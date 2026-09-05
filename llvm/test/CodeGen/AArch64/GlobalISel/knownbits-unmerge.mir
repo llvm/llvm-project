@@ -6,13 +6,13 @@ name:            Scalar
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Scalar
-  ; CHECK-NEXT: %copy_x0:_ KnownBits:???????????????? SignBits:1
-  ; CHECK-NEXT: %maskf:_ KnownBits:0000000000001111 SignBits:12
-  ; CHECK-NEXT: %x0_x1:_ KnownBits:0000000000001111 SignBits:12
-  ; CHECK-NEXT: %and:_ KnownBits:000000000000???? SignBits:12
-  ; CHECK-NEXT: %x0_0:_ KnownBits:000000000000???? SignBits:12
-  ; CHECK-NEXT: %x0_1:_ KnownBits:000000000000???? SignBits:12
-  ; CHECK-NEXT: %result:_ KnownBits:000000000000???? SignBits:12
+  ; CHECK-NEXT: %copy_x0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %maskf:_ KnownBits:0000000000001111 SignBits:12 IsKnownNeverZero:1
+  ; CHECK-NEXT: %x0_x1:_ KnownBits:0000000000001111 SignBits:12 IsKnownNeverZero:1
+  ; CHECK-NEXT: %and:_ KnownBits:000000000000???? SignBits:12 IsKnownNeverZero:0
+  ; CHECK-NEXT: %x0_0:_ KnownBits:000000000000???? SignBits:12 IsKnownNeverZero:0
+  ; CHECK-NEXT: %x0_1:_ KnownBits:000000000000???? SignBits:12 IsKnownNeverZero:0
+  ; CHECK-NEXT: %result:_ KnownBits:000000000000???? SignBits:12 IsKnownNeverZero:0
    %copy_x0:_(<2 x i16>) = COPY $w0
    %maskf:_(i16) = G_CONSTANT i16 15
    %x0_x1:_(<2 x i16>) = G_BUILD_VECTOR %maskf, %maskf
@@ -25,15 +25,15 @@ name:            Vector
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Vector
-  ; CHECK-NEXT: %copy_x0:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %maskff:_ KnownBits:11111111 SignBits:8
-  ; CHECK-NEXT: %maskf:_ KnownBits:00001111 SignBits:4
-  ; CHECK-NEXT: %x0_x1:_ KnownBits:????1111 SignBits:4
-  ; CHECK-NEXT: %and:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %x0_0:_ KnownBits:0000???? SignBits:4
-  ; CHECK-NEXT: %x0_1:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %result1:_ KnownBits:0000???? SignBits:4
-  ; CHECK-NEXT: %result2:_ KnownBits:???????? SignBits:1
+  ; CHECK-NEXT: %copy_x0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %maskff:_ KnownBits:11111111 SignBits:8 IsKnownNeverZero:1
+  ; CHECK-NEXT: %maskf:_ KnownBits:00001111 SignBits:4 IsKnownNeverZero:1
+  ; CHECK-NEXT: %x0_x1:_ KnownBits:????1111 SignBits:4 IsKnownNeverZero:1
+  ; CHECK-NEXT: %and:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %x0_0:_ KnownBits:0000???? SignBits:4 IsKnownNeverZero:0
+  ; CHECK-NEXT: %x0_1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %result1:_ KnownBits:0000???? SignBits:4 IsKnownNeverZero:0
+  ; CHECK-NEXT: %result2:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
    %copy_x0:_(<4 x i8>) = COPY $w0
    %maskff:_(i8) = G_CONSTANT i8 255
    %maskf:_(i8) = G_CONSTANT i8 15
@@ -48,19 +48,19 @@ name:            Sign_Scalar
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Sign_Scalar
-  ; CHECK-NEXT: %copy_x0:_ KnownBits:???????????????????????????????? SignBits:1
-  ; CHECK-NEXT: %mask4:_ KnownBits:00000000000000000000000000000100 SignBits:29
-  ; CHECK-NEXT: %and4:_ KnownBits:???????????????????????????????? SignBits:5
-  ; CHECK-NEXT: %x4_0:_ KnownBits:???????????????? SignBits:1
-  ; CHECK-NEXT: %x4_1:_ KnownBits:???????????????? SignBits:5
-  ; CHECK-NEXT: %mask16:_ KnownBits:00000000000000000000000000001111 SignBits:28
-  ; CHECK-NEXT: %and16:_ KnownBits:???????????????????????????????? SignBits:16
-  ; CHECK-NEXT: %x16_0:_ KnownBits:???????????????? SignBits:1
-  ; CHECK-NEXT: %x16_1:_ KnownBits:???????????????? SignBits:16
-  ; CHECK-NEXT: %mask24:_ KnownBits:00000000000000000000000000011000 SignBits:27
-  ; CHECK-NEXT: %and24:_ KnownBits:???????????????????????????????? SignBits:25
-  ; CHECK-NEXT: %x24_0:_ KnownBits:???????????????? SignBits:9
-  ; CHECK-NEXT: %x24_1:_ KnownBits:???????????????? SignBits:16
+  ; CHECK-NEXT: %copy_x0:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %mask4:_ KnownBits:00000000000000000000000000000100 SignBits:29 IsKnownNeverZero:1
+  ; CHECK-NEXT: %and4:_ KnownBits:???????????????????????????????? SignBits:5 IsKnownNeverZero:0
+  ; CHECK-NEXT: %x4_0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %x4_1:_ KnownBits:???????????????? SignBits:5 IsKnownNeverZero:0
+  ; CHECK-NEXT: %mask16:_ KnownBits:00000000000000000000000000001111 SignBits:28 IsKnownNeverZero:1
+  ; CHECK-NEXT: %and16:_ KnownBits:???????????????????????????????? SignBits:16 IsKnownNeverZero:0
+  ; CHECK-NEXT: %x16_0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %x16_1:_ KnownBits:???????????????? SignBits:16 IsKnownNeverZero:0
+  ; CHECK-NEXT: %mask24:_ KnownBits:00000000000000000000000000011000 SignBits:27 IsKnownNeverZero:1
+  ; CHECK-NEXT: %and24:_ KnownBits:???????????????????????????????? SignBits:25 IsKnownNeverZero:0
+  ; CHECK-NEXT: %x24_0:_ KnownBits:???????????????? SignBits:9 IsKnownNeverZero:0
+  ; CHECK-NEXT: %x24_1:_ KnownBits:???????????????? SignBits:16 IsKnownNeverZero:0
    %copy_x0:_(i32) = COPY $w0
    %mask4:_(i32) = G_CONSTANT i32 4
    %and4:_(i32) = G_ASHR %copy_x0, %mask4
@@ -77,12 +77,12 @@ name:            Sign_Scalar_Vector
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Sign_Scalar_Vector
-  ; CHECK-NEXT: %copy_x0:_ KnownBits:???????????????? SignBits:1
-  ; CHECK-NEXT: %maskf:_ KnownBits:0000000000000100 SignBits:13
-  ; CHECK-NEXT: %x0_x1:_ KnownBits:0000000000000100 SignBits:13
-  ; CHECK-NEXT: %and:_ KnownBits:???????????????? SignBits:5
-  ; CHECK-NEXT: %x0_0:_ KnownBits:???????????????? SignBits:5
-  ; CHECK-NEXT: %x0_1:_ KnownBits:???????????????? SignBits:5
+  ; CHECK-NEXT: %copy_x0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %maskf:_ KnownBits:0000000000000100 SignBits:13 IsKnownNeverZero:1
+  ; CHECK-NEXT: %x0_x1:_ KnownBits:0000000000000100 SignBits:13 IsKnownNeverZero:1
+  ; CHECK-NEXT: %and:_ KnownBits:???????????????? SignBits:5 IsKnownNeverZero:0
+  ; CHECK-NEXT: %x0_0:_ KnownBits:???????????????? SignBits:5 IsKnownNeverZero:0
+  ; CHECK-NEXT: %x0_1:_ KnownBits:???????????????? SignBits:5 IsKnownNeverZero:0
    %copy_x0:_(<2 x i16>) = COPY $w0
    %maskf:_(i16) = G_CONSTANT i16 4
    %x0_x1:_(<2 x i16>) = G_BUILD_VECTOR %maskf, %maskf
@@ -94,13 +94,13 @@ name:            Sign_Vector
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Sign_Vector
-  ; CHECK-NEXT: %copy_x0:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %mask6:_ KnownBits:00000110 SignBits:5
-  ; CHECK-NEXT: %mask4:_ KnownBits:00000100 SignBits:5
-  ; CHECK-NEXT: %x0_x1:_ KnownBits:000001?0 SignBits:5
-  ; CHECK-NEXT: %and:_ KnownBits:???????? SignBits:5
-  ; CHECK-NEXT: %x0_0:_ KnownBits:???????? SignBits:5
-  ; CHECK-NEXT: %x0_1:_ KnownBits:???????? SignBits:7
+  ; CHECK-NEXT: %copy_x0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %mask6:_ KnownBits:00000110 SignBits:5 IsKnownNeverZero:1
+  ; CHECK-NEXT: %mask4:_ KnownBits:00000100 SignBits:5 IsKnownNeverZero:1
+  ; CHECK-NEXT: %x0_x1:_ KnownBits:000001?0 SignBits:5 IsKnownNeverZero:1
+  ; CHECK-NEXT: %and:_ KnownBits:???????? SignBits:5 IsKnownNeverZero:0
+  ; CHECK-NEXT: %x0_0:_ KnownBits:???????? SignBits:5 IsKnownNeverZero:0
+  ; CHECK-NEXT: %x0_1:_ KnownBits:???????? SignBits:7 IsKnownNeverZero:0
    %copy_x0:_(<4 x i8>) = COPY $w0
    %mask6:_(i8) = G_CONSTANT i8 6
    %mask4:_(i8) = G_CONSTANT i8 4
@@ -113,14 +113,14 @@ name:            Sign_Vector_Poison
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @Sign_Vector_Poison
-  ; CHECK-NEXT: %copy_x0:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %mask8:_ KnownBits:00001000 SignBits:4
-  ; CHECK-NEXT: %mask6:_ KnownBits:00000110 SignBits:5
-  ; CHECK-NEXT: %mask4:_ KnownBits:00000100 SignBits:5
-  ; CHECK-NEXT: %x0_x1:_ KnownBits:0000???0 SignBits:4
-  ; CHECK-NEXT: %and:_ KnownBits:???????? SignBits:1
-  ; CHECK-NEXT: %x0_0:_ KnownBits:???????? SignBits:5
-  ; CHECK-NEXT: %x0_1:_ KnownBits:00000000 SignBits:8
+  ; CHECK-NEXT: %copy_x0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %mask8:_ KnownBits:00001000 SignBits:4 IsKnownNeverZero:1
+  ; CHECK-NEXT: %mask6:_ KnownBits:00000110 SignBits:5 IsKnownNeverZero:1
+  ; CHECK-NEXT: %mask4:_ KnownBits:00000100 SignBits:5 IsKnownNeverZero:1
+  ; CHECK-NEXT: %x0_x1:_ KnownBits:0000???0 SignBits:4 IsKnownNeverZero:1
+  ; CHECK-NEXT: %and:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %x0_0:_ KnownBits:???????? SignBits:5 IsKnownNeverZero:0
+  ; CHECK-NEXT: %x0_1:_ KnownBits:00000000 SignBits:8 IsKnownNeverZero:0
    %copy_x0:_(<4 x i8>) = COPY $w0
    %mask8:_(i8) = G_CONSTANT i8 8
    %mask6:_(i8) = G_CONSTANT i8 6

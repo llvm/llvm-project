@@ -2705,7 +2705,8 @@ void DAGTypeLegalizer::SplitVecRes_MLOAD(MaskedLoadSDNode *MLD,
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MLD->getPointerInfo(), MMOFlags, LocationSize::beforeOrAfterPointer(),
-      Alignment, MMOMetadata(MLD->getAAInfo(), MLD->getRanges()));
+      Alignment,
+      MMOMetadata(MLD->getAAInfo(), MLD->getRanges(), MLD->getMemCacheHint()));
 
   Lo = DAG.getMaskedLoad(LoVT, dl, Ch, Ptr, Offset, MaskLo, PassThruLo, LoMemVT,
                          MMO, MLD->getAddressingMode(), ExtType,
@@ -2729,7 +2730,8 @@ void DAGTypeLegalizer::SplitVecRes_MLOAD(MaskedLoadSDNode *MLD,
 
     MMO = DAG.getMachineFunction().getMachineMemOperand(
         MPI, MMOFlags, LocationSize::beforeOrAfterPointer(), Alignment,
-        MMOMetadata(MLD->getAAInfo(), MLD->getRanges()));
+        MMOMetadata(MLD->getAAInfo(), MLD->getRanges(),
+                    MLD->getMemCacheHint()));
 
     Hi = DAG.getMaskedLoad(HiVT, dl, Ch, Ptr, Offset, MaskHi, PassThruHi,
                            HiMemVT, MMO, MLD->getAddressingMode(), ExtType,
@@ -2888,14 +2890,14 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_COMPRESS(SDNode *N, SDValue &Lo,
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(
       MF, cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex());
 
-  EVT MaskVT = LoMask.getValueType();
-  assert(MaskVT.getScalarType() == MVT::i1 && "Expected vector of i1s");
+  EVT LoMaskVT = LoMask.getValueType();
+  assert(LoMaskVT.getScalarType() == MVT::i1 && "Expected vector of i1s");
 
   // We store LoVec and then insert HiVec starting at offset=|1s| in LoMask.
-  EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
-                                    MaskVT.getVectorElementCount());
-  SDValue WideMask = DAG.getNode(ISD::ZERO_EXTEND, DL, WideMaskVT, LoMask);
-  SDValue Offset = DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i32, WideMask);
+  EVT WideLoMaskVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
+                                      LoMaskVT.getVectorElementCount());
+  SDValue WideLoMask = DAG.getNode(ISD::ZERO_EXTEND, DL, WideLoMaskVT, LoMask);
+  SDValue Offset = DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i32, WideLoMask);
   Offset = TLI.getVectorElementPointer(DAG, StackPtr, VecVT, Offset);
 
   SDValue Chain = DAG.getEntryNode();
@@ -4590,7 +4592,7 @@ SDValue DAGTypeLegalizer::SplitVecOp_MSTORE(MaskedStoreSDNode *N,
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       N->getPointerInfo(), MachineMemOperand::MOStore,
       LocationSize::beforeOrAfterPointer(), Alignment,
-      MMOMetadata(N->getAAInfo(), N->getRanges()));
+      MMOMetadata(N->getAAInfo(), N->getRanges(), N->getMemCacheHint()));
 
   Lo = DAG.getMaskedStore(Ch, DL, DataLo, Ptr, Offset, MaskLo, LoMemVT, MMO,
                           N->getAddressingMode(), N->isTruncatingStore(),
@@ -4616,7 +4618,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_MSTORE(MaskedStoreSDNode *N,
 
     MMO = DAG.getMachineFunction().getMachineMemOperand(
         MPI, MachineMemOperand::MOStore, LocationSize::beforeOrAfterPointer(),
-        Alignment, MMOMetadata(N->getAAInfo(), N->getRanges()));
+        Alignment,
+        MMOMetadata(N->getAAInfo(), N->getRanges(), N->getMemCacheHint()));
 
     Hi = DAG.getMaskedStore(Ch, DL, DataHi, Ptr, Offset, MaskHi, HiMemVT, MMO,
                             N->getAddressingMode(), N->isTruncatingStore(),
@@ -5531,6 +5534,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
       Res = WidenVecRes_UnaryOpWithTwoResults(N, ResNo);
     break;
   }
+  case ISD::PARTIAL_REDUCE_FMLA:
+    Res = WidenVecRes_PARTIAL_REDUCE_MLA(N);
+    break;
   }
 
   // If Res is null, the sub-method took care of registering the result.
@@ -7589,6 +7595,16 @@ SDValue DAGTypeLegalizer::WidenVecRes_STRICT_FSETCC(SDNode *N) {
   ReplaceValueWith(SDValue(N, 1), NewChain);
 
   return DAG.getBuildVector(WidenVT, dl, Scalars);
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_PARTIAL_REDUCE_MLA(SDNode *N) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  // Expand, then widen the result.
+  SDValue Expanded = TLI.expandPartialReduceMLA(N, DAG);
+  EVT WideVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  return DAG.getInsertSubvector(DL, DAG.getPOISON(WideVT), Expanded, 0);
 }
 
 //===----------------------------------------------------------------------===//

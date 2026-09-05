@@ -523,7 +523,7 @@ define zeroext i1 @smuloi256(i256 %v1, i256 %v2, ptr %res) {
 ; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 20
-; X86-NEXT:    subl $128, %esp
+; X86-NEXT:    addl $-128, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 148
 ; X86-NEXT:    .cfi_offset %esi, -20
 ; X86-NEXT:    .cfi_offset %edi, -16
@@ -1280,7 +1280,7 @@ define zeroext i1 @smuloi256(i256 %v1, i256 %v2, ptr %res) {
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx ## 4-byte Reload
 ; X86-NEXT:    movl %ecx, 24(%eax)
 ; X86-NEXT:    setne %al
-; X86-NEXT:    addl $128, %esp
+; X86-NEXT:    subl $-128, %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx

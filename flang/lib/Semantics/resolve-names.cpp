@@ -10710,6 +10710,21 @@ void ResolveNamesVisitor::PreSpecificationConstruct(
       spec.u);
 }
 
+static bool IsCallOfDeclaredEntity(
+    const parser::Call &call, const std::list<parser::EntityDecl> &entities) {
+  // Pure query: do not resolve names or modify symbols/scopes.
+  const auto &procDesignator{std::get<parser::ProcedureDesignator>(call.t)};
+  if (const auto *name{std::get_if<parser::Name>(&procDesignator.u)}) {
+    for (const auto &ent : entities) {
+      const auto &objName{std::get<parser::ObjectName>(ent.t)};
+      if (name->source == objName.source) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 void ResolveNamesVisitor::EarlyDummyTypeDeclaration(
     const parser::Statement<common::Indirection<parser::TypeDeclarationStmt>>
         &stmt) {
@@ -10725,6 +10740,10 @@ void ResolveNamesVisitor::EarlyDummyTypeDeclaration(
             // nonempty argument list, to prevent implicitly typing names
             // that might appear.  (TODO: But maybe INTEGER(KIND(n)) after
             // an explicit declaration of 'n' would be useful.)
+            return;
+          }
+          if (IsCallOfDeclaredEntity(*call, entities)) {
+            // Avoid implicitly typing the entity referenced by the KIND call.
             return;
           }
         } else if (!parser::Unwrap<parser::KindSelector::StarSize>(*kind) &&
@@ -10895,16 +10914,17 @@ void ResolveNamesVisitor::FinishSpecificationPart(
         // OpenACC) would incorrectly route every allocatable through the CUDA
         // Fortran managed descriptor pipeline.
         if (context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CudaManaged) &&
-            context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CUDA))
-          object->set_cudaDataAttr(common::CUDADataAttr::Managed);
-        // Implicitly treat allocatable arrays as pinned when feature is
-        // enabled.
-        else if (IsAllocatable(symbol) &&
-            context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CudaPinned))
-          object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+                common::LanguageFeature::CUDA)) {
+          if (context().languageFeatures().IsEnabled(
+                  common::LanguageFeature::CudaManaged))
+            object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+          // Implicitly treat allocatable arrays as pinned when feature is
+          // enabled.
+          else if (IsAllocatable(symbol) &&
+              context().languageFeatures().IsEnabled(
+                  common::LanguageFeature::CudaPinned))
+            object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+        }
       }
     }
   }

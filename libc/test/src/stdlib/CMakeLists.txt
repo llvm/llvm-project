@@ -601,3 +601,16 @@ if((LIBC_TARGET_OS_IS_BAREMETAL OR LIBC_TARGET_OS_IS_GPU) AND
       libc.src.stdlib.free
   )
 endif()
+
+add_libc_test(
+  getloadavg_test
+  SUITE
+    libc-stdlib-tests
+  SRCS
+    getloadavg_test.cpp
+  DEPENDS
+    libc.src.stdlib.getloadavg
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+

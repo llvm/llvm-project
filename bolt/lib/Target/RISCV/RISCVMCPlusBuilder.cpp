@@ -167,6 +167,10 @@ public:
       return RISCV::C_BNEZ;
     case RISCV::C_BNEZ:
       return RISCV::C_BEQZ;
+    case RISCV::BEQI:
+      return RISCV::BNEI;
+    case RISCV::BNEI:
+      return RISCV::BEQI;
     }
   }
 
@@ -435,6 +439,8 @@ public:
     case RISCV::BNE:
     case RISCV::BLT:
     case RISCV::BLTU:
+    case RISCV::BEQI:
+    case RISCV::BNEI:
       OpNum = 2;
       return true;
     }

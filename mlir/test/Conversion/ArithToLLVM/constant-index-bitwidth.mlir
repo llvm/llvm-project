@@ -42,3 +42,26 @@ func.func @sparse_index_constant() -> vector<4xindex> {
   %0 = arith.constant sparse<[[0]], [-1]> : vector<4xindex>
   return %0 : vector<4xindex>
 }
+
+// A resource-backed elements attribute is only reinterpreted, so it can be
+// retyped exactly when the converted index type has the same width as the
+// storage `index` uses in a blob. Otherwise the lowering fails.
+
+// CHECK32-LABEL: @resource_index_constant
+//       CHECK32:   arith.constant dense_resource<index_blob> : vector<2xindex>
+// CHECK64-LABEL: @resource_index_constant
+//       CHECK64:   llvm.mlir.constant(dense_resource<index_blob> : vector<2xi64>) : vector<2xi64>
+// CHECK128-LABEL: @resource_index_constant
+//       CHECK128:   arith.constant dense_resource<index_blob> : vector<2xindex>
+func.func @resource_index_constant() -> vector<2xindex> {
+  %0 = arith.constant dense_resource<index_blob> : vector<2xindex>
+  return %0 : vector<2xindex>
+}
+
+{-#
+  dialect_resources: {
+    builtin: {
+      index_blob: "0x0800000001000000000000000200000000000000"
+    }
+  }
+#-}

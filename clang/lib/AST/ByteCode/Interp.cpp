@@ -155,9 +155,8 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
   if (!S.diagnosing())
     return;
 
-  const SourceInfo &Loc = S.Current->getSource(OpPC);
   if (!S.getLangOpts().CPlusPlus) {
-    S.FFDiag(Loc);
+    S.FFDiag(S.Current->getSource(OpPC));
     return;
   }
 
@@ -175,6 +174,7 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
     return;
 
   if (VD->getType()->isIntegralOrEnumerationType()) {
+    SourceInfo Loc = S.Current->getSource(OpPC);
     if (isModification(AK)) {
       S.FFDiag(Loc, diag::note_constexpr_modify_global);
     } else {
@@ -184,7 +184,7 @@ static void diagnoseNonConstVariable(InterpState &S, CodePtr OpPC,
     return;
   }
 
-  S.FFDiag(Loc,
+  S.FFDiag(S.Current->getSource(OpPC),
            S.getLangOpts().CPlusPlus11 ? diag::note_constexpr_ltor_non_constexpr
                                        : diag::note_constexpr_ltor_non_integral,
            1)
@@ -1608,6 +1608,29 @@ static bool getField(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   }
 
+  if (Ptr.isOpaquePointer()) {
+    const OpaquePointer &OP = Ptr.asOpaquePointer();
+    const RecordDecl *RD = OP.getFieldType()->getAsRecordDecl();
+    if (!RD)
+      return false;
+    const Record *R = S.getContext().getRecord(RD);
+    if (!R)
+      return false;
+
+    const Record::Field *F = R->findField(Off);
+    if (!F)
+      return false;
+
+    PointerPathEntry *NewPath = S.extendPointerPath(
+        OP.PathLength + 1, OP.Path, PointerPathEntry::field(F->Decl));
+
+    S.Stk.push<Pointer>(OP.withPath(NewPath, OP.PathLength + 1,
+                                    F->Decl->getType().getTypePtr()),
+                        Ptr.getByteOffset());
+
+    return true;
+  }
+
   if (!Ptr.isBlockPointer()) {
     // If we're trying to get the field of a TypeId pointer, try to produce a
     // proper diagnostic.
@@ -1641,6 +1664,29 @@ static bool getBase(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                     uint32_t Off, bool NullOK) {
   if (!NullOK && !CheckNull(S, OpPC, Ptr, CSK_Base))
     return false;
+
+  if (Ptr.isOpaquePointer()) {
+    const OpaquePointer &OP = Ptr.asOpaquePointer();
+    const RecordDecl *RD = OP.getFieldType()->getAsRecordDecl();
+    if (!RD)
+      return false;
+    const Record *R = S.getContext().getRecord(RD);
+    assert(R);
+
+    const Record::Base *B = R->findBase(Off);
+    if (!B)
+      return false;
+
+    PointerPathEntry *NewPath = S.extendPointerPath(
+        OP.PathLength + 1, OP.Path,
+        PointerPathEntry::base(cast<CXXRecordDecl>(B->Decl)));
+    S.Stk.push<Pointer>(
+        OP.withPath(
+            NewPath, OP.PathLength + 1,
+            S.getASTContext().getCanonicalTagType(B->Decl).getTypePtr()),
+        Ptr.getByteOffset());
+    return true;
+  }
 
   if (!Ptr.isBlockPointer()) {
     if (!Ptr.isIntegralPointer())
@@ -1902,6 +1948,7 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   S.Current = FrameBefore;
   return false;
 }
+
 bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
           uint32_t VarArgSize) {
 
@@ -3045,19 +3092,25 @@ bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
   return false;
 }
 
+// Destroy one scope: deallocate all local variables of the scope and diagnose
+// out-of-lifetime destroys.
 bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
   assert(S.Current->getFunction());
-  // FIXME: We iterate the scope once here and then again in the destroy() call
-  // below.
   for (auto &Local : S.Current->getFunction()->getScope(I).locals_reverse()) {
-    if (!S.Current->getLocalBlock(Local.Offset)->isInitialized())
+    Block *LocalBlock = S.Current->getLocalBlock(Local.Offset);
+
+    if (!LocalBlock->isInitialized())
       continue;
-    const Pointer &Ptr = S.Current->getLocalPointer(Local.Offset);
-    if (Ptr.getLifetime() == Lifetime::Ended)
+
+    if (LocalBlock->getBlockDesc<InlineDescriptor>().LifeState ==
+        Lifetime::Ended) {
+      const Pointer Ptr = S.Current->getLocalPointer(Local.Offset);
       return diagnoseOutOfLifetimeDestroy(S, OpPC, Ptr);
+    }
+
+    S.deallocate(LocalBlock);
   }
 
-  S.Current->destroy(I);
   return true;
 }
 
@@ -3227,6 +3280,128 @@ bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC, uint32_t BitWidth,
                              uint32_t FPOI) {
   Floating F = S.Stk.pop<Floating>();
   return floatAPCast<true>(S, OpPC, F, BitWidth, FPOI);
+}
+
+static bool validType(QualType T) {
+  if (const RecordDecl *RD = T->getAsRecordDecl())
+    return ASTContext::hasLayout(RD);
+  return true;
+}
+
+bool arrayElemPtrOpaque(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                        APSInt &&Index, bool AllowReplace) {
+  const OpaquePointer &OP = Ptr.asOpaquePointer();
+  QualType ArrTy = OP.getSurroundingArray();
+
+  if (isa<VariableArrayType>(ArrTy) && OP.PathLength != 0)
+    return false;
+
+  QualType ElemType;
+  if (const ArrayType *AT = ArrTy->getAsArrayTypeUnsafe())
+    ElemType = AT->getElementType();
+  else
+    ElemType = ArrTy;
+
+  if (ArrTy->isArrayType()) {
+    unsigned NewPathLength;
+    if (AllowReplace && OP.isArrayElement()) {
+      // This is what happens after an array-to-pointer-decay. We don't enter
+      // the array element but simply change the index in the array we're
+      // already pointing into.
+      NewPathLength = OP.PathLength;
+    } else {
+      NewPathLength = OP.PathLength + 1;
+    }
+
+    PointerPathEntry NewEntry;
+    if (Index.isNonNegative())
+      NewEntry = PointerPathEntry::array(Index.getZExtValue());
+    else
+      NewEntry = PointerPathEntry::negativeArray((-Index).getZExtValue());
+
+    PointerPathEntry *NewPath =
+        S.extendPointerPath(NewPathLength, OP.Path, NewEntry);
+    S.Stk.push<Pointer>(
+        OP.withPath(NewPath, NewPathLength, ElemType.getTypePtr()),
+        Ptr.getByteOffset());
+
+  } else {
+    if (!validType(ElemType))
+      return false;
+    unsigned ElemSize =
+        S.getASTContext().getTypeSizeInChars(ElemType).getQuantity();
+    size_t NewOffset = Ptr.getByteOffset() + (Index.getZExtValue() * ElemSize);
+    bool PastEnd = Index != 0;
+
+    S.Stk.push<Pointer>(OP.withFieldType(ElemType.getTypePtr(), PastEnd),
+                        NewOffset);
+  }
+  return true;
+}
+
+std::optional<Pointer> addSubOffsetOpaque(InterpState &S, CodePtr OpPC,
+                                          const Pointer &Ptr, APSInt &&Offset,
+                                          ArithOp Op) {
+  assert(Ptr.isOpaquePointer());
+  if (Offset.isZero())
+    return Ptr;
+
+  const OpaquePointer &OP = Ptr.asOpaquePointer();
+  QualType ArrTy = OP.getSurroundingArray();
+  QualType ElemTy = ArrTy;
+  unsigned NumElems = 1;
+  if (const ArrayType *AT = ArrTy->getAsArrayTypeUnsafe()) {
+    ElemTy = AT->getElementType();
+    if (const auto *CAT = dyn_cast<ConstantArrayType>(AT))
+      NumElems = CAT->getZExtSize();
+  }
+
+  if (isa<IncompleteArrayType>(ArrTy)) {
+    const SourceInfo &E = S.Current->getSource(OpPC);
+    S.FFDiag(E, diag::note_constexpr_unsized_array_indexed);
+    return std::nullopt;
+  }
+
+  if (Offset > NumElems) {
+    if (Op == ArithOp::Add)
+      S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
+          << Offset << /*non-array*/ !isa<ArrayType>(ArrTy) << NumElems;
+    else
+      S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
+          << -Offset << /*non-array*/ !isa<ArrayType>(ArrTy) << NumElems;
+  }
+
+  if (!validType(ElemTy) || !validType(ArrTy)) {
+    Invalid(S, OpPC);
+    return std::nullopt;
+  }
+
+  if (Offset.getActiveBits() > 64)
+    return std::nullopt;
+
+  // If the pointer is an array element, advance that index.
+  if (OP.isArrayElement()) {
+    unsigned NewPathLength = OP.PathLength;
+    PointerPathEntry *NewPath = S.allocPointerPath(OP.PathLength, OP.Path);
+
+    if (Op == ArithOp::Add)
+      NewPath[NewPathLength - 1].Index += Offset.getZExtValue();
+    else
+      NewPath[NewPathLength - 1].Index -= Offset.getZExtValue();
+    return OP.withPath(NewPath, NewPathLength, OP.FieldType.getPointer());
+  }
+
+  unsigned ElemSize =
+      S.getASTContext().getTypeSizeInChars(ElemTy).getQuantity();
+  unsigned NewOffset;
+  if (Op == ArithOp::Add)
+    NewOffset = Ptr.getByteOffset() + (ElemSize * Offset.getZExtValue());
+  else
+    NewOffset = Ptr.getByteOffset() - (ElemSize * Offset.getZExtValue());
+
+  // We already checked offset != before, so this is a non-array type being
+  // offset by > 0.
+  return Pointer(OP.withPastEnd(true), NewOffset);
 }
 
 // FIXME: Would be nice to generate this instead of hardcoding it here.

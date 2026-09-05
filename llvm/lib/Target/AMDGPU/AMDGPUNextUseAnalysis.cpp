@@ -56,8 +56,6 @@
 #include "GCNRegPressure.h"
 #include "GCNSubtarget.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -71,8 +69,6 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <algorithm>
-#include <limits>
 #include <string>
 
 using namespace llvm;

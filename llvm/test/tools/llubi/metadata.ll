@@ -39,27 +39,27 @@ define void @main() {
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %alloc = alloca i32, align 4 => ptr 0x8 [alloc]
 ; CHECK-NEXT:   store i32 1, ptr %alloc, align 4
-; CHECK-NEXT:   %range_load_valid = load i32, ptr %alloc, align 4, !range !0, !noundef !1 => i32 1
-; CHECK-NEXT:   %range_load_invalid = load i32, ptr %alloc, align 4, !range !2 => poison
+; CHECK-NEXT:   %range_load_valid = load i32, ptr %alloc, align 4, !range !{{[0-9]+}}, !noundef !{{[0-9]+}} => i32 1
+; CHECK-NEXT:   %range_load_invalid = load i32, ptr %alloc, align 4, !range !{{[0-9]+}} => poison
 ; CHECK-NEXT:   %alloc_vec = alloca <8 x i32>, align 32 => ptr 0x20 [alloc_vec]
 ; CHECK-NEXT:   store <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>, ptr %alloc_vec, align 32
-; CHECK-NEXT:   %range_list_load_vec = load <8 x i32>, ptr %alloc_vec, align 32, !range !3 => { i32 0, i32 1, poison, i32 3, poison, i32 5, poison, i32 7 }
+; CHECK-NEXT:   %range_list_load_vec = load <8 x i32>, ptr %alloc_vec, align 32, !range !{{[0-9]+}} => { i32 0, i32 1, poison, i32 3, poison, i32 5, poison, i32 7 }
 ; CHECK-NEXT:   store float 0.000000e+00, ptr %alloc, align 4
-; CHECK-NEXT:   %nofpclass_load_valid = load float, ptr %alloc, align 4, !noundef !1, !nofpclass !4 => float 0.000000e+00
-; CHECK-NEXT:   %nofpclass_load_invalid = load float, ptr %alloc, align 4, !nofpclass !5 => poison
+; CHECK-NEXT:   %nofpclass_load_valid = load float, ptr %alloc, align 4, !noundef !{{[0-9]+}}, !nofpclass !{{[0-9]+}} => float 0.000000e+00
+; CHECK-NEXT:   %nofpclass_load_invalid = load float, ptr %alloc, align 4, !nofpclass !{{[0-9]+}} => poison
 ; CHECK-NEXT:   %alloc_ptr = alloca ptr, align 8 => ptr 0x48 [alloc_ptr]
 ; CHECK-NEXT:   store ptr %alloc_ptr, ptr %alloc_ptr, align 8
-; CHECK-NEXT:   %align_nonnull_load_valid = load ptr, ptr %alloc_ptr, align 8, !nonnull !1, !dereferenceable !6, !dereferenceable_or_null !6, !align !6, !noundef !1 => ptr 0x48 [alloc_ptr]
+; CHECK-NEXT:   %align_nonnull_load_valid = load ptr, ptr %alloc_ptr, align 8, !nonnull !{{[0-9]+}}, !dereferenceable !{{[0-9]+}}, !dereferenceable_or_null !{{[0-9]+}}, !align !{{[0-9]+}}, !noundef !{{[0-9]+}} => ptr 0x48 [alloc_ptr]
 ; CHECK-NEXT:   store ptr null, ptr %alloc_ptr, align 8
-; CHECK-NEXT:   %align_load_valid = load ptr, ptr %alloc_ptr, align 8, !dereferenceable_or_null !6, !align !6, !noundef !1 => ptr 0x0 [nullary]
-; CHECK-NEXT:   %nonnull_load_invalid = load ptr, ptr %alloc_ptr, align 8, !nonnull !1 => poison
+; CHECK-NEXT:   %align_load_valid = load ptr, ptr %alloc_ptr, align 8, !dereferenceable_or_null !{{[0-9]+}}, !align !{{[0-9]+}}, !noundef !{{[0-9]+}} => ptr 0x0 [nullary]
+; CHECK-NEXT:   %nonnull_load_invalid = load ptr, ptr %alloc_ptr, align 8, !nonnull !{{[0-9]+}} => poison
 ; CHECK-NEXT: Entering function: callee
 ; CHECK-NEXT:   ret i32 10
 ; CHECK-NEXT: Exiting function: callee
-; CHECK-NEXT:   %range_call_valid = call i32 @callee(), !range !7 => i32 10
+; CHECK-NEXT:   %range_call_valid = call i32 @callee(), !range !{{[0-9]+}} => i32 10
 ; CHECK-NEXT: Entering function: callee
 ; CHECK-NEXT:   ret i32 10
 ; CHECK-NEXT: Exiting function: callee
-; CHECK-NEXT:   %range_call_invalid = call i32 @callee(), !range !0 => poison
+; CHECK-NEXT:   %range_call_invalid = call i32 @callee(), !range !{{[0-9]+}} => poison
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

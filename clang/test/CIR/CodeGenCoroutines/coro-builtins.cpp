@@ -53,8 +53,12 @@ void f(int n) {
   // TODO(CIR):
   //__builtin_coro_done(__builtin_coro_frame());
 
-  // TODO(CIR):
-  //__builtin_coro_promise(__builtin_coro_frame(), 48, 0);
+  __builtin_coro_promise(__builtin_coro_frame(), 48, 0);
+  // CIR: %[[ALIGN:.*]] = cir.const #cir.int<48> : !s32i
+  // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+  // CIR: %[[FALSE:.*]] = cir.cast int_to_bool %[[ZERO]] : !s32i -> !cir.bool
+  // CIR: cir.coro.intrinsic.promise(%[[FRAME]], %[[ALIGN]], %[[FALSE]])
+  // LLVM: call ptr @llvm.coro.promise(ptr %[[FRAME]], i32 48, i1 false)
 
   __builtin_coro_free(__builtin_coro_frame());
   // CIR: cir.coro.intrinsic.free(%[[COROID]], %[[FRAME]])

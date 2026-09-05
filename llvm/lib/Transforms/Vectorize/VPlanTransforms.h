@@ -317,10 +317,10 @@ struct VPlanTransforms {
 
   /// Replace symbolic strides from \p StridesMap in \p Plan with constants when
   /// possible.
-  static void
-  replaceSymbolicStrides(VPlan &Plan, PredicatedScalarEvolution &PSE,
-                         const DenseMap<Value *, const SCEV *> &StridesMap,
-                         const VPDominatorTree &VPDT);
+  static void replaceSymbolicStrides(VPlan &Plan,
+                                     PredicatedScalarEvolution &PSE,
+                                     const SymbolicStrideMap &StridesMap,
+                                     const VPDominatorTree &VPDT);
 
   /// Drop poison flags from recipes that may generate a poison value that is
   /// used after vectorization, even when their operands are not poison. Those
@@ -599,9 +599,10 @@ struct VPlanTransforms {
   static void optimizeFindIVReductions(VPlan &Plan,
                                        PredicatedScalarEvolution &PSE, Loop &L);
 
-  /// Detect and create partial reduction recipes for scaled reductions in
-  /// \p Plan. Must be called after recipe construction. If partial reductions
-  /// are only valid for a subset of VFs in Range, Range.End is updated.
+  /// Detect and create partial reduction recipes for scaled or unordered
+  /// reductions in \p Plan. Must be called after recipe construction. If
+  /// partial reductions are only valid for a subset of VFs in Range, Range.End
+  /// is updated.
   static void createPartialReductions(VPlan &Plan, VPCostContext &CostCtx,
                                       VFRange &Range);
 

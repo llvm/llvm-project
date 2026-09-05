@@ -4723,9 +4723,9 @@ SDValue DAGCombiner::visitSUBSAT(SDNode *N) {
       for (unsigned NarrowBits = PowerOf2Ceil(ActiveBits);
            NarrowBits != 0 && NarrowBits < ScalarBits; NarrowBits *= 2) {
         unsigned Scale = ScalarBits / NarrowBits;
-        unsigned NumElts = VT.getVectorNumElements() * Scale;
+        ElementCount ScaledEC = VT.getVectorElementCount() * Scale;
         MVT NarrowSVT = MVT::getIntegerVT(NarrowBits);
-        MVT NarrowVT = MVT::getVectorVT(NarrowSVT, NumElts);
+        EVT NarrowVT = EVT::getVectorVT(*DAG.getContext(), NarrowSVT, ScaledEC);
 
         if (!TLI.isOperationLegalOrCustom(ISD::USUBSAT, NarrowVT))
           continue;
@@ -18446,7 +18446,8 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   //   => int_vt (any_extend elt_vt:x)
   if (N0.getOpcode() == ISD::SCALAR_TO_VECTOR && VT.isScalarInteger()) {
     SDValue SrcScalar = N0.getOperand(0);
-    if (SrcScalar.getValueType().isScalarInteger())
+    EVT SrcVT = SrcScalar.getValueType();
+    if (SrcVT.isScalarInteger() && VT.bitsGT(SrcVT))
       return DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), VT, SrcScalar);
   }
 

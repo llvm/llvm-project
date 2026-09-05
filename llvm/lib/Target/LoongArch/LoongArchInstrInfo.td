@@ -456,8 +456,10 @@ def simm16_lsl2 : Operand<GRLenVT>,
 
 def simm16_lsl2_br : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<16, "lsl2">;
+  let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsr<2>";
-  let DecoderMethod = "decodeSImmOperand<16, 2>";
+  let DecoderMethod = "decodeSImmOperand<16, 2, true>";
+  let OperandType = "OPERAND_PCREL";
 }
 
 class SImm20Operand : Operand<GRLenVT> {
@@ -492,10 +494,19 @@ def simm20_pcaddi : SImm20Operand {
   let ParserMatchClass = SImmAsmOperand<20, "pcaddi">;
 }
 
+// Kept for JISCR[01] without PC-rel branching semantics
 def simm21_lsl2 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<21, "lsl2">;
   let EncoderMethod = "getImmOpValueAsr<2>";
   let DecoderMethod = "decodeSImmOperand<21, 2>";
+}
+
+def simm21_lsl2_br : Operand<OtherVT> {
+  let ParserMatchClass = SImmAsmOperand<21, "lsl2">;
+  let PrintMethod = "printBranchOperand";
+  let EncoderMethod = "getImmOpValueAsr<2>";
+  let DecoderMethod = "decodeSImmOperand<21, 2, true>";
+  let OperandType = "OPERAND_PCREL";
 }
 
 def SImm26OperandB: AsmOperandClass {
@@ -509,8 +520,10 @@ def SImm26OperandB: AsmOperandClass {
 // A symbol or an imm used in B/PseudoBR.
 def simm26_b : Operand<OtherVT> {
   let ParserMatchClass = SImm26OperandB;
+  let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsr<2>";
-  let DecoderMethod = "decodeSImmOperand<26, 2>";
+  let DecoderMethod = "decodeSImmOperand<26, 2, true>";
+  let OperandType = "OPERAND_PCREL";
 }
 
 def SImm26OperandBL: AsmOperandClass {
@@ -524,8 +537,10 @@ def SImm26OperandBL: AsmOperandClass {
 // A symbol or an imm used in BL/PseudoCALL_SMALL/PseudoTAIL_SMALL.
 def simm26_symbol : Operand<GRLenVT> {
   let ParserMatchClass = SImm26OperandBL;
+  let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsr<2>";
-  let DecoderMethod = "decodeSImmOperand<26, 2>";
+  let DecoderMethod = "decodeSImmOperand<26, 2, true>";
+  let OperandType = "OPERAND_PCREL";
 }
 
 // A 32-bit signed immediate with the lowest 16 bits zeroed, suitable for
@@ -766,7 +781,7 @@ class BrCC_2RI16<bits<32> op>
   let isTerminator = 1;
 }
 class BrCCZ_1RI21<bits<32> op>
-    : Fmt1RI21<op, (outs), (ins GPR:$rj, simm21_lsl2:$imm21),
+    : Fmt1RI21<op, (outs), (ins GPR:$rj, simm21_lsl2_br:$imm21),
                "$rj, $imm21"> {
   let isBranch = 1;
   let isTerminator = 1;

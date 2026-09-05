@@ -7181,7 +7181,7 @@ CFI
 
 2.  The CFI CFA is defined using an expression which evaluates to a location
     description that comprises one memory location description for the
-    ``DW_ASPACE_AMDGPU_private_lane`` address space address ``0``.
+    ``DW_ASPACE_AMDGPU_private_wave`` address space address ``0``.
 
 .. _amdgpu-amdhsa-kernel-prolog-m0:
 

@@ -1299,13 +1299,6 @@ def Bounded : IgnoredAttr {
   let Spellings = [GNU<"bounded">];
 }
 
-def CarriesDependency : InheritableParamAttr {
-  let Spellings = [GNU<"carries_dependency">,
-                   CXX11<"","carries_dependency", 200809>];
-  let Subjects = SubjectList<[ParmVar, ObjCMethod, Function], ErrorDiag>;
-  let Documentation = [CarriesDependencyDocs];
-}
-
 def CDecl : DeclOrTypeAttr {
   let Spellings = [GCC<"cdecl">, CustomKeyword<"__cdecl">, CustomKeyword<"_cdecl">];
 //  let Subjects = [Function, ObjCMethod];
@@ -2590,7 +2583,7 @@ def WebAssemblyExportName : InheritableAttr,
   let Spellings = [Clang<"export_name">];
   let Args = [StringArgument<"ExportName">];
   let Documentation = [WebAssemblyExportNameDocs];
-  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Subjects = SubjectList<[Function, GlobalVar], ErrorDiag>;
 }
 
 def WebAssemblyImportModule : InheritableAttr,
@@ -2598,7 +2591,7 @@ def WebAssemblyImportModule : InheritableAttr,
   let Spellings = [Clang<"import_module">];
   let Args = [StringArgument<"ImportModule">];
   let Documentation = [WebAssemblyImportModuleDocs];
-  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Subjects = SubjectList<[Function, GlobalVar], ErrorDiag>;
 }
 
 def WebAssemblyImportName : InheritableAttr,
@@ -2606,7 +2599,7 @@ def WebAssemblyImportName : InheritableAttr,
   let Spellings = [Clang<"import_name">];
   let Args = [StringArgument<"ImportName">];
   let Documentation = [WebAssemblyImportNameDocs];
-  let Subjects = SubjectList<[Function], ErrorDiag>;
+  let Subjects = SubjectList<[Function, GlobalVar], ErrorDiag>;
 }
 
 def NoSplitStack : InheritableAttr {
@@ -4887,6 +4880,20 @@ def OMPAssume : InheritableAttr {
   let InheritEvenIfAlreadyPresent = 1;
   let Documentation = [OMPAssumeDocs];
   let Args = [StringArgument<"Assumption">];
+}
+
+def OMPInvariantPredicateBound : StmtAttr {
+  // Internal droppable hint on an `#pragma omp tile` intra-tile loop.
+  // RectCond: rectangular bound (`t < floor + T`) used instead of the stored
+  //           `min(floor + T, N)` condition.
+  // TileSize: constant intra-tile trip count T.
+  // Predicate: optional overshoot guard (`t < N`); omitted when N % T == 0.
+  let Spellings = [];
+  let SemaHandler = 0;
+  let Subjects = SubjectList<[Stmt], ErrorDiag>;
+  let Args = [ExprArgument<"RectCond">, ExprArgument<"TileSize">,
+              ExprArgument<"Predicate", 1>];
+  let Documentation = [InternalOnly];
 }
 
 def InternalLinkage : InheritableAttr {

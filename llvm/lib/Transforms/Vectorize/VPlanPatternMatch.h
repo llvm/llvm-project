@@ -560,6 +560,18 @@ inline AllRecipe_match<Instruction::FPExt, Op0_t> m_FPExt(const Op0_t &Op0) {
 }
 
 template <typename Op0_t>
+inline AllRecipe_match<Instruction::BitCast, Op0_t>
+m_BitCast(const Op0_t &Op0) {
+  return m_Unary<Instruction::BitCast, Op0_t>(Op0);
+}
+
+template <typename Op0_t>
+inline AllRecipe_match<Instruction::PtrToAddr, Op0_t>
+m_PtrToAddr(const Op0_t &Op0) {
+  return m_Unary<Instruction::PtrToAddr, Op0_t>(Op0);
+}
+
+template <typename Op0_t>
 inline AllRecipe_match<Instruction::FNeg, Op0_t> m_FNeg(const Op0_t &Op0) {
   return m_Unary<Instruction::FNeg, Op0_t>(Op0);
 }
@@ -671,6 +683,12 @@ template <typename Op0_t, typename Op1_t>
 inline AllRecipe_match<Instruction::URem, Op0_t, Op1_t>
 m_URem(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::URem, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::SDiv, Op0_t, Op1_t>
+m_SDiv(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::SDiv, Op0_t, Op1_t>(Op0, Op1);
 }
 
 template <typename Op0_t, typename Op1_t>

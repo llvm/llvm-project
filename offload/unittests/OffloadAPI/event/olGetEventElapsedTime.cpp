@@ -19,7 +19,7 @@ struct olGetEventElapsedTimeTest : OffloadQueueTest {
     SKIP_KNOWN_FAILURE(LevelZero{"unsupported feature"});
 
     ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));
-    ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->getBufferStart(),
+    ASSERT_SUCCESS(olCreateProgram(Context, Device, DeviceBin->getBufferStart(),
                                    DeviceBin->getBufferSize(), &Program));
     ASSERT_SUCCESS(olGetSymbol(Program, "foo", OL_SYMBOL_KIND_KERNEL, &Kernel));
 

@@ -472,8 +472,7 @@ define void @test_2xi64_different_loads_feeding_fmul(ptr noalias %data, ptr noal
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[GEP_SRC_0]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP5]]
-; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i64>, ptr [[GEP_SRC_0]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = mul <4 x i64> [[WIDE_LOAD]], [[WIDE_LOAD1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = mul <4 x i64> [[WIDE_LOAD]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = or disjoint i64 [[TMP5]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP8]], align 8

@@ -5,7 +5,7 @@
 ; BranchProbabilityInfo, but if we vectorize it then we will unconditionally
 ; execute it. Avoid this unprofitable vectorization by taking the nested
 ; probability into account in the cost model.
-define void @nested(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1) {
+define void @nested(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @nested(
 ; CHECK-SAME: ptr noalias [[P0:%.*]], ptr noalias [[P1:%.*]], i1 [[C0:%.*]], i1 [[C1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -63,7 +63,7 @@ exit:
 ; This is the same CFG as @nested above, but we have provided branch weights
 ; which tell BranchProbabilityInfo that then.1 will always be taken. In this
 ; case, we should vectorize because it is profitable.
-define void @always_taken(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1) {
+define void @always_taken(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @always_taken(
 ; CHECK-SAME: ptr noalias [[P0:%.*]], ptr noalias [[P1:%.*]], i1 [[C0:%.*]], i1 [[C1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]

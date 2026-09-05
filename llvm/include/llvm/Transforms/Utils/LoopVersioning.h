@@ -26,6 +26,7 @@ class SCEVPredicate;
 class ScalarEvolution;
 class LoopAccessInfo;
 class LoopInfo;
+class MemorySSAUpdater;
 struct RuntimeCheckingPtrGroup;
 typedef std::pair<const RuntimeCheckingPtrGroup *,
                   const RuntimeCheckingPtrGroup *>
@@ -46,10 +47,12 @@ public:
   /// object having no checks and we expect the user to add them.
   LLVM_ABI LoopVersioning(const LoopAccessInfo &LAI,
                           ArrayRef<RuntimePointerCheck> Checks, Loop *L,
-                          LoopInfo *LI, DominatorTree *DT, ScalarEvolution *SE);
+                          LoopInfo *LI, DominatorTree *DT, ScalarEvolution *SE,
+                          MemorySSAUpdater *MSSAU = nullptr);
 
   /// Performs the CFG manipulation part of versioning the loop including
-  /// the DominatorTree and LoopInfo updates.
+  /// the DominatorTree, LoopInfo and, if a MemorySSAUpdater was provided,
+  /// MemorySSA updates.
   ///
   /// The loop that was used to construct the class will be the "versioned" loop
   /// i.e. the loop that will receive control if all the memchecks pass.
@@ -148,6 +151,10 @@ private:
   LoopInfo *LI;
   DominatorTree *DT;
   ScalarEvolution *SE;
+
+  /// Updater to keep MemorySSA up to date, or nullptr if MemorySSA does not
+  /// need updating.
+  MemorySSAUpdater *MSSAU;
 };
 
 /// Expose LoopVersioning as a pass.  Currently this is only used for

@@ -12,7 +12,7 @@
 
 #include "orc-rt/bedrock/Session.h"
 #include "orc-rt/bedrock/QueueingRunner.h"
-#include "orc-rt/support/SPSWrapperFunction.h"
+#include "orc-rt/support/sps/SPSWrapperFunction.h"
 
 #include "orc-rt-c/bedrock/Session.h"
 
@@ -107,7 +107,7 @@ private:
       if (MCA) {
         bool Notify;
         {
-          std::scoped_lock Lock(MCA->M);
+          std::scoped_lock<std::mutex> Lock(MCA->M);
           --MCA->Outstanding;
           Notify = MCA->Shutdown && MCA->Outstanding == 0;
         }
