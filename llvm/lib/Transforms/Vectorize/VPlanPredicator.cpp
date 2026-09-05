@@ -81,11 +81,34 @@ class VPPredicator {
     return VPBB->getFirstNonPhi();
   }
 
+  /// Returns where to insert new blends in \p VPBB.
+  VPBasicBlock::iterator getBlendInsertPoint(VPBasicBlock *VPBB) {
+    VPBasicBlock::iterator It = getMaskInsertPoint(VPBB);
+    if (It == VPBB->end())
+      return It;
+    // Insert after any incoming edge masks if they were already inserted.
+    for (VPBlockBase *Pred : VPBB->predecessors())
+      if (VPValue *EdgeMask = getEdgeMask(cast<VPBasicBlock>(Pred), VPBB))
+        if (VPRecipeBase *EdgeR = EdgeMask->getDefiningRecipe())
+          if (EdgeR->getParent() == VPBB &&
+              !VPDT.properlyDominates(EdgeR, &*It)) {
+            It = std::next(EdgeR->getIterator());
+            if (It == VPBB->end())
+              return It;
+          }
+    return It;
+  }
+
   using EdgeTy = std::pair<const VPBasicBlock *, const VPBasicBlock *>;
 
   /// Compute the set of edges that are "furthest up" in the CFG for each
   /// incoming value of \p Phi.
   MapVector<EdgeTy, VPValue *> computeBlendEdges(VPPhi *Phi);
+
+  /// Given a set of \p Edges that each can reach \p VPBB, try to see if there
+  /// is a block in-mask that can be used for its blend mask. Only valid when
+  /// there's exactly one unique incoming value on the paths from Edges to VPBB.
+  VPValue *tryFindBlockInMask(ArrayRef<EdgeTy> Edges, VPBasicBlock *VPBB);
 
   /// Given a set of \p Edges that each can reach \p VPBB, return the OR of all
   /// edges, or an equivalent block in-mask.
@@ -275,6 +298,13 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
   for (auto [InVal, InVPBB] : Phi->incoming_values_and_blocks())
     AddEdge(InVPBB, Phi->getParent(), InVal);
 
+  // Don't optimize any phis used to mask tail values of reductions during tail
+  // folding until handleFindLastReductions can match the new form.
+  VPlan *Plan = Phi->getParent()->getPlan();
+  if (Phi->getParent() == Plan->getVectorLoopRegion()->getExiting() &&
+      any_of(Phi->incoming_values(), IsaPred<VPReductionPHIRecipe>))
+    return Edges;
+
   SetVector<const VPBlockBase *> Worklist(from_range, Phi->incoming_blocks());
   while (!Worklist.empty()) {
     auto *VPBB = cast<VPBasicBlock>(Worklist.pop_back_val());
@@ -293,6 +323,17 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
     for (EdgeTy Edge : OutEdges)
       Edges.erase(Edge);
 
+    // If the value is a phi postdominated by VPBB, then look through the inner
+    // incoming values instead of propagating the phi.
+    if (auto *Phi = dyn_cast<VPPhi>(Common))
+      if (Phi->hasOneUse() && VPPDT.dominates(VPBB, Phi->getParent())) {
+        for (auto [InV, InVPBB] : Phi->incoming_values_and_blocks()) {
+          AddEdge(InVPBB, Phi->getParent(), InV);
+          Worklist.insert(InVPBB);
+        }
+        continue;
+      }
+
     // Iterate up through the post dominance frontier.
     assert(VPPDF.find(VPBB) != VPPDF.end() &&
            "VPBB must have a post-dominance frontier entry");
@@ -307,8 +348,8 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
   return Edges;
 }
 
-VPValue *VPPredicator::createBlendMaskForEdges(ArrayRef<EdgeTy> Edges,
-                                               VPBasicBlock *VPBB) {
+VPValue *VPPredicator::tryFindBlockInMask(ArrayRef<EdgeTy> Edges,
+                                          VPBasicBlock *VPBB) {
   // If the nearest common postdominator to all of Edges destinations isn't VPBB
   // then we can use its block in-mask. E.g:
   //
@@ -321,16 +362,20 @@ VPValue *VPPredicator::createBlendMaskForEdges(ArrayRef<EdgeTy> Edges,
   //     VPBB
   //
   // If the edges are A->D and B->C, PostDom will be D. We can reuse Ds block
-  // in-mask.
+  // in-mask. Only valid when there is only one unique incoming value flowing
+  // from the edges to VPBB.
   const VPBasicBlock *PostDom = Edges[0].second;
   for (auto [_, DstVPBB] : drop_begin(Edges))
     PostDom =
         cast<VPBasicBlock>(VPPDT.findNearestCommonDominator(PostDom, DstVPBB));
   assert(VPPDT.dominates(VPBB, PostDom) && "VPBB doesn't postdominate edges");
-  if (PostDom != VPBB)
-    return getBlockInMask(PostDom);
+  if (PostDom == VPBB)
+    return nullptr;
+  return getBlockInMask(PostDom);
+}
 
-  // Otherwise, compute the disjunction of edges.
+VPValue *VPPredicator::createBlendMaskForEdges(ArrayRef<EdgeTy> Edges,
+                                               VPBasicBlock *VPBB) {
   VPValue *Mask = nullptr;
   for (auto [Src, ConstDst] : Edges) {
     auto *Dst = const_cast<VPBasicBlock *>(ConstDst);
@@ -346,7 +391,7 @@ VPValue *VPPredicator::createBlendMaskForEdges(ArrayRef<EdgeTy> Edges,
 }
 
 void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
-  Builder.setInsertPoint(VPBB, getMaskInsertPoint(VPBB));
+  Builder.setInsertPoint(VPBB, getBlendInsertPoint(VPBB));
 
   SmallVector<VPPhi *> Phis;
   for (VPRecipeBase &R : VPBB->phis())
@@ -371,7 +416,18 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     MapVector<VPValue *, SmallVector<EdgeTy>> InValEdgesMap;
     for (auto [Edge, Val] : computeBlendEdges(PhiR))
       InValEdgesMap[Val].push_back(Edge);
+    bool IncomingEdgesUnique =
+        all_of(PhiR->incoming_values(), [&](VPValue *InV) {
+          return is_contained(InValEdgesMap.keys(), InV);
+        });
+
     auto InValEdges = InValEdgesMap.takeVector();
+
+    if (InValEdges.size() == 1) {
+      PhiR->replaceAllUsesWith(InValEdges[0].first);
+      PhiR->eraseFromParent();
+      continue;
+    }
 
     // Sort the incoming value order to match PhiR as much as possible.
     llvm::stable_sort(InValEdges, [&PhiR](auto &L, auto &R) {
@@ -383,6 +439,12 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     SmallVector<VPValue *, 2> OperandsWithMask;
     for (const auto &[InVPV, Edges] : InValEdges) {
       OperandsWithMask.push_back(InVPV);
+      if (IncomingEdgesUnique) {
+        if (auto *Mask = tryFindBlockInMask(Edges, VPBB)) {
+          OperandsWithMask.push_back(Mask);
+          continue;
+        }
+      }
       OperandsWithMask.push_back(createBlendMaskForEdges(Edges, VPBB));
     }
     PHINode *IRPhi = cast_or_null<PHINode>(PhiR->getUnderlyingValue());
