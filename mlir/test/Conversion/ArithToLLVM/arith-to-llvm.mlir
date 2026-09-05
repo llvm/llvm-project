@@ -838,10 +838,55 @@ func.func @minmaxf(%arg0 : f32, %arg1 : f32) -> f32 {
   %2 = arith.minnumf %arg0, %arg1 : f32
   // CHECK: = llvm.intr.maxnum(%arg0, %arg1) : (f32, f32) -> f32
   %3 = arith.maxnumf %arg0, %arg1 : f32
+  // CHECK: = llvm.intr.minimumnum(%arg0, %arg1) : (f32, f32) -> f32
+  %4 = arith.minimumnumf %arg0, %arg1 : f32
+  // CHECK: = llvm.intr.maximumnum(%arg0, %arg1) : (f32, f32) -> f32
+  %5 = arith.maximumnumf %arg0, %arg1 : f32
   return %0 : f32
 }
 
 // -----
+
+// CHECK-LABEL: @minmaxnumf_float_widths
+func.func @minmaxnumf_float_widths(%arg0 : f16, %arg1 : f16, %arg2 : bf16,
+                                   %arg3 : bf16, %arg4 : f64, %arg5 : f64) {
+  // CHECK: = llvm.intr.minimumnum(%arg0, %arg1) : (f16, f16) -> f16
+  %0 = arith.minimumnumf %arg0, %arg1 : f16
+  // CHECK: = llvm.intr.maximumnum(%arg0, %arg1) : (f16, f16) -> f16
+  %1 = arith.maximumnumf %arg0, %arg1 : f16
+  // CHECK: = llvm.intr.minimumnum(%arg2, %arg3) : (bf16, bf16) -> bf16
+  %2 = arith.minimumnumf %arg2, %arg3 : bf16
+  // CHECK: = llvm.intr.maximumnum(%arg2, %arg3) : (bf16, bf16) -> bf16
+  %3 = arith.maximumnumf %arg2, %arg3 : bf16
+  // CHECK: = llvm.intr.minimumnum(%arg4, %arg5) : (f64, f64) -> f64
+  %4 = arith.minimumnumf %arg4, %arg5 : f64
+  // CHECK: = llvm.intr.maximumnum(%arg4, %arg5) : (f64, f64) -> f64
+  %5 = arith.maximumnumf %arg4, %arg5 : f64
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @minmaxnumf_vector
+func.func @minmaxnumf_vector(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) {
+  // CHECK: = llvm.intr.minimumnum(%arg0, %arg1) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+  %0 = arith.minimumnumf %arg0, %arg1 : vector<4xf32>
+  // CHECK: = llvm.intr.maximumnum(%arg0, %arg1) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+  %1 = arith.maximumnumf %arg0, %arg1 : vector<4xf32>
+  return
+}
+
+// -----
+
+//    CHECK-LABEL: @minmaxnumf_2dvector
+// CHECK-COUNT-2:   llvm.intr.minimumnum({{.*}}) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+// CHECK-COUNT-2:   llvm.intr.maximumnum({{.*}}) : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+func.func @minmaxnumf_2dvector(%arg0 : vector<2x4xf32>,
+                               %arg1 : vector<2x4xf32>) {
+  %0 = arith.minimumnumf %arg0, %arg1 : vector<2x4xf32>
+  %1 = arith.maximumnumf %arg0, %arg1 : vector<2x4xf32>
+  return
+}
 
 // CHECK-LABEL: @fastmath
 func.func @fastmath(%arg0: f32, %arg1: f32, %arg2: i32) {
@@ -870,14 +915,18 @@ func.func @ops_supporting_fastmath(%arg0: f32, %arg1: f32, %arg2: i32) {
   %2 = arith.maximumf %arg0, %arg1 fastmath<fast> : f32
 // CHECK: llvm.intr.minimum(%arg0, %arg1) fastmath<fast> : (f32, f32) -> f32
   %3 = arith.minimumf %arg0, %arg1 fastmath<fast> : f32
+// CHECK: llvm.intr.maximumnum(%arg0, %arg1) fastmath<fast> : (f32, f32) -> f32
+  %4 = arith.maximumnumf %arg0, %arg1 fastmath<fast> : f32
+// CHECK: llvm.intr.minimumnum(%arg0, %arg1) fastmath<fast> : (f32, f32) -> f32
+  %5 = arith.minimumnumf %arg0, %arg1 fastmath<fast> : f32
 // CHECK: llvm.fmul %arg0, %arg1 fastmath<fast> : f32
-  %4 = arith.mulf %arg0, %arg1 fastmath<fast> : f32
+  %6 = arith.mulf %arg0, %arg1 fastmath<fast> : f32
 // CHECK: llvm.fneg %arg0 fastmath<fast> : f32
-  %5 = arith.negf %arg0 fastmath<fast> : f32
+  %7 = arith.negf %arg0 fastmath<fast> : f32
 // CHECK: llvm.frem %arg0, %arg1 fastmath<fast> : f32
-  %6 = arith.remf %arg0, %arg1 fastmath<fast> : f32
+  %8 = arith.remf %arg0, %arg1 fastmath<fast> : f32
 // CHECK: llvm.fsub %arg0, %arg1 fastmath<fast> : f32
-  %7 = arith.subf %arg0, %arg1 fastmath<fast> : f32
+  %9 = arith.subf %arg0, %arg1 fastmath<fast> : f32
   return
 }
 

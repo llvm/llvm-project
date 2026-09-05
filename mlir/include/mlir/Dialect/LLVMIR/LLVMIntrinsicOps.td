@@ -201,6 +201,8 @@ def LLVM_MaxNumOp : LLVM_BinarySameArgsIntrOpF<"maxnum">;
 def LLVM_MinNumOp : LLVM_BinarySameArgsIntrOpF<"minnum">;
 def LLVM_MaximumOp : LLVM_BinarySameArgsIntrOpF<"maximum">;
 def LLVM_MinimumOp : LLVM_BinarySameArgsIntrOpF<"minimum">;
+def LLVM_MaximumNumOp : LLVM_BinarySameArgsIntrOpF<"maximumnum">;
+def LLVM_MinimumNumOp : LLVM_BinarySameArgsIntrOpF<"minimumnum">;
 def LLVM_SMaxOp : LLVM_BinarySameArgsIntrOpI<"smax">;
 def LLVM_SMinOp : LLVM_BinarySameArgsIntrOpI<"smin">;
 def LLVM_UMaxOp : LLVM_BinarySameArgsIntrOpI<"umax">;
@@ -1263,6 +1265,8 @@ def LLVM_vector_reduce_fmax : LLVM_VecReductionF<"fmax">;
 def LLVM_vector_reduce_fmin : LLVM_VecReductionF<"fmin">;
 def LLVM_vector_reduce_fmaximum : LLVM_VecReductionF<"fmaximum">;
 def LLVM_vector_reduce_fminimum : LLVM_VecReductionF<"fminimum">;
+def LLVM_vector_reduce_fmaximumnum : LLVM_VecReductionF<"fmaximumnum">;
+def LLVM_vector_reduce_fminimumnum : LLVM_VecReductionF<"fminimumnum">;
 
 def LLVM_vector_reduce_fadd : LLVM_VecReductionAccF<"fadd">;
 def LLVM_vector_reduce_fmul : LLVM_VecReductionAccF<"fmul">;

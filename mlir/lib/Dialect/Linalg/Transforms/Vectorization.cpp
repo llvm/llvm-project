@@ -650,10 +650,12 @@ mlir::linalg::getCombinerOpKind(Operation *combinerOp) {
       .Case([&](arith::MaxUIOp op) { return CombiningKind::MAXUI; })
       .Case([&](arith::MaximumFOp op) { return CombiningKind::MAXIMUMF; })
       .Case([&](arith::MaxNumFOp op) { return CombiningKind::MAXNUMF; })
+      .Case([&](arith::MaximumNumFOp op) { return CombiningKind::MAXIMUMNUMF; })
       .Case([&](arith::MinSIOp op) { return CombiningKind::MINSI; })
       .Case([&](arith::MinUIOp op) { return CombiningKind::MINUI; })
       .Case([&](arith::MinimumFOp op) { return CombiningKind::MINIMUMF; })
       .Case([&](arith::MinNumFOp op) { return CombiningKind::MINNUMF; })
+      .Case([&](arith::MinimumNumFOp op) { return CombiningKind::MINIMUMNUMF; })
       .Case<arith::MulIOp, arith::MulFOp>(
           [&](auto op) { return CombiningKind::MUL; })
       .Case([&](arith::OrIOp op) { return CombiningKind::OR; })
@@ -2205,10 +2207,12 @@ static bool isSupportedPoolKind(vector::CombiningKind kind) {
   case vector::CombiningKind::ADD:
   case vector::CombiningKind::MAXNUMF:
   case vector::CombiningKind::MAXIMUMF:
+  case vector::CombiningKind::MAXIMUMNUMF:
   case vector::CombiningKind::MAXSI:
   case vector::CombiningKind::MAXUI:
   case vector::CombiningKind::MINNUMF:
   case vector::CombiningKind::MINIMUMF:
+  case vector::CombiningKind::MINIMUMNUMF:
   case vector::CombiningKind::MINSI:
   case vector::CombiningKind::MINUI:
     return true;

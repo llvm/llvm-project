@@ -726,6 +726,14 @@ template <>
 struct VectorToScalarMapper<LLVM::vector_reduce_fmin> {
   using Type = LLVM::MinNumOp;
 };
+template <>
+struct VectorToScalarMapper<LLVM::vector_reduce_fmaximumnum> {
+  using Type = LLVM::MaximumNumOp;
+};
+template <>
+struct VectorToScalarMapper<LLVM::vector_reduce_fminimumnum> {
+  using Type = LLVM::MinimumNumOp;
+};
 } // namespace
 
 template <class LLVMRedIntrinOp>
@@ -741,6 +749,60 @@ static Value createFPReductionComparisonOpLowering(
   }
 
   return result;
+}
+
+/// Mask neutral classes for overloading.
+class MaskNeutralFMaximumNum {};
+class MaskNeutralFMinimumNum {};
+
+/// Get the mask neutral value for a `fmaximumnum` reduction. `maximumnum`
+/// ignores NaN operands, making a quiet NaN the identity element. When `nnan`
+/// promises no NaN reaches the reduction, fall back to the smallest
+/// representable value, which `ninf` further constrains to be finite.
+static llvm::APFloat getMaskNeutralValue(MaskNeutralFMaximumNum,
+                                         const llvm::fltSemantics &semantics,
+                                         bool noNaNs, bool noInfs) {
+  if (!noNaNs)
+    return llvm::APFloat::getQNaN(semantics, /*Negative=*/false);
+  return noInfs ? llvm::APFloat::getLargest(semantics, /*Negative=*/true)
+                : llvm::APFloat::getInf(semantics, /*Negative=*/true);
+}
+
+/// Get the mask neutral value for a `fminimumnum` reduction. See the
+/// `fmaximumnum` overload above for the rationale.
+static llvm::APFloat getMaskNeutralValue(MaskNeutralFMinimumNum,
+                                         const llvm::fltSemantics &semantics,
+                                         bool noNaNs, bool noInfs) {
+  if (!noNaNs)
+    return llvm::APFloat::getQNaN(semantics, /*Negative=*/false);
+  return noInfs ? llvm::APFloat::getLargest(semantics, /*Negative=*/false)
+                : llvm::APFloat::getInf(semantics, /*Negative=*/false);
+}
+
+/// Lowers masked `fmaximumnum` and `fminimumnum` reductions using the
+/// non-masked intrinsics, since LLVM has no predicated counterpart for them.
+/// Inactive lanes are replaced by a mask neutral value before reducing.
+/// TODO: Switch to `lowerPredicatedReductionWithStartValue` once
+/// `llvm.vp.reduce.fmaximumnum`/`fminimumnum` are added to LLVM IR.
+template <class LLVMRedIntrinOp, class MaskNeutral>
+static Value
+lowerMaskedReductionWithRegular(ConversionPatternRewriter &rewriter,
+                                Location loc, Type llvmType,
+                                Value vectorOperand, Value accumulator,
+                                Value mask, LLVM::FastmathFlagsAttr fmf) {
+  const auto &floatSemantics = cast<FloatType>(llvmType).getFloatSemantics();
+  auto value = getMaskNeutralValue(
+      MaskNeutral{}, floatSemantics,
+      LLVM::bitEnumContainsAny(fmf.getValue(), LLVM::FastmathFlags::nnan),
+      LLVM::bitEnumContainsAny(fmf.getValue(), LLVM::FastmathFlags::ninf));
+  Type vectorType = vectorOperand.getType();
+  auto denseValue = DenseElementsAttr::get(cast<ShapedType>(vectorType), value);
+  const Value vectorMaskNeutral =
+      LLVM::ConstantOp::create(rewriter, loc, vectorType, denseValue);
+  const Value selectedVectorByMask = LLVM::SelectOp::create(
+      rewriter, loc, mask, vectorOperand, vectorMaskNeutral);
+  return createFPReductionComparisonOpLowering<LLVMRedIntrinOp>(
+      rewriter, loc, llvmType, selectedVectorByMask, accumulator, fmf);
 }
 
 template <class LLVMRedIntrinOp, class ReductionNeutral>
@@ -915,6 +977,14 @@ public:
     } else if (kind == vector::CombiningKind::MAXNUMF) {
       result = createFPReductionComparisonOpLowering<LLVM::vector_reduce_fmax>(
           rewriter, loc, llvmType, operand, acc, fmf);
+    } else if (kind == vector::CombiningKind::MAXIMUMNUMF) {
+      result = createFPReductionComparisonOpLowering<
+          LLVM::vector_reduce_fmaximumnum>(rewriter, loc, llvmType, operand,
+                                           acc, fmf);
+    } else if (kind == vector::CombiningKind::MINIMUMNUMF) {
+      result = createFPReductionComparisonOpLowering<
+          LLVM::vector_reduce_fminimumnum>(rewriter, loc, llvmType, operand,
+                                           acc, fmf);
     } else {
       return failure();
     }
@@ -1064,6 +1134,16 @@ public:
               : lowerPredicatedReductionWithStartValue<
                     LLVM::VPReduceFMinimumOp, ReductionNeutralFPPosInf>(
                     rewriter, loc, llvmType, operand, acc, maskOp.getMask());
+      break;
+    case CombiningKind::MAXIMUMNUMF:
+      result = lowerMaskedReductionWithRegular<LLVM::vector_reduce_fmaximumnum,
+                                               MaskNeutralFMaximumNum>(
+          rewriter, loc, llvmType, operand, acc, maskOp.getMask(), fmf);
+      break;
+    case CombiningKind::MINIMUMNUMF:
+      result = lowerMaskedReductionWithRegular<LLVM::vector_reduce_fminimumnum,
+                                               MaskNeutralFMinimumNum>(
+          rewriter, loc, llvmType, operand, acc, maskOp.getMask(), fmf);
       break;
     }
 
