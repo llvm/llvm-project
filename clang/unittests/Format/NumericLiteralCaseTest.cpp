@@ -340,15 +340,19 @@ TEST_F(NumericLiteralCaseTest, UnderScoreSeparatorLanguages) {
   verifyFormat("o = 0o0_10_010;", "o = 0O0_10_010;", Style);
 }
 
-TEST_F(NumericLiteralCaseTest, IgnoresMacroInvocations) {
-  // Arguments of a likely macro invocation aren't literals.
-  constexpr StringRef A("FOO(0xabc);");
-  constexpr StringRef B("FOO(bar(1), 0xabc);");
-  // Non-macro contexts, where literals are still formatted.
-  constexpr StringRef C("foo(0xabc);");
-  constexpr StringRef D("FOO(1) + 0xabc;");
-  constexpr StringRef E("T(0xabc);");
-  constexpr StringRef F("NS::FOO(0xabc);");
+TEST_F(NumericLiteralCaseTest, IgnoresWhitespaceSensitiveMacros) {
+  // Arguments of a whitespace-sensitive macro (e.g. a stringizing macro) must
+  // not be recased; everything else still is.
+  constexpr StringRef A("a = STRINGIZE(0xabc);");
+  constexpr StringRef B("b = PP_STRINGIZE(0xa, 0xb);");
+  // Nested parens and multiple literals inside the macro are all left alone.
+  constexpr StringRef C("c = STRINGIZE(f(0xa) + 0xb);");
+  // A literal outside the macro is still formatted.
+  constexpr StringRef D("d = STRINGIZE(1) + 0xabc;");
+  // A macro that is not whitespace-sensitive, and a plain literal, are still
+  // formatted.
+  constexpr StringRef E("e = FOO(0xabc);");
+  constexpr StringRef F("f = 0xabc;");
   verifyFormat(A);
   verifyFormat(B);
   verifyFormat(C);
@@ -358,12 +362,18 @@ TEST_F(NumericLiteralCaseTest, IgnoresMacroInvocations) {
 
   auto Style = getLLVMStyle();
   Style.NumericLiteralCase.HexDigit = FormatStyle::NLCS_Upper;
+  // STRINGIZE and PP_STRINGIZE are whitespace-sensitive by default.
   verifyFormat(A, Style);
   verifyFormat(B, Style);
-  verifyFormat("foo(0xABC);", C, Style);
-  verifyFormat("FOO(1) + 0xABC;", D, Style);
-  verifyFormat("T(0xABC);", E, Style);
-  verifyFormat("NS::FOO(0xABC);", F, Style);
+  verifyFormat(C, Style);
+  verifyFormat("d = STRINGIZE(1) + 0xABC;", D, Style);
+  verifyFormat("e = FOO(0xABC);", E, Style);
+  verifyFormat("f = 0xABC;", F, Style);
+
+  // A user-declared macro is honored too, including its nested arguments.
+  Style.WhitespaceSensitiveMacros.push_back("FOO");
+  verifyFormat(E, Style);
+  verifyFormat("g = FOO(h(0xa), 0xbc);", Style);
 }
 
 } // namespace

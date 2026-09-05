@@ -16,6 +16,7 @@
 #include "NumericLiteralInfo.h"
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringSet.h"
 
 #include <algorithm>
 
@@ -41,11 +42,6 @@ static bool isNumericLiteralCaseFixerNeeded(const FormatStyle &Style) {
   const auto Leave = FormatStyle::NLCS_Leave;
   return Option.Prefix != Leave || Option.HexDigit != Leave ||
          Option.ExponentLetter != Leave || Option.Suffix != Leave;
-}
-
-// An all-caps identifier is likely a macro; see FormatToken::isPossibleMacro.
-static bool isPossibleMacroName(StringRef Name) {
-  return Name.size() > 1 && Name == Name.upper();
 }
 
 static std::string
@@ -135,6 +131,12 @@ NumericLiteralCaseFixer::process(const Environment &Env,
   const auto &SourceMgr = Env.getSourceManager();
   AffectedRangeManager AffectedRangeMgr(SourceMgr, Env.getCharRanges());
 
+  // Don't recase pp-numbers inside whitespace-sensitive macros (e.g.
+  // STRINGIZE(0xa)); recasing a stringized argument would change the result.
+  llvm::StringSet<> UntouchableMacros;
+  for (StringRef Macro : Style.WhitespaceSensitiveMacros)
+    UntouchableMacros.insert(Macro);
+
   const auto ID = Env.getFileID();
   const auto LangOpts = getFormattingLangOpts(Style);
   Lexer Lex(ID, SourceMgr.getBufferOrFake(ID), SourceMgr, LangOpts);
@@ -142,14 +144,12 @@ NumericLiteralCaseFixer::process(const Environment &Env,
 
   Token Tok;
   tooling::Replacements Result;
-  int MacroArgDepth = 0; // Paren depth inside a possible macro invocation.
+  int MacroArgDepth = 0; // Paren depth inside an untouchable macro invocation.
 
-  for (bool Skip = false, AfterMacroName = false, AfterScope = false;
-       !Lex.LexFromRawLexer(Tok);) {
-    // Leave arguments of a likely macro invocation (e.g. FOO(0xa)) untouched.
+  for (bool Skip = false, AfterMacroName = false; !Lex.LexFromRawLexer(Tok);) {
+    // Track whether we are inside the argument list of an untouchable macro.
     if (Tok.is(tok::raw_identifier)) {
-      AfterMacroName =
-          !AfterScope && isPossibleMacroName(Tok.getRawIdentifier());
+      AfterMacroName = UntouchableMacros.contains(Tok.getRawIdentifier());
     } else if (Tok.is(tok::l_paren)) {
       if (MacroArgDepth > 0 || AfterMacroName)
         ++MacroArgDepth;
@@ -159,7 +159,6 @@ NumericLiteralCaseFixer::process(const Environment &Env,
         --MacroArgDepth;
       AfterMacroName = false;
     }
-    AfterScope = Tok.is(tok::coloncolon);
 
     // Skip tokens that are too small to contain a formattable literal.
     // Size=2 is the smallest possible literal that could contain formattable
