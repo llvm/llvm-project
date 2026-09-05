@@ -29,6 +29,12 @@ def vector_select_to_faceforward_lowering : GICombineRule <
   (apply [{ Helper.applySPIRVFaceForward(*${root}); }])
 >;
 
+def degrees_lowering
+    : GICombineRule<(defs root:$root),
+                    (match (G_FMUL $dst, $lhs, $rhs):$root,
+                        [{ return Helper.matchDegrees(*${root}); }]),
+                    (apply [{ Helper.applyDegrees(*${root}); }])>;
+
 def matrix_transpose_lowering
     : GICombineRule<
           (defs root:$root),
@@ -50,6 +56,6 @@ def SPIRVPreLegalizerCombiner
                  [vector_length_sub_to_distance_lowering,
                   vector_fdiv_length_to_normalize_lowering,
                   vector_select_to_faceforward_lowering,
-                  matrix_transpose_lowering, matrix_multiply_lowering]> {
+                  degrees_lowering, matrix_transpose_lowering, matrix_multiply_lowering]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
