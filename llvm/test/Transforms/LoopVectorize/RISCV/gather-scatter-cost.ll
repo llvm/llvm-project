@@ -101,8 +101,8 @@ define void @predicated_strided_store(ptr %start) {
 ; RVA23-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; RVA23-NEXT:    [[AVL:%.*]] = phi i64 [ 586, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; RVA23-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 16, i1 true)
-; RVA23-NEXT:    [[TMP1:%.*]] = mul i64 [[INDEX]], 7
-; RVA23-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[START:%.*]], i64 [[TMP1]]
+; RVA23-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[INDEX]], 7
+; RVA23-NEXT:    [[TMP2:%.*]] = getelementptr nuw i8, ptr [[START:%.*]], i64 [[TMP1]]
 ; RVA23-NEXT:    call void @llvm.experimental.vp.strided.store.nxv16i8.p0.i64(<vscale x 16 x i8> zeroinitializer, ptr align 1 [[TMP2]], i64 7, <vscale x 16 x i1> splat (i1 true), i32 [[TMP0]])
 ; RVA23-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP0]] to i64
 ; RVA23-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP3]], [[INDEX]]
@@ -123,8 +123,8 @@ define void @predicated_strided_store(ptr %start) {
 ; RVA23ZVL1024B-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; RVA23ZVL1024B-NEXT:    [[AVL:%.*]] = phi i64 [ 586, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; RVA23ZVL1024B-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
-; RVA23ZVL1024B-NEXT:    [[TMP1:%.*]] = mul i64 [[INDEX]], 7
-; RVA23ZVL1024B-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[START:%.*]], i64 [[TMP1]]
+; RVA23ZVL1024B-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[INDEX]], 7
+; RVA23ZVL1024B-NEXT:    [[TMP2:%.*]] = getelementptr nuw i8, ptr [[START:%.*]], i64 [[TMP1]]
 ; RVA23ZVL1024B-NEXT:    call void @llvm.experimental.vp.strided.store.nxv8i8.p0.i64(<vscale x 8 x i8> zeroinitializer, ptr align 1 [[TMP2]], i64 7, <vscale x 8 x i1> splat (i1 true), i32 [[TMP0]])
 ; RVA23ZVL1024B-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP0]] to i64
 ; RVA23ZVL1024B-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP3]], [[INDEX]]

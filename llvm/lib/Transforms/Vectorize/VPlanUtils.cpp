@@ -358,6 +358,41 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
   return PSE.getPredicatedSCEV(Expr);
 }
 
+std::optional<std::tuple<const SCEV *, const SCEV *, SCEVNoWrapFlags>>
+vputils::getStrideExpr(const VPValue *Ptr, PredicatedScalarEvolution &PSE,
+                       const Loop &L, Type *AccessTy) {
+  assert(Ptr->getScalarType()->isPointerTy() && "Ptr must be pointer type");
+  ScalarEvolution &SE = *PSE.getSE();
+  const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, &L);
+  if (isa<SCEVCouldNotCompute>(PtrSCEV))
+    return std::nullopt;
+  const SCEV *PointerBase = SE.getPointerBase(PtrSCEV);
+  const SCEV *StrideExpr = SE.removePointerBase(PtrSCEV);
+  Type *StrideTy = StrideExpr->getType();
+  const SCEV *Start;
+  const SCEV *Step;
+  if (!match(StrideExpr, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step),
+                                             m_SpecificLoop(&L))))
+    return std::nullopt;
+  SCEVNoWrapFlags NWFlags = cast<SCEVAddRecExpr>(StrideExpr)->getNoWrapFlags();
+  const SCEV *Base =
+      SE.getAddExpr(PointerBase, SE.getNoopOrSignExtend(Start, StrideTy));
+  const DataLayout &DL = SE.getDataLayout();
+  TypeSize AllocSz = DL.getTypeAllocSize(AccessTy);
+  if (AllocSz.isScalable())
+    return std::nullopt;
+  // TODO: ScalarEvolution doesn't have SRem/SDiv expressions yet, so we
+  // resort to matching APInt.
+  const APInt *StepC;
+  if (!match(Step, m_scev_APInt(StepC)) ||
+      StepC->sext(StrideTy->getIntegerBitWidth()).srem(AllocSz) != 0)
+    return std::nullopt;
+  return std::make_tuple(
+      Base,
+      SE.getConstant(StepC->sext(StrideTy->getIntegerBitWidth()).sdiv(AllocSz)),
+      NWFlags);
+}
+
 bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,
                                    const Loop *L) {
   // If address is an SCEVAddExpr, we require that all operands must be either

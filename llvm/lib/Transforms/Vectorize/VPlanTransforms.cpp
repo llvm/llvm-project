@@ -54,17 +54,16 @@ static cl::opt<bool> UsePartialReductionsByDefault(
 /// If the pointer operand \p Addr of a memory access is an affine AddRec
 /// w.r.t. \p L with a constant stride, return the stride in units of
 /// \p AccessTy. Otherwise return std::nullopt.
-static std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
-                                                PredicatedScalarEvolution &PSE,
-                                                const Loop *L) {
+static std::optional<APInt> getConstantStride(VPValue *Addr, Type *AccessTy,
+                                              PredicatedScalarEvolution &PSE,
+                                              const Loop *L) {
   assert(!hasIrregularType(AccessTy, L->getHeader()->getDataLayout()) &&
          "should not try to widen irregular types");
-  const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
-  auto *AddRec = dyn_cast<SCEVAddRecExpr>(AddrSCEV);
-  if (!AddRec)
+  auto Stride = vputils::getStrideExpr(Addr, PSE, *L, AccessTy);
+  const APInt *StrideC;
+  if (!Stride || !match(std::get<1>(*Stride), m_scev_APInt(StrideC)))
     return {};
-
-  return getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE);
+  return *StrideC;
 }
 
 bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
@@ -5572,7 +5571,7 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         VPValue *Ptr = VPI->getOperand(!IsLoad);
         Type *ScalarTy =
             IsLoad ? VPI->getScalarType() : VPI->getOperand(0)->getScalarType();
-        std::optional<int64_t> Stride =
+        std::optional<APInt> Stride =
             getConstantStride(Ptr, ScalarTy, CostCtx.PSE, CostCtx.L);
         if (Stride != 1 && Stride != -1)
           return false;
@@ -5865,14 +5864,16 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       VPValue *Ptr = MemR->getAddr();
       // Check if this is a strided access by analyzing the address SCEV for an
       // affine addRec.
-      const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, &L);
-      const SCEV *Start;
-      const SCEVConstant *Step;
-      // TODO: Support non-constant loop invariant stride.
-      if (!match(PtrSCEV,
-                 m_scev_AffineAddRec(m_SCEV(Start), m_SCEVConstant(Step),
-                                     m_SpecificLoop(&L))))
+      auto StrideTup = vputils::getStrideExpr(
+          Ptr, PSE, L, Type::getInt8Ty(Plan.getContext()));
+      if (!StrideTup)
         continue;
+      auto [Start, Stride, NW] = *StrideTup;
+      // TODO: Support non-constant loop invariant stride.
+      const APInt *StrideC;
+      if (!match(Stride, m_scev_APInt(StrideC)))
+        continue;
+      bool HasNUW = any(NW & SCEV::FlagNUW);
 
       VPValue *StoredValue = nullptr;
       Type *DataTy;
@@ -5923,19 +5924,16 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       // supports a general VPValue as the start value.
       VPValue *StartVPV =
           VPSCEVExpander(Builder, *PSE.getSE(), R.getDebugLoc()).expand(Start);
-      VPValue *StrideInBytes = Plan.getOrAddLiveIn(Step->getValue());
+      VPValue *StrideInBytes = Plan.getConstantInt(*StrideC);
       Type *IndexTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
       assert(IndexTy == StrideInBytes->getScalarType() &&
              "Stride type from SCEV must match the index type");
       VPValue *CanIV = Builder.createScalarZExtOrTrunc(
           VectorLoop->getCanonicalIV(), IndexTy, DebugLoc::getUnknown());
-      auto *AddRecPtr = cast<SCEVAddRecExpr>(PtrSCEV);
       auto *Offset = Builder.createOverflowingOp(
-          Instruction::Mul, {CanIV, StrideInBytes},
-          {AddRecPtr->hasNoUnsignedWrap(), /*HasNSW=*/false});
-      GEPNoWrapFlags NWFlags = AddRecPtr->hasNoUnsignedWrap()
-                                   ? GEPNoWrapFlags::noUnsignedWrap()
-                                   : GEPNoWrapFlags::none();
+          Instruction::Mul, {CanIV, StrideInBytes}, {HasNUW, /*HasNSW=*/false});
+      GEPNoWrapFlags NWFlags =
+          HasNUW ? GEPNoWrapFlags::noUnsignedWrap() : GEPNoWrapFlags::none();
       VPValue *BasePtr = Builder.createNoWrapPtrAdd(StartVPV, Offset, NWFlags);
 
       // Create a new vector pointer for strided access.
