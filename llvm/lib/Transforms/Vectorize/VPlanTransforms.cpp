@@ -265,8 +265,7 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
                                VPBasicBlock *FirstBB, VPBasicBlock *LastBB,
                                std::optional<SinkStoreInfo> SinkInfo = {}) {
   bool CheckReads = SinkInfo.has_value();
-  for (VPBasicBlock *VPBB :
-       VPBlockUtils::blocksInSingleSuccessorChainBetween(FirstBB, LastBB)) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksBetween(FirstBB, LastBB)) {
     for (VPRecipeBase &R : *VPBB) {
       if (SinkInfo && SinkInfo->shouldSkip(R))
         continue;
@@ -5959,5 +5958,89 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
         cast<VPWidenLoadRecipe>(&R)->replaceAllUsesWith(StridedR);
       R.eraseFromParent();
     }
+  }
+}
+
+void VPlanTransforms::optimizeConditionalVPBB(VPlan &Plan) {
+  VPDominatorTree VPDT(Plan);
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPValue *HeaderMask = LoopRegion->getUsedHeaderMask();
+  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
+
+  // Get the mask for the \p VPBB from the masked store.
+  // TODO: Get mask from other operations.
+  auto GetMask = [HeaderMask](VPBasicBlock *VPBB) -> VPSingleDefRecipe * {
+    for (VPRecipeBase &R : *VPBB) {
+      VPValue *Mask;
+      if (!match(&R, m_VPInstruction<Instruction::Store>(
+                         m_VPValue(), m_VPValue(), m_VPValue(Mask))))
+        continue;
+      if (Mask && Mask != HeaderMask)
+        return dyn_cast<VPSingleDefRecipe>(Mask);
+    }
+    return nullptr;
+  };
+
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    if (VPBB == Header)
+      continue;
+
+    VPSingleDefRecipe *Mask = GetMask(VPBB);
+    if (!Mask)
+      continue;
+
+    // Only handle the simple case for now.
+    auto *Pred = dyn_cast_or_null<VPBasicBlock>(VPBB->getSinglePredecessor());
+    if (!Pred || Pred->getNumSuccessors() != 2 ||
+        Pred->getSuccessors()[0] != VPBB)
+      continue;
+
+    // Only support the following kind of conditional block to conditional
+    // VPBB:
+    // TODO: Support more kind of conditioanl blocks.
+    //
+    // [ Pred ] --> [ Conditional VPBB ] -+
+    //     |                              v
+    //     +-----------------------> [ continue ]
+    auto *Succ = VPBB->getSingleSuccessor();
+    if (!Succ || Succ != Pred->getSuccessors()[1])
+      continue;
+
+    // TODO: Support live out.
+    if (any_of(*VPBB, [VPBB](VPRecipeBase &R) {
+          return any_of(R.definedValues(), [VPBB](VPValue *Def) {
+            return any_of(Def->users(), [VPBB](VPUser *U) {
+              auto *UR = dyn_cast<VPRecipeBase>(U);
+              return !UR || UR->getParent() != VPBB;
+            });
+          });
+        }))
+      continue;
+
+    auto *Br = cast<VPInstruction>(Pred->getTerminator());
+    if (!match(Br, m_Branch()))
+      continue;
+
+    // Make sure the mask is in the predecessor block or can safely hoist to
+    // predecessor.
+    if (vputils::cannotHoistOrSinkRecipe(*Mask, false) ||
+        any_of(Mask->operands(), [&](VPValue *Def) {
+          VPRecipeBase *R = Def->getDefiningRecipe();
+          return R && !VPDT.properlyDominates(R, Br);
+        }))
+      continue;
+    Mask->moveBefore(*Pred, Br->getIterator());
+
+    // Only enter the conditional block with at least one active lane.
+    VPBuilder Builder(Br);
+    VPValue *Cond = Builder.createNaryOp(VPInstruction::AnyOf, {Mask});
+    Builder.createNaryOp(VPInstruction::BranchOnCond, {Cond});
+    Br->eraseFromParent();
+
+    // Prevent LinearizeVPlan from flattening the real control flow between
+    // Pred, VPBB and their common successor.
+    VPBB->setConditional();
   }
 }

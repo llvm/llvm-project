@@ -564,6 +564,8 @@ VPBasicBlock *VPBasicBlock::clone() {
   auto *NewBlock = getPlan()->createVPBasicBlock(getName());
   for (VPRecipeBase &R : *this)
     NewBlock->appendRecipe(R.clone());
+  if (isConditional())
+    NewBlock->setConditional();
   return NewBlock;
 }
 

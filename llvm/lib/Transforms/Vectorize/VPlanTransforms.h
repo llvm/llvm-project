@@ -565,9 +565,11 @@ struct VPlanTransforms {
   /// last active lane of the header mask.
   static void foldTailByMasking(VPlan &Plan);
 
-  /// Predicate and linearize the control-flow in the only loop region of
-  /// \p Plan.
-  static void introduceMasksAndLinearize(VPlan &Plan);
+  /// Predicate the only loop region of \p Plan.
+  static void introduceMasks(VPlan &Plan);
+
+  /// Linearize the control-flow in the only loop region of the \p Plan.
+  static void LinearizeVPlan(VPlan &Plan);
 
   /// Replace a VPWidenCanonicalIVRecipe if it is present in \p Plan, with a
   /// VPWidenIntOrFpInductionRecipe, provided it would not cause additional
@@ -622,6 +624,28 @@ struct VPlanTransforms {
   static void makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
                                         VPRecipeBuilder &RecipeBuilder,
                                         VPCostContext &CostCtx);
+
+  /// Try to keep the control flow before vplan linearization for conditional
+  /// vector basic block. If there are no active bits in the mask, it will skip
+  /// all masked operations in the block. This transformation will iterate all
+  /// VPBBs and try to find it contains masked store without live-out. Then keep
+  /// the cfg between predcessor of the conditional VPBB
+  ///
+  ///
+  ///      [ ] <-- vector.loop
+  ///      ^  |    %any.active.mask = any-of(%Mask)
+  ///     /   |    Branch-On-Cond %any.active.mask
+  ///    /    |\
+  ///   |  (F)| \ (T)
+  ///   |     |  v
+  ///   |     |  [ ] <-- if.bb (masked operations)
+  ///   |     |    |
+  ///   |     |    v
+  ///   |     +-->[ ] <-- continue.bb
+  ///   |         |  |
+  ///   +---------+  v
+  ///               [ ] <-- middle.block
+  static void optimizeConditionalVPBB(VPlan &Plan);
 };
 
 } // namespace llvm

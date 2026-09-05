@@ -567,24 +567,27 @@ bool vputils::cannotHoistOrSinkRecipe(const VPRecipeBase &R, bool Sinking) {
   return RepR && RepR->getOpcode() == Instruction::Alloca;
 }
 
-SmallVector<VPBasicBlock *>
-VPBlockUtils::blocksInSingleSuccessorChainBetween(VPBasicBlock *FirstBB,
-                                                  VPBasicBlock *LastBB) {
+SmallVector<VPBasicBlock *> VPBlockUtils::blocksBetween(VPBasicBlock *FirstBB,
+                                                        VPBasicBlock *LastBB) {
   assert(FirstBB->getParent() == LastBB->getParent() &&
          "FirstBB and LastBB from different regions");
-#ifndef NDEBUG
-  bool InSingleSuccChain = false;
-  for (VPBlockBase *Succ = FirstBB; Succ; Succ = Succ->getSingleSuccessor())
-    InSingleSuccChain |= (Succ == LastBB);
-  assert(InSingleSuccChain &&
-         "LastBB unreachable from FirstBB in single-successor chain");
-#endif
   auto Blocks = to_vector(
       VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_deep(FirstBB)));
   auto *LastIt = find(Blocks, LastBB);
   assert(LastIt != Blocks.end() &&
          "LastBB unreachable from FirstBB in depth-first traversal");
   Blocks.erase(std::next(LastIt), Blocks.end());
+#ifndef NDEBUG
+  for (VPBasicBlock *VPBB : drop_end(Blocks)) {
+    if (VPBB->getNumSuccessors() <= 1)
+      continue;
+    // Control flow vectorization will generate non-linear vector body.
+    // Make sure all the blocks between FirstBB and LastBB will be collected.
+    assert(VPBB->getNumSuccessors() == 2 &&
+           find(Blocks, VPBB->getSuccessors()[1]) != Blocks.end() &&
+           "unexpected branching between FirstBB and LastBB");
+  }
+#endif
   return Blocks;
 }
 
