@@ -33,6 +33,20 @@ void test_basic_double_two_conditions_ok(bool cond) {
   }
 }
 
+void test_basic_double_two_conditions_in_switch_ok(int val) {
+  int* a = new int(42);
+  switch (val) {
+    case 0: {
+      std::shared_ptr<int> p1(a);
+      break;
+    }
+    case 1: {
+      std::shared_ptr<int> p2(a);
+      break;
+    }
+  }
+}
+
 void test_basic_no_double_ownership() {
   int* a = new int(42);
   std::shared_ptr<int> p1(a);
