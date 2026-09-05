@@ -136,9 +136,8 @@ public:
         SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
         ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
         XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
-        PPCGenScalarMASSEntries(false), JMCInstrument(false),
-        EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
-        VerifyArgABICompliance(true) {}
+        JMCInstrument(false), EnableCFIFixup(false), MisExpect(false),
+        XCOFFReadOnlyPointers(false), VerifyArgABICompliance(true) {}
 
   /// EnableAIXExtendedAltivecABI - This flag returns true when -vec-extabi is
   /// specified. The code generator is then able to use both volatile and
@@ -304,9 +303,6 @@ public:
 
   /// Emit the hotpatch flag in CodeView debug.
   unsigned Hotpatch : 1;
-
-  /// Enables scalar MASS conversions
-  unsigned PPCGenScalarMASSEntries : 1;
 
   /// Enable JustMyCode instrumentation.
   unsigned JMCInstrument : 1;
