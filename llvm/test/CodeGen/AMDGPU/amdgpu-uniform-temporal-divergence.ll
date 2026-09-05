@@ -56,3 +56,252 @@ X:
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare i32 @llvm.amdgcn.readfirstlane.i32(i32)
+
+define amdgpu_kernel void @temporal_divergence_ballot_chain(ptr addrspace(1) %out, ptr addrspace(1) %data) {
+; PASS-CHECK-LABEL: define amdgpu_kernel void @temporal_divergence_ballot_chain(
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[DATA:%.*]]) {
+; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
+; PASS-CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; PASS-CHECK-NEXT:    br label %[[H:.*]]
+; PASS-CHECK:       [[H]]:
+; PASS-CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[H]] ]
+; PASS-CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[DATA]], i32 [[I]]
+; PASS-CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4
+; PASS-CHECK-NEXT:    [[X:%.*]] = icmp sgt i32 [[V]], 0
+; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 [[X]])
+; PASS-CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X]], true
+; PASS-CHECK-NEXT:    [[NONE:%.*]] = icmp eq i32 [[BALLOT]], 0
+; PASS-CHECK-NEXT:    [[INC]] = add i32 [[I]], 1
+; PASS-CHECK-NEXT:    [[DIV_EXITX:%.*]] = icmp ugt i32 [[INC]], [[TID]]
+; PASS-CHECK-NEXT:    br i1 [[DIV_EXITX]], label %[[EXIT:.*]], label %[[H]]
+; PASS-CHECK:       [[EXIT]]:
+; PASS-CHECK-NEXT:    [[BALLOT2:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 [[TMP0]])
+; PASS-CHECK-NEXT:    [[ANY:%.*]] = icmp ne i32 [[BALLOT2]], 0
+; PASS-CHECK-NEXT:    [[Z:%.*]] = zext i1 [[ANY]] to i32
+; PASS-CHECK-NEXT:    [[OG:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i32 [[TID]]
+; PASS-CHECK-NEXT:    store i32 [[Z]], ptr addrspace(1) [[OG]], align 4
+; PASS-CHECK-NEXT:    ret void
+;
+; COMB-CHECK-LABEL: define amdgpu_kernel void @temporal_divergence_ballot_chain(
+; COMB-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[DATA:%.*]]) {
+; COMB-CHECK-NEXT:  [[ENTRY:.*]]:
+; COMB-CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; COMB-CHECK-NEXT:    br label %[[H:.*]]
+; COMB-CHECK:       [[H]]:
+; COMB-CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[H]] ]
+; COMB-CHECK-NEXT:    [[INC]] = add i32 [[I]], 1
+; COMB-CHECK-NEXT:    [[DIV_EXITX:%.*]] = icmp ugt i32 [[INC]], [[TID]]
+; COMB-CHECK-NEXT:    br i1 [[DIV_EXITX]], label %[[EXIT:.*]], label %[[H]]
+; COMB-CHECK:       [[EXIT]]:
+; COMB-CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
+; COMB-CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[DATA]], i64 [[TMP0]]
+; COMB-CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4
+; COMB-CHECK-NEXT:    [[X:%.*]] = icmp slt i32 [[V]], 1
+; COMB-CHECK-NEXT:    [[BALLOT2:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 [[X]])
+; COMB-CHECK-NEXT:    [[ANY:%.*]] = icmp ne i32 [[BALLOT2]], 0
+; COMB-CHECK-NEXT:    [[Z:%.*]] = zext i1 [[ANY]] to i32
+; COMB-CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TID]] to i64
+; COMB-CHECK-NEXT:    [[OG:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[OUT]], i64 [[TMP1]]
+; COMB-CHECK-NEXT:    store i32 [[Z]], ptr addrspace(1) [[OG]], align 4
+; COMB-CHECK-NEXT:    ret void
+;
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  br label %H
+
+H:
+  %i = phi i32 [ 0, %entry ], [ %inc, %H ]
+  %gep = getelementptr i32, ptr addrspace(1) %data, i32 %i
+  %v = load i32, ptr addrspace(1) %gep
+  %x = icmp sgt i32 %v, 0
+  %ballot = call i32 @llvm.amdgcn.ballot.i32(i1 %x)
+  %none = icmp eq i32 %ballot, 0
+  %inc = add i32 %i, 1
+  %div.exitx = icmp ugt i32 %inc, %tid
+  br i1 %div.exitx, label %exit, label %H ; divergent branch
+
+exit:
+  %ballot2 = call i32 @llvm.amdgcn.ballot.i32(i1 %none)
+  %any = icmp ne i32 %ballot2, 0
+  %z = zext i1 %any to i32
+  %og = getelementptr i32, ptr addrspace(1) %out, i32 %tid
+  store i32 %z, ptr addrspace(1) %og
+  ret void
+}
+
+define amdgpu_kernel void @temporal_divergence_ballot_user_outside(ptr addrspace(1) %out, ptr addrspace(1) %data) {
+; PASS-CHECK-LABEL: define amdgpu_kernel void @temporal_divergence_ballot_user_outside(
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[DATA:%.*]]) {
+; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
+; PASS-CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; PASS-CHECK-NEXT:    br label %[[H:.*]]
+; PASS-CHECK:       [[H]]:
+; PASS-CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[H]] ]
+; PASS-CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[DATA]], i32 [[I]]
+; PASS-CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4
+; PASS-CHECK-NEXT:    [[X:%.*]] = icmp sgt i32 [[V]], 0
+; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 [[X]])
+; PASS-CHECK-NEXT:    [[INC]] = add i32 [[I]], 1
+; PASS-CHECK-NEXT:    [[DIV_EXITX:%.*]] = icmp ugt i32 [[INC]], [[TID]]
+; PASS-CHECK-NEXT:    br i1 [[DIV_EXITX]], label %[[EXIT:.*]], label %[[H]]
+; PASS-CHECK:       [[EXIT]]:
+; PASS-CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X]], true
+; PASS-CHECK-NEXT:    [[NONE:%.*]] = icmp eq i32 [[BALLOT]], 0
+; PASS-CHECK-NEXT:    [[BALLOT2:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 [[TMP0]])
+; PASS-CHECK-NEXT:    [[ANY:%.*]] = icmp ne i32 [[BALLOT2]], 0
+; PASS-CHECK-NEXT:    [[Z:%.*]] = zext i1 [[ANY]] to i32
+; PASS-CHECK-NEXT:    [[OG:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i32 [[TID]]
+; PASS-CHECK-NEXT:    store i32 [[Z]], ptr addrspace(1) [[OG]], align 4
+; PASS-CHECK-NEXT:    ret void
+;
+; COMB-CHECK-LABEL: define amdgpu_kernel void @temporal_divergence_ballot_user_outside(
+; COMB-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[DATA:%.*]]) {
+; COMB-CHECK-NEXT:  [[ENTRY:.*]]:
+; COMB-CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; COMB-CHECK-NEXT:    br label %[[H:.*]]
+; COMB-CHECK:       [[H]]:
+; COMB-CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[H]] ]
+; COMB-CHECK-NEXT:    [[INC]] = add i32 [[I]], 1
+; COMB-CHECK-NEXT:    [[DIV_EXITX:%.*]] = icmp ugt i32 [[INC]], [[TID]]
+; COMB-CHECK-NEXT:    br i1 [[DIV_EXITX]], label %[[EXIT:.*]], label %[[H]]
+; COMB-CHECK:       [[EXIT]]:
+; COMB-CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
+; COMB-CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[DATA]], i64 [[TMP0]]
+; COMB-CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4
+; COMB-CHECK-NEXT:    [[X:%.*]] = icmp slt i32 [[V]], 1
+; COMB-CHECK-NEXT:    [[BALLOT2:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 [[X]])
+; COMB-CHECK-NEXT:    [[ANY:%.*]] = icmp ne i32 [[BALLOT2]], 0
+; COMB-CHECK-NEXT:    [[Z:%.*]] = zext i1 [[ANY]] to i32
+; COMB-CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TID]] to i64
+; COMB-CHECK-NEXT:    [[OG:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[OUT]], i64 [[TMP1]]
+; COMB-CHECK-NEXT:    store i32 [[Z]], ptr addrspace(1) [[OG]], align 4
+; COMB-CHECK-NEXT:    ret void
+;
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  br label %H
+
+H:
+  %i = phi i32 [ 0, %entry ], [ %inc, %H ]
+  %gep = getelementptr i32, ptr addrspace(1) %data, i32 %i
+  %v = load i32, ptr addrspace(1) %gep
+  %x = icmp sgt i32 %v, 0
+  %ballot = call i32 @llvm.amdgcn.ballot.i32(i1 %x)
+  %inc = add i32 %i, 1
+  %div.exitx = icmp ugt i32 %inc, %tid
+  br i1 %div.exitx, label %exit, label %H ; divergent branch
+
+exit:
+  %none = icmp eq i32 %ballot, 0
+  %ballot2 = call i32 @llvm.amdgcn.ballot.i32(i1 %none)
+  %any = icmp ne i32 %ballot2, 0
+  %z = zext i1 %any to i32
+  %og = getelementptr i32, ptr addrspace(1) %out, i32 %tid
+  store i32 %z, ptr addrspace(1) %og
+  ret void
+}
+
+define amdgpu_kernel void @temporal_divergence_readlane_of_not(ptr addrspace(1) %out, ptr addrspace(1) %data) {
+; PASS-CHECK-LABEL: define amdgpu_kernel void @temporal_divergence_readlane_of_not(
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[DATA:%.*]]) {
+; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
+; PASS-CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; PASS-CHECK-NEXT:    br label %[[H:.*]]
+; PASS-CHECK:       [[H]]:
+; PASS-CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[H]] ]
+; PASS-CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr addrspace(1) [[DATA]], i32 [[I]]
+; PASS-CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4
+; PASS-CHECK-NEXT:    [[X:%.*]] = icmp sgt i32 [[V]], 0
+; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 [[X]])
+; PASS-CHECK-NEXT:    [[INC]] = add i32 [[I]], 1
+; PASS-CHECK-NEXT:    [[DIV_EXITX:%.*]] = icmp ugt i32 [[INC]], [[TID]]
+; PASS-CHECK-NEXT:    br i1 [[DIV_EXITX]], label %[[EXIT:.*]], label %[[H]]
+; PASS-CHECK:       [[EXIT]]:
+; PASS-CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X]], true
+; PASS-CHECK-NEXT:    [[NONE:%.*]] = icmp eq i32 [[BALLOT]], 0
+; PASS-CHECK-NEXT:    [[RL:%.*]] = call i1 @llvm.amdgcn.readlane.i1(i1 [[TMP0]], i32 0)
+; PASS-CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[RL]] to i32
+; PASS-CHECK-NEXT:    [[OG:%.*]] = getelementptr i32, ptr addrspace(1) [[OUT]], i32 [[TID]]
+; PASS-CHECK-NEXT:    store i32 [[EXT]], ptr addrspace(1) [[OG]], align 4
+; PASS-CHECK-NEXT:    ret void
+;
+; COMB-CHECK-LABEL: define amdgpu_kernel void @temporal_divergence_readlane_of_not(
+; COMB-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]], ptr addrspace(1) [[DATA:%.*]]) {
+; COMB-CHECK-NEXT:  [[ENTRY:.*]]:
+; COMB-CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; COMB-CHECK-NEXT:    br label %[[H:.*]]
+; COMB-CHECK:       [[H]]:
+; COMB-CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[H]] ]
+; COMB-CHECK-NEXT:    [[INC]] = add i32 [[I]], 1
+; COMB-CHECK-NEXT:    [[DIV_EXITX:%.*]] = icmp ugt i32 [[INC]], [[TID]]
+; COMB-CHECK-NEXT:    br i1 [[DIV_EXITX]], label %[[EXIT:.*]], label %[[H]]
+; COMB-CHECK:       [[EXIT]]:
+; COMB-CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
+; COMB-CHECK-NEXT:    [[GEP:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[DATA]], i64 [[TMP0]]
+; COMB-CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(1) [[GEP]], align 4
+; COMB-CHECK-NEXT:    [[X:%.*]] = icmp slt i32 [[V]], 1
+; COMB-CHECK-NEXT:    [[RL:%.*]] = call i1 @llvm.amdgcn.readlane.i1(i1 [[X]], i32 0)
+; COMB-CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[RL]] to i32
+; COMB-CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TID]] to i64
+; COMB-CHECK-NEXT:    [[OG:%.*]] = getelementptr [4 x i8], ptr addrspace(1) [[OUT]], i64 [[TMP1]]
+; COMB-CHECK-NEXT:    store i32 [[EXT]], ptr addrspace(1) [[OG]], align 4
+; COMB-CHECK-NEXT:    ret void
+;
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  br label %H
+
+H:
+  %i = phi i32 [ 0, %entry ], [ %inc, %H ]
+  %gep = getelementptr i32, ptr addrspace(1) %data, i32 %i
+  %v = load i32, ptr addrspace(1) %gep
+  %x = icmp sgt i32 %v, 0
+  %ballot = call i32 @llvm.amdgcn.ballot.i32(i1 %x)
+  %inc = add i32 %i, 1
+  %div.exitx = icmp ugt i32 %inc, %tid
+  br i1 %div.exitx, label %exit, label %H ; divergent branch
+
+exit:
+  %none = icmp eq i32 %ballot, 0
+  %rl = call i1 @llvm.amdgcn.readlane.i1(i1 %none, i32 0)
+  %ext = zext i1 %rl to i32
+  %og = getelementptr i32, ptr addrspace(1) %out, i32 %tid
+  store i32 %ext, ptr addrspace(1) %og
+  ret void
+}
+
+define amdgpu_kernel void @ballot_chain_uniform(i32 %v, ptr addrspace(1) %out) {
+; PASS-CHECK-LABEL: define amdgpu_kernel void @ballot_chain_uniform(
+; PASS-CHECK-SAME: i32 [[V:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
+; PASS-CHECK-NEXT:  [[ENTRY:.*:]]
+; PASS-CHECK-NEXT:    [[X:%.*]] = icmp sgt i32 [[V]], 0
+; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 [[X]])
+; PASS-CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[X]], true
+; PASS-CHECK-NEXT:    [[NONE:%.*]] = icmp eq i32 [[BALLOT]], 0
+; PASS-CHECK-NEXT:    [[BALLOT2:%.*]] = call i32 @llvm.amdgcn.ballot.i32(i1 [[TMP0]])
+; PASS-CHECK-NEXT:    [[ANY:%.*]] = icmp ne i32 [[BALLOT2]], 0
+; PASS-CHECK-NEXT:    [[Z:%.*]] = zext i1 [[TMP0]] to i32
+; PASS-CHECK-NEXT:    store i32 [[Z]], ptr addrspace(1) [[OUT]], align 4
+; PASS-CHECK-NEXT:    ret void
+;
+; COMB-CHECK-LABEL: define amdgpu_kernel void @ballot_chain_uniform(
+; COMB-CHECK-SAME: i32 [[V:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
+; COMB-CHECK-NEXT:  [[ENTRY:.*:]]
+; COMB-CHECK-NEXT:    [[X:%.*]] = icmp slt i32 [[V]], 1
+; COMB-CHECK-NEXT:    [[Z:%.*]] = zext i1 [[X]] to i32
+; COMB-CHECK-NEXT:    store i32 [[Z]], ptr addrspace(1) [[OUT]], align 4
+; COMB-CHECK-NEXT:    ret void
+;
+entry:
+  %x = icmp sgt i32 %v, 0
+  %ballot = call i32 @llvm.amdgcn.ballot.i32(i1 %x)
+  %none = icmp eq i32 %ballot, 0
+  %ballot2 = call i32 @llvm.amdgcn.ballot.i32(i1 %none)
+  %any = icmp ne i32 %ballot2, 0
+  %z = zext i1 %any to i32
+  store i32 %z, ptr addrspace(1) %out
+  ret void
+}
+
+declare i32 @llvm.amdgcn.ballot.i32(i1)
+declare i1 @llvm.amdgcn.readlane.i1(i1, i32)
