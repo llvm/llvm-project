@@ -5583,16 +5583,29 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::roundeven: {
       KnownFPClass KnownSrc;
       FPClassTest InterestedSrcs = InterestedClasses;
-      if (InterestedSrcs & fcPosFinite)
-        InterestedSrcs |= fcPosFinite;
+
+      // Negative round ups towards zero produce negative zero.
       if (InterestedSrcs & fcNegFinite)
         InterestedSrcs |= fcNegFinite;
+
+      // Negative subnormals may flush to positive zero.
+      if (InterestedSrcs & fcPosFinite)
+        InterestedSrcs |= fcPosFinite | fcNegSubnormal;
+
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
                           KnownSrc, Q, Depth + 1);
 
-      Known = KnownFPClass::roundToIntegral(
-          KnownSrc, IID == Intrinsic::trunc,
-          V->getType()->getScalarType()->isMultiUnitFPType());
+      const Function *F = II->getFunction();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(
+                  II->getType()->getScalarType()->getFltSemantics())
+            : DenormalMode::getDynamic();
+      const bool IsKnownNeverMultiUnitFPType =
+          !V->getType()->getScalarType()->isMultiUnitFPType();
+
+      const bool IsTrunc = IID == Intrinsic::trunc;
+      Known = KnownFPClass::roundToIntegral(KnownSrc, IsTrunc,
+                                            IsKnownNeverMultiUnitFPType, Mode);
       break;
     }
     case Intrinsic::exp:

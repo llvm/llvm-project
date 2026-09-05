@@ -3298,6 +3298,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::nearbyint:
     case Intrinsic::round:
     case Intrinsic::roundeven: {
+      Type *EltTy = VTy->getScalarType();
+      DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+
       FPClassTest DemandedSrcMask = DemandedMask;
       if (DemandedMask & fcNan)
         DemandedSrcMask |= fcNan;
@@ -3306,8 +3309,17 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (DemandedMask & fcNegZero)
         DemandedSrcMask |= fcNegSubnormal | fcNegNormal;
 
-      if (DemandedMask & fcPosZero)
+      if (DemandedMask & fcPosZero) {
         DemandedSrcMask |= fcPosSubnormal | fcPosNormal;
+        if (Mode.inputsMayBePositiveZero())
+          DemandedSrcMask |= fcNegSubnormal;
+      }
+
+      // Rounding a subnormal away from zero may produce a normal value.
+      if (DemandedMask & fcNegNormal)
+        DemandedSrcMask |= fcNegSubnormal;
+      if (DemandedMask & fcPosNormal)
+        DemandedSrcMask |= fcPosSubnormal;
 
       KnownFPClass KnownSrc;
       if (SimplifyDemandedFPClass(CI, 0, DemandedSrcMask, KnownSrc, SQ,
@@ -3338,9 +3350,11 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (IID == Intrinsic::ceil && KnownSrc.isKnownAlways(fcPosSubnormal))
         return ConstantFP::get(VTy, 1.0);
 
-      Known = KnownFPClass::roundToIntegral(
-          KnownSrc, IID == Intrinsic::trunc,
-          VTy->getScalarType()->isMultiUnitFPType());
+      const bool IsKnownNeverMultiUnitFPType = !EltTy->isMultiUnitFPType();
+
+      const bool IsTrunc = IID == Intrinsic::trunc;
+      Known = KnownFPClass::roundToIntegral(KnownSrc, IsTrunc,
+                                            IsKnownNeverMultiUnitFPType, Mode);
 
       Known.knownNot(~DemandedMask);
 

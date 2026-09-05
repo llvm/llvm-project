@@ -843,7 +843,8 @@ KnownFPClass KnownFPClass::fptrunc(const KnownFPClass &KnownSrc) {
 
 KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
                                            bool IsTrunc,
-                                           bool IsMultiUnitFPType) {
+                                           bool IsKnownNeverMultiUnitFPType,
+                                           DenormalMode Mode) {
   KnownFPClass Known;
 
   // Integer results cannot be subnormal.
@@ -853,18 +854,28 @@ KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
 
   // Pass through infinities, except PPC_FP128 is a special case for
   // intrinsics other than trunc.
-  if (IsTrunc || !IsMultiUnitFPType) {
+  if (IsTrunc || IsKnownNeverMultiUnitFPType) {
     if (KnownSrc.isKnownNeverPosInfinity())
       Known.knownNot(fcPosInf);
     if (KnownSrc.isKnownNeverNegInfinity())
       Known.knownNot(fcNegInf);
   }
 
-  // Negative round ups to 0 produce -0
-  if (KnownSrc.isKnownNever(fcPosFinite))
-    Known.knownNot(fcPosFinite);
+  if (KnownSrc.isKnownNever(fcPosNormal | fcPosSubnormal))
+    Known.knownNot(fcPosNormal);
+
+  if (KnownSrc.isKnownNever(fcNegNormal | fcNegSubnormal))
+    Known.knownNot(fcNegNormal);
+
+  // Negative round ups towards zero produce negative zero.
   if (KnownSrc.isKnownNever(fcNegFinite))
-    Known.knownNot(fcNegFinite);
+    Known.knownNot(fcNegZero);
+
+  // Negative subnormals may flush to positive zero.
+  if (KnownSrc.isKnownNever(fcPosFinite) &&
+      (KnownSrc.isKnownNever(fcNegSubnormal) ||
+       !Mode.inputsMayBePositiveZero()))
+    Known.knownNot(fcPosZero);
 
   return Known;
 }

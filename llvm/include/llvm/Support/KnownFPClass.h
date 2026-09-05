@@ -474,10 +474,12 @@ struct KnownFPClass {
 
   /// Propagate known class for rounding intrinsics (trunc, floor, ceil, rint,
   /// nearbyint, round, roundeven). This is trunc if \p IsTrunc. \p
-  /// IsMultiUnitFPType if this is for a multi-unit floating-point type.
-  LLVM_ABI static KnownFPClass roundToIntegral(const KnownFPClass &Src,
-                                               bool IsTrunc,
-                                               bool IsMultiUnitFPType);
+  /// IsKnownNeverMultiUnitFPType if this is known to never be for a multi-unit
+  /// floating-point type.
+  LLVM_ABI static KnownFPClass
+  roundToIntegral(const KnownFPClass &Src, bool IsTrunc,
+                  bool IsKnownNeverMultiUnitFPType,
+                  DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Propagate known class for mantissa component of frexp
   LLVM_ABI static KnownFPClass
