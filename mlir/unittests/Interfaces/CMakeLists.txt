@@ -2,6 +2,7 @@ add_mlir_unittest(MLIRInterfacesTests
   ControlFlowInterfacesTest.cpp
   DataLayoutInterfacesTest.cpp
   InferIntRangeInterfaceTest.cpp
+  InferUniformityOpInterfaceTest.cpp
   MemorySlotUtilsTest.cpp
   SideEffectInterfacesTest.cpp
   InferTypeOpInterfaceTest.cpp
@@ -20,6 +21,7 @@ mlir_target_link_libraries(MLIRInterfacesTests
   MLIRFuncDialect
   MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
+  MLIRInferUniformityOpInterface
   MLIRMemorySlotUtils
   MLIRParser
   MLIRSideEffectInterfaces
