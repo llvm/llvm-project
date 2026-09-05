@@ -172,8 +172,9 @@ struct MaybeView<true> : std::ranges::view_base {};
 template <std::input_iterator Iter,
           std::sentinel_for<Iter> Sent = sentinel_wrapper<Iter>,
           bool IsSized                 = false,
+          bool IsApproximatelySized    = false,
           bool IsView                  = false,
-          bool IsCopyable              = false >
+          bool IsCopyable              = false>
   requires((!IsSized) || (IsSized && IterDifferable<Iter>))
 struct BasicTestViewOrRange : MaybeView<IsView> {
   Iter begin_{};
@@ -188,6 +189,12 @@ struct BasicTestViewOrRange : MaybeView<IsView> {
 
   constexpr auto size() const
     requires IsSized
+  {
+    return begin_ - end_;
+  }
+
+  constexpr auto reserve_hint() const
+    requires IsApproximatelySized
   {
     return begin_ - end_;
   }
@@ -210,12 +217,16 @@ struct BasicTestViewOrRange : MaybeView<IsView> {
   = default;
 };
 
-template <std::input_iterator Iter, std::sentinel_for<Iter> Sent = sentinel_wrapper<Iter>, bool IsSized = false>
+template <std::input_iterator Iter,
+          std::sentinel_for<Iter> Sent = sentinel_wrapper<Iter>,
+          bool IsSized                 = false,
+          bool IsApproximatelySized    = false>
   requires((!IsSized) || (IsSized && IterDifferable<Iter>))
-using BasicTestView = BasicTestViewOrRange<Iter, Sent, IsSized, true /* IsView */, true /* IsCopyable */>;
+using BasicTestView =
+    BasicTestViewOrRange<Iter, Sent, IsSized, IsApproximatelySized, true /* IsView */, true /* IsCopyable */>;
 
 template <std::input_iterator Iter, std::sentinel_for<Iter> Sent = sentinel_wrapper<Iter>, bool IsCopyable = true>
-using MaybeCopyableAlwaysMoveableView = BasicTestViewOrRange<Iter, Sent, false, true, IsCopyable>;
+using MaybeCopyableAlwaysMoveableView = BasicTestViewOrRange<Iter, Sent, false, false, true, IsCopyable>;
 
 static_assert(std::ranges::view<MaybeCopyableAlwaysMoveableView<cpp17_input_iterator<int*>>>);
 static_assert(std::ranges::view<MaybeCopyableAlwaysMoveableView<cpp17_input_iterator<int*>,
