@@ -5973,9 +5973,9 @@ libc_support_library(
     name = "__support_math_fmodf128",
     hdrs = ["src/__support/math/fmodf128.h"],
     deps = [
+        ":__support_fputil_float128",
         ":__support_fputil_generic_fmod",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -6836,8 +6836,8 @@ libc_support_library(
     hdrs = ["src/__support/math/remainderf128.h"],
     deps = [
         ":__support_fputil_division_and_remainder_operations",
+        ":__support_fputil_float128",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -12301,6 +12301,8 @@ libc_math_function(
 libc_math_function(
     name = "fmodf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_fmodf128",
     ],
 )
@@ -13304,6 +13306,8 @@ libc_math_function(
 libc_math_function(
     name = "remainderf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_remainderf128",
     ],
 )
