@@ -62,6 +62,11 @@
              { kind = "direct" } ]
 }
 
+#byref_arg_align16 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 16, byval = false } ]
+}
+
 #passthrough = {
   return = { kind = "direct" },
   args   = [ ]
@@ -424,5 +429,26 @@ module attributes {
   // CHECK-SAME:     llvm.byref = !rec_Big
   // CHECK-NOT:    llvm.noalias
   // CHECK-NOT:    llvm.noundef
+
+  // A slot aligned above the record's own alignment, matching an
+  // indirect_align that also exceeds it, is still forwarded.
+  cir.func private @takes_big_byref16(%a: !rec_Big)
+      attributes { test_classify = #byref_arg_align16 }
+
+  cir.func @caller_byref_overaligned(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %tmp = cir.alloca "agg.tmp" align(16) : !cir.ptr<!rec_Big>
+    cir.store %s, %tmp : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %tmp : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_byref16(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @caller_byref_overaligned
+  // CHECK:        %[[TMP:.*]] = cir.alloca "agg.tmp" align(16) : !cir.ptr<!rec_Big>
+  // CHECK-NOT:    cir.load
+  // CHECK:        cir.call @takes_big_byref16(%[[TMP]]) :
+  // CHECK-SAME:     llvm.align = 16 : i64
+  // CHECK-SAME:     llvm.byref = !rec_Big
 
 }

@@ -423,22 +423,68 @@ void insertReturnCoercion(mlir::FunctionOpInterface funcOp,
   }
 }
 
-/// If \p recordVal is a plain load of an alloca, return that alloca and the
-/// load.  Return nulls otherwise: a volatile or atomic load has to keep its
-/// ordering, and a call result or a load of a member of a larger record has no
-/// alloca of its own.
-static std::pair<cir::AllocaOp, cir::LoadOp>
-getWholeRecordSource(mlir::Value recordVal) {
-  cir::LoadOp load = recordVal.getDefiningOp<cir::LoadOp>();
+/// \p val's defining load, if it is non-volatile and non-atomic.  Null
+/// otherwise: such a load's access has to survive as written, and a call
+/// result or any other first-class value has no defining load at all.
+static cir::LoadOp plainLoad(mlir::Value val) {
+  cir::LoadOp load = val.getDefiningOp<cir::LoadOp>();
   if (!load || load.getIsVolatile() || load.getMemOrder())
     return {};
+  return load;
+}
+
+/// The slot \p addr designates, or null if it designates something else, such
+/// as a member of a larger record or an incoming pointer.
+static cir::AllocaOp underlyingAlloca(mlir::Value addr) {
   // TODO: look through cir.cast ops where isAllocaPreservingCast() is true,
-  // mirroring Address::getUnderlyingAllocaOp() (CodeGen/Address.h), so an
+  // mirroring Address::getUnderlyingAllocaOp() (CIR/CodeGen/Address.h), so an
   // address-space-cast alloca is still found here once offload targets need it.
-  auto alloca = load.getAddr().getDefiningOp<cir::AllocaOp>();
+  return addr.getDefiningOp<cir::AllocaOp>();
+}
+
+/// If \p recordVal is a plain load of a slot, return that slot and the load.
+/// Return nulls otherwise.
+static std::pair<cir::AllocaOp, cir::LoadOp>
+getWholeRecordSource(mlir::Value recordVal) {
+  cir::LoadOp load = plainLoad(recordVal);
+  if (!load)
+    return {};
+  cir::AllocaOp alloca = underlyingAlloca(load.getAddr());
   if (!alloca)
     return {};
   return {alloca, load};
+}
+
+/// Whether \p addr is the enclosing function's own byref parameter, stated to
+/// be at least \p minAlign aligned.  Such a parameter already names an object
+/// the caller destroys after the call, which is what byref promises, so it can
+/// be handed on unchanged.  The other pointer parameters also state an
+/// alignment, so it is llvm.byref that identifies this one.
+static bool isByrefParameter(mlir::Value addr, uint64_t minAlign) {
+  auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(addr);
+  if (!blockArg || !blockArg.getOwner()->isEntryBlock())
+    return false;
+  auto funcOp = mlir::dyn_cast<cir::FuncOp>(blockArg.getOwner()->getParentOp());
+  if (!funcOp)
+    return false;
+  unsigned argNo = blockArg.getArgNumber();
+  if (!funcOp.getArgAttr(argNo, mlir::LLVM::LLVMDialect::getByRefAttrName()))
+    return false;
+  auto align = funcOp.getArgAttrOfType<mlir::IntegerAttr>(
+      argNo, mlir::LLVM::LLVMDialect::getAlignAttrName());
+  return align && align.getValue().getZExtValue() >= minAlign;
+}
+
+/// Whether a byref argument may name \p addr, given the callee is told the
+/// argument is \p minAlign aligned.  A slot allocated here qualifies, and so
+/// does the enclosing function's own byref parameter.  Both must already state
+/// that alignment: a slot's own alignment can be raised in principle, but one
+/// standing in for a parameter is replaced by the incoming pointer later, which
+/// would discard the raise and leave the callee over-promised.
+static bool forwardableByrefStorage(mlir::Value addr, uint64_t minAlign) {
+  if (cir::AllocaOp slot = underlyingAlloca(addr))
+    return slot.getAlignment() >= minAlign;
+  return isByrefParameter(addr, minAlign);
 }
 
 /// Decompose a struct value into one scalar call argument per field of \p
@@ -1193,7 +1239,8 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   newArgs.reserve(argOperands.size());
 
   // Loads that the new call leaves unused: Expand and Direct+canFlatten read
-  // the fields out of the source alloca, and byref passes the alloca itself.
+  // the fields out of the source alloca, and byref passes the address the
+  // load read from.
   // The old call still uses them, so erase them only after it is gone.
   SmallVector<cir::LoadOp> deadRecordLoads;
 
@@ -1244,20 +1291,18 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
       newArgs.push_back(arg);
     } else if (ac.kind == ArgKind::Indirect) {
       // byval hands the callee its own copy.  byref must name the caller's
-      // storage instead: CIRGen materializes the argument into a temporary it
-      // destroys after the call and emits the operand's load immediately
-      // before that call, so forwarding the alloca hands the callee the object
-      // the caller destroys, with nothing able to write it in between.
+      // storage instead, so that the object the callee operates on is the one
+      // the caller destroys.  That means forwarding the address the operand
+      // was loaded from rather than the loaded value, so a store to that
+      // storage after the load is visible to the callee.
       if (!ac.byVal) {
-        auto [srcAlloca, srcLoad] = getWholeRecordSource(arg);
-        if (!srcAlloca)
+        cir::LoadOp srcLoad = plainLoad(arg);
+        if (!srcLoad || !forwardableByrefStorage(srcLoad.getAddr(),
+                                                 ac.indirectAlign.value()))
           return call->emitOpError()
-                 << "byref argument that is not a load of an alloca is not yet "
-                    "implemented in CallConvLowering";
-        assert(srcAlloca.getAlignment() >= ac.indirectAlign.value() &&
-               "llvm.align on a byref argument must not overstate the "
-               "forwarded slot");
-        newArgs.push_back(srcAlloca);
+                 << "byref argument that does not name the caller's storage "
+                    "is not yet implemented in CallConvLowering";
+        newArgs.push_back(srcLoad.getAddr());
         deadRecordLoads.push_back(srcLoad);
         continue;
       }

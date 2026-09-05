@@ -115,3 +115,38 @@ void callByval() {
 // LLVM-CIR:     store %struct.Big %[[V]], ptr %[[SLOT:.*]], align 8
 // LLVM-CIR:     call void @_Z9takeByval3Big(ptr noundef byval(%struct.Big) align 8 %[[SLOT]])
 // OGCG:         call void @_Z9takeByval3Big(ptr noundef byval(%struct.Big) align 8 %[[TMP]])
+
+// An inherited constructor forwards its by-value parameter with no temporary
+// of its own, so the base constructor operates on the object the caller
+// destroys.
+struct Base { Base(WithDtor t); };
+struct Derived : Base { using Base::Base; };
+void callInheritedCtor(WithDtor t) { Derived d(t); }
+
+// The caller materializes a temporary and passes that, which is the boundary
+// the forwarding below sits against.
+// CIR-LABEL: cir.func {{.*}}@_Z17callInheritedCtor8WithDtor
+// CIR:         %[[TMP:.*]] = cir.alloca "agg.tmp0" align(4) : !cir.ptr<!rec_WithDtor>
+// CIR:         cir.copy %{{.*}} to %[[TMP]]
+// CIR:         cir.call @_ZN7DerivedCI14BaseE8WithDtor(%{{.*}}, %[[TMP]])
+// CIR-SAME:      llvm.byref = !rec_WithDtor
+
+// Both inheriting constructor variants hand their own parameter on unchanged.
+// CIR-LABEL: cir.func {{.*}}@_ZN7DerivedCI14BaseE8WithDtor
+// CIR-SAME:      %[[CI1ARG:[^:]*]]: !cir.ptr<!rec_WithDtor> {llvm.align = 4 : i64, llvm.byref = !rec_WithDtor}
+// CIR-NOT:     cir.copy
+// CIR:         cir.call @_ZN7DerivedCI24BaseE8WithDtor(%{{.*}}, %[[CI1ARG]])
+
+// CIR-LABEL: cir.func {{.*}}@_ZN7DerivedCI24BaseE8WithDtor
+// CIR-SAME:      %[[ARG:[^:]*]]: !cir.ptr<!rec_WithDtor> {llvm.align = 4 : i64, llvm.byref = !rec_WithDtor}
+// CIR-NOT:     cir.copy
+// CIR:         cir.call @_ZN4BaseC2E8WithDtor(%{{.*}}, %[[ARG]])
+
+// LLVM-CIR:     define {{.*}}@_ZN7DerivedCI14BaseE8WithDtor(ptr{{.*}}, ptr byref(%struct.WithDtor) align 4 %[[CI1ARG:[0-9]+]])
+// LLVM-CIR-NOT: alloca %struct.WithDtor
+// LLVM-CIR:     call void @_ZN7DerivedCI24BaseE8WithDtor(ptr{{.*}}, ptr byref(%struct.WithDtor) align 4 %[[CI1ARG]])
+// LLVM-CIR:     define {{.*}}@_ZN7DerivedCI24BaseE8WithDtor(ptr{{.*}}, ptr byref(%struct.WithDtor) align 4 %[[ARG:[0-9]+]])
+// LLVM-CIR-NOT: alloca %struct.WithDtor
+// LLVM-CIR:     call void @_ZN4BaseC2E8WithDtor(ptr{{.*}}, ptr byref(%struct.WithDtor) align 4 %[[ARG]])
+// OGCG:         define {{.*}}@_ZN7DerivedCI24BaseE8WithDtor(ptr{{.*}}, ptr nofreeobj noundef align 4 dereferenceable(4) %[[ARG:[0-9]+]])
+// OGCG:         call void @_ZN4BaseC2E8WithDtor(ptr{{.*}}, ptr nofreeobj noundef align 4 dereferenceable(4) %[[ARG]])

@@ -1,0 +1,173 @@
+// RUN: cir-opt %s -split-input-file \
+// RUN:     -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#byref_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A byref parameter handed on to another byref parameter, as a delegating or
+  // inherited constructor does.  Declaring the callee after the caller is what
+  // makes the operand load the incoming pointer rather than a slot, so the
+  // order here is load bearing.
+  cir.func @forwards_byref_param(%arg0: !rec_Big)
+      attributes { test_classify = #byref_arg } {
+    %spill = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_byref(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @forwards_byref_param(%[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.align = 8 : i64
+  // CHECK-SAME:     llvm.byref = !rec_Big
+  // CHECK-NOT:    cir.alloca
+  // CHECK-NOT:    cir.load
+  // CHECK:        cir.call @takes_big_byref(%[[PTR]]) :
+  // CHECK-SAME:     llvm.byref = !rec_Big
+
+  cir.func private @takes_big_byref(%arg0: !rec_Big)
+      attributes { test_classify = #byref_arg }
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#byref_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The reverse order, where the operand still loads the parameter's own slot
+  // and that slot is forwarded, then retargeted to the incoming pointer.  The
+  // callee receives the caller's storage either way.
+  cir.func private @takes_big_byref(%arg0: !rec_Big)
+      attributes { test_classify = #byref_arg }
+
+  cir.func @forwards_byref_param_via_slot(%arg0: !rec_Big)
+      attributes { test_classify = #byref_arg } {
+    %spill = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_byref(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @forwards_byref_param_via_slot(%[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.byref = !rec_Big
+  // CHECK-NOT:    cir.alloca
+  // CHECK-NOT:    cir.load
+  // CHECK:        cir.call @takes_big_byref(%[[PTR]]) :
+  // CHECK-SAME:     llvm.byref = !rec_Big
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#byref_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // Mutual recursion puts each function on both sides of the other, so both
+  // orders above occur in one module.
+  cir.func @ping(%arg0: !rec_Big) attributes { test_classify = #byref_arg } {
+    %spill = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @pong(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  cir.func @pong(%arg0: !rec_Big) attributes { test_classify = #byref_arg } {
+    %spill = cir.alloca "arg0" align(8) init : !cir.ptr<!rec_Big>
+    cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @ping(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @ping(%[[PING:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.byref = !rec_Big
+  // CHECK-NOT:    cir.alloca
+  // CHECK-NOT:    cir.load
+  // CHECK:        cir.call @pong(%[[PING]]) :
+  // CHECK-SAME:     llvm.byref = !rec_Big
+  // CHECK:      cir.func{{.*}} @pong(%[[PONG:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.byref = !rec_Big
+  // CHECK-NOT:    cir.alloca
+  // CHECK-NOT:    cir.load
+  // CHECK:        cir.call @ping(%[[PONG]]) :
+  // CHECK-SAME:     llvm.byref = !rec_Big
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+!rec_Two = !cir.struct<"Two" {data !s64i, data !s64i}>
+
+#byref_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#expand_then_byref = {
+  return = { kind = "direct" },
+  args   = [ { kind = "expand" },
+             { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // An Expand parameter ahead of the byref one turns into two arguments, so
+  // the byref parameter sits at a different index than it was declared at.
+  // The attributes have to follow it there for the forward to be recognised.
+  cir.func @expand_ahead_of_byref(%two: !rec_Two, %big: !rec_Big)
+      attributes { test_classify = #expand_then_byref } {
+    %spill = cir.alloca "big" align(8) init : !cir.ptr<!rec_Big>
+    cir.store %big, %spill : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_byref(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @expand_ahead_of_byref(%{{.*}}: !s64i, %{{.*}}: !s64i, %[[PTR:.*]]: !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.byref = !rec_Big
+  // CHECK:        cir.call @takes_big_byref(%[[PTR]]) :
+  // CHECK-SAME:     llvm.byref = !rec_Big
+
+  cir.func private @takes_big_byref(%arg0: !rec_Big)
+      attributes { test_classify = #byref_arg }
+
+}
