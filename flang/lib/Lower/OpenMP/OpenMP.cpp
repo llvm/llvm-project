@@ -2607,7 +2607,7 @@ static void genScopeClauses(lower::AbstractConverter &converter,
                             mlir::omp::ScopeOperands &clauseOps,
                             llvm::SmallVectorImpl<Object> &reductionObjects) {
   ClauseProcessor cp(converter, semaCtx, clauses);
-  cp.processAllocate(clauseOps);
+  cp.processAllocate(clauseOps, /*supportAlignment=*/true);
   cp.processNowait(clauseOps);
   cp.processReduction(loc, clauseOps, reductionObjects);
 }
@@ -3452,6 +3452,90 @@ genOrderedRegionOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       queue, item, clauseOps);
 }
 
+/// Private operand order follows privatization expansion rather than the
+/// ALLOCATE clause's list order.
+template <typename ClauseOpsT>
+static void
+mapAllocateClauseToPrivateSlots(mlir::Location loc, const List<Clause> &clauses,
+                                const ObjectEntryBlockArgs &args,
+                                ClauseOpsT &clauseOps,
+                                bool requireAutomaticStorage = false) {
+  if (clauseOps.allocateVars.empty())
+    return;
+
+  llvm::DenseMap<const semantics::Symbol *, int64_t> privateSlots;
+  int64_t privateSlot = 0;
+  auto addPrivateSlot = [&](const semantics::Symbol &symbol) {
+    if (!privateSlots.try_emplace(&symbol.GetUltimate(), privateSlot).second)
+      fir::emitFatalError(
+          loc, "symbol with multiple private storage slots on one construct");
+    ++privateSlot;
+  };
+  for (const Object &object : args.priv.objects) {
+    const semantics::Symbol *symbol = object.sym();
+    if (!symbol)
+      fir::emitFatalError(loc, "private item without a semantic symbol");
+    // A privatized common block contributes one private operand per member,
+    // so slot numbering must follow the same expansion.
+    if (const auto *commonDetails =
+            symbol->detailsIf<semantics::CommonBlockDetails>()) {
+      for (const auto &member : commonDetails->objects())
+        addPrivateSlot(*member);
+    } else {
+      addPrivateSlot(*symbol);
+    }
+  }
+
+  llvm::DenseSet<const semantics::Symbol *> allocateSymbols;
+  for (const Clause &clause : clauses) {
+    if (clause.id != llvm::omp::Clause::OMPC_allocate)
+      continue;
+    const auto &allocate = std::get<clause::Allocate>(clause.u);
+    const auto &objects = std::get<ObjectList>(allocate.t);
+    for (const Object &object : objects) {
+      const semantics::Symbol *symbol = object.sym();
+      if (!symbol)
+        fir::emitFatalError(loc,
+                            "ALLOCATE clause item without a semantic symbol");
+      const semantics::Symbol *ultimate = &symbol->GetUltimate();
+      if (!allocateSymbols.insert(ultimate).second)
+        TODO(loc, "ALLOCATE clause item appears more than once");
+
+      if (requireAutomaticStorage &&
+          (semantics::IsSaved(*ultimate) ||
+           semantics::FindCommonBlockContaining(*ultimate)))
+        TODO(loc, "ALLOCATE clause on SCOPE currently does not support SAVE or "
+                  "common block entities");
+
+      auto privateSlot = privateSlots.find(ultimate);
+      if (privateSlot == privateSlots.end())
+        fir::emitFatalError(
+            loc, "ALLOCATE clause item without private storage slot");
+
+      auto type = evaluate::DynamicType::From(*ultimate);
+      bool supportedDataSharing =
+          symbol->test(semantics::Symbol::Flag::OmpPrivate) ||
+          symbol->test(semantics::Symbol::Flag::OmpFirstPrivate);
+      bool supportedType = ultimate->Rank() == 0 &&
+                           !semantics::IsAllocatableOrPointer(*ultimate) &&
+                           type &&
+                           type->category() != common::TypeCategory::Derived &&
+                           !type->RequiresDescriptor() &&
+                           !type->HasDeferredOrAssumedTypeParameter();
+      if (!supportedDataSharing || !supportedType)
+        TODO(loc,
+             "ALLOCATE clause currently supports only fixed-size intrinsic "
+             "scalar PRIVATE or FIRSTPRIVATE items");
+
+      clauseOps.allocatePrivateIndices.push_back(privateSlot->second);
+    }
+  }
+
+  if (clauseOps.allocatePrivateIndices.size() != clauseOps.allocateVars.size())
+    fir::emitFatalError(loc,
+                        "incomplete ALLOCATE clause private storage mapping");
+}
+
 static mlir::omp::ParallelOp
 genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               semantics::SemanticsContext &semaCtx,
@@ -3463,74 +3547,7 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   assert((!enableDelayedPrivatization || dsp) &&
          "expected valid DataSharingProcessor");
 
-  if (!clauseOps.allocateVars.empty()) {
-    llvm::DenseMap<const semantics::Symbol *, int64_t> privateSlots;
-    int64_t privateSlot = 0;
-    auto addPrivateSlot = [&](const semantics::Symbol &symbol) {
-      if (!privateSlots.try_emplace(&symbol.GetUltimate(), privateSlot).second)
-        fir::emitFatalError(
-            loc, "symbol with multiple private storage slots on one construct");
-      ++privateSlot;
-    };
-    for (const Object &object : args.priv.objects) {
-      const semantics::Symbol *symbol = object.sym();
-      if (!symbol)
-        fir::emitFatalError(loc, "private item without a semantic symbol");
-      // A privatized common block contributes one private operand per member,
-      // so slot numbering must follow the same expansion.
-      if (const auto *commonDetails =
-              symbol->detailsIf<semantics::CommonBlockDetails>()) {
-        for (const auto &member : commonDetails->objects())
-          addPrivateSlot(*member);
-      } else {
-        addPrivateSlot(*symbol);
-      }
-    }
-
-    llvm::DenseSet<const semantics::Symbol *> allocateSymbols;
-    for (const Clause &clause : item->clauses) {
-      if (clause.id != llvm::omp::Clause::OMPC_allocate)
-        continue;
-      const auto &allocate = std::get<clause::Allocate>(clause.u);
-      const auto &objects = std::get<ObjectList>(allocate.t);
-      for (const Object &object : objects) {
-        const semantics::Symbol *symbol = object.sym();
-        if (!symbol)
-          fir::emitFatalError(loc,
-                              "ALLOCATE clause item without a semantic symbol");
-        const semantics::Symbol *ultimate = &symbol->GetUltimate();
-        if (!allocateSymbols.insert(ultimate).second)
-          TODO(loc, "ALLOCATE clause item appears more than once");
-
-        auto privateSlot = privateSlots.find(ultimate);
-        if (privateSlot == privateSlots.end())
-          fir::emitFatalError(
-              loc, "ALLOCATE clause item without private storage slot");
-
-        auto type = evaluate::DynamicType::From(*ultimate);
-        bool supportedDataSharing =
-            symbol->test(semantics::Symbol::Flag::OmpPrivate) ||
-            symbol->test(semantics::Symbol::Flag::OmpFirstPrivate);
-        bool supportedType =
-            ultimate->Rank() == 0 &&
-            !semantics::IsAllocatableOrPointer(*ultimate) && type &&
-            type->category() != common::TypeCategory::Derived &&
-            !type->RequiresDescriptor() &&
-            !type->HasDeferredOrAssumedTypeParameter();
-        if (!supportedDataSharing || !supportedType)
-          TODO(loc,
-               "ALLOCATE clause currently supports only fixed-size intrinsic "
-               "scalar PRIVATE or FIRSTPRIVATE items");
-
-        clauseOps.allocatePrivateIndices.push_back(privateSlot->second);
-      }
-    }
-
-    if (clauseOps.allocatePrivateIndices.size() !=
-        clauseOps.allocateVars.size())
-      fir::emitFatalError(loc,
-                          "incomplete ALLOCATE clause private storage mapping");
-  }
+  mapAllocateClauseToPrivateSlots(loc, item->clauses, args, clauseOps);
 
   OpWithBodyGenInfo genInfo =
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
@@ -3890,6 +3907,9 @@ genScopeOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   args.priv.vars = clauseOps.privateVars;
   args.reduction.objects = reductionObjects;
   args.reduction.vars = clauseOps.reductionVars;
+
+  mapAllocateClauseToPrivateSlots(loc, item->clauses, args, clauseOps,
+                                  /*requireAutomaticStorage=*/true);
 
   return genOpWithBody<mlir::omp::ScopeOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
