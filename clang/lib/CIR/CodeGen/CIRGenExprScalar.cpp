@@ -682,7 +682,7 @@ public:
         value = emitIncDecConsiderOverflowBehavior(e, value);
       } else {
         // NOTE(CIR): clang calls CreateAdd but folds this to a unary op
-        value = emitIncOrDec(e, input, /*nsw=*/false);
+        value = emitIntIncOrDec(e, input, /*nsw=*/false);
       }
     } else if (const PointerType *ptr = type->getAs<PointerType>()) {
       QualType type = ptr->getPointeeType();
@@ -704,32 +704,14 @@ public:
       }
     } else if (type->isVectorType()) {
       if (type->hasIntegerRepresentation()) {
-        value = emitIncOrDec(e, input, /*nsw=*/false);
+        value = emitIntIncOrDec(e, input, /*nsw=*/false);
       } else {
-        cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec vector of float");
-        return {};
+        CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
+        value = emitFloatIncOrDec(e, input);
       }
     } else if (type->isRealFloatingType()) {
       CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
-
-      if (type->isHalfType() &&
-          !cgf.getContext().getLangOpts().NativeHalfType) {
-        cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec half");
-        return {};
-      }
-
-      if (mlir::isa<cir::SingleType, cir::DoubleType, cir::LongDoubleType>(
-              value.getType())) {
-        mlir::Location loc = cgf.getLoc(e->getExprLoc());
-        auto fpType = mlir::cast<cir::FPTypeInterface>(value.getType());
-        mlir::Value amount = builder.getConstFP(
-            loc, value.getType(), llvm::APFloat(fpType.getFloatSemantics(), 1));
-        value = e->isIncrementOp() ? builder.createFAdd(loc, value, amount)
-                                   : builder.createFSub(loc, value, amount);
-      } else {
-        cgf.cgm.errorNYI(e->getSourceRange(), "Unary inc/dec other fp type");
-        return {};
-      }
+      value = emitFloatIncOrDec(e, input);
     } else if (type->isFixedPointType()) {
       value = emitFixedPointIncDec(e, value, type);
     } else {
@@ -756,13 +738,13 @@ public:
                                                  mlir::Value inVal) {
     switch (cgf.getLangOpts().getSignedOverflowBehavior()) {
     case LangOptions::SOB_Defined:
-      return emitIncOrDec(e, inVal, /*nsw=*/false);
+      return emitIntIncOrDec(e, inVal, /*nsw=*/false);
     case LangOptions::SOB_Undefined:
       assert(!cir::MissingFeatures::sanitizers());
-      return emitIncOrDec(e, inVal, /*nsw=*/true);
+      return emitIntIncOrDec(e, inVal, /*nsw=*/true);
     case LangOptions::SOB_Trapping:
       if (!e->canOverflow())
-        return emitIncOrDec(e, inVal, /*nsw=*/true);
+        return emitIntIncOrDec(e, inVal, /*nsw=*/true);
       cgf.cgm.errorNYI(e->getSourceRange(), "inc/def overflow SOB_Trapping");
       return {};
     }
@@ -828,12 +810,46 @@ public:
     return builder.createOrFold<cir::MinusOp>(loc, operand, nsw);
   }
 
-  mlir::Value emitIncOrDec(const UnaryOperator *e, mlir::Value input,
-                           bool nsw = false) {
+  mlir::Value emitIntIncOrDec(const UnaryOperator *e, mlir::Value input,
+                              bool nsw = false) {
     mlir::Location loc = cgf.getLoc(e->getSourceRange().getBegin());
     return e->isIncrementOp()
                ? builder.createOrFold<cir::IncOp>(loc, input, nsw)
                : builder.createOrFold<cir::DecOp>(loc, input, nsw);
+  }
+
+  mlir::Value emitFloatIncOrDec(const UnaryOperator *e, mlir::Value input) {
+    assert(cir::isFPOrVectorOfFPType(input.getType()) &&
+           "Expect floating-point operand");
+    mlir::Location loc = cgf.getLoc(e->getSourceRange().getBegin());
+
+    if (auto vecType = mlir::dyn_cast<cir::VectorType>(input.getType())) {
+      mlir::Type fpScalarType = vecType.getElementType();
+      auto fpInterface = mlir::cast<cir::FPTypeInterface>(fpScalarType);
+      mlir::Value amount = builder.getConstFP(
+          loc, fpScalarType, llvm::APFloat(fpInterface.getFloatSemantics(), 1));
+      amount = cir::VecSplatOp::create(builder, loc, vecType, amount);
+      return e->isIncrementOp() ? builder.createFAdd(loc, input, amount)
+                                : builder.createFSub(loc, input, amount);
+    } else {
+      QualType type = e->getSubExpr()->getType();
+      // Another special case: half FP increment should be done via float.
+      if (type->isHalfType() && !cgf.getContext().getLangOpts().NativeHalfType)
+        input = builder.createFloatingCast(input, builder.getSingleTy());
+
+      auto fpInterface = mlir::cast<cir::FPTypeInterface>(input.getType());
+      mlir::Value amount =
+          builder.getConstFP(loc, input.getType(),
+                             llvm::APFloat(fpInterface.getFloatSemantics(), 1));
+      mlir::Value output = e->isIncrementOp()
+                               ? builder.createFAdd(loc, input, amount)
+                               : builder.createFSub(loc, input, amount);
+
+      if (type->isHalfType() && !cgf.getContext().getLangOpts().NativeHalfType)
+        output = builder.createFloatingCast(output, builder.getFp16Ty());
+
+      return output;
+    }
   }
 
   mlir::Value VisitUnaryNot(const UnaryOperator *e) {
