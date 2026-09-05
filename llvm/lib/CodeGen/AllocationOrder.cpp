@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AllocationOrder.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
@@ -35,15 +36,16 @@ AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   auto Order = RegClassInfo.getOrder(MF.getRegInfo().getRegClass(VirtReg));
 
-  // HintsAndCustomOrder holds Hints first followed by the shuffled order if the
-  // anti-hints shuffle it.
+  // HintsAndCustomOrder holds Hints first followed by the custom order if the
+  // anti-hints reorders it.
   SmallVector<MCPhysReg, 16> HintsAndCustomOrder;
 
-  // Get hints
+  // Get Hints.
   bool HardHints = TRI->getRegAllocationHints(
       VirtReg, Order, HintsAndCustomOrder, MF, &VRM, Matrix);
   const int NumHints = static_cast<int>(HintsAndCustomOrder.size());
 
+  // HintsAndCustomOrder only holds Hints (custom order is not added yet).
   LLVM_DEBUG({
     if (NumHints) {
       dbgs() << "hints:";
@@ -53,27 +55,29 @@ AllocationOrder AllocationOrder::create(Register VirtReg, const VirtRegMap &VRM,
     }
   });
 
-  // Get anti-hints
-  SmallVector<MCPhysReg, 16> AntiHintedPhysRegs;
-  MRI.getPhysRegAntiHints(VirtReg, AntiHintedPhysRegs, VRM);
+  // Get anti-hints.
+  BitVector AntiHintedRegUnits;
+  MRI.getBitVecRegAntiHints(VirtReg, AntiHintedRegUnits, VRM);
 
   LLVM_DEBUG({
-    if (!AntiHintedPhysRegs.empty()) {
+    if (AntiHintedRegUnits.any()) {
       dbgs() << "anti-hints:";
-      for (MCPhysReg AntiHint : AntiHintedPhysRegs)
-        dbgs() << ' ' << printReg(AntiHint, TRI);
+      for (Register AntiHintVReg : MRI.getRegAllocationAntiHints(VirtReg)) {
+        if (!VRM.hasPhys(AntiHintVReg))
+          continue;
+        dbgs() << ' ' << printReg(VRM.getPhys(AntiHintVReg), TRI);
+      }
       dbgs() << '\n';
     }
   });
 
-  if (!AntiHintedPhysRegs.empty()) {
+  if (AntiHintedRegUnits.any()) {
     HintsAndCustomOrder.reserve(NumHints + Order.size());
     TRI->applyRegAllocationAntiHints(VirtReg, Order, HintsAndCustomOrder,
-                                     NumHints, AntiHintedPhysRegs, MF, &VRM,
-                                     Matrix);
+                                     NumHints, AntiHintedRegUnits, MF, Matrix);
   }
 
-  // Create allocation order object
+  // Create allocation order object.
   AllocationOrder AO(std::move(HintsAndCustomOrder), NumHints, Order,
                      HardHints);
 
