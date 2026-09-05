@@ -16,6 +16,8 @@
 #include "fp_lib.h"
 #include "int_lib.h"
 
+#ifdef CRT_HAS_128BIT
+
 #if defined(CRT_HAS_TF_MODE)
 #define SRC_U128
 #define DST_QUAD
@@ -33,3 +35,5 @@
 COMPILER_RT_ABI fp_t __floatuntitf(tu_int a) { return __floatXiYf__(a); }
 
 #endif
+
+#endif // CRT_HAS_128BIT

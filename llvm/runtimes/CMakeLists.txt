@@ -56,6 +56,13 @@ if(NOT LLVM_BUILD_RUNTIMES)
   set(EXTRA_ARGS EXCLUDE_FROM_ALL)
 endif()
 
+# Exclude llvm-* tools from TOOLCHAIN_TOOLS for ZOS
+if(ZOS)
+  # TODO: Re-use llvm-* tools when functional for ZOS
+  set(TOOLCHAIN_TOOLS clang)
+  list(APPEND COMMON_CMAKE_ARGS "-DCMAKE_AR=/bin/ar" "-DCMAKE_LINKER=/bin/ld" "-DCMAKE_C_FLAGS=-fstack-protector" "-DCMAKE_CXX_FLAGS=-fstack-protector")
+endif()
+
 function(check_apple_target triple builtin_or_runtime)
   set(error "\
 compiler-rt for Darwin builds for all platforms and architectures using a \
