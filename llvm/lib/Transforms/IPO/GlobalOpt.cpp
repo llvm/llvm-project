@@ -1331,9 +1331,13 @@ deleteIfDead(GlobalValue &GV,
   if (!GV.isDiscardableIfUnused() && !GV.isDeclaration())
     return false;
 
-  if (const Comdat *C = GV.getComdat())
-    if (!GV.hasLocalLinkage() && NotDiscardableComdats.count(C))
+  if (auto *C = GV.getComdat()) {
+    auto IsComdatLeaderWithUses =
+        C->getName() == GV.getName() && C->getUsers().size() > 1;
+    if (IsComdatLeaderWithUses ||
+        (!GV.hasInternalLinkage() && NotDiscardableComdats.count(C)))
       return false;
+  }
 
   bool Dead;
   if (auto *F = dyn_cast<Function>(&GV))
