@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
+#include "mlir/Interfaces/InferUniformityOpInterface.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 
@@ -946,6 +947,127 @@ void TestWithoutBoundsOp::inferResultRangesFromOptional(
     ArrayRef<IntegerValueRange> argRanges, SetIntLatticeFn setResultRanges) {
   // Mimic ops with uninitialized range.
   setResultRanges(getResult(), IntegerValueRange{});
+}
+
+//===----------------------------------------------------------------------===//
+// TestWithUniformityOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult TestWithUniformityOp::verify() {
+  if (!symbolizeUniformityScope(getScope()))
+    return emitOpError("unknown uniformity scope \"") << getScope() << "\"";
+  return success();
+}
+
+void TestWithUniformityOp::inferUniformity(ArrayRef<Uniformity>,
+                                           SetUniformityFn setUniformity) {
+  setUniformity(getResult(), *symbolizeUniformityScope(getScope()));
+}
+
+//===----------------------------------------------------------------------===//
+// TestUniformityOfOp
+//===----------------------------------------------------------------------===//
+
+void TestUniformityOfOp::inferUniformity(ArrayRef<Uniformity> operandUniformity,
+                                         SetUniformityFn setUniformity) {
+  if (!operandUniformity[0].isUninitialized())
+    setUniformity(getSame(), operandUniformity[0].getScope());
+  setUniformity(getOther(), UniformityScope::Divergent);
+}
+
+//===----------------------------------------------------------------------===//
+// TestUniformityLaunchOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult TestUniformityLaunchOp::verify() {
+  if (getScopes().size() != getBody().getNumArguments())
+    return emitOpError("expected one scope per body argument");
+  for (Attribute scope : getScopes())
+    if (!symbolizeUniformityScope(cast<StringAttr>(scope).getValue()))
+      return emitOpError("unknown uniformity scope ") << scope;
+  return success();
+}
+
+void TestUniformityLaunchOp::inferUniformity(ArrayRef<Uniformity>,
+                                             SetUniformityFn setUniformity) {
+  for (auto [argument, scope] :
+       llvm::zip_equal(getBody().getArguments(), getScopes()))
+    setUniformity(argument, *symbolizeUniformityScope(
+                                cast<StringAttr>(scope).getValue()));
+}
+
+bool TestUniformityLaunchOp::isLaunchBoundary() { return true; }
+
+//===----------------------------------------------------------------------===//
+// TestUniformityRegionOp
+//===----------------------------------------------------------------------===//
+
+/// Checks that `scopes`, if present, has one entry per value, each a known
+/// scope or the empty string.
+static LogicalResult verifyUniformityScopes(Operation *op,
+                                            std::optional<ArrayAttr> scopes,
+                                            unsigned numValues,
+                                            StringRef what) {
+  if (!scopes)
+    return success();
+  if (scopes->size() != numValues)
+    return op->emitOpError("expected one scope per ") << what;
+  for (Attribute scope : *scopes) {
+    StringRef name = cast<StringAttr>(scope).getValue();
+    if (!name.empty() && !symbolizeUniformityScope(name))
+      return op->emitOpError("unknown uniformity scope ") << scope;
+  }
+  return success();
+}
+
+LogicalResult TestUniformityRegionOp::verify() {
+  if (failed(verifyUniformityScopes(getOperation(), getArgScopes(),
+                                    getBody().getNumArguments(),
+                                    "body argument")))
+    return failure();
+  return verifyUniformityScopes(getOperation(), getResultScopes(),
+                                getNumResults(), "result");
+}
+
+void TestUniformityRegionOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  // The body is always entered, and returns to the parent.
+  if (point.isParent())
+    regions.emplace_back(&getBody());
+  else
+    regions.push_back(RegionSuccessor(getOperation()));
+}
+
+OperandRange
+TestUniformityRegionOp::getEntrySuccessorOperands(RegionSuccessor) {
+  return getInits();
+}
+
+ValueRange
+TestUniformityRegionOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isOperation())
+    return getResults();
+  return getBody().getArguments();
+}
+
+/// Declares the scope listed in `scopes` for each of `values`, skipping the
+/// values whose entry is the empty string.
+static void setUniformityScopes(std::optional<ArrayAttr> scopes,
+                                ValueRange values,
+                                SetUniformityFn setUniformity) {
+  if (!scopes)
+    return;
+  for (auto [value, scope] : llvm::zip_equal(values, *scopes)) {
+    StringRef name = cast<StringAttr>(scope).getValue();
+    if (!name.empty())
+      setUniformity(value, *symbolizeUniformityScope(name));
+  }
+}
+
+void TestUniformityRegionOp::inferUniformity(ArrayRef<Uniformity>,
+                                             SetUniformityFn setUniformity) {
+  setUniformityScopes(getArgScopes(), getBody().getArguments(), setUniformity);
+  setUniformityScopes(getResultScopes(), getResults(), setUniformity);
 }
 
 //===----------------------------------------------------------------------===//

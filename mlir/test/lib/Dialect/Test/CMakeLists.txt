@@ -85,6 +85,7 @@ mlir_target_link_libraries(MLIRTestDialect PUBLIC
   MLIRIR
   MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
+  MLIRInferUniformityOpInterface
   MLIRLinalgDialect
   MLIRLinalgTransforms
   MLIRPtrDialect
