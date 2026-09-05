@@ -3053,6 +3053,27 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       }
     }
 
+    // Allow cases where the ExactTC == (VF * IC) or ExactTC == (VF * IC) + 1.
+    //
+    // This produces at most 1 vector iteration, and at most 1 scalar iteration
+    // with no remainder. Later passes will eliminate the loop and leave
+    // straight-line code as the both iteration counts are statically known.
+    //
+    // If a function is marked as minsize/optsize or OptForSize is set, do not
+    // allow this form of transformation as this will increase CodeSize.
+    unsigned EffectiveIC = UserIC > 0 ? UserIC : 1;
+    unsigned MaxVFForTC = llvm::bit_floor(TC.getFixedValue());
+    if (TC.getFixedValue() - MaxVFForTC <= 1 &&
+        MaxVFForTC <= (MaxFactors.FixedVF.getFixedValue() * EffectiveIC) &&
+        !Config.OptForSize) {
+      unsigned VF = MaxVFForTC / EffectiveIC;
+      LLVM_DEBUG(dbgs() << "LV: Picking MaxVF=" << VF
+                        << " with 1 scalar iteration remaining.\n");
+      MaxFactors.FixedVF = ElementCount::getFixed(VF);
+      MaxFactors.ScalableVF = ElementCount::getScalable(0);
+      return MaxFactors;
+    }
+
     reportVectorizationFailure(
         "The trip count is below the minial threshold value.",
         "loop trip count is too low, avoiding vectorization", "LowTripCount",
@@ -5599,6 +5620,7 @@ LoopVectorizationPlanner::computeBestVF() {
   }
 
   VPlan *PlanForBestVF = &FirstPlan;
+  ElementCount ExactTC = getSmallConstantTripCount(PSE.getSE(), OrigLoop);
 
   for (auto &P : VPlans) {
     ArrayRef<ElementCount> VFs(P->vectorFactors().begin(),
@@ -5610,6 +5632,16 @@ LoopVectorizationPlanner::computeBestVF() {
     });
     if (ConsiderRegPressure)
       RUs = calculateRegisterUsageForPlan(*P, VFs, TTI);
+
+    // For loops where the Trip Count is below the TailFoldingThreshold, only
+    // consider the largest VF to result in at most one vector iteration, and at
+    // most one scalar iteration.
+    // FIXME: Encode this decision directly in LVPlanner.
+    if (!ForceVectorization && P->hasScalarTail() && ExactTC.isFixed() &&
+        ExactTC.getFixedValue() > 0 &&
+        ExactTC.getFixedValue() <= TTI.getMinTripCountTailFoldingThreshold()) {
+      VFs = VFs.take_back(1);
+    }
 
     for (unsigned I = 0; I < VFs.size(); I++) {
       ElementCount VF = VFs[I];

@@ -8,20 +8,32 @@ target triple = "riscv64-unknown-linux-gnu"
 define void @test_invariant_cond_for_select(ptr %dst, i8 %x) #0 {
 ; CHECK-LABEL: define void @test_invariant_cond_for_select(
 ; CHECK-SAME: ptr [[DST:%.*]], i8 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C_1]], <4 x i64> <i64 0, i64 1, i64 1, i64 1>, <4 x i64> zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[TMP1]] to <4 x i8>
+; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.v4i8.p0.i64(<4 x i8> [[TMP2]], ptr align 1 [[DST]], i64 4, <4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 16, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[C_3:%.*]] = icmp eq i8 [[X]], 0
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i64 [[IV]], 0
 ; CHECK-NEXT:    [[C_2_EXT:%.*]] = zext i1 [[C_2]] to i64
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C_1]], i64 [[C_2_EXT]], i64 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C_3]], i64 [[C_2_EXT]], i64 0
 ; CHECK-NEXT:    [[SEL_TRUNC:%.*]] = trunc i64 [[SEL]] to i8
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[IV]]
 ; CHECK-NEXT:    store i8 [[SEL_TRUNC]], ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 4
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ult i64 [[IV]], 14
-; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP1]], label %[[EXIT:.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
