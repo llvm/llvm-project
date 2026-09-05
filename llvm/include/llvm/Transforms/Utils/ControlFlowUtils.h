@@ -13,6 +13,7 @@
 #ifndef LLVM_TRANSFORMS_UTILS_CONTROLFLOWUTILS_H
 #define LLVM_TRANSFORMS_UTILS_CONTROLFLOWUTILS_H
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -25,11 +26,19 @@ class DomTreeUpdater;
 
 /// Given a set of branch descriptors [BB, Succ0, Succ1], create a "hub" such
 /// that the control flow from each BB to a successor is now split into two
-/// edges, one from BB to the hub and another from the hub to the successor. The
-/// hub consists of a series of guard blocks, one for each outgoing block. Each
-/// guard block conditionally branches to the corresponding outgoing block, or
-/// the next guard block in the chain. These guard blocks are returned in the
-/// argument vector.
+/// edges, one from BB to the hub and another from the hub to the successor.
+/// There are two ways to configure the hub: either as a branch sled or as a
+/// single switch.
+///
+/// For the branch sled case, the hub consists of a series of guard blocks, one
+/// for each outgoing block. Each guard block conditionally branches to the
+/// corresponding outgoing block, or the next guard block in the chain. These
+/// guard blocks are returned in the argument vector `GuardBlocks`.
+///
+/// In the case of a switch guard, the hub consists only of a single guard block
+/// containing a switch instruction that branches to all outgoing blocks (with
+/// an unreachable default destination). `GuardBlocks` will contain this single
+/// guard block.
 ///
 /// This also updates any PHINodes in the successor. For each such PHINode, the
 /// operands corresponding to incoming blocks are moved to a new PHINode in the
@@ -113,14 +122,26 @@ struct ControlFlowHub {
     Branches.emplace_back(BB, Succ0, Succ1);
   }
 
-  /// Return the unified loop exit block and a flag indicating if the CFG was
-  /// changed at all.
+  /// Return the first guard block (or the single switch guard block) and a
+  /// flag indicating if the CFG was changed at all.
   LLVM_ABI std::pair<BasicBlock *, bool>
   finalize(DomTreeUpdater *DTU, SmallVectorImpl<BasicBlock *> &GuardBlocks,
            const StringRef Prefix,
-           std::optional<unsigned> MaxControlFlowBooleans = std::nullopt);
+           std::optional<unsigned> MaxControlFlowBooleans = std::nullopt,
+           bool SwitchGuards = false);
 
   SmallVector<BranchDescriptor> Branches;
+
+private:
+  BasicBlock *finalizeAsBrSled(DomTreeUpdater *DTU,
+                               SmallVectorImpl<BasicBlock *> &GuardBlocks,
+                               const StringRef Prefix,
+                               std::optional<unsigned> MaxControlFlowBooleans,
+                               SetVector<BasicBlock *> &Outgoing);
+  BasicBlock *finalizeAsSwitch(DomTreeUpdater *DTU,
+                               SmallVectorImpl<BasicBlock *> &GuardBlocks,
+                               const StringRef Prefix,
+                               SetVector<BasicBlock *> &Outgoing);
 };
 
 } // end namespace llvm
