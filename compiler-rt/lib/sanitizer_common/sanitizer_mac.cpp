@@ -1361,6 +1361,7 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
   if (largest_gap_found) *largest_gap_found = 0;
   if (max_occupied_addr) *max_occupied_addr = 0;
   while (kr == KERN_SUCCESS) {
+    bool break_after_gap_check = false;
     mach_vm_size_t vmsize = 0;
     natural_t depth = 0;
     vm_region_submap_short_info_data_64_t vminfo;
@@ -1374,7 +1375,7 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
       // max address as well.
       if (address > max_vm_address) {
         address = max_vm_address;
-        kr = -1;  // break after this iteration.
+        break_after_gap_check = true;
       }
 
       if (max_occupied_addr)
@@ -1382,19 +1383,18 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
     } else if (kr == KERN_INVALID_ADDRESS) {
       // No more regions beyond "address", consider the gap at the end of VM.
       address = max_vm_address;
-
-      // We will break after this iteration anyway since kr != KERN_SUCCESS
+      break_after_gap_check = true;
     } else if (kr == KERN_DENIED) {
       Report("ERROR: Unable to find a memory range for dynamic shadow.\n");
       Report("HINT: Ensure mach_vm_region_recurse is allowed under sandbox.\n");
-      Die();
+      address = max_vm_address;
+      break_after_gap_check = true;
     } else {
       Report(
           "WARNING: mach_vm_region_recurse returned unexpected code %d (%s)\n",
           kr, mach_error_string(kr));
-      DCHECK(false && "mach_vm_region_recurse returned unexpected code");
-      break;  // address is not valid unless KERN_SUCCESS, therefore we must not
-              // use it.
+      address = max_vm_address;
+      break_after_gap_check = true;
     }
 
     if (free_begin != address) {
@@ -1410,6 +1410,9 @@ uptr FindAvailableMemoryRange(uptr size, uptr alignment, uptr left_padding,
         *largest_gap_found = gap_size;
       }
     }
+    if (break_after_gap_check)
+      break;
+
     // Move to the next region.
     address += vmsize;
     free_begin = address;
