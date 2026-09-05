@@ -37,6 +37,7 @@
 #include "llvm/Support/UndefPoison.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
+#include <cmath>
 #include <limits>
 #include <numeric>
 #include <optional>
@@ -828,6 +829,32 @@ llvm::ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
   return FoldedElements;
 }
 
+SmallVector<APFloat>
+llvm::ConstantFoldVectorFPBinop(unsigned Opcode, const Register Op1,
+                                const Register Op2,
+                                const MachineRegisterInfo &MRI) {
+  auto *SrcVec2 = getBuildVectorLikeDef(Op2, MRI);
+  if (!SrcVec2)
+    return SmallVector<APFloat>();
+
+  auto *SrcVec1 = getBuildVectorLikeDef(Op1, MRI);
+  if (!SrcVec1)
+    return SmallVector<APFloat>();
+
+  if (SrcVec1->getNumSources() != SrcVec2->getNumSources())
+    return SmallVector<APFloat>();
+
+  SmallVector<APFloat> FoldedElements;
+  for (unsigned Idx = 0, E = SrcVec1->getNumSources(); Idx < E; ++Idx) {
+    auto MaybeCst = ConstantFoldFPBinOp(Opcode, SrcVec1->getSourceReg(Idx),
+                                        SrcVec2->getSourceReg(Idx), MRI);
+    if (!MaybeCst)
+      return SmallVector<APFloat>();
+    FoldedElements.push_back(*MaybeCst);
+  }
+  return FoldedElements;
+}
+
 Align llvm::inferAlignFromPtrInfo(MachineFunction &MF,
                                   const MachinePointerInfo &MPO) {
   auto PSV = dyn_cast_if_present<const PseudoSourceValue *>(MPO.V);
@@ -965,6 +992,85 @@ llvm::ConstantFoldUnaryIntOp(unsigned Opcode, LLT DstTy, Register Src,
     if (!BV)
       return {};
     SmallVector<APInt> Folded;
+    for (unsigned SrcIdx = 0; SrcIdx < BV->getNumSources(); ++SrcIdx) {
+      if (auto MaybeFold = tryFoldScalar(BV->getSourceReg(SrcIdx))) {
+        Folded.emplace_back(std::move(*MaybeFold));
+        continue;
+      }
+      return {};
+    }
+    return Folded;
+  }
+  if (auto MaybeCst = tryFoldScalar(Src))
+    return {std::move(*MaybeCst)};
+  return {};
+}
+
+SmallVector<APFloat>
+llvm::ConstantFoldUnaryFPOp(unsigned Opcode, LLT DstTy, Register Src,
+                            const MachineRegisterInfo &MRI) {
+  LLT DstEltTy = DstTy.getScalarType();
+  auto Fold = [Opcode, DstEltTy](const APFloat &V) -> APFloat {
+    APFloat Result(V);
+    bool Unused;
+    switch (Opcode) {
+    case TargetOpcode::G_FNEG:
+      Result.changeSign();
+      return Result;
+    case TargetOpcode::G_FABS:
+      Result.clearSign();
+      return Result;
+    case TargetOpcode::G_FCEIL:
+      Result.roundToIntegral(APFloat::rmTowardPositive);
+      return Result;
+    case TargetOpcode::G_FFLOOR:
+      Result.roundToIntegral(APFloat::rmTowardNegative);
+      return Result;
+    case TargetOpcode::G_INTRINSIC_TRUNC:
+      Result.roundToIntegral(APFloat::rmTowardZero);
+      return Result;
+    case TargetOpcode::G_INTRINSIC_ROUND:
+      Result.roundToIntegral(APFloat::rmNearestTiesToAway);
+      return Result;
+    case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
+    case TargetOpcode::G_FRINT:
+    case TargetOpcode::G_FNEARBYINT:
+      Result.roundToIntegral(APFloat::rmNearestTiesToEven);
+      return Result;
+    case TargetOpcode::G_FPEXT:
+    case TargetOpcode::G_FPTRUNC:
+      Result.convert(getFltSemanticForLLT(DstEltTy),
+                     APFloat::rmNearestTiesToEven, &Unused);
+      return Result;
+    case TargetOpcode::G_FSQRT:
+      Result.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                     &Unused);
+      Result = APFloat(std::sqrt(Result.convertToDouble()));
+      break;
+    case TargetOpcode::G_FLOG2:
+      Result.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
+                     &Unused);
+      Result = APFloat(std::log2(Result.convertToDouble()));
+      break;
+    default:
+      llvm_unreachable("unexpected opcode in ConstantFoldUnaryFPOp");
+    }
+    // Only G_FSQRT and G_FLOG2 reach here; convert the double result back to
+    // the source (== destination) semantics.
+    Result.convert(V.getSemantics(), APFloat::rmNearestTiesToEven, &Unused);
+    return Result;
+  };
+
+  auto tryFoldScalar = [&](Register R) -> std::optional<APFloat> {
+    if (const ConstantFP *Cst = getConstantFPVRegVal(R, MRI))
+      return Fold(Cst->getValueAPF());
+    return std::nullopt;
+  };
+  if (MRI.getType(Src).isVector()) {
+    auto *BV = getOpcodeDef<GBuildVector>(Src, MRI);
+    if (!BV)
+      return {};
+    SmallVector<APFloat> Folded;
     for (unsigned SrcIdx = 0; SrcIdx < BV->getNumSources(); ++SrcIdx) {
       if (auto MaybeFold = tryFoldScalar(BV->getSourceReg(SrcIdx))) {
         Folded.emplace_back(std::move(*MaybeFold));

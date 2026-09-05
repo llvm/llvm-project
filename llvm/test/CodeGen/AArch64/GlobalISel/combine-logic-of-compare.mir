@@ -386,9 +386,8 @@ body:             |
     ; CHECK-LABEL: name: test_fcmp_and_fcmp_with_vectors
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i1) = G_CONSTANT i1 false
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i1>) = G_BUILD_VECTOR [[C]](i1), [[C]](i1)
-    ; CHECK-NEXT: %zext:_(<2 x i64>) = G_ZEXT [[BUILD_VECTOR]](<2 x i1>)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %zext:_(<2 x i64>) = G_BUILD_VECTOR [[C]](i64), [[C]](i64)
     ; CHECK-NEXT: $q0 = COPY %zext(<2 x i64>)
     %0:_(f64) = COPY $x0
     %1:_(f64) = COPY $x1

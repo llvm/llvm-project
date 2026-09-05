@@ -210,24 +210,23 @@ define <8 x i16> @pr38477(<8 x i16> %a0) {
 ; GISEL-LABEL: pr38477:
 ; GISEL:       // %bb.0:
 ; GISEL-NEXT:    adrp x8, .LCPI5_3
+; GISEL-NEXT:    adrp x9, .LCPI5_0
 ; GISEL-NEXT:    ldr q1, [x8, :lo12:.LCPI5_3]
 ; GISEL-NEXT:    adrp x8, .LCPI5_2
 ; GISEL-NEXT:    ldr q3, [x8, :lo12:.LCPI5_2]
-; GISEL-NEXT:    adrp x8, .LCPI5_0
+; GISEL-NEXT:    adrp x8, .LCPI5_1
 ; GISEL-NEXT:    umull2 v2.4s, v0.8h, v1.8h
 ; GISEL-NEXT:    umull v1.4s, v0.4h, v1.4h
 ; GISEL-NEXT:    uzp2 v1.8h, v1.8h, v2.8h
 ; GISEL-NEXT:    sub v2.8h, v0.8h, v1.8h
 ; GISEL-NEXT:    umull2 v4.4s, v2.8h, v3.8h
 ; GISEL-NEXT:    umull v2.4s, v2.4h, v3.4h
-; GISEL-NEXT:    ldr d3, [x8, :lo12:.LCPI5_0]
-; GISEL-NEXT:    adrp x8, .LCPI5_1
-; GISEL-NEXT:    ushll v3.8h, v3.8b, #0
+; GISEL-NEXT:    ldr q3, [x8, :lo12:.LCPI5_1]
 ; GISEL-NEXT:    uzp2 v2.8h, v2.8h, v4.8h
-; GISEL-NEXT:    ldr q4, [x8, :lo12:.LCPI5_1]
-; GISEL-NEXT:    shl v3.8h, v3.8h, #15
+; GISEL-NEXT:    ldr q4, [x9, :lo12:.LCPI5_0]
 ; GISEL-NEXT:    add v1.8h, v2.8h, v1.8h
-; GISEL-NEXT:    neg v2.8h, v4.8h
+; GISEL-NEXT:    neg v2.8h, v3.8h
+; GISEL-NEXT:    shl v3.8h, v4.8h, #15
 ; GISEL-NEXT:    ushl v1.8h, v1.8h, v2.8h
 ; GISEL-NEXT:    cmlt v2.8h, v3.8h, #0
 ; GISEL-NEXT:    bif v0.16b, v1.16b, v2.16b
