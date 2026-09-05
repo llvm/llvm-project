@@ -21,6 +21,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/VersionTuple.h"
@@ -793,9 +794,9 @@ bool clang::api_notes::parseAndDumpAPINotes(StringRef YI,
 namespace {
 using namespace api_notes;
 
-static std::string
-getFunctionSelectorKey(llvm::StringRef Name,
-                       llvm::ArrayRef<llvm::StringRef> Parameters) {
+template <typename ParametersT>
+static std::string getFunctionSelectorKey(llvm::StringRef Name,
+                                          const ParametersT &Parameters) {
   llvm::SmallString<64> Key;
   llvm::raw_svector_ostream OS(Key);
   auto AppendKeyPart = [&OS](llvm::StringRef Part) {
@@ -807,6 +808,31 @@ getFunctionSelectorKey(llvm::StringRef Name,
   for (llvm::StringRef Parameter : Parameters)
     AppendKeyPart(Parameter);
   return Key.str().str();
+}
+
+// YAML conversion has parameter spellings but no AST context. Keep this as a
+// narrow lexical normalization step. Declaration spellings are normalized with
+// QualType in Sema before using the same lexical selector normalization.
+static void normalizeWhereParameterList(
+    llvm::ArrayRef<llvm::StringRef> Parameters,
+    llvm::SmallVectorImpl<std::string> &NormalizedParameters) {
+  NormalizedParameters.clear();
+  NormalizedParameters.reserve(Parameters.size());
+
+  for (llvm::StringRef Parameter : Parameters)
+    NormalizedParameters.push_back(
+        normalizeAPINotesParameterSelector(Parameter));
+}
+
+static llvm::SmallVector<llvm::StringRef, 4>
+getParameterSelectorRefs(llvm::ArrayRef<std::string> Parameters) {
+  llvm::SmallVector<llvm::StringRef, 4> ParameterRefs;
+  ParameterRefs.reserve(Parameters.size());
+
+  for (const std::string &Parameter : Parameters)
+    ParameterRefs.push_back(Parameter);
+
+  return ParameterRefs;
 }
 
 class YAMLConverter {
@@ -1190,24 +1216,32 @@ public:
         continue;
 
       if (WhereParameters.second) {
+        llvm::SmallVector<std::string, 4> NormalizedWhereParameters;
+        normalizeWhereParameterList(*WhereParameters.second,
+                                    NormalizedWhereParameters);
+        auto NormalizedWhereParameterRefs =
+            getParameterSelectorRefs(NormalizedWhereParameters);
         if (!KnownMethodSelectors
                  .insert(getFunctionSelectorKey(CXXMethod.Name,
-                                                *WhereParameters.second))
+                                                NormalizedWhereParameters))
                  .second) {
           emitError(llvm::Twine("multiple API notes entries for C++ method '") +
                     CXXMethod.Name + "' with Where.Parameters " +
-                    formatAPINotesParameterSelector(*WhereParameters.second));
+                    api_notes::formatAPINotesParameterSelector(
+                        NormalizedWhereParameters));
           continue;
         }
+
+        CXXMethodInfo MI;
+        convertFunction(CXXMethod, MI);
+        Writer.addCXXMethod(TagCtxID, CXXMethod.Name,
+                            NormalizedWhereParameterRefs, MI, SwiftVersion);
+        continue;
       }
 
       CXXMethodInfo MI;
       convertFunction(CXXMethod, MI);
-      if (WhereParameters.second)
-        Writer.addCXXMethod(TagCtxID, CXXMethod.Name, *WhereParameters.second,
-                            MI, SwiftVersion);
-      else
-        Writer.addCXXMethod(TagCtxID, CXXMethod.Name, MI, SwiftVersion);
+      Writer.addCXXMethod(TagCtxID, CXXMethod.Name, MI, SwiftVersion);
     }
 
     // Convert nested tags.
@@ -1284,21 +1318,32 @@ public:
         continue;
 
       if (WhereParameters.second) {
+        llvm::SmallVector<std::string, 4> NormalizedWhereParameters;
+        normalizeWhereParameterList(*WhereParameters.second,
+                                    NormalizedWhereParameters);
+        auto NormalizedWhereParameterRefs =
+            getParameterSelectorRefs(NormalizedWhereParameters);
         if (!KnownFunctionSelectors
                  .insert(getFunctionSelectorKey(Function.Name,
-                                                *WhereParameters.second))
+                                                NormalizedWhereParameters))
                  .second) {
           emitError(
               llvm::Twine("multiple API notes entries for global function '") +
               Function.Name + "' with Where.Parameters " +
-              formatAPINotesParameterSelector(*WhereParameters.second));
+              formatAPINotesParameterSelector(NormalizedWhereParameters));
           continue;
         }
+
+        GlobalFunctionInfo GFI;
+        convertFunction(Function, GFI);
+        Writer.addGlobalFunction(Ctx, Function.Name,
+                                 NormalizedWhereParameterRefs, GFI,
+                                 SwiftVersion);
+        continue;
       }
 
       // Check for duplicate name-only global functions.
-      if (!WhereParameters.second &&
-          !KnownNameOnlyFunctions.insert(Function.Name).second) {
+      if (!KnownNameOnlyFunctions.insert(Function.Name).second) {
         emitError(llvm::Twine("multiple definitions of global function '") +
                   Function.Name + "'");
         continue;
@@ -1306,11 +1351,7 @@ public:
 
       GlobalFunctionInfo GFI;
       convertFunction(Function, GFI);
-      if (WhereParameters.second)
-        Writer.addGlobalFunction(Ctx, Function.Name, *WhereParameters.second,
-                                 GFI, SwiftVersion);
-      else
-        Writer.addGlobalFunction(Ctx, Function.Name, GFI, SwiftVersion);
+      Writer.addGlobalFunction(Ctx, Function.Name, GFI, SwiftVersion);
     }
 
     // Write all enumerators.

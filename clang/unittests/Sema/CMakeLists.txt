@@ -3,6 +3,7 @@
 # large statically linked binary, but separating it out is
 # the right tradeoff today.
 add_distinct_clang_unittest(SemaTests
+  APINotesSelectorTest.cpp
   ExternalSemaSourceTest.cpp
   CodeCompleteTest.cpp
   HeuristicResolverTest.cpp

@@ -21,6 +21,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Sema/APINotesSelector.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaSwift.h"
 #include <stack>
@@ -1001,81 +1002,6 @@ UnwindTagContext(TagDecl *DC, api_notes::APINotesManager &APINotes) {
   return std::nullopt;
 }
 
-namespace clang {
-struct APINotesParameterSelector {
-  SmallVector<std::string, 4> Parameters;
-
-  bool operator==(const APINotesParameterSelector &Other) const {
-    return Parameters == Other.Parameters;
-  }
-
-  bool operator!=(const APINotesParameterSelector &Other) const {
-    return !(*this == Other);
-  }
-};
-
-struct APINotesParameterSelectorCandidates {
-  APINotesParameterSelector Source;
-  std::optional<APINotesParameterSelector> Desugared;
-};
-} // namespace clang
-
-static PrintingPolicy
-getAPINotesParameterSelectorPrintingPolicy(const ASTContext &Context) {
-  PrintingPolicy Policy(Context.getLangOpts());
-  Policy.PrintAsCanonical = false;
-  Policy.FullyQualifiedName = false;
-  Policy.SuppressScope = false;
-  Policy.UsePreferredNames = false;
-  Policy.MSVCFormatting = false;
-  Policy.SplitTemplateClosers = false;
-  Policy.IncludeNewlines = false;
-  return Policy;
-}
-
-// Print the APINotes selector spelling for one parameter. The source-spelled
-// selector is tried first. The desugared spelling is only a permissive
-// fallback.
-static std::string getAPINotesParameterSelectorSpelling(
-    QualType ParamType, const ASTContext &Context, const PrintingPolicy &Policy,
-    bool Desugar) {
-  if (Desugar)
-    ParamType = ParamType.getDesugaredType(Context);
-
-  ParamType.removeLocalConst();
-  ParamType.removeLocalVolatile();
-  ParamType = ParamType.stripNullability(Context);
-
-  return ParamType.getAsString(Policy);
-}
-
-static std::optional<APINotesParameterSelectorCandidates>
-getAPINotesParameterSelectorCandidates(const Sema &S, const FunctionDecl *FD) {
-  const auto *FPT = FD->getType()->getAs<FunctionProtoType>();
-  if (!FPT)
-    return std::nullopt;
-
-  APINotesParameterSelectorCandidates Candidates;
-  APINotesParameterSelector Desugared;
-  Candidates.Source.Parameters.reserve(FPT->getNumParams());
-  Desugared.Parameters.reserve(FPT->getNumParams());
-
-  const PrintingPolicy Policy =
-      getAPINotesParameterSelectorPrintingPolicy(S.Context);
-  for (QualType ParamType : FPT->param_types()) {
-    Candidates.Source.Parameters.push_back(
-        getAPINotesParameterSelectorSpelling(ParamType, S.Context, Policy,
-                                             /*Desugar=*/false));
-    Desugared.Parameters.push_back(getAPINotesParameterSelectorSpelling(
-        ParamType, S.Context, Policy, /*Desugar=*/true));
-  }
-
-  if (Candidates.Source != Desugared)
-    Candidates.Desugared = std::move(Desugared);
-
-  return Candidates;
-}
-
 APINotesSelectorDiagnosticReaderState &
 APINotesSelectorDiagnosticState::getOrCreateReaderState(
     api_notes::APINotesReader &Reader) {
@@ -1104,10 +1030,10 @@ void APINotesSelectorDiagnosticReaderState::markCandidatesUsed(
         ArrayRef<std::string>)>
         GetSelectorKey,
     const APINotesParameterSelectorCandidates &Candidates) {
-  if (auto Key = GetSelectorKey(Candidates.Source.Parameters))
+  if (auto Key = GetSelectorKey(Candidates.Source))
     markUsed(*Key);
   if (Candidates.Desugared) {
-    if (auto Key = GetSelectorKey(Candidates.Desugared->Parameters))
+    if (auto Key = GetSelectorKey(*Candidates.Desugared))
       markUsed(*Key);
   }
 }
@@ -1123,7 +1049,7 @@ static void processExactAPINotes(
         ArrayRef<std::string>)>
         LookupExact) {
   auto ProcessSelector = [&](const APINotesParameterSelector &Selector) {
-    auto Info = LookupExact(Selector.Parameters);
+    auto Info = LookupExact(Selector);
     if (Info.size() == 0)
       return false;
 
@@ -1170,7 +1096,7 @@ void Sema::ProcessAPINotes(Decl *D) {
     if (auto FD = dyn_cast<FunctionDecl>(D)) {
       if (FD->getDeclName().isIdentifier()) {
         auto ParameterSelectorCandidates =
-            getAPINotesParameterSelectorCandidates(*this, FD);
+            getAPINotesParameterSelectorCandidates(Context, FD);
 
         for (auto Reader : Readers) {
           auto Info =
@@ -1383,7 +1309,7 @@ void Sema::ProcessAPINotes(Decl *D) {
           !isa<CXXDestructorDecl>(CXXMethod) &&
           !isa<CXXConversionDecl>(CXXMethod)) {
         auto ParameterSelectorCandidates =
-            getAPINotesParameterSelectorCandidates(*this, CXXMethod);
+            getAPINotesParameterSelectorCandidates(getASTContext(), CXXMethod);
         for (auto Reader : Readers) {
           if (auto Context = UnwindTagContext(TagContext, APINotes)) {
             std::string MethodName;

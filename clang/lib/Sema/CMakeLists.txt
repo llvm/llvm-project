@@ -14,6 +14,7 @@ clang_tablegen(OpenCLBuiltins.inc -gen-clang-opencl-builtins
   )
 
 add_clang_library(clangSema
+  APINotesSelector.cpp
   AnalysisBasedWarnings.cpp
   CheckExprLifetime.cpp
   CodeCompleteConsumer.cpp
