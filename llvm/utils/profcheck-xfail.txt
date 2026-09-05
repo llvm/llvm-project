@@ -111,7 +111,6 @@ Transforms/PreISelIntrinsicLowering/AArch64/expand-exp.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-fp-math.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-fp-math-binary.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-log.ll
-Transforms/SimplifyCFG/switch-select-remap.ll
 Transforms/StackProtector/cross-dso-cfi-stack-chk-fail.ll
 Transforms/TailCallElim/2010-06-26-MultipleReturnValues.ll
 Transforms/TailCallElim/accum_recursion.ll
