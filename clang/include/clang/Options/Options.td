@@ -100,10 +100,11 @@ def DXCOption : OptionVisibility;
 /////////
 // Docs
 
-// A short name to show in documentation. The name will be interpreted as rST.
+// A short name to show in documentation. The name will be interpreted as
+// Markdown.
 class DocName<string name> { string DocName = name; }
 
-// A brief description to show in documentation, interpreted as rST.
+// A brief description to show in documentation, interpreted as Markdown.
 class DocBrief<code descr> { code DocBrief = descr; }
 
 // Indicates that this group should be flattened into its parent when generating
@@ -133,7 +134,7 @@ Flags controlling the behavior of the %Program preprocessor.}]>.str>;
 def IncludePath_Group : OptionGroup<"<I/i group>">, Group<Preprocessor_Group>,
                         DocName<"Include path management">,
                         DocBrief<[{
-Flags controlling how ``#include``\s are resolved to files.}]>;
+Flags controlling how `#include`s are resolved to files.}]>;
 
 def I_Group : OptionGroup<"<I group>">, Group<IncludePath_Group>, DocFlatten;
 def i_Group : OptionGroup<"<i group>">, Group<IncludePath_Group>, DocFlatten;
@@ -141,7 +142,7 @@ def clang_i_Group : OptionGroup<"<clang i group>">, Group<i_Group>, DocFlatten;
 
 def M_Group : OptionGroup<"<M group>">, Group<Preprocessor_Group>,
               DocName<"Dependency file generation">, DocBrief<[{
-Flags controlling generation of a dependency file for ``make``-like build
+Flags controlling generation of a dependency file for `make`-like build
 systems.}]>;
 
 def d_Group : OptionGroup<"<d group>">, Group<Preprocessor_Group>,
@@ -154,7 +155,7 @@ def Diag_Group : OptionGroup<"<W/R group>">, Group<CompileOnly_Group>,
 "Flags controlling which warnings, errors, and remarks %Program will generate. ">.str,
                   // When in clang link directly to the page.
                   !cond(!eq(GlobalDocumentation.Program, "Clang"):
-"See the :doc:`full list of warning and remark flags <DiagnosticsReference>`.",
+"See the {doc}`full list of warning and remark flags <DiagnosticsReference>`.",
                   // When elsewhere the link will not work.
                   true:
 "See Clang's Diagnostic Reference for a full list of warning and remark flags."))>;
@@ -282,7 +283,7 @@ Flags controlling the behavior of the Scalable Static Analysis Framework (SSAF).
 // invoking GCC to compile Fortran code.
 def gfortran_Group : OptionGroup<"<gfortran group>">,
                      DocName<"Fortran compilation options">, DocBrief<[{
-Flags that will be passed onto the ``gfortran`` compiler when Clang is given
+Flags that will be passed onto the `gfortran` compiler when Clang is given
 a Fortran input.}]>;
 
 def Link_Group : OptionGroup<"<T/e/s/t/u group>">, DocName<"Linker options">,
@@ -783,8 +784,8 @@ def H : Flag<["-"], "H">, Visibility<[ClangOption, CC1Option]>,
 def fshow_skipped_includes : Flag<["-"], "fshow-skipped-includes">,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Show skipped includes in -H output.">,
-  DocBrief<[{#include files may be "skipped" due to include guard optimization
-             or #pragma once. This flag makes -H show also such includes.}]>,
+  DocBrief<[{`#include` files may be "skipped" due to include guard optimization
+or `#pragma once`. This flag makes `-H` show also such includes.}]>,
   MarshallingInfoFlag<DependencyOutputOpts<"ShowSkippedHeaderIncludes">>;
 
 def I_ : Flag<["-"], "I-">, Group<I_Group>, IgnoredGCCCompat,
@@ -1055,13 +1056,13 @@ def Xarch__
       HelpText<"Pass <arg> to the compilation if the target matches <arch>">,
       DocBrief<
           [{Specifies that the argument should only be used if the compilation
-  target matches the specified architecture. This can be used with the target
-  CPU, triple architecture, or offloading host and device. It is most useful
-  for separating behavior undesirable on one of the targets when combining many
-  compilation jobs, as is common with offloading. For example, -Xarch_x86_64,
-  -Xarch_gfx90a, and -Xarch_device are all valid selectors. -Xarch_device will
-  forward the argument to the offloading device while -Xarch_host will target
-  the host system, which can be used to suppress incompatible GPU arguments.}]>,
+target matches the specified architecture. This can be used with the target
+CPU, triple architecture, or offloading host and device. It is most useful
+for separating behavior undesirable on one of the targets when combining many
+compilation jobs, as is common with offloading. For example, `-Xarch_x86_64`,
+`-Xarch_gfx90a`, and `-Xarch_device` are all valid selectors. `-Xarch_device` will
+forward the argument to the offloading device while `-Xarch_host` will target
+the host system, which can be used to suppress incompatible GPU arguments.}]>,
       MetaVarName<"<arch> <arg>">;
 def Xarch_host : Separate<["-"], "Xarch_host">, Flags<[NoXarchOption]>,
   HelpText<"Pass <arg> to host compilation in the offloading toolchain">, MetaVarName<"<arg>">;
@@ -1735,10 +1736,10 @@ def fstrict_flex_arrays_EQ : Joined<["-"], "fstrict-flex-arrays=">, Group<f_Grou
   NormalizedValuesScope<"LangOptions::StrictFlexArraysLevelKind">,
   NormalizedValues<["Default", "OneZeroOrIncomplete", "ZeroOrIncomplete", "IncompleteOnly"]>,
   HelpText<"Enable optimizations based on the strict definition of flexible arrays.">,
-  DocBrief<[{If ``<n>`` is equal to 0, any trailing array member is considered a flexible array.
-             If ``<n>`` is equal to 1, trailing array members of size 0, 1 or undefined are considered flexible arrays.
-             If ``<n>`` is equal to 2, trailing array members of size 0 or undefined are considered flexible arrays.
-             If ``<n>`` is equal to 3, only trailing array members of undefined size are considered flexible arrays.}]>,
+  DocBrief<[{If `<n>` is equal to 0, any trailing array member is considered a flexible array.
+If `<n>` is equal to 1, trailing array members of size 0, 1 or undefined are considered flexible arrays.
+If `<n>` is equal to 2, trailing array members of size 0 or undefined are considered flexible arrays.
+If `<n>` is equal to 3, only trailing array members of undefined size are considered flexible arrays.}]>,
   MarshallingInfoEnum<LangOpts<"StrictFlexArraysLevel">, "Default">;
 defm apple_pragma_pack : BoolFOption<"apple-pragma-pack",
   LangOpts<"ApplePragmaPack">, DefaultFalse,
@@ -1887,18 +1888,18 @@ def fprofile_sample_accurate : Flag<["-"], "fprofile-sample-accurate">,
     Visibility<[ClangOption, CC1Option]>,
     HelpText<"Specifies that the sample profile is accurate">,
     DocBrief<[{Specifies that the sample profile is accurate. If the sample
-               profile is accurate, callsites without profile samples are marked
-               as cold. Otherwise, treat callsites without profile samples as if
-               we have no profile}]>,
+profile is accurate, callsites without profile samples are marked
+as cold. Otherwise, treat callsites without profile samples as if
+we have no profile}]>,
    MarshallingInfoFlag<CodeGenOpts<"ProfileSampleAccurate">>;
 def fsample_profile_use_profi : Flag<["-"], "fsample-profile-use-profi">,
     Visibility<[ClangOption, CC1Option]>,
     Group<f_Group>,
     HelpText<"Use profi to infer block and edge counts">,
     DocBrief<[{Infer block and edge counts. If the profiles have errors or missing
-               blocks caused by sampling, profile inference (profi) can convert
-               basic block counts to branch probabilities to fix them by extended
-               and re-engineered classic MCMF (min-cost max-flow) approach.}]>;
+blocks caused by sampling, profile inference (profi) can convert
+basic block counts to branch probabilities to fix them by extended
+and re-engineered classic MCMF (min-cost max-flow) approach.}]>;
 def fno_profile_sample_accurate : Flag<["-"], "fno-profile-sample-accurate">, Group<f_Group>;
 def fno_sample_profile_use_profi : Flag<["-"], "fno-sample-profile-use-profi">,
                                    Group<f_Group>;
@@ -2793,14 +2794,14 @@ defm sanitize_address_poison_custom_array_cookie : BoolOption<"f", "sanitize-add
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
   BothFlags<[], [ClangOption], " poisoning array cookies when using custom operator new[] in AddressSanitizer">>,
   DocBrief<[{Enable "poisoning" array cookies when allocating arrays with a
-custom operator new\[\] in Address Sanitizer, preventing accesses to the
+custom operator new[] in Address Sanitizer, preventing accesses to the
 cookies from user code. An array cookie is a small implementation-defined
 header added to certain array allocations to record metadata such as the
 length of the array. Accesses to array cookies from user code are technically
 allowed by the standard but are more likely to be the result of an
 out-of-bounds array access.
 
-An operator new\[\] is "custom" if it is not one of the allocation functions
+An operator new[] is "custom" if it is not one of the allocation functions
 provided by the C++ standard library. Array cookies from non-custom allocation
 functions are always poisoned.}]>,
   Group<f_clang_Group>;
@@ -3821,6 +3822,13 @@ def fno_modules_driver :
   Group<f_Group>,
   Visibility<[ClangOption]>,
   HelpText<"Disable support for driver managed module builds (experimental)">;
+def fdepscan_log_path : Joined<["-"], "fdepscan-log-path=">,
+  Group<f_Group>,
+  Visibility<[ClangOption]>,
+  Flags<[NoArgumentUnused]>,
+  MetaVarName<"<file>">,
+  HelpText<"Log the timing of dependency scanning actions to <file>. Only "
+           "takes effect while running the dependency scanner.">;
 
 def fincremental_extensions :
   Flag<["-"], "fincremental-extensions">,
@@ -4781,8 +4789,8 @@ def ftime_trace : Flag<["-"], "ftime-trace">, Group<f_Group>,
   HelpText<"Turn on time profiler. Generates JSON file based on output filename.">,
   DocBrief<[{
 Turn on time profiler. Generates JSON file based on output filename. Results
-can be analyzed with chrome://tracing or `Speedscope App
-<https://www.speedscope.app>`_ for flamegraph visualization.}]>,
+can be analyzed with chrome://tracing or [Speedscope App](https://www.speedscope.app)
+for flamegraph visualization.}]>,
   Visibility<[ClangOption, CLOption, DXCOption]>;
 def ftime_trace_granularity_EQ : Joined<["-"], "ftime-trace-granularity=">, Group<f_Group>,
   HelpText<"Minimum time granularity (in microseconds) traced by time profiler">,
@@ -4999,7 +5007,7 @@ def fdefined_pointer_subtraction :
     "When subtracting two pointers, do not assume that the byte difference is an "
     "exact multiple of the pointee type size, thereby preventing such subtraction "
     "from resulting in undefined behavior. Users should prefer casting pointers "
-    "to ``char *`` before subtracting them rather than relying on this flag."
+    "to `char *` before subtracting them rather than relying on this flag."
   >,
   MarshallingInfoFlag<LangOpts<"StablePointerSubtraction">>;
 def fno_wrapv_pointer : Flag<["-"], "fno-wrapv-pointer">, Group<f_Group>,
@@ -5381,9 +5389,9 @@ defm structor_decl_linkage_names
                           "declarations in DWARF.">,
                   BothFlags<[], [ClangOption, CLOption, CC1Option]>>,
                   Group<g_flags_Group>,
-                  DocBrief<[{On some ABIs (e.g., Itanium), constructors and destructors may have multiple variants. Historically, when generating DWARF, Clang did not attach ``DW_AT_linkage_name`` to structor DIEs because there were multiple possible manglings (depending on the structor variant) that could be used. With ``-gstructor-decl-linkage-names``, for ABIs with structor variants, we attach a "unified" mangled name to structor declarations DIEs which debuggers can use to look up all the definitions for a structor declaration. E.g., a "unified" mangled name ``_ZN3FooC4Ev`` may have multiple definitions associated with it such as ``_ZN3FooC1Ev`` and ``_ZN3FooC2Ev``.
+                  DocBrief<[{On some ABIs (e.g., Itanium), constructors and destructors may have multiple variants. Historically, when generating DWARF, Clang did not attach `DW_AT_linkage_name` to structor DIEs because there were multiple possible manglings (depending on the structor variant) that could be used. With `-gstructor-decl-linkage-names`, for ABIs with structor variants, we attach a "unified" mangled name to structor declarations DIEs which debuggers can use to look up all the definitions for a structor declaration. E.g., a "unified" mangled name `_ZN3FooC4Ev` may have multiple definitions associated with it such as `_ZN3FooC1Ev` and `_ZN3FooC2Ev`.
 
-Enabling this flag results in a better interactive debugging experience (both GDB and LLDB have support for understanding these "unified" linkage names). However, it comes with a significant increase in debug-info size (particularly the `.debug_str` section). As an escape hatch, users can disable this feature using ``-gno-structor-decl-linkage-names``.}]>;
+Enabling this flag results in a better interactive debugging experience (both GDB and LLDB have support for understanding these "unified" linkage names). However, it comes with a significant increase in debug-info size (particularly the `.debug_str` section). As an escape hatch, users can disable this feature using `-gno-structor-decl-linkage-names`.}]>;
 defm key_instructions : BoolGOption<"key-instructions",
     CodeGenOpts<"DebugKeyInstructions">, DefaultFalse,
     NegFlag<SetFalse>, PosFlag<SetTrue, [], [],

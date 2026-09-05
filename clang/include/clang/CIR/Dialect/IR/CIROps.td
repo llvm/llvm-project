@@ -660,7 +660,11 @@ def CIR_MemOrder : CIR_I32EnumAttr<
     I32EnumAttrCase<"Release", 3, "release">,
     I32EnumAttrCase<"AcquireRelease", 4, "acq_rel">,
     I32EnumAttrCase<"SequentiallyConsistent", 5, "seq_cst">
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_MemOrderAttr : CIR_EnumAttr<CIR_MemOrder, "mem_order">;
 
 //===----------------------------------------------------------------------===//
 // C/C++ sync scope definitions
@@ -687,7 +691,11 @@ def CIR_SyncScopeKind : CIR_I32EnumAttr<"SyncScopeKind", "sync scope kind", [
   I32EnumAttrCase<"OpenCLDevice", 13, "opencl_device">,
   I32EnumAttrCase<"OpenCLAllSVMDevices", 14, "opencl_all_svm_devices">,
   I32EnumAttrCase<"OpenCLSubGroup", 15, "opencl_sub_group">,
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_SyncScopeKindAttr : CIR_EnumAttr<CIR_SyncScopeKind, "sync_scope">;
 
 //===----------------------------------------------------------------------===//
 // AllocaOp
@@ -828,8 +836,8 @@ def CIR_LoadOp : CIR_Op<"load", [
                        UnitAttr:$is_volatile,
                        UnitAttr:$is_nontemporal,
                        OptionalAttr<I64Attr>:$alignment,
-                       OptionalAttr<CIR_SyncScopeKind>:$sync_scope,
-                       OptionalAttr<CIR_MemOrder>:$mem_order,
+                       OptionalAttr<CIR_SyncScopeKindAttr>:$sync_scope,
+                       OptionalAttr<CIR_MemOrderAttr>:$mem_order,
                        UnitAttr:$invariant);
   let results = (outs CIR_AnyType:$result);
 
@@ -839,8 +847,8 @@ def CIR_LoadOp : CIR_Op<"load", [
     (`nontemporal` $is_nontemporal^)?
     (`invariant` $invariant^)?
     (`align` `(` $alignment^ `)`)?
-    (`syncscope` `(` $sync_scope^ `)`)?
-    (`atomic` `(` $mem_order^ `)`)?
+    (`syncscope` `(` enum($sync_scope)^ `)`)?
+    (`atomic` `(` enum($mem_order)^ `)`)?
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
   }];
 
@@ -931,15 +939,15 @@ def CIR_StoreOp : CIR_Op<"store", [
                        UnitAttr:$is_volatile,
                        UnitAttr:$is_nontemporal,
                        OptionalAttr<I64Attr>:$alignment,
-                       OptionalAttr<CIR_SyncScopeKind>:$sync_scope,
-                       OptionalAttr<CIR_MemOrder>:$mem_order);
+                       OptionalAttr<CIR_SyncScopeKindAttr>:$sync_scope,
+                       OptionalAttr<CIR_MemOrderAttr>:$mem_order);
 
   let assemblyFormat = [{
     (`volatile` $is_volatile^)?
     (`nontemporal` $is_nontemporal^)?
     (`align` `(` $alignment^ `)`)?
-    (`syncscope` `(` $sync_scope^ `)`)?
-    (`atomic` `(` $mem_order^ `)`)?
+    (`syncscope` `(` enum($sync_scope)^ `)`)?
+    (`atomic` `(` enum($mem_order)^ `)`)?
     $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
   }];
 
@@ -3337,7 +3345,12 @@ def CIR_GlobalLinkageKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"ExternalWeakLinkage", 9, "extern_weak">,
     // Tentative definitions.
     I32EnumAttrCase<"CommonLinkage", 10, "common">
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_GlobalLinkageKindAttr
+    : CIR_EnumAttr<CIR_GlobalLinkageKind, "linkage">;
 
 // TODO(CIR): For starters, cir.global has only name and type.  The other
 // properties of a global variable will be added over time as more of ClangIR
@@ -3403,7 +3416,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
                        >:$global_visibility,
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
-                       CIR_GlobalLinkageKind:$linkage,
+                       CIR_GlobalLinkageKindAttr:$linkage,
                        OptionalAttr<MemorySpaceAttrInterface>:$addr_space,
                        OptionalAttr<CIR_TLSModelAttr>:$tls_model,
                        OptionalAttr<CIR_ThreadLocalGlobalWrapperInitAttr>:$tls_refs,
@@ -3429,7 +3442,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     ($sym_visibility^)?
     ($global_visibility^)?
     (`constant` $constant^)?
-    $linkage
+    enum($linkage)
     (`comdat` $comdat^)?
     (`tls_model` `=` enum($tls_model)^)?
     (`tls_refs` `=` $tls_refs^)?
@@ -4195,7 +4208,11 @@ def CIR_CallingConv : CIR_I32EnumAttr<"CallingConv", "calling convention", [
   I32EnumAttrCase<"SpirKernel", 3, "spir_kernel">,
   I32EnumAttrCase<"AMDGPUKernel", 4, "amdgpu_kernel">,
   I32EnumAttrCase<"X86WinCall", 5, "x86_wincall">
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_CallingConvAttr : CIR_EnumAttr<CIR_CallingConv, "calling_conv">;
 
 def CIR_FuncOp : CIR_Op<"func", [
   AutomaticAllocationScope, CallableOpInterface, SymbolName, SymbolVisibility,
@@ -4289,11 +4306,11 @@ def CIR_FuncOp : CIR_Op<"func", [
     UnitAttr:$no_proto,
     UnitAttr:$dso_local,
     DefaultValuedAttr<
-      CIR_GlobalLinkageKind,
+      CIR_GlobalLinkageKindAttr,
       "cir::GlobalLinkageKind::ExternalLinkage"
     >:$linkage,
     DefaultValuedAttr<
-      CIR_CallingConv,
+      CIR_CallingConvAttr,
       "cir::CallingConv::C"
     >:$calling_conv,
     OptionalAttr<StrAttr>:$sym_visibility,
@@ -4301,7 +4318,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs,
     OptionalAttr<FlatSymbolRefAttr>:$aliasee,
-    OptionalAttr<CIR_SideEffect>:$side_effect,
+    OptionalAttr<CIR_SideEffectAttr>:$side_effect,
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     CIR_OptionalPriorityAttr:$global_ctor_priority,
     CIR_OptionalPriorityAttr:$global_dtor_priority,
@@ -4605,7 +4622,7 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
       UnitAttr:$nothrow,
       OptionalAttr<CIR_InlineKindAttr>:$inline_kind,
       UnitAttr:$musttail,
-      DefaultValuedAttr<CIR_SideEffect, "SideEffect::All">:$side_effect,
+      DefaultValuedAttr<CIR_SideEffectAttr, "SideEffect::All">:$side_effect,
       OptionalAttr<DictArrayAttr>:$arg_attrs,
       OptionalAttr<DictArrayAttr>:$res_attrs
       );
@@ -5013,6 +5030,29 @@ def CIR_CoroSizeOp : CIR_CoroIntrinsicOp<"size", (ins),
 }
 
 //===----------------------------------------------------------------------===//
+// Coroutine intrinsic PromiseOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroPromiseOp : CIR_CoroIntrinsicOp<"promise",
+    (ins CIR_VoidPtrType:$coroframe, CIR_AnyIntType:$align,
+    CIR_BoolType:$isFromPromise),
+    (outs CIR_VoidPtrType:$result)> {
+  let summary = "Represents llvm.coro.promise";
+  let description = [{
+    Given a coroutine handle (if `isFromPromise` is false) or a pointer to a
+    coroutine promise (if `isFromPromise` is true), obtains a pointer to the
+    coroutine promise or the coroutine handle, respectively. `align` is the
+    alignment requirement of the promise, and `isFromPromise` indicates the
+    direction of the transformation: `true` recovers the coroutine handle
+    from a promise pointer, `false` recovers the promise pointer from a
+    coroutine handle. Using this op on a coroutine without a coroutine
+    promise is undefined behavior.
+  }];
+
+  let llvmOp = "CoroPromiseOp";
+}
+
+//===----------------------------------------------------------------------===//
 // CopyOp
 //===----------------------------------------------------------------------===//
 
@@ -5416,7 +5456,11 @@ def CIR_LifetimeEndOp : CIR_Op<"lifetime.end"> {
 
 def CIR_AsmFlavor : CIR_I32EnumAttr<"AsmFlavor", "ATT or Intel",
                                     [I32EnumAttrCase<"x86_att", 0>,
-                                     I32EnumAttrCase<"x86_intel", 1>]>;
+                                     I32EnumAttrCase<"x86_intel", 1>]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_AsmFlavorAttr : CIR_EnumAttr<CIR_AsmFlavor, "asm_flavor">;
 
 def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
   let description = [{
@@ -5479,7 +5523,7 @@ def CIR_InlineAsmOp : CIR_Op<"asm", [RecursiveMemoryEffects]> {
   let arguments =
       (ins VariadicOfVariadic<AnyType, "operands_segments">:$asm_operands,
           StrAttr:$asm_string, StrAttr:$constraints, UnitAttr:$side_effects,
-          CIR_AsmFlavor:$asm_flavor, ArrayAttr:$operand_attrs,
+          CIR_AsmFlavorAttr:$asm_flavor, ArrayAttr:$operand_attrs,
           DenseI32ArrayAttr:$operands_segments);
 
   let builders = [OpBuilder<(ins
@@ -6990,7 +7034,11 @@ def CIR_AssumeBundleKind : CIR_I32EnumAttr<
   I32EnumAttrCase<"SeparateStorage", 2, "separate_storage">,
   I32EnumAttrCase<"Dereferenceable", 3, "dereferenceable">
 ]> {
+  let genSpecializedAttr = 0;
 }
+
+def CIR_AssumeBundleKindAttr
+    : CIR_EnumAttr<CIR_AssumeBundleKind, "assume_bundle">;
 
 def CIR_AssumeOp : CIR_Op<"assume"> {
   let summary = "Tell the optimizer that a boolean value is true";
@@ -7018,7 +7066,7 @@ def CIR_AssumeOp : CIR_Op<"assume"> {
 
   let arguments = (ins
     CIR_BoolType:$predicate,
-    DefaultValuedAttr<CIR_AssumeBundleKind,
+    DefaultValuedAttr<CIR_AssumeBundleKindAttr,
                       "::cir::AssumeBundleKind::None">:$bundle_kind,
     Variadic<CIR_AnyType>:$bundle_args
   );
@@ -8876,7 +8924,12 @@ def CIR_AtomicFetchKind : CIR_I32EnumAttr<
     I32EnumAttrCase<"Minimum", 11, "minimum">,
     I32EnumAttrCase<"MaximumNum", 12, "maximum_num">,
     I32EnumAttrCase<"MinimumNum", 13, "minimum_num">
-]>;
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_AtomicFetchKindAttr
+    : CIR_EnumAttr<CIR_AtomicFetchKind, "atomic_fetch">;
 
 def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
   AllTypesMatch<["result", "val"]>,
@@ -8926,16 +8979,16 @@ def CIR_AtomicFetchOp : CIR_Op<"atomic.fetch", [
   let arguments = (ins
     Arg<CIR_PtrToIntOrFloatType, "", [MemRead, MemWrite]>:$ptr,
     CIR_AnyIntOrFloatType:$val,
-    CIR_AtomicFetchKind:$binop,
-    Arg<CIR_MemOrder, "memory order">:$mem_order,
-    Arg<CIR_SyncScopeKind, "synchronization scope">:$sync_scope,
+    CIR_AtomicFetchKindAttr:$binop,
+    Arg<CIR_MemOrderAttr, "memory order">:$mem_order,
+    Arg<CIR_SyncScopeKindAttr, "synchronization scope">:$sync_scope,
     UnitAttr:$is_volatile,
     UnitAttr:$fetch_first
   );
 
   let assemblyFormat = [{
-    $binop $mem_order
-    `syncscope` `(` $sync_scope `)`
+    enum($binop) enum($mem_order)
+    `syncscope` `(` enum($sync_scope) `)`
     (`fetch_first` $fetch_first^)?
     $ptr `,` $val
     (`volatile` $is_volatile^)?
@@ -8983,14 +9036,14 @@ def CIR_AtomicXchgOp : CIR_Op<"atomic.xchg", [
   let arguments = (ins
     Arg<CIR_PointerType, "", [MemRead, MemWrite]>:$ptr,
     CIR_AnyType:$val,
-    Arg<CIR_MemOrder, "memory order">:$mem_order,
-    CIR_SyncScopeKind:$sync_scope,
+    Arg<CIR_MemOrderAttr, "memory order">:$mem_order,
+    CIR_SyncScopeKindAttr:$sync_scope,
     UnitAttr:$is_volatile
   );
 
   let assemblyFormat = [{
-    $mem_order
-    `syncscope` `(` $sync_scope `)`
+    enum($mem_order)
+    `syncscope` `(` enum($sync_scope) `)`
     (`volatile` $is_volatile^)?
     $ptr `,` $val
     `:` functional-type(operands, results) attr-dict
@@ -9047,17 +9100,17 @@ def CIR_AtomicCmpXchgOp : CIR_Op<"atomic.cmpxchg", [
   let arguments = (ins Arg<CIR_PointerType, "", [MemRead, MemWrite]>:$ptr,
                        CIR_AnyType:$expected,
                        CIR_AnyType:$desired,
-                       Arg<CIR_MemOrder, "success memory order">:$succ_order,
-                       Arg<CIR_MemOrder, "failure memory order">:$fail_order,
-                       CIR_SyncScopeKind:$sync_scope,
+                       Arg<CIR_MemOrderAttr, "success memory order">:$succ_order,
+                       Arg<CIR_MemOrderAttr, "failure memory order">:$fail_order,
+                       CIR_SyncScopeKindAttr:$sync_scope,
                        OptionalAttr<I64Attr>:$alignment,
                        UnitAttr:$weak,
                        UnitAttr:$is_volatile);
 
   let assemblyFormat = [{
     (`weak` $weak^)?
-    `success` `(` $succ_order `)` `failure` `(` $fail_order `)`
-    `syncscope` `(` $sync_scope `)`
+    `success` `(` enum($succ_order) `)` `failure` `(` enum($fail_order) `)`
+    `syncscope` `(` enum($sync_scope) `)`
     $ptr `,` $expected `,` $desired
     (`align` `(` $alignment^ `)`)?
     (`volatile` $is_volatile^)?
@@ -9084,7 +9137,7 @@ def CIR_AtomicTestAndSetOp : CIR_Op<"atomic.test_and_set"> {
 
   let arguments = (ins
     Arg<CIR_PtrToType<CIR_SInt8>, "", [MemRead, MemWrite]>:$ptr,
-    Arg<CIR_MemOrder, "memory order">:$mem_order,
+    Arg<CIR_MemOrderAttr, "memory order">:$mem_order,
     OptionalAttr<I64Attr>:$alignment,
     UnitAttr:$is_volatile
   );
@@ -9092,7 +9145,7 @@ def CIR_AtomicTestAndSetOp : CIR_Op<"atomic.test_and_set"> {
   let results = (outs CIR_BoolType:$result);
 
   let assemblyFormat = [{
-    $mem_order $ptr
+    enum($mem_order) $ptr
     (`volatile` $is_volatile^)?
     `:` qualified(type($ptr)) `->` qualified(type($result)) attr-dict
   }];
@@ -9115,13 +9168,13 @@ def CIR_AtomicClearOp : CIR_Op<"atomic.clear"> {
 
   let arguments = (ins
     Arg<CIR_PtrToType<CIR_SInt8>, "", [MemRead, MemWrite]>:$ptr,
-    Arg<CIR_MemOrder, "memory order">:$mem_order,
+    Arg<CIR_MemOrderAttr, "memory order">:$mem_order,
     OptionalAttr<I64Attr>:$alignment,
     UnitAttr:$is_volatile
   );
 
   let assemblyFormat = [{
-    $mem_order $ptr
+    enum($mem_order) $ptr
     (`volatile` $is_volatile^)?
     `:` qualified(type($ptr)) attr-dict
   }];
@@ -9148,12 +9201,12 @@ def CIR_AtomicFenceOp : CIR_Op<"atomic.fence"> {
   }];
 
   let arguments = (ins
-    Arg<CIR_MemOrder, "memory order">:$ordering,
-    OptionalAttr<CIR_SyncScopeKind>:$syncscope
+    Arg<CIR_MemOrderAttr, "memory order">:$ordering,
+    OptionalAttr<CIR_SyncScopeKindAttr>:$syncscope
   );
 
   let assemblyFormat = [{
-    (`syncscope` `(` $syncscope^ `)`)? $ordering attr-dict
+    (`syncscope` `(` enum($syncscope)^ `)`)? enum($ordering) attr-dict
   }];
 }
 
