@@ -127,19 +127,6 @@ KnownFPClass KnownFPClass::minMaxLike(const KnownFPClass &LHS_,
   } else
     llvm_unreachable("unhandled intrinsic");
 
-  // Fixup zero handling if denormals could be returned as a zero.
-  //
-  // As there's no spec for denormal flushing, be conservative with the
-  // treatment of denormals that could be flushed to zero. For older
-  // subtargets on AMDGPU the min/max instructions would not flush the
-  // output and return the original value.
-  //
-  if ((Known.KnownFPClasses & fcZero) != fcNone &&
-      !Known.isKnownNeverSubnormal()) {
-    if (Mode != DenormalMode::getIEEE())
-      Known.KnownFPClasses |= fcZero;
-  }
-
   if (Known.isKnownNeverNaN()) {
     if (KnownLHS.getSignBit() && KnownRHS.getSignBit() &&
         *KnownLHS.getSignBit() == *KnownRHS.getSignBit()) {
@@ -169,6 +156,19 @@ KnownFPClass KnownFPClass::minMaxLike(const KnownFPClass &LHS_,
                (KnownLHS.getSignBit() == true || KnownRHS.getSignBit() == true))
         Known.signBitMustBeOne();
     }
+  }
+
+  // Fixup zero handling if denormal outputs/inputs could be treated as zero.
+  //
+  // As there's no spec for denormal flushing, be conservative with the
+  // treatment of denormals that could be flushed to zero. For older
+  // subtargets on AMDGPU the min/max instructions would not flush the
+  // output and return the original value.
+  //
+  if (Mode != DenormalMode::getIEEE() && (!KnownLHS.isKnownNeverSubnormal() ||
+                                          !KnownRHS.isKnownNeverSubnormal())) {
+    Known.KnownFPClasses |= fcZero;
+    Known.SignBit = std::nullopt;
   }
 
   return Known;

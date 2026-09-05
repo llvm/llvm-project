@@ -2258,6 +2258,13 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
                               KnownFPClass KnownLHS, KnownFPClass KnownRHS,
                               const Function &F, bool NSZ) {
   bool OrderedZeroSign = !NSZ;
+  Type *EltTy = CI->getType()->getScalarType();
+  DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+  // Prevent folding of the operand if a subnormal output/input could flush to
+  // zero.
+  bool CanReturnOperand =
+      Mode == DenormalMode::getIEEE() ||
+      (KnownLHS.isKnownNeverSubnormal() && KnownRHS.isKnownNeverSubnormal());
 
   KnownFPClass::MinMaxKind OpKind;
   switch (IID) {
@@ -2266,12 +2273,14 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
 
     // If one operand is known greater than the other, it must be that
     // operand unless the other is a nan.
-    if (cannotOrderStrictlyLess(KnownLHS.KnownFPClasses,
+    if (CanReturnOperand &&
+        cannotOrderStrictlyLess(KnownLHS.KnownFPClasses,
                                 KnownRHS.KnownFPClasses, OrderedZeroSign) &&
         KnownRHS.isKnownNever(fcNan))
       return CI->getArgOperand(0);
 
-    if (cannotOrderStrictlyGreater(KnownLHS.KnownFPClasses,
+    if (CanReturnOperand &&
+        cannotOrderStrictlyGreater(KnownLHS.KnownFPClasses,
                                    KnownRHS.KnownFPClasses, OrderedZeroSign) &&
         KnownLHS.isKnownNever(fcNan))
       return CI->getArgOperand(1);
@@ -2283,12 +2292,14 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
 
     // If one operand is known less than the other, it must be that operand
     // unless the other is a nan.
-    if (cannotOrderStrictlyGreater(KnownLHS.KnownFPClasses,
+    if (CanReturnOperand &&
+        cannotOrderStrictlyGreater(KnownLHS.KnownFPClasses,
                                    KnownRHS.KnownFPClasses, OrderedZeroSign) &&
         KnownRHS.isKnownNever(fcNan))
       return CI->getArgOperand(0);
 
-    if (cannotOrderStrictlyLess(KnownLHS.KnownFPClasses,
+    if (CanReturnOperand &&
+        cannotOrderStrictlyLess(KnownLHS.KnownFPClasses,
                                 KnownRHS.KnownFPClasses, OrderedZeroSign) &&
         KnownLHS.isKnownNever(fcNan))
       return CI->getArgOperand(1);
@@ -2300,12 +2311,14 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
     OpKind = IID == Intrinsic::maxnum ? KnownFPClass::MinMaxKind::maxnum
                                       : KnownFPClass::MinMaxKind::maximumnum;
 
-    if (cannotOrderStrictlyLess(KnownLHS.KnownFPClasses,
+    if (CanReturnOperand &&
+        cannotOrderStrictlyLess(KnownLHS.KnownFPClasses,
                                 KnownRHS.KnownFPClasses, OrderedZeroSign) &&
         KnownLHS.isKnownNever(fcNan))
       return CI->getArgOperand(0);
 
-    if (cannotOrderStrictlyGreater(KnownLHS.KnownFPClasses,
+    if (CanReturnOperand &&
+        cannotOrderStrictlyGreater(KnownLHS.KnownFPClasses,
                                    KnownRHS.KnownFPClasses, OrderedZeroSign) &&
         KnownRHS.isKnownNever(fcNan))
       return CI->getArgOperand(1);
@@ -2317,12 +2330,14 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
     OpKind = IID == Intrinsic::minnum ? KnownFPClass::MinMaxKind::minnum
                                       : KnownFPClass::MinMaxKind::minimumnum;
 
-    if (cannotOrderStrictlyGreater(KnownLHS.KnownFPClasses,
+    if (CanReturnOperand &&
+        cannotOrderStrictlyGreater(KnownLHS.KnownFPClasses,
                                    KnownRHS.KnownFPClasses, OrderedZeroSign) &&
         KnownLHS.isKnownNever(fcNan))
       return CI->getArgOperand(0);
 
-    if (cannotOrderStrictlyLess(KnownLHS.KnownFPClasses,
+    if (CanReturnOperand &&
+        cannotOrderStrictlyLess(KnownLHS.KnownFPClasses,
                                 KnownRHS.KnownFPClasses, OrderedZeroSign) &&
         KnownRHS.isKnownNever(fcNan))
       return CI->getArgOperand(1);
@@ -2333,8 +2348,6 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
     llvm_unreachable("not a min/max intrinsic");
   }
 
-  Type *EltTy = CI->getType()->getScalarType();
-  DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
   Known = KnownFPClass::minMaxLike(KnownLHS, KnownRHS, OpKind, Mode);
   Known.knownNot(~DemandedMask);
 
