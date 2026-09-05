@@ -737,6 +737,56 @@ define i1 @is_signbit_set_simplify_nan(double %x) {
   ret i1 %r
 }
 
+define i1 @fcmp_if_constant_nonzero_test1(float %x) {
+; CHECK-LABEL: @fcmp_if_constant_nonzero_test1(
+; CHECK-NEXT: [[CMP:%.*]] = fcmp ogt float [[X:%.*]], 0.000000e+00
+;
+  %mul = fmul float %x, 4.000000e+00
+  %cmp = fcmp ogt float %mul, 0.000000e+00
+  ret i1 %cmp
+}
+
+define i1 @fcmp_if_constant_nonzeronegative_test2(float %x) {
+; CHECK-LABEL: @fcmp_if_constant_nonzeronegative_test2(
+; CHECK-NEXT: [[MUL:%.*]] = fmul float %x, -6.0
+; CHECK-NEXT: [[CMP:%.*]] = fcmp olt float [[MUL]], 0.000000e+00
+;
+  %mul = fmul float %x, -6.000000e+00
+  %cmp = fcmp ogt float 0.000000e+00, %mul
+  ret i1 %cmp
+}
+
+define i1 @fcmp_if_constant_negzero_test3(float %x) {
+; CHECK-LABEL: @fcmp_if_constant_negzero_test3(
+; CHECK-NEXT: [[MUL:%.*]] = fmul float %x, -0.0
+; CHECK-NEXT: [[CMP:%.*]] = fcmp olt float [[MUL]], 0.000000e+00
+; CHECK-NEXT: ret i1 false
+;
+  %mul = fmul float %x, -0.0
+  %cmp = fcmp ogt float 0.000000e+00, %mul
+  ret i1 %cmp
+}
+
+define i1 @fcmp_if_constant_poszero_test4(float %x) {
+; CHECK-LABEL: @fcmp_if_constant_poszero_test4(
+; CHECK-NEXT: [[MUL:%.*]] = fmul float %x, 0.0
+; CHECK-NEXT: [[CMP:%.*]] = fcmp ogt [[MUL]], 0.0
+; CHECK-NEXT: ret i1 false
+;
+  %mul = fmul float %x, 0.0
+  %cmp = fcmp ogt float %mul, 0.0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_operandposition_switch_test5(float %x) {
+; CHECK-LABEL: @fcmp_operandposition_switch_test5(
+; CHECK-NEXT: [[CMP:%.*]] = fcmp olt float [[X:%.*]], 0.0
+;
+  %mul = fmul float 5.0, %x
+  %cmp = fcmp ogt float 0.0, %mul
+  ret i1 cmp
+}
+
 define <2 x i1> @lossy_oeq(<2 x float> %x) {
 ; CHECK-LABEL: @lossy_oeq(
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
