@@ -119,6 +119,25 @@ set python32_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311-32
 set python64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311
 set pythonarm64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311-arm64
 
+if "%x86%" == "true" (
+  if not exist %python32_dir% (
+    echo Can't find python directory %python32_dir%
+    exit /b 1
+  )
+)
+if "%x64%" == "true" (
+  if not exist %python64_dir% (
+    echo Can't find python directory %python64_dir%
+    exit /b 1
+  )
+)
+if "%arm64%" == "true" (
+  if not exist %pythonarm64_dir% (
+    echo Can't find python directory %pythonarm64_dir%
+    exit /b 1
+  )
+)
+
 set revision=llvmorg-%version%
 set package_version=%version%
 set build_dir=%cd%\llvm_package_%package_version%
