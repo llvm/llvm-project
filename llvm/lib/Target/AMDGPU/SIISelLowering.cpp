@@ -5090,20 +5090,31 @@ Register SITargetLowering::getRegisterByName(const char *RegName, LLT VT,
                                              const MachineFunction &MF) const {
   const Function &Fn = MF.getFunction();
 
-  Register Reg = StringSwitch<Register>(RegName)
-                     .Case("m0", AMDGPU::M0)
-                     .Case("exec", AMDGPU::EXEC)
-                     .Case("exec_lo", AMDGPU::EXEC_LO)
-                     .Case("exec_hi", AMDGPU::EXEC_HI)
-                     .Case("flat_scratch", AMDGPU::FLAT_SCR)
-                     .Case("flat_scratch_lo", AMDGPU::FLAT_SCR_LO)
-                     .Case("flat_scratch_hi", AMDGPU::FLAT_SCR_HI)
-                     .Default(Register());
+  Register Reg =
+      StringSwitch<Register>(RegName)
+          .Case("m0", AMDGPU::M0)
+          .Case("exec", AMDGPU::EXEC)
+          .Case("exec_lo", AMDGPU::EXEC_LO)
+          .Case("exec_hi", AMDGPU::EXEC_HI)
+          .Case("flat_scratch", AMDGPU::FLAT_SCR)
+          .Case("flat_scratch_lo", AMDGPU::FLAT_SCR_LO)
+          .Case("flat_scratch_hi", AMDGPU::FLAT_SCR_HI)
+          .Case("src_flat_scratch_base", AMDGPU::SRC_FLAT_SCRATCH_BASE)
+          .Case("src_flat_scratch_base_lo", AMDGPU::SRC_FLAT_SCRATCH_BASE_LO)
+          .Case("src_flat_scratch_base_hi", AMDGPU::SRC_FLAT_SCRATCH_BASE_HI)
+          .Default(Register());
   if (!Reg)
     return Reg;
 
   if (!Subtarget->hasFlatScrRegister() &&
       Subtarget->getRegisterInfo()->regsOverlap(Reg, AMDGPU::FLAT_SCR)) {
+    Fn.getContext().emitError(Twine("invalid register \"" + StringRef(RegName) +
+                                    "\" for subtarget."));
+  }
+
+  if (!Subtarget->hasGloballyAddressableScratch() &&
+      Subtarget->getRegisterInfo()->regsOverlap(
+          Reg, AMDGPU::SRC_FLAT_SCRATCH_BASE)) {
     Fn.getContext().emitError(Twine("invalid register \"" + StringRef(RegName) +
                                     "\" for subtarget."));
   }
@@ -5114,11 +5125,14 @@ Register SITargetLowering::getRegisterByName(const char *RegName, LLT VT,
   case AMDGPU::EXEC_HI:
   case AMDGPU::FLAT_SCR_LO:
   case AMDGPU::FLAT_SCR_HI:
+  case AMDGPU::SRC_FLAT_SCRATCH_BASE_LO:
+  case AMDGPU::SRC_FLAT_SCRATCH_BASE_HI:
     if (VT.getSizeInBits() == 32)
       return Reg;
     break;
   case AMDGPU::EXEC:
   case AMDGPU::FLAT_SCR:
+  case AMDGPU::SRC_FLAT_SCRATCH_BASE:
     if (VT.getSizeInBits() == 64)
       return Reg;
     break;
