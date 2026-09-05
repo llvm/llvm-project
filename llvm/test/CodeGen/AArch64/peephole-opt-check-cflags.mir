@@ -2,15 +2,16 @@
 
 # Check that we don't optimize out a subs due to areCFlagsAccessedBetweenInstrs
 # returning the wrong result; it should check the cneg before the subs which does
-# modify cflags.
+# modify cflags. The second SUBWrr must not become flag-setting; its compare
+# with zero instead folds into the branch as CBNZW, deleting the dead CSNEG
+# that read it.
 
 # CHECK-LABEL: f
 # CHECK:      SUBSWrr
 # CHECK-NEXT: SUBWrr
 # CHECK-NEXT: CSNEGWr
-# CHECK-NEXT: SUBSWri
-# CHECK-NEXT: CSNEGWr
-# CHECK-NEXT: Bcc
+# CHECK-NEXT: CBNZW
+# CHECK-NEXT: RET_ReallyLR
 
 --- |
   target datalayout = "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128"
