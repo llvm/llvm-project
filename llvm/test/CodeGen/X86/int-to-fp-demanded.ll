@@ -424,12 +424,15 @@ define i16 @bf16_bitcast_signbit(float %a) nounwind {
 ;
 ; X64-LABEL: bf16_bitcast_signbit:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq __truncsfbf2@PLT
-; X64-NEXT:    pextrw $0, %xmm0, %eax
+; X64-NEXT:    movd %xmm0, %ecx
+; X64-NEXT:    btl $16, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    adcl $32767, %eax # imm = 0x7FFF
+; X64-NEXT:    ucomiss %xmm0, %xmm0
+; X64-NEXT:    cmovpl %ecx, %eax
+; X64-NEXT:    shrl $16, %eax
 ; X64-NEXT:    andl $32768, %eax # imm = 0x8000
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
-; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
   %bf = fptrunc float %a to bfloat
   %i = bitcast bfloat %bf to i16
