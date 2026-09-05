@@ -32,6 +32,8 @@ static cl::opt<std::string>
     CodeGenDataUsePath("codegen-data-use-path", cl::init(""), cl::Hidden,
                        cl::desc("File path to where .cgdata file is read"));
 
+StringRef llvm::cgdata::getCodeGenDataUsePath() { return CodeGenDataUsePath; }
+
 namespace llvm {
 cl::opt<bool> CodeGenDataThinLTOTwoRounds(
     "codegen-data-thinlto-two-rounds", cl::init(false), cl::Hidden,
