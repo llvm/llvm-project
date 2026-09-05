@@ -30,15 +30,15 @@
 using namespace clang;
 using namespace ento;
 
-void ExprEngine::CreateCXXTemporaryObject(const MaterializeTemporaryExpr *ME,
-                                          ExplodedNode *Pred,
-                                          ExplodedNodeSet &Dst) {
-  const Expr *tempExpr = ME->getSubExpr()->IgnoreParens();
-  ProgramStateRef state = Pred->getState();
+void ExprEngine::VisitMaterializeTemporaryExpr(
+    const MaterializeTemporaryExpr *MTE, ExplodedNode *Pred,
+    ExplodedNodeSet &Dst) {
+  const Expr *TempExpr = MTE->getSubExpr()->IgnoreParens();
+  ProgramStateRef State = Pred->getState();
   const StackFrame *SF = Pred->getStackFrame();
 
-  state = createTemporaryRegionIfNeeded(state, SF, tempExpr, ME);
-  Dst.insert(Engine.makePostStmtNode(ME, state, Pred));
+  State = createTemporaryRegionIfNeeded(State, SF, TempExpr, MTE);
+  Dst.insert(Engine.makePostStmtNode(MTE, State, Pred));
 }
 
 void ExprEngine::performTrivialCopy(ExplodedNodeSet &Dst, ExplodedNode *Pred,
@@ -1102,6 +1102,12 @@ void ExprEngine::VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,
   Dst.insert(Engine.makePostStmtNode(CS, state, Pred));
 }
 
+void ExprEngine::VisitCXXParenListInitExpr(const CXXParenListInitExpr *E,
+                                           ExplodedNode *Pred,
+                                           ExplodedNodeSet &Dst) {
+  ConstructInitList(E, E->getInitExprs(), /*IsTransparent*/ false, Pred, Dst);
+}
+
 void ExprEngine::VisitCXXThisExpr(const CXXThisExpr *TE, ExplodedNode *Pred,
                                   ExplodedNodeSet &Dst) {
   // Get the this object region from StoreManager.
@@ -1116,6 +1122,14 @@ void ExprEngine::VisitCXXThisExpr(const CXXThisExpr *TE, ExplodedNode *Pred,
 
 void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
                                  ExplodedNodeSet &Dst) {
+
+  if (!AMgr.options.ShouldInlineLambdas) {
+    const ExplodedNode *Node = Engine.makePostStmtNode(
+        LE, Pred->getState(), Pred, /*MarkAsSink=*/true);
+    Engine.addAbortedBlock(Node, getCurrBlock());
+    return;
+  }
+
   const StackFrame *SF = Pred->getStackFrame();
 
   // Get the region of the lambda itself.
@@ -1187,28 +1201,20 @@ void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
 void ExprEngine::VisitAttributedStmt(const AttributedStmt *A,
                                      ExplodedNode *Pred, ExplodedNodeSet &Dst) {
   const StackFrame *SF = Pred->getStackFrame();
-  ExplodedNodeSet CheckerPreStmt;
-  getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, A, *this);
+  ProgramStateRef State = Pred->getState();
 
-  ExplodedNodeSet EvalSet;
-
-  for (ExplodedNode *N : CheckerPreStmt) {
-    ProgramStateRef State = N->getState();
-    for (const auto *Attr : getSpecificAttrs<CXXAssumeAttr>(A->getAttrs())) {
-      SVal AssumedVal = State->getSVal(Attr->getAssumption(), SF);
-      // This code ignores assumptions that evaluate to UndefinedVal.
-      // Perhaps there should be a checker that reports this situation.
-      if (auto ValidAssumedVal = AssumedVal.getAs<DefinedOrUnknownSVal>()) {
-        State = State->assume(*ValidAssumedVal, true);
-      }
-
-      if (!State)
-        break;
+  for (const auto *Attr : getSpecificAttrs<CXXAssumeAttr>(A->getAttrs())) {
+    SVal AssumedVal = State->getSVal(Attr->getAssumption(), SF);
+    // This code ignores assumptions that evaluate to UndefinedVal.
+    // Perhaps there should be a checker that reports this situation.
+    if (auto ValidAssumedVal = AssumedVal.getAs<DefinedOrUnknownSVal>()) {
+      State = State->assume(*ValidAssumedVal, true);
     }
 
-    if (State)
-      EvalSet.insert(Engine.makePostStmtNode(A, State, N));
+    if (!State)
+      break;
   }
 
-  getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, A, *this);
+  if (State)
+    Dst.insert(Engine.makePostStmtNode(A, State, Pred));
 }

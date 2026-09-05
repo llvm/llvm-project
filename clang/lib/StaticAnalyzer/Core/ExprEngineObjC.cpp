@@ -25,18 +25,7 @@ void ExprEngine::VisitLvalObjCIvarRefExpr(const ObjCIvarRefExpr *Ex,
   const StackFrame *SF = Pred->getStackFrame();
   SVal baseVal = state->getSVal(Ex->getBase(), SF);
   SVal location = state->getLValue(Ex->getDecl(), baseVal);
-
-  ExplodedNode *N = Engine.makeNodeWithBinding(Pred, Ex, location);
-
-  // Perform the post-condition check of the ObjCIvarRefExpr and store
-  // the created nodes in 'Dst'.
-  getCheckerManager().runCheckersForPostStmt(Dst, N, Ex, *this);
-}
-
-void ExprEngine::VisitObjCAtSynchronizedStmt(const ObjCAtSynchronizedStmt *S,
-                                             ExplodedNode *Pred,
-                                             ExplodedNodeSet &Dst) {
-  getCheckerManager().runCheckersForPreStmt(Dst, Pred, S, *this);
+  Dst.insert(Engine.makeNodeWithBinding(Pred, Ex, location));
 }
 
 void ExprEngine::populateObjCForDestinationSet(const ObjCForCollectionStmt *S,
@@ -128,9 +117,7 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
 
     populateObjCForDestinationSet(S, N, Tmp, elementV, /*hasElements=*/false);
 
-    // Finally, run any custom checkers.
-    // FIXME: Eventually all pre- and post-checks should live in VisitStmt.
-    getCheckerManager().runCheckersForPostStmt(Dst, Tmp, S, *this);
+    Dst.insert(Tmp);
   }
 }
 

@@ -1100,6 +1100,334 @@ const ProgramPointTag *ExprEngine::cleanupNodeTag() {
   return &cleanupTag;
 }
 
+namespace {
+enum class VisitKind {
+  Pre,
+  Post,
+};
+}
+
+static bool shouldJustCallCheckers(const Stmt *S, VisitKind K) {
+
+  switch (S->getStmtClass()) {
+
+  default:
+    return true;
+
+  // C++, OpenMP and ARC stuff we don't support yet.
+  case Stmt::CXXDependentScopeMemberExprClass:
+  case Stmt::CXXReflectExprClass:
+  case Stmt::CXXTryStmtClass:
+  case Stmt::CXXTypeidExprClass:
+  case Stmt::CXXUuidofExprClass:
+  case Stmt::CXXFoldExprClass:
+  case Stmt::MSPropertyRefExprClass:
+  case Stmt::MSPropertySubscriptExprClass:
+  case Stmt::CXXUnresolvedConstructExprClass:
+  case Stmt::DependentScopeDeclRefExprClass:
+  case Stmt::ArrayTypeTraitExprClass:
+  case Stmt::ExpressionTraitExprClass:
+  case Stmt::UnresolvedLookupExprClass:
+  case Stmt::UnresolvedMemberExprClass:
+  case Stmt::DependentTemplateIdExprClass:
+  case Stmt::RecoveryExprClass:
+  case Stmt::CXXNoexceptExprClass:
+  case Stmt::PackExpansionExprClass:
+  case Stmt::PackIndexingExprClass:
+  case Stmt::SubstNonTypeTemplateParmPackExprClass:
+  case Stmt::FunctionParmPackExprClass:
+  case Stmt::CoroutineBodyStmtClass:
+  case Stmt::CoawaitExprClass:
+  case Stmt::DependentCoawaitExprClass:
+  case Stmt::CoreturnStmtClass:
+  case Stmt::CoyieldExprClass:
+  case Stmt::SEHTryStmtClass:
+  case Stmt::SEHExceptStmtClass:
+  case Stmt::SEHLeaveStmtClass:
+  case Stmt::SEHFinallyStmtClass:
+  case Stmt::CXXExpansionStmtPatternClass:
+  case Stmt::CXXExpansionStmtInstantiationClass:
+  case Stmt::CXXExpansionSelectExprClass:
+  case Stmt::OMPCanonicalLoopClass:
+  case Stmt::OMPParallelDirectiveClass:
+  case Stmt::OMPSimdDirectiveClass:
+  case Stmt::OMPForDirectiveClass:
+  case Stmt::OMPForSimdDirectiveClass:
+  case Stmt::OMPSectionsDirectiveClass:
+  case Stmt::OMPSectionDirectiveClass:
+  case Stmt::OMPScopeDirectiveClass:
+  case Stmt::OMPSingleDirectiveClass:
+  case Stmt::OMPMasterDirectiveClass:
+  case Stmt::OMPCriticalDirectiveClass:
+  case Stmt::OMPParallelForDirectiveClass:
+  case Stmt::OMPParallelForSimdDirectiveClass:
+  case Stmt::OMPParallelSectionsDirectiveClass:
+  case Stmt::OMPParallelMasterDirectiveClass:
+  case Stmt::OMPParallelMaskedDirectiveClass:
+  case Stmt::OMPTaskDirectiveClass:
+  case Stmt::OMPTaskyieldDirectiveClass:
+  case Stmt::OMPBarrierDirectiveClass:
+  case Stmt::OMPTaskwaitDirectiveClass:
+  case Stmt::OMPErrorDirectiveClass:
+  case Stmt::OMPTaskgroupDirectiveClass:
+  case Stmt::OMPFlushDirectiveClass:
+  case Stmt::OMPDepobjDirectiveClass:
+  case Stmt::OMPScanDirectiveClass:
+  case Stmt::OMPOrderedStandaloneDirectiveClass:
+  case Stmt::OMPOrderedBlockAssocDirectiveClass:
+  case Stmt::OMPAtomicDirectiveClass:
+  case Stmt::OMPAssumeDirectiveClass:
+  case Stmt::OMPTargetDirectiveClass:
+  case Stmt::OMPTargetDataDirectiveClass:
+  case Stmt::OMPTargetEnterDataDirectiveClass:
+  case Stmt::OMPTargetExitDataDirectiveClass:
+  case Stmt::OMPTargetParallelDirectiveClass:
+  case Stmt::OMPTargetParallelForDirectiveClass:
+  case Stmt::OMPTargetUpdateDirectiveClass:
+  case Stmt::OMPTeamsDirectiveClass:
+  case Stmt::OMPCancellationPointDirectiveClass:
+  case Stmt::OMPCancelDirectiveClass:
+  case Stmt::OMPTaskLoopDirectiveClass:
+  case Stmt::OMPTaskLoopSimdDirectiveClass:
+  case Stmt::OMPMasterTaskLoopDirectiveClass:
+  case Stmt::OMPMaskedTaskLoopDirectiveClass:
+  case Stmt::OMPMasterTaskLoopSimdDirectiveClass:
+  case Stmt::OMPMaskedTaskLoopSimdDirectiveClass:
+  case Stmt::OMPParallelMasterTaskLoopDirectiveClass:
+  case Stmt::OMPParallelMaskedTaskLoopDirectiveClass:
+  case Stmt::OMPParallelMasterTaskLoopSimdDirectiveClass:
+  case Stmt::OMPParallelMaskedTaskLoopSimdDirectiveClass:
+  case Stmt::OMPDistributeDirectiveClass:
+  case Stmt::OMPDistributeParallelForDirectiveClass:
+  case Stmt::OMPDistributeParallelForSimdDirectiveClass:
+  case Stmt::OMPDistributeSimdDirectiveClass:
+  case Stmt::OMPTargetParallelForSimdDirectiveClass:
+  case Stmt::OMPTargetSimdDirectiveClass:
+  case Stmt::OMPTeamsDistributeDirectiveClass:
+  case Stmt::OMPTeamsDistributeSimdDirectiveClass:
+  case Stmt::OMPTeamsDistributeParallelForSimdDirectiveClass:
+  case Stmt::OMPTeamsDistributeParallelForDirectiveClass:
+  case Stmt::OMPTargetTeamsDirectiveClass:
+  case Stmt::OMPTargetTeamsDistributeDirectiveClass:
+  case Stmt::OMPTargetTeamsDistributeParallelForDirectiveClass:
+  case Stmt::OMPTargetTeamsDistributeParallelForSimdDirectiveClass:
+  case Stmt::OMPTargetTeamsDistributeSimdDirectiveClass:
+  case Stmt::OMPReverseDirectiveClass:
+  case Stmt::OMPStripeDirectiveClass:
+  case Stmt::OMPTileDirectiveClass:
+  case Stmt::OMPInterchangeDirectiveClass:
+  case Stmt::OMPSplitDirectiveClass:
+  case Stmt::OMPFuseDirectiveClass:
+  case Stmt::OMPInteropDirectiveClass:
+  case Stmt::OMPDispatchDirectiveClass:
+  case Stmt::OMPMaskedDirectiveClass:
+  case Stmt::OMPGenericLoopDirectiveClass:
+  case Stmt::OMPTeamsGenericLoopDirectiveClass:
+  case Stmt::OMPTargetTeamsGenericLoopDirectiveClass:
+  case Stmt::OMPParallelGenericLoopDirectiveClass:
+  case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
+  case Stmt::CapturedStmtClass:
+  case Stmt::SYCLKernelCallStmtClass:
+  case Stmt::UnresolvedSYCLKernelCallStmtClass:
+  case Stmt::OpenACCComputeConstructClass:
+  case Stmt::OpenACCLoopConstructClass:
+  case Stmt::OpenACCCombinedConstructClass:
+  case Stmt::OpenACCDataConstructClass:
+  case Stmt::OpenACCEnterDataConstructClass:
+  case Stmt::OpenACCExitDataConstructClass:
+  case Stmt::OpenACCHostDataConstructClass:
+  case Stmt::OpenACCWaitConstructClass:
+  case Stmt::OpenACCCacheConstructClass:
+  case Stmt::OpenACCInitConstructClass:
+  case Stmt::OpenACCShutdownConstructClass:
+  case Stmt::OpenACCSetConstructClass:
+  case Stmt::OpenACCUpdateConstructClass:
+  case Stmt::OpenACCAtomicConstructClass:
+  case Stmt::OMPUnrollDirectiveClass:
+  case Stmt::OMPMetaDirectiveClass:
+  case Stmt::HLSLOutArgExprClass:
+    return false;
+
+  // ParenExprs already handled.
+  case Stmt::ParenExprClass:
+    return false;
+
+  // GenericSelectionExprs already handled.
+  case Stmt::GenericSelectionExprClass:
+    return false;
+
+  // Cases that should never be evaluated simply because they shouldn't
+  // appear in the CFG.
+  case Stmt::BreakStmtClass:
+  case Stmt::CaseStmtClass:
+  case Stmt::CompoundStmtClass:
+  case Stmt::ContinueStmtClass:
+  case Stmt::CXXForRangeStmtClass:
+  case Stmt::DefaultStmtClass:
+  case Stmt::DoStmtClass:
+  case Stmt::ForStmtClass:
+  case Stmt::GotoStmtClass:
+  case Stmt::IfStmtClass:
+  case Stmt::IndirectGotoStmtClass:
+  case Stmt::LabelStmtClass:
+  case Stmt::NoStmtClass:
+  case Stmt::NullStmtClass:
+  case Stmt::SwitchStmtClass:
+  case Stmt::WhileStmtClass:
+  case Stmt::DeferStmtClass:
+  case Expr::MSDependentExistsStmtClass:
+    return false;
+
+  // These nodes are shared in the CFG and would case caching out.
+  // Moreover, no additional evaluation required for them, the
+  // analyzer can reconstruct these values from the AST.
+  case Stmt::ImplicitValueInitExprClass:
+    return false;
+
+  // These are handled by PseudoObjectExpr
+  case Stmt::ObjCSubscriptRefExprClass:
+  case Stmt::ObjCPropertyRefExprClass:
+    return false;
+
+  // FIXME: Does not call checkers
+  case Stmt::GNUNullExprClass:
+    return false;
+
+  // FIXME: Does not call PostVisit checkers
+  case Stmt::ObjCAtSynchronizedStmtClass:
+    return K == VisitKind::Pre;
+
+  // FIXME: They do not call checkers
+  case Expr::ConstantExprClass:
+  case Stmt::ExprWithCleanupsClass:
+    return false;
+
+  // Support for MatrixSingleSubscriptExprClass is not implemented.
+  case Stmt::MatrixSingleSubscriptExprClass:
+    return false;
+
+  // Support for MatrixSubscriptExpr is not implemented.
+  case Stmt::MatrixSubscriptExprClass:
+    return false;
+
+  // FIXME: Does not call checkers
+  case Stmt::MSAsmStmtClass:
+    return false;
+
+  // FIXME: Does not call PreVisit checkers
+  case Stmt::BlockExprClass:
+    return K == VisitKind::Post;
+
+  // FIXME: Does not call PreVisit checkers
+  // Currently the engine does not call PostVisit checkers when
+  // lambda inlining is disabled, so K == PostVisitKind
+  // cannot be returned here.
+  case Stmt::LambdaExprClass:
+    return false;
+
+  // Checkers are called manually with custom logic when this calls
+  // VisitBinaryOperator, but calls no checkers during VisitLogicalExpr
+  case Stmt::BinaryOperatorClass:
+    return false;
+
+  // Checkers are called manually with custom logic in these cases
+  // (VisitCallExpr)
+  case Stmt::CXXOperatorCallExprClass:
+  case Stmt::CallExprClass:
+  case Stmt::CXXMemberCallExprClass:
+  case Stmt::UserDefinedLiteralClass:
+    return false;
+
+  // FIXME: Does not call checkers
+  case Stmt::CXXCatchStmtClass:
+    return false;
+
+  // Checkers are called manually with custom logic in these cases
+  // (handleConstructor)
+  case Stmt::CXXTemporaryObjectExprClass:
+  case Stmt::CXXConstructExprClass:
+    return false;
+
+  // Checkers are called manually with custom logic in this case
+  // (handleConstructor)
+  case Stmt::CXXInheritedCtorInitExprClass:
+    return false;
+
+  // FIXME: Does not call checkers
+  case Stmt::ChooseExprClass:
+    return false;
+
+  // Checkers are called manually with custom logic in this case
+  // (VisitBinaryOperator)
+  case Stmt::CompoundAssignOperatorClass:
+    return false;
+
+  // FIXME: Does not call checkers
+  case Stmt::CompoundLiteralExprClass:
+    return false;
+
+  // FIXME: These do not call checkers
+  case Stmt::BinaryConditionalOperatorClass:
+  case Stmt::ConditionalOperatorClass:
+    return false;
+
+  // FIXME: Does not call checkers
+  case Stmt::CXXThisExprClass:
+    return false;
+
+  // FIXME: Does not call checkers
+  case Stmt::DeclRefExprClass:
+    return false;
+
+  // Checkers are called manually with custom logic in this case
+  case Stmt::DeclStmtClass:
+    return false;
+
+  // FIXME: These do not call checkers
+  // (ConstructInitList)
+  case Stmt::InitListExprClass:
+  case Expr::CXXParenListInitExprClass:
+    return false;
+
+  // FIXME: Does not call PreVisit checkers
+  case Stmt::ObjCIvarRefExprClass:
+    return K == VisitKind::Post;
+
+  // FIXME: Does not call PreVisit checkers
+  case Stmt::ObjCForCollectionStmtClass:
+    return K == VisitKind::Post;
+
+  // FIXME: Does not call checkers
+  case Stmt::ObjCMessageExprClass:
+    return false;
+
+  // FIXME: These do not call checkers
+  case Stmt::ObjCAtThrowStmtClass:
+  case Stmt::CXXThrowExprClass:
+    return false;
+
+  // FIXME: Does not call PostVisit checkers
+  case Stmt::ReturnStmtClass:
+    return K == VisitKind::Pre;
+
+  // FIXME: Does not call checkers
+  case Stmt::StmtExprClass:
+    return false;
+
+  // Checkers are called manually with custom logic in this case
+  case Stmt::UnaryOperatorClass:
+    return false;
+
+  // FIXME: Does not call checkers
+  case Stmt::PseudoObjectExprClass:
+    return false;
+
+  // FIXME: Does not call checkers
+  case Expr::ObjCIndirectCopyRestoreExprClass:
+    return false;
+  }
+}
+
 void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
   // Reclaim any unnecessary nodes in the ExplodedGraph.
   G.reclaimRecentlyAllocatedNodes();
@@ -1115,17 +1443,29 @@ void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
   } else
     CleanedStates.insert(Pred);
 
-  // Visit the statement.
-  ExplodedNodeSet Dst;
-  for (const auto I : CleanedStates) {
-    ExplodedNodeSet DstI;
-    // Visit the statement.
-    Visit(currStmt, I, DstI);
-    Dst.insert(DstI);
+  ExplodedNodeSet PreVisited;
+  if (shouldJustCallCheckers(currStmt, VisitKind::Pre)) {
+    getCheckerManager().runCheckersForPreStmt(PreVisited, CleanedStates,
+                                              currStmt, *this);
+  } else
+    PreVisited.insert(CleanedStates);
+
+  ExplodedNodeSet Visited;
+  for (const auto I : PreVisited) {
+    ExplodedNodeSet Tmp;
+    Visit(currStmt, I, Tmp);
+    Visited.insert(Tmp);
   }
 
+  ExplodedNodeSet PostVisited;
+  if (shouldJustCallCheckers(currStmt, VisitKind::Post)) {
+    getCheckerManager().runCheckersForPostStmt(PostVisited, Visited, currStmt,
+                                               *this);
+  } else
+    PostVisited.insert(Visited);
+
   // Enqueue the new nodes onto the work list.
-  Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(PostVisited, getCurrBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
@@ -1624,7 +1964,7 @@ void ExprEngine::processCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,
 }
 
 void ExprEngine::VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE,
-                                           ExplodedNodeSet &PreVisit,
+                                           ExplodedNode *Pred,
                                            ExplodedNodeSet &Dst) {
   // This is a fallback solution in case we didn't have a construction
   // context when we were constructing the temporary. Otherwise the map should
@@ -1632,21 +1972,19 @@ void ExprEngine::VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE,
   if (!getAnalysisManager().options.ShouldIncludeTemporaryDtorsInCFG) {
     // In case we don't have temporary destructors in the CFG, do not mark
     // the initialization - we would otherwise never clean it up.
-    Dst = PreVisit;
+    Dst.insert(Pred);
     return;
   }
-  for (ExplodedNode *Node : PreVisit) {
-    ProgramStateRef State = Node->getState();
-    const StackFrame *SF = Node->getStackFrame();
-    if (!getObjectUnderConstruction(State, BTE, SF)) {
-      // FIXME: Currently the state might also already contain the marker due to
-      // incorrect handling of temporaries bound to default parameters; for
-      // those, we currently skip the CXXBindTemporaryExpr but rely on adding
-      // temporary destructor nodes.
-      State = addObjectUnderConstruction(State, BTE, SF, UnknownVal());
-    }
-    Dst.insert(Engine.makePostStmtNode(BTE, State, Node));
+  ProgramStateRef State = Pred->getState();
+  const StackFrame *SF = Pred->getStackFrame();
+  if (!getObjectUnderConstruction(State, BTE, SF)) {
+    // FIXME: Currently the state might also already contain the marker due to
+    // incorrect handling of temporaries bound to default parameters; for
+    // those, we currently skip the CXXBindTemporaryExpr but rely on adding
+    // temporary destructor nodes.
+    State = addObjectUnderConstruction(State, BTE, SF, UnknownVal());
   }
+  Dst.insert(Engine.makePostStmtNode(BTE, State, Pred));
 }
 
 ProgramStateRef ExprEngine::escapeValues(ProgramStateRef State,
@@ -1864,9 +2202,10 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       break;
     }
 
-    case Stmt::ObjCAtSynchronizedStmtClass:
-      VisitObjCAtSynchronizedStmt(cast<ObjCAtSynchronizedStmt>(S), Pred, Dst);
+    case Stmt::ObjCAtSynchronizedStmtClass: {
+      Dst.insert(Pred);
       break;
+    }
 
     case Expr::ConstantExprClass:
     case Stmt::ExprWithCleanupsClass:
@@ -1874,14 +2213,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       // Handled due to fully linearised CFG.
       break;
 
-    case Stmt::CXXBindTemporaryExprClass: {
-      ExplodedNodeSet PreVisit;
-      getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
-      ExplodedNodeSet Next;
-      VisitCXXBindTemporaryExpr(cast<CXXBindTemporaryExpr>(S), PreVisit, Next);
-      getCheckerManager().runCheckersForPostStmt(Dst, Next, S, *this);
+    case Stmt::CXXBindTemporaryExprClass:
+      VisitCXXBindTemporaryExpr(cast<CXXBindTemporaryExpr>(S), Pred, Dst);
       break;
-    }
 
     case Stmt::ArrayInitLoopExprClass:
       VisitArrayInitLoopExpr(cast<ArrayInitLoopExpr>(S), Pred, Dst);
@@ -1940,23 +2274,16 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::SYCLUniqueStableNameExprClass:
     case Stmt::OpenACCAsteriskSizeExprClass:
     case Stmt::TypeTraitExprClass: {
-      ExplodedNodeSet preVisit;
-      getCheckerManager().runCheckersForPreStmt(preVisit, Pred, S, *this);
-      getCheckerManager().runCheckersForPostStmt(Dst, preVisit, S, *this);
+      Dst.insert(Pred);
       break;
     }
 
-    case Stmt::AttributedStmtClass: {
+    case Stmt::AttributedStmtClass:
       VisitAttributedStmt(cast<AttributedStmt>(S), Pred, Dst);
       break;
-    }
 
     case Stmt::CXXDefaultArgExprClass:
     case Stmt::CXXDefaultInitExprClass: {
-      ExplodedNodeSet PreVisit;
-      getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
-
-      ExplodedNodeSet Tmp;
 
       const Expr *ArgE;
       if (const auto *DefE = dyn_cast<CXXDefaultArgExpr>(S))
@@ -1977,16 +2304,13 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
         ConstantVal = UnknownVal();
 
       const StackFrame *SF = Pred->getStackFrame();
-      for (const auto I : PreVisit) {
-        ProgramStateRef State = I->getState();
-        State = State->BindExpr(cast<Expr>(S), SF, *ConstantVal);
-        if (IsTemporary)
-          State = createTemporaryRegionIfNeeded(State, SF, cast<Expr>(S),
-                                                cast<Expr>(S));
-        Tmp.insert(Engine.makePostStmtNode(S, State, I));
-      }
+      ProgramStateRef State = Pred->getState();
+      State = State->BindExpr(cast<Expr>(S), SF, *ConstantVal);
+      if (IsTemporary)
+        State = createTemporaryRegionIfNeeded(State, SF, cast<Expr>(S),
+                                              cast<Expr>(S));
+      Dst.insert(Engine.makePostStmtNode(S, State, Pred));
 
-      getCheckerManager().runCheckersForPostStmt(Dst, Tmp, S, *this);
       break;
     }
 
@@ -1995,37 +2319,27 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Expr::ObjCArrayLiteralClass:
     case Expr::ObjCDictionaryLiteralClass:
     case Expr::ObjCBoxedExprClass: {
-      ExplodedNodeSet preVisit;
-      getCheckerManager().runCheckersForPreStmt(preVisit, Pred, S, *this);
-
-      ExplodedNodeSet Tmp;
-
       const auto *Ex = cast<Expr>(S);
       QualType resultType = Ex->getType();
 
-      for (const auto N : preVisit) {
-        const StackFrame *SF = N->getStackFrame();
-        SVal result = svalBuilder.conjureSymbolVal(
-            /*symbolTag=*/nullptr, getCFGElementRef(), SF, resultType,
-            getNumVisitedCurrent());
-        ProgramStateRef State = N->getState()->BindExpr(Ex, SF, result);
+      const StackFrame *SF = Pred->getStackFrame();
+      SVal result = svalBuilder.conjureSymbolVal(
+          /*symbolTag=*/nullptr, getCFGElementRef(), SF, resultType,
+          getNumVisitedCurrent());
+      ProgramStateRef State = Pred->getState()->BindExpr(Ex, SF, result);
 
-        // Escape pointers passed into the list, unless it's an ObjC boxed
-        // expression which is not a boxable C structure.
-        if (!(isa<ObjCBoxedExpr>(Ex) &&
-              !cast<ObjCBoxedExpr>(Ex)->getSubExpr()
-                                      ->getType()->isRecordType()))
-          for (auto Child : Ex->children()) {
-            assert(Child);
-            const auto *ChildExpr = dyn_cast<Expr>(Child);
-            SVal Val = ChildExpr ? State->getSVal(ChildExpr, SF) : UnknownVal();
-            State = escapeValues(State, Val, PSK_EscapeOther);
-          }
+      // Escape pointers passed into the list, unless it's an ObjC boxed
+      // expression which is not a boxable C structure.
+      if (!(isa<ObjCBoxedExpr>(Ex) &&
+            !cast<ObjCBoxedExpr>(Ex)->getSubExpr()->getType()->isRecordType()))
+        for (auto Child : Ex->children()) {
+          assert(Child);
+          const auto *ChildExpr = dyn_cast<Expr>(Child);
+          SVal Val = ChildExpr ? State->getSVal(ChildExpr, SF) : UnknownVal();
+          State = escapeValues(State, Val, PSK_EscapeOther);
+        }
 
-        Tmp.insert(Engine.makePostStmtNode(S, State, N));
-      }
-
-      getCheckerManager().runCheckersForPostStmt(Dst, Tmp, S, *this);
+      Dst.insert(Engine.makePostStmtNode(S, State, Pred));
       break;
     }
 
@@ -2042,15 +2356,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       llvm_unreachable("Support for MatrixSubscriptExpr is not implemented.");
       break;
 
-    case Stmt::GCCAsmStmtClass: {
-      ExplodedNodeSet PreVisit;
-      getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
-      ExplodedNodeSet PostVisit;
-      for (ExplodedNode *const N : PreVisit)
-        VisitGCCAsmStmt(cast<GCCAsmStmt>(S), N, PostVisit);
-      getCheckerManager().runCheckersForPostStmt(Dst, PostVisit, S, *this);
+    case Stmt::GCCAsmStmtClass:
+      VisitGCCAsmStmt(cast<GCCAsmStmt>(S), Pred, Dst);
       break;
-    }
 
     case Stmt::MSAsmStmtClass:
       VisitMSAsmStmt(cast<MSAsmStmt>(S), Pred, Dst);
@@ -2061,13 +2369,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       break;
 
     case Stmt::LambdaExprClass:
-      if (AMgr.options.ShouldInlineLambdas) {
-        VisitLambdaExpr(cast<LambdaExpr>(S), Pred, Dst);
-      } else {
-        const ExplodedNode *Node = Engine.makePostStmtNode(
-            S, Pred->getState(), Pred, /*MarkAsSink=*/true);
-        Engine.addAbortedBlock(Node, getCurrBlock());
-      }
+      VisitLambdaExpr(cast<LambdaExpr>(S), Pred, Dst);
       break;
 
     case Stmt::BinaryOperatorClass: {
@@ -2115,34 +2417,16 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
                                     Dst);
       break;
 
-    case Stmt::CXXNewExprClass: {
-
-      ExplodedNodeSet PreVisit;
-      getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
-
-      ExplodedNodeSet PostVisit;
-      for (const auto i : PreVisit)
-        VisitCXXNewExpr(cast<CXXNewExpr>(S), i, PostVisit);
-
-      getCheckerManager().runCheckersForPostStmt(Dst, PostVisit, S, *this);
+    case Stmt::CXXNewExprClass:
+      VisitCXXNewExpr(cast<CXXNewExpr>(S), Pred, Dst);
       break;
-    }
 
-    case Stmt::CXXDeleteExprClass: {
-      ExplodedNodeSet PreVisit;
-      const auto *CDE = cast<CXXDeleteExpr>(S);
-      getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
-
-      ExplodedNodeSet PostVisit;
-      for (const auto i : PreVisit)
-        VisitCXXDeleteExpr(CDE, i, PostVisit);
-
-      getCheckerManager().runCheckersForPostStmt(Dst, PostVisit, S, *this);
+    case Stmt::CXXDeleteExprClass:
+      VisitCXXDeleteExpr(cast<CXXDeleteExpr>(S), Pred, Dst);
       break;
-    }
-      // FIXME: ChooseExpr is really a constant.  We need to fix
-      //        the CFG do not model them as explicit control-flow.
 
+    // FIXME: ChooseExpr is really a constant.  We need to fix
+    //        the CFG do not model them as explicit control-flow.
     case Stmt::ChooseExprClass: { // __builtin_choose_expr
       const auto *C = cast<ChooseExpr>(S);
       VisitGuardedExpr(C, C->getLHS(), C->getRHS(), Pred, Dst);
@@ -2187,26 +2471,14 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::CXXFunctionalCastExprClass:
     case Stmt::BuiltinBitCastExprClass:
     case Stmt::ObjCBridgedCastExprClass:
-    case Stmt::CXXAddrspaceCastExprClass: {
-      const auto *C = cast<CastExpr>(S);
-      ExplodedNodeSet dstExpr;
-      VisitCast(C, C->getSubExpr(), Pred, dstExpr);
-
-      // Handle the postvisit checks.
-      getCheckerManager().runCheckersForPostStmt(Dst, dstExpr, C, *this);
+    case Stmt::CXXAddrspaceCastExprClass:
+      VisitCastExpr(cast<CastExpr>(S), Pred, Dst);
       break;
-    }
 
-    case Expr::MaterializeTemporaryExprClass: {
-      const auto *MTE = cast<MaterializeTemporaryExpr>(S);
-      ExplodedNodeSet dstPrevisit;
-      getCheckerManager().runCheckersForPreStmt(dstPrevisit, Pred, MTE, *this);
-      ExplodedNodeSet dstExpr;
-      for (const auto i : dstPrevisit)
-        CreateCXXTemporaryObject(MTE, i, dstExpr);
-      getCheckerManager().runCheckersForPostStmt(Dst, dstExpr, MTE, *this);
+    case Expr::MaterializeTemporaryExprClass:
+      VisitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(S), Pred,
+                                    Dst);
       break;
-    }
 
     case Stmt::InitListExprClass: {
       const InitListExpr *E = cast<InitListExpr>(S);
@@ -2214,12 +2486,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       break;
     }
 
-    case Expr::CXXParenListInitExprClass: {
-      const CXXParenListInitExpr *E = cast<CXXParenListInitExpr>(S);
-      ConstructInitList(E, E->getInitExprs(), /*IsTransparent*/ false, Pred,
-                        Dst);
+    case Expr::CXXParenListInitExprClass:
+      VisitCXXParenListInitExpr(cast<CXXParenListInitExpr>(S), Pred, Dst);
       break;
-    }
 
     case Stmt::MemberExprClass:
       VisitMemberExpr(cast<MemberExpr>(S), Pred, Dst);
@@ -2252,38 +2521,18 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       VisitReturnStmt(cast<ReturnStmt>(S), Pred, Dst);
       break;
 
-    case Stmt::OffsetOfExprClass: {
-      ExplodedNodeSet PreVisit;
-      getCheckerManager().runCheckersForPreStmt(PreVisit, Pred, S, *this);
-
-      ExplodedNodeSet PostVisit;
-      for (const auto Node : PreVisit)
-        VisitOffsetOfExpr(cast<OffsetOfExpr>(S), Node, PostVisit);
-
-      getCheckerManager().runCheckersForPostStmt(Dst, PostVisit, S, *this);
+    case Stmt::OffsetOfExprClass:
+      VisitOffsetOfExpr(cast<OffsetOfExpr>(S), Pred, Dst);
       break;
-    }
 
     case Stmt::UnaryExprOrTypeTraitExprClass:
       VisitUnaryExprOrTypeTraitExpr(cast<UnaryExprOrTypeTraitExpr>(S), Pred,
                                     Dst);
       break;
 
-    case Stmt::StmtExprClass: {
-      const auto *SE = cast<StmtExpr>(S);
-
-      if (SE->getSubStmt()->body_empty()) {
-        // Empty statement expression.
-        assert(SE->getType() == getContext().VoidTy
-               && "Empty statement expression must have void type.");
-      } else if (const auto *LastExpr =
-                     dyn_cast<Expr>(*SE->getSubStmt()->body_rbegin())) {
-        SVal Val = Pred->getState()->getSVal(LastExpr, Pred->getStackFrame());
-        Pred = Engine.makeNodeWithBinding(Pred, SE, Val);
-      }
-      Dst.insert(Pred);
+    case Stmt::StmtExprClass:
+      VisitStmtExpr(cast<StmtExpr>(S), Pred, Dst);
       break;
-    }
 
     case Stmt::UnaryOperatorClass: {
       const auto *U = cast<UnaryOperator>(S);
@@ -2297,26 +2546,15 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       break;
     }
 
-    case Stmt::PseudoObjectExprClass: {
-      const auto *PE = cast<PseudoObjectExpr>(S);
-      SVal V = UnknownVal();
-      if (const Expr *Result = PE->getResultExpr())
-        V = Pred->getState()->getSVal(Result, Pred->getStackFrame());
-      Dst.insert(Engine.makeNodeWithBinding(Pred, PE, V));
+    case Stmt::PseudoObjectExprClass:
+      VisitPseudoObjectExpr(cast<PseudoObjectExpr>(S), Pred, Dst);
       break;
-    }
 
-    case Expr::ObjCIndirectCopyRestoreExprClass: {
-      // ObjCIndirectCopyRestoreExpr implies passing a temporary for
-      // correctness of lifetime management.  Due to limited analysis
-      // of ARC, this is implemented as direct arg passing.
-      const auto *OIE = cast<ObjCIndirectCopyRestoreExpr>(S);
-      const Expr *E = OIE->getSubExpr();
-      SVal V = Pred->getState()->getSVal(E, Pred->getStackFrame());
-      Dst.insert(Engine.makeNodeWithBinding(Pred, OIE, V));
+    case Expr::ObjCIndirectCopyRestoreExprClass:
+      VisitObjCIndirectCopyRestoreExpr(cast<ObjCIndirectCopyRestoreExpr>(S),
+                                       Pred, Dst);
       break;
     }
-  }
 }
 
 bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
@@ -3183,109 +3421,95 @@ void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
                                         ExplodedNodeSet &Dst) {
   const Expr *Arr = Ex->getCommonExpr()->getSourceExpr();
 
-  ExplodedNodeSet CheckerPreStmt;
-  getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, Ex, *this);
-
-  ExplodedNodeSet EvalSet;
+  // The constructor visitor has already handled everything
   if (isa<CXXConstructExpr>(Ex->getSubExpr())) {
-    // The constructor visitor has already handled everything, so let's skip
-    // forward to PostStmt handling by clearing the range of the 'for' loop.
-    EvalSet.insert(CheckerPreStmt);
-    CheckerPreStmt.clear();
+    Dst.insert(Pred);
+    return;
   }
 
-  for (auto *Node : CheckerPreStmt) {
-    const StackFrame *SF = Node->getStackFrame();
-    ProgramStateRef state = Node->getState();
+  const StackFrame *SF = Pred->getStackFrame();
+  ProgramStateRef state = Pred->getState();
 
-    SVal Base = UnknownVal();
+  SVal Base = UnknownVal();
 
-    // As in case of this expression the sub-expressions are not visited by any
-    // other transfer functions, they are handled by matching their AST.
+  // As in case of this expression the sub-expressions are not visited by any
+  // other transfer functions, they are handled by matching their AST.
 
-    // Case of implicit copy or move ctor of object with array member
-    //
-    // Note: ExprEngine::VisitMemberExpr is not able to bind the array to the
-    // environment.
-    //
-    //    struct S {
-    //      int arr[2];
-    //    };
-    //
-    //
-    //    S a;
-    //    S b = a;
-    //
-    // The AST in case of a *copy constructor* looks like this:
-    //    ArrayInitLoopExpr
-    //    |-OpaqueValueExpr
-    //    | `-MemberExpr              <-- match this
-    //    |   `-DeclRefExpr
-    //    ` ...
-    //
-    //
-    //    S c;
-    //    S d = std::move(d);
-    //
-    // In case of a *move constructor* the resulting AST looks like:
-    //    ArrayInitLoopExpr
-    //    |-OpaqueValueExpr
-    //    | `-MemberExpr              <-- match this first
-    //    |   `-CXXStaticCastExpr     <-- match this after
-    //    |     `-DeclRefExpr
-    //    ` ...
-    if (const auto *ME = dyn_cast<MemberExpr>(Arr)) {
-      Expr *MEBase = ME->getBase();
+  // Case of implicit copy or move ctor of object with array member
+  //
+  // Note: ExprEngine::VisitMemberExpr is not able to bind the array to the
+  // environment.
+  //
+  //    struct S {
+  //      int arr[2];
+  //    };
+  //
+  //
+  //    S a;
+  //    S b = a;
+  //
+  // The AST in case of a *copy constructor* looks like this:
+  //    ArrayInitLoopExpr
+  //    |-OpaqueValueExpr
+  //    | `-MemberExpr              <-- match this
+  //    |   `-DeclRefExpr
+  //    ` ...
+  //
+  //
+  //    S c;
+  //    S d = std::move(d);
+  //
+  // In case of a *move constructor* the resulting AST looks like:
+  //    ArrayInitLoopExpr
+  //    |-OpaqueValueExpr
+  //    | `-MemberExpr              <-- match this first
+  //    |   `-CXXStaticCastExpr     <-- match this after
+  //    |     `-DeclRefExpr
+  //    ` ...
+  if (const auto *ME = dyn_cast<MemberExpr>(Arr)) {
+    Expr *MEBase = ME->getBase();
 
-      // Move ctor
-      if (auto CXXSCE = dyn_cast<CXXStaticCastExpr>(MEBase)) {
-        MEBase = CXXSCE->getSubExpr();
-      }
-
-      auto ObjDeclExpr = cast<DeclRefExpr>(MEBase);
-      SVal Obj = state->getLValue(cast<VarDecl>(ObjDeclExpr->getDecl()), SF);
-
-      Base = state->getLValue(cast<FieldDecl>(ME->getMemberDecl()), Obj);
+    // Move ctor
+    if (auto CXXSCE = dyn_cast<CXXStaticCastExpr>(MEBase)) {
+      MEBase = CXXSCE->getSubExpr();
     }
 
-    // Case of lambda capture and decomposition declaration
-    //
-    //    int arr[2];
-    //
-    //    [arr]{ int a = arr[0]; }();
-    //    auto[a, b] = arr;
-    //
-    // In both of these cases the AST looks like the following:
-    //    ArrayInitLoopExpr
-    //    |-OpaqueValueExpr
-    //    | `-DeclRefExpr             <-- match this
-    //    ` ...
-    if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(Arr))
-      Base = state->getLValue(cast<VarDecl>(DRE->getDecl()), SF);
+    auto ObjDeclExpr = cast<DeclRefExpr>(MEBase);
+    SVal Obj = state->getLValue(cast<VarDecl>(ObjDeclExpr->getDecl()), SF);
 
-    // Create a lazy compound value to the original array
-    if (const MemRegion *R = Base.getAsRegion())
-      Base = state->getSVal(R);
-    else
-      Base = UnknownVal();
-
-    EvalSet.insert(Engine.makeNodeWithBinding(Node, Ex, Base));
+    Base = state->getLValue(cast<FieldDecl>(ME->getMemberDecl()), Obj);
   }
 
-  getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, Ex, *this);
+  // Case of lambda capture and decomposition declaration
+  //
+  //    int arr[2];
+  //
+  //    [arr]{ int a = arr[0]; }();
+  //    auto[a, b] = arr;
+  //
+  // In both of these cases the AST looks like the following:
+  //    ArrayInitLoopExpr
+  //    |-OpaqueValueExpr
+  //    | `-DeclRefExpr             <-- match this
+  //    ` ...
+  if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(Arr))
+    Base = state->getLValue(cast<VarDecl>(DRE->getDecl()), SF);
+
+  // Create a lazy compound value to the original array
+  if (const MemRegion *R = Base.getAsRegion())
+    Base = state->getSVal(R);
+  else
+    Base = UnknownVal();
+
+  Dst.insert(Engine.makeNodeWithBinding(Pred, Ex, Base));
 }
 
 /// VisitArraySubscriptExpr - Transfer function for array accesses
 void ExprEngine::VisitArraySubscriptExpr(const ArraySubscriptExpr *A,
-                                             ExplodedNode *Pred,
-                                             ExplodedNodeSet &Dst){
+                                         ExplodedNode *Pred,
+                                         ExplodedNodeSet &Dst) {
   const Expr *Base = A->getBase()->IgnoreParens();
   const Expr *Idx  = A->getIdx()->IgnoreParens();
-
-  ExplodedNodeSet CheckerPreStmt;
-  getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, A, *this);
-
-  ExplodedNodeSet EvalSet;
 
   bool IsVectorType = A->getBase()->getType()->isVectorType();
 
@@ -3295,149 +3519,124 @@ void ExprEngine::VisitArraySubscriptExpr(const ArraySubscriptExpr *A,
   bool IsGLValueLike = A->isGLValue() ||
     (A->getType().isCForbiddenLValueType() && !AMgr.getLangOpts().CPlusPlus);
 
-  for (auto *Node : CheckerPreStmt) {
-    const StackFrame *SF = Node->getStackFrame();
-    ProgramStateRef state = Node->getState();
+  const StackFrame *SF = Pred->getStackFrame();
+  ProgramStateRef state = Pred->getState();
 
-    if (IsGLValueLike) {
-      QualType T = A->getType();
+  if (IsGLValueLike) {
+    QualType T = A->getType();
 
-      // One of the forbidden LValue types! We still need to have sensible
-      // symbolic locations to represent this stuff. Note that arithmetic on
-      // void pointers is a GCC extension.
-      if (T->isVoidType())
-        T = getContext().CharTy;
+    // One of the forbidden LValue types! We still need to have sensible
+    // symbolic locations to represent this stuff. Note that arithmetic on
+    // void pointers is a GCC extension.
+    if (T->isVoidType())
+      T = getContext().CharTy;
 
-      SVal V = state->getLValue(T, state->getSVal(Idx, SF),
-                                state->getSVal(Base, SF));
-      EvalSet.insert(
-          Engine.makeNodeWithBinding(Node, A, V, ProgramPoint::PostLValueKind));
-    } else if (IsVectorType) {
-      // FIXME: non-glvalue vector reads are not modelled.
-      EvalSet.insert(Engine.makePostStmtNode(A, state, Node));
-    } else {
-      llvm_unreachable("Array subscript should be an lValue when not \
+    SVal V =
+        state->getLValue(T, state->getSVal(Idx, SF), state->getSVal(Base, SF));
+    Dst.insert(
+        Engine.makeNodeWithBinding(Pred, A, V, ProgramPoint::PostLValueKind));
+  } else if (IsVectorType) {
+    // FIXME: non-glvalue vector reads are not modelled.
+    Dst.insert(Engine.makePostStmtNode(A, state, Pred));
+  } else {
+    llvm_unreachable("Array subscript should be an lValue when not \
 a vector and not a forbidden lvalue type");
-    }
   }
-
-  getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, A, *this);
 }
 
 /// VisitMemberExpr - Transfer function for member expressions.
 void ExprEngine::VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
                                  ExplodedNodeSet &Dst) {
-  // FIXME: Prechecks eventually go in ::Visit().
-  ExplodedNodeSet CheckedSet;
-  getCheckerManager().runCheckersForPreStmt(CheckedSet, Pred, M, *this);
-
-  ExplodedNodeSet EvalSet;
   ValueDecl *Member = M->getMemberDecl();
 
   // Handle static member variables and enum constants accessed via
   // member syntax.
   if (isa<VarDecl, EnumConstantDecl>(Member)) {
-    for (const auto I : CheckedSet)
-      VisitCommonDeclRefExpr(M, Member, I, EvalSet);
-  } else {
-
-    for (const auto I : CheckedSet) {
-      ProgramStateRef state = I->getState();
-      const StackFrame *SF = I->getStackFrame();
-      Expr *BaseExpr = M->getBase();
-
-      // Handle C++ method calls.
-      if (const auto *MD = dyn_cast<CXXMethodDecl>(Member)) {
-        if (MD->isImplicitObjectMemberFunction())
-          state = createTemporaryRegionIfNeeded(state, SF, BaseExpr);
-
-        SVal MDVal = svalBuilder.getFunctionPointer(MD);
-
-        EvalSet.insert(Engine.makeNodeWithBinding(I, M, MDVal, state));
-        continue;
-      }
-
-      // Handle regular struct fields / member variables.
-      const SubRegion *MR = nullptr;
-      state = createTemporaryRegionIfNeeded(state, SF, BaseExpr,
-                                            /*Result=*/nullptr,
-                                            /*OutRegionWithAdjustments=*/&MR);
-      SVal baseExprVal =
-          MR ? loc::MemRegionVal(MR) : state->getSVal(BaseExpr, SF);
-
-      // FIXME: Copied from RegionStoreManager::bind()
-      if (const auto *SR =
-              dyn_cast_or_null<SymbolicRegion>(baseExprVal.getAsRegion())) {
-        QualType T = SR->getPointeeStaticType();
-        baseExprVal =
-            loc::MemRegionVal(getStoreManager().GetElementZeroRegion(SR, T));
-      }
-
-      const auto *field = cast<FieldDecl>(Member);
-      SVal L = state->getLValue(field, baseExprVal);
-
-      if (M->isGLValue() || M->getType()->isArrayType()) {
-        // We special-case rvalues of array type because the analyzer cannot
-        // reason about them, since we expect all regions to be wrapped in Locs.
-        // We instead treat these as lvalues and assume that they will decay to
-        // pointers as soon as they are used.
-        if (!M->isGLValue()) {
-          assert(M->getType()->isArrayType());
-          const auto *PE =
-            dyn_cast<ImplicitCastExpr>(I->getParentMap().getParentIgnoreParens(M));
-          if (!PE || PE->getCastKind() != CK_ArrayToPointerDecay) {
-            llvm_unreachable("should always be wrapped in ArrayToPointerDecay");
-          }
-        }
-
-        if (field->getType()->isReferenceType()) {
-          if (const MemRegion *R = L.getAsRegion())
-            L = state->getSVal(R);
-          else
-            L = UnknownVal();
-        }
-
-        EvalSet.insert(Engine.makeNodeWithBinding(
-            I, M, L, state, ProgramPoint::PostLValueKind));
-      } else {
-        evalLoad(EvalSet, M, M, I, state, L);
-      }
-    }
+    VisitCommonDeclRefExpr(M, Member, Pred, Dst);
+    return;
   }
 
-  getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, M, *this);
+  ProgramStateRef state = Pred->getState();
+  const StackFrame *SF = Pred->getStackFrame();
+  Expr *BaseExpr = M->getBase();
+
+  // Handle C++ method calls.
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(Member)) {
+    if (MD->isImplicitObjectMemberFunction())
+      state = createTemporaryRegionIfNeeded(state, SF, BaseExpr);
+
+    SVal MDVal = svalBuilder.getFunctionPointer(MD);
+
+    Dst.insert(Engine.makeNodeWithBinding(Pred, M, MDVal, state));
+    return;
+  }
+
+  // Handle regular struct fields / member variables.
+  const SubRegion *MR = nullptr;
+  state = createTemporaryRegionIfNeeded(state, SF, BaseExpr,
+                                        /*Result=*/nullptr,
+                                        /*OutRegionWithAdjustments=*/&MR);
+  SVal baseExprVal = MR ? loc::MemRegionVal(MR) : state->getSVal(BaseExpr, SF);
+
+  // FIXME: Copied from RegionStoreManager::bind()
+  if (const auto *SR =
+          dyn_cast_or_null<SymbolicRegion>(baseExprVal.getAsRegion())) {
+    QualType T = SR->getPointeeStaticType();
+    baseExprVal =
+        loc::MemRegionVal(getStoreManager().GetElementZeroRegion(SR, T));
+  }
+
+  const auto *field = cast<FieldDecl>(Member);
+  SVal L = state->getLValue(field, baseExprVal);
+
+  if (M->isGLValue() || M->getType()->isArrayType()) {
+    // We special-case rvalues of array type because the analyzer cannot
+    // reason about them, since we expect all regions to be wrapped in Locs.
+    // We instead treat these as lvalues and assume that they will decay to
+    // pointers as soon as they are used.
+    if (!M->isGLValue()) {
+      assert(M->getType()->isArrayType());
+      const auto *PE = dyn_cast<ImplicitCastExpr>(
+          Pred->getParentMap().getParentIgnoreParens(M));
+      if (!PE || PE->getCastKind() != CK_ArrayToPointerDecay) {
+        llvm_unreachable("should always be wrapped in ArrayToPointerDecay");
+      }
+    }
+
+    if (field->getType()->isReferenceType()) {
+      if (const MemRegion *R = L.getAsRegion())
+        L = state->getSVal(R);
+      else
+        L = UnknownVal();
+    }
+
+    Dst.insert(Engine.makeNodeWithBinding(Pred, M, L, state,
+                                          ProgramPoint::PostLValueKind));
+  } else {
+    evalLoad(Dst, M, M, Pred, state, L);
+  }
 }
 
 void ExprEngine::VisitAtomicExpr(const AtomicExpr *AE, ExplodedNode *Pred,
                                  ExplodedNodeSet &Dst) {
-  ExplodedNodeSet AfterPreSet;
-  getCheckerManager().runCheckersForPreStmt(AfterPreSet, Pred, AE, *this);
-
   // For now, treat all the arguments to C11 atomics as escaping.
   // FIXME: Ideally we should model the behavior of the atomics precisely here.
 
-  ExplodedNodeSet AfterInvalidateSet;
+  ProgramStateRef State = Pred->getState();
+  const StackFrame *SF = Pred->getStackFrame();
 
-  for (const auto I : AfterPreSet) {
-    ProgramStateRef State = I->getState();
-    const StackFrame *SF = I->getStackFrame();
-
-    SmallVector<SVal, 8> ValuesToInvalidate;
-    for (const Stmt *SubExpr : AE->children()) {
-      SVal SubExprVal = State->getSVal(cast<Expr>(SubExpr), SF);
-      ValuesToInvalidate.push_back(SubExprVal);
-    }
-
-    State = State->invalidateRegions(ValuesToInvalidate, getCFGElementRef(),
-                                     getNumVisitedCurrent(), SF,
-                                     /*CausedByPointerEscape*/ true,
-                                     /*Symbols=*/nullptr);
-
-    AfterInvalidateSet.insert(
-        Engine.makeNodeWithBinding(I, AE, UnknownVal(), State));
+  SmallVector<SVal, 8> ValuesToInvalidate;
+  for (const Stmt *SubExpr : AE->children()) {
+    SVal SubExprVal = State->getSVal(cast<Expr>(SubExpr), SF);
+    ValuesToInvalidate.push_back(SubExprVal);
   }
 
-  getCheckerManager().runCheckersForPostStmt(Dst, AfterInvalidateSet, AE, *this);
+  State = State->invalidateRegions(ValuesToInvalidate, getCFGElementRef(),
+                                   getNumVisitedCurrent(), SF,
+                                   /*CausedByPointerEscape*/ true,
+                                   /*Symbols=*/nullptr);
+
+  Dst.insert(Engine.makeNodeWithBinding(Pred, AE, UnknownVal(), State));
 }
 
 // A value escapes in four possible cases:
