@@ -267,12 +267,13 @@ private:
   /// nonzeros, and the dimensions sizes (one per rank) of the sparse tensor.
   void readExtFROSTTHeader();
 
+  static constexpr uint64_t kMaxRank = 510;
   static constexpr int kColWidth = 1025;
   const char *const filename;
   FILE *file = nullptr;
   ValueKind valueKind_ = ValueKind::kInvalid;
   bool isSymmetric_ = false;
-  uint64_t idata[512];
+  uint64_t idata[kMaxRank + 2];
   char line[kColWidth];
 };
 
