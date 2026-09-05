@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Linux implementation of execle
+/// Linux implementation of execl
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/unistd/execle.h"
+#include "src/unistd/execl.h"
 
 #include "hdr/types/size_t.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/execve.h"
@@ -19,12 +19,13 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
+#include "src/unistd/environ.h"
 
 #include <stdarg.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, execle, (const char *path, const char *arg0, ...)) {
+LLVM_LIBC_FUNCTION(int, execl, (const char *path, const char *arg0, ...)) {
   LIBC_CRASH_ON_NULLPTR(arg0);
 
   va_list varargs, varargs_copy;
@@ -45,18 +46,19 @@ LLVM_LIBC_FUNCTION(int, execle, (const char *path, const char *arg0, ...)) {
 #pragma GCC diagnostic pop
   argv[0] = const_cast<char *>(arg0);
 
-  for (size_t i = 1; i <= argc; ++i)
+  for (size_t i = 1; i < argc; ++i)
     argv[i] = va_arg(varargs_copy, char *);
-  char **envp = va_arg(varargs_copy, char **);
   va_end(varargs_copy);
+  argv[argc] = nullptr;
 
-  auto ret = linux_syscalls::execve(path, argv, envp);
+  auto ret = linux_syscalls::execve(
+      path, argv, const_cast<char *const *>(LIBC_NAMESPACE::environ));
   if (!ret) {
     libc_errno = ret.error();
     return -1;
   }
 
-  // Control will not reach here on success but have a return statement will
+  // Control will not reach here on success but having a return statement will
   // keep the compilers happy.
   return *ret;
 }
