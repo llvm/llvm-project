@@ -344,6 +344,12 @@ functions:
       - type: int
       - type: off_t
       - type: int
+  - name: nice
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: int
   - name: pathconf
     standards:
       - posix

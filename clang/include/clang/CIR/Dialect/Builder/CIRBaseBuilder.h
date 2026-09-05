@@ -116,6 +116,11 @@ public:
   }
 
   mlir::TypedAttr getZeroInitAttr(mlir::Type ty) {
+    if (auto bitFieldTy = mlir::dyn_cast<cir::BitFieldType>(ty)) {
+      assert(bitFieldTy.ownsBytes() &&
+             "a zero-width bit-field takes no initializer");
+      return getZeroInitAttr(bitFieldTy.getStorageType());
+    }
     if (mlir::isa<cir::IntType>(ty))
       return cir::IntAttr::get(ty, 0);
     if (cir::isAnyFloatingPointType(ty))
