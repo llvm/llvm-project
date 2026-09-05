@@ -29,9 +29,7 @@ define i32 @pack_high_half(i16 %hi, i32 %lo) {
 ; GFX11-TRUE16-LABEL: pack_high_half:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_or_b16 v1.h, v0.l, v1.h
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: pack_high_half:
@@ -51,9 +49,7 @@ define i32 @pack_high_half(i16 %hi, i32 %lo) {
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_or_b16 v1.h, v0.l, v1.h
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX12-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %ext = zext i16 %hi to i32
   %shl = shl i32 %ext, 16
@@ -89,8 +85,8 @@ define void @pack_high_half_to_store(i16 %hi, i32 %lo, ptr addrspace(1) %out) {
 ; GFX11-TRUE16-LABEL: pack_high_half_to_store:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_or_b16 v1.h, v0.l, v1.h
-; GFX11-TRUE16-NEXT:    global_store_b32 v[2:3], v1, off
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX11-TRUE16-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: pack_high_half_to_store:
@@ -111,8 +107,8 @@ define void @pack_high_half_to_store(i16 %hi, i32 %lo, ptr addrspace(1) %out) {
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_or_b16 v1.h, v0.l, v1.h
-; GFX12-TRUE16-NEXT:    global_store_b32 v[2:3], v1, off
+; GFX12-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX12-TRUE16-NEXT:    global_store_b32 v[2:3], v0, off
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %ext = zext i16 %hi to i32
   %shl = shl i32 %ext, 16
@@ -144,10 +140,7 @@ define i32 @pack_high_half_sgpr(i16 %hi, i32 inreg %lo) {
 ; GFX11-TRUE16-LABEL: pack_high_half_sgpr:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, s0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_or_b16 v1.h, v0.l, v1.h
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 16, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: pack_high_half_sgpr:
@@ -167,10 +160,7 @@ define i32 @pack_high_half_sgpr(i16 %hi, i32 inreg %lo) {
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v1, s0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_or_b16 v1.h, v0.l, v1.h
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX12-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 16, s0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %ext = zext i16 %hi to i32
   %shl = shl i32 %ext, 16
@@ -201,10 +191,7 @@ define i32 @pack_high_half_sgpr.half(half %hi, i32 inreg %lo) {
 ; GFX11-TRUE16-LABEL: pack_high_half_sgpr.half:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, s0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_or_b16 v1.h, v0.l, v1.h
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 16, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: pack_high_half_sgpr.half:
@@ -224,10 +211,7 @@ define i32 @pack_high_half_sgpr.half(half %hi, i32 inreg %lo) {
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v1, s0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_or_b16 v1.h, v0.l, v1.h
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX12-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 16, s0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %bc = bitcast half %hi to i16
   %ext = zext i16 %bc to i32
@@ -259,10 +243,7 @@ define i32 @pack_high_half_sgpr.bfloat(bfloat %hi, i32 inreg %lo) {
 ; GFX11-TRUE16-LABEL: pack_high_half_sgpr.bfloat:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, s0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_or_b16 v1.h, v0.l, v1.h
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 16, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: pack_high_half_sgpr.bfloat:
@@ -282,14 +263,124 @@ define i32 @pack_high_half_sgpr.bfloat(bfloat %hi, i32 inreg %lo) {
 ; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v1, s0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_or_b16 v1.h, v0.l, v1.h
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX12-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 16, s0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
   %bc = bitcast bfloat %hi to i16
   %ext = zext i16 %bc to i32
   %shl = shl i32 %ext, 16
   %or = or i32 %shl, %lo
   ret i32 %or
+}
+
+define i32 @pack_high_half_imm(i16 %hi) {
+; GFX8-LABEL: pack_high_half_imm:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX8-NEXT:    v_or_b32_e32 v0, 0x3c00, v0
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: pack_high_half_imm:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_movk_i32 s4, 0x3c00
+; GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, s4
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: pack_high_half_imm:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v0, v0, 16, 0x3c00
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: pack_high_half_imm:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 16, 0x3c00
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FAKE16-LABEL: pack_high_half_imm:
+; GFX12-FAKE16:       ; %bb.0:
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    v_lshl_or_b32 v0, v0, 16, 0x3c00
+; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-TRUE16-LABEL: pack_high_half_imm:
+; GFX12-TRUE16:       ; %bb.0:
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 16, 0x3c00
+; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+  %ext = zext i16 %hi to i32
+  %shl = shl i32 %ext, 16
+  %or = or i32 %shl, 15360
+  ret i32 %or
+}
+
+define void @pack_high_half_imm_to_store(i16 %hi, ptr addrspace(1) %out) {
+; GFX8-LABEL: pack_high_half_imm_to_store:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX8-NEXT:    v_or_b32_e32 v0, 0x3c00, v0
+; GFX8-NEXT:    flat_store_dword v[1:2], v0
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: pack_high_half_imm_to_store:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_movk_i32 s4, 0x3c00
+; GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, s4
+; GFX9-NEXT:    global_store_dword v[1:2], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: pack_high_half_imm_to_store:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v0, v0, 16, 0x3c00
+; GFX11-FAKE16-NEXT:    global_store_b32 v[1:2], v0, off
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-TRUE16-LABEL: pack_high_half_imm_to_store:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 16, 0x3c00
+; GFX11-TRUE16-NEXT:    global_store_b32 v[1:2], v0, off
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-FAKE16-LABEL: pack_high_half_imm_to_store:
+; GFX12-FAKE16:       ; %bb.0:
+; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-FAKE16-NEXT:    v_lshl_or_b32 v0, v0, 16, 0x3c00
+; GFX12-FAKE16-NEXT:    global_store_b32 v[1:2], v0, off
+; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-TRUE16-LABEL: pack_high_half_imm_to_store:
+; GFX12-TRUE16:       ; %bb.0:
+; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-TRUE16-NEXT:    v_lshl_or_b32 v0, v0, 16, 0x3c00
+; GFX12-TRUE16-NEXT:    global_store_b32 v[1:2], v0, off
+; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+  %ext = zext i16 %hi to i32
+  %shl = shl i32 %ext, 16
+  %or = or i32 %shl, 15360
+  store i32 %or, ptr addrspace(1) %out
+  ret void
 }
