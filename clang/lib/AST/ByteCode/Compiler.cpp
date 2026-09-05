@@ -7936,12 +7936,18 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     // check), so that e.g. '&*(int *)0' is not rejected.
     if (!Ctx.getLangOpts().CPlusPlus) {
       const Expr *Sub = SubExpr->IgnoreParens();
+
       if (const auto *Deref = dyn_cast<UnaryOperator>(Sub);
-          Deref && Deref->getOpcode() == UO_Deref)
-        return this->delegate(Deref->getSubExpr());
+          Deref && Deref->getOpcode() == UO_Deref) {
+        if (DiscardResult)
+          return this->discard(Deref->getSubExpr());
+        return this->visit(Deref->getSubExpr()) && this->emitAddrOf(E);
+      }
     }
     // We should already have a pointer when we get here.
-    return this->delegate(SubExpr);
+    if (DiscardResult)
+      return this->discard(SubExpr);
+    return this->delegate(SubExpr) && this->emitAddrOf(E);
   case UO_Deref: // *x
     if (DiscardResult)
       return this->discard(SubExpr);
@@ -8729,25 +8735,7 @@ bool Compiler<Emitter>::emitDestructionPop(const Descriptor *Desc,
 template <class Emitter>
 bool Compiler<Emitter>::emitDummyPtr(DeclOrExpr D, const Expr *E, bool CU) {
   assert(!DiscardResult && "Should've been checked before");
-
-  if (ToLValue) {
-    if (const auto *VD = D.asValueDecl())
-      return this->emitGetOpaquePtr(VD, CU, E);
-  }
-
-  unsigned DummyID = P.getOrCreateDummy(D, CU);
-  if (!this->emitGetPtrGlobal(DummyID, E))
-    return false;
-  if (E->getType()->isVoidType())
-    return true;
-
-  // Convert the dummy pointer to another pointer type if we have to.
-  if (PrimType PT = classifyPrim(E); PT != PT_Ptr) {
-    if (isPtrType(PT))
-      return this->emitDecayPtr(PT_Ptr, PT, E);
-    return false;
-  }
-  return true;
+  return this->emitGetOpaquePtr(D, CU, E);
 }
 
 template <class Emitter>
