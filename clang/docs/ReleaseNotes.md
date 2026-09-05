@@ -507,6 +507,8 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
 - Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
+- Fixed RTTI name for internal-linkage types lacking '*', fixed breaking type_info::operator== and
+dynamic_cast with libstdc++ (#GH34255)
 
 #### Bug Fixes to Compiler Builtins
 
