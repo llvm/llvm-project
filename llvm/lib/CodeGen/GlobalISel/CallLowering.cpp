@@ -859,23 +859,50 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
     // Now split the registers into the assigned types.
     Args[i].OrigRegs.assign(Args[i].Regs.begin(), Args[i].Regs.end());
 
+    int IndirectFrameIdx = 0;
+    Register IndirectPointerToStackReg{};
+    TypeSize CurrentIndirectChunkSize = TypeSize::getZero();
+    for (unsigned Part = 0; Part < NumParts; Part++) {
+      if (ArgLocs[j + Part].getLocInfo() == CCValAssign::Indirect)
+        CurrentIndirectChunkSize += ArgLocs[j + Part].getValVT().getStoreSize();
+      else if (CurrentIndirectChunkSize != 0)
+        llvm_unreachable("Indirect parameter passing where the middle part of "
+                         "a parameter is indirect isn't yet supported!");
+    }
+
     if (NumParts != 1 || NewLLT != OrigTy) {
       // If we can't directly assign the register, we need one or more
       // intermediate values.
       Args[i].Regs.resize(NumParts);
 
-      // When we have indirect parameter passing we are receiving a pointer,
-      // that points to the actual value, so we need one "temporary" pointer.
-      if (VA.getLocInfo() == CCValAssign::Indirect) {
-        if (Handler.isIncomingArgumentHandler())
-          Args[i].Regs[0] = MRI.createGenericVirtualRegister(PointerTy);
-      } else {
-        // For each split register, create and assign a vreg that will store
-        // the incoming component of the larger value. These will later be
-        // merged to form the final vreg.
-        for (unsigned Part = 0; Part < NumParts; ++Part)
-          Args[i].Regs[Part] = MRI.createGenericVirtualRegister(NewLLT);
+      // For each split register, create and assign a vreg that will store
+      // the incoming component of the larger value. These will later be
+      // merged to form the final vreg. If we reach an indirect chunk or the
+      // whole value is passed indirectly, we just need a pointer.
+      for (unsigned Part = 0; Part < NumParts; Part++) {
+        if (ArgLocs[j + Part].getLocInfo() == CCValAssign::Indirect) {
+          Args[i].Regs[Part] = MRI.createGenericVirtualRegister(PointerTy);
+          break;
+        }
+        Args[i].Regs[Part] = (MRI.createGenericVirtualRegister(NewLLT));
       }
+    }
+
+    // The argument has an indirect part or is entirely passed indirectly.
+    // Create space for it on the stack, so later we can store the value there.
+    if (CurrentIndirectChunkSize.isNonZero() &&
+        !Handler.isIncomingArgumentHandler()) {
+      Align AlignmentForStored = DL.getPrefTypeAlign(Args[i].Ty);
+      MachineFrameInfo &MFI = MF.getFrameInfo();
+      const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
+      int StackID = 0;
+      if (CurrentIndirectChunkSize.isScalable())
+        StackID = TFI->getStackIDForScalableVectors();
+      IndirectFrameIdx =
+          MFI.CreateStackObject(CurrentIndirectChunkSize.getKnownMinValue(),
+                                AlignmentForStored, false, nullptr, StackID);
+      IndirectPointerToStackReg =
+          MIRBuilder.buildFrameIndex(PointerTy, IndirectFrameIdx).getReg(0);
     }
 
     assert((j + (NumParts - 1)) < ArgLocs.size() &&
@@ -889,52 +916,60 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
                       ValTy, extendOpFromFlags(Args[i].Flags[0]));
     }
 
-    bool IndirectParameterPassingHandled = false;
     bool BigEndianPartOrdering = TLI->hasBigEndianPartOrdering(OrigVT, DL);
+    unsigned IndirectIdx = 0;
+    Register IncomingIndirectValuePointer;
     for (unsigned Part = 0; Part < NumParts; ++Part) {
-      assert((VA.getLocInfo() != CCValAssign::Indirect || Part == 0) &&
-             "Only the first parameter should be processed when "
-             "handling indirect passing!");
       Register ArgReg = Args[i].Regs[Part];
+
       // There should be Regs.size() ArgLocs per argument.
       unsigned Idx = BigEndianPartOrdering ? NumParts - 1 - Part : Part;
       CCValAssign &VA = ArgLocs[j + Idx];
       const ISD::ArgFlagsTy Flags = Args[i].Flags[Part];
+      const bool IsIndirect = VA.getLocInfo() == CCValAssign::Indirect;
+      const bool IsFirstIndirectPart = IsIndirect && IndirectIdx == 0;
 
-      // We found an indirect parameter passing, and we have an
-      // OutgoingValueHandler as our handler (so we are at the call site or the
-      // return value). In this case, start the construction of the following
-      // GMIR, that is responsible for the preparation of indirect parameter
-      // passing:
-      //
-      // %1(indirectly passed type) = The value to pass
-      // %3(pointer) = G_FRAME_INDEX %stack.0
-      // G_STORE %1, %3 :: (store (s128), align 8)
-      //
-      // After this GMIR, the remaining part of the loop body will decide how
-      // to get the value to the caller and we break out of the loop.
-      if (VA.getLocInfo() == CCValAssign::Indirect &&
-          !Handler.isIncomingArgumentHandler()) {
-        Align AlignmentForStored = DL.getPrefTypeAlign(Args[i].Ty);
-        MachineFrameInfo &MFI = MF.getFrameInfo();
-        // Get some space on the stack for the value, so later we can pass it
-        // as a reference.
-        int FrameIdx = MFI.CreateStackObject(OrigTy.getScalarSizeInBits(),
-                                             AlignmentForStored, false);
-        Register PointerToStackReg =
-            MIRBuilder.buildFrameIndex(PointerTy, FrameIdx).getReg(0);
-        MachinePointerInfo StackPointerMPO =
-            MachinePointerInfo::getFixedStack(MF, FrameIdx);
-        // Store the value in the previously created stack space.
-        MIRBuilder.buildStore(Args[i].OrigRegs[Part], PointerToStackReg,
-                              StackPointerMPO,
+      // Handle indirectly passed values.
+      if (IsIndirect && !Handler.isIncomingArgumentHandler()) {
+        Register StoreAddr = IndirectPointerToStackReg;
+        TypeSize OffsetBytes =
+            NewLLT.getSizeInBytes().multiplyCoefficientBy(IndirectIdx);
+
+        if (OffsetBytes.isNonZero()) {
+          LLT OffsetTy =
+              LLT::scalar(PointerTy.getSizeInBits().getKnownMinValue());
+          auto OffsetConst = MIRBuilder.buildConstant(
+              OffsetTy, OffsetBytes.getKnownMinValue());
+          StoreAddr = MIRBuilder
+                          .buildPtrAdd(PointerTy, IndirectPointerToStackReg,
+                                       OffsetConst)
+                          .getReg(0);
+        }
+
+        Register PartToStore = Args[i].OrigRegs[0];
+        if (NumParts != 1 || NewLLT != OrigTy)
+          PartToStore =
+              MIRBuilder
+                  .buildExtract(NewLLT, Args[i].OrigRegs[0],
+                                NewLLT.getSizeInBits()
+                                    .multiplyCoefficientBy(IndirectIdx)
+                                    .getKnownMinValue())
+                  .getReg(0);
+
+        auto StackPointerMPO = MachinePointerInfo::getFixedStack(
+            MF, IndirectFrameIdx, OffsetBytes);
+        MIRBuilder.buildStore(PartToStore, StoreAddr, StackPointerMPO,
                               inferAlignFromPtrInfo(MF, StackPointerMPO));
 
-        ArgReg = PointerToStackReg;
-        IndirectParameterPassingHandled = true;
+        IndirectIdx++;
+        ArgReg = IndirectPointerToStackReg;
       }
 
-      if (VA.isMemLoc() && !Flags.isByVal()) {
+      // The calling convention emits one identical location assignment for
+      // every part of an indirect argument. Assign the pointer to that
+      // location only once, while still loading or storing every value part.
+      const bool AssignLocation = !IsIndirect || IsFirstIndirectPart;
+      if (ArgReg && AssignLocation && VA.isMemLoc() && !Flags.isByVal()) {
         // Individual pieces may have been spilled to the stack and others
         // passed in registers.
 
@@ -958,7 +993,7 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
         else
           Handler.assignValueToAddress(Args[i], Part, StackAddr, MemTy, MPO,
                                        VA);
-      } else if (VA.isMemLoc() && Flags.isByVal()) {
+      } else if (AssignLocation && VA.isMemLoc() && Flags.isByVal()) {
         assert(Args[i].Regs.size() == 1 && "didn't expect split byval pointer");
 
         if (Handler.isIncomingArgumentHandler()) {
@@ -996,13 +1031,13 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
                                      DstMPO, DstAlign, SrcMPO, SrcAlign,
                                      MemSize, VA);
         }
-      } else if (i == 0 && !ThisReturnRegs.empty() &&
+      } else if (AssignLocation && i == 0 && !ThisReturnRegs.empty() &&
                  Handler.isIncomingArgumentHandler() &&
                  isTypeIsValidForThisReturn(ValVT)) {
         Handler.assignValueToReg(ArgReg, ThisReturnRegs[Part], VA, Flags);
-      } else if (Handler.isIncomingArgumentHandler()) {
+      } else if (AssignLocation && Handler.isIncomingArgumentHandler()) {
         Handler.assignValueToReg(ArgReg, VA.getLocReg(), VA, Flags);
-      } else {
+      } else if (AssignLocation) {
         DelayedOutgoingRegAssignments.emplace_back([=, &Handler]() {
           Handler.assignValueToReg(ArgReg, VA.getLocReg(), VA, Flags);
         });
@@ -1011,30 +1046,54 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
       // Finish the handling of indirect parameter passing when receiving
       // the value (we are in the called function or the caller when receiving
       // the return value).
-      if (VA.getLocInfo() == CCValAssign::Indirect &&
-          Handler.isIncomingArgumentHandler()) {
-        Align Alignment = DL.getABITypeAlign(Args[i].Ty);
-        MachinePointerInfo MPO = MachinePointerInfo::getUnknownStack(MF);
+      if (IsIndirect && Handler.isIncomingArgumentHandler()) {
+        if (IsFirstIndirectPart)
+          IncomingIndirectValuePointer = ArgReg;
 
+        uint64_t OffsetBytes = NewLLT.getSizeInBytes()
+                                   .multiplyCoefficientBy(IndirectIdx)
+                                   .getKnownMinValue();
+        Align Alignment =
+            commonAlignment(DL.getABITypeAlign(Args[i].Ty), OffsetBytes);
+        MachinePointerInfo MPO = MachinePointerInfo::getUnknownStack(MF);
+        Register PartPtrReg = IncomingIndirectValuePointer;
+        if (IndirectIdx > 0) {
+          LLT OffsetTy = LLT::scalar(PointerTy.getSizeInBits());
+          auto PartOffset = MIRBuilder.buildConstant(OffsetTy, OffsetBytes);
+          PartPtrReg = MIRBuilder
+                           .buildPtrAdd(PointerTy, IncomingIndirectValuePointer,
+                                        PartOffset)
+                           .getReg(0);
+        }
         // Since we are doing indirect parameter passing, we know that the value
         // in the temporary register is not the value passed to the function,
         // but rather a pointer to that value. Let's load that value into the
         // virtual register where the parameter should go.
-        MIRBuilder.buildLoad(Args[i].OrigRegs[0], Args[i].Regs[0], MPO,
-                             Alignment);
+        LLT LoadedPartTy = getLLTForMVT(VA.getValVT());
+        Register LoadedPart;
+        if (NumParts == 1 && LoadedPartTy == OrigTy) {
+          LoadedPart = Args[i].OrigRegs[0];
+          MIRBuilder.buildLoad(LoadedPart, PartPtrReg, MPO, Alignment);
+        } else {
+          LoadedPart =
+              MIRBuilder.buildLoad(LoadedPartTy, PartPtrReg, MPO, Alignment)
+                  .getReg(0);
+        }
+        if (Part < Args[i].Regs.size())
+          Args[i].Regs[Part] = LoadedPart;
 
-        IndirectParameterPassingHandled = true;
+        IndirectIdx++;
       }
-
-      if (IndirectParameterPassingHandled)
-        break;
     }
 
-    // Now that all pieces have been assigned, re-pack the register typed values
-    // into the original value typed registers. This is only necessary, when
-    // the value was passed in multiple registers, not indirectly.
+    // Now that all pieces have been assigned, re-pack the register typed
+    // values into the original value typed registers. An indirect value loaded
+    // in one piece already has the original type and needs no repacking.
+    const bool IndirectValueLoadedInOnePiece =
+        IndirectIdx == 1 && Args[i].Regs.size() == 1 &&
+        MRI.getType(Args[i].Regs[0]) == OrigTy;
     if (Handler.isIncomingArgumentHandler() && OrigVT != LocVT &&
-        !IndirectParameterPassingHandled) {
+        !IndirectValueLoadedInOnePiece) {
       // Merge the split registers into the expected larger result vregs of
       // the original call.
       buildCopyFromRegs(MIRBuilder, Args[i].OrigRegs, Args[i].Regs, OrigTy,
