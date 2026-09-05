@@ -98,12 +98,20 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
     // If instruction accesses memory, collect its pointer arguments.
     Instruction *I = &(*Inst);
     SmallVector<const Value *, 2u> PtrArgs;
+    // May reach a noalias argument via a copy captured before the call.
+    bool IsUnrestrictedCall = false;
 
     if (std::optional<MemoryLocation> MO = MemoryLocation::getOrNone(I))
       PtrArgs.push_back(MO->Ptr);
     else if (const CallBase *Call = dyn_cast<CallBase>(I)) {
-      if (Call->doesNotAccessMemory())
+      MemoryEffects ME = Call->getMemoryEffects();
+      if (ME.doesNotAccessMemory())
         continue;
+
+      // Inaccessible memory cannot alias any IR-visible pointer.
+      if (ME.onlyAccessesInaccessibleMem())
+        continue;
+      IsUnrestrictedCall = !ME.onlyAccessesArgPointees();
 
       for (Value *Arg : Call->args()) {
         if (!Arg->getType()->isPointerTy())
@@ -121,64 +129,59 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
     SmallPtrSet<const Value *, 4u> ObjSet;
     SmallVector<Metadata *, 4u> NoAliases;
 
-    if (!PtrArgs.empty()) {
-      // Trace pointer arguments back to underlying objects and decide which
-      // noalias scopes apply based on provenance and capture analysis.
-      for (const Value *Val : PtrArgs) {
-        SmallVector<const Value *, 4u> Objects;
-        getUnderlyingObjects(Val, Objects);
-        ObjSet.insert_range(Objects);
-      }
+    for (const Value *Val : PtrArgs) {
+      SmallVector<const Value *, 4u> Objects;
+      getUnderlyingObjects(Val, Objects);
+      ObjSet.insert_range(Objects);
+    }
 
-      bool RequiresNoCaptureBefore = false;
-      bool UsesUnknownObject = false;
-      bool UsesAliasingPtr = false;
+    bool RequiresNoCaptureBefore = false;
+    bool UsesUnknownObject = false;
+    bool UsesAliasingPtr = false;
 
-      for (const Value *Val : ObjSet) {
-        if (isa<ConstantData>(Val))
-          continue;
-
-        if (const Argument *Arg = dyn_cast<Argument>(Val)) {
-          if (!Arg->hasAttribute(Attribute::NoAlias))
-            UsesAliasingPtr = true;
-        } else
-          UsesAliasingPtr = true;
-
-        if (isEscapeSource(Val))
-          RequiresNoCaptureBefore = true;
-        else if (!isa<Argument>(Val) && isIdentifiedObject(Val))
-          UsesUnknownObject = true;
-      }
-
-      if (UsesUnknownObject)
+    for (const Value *Val : ObjSet) {
+      if (isa<ConstantData>(Val))
         continue;
 
-      // Collect noalias scopes for instruction.
-      for (const Argument *Arg : NoAliasArgs) {
-        if (ObjSet.contains(Arg))
-          continue;
+      if (const Argument *Arg = dyn_cast<Argument>(Val)) {
+        if (!Arg->hasAttribute(Attribute::NoAlias))
+          UsesAliasingPtr = true;
+      } else
+        UsesAliasingPtr = true;
 
-        if (!RequiresNoCaptureBefore ||
-            !capturesAnything(PointerMayBeCapturedBefore(
-                Arg, false, I, &DT, false, CaptureComponents::Provenance)))
-          NoAliases.push_back(NewScopes[Arg]);
+      if (isEscapeSource(Val)) {
+        // Can only alias a noalias argument if captured beforehand.
+        RequiresNoCaptureBefore = true;
+      } else if (!isa<Argument>(Val) && !isIdentifiedObject(Val)) {
+        // Unknown provenance: assume nothing.
+        UsesUnknownObject = true;
       }
+    }
 
-      // Collect scopes for alias.scope metadata.
-      if (!UsesAliasingPtr)
-        for (const Argument *Arg : NoAliasArgs) {
-          if (ObjSet.count(Arg))
-            Scopes.push_back(NewScopes[Arg]);
-        }
-    } else {
-      // The instruction accesses memory but has no pointer arguments.
-      // Since none of its operands derive from any noalias kernel argument,
-      // it cannot possibly alias them. Mark it as !noalias w.r.t. every
-      // noalias scope so that ScopedNoAliasAA can prove non-aliasing when
-      // other instructions reference those scopes via !alias.scope.
-      for (const Argument *Arg : NoAliasArgs)
+    if (UsesUnknownObject)
+      continue;
+
+    if (IsUnrestrictedCall)
+      RequiresNoCaptureBefore = true;
+
+    // Collect noalias scopes for instruction.
+    for (const Argument *Arg : NoAliasArgs) {
+      if (ObjSet.contains(Arg))
+        continue;
+
+      if (!RequiresNoCaptureBefore ||
+          !capturesAnything(PointerMayBeCapturedBefore(
+              Arg, false, I, &DT, false, CaptureComponents::Provenance)))
         NoAliases.push_back(NewScopes[Arg]);
     }
+
+    // Collect scopes for alias.scope metadata. Skip unrestricted calls: they
+    // may touch memory beyond their pointer arguments' pointees.
+    if (!UsesAliasingPtr && !IsUnrestrictedCall)
+      for (const Argument *Arg : NoAliasArgs) {
+        if (ObjSet.count(Arg))
+          Scopes.push_back(NewScopes[Arg]);
+      }
 
     // Add noalias metadata to instruction.
     if (!NoAliases.empty()) {
