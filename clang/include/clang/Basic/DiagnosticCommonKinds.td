@@ -419,7 +419,8 @@ def err_module_format_unhandled : Error<
 
 // API notes
 def err_apinotes_message : Error<"%0">;
-def warn_apinotes_message : Warning<"%0">, InGroup<DiagGroup<"apinotes">>;
+def warn_apinotes_message : Warning<"%0">,
+  InGroup<DiagGroup<"apinotes">>, ShowInSystemHeader;
 def note_apinotes_message : Note<"%0">;
 
 class NonportablePrivateAPINotesPath  : Warning<
