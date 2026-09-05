@@ -2426,6 +2426,28 @@ def MaskedOp : OpenMP_Op<"masked", traits = [
 }
 
 //===----------------------------------------------------------------------===//
+// [Spec 5.1] 12.3 dispatch Construct
+//===----------------------------------------------------------------------===//
+def DispatchOp : OpenMP_Op<"dispatch", traits = [
+    AttrSizedOperandSegments, NoRegionArguments
+  ], clauses = [
+    // TODO: Complete clause list (device, depend, is_device_ptr).
+    OpenMP_NocontextClause, OpenMP_NovariantsClause, OpenMP_NowaitClause
+  ], singleRegion = true> {
+  let summary = "dispatch construct";
+  let description = [{
+    The dispatch construct enables the invocation of a variant of a
+    base procedure. The structured block of a dispatch construct is
+    a single expression statement that contains a function call or
+    a subroutine call.
+  }] # clausesDescription;
+
+  let builders = [
+    OpBuilder<(ins CArg<"const DispatchOperands &">:$clauses)>
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // [Spec 5.2] 6.5 allocate Directive
 //===----------------------------------------------------------------------===//
 def AllocateDirOp : OpenMP_Op<"allocate_dir", [AttrSizedOperandSegments], clauses = [

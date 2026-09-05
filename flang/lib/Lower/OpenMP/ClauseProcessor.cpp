@@ -717,6 +717,40 @@ bool ClauseProcessor::processNogroup(
   return markClauseOccurrence<omp::clause::Nogroup>(result.nogroup);
 }
 
+bool ClauseProcessor::processNocontext(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::NocontextClauseOps &result) const {
+  const parser::CharBlock *source = nullptr;
+  if (auto *clause = findUniqueClause<omp::clause::Nocontext>(&source)) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::Location clauseLocation = converter.genLocation(*source);
+
+    mlir::Value nocontextVal =
+        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    result.nocontext = firOpBuilder.createConvert(
+        clauseLocation, firOpBuilder.getI1Type(), nocontextVal);
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processNovariants(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::NovariantsClauseOps &result) const {
+  const parser::CharBlock *source = nullptr;
+  if (auto *clause = findUniqueClause<omp::clause::Novariants>(&source)) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::Location clauseLocation = converter.genLocation(*source);
+
+    mlir::Value novariantsVal =
+        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    result.novariants = firOpBuilder.createConvert(
+        clauseLocation, firOpBuilder.getI1Type(), novariantsVal);
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processNowait(mlir::omp::NowaitClauseOps &result) const {
   return markClauseOccurrence<omp::clause::Nowait>(result.nowait);
 }

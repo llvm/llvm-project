@@ -1435,15 +1435,29 @@ semantics::omp::OmpVariantMatchContext makeVariantMatchContext(
 
 void collectEnclosingConstructTraits(
     mlir::Operation *op,
-    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
+    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits,
+    bool excludeNearestDispatch) {
   // Collect enclosing OpenMP operations so variants chosen by an outer
   // metadirective are part of this metadirective's context. For example, an
   // inner metadirective inside `target` and an outer-selected `parallel` must
   // be able to match construct={target, parallel}. The final reverse yields
   // outermost-to-innermost order as required by OMPContext.
+  //
+  // When \p excludeNearestDispatch is set, the innermost enclosing `dispatch`
+  // construct is left out of the trait set. This implements the `nocontext`
+  // clause, which removes its own dispatch construct from the OpenMP context
+  // used for variant selection.
+  bool skippedDispatch = false;
   for (; op; op = op->getParentOp()) {
     if (mlir::isa<mlir::omp::WsloopOp>(op))
       constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
+    if (mlir::isa<mlir::omp::DispatchOp>(op)) {
+      if (excludeNearestDispatch && !skippedDispatch)
+        skippedDispatch = true;
+      else
+        constructTraits.push_back(
+            llvm::omp::TraitProperty::construct_dispatch_dispatch);
+    }
     if (mlir::isa<mlir::omp::ParallelOp>(op))
       constructTraits.push_back(
           llvm::omp::TraitProperty::construct_parallel_parallel);
@@ -1459,7 +1473,8 @@ void collectEnclosingConstructTraits(
 
 const semantics::Symbol *
 resolveDeclareVariantCallee(const semantics::Symbol &base,
-                            AbstractConverter &converter) {
+                            AbstractConverter &converter,
+                            bool excludeDispatchContext) {
   const semantics::Symbol &ultimate{base.GetUltimate()};
 
   const auto *details{ultimate.detailsIf<semantics::SubprogramDetails>()};
@@ -1500,7 +1515,7 @@ resolveDeclareVariantCallee(const semantics::Symbol &base,
   llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
   collectEnclosingConstructTraits(
       converter.getFirOpBuilder().getInsertionBlock()->getParentOp(),
-      constructTraits);
+      constructTraits, excludeDispatchContext);
   semantics::omp::OmpVariantMatchContext ompCtx =
       makeVariantMatchContext(converter.getModuleOp(), constructTraits);
 
@@ -1510,6 +1525,24 @@ resolveDeclareVariantCallee(const semantics::Symbol &base,
   if (bestIdx < 0)
     return nullptr;
   return variants[bestIdx];
+}
+
+mlir::Value getEnclosingDispatchNovariants(mlir::OpBuilder &builder) {
+  mlir::Block *block = builder.getInsertionBlock();
+  for (mlir::Operation *op = block ? block->getParentOp() : nullptr; op;
+       op = op->getParentOp())
+    if (auto dispatch = mlir::dyn_cast<mlir::omp::DispatchOp>(op))
+      return dispatch.getNovariants();
+  return {};
+}
+
+mlir::Value getEnclosingDispatchNocontext(mlir::OpBuilder &builder) {
+  mlir::Block *block = builder.getInsertionBlock();
+  for (mlir::Operation *op = block ? block->getParentOp() : nullptr; op;
+       op = op->getParentOp())
+    if (auto dispatch = mlir::dyn_cast<mlir::omp::DispatchOp>(op))
+      return dispatch.getNocontext();
+  return {};
 }
 
 } // namespace omp

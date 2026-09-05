@@ -22,6 +22,8 @@ namespace mlir {
 class Operation;
 class Location;
 class Type;
+class Value;
+class OpBuilder;
 namespace omp {
 enum class DeclareTargetDeviceType : uint32_t;
 enum class DeclareTargetCaptureClause : uint32_t;
@@ -115,10 +117,21 @@ void markOpenMPImportedDeclareTargets(
 namespace omp {
 /// If \p base carries OpenMP DECLARE VARIANT entries, return the variant symbol
 /// that best matches the enclosing OpenMP context, or nullptr if none matches.
-/// \p base is expected to have variant entries.
+/// \p base is expected to have variant entries. When \p excludeDispatchContext
+/// is set, the innermost enclosing `dispatch` construct is removed from the
+/// context before matching, implementing the `nocontext` clause.
 const Fortran::semantics::Symbol *
 resolveDeclareVariantCallee(const Fortran::semantics::Symbol &base,
-                            AbstractConverter &converter);
+                            AbstractConverter &converter,
+                            bool excludeDispatchContext = false);
+
+/// Return the i1 `novariants` value of an enclosing `omp.dispatch`, or a null
+/// Value if there is none.
+mlir::Value getEnclosingDispatchNovariants(mlir::OpBuilder &builder);
+
+/// Return the i1 `nocontext` value of an enclosing `omp.dispatch`, or a null
+/// Value if there is none.
+mlir::Value getEnclosingDispatchNocontext(mlir::OpBuilder &builder);
 } // namespace omp
 
 // Materialize (idempotently) the omp.declare_reduction op for one already-
