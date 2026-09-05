@@ -3695,6 +3695,16 @@ static bool CheckVectorSelect(Sema *S, CallExpr *TheCall) {
   return false;
 }
 
+static QualType getVectorOrScalarType(Sema &S, QualType BaseType,
+                                      unsigned Count) {
+  return Count > 1 ? S.Context.getExtVectorType(BaseType, Count) : BaseType;
+}
+
+static bool CheckScalarFloatOperand(Sema &S, CallExpr *TheCall,
+                                    unsigned ArgIndex) {
+  return CheckArgTypeMatches(&S, TheCall->getArg(ArgIndex), S.Context.FloatTy);
+}
+
 static bool CheckIndexType(Sema *S, CallExpr *TheCall, unsigned IndexArgIndex) {
   assert(TheCall->getNumArgs() > IndexArgIndex && "Index argument missing");
   QualType ArgType = TheCall->getArg(IndexArgIndex)->getType();
@@ -3767,23 +3777,6 @@ static QualType createCounterHandleType(ASTContext &AST,
   return AST.getHLSLAttributedResourceType(MainResType->getWrappedType(),
                                            MainResType->getContainedType(),
                                            MainAttrs);
-}
-
-static bool CheckVectorElementCount(Sema *S, QualType PassedType,
-                                    QualType BaseType, unsigned ExpectedCount,
-                                    SourceLocation Loc) {
-  unsigned PassedCount = 1;
-  if (const auto *VecTy = PassedType->getAs<VectorType>())
-    PassedCount = VecTy->getNumElements();
-
-  if (PassedCount != ExpectedCount) {
-    QualType ExpectedType =
-        S->Context.getExtVectorType(BaseType, ExpectedCount);
-    S->Diag(Loc, diag::err_typecheck_convert_incompatible)
-        << PassedType << ExpectedType << 1 << 0 << 0;
-    return true;
-  }
-  return false;
 }
 
 enum class SampleKind { Sample, Bias, Grad, Level, Cmp, CmpLevelZero };
@@ -3903,9 +3896,9 @@ static bool CheckTextureSamplerAndLocation(Sema &S, CallExpr *TheCall,
   unsigned ExpectedDim =
       getResourceDimensions(ResourceTy->getAttrs().ResourceDimension) +
       (IncludeArraySlice && ResourceTy->getAttrs().IsArray ? 1 : 0);
-  if (CheckVectorElementCount(&S, TheCall->getArg(2)->getType(),
-                              S.Context.FloatTy, ExpectedDim,
-                              TheCall->getBeginLoc()))
+  if (CheckArgTypeMatches(
+          &S, TheCall->getArg(2),
+          getVectorOrScalarType(S, S.Context.FloatTy, ExpectedDim)))
     return true;
 
   return false;
@@ -3934,25 +3927,16 @@ static bool CheckGatherBuiltin(Sema &S, CallExpr *TheCall, bool IsCmp) {
   unsigned NextIdx = 3;
   if (IsCmp) {
     // Check the compare value.
-    QualType CmpTy = TheCall->getArg(NextIdx)->getType();
-    if (!CmpTy->isFloatingType() || CmpTy->isVectorType()) {
-      S.Diag(TheCall->getArg(NextIdx)->getBeginLoc(),
-             diag::err_typecheck_convert_incompatible)
-          << CmpTy << S.Context.FloatTy << 1 << 0 << 0;
+    if (CheckScalarFloatOperand(S, TheCall, NextIdx))
       return true;
-    }
     NextIdx++;
   }
 
   // Check the component operand.
-  Expr *ComponentArg = TheCall->getArg(NextIdx);
-  QualType ComponentTy = ComponentArg->getType();
-  if (!ComponentTy->isIntegerType() || ComponentTy->isVectorType()) {
-    S.Diag(ComponentArg->getBeginLoc(),
-           diag::err_typecheck_convert_incompatible)
-        << ComponentTy << S.Context.UnsignedIntTy << 1 << 0 << 0;
+  if (CheckArgTypeMatches(&S, TheCall->getArg(NextIdx),
+                          S.Context.UnsignedIntTy))
     return true;
-  }
+  Expr *ComponentArg = TheCall->getArg(NextIdx);
 
   // GatherCmp operations on Vulkan target must use component 0 (Red).
   if (IsCmp && S.getASTContext().getTargetInfo().getTriple().isSPIRV()) {
@@ -3981,9 +3965,9 @@ static bool CheckGatherBuiltin(Sema &S, CallExpr *TheCall, bool IsCmp) {
   if (TheCall->getNumArgs() > NextIdx) {
     unsigned ExpectedDim =
         getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
-    if (CheckVectorElementCount(&S, TheCall->getArg(NextIdx)->getType(),
-                                S.Context.IntTy, ExpectedDim,
-                                TheCall->getArg(NextIdx)->getBeginLoc()))
+    if (CheckArgTypeMatches(
+            &S, TheCall->getArg(NextIdx),
+            getVectorOrScalarType(S, S.Context.IntTy, ExpectedDim)))
       return true;
     NextIdx++;
   }
@@ -4042,25 +4026,16 @@ static bool CheckLoadLevelBuiltin(Sema &S, CallExpr *TheCall) {
   unsigned LocationDim = ResourceDim + (ResourceTy->getAttrs().IsArray ? 1 : 0);
   if (!IsUAV)
     ++LocationDim;
-  QualType CoordLODTy = TheCall->getArg(1)->getType();
-  if (CheckVectorElementCount(&S, CoordLODTy, S.Context.IntTy, LocationDim,
-                              TheCall->getArg(1)->getBeginLoc()))
+  if (CheckArgTypeMatches(
+          &S, TheCall->getArg(1),
+          getVectorOrScalarType(S, S.Context.IntTy, LocationDim)))
     return true;
-
-  QualType EltTy = CoordLODTy;
-  if (const auto *VTy = EltTy->getAs<VectorType>())
-    EltTy = VTy->getElementType();
-  if (!EltTy->isIntegerType()) {
-    S.Diag(TheCall->getArg(1)->getBeginLoc(), diag::err_typecheck_expect_int)
-        << CoordLODTy;
-    return true;
-  }
 
   // Check the offset operand (int2 for 2D textures; no array slice).
   if (TheCall->getNumArgs() > 2) {
-    if (CheckVectorElementCount(&S, TheCall->getArg(2)->getType(),
-                                S.Context.IntTy, ResourceDim,
-                                TheCall->getArg(2)->getBeginLoc()))
+    if (CheckArgTypeMatches(
+            &S, TheCall->getArg(2),
+            getVectorOrScalarType(S, S.Context.IntTy, ResourceDim)))
       return true;
   }
 
@@ -4087,23 +4062,20 @@ static bool CheckLoadMSBuiltin(Sema &S, CallExpr *TheCall) {
   unsigned ResourceDim =
       getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
   unsigned LocationDim = ResourceDim + (ResourceTy->getAttrs().IsArray ? 1 : 0);
-  QualType LocationTy = TheCall->getArg(1)->getType();
-  if (CheckVectorElementCount(&S, LocationTy, S.Context.IntTy, LocationDim,
-                              TheCall->getArg(1)->getBeginLoc()))
+  if (CheckArgTypeMatches(
+          &S, TheCall->getArg(1),
+          getVectorOrScalarType(S, S.Context.IntTy, LocationDim)))
     return true;
 
   // Check the sample index operand (scalar int).
-  if (!TheCall->getArg(2)->getType()->isIntegerType()) {
-    S.Diag(TheCall->getArg(2)->getBeginLoc(), diag::err_typecheck_expect_int)
-        << TheCall->getArg(2)->getType();
+  if (CheckArgTypeMatches(&S, TheCall->getArg(2), S.Context.IntTy))
     return true;
-  }
 
   // Check the offset operand (int2 for 2D textures; no array slice).
   if (TheCall->getNumArgs() > 3) {
-    if (CheckVectorElementCount(&S, TheCall->getArg(3)->getType(),
-                                S.Context.IntTy, ResourceDim,
-                                TheCall->getArg(3)->getBeginLoc()))
+    if (CheckArgTypeMatches(
+            &S, TheCall->getArg(3),
+            getVectorOrScalarType(S, S.Context.IntTy, ResourceDim)))
       return true;
   }
 
@@ -4150,26 +4122,18 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
       Kind == SampleKind::Cmp || Kind == SampleKind::CmpLevelZero) {
     // Check the bias, lod level, or compare value, depending on the kind.
     // All of them must be a scalar float value.
-    QualType BiasOrLODOrCmpTy = TheCall->getArg(NextIdx)->getType();
-    if (!BiasOrLODOrCmpTy->isFloatingType() ||
-        BiasOrLODOrCmpTy->isVectorType()) {
-      S.Diag(TheCall->getArg(NextIdx)->getBeginLoc(),
-             diag::err_typecheck_convert_incompatible)
-          << BiasOrLODOrCmpTy << S.Context.FloatTy << 1 << 0 << 0;
+    if (CheckScalarFloatOperand(S, TheCall, NextIdx))
       return true;
-    }
     NextIdx++;
   } else if (Kind == SampleKind::Grad) {
+    QualType GradTy = getVectorOrScalarType(S, S.Context.FloatTy, ExpectedDim);
+
     // Check the DDX operand.
-    if (CheckVectorElementCount(&S, TheCall->getArg(NextIdx)->getType(),
-                                S.Context.FloatTy, ExpectedDim,
-                                TheCall->getArg(NextIdx)->getBeginLoc()))
+    if (CheckArgTypeMatches(&S, TheCall->getArg(NextIdx), GradTy))
       return true;
 
     // Check the DDY operand.
-    if (CheckVectorElementCount(&S, TheCall->getArg(NextIdx + 1)->getType(),
-                                S.Context.FloatTy, ExpectedDim,
-                                TheCall->getArg(NextIdx + 1)->getBeginLoc()))
+    if (CheckArgTypeMatches(&S, TheCall->getArg(NextIdx + 1), GradTy))
       return true;
     NextIdx += 2;
   }
@@ -4177,9 +4141,9 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
   // Check the offset operand (if applicable).
   if (hasResourceOffset(ResourceTy->getAttrs().ResourceDimension) &&
       TheCall->getNumArgs() > NextIdx) {
-    if (CheckVectorElementCount(&S, TheCall->getArg(NextIdx)->getType(),
-                                S.Context.IntTy, ExpectedDim,
-                                TheCall->getArg(NextIdx)->getBeginLoc()))
+    if (CheckArgTypeMatches(
+            &S, TheCall->getArg(NextIdx),
+            getVectorOrScalarType(S, S.Context.IntTy, ExpectedDim)))
       return true;
     NextIdx++;
   }
@@ -4187,13 +4151,8 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
   // Check the clamp operand.
   if (Kind != SampleKind::Level && Kind != SampleKind::CmpLevelZero &&
       TheCall->getNumArgs() > NextIdx) {
-    QualType ClampTy = TheCall->getArg(NextIdx)->getType();
-    if (!ClampTy->isFloatingType() || ClampTy->isVectorType()) {
-      S.Diag(TheCall->getArg(NextIdx)->getBeginLoc(),
-             diag::err_typecheck_convert_incompatible)
-          << ClampTy << S.Context.FloatTy << 1 << 0 << 0;
+    if (CheckScalarFloatOperand(S, TheCall, NextIdx))
       return true;
-    }
   }
 
   assert(ResourceTy->hasContainedType() &&
