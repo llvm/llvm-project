@@ -90,15 +90,6 @@ bool isSourceElement(Type type) {
 }
 
 template <TosaNarrowKind Kind>
-Type convertElement(Type type) {
-  if (auto intTy = dyn_cast<IntegerType>(type))
-    return convertInteger<Kind>(intTy);
-  if (auto floatTy = dyn_cast<FloatType>(type))
-    return convertFloat<Kind>(floatTy);
-  return type;
-}
-
-template <TosaNarrowKind Kind>
 bool typeNeedsConversion(Type type) {
   if (auto shaped = dyn_cast<ShapedType>(type))
     return isSourceElement<Kind>(shaped.getElementType());

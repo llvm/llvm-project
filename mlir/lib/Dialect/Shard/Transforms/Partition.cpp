@@ -38,14 +38,6 @@
 
 namespace mlir::shard {
 
-template <typename SourceAxes, typename TargetAxes>
-static bool arePartialAxesCompatible(const SourceAxes &sourceAxes,
-                                     const TargetAxes &targetAxes) {
-  return llvm::all_of(targetAxes, [&sourceAxes](auto &targetAxis) {
-    return sourceAxes.contains(targetAxis);
-  });
-}
-
 /// Base class for resharding patterns.
 /// Subclasses implement `tryApply` to detect and apply a specific resharding.
 class ReshardingPattern {

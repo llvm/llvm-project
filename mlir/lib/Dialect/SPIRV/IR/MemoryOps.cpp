@@ -319,12 +319,6 @@ void AccessChainOp::build(OpBuilder &builder, OperationState &state,
 }
 
 template <typename Op>
-static void printAccessChain(Op op, ValueRange indices, OpAsmPrinter &printer) {
-  printer << ' ' << op.getBasePtr() << '[' << indices
-          << "] : " << op.getBasePtr().getType() << ", " << indices.getTypes();
-}
-
-template <typename Op>
 static LogicalResult verifyAccessChain(Op accessChainOp, ValueRange indices) {
   auto resultType = getElementPtrType(accessChainOp.getBasePtr().getType(),
                                       indices, accessChainOp.getLoc());

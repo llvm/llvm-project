@@ -3374,28 +3374,6 @@ void scf::WhileOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDictWithKeyword((*this)->getAttrs());
 }
 
-/// Verifies that two ranges of types match, i.e. have the same number of
-/// entries and that types are pairwise equals. Reports errors on the given
-/// operation in case of mismatch.
-template <typename OpTy>
-static LogicalResult verifyTypeRangesMatch(OpTy op, TypeRange left,
-                                           TypeRange right, StringRef message) {
-  if (left.size() != right.size())
-    return op.emitOpError("expects the same number of ") << message;
-
-  for (unsigned i = 0, e = left.size(); i < e; ++i) {
-    if (left[i] != right[i]) {
-      InFlightDiagnostic diag = op.emitOpError("expects the same types for ")
-                                << message;
-      diag.attachNote() << "for argument " << i << ", found " << left[i]
-                        << " and " << right[i];
-      return diag;
-    }
-  }
-
-  return success();
-}
-
 LogicalResult scf::WhileOp::verify() {
   auto beforeTerminator = verifyAndGetTerminator<scf::ConditionOp>(
       *this, getBefore(),

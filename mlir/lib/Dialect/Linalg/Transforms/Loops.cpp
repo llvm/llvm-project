@@ -76,24 +76,6 @@ static void inlineRegionAndEmitStore(OpBuilder &b, Location loc, OpType op,
   }
 }
 
-// Returns a pair that contains input indices and output indices of a
-// SingleInputPoolingOp `op`.
-struct InputAndOutputIndices {
-  SmallVector<Value> inputs;
-  SmallVector<Value> outputs;
-};
-template <typename SingleInputPoolingOp>
-static InputAndOutputIndices
-getInputAndOutputIndices(OpBuilder &b, Location loc, ArrayRef<Value> allIvs,
-                         SingleInputPoolingOp op) {
-  auto mapsRange = op.getIndexingMapsArray();
-  auto maps = llvm::to_vector<8>(
-      llvm::map_range(mapsRange, [](AffineMapAttr a) { return a.getValue(); }));
-  return InputAndOutputIndices{
-      makeCanonicalAffineApplies(b, loc, maps[0], allIvs),
-      makeCanonicalAffineApplies(b, loc, maps[2], allIvs)};
-}
-
 /// Emits the MLIR for the scalar part of the generic op by:
 ///   1. Emitting load ops for each input and output view in order. This is
 ///      achieved by applying the appropriate input or output map to the
