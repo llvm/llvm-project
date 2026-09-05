@@ -199,7 +199,35 @@ public:
   }
 
   /// Possible exception handling behavior.
-  enum class ExceptionHandlingKind { None, SjLj, WinEH, DwarfCFI, Wasm };
+  enum class ExceptionHandlingKind {
+    Default,
+    None,
+    SjLj,
+    WinEH,
+    DwarfCFI,
+    Wasm
+  };
+
+  /// Translate a clang ExceptionHandlingKind into the corresponding LLVM
+  /// ExceptionHandling model.
+  static llvm::ExceptionHandling
+  toExceptionHandling(ExceptionHandlingKind Kind) {
+    switch (Kind) {
+    case ExceptionHandlingKind::Default:
+      return llvm::ExceptionHandling::Default;
+    case ExceptionHandlingKind::None:
+      return llvm::ExceptionHandling::None;
+    case ExceptionHandlingKind::SjLj:
+      return llvm::ExceptionHandling::SjLj;
+    case ExceptionHandlingKind::WinEH:
+      return llvm::ExceptionHandling::WinEH;
+    case ExceptionHandlingKind::DwarfCFI:
+      return llvm::ExceptionHandling::DwarfCFI;
+    case ExceptionHandlingKind::Wasm:
+      return llvm::ExceptionHandling::Wasm;
+    }
+    llvm_unreachable("invalid ExceptionHandlingKind");
+  }
 
   enum class SwiftAsyncFramePointerKind {
     Auto, // Choose Swift async extended frame info based on deployment target.

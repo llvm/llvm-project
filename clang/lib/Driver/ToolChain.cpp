@@ -1460,7 +1460,7 @@ ObjCRuntime ToolChain::getDefaultObjCRuntime(bool isNonFragile) const {
 
 llvm::ExceptionHandling
 ToolChain::GetExceptionModel(const llvm::opt::ArgList &Args) const {
-  return llvm::ExceptionHandling::None;
+  return llvm::ExceptionHandling::Default;
 }
 
 bool ToolChain::isThreadModelSupported(const StringRef Model) const {

@@ -2459,7 +2459,7 @@ def exception_model : Separate<["-"], "exception-model">,
   Values<"dwarf,sjlj,seh,wasm,none">,
   NormalizedValuesScope<"CodeGenOptions::ExceptionHandlingKind">,
   NormalizedValues<["DwarfCFI", "SjLj", "WinEH", "Wasm", "None"]>,
-  MarshallingInfoEnum<CodeGenOpts<"ExceptionHandling">, "None">;
+  MarshallingInfoEnum<CodeGenOpts<"ExceptionHandling">, "Default">;
 def exception_model_EQ : Joined<["-"], "exception-model=">,
   Visibility<[CC1Option]>, Alias<exception_model>;
 def fignore_exceptions : Flag<["-"], "fignore-exceptions">, Group<f_Group>,

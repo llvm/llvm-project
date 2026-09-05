@@ -151,7 +151,7 @@ def err_fe_invalid_multiple_actions : Error<
 def err_fe_invalid_alignment : Error<
     "invalid value '%1' in '%0'; alignment must be a power of 2">;
 def err_fe_invalid_exception_model
-   : Error<"invalid exception model '%select{none|sjlj|seh|dwarf|wasm}0' for target '%1'">;
+   : Error<"invalid exception model '%select{default|none|sjlj|seh|dwarf|wasm}0' for target '%1'">;
 def err_fe_invalid_source_date_epoch : Error<
     "environment variable 'SOURCE_DATE_EPOCH' ('%0') must be a non-negative decimal integer <= %1">;
 
