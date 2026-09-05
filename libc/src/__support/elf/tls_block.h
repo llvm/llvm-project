@@ -21,6 +21,7 @@
 #include "hdr/stdint_proxy.h"
 #include "hdr/sys_mman_macros.h"
 #include "hdr/types/size_t.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/getrandom.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
 #include "src/__support/elf/module.h"
@@ -100,9 +101,10 @@ LIBC_INLINE ErrorOr<TlsBlock> allocate_tls_block(const Module *modules,
   // are padded until it does; the mapping itself is page aligned.
   const size_t below_tp =
       TLS_VARIANT_2
-          ? round_up(layout.size() - TLS_TCB_SIZE, layout.alignment())
+          ? round_up(layout.size() - TLS_TCB_RESERVE, layout.alignment())
           : 0;
-  const size_t total = TLS_VARIANT_2 ? below_tp + TLS_TCB_SIZE : layout.size();
+  const size_t total =
+      TLS_VARIANT_2 ? below_tp + TLS_TCB_RESERVE : layout.size();
 
   auto storage = linux_syscalls::mmap(nullptr, total, PROT_READ | PROT_WRITE,
                                       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -119,6 +121,16 @@ LIBC_INLINE ErrorOr<TlsBlock> allocate_tls_block(const Module *modules,
   // it to find their own base, so leaving it zero makes every one of them
   // dereference an offset from address zero.
   *reinterpret_cast<uintptr_t *>(tp) = tp;
+
+  // Code built with -fstack-protector reads its guard from a fixed offset
+  // from the thread pointer, so every thread needs one before any such code
+  // runs. A failed read leaves the value at zero, which still compares equal
+  // to itself and so costs correctness nothing.
+  if (TLS_VARIANT_2) {
+    auto *guard = reinterpret_cast<uintptr_t *>(tp + TLS_STACK_GUARD_OFFSET);
+    if (!linux_syscalls::getrandom(guard, sizeof(uintptr_t), 0).has_value())
+      *guard = 0;
+  }
 
   TlsLayout again;
   for (size_t i = 0; i < count; ++i) {

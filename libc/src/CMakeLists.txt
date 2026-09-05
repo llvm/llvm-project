@@ -26,6 +26,7 @@ add_subdirectory(stdlib)
 add_subdirectory(string)
 add_subdirectory(strings)
 add_subdirectory(time)
+add_subdirectory(tls)
 add_subdirectory(wchar)
 add_subdirectory(wctype)
 

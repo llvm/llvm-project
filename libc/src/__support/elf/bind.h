@@ -36,22 +36,33 @@ constexpr uint32_t RELOC_ABSOLUTE = R_X86_64_64;
 constexpr uint32_t RELOC_GLOB_DAT = R_X86_64_GLOB_DAT;
 constexpr uint32_t RELOC_JUMP_SLOT = R_X86_64_JUMP_SLOT;
 constexpr uint32_t RELOC_TLS_OFFSET = R_X86_64_TPOFF64;
+// The general dynamic model, which a shared library uses because it does not
+// know at link time where in the thread's blocks its own will sit. The pair
+// is read at run time by __tls_get_addr.
+constexpr uint32_t RELOC_TLS_MODULE = R_X86_64_DTPMOD64;
+constexpr uint32_t RELOC_TLS_MODULE_OFFSET = R_X86_64_DTPOFF64;
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 constexpr uint32_t RELOC_ABSOLUTE = R_AARCH64_ABS64;
 constexpr uint32_t RELOC_GLOB_DAT = R_AARCH64_GLOB_DAT;
 constexpr uint32_t RELOC_JUMP_SLOT = R_AARCH64_JUMP_SLOT;
 constexpr uint32_t RELOC_TLS_OFFSET = R_AARCH64_TLS_TPREL;
+constexpr uint32_t RELOC_TLS_MODULE = R_AARCH64_TLS_DTPMOD;
+constexpr uint32_t RELOC_TLS_MODULE_OFFSET = R_AARCH64_TLS_DTPREL;
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 constexpr uint32_t RELOC_ABSOLUTE = R_RISCV_64;
 constexpr uint32_t RELOC_GLOB_DAT = R_RISCV_JUMP_SLOT;
 constexpr uint32_t RELOC_JUMP_SLOT = R_RISCV_JUMP_SLOT;
 constexpr uint32_t RELOC_TLS_OFFSET = R_RISCV_TLS_TPREL64;
+constexpr uint32_t RELOC_TLS_MODULE = R_RISCV_TLS_DTPMOD64;
+constexpr uint32_t RELOC_TLS_MODULE_OFFSET = R_RISCV_TLS_DTPREL64;
 #elif defined(LIBC_TARGET_ARCH_IS_ARM)
 constexpr uint32_t RELOC_ABSOLUTE = R_ARM_ABS32;
 constexpr uint32_t RELOC_GLOB_DAT = R_ARM_GLOB_DAT;
 constexpr uint32_t RELOC_JUMP_SLOT = R_ARM_JUMP_SLOT;
 // ARM uses a different TLS model; not handled here yet.
 constexpr uint32_t RELOC_TLS_OFFSET = 0xffffffffu;
+constexpr uint32_t RELOC_TLS_MODULE = 0xfffffffeu;
+constexpr uint32_t RELOC_TLS_MODULE_OFFSET = 0xfffffffdu;
 #else
 // No loader runs on this architecture, so nothing binds symbols. These match
 // no relocation type.
@@ -159,13 +170,44 @@ LIBC_INLINE BindResult bind_relocations(const Module &target,
   for (const ElfW(Rela) *rela = table.begin(); rela != table.end(); ++rela) {
     const uint32_t type = reloc_type(rela->r_info);
     const bool is_tls = type == RELOC_TLS_OFFSET;
+    const bool is_tls_module = type == RELOC_TLS_MODULE;
+    const bool is_tls_module_offset = type == RELOC_TLS_MODULE_OFFSET;
     if (type != RELOC_ABSOLUTE && type != RELOC_GLOB_DAT &&
-        type != RELOC_JUMP_SLOT && !is_tls)
+        type != RELOC_JUMP_SLOT && !is_tls && !is_tls_module &&
+        !is_tls_module_offset)
       continue;
 
     const uint32_t symbol_index = reloc_symbol(rela->r_info);
     const ElfW(Sym) &symbol = symtab[symbol_index];
     const char *name = strtab + symbol.st_name;
+
+    if (is_tls_module || is_tls_module_offset) {
+      // The general dynamic model. What is stored is not an address but a
+      // module and an offset within that module's block, which
+      // __tls_get_addr turns into an address once it knows which thread is
+      // asking.
+      size_t module = target_index;
+      ElfW(Addr) value = 0;
+      if (symbol_index != 0 && symbol.st_shndx == SHN_UNDEF) {
+        auto defined = order.find(name);
+        if (!defined) {
+          ++result.unresolved;
+          if (result.missing == nullptr)
+            result.missing = name;
+          continue;
+        }
+        module = defined->module;
+        value = defined->value;
+      } else if (symbol_index != 0) {
+        value = symbol.st_value;
+      }
+      auto *slot =
+          reinterpret_cast<ElfW(Addr) *>(target.load_bias() + rela->r_offset);
+      *slot = is_tls_module ? static_cast<ElfW(Addr)>(module)
+                            : static_cast<ElfW(Addr)>(value + rela->r_addend);
+      ++result.bound;
+      continue;
+    }
 
     if (is_tls) {
       // A thread local is addressed relative to the thread pointer, so what

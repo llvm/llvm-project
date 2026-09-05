@@ -39,6 +39,20 @@ constexpr bool TLS_VARIANT_2 = false;
 // module's block.
 constexpr size_t TLS_TCB_SIZE = 2 * sizeof(void *);
 
+// Bytes to keep at the thread pointer itself. Variant 1 needs only the
+// control block, which its offsets already skip. Variant 2 has to leave room
+// for what x86 addresses through the thread pointer by fixed offset: the self
+// pointer at zero, the stack guard at 0x28 and the pointer guard at 0x30.
+#if defined(LIBC_TARGET_ARCH_IS_X86_64) || defined(LIBC_TARGET_ARCH_IS_X86_32)
+constexpr size_t TLS_TCB_RESERVE = 64;
+#else
+constexpr size_t TLS_TCB_RESERVE = TLS_TCB_SIZE;
+#endif
+
+// Where the stack guard sits, relative to the thread pointer, for code built
+// with -fstack-protector.
+constexpr size_t TLS_STACK_GUARD_OFFSET = 0x28;
+
 LIBC_INLINE constexpr size_t round_up(size_t value, size_t alignment) {
   if (alignment <= 1)
     return value;
@@ -84,7 +98,7 @@ public:
   // Total bytes the thread block needs, thread control block included.
   LIBC_INLINE constexpr size_t size() const {
     if (TLS_VARIANT_2)
-      return offset_ + TLS_TCB_SIZE;
+      return offset_ + TLS_TCB_RESERVE;
     return offset_;
   }
 

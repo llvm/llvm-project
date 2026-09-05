@@ -194,12 +194,20 @@ if(LLVM_LIBC_FULL_BUILD)
   set(header_install_target install-libc-headers)
 endif()
 
+# The loader is installed alongside the shared libraries it exists to load,
+# so it has to be built before the install step runs.
+set(loader_target "")
+if(TARGET libc-loader)
+  set(loader_target libc-loader)
+endif()
+
 add_custom_target(install-libc
   DEPENDS ${added_archive_targets}
     ${added_shared_targets}
     ${added_bitcode_targets}
     ${added_empty_archives}
     ${startup_target}
+    ${loader_target}
     ${header_install_target}
   COMMAND "${CMAKE_COMMAND}"
     -DCMAKE_INSTALL_COMPONENT=libc
@@ -210,6 +218,7 @@ add_custom_target(install-libc-stripped
     ${added_bitcode_targets}
     ${added_empty_archives}
     ${startup_target}
+    ${loader_target}
     ${header_install_target}
   COMMAND "${CMAKE_COMMAND}"
     -DCMAKE_INSTALL_COMPONENT=libc

@@ -15,6 +15,7 @@
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::elf::round_up;
+using LIBC_NAMESPACE::elf::TLS_TCB_RESERVE;
 using LIBC_NAMESPACE::elf::TLS_TCB_SIZE;
 using LIBC_NAMESPACE::elf::TLS_VARIANT_2;
 using LIBC_NAMESPACE::elf::TlsLayout;
@@ -34,7 +35,7 @@ TEST(LlvmLibcElfTlsLayoutTest, EmptyLayout) {
   EXPECT_EQ(layout.module_count(), size_t(0));
   EXPECT_EQ(layout.alignment(), TLS_TCB_SIZE);
   if (TLS_VARIANT_2)
-    EXPECT_EQ(layout.size(), TLS_TCB_SIZE);
+    EXPECT_EQ(layout.size(), TLS_TCB_RESERVE);
   else
     EXPECT_EQ(layout.size(), size_t(0));
 }

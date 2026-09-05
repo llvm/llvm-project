@@ -1,0 +1,12 @@
+add_entrypoint_object(
+  __tls_get_addr
+  SRCS
+    tls_get_addr.cpp
+  HDRS
+    tls_get_addr.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.elf.passive_abi
+    libc.src.__support.elf.thread_pointer
+)

@@ -12,6 +12,8 @@
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
 #include "src/__support/OSUtil/syscall.h"
+#include "src/__support/elf/passive_abi.h"
+#include "src/__support/elf/tls_block.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/tcb.h"
 #include "src/string/memory_utils/inline_memcpy.h"
@@ -19,7 +21,32 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+// Builds the thread's static TLS from the loaded module set.
+//
+// Every module loaded at startup has a place in the one block each thread is
+// given, and where each one sits was decided when the process was linked.
+// Sizing this from the main executable's PT_TLS alone leaves libc.so's own
+// thread locals, and those of every shared library, pointing outside it.
+LIBC_INLINE bool init_tls_from_modules(TLSDescriptor &tls_descriptor) {
+  const elf::ModuleSet *modules = elf::process_modules();
+  if (modules == nullptr || !modules->linked)
+    return false;
+  // Only what was loaded at startup has a place in the block. Anything opened
+  // since takes a block of its own the first time a thread asks for it.
+  auto block = elf::allocate_tls_block(
+      __atomic_load_n(&modules->modules, __ATOMIC_ACQUIRE),
+      modules->static_count);
+  if (!block.has_value())
+    linux_syscalls::exit(1);
+  tls_descriptor = {block->size, reinterpret_cast<uintptr_t>(block->storage),
+                    block->thread_pointer};
+  return true;
+}
+
 [[gnu::flatten]] void init_tls(TLSDescriptor &tls_descriptor) {
+  if (init_tls_from_modules(tls_descriptor))
+    return;
+
   // riscv follows the variant 1 TLS layout:
   const uintptr_t TCB_SIZE = sizeof(ThreadControlBlock);
   uintptr_t padding = 0;

@@ -61,14 +61,39 @@ constexpr const char *MODULE_SET_SYMBOL = "__llvm_libc_process_modules";
 } // namespace elf
 } // namespace LIBC_NAMESPACE_DECL
 
-extern "C" [[gnu::visibility("default")]]
+// Declared weak because the startup files refer to it and are also linked
+// into programs built against a static libc, where nothing defines it. Such a
+// program has no loader and no module set, and the reference resolves to
+// nothing rather than failing the link.
+extern "C" [[gnu::weak, gnu::visibility("default")]]
 LIBC_NAMESPACE::elf::ModuleSet __llvm_libc_process_modules;
 
 namespace LIBC_NAMESPACE_DECL {
 namespace elf {
 
-// The same object, under the name the rest of libc uses.
+// The same object, under the name the rest of libc uses. Only for code that
+// is always linked with the definition, which is everything inside libc and
+// the loader.
 LIBC_INLINE ModuleSet &loaded_modules() { return __llvm_libc_process_modules; }
+
+// Some readers of the set do not hold a lock: __tls_get_addr and the creation
+// of a thread cannot wait on the loader. What they may rely on is that an
+// array they have seen is never freed, only replaced by a larger one (see
+// make_room in dlopen), and that an entry is written before the count which
+// covers it. These are the two halves of that, for the code that changes the
+// set and the code that reads it unlocked.
+LIBC_INLINE size_t module_count(const ModuleSet &set) {
+  return __atomic_load_n(&set.count, __ATOMIC_ACQUIRE);
+}
+LIBC_INLINE void set_module_count(ModuleSet &set, size_t count) {
+  __atomic_store_n(&set.count, count, __ATOMIC_RELEASE);
+}
+
+// The record, or null where it was not linked in at all. Callers that may run
+// in a statically linked program have to ask this way.
+LIBC_INLINE ModuleSet *process_modules() {
+  return &__llvm_libc_process_modules;
+}
 
 } // namespace elf
 } // namespace LIBC_NAMESPACE_DECL

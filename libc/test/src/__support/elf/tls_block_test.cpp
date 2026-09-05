@@ -21,7 +21,8 @@ using LIBC_NAMESPACE::elf::free_tls_block;
 using LIBC_NAMESPACE::elf::load_module;
 using LIBC_NAMESPACE::elf::LoadedModule;
 using LIBC_NAMESPACE::elf::Module;
-using LIBC_NAMESPACE::elf::TLS_TCB_SIZE;
+using LIBC_NAMESPACE::elf::TLS_STACK_GUARD_OFFSET;
+using LIBC_NAMESPACE::elf::TLS_TCB_RESERVE;
 using LIBC_NAMESPACE::elf::TLS_VARIANT_2;
 using LIBC_NAMESPACE::elf::TlsBlock;
 using LIBC_NAMESPACE::elf::unmap_module;
@@ -64,7 +65,7 @@ TEST(LlvmLibcElfTlsBlockTest, CoversLibcOwnTlsSegment) {
 
   ASSERT_TRUE(block.storage != nullptr);
   // The block has to hold libc's whole TLS segment plus the control block.
-  EXPECT_GE(block.size, size_t(tls->p_memsz) + TLS_TCB_SIZE);
+  EXPECT_GE(block.size, size_t(tls->p_memsz) + TLS_TCB_RESERVE);
 
   // The thread pointer sits inside the allocation, at the top under variant 2
   // and at the bottom under variant 1.
@@ -72,9 +73,31 @@ TEST(LlvmLibcElfTlsBlockTest, CoversLibcOwnTlsSegment) {
   EXPECT_GE(block.thread_pointer, base);
   EXPECT_LE(block.thread_pointer, base + block.size);
   if (TLS_VARIANT_2)
-    EXPECT_EQ(block.thread_pointer, base + block.size - TLS_TCB_SIZE);
+    EXPECT_EQ(block.thread_pointer, base + block.size - TLS_TCB_RESERVE);
   else
     EXPECT_EQ(block.thread_pointer, base);
+
+  free_tls_block(block);
+  unmap_module(c.mapping);
+}
+
+TEST(LlvmLibcElfTlsBlockTest, StackGuardIsSeeded) {
+  if (!TLS_VARIANT_2)
+    return;
+  auto loaded = load_module(LIBC_PATH, PAGE);
+  ASSERT_TRUE(loaded.has_value());
+  LoadedModule c = loaded.value();
+
+  Module modules[] = {c.module};
+  auto result = allocate_tls_block(modules, 1);
+  ASSERT_TRUE(result.has_value());
+  TlsBlock block = result.value();
+
+  // Where code built with -fstack-protector reads its guard from. Leaving it
+  // zero would make every such function compare zero against zero.
+  auto *guard = reinterpret_cast<uintptr_t *>(block.thread_pointer +
+                                              TLS_STACK_GUARD_OFFSET);
+  EXPECT_NE(*guard, uintptr_t(0));
 
   free_tls_block(block);
   unmap_module(c.mapping);

@@ -8,6 +8,18 @@ add_header_library(
 )
 
 add_header_library(
+  thread_pointer
+  HDRS
+    thread_pointer.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   dynamic
   HDRS
     dynamic.h
@@ -181,6 +193,7 @@ add_header_library(
     libc.hdr.stdint_proxy
     libc.hdr.sys_mman_macros
     libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
     libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
     libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
     libc.src.__support.elf.module

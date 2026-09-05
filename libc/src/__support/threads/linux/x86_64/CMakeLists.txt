@@ -8,6 +8,9 @@ add_object_library(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.__support.OSUtil.linux.syscall_wrappers.exit
+
+    libc.src.__support.elf.passive_abi
+    libc.src.__support.elf.tls_block
     libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
     libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
     libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
