@@ -911,6 +911,47 @@ void __sycl_kernel(int f1) {
   }];
 }
 
+def SYCLSpecialKernelParameterDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``sycl_special_kernel_parameter`` attribute is used to mark a class type
+whose instances require special handling when passed as kernel arguments to a
+function declared with the ``sycl_kernel_entry_point`` attribute. This attribute
+is intended for use by SYCL library implementations to annotate types such as
+``sycl::accessor`` and ``sycl::stream`` that are not trivially copyable and
+therefore cannot be copied to device memory as if by ``memcpy()``.
+
+The attribute only appertains to C++ class or struct types and is only valid
+in SYCL host or device compilation modes.
+
+When a parameter of a function declared with the ``sycl_kernel_entry_point``
+attribute contains a subobject whose type is marked with this attribute, the
+synthesized call to ``sycl_kernel_launch`` is expected to return a callable
+object. This callable is then invoked with references to the special subobjects
+(found by traversing the kernel function object's members) so that the SYCL
+runtime can process them. The return type of that second call must be ``void``.
+The synthesized host code looks approximately as follows:
+
+.. code-block:: c++
+
+  sycl_kernel_launch<KN>(symbol,
+                         std::move(kernelFunc))(kernelFunc.special_member);
+
+Where ``special_member`` is a subobject of the kernel function object whose type
+is marked with ``sycl_special_kernel_parameter``.
+
+Use of this attribute might look as follows:
+
+.. code-block:: c++
+
+  struct [[clang::sycl_special_kernel_parameter]] accessor {
+    int *ptr;
+    size_t range;
+  };
+
+  }];
+}
+
 def C11NoReturnDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

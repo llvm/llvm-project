@@ -13545,6 +13545,11 @@ def note_sycl_kernel_launch_lookup_here : Note<
 def note_sycl_kernel_launch_overload_resolution_here : Note<
   "in implicit call to 'sycl_kernel_launch' with template argument %0 and"
   " function arguments %1 required here">;
+def note_sycl_kernel_implicit_call_here : Note<
+  "in implicit call to %0 with arguments %1 required here">;
+def err_sycl_kernel_launch_not_void : Error<
+  "the callable returned by 'sycl_kernel_launch' must return 'void' when invoked"
+  " with the special kernel parameter subobjects; %0 was returned instead">;
 def err_sycl_entry_point_device_use : Error<
   "function %0 cannot be used in device code because it is declared with the"
   " %1 attribute">;
