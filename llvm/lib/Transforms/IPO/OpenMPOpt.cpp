@@ -5632,10 +5632,27 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
     }
   }
 
+  // Seed the generic noalias deduction for callback-mapped pointer arguments
+  // in host regions. It will inspect every callback and direct call site before
+  // manifesting the attribute.
+  if (!isOpenMPDevice(M)) {
+    for (Function *F : SCC) {
+      if (F->isDeclaration())
+        continue;
+      for (Use &U : F->uses()) {
+        AbstractCallSite ACS(&U);
+        if (!ACS || !ACS.isCallbackCall())
+          continue;
+        for (Argument &Arg : F->args())
+          if (Arg.getType()->isPointerTy() && ACS.getCallArgOperandNo(Arg) >= 0)
+            A.getOrCreateAAFor<AANoAlias>(IRPosition::argument(Arg));
+      }
+    }
+    return;
+  }
+
   // Create an ExecutionDomain AA for every function and a HeapToStack AA for
   // every function if there is a device kernel.
-  if (!isOpenMPDevice(M))
-    return;
 
   for (auto *F : SCC) {
     if (F->isDeclaration())
