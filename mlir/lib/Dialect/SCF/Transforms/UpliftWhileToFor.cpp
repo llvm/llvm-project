@@ -249,12 +249,8 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
   // Assumes a strictly positive `step`. The matcher does not check this, so a
   // non-positive step breaks the ceil-div and also builds an `scf.for` that
   // violates its own contract; pre-existing gap, not repairable here.
-  Value zero;
-  if (isa<IndexType>(step.getType())) {
-    zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
-  } else {
-    zero = arith::ConstantIntOp::create(rewriter, loc, step.getType(), 0);
-  }
+  Value zero = arith::ConstantOp::create(rewriter, loc,
+                                         rewriter.getZeroAttr(step.getType()));
 
   Value stepDec = arith::SubIOp::create(rewriter, loc, step, one);
   Value len = arith::SubIOp::create(rewriter, loc, ub, lb);
