@@ -559,6 +559,151 @@ PreservedAnalyses CodeGenPreparePass::run(Function &F,
   return PA;
 }
 
+static bool isDivOrRem(unsigned Opcode) {
+  switch (Opcode) {
+  case Instruction::SDiv:
+  case Instruction::UDiv:
+  case Instruction::SRem:
+  case Instruction::URem:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool isCheapConstantDivisor(Value *V, const TargetLowering *TLI,
+                                   const DataLayout &DL, AttributeList Attr) {
+  auto *C = dyn_cast<Constant>(V);
+  if (!C)
+    return false;
+  Type *ScalarTy = C->getType()->getScalarType();
+  if (auto *VecTy = dyn_cast<FixedVectorType>(C->getType())) {
+    // BuildSDIV compute per lane so divisors can be nonuniform
+    for (unsigned I = 0, E = VecTy->getNumElements(); I != E; ++I) {
+      auto *CI = dyn_cast_or_null<ConstantInt>(C->getAggregateElement(I));
+      if (!CI || CI->isZero())
+        return false;
+    }
+  } else {
+    auto *CI = dyn_cast<ConstantInt>(C);
+    if (!CI || CI->isZero())
+      return false;
+  }
+  return !TLI->isIntDivCheap(TLI->getValueType(DL, ScalarTy), Attr);
+}
+
+/// Fold a div/rem of a select divisor with a cheap constant arm into a
+/// branch with one division per arm:
+///   div X, (select Cond, Y, C) -->
+///   select Cond, (div X, Y), (div X, C)
+/// so the constant arm keeps its cheap lowering instead of being dragged
+/// into a variable divide. Returns true if \p I was replaced.
+static bool splitDivRemBySelectDivisor(Instruction *I,
+                                       const TargetLowering *TLI,
+                                       const DataLayout &DL,
+                                       DomTreeUpdater *DTU, LoopInfo *LI) {
+  if (!isDivOrRem(I->getOpcode()))
+    return false;
+
+  // Don't touch loops. foldURemOfLoopIncrement handles that case
+  if (LI && LI->getLoopFor(I->getParent()))
+    return false;
+
+  // If the select has more than one use, there's probably a sibling rem
+  // sharing this divisor and splitting them separately would duplicate the
+  // division
+  auto *Sel = dyn_cast<SelectInst>(I->getOperand(1));
+  if (!Sel || !Sel->hasOneUse())
+    return false;
+
+  // Lanes pick different divisors which a branch can't express.
+  if (Sel->getCondition()->getType()->isVectorTy())
+    return false;
+
+  // If the dividend is also constant, foldBinOpIntoSelect handles it.
+  Value *Dividend = I->getOperand(0);
+  if (isa<Constant>(Dividend))
+    return false;
+
+  AttributeList Attr = I->getFunction()->getAttributes();
+  Value *TrueVal = Sel->getTrueValue();
+  Value *FalseVal = Sel->getFalseValue();
+  if (!isCheapConstantDivisor(TrueVal, TLI, DL, Attr) &&
+      !isCheapConstantDivisor(FalseVal, TLI, DL, Attr))
+    return false;
+
+  BasicBlock *MainBB = I->getParent();
+  Function *F = MainBB->getParent();
+  LLVMContext &Ctx = F->getContext();
+  auto Opcode = static_cast<Instruction::BinaryOps>(I->getOpcode());
+
+  BasicBlock *TailBB = SplitBlock(MainBB, I, DTU, LI, nullptr, "select.end");
+  // Replace the unconditional branch that was created by the split with a
+  // branch on the select's condition.
+  MainBB->back().eraseFromParent();
+
+  auto CreateArmBB = [&](Value *Divisor, const Twine &Name) {
+    BasicBlock *ArmBB = BasicBlock::Create(Ctx, Name, F, TailBB);
+    IRBuilder<> Builder(ArmBB);
+    Builder.SetCurrentDebugLocation(I->getDebugLoc());
+    Value *Op = Builder.CreateBinOp(Opcode, Dividend, Divisor);
+    if (auto *NewI = dyn_cast<Instruction>(Op))
+      NewI->copyIRFlags(I);
+    Builder.CreateBr(TailBB);
+    return std::make_pair(ArmBB, Op);
+  };
+
+  auto [TrueBB, TrueOp] = CreateArmBB(TrueVal, "select.true");
+  auto [FalseBB, FalseOp] = CreateArmBB(FalseVal, "select.false");
+
+  IRBuilder<> HeadBuilder(MainBB, MainBB->end());
+  HeadBuilder.SetCurrentDebugLocation(I->getDebugLoc());
+  Value *Cond = HeadBuilder.CreateFreeze(Sel->getCondition());
+  HeadBuilder.CreateCondBr(Cond, TrueBB, FalseBB);
+
+  IRBuilder<> TailBuilder(TailBB, TailBB->begin());
+  TailBuilder.SetCurrentDebugLocation(I->getDebugLoc());
+  PHINode *Phi = TailBuilder.CreatePHI(I->getType(), 2);
+  Phi->addIncoming(TrueOp, TrueBB);
+  Phi->addIncoming(FalseOp, FalseBB);
+
+  I->replaceAllUsesWith(Phi);
+  I->eraseFromParent();
+  if (Sel->use_empty())
+    Sel->eraseFromParent();
+
+  if (DTU)
+    DTU->applyUpdates({{DominatorTree::Insert, MainBB, TrueBB},
+                       {DominatorTree::Insert, MainBB, FalseBB},
+                       {DominatorTree::Insert, TrueBB, TailBB},
+                       {DominatorTree::Insert, FalseBB, TailBB},
+                       {DominatorTree::Delete, MainBB, TailBB}});
+
+  return true;
+}
+
+/// Scan \p BB for div/rem instructions with a select divisor and split them
+/// (see splitDivRemBySelectDivisor).
+static bool optimizeDivRemBySelectDivisor(BasicBlock *BB,
+                                          const TargetLowering *TLI,
+                                          const DataLayout &DL,
+                                          DomTreeUpdater *DTU, LoopInfo *LI) {
+  bool MadeChange = false;
+  Instruction *Next = &*BB->begin();
+  while (Next != nullptr) {
+    // We may add instructions immediately after I but we want to skip over
+    // them.
+    Instruction *I = Next;
+    Next = Next->getNextNode();
+
+    if (I->use_empty())
+      continue;
+
+    MadeChange |= splitDivRemBySelectDivisor(I, TLI, DL, DTU, LI);
+  }
+  return MadeChange;
+}
+
 bool CodeGenPrepare::run(Function &F, FunctionAnalysisManager &AM) {
   DL = &F.getDataLayout();
   SubtargetInfo = TM->getSubtargetImpl(F);
@@ -621,6 +766,20 @@ bool CodeGenPrepare::_run(Function &F) {
       BasicBlock *Next = BB->getNextNode();
       if (!llvm::shouldOptimizeForSize(BB, PSI, BFI))
         EverMadeChange |= bypassSlowDivision(BB, BypassWidths, DTU, LI, BPI);
+      BB = Next;
+    }
+  }
+
+  /// Split a div/rem whose divisor is a select with a constant arm into a
+  /// branch with one division per arm.
+  if (!OptSize) {
+    BasicBlock *BB = &*F.begin();
+    while (BB != nullptr) {
+      // optimizeDivRemBySelectDivisor may create new BBs, but we don't want
+      // to reapply the optimization to those blocks.
+      BasicBlock *Next = BB->getNextNode();
+      if (!llvm::shouldOptimizeForSize(BB, PSI, BFI))
+        EverMadeChange |= optimizeDivRemBySelectDivisor(BB, TLI, *DL, DTU, LI);
       BB = Next;
     }
   }
