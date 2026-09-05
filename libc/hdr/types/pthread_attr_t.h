@@ -7,21 +7,21 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implementation header for pthread_getattr_np (GNU extension).
+/// Proxy for pthread_attr_t.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_GETATTR_NP_H
-#define LLVM_LIBC_SRC_PTHREAD_PTHREAD_GETATTR_NP_H
+#ifndef LLVM_LIBC_HDR_TYPES_PTHREAD_ATTR_T_H
+#define LLVM_LIBC_HDR_TYPES_PTHREAD_ATTR_T_H
 
-#include "hdr/types/pthread_attr_t.h"
-#include "hdr/types/pthread_t.h"
-#include "src/__support/macros/config.h"
+#ifdef LIBC_FULL_BUILD
 
-namespace LIBC_NAMESPACE_DECL {
+#include "include/llvm-libc-types/pthread_attr_t.h"
 
-int pthread_getattr_np(pthread_t th, pthread_attr_t *attr);
+#else // Overlay mode
 
-} // namespace LIBC_NAMESPACE_DECL
+#include <pthread.h>
 
-#endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_GETATTR_NP_H
+#endif // LIBC_FULL_BUILD
+
+#endif // LLVM_LIBC_HDR_TYPES_PTHREAD_ATTR_T_H

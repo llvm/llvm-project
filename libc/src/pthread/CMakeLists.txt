@@ -969,6 +969,23 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pthread_getattr_np
+  SRCS
+    pthread_getattr_np.cpp
+  HDRS
+    pthread_getattr_np.h
+  DEPENDS
+    libc.hdr.pthread_macros
+    libc.hdr.types.pthread_attr_t
+    libc.hdr.types.pthread_t
+    libc.src.__support.CPP.atomic
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.threads.thread
+)
+
+add_entrypoint_object(
   pthread_getstack_np
   SRCS
     pthread_getstack_np.cpp
