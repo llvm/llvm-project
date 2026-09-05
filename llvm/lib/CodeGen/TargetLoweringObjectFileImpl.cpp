@@ -2125,7 +2125,7 @@ const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
   // defined.
   //
   // It should look something like this: @__ImageBase = external constant i8
-  if (!isa<GlobalObject>(LHS) || !isa<GlobalVariable>(RHS) ||
+  if (!LHS->getAliaseeObject() || !isa<GlobalVariable>(RHS) ||
       LHS->isThreadLocal() || RHS->isThreadLocal() ||
       RHS->getName() != "__ImageBase" || !RHS->hasExternalLinkage() ||
       cast<GlobalVariable>(RHS)->hasInitializer() || RHS->hasSection())
