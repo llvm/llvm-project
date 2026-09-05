@@ -2107,9 +2107,19 @@ public:
       return false;
     if (OpWidth != 8 && OpWidth != 16 && OpWidth != 32)
       return false;
-    if (OpWidth >= 16)
+    if (OpWidth >= 16) {
       if (OpWidth != WcharSize * 8)
         return false;
+
+      // wcslen requires a pointer aligned to wchar_t. Loops that load
+      // wchar_t-sized values at weaker alignment (e.g. memcpy from a byte
+      // buffer) must not be rewritten as wcslen.
+      Align RequiredAlign(WcharSize);
+      if (LoopLoad->getAlign() < RequiredAlign &&
+          getKnownAlignment(IncPtr, SE->getDataLayout(), LoopLoad) <
+              RequiredAlign)
+        return false;
+    }
 
     // Scan every instruction in the loop to ensure there are no side effects.
     for (Instruction &I : *LoopBody)
