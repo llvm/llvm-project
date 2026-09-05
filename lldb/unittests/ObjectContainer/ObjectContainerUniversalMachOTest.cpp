@@ -194,20 +194,28 @@ TEST_F(ObjectContainerUniversalMachOTest, GetObjectFileOversizedSlice) {
   Data.insert(Data.end(), SliceBytes, SliceBytes + sizeof(SliceHeader));
   Data.resize(40 + 512, 0);
 
-  llvm::Expected<llvm::sys::fs::TempFile> TmpFile =
-      llvm::sys::fs::TempFile::create("temp%%%%%%%%%%%%%%%%");
-  ASSERT_THAT_EXPECTED(TmpFile, llvm::Succeeded());
-  llvm::raw_fd_ostream(TmpFile->FD, /*shouldClose=*/false) << llvm::StringRef(
-      reinterpret_cast<const char *>(Data.data()), Data.size());
+  // The slice is re-read from the file path, so the bytes must be on disk and
+  // the path must stay openable.
+  int FD;
+  llvm::SmallString<128> TmpName;
+  ASSERT_FALSE(llvm::sys::fs::createTemporaryFile("oversized-slice", "bin", FD,
+                                                  TmpName));
+  {
+    llvm::raw_fd_ostream OS(FD, /*shouldClose=*/true);
+    OS << llvm::StringRef(reinterpret_cast<const char *>(Data.data()),
+                          Data.size());
+  }
 
   ArchSpec Arch;
   Arch.SetArchitecture(eArchTypeMachO, 0x01000007, 0x00000003);
   lldb::ModuleSP Module =
-      std::make_shared<lldb_private::Module>(FileSpec(TmpFile->TmpName), Arch);
+      std::make_shared<lldb_private::Module>(FileSpec(TmpName), Arch);
   ObjectFile *Obj = Module->GetObjectFile();
-  ASSERT_THAT_ERROR(TmpFile->discard(), llvm::Succeeded());
   ASSERT_NE(Obj, nullptr);
   EXPECT_EQ(Obj->GetByteSize(), 512u); // Clamped to the bytes available.
+
+  Module.reset();
+  ASSERT_FALSE(llvm::sys::fs::remove(TmpName));
 }
 
 // Regression fixture: a Mach-O fileset whose single load command has
