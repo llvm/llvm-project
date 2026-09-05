@@ -2012,34 +2012,33 @@ define amdgpu_kernel void @v5f32_arg(ptr addrspace(1) nocapture %out, <5 x float
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_add_u32 s4, s6, 16
 ; VI-NEXT:    s_addc_u32 s5, s7, 0
-; VI-NEXT:    v_mov_b32_e32 v3, s8
-; VI-NEXT:    v_mov_b32_e32 v1, s4
-; VI-NEXT:    v_mov_b32_e32 v2, s5
+; VI-NEXT:    v_mov_b32_e32 v2, s8
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    v_mov_b32_e32 v4, s6
+; VI-NEXT:    v_mov_b32_e32 v5, s7
+; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    flat_store_dword v[1:2], v3
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_mov_b32_e32 v2, s2
 ; VI-NEXT:    v_mov_b32_e32 v3, s3
-; VI-NEXT:    v_mov_b32_e32 v4, s6
-; VI-NEXT:    v_mov_b32_e32 v5, s7
 ; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: v5f32_arg:
 ; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_load_dword s6, s[8:9], 0x30
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x20
 ; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
-; GFX9-NEXT:    s_load_dword s6, s[8:9], 0x30
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    v_mov_b32_e32 v5, s6
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s3
+; GFX9-NEXT:    global_store_dword v4, v5, s[4:5] offset:16
 ; GFX9-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5]
-; GFX9-NEXT:    s_nop 0
-; GFX9-NEXT:    v_mov_b32_e32 v0, s6
-; GFX9-NEXT:    global_store_dword v4, v0, s[4:5] offset:16
 ; GFX9-NEXT:    s_endpgm
 ;
 ; EG-LABEL: v5f32_arg:

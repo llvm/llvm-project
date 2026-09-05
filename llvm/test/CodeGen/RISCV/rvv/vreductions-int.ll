@@ -2533,55 +2533,7 @@ define signext i32 @vreduce_mul_nxv6i32_exact_vlen(<vscale x 6 x i32> %v) vscale
 define signext i31 @vreduce_mul_nxv8i31_exact_vlen(<vscale x 8 x i31> %v) vscale_range(2,2) {
 ; RV32-LABEL: vreduce_mul_nxv8i31_exact_vlen:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    sw s0, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    .cfi_offset s0, -4
 ; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32-NEXT:    vslidedown.vi v12, v11, 3
-; RV32-NEXT:    vmv.x.s a0, v12
-; RV32-NEXT:    vslidedown.vi v12, v11, 2
-; RV32-NEXT:    vmv.x.s a1, v12
-; RV32-NEXT:    vslidedown.vi v12, v11, 1
-; RV32-NEXT:    vmv.x.s a2, v12
-; RV32-NEXT:    vmv.x.s a3, v11
-; RV32-NEXT:    vslidedown.vi v11, v10, 3
-; RV32-NEXT:    vmv.x.s a4, v11
-; RV32-NEXT:    vslidedown.vi v11, v10, 2
-; RV32-NEXT:    vmv.x.s a5, v11
-; RV32-NEXT:    vslidedown.vi v11, v10, 1
-; RV32-NEXT:    vmv.x.s a6, v11
-; RV32-NEXT:    vmv.x.s a7, v10
-; RV32-NEXT:    vslidedown.vi v10, v9, 3
-; RV32-NEXT:    vmv.x.s t0, v10
-; RV32-NEXT:    vslidedown.vi v10, v9, 2
-; RV32-NEXT:    vmv.x.s t1, v10
-; RV32-NEXT:    vslidedown.vi v10, v9, 1
-; RV32-NEXT:    vmv.x.s t2, v10
-; RV32-NEXT:    vmv.x.s t3, v9
-; RV32-NEXT:    vslidedown.vi v9, v8, 3
-; RV32-NEXT:    vmv.x.s t4, v9
-; RV32-NEXT:    vslidedown.vi v9, v8, 2
-; RV32-NEXT:    vmv.x.s t5, v9
-; RV32-NEXT:    vslidedown.vi v9, v8, 1
-; RV32-NEXT:    vmv.x.s t6, v9
-; RV32-NEXT:    vmv.x.s s0, v8
-; RV32-NEXT:    vmv.v.x v8, s0
-; RV32-NEXT:    vmv.v.x v9, t3
-; RV32-NEXT:    vslide1down.vx v8, v8, t6
-; RV32-NEXT:    vslide1down.vx v9, v9, t2
-; RV32-NEXT:    vslide1down.vx v8, v8, t5
-; RV32-NEXT:    vslide1down.vx v9, v9, t1
-; RV32-NEXT:    vslide1down.vx v8, v8, t4
-; RV32-NEXT:    vslide1down.vx v9, v9, t0
-; RV32-NEXT:    vmv.v.x v10, a7
-; RV32-NEXT:    vmv.v.x v11, a3
-; RV32-NEXT:    vslide1down.vx v10, v10, a6
-; RV32-NEXT:    vslide1down.vx v11, v11, a2
-; RV32-NEXT:    vslide1down.vx v10, v10, a5
-; RV32-NEXT:    vslide1down.vx v11, v11, a1
-; RV32-NEXT:    vslide1down.vx v10, v10, a4
-; RV32-NEXT:    vslide1down.vx v11, v11, a0
 ; RV32-NEXT:    vmul.vv v8, v8, v9
 ; RV32-NEXT:    vmul.vv v9, v10, v11
 ; RV32-NEXT:    vmul.vv v8, v8, v9
@@ -2592,63 +2544,11 @@ define signext i31 @vreduce_mul_nxv8i31_exact_vlen(<vscale x 8 x i31> %v) vscale
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    slli a0, a0, 1
 ; RV32-NEXT:    srai a0, a0, 1
-; RV32-NEXT:    lw s0, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    .cfi_restore s0
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vreduce_mul_nxv8i31_exact_vlen:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    .cfi_def_cfa_offset 16
-; RV64-NEXT:    sd s0, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    .cfi_offset s0, -8
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV64-NEXT:    vslidedown.vi v12, v11, 3
-; RV64-NEXT:    vmv.x.s a0, v12
-; RV64-NEXT:    vslidedown.vi v12, v11, 2
-; RV64-NEXT:    vmv.x.s a1, v12
-; RV64-NEXT:    vslidedown.vi v12, v11, 1
-; RV64-NEXT:    vmv.x.s a2, v12
-; RV64-NEXT:    vmv.x.s a3, v11
-; RV64-NEXT:    vslidedown.vi v11, v10, 3
-; RV64-NEXT:    vmv.x.s a4, v11
-; RV64-NEXT:    vslidedown.vi v11, v10, 2
-; RV64-NEXT:    vmv.x.s a5, v11
-; RV64-NEXT:    vslidedown.vi v11, v10, 1
-; RV64-NEXT:    vmv.x.s a6, v11
-; RV64-NEXT:    vmv.x.s a7, v10
-; RV64-NEXT:    vslidedown.vi v10, v9, 3
-; RV64-NEXT:    vmv.x.s t0, v10
-; RV64-NEXT:    vslidedown.vi v10, v9, 2
-; RV64-NEXT:    vmv.x.s t1, v10
-; RV64-NEXT:    vslidedown.vi v10, v9, 1
-; RV64-NEXT:    vmv.x.s t2, v10
-; RV64-NEXT:    vmv.x.s t3, v9
-; RV64-NEXT:    vslidedown.vi v9, v8, 3
-; RV64-NEXT:    vmv.x.s t4, v9
-; RV64-NEXT:    vslidedown.vi v9, v8, 2
-; RV64-NEXT:    vmv.x.s t5, v9
-; RV64-NEXT:    vslidedown.vi v9, v8, 1
-; RV64-NEXT:    vmv.x.s t6, v9
-; RV64-NEXT:    vmv.x.s s0, v8
-; RV64-NEXT:    vmv.v.x v8, s0
-; RV64-NEXT:    vmv.v.x v9, t3
-; RV64-NEXT:    vslide1down.vx v8, v8, t6
-; RV64-NEXT:    vslide1down.vx v9, v9, t2
-; RV64-NEXT:    vslide1down.vx v8, v8, t5
-; RV64-NEXT:    vslide1down.vx v9, v9, t1
-; RV64-NEXT:    vslide1down.vx v8, v8, t4
-; RV64-NEXT:    vslide1down.vx v9, v9, t0
-; RV64-NEXT:    vmv.v.x v10, a7
-; RV64-NEXT:    vmv.v.x v11, a3
-; RV64-NEXT:    vslide1down.vx v10, v10, a6
-; RV64-NEXT:    vslide1down.vx v11, v11, a2
-; RV64-NEXT:    vslide1down.vx v10, v10, a5
-; RV64-NEXT:    vslide1down.vx v11, v11, a1
-; RV64-NEXT:    vslide1down.vx v10, v10, a4
-; RV64-NEXT:    vslide1down.vx v11, v11, a0
 ; RV64-NEXT:    vmul.vv v8, v8, v9
 ; RV64-NEXT:    vmul.vv v9, v10, v11
 ; RV64-NEXT:    vmul.vv v8, v8, v9
@@ -2659,10 +2559,6 @@ define signext i31 @vreduce_mul_nxv8i31_exact_vlen(<vscale x 8 x i31> %v) vscale
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    slli a0, a0, 33
 ; RV64-NEXT:    srai a0, a0, 33
-; RV64-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    .cfi_restore s0
-; RV64-NEXT:    addi sp, sp, 16
-; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
   %red = call i31 @llvm.vector.reduce.mul.nxv8i31(<vscale x 8 x i31> %v)
   ret i31 %red
