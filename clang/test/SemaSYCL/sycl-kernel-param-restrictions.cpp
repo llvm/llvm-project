@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -Wno-vla-cxx-extension -fsycl-is-host -verify %s
-// RUN: %clang_cc1 -triple spirv64 -std=c++17 -fsyntax-only -Wno-vla-cxx-extension -fsycl-is-device -verify %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -std=c++17 -fsyntax-only -Wno-vla-cxx-extension -Wno-sycl-device-copyable -fsycl-is-host -verify %s
+// RUN: %clang_cc1 -triple spirv64 -std=c++17 -fsyntax-only -Wno-vla-cxx-extension -Wno-sycl-device-copyable -fsycl-is-device -verify %s
 
 // A unique kernel name type is required for each declared kernel entry point.
 template<int, int = 0> struct KN;
@@ -166,7 +166,6 @@ public:
 class Derived : virtual Base { // expected-note {{within base class of type 'Base' declared here}}
 public:
   Derived(int &a) : Base(a) {}
-
 };
 
 void test() {

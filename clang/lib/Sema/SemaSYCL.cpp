@@ -493,6 +493,140 @@ ExprResult SemaSYCL::BuildSYCLKernelLaunchIdExpr(FunctionDecl *FD,
   return IdExpr;
 }
 
+NamespaceDecl *SemaSYCL::getSyclNamespace(SourceLocation Loc) {
+  if (SyclNamespacePtr)
+    return SyclNamespacePtr;
+
+  ASTContext &Ctx = getASTContext();
+  IdentifierInfo const &SyclNamespaceID = Ctx.Idents.get("sycl");
+
+  LookupResult NamespaceResult(SemaRef, &SyclNamespaceID, Loc,
+                               Sema::LookupNamespaceName);
+  SemaRef.LookupQualifiedName(NamespaceResult, Ctx.getTranslationUnitDecl());
+
+  if (NamespaceResult.isAmbiguous())
+    return nullptr;
+
+  SyclNamespacePtr = NamespaceResult.getAsSingle<NamespaceDecl>();
+  return SyclNamespacePtr;
+  // Don't cache the sycl NamespaceDecl pointer if we can't find it, since
+  // namespace declarations could have been declared later on.
+}
+
+bool SemaSYCL::isEnforcingDeviceCopyable(SourceLocation Loc) const {
+  DiagnosticsEngine::Level DiagLvl = getDiagnostics().getDiagnosticLevel(
+      diag::warn_sycl_kernel_param_not_device_copyable, Loc);
+  return DiagLvl >= DiagnosticsEngine::Level::Error;
+}
+
+bool SemaSYCL::checkExplicitDeviceCopyable(const QualType Ty,
+                                           SourceLocation Loc) {
+  ASTContext &Ctx = getASTContext();
+
+  QualType CanonicalTy = Ctx.getCanonicalType(Ty);
+  auto It = MarkedDeviceCopyableCache.find(CanonicalTy);
+  if (It != MarkedDeviceCopyableCache.end()) {
+    return It->second;
+  }
+
+  // VMT's are not legal template parameters and cannot be marked device
+  // copyable.
+  if (Ty->isVariablyModifiedType())
+    return false;
+  // If we are not checking device-copyability, completely ignore
+  // is_device_copyable.
+  if (!isEnforcingDeviceCopyable(Loc))
+    return false;
+
+  NamespaceDecl *SyclNamespace = getSyclNamespace(Loc);
+  if (!SyclNamespace)
+    return false;
+
+  // is_device_copyable Identifier
+  IdentifierInfo const &IDCIdent = Ctx.Idents.get("is_device_copyable");
+  LookupResult IdentResult(SemaRef, &IDCIdent, Loc, Sema::LookupOrdinaryName);
+  SemaRef.LookupQualifiedName(IdentResult, SyclNamespace);
+
+  if (IdentResult.isAmbiguous()) {
+    SemaRef.DiagnoseAmbiguousLookup(IdentResult);
+    return false;
+  }
+
+  ClassTemplateDecl *IDCDecl = IdentResult.getAsSingle<ClassTemplateDecl>();
+  if (!IDCDecl)
+    return false;
+
+  TemplateArgumentListInfo Args{};
+  TemplateArgument TyArg{Ty};
+  Args.addArgument(
+      SemaRef.getTrivialTemplateArgumentLoc(TyArg, QualType{}, Loc));
+
+  QualType IDCTrait;
+  {
+    // CheckTemplateIdType tries to diagnose illegal template argument types.
+    // An SFINAETrap is used here to catch said errors if Ty is an illegal
+    // template argument type.
+    Sema::SFINAETrap Trap(SemaRef);
+    IDCTrait = SemaRef.CheckTemplateIdType(
+        ElaboratedTypeKeyword::None, TemplateName{IDCDecl}, Loc, Args,
+        /*Scope=*/nullptr, /*ForNestedNameSpecifier=*/false);
+    if (IDCTrait.isNull())
+      return false;
+
+    // IDCTrait must be checked for null before calling RequireCompleteType:
+    // it isn't valid to require completeness of a null QualType.
+    if (SemaRef.RequireCompleteType(Loc, IDCTrait,
+                                    diag::err_sycl_incomplete_type_trait))
+      return false;
+  }
+
+  CXXRecordDecl *RD = IDCTrait->getAsCXXRecordDecl();
+  assert(RD && "specialization of class template is not a class?");
+  assert(RD->hasDefinition() &&
+         "RequireCompleteType should have guaranteed a definition exists");
+
+  // Look up the ::value member.
+  IdentifierInfo const &ValueIdent = Ctx.Idents.get("value");
+  LookupResult ValueResult(SemaRef, &ValueIdent, Loc, Sema::LookupOrdinaryName);
+  SemaRef.LookupQualifiedName(ValueResult, RD);
+  if (ValueResult.isAmbiguous()) {
+    SemaRef.DiagnoseAmbiguousLookup(ValueResult);
+    return false;
+  }
+  if (ValueResult.empty()) {
+    SemaRef.Diag(Loc, diag::err_sycl_type_trait_bad_value) << IDCTrait;
+    return false;
+  }
+
+  ExprResult ValueExpr = SemaRef.BuildDeclarationNameExpr(
+      CXXScopeSpec{}, ValueResult, /*NeedsADL=*/false);
+  if (ValueExpr.isInvalid()) {
+    SemaRef.Diag(Loc, diag::err_sycl_type_trait_bad_value) << IDCTrait;
+    return false;
+  }
+
+  struct ICEDiagnoser : Sema::VerifyICEDiagnoser {
+    QualType &TraitTy;
+    Expr *GotExpr;
+    ICEDiagnoser(QualType &TT, Expr *E) : TraitTy(TT), GotExpr(E) {}
+    Sema::SemaDiagnosticBuilder diagnoseNotICE(Sema &S,
+                                               SourceLocation Loc) override {
+      return S.Diag(Loc, diag::err_sycl_unexpected_type_trait_val)
+             << TraitTy << "std::true_type or std::false_type" << GotExpr;
+    }
+  } Diagnoser(IDCTrait, ValueExpr.get());
+
+  llvm::APSInt IDCValue;
+  ValueExpr = SemaRef.VerifyIntegerConstantExpression(ValueExpr.get(),
+                                                      &IDCValue, Diagnoser);
+  if (ValueExpr.isInvalid())
+    return false;
+
+  bool Marked = IDCValue.getBoolValue();
+  MarkedDeviceCopyableCache.try_emplace(Ty, Marked);
+  return Marked;
+}
+
 namespace {
 
 // Constructs the arguments to be passed for the SYCL kernel launch call.
@@ -674,6 +808,16 @@ class KernelParamsChecker : public ConstSubobjectVisitor<KernelParamsChecker> {
                          const FieldDecl *>;
   SmallVector<ObjectAccess, 4> ObjectAccessPath;
 
+  SourceLocation getObjectAccessLoc(ObjectAccess O) {
+    if (auto *PVD = dyn_cast<const ParmVarDecl *>(O))
+      return PVD->getLocation();
+    if (auto *FD = dyn_cast<const FieldDecl *>(O))
+      return FD->getLocation();
+    if (auto *BS = dyn_cast<const CXXBaseSpecifier *>(O))
+      return BS->getBaseTypeLoc();
+    llvm_unreachable("Unexpected type in ObjectAccess");
+  }
+
   void emitObjectAccessPathNotes() {
     for (auto Parent : llvm::reverse(ObjectAccessPath)) {
       if (auto *FD = Parent.dyn_cast<const FieldDecl *>()) {
@@ -706,11 +850,16 @@ public:
 
   void checkParameter(const ParmVarDecl *PVD) {
     ObjectAccessPath.push_back(PVD);
-    // Check the immediate type of the parameter.
-    if (checkType(PVD->getType())) {
+    QualType Ty = PVD->getType();
+    // If type is explicitly marked as sycl::is_device_copyable, don't check the
+    // type further: Defining a non device-copyable type as device-copyable is
+    // UB.
+    // Otherwise, check the immediate type of the parameter.
+    if (!SemaSYCLRef.checkExplicitDeviceCopyable(Ty, PVD->getLocation()) &&
+        checkType(Ty) && checkDeviceCopyable(Ty)) {
       // If type checking wasn't short circuited, visit subobjects to check
       // them.
-      visit(PVD->getType());
+      visit(Ty);
     }
     ObjectAccessPath.pop_back();
     assert(ObjectAccessPath.empty());
@@ -718,12 +867,24 @@ public:
 
   bool visitBaseSpecifierPre(const CXXBaseSpecifier *BS) {
     ObjectAccessPath.push_back(BS);
-    return checkType(BS->getType());
+    QualType Ty = BS->getType();
+    // If type is explicitly marked as sycl::is_device_copyable, don't check the
+    // type further: Defining a non device-copyable type as device-copyable is
+    // UB.
+    if (SemaSYCLRef.checkExplicitDeviceCopyable(Ty, BS->getBaseTypeLoc()))
+      return false;
+    return checkType(Ty) && checkDeviceCopyable(Ty);
   }
 
   bool visitFieldDeclPre(const FieldDecl *FD) {
     ObjectAccessPath.push_back(FD);
-    return checkType(FD->getType());
+    QualType Ty = FD->getType();
+    // If type is explicitly marked as sycl::is_device_copyable, don't check the
+    // type further: Defining a non device-copyable type as device-copyable is
+    // UB.
+    if (SemaSYCLRef.checkExplicitDeviceCopyable(Ty, FD->getLocation()))
+      return false;
+    return checkType(Ty) && checkDeviceCopyable(Ty);
   }
 
   // Returns true if subobjects should be visited and false otherwise.
@@ -748,6 +909,121 @@ public:
       // kernel parameter types contained within the referenced type
       // might not be relevant once the programmer addresses the
       // invalid use of a reference.
+      IsValid = false;
+      return false;
+    }
+
+    return true;
+  }
+
+  bool checkDeviceCopyable(QualType Ty) {
+    auto DirectParent = ObjectAccessPath.back();
+    SourceLocation Loc = getObjectAccessLoc(DirectParent);
+    // Since references are allowed as direct kernel parameters, we need to
+    // explicitly check the referenced type:
+    QualType Type = Ty;
+    if (Ty->isReferenceType() && isa<const ParmVarDecl *>(DirectParent))
+      Type = Ty->getPointeeType();
+
+    bool MarkedCopyable = SemaSYCLRef.checkExplicitDeviceCopyable(Type, Loc);
+
+    CXXRecordDecl *RD = Type->getAsCXXRecordDecl();
+    // Set all lambdas as copyable: Future traversal deeper into the lambda
+    // will determine whether or not the parameters/capture of the lambda are
+    // actually copyable.
+    if (RD && RD->isLambda())
+      return true;
+
+    // These SMF checks are not cheap and should only be enabled with
+    // -Wpendantic-sycl.
+    DiagnosticsEngine &Diags = SemaSYCLRef.getDiagnostics();
+    bool CheckSMFs =
+        !Diags.isIgnored(diag::warn_sycl_device_copyable_smf_not_public, Loc);
+
+    // Checking SYCL 2020 3.13.1, when explicitly declaring certain class types
+    // as device copyable:
+    if (CheckSMFs && MarkedCopyable && RD) {
+      // * Type T has a public non-deleted destructor;
+      CXXDestructorDecl *DD = SemaSYCLRef.SemaRef.LookupDestructor(RD);
+      if (!DD || DD->isDeleted() || DD->getAccess() != AS_public) {
+        SemaSYCLRef.Diag(DD ? DD->getLocation() : RD->getLocation(),
+                         diag::warn_sycl_device_copyable_bad_destructor)
+            << Type;
+        emitObjectAccessPathNotes();
+      }
+    }
+
+    // SYCL 2020 3.13.1: trivially copyable implies device-copyability.
+    // However, due to Clang not implementing DR 1734, Clang treats classes
+    // with deleted destructors as trivially copyable. Thus, checking for
+    // is_trivially_copyable must happen after deleted destructors are checked.
+    // FIXME: DR1734
+    if (Type.isTriviallyCopyableType(SemaSYCLRef.getASTContext()))
+      return true;
+
+    if (CheckSMFs && MarkedCopyable && RD) {
+      // * Each eligible copy constructor, move constructor, copy assignment
+      //   operator, and move assignment operator is public;
+      bool HasEligibleSMF = false;
+      for (const NamedDecl *ND : SemaSYCLRef.SemaRef.LookupConstructors(RD)) {
+        auto *CD = dyn_cast<CXXConstructorDecl>(ND);
+        if (CD && CD->isCopyOrMoveConstructor() && !CD->isDeleted() &&
+            !CD->isIneligibleOrNotSelected()) {
+          if (CD->getAccess() != AS_public) {
+            SemaSYCLRef.Diag(CD->getLocation(),
+                             diag::warn_sycl_device_copyable_smf_not_public)
+                << Type
+                << (CD->isCopyConstructor() ? diag::EligibleSMFKind::CopyCtor
+                                            : diag::EligibleSMFKind::MoveCtor);
+            emitObjectAccessPathNotes();
+          }
+          HasEligibleSMF = true;
+        }
+      }
+      for (const NamedDecl *ND :
+           SemaSYCLRef.SemaRef.LookupAssignmentOperators(RD)) {
+        auto *MD = dyn_cast<CXXMethodDecl>(ND);
+        if (MD &&
+            (MD->isCopyAssignmentOperator() ||
+             MD->isMoveAssignmentOperator()) &&
+            !MD->isDeleted() && !MD->isIneligibleOrNotSelected()) {
+          if (MD->getAccess() != AS_public) {
+            SemaSYCLRef.Diag(MD->getLocation(),
+                             diag::warn_sycl_device_copyable_smf_not_public)
+                << Type
+                << (MD->isCopyAssignmentOperator()
+                        ? diag::EligibleSMFKind::CopyAssign
+                        : diag::EligibleSMFKind::MoveAssign);
+            emitObjectAccessPathNotes();
+          }
+          HasEligibleSMF = true;
+        }
+      }
+      // * Type T has at least one eligible copy constructor, move
+      //   constructor,
+      //   copy assignment operator, or move assignment operator;
+      if (!HasEligibleSMF) {
+        SemaSYCLRef.Diag(RD->getLocation(),
+                         diag::warn_sycl_device_copyable_no_eligible_smf)
+            << Type;
+        emitObjectAccessPathNotes();
+      }
+      // Not possible to check for the following:
+      // * The effect of each eligible copy constructor, move constructor, copy
+      //   assignment operator, and move assignment operator is the same as a
+      //   bitwise copy of the object;
+      // * The destructor has no effect.
+    }
+
+    if (!MarkedCopyable) {
+      SemaSYCLRef.Diag(Loc, diag::warn_sycl_kernel_param_not_device_copyable)
+          << Type;
+      emitObjectAccessPathNotes();
+
+      // Continue traversal if not enforcing device-copyability.
+      if (!SemaSYCLRef.isEnforcingDeviceCopyable(Loc))
+        return true;
+      // Otherwise, do not continue if enforcing device-copyability.
       IsValid = false;
       return false;
     }
