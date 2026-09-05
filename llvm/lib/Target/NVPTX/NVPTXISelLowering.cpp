@@ -7821,8 +7821,7 @@ AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
           STI.getMinCmpXchgSizeInBits())
     return AtomicOrdering::Acquire;
   else if (auto *RI = dyn_cast<AtomicRMWInst>(I);
-           RI &&
-           RI->getOrdering() == AtomicOrdering::SequentiallyConsistent) {
+           RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent) {
     AtomicExpansionKind ExpansionKind = shouldExpandAtomicRMWInIR(RI);
     if (ExpansionKind == AtomicExpansionKind::None ||
         ExpansionKind == AtomicExpansionKind::Expand)
