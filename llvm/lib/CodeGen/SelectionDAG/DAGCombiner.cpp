@@ -25568,6 +25568,24 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
   return SDValue();
 }
 
+// Return true if:
+//   trunc(binop(anyext(x), anyext(y))) == binop(x, y)
+// for any choice of high bits introduced by widening the operands.
+static bool isBinOpLowBitsInvariantWithWidenedOperands(unsigned Opc) {
+  switch (Opc) {
+  case ISD::ADD:
+  case ISD::SUB:
+  case ISD::MUL:
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
+  case ISD::CLMUL:
+    return true;
+  default:
+    return false;
+  }
+}
+
 /// Transform a vector binary operation into a scalar binary operation by moving
 /// the math/logic after an extract element of a vector.
 static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
@@ -25586,8 +25604,15 @@ static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
     return SDValue();
 
   EVT ResVT = ExtElt->getValueType(0);
-  if (Opc == ISD::SETCC &&
-      (ResVT != Vec.getValueType().getVectorElementType() || LegalTypes))
+  EVT EltVT = Vec.getValueType().getVectorElementType();
+
+  // EXTRACT_VECTOR_ELT may return an integer type wider than the vector element
+  // type, with undefined high bits. Only scalarize binops in that widened type
+  // if their low bits cannot depend on those undefined high bits.
+  if (ResVT != EltVT && !isBinOpLowBitsInvariantWithWidenedOperands(Opc))
+    return SDValue();
+
+  if (Opc == ISD::SETCC && (ResVT != EltVT || LegalTypes))
     return SDValue();
 
   // Extracting an element of a vector constant is constant-folded, so this
