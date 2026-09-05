@@ -2672,7 +2672,15 @@ static bool shouldDropFuncAttribute(cir::FuncOp func, mlir::NamedAttribute attr,
          attr.getName() == func.getSideEffectAttrName() ||
          attr.getName() == CIRDialect::getNoReturnAttrName() ||
          attr.getName() == CIRDialect::getStrictFPAttrName() ||
-         attr.getName() == func.getAnnotationsAttrName();
+         attr.getName() == func.getAnnotationsAttrName() ||
+         attr.getName() == func.getSanitizeAttrName();
+}
+
+static llvm::StringRef getLLVMSanitizeAttrName(cir::SanitizeKind kind) {
+  switch (kind) {
+  case cir::SanitizeKind::Address:
+    return "sanitize_address";
+  }
 }
 
 /// Lower `cir.func` attributes for an `LLVMFuncOp` or `LLVM::AliasOp`.
@@ -2811,13 +2819,21 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   if (op->hasAttr(CIRDialect::getNoReturnAttrName()))
     fn.setNoreturn(true);
 
-  // The LLVM dialect's LLVMFuncOp has no dedicated field for the `strictfp`
-  // function attribute, so route it through the `passthrough` array. The MLIR
-  // LLVM IR translator forwards `passthrough` entries to LLVM IR as function
-  // attributes.
+  // The LLVM dialect's LLVMFuncOp has no dedicated fields for sanitizer or
+  // `strictfp` function attributes, so route them through the `passthrough`
+  // array. The MLIR LLVM IR translator forwards `passthrough` entries to LLVM
+  // IR as function attributes.
+  SmallVector<mlir::Attribute> passthroughAttrs;
+  if (cir::SanitizeAttr sanitizeAttr = op.getSanitizeAttr()) {
+    for (cir::SanitizeKind kind : sanitizeAttr.getKinds())
+      passthroughAttrs.push_back(
+          rewriter.getStringAttr(getLLVMSanitizeAttrName(kind)));
+  }
   if (op->hasAttr(CIRDialect::getStrictFPAttrName()))
-    fn.setPassthroughAttr(rewriter.getArrayAttr(
-        {rewriter.getStringAttr(CIRDialect::getStrictFPAttrName())}));
+    passthroughAttrs.push_back(
+        rewriter.getStringAttr(CIRDialect::getStrictFPAttrName()));
+  if (!passthroughAttrs.empty())
+    fn.setPassthroughAttr(rewriter.getArrayAttr(passthroughAttrs));
 
   if (std::optional<cir::InlineKind> inlineKind = op.getInlineKind()) {
     fn.setNoInline(*inlineKind == cir::InlineKind::NoInline);

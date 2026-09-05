@@ -145,6 +145,15 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   theModule->setAttr(cir::CIRDialect::getIntTypeWidthAttrName(),
                      builder.getI32IntegerAttr(target.getIntWidth()));
 
+  llvm::SmallVector<cir::SanitizeKind> sanitizerKinds;
+  if (getLangOpts().Sanitize.has(SanitizerKind::Address))
+    sanitizerKinds.push_back(cir::SanitizeKind::Address);
+  // TODO(CIR): Register more enabled sanitizers into the sanitize attribute
+  assert(!cir::MissingFeatures::sanitizers());
+  if (!sanitizerKinds.empty())
+    theModule->setAttr(cir::CIRDialect::getSanitizeAttrName(),
+                       cir::SanitizeAttr::get(&mlirContext, sanitizerKinds));
+
   if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
     theModule->setAttr(cir::CIRDialect::getOptInfoAttrName(),
                        cir::OptInfoAttr::get(&mlirContext,

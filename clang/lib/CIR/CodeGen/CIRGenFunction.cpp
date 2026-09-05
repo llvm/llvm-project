@@ -64,7 +64,7 @@ static bool functionMightHaveBypass(const Stmt *s) {
 CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                                bool suppressNewContext)
     : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder),
-      curFPFeatures(cgm.getLangOpts()) {
+      sanOpts(cgm.getLangOpts().Sanitize), curFPFeatures(cgm.getLangOpts()) {
   ehStack.setCGF(this);
   shouldEmitLifetimeMarkers = CIRGen::shouldEmitLifetimeMarkers(
       cgm.getCodeGenOpts(), getContext().getLangOpts());
@@ -522,6 +522,23 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   curCodeDecl = d;
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = (d ? d->getNonClosureContext() : nullptr);
+
+  if (d) {
+    SanitizerMask noSanitizeMask;
+    for (const auto *attr : d->specific_attrs<NoSanitizeAttr>())
+      noSanitizeMask |= attr->getMask();
+    sanOpts.Mask &= ~noSanitizeMask;
+
+    assert(!cir::MissingFeatures::sanitizers());
+  }
+
+  llvm::SmallVector<cir::SanitizeKind> sanitizerKinds;
+  if (sanOpts.has(SanitizerKind::Address))
+    sanitizerKinds.push_back(cir::SanitizeKind::Address);
+  assert(!cir::MissingFeatures::sanitizers());
+  if (!sanitizerKinds.empty())
+    fn.setSanitizeAttr(
+        cir::SanitizeAttr::get(&getMLIRContext(), sanitizerKinds));
 
   // This is an artifact of the legacy handling of constrained floating-point
   // modes. The rounding mode and exception behavior tracked in

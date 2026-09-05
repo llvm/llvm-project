@@ -2233,6 +2233,35 @@ def CIR_AnnotationArrayAttr
     : CIR_TypedArrayAttrBase<CIR_AnnotationAttr,
                              "array of cir.annotation attributes">;
 
+//===----------------------------------------------------------------------===//
+// SanitizeAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_SanitizeKind : CIR_I32EnumAttr<"SanitizeKind", "sanitize kind", [
+  I32EnumAttrCase<"Address", 0, "address">,
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_SanitizeAttr : CIR_Attr<"Sanitize", "sanitize"> {
+  let summary = "A list of sanitizers enabled for the module or function";
+  let description = [{
+    The `cir.sanitize` attribute is essentially a list of `SanitizeKind` values
+    attached to the module or a function. It represents the list of sanitizers
+    that should be enabled for the attached module or function.
+
+    Each element in the `kinds` parameter is a `SanitizeKind` value. No
+    duplicates are allowed in the list.
+  }];
+
+  let parameters = (ins
+    OptionalArrayRefParameter<"cir::SanitizeKind">:$kinds
+  );
+  let assemblyFormat = "`<` `[` (`]` `>`) : ($kinds^ `]` `>`)?";
+
+  let genVerifyDecl = 1;
+}
+
 include "clang/CIR/Dialect/IR/CIROpenCLAttrs.td"
 include "clang/CIR/Dialect/IR/CIRCUDAAttrs.td"
 
