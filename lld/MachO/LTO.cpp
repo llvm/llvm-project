@@ -66,6 +66,12 @@ static lto::Config createConfig() {
   c.PTO.LoopVectorization = c.OptLevel > 1;
   c.PTO.SLPVectorization = c.OptLevel > 1;
 
+  c.RemarksFilename = std::string(config->optRemarksFilename);
+  c.RemarksPasses = std::string(config->optRemarksPasses);
+  c.RemarksWithHotness = config->optRemarksWithHotness;
+  c.RemarksHotnessThreshold = config->optRemarksHotnessThreshold;
+  c.RemarksFormat = std::string(config->optRemarksFormat);
+
   if (config->saveTemps)
     checkError(c.addSaveTemps(config->outputFile.str() + ".",
                               /*UseInputModulePath=*/true));

@@ -171,6 +171,10 @@ struct Configuration {
   llvm::StringRef mapFile;
   llvm::StringRef ltoNewPmPasses;
   llvm::StringRef ltoObjPath;
+  llvm::StringRef optRemarksFilename;
+  std::optional<uint64_t> optRemarksHotnessThreshold = 0;
+  llvm::StringRef optRemarksPasses;
+  llvm::StringRef optRemarksFormat;
   llvm::StringRef thinLTOJobs;
   llvm::StringRef umbrella;
   uint32_t ltoo = 2;
@@ -218,6 +222,7 @@ struct Configuration {
   std::vector<SectionAlign> sectionAlignments;
   std::vector<SegmentProtection> segmentProtections;
   bool ltoDebugPassManager = false;
+  bool optRemarksWithHotness = false;
   bool emitLLVM = false;
   llvm::StringRef codegenDataGeneratePath;
   bool csProfileGenerate = false;
