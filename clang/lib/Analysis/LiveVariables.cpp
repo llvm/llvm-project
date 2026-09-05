@@ -488,6 +488,12 @@ LiveVariablesImpl::runOnBlock(const CFGBlock *block,
       continue;
     }
 
+    if (std::optional<CFGCleanupFunction> Cleanup =
+            elem.getAs<CFGCleanupFunction>()) {
+      val.liveDecls = DSetFact.add(val.liveDecls, Cleanup->getVarDecl());
+      continue;
+    }
+
     if (!elem.getAs<CFGStmt>())
       continue;
 

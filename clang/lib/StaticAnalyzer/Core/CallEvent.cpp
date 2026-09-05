@@ -417,6 +417,12 @@ static bool isTransparentUnion(QualType T) {
 static SVal processArgument(SVal Value, const Expr *ArgumentExpr,
                             const ParmVarDecl *Parameter, SValBuilder &SVB) {
   QualType ParamType = Parameter->getType();
+
+  // Decl-origin calls (e.g. cleanup functions) have arguments without a
+  // corresponding expression. There is nothing to fix up for these.
+  if (!ArgumentExpr)
+    return Value;
+
   QualType ArgumentType = ArgumentExpr->getType();
 
   // Transparent unions allow users to easily convert values of union field
@@ -471,6 +477,9 @@ static SVal castArgToParamTypeIfNeeded(const CallEvent &Call, unsigned ArgIdx,
     return UnknownVal();
 
   const Expr *ArgExpr = Call.getArgExpr(ArgIdx);
+  if (!ArgExpr)
+    return ArgVal;
+
   const ParmVarDecl *Param = Definition->getParamDecl(ArgIdx);
   return SVB.evalCast(ArgVal, Param->getType(), ArgExpr->getType());
 }
@@ -508,8 +517,16 @@ static void addParameterValuesToBindings(const StackFrame *CalleeSF,
     // edge-cases.
     ArgVal = castArgToParamTypeIfNeeded(Call, Idx, ArgVal, SVB);
 
-    Loc ParamLoc = SVB.makeLoc(
-        MRMgr.getParamVarRegion(Call.getOriginExpr(), Idx, CalleeSF));
+    // The parameter region is keyed on the call expression when there is one;
+    // Decl-origin calls (e.g. cleanup functions) have no call site, so the
+    // callee body resolves parameters via MemRegionManager::getVarRegion.
+    // Bind to exactly that region.
+    const MemRegion *ParamRegion =
+        Call.getOriginExpr()
+            ? static_cast<const MemRegion *>(MRMgr.getParamVarRegion(
+                  Call.getOriginExpr(), Idx, CalleeSF))
+            : MRMgr.getVarRegion(*I, CalleeSF);
+    Loc ParamLoc = SVB.makeLoc(ParamRegion);
     Bindings.push_back(
         std::make_pair(ParamLoc, processArgument(ArgVal, ArgExpr, *I, SVB)));
   }
@@ -1477,10 +1494,18 @@ CallEventRef<> CallEventManager::getCaller(const StackFrame *CalleeSF,
     llvm_unreachable("This is not an inlineable statement");
   }
 
-  // Fall back to the CFG. The only thing we haven't handled yet is
-  // destructors, though this could change in the future.
+  // Fall back to the CFG. The only things we haven't handled yet are
+  // destructors and cleanup functions, though this could change in the future.
   const CFGBlock *B = CalleeSF->getCallSiteBlock();
   CFGElement E = (*B)[CalleeSF->getIndex()];
+
+  if (std::optional<CFGCleanupFunction> Cleanup =
+          E.getAs<CFGCleanupFunction>()) {
+    const auto *FD = cast<FunctionDecl>(CalleeSF->getDecl());
+    return getCleanupFunctionCall(FD, Cleanup->getVarDecl(), State, CallerSF,
+                                  ElemRef);
+  }
+
   assert((E.getAs<CFGImplicitDtor>() || E.getAs<CFGTemporaryDtor>()) &&
          "All other CFG elements should have exprs");
 

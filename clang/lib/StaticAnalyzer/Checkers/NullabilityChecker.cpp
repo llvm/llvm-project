@@ -796,8 +796,12 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
 
     Nullability RequiredNullability =
         getNullabilityAnnotation(Param->getType());
-    Nullability ArgExprTypeLevelNullability =
-        getNullabilityAnnotation(lookThroughImplicitCasts(ArgExpr)->getType());
+    // Implicit calls (e.g. cleanup functions) may have arguments without a
+    // corresponding expression; there is no type-level nullability to read.
+    Nullability ArgExprTypeLevelNullability = Nullability::Unspecified;
+    if (ArgExpr)
+      ArgExprTypeLevelNullability =
+          getNullabilityAnnotation(lookThroughImplicitCasts(ArgExpr)->getType());
 
     unsigned ParamIdx = Param->getFunctionScopeIndex() + 1;
 

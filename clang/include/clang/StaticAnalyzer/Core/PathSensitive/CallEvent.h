@@ -70,8 +70,9 @@ enum CallEventKind {
   CE_END_CXX_CONSTRUCTOR_CALLS = CE_CXXInheritedConstructor,
   CE_CXXAllocator,
   CE_CXXDeallocator,
+  CE_CleanupFunction,
   CE_BEG_FUNCTION_CALLS = CE_Function,
-  CE_END_FUNCTION_CALLS = CE_CXXDeallocator,
+  CE_END_FUNCTION_CALLS = CE_CleanupFunction,
   CE_Block,
   CE_ObjCMessage
 };
@@ -430,6 +431,11 @@ public:
   /// not do that because we don't know how (i.e., construction context is
   /// unavailable in the CFG or not supported by the analyzer).
   bool isArgumentConstructedDirectly(unsigned Index) const {
+    // Decl-origin calls (e.g. cleanup functions) have no argument expression,
+    // so nothing can have been constructed directly into an argument.
+    if (!getOriginExpr())
+      return false;
+
     // This assumes that the object was not yet removed from the state.
     return ExprEngine::getObjectUnderConstruction(
                getState(), {getOriginExpr(), Index}, getStackFrame())
@@ -1239,6 +1245,60 @@ public:
   }
 };
 
+/// Represents an implicit call to a cleanup function, triggered by a
+/// `__attribute__((cleanup(f)))` variable going out of scope.
+///
+/// The call has no syntactic representation: like \c CXXDestructorCall it is
+/// Decl-origin, and its single argument, the address of the annotated
+/// variable, is not written in the source.
+class CleanupFunctionCall : public AnyFunctionCall {
+  friend class CallEventManager;
+
+protected:
+  CleanupFunctionCall(const FunctionDecl *FD, const VarDecl *VD,
+                      ProgramStateRef St, const StackFrame *SF,
+                      CFGBlock::ConstCFGElementRef ElemRef)
+      : AnyFunctionCall(FD, St, SF, ElemRef) {
+    Data = VD;
+    Location = VD->getAttr<CleanupAttr>()->getLoc();
+  }
+
+  CleanupFunctionCall(const CleanupFunctionCall &Other) = default;
+
+  void cloneTo(void *Dest) const override {
+    new (Dest) CleanupFunctionCall(*this);
+  }
+
+public:
+  /// Returns the variable declaration whose scope exit triggered this call.
+  const VarDecl *getVarDecl() const {
+    return static_cast<const VarDecl *>(Data);
+  }
+
+  SourceRange getSourceRange() const override { return Location; }
+
+  unsigned getNumArgs() const override { return 1; }
+
+  // The implicit `&var` argument has no expression in the source.
+  const Expr *getArgExpr(unsigned Index) const override { return nullptr; }
+
+  SVal getArgSVal(unsigned Index) const override {
+    assert(Index == 0);
+    return getState()->getLValue(getVarDecl(), getStackFrame());
+  }
+
+  SourceRange getArgSourceRange(unsigned Index) const override {
+    return getSourceRange();
+  }
+
+  Kind getKind() const override { return CE_CleanupFunction; }
+  StringRef getKindAsString() const override { return "CleanupFunctionCall"; }
+
+  static bool classof(const CallEvent *CA) {
+    return CA->getKind() == CE_CleanupFunction;
+  }
+};
+
 /// Represents the ways an Objective-C message send can occur.
 //
 // Note to maintainers: OCM_Message should always be last, since it does not
@@ -1472,6 +1532,13 @@ public:
                         const StackFrame *SF,
                         CFGBlock::ConstCFGElementRef ElemRef) {
     return create<CXXDeallocatorCall>(E, State, SF, ElemRef);
+  }
+
+  CallEventRef<CleanupFunctionCall>
+  getCleanupFunctionCall(const FunctionDecl *FD, const VarDecl *VD,
+                         ProgramStateRef State, const StackFrame *SF,
+                         CFGBlock::ConstCFGElementRef ElemRef) {
+    return create<CleanupFunctionCall>(FD, VD, State, SF, ElemRef);
   }
 };
 
