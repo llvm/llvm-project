@@ -1209,9 +1209,10 @@ def trunc_shift: GICombineRule <
 >;
 
 // Transform (mul x, -1) -> (sub 0, x)
+// The sub inherits the mul's flags, and (sub nuw 0, x) is only valid for x = 0.
 def mul_by_neg_one: GICombineRule <
   (defs root:$dst),
-  (match (G_MUL $dst, $x, -1)),
+  (match (G_MUL $dst, $x, -1, (MIFlags (not NoUWrap)))),
   (apply (G_SUB $dst, 0, $x))
 >;
 
