@@ -89,13 +89,12 @@ struct PointerLocation {
 enum PointerState : std::uint8_t {
   PS_Unknown = 0,
   PS_PlainPointer = 1,
-  PS_NewPointer = 2,
-  PS_SmartPtrWrapper = 3
+  PS_SmartPtrWrapper = 2
 };
 
 struct Transition {
-  PointerState FromState;  // 0-3
-  PointerState ToState;    // 1-3
+  PointerState FromState;  // 0-2
+  PointerState ToState;    // 1-2
   const clang::Stmt *Stmt; // instruction that caused the transition
 };
 
@@ -240,7 +239,8 @@ private:
     static const auto UniquePtrMatcher =
         cxxRecordDecl(hasAnyName(UniquePointers));
 
-    return !match(SharedPtrMatcher, *RD, *Context).empty() || !match(UniquePtrMatcher, *RD, *Context).empty();
+    return !match(SharedPtrMatcher, *RD, *Context).empty() ||
+           !match(UniquePtrMatcher, *RD, *Context).empty();
   }
 
   // Attempts to recognize E as a tracked location:
@@ -284,21 +284,6 @@ private:
     const clang::Expr *S = stripWrappers(E);
     if (!S)
       return PS_PlainPointer;
-
-    // a = new int;
-    if (llvm::isa<clang::CXXNewExpr>(S))
-      return PS_NewPointer;
-
-    // a = nullptr; / a = NULL;
-    if (llvm::isa<clang::CXXNullPtrLiteralExpr>(S) ||
-        llvm::isa<clang::GNUNullExpr>(S))
-      return PS_PlainPointer;
-
-    // a = 0;
-    if (const auto *IL = llvm::dyn_cast<clang::IntegerLiteral>(S)) {
-      if (IL->getValue() == 0)
-        return PS_PlainPointer;
-    }
 
     // rare case: the pointer is directly assigned the result of constructing a
     // smart pointer
@@ -366,10 +351,9 @@ private:
     if (!ProcessedConstructsAndResets.insert(CE).second)
       return; // has already been processed within this call
 
-    for (const clang::Expr *Arg : CE->arguments()) {
+    for (const clang::Expr *Arg : CE->arguments())
       if (auto Loc = resolveLocation(Arg))
         addTransition(std::move(*Loc), PS_SmartPtrWrapper, EnclosingStmt);
-    }
   }
 
   void handleSmartPtrReset(const clang::CXXMemberCallExpr *ME,
@@ -385,10 +369,9 @@ private:
     if (!ProcessedConstructsAndResets.insert(ME).second)
       return; // has already been processed within this call
 
-    for (const clang::Expr *Arg : ME->arguments()) {
+    for (const clang::Expr *Arg : ME->arguments())
       if (auto Loc = resolveLocation(Arg))
         addTransition(std::move(*Loc), PS_SmartPtrWrapper, EnclosingStmt);
-    }
   }
 };
 
