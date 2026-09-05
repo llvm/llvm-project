@@ -721,6 +721,13 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
     l = 0;
     u = 31;
     break;
+  case X86::BI__builtin_ia32_vunpackb128:
+  case X86::BI__builtin_ia32_vunpackb256:
+  case X86::BI__builtin_ia32_vunpackb512:
+    i = 1;
+    l = 0;
+    u = 63;
+    break;
   case X86::BI__builtin_ia32_cmpps:
   case X86::BI__builtin_ia32_cmpss:
   case X86::BI__builtin_ia32_cmppd:

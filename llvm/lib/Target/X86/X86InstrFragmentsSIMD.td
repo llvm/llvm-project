@@ -202,6 +202,9 @@ def X86vtrunc    : SDNode<"X86ISD::VTRUNC",   SDTVtrunc>;
 def X86vtruncs   : SDNode<"X86ISD::VTRUNCS",  SDTVtrunc>;
 def X86vtruncus  : SDNode<"X86ISD::VTRUNCUS", SDTVtrunc>;
 
+// Vector integer truncate with symmetric signed saturation.
+def X86vtruncss  : SDNode<"X86ISD::VTRUNCSS", SDTVtrunc>;
+
 // Masked version of the above. Used when less than a 128-bit result is
 // produced since the mask only applies to the lower elements and can't
 // be represented by a select.
@@ -209,6 +212,7 @@ def X86vtruncus  : SDNode<"X86ISD::VTRUNCUS", SDTVtrunc>;
 def X86vmtrunc   : SDNode<"X86ISD::VMTRUNC",   SDTVmtrunc>;
 def X86vmtruncs  : SDNode<"X86ISD::VMTRUNCS",  SDTVmtrunc>;
 def X86vmtruncus : SDNode<"X86ISD::VMTRUNCUS", SDTVmtrunc>;
+def X86vmtruncss : SDNode<"X86ISD::VMTRUNCSS", SDTVmtrunc>;
 
 // Vector FP extend.
 def X86vfpext  : SDNode<"X86ISD::VFPEXT",
@@ -1199,6 +1203,63 @@ def X86vmcvtph2hf8 : SDNode<"X86ISD::VMCVTPH2HF8",
 def X86vmcvtph2hf8s : SDNode<"X86ISD::VMCVTPH2HF8S",
                         SDTAVX10CONVERT_I8F16_MASK>;
 
+// AVX10 V2 AUX convert SDTypeProfiles
+def SDTAVX10CONVERT_I8F32 : SDTypeProfile<1, 1, [
+  SDTCVecEltisVT<0, i8>, SDTCVecEltisVT<1, f32>
+]>;
+
+def SDTAVX10CONVERT_I8F32_MASK : SDTypeProfile<1, 3, [
+  SDTCVecEltisVT<0, i8>, SDTCVecEltisVT<1, f32>,
+  SDTCisSameAs<0, 2>, SDTCVecEltisVT<3, i1>,
+  SDTCisSameNumEltsAs<1, 3>
+]>;
+
+def SDTAVX10CONVERT_I8I32F32 : SDTypeProfile<1, 2, [
+  SDTCVecEltisVT<0, i8>, SDTCVecEltisVT<1, i32>, SDTCVecEltisVT<2, f32>
+]>;
+
+def SDTAVX10CONVERT_I8I32F32_MASK : SDTypeProfile<1, 4, [
+  SDTCVecEltisVT<0, i8>, SDTCVecEltisVT<1, i32>,
+  SDTCVecEltisVT<2, f32>, SDTCisSameAs<0, 3>, SDTCVecEltisVT<4, i1>,
+  SDTCisSameNumEltsAs<2, 4>
+]>;
+
+def SDTAVX10CONVERT_F32I8 : SDTypeProfile<1, 1, [
+  SDTCVecEltisVT<0, f32>, SDTCVecEltisVT<1, i8>
+]>;
+
+// AVX10 V2 AUX convert SDNodes
+// Group A: PS->8bit truncating (single source)
+def X86vcvtps2bf8  : SDNode<"X86ISD::VCVTPS2BF8",  SDTAVX10CONVERT_I8F32>;
+def X86vcvtps2bf8s : SDNode<"X86ISD::VCVTPS2BF8S", SDTAVX10CONVERT_I8F32>;
+def X86vcvtps2hf8  : SDNode<"X86ISD::VCVTPS2HF8",  SDTAVX10CONVERT_I8F32>;
+def X86vcvtps2hf8s : SDNode<"X86ISD::VCVTPS2HF8S", SDTAVX10CONVERT_I8F32>;
+def X86vcvtrops2hf8  : SDNode<"X86ISD::VCVTROPS2HF8",  SDTAVX10CONVERT_I8F32>;
+def X86vcvtrops2hf8s : SDNode<"X86ISD::VCVTROPS2HF8S", SDTAVX10CONVERT_I8F32>;
+
+// Masked variants
+def X86vmcvtps2bf8  : SDNode<"X86ISD::VMCVTPS2BF8",  SDTAVX10CONVERT_I8F32_MASK>;
+def X86vmcvtps2bf8s : SDNode<"X86ISD::VMCVTPS2BF8S", SDTAVX10CONVERT_I8F32_MASK>;
+def X86vmcvtps2hf8  : SDNode<"X86ISD::VMCVTPS2HF8",  SDTAVX10CONVERT_I8F32_MASK>;
+def X86vmcvtps2hf8s : SDNode<"X86ISD::VMCVTPS2HF8S", SDTAVX10CONVERT_I8F32_MASK>;
+def X86vmcvtrops2hf8  : SDNode<"X86ISD::VMCVTROPS2HF8",  SDTAVX10CONVERT_I8F32_MASK>;
+def X86vmcvtrops2hf8s : SDNode<"X86ISD::VMCVTROPS2HF8S", SDTAVX10CONVERT_I8F32_MASK>;
+
+// Group B: Bias PS->8bit (3 operand)
+def X86vcvtbiasps2bf8  : SDNode<"X86ISD::VCVTBIASPS2BF8",  SDTAVX10CONVERT_I8I32F32>;
+def X86vcvtbiasps2bf8s : SDNode<"X86ISD::VCVTBIASPS2BF8S", SDTAVX10CONVERT_I8I32F32>;
+def X86vcvtbiasps2hf8  : SDNode<"X86ISD::VCVTBIASPS2HF8",  SDTAVX10CONVERT_I8I32F32>;
+def X86vcvtbiasps2hf8s : SDNode<"X86ISD::VCVTBIASPS2HF8S", SDTAVX10CONVERT_I8I32F32>;
+
+def X86vmcvtbiasps2bf8  : SDNode<"X86ISD::VMCVTBIASPS2BF8",  SDTAVX10CONVERT_I8I32F32_MASK>;
+def X86vmcvtbiasps2bf8s : SDNode<"X86ISD::VMCVTBIASPS2BF8S", SDTAVX10CONVERT_I8I32F32_MASK>;
+def X86vmcvtbiasps2hf8  : SDNode<"X86ISD::VMCVTBIASPS2HF8",  SDTAVX10CONVERT_I8I32F32_MASK>;
+def X86vmcvtbiasps2hf8s : SDNode<"X86ISD::VMCVTBIASPS2HF8S", SDTAVX10CONVERT_I8I32F32_MASK>;
+
+// Group C: 8bit->PS expanding
+def X86vcvtbf82ps  : SDNode<"X86ISD::VCVTBF82PS",  SDTAVX10CONVERT_F32I8>;
+def X86vcvthf82ps  : SDNode<"X86ISD::VCVTHF82PS",  SDTAVX10CONVERT_F32I8>;
+
 //===----------------------------------------------------------------------===//
 // SSE pattern fragments
 //===----------------------------------------------------------------------===//
@@ -1610,6 +1671,14 @@ def X86MTruncSStore : SDNode<"X86ISD::VMTRUNCSTORES",  SDTX86MaskedStore,
 def X86MTruncUSStore : SDNode<"X86ISD::VMTRUNCSTOREUS",  SDTX86MaskedStore,
                        [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
+// Vector truncating store with symmetric signed saturation
+def X86TruncSSStore : SDNode<"X86ISD::VTRUNCSTORSS",  SDTStore,
+                       [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
+// Vector truncating masked store with symmetric signed saturation
+def X86MTruncSSStore : SDNode<"X86ISD::VMTRUNCSTORSS",  SDTX86MaskedStore,
+                       [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
 def truncstore_s_vi8 : PatFrag<(ops node:$val, node:$ptr),
                                (X86TruncSStore node:$val, node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
@@ -1617,6 +1686,11 @@ def truncstore_s_vi8 : PatFrag<(ops node:$val, node:$ptr),
 
 def truncstore_us_vi8 : PatFrag<(ops node:$val, node:$ptr),
                                (X86TruncUSStore node:$val, node:$ptr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
+}]>;
+
+def truncstore_ss_vi8 : PatFrag<(ops node:$val, node:$ptr),
+                               (X86TruncSSStore node:$val, node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
 }]>;
 
@@ -1647,6 +1721,11 @@ def masked_truncstore_s_vi8 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
 
 def masked_truncstore_us_vi8 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
                                (X86MTruncUSStore node:$src1, node:$src2, node:$src3), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
+}]>;
+
+def masked_truncstore_ss_vi8 : PatFrag<(ops node:$src1, node:$src2, node:$src3),
+                               (X86MTruncSSStore node:$src1, node:$src2, node:$src3), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
 }]>;
 
@@ -1717,6 +1796,9 @@ def select_truncs : PatFrag<(ops node:$src, node:$src0, node:$mask),
 def select_truncus : PatFrag<(ops node:$src, node:$src0, node:$mask),
                              (vselect_mask node:$mask,
                                            (X86vtruncus node:$src), node:$src0)>;
+def select_truncss : PatFrag<(ops node:$src, node:$src0, node:$mask),
+                             (vselect_mask node:$mask,
+                                           (X86vtruncss node:$src), node:$src0)>;
 
 def X86Vpshufbitqmb_su : PatFrag<(ops node:$src1, node:$src2),
                                  (X86Vpshufbitqmb node:$src1, node:$src2), [{

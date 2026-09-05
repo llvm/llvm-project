@@ -502,6 +502,9 @@ _storebe_i64(void * __P, long long __D) {
 #include <avx10_2_512satcvtdsintrin.h>
 #include <avx10_2_512satcvtintrin.h>
 
+#include <avx10_2_512v2auxintrin.h>
+#include <avx10_2_v2auxintrin.h>
+
 #include <sm4evexintrin.h>
 
 #include <enqcmdintrin.h>

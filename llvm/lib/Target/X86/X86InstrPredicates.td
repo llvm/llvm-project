@@ -77,6 +77,7 @@ def HasAVX1Only  : Predicate<"Subtarget->hasAVX() && !Subtarget->hasAVX2()">;
 def HasAVX10_1   : Predicate<"Subtarget->hasAVX10_1()">;
 def HasAVX10_2   : Predicate<"Subtarget->hasAVX10_2()">;
 def NoAVX10_2    : Predicate<"!Subtarget->hasAVX10_2()">;
+def HasAVX10_V2_AUX : Predicate<"Subtarget->hasAVX10_V2_AUX()">;
 def HasAVX512    : Predicate<"Subtarget->hasAVX512()">;
 def UseAVX       : Predicate<"Subtarget->hasAVX() && !Subtarget->hasAVX512()">;
 def UseAVX2      : Predicate<"Subtarget->hasAVX2() && !Subtarget->hasAVX512()">;

@@ -28800,6 +28800,20 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
       return EmitMaskedTruncSStore(IsSigned, Chain, dl, DataToTruncate, Addr,
                                    VMask, MemVT, MemIntr->getMemOperand(), DAG);
     }
+    case X86ISD::VTRUNCSS: {
+      SDVTList VTs = DAG.getVTList(MVT::Other);
+      if (isAllOnesConstant(Mask)) {
+        SDValue Ops[] = {Chain, DataToTruncate, Addr};
+        return DAG.getMemIntrinsicNode(X86ISD::VTRUNCSTORSS, dl, VTs, Ops,
+                                       MemVT, MemIntr->getMemOperand());
+      }
+
+      MVT MaskVT = MVT::getVectorVT(MVT::i1, MemVT.getVectorNumElements());
+      SDValue VMask = getMaskNode(Mask, MaskVT, Subtarget, DAG, dl);
+      SDValue Ops[] = {Chain, DataToTruncate, Addr, VMask};
+      return DAG.getMemIntrinsicNode(X86ISD::VMTRUNCSTORSS, dl, VTs, Ops, MemVT,
+                                     MemIntr->getMemOperand());
+    }
     default:
       llvm_unreachable("Unsupported truncstore intrinsic");
     }
