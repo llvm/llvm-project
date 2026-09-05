@@ -2116,6 +2116,15 @@ void OMPClausePrinter::VisitOMPPermutationClause(OMPPermutationClause *Node) {
 
 void OMPClausePrinter::VisitOMPFullClause(OMPFullClause *Node) { OS << "full"; }
 
+void OMPClausePrinter::VisitOMPDepthClause(OMPDepthClause *Node) {
+  OS << "depth";
+  if (Expr *Depth = Node->getDepth()) {
+    OS << '(';
+    Depth->printPretty(OS, nullptr, Policy, 0);
+    OS << ')';
+  }
+}
+
 void OMPClausePrinter::VisitOMPPartialClause(OMPPartialClause *Node) {
   OS << "partial";
 

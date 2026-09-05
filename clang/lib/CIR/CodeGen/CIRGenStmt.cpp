@@ -441,6 +441,8 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitOMPSplitDirective(cast<OMPSplitDirective>(*s));
   case Stmt::OMPInterchangeDirectiveClass:
     return emitOMPInterchangeDirective(cast<OMPInterchangeDirective>(*s));
+  case Stmt::OMPFlattenDirectiveClass:
+    return emitOMPFlattenDirective(cast<OMPFlattenDirective>(*s));
   case Stmt::OMPAssumeDirectiveClass:
     return emitOMPAssumeDirective(cast<OMPAssumeDirective>(*s));
   case Stmt::OMPMaskedDirectiveClass:

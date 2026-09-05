@@ -824,6 +824,9 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 ### OpenMP Support
 
+- Added the OpenMP 6.1 `#pragma omp flatten` loop transformation and the
+  `depth` clause. Flatten combines perfectly nested canonical loops into one
+  loop. `depth(k)` selects how many outermost loops to combine (default 2).
 - Canonicalize intra-tiles in loop tiling. `#pragma omp tile` still emits a
   min-bounded inner loop, which vectorizes well. When a parent directive such as
   `for collapse(n)` needs a constant per-tile trip count, Clang rereads a
@@ -837,8 +840,6 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   - A loop transformation (`tile`, `unroll`, `interchange`, ...) that consumes
     another tile's intra-tile loop.
 
-- Added parsing and semantic support for `dims` modifier in `num_teams` and
-  `thread_limit` clauses for OpenMP 6.1 or later.
 - Added parsing and semantic support for `dims` modifier in `num_teams`,
   `thread_limit` and `num_threads` clauses for OpenMP 6.1 or later.
 - Map-type-modifying modifiers applied to a list item with a user-defined mapper

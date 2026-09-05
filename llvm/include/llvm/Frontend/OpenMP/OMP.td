@@ -169,6 +169,7 @@ def OMPC_Depobj : Clause<[Spelling<"depobj">]> {
   let isImplicit = true;
 }
 def OMPC_Depth : Clause<[Spelling<"depth">]> {
+  let clangClass = "OMPDepthClause";
   let flangClass = "ScalarIntConstantExpr";
 }
 def OMPC_Destroy : Clause<[Spelling<"destroy">]> {

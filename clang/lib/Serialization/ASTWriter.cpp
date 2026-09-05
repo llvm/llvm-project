@@ -8131,6 +8131,11 @@ void OMPClauseWriter::VisitOMPPartialClause(OMPPartialClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
+void OMPClauseWriter::VisitOMPDepthClause(OMPDepthClause *C) {
+  Record.AddStmt(C->getDepth());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
 void OMPClauseWriter::VisitOMPLoopRangeClause(OMPLoopRangeClause *C) {
   Record.AddStmt(C->getFirst());
   Record.AddStmt(C->getCount());

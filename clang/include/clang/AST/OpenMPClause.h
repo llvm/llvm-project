@@ -1490,6 +1490,69 @@ public:
   }
 };
 
+/// This represents the 'depth' clause on the '#pragma omp flatten' (and
+/// '#pragma omp fuse') loop-transformation directives.
+///
+/// \code
+/// #pragma omp flatten depth(3)
+/// \endcode
+/// In this example the 'flatten' directive has a 'depth' clause whose argument
+/// '3' specifies how many perfectly nested loops are combined into one.
+/// The argument must be a positive integer constant expression that evaluates
+/// to at most the loop nest depth of the associated loop nest.
+class OMPDepthClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('.
+  SourceLocation LParenLoc;
+
+  /// The depth expression (number of loops to flatten).
+  Stmt *Depth = nullptr;
+
+  /// Build an empty clause.
+  explicit OMPDepthClause() : OMPClause(llvm::omp::OMPC_depth, {}, {}) {}
+
+  /// Set the depth expression.
+  void setDepth(Expr *E) { Depth = E; }
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+public:
+  /// Build an AST node for a 'depth' clause.
+  ///
+  /// \param StartLoc  Location of the 'depth' identifier.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc    Location of ')'.
+  /// \param Depth     The depth expression.
+  OMPDepthClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                 SourceLocation EndLoc, Expr *Depth)
+      : OMPClause(llvm::omp::OMPC_depth, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), Depth(Depth) {}
+
+  /// Returns the location of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns the depth expression or nullptr if not set.
+  Expr *getDepth() const { return cast_or_null<Expr>(Depth); }
+
+  child_range children() { return child_range(&Depth, &Depth + 1); }
+  const_child_range children() const {
+    return const_child_range(&Depth, &Depth + 1);
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_depth;
+  }
+};
+
 /// This represents 'collapse' clause in the '#pragma omp ...'
 /// directive.
 ///

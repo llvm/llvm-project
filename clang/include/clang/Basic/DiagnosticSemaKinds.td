@@ -12165,6 +12165,15 @@ def err_omp_invalid_looprange
 def warn_omp_redundant_fusion : Warning<"looprange clause selects a single "
                                         "loop, resulting in redundant fusion">,
                                 InGroup<OpenMPClauses>;
+def warn_omp_flatten_omitted_depth : Warning<
+  "'flatten' without a 'depth' clause only combines 2 loops, but 3 or more "
+  "loops are perfectly nested">,
+  InGroup<OpenMPClauses>;
+def note_omp_flatten_insert_depth : Note<
+  "add 'depth(2)' to make it explicit that only the two outermost loops are "
+  "flattened and to silence this warning">;
+def err_omp_clause_not_supported_yet : Error<
+  "'%0' clause is not yet supported on '#pragma omp %1' directive">;
 def err_omp_not_for : Error<
   "%select{statement after '#pragma omp %1' must be a for loop|"
   "expected %2 for loops after '#pragma omp %1'%select{|, but found only %4}3}0">;
