@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CGData/CodeGenData.h"
 #include "llvm/CGData/CodeGenDataWriter.h"
 #include "llvm/CodeGen/Passes.h"
@@ -33,11 +34,37 @@ static cl::opt<bool> DisableCGDataForMerging(
              "merging is still enabled within a module."),
     cl::init(false));
 
+enum class GlobalMergingProfilePolicy { None, Hot, Executed };
+
+// The selected policy is intentionally not serialized in CGData. Producers and
+// consumers should use the same policy so candidate finalization and parameter
+// selection operate on the same set of functions. A consumer still applies its
+// current policy to each function when reading CGData produced with another
+// policy.
+static cl::opt<GlobalMergingProfilePolicy> GlobalMergingProfilePolicyOpt(
+    "global-merging-profile-policy", cl::Hidden,
+    cl::desc("Profile policy for excluding functions from global function "
+             "merging"),
+    cl::values(
+        clEnumValN(GlobalMergingProfilePolicy::None, "none",
+                   "Do not exclude functions based on profile information"),
+        clEnumValN(GlobalMergingProfilePolicy::Hot, "hot",
+                   "Exclude functions marked or profiled as hot"),
+        clEnumValN(GlobalMergingProfilePolicy::Executed, "executed",
+                   "Exclude functions marked hot or executed by the profile")),
+    cl::init(GlobalMergingProfilePolicy::None));
+
 STATISTIC(NumMergedFunctions,
           "Number of functions that are actually merged using function hash");
 STATISTIC(NumAnalyzedModues, "Number of modules that are analyzed");
 STATISTIC(NumAnalyzedFunctions, "Number of functions that are analyzed");
 STATISTIC(NumEligibleFunctions, "Number of functions that are eligible");
+STATISTIC(NumProducerProfileSkippedFunctions,
+          "Number of structurally eligible functions excluded while "
+          "producing global function merge data");
+STATISTIC(NumConsumerProfileSkippedFunctions,
+          "Number of structurally eligible functions excluded while "
+          "consuming global function merge data");
 
 /// Returns true if the \OpIdx operand of \p CI is the callee operand.
 static bool isCalleeOperand(const CallBase *CI, unsigned OpIdx) {
@@ -114,6 +141,31 @@ bool isEligibleFunction(Function *F) {
   return true;
 }
 
+static bool shouldSkipFunction(const Function &F,
+                               const ProfileSummaryInfo *PSI) {
+  switch (GlobalMergingProfilePolicyOpt) {
+  case GlobalMergingProfilePolicy::None:
+    return false;
+  case GlobalMergingProfilePolicy::Hot:
+    return F.hasFnAttribute(Attribute::Hot) ||
+           (PSI && PSI->isFunctionEntryHot(&F));
+  case GlobalMergingProfilePolicy::Executed:
+    if (F.hasFnAttribute(Attribute::Hot))
+      return true;
+    if (std::optional<uint64_t> EntryCount = F.getEntryCount())
+      return *EntryCount > 0;
+    return false;
+  }
+  llvm_unreachable("Unhandled global function merging profile policy");
+}
+
+static std::unique_ptr<ProfileSummaryInfo>
+createProfileSummaryInfoForMerging(Module &M) {
+  if (GlobalMergingProfilePolicyOpt != GlobalMergingProfilePolicy::Hot)
+    return nullptr;
+  return std::make_unique<ProfileSummaryInfo>(M);
+}
+
 static bool isEligibleInstructionForConstantSharing(const Instruction *I) {
   switch (I->getOpcode()) {
   case Instruction::Load:
@@ -146,28 +198,37 @@ static bool ignoreOp(const Instruction *I, unsigned OpIdx) {
   return true;
 }
 
-void GlobalMergeFunc::analyze(Module &M) {
+void GlobalMergeFunc::analyze(Module &M, const ProfileSummaryInfo *PSI) {
   ++NumAnalyzedModues;
   for (Function &Func : M) {
     ++NumAnalyzedFunctions;
-    if (isEligibleFunction(&Func)) {
-      ++NumEligibleFunctions;
-
-      auto FI = llvm::StructuralHashWithDifferences(Func, ignoreOp);
-
-      // Convert the operand map to a vector for a serialization-friendly
-      // format.
-      IndexOperandHashVecType IndexOperandHashes;
-      for (auto &Pair : *FI.IndexOperandHashMap)
-        IndexOperandHashes.emplace_back(Pair);
-
-      StableFunction SF(FI.FunctionHash, get_stable_name(Func.getName()).str(),
-                        M.getModuleIdentifier(), FI.IndexInstruction->size(),
-                        std::move(IndexOperandHashes));
-
-      LocalFunctionMap->insert(SF);
+    if (!isEligibleFunction(&Func))
+      continue;
+    ++NumEligibleFunctions;
+    if (shouldSkipFunction(Func, PSI)) {
+      ++NumProducerProfileSkippedFunctions;
+      continue;
     }
+
+    auto FI = llvm::StructuralHashWithDifferences(Func, ignoreOp);
+
+    // Convert the operand map to a vector for a serialization-friendly
+    // format.
+    IndexOperandHashVecType IndexOperandHashes;
+    for (auto &Pair : *FI.IndexOperandHashMap)
+      IndexOperandHashes.emplace_back(Pair);
+
+    StableFunction SF(FI.FunctionHash, get_stable_name(Func.getName()).str(),
+                      M.getModuleIdentifier(), FI.IndexInstruction->size(),
+                      std::move(IndexOperandHashes));
+
+    LocalFunctionMap->insert(SF);
   }
+}
+
+void GlobalMergeFunc::analyze(Module &M) {
+  auto PSI = createProfileSummaryInfoForMerging(M);
+  analyze(M, PSI.get());
 }
 
 /// Tuple to hold function info to process merging.
@@ -401,7 +462,8 @@ computeParamInfo(const StableFunctionMap::StableFunctionEntries &SFS) {
   return ParamLocsVec;
 }
 
-bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
+bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap,
+                            const ProfileSummaryInfo *PSI) {
   bool Changed = false;
 
   // Collect stable functions related to the current module.
@@ -410,6 +472,10 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
   for (auto &F : M) {
     if (!isEligibleFunction(&F))
       continue;
+    if (shouldSkipFunction(F, PSI)) {
+      ++NumConsumerProfileSkippedFunctions;
+      continue;
+    }
     auto FI = llvm::StructuralHashWithDifferences(F, ignoreOp);
     if (FunctionMap->contains(FI.FunctionHash))
       HashToFuncs[FI.FunctionHash].emplace_back(&F, std::move(FI));
@@ -514,6 +580,11 @@ bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
   return Changed;
 }
 
+bool GlobalMergeFunc::merge(Module &M, const StableFunctionMap *FunctionMap) {
+  auto PSI = createProfileSummaryInfoForMerging(M);
+  return merge(M, FunctionMap, PSI.get());
+}
+
 void GlobalMergeFunc::initializeMergerMode(const Module &M) {
   // Initialize the local function map regardless of the merger mode.
   LocalFunctionMap = std::make_unique<StableFunctionMap>();
@@ -558,13 +629,14 @@ void GlobalMergeFunc::emitFunctionMap(Module &M) {
 
 bool GlobalMergeFunc::run(Module &M) {
   initializeMergerMode(M);
+  auto PSI = createProfileSummaryInfoForMerging(M);
 
   const StableFunctionMap *FuncMap;
   if (MergerMode == HashFunctionMode::UsingHashFunction) {
     // Use the prior CG data to optimistically create global merge candidates.
     FuncMap = cgdata::getStableFunctionMap();
   } else {
-    analyze(M);
+    analyze(M, PSI.get());
     // Emit the local function map to the custom section, __llvm_merge before
     // finalizing it.
     if (MergerMode == HashFunctionMode::BuildingHashFuncion)
@@ -573,7 +645,7 @@ bool GlobalMergeFunc::run(Module &M) {
     FuncMap = LocalFunctionMap.get();
   }
 
-  return merge(M, FuncMap);
+  return merge(M, FuncMap, PSI.get());
 }
 
 namespace {
