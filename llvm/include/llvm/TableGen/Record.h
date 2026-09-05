@@ -257,7 +257,7 @@ public:
                                 ArrayRef<const Record *> Classes);
   static const RecordRecTy *get(const Record *Class);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  ArrayRef<const Record *> getKey() const { return getClasses(); }
 
   ArrayRef<const Record *> getClasses() const {
     return getTrailingObjects(NumClasses);
@@ -608,7 +608,7 @@ public:
 
   static BitsInit *get(RecordKeeper &RK, ArrayRef<const Init *> Range);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  ArrayRef<const Init *> getKey() const { return getBits(); }
 
   unsigned getNumBits() const { return NumBits; }
 
@@ -1045,7 +1045,10 @@ public:
                                ArrayRef<const Init *> Values,
                                const RecTy *Type);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::tuple<const RecTy *, ArrayRef<const Init *>, ArrayRef<const Init *>>
+  getKey() const {
+    return {ValType, getConds(), getVals()};
+  }
 
   const RecTy *getValType() const { return ValType; }
 
@@ -1111,7 +1114,11 @@ public:
                                const Init *A, const Init *B, const Init *Expr,
                                const RecTy *Type);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::tuple<const Init *, const Init *, const Init *, const Init *,
+             const Init *, const RecTy *>
+  getKey() const {
+    return {Start, List, A, B, Expr, getType()};
+  }
 
   // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
@@ -1144,7 +1151,9 @@ public:
 
   static const IsAOpInit *get(const RecTy *CheckType, const Init *Expr);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::pair<const RecTy *, const Init *> getKey() const {
+    return {CheckType, Expr};
+  }
 
   // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
@@ -1178,7 +1187,9 @@ public:
 
   static const ExistsOpInit *get(const RecTy *CheckType, const Init *Expr);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::pair<const RecTy *, const Init *> getKey() const {
+    return {CheckType, Expr};
+  }
 
   // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
@@ -1215,7 +1226,9 @@ public:
 
   static const InstancesOpInit *get(const RecTy *Type, const Init *Regex);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::pair<const RecTy *, const Init *> getKey() const {
+    return {Type, Regex};
+  }
 
   const Init *Fold(const Record *CurRec, bool IsFinal = false) const;
 
@@ -1364,7 +1377,9 @@ public:
   static const VarDefInit *get(SMLoc Loc, const Record *Class,
                                ArrayRef<const ArgumentInit *> Args);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::pair<const Record *, ArrayRef<const ArgumentInit *>> getKey() const {
+    return {Class, args()};
+  }
 
   const Init *resolveReferences(Resolver &R) const override;
   const Init *Fold() const;
@@ -1478,7 +1493,11 @@ public:
     return DagInit::get(V, nullptr, ArgAndNames);
   }
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::tuple<const Init *, const StringInit *, ArrayRef<const Init *>,
+             ArrayRef<const StringInit *>>
+  getKey() const {
+    return {Val, ValName, getArgs(), getArgNames()};
+  }
 
   const Init *getOperator() const { return Val; }
   const Record *getOperatorAsDef(ArrayRef<SMLoc> Loc) const;
