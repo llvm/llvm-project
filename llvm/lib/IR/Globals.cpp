@@ -16,6 +16,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -559,6 +560,116 @@ bool GlobalValue::canBeOmittedFromSymbolTable() const {
       return false;
 
   return hasAtLeastLocalUnnamedAddr();
+}
+
+bool GlobalValue::isLargeGlobalValue() const {
+  const Module *M = getParent();
+  assert(M && "GlobalValue must have a parent Module");
+
+  CodeModel::Model CM = M->getCodeModel().value_or(CodeModel::Small);
+
+  Triple TT = M->getTargetTriple();
+  if (!TT.getTriple().empty() && TT.getArch() != Triple::x86_64)
+    return false;
+
+  // Remaining logic below is ELF-specific.
+  if (!TT.getTriple().empty() && !TT.isOSBinFormatELF())
+    return CM == CodeModel::Large;
+
+  const GlobalObject *GO = getAliaseeObject();
+
+  // Be conservative if we can't find an underlying GlobalObject.
+  if (!GO)
+    return true;
+
+  auto IsPrefix = [](StringRef Name, StringRef Prefix) {
+    return Name.consume_front(Prefix) && (Name.empty() || Name[0] == '.');
+  };
+
+  const auto *GV = dyn_cast<GlobalVariable>(GO);
+
+  if (!GV) {
+    // Handle explicit sections as we do for GlobalVariables with an explicit
+    // section.
+    if (GO->hasSection()) {
+      StringRef Name = GO->getSection();
+      return IsPrefix(Name, ".ltext");
+    }
+    return CM == CodeModel::Large;
+  }
+
+  if (GV->isThreadLocal())
+    return false;
+
+  // For x86-64, we treat an explicit GlobalVariable small code model to mean
+  // that the global should be placed in a small section, and ditto for large.
+  if (auto GVCM = GV->getCodeModel()) {
+    if (*GVCM == CodeModel::Small)
+      return false;
+    if (*GVCM == CodeModel::Large)
+      return true;
+  }
+
+  // Treat all globals in user-defined sections as small, except for the
+  // standard large sections of .lbss, .ldata, .lrodata. This reduces the risk
+  // of linking together small and large sections, resulting in small
+  // references to large data sections. The code model attribute overrides this
+  // above.
+  if (GV->hasSection()) {
+    StringRef SectionName = GV->getSection();
+    if (!SectionName.empty()) {
+      return IsPrefix(SectionName, ".lbss") ||
+             IsPrefix(SectionName, ".ldata") ||
+             IsPrefix(SectionName, ".lrodata");
+    }
+  } else if (GV->hasImplicitSection()) {
+    StringRef SectionName;
+    auto Attrs = GV->getAttributes();
+    if (!GV->isConstant()) {
+      if (GV->getInitializer() && GV->getInitializer()->isNullValue() &&
+          Attrs.hasAttribute("bss-section"))
+        SectionName = Attrs.getAttribute("bss-section").getValueAsString();
+      else if (Attrs.hasAttribute("data-section"))
+        SectionName = Attrs.getAttribute("data-section").getValueAsString();
+    } else {
+      bool IsRelro = M->getPICLevel() != PICLevel::NotPIC &&
+                     GV->hasInitializer() &&
+                     GV->getInitializer()->needsDynamicRelocation();
+      if (IsRelro && Attrs.hasAttribute("relro-section"))
+        SectionName = Attrs.getAttribute("relro-section").getValueAsString();
+      else if (Attrs.hasAttribute("rodata-section"))
+        SectionName = Attrs.getAttribute("rodata-section").getValueAsString();
+    }
+    if (!SectionName.empty()) {
+      return IsPrefix(SectionName, ".lbss") ||
+             IsPrefix(SectionName, ".ldata") ||
+             IsPrefix(SectionName, ".lrodata");
+    }
+  }
+
+  // Respect large data threshold for medium and large code models.
+  if (CM == CodeModel::Medium || CM == CodeModel::Large) {
+    if (!GV->getValueType()->isSized())
+      return true;
+    // Linker defined start/stop symbols can point to arbitrary points in the
+    // binary, so treat them as large.
+    if (GV->isDeclaration() && (GV->getName() == "__ehdr_start" ||
+                                GV->getName().starts_with("__start_") ||
+                                GV->getName().starts_with("__stop_")))
+      return true;
+    // Linkers do not currently support PT_GNU_RELRO for SHF_X86_64_LARGE
+    // sections.
+    if (!GV->isDeclarationForLinker() && GV->isConstant() &&
+        GV->hasInitializer() && M->getPICLevel() != PICLevel::NotPIC &&
+        GV->getInitializer()->needsDynamicRelocation())
+      return false;
+    const DataLayout &DL = M->getDataLayout();
+    uint64_t Threshold = M->getLargeDataThreshold().value_or(0);
+    uint64_t Size = GV->getGlobalSize(DL);
+    return Size == 0 || Size > Threshold;
+  }
+
+  return false;
 }
 
 //===----------------------------------------------------------------------===//

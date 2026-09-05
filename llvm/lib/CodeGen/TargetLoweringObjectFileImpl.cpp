@@ -649,7 +649,7 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
                            bool UniqueSectionName,
                            const MachineJumpTableEntry *JTE) {
   SmallString<128> Name =
-      getSectionPrefixForGlobal(Kind, TM.isLargeGlobalValue(GO));
+      getSectionPrefixForGlobal(Kind, GO->isLargeGlobalValue());
   unsigned EntrySize = getEntrySizeForKind(Kind);
   if (Kind.isMergeableCString()) {
     // We also need alignment here.
@@ -825,7 +825,7 @@ getGlobalObjectInfo(const GlobalObject *GO, const TargetMachine &TM,
     Group = C->getName();
     IsComdat = C->getSelectionKind() == Comdat::Any;
   }
-  if (TM.isLargeGlobalValue(GO))
+  if (GO->isLargeGlobalValue())
     Flags |= ELF::SHF_X86_64_LARGE;
 
   unsigned Type, EntrySize;

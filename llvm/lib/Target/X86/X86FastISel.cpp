@@ -826,7 +826,7 @@ bool X86FastISel::handleConstantAddresses(const Value *V, X86AddressMode &AM) {
       return false;
 
     // Can't handle large objects yet.
-    if (TM.isLargeGlobalValue(GV))
+    if (GV->isLargeGlobalValue())
       return false;
 
     // Can't handle TLS yet.
@@ -4024,7 +4024,7 @@ Register X86FastISel::X86MaterializeGV(const GlobalValue *GV, MVT VT) {
   if (TM.getCodeModel() != CodeModel::Small &&
       TM.getCodeModel() != CodeModel::Medium)
     return Register();
-  if (TM.isLargeGlobalValue(GV))
+  if (GV->isLargeGlobalValue())
     return Register();
 
   // Materialize addresses with LEA/MOV instructions.

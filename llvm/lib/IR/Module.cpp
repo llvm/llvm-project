@@ -647,7 +647,7 @@ PICLevel::Level Module::getPICLevel() const {
 void Module::setPICLevel(PICLevel::Level PL) {
   // The merge result of a non-PIC object and a PIC object can only be reliably
   // used as a non-PIC object, so use the Min merge behavior.
-  addModuleFlag(ModFlagBehavior::Min, "PIC Level", PL);
+  setModuleFlag(ModFlagBehavior::Min, "PIC Level", PL);
 }
 
 PIELevel::Level Module::getPIELevel() const {
@@ -661,7 +661,7 @@ PIELevel::Level Module::getPIELevel() const {
 }
 
 void Module::setPIELevel(PIELevel::Level PL) {
-  addModuleFlag(ModFlagBehavior::Max, "PIE Level", PL);
+  setModuleFlag(ModFlagBehavior::Max, "PIE Level", PL);
 }
 
 std::optional<CodeModel::Model> Module::getCodeModel() const {
@@ -679,7 +679,7 @@ void Module::setCodeModel(CodeModel::Model CL) {
   // because the compiler would have to generate additional code (to span
   // longer jumps) if a larger code model is used with a smaller one.
   // Therefore we will treat attempts to mix code models as an error.
-  addModuleFlag(ModFlagBehavior::Error, "Code Model", CL);
+  setModuleFlag(ModFlagBehavior::Error, "Code Model", CL);
 }
 
 LongDoubleFormat Module::getLongDoubleFormat() const {
@@ -738,7 +738,7 @@ std::optional<uint64_t> Module::getLargeDataThreshold() const {
 void Module::setLargeDataThreshold(uint64_t Threshold) {
   // Since the large data threshold goes along with the code model, the merge
   // behavior is the same.
-  addModuleFlag(ModFlagBehavior::Error, "Large Data Threshold",
+  setModuleFlag(ModFlagBehavior::Error, "Large Data Threshold",
                 ConstantInt::get(Type::getInt64Ty(Context), Threshold));
 }
 
