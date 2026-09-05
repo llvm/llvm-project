@@ -710,26 +710,24 @@ bool M68kInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   return false;
 }
 
-bool M68kInstrInfo::isPCRelRegisterOperandLegal(
-    const MachineOperand &MO) const {
-  assert(MO.isReg());
+bool M68kInstrInfo::isPCRelRegisterOperandLegal(const MachineInstr &MI,
+                                                unsigned OpIdx) const {
+  assert(MI.getOperand(OpIdx).isReg());
 
-  // Check whether this MO belongs to an instruction with addressing mode 'k',
-  // Refer to TargetInstrInfo.h for more information about this function.
+  // Check whether this operand belongs to an instruction with addressing mode
+  // 'k', Refer to TargetInstrInfo.h for more information about this function.
 
-  const MachineInstr *MI = MO.getParent();
-  const unsigned NameIndices = M68kInstrNameIndices[MI->getOpcode()];
+  const unsigned NameIndices = M68kInstrNameIndices[MI.getOpcode()];
   StringRef InstrName(&M68kInstrNameData[NameIndices]);
-  const unsigned OperandNo = MO.getOperandNo();
 
   // If this machine operand is the 2nd operand, then check
   // whether the instruction has destination addressing mode 'k'.
-  if (OperandNo == 1)
+  if (OpIdx == 1)
     return Regex("[A-Z]+(8|16|32)k[a-z](_TC)?$").match(InstrName);
 
   // If this machine operand is the last one, then check
   // whether the instruction has source addressing mode 'k'.
-  if (OperandNo == MI->getNumExplicitOperands() - 1)
+  if (OpIdx == MI.getNumExplicitOperands() - 1)
     return Regex("[A-Z]+(8|16|32)[a-z]k(_TC)?$").match(InstrName);
 
   return false;
