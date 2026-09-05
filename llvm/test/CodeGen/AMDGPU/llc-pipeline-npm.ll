@@ -215,6 +215,7 @@
 ; GCN-O2-NEXT:   function
 ; GCN-O2-NEXT:     machine-function
 ; GCN-O2-NEXT:       reg-usage-propagation
+; GCN-O2-NEXT:       si-sink-async-dma
 ; GCN-O2-NEXT:       amdgpu-prepare-agpr-alloc
 ; GCN-O2-NEXT:       detect-dead-lanes
 ; GCN-O2-NEXT:       dead-mi-elimination
@@ -402,6 +403,7 @@
 ; GCN-O3-NEXT:   function
 ; GCN-O3-NEXT:     machine-function
 ; GCN-O3-NEXT:       reg-usage-propagation
+; GCN-O3-NEXT:       si-sink-async-dma
 ; GCN-O3-NEXT:       amdgpu-prepare-agpr-alloc
 ; GCN-O3-NEXT:       detect-dead-lanes
 ; GCN-O3-NEXT:       dead-mi-elimination

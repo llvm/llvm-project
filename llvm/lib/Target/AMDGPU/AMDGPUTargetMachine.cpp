@@ -67,6 +67,7 @@
 #include "SIPostRABundler.h"
 #include "SIPreAllocateWWMRegs.h"
 #include "SIShrinkInstructions.h"
+#include "SISinkAsyncDMA.h"
 #include "SIWholeQuadMode.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -737,6 +738,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIModeRegisterLegacyPass(*PR);
   initializeSIWholeQuadModeLegacyPass(*PR);
   initializeSILowerControlFlowLegacyPass(*PR);
+  initializeSISinkAsyncDMALegacyPass(*PR);
   initializeSIPreEmitPeepholeLegacyPass(*PR);
   initializeSILateBranchLoweringLegacyPass(*PR);
   initializeSIMemoryLegalizerLegacyPass(*PR);
@@ -1836,8 +1838,10 @@ void GCNPassConfig::addFastRegAlloc() {
 }
 
 void GCNPassConfig::addPreRegAlloc() {
-  if (getOptLevel() != CodeGenOptLevel::None)
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addPass(&SISinkAsyncDMALegacyID);
     addPass(&AMDGPUPrepareAGPRAllocLegacyID);
+  }
   if (getOptLevel() >= CodeGenOptLevel::Default && EnableMachinePipeliner)
     addPass(&MachinePipelinerID);
 }
@@ -2646,8 +2650,12 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
 }
 
 void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
-  if (getOptLevel() != CodeGenOptLevel::None)
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    // Still in SSA, which the PHI repair needs, and the last CFG change before
+    // SILowerControlFlow, which runs right after PHI elimination.
+    addMachineFunctionPass(SISinkAsyncDMAPass(), PMW);
     addMachineFunctionPass(AMDGPUPrepareAGPRAllocPass(), PMW);
+  }
 }
 
 Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
