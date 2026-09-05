@@ -514,6 +514,14 @@ the Itanium C++ ABI are covered.
 The declarations in a module unit which are not in the global module fragment
 have new linkage names.
 
+By default, Clang keeps internal-linkage functions from global module
+fragments in different named module units distinct and includes the
+module-unit owner in their mangled names. This is a practical, non-conforming
+strategy for C-style `static inline` functions in real-world headers. Specify
+`-fno-modules-unique-gmf-internal-linkage` to restore the ordinary
+internal-linkage identity and mangling. This behavior is independent of
+whether global module fragment ODR checking is enabled.
+
 For example,
 
 ```c++

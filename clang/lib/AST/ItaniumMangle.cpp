@@ -1109,9 +1109,40 @@ void CXXNameMangler::mangleNameWithAbiTags(
 }
 
 void CXXNameMangler::mangleModuleName(const NamedDecl *ND) {
-  if (ND->isExternallyVisible())
+  if (ND->isExternallyVisible()) {
     if (Module *M = ND->getOwningModuleForLinkage())
       mangleModuleNamePrefix(M->getPrimaryModuleInterfaceName());
+    return;
+  }
+
+  // FIXME: Giving a TU-local entity a module-qualified name is not
+  // standard-conforming. This is Clang's practical strategy for real-world
+  // headers; users can restore the ordinary internal-linkage mangling with
+  // -fno-modules-unique-gmf-internal-linkage.
+  if (!getASTContext().getLangOpts().ModulesUniqueGMFInternalLinkage)
+    return;
+
+  // A function with internal linkage in a global module fragment denotes a
+  // different entity in every module unit. When definitions from multiple
+  // imported units are emitted into one translation unit, their ordinary
+  // internal-linkage names would otherwise collide.
+  const auto *FD = dyn_cast<FunctionDecl>(ND);
+  Module *M = ND->getOwningModule();
+  if (!FD || FD->getFormalLinkage() != Linkage::Internal || !M ||
+      !M->isGlobalModule() || !M->Parent || !M->Parent->isNamedModuleUnit())
+    return;
+
+  M = M->Parent;
+  if (!M->isModulePartition()) {
+    mangleModuleNamePrefix(M->Name);
+    return;
+  }
+
+  auto [PrimaryName, PartitionName] = StringRef(M->Name).rsplit(':');
+  assert(!PrimaryName.empty() && !PartitionName.empty() &&
+         "invalid module partition name");
+  mangleModuleNamePrefix(PrimaryName);
+  mangleModuleNamePrefix(PartitionName, /*IsPartition=*/true);
 }
 
 // <module-name> ::= <module-subname>

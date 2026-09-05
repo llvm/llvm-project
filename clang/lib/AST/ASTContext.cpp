@@ -7802,6 +7802,16 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
   // functions, etc.
   if (const auto *FuncX = dyn_cast<FunctionDecl>(X)) {
     const auto *FuncY = cast<FunctionDecl>(Y);
+
+    // Internal-linkage functions in different global module fragments denote
+    // different entities, even if they otherwise have the same name and type.
+    if (getLangOpts().ModulesUniqueGMFInternalLinkage &&
+        FuncX->getFormalLinkage() == Linkage::Internal &&
+        FuncY->getFormalLinkage() == Linkage::Internal &&
+        FuncX->isFromGlobalModule() && FuncY->isFromGlobalModule() &&
+        FuncX->getOwningModule() != FuncY->getOwningModule())
+      return false;
+
     if (const auto *CtorX = dyn_cast<CXXConstructorDecl>(X)) {
       const auto *CtorY = cast<CXXConstructorDecl>(Y);
       if (CtorX->getInheritedConstructor() &&

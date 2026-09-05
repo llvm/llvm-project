@@ -4273,6 +4273,9 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
   // module fragment.
   CmdArgs.push_back("-fskip-odr-check-in-gmf");
 
+  Args.AddLastArg(CmdArgs, options::OPT_fmodules_unique_gmf_internal_linkage,
+                  options::OPT_fno_modules_unique_gmf_internal_linkage);
+
   if (Input.getType() == driver::types::TY_CXXModule ||
       Input.getType() == driver::types::TY_PP_CXXModule) {
     if (!Args.hasArg(options::OPT_fno_modules_reduced_bmi))

@@ -3732,6 +3732,17 @@ defm skip_odr_check_in_gmf : BoolOption<"f", "skip-odr-check-in-gmf",
           "Perform ODR checks for decls in the global module fragment.">>,
   Group<f_Group>;
 
+defm modules_unique_gmf_internal_linkage : BoolOption<"f",
+  "modules-unique-gmf-internal-linkage",
+  LangOpts<"ModulesUniqueGMFInternalLinkage">, DefaultTrue,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Use distinct internal-linkage identities for functions in global "
+          "module fragments.">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+          "Use ordinary internal-linkage identities for functions in global "
+          "module fragments.">>,
+  Group<f_Group>;
+
 defm modules_reduced_bmi : BoolOption<"f", "modules-reduced-bmi",
   FrontendOpts<"GenReducedBMI">, DefaultFalse,
   NegFlag<SetFalse>,
