@@ -262,7 +262,8 @@ void RTDECL(CUFDataTransferDescDesc)(Descriptor *dstDesc, Descriptor *srcDesc,
     dstDesc->Allocate(/*asyncObject=*/nullptr);
   }
   if ((srcDesc->rank() > 0) && (dstDesc->Elements() <= srcDesc->Elements()) &&
-      srcDesc->IsContiguous() && dstDesc->IsContiguous()) {
+      srcDesc->IsContiguous() && dstDesc->IsContiguous() &&
+      dstDesc->ElementBytes() == srcDesc->ElementBytes()) {
     // Special case when rhs is bigger than lhs and both are contiguous arrays.
     // In this case we do a simple ptr to ptr transfer with the size of lhs.
     // This is be allowed in the reference compiler and it avoids error
