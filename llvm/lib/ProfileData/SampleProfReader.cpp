@@ -40,6 +40,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 #include <memory>
 #include <system_error>
@@ -549,43 +550,57 @@ bool SampleProfileReaderText::hasFormat(const MemoryBuffer &Buffer) {
   return result;
 }
 
-template <typename T> ErrorOr<T> SampleProfileReaderBinary::readNumber() {
-  unsigned NumBytesRead = 0;
-  uint64_t Val = decodeULEB128(Data, &NumBytesRead);
+/// Emit a reader diagnostic for \p ProfError and return its error code.
+static std::error_code diagnoseReaderError(const SampleProfileReader &Reader,
+                                           sampleprof_error ProfError) {
+  std::error_code EC = ProfError;
+  Reader.reportError(0, EC.message());
+  return EC;
+}
 
-  if (Val > std::numeric_limits<T>::max()) {
-    std::error_code EC = sampleprof_error::malformed;
-    reportError(0, EC.message());
-    return EC;
-  } else if (Data + NumBytesRead > End) {
-    std::error_code EC = sampleprof_error::truncated;
-    reportError(0, EC.message());
-    return EC;
+template <typename T> ErrorOr<T> SampleProfileReaderBinary::readNumber() {
+  if (Data >= End)
+    return diagnoseReaderError(*this, sampleprof_error::truncated);
+
+  unsigned NumBytesRead = 0;
+  ULEB128DecodeError DecodeError = ULEB128DecodeError::None;
+  uint64_t Val = decodeULEB128(Data, &NumBytesRead, End, nullptr, &DecodeError);
+
+  // Preserve the distinction between incomplete input and an invalid value.
+  switch (DecodeError) {
+  case ULEB128DecodeError::None:
+    break;
+  case ULEB128DecodeError::UnexpectedEnd:
+    return diagnoseReaderError(*this, sampleprof_error::truncated);
+  case ULEB128DecodeError::TooBig:
+    return diagnoseReaderError(*this, sampleprof_error::malformed);
   }
+
+  if (Val > std::numeric_limits<T>::max())
+    return diagnoseReaderError(*this, sampleprof_error::malformed);
 
   Data += NumBytesRead;
   return static_cast<T>(Val);
 }
 
 ErrorOr<StringRef> SampleProfileReaderBinary::readString() {
-  StringRef Str(reinterpret_cast<const char *>(Data));
-  if (Data + Str.size() + 1 > End) {
-    std::error_code EC = sampleprof_error::truncated;
-    reportError(0, EC.message());
-    return EC;
-  }
+  if (Data >= End)
+    return diagnoseReaderError(*this, sampleprof_error::truncated);
 
-  Data += Str.size() + 1;
+  const auto *Terminator = static_cast<const uint8_t *>(
+      std::memchr(Data, 0, static_cast<size_t>(End - Data)));
+  if (!Terminator)
+    return diagnoseReaderError(*this, sampleprof_error::truncated);
+
+  StringRef Str(reinterpret_cast<const char *>(Data), Terminator - Data);
+  Data = Terminator + 1;
   return Str;
 }
 
 template <typename T>
 ErrorOr<T> SampleProfileReaderBinary::readUnencodedNumber() {
-  if (Data + sizeof(T) > End) {
-    std::error_code EC = sampleprof_error::truncated;
-    reportError(0, EC.message());
-    return EC;
-  }
+  if (Data > End || static_cast<size_t>(End - Data) < sizeof(T))
+    return diagnoseReaderError(*this, sampleprof_error::truncated);
 
   using namespace support;
   T Val = endian::readNext<T, llvm::endianness::little>(Data);
@@ -1857,18 +1872,23 @@ std::error_code SampleProfileReaderBinary::readSummary() {
   return sampleprof_error::success;
 }
 
-bool SampleProfileReaderRawBinary::hasFormat(const MemoryBuffer &Buffer) {
+/// Return whether Buffer starts with ExpectedMagic without reading beyond it.
+static bool hasBinaryFormat(const MemoryBuffer &Buffer,
+                            uint64_t ExpectedMagic) {
   const uint8_t *Data =
       reinterpret_cast<const uint8_t *>(Buffer.getBufferStart());
-  uint64_t Magic = decodeULEB128(Data);
-  return Magic == SPMagic();
+  const uint8_t *End = reinterpret_cast<const uint8_t *>(Buffer.getBufferEnd());
+  ULEB128DecodeError DecodeError = ULEB128DecodeError::None;
+  uint64_t Magic = decodeULEB128(Data, nullptr, End, nullptr, &DecodeError);
+  return DecodeError == ULEB128DecodeError::None && Magic == ExpectedMagic;
+}
+
+bool SampleProfileReaderRawBinary::hasFormat(const MemoryBuffer &Buffer) {
+  return hasBinaryFormat(Buffer, SPMagic());
 }
 
 bool SampleProfileReaderExtBinary::hasFormat(const MemoryBuffer &Buffer) {
-  const uint8_t *Data =
-      reinterpret_cast<const uint8_t *>(Buffer.getBufferStart());
-  uint64_t Magic = decodeULEB128(Data);
-  return Magic == SPMagic(SPF_Ext_Binary);
+  return hasBinaryFormat(Buffer, SPMagic(SPF_Ext_Binary));
 }
 
 std::error_code SampleProfileReaderGCC::skipNextWord() {
@@ -2112,8 +2132,10 @@ std::error_code SampleProfileReaderGCC::readImpl() {
 }
 
 bool SampleProfileReaderGCC::hasFormat(const MemoryBuffer &Buffer) {
-  StringRef Magic(Buffer.getBufferStart());
-  return Magic == "adcg*704";
+  StringRef Contents = Buffer.getBuffer();
+  // Preserve exact magic matching, including a magic-only eight-byte buffer.
+  return Contents.starts_with("adcg*704") &&
+         (Contents.size() == 8 || Contents[8] == '\0');
 }
 
 void SampleProfileReaderItaniumRemapper::applyRemapping(LLVMContext &Ctx) {

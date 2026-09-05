@@ -9,6 +9,7 @@
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
@@ -16,16 +17,30 @@
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/Support/Memory.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
+#include <algorithm>
+#include <memory>
 #include <string>
+#include <system_error>
 #include <vector>
+
+#if defined(_WIN32)
+#include "llvm/Support/Windows/WindowsSupport.h"
+#include "llvm/Support/WindowsError.h"
+#elif defined(LLVM_ON_UNIX) && !defined(__MVS__)
+#include <sys/mman.h>
+#endif
 
 using namespace llvm;
 using namespace sampleprof;
@@ -40,6 +55,115 @@ static ::testing::AssertionResult NoError(std::error_code EC) {
 }
 
 namespace {
+
+/// Expose string decoding for focused buffer-boundary tests.
+class StringDataTestReader final : public SampleProfileReaderRawBinary {
+public:
+  /// Construct a reader over the supplied test buffer.
+  StringDataTestReader(std::unique_ptr<MemoryBuffer> Buffer,
+                       LLVMContext &Context)
+      : SampleProfileReaderRawBinary(std::move(Buffer), Context) {}
+
+  /// Decode one string using the production binary-reader path.
+  ErrorOr<StringRef> readCString() {
+    Data = reinterpret_cast<const uint8_t *>(Buffer->getBufferStart());
+    End = reinterpret_cast<const uint8_t *>(Buffer->getBufferEnd());
+    return readString();
+  }
+
+  /// Decode one string with the cursor at the logical buffer end.
+  ErrorOr<StringRef> readCStringAtEnd() {
+    Data = reinterpret_cast<const uint8_t *>(Buffer->getBufferEnd());
+    End = Data;
+    return readString();
+  }
+
+  /// Return whether the decoder consumed the complete test buffer.
+  bool atEnd() const { return Data == End; }
+};
+
+/// Expose ExtBinary header reading for fixed-width number boundary tests.
+class ExtBinaryDataTestReader final : public SampleProfileReaderExtBinary {
+public:
+  /// Construct a reader over the supplied test buffer.
+  ExtBinaryDataTestReader(std::unique_ptr<MemoryBuffer> Buffer,
+                          LLVMContext &Context)
+      : SampleProfileReaderExtBinary(std::move(Buffer), Context) {}
+
+  /// Read the ExtBinary header using the production reader path.
+  std::error_code readProfileHeader() { return readHeader(); }
+};
+
+/// Create a non-owning MemoryBuffer view over \p Bytes.
+static std::unique_ptr<MemoryBuffer>
+createTestMemoryBuffer(ArrayRef<uint8_t> Bytes) {
+  return MemoryBuffer::getMemBuffer(
+      StringRef(reinterpret_cast<const char *>(Bytes.data()), Bytes.size()),
+      "binary-data", /*RequiresNullTerminator=*/false);
+}
+
+/// Own a buffer ending immediately before an inaccessible guard page.
+struct GuardedMemoryBuffer {
+  sys::OwningMemoryBlock Storage;
+  std::unique_ptr<MemoryBuffer> Buffer;
+};
+
+/// Return whether this host exposes an API for no-access memory pages.
+static constexpr bool guardPagesSupported() {
+#if defined(_WIN32) || (defined(LLVM_ON_UNIX) && !defined(__MVS__))
+  return true;
+#else
+  return false;
+#endif
+}
+
+/// Make \p GuardPage inaccessible so an out-of-bounds read faults immediately.
+static std::error_code protectGuardPage(sys::MemoryBlock GuardPage) {
+#if defined(_WIN32)
+  DWORD OldProtection;
+  if (!VirtualProtect(GuardPage.base(), GuardPage.allocatedSize(),
+                      PAGE_NOACCESS, &OldProtection))
+    return mapLastWindowsError();
+  return std::error_code();
+#elif defined(LLVM_ON_UNIX) && !defined(__MVS__)
+  if (::mprotect(GuardPage.base(), GuardPage.allocatedSize(), PROT_NONE))
+    return errnoAsErrorCode();
+  return std::error_code();
+#else
+  return std::make_error_code(std::errc::not_supported);
+#endif
+}
+
+/// Copy \p Bytes to the end of a readable page followed by a no-access page.
+static Expected<GuardedMemoryBuffer>
+createGuardedMemoryBuffer(ArrayRef<uint8_t> Bytes) {
+  auto PageSizeOrErr = sys::Process::getPageSize();
+  if (!PageSizeOrErr)
+    return PageSizeOrErr.takeError();
+  const size_t PageSize = *PageSizeOrErr;
+  if (Bytes.empty() || Bytes.size() > PageSize)
+    return createStringError(std::errc::invalid_argument,
+                             "test buffer must fit in one memory page");
+
+  std::error_code EC;
+  sys::MemoryBlock Allocation = sys::Memory::allocateMappedMemory(
+      2 * PageSize, nullptr, sys::Memory::MF_READ | sys::Memory::MF_WRITE, EC);
+  if (EC)
+    return errorCodeToError(EC);
+
+  sys::OwningMemoryBlock Storage(Allocation);
+  auto *GuardStart = static_cast<uint8_t *>(Allocation.base()) + PageSize;
+  sys::MemoryBlock GuardPage(GuardStart, PageSize);
+  EC = protectGuardPage(GuardPage);
+  if (EC)
+    return errorCodeToError(EC);
+
+  auto *BufferStart = GuardStart - Bytes.size();
+  std::copy(Bytes.begin(), Bytes.end(), BufferStart);
+  auto Buffer =
+      createTestMemoryBuffer(ArrayRef<uint8_t>(BufferStart, Bytes.size()));
+  return GuardedMemoryBuffer{std::move(Storage), std::move(Buffer)};
+}
 
 struct SampleProfTest : ::testing::Test {
   LLVMContext Context;
@@ -175,6 +299,46 @@ struct SampleProfTest : ::testing::Test {
     encodeULEB128(SPMagic(SPF_Ext_Binary), OS);
     encodeULEB128(Version, OS);
     return Buffer;
+  }
+
+  // Read a binary header through the production reader path.
+  std::error_code readBinaryHeaderFromBuffer(ArrayRef<uint8_t> Encoded) {
+    auto Buffer = createTestMemoryBuffer(Encoded);
+    SampleProfileReaderRawBinary TestReader(std::move(Buffer), Context);
+    return TestReader.readHeader();
+  }
+
+  // Decode one string through the production reader path.
+  std::error_code readStringErrorFromBuffer(ArrayRef<uint8_t> Encoded) {
+    auto Buffer = createTestMemoryBuffer(Encoded);
+    StringDataTestReader TestReader(std::move(Buffer), Context);
+    return TestReader.readCString().getError();
+  }
+
+  // Decode one string with the cursor at the supplied buffer's end.
+  std::error_code readStringAtEndError(ArrayRef<uint8_t> Encoded) {
+    auto Buffer = createTestMemoryBuffer(Encoded);
+    StringDataTestReader TestReader(std::move(Buffer), Context);
+    return TestReader.readCStringAtEnd().getError();
+  }
+
+  // Build an ExtBinary header whose section-count field is truncated mid-value.
+  SmallVector<uint8_t, 32> writeTruncatedExtBinarySecCount() {
+    SmallVector<char, 32> Header;
+    raw_svector_ostream OS(Header);
+    encodeULEB128(SPMagic(SPF_Ext_Binary), OS);
+    encodeULEB128(103, OS);
+    SmallVector<uint8_t, 32> Encoded(Header.begin(), Header.end());
+    // Four bytes are not enough for the fixed-width section-count uint64_t.
+    Encoded.append({1, 2, 3, 4});
+    return Encoded;
+  }
+
+  // Read an ExtBinary header through the production reader path.
+  std::error_code readExtBinaryHeaderFromBuffer(ArrayRef<uint8_t> Encoded) {
+    auto Buffer = createTestMemoryBuffer(Encoded);
+    ExtBinaryDataTestReader TestReader(std::move(Buffer), Context);
+    return TestReader.readProfileHeader();
   }
 
   // Read the profile from an in-memory buffer, verify its payload, and
@@ -478,6 +642,49 @@ struct SampleProfTest : ::testing::Test {
   }
 };
 
+/// Run buffer-boundary tests only where the host supports inaccessible pages.
+struct GuardedSampleProfTest : SampleProfTest {
+  /// Skip guard-page tests on hosts without the required memory protection.
+  void SetUp() override {
+    SampleProfTest::SetUp();
+    if (!guardPagesSupported())
+      GTEST_SKIP() << "guard pages are not supported on this host";
+  }
+
+  /// Read a binary header ending at a guard page.
+  Expected<std::error_code>
+  readBinaryHeaderFromGuardedBuffer(ArrayRef<uint8_t> Encoded) {
+    auto GuardedOrErr = createGuardedMemoryBuffer(Encoded);
+    if (!GuardedOrErr)
+      return GuardedOrErr.takeError();
+    GuardedMemoryBuffer Guarded = std::move(*GuardedOrErr);
+    SampleProfileReaderRawBinary TestReader(std::move(Guarded.Buffer), Context);
+    return TestReader.readHeader();
+  }
+
+  /// Decode one string ending at a guard page.
+  Expected<std::error_code>
+  readStringErrorFromGuardedBuffer(ArrayRef<uint8_t> Encoded) {
+    auto GuardedOrErr = createGuardedMemoryBuffer(Encoded);
+    if (!GuardedOrErr)
+      return GuardedOrErr.takeError();
+    GuardedMemoryBuffer Guarded = std::move(*GuardedOrErr);
+    StringDataTestReader TestReader(std::move(Guarded.Buffer), Context);
+    return TestReader.readCString().getError();
+  }
+
+  /// Read an ExtBinary header ending at a guard page.
+  Expected<std::error_code>
+  readExtBinaryHeaderFromGuardedBuffer(ArrayRef<uint8_t> Encoded) {
+    auto GuardedOrErr = createGuardedMemoryBuffer(Encoded);
+    if (!GuardedOrErr)
+      return GuardedOrErr.takeError();
+    GuardedMemoryBuffer Guarded = std::move(*GuardedOrErr);
+    ExtBinaryDataTestReader TestReader(std::move(Guarded.Buffer), Context);
+    return TestReader.readProfileHeader();
+  }
+};
+
 TEST_F(SampleProfTest, roundtrip_text_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Text, false, false);
 }
@@ -604,6 +811,125 @@ TEST(SampleProfSectionFlagTest, RejectsMismatchedSectionSpecificFlag) {
       "Misuse of a flag in an incompatible section");
 }
 #endif
+
+// Verify that a non-terminated ULEB is reported as truncated.
+TEST_F(SampleProfTest, TruncatedULEBIsTruncated) {
+  const uint8_t Encoded[] = {0x80};
+  EXPECT_EQ(readBinaryHeaderFromBuffer(Encoded), sampleprof_error::truncated);
+}
+
+// Verify that a non-terminated ULEB at a guard-page boundary does not read past
+// the supplied MemoryBuffer.
+TEST_F(GuardedSampleProfTest, TruncatedULEBDoesNotReadPastBufferEnd) {
+  const uint8_t Encoded[] = {0x80};
+  auto ECOrErr = readBinaryHeaderFromGuardedBuffer(Encoded);
+  ASSERT_THAT_EXPECTED(ECOrErr, Succeeded());
+  EXPECT_EQ(*ECOrErr, sampleprof_error::truncated);
+}
+
+// Verify that an in-bounds ULEB value exceeding uint64_t is malformed rather
+// than silently decoded as zero.
+TEST_F(SampleProfTest, OversizedULEBIsMalformed) {
+  SmallVector<uint8_t, 10> Encoded(10, 0xff);
+  EXPECT_EQ(readBinaryHeaderFromBuffer(Encoded), sampleprof_error::malformed);
+}
+
+// Verify that format detection rejects a truncated magic value.
+TEST_F(SampleProfTest, TruncatedMagicIsRejected) {
+  const uint8_t Encoded[] = {0x80};
+  auto Buffer = createTestMemoryBuffer(Encoded);
+  EXPECT_FALSE(SampleProfileReaderRawBinary::hasFormat(*Buffer));
+  EXPECT_FALSE(SampleProfileReaderExtBinary::hasFormat(*Buffer));
+}
+
+// Verify that format detection rejects a truncated magic without reading into
+// the guard page beyond the supplied MemoryBuffer.
+TEST_F(GuardedSampleProfTest, TruncatedMagicDoesNotReadPastBufferEnd) {
+  const uint8_t Encoded[] = {0x80};
+  auto GuardedOrErr = createGuardedMemoryBuffer(Encoded);
+  ASSERT_THAT_EXPECTED(GuardedOrErr, Succeeded());
+  GuardedMemoryBuffer Guarded = std::move(*GuardedOrErr);
+  EXPECT_FALSE(SampleProfileReaderRawBinary::hasFormat(*Guarded.Buffer));
+  EXPECT_FALSE(SampleProfileReaderExtBinary::hasFormat(*Guarded.Buffer));
+}
+
+// Verify all accepted and rejected forms of the GCC format magic.
+TEST_F(SampleProfTest, GCCMagicDetection) {
+  const uint8_t Truncated[] = {'a'};
+  auto ShortBuffer = createTestMemoryBuffer(Truncated);
+  EXPECT_FALSE(SampleProfileReaderGCC::hasFormat(*ShortBuffer));
+
+  const uint8_t MagicOnly[] = {'a', 'd', 'c', 'g', '*', '7', '0', '4'};
+  auto MagicOnlyBuffer = createTestMemoryBuffer(MagicOnly);
+  EXPECT_TRUE(SampleProfileReaderGCC::hasFormat(*MagicOnlyBuffer));
+
+  const uint8_t Magic[] = {'a', 'd', 'c', 'g', '*', '7', '0', '4', 0};
+  auto MagicBuffer = createTestMemoryBuffer(Magic);
+  EXPECT_TRUE(SampleProfileReaderGCC::hasFormat(*MagicBuffer));
+
+  const uint8_t NonTerminated[] = {'a', 'd', 'c', 'g', '*', '7', '0', '4', 'x'};
+  auto NonTerminatedBuffer = createTestMemoryBuffer(NonTerminated);
+  EXPECT_FALSE(SampleProfileReaderGCC::hasFormat(*NonTerminatedBuffer));
+}
+
+// Verify that GCC magic detection does not read beyond a magic-only buffer.
+TEST_F(GuardedSampleProfTest, GCCMagicDoesNotReadPastBufferEnd) {
+  const uint8_t MagicOnly[] = {'a', 'd', 'c', 'g', '*', '7', '0', '4'};
+  auto GuardedOrErr = createGuardedMemoryBuffer(MagicOnly);
+  ASSERT_THAT_EXPECTED(GuardedOrErr, Succeeded());
+  GuardedMemoryBuffer Guarded = std::move(*GuardedOrErr);
+  EXPECT_TRUE(SampleProfileReaderGCC::hasFormat(*Guarded.Buffer));
+}
+
+// Verify that an unterminated string is reported as truncated.
+TEST_F(SampleProfTest, UnterminatedStringIsTruncated) {
+  const uint8_t Encoded[] = {'n', 'o'};
+  EXPECT_EQ(readStringErrorFromBuffer(Encoded), sampleprof_error::truncated);
+}
+
+// Verify that an unterminated string does not search into the guard page beyond
+// the supplied MemoryBuffer.
+TEST_F(GuardedSampleProfTest, UnterminatedStringDoesNotReadPastBufferEnd) {
+  const uint8_t Encoded[] = {'n', 'o'};
+  auto ECOrErr = readStringErrorFromGuardedBuffer(Encoded);
+  ASSERT_THAT_EXPECTED(ECOrErr, Succeeded());
+  EXPECT_EQ(*ECOrErr, sampleprof_error::truncated);
+}
+
+// Verify that readString accepts a terminator in the final buffer byte and
+// advances the input cursor exactly to End.
+TEST_F(SampleProfTest, ValidStringEndsAtBufferEnd) {
+  const uint8_t Encoded[] = {'o', 'k', 0};
+  auto Buffer = createTestMemoryBuffer(Encoded);
+  StringDataTestReader TestReader(std::move(Buffer), Context);
+
+  auto StringOrErr = TestReader.readCString();
+  ASSERT_TRUE(NoError(StringOrErr.getError()));
+  EXPECT_EQ(*StringOrErr, "ok");
+  EXPECT_TRUE(TestReader.atEnd());
+}
+
+// Verify that string decoding rejects a cursor already at the buffer end.
+TEST_F(SampleProfTest, StringReaderAtEndIsTruncated) {
+  const uint8_t Data[] = {0};
+  EXPECT_EQ(readStringAtEndError(Data), sampleprof_error::truncated);
+}
+
+// Verify that a short fixed-width ExtBinary section count is truncated.
+TEST_F(SampleProfTest, ShortUnencodedNumberIsTruncated) {
+  auto Encoded = writeTruncatedExtBinarySecCount();
+  EXPECT_EQ(readExtBinaryHeaderFromBuffer(Encoded),
+            sampleprof_error::truncated);
+}
+
+// Verify that a short fixed-width ExtBinary section count does not read into
+// the guard page.
+TEST_F(GuardedSampleProfTest, ShortUnencodedNumberDoesNotReadPastBufferEnd) {
+  auto Encoded = writeTruncatedExtBinarySecCount();
+  auto ECOrErr = readExtBinaryHeaderFromGuardedBuffer(Encoded);
+  ASSERT_THAT_EXPECTED(ECOrErr, Succeeded());
+  EXPECT_EQ(*ECOrErr, sampleprof_error::truncated);
+}
 
 // Verify that requesting format version 103 results in a version 103 profile.
 TEST_F(SampleProfTest, SampleProfileFormatVersion103) {
