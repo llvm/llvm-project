@@ -2,7 +2,7 @@
 
 ; CHECK-LABEL:  uses_rax:
 ; CHECK:        .Limpcall0:
-; CHECK-NEXT:     jmpq    *%rax
+; CHECK-NEXT:     jmpq    *%rcx
 
 define void @uses_rax(i32 %x) {
 entry:
@@ -74,7 +74,7 @@ declare void @g(i32)
 ; CHECK-NEXT:   .asciz  "RetpolineV1"
 ; CHECK-NEXT:   .long   24
 ; CHECK-NEXT:   .secnum .text
-; CHECK-NEXT:   .long   16
+; CHECK-NEXT:   .long   17
 ; CHECK-NEXT:   .secoffset      .Limpcall0
 ; CHECK-NEXT:   .long   17
 ; CHECK-NEXT:   .secoffset      .Limpcall1
