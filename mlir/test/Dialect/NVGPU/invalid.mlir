@@ -465,3 +465,59 @@ func.func @warpgroup_mma_store_mismatched_shape(
       to memref<64x64xf32, 3>
   return
 }
+
+// -----
+
+!tResult = !nvgpu.warpgroup.accumulator<fragmented = vector<128x128xf32>>
+!tDescA  = !nvgpu.warpgroup.descriptor<tensor = memref<128x64xf16, 3>>
+!tDescB  = !nvgpu.warpgroup.descriptor<tensor = memref<64x128xf16, 3>>
+func.func @warpgroup_mma_transpose_a(%descA: !tDescA, %descB: !tDescB, %acc: !tResult) {
+  // expected-error @+1 {{supports non-transpose A (Row Major) and transpose B (Column Major) for the time being}}
+  %0 = nvgpu.warpgroup.mma %descA, %descB, %acc {transposeA}: !tDescA, !tDescB, !tResult -> !tResult
+  return
+}
+
+// -----
+
+!tResultC = !nvgpu.warpgroup.accumulator<fragmented = vector<128x128xf32>>
+!tResultD = !nvgpu.warpgroup.accumulator<fragmented = vector<64x128xf32>>
+!tDescA  = !nvgpu.warpgroup.descriptor<tensor = memref<128x64xf16, 3>>
+!tDescB  = !nvgpu.warpgroup.descriptor<tensor = memref<64x128xf16, 3>>
+func.func @warpgroup_mma_mismatched_c_d(%descA: !tDescA, %descB: !tDescB, %acc: !tResultC) {
+  // expected-error @+1 {{type of matrix C and matrix D must be the same}}
+  %0 = nvgpu.warpgroup.mma %descA, %descB, %acc: !tDescA, !tDescB, !tResultC -> !tResultD
+  return
+}
+
+// -----
+
+!tResult = !nvgpu.warpgroup.accumulator<fragmented = vector<128x128xf32>>
+!tDescA  = !nvgpu.warpgroup.descriptor<tensor = memref<128x64xf16, 3>>
+!tDescB  = !nvgpu.warpgroup.descriptor<tensor = memref<63x128xf16, 3>>
+func.func @warpgroup_mma_mismatched_contracting_dim(%descA: !tDescA, %descB: !tDescB, %acc: !tResult) {
+  // expected-error @+1 {{2nd dim matrix-A (64)!= 1st dim matrix-B (63 )}}
+  %0 = nvgpu.warpgroup.mma %descA, %descB, %acc: !tDescA, !tDescB, !tResult -> !tResult
+  return
+}
+
+// -----
+
+!tResult = !nvgpu.warpgroup.accumulator<fragmented = vector<128x128xf32>>
+!tDescA  = !nvgpu.warpgroup.descriptor<tensor = memref<64x64xf16, 3>>
+!tDescB  = !nvgpu.warpgroup.descriptor<tensor = memref<64x128xf16, 3>>
+func.func @warpgroup_mma_mismatched_m_dim(%descA: !tDescA, %descB: !tDescB, %acc: !tResult) {
+  // expected-error @+1 {{1st dim matrix-A ( 64 )!= 1st dim matrix-C ( 128 )}}
+  %0 = nvgpu.warpgroup.mma %descA, %descB, %acc: !tDescA, !tDescB, !tResult -> !tResult
+  return
+}
+
+// -----
+
+!tResult = !nvgpu.warpgroup.accumulator<fragmented = vector<128x121xf32>>
+!tDescA  = !nvgpu.warpgroup.descriptor<tensor = memref<128x64xf16, 3>>
+!tDescB  = !nvgpu.warpgroup.descriptor<tensor = memref<64x121xf16, 3>>
+func.func @warpgroup_mma_unsupported_n(%descA: !tDescA, %descB: !tDescB, %acc: !tResult) {
+  // expected-error @+1 {{n is set to 121, it is not supported}}
+  %0 = nvgpu.warpgroup.mma %descA, %descB, %acc: !tDescA, !tDescB, !tResult -> !tResult
+  return
+}
