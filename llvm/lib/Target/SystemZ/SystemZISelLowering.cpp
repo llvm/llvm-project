@@ -2152,6 +2152,17 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
           assert(PartOffset && "Offset should be non-zero.");
         }
       }
+    } else if (Subtarget.isTargetXPLINK64() &&
+               (VA.getLocInfo() == CCValAssign::SExt ||
+                VA.getLocInfo() == CCValAssign::ZExt) &&
+               Ins[I].ArgVT.isSimple() &&
+               !Ins[I].Flags.isPointer()) {
+      // Some prior z/OS compilers do not always perform the extension of
+      // short integer arguments.  To accommodate those, do not rely on
+      // that extension by avoiding any AssertSext/AssertZext nodes by
+      // directly truncating ArgValue to the original argument type.
+      MVT OrigVT = Ins[I].ArgVT.getSimpleVT();
+      InVals.push_back(DAG.getNode(ISD::TRUNCATE, DL, OrigVT, ArgValue));
     } else
       InVals.push_back(convertLocVTToValVT(DAG, DL, VA, Chain, ArgValue));
   }
