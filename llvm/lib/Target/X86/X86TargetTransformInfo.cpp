@@ -5548,9 +5548,23 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
       // Sandybridge.
       // Sub-32-bit loads/stores will be slower either with PINSR*/PEXTR* or
       // will be scalarized.
+      //
+      // For a vector load, each non-0th 1/2/4-byte in-lane remainder chunk is
+      // materialized by a *single* folded PINSR*(mem) that both loads and
+      // inserts the lane (1B->PINSRB, 2B->PINSRW, 4B->PINSRD; the byte and
+      // dword folds need SSE4.1, the word fold only SSE2).
+      // When that fold is available the chunk is one instruction, so it must be
+      // priced once here (as a plain load) and the separate lane-insert charge
+      // below must be skipped - otherwise the folded insert is double-counted.
+      // Stores (the symmetric PEXTR*(mem) fold) are left unchanged here.
+      bool Is0thSubVec = (NumEltDone() % LT.second.getVectorNumElements()) == 0;
+      bool FoldedInLaneInsert = IsLoad && !Is0thSubVec &&
+                                ((CurrOpSizeBytes == 1 && ST->hasSSE41()) ||
+                                 (CurrOpSizeBytes == 2 && ST->hasSSE2()) ||
+                                 (CurrOpSizeBytes == 4 && ST->hasSSE41()));
       if (CurrOpSizeBytes == 32 && ST->isUnalignedMem32Slow())
         Cost += 2;
-      else if (CurrOpSizeBytes < 4)
+      else if (CurrOpSizeBytes < 4 && !FoldedInLaneInsert)
         Cost += 2;
       else
         Cost += 1;
@@ -5559,8 +5573,6 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
       // loading just a single (widest) vector can be reused by all splits.
       if (IsLoad && OpInfo.isUniform())
         return Cost;
-
-      bool Is0thSubVec = (NumEltDone() % LT.second.getVectorNumElements()) == 0;
 
       // If we have fully processed the previous reg, we need to replenish it.
       if (SubVecEltsLeft == 0) {
@@ -5577,7 +5589,7 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
       // for smaller widths (32/16/8) we have to insert/extract them separately.
       // Again, it's free for the 0'th subreg (if op is 32/64 bit wide,
       // but let's pretend that it is also true for 16/8 bit wide ops...)
-      if (CurrOpSizeBytes <= 32 / 8 && !Is0thSubVec) {
+      if (CurrOpSizeBytes <= 32 / 8 && !Is0thSubVec && !FoldedInLaneInsert) {
         int NumEltDoneInCurrXMM = NumEltDone() % NumEltPerXMM;
         assert(NumEltDoneInCurrXMM % CurrNumEltPerOp == 0 && "");
         int CoalescedVecEltIdx = NumEltDoneInCurrXMM / CurrNumEltPerOp;
