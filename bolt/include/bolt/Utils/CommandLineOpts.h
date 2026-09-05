@@ -107,6 +107,7 @@ extern llvm::cl::opt<bool> HotData;
 extern llvm::cl::opt<bool> HotFunctionsAtEnd;
 extern llvm::cl::opt<bool> HotText;
 extern llvm::cl::opt<bool> Hugify;
+extern llvm::cl::opt<bool> HugifyAllText;
 extern llvm::cl::opt<bool> Instrument;
 extern llvm::cl::opt<std::string> OutputFilename;
 extern llvm::cl::list<std::string> PerfData;
