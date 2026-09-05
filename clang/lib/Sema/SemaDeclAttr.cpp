@@ -1809,7 +1809,8 @@ static void handleAliasAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     }
   } else {
     const auto *VD = cast<VarDecl>(D);
-    if (VD->isThisDeclarationADefinition() && VD->isExternallyVisible()) {
+    if (VD->isThisDeclarationADefinition() &&
+        isExternallyVisible(VD->computeLinkageInternal())) {
       S.Diag(AL.getLoc(), diag::err_alias_is_definition) << VD << 0;
       return;
     }
