@@ -374,12 +374,6 @@ public:
   /// is not valid to replace the loop header with this method.
   void addBasicBlockToLoop(BlockT *NewBB, LoopInfoBase<BlockT, LoopT> &LI);
 
-  /// This is used when splitting loops up. It replaces the OldChild entry in
-  /// our children list with NewChild, and updates the parent pointer of
-  /// OldChild to be null and the NewChild to be this loop.
-  /// This updates the loop depth of the new child.
-  void replaceChildLoopWith(LoopT *OldChild, LoopT *NewChild);
-
   /// Add the specified loop to be a child of this loop.
   /// This updates the loop depth of the new child.
   void addChildLoop(LoopT *NewChild) {
@@ -801,14 +795,17 @@ public:
     BBMap[Number] = L;
   }
 
-  /// Replace the specified loop in the top-level loops list with the indicated
-  /// loop.
-  void changeTopLevelLoop(LoopT *OldLoop, LoopT *NewLoop) {
-    auto I = find(TopLevelLoops, OldLoop);
-    assert(I != TopLevelLoops.end() && "Old loop not at top level!");
-    *I = NewLoop;
-    assert(!NewLoop->ParentLoop && !OldLoop->ParentLoop &&
-           "Loops already embedded into a subloop!");
+  /// Replace a loop among its siblings (a parent loop's child list or the
+  /// top-level list) with a new loop.
+  void replaceLoop(LoopT *Old, LoopT *New) {
+    assert(!New->ParentLoop && "New loop already has a parent!");
+    LoopT *Parent = Old->ParentLoop;
+    auto &Siblings = Parent ? Parent->SubLoops : TopLevelLoops;
+    auto I = find(Siblings, Old);
+    assert(I != Siblings.end() && "Old loop is not among its siblings!");
+    *I = New;
+    Old->ParentLoop = nullptr;
+    New->ParentLoop = Parent;
   }
 
   /// This adds the specified loop to the collection of top-level loops.
