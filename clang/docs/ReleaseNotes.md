@@ -642,6 +642,11 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when a coroutine keyword appeared inside a mem-initializer on a
   function that is not a constructor. (#GH194298)
 
+- Fixed a bogus "deduced type depends on itself" error when a variable template
+  specialization with a deduced type was first named in a context that did not
+  require its definition (such as ``decltype``) and then referenced again;
+  Clang now instantiates the definition to deduce the type instead. (#GH214477)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
