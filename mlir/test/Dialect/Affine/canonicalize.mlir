@@ -1522,6 +1522,23 @@ func.func @delinearize_dont_fold_constant_dynamic_basis(%arg0: index) -> (index,
 
 // -----
 
+// A dynamic basis operand that folds to a non-positive constant (zero or
+// negative) must not be folded into the static basis: doing so would create a
+// statically non-positive basis (rejected by the verifier) and crash the
+// constant folding. The op must stay unfolded.
+// CHECK-LABEL: @delinearize_dont_fold_non_positive_basis
+// CHECK-DAG: %[[C0:.+]] = arith.constant 0 : index
+// CHECK-DAG: %[[CNEG:.+]] = arith.constant -3 : index
+// CHECK: affine.delinearize_index %{{.*}} into (4, %[[C0]], %[[CNEG]])
+func.func @delinearize_dont_fold_non_positive_basis(%idx: index) -> (index, index, index) {
+  %c0 = arith.constant 0 : index
+  %cneg = arith.constant -3 : index
+  %0:3 = affine.delinearize_index %idx into (4, %c0, %cneg) : index, index, index
+  return %0#0, %0#1, %0#2 : index, index, index
+}
+
+// -----
+
 func.func @drop_unit_basis_in_delinearize(%arg0 : index, %arg1 : index, %arg2 : index) ->
     (index, index, index, index, index, index) {
   %c1 = arith.constant 1 : index
@@ -1651,6 +1668,20 @@ func.func @linearize_fold_constants_no_outer_bound() -> index {
   %c1 = arith.constant 1 : index
 
   %ret = affine.linearize_index [%c1, %c1, %c2] by (3, 5) : index
+  return %ret : index
+}
+
+// -----
+
+// Folding a dynamic basis operand to a constant must not disturb a pre-existing
+// statically non-positive basis element (which the linearize_index verifier
+// permits, unlike delinearize_index). Promoting the static 0 to a kDynamic
+// marker without a matching dynamic operand previously crashed the fold.
+// CHECK-LABEL: @linearize_fold_dynamic_keeps_static_non_positive_basis
+// CHECK: affine.linearize_index {{.*}} by (4, 0, 8)
+func.func @linearize_fold_dynamic_keeps_static_non_positive_basis(%i0: index, %i1: index, %i2: index) -> index {
+  %c8 = arith.constant 8 : index
+  %ret = affine.linearize_index [%i0, %i1, %i2] by (4, 0, %c8) : index
   return %ret : index
 }
 
