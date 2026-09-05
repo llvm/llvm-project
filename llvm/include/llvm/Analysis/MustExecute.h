@@ -38,6 +38,7 @@ template <typename T> using GetterTy = std::function<T *(const Function &F)>;
 
 class BasicBlock;
 class DominatorTree;
+class Function;
 class Loop;
 class LoopInfo;
 class PostDominatorTree;
@@ -59,18 +60,31 @@ class raw_ostream;
 /// methods except for computeLoopSafetyInfo is undefined.
 class LoopSafetyInfo {
   // Used to update funclet bundle operands.
-  DenseMap<BasicBlock *, ColorVector> BlockColors;
+  mutable DenseMap<BasicBlock *, ColorVector> BlockColors;
 
   // Cache whether (the start of) this block is guaranteed to execute if the
   // loop is entered.
   mutable DenseMap<const BasicBlock *, bool> GuaranteedToExecute;
 
+  // The function containing the last loop passed to computeLoopSafetyInfo.
+  // BlockColors is computed lazily on first use via getBlockColors(), so
+  // querying the map stays free for passes that never perform a
+  // color-dependent transformation.
+  Function *ColoredFunc = nullptr;
+  // Whether an attempt to compute BlockColors has already been made.
+  mutable bool BlockColorsComputed = false;
+
 protected:
-  /// Computes block colors.
-  LLVM_ABI void computeBlockColors(const Loop *CurLoop);
+  /// Records the function containing \p CurLoop for lazy funclet color
+  /// computation. The colors themselves are computed by getBlockColors() on
+  /// first use.
+  LLVM_ABI void recordColoringFunction(const Loop *CurLoop);
 
 public:
   /// Returns block colors map that is used to update funclet operand bundles.
+  /// The map is computed on first use; callers should avoid querying it
+  /// speculatively (e.g. while inspecting ordinary instructions) because
+  /// computing it walks the entire function.
   LLVM_ABI const DenseMap<BasicBlock *, ColorVector> &getBlockColors() const;
 
   /// Copy colors of block \p Old into the block \p New.
