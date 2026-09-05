@@ -303,6 +303,81 @@ define <2 x i32> @sdiv_v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i1> %m) {
 }
 
 ; Promotion
+define <8 x i8> @sdiv_v8i8(<8 x i8> %x, <8 x i8> %y, <8 x i1> %m) {
+; SSE2-LABEL: sdiv_v8i8:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
+; SSE2-NEXT:    psrad $24, %xmm2
+; SSE2-NEXT:    cvtdq2ps %xmm2, %xmm2
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
+; SSE2-NEXT:    psrad $24, %xmm3
+; SSE2-NEXT:    cvtdq2ps %xmm3, %xmm3
+; SSE2-NEXT:    divps %xmm2, %xmm3
+; SSE2-NEXT:    cvttps2dq %xmm3, %xmm2
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
+; SSE2-NEXT:    psrad $24, %xmm1
+; SSE2-NEXT:    cvtdq2ps %xmm1, %xmm1
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; SSE2-NEXT:    psrad $24, %xmm0
+; SSE2-NEXT:    cvtdq2ps %xmm0, %xmm0
+; SSE2-NEXT:    divps %xmm1, %xmm0
+; SSE2-NEXT:    cvttps2dq %xmm0, %xmm0
+; SSE2-NEXT:    packssdw %xmm2, %xmm0
+; SSE2-NEXT:    packsswb %xmm0, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: sdiv_v8i8:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pmovsxbd %xmm1, %xmm2
+; SSE42-NEXT:    cvtdq2ps %xmm2, %xmm2
+; SSE42-NEXT:    pmovsxbd %xmm0, %xmm3
+; SSE42-NEXT:    cvtdq2ps %xmm3, %xmm3
+; SSE42-NEXT:    divps %xmm2, %xmm3
+; SSE42-NEXT:    cvttps2dq %xmm3, %xmm2
+; SSE42-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; SSE42-NEXT:    pmovsxbd %xmm1, %xmm1
+; SSE42-NEXT:    cvtdq2ps %xmm1, %xmm1
+; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; SSE42-NEXT:    pmovsxbd %xmm0, %xmm0
+; SSE42-NEXT:    cvtdq2ps %xmm0, %xmm0
+; SSE42-NEXT:    divps %xmm1, %xmm0
+; SSE42-NEXT:    cvttps2dq %xmm0, %xmm0
+; SSE42-NEXT:    packssdw %xmm0, %xmm2
+; SSE42-NEXT:    packsswb %xmm2, %xmm2
+; SSE42-NEXT:    movdqa %xmm2, %xmm0
+; SSE42-NEXT:    retq
+;
+; AVX2-LABEL: sdiv_v8i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpmovsxbd %xmm1, %ymm1
+; AVX2-NEXT:    vcvtdq2ps %ymm1, %ymm1
+; AVX2-NEXT:    vpmovsxbd %xmm0, %ymm0
+; AVX2-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; AVX2-NEXT:    vdivps %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vcvttps2dq %ymm0, %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: sdiv_v8i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbd %xmm1, %ymm1
+; AVX512-NEXT:    vcvtdq2ps %ymm1, %ymm1
+; AVX512-NEXT:    vpmovsxbd %xmm0, %ymm0
+; AVX512-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; AVX512-NEXT:    vdivps %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vcvttps2dq %ymm0, %ymm0
+; AVX512-NEXT:    vpmovdb %ymm0, %xmm0
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %res = call <8 x i8> @llvm.masked.sdiv(<8 x i8> %x, <8 x i8> %y, <8 x i1> %m)
+  ret <8 x i8> %res
+}
+
 define <4 x i16> @sdiv_v4i16(<4 x i16> %x, <4 x i16> %y, <4 x i1> %m) {
 ; SSE2-LABEL: sdiv_v4i16:
 ; SSE2:       # %bb.0:
