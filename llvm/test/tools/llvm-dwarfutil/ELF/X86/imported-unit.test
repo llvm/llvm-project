@@ -1,0 +1,457 @@
+## DW_AT_import must hold the .debug_info offset of the referenced unit's root
+## DIE. The classic linker rewrote it to that unit's header offset instead,
+## short of the root by the size of the header, leaving every
+## DW_TAG_imported_unit in the output pointing between DIEs.
+##
+## Both reference directions are covered in every document. U01 imports U02,
+## which is cloned after it, and U03 imports U02, which is cloned before it. A
+## single capture pins both against U02's root, so neither direction can be
+## satisfied alone.
+##
+## The defect does not depend on the imported unit's root tag, so the three
+## documents hold one set of expectations. They differ in U02's root tag, in
+## the DWARF version, and in whether U02's root carries DW_AT_low_pc, which a
+## DW_TAG_partial_unit root cannot. U02 carries code in all three. The DWARFv4
+## document also has no .debug_str_offsets and no DW_AT_str_offsets_base,
+## which DWARFv4 has no use for.
+
+## DWARFv5 with DW_TAG_compile_unit roots, through both linkers, under garbage
+## collection and in update mode.
+# RUN: yaml2obj --docnum=1 %s -o %t1.o
+
+# RUN: llvm-dwarfutil %t1.o %t1.classic
+# RUN: llvm-dwarfdump --debug-info %t1.classic | FileCheck %s -DU02TAG=compile_unit
+# RUN: llvm-dwarfdump --verify %t1.classic
+
+# RUN: llvm-dwarfutil --no-garbage-collection --build-accelerator=DWARF %t1.o %t1.classic.upd
+# RUN: llvm-dwarfdump --debug-info %t1.classic.upd | FileCheck %s -DU02TAG=compile_unit
+# RUN: llvm-dwarfdump --verify %t1.classic.upd
+
+# RUN: llvm-dwarfutil --linker parallel %t1.o %t1.parallel
+# RUN: llvm-dwarfdump --debug-info %t1.parallel | FileCheck %s -DU02TAG=compile_unit
+# RUN: llvm-dwarfdump --verify %t1.parallel
+
+# RUN: llvm-dwarfutil --linker parallel --no-garbage-collection --build-accelerator=DWARF %t1.o %t1.parallel.upd
+# RUN: llvm-dwarfdump --debug-info %t1.parallel.upd | FileCheck %s -DU02TAG=compile_unit
+# RUN: llvm-dwarfdump --verify %t1.parallel.upd
+
+## DWARFv4, whose unit header is eleven bytes where DWARFv5's is twelve, so an
+## offset derived from a hardcoded header size does not survive this document.
+# RUN: yaml2obj --docnum=2 %s -o %t2.o
+
+# RUN: llvm-dwarfutil %t2.o %t2.classic
+# RUN: llvm-dwarfdump --debug-info %t2.classic | FileCheck %s -DU02TAG=compile_unit
+# RUN: llvm-dwarfdump --verify %t2.classic
+
+# RUN: llvm-dwarfutil --linker parallel %t2.o %t2.parallel
+# RUN: llvm-dwarfdump --debug-info %t2.parallel | FileCheck %s -DU02TAG=compile_unit
+# RUN: llvm-dwarfdump --verify %t2.parallel
+
+## The dwz shape: the imported unit is a DW_TAG_partial_unit, which is what dwz
+## produces. Its root carries no code, so it has no DW_AT_low_pc.
+# RUN: yaml2obj --docnum=3 %s -o %t3.o
+
+# RUN: llvm-dwarfutil %t3.o %t3.classic
+# RUN: llvm-dwarfdump --debug-info %t3.classic | FileCheck %s -DU02TAG=partial_unit
+# RUN: llvm-dwarfdump --verify %t3.classic
+
+# RUN: llvm-dwarfutil --linker parallel %t3.o %t3.parallel
+# RUN: llvm-dwarfdump --debug-info %t3.parallel | FileCheck %s -DU02TAG=partial_unit
+# RUN: llvm-dwarfdump --verify %t3.parallel
+
+## Update mode runs without --verify: it builds .debug_names, and the verifier
+## demands an index entry for a named DW_TAG_partial_unit root where it excuses
+## a DW_TAG_compile_unit one.
+# RUN: llvm-dwarfutil --no-garbage-collection --build-accelerator=DWARF %t3.o %t3.classic.upd
+# RUN: llvm-dwarfdump --debug-info %t3.classic.upd | FileCheck %s -DU02TAG=partial_unit
+
+# RUN: llvm-dwarfutil --linker parallel --no-garbage-collection --build-accelerator=DWARF %t3.o %t3.parallel.upd
+# RUN: llvm-dwarfdump --debug-info %t3.parallel.upd | FileCheck %s -DU02TAG=partial_unit
+
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_name{{.*}}"U01"
+
+## Forward reference: U02 has not been cloned yet when this is emitted.
+# CHECK: DW_TAG_imported_unit
+# CHECK-NEXT: DW_AT_import{{.*}}(0x00000000[[U02ROOT:[0-9a-f]{8}]] "U02")
+
+# CHECK: 0x[[U02ROOT]]: DW_TAG_[[U02TAG]]
+# CHECK: DW_AT_name{{.*}}"U02"
+
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_name{{.*}}"U03"
+
+## Backward reference: U02 already carries an output DIE at this point.
+# CHECK: DW_TAG_imported_unit
+# CHECK-NEXT: DW_AT_import{{.*}}(0x00000000[[U02ROOT]] "U02")
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x30
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "0400000005000000"
+DWARF:
+  debug_abbrev:
+    - ID:    0
+      Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_imported_unit
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_import
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U01
+            - Value: 0x04
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x8
+        - AbbrCode: 3
+          Values:
+            - Value: 0x57
+        - AbbrCode: 2
+          Values:
+            - CStr: foo1
+            - Value: 0x1130
+            - Value: 0x10
+        - AbbrCode: 0
+    - Version:  5
+      UnitType: DW_UT_compile
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U02
+            - Value: 0x04
+            - Value: 0x1140
+            - Value: 0x10
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: foo2
+            - Value: 0x1140
+            - Value: 0x10
+        - AbbrCode: 4
+          Values:
+            - CStr: ns
+        - AbbrCode: 5
+          Values:
+            - CStr: S
+            - Value: 0x8
+        - AbbrCode: 0
+        - AbbrCode: 0
+    - Version:  5
+      UnitType: DW_UT_compile
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U03
+            - Value: 0x04
+            - Value: 0x1150
+            - Value: 0x10
+            - Value: 0x8
+        - AbbrCode: 3
+          Values:
+            - Value: 0x57
+        - AbbrCode: 2
+          Values:
+            - CStr: foo3
+            - Value: 0x1150
+            - Value: 0x10
+        - AbbrCode: 0
+...
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x30
+DWARF:
+  debug_abbrev:
+    - ID:    0
+      Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_imported_unit
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_import
+            Form:      DW_FORM_ref_addr
+  debug_info:
+    - Version:  4
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U01
+            - Value: 0x04
+            - Value: 0x1130
+            - Value: 0x10
+        - AbbrCode: 3
+          Values:
+            - Value: 0x51
+        - AbbrCode: 2
+          Values:
+            - CStr: foo1
+            - Value: 0x1130
+            - Value: 0x10
+        - AbbrCode: 0
+    - Version:  4
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U02
+            - Value: 0x04
+            - Value: 0x1140
+            - Value: 0x10
+        - AbbrCode: 2
+          Values:
+            - CStr: foo2
+            - Value: 0x1140
+            - Value: 0x10
+        - AbbrCode: 0
+    - Version:  4
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U03
+            - Value: 0x04
+            - Value: 0x1150
+            - Value: 0x10
+        - AbbrCode: 3
+          Values:
+            - Value: 0x51
+        - AbbrCode: 2
+          Values:
+            - CStr: foo3
+            - Value: 0x1150
+            - Value: 0x10
+        - AbbrCode: 0
+...
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x30
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "0400000005000000"
+DWARF:
+  debug_abbrev:
+    - ID:    0
+      Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_imported_unit
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_import
+            Form:      DW_FORM_ref_addr
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_partial_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U01
+            - Value: 0x04
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x8
+        - AbbrCode: 3
+          Values:
+            - Value: 0x57
+        - AbbrCode: 2
+          Values:
+            - CStr: foo1
+            - Value: 0x1130
+            - Value: 0x10
+        - AbbrCode: 0
+    - Version:  5
+      UnitType: DW_UT_partial
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 6
+          Values:
+            - CStr: by_hand
+            - CStr: U02
+            - Value: 0x04
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: foo2
+            - Value: 0x1140
+            - Value: 0x10
+        - AbbrCode: 4
+          Values:
+            - CStr: ns
+        - AbbrCode: 5
+          Values:
+            - CStr: S
+            - Value: 0x8
+        - AbbrCode: 0
+        - AbbrCode: 0
+    - Version:  5
+      UnitType: DW_UT_compile
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U03
+            - Value: 0x04
+            - Value: 0x1150
+            - Value: 0x10
+            - Value: 0x8
+        - AbbrCode: 3
+          Values:
+            - Value: 0x57
+        - AbbrCode: 2
+          Values:
+            - CStr: foo3
+            - Value: 0x1150
+            - Value: 0x10
+        - AbbrCode: 0
+...
