@@ -1,0 +1,176 @@
+## A DW_TAG_partial_unit root - what dwz emits, and what Fedora, RHEL and
+## Debian debuginfo packaging therefore ships - was kept out of the artificial
+## type unit by nothing but a test on its tag, so it was cloned as a type DIE
+## and asked for the type entry that no unit root is ever assigned. Reaching
+## that point needs a scope between the type and the unit root, because the
+## walk that looks for a type's enclosing scope stops at a namespace but runs
+## past a unit root. A DW_TAG_compile_unit root is linked alongside as the
+## control.
+##
+## namespace ns {
+##   struct S { int m1; };
+## }
+##
+## ns::S foo1() { ... }
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -DUNITTYPE=DW_UT_compile -o %t.cu.o
+# RUN: llvm-dwarfutil %t.cu.o %t.cu.classic
+# RUN: llvm-dwarfdump --debug-info %t.cu.classic | FileCheck %s --check-prefixes=CLASSIC,CLASSIC-CU
+# RUN: llvm-dwarfutil --linker parallel %t.cu.o %t.cu.parallel
+# RUN: llvm-dwarfdump --debug-info %t.cu.parallel | FileCheck %s --check-prefixes=PARALLEL,PARALLEL-CU
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -DUNITTYPE=DW_UT_partial -o %t.pu.o
+# RUN: llvm-dwarfutil %t.pu.o %t.pu.classic
+# RUN: llvm-dwarfdump --debug-info %t.pu.classic | FileCheck %s --check-prefixes=CLASSIC,CLASSIC-PU
+# RUN: llvm-dwarfutil --linker parallel %t.pu.o %t.pu.parallel
+# RUN: llvm-dwarfdump --debug-info %t.pu.parallel | FileCheck %s --check-prefixes=PARALLEL,PARALLEL-PU
+
+## The classic backend leaves the type where it found it, and the root tag
+## survives linking. llvm-dwarfdump qualifies a type name with the names of its
+## enclosing scopes and stops that walk at either unit root, so both runs print
+## the type as "ns::S" and both resolve to the same DIE.
+# CLASSIC-CU:     DW_TAG_compile_unit
+# CLASSIC-PU:     DW_TAG_partial_unit
+# CLASSIC:        DW_TAG_subprogram
+# CLASSIC-NEXT:     DW_AT_name ("foo1")
+# CLASSIC:          DW_AT_type (0x00000000[[S:[0-9a-f]{8}]] "ns::S")
+# CLASSIC:        DW_TAG_namespace
+# CLASSIC-NEXT:     DW_AT_name ("ns")
+# CLASSIC:      0x[[S]]:     DW_TAG_structure_type
+# CLASSIC-NEXT:   DW_AT_name ("S")
+# CLASSIC:          DW_TAG_member
+# CLASSIC-NEXT:       DW_AT_name ("m1")
+
+## The parallel backend puts the type in the artificial type unit, under a copy
+## of the namespace that held it, and the unit's reference resolves there. The
+## unit root itself stays out of that unit, which is what this pins: it has no
+## name of its own to be deduplicated under, and cloning it as a type DIE is
+## what used to crash.
+# PARALLEL:      DW_AT_name ("__artificial_type_unit")
+# PARALLEL:      DW_TAG_namespace
+# PARALLEL-NEXT:   DW_AT_name ("ns")
+# PARALLEL:      0x[[S:[0-9a-f]{8}]]:     DW_TAG_structure_type
+# PARALLEL-NEXT:   DW_AT_name ("S")
+# PARALLEL:          DW_TAG_member
+# PARALLEL-NEXT:       DW_AT_name ("m1")
+# PARALLEL-CU:   DW_TAG_compile_unit
+# PARALLEL-PU:   DW_TAG_partial_unit
+# PARALLEL-NEXT:   DW_AT_producer ("by_hand")
+# PARALLEL-NEXT:   DW_AT_name ("U01")
+# PARALLEL:      DW_TAG_subprogram
+# PARALLEL-NEXT:   DW_AT_name ("foo1")
+# PARALLEL:        DW_AT_type (0x00000000[[S]] "ns::S")
+
+## One DWARFv5 unit with a function in .text returning struct S, which is
+## defined in namespace ns. The root carries its own DW_AT_str_offsets_base, so
+## the strings the linker rewrites into DW_FORM_strx stay resolvable on output;
+## the linker does not synthesize that attribute for a partial unit root by
+## itself.
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x10
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "0400000005000000"
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      [[ROOT]]
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_member
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+          - Attribute: DW_AT_data_member_location
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+  debug_info:
+    - Version:  5
+      UnitType: [[UNITTYPE]]
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U01
+            - Value: 0x04
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: foo1
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x4d
+        - AbbrCode: 3
+          Values:
+            - CStr: ns
+        - AbbrCode: 4
+          Values:
+            - CStr: S
+            - Value: 0x8
+        - AbbrCode: 5
+          Values:
+            - CStr: m1
+            - Value: 0x5c
+            - Value: 0x0
+        - AbbrCode: 0
+        - AbbrCode: 0
+        - AbbrCode: 6
+          Values:
+            - CStr: int
+        - AbbrCode: 0
+...

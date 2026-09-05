@@ -1,0 +1,190 @@
+## A unit root is never assigned a type entry, so it is never cloned into the
+## artificial type unit and the recursion into its type children is allowed by
+## a separate test - which named DW_TAG_compile_unit only. A
+## DW_TAG_partial_unit root holding types and no code, the unit dwz produces to
+## carry the definitions it hoisted out of the compile units, therefore reached
+## neither branch and its subtree was dropped after the type name had already
+## been registered. A DW_TAG_compile_unit root is linked alongside as the
+## control.
+##
+## U01:  namespace ns { struct S {}; }
+## U02:  ns::S foo1() { ... }   // DW_FORM_ref_addr reference into U01
+##
+## The classic backend links the same input. Until types under a partial unit
+## root were given a declaration context, this shape aborted there too: the
+## definition was dropped and the second unit's DW_FORM_ref_addr into it hit
+## "DIE must be owned by a DIEUnit to get its absolute offset". The compile
+## unit control was clean, so that was the same defect wearing another symptom.
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_compile_unit -DUNITTYPE=DW_UT_compile -o %t.cu.o
+# RUN: llvm-dwarfutil %t.cu.o %t.cu.classic
+# RUN: llvm-dwarfdump --debug-info %t.cu.classic | FileCheck %s --check-prefixes=CLASSIC,CLASSIC-CU
+# RUN: llvm-dwarfutil --linker parallel %t.cu.o %t.cu.parallel
+# RUN: llvm-dwarfdump --debug-info %t.cu.parallel | FileCheck %s --check-prefix=PARALLEL --implicit-check-not='DW_AT_name ("U01")'
+
+# RUN: yaml2obj %s -DROOT=DW_TAG_partial_unit -DUNITTYPE=DW_UT_partial -o %t.pu.o
+# RUN: llvm-dwarfutil %t.pu.o %t.pu.classic
+# RUN: llvm-dwarfdump --debug-info %t.pu.classic | FileCheck %s --check-prefixes=CLASSIC,CLASSIC-PU
+# RUN: llvm-dwarfutil --linker parallel %t.pu.o %t.pu.parallel
+# RUN: llvm-dwarfdump --debug-info %t.pu.parallel | FileCheck %s --check-prefix=PARALLEL --implicit-check-not='DW_AT_name ("U01")'
+
+## The two parallel links agree byte for byte.
+# RUN: cmp %t.cu.parallel %t.pu.parallel
+
+## The classic backend leaves the type where it found it, so the first unit
+## survives and the cross-unit reference resolves to the definition under it.
+## llvm-dwarfdump stops the scope walk that qualifies a type name at either
+## unit root, so both runs print the type as "ns::S".
+# CLASSIC-CU:     DW_TAG_compile_unit
+# CLASSIC-PU:     DW_TAG_partial_unit
+# CLASSIC-NEXT:     DW_AT_producer ("by_hand")
+# CLASSIC-NEXT:     DW_AT_name ("U01")
+# CLASSIC:        DW_TAG_namespace
+# CLASSIC-NEXT:     DW_AT_name ("ns")
+# CLASSIC:      0x[[S:[0-9a-f]{8}]]:     DW_TAG_structure_type
+# CLASSIC-NEXT:   DW_AT_name ("S")
+# CLASSIC:        DW_TAG_compile_unit
+# CLASSIC-NEXT:     DW_AT_producer ("by_hand")
+# CLASSIC-NEXT:     DW_AT_name ("U02")
+# CLASSIC:        DW_TAG_subprogram
+# CLASSIC-NEXT:     DW_AT_name ("foo1")
+# CLASSIC:          DW_AT_type (0x00000000[[S]] "ns::S")
+
+## The type reaches the artificial type unit under a copy of the namespace that
+## held it, and the second unit's reference resolves into the type unit rather
+## than to a dropped DIE.
+# PARALLEL:      DW_AT_name ("__artificial_type_unit")
+# PARALLEL:      DW_TAG_namespace
+# PARALLEL-NEXT:   DW_AT_name ("ns")
+# PARALLEL:      0x[[S:[0-9a-f]{8}]]:     DW_TAG_structure_type
+# PARALLEL-NEXT:   DW_AT_name ("S")
+# PARALLEL-NEXT:   DW_AT_byte_size (0x08)
+
+## The first unit is emptied, since its only child moved to the type unit, and
+## a unit root with nothing left under it is dropped whole - a partial unit
+## root exactly as a compile unit root - so only the second unit survives.
+# PARALLEL:      DW_TAG_compile_unit
+# PARALLEL-NEXT:   DW_AT_producer ("by_hand")
+# PARALLEL-NEXT:   DW_AT_name ("U02")
+# PARALLEL:      DW_TAG_subprogram
+# PARALLEL-NEXT:   DW_AT_name ("foo1")
+# PARALLEL:        DW_AT_type (0x00000000[[S]] "ns::S")
+
+## Two DWARFv5 units. The first defines struct S in namespace ns and has no
+## code of its own; the second has the only function, which returns S through a
+## DW_FORM_ref_addr reference into the first. S is deliberately memberless, so
+## that the first unit holds nothing the linker would keep in plain DWARF - a
+## member would pull in a DW_TAG_base_type, which is always kept, and that
+## alone would give the root plain children to descend for. Each root carries
+## its own DW_AT_str_offsets_base, so the strings the linker rewrites into
+## DW_FORM_strx stay resolvable on output; the linker does not synthesize that
+## attribute for a partial unit root by itself.
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x10
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "0400000005000000"
+DWARF:
+  debug_abbrev:
+    - ID:    0
+      Table:
+      - Tag:      [[ROOT]]
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref_addr
+  debug_info:
+    - Version:  5
+      UnitType: [[UNITTYPE]]
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U01
+            - Value: 0x04
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: ns
+        - AbbrCode: 3
+          Values:
+            - CStr: S
+            - Value: 0x8
+        - AbbrCode: 0
+        - AbbrCode: 0
+    - Version:  5
+      UnitType: DW_UT_compile
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 4
+          Values:
+            - CStr: by_hand
+            - CStr: U02
+            - Value: 0x04
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x8
+        - AbbrCode: 5
+          Values:
+            - CStr: foo1
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x23
+        - AbbrCode: 0
+...
