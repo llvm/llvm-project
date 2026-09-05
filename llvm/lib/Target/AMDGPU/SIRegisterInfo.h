@@ -373,11 +373,9 @@ public:
                             unsigned NumAllocatedVGPRs,
                             unsigned &MaxVGPRsForCurrentOccupancy) const;
 
-  void applyRegAllocationAntiHints(
-      Register VirtReg, ArrayRef<MCPhysReg> Order,
-      SmallVectorImpl<MCPhysReg> &HintsAndCustomOrder, unsigned NumHints,
-      SmallVectorImpl<MCPhysReg> &AntiHints, const MachineFunction &MF,
-      const VirtRegMap *VRM = nullptr,
+  void filterAndSortForAntiHintedRegs(
+      Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
+      const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
       const LiveRegMatrix *Matrix = nullptr) const override;
 
   const int *getRegUnitPressureSets(MCRegUnit RegUnit) const override;

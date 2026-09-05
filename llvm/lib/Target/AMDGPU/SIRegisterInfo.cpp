@@ -4225,15 +4225,10 @@ bool SIRegisterInfo::shouldApplyAntiHints(
   return true;
 }
 
-void SIRegisterInfo::applyRegAllocationAntiHints(
-    Register VirtReg, ArrayRef<MCPhysReg> Order,
-    SmallVectorImpl<MCPhysReg> &HintsAndCustomOrder, unsigned NumHints,
-    SmallVectorImpl<MCPhysReg> &AntiHints, const MachineFunction &MF,
-    const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
-
-  // Early exit to default order if we have no anti-hints or no VRM.
-  if (AntiHints.empty() || !VRM)
-    return;
+void SIRegisterInfo::filterAndSortForAntiHintedRegs(
+    Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
+    const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
+    const LiveRegMatrix *Matrix) const {
 
   // Get total number of allocated VGPRs to determine the current occupancy.
   unsigned NumVGPRs = 0;
@@ -4278,32 +4273,21 @@ void SIRegisterInfo::applyRegAllocationAntiHints(
            MaxVGPRsForCurrentOccupancy;
   };
 
-  HintsAndCustomOrder.truncate(NumHints);
-  HintsAndCustomOrder.append(Order.begin(), Order.end());
-
-  // Helper to check if a register overlaps with any anti-hint.
-  auto isAntiHinted = [&](MCPhysReg Reg) {
-    return llvm::any_of(AntiHints, [&](MCPhysReg AntiHint) {
-      return regsOverlap(Reg, AntiHint);
-    });
-  };
-
   // Find the cutoff point for the current occupancy VGPR budget.
-  auto *BeyondBudgetStart =
-      llvm::find_if(llvm::drop_begin(HintsAndCustomOrder, NumHints),
-                    [&](MCPhysReg Reg) { return !IsWithinBudget(Reg); });
+  auto *BeyondBudgetStart = llvm::find_if(
+      CustomOrder, [&](MCPhysReg Reg) { return !IsWithinBudget(Reg); });
 
   // Only shuffle within the current occupancy VGPR budget.
   auto *PartitionPoint = std::stable_partition(
-      HintsAndCustomOrder.begin() + NumHints, BeyondBudgetStart,
-      [&](MCPhysReg Reg) { return !isAntiHinted(Reg); });
+      CustomOrder.begin(), BeyondBudgetStart,
+      [&](MCPhysReg Reg) { return !isAntiHintedReg(Reg, AntiHintedRegUnits); });
 
   LLVM_DEBUG({
     size_t NonAntiHintedCount =
-        std::distance(HintsAndCustomOrder.begin() + NumHints, PartitionPoint);
+        std::distance(CustomOrder.begin(), PartitionPoint);
     size_t AntiHintedCount = std::distance(PartitionPoint, BeyondBudgetStart);
     size_t BeyondBudgetCount =
-        std::distance(BeyondBudgetStart, HintsAndCustomOrder.end());
+        std::distance(BeyondBudgetStart, CustomOrder.end());
     dbgs() << "Added " << NonAntiHintedCount
            << " non-anti-hinted registers first\n"
            << "Added " << AntiHintedCount
