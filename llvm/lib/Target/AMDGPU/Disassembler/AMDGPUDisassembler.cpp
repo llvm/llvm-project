@@ -398,6 +398,7 @@ DECODE_OPERAND_SREG_7(SReg_256_XNULL, 256)
 DECODE_OPERAND_SREG_7(SReg_512, 512)
 
 DECODE_OPERAND_SREG_8(SReg_64, 64)
+DECODE_OPERAND_SREG_8(SReg_64_Encodable, 64)
 
 // GFX13 VBUFFER instructions use a 9-bit srsrc field. For the non-indexed form
 // the two extra MSBs are always 0, so the value still decodes to an SReg_128.
@@ -409,6 +410,22 @@ DECODE_OPERAND_REG_8(AReg_128)
 DECODE_OPERAND_REG_8(AReg_256)
 DECODE_OPERAND_REG_8(AReg_512)
 DECODE_OPERAND_REG_8(AReg_1024)
+
+// SReg_32_Encodable is the register-only 32-bit source of SOP1 instructions
+// such as s_movrels_b32. The 32-bit aperture registers have no assembler
+// syntax there (src_shared_base and friends name the 64-bit registers), so
+// don't decode them.
+static DecodeStatus
+DecodeSReg_32_EncodableRegisterClass(MCInst &Inst, uint64_t Imm,
+                                     uint64_t /*Addr*/,
+                                     const MCDisassembler *Decoder) {
+  // src_shared_base_lo, src_shared_limit_lo, src_private_base_lo and
+  // src_private_limit_lo.
+  if (!isUInt<8>(Imm) || (Imm >= 235 && Imm <= 238))
+    return MCDisassembler::Fail;
+  auto DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
+  return addOperand(Inst, DAsm->decodeSrcOp(Inst, 32, Imm));
+}
 
 static DecodeStatus DecodeVGPR_16RegisterClass(MCInst &Inst, uint64_t Imm,
                                                uint64_t /*Addr*/,
@@ -2257,8 +2274,14 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg32(unsigned Val) const {
     return isGFX11Plus() ? createRegOperand(M0) : createRegOperand(SGPR_NULL);
   case 126: return createRegOperand(EXEC_LO);
   case 127: return createRegOperand(EXEC_HI);
-  case 230: return createRegOperand(SRC_FLAT_SCRATCH_BASE_LO);
-  case 231: return createRegOperand(SRC_FLAT_SCRATCH_BASE_HI);
+  case 230:
+    if (STI.hasFeature(AMDGPU::FeatureGloballyAddressableScratch))
+      return createRegOperand(SRC_FLAT_SCRATCH_BASE_LO);
+    break;
+  case 231:
+    if (STI.hasFeature(AMDGPU::FeatureGloballyAddressableScratch))
+      return createRegOperand(SRC_FLAT_SCRATCH_BASE_HI);
+    break;
   case 235: return createRegOperand(SRC_SHARED_BASE_LO);
   case 236: return createRegOperand(SRC_SHARED_LIMIT_LO);
   case 237:
@@ -2307,7 +2330,10 @@ MCOperand AMDGPUDisassembler::decodeSpecialReg64(unsigned Val) const {
       return createRegOperand(SGPR_NULL);
     break;
   case 126: return createRegOperand(EXEC);
-  case 230: return createRegOperand(SRC_FLAT_SCRATCH_BASE_LO);
+  case 230:
+    if (STI.hasFeature(AMDGPU::FeatureGloballyAddressableScratch))
+      return createRegOperand(SRC_FLAT_SCRATCH_BASE_LO);
+    break;
   case 235: return createRegOperand(SRC_SHARED_BASE);
   case 236: return createRegOperand(SRC_SHARED_LIMIT);
   case 237:
