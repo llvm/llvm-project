@@ -98,6 +98,11 @@ void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum,
     if (Imm & NVPTX::PTXCvtMode::SATFINITE_FLAG)
       O << ".satfinite";
     return;
+  } else if (Modifier == "pzo") {
+    // PZO flag
+    if (Imm & NVPTX::PTXCvtMode::PZO_FLAG)
+      O << ".pzo";
+    return;
   } else if (Modifier == "relu") {
     // RELU flag
     if (Imm & NVPTX::PTXCvtMode::RELU_FLAG)

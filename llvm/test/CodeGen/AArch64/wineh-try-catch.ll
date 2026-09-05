@@ -67,7 +67,7 @@
 
 ; Check that the funclet branches back to the catchret destination
 ; CHECK:       adrp    x0, .LBB0_2
-; CHECK-NEXT:  add     x0, x0, [[CATCHRETDEST]]
+; CHECK-NEXT:  add     x0, x0, :lo12:[[CATCHRETDEST]]
 
 
 ; Now check that the offset of the unwind help object from the stack pointer on

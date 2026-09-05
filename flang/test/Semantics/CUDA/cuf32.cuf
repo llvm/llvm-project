@@ -1,0 +1,123 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+! The descriptors of a DEVICE object live in device global memory, so a
+! component of one can only be allocated where they are addressable.
+module m
+  type :: t
+    integer(4), allocatable, pinned :: pc(:)
+    integer(4), allocatable, managed :: mc(:)
+    integer(4), allocatable, unified :: uc(:)
+  end type
+  type :: inner_alloc
+    type(t), allocatable :: x
+  end type
+  type :: td
+    integer(4), allocatable, device :: dc(:)
+  end type
+
+  type(t), device :: mds(10)
+
+contains
+  ! PINNED, MANAGED, and UNIFIED allocatables are placed in host-accessible
+  ! memory, so such a component of a DEVICE object may never be allocated.
+  subroutine test_device_derived_host_mem_components()
+    type(t), allocatable, device :: d(:)
+    type(t), device :: ds(10)
+    type(t), allocatable :: h(:)
+    type(t), allocatable, managed :: md(:)
+    type(inner_alloc), allocatable, device :: nest(:)
+    integer :: n, i
+    n = 2
+    i = 1
+
+    allocate(h(n))
+    allocate(h(i)%pc(3))
+    allocate(h(i)%mc(3))
+    allocate(h(i)%uc(3))
+    h(i)%pc = 10
+
+    allocate(md(n))
+    allocate(md(i)%pc(3))
+    allocate(md(i)%mc(3))
+    allocate(md(i)%uc(3))
+
+    allocate(d(n))
+    !ERROR: PINNED allocatable component 'pc' must not be allocated in DEVICE object 'd'
+    allocate(d(i)%pc(3))
+    !ERROR: MANAGED allocatable component 'mc' must not be allocated in DEVICE object 'd'
+    allocate(d(i)%mc(3))
+    !ERROR: UNIFIED allocatable component 'uc' must not be allocated in DEVICE object 'd'
+    allocate(d(i)%uc(3))
+
+    !ERROR: PINNED allocatable component 'pc' must not be allocated in DEVICE object 'ds'
+    allocate(ds(i)%pc(3))
+    !ERROR: MANAGED allocatable component 'mc' must not be allocated in DEVICE object 'ds'
+    allocate(ds(i)%mc(3))
+    !ERROR: UNIFIED allocatable component 'uc' must not be allocated in DEVICE object 'ds'
+    allocate(ds(i)%uc(3))
+
+    !ERROR: PINNED allocatable component 'pc' must not be allocated in DEVICE object 'mds'
+    allocate(mds(i)%pc(3))
+    !ERROR: MANAGED allocatable component 'mc' must not be allocated in DEVICE object 'mds'
+    allocate(mds(i)%mc(3))
+    !ERROR: UNIFIED allocatable component 'uc' must not be allocated in DEVICE object 'mds'
+    allocate(mds(i)%uc(3))
+
+    allocate(nest(n))
+    allocate(nest(i)%x)
+    !ERROR: PINNED allocatable component 'pc' must not be allocated in DEVICE object 'nest'
+    allocate(nest(i)%x%pc(3))
+    !ERROR: MANAGED allocatable component 'mc' must not be allocated in DEVICE object 'nest'
+    allocate(nest(i)%x%mc(3))
+    !ERROR: UNIFIED allocatable component 'uc' must not be allocated in DEVICE object 'nest'
+    allocate(nest(i)%x%uc(3))
+  end subroutine
+
+  subroutine host_ok(h)
+    type(t), intent(inout) :: h(:)
+    allocate(h(1)%pc(3))
+    allocate(h(1)%mc(3))
+    allocate(h(1)%uc(3))
+  end subroutine
+
+  subroutine dummy_device(d)
+    type(t), device :: d(:)
+    !ERROR: PINNED allocatable component 'pc' must not be allocated in DEVICE object 'd'
+    allocate(d(1)%pc(3))
+    !ERROR: MANAGED allocatable component 'mc' must not be allocated in DEVICE object 'd'
+    allocate(d(1)%mc(3))
+    !ERROR: UNIFIED allocatable component 'uc' must not be allocated in DEVICE object 'd'
+    allocate(d(1)%uc(3))
+  end subroutine
+
+  ! A DEVICE component of a DEVICE object may only be allocated from device
+  ! code, where the device-resident descriptor can be updated.
+  subroutine test_device_derived_device_component()
+    type(td), device :: dd(10)
+    type(td), allocatable, device :: ad(:)
+    type(td) :: h
+    type(td), allocatable, managed :: md(:)
+    integer :: i
+    i = 1
+
+    ! Allocating a DEVICE component of a host or MANAGED object is fine.
+    allocate(h%dc(3))
+    allocate(md(2))
+    allocate(md(i)%dc(3))
+
+    !ERROR: DEVICE allocatable component 'dc' of DEVICE object 'dd' may only be allocated in a device subprogram
+    allocate(dd(i)%dc(3))
+    allocate(ad(2))
+    !ERROR: DEVICE allocatable component 'dc' of DEVICE object 'ad' may only be allocated in a device subprogram
+    allocate(ad(i)%dc(3))
+  end subroutine
+
+  attributes(global) subroutine global_ok(dd)
+    type(td), device :: dd(:)
+    allocate(dd(1)%dc(3))
+  end subroutine
+
+  attributes(device) subroutine device_ok(dd)
+    type(td), device :: dd(:)
+    allocate(dd(1)%dc(3))
+  end subroutine
+end module

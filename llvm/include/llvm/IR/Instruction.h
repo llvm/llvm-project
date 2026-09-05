@@ -951,6 +951,8 @@ public:
     CompareUsingScalarTypes = 1 << 1,
     /// Check for equivalence with intersected callbase attrs.
     CompareUsingIntersectedAttrs = 1 << 2,
+    /// Check for equivalence by comparing call targets.
+    CompareCallTargets = 1 << 3,
   };
 
   /// This function determines if the specified instruction executes the same

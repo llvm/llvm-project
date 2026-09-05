@@ -1,0 +1,46 @@
+# RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -start-after=finalize-isel %s -o - | FileCheck %s
+
+# Verify that parsing either special user SGPR preserves the total user SGPR count.
+
+# CHECK-LABEL: .amdhsa_kernel private_segment_size
+# CHECK: .amdhsa_user_sgpr_count 1
+# CHECK-LABEL: .amdhsa_kernel lds_kernel_id
+# CHECK: .amdhsa_user_sgpr_count 1
+
+--- |
+  target triple = "amdgcn-amd-amdhsa"
+
+  define amdgpu_kernel void @private_segment_size() #0 {
+    ret void
+  }
+
+  define amdgpu_kernel void @lds_kernel_id() #0 {
+    ret void
+  }
+
+  attributes #0 = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-queue-ptr" }
+...
+---
+name:            private_segment_size
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  argumentInfo:
+    privateSegmentSize: { reg: '$sgpr0' }
+body:             |
+  bb.0:
+    S_ENDPGM 0
+
+...
+---
+name:            lds_kernel_id
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  argumentInfo:
+    LDSKernelId:     { reg: '$sgpr0' }
+body:             |
+  bb.0:
+    S_ENDPGM 0
+
+...

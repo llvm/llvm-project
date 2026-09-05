@@ -858,6 +858,18 @@ The available directives are as follows:
         declarative assembly format will print it instead as:
         `vector.multi_reduction #vector.kind<minf>, ...`.
 
+*   `enum ( attribute )`
+
+    -   Represents the symbolic value of an enum-backed attribute without the
+        attribute's dialect prefix, mnemonic, or custom assembly format.
+    -   The argument must be an enum attribute. For example, if `$kind` has the
+        complete form `#vector.kind<minf>`, `enum($kind)` prints `minf`, `$kind`
+        prints the attribute's assembly-format body `<minf>`, and
+        `qualified($kind)` prints the complete attribute `#vector.kind<minf>`.
+    -   Bit enums must define a zero-valued case so every valid bitmask has a
+        symbolic spelling. An unquoted comma-separated bit enum cannot be
+        followed by a comma literal because the two uses would be ambiguous.
+
 #### Literals
 
 A literal is either a keyword or punctuation surrounded by \`\`.
@@ -1787,12 +1799,15 @@ There are several mechanisms for creating an `Attribute` whose values are
 taken from a `*Enum`.
 
 The most common of these is to use the `EnumAttr` class, which takes
-an `EnumInfo` (either a `IntEnum` or `BitEnum`) as a parameter and constructs
-an attribute that holds one argument - value of the enum. This attribute
-is defined within a dialect and can have its assembly format customized to,
-for example, print angle brackets around the enum value or assign a mnemonic.
+an `EnumInfo` (either an `IntEnum` or `BitEnum`) as a parameter and constructs
+an attribute with one parameter: the value of the enum. This attribute
+is defined within a dialect and, by default, prints its value in angle brackets,
+for example `#my_dialect.kind<case>`. In a declarative operation assembly
+format, use `enum($kind)` to print only the symbolic value `case`. The
+attribute's assembly format can still be overridden when different standalone
+syntax is required.
 
-An older form involves using the `*IntEnumAttr` and `*BitEnumATtr` classes
+An older form involves using the `*IntEnumAttr` and `*BitEnumAttr` classes
 and their corresponding `*EnumAttrCase` classes (which can be used
 anywhere a `*EnumCase` is needed). These classes store their values
 as a `SignlessIntegerAttr` of their bitwidth, imposing the constraint on it

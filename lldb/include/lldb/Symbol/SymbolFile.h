@@ -537,6 +537,12 @@ public:
 
   std::string GetObjectName() const;
 
+  /// Get the semantically innermost non-function type that encloses the
+  /// provided variable
+  virtual lldb::TypeSP GetTypeEnclosingVariableUID(lldb::user_id_t uid) {
+    return {};
+  }
+
 protected:
   void AssertModuleLock();
 

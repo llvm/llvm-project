@@ -234,18 +234,13 @@ class RequestCounter(http.server.SimpleHTTPRequestHandler):
         super().do_GET()
 
 
-class SlowHTTPHandler(http.server.BaseHTTPRequestHandler):
-    """HTTP request handler that delays responses to simulate a slow server."""
+class NeverRespondsHTTPHandler(http.server.BaseHTTPRequestHandler):
+    """HTTP request handler that never responds."""
 
-    delay = 2  # seconds to sleep before responding; set per test
+    can_finish = threading.Event()
 
     def do_GET(self):
-        try:
-            time.sleep(self.delay)
-            self.send_response(200)
-            self.end_headers()
-        except (BrokenPipeError, ConnectionResetError):
-            pass  # client disconnected after timeout, as expected
+        self.can_finish.wait()
 
     def log_message(self, *args):
         pass  # suppress server-side output
@@ -451,18 +446,23 @@ class SymStoreTests(TestBase):
         """
         exe, sym = self.build_inferior()
         with MockedSymStore(self, exe, sym) as dir:
-            SlowHTTPHandler.delay = 5  # seconds; exceeds the 1s timeout below
+            NeverRespondsHTTPHandler.can_finish.clear()
             self.runCmd("settings set plugin.symbol-locator.symstore.timeout 1")
-            with HTTPServer(dir, SlowHTTPHandler) as url:
-                self.runCmd(f"settings set plugin.symbol-locator.symstore.urls {url}")
-                warnings = ""
-                with open(self.getBuildArtifact("stderr.txt"), "w+b") as err_file:
-                    self.dbg.SetErrorFileHandle(err_file, False)
-                    self.try_breakpoint(exe, should_have_loc=False)
-                    self.dbg.SetErrorFileHandle(sys.stderr, False)
-                    err_file.seek(0)
-                    warnings = err_file.read().decode()
-                self.assertIn("failed to download", warnings)
+
+            with HTTPServer(dir, NeverRespondsHTTPHandler) as url:
+                try:
+                    self.runCmd(
+                        f"settings set plugin.symbol-locator.symstore.urls {url}"
+                    )
+                    with open(self.getBuildArtifact("stderr.txt"), "w+b") as err_file:
+                        self.dbg.SetErrorFileHandle(err_file, False)
+                        self.try_breakpoint(exe, should_have_loc=False)
+                        self.dbg.SetErrorFileHandle(sys.stderr, False)
+                        err_file.seek(0)
+                        warnings = err_file.read().decode()
+                    self.assertIn("failed to download", warnings)
+                finally:
+                    NeverRespondsHTTPHandler.can_finish.set()
 
     @skipUnlessPackageAvailable("cryptography")
     def test_https(self):

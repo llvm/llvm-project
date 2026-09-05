@@ -48,6 +48,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  chroot
+  SRCS
+    chroot.cpp
+  HDRS
+    ../chroot.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.chroot
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   close
   SRCS
     close.cpp
@@ -320,10 +331,7 @@ add_entrypoint_object(
     ../getpid.h
   DEPENDS
     libc.hdr.types.pid_t
-    libc.hdr.fcntl_macros
-    libc.include.unistd
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getpid
 )
 
 add_entrypoint_object(
@@ -429,6 +437,24 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.off_t
     libc.src.__support.OSUtil.linux.syscall_wrappers.lseek
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  nice
+  SRCS
+    nice.cpp
+  HDRS
+    ../nice.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.limits_macros
+    libc.hdr.sys_resource_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.getpriority
+    libc.src.__support.OSUtil.linux.syscall_wrappers.setpriority
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.math_extras
     libc.src.errno.errno
 )
 

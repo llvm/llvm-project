@@ -1612,7 +1612,6 @@ feature_test_macros = [
                 "c++29": 202606,  # P3052R2 view_interface::at()
             },
             "headers": ["ranges"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_void_t",

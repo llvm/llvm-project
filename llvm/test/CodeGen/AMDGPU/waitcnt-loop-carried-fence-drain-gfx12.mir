@@ -23,6 +23,7 @@ body: |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vgpr1, $vgpr2, $sgpr0
   ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_WAIT_DSCNT 0
   ; CHECK-NEXT:   S_BARRIER
   ; CHECK-NEXT:   renamable $vgpr3 = DS_READ_B32_gfx9 $vgpr2, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(3) poison`, addrspace 3)
   ; CHECK-NEXT:   S_WAIT_DSCNT 0
