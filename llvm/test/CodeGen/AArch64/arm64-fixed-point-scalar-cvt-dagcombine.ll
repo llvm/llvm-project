@@ -51,6 +51,190 @@ entry:
   ret float %vcvts_n_f32_u32
 }
 
+define float @neon_vcvtfxu2fp_i32_f32_umaxv_v8i8(<8 x i8> %v) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i32_f32_umaxv_v8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umaxv.8b b0, v0
+; CHECK-NEXT:    ucvtf s0, s0, #1
+; CHECK-NEXT:    ret
+  %elt = call i32 @llvm.aarch64.neon.umaxv.i32.v8i8(<8 x i8> %v)
+  %cvt = call float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32 %elt, i32 1)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxu2fp_i32_f32_umaxv_v16i8(<16 x i8> %v) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i32_f32_umaxv_v16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umaxv.16b b0, v0
+; CHECK-NEXT:    ucvtf s0, s0, #1
+; CHECK-NEXT:    ret
+  %elt = call i32 @llvm.aarch64.neon.umaxv.i32.v16i8(<16 x i8> %v)
+  %cvt = call float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32 %elt, i32 1)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxu2fp_i32_f32_umaxv_v4i16(<4 x i16> %v) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i32_f32_umaxv_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umaxv.4h h0, v0
+; CHECK-NEXT:    ucvtf s0, s0, #1
+; CHECK-NEXT:    ret
+  %elt = call i32 @llvm.aarch64.neon.umaxv.i32.v4i16(<4 x i16> %v)
+  %cvt = call float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32 %elt, i32 1)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxu2fp_i32_f32_umaxv_v8i16(<8 x i16> %v) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i32_f32_umaxv_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umaxv.8h h0, v0
+; CHECK-NEXT:    ucvtf s0, s0, #1
+; CHECK-NEXT:    ret
+  %elt = call i32 @llvm.aarch64.neon.umaxv.i32.v8i16(<8 x i16> %v)
+  %cvt = call float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32 %elt, i32 1)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxu2fp_i32_f32_uminv_v8i8(<8 x i8> %v) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i32_f32_uminv_v8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uminv.8b b0, v0
+; CHECK-NEXT:    ucvtf s0, s0, #1
+; CHECK-NEXT:    ret
+  %elt = call i32 @llvm.aarch64.neon.uminv.i32.v8i8(<8 x i8> %v)
+  %cvt = call float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32 %elt, i32 1)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxu2fp_i32_f32_uminv_v16i8(<16 x i8> %v) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i32_f32_uminv_v16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uminv.16b b0, v0
+; CHECK-NEXT:    ucvtf s0, s0, #1
+; CHECK-NEXT:    ret
+  %elt = call i32 @llvm.aarch64.neon.uminv.i32.v16i8(<16 x i8> %v)
+  %cvt = call float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32 %elt, i32 1)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxu2fp_i32_f32_uminv_v4i16(<4 x i16> %v) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i32_f32_uminv_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uminv.4h h0, v0
+; CHECK-NEXT:    ucvtf s0, s0, #1
+; CHECK-NEXT:    ret
+  %elt = call i32 @llvm.aarch64.neon.uminv.i32.v4i16(<4 x i16> %v)
+  %cvt = call float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32 %elt, i32 1)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxu2fp_i32_f32_uminv_v8i16(<8 x i16> %v) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i32_f32_uminv_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uminv.8h h0, v0
+; CHECK-NEXT:    ucvtf s0, s0, #1
+; CHECK-NEXT:    ret
+  %elt = call i32 @llvm.aarch64.neon.uminv.i32.v8i16(<8 x i16> %v)
+  %cvt = call float @llvm.aarch64.neon.vcvtfxu2fp.f32.i32(i32 %elt, i32 1)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxs2fp_i32_f32_smaxv_v4i32(<4 x i32> %v) {
+; CHECK-LABEL: neon_vcvtfxs2fp_i32_f32_smaxv_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smaxv.4s s0, v0
+; CHECK-NEXT:    scvtf.4s v0, v0, #1
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-NEXT:    ret
+  %elt = call i32 @llvm.aarch64.neon.smaxv.i32.v4i32(<4 x i32> %v)
+  %cvt = call float @llvm.aarch64.neon.vcvtfxs2fp.f32.i32(i32 %elt, i32 1)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxu2fp_i32_f32_gpr(i32 %a) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i32_f32_gpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ucvtf s0, w0, #16
+; CHECK-NEXT:    ret
+  %cvt = tail call float @llvm.aarch64.neon.vcvtfxu2fp.i32.f32(i32 %a, i32 16)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxu2fp_i32_f32_fpr(i32 %a) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i32_f32_fpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    usqadd s0, s0
+; CHECK-NEXT:    ucvtf s0, s0, #16
+; CHECK-NEXT:    ret
+  %sum = call i32 @llvm.aarch64.neon.usqadd.i32(i32 %a, i32 %a)
+  %cvt = tail call float @llvm.aarch64.neon.vcvtfxu2fp.i32.f32(i32 %sum, i32 16)
+  ret float %cvt
+}
+
+define float @neon_vcvtfxs2fp_i32_f32_gpr(i32 %a) {
+; CHECK-LABEL: neon_vcvtfxs2fp_i32_f32_gpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    scvtf s0, w0, #16
+; CHECK-NEXT:    ret
+  %cvt = call float @llvm.aarch64.neon.vcvtfxs2fp.i32.f32(i32 %a, i32 16)
+  ret float %cvt
+}
+
+define double @neon_vcvtfxs2fp_i64_f64_gpr(i64 %a) {
+; CHECK-LABEL: neon_vcvtfxs2fp_i64_f64_gpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    scvtf d0, x0, #32
+; CHECK-NEXT:    ret
+  %cvt = call double @llvm.aarch64.neon.vcvtfxs2fp.i64.f64(i64 %a, i32 32)
+  ret double %cvt
+}
+
+define double @neon_vcvtfxu2fp_i64_f64_gpr(i64 %a) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i64_f64_gpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ucvtf d0, x0, #32
+; CHECK-NEXT:    ret
+  %cvt = call double @llvm.aarch64.neon.vcvtfxu2fp.i64.f64(i64 %a, i32 32)
+  ret double %cvt
+}
+
+define float @neon_vcvtfxs2fp_i32_f32_fpr(i32 %a) {
+; CHECK-LABEL: neon_vcvtfxs2fp_i32_f32_fpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w0
+; CHECK-NEXT:    usqadd s0, s0
+; CHECK-NEXT:    scvtf s0, s0, #16
+; CHECK-NEXT:    ret
+  %sum = call i32 @llvm.aarch64.neon.usqadd.i32(i32 %a, i32 %a)
+  %cvt = call float @llvm.aarch64.neon.vcvtfxs2fp.i32.f32(i32 %sum, i32 16)
+  ret float %cvt
+}
+
+define double @neon_vcvtfxs2fp_i64_f64_fpr(i64 %a) {
+; CHECK-LABEL: neon_vcvtfxs2fp_i64_f64_fpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    usqadd d0, d0
+; CHECK-NEXT:    scvtf d0, d0, #32
+; CHECK-NEXT:    ret
+  %sum = call i64 @llvm.aarch64.neon.usqadd.i64(i64 %a, i64 %a)
+  %cvt = call double @llvm.aarch64.neon.vcvtfxs2fp.i64.f64(i64 %sum, i32 32)
+  ret double %cvt
+}
+
+define double @neon_vcvtfxu2fp_i64_f64_fpr(i64 %a) {
+; CHECK-LABEL: neon_vcvtfxu2fp_i64_f64_fpr:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    usqadd d0, d0
+; CHECK-NEXT:    ucvtf d0, d0, #32
+; CHECK-NEXT:    ret
+  %sum = call i64 @llvm.aarch64.neon.usqadd.i64(i64 %a, i64 %a)
+  %cvt = call double @llvm.aarch64.neon.vcvtfxu2fp.i64.f64(i64 %sum, i32 32)
+  ret double %cvt
+}
+
 declare <1 x i64> @llvm.aarch64.neon.vsri.v1i64(<1 x i64>, <1 x i64>, i32)
 declare double @llvm.aarch64.neon.vcvtfxs2fp.f64.i64(i64, i32)
 declare <1 x double> @llvm.nearbyint.v1f64(<1 x double>)
