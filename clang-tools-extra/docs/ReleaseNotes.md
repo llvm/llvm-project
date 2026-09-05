@@ -179,6 +179,10 @@ infrastructure are described first, followed by tool-specific sections.
   - Fixed false positives when the pointee is written through a pointer
     assignment, such as `*(p = q) = 0`.
 
+- Fixed an infinite loop in {doc}`misc-multiple-inheritance
+  <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
+  inherits from itself or has a circular inheritance graph.
+
 - Improved {doc}`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` by fixing false positives in
   nested expressions involving different macros or a mix of macro and
