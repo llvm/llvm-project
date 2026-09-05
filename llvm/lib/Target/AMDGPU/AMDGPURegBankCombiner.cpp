@@ -106,7 +106,9 @@ private:
   SIModeRegisterDefaults getMode() const;
   bool getIEEE() const;
   bool getDX10Clamp() const;
-  bool isFminnumIeee(const MachineInstr &MI) const;
+  bool isFminnumForMode(const MachineInstr &MI) const;
+  bool isValNeverNaN(const MachineInstr &MI, MinMaxMedOpc Opc,
+                     Register Val) const;
   bool isFCst(MachineInstr *MI) const;
   bool isClampZeroToOne(MachineInstr *K0, MachineInstr *K1) const;
 
@@ -229,6 +231,26 @@ bool AMDGPURegBankCombinerImpl::matchIntMinMaxToMed3(
   return true;
 }
 
+// Val is an operand of the inner min/max, so nnan there implies Val is not NaN.
+// nnan on the outer MI implies nothing: the inner min/max already replaced a
+// NaN Val with its constant operand.
+bool AMDGPURegBankCombinerImpl::isValNeverNaN(const MachineInstr &MI,
+                                              MinMaxMedOpc Opc,
+                                              Register Val) const {
+  // matchMed guarantees the other operand of MI is a constant, so the first
+  // hit is the inner min/max it matched.
+  unsigned InnerOpc = MI.getOpcode() == Opc.Min ? Opc.Max : Opc.Min;
+  uint32_t InnerFlags = 0;
+  for (const MachineOperand &Op : MI.explicit_uses()) {
+    if (MachineInstr *Inner = getOpcodeDef(InnerOpc, Op.getReg(), MRI)) {
+      InnerFlags = Inner->getFlags();
+      break;
+    }
+  }
+  return VT->computeKnownFPClass(Val, InnerFlags, fcNan, /*Depth=*/0)
+      .isKnownNeverNaN();
+}
+
 // fmed3(NaN, K0, K1) = min(min(NaN, K0), K1)
 // ieee = true  : min/max(SNaN, K) = QNaN, min/max(QNaN, K) = K
 // ieee = false : min/max(NaN, K) = K
@@ -271,14 +293,10 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToMed3(
   if (K0->Value > K1->Value)
     return false;
 
-  // For IEEE=false perform combine only when it's safe to assume that there are
-  // no NaN inputs. Most often MI is marked with nnan fast math flag.
-  // For IEEE=true consider NaN inputs. fmed3(NaN, K0, K1) is equivalent to
-  // min(min(NaN, K0), K1). Safe to fold for min(max(Val, K0), K1) since inner
-  // nodes(max/min) have same behavior when one input is NaN and other isn't.
-  // Don't consider max(min(SNaN, K1), K0) since there is no isKnownNeverQNaN,
-  // also post-legalizer inputs to min/max are fcanonicalized (never SNaN).
-  if ((getIEEE() && isFminnumIeee(MI)) || VT->isKnownNeverNaN(Dst)) {
+  // min(max(Val, K0), K1) matches fmed3 even for NaN Val: the inner max
+  // absorbs the NaN into K0. max(min(Val, K1), K0) yields K1, so it needs Val
+  // non-NaN.
+  if (isFminnumForMode(MI) || isValNeverNaN(MI, OpcodeTriple, Val)) {
     // Don't fold single use constant that can't be inlined.
     if ((!MRI.hasOneNonDBGUse(K0->VReg) || TII.isInlineConstant(K0->Value)) &&
         (!MRI.hasOneNonDBGUse(K1->VReg) || TII.isInlineConstant(K1->Value))) {
@@ -307,13 +325,12 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToClamp(MachineInstr &MI,
   if (!K0->Value.isPosZero() || !K1->Value.isOne())
     return false;
 
-  // For IEEE=false perform combine only when it's safe to assume that there are
-  // no NaN inputs. Most often MI is marked with nnan fast math flag.
-  // For IEEE=true consider NaN inputs. Only min(max(QNaN, 0.0), 1.0) evaluates
-  // to 0.0 requires dx10_clamp = true.
-  if ((getIEEE() && getDX10Clamp() && isFminnumIeee(MI) &&
-       VT->isKnownNeverSNaN(Val)) ||
-      VT->isKnownNeverNaN(MI.getOperand(0).getReg())) {
+  // min(max(NaN, 0.0), 1.0) = 0.0 = clamp, but only with dx10_clamp, and under
+  // IEEE only if Val is not SNaN (min/max quiet it, giving 1.0 instead).
+  // max(min(Val, 1.0), 0.0) yields 1.0, so it needs Val non-NaN.
+  if ((getDX10Clamp() && isFminnumForMode(MI) &&
+       (!getIEEE() || VT->isKnownNeverSNaN(Val))) ||
+      isValNeverNaN(MI, OpcodeTriple, Val)) {
     Reg = Val;
     return true;
   }
@@ -607,8 +624,9 @@ bool AMDGPURegBankCombinerImpl::getDX10Clamp() const {
   return getMode().DX10Clamp;
 }
 
-bool AMDGPURegBankCombinerImpl::isFminnumIeee(const MachineInstr &MI) const {
-  return MI.getOpcode() == AMDGPU::G_FMINNUM_IEEE;
+bool AMDGPURegBankCombinerImpl::isFminnumForMode(const MachineInstr &MI) const {
+  return MI.getOpcode() ==
+         (getIEEE() ? AMDGPU::G_FMINNUM_IEEE : AMDGPU::G_FMINNUM);
 }
 
 bool AMDGPURegBankCombinerImpl::isFCst(MachineInstr *MI) const {
