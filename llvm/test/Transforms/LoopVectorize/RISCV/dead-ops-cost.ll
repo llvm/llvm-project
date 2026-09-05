@@ -158,60 +158,19 @@ define i32 @cost_of_exit_branch_and_cond_insts(ptr %a, ptr %b, i1 %c, i16 %x) vs
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i32 8, i32 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[TMP9]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i1> poison, i1 [[C]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i1> [[BROADCAST_SPLATINSERT]], <8 x i1> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_EXITING18:.*]] ]
-; CHECK-NEXT:    br i1 [[C]], label %[[THEN3:.*]], label %[[LOOP_EXITING18]]
-; CHECK:       [[THEN3]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[B]], i32 [[INDEX]]
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META10:![0-9]+]], !noalias [[META13:![0-9]+]]
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
-; CHECK:       [[PRED_STORE_IF5]]:
-; CHECK-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META10]], !noalias [[META13]]
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
-; CHECK:       [[PRED_STORE_CONTINUE6]]:
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
-; CHECK:       [[PRED_STORE_IF7]]:
-; CHECK-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META10]], !noalias [[META13]]
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
-; CHECK:       [[PRED_STORE_CONTINUE8]]:
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
-; CHECK:       [[PRED_STORE_IF9]]:
-; CHECK-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META10]], !noalias [[META13]]
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
-; CHECK:       [[PRED_STORE_CONTINUE10]]:
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF11:.*]], label %[[PRED_STORE_CONTINUE12:.*]]
-; CHECK:       [[PRED_STORE_IF11]]:
-; CHECK-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META10]], !noalias [[META13]]
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE12]]
-; CHECK:       [[PRED_STORE_CONTINUE12]]:
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF13:.*]], label %[[PRED_STORE_CONTINUE14:.*]]
-; CHECK:       [[PRED_STORE_IF13]]:
-; CHECK-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META10]], !noalias [[META13]]
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE14]]
-; CHECK:       [[PRED_STORE_CONTINUE14]]:
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF15:.*]], label %[[PRED_STORE_CONTINUE16:.*]]
-; CHECK:       [[PRED_STORE_IF15]]:
-; CHECK-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META10]], !noalias [[META13]]
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE16]]
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE16:.*]]
 ; CHECK:       [[PRED_STORE_CONTINUE16]]:
-; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF17:.*]], label %[[PRED_STORE_CONTINUE18:.*]]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE18:.*]] ]
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF17:.*]], label %[[PRED_STORE_CONTINUE18]]
 ; CHECK:       [[PRED_STORE_IF17]]:
-; CHECK-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META10]], !noalias [[META13]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[INDEX]]
+; CHECK-NEXT:    store i1 false, ptr [[A]], align 1, !alias.scope [[META10:![0-9]+]], !noalias [[META13:![0-9]+]]
+; CHECK-NEXT:    store <8 x i32> zeroinitializer, ptr [[TMP13]], align 4, !alias.scope [[META13]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE18]]
 ; CHECK:       [[PRED_STORE_CONTINUE18]]:
-; CHECK-NEXT:    call void @llvm.masked.store.v8i32.p0(<8 x i32> zeroinitializer, ptr align 4 [[TMP11]], <8 x i1> [[BROADCAST_SPLAT]]), !alias.scope [[META13]]
-; CHECK-NEXT:    br label %[[LOOP_EXITING18]]
-; CHECK:       [[LOOP_EXITING18]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[PRED_STORE_CONTINUE16]], !llvm.loop [[LOOP15:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:

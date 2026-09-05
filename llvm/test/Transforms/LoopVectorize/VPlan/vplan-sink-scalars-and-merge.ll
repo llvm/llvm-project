@@ -1164,27 +1164,13 @@ define void @update_multiple_users(ptr noalias %src, ptr noalias %dst, i1 %c) {
 ; CHECK-NEXT:    Successor(s): loop.then, loop.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    loop.then:
-; CHECK-NEXT:    Successor(s): pred.store
-; CHECK-EMPTY:
-; CHECK-NEXT:    <xVFxUF> pred.store: {
-; CHECK-NEXT:      pred.store.entry:
-; CHECK-NEXT:        BRANCH-ON-MASK ir<%c>
-; CHECK-NEXT:      Successor(s): pred.store.if, pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:      pred.store.if:
-; CHECK-NEXT:        REPLICATE ir<%l1> = load ir<%src>
-; CHECK-NEXT:        REPLICATE ir<%l2> = trunc ir<%l1>
-; CHECK-NEXT:        REPLICATE ir<%cmp> = icmp eq ir<%l1>, ir<0>
-; CHECK-NEXT:        REPLICATE ir<%sel> = select ir<%cmp>, ir<5>, ir<%l2>
-; CHECK-NEXT:        REPLICATE store ir<%sel>, ir<%dst>
-; CHECK-NEXT:      Successor(s): pred.store.continue
-; CHECK-EMPTY:
-; CHECK-NEXT:      pred.store.continue:
-; CHECK-NEXT:      No successors
-; CHECK-NEXT:    }
-; CHECK-NEXT:    Successor(s): loop.then.1
-; CHECK-EMPTY:
-; CHECK-NEXT:    loop.then.1:
+; CHECK-NEXT:      REPLICATE ir<%l1> = load ir<%src>
+; CHECK-NEXT:      REPLICATE ir<%l2> = trunc ir<%l1>
+; CHECK-NEXT:      REPLICATE ir<%cmp> = icmp eq ir<%l1>, ir<0>
+; CHECK-NEXT:      REPLICATE ir<%sel> = select ir<%cmp>, ir<5>, ir<%l2>
+; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = extract-last-part ir<%sel>
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = extract-last-lane vp<[[VP3]]>
+; CHECK-NEXT:      CLONE store vp<[[VP4]]>, ir<%dst>
 ; CHECK-NEXT:    Successor(s): loop.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    loop.latch:

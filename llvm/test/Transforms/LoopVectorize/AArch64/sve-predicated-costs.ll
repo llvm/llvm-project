@@ -81,11 +81,7 @@ define void @always_taken(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1, i1 %
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 2 x i1> poison, i1 [[C2]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <vscale x 2 x i1> [[BROADCAST_SPLATINSERT2]], <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i1> poison, i1 [[C1]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i1> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 2 x i1> poison, i1 [[C0]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i1> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = freeze i1 [[C1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = select <vscale x 2 x i1> [[BROADCAST_SPLAT2]], <vscale x 2 x i1> [[BROADCAST_SPLAT]], <vscale x 2 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <vscale x 2 x i1> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i1> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = freeze i1 [[C2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = select <vscale x 2 x i1> [[TMP6]], <vscale x 2 x i1> [[BROADCAST_SPLAT1]], <vscale x 2 x i1> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -93,7 +89,7 @@ define void @always_taken(ptr noalias %p0, ptr noalias %p1, i1 %c0, i1 %c1, i1 %
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LATCH9:.*]] ]
 ; CHECK-NEXT:    br i1 [[C0]], label %[[THEN_05:.*]], label %[[LATCH9]]
 ; CHECK:       [[THEN_05]]:
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[THEN_16:.*]], label %[[LATCH9]]
+; CHECK-NEXT:    br i1 [[C1]], label %[[THEN_16:.*]], label %[[LATCH9]]
 ; CHECK:       [[THEN_16]]:
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[THEN_27:.*]], label %[[LATCH9]]
 ; CHECK:       [[THEN_27]]:

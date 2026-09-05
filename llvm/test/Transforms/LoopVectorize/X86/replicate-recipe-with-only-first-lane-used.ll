@@ -69,72 +69,20 @@ define void @replicate_udiv_with_only_first_lane_used2(i32 %x, ptr %dst, i64 %d)
 ; CHECK-SAME: i32 [[X:%.*]], ptr [[DST:%.*]], i64 [[D:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X]], 10
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = xor <4 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH16:.*]] ]
-; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_LATCH16]], label %[[PRED_UDIV_IF:.*]]
-; CHECK:       [[PRED_UDIV_IF]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[PRED_UDIV_IF2:.*]], label %[[PRED_UDIV_CONTINUE:.*]]
-; CHECK:       [[PRED_UDIV_IF2]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = udiv i64 99, [[D]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> poison, i64 [[TMP2]], i64 0
-; CHECK-NEXT:    br label %[[PRED_UDIV_CONTINUE]]
-; CHECK:       [[PRED_UDIV_CONTINUE]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x i64> [ poison, %[[PRED_UDIV_IF]] ], [ [[TMP3]], %[[PRED_UDIV_IF2]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_UDIV_IF1:.*]], label %[[PRED_UDIV_CONTINUE2:.*]]
-; CHECK:       [[PRED_UDIV_IF1]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = udiv i64 99, [[D]]
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i64> [[TMP4]], i64 [[TMP6]], i64 1
-; CHECK-NEXT:    br label %[[PRED_UDIV_CONTINUE2]]
-; CHECK:       [[PRED_UDIV_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi <4 x i64> [ [[TMP4]], %[[PRED_UDIV_CONTINUE]] ], [ [[TMP7]], %[[PRED_UDIV_IF1]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[PRED_UDIV_IF3:.*]], label %[[PRED_UDIV_CONTINUE4:.*]]
-; CHECK:       [[PRED_UDIV_IF3]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = udiv i64 99, [[D]]
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i64> [[TMP8]], i64 [[TMP10]], i64 2
-; CHECK-NEXT:    br label %[[PRED_UDIV_CONTINUE4]]
-; CHECK:       [[PRED_UDIV_CONTINUE4]]:
-; CHECK-NEXT:    [[TMP23:%.*]] = phi <4 x i64> [ [[TMP8]], %[[PRED_UDIV_CONTINUE2]] ], [ [[TMP11]], %[[PRED_UDIV_IF3]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; CHECK-NEXT:    br i1 [[TMP13]], label %[[PRED_UDIV_IF5:.*]], label %[[PRED_UDIV_CONTINUE6:.*]]
-; CHECK:       [[PRED_UDIV_IF5]]:
-; CHECK-NEXT:    [[TMP14:%.*]] = udiv i64 99, [[D]]
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i64> [[TMP23]], i64 [[TMP14]], i64 3
-; CHECK-NEXT:    br label %[[PRED_UDIV_CONTINUE6]]
-; CHECK:       [[PRED_UDIV_CONTINUE6]]:
-; CHECK-NEXT:    [[TMP16:%.*]] = phi <4 x i64> [ [[TMP23]], %[[PRED_UDIV_CONTINUE4]] ], [ [[TMP15]], %[[PRED_UDIV_IF5]] ]
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; CHECK-NEXT:    br i1 [[TMP17]], label %[[PRED_UDIV_IF7:.*]], label %[[PRED_UDIV_CONTINUE8:.*]]
-; CHECK:       [[PRED_UDIV_IF7]]:
-; CHECK-NEXT:    br label %[[PRED_UDIV_CONTINUE8]]
-; CHECK:       [[PRED_UDIV_CONTINUE8]]:
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; CHECK-NEXT:    br i1 [[TMP18]], label %[[PRED_UDIV_IF9:.*]], label %[[PRED_UDIV_CONTINUE10:.*]]
-; CHECK:       [[PRED_UDIV_IF9]]:
-; CHECK-NEXT:    br label %[[PRED_UDIV_CONTINUE10]]
-; CHECK:       [[PRED_UDIV_CONTINUE10]]:
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; CHECK-NEXT:    br i1 [[TMP19]], label %[[PRED_UDIV_IF11:.*]], label %[[PRED_UDIV_CONTINUE12:.*]]
-; CHECK:       [[PRED_UDIV_IF11]]:
-; CHECK-NEXT:    br label %[[PRED_UDIV_CONTINUE12]]
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[TMP3]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[PRED_UDIV_CONTINUE12:.*]]
 ; CHECK:       [[PRED_UDIV_CONTINUE12]]:
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
-; CHECK-NEXT:    br i1 [[TMP20]], label %[[PRED_UDIV_IF13:.*]], label %[[PRED_UDIV_CONTINUE14:.*]]
-; CHECK:       [[PRED_UDIV_IF13]]:
-; CHECK-NEXT:    br label %[[PRED_UDIV_CONTINUE14]]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_BODY]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH16:.*]] ]
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_LATCH16]], label %[[PRED_UDIV_CONTINUE14:.*]]
 ; CHECK:       [[PRED_UDIV_CONTINUE14]]:
 ; CHECK-NEXT:    br label %[[LOOP_LATCH16]]
 ; CHECK:       [[LOOP_LATCH16]]:
-; CHECK-NEXT:    [[TMP21:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_BODY]] ], [ [[TMP16]], %[[PRED_UDIV_CONTINUE14]] ]
-; CHECK-NEXT:    [[TMP22:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP0]], %[[PRED_UDIV_CONTINUE14]] ]
+; CHECK-NEXT:    [[TMP21:%.*]] = phi <4 x i64> [ poison, %[[PRED_UDIV_CONTINUE12]] ], [ [[BROADCAST_SPLAT]], %[[PRED_UDIV_CONTINUE14]] ]
+; CHECK-NEXT:    [[TMP22:%.*]] = phi <4 x i1> [ zeroinitializer, %[[PRED_UDIV_CONTINUE12]] ], [ splat (i1 true), %[[PRED_UDIV_CONTINUE14]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP22]], <4 x i64> [[TMP21]], <4 x i64> zeroinitializer
 ; CHECK-NEXT:    [[TMP45:%.*]] = extractelement <4 x i64> [[PREDPHI]], i64 0
 ; CHECK-NEXT:    [[TMP46:%.*]] = getelementptr i16, ptr [[DST]], i64 [[TMP45]]
@@ -154,7 +102,7 @@ define void @replicate_udiv_with_only_first_lane_used2(i32 %x, ptr %dst, i64 %d)
 ; CHECK-NEXT:    store i16 0, ptr [[TMP30]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[PRED_UDIV_CONTINUE12]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:

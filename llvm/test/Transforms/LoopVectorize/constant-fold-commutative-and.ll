@@ -11,9 +11,6 @@ define void @constant_fold_commutative_and(ptr %ptr.n, ptr noalias %p, i1 %cond)
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i1> poison, i1 [[COND]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT]], <2 x i1> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = xor <2 x i1> [[BROADCAST_SPLAT]], splat (i1 true)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE5:.*]] ]
@@ -25,13 +22,12 @@ define void @constant_fold_commutative_and(ptr %ptr.n, ptr noalias %p, i1 %cond)
 ; CHECK-NEXT:    br i1 [[COND]], label %[[LATCH4:.*]], label %[[PRED_11:.*]]
 ; CHECK:       [[PRED_11]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp uge <2 x i64> [[BROADCAST_SPLAT2]], splat (i64 4)
-; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP0]], <2 x i1> [[TMP3]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult <2 x i64> [[BROADCAST_SPLAT2]], splat (i64 7)
 ; CHECK-NEXT:    br label %[[LATCH4]]
 ; CHECK:       [[LATCH4]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi <2 x i1> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP0]], %[[PRED_11]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <2 x i1> [ zeroinitializer, %[[VECTOR_BODY]] ], [ splat (i1 true), %[[PRED_11]] ]
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi <2 x i1> [ poison, %[[VECTOR_BODY]] ], [ [[TMP7]], %[[PRED_11]] ]
-; CHECK-NEXT:    [[TMP14:%.*]] = phi <2 x i1> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP5]], %[[PRED_11]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = phi <2 x i1> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP3]], %[[PRED_11]] ]
 ; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <2 x i1> [[TMP14]], <2 x i1> [[TMP13]], <2 x i1> [[TMP12]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]

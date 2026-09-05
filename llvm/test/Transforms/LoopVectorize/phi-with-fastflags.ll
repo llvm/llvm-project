@@ -7,8 +7,6 @@ define void @f(ptr noalias %p, i1 %c) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[C]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LATCH2:.*]] ]
@@ -18,7 +16,7 @@ define void @f(ptr noalias %p, i1 %c) {
 ; CHECK:       [[THEN1]]:
 ; CHECK-NEXT:    br label %[[LATCH2]]
 ; CHECK:       [[LATCH2]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[BROADCAST_SPLAT]], %[[THEN1]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_BODY]] ], [ splat (i1 true), %[[THEN1]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select fast <4 x i1> [[TMP2]], <4 x float> zeroinitializer, <4 x float> [[WIDE_LOAD]]
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
