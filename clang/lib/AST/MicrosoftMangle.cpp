@@ -27,6 +27,7 @@
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/DiagnosticAST.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/Module.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Preprocessor.h"
@@ -342,6 +343,11 @@ public:
   enum QualifierMangleMode { QMM_Drop, QMM_Mangle, QMM_Escape, QMM_Result };
   enum class TplArgKind { ClassNTTP, StructuralValue };
 
+  // The module owning the entity `mangle(GlobalDecl, StringRef)` is
+  // mangling the top-level name of, or null if there is none (e.g. RTTI).
+  // Consulted by mangleType(TagDecl*) for the "$$_A<module>" tag.
+  Module *MangleContextModule = nullptr;
+
   MicrosoftCXXNameMangler(MicrosoftMangleContextImpl &C, raw_ostream &Out_)
       : Context(C), Out(Out_), Structor(nullptr), StructorType(-1),
         TemplateArgStringStorage(TemplateArgStringStorageAlloc),
@@ -365,7 +371,7 @@ public:
   raw_ostream &getStream() const { return Out; }
 
   void mangle(GlobalDecl GD, StringRef Prefix = "?");
-  void mangleName(GlobalDecl GD);
+  void mangleName(GlobalDecl GD, bool Terminate = true);
   void mangleFunctionEncoding(GlobalDecl GD, bool ShouldMangle);
   void mangleVariableEncoding(const VarDecl *VD);
   void mangleMemberDataPointer(const CXXRecordDecl *RD, const ValueDecl *VD,
@@ -600,6 +606,11 @@ void MicrosoftCXXNameMangler::mangle(GlobalDecl GD, StringRef Prefix) {
   // name with leading underscores or leading/trailing at signs. So, by
   // default, we emit an asm marker at the start so we get the name right.
   // Callers can override this with a custom prefix.
+
+  // Record this entity's own module, so an embedded record-type reference
+  // below can compare against it -- see MangleContextModule.
+  if (D->isExternallyVisible())
+    MangleContextModule = D->getOwningModuleForLinkage();
 
   // <mangled-name> ::= ? <name> <type-encoding>
   Out << Prefix;
@@ -958,7 +969,7 @@ void MicrosoftCXXNameMangler::mangleVirtualMemPtrThunk(
                           MD->getSourceRange());
 }
 
-void MicrosoftCXXNameMangler::mangleName(GlobalDecl GD) {
+void MicrosoftCXXNameMangler::mangleName(GlobalDecl GD, bool Terminate) {
   // <name> ::= <unscoped-name> {[<named-scope>]+ | [<nested-name>]}? @
 
   // Always start with the unqualified name.
@@ -966,8 +977,10 @@ void MicrosoftCXXNameMangler::mangleName(GlobalDecl GD) {
 
   mangleNestedName(GD);
 
-  // Terminate the whole name with an '@'.
-  Out << '@';
+  // Terminate with '@', unless the caller (mangleType(TagDecl*)) wants to
+  // append more first and terminate it itself.
+  if (Terminate)
+    Out << '@';
 }
 
 void MicrosoftCXXNameMangler::mangleNumber(int64_t Number) {
@@ -3465,7 +3478,29 @@ void MicrosoftCXXNameMangler::mangleType(const TagDecl *TD) {
   const auto *Def = TD->getDefinition();
   TD = Def ? Def : TD->getFirstDecl();
   mangleTagTypeKind(TD->getTagKind());
-  mangleName(TD);
+  // A record referenced here (as opposed to being the top-level entity
+  // mangle(GlobalDecl) is naming) gets a "$$_A<module>" tag when its
+  // module differs from MangleContextModule -- always true for RTTI.
+  mangleName(TD, /*Terminate=*/false);
+  if (Module *M = TD->getOwningModuleForLinkage())
+    if (M != MangleContextModule) {
+      // Shares NameBackReferences with ordinary names: a fresh name needs
+      // its own '@' plus the list terminator ("@@"); a back-reference
+      // digit has no '@' of its own, so it needs only "@".
+      Out << "$$_A";
+      StringRef Name = M->getPrimaryModuleInterfaceName();
+      BackRefVec::iterator Found = llvm::find(NameBackReferences, Name);
+      if (Found == NameBackReferences.end()) {
+        if (NameBackReferences.size() < 10)
+          NameBackReferences.push_back(std::string(Name));
+        Out << Name << "@@";
+      } else {
+        Out << (Found - NameBackReferences.begin()) << '@';
+      }
+      Out << '@';
+      return;
+    }
+  Out << '@';
 }
 
 // If you add a call to this, consider updating isArtificialTagType() too.
@@ -3942,22 +3977,40 @@ void MicrosoftMangleContextImpl::mangleCXXName(GlobalDecl GD,
                                  getASTContext().getSourceManager(),
                                  "Mangling declaration");
 
-  msvc_hashing_ostream MHO(Out);
+  {
+    msvc_hashing_ostream MHO(Out);
 
-  if (auto *CD = dyn_cast<CXXConstructorDecl>(D)) {
-    auto Type = GD.getCtorType();
-    MicrosoftCXXNameMangler mangler(*this, MHO, CD, Type);
-    return mangler.mangle(GD);
+    if (auto *CD = dyn_cast<CXXConstructorDecl>(D)) {
+      auto Type = GD.getCtorType();
+      MicrosoftCXXNameMangler mangler(*this, MHO, CD, Type);
+      mangler.mangle(GD);
+    } else if (auto *DD = dyn_cast<CXXDestructorDecl>(D)) {
+      auto Type = GD.getDtorType();
+      MicrosoftCXXNameMangler mangler(*this, MHO, DD, Type);
+      mangler.mangle(GD);
+    } else {
+      MicrosoftCXXNameMangler Mangler(*this, MHO);
+      Mangler.mangle(GD);
+    }
+    // MHO flushes here (raw, or hashed to "??@<md5>@" past the length
+    // threshold) before the module-ownership suffix below, since MSVC
+    // appends "::<!name>" after hashing rather than folding it in.
   }
 
-  if (auto *DD = dyn_cast<CXXDestructorDecl>(D)) {
-    auto Type = GD.getDtorType();
-    MicrosoftCXXNameMangler mangler(*this, MHO, DD, Type);
-    return mangler.mangle(GD);
+  // <mangled-name> ::= <mangled-name> "::<!" <module-name> ">"
+  //
+  // MSVC tags externally-visible module-owned entities with this suffix so
+  // identically-named entities from different modules stay distinct at
+  // link time; a module partition's own name is dropped, only the primary
+  // module name is used. The vector deleting destructor is excluded --
+  // unlike the base and scalar-deleting destructors, MSVC leaves it
+  // unmangled by module ownership.
+  bool IsVectorDeletingDtor =
+      isa<CXXDestructorDecl>(D) && GD.getDtorType() == Dtor_VectorDeleting;
+  if (!IsVectorDeletingDtor && D->isExternallyVisible()) {
+    if (Module *M = D->getOwningModuleForLinkage())
+      Out << "::<!" << M->getPrimaryModuleInterfaceName() << '>';
   }
-
-  MicrosoftCXXNameMangler Mangler(*this, MHO);
-  return Mangler.mangle(GD);
 }
 
 void MicrosoftCXXNameMangler::mangleType(const BitIntType *T, Qualifiers,
