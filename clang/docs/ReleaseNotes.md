@@ -651,6 +651,9 @@ features cannot lower the translation-unit ABI level;
 - `FunctionDecl::getReturnTypeSourceRange()` now returns correct source
   location of a trailing return type. (#GH162649)
 
+- Added missed information to the AST node representing the member function
+  when calling a explicit object member function. (#GH218829)
+
 #### Miscellaneous Bug Fixes
 
 #### Miscellaneous Clang Crashes Fixed
