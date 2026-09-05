@@ -100,9 +100,9 @@ long get_nprocessors_onln() {
 
 long get_phys_pages() {
   struct ::sysinfo info;
-  ErrorOr<int> ret = linux_syscalls::sysinfo(&info);
-  if (!ret) {
-    libc_errno = -ret.error();
+  int ret = linux_syscalls::sysinfo(&info);
+  if (ret < 0) {
+    libc_errno = -ret;
     return -1;
   }
   cpp::optional<unsigned long> page_size = auxv::get(AT_PAGESZ);

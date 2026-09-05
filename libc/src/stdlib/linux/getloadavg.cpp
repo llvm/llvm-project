@@ -26,9 +26,8 @@ LLVM_LIBC_FUNCTION(int, getloadavg, (double loadavg[], int nelem)) {
     return 0;
 
   struct sysinfo info;
-  auto result = linux_syscalls::sysinfo(&info);
-  if (!result) {
-    libc_errno = result.error();
+  int result = linux_syscalls::sysinfo(&info);
+  if (result < 0) {
     return -1;
   }
 
