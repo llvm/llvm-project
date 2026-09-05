@@ -1019,6 +1019,12 @@ Expected<TargetExtType *> TargetExtType::checkParams(TargetExtType *TTy) {
                              "and at most one integer parameter");
   }
 
+  if (TTy->Name == "llvm.test.tokenlike" &&
+      (TTy->getNumTypeParameters() > 1 || TTy->getNumIntParameters() != 0))
+    return createStringError("target extension type llvm.test.tokenlike "
+                             "should have at most one type parameter and no "
+                             "integer parameters");
+
   return TTy;
 }
 
@@ -1125,6 +1131,11 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     return TargetTypeInfo(Type::getInt32Ty(C), TargetExtType::CanBeLocal,
                           TargetExtType::CanBeVectorElement);
   }
+  if (Name == "llvm.test.tokenlike")
+    return TargetTypeInfo(Ty->getNumTypeParameters() == 0
+                              ? Type::getVoidTy(C)
+                              : Ty->getTypeParameter(0),
+                          TargetExtType::IsTokenLike);
 
   // Opaque types in the WebAssembly name space.
   if (Name == "wasm.funcref" || Name == "wasm.externref")
