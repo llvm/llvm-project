@@ -80,7 +80,7 @@ identify object files causing dead-stripping or layout issues, LLD provides:
 
 To resolve the warning and allow subsection splitting, add `.subsections_via_symbols`
 to the assembly source:
-```assembly
+```asm
 #if defined(__APPLE__)
 .subsections_via_symbols
 #endif
