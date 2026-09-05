@@ -1249,6 +1249,11 @@ public:
   /// Returns true if \p Op is guaranteed to not be poison.
   LLVM_ABI static bool isGuaranteedNotToBePoison(const SCEV *Op);
 
+  /// Returns true if \p Op is guaranteed not to cause immediate UB. Use this
+  /// to check whether \p Op can be expanded at a point it may not have been
+  /// evaluated at in the original program.
+  LLVM_ABI bool isGuaranteedNotToCauseUB(const SCEV *Op);
+
   /// Test if the given expression is known to be a power of 2.  OrNegative
   /// allows matching negative power of 2s, and OrZero allows matching 0.
   LLVM_ABI bool isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero = false,
@@ -2459,9 +2464,6 @@ private:
   /// prove B must execute given A executes.
   bool isGuaranteedToTransferExecutionTo(const Instruction *A,
                                          const Instruction *B);
-
-  /// Returns true if \p Op is guaranteed not to cause immediate UB.
-  bool isGuaranteedNotToCauseUB(const SCEV *Op);
 
   /// Return true if the SCEV corresponding to \p I is never poison.  Proving
   /// this is more complex than proving that just \p I is never poison, since
