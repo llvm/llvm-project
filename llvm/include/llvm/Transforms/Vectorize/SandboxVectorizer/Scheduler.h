@@ -314,7 +314,7 @@ class Scheduler {
   /// top-most/bottom-most instruction scheduled. It may get updated after every
   /// trySchedule() attempt, regardless of whether scheduling succeeded or not.
   /// It is nullopt if we have not scheduled before.
-  std::optional<SchedulingPoint> ScheduleTopItOpt;
+  std::optional<SchedulingPoint> ScheduleFrontierOpt;
   // TODO: This is wasting memory in exchange for fast removal using a raw ptr.
   DenseMap<SchedBundle *, std::unique_ptr<SchedBundle>> Bndls;
   /// The BB that we are currently scheduling.
@@ -387,10 +387,10 @@ public:
     // TODO: clear view once it lands.
     DAG.clear();
     ReadyList.clear();
-    ScheduleTopItOpt = std::nullopt;
+    ScheduleFrontierOpt = std::nullopt;
     ScheduledBB = nullptr;
     assert(Bndls.empty() && DAG.empty() && ReadyList.empty() &&
-           !ScheduleTopItOpt && ScheduledBB == nullptr &&
+           !ScheduleFrontierOpt && ScheduledBB == nullptr &&
            "Expected empty state!");
   }
 
