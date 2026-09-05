@@ -4589,6 +4589,108 @@ static bool isSelectZeroSignInsignificant(SelectInst &SI) {
   return true;
 }
 
+/// Canonicalize a NaN-fallback float clamp to `minnum`/`maxnum`:
+///
+///   below_lo_or_nan = fcmp ult %x, LO
+///   below_hi        = fcmp olt %x, HI
+///   upper           = select nsz below_hi, %x, HI
+///   ordered         = fcmp ord %x, LO
+///   lower_or_fb     = select ordered, LO, %fallback
+///   result          = select below_lo_or_nan, lower_or_fb, upper
+///
+/// =>
+///
+///   isnan   = fcmp uno %x, %x
+///   upperV  = call @llvm.minnum(%x, HI)
+///   clamped = call @llvm.maxnum(upperV, LO)
+///   result  = select isnan, %fallback, clamped
+///
+/// The match is deliberately narrow: exact predicates/operands/bounds,
+/// `denormal-fp-math = ieee`, and one-use intermediate nodes so the original
+/// tree is fully removed. `nnan`/`ninf` are never inferred; NaN is handled
+/// explicitly. `nsz` is required only on the upper clamp select (the boundary
+/// where a -0.0 result must be allowed to take either sign to match the
+/// ordered-zero minnum/maxnum form).
+static Value *foldClampWithNaNFallback(SelectInst &Outer,
+                                       InstCombinerImpl &IC) {
+  InstCombiner::BuilderTy &Builder = IC.Builder;
+  // Only handle scalar/vector float selects. FPMathOperator also covers selects
+  // of homogeneous FP aggregates (e.g. { float, float }), whose scalar type has
+  // no fltSemantics, so restrict to isFPOrFPVectorTy() before querying FP
+  // semantics below. The signed-zero handling only requires nsz on the upper
+  // clamp select (checked below), not on this outer select.
+  if (!Outer.getType()->isFPOrFPVectorTy())
+    return nullptr;
+
+  // The minnum/maxnum form treats denormals per IEEE. If the function may flush
+  // denormals to zero (non-IEEE denormal mode), the rewrite is not
+  // value-equivalent.
+  Type *Ty = Outer.getType()->getScalarType();
+  const fltSemantics &FPSem = Ty->getFltSemantics();
+  if (Outer.getFunction()->getDenormalMode(FPSem) != DenormalMode::getIEEE())
+    return nullptr;
+
+  Value *BelowLoOrNan, *LowerOrFallback, *Upper;
+  if (!match(&Outer, m_Select(m_Value(BelowLoOrNan), m_Value(LowerOrFallback),
+                              m_Value(Upper))))
+    return nullptr;
+
+  // belowLoOrNan = fcmp ult %x, LO (nsz on the fcmp is irrelevant).
+  Value *X;
+  Constant *Lo;
+  if (!match(BelowLoOrNan,
+             m_OneUse(m_SpecificFCmp(FCmpInst::FCMP_ULT, m_Value(X),
+                                     m_Constant(Lo)))))
+    return nullptr;
+
+  // upper = select nsz (fcmp olt %x, HI), %x, HI. nsz is required here (and
+  // only here): it lets the -0.0 boundary result take either sign, matching the
+  // ordered-zero minnum/maxnum form.
+  auto *UpperSel = dyn_cast<SelectInst>(Upper);
+  if (!UpperSel || !UpperSel->hasOneUse() || !UpperSel->hasNoSignedZeros())
+    return nullptr;
+  Constant *Hi;
+  if (!match(UpperSel->getCondition(),
+             m_OneUse(m_SpecificFCmp(FCmpInst::FCMP_OLT, m_Specific(X),
+                                     m_Constant(Hi)))) ||
+      UpperSel->getTrueValue() != X || UpperSel->getFalseValue() != Hi)
+    return nullptr;
+
+  // lowerOrFallback = select (fcmp ord %x, Y), LO, %fallback (nsz not
+  // required).
+  auto *LowSel = dyn_cast<SelectInst>(LowerOrFallback);
+  if (!LowSel || !LowSel->hasOneUse())
+    return nullptr;
+  Value *OrdOther;
+  if (!match(LowSel->getCondition(),
+             m_OneUse(m_SpecificFCmp(FCmpInst::FCMP_ORD, m_Specific(X),
+                                     m_Value(OrdOther)))) ||
+      LowSel->getTrueValue() != Lo)
+    return nullptr;
+  // fcmp ord %x, Y equals "%x is not NaN" only when Y is known non-NaN; else a
+  // NaN Y would make the source pick %fallback where the rewrite picks LO.
+  if (OrdOther != X &&
+      !isKnownNeverNaN(OrdOther,
+                       IC.getSimplifyQuery().getWithInstruction(&Outer)))
+    return nullptr;
+  Value *Fallback = LowSel->getFalseValue();
+
+  // Require LO <= HI (as constants) so the clamp is well-formed. For LO > HI
+  // the source tree and the minnum/maxnum form disagree, so bail out.
+  Constant *LeCmp = ConstantFoldCompareInstOperands(FCmpInst::FCMP_OLE, Lo, Hi,
+                                                    Outer.getDataLayout());
+  if (!LeCmp || !match(LeCmp, m_One()))
+    return nullptr;
+
+  // Match succeeded -- build the normalized form. The minnum/maxnum use their
+  // ordered-zero semantics, so no nsz flag is set on them.
+  Value *IsNaN = Builder.CreateFCmpUNO(X, X, "isnan");
+  Value *UpperV = Builder.CreateBinaryIntrinsic(Intrinsic::minnum, X, Hi);
+  Value *Clamped = Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, UpperV, Lo);
+
+  return Builder.CreateSelect(IsNaN, Fallback, Clamped, "clamp.or.fallback");
+}
+
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -5423,6 +5525,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         SI.getModule(), Intrinsic::scmp, {SI.getType(), SI.getType()});
     return CallInst::Create(Scmp, {CmpLHS, ConstantInt::get(SI.getType(), 0)});
   }
+
+  if (Value *V = foldClampWithNaNFallback(SI, *this))
+    return replaceInstUsesWith(SI, V);
 
   return nullptr;
 }
