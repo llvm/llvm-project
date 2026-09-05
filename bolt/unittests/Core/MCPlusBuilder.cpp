@@ -16,6 +16,11 @@
 #include "X86Subtarget.h"
 #endif // X86_AVAILABLE
 
+#ifdef RISCV_AVAILABLE
+#include "MCTargetDesc/RISCVMCTargetDesc.h"
+#include "RISCVSubtarget.h"
+#endif // RISCV_AVAILABLE
+
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Rewrite/RewriteInstance.h"
@@ -23,6 +28,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -56,20 +62,37 @@ protected:
     ELF64LE::Ehdr *EHdr = reinterpret_cast<typename ELF64LE::Ehdr *>(ElfBuf);
     EHdr->e_ident[llvm::ELF::EI_CLASS] = llvm::ELF::ELFCLASS64;
     EHdr->e_ident[llvm::ELF::EI_DATA] = llvm::ELF::ELFDATA2LSB;
-    EHdr->e_machine = GetParam() == Triple::aarch64 ? EM_AARCH64 : EM_X86_64;
+    switch (GetParam()) {
+    case Triple::aarch64:
+      EHdr->e_machine = EM_AARCH64;
+      break;
+    case Triple::riscv64:
+      EHdr->e_machine = EM_RISCV;
+      break;
+    case Triple::x86_64:
+      EHdr->e_machine = EM_X86_64;
+      break;
+    default:
+      llvm_unreachable("Unsupported architecture");
+      break;
+    }
     MemoryBufferRef Source(StringRef(ElfBuf, sizeof(ElfBuf)), "ELF");
     ObjFile = cantFail(ObjectFile::createObjectFile(Source));
   }
 
   void initializeBolt() {
-    Relocation::Arch = ObjFile->makeTriple().getArch();
+    const Triple TheTriple = GetParam();
+    Relocation::Arch = TheTriple.getArch();
+    // Minimal test ELFs have no RISC-V attributes. RISC-V needs an empty
+    // feature set for +relax, while other targets reject a non-null one.
+    SubtargetFeatures Features;
     BC = cantFail(BinaryContext::createBinaryContext(
-        ObjFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
-        ObjFile->getFileName(), nullptr, true, DWARFContext::create(*ObjFile),
-        {llvm::outs(), llvm::errs()}));
+        TheTriple, std::make_shared<orc::SymbolStringPool>(),
+        ObjFile->getFileName(), TheTriple.isRISCV() ? &Features : nullptr, true,
+        DWARFContext::create(*ObjFile), {llvm::outs(), llvm::errs()}));
     ASSERT_FALSE(!BC);
     BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(
-        createMCPlusBuilder(GetParam(), BC->MIA.get(), BC->MII.get(),
+        createMCPlusBuilder(TheTriple.getArch(), BC->MIA.get(), BC->MII.get(),
                             BC->MRI.get(), BC->STI.get())));
   }
 
@@ -831,7 +854,7 @@ TEST_P(MCPlusBuilderTester, AArch64_Psign_Pauth_variants) {
   ASSERT_TRUE(BC->MIB->isPAuthAndRet(Retab));
 }
 
-TEST_P(MCPlusBuilderTester, AArch64_isCleanRegXOR) {
+TEST_P(MCPlusBuilderTester, AArch64_isCleanReg) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();
 
@@ -844,7 +867,7 @@ TEST_P(MCPlusBuilderTester, AArch64_isCleanRegXOR) {
                       .addReg(AArch64::X0)
                       .addReg(AArch64::X0)
                       .addImm(0);
-  ASSERT_TRUE(BC->MIB->isCleanRegXOR(EORXrs));
+  ASSERT_TRUE(BC->MIB->isCleanReg(EORXrs));
 
   // eor w0, w0, w0
   MCInst EORWrs = MCInstBuilder(AArch64::EORWrs)
@@ -852,7 +875,7 @@ TEST_P(MCPlusBuilderTester, AArch64_isCleanRegXOR) {
                       .addReg(AArch64::W0)
                       .addReg(AArch64::W0)
                       .addImm(0);
-  ASSERT_TRUE(BC->MIB->isCleanRegXOR(EORWrs));
+  ASSERT_TRUE(BC->MIB->isCleanReg(EORWrs));
 
   // mov x0, xzr
   MCInst ORRXrs = MCInstBuilder(AArch64::ORRXrs)
@@ -860,7 +883,7 @@ TEST_P(MCPlusBuilderTester, AArch64_isCleanRegXOR) {
                       .addReg(AArch64::XZR)
                       .addReg(AArch64::XZR)
                       .addImm(0);
-  ASSERT_TRUE(BC->MIB->isCleanRegXOR(ORRXrs));
+  ASSERT_TRUE(BC->MIB->isCleanReg(ORRXrs));
 
   // mov w0, wzr
   MCInst ORRWrs = MCInstBuilder(AArch64::ORRWrs)
@@ -868,17 +891,17 @@ TEST_P(MCPlusBuilderTester, AArch64_isCleanRegXOR) {
                       .addReg(AArch64::WZR)
                       .addReg(AArch64::WZR)
                       .addImm(0);
-  ASSERT_TRUE(BC->MIB->isCleanRegXOR(ORRWrs));
+  ASSERT_TRUE(BC->MIB->isCleanReg(ORRWrs));
 
   // mov x0, #0
   MCInst MOVZXi =
       MCInstBuilder(AArch64::MOVZXi).addReg(AArch64::X0).addImm(0).addImm(0);
-  ASSERT_TRUE(BC->MIB->isCleanRegXOR(MOVZXi));
+  ASSERT_TRUE(BC->MIB->isCleanReg(MOVZXi));
 
   // mov w0, #0
   MCInst MOVZWi =
       MCInstBuilder(AArch64::MOVZWi).addReg(AArch64::W0).addImm(0).addImm(0);
-  ASSERT_TRUE(BC->MIB->isCleanRegXOR(MOVZWi));
+  ASSERT_TRUE(BC->MIB->isCleanReg(MOVZWi));
 
   // movz x0, #:abs_g3:symbol
   MCInst MOVZXiWithExpr =
@@ -887,10 +910,96 @@ TEST_P(MCPlusBuilderTester, AArch64_isCleanRegXOR) {
           .addExpr(MCSpecifierExpr::create(BB->getLabel(), AArch64::S_ABS_G3,
                                            *BC->Ctx.get()))
           .addImm(48);
-  ASSERT_FALSE(BC->MIB->isCleanRegXOR(MOVZXiWithExpr));
+  ASSERT_FALSE(BC->MIB->isCleanReg(MOVZXiWithExpr));
 }
 
 #endif // AARCH64_AVAILABLE
+
+#ifdef RISCV_AVAILABLE
+
+INSTANTIATE_TEST_SUITE_P(RISCV, MCPlusBuilderTester,
+                         ::testing::Values(Triple::riscv64));
+
+TEST_P(MCPlusBuilderTester, RISCV_NoFlagsRegister) {
+  if (GetParam() != Triple::riscv64)
+    GTEST_SKIP();
+
+  EXPECT_EQ(BC->MIB->getFlagsReg(), RISCV::NoRegister);
+}
+
+TEST_P(MCPlusBuilderTester, RISCV_isCleanReg) {
+  if (GetParam() != Triple::riscv64)
+    GTEST_SKIP();
+
+  MCInst ADDI =
+      MCInstBuilder(RISCV::ADDI).addReg(RISCV::X5).addReg(RISCV::X0).addImm(0);
+  EXPECT_TRUE(BC->MIB->isCleanReg(ADDI));
+
+  MCInst NonZeroSource =
+      MCInstBuilder(RISCV::ADDI).addReg(RISCV::X5).addReg(RISCV::X6).addImm(0);
+  EXPECT_FALSE(BC->MIB->isCleanReg(NonZeroSource));
+
+  MCInst NonZeroImmediate =
+      MCInstBuilder(RISCV::ADDI).addReg(RISCV::X5).addReg(RISCV::X0).addImm(1);
+  EXPECT_FALSE(BC->MIB->isCleanReg(NonZeroImmediate));
+
+  MCInst XOR = MCInstBuilder(RISCV::XOR)
+                   .addReg(RISCV::X5)
+                   .addReg(RISCV::X6)
+                   .addReg(RISCV::X6);
+  EXPECT_FALSE(BC->MIB->isCleanReg(XOR));
+}
+
+TEST_P(MCPlusBuilderTester, RISCV_ABIRegisterMasks) {
+  if (GetParam() != Triple::riscv64)
+    GTEST_SKIP();
+
+  BitVector ExpectedParams(BC->MRI->getNumRegs());
+  for (MCPhysReg Reg = RISCV::X10; Reg <= RISCV::X17; ++Reg)
+    ExpectedParams |= BC->MIB->getAliases(Reg);
+  EXPECT_EQ(BC->MIB->getRegsUsedAsParams(), ExpectedParams);
+
+  BitVector LiveOut(BC->MRI->getNumRegs());
+  BC->MIB->getDefaultLiveOut(LiveOut);
+  BitVector ExpectedLiveOut = BC->MIB->getAliases(RISCV::X10);
+  ExpectedLiveOut |= BC->MIB->getAliases(RISCV::X11);
+  EXPECT_EQ(LiveOut, ExpectedLiveOut);
+}
+
+TEST_P(MCPlusBuilderTester, RISCV_GPRegisterMasks) {
+  if (GetParam() != Triple::riscv64)
+    GTEST_SKIP();
+
+  BitVector ExpectedWithAliases(BC->MRI->getNumRegs());
+  BitVector ExpectedWithoutAliases(BC->MRI->getNumRegs());
+  for (MCPhysReg Reg = RISCV::X1; Reg <= RISCV::X31; ++Reg) {
+    ExpectedWithAliases |= BC->MIB->getAliases(Reg);
+    ExpectedWithoutAliases.set(Reg);
+  }
+
+  BitVector GPRegs(BC->MRI->getNumRegs());
+  BC->MIB->getGPRegs(GPRegs);
+  EXPECT_EQ(GPRegs, ExpectedWithAliases);
+
+  GPRegs.reset();
+  BC->MIB->getGPRegs(GPRegs, /*IncludeAlias=*/false);
+  EXPECT_EQ(GPRegs, ExpectedWithoutAliases);
+}
+
+TEST_P(MCPlusBuilderTester, RISCV_removeNonScavengeableRegs) {
+  if (GetParam() != Triple::riscv64)
+    GTEST_SKIP();
+
+  BitVector Regs(BC->MRI->getNumRegs(), true);
+  BitVector Expected = Regs;
+  for (MCPhysReg Reg : {RISCV::X1, RISCV::X2, RISCV::X3, RISCV::X4, RISCV::X8})
+    Expected.reset(BC->MIB->getAliases(Reg));
+
+  BC->MIB->removeNonScavengeableRegs(Regs);
+  EXPECT_EQ(Regs, Expected);
+}
+
+#endif // RISCV_AVAILABLE
 
 #ifdef X86_AVAILABLE
 

@@ -40,6 +40,21 @@ class RISCVMCPlusBuilder : public MCPlusBuilder {
 public:
   using MCPlusBuilder::MCPlusBuilder;
 
+  MCPhysReg getFlagsReg() const override { return RISCV::NoRegister; }
+
+  bool isCleanReg(const MCInst &Inst) const override {
+    return Inst.getOpcode() == RISCV::ADDI && Inst.getOperand(1).isReg() &&
+           Inst.getOperand(1).getReg() == RISCV::X0 &&
+           Inst.getOperand(2).isImm() && Inst.getOperand(2).getImm() == 0;
+  }
+
+  BitVector getRegsUsedAsParams() const override {
+    BitVector Regs(RegInfo->getNumRegs(), false);
+    for (MCPhysReg Reg = RISCV::X10; Reg <= RISCV::X17; ++Reg)
+      Regs |= getAliases(Reg);
+    return Regs;
+  }
+
   std::unique_ptr<MCSymbolizer>
   createTargetSymbolizer(BinaryFunction &Function,
                          bool CreateNewSymbols) const override {
@@ -71,6 +86,33 @@ public:
     Regs |= getAliases(RISCV::X25);
     Regs |= getAliases(RISCV::X26);
     Regs |= getAliases(RISCV::X27);
+  }
+
+  void getDefaultLiveOut(BitVector &Regs) const override {
+    // The RISC-V psABI uses a0 (x10) and a1 (x11) to return integer and pointer
+    // values.
+    Regs |= getAliases(RISCV::X10);
+    Regs |= getAliases(RISCV::X11);
+  }
+
+  void getGPRegs(BitVector &Regs, bool IncludeAlias = true) const override {
+    for (MCPhysReg Reg = RISCV::X1; Reg <= RISCV::X31; ++Reg) {
+      if (IncludeAlias)
+        Regs |= getAliases(Reg);
+      else
+        Regs.set(Reg);
+    }
+  }
+
+  void removeNonScavengeableRegs(BitVector &Regs) const override {
+    BitVector ExclusionMask(RegInfo->getNumRegs(), false);
+    ExclusionMask |= getAliases(RISCV::X1); // return address
+    ExclusionMask |= getAliases(RISCV::X2); // stack pointer
+    ExclusionMask |= getAliases(RISCV::X3); // global pointer
+    ExclusionMask |= getAliases(RISCV::X4); // thread pointer
+    ExclusionMask |= getAliases(RISCV::X8); // frame pointer
+    ExclusionMask.flip();
+    Regs &= ExclusionMask;
   }
 
   bool shouldRecordCodeRelocation(uint32_t RelType) const override {

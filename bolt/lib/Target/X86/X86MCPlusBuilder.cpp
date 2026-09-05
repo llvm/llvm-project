@@ -379,7 +379,7 @@ public:
     return MCII.mayStore();
   }
 
-  bool isCleanRegXOR(const MCInst &Inst) const override {
+  bool isCleanReg(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case X86::XOR16rr:
     case X86::XOR32rr:
