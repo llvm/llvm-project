@@ -21,9 +21,9 @@ define dso_local i32 @_Z5func1i(i32 %x) #0 {
 entry:
   %mul = mul nsw i32 %x, %x
   %add = add nuw nsw i32 %mul, 1
-  %exception = tail call ptr @__cxa_allocate_exception(i64 4) #1
+  %exception = call ptr @__cxa_allocate_exception(i64 4) #1
   store i32 %add, ptr %exception, align 16
-  tail call void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) #2
+  call void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) #2
   unreachable
 }
 
@@ -44,9 +44,9 @@ entry:
   %conv = zext i8 %x to i32
   %mul = mul nuw nsw i32 %conv, %conv
   %add = add nuw nsw i32 %mul, 1
-  %exception = tail call ptr @__cxa_allocate_exception(i64 4) #1
+  %exception = call ptr @__cxa_allocate_exception(i64 4) #1
   store i32 %add, ptr %exception, align 16
-  tail call void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) #2
+  call void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) #2
   unreachable
 }
 
