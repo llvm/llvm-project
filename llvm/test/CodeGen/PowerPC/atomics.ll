@@ -310,12 +310,12 @@ define i64 @cas_weak_i64_release_monotonic(ptr %mem) {
 ;
 ; PPC64-LABEL: cas_weak_i64_release_monotonic:
 ; PPC64:       # %bb.0: # %cmpxchg.start
+; PPC64-NEXT:    lwsync
 ; PPC64-NEXT:    mr r4, r3
 ; PPC64-NEXT:    ldarx r3, 0, r3
 ; PPC64-NEXT:    cmpldi r3, 0
 ; PPC64-NEXT:    bnelr- cr0
 ; PPC64-NEXT:  # %bb.1: # %cmpxchg.fencedstore
-; PPC64-NEXT:    lwsync
 ; PPC64-NEXT:    li r5, 1
 ; PPC64-NEXT:    stdcx. r5, 0, r4
 ; PPC64-NEXT:    blr
