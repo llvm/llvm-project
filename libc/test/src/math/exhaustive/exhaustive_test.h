@@ -146,6 +146,12 @@ struct LlvmLibcExhaustiveMathTest
   void test_full_range(mpfr::RoundingMode rounding, StorageType start,
                        StorageType stop, T... extra_range_bounds) {
     int n_threads = std::thread::hardware_concurrency();
+#ifdef LIBC_TEST_MAX_CONCURRENCY
+    if (n_threads <= 0 || n_threads > LIBC_TEST_MAX_CONCURRENCY)
+      n_threads = LIBC_TEST_MAX_CONCURRENCY;
+#endif
+    if (n_threads < 1)
+      n_threads = 1;
     std::vector<std::thread> thread_list;
     std::mutex mx_cur_val;
     int current_percent = -1;
