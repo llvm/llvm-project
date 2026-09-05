@@ -139,7 +139,18 @@ void DwarfEmitterImpl::emitCompileUnitHeader(DwarfUnit &Unit) {
   Asm->emitInt16(Unit.getVersion());
 
   if (Unit.getVersion() >= 5) {
-    Asm->emitInt8(dwarf::DW_UT_compile);
+    // The header has to agree with the root DIE that was actually cloned, or
+    // llvm-dwarfdump --verify rejects the unit with "Mismatched unit type".
+    // getTag() is the tag of that root, cached by setOutUnitDIE(); a TypeUnit's
+    // artificial root is a DW_TAG_compile_unit, so type units keep emitting
+    // DW_UT_compile. DWARFv5 section 7.5.1.1 gives full and partial units the
+    // same five-field header, so the size below is unchanged. Skeleton roots
+    // are deliberately not mapped to DW_UT_skeleton: section 7.5.1.2 adds an
+    // 8-byte dwo_id to that header, which the 12-byte constant here and in
+    // getDebugInfoHeaderSize() does not account for.
+    dwarf::Tag RootTag = Unit.getTag();
+    Asm->emitInt8(RootTag == dwarf::DW_TAG_partial_unit ? dwarf::DW_UT_partial
+                                                        : dwarf::DW_UT_compile);
     Asm->emitInt8(Unit.getFormParams().AddrSize);
     // Proper offset to the abbreviations table will be set later.
     Asm->emitInt32(0);

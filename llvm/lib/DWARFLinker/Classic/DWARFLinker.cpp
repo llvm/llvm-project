@@ -2013,9 +2013,15 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
     }
   }
 
-  if (Unit.getOrigUnit().getVersion() >= 5 && !AttrInfo.AttrStrOffsetBaseSeen &&
-      Die->getTag() == dwarf::DW_TAG_compile_unit) {
-    // No DW_AT_str_offsets_base seen, add it to the DIE.
+  // Comparing against the output unit DIE identifies the root of the unit,
+  // whatever its tag. cloneStringAttribute() rewrites strings into
+  // DW_FORM_strx for every DWARFv5 unit without consulting the root tag, and
+  // DWARFv5 section 7.26 resolves those indices only through
+  // DW_AT_str_offsets_base, so a DW_TAG_partial_unit or DW_TAG_skeleton_unit
+  // root needs the attribute on the same terms as a full compilation unit
+  // (DWARFv5 sections 3.1.1 and 3.1.2).
+  if (Die == Unit.getOutputUnitDIE() && Unit.getOrigUnit().getVersion() >= 5 &&
+      !AttrInfo.AttrStrOffsetBaseSeen) {
     Die->addValue(DIEAlloc, dwarf::DW_AT_str_offsets_base,
                   dwarf::DW_FORM_sec_offset, DIEInteger(8));
     OutOffset += 4;
