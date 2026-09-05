@@ -222,3 +222,34 @@ func.func private @insert_slice_non_zero_offset_for_dyn_dim(%source: tensor<?x3x
     transform.yield
   }
  }
+
+// -----
+
+// The rank-reduced dim is the leading one, so the source maps onto the most
+// minor dims of the destination and the write is a plain transfer_write at
+// the slice offsets.
+
+func.func private @insert_slice_rank_reducing_leading_dim(%source: tensor<8x4xi32>, %init: tensor<2x8x4xi32>) -> tensor<2x8x4xi32> {
+  %c1 = arith.constant 1 : index
+  %res = tensor.insert_slice %source into %init[%c1, 0, 0] [1, 8, 4] [1, 1, 1] : tensor<8x4xi32> into tensor<2x8x4xi32>
+
+  return %res : tensor<2x8x4xi32>
+}
+
+// CHECK-LABEL:   func.func private @insert_slice_rank_reducing_leading_dim(
+// CHECK-SAME:      %[[SRC:.*]]: tensor<8x4xi32>,
+// CHECK-SAME:      %[[INIT:.*]]: tensor<2x8x4xi32>) -> tensor<2x8x4xi32> {
+// CHECK:           %[[C_1:.*]] = arith.constant 1 : index
+// CHECK:           %[[READ:.*]] = vector.transfer_read %[[SRC]]{{.*}} : tensor<8x4xi32>, vector<8x4xi32>
+// CHECK:           %[[C_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[C_0_1:.*]] = arith.constant 0 : index
+// CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[INIT]][%[[C_1]], %[[C_0]], %[[C_0_1]]] {in_bounds = [true, true]} : vector<8x4xi32>, tensor<2x8x4xi32>
+// CHECK:           return %[[RES]] : tensor<2x8x4xi32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+}

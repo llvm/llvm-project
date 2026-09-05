@@ -411,3 +411,41 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// A stride of 3 along the first dim cannot be expressed by the
+// vector.transfer_write that the insert is vectorized to.
+
+func.func @insert_slice_non_unit_stride(%src: tensor<2x4xf32>, %dest: tensor<8x4xf32>) -> tensor<8x4xf32> {
+  // expected-error @+1 {{Attempted to vectorize, but failed}}
+  %res = tensor.insert_slice %src into %dest[0, 0] [2, 4] [3, 1] : tensor<2x4xf32> into tensor<8x4xf32>
+  return %res : tensor<8x4xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// The rank-reduced dim is the middle one, so the source does not map onto the
+// most minor dims of the destination.
+
+func.func @insert_slice_rank_reducing_non_minor_dim(%src: tensor<8x4xf32>, %dest: tensor<8x1x4xf32>) -> tensor<8x1x4xf32> {
+  // expected-error @+1 {{Attempted to vectorize, but failed}}
+  %res = tensor.insert_slice %src into %dest[0, 0, 0] [8, 1, 4] [1, 1, 1] : tensor<8x4xf32> into tensor<8x1x4xf32>
+  return %res : tensor<8x1x4xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+}
