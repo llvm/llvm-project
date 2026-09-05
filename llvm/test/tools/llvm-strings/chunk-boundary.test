@@ -1,0 +1,56 @@
+## Show that strings interacting with the read-chunk boundary are reported
+## correctly. The input files are crafted assuming the native read chunk size
+## (sys::fs::DefaultReadChunkSize) of 16384 bytes.
+
+## Case 1: at least min string size appears before the boundary, unprintable
+## byte as first byte of the next chunk. The string is printed on its own,
+## with the offset of its start (0x3ff8 = 16384 - 8).
+RUN: %python -c "import sys; sys.stdout.buffer.write(b'\0' * 16376 + b'ENDCHUNK' + b'\0' * 4)" > %t.1
+RUN: llvm-strings --radix=x %t.1 | FileCheck %s --check-prefix=CASE1 --strict-whitespace --implicit-check-not={{.}}
+
+CASE1:{{^}}   3ff8 ENDCHUNK{{$}}
+
+## Case 2: at least min string size appears before the boundary, printable
+## byte as first byte of the next chunk. The prefix is printed together with
+## the following characters, as a single string.
+RUN: %python -c "import sys; sys.stdout.buffer.write(b'\0' * 16378 + b'BEFORE' + b'AFTER!' + b'\0' * 4)" > %t.2
+RUN: llvm-strings --radix=x %t.2 | FileCheck %s --check-prefix=CASE2 --strict-whitespace --implicit-check-not={{.}}
+
+CASE2:{{^}}   3ffa BEFOREAFTER!{{$}}
+
+## Case 3: less than min string size appears before the boundary, unprintable
+## byte as the next byte. The prefix is not printed.
+RUN: %python -c "import sys; sys.stdout.buffer.write(b'\0' * 16382 + b'AB' + b'\0' * 4)" > %t.3
+RUN: llvm-strings %t.3 | count 0
+
+## Case 4: less than min string size appears before the boundary, printable
+## bytes as the next bytes, forming a min length string. The prefix is
+## printed together with the following characters, with the offset of its
+## true start (0x3ffd = 16384 - 3).
+RUN: %python -c "import sys; sys.stdout.buffer.write(b'\0' * 16381 + b'ABC' + b'DEF' + b'\0' * 4)" > %t.4
+RUN: llvm-strings --radix=x %t.4 | FileCheck %s --check-prefix=CASE4 --strict-whitespace --implicit-check-not={{.}}
+
+CASE4:{{^}}   3ffd ABCDEF{{$}}
+
+## Case 5: the prefix is empty at the start of a chunk that starts with a min
+## length string (0x4000 = 16384).
+RUN: %python -c "import sys; sys.stdout.buffer.write(b'\0' * 16384 + b'FRESH' + b'\0' * 4)" > %t.5
+RUN: llvm-strings --radix=x %t.5 | FileCheck %s --check-prefix=CASE5 --strict-whitespace --implicit-check-not={{.}}
+
+CASE5:{{^}}   4000 FRESH{{$}}
+
+## Case 6: a string that spans the entirety of one chunk, with one character
+## before the chunk start and one after its end. The string is printed
+## intact, once. The expected output is generated rather than written as a
+## CHECK line because it is a chunk long.
+RUN: %python -c "import sys; sys.stdout.buffer.write(b'\0' * 16383 + b'S' + b'M' * 16384 + b'E' + b'\0' * 4)" > %t.6
+RUN: %python -c "import sys; sys.stdout.buffer.write(b'S' + b'M' * 16384 + b'E\n')" > %t.6.expected
+RUN: llvm-strings %t.6 > %t.6.out
+RUN: diff %t.6.expected %t.6.out
+
+## A string terminated by the end of the file (no trailing unprintable byte)
+## must still be printed.
+RUN: %python -c "import sys; sys.stdout.buffer.write(b'\0' * 16380 + b'TRAILING')" > %t.7
+RUN: llvm-strings %t.7 | FileCheck %s --check-prefix=EOF --strict-whitespace --implicit-check-not={{.}}
+
+EOF:{{^}}TRAILING{{$}}
