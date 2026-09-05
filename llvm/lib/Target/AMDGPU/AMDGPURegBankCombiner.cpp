@@ -423,11 +423,15 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
   const int64_t CleanLo16 = 0xFFFFFFFFFFFF0000;
   const int64_t CleanHi16 = 0x000000000000FFFF;
 
+  // The small load is erased, so the chain up to MI has to become dead.
+  if (!MRI.hasOneNonDBGUse(MI.getOperand(1).getReg()))
+    return false;
+
   // Load lo
   if (mi_match(MI.getOperand(1).getReg(), MRI,
                m_GOr(m_GAnd(m_GBitcast(m_Reg(Dst)),
                             m_Copy(m_SpecificICst(CleanLo16))),
-                     m_MInstr(Load)))) {
+                     m_OneNonDBGUse(m_MInstr(Load))))) {
 
     if (Load->getOpcode() == AMDGPU::G_ZEXTLOAD) {
       const MachineMemOperand *MMO = *Load->memoperands_begin();
@@ -442,12 +446,12 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
     // s32 Load_lo16 holds SextLoad i8, Load_hi16 is zero.
     // fake16: and  (sextload i8 -> s32), 0xFFFF
     // true16: zext (sextload i8 -> s16) -> s32
-    if (mi_match(
-            Load, MRI,
-            m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16)))) ||
+    if (mi_match(Load, MRI,
+                 m_GAnd(m_OneNonDBGUse(m_MInstr(SextLoad)),
+                        m_Copy(m_SpecificICst(CleanHi16)))) ||
         mi_match(Load, MRI,
-                 m_GZExt(m_all_of(m_SpecificType(LLT::scalar(16)),
-                                  m_MInstr(SextLoad))))) {
+                 m_GZExt(m_OneNonDBGUse(m_all_of(
+                     m_SpecificType(LLT::scalar(16)), m_MInstr(SextLoad)))))) {
       if (SextLoad->getOpcode() != AMDGPU::G_SEXTLOAD)
         return false;
 
@@ -465,7 +469,8 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
   if (mi_match(MI.getOperand(1).getReg(), MRI,
                m_GOr(m_GAnd(m_GBitcast(m_Reg(Dst)),
                             m_Copy(m_SpecificICst(CleanHi16))),
-                     m_GShl(m_MInstr(Load), m_Copy(m_SpecificICst(16)))))) {
+                     m_OneNonDBGUse(m_GShl(m_OneNonDBGUse(m_MInstr(Load)),
+                                           m_Copy(m_SpecificICst(16))))))) {
 
     if (Load->getOpcode() == AMDGPU::G_ZEXTLOAD) {
       const MachineMemOperand *MMO = *Load->memoperands_begin();
@@ -480,12 +485,12 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
     // s32 Load_lo16 holds SextLoad i8, Load_hi16 is zero.
     // fake16: and  (sextload i8 -> s32), 0xFFFF
     // true16: zext (sextload i8 -> s16) -> s32
-    if (mi_match(
-            Load, MRI,
-            m_GAnd(m_MInstr(SextLoad), m_Copy(m_SpecificICst(CleanHi16)))) ||
+    if (mi_match(Load, MRI,
+                 m_GAnd(m_OneNonDBGUse(m_MInstr(SextLoad)),
+                        m_Copy(m_SpecificICst(CleanHi16)))) ||
         mi_match(Load, MRI,
-                 m_GZExt(m_all_of(m_SpecificType(LLT::scalar(16)),
-                                  m_MInstr(SextLoad))))) {
+                 m_GZExt(m_OneNonDBGUse(m_all_of(
+                     m_SpecificType(LLT::scalar(16)), m_MInstr(SextLoad)))))) {
       if (SextLoad->getOpcode() != AMDGPU::G_SEXTLOAD)
         return false;
 
@@ -580,20 +585,29 @@ bool AMDGPURegBankCombinerImpl::applyD16Load(
   Register DstReg = DstMI.getOperand(0).getReg();
   LLT SrcTy = MRI.getType(SrcReg32ToOverwriteD16);
 
+  // Built in place of SmallLoad, so the access is neither duplicated nor
+  // reordered. The merged-into value has to be available there.
+  if (!Helper.dominates(*MRI.getVRegDef(SrcReg32ToOverwriteD16), *SmallLoad))
+    return false;
+
   // Dst and Src for D16 load need to have same type.
   Register D16Dst =
       SrcTy == MRI.getType(DstReg)
           ? DstReg
           : MRI.createVirtualRegister({MRI.getRegBank(DstReg), SrcTy});
 
+  B.setInstrAndDebugLoc(*SmallLoad);
   B.buildInstr(D16Opc, {D16Dst},
                {SmallLoad->getOperand(1).getReg(), SrcReg32ToOverwriteD16})
       .setMemRefs(SmallLoad->memoperands());
 
-  if (D16Dst != DstReg)
+  if (D16Dst != DstReg) {
+    B.setInstrAndDebugLoc(DstMI);
     B.buildBitcast(DstReg, D16Dst);
+  }
 
   DstMI.eraseFromParent();
+  SmallLoad->eraseFromParent();
   return true;
 }
 
