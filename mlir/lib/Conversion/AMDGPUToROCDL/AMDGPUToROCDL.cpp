@@ -43,6 +43,21 @@ namespace mlir {
 using namespace mlir;
 using namespace mlir::amdgpu;
 
+/// Returns the GEP no-wrap flags valid for address arithmetic on `memRefType`.
+/// `inbounds` always holds, since these ops require in-bounds indices. `nuw`
+/// additionally promises that no `index * stride` term wraps as an unsigned
+/// value, which only holds when every stride is statically non-negative. This
+/// matches what MemRefToLLVM does for `memref.load`/`store`.
+static LLVM::GEPNoWrapFlags getNoWrapFlags(MemRefType memRefType) {
+  auto [strides, offset] = memRefType.getStridesAndOffset();
+  LLVM::GEPNoWrapFlags flags = LLVM::GEPNoWrapFlags::inbounds;
+  if (llvm::all_of(strides, [](int64_t stride) {
+        return ShapedType::isStatic(stride) && stride >= 0;
+      }))
+    flags = flags | LLVM::GEPNoWrapFlags::nuw;
+  return flags;
+}
+
 // Define commonly used chipsets versions for convenience.
 constexpr Chipset kGfx908 = Chipset(9, 0, 8);
 constexpr Chipset kGfx90a = Chipset(9, 0, 0xa);
@@ -2356,7 +2371,7 @@ struct GlobalTransposeLoadOpLowering
 
     Value srcPtr = getStridedElementPtr(
         rewriter, loc, srcMemRefType, adaptor.getSrc(), adaptor.getSrcIndices(),
-        LLVM::GEPNoWrapFlags::inbounds | LLVM::GEPNoWrapFlags::nuw);
+        getNoWrapFlags(srcMemRefType));
 
     size_t numElements = resultType.getNumElements();
     size_t elementTypeSize =
@@ -4504,9 +4519,8 @@ struct GlobalPrefetchOpLowering
     MemRefDescriptor descriptor(memRef);
     MemRefType memRefType = op.getSrc().getType();
     Location loc = op->getLoc();
-    auto inboundsFlags = isSpeculative ? LLVM::GEPNoWrapFlags::none
-                                       : LLVM::GEPNoWrapFlags::inbounds |
-                                             LLVM::GEPNoWrapFlags::nuw;
+    auto inboundsFlags =
+        isSpeculative ? LLVM::GEPNoWrapFlags::none : getNoWrapFlags(memRefType);
     Value prefetchPtr = getStridedElementPtr(
         rewriter, loc, memRefType, descriptor, indices, inboundsFlags);
 
