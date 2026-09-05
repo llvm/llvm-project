@@ -6,8 +6,8 @@
 // CHECK:         }
 
 func.func @test_cancel_transpose_transpose(%arg0: tensor<1x2x3xi32>) -> (tensor<1x2x3xi32>) {
-	%1 = tosa.transpose %arg0 { perms = array<i32: 1, 2, 0> }: (tensor<1x2x3xi32>) -> tensor<2x3x1xi32>
-	%3 = tosa.transpose %1 { perms = array<i32: 2, 0, 1> }: (tensor<2x3x1xi32>) -> tensor<1x2x3xi32>
+	%1 = tosa.transpose %arg0 perms([1, 2, 0]) : (tensor<1x2x3xi32>) -> tensor<2x3x1xi32>
+	%3 = tosa.transpose %1 perms([2, 0, 1]) : (tensor<2x3x1xi32>) -> tensor<1x2x3xi32>
   return %3 : tensor<1x2x3xi32>
 }
 
@@ -19,7 +19,7 @@ func.func @test_cancel_transpose_transpose(%arg0: tensor<1x2x3xi32>) -> (tensor<
 // CHECK:         }
 
 func.func @test_remove_identity_transpose(%arg0: tensor<1x2x3xi32>) -> (tensor<1x2x3xi32>) {
-	%1 = tosa.transpose %arg0 { perms = array<i32: 0, 1, 2> }: (tensor<1x2x3xi32>) -> tensor<1x2x3xi32>
+	%1 = tosa.transpose %arg0 perms([0, 1, 2]) : (tensor<1x2x3xi32>) -> tensor<1x2x3xi32>
   return %1 : tensor<1x2x3xi32>
 }
 
@@ -27,13 +27,13 @@ func.func @test_remove_identity_transpose(%arg0: tensor<1x2x3xi32>) -> (tensor<1
 
 // CHECK-LABEL:   func.func @test_do_not_cancel_different_transpose(
 // CHECK-SAME:                                                      %[[VAL_0:.*]]: tensor<2x3x4x5xi32>) -> tensor<5x4x3x2xi32> {
-// CHECK:           %[[VAL_2:.*]] = tosa.transpose %[[VAL_0]] {perms = array<i32: 3, 2, 1, 0>} : (tensor<2x3x4x5xi32>) -> tensor<5x4x3x2xi32>
+// CHECK:           %[[VAL_2:.*]] = tosa.transpose %[[VAL_0]] perms([3, 2, 1, 0]) : (tensor<2x3x4x5xi32>) -> tensor<5x4x3x2xi32>
 // CHECK:           return %[[VAL_2]] : tensor<5x4x3x2xi32>
 // CHECK:         }
 
 func.func @test_do_not_cancel_different_transpose(%arg0: tensor<2x3x4x5xi32>) -> (tensor<5x4x3x2xi32>) {
-	%1 = tosa.transpose %arg0 { perms = array<i32: 1, 2, 0, 3> }: (tensor<2x3x4x5xi32>) -> tensor<3x4x2x5xi32>
-	%3 = tosa.transpose %1 { perms = array<i32: 3, 1, 0, 2> }: (tensor<3x4x2x5xi32>) -> tensor<5x4x3x2xi32>
+	%1 = tosa.transpose %arg0 perms([1, 2, 0, 3]) : (tensor<2x3x4x5xi32>) -> tensor<3x4x2x5xi32>
+	%3 = tosa.transpose %1 perms([3, 1, 0, 2]) : (tensor<3x4x2x5xi32>) -> tensor<5x4x3x2xi32>
   return %3 : tensor<5x4x3x2xi32>
 }
 
@@ -41,12 +41,12 @@ func.func @test_do_not_cancel_different_transpose(%arg0: tensor<2x3x4x5xi32>) ->
 
 // CHECK-LABEL:   func.func @test_prefer_compose_transpose(
 // CHECK-SAME:                                                      %[[VAL_0:.*]]: tensor<1x2x3x4xi32>) -> tensor<4x3x2x1xi32> {
-// CHECK:           %[[VAL_2:.*]] = tosa.transpose %[[VAL_0]] {perms = array<i32: 3, 2, 1, 0>} : (tensor<1x2x3x4xi32>) -> tensor<4x3x2x1xi32>
+// CHECK:           %[[VAL_2:.*]] = tosa.transpose %[[VAL_0]] perms([3, 2, 1, 0]) : (tensor<1x2x3x4xi32>) -> tensor<4x3x2x1xi32>
 // CHECK:           return %[[VAL_2]] : tensor<4x3x2x1xi32>
 // CHECK:         }
 
 func.func @test_prefer_compose_transpose(%arg0: tensor<1x2x3x4xi32>) -> (tensor<4x3x2x1xi32>) {
-	%1 = tosa.transpose %arg0 { perms = array<i32: 1, 2, 0, 3> }: (tensor<1x2x3x4xi32>) -> tensor<2x3x1x4xi32>
-	%3 = tosa.transpose %1 { perms = array<i32: 3, 1, 0, 2> }: (tensor<2x3x1x4xi32>) -> tensor<4x3x2x1xi32>
+	%1 = tosa.transpose %arg0 perms([1, 2, 0, 3]) : (tensor<1x2x3x4xi32>) -> tensor<2x3x1x4xi32>
+	%3 = tosa.transpose %1 perms([3, 1, 0, 2]) : (tensor<2x3x1x4xi32>) -> tensor<4x3x2x1xi32>
   return %3 : tensor<4x3x2x1xi32>
 }

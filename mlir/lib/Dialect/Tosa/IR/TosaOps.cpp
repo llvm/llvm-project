@@ -272,308 +272,6 @@ void mlir::tosa::printVariableOpTypeOrInitialValue(
   }
 }
 
-namespace {
-
-// parse attributes with special handling for tosa enum attributes
-template <typename EnumType>
-ParseResult parseAttrEntryWithEnumHandling(OpAsmParser &parser,
-                                           NamedAttrList &outAttrs) {
-  llvm::StringRef name;
-  if (parser.parseOptionalKeyword(&name) || parser.parseEqual())
-    return failure();
-
-  // special handling: rounding_mode accepts a *bare* RoundingMode enum
-  // keyword.
-  llvm::StringRef kw;
-  if constexpr (std::is_same_v<EnumType, tosa::RoundingMode>) {
-    if (name == "rounding_mode" &&
-        succeeded(parser.parseOptionalKeyword(&kw))) {
-      auto sym = symbolizeRoundingMode(kw);
-      if (!sym)
-        return parser.emitError(parser.getCurrentLocation())
-               << "invalid rounding_mode value: " << kw;
-      auto attr = RoundingModeAttr::get(parser.getContext(), sym.value());
-      outAttrs.push_back(NamedAttribute(name, attr));
-      return success();
-    }
-  }
-  // special handling: mode accepts a *bare* ResizeMode enum keyword.
-  if constexpr (std::is_same_v<EnumType, tosa::ResizeMode>) {
-    if (name == "mode" && succeeded(parser.parseOptionalKeyword(&kw))) {
-      auto sym = symbolizeResizeMode(kw);
-      if (!sym)
-        return parser.emitError(parser.getCurrentLocation())
-               << "invalid resize mode value: " << kw;
-      auto attr = ResizeModeAttr::get(parser.getContext(), sym.value());
-      outAttrs.push_back(NamedAttribute(name, attr));
-      return success();
-    }
-  }
-  // special handling: nan_mode accepts a *bare* NanPropagationMode enum
-  // keyword.
-  if constexpr (std::is_same_v<EnumType, tosa::NanPropagationMode>) {
-    if (name == "nan_mode" && succeeded(parser.parseOptionalKeyword(&kw))) {
-      auto sym = symbolizeNanPropagationMode(kw);
-      if (!sym)
-        return parser.emitError(parser.getCurrentLocation())
-               << "invalid nan_mode value: " << kw;
-      auto attr = NanPropagationModeAttr::get(parser.getContext(), sym.value());
-      outAttrs.push_back(NamedAttribute(name, attr));
-      return success();
-    }
-  }
-
-  // special handling: block_size accepts a *bare* BlockSizeMode enum
-  if constexpr (std::is_same_v<EnumType, tosa::BlockSize>) {
-    if (name == "block_size" && succeeded(parser.parseOptionalKeyword(&kw))) {
-      auto sym = symbolizeBlockSize(kw);
-      if (!sym)
-        return parser.emitError(parser.getCurrentLocation())
-               << "invalid block_size value: " << kw;
-      auto attr = BlockSizeAttr::get(parser.getContext(), sym.value());
-      outAttrs.push_back(NamedAttribute(name, attr));
-      return success();
-    }
-  }
-
-  // Default path: parse any normal attribute literal, including fully qualified
-  // enum keyword
-  Attribute attr;
-  return parser.parseAttribute(attr, name, outAttrs);
-}
-
-template <typename EnumType>
-ParseResult parseWithEnumHandling(OpAsmParser &parser, OperationState &result) {
-  // parse operands
-  SmallVector<OpAsmParser::UnresolvedOperand, 5> operands;
-  if (parser.parseCommaSeparatedList(
-          [&]() { return parser.parseOperand(operands.emplace_back()); }))
-    return failure();
-
-  // Parse { attr-dict } with special handling for enum bare token
-  NamedAttrList attrs;
-  if (succeeded(parser.parseOptionalLBrace()) &&
-      failed(parser.parseOptionalRBrace())) {
-    do {
-      if (parseAttrEntryWithEnumHandling<EnumType>(parser, attrs))
-        return failure();
-    } while (succeeded(parser.parseOptionalComma()));
-    if (parser.parseRBrace())
-      return failure();
-  }
-
-  FunctionType fnTy;
-  if (parser.parseColonType(fnTy))
-    return failure();
-
-  // Resolve operands and types
-  if (failed(parser.resolveOperands(operands, fnTy.getInputs(),
-                                    parser.getCurrentLocation(),
-                                    result.operands)))
-    return failure();
-
-  result.addTypes(fnTy.getResults());
-  result.addAttributes(attrs);
-
-  return success();
-}
-
-void printNamedAttr(OpAsmPrinter &parser, const NamedAttribute namedAttr) {
-  parser << namedAttr.getName().strref() << " = ";
-  auto attr = namedAttr.getValue();
-  if (auto roundingModeAttr = dyn_cast<tosa::RoundingModeAttr>(attr)) {
-    parser << roundingModeAttr.getValue();
-  } else if (auto resizeModeAttr = dyn_cast<tosa::ResizeModeAttr>(attr)) {
-    parser << resizeModeAttr.getValue();
-  } else if (auto nanPropagationModeAttr =
-                 dyn_cast<tosa::NanPropagationModeAttr>(attr)) {
-    parser << nanPropagationModeAttr.getValue();
-  } else if (auto blockSizeAttr = dyn_cast<tosa::BlockSizeAttr>(attr)) {
-    parser << blockSizeAttr.getValue();
-  } else {
-    parser.printAttribute(attr);
-  }
-}
-
-// print with special handling for default valued NanPropagationMode attribute
-void printWithNanPropagationHandling(OpAsmPrinter &parser, Operation *op) {
-  parser << " ";
-  parser.printOperands(op->getOperands());
-
-  NamedAttrList toPrint(op->getDiscardableAttrDictionary().getValue());
-  op->getName().walkInherentAttrs(
-      op, [&](StringRef name, Attribute &attr) { toPrint.append(name, attr); });
-  // remove default NanPropagate attribute
-  const auto kDefaultNanValue = NanPropagationMode::PROPAGATE;
-  for (auto attr : toPrint) {
-    if (auto nanAttr = dyn_cast<NanPropagationModeAttr>(attr.getValue())) {
-      if (nanAttr.getValue() == kDefaultNanValue) {
-        // elide from toPrint
-        toPrint.erase(attr.getName());
-        break;
-      }
-    }
-  }
-
-  if (!toPrint.empty()) {
-    parser << " {";
-    llvm::interleaveComma(toPrint, parser, [&](const NamedAttribute namedAttr) {
-      printNamedAttr(parser, namedAttr);
-    });
-    parser << "}";
-  }
-
-  parser << " : ";
-  parser.printFunctionalType(op);
-}
-
-// print with special handling for enums: RoundingMode, ResizeMode
-void printWithEnumHandling(OpAsmPrinter &parser, Operation *op) {
-  parser << " ";
-  parser.printOperands(op->getOperands());
-
-  NamedAttrList toPrint(op->getDiscardableAttrDictionary().getValue());
-  op->getName().walkInherentAttrs(
-      op, [&](StringRef name, Attribute &attr) { toPrint.append(name, attr); });
-  if (!toPrint.empty()) {
-    parser << " {";
-    llvm::interleaveComma(toPrint, parser, [&](NamedAttribute attr) {
-      printNamedAttr(parser, attr);
-    });
-    parser << "}";
-  }
-
-  parser << " : ";
-  parser.printFunctionalType(op);
-}
-
-} // namespace
-
-ParseResult RescaleOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseWithEnumHandling<tosa::RoundingMode>(parser, result);
-}
-
-void RescaleOp::print(OpAsmPrinter &parser) {
-  printWithEnumHandling(parser, *this);
-}
-
-ParseResult ApplyScaleOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseWithEnumHandling<tosa::RoundingMode>(parser, result);
-}
-
-void ApplyScaleOp::print(OpAsmPrinter &parser) {
-  printWithEnumHandling(parser, *this);
-}
-
-ParseResult ResizeOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseWithEnumHandling<tosa::ResizeMode>(parser, result);
-}
-
-void ResizeOp::print(OpAsmPrinter &parser) {
-  printWithEnumHandling(parser, *this);
-}
-
-ParseResult ArgMaxOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
-}
-
-void ArgMaxOp::print(OpAsmPrinter &parser) {
-  printWithNanPropagationHandling(parser, *this);
-}
-
-ParseResult MaxPool2dOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
-}
-
-void MaxPool2dOp::print(OpAsmPrinter &parser) {
-  printWithNanPropagationHandling(parser, *this);
-}
-
-ParseResult MaxPool2dAdaptiveOp::parse(OpAsmParser &parser,
-                                       OperationState &result) {
-  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
-}
-
-void MaxPool2dAdaptiveOp::print(OpAsmPrinter &parser) {
-  printWithNanPropagationHandling(parser, *this);
-}
-
-ParseResult ClampOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
-}
-
-void ClampOp::print(OpAsmPrinter &parser) {
-  printWithNanPropagationHandling(parser, *this);
-}
-
-ParseResult MaximumOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
-}
-
-void MaximumOp::print(OpAsmPrinter &parser) {
-  printWithNanPropagationHandling(parser, *this);
-}
-
-ParseResult MinimumOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
-}
-
-void MinimumOp::print(OpAsmPrinter &parser) {
-  printWithNanPropagationHandling(parser, *this);
-}
-
-ParseResult ReduceMaxOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
-}
-
-void ReduceMaxOp::print(OpAsmPrinter &parser) {
-  printWithNanPropagationHandling(parser, *this);
-}
-
-ParseResult ReduceMinOp::parse(OpAsmParser &parser, OperationState &result) {
-  return parseWithEnumHandling<tosa::NanPropagationMode>(parser, result);
-}
-
-void ReduceMinOp::print(OpAsmPrinter &parser) {
-  printWithNanPropagationHandling(parser, *this);
-}
-
-ParseResult MatmulTBlockScaledOp::parse(OpAsmParser &parser,
-                                        OperationState &result) {
-  return parseWithEnumHandling<tosa::BlockSize>(parser, result);
-}
-
-void MatmulTBlockScaledOp::print(OpAsmPrinter &parser) {
-  printWithEnumHandling(parser, *this);
-}
-
-ParseResult CastFromBlockScaledOp::parse(OpAsmParser &parser,
-                                         OperationState &result) {
-  return parseWithEnumHandling<tosa::BlockSize>(parser, result);
-}
-
-void CastFromBlockScaledOp::print(OpAsmPrinter &parser) {
-  printWithEnumHandling(parser, *this);
-}
-
-ParseResult CastToBlockScaledOp::parse(OpAsmParser &parser,
-                                       OperationState &result) {
-  return parseWithEnumHandling<tosa::BlockSize>(parser, result);
-}
-
-void CastToBlockScaledOp::print(OpAsmPrinter &parser) {
-  printWithEnumHandling(parser, *this);
-}
-
-ParseResult Conv2DBlockScaledOp::parse(OpAsmParser &parser,
-                                       OperationState &result) {
-  return parseWithEnumHandling<tosa::BlockSize>(parser, result);
-}
-
-void Conv2DBlockScaledOp::print(OpAsmPrinter &parser) {
-  printWithEnumHandling(parser, *this);
-}
-
 //===----------------------------------------------------------------------===//
 // Tosa utilities.
 //===----------------------------------------------------------------------===//
@@ -6184,6 +5882,43 @@ LogicalResult tosa::SliceShapeOp::verify() {
 //===----------------------------------------------------------------------===//
 // TOSA Operator Definitions.
 //===----------------------------------------------------------------------===//
+
+static ParseResult parseOptionalBoolClause(OpAsmParser &parser,
+                                           StringRef keyword,
+                                           BoolAttr &result) {
+  if (failed(parser.parseOptionalKeyword(keyword)))
+    return success();
+  if (parser.parseLParen() || parser.parseAttribute(result) ||
+      parser.parseRParen())
+    return failure();
+  return success();
+}
+
+static void printOptionalBoolClause(OpAsmPrinter &printer, StringRef keyword,
+                                    BoolAttr attr) {
+  if (!attr)
+    return;
+  printer << keyword << '(';
+  printer.printAttribute(attr);
+  printer << ')';
+}
+
+static ParseResult parseLocalBound(OpAsmParser &parser, BoolAttr &result) {
+  return parseOptionalBoolClause(parser, "local_bound", result);
+}
+
+static void printLocalBound(OpAsmPrinter &printer, Operation *, BoolAttr attr) {
+  printOptionalBoolClause(printer, "local_bound", attr);
+}
+
+static ParseResult parseInputUnsigned(OpAsmParser &parser, BoolAttr &result) {
+  return parseOptionalBoolClause(parser, "input_unsigned", result);
+}
+
+static void printInputUnsigned(OpAsmPrinter &printer, Operation *,
+                               BoolAttr attr) {
+  printOptionalBoolClause(printer, "input_unsigned", attr);
+}
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Tosa/IR/TosaOps.cpp.inc"

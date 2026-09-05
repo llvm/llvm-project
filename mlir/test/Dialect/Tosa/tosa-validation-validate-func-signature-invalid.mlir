@@ -9,7 +9,7 @@ func.func @test_shape_func_input(%arg0: !tosa.shape<1>) {
 
 // expected-error@+1 {{'func.func' op Function return types must be a tensor type to be TOSA compliant, got !tosa.shape type}}
 func.func @test_shape_func_output() -> !tosa.shape<4> {
-  %cst = tosa.const_shape {values = dense<[1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
+  %cst = tosa.const_shape values(dense<[1, 2, 3, 4]> : tensor<4xindex>) : () -> !tosa.shape<4>
   return %cst : !tosa.shape<4>
 }
 
