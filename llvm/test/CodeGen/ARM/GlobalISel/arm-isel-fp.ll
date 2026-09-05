@@ -2,14 +2,14 @@
 ; RUN: llc -mtriple arm-linux-gnueabi -mattr=+vfp2,+soft-float -float-abi=soft -global-isel %s -o - | FileCheck %s -check-prefix CHECK -check-prefix SOFT-AEABI
 ; RUN: llc -mtriple arm-linux-gnu- -mattr=+vfp2,+soft-float -float-abi=soft -global-isel %s -o - | FileCheck %s -check-prefix CHECK -check-prefix SOFT-DEFAULT
 
-define arm_aapcscc float @test_frem_float(float %x, float %y) {
+define float @test_frem_float(float %x, float %y) {
 ; CHECK-LABEL: test_frem_float:
 ; CHECK: bl fmodf
   %r = frem float %x, %y
   ret float %r
 }
 
-define arm_aapcscc double @test_frem_double(double %x, double %y) {
+define double @test_frem_double(double %x, double %y) {
 ; CHECK-LABEL: test_frem_double:
 ; CHECK: bl fmod
   %r = frem double %x, %y
@@ -17,7 +17,7 @@ define arm_aapcscc double @test_frem_double(double %x, double %y) {
 }
 
 declare float @llvm.pow.f32(float %x, float %y)
-define arm_aapcscc float @test_fpow_float(float %x, float %y) {
+define float @test_fpow_float(float %x, float %y) {
 ; CHECK-LABEL: test_fpow_float:
 ; CHECK: bl powf
   %r = call float @llvm.pow.f32(float %x, float %y)
@@ -25,14 +25,14 @@ define arm_aapcscc float @test_fpow_float(float %x, float %y) {
 }
 
 declare double @llvm.pow.f64(double %x, double %y)
-define arm_aapcscc double @test_fpow_double(double %x, double %y) {
+define double @test_fpow_double(double %x, double %y) {
 ; CHECK-LABEL: test_fpow_double:
 ; CHECK: bl pow
   %r = call double @llvm.pow.f64(double %x, double %y)
   ret double %r
 }
 
-define arm_aapcscc float @test_add_float(float %x, float %y) {
+define float @test_add_float(float %x, float %y) {
 ; CHECK-LABEL: test_add_float:
 ; HARD: vadd.f32
 ; SOFT-AEABI: bl __aeabi_fadd
@@ -41,7 +41,7 @@ define arm_aapcscc float @test_add_float(float %x, float %y) {
   ret float %r
 }
 
-define arm_aapcscc double @test_add_double(double %x, double %y) {
+define double @test_add_double(double %x, double %y) {
 ; CHECK-LABEL: test_add_double:
 ; HARD: vadd.f64
 ; SOFT-AEABI: bl __aeabi_dadd
@@ -50,7 +50,7 @@ define arm_aapcscc double @test_add_double(double %x, double %y) {
   ret double %r
 }
 
-define arm_aapcscc float @test_sub_float(float %x, float %y) {
+define float @test_sub_float(float %x, float %y) {
 ; CHECK-LABEL: test_sub_float:
 ; HARD: vsub.f32
 ; SOFT-AEABI: bl __aeabi_fsub
@@ -59,7 +59,7 @@ define arm_aapcscc float @test_sub_float(float %x, float %y) {
   ret float %r
 }
 
-define arm_aapcscc double @test_sub_double(double %x, double %y) {
+define double @test_sub_double(double %x, double %y) {
 ; CHECK-LABEL: test_sub_double:
 ; HARD: vsub.f64
 ; SOFT-AEABI: bl __aeabi_dsub
@@ -67,7 +67,8 @@ define arm_aapcscc double @test_sub_double(double %x, double %y) {
   %r = fsub double %x, %y
   ret double %r
 }
-define arm_aapcs_vfpcc i32 @test_cmp_float_ogt(float %x, float %y) {
+
+define i32 @test_cmp_float_ogt(float %x, float %y) {
 ; CHECK-LABEL: test_cmp_float_ogt
 ; HARD: vcmp.f32
 ; HARD: vmrs APSR_nzcv, fpscr
@@ -80,7 +81,7 @@ entry:
   ret i32 %r
 }
 
-define arm_aapcs_vfpcc i32 @test_cmp_float_one(float %x, float %y) {
+define i32 @test_cmp_float_one(float %x, float %y) {
 ; CHECK-LABEL: test_cmp_float_one
 ; HARD: vcmp.f32
 ; HARD: vmrs APSR_nzcv, fpscr

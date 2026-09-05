@@ -1,6 +1,7 @@
 ; RUN: not llc --mtriple=armv7-none-eabi --mattr=-fpregs < %s -o /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
 ; RUN: not llc --mtriple=armv7-none-eabihf --mattr=-fpregs < %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=CHECK,EABIHF --implicit-check-not=error:
 ; RUN: not llc --mtriple=thumbv6-none-eabihf --mcpu=arm1176jzf-s < %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=CHECK,EABIHF --implicit-check-not=error:
+; RUN: not llc --mtriple=armv7-none-eabihf --mattr=+soft-float < %s -o /dev/null 2>&1 | FileCheck %s --check-prefixes=CHECK,EABIHF --implicit-check-not=error:
 
 ; EABIHF: error: <unknown>:0:0: in function default_pcs void (): calling convention is hard-float, but floating-point registers are unavailable
 define void @default_pcs() {
