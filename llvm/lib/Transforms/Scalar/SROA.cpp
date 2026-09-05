@@ -5409,6 +5409,95 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
   return VTy;
 }
 
+/// Return true if V is only forwarded through bit-preserving SSA operations
+/// and eventually stored. In this case the type of V is only acting as a
+/// carrier for its bits.
+static bool isOnlyForwardedToStores(Value *V, const DataLayout &DL,
+                                    SmallPtrSetImpl<Value *> &Visited) {
+  if (!Visited.insert(V).second)
+    return true;
+
+  for (User *U : V->users()) {
+    if (auto *SI = dyn_cast<StoreInst>(U)) {
+      if (SI->getValueOperand() != V || SI->isVolatile() || SI->isAtomic())
+        return false;
+      continue;
+    }
+
+    auto *I = dyn_cast<Instruction>(U);
+    if (!I)
+      return false;
+
+    bool IsTransparent = isa<PHINode, SelectInst, FreezeInst, BitCastInst>(I);
+    if (isa<PtrToIntInst, IntToPtrInst>(I))
+      IsTransparent = canConvertValue(DL, V->getType(), I->getType());
+    if (!IsTransparent || !isOnlyForwardedToStores(I, DL, Visited))
+      return false;
+  }
+
+  return true;
+}
+
+/// Return true if an integer can be used as a bit carrier for every access to
+/// P. Restrict this to whole-partition accesses so that choosing IntTy does not
+/// require integer widening or partial insert/extract operations.
+static bool isIntegerCarrierViable(Partition &P, IntegerType *IntTy,
+                                   const DataLayout &DL) {
+  auto IsViableSlice = [&](const Slice &S) {
+    if (S.isDead())
+      return true;
+
+    Use *U = S.getUse();
+    if (!U)
+      return true;
+    User *Usr = U->getUser();
+
+    if (auto *MI = dyn_cast<MemIntrinsic>(Usr))
+      return !MI->isVolatile() && isa<Constant>(MI->getLength()) &&
+             S.isSplittable();
+
+    if (auto *II = dyn_cast<IntrinsicInst>(Usr))
+      return II->isLifetimeStartOrEnd() || II->isDroppable();
+
+    if (S.beginOffset() != P.beginOffset() || S.endOffset() != P.endOffset())
+      return false;
+
+    auto IsConvertible = [&](Type *UseTy) {
+      return canConvertValue(DL, UseTy, IntTy) &&
+             canConvertValue(DL, IntTy, UseTy);
+    };
+
+    if (auto *LI = dyn_cast<LoadInst>(Usr)) {
+      if (LI->isVolatile() || LI->isAtomic() || !IsConvertible(LI->getType()))
+        return false;
+      SmallPtrSet<Value *, 8> Visited;
+      return isOnlyForwardedToStores(LI, DL, Visited);
+    }
+
+    if (auto *SI = dyn_cast<StoreInst>(Usr))
+      return !SI->isVolatile() && !SI->isAtomic() &&
+             IsConvertible(SI->getValueOperand()->getType());
+
+    auto *PN = dyn_cast<PHINode>(Usr);
+    if (!PN || !isSafePHIToSpeculate(*PN))
+      return false;
+
+    for (User *PhiUser : PN->users()) {
+      auto *LI = cast<LoadInst>(PhiUser);
+      if (!IsConvertible(LI->getType()))
+        return false;
+      SmallPtrSet<Value *, 8> Visited;
+      if (!isOnlyForwardedToStores(LI, DL, Visited))
+        return false;
+    }
+    return true;
+  };
+
+  return llvm::all_of(P, IsViableSlice) &&
+         llvm::all_of(P.splitSliceTails(),
+                      [&](const Slice *S) { return IsViableSlice(*S); });
+}
+
 /// Select a partition type for an alloca partition.
 ///
 /// Try to compute a friendly type for this partition of the alloca. This
@@ -5462,6 +5551,18 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
       VecTy->getElementCount().getFixedValue() > 1) {
     LogSelection("direct-fp-vecty", VecTy, VecTy, false);
     return {VecTy, false, VecTy};
+  }
+
+  // When a partition is only used to forward bits between memory locations,
+  // use a legal integer as a common carrier. In particular, this keeps pointer
+  // and integer accesses to adjacent partitions in a uniform representation
+  // that later vectorization can recognize.
+  if (!VecTy && DL.isLegalInteger(P.size() * 8)) {
+    IntegerType *IntTy = Type::getIntNTy(C, P.size() * 8);
+    if (isIntegerCarrierViable(P, IntTy, DL)) {
+      LogSelection("forwarding-int-carrier", IntTy, nullptr, false);
+      return {IntTy, false, nullptr};
+    }
   }
 
   // Check if there is a common type that all slices of the partition use that
