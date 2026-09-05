@@ -25,7 +25,9 @@ class ASTConsumer;
 class CompilerInstance;
 class Parser;
 class Sema;
+class NamedDecl;
 class TranslationUnitDecl;
+template <typename decl_type> class Redeclarable;
 class IncrementalAction;
 struct PartialTranslationUnit;
 
@@ -73,6 +75,25 @@ private:
   /// Rebuild the translation unit redeclaration chain without \p MostRecentTU,
   /// making its predecessor the current unit again.
   void withdrawMostRecentTU(TranslationUnitDecl *MostRecentTU);
+
+  /// Rebuild D's redeclaration chain without the declarations
+  /// DiscardedTU contributed, making Prev current again.
+  void withdrawRedecl(NamedDecl *D, NamedDecl *Prev,
+                      TranslationUnitDecl *DiscardedTU);
+
+  /// Unlink D from the chain it shares with Prev.
+  template <typename DeclT>
+  void unlinkRedeclChain(Redeclarable<DeclT> *D, NamedDecl *Prev);
+
+  /// Withdraw one redeclarable declaration. Kinds that keep state outside the
+  /// redeclaration chain specialize this.
+  template <typename DeclT>
+  void withdrawRedeclImpl(Redeclarable<DeclT> *D, NamedDecl *Prev,
+                          TranslationUnitDecl *DiscardedTU);
+
+  /// Fallback for the non-redeclarable kinds the DeclNodes.inc switch also
+  /// enumerates.
+  void withdrawRedeclImpl(...);
 };
 } // end namespace clang
 
