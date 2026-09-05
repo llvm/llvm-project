@@ -10463,8 +10463,8 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
   return ExprEvaluatorBaseTy::VisitCastExpr(E);
 }
 
-static CharUnits GetAlignOfType(const ASTContext &Ctx, QualType T,
-                                UnaryExprOrTypeTrait ExprKind) {
+CharUnits GetAlignOfType(const ASTContext &Ctx, QualType T,
+                         UnaryExprOrTypeTrait ExprKind) {
   // C++ [expr.alignof]p3:
   //     When alignof is applied to a reference type, the result is the
   //     alignment of the referenced type.
@@ -10559,12 +10559,15 @@ CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
   return GetAlignOfType(Ctx, E->getType(), ExprKind);
 }
 
-static CharUnits getBaseAlignment(EvalInfo &Info, const LValue &Value) {
-  if (const auto *VD = Value.Base.dyn_cast<const ValueDecl *>())
-    return Info.Ctx.getDeclAlign(VD);
-  if (const auto *E = Value.Base.dyn_cast<const Expr *>())
-    return GetAlignOfExpr(Info.Ctx, E, UETT_AlignOf);
-  return GetAlignOfType(Info.Ctx, Value.Base.getTypeInfoType(), UETT_AlignOf);
+CharUnits GetBaseAlignment(const ASTContext &Ctx,
+                           const APValue::LValueBase &Base) {
+  if (const auto *VD = Base.dyn_cast<const ValueDecl *>())
+    return Ctx.getDeclAlign(VD);
+  if (const auto *E = Base.dyn_cast<const Expr *>())
+    return GetAlignOfExpr(Ctx, E, UETT_AlignOf);
+  if (Base.is<TypeInfoLValue>())
+    return GetAlignOfType(Ctx, Base.getTypeInfoType(), UETT_AlignOf);
+  return GetAlignOfType(Ctx, Base.getDynamicAllocType(), UETT_AlignOf);
 }
 
 /// Evaluate the value of the alignment argument to __builtin_align_{up,down},
@@ -10656,7 +10659,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     // If there is a base object, then it must have the correct alignment.
     if (OffsetResult.Base) {
-      CharUnits BaseAlignment = getBaseAlignment(Info, OffsetResult);
+      CharUnits BaseAlignment = GetBaseAlignment(Info.Ctx, OffsetResult.Base);
 
       if (BaseAlignment < Align) {
         Result.Designator.setInvalid();
@@ -10690,7 +10693,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     if (!getAlignmentArgument(E->getArg(1), E->getArg(0)->getType(), Info,
                               Alignment))
       return false;
-    CharUnits BaseAlignment = getBaseAlignment(Info, Result);
+    CharUnits BaseAlignment = GetBaseAlignment(Info.Ctx, Result.Base);
     CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Result.Offset);
     // For align_up/align_down, we can return the same value if the alignment
     // is known to be greater or equal to the requested value.
@@ -16933,6 +16936,70 @@ static bool getBuiltinAlignArguments(const CallExpr *E, EvalInfo &Info,
   return true;
 }
 
+// Implements the C2y §7.18.21 stdc_load8_* family: reads N bytes from
+// E->getArg(0) and assembles them per IsBE into a value of E's type. The
+// aligned_* variants additionally require the pointer to be aligned to the
+// natural alignment of E's type.
+static bool EvaluateStdcLoad8(EvalInfo &Info, const CallExpr *E, bool IsBE,
+                              bool IsAligned, APSInt &Result) {
+  LValue Ptr;
+  if (!EvaluatePointer(E->getArg(0), Ptr, Info))
+    return false;
+
+  if (!Ptr.checkNullPointerForFoldAccess(Info, E, AK_Read) ||
+      Ptr.Designator.Invalid)
+    return false;
+
+  if (IsAligned) {
+    CharUnits RequiredAlign = Info.Ctx.getTypeAlignInChars(E->getType());
+    CharUnits BaseAlignment = GetBaseAlignment(Info.Ctx, Ptr.Base);
+    CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Ptr.Offset);
+    if (PtrAlign < RequiredAlign) {
+      Info.FFDiag(E, diag::note_constexpr_load8_unaligned)
+          << Info.Ctx.BuiltinInfo.getQuotedName(E->getBuiltinCallee())
+          << RequiredAlign.getQuantity() << PtrAlign.getQuantity();
+      return false;
+    }
+  }
+
+  QualType CharTy = Ptr.Designator.getType(Info.Ctx);
+  unsigned ByteWidth = Info.Ctx.getTypeSize(E->getType()) / 8;
+  uint64_t RemainingElems = Ptr.Designator.validIndexAdjustments().second;
+  if (ByteWidth > RemainingElems) {
+    uint64_t ArrayIndex = Ptr.Designator.MostDerivedIsArrayElement
+                              ? Ptr.Designator.Entries.back().getAsArrayIndex()
+                              : (uint64_t)Ptr.Designator.IsOnePastTheEnd;
+    APSInt Index = APSInt::get(ArrayIndex + ByteWidth - 1);
+    Ptr.Designator.diagnosePointerArithmetic(Info, E, Index);
+    return false;
+  }
+
+  // Load bytes sequentially, then assemble per C2y §7.18.21:
+  // result = sum(b_index * 2^(8*index)) where b_index = ptr[index] (LE)
+  // or ptr[N/8 - index - 1] (BE).
+  SmallVector<uint64_t, 8> Bytes(ByteWidth);
+  LValue BytePtr = Ptr;
+  for (unsigned I = 0; I < ByteWidth; ++I) {
+    APValue ByteVal;
+    if (!handleLValueToRValueConversion(Info, E, CharTy, BytePtr, ByteVal))
+      return false;
+    Bytes[I] = ByteVal.getInt().getZExtValue();
+    if (I + 1 < ByteWidth)
+      if (!HandleLValueArrayAdjustment(Info, E, BytePtr, CharTy, 1))
+        return false;
+  }
+
+  APInt ResultBits = APInt::getZero(ByteWidth * 8);
+  for (unsigned I = 0; I < ByteWidth; ++I) {
+    unsigned SrcIdx = IsBE ? (ByteWidth - I - 1) : I;
+    ResultBits |= APInt(ByteWidth * 8, Bytes[SrcIdx]) << (8 * I);
+  }
+
+  bool IsSigned = E->getType()->isSignedIntegerType();
+  Result = APSInt(ResultBits, !IsSigned);
+  return true;
+}
+
 bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                             unsigned BuiltinOp) {
   auto EvalTestOp = [&](llvm::function_ref<bool(const APInt &, const APInt &)>
@@ -17067,7 +17134,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       // If we evaluated a pointer, check the minimum known alignment.
       LValue Ptr;
       Ptr.setFrom(Info.Ctx, Src);
-      CharUnits BaseAlignment = getBaseAlignment(Info, Ptr);
+      CharUnits BaseAlignment = GetBaseAlignment(Info.Ctx, Ptr.Base);
       CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Ptr.Offset);
       // We can return true if the known alignment at the computed offset is
       // greater than the requested alignment.
@@ -17145,6 +17212,63 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return Success(Val, E);
 
     return Success(Val.byteSwap(), E);
+  }
+
+  case Builtin::BIstdc_load8_leu8:
+  case Builtin::BIstdc_load8_leu16:
+  case Builtin::BIstdc_load8_leu32:
+  case Builtin::BIstdc_load8_leu64:
+  case Builtin::BIstdc_load8_les8:
+  case Builtin::BIstdc_load8_les16:
+  case Builtin::BIstdc_load8_les32:
+  case Builtin::BIstdc_load8_les64: {
+    APSInt Result;
+    if (!EvaluateStdcLoad8(Info, E, /*IsBE=*/false, /*IsAligned=*/false,
+                           Result))
+      return false;
+    return Success(Result, E);
+  }
+
+  case Builtin::BIstdc_load8_aligned_leu8:
+  case Builtin::BIstdc_load8_aligned_leu16:
+  case Builtin::BIstdc_load8_aligned_leu32:
+  case Builtin::BIstdc_load8_aligned_leu64:
+  case Builtin::BIstdc_load8_aligned_les8:
+  case Builtin::BIstdc_load8_aligned_les16:
+  case Builtin::BIstdc_load8_aligned_les32:
+  case Builtin::BIstdc_load8_aligned_les64: {
+    APSInt Result;
+    if (!EvaluateStdcLoad8(Info, E, /*IsBE=*/false, /*IsAligned=*/true, Result))
+      return false;
+    return Success(Result, E);
+  }
+
+  case Builtin::BIstdc_load8_beu8:
+  case Builtin::BIstdc_load8_beu16:
+  case Builtin::BIstdc_load8_beu32:
+  case Builtin::BIstdc_load8_beu64:
+  case Builtin::BIstdc_load8_bes8:
+  case Builtin::BIstdc_load8_bes16:
+  case Builtin::BIstdc_load8_bes32:
+  case Builtin::BIstdc_load8_bes64: {
+    APSInt Result;
+    if (!EvaluateStdcLoad8(Info, E, /*IsBE=*/true, /*IsAligned=*/false, Result))
+      return false;
+    return Success(Result, E);
+  }
+
+  case Builtin::BIstdc_load8_aligned_beu8:
+  case Builtin::BIstdc_load8_aligned_beu16:
+  case Builtin::BIstdc_load8_aligned_beu32:
+  case Builtin::BIstdc_load8_aligned_beu64:
+  case Builtin::BIstdc_load8_aligned_bes8:
+  case Builtin::BIstdc_load8_aligned_bes16:
+  case Builtin::BIstdc_load8_aligned_bes32:
+  case Builtin::BIstdc_load8_aligned_bes64: {
+    APSInt Result;
+    if (!EvaluateStdcLoad8(Info, E, /*IsBE=*/true, /*IsAligned=*/true, Result))
+      return false;
+    return Success(Result, E);
   }
 
   case Builtin::BI__builtin_classify_type:

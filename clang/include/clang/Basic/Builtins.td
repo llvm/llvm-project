@@ -38,6 +38,14 @@ class MemReverse8Template : Template<
     ["uint8_t", "uint16_t", "uint32_t", "uint64_t"],
     ["u8",      "u16",      "u32",      "u64"]>;
 
+class Load8UnsignedTemplate : Template<
+    ["uint_least8_t", "uint_least16_t", "uint_least32_t", "uint_least64_t"],
+    ["8",             "16",             "32",             "64"]>;
+
+class Load8SignedTemplate : Template<
+    ["int_least8_t", "int_least16_t", "int_least32_t", "int_least64_t"],
+    ["8",            "16",            "32",            "64"]>;
+
 class MSInt8_16_32Template : Template<["char", "short", "msint32_t"],
                                       ["8",    "16",    ""]>;
 
@@ -1001,6 +1009,43 @@ def StdcMemReverse8Typed : LibBuiltin<"stdbit.h", "C2Y_LANG">, MemReverse8Templa
   let Spellings = ["stdc_memreverse8"];
   let Attributes = [NoThrow, Pure, Const, Constexpr];
   let Prototype = "T(T)";
+}
+
+class Load8Common : LibBuiltin<"stdbit.h", "C2Y_LANG"> {
+  let Attributes = [NoThrow, Pure, Constexpr, NonNull<NonOptimizing, [0]>];
+  let Prototype = "T(unsigned char const*)";
+}
+
+def StdcLoad8LeU : Load8Common, Load8UnsignedTemplate {
+  let Spellings = ["stdc_load8_leu"];
+}
+
+def StdcLoad8BeU : Load8Common, Load8UnsignedTemplate {
+  let Spellings = ["stdc_load8_beu"];
+}
+
+def StdcLoad8AlignedLeU : Load8Common, Load8UnsignedTemplate {
+  let Spellings = ["stdc_load8_aligned_leu"];
+}
+
+def StdcLoad8AlignedBeU : Load8Common, Load8UnsignedTemplate {
+  let Spellings = ["stdc_load8_aligned_beu"];
+}
+
+def StdcLoad8LeS : Load8Common, Load8SignedTemplate {
+  let Spellings = ["stdc_load8_les"];
+}
+
+def StdcLoad8BeS : Load8Common, Load8SignedTemplate {
+  let Spellings = ["stdc_load8_bes"];
+}
+
+def StdcLoad8AlignedLeS : Load8Common, Load8SignedTemplate {
+  let Spellings = ["stdc_load8_aligned_les"];
+}
+
+def StdcLoad8AlignedBeS : Load8Common, Load8SignedTemplate {
+  let Spellings = ["stdc_load8_aligned_bes"];
 }
 
 
