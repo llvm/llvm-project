@@ -6080,6 +6080,14 @@ vec_msum(vector unsigned short __a, vector unsigned short __b,
   return __builtin_altivec_vmsumuhm(__a, __b, __c);
 }
 
+#if defined(__POWER9_VECTOR__) && defined(__SIZEOF_INT128__)
+static __inline__ vector unsigned __int128 __ATTRS_o_ai
+vec_msum(vector unsigned long long __a, vector unsigned long long __b,
+         vector unsigned __int128 __c) {
+  return __builtin_altivec_vmsumudm(__a, __b, __c);
+}
+#endif
+
 /* vec_msumc */
 
 #if defined(__POWER10_VECTOR__) && defined(__SIZEOF_INT128__)
@@ -6148,6 +6156,16 @@ vec_vmsumuhs(vector unsigned short __a, vector unsigned short __b,
              vector unsigned int __c) {
   return __builtin_altivec_vmsumuhs(__a, __b, __c);
 }
+
+#if defined(__POWER9_VECTOR__) && defined(__SIZEOF_INT128__)
+/* vec_vmsumudm */
+
+static __inline__ vector unsigned __int128 __attribute__((__always_inline__))
+vec_vmsumudm(vector unsigned long long __a, vector unsigned long long __b,
+             vector unsigned __int128 __c) {
+  return __builtin_altivec_vmsumudm(__a, __b, __c);
+}
+#endif
 
 /* vec_mtvscr */
 
