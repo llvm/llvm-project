@@ -298,12 +298,18 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
     // expressions:  l-value only if the operand is a true l-value.
     case UO_Real:
     case UO_Imag: {
-      const Expr *Op = cast<UnaryOperator>(E)->getSubExpr()->IgnoreParens();
+      const auto *UnaryOp = cast<UnaryOperator>(E);
+      const Expr *Op = UnaryOp->getSubExpr()->IgnoreParens();
       Cl::Kinds K = ClassifyInternal(Ctx, Op);
       if (K != Cl::CL_LValue) return K;
 
       if (isa<ObjCPropertyRefExpr>(Op))
         return Cl::CL_SubObjCPropertySetting;
+
+      // _Imag with non-complex operand is not a valid l-value.
+      if (UnaryOp->getOpcode() == UO_Imag && !Op->getType()->isAnyComplexType())
+        return Cl::CL_PRValue;
+
       return Cl::CL_LValue;
     }
 
