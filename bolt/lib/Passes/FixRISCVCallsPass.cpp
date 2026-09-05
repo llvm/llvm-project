@@ -49,10 +49,12 @@ void FixRISCVCallsPass::runOnFunction(BinaryFunction &BF) {
         auto *Target = MIB->getTargetSymbol(*II);
         assert(Target && "Cannot find call target");
 
+        MCInst OldAUIPC = *II;
         MCInst OldCall = *NextII;
         auto L = BC.scopeLock();
 
         MIB->createNoop(*II);
+        MIB->moveAnnotations(std::move(OldAUIPC), *II);
 
         if (MIB->isTailCall(*NextII))
           MIB->createTailCall(*NextII, Target, Ctx);
