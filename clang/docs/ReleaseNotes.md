@@ -779,6 +779,8 @@ features cannot lower the translation-unit ABI level;
 - Add `AfterRequiresExpression` sub-option of `BraceWrapping` to wrap the
   body of requires expressions. It is enabled by the `Allman`, `Whitesmiths`,
   and `GNU` styles of `BreakBeforeBraces`.
+- Fixed incorrect indentation of consecutive template declarations with
+  requires clauses. (#GH219801)
 
 - `QualifierOrder` now supports `typedef`, `consteval`, `constinit`,
   `thread_local`, `extern`, `mutable`, `signed`, `unsigned`, `long`, `short`,

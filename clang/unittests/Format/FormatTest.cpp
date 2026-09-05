@@ -24179,6 +24179,13 @@ TEST_F(FormatTest, RequiresClausesPositions) {
   // when the default was REI_Keyword.
   Style.RequiresExpressionIndentation = FormatStyle::REI_Keyword;
 
+  verifyFormat("template <int N, int C>\n"
+               "  requires(N > 2) && (C > 0)\n"
+               "template <typename U>\n"
+               "  requires(sizeof(U) > 0)\n"
+               "void S<N, C>::f(U) {}",
+               Style);
+
   verifyFormat("template <typename T>\n"
                "  requires(Foo<T> && std::trait<T>)\n"
                "struct Bar;",
