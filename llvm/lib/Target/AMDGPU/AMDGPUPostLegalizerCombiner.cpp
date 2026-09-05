@@ -177,7 +177,15 @@ bool AMDGPUPostLegalizerCombinerImpl::matchFMinFMaxLegacy(
     Info.Pred = CmpInst::getInversePredicate(Info.Pred);
 
   // Only match </<=/>=/> not ==/!= etc.
-  return Info.Pred != CmpInst::getSwappedPredicate(Info.Pred);
+  if (Info.Pred == CmpInst::getSwappedPredicate(Info.Pred))
+    return false;
+
+  // These predicates pick the signed zero tie-incorrect operand order.
+  if (Info.Pred == CmpInst::FCMP_OLE || Info.Pred == CmpInst::FCMP_ULT ||
+      Info.Pred == CmpInst::FCMP_OGT || Info.Pred == CmpInst::FCMP_UGE)
+    return Helper.canIgnoreLegacyMinMaxTies(MI, Info.LHS, Info.RHS);
+
+  return true;
 }
 
 void AMDGPUPostLegalizerCombinerImpl::applySelectFCmpToFMinFMaxLegacy(

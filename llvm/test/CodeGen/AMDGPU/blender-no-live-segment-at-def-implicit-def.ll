@@ -108,7 +108,7 @@ if.then263.i.i:                                   ; preds = %if.else251.i.i
 
 if.end273.i.i:                                    ; preds = %if.then263.i.i, %if.else251.i.i
   %i = phi float [ 1.000000e+00, %if.then263.i.i ], [ 0.000000e+00, %if.else251.i.i ]
-  %i1 = phi float [ 0x7FF8000000000000, %if.then263.i.i ], [ 0.000000e+00, %if.else251.i.i ]
+  %i1 = phi float [ +qnan, %if.then263.i.i ], [ 0.000000e+00, %if.else251.i.i ]
   %extractVec278.i.i = insertelement <3 x float> zeroinitializer, float %i1, i64 0
   %extractVec3.i.i.i = insertelement <3 x float> zeroinitializer, float %i, i64 0
   %i3.i = fadd <3 x float> %extractVec278.i.i, %extractVec3.i.i.i

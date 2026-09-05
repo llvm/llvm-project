@@ -140,7 +140,7 @@ define { float, float } @sincos_qnan() {
 ; CHECK-NEXT:    [[RET:%.*]] = call { float, float } @llvm.sincos.f32(float +qnan)
 ; CHECK-NEXT:    ret { float, float } [[RET]]
 ;
-  %ret = call { float, float } @llvm.sincos.f32(float 0x7FF8000000000000)
+  %ret = call { float, float } @llvm.sincos.f32(float +qnan)
   ret { float, float } %ret
 }
 
