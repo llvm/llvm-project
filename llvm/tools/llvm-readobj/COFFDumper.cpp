@@ -1598,7 +1598,7 @@ void COFFDumper::printSectionHeaders() {
     W.printBinary("Name", Name, Section->Name);
     W.printHex   ("VirtualSize", Section->VirtualSize);
     W.printHex   ("VirtualAddress", Section->VirtualAddress);
-    W.printNumber("RawDataSize", Section->SizeOfRawData);
+    W.printHex   ("RawDataSize", Section->SizeOfRawData);
     W.printHex   ("PointerToRawData", Section->PointerToRawData);
     W.printHex   ("PointerToRelocations", Section->PointerToRelocations);
     W.printHex   ("PointerToLineNumbers", Section->PointerToLinenumbers);

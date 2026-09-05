@@ -5,7 +5,7 @@
 // CHECK:      Name: .xdata
 // CHECK-NEXT: VirtualSize
 // CHECK-NEXT: VirtualAddress
-// CHECK-NEXT: RawDataSize: 8
+// CHECK-NEXT: RawDataSize: 0x8
 // CHECK-NEXT: PointerToRawData
 // CHECK-NEXT: PointerToRelocations
 // CHECK-NEXT: PointerToLineNumbers
@@ -23,7 +23,7 @@
 // CHECK:      Name: .xdata
 // CHECK-NEXT: VirtualSize
 // CHECK-NEXT: VirtualAddress
-// CHECK-NEXT: RawDataSize: 8
+// CHECK-NEXT: RawDataSize: 0x8
 // CHECK-NEXT: PointerToRawData
 // CHECK-NEXT: PointerToRelocations
 // CHECK-NEXT: PointerToLineNumbers
@@ -41,7 +41,7 @@
 // CHECK:      Name: .xdata
 // CHECK-NEXT: VirtualSize
 // CHECK-NEXT: VirtualAddress
-// CHECK-NEXT: RawDataSize: 8
+// CHECK-NEXT: RawDataSize: 0x8
 // CHECK-NEXT: PointerToRawData
 // CHECK-NEXT: PointerToRelocations
 // CHECK-NEXT: PointerToLineNumbers
