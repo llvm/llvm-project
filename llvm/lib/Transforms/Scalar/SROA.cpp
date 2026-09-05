@@ -4834,6 +4834,56 @@ static Type *getTypePartition(const DataLayout &DL, Type *Ty, uint64_t Offset,
   return SubTy;
 }
 
+static bool containsNonIntegralPointer(Type *Ty, const DataLayout &DL) {
+  if (auto *PtrTy = dyn_cast<PointerType>(Ty))
+    return DL.isNonIntegralPointerType(PtrTy);
+  return llvm::any_of(Ty->subtypes(), [&](Type *SubTy) {
+    return containsNonIntegralPointer(SubTy, DL);
+  });
+}
+
+/// Return true if every non-ignorable use covers the whole partition and can
+/// be rewritten as a direct access to NewTy.
+static bool areAllUsesWholePartitionPromotable(Partition &P, Type *NewTy,
+                                                const DataLayout &DL) {
+  auto IsPromotable = [&](const Slice &S) {
+    if (S.isDead() || !S.getUse())
+      return true;
+
+    User *Usr = S.getUse()->getUser();
+    if (auto *II = dyn_cast<IntrinsicInst>(Usr);
+        II && (II->isLifetimeStartOrEnd() || II->isDroppable()))
+      return true;
+
+    if (S.beginOffset() > P.beginOffset() ||
+        S.endOffset() < P.endOffset())
+      return false;
+
+    bool IsExactPartition = S.beginOffset() == P.beginOffset() &&
+                            S.endOffset() == P.endOffset();
+    if (auto *LI = dyn_cast<LoadInst>(Usr)) {
+      if (LI->isVolatile())
+        return false;
+      return IsExactPartition ? canConvertValue(DL, NewTy, LI->getType())
+                              : S.isSplittable();
+    }
+    if (auto *SI = dyn_cast<StoreInst>(Usr)) {
+      if (SI->isVolatile())
+        return false;
+      return IsExactPartition
+                 ? canConvertValue(DL, SI->getValueOperand()->getType(), NewTy)
+                 : S.isSplittable();
+    }
+    if (auto *MI = dyn_cast<MemIntrinsic>(Usr))
+      return !MI->isVolatile() && S.isSplittable();
+    return false;
+  };
+
+  return llvm::all_of(P, IsPromotable) &&
+         llvm::all_of(P.splitSliceTails(),
+                      [&](const Slice *S) { return IsPromotable(*S); });
+}
+
 /// Pre-split loads and stores to simplify rewriting.
 ///
 /// We want to break up the splittable load+store pairs as much as
@@ -5488,13 +5538,22 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
   // type?
   if (Type *TypePartitionTy = getTypePartition(DL, AI.getAllocatedType(),
                                                P.beginOffset(), P.size())) {
-    // If the partition is an integer array that can be spanned by a legal
-    // integer type, prefer to represent it as a legal integer type because
-    // it's more likely to be promotable.
-    if (TypePartitionTy->isArrayTy() &&
-        TypePartitionTy->getArrayElementType()->isIntegerTy() &&
-        DL.isLegalInteger(P.size() * 8))
-      TypePartitionTy = Type::getIntNTy(C, P.size() * 8);
+    // Canonicalize arrays, or structs when requested, to a legal integer only
+    // when this is guaranteed to produce a promotable partition.
+    if ((TypePartitionTy->isArrayTy() ||
+         (AggregateToVector && TypePartitionTy->isStructTy())) &&
+        !containsNonIntegralPointer(TypePartitionTy, DL) &&
+        DL.isLegalInteger(P.size() * 8)) {
+      Type *IntTy = Type::getIntNTy(C, P.size() * 8);
+      if (isIntegerWideningViable(P, IntTy, DL)) {
+        LogSelection("aggregate-int-widen", IntTy, nullptr, true);
+        return {IntTy, true, nullptr};
+      }
+      if (areAllUsesWholePartitionPromotable(P, IntTy, DL)) {
+        LogSelection("aggregate-int-whole", IntTy, nullptr, false);
+        return {IntTy, false, nullptr};
+      }
+    }
     // There was no common type used, so we prefer integer widening promotion.
     if (isIntegerWideningViable(P, TypePartitionTy, DL)) {
       LogSelection("type-partition-int-widen", TypePartitionTy, nullptr, true);
