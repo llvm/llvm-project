@@ -1259,3 +1259,95 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// Two static slices of the same dynamically-offset subview: they resolve to a
+// shared root and are provably disjoint, so both pairs are hoisted.
+
+// CHECK-LABEL:   func.func @hoist_disjoint_subviews_of_dynamic_parent(
+// CHECK-SAME:      %[[MEM:[a-zA-Z0-9]+]]: memref<8xf32>,
+// CHECK-SAME:      %[[OFF:[a-zA-Z0-9]+]]: index,
+// CHECK:           %[[PARENT:.*]] = memref.subview %[[MEM]][%[[OFF]]] [4] [1]
+// CHECK-NEXT:      %[[SV0:.*]] = memref.subview %[[PARENT]][0] [2] [1]
+// CHECK-NEXT:      %[[SV1:.*]] = memref.subview %[[PARENT]][2] [2] [1]
+// CHECK-NEXT:      %[[R0:.*]] = vector.transfer_read %[[SV0]]
+// CHECK-NEXT:      %[[R1:.*]] = vector.transfer_read %[[SV1]]
+// CHECK-NEXT:      %[[FOR:.*]]:2 = scf.for {{.*}} iter_args(%[[I0:.*]] = %[[R0]], %[[I1:.*]] = %[[R1]]) -> (vector<2xf32>, vector<2xf32>) {
+// CHECK-NEXT:        %[[U0:.*]] = "test.val_use"(%[[I0]])
+// CHECK-NEXT:        %[[U1:.*]] = "test.val_use"(%[[I1]])
+// CHECK-NEXT:        scf.yield %[[U0]], %[[U1]]
+// CHECK-NEXT:      }
+// CHECK-NEXT:      vector.transfer_write %[[FOR]]#1, %[[SV1]]
+// CHECK-NEXT:      vector.transfer_write %[[FOR]]#0, %[[SV0]]
+func.func @hoist_disjoint_subviews_of_dynamic_parent(
+    %mem: memref<8xf32>, %off: index, %lb : index, %ub : index, %step: index) {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %parent = memref.subview %mem[%off][4][1] : memref<8xf32> to memref<4xf32, strided<[1], offset: ?>>
+  %sv0 = memref.subview %parent[0][2][1] : memref<4xf32, strided<[1], offset: ?>> to memref<2xf32, strided<[1], offset: ?>>
+  %sv1 = memref.subview %parent[2][2][1] : memref<4xf32, strided<[1], offset: ?>> to memref<2xf32, strided<[1], offset: ?>>
+  scf.for %i = %lb to %ub step %step {
+    %r0 = vector.transfer_read %sv0[%c0], %pad : memref<2xf32, strided<[1], offset: ?>>, vector<2xf32>
+    %u0 = "test.val_use"(%r0) : (vector<2xf32>) -> vector<2xf32>
+    vector.transfer_write %u0, %sv0[%c0] : vector<2xf32>, memref<2xf32, strided<[1], offset: ?>>
+
+    %r1 = vector.transfer_read %sv1[%c0], %pad : memref<2xf32, strided<[1], offset: ?>>, vector<2xf32>
+    %u1 = "test.val_use"(%r1) : (vector<2xf32>) -> vector<2xf32>
+    vector.transfer_write %u1, %sv1[%c0] : vector<2xf32>, memref<2xf32, strided<[1], offset: ?>>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Slices of two distinct dynamically-offset subviews resolve to distinct roots,
+// so they are not comparable and hoisting is blocked.
+
+// CHECK-LABEL:   func.func @negative_hoist_subviews_of_distinct_dynamic_parents(
+// CHECK:           scf.for {{.*}} step %{{.*}} {
+// CHECK:             vector.transfer_read
+// CHECK:             vector.transfer_write
+// CHECK:             vector.transfer_read
+// CHECK:             vector.transfer_write
+// CHECK:           }
+
+func.func @negative_hoist_subviews_of_distinct_dynamic_parents(
+    %mem: memref<8xf32>, %off0: index, %off1: index, %lb : index, %ub : index, %step: index) {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %parent0 = memref.subview %mem[%off0][4][1] : memref<8xf32> to memref<4xf32, strided<[1], offset: ?>>
+  %parent1 = memref.subview %mem[%off1][4][1] : memref<8xf32> to memref<4xf32, strided<[1], offset: ?>>
+  %sv0 = memref.subview %parent0[0][2][1] : memref<4xf32, strided<[1], offset: ?>> to memref<2xf32, strided<[1], offset: ?>>
+  %sv1 = memref.subview %parent1[0][2][1] : memref<4xf32, strided<[1], offset: ?>> to memref<2xf32, strided<[1], offset: ?>>
+  scf.for %i = %lb to %ub step %step {
+    %r0 = vector.transfer_read %sv0[%c0], %pad : memref<2xf32, strided<[1], offset: ?>>, vector<2xf32>
+    %u0 = "test.val_use"(%r0) : (vector<2xf32>) -> vector<2xf32>
+    vector.transfer_write %u0, %sv0[%c0] : vector<2xf32>, memref<2xf32, strided<[1], offset: ?>>
+
+    %r1 = vector.transfer_read %sv1[%c0], %pad : memref<2xf32, strided<[1], offset: ?>>, vector<2xf32>
+    %u1 = "test.val_use"(%r1) : (vector<2xf32>) -> vector<2xf32>
+    vector.transfer_write %u1, %sv1[%c0] : vector<2xf32>, memref<2xf32, strided<[1], offset: ?>>
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
