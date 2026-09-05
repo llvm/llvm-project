@@ -1713,8 +1713,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_coro_end:
     return RValue::get(emitCoroEndBuiltinCall(e).getResult());
   case Builtin::BI__builtin_coro_promise:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_promise NYI");
-    return getUndefRValue(e->getType());
+    return RValue::get(emitCoroPromiseBuiltinCall(e).getResult());
   case Builtin::BI__builtin_coro_resume:
     cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_resume NYI");
     return getUndefRValue(e->getType());
