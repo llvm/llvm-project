@@ -56,6 +56,11 @@ void ReportNewDeleteTypeMismatch(uptr addr, uptr delete_size,
 void ReportFreeSizeMismatch(uptr addr, uptr delete_size, uptr delete_alignment,
                             BufferedStackTrace* free_stack);
 void ReportDoubleFree(uptr addr, BufferedStackTrace *free_stack);
+// Double-free of a GPU-only HSA VMEM reservation. Such reservations have no
+// AsanChunk metadata, so provenance is supplied from VmemGpuReserveTracker.
+void ReportVmemDoubleFree(uptr addr, uptr size, u32 reserve_stack_id,
+                          u32 reserve_tid, u32 first_free_stack_id,
+                          u32 first_free_tid, BufferedStackTrace* free_stack);
 void ReportFreeNotMalloced(uptr addr, BufferedStackTrace *free_stack);
 void ReportAllocTypeMismatch(uptr addr, BufferedStackTrace *free_stack,
                              AllocType alloc_type,
