@@ -18,12 +18,42 @@ define void @axpy4_contract(ptr noalias %d, ptr noalias %a, ptr noalias %b, ptr 
 ; CHECK-LABEL: define void @axpy4_contract(
 ; CHECK-SAME: ptr noalias [[D:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[C]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[B]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul contract <4 x float> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd contract <4 x float> [[TMP0]], [[TMP3]]
-; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[D]], align 4
+; CHECK-NEXT:    [[C0:%.*]] = load float, ptr [[C]], align 4
+; CHECK-NEXT:    [[A0:%.*]] = load float, ptr [[A]], align 4
+; CHECK-NEXT:    [[B0:%.*]] = load float, ptr [[B]], align 4
+; CHECK-NEXT:    [[M0:%.*]] = fmul contract float [[A0]], [[B0]]
+; CHECK-NEXT:    [[R0:%.*]] = fadd contract float [[C0]], [[M0]]
+; CHECK-NEXT:    store float [[R0]], ptr [[D]], align 4
+; CHECK-NEXT:    [[CP1:%.*]] = getelementptr inbounds float, ptr [[C]], i64 1
+; CHECK-NEXT:    [[C1:%.*]] = load float, ptr [[CP1]], align 4
+; CHECK-NEXT:    [[AP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 1
+; CHECK-NEXT:    [[A1:%.*]] = load float, ptr [[AP1]], align 4
+; CHECK-NEXT:    [[BP1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 1
+; CHECK-NEXT:    [[B1:%.*]] = load float, ptr [[BP1]], align 4
+; CHECK-NEXT:    [[M1:%.*]] = fmul contract float [[A1]], [[B1]]
+; CHECK-NEXT:    [[R1:%.*]] = fadd contract float [[C1]], [[M1]]
+; CHECK-NEXT:    [[DP1:%.*]] = getelementptr inbounds float, ptr [[D]], i64 1
+; CHECK-NEXT:    store float [[R1]], ptr [[DP1]], align 4
+; CHECK-NEXT:    [[CP2:%.*]] = getelementptr inbounds float, ptr [[C]], i64 2
+; CHECK-NEXT:    [[C2:%.*]] = load float, ptr [[CP2]], align 4
+; CHECK-NEXT:    [[AP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 2
+; CHECK-NEXT:    [[A2:%.*]] = load float, ptr [[AP2]], align 4
+; CHECK-NEXT:    [[BP2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 2
+; CHECK-NEXT:    [[B2:%.*]] = load float, ptr [[BP2]], align 4
+; CHECK-NEXT:    [[M2:%.*]] = fmul contract float [[A2]], [[B2]]
+; CHECK-NEXT:    [[R2:%.*]] = fadd contract float [[C2]], [[M2]]
+; CHECK-NEXT:    [[DP2:%.*]] = getelementptr inbounds float, ptr [[D]], i64 2
+; CHECK-NEXT:    store float [[R2]], ptr [[DP2]], align 4
+; CHECK-NEXT:    [[CP3:%.*]] = getelementptr inbounds float, ptr [[C]], i64 3
+; CHECK-NEXT:    [[C3:%.*]] = load float, ptr [[CP3]], align 4
+; CHECK-NEXT:    [[AP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 3
+; CHECK-NEXT:    [[A3:%.*]] = load float, ptr [[AP3]], align 4
+; CHECK-NEXT:    [[BP3:%.*]] = getelementptr inbounds float, ptr [[B]], i64 3
+; CHECK-NEXT:    [[B3:%.*]] = load float, ptr [[BP3]], align 4
+; CHECK-NEXT:    [[M3:%.*]] = fmul contract float [[A3]], [[B3]]
+; CHECK-NEXT:    [[R3:%.*]] = fadd contract float [[C3]], [[M3]]
+; CHECK-NEXT:    [[DP3:%.*]] = getelementptr inbounds float, ptr [[D]], i64 3
+; CHECK-NEXT:    store float [[R3]], ptr [[DP3]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; THR12-LABEL: define void @axpy4_contract(
@@ -81,12 +111,42 @@ define void @axpy4_reassoc(ptr noalias %d, ptr noalias %a, ptr noalias %b, ptr n
 ; CHECK-LABEL: define void @axpy4_reassoc(
 ; CHECK-SAME: ptr noalias [[D:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[C]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[B]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul reassoc contract <4 x float> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc contract <4 x float> [[TMP0]], [[TMP3]]
-; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[D]], align 4
+; CHECK-NEXT:    [[C0:%.*]] = load float, ptr [[C]], align 4
+; CHECK-NEXT:    [[A0:%.*]] = load float, ptr [[A]], align 4
+; CHECK-NEXT:    [[B0:%.*]] = load float, ptr [[B]], align 4
+; CHECK-NEXT:    [[M0:%.*]] = fmul reassoc contract float [[A0]], [[B0]]
+; CHECK-NEXT:    [[R0:%.*]] = fadd reassoc contract float [[C0]], [[M0]]
+; CHECK-NEXT:    store float [[R0]], ptr [[D]], align 4
+; CHECK-NEXT:    [[CP1:%.*]] = getelementptr inbounds float, ptr [[C]], i64 1
+; CHECK-NEXT:    [[C1:%.*]] = load float, ptr [[CP1]], align 4
+; CHECK-NEXT:    [[AP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 1
+; CHECK-NEXT:    [[A1:%.*]] = load float, ptr [[AP1]], align 4
+; CHECK-NEXT:    [[BP1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 1
+; CHECK-NEXT:    [[B1:%.*]] = load float, ptr [[BP1]], align 4
+; CHECK-NEXT:    [[M1:%.*]] = fmul reassoc contract float [[A1]], [[B1]]
+; CHECK-NEXT:    [[R1:%.*]] = fadd reassoc contract float [[C1]], [[M1]]
+; CHECK-NEXT:    [[DP1:%.*]] = getelementptr inbounds float, ptr [[D]], i64 1
+; CHECK-NEXT:    store float [[R1]], ptr [[DP1]], align 4
+; CHECK-NEXT:    [[CP2:%.*]] = getelementptr inbounds float, ptr [[C]], i64 2
+; CHECK-NEXT:    [[C2:%.*]] = load float, ptr [[CP2]], align 4
+; CHECK-NEXT:    [[AP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 2
+; CHECK-NEXT:    [[A2:%.*]] = load float, ptr [[AP2]], align 4
+; CHECK-NEXT:    [[BP2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 2
+; CHECK-NEXT:    [[B2:%.*]] = load float, ptr [[BP2]], align 4
+; CHECK-NEXT:    [[M2:%.*]] = fmul reassoc contract float [[A2]], [[B2]]
+; CHECK-NEXT:    [[R2:%.*]] = fadd reassoc contract float [[C2]], [[M2]]
+; CHECK-NEXT:    [[DP2:%.*]] = getelementptr inbounds float, ptr [[D]], i64 2
+; CHECK-NEXT:    store float [[R2]], ptr [[DP2]], align 4
+; CHECK-NEXT:    [[CP3:%.*]] = getelementptr inbounds float, ptr [[C]], i64 3
+; CHECK-NEXT:    [[C3:%.*]] = load float, ptr [[CP3]], align 4
+; CHECK-NEXT:    [[AP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 3
+; CHECK-NEXT:    [[A3:%.*]] = load float, ptr [[AP3]], align 4
+; CHECK-NEXT:    [[BP3:%.*]] = getelementptr inbounds float, ptr [[B]], i64 3
+; CHECK-NEXT:    [[B3:%.*]] = load float, ptr [[BP3]], align 4
+; CHECK-NEXT:    [[M3:%.*]] = fmul reassoc contract float [[A3]], [[B3]]
+; CHECK-NEXT:    [[R3:%.*]] = fadd reassoc contract float [[C3]], [[M3]]
+; CHECK-NEXT:    [[DP3:%.*]] = getelementptr inbounds float, ptr [[D]], i64 3
+; CHECK-NEXT:    store float [[R3]], ptr [[DP3]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; THR12-LABEL: define void @axpy4_reassoc(
@@ -144,12 +204,42 @@ define void @axpy4_mixed_reassoc(ptr noalias %d, ptr noalias %a, ptr noalias %b,
 ; CHECK-LABEL: define void @axpy4_mixed_reassoc(
 ; CHECK-SAME: ptr noalias [[D:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[C]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[B]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul contract <4 x float> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fadd contract <4 x float> [[TMP0]], [[TMP3]]
-; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[D]], align 4
+; CHECK-NEXT:    [[C0:%.*]] = load float, ptr [[C]], align 4
+; CHECK-NEXT:    [[A0:%.*]] = load float, ptr [[A]], align 4
+; CHECK-NEXT:    [[B0:%.*]] = load float, ptr [[B]], align 4
+; CHECK-NEXT:    [[M0:%.*]] = fmul contract float [[A0]], [[B0]]
+; CHECK-NEXT:    [[R0:%.*]] = fadd reassoc contract float [[C0]], [[M0]]
+; CHECK-NEXT:    store float [[R0]], ptr [[D]], align 4
+; CHECK-NEXT:    [[CP1:%.*]] = getelementptr inbounds float, ptr [[C]], i64 1
+; CHECK-NEXT:    [[C1:%.*]] = load float, ptr [[CP1]], align 4
+; CHECK-NEXT:    [[AP1:%.*]] = getelementptr inbounds float, ptr [[A]], i64 1
+; CHECK-NEXT:    [[A1:%.*]] = load float, ptr [[AP1]], align 4
+; CHECK-NEXT:    [[BP1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 1
+; CHECK-NEXT:    [[B1:%.*]] = load float, ptr [[BP1]], align 4
+; CHECK-NEXT:    [[M1:%.*]] = fmul contract float [[A1]], [[B1]]
+; CHECK-NEXT:    [[R1:%.*]] = fadd contract float [[C1]], [[M1]]
+; CHECK-NEXT:    [[DP1:%.*]] = getelementptr inbounds float, ptr [[D]], i64 1
+; CHECK-NEXT:    store float [[R1]], ptr [[DP1]], align 4
+; CHECK-NEXT:    [[CP2:%.*]] = getelementptr inbounds float, ptr [[C]], i64 2
+; CHECK-NEXT:    [[C2:%.*]] = load float, ptr [[CP2]], align 4
+; CHECK-NEXT:    [[AP2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 2
+; CHECK-NEXT:    [[A2:%.*]] = load float, ptr [[AP2]], align 4
+; CHECK-NEXT:    [[BP2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 2
+; CHECK-NEXT:    [[B2:%.*]] = load float, ptr [[BP2]], align 4
+; CHECK-NEXT:    [[M2:%.*]] = fmul contract float [[A2]], [[B2]]
+; CHECK-NEXT:    [[R2:%.*]] = fadd contract float [[C2]], [[M2]]
+; CHECK-NEXT:    [[DP2:%.*]] = getelementptr inbounds float, ptr [[D]], i64 2
+; CHECK-NEXT:    store float [[R2]], ptr [[DP2]], align 4
+; CHECK-NEXT:    [[CP3:%.*]] = getelementptr inbounds float, ptr [[C]], i64 3
+; CHECK-NEXT:    [[C3:%.*]] = load float, ptr [[CP3]], align 4
+; CHECK-NEXT:    [[AP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 3
+; CHECK-NEXT:    [[A3:%.*]] = load float, ptr [[AP3]], align 4
+; CHECK-NEXT:    [[BP3:%.*]] = getelementptr inbounds float, ptr [[B]], i64 3
+; CHECK-NEXT:    [[B3:%.*]] = load float, ptr [[BP3]], align 4
+; CHECK-NEXT:    [[M3:%.*]] = fmul contract float [[A3]], [[B3]]
+; CHECK-NEXT:    [[R3:%.*]] = fadd contract float [[C3]], [[M3]]
+; CHECK-NEXT:    [[DP3:%.*]] = getelementptr inbounds float, ptr [[D]], i64 3
+; CHECK-NEXT:    store float [[R3]], ptr [[DP3]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; THR12-LABEL: define void @axpy4_mixed_reassoc(

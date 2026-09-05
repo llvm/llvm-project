@@ -771,6 +771,16 @@ Instruction *lookThroughCastRoundTrip(Value *V, bool MustBeElidable) {
   return Narrow;
 }
 
+unsigned getFMulOperandIdx(const Instruction *I) {
+  assert((I->getOpcode() == Instruction::FAdd ||
+          I->getOpcode() == Instruction::FSub) &&
+         "Expected an fadd/fsub-like instruction");
+  for (unsigned Idx : seq<unsigned>(I->getNumOperands()))
+    if (match(I->getOperand(Idx), m_OneUse(m_FMul(m_Value(), m_Value()))))
+      return Idx;
+  return 0;
+}
+
 namespace {
 
 /// Shifts and the mask accumulated from the narrow ops on the current path:
