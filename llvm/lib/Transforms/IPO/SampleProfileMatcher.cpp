@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/SampleProfileMatcher.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -158,17 +159,45 @@ void SampleProfileMatcher::findProfileAnchors(const FunctionSamples &FS,
     const LineLocation &Loc = I.first;
     if (isInvalidLineOffset(Loc.LineOffset))
       continue;
-    for (const auto &C : I.second.getCallTargets())
+
+    const auto &CallTargets = I.second.getCallTargets();
+    const bool HasSampledTarget =
+        llvm::any_of(CallTargets, [](const auto &C) { return C.second != 0; });
+    for (const auto &C : CallTargets) {
+      // Zero-count targets carry no evidence of another sampled callee.
+      if (HasSampledTarget && C.second == 0)
+        continue;
       InsertAnchor(Loc, C.first, ProfileAnchors);
+    }
   }
 
   for (const auto &I : FS.getCallsiteSamples()) {
     const LineLocation &Loc = I.first;
     if (isInvalidLineOffset(Loc.LineOffset))
       continue;
-    for (const auto &C : I.second)
+
+    const auto &Callees = I.second;
+    const bool HasSampledCallee = llvm::any_of(
+        Callees, [](const auto &C) { return C.second.getTotalSamples() != 0; });
+    for (const auto &C : Callees) {
+      // Zero-sample inline frames carry no evidence of another call target.
+      if (HasSampledCallee && C.second.getTotalSamples() == 0)
+        continue;
       InsertAnchor(Loc, C.first, ProfileAnchors);
+    }
   }
+}
+
+bool SampleProfileMatcher::anchorsMatch(const FunctionId &IRAnchor,
+                                        const FunctionId &ProfileAnchor) const {
+  // Check whether the callees at an already-aligned location are compatible.
+  // An indirect IR call has no statically known callee, so any profiled target
+  // is compatible. The reverse is not true: multiple sampled profile targets
+  // cannot match a direct IR call. This is only a compatibility test; an
+  // indirect anchor carries no callee identity and must not be used to
+  // establish the location alignment itself.
+  return IRAnchor == ProfileAnchor ||
+         IRAnchor == FunctionId(UnknownIndirectCallee);
 }
 
 bool SampleProfileMatcher::functionHasProfile(const FunctionId &IRFuncName,
@@ -523,7 +552,7 @@ void SampleProfileMatcher::recordCallsiteMatchStates(
     if (It == ProfileAnchors.end())
       continue;
     const auto &ProfCalleeId = It->second;
-    if (IRCalleeId == ProfCalleeId) {
+    if (anchorsMatch(IRCalleeId, ProfCalleeId)) {
       auto It = CallsiteMatchStates.find(ProfileLoc);
       if (It == CallsiteMatchStates.end())
         CallsiteMatchStates.try_emplace(ProfileLoc, MatchState::InitialMatch);
