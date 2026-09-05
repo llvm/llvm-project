@@ -17482,3 +17482,29 @@ libc_function(
         ":types_wchar_t",
     ],
 )
+
+
+
+libc_test(
+    name = "canonicalizebf16_test",
+    srcs = ["canonicalizebf16_test.cpp"],
+    libc_function = "//libc:canonicalizebf16",
+)
+
+libc_test(
+    name = "getpayloadbf16_test",
+    srcs = ["getpayloadbf16_test.cpp"],
+    libc_function = "//libc:getpayloadbf16",
+)
+
+libc_test(
+    name = "setpayloadbf16_test",
+    srcs = ["setpayloadbf16_test.cpp"],
+    libc_function = "//libc:setpayloadbf16",
+)
+
+libc_test(
+    name = "setpayloadsigbf16_test",
+    srcs = ["setpayloadsigbf16_test.cpp"],
+    libc_function = "//libc:setpayloadsigbf16",
+)
