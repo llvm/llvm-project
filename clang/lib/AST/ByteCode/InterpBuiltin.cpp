@@ -9,6 +9,7 @@
 #include "Boolean.h"
 #include "Char.h"
 #include "EvalEmitter.h"
+#include "Interp.h"
 #include "InterpBuiltinBitCast.h"
 #include "InterpHelpers.h"
 #include "PrimType.h"
@@ -22,6 +23,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/AllocToken.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SipHash.h"
 
 namespace clang {
@@ -2103,6 +2105,68 @@ static bool interp__builtin_memcpy(InterpState &S, CodePtr OpPC,
 /// sizeof(T) == 1.
 static bool isOneByteCharacterType(QualType T) {
   return T->isCharType() || T->isChar8Type();
+}
+
+// stdc_memreverse8(size_t N, unsigned char *P)
+static bool interp__builtin_stdc_memreverse8(InterpState &S, CodePtr OpPC,
+                                             const InterpFrame *Frame,
+                                             const CallExpr *Call) {
+  Pointer Ptr = S.Stk.pop<Pointer>();
+
+  uint64_t NElems;
+  if (!popToUInt64(S, Call->getArg(0), NElems))
+    return false;
+
+  if (Ptr.isZero()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_null)
+        << AK_Assign;
+    return false;
+  }
+
+  if (!isReadable(Ptr) && !Ptr.isOnePastEnd())
+    return false;
+
+  const Descriptor *Desc = Ptr.getFieldDesc();
+  bool IsArray = Desc->isArray();
+  QualType ElemTy = IsArray ? Desc->getElemQualType() : Desc->getType();
+
+  if (IsArray)
+    Ptr = Ptr.expand();
+
+  uint64_t BaseIdx = Ptr.getIndex();
+  uint64_t ArraySize = Ptr.getNumElems();
+  uint64_t RemainingElems = ArraySize - BaseIdx;
+  if (NElems > RemainingElems) {
+    uint64_t LastIndex = llvm::SaturatingAdd(BaseIdx, NElems - 1);
+    if (IsArray)
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
+          << LastIndex << /*array*/ 0 << ArraySize;
+    else
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
+          << LastIndex << /*non-array*/ 1;
+    return false;
+  }
+
+  if (NElems <= 1)
+    return true;
+
+  PrimType ElemT = *S.getContext().classify(ElemTy);
+
+  for (uint64_t I = 0, Half = NElems / 2; I < Half; ++I) {
+    Pointer LoPtr = Ptr.atIndex(BaseIdx + I);
+    Pointer HiPtr = Ptr.atIndex(BaseIdx + NElems - 1 - I);
+
+    if (!CheckLoad(S, OpPC, LoPtr, AK_Read) ||
+        !CheckLoad(S, OpPC, HiPtr, AK_Read) || !CheckStore(S, OpPC, LoPtr) ||
+        !CheckStore(S, OpPC, HiPtr))
+      return false;
+
+    INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                            { std::swap(LoPtr.deref<T>(), HiPtr.deref<T>()); });
+    LoPtr.initialize();
+    HiPtr.initialize();
+  }
+  return true;
 }
 
 static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
@@ -5124,6 +5188,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_memreverse8u32:
   case Builtin::BIstdc_memreverse8u64:
     return interp__builtin_bswap(S, OpPC, Frame, Call);
+
+  case Builtin::BIstdc_memreverse8:
+  case Builtin::BI__builtin_stdc_memreverse8:
+    return interp__builtin_stdc_memreverse8(S, OpPC, Frame, Call);
 
   case Builtin::BI__atomic_always_lock_free:
   case Builtin::BI__atomic_is_lock_free:
