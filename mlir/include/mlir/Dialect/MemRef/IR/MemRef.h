@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
+#include "mlir/IR/BuiltinEnums.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/Interfaces/AlignmentAttrInterface.h"
 #include "mlir/Interfaces/CallInterfaces.h"
