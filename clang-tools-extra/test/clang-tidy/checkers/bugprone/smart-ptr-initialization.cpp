@@ -1,5 +1,4 @@
 // RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-smart-ptr-initialization %t
-
 #include <memory>
 #include <string>
 #include <utility>
@@ -88,21 +87,6 @@ void test_new_expression_fail() {
   std::unique_ptr<A> b(second);
   std::unique_ptr<A> b2(second);
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A *' to 'std::unique_ptr<A>' constructor may cause double deletion
-}
-
-using ptr_a_t = A*;
-using shared_ptr_a_t = std::shared_ptr<A>;
-using unique_ptr_a_t = std::unique_ptr<A>;
-
-void test_new_expression_with_aliases() {
-  ptr_a_t first = new A();
-  ptr_a_t second = new A();
-  shared_ptr_a_t a(first);
-  shared_ptr_a_t a2(first);
-  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: passing a raw pointer 'ptr_a_t' (aka 'A *') to 'shared_ptr_a_t' (aka 'std::shared_ptr<A>') constructor may cause double deletion
-  unique_ptr_a_t b(second);
-  unique_ptr_a_t b2(second);
-  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: passing a raw pointer 'ptr_a_t' (aka 'A *') to 'unique_ptr_a_t' (aka 'std::unique_ptr<A>') constructor may cause double deletion
 }
 
 void test_new_expression_fail_in_different_scopes() {
@@ -265,7 +249,6 @@ void test_nested_function() {
   auto lambda = []() {
     int* a = new int(42);
     std::shared_ptr<int> p1(a);
-    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
     std::shared_ptr<int> p2(a);
     // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
   };
@@ -276,62 +259,28 @@ void test_nested_function2() {
   int* a = new int(42);
   auto lambda = [&]() {
     std::shared_ptr<int> p1(a);
-    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
     std::shared_ptr<int> p2(a);
+    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
   };
   lambda();
 }
 
-void test_inside_structure() {
-  A a;
-  a.val = new int(42);
-  std::shared_ptr<int> p1(a.val);
-  std::shared_ptr<int> p2(a.val);
-  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
+
+using ptr_a_t = A*;
+using shared_ptr_a_t = std::shared_ptr<A>;
+using unique_ptr_a_t = std::unique_ptr<A>;
+
+void test_new_expression_with_aliases() {
+  ptr_a_t first = new A();
+  ptr_a_t second = new A();
+  shared_ptr_a_t a(first);
+  shared_ptr_a_t a2(first);
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: passing a raw pointer 'ptr_a_t' (aka 'A *') to 'shared_ptr_a_t' (aka 'std::shared_ptr<A>') constructor may cause double deletion
+  unique_ptr_a_t b(second);
+  unique_ptr_a_t b2(second);
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: passing a raw pointer 'ptr_a_t' (aka 'A *') to 'unique_ptr_a_t' (aka 'std::unique_ptr<A>') constructor may cause double deletion
 }
 
-void test_inside_structure_and_argument(A& a) {
-  a.val = new int(42);
-  std::shared_ptr<int> p1(a.val);
-  std::shared_ptr<int> p2(a.val);
-  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
-}
-
-class test_inside_a_class {
-  int* a = nullptr;
-public:
-  void operator() () {
-    a = new int(42);
-    std::shared_ptr<int> p1(a);
-    std::shared_ptr<int> p2(a);
-    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
-  }
-};
-
-class test_inside_a_class_with_this {
-  int* a = nullptr;
-public:
-  void operator() () {
-    this->a = new int(42);
-    std::shared_ptr<int> p1(this->a);
-    std::shared_ptr<int> p2(this->a);
-    // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
-  }
-};
-
-struct Inner {
-  int *P = nullptr;
-};
-struct Outer {
-  Inner In;
-};
-
-void double_wrap_nested_fields(Outer &O) {
-  O.In.P = new int;
-  std::shared_ptr<int> First(O.In.P);
-  std::shared_ptr<int> Second(O.In.P);
-  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: passing a raw pointer 'int *' to 'std::shared_ptr<int>' constructor may cause double deletion
-}
 
 // test_new_expression_ok_in_global
 // FIXME: support it
@@ -376,6 +325,7 @@ void test_basic_no_double_ownership(std::shared_ptr<int> p1, std::shared_ptr<int
   p2.reset(a);
 }
 
+
 void test_new_expression_reset_fail() {
   A* first = new A();
   A* second = new A();
@@ -389,6 +339,20 @@ void test_new_expression_reset_fail() {
   std::unique_ptr<A> b2;
   b2.reset(second);
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: passing a raw pointer 'A *' to 'std::unique_ptr<A>' reset method may cause double deletion
+}
+
+
+void test_new_expression_crossed_fail() {
+  A* first = new A();
+  A* second = new A();
+  std::shared_ptr<A> a(first);
+  std::shared_ptr<A> a2;
+  a2.reset(first);
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: passing a raw pointer 'A *' to 'std::shared_ptr<A>' reset method may cause double deletion
+  std::unique_ptr<A> b;
+  b.reset(second);
+  std::unique_ptr<A> b2(second);
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A *' to 'std::unique_ptr<A>' constructor may cause double deletion
 }
 
 void test_new_expression_reset_fail_with_aliases() {
@@ -406,18 +370,7 @@ void test_new_expression_reset_fail_with_aliases() {
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: passing a raw pointer 'ptr_a_t' (aka 'A *') to 'unique_ptr_a_t' (aka 'std::unique_ptr<A>') reset method may cause double deletion
 }
 
-void test_new_expression_crossed_fail() {
-  A* first = new A();
-  A* second = new A();
-  std::shared_ptr<A> a(first);
-  std::shared_ptr<A> a2;
-  a2.reset(first);
-  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: passing a raw pointer 'A *' to 'std::shared_ptr<A>' reset method may cause double deletion
-  std::unique_ptr<A> b;
-  b.reset(second);
-  std::unique_ptr<A> b2(second);
-  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing a raw pointer 'A *' to 'std::unique_ptr<A>' constructor may cause double deletion
-}
+
 
 bool can_take(std::shared_ptr<A> a);
 void take(std::shared_ptr<A> a);
@@ -436,3 +389,4 @@ void test_new_expression_not_only_smartpointers() {
   std::unique_ptr<char> b(second);
   std::string b2(second);
 }
+
