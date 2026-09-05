@@ -359,9 +359,17 @@ applyTileToAll(RewriterBase &rewriter, Operation *transformOp,
       loopOps.push_back(loop);
   }
 
+  unsigned numLoopResults = transformOp->getNumResults() - 1;
+  if (loopOps.size() > numLoopResults)
+    return transformOp->emitError()
+           << "generated " << loopOps.size() << " loops but only "
+           << numLoopResults << " loop results were declared";
+
   transformResults.set(transformOp->getOpResult(0), tiledOps);
   for (auto [index, loop] : llvm::enumerate(loopOps))
     transformResults.set(transformOp->getOpResult(index + 1), {loop});
+  for (unsigned index : llvm::seq<unsigned>(loopOps.size(), numLoopResults))
+    transformResults.set(transformOp->getOpResult(index + 1), {});
 
   return success();
 }
