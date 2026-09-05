@@ -1028,6 +1028,14 @@ public:
   virtual void emitCFIDefCfaRegister(int64_t Register, SMLoc Loc = {});
   virtual void emitCFILLVMDefAspaceCfa(int64_t Register, int64_t Offset,
                                        int64_t AddressSpace, SMLoc Loc = {});
+  virtual void emitCFILLVMDefCfaConstantAddress(uint64_t Value,
+                                                int64_t AddressSpace,
+                                                SMLoc Loc = {});
+  virtual void emitCFILLVMDefCfaRegisterAddressTransform(int64_t Register,
+                                                         int64_t DerefSize,
+                                                         int64_t Scale,
+                                                         int64_t AddressSpace,
+                                                         SMLoc Loc = {});
   virtual void emitCFIOffset(int64_t Register, int64_t Offset, SMLoc Loc = {});
   virtual void emitCFIPersonality(const MCSymbol *Sym, unsigned Encoding);
   virtual void emitCFILsda(const MCSymbol *Sym, unsigned Encoding);

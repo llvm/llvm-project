@@ -26,7 +26,7 @@ machineFunctionInfo:
 body:             |
   bb.0:
     ; CHECK-LABEL: name: kern1
-    ; CHECK: frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
+    ; CHECK: frame-setup CFI_INSTRUCTION llvm_def_cfa_constant_address 0, 6
     ; CHECK-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; CHECK-NEXT: S_ENDPGM 0
     S_ENDPGM 0

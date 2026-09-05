@@ -2672,6 +2672,34 @@ bool MIParser::parseCFIOperand(MachineOperand &Dest) {
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createLLVMDefAspaceCfa(
         nullptr, Reg, Offset, AddressSpace, SMLoc()));
     break;
+  case MIToken::kw_cfi_llvm_def_cfa_constant_address: {
+    uint64_t Value;
+    if (Token.isNot(MIToken::IntegerLiteral) || Token.integerValue().isSigned())
+      return error("expected an unsigned constant CFA address");
+    if (getUint64(Value))
+      return true;
+    lex();
+    if (expectAndConsume(MIToken::comma) || parseCFIAddressSpace(AddressSpace))
+      return true;
+    CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::createLLVMDefCfaConstantAddress(
+            nullptr, Value, AddressSpace));
+    break;
+  }
+  case MIToken::kw_cfi_llvm_def_cfa_register_address_transform: {
+    unsigned DerefSize, Scale;
+    if (parseCFIRegister(Reg) || expectAndConsume(MIToken::comma) ||
+        parseCFIUnsigned(DerefSize) || expectAndConsume(MIToken::comma) ||
+        parseCFIUnsigned(Scale) || expectAndConsume(MIToken::comma) ||
+        parseCFIAddressSpace(AddressSpace))
+      return true;
+    if (DerefSize > UINT8_MAX)
+      return error("expected an 8-bit CFA dereference size");
+    CFIIndex = MF.addFrameInst(
+        MCCFIInstruction::createLLVMDefCfaRegisterAddressTransform(
+            nullptr, Reg, DerefSize, Scale, AddressSpace));
+    break;
+  }
   case MIToken::kw_cfi_remember_state:
     CFIIndex = MF.addFrameInst(MCCFIInstruction::createRememberState(nullptr));
     break;
@@ -3167,6 +3195,8 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
   case MIToken::kw_cfi_escape:
   case MIToken::kw_cfi_def_cfa:
   case MIToken::kw_cfi_llvm_def_aspace_cfa:
+  case MIToken::kw_cfi_llvm_def_cfa_constant_address:
+  case MIToken::kw_cfi_llvm_def_cfa_register_address_transform:
   case MIToken::kw_cfi_register:
   case MIToken::kw_cfi_remember_state:
   case MIToken::kw_cfi_restore:

@@ -41,7 +41,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_v1
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-NEXT: $vgpr0 = IMPLICIT_DEF
@@ -52,7 +52,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_v1
     ; FLATSCR-V2A: liveins: $agpr0
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
@@ -83,7 +83,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_v1
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-NEXT: $vgpr0 = IMPLICIT_DEF
@@ -94,7 +94,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_v1
     ; FLATSCR-GFX90A-V2A: liveins: $agpr0
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
@@ -149,7 +149,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_v2
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -161,7 +161,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_v2
     ; FLATSCR-V2A: liveins: $agpr0, $agpr1
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -203,7 +203,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_v2
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -215,7 +215,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_v2
     ; FLATSCR-GFX90A-V2A: liveins: $agpr0, $agpr1
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -281,7 +281,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_v3
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -294,7 +294,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_v3
     ; FLATSCR-V2A: liveins: $agpr0, $agpr1, $agpr2
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -347,7 +347,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_v3
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -360,7 +360,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_v3
     ; FLATSCR-GFX90A-V2A: liveins: $agpr0, $agpr1, $agpr2
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -437,7 +437,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_v4
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -451,7 +451,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_v4
     ; FLATSCR-V2A: liveins: $agpr0, $agpr1, $agpr2, $agpr3
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -515,7 +515,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_v4
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -529,7 +529,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_v4
     ; FLATSCR-GFX90A-V2A: liveins: $agpr0, $agpr1, $agpr2, $agpr3
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -617,7 +617,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_v5
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -634,7 +634,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_v5
     ; FLATSCR-V2A: liveins: $agpr0, $agpr1, $agpr2, $agpr3, $agpr4
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -709,7 +709,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_v5
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -726,7 +726,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_v5
     ; FLATSCR-GFX90A-V2A: liveins: $agpr0, $agpr1, $agpr2, $agpr3, $agpr4
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -825,7 +825,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_v6
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -843,7 +843,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_v6
     ; FLATSCR-V2A: liveins: $agpr0, $agpr1, $agpr2, $agpr3, $agpr4, $agpr5
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -929,7 +929,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_v6
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -947,7 +947,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_v6
     ; FLATSCR-GFX90A-V2A: liveins: $agpr0, $agpr1, $agpr2, $agpr3, $agpr4, $agpr5
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -1057,7 +1057,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_v7
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -1076,7 +1076,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_v7
     ; FLATSCR-V2A: liveins: $agpr0, $agpr1, $agpr2, $agpr3, $agpr4, $agpr5, $agpr6
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -1173,7 +1173,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_v7
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -1192,7 +1192,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_v7
     ; FLATSCR-GFX90A-V2A: liveins: $agpr0, $agpr1, $agpr2, $agpr3, $agpr4, $agpr5, $agpr6
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -1313,7 +1313,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_v8
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -1333,7 +1333,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_v8
     ; FLATSCR-V2A: liveins: $agpr0, $agpr1, $agpr2, $agpr3, $agpr4, $agpr5, $agpr6, $agpr7
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -1441,7 +1441,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_v8
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -1461,7 +1461,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_v8
     ; FLATSCR-GFX90A-V2A: liveins: $agpr0, $agpr1, $agpr2, $agpr3, $agpr4, $agpr5, $agpr6, $agpr7
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -1642,7 +1642,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_v16
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -1674,7 +1674,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_v16
     ; FLATSCR-V2A: liveins: $agpr0, $agpr1, $agpr2, $agpr3, $agpr4, $agpr5, $agpr6, $agpr7, $agpr8, $agpr9, $agpr10, $agpr11, $agpr12, $agpr13, $agpr14, $agpr15
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -1870,7 +1870,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_v16
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -1902,7 +1902,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_v16
     ; FLATSCR-GFX90A-V2A: liveins: $agpr0, $agpr1, $agpr2, $agpr3, $agpr4, $agpr5, $agpr6, $agpr7, $agpr8, $agpr9, $agpr10, $agpr11, $agpr12, $agpr13, $agpr14, $agpr15
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -2227,7 +2227,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_v32
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -2283,7 +2283,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_v32
     ; FLATSCR-V2A: liveins: $agpr0, $agpr1, $agpr2, $agpr3, $agpr4, $agpr5, $agpr6, $agpr7, $agpr8, $agpr9, $agpr10, $agpr11, $agpr12, $agpr13, $agpr14, $agpr15, $agpr16, $agpr17, $agpr18, $agpr19, $agpr20, $agpr21, $agpr22, $agpr23, $agpr24, $agpr25, $agpr26, $agpr27, $agpr28, $agpr29, $agpr30, $agpr31
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -2655,7 +2655,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_v32
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -2711,7 +2711,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_v32
     ; FLATSCR-GFX90A-V2A: liveins: $agpr0, $agpr1, $agpr2, $agpr3, $agpr4, $agpr5, $agpr6, $agpr7, $agpr8, $agpr9, $agpr10, $agpr11, $agpr12, $agpr13, $agpr14, $agpr15, $agpr16, $agpr17, $agpr18, $agpr19, $agpr20, $agpr21, $agpr22, $agpr23, $agpr24, $agpr25, $agpr26, $agpr27, $agpr28, $agpr29, $agpr30, $agpr31
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -2885,7 +2885,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a1
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-NEXT: $agpr0 = IMPLICIT_DEF
@@ -2898,7 +2898,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a1
     ; FLATSCR-V2A: liveins: $vgpr0
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
@@ -2929,7 +2929,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_a1
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-GFX90A-NEXT: $agpr0 = IMPLICIT_DEF
@@ -2940,7 +2940,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a1
     ; FLATSCR-GFX90A-V2A: liveins: $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
@@ -2999,7 +2999,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a2
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -3017,7 +3017,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a2
     ; FLATSCR-V2A: liveins: $vgpr0, $vgpr1
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -3059,7 +3059,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_a2
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -3071,7 +3071,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a2
     ; FLATSCR-GFX90A-V2A: liveins: $vgpr0, $vgpr1
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -3143,7 +3143,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a3
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -3166,7 +3166,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a3
     ; FLATSCR-V2A: liveins: $vgpr0, $vgpr1, $vgpr2
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -3219,7 +3219,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_a3
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -3232,7 +3232,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a3
     ; FLATSCR-GFX90A-V2A: liveins: $vgpr0, $vgpr1, $vgpr2
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -3317,7 +3317,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a4
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -3345,7 +3345,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a4
     ; FLATSCR-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -3409,7 +3409,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_a4
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -3423,7 +3423,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a4
     ; FLATSCR-GFX90A-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -3521,7 +3521,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a5
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -3554,7 +3554,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a5
     ; FLATSCR-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -3629,7 +3629,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_a5
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -3646,7 +3646,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a5
     ; FLATSCR-GFX90A-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -3757,7 +3757,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a6
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -3795,7 +3795,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a6
     ; FLATSCR-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -3881,7 +3881,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_a6
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -3899,7 +3899,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a6
     ; FLATSCR-GFX90A-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -4023,7 +4023,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a7
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -4066,7 +4066,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a7
     ; FLATSCR-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -4163,7 +4163,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_a7
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -4182,7 +4182,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a7
     ; FLATSCR-GFX90A-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -4319,7 +4319,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a8
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -4367,7 +4367,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a8
     ; FLATSCR-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -4475,7 +4475,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_a8
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -4495,7 +4495,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a8
     ; FLATSCR-GFX90A-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -4645,7 +4645,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a9
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -4698,7 +4698,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a9
     ; FLATSCR-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -4817,7 +4817,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_a9
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -4840,7 +4840,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a9
     ; FLATSCR-GFX90A-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -5003,7 +5003,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a10
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -5061,7 +5061,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a10
     ; FLATSCR-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -5191,7 +5191,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_a10
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -5215,7 +5215,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a10
     ; FLATSCR-GFX90A-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -5391,7 +5391,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a11
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -5454,7 +5454,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a11
     ; FLATSCR-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -5595,7 +5595,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_a11
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -5620,7 +5620,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a11
     ; FLATSCR-GFX90A-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -5809,7 +5809,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a12
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -5877,7 +5877,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a12
     ; FLATSCR-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -6029,7 +6029,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_a12
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -6055,7 +6055,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a12
     ; FLATSCR-GFX90A-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -6284,7 +6284,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a16
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -6372,7 +6372,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a16
     ; FLATSCR-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -6568,7 +6568,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_a16
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -6600,7 +6600,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a16
     ; FLATSCR-GFX90A-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -6989,7 +6989,7 @@ body:             |
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_av_a32
-    ; FLATSCR: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -7157,7 +7157,7 @@ body:             |
     ; FLATSCR-V2A-LABEL: name: test_spill_av_a32
     ; FLATSCR-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31
     ; FLATSCR-V2A-NEXT: {{  $}}
-    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
@@ -7529,7 +7529,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_av_a32
-    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -7585,7 +7585,7 @@ body:             |
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_av_a32
     ; FLATSCR-GFX90A-V2A: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31
     ; FLATSCR-GFX90A-V2A-NEXT: {{  $}}
-    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1

@@ -91,6 +91,8 @@ struct MIToken {
     kw_cfi_escape,
     kw_cfi_def_cfa,
     kw_cfi_llvm_def_aspace_cfa,
+    kw_cfi_llvm_def_cfa_constant_address,
+    kw_cfi_llvm_def_cfa_register_address_transform,
     kw_cfi_register,
     kw_cfi_remember_state,
     kw_cfi_restore,
