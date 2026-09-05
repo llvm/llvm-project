@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file --linalg-specialize-generic-ops | FileCheck %s
+// RUN: mlir-opt %s -split-input-file --linalg-specialize-generic-ops -linalg-morph-ops=generic-to-category | FileCheck %s
 
 #projection = affine_map<(d0, d1, d2, d3, d4) -> (d2, d3, d1)>
 #identity   = affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d3, d4)>
