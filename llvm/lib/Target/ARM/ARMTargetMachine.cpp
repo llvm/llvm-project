@@ -197,8 +197,8 @@ MachineFunctionInfo *ARMBaseTargetMachine::createMachineFunctionInfo(
     BumpPtrAllocator &Allocator, const Function &F,
     const TargetSubtargetInfo *STI) const {
   const auto *ARMSTI = static_cast<const ARMSubtarget *>(STI);
-  bool FPRegsUnavailable = !ARMSTI->hasFPRegs() || ARMSTI->isThumb1Only();
-  if (FPRegsUnavailable) {
+  if (!ARMSTI->hasFPRegs() || ARMSTI->isThumb1Only() ||
+      ARMSTI->useSoftFloat()) {
     const StringRef FPRegsUnavailableMsg =
         ", but floating-point registers are unavailable";
     const ARMTargetLowering *TLI = ARMSTI->getTargetLowering();
