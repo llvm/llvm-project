@@ -5012,6 +5012,29 @@ def CIR_CoroSizeOp : CIR_CoroIntrinsicOp<"size", (ins),
 }
 
 //===----------------------------------------------------------------------===//
+// Coroutine intrinsic PromiseOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroPromiseOp : CIR_CoroIntrinsicOp<"promise",
+    (ins CIR_VoidPtrType:$coroframe, CIR_AnyIntType:$align,
+    CIR_BoolType:$isFromPromise),
+    (outs CIR_VoidPtrType:$result)> {
+  let summary = "Represents llvm.coro.promise";
+  let description = [{
+    Given a coroutine handle (if `isFromPromise` is false) or a pointer to a
+    coroutine promise (if `isFromPromise` is true), obtains a pointer to the
+    coroutine promise or the coroutine handle, respectively. `align` is the
+    alignment requirement of the promise, and `isFromPromise` indicates the
+    direction of the transformation: `true` recovers the coroutine handle
+    from a promise pointer, `false` recovers the promise pointer from a
+    coroutine handle. Using this op on a coroutine without a coroutine
+    promise is undefined behavior.
+  }];
+
+  let llvmOp = "CoroPromiseOp";
+}
+
+//===----------------------------------------------------------------------===//
 // CopyOp
 //===----------------------------------------------------------------------===//
 

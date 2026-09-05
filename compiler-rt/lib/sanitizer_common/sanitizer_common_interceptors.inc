@@ -3583,7 +3583,8 @@ INTERCEPTOR(int, sysinfo, void *info) {
 INTERCEPTOR(__sanitizer_dirent *, opendir, const char *path) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, opendir, path);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, path, internal_strlen(path) + 1);
+  if (path)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, path, internal_strlen(path) + 1);
   __sanitizer_dirent *res = REAL(opendir)(path);
   if (res)
     COMMON_INTERCEPTOR_DIR_ACQUIRE(ctx, path);

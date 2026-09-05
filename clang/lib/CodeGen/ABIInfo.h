@@ -156,7 +156,8 @@ public:
 
   /// Used by Arm64EC calling convention code to call into x86 calling
   /// convention code for varargs function.
-  virtual ABIArgInfo classifyArgForArm64ECVarArg(QualType Ty) const;
+  virtual ABIArgInfo classifyArgForArm64ECVarArg(QualType Ty,
+                                                 bool IsNamedArg) const;
 };
 
 /// Target specific hooks for defining how a type should be passed or returned

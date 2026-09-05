@@ -1750,6 +1750,14 @@ public:
       mlir::Value *emittedArgValue = nullptr,
       cir::MemOrder ordering = cir::MemOrder::SequentiallyConsistent);
 
+  /// Emit `cir.atomic.cmpxchg`. Returns the old value, or the success flag
+  /// when `returnBool` is true.
+  mlir::Value emitAtomicCmpXchg(
+      const clang::CallExpr *expr, bool returnBool,
+      cir::MemOrder successOrder = cir::MemOrder::SequentiallyConsistent,
+      cir::MemOrder failureOrder = cir::MemOrder::SequentiallyConsistent,
+      cir::SyncScopeKind scope = cir::SyncScopeKind::System);
+
   mlir::LogicalResult emitAttributedStmt(const AttributedStmt &s);
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
@@ -1907,6 +1915,7 @@ public:
   cir::CoroIdOp emitCoroIDBuiltinCall(const CallExpr *e);
   cir::CoroAllocOp emitCoroAllocBuiltinCall(const CallExpr *e);
   cir::CoroBeginOp emitCoroBeginBuiltinCall(const CallExpr *e);
+  cir::CoroPromiseOp emitCoroPromiseBuiltinCall(const CallExpr *e);
 
   cir::CoroSizeOp emitCoroSizeBuiltinCall(const CallExpr *e);
   cir::CoroFreeOp emitCoroFreeBuiltin(const CallExpr *e);
