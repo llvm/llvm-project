@@ -137,7 +137,7 @@ class BumpPtrAllocator {
   };
 
 public:
-#if defined(__ANDROID__)
+#if defined(ANDROID_AARCH64)
   __attribute__((noinline))
 #endif
   void *allocate(size_t Size) {
@@ -167,7 +167,7 @@ public:
   /// bugs by checking magic bytes. Ordinarily, we reset the allocator once
   /// we are done with it. Reset is done with clear(). There's no need
   /// to deallocate each element individually.
-#if defined(__ANDROID__)
+#if defined(ANDROID_AARCH64)
   __attribute__((noinline))
 #endif
   void deallocate(void *Ptr) {
@@ -271,7 +271,7 @@ struct SimpleHashTableEntryBase {
   uint64_t Key;
   uint64_t Val;
   void dump(const char *Msg = nullptr) {
-#if !defined(__ANDROID__)
+#if !defined(ANDROID_AARCH64)
     // TODO: make some sort of formatting function
     // Currently we have to do it the ugly way because
     // we want every message to be printed atomically via a single call to
@@ -615,7 +615,7 @@ int compareStr(const char *Str1, const char *Str2, int Size) {
 }
 
 /// Output Location to the fdata file
-#if defined(__ANDROID__)
+#if defined(ANDROID_AARCH64)
 __attribute__((noinline))
 #endif
 char *serializeLoc(const ProfileWriterContext &Ctx, char *OutBuf,
@@ -841,7 +841,7 @@ ProfileWriterContext readDescriptions() {
 #if !defined(__APPLE__)
 /// Debug by printing overall metadata global numbers to check it is sane
 void printStats(const ProfileWriterContext &Ctx) {
-#if !defined(__ANDROID__)
+#if !defined(ANDROID_AARCH64)
   char StatMsg[BufSize];
   char *StatPtr = StatMsg;
   StatPtr =
@@ -1565,15 +1565,34 @@ extern "C" void __bolt_instr_clear_counters() {
 ///    to get a pointer to this function and call through the acquired
 ///    function pointer to dump profile data.
 ///
-extern "C" void ALIGN_ARG_POINTER __bolt_instr_data_dump(
+/// Returns 0 on success, non-zero if the dump failed.
+extern "C" int ALIGN_ARG_POINTER __bolt_instr_data_dump(
     int FD, const char *LibPath = nullptr, const uint8_t *LibContents = nullptr,
     uint64_t LibSize = 0) {
+#if defined(ANDROID_AARCH64)
+  // A prior dump already failed. No recovery is attempted so don't retry.
+  if (__bolt_instr_dump_failed)
+    return 1;
+#endif
+
   if (LibPath)
     strCopy(TargetPath, LibPath, NameMax);
 
   // Already dumping
   if (!GlobalWriteProfileMutex->acquire())
-    return;
+    return 0;
+
+#if defined(ANDROID_AARCH64)
+  // Install a recovery point for failed assert() or reportError() instead
+  // of exiting the host app. We land here with the write mutex held; release
+  // it and report failure.
+  if (__bolt_setjmp(__bolt_instr_longjmp_buf)) {
+    __bolt_instr_recovery_active = false;
+    GlobalWriteProfileMutex->release();
+    return 1;
+  }
+  __bolt_instr_recovery_active = true;
+#endif
 
   int ret = __lseek(FD, 0, SEEK_SET);
   assert(ret == 0, "Failed to lseek!");
@@ -1606,8 +1625,12 @@ extern "C" void ALIGN_ARG_POINTER __bolt_instr_data_dump(
     __close(Ctx.FileDesc);
   }
   HashAlloc.destroy();
+#if defined(ANDROID_AARCH64)
+  __bolt_instr_recovery_active = false;
+#endif
   GlobalWriteProfileMutex->release();
   DEBUG(report("Finished writing profile.\n"));
+  return 0;
 }
 
 /// Event loop for our child process spawned during setup to dump profile data
