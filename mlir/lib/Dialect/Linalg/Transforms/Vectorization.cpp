@@ -3020,20 +3020,30 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
   }
 
   // 2. Get the vector shape
+  // Map each source dim to its corresponding (non-dropped) result dim: for a
+  // rank-reducing slice, dropped dims need not be the trailing ones.
+  llvm::SmallBitVector droppedDims = sliceOp.getDroppedDims();
+  SmallVector<int64_t> resultDimsForSourceDims;
+  resultDimsForSourceDims.reserve(sourceType.getRank());
+  for (int64_t resultDim = 0, end = resultType.getRank(); resultDim < end;
+       ++resultDim)
+    if (!droppedDims[resultDim])
+      resultDimsForSourceDims.push_back(resultDim);
+  assert(resultDimsForSourceDims.size() ==
+             static_cast<size_t>(sourceType.getRank()) &&
+         "expected one non-dropped result dim per source dim");
+
   SmallVector<int64_t> vecShape;
-  size_t rankDiff = resultType.getRank() - sourceType.getRank();
   for (int64_t i = 0, end = sourceType.getRank(); i < end; ++i) {
     if (!inputVectorSizes.empty()) {
       vecShape.push_back(inputVectorSizes[i]);
     } else if (!sourceType.isDynamicDim(i)) {
       vecShape.push_back(sourceType.getDimSize(i));
-    } else if (!resultType.isDynamicDim(i)) {
+    } else if (!resultType.isDynamicDim(resultDimsForSourceDims[i])) {
       // Source shape is not statically known, but result shape is.
       // Vectorize with size of result shape. This may be larger than the
       // source size.
-      // FIXME: Using rankDiff implies that the source tensor is inserted at
-      // the end of the destination tensor. However, that's not required.
-      vecShape.push_back(resultType.getDimSize(rankDiff + i));
+      vecShape.push_back(resultType.getDimSize(resultDimsForSourceDims[i]));
     } else {
       // Neither source nor result dim of padOp is static. Cannot vectorize
       // the copy.
