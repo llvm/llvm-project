@@ -419,6 +419,8 @@ static bool initTargetOptions(const CompilerInstance &CI,
     Options.ExceptionModel = llvm::ExceptionHandling::DwarfCFI;
   if (CodeGenOpts.hasWasmExceptions())
     Options.ExceptionModel = llvm::ExceptionHandling::Wasm;
+  if (CodeGenOpts.hasEmscriptenExceptions())
+    Options.ExceptionModel = llvm::ExceptionHandling::EmscriptenEH;
 
   Options.NoZerosInBSS = CodeGenOpts.NoZeroInitializedInBSS;
 

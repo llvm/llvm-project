@@ -11,7 +11,7 @@
 ; CHECK-LABEL: define void @test(
 
 ; ERR: error: invalid value 'invalid' in '-exception-model=invalid'
-; ERR-BE: fatal error: error in backend: -exception-model should be either 'none' or 'wasm'
+; ERR-BE: fatal error: error in backend: -exception-model should be either 'none', 'wasm', or 'emscripten'
 define void @test() {
   ret void
 }

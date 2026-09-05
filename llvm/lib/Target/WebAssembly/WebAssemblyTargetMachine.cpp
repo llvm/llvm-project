@@ -141,18 +141,24 @@ using WebAssembly::WasmEnableSjLj;
 
 static void basicCheckForEHAndSjLj(TargetMachine *TM) {
 
+  // Emscripten EH is selected by the exception model. WasmEnableEmEH is a
+  // deprecated cl::opt alias, OR-ed in here until it is removed.
+  bool EnableEmEH =
+      TM->Options.ExceptionModel == ExceptionHandling::EmscriptenEH ||
+      WasmEnableEmEH;
+
   // You can't enable two modes of EH at the same time
-  if (WasmEnableEmEH && WasmEnableEH)
+  if (EnableEmEH && WasmEnableEH)
     report_fatal_error(
-        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-eh");
+        "-exception-model=emscripten not allowed with -wasm-enable-eh");
   // You can't enable two modes of SjLj at the same time
   if (WasmEnableEmSjLj && WasmEnableSjLj)
     report_fatal_error(
         "-enable-emscripten-sjlj not allowed with -wasm-enable-sjlj");
   // You can't mix Emscripten EH with Wasm SjLj.
-  if (WasmEnableEmEH && WasmEnableSjLj)
+  if (EnableEmEH && WasmEnableSjLj)
     report_fatal_error(
-        "-enable-emscripten-cxx-exceptions not allowed with -wasm-enable-sjlj");
+        "-exception-model=emscripten not allowed with -wasm-enable-sjlj");
 
   if (TM->Options.ExceptionModel == ExceptionHandling::None) {
     // FIXME: These flags should be removed in favor of directly using the
@@ -163,11 +169,10 @@ static void basicCheckForEHAndSjLj(TargetMachine *TM) {
 
   // Basic Correctness checking related to -exception-model
   if (TM->Options.ExceptionModel != ExceptionHandling::None &&
-      TM->Options.ExceptionModel != ExceptionHandling::Wasm)
-    report_fatal_error("-exception-model should be either 'none' or 'wasm'");
-  if (WasmEnableEmEH && TM->Options.ExceptionModel == ExceptionHandling::Wasm)
-    report_fatal_error("-exception-model=wasm not allowed with "
-                       "-enable-emscripten-cxx-exceptions");
+      TM->Options.ExceptionModel != ExceptionHandling::Wasm &&
+      TM->Options.ExceptionModel != ExceptionHandling::EmscriptenEH)
+    report_fatal_error(
+        "-exception-model should be either 'none', 'wasm', or 'emscripten'");
   if (WasmEnableEH && TM->Options.ExceptionModel != ExceptionHandling::Wasm)
     report_fatal_error(
         "-wasm-enable-eh only allowed with -exception-model=wasm");
@@ -337,7 +342,10 @@ void WebAssemblyPassConfig::addIRPasses() {
   // TargetPassConfig::addPassesToHandleExceptions, but that runs after these IR
   // passes and Emscripten SjLj handling expects all invokes to be lowered
   // before.
-  if (!WasmEnableEmEH && !WasmEnableEH) {
+  bool EnableEmEH =
+      TM->Options.ExceptionModel == ExceptionHandling::EmscriptenEH ||
+      WasmEnableEmEH;
+  if (!EnableEmEH && !WasmEnableEH) {
     addPass(createLowerInvokePass());
     // The lower invoke pass may create unreachable code. Remove it in order not
     // to process dead blocks in setjmp/longjmp handling.
@@ -348,8 +356,8 @@ void WebAssemblyPassConfig::addIRPasses() {
   // done in WasmEHPrepare pass, Wasm SjLj preparation shares libraries and
   // transformation algorithms with Emscripten SjLj, so we run
   // LowerEmscriptenEHSjLj pass also when Wasm SjLj is enabled.
-  if (WasmEnableEmEH || WasmEnableEmSjLj || WasmEnableSjLj)
-    addPass(createWebAssemblyLowerEmscriptenEHSjLjLegacyPass());
+  if (EnableEmEH || WasmEnableEmSjLj || WasmEnableSjLj)
+    addPass(createWebAssemblyLowerEmscriptenEHSjLjLegacyPass(EnableEmEH));
 
   // Expand indirectbr instructions to switches.
   addPass(createIndirectBrExpandPass());

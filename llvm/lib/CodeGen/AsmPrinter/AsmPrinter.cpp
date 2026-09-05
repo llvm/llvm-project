@@ -669,6 +669,8 @@ bool AsmPrinter::doInitialization(Module &M) {
   EHStreamer *ES = nullptr;
   switch (MAI.getExceptionHandlingType()) {
   case ExceptionHandling::None:
+  case ExceptionHandling::EmscriptenEH:
+    // Emscripten EH is handled in JS glue code and emits no EH tables here.
     if (!usesCFIWithoutEH())
       break;
     [[fallthrough]];
