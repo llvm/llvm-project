@@ -1073,6 +1073,10 @@ class ParamVarRegion : public VarRegion {
   friend class MemRegionManager;
 
   const Expr *OriginExpr;
+
+  /// Index of teh declared parameter of the callee that this region stands
+  /// for. This is not necessarily the index of the corresponding argument
+  /// in `OriginExpr`. See `CallEvent::getDeclaredParameterIndex()`.
   unsigned Index;
 
   ParamVarRegion(const Expr *OE, unsigned Idx, const MemRegion *SReg)
@@ -1095,7 +1099,8 @@ public:
 
   QualType getValueType() const override;
 
-  /// TODO: What does this return?
+  /// \returns the declared parameter of the callee that this region
+  /// stands for (`getStackFrame()->getDecl()->parameters()[getIndex()]`).
   const ParmVarDecl *getDecl() const override;
 
   bool canPrintPrettyAsExpr() const override;
