@@ -482,6 +482,48 @@ private:
                                      const MemAccessInfo &B,
                                      Instruction *BInst);
 
+  /// Get the stride of a SCEV expression for the dependence analysis, without
+  /// considering symbolic strides or wrap predicates that the whole-pointer
+  /// analysis in getPtrStride may add. Returns 0 for loop-invariant SCEVs,
+  /// the element count stride for affine non-wrapping AddRecs and
+  /// std::nullopt otherwise. \p Predicates collects any no-wrap assumptions
+  /// made on the AddRec.
+  std::optional<int64_t> getStrideFromSCEV(
+      const SCEV *S, Type *AccessTy,
+      SmallVectorImpl<const SCEVPredicate *> *Predicates);
+
+  /// Compute the dependence distance/stride info (or directly a DepType, if
+  /// the analysis can already be resolved) for a pair of access SCEVs with the
+  /// given element-count strides. This is the shared analysis used both for
+  /// whole pointers (see getDependenceDistanceStrideAndSize) and for each
+  /// alternative of a forked pointer (see getForkedDepType).
+  std::variant<Dependence::DepType, DepDistanceStrideAndSizeInfo>
+  classifyStridedDistance(const SCEV *Src, const SCEV *Sink,
+                          std::optional<int64_t> StrideAPtr,
+                          std::optional<int64_t> StrideBPtr, Type *ATy,
+                          Type *BTy, bool AIsWrite, bool BIsWrite,
+                          Instruction *AInst, Instruction *BInst);
+
+  /// Classify the dependence for a pair of access SCEVs given the distance and
+  /// stride info computed by classifyStridedDistance, updating the safe vector
+  /// width limits as appropriate.
+  Dependence::DepType classifyDependence(const SCEV *Src, const SCEV *Sink,
+                                         Type *SrcTy, Type *SinkTy,
+                                         const DepDistanceStrideAndSizeInfo &Info);
+
+  /// Check the dependence between two accesses when at least one of the access
+  /// pointers is a fork of multiple strided pointers, e.g. produced by a
+  /// select of two pointers. SCEV cannot form a single AddRec for such a
+  /// pointer, so the analysis in getDependenceDistanceStrideAndSize would
+  /// report an IndirectUnsafe dependence. Instead, check each pair of fork
+  /// alternatives (mirroring the runtime pointer checking in
+  /// AccessAnalysis::createCheckForAccess) and aggregate the results. Returns
+  /// std::nullopt if neither access pointer is a fork, in which case the
+  /// regular single-SCEV analysis should be used.
+  std::optional<Dependence::DepType>
+  getForkedDepType(const MemAccessInfo &A, Instruction *AInst,
+                   const MemAccessInfo &B, Instruction *BInst);
+
   // Return true if we can prove that \p Sink only accesses memory after \p
   // Src's end or vice versa.
   bool areAccessesCompletelyBeforeOrAfter(const SCEV *Src, Type *SrcTy,

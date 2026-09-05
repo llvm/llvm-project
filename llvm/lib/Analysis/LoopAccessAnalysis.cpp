@@ -2187,8 +2187,6 @@ std::variant<MemoryDepChecker::Dependence::DepType,
 MemoryDepChecker::getDependenceDistanceStrideAndSize(
     const AccessAnalysis::MemAccessInfo &A, Instruction *AInst,
     const AccessAnalysis::MemAccessInfo &B, Instruction *BInst) {
-  const auto &DL = InnermostLoop->getHeader()->getDataLayout();
-  auto &SE = *PSE.getSE();
   const auto &[APtr, AIsWrite] = A;
   const auto &[BPtr, BIsWrite] = B;
 
@@ -2213,8 +2211,19 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
                    /*ShouldCheckWrap=*/true, &Predicates);
   PSE.addPredicates(Predicates);
 
-  const SCEV *Src = PSE.getSCEV(APtr);
-  const SCEV *Sink = PSE.getSCEV(BPtr);
+  return classifyStridedDistance(PSE.getSCEV(APtr), PSE.getSCEV(BPtr),
+                                 StrideAPtr, StrideBPtr, ATy, BTy, AIsWrite,
+                                 BIsWrite, AInst, BInst);
+}
+
+std::variant<MemoryDepChecker::Dependence::DepType,
+             MemoryDepChecker::DepDistanceStrideAndSizeInfo>
+MemoryDepChecker::classifyStridedDistance(
+    const SCEV *Src, const SCEV *Sink, std::optional<int64_t> StrideAPtr,
+    std::optional<int64_t> StrideBPtr, Type *ATy, Type *BTy, bool AIsWrite,
+    bool BIsWrite, Instruction *AInst, Instruction *BInst) {
+  const auto &DL = InnermostLoop->getHeader()->getDataLayout();
+  auto &SE = *PSE.getSE();
 
   // If the induction step is negative we have to invert source and sink of the
   // dependence when measuring the distance between them. We should not swap
@@ -2301,6 +2310,82 @@ MemoryDepChecker::getDependenceDistanceStrideAndSize(
                                       TypeByteSize, AIsWrite, BIsWrite);
 }
 
+std::optional<int64_t>
+MemoryDepChecker::getStrideFromSCEV(
+    const SCEV *S, Type *AccessTy,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
+  ScalarEvolution &SE = *PSE.getSE();
+  if (SE.isLoopInvariant(S, InnermostLoop))
+    return 0;
+  const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S);
+  if (!AR)
+    return std::nullopt;
+  std::optional<int64_t> Stride =
+      getStrideFromAddRec(AR, InnermostLoop, AccessTy, /*Ptr=*/nullptr, PSE);
+  if (!Stride)
+    return std::nullopt;
+  if (isNoWrap(PSE, AR, /*Ptr=*/nullptr, AccessTy, InnermostLoop, *DT, Stride,
+               Predicates))
+    return Stride;
+  return std::nullopt;
+}
+
+std::optional<MemoryDepChecker::Dependence::DepType>
+MemoryDepChecker::getForkedDepType(const MemAccessInfo &A, Instruction *AInst,
+                                   const MemAccessInfo &B, Instruction *BInst) {
+  const auto &[APtr, AIsWrite] = A;
+  const auto &[BPtr, BIsWrite] = B;
+  if (!AIsWrite && !BIsWrite)
+    return Dependence::NoDep;
+
+  if (APtr->getType()->getPointerAddressSpace() !=
+      BPtr->getType()->getPointerAddressSpace())
+    return Dependence::Unknown;
+
+  ScalarEvolution &SE = *PSE.getSE();
+  SmallVector<PointerIntPair<const SCEV *, 1, bool>> Srcs;
+  SmallVector<PointerIntPair<const SCEV *, 1, bool>> Sinks;
+  findForkedSCEVs(&SE, InnermostLoop, APtr, Srcs, MaxForkedSCEVDepth);
+  findForkedSCEVs(&SE, InnermostLoop, BPtr, Sinks, MaxForkedSCEVDepth);
+
+  if (Srcs.size() == 1 && Sinks.size() == 1)
+    return std::nullopt;
+
+  if (Srcs.size() > 1 && Sinks.size() > 1)
+    return std::nullopt;
+
+  Type *ATy = getLoadStoreType(AInst);
+  Type *BTy = getLoadStoreType(BInst);
+  SmallVector<const SCEVPredicate *> Predicates;
+
+  for (const auto &[SrcArm, _] : Srcs) {
+    for (const auto &[SinkArm, _] : Sinks) {
+      std::optional<int64_t> StrideSrc =
+          getStrideFromSCEV(SrcArm, ATy, &Predicates);
+      std::optional<int64_t> StrideSink =
+          getStrideFromSCEV(SinkArm, BTy, &Predicates);
+
+      auto ArmRes = classifyStridedDistance(
+          SrcArm, SinkArm, StrideSrc, StrideSink, ATy, BTy, AIsWrite, BIsWrite,
+          AInst, BInst);
+      Dependence::DepType ArmType =
+          std::holds_alternative<Dependence::DepType>(ArmRes)
+              ? std::get<Dependence::DepType>(ArmRes)
+              : classifyDependence(SrcArm, SinkArm, ATy, BTy,
+                                   std::get<DepDistanceStrideAndSizeInfo>(ArmRes));
+
+      if (Dependence::isSafeForVectorization(ArmType) ==
+          VectorizationSafetyStatus::Unsafe)
+        return ArmType;
+      if (Dependence::isSafeForVectorization(ArmType) ==
+          VectorizationSafetyStatus::PossiblySafeWithRtChecks)
+        return Dependence::Unknown;
+    }
+  }
+  PSE.addPredicates(Predicates);
+  return Dependence::NoDep;
+}
+
 MemoryDepChecker::Dependence::DepType
 MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
                               const MemAccessInfo &B, unsigned BIdx) {
@@ -2319,6 +2404,15 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return areAccessesCompletelyBeforeOrAfter(Src, ATy, Sink, BTy);
   };
 
+  // If either access pointer is a fork of multiple strided pointers, e.g.
+  // produced by a select of two pointers, SCEV cannot form a single AddRec for
+  // the pointer and the analysis in getDependenceDistanceStrideAndSize would
+  // report an IndirectUnsafe dependence. Instead, analyze each pair of fork
+  // alternatives and aggregate the results (see getForkedDepType).
+  if (std::optional<Dependence::DepType> ForkedType =
+          getForkedDepType(A, InstMap[AIdx], B, InstMap[BIdx]))
+    return *ForkedType;
+
   // Get the dependence distance, stride, type size and what access writes for
   // the dependence between A and B.
   auto Res =
@@ -2330,12 +2424,31 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return std::get<Dependence::DepType>(Res);
   }
 
-  auto &[Dist, MaxStride, CommonStride, TypeByteSize, AIsWrite, BIsWrite] =
-      std::get<DepDistanceStrideAndSizeInfo>(Res);
+  return classifyDependence(PSE.getSCEV(A.getPointer()),
+                            PSE.getSCEV(B.getPointer()),
+                            getLoadStoreType(InstMap[AIdx]),
+                            getLoadStoreType(InstMap[BIdx]),
+                            std::get<DepDistanceStrideAndSizeInfo>(Res));
+}
+
+MemoryDepChecker::Dependence::DepType
+MemoryDepChecker::classifyDependence(
+    const SCEV *Src, const SCEV *Sink, Type *SrcTy, Type *SinkTy,
+    const DepDistanceStrideAndSizeInfo &Info) {
+  const SCEV *Dist = Info.Dist;
+  uint64_t MaxStride = Info.MaxStride;
+  std::optional<uint64_t> CommonStride = Info.CommonStride;
+  uint64_t TypeByteSize = Info.TypeByteSize;
+  bool AIsWrite = Info.AIsWrite;
+  bool BIsWrite = Info.BIsWrite;
   bool HasSameSize = TypeByteSize > 0;
 
   ScalarEvolution &SE = *PSE.getSE();
   auto &DL = InnermostLoop->getHeader()->getDataLayout();
+
+  auto CheckCompletelyBeforeOrAfter = [&]() {
+    return areAccessesCompletelyBeforeOrAfter(Src, SrcTy, Sink, SinkTy);
+  };
 
   // If the distance between the acecsses is larger than their maximum absolute
   // stride multiplied by the symbolic maximum backedge taken count (which is an
