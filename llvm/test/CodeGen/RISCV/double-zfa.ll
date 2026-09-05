@@ -57,7 +57,7 @@ define double @loadfpimm7() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fli.d fa0, nan
 ; CHECK-NEXT:    ret
-  ret double 0x7FF8000000000000
+  ret double +qnan
 }
 
 define double @loadfpimm8() {

@@ -120,7 +120,7 @@ define float @fsqrt_float_const() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea.sl %s0, -4194304
 ; CHECK-NEXT:    b.l.t (, %s10)
-  ret float 0xFFF8000000000000
+  ret float -qnan
 }
 
 ; Function Attrs: norecurse nounwind readnone
@@ -129,7 +129,7 @@ define double @fsqrt_double_const() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lea.sl %s0, -524288
 ; CHECK-NEXT:    b.l.t (, %s10)
-  ret double 0xFFF8000000000000
+  ret double -qnan
 }
 
 ; Function Attrs: nounwind readnone

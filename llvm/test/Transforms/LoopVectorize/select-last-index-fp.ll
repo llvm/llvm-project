@@ -858,7 +858,7 @@ entry:
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %min.idx = phi i64 [ 0, %entry ], [ %min.idx.next, %loop ]
-  %min.val = phi float [ 0x7FF8000000000000, %entry ], [ %min.val.next, %loop ]
+  %min.val = phi float [ +qnan, %entry ], [ %min.val.next, %loop ]
   %gep = getelementptr float, ptr %src, i64 %iv
   %l = load float, ptr %gep
   %cmp = fcmp oge float %min.val, %l
@@ -1068,7 +1068,7 @@ entry:
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %max.idx = phi i64 [ 0, %entry ], [ %max.idx.next, %loop ]
-  %max.val = phi float [ 0x7FF8000000000000, %entry ], [ %max.val.next, %loop ]
+  %max.val = phi float [ +qnan, %entry ], [ %max.val.next, %loop ]
   %gep = getelementptr float, ptr %src, i64 %iv
   %l = load float, ptr %gep
   %cmp = fcmp ole float %max.val, %l
