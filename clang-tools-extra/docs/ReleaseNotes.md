@@ -233,7 +233,7 @@ infrastructure are described first, followed by tool-specific sections.
     the new `LambdaCapture` options. Simple, non-init captures continue to follow
     the naming style of the variable they capture.
 
-  - Added the {option}`AllowTrailingUnderscore` option, which permits a
+  - Added the {option}`AllowTrailingUnderscore`, which permits a
     single trailing underscore on any identifier.
 
 - Improved {doc}`readability-named-parameter
