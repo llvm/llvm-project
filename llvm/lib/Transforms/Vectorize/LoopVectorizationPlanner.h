@@ -662,6 +662,15 @@ class VFSelectionContext {
                                        bool FoldTailByMasking,
                                        bool RequiresScalarEpilogue);
 
+  /// If the loop contains a reduction the target can lower as a partial
+  /// reduction (e.g. a dot-product), \return the largest ratio of input
+  /// elements to accumulator elements among such reductions, or 0 if there is
+  /// none. Because a partial reduction packs \p Ratio input elements into each
+  /// accumulator element, forming it requires a VF that is a multiple of the
+  /// ratio. \p Scalable selects whether to query the target for scalable or
+  /// fixed-width vectors.
+  unsigned getMaxPartialReductionScaleFactor(bool Scalable) const;
+
   /// If \p VF * \p UserIC > MaxTripcount, clamps VF to the next lower VF
   /// that results in VF * UserIC <= MaxTripCount.
   ElementCount clampVFByMaxTripCount(ElementCount VF, unsigned MaxTripCount,
