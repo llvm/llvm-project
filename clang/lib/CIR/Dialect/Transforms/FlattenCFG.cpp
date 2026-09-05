@@ -1381,11 +1381,9 @@ public:
                  llvm::SmallVectorImpl<cir::ResumeOp> &resumeOpsToChain,
                  mlir::PatternRewriter &rewriter) const {
     mlir::Location loc = cleanupOp.getLoc();
-    cir::CleanupKind cleanupKind = cleanupOp.getCleanupKind();
-    bool hasNormalCleanup = cleanupKind == cir::CleanupKind::Normal ||
-                            cleanupKind == cir::CleanupKind::All;
-    bool hasEHCleanup = cleanupKind == cir::CleanupKind::EH ||
-                        cleanupKind == cir::CleanupKind::All;
+    cir::CleanupKindAttr cleanupKind = cleanupOp.getCleanupKindAttr();
+    bool hasNormalCleanup = cleanupKind.isNormal();
+    bool hasEHCleanup = cleanupKind.isEH();
     bool isMultiExit = exits.size() > 1;
 
     // Get references to region blocks before inlining.
@@ -1648,7 +1646,7 @@ public:
     if (hasNestedOpsToFlatten(cleanupOp.getBodyRegion()))
       return mlir::failure();
 
-    cir::CleanupKind cleanupKind = cleanupOp.getCleanupKind();
+    bool hasEHCleanup = cleanupOp.getCleanupKindAttr().isEH();
 
     // Collect all exits from the body region.
     llvm::SmallVector<CleanupExit> exits;
@@ -1658,11 +1656,11 @@ public:
     assert(!exits.empty() && "cleanup scope body has no exit");
 
     // Collect non-nothrow calls and throws that need to be converted to
-    // try_call/try_throw. This is only needed for EH and All cleanup kinds,
-    // but the vectors will simply be empty for Normal cleanup.
+    // try_call/try_throw. Both vectors stay empty unless the cleanup runs
+    // while unwinding.
     llvm::SmallVector<cir::CallOp> callsToRewrite;
     llvm::SmallVector<cir::ThrowOp> throwsToRewrite;
-    if (cleanupKind != cir::CleanupKind::Normal) {
+    if (hasEHCleanup) {
       collectThrowingCalls(cleanupOp.getBodyRegion(), callsToRewrite);
       collectThrows(cleanupOp.getBodyRegion(), throwsToRewrite);
     }
@@ -1670,7 +1668,7 @@ public:
     // Collect resume ops from already-flattened inner cleanup scopes that
     // need to chain through this cleanup's EH handler.
     llvm::SmallVector<cir::ResumeOp> resumeOpsToChain;
-    if (cleanupKind != cir::CleanupKind::Normal)
+    if (hasEHCleanup)
       collectResumeOps(cleanupOp.getBodyRegion(), resumeOpsToChain);
 
     return flattenCleanup(cleanupOp, exits, callsToRewrite, throwsToRewrite,
