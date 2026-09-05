@@ -16534,7 +16534,23 @@ uint64_t BoUpSLP::getScaleToLoopIterations(const TreeEntry &TE, Value *Scalar,
       if (EI.UserTE->State == TreeEntry::Vectorize &&
           EI.UserTE->getOpcode() == Instruction::PHI) {
         auto *PH = cast<PHINode>(EI.UserTE->getMainOp());
-        Parent = PH->getIncomingBlock(EI.EdgeIdx);
+        BasicBlock *IncomingBB = PH->getIncomingBlock(EI.EdgeIdx);
+        Parent = IncomingBB;
+
+        BasicBlock *PhiBB = PH->getParent();
+        const Loop *PhiL = LI->getLoopFor(PhiBB);
+        const Loop *IncomingL = LI->getLoopFor(IncomingBB);
+        if (IncomingL && PhiL && IncomingL != PhiL &&
+            !IncomingL->contains(PhiBB) && !PhiL->contains(IncomingBB)) {
+          // When a gather feeds a PHI across sibling loops
+          // without a preheader, use their common parent loop
+          // as the scaling context.
+          if (const Loop *CommonL =
+                  LI->getSmallestCommonLoop(IncomingBB, PhiBB))
+            Parent = CommonL->getHeader();
+          else
+            return 1;
+        }
       } else {
         Parent = EI.UserTE->getMainOp()->getParent();
       }
