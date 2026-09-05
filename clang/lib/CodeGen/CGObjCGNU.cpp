@@ -214,7 +214,8 @@ protected:
       llvm::Constant *value = llvm::ConstantDataArray::getString(VMContext,Str);
       auto *GV = new llvm::GlobalVariable(TheModule, value->getType(), true,
               llvm::GlobalValue::LinkOnceODRLinkage, value, name);
-      GV->setComdat(TheModule.getOrInsertComdat(name));
+      if (CGM.supportsCOMDAT())
+        GV->setComdat(TheModule.getOrInsertComdat(name));
       if (Private)
         GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
       ConstStr = GV;
