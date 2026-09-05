@@ -28,16 +28,17 @@ namespace darwin_syscalls {
 
 LIBC_INLINE ErrorOr<int> sigprocmask(int how, const sigset_t *set,
                                      sigset_t *oldset) {
-  int ret = syscall_impl<int>(SYS_sigprocmask, how, set, oldset);
+  // TODO: Use a 32-bit sigset_t on Darwin and remove this conversion.
+  uint32_t kernel_set = set ? static_cast<uint32_t>(set->__signals[0]) : 0;
+  uint32_t kernel_oldset = 0;
+  int ret = syscall_impl<int>(SYS_sigprocmask, how, set ? &kernel_set : nullptr,
+                              oldset ? &kernel_oldset : nullptr);
   if (ret != 0)
     return Error(ret);
 
-  if (oldset) {
-    uint32_t kernel_oldset;
-    __builtin_memcpy(&kernel_oldset, oldset, sizeof(kernel_oldset));
+  if (oldset)
     oldset->__signals[0] =
         static_cast<unsigned long>(kernel_oldset & 0x7FFFFFFFU);
-  }
   return ret;
 }
 
