@@ -279,6 +279,22 @@ bool ScopArrayInfo::isCompatibleWith(const ScopArrayInfo *Array) const {
   return true;
 }
 
+/// Multiply the innermost of @p Sizes by @p Factor.
+///
+/// Dimension sizes count elements of an array's canonical element type, so a
+/// row holds @p Factor times as many of them once that type becomes @p Factor
+/// times smaller. Only the innermost size changes: the outer ones count rows,
+/// and a row grows together with the innermost dimension.
+static void stretchInnermostSize(SmallVectorImpl<const SCEV *> &Sizes,
+                                 uint64_t Factor, ScalarEvolution &SE) {
+  if (Factor == 1 || Sizes.empty() || !Sizes.back())
+    return;
+
+  const SCEV *Innermost = Sizes.back();
+  Sizes.back() =
+      SE.getMulExpr(Innermost, SE.getConstant(Innermost->getType(), Factor));
+}
+
 void ScopArrayInfo::updateElementType(Type *NewElementType) {
   if (NewElementType == ElementType)
     return;
@@ -295,6 +311,28 @@ void ScopArrayInfo::updateElementType(Type *NewElementType) {
     auto GCD = std::gcd((uint64_t)NewElementSize, (uint64_t)OldElementSize);
     ElementType = IntegerType::get(ElementType->getContext(), GCD);
   }
+
+  // The sizes recorded so far count elements of the type we just replaced, so
+  // they no longer describe the same memory. Restate them in the new element.
+  // Leaving them alone would shrink every row along with the element type and
+  // model in-bounds accesses as running past its end, which makes the inbounds
+  // assumption infeasible and drops the SCoP.
+  //
+  // The canonical type is an integer of the greatest common divisor of two
+  // sizes, and rounding that up to its allocation size can leave it not
+  // dividing the type it replaces. There is no whole number of new elements
+  // per old one to restate the sizes in, so leave them as they are.
+  uint64_t FinalElementSize = DL.getTypeAllocSizeInBits(ElementType);
+  if (FinalElementSize == 0 || (uint64_t)OldElementSize % FinalElementSize != 0)
+    return;
+
+  uint64_t Factor = (uint64_t)OldElementSize / FinalElementSize;
+  if (Factor == 1)
+    return;
+
+  SmallVector<const SCEV *, 4> Stretched(DimensionSizes);
+  stretchInnermostSize(Stretched, Factor, *S.getSE());
+  updateSizes(Stretched, false /* CheckConsistency */);
 }
 
 bool ScopArrayInfo::updateSizes(ArrayRef<const SCEV *> NewSizes,
@@ -476,6 +514,26 @@ void MemoryAccess::updateDimensionality() {
   if (DimsAccess == 1) {
     isl::val V = isl::val(Ctx, ArrayElemSize);
     AccessRelation = AccessRelation.floordiv_val(V);
+  } else if (ElemBytes > ArrayElemSize) {
+    // A delinearized access has its subscripts in elements of the type it
+    // reads or writes, which is not the canonical element type of the array
+    // when some other access forced a smaller one. Restate the innermost
+    // subscript in canonical elements too; the outer ones count rows and are
+    // already stated in the sizes this access was delinearized against.
+    assert(ElemBytes % ArrayElemSize == 0 &&
+           "Loaded element size should be multiple of canonical element size");
+    isl::map Scale = isl::map::from_domain_and_range(
+        isl::set::universe(ArraySpace), isl::set::universe(ArraySpace));
+    for (auto i : seq<unsigned>(0, DimsArray - 1))
+      Scale = Scale.equate(isl::dim::in, i, isl::dim::out, i);
+
+    isl::local_space LS(Scale.get_space());
+    isl::constraint C = isl::constraint::alloc_equality(LS);
+    C = C.set_coefficient_si(isl::dim::in, DimsArray - 1,
+                             ElemBytes / ArrayElemSize);
+    C = C.set_coefficient_si(isl::dim::out, DimsArray - 1, -1);
+    Scale = Scale.add_constraint(C);
+    AccessRelation = AccessRelation.apply_range(Scale);
   }
 
   // We currently do this only if we added at least one dimension, which means
@@ -1758,9 +1816,23 @@ ScopArrayInfo *Scop::getOrCreateScopArrayInfo(Value *BasePtr, Type *ElementType,
     ScopArrayInfoSet.insert(SAI.get());
   } else {
     SAI->updateElementType(ElementType);
+
+    // The sizes handed in count elements of ElementType, which is larger than
+    // the canonical element type of the array whenever some other access to it
+    // uses a smaller one. Restate them in the canonical element, so that they
+    // are compared against, and stored next to, sizes in the same unit.
+    auto &DL = getFunction().getParent()->getDataLayout();
+    uint64_t AccessElemSize = DL.getTypeAllocSize(ElementType);
+    uint64_t CanonicalElemSize = SAI->getElemSizeInBytes();
+
+    SmallVector<const SCEV *, 4> CanonicalSizes(Sizes);
+    if (CanonicalElemSize != 0 && AccessElemSize % CanonicalElemSize == 0)
+      stretchInnermostSize(CanonicalSizes, AccessElemSize / CanonicalElemSize,
+                           *getSE());
+
     // In case of mismatching array sizes, we bail out by setting the run-time
     // context to false.
-    if (!SAI->updateSizes(Sizes))
+    if (!SAI->updateSizes(CanonicalSizes))
       invalidate(DELINEARIZATION, DebugLoc());
   }
   return SAI.get();
