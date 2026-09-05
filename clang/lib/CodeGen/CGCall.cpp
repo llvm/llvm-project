@@ -2865,11 +2865,10 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
                                  NumElemsParam);
     }
 
-    // Leftover work-groups are an OpenCL 2.0+ language feature. Host C/C++
-    // inherit OffloadUniformBlock but must not receive the GPU ABI attribute.
     if (getLangOpts().OffloadUniformBlock &&
-        (getLangOpts().CUDA || getLangOpts().OpenCL ||
-         getLangOpts().isTargetDevice() || getTarget().getTriple().isGPU()))
+        (getLangOpts().OpenCL || getLangOpts().CUDA ||
+         getLangOpts().isTargetDevice() ||
+         getTargetCodeGenInfo().hasUniformWorkGroupLaunch()))
       FuncAttrs.addAttribute("uniform-work-group-size");
 
     if (TargetDecl->hasAttr<ArmLocallyStreamingAttr>())

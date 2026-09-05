@@ -1151,7 +1151,8 @@ defm offload_uniform_block : BoolFOption<"offload-uniform-block",
   Default<"LangOpts->defaultOffloadUniformBlock()">,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Assume">,
   NegFlag<SetFalse, [], [ClangOption, CC1Option], "Don't assume">,
-  BothFlags<[], [ClangOption], " that kernels are launched with uniform block sizes">>;
+  BothFlags<[], [ClangOption], " that kernels are launched with uniform block sizes "
+  "(OpenCL 2.0 and later instead default to non-uniform, see -cl-uniform-work-group-size)">>;
 
 def fcomplex_arithmetic_EQ : Joined<["-"], "fcomplex-arithmetic=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
