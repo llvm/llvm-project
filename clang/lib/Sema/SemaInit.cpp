@@ -5053,9 +5053,15 @@ static void TryListInitialization(Sema &S,
     return;
   }
 
-  if (DestType->isRecordType() &&
-      !S.isCompleteType(InitList->getBeginLoc(), DestType)) {
-    Sequence.setIncompleteTypeFailure(DestType);
+  // For an array of unknown bound (C++20), the base element type must be
+  // complete: an empty list creates a zero-length array whose elements are
+  // never initialized, so nothing else would complete it.
+  QualType InitTy = DestType;
+  if (const auto *IAT = S.Context.getAsIncompleteArrayType(DestType))
+    InitTy = S.Context.getBaseElementType(IAT);
+  if (InitTy->isRecordType() &&
+      !S.isCompleteType(InitList->getBeginLoc(), InitTy)) {
+    Sequence.setIncompleteTypeFailure(InitTy);
     return;
   }
 

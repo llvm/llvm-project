@@ -641,6 +641,10 @@ features cannot lower the translation-unit ABI level;
   (#GH214128)
 - Fixed a crash when a coroutine keyword appeared inside a mem-initializer on a
   function that is not a constructor. (#GH194298)
+- Fixed a crash when list-initializing an array of unknown bound from an empty
+  initializer list whose element type is an uninstantiated class template
+  specialization or an incomplete class; the element type is now completed
+  first. (#GH217883)
 
 #### Bug Fixes to AST Handling
 
