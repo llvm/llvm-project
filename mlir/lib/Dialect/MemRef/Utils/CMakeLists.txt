@@ -8,4 +8,5 @@ add_mlir_dialect_library(MLIRMemRefUtils
   MLIRIR
   MLIRAffineDialect
   MLIRArithUtils
+  MLIRSideEffectInterfaces
 )

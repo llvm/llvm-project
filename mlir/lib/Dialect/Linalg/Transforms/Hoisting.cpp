@@ -17,6 +17,8 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -161,40 +163,6 @@ void mlir::linalg::hoistRedundantVectorBroadcasts(RewriterBase &rewriter,
   }
 }
 
-static bool noAliasingUseInLoop(vector::TransferReadOp transferRead,
-                                LoopLikeOpInterface loop) {
-  Value source = transferRead.getBase();
-
-  // Skip view-like Ops and retrive the actual soruce Operation
-  while (auto viewLike = source.getDefiningOp<ViewLikeOpInterface>()) {
-    if (viewLike.getViewDest() != source) {
-      break;
-    }
-    source = viewLike.getViewSource();
-  }
-
-  llvm::SmallVector<Operation *, 32> users(source.getUsers().begin(),
-                                           source.getUsers().end());
-  llvm::SmallDenseSet<Operation *, 32> processed;
-  while (!users.empty()) {
-    Operation *user = users.pop_back_val();
-    // If the user has already been processed skip.
-    if (!processed.insert(user).second)
-      continue;
-    if (auto viewLike = dyn_cast<ViewLikeOpInterface>(user)) {
-      Value viewDest = viewLike.getViewDest();
-      users.append(viewDest.getUsers().begin(), viewDest.getUsers().end());
-      continue;
-    }
-    if (isMemoryEffectFree(user) || isa<vector::TransferReadOp>(user))
-      continue;
-    if (!loop->isAncestor(user))
-      continue;
-    return false;
-  }
-  return true;
-}
-
 void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
                                                  bool verifyNonZeroTrip) {
   bool changed = true;
@@ -286,9 +254,11 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       // Only hoist transfer_read / transfer_write pairs and singleton
       // transfer_reads for now.
       if (!transferWrite) {
-        // Make sure there are no other accesses to the memref before
-        // hoisting transfer_read.
-        if (noAliasingUseInLoop(transferRead, loop))
+        // Hoisting a lone read is safe as long as no aliasing write remains in
+        // the loop; other reads never conflict.
+        if (memref::hasNoAliasingAccessInScope(transferRead.getBase(), loop,
+                                               /*excludedOps=*/{},
+                                               /*readsAreSafe=*/true))
           loop.moveOutOfLoop(transferRead);
         return WalkResult::advance();
       }
@@ -314,6 +284,17 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
       // Check 2. Note, since both xfer Ops share the source, we only need to
       // look at one of them.
       auto base = transferRead.getBase();
+      // Whether hoisting is safe despite a view base. Computed lazily and
+      // cached since it is only consulted when a view is present.
+      std::optional<bool> viewAliasingIsSafeCache;
+      auto viewAliasingIsSafe = [&]() {
+        if (!viewAliasingIsSafeCache) {
+          Operation *hoistedPair[] = {transferRead, transferWrite};
+          viewAliasingIsSafeCache =
+              memref::hasNoAliasingAccessInScope(base, loop, hoistedPair);
+        }
+        return *viewAliasingIsSafeCache;
+      };
       auto *source = base.getDefiningOp();
       if (source) {
         // NOTE: We treat `memref.assume_alignment` as a special case.
@@ -337,11 +318,13 @@ void mlir::linalg::hoistRedundantVectorTransfers(Operation *root,
           if (numInLoopUses && memPreAlignment.hasOneUse())
             source = memPreAlignment.getDefiningOp();
         }
-        if (isa_and_nonnull<ViewLikeOpInterface>(source))
+        if (isa_and_nonnull<ViewLikeOpInterface>(source) &&
+            !viewAliasingIsSafe())
           return WalkResult::advance();
       }
 
-      if (llvm::any_of(base.getUsers(), llvm::IsaPred<ViewLikeOpInterface>))
+      if (llvm::any_of(base.getUsers(), llvm::IsaPred<ViewLikeOpInterface>) &&
+          !viewAliasingIsSafe())
         return WalkResult::advance();
 
       // Check 3.
