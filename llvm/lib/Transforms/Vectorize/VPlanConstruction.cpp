@@ -680,10 +680,17 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
           IndDesc.getKind() == InductionDescriptor::IK_FpInduction) &&
          "must have an integer or float induction at this point");
 
+  VPValue *IncStep;
+  bool HasInLoopStepIncrement =
+      (match(BackedgeVal, m_c_Add(m_Specific(PhiR), m_VPValue(IncStep))) ||
+       match(BackedgeVal, m_Sub(m_Specific(PhiR), m_VPValue(IncStep)))) &&
+      IncStep->hasDefiningRecipe();
+
   // Update wide induction increments to use the same step as the corresponding
   // wide induction. This enables detecting induction increments directly in
   // VPlan and removes redundant splats.
-  if (match(BackedgeVal, m_Add(m_Specific(PhiR), m_VPValue())))
+  if (!HasInLoopStepIncrement &&
+      match(BackedgeVal, m_Add(m_Specific(PhiR), m_VPValue())))
     BackedgeVal->getDefiningRecipe()->setOperand(1, Step);
 
   // It is always safe to copy over the NoWrap and FastMath flags. In
@@ -694,7 +701,8 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   auto *WideIV = new VPWidenIntOrFpInductionRecipe(
       Phi, Start, Step, &Plan.getVF(), IndDesc, Flags, DL);
 
-  ReplaceExtractsWithExitingIVValueIfPossible(WideIV);
+  if (!HasInLoopStepIncrement)
+    ReplaceExtractsWithExitingIVValueIfPossible(WideIV);
   return WideIV;
 }
 
