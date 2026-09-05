@@ -6270,11 +6270,26 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if (const auto *II = dyn_cast<IntrinsicInst>(Src)) {
         switch (II->getIntrinsicID()) {
         case Intrinsic::frexp: {
-          Known.knownNot(fcSubnormal);
+          FPClassTest InterestedSrcs = InterestedClasses;
+
+          // Positive subnormals and negative subnormals could become positive
+          // zero.
+          if (InterestedClasses & fcPosZero)
+            InterestedSrcs |= fcSubnormal;
+
+          // Negative subnormals could become negative zero.
+          if (InterestedClasses & fcNegZero)
+            InterestedSrcs |= fcNegSubnormal;
+
+          if (InterestedClasses & fcPosNormal)
+            InterestedSrcs |= fcPosSubnormal;
+
+          if (InterestedClasses & fcNegNormal)
+            InterestedSrcs |= fcNegSubnormal;
 
           KnownFPClass KnownSrc;
           computeKnownFPClass(II->getArgOperand(0), DemandedElts,
-                              InterestedClasses, KnownSrc, Q, Depth + 1);
+                              InterestedSrcs, KnownSrc, Q, Depth + 1);
 
           const Function *F = cast<Instruction>(Op)->getFunction();
           const fltSemantics &FltSem =

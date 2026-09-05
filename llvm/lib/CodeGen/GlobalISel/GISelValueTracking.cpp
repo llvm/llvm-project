@@ -1907,9 +1907,24 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     if (R != MI.getOperand(0).getReg())
       break;
     Register Src = MI.getOperand(2).getReg();
+    FPClassTest InterestedSrcs = InterestedClasses;
+
+    // Positive subnormals and negative subnormals could become positive zero.
+    if (InterestedClasses & fcPosZero)
+      InterestedSrcs |= fcSubnormal;
+
+    // Negative subnormals could become negative zero.
+    if (InterestedClasses & fcNegZero)
+      InterestedSrcs |= fcNegSubnormal;
+
+    if (InterestedClasses & fcPosNormal)
+      InterestedSrcs |= fcPosSubnormal;
+
+    if (InterestedClasses & fcNegNormal)
+      InterestedSrcs |= fcNegSubnormal;
+
     KnownFPClass KnownSrc;
-    computeKnownFPClass(Src, DemandedElts, InterestedClasses, KnownSrc,
-                        Depth + 1);
+    computeKnownFPClass(Src, DemandedElts, InterestedSrcs, KnownSrc, Depth + 1);
     DenormalMode Mode =
         MF->getDenormalMode(getFltSemanticForLLT(DstTy.getScalarType()));
     Known = KnownFPClass::frexp_mant(KnownSrc, Mode);

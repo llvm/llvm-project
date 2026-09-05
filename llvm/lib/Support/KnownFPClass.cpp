@@ -872,27 +872,31 @@ KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
 KnownFPClass KnownFPClass::frexp_mant(const KnownFPClass &KnownSrc,
                                       DenormalMode Mode) {
   KnownFPClass Known;
+
   Known.knownNot(fcSubnormal);
 
-  if (KnownSrc.isKnownNever(fcNegative))
-    Known.knownNot(fcNegative);
-  else {
-    if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
-      Known.knownNot(fcNegZero);
-    if (KnownSrc.isKnownNever(fcNegInf))
-      Known.knownNot(fcNegInf);
-  }
-
-  if (KnownSrc.isKnownNever(fcPositive))
-    Known.knownNot(fcPositive);
-  else {
-    if (KnownSrc.isKnownNeverLogicalPosZero(Mode))
-      Known.knownNot(fcPosZero);
-    if (KnownSrc.isKnownNever(fcPosInf))
-      Known.knownNot(fcPosInf);
-  }
-
   Known.propagateNonNaN(KnownSrc);
+
+  if (KnownSrc.isKnownNeverPosInfinity())
+    Known.knownNot(fcPosInf);
+
+  if (KnownSrc.isKnownNeverNegInfinity())
+    Known.knownNot(fcNegInf);
+
+  if (KnownSrc.isKnownNeverLogicalPosZero(Mode))
+    Known.knownNot(fcPosZero);
+
+  if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
+    Known.knownNot(fcNegZero);
+
+  // TODO: These deductions can be improved if subnormal inputs are guaranteed
+  // to be flushed to zero.
+  if (KnownSrc.isKnownNever(fcPosNormal | fcPosSubnormal))
+    Known.knownNot(fcPosNormal);
+
+  if (KnownSrc.isKnownNever(fcNegNormal | fcNegSubnormal))
+    Known.knownNot(fcNegNormal);
+
   return Known;
 }
 

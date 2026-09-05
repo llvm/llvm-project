@@ -3516,12 +3516,24 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         switch (IID) {
         case Intrinsic::frexp: {
           FPClassTest SrcDemandedMask = fcNone;
+
           if (DemandedMask & fcNan)
             SrcDemandedMask |= fcNan;
-          if (DemandedMask & fcNegFinite)
-            SrcDemandedMask |= fcNegFinite;
-          if (DemandedMask & fcPosFinite)
-            SrcDemandedMask |= fcPosFinite;
+
+          // Positive subnormals and negative subnormals could become positive
+          // zero.
+          if (DemandedMask & fcPosZero)
+            SrcDemandedMask |= fcPosZero | fcSubnormal;
+
+          // Negative subnormals could become negative zero.
+          if (DemandedMask & fcNegZero)
+            SrcDemandedMask |= fcNegZero | fcNegSubnormal;
+
+          if (DemandedMask & (fcNegNormal | fcNegSubnormal))
+            SrcDemandedMask |= fcNegNormal | fcNegSubnormal;
+          if (DemandedMask & (fcPosNormal | fcPosSubnormal))
+            SrcDemandedMask |= fcPosNormal | fcPosSubnormal;
+
           if (DemandedMask & fcPosInf)
             SrcDemandedMask |= fcPosInf;
           if (DemandedMask & fcNegInf)
@@ -3543,7 +3555,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                      /*IsCanonicalizing=*/true))
             return SingleVal;
 
-          if (Known.isKnownAlways(fcInf | fcNan))
+          // frexp returns zero, infinity, and NaN inputs unchanged.
+          if (KnownSrc.isKnownAlways(fcZero | fcInf | fcNan))
             return II->getArgOperand(0);
 
           return nullptr;
