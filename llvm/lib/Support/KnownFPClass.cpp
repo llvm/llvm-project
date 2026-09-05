@@ -521,26 +521,36 @@ KnownFPClass KnownFPClass::frem(const KnownFPClass &KnownLHS,
                                 DenormalMode Mode) {
   KnownFPClass Known;
 
+  // We are assuming that frem(x, Inf) is already handled elsewhere.
+
   Known.knownNot(fcInf);
 
-  // Inf REM x and x REM 0 produce NaN.
-  if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
-      KnownLHS.isKnownNeverInfinity() &&
+  Known.propagateNonSNaN(KnownLHS, KnownRHS);
+
+  // frem(Inf, x) and frem(x, 0) produce NaN.
+  if (KnownLHS.isKnownNeverInfOrNaN() && KnownRHS.isKnownNeverNaN() &&
       KnownRHS.isKnownNeverLogicalZero(Mode)) {
     Known.knownNot(fcNan);
   }
 
   // The sign for frem is the same as the first operand.
-  if (KnownLHS.cannotBeOrderedLessThanZero())
-    Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
-  if (KnownLHS.cannotBeOrderedGreaterThanZero())
-    Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
+  if (KnownLHS.isKnownNever(fcPosNormal | fcPosSubnormal))
+    Known.knownNot(fcPosNormal | fcPosSubnormal);
+  if (KnownLHS.isKnownNever(fcNegNormal | fcNegSubnormal))
+    Known.knownNot(fcNegNormal | fcNegSubnormal);
 
-  // See if we can be more aggressive about the sign of 0.
-  if (KnownLHS.isKnownNever(fcNegative))
-    Known.knownNot(fcNegative);
-  if (KnownLHS.isKnownNever(fcPositive))
-    Known.knownNot(fcPositive);
+  // A negative zero result requires a negative finite first operand.
+  if (KnownLHS.isKnownNever(fcNegFinite))
+    Known.knownNot(fcNegZero);
+
+  // A positive zero result can additionally come from a negative finite
+  // result being flushed to positive zero.
+  if (KnownLHS.isKnownNever(fcPosFinite) &&
+      (!Mode.inputsMayBePositiveZero() ||
+       KnownLHS.isKnownNever(fcNegSubnormal)) &&
+      (!Mode.outputsMayBePositiveZero() ||
+       KnownLHS.isKnownNever(fcNegNormal | fcNegSubnormal)))
+    Known.knownNot(fcPosZero);
 
   return Known;
 }
@@ -550,10 +560,18 @@ KnownFPClass KnownFPClass::frem_self(const KnownFPClass &KnownSrc,
   // X % X is always exactly [+-]0.0 or a NaN.
   KnownFPClass Known(fcNan | fcZero);
 
+  Known.propagateNonSNaN(KnownSrc);
+
   if (KnownSrc.isKnownNeverInfOrNaN() && KnownSrc.isKnownNeverLogicalZero(Mode))
     Known.knownNot(fcNan);
-  else if (KnownSrc.isKnownNever(fcSNan))
-    Known.knownNot(fcSNan);
+
+  // The sign of a zero result is the sign of the finite non-zero input.
+  // We do not have to worry about subnormal values flushing to zero, since
+  // frem(+-0.0, +-0.0) = NaN.
+  if (KnownSrc.isKnownNever(fcPosNormal | fcPosSubnormal))
+    Known.knownNot(fcPosZero);
+  if (KnownSrc.isKnownNever(fcNegNormal | fcNegSubnormal))
+    Known.knownNot(fcNegZero);
 
   return Known;
 }

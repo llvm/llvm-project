@@ -1909,6 +1909,23 @@ TEST_F(ComputeKnownFPClassTest, MaximumNumSignBit) {
   expectKnownFPClass(fcPositive, false, A7);
 }
 
+TEST_F(ComputeKnownFPClassTest, FRemDemandRHSForSNaN) {
+  parseAssembly("define float @test(float nofpclass(snan) %lhs, "
+                "float nofpclass(snan) %rhs) {\n"
+                "  %A = frem float %lhs, %rhs\n"
+                "  ret float %A\n"
+                "}\n");
+
+  KnownFPClass KnownSNan = computeKnownFPClass(A, M->getDataLayout(), fcSNan);
+  KnownFPClass KnownQNan = computeKnownFPClass(A, M->getDataLayout(), fcQNan);
+
+  EXPECT_TRUE(KnownSNan.isKnownNever(fcSNan));
+  EXPECT_FALSE(KnownSNan.isKnownNever(fcQNan));
+
+  EXPECT_TRUE(KnownQNan.isKnownNever(fcSNan));
+  EXPECT_FALSE(KnownQNan.isKnownNever(fcQNan));
+}
+
 TEST_F(ComputeKnownFPClassTest, PowUseRHSToRuleOutNegativeResults) {
   parseAssembly("declare float @llvm.pow.f32(float, float)\n"
                 "define float @test(float nofpclass(ninf nsub nnorm) %base,\n"
