@@ -2129,11 +2129,10 @@ void VPIRPhi::printRecipe(raw_ostream &O, const Twine &Indent,
 void VPIRMetadata::applyMetadata(Instruction &I) const {
   if (Metadata.empty())
     return;
-  // The execution frequency is VPlan-internal and must not reach IR; recipes
-  // that end up unguarded may still carry one.
-  unsigned InternalKind = getMDKindID(ExecutionFrequencyMDName);
+  // The execution frequency is VPlan-internal and must not reach IR.
+  unsigned ExecFreqKind = getMDKindID(ExecutionFrequencyMDName);
   for (const auto &[Kind, Node] : Metadata)
-    if (Kind != InternalKind)
+    if (Kind != ExecFreqKind)
       I.setMetadata(Kind, Node);
 }
 

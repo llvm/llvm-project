@@ -6435,7 +6435,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   if (CM->foldTailByMasking())
     RUN_VPLAN_PASS(VPlanTransforms::foldTailByMasking, *VPlan0);
 
-  assert(verifyExecutionFrequenciesMatchBFI(*VPlan0, OrigLoop, LI, CM) &&
+  assert(verifyExecutionFrequenciesMatchBFI(*VPlan0, OrigLoop, LI, *CM) &&
          "execution frequencies do not match the loop's block frequencies");
   RUN_VPLAN_PASS(VPlanTransforms::introduceMasksAndLinearize, *VPlan0);
 
