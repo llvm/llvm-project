@@ -462,12 +462,6 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
     CC1Args.push_back("-wasm-enable-eh");
   }
 
-  if (DriverArgs.getLastArg(options::OPT_femscripten_exceptions)) {
-    // Backend needs -enable-emscripten-cxx-exceptions to enable Emscripten EH
-    CC1Args.push_back("-mllvm");
-    CC1Args.push_back("-enable-emscripten-cxx-exceptions");
-  }
-
   for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
     StringRef Opt = A->getValue(0);
     if (Opt.starts_with("-emscripten-cxx-exceptions-allowed")) {
