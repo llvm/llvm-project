@@ -49,6 +49,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  bfloat16_macros
+  HDR
+    bfloat16-macros.h
+)
+
+add_macro_header(
   byteswap_macros
   HDR
     byteswap-macros.h
