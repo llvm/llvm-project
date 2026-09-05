@@ -467,6 +467,9 @@ private:
 
   /// Common section names.
   static StringRef getEHFrameSectionName() { return ".eh_frame"; }
+
+  /// GNU crtbegin symbol used as the .eh_frame registration anchor.
+  static StringRef getEHFrameBeginSymbolName() { return "__EH_FRAME_BEGIN__"; }
   static StringRef getEHFrameHdrSectionName() { return ".eh_frame_hdr"; }
   static StringRef getRelaDynSectionName() { return ".rela.dyn"; }
 
@@ -614,6 +617,9 @@ private:
 
   /// Exception handling and stack unwinding information in this binary.
   ErrorOr<BinarySection &> EHFrameSection{std::errc::bad_address};
+
+  /// GNU crtbegin symbol used to register the regenerated .eh_frame.
+  BinaryData *EHFrameBegin{nullptr};
 
   /// Helper for accessing sections by name.
   BinarySection *getSection(const Twine &Name) {
