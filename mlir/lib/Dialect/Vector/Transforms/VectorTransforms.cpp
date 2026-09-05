@@ -1915,6 +1915,14 @@ struct FoldArithExtIntoContractionOp
                                          "no defining op on contract operands");
     }
 
+    // The contraction requires lhs and rhs to have the same element type, so
+    // the two extensions must also start from the same one.
+    if (getElementTypeOrSelf(lhsDefOp.getIn().getType()) !=
+        getElementTypeOrSelf(rhsDefOp.getIn().getType())) {
+      return rewriter.notifyMatchFailure(
+          contractOp, "lhs and rhs are extended from different element types");
+    }
+
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         contractOp, lhsDefOp->getOperand(0), rhsDefOp->getOperand(0),
         contractOp.getAcc(), contractOp.getIndexingMapsAttr(),
