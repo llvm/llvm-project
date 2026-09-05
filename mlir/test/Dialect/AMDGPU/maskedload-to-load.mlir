@@ -167,3 +167,47 @@ func.func @full_mask_maskedstore_to_store(%arg0: memref<8x8xf16>, %arg1: index, 
 // CHECK-NOT: vector.maskedstore
 // CHECK: scf.if %[[PRED]]
 // CHECK:   vector.store
+
+// -----
+
+// CHECK-LABEL: func @maskedload_fatrawbuffer_alignment(
+// CHECK-SAME: %[[ARG0:.*]]: memref<8x8xf32, #amdgpu.address_space<fat_raw_buffer>>
+// CHECK-SAME: %[[ARG1:.*]]: index
+// CHECK-SAME: %[[ARG2:.*]]: vector<4xi1>
+// CHECK-SAME: %[[ARG3:.*]]: vector<4xf32>
+func.func @maskedload_fatrawbuffer_alignment(%mem : memref<8x8xf32, #amdgpu.address_space<fat_raw_buffer>>, %idx : index, %mask : vector<4xi1>, %passthru : vector<4xf32>) -> vector<4xf32> {
+  %res = vector.maskedload %mem[%idx, %idx], %mask, %passthru alignment = 16 : memref<8x8xf32, #amdgpu.address_space<fat_raw_buffer>>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+  return %res : vector<4xf32>
+}
+// CHECK: scf.if
+// CHECK: vector.maskedload %[[ARG0]][%[[ARG1]], %[[ARG1]]], %[[ARG2]], %[[ARG3]] alignment = 16
+// CHECK: } else {
+// CHECK: vector.load %[[ARG0]][%[[ARG1]], %[[ARG1]]] alignment = 16
+
+// -----
+
+// CHECK-LABEL: func.func @full_select_maskedload_to_load_alignment
+// CHECK-SAME: %[[MEM:.+]]: memref<8x8xf16>,
+// CHECK-SAME: %[[IDX:.+]]: index,
+func.func @full_select_maskedload_to_load_alignment(%arg0: memref<8x8xf16>, %arg1: index, %arg2: i1, %arg3: vector<4xf16>) -> vector<4xf16> {
+  %0 = vector.broadcast %arg2 : i1 to vector<4xi1>
+  %1 = vector.maskedload %arg0[%arg1, %arg1], %0, %arg3 alignment = 16 : memref<8x8xf16>, vector<4xi1>, vector<4xf16> into vector<4xf16>
+  return %1 : vector<4xf16>
+}
+// CHECK: scf.if
+// CHECK:   vector.load %[[MEM]][%[[IDX]], %[[IDX]]] alignment = 16
+
+// -----
+
+// CHECK-LABEL: func.func @full_mask_maskedstore_to_store_alignment
+// CHECK-SAME: %[[MEM:.+]]: memref<8x8xf16>,
+// CHECK-SAME: %[[IDX:.+]]: index,
+// CHECK-SAME: %[[PRED:.+]]: i1,
+// CHECK-SAME: %[[VAL:.+]]: vector<4xf16>)
+func.func @full_mask_maskedstore_to_store_alignment(%arg0: memref<8x8xf16>, %arg1: index, %arg2: i1, %arg3: vector<4xf16>) {
+  %0 = vector.broadcast %arg2 : i1 to vector<4xi1>
+  vector.maskedstore %arg0[%arg1, %arg1], %0, %arg3 alignment = 16 : memref<8x8xf16>, vector<4xi1>, vector<4xf16>
+  return
+}
+// CHECK: scf.if
+// CHECK:   vector.store %[[VAL]], %[[MEM]][%[[IDX]], %[[IDX]]] alignment = 16
