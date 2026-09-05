@@ -2,13 +2,12 @@
 
 # libc++ C++23 Status
 
-```{eval-rst}
-.. include:: ../Helpers/Styles.md
-```
+:::{include} ../Helpers/Styles.md
+:::
 
-```{contents}
+:::{contents}
 :local: true
-```
+:::
 
 ## Overview
 
@@ -29,19 +28,16 @@ The groups that have contributed papers:
 
 ## Paper Status
 
-```{eval-rst}
-.. csv-table::
-   :file: Cxx23Papers.csv
-   :header-rows: 1
-   :widths: auto
-```
+:::{csv-table}
+:file: Cxx23Papers.csv
+:header-rows: 1
+:widths: auto
+:::
 
 ## Library Working Group Issues Status
 
-```{eval-rst}
-.. csv-table::
-   :file: Cxx23Issues.csv
-   :header-rows: 1
-   :widths: auto
-```
-
+:::{csv-table}
+:file: Cxx23Issues.csv
+:header-rows: 1
+:widths: auto
+:::

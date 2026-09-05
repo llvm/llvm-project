@@ -2,8 +2,7 @@
 
 # libc++ C++29 Status
 
-```{eval-rst}
-.. include:: ../Helpers/Styles.md
+```{include} ../Helpers/Styles.md
 ```
 
 ```{contents}
@@ -32,19 +31,16 @@ The groups that have contributed papers:
 
 ## Paper Status
 
-```{eval-rst}
-.. csv-table::
-   :file: Cxx29Papers.csv
-   :header-rows: 1
-   :widths: auto
-```
+:::{csv-table}
+:file: Cxx29Papers.csv
+:header-rows: 1
+:widths: auto
+:::
 
 ## Library Working Group Issues Status
 
-```{eval-rst}
-.. csv-table::
-   :file: Cxx29Issues.csv
-   :header-rows: 1
-   :widths: auto
-```
-
+:::{csv-table}
+:file: Cxx29Issues.csv
+:header-rows: 1
+:widths: auto
+:::

@@ -1,21 +1,3 @@
----
-substitutions:
-  Complete: '{complete}`Complete`'
-  In Progress: '{inprogress}`In Progress`'
-  Not Started: '{notstarted}`Not Started`'
-  Nothing To Do: '{nothingtodo}`Nothing To Do`'
-  Partial: '{partial}`Partial`'
-  Review: '{inreview}`Review`'
-  hellip: |-
-    ```{eval-rst}
-    .. unicode:: U+2026
-    ```
-  sect: |-
-    ```{eval-rst}
-    .. unicode:: U+00A7
-    ```
----
-
 ```{raw} html
 <style type="text/css">
   td { text-align: left; }
@@ -37,27 +19,20 @@ substitutions:
 </style>
 ```
 
-```{eval-rst}
-.. role:: notstarted
-```
+:::{role} notstarted
+:::
 
-```{eval-rst}
-.. role:: nothingtodo
-```
+:::{role} nothingtodo
+:::
 
-```{eval-rst}
-.. role:: inprogress
-```
+:::{role} inprogress
+:::
 
-```{eval-rst}
-.. role:: inreview
-```
+:::{role} inreview
+:::
 
-```{eval-rst}
-.. role:: partial
-```
+:::{role} partial
+:::
 
-```{eval-rst}
-.. role:: complete
-```
-
+:::{role} complete
+:::

@@ -3,7 +3,6 @@
 import os
 from builtins import range
 from dataclasses import dataclass
-from functools import reduce
 from typing import (
     Any,
     Dict,
@@ -189,7 +188,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_atomic_min_max",
-            "values": {"c++26": 202403}, # P0493R5: Atomic minimum/maximum
+            "values": {"c++26": 202403},  # P0493R5: Atomic minimum/maximum
             "headers": ["atomic"],
         },
         {
@@ -508,7 +507,7 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_debugging",
             "values": {
-                "c++26": 202311, # P2546R5 Debugging Support
+                "c++26": 202311,  # P2546R5 Debugging Support
                 # "c++26": 202403, # P2810R4: is_debugger_present is_replaceable
             },
             "headers": ["debugging"],
@@ -516,8 +515,18 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_default_template_type_for_algorithm_values",
-            "values": {"c++26": 202403}, # P2248R8: Enabling list-initialization for algorithms
-            "headers": ["algorithm", "deque", "forward_list", "list", "ranges", "string", "vector"],
+            "values": {
+                "c++26": 202403
+            },  # P2248R8: Enabling list-initialization for algorithms
+            "headers": [
+                "algorithm",
+                "deque",
+                "forward_list",
+                "list",
+                "ranges",
+                "string",
+                "vector",
+            ],
             "unimplemented": True,
         },
         {
@@ -725,7 +734,9 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_generate_random",
-            "values": {"c++26": 202403}, # P1068R11: Vector API for random number generation
+            "values": {
+                "c++26": 202403
+            },  # P1068R11: Vector API for random number generation
             "headers": ["random"],
             "unimplemented": True,
         },
@@ -1164,7 +1175,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_ranges_concat",
-            "values": {"c++26": 202403}, # P2542R8: views::concat
+            "values": {"c++26": 202403},  # P2542R8: views::concat
             "headers": ["ranges"],
         },
         {
@@ -1259,7 +1270,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_reference_wrapper",
-            "values": {"c++26": 202403}, # P2944R3: Comparisons for reference_wrapper
+            "values": {"c++26": 202403},  # P2944R3: Comparisons for reference_wrapper
             "headers": ["functional"],
         },
         {
@@ -1464,7 +1475,7 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_submdspan",
             "values": {
-                "c++26": 202306, # P2630R4: submdspan
+                "c++26": 202306,  # P2630R4: submdspan
                 # "c++26": 202403, # P2642R6: Padded mdspan layouts
             },
             "headers": ["mdspan"],
@@ -1625,7 +1636,14 @@ assert feature_test_macros == sorted(feature_test_macros, key=lambda tc: tc["nam
 for tc in feature_test_macros:
     assert tc["headers"] == sorted(tc["headers"]), tc
     assert ("libcxx_guard" in tc) == ("test_suite_guard" in tc), tc
-    valid_keys = ["name", "values", "headers", "libcxx_guard", "test_suite_guard", "unimplemented"]
+    valid_keys = [
+        "name",
+        "values",
+        "headers",
+        "libcxx_guard",
+        "test_suite_guard",
+        "unimplemented",
+    ]
     assert all(key in valid_keys for key in tc.keys()), tc
 
 # Map from each header to the Lit annotations that should be used for
@@ -2034,51 +2052,20 @@ def produce_tests():
 """
 
 
-def make_widths(grid):
-    widths = []
-    for i in range(0, len(grid[0])):
-        cell_width = 2 + max(
-            reduce(lambda x, y: x + y, [[len(row[i])] for row in grid], [])
-        )
-        widths += [cell_width]
-    return widths
+def create_table(grid):
+    widths = [max(len(row[column]) for row in grid) for column in range(len(grid[0]))]
 
-
-def create_table(grid, indent):
-    indent_str = " " * indent
-    col_widths = make_widths(grid)
-    result = [indent_str + add_divider(col_widths, 2)]
-    header_flag = 2
-    for row_i in range(0, len(grid)):
-        row = grid[row_i]
-        line = indent_str + " ".join(
-            [pad_cell(row[i], col_widths[i]) for i in range(0, len(row))]
+    def format_row(row):
+        return (
+            "| "
+            + " | ".join(cell.ljust(widths[i]) for i, cell in enumerate(row))
+            + " |"
         )
-        result.append(line.rstrip())
-        if row_i == len(grid) - 1:
-            header_flag = 2
-        if row[0].startswith("**"):
-            header_flag += 1
-        separator = indent_str + add_divider(col_widths, header_flag)
-        result.append(separator.rstrip())
-        header_flag = 0
+
+    result = [format_row(grid[0])]
+    result.append("| " + " | ".join("-" * width for width in widths) + " |")
+    result.extend(format_row(row) for row in grid[1:])
     return "\n".join(result)
-
-
-def add_divider(widths, header_flag):
-    if header_flag == 3:
-        return "=".join(["=" * w for w in widths])
-    if header_flag == 2:
-        return " ".join(["=" * w for w in widths])
-    if header_flag == 1:
-        return "-".join(["-" * w for w in widths])
-    else:
-        return " ".join(["-" * w for w in widths])
-
-
-def pad_cell(s, length, left_align=True):
-    padding = (length - len(s)) * " "
-    return s + padding
 
 
 def get_status_table():
@@ -2088,42 +2075,38 @@ def get_status_table():
         for tc in feature_test_macros:
             if std not in tc["values"].keys():
                 continue
-            value = "``%sL``" % tc["values"][std]
+            value = "`%sL`" % tc["values"][std]
             if "unimplemented" in tc.keys():
                 value = "*unimplemented*"
-            table += [["``%s``" % tc["name"], value]]
+            table += [["`%s`" % tc["name"], value]]
     return table
 
 
 def produce_docs():
-    doc_str = """.. _FeatureTestMacroTable:
+    doc_str = """(featuretestmacrotable)=
 
-==========================
-Feature Test Macro Support
-==========================
+# Feature Test Macro Support
 
-.. contents::
-   :local:
+:::{{contents}}
+:local: true
+:::
 
-Overview
-========
+## Overview
 
 This file documents the feature test macros currently supported by libc++.
 
-.. _feature-status:
+(feature-status)=
 
-Status
-======
+## Status
 
-.. table:: Current Status
-    :name: feature-status-table
-    :widths: auto
+:::{{table}} Current Status
+:name: feature-status-table
+:widths: auto
 
 {status_tables}
+:::
 
-""".format(
-        status_tables=create_table(get_status_table(), 4)
-    )
+""".format(status_tables=create_table(get_status_table()))
 
     table_doc_path = os.path.join(docs_path, "FeatureTestMacroTable.md")
     with open(table_doc_path, "w", newline="\n") as f:
@@ -2132,7 +2115,10 @@ Status
 
 Std = NewType("Std", str)  # Standard version number
 Ftm = NewType("Ftm", str)  # The name of a feature test macro
-Value = NewType("Value", str)  # The value of a feature test macro including the L suffix
+Value = NewType(
+    "Value", str
+)  # The value of a feature test macro including the L suffix
+
 
 @dataclass
 class Metadata:
@@ -2155,6 +2141,7 @@ class FtmHeaderTest:
     value: Value = None
     implemented: bool = None
     condition: str = None
+
 
 def get_ftms(
     data, std_dialects: List[Std], use_implemented_status: bool
@@ -2228,7 +2215,7 @@ def generate_version_header_dialect_block(data: Dict[Ftm, VersionHeader]) -> str
 
 
 def generate_version_header_implementation(
-    data: Dict[Std, Dict[Ftm, VersionHeader]]
+    data: Dict[Std, Dict[Ftm, VersionHeader]],
 ) -> str:
     """Generates the body of the version header."""
 
@@ -2245,6 +2232,7 @@ def generate_version_header_implementation(
         )
 
     return "\n\n".join(result)
+
 
 #
 # The templates used to create a FTM test file
@@ -2295,6 +2283,7 @@ ftm_header_test_file_dialect_block = """
 #{pp_if} TEST_STD_VER {operator} {dialect}
 {tests}\
 """
+
 
 class FeatureTestMacros:
     """Provides all feature-test macro (FTM) output components.
@@ -2455,14 +2444,16 @@ class FeatureTestMacros:
 
         return get_ftms(self.__data, self.std_dialects, True)
 
-
     def is_implemented(self, ftm: Ftm, std: Std) -> bool:
         """Has the FTM `ftm` been implemented in the dialect `std`?"""
 
         # When a paper for C++20 has not been implemented in libc++, then there will be no
         # FTM entry in implemented_ftms for C++23 and later. Similarly, a paper like <format>
         # has no entry in standard_ftms for e.g. C++11.
-        if not std in self.implemented_ftms[ftm].keys() or not std in self.standard_ftms[ftm].keys():
+        if (
+            not std in self.implemented_ftms[ftm].keys()
+            or not std in self.standard_ftms[ftm].keys()
+        ):
             return False
 
         return self.implemented_ftms[ftm][std] == self.standard_ftms[ftm][std]
@@ -2565,17 +2556,16 @@ class FeatureTestMacros:
                     continue
 
                 result[get_std_number(std)].append(
-                        {
-                            ftm: FtmHeaderTest(
-                                values[std],
-                                self.is_implemented(ftm, std),
-                                self.ftm_metadata[ftm].test_suite_guard,
-                            )
-                        }
+                    {
+                        ftm: FtmHeaderTest(
+                            values[std],
+                            self.is_implemented(ftm, std),
+                            self.ftm_metadata[ftm].test_suite_guard,
+                        )
+                    }
                 )
 
         return result
-
 
     def generate_ftm_test(self, std: Std, ftm: Ftm, value: FtmHeaderTest) -> str:
         """Adds a single `ftm` test for C++ `std` based on the status information in `value`.
@@ -2636,9 +2626,7 @@ class FeatureTestMacros:
             )
 
         if not value.implemented:
-            return ftm_not_implemented.format(
-                ftm=ftm, value=value.value, dialect=std
-            )
+            return ftm_not_implemented.format(ftm=ftm, value=value.value, dialect=std)
 
         if self.ftm_metadata[ftm].test_suite_guard:
             return ftm_conditionally_implemented.format(
@@ -2660,7 +2648,7 @@ class FeatureTestMacros:
             for ftm, value in element.items()
         )
 
-    def generate_lit_markup(self, header:str) -> str:
+    def generate_lit_markup(self, header: str) -> str:
         if not header in lit_markup.keys():
             return ""
 
@@ -2672,28 +2660,30 @@ class FeatureTestMacros:
         # FTM block before the first Standard that introduced them.
         # This test the macros are not available before this version.
         data = ftm_header_test_file_dialect_block.format(
-                pp_if="if",
-                operator="<",
-                dialect=get_std_number(self.std_dialects[0]),
-                tests=self.generate_header_test_dialect(
-                    None, next(iter(self.header_ftm_data(header).values()))
-                ),
-            )
+            pp_if="if",
+            operator="<",
+            dialect=get_std_number(self.std_dialects[0]),
+            tests=self.generate_header_test_dialect(
+                None, next(iter(self.header_ftm_data(header).values()))
+            ),
+        )
 
         # FTM for all Standards that have FTM defined.
         # Note in libc++ the TEST_STD_VER contains 99 for the Standard
         # in development, therefore the last entry uses a different #elif.
         data += "".join(
-                ftm_header_test_file_dialect_block.format(
-                    pp_if="elif",
-                    operator="==" if std != get_std_number(self.std_dialects[-1]) else ">",
-                    dialect=std
+            ftm_header_test_file_dialect_block.format(
+                pp_if="elif",
+                operator="==" if std != get_std_number(self.std_dialects[-1]) else ">",
+                dialect=(
+                    std
                     if std != get_std_number(self.std_dialects[-1])
-                    else get_std_number(self.std_dialects[-2]),
-                    tests=self.generate_header_test_dialect(f"c++{std}", values),
-                )
-                for std, values in self.header_ftm_data(header).items()
+                    else get_std_number(self.std_dialects[-2])
+                ),
+                tests=self.generate_header_test_dialect(f"c++{std}", values),
             )
+            for std, values in self.header_ftm_data(header).items()
+        )
 
         # The final #endif for the last #elif block.
         data += f"\n#endif // TEST_STD_VER > {get_std_number(self.std_dialects[-2])}"
@@ -2708,7 +2698,7 @@ class FeatureTestMacros:
                 if header in self.__unavailable_headers
                 else ftm_header_test_file_include_unconditional.format(header=header)
             ),
-            data=data
+            data=data,
         )
 
     def generate_header_test_directory(self, path: os.path) -> None:
@@ -2736,7 +2726,8 @@ def main():
         ftm = FeatureTestMacros(
             os.path.join(
                 source_root, "test", "libcxx", "feature_test_macro", "test_data.json"
-            ), headers_not_available
+            ),
+            headers_not_available,
         )
         version_header_path = os.path.join(include_path, "version")
         with open(version_header_path, "w", newline="\n") as f:
