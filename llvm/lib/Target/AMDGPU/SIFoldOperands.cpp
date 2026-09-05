@@ -857,13 +857,50 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
     if (!OpToFold.isImm())
       return false;
 
-    const bool TryAK = OpNo == 3;
+    bool TryAK = OpNo == 3;
+
+    const MCInstrDesc &MKDesc = TII->get(AMDGPU::S_FMAMK_F32);
+    std::optional<int64_t> ImmToFold = OpToFold.getEffectiveImmVal();
+    unsigned KFromOpNo = 0;
+    int64_t KImm = 0;
+    if (TryAK && ImmToFold &&
+        TII->isInlineConstant(*ImmToFold, MKDesc.operands()[3].OperandType)) {
+      // Prefer src1: it already sits in the FMAMK K slot, so no commute.
+      for (unsigned FactorOpNo : {2, 1}) {
+        MachineOperand &Factor = MI->getOperand(FactorOpNo);
+        std::optional<int64_t> FactorImm = TII->getImmOrMaterializedImm(Factor);
+        if (!FactorImm || TII->isInlineConstant(*MI, FactorOpNo, *FactorImm))
+          continue;
+        const unsigned KeptOpNo = (FactorOpNo == 1) ? 2 : 1;
+        const MachineOperand &Kept = MI->getOperand(KeptOpNo);
+        if (Kept.isImm() ? !TII->isInlineConstant(*MI, KeptOpNo)
+                         : !Kept.isReg())
+          continue;
+        // s_fmamk_f32 keeps the literal in operand 2, so commute if it sits in
+        // operand 1.
+        if (FactorOpNo == 1 &&
+            !TII->commuteInstruction(*MI, /*NewMI=*/false, 1, 2))
+          continue;
+        KFromOpNo = FactorOpNo;
+        KImm = *FactorImm;
+        TryAK = false;
+        break;
+      }
+    }
+
     const unsigned NewOpc = TryAK ? AMDGPU::S_FMAAK_F32 : AMDGPU::S_FMAMK_F32;
+    // OpToFold lands in the K slot, unless a multiplicand has claimed it.
+    const unsigned FoldOpNo = (TryAK || KFromOpNo) ? 3 : 2;
+
+    // Replace the register the constant was materialized into by the literal.
+    const MachineOperand OrigSrc1 = MI->getOperand(2);
+    const bool KWasReg = KFromOpNo && OrigSrc1.isReg();
     MI->setDesc(TII->get(NewOpc));
+    if (KWasReg)
+      MI->getOperand(2).ChangeToImmediate(KImm);
 
     // We have to fold into operand which would be Imm not into OpNo.
-    bool FoldAsFMAAKorMK =
-        tryAddToFoldList(FoldList, MI, TryAK ? 3 : 2, OpToFold);
+    bool FoldAsFMAAKorMK = tryAddToFoldList(FoldList, MI, FoldOpNo, OpToFold);
     if (FoldAsFMAAKorMK) {
       // Untie Src2 of fmac.
       MI->untieRegOperand(3);
@@ -884,6 +921,15 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
       return true;
     }
     MI->setDesc(TII->get(Opc));
+    if (KWasReg) {
+      MachineOperand &Src1 = MI->getOperand(2);
+      Src1.ChangeToRegister(OrigSrc1.getReg(), /*isDef=*/false, /*isImp=*/false,
+                            OrigSrc1.isKill(), /*isDead=*/false,
+                            OrigSrc1.isUndef());
+      Src1.setSubReg(OrigSrc1.getSubReg());
+    }
+    if (KFromOpNo == 1)
+      TII->commuteInstruction(*MI, /*NewMI=*/false, 1, 2);
     return false;
   };
 
