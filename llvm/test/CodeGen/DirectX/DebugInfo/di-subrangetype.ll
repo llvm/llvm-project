@@ -1,4 +1,5 @@
-; RUN: llc %s -o - | FileCheck %s
+; RUN: opt -S -passes=dxil-debug-info %s -o - | FileCheck %s
+; RUN: llc %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-COMMENT
 
 target triple = "dxil-pc-shadermodel6.3-library"
 
@@ -11,14 +12,14 @@ define void @sr() !dbg !7 {
 !llvm.module.flags = !{!5, !6}
 
 ; CHECK-DAG: [[CU]] = distinct !DICompileUnit(language: DW_LANG_Ada95, file: [[F:![0-9]+]], producer: "GNAT/LLVM", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, retainedTypes: [[TS:![0-9]+]])
-; CHECK-DAG: DXIL: [[CU]]: additional data: [[SPS:![0-9]+]]
+; CHECK-COMMENT-DAG: DXIL: [[CU]]: additional data: [[SPS:![0-9]+]]
 ; CHECK-DAG: [[F]] = !DIFile(filename: "subrange_type.adb", directory: "/dir")
 ; CHECK-DAG: [[TS]] = !{[[RT:![0-9]+]]}
 ; CHECK-DAG: [[RT]] = !DISubrangeType(name: "sr__int_range", file: [[F]], line: 2, size: 32, align: 32, baseType: [[BT:![0-9]+]], lowerBound: i64 -7, upperBound: i64 23)
 ; CHECK-DAG: [[BT]] = !DIBasicType(name: "sr__Tint_rangeB", size: 32, encoding: DW_ATE_signed)
-; CHECK-DAG: DXIL: [[RT]]: to be replaced by: [[BT]]
-; CHECK-DAG: [[SPS]] = !{[[SP:![0-9]+]]}
-; CHECK-DAG: [[SP]] = distinct !DISubprogram(name: "sr", scope: [[F]], file: [[F]], line: 1, type: [[ST:![0-9]+]], scopeLine: 1, spFlags: DISPFlagDefinition, unit: [[CU]], retainedNodes: [[VS:![0-9]+]])
+; CHECK-COMMENT-DAG: DXIL: [[RT]]: to be replaced by: [[BT]]
+; CHECK-COMMENT-DAG: [[SPS]] = !{[[SP:![0-9]+]]}
+; CHECK-DAG: [[SP:![0-9]+]] = distinct !DISubprogram(name: "sr", scope: [[F]], file: [[F]], line: 1, type: [[ST:![0-9]+]], scopeLine: 1, spFlags: DISPFlagDefinition, unit: [[CU]], retainedNodes: [[VS:![0-9]+]])
 ; CHECK-DAG: [[ST]] = !DISubroutineType
 ; CHECK-DAG: [[VS]] = !{[[V:![0-9]+]]}
 ; CHECK-DAG: [[V]] = !DILocalVariable(name: "x", scope: [[SP]], file: [[F]], line: 3, type: [[RT]], align: 32)
