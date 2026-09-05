@@ -165,6 +165,11 @@ bool GCOVFile::readGCNO(GCOVBuffer &buf) {
           version >= GCOV::V1200 ? (length / 4 - 1) / 2 : (length - 1) / 2;
       for (uint32_t i = 0; i != e; ++i) {
         uint32_t dstNo = buf.getWord(), flags = buf.getWord();
+        if (dstNo >= fn->blocks.size()) {
+          errs() << "unexpected block number: " << dstNo << " (in "
+                 << fn->blocks.size() << ")\n";
+          return false;
+        }
         GCOVBlock *dst = fn->blocks[dstNo].get();
         auto arc = std::make_unique<GCOVArc>(*src, *dst, flags);
         src->addDstEdge(arc.get());
