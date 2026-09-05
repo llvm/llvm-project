@@ -2771,7 +2771,8 @@ void IGroupLPDAGMutation::addSchedBarrierEdges(SUnit &SchedBarrier) {
   LLVM_DEBUG(dbgs() << "Building SchedGroup for SchedBarrier with Mask: "
                     << MI.getOperand(0).getImm() << "\n");
   auto InvertedMask =
-      invertSchedBarrierMask((SchedGroupMask)MI.getOperand(0).getImm());
+      invertSchedBarrierMask((SchedGroupMask)(MI.getOperand(0).getImm() &
+                                              (int32_t)SchedGroupMask::ALL));
   SchedGroup SG(InvertedMask, std::nullopt, DAG, TII);
 
   for (SUnit &SU : DAG->SUnits)
@@ -2825,8 +2826,9 @@ void IGroupLPDAGMutation::initSchedGroupBarrierPipelineStage(
   int32_t SyncID = SGB.getOperand(2).getImm();
 
   Size++; // Make room for the SCHED_GROUP_BARRIER instruction
-  auto &SG = SyncedSchedGroups[SyncID].emplace_back((SchedGroupMask)SGMask,
-                                                    Size, SyncID, DAG, TII);
+  auto &SG = SyncedSchedGroups[SyncID].emplace_back(
+      (SchedGroupMask)(SGMask & (int32_t)SchedGroupMask::ALL), Size, SyncID,
+      DAG, TII);
   SG.add(*RIter);
   SG.findCandidateSUnits(RIter, SG.DAG->SUnits.rend(),
                          SyncedInstrs[SG.getSyncID()]);
