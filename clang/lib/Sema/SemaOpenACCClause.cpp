@@ -1159,7 +1159,7 @@ ExprResult CheckGangDimExpr(SemaOpenACC &S, Expr *E) {
 
   if (!ICE || *ICE <= 0 || ICE > 3) {
     S.Diag(Res.get()->getBeginLoc(), diag::err_acc_gang_dim_value)
-        << ICE.has_value() << ICE.value_or(llvm::APSInt{}).getExtValue();
+        << ICE.has_value() << ICE.value_or(llvm::APSInt::get(0));
     return ExprError();
   }
 
