@@ -105,6 +105,7 @@ extern "C" IN_SECTION(".CRT$XCAB") int (*__asan_seh_interceptor)() =
 WIN_FORCE_LINK(__asan_seh_interceptor)
 }
 
+extern "C" void (*const __asan_dso_reg_hook)();
 WIN_FORCE_LINK(__asan_dso_reg_hook)
 
 #endif  // defined(SANITIZER_DYNAMIC_RUNTIME_THUNK) ||
