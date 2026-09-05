@@ -322,7 +322,7 @@ define float @ret_mul_f32_nan(float %arg0) {
 ; CHECK-NEXT:    [[CALL:%.*]] = fmul float [[ARG0]], +qnan
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %call = fmul float %arg0, 0x7FF8000000000000
+  %call = fmul float %arg0, +qnan
   ret float %call
 }
 

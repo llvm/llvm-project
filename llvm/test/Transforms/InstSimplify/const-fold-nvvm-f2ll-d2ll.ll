@@ -516,7 +516,7 @@ define i64 @test_nan_d2ll_rm() {
 ; CHECK-LABEL: define i64 @test_nan_d2ll_rm() {
 ; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
-  %res = call i64 @llvm.nvvm.d2ll.rm(double 0xFFF8000000000000)
+  %res = call i64 @llvm.nvvm.d2ll.rm(double -qnan)
   ret i64 %res
 }
 
@@ -524,7 +524,7 @@ define i64 @test_nan_d2ll_rn() {
 ; CHECK-LABEL: define i64 @test_nan_d2ll_rn() {
 ; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
-  %res = call i64 @llvm.nvvm.d2ll.rn(double 0xFFF8000000000000)
+  %res = call i64 @llvm.nvvm.d2ll.rn(double -qnan)
   ret i64 %res
 }
 
@@ -533,7 +533,7 @@ define i64 @test_nan_d2ll_rp() {
 ; CHECK-LABEL: define i64 @test_nan_d2ll_rp() {
 ; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
-  %res = call i64 @llvm.nvvm.d2ll.rp(double 0xFFF8000000000000)
+  %res = call i64 @llvm.nvvm.d2ll.rp(double -qnan)
   ret i64 %res
 }
 
@@ -541,7 +541,7 @@ define i64 @test_nan_d2ll_rz() {
 ; CHECK-LABEL: define i64 @test_nan_d2ll_rz() {
 ; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
-  %res = call i64 @llvm.nvvm.d2ll.rz(double 0xFFF8000000000000)
+  %res = call i64 @llvm.nvvm.d2ll.rz(double -qnan)
   ret i64 %res
 }
 
@@ -622,7 +622,7 @@ define i64 @test_nan_d2ull_rm() {
 ; CHECK-LABEL: define i64 @test_nan_d2ull_rm() {
 ; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
-  %res = call i64 @llvm.nvvm.d2ull.rm(double 0xFFF8000000000000)
+  %res = call i64 @llvm.nvvm.d2ull.rm(double -qnan)
   ret i64 %res
 }
 
@@ -630,7 +630,7 @@ define i64 @test_nan_d2ull_rn() {
 ; CHECK-LABEL: define i64 @test_nan_d2ull_rn() {
 ; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
-  %res = call i64 @llvm.nvvm.d2ull.rn(double 0xFFF8000000000000)
+  %res = call i64 @llvm.nvvm.d2ull.rn(double -qnan)
   ret i64 %res
 }
 
@@ -639,7 +639,7 @@ define i64 @test_nan_d2ull_rp() {
 ; CHECK-LABEL: define i64 @test_nan_d2ull_rp() {
 ; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
-  %res = call i64 @llvm.nvvm.d2ull.rp(double 0xFFF8000000000000)
+  %res = call i64 @llvm.nvvm.d2ull.rp(double -qnan)
   ret i64 %res
 }
 
@@ -647,7 +647,7 @@ define i64 @test_nan_d2ull_rz() {
 ; CHECK-LABEL: define i64 @test_nan_d2ull_rz() {
 ; CHECK-NEXT:    ret i64 -9223372036854775808
 ;
-  %res = call i64 @llvm.nvvm.d2ull.rz(double 0xFFF8000000000000)
+  %res = call i64 @llvm.nvvm.d2ull.rz(double -qnan)
   ret i64 %res
 }
 

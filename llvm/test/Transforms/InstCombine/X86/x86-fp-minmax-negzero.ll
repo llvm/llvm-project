@@ -66,7 +66,7 @@ define <4 x float> @test_max_ss_allow_negzero_first() {
 ; CHECK-NEXT:    ret <4 x float> <float 1.000000e+00, float +qnan, float +qnan, float +qnan>
 ;
 entry:
-  %r = call <4 x float> @llvm.x86.sse.max.ss(<4 x float> <float -0.0, float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000>, <4 x float> <float 1.0, float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000>)
+  %r = call <4 x float> @llvm.x86.sse.max.ss(<4 x float> <float -0.0, float +qnan, float +qnan, float +qnan>, <4 x float> <float 1.0, float +qnan, float +qnan, float +qnan>)
   ret <4 x float> %r
 }
 
@@ -77,7 +77,7 @@ define <4 x float> @test_max_ss_disallow_negzero_second() {
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
 entry:
-  %r = call <4 x float> @llvm.x86.sse.max.ss(<4 x float> <float 1.0, float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000>, <4 x float> <float -0.0, float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000>)
+  %r = call <4 x float> @llvm.x86.sse.max.ss(<4 x float> <float 1.0, float +qnan, float +qnan, float +qnan>, <4 x float> <float -0.0, float +qnan, float +qnan, float +qnan>)
   ret <4 x float> %r
 }
 
@@ -87,7 +87,7 @@ define <4 x float> @test_min_ss_allow_negzero_second() {
 ; CHECK-NEXT:    ret <4 x float> <float -0.000000e+00, float +qnan, float +qnan, float +qnan>
 ;
 entry:
-  %r = call <4 x float> @llvm.x86.sse.min.ss(<4 x float> <float 1.0, float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000>, <4 x float> <float -0.0, float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000>)
+  %r = call <4 x float> @llvm.x86.sse.min.ss(<4 x float> <float 1.0, float +qnan, float +qnan, float +qnan>, <4 x float> <float -0.0, float +qnan, float +qnan, float +qnan>)
   ret <4 x float> %r
 }
 
@@ -98,6 +98,6 @@ define <4 x float> @test_min_ss_disallow_negzero_first() {
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
 entry:
-  %r = call <4 x float> @llvm.x86.sse.min.ss(<4 x float> <float -0.0, float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000>, <4 x float> <float 1.0, float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000>)
+  %r = call <4 x float> @llvm.x86.sse.min.ss(<4 x float> <float -0.0, float +qnan, float +qnan, float +qnan>, <4 x float> <float 1.0, float +qnan, float +qnan, float +qnan>)
   ret <4 x float> %r
 }

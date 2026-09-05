@@ -357,7 +357,7 @@ define float @fold_fadd_qnan_qnan_ebmaytrap() #0 {
 ; CHECK-LABEL: @fold_fadd_qnan_qnan_ebmaytrap(
 ; CHECK-NEXT:    ret float +qnan
 ;
-  %add = call float @llvm.experimental.constrained.fadd.f32(float 0x7ff8000000000000, float 0x7ff8000000000000, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %add = call float @llvm.experimental.constrained.fadd.f32(float +qnan, float +qnan, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
   ret float %add
 }
 
@@ -366,7 +366,7 @@ define float @fold_fadd_qnan_qnan_ebstrict() #0 {
 ; CHECK-NEXT:    [[ADD:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float +qnan, float +qnan, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
 ; CHECK-NEXT:    ret float +qnan
 ;
-  %add = call float @llvm.experimental.constrained.fadd.f32(float 0x7ff8000000000000, float 0x7ff8000000000000, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %add = call float @llvm.experimental.constrained.fadd.f32(float +qnan, float +qnan, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %add
 }
 
@@ -426,7 +426,7 @@ define <2 x float> @fold_fadd_vec_partial_snan_variable_ebmaytrap(<2 x float> %x
 ; CHECK-LABEL: @fold_fadd_vec_partial_snan_variable_ebmaytrap(
 ; CHECK-NEXT:    ret <2 x float> <float -qnan, float +nan(0x200000)>
 ;
-  %add = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float><float 0xfff8000000000000, float 0x7ff4000000000000>, <2 x float> %x, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %add = call <2 x float> @llvm.experimental.constrained.fadd.v2f32(<2 x float><float -qnan, float 0x7ff4000000000000>, <2 x float> %x, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
   ret <2 x float> %add
 }
 
@@ -443,7 +443,7 @@ define float @fold_fadd_snan_qnan_ebmaytrap() #0 {
 ; CHECK-LABEL: @fold_fadd_snan_qnan_ebmaytrap(
 ; CHECK-NEXT:    ret float +nan(0x200000)
 ;
-  %add = call float @llvm.experimental.constrained.fadd.f32(float 0x7ff4000000000000, float 0x7ff8000000000000, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
+  %add = call float @llvm.experimental.constrained.fadd.f32(float 0x7ff4000000000000, float +qnan, metadata !"round.tonearest", metadata !"fpexcept.maytrap") #0
   ret float %add
 }
 
@@ -452,7 +452,7 @@ define float @fold_fadd_snan_qnan_ebstrict() #0 {
 ; CHECK-NEXT:    [[ADD:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float +snan(0x200000), float +qnan, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
-  %add = call float @llvm.experimental.constrained.fadd.f32(float 0x7ff4000000000000, float 0x7ff8000000000000, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  %add = call float @llvm.experimental.constrained.fadd.f32(float 0x7ff4000000000000, float +qnan, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %add
 }
 

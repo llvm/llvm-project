@@ -31,7 +31,7 @@ B2:
   br i1 %cmp, label %B30.1, label %B30.2
 
 B30.1:
-  %sub = fsub <4 x float> %v0, splat (float 0x7FF8000000000000)
+  %sub = fsub <4 x float> %v0, splat (float +qnan)
   br label %B30.2
 
 B30.2:
@@ -77,7 +77,7 @@ bb:
   %tmp3 = bitcast i32 %tmp1 to float
   %tmp4 = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float %tmp3, float %tmp3, <8 x i32> poison, <4 x i32> poison, i1 0, i32 0, i32 0)
   %tmp5 = extractelement <4 x float> %tmp4, i32 0
-  %tmp6 = fmul float %tmp5, 0x7FF8000000000000
+  %tmp6 = fmul float %tmp5, +qnan
   %tmp7 = fadd float %tmp6, %tmp6
   %tmp8 = insertelement <4 x i32> %tmp2, i32 %tmp, i32 1
   store <4 x i32> %tmp8, ptr addrspace(1) poison, align 16
