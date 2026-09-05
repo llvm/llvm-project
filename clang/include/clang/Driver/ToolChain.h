@@ -435,6 +435,7 @@ public:
   // Helper methods
 
   std::string GetFilePath(const char *Name) const;
+  std::optional<std::string> GetFilePathIfExists(const char *Name) const;
   std::string GetProgramPath(const char *Name) const;
 
   /// Returns the linker path, respecting the -fuse-ld= argument to determine
