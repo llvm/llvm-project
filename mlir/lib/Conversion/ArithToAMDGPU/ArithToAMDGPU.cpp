@@ -441,6 +441,29 @@ static Value getOriginalVectorValue(Value value) {
   return current;
 }
 
+/// The scaled conversion instructions take their scale as an f32 and use only
+/// its exponent, so they implement `arith.scaling_extf`/`arith.scaling_truncf`
+/// only for an f8E8M0FNU scale, whose value is its exponent. Returns that scale
+/// extended to f32, or failure for any other scale type. When the scale is an
+/// f32 truncated to f8E8M0FNU toward zero, the truncation is what the
+/// instruction does itself, so the f32 is used directly.
+static FailureOr<Value> getF32Scale(PatternRewriter &rewriter, Location loc,
+                                    Value scale) {
+  if (!isa<Float8E8M0FNUType>(getElementTypeOrSelf(scale)))
+    return failure();
+
+  if (auto truncOp = scale.getDefiningOp<arith::TruncFOp>())
+    if (getElementTypeOrSelf(truncOp.getIn()).isF32() &&
+        truncOp.getRoundingmode() == arith::RoundingMode::toward_zero)
+      return truncOp.getIn();
+
+  Type f32 = rewriter.getF32Type();
+  Type scaleF32Type = f32;
+  if (auto scaleVecType = dyn_cast<VectorType>(scale.getType()))
+    scaleF32Type = VectorType::get(scaleVecType.getShape(), f32);
+  return arith::ExtFOp::create(rewriter, loc, scaleF32Type, scale).getResult();
+}
+
 LogicalResult
 ScalingExtFRewritePattern::matchAndRewrite(arith::ScalingExtFOp op,
                                            PatternRewriter &rewriter) const {
@@ -451,15 +474,12 @@ ScalingExtFRewritePattern::matchAndRewrite(arith::ScalingExtFOp op,
   Value scale = op.getScale();
   Value out = op.getOut();
 
-  Type f32 = rewriter.getF32Type();
   Type inType = getElementTypeOrSelf(in);
-  Type scaleType = getElementTypeOrSelf(scale);
   Type outType = getElementTypeOrSelf(out);
 
   int64_t opInWidth = 32 / inType.getIntOrFloatBitWidth();
 
   VectorType outVecType = dyn_cast<VectorType>(out.getType());
-  VectorType scaleVecType = dyn_cast<VectorType>(scale.getType());
 
   if (outVecType && outVecType.isScalable())
     return failure();
@@ -469,12 +489,10 @@ ScalingExtFRewritePattern::matchAndRewrite(arith::ScalingExtFOp op,
       isa<RankedTensorType>(scale.getType()))
     return failure();
 
-  Type scaleF32Type =
-      scaleVecType ? VectorType::get(scaleVecType.getShape(), f32) : f32;
-  if (scaleType.getIntOrFloatBitWidth() < 32)
-    scale = arith::ExtFOp::create(rewriter, loc, scaleF32Type, scale);
-  else if (scaleType.getIntOrFloatBitWidth() > 32)
-    scale = arith::TruncFOp::create(rewriter, loc, scaleF32Type, scale);
+  FailureOr<Value> scaleF32 = getF32Scale(rewriter, loc, scale);
+  if (failed(scaleF32))
+    return rewriter.notifyMatchFailure(op, "scale is not f8E8M0FNU");
+  scale = *scaleF32;
 
   VectorType extScaleResultType = VectorType::get(opOutWidth, outType);
 
@@ -572,13 +590,10 @@ ScalingTruncFRewritePattern::matchAndRewrite(arith::ScalingTruncFOp op,
   Value scale = op.getScale();
   Value out = op.getOut();
 
-  Type f32 = rewriter.getF32Type();
   Type inType = getElementTypeOrSelf(in);
-  Type scaleType = getElementTypeOrSelf(scale);
   Type outType = getElementTypeOrSelf(out);
 
   VectorType outVecType = dyn_cast<VectorType>(out.getType());
-  VectorType scaleVecType = dyn_cast<VectorType>(scale.getType());
   if (outVecType && outVecType.isScalable())
     return failure();
 
@@ -587,12 +602,10 @@ ScalingTruncFRewritePattern::matchAndRewrite(arith::ScalingTruncFOp op,
       isa<RankedTensorType>(scale.getType()))
     return failure();
 
-  Type scaleF32Type =
-      scaleVecType ? VectorType::get(scaleVecType.getShape(), f32) : f32;
-  if (scaleType.getIntOrFloatBitWidth() < 32)
-    scale = arith::ExtFOp::create(rewriter, loc, scaleF32Type, scale);
-  else if (scaleType.getIntOrFloatBitWidth() > 32)
-    scale = arith::TruncFOp::create(rewriter, loc, scaleF32Type, scale);
+  FailureOr<Value> scaleF32 = getF32Scale(rewriter, loc, scale);
+  if (failed(scaleF32))
+    return rewriter.notifyMatchFailure(op, "scale is not f8E8M0FNU");
+  scale = *scaleF32;
 
   Value zero = arith::ConstantOp::create(rewriter, loc, outType,
                                          rewriter.getFloatAttr(outType, 0.0));
