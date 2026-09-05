@@ -265,23 +265,9 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       SmallVector<VPValue *, 4> VPOperands;
       for (Value *Op : Inst->operands())
         VPOperands.push_back(getOrCreateVPOperand(Op));
-
-      if (auto *CI = dyn_cast<CastInst>(Inst)) {
-        NewR = VPIRBuilder.createScalarCast(CI->getOpcode(), VPOperands[0],
-                                            CI->getType(), CI->getDebugLoc(),
-                                            VPIRFlags(*CI), MD);
-        NewR->setUnderlyingValue(CI);
-      } else if (auto *LI = dyn_cast<LoadInst>(Inst)) {
-        NewR = VPIRBuilder.createScalarLoad(LI->getType(), VPOperands[0],
-                                            LI->getDebugLoc(), MD);
-        NewR->setUnderlyingValue(LI);
-      } else {
-        // Build VPInstruction for any arbitrary Instruction without specific
-        // representation in VPlan.
-        NewR = VPIRBuilder.createNaryOp(
-            Inst->getOpcode(), VPOperands, Inst, VPIRFlags(*Inst), MD,
-            Inst->getDebugLoc(), "", Inst->getType());
-      }
+      NewR = VPIRBuilder.createNaryOp(Inst->getOpcode(), VPOperands, Inst,
+                                      VPIRFlags(*Inst), MD, Inst->getDebugLoc(),
+                                      "", Inst->getType());
     }
 
     IRDef2VPValue[Inst] = NewR;
