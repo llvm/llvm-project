@@ -16,6 +16,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/CFG.h"
 #include <memory>
+#include <optional>
 
 using namespace clang::ast_matchers;
 
@@ -149,10 +150,9 @@ public:
       scanForSmartPtrWrap(BO);
       return;
     }
-    PointerLocation Loc;
-    if (resolveLocation(BO->getLHS(), Loc)) {
+    if (auto Loc = resolveLocation(BO->getLHS())) {
       const PointerState NewState = classify(BO->getRHS());
-      addTransition(std::move(Loc), NewState, BO);
+      addTransition(std::move(*Loc), NewState, BO);
     }
     scanForSmartPtrWrap(BO);
   }
@@ -225,8 +225,8 @@ private:
   }
 
   // Checking that a type (after expansion of typedef/using) is a specialization
-  // std::shared_ptr
-  bool isStdSharedPtrType(clang::QualType QT) {
+  // std::shared_ptr of std::unique_ptr
+  bool isSmartPtrType(clang::QualType QT) {
     QT = QT.getCanonicalType();
     const clang::CXXRecordDecl *RD = QT->getAsCXXRecordDecl();
     if (!RD)
@@ -237,27 +237,10 @@ private:
     static const auto SharedPtrMatcher =
         cxxRecordDecl(hasAnyName(SharedPointers));
 
-    return !match(SharedPtrMatcher, *RD, *Context).empty();
-  }
-
-  // Checking that a type (after expansion of typedef/using) is a specialization
-  // std::unique_ptr
-  bool isStdUniquePtrType(clang::QualType QT) {
-    QT = QT.getCanonicalType();
-    const clang::CXXRecordDecl *RD = QT->getAsCXXRecordDecl();
-    if (!RD)
-      return false;
-    if (!RD->getDeclName().isIdentifier())
-      return false;
-
     static const auto UniquePtrMatcher =
         cxxRecordDecl(hasAnyName(UniquePointers));
 
-    return !match(UniquePtrMatcher, *RD, *Context).empty();
-  }
-
-  bool isSmartPtrType(clang::QualType QT) {
-    return isStdSharedPtrType(QT) || isStdUniquePtrType(QT);
+    return !match(SharedPtrMatcher, *RD, *Context).empty() || !match(UniquePtrMatcher, *RD, *Context).empty();
   }
 
   // Attempts to recognize E as a tracked location:
@@ -265,10 +248,11 @@ private:
   // - MemberExpr(base, field), where field is in PtrFields (a.val / a->val),
   // and base is recognized STRUCTURALLY (without checking PtrVars for base -
   // since base is usually NOT a pointer, but a structure/object).
-  bool resolveLocation(const clang::Expr *E, PointerLocation &Out) {
+  std::optional<PointerLocation> resolveLocation(const clang::Expr *E) {
+    PointerLocation Out;
     const clang::Expr *S = stripWrappers(E);
     if (!S)
-      return false;
+      return std::nullopt;
 
     if (const auto *DRE = llvm::dyn_cast<clang::DeclRefExpr>(S)) {
       const auto *VD = llvm::dyn_cast<clang::VarDecl>(DRE->getDecl());
@@ -276,22 +260,22 @@ private:
         Out.Root = VD;
         Out.IsThis = false;
         Out.Path.clear();
-        return true;
+        return Out;
       }
-      return false;
+      return std::nullopt;
     }
 
     if (const auto *ME = llvm::dyn_cast<clang::MemberExpr>(S)) {
       const auto *FD = llvm::dyn_cast<clang::FieldDecl>(ME->getMemberDecl());
       if (!FD || !PtrFields.contains(FD))
-        return false;
+        return std::nullopt;
       if (!resolveBase(ME->getBase(), Out))
-        return false;
+        return std::nullopt;
       Out.Path.push_back(FD);
-      return true;
+      return Out;
     }
 
-    return false;
+    return std::nullopt;
   }
 
   // Defines the state that a pointer goes into when it is assigned/initialized
@@ -325,9 +309,8 @@ private:
 
     // b = a;  /  b = a.val;  -> infection with the CURRENT (for this block)
     // state of the source
-    PointerLocation SrcLoc;
-    if (resolveLocation(S, SrcLoc))
-      return getState(CurrentState, SrcLoc);
+    if (const auto SrcLoc = resolveLocation(S))
+      return getState(CurrentState, *SrcLoc);
 
     // An unknown expression of a pointer type (function call, type cast, etc.)
     // is considered an ordinary pointer.
@@ -384,9 +367,8 @@ private:
       return; // has already been processed within this call
 
     for (const clang::Expr *Arg : CE->arguments()) {
-      PointerLocation Loc;
-      if (resolveLocation(Arg, Loc))
-        addTransition(std::move(Loc), PS_SmartPtrWrapper, EnclosingStmt);
+      if (auto Loc = resolveLocation(Arg))
+        addTransition(std::move(*Loc), PS_SmartPtrWrapper, EnclosingStmt);
     }
   }
 
@@ -404,9 +386,8 @@ private:
       return; // has already been processed within this call
 
     for (const clang::Expr *Arg : ME->arguments()) {
-      PointerLocation Loc;
-      if (resolveLocation(Arg, Loc))
-        addTransition(std::move(Loc), PS_SmartPtrWrapper, EnclosingStmt);
+      if (auto Loc = resolveLocation(Arg))
+        addTransition(std::move(*Loc), PS_SmartPtrWrapper, EnclosingStmt);
     }
   }
 };
