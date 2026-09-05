@@ -240,3 +240,7 @@ TEST_P(PerfScriptTestHelper, ParseAndCheckFileHeader) {
   // should be 'size == 3' after the parsing this dummy MainEvents.
   parseAndCheckPerfScriptProfile(Buffer, Pid, 3);
 }
+
+#if !defined(X86_AVAILABLE) && !defined(AARCH64_AVAILABLE)
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(PerfScriptTestHelper);
+#endif // !defined(X86_AVAILABLE) && !defined(AARCH64_AVAILABLE)
