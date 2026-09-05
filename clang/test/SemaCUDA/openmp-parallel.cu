@@ -13,7 +13,7 @@ int main() {
     new int;
   }
 
-  auto Lambda = []() {
+  auto Lambda = []() { // expected-note {{in HD-promoted function 'operator()'}}
     #pragma omp parallel
     for (int i = 0; i < 100; i++) {
       foo(1); // expected-error {{reference to __device__ function 'foo' in __host__ __device__ function}}

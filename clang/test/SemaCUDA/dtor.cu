@@ -13,7 +13,7 @@ void host_fun() // dev-note {{'host_fun' declared here}}
 {}
 
 template <unsigned>
-constexpr void hd_fun() {
+constexpr void hd_fun() { // dev-note {{in HD-promoted function 'hd_fun<8U>'}}
   host_fun(); // dev-error {{reference to __host__ function 'host_fun' in __host__ __device__ function}}
 }
 
@@ -84,7 +84,7 @@ void host_fun() // dev-note {{'host_fun' declared here}}
 {}
 
 template <unsigned>
-constexpr void hd_fun() {
+constexpr void hd_fun() { // dev-note {{in HD-promoted function 'hd_fun<8U>'}}
   host_fun(); // dev-error {{reference to __host__ function 'host_fun' in __host__ __device__ function}}
 }
 

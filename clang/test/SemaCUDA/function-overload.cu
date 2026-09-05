@@ -406,6 +406,7 @@ inline __host__ __device__ void test_host_device_wrong_side_overloading_inline_n
 // wrong-sided overloading should cause diagnostic if it is emitted.
 // This inline function is emitted since it is called by an emitted function.
 inline __host__ __device__ void test_host_device_wrong_side_overloading_inline_diag() {
+  // expected-note@-1 2{{in HD-promoted function 'test_host_device_wrong_side_overloading_inline_diag'}}
   DeviceReturnTy ret1 = device_only_function(1);
   DeviceReturnTy2 ret2 = device_only_function(1.0f);
 #ifndef __CUDA_ARCH__
@@ -422,7 +423,7 @@ inline __host__ __device__ void test_host_device_wrong_side_overloading_inline_d
 
 __host__ __device__ void test_host_device_wrong_side_overloading_inline_diag_caller() {
   test_host_device_wrong_side_overloading_inline_diag();
-  // expected-note@-1 {{called by 'test_host_device_wrong_side_overloading_inline_diag_caller'}}
+  // expected-note@-1 2{{called by 'test_host_device_wrong_side_overloading_inline_diag_caller'}}
 }
 
 // Verify that we allow overloading function templates.
@@ -617,7 +618,7 @@ namespace TestDeferNoMatchingFuncEmitted {
     // devnodeferonly-note@-1{{'ag<TestDeferNoMatchingFuncEmitted::b::c>' declared here}}
   } // namespace b
   template <typename ae>
-  __host__ __device__ void ag(a<ae>) {
+  __host__ __device__ void ag(a<ae>) { // dev-note {{in HD-promoted function 'ag<}}
     ae e;
     ag(e);
     // devnodeferonly-error@-1{{reference to __host__ function 'ag<TestDeferNoMatchingFuncEmitted::b::c>' in __host__ __device__ function}}
