@@ -4397,9 +4397,35 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   case Builtin::BI__builtin_hlsl_resource_counterhandlefromimplicitbinding: {
     assert(TheCall->getNumArgs() == 3 && "expected 3 args");
-    QualType MainHandleTy = TheCall->getArg(0)->getType();
     // Update return type to be the attributed resource type from arg0
     // with added IsCounter flag.
+    QualType MainHandleTy = TheCall->getArg(0)->getType();
+    QualType CounterHandleTy =
+        createCounterHandleType(SemaRef.getASTContext(), MainHandleTy);
+    TheCall->setType(CounterHandleTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_resource_handlefromheap: {
+    if (SemaRef.checkArgCount(TheCall, 2) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().UnsignedIntTy))
+      return true;
+
+    // Update return type to be the attributed resource type from arg0.
+    QualType ResourceTy = TheCall->getArg(0)->getType();
+    TheCall->setType(ResourceTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_resource_counterhandlefromheap: {
+    if (SemaRef.checkArgCount(TheCall, 2) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().UnsignedIntTy))
+      return true;
+    // Update return type to be the attributed resource type from arg0
+    // with added IsCounter flag.
+    QualType MainHandleTy = TheCall->getArg(0)->getType();
     QualType CounterHandleTy =
         createCounterHandleType(SemaRef.getASTContext(), MainHandleTy);
     TheCall->setType(CounterHandleTy);

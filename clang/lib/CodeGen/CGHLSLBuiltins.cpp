@@ -1063,6 +1063,28 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return EmitIntrinsicCall(IntrinsicID, {HandleTy, MainHandle->getType()},
                              Args);
   }
+  case Builtin::BI__builtin_hlsl_resource_handlefromheap: {
+    llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
+    Value *IndexOp = EmitScalarExpr(E->getArg(1));
+    llvm::Intrinsic::ID IntrinsicID =
+        CGM.getHLSLRuntime().getCreateHandleFromHeapIntrinsic();
+    SmallVector<Value *> Args{IndexOp};
+    return Builder.CreateIntrinsic(HandleTy, IntrinsicID, Args);
+  }
+  case Builtin::BI__builtin_hlsl_resource_counterhandlefromheap: {
+    Value *MainHandle = EmitScalarExpr(E->getArg(0));
+    if (!CGM.getTriple().isSPIRV())
+      return MainHandle;
+
+    llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
+    Value *IndexOp = EmitScalarExpr(E->getArg(1));
+    llvm::Intrinsic::ID IntrinsicID =
+        llvm::Intrinsic::spv_resource_counterhandlefromheap;
+    SmallVector<Value *> Args{MainHandle, IndexOp};
+    return EmitIntrinsicCall(IntrinsicID, {HandleTy, MainHandle->getType()},
+                             Args);
+  }
+
   case Builtin::BI__builtin_hlsl_resource_nonuniformindex: {
     Value *IndexOp = EmitScalarExpr(E->getArg(0));
     llvm::Type *RetTy = ConvertType(E->getType());
