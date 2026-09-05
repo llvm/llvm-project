@@ -20,8 +20,16 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Rematerializer.h"
+#include "llvm/Support/CommandLine.h"
 
 namespace llvm {
+
+struct VGPRThresholdParser : public cl::parser<unsigned> {
+  VGPRThresholdParser(cl::Option &O) : cl::parser<unsigned>(O) {}
+  bool parse(cl::Option &O, StringRef ArgName, StringRef Arg, unsigned &Value);
+};
+
+extern cl::opt<unsigned, false, VGPRThresholdParser> VGPRThresholdPercentOpt;
 
 class SIMachineFunctionInfo;
 class SIRegisterInfo;
@@ -35,7 +43,8 @@ enum class GCNSchedStageID : unsigned {
   ClusteredLowOccupancyReschedule = 3,
   PreRARematerialize = 4,
   ILPInitialSchedule = 5,
-  MemoryClauseInitialSchedule = 6
+  MemoryClauseInitialSchedule = 6,
+  LiveIntervalRPReschedule = 7
 };
 
 #ifndef NDEBUG
@@ -88,10 +97,6 @@ protected:
 
   std::vector<unsigned> MaxPressure;
 
-  unsigned SGPRExcessLimit;
-
-  unsigned VGPRExcessLimit;
-
   unsigned TargetOccupancy;
 
   MachineFunction *MF;
@@ -132,13 +137,19 @@ public:
   // Bias for VGPR limits under a high register pressure.
   const unsigned HighRPVGPRBias = 7;
 
-  unsigned SGPRCriticalLimit;
+  unsigned SGPRExcessLimit = 0;
 
-  unsigned VGPRCriticalLimit;
+  unsigned VGPRExcessLimit = 0;
+
+  unsigned SGPRCriticalLimit = 0;
+
+  unsigned VGPRCriticalLimit = 0;
 
   unsigned SGPRLimitBias = 0;
 
   unsigned VGPRLimitBias = 0;
+
+  unsigned VGPRThresholdPercent = 0;
 
   GCNSchedStrategy(const MachineSchedContext *C);
 
@@ -265,6 +276,7 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   friend class ClusteredLowOccStage;
   friend class PreRARematStage;
   friend class ILPInitialScheduleStage;
+  friend class LiveIntervalRPStage;
   friend class RegionPressureMap;
 
   const GCNSubtarget &ST;
@@ -795,6 +807,21 @@ public:
   MemoryClauseInitialScheduleStage(GCNSchedStageID StageID,
                                    GCNScheduleDAGMILive &DAG)
       : GCNSchedStage(StageID, DAG) {}
+};
+
+class LiveIntervalRPStage : public GCNSchedStage {
+public:
+  bool initGCNSchedStage() override;
+  bool initGCNRegion() override;
+  void finalizeGCNRegion() override;
+
+  LiveIntervalRPStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
+      : GCNSchedStage(StageID, DAG) {}
+
+private:
+  unsigned SavedVGPRThresholdPercent = 0;
+  unsigned SavedVGPRExcessLimit = 0;
+  unsigned SavedVGPRCriticalLimit = 0;
 };
 
 class GCNPostScheduleDAGMILive final : public ScheduleDAGMI {
