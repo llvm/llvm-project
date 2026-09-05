@@ -18667,11 +18667,10 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
 
 // Returns true if floating point contraction is allowed on the FMUL-SDValue
 // `N`
-static bool isContractableFMUL(const TargetOptions &Options, SDValue N) {
+static bool isContractableFMUL(SDValue N) {
   assert(N.getOpcode() == ISD::FMUL);
 
-  return Options.AllowFPOpFusion == FPOpFusion::Fast ||
-         N->getFlags().hasAllowContract();
+  return N->getFlags().hasAllowContract();
 }
 
 /// Try to perform FMA combining on a given FADD node.
@@ -19223,8 +19222,6 @@ SDValue DAGCombiner::visitFMULForFMADistributiveCombine(SDNode *N) {
 
   assert(N->getOpcode() == ISD::FMUL && "Expected FMUL Operation");
 
-  const TargetOptions &Options = DAG.getTarget().Options;
-
   // The transforms below are incorrect when x == 0 and y == inf, because the
   // intermediate multiplication produces a nan.
   SDValue FAdd = N0.getOpcode() == ISD::FADD ? N0 : N1;
@@ -19233,7 +19230,7 @@ SDValue DAGCombiner::visitFMULForFMADistributiveCombine(SDNode *N) {
 
   // Floating-point multiply-add without intermediate rounding.
   bool HasFMA =
-      isContractableFMUL(Options, SDValue(N, 0)) &&
+      isContractableFMUL(SDValue(N, 0)) &&
       (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::FMA, VT)) &&
       TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT);
 

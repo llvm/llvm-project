@@ -57,7 +57,7 @@ define float @loadfpimm7() {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    fli.s fa0, nan
 ; CHECK-NEXT:    ret
-  ret float 0x7FF8000000000000
+  ret float +qnan
 }
 
 define float @loadfpimm8() {

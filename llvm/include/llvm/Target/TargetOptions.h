@@ -141,15 +141,6 @@ public:
         EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
         VerifyArgABICompliance(true) {}
 
-  /// DisableFramePointerElim - This returns true if frame pointer elimination
-  /// optimization should be disabled for the given machine function.
-  LLVM_ABI bool DisableFramePointerElim(const MachineFunction &MF) const;
-
-  /// FramePointerIsReserved - This returns true if the frame pointer must
-  /// always either point to a new frame record or be un-modified in the given
-  /// function.
-  LLVM_ABI bool FramePointerIsReserved(const MachineFunction &MF) const;
-
   /// If greater than 0, override the default value of
   /// MCAsmInfo::BinutilsVersion.
   std::pair<int, int> BinutilsVersion{0, 0};

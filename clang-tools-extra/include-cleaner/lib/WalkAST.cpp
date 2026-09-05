@@ -17,6 +17,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
@@ -531,53 +532,57 @@ public:
   bool VisitCastExpr(CastExpr *E) {
     // Handle implicit or explicit casts between Objective-C object pointers
     // aimed towards protocol-qualification (e.g., `ClassName *` to
-    // `id<Proto>`).
-    QualType SourceType = E->getSubExpr()->getType();
-    QualType DestType = E->getType();
+    // `id<Proto>`), as well as C-pointer-to-ObjC and id-to-ObjC pointer casts.
+    const auto *DestPtr = E->getType()->getAs<ObjCObjectPointerType>();
 
-    const auto *SrcPtr = SourceType->getAs<ObjCObjectPointerType>();
-    const auto *DestPtr = DestType->getAs<ObjCObjectPointerType>();
+    if (!DestPtr)
+      return true;
+
+    const auto *SrcPtr =
+        E->getSubExpr()->getType()->getAs<ObjCObjectPointerType>();
+
+    // Handles non-arc CPointer to ObjCPointer and id to ObjCPointer casts.
+    if (isa<ImplicitCastExpr>(E) &&
+        (E->getCastKind() == CK_CPointerToObjCPointerCast ||
+         (SrcPtr && SrcPtr->isObjCIdType())))
+      report(E->getExprLoc(), DestPtr->getInterfaceDecl(), RefType::Implicit);
+
+    if (!SrcPtr)
+      return true;
 
     // If we're casting from a known class pointer to protocol conformance.
-    if (SrcPtr && DestPtr && SrcPtr->getInterfaceDecl()) {
-      const ObjCInterfaceDecl *Class = SrcPtr->getInterfaceDecl();
-      ASTContext &Ctx = Class->getASTContext();
+    const ObjCInterfaceDecl *Class = SrcPtr->getInterfaceDecl();
+    if (!Class)
+      return true;
 
-      // For every protocol required by the destination type.
-      for (const ObjCProtocolDecl *Proto : DestPtr->quals()) {
-        const ObjCInterfaceDecl *Current = Class;
-        // Search the inheritance hierarchy for the provider of conformance.
-        while (Current) {
-          bool ConformsDirectly = false;
-          for (const auto *PI : Current->protocols()) {
-            if (Ctx.ProtocolCompatibleWithProtocol(
-                    const_cast<ObjCProtocolDecl *>(Proto),
-                    const_cast<ObjCProtocolDecl *>(PI))) {
-              ConformsDirectly = true;
-              break;
-            }
-          }
-          // If the class itself provides the conformance directly, we don't
-          // need to keep searching Categories.
-          if (ConformsDirectly)
+    ASTContext &Ctx = Class->getASTContext();
+
+    // For every protocol required by the destination type.
+    for (ObjCProtocolDecl *Proto : DestPtr->quals()) {
+      const ObjCInterfaceDecl *Current = Class;
+      // Search the inheritance hierarchy for the provider of conformance.
+      while (Current) {
+        bool ConformsDirectly = false;
+        for (auto *PI : Current->protocols()) {
+          if (Ctx.ProtocolCompatibleWithProtocol(Proto, PI)) {
+            ConformsDirectly = true;
             break;
-
-          // If the class doesn't declare direct conformance but conformance is
-          // injected via a visible Category attached to this class, note that
-          // the category header is required by recording an Implicit reference
-          // to it.
-          for (const auto *Cat : Current->visible_categories()) {
-            for (auto *PI : Cat->protocols()) {
-              if (Ctx.ProtocolCompatibleWithProtocol(
-                      const_cast<ObjCProtocolDecl *>(Proto),
-                      const_cast<ObjCProtocolDecl *>(PI))) {
-                report(E->getExprLoc(), const_cast<ObjCCategoryDecl *>(Cat),
-                       RefType::Implicit);
-              }
-            }
           }
-          Current = Current->getSuperClass();
         }
+        // If the class itself provides the conformance directly, we don't
+        // need to keep searching Categories.
+        if (ConformsDirectly)
+          break;
+
+        // If the class doesn't declare direct conformance but conformance is
+        // injected via a visible Category attached to this class, note that
+        // the category header is required by recording an Implicit reference
+        // to it.
+        for (auto *Cat : Current->visible_categories())
+          for (auto *PI : Cat->protocols())
+            if (Ctx.ProtocolCompatibleWithProtocol(Proto, PI))
+              report(E->getExprLoc(), Cat, RefType::Implicit);
+        Current = Current->getSuperClass();
       }
     }
     return true;

@@ -1009,7 +1009,12 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       }
     }
 
-    return Builder.createScalarCast(Opcode, Op, S->getType(), DL);
+    std::optional<VPIRFlags> Flags;
+    if (Opcode == Instruction::ZExt)
+      Flags =
+          VPIRFlags::NonNegFlagsTy(SE.isKnownNonNegative(Cast->getOperand()));
+
+    return Builder.createScalarCast(Opcode, Op, S->getType(), DL, Flags);
   }
   case scUMaxExpr:
   case scSMaxExpr:

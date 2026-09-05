@@ -1964,7 +1964,11 @@ def CIR_SideEffect : CIR_I32EnumAttr<
     %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(const)
     ```
   }];
+
+  let genSpecializedAttr = 0;
 }
+
+def CIR_SideEffectAttr : CIR_EnumAttr<CIR_SideEffect, "side_effect">;
 
 //===----------------------------------------------------------------------===//
 // StaticLocalGuardAttr

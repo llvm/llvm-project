@@ -449,16 +449,15 @@ TEST_F(MatchSelectPatternTest, VectorFMinOtherOrdered) {
 }
 
 TEST_F(MatchSelectPatternTest, VectorNotFMinimum) {
-  parseAssembly(
-      "define <4 x float> @test(<4 x float> %a) {\n"
-      "  %1 = fcmp ule <4 x float> %a, \n"
-      "    <float 5.0, float 0x7ff8000000000000, float 5.0, float 5.0>\n"
-      "  %A = select <4 x i1> %1, <4 x float> %a,\n"
-      "     <4 x float> <float 5.0, float 0x7ff8000000000000, float 5.0, float "
-      "5.0>\n"
-      "  ret <4 x float> %A\n"
-      "}\n");
-  // The lane that contains a NaN (0x7ff80...) behaves like a
+  parseAssembly("define <4 x float> @test(<4 x float> %a) {\n"
+                "  %1 = fcmp ule <4 x float> %a, \n"
+                "    <float 5.0, float +qnan, float 5.0, float 5.0>\n"
+                "  %A = select <4 x i1> %1, <4 x float> %a,\n"
+                "     <4 x float> <float 5.0, float +qnan, float 5.0, float "
+                "5.0>\n"
+                "  ret <4 x float> %A\n"
+                "}\n");
+  // The lane that contains a NaN (0x7FC0...) behaves like a
   // non-NaN-propagating min and the other lines behave like a NaN-propagating
   // min, so check that neither is returned.
   expectPattern({SPF_UNKNOWN, SPNB_NA, false});
@@ -2175,10 +2174,10 @@ TEST_F(ComputeKnownFPClassTest, CannotBeOrderedLessThanZero) {
 
 TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_OrdNan) {
   parseAssembly("define i1 @test(double %arg) {\n"
-                "  %A = fcmp ord double %arg, 0x7FF8000000000000"
-                "  %A2 = fcmp uno double %arg, 0x7FF8000000000000"
-                "  %A3 = fcmp oeq double %arg, 0x7FF8000000000000"
-                "  %A4 = fcmp ueq double %arg, 0x7FF8000000000000"
+                "  %A = fcmp ord double %arg, +qnan"
+                "  %A2 = fcmp uno double %arg, +qnan"
+                "  %A3 = fcmp oeq double %arg, +qnan"
+                "  %A4 = fcmp ueq double %arg, +qnan"
                 "  ret i1 %A\n"
                 "}\n");
 

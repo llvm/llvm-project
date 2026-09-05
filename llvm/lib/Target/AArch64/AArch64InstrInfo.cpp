@@ -7569,11 +7569,9 @@ static bool isCombineInstrCandidateFP(const MachineInstr &Inst) {
   case AArch64::FSUBv2f32:
   case AArch64::FSUBv2f64:
   case AArch64::FSUBv4f32:
-    TargetOptions Options = Inst.getParent()->getParent()->getTarget().Options;
-    // We can fuse FADD/FSUB with FMUL, if fusion is either allowed globally by
-    // the target options or if FADD/FSUB has the contract fast-math flag.
-    return Options.AllowFPOpFusion == FPOpFusion::Fast ||
-           Inst.getFlag(MachineInstr::FmContract);
+    // We can fuse FADD/FSUB with FMUL, if FADD/FSUB has the contract fast-math
+    // flag.
+    return Inst.getFlag(MachineInstr::FmContract);
   }
   return false;
 }

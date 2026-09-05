@@ -5,6 +5,8 @@
 // dictionary. These used to be IntegerAttr subclasses, which printed as
 // `2 : i32`.
 
+!s32i = !cir.int<s, 32>
+
 module {
 
 // CHECK-LABEL: cir.func @cast_attr() {
@@ -61,5 +63,85 @@ cir.func @tls_model_attr() {
   cir.return {cir.test = [#cir.tls_model<tls_dyn>,
                           #cir.tls_model<tls_local_exec>]}
 }
+
+// CHECK-LABEL: cir.func @mem_order_attr() {
+cir.func @mem_order_attr() {
+  // CHECK: cir.return {cir.test = [#cir.mem_order<relaxed>, #cir.mem_order<acq_rel>, #cir.mem_order<seq_cst>]}
+  cir.return {cir.test = [#cir.mem_order<relaxed>, #cir.mem_order<acq_rel>,
+                          #cir.mem_order<seq_cst>]}
+}
+
+// CHECK-LABEL: cir.func @sync_scope_attr() {
+cir.func @sync_scope_attr() {
+  // CHECK: cir.return {cir.test = [#cir.sync_scope<single_thread>, #cir.sync_scope<hip_workgroup>, #cir.sync_scope<opencl_all_svm_devices>]}
+  cir.return {cir.test = [#cir.sync_scope<single_thread>,
+                          #cir.sync_scope<hip_workgroup>,
+                          #cir.sync_scope<opencl_all_svm_devices>]}
+}
+
+// CHECK-LABEL: cir.func @atomic_fetch_attr() {
+cir.func @atomic_fetch_attr() {
+  // CHECK: cir.return {cir.test = [#cir.atomic_fetch<add>, #cir.atomic_fetch<nand>, #cir.atomic_fetch<minimum_num>]}
+  cir.return {cir.test = [#cir.atomic_fetch<add>,
+                          #cir.atomic_fetch<nand>,
+                          #cir.atomic_fetch<minimum_num>]}
+}
+
+// The None case declares no keyword, so it spells as its symbol name.
+
+// CHECK-LABEL: cir.func @assume_bundle_attr() {
+cir.func @assume_bundle_attr() {
+  // CHECK: cir.return {cir.test = [#cir.assume_bundle<None>, #cir.assume_bundle<align>, #cir.assume_bundle<separate_storage>, #cir.assume_bundle<dereferenceable>]}
+  cir.return {cir.test = [#cir.assume_bundle<None>,
+                          #cir.assume_bundle<align>,
+                          #cir.assume_bundle<separate_storage>,
+                          #cir.assume_bundle<dereferenceable>]}
+}
+
+// CHECK-LABEL: cir.func @asm_flavor_attr() {
+cir.func @asm_flavor_attr() {
+  // CHECK: cir.return {cir.test = [#cir.asm_flavor<x86_att>, #cir.asm_flavor<x86_intel>]}
+  cir.return {cir.test = [#cir.asm_flavor<x86_att>,
+                          #cir.asm_flavor<x86_intel>]}
+}
+
+// CHECK-LABEL: cir.func @linkage_attr() {
+cir.func @linkage_attr() {
+  // CHECK: cir.return {cir.test = [#cir.linkage<external>, #cir.linkage<linkonce_odr>, #cir.linkage<cir_private>]}
+  cir.return {cir.test = [#cir.linkage<external>,
+                          #cir.linkage<linkonce_odr>,
+                          #cir.linkage<cir_private>]}
+}
+
+// CHECK-LABEL: cir.func @calling_conv_attr() {
+cir.func @calling_conv_attr() {
+  // CHECK: cir.return {cir.test = [#cir.calling_conv<c>, #cir.calling_conv<ptx_kernel>, #cir.calling_conv<amdgpu_kernel>]}
+  cir.return {cir.test = [#cir.calling_conv<c>, #cir.calling_conv<ptx_kernel>,
+                          #cir.calling_conv<amdgpu_kernel>]}
+}
+
+// CHECK-LABEL: cir.func @side_effect_attr() {
+cir.func @side_effect_attr() {
+  // CHECK: cir.return {cir.test = [#cir.side_effect<all>, #cir.side_effect<pure>, #cir.side_effect<const>]}
+  cir.return {cir.test = [#cir.side_effect<all>, #cir.side_effect<pure>,
+                          #cir.side_effect<const>]}
+}
+
+// The operations themselves keep printing a bare keyword.
+
+// CHECK-LABEL: cir.func @mem_order_sync_scope_ops(%arg0: !cir.ptr<!s32i>) {
+cir.func @mem_order_sync_scope_ops(%arg0: !cir.ptr<!s32i>) {
+  // CHECK: %0 = cir.load syncscope(system) atomic(seq_cst) %arg0 : !cir.ptr<!s32i>, !s32i
+  %0 = cir.load syncscope(system) atomic(seq_cst) %arg0 : !cir.ptr<!s32i>, !s32i
+  // CHECK: cir.atomic.fence syncscope(system) seq_cst
+  cir.atomic.fence syncscope(system) seq_cst
+  cir.return
+}
+
+// cir.global's linkage is the one bare keyword that cannot be checked from
+// inside a function.
+
+// CHECK-LABEL: cir.global "private" internal @g = #cir.int<0> : !s32i
+cir.global "private" internal @g = #cir.int<0> : !s32i
 
 }
