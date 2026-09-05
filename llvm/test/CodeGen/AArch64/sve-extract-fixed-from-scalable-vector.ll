@@ -67,10 +67,9 @@ define <2 x i16> @extract_v2i16_nxv32i16_8(<vscale x 32 x i16> %arg) {
 ; CHECK-NEXT:    addvl sp, sp, #-8
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0xc0, 0x00, 0x1e, 0x22 // sp + 16 + 64 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    str z3, [sp, #3, mul vl]
+; CHECK-NEXT:    add x8, sp, #32
 ; CHECK-NEXT:    str z2, [sp, #2, mul vl]
-; CHECK-NEXT:    add x8, x8, #32
 ; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    str z3, [sp, #7, mul vl]
@@ -78,8 +77,8 @@ define <2 x i16> @extract_v2i16_nxv32i16_8(<vscale x 32 x i16> %arg) {
 ; CHECK-NEXT:    str z1, [sp, #5, mul vl]
 ; CHECK-NEXT:    str z0, [sp, #4, mul vl]
 ; CHECK-NEXT:    ld1 { v0.h }[0], [x8]
-; CHECK-NEXT:    addvl x8, sp, #4
-; CHECK-NEXT:    add x8, x8, #34
+; CHECK-NEXT:    add x8, sp, #34
+; CHECK-NEXT:    addvl x8, x8, #4
 ; CHECK-NEXT:    ld1 { v0.h }[2], [x8]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    addvl sp, sp, #8
@@ -210,10 +209,9 @@ define <4 x i3> @extract_v4i3_nxv32i3_16(<vscale x 32 x i3> %arg) {
 ; CHECK-NEXT:    addvl sp, sp, #-8
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0xc0, 0x00, 0x1e, 0x22 // sp + 16 + 64 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    str z0, [sp]
-; CHECK-NEXT:    add x8, x8, #16
 ; CHECK-NEXT:    str z1, [sp, #3, mul vl]
 ; CHECK-NEXT:    str z0, [sp, #2, mul vl]
 ; CHECK-NEXT:    str z1, [sp, #5, mul vl]
@@ -221,14 +219,14 @@ define <4 x i3> @extract_v4i3_nxv32i3_16(<vscale x 32 x i3> %arg) {
 ; CHECK-NEXT:    str z1, [sp, #7, mul vl]
 ; CHECK-NEXT:    str z0, [sp, #6, mul vl]
 ; CHECK-NEXT:    ld1 { v0.b }[0], [x8]
-; CHECK-NEXT:    addvl x8, sp, #2
-; CHECK-NEXT:    add x8, x8, #17
+; CHECK-NEXT:    add x8, sp, #17
+; CHECK-NEXT:    addvl x8, x8, #2
 ; CHECK-NEXT:    ld1 { v0.b }[2], [x8]
-; CHECK-NEXT:    addvl x8, sp, #4
-; CHECK-NEXT:    add x8, x8, #18
+; CHECK-NEXT:    add x8, sp, #18
+; CHECK-NEXT:    addvl x8, x8, #4
 ; CHECK-NEXT:    ld1 { v0.b }[4], [x8]
-; CHECK-NEXT:    addvl x8, sp, #6
-; CHECK-NEXT:    add x8, x8, #19
+; CHECK-NEXT:    add x8, sp, #19
+; CHECK-NEXT:    addvl x8, x8, #6
 ; CHECK-NEXT:    ld1 { v0.b }[6], [x8]
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    addvl sp, sp, #8
