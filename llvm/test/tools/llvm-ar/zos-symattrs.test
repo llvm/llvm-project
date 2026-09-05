@@ -4,7 +4,7 @@
 ## The three attribute bits come from GOFF ESD record fields:
 ##   bit 2 (0x4): 64-bit  - AMODE == ESD_AMODE_64
 ##   bit 1 (0x2): XPLink  - LinkageType == ESD_LT_XPLink
-##   bit 0 (0x1): WSA     - parent ED NameSpaceId == ESD_NS_Parts
+##   bit 0 (0x1): WSA     - NameSpaceId == ESD_NS_Parts
 ##
 ## GOFF objects are produced by compiling embedded .ll files with llc.
 
@@ -28,14 +28,15 @@
 # ARMAP-NEXT: s_data in data.o (flags: 0x00000003 [XPLink + WSA])
 
 ## 2. Test that basic archive operations still work on a GOFF archive.
-##    llvm-ar t should list all member names.
-# RUN: llvm-ar t %t.dir/test.a | FileCheck %s --check-prefix=LIST
+##    llvm-ar t should list exactly the expected member names and nothing else.
+# RUN: llvm-ar t %t.dir/test.a | FileCheck %s --check-prefix=LIST \
+# RUN:   --implicit-check-not={{.+}}
 
-# LIST:      func.o
+# LIST: func.o
 # LIST-NEXT: data.o
 
 ## 3. Test mixed archive: one GOFF object and one bitcode object together.
-##    The bitcode member should produce attribute of 0 (no GOFF ESD data available).
+##    The bitcode member should have an attribute of 0 (no GOFF ESD data available).
 # RUN: llc -mtriple=s390x-ibm-zos -filetype=obj %t.dir/func2.ll -o %t.dir/func2.o
 # RUN: llvm-as %t.dir/mixed.ll -o %t.dir/mixed.bc
 # RUN: llvm-ar rcD --format=zos %t.dir/mixed.a %t.dir/func2.o %t.dir/mixed.bc

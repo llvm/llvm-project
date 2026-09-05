@@ -687,7 +687,7 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
         printNBits(Out, Kind, M.Symbols[I]);
       printNBits(Out, Kind, Pos); // member offset
       if (isZOSArchive(Kind))
-        printNBits(Out, Kind, M.SymbolAttrs[I]); // symbol attribute flags
+        printNBits(Out, Kind, M.SymbolAttrs[I]); // symbol attributes
     }
     Pos += M.Header.size() + M.Data.size() + M.Padding.size();
   }
@@ -1087,7 +1087,7 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
       if (isZOSArchive(Kind)) {
         auto *GOFFObj = dyn_cast_or_null<GOFFObjectFile>(D.SymFile.get());
         if (GOFFObj) {
-          for (const object::BasicSymbolRef &S : GOFFObj->symbols()) {
+          for (object::BasicSymbolRef S : GOFFObj->symbols()) {
             if (!isArchiveSymbol(S))
               continue;
             D.SymbolAttrs.push_back(
@@ -1097,7 +1097,7 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
           // For non-GOFF symbolic files (e.g. bitcode/IR), there is no z/OS
           // archive attribute data available. Pad SymbolAttrs to stay in sync
           // with Symbols.
-          D.SymbolAttrs.resize(D.Symbols.size(), 0);
+          D.SymbolAttrs.resize(D.Symbols.size());
         }
       }
       if (D.SymFile)
