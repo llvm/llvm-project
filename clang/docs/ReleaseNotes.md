@@ -299,6 +299,12 @@ features cannot lower the translation-unit ABI level;
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
 
+- When a `constexpr` range-based for loop variable cannot be initialized by a
+  constant expression, Clang now emits a single note identifying the read of
+  the loop's implicit `__begin` variable, instead of a generic note about
+  reading a non-constexpr variable followed by a `declared here` note.
+  (#GH211926)
+
 - Fixed concept template parameters not being recognized in `-Wdocumentation`
   when mentioned in tparam comments. (#GH64087)
 
