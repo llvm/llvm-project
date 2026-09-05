@@ -3526,7 +3526,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
           // padding/alignment is being carried by the struct.
           if (getContext().getTypeSize(Ty) ==
               getContext().getTypeSize(FieldTy)) {
-            if (IsReturnType)
+            if (Kind == ClassifyKind::Return)
               return ABIArgInfo::getDirect(FieldLLTy);
             if (Width <= 128)
               return ABIArgInfo::getDirect(FieldLLTy);
@@ -3544,7 +3544,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
       // Empty C++ objects take no register slots.
       if (isEmptyRecord(getContext(), Ty, /*AllowArrays=*/true))
         return ABIArgInfo::getIgnore();
-      if (IsReturnType)
+      if (Kind == ClassifyKind::Return)
         return ABIArgInfo::getDirect();
       // Pass as an integer of the aggregate size when it fits in one register,
       // otherwise expand it into its 8-byte parts.
@@ -3564,7 +3564,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     llvm::Type *ElemLLTy = CGT.ConvertType(ElemTy);
     if (llvm::FixedVectorType::isValidElementType(ElemLLTy)) {
       auto *V2 = llvm::FixedVectorType::get(ElemLLTy, 2);
-      if (IsReturnType)
+      if (Kind == ClassifyKind::Return)
         return ABIArgInfo::getDirect(V2);
       // A 128-bit complex value fits in one XMM register; a wider one (e.g.
       // long double complex) is expanded into its 64-bit parts.
@@ -3652,13 +3652,13 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
       // wincall passes 128-bit integers in two integer registers and returns
       // them in RAX (low) and RDX (high), per the spec.
       if (IsWinCall && BT->getKind() != BuiltinType::Float128) {
-        if (IsReturnType)
+        if (Kind == ClassifyKind::Return)
           return ABIArgInfo::getDirect();
         return ABIArgInfo::getExpand();
       }
       if (IsWinCall) {
         // std::float128_t is passed like __int128: in two integer registers.
-        if (IsReturnType)
+        if (Kind == ClassifyKind::Return)
           return ABIArgInfo::getDirect(llvm::FixedVectorType::get(
               llvm::Type::getInt64Ty(getVMContext()), 2));
         return ABIArgInfo::getExpand();
