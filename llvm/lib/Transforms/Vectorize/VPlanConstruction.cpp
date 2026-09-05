@@ -1540,9 +1540,17 @@ void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
     ElementCount EpilogueVF, unsigned EpilogueUF, unsigned MainLoopStep,
     unsigned EpilogueLoopStep, ScalarEvolution &SE) {
   // Add the minimum iteration check for the epilogue vector loop.
+  VPBuilder Builder(cast<VPBasicBlock>(Plan.getEntry()));
+
+  if (Plan.hasTailFolded()) {
+    assert(!RequiresScalarEpilogue &&
+           "Expected no scalar epilogue for tail-folded plan");
+    Builder.createNaryOp(VPInstruction::BranchOnCond, Plan.getFalse());
+    return;
+  }
+
   VPValue *TC = Plan.getTripCount();
   Value *TripCount = TC->getLiveInIRValue();
-  VPBuilder Builder(cast<VPBasicBlock>(Plan.getEntry()));
   VPValue *VFxUF = Builder.createExpandSCEV(SE.getElementCount(
       TripCount->getType(), (EpilogueVF * EpilogueUF), SCEV::FlagNUW));
   VPValue *Count = Builder.createSub(TC, Plan.getOrAddLiveIn(VectorTripCount),
