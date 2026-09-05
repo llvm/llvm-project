@@ -4563,7 +4563,14 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
       return Load ? X86::VMOVUPSZrm : X86::VMOVUPSZmr;
   case 1024:
     assert(X86::TILERegClass.hasSubClassEq(RC) && "Unknown 1024-byte regclass");
-    assert(STI.hasAMXTILE() && "Using 8*1024-bit register requires AMX-TILE");
+    assert((STI.hasAMXTILE() || STI.hasACEV1()) &&
+           "Using 8*1024-bit register requires AMX-TILE or ACE");
+    // ACE configures palette 2, which has no TILELOADD/TILESTORED. Spill and
+    // reload through pseudos that X86LowerTileCopy expands into TILEMOVROW.
+    // This is the only place these pseudos are created, so it is what keeps
+    // the row-by-row sequences confined to ACE targets.
+    if (STI.hasACEV1())
+      return Load ? X86::ACE_TILERELOAD : X86::ACE_TILESPILL;
 #define GET_EGPR_IF_ENABLED(OPC) (STI.hasEGPR() ? OPC##_EVEX : OPC)
     return Load ? GET_EGPR_IF_ENABLED(X86::TILELOADD)
                 : GET_EGPR_IF_ENABLED(X86::TILESTORED);

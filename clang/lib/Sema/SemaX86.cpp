@@ -495,6 +495,18 @@ bool SemaX86::CheckBuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_tcvtrowps2phl:
   case X86::BI__builtin_ia32_tcvtrowd2ps:
   case X86::BI__builtin_ia32_tilemovrow:
+  // The ACE outer products name only the accumulator tile; their two sources
+  // are ZMM values, so neither the range nor the duplicate rule applies there.
+  case X86::BI__builtin_ia32_top2bf16ps:
+  case X86::BI__builtin_ia32_top4buud:
+  case X86::BI__builtin_ia32_top4busd:
+  case X86::BI__builtin_ia32_top4bssd:
+  case X86::BI__builtin_ia32_top4bsud:
+  case X86::BI__builtin_ia32_top4mxhf8ps:
+  case X86::BI__builtin_ia32_top4mxbhf8ps:
+  case X86::BI__builtin_ia32_top4mxhbf8ps:
+  case X86::BI__builtin_ia32_top4mxbf8ps:
+  case X86::BI__builtin_ia32_top4mxbssps:
     return CheckBuiltinTileArgumentsRange(TheCall, 0);
   case X86::BI__builtin_ia32_tdpbssd:
   case X86::BI__builtin_ia32_tdpbsud:

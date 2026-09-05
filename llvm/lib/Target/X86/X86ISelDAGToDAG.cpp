@@ -5683,6 +5683,25 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       ReplaceNode(Node, CNode);
       return;
     }
+    // AMX-AVX512 internal intrinsics - set program model for struct-based API
+    case Intrinsic::x86_tcvtrowd2ps_internal:
+    case Intrinsic::x86_tcvtrowps2bf16h_internal:
+    case Intrinsic::x86_tcvtrowps2bf16l_internal:
+    case Intrinsic::x86_tcvtrowps2phh_internal:
+    case Intrinsic::x86_tcvtrowps2phl_internal:
+    case Intrinsic::x86_tilemovrow_internal: {
+      if (!Subtarget->hasAMXAVX512() && !Subtarget->hasACEV1())
+        break;
+      auto *MFI =
+          CurDAG->getMachineFunction().getInfo<X86MachineFunctionInfo>();
+      // Set program model for struct-based API (ManagedRA)
+      if (Subtarget->hasACEV1())
+        MFI->setACEProgModel(ACEProgModelEnum::ACE_ManagedRA);
+      else
+        MFI->setAMXProgModel(AMXProgModelEnum::ManagedRA);
+      // Let pattern matching handle the rest
+      break;
+    }
     }
     break;
   }

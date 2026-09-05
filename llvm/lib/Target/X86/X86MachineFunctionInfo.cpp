@@ -15,7 +15,8 @@ using namespace llvm;
 
 yaml::X86MachineFunctionInfo::X86MachineFunctionInfo(
     const llvm::X86MachineFunctionInfo &MFI)
-    : AMXProgModel(MFI.getAMXProgModel()) {}
+    : AMXProgModel(MFI.getAMXProgModel()), ACEProgModel(MFI.getACEProgModel()) {
+}
 
 void yaml::X86MachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<X86MachineFunctionInfo>::mapping(YamlIO, *this);
@@ -31,6 +32,7 @@ MachineFunctionInfo *X86MachineFunctionInfo::clone(
 void X86MachineFunctionInfo::initializeBaseYamlFields(
     const yaml::X86MachineFunctionInfo &YamlMFI) {
   AMXProgModel = YamlMFI.AMXProgModel;
+  ACEProgModel = YamlMFI.ACEProgModel;
 }
 
 void X86MachineFunctionInfo::anchor() { }

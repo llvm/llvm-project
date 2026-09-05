@@ -210,8 +210,10 @@ void X86FastPreTileConfigImpl::InitializeTileConfigStackSpace() {
         .addReg(Xmm);
   }
   // Fill in the palette first.
+  // Use Palette 2 for ACE v1, Palette 1 for AMX.
+  int PaletteId = ST->hasACEV1() ? 2 : 1;
   addFrameReference(BuildMI(MBB, MI, DL, TII->get(X86::MOV8mi)), CfgSS)
-      .addImm(1);
+      .addImm(PaletteId);
 }
 
 /// Insert spill instruction for \p AssignedReg before \p Before.
@@ -223,9 +225,39 @@ void X86FastPreTileConfigImpl::spill(MachineBasicBlock::iterator Before,
   LLVM_DEBUG(dbgs() << " to stack slot #" << FI << '\n');
 
   const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
-  // Don't need shape information for tile store, becasue it is adjacent to
-  // the tile def instruction.
-  TII->storeRegToStackSlot(*MBB, Before, VirtReg, Kill, FI, &RC, Register());
+
+  // ACE configures palette 2, which has no TILESTORED - use TILEMOVROW
+  // row-by-row through a scratch ZMM.
+  // FIXME: This defines the tile and the scratch register once per row, which
+  // is not valid SSA. X86VolatileTileData also still emits the AMX load/store
+  // intrinsics at -O0, so the ACE -O0 path needs both fixed together.
+  if (ST->hasACEV1()) {
+    const DebugLoc &DL = Before->getDebugLoc();
+    Register ScratchZMM = MRI->createVirtualRegister(&X86::VR512RegClass);
+
+    const unsigned NumRows = 16;
+    const unsigned RowSize = 64;
+
+    for (unsigned Row = 0; Row < NumRows; ++Row) {
+      // tilemovrow $row, %tmm, %zmm
+      // Only kill src on the last row read.
+      bool KillSrcNow = (Row == NumRows - 1) && Kill;
+      BuildMI(*MBB, Before, DL, TII->get(X86::TILEMOVROWrti), ScratchZMM)
+          .addReg(VirtReg, getKillRegState(KillSrcNow))
+          .addImm(Row);
+
+      // vmovups %zmm, row*64(%sp)
+      MachineInstrBuilder MIB =
+          BuildMI(*MBB, Before, DL, TII->get(X86::VMOVUPSZmr));
+      addFrameReference(MIB, FI, Row * RowSize);
+      MIB.addReg(ScratchZMM, RegState::Kill);
+    }
+  } else {
+    // AMX: Use storeRegToStackSlot (TILESTORED)
+    // Don't need shape information for tile store, because it is adjacent to
+    // the tile def instruction.
+    TII->storeRegToStackSlot(*MBB, Before, VirtReg, Kill, FI, &RC, Register());
+  }
   ++NumStores;
 
   // TODO: update DBG_VALUEs
@@ -238,6 +270,7 @@ void X86FastPreTileConfigImpl::reload(MachineBasicBlock::iterator UseMI,
   int FI = getStackSpaceFor(OrigReg);
   const TargetRegisterClass &RC = *MRI->getRegClass(OrigReg);
   Register TileReg;
+
   // Fold copy to tileload
   // BB1:
   // spill src to s
@@ -250,25 +283,52 @@ void X86FastPreTileConfigImpl::reload(MachineBasicBlock::iterator UseMI,
     TileReg = UseMI->getOperand(0).getReg();
   else
     TileReg = MRI->createVirtualRegister(&RC);
-  // Can't use TII->loadRegFromStackSlot(), because we need the shape
-  // information for reload.
-  // tileloadd (%sp, %idx), %tmm
-  unsigned Opc = X86::PTILELOADDV;
-  Register StrideReg = MRI->createVirtualRegister(&X86::GR64_NOSPRegClass);
-  // FIXME: MBB is not the parent of UseMI.
-  MachineInstr *NewMI = BuildMI(*UseMI->getParent(), UseMI, DebugLoc(),
-                                TII->get(X86::MOV64ri), StrideReg)
-                            .addImm(64);
-  NewMI = addFrameReference(
-      BuildMI(*UseMI->getParent(), UseMI, DebugLoc(), TII->get(Opc), TileReg)
-          .addReg(RowMO->getReg())
-          .addReg(ColMO->getReg()),
-      FI);
-  MachineOperand &MO = NewMI->getOperand(5);
-  MO.setReg(StrideReg);
-  MO.setIsKill(true);
-  RowMO->setIsKill(false);
-  ColMO->setIsKill(false);
+
+  // ACE configures palette 2, which has no TILELOADD - use TILEMOVROW
+  // row-by-row through a scratch ZMM.
+  // FIXME: See the corresponding comment in spill().
+  if (ST->hasACEV1()) {
+    const DebugLoc &DL = UseMI->getDebugLoc();
+    Register ScratchZMM = MRI->createVirtualRegister(&X86::VR512RegClass);
+
+    const unsigned NumRows = 16;
+    const unsigned RowSize = 64;
+
+    for (unsigned Row = 0; Row < NumRows; ++Row) {
+      // vmovups row*64(%sp), %zmm
+      MachineInstrBuilder MIB = BuildMI(*UseMI->getParent(), UseMI, DL,
+                                        TII->get(X86::VMOVUPSZrm), ScratchZMM);
+      addFrameReference(MIB, FI, Row * RowSize);
+
+      // tilemovrow $row, %zmm, %tmm
+      BuildMI(*UseMI->getParent(), UseMI, DL, TII->get(X86::TILEMOVROWri),
+              TileReg)
+          .addReg(ScratchZMM, RegState::Kill)
+          .addImm(Row);
+    }
+  } else {
+    // AMX: Use PTILELOADDV
+    // Can't use TII->loadRegFromStackSlot(), because we need the shape
+    // information for reload.
+    // tileloadd (%sp, %idx), %tmm
+    unsigned Opc = X86::PTILELOADDV;
+    Register StrideReg = MRI->createVirtualRegister(&X86::GR64_NOSPRegClass);
+    // FIXME: MBB is not the parent of UseMI.
+    MachineInstr *NewMI = BuildMI(*UseMI->getParent(), UseMI, DebugLoc(),
+                                  TII->get(X86::MOV64ri), StrideReg)
+                              .addImm(64);
+    NewMI = addFrameReference(
+        BuildMI(*UseMI->getParent(), UseMI, DebugLoc(), TII->get(Opc), TileReg)
+            .addReg(RowMO->getReg())
+            .addReg(ColMO->getReg()),
+        FI);
+    MachineOperand &MO = NewMI->getOperand(5);
+    MO.setReg(StrideReg);
+    MO.setIsKill(true);
+    RowMO->setIsKill(false);
+    ColMO->setIsKill(false);
+  }
+
   // Erase copy instruction after it is folded.
   if (UseMI->isCopy()) {
     UseMI->eraseFromParent();
@@ -684,8 +744,9 @@ bool X86FastPreTileConfigImpl::configBasicBlock(MachineBasicBlock &MBB) {
 
 bool X86FastPreTileConfigImpl::runOnMachineFunction(MachineFunction &MFunc) {
   X86FI = MFunc.getInfo<X86MachineFunctionInfo>();
-  // Early exit in the common case of non-AMX code.
-  if (X86FI->getAMXProgModel() != AMXProgModelEnum::ManagedRA)
+  // Early exit in the common case of non-AMX/ACE code.
+  if (X86FI->getAMXProgModel() != AMXProgModelEnum::ManagedRA &&
+      X86FI->getACEProgModel() != ACEProgModelEnum::ACE_ManagedRA)
     return false;
 
   MF = &MFunc;

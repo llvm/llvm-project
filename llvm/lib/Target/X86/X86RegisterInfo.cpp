@@ -542,6 +542,9 @@ BitVector X86RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Set the SIMD floating point control register as reserved.
   Reserved.set(X86::MXCSR);
 
+  // Set the ACE block scale register as reserved.
+  Reserved.set(X86::BSR0);
+
   // Set the stack-pointer register and its aliases as reserved.
   for (const MCPhysReg &SubReg : subregs_inclusive(X86::RSP))
     Reserved.set(SubReg);
@@ -715,7 +718,7 @@ unsigned X86RegisterInfo::getNumSupportedRegs(const MachineFunction &MF) const {
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   if (ST.hasEGPR())
     return X86::NUM_TARGET_REGS;
-  if (ST.hasAMXTILE())
+  if (ST.hasAMXTILE() || ST.hasACEV1())
     return X86::TMM7 + 1;
   if (ST.hasAVX512())
     return X86::K6_K7 + 1;
@@ -1153,7 +1156,20 @@ static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
   case X86::PTDPBF8PSV:
   case X86::PTDPBHF8PSV:
   case X86::PTDPHBF8PSV:
-  case X86::PTDPHF8PSV: {
+  case X86::PTDPHF8PSV:
+  // ACE internal pseudos - same pattern: operands 1,2 are row,col
+  case X86::PTOP2BF16PSV:
+  case X86::PTOP4BUUDV:
+  case X86::PTOP4BUSDV:
+  case X86::PTOP4BSSDV:
+  case X86::PTOP4BSUDV:
+  case X86::PTOP4MXHF8PSV:
+  case X86::PTOP4MXBHF8PSV:
+  case X86::PTOP4MXHBF8PSV:
+  case X86::PTOP4MXBF8PSV:
+  case X86::PTOP4MXBSSPSV:
+  case X86::PTILEMOVCOLV:
+  case X86::PTILEMOVROWV: {
     MachineOperand &MO1 = MI->getOperand(1);
     MachineOperand &MO2 = MI->getOperand(2);
     ShapeT Shape(&MO1, &MO2, MRI);
