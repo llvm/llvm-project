@@ -17124,6 +17124,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       }
 
       auto *I = cast<Instruction>(UniqueValues[Idx]);
+      // Undef/poison extract indices form holes in the reused source vector,
+      // such lanes are free.
+      std::optional<unsigned> ExtIdx = getExtractIndex(I);
+      if (!ExtIdx)
+        return InstructionCost(TTI::TCC_Free);
       if (!SrcVecTy) {
         if (ShuffleOrOp == Instruction::ExtractElement) {
           auto *EE = cast<ExtractElementInst>(I);
@@ -17146,8 +17151,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           // Use getExtractWithExtendCost() to calculate the cost of
           // extractelement/ext pair.
           InstructionCost Cost = TTI->getExtractWithExtendCost(
-              Ext->getOpcode(), Ext->getType(), SrcVecTy, *getExtractIndex(I),
-              CostKind);
+              Ext->getOpcode(), Ext->getType(), SrcVecTy, *ExtIdx, CostKind);
           // Subtract the cost of s|zext which is subtracted separately.
           Cost -= TTI->getCastInstrCost(
               Ext->getOpcode(), Ext->getType(), I->getType(),
@@ -17157,7 +17161,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       }
       if (DemandedElts.isZero())
         DemandedElts = APInt::getZero(getNumElements(SrcVecTy));
-      DemandedElts.setBit(*getExtractIndex(I));
+      DemandedElts.setBit(*ExtIdx);
       return InstructionCost(TTI::TCC_Free);
     };
     auto GetVectorCost = [&, &TTI = *TTI](InstructionCost CommonCost) {

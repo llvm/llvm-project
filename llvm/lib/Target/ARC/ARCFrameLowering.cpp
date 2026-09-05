@@ -489,7 +489,7 @@ MachineBasicBlock::iterator ARCFrameLowering::eliminateCallFramePseudoInstr(
 
 bool ARCFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
-  bool HasFP = MF.getTarget().Options.DisableFramePointerElim(MF) ||
+  bool HasFP = MF.disableFramePointerElim() ||
                MF.getFrameInfo().hasVarSizedObjects() ||
                MF.getFrameInfo().isFrameAddressTaken() ||
                RegInfo->hasStackRealignment(MF);

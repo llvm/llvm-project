@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/InitializePasses.h"
@@ -692,7 +693,6 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
 class AMDGPURewriteAGPRCopyMFMALegacy : public MachineFunctionPass {
 public:
   static char ID;
-  RegisterClassInfo RegClassInfo;
 
   AMDGPURewriteAGPRCopyMFMALegacy() : MachineFunctionPass(ID) {}
 
@@ -707,12 +707,14 @@ public:
     AU.addRequired<VirtRegMapWrapperLegacy>();
     AU.addRequired<LiveRegMatrixWrapperLegacy>();
     AU.addRequired<LiveStacksWrapperLegacy>();
+    AU.addRequired<MachineRegisterClassInfoWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
 
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addPreserved<VirtRegMapWrapperLegacy>();
     AU.addPreserved<LiveRegMatrixWrapperLegacy>();
     AU.addPreserved<LiveStacksWrapperLegacy>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
 
     AU.setPreservesAll();
@@ -728,6 +730,7 @@ INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(LiveRegMatrixWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(LiveStacksWrapperLegacy)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(AMDGPURewriteAGPRCopyMFMALegacy, DEBUG_TYPE,
                     "AMDGPU Rewrite AGPR-Copy-MFMA", false, false)
@@ -742,14 +745,13 @@ bool AMDGPURewriteAGPRCopyMFMALegacy::runOnMachineFunction(
   if (skipFunction(MF.getFunction()))
     return false;
 
-  RegClassInfo.runOnMachineFunction(MF);
-
   auto &VRM = getAnalysis<VirtRegMapWrapperLegacy>().getVRM();
   auto &LRM = getAnalysis<LiveRegMatrixWrapperLegacy>().getLRM();
   auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   auto &LSS = getAnalysis<LiveStacksWrapperLegacy>().getLS();
+  auto &RCI = getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
   auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  AMDGPURewriteAGPRCopyMFMAImpl Impl(MF, VRM, LRM, LIS, LSS, RegClassInfo, MDT);
+  AMDGPURewriteAGPRCopyMFMAImpl Impl(MF, VRM, LRM, LIS, LSS, RCI, MDT);
   return Impl.run(MF);
 }
 
@@ -760,11 +762,10 @@ AMDGPURewriteAGPRCopyMFMAPass::run(MachineFunction &MF,
   LiveRegMatrix &LRM = MFAM.getResult<LiveRegMatrixAnalysis>(MF);
   LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
   LiveStacks &LSS = MFAM.getResult<LiveStacksAnalysis>(MF);
+  RegisterClassInfo &RCI = MFAM.getResult<MachineRegisterClassAnalysis>(MF);
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
-  RegisterClassInfo RegClassInfo;
-  RegClassInfo.runOnMachineFunction(MF);
 
-  AMDGPURewriteAGPRCopyMFMAImpl Impl(MF, VRM, LRM, LIS, LSS, RegClassInfo, MDT);
+  AMDGPURewriteAGPRCopyMFMAImpl Impl(MF, VRM, LRM, LIS, LSS, RCI, MDT);
   if (!Impl.run(MF))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
@@ -773,6 +774,7 @@ AMDGPURewriteAGPRCopyMFMAPass::run(MachineFunction &MF,
       .preserve<VirtRegMapAnalysis>()
       .preserve<SlotIndexesAnalysis>()
       .preserve<LiveIntervalsAnalysis>()
-      .preserve<LiveRegMatrixAnalysis>();
+      .preserve<LiveRegMatrixAnalysis>()
+      .preserve<MachineRegisterClassAnalysis>();
   return PA;
 }

@@ -189,7 +189,7 @@ define float @ret_canonicalize_ieee_constant_qnan() denormal_fpenv(ieee|ieee) {
 ; CHECK-NEXT:    [[CALL:%.*]] = call noundef nofpclass(snan inf zero sub norm) float @llvm.canonicalize.f32(float noundef +qnan) #[[ATTR12]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %call = call float @llvm.canonicalize.f32(float 0x7FF8000000000000)
+  %call = call float @llvm.canonicalize.f32(float +qnan)
   ret float %call
 }
 
@@ -289,7 +289,7 @@ define float @ret_canonicalize_daz_constant_qnan() denormal_fpenv(preservesign) 
 ; CHECK-NEXT:    [[CALL:%.*]] = call noundef nofpclass(snan inf zero sub norm) float @llvm.canonicalize.f32(float noundef +qnan) #[[ATTR12]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %call = call float @llvm.canonicalize.f32(float 0x7FF8000000000000)
+  %call = call float @llvm.canonicalize.f32(float +qnan)
   ret float %call
 }
 
@@ -389,7 +389,7 @@ define float @ret_canonicalize_dapz_constant_qnan() denormal_fpenv(positivezero|
 ; CHECK-NEXT:    [[CALL:%.*]] = call noundef nofpclass(snan inf zero sub norm) float @llvm.canonicalize.f32(float noundef +qnan) #[[ATTR12]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %call = call float @llvm.canonicalize.f32(float 0x7FF8000000000000)
+  %call = call float @llvm.canonicalize.f32(float +qnan)
   ret float %call
 }
 
@@ -489,7 +489,7 @@ define float @ret_canonicalize_dynamic_constant_qnan() denormal_fpenv(dynamic) {
 ; CHECK-NEXT:    [[CALL:%.*]] = call noundef nofpclass(snan inf sub norm) float @llvm.canonicalize.f32(float noundef +qnan) #[[ATTR12]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %call = call float @llvm.canonicalize.f32(float 0x7FF8000000000000)
+  %call = call float @llvm.canonicalize.f32(float +qnan)
   ret float %call
 }
 
