@@ -23,6 +23,7 @@
 #include "llvm/Support/AllocToken.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SipHash.h"
+#include <cstdint>
 
 namespace clang {
 namespace interp {
@@ -4378,6 +4379,69 @@ static bool interp__builtin_ia32_gfni_mul(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_x86_comi(InterpState &S, CodePtr OpPC,
+                                     const InterpFrame *Frame,
+                                     const CallExpr *Call, unsigned ID,
+                                     uint64_t Predicate) {
+  const Pointer &VectorB = S.Stk.pop<Pointer>();
+  const Pointer &VectorA = S.Stk.pop<Pointer>();
+
+  if (VectorA.getNumElems() == 0 ||
+      VectorA.getNumElems() != VectorB.getNumElems())
+    return false;
+
+  llvm::APFloat A = VectorA.elem<Floating>(0).getAPFloat();
+  llvm::APFloat B = VectorB.elem<Floating>(0).getAPFloat();
+  bool Matches = MatchesPredicate(Predicate, A.compare(B));
+  pushInteger(S, Matches, Call->getType());
+  return true;
+}
+
+static bool interp__builtin_x86_cmp(InterpState &S, CodePtr OpPC,
+                                    const InterpFrame *Frame,
+                                    const CallExpr *Call, unsigned ID,
+                                    uint64_t Predicate, bool IsScalar) {
+  const Pointer &VectorB = S.Stk.pop<Pointer>();
+  const Pointer &VectorA = S.Stk.pop<Pointer>();
+  Pointer &Dst = S.Stk.peek<Pointer>();
+
+  unsigned NumLanes = VectorA.getNumElems();
+  if (NumLanes != VectorB.getNumElems())
+    return false;
+
+  for (unsigned I = 0; I != NumLanes; ++I) {
+    // Handle cmpss/cmpsd
+    if (IsScalar && I > 0) {
+      // Copy the upper 3 packed elements from a to the upper elements of dst
+      Dst.elem<Floating>(I) = VectorA.elem<Floating>(I);
+      continue;
+    }
+
+    llvm::APFloat AElement = VectorA.elem<Floating>(I).getAPFloat();
+    llvm::APFloat BElement = VectorB.elem<Floating>(I).getAPFloat();
+
+    auto CompareResult = AElement.compare(BElement);
+    bool Matches = MatchesPredicate(Predicate, CompareResult);
+
+    // Create bit patterns for comparison results:
+    // True = all bits set (0xFFFFFFFF for float, 0xFFFFFFFFFFFFFFFF for double)
+    // False = all bits zero
+    const llvm::fltSemantics &Sem = AElement.getSemantics();
+    unsigned BitWidth = llvm::APFloat::getSizeInBits(Sem);
+
+    if (Matches) {
+      llvm::APFloat True(Sem, llvm::APInt::getAllOnes(BitWidth));
+      Dst.elem<Floating>(I) = Floating(True);
+    } else {
+      llvm::APFloat False(Sem, llvm::APInt(BitWidth, 0));
+      Dst.elem<Floating>(I) = Floating(False);
+    }
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
 static bool interp__builtin_ia32_vpdp(InterpState &S, CodePtr OpPC,
                                       const CallExpr *Call, bool IsSaturating) {
   assert(Call->getNumArgs() == 3);
@@ -5835,14 +5899,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pblendd128:
   case clang::X86::BI__builtin_ia32_pblendd256:
     return interp__builtin_ia32_shuffle_generic(
-      S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
-        // Bit index for mask.
-        unsigned MaskBit = (ShuffleMask >> (DstIdx % 8)) & 0x1;
-        unsigned SrcVecIdx = MaskBit ? 1 : 0;  // 1 = TrueVec, 0 = FalseVec
-        return std::pair<unsigned, int>{SrcVecIdx, static_cast<int>(DstIdx)};
-      });
-
-
+        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
+          // Bit index for mask.
+          unsigned MaskBit = (ShuffleMask >> (DstIdx % 8)) & 0x1;
+          unsigned SrcVecIdx = MaskBit ? 1 : 0; // 1 = TrueVec, 0 = FalseVec
+          return std::pair<unsigned, int>{SrcVecIdx, static_cast<int>(DstIdx)};
+        });
 
   case clang::X86::BI__builtin_ia32_blendvpd:
   case clang::X86::BI__builtin_ia32_blendvpd256:
@@ -6664,6 +6726,204 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
             return B;
           return llvm::maximum(A, B);
         });
+
+  case X86::BI__builtin_ia32_comieq:
+  case X86::BI__builtin_ia32_ucomieq:
+  case X86::BI__builtin_ia32_comisdeq:
+  case X86::BI__builtin_ia32_ucomisdeq:
+    return interp__builtin_x86_comi(S, OpPC, Frame, Call, BuiltinID,
+                                    X86CmpImm::CMP_EQ_OQ);
+
+  case X86::BI__builtin_ia32_comilt:
+  case X86::BI__builtin_ia32_ucomilt:
+  case X86::BI__builtin_ia32_comisdlt:
+  case X86::BI__builtin_ia32_ucomisdlt:
+    return interp__builtin_x86_comi(S, OpPC, Frame, Call, BuiltinID,
+                                    X86CmpImm::CMP_LT_OQ);
+
+  case X86::BI__builtin_ia32_comile:
+  case X86::BI__builtin_ia32_ucomile:
+  case X86::BI__builtin_ia32_comisdle:
+  case X86::BI__builtin_ia32_ucomisdle:
+    return interp__builtin_x86_comi(S, OpPC, Frame, Call, BuiltinID,
+                                    X86CmpImm::CMP_LE_OQ);
+
+  case X86::BI__builtin_ia32_comigt:
+  case X86::BI__builtin_ia32_ucomigt:
+  case X86::BI__builtin_ia32_comisdgt:
+  case X86::BI__builtin_ia32_ucomisdgt:
+    return interp__builtin_x86_comi(S, OpPC, Frame, Call, BuiltinID,
+                                    X86CmpImm::CMP_GT_OQ);
+
+  case X86::BI__builtin_ia32_comige:
+  case X86::BI__builtin_ia32_ucomige:
+  case X86::BI__builtin_ia32_comisdge:
+  case X86::BI__builtin_ia32_ucomisdge:
+    return interp__builtin_x86_comi(S, OpPC, Frame, Call, BuiltinID,
+                                    X86CmpImm::CMP_GE_OQ);
+
+  case X86::BI__builtin_ia32_comineq:
+  case X86::BI__builtin_ia32_ucomineq:
+  case X86::BI__builtin_ia32_comisdneq:
+  case X86::BI__builtin_ia32_ucomisdneq:
+    return interp__builtin_x86_comi(S, OpPC, Frame, Call, BuiltinID,
+                                    X86CmpImm::CMP_NEQ_UQ);
+
+  case X86::BI__builtin_ia32_vcomish: {
+    uint64_t Predicate;
+    discard(S.Stk, *S.getContext().classify(Call->getArg(3)));
+    if (!popToUInt64(S, Call->getArg(2), Predicate))
+      return false;
+    return interp__builtin_x86_comi(S, OpPC, Frame, Call, BuiltinID, Predicate);
+  }
+
+  case X86::BI__builtin_ia32_cmpps:
+  case X86::BI__builtin_ia32_cmppd:
+  case X86::BI__builtin_ia32_cmpps256:
+  case X86::BI__builtin_ia32_cmppd256:
+  case X86::BI__builtin_ia32_cmpss:
+  case X86::BI__builtin_ia32_cmpsd: {
+    uint64_t Predicate;
+    if (!popToUInt64(S, Call->getArg(2), Predicate))
+      return false;
+
+    bool IsScalar = (BuiltinID == X86::BI__builtin_ia32_cmpss ||
+                     BuiltinID == X86::BI__builtin_ia32_cmpsd);
+
+    return interp__builtin_x86_cmp(S, OpPC, Frame, Call, BuiltinID, Predicate,
+                                   IsScalar);
+  }
+
+  case X86::BI__builtin_ia32_cmpeqss:
+  case X86::BI__builtin_ia32_cmpeqsd:
+  case X86::BI__builtin_ia32_cmpeqps:
+  case X86::BI__builtin_ia32_cmpeqpd: {
+    bool IsScalar = (BuiltinID == X86::BI__builtin_ia32_cmpeqss ||
+                     BuiltinID == X86::BI__builtin_ia32_cmpeqsd);
+
+    return interp__builtin_x86_cmp(S, OpPC, Frame, Call, BuiltinID,
+                                   X86CmpImm::CMP_EQ_OQ, IsScalar);
+  }
+
+  case X86::BI__builtin_ia32_cmpgess:
+  case X86::BI__builtin_ia32_cmpgesd:
+  case X86::BI__builtin_ia32_cmpgeps:
+  case X86::BI__builtin_ia32_cmpgepd: {
+    bool IsScalar = (BuiltinID == X86::BI__builtin_ia32_cmpgess ||
+                     BuiltinID == X86::BI__builtin_ia32_cmpgesd);
+
+    return interp__builtin_x86_cmp(S, OpPC, Frame, Call, BuiltinID,
+                                   X86CmpImm::CMP_GE_OS, IsScalar);
+  }
+
+  case X86::BI__builtin_ia32_cmpgtss:
+  case X86::BI__builtin_ia32_cmpgtsd:
+  case X86::BI__builtin_ia32_cmpgtps:
+  case X86::BI__builtin_ia32_cmpgtpd: {
+    bool IsScalar = (BuiltinID == X86::BI__builtin_ia32_cmpgtss ||
+                     BuiltinID == X86::BI__builtin_ia32_cmpgtsd);
+
+    return interp__builtin_x86_cmp(S, OpPC, Frame, Call, BuiltinID,
+                                   X86CmpImm::CMP_GT_OS, IsScalar);
+  }
+
+  case X86::BI__builtin_ia32_cmpless:
+  case X86::BI__builtin_ia32_cmplesd:
+  case X86::BI__builtin_ia32_cmpleps:
+  case X86::BI__builtin_ia32_cmplepd: {
+    bool IsScalar = (BuiltinID == X86::BI__builtin_ia32_cmpless ||
+                     BuiltinID == X86::BI__builtin_ia32_cmplesd);
+
+    return interp__builtin_x86_cmp(S, OpPC, Frame, Call, BuiltinID,
+                                   X86CmpImm::CMP_LE_OS, IsScalar);
+  }
+
+  case X86::BI__builtin_ia32_cmpltss:
+  case X86::BI__builtin_ia32_cmpltsd:
+  case X86::BI__builtin_ia32_cmpltps:
+  case X86::BI__builtin_ia32_cmpltpd: {
+    bool IsScalar = (BuiltinID == X86::BI__builtin_ia32_cmpltss ||
+                     BuiltinID == X86::BI__builtin_ia32_cmpltsd);
+
+    return interp__builtin_x86_cmp(S, OpPC, Frame, Call, BuiltinID,
+                                   X86CmpImm::CMP_LT_OS, IsScalar);
+  }
+
+  case X86::BI__builtin_ia32_cmpneqss:
+  case X86::BI__builtin_ia32_cmpneqsd:
+  case X86::BI__builtin_ia32_cmpneqps:
+  case X86::BI__builtin_ia32_cmpneqpd: {
+    bool IsScalar = (BuiltinID == X86::BI__builtin_ia32_cmpneqss ||
+                     BuiltinID == X86::BI__builtin_ia32_cmpneqsd);
+
+    return interp__builtin_x86_cmp(S, OpPC, Frame, Call, BuiltinID,
+                                   X86CmpImm::CMP_NEQ_UQ, IsScalar);
+  }
+
+  case X86::BI__builtin_ia32_cmpngess:
+  case X86::BI__builtin_ia32_cmpngesd:
+  case X86::BI__builtin_ia32_cmpngeps:
+  case X86::BI__builtin_ia32_cmpngepd: {
+    bool IsScalar = (BuiltinID == X86::BI__builtin_ia32_cmpngess ||
+                     BuiltinID == X86::BI__builtin_ia32_cmpngesd);
+
+    return interp__builtin_x86_cmp(S, OpPC, Frame, Call, BuiltinID,
+                                   X86CmpImm::CMP_NGE_US, IsScalar);
+  }
+  case X86::BI__builtin_ia32_cmpngtss:
+  case X86::BI__builtin_ia32_cmpngtsd:
+  case X86::BI__builtin_ia32_cmpngtps:
+  case X86::BI__builtin_ia32_cmpngtpd: {
+    bool IsScalar = (BuiltinID == X86::BI__builtin_ia32_cmpngtss ||
+                     BuiltinID == X86::BI__builtin_ia32_cmpngtsd);
+
+    return interp__builtin_x86_cmp(S, OpPC, Frame, Call, BuiltinID,
+                                   X86CmpImm::CMP_NGT_US, IsScalar);
+  }
+
+  case X86::BI__builtin_ia32_cmpnless:
+  case X86::BI__builtin_ia32_cmpnlesd:
+  case X86::BI__builtin_ia32_cmpnleps:
+  case X86::BI__builtin_ia32_cmpnlepd: {
+    bool IsScalar = (BuiltinID == X86::BI__builtin_ia32_cmpnless ||
+                     BuiltinID == X86::BI__builtin_ia32_cmpnlesd);
+
+    return interp__builtin_x86_cmp(S, OpPC, Frame, Call, BuiltinID,
+                                   X86CmpImm::CMP_NLE_US, IsScalar);
+  }
+
+  case X86::BI__builtin_ia32_cmpnltss:
+  case X86::BI__builtin_ia32_cmpnltsd:
+  case X86::BI__builtin_ia32_cmpnltps:
+  case X86::BI__builtin_ia32_cmpnltpd: {
+    bool IsScalar = (BuiltinID == X86::BI__builtin_ia32_cmpnltss ||
+                     BuiltinID == X86::BI__builtin_ia32_cmpnltsd);
+
+    return interp__builtin_x86_cmp(S, OpPC, Frame, Call, BuiltinID,
+                                   X86CmpImm::CMP_NLT_US, IsScalar);
+  }
+
+  case X86::BI__builtin_ia32_cmpordss:
+  case X86::BI__builtin_ia32_cmpordsd:
+  case X86::BI__builtin_ia32_cmpordps:
+  case X86::BI__builtin_ia32_cmpordpd: {
+    bool IsScalar = (BuiltinID == X86::BI__builtin_ia32_cmpordss ||
+                     BuiltinID == X86::BI__builtin_ia32_cmpordsd);
+
+    return interp__builtin_x86_cmp(S, OpPC, Frame, Call, BuiltinID,
+                                   X86CmpImm::CMP_ORD_Q, IsScalar);
+  }
+
+  case X86::BI__builtin_ia32_cmpunordss:
+  case X86::BI__builtin_ia32_cmpunordsd:
+  case X86::BI__builtin_ia32_cmpunordps:
+  case X86::BI__builtin_ia32_cmpunordpd: {
+    bool IsScalar = (BuiltinID == X86::BI__builtin_ia32_cmpunordss ||
+                     BuiltinID == X86::BI__builtin_ia32_cmpunordsd);
+
+    return interp__builtin_x86_cmp(S, OpPC, Frame, Call, BuiltinID,
+                                   X86CmpImm::CMP_UNORD_Q, IsScalar);
+  }
 
   case clang::X86::BI__builtin_ia32_maxss:
   case clang::X86::BI__builtin_ia32_maxsd:

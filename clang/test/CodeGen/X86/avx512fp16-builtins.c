@@ -421,89 +421,162 @@ __m512h test_mm512_zextph256_ph512(__m256h __a) {
 }
 TEST_CONSTEXPR(match_m512h(_mm512_zextph256_ph512((__m256h){1.0f16, 2.0f16, 3.0f16, 4.0f16, 5.0f16, 6.0f16, 7.0f16, 8.0f16, 9.0f16, 10.0f16, 11.0f16, 12.0f16, 13.0f16, 14.0f16, 15.0f16, 16.0f16}), 1.0f16, 2.0f16, 3.0f16, 4.0f16, 5.0f16, 6.0f16, 7.0f16, 8.0f16, 9.0f16, 10.0f16, 11.0f16, 12.0f16, 13.0f16, 14.0f16, 15.0f16, 16.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16, 0.0f16));
 
-int test_mm_comi_round_sh(__m128h __A, __m128h __B) {
-  // CHECK-LABEL: test_mm_comi_round_sh
-  // CHECK: @llvm.x86.avx512fp16.vcomi.sh(<8 x half> %{{.}}, <8 x half> %{{.}}, i32 0, i32 8)
-  return _mm_comi_round_sh(__A, __B, 0, _MM_FROUND_NO_EXC);
-}
-
 int test_mm_comi_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_comi_sh
   // CHECK: @llvm.x86.avx512fp16.vcomi.sh(<8 x half> %{{.}}, <8 x half> %{{.}}, i32 0, i32 4)
   return _mm_comi_sh(__A, __B, 0);
 }
 
+#define HNAN ((_Float16)__builtin_nanf(""))
+#define COMI_SH_CASE(FN, A0, B0, EXPECT)                                          \
+  TEST_CONSTEXPR(FN((__m128h){A0, +0.0f16, +0.0f16, +0.0f16, +0.0f16, +0.0f16,   \
+                             +0.0f16, +0.0f16},                                    \
+                    (__m128h){B0, +1.0f16, +1.0f16, +1.0f16, +1.0f16, +1.0f16,    \
+                             +1.0f16, +1.0f16}) == (EXPECT));
+#define COMI_SH_A(X)                                                               \
+  ((__m128h){X, +0.0f16, +0.0f16, +0.0f16, +0.0f16, +0.0f16, +0.0f16, +0.0f16})
+#define COMI_SH_B(X)                                                               \
+  ((__m128h){X, +1.0f16, +1.0f16, +1.0f16, +1.0f16, +1.0f16, +1.0f16, +1.0f16})
+#define COMI_SH_PRED_CASE(A0, B0, PRED, EXPECT)                                   \
+  TEST_CONSTEXPR(_mm_comi_sh(COMI_SH_A(A0), COMI_SH_B(B0), PRED) == (EXPECT));
+
+COMI_SH_PRED_CASE(+2.0f16, +2.0f16, _CMP_EQ_OQ, 1)
+COMI_SH_PRED_CASE(+1.0f16, +2.0f16, _CMP_EQ_OQ, 0)
+COMI_SH_PRED_CASE(HNAN, +2.0f16, _CMP_EQ_OQ, 0)
+
+COMI_SH_PRED_CASE(+1.0f16, +2.0f16, _CMP_LT_OQ, 1)
+COMI_SH_PRED_CASE(+2.0f16, +2.0f16, _CMP_LT_OQ, 0)
+COMI_SH_PRED_CASE(HNAN, +2.0f16, _CMP_LT_OQ, 0)
+
+COMI_SH_PRED_CASE(+2.0f16, +2.0f16, _CMP_LE_OQ, 1)
+COMI_SH_PRED_CASE(+3.0f16, +2.0f16, _CMP_LE_OQ, 0)
+COMI_SH_PRED_CASE(HNAN, +2.0f16, _CMP_LE_OQ, 0)
+
+COMI_SH_PRED_CASE(+3.0f16, +2.0f16, _CMP_GE_OQ, 1)
+COMI_SH_PRED_CASE(+1.0f16, +2.0f16, _CMP_GE_OQ, 0)
+COMI_SH_PRED_CASE(HNAN, +2.0f16, _CMP_GE_OQ, 0)
+
+COMI_SH_PRED_CASE(+3.0f16, +2.0f16, _CMP_GT_OQ, 1)
+COMI_SH_PRED_CASE(+2.0f16, +2.0f16, _CMP_GT_OQ, 0)
+COMI_SH_PRED_CASE(HNAN, +2.0f16, _CMP_GT_OQ, 0)
+
+COMI_SH_PRED_CASE(+1.0f16, +2.0f16, _CMP_NEQ_UQ, 1)
+COMI_SH_PRED_CASE(+2.0f16, +2.0f16, _CMP_NEQ_UQ, 0)
+COMI_SH_PRED_CASE(HNAN, +2.0f16, _CMP_NEQ_UQ, 1)
+
 int test_mm_comieq_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_comieq_sh
   // CHECK: @llvm.x86.avx512fp16.vcomi.sh(<8 x half> %{{.}}, <8 x half> %{{.}}, i32 16, i32 4)
   return _mm_comieq_sh(__A, __B);
 }
+COMI_SH_CASE(_mm_comieq_sh, +2.0f16, +2.0f16, 1)
+COMI_SH_CASE(_mm_comieq_sh, +1.0f16, +2.0f16, 0)
+COMI_SH_CASE(_mm_comieq_sh, HNAN, +2.0f16, 0)
 
 int test_mm_comilt_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_comilt_sh
   // CHECK: @llvm.x86.avx512fp16.vcomi.sh(<8 x half> %{{.}}, <8 x half> %{{.}}, i32 1, i32 4)
   return _mm_comilt_sh(__A, __B);
 }
+COMI_SH_CASE(_mm_comilt_sh, +1.0f16, +2.0f16, 1)
+COMI_SH_CASE(_mm_comilt_sh, +2.0f16, +2.0f16, 0)
+COMI_SH_CASE(_mm_comilt_sh, HNAN, +2.0f16, 0)
 
 int test_mm_comile_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_comile_sh
   // CHECK: @llvm.x86.avx512fp16.vcomi.sh(<8 x half> %{{.}}, <8 x half> %{{.}}, i32 2, i32 4)
   return _mm_comile_sh(__A, __B);
 }
+COMI_SH_CASE(_mm_comile_sh, +2.0f16, +2.0f16, 1)
+COMI_SH_CASE(_mm_comile_sh, +3.0f16, +2.0f16, 0)
+COMI_SH_CASE(_mm_comile_sh, HNAN, +2.0f16, 0)
 
 int test_mm_comigt_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_comigt_sh
   // CHECK: @llvm.x86.avx512fp16.vcomi.sh(<8 x half> %{{.}}, <8 x half> %{{.}}, i32 14, i32 4)
   return _mm_comigt_sh(__A, __B);
 }
+COMI_SH_CASE(_mm_comigt_sh, +3.0f16, +2.0f16, 1)
+COMI_SH_CASE(_mm_comigt_sh, +2.0f16, +2.0f16, 0)
+COMI_SH_CASE(_mm_comigt_sh, HNAN, +2.0f16, 0)
 
 int test_mm_comige_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_comige_sh
   // CHECK: @llvm.x86.avx512fp16.vcomi.sh(<8 x half> %{{.}}, <8 x half> %{{.}}, i32 13, i32 4)
   return _mm_comige_sh(__A, __B);
 }
+COMI_SH_CASE(_mm_comige_sh, +3.0f16, +2.0f16, 1)
+COMI_SH_CASE(_mm_comige_sh, +1.0f16, +2.0f16, 0)
+COMI_SH_CASE(_mm_comige_sh, HNAN, +2.0f16, 0)
 
 int test_mm_comineq_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_comineq_sh
   // CHECK: @llvm.x86.avx512fp16.vcomi.sh(<8 x half> %{{.}}, <8 x half> %{{.}}, i32 20, i32 4)
   return _mm_comineq_sh(__A, __B);
 }
+COMI_SH_CASE(_mm_comineq_sh, +1.0f16, +2.0f16, 1)
+COMI_SH_CASE(_mm_comineq_sh, +2.0f16, +2.0f16, 0)
+COMI_SH_CASE(_mm_comineq_sh, HNAN, +2.0f16, 1)
 
 int test_mm_ucomieq_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_ucomieq_sh
   // CHECK: @llvm.x86.avx512fp16.vcomi.sh(<8 x half> %{{.}}, <8 x half> %{{.}}, i32 0, i32 4)
   return _mm_ucomieq_sh(__A, __B);
 }
+COMI_SH_CASE(_mm_ucomieq_sh, +2.0f16, +2.0f16, 1)
+COMI_SH_CASE(_mm_ucomieq_sh, +1.0f16, +2.0f16, 0)
+COMI_SH_CASE(_mm_ucomieq_sh, HNAN, +2.0f16, 0)
 
 int test_mm_ucomilt_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_ucomilt_sh
   // CHECK: @llvm.x86.avx512fp16.vcomi.sh(<8 x half> %{{.}}, <8 x half> %{{.}}, i32 17, i32 4)
   return _mm_ucomilt_sh(__A, __B);
 }
+COMI_SH_CASE(_mm_ucomilt_sh, +1.0f16, +2.0f16, 1)
+COMI_SH_CASE(_mm_ucomilt_sh, +2.0f16, +2.0f16, 0)
+COMI_SH_CASE(_mm_ucomilt_sh, HNAN, +2.0f16, 0)
 
 int test_mm_ucomile_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_ucomile_sh
   // CHECK: @llvm.x86.avx512fp16.vcomi.sh(<8 x half> %{{.}}, <8 x half> %{{.}}, i32 18, i32 4)
   return _mm_ucomile_sh(__A, __B);
 }
+COMI_SH_CASE(_mm_ucomile_sh, +2.0f16, +2.0f16, 1)
+COMI_SH_CASE(_mm_ucomile_sh, +3.0f16, +2.0f16, 0)
+COMI_SH_CASE(_mm_ucomile_sh, HNAN, +2.0f16, 0)
 
 int test_mm_ucomigt_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_ucomigt_sh
   // CHECK: @llvm.x86.avx512fp16.vcomi.sh(<8 x half> %{{.}}, <8 x half> %{{.}}, i32 30, i32 4)
   return _mm_ucomigt_sh(__A, __B);
 }
+COMI_SH_CASE(_mm_ucomigt_sh, +3.0f16, +2.0f16, 1)
+COMI_SH_CASE(_mm_ucomigt_sh, +2.0f16, +2.0f16, 0)
+COMI_SH_CASE(_mm_ucomigt_sh, HNAN, +2.0f16, 0)
 
 int test_mm_ucomige_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_ucomige_sh
   // CHECK: @llvm.x86.avx512fp16.vcomi.sh(<8 x half> %{{.}}, <8 x half> %{{.}}, i32 29, i32 4)
   return _mm_ucomige_sh(__A, __B);
 }
+COMI_SH_CASE(_mm_ucomige_sh, +3.0f16, +2.0f16, 1)
+COMI_SH_CASE(_mm_ucomige_sh, +1.0f16, +2.0f16, 0)
+COMI_SH_CASE(_mm_ucomige_sh, HNAN, +2.0f16, 0)
 
 int test_mm_ucomineq_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: test_mm_ucomineq_sh
   // CHECK: @llvm.x86.avx512fp16.vcomi.sh(<8 x half> %{{.}}, <8 x half> %{{.}}, i32 4, i32 4)
   return _mm_ucomineq_sh(__A, __B);
 }
+COMI_SH_CASE(_mm_ucomineq_sh, +1.0f16, +2.0f16, 1)
+COMI_SH_CASE(_mm_ucomineq_sh, +2.0f16, +2.0f16, 0)
+COMI_SH_CASE(_mm_ucomineq_sh, HNAN, +2.0f16, 1)
+
+#undef COMI_SH_CASE
+#undef COMI_SH_PRED_CASE
+#undef COMI_SH_B
+#undef COMI_SH_A
+#undef HNAN
 
 __m512h test_mm512_add_ph(__m512h __A, __m512h __B) {
   // CHECK-LABEL: test_mm512_add_ph
