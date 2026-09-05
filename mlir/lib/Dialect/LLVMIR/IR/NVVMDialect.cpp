@@ -3927,6 +3927,18 @@ Ex2Op::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
   return {id, {mt.lookupValue(thisOp.getSrc())}};
 }
 
+LogicalResult NVVM::Ex2Op::verify() {
+  auto vectorType = dyn_cast<VectorType>(getSrc().getType());
+  if (!vectorType)
+    return success();
+
+  if (vectorType.getElementType().isF16() && getFtz())
+    return emitOpError("FTZ is not supported for vector<2xf16>");
+  if (vectorType.getElementType().isBF16() && !getFtz())
+    return emitOpError("FTZ is required for vector<2xbf16>");
+  return success();
+}
+
 mlir::NVVM::IDArgPair
 RsqrtOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
                                llvm::IRBuilderBase &builder) {
