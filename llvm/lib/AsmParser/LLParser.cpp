@@ -8788,6 +8788,9 @@ int LLParser::parsePHI(Instruction *&Inst, PerFunctionState &PFS) {
   if (!Ty->isFirstClassType())
     return error(TypeLoc, "phi node must have first class type");
 
+  if (const char *Reason = PHINode::isInvalidType(Ty))
+    return error(TypeLoc, Reason);
+
   bool First = true;
   bool AteExtraComma = false;
   SmallVector<std::pair<Value*, BasicBlock*>, 16> PHIVals;
