@@ -18974,15 +18974,13 @@ bool AArch64TargetLowering::isProfitableToHoist(Instruction *I) const {
         User->getOpcode() == Instruction::FAdd))
     return true;
 
-  const TargetOptions &Options = getTargetMachine().Options;
   const Function *F = I->getFunction();
   const DataLayout &DL = F->getDataLayout();
   Type *Ty = User->getOperand(0)->getType();
 
   return !(isFMAFasterThanFMulAndFAdd(*F, Ty) &&
            isOperationLegalOrCustom(ISD::FMA, getValueType(DL, Ty)) &&
-           (Options.AllowFPOpFusion == FPOpFusion::Fast ||
-            I->getFastMathFlags().allowContract()));
+           I->getFastMathFlags().allowContract());
 }
 
 // All 32-bit GPR operations implicitly zero the high-half of the corresponding
