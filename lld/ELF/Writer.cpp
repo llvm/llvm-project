@@ -602,7 +602,7 @@ static bool isRelroSection(Ctx &ctx, const OutputSection *sec) {
   // by default resolved lazily, so we usually cannot put it into RELRO.
   // However, if "-z now" is given, the lazy symbol resolution is
   // disabled, which enables us to put it into RELRO.
-  if (sec == ctx.in.gotPlt->getParent())
+  if (ctx.target->usesGotPlt && sec == ctx.in.gotPlt->getParent())
     return ctx.arg.zNow;
 
   if (ctx.in.relroPadding && sec == ctx.in.relroPadding->getParent())
@@ -844,10 +844,14 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   if (ctx.sym.globalOffsetTable) {
     // The _GLOBAL_OFFSET_TABLE_ symbol is defined by target convention usually
     // to the start of the .got or .got.plt section.
-    InputSection *sec = ctx.in.gotPlt.get();
-    if (!ctx.target->gotBaseSymInGotPlt)
+    InputSection *sec;
+    if (ctx.target->gotBaseSymInGotPlt) {
+      assert(ctx.target->usesGotPlt);
+      sec = ctx.in.gotPlt.get();
+    } else {
       sec = ctx.in.mipsGot ? cast<InputSection>(ctx.in.mipsGot.get())
                            : cast<InputSection>(ctx.in.got.get());
+    }
     ctx.sym.globalOffsetTable->section = sec;
   }
 
