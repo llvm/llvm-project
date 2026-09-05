@@ -2865,3 +2865,73 @@ define amdgpu_kernel void @fma_v2_imm_imm_s(ptr addrspace(1) %a) {
   store <2 x double> %fma, ptr addrspace(1) %gep, align 8
   ret void
 }
+
+define amdgpu_kernel void @fminnum_v4f64_vec(ptr addrspace(1) %a, ptr addrspace(1) %b) {
+; GFX1251-SDAG-LABEL: fminnum_v4f64_vec:
+; GFX1251-SDAG:       ; %bb.0:
+; GFX1251-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1251-SDAG-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1251-SDAG-NEXT:    v_nop
+; GFX1251-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1251-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; GFX1251-SDAG-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1251-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-SDAG-NEXT:    v_lshlrev_b32_e32 v16, 5, v0
+; GFX1251-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-SDAG-NEXT:    s_clause 0x3
+; GFX1251-SDAG-NEXT:    global_load_b128 v[0:3], v16, s[0:1]
+; GFX1251-SDAG-NEXT:    global_load_b128 v[4:7], v16, s[2:3]
+; GFX1251-SDAG-NEXT:    global_load_b128 v[8:11], v16, s[0:1] offset:16
+; GFX1251-SDAG-NEXT:    global_load_b128 v[12:15], v16, s[2:3] offset:16
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x2
+; GFX1251-SDAG-NEXT:    v_pk_min_num_f64 v[0:3], v[0:3], v[4:7]
+; GFX1251-SDAG-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-SDAG-NEXT:    v_pk_min_num_f64 v[4:7], v[8:11], v[12:15]
+; GFX1251-SDAG-NEXT:    s_clause 0x1
+; GFX1251-SDAG-NEXT:    global_store_b128 v16, v[0:3], s[0:1]
+; GFX1251-SDAG-NEXT:    global_store_b128 v16, v[4:7], s[0:1] offset:16
+; GFX1251-SDAG-NEXT:    s_endpgm
+;
+; GFX1251-GISEL-LABEL: fminnum_v4f64_vec:
+; GFX1251-GISEL:       ; %bb.0:
+; GFX1251-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1251-GISEL-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1251-GISEL-NEXT:    v_nop
+; GFX1251-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1251-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
+; GFX1251-GISEL-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1251-GISEL-NEXT:    v_lshlrev_b32_e32 v16, 5, v0
+; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1251-GISEL-NEXT:    s_clause 0x3
+; GFX1251-GISEL-NEXT:    global_load_b128 v[0:3], v16, s[0:1]
+; GFX1251-GISEL-NEXT:    global_load_b128 v[4:7], v16, s[2:3]
+; GFX1251-GISEL-NEXT:    global_load_b128 v[8:11], v16, s[0:1] offset:16
+; GFX1251-GISEL-NEXT:    global_load_b128 v[12:15], v16, s[2:3] offset:16
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x3
+; GFX1251-GISEL-NEXT:    v_pk_max_num_f64 v[0:3], v[0:3], v[0:3]
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x2
+; GFX1251-GISEL-NEXT:    v_pk_max_num_f64 v[4:7], v[4:7], v[4:7]
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x1
+; GFX1251-GISEL-NEXT:    v_pk_max_num_f64 v[8:11], v[8:11], v[8:11]
+; GFX1251-GISEL-NEXT:    s_wait_loadcnt 0x0
+; GFX1251-GISEL-NEXT:    v_pk_max_num_f64 v[12:15], v[12:15], v[12:15]
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX1251-GISEL-NEXT:    v_min_num_f64_e32 v[0:1], v[0:1], v[4:5]
+; GFX1251-GISEL-NEXT:    v_min_num_f64_e32 v[2:3], v[2:3], v[6:7]
+; GFX1251-GISEL-NEXT:    v_min_num_f64_e32 v[4:5], v[8:9], v[12:13]
+; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX1251-GISEL-NEXT:    v_min_num_f64_e32 v[6:7], v[10:11], v[14:15]
+; GFX1251-GISEL-NEXT:    s_clause 0x1
+; GFX1251-GISEL-NEXT:    global_store_b128 v16, v[0:3], s[0:1]
+; GFX1251-GISEL-NEXT:    global_store_b128 v16, v[4:7], s[0:1] offset:16
+; GFX1251-GISEL-NEXT:    s_endpgm
+  %id = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %gep.a = getelementptr inbounds <4 x double>, ptr addrspace(1) %a, i32 %id
+  %gep.b = getelementptr inbounds <4 x double>, ptr addrspace(1) %b, i32 %id
+  %x = load <4 x double>, ptr addrspace(1) %gep.a, align 32
+  %y = load <4 x double>, ptr addrspace(1) %gep.b, align 32
+  %min = tail call <4 x double> @llvm.minnum.v4f64(<4 x double> %x, <4 x double> %y)
+  store <4 x double> %min, ptr addrspace(1) %gep.a, align 32
+  ret void
+}

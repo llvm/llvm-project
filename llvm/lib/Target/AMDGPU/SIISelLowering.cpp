@@ -8839,12 +8839,19 @@ SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
   // ieee_mode. Currently a combine can produce the ieee version for non-ieee
   // mode functions, but this happens to be OK since it's only done in cases
   // where there is known no sNaN.
-  if (IsIEEEMode)
+  //
+  // Skip the expansion on targets that have no IEEE mode bit.
+  if (IsIEEEMode && Subtarget->hasDX10ClampAndIEEEMode())
     return expandFMINNUM_FMAXNUM(Op.getNode(), DAG);
 
   if (VT == MVT::v4f16 || VT == MVT::v8f16 || VT == MVT::v16f16 ||
       VT == MVT::v16bf16)
     return splitBinaryVectorOp(Op, DAG);
+
+  // Split wider vectors into legal pieces if possible.
+  if (SDValue Split = expandVectorNaryOpBySplitting(Op.getNode(), DAG))
+    return Split;
+
   return Op;
 }
 

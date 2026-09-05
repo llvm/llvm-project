@@ -578,8 +578,6 @@ define float @test_minmax_f32_ieee_true(float %a, float %b, float %c) {
 ; SDAG-GFX1170-LABEL: test_minmax_f32_ieee_true:
 ; SDAG-GFX1170:       ; %bb.0:
 ; SDAG-GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1170-NEXT:    v_dual_max_num_f32 v1, v1, v1 :: v_dual_max_num_f32 v0, v0, v0
-; SDAG-GFX1170-NEXT:    v_max_num_f32_e32 v2, v2, v2
 ; SDAG-GFX1170-NEXT:    v_maxmin_num_f32 v0, v0, v1, v2
 ; SDAG-GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -598,8 +596,6 @@ define float @test_minmax_f32_ieee_true(float %a, float %b, float %c) {
 ; SDAG-GFX12-NEXT:    s_wait_samplecnt 0x0
 ; SDAG-GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; SDAG-GFX12-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX12-NEXT:    v_dual_max_num_f32 v1, v1, v1 :: v_dual_max_num_f32 v0, v0, v0
-; SDAG-GFX12-NEXT:    v_max_num_f32_e32 v2, v2, v2
 ; SDAG-GFX12-NEXT:    v_maxmin_num_f32 v0, v0, v1, v2
 ; SDAG-GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -619,8 +615,6 @@ define float @test_minmax_f32_ieee_true(float %a, float %b, float %c) {
 ; SDAG-GFX1250:       ; %bb.0:
 ; SDAG-GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; SDAG-GFX1250-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX1250-NEXT:    v_dual_max_num_f32 v1, v1, v1 :: v_dual_max_num_f32 v0, v0, v0
-; SDAG-GFX1250-NEXT:    v_max_num_f32_e32 v2, v2, v2
 ; SDAG-GFX1250-NEXT:    v_maxmin_num_f32 v0, v0, v1, v2
 ; SDAG-GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -778,8 +772,6 @@ define float @test_maxmin_f32_ieee_true(float %a, float %b, float %c) {
 ; SDAG-GFX1170-LABEL: test_maxmin_f32_ieee_true:
 ; SDAG-GFX1170:       ; %bb.0:
 ; SDAG-GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1170-NEXT:    v_dual_max_num_f32 v1, v1, v1 :: v_dual_max_num_f32 v0, v0, v0
-; SDAG-GFX1170-NEXT:    v_max_num_f32_e32 v2, v2, v2
 ; SDAG-GFX1170-NEXT:    v_minmax_num_f32 v0, v0, v1, v2
 ; SDAG-GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -798,8 +790,6 @@ define float @test_maxmin_f32_ieee_true(float %a, float %b, float %c) {
 ; SDAG-GFX12-NEXT:    s_wait_samplecnt 0x0
 ; SDAG-GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; SDAG-GFX12-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX12-NEXT:    v_dual_max_num_f32 v1, v1, v1 :: v_dual_max_num_f32 v0, v0, v0
-; SDAG-GFX12-NEXT:    v_max_num_f32_e32 v2, v2, v2
 ; SDAG-GFX12-NEXT:    v_minmax_num_f32 v0, v0, v1, v2
 ; SDAG-GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -819,8 +809,6 @@ define float @test_maxmin_f32_ieee_true(float %a, float %b, float %c) {
 ; SDAG-GFX1250:       ; %bb.0:
 ; SDAG-GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; SDAG-GFX1250-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX1250-NEXT:    v_dual_max_num_f32 v1, v1, v1 :: v_dual_max_num_f32 v0, v0, v0
-; SDAG-GFX1250-NEXT:    v_max_num_f32_e32 v2, v2, v2
 ; SDAG-GFX1250-NEXT:    v_minmax_num_f32 v0, v0, v1, v2
 ; SDAG-GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -1272,18 +1260,12 @@ define half @test_minmax_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; SDAG-GFX1170-TRUE16-LABEL: test_minmax_commuted_f16_ieee_true:
 ; SDAG-GFX1170-TRUE16:       ; %bb.0:
 ; SDAG-GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1170-TRUE16-NEXT:    v_max_num_f16_e32 v0.h, v1.l, v1.l
-; SDAG-GFX1170-TRUE16-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v0.l
-; SDAG-GFX1170-TRUE16-NEXT:    v_max_num_f16_e32 v1.l, v2.l, v2.l
-; SDAG-GFX1170-TRUE16-NEXT:    v_maxmin_num_f16 v0.l, v0.l, v0.h, v1.l
+; SDAG-GFX1170-TRUE16-NEXT:    v_maxmin_num_f16 v0.l, v0.l, v1.l, v2.l
 ; SDAG-GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX1170-FAKE16-LABEL: test_minmax_commuted_f16_ieee_true:
 ; SDAG-GFX1170-FAKE16:       ; %bb.0:
 ; SDAG-GFX1170-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1170-FAKE16-NEXT:    v_max_num_f16_e32 v1, v1, v1
-; SDAG-GFX1170-FAKE16-NEXT:    v_max_num_f16_e32 v0, v0, v0
-; SDAG-GFX1170-FAKE16-NEXT:    v_max_num_f16_e32 v2, v2, v2
 ; SDAG-GFX1170-FAKE16-NEXT:    v_maxmin_num_f16 v0, v0, v1, v2
 ; SDAG-GFX1170-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1312,10 +1294,7 @@ define half @test_minmax_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v0.h, v1.l, v1.l
-; SDAG-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v0.l
-; SDAG-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v1.l, v2.l, v2.l
-; SDAG-GFX12-TRUE16-NEXT:    v_maxmin_num_f16 v0.l, v0.l, v0.h, v1.l
+; SDAG-GFX12-TRUE16-NEXT:    v_maxmin_num_f16 v0.l, v0.l, v1.l, v2.l
 ; SDAG-GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX12-FAKE16-LABEL: test_minmax_commuted_f16_ieee_true:
@@ -1325,9 +1304,6 @@ define half @test_minmax_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; SDAG-GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; SDAG-GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; SDAG-GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX12-FAKE16-NEXT:    v_max_num_f16_e32 v1, v1, v1
-; SDAG-GFX12-FAKE16-NEXT:    v_max_num_f16_e32 v0, v0, v0
-; SDAG-GFX12-FAKE16-NEXT:    v_max_num_f16_e32 v2, v2, v2
 ; SDAG-GFX12-FAKE16-NEXT:    v_maxmin_num_f16 v0, v0, v1, v2
 ; SDAG-GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1361,19 +1337,13 @@ define half @test_minmax_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; SDAG-GFX1250-TRUE16:       ; %bb.0:
 ; SDAG-GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; SDAG-GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX1250-TRUE16-NEXT:    v_max_num_f16_e32 v0.h, v1.l, v1.l
-; SDAG-GFX1250-TRUE16-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v0.l
-; SDAG-GFX1250-TRUE16-NEXT:    v_max_num_f16_e32 v1.l, v2.l, v2.l
-; SDAG-GFX1250-TRUE16-NEXT:    v_maxmin_num_f16 v0.l, v0.l, v0.h, v1.l
+; SDAG-GFX1250-TRUE16-NEXT:    v_maxmin_num_f16 v0.l, v0.l, v1.l, v2.l
 ; SDAG-GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; SDAG-GFX1250-FAKE16-LABEL: test_minmax_commuted_f16_ieee_true:
 ; SDAG-GFX1250-FAKE16:       ; %bb.0:
 ; SDAG-GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; SDAG-GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX1250-FAKE16-NEXT:    v_max_num_f16_e32 v1, v1, v1
-; SDAG-GFX1250-FAKE16-NEXT:    v_max_num_f16_e32 v0, v0, v0
-; SDAG-GFX1250-FAKE16-NEXT:    v_max_num_f16_e32 v2, v2, v2
 ; SDAG-GFX1250-FAKE16-NEXT:    v_maxmin_num_f16 v0, v0, v1, v2
 ; SDAG-GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
@@ -1542,18 +1512,12 @@ define half @test_maxmin_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; SDAG-GFX1170-TRUE16-LABEL: test_maxmin_commuted_f16_ieee_true:
 ; SDAG-GFX1170-TRUE16:       ; %bb.0:
 ; SDAG-GFX1170-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1170-TRUE16-NEXT:    v_max_num_f16_e32 v0.h, v1.l, v1.l
-; SDAG-GFX1170-TRUE16-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v0.l
-; SDAG-GFX1170-TRUE16-NEXT:    v_max_num_f16_e32 v1.l, v2.l, v2.l
-; SDAG-GFX1170-TRUE16-NEXT:    v_minmax_num_f16 v0.l, v0.l, v0.h, v1.l
+; SDAG-GFX1170-TRUE16-NEXT:    v_minmax_num_f16 v0.l, v0.l, v1.l, v2.l
 ; SDAG-GFX1170-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX1170-FAKE16-LABEL: test_maxmin_commuted_f16_ieee_true:
 ; SDAG-GFX1170-FAKE16:       ; %bb.0:
 ; SDAG-GFX1170-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1170-FAKE16-NEXT:    v_max_num_f16_e32 v1, v1, v1
-; SDAG-GFX1170-FAKE16-NEXT:    v_max_num_f16_e32 v0, v0, v0
-; SDAG-GFX1170-FAKE16-NEXT:    v_max_num_f16_e32 v2, v2, v2
 ; SDAG-GFX1170-FAKE16-NEXT:    v_minmax_num_f16 v0, v0, v1, v2
 ; SDAG-GFX1170-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1582,10 +1546,7 @@ define half @test_maxmin_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v0.h, v1.l, v1.l
-; SDAG-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v0.l
-; SDAG-GFX12-TRUE16-NEXT:    v_max_num_f16_e32 v1.l, v2.l, v2.l
-; SDAG-GFX12-TRUE16-NEXT:    v_minmax_num_f16 v0.l, v0.l, v0.h, v1.l
+; SDAG-GFX12-TRUE16-NEXT:    v_minmax_num_f16 v0.l, v0.l, v1.l, v2.l
 ; SDAG-GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX12-FAKE16-LABEL: test_maxmin_commuted_f16_ieee_true:
@@ -1595,9 +1556,6 @@ define half @test_maxmin_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; SDAG-GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; SDAG-GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; SDAG-GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX12-FAKE16-NEXT:    v_max_num_f16_e32 v1, v1, v1
-; SDAG-GFX12-FAKE16-NEXT:    v_max_num_f16_e32 v0, v0, v0
-; SDAG-GFX12-FAKE16-NEXT:    v_max_num_f16_e32 v2, v2, v2
 ; SDAG-GFX12-FAKE16-NEXT:    v_minmax_num_f16 v0, v0, v1, v2
 ; SDAG-GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1631,19 +1589,13 @@ define half @test_maxmin_commuted_f16_ieee_true(half %a, half %b, half %c) {
 ; SDAG-GFX1250-TRUE16:       ; %bb.0:
 ; SDAG-GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; SDAG-GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX1250-TRUE16-NEXT:    v_max_num_f16_e32 v0.h, v1.l, v1.l
-; SDAG-GFX1250-TRUE16-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v0.l
-; SDAG-GFX1250-TRUE16-NEXT:    v_max_num_f16_e32 v1.l, v2.l, v2.l
-; SDAG-GFX1250-TRUE16-NEXT:    v_minmax_num_f16 v0.l, v0.l, v0.h, v1.l
+; SDAG-GFX1250-TRUE16-NEXT:    v_minmax_num_f16 v0.l, v0.l, v1.l, v2.l
 ; SDAG-GFX1250-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; SDAG-GFX1250-FAKE16-LABEL: test_maxmin_commuted_f16_ieee_true:
 ; SDAG-GFX1250-FAKE16:       ; %bb.0:
 ; SDAG-GFX1250-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; SDAG-GFX1250-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; SDAG-GFX1250-FAKE16-NEXT:    v_max_num_f16_e32 v1, v1, v1
-; SDAG-GFX1250-FAKE16-NEXT:    v_max_num_f16_e32 v0, v0, v0
-; SDAG-GFX1250-FAKE16-NEXT:    v_max_num_f16_e32 v2, v2, v2
 ; SDAG-GFX1250-FAKE16-NEXT:    v_minmax_num_f16 v0, v0, v1, v2
 ; SDAG-GFX1250-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
