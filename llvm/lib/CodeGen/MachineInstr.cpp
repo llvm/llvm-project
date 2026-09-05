@@ -380,6 +380,11 @@ void MachineInstr::setMemRefs(MachineFunction &MF,
 
 void MachineInstr::addMemOperand(MachineFunction &MF,
                                  MachineMemOperand *MO) {
+  if (memoperands_empty()) {
+    setMemRefs(MF, {MO});
+    return;
+  }
+
   SmallVector<MachineMemOperand *, 2> MMOs;
   MMOs.append(memoperands_begin(), memoperands_end());
   MMOs.push_back(MO);
