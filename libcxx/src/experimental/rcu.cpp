@@ -63,18 +63,17 @@ class rcu_domain_impl {
   // flag used for waking up writer threads waiting for all reader threads' quiescent state
   std::atomic<bool> grace_period_waiting_flag_ = false;
 
-  // todo: maybe use a lock-free queue
-  rcu_thread_local_list_view __retired_callback_queue_;
+  rcu_thread_local_list_view retired_queue_stage0_;
 
   // these two queues do not need extra synchronization
   // as they are always processed under the grace period mutex
-  rcu_singly_list_view callbacks_phase_1_;
-  rcu_singly_list_view callbacks_phase_2_;
+  rcu_singly_list_view retired_queue_stage1_;
+  rcu_singly_list_view retired_queue_stage2_;
 
   friend class rcu_domain;
 
   rcu_singly_list_view update_phase_and_wait() noexcept {
-    callbacks_phase_1_.__splice_back(__retired_callback_queue_);
+    retired_queue_stage1_.__splice_back(retired_queue_stage0_);
 
     // Flip the global phase
     auto old_phase = global_reader_phase_.fetch_xor(reader_states::grace_period_phase_mask, std::memory_order_relaxed);
@@ -90,8 +89,8 @@ class rcu_domain_impl {
     grace_period_waiting_flag_.store(false, std::memory_order_relaxed);
 
     rcu_singly_list_view ready_callbacks;
-    ready_callbacks.__splice_back(callbacks_phase_2_);
-    callbacks_phase_2_.__splice_back(callbacks_phase_1_);
+    ready_callbacks.__splice_back(retired_queue_stage2_);
+    retired_queue_stage2_.__splice_back(retired_queue_stage1_);
     return ready_callbacks;
   }
 
@@ -146,7 +145,7 @@ public:
   }
 
   void retire(__rcu_node* node) noexcept {
-    __retired_callback_queue_.__push_front(node);
+    retired_queue_stage0_.__push_front(node);
   }
 
   void synchronize() noexcept {
