@@ -1311,6 +1311,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  glob_t
+  HDRS
+    glob_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.glob_t
+)
+
+add_proxy_header_library(
   regex_t
   HDRS
     regex_t.h
