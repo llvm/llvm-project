@@ -5840,13 +5840,18 @@ AAFoldRuntimeCall &AAFoldRuntimeCall::createForPosition(const IRPosition &IRP,
 /// call site there can see every outlined region in the module; specializing
 /// all of them costs more in code size and compile time than the direct calls
 /// are worth.
-static constexpr unsigned MaxIndirectCallSpecializations = 3;
+///
+/// This is a threshold on the call site rather than a limit on how many callees
+/// get specialized: the Attributor asks about each callee with the same total,
+/// so a site above the threshold keeps its indirect call instead of getting
+/// this many direct ones plus a fallback.
+static constexpr unsigned MaxCalleesForSpecialization = 3;
 
 static bool shouldSpecializeIndirectCallee(Attributor &,
                                            const AbstractAttribute &,
                                            CallBase &, Function &,
                                            unsigned NumAssumedCallees) {
-  return NumAssumedCallees <= MaxIndirectCallSpecializations;
+  return NumAssumedCallees <= MaxCalleesForSpecialization;
 }
 
 PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
