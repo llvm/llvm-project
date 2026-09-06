@@ -504,7 +504,10 @@ may not be held. A try-acquire of a capability that is already held adds a
 further conditionally held level onto the hold -- the success branch may be
 statically unreachable, but the modeling doesn't assume that. An acquisition of
 the other kind (shared vs. exclusive) than the existing hold, blocking or try,
-generates a warning since a hold has one kind. A try-acquire of a capability
+generates a warning since a hold has one kind -- except where the two are one
+call's own attributes promising the capability in each kind on results the
+other does not name, which is tracked as one conditional acquisition per kind
+(see {ref}`try_acquire`). A try-acquire of a capability
 that is already conditionally held by another try-acquire is tracked separately:
 each is resolved by the branch on its own return value. Asserting the capability
 (`ASSERT_CAPABILITY`) upgrades it to held without a warning.
@@ -555,7 +558,11 @@ between its outcomes, so all of its capabilities resolve by truthiness, as every
 try-acquire did before success codes. The same capability listed under a falsy
 and a specific truthy code of an integer result is *not* "acquired regardless"
 -- a result matching neither code acquires nothing -- so it stays a conditional
-acquisition resolved by value.
+acquisition resolved by value. Nor is a capability listed exclusive on
+one polarity and shared on the other (`TRY_ACQUIRE(true, mu)
+TRY_ACQUIRE_SHARED(false, mu)`): it is held in one kind on each outcome, and is
+tracked as one conditional acquisition per kind, each resolved by the branch on
+its own outcome and by that kind's own success values.
 
 Value resolution applies to the call's own result. A branch on a copy that a
 conversion may have changed (`bool ok = try_lock_codes();`) tests only whether

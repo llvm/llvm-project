@@ -303,3 +303,20 @@ void logical_insitu_without_beta(bool other) {
   a = 3;
   mu.Unlock();
 }
+
+// A cross-kind try-acquire reads the same in either mode: one conditional
+// acquisition per kind, each resolved on its own attribute's outcome.
+Mutex mu_cross;
+int a_cross __attribute__((guarded_by(mu_cross)));
+bool TryUpgradeCross() __attribute__((try_acquire_capability(true, mu_cross)))
+    __attribute__((try_acquire_shared_capability(false, mu_cross)));
+void cross_kind_without_beta() {
+  if (TryUpgradeCross()) {
+    a_cross = 1;
+    mu_cross.Unlock();
+  } else {
+    int r = a_cross;
+    (void)r;
+    mu_cross.ReaderUnlock();
+  }
+}
