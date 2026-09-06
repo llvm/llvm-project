@@ -608,8 +608,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(Callee, {Vector, Index, Val});
   }
   case WebAssembly::BI__builtin_wasm_table_get: {
-    assert(E->getArg(0)->getType()->isArrayType());
-    Value *Table = EmitArrayToPointerDecay(E->getArg(0)).emitRawPointer(*this);
+    assert(E->getArg(0)->getType()->isWebAssemblyTableType());
+    Value *Table = EmitLValue(E->getArg(0)).emitRawPointer(*this);
     Value *Index = EmitScalarExpr(E->getArg(1));
     Function *Callee;
     if (E->getType().isWebAssemblyExternrefType())
@@ -622,8 +622,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(Callee, {Table, Index});
   }
   case WebAssembly::BI__builtin_wasm_table_set: {
-    assert(E->getArg(0)->getType()->isArrayType());
-    Value *Table = EmitArrayToPointerDecay(E->getArg(0)).emitRawPointer(*this);
+    assert(E->getArg(0)->getType()->isWebAssemblyTableType());
+    Value *Table = EmitLValue(E->getArg(0)).emitRawPointer(*this);
     Value *Index = EmitScalarExpr(E->getArg(1));
     Value *Val = EmitScalarExpr(E->getArg(2));
     Function *Callee;
@@ -637,14 +637,14 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(Callee, {Table, Index, Val});
   }
   case WebAssembly::BI__builtin_wasm_table_size: {
-    assert(E->getArg(0)->getType()->isArrayType());
-    Value *Value = EmitArrayToPointerDecay(E->getArg(0)).emitRawPointer(*this);
+    assert(E->getArg(0)->getType()->isWebAssemblyTableType());
+    Value *Value = EmitLValue(E->getArg(0)).emitRawPointer(*this);
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_table_size);
     return Builder.CreateCall(Callee, Value);
   }
   case WebAssembly::BI__builtin_wasm_table_grow: {
-    assert(E->getArg(0)->getType()->isArrayType());
-    Value *Table = EmitArrayToPointerDecay(E->getArg(0)).emitRawPointer(*this);
+    assert(E->getArg(0)->getType()->isWebAssemblyTableType());
+    Value *Table = EmitLValue(E->getArg(0)).emitRawPointer(*this);
     Value *Val = EmitScalarExpr(E->getArg(1));
     Value *NElems = EmitScalarExpr(E->getArg(2));
 
@@ -660,8 +660,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(Callee, {Table, Val, NElems});
   }
   case WebAssembly::BI__builtin_wasm_table_fill: {
-    assert(E->getArg(0)->getType()->isArrayType());
-    Value *Table = EmitArrayToPointerDecay(E->getArg(0)).emitRawPointer(*this);
+    assert(E->getArg(0)->getType()->isWebAssemblyTableType());
+    Value *Table = EmitLValue(E->getArg(0)).emitRawPointer(*this);
     Value *Index = EmitScalarExpr(E->getArg(1));
     Value *Val = EmitScalarExpr(E->getArg(2));
     Value *NElems = EmitScalarExpr(E->getArg(3));
@@ -678,9 +678,9 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(Callee, {Table, Index, Val, NElems});
   }
   case WebAssembly::BI__builtin_wasm_table_copy: {
-    assert(E->getArg(0)->getType()->isArrayType());
-    Value *TableX = EmitArrayToPointerDecay(E->getArg(0)).emitRawPointer(*this);
-    Value *TableY = EmitArrayToPointerDecay(E->getArg(1)).emitRawPointer(*this);
+    assert(E->getArg(0)->getType()->isWebAssemblyTableType());
+    Value *TableX = EmitLValue(E->getArg(0)).emitRawPointer(*this);
+    Value *TableY = EmitLValue(E->getArg(1)).emitRawPointer(*this);
     Value *DstIdx = EmitScalarExpr(E->getArg(2));
     Value *SrcIdx = EmitScalarExpr(E->getArg(3));
     Value *NElems = EmitScalarExpr(E->getArg(4));

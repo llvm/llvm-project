@@ -30,13 +30,13 @@ SemaWasm::SemaWasm(Sema &S) : SemaBase(S) {}
 static bool CheckWasmBuiltinArgIsTable(Sema &S, CallExpr *E, unsigned ArgIndex,
                                        QualType &ElTy) {
   Expr *ArgExpr = E->getArg(ArgIndex);
-  const auto *ATy = dyn_cast<ArrayType>(ArgExpr->getType());
-  if (!ATy || !ATy->getElementType().isWebAssemblyReferenceType()) {
+  const auto *TTy = ArgExpr->getType()->getAs<WebAssemblyTableType>();
+  if (!TTy) {
     return S.Diag(ArgExpr->getBeginLoc(),
                   diag::err_wasm_builtin_arg_must_be_table_type)
            << ArgIndex + 1 << ArgExpr->getSourceRange();
   }
-  ElTy = ATy->getElementType();
+  ElTy = TTy->getElementType();
   return false;
 }
 

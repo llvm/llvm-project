@@ -2661,6 +2661,15 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     Width = Target->getPointerWidth(LangAS::opencl_global);
     Align = Target->getPointerAlign(LangAS::opencl_global);
     break;
+
+  case Type::WebAssemblyTable: {
+    // A WebAssembly table is a zero-length array of a reference type; it has
+    // no storage size and takes the alignment of its element type.
+    const auto *WTT = cast<WebAssemblyTableType>(T);
+    Width = 0;
+    Align = getTypeAlign(WTT->getElementType());
+    break;
+  }
   }
 
   assert(llvm::isPowerOf2_32(Align) && "Alignment must be power of 2");
@@ -3520,6 +3529,7 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
 
   // Don't bother discriminating based on these types.
   case Type::Pipe:
+  case Type::WebAssemblyTable:
   case Type::BitInt:
   case Type::ConstantMatrix:
     OS << "?";
@@ -4376,6 +4386,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
   case Type::OverflowBehavior:
+  case Type::WebAssemblyTable:
     llvm_unreachable("type should never be variably-modified");
 
   // These types can be variably-modified but should never need to
@@ -5243,6 +5254,34 @@ QualType ASTContext::getReadPipeType(QualType T) const {
 
 QualType ASTContext::getWritePipeType(QualType T) const {
   return getPipeType(T, false);
+}
+
+QualType ASTContext::getWebAssemblyTableType(QualType T) const {
+  llvm::FoldingSetNodeID ID;
+  WebAssemblyTableType::Profile(ID, T);
+
+  void *InsertPos = nullptr;
+  if (WebAssemblyTableType *WTT =
+          WebAssemblyTableTypes.FindNodeOrInsertPos(ID, InsertPos))
+    return QualType(WTT, 0);
+
+  // If the element type isn't canonical, this won't be a canonical type either,
+  // so fill in the canonical type field.
+  QualType Canonical;
+  if (!T.isCanonical()) {
+    Canonical = getWebAssemblyTableType(getCanonicalType(T));
+
+    // Get the new insert position for the node we care about.
+    WebAssemblyTableType *NewIP =
+        WebAssemblyTableTypes.FindNodeOrInsertPos(ID, InsertPos);
+    assert(!NewIP && "Shouldn't be in the map!");
+    (void)NewIP;
+  }
+  auto *New = new (*this, alignof(WebAssemblyTableType))
+      WebAssemblyTableType(T, Canonical);
+  Types.push_back(New);
+  WebAssemblyTableTypes.InsertNode(New, InsertPos);
+  return QualType(New, 0);
 }
 
 QualType ASTContext::getBitIntType(bool IsUnsigned, unsigned NumBits) const {
@@ -9790,6 +9829,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
 
   case Type::ArrayParameter:
   case Type::Pipe:
+  case Type::WebAssemblyTable:
 #define ABSTRACT_TYPE(KIND, BASE)
 #define TYPE(KIND, BASE)
 #define DEPENDENT_TYPE(KIND, BASE) \
@@ -12275,6 +12315,10 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
     assert(LHS != RHS &&
            "Equivalent pipe types should have already been handled!");
     return {};
+  case Type::WebAssemblyTable:
+    assert(LHS != RHS && "Equivalent WebAssembly table types should have "
+                         "already been handled!");
+    return {};
   case Type::ArrayParameter:
     assert(LHS != RHS &&
            "Equivalent ArrayParameter types should have already been handled!");
@@ -14731,6 +14775,11 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
                                : &ASTContext::getWritePipeType;
     return (Ctx.*MP)(getCommonElementType(Ctx, PX, PY));
   }
+  case Type::WebAssemblyTable: {
+    const auto *TX = cast<WebAssemblyTableType>(X),
+               *TY = cast<WebAssemblyTableType>(Y);
+    return Ctx.getWebAssemblyTableType(getCommonElementType(Ctx, TX, TY));
+  }
   case Type::TemplateTypeParm: {
     const auto *TX = cast<TemplateTypeParmType>(X),
                *TY = cast<TemplateTypeParmType>(Y);
@@ -14786,6 +14835,7 @@ static QualType getCommonSugarTypeNode(const ASTContext &Ctx, const Type *X,
     CANONICAL_TYPE(RValueReference)
     CANONICAL_TYPE(VariableArray)
     CANONICAL_TYPE(Vector)
+    CANONICAL_TYPE(WebAssemblyTable)
 #undef CANONICAL_TYPE
 
 #undef UNEXPECTED_TYPE

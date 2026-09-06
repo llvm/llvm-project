@@ -4015,6 +4015,11 @@ llvm::DIType *CGDebugInfo::CreateType(const PipeType *Ty, llvm::DIFile *U) {
   return getOrCreateType(Ty->getElementType(), U);
 }
 
+llvm::DIType *CGDebugInfo::CreateType(const WebAssemblyTableType *Ty,
+                                      llvm::DIFile *U) {
+  return getOrCreateType(Ty->getElementType(), U);
+}
+
 llvm::DIType *CGDebugInfo::CreateType(const HLSLAttributedResourceType *Ty,
                                       llvm::DIFile *U) {
   return getOrCreateType(Ty->getWrappedType(), U);
@@ -4383,6 +4388,8 @@ llvm::DIType *CGDebugInfo::CreateTypeNode(QualType Ty, llvm::DIFile *Unit) {
     return CreateType(cast<OverflowBehaviorType>(Ty), Unit);
   case Type::Pipe:
     return CreateType(cast<PipeType>(Ty), Unit);
+  case Type::WebAssemblyTable:
+    return CreateType(cast<WebAssemblyTableType>(Ty), Unit);
 
   case Type::TemplateSpecialization:
     return CreateType(cast<TemplateSpecializationType>(Ty), Unit);

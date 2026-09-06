@@ -35,6 +35,19 @@ FTIHasNonVoidParameters(const DeclaratorChunk::FunctionTypeInfo &FTI) {
   return FTI.NumParams && !FTIHasSingleVoidParameter(FTI);
 }
 
+/// Determine whether \p T is a WebAssembly table. A valid table is represented
+/// by a WebAssemblyTableType; an array of a WebAssembly reference type that is
+/// not a valid table (e.g. has a non-zero or unspecified length) remains an
+/// ArrayType and is matched here so that it can be diagnosed.
+inline bool isWebAssemblyTableOrRefArrayType(const ASTContext &Ctx,
+                                             QualType T) {
+  if (T->isWebAssemblyTableType())
+    return true;
+  if (const auto *ATy = Ctx.getAsArrayType(T))
+    return ATy->getElementType().isWebAssemblyReferenceType();
+  return false;
+}
+
 // Helper function to check whether D's attributes match current CUDA mode.
 // Decls with mismatched attributes and related diagnostics may have to be
 // ignored during this CUDA compilation pass.

@@ -7833,6 +7833,10 @@ void TypeLocReader::VisitPipeTypeLoc(PipeTypeLoc TL) {
   TL.setKWLoc(readSourceLocation());
 }
 
+void TypeLocReader::VisitWebAssemblyTableTypeLoc(WebAssemblyTableTypeLoc TL) {
+  TL.setKWLoc(readSourceLocation());
+}
+
 void TypeLocReader::VisitBitIntTypeLoc(clang::BitIntTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
 }

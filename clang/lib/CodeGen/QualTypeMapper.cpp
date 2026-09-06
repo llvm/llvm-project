@@ -102,6 +102,12 @@ const llvm::abi::Type *QualTypeMapper::convertTypeImpl(QualType QT) {
   case Type::BlockPointer:
   case Type::Pipe:
     return createPointerTypeForPointee(ASTCtx.VoidPtrTy);
+  case Type::WebAssemblyTable: {
+    // A WebAssembly table is a zero-length array of its element type.
+    const auto *WTT = cast<WebAssemblyTableType>(QT);
+    return Builder.getArrayType(convertType(WTT->getElementType()),
+                                /*NumElements=*/0, /*Size=*/0);
+  }
   case Type::ConstantMatrix: {
     const auto *MT = cast<ConstantMatrixType>(QT);
     return Builder.getArrayType(convertType(MT->getElementType()),
