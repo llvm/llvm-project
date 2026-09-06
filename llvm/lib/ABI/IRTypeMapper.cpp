@@ -77,8 +77,17 @@ llvm::Type *IRTypeMapper::convertArrayType(const abi::ArrayType *AT) {
 }
 
 llvm::Type *IRTypeMapper::convertVectorType(const abi::VectorType *VT) {
+  if (VT->isSVECount())
+    return llvm::TargetExtType::get(Context, "aarch64.svcount");
+
   llvm::Type *ElementType = convertType(VT->getElementType());
-  return llvm::VectorType::get(ElementType, VT->getNumElements());
+  llvm::Type *VecTy = llvm::VectorType::get(ElementType, VT->getNumElements());
+  if (!VT->isTuple())
+    return VecTy;
+
+  // SVE tuples are a struct with one element per vector.
+  SmallVector<llvm::Type *, 4> Elements(VT->getNumVectors(), VecTy);
+  return llvm::StructType::get(Context, Elements);
 }
 
 llvm::Type *IRTypeMapper::convertRecordType(const abi::RecordType *RT) {
