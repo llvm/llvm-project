@@ -68,7 +68,12 @@ bool macho::validateSymbolRelocation(const Symbol *sym,
         .str();
   };
 
-  if (relocAttrs.hasAttr(RelocAttrBits::TLV) != sym->isTlv())
+  // A dynamic-lookup symbol's thread-locality is unknown at link time but
+  // resolved by dyld at load time; rejecting it would refuse a valid link.
+  const auto *dysym = dyn_cast<DylibSymbol>(sym);
+  bool tlvKindIsKnown = !(dysym && dysym->isDynamicLookup());
+
+  if (tlvKindIsKnown && relocAttrs.hasAttr(RelocAttrBits::TLV) != sym->isTlv())
     error(message(Twine("requires that symbol ") + sym->getName() + " " +
                   (sym->isTlv() ? "not " : "") + "be thread-local"));
 
