@@ -68,6 +68,9 @@ struct TestConvertFuncOp
     : public PassWrapper<TestConvertFuncOp, OperationPass<ModuleOp>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestConvertFuncOp)
 
+  TestConvertFuncOp() = default;
+  TestConvertFuncOp(const TestConvertFuncOp &other) : PassWrapper(other) {}
+
   void getDependentDialects(DialectRegistry &registry) const final {
     registry.insert<LLVM::LLVMDialect>();
   }
@@ -92,10 +95,16 @@ struct TestConvertFuncOp
     patterns.add<ReturnOpConversion>(typeConverter);
 
     LLVMConversionTarget target(getContext());
+    ConversionConfig config;
+    config.allowPatternRollback = allowPatternRollback;
     if (failed(applyPartialConversion(getOperation(), target,
-                                      std::move(patterns))))
+                                      std::move(patterns), config)))
       signalPassFailure();
   }
+
+  Option<bool> allowPatternRollback{*this, "allow-pattern-rollback",
+                                    llvm::cl::desc("Allow pattern rollback"),
+                                    llvm::cl::init(true)};
 };
 
 } // namespace
