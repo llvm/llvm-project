@@ -433,8 +433,22 @@ static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1,
 
   auto AssocOpcode = BinOp1->getOpcode();
   auto *BinOp2 = dyn_cast<BinaryOperator>(Cast->getOperand(0));
-  if (!BinOp2 || !BinOp2->hasOneUse() || BinOp2->getOpcode() != AssocOpcode)
+  if (!BinOp2 || !BinOp2->hasOneUse())
     return false;
+
+  if (BinOp2->getOpcode() != AssocOpcode) {
+    // For defined inputs, `or disjoint` is equivalent to xor.
+    bool IsMixedXorDisjointOr =
+        (AssocOpcode == Instruction::Xor &&
+         match(BinOp2, m_DisjointOr(m_Value(), m_Value()))) ||
+        (BinOp2->getOpcode() == Instruction::Xor &&
+         match(BinOp1, m_DisjointOr(m_Value(), m_Value())));
+
+    if (!IsMixedXorDisjointOr)
+      return false;
+
+    AssocOpcode = Instruction::Xor;
+  }
 
   Constant *C1, *C2;
   if (!match(BinOp1->getOperand(1), m_Constant(C1)) ||
@@ -456,10 +470,18 @@ static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1,
   if (!FoldedC)
     return false;
 
+  // A non-negative (X | C) implies that X is also non-negative.
+  bool PreserveNonNeg =
+      Cast->hasNonNeg() && BinOp2->getOpcode() == Instruction::Or;
+
   IC.replaceOperand(*Cast, 0, BinOp2->getOperand(0));
-  IC.replaceOperand(*BinOp1, 1, FoldedC);
-  BinOp1->dropPoisonGeneratingFlags();
   Cast->dropPoisonGeneratingFlags();
+
+  if (PreserveNonNeg)
+    Cast->setNonNeg();
+
+  Value *NewBinOp = IC.Builder.CreateBinOp(AssocOpcode, Cast, FoldedC);
+  IC.replaceInstUsesWith(*BinOp1, NewBinOp);
   return true;
 }
 
@@ -582,9 +604,8 @@ bool InstCombinerImpl::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
 
     if (I.isAssociative() && I.isCommutative()) {
       if (simplifyAssocCastAssoc(&I, *this)) {
-        Changed = true;
         ++NumReassoc;
-        continue;
+        return true;
       }
 
       // Transform: "(A op B) op C" ==> "(C op A) op B" if "C op A" simplifies.
