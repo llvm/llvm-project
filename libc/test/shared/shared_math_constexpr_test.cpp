@@ -419,6 +419,10 @@ static_assert(Float128(0.0) ==
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::fminimum_numf128(Float128(0.0),
                                                        Float128(0.0)));
+static_assert(Float128(0.0) == [] {
+  int exp{};
+  return LIBC_NAMESPACE::shared::frexpf128(Float128(0.0), &exp);
+}());
 static_assert(1 == LIBC_NAMESPACE::shared::iscanonicalf128(Float128(0.0)));
 static_assert(0 == LIBC_NAMESPACE::shared::isnanf128(Float128(0.0)));
 static_assert(0.0 == LIBC_NAMESPACE::shared::issignalingf128(Float128(0.0)));

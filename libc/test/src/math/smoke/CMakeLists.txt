@@ -1746,6 +1746,7 @@ add_fp_unittest(
     FrexpTest.h
   DEPENDS
     libc.src.math.frexpf128
+    libc.src.__support.FPUtil.float128
 )
 
 add_fp_unittest(
