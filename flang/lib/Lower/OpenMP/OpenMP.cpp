@@ -299,17 +299,12 @@ hasUserDefinedArrayElementReduction(const List<Clause> &clauses,
   return found;
 }
 
-static void checkTaskModifierUserDefinedArrayElementReduction(
+static void checkUserDefinedArrayElementReduction(
     mlir::Location loc, lower::AbstractConverter &converter,
-    semantics::SemanticsContext &semaCtx,
-    mlir::omp::ReductionModifierAttr reductionMod,
-    const List<Clause> &clauses) {
-  if (reductionMod &&
-      reductionMod.getValue() == mlir::omp::ReductionModifier::task &&
-      hasUserDefinedArrayElementReduction<clause::Reduction>(clauses, converter,
+    semantics::SemanticsContext &semaCtx, const List<Clause> &clauses) {
+  if (hasUserDefinedArrayElementReduction<clause::Reduction>(clauses, converter,
                                                              semaCtx))
-    TODO(loc, "REDUCTION with TASK modifier of an array element using a "
-              "user-defined reduction");
+    TODO(loc, "REDUCTION of an array element using a user-defined reduction");
 }
 
 /// Structure holding the information needed to create and bind entry block
@@ -2568,8 +2563,7 @@ static void genParallelClauses(
   cp.processReduction(loc, clauseOps, reductionObjects);
   checkTaskModifierPartialArrayReduction(loc, semaCtx, clauseOps.reductionMod,
                                          reductionObjects);
-  checkTaskModifierUserDefinedArrayElementReduction(
-      loc, converter, semaCtx, clauseOps.reductionMod, clauses);
+  checkUserDefinedArrayElementReduction(loc, converter, semaCtx, clauses);
 }
 
 static void genScanClauses(lower::AbstractConverter &converter,
@@ -2593,8 +2587,7 @@ genSectionsClauses(lower::AbstractConverter &converter,
   cp.processReduction(loc, clauseOps, reductionObjects);
   checkTaskModifierPartialArrayReduction(loc, semaCtx, clauseOps.reductionMod,
                                          reductionObjects);
-  checkTaskModifierUserDefinedArrayElementReduction(
-      loc, converter, semaCtx, clauseOps.reductionMod, clauses);
+  checkUserDefinedArrayElementReduction(loc, converter, semaCtx, clauses);
   // TODO Support delayed privatization.
 }
 
@@ -2697,8 +2690,7 @@ static void genScopeClauses(lower::AbstractConverter &converter,
   cp.processReduction(loc, clauseOps, reductionObjects);
   checkTaskModifierPartialArrayReduction(loc, semaCtx, clauseOps.reductionMod,
                                          reductionObjects);
-  checkTaskModifierUserDefinedArrayElementReduction(
-      loc, converter, semaCtx, clauseOps.reductionMod, clauses);
+  checkUserDefinedArrayElementReduction(loc, converter, semaCtx, clauses);
 }
 
 static void genSingleClauses(lower::AbstractConverter &converter,
@@ -2927,8 +2919,7 @@ static void genWsloopClauses(
   cp.processReduction(loc, clauseOps, reductionObjects, reductionVarCache);
   checkTaskModifierPartialArrayReduction(loc, semaCtx, clauseOps.reductionMod,
                                          reductionObjects);
-  checkTaskModifierUserDefinedArrayElementReduction(
-      loc, converter, semaCtx, clauseOps.reductionMod, clauses);
+  checkUserDefinedArrayElementReduction(loc, converter, semaCtx, clauses);
   cp.processSchedule(stmtCtx, clauseOps);
   cp.processLinear(clauseOps);
 }

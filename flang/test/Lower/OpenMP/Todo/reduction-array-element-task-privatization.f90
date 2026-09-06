@@ -69,6 +69,14 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/scope-task-udr-element.f90 2>&1 | FileCheck %s --check-prefix=SCOPE-TASK-UDR-ELEMENT
 ! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/do-task-udr-element.f90 2>&1 | FileCheck %s --check-prefix=DO-TASK-UDR-ELEMENT
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/do-task-udr-element.f90 2>&1 | FileCheck %s --check-prefix=DO-TASK-UDR-ELEMENT
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/parallel-udr-element.f90 2>&1 | FileCheck %s --check-prefix=PARALLEL-UDR-ELEMENT
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/parallel-udr-element.f90 2>&1 | FileCheck %s --check-prefix=PARALLEL-UDR-ELEMENT
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/sections-udr-element.f90 2>&1 | FileCheck %s --check-prefix=SECTIONS-UDR-ELEMENT
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/sections-udr-element.f90 2>&1 | FileCheck %s --check-prefix=SECTIONS-UDR-ELEMENT
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=51 -o - %t/scope-udr-element.f90 2>&1 | FileCheck %s --check-prefix=SCOPE-UDR-ELEMENT
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -o - %t/scope-udr-element.f90 2>&1 | FileCheck %s --check-prefix=SCOPE-UDR-ELEMENT
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/do-udr-element.f90 2>&1 | FileCheck %s --check-prefix=DO-UDR-ELEMENT
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/do-udr-element.f90 2>&1 | FileCheck %s --check-prefix=DO-UDR-ELEMENT
 
 ! An array element or section in a task reduction and the implicitly
 ! firstprivate base array are represented by separate block arguments. Reject
@@ -102,10 +110,14 @@
 ! SECTIONS-TASK-UDR-SECTION: not yet implemented: REDUCTION with TASK modifier of a partial array section
 ! SCOPE-TASK-UDR-SECTION: not yet implemented: REDUCTION with TASK modifier of a partial array section
 ! DO-TASK-UDR-SECTION: not yet implemented: REDUCTION with TASK modifier of a partial array section
-! PARALLEL-TASK-UDR-ELEMENT: not yet implemented: REDUCTION with TASK modifier of an array element using a user-defined reduction
-! SECTIONS-TASK-UDR-ELEMENT: not yet implemented: REDUCTION with TASK modifier of an array element using a user-defined reduction
-! SCOPE-TASK-UDR-ELEMENT: not yet implemented: REDUCTION with TASK modifier of an array element using a user-defined reduction
-! DO-TASK-UDR-ELEMENT: not yet implemented: REDUCTION with TASK modifier of an array element using a user-defined reduction
+! PARALLEL-TASK-UDR-ELEMENT: not yet implemented: REDUCTION of an array element using a user-defined reduction
+! SECTIONS-TASK-UDR-ELEMENT: not yet implemented: REDUCTION of an array element using a user-defined reduction
+! SCOPE-TASK-UDR-ELEMENT: not yet implemented: REDUCTION of an array element using a user-defined reduction
+! DO-TASK-UDR-ELEMENT: not yet implemented: REDUCTION of an array element using a user-defined reduction
+! PARALLEL-UDR-ELEMENT: not yet implemented: REDUCTION of an array element using a user-defined reduction
+! SECTIONS-UDR-ELEMENT: not yet implemented: REDUCTION of an array element using a user-defined reduction
+! SCOPE-UDR-ELEMENT: not yet implemented: REDUCTION of an array element using a user-defined reduction
+! DO-UDR-ELEMENT: not yet implemented: REDUCTION of an array element using a user-defined reduction
 
 !--- task.f90
 subroutine task_reduction_element(a)
@@ -416,6 +428,49 @@ subroutine do_task_udr_element(a)
   !$omp declare reduction(+ : integer : omp_out = omp_out + omp_in) &
   !$omp& initializer(omp_priv = 1)
   !$omp do reduction(task, + : a(2))
+  do i = 1, 1
+    a(2) = a(2) + i
+  end do
+  !$omp end do
+end subroutine
+
+!--- parallel-udr-element.f90
+subroutine parallel_udr_element(a)
+  integer :: a(4)
+  !$omp declare reduction(myred : integer : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1)
+  !$omp parallel reduction(myred : a(2))
+  a(2) = a(2) + 1
+  !$omp end parallel
+end subroutine
+
+!--- sections-udr-element.f90
+subroutine sections_udr_element(a)
+  integer :: a(4)
+  !$omp declare reduction(myred : integer : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1)
+  !$omp sections reduction(myred : a(2))
+  !$omp section
+  a(2) = a(2) + 1
+  !$omp end sections
+end subroutine
+
+!--- scope-udr-element.f90
+subroutine scope_udr_element(a)
+  integer :: a(4)
+  !$omp declare reduction(myred : integer : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1)
+  !$omp scope reduction(myred : a(2))
+  a(2) = a(2) + 1
+  !$omp end scope
+end subroutine
+
+!--- do-udr-element.f90
+subroutine do_udr_element(a)
+  integer :: a(4), i
+  !$omp declare reduction(myred : integer : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1)
+  !$omp do reduction(myred : a(2))
   do i = 1, 1
     a(2) = a(2) + i
   end do
