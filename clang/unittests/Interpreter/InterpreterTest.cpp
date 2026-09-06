@@ -174,6 +174,9 @@ TEST_F(InterpreterTest, TranslationUnitRedeclChainAcrossManyPTUs) {
 }
 
 TEST_F(InterpreterTest, UndoLeavesDeclsInTranslationUnitChain) {
+#ifdef __EMSCRIPTEN__
+  GTEST_SKIP() << "Undo is not supported for Emscripten builds";
+#endif
   std::unique_ptr<Interpreter> Interp = createInterpreter();
 
   cantFail(Interp->Parse("struct Kept {};"));
@@ -505,6 +508,11 @@ TEST_F(InterpreterTest, ValueSetRawBitsCopiesByteCount) {
 // Earlier the move ctor called Release() on the just-moved-into storage,
 // double-releasing on the next read.
 TEST_F(InterpreterTest, ValueMoveSemantics) {
+  // FIXME: Emscripten cannot resolve MoveT's destructor symbol
+  // `_ZN5MoveTD2Ev` from the incrementally loaded Wasm side module.
+#ifdef __EMSCRIPTEN__
+  GTEST_SKIP() << "Unresolved destructor symbol: _ZN5MoveTD2Ev";
+#endif
   std::vector<const char *> Args = {"-fno-sized-deallocation"};
   std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
 
