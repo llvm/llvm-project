@@ -43,7 +43,7 @@ define double @reassoc_repeated_vals(double %x) {
 ; CHECK-LABEL: define double @reassoc_repeated_vals(
 ; CHECK-SAME: double [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = fmul double [[X]], 9.000000e+00
+; CHECK-NEXT:    [[TMP0:%.*]] = fmul reassoc double [[X]], 9.000000e+00
 ; CHECK-NEXT:    ret double [[TMP0]]
 ;
 entry:
