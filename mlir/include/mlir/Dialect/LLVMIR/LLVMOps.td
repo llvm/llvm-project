@@ -282,6 +282,7 @@ def LLVM_AllocaOp : LLVM_Op<"alloca",
     ];
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+  let hasCanonicalizeMethod = 1;
 }
 
 def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
