@@ -8,9 +8,13 @@
 
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/ProfileData/InstrProf.h"
+#include "llvm/ProfileData/InstrProfWriter.h"
+#include "llvm/Testing/Support/Error.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -185,6 +189,119 @@ TEST_P(PGOInstrumentationGenTest, Instrumented) {
       M->getNamedGlobal(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
   EXPECT_THAT(IRInstrVar, NotNull());
   EXPECT_FALSE(IRInstrVar->isDeclaration());
+}
+
+TEST(PGOInstrumentationUseTest, BlockUniformityMetadataUsesPresence) {
+  static constexpr StringRef Code = R"(
+    define i32 @f(i1 %cond) {
+    entry:
+      br i1 %cond, label %then, label %else
+    then:
+      ret i32 1
+    else:
+      ret i32 0
+    })";
+
+  for (bool IsUniform : {false, true}) {
+    LLVMContext Context;
+    SMDiagnostic ParseError;
+    auto GenModule = parseAssemblyString(Code, ParseError, Context);
+    ASSERT_THAT(GenModule, NotNull());
+
+    PassBuilder PB;
+    LoopAnalysisManager LAM;
+    FunctionAnalysisManager FAM;
+    CGSCCAnalysisManager CGAM;
+    ModuleAnalysisManager MAM;
+    PB.registerModuleAnalyses(MAM);
+    PB.registerCGSCCAnalyses(CGAM);
+    PB.registerFunctionAnalyses(FAM);
+    PB.registerLoopAnalyses(LAM);
+    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+    ModulePassManager GenMPM;
+    GenMPM.addPass(PGOInstrumentationGen());
+    GenMPM.run(*GenModule, MAM);
+
+    Function *GenFunction = GenModule->getFunction("f");
+    ASSERT_THAT(GenFunction, NotNull());
+
+    uint64_t FunctionHash = 0;
+    unsigned NumCounters = 0;
+    std::vector<std::string> BlockNames;
+    for (Instruction &I : instructions(*GenFunction)) {
+      auto *Counter = dyn_cast<InstrProfCntrInstBase>(&I);
+      if (!Counter)
+        continue;
+
+      if (BlockNames.empty()) {
+        FunctionHash = Counter->getHash()->getZExtValue();
+        NumCounters = Counter->getNumCounters()->getZExtValue();
+        BlockNames.resize(NumCounters);
+      }
+
+      unsigned Index = Counter->getIndex()->getZExtValue();
+      ASSERT_LT(Index, NumCounters);
+      BlockNames[Index] = I.getParent()->getName().str();
+    }
+
+    ASSERT_GE(NumCounters, 2u);
+    for (const std::string &BlockName : BlockNames)
+      ASSERT_FALSE(BlockName.empty());
+
+    std::vector<uint8_t> UniformityBits((NumCounters + 7) / 8,
+                                        IsUniform ? 0xFF : 0);
+    std::string ProfileName = getIRPGOFuncName(*GenFunction);
+    NamedInstrProfRecord Record(ProfileName, FunctionHash,
+                                std::vector<uint64_t>(NumCounters, 10));
+    Record.UniformityBits = std::move(UniformityBits);
+
+    InstrProfWriter Writer;
+    ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::IRInstrumentation),
+                      Succeeded());
+    Writer.addRecord(std::move(Record),
+                     [](Error E) { ADD_FAILURE() << toString(std::move(E)); });
+    auto Profile = Writer.writeBuffer();
+    ASSERT_THAT(Profile, NotNull());
+
+    auto FS = makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
+    ASSERT_TRUE(FS->addFile("/profile.profdata", 0, std::move(Profile)));
+
+    auto UseModule = parseAssemblyString(Code, ParseError, Context);
+    ASSERT_THAT(UseModule, NotNull());
+    ModulePassManager UseMPM;
+    UseMPM.addPass(PGOInstrumentationUse("/profile.profdata", "", false, FS));
+    UseMPM.run(*UseModule, MAM);
+
+    Function *UseFunction = UseModule->getFunction("f");
+    ASSERT_THAT(UseFunction, NotNull());
+    MDNode *FunctionMD =
+        UseFunction->getMetadata(LLVMContext::MD_block_uniformity_profile);
+    ASSERT_THAT(FunctionMD, NotNull());
+    EXPECT_EQ(FunctionMD->getNumOperands(), 0u);
+
+    auto *Branch =
+        cast<CondBrInst>(UseFunction->getEntryBlock().getTerminator());
+    MDNode *BranchMD =
+        Branch->getMetadata(LLVMContext::MD_branch_uniformity_profile);
+    EXPECT_EQ(BranchMD != nullptr, IsUniform);
+    if (BranchMD)
+      EXPECT_EQ(BranchMD->getNumOperands(), 0u);
+
+    for (unsigned I = 0; I < NumCounters; ++I) {
+      BasicBlock *BB = nullptr;
+      for (BasicBlock &Candidate : *UseFunction)
+        if (Candidate.getName() == BlockNames[I])
+          BB = &Candidate;
+      ASSERT_THAT(BB, NotNull());
+
+      MDNode *MD = BB->getTerminator()->getMetadata(
+          LLVMContext::MD_block_uniformity_profile);
+      EXPECT_EQ(MD != nullptr, IsUniform);
+      if (MD)
+        EXPECT_EQ(MD->getNumOperands(), 0u);
+    }
+  }
 }
 
 } // end anonymous namespace
