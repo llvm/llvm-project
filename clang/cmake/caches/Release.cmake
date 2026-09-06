@@ -173,6 +173,7 @@ set_final_stage_var(CPACK_ARCHIVE_THREADS "0" STRING)
 
 set_final_stage_var(LLVM_USE_STATIC_ZSTD "ON" BOOL)
 if (${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
+  set_final_stage_var(LLVM_BUILD_LIBXML2 "ON" BOOL)
   set_final_stage_var(LLVM_USE_STATIC_LIBXML2 "ON" BOOL)
 endif()
 
