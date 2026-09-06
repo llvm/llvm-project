@@ -1,4 +1,4 @@
-//===-- RegisterContextDarwin_riscv32.h -------------------------*- C++ -*-===//
+//===-- RegisterContextDarwin_x86_64.h --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTDARWIN_RISCV32_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTDARWIN_RISCV32_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_COMMON_REGISTERCONTEXT_DARWIN_REGISTERCONTEXTDARWIN_X86_64_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_COMMON_REGISTERCONTEXT_DARWIN_REGISTERCONTEXTDARWIN_X86_64_H
 
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/lldb-private.h"
 
-class RegisterContextDarwin_riscv32 : public lldb_private::RegisterContext {
+class RegisterContextDarwin_x86_64 : public lldb_private::RegisterContext {
 public:
-  RegisterContextDarwin_riscv32(lldb_private::Thread &thread,
-                                uint32_t concrete_frame_idx);
+  RegisterContextDarwin_x86_64(lldb_private::Thread &thread,
+                               uint32_t concrete_frame_idx);
 
-  ~RegisterContextDarwin_riscv32() override;
+  ~RegisterContextDarwin_x86_64() override;
 
   void InvalidateAllRegisters() override;
 
@@ -42,123 +42,90 @@ public:
   uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
                                                uint32_t num) override;
 
+  bool HardwareSingleStep(bool enable) override;
+
   struct GPR {
-    uint32_t x0;
-    uint32_t x1;
-    uint32_t x2;
-    uint32_t x3;
-    uint32_t x4;
-    uint32_t x5;
-    uint32_t x6;
-    uint32_t x7;
-    uint32_t x8;
-    uint32_t x9;
-    uint32_t x10;
-    uint32_t x11;
-    uint32_t x12;
-    uint32_t x13;
-    uint32_t x14;
-    uint32_t x15;
-    uint32_t x16;
-    uint32_t x17;
-    uint32_t x18;
-    uint32_t x19;
-    uint32_t x20;
-    uint32_t x21;
-    uint32_t x22;
-    uint32_t x23;
-    uint32_t x24;
-    uint32_t x25;
-    uint32_t x26;
-    uint32_t x27;
-    uint32_t x28;
-    uint32_t x29;
-    uint32_t x30;
-    uint32_t x31;
-    uint32_t pc;
+    uint64_t rax;
+    uint64_t rbx;
+    uint64_t rcx;
+    uint64_t rdx;
+    uint64_t rdi;
+    uint64_t rsi;
+    uint64_t rbp;
+    uint64_t rsp;
+    uint64_t r8;
+    uint64_t r9;
+    uint64_t r10;
+    uint64_t r11;
+    uint64_t r12;
+    uint64_t r13;
+    uint64_t r14;
+    uint64_t r15;
+    uint64_t rip;
+    uint64_t rflags;
+    uint64_t cs;
+    uint64_t fs;
+    uint64_t gs;
+  };
+
+  struct MMSReg {
+    uint8_t bytes[10];
+    uint8_t pad[6];
+  };
+
+  struct XMMReg {
+    uint8_t bytes[16];
   };
 
   struct FPU {
-    uint32_t f0;
-    uint32_t f1;
-    uint32_t f2;
-    uint32_t f3;
-    uint32_t f4;
-    uint32_t f5;
-    uint32_t f6;
-    uint32_t f7;
-    uint32_t f8;
-    uint32_t f9;
-    uint32_t f10;
-    uint32_t f11;
-    uint32_t f12;
-    uint32_t f13;
-    uint32_t f14;
-    uint32_t f15;
-    uint32_t f16;
-    uint32_t f17;
-    uint32_t f18;
-    uint32_t f19;
-    uint32_t f20;
-    uint32_t f21;
-    uint32_t f22;
-    uint32_t f23;
-    uint32_t f24;
-    uint32_t f25;
-    uint32_t f26;
-    uint32_t f27;
-    uint32_t f28;
-    uint32_t f29;
-    uint32_t f30;
-    uint32_t f31;
-    uint32_t fcsr;
+    uint32_t pad[2];
+    uint16_t fcw; // "fctrl"
+    uint16_t fsw; // "fstat"
+    uint8_t ftw;  // "ftag"
+    uint8_t pad1;
+    uint16_t fop; // "fop"
+    uint32_t ip;  // "fioff"
+    uint16_t cs;  // "fiseg"
+    uint16_t pad2;
+    uint32_t dp; // "fooff"
+    uint16_t ds; // "foseg"
+    uint16_t pad3;
+    uint32_t mxcsr;
+    uint32_t mxcsrmask;
+    MMSReg stmm[8];
+    XMMReg xmm[16];
+    uint8_t pad4[6 * 16];
+    int pad5;
   };
 
   struct EXC {
-    uint32_t exception;
-    uint32_t fsr;
-    uint32_t far;
-  };
-
-  struct CSR {
-    uint32_t csr[1024];
+    uint32_t trapno;
+    uint32_t err;
+    uint64_t faultvaddr;
   };
 
 protected:
-  enum {
-    GPRRegSet = 2,  // RV32_THREAD_STATE
-    EXCRegSet = 3,  // RV32_EXCEPTION_STATE
-    FPURegSet = 4,  // RV_FP32_STATE
-    CSRRegSet1 = 6, // RV_CSR_STATE1
-    CSRRegSet2 = 7, // RV_CSR_STATE2
-    CSRRegSet3 = 8, // RV_CSR_STATE3
-    CSRRegSet4 = 9, // RV_CSR_STATE4
-    CSRRegSet = 10  // full 16kbyte CSR reg bank
-  };
+  enum { GPRRegSet = 4, FPURegSet = 5, EXCRegSet = 6 };
 
   enum {
     GPRWordCount = sizeof(GPR) / sizeof(uint32_t),
     FPUWordCount = sizeof(FPU) / sizeof(uint32_t),
-    EXCWordCount = sizeof(EXC) / sizeof(uint32_t),
-    CSRWordCount = sizeof(CSR) / sizeof(uint32_t)
+    EXCWordCount = sizeof(EXC) / sizeof(uint32_t)
   };
 
   enum { Read = 0, Write = 1, kNumErrors = 2 };
 
   GPR gpr;
-  FPU fpr;
+  FPU fpu;
   EXC exc;
-  CSR csr;
   int gpr_errs[2]; // Read/Write errors
-  int fpr_errs[2]; // Read/Write errors
+  int fpu_errs[2]; // Read/Write errors
   int exc_errs[2]; // Read/Write errors
-  int csr_errs[2]; // Read/Write errors
 
   void InvalidateAllRegisterStates() {
     SetError(GPRRegSet, Read, -1);
     SetError(FPURegSet, Read, -1);
     SetError(EXCRegSet, Read, -1);
-    SetError(CSRRegSet, Read, -1);
   }
 
   int GetError(int flavor, uint32_t err_idx) const {
@@ -169,11 +136,9 @@ protected:
       case GPRRegSet:
         return gpr_errs[err_idx];
       case FPURegSet:
-        return fpr_errs[err_idx];
+        return fpu_errs[err_idx];
       case EXCRegSet:
         return exc_errs[err_idx];
-      case CSRRegSet:
-        return csr_errs[err_idx];
       default:
         break;
       }
@@ -189,15 +154,11 @@ protected:
         return true;
 
       case FPURegSet:
-        fpr_errs[err_idx] = err;
+        fpu_errs[err_idx] = err;
         return true;
 
       case EXCRegSet:
         exc_errs[err_idx] = err;
-        return true;
-
-      case CSRRegSet:
-        csr_errs[err_idx] = err;
         return true;
 
       default:
@@ -209,7 +170,7 @@ protected:
 
   bool RegisterSetIsCached(int set) const { return GetError(set, Read) == 0; }
 
-  void LogGPR(lldb_private::Log *log, const char *title);
+  void LogGPR(lldb_private::Log *log, const char *format, ...);
 
   int ReadGPR(bool force);
 
@@ -217,32 +178,24 @@ protected:
 
   int ReadEXC(bool force);
 
-  int ReadCSR(bool force);
-
   int WriteGPR();
 
   int WriteFPU();
 
   int WriteEXC();
 
-  int WriteCSR();
-
   // Subclasses override these to do the actual reading.
   virtual int DoReadGPR(lldb::tid_t tid, int flavor, GPR &gpr) = 0;
 
-  virtual int DoReadFPU(lldb::tid_t tid, int flavor, FPU &fpr) = 0;
+  virtual int DoReadFPU(lldb::tid_t tid, int flavor, FPU &fpu) = 0;
 
   virtual int DoReadEXC(lldb::tid_t tid, int flavor, EXC &exc) = 0;
 
-  virtual int DoReadCSR(lldb::tid_t tid, int flavor, CSR &exc) = 0;
-
   virtual int DoWriteGPR(lldb::tid_t tid, int flavor, const GPR &gpr) = 0;
 
-  virtual int DoWriteFPU(lldb::tid_t tid, int flavor, const FPU &fpr) = 0;
+  virtual int DoWriteFPU(lldb::tid_t tid, int flavor, const FPU &fpu) = 0;
 
   virtual int DoWriteEXC(lldb::tid_t tid, int flavor, const EXC &exc) = 0;
-
-  virtual int DoWriteCSR(lldb::tid_t tid, int flavor, const CSR &exc) = 0;
 
   int ReadRegisterSet(uint32_t set, bool force);
 
@@ -257,4 +210,4 @@ protected:
   static const lldb_private::RegisterInfo *GetRegisterInfos();
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTDARWIN_RISCV32_H
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_COMMON_REGISTERCONTEXT_DARWIN_REGISTERCONTEXTDARWIN_X86_64_H

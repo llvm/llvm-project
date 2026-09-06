@@ -4,7 +4,7 @@ static_library("Mach-O") {
   deps = [
     "//lldb/source/Core",
     "//lldb/source/Host",
-    "//lldb/source/Plugins/Process/Utility",
+    "//lldb/source/Plugins/Process/Common",
     "//lldb/source/Symbol",
     "//lldb/source/Target",
     "//lldb/source/Utility",
