@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVEREGISTERCONTEXTAIX_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVEREGISTERCONTEXTAIX_H
 
-#include "Plugins/Process/Utility/NativeRegisterContextRegisterInfo.h"
+#include "Plugins/Register/Native/NativeRegisterContextRegisterInfo.h"
 
 namespace lldb_private::process_aix {
 

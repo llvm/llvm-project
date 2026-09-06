@@ -1,4 +1,4 @@
-//===-- NativeRegisterContextDBReg_arm64.h ----------------------*- C++ -*-===//
+//===-- NativeRegisterContextDBReg_loongarch.h ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_NATIVEREGISTERCONTEXTDBREG_ARM64_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_NATIVEREGISTERCONTEXTDBREG_ARM64_H
+#ifndef LLDB_SOURCE_PLUGINS_REGISTER_NATIVE_NATIVEREGISTERCONTEXTDBREG_LOONGARCH_H
+#define LLDB_SOURCE_PLUGINS_REGISTER_NATIVE_NATIVEREGISTERCONTEXTDBREG_LOONGARCH_H
 
-#include "Plugins/Process/Utility/NativeRegisterContextDBReg.h"
+#include "NativeRegisterContextDBReg.h"
 
 namespace lldb_private {
 
-class NativeRegisterContextDBReg_arm64 : public NativeRegisterContextDBReg {
+class NativeRegisterContextDBReg_loongarch : public NativeRegisterContextDBReg {
 public:
-  NativeRegisterContextDBReg_arm64()
-      : NativeRegisterContextDBReg(/*enable_bit=*/0x1U) {}
+  NativeRegisterContextDBReg_loongarch()
+      : NativeRegisterContextDBReg(/*enable_bit=*/0x10U) {}
 
 private:
   uint32_t GetWatchpointSize(uint32_t wp_index) override;
@@ -31,4 +31,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_NATIVEREGISTERCONTEXTDBREG_ARM64_H
+#endif // LLDB_SOURCE_PLUGINS_REGISTER_NATIVE_NATIVEREGISTERCONTEXTDBREG_LOONGARCH_H

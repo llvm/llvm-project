@@ -30,4 +30,5 @@ add_lldb_library(lldbPluginProcessLinux
     lldbUtility
     lldbPluginProcessPOSIX
     lldbPluginProcessUtility
+    lldbPluginRegisterNative
   )
