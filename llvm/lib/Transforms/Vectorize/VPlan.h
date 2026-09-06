@@ -2908,6 +2908,11 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe, public VPIRFlags {
   /// compare has multiple uses.
   bool HasUsesOutsideReductionChain;
 
+  // True if FindIV's expression was sunk into the vector loop. Epilogue
+  // is disabled while this is true. Temporary until epilogue handles sunk
+  // expressions.
+  bool ExpressionSunk = false;
+
 public:
   /// Create a new VPReductionPHIRecipe for the reduction \p Phi.
   VPReductionPHIRecipe(PHINode *Phi, RecurKind Kind, VPValue &Start,
@@ -2924,9 +2929,11 @@ public:
 
   VPReductionPHIRecipe *cloneWithOperands(VPValue *Start,
                                           VPValue *BackedgeValue) {
-    return new VPReductionPHIRecipe(
+    auto *Clone = new VPReductionPHIRecipe(
         dyn_cast_or_null<PHINode>(getUnderlyingValue()), getRecurrenceKind(),
         *Start, *BackedgeValue, Style, *this, HasUsesOutsideReductionChain);
+    Clone->ExpressionSunk = ExpressionSunk;
+    return Clone;
   }
 
   VPReductionPHIRecipe *clone() override {
@@ -2971,6 +2978,10 @@ public:
   bool hasUsesOutsideReductionChain() const {
     return HasUsesOutsideReductionChain;
   }
+
+  void setExpressionSunk() { ExpressionSunk = true; }
+
+  bool isExpressionSunk() const { return ExpressionSunk; }
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {

@@ -4670,10 +4670,13 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
     // If IVOfExpressionToSink is an expression to sink, sink it now.
     VPValue *VectorRegionExitingVal = ReducedIV;
-    if (IVOfExpressionToSink)
+    bool SunkExpression = false;
+    if (IVOfExpressionToSink) {
       VectorRegionExitingVal =
           cloneBinOpForScalarIV(cast<VPWidenRecipe>(FindLastExpression),
                                 ReducedIV, IVOfExpressionToSink);
+      SunkExpression = true;
+    }
 
     VPValue *NewRdxResult;
     VPValue *StartVPV = PhiR->getStartValue();
@@ -4714,6 +4717,8 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
         cast<PHINode>(PhiR->getUnderlyingInstr()), RecurKind::FindIV, *StartVPV,
         *NewFindLastSelect, RdxUnordered{1}, {},
         PhiR->hasUsesOutsideReductionChain());
+    if (SunkExpression)
+      NewPhiR->setExpressionSunk();
     NewPhiR->insertBefore(PhiR);
     PhiR->replaceAllUsesWith(NewPhiR);
     PhiR->eraseFromParent();
