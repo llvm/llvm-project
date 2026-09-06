@@ -99,7 +99,7 @@ The core idea of `rcu` can be described by this image from lwn.net
 - Each row is a thread. The last row is the collector thread and the rows above are the reader threads.
 - Each "Reader" block represents a critical section, which starts with `rcu_domain::lock` and ends with `rcu_domain::unlock` .
 - When `rcu_retire` is called from the writer thread, it starts the "Removal" block.
-- When `rcu_synchronize` is called from the collector thread, it starts the "Grace Period" block. We need to wait until all the 
+- When `rcu_synchronize`/`rcu_barrier` is called from the collector thread, it starts the "Grace Period" block. We need to wait until all the 
   "Reader" blocks that started before the "Grace Period" started, to exit via `rcu_domain::unlock`, then we can end the "Grace Period".
   Note that the "Grace Period" ends after the 4th row's "Reader" block ends. Also note that the "Grace Period" does not need to wait
   for the late "Reader" blocks.
@@ -111,14 +111,14 @@ Some key details of this design are:
 
 - There is a global state which has two phases and it flips between the two phases.
 - Each thread stores its state: whether there is a reader in the critical section, and which phase it was when it entered the critical section.
-- When `rcu_synchronize` is called, it
+- When `rcu_synchronize`/`rcu_barrier` is called, it
 
   - flips the global state to the next phase
   - Going through a grace period: waits until all the threads that are in the critical section with the previous phase to exit the critical section.
   - flips the global state back to the original phase
   - Going through another grace period: waits until all the threads that are in the critical section with the next phase to exit the critical section.
 
-When `rcu_synchronize` returns, we can be sure that all the readers that were in the critical section before `rcu_synchronize` are now out of the critical section.
+When `rcu_synchronize`/`rcu_barrier` returns, we can be sure that all the readers that were in the critical section before `rcu_synchronize`/`rcu_barrier` are now out of the critical section.
 The paper explains why we need to wait two phases instead of just one phase in detail. The key point is that, if we only wait for the readers in the previous phase to exit,
 there might be a late reader that enters the critical section after we flip the global state and before we wait for the previous phase's readers to exit.
 
@@ -187,7 +187,8 @@ This is the main class that implements the `rcu` logic. It contains
 
 - `rcu_thread_local_list_view retired_queue_stage0_;` : All the retired objects are directly pushed to this queue first.
 
-- `rcu_singly_list_view retired_queue_stage1_` and `rcu_singly_list_view retired_queue_stage2_` : These two queues are used to let the retired callbacks go through two grace periods before being invoked. No additional synchronization is needed for these two queues as they are only processed when the collector thread is holding the `grace_period_mutex_` .
+- `rcu_singly_list_view retired_queue_stage1_` and `rcu_singly_list_view retired_queue_stage2_` : These two queues are used to let the retired callbacks go through two grace periods before being invoked. No additional synchronization is needed for these two queues as they are only processed when the collector thread is holding the `grace_period_mutex_`.
+  Note that `_retired_queue_stage2_` queue holds the callbacks that are ready to be called.
 
 The domain has few operations:
 
@@ -222,21 +223,23 @@ The domain has few operations:
 - Detailed Algorithms of going through one grace period:
 
   1. lock `grace_period_mutex_`
-  2. Promote stage 0 to stage 1
+  2. Move stage 0 to a local working queue
   3. Flip the global phase
   4. Wait for the current grace period to end
-  5. Promote stage 2 to the local ready list
-  6. Promote stage 1 to stage 2
+  5. Promote stage 1 to stage 2
+  6. Promote local work queue (from stage 0) to stage 1
   7. unlock `grace_period_mutex_`
-  8. Drain the local ready list
 
 - Post condition of each cycle of this algorithm:
 
-  1. Nodes that were previously inside stage 2 queue will be drained
-  2. Nodes that were previously inside stage 0 will end up in stage 2
-  3. stage 1 queue was empty before the cycle and empty after the cycle (maybe we should make it a local variable instead?)
+  - Nodes that were previously inside stage 0 will end up in stage 1
+  - Nodes that were previously inside stage 1 will end up in stage 2
 
-- Note: in this design, both `rcu_retire` and `rcu_synchronize` calls this `synchronize` operation.
+- Note: in this design, This `synchronize` operation has a `invoke_callback` parameter. `rcu_synchronize` calls it with `false`,
+  while `rcu_barrier` calls it with `true`, which means that the stage 2 queue will be drained and invoked at the end of each
+  grace period
+
+- Note: stage 0 queue is not guarded by `grace_period_mutex_`
 
 
 Design Questions
@@ -273,7 +276,7 @@ And Thomas Rodgers (libstdc++ contributor) also said:
   thread. But on the other hand, users of the library might find it surprising that then gave the library permission
   to also do work on those threads in ways they might not expect.
 
-In libc++'s design, we would like to follow Folly's approach to run these deleters inline when `rcu_synchronize` or
+In libc++'s design, we would like to follow Folly's approach to run these deleters inline when 
 `rcu_barrier` is called.
 
 If we create a libc++ owned collector thread that performs stage migration and potentially stage 2 collection, there is a challenge that creating that thread is something each platform would have to teach us how to do
@@ -288,12 +291,13 @@ inline, we have to decide when to run them.
 
 There are few places we can run the deleters:
 
-- Inside `rcu_synchronize` after the collector thread is unblocked. This approach has the advantage that the collector thread
+- Inside `rcu_barrier` after the collector thread is unblocked. This approach has the advantage that the collector thread
   can reclaim the retired objects as soon as possible. However, it has the disadvantage that the collector thread may be
-  blocked for a long time if there are many retired objects to reclaim.
-
-- Inside `rcu_barrier` after the collector thread is unblocked. Since `rcu_barrier` is designed to block until all the retired
+  blocked for a long time if there are many retired objects to reclaim. Since `rcu_barrier` is designed to block until all the retired
   objects that happen before the `rcu_barrier` call are reclaimed, it is natural to run the deleters here.
+
+- Inside `rcu_synchronize` after the collector thread is unblocked. However, the standard spec does not explicitly suggests that this function
+  maybe invoke evaluations.
 
 - Inside `rcu_retire` after the deleter is put into the queue. `rcu_retire` is designed not to block. However, if there are
   objects that are safe to reclaim due to readers have exited their critical sections, and at the same time, there is no other
@@ -301,10 +305,11 @@ There are few places we can run the deleters:
 
 Folly currently takes the inline approach and runs the deleters at all three places mentioned above.
 
-In libc++'s design, we use the inline approach and only run the deleters inside `rcu_synchronize` and
-`rcu_barrier` for simplicity. Whether or not running the deleters inside `rcu_retire` is debatable. On the one hand, running
-them will make `rcu_retire`  take more time to return. But not running them will make the retired objects stay in the queue
-for a longer time. In an extreme case, if the user never calls `rcu_synchronize` or `rcu_barrier` after calling `rcu_retire`,
+In libc++'s design, we use the inline approach and only run the deleters inside
+`rcu_barrier` for simplicity. The standard spec does not suggest we should invoke deleters in `rcu_synchronize`.
+Whether or not running the deleters inside `rcu_retire` is debatable. On the one hand, running
+them will make `rcu_retire` take more time to return. But not running them will make the retired objects stay in the queue
+for a longer time. In an extreme case, if the user never calls `rcu_barrier` after calling `rcu_retire`,
 the retired objects will never be reclaimed (without a background thread to drain the queue).
 
 Almost all APIs are `noexcept` . Is it designed to avoid memory allocation and avoid using `mutex` ?
