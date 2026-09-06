@@ -4942,31 +4942,25 @@ def : InstAlias<"mfpvr $RT", (MFSPR gprc:$RT, 287)>;
 def : InstAlias<"mfspefscr $Rx", (MFSPR gprc:$Rx, 512)>;
 def : InstAlias<"mtspefscr $Rx", (MTSPR 512, gprc:$Rx)>;
 
+let Predicates = [ModernAs, IsPPC6xx] in {
 foreach BATR = 0-3 in {
     def : InstAlias<"mtdbatu "#BATR#", $Rx",
-                    (MTSPR !add(BATR, !add(BATR, 536)), gprc:$Rx)>,
-                    Requires<[IsPPC6xx]>;
+                    (MTSPR !add(BATR, !add(BATR, 536)), gprc:$Rx)>;
     def : InstAlias<"mfdbatu $Rx, "#BATR,
-                    (MFSPR gprc:$Rx, !add(BATR, !add(BATR, 536)))>,
-                    Requires<[IsPPC6xx]>;
+                    (MFSPR gprc:$Rx, !add(BATR, !add(BATR, 536)))>;
     def : InstAlias<"mtdbatl "#BATR#", $Rx",
-                    (MTSPR !add(BATR, !add(BATR, 537)), gprc:$Rx)>,
-                    Requires<[IsPPC6xx]>;
+                    (MTSPR !add(BATR, !add(BATR, 537)), gprc:$Rx)>;
     def : InstAlias<"mfdbatl $Rx, "#BATR,
-                    (MFSPR gprc:$Rx, !add(BATR, !add(BATR, 537)))>,
-                    Requires<[IsPPC6xx]>;
+                    (MFSPR gprc:$Rx, !add(BATR, !add(BATR, 537)))>;
     def : InstAlias<"mtibatu "#BATR#", $Rx",
-                    (MTSPR !add(BATR, !add(BATR, 528)), gprc:$Rx)>,
-                    Requires<[IsPPC6xx]>;
+                    (MTSPR !add(BATR, !add(BATR, 528)), gprc:$Rx)>;
     def : InstAlias<"mfibatu $Rx, "#BATR,
-                    (MFSPR gprc:$Rx, !add(BATR, !add(BATR, 528)))>,
-                    Requires<[IsPPC6xx]>;
+                    (MFSPR gprc:$Rx, !add(BATR, !add(BATR, 528)))>;
     def : InstAlias<"mtibatl "#BATR#", $Rx",
-                    (MTSPR !add(BATR, !add(BATR, 529)), gprc:$Rx)>,
-                    Requires<[IsPPC6xx]>;
+                    (MTSPR !add(BATR, !add(BATR, 529)), gprc:$Rx)>;
     def : InstAlias<"mfibatl $Rx, "#BATR,
-                    (MFSPR gprc:$Rx, !add(BATR, !add(BATR, 529)))>,
-                    Requires<[IsPPC6xx]>;
+                    (MFSPR gprc:$Rx, !add(BATR, !add(BATR, 529)))>;
+}
 }
 
 def : InstAlias<"mtppr $RT", (MTSPR 896, gprc:$RT)>;
