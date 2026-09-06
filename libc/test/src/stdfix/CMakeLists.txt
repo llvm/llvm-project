@@ -21,7 +21,7 @@ foreach(suffix IN ITEMS hr r lr hk k lk)
   )
 endforeach()
 
-foreach(suffix IN ITEMS uhr ur ulr uhk uk)
+foreach(suffix IN ITEMS uhr ur ulr uhk uk ulk)
   add_libc_test(
     sqrt${suffix}_test
     SUITE
