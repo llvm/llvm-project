@@ -1056,21 +1056,19 @@ TEST(WalkAST, ObjCCategoryDeclDependsOnInterface) {
     @end
   )objc",
            R"objc(
-    @interface ^MyClass (Category)
+    @interface MyClass (^Category)
     @end
   )objc",
            {"-x", "objective-c"});
 }
 
-TEST(WalkAST, ObjCCategoryImplDependsOnInterface) {
+TEST(WalkAST, ObjCCategoryImplDependsOnInterfaceIfNoCategoryDecl) {
   testWalk(R"objc(
     @interface $explicit^MyClass
     @end
   )objc",
            R"objc(
-    @interface MyClass (Category)
-    @end
-    @implementation ^MyClass (Category)
+    @implementation MyClass (^Category)
     @end
   )objc",
            {"-x", "objective-c"});
