@@ -246,13 +246,17 @@ static inline bool ConvertUTF8toWideInternal(llvm::StringRef Source,
   // at least as large as the number of elements in the resulting wide
   // string, because surrogate pairs take at least 4 bytes in UTF-8.
   Result.resize(Source.size() + 1);
-  char *ResultPtr = reinterpret_cast<char *>(&Result[0]);
+  char *ResultBegin = reinterpret_cast<char *>(&Result[0]);
+  char *ResultPtr = ResultBegin;
   const UTF8 *ErrorPtr;
   if (!ConvertUTF8toWide(sizeof(wchar_t), Source, ResultPtr, ErrorPtr)) {
     Result.clear();
     return false;
   }
-  Result.resize(reinterpret_cast<wchar_t *>(ResultPtr) - &Result[0]);
+  // ResultPtr points one position after the copied string, so the byte count
+  // (ResultPtr - ResultBegin) is nonnegative and safe to cast to size_t.
+  const size_t ResultBytes = static_cast<size_t>(ResultPtr - ResultBegin);
+  Result.resize(ResultBytes / sizeof(wchar_t));
   return true;
 }
 
