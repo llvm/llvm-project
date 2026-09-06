@@ -2125,7 +2125,7 @@ Status
         status_tables=create_table(get_status_table(), 4)
     )
 
-    table_doc_path = os.path.join(docs_path, "FeatureTestMacroTable.rst")
+    table_doc_path = os.path.join(docs_path, "FeatureTestMacroTable.md")
     with open(table_doc_path, "w", newline="\n") as f:
         f.write(doc_str)
 

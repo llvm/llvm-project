@@ -1,10 +1,10 @@
-.. _cxx17-status:
+.. _cxx29-status:
 
 ================================
-libc++ C++17 Status
+libc++ C++29 Status
 ================================
 
-.. include:: ../Helpers/Styles.rst
+.. include:: ../Helpers/Styles.md
 
 .. contents::
    :local:
@@ -13,10 +13,11 @@ libc++ C++17 Status
 Overview
 ================================
 
-In November 2014, the C++ standard committee created a draft for the next version of the C++ standard, initially known as "C++1z".
-In February 2017, the C++ standard committee approved this draft, and sent it to ISO for approval as C++17.
+In June 2026, the C++ standard committee adopted the first changes to the next version of the C++ standard, known here as "C++29".
 
-This page shows the status of libc++; the status of clang's support of the language features is `here <https://clang.llvm.org/cxx_status.html#cxx17>`__.
+This page shows the status of libc++; the status of clang's support of the language features is `here <https://clang.llvm.org/cxx_status.html#cxx29>`__.
+
+.. attention:: Features in unreleased drafts of the standard are subject to change.
 
 The groups that have contributed papers:
 
@@ -30,7 +31,7 @@ Paper Status
 ====================================
 
 .. csv-table::
-   :file: Cxx17Papers.csv
+   :file: Cxx29Papers.csv
    :header-rows: 1
    :widths: auto
 
@@ -38,6 +39,6 @@ Library Working Group Issues Status
 ====================================
 
 .. csv-table::
-   :file: Cxx17Issues.csv
+   :file: Cxx29Issues.csv
    :header-rows: 1
    :widths: auto
