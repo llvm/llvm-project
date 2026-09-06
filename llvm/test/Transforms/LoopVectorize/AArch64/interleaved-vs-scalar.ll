@@ -13,8 +13,8 @@ target triple = "aarch64--linux-gnu"
 ; CHECK-LABEL: vector.body:
 ; CHECK: [[LOAD1:%.*]] = load i8
 ; CHECK: [[LOAD2:%.*]] = load i8
-; CHECK: [[INSERT:%.*]] = insertelement <2 x i8> poison, i8 [[LOAD1]], i32 0
-; CHECK: insertelement <2 x i8> [[INSERT]], i8 [[LOAD2]], i32 1
+; CHECK: [[INSERT:%.*]] = insertelement <2 x i8> poison, i8 [[LOAD1]], i64 0
+; CHECK: insertelement <2 x i8> [[INSERT]], i8 [[LOAD2]], i64 1
 ; CHECK: br i1 {{.*}}, label %middle.block, label %vector.body
 
 define void @test(ptr %p, ptr %q, i64 %n) {

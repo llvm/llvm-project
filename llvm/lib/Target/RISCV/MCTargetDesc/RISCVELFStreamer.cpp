@@ -14,7 +14,6 @@
 #include "RISCVAsmBackend.h"
 #include "RISCVBaseInfo.h"
 #include "RISCVMCTargetDesc.h"
-#include "RISCVSubtarget.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
@@ -22,7 +21,6 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -31,7 +29,24 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
                                                const MCSubtargetInfo &STI)
     : RISCVTargetStreamer(S), CurrentVendor("riscv") {
   MCAssembler &MCA = getStreamer().getAssembler();
-  setTargetABI(static_cast<const RISCVSubtarget &>(STI).getTargetABI());
+  auto &MAB = static_cast<RISCVAsmBackend &>(MCA.getBackend());
+  StringRef ABIName = MAB.getTargetOptions().getABIName();
+  // We have to recompute the ABI rather than casting STI to RISCVSubtarget
+  // since MC tools like llvm-mc call this when STI is MCSubtargetInfo instead.
+  // Using RISCVSubtarget requires a TargetMachine, which the MC-only tools
+  // deliberately don't link.
+  // TODO: Might be cleaner to have callers set the ABI instead of computing
+  // it twice which introduces a chance of it being out of sync.
+  if (auto ABIOrErr = RISCVABI::computeTargetABI(STI, ABIName)) {
+    setTargetABI(*ABIOrErr);
+  } else {
+    // Do not warn here and instead silently fall back to the default ABI:
+    // either RISCVSubtarget::initializeSubtargetDependencies() or
+    // RISCVAsmParser::onBeginOfFile() will print the message with proper
+    // contexts. Reporting here would just duplicate that diagnostic.
+    consumeError(ABIOrErr.takeError());
+    setTargetABI(cantFail(RISCVABI::computeTargetABI(STI, "")));
+  }
   setFlagsFromFeatures(STI);
 
   // Compute the initial ISA string.  This serves two purposes:

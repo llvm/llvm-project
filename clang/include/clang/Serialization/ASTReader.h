@@ -646,10 +646,6 @@ private:
   llvm::DenseMap<Decl*, llvm::SmallVector<NamedDecl*, 2>>
     AnonymousDeclarationsForMerging;
 
-  /// Map from numbering information for lambdas to the corresponding lambdas.
-  llvm::DenseMap<std::pair<const Decl *, unsigned>, NamedDecl *>
-      LambdaDeclarationsForMerging;
-
   /// Key used to identify LifetimeExtendedTemporaryDecl for merging,
   /// containing the lifetime-extending declaration and the mangling number.
   using LETemporaryKey = std::pair<Decl *, unsigned>;
@@ -2341,8 +2337,6 @@ public:
   void ReadLateParsedTemplates(
       llvm::MapVector<const FunctionDecl *, std::unique_ptr<LateParsedTemplate>>
           &LPTMap) override;
-
-  void AssignedLambdaNumbering(CXXRecordDecl *Lambda) override;
 
   /// Load a selector from disk, registering its ID if it exists.
   void LoadSelector(Selector Sel);

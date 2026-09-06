@@ -20,6 +20,7 @@ unittest("CodeGenTests") {
   ]
   sources = [
     "AMDGPUMetadataTest.cpp",
+    "AccelTableTest.cpp",
     "AllocationOrderTest.cpp",
     "AsmPrinterDwarfTest.cpp",
     "CCStateTest.cpp",
@@ -36,6 +37,7 @@ unittest("CodeGenTests") {
     "MachineDomTreeUpdaterTest.cpp",
     "MachineInstrBundleIteratorTest.cpp",
     "MachineInstrTest.cpp",
+    "MachineModuleInfoTest.cpp",
     "MachineOperandTest.cpp",
     "PassManagerTest.cpp",
     "RegAllocBasicTest.cpp",
@@ -45,6 +47,7 @@ unittest("CodeGenTests") {
     "ScalableVectorMVTsTest.cpp",
     "SchedBoundary.cpp",
     "SelectionDAGAddressAnalysisTest.cpp",
+    "SelectionDAGCSETest.cpp",
     "SelectionDAGNodeConstructionTest.cpp",
     "SelectionDAGPatternMatchTest.cpp",
     "TargetOptionsTest.cpp",

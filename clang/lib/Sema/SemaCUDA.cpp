@@ -13,6 +13,7 @@
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/Cuda.h"
 #include "clang/Basic/TargetInfo.h"
@@ -61,9 +62,8 @@ ExprResult SemaCUDA::ActOnExecConfigExpr(Scope *S, SourceLocation LLLLoc,
   case CUDAFunctionTarget::HostDevice:
     if (getLangOpts().CUDAIsDevice) {
       IsDeviceKernelCall = true;
-      if (FunctionDecl *Caller =
-              SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
-          Caller && isImplicitHostDeviceFunction(Caller)) {
+      FunctionDecl *Caller = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
+      if (Caller && isImplicitHostDeviceFunction(Caller)) {
         // Under the device compilation, config call under an HD function should
         // be treated as a device kernel call. But, for implicit HD ones (such
         // as lambdas), need to check whether RDC is enabled or not.
@@ -73,6 +73,9 @@ ExprResult SemaCUDA::ActOnExecConfigExpr(Scope *S, SourceLocation LLLLoc,
         // the host-side kernel call.
         if (getLangOpts().HIP)
           IsDeviceKernelCall = false;
+      } else if (getLangOpts().HIP && getLangOpts().IncrementalExtensions &&
+                 isa<TopLevelStmtDecl>(SemaRef.getCurLexicalContext())) {
+        IsDeviceKernelCall = false;
       }
     }
     break;
@@ -789,6 +792,24 @@ void SemaCUDA::checkAllowedInitializer(VarDecl *VD) {
         VD->setInvalidDecl();
       }
     }
+    struct GlobVarInitChecker : ConstEvaluatedExprVisitor<GlobVarInitChecker> {
+      using Base = ConstEvaluatedExprVisitor<GlobVarInitChecker>;
+      SemaCUDA &SCRef;
+      SourceLocation InitLoc;
+
+      GlobVarInitChecker(SemaCUDA &S, SourceLocation L)
+          : Base(S.getASTContext()), SCRef(S), InitLoc(L) {}
+      void VisitDeclRefExpr(const DeclRefExpr *DRE) {
+        if (auto *VarD = dyn_cast<VarDecl>(DRE->getDecl());
+            VarD && VarD->hasAttr<HIPManagedAttr>()) {
+          SCRef.Diag(DRE->getLocation(),
+                     diag::err_cuda_invalid_use_of_managedvar);
+          SCRef.Diag(InitLoc, diag::note_cuda_managed_var_in_glob_init);
+        }
+      }
+    };
+    GlobVarInitChecker Checker(*this, VD->getLocation());
+    Checker.Visit(Init);
   }
 }
 

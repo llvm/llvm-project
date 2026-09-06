@@ -14,7 +14,7 @@
 
 !CHECK-LABEL: func.func @_QPomp_target_in_reduction()
 !CHECK:       %[[IDECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFomp_target_in_reductionEi"}
-!CHECK:       %[[IMAP:.*]] = omp.map.info var_ptr(%[[IDECL]]#1 : !fir.ref<i32>, i32) map_clauses(implicit, tofrom) capture(ByRef) -> !fir.ref<i32> {name = "i"}
+!CHECK:       %[[IMAP:.*]] = omp.map.info var_ptr(%[[IDECL]]#1 : !fir.ref<i32>, i32) map_clauses(implicit, tofrom) capture(ByRef) name("i") -> !fir.ref<i32>
 !CHECK:       omp.target kernel_type(generic) in_reduction(@[[RED_I32_NAME]] %[[IDECL]]#0 : !fir.ref<i32>)
 !CHECK-SAME:    map_entries(%[[IMAP]] -> %[[MAPARG:[^ ]+]] : !fir.ref<i32>)
 !CHECK:         hlfir.declare %[[MAPARG]]

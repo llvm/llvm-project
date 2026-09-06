@@ -61,6 +61,7 @@ unittest("SupportTests") {
     "JSONTest.cpp",
     "JobserverTest.cpp",
     "KnownBitsTest.cpp",
+    "KnownFPClassTest.cpp",
     "LEB128Test.cpp",
     "LineIteratorTest.cpp",
     "LockFileManagerTest.cpp",

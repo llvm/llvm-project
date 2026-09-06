@@ -24,13 +24,9 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <cctype>
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
-
-#define GET_SUBTARGETINFO_ENUM
-#include "NVPTXGenSubtargetInfo.inc"
 
 #include "NVPTXGenAsmWriter.inc"
 
@@ -101,6 +97,11 @@ void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum,
     // SATFINITE flag
     if (Imm & NVPTX::PTXCvtMode::SATFINITE_FLAG)
       O << ".satfinite";
+    return;
+  } else if (Modifier == "pzo") {
+    // PZO flag
+    if (Imm & NVPTX::PTXCvtMode::PZO_FLAG)
+      O << ".pzo";
     return;
   } else if (Modifier == "relu") {
     // RELU flag
@@ -372,6 +373,80 @@ void NVPTXInstPrinter::printAtomicCode(const MCInst *MI, int OpNum,
   llvm_unreachable(formatv("Unknown Modifier: {}", Modifier).str().c_str());
 }
 
+void NVPTXInstPrinter::printEvictionAndPrefetchHint(const MCInst *MI, int OpNum,
+                                                    const MCSubtargetInfo &,
+                                                    raw_ostream &O,
+                                                    StringRef Modifier) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  unsigned Hint = MO.getImm();
+
+  // If no hint is set, print nothing.
+  if (Hint == 0)
+    return;
+
+  // Check if L2::cache_hint mode is active.
+  bool IsCacheHintMode = NVPTX::isL2CacheHintMode(Hint);
+
+  if (Modifier == "l1") {
+    switch (NVPTX::decodeL1Eviction(Hint)) {
+    case NVPTX::L1Eviction::Normal:
+      return;
+    case NVPTX::L1Eviction::Unchanged:
+      O << ".L1::evict_unchanged";
+      return;
+    case NVPTX::L1Eviction::First:
+      O << ".L1::evict_first";
+      return;
+    case NVPTX::L1Eviction::Last:
+      O << ".L1::evict_last";
+      return;
+    case NVPTX::L1Eviction::NoAllocate:
+      O << ".L1::no_allocate";
+      return;
+    }
+  } else if (Modifier == "l2") {
+    switch (NVPTX::decodeL2Eviction(Hint)) {
+    case NVPTX::L2Eviction::Normal:
+      break;
+    case NVPTX::L2Eviction::First:
+      O << ".L2::evict_first";
+      break;
+    case NVPTX::L2Eviction::Last:
+      O << ".L2::evict_last";
+      break;
+    }
+    if (IsCacheHintMode)
+      O << ".L2::cache_hint";
+    return;
+  } else if (Modifier == "prefetch") {
+    switch (NVPTX::decodeL2Prefetch(Hint)) {
+    case NVPTX::L2Prefetch::None:
+      return;
+    case NVPTX::L2Prefetch::Bytes64:
+      O << ".L2::64B";
+      return;
+    case NVPTX::L2Prefetch::Bytes128:
+      O << ".L2::128B";
+      return;
+    case NVPTX::L2Prefetch::Bytes256:
+      O << ".L2::256B";
+      return;
+    }
+  }
+  llvm_unreachable(formatv("Unknown Modifier: {}", Modifier).str().c_str());
+}
+
+void NVPTXInstPrinter::printCachePolicy(const MCInst *MI, int OpNum,
+                                        const MCSubtargetInfo &,
+                                        raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  // If the operand is a register and valid, print ", $reg"
+  if (MO.isReg() && MO.getReg().isValid()) {
+    O << ", ";
+    printRegName(O, MO.getReg());
+  }
+}
+
 void NVPTXInstPrinter::printMmaCode(const MCInst *MI, int OpNum,
                                     const MCSubtargetInfo &, raw_ostream &O,
                                     StringRef Modifier) {
@@ -468,36 +543,9 @@ void NVPTXInstPrinter::printTmaReductionMode(const MCInst *MI, int OpNum,
                                              const MCSubtargetInfo &,
                                              raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
-  using RedTy = nvvm::TMAReductionOp;
-
-  switch (static_cast<RedTy>(MO.getImm())) {
-  case RedTy::ADD:
-    O << ".add";
-    return;
-  case RedTy::MIN:
-    O << ".min";
-    return;
-  case RedTy::MAX:
-    O << ".max";
-    return;
-  case RedTy::INC:
-    O << ".inc";
-    return;
-  case RedTy::DEC:
-    O << ".dec";
-    return;
-  case RedTy::AND:
-    O << ".and";
-    return;
-  case RedTy::OR:
-    O << ".or";
-    return;
-  case RedTy::XOR:
-    O << ".xor";
-    return;
-  }
-  llvm_unreachable(
-      "Invalid Reduction Op in printCpAsyncBulkTensorReductionMode");
+  O << '.'
+    << nvvm::getTMATensorReductionOpName(
+           static_cast<nvvm::TMAReductionOp>(MO.getImm()));
 }
 
 void NVPTXInstPrinter::printCTAGroup(const MCInst *MI, int OpNum,
@@ -517,6 +565,18 @@ void NVPTXInstPrinter::printCTAGroup(const MCInst *MI, int OpNum,
     return;
   }
   llvm_unreachable("Invalid cta_group in printCTAGroup");
+}
+
+void NVPTXInstPrinter::printEvictPolicy(const MCInst *MI, int OpNum,
+                                        const MCSubtargetInfo &, raw_ostream &O,
+                                        StringRef Modifier) {
+  const auto Policy =
+      static_cast<nvvm::EvictPolicyType>(MI->getOperand(OpNum).getImm());
+  // Evict normal is the default priority policy for prefetch and does not print
+  // a qualifier.
+  if (Policy == nvvm::EvictPolicyType::EVICT_NORMAL)
+    return;
+  O << "." << nvvm::getEvictPolicyName(Policy);
 }
 
 void NVPTXInstPrinter::printCallOperand(const MCInst *MI, int OpNum,

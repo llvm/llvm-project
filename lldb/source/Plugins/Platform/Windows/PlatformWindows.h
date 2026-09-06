@@ -77,7 +77,7 @@ public:
   // FIXME not sure what the _sigtramp equivalent would be on this platform
   void CalculateTrapHandlerSymbolNames() override {}
 
-  ConstString GetFullNameForDylib(ConstString basename) override;
+  std::string GetFullNameForDylib(llvm::StringRef basename) override;
 
   size_t GetSoftwareBreakpointTrapOpcode(Target &target,
                                          BreakpointSite *bp_site) override;

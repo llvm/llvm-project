@@ -18,12 +18,12 @@ define float @float_arg_test(ptr %inout) nounwind {
 ; CHECK:       ; %bb.0: ; %start
 ; CHECK-NEXT:    suba.l #12, %sp
 ; CHECK-NEXT:    movem.l %a2, (8,%sp) ; 8-byte Folded Spill
-; CHECK-NEXT:    move.l #0, (%sp)
+; CHECK-NEXT:    clr.l (%sp)
 ; CHECK-NEXT:    jsr float_arg
 ; CHECK-NEXT:    move.l (16,%sp), %a2
 ; CHECK-NEXT:    move.l (%a2), %d0
 ; CHECK-NEXT:    move.l %d0, (%sp)
-; CHECK-NEXT:    move.l #0, (4,%sp)
+; CHECK-NEXT:    clr.l (4,%sp)
 ; CHECK-NEXT:    jsr __mulsf3
 ; CHECK-NEXT:    move.l %d0, (%a2)
 ; CHECK-NEXT:    moveq #0, %d0
@@ -44,13 +44,13 @@ define float @double_arg_test(ptr %inout) nounwind {
 ; CHECK:       ; %bb.0: ; %start
 ; CHECK-NEXT:    suba.l #12, %sp
 ; CHECK-NEXT:    movem.l %a2, (8,%sp) ; 8-byte Folded Spill
-; CHECK-NEXT:    move.l #0, (4,%sp)
-; CHECK-NEXT:    move.l #0, (%sp)
+; CHECK-NEXT:    clr.l (4,%sp)
+; CHECK-NEXT:    clr.l (%sp)
 ; CHECK-NEXT:    jsr double_arg
 ; CHECK-NEXT:    move.l (16,%sp), %a2
 ; CHECK-NEXT:    move.l (%a2), %d0
 ; CHECK-NEXT:    move.l %d0, (%sp)
-; CHECK-NEXT:    move.l #0, (4,%sp)
+; CHECK-NEXT:    clr.l (4,%sp)
 ; CHECK-NEXT:    jsr __mulsf3
 ; CHECK-NEXT:    move.l %d0, (%a2)
 ; CHECK-NEXT:    moveq #0, %d0

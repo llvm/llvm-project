@@ -18,6 +18,9 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
@@ -29,16 +32,16 @@
 using namespace llvm;
 
 namespace {
-class SPIRVPreLegalizer : public MachineFunctionPass {
+class SPIRVPreLegalizerLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  SPIRVPreLegalizer() : MachineFunctionPass(ID) {}
+  SPIRVPreLegalizerLegacy() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 } // namespace
 
-void SPIRVPreLegalizer::getAnalysisUsage(AnalysisUsage &AU) const {
+void SPIRVPreLegalizerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -270,7 +273,20 @@ static void insertBitcasts(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       // If the ptrcast would be redundant, replace all uses with the source
       // register.
       MachineRegisterInfo *MRI = MIB.getMRI();
-      if (GR->getSPIRVTypeForVReg(Source) == AssignedPtrType) {
+      // For untyped pointers the SPIR-V pointer type does not encode the
+      // pointee, so two pointers with different element types share the same
+      // pointer type. The element type still matters because it selects the
+      // Base Type operand of OpUntyped*AccessChainKHR. Treat the cast as
+      // redundant only when the source already carries the same element type.
+      // Otherwise keep a distinct register so the element type is preserved.
+      bool Redundant =
+          AssignedPtrType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR
+              ? GR->getUntypedPtrElementType(Source) ==
+                    GR->getOrCreateSPIRVType(ElemTy, MIB,
+                                             SPIRV::AccessQualifier::ReadWrite,
+                                             /*EmitIR=*/true)
+              : GR->getSPIRVTypeForVReg(Source) == AssignedPtrType;
+      if (Redundant) {
         // Erase Def's assign type instruction if we are going to replace Def.
         if (MachineInstr *AssignMI = findAssignTypeInstr(Def, MRI))
           ToErase.push_back(AssignMI);
@@ -377,8 +393,7 @@ static SPIRVTypeInst propagateSPIRVType(MachineInstr *MI,
       if (SpvType) {
         // check if the address space needs correction
         LLT RegType = MRI.getType(Reg);
-        if (SpvType->getOpcode() == SPIRV::OpTypePointer &&
-            RegType.isPointer() &&
+        if (SpvType.isPointer() && RegType.isPointer() &&
             storageClassToAddressSpace(GR->getPointerStorageClass(SpvType)) !=
                 RegType.getAddressSpace()) {
           // Don't correct CodeSectionINTEL back to Function for function
@@ -573,12 +588,12 @@ static void widenSignSensitiveOps(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                            MachineInstr &MI) -> Register {
     unsigned NewW = widenBitWidthToNextPow2(OldW);
     LLT NewLLT = LLT::scalar(NewW);
+    MIB.setInsertPt(*MI.getParent(), MI.getIterator());
     SPIRVTypeInst SpvTy = GR->getOrCreateSPIRVIntegerType(NewW, MIB);
     Register SExted = MRI.createGenericVirtualRegister(NewLLT);
     GR->assignSPIRVTypeToVReg(SpvTy, SExted, MF);
     MRI.setRegClass(SExted, GR->getRegClass(SpvTy));
     MRI.setType(Reg, NewLLT);
-    MIB.setInsertPt(*MI.getParent(), MI.getIterator());
     MIB.buildSExtInReg(SExted, Reg, OldW);
     return SExted;
   };
@@ -746,16 +761,31 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         Register Reg = MI.getOperand(1).getReg();
         MIB.setInsertPt(*MI.getParent(), MI.getIterator());
         Type *ElementTy = getMDOperandAsType(MI.getOperand(2).getMetadata(), 0);
-        SPIRVTypeInst AssignedPtrType = GR->getOrCreateSPIRVPointerType(
-            ElementTy, MI,
-            addressSpaceToStorageClass(MI.getOperand(3).getImm(), *ST));
+        auto SC = addressSpaceToStorageClass(MI.getOperand(3).getImm(), *ST);
+        if (SC == SPIRV::StorageClass::Function &&
+            isa<FunctionType>(ElementTy) &&
+            ST->canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers))
+          SC = SPIRV::StorageClass::CodeSectionINTEL;
+        SPIRVTypeInst AssignedPtrType =
+            GR->getOrCreateSPIRVPointerType(ElementTy, MI, SC);
+
+        // For untyped pointers, store the element type for later use.
+        if (ST->canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers) &&
+            !ST->isShader()) {
+          SPIRVTypeInst ElemSpvType = GR->getOrCreateSPIRVType(
+              ElementTy, MIB, SPIRV::AccessQualifier::ReadWrite,
+              /*EmitIR=*/true);
+          GR->setUntypedPtrElementType(Reg, ElemSpvType);
+        }
+
         // The intrinsic also carries vector-of-pointer values produced by
         // scalarized vector GEPs; wrap the pointer in OpTypeVector to match
         // the vreg's LLT.
         LLT RegTy = MRI.getType(Reg);
         if (RegTy.isValid() && RegTy.isVector())
           AssignedPtrType = GR->getOrCreateSPIRVVectorType(
-              AssignedPtrType, RegTy.getNumElements(), MIB, true);
+              AssignedPtrType, RegTy.getNumElements(), MIB,
+              /*EmitIR=*/true);
         MachineInstr *Def = MRI.getVRegDef(Reg);
         assert(Def && "Expecting an instruction that defines the register");
         // G_GLOBAL_VALUE already has type info.
@@ -771,6 +801,9 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         // G_GLOBAL_VALUE already has type info.
         if (Def->getOpcode() != TargetOpcode::G_GLOBAL_VALUE)
           updateRegType(Reg, Ty, nullptr, GR, MIB, MF.getRegInfo());
+        if (Def->getOpcode() == TargetOpcode::COPY && isVector1(Ty))
+          updateRegType(passCopy(Def, &MF.getRegInfo())->getOperand(0).getReg(),
+                        Ty, nullptr, GR, MIB, MF.getRegInfo());
         ToErase.push_back(&MI);
       } else if (MIOp == TargetOpcode::FAKE_USE && MI.getNumOperands() > 0) {
         MachineInstr *MdMI = MI.getPrevNode();
@@ -1272,7 +1305,7 @@ static void removeImplicitFallthroughs(MachineFunction &MF,
   }
 }
 
-bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
+static bool runPreLegalizer(MachineFunction &MF) {
   // Initialize the type registry.
   const SPIRVSubtarget &ST = MF.getSubtarget<SPIRVSubtarget>();
   SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
@@ -1299,11 +1332,26 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-INITIALIZE_PASS(SPIRVPreLegalizer, DEBUG_TYPE, "SPIRV pre legalizer", false,
-                false)
+INITIALIZE_PASS(SPIRVPreLegalizerLegacy, DEBUG_TYPE, "SPIRV pre legalizer",
+                false, false)
 
-char SPIRVPreLegalizer::ID = 0;
+char SPIRVPreLegalizerLegacy::ID = 0;
 
-FunctionPass *llvm::createSPIRVPreLegalizerPass() {
-  return new SPIRVPreLegalizer();
+FunctionPass *llvm::createSPIRVPreLegalizerLegacyPass() {
+  return new SPIRVPreLegalizerLegacy();
+}
+
+bool SPIRVPreLegalizerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runPreLegalizer(MF);
+}
+
+PreservedAnalyses
+SPIRVPreLegalizerPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = runPreLegalizer(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserve<GISelValueTrackingAnalysis>();
 }

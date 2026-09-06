@@ -307,6 +307,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   std::unique_ptr<RISCVOperand> defaultFRMArgOp() const;
   std::unique_ptr<RISCVOperand> defaultFRMArgLegacyOp() const;
   std::unique_ptr<RISCVOperand> defaultSMTVType();
+  std::unique_ptr<RISCVOperand> defaultZeroOffset();
 
 public:
   enum RISCVMatchResultTy : unsigned {
@@ -910,6 +911,8 @@ public:
 
   bool isUImm6Lsb0() const { return isUImmShifted<5, 1>(); }
 
+  bool isUImm6Lsb000() const { return isUImmShifted<3, 3>(); }
+
   bool isUImm7Lsb00() const { return isUImmShifted<5, 2>(); }
 
   bool isUImm7Lsb000() const { return isUImmShifted<4, 3>(); }
@@ -948,6 +951,19 @@ public:
            (VK == RISCV::S_LO || VK == RISCV::S_PCREL_LO ||
             VK == RISCV::S_TPREL_LO || VK == ELF::R_RISCV_TLSDESC_LOAD_LO12 ||
             VK == ELF::R_RISCV_TLSDESC_ADD_LO12);
+  }
+
+  /// Returns NoMatch rather than the NearMatch of the underlying predicate
+  /// for anything that is not an immediate at all (such as the '(' token of an
+  /// offset-less memory operand). This lets the matcher skip this optional
+  /// operand and insert the default 0 offset. An immediate that fails Pred
+  /// (e.g. out of range) still reports the wrapped class diagnostic.
+  template <bool (RISCVOperand::*Pred)() const>
+  DiagnosticPredicate isOptionalMemOffset() const {
+    if (!isImm())
+      return DiagnosticPredicate::NoMatch;
+    return (this->*Pred)() ? DiagnosticPredicate::Match
+                           : DiagnosticPredicate::NearMatch;
   }
 
   bool isSImm12Lsb00000() const {
@@ -1597,6 +1613,9 @@ std::string RISCVAsmParser::getCustomOperandDiag(unsigned MatchError) {
   case Match_InvalidUImm6Lsb0:
     return Range(0, (1 << 6) - 2,
                  "immediate must be a multiple of 2 bytes in the range");
+  case Match_InvalidUImm6Lsb000:
+    return Range(0, (1 << 6) - 8,
+                 "immediate must be a multiple of 8 in the range");
   case Match_InvalidUImm7Lsb00:
     return Range(0, (1 << 7) - 4,
                  "immediate must be a multiple of 4 bytes in the range");
@@ -4093,6 +4112,11 @@ std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultFRMArgOp() const {
 std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultFRMArgLegacyOp() const {
   return RISCVOperand::createFRMArg(RISCVFPRndMode::RoundingMode::RNE,
                                     llvm::SMLoc());
+}
+
+std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultZeroOffset() {
+  return RISCVOperand::createExpr(MCConstantExpr::create(0, getContext()),
+                                  llvm::SMLoc(), llvm::SMLoc(), isRV64());
 }
 
 static unsigned getNFforLXSEG(unsigned Opcode) {

@@ -28,11 +28,13 @@
 #include <cstddef>
 #include <execution>
 #include <numeric>
+#include <memory>
 
 #include "test_iterators.h"
 
 using non_forward_iterator       = cpp17_input_iterator<int*>;
 using non_bidirectional_iterator = forward_iterator<int*>;
+using non_randomaccess_iterator  = bidirectional_iterator<int*>;
 struct non_output_iterator : forward_iterator<int*> {
   constexpr int const& operator*() const; // prevent it from being an output iterator
 };
@@ -40,6 +42,7 @@ struct non_output_iterator : forward_iterator<int*> {
 void f(non_forward_iterator non_fwd,
        non_output_iterator non_output,
        non_bidirectional_iterator non_bidir,
+       non_randomaccess_iterator non_random,
        std::execution::sequenced_policy pol) {
   auto pred     = [](auto&&...) -> bool { return true; };
   auto func     = [](auto&&...) -> int { return 1; };
@@ -71,6 +74,11 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::destroy(pol, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: destroy}}
+    (void)std::destroy_n(pol, non_fwd, n);     // expected-error@*:* {{static assertion failed: destroy_n}}
+  }
+
+  {
     (void)std::equal(pol, non_fwd, non_fwd, it);       // expected-error@*:* {{static assertion failed: equal}}
     (void)std::equal(pol, it, it, non_fwd);            // expected-error@*:* {{static assertion failed: equal}}
     (void)std::equal(pol, non_fwd, non_fwd, it, pred); // expected-error@*:* {{static assertion failed: equal}}
@@ -91,6 +99,15 @@ void f(non_forward_iterator non_fwd,
     (void)std::find(pol, non_fwd, non_fwd, val);         // expected-error@*:* {{static assertion failed: find}}
     (void)std::find_if(pol, non_fwd, non_fwd, pred);     // expected-error@*:* {{static assertion failed: find_if}}
     (void)std::find_if_not(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: find_if_not}}
+  }
+
+  {
+    (void)std::find_end(pol, it, it, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: find_end}}
+    (void)std::find_end(
+        pol, it, it, non_fwd, non_fwd, pred);           // expected-error@*:* {{static assertion failed: find_end}}
+    (void)std::find_end(pol, non_fwd, non_fwd, it, it); // expected-error@*:* {{static assertion failed: find_end}}
+    (void)std::find_end(
+        pol, non_fwd, non_fwd, it, it, pred); // expected-error@*:* {{static assertion failed: find_end}}
   }
 
   {
@@ -141,6 +158,13 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::is_heap_until(
+        pol, non_random, non_random); // expected-error@*:* {{static assertion failed: is_heap_until}}
+    (void)std::is_heap_until(
+        pol, non_random, non_random, pred); // expected-error@*:* {{static assertion failed: is_heap_until}}
+  }
+
+  {
     (void)std::is_sorted(pol, non_fwd, non_fwd);       // expected-error@*:* {{static assertion failed: is_sorted}}
     (void)std::is_sorted(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: is_sorted}}
   }
@@ -160,6 +184,13 @@ void f(non_forward_iterator non_fwd,
     (void)std::merge(pol, non_fwd, non_fwd, it, it, out, pred); // expected-error@*:* {{static assertion failed: merge}}
     (void)std::merge(pol, it, it, non_fwd, non_fwd, out, pred); // expected-error@*:* {{static assertion failed: merge}}
     (void)std::merge(pol, it, it, it, it, non_output, pred);    // expected-error@*:* {{static assertion failed: merge}}
+  }
+
+  {
+    (void)std::max_element(pol, non_fwd, non_fwd);       // expected-error@*:* {{static assertion failed: max_element}}
+    (void)std::max_element(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: max_element}}
+    (void)std::min_element(pol, non_fwd, non_fwd);       // expected-error@*:* {{static assertion failed: min_element}}
+    (void)std::min_element(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: min_element}}
   }
 
   {
@@ -218,6 +249,19 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::search(pol, non_fwd, non_fwd, it, it); // expected-error@*:* {{static assertion failed: search}}
+    (void)std::search(pol, it, it, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: search}}
+
+    (void)std::search(pol, non_fwd, non_fwd, it, it, pred); // expected-error@*:* {{static assertion failed: search}}
+    (void)std::search(pol, it, it, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: search}}
+  }
+
+  {
+    (void)std::search_n(pol, non_fwd, non_fwd, 1, 1);       // expected-error@*:* {{static assertion failed: search_n}}
+    (void)std::search_n(pol, non_fwd, non_fwd, 1, 1, pred); // expected-error@*:* {{static assertion failed: search_n}}
+  }
+
+  {
     (void)std::sort(pol, non_fwd, non_fwd);       // expected-error@*:* {{static assertion failed: sort}}
     (void)std::sort(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: sort}}
   }
@@ -270,5 +314,20 @@ void f(non_forward_iterator non_fwd,
         pol, non_fwd, non_fwd, it); // expected-error@*:* {{static assertion failed: adjacent_difference}}
     (void)std::adjacent_difference(
         pol, non_fwd, non_fwd, it, func); // expected-error@*:* {{static assertion failed: adjacent_difference}}
+  }
+
+  {
+    std::uninitialized_default_construct(
+        pol, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: uninitialized_default_construct}}
+    std::uninitialized_default_construct_n(
+        pol, non_fwd, n); // expected-error@*:* {{static assertion failed: uninitialized_default_construct_n}}
+    std::uninitialized_value_construct(
+        pol, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: uninitialized_value_construct}}
+    std::uninitialized_value_construct_n(
+        pol, non_fwd, n); // expected-error@*:* {{static assertion failed: uninitialized_value_construct_n}}
+    std::uninitialized_fill(
+        pol, non_fwd, non_fwd, val); // expected-error@*:* {{static assertion failed: uninitialized_fill}}
+    std::uninitialized_fill_n(
+        pol, non_fwd, n, val); // expected-error@*:* {{static assertion failed: uninitialized_fill_n}}
   }
 }

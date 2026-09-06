@@ -102,7 +102,7 @@ InputSection *elf::createInterpSection(Ctx &ctx) {
 
 Defined *elf::addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
                                 uint64_t value, uint64_t size,
-                                InputSectionBase &section) {
+                                SectionBase &section) {
   Defined *s = makeDefined(ctx, section.file, name, STB_LOCAL, STV_DEFAULT,
                            type, value, size, &section);
   if (ctx.in.symTab)
@@ -461,6 +461,10 @@ bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
       continue;
     }
     for (EhSectionPiece *fde : rec->fdes) {
+      // Discard zero-range FDE, otherwise it would displace the FDE of the
+      // next function, which shares its address.
+      if (hasZeroPcRange(ctx, *fde, enc))
+        continue;
       // The FDE has passed `isFdeLive`, so the first relocation's symbol is a
       // live Defined.
       auto *isec = cast<EhInputSection>(fde->sec);
@@ -491,6 +495,12 @@ bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
   // Compute size.
   size_t oldSize = size;
   finalizeContents();
+
+  // Don't allow the section to shrink; otherwise the size of the section can
+  // oscillate infinitely.
+  if (size < oldSize)
+    size = oldSize;
+
   return size != oldSize;
 }
 
@@ -2869,14 +2879,14 @@ void DebugNamesBaseSection::computeHdrAndAbbrevTable(
         FoldingSetNodeID id;
         abbrev.Profile(id);
         uint32_t newCode;
-        void *insertPos;
-        if (Abbrev *existing = abbrevSet.FindNodeOrInsertPos(id, insertPos)) {
+        FoldingSetInsertToken token;
+        if (Abbrev *existing = abbrevSet.lookup(id, token)) {
           // Found it; we've already seen an identical abbreviation.
           newCode = existing->code;
         } else {
           Abbrev *abbrev2 =
               new (abbrevAlloc.Allocate()) Abbrev(std::move(abbrev));
-          abbrevSet.InsertNode(abbrev2, insertPos);
+          abbrevSet.insert(abbrev2, token);
           abbrevTable.push_back(abbrev2);
           newCode = abbrevTable.size();
           abbrev2->code = newCode;

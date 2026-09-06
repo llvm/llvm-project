@@ -1,0 +1,9 @@
+{
+  "members": [],
+  "namespace": {
+    "kind": "StaticLibrary",
+    "name": "otherlib"
+  },
+  "target_triple": "x86_64-apple-macosx",
+  "type": "StaticLibrary"
+}

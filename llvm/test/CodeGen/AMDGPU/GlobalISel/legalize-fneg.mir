@@ -354,3 +354,115 @@ body: |
     %1:_(<4 x f16>) = G_FNEG %0
     $vgpr0_vgpr1 = COPY %1
 ...
+
+---
+name: test_fneg_bf16
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; SI-LABEL: name: test_fneg_bf16
+    ; SI: liveins: $vgpr0
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(bf16) = G_TRUNC [[COPY]](i32)
+    ; SI-NEXT: [[FNEG:%[0-9]+]]:_(bf16) = G_FNEG [[TRUNC]]
+    ; SI-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[FNEG]](bf16)
+    ; SI-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
+    ;
+    ; VI-LABEL: name: test_fneg_bf16
+    ; VI: liveins: $vgpr0
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(bf16) = G_TRUNC [[COPY]](i32)
+    ; VI-NEXT: [[FNEG:%[0-9]+]]:_(bf16) = G_FNEG [[TRUNC]]
+    ; VI-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[FNEG]](bf16)
+    ; VI-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
+    ;
+    ; GFX9-LABEL: name: test_fneg_bf16
+    ; GFX9: liveins: $vgpr0
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(bf16) = G_TRUNC [[COPY]](i32)
+    ; GFX9-NEXT: [[FNEG:%[0-9]+]]:_(bf16) = G_FNEG [[TRUNC]]
+    ; GFX9-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[FNEG]](bf16)
+    ; GFX9-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i16) = G_TRUNC %0
+    %2:_(bf16) = G_BITCAST %1
+    %3:_(bf16) = G_FNEG %2
+    %4:_(i16) = G_BITCAST %3
+    %5:_(i32) = G_ANYEXT %4
+    $vgpr0 = COPY %5
+...
+
+---
+name: test_fneg_v2bf16
+body: |
+  bb.0:
+    liveins: $vgpr0
+
+    ; SI-LABEL: name: test_fneg_v2bf16
+    ; SI: liveins: $vgpr0
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x bf16>) = COPY $vgpr0
+    ; SI-NEXT: [[FNEG:%[0-9]+]]:_(<2 x bf16>) = G_FNEG [[COPY]]
+    ; SI-NEXT: $vgpr0 = COPY [[FNEG]](<2 x bf16>)
+    ;
+    ; VI-LABEL: name: test_fneg_v2bf16
+    ; VI: liveins: $vgpr0
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x bf16>) = COPY $vgpr0
+    ; VI-NEXT: [[FNEG:%[0-9]+]]:_(<2 x bf16>) = G_FNEG [[COPY]]
+    ; VI-NEXT: $vgpr0 = COPY [[FNEG]](<2 x bf16>)
+    ;
+    ; GFX9-LABEL: name: test_fneg_v2bf16
+    ; GFX9: liveins: $vgpr0
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x bf16>) = COPY $vgpr0
+    ; GFX9-NEXT: [[FNEG:%[0-9]+]]:_(<2 x bf16>) = G_FNEG [[COPY]]
+    ; GFX9-NEXT: $vgpr0 = COPY [[FNEG]](<2 x bf16>)
+    %0:_(<2 x bf16>) = COPY $vgpr0
+    %1:_(<2 x bf16>) = G_FNEG %0
+    $vgpr0 = COPY %1
+...
+
+---
+name: test_fneg_v4bf16
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    ; SI-LABEL: name: test_fneg_v4bf16
+    ; SI: liveins: $vgpr0_vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<4 x bf16>) = COPY $vgpr0_vgpr1
+    ; SI-NEXT: [[UV:%[0-9]+]]:_(<2 x bf16>), [[UV1:%[0-9]+]]:_(<2 x bf16>) = G_UNMERGE_VALUES [[COPY]](<4 x bf16>)
+    ; SI-NEXT: [[FNEG:%[0-9]+]]:_(<2 x bf16>) = G_FNEG [[UV]]
+    ; SI-NEXT: [[FNEG1:%[0-9]+]]:_(<2 x bf16>) = G_FNEG [[UV1]]
+    ; SI-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x bf16>) = G_CONCAT_VECTORS [[FNEG]](<2 x bf16>), [[FNEG1]](<2 x bf16>)
+    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x bf16>)
+    ;
+    ; VI-LABEL: name: test_fneg_v4bf16
+    ; VI: liveins: $vgpr0_vgpr1
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<4 x bf16>) = COPY $vgpr0_vgpr1
+    ; VI-NEXT: [[UV:%[0-9]+]]:_(<2 x bf16>), [[UV1:%[0-9]+]]:_(<2 x bf16>) = G_UNMERGE_VALUES [[COPY]](<4 x bf16>)
+    ; VI-NEXT: [[FNEG:%[0-9]+]]:_(<2 x bf16>) = G_FNEG [[UV]]
+    ; VI-NEXT: [[FNEG1:%[0-9]+]]:_(<2 x bf16>) = G_FNEG [[UV1]]
+    ; VI-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x bf16>) = G_CONCAT_VECTORS [[FNEG]](<2 x bf16>), [[FNEG1]](<2 x bf16>)
+    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x bf16>)
+    ;
+    ; GFX9-LABEL: name: test_fneg_v4bf16
+    ; GFX9: liveins: $vgpr0_vgpr1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<4 x bf16>) = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: [[UV:%[0-9]+]]:_(<2 x bf16>), [[UV1:%[0-9]+]]:_(<2 x bf16>) = G_UNMERGE_VALUES [[COPY]](<4 x bf16>)
+    ; GFX9-NEXT: [[FNEG:%[0-9]+]]:_(<2 x bf16>) = G_FNEG [[UV]]
+    ; GFX9-NEXT: [[FNEG1:%[0-9]+]]:_(<2 x bf16>) = G_FNEG [[UV1]]
+    ; GFX9-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x bf16>) = G_CONCAT_VECTORS [[FNEG]](<2 x bf16>), [[FNEG1]](<2 x bf16>)
+    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x bf16>)
+    %0:_(<4 x bf16>) = COPY $vgpr0_vgpr1
+    %1:_(<4 x bf16>) = G_FNEG %0
+    $vgpr0_vgpr1 = COPY %1
+...

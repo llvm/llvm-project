@@ -848,6 +848,10 @@ bool ClauseProcessor::processOrdered(
   return false;
 }
 
+bool ClauseProcessor::processFull() const {
+  return findUniqueClause<omp::clause::Full>() != nullptr;
+}
+
 bool ClauseProcessor::processPartial(std::optional<int64_t> &result) const {
   if (auto *clause = findUniqueClause<omp::clause::Partial>()) {
     if (clause->v.has_value())
@@ -1719,8 +1723,7 @@ bool ClauseProcessor::processInReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 inReductionVars, inReduceVarByRef, inReductionDeclSymbols,
-                inReductionSyms, inReductionObjects, converter.getSymbolMap(),
-                &semaCtx))
+                inReductionSyms, &semaCtx))
           TODO(currentLocation, "Lowering unrecognised reduction type");
 
         // Copy local lists into the output.
@@ -1828,7 +1831,7 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result,
       std::optional<mlir::omp::LinearModifier> linearMod;
       if (explicitLinearMod)
         linearMod = *explicitLinearMod;
-      else if (semaCtx.langOptions().OpenMPVersion >= 52)
+      else if (semaCtx.langOptions().getOpenMPVersion() >= 52)
         linearMod = isDeclareSimd ? getDeclareSimdDefaultMod(*sym)
                                   : mlir::omp::LinearModifier::val;
 
@@ -1976,10 +1979,10 @@ bool ClauseProcessor::processMap(
     // default value
     Map::MapType type;
     if (directive == llvm::omp::Directive::OMPD_target_enter_data &&
-        semaCtx.langOptions().OpenMPVersion >= 52)
+        semaCtx.langOptions().getOpenMPVersion() >= 52)
       type = mapType.value_or(Map::MapType::To);
     else if (directive == llvm::omp::Directive::OMPD_target_exit_data &&
-             semaCtx.langOptions().OpenMPVersion >= 52)
+             semaCtx.langOptions().getOpenMPVersion() >= 52)
       type = mapType.value_or(Map::MapType::From);
     else
       type = mapType.value_or(Map::MapType::Tofrom);
@@ -2138,8 +2141,7 @@ bool ClauseProcessor::processReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 reductionVars, reduceVarByRef, reductionDeclSymbols,
-                reductionSyms, reductionObjects, converter.getSymbolMap(),
-                &semaCtx, reductionVarCache))
+                reductionSyms, &semaCtx, reductionVarCache))
           TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
@@ -2168,8 +2170,7 @@ bool ClauseProcessor::processTaskReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 taskReductionVars, taskReduceVarByRef, taskReductionDeclSymbols,
-                taskReductionSyms, taskReductionObjects,
-                converter.getSymbolMap(), &semaCtx))
+                taskReductionSyms, &semaCtx))
           TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(taskReductionVars,
@@ -2211,6 +2212,15 @@ bool ClauseProcessor::processEnter(
 bool ClauseProcessor::processUseDeviceAddr(
     lower::StatementContext &stmtCtx, mlir::omp::UseDeviceAddrClauseOps &result,
     llvm::SmallVectorImpl<Object> &useDeviceObjects) const {
+  llvm::SmallPtrSet<const semantics::Symbol *, 4> mappedCommonBlocks;
+  findRepeatableClause<omp::clause::Map>(
+      [&](const omp::clause::Map &clause, const parser::CharBlock &) {
+        for (const Object &object : std::get<ObjectList>(clause.t)) {
+          if (object.sym()->has<semantics::CommonBlockDetails>())
+            mappedCommonBlocks.insert(&object.sym()->GetUltimate());
+        }
+      });
+
   std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
   bool clauseFound = findRepeatableClause<omp::clause::UseDeviceAddr>(
       [&](const omp::clause::UseDeviceAddr &clause,
@@ -2218,7 +2228,21 @@ bool ClauseProcessor::processUseDeviceAddr(
         mlir::Location location = converter.genLocation(source);
         mlir::omp::ClauseMapFlags mapTypeBits =
             mlir::omp::ClauseMapFlags::return_param;
-        processMapObjects(stmtCtx, location, clause.v, mapTypeBits,
+        ObjectList objects;
+        // Keep the aggregate only when it pairs with a whole-COMMON map on
+        // this directive; otherwise preserve named-COMMON member equivalence.
+        for (const Object &object : clause.v) {
+          auto *details =
+              object.sym()->detailsIf<semantics::CommonBlockDetails>();
+          if (!details ||
+              mappedCommonBlocks.contains(&object.sym()->GetUltimate())) {
+            objects.push_back(object);
+            continue;
+          }
+          for (const auto &member : details->objects())
+            objects.push_back(Object{&*member, std::nullopt});
+        }
+        processMapObjects(stmtCtx, location, objects, mapTypeBits,
                           parentMemberIndices, result.useDeviceAddrVars,
                           useDeviceObjects);
       });

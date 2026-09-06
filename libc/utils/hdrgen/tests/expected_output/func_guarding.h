@@ -13,9 +13,9 @@
 
 __BEGIN_C_DECLS
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 void func_all_guarded(int) __NOEXCEPT;
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 int func_guarded_a(int) __NOEXCEPT;
@@ -23,9 +23,9 @@ int func_guarded_a(int) __NOEXCEPT;
 int func_guarded_b(int) __NOEXCEPT;
 #endif // LIBC_TYPES_HAS_FLOAT16
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 int func_guarded_c(int) __NOEXCEPT;
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 int func_plain(int) __NOEXCEPT;
 

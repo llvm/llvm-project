@@ -1204,10 +1204,9 @@ define i8 @vpreduce_mul_v1i8(i8 %s, <1 x i8> %v, <1 x i1> %m, i32 zeroext %evl) 
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
 ; RV32-NEXT:    vmv.s.x v9, a1
-; RV32-NEXT:    vmsne.vi v9, v9, 0
-; RV32-NEXT:    vmand.mm v0, v9, v0
+; RV32-NEXT:    vmsne.vi v0, v9, 0, v0.t
 ; RV32-NEXT:    vmv.v.i v9, 1
 ; RV32-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
 ; RV32-NEXT:    vmerge.vvm v8, v9, v8, v0
@@ -1228,10 +1227,9 @@ define i8 @vpreduce_mul_v1i8(i8 %s, <1 x i8> %v, <1 x i1> %m, i32 zeroext %evl) 
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
 ; RV64-NEXT:    vmv.s.x v9, a1
-; RV64-NEXT:    vmsne.vi v9, v9, 0
-; RV64-NEXT:    vmand.mm v0, v9, v0
+; RV64-NEXT:    vmsne.vi v0, v9, 0, v0.t
 ; RV64-NEXT:    vmv.v.i v9, 1
 ; RV64-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
 ; RV64-NEXT:    vmerge.vvm v8, v9, v8, v0
@@ -1256,10 +1254,9 @@ define signext i8 @vpreduce_mul_v2i8(i8 signext %s, <2 x i8> %v, <2 x i1> %m, i3
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; RV32-NEXT:    vid.v v9
-; RV32-NEXT:    vmsltu.vx v9, v9, a1
-; RV32-NEXT:    vmand.mm v0, v9, v0
+; RV32-NEXT:    vmsltu.vx v0, v9, a1, v0.t
 ; RV32-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
 ; RV32-NEXT:    vmv.v.i v9, 1
 ; RV32-NEXT:    vmerge.vvm v8, v9, v8, v0
@@ -1284,10 +1281,9 @@ define signext i8 @vpreduce_mul_v2i8(i8 signext %s, <2 x i8> %v, <2 x i1> %m, i3
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
 ; RV64-NEXT:    vid.v v9
-; RV64-NEXT:    vmsltu.vx v9, v9, a1
-; RV64-NEXT:    vmand.mm v0, v9, v0
+; RV64-NEXT:    vmsltu.vx v0, v9, a1, v0.t
 ; RV64-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
 ; RV64-NEXT:    vmv.v.i v9, 1
 ; RV64-NEXT:    vmerge.vvm v8, v9, v8, v0
@@ -1316,10 +1312,9 @@ define signext i8 @vpreduce_mul_v4i8(i8 signext %s, <4 x i8> %v, <4 x i1> %m, i3
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    .cfi_offset ra, -4
-; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; RV32-NEXT:    vid.v v9
-; RV32-NEXT:    vmsltu.vx v9, v9, a1
-; RV32-NEXT:    vmand.mm v0, v9, v0
+; RV32-NEXT:    vmsltu.vx v0, v9, a1, v0.t
 ; RV32-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; RV32-NEXT:    vmv.v.i v9, 1
 ; RV32-NEXT:    vmerge.vvm v8, v9, v8, v0
@@ -1346,10 +1341,9 @@ define signext i8 @vpreduce_mul_v4i8(i8 signext %s, <4 x i8> %v, <4 x i1> %m, i3
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-NEXT:    .cfi_offset ra, -8
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
 ; RV64-NEXT:    vid.v v9
-; RV64-NEXT:    vmsltu.vx v9, v9, a1
-; RV64-NEXT:    vmand.mm v0, v9, v0
+; RV64-NEXT:    vmsltu.vx v0, v9, a1, v0.t
 ; RV64-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
 ; RV64-NEXT:    vmv.v.i v9, 1
 ; RV64-NEXT:    vmerge.vvm v8, v9, v8, v0

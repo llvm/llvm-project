@@ -69,8 +69,7 @@ struct NotLengthExprForStringNode {
           return true;
         }
 
-        if (const auto *OnNode =
-                dyn_cast<Expr>(MemberCallNode->getImplicitObjectArgument())) {
+        if (const Expr *OnNode = MemberCallNode->getImplicitObjectArgument()) {
           return !utils::areStatementsIdentical(OnNode->IgnoreParenImpCasts(),
                                                 ExprNode->IgnoreParenImpCasts(),
                                                 *Context);

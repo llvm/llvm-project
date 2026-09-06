@@ -1027,6 +1027,11 @@ void DWARFRewriter::updateDebugInfo() {
       finalizeTypeSections(DIEBlder, *Streamer, GDBIndexSection);
   SmallVector<SmallVector<DWARFUnit *>> PartVec =
       partitionCUs(*BC.DwCtx, CUSize);
+  // Buckets below run in parallel, and with a .dwp package they all read the
+  // same split DWARF context. Create that context now to avoid a race
+  // (note this is a DWP-only issue, DWOs are safe since each thread operate
+  // on its own DWARF context).
+  BC.openSharedDWOContext();
   const unsigned int ThreadCount =
       std::min(opts::DebugThreadCount, opts::ThreadCount);
   llvm::ThreadPoolInterface &ThreadPool =
@@ -1061,6 +1066,9 @@ void DWARFRewriter::updateDebugInfo() {
     BucketDIEBlders[Idx].reset();
     LocalWriters[Idx].RngListsWriter.reset();
     LocalWriters[Idx].LegacyRangesWriter.reset();
+    for (DWARFUnit *CU : SortedCUs)
+      if (std::optional<uint64_t> DWOId = CU->getDWOId())
+        BC.releaseDWOCU(*DWOId);
   };
 
   for (size_t I = 0; I < TotalTasks; ++I) {
@@ -2250,15 +2258,7 @@ void DWARFRewriter::writeDWOFiles(
     const std::string &DWOName, DebugLocWriter &LocWriter,
     DebugStrOffsetsWriter &StrOffstsWriter, DebugStrWriter &StrWriter,
     DebugRangesSectionWriter &TempRangesSectionWriter) {
-  // Setup DWP code once.
-  DWARFContext *DWOCtx = BC.getDWOContext();
   const uint64_t DWOId = *CU.getDWOId();
-  const DWARFUnitIndex *CUIndex = nullptr;
-  bool IsDWP = false;
-  if (DWOCtx) {
-    CUIndex = &DWOCtx->getCUIndex();
-    IsDWP = !CUIndex->getRows().empty();
-  }
 
   // Skipping CUs that we failed to load.
   std::optional<DWARFUnit *> DWOCU = BC.getDWOCU(DWOId);
@@ -2284,9 +2284,9 @@ void DWARFRewriter::writeDWOFiles(
   std::unique_ptr<ToolOutputFile> TempOut =
       std::make_unique<ToolOutputFile>(AbsolutePath, EC, sys::fs::OF_None);
 
-  const DWARFUnitIndex::Entry *CUDWOEntry = nullptr;
-  if (IsDWP)
-    CUDWOEntry = CUIndex->getFromHash(DWOId);
+  const DWARFUnitIndex::Entry *CUDWOEntry =
+      !BC.usesDWP() ? nullptr
+                    : (*DWOCU)->getContext().getCUIndex().getFromHash(DWOId);
 
   const object::ObjectFile *File =
       (*DWOCU)->getContext().getDWARFObj().getFile();
@@ -2324,7 +2324,7 @@ void DWARFRewriter::writeDWOFiles(
       continue;
     Expected<StringRef> ContentsExp = Section.getContents();
     assert(ContentsExp && "Invalid contents.");
-    if (IsDWP && SectionName == "debug_str.dwo") {
+    if (BC.usesDWP() && SectionName == "debug_str.dwo") {
       if (StrWriter.isInitialized())
         StrDWOContent = StrWriter.getBufferStr();
       else
@@ -2335,7 +2335,7 @@ void DWARFRewriter::writeDWOFiles(
             (*DWOCU)->getContext(), SectionName, *ContentsExp, KnownSections,
             *Streamer, *this, CUDWOEntry, DWOId, OutputData, RangeListssWriter,
             LocWriter, StrOffstsWriter, StrWriter, OverridenSections)) {
-      if (IsDWP && SectionName == "debug_str_offsets.dwo") {
+      if (BC.usesDWP() && SectionName == "debug_str_offsets.dwo") {
         StrOffsetsContent = *OutData;
         continue;
       }
@@ -2343,7 +2343,7 @@ void DWARFRewriter::writeDWOFiles(
     }
   }
 
-  if (IsDWP) {
+  if (BC.usesDWP()) {
     // Handling both .debug_str.dwo and .debug_str_offsets.dwo concurrently. In
     // the original DWP, .debug_str is a deduplicated global table, and the
     // .debug_str.dwo slice for a single CU needs to be extracted according to
