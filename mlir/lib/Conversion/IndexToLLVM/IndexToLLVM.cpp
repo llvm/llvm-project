@@ -25,8 +25,8 @@ namespace {
 // ConvertIndexCeilDivS
 //===----------------------------------------------------------------------===//
 
-/// Convert `ceildivs(n, m)` into `x = m > 0 ? -1 : 1` and then
-/// `n*m > 0 ? (n+x)/m + 1 : -(-n/m)`.
+/// Convert `ceildivs(n, m)` into `z = n / m` and then
+/// `z*m != n && (n < 0) == (m < 0) ? z + 1 : z`.
 struct ConvertIndexCeilDivS : mlir::ConvertOpToLLVMPattern<CeilDivSOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
@@ -38,33 +38,27 @@ struct ConvertIndexCeilDivS : mlir::ConvertOpToLLVMPattern<CeilDivSOp> {
     Value m = adaptor.getRhs();
     Value zero = LLVM::ConstantOp::create(rewriter, loc, n.getType(), 0);
     Value posOne = LLVM::ConstantOp::create(rewriter, loc, n.getType(), 1);
-    Value negOne = LLVM::ConstantOp::create(rewriter, loc, n.getType(), -1);
 
-    // Compute `x`.
-    Value mPos =
-        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::sgt, m, zero);
-    Value x = LLVM::SelectOp::create(rewriter, loc, mPos, negOne, posOne);
+    // Compute the truncated quotient. sdiv rounds towards zero, so it already
+    // rounds up whenever the exact quotient is negative.
+    Value quotient = LLVM::SDivOp::create(rewriter, loc, n, m);
+    Value quotientPlusOne =
+        LLVM::AddOp::create(rewriter, loc, quotient, posOne);
 
-    // Compute the positive result.
-    Value nPlusX = LLVM::AddOp::create(rewriter, loc, n, x);
-    Value nPlusXDivM = LLVM::SDivOp::create(rewriter, loc, nPlusX, m);
-    Value posRes = LLVM::AddOp::create(rewriter, loc, nPlusXDivM, posOne);
-
-    // Compute the negative result.
-    Value negN = LLVM::SubOp::create(rewriter, loc, zero, n);
-    Value negNDivM = LLVM::SDivOp::create(rewriter, loc, negN, m);
-    Value negRes = LLVM::SubOp::create(rewriter, loc, zero, negNDivM);
-
-    // Pick the positive result if `n` and `m` have the same sign and `n` is
-    // non-zero, i.e. `(n > 0) == (m > 0) && n != 0`.
-    Value nPos =
-        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::sgt, n, zero);
+    // Correct the quotient by one if the division is inexact and the exact
+    // quotient is positive, i.e. if `n` and `m` have the same sign.
+    Value product = LLVM::MulOp::create(rewriter, loc, quotient, m);
+    Value inexact = LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::ne,
+                                         n, product);
+    Value nNeg =
+        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::slt, n, zero);
+    Value mNeg =
+        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::slt, m, zero);
     Value sameSign = LLVM::ICmpOp::create(rewriter, loc,
-                                          LLVM::ICmpPredicate::eq, nPos, mPos);
-    Value nNonZero =
-        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::ne, n, zero);
-    Value cmp = LLVM::AndOp::create(rewriter, loc, sameSign, nNonZero);
-    rewriter.replaceOpWithNewOp<LLVM::SelectOp>(op, cmp, posRes, negRes);
+                                          LLVM::ICmpPredicate::eq, nNeg, mNeg);
+    Value cmp = LLVM::AndOp::create(rewriter, loc, inexact, sameSign);
+    rewriter.replaceOpWithNewOp<LLVM::SelectOp>(op, cmp, quotientPlusOne,
+                                                quotient);
     return success();
   }
 };

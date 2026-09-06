@@ -71,29 +71,39 @@ func.func @ceildivs(%n: index, %m: index) -> index {
   // CHECK-DAG: %[[N:.*]] = builtin.unrealized_conversion_cast %[[NI]]
   // CHECK-DAG: %[[M:.*]] = builtin.unrealized_conversion_cast %[[MI]]
   // CHECK: %[[ZERO:.*]] = spirv.Constant 0
-  // CHECK: %[[POS_ONE:.*]] = spirv.Constant 1
-  // CHECK: %[[NEG_ONE:.*]] = spirv.Constant -1
+  // CHECK: %[[ONE:.*]] = spirv.Constant 1
 
-  // CHECK: %[[M_POS:.*]] = spirv.SGreaterThan %[[M]], %[[ZERO]]
-  // CHECK: %[[X:.*]] = spirv.Select %[[M_POS]], %[[NEG_ONE]], %[[POS_ONE]]
+  // CHECK: %[[QUOTIENT:.*]] = spirv.SDiv %[[N]], %[[M]]
+  // CHECK: %[[QUOTIENT_PLUS_ONE:.*]] = spirv.IAdd %[[QUOTIENT]], %[[ONE]]
 
-  // CHECK: %[[N_PLUS_X:.*]] = spirv.IAdd %[[N]], %[[X]]
-  // CHECK: %[[N_PLUS_X_DIV_M:.*]] = spirv.SDiv %[[N_PLUS_X]], %[[M]]
-  // CHECK: %[[POS_RES:.*]] = spirv.IAdd %[[N_PLUS_X_DIV_M]], %[[POS_ONE]]
-
-  // CHECK: %[[NEG_N:.*]] = spirv.ISub %[[ZERO]], %[[N]]
-  // CHECK: %[[NEG_N_DIV_M:.*]] = spirv.SDiv %[[NEG_N]], %[[M]]
-  // CHECK: %[[NEG_RES:.*]] = spirv.ISub %[[ZERO]], %[[NEG_N_DIV_M]]
-
-  // CHECK: %[[N_POS:.*]] = spirv.SGreaterThan %[[N]], %[[ZERO]]
-  // CHECK: %[[SAME_SIGN:.*]] = spirv.LogicalEqual %[[N_POS]], %[[M_POS]]
-  // CHECK: %[[N_NON_ZERO:.*]] = spirv.INotEqual %[[N]], %[[ZERO]]
-  // CHECK: %[[CMP:.*]] = spirv.LogicalAnd %[[SAME_SIGN]], %[[N_NON_ZERO]]
-  // CHECK: %[[RESULT:.*]] = spirv.Select %[[CMP]], %[[POS_RES]], %[[NEG_RES]]
+  // CHECK: %[[PRODUCT:.*]] = spirv.IMul %[[QUOTIENT]], %[[M]]
+  // CHECK: %[[INEXACT:.*]] = spirv.INotEqual %[[N]], %[[PRODUCT]]
+  // CHECK: %[[N_NEG:.*]] = spirv.SLessThan %[[N]], %[[ZERO]]
+  // CHECK: %[[M_NEG:.*]] = spirv.SLessThan %[[M]], %[[ZERO]]
+  // CHECK: %[[SAME_SIGN:.*]] = spirv.LogicalEqual %[[N_NEG]], %[[M_NEG]]
+  // CHECK: %[[CMP:.*]] = spirv.LogicalAnd %[[INEXACT]], %[[SAME_SIGN]]
+  // CHECK: %[[RESULT:.*]] = spirv.Select %[[CMP]], %[[QUOTIENT_PLUS_ONE]], %[[QUOTIENT]]
   %result = index.ceildivs %n, %m
 
   // %[[RESULTI:.*] = builtin.unrealized_conversion_cast %[[RESULT]]
   // return %[[RESULTI]]
+  return %result : index
+}
+
+// INDEX32-LABEL: @ceildivs_intmin_dividend
+// INDEX64-LABEL: @ceildivs_intmin_dividend
+func.func @ceildivs_intmin_dividend() -> index {
+  %n = index.constant -2147483648
+  %m = index.constant 7
+
+  // The conversion folds an op before it looks for a pattern, and the fold
+  // needs the 32-bit and the 64-bit result to agree, which they now do. They
+  // did not while the dividend was negated, so the sequence above ran instead
+  // and computed 306783378 on 32-bit.
+  // INDEX32: spirv.Constant -306783378 : i32
+  // INDEX64: spirv.Constant -306783378 : i64
+  %result = index.ceildivs %n, %m
+
   return %result : index
 }
 

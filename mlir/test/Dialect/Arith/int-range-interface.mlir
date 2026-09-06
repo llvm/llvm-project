@@ -272,16 +272,35 @@ func.func @ceil_divsi_full_range(%6: index) -> index {
   return %55 : index
 }
 
-// CHECK-LABEL: func @ceil_divsi_intmin_bug_115293
+// ceildivsi(INT_MIN, x > 1) is negative, as the mathematical definition of
+// signed ceiling division requires. See #115293, where it was inferred to be
+// positive to match a folder that gave up on INT_MIN operands.
+// CHECK-LABEL: func @ceil_divsi_intmin
 // CHECK: %[[ret:.*]] = arith.constant true
 // CHECK: return %[[ret]]
-func.func @ceil_divsi_intmin_bug_115293() -> i1 {
+func.func @ceil_divsi_intmin() -> i1 {
     %intMin_i64 = test.with_bounds { smin = -9223372036854775808 : si64, smax = -9223372036854775808 : si64, umin = 9223372036854775808 : ui64, umax = 9223372036854775808 : ui64 } : i64
     %denom_i64 = test.with_bounds { smin = 1189465982 : si64, smax = 1189465982 : si64, umin = 1189465982 : ui64, umax = 1189465982 : ui64 } : i64
-    %res_i64 = test.with_bounds { smin = 7754212542 : si64, smax = 7754212542 : si64, umin = 7754212542 : ui64, umax = 7754212542 : ui64 }  : i64
+    %res_i64 = test.with_bounds { smin = -7754212542 : si64, smax = -7754212542 : si64, umin = 18446744065955339074 : ui64, umax = 18446744065955339074 : ui64 }  : i64
 
     %0 = arith.ceildivsi %intMin_i64, %denom_i64 : i64
     %1 = arith.cmpi eq, %0, %res_i64 : i64
+    func.return %1 : i1
+}
+
+// A dividend range that starts at INT_MIN needs no special case either:
+// ceildivsi is monotonic in its dividend, so the endpoints bound it. Here every
+// quotient is negative, which #115293 could not conclude.
+// CHECK-LABEL: func @ceil_divsi_intmin_dividend_range
+// CHECK: %[[ret:.*]] = arith.constant true
+// CHECK: return %[[ret]]
+func.func @ceil_divsi_intmin_dividend_range() -> i1 {
+    %c0_i64 = arith.constant 0 : i64
+    %c64_i64 = arith.constant 64 : i64
+    %num_i64 = test.with_bounds { smin = -9223372036854775808 : si64, smax = -9223372036854775553 : si64, umin = 9223372036854775808 : ui64, umax = 9223372036854776063 : ui64 } : i64
+
+    %0 = arith.ceildivsi %num_i64, %c64_i64 : i64
+    %1 = arith.cmpi slt, %0, %c0_i64 : i64
     func.return %1 : i1
 }
 
