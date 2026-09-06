@@ -4339,11 +4339,9 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
         if (IsNoThrow) {
           if (!this->emitDupPtr(E))
             return false;
-          if (!this->emitNullPtr(0, nullptr, E))
+          if (!this->emitIsNonNullPtr(E))
             return false;
-          if (!this->emitEQPtr(E))
-            return false;
-          if (!this->jumpTrue(EndLabel, E))
+          if (!this->jumpFalse(EndLabel, E))
             return false;
         }
 
