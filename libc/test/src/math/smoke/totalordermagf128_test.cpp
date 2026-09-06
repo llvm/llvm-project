@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains tests for totalordermagf128.
+///
+//===----------------------------------------------------------------------===//
 
 #include "TotalOrderMagTest.h"
 

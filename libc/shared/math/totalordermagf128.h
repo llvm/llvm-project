@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Shared totalordermagf128 function.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SHARED_MATH_TOTALORDERMAGF128_H
 #define LLVM_LIBC_SHARED_MATH_TOTALORDERMAGF128_H

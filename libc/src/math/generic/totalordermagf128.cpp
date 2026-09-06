@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of totalordermagf128 function.
+///
+//===----------------------------------------------------------------------===//
 
 #include "src/math/totalordermagf128.h"
 #include "src/__support/CPP/bit.h"
