@@ -112,16 +112,23 @@ static bool hasProcessableCondition(const Loop &L, ScalarEvolution &SE,
     Pred = ICmpInst::getSwappedPredicate(Pred);
   }
 
-  // Allowed AddRec as induction variable.
+  // Allowed AddRec as induction variable, and only one of this loop: a
+  // recurrence of another loop does not evolve with this loop's latch, and the
+  // bound calculated from it would not refer to this loop either.
   const auto *AddRec = dyn_cast<SCEVAddRecExpr>(AddRecSCEV);
-  if (!AddRec)
+  if (!AddRec || AddRec->getLoop() != &L)
     return false;
 
   // If the induction variable is a PHI node, the value from the backedge is
-  // used instead.
+  // used instead. Only the header PHI has one: a recurrence of this loop is
+  // also reported for a PHI that merely forwards it, such as a single-entry
+  // PHI elsewhere in the loop.
   Value *NonPHIAddRecValue = AddRecValue;
-  if (auto *PN = dyn_cast<PHINode>(AddRecValue))
+  if (auto *PN = dyn_cast<PHINode>(AddRecValue)) {
+    if (PN->getParent() != L.getHeader())
+      return false;
     NonPHIAddRecValue = PN->getIncomingValueForBlock(L.getLoopLatch());
+  }
 
   // The BoundSCEV should be evaluated at loop entry.
   if (!SE.isAvailableAtLoopEntry(BoundSCEV, &L))
