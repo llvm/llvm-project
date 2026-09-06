@@ -10,7 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_ARM64_H
 
 #include "Plugins/Process/Utility/LinuxPTraceDefines_arm64sve.h"
-#include "Plugins/Process/Utility/RegisterContextPOSIX_arm64.h"
+#include "Plugins/Process/Common/RegisterContext/POSIX/RegisterContextPOSIX_arm64.h"
 #include "Register/Common/RegisterTypeDetector_arm64.h"
 
 #include "Plugins/Process/elf-core/RegisterUtilities.h"

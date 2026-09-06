@@ -30,4 +30,5 @@ add_lldb_unittest(RegisterSupportTests
   ${PLATFORM_SOURCES}
 
   LINK_LIBS
-    lldbRegister)
+    lldbRegister
+    lldbProcessContextSupport)

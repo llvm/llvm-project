@@ -17,6 +17,7 @@ add_lldb_library(lldbPluginProcessElfCore PLUGIN
     BinaryFormat
     Support
   LINK_LIBS
+    lldbProcessContextSupport
     lldbCore
     lldbTarget
     lldbPluginDynamicLoaderPosixDYLD

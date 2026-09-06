@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_ARM_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_ARM_H
 
-#include "Plugins/Process/Utility/RegisterContextPOSIX_arm.h"
+#include "Plugins/Process/Common/RegisterContext/POSIX/RegisterContextPOSIX_arm.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"

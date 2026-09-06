@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNELCORE_X86_64_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNELCORE_X86_64_H
 
-#include "Plugins/Process/Utility/RegisterContextPOSIX_x86.h"
+#include "Plugins/Process/Common/RegisterContext/POSIX/RegisterContextPOSIX_x86.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 
 class RegisterContextFreeBSDKernelCore_x86_64
