@@ -10,7 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_ARM_H
 
 #include "RegisterInfoInterface.h"
-#include "RegisterInfoPOSIX_arm.h"
+#include "RegisterInfoCommon_arm.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 
@@ -18,7 +18,7 @@ class RegisterContextPOSIX_arm : public lldb_private::RegisterContext {
 public:
   RegisterContextPOSIX_arm(
       lldb_private::Thread &thread,
-      std::unique_ptr<RegisterInfoPOSIX_arm> register_info);
+      std::unique_ptr<RegisterInfoCommon_arm> register_info);
 
   ~RegisterContextPOSIX_arm() override;
 
@@ -43,7 +43,7 @@ public:
   const char *GetRegisterName(unsigned reg);
 
 protected:
-  std::unique_ptr<RegisterInfoPOSIX_arm> m_register_info_up;
+  std::unique_ptr<RegisterInfoCommon_arm> m_register_info_up;
 
   virtual const lldb_private::RegisterInfo *GetRegisterInfo();
 
@@ -51,7 +51,7 @@ protected:
 
   bool IsFPR(unsigned reg);
 
-  size_t GetFPUSize() { return sizeof(RegisterInfoPOSIX_arm::FPU); }
+  size_t GetFPUSize() { return sizeof(RegisterInfoCommon_arm::FPU); }
 
   virtual bool ReadGPR() = 0;
   virtual bool ReadFPR() = 0;

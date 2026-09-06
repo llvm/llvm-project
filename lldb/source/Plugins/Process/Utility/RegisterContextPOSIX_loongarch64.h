@@ -10,7 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_LOONGARCH64_H
 
 #include "RegisterInfoInterface.h"
-#include "RegisterInfoPOSIX_loongarch64.h"
+#include "RegisterInfoCommon_loongarch64.h"
 #include "lldb-loongarch-register-enums.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
@@ -19,7 +19,7 @@ class RegisterContextPOSIX_loongarch64 : public lldb_private::RegisterContext {
 public:
   RegisterContextPOSIX_loongarch64(
       lldb_private::Thread &thread,
-      std::unique_ptr<RegisterInfoPOSIX_loongarch64> register_info);
+      std::unique_ptr<RegisterInfoCommon_loongarch64> register_info);
 
   ~RegisterContextPOSIX_loongarch64() override;
 
@@ -42,7 +42,7 @@ public:
   const lldb_private::RegisterSet *GetRegisterSet(size_t set) override;
 
 protected:
-  std::unique_ptr<RegisterInfoPOSIX_loongarch64> m_register_info_up;
+  std::unique_ptr<RegisterInfoCommon_loongarch64> m_register_info_up;
 
   virtual const lldb_private::RegisterInfo *GetRegisterInfo();
 
@@ -54,7 +54,7 @@ protected:
 
   bool IsLASX(unsigned reg);
 
-  size_t GetFPRSize() { return sizeof(RegisterInfoPOSIX_loongarch64::FPR); }
+  size_t GetFPRSize() { return sizeof(RegisterInfoCommon_loongarch64::FPR); }
 
   uint32_t GetRegNumFCSR() const { return fpr_fcsr_loongarch; }
 

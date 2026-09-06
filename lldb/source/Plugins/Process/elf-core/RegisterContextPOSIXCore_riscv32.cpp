@@ -42,13 +42,13 @@ RegisterContextCorePOSIX_riscv32::Create(Thread &thread, const ArchSpec &arch,
                                          llvm::ArrayRef<CoreNote> notes) {
   return std::unique_ptr<RegisterContextCorePOSIX_riscv32>(
       new RegisterContextCorePOSIX_riscv32(
-          thread, std::make_unique<RegisterInfoPOSIXDynamic_riscv32>(arch),
+          thread, std::make_unique<RegisterInfoCommonDynamic_riscv32>(arch),
           gpregset, notes));
 }
 
 RegisterContextCorePOSIX_riscv32::RegisterContextCorePOSIX_riscv32(
     Thread &thread,
-    std::unique_ptr<RegisterInfoPOSIXDynamic_riscv32> register_info,
+    std::unique_ptr<RegisterInfoCommonDynamic_riscv32> register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContext(thread, 0), m_reg_infos_up(std::move(register_info)) {
   // Compute the maximum register counts for GPR, FPR, and CSR.

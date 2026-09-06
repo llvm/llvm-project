@@ -12,7 +12,7 @@
 #define lldb_NativeRegisterContextLinux_riscv64_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv64.h"
+#include "Plugins/Process/Utility/RegisterInfoCommon_riscv64.h"
 
 #include <asm/ptrace.h>
 
@@ -25,7 +25,7 @@ class NativeRegisterContextLinux_riscv64 : public NativeRegisterContextLinux {
 public:
   NativeRegisterContextLinux_riscv64(
       const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
-      std::unique_ptr<RegisterInfoPOSIX_riscv64> register_info_up);
+      std::unique_ptr<RegisterInfoCommon_riscv64> register_info_up);
 
   uint32_t GetRegisterSetCount() const override;
 
@@ -71,9 +71,9 @@ private:
   bool m_gpr_is_valid;
   bool m_fpu_is_valid;
 
-  RegisterInfoPOSIX_riscv64::GPR m_gpr;
+  RegisterInfoCommon_riscv64::GPR m_gpr;
 
-  RegisterInfoPOSIX_riscv64::FPR m_fpr;
+  RegisterInfoCommon_riscv64::FPR m_fpr;
 
   size_t GetRegContextSize();
 
@@ -83,7 +83,7 @@ private:
 
   uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
 
-  const RegisterInfoPOSIX_riscv64 &GetRegisterInfo() const;
+  const RegisterInfoCommon_riscv64 &GetRegisterInfo() const;
 };
 
 } // namespace process_linux

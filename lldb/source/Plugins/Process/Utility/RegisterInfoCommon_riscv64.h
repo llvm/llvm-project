@@ -1,4 +1,4 @@
-//===-- RegisterInfoPOSIX_riscv64.h -----------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_RISCV64_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_RISCV64_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOCOMMON_RISCV64_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOCOMMON_RISCV64_H
 
 #include "RegisterInfoAndSetInterface.h"
 #include "lldb/Target/RegisterContext.h"
@@ -15,7 +15,7 @@
 #include "lldb/lldb-private.h"
 #include <map>
 
-class RegisterInfoPOSIX_riscv64
+class RegisterInfoCommon_riscv64
     : public lldb_private::RegisterInfoAndSetInterface {
 public:
   enum { GPRegSet = 0 };
@@ -42,7 +42,7 @@ public:
     void *vpr;
   };
 
-  RegisterInfoPOSIX_riscv64(const lldb_private::ArchSpec &target_arch,
+  RegisterInfoCommon_riscv64(const lldb_private::ArchSpec &target_arch,
                             lldb_private::Flags opt_regsets);
 
   void AddRegSetGP();

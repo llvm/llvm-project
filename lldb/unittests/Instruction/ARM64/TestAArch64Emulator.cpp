@@ -16,14 +16,14 @@
 #include "lldb/Utility/RegisterValue.h"
 
 #include "Plugins/Instruction/ARM64/EmulateInstructionARM64.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
+#include "Plugins/Process/Utility/RegisterInfoCommon_arm64.h"
 #include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
 struct Arch64EmulatorTester : public EmulateInstructionARM64 {
-  RegisterInfoPOSIX_arm64::GPR gpr;
+  RegisterInfoCommon_arm64::GPR gpr;
   uint8_t memory[64] = {0};
   uint64_t memory_offset = 0;
 

@@ -13,7 +13,7 @@
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
+#include "Plugins/Process/Utility/RegisterInfoCommon_arm.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
@@ -75,7 +75,7 @@ NativeRegisterContextLinux_arm::NativeRegisterContextLinux_arm(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
     : NativeRegisterContextRegisterInfo(
           native_thread,
-          new RegisterInfoPOSIX_arm(target_arch, /*has_tls_reg=*/true)),
+          new RegisterInfoCommon_arm(target_arch, /*has_tls_reg=*/true)),
       NativeRegisterContextLinux(native_thread) {
   assert(target_arch.GetMachine() == llvm::Triple::arm);
 
@@ -89,8 +89,8 @@ NativeRegisterContextLinux_arm::NativeRegisterContextLinux_arm(
   m_refresh_hwdebug_info = true;
 }
 
-RegisterInfoPOSIX_arm &NativeRegisterContextLinux_arm::GetRegisterInfo() const {
-  return static_cast<RegisterInfoPOSIX_arm &>(*m_register_info_interface_up);
+RegisterInfoCommon_arm &NativeRegisterContextLinux_arm::GetRegisterInfo() const {
+  return static_cast<RegisterInfoCommon_arm &>(*m_register_info_interface_up);
 }
 
 uint32_t NativeRegisterContextLinux_arm::GetRegisterSetCount() const {
@@ -293,21 +293,21 @@ Status NativeRegisterContextLinux_arm::WriteAllRegisterValues(
 
 bool NativeRegisterContextLinux_arm::IsGPR(unsigned reg) const {
   if (GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
-      RegisterInfoPOSIX_arm::GPRegSet)
+      RegisterInfoCommon_arm::GPRegSet)
     return true;
   return false;
 }
 
 bool NativeRegisterContextLinux_arm::IsFPR(unsigned reg) const {
   if (GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
-      RegisterInfoPOSIX_arm::FPRegSet)
+      RegisterInfoCommon_arm::FPRegSet)
     return true;
   return false;
 }
 
 bool NativeRegisterContextLinux_arm::IsTLS(unsigned reg) const {
   return GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
-         RegisterInfoPOSIX_arm::TLSRegSet;
+         RegisterInfoCommon_arm::TLSRegSet;
 }
 
 llvm::Error NativeRegisterContextLinux_arm::ReadHardwareDebugInfo() {

@@ -23,7 +23,7 @@ using namespace lldb_private;
 RegisterContextFreeBSDKernelCore_riscv64::
     RegisterContextFreeBSDKernelCore_riscv64(
         Thread &thread,
-        std::unique_ptr<RegisterInfoPOSIX_riscv64> register_info_up,
+        std::unique_ptr<RegisterInfoCommon_riscv64> register_info_up,
         lldb::addr_t pcb_addr)
     : RegisterContextPOSIX_riscv64(thread, std::move(register_info_up)),
       m_pcb_addr(pcb_addr) {}

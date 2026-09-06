@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_RISCV32_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_RISCV32_H
 
-#include "Plugins/Process/Utility/RegisterInfoPOSIXDynamic_riscv32.h"
+#include "Plugins/Process/Utility/RegisterInfoCommonDynamic_riscv32.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataExtractor.h"
@@ -51,7 +51,7 @@ public:
 protected:
   RegisterContextCorePOSIX_riscv32(
       lldb_private::Thread &thread,
-      std::unique_ptr<RegisterInfoPOSIXDynamic_riscv32> register_info,
+      std::unique_ptr<RegisterInfoCommonDynamic_riscv32> register_info,
       const lldb_private::DataExtractor &gpregset,
       llvm::ArrayRef<lldb_private::CoreNote> notes);
 
@@ -71,7 +71,7 @@ protected:
   void GetFeatures(llvm::SmallVectorImpl<std::string> &features) const;
 
 private:
-  std::unique_ptr<RegisterInfoPOSIXDynamic_riscv32> m_reg_infos_up;
+  std::unique_ptr<RegisterInfoCommonDynamic_riscv32> m_reg_infos_up;
   lldb_private::DataExtractor m_gpregset;
   lldb_private::DataExtractor m_fpregset;
   lldb_private::DataExtractor m_csregset;

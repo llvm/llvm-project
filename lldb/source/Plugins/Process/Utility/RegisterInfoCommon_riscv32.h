@@ -1,4 +1,4 @@
-//===-- RegisterInfoPOSIX_riscv32.h -----------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_RISCV32_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_RISCV32_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOCOMMON_RISCV32_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOCOMMON_RISCV32_H
 
 #include "RegisterInfoAndSetInterface.h"
 #include "lldb/Target/RegisterContext.h"
@@ -16,7 +16,7 @@
 
 #include <map>
 
-class RegisterInfoPOSIX_riscv32
+class RegisterInfoCommon_riscv32
     : public lldb_private::RegisterInfoAndSetInterface {
 public:
   static const lldb_private::RegisterInfo *
@@ -42,7 +42,7 @@ public:
     uint32_t fcsr;
   };
 
-  RegisterInfoPOSIX_riscv32(const lldb_private::ArchSpec &target_arch,
+  RegisterInfoCommon_riscv32(const lldb_private::ArchSpec &target_arch,
                             lldb_private::Flags flags);
 
   size_t GetGPRSize() const override;

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIXDYNAMIC_RISCV32_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIXDYNAMIC_RISCV32_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOCOMMONDYNAMIC_RISCV32_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOCOMMONDYNAMIC_RISCV32_H
 
 #include "RegisterInfoAndSetInterface.h"
 #include "lldb/Target/DynamicRegisterInfo.h"
@@ -17,10 +17,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
-class RegisterInfoPOSIXDynamic_riscv32
+class RegisterInfoCommonDynamic_riscv32
     : public lldb_private::RegisterInfoAndSetInterface {
 public:
-  RegisterInfoPOSIXDynamic_riscv32(const lldb_private::ArchSpec &target_arch);
+  RegisterInfoCommonDynamic_riscv32(const lldb_private::ArchSpec &target_arch);
 
   size_t GetGPRSize() const override;
 
@@ -67,4 +67,4 @@ private:
       llvm::SmallVectorImpl<lldb_private::RegisterInfo> &cs_reg_infos);
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIXDYNAMIC_RISCV32_H
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOCOMMONDYNAMIC_RISCV32_H
