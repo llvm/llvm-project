@@ -89,7 +89,7 @@ static void checkDependences(ArrayRef<Operation *> loadsAndStores) {
         if (result.value == DependenceResult::Failure) {
           srcOpInst->emitError("dependence check failed");
         } else {
-          bool ret = hasDependence(result);
+          bool ret = mustHaveDependence(result);
           // TODO: Print dependence type (i.e. RAW, etc) and print
           // distance vectors as: ([2, 3], [0, 10]). Also, shorten distance
           // vectors from ([1, 1], [3, 3]) to (1, 3).
