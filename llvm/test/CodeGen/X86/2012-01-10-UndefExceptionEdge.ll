@@ -125,6 +125,16 @@ define void @f(ptr nocapture %arg, ptr nocapture %arg1, ptr nocapture %arg2, ptr
 ; CHECK-NEXT:    ## in Loop: Header=BB0_8 Depth=1
 ; CHECK-NEXT:    decl {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Folded Spill
 ; CHECK-NEXT:    jmp LBB0_8
+; CHECK-NEXT:  LBB0_9:
+; CHECK-NEXT:    movl %esi, %ebx
+; CHECK-NEXT:  LBB0_6: ## %bb23
+; CHECK-NEXT:    testl %ebx, %ebx
+; CHECK-NEXT:    addl $28, %esp
+; CHECK-NEXT:    popl %esi
+; CHECK-NEXT:    popl %edi
+; CHECK-NEXT:    popl %ebx
+; CHECK-NEXT:    popl %ebp
+; CHECK-NEXT:    retl
 ; CHECK-NEXT:  LBB0_18: ## %bb43
 ; CHECK-NEXT:  Ltmp5: ## EH_LABEL
 ; CHECK-NEXT:    movl %esi, %ebx
@@ -140,16 +150,6 @@ define void @f(ptr nocapture %arg, ptr nocapture %arg1, ptr nocapture %arg2, ptr
 ; CHECK-NEXT:    ud2
 ; CHECK-NEXT:  LBB0_4: ## %bb20.loopexit
 ; CHECK-NEXT:  Ltmp4: ## EH_LABEL
-; CHECK-NEXT:  LBB0_9:
-; CHECK-NEXT:    movl %esi, %ebx
-; CHECK-NEXT:  LBB0_6: ## %bb23
-; CHECK-NEXT:    testl %ebx, %ebx
-; CHECK-NEXT:    addl $28, %esp
-; CHECK-NEXT:    popl %esi
-; CHECK-NEXT:    popl %edi
-; CHECK-NEXT:    popl %ebx
-; CHECK-NEXT:    popl %ebp
-; CHECK-NEXT:    retl
 ; CHECK-NEXT:  LBB0_5: ## %bb20.loopexit.split-lp
 ; CHECK-NEXT:  Ltmp9: ## EH_LABEL
 ; CHECK-NEXT:    jmp LBB0_6

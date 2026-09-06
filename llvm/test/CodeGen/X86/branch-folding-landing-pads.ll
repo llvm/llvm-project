@@ -39,7 +39,6 @@ define ptr @wombat(i1 %arg) personality ptr null {
 ; CHECK-NEXT:  .LBB0_6: # %bbl8
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:  .Ltmp5: # EH_LABEL
-; CHECK-NEXT:    jmp .LBB0_8
 ; CHECK-NEXT:  .LBB0_7: # %bbl10
 ; CHECK-NEXT:  .Ltmp8: # EH_LABEL
 ; CHECK-NEXT:    jmp .LBB0_8
