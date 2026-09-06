@@ -3051,19 +3051,19 @@ def FTRUNC_S_D : FTRUNC_S_D_ENC, FTRUNC_S_D_DESC;
 def FTRUNC_U_W : FTRUNC_U_W_ENC, FTRUNC_U_W_DESC;
 def FTRUNC_U_D : FTRUNC_U_D_ENC, FTRUNC_U_D_DESC;
 
-def : MipsPat<(fsub MSA128WOpnd:$wd, (fmul MSA128WOpnd:$ws, MSA128WOpnd:$wt)),
+def : MipsPat<(fsub_contract MSA128WOpnd:$wd, (fmul_contract MSA128WOpnd:$ws, MSA128WOpnd:$wt)),
               (FMSUB_W MSA128WOpnd:$wd, MSA128WOpnd:$ws, MSA128WOpnd:$wt)>,
-              ISA_MIPS1, ASE_MSA, FPOP_FUSION_FAST;
-def : MipsPat<(fsub MSA128DOpnd:$wd, (fmul MSA128DOpnd:$ws, MSA128DOpnd:$wt)),
+              ISA_MIPS1, ASE_MSA;
+def : MipsPat<(fsub_contract MSA128DOpnd:$wd, (fmul_contract MSA128DOpnd:$ws, MSA128DOpnd:$wt)),
               (FMSUB_D MSA128DOpnd:$wd, MSA128DOpnd:$ws, MSA128DOpnd:$wt)>,
-              ISA_MIPS1, ASE_MSA, FPOP_FUSION_FAST;
+              ISA_MIPS1, ASE_MSA;
 
-def : MipsPat<(fadd MSA128WOpnd:$wd, (fmul MSA128WOpnd:$ws, MSA128WOpnd:$wt)),
+def : MipsPat<(fadd_contract MSA128WOpnd:$wd, (fmul_contract MSA128WOpnd:$ws, MSA128WOpnd:$wt)),
               (FMADD_W MSA128WOpnd:$wd, MSA128WOpnd:$ws, MSA128WOpnd:$wt)>,
-              ISA_MIPS1, ASE_MSA, FPOP_FUSION_FAST;
-def : MipsPat<(fadd MSA128DOpnd:$wd, (fmul MSA128DOpnd:$ws, MSA128DOpnd:$wt)),
+              ISA_MIPS1, ASE_MSA;
+def : MipsPat<(fadd_contract MSA128DOpnd:$wd, (fmul_contract MSA128DOpnd:$ws, MSA128DOpnd:$wt)),
               (FMADD_D MSA128DOpnd:$wd, MSA128DOpnd:$ws, MSA128DOpnd:$wt)>,
-              ISA_MIPS1, ASE_MSA, FPOP_FUSION_FAST;
+              ISA_MIPS1, ASE_MSA;
 
 def HADD_S_H : HADD_S_H_ENC, HADD_S_H_DESC;
 def HADD_S_W : HADD_S_W_ENC, HADD_S_W_DESC;

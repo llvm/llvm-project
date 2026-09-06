@@ -1,12 +1,13 @@
-; RUN: llc %s -o - | FileCheck %s
+; RUN: opt -S -passes=dxil-debug-info %s -o - | FileCheck %s
+; RUN: llc %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-COMMENT
 
 target triple = "dxil-pc-shadermodel6.3-library"
 
 ; CHECK: define i32 @main(i32 %argc, ptr %argv)
 ; CHECK-NEXT: entry:
-; CHECK-NEXT:   ; DXIL: to be replaced with: {{.*}} @llvm.dbg.value(metadata i32 %argc, i64 0, metadata ![[LV_ARGC:[0-9]+]], metadata !DIExpression()), !dbg ![[LOC_ARGC:[0-9]+]]
+; CHECK-COMMENT-NEXT:   ; DXIL: to be replaced with: {{.*}} @llvm.dbg.value(metadata i32 %argc, i64 0, metadata ![[LV_ARGC:[0-9]+]], metadata !DIExpression()), !dbg ![[LOC_ARGC:[0-9]+]]
 ; CHECK-NEXT:   call void @llvm.dbg.value(metadata i32 %argc, metadata ![[LV_ARGC:[0-9]+]], metadata !DIExpression()), !dbg ![[LOC_ARGC:[0-9]+]]
-; CHECK-NEXT:   ; DXIL: to be replaced with: {{.*}} @llvm.dbg.value(metadata ptr %argv, i64 0, metadata ![[LV_ARGV:[0-9]+]], metadata !DIExpression()), !dbg ![[LOC_ARGV:[0-9]+]]
+; CHECK-COMMENT-NEXT:   ; DXIL: to be replaced with: {{.*}} @llvm.dbg.value(metadata ptr %argv, i64 0, metadata ![[LV_ARGV:[0-9]+]], metadata !DIExpression()), !dbg ![[LOC_ARGV:[0-9]+]]
 ; CHECK-NEXT:   call void @llvm.dbg.value(metadata ptr %argv, metadata ![[LV_ARGV:[0-9]+]], metadata !DIExpression()), !dbg ![[LOC_ARGV:[0-9]+]]
 ; CHECK-NEXT:   ret i32 0
 ; CHECK-NEXT: }

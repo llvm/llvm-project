@@ -38,11 +38,13 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/InstructionCost.h"
 #include <cassert>
 #include <cstddef>
 #include <functional>
+#include <optional>
 #include <string>
 #include <utility>
 #include <variant>
@@ -1180,12 +1182,30 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
 class LLVM_ABI_FOR_TEST VPIRMetadata {
   SmallVector<std::pair<unsigned, MDNode *>> Metadata;
 
+  /// Name of the VPlan-internal metadata kind holding the execution frequency.
+  static constexpr StringLiteral ExecutionFrequencyMDName =
+      "vplan.execution.frequency";
+
+  /// Returns the ID of the metadata kind named \p Kind, taking the context from
+  /// any attached node; all belong to the context of the VPlan's function.
+  unsigned getMDKindID(StringRef Kind) const {
+    assert(!Metadata.empty() && "no node to take the context from");
+    return Metadata.front().second->getContext().getMDKindID(Kind);
+  }
+
 public:
   VPIRMetadata() = default;
 
   /// Adds metatadata that can be preserved from the original instruction
   /// \p I.
-  VPIRMetadata(Instruction &I) { getMetadataToPropagate(&I, Metadata); }
+  VPIRMetadata(Instruction &I) {
+    getMetadataToPropagate(&I, Metadata);
+    // Retain the branch weights of terminators. They are used to compute the
+    // frequencies with which the blocks of the original loop execute.
+    if (I.isTerminator())
+      if (MDNode *BW = I.getMetadata(LLVMContext::MD_prof))
+        Metadata.emplace_back(LLVMContext::MD_prof, BW);
+  }
 
   /// Copy constructor for cloning.
   VPIRMetadata(const VPIRMetadata &Other) = default;
@@ -1218,6 +1238,17 @@ public:
         find_if(Metadata, [Kind](const auto &P) { return P.first == Kind; });
     return It != Metadata.end() ? It->second : nullptr;
   }
+
+  /// Record that the recipe executes with frequency \p Freq, relative to the
+  /// entry of the loop region; see vputils::AlwaysExecutesFreq.
+  void setExecutionFrequency(std::optional<BlockFrequency> Freq,
+                             LLVMContext &Ctx);
+
+  /// Returns the frequency recorded by setExecutionFrequency, if any.
+  std::optional<BlockFrequency> getExecutionFrequency() const;
+
+  /// Drop the frequency recorded by setExecutionFrequency, if any.
+  void clearExecutionFrequency();
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print metadata with node IDs.
@@ -2495,9 +2526,7 @@ public:
   void setStartValue(VPValue *V) { setOperand(0, V); }
 
   /// Returns the incoming value from the loop backedge.
-  virtual VPValue *getBackedgeValue() {
-    return getOperand(1);
-  }
+  virtual VPValue *getBackedgeValue() { return getOperand(1); }
 
   /// Update the incoming value from the loop backedge.
   void setBackedgeValue(VPValue *V) { setOperand(1, V); }
@@ -3512,13 +3541,16 @@ protected:
 };
 
 /// A recipe for generating conditional branches on the bits of a mask.
-class LLVM_ABI_FOR_TEST VPBranchOnMaskRecipe : public VPRecipeBase {
+class LLVM_ABI_FOR_TEST VPBranchOnMaskRecipe : public VPRecipeBase,
+                                               public VPIRMetadata {
 public:
-  VPBranchOnMaskRecipe(VPValue *BlockInMask, DebugLoc DL)
-      : VPRecipeBase(VPRecipeBase::VPBranchOnMaskSC, {BlockInMask}, DL) {}
+  VPBranchOnMaskRecipe(VPValue *BlockInMask, DebugLoc DL,
+                       const VPIRMetadata &Metadata = {})
+      : VPRecipeBase(VPRecipeBase::VPBranchOnMaskSC, {BlockInMask}, DL),
+        VPIRMetadata(Metadata) {}
 
   VPBranchOnMaskRecipe *clone() override {
-    return new VPBranchOnMaskRecipe(getOperand(0), getDebugLoc());
+    return new VPBranchOnMaskRecipe(getOperand(0), getDebugLoc(), *this);
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPBranchOnMaskSC)
@@ -4398,10 +4430,11 @@ struct CastInfo<VPWidenMemoryRecipe, const VPSingleDefRecipe *>
 /// Support casting from VPRecipeBase -> VPIRMetadata.
 template <>
 struct CastInfo<VPIRMetadata, VPRecipeBase *>
-    : vpdetail::CastInfoMixinImpl<
-          VPIRMetadata, VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
-          VPWidenIntrinsicRecipe, VPWidenCallRecipe, VPReplicateRecipe,
-          VPInterleaveBase, VPWidenMemoryRecipe, VPHistogramRecipe> {};
+    : vpdetail::CastInfoMixinImpl<VPIRMetadata, VPInstruction, VPWidenRecipe,
+                                  VPWidenCastRecipe, VPWidenIntrinsicRecipe,
+                                  VPWidenCallRecipe, VPReplicateRecipe,
+                                  VPInterleaveBase, VPWidenMemoryRecipe,
+                                  VPHistogramRecipe, VPBranchOnMaskRecipe> {};
 
 template <>
 struct CastInfo<VPIRMetadata, const VPRecipeBase *>
@@ -4415,7 +4448,8 @@ struct CastInfo<VPIRMetadata, VPRecipeBase>
 
 /// VPBasicBlock serves as the leaf of the Hierarchical Control-Flow Graph. It
 /// holds a sequence of zero or more VPRecipe's each representing a sequence of
-/// output IR instructions. All PHI-like recipes must come before any non-PHI recipes.
+/// output IR instructions. All PHI-like recipes must come before any non-PHI
+/// recipes.
 class LLVM_ABI_FOR_TEST VPBasicBlock : public VPBlockBase {
   friend class VPlan;
 

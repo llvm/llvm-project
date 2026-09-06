@@ -492,6 +492,15 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
     if (!Then1 || !Then2)
       continue;
 
+    // The merged region is entered whenever either of the original regions was,
+    // so use the higher, i.e. more conservative, of their entry frequencies.
+    VPBranchOnMaskRecipe *Guard2 = Region2->getEntryBranchOnMask();
+    std::optional<BlockFrequency> Freq1 =
+        Region1->getEntryBranchOnMask()->getExecutionFrequency();
+    std::optional<BlockFrequency> Freq2 = Guard2->getExecutionFrequency();
+    if (Freq1 && Freq2 && *Freq2 < *Freq1)
+      Guard2->setExecutionFrequency(Freq1, Plan.getContext());
+
     // Note: No fusion-preventing memory dependencies are expected in either
     // region. Such dependencies should be rejected during earlier dependence
     // checks, which guarantee accesses can be re-ordered for vectorization.
@@ -559,6 +568,11 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
       PredRecipe->getUnderlyingInstr(), PredRecipe->operandsWithoutMask(),
       PredRecipe->isSingleScalar(), nullptr /*Mask*/, *PredRecipe, *PredRecipe,
       PredRecipe->getDebugLoc());
+  // The predicated recipe executes exactly when the guarding branch-on-mask is
+  // taken, so move its execution frequency there.
+  BOMRecipe->setExecutionFrequency(RecipeWithoutMask->getExecutionFrequency(),
+                                   Plan.getContext());
+  RecipeWithoutMask->clearExecutionFrequency();
   auto *Pred =
       Plan.createVPBasicBlock(Twine(RegionName) + ".if", RecipeWithoutMask);
   auto *Exiting = Plan.createVPBasicBlock(Twine(RegionName) + ".continue");
@@ -3765,6 +3779,9 @@ static VPIRMetadata getCommonMetadata(ArrayRef<VPReplicateRecipe *> Recipes) {
   VPIRMetadata CommonMetadata = *Recipes.front();
   for (VPReplicateRecipe *Recipe : drop_begin(Recipes))
     CommonMetadata.intersect(*Recipe);
+  // The recipe using the common metadata is not predicated, so it does not
+  // share the group's execution frequency.
+  CommonMetadata.clearExecutionFrequency();
   return CommonMetadata;
 }
 

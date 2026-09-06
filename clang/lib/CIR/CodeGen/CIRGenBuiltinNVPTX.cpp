@@ -193,10 +193,8 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
                              cir::SyncScopeKind::System);
   case NVPTX::BI__nvvm_atom_add_gen_f:
   case NVPTX::BI__nvvm_atom_add_gen_d:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeScopedAtomicRMW(*this, expr, cir::AtomicFetchKind::Add,
+                               cir::SyncScopeKind::System);
   case NVPTX::BI__nvvm_atom_inc_gen_ui:
     return makeBinaryAtomicValue(cir::AtomicFetchKind::UIncWrap, expr,
                                  /*originalArgType=*/nullptr,

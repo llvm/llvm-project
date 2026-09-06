@@ -53,7 +53,7 @@ if.then:
 if.end:
   %3 = phi float [ %1, %if.then ], [ %0, %entry ]
   %4 = phi float [ 0.000000e+00, %if.then ], [ %1, %entry ]
-  %5 = phi float [ 0.000000e+00, %if.then ], [ 0x7FF8000000000000, %entry ]
+  %5 = phi float [ 0.000000e+00, %if.then ], [ +qnan, %entry ]
   %6 = phi float [ 0.000000e+00, %if.then ], [ 1.000000e+00, %entry ]
   %fa.sroa.9.0 = phi float [ %div.2.i.i, %if.then ], [ 0.000000e+00, %entry ]
   %fa.sroa.7.0 = phi float [ %div.1.i.i, %if.then ], [ 0.000000e+00, %entry ]

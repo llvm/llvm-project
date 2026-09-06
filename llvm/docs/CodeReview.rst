@@ -234,8 +234,9 @@ Moreover, authors are encouraged to interpret questions as a reason to reexamine
 the readability of the code in question. Structural changes, or further
 comments, may be appropriate.
 
-If you're new to the LLVM community, you might also find this presentation helpful:
-.. _How to Contribute to LLVM, A 2019 LLVM Developers' Meeting Presentation: https://youtu.be/C5Y977rLqpw
+If you're new to the LLVM community, you might also find this presentation
+helpful: `How to Contribute to LLVM, A 2019 LLVM Developers' Meeting
+Presentation <https://youtu.be/C5Y977rLqpw>`_.
 
 A good way for new contributors to increase their knowledge of the code base is
 to review code. It is perfectly acceptable to review code and explicitly

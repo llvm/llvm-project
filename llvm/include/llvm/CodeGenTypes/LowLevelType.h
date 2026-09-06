@@ -35,6 +35,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <atomic>
 #include <cassert>
 
 namespace llvm {
@@ -704,11 +705,20 @@ public:
     return ((uint64_t)RawData) | ((uint64_t)Info) << 60;
   }
 
-  static bool getUseExtended() { return ExtendedLLT; }
-  static void setUseExtended(bool Enable) { ExtendedLLT = Enable; }
+  static bool getUseExtended() {
+    return ExtendedLLT.load(std::memory_order_relaxed);
+  }
+  static void setUseExtended(bool Enable) {
+    ExtendedLLT.store(Enable, std::memory_order_relaxed);
+  }
 
 private:
-  LLVM_ABI static bool ExtendedLLT;
+  // Enabled during target construction, which may run concurrently. Relaxed
+  // ordering suffices because the flag publishes no other state.
+  //
+  // FIXME: Scope this per target rather than globally:
+  // https://github.com/llvm/llvm-project/issues/219517.
+  LLVM_ABI static std::atomic<bool> ExtendedLLT;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const LLT &Ty) {

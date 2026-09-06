@@ -114,7 +114,7 @@ define amdgpu_cs void @_amdgpu_cs_main() {
 ; GFX1250-GISEL-NEXT:    s_add_co_i32 s5, s5, s3
 ; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s2, 0
 ; GFX1250-GISEL-NEXT:    s_cselect_b32 s2, s4, s5
-; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX1250-GISEL-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
 ; GFX1250-GISEL-NEXT:    s_endpgm
@@ -192,7 +192,7 @@ define amdgpu_cs void @workgroup_id_no_clusters() "amdgpu-cluster-dims"="0,0,0" 
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s0, ttmp9
 ; GFX1250-GISEL-NEXT:    s_and_b32 s1, ttmp7, 0xffff
 ; GFX1250-GISEL-NEXT:    s_lshr_b32 s2, ttmp7, 16
-; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX1250-GISEL-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
 ; GFX1250-GISEL-NEXT:    s_endpgm
@@ -285,7 +285,7 @@ define amdgpu_cs void @workgroup_id_optimized() "amdgpu-cluster-dims"="2,3,4" {
 ; GFX1250-GISEL-NEXT:    s_lshl1_add_u32 s0, ttmp9, s0
 ; GFX1250-GISEL-NEXT:    s_add_co_i32 s1, s2, s1
 ; GFX1250-GISEL-NEXT:    s_lshl2_add_u32 s2, s3, s4
-; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX1250-GISEL-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
 ; GFX1250-GISEL-NEXT:    s_endpgm
