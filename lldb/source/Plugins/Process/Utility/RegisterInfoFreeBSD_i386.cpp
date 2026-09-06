@@ -1,12 +1,12 @@
-//===-- RegisterContextFreeBSD_i386.cpp -----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
-#include "RegisterContextFreeBSD_i386.h"
+#include "RegisterInfoFreeBSD_i386.h"
 #include "RegisterContext_x86.h"
 #include "lldb-x86-register-enums.h"
 #include "lldb/lldb-defines.h"
@@ -63,13 +63,13 @@ struct UserArea {
 #include "RegisterInfos_i386.h"
 #undef DECLARE_REGISTER_INFOS_I386_STRUCT
 
-RegisterContextFreeBSD_i386::RegisterContextFreeBSD_i386(
+RegisterInfoFreeBSD_i386::RegisterInfoFreeBSD_i386(
     const ArchSpec &target_arch)
     : RegisterInfoInterface(target_arch) {}
 
-size_t RegisterContextFreeBSD_i386::GetGPRSize() const { return sizeof(GPR); }
+size_t RegisterInfoFreeBSD_i386::GetGPRSize() const { return sizeof(GPR); }
 
-const RegisterInfo *RegisterContextFreeBSD_i386::GetRegisterInfo() const {
+const RegisterInfo *RegisterInfoFreeBSD_i386::GetRegisterInfo() const {
   switch (GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:
     return g_register_infos_i386;
@@ -79,7 +79,7 @@ const RegisterInfo *RegisterContextFreeBSD_i386::GetRegisterInfo() const {
   }
 }
 
-uint32_t RegisterContextFreeBSD_i386::GetRegisterCount() const {
+uint32_t RegisterInfoFreeBSD_i386::GetRegisterCount() const {
   return static_cast<uint32_t>(sizeof(g_register_infos_i386) /
                                sizeof(g_register_infos_i386[0]));
 }
