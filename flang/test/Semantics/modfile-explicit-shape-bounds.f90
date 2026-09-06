@@ -11,7 +11,7 @@ end module
 !Expect: m1.mod
 !module m1
 !integer(4),parameter::dims(1_8:3_8)=[INTEGER(4)::5_4,10_4,15_4]
-!real(4)::a(1_8:[INTEGER(8)::5_8,10_8,15_8])
+!real(4)::a(1_8:5_8,1_8:10_8,1_8:15_8)
 !end
 
 ! Rank-1 dummy as upper bounds
