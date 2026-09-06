@@ -711,7 +711,6 @@ public:
   getStrengthenedNoWrapFlagsFromBinOp(const OverflowingBinaryOperator *OBO);
 
   /// Notify this ScalarEvolution that \p User directly uses SCEVs in \p Ops.
-  LLVM_ABI void registerUser(const SCEV *User, ArrayRef<const SCEV *> Ops);
   LLVM_ABI void registerUser(const SCEV *User, ArrayRef<SCEVUse> Ops);
 
   /// Return true if the SCEV expression contains an undef value.
@@ -1152,6 +1151,10 @@ public:
   /// in a way that may effect its value, or which may disconnect it from a
   /// def-use chain linking it to a loop.
   LLVM_ABI void forgetValue(Value *V);
+
+  /// Batched forgetValue: invalidates all \p Values in one shared def-use walk,
+  /// avoiding the redundant re-traversal of overlapping users.
+  LLVM_ABI void forgetValues(ArrayRef<Value *> Values);
 
   /// Forget LCSSA phi node V of loop L to which a new predecessor was added,
   /// such that it may no longer be trivial.
