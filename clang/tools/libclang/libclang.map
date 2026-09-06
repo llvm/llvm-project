@@ -59,6 +59,10 @@ LLVM_13 {
     clang_Cursor_getMangling;
     clang_Cursor_getModule;
     clang_Cursor_getNumArguments;
+    clang_Cursor_getFormatAttr;
+    clang_FormatAttr_getType;
+    clang_FormatAttr_getFormatIdx;
+    clang_FormatAttr_getFirstArg;
     clang_Cursor_getNumTemplateArguments;
     clang_Cursor_getObjCDeclQualifiers;
     clang_Cursor_getObjCManglings;
