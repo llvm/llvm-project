@@ -1,13 +1,17 @@
-.. include:: ReleaseNotes/24.md
+```{include} ReleaseNotes/24.md
+```
 
-.. Make sure to reference the non-live release notes in a toctree to avoid Sphinx errors.
-.. toctree::
-    :hidden:
+% Make sure to reference the non-live release notes in a toctree to avoid Sphinx errors.
 
-    ReleaseNotes/20
-    ReleaseNotes/21
-    ReleaseNotes/22
-    ReleaseNotes/23
+```{toctree}
+:hidden: true
 
-.. The release notes are in versioned files, but we make sure to keep publishing
-.. them in an unversioned ReleaseNotes.html page for external sites to reference.
+ReleaseNotes/20
+ReleaseNotes/21
+ReleaseNotes/22
+ReleaseNotes/23
+```
+
+% The release notes are in versioned files, but we make sure to keep publishing
+
+% them in an unversioned ReleaseNotes.html page for external sites to reference.

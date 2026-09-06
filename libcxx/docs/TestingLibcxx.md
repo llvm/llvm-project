@@ -1,88 +1,83 @@
-.. _testing:
+(testing)=
 
-==============
-Testing libc++
-==============
+# Testing libc++
 
-.. contents::
-  :local:
+:::{contents}
+:local: true
+:::
 
-Getting Started
-===============
+## Getting Started
 
 libc++ uses LIT to configure and run its tests.
 
-The primary way to run the libc++ tests is by using ``make check-cxx``.
+The primary way to run the libc++ tests is by using `make check-cxx`.
 
 However since libc++ can be used in any number of possible
 configurations it is important to customize the way LIT builds and runs
 the tests. This guide provides information on how to use LIT directly to
 test libc++.
 
-Please see the `Lit Command Guide`_ for more information about LIT.
+Please see the [Lit Command Guide][lit command guide] for more information about LIT.
 
-.. _LIT Command Guide: https://llvm.org/docs/CommandGuide/lit.html
-
-Dependencies
-------------
+### Dependencies
 
 The libc++ test suite has a few optional dependencies. These can be installed
-with ``pip install -r libcxx/test/requirements.txt``. Installing these dependencies
+with `pip install -r libcxx/test/requirements.txt`. Installing these dependencies
 will ensure that the maximum number of tests can be run.
 
-Usage
------
+### Usage
 
-After :ref:`building libc++ <VendorDocumentation>`, you can run parts of the libc++ test suite by simply
-running ``llvm-lit`` on a specified test or directory. If you're unsure
+After {ref}`building libc++ <VendorDocumentation>`, you can run parts of the libc++ test suite by simply
+running `llvm-lit` on a specified test or directory. If you're unsure
 whether the required libraries have been built, you can use the
-``cxx-test-depends`` target. For example:
+`cxx-test-depends` target. For example:
 
-.. code-block:: bash
+```bash
+$ cd <monorepo-root>
+$ make -C <build> cxx-test-depends # If you want to make sure the targets get rebuilt
+$ <build>/bin/llvm-lit -sv libcxx/test/std/re # Run all of the std::regex tests
+$ <build>/bin/llvm-lit -sv libcxx/test/std/depr/depr.c.headers/stdlib_h.pass.cpp # Run a single test
+$ <build>/bin/llvm-lit -sv libcxx/test/std/atomics libcxx/test/std/threads # Test std::thread and std::atomic
+```
 
-  $ cd <monorepo-root>
-  $ make -C <build> cxx-test-depends # If you want to make sure the targets get rebuilt
-  $ <build>/bin/llvm-lit -sv libcxx/test/std/re # Run all of the std::regex tests
-  $ <build>/bin/llvm-lit -sv libcxx/test/std/depr/depr.c.headers/stdlib_h.pass.cpp # Run a single test
-  $ <build>/bin/llvm-lit -sv libcxx/test/std/atomics libcxx/test/std/threads # Test std::thread and std::atomic
-
-If you used **ninja** as your build system, running ``ninja -C <build> check-cxx`` will run
+If you used **ninja** as your build system, running `ninja -C <build> check-cxx` will run
 all the tests in the libc++ testsuite.
 
-.. note::
-  If you used the Bootstrapping build instead of the default runtimes build, the
-  ``cxx-test-depends`` target is instead named ``runtimes-test-depends``, and
-  you will need to prefix ``<build>/runtimes/runtimes-<target>-bins/`` to the
-  paths of all tests. For example, to run all the libcxx tests you can do
-  ``<build>/bin/llvm-lit -sv <build>/runtimes/runtimes-bins/libcxx/test``.
+:::{note}
+If you used the Bootstrapping build instead of the default runtimes build, the
+`cxx-test-depends` target is instead named `runtimes-test-depends`, and
+you will need to prefix `<build>/runtimes/runtimes-<target>-bins/` to the
+paths of all tests. For example, to run all the libcxx tests you can do
+`<build>/bin/llvm-lit -sv <build>/runtimes/runtimes-bins/libcxx/test`.
+:::
 
 In the default configuration, the tests are built against headers that form a
 fake installation root of libc++. This installation root has to be updated when
-changes are made to the headers, so you should re-run the ``cxx-test-depends``
-target before running the tests manually with ``lit`` when you make any sort of
-change, including to the headers. We recommend using the provided ``libcxx/utils/libcxx-lit``
+changes are made to the headers, so you should re-run the `cxx-test-depends`
+target before running the tests manually with `lit` when you make any sort of
+change, including to the headers. We recommend using the provided `libcxx/utils/libcxx-lit`
 script to automate this so you don't have to think about building test dependencies
 every time:
 
-.. code-block:: bash
-
-  $ cd <monorepo-root>
-  $ libcxx/utils/libcxx-lit <build> -sv libcxx/test/std/re # Build testing dependencies and run all of the std::regex tests
+```bash
+$ cd <monorepo-root>
+$ libcxx/utils/libcxx-lit <build> -sv libcxx/test/std/re # Build testing dependencies and run all of the std::regex tests
+```
 
 Sometimes you'll want to change the way LIT is running the tests. Custom options
-can be specified using the ``--param <name>=<val>`` flag. The most common option
-you'll want to change is the standard dialect (ie ``-std=c++XX``). By default the
+can be specified using the `--param <name>=<val>` flag. The most common option
+you'll want to change is the standard dialect (ie `-std=c++XX`). By default the
 test suite will select the newest C++ dialect supported by the compiler and use
 that. However, you can manually specify the option like so if you want:
 
-.. code-block:: bash
+```bash
+$ libcxx/utils/libcxx-lit <build> -sv libcxx/test/std/containers # Run the tests with the newest -std
+$ libcxx/utils/libcxx-lit <build> -sv libcxx/test/std/containers --param std=c++03 # Run the tests in C++03
+```
 
-  $ libcxx/utils/libcxx-lit <build> -sv libcxx/test/std/containers # Run the tests with the newest -std
-  $ libcxx/utils/libcxx-lit <build> -sv libcxx/test/std/containers --param std=c++03 # Run the tests in C++03
-
-Other parameters are supported by the test suite. Those are defined in ``libcxx/utils/libcxx/test/params.py``.
+Other parameters are supported by the test suite. Those are defined in `libcxx/utils/libcxx/test/params.py`.
 If you want to customize how to run the libc++ test suite beyond what is available
-in ``params.py``, you most likely want to use a custom site configuration instead.
+in `params.py`, you most likely want to use a custom site configuration instead.
 
 The libc++ test suite works by loading a site configuration that defines various
 "base" parameters (via Lit substitutions). These base parameters represent things
@@ -91,34 +86,33 @@ flags to use, and how to run an executable. This system is meant to be easily
 extended for custom needs, in particular when porting the libc++ test suite to
 new platforms.
 
-.. note::
-  If you run the test suite on Apple platforms, we recommend adding the terminal application
-  used to run the test suite to the list of "Developer Tools". This prevents the system from
-  trying to scan each individual test binary for malware and dramatically speeds up the test
-  suite.
+:::{note}
+If you run the test suite on Apple platforms, we recommend adding the terminal application
+used to run the test suite to the list of "Developer Tools". This prevents the system from
+trying to scan each individual test binary for malware and dramatically speeds up the test
+suite.
+:::
 
-Using a Custom Site Configuration
----------------------------------
+### Using a Custom Site Configuration
 
 By default, the libc++ test suite will use a site configuration that matches
-the current CMake configuration. It does so by generating a ``lit.site.cfg``
+the current CMake configuration. It does so by generating a `lit.site.cfg`
 file in the build directory from one of the configuration file templates in
-``libcxx/test/configs/``, and pointing ``llvm-lit`` (which is a wrapper around
-``llvm/utils/lit/lit.py``) to that file. So when you're running
-``<build>/bin/llvm-lit`` either directly or indirectly, the generated ``lit.site.cfg``
-file is always loaded instead of ``libcxx/test/lit.cfg.py``. If you want to use a
+`libcxx/test/configs/`, and pointing `llvm-lit` (which is a wrapper around
+`llvm/utils/lit/lit.py`) to that file. So when you're running
+`<build>/bin/llvm-lit` either directly or indirectly, the generated `lit.site.cfg`
+file is always loaded instead of `libcxx/test/lit.cfg.py`. If you want to use a
 custom site configuration, simply point the CMake build to it using
-``-DLIBCXX_TEST_CONFIG=<path-to-site-config>``, and that site configuration
+`-DLIBCXX_TEST_CONFIG=<path-to-site-config>`, and that site configuration
 will be used instead. That file can use CMake variables inside it to make
 configuration easier.
 
-   .. code-block:: bash
+```bash
+$ cmake <options> -DLIBCXX_TEST_CONFIG=<path-to-site-config>
+$ libcxx/utils/libcxx-lit <build> -sv libcxx/test # will use your custom config file
+```
 
-     $ cmake <options> -DLIBCXX_TEST_CONFIG=<path-to-site-config>
-     $ libcxx/utils/libcxx-lit <build> -sv libcxx/test # will use your custom config file
-
-Additional tools
-----------------
+### Additional tools
 
 The libc++ test suite uses a few optional tools to improve the code quality.
 
@@ -126,18 +120,17 @@ These tools are:
 
 - clang-tidy (you might need additional dev packages to compile libc++-specific clang-tidy checks)
 
-Reproducing CI issues locally
------------------------------
+### Reproducing CI issues locally
 
 Libc++ has extensive CI that tests various configurations of the library. The testing for
-all these configurations is located in ``libcxx/utils/ci/run-buildbot``. Most of our
+all these configurations is located in `libcxx/utils/ci/run-buildbot`. Most of our
 CI jobs are being run on a Docker image for reproducibility. The definition of this Docker
-image is located in ``libcxx/utils/ci/Dockerfile``. If you are looking to reproduce the
+image is located in `libcxx/utils/ci/Dockerfile`. If you are looking to reproduce the
 failure of a specific CI job locally, you should first drop into a Docker container that
-matches our CI images by running ``libcxx/utils/ci/run-buildbot-container``, and then run
-the specific CI job that you're interested in (from within the container) using the ``run-buildbot``
-script above. If you want to control which compiler is used, you can set the ``CC`` and the
-``CXX`` environment variables before calling ``run-buildbot`` to select the right compiler.
+matches our CI images by running `libcxx/utils/ci/run-buildbot-container`, and then run
+the specific CI job that you're interested in (from within the container) using the `run-buildbot`
+script above. If you want to control which compiler is used, you can set the `CC` and the
+`CXX` environment variables before calling `run-buildbot` to select the right compiler.
 Take note that some CI jobs are testing the library on specific platforms and are *not* run
 in our Docker image. In the general case, it is not possible to reproduce these failures
 locally, unless they aren't specific to the platform.
@@ -146,8 +139,7 @@ Also note that the Docker container shares the same filesystem as your local mac
 modifying files on your local machine will also modify what the Docker container sees.
 This is useful for editing source files as you're testing your code in the Docker container.
 
-Writing Tests
-=============
+## Writing Tests
 
 When writing tests for the libc++ test suite, you should follow a few guidelines.
 This will ensure that your tests can run on a wide variety of hardware and under
@@ -159,7 +151,7 @@ few requirements to the test suite. Here's some stuff you should know:
   cleaned up after the test is done.
 - When a test needs data files as inputs, these data files can be saved in the
   repository (when reasonable) and referenced by the test as
-  ``// FILE_DEPENDENCIES: <path-to-dependencies>``. Copies of these files or
+  `// FILE_DEPENDENCIES: <path-to-dependencies>`. Copies of these files or
   directories will be made available to the test in the temporary directory
   where it is run.
 - You should never hardcode a path from the build-host in a test, because that
@@ -169,190 +161,175 @@ few requirements to the test suite. Here's some stuff you should know:
   necessarily available on all devices we may want to run the tests on (even
   though supporting Python is probably trivial for the build-host).
 
-Structure of the testing related directories
---------------------------------------------
+### Structure of the testing related directories
 
 The tests of libc++ are stored in libc++'s testing related subdirectories:
 
-- ``libcxx/test/support`` This directory contains several helper headers with
-  generic parts for the tests. The most important header is ``test_macros.h``.
+- `libcxx/test/support` This directory contains several helper headers with
+  generic parts for the tests. The most important header is `test_macros.h`.
   This file contains configuration information regarding the platform used.
-  This is similar to the ``__config`` file in libc++'s ``include`` directory.
+  This is similar to the `__config` file in libc++'s `include` directory.
   Since libc++'s tests are used by other Standard libraries, tests should use
-  the ``TEST_FOO`` macros instead of the ``_LIBCPP_FOO`` macros, which are
+  the `TEST_FOO` macros instead of the `_LIBCPP_FOO` macros, which are
   specific to libc++.
-- ``libcxx/test/std`` This directory contains the tests that validate the library under
+- `libcxx/test/std` This directory contains the tests that validate the library under
   test conforms to the C++ Standard. The paths and the names of the test match
   the section names in the C++ Standard. Note that the C++ Standard sometimes
   reorganises its structure, therefore some tests are at a location based on
   where they appeared historically in the standard. We try to strike a balance
   between keeping things at up-to-date locations and unnecessary churn.
-- ``libcxx/test/libcxx`` This directory contains the tests that validate libc++
+- `libcxx/test/libcxx` This directory contains the tests that validate libc++
   specific behavior and implementation details. For example, libc++ has
   "wrapped iterators" that perform bounds checks. Since those are specific to
   libc++ and not mandated by the Standard, tests for those are located under
-  ``libcxx/test/libcxx``. The structure of this directories follows the
-  structure of ``libcxx/test/std``.
+  `libcxx/test/libcxx`. The structure of this directories follows the
+  structure of `libcxx/test/std`.
 
-Structure of a test
--------------------
+### Structure of a test
 
 Some platforms where libc++ is tested have requirement on the signature of
-``main`` and require ``main`` to explicitly return a value. Therefore the
-typical ``main`` function should look like:
+`main` and require `main` to explicitly return a value. Therefore the
+typical `main` function should look like:
 
-.. code-block:: cpp
+```cpp
+int main(int, char**) {
+  ...
+  return 0;
+}
+```
 
-  int main(int, char**) {
-    ...
-    return 0;
-  }
+The C++ Standard has `constexpr` requirements. The typical way to test that,
+is to create a helper `test` function that returns a `bool` and use the
+following `main` function:
 
+```cpp
+constexpr bool test() {
+  ...
+  return true;
+}
 
-The C++ Standard has ``constexpr`` requirements. The typical way to test that,
-is to create a helper ``test`` function that returns a ``bool`` and use the
-following ``main`` function:
+int main(int, char**) {
+  test()
+  static_assert(test());
 
-.. code-block:: cpp
+  return 0;
+}
+```
 
-  constexpr bool test() {
-    ...
-    return true;
-  }
-
-  int main(int, char**) {
-    test()
-    static_assert(test());
-
-    return 0;
-  }
-
-Tests in libc++ mainly use ``assert`` and ``static_assert`` for testing. There
+Tests in libc++ mainly use `assert` and `static_assert` for testing. There
 are a few helper macros and function that can be used to make it easier to
 write common tests.
 
-libcxx/test/support/assert_macros.h
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#### libcxx/test/support/assert_macros.h
 
 The header contains several macros with user specified log messages. This is
 useful when a normal assertion failure lacks the information to easily
 understand why the test has failed. This usually happens when the test is in a
-helper function. For example the ``std::format`` tests use a helper function
+helper function. For example the `std::format` tests use a helper function
 for its validation. When the test fails it will give the line in the helper
-function with the condition ``out == expected`` failed. Without knowing what
-the value of ``format string``, ``out`` and ``expected`` are it is not easy to
+function with the condition `out == expected` failed. Without knowing what
+the value of `format string`, `out` and `expected` are it is not easy to
 understand why the test has failed. By logging these three values the point of
 failure can be found without resorting to a debugger.
 
-Several of these macros are documented to take an ``ARG``. This ``ARG``:
+Several of these macros are documented to take an `ARG`. This `ARG`:
 
- - if it is a ``const char*`` or ``std::string`` its contents are written to
-   the ``stderr``,
- - otherwise it must be a callable that is invoked without any additional
-   arguments and is expected to produce useful output to e.g. ``stderr``.
+> - if it is a `const char*` or `std::string` its contents are written to
+>   the `stderr`,
+> - otherwise it must be a callable that is invoked without any additional
+>   arguments and is expected to produce useful output to e.g. `stderr`.
 
 This makes it possible to write additional information when a test fails,
 either by supplying a hard-coded string or generate it at runtime.
 
-TEST_FAIL(ARG)
-^^^^^^^^^^^^^^
+##### TEST_FAIL(ARG)
 
-This macro is an unconditional failure with a log message ``ARG``. The main
+This macro is an unconditional failure with a log message `ARG`. The main
 use-case is to fail when code is reached that should be unreachable.
 
+##### TEST_REQUIRE(CONDITION, ARG)
 
-TEST_REQUIRE(CONDITION, ARG)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+This macro requires its `CONDITION` to evaluate to `true`. If that fails it
+will fail the test with a log message `ARG`.
 
-This macro requires its ``CONDITION`` to evaluate to ``true``. If that fails it
-will fail the test with a log message ``ARG``.
+##### TEST_LIBCPP_REQUIRE((CONDITION, ARG)
 
-
-TEST_LIBCPP_REQUIRE((CONDITION, ARG)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-If the library under test is libc++ it behaves like ``TEST_REQUIRE``, else it
+If the library under test is libc++ it behaves like `TEST_REQUIRE`, else it
 is a no-op. This makes it possible to test libc++ specific behaviour. For
-example testing whether the ``what()`` of an exception thrown matches libc++'s
+example testing whether the `what()` of an exception thrown matches libc++'s
 expectations. (Usually the Standard requires certain exceptions to be thrown,
-but not the contents of its ``what()`` message.)
+but not the contents of its `what()` message.)
 
+##### TEST_DOES_NOT_THROW(EXPR)
 
-TEST_DOES_NOT_THROW(EXPR)
-^^^^^^^^^^^^^^^^^^^^^^^^^
+Validates execution of `EXPR` does not throw an exception.
 
-Validates execution of ``EXPR`` does not throw an exception.
+##### TEST_THROWS_TYPE(TYPE, EXPR)
 
-TEST_THROWS_TYPE(TYPE, EXPR)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Validates the execution of `EXPR` throws an exception of the type `TYPE`.
 
-Validates the execution of ``EXPR`` throws an exception of the type ``TYPE``.
+##### TEST_VALIDATE_EXCEPTION(TYPE, PRED, EXPR)
 
-
-TEST_VALIDATE_EXCEPTION(TYPE, PRED, EXPR)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Validates the execution of ``EXPR`` throws an exception of the type ``TYPE``
-which passes validation of ``PRED``. Using this macro makes it easier to write
+Validates the execution of `EXPR` throws an exception of the type `TYPE`
+which passes validation of `PRED`. Using this macro makes it easier to write
 tests using exceptions. The code to write a test manually would be:
 
-
-.. code-block:: cpp
-
-  void test_exception([[maybe_unused]] int arg) {
-  #ifndef TEST_HAS_NO_EXCEPTIONS // do nothing when tests are disabled
-    try {
-      foo(arg);
-      assert(false); // validates foo really throws
-    } catch ([[maybe_unused]] const bar& e) {
-      LIBCPP_ASSERT(e.what() == what);
-      return;
-    }
-    assert(false); // validates bar was thrown
-  #endif
-    }
+```cpp
+void test_exception([[maybe_unused]] int arg) {
+#ifndef TEST_HAS_NO_EXCEPTIONS // do nothing when tests are disabled
+  try {
+    foo(arg);
+    assert(false); // validates foo really throws
+  } catch ([[maybe_unused]] const bar& e) {
+    LIBCPP_ASSERT(e.what() == what);
+    return;
+  }
+  assert(false); // validates bar was thrown
+#endif
+  }
+```
 
 The same test using a macro:
 
-.. code-block:: cpp
+```cpp
+void test_exception([[maybe_unused]] int arg) {
+  TEST_VALIDATE_EXCEPTION(bar,
+                          [](const bar& e) {
+                            LIBCPP_ASSERT(e.what() == what);
+                          },
+                          foo(arg));
+  }
+```
 
-  void test_exception([[maybe_unused]] int arg) {
-    TEST_VALIDATE_EXCEPTION(bar,
-                            [](const bar& e) {
-                              LIBCPP_ASSERT(e.what() == what);
-                            },
-                            foo(arg));
-    }
+#### libcxx/test/support/concat_macros.h
 
-
-libcxx/test/support/concat_macros.h
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This file contains a helper macro ``TEST_WRITE_CONCATENATED`` to lazily
-concatenate its arguments to a ``std::string`` and write it to ``stderr``. When
+This file contains a helper macro `TEST_WRITE_CONCATENATED` to lazily
+concatenate its arguments to a `std::string` and write it to `stderr`. When
 the output can't be concatenated a default message will be written to
-``stderr``. This is useful for tests where the arguments use different
-character types like ``char`` and ``wchar_t``, the latter can't simply be
-written to ``stderr``.
+`stderr`. This is useful for tests where the arguments use different
+character types like `char` and `wchar_t`, the latter can't simply be
+written to `stderr`.
 
-This macro is in a different header as ``assert_macros.h`` since it pulls in
+This macro is in a different header as `assert_macros.h` since it pulls in
 additional headers.
 
- .. note: This macro can only be used in test using C++20 or newer. The macro
-          was added at a time where most of libc++'s C++17 support was complete.
-          Since it is not expected to add this to existing tests no effort was
-          taken to make it work in earlier language versions.
+:::{note}
+This macro can only be used in test using C++20 or newer. The macro
+was added at a time where most of libc++'s C++17 support was complete.
+Since it is not expected to add this to existing tests no effort was
+taken to make it work in earlier language versions.
+:::
 
-
-Test names
-----------
+### Test names
 
 The names of test files have meaning for the libc++-specific configuration of
 Lit. Based on the pattern that matches the name of a test file, Lit will test
-the code contained therein in different ways. Refer to the `Lit Meaning of libc++
-Test Filenames`_ when determining the names for new test files.
+the code contained therein in different ways. Refer to the {ref}`Lit Meaning of libc++
+Test Filenames <lit-meaning-of-libc-test-filenames>` when determining the names for new test files.
 
-.. _Lit Meaning of libc++ Test Filenames:
+(lit-meaning-of-libc-test-filenames)=
+
+```{eval-rst}
 .. list-table:: Lit Meaning of libc++ Test Filenames
    :widths: 25 75
    :header-rows: 1
@@ -404,17 +381,18 @@ Test Filenames`_ when determining the names for new test files.
      - A benchmark test. These tests are linked against the GoogleBenchmark library and generally consist of micro-benchmarks of individual
        components of the library.
 
+```
 
-libc++-Specific Lit Features
-----------------------------
+### libc++-Specific Lit Features
 
-Custom Directives
-~~~~~~~~~~~~~~~~~
+#### Custom Directives
 
-Lit has many directives built in (e.g., ``DEFINE``, ``UNSUPPORTED``). In addition to those directives, libc++ adds two additional libc++-specific directives that makes
-writing tests easier. See `libc++-specific Lit Directives`_ for more information about the ``FILE_DEPENDENCIES``, ``ADDITIONAL_COMPILE_FLAGS``, and ``MODULE_DEPENDENCIES`` libc++-specific directives.
+Lit has many directives built in (e.g., `DEFINE`, `UNSUPPORTED`). In addition to those directives, libc++ adds two additional libc++-specific directives that makes
+writing tests easier. See {ref}`libc++-specific Lit Directives <libc-specific-lit-directives>` for more information about the `FILE_DEPENDENCIES`, `ADDITIONAL_COMPILE_FLAGS`, and `MODULE_DEPENDENCIES` libc++-specific directives.
 
-.. _libc++-specific Lit Directives:
+(libc-specific-lit-directives)=
+
+```{eval-rst}
 .. list-table:: libc++-specific Lit Directives
    :widths: 20 35 45
    :header-rows: 1
@@ -434,7 +412,7 @@ writing tests easier. See `libc++-specific Lit Directives`_ for more information
      - ``// ADDITIONAL_COMPILE_FLAGS: flag1 flag2 ...``
      - The additional compiler flags specified by a space-separated list to the ``ADDITIONAL_COMPILE_FLAGS`` libc++-specific Lit directive will be added to the end of the ``%{compile_flags}``
        substitution for the test that contains it. This libc++-specific Lit directive makes it possible to add special compilation flags without having to resort to writing a ``.sh.cpp`` test (see
-       `Lit Meaning of libc++ Test Filenames`_), more powerful but perhaps overkill.
+       :ref:`Lit Meaning of libc++ Test Filenames <lit-meaning-of-libc-test-filenames>`), more powerful but perhaps overkill.
    * - ``MODULE_DEPENDENCIES``
      - ``// MODULE_DEPENDENCIES: std std.compat``
      - This directive will build the required C++23 standard library
@@ -442,150 +420,148 @@ writing tests easier. See `libc++-specific Lit Directives`_ for more information
        %{compile_flags}. (Libc++ offers these modules in C++20 as an
        extension.)
 
+```
 
-C++ Standard version tests
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+#### C++ Standard version tests
 
 Historically libc++ tests used to filter the tests for C++ Standard versions
 with lit directives like:
 
-.. code-block:: cpp
-
-   // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+```cpp
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+```
 
 With C++ Standards released every 3 years, this solution is not scalable.
 Instead use:
 
-.. code-block:: cpp
+```cpp
+// REQUIRES: std-at-least-c++26
+```
 
-   // REQUIRES: std-at-least-c++26
-
-There is no corresponding ``std-at-most-c++23``. This could be useful when
+There is no corresponding `std-at-most-c++23`. This could be useful when
 tests are only valid for a small set of standard versions. For example, a
 deprecation test is only valid when the feature is deprecated until it is
 removed from the Standard. These tests should be written like:
 
-.. code-block:: cpp
+```cpp
+// REQUIRES: c++17 || c++20 || c++23
+```
 
-   // REQUIRES: c++17 || c++20 || c++23
+:::{note}
+There are a lot of tests with the first style, these can remain as they are.
+The new style is only intended to be used for new tests.
+:::
 
-.. note::
+## Benchmarks
 
-   There are a lot of tests with the first style, these can remain as they are.
-   The new style is only intended to be used for new tests.
-
-
-Benchmarks
-==========
-
-Libc++'s test suite also contains benchmarks. Many benchmarks are written using the `Google Benchmark`_
+Libc++'s test suite also contains benchmarks. Many benchmarks are written using the [Google Benchmark][google benchmark]
 library, a copy of which is stored in the LLVM monorepo. For more information about using the Google
-Benchmark library, see the `official documentation <https://github.com/google/benchmark>`_.
+Benchmark library, see the [official documentation](https://github.com/google/benchmark).
 
-The benchmarks are located under ``libcxx/test/benchmarks``. Running a benchmark
+The benchmarks are located under `libcxx/test/benchmarks`. Running a benchmark
 works in the same way as running a test. Both the benchmarks and the tests share
 the same configuration, so make sure to enable the relevant optimization level
 when running the benchmarks. For example,
 
-.. code-block:: bash
+```bash
+$ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/containers/string.bench.cpp --show-all --param optimization=speed
+```
 
-  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/containers/string.bench.cpp --show-all --param optimization=speed
-
-Note that benchmarks are only dry-run when run via the ``check-cxx`` target since
+Note that benchmarks are only dry-run when run via the `check-cxx` target since
 we only want to make sure they don't rot. Do not rely on the results of benchmarks
-run through ``check-cxx`` for anything, instead run the benchmarks manually using
+run through `check-cxx` for anything, instead run the benchmarks manually using
 the instructions for running individual tests.
 
 If you want to compare the results of different benchmark runs, we recommend using the
-``compare-benchmarks`` helper tool. Note that the script has some dependencies, which can
+`compare-benchmarks` helper tool. Note that the script has some dependencies, which can
 be installed with:
 
-.. code-block:: bash
-
-  $ python -m venv .venv && source .venv/bin/activate # Optional but recommended
-  $ pip install -r libcxx/utils/requirements.txt
+```bash
+$ python -m venv .venv && source .venv/bin/activate # Optional but recommended
+$ pip install -r libcxx/utils/requirements.txt
+```
 
 Once that's done, start by configuring CMake in a build directory and running one or
 more benchmarks, as usual:
 
-.. code-block:: bash
+```bash
+$ cmake -S runtimes -B <build> [...]
+$ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/containers/string.bench.cpp --param optimization=speed
+```
 
-  $ cmake -S runtimes -B <build> [...]
-  $ libcxx/utils/libcxx-lit <build> libcxx/test/benchmarks/containers/string.bench.cpp --param optimization=speed
+Then, get the consolidated benchmark output for that run using `consolidate-benchmarks`:
 
-Then, get the consolidated benchmark output for that run using ``consolidate-benchmarks``:
+```bash
+$ libcxx/utils/consolidate-benchmarks <build> > baseline.lnt
+```
 
-.. code-block:: bash
-
-  $ libcxx/utils/consolidate-benchmarks <build> > baseline.lnt
-
-The ``baseline.lnt`` file will contain a consolidation of all the benchmark results present in the build
+The `baseline.lnt` file will contain a consolidation of all the benchmark results present in the build
 directory. You can then make the desired modifications to the code, run the benchmark(s) again, and then run:
 
-.. code-block:: bash
+```bash
+$ libcxx/utils/consolidate-benchmarks <build> > candidate.lnt
+```
 
-  $ libcxx/utils/consolidate-benchmarks <build> > candidate.lnt
+Finally, use `compare-benchmarks` to compare both:
 
-Finally, use ``compare-benchmarks`` to compare both:
+```bash
+$ libcxx/utils/compare-benchmarks baseline.lnt candidate.lnt
 
-.. code-block:: bash
+# Useful one-liner when iterating locally:
+$ libcxx/utils/compare-benchmarks baseline.lnt <(libcxx/utils/consolidate-benchmarks <build>)
+```
 
-  $ libcxx/utils/compare-benchmarks baseline.lnt candidate.lnt
-
-  # Useful one-liner when iterating locally:
-  $ libcxx/utils/compare-benchmarks baseline.lnt <(libcxx/utils/consolidate-benchmarks <build>)
-
-The ``compare-benchmarks`` script provides some useful options like creating a chart to easily visualize
-differences in a browser window. Use ``compare-benchmarks --help`` for details.
+The `compare-benchmarks` script provides some useful options like creating a chart to easily visualize
+differences in a browser window. Use `compare-benchmarks --help` for details.
 
 Additionally, adding a comment of the following form to a libc++ PR will cause the specified benchmarks to be run
 on our pre-commit CI infrastructure and the results to be reported in the PR by our CI system:
 
-.. code-block::
-
-    /libcxx-bot benchmark <path/to/benchmark1.bench.cpp> <path/to/benchmark2.bench.cpp> ...
+```
+/libcxx-bot benchmark <path/to/benchmark1.bench.cpp> <path/to/benchmark2.bench.cpp> ...
+```
 
 Note that this is currently experimental and the results should not be relied upon too strongly, since
 we do not have dedicated hardware to run the benchmarks on.
 
-.. _`Google Benchmark`: https://github.com/google/benchmark
+(testing-hardening-assertions)=
 
-.. _testing-hardening-assertions:
-
-Testing hardening assertions
-============================
+## Testing hardening assertions
 
 Each hardening assertion should be tested using death tests (via the
-``TEST_LIBCPP_ASSERT_FAILURE`` macro). The convention is to use ``assert.`` in
+`TEST_LIBCPP_ASSERT_FAILURE` macro). The convention is to use `assert.` in
 the name of the test file to make it easier to identify as a hardening test, e.g.
-``assert.my_func.pass.cpp``.
+`assert.my_func.pass.cpp`.
 
 These tests only make sense in configurations where the death test machinery in
-``check_assertion.h`` is usable, where a failing assertion is observable, and
+`check_assertion.h` is usable, where a failing assertion is observable, and
 where the assertion being tested is enabled in the first place. Use the various
-``can-test-hardening-assertions-<mode>`` Lit features to guard the tests accordingly.
-The bare ``can-test-hardening-assertions`` Lit feature only encodes whether the death
+`can-test-hardening-assertions-<mode>` Lit features to guard the tests accordingly.
+The bare `can-test-hardening-assertions` Lit feature only encodes whether the death
 test machinery is usable; it is meant for tests that select a hardening mode or an
-assertion semantic themselves (see the tests under ``libcxx/test/libcxx/assertions/``).
+assertion semantic themselves (see the tests under `libcxx/test/libcxx/assertions/`).
 
 A toy example:
 
-.. code-block:: cpp
+```cpp
+// Example: `std::foo(...)` uses `_LIBCPP_ASSERT_NON_NULL`, which is
+// enabled in the `extensive` and `debug` modes.
+// REQUIRES: can-test-hardening-assertions-extensive
 
-  // Example: `std::foo(...)` uses `_LIBCPP_ASSERT_NON_NULL`, which is
-  // enabled in the `extensive` and `debug` modes.
-  // REQUIRES: can-test-hardening-assertions-extensive
+#include <stdfoo>
 
-  #include <stdfoo>
+#include "check_assertion.h" // Contains the `TEST_LIBCPP_ASSERT_FAILURE` macro
 
-  #include "check_assertion.h" // Contains the `TEST_LIBCPP_ASSERT_FAILURE` macro
+int main(int, char**) {
+  int bad_input = -1;
+  TEST_LIBCPP_ASSERT_FAILURE(std::foo(bad_input), "The expected assertion message");
 
-  int main(int, char**) {
-    int bad_input = -1;
-    TEST_LIBCPP_ASSERT_FAILURE(std::foo(bad_input), "The expected assertion message");
-
-    return 0;
-  }
+  return 0;
+}
+```
 
 Note that error messages are only tested (matched) when the assertion semantic in
-effect logs one, i.e. ``enforce`` or ``observe``.
+effect logs one, i.e. `enforce` or `observe`.
+
+[google benchmark]: https://github.com/google/benchmark
+[lit command guide]: https://llvm.org/docs/CommandGuide/lit.html

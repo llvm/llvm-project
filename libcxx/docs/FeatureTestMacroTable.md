@@ -1,22 +1,20 @@
-.. _FeatureTestMacroTable:
+(featuretestmacrotable)=
 
-==========================
-Feature Test Macro Support
-==========================
+# Feature Test Macro Support
 
-.. contents::
-   :local:
+:::{contents}
+:local: true
+:::
 
-Overview
-========
+## Overview
 
 This file documents the feature test macros currently supported by libc++.
 
-.. _feature-status:
+(feature-status)=
 
-Status
-======
+## Status
 
+```{eval-rst}
 .. table:: Current Status
     :name: feature-status-table
     :widths: auto
@@ -576,4 +574,5 @@ Status
     ---------------------------------------------------------- -----------------
     ``__cpp_lib_view_interface``                               ``202606L``
     ========================================================== =================
+```
 
