@@ -1086,6 +1086,16 @@ public:
   /// @}
 
   /// @}
+  /// @name Utility function for querying the exception model
+  /// @{
+
+  /// Returns the exception model recorded by the "exception-model" module flag,
+  /// or ExceptionHandling::None when the flag is absent (meaning unspecified;
+  /// callers with a TargetMachine should fall back to its exception model).
+  ExceptionHandling getExceptionModel() const;
+  /// @}
+
+  /// @}
   /// @name Utility function for querying and setting the large data threshold
   /// @{
 

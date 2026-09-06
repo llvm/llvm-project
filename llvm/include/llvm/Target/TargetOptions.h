@@ -382,7 +382,7 @@ public:
 
 public:
   /// What exception model to use
-  ExceptionHandling ExceptionModel = ExceptionHandling::None;
+  ExceptionHandling ExceptionModel = ExceptionHandling::Default;
 
   /// Machine level options.
   MCTargetOptions MCOptions;

@@ -31,11 +31,9 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
                                          FloatABI::ABIType FloatABI,
                                          EABI EABIVersion, StringRef ABIName,
                                          VectorLibrary VecLib) {
-  // FIXME: The ExceptionModel parameter is to handle the field in
-  // TargetOptions. This interface fails to distinguish the forced disable
-  // case for targets which support exceptions by default. This should
-  // probably be a module flag and removed from TargetOptions.
-  if (ExceptionModel == ExceptionHandling::None)
+  // Only an unspecified model resolves to the triple default; None is left as
+  // an explicit disable.
+  if (ExceptionModel == ExceptionHandling::Default)
     ExceptionModel = TT.getDefaultExceptionHandling();
 
   initLibcalls(TT, ExceptionModel, FloatABI, EABIVersion, ABIName,

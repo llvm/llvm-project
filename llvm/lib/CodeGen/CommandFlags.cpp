@@ -186,10 +186,11 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
 
   static cl::opt<ExceptionHandling> ExceptionModel(
       "exception-model", cl::desc("exception model"),
-      cl::init(ExceptionHandling::None),
+      cl::init(ExceptionHandling::Default),
       cl::values(
-          clEnumValN(ExceptionHandling::None, "default",
+          clEnumValN(ExceptionHandling::Default, "default",
                      "default exception handling model"),
+          clEnumValN(ExceptionHandling::None, "none", "no exception handling"),
           clEnumValN(ExceptionHandling::DwarfCFI, "dwarf",
                      "DWARF-like CFI based exception handling"),
           clEnumValN(ExceptionHandling::SjLj, "sjlj",
