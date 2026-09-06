@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Passes/StandardInstrumentations.h"
+#include "InstructionChangePrinter.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
@@ -390,10 +391,25 @@ bool isInteresting(IRUnitRef IR, StringRef PassID, StringRef PassName) {
   return true;
 }
 
+bool isSameIRUnit(IRUnitRef LHS, IRUnitRef RHS) {
+  if (const auto *M = dyn_cast<Module>(LHS))
+    return M == dyn_cast<Module>(RHS);
+  if (const auto *F = dyn_cast<Function>(LHS))
+    return F == dyn_cast<Function>(RHS);
+  if (const auto *C = dyn_cast<LazyCallGraph::SCC>(LHS))
+    return C == dyn_cast<LazyCallGraph::SCC>(RHS);
+  if (const auto *L = dyn_cast<Loop>(LHS))
+    return L == dyn_cast<Loop>(RHS);
+  if (const auto *MF = dyn_cast<MachineFunction>(LHS))
+    return MF == dyn_cast<MachineFunction>(RHS);
+  llvm_unreachable("Unknown wrapped IR type");
+}
+
 } // namespace
 
 template <typename T> ChangeReporter<T>::~ChangeReporter() {
   assert(BeforeStack.empty() && "Problem with Change Printer stack.");
+  assert(ActivePasses == 0 && "Active change-reporting passes at exit");
 }
 
 template <typename T>
@@ -406,17 +422,28 @@ void ChangeReporter<T>::saveIRBeforePass(IRUnitRef IR, StringRef PassID,
       handleInitialIR(IR);
   }
 
+  const bool IsIgnored = isIgnored(PassID);
+  if (ReuseAfterAsBefore && !IsIgnored)
+    ++ActivePasses;
+
   // Always need to place something on the stack because invalidated passes
   // are not given the IR so it cannot be determined whether the pass was for
   // something that was filtered out.
   BeforeStack.emplace_back();
   auto &Before = BeforeStack.back();
   Before.IsInteresting = isInteresting(IR, PassID, PassName);
-  if (!Before.IsInteresting)
+  if (!Before.IsInteresting) {
+    CachedSnapshot.reset();
     return;
+  }
 
   // Save the IR representation on the stack.
-  generateIRRepresentation(IR, PassID, Before.Data);
+  if (ReuseAfterAsBefore && ActivePasses == 1 && CachedSnapshot &&
+      isSameIRUnit(CachedSnapshot->IR, IR))
+    Before.Data = std::move(CachedSnapshot->Representation);
+  else
+    generateIRRepresentation(IR, PassID, Before.Data);
+  CachedSnapshot.reset();
 }
 
 template <typename T>
@@ -426,13 +453,16 @@ void ChangeReporter<T>::handleIRAfterPass(IRUnitRef IR, StringRef PassID,
 
   std::string Name = getIRName(IR);
 
-  if (isIgnored(PassID)) {
+  const bool IsIgnored = isIgnored(PassID);
+  if (IsIgnored) {
+    CachedSnapshot.reset();
     if (VerboseMode)
       handleIgnored(PassID, Name);
   } else {
     auto &Before = BeforeStack.back();
     bool AfterIsInteresting = isInteresting(IR, PassID, PassName);
     if (!Before.IsInteresting && !AfterIsInteresting) {
+      CachedSnapshot.reset();
       if (VerboseMode)
         handleFiltered(PassID, Name);
     } else {
@@ -446,7 +476,16 @@ void ChangeReporter<T>::handleIRAfterPass(IRUnitRef IR, StringRef PassID,
           omitAfter(PassID, Name);
       } else
         handleAfter(PassID, Name, Before.Data, After, IR);
+
+      if (ReuseAfterAsBefore && ActivePasses == 1 && AfterIsInteresting)
+        CachedSnapshot.emplace(SnapshotCache{IR, std::move(After)});
+      else
+        CachedSnapshot.reset();
     }
+  }
+  if (ReuseAfterAsBefore && !IsIgnored) {
+    assert(ActivePasses != 0 && "Unbalanced change-reporting pass callbacks");
+    --ActivePasses;
   }
   BeforeStack.pop_back();
 }
@@ -461,6 +500,11 @@ void ChangeReporter<T>::handleInvalidatedPass(StringRef PassID) {
   // forms of the banner anyway.
   if (VerboseMode)
     handleInvalidated(PassID);
+  CachedSnapshot.reset();
+  if (ReuseAfterAsBefore && !isIgnored(PassID)) {
+    assert(ActivePasses != 0 && "Unbalanced change-reporting pass callbacks");
+    --ActivePasses;
+  }
   BeforeStack.pop_back();
 }
 
@@ -520,9 +564,19 @@ void TextChangeReporter<T>::handleIgnored(StringRef PassID, std::string &Name) {
   Out << formatv("*** IR Pass {0} on {1} ignored ***\n", PassID, Name);
 }
 
+IRChangedPrinter::IRChangedPrinter(bool VerboseMode)
+    : TextChangeReporter<std::string>(VerboseMode) {}
+
 IRChangedPrinter::~IRChangedPrinter() = default;
 
 void IRChangedPrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
+  if (PrintChanged == ChangePrinter::InstructionVerbose ||
+      PrintChanged == ChangePrinter::InstructionQuiet) {
+    InstructionChanges =
+        std::make_unique<InstructionChangeReporter>(VerboseMode);
+    InstructionChanges->registerCallbacks(PIC);
+    return;
+  }
   if (PrintChanged == ChangePrinter::Verbose ||
       PrintChanged == ChangePrinter::Quiet)
     TextChangeReporter<std::string>::registerRequiredCallbacks(PIC);
@@ -2478,7 +2532,8 @@ StandardInstrumentations::StandardInstrumentations(
     PrintPassOptions PrintPassOpts)
     : PrintPass(DebugLogging, PrintPassOpts), OptNone(DebugLogging),
       OptPassGate(Context),
-      PrintChangedIR(PrintChanged == ChangePrinter::Verbose),
+      PrintChangedIR(PrintChanged == ChangePrinter::Verbose ||
+                     PrintChanged == ChangePrinter::InstructionVerbose),
       PrintChangedDiff(PrintChanged == ChangePrinter::DiffVerbose ||
                            PrintChanged == ChangePrinter::ColourDiffVerbose,
                        PrintChanged == ChangePrinter::ColourDiffVerbose ||
@@ -2575,6 +2630,7 @@ void StandardInstrumentations::registerCallbacks(
 
 template class ChangeReporter<std::string>;
 template class TextChangeReporter<std::string>;
+template class ChangeReporter<detail::InstructionChangeSnapshot>;
 
 template class BlockDataT<EmptyData>;
 template class FuncDataT<EmptyData>;

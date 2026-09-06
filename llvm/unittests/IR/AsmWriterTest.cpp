@@ -9,10 +9,13 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/FunctionInstructionPrinter.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -226,5 +229,105 @@ TEST(AsmWriterTest, PrintNullOperandBundle) {
   raw_string_ostream OS(S);
   Invoke->print(OS);
   EXPECT_THAT(S, HasSubstr("<null operand bundle!>"));
+}
+
+TEST(AsmWriterTest, FunctionInstructionPrinterMatchesInstructionPrint) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+    declare i32 @callee(i32)
+
+    define i32 @test(i32 %arg, ptr %ptr) {
+    entry:
+      %0 = add nsw i32 %arg, 1, !annotation !0
+      %named = call i32 @callee(i32 %0) #0 [ "tag"(i32 %arg) ], !prof !1
+      store atomic i32 %named, ptr %ptr release, align 4, !annotation !0
+      ret i32 %named
+    }
+
+    attributes #0 = { nounwind }
+
+    !0 = !{!"attached metadata"}
+    !1 = !{!"branch_weights", i32 10}
+  )",
+                                                  Err, Ctx);
+  ASSERT_TRUE(M);
+  Function &F = *M->getFunction("test");
+  // Exercise an instruction that exceeds the printer's internal buffer.
+  F.front().front().setName(std::string(2048, 'x'));
+
+  for (bool IsForDebug : {false, true}) {
+    std::string Expected;
+    raw_string_ostream ExpectedOS(Expected);
+    ModuleSlotTracker ExpectedMST(M.get());
+    ExpectedOS << "before:";
+    for (const Instruction &I : instructions(F)) {
+      I.print(ExpectedOS, ExpectedMST, IsForDebug);
+      ExpectedOS << ":after\n";
+    }
+
+    std::string Actual;
+    raw_string_ostream ActualOS(Actual);
+    ModuleSlotTracker ActualMST(M.get());
+    FunctionInstructionPrinter Printer(ActualOS, ActualMST, F, IsForDebug);
+    ActualOS << "before:";
+    for (const Instruction &I : instructions(F)) {
+      Printer.printInstruction(I);
+      ActualOS << ":after\n";
+    }
+
+    EXPECT_EQ(Expected, Actual);
+  }
+}
+
+TEST(AsmWriterTest, FunctionInstructionPrinterOwnsCustomNames) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+    %0 = type { i32 }
+
+    @0 = global i32 0
+
+    declare void @callee()
+
+    define i32 @test() {
+    entry:
+      %storage = alloca %0, align 4
+      %0 = load i32, ptr @0
+      call void @callee() #0
+      ret i32 %0
+    }
+
+    attributes #0 = { nounwind }
+  )",
+                                                  Err, Ctx);
+  ASSERT_TRUE(M);
+  Function &F = *M->getFunction("test");
+
+  std::string Actual;
+  raw_string_ostream OS(Actual);
+  ModuleSlotTracker MST(M.get());
+  FunctionInstructionPrinter Printer(
+      OS, MST, F, /*IsForDebug=*/false,
+      [State = std::make_unique<unsigned>(0)](raw_ostream &OS,
+                                              const Value &V) mutable {
+        ++*State;
+        OS << (isa<GlobalValue>(V) ? "@<global>" : "%<local>");
+      },
+      [State = std::make_unique<unsigned>(0)](raw_ostream &OS,
+                                              const Type &) mutable {
+        ++*State;
+        OS << "%<type>";
+      },
+      /*PrintCallAttributesInline=*/true);
+  for (const Instruction &I : instructions(F)) {
+    Printer.printInstruction(I);
+    OS << '\n';
+  }
+
+  EXPECT_EQ(Actual, "  %storage = alloca %<type>, align 4\n"
+                    "  %<local> = load i32, ptr @<global>, align 4\n"
+                    "  call void @callee() nounwind\n"
+                    "  ret i32 %<local>\n");
 }
 }

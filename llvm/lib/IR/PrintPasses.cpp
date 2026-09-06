@@ -71,7 +71,18 @@ static cl::opt<bool> PrintAfterAll("print-after-all",
 // -filter-print-source-locs and -filter-passes can be used to filter the
 // output. This reporter relies on the linux diff utility to do comparisons and
 // insert the prefixes. For systems that do not have the necessary facilities,
-// the error message will be shown in place of the expected output.
+// the error message will be shown in place of the expected output. The values
+// "inst" and "inst-quiet" produce a diagnostic stream of added, removed,
+// changed, or moved instructions and basic blocks. They compare exact
+// instruction text without hashing and give
+// unnamed values and identified types IDs that persist for this compiler
+// invocation. Call attributes are printed inline so module attribute-group
+// numbering does not affect comparisons. These modes are available only for
+// LLVM IR under the new pass manager. Changes outside instructions and basic
+// blocks, including debug records, are not reported. -print-before-changed has
+// no additional effect because removed and changed records already contain
+// their before text. A move is reported separately only when the instruction
+// text is unchanged; changed records include both the old and new locations.
 cl::opt<ChangePrinter> llvm::PrintChanged(
     "print-changed", cl::desc("Print changed IRs"), cl::Hidden,
     cl::ValueOptional, cl::init(ChangePrinter::None),
@@ -89,6 +100,10 @@ cl::opt<ChangePrinter> llvm::PrintChanged(
                    "Create a website with graphical changes"),
         clEnumValN(ChangePrinter::DotCfgQuiet, "dot-cfg-quiet",
                    "Create a website with graphical changes in quiet mode"),
+        clEnumValN(ChangePrinter::InstructionVerbose, "inst",
+                   "Display instruction-level changes"),
+        clEnumValN(ChangePrinter::InstructionQuiet, "inst-quiet",
+                   "Display instruction-level changes in quiet mode"),
         // Sentinel value for unspecified option.
         clEnumValN(ChangePrinter::Verbose, "", "")));
 
@@ -425,6 +440,11 @@ void llvm::reportChangedIR(StringRef Before, StringRef After,
                            StringRef PassName, StringRef PassID,
                            StringRef IRName, bool IsInteresting,
                            bool ShouldReport) {
+  if (PrintChanged == ChangePrinter::InstructionQuiet ||
+      PrintChanged == ChangePrinter::InstructionVerbose)
+    report_fatal_error("instruction-level change printing is only supported "
+                       "for LLVM IR under the new pass manager");
+
   if (!ShouldReport && IsInteresting)
     return;
 
@@ -450,6 +470,9 @@ void llvm::reportChangedIR(StringRef Before, StringRef After,
     case ChangePrinter::DotCfgVerbose: // unimplemented
       errs() << After;
       break;
+    case ChangePrinter::InstructionQuiet:
+    case ChangePrinter::InstructionVerbose:
+      llvm_unreachable("handled above");
     case ChangePrinter::DiffQuiet:
     case ChangePrinter::DiffVerbose:
     case ChangePrinter::ColourDiffQuiet:
@@ -466,7 +489,8 @@ void llvm::reportChangedIR(StringRef Before, StringRef After,
     }
   } else if (llvm::is_contained({ChangePrinter::Verbose,
                                  ChangePrinter::DiffVerbose,
-                                 ChangePrinter::ColourDiffVerbose},
+                                 ChangePrinter::ColourDiffVerbose,
+                                 ChangePrinter::InstructionVerbose},
                                 PrintChanged.getValue())) {
     const char *Reason =
         IsInteresting ? " omitted because no change" : " filtered out";
