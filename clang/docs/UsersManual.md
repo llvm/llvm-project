@@ -275,7 +275,7 @@ specific parts of the diagnostic, e.g.,
 
 ::::{raw} html
 <pre>
-  <b><span style="color:black">test.c:28:8: <span style="color:magenta">warning</span>: extra tokens at end of #endif directive [-Wextra-tokens]</span></b>
+  <b>test.c:28:8: <span style="color:magenta">warning</span>: extra tokens at end of #endif directive [-Wextra-tokens]</b>
   #endif bad
          <span style="color:green">^</span>
          <span style="color:green">//</span>
