@@ -686,3 +686,170 @@ module attributes {transform.with_named_sequence} {
       transform.yield
   }
 }
+
+// -----
+
+#identity = affine_map<(d0) -> (d0)>
+
+// CHECK-DAG: #[[$PACK_INDEX_MAP:.*]] = affine_map<()[s0, s1] -> (s0 * 4 + s1)>
+// CHECK-LABEL: func.func @pack_linalg_index
+// CHECK:         linalg.generic
+// CHECK:       ^bb0
+// CHECK-DAG:     %[[OUTER:.*]] = linalg.index 0 : index
+// CHECK-DAG:     %[[INNER:.*]] = linalg.index 1 : index
+// CHECK:         %[[INDEX:.*]] = affine.apply #[[$PACK_INDEX_MAP]]()[%[[OUTER]], %[[INNER]]]
+// CHECK:         arith.index_cast %[[INDEX]] : index to i32
+func.func @pack_linalg_index(%input: tensor<8xi32>, %init: tensor<8xi32>) -> tensor<8xi32> {
+  %result = linalg.generic {
+      indexing_maps = [#identity, #identity],
+      iterator_types = ["parallel"]}
+      ins(%input : tensor<8xi32>) outs(%init : tensor<8xi32>) {
+  ^bb0(%in: i32, %out: i32):
+    %index = linalg.index 0 : index
+    %index_i32 = arith.index_cast %index : index to i32
+    %sum = arith.addi %in, %index_i32 : i32
+    linalg.yield %sum : i32
+  } -> tensor<8xi32>
+  return %result : tensor<8xi32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg0
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.pack %generic packed_sizes = [4]
+      : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+    transform.yield
+  }
+}
+
+// -----
+
+#identity = affine_map<(d0) -> (d0)>
+
+// Check index remapping when packing adds a padded iteration. Unpacking drops
+// the extra output element at index 8.
+// CHECK-DAG: #[[$PADDED_PACK_INDEX:.*]] = affine_map<()[s0, s1] -> (s0 * 3 + s1)>
+// CHECK-LABEL: func.func @pack_linalg_index_padded(
+// CHECK:         linalg.pack {{.*}} padding_value{{.*}} : tensor<8xi32> -> tensor<3x3xi32>
+// CHECK:         %[[PACKED:.*]] = linalg.generic
+// CHECK:       ^bb0
+// CHECK-DAG:     %[[OUTER:.*]] = linalg.index 0 : index
+// CHECK-DAG:     %[[INNER:.*]] = linalg.index 1 : index
+// CHECK:         %[[INDEX:.*]] = affine.apply #[[$PADDED_PACK_INDEX]]()[%[[OUTER]], %[[INNER]]]
+// CHECK:         arith.index_cast %[[INDEX]] : index to i32
+// CHECK:         linalg.unpack %[[PACKED]] {{.*}} : tensor<3x3xi32> -> tensor<8xi32>
+func.func @pack_linalg_index_padded(%input: tensor<8xi32>, %init: tensor<8xi32>) -> tensor<8xi32> {
+  %result = linalg.generic {
+      indexing_maps = [#identity, #identity],
+      iterator_types = ["parallel"]}
+      ins(%input : tensor<8xi32>) outs(%init : tensor<8xi32>) {
+  ^bb0(%in: i32, %out: i32):
+    %index = linalg.index 0 : index
+    %index_i32 = arith.index_cast %index : index to i32
+    %sum = arith.addi %in, %index_i32 : i32
+    linalg.yield %sum : i32
+  } -> tensor<8xi32>
+  return %result : tensor<8xi32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg0
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.pack %generic packed_sizes = [3]
+      : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+    transform.yield
+  }
+}
+
+// -----
+
+#identity_3d = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+
+// CHECK-DAG: #[[$PACK_INDEX_4:.*]] = affine_map<()[s0, s1] -> (s0 * 4 + s1)>
+// CHECK-DAG: #[[$PACK_INDEX_8:.*]] = affine_map<()[s0, s1] -> (s0 * 8 + s1)>
+// CHECK-LABEL: func.func @pack_multiple_linalg_indices
+// CHECK:         linalg.generic
+// CHECK:       ^bb0
+// CHECK:         %[[OUTER_0:.*]] = linalg.index 0 : index
+// CHECK:         %[[INNER_0:.*]] = linalg.index 3 : index
+// CHECK:         %[[INDEX_0:.*]] = affine.apply #[[$PACK_INDEX_4]]()[%[[OUTER_0]], %[[INNER_0]]]
+// CHECK:         %[[INDEX_1:.*]] = linalg.index 1 : index
+// CHECK:         %[[OUTER_2:.*]] = linalg.index 2 : index
+// CHECK:         %[[INNER_2:.*]] = linalg.index 4 : index
+// CHECK:         %[[INDEX_2:.*]] = affine.apply #[[$PACK_INDEX_8]]()[%[[OUTER_2]], %[[INNER_2]]]
+// CHECK:         arith.index_cast %[[INDEX_0]] : index to i32
+// CHECK:         arith.index_cast %[[INDEX_1]] : index to i32
+// CHECK:         arith.index_cast %[[INDEX_2]] : index to i32
+func.func @pack_multiple_linalg_indices(%input: tensor<8x5x16xi32>,
+                                        %init: tensor<8x5x16xi32>) -> tensor<8x5x16xi32> {
+  %result = linalg.generic {
+      indexing_maps = [#identity_3d, #identity_3d],
+      iterator_types = ["parallel", "parallel", "parallel"]}
+      ins(%input : tensor<8x5x16xi32>) outs(%init : tensor<8x5x16xi32>) {
+  ^bb0(%in: i32, %out: i32):
+    %index_0 = linalg.index 0 : index
+    %index_1 = linalg.index 1 : index
+    %index_2 = linalg.index 2 : index
+    %index_0_i32 = arith.index_cast %index_0 : index to i32
+    %index_1_i32 = arith.index_cast %index_1 : index to i32
+    %index_2_i32 = arith.index_cast %index_2 : index to i32
+    %sum_0 = arith.addi %in, %index_0_i32 : i32
+    %sum_1 = arith.addi %sum_0, %index_1_i32 : i32
+    %sum_2 = arith.addi %sum_1, %index_2_i32 : i32
+    linalg.yield %sum_2 : i32
+  } -> tensor<8x5x16xi32>
+  return %result : tensor<8x5x16xi32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg0
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.pack %generic packed_sizes = [4, 0, 8]
+      : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+    transform.yield
+  }
+}
+
+// -----
+
+#identity_dynamic = affine_map<(d0) -> (d0)>
+
+// CHECK-DAG: #[[$DYNAMIC_PACK_INDEX:.*]] = affine_map<()[s0, s1, s2] -> (s0 * s1 + s2)>
+// CHECK-LABEL: func.func @pack_linalg_index_dynamic
+// CHECK:         %[[TILE_SIZE:.*]] = "tile_size"() : () -> index
+// CHECK:         linalg.generic
+// CHECK:       ^bb0
+// CHECK:         %[[OUTER:.*]] = linalg.index 0 : index
+// CHECK:         %[[INNER:.*]] = linalg.index 1 : index
+// CHECK:         %[[INDEX:.*]] = affine.apply #[[$DYNAMIC_PACK_INDEX]]()[%[[TILE_SIZE]], %[[OUTER]], %[[INNER]]]
+// CHECK:         arith.index_cast %[[INDEX]] : index to i32
+func.func @pack_linalg_index_dynamic(%input: tensor<?xi32>,
+                                     %init: tensor<?xi32>) -> tensor<?xi32> {
+  %tile_size = "tile_size"() : () -> index
+  %result = linalg.generic {
+      indexing_maps = [#identity_dynamic, #identity_dynamic],
+      iterator_types = ["parallel"]}
+      ins(%input : tensor<?xi32>) outs(%init : tensor<?xi32>) {
+  ^bb0(%in: i32, %out: i32):
+    %index = linalg.index 0 : index
+    %index_i32 = arith.index_cast %index : index to i32
+    %sum = arith.addi %in, %index_i32 : i32
+    linalg.yield %sum : i32
+  } -> tensor<?xi32>
+  return %result : tensor<?xi32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg0
+      : (!transform.any_op) -> !transform.any_op
+    %tile_size = transform.structured.match ops{["tile_size"]} in %arg0
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.pack %generic packed_sizes = [%tile_size]
+      : (!transform.any_op, !transform.any_op) -> (!transform.op<"linalg.generic">)
+    transform.yield
+  }
+}
