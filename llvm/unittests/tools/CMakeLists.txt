@@ -10,3 +10,4 @@ add_subdirectory(
 add_subdirectory(llvm-profdata)
 add_subdirectory(llvm-profgen)
 add_subdirectory(llvm-mca)
+add_subdirectory(lto)
