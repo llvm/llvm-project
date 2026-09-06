@@ -864,6 +864,21 @@ unsigned AArch64InstrInfo::insertBranch(
   return 2;
 }
 
+#ifndef NDEBUG
+static bool isValidCBExtend(int64_t Opc, AArch64_AM::ShiftExtendType Ext) {
+  switch (Ext) {
+  default:
+    return false;
+  case AArch64_AM::UXTB:
+  case AArch64_AM::SXTB:
+    return Opc == AArch64::CBBAssertExt;
+  case AArch64_AM::UXTH:
+  case AArch64_AM::SXTH:
+    return Opc == AArch64::CBHAssertExt;
+  }
+}
+#endif
+
 AArch64CC::CondCode AArch64InstrInfo::insertCmpForCondBr(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, const DebugLoc &DL,
     ArrayRef<MachineOperand> Cond) const {
@@ -996,49 +1011,39 @@ AArch64CC::CondCode AArch64InstrInfo::insertCmpForCondBr(
     // Cond is { -1, Opcode, CC, Op0, Op1, Ext0, Ext1 }
 
     // We need a new register for the now explicitly extended register
-    Register Reg = Cond[4].getReg();
+    Register Reg = Cond[3].getReg();
     if (Cond[5].getImm() != AArch64_AM::InvalidShiftExtend) {
       unsigned ExtOpc;
       unsigned ExtBits;
       AArch64_AM::ShiftExtendType ExtendType =
           AArch64_AM::getExtendType(Cond[5].getImm());
+      assert(isValidCBExtend(Cond[1].getImm(), ExtendType) &&
+             "Unexpected compare-and-branch instruction for extend type");
       switch (ExtendType) {
       default:
         llvm_unreachable("Unknown shift-extend for CB instruction");
       case AArch64_AM::SXTB:
-        assert(
-            Cond[1].getImm() == AArch64::CBBAssertExt &&
-            "Unexpected compare-and-branch instruction for SXTB shift-extend");
         ExtOpc = AArch64::SBFMWri;
         ExtBits = AArch64_AM::encodeLogicalImmediate(0xff, 32);
         break;
       case AArch64_AM::SXTH:
-        assert(
-            Cond[1].getImm() == AArch64::CBHAssertExt &&
-            "Unexpected compare-and-branch instruction for SXTH shift-extend");
         ExtOpc = AArch64::SBFMWri;
         ExtBits = AArch64_AM::encodeLogicalImmediate(0xffff, 32);
         break;
       case AArch64_AM::UXTB:
-        assert(
-            Cond[1].getImm() == AArch64::CBBAssertExt &&
-            "Unexpected compare-and-branch instruction for UXTB shift-extend");
         ExtOpc = AArch64::ANDWri;
         ExtBits = AArch64_AM::encodeLogicalImmediate(0xff, 32);
         break;
       case AArch64_AM::UXTH:
-        assert(
-            Cond[1].getImm() == AArch64::CBHAssertExt &&
-            "Unexpected compare-and-branch instruction for UXTH shift-extend");
         ExtOpc = AArch64::ANDWri;
         ExtBits = AArch64_AM::encodeLogicalImmediate(0xffff, 32);
         break;
       }
 
       // Build the explicit extension of the first operand
-      Reg = MRI.createVirtualRegister(&AArch64::GPR32spRegClass);
+      Reg = MRI.createVirtualRegister(&AArch64::GPR32commonRegClass);
       MachineInstrBuilder MBBI =
-          BuildMI(MBB, MI, DL, get(ExtOpc), Reg).addReg(Cond[4].getReg());
+          BuildMI(MBB, MI, DL, get(ExtOpc), Reg).addReg(Cond[3].getReg());
       if (ExtOpc != AArch64::ANDWri)
         MBBI.addImm(0);
       MBBI.addImm(ExtBits);
@@ -1046,21 +1051,20 @@ AArch64CC::CondCode AArch64InstrInfo::insertCmpForCondBr(
 
     // Now, subs with an extended second operand
     if (Cond[6].getImm() != AArch64_AM::InvalidShiftExtend) {
+      MRI.constrainRegClass(Reg, &AArch64::GPR32commonRegClass);
       AArch64_AM::ShiftExtendType ExtendType =
           AArch64_AM::getExtendType(Cond[6].getImm());
-      MRI.constrainRegClass(Reg, MRI.getRegClass(Cond[3].getReg()));
-      MRI.constrainRegClass(Cond[3].getReg(), &AArch64::GPR32spRegClass);
+      assert(isValidCBExtend(Cond[1].getImm(), ExtendType) &&
+             "Unexpected compare-and-branch instruction for extend type");
       BuildMI(MBB, MI, DL, get(AArch64::SUBSWrx), AArch64::WZR)
-          .addReg(Cond[3].getReg())
           .addReg(Reg)
+          .addReg(Cond[4].getReg())
           .addImm(AArch64_AM::getArithExtendImm(ExtendType, 0));
     } // If no extension is needed, just a regular subs
     else {
-      MRI.constrainRegClass(Reg, MRI.getRegClass(Cond[3].getReg()));
-      MRI.constrainRegClass(Cond[3].getReg(), &AArch64::GPR32spRegClass);
       BuildMI(MBB, MI, DL, get(AArch64::SUBSWrr), AArch64::WZR)
-          .addReg(Cond[3].getReg())
-          .addReg(Reg);
+          .addReg(Reg)
+          .addReg(Cond[4].getReg());
     }
 
     CC = static_cast<AArch64CC::CondCode>(Cond[2].getImm());
