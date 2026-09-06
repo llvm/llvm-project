@@ -52,6 +52,9 @@ Implemented Papers
 - P2830R10: Standardized Constexpr Type Ordering (`Github <https://llvm.org/PR216616>`__)
 - P3778R0: Fix for ``type_order`` template definition (`Github <https://llvm.org/PR216616>`__)
 - P4140R0: Proposed resolution for US70-126: allow incomplete types in type_order (`Github <https://llvm.org/PR216616>`__)
+- P2278R4: ``cbegin`` should always return a constant iterator (`Github <https://llvm.org/PR105201>`__)
+- P2836R1: ``std::basic_const_iterator`` should follow its underlying type's convertibility
+  (`Github <https://llvm.org/PR105406>`__)
 
 Improvements and New Features
 -----------------------------

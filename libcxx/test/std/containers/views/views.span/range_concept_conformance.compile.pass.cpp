@@ -15,6 +15,8 @@
 #include <concepts>
 #include <ranges>
 
+#include "test_macros.h"
+
 using range = std::span<int>;
 
 static_assert(std::same_as<std::ranges::iterator_t<range>, range::iterator>);
@@ -34,3 +36,8 @@ static_assert(!std::ranges::view<range const> && !std::ranges::enable_view<range
 static_assert(std::ranges::sized_range<range const>);
 static_assert(std::ranges::borrowed_range<range const>);
 static_assert(std::ranges::viewable_range<range const>);
+
+#if TEST_STD_VER >= 23
+static_assert(std::same_as<std::ranges::const_iterator_t<range>, range::const_iterator>);
+static_assert(std::same_as<std::ranges::const_iterator_t<range const>, range::const_iterator>);
+#endif

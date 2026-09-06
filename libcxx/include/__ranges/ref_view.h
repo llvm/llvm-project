@@ -19,7 +19,6 @@
 #include <__memory/addressof.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
-#include <__ranges/data.h>
 #include <__ranges/empty.h>
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/size.h>

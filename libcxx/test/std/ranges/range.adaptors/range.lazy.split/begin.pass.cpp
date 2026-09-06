@@ -14,6 +14,7 @@
 #include <ranges>
 
 #include <cassert>
+#include <type_traits>
 #include <utility>
 #include "test_iterators.h"
 #include "test_range.h"
@@ -136,6 +137,15 @@ constexpr bool test() {
     static_assert(std::is_same_v<decltype(*(*it).begin()), char&>);
 
     static_assert(ConstBeginDisabled<decltype(v)>);
+  }
+
+  // LWG4027 ensures that the behavior is unchanged in C++23.
+  {
+    [[maybe_unused]] auto r = std::views::single(0) | std::views::lazy_split(0);
+    using R1                = decltype((*std::ranges::cbegin(r)).front());
+    using R2                = decltype((*std::cbegin(r)).front());
+    static_assert(std::is_same_v<R1, R2>);
+    static_assert(std::is_const_v<std::remove_reference_t<R1>>);
   }
 
   return true;
