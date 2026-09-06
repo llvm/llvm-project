@@ -86,7 +86,7 @@ module attributes {
 
   // CHECK: cir.func{{.*}} @pass_two_exhausted(%arg0: !cir.ptr<!s8i>, %arg1: !s32i, %arg2: !s64i, %arg3: !s64i)
   // CHECK:   %[[SLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Two>
-  // CHECK:   cir.call @variadic(%arg0, %arg1, %arg1, %arg1, %arg1, %arg1, %[[SLOT]]) : (!cir.ptr<!s8i>, !s32i, !s32i, !s32i, !s32i, !s32i, !cir.ptr<!rec_Two> {llvm.align = 8 : i64, llvm.byval = !rec_Two, llvm.noalias, llvm.noundef}) -> !s32i
+  // CHECK:   cir.call @variadic(%arg0, %arg1, %arg1, %arg1, %arg1, %arg1, %[[SLOT]]) : (!cir.ptr<!s8i>, !s32i, !s32i, !s32i, !s32i, !s32i, !cir.ptr<!rec_Two> {llvm.align = 8 : i64, llvm.byval = !rec_Two, llvm.noundef}) -> !s32i
 
   // A record larger than two eightbytes is memory class no matter how many
   // registers are free.
@@ -95,9 +95,9 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @pass_big(%arg0: !cir.ptr<!s8i>, %arg1: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noalias, llvm.noundef})
+  // CHECK: cir.func{{.*}} @pass_big(%arg0: !cir.ptr<!s8i>, %arg1: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef})
   // CHECK:   %[[BSLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
-  // CHECK:   cir.call @variadic(%arg0, %[[BSLOT]]) : (!cir.ptr<!s8i>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noalias, llvm.noundef}) -> !s32i
+  // CHECK:   cir.call @variadic(%arg0, %[[BSLOT]]) : (!cir.ptr<!s8i>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s32i
 
   // An empty record occupies no register and is dropped, without displacing
   // the argument behind it.
@@ -129,8 +129,8 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @pass_wide_vector(%arg0: !cir.ptr<!s8i>, %arg1: !cir.ptr<!cir.vector<8 x !cir.float>> {llvm.align = 32 : i64, llvm.byval = !cir.vector<8 x !cir.float>, llvm.noalias, llvm.noundef})
-  // CHECK:   cir.call @variadic(%arg0, %{{.*}}) : (!cir.ptr<!s8i>, !cir.ptr<!cir.vector<8 x !cir.float>> {llvm.align = 32 : i64, llvm.byval = !cir.vector<8 x !cir.float>, llvm.noalias, llvm.noundef}) -> !s32i
+  // CHECK: cir.func{{.*}} @pass_wide_vector(%arg0: !cir.ptr<!s8i>, %arg1: !cir.ptr<!cir.vector<8 x !cir.float>> {llvm.align = 32 : i64, llvm.byval = !cir.vector<8 x !cir.float>, llvm.noundef})
+  // CHECK:   cir.call @variadic(%arg0, %{{.*}}) : (!cir.ptr<!s8i>, !cir.ptr<!cir.vector<8 x !cir.float>> {llvm.align = 32 : i64, llvm.byval = !cir.vector<8 x !cir.float>, llvm.noundef}) -> !s32i
 
   // A declared parameter is coerced the same way whether or not the call also
   // passes ellipsis arguments.
@@ -209,10 +209,10 @@ module attributes {
 // LLVM:   call i32 (ptr, ...) @variadic(ptr %{{[^,)]+}}, i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
 
 // LLVM: define void @pass_two_exhausted(ptr %{{[^,)]+}}, i32 %{{[^,)]+}}, i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
-// LLVM:   call i32 (ptr, ...) @variadic(ptr %{{[^,)]+}}, i32 %{{[^,)]+}}, i32 %{{[^,)]+}}, i32 %{{[^,)]+}}, i32 %{{[^,)]+}}, i32 %{{[^,)]+}}, ptr noalias noundef byval(%struct.Two) align 8 %{{[^,)]+}})
+// LLVM:   call i32 (ptr, ...) @variadic(ptr %{{[^,)]+}}, i32 %{{[^,)]+}}, i32 %{{[^,)]+}}, i32 %{{[^,)]+}}, i32 %{{[^,)]+}}, i32 %{{[^,)]+}}, ptr noundef byval(%struct.Two) align 8 %{{[^,)]+}})
 
-// LLVM: define void @pass_big(ptr %{{[^,)]+}}, ptr noalias noundef byval(%struct.Big) align 8 %{{[^,)]+}})
-// LLVM:   call i32 (ptr, ...) @variadic(ptr %{{[^,)]+}}, ptr noalias noundef byval(%struct.Big) align 8 %{{[^,)]+}})
+// LLVM: define void @pass_big(ptr %{{[^,)]+}}, ptr noundef byval(%struct.Big) align 8 %{{[^,)]+}})
+// LLVM:   call i32 (ptr, ...) @variadic(ptr %{{[^,)]+}}, ptr noundef byval(%struct.Big) align 8 %{{[^,)]+}})
 
 // LLVM: define void @pass_empty(ptr %{{[^,)]+}}, i32 %{{[^,)]+}})
 // LLVM:   call i32 (ptr, ...) @variadic(ptr %{{[^,)]+}}, i32 %{{[^,)]+}})
@@ -220,8 +220,8 @@ module attributes {
 // LLVM: define void @pass_all_float(ptr %{{[^,)]+}}, <2 x float> %{{[^,)]+}})
 // LLVM:   call i32 (ptr, ...) @variadic(ptr %{{[^,)]+}}, <2 x float> %{{[^,)]+}})
 
-// LLVM: define void @pass_wide_vector(ptr %{{[^,)]+}}, ptr noalias noundef byval(<8 x float>) align 32 %{{[^,)]+}})
-// LLVM:   call i32 (ptr, ...) @variadic(ptr %{{[^,)]+}}, ptr noalias noundef byval(<8 x float>) align 32 %{{[^,)]+}})
+// LLVM: define void @pass_wide_vector(ptr %{{[^,)]+}}, ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
+// LLVM:   call i32 (ptr, ...) @variadic(ptr %{{[^,)]+}}, ptr noundef byval(<8 x float>) align 32 %{{[^,)]+}})
 
 // LLVM: define void @pass_declared_coerced(i64 %{{[^,)]+}}, i32 %{{[^,)]+}})
 // LLVM:   call i32 (i64, ...) @variadic_pair(i64 %{{[^,)]+}}, i32 %{{[^,)]+}})

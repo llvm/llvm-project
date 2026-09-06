@@ -21,7 +21,7 @@
 // CIR:   %[[CAST:.*]] = cir.cast address_space %[[GR_VAL]] : !cir.ptr<!s32i> -> !cir.ptr<!s32i>
 // CIR:   cir.store {{.*}} %[[CAST]], %[[R]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 
-// LLVM: define dso_local void @k(ptr noundef %[[ARG:.*]])
+// LLVM: define dso_local spir_kernel void @k(ptr noundef %[[ARG:.*]])
 // LLVM:   %[[GP_ADDR:.*]] = alloca ptr
 // LLVM:   %[[GR_ADDR:.*]] = alloca ptr
 // LLVM:   %[[R_ADDR:.*]] = alloca ptr

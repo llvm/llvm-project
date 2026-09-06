@@ -10719,6 +10719,7 @@ cc_library(
         ":DialectUtils",
         ":FuncDialect",
         ":FunctionInterfaces",
+        ":GPUDialect",
         ":IR",
         ":LLVMDialect",
         ":MemRefDialect",
