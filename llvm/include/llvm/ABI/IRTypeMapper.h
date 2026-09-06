@@ -42,6 +42,7 @@ private:
 
   llvm::DenseMap<const abi::Type *, llvm::Type *> TypeCache;
 
+  llvm::Type *convertAtomicType(const abi::AtomicType *AT);
   llvm::Type *convertArrayType(const abi::ArrayType *AT);
   llvm::Type *convertVectorType(const abi::VectorType *VT);
   llvm::Type *convertRecordType(const abi::RecordType *RT);
