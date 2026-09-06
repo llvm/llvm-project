@@ -25,6 +25,8 @@ enum IGLPStrategyID : int {
   MFMAExpInterleaveID = 2,
   MFMAExpSimpleInterleaveID = 3,
 };
+
+unsigned sanitizeSchedMask(unsigned Mask);
 } // namespace AMDGPU
 
 std::unique_ptr<ScheduleDAGMutation>

@@ -13,6 +13,7 @@
 
 #include "SIISelLowering.h"
 #include "AMDGPU.h"
+#include "AMDGPUIGroupLP.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
 #include "AMDGPUMemoryUtils.h"
@@ -7397,6 +7398,11 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MRI.setSimpleHint(MI.getOperand(0).getReg(), MI.getOperand(6).getReg());
     return BB;
   }
+  case AMDGPU::SCHED_BARRIER:
+  case AMDGPU::SCHED_GROUP_BARRIER:
+    MI.getOperand(0).setImm(
+        AMDGPU::sanitizeSchedMask(MI.getOperand(0).getImm()));
+    return BB;
   default:
     if (TII->isImage(MI) || TII->isMUBUF(MI)) {
       if (!MI.mayStore())
