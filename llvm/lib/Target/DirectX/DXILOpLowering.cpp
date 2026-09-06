@@ -1120,11 +1120,11 @@ public:
       Value *BinOp = CI->getArgOperand(1);
       Value *Coord0 = CI->getArgOperand(2);
       Value *Coord1 = CI->getArgOperand(3);
-      Value *NewValue = CI->getArgOperand(4);
+      Value *Coord2 = CI->getArgOperand(4);
+      Value *NewValue = CI->getArgOperand(5);
 
-      std::array<Value *, 6> Args{
-          Handle,  BinOp, Coord0, Coord1, ConstantInt::get(IRB.getInt32Ty(), 0),
-          NewValue};
+      std::array<Value *, 6> Args{Handle, BinOp,  Coord0,
+                                  Coord1, Coord2, NewValue};
       Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
           dxil::OpCode::AtomicBinOp, Args, CI->getName(), CI->getType());
       if (Error E = OpCall.takeError()) {
