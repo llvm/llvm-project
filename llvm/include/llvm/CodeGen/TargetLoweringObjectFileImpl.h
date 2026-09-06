@@ -54,6 +54,8 @@ public:
   /// Emit Obj-C garbage collection and linker options.
   void emitModuleMetadata(MCStreamer &Streamer, Module &M) const override;
 
+  MCSection *getNamedSection(StringRef Name, SectionKind Kind) const override;
+
   void emitPersonalityValue(MCStreamer &Streamer, const DataLayout &DL,
                             const MCSymbol *Sym,
                             const MachineModuleInfo *MMI) const override;
@@ -149,6 +151,8 @@ public:
   /// Emit the module flags that specify the garbage collection information.
   void emitModuleMetadata(MCStreamer &Streamer, Module &M) const override;
 
+  MCSection *getNamedSection(StringRef Name, SectionKind Kind) const override;
+
   void emitLinkerDirectives(MCStreamer &Streamer, Module &M) const override;
 
   MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
@@ -212,6 +216,8 @@ public:
   /// Emit Obj-C garbage collection and linker options.
   void emitModuleMetadata(MCStreamer &Streamer, Module &M) const override;
 
+  MCSection *getNamedSection(StringRef Name, SectionKind Kind) const override;
+
   void emitLinkerDirectives(MCStreamer &Streamer, Module &M) const override;
 
   MCSection *getStaticCtorSection(unsigned Priority,
@@ -249,6 +255,8 @@ public:
 
   bool shouldPutJumpTableInFunctionSection(bool UsesLabelDifference,
                                            const Function &F) const override;
+
+  MCSection *getNamedSection(StringRef Name, SectionKind Kind) const override;
 
   void InitializeWasm();
   MCSection *getStaticCtorSection(unsigned Priority,

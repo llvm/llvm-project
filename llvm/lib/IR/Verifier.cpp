@@ -316,6 +316,7 @@ public:
     visitModuleIdents();
     visitModuleCommandLines();
     visitModuleErrnoTBAA();
+    visitModuleRawSections();
 
     verifyCompileUnits();
 
@@ -354,6 +355,7 @@ private:
   void visitModuleIdents();
   void visitModuleCommandLines();
   void visitModuleErrnoTBAA();
+  void visitModuleRawSections();
   void visitModuleFlags();
   void visitModuleFlag(const MDNode *Op,
                        DenseMap<const MDString *, const MDNode *> &SeenIDs,
@@ -1918,6 +1920,42 @@ void Verifier::visitModuleErrnoTBAA() {
 
   for (const MDNode *N : ErrnoTBAA->operands())
     TBAAVerifyHelper.visitTBAAMetadata(nullptr, N);
+}
+
+void Verifier::visitModuleRawSections() {
+  const NamedMDNode *RawSections = M.getNamedMetadata("llvm.raw.sections");
+  if (!RawSections)
+    return;
+
+  for (const MDNode *N : RawSections->operands()) {
+    if (N->getNumOperands() != 4) {
+      CheckFailed("llvm.raw.sections entry must have four operands", N);
+      continue;
+    }
+    Check(dyn_cast_or_null<MDString>(N->getOperand(0)),
+          "llvm.raw.sections entry operand 0 must be a string "
+          "(section name)",
+          N);
+    Check(mdconst::dyn_extract_or_null<ConstantInt>(N->getOperand(1)),
+          "llvm.raw.sections entry operand 1 must be an integer "
+          "(alignment)",
+          N);
+    auto *FlagsCI = mdconst::dyn_extract_or_null<ConstantInt>(N->getOperand(2));
+    Check(FlagsCI,
+          "llvm.raw.sections entry operand 2 must be an integer "
+          "(flags)",
+          N);
+    if (!Module::isValidRawSectionFlags(FlagsCI->getZExtValue())) {
+      CheckFailed("llvm.raw.sections entry operand 2 is not a valid "
+                  "combination of section flags",
+                  N);
+      continue;
+    }
+    Check(dyn_cast_or_null<MDString>(N->getOperand(3)),
+          "llvm.raw.sections entry operand 3 must be a string "
+          "(section data)",
+          N);
+  }
 }
 
 void Verifier::visitModuleFlags() {

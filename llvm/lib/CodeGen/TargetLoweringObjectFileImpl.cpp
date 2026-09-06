@@ -571,6 +571,14 @@ static unsigned getELFSectionFlags(SectionKind K, const Triple &T) {
   return Flags;
 }
 
+MCSection *
+TargetLoweringObjectFileELF::getNamedSection(StringRef Name,
+                                             SectionKind Kind) const {
+  unsigned Type = getELFSectionType(Name, Kind);
+  unsigned Flags = getELFSectionFlags(Kind, getContext().getTargetTriple());
+  return getContext().getELFSection(Name, Type, Flags);
+}
+
 static const Comdat *getELFComdat(const GlobalValue *GV) {
   const Comdat *C = GV->getComdat();
   if (!C)
@@ -1367,6 +1375,13 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
   Streamer.addBlankLine();
 }
 
+MCSection *
+TargetLoweringObjectFileMachO::getNamedSection(StringRef Name,
+                                               SectionKind Kind) const {
+  auto [Segment, SecName] = Name.split(',');
+  return getContext().getMachOSection(Segment, SecName, 0, Kind);
+}
+
 void TargetLoweringObjectFileMachO::emitLinkerDirectives(MCStreamer &Streamer,
                                                          Module &M) const {
   if (auto *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
@@ -1961,6 +1976,12 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
   });
 }
 
+MCSection *
+TargetLoweringObjectFileCOFF::getNamedSection(StringRef Name,
+                                              SectionKind Kind) const {
+  return getContext().getCOFFSection(Name, getCOFFSectionFlags(Kind, *TM));
+}
+
 void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
     MCStreamer &Streamer, Module &M) const {
   if (NamedMDNode *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
@@ -2273,6 +2294,12 @@ void TargetLoweringObjectFileWasm::getModuleMetadata(Module &M) {
   for (GlobalValue *GV : Vec)
     if (auto *GO = dyn_cast<GlobalObject>(GV))
       Used.insert(GO);
+}
+
+MCSection *
+TargetLoweringObjectFileWasm::getNamedSection(StringRef Name,
+                                              SectionKind Kind) const {
+  return getContext().getWasmSection(Name, Kind);
 }
 
 MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(
