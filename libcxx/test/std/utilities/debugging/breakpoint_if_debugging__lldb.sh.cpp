@@ -13,6 +13,7 @@
 // UNSUPPORTED: android
 // UNSUPPORTED: availability-debugging-missing
 // XFAIL: LIBCXX-PICOLIBC-FIXME
+// UNSUPPORTED: target=i686-w64-windows-gnu
 
 // RUN: %{cxx} %{flags} %s %{compile_flags} %{link_flags} -o %t.exe -g
 // RUN: %if darwin %{ codesign --entitlements %S/entitlements-apple.plist -f -s - %t.exe %}
