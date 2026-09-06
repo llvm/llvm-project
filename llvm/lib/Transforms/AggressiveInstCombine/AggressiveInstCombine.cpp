@@ -1462,9 +1462,9 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   IRBuilder<> Builder(&I);
   LoadInst *NewLoad = nullptr, *LI1 = LOps.Root;
 
-  IntegerType *WiderType = IntegerType::get(I.getContext(), LOps.LoadSize);
-  // TTI based checks if we want to proceed with wider load
-  bool Allowed = TTI.isTypeLegal(WiderType);
+  // Allow a power of 2 number of bytes that fit in a legal integer type.
+  bool Allowed = LOps.LoadSize >= 16 && isPowerOf2_64(LOps.LoadSize) &&
+                 DL.fitsInLegalInteger(LOps.LoadSize);
   if (!Allowed)
     return false;
 
@@ -1485,6 +1485,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     Load1Ptr = Builder.CreatePtrAdd(Load1Ptr, Builder.getInt(Offset1));
   }
   // Generate wider load.
+  IntegerType *WiderType = IntegerType::get(I.getContext(), LOps.LoadSize);
   NewLoad = Builder.CreateAlignedLoad(WiderType, Load1Ptr, LI1->getAlign(),
                                       LI1->isVolatile(), "");
   NewLoad->takeName(LI1);
@@ -1561,9 +1562,10 @@ static bool mergeConsecutivePartStores(ArrayRef<PartStore> Parts,
   // FIXME: We could generate smaller stores if we can't produce a large one.
   const PartStore &First = Parts.front();
   LLVMContext &Ctx = First.Store->getContext();
-  Type *NewTy = Type::getIntNTy(Ctx, Width);
   unsigned Fast = 0;
-  if (!TTI.isTypeLegal(NewTy) ||
+  bool Allowed =
+      Width >= 16 && isPowerOf2_64(Width) && DL.fitsInLegalInteger(Width);
+  if (!Allowed ||
       !TTI.allowsMisalignedMemoryAccesses(Ctx, Width,
                                           First.Store->getPointerAddressSpace(),
                                           First.Store->getAlign(), &Fast) ||
@@ -1572,6 +1574,7 @@ static bool mergeConsecutivePartStores(ArrayRef<PartStore> Parts,
 
   // Generate the combined store.
   IRBuilder<> Builder(First.Store);
+  Type *NewTy = Type::getIntNTy(Ctx, Width);
   Value *Val = First.Val;
   if (First.ValOffset != 0)
     Val = Builder.CreateLShr(Val, First.ValOffset);
