@@ -5636,6 +5636,12 @@ def HLSLWaveReadLaneAt : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLWaveReadLaneFirst : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_read_lane_first"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLWaveGetLaneCount : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_get_lane_count"];
   let Attributes = [NoThrow, Const];

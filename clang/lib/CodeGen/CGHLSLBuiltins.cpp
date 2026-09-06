@@ -1583,6 +1583,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                              {OpExpr->getType()}, ArrayRef{OpExpr, OpIndex},
                              "hlsl.wave.readlane");
   }
+  case Builtin::BI__builtin_hlsl_wave_read_lane_first: {
+    Value *OpExpr = EmitScalarExpr(E->getArg(0));
+    return EmitIntrinsicCall(
+        CGM.getHLSLRuntime().getWaveReadLaneFirstIntrinsic(),
+        {OpExpr->getType()}, ArrayRef{OpExpr}, "hlsl.wave.readlane.first");
+  }
   case Builtin::BI__builtin_hlsl_wave_prefix_sum: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
     Intrinsic::ID IID = getWavePrefixSumIntrinsic(

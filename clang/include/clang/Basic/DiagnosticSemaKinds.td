@@ -9958,6 +9958,8 @@ def err_typecheck_expect_scalar_or_vector_or_matrix : Error<
   "a vector or matrix of such type is required">;
 def err_typecheck_expect_any_scalar_or_vector : Error<
   "invalid operand of type %0%select{| where a scalar or vector is required}1">;
+def err_typecheck_expect_any_scalar_or_vector_or_matrix : Error<
+  "invalid operand of type %0 where a scalar, vector, or matrix is required">;
 def err_typecheck_expect_flt_or_vector : Error<
   "invalid operand of type %0 where floating, complex or "
   "a vector of such types is required">;
