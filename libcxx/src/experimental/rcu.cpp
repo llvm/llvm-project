@@ -23,7 +23,6 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace {
 
-
 // Adopted the 2-phase implementation in the section
 // "3) General-Purpose RCU" of the paper
 // http://www.rdrop.com/users/paulmck/RCU/urcu-supp-accepted.2011.08.30a.pdf
@@ -78,29 +77,29 @@ class rcu_domain_impl {
 
   void update_phase_and_wait() noexcept {
     rcu_singly_list_view working_queue;
-    working_queue.__splice_back(retired_queue_stage0_);
+    working_queue.splice_back(retired_queue_stage0_);
 
     // Flip the global phase
     auto old_phase = global_reader_phase_.fetch_xor(reader_states::grace_period_phase_mask, std::memory_order_relaxed);
-    auto __new_phase = old_phase ^ reader_states::grace_period_phase_mask;
-    // std::printf("rcu_domain::update_phase_and_wait() new phase: 0x%04x\n", __new_phase);
+    auto new_phase = old_phase ^ reader_states::grace_period_phase_mask;
+    // std::printf("rcu_domain::update_phase_and_wait() new phase: 0x%04x\n", new_phase);
 
-    __barrier();
+    barrier();
     // Wait for all threads to quiesce in the old phase
-    while (any_reader_in_ongoing_grace_period(__new_phase)) {
+    while (any_reader_in_ongoing_grace_period(new_phase)) {
       grace_period_waiting_flag_.store(true, std::memory_order_relaxed);
       grace_period_waiting_flag_.wait(true, std::memory_order_relaxed);
     }
     grace_period_waiting_flag_.store(false, std::memory_order_relaxed);
 
-    retired_queue_stage2_.__splice_back(retired_queue_stage1_);
-    retired_queue_stage1_.__splice_back(working_queue);
+    retired_queue_stage2_.splice_back(retired_queue_stage1_);
+    retired_queue_stage1_.splice_back(working_queue);
   }
 
-  bool any_reader_in_ongoing_grace_period(reader_states::state_type __global_phase) noexcept {
+  bool any_reader_in_ongoing_grace_period(reader_states::state_type global_phase) noexcept {
     bool any_ongoing = false;
-    per_thread_states::for_each([this, __global_phase, &any_ongoing](atomic_ref<reader_states::state_type> __state) {
-      if (is_grace_period_ongoing(__state.load(memory_order_relaxed), __global_phase)) {
+    per_thread_states::for_each([this, global_phase, &any_ongoing](atomic_ref<reader_states::state_type> state) {
+      if (is_grace_period_ongoing(state.load(memory_order_relaxed), global_phase)) {
         any_ongoing = true;
       }
     });
@@ -117,7 +116,7 @@ class rcu_domain_impl {
            reader_states::get_grace_period_phase(thread_state) != global_phase;
   }
 
-  void __barrier() noexcept { asm volatile("" : : : "memory"); }
+  void barrier() noexcept { asm volatile("" : : : "memory"); }
 
 public:
   void lock() noexcept {
@@ -147,9 +146,7 @@ public:
     }
   }
 
-  void retire(__rcu_node* node) noexcept {
-    retired_queue_stage0_.__push_front(node);
-  }
+  void retire(__rcu_node* node) noexcept { retired_queue_stage0_.push_front(node); }
 
   void synchronize(bool invoke_callback) noexcept {
     __cxx_atomic_thread_fence(memory_order_seq_cst);
@@ -159,31 +156,31 @@ public:
 
     if (invoke_callback) {
       rcu_singly_list_view ready_callbacks;
-      ready_callbacks.__splice_back(retired_queue_stage2_);
+      ready_callbacks.splice_back(retired_queue_stage2_);
 
       // Invoke the ready callbacks outside of the grace period mutex
       lk.unlock();
-      ready_callbacks.__for_each([](auto* node) { node->__callback_(); });
+      ready_callbacks.for_each([](auto* node) { node->__callback_(); });
       lk.lock();
     }
 
-    __barrier();
+    barrier();
     update_phase_and_wait();
 
     lk.unlock();
 
     if (invoke_callback) {
       rcu_singly_list_view ready_callbacks;
-      ready_callbacks.__splice_back(retired_queue_stage2_);
+      ready_callbacks.splice_back(retired_queue_stage2_);
 
       // Invoke the ready callbacks outside of the grace period mutex
-      ready_callbacks.__for_each([](auto* node) { node->__callback_(); });
+      ready_callbacks.for_each([](auto* node) { node->__callback_(); });
     }
     __cxx_atomic_thread_fence(memory_order_seq_cst);
   }
 
   void debugPrintAllReaderStatesInHex() {
-    per_thread_states::for_each([](auto __state_ref) { std::printf("Reader state: 0x%04x\n", __state_ref.load()); });
+    per_thread_states::for_each([](auto state_ref) { std::printf("Reader state: 0x%04x\n", state_ref.load()); });
   }
 };
 } // namespace
