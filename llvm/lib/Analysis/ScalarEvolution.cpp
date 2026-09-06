@@ -13579,13 +13579,90 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     // Let End = max(RHS,Start).  We use the expression (End-Start)/Stride to
     // describe the backedge count: if the backedge is taken at least once then
     // End is RHS, and if not End is Start so we get a backedge count of zero.
+    //
+    // AddingStrideMinusOneMayOverflow has the following preconditions:
+    //
+    // 1. If IsSigned, Start <=s End; otherwise, Start <=u End
+    // 2. The index variable doesn't overflow.
+    //
+    // Therefore, we know N exists such that
+    // (Start + Stride * N) >= End, and computing "(Start + Stride * N)"
+    // doesn't overflow.
+    //
+    // Using this information, try to prove whether the addition in
+    // "(Start - End) + (Stride - 1)" has unsigned overflow.
+    //
+    // If the IV cannot overflow, RHS is at least Stride - 1 below the maximum
+    // value, so the distance End - Start is at most UMAX - (Stride - 1) and
+    // the (Stride - 1) addition below cannot overflow.
+    const SCEV *One = getOne(Stride->getType());
+    bool AddingStrideMinusOneMayOverflow = IVMayOverflow && [&] {
+      if (isKnownToBeAPowerOfTwo(Stride)) {
+        // Suppose Stride is a power of two, and Start/End are unsigned
+        // integers.  Let UMAX be the largest representable unsigned
+        // integer.
+        //
+        // By the preconditions of this function, we know
+        // "(Start + Stride * N) >= End", and this doesn't overflow.
+        // As a formula:
+        //
+        //   End <= (Start + Stride * N) <= UMAX
+        //
+        // Subtracting Start from all the terms:
+        //
+        //   End - Start <= Stride * N <= UMAX - Start
+        //
+        // Since Start is unsigned, UMAX - Start <= UMAX.  Therefore:
+        //
+        //   End - Start <= Stride * N <= UMAX
+        //
+        // Stride * N is a multiple of Stride. Therefore,
+        //
+        //   End - Start <= Stride * N <= UMAX - (UMAX mod Stride)
+        //
+        // Since Stride is a power of two, UMAX + 1 is divisible by
+        // Stride. Therefore, UMAX mod Stride == Stride - 1.  So we can
+        // write:
+        //
+        //   End - Start <= Stride * N <= UMAX - Stride - 1
+        //
+        // Dropping the middle term:
+        //
+        //   End - Start <= UMAX - Stride - 1
+        //
+        // Adding Stride - 1 to both sides:
+        //
+        //   (End - Start) + (Stride - 1) <= UMAX
+        //
+        // In other words, the addition doesn't have unsigned overflow.
+        //
+        // A similar proof works if we treat Start/End as signed values.
+        // Just rewrite steps before "End - Start <= Stride * N <= UMAX"
+        // to use signed max instead of unsigned max. Note that we're
+        // trying to prove a lack of unsigned overflow in either case.
+        return false;
+      }
+      if (Start == Stride || Start == getMinusSCEV(Stride, One)) {
+        // If Start is equal to Stride, (End - Start) + (Stride - 1) == End
+        // - 1. If !IsSigned, 0 <u Stride == Start <=u End; so 0 <u End - 1
+        // <u End. If IsSigned, 0 <s Stride == Start <=s End; so 0 <s End -
+        // 1 <s End.
+        //
+        // If Start is equal to Stride - 1, (End - Start) + Stride - 1 ==
+        // End.
+        return false;
+      }
+      return true;
+    }();
+
     auto *OrigStartMinusStride = getMinusSCEV(OrigStart, Stride);
     assert(isAvailableAtLoopEntry(OrigStartMinusStride, L) && "Must be!");
     assert(isAvailableAtLoopEntry(OrigStart, L) && "Must be!");
     assert(isAvailableAtLoopEntry(OrigRHS, L) && "Must be!");
     // Can we prove Start - Stride < RHS, and either Start - Stride < Start or
-    // (via !IVMayOverflow) that RHS + Stride - 1 does not overflow?
-    if ((!IVMayOverflow ||
+    // (via !AddingStrideMinusOneMayOverflow) that (RHS - Start) + (Stride - 1)
+    // does not overflow?
+    if ((!AddingStrideMinusOneMayOverflow ||
          isLoopEntryGuardedByCond(L, Cond, OrigStartMinusStride, OrigStart)) &&
         isLoopEntryGuardedByCond(L, Cond, OrigStartMinusStride, OrigRHS)) {
       // In this case, we can use a refined formula for computing backedge
@@ -13611,12 +13688,23 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       //   "RHS - (Start - Stride) - 1" does not overflow, which is the
       //   reassociated numerator.
       //
-      //   Otherwise !IVMayOverflow guarantees "RHS + (Stride - 1) <= MaxV",
-      //   where MaxV is the maximum signed/unsigned value. Let MinV be the
-      //   matching minimum value. "Start >= MinV" gives
-      //   "RHS + (Stride - 1) - Start <= MaxV - MinV", and as "MaxV - MinV" is
-      //   the largest unsigned value, the reassociated numerator does not
-      //   overflow.
+      //   Otherwise we rely on !AddingStrideMinusOneMayOverflow, which gives
+      //   3 cases:
+      //
+      //   - canIVOverflowOnLT proved: "RHS + (Stride - 1) <= MaxV", where MaxV
+      //     is the maximum signed/unsigned value. Let MinV be the matching
+      //     minimum value. "Start >= MinV" gives
+      //     "RHS + (Stride - 1) - Start <= MaxV - MinV", and as "MaxV - MinV"
+      //     is the largest unsigned value, the reassociated numerator does not
+      //     overflow.
+      //
+      //   - Stride is a power of two, so the largest multiple of Stride that
+      //     is representable is "UMAX - (Stride - 1)", and the IV not
+      //     overflowing bounds "RHS - Start" by such a multiple.
+      //
+      //   - "Start == Stride" or "Start == Stride - 1", for which
+      //     "(RHS - Start) + (Stride - 1)" is "RHS - 1" respectively "RHS",
+      //     which is trivially in range.
       const SCEV *MinusOne = getMinusOne(Stride->getType());
       const SCEV *Numerator =
           getMinusSCEV(getAddExpr(RHS, MinusOne), getMinusSCEV(Start, Stride));
@@ -13669,83 +13757,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
             getUDivCeilSCEV(getMinusSCEV(RHS, Start), Stride);
       }
 
-      // At this point, we know:
-      //
-      // 1. If IsSigned, Start <=s End; otherwise, Start <=u End
-      // 2. The index variable doesn't overflow.
-      //
-      // Therefore, we know N exists such that
-      // (Start + Stride * N) >= End, and computing "(Start + Stride * N)"
-      // doesn't overflow.
-      //
-      // Using this information, try to prove whether the addition in
-      // "(Start - End) + (Stride - 1)" has unsigned overflow.
-      //
-      // If the IV cannot overflow, RHS is at least Stride - 1 below the maximum
-      // value, so the distance End - Start is at most UMAX - (Stride - 1) and
-      // the (Stride - 1) addition below cannot overflow.
-      const SCEV *One = getOne(Stride->getType());
-      bool MayAddOverflow = IVMayOverflow && [&] {
-        if (isKnownToBeAPowerOfTwo(Stride)) {
-          // Suppose Stride is a power of two, and Start/End are unsigned
-          // integers.  Let UMAX be the largest representable unsigned
-          // integer.
-          //
-          // By the preconditions of this function, we know
-          // "(Start + Stride * N) >= End", and this doesn't overflow.
-          // As a formula:
-          //
-          //   End <= (Start + Stride * N) <= UMAX
-          //
-          // Subtracting Start from all the terms:
-          //
-          //   End - Start <= Stride * N <= UMAX - Start
-          //
-          // Since Start is unsigned, UMAX - Start <= UMAX.  Therefore:
-          //
-          //   End - Start <= Stride * N <= UMAX
-          //
-          // Stride * N is a multiple of Stride. Therefore,
-          //
-          //   End - Start <= Stride * N <= UMAX - (UMAX mod Stride)
-          //
-          // Since Stride is a power of two, UMAX + 1 is divisible by
-          // Stride. Therefore, UMAX mod Stride == Stride - 1.  So we can
-          // write:
-          //
-          //   End - Start <= Stride * N <= UMAX - Stride - 1
-          //
-          // Dropping the middle term:
-          //
-          //   End - Start <= UMAX - Stride - 1
-          //
-          // Adding Stride - 1 to both sides:
-          //
-          //   (End - Start) + (Stride - 1) <= UMAX
-          //
-          // In other words, the addition doesn't have unsigned overflow.
-          //
-          // A similar proof works if we treat Start/End as signed values.
-          // Just rewrite steps before "End - Start <= Stride * N <= UMAX"
-          // to use signed max instead of unsigned max. Note that we're
-          // trying to prove a lack of unsigned overflow in either case.
-          return false;
-        }
-        if (Start == Stride || Start == getMinusSCEV(Stride, One)) {
-          // If Start is equal to Stride, (End - Start) + (Stride - 1) == End
-          // - 1. If !IsSigned, 0 <u Stride == Start <=u End; so 0 <u End - 1
-          // <u End. If IsSigned, 0 <s Stride == Start <=s End; so 0 <s End -
-          // 1 <s End.
-          //
-          // If Start is equal to Stride - 1, (End - Start) + Stride - 1 ==
-          // End.
-          return false;
-        }
-        return true;
-      }();
-
       const SCEV *Delta = getMinusSCEV(End, Start);
-      if (!MayAddOverflow) {
+      if (!AddingStrideMinusOneMayOverflow) {
         // floor((D + (S - 1)) / S)
         // We prefer this formulation if it's legal because it's fewer
         // operations.
