@@ -8,11 +8,22 @@
 // RUN:   -DWIDE_INDEX_ARG="int4(1, 2, 3, 4)" -DNARROW_INDEX_TYPE=uint2 \
 // RUN:   -DNARROW_INDEX_ARG="uint2(1, 2)" -verify -o - %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DTEXTURE=Texture3D -DINDEX_TYPE=uint3 \
+// RUN:   -DINDEX_ARG="uint3(1, 2, 0)" -DWIDE_INDEX_TYPE=int4 \
+// RUN:   -DWIDE_INDEX_ARG="int4(1, 2, 3, 4)" -DNARROW_INDEX_TYPE=uint2 \
+// RUN:   -DNARROW_INDEX_ARG="uint2(1, 2)" -verify -o - %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -DTEXTURE=RWTexture2D -DHAS_STORE \
 // RUN:   -DINDEX_TYPE=uint2 -DINDEX_ARG="uint2(1, 2)" -DWIDE_INDEX_TYPE=int3 \
 // RUN:   -DWIDE_INDEX_ARG="int3(1, 2, 3)" -verify -o - %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -DTEXTURE=RWTexture2DArray -DHAS_STORE \
+// RUN:   -DINDEX_TYPE=uint3 -DINDEX_ARG="uint3(1, 2, 0)" \
+// RUN:   -DWIDE_INDEX_TYPE=int4 -DWIDE_INDEX_ARG="int4(1, 2, 3, 4)" \
+// RUN:   -DNARROW_INDEX_TYPE=uint2 -DNARROW_INDEX_ARG="uint2(1, 2)" -verify \
+// RUN:   -o - %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
+// RUN:   -finclude-default-header -DTEXTURE=RWTexture3D -DHAS_STORE \
 // RUN:   -DINDEX_TYPE=uint3 -DINDEX_ARG="uint3(1, 2, 0)" \
 // RUN:   -DWIDE_INDEX_TYPE=int4 -DWIDE_INDEX_ARG="int4(1, 2, 3, 4)" \
 // RUN:   -DNARROW_INDEX_TYPE=uint2 -DNARROW_INDEX_ARG="uint2(1, 2)" -verify \
@@ -23,6 +34,12 @@
 // RUN:   -DWIDE_INDEX_ARG="int3(1, 2, 3)" -verify -o - %s
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl \
 // RUN:   -finclude-default-header -DTEXTURE=RWTexture2DArray -DHAS_STORE \
+// RUN:   -DINDEX_TYPE=uint3 -DINDEX_ARG="uint3(1, 2, 0)" \
+// RUN:   -DWIDE_INDEX_TYPE=int4 -DWIDE_INDEX_ARG="int4(1, 2, 3, 4)" \
+// RUN:   -DNARROW_INDEX_TYPE=uint2 -DNARROW_INDEX_ARG="uint2(1, 2)" -verify \
+// RUN:   -o - %s
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl \
+// RUN:   -finclude-default-header -DTEXTURE=RWTexture3D -DHAS_STORE \
 // RUN:   -DINDEX_TYPE=uint3 -DINDEX_ARG="uint3(1, 2, 0)" \
 // RUN:   -DWIDE_INDEX_TYPE=int4 -DWIDE_INDEX_ARG="int4(1, 2, 3, 4)" \
 // RUN:   -DNARROW_INDEX_TYPE=uint2 -DNARROW_INDEX_ARG="uint2(1, 2)" -verify \

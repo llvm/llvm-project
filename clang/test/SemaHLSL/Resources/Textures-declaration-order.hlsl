@@ -24,6 +24,10 @@ TextureCube<float> TexCube;
 TextureCube<float2> TexCubeVec;
 TextureCubeArray<float> TexCubeArray;
 TextureCubeArray<float2> TexCubeArrayVec;
+Texture3D<float> Tex3D;
+Texture3D<float2> Tex3DVec;
+RWTexture3D<float> RWTex3D;
+RWTexture3D<float2> RWTex3DVec;
 #else
 Texture2D<float2> Tex2DVec;
 Texture2D<float> Tex2D;
@@ -37,6 +41,10 @@ TextureCube<float2> TexCubeVec;
 TextureCube<float> TexCube;
 TextureCubeArray<float2> TexCubeArrayVec;
 TextureCubeArray<float> TexCubeArray;
+Texture3D<float2> Tex3DVec;
+Texture3D<float> Tex3D;
+RWTexture3D<float2> RWTex3DVec;
+RWTexture3D<float> RWTex3D;
 #endif
 
 SamplerState Samp;
@@ -59,4 +67,9 @@ export void useTextures(float2 UV, float3 UVW, float4 UVWA) {
 
   float CAS = TexCubeArray.Sample(Samp, UVWA);
   float2 CAV = TexCubeArrayVec.Sample(Samp, UVWA);
+
+  float VS = Tex3D.Sample(Samp, UVW);
+  float2 VV = Tex3DVec.Sample(Samp, UVW);
+  RWTex3D[uint3(0, 0, 0)] = VS;
+  RWTex3DVec[uint3(0, 0, 0)] = VV;
 }

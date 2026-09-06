@@ -2,6 +2,9 @@
 // RUN:   -finclude-default-header -fsyntax-only -verify=expected,dim2 \
 // RUN:   -DTEXTURE=Texture2D -DLOD_TYPE=float2 %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
+// RUN:   -finclude-default-header -fsyntax-only -verify=expected,dim3 \
+// RUN:   -DTEXTURE=Texture3D -DLOD_TYPE=float3 %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
 // RUN:   -finclude-default-header -fsyntax-only -verify=expected,dim2 \
 // RUN:   -DTEXTURE=Texture2DArray -DLOD_TYPE=float2 %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \

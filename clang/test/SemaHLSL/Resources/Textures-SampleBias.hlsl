@@ -3,6 +3,10 @@
 // RUN:   -DHAS_OFFSET -DOFFSET_TYPE=int2 -DTEXTURE=Texture2D \
 // RUN:   -DCOORD_TYPE=float2 %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
+// RUN:   -finclude-default-header -fsyntax-only -verify=expected,offset,dim3 \
+// RUN:   -DHAS_OFFSET -DOFFSET_TYPE=int3 -DTEXTURE=Texture3D \
+// RUN:   -DCOORD_TYPE=float3 %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
 // RUN:   -finclude-default-header -fsyntax-only -verify=expected,offset,dim2 \
 // RUN:   -DHAS_OFFSET -DOFFSET_TYPE=int2 -DTEXTURE=Texture2DArray \
 // RUN:   -DCOORD_TYPE=float3 %s
