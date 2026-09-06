@@ -10062,7 +10062,97 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unknown branch instruction?");
-  case AArch64::Bcc:
+  case AArch64::Bcc: {
+    // Convert 'CMP Rn, #0; B.eq/B.ne' into 'CBZ/CBNZ Rn' and delete the
+    // compare when its flags have no other use. ISel forms CBZ/CBNZ from
+    // generic compare-and-branch patterns, but a compare introduced by
+    // custom lowering, e.g. the success check of a CAS whose expected value
+    // is constant zero, only becomes recognizable here.
+    AArch64CC::CondCode CC =
+        static_cast<AArch64CC::CondCode>(MI.getOperand(0).getImm());
+    if (CC != AArch64CC::EQ && CC != AArch64CC::NE)
+      return false;
+
+    MachineBasicBlock *MBB = MI.getParent();
+    MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+    const TargetRegisterInfo &TRI = getRegisterInfo();
+
+    // Speculative load hardening needs flag-setting conditional branches; ISel
+    // avoids CBZ/CBNZ under it, so do not reintroduce them.
+    if (MBB->getParent()->getFunction().hasFnAttribute(
+            Attribute::SpeculativeLoadHardening))
+      return false;
+
+    // Find the instruction that produced the flags.
+    MachineInstr *CmpMI = nullptr;
+    for (MachineInstr &Candidate : instructionsWithoutDebug(
+             std::next(MI.getReverseIterator()), MBB->instr_rend())) {
+      if (Candidate.modifiesRegister(AArch64::NZCV, &TRI)) {
+        CmpMI = &Candidate;
+        break;
+      }
+    }
+    // It must be a compare with zero; the immediate shifts to zero for
+    // either shift amount, so the shift operand does not matter.
+    if (!CmpMI || (!isADDSRegImm(CmpMI->getOpcode()) &&
+                   !isSUBSRegImm(CmpMI->getOpcode())))
+      return false;
+    if (CmpMI->getOperand(2).getImm() != 0)
+      return false;
+
+    // The compare can only be deleted if its own result is unused and this
+    // branch is the sole live reader of its flags. A dead select left over
+    // from a previous fold of this function still reads them and is deleted
+    // together with the compare.
+    Register DefReg = CmpMI->getOperand(0).getReg();
+    if (DefReg.isVirtual() ? !MRI.use_nodbg_empty(DefReg)
+                           : (DefReg != AArch64::WZR && DefReg != AArch64::XZR))
+      return false;
+    SmallVector<MachineInstr *, 4> CCUseInstrs;
+    if (!examineCFlagsUse(MI, *CmpMI, TRI, &CCUseInstrs))
+      return false;
+    SmallVector<MachineInstr *, 4> DeadReaders;
+    for (MachineInstr *CCUse : CCUseInstrs) {
+      if (CCUse == &MI)
+        continue;
+      Register R =
+          CCUse->isBranch() ? Register() : CCUse->getOperand(0).getReg();
+      if (!R.isVirtual() || !MRI.use_nodbg_empty(R))
+        return false;
+      DeadReaders.push_back(CCUse);
+    }
+    if (!llvm::is_contained(CCUseInstrs, &MI))
+      return false;
+
+    // In SSA form the compared value cannot change between the compare and
+    // the branch, so its register can be read at the branch instead. CB(N)Z
+    // does not accept WSP/SP.
+    Register SrcReg = CmpMI->getOperand(1).getReg();
+    if (!SrcReg.isVirtual() || CmpMI->getOperand(1).getSubReg())
+      return false;
+    bool Is64 = CmpMI->getOpcode() == AArch64::SUBSXri ||
+                CmpMI->getOpcode() == AArch64::ADDSXri;
+    if (!MRI.constrainRegClass(SrcReg, Is64 ? &AArch64::GPR64RegClass
+                                            : &AArch64::GPR32RegClass))
+      return false;
+
+    unsigned Opc = CC == AArch64CC::EQ
+                       ? (Is64 ? AArch64::CBZX : AArch64::CBZW)
+                       : (Is64 ? AArch64::CBNZX : AArch64::CBNZW);
+    MachineInstr *NewMI = BuildMI(*MBB, MI, MI.getDebugLoc(), get(Opc))
+                              .addReg(SrcReg)
+                              .addMBB(MI.getOperand(1).getMBB());
+    // The compared register now lives until the branch.
+    MRI.clearKillFlags(SrcReg);
+    MI.eraseFromParent();
+    for (MachineInstr *DeadReader : DeadReaders)
+      DeadReader->eraseFromParent();
+    CmpMI->eraseFromParent();
+    // If the compared value was itself a CSET, the new CBZ/CBNZ folds
+    // further into a conditional branch on the original flags.
+    optimizeCondBranch(*NewMI);
+    return true;
+  }
   case AArch64::CBWPri:
   case AArch64::CBXPri:
   case AArch64::CBBAssertExt:
@@ -10197,8 +10287,13 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     DebugLoc DL = MI.getDebugLoc();
     if (IsNegativeBranch)
       CC = AArch64CC::getInvertedCondCode(CC);
-    BuildMI(RefToMBB, MI, DL, get(AArch64::Bcc)).addImm(CC).addMBB(TBB);
+    MachineInstr *NewMI =
+        BuildMI(RefToMBB, MI, DL, get(AArch64::Bcc)).addImm(CC).addMBB(TBB);
     MI.eraseFromParent();
+    // The peephole pass does not revisit the new Bcc, so try to fold it with
+    // a preceding compare with zero here (the CSINC is dead by now and goes
+    // away with the compare).
+    optimizeCondBranch(*NewMI);
     return true;
   }
   }
