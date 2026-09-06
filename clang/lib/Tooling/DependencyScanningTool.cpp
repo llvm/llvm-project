@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/DependencyScanningTool.h"
+#include "clang/Basic/AtomicLineLogger.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
@@ -15,6 +16,7 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/Utils.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/TargetParser/Host.h"
@@ -90,7 +92,7 @@ static std::pair<std::unique_ptr<driver::Driver>,
                  std::unique_ptr<driver::Compilation>>
 buildCompilation(ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-                 llvm::BumpPtrAllocator &Alloc) {
+                 llvm::BumpPtrAllocator &Alloc, AtomicLineLogger &Logger) {
   SmallVector<const char *, 256> Argv;
   Argv.reserve(ArgStrs.size());
   for (const std::string &Arg : ArgStrs)
@@ -125,6 +127,24 @@ buildCompilation(ArrayRef<std::string> ArgStrs, DiagnosticsEngine &Diags,
     return std::make_pair(nullptr, nullptr);
   }
 
+  const llvm::opt::Arg *LogPathArg =
+      Compilation->getArgs().getLastArg(options::OPT_fdepscan_log_path);
+  StringRef LogPath =
+      LogPathArg ? StringRef(LogPathArg->getValue()).trim() : StringRef();
+
+  // Forbid -fdepscan-log-path="".
+  if (LogPathArg && LogPath.empty()) {
+    Diags.Report(diag::err_drv_depscan_log_path_empty);
+    return std::make_pair(nullptr, nullptr);
+  }
+
+  if (!Logger.enable(LogPath)) {
+    Diags.Report(diag::err_drv_depscan_log_path_inconsistent)
+        << unsigned(!LogPath.empty()) << LogPath
+        << unsigned(!Logger.getLogPath().empty()) << Logger.getLogPath();
+    return std::make_pair(nullptr, nullptr);
+  }
+
   return std::make_pair(std::move(Driver), std::move(Compilation));
 }
 
@@ -155,8 +175,8 @@ static bool computeDependenciesForDriverCommandLine(
   auto DiagEngine =
       CompilerInstance::createDiagnostics(*FS, *DiagOpts, &DiagConsumer,
                                           /*ShouldOwnClient=*/false);
-  const auto [Driver, Compilation] =
-      buildCompilation(CommandLine, *DiagEngine, FS, Alloc);
+  const auto [Driver, Compilation] = buildCompilation(
+      CommandLine, *DiagEngine, FS, Alloc, Worker.getService().getLogger());
   if (!Compilation)
     return false;
 
@@ -326,13 +346,14 @@ DependencyScanningTool::getTranslationUnitDependencies(
 static std::optional<SmallVector<std::string, 0>>
 getFirstCC1CommandLine(ArrayRef<std::string> CommandLine,
                        DiagnosticsEngine &Diags,
-                       llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
+                       llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+                       AtomicLineLogger &Logger) {
   // Compilation holds a non-owning a reference to the Driver, hence we need to
   // keep the Driver alive when we use Compilation. Arguments to commands may be
   // owned by Alloc when expanded from response files.
   llvm::BumpPtrAllocator Alloc;
   const auto [Driver, Compilation] =
-      buildCompilation(CommandLine, Diags, std::move(FS), Alloc);
+      buildCompilation(CommandLine, Diags, std::move(FS), Alloc, Logger);
   if (!Compilation)
     return std::nullopt;
 
@@ -362,8 +383,8 @@ bool DependencyScanningTool::getByNameDependencies(
     auto DiagEngine =
         CompilerInstance::createDiagnostics(*FS, *DiagOpts, &DiagConsumer,
                                             /*ShouldOwnClient=*/false);
-    auto MaybeFirstCC1 =
-        getFirstCC1CommandLine(ModifiedCommandLine, *DiagEngine, FS);
+    auto MaybeFirstCC1 = getFirstCC1CommandLine(
+        ModifiedCommandLine, *DiagEngine, FS, Worker.getService().getLogger());
     if (!MaybeFirstCC1)
       return false;
     CC1CommandLine.assign(MaybeFirstCC1->begin(), MaybeFirstCC1->end());

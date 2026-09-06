@@ -231,7 +231,13 @@ size_t RTNAME(GetModesTypeSize)(void) {
 #endif
 }
 size_t RTNAME(GetStatusTypeSize)(void) {
-  return sizeof(fenv_t); // byte size of ieee_status_type data
+  // byte size of ieee_status_type data
+#if defined(_AIX)
+  // the raw FPSCR double is needed for trap-enable bit round-trip
+  return sizeof(fenv_t) + sizeof(double);
+#else
+  return sizeof(fenv_t);
+#endif
 }
 
 } // extern "C"

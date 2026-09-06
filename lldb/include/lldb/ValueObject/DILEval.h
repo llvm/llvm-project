@@ -18,6 +18,13 @@
 
 namespace lldb_private::dil {
 
+/// Given the name of a persistent identifier (i.e., one that starts with a $),
+/// find the ValueObject for that name (if it exists).
+lldb::ValueObjectSP LookupPersistentIdentifier(llvm::StringRef name_ref,
+                                               StackFrame &stack_frame,
+                                               lldb::TargetSP target_sp,
+                                               lldb::LanguageType language);
+
 /// Given the name of an identifier (variable name, member name, type name,
 /// etc.), find the ValueObject for that name (if it exists), excluding global
 /// variables, and create and return an IdentifierInfo object containing all

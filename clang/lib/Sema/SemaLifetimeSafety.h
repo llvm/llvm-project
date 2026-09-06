@@ -700,17 +700,23 @@ private:
       LastExpr = CurrExpr;
       if (ParamInfo) {
         bool IsImplicitObject = isa<const CXXMethodDecl *>(*ParamInfo);
+        bool IsInferred = true;
         std::string ParamName;
         if (!IsImplicitObject) {
           const auto *Param = cast<const ParmVarDecl *>(*ParamInfo);
+          if (const auto *Attr = Param->getAttr<LifetimeBoundAttr>())
+            IsInferred = Attr->isImplicit();
           ParamName = Param->getIdentifier()
                           ? "'" + Param->getNameAsString() + "'"
                           : "'<unnamed>'";
+        } else if (const auto *Attr = getImplicitObjectParamLifetimeBoundAttr(
+                       cast<const CXXMethodDecl *>(*ParamInfo))) {
+          IsInferred = Attr->isImplicit();
         }
         S.Diag(CurrExpr->getBeginLoc(),
                diag::note_lifetime_safety_aliases_storage_lifetimebound)
             << CurrExpr->getSourceRange() << getDiagSubjectDescription(CurrExpr)
-            << IssueStr << IsImplicitObject << ParamName;
+            << IssueStr << IsImplicitObject << ParamName << IsInferred;
       } else
         S.Diag(CurrExpr->getBeginLoc(),
                diag::note_lifetime_safety_aliases_storage)

@@ -347,8 +347,7 @@ public:
 template <> struct FoldingSetTrait<SCEV> : DefaultFoldingSetTrait<SCEV> {
   static void Profile(const SCEV &X, FoldingSetNodeID &ID) { ID = X.FastID; }
 
-  static bool Equals(const SCEV &X, const FoldingSetNodeID &ID,
-                     FoldingSetNodeID &TempID) {
+  static bool Equals(const SCEV &X, const FoldingSetNodeID &ID) {
     return ID == X.FastID;
   }
 };
@@ -426,8 +425,7 @@ struct FoldingSetTrait<SCEVPredicate> : DefaultFoldingSetTrait<SCEVPredicate> {
     ID = X.FastID;
   }
 
-  static bool Equals(const SCEVPredicate &X, const FoldingSetNodeID &ID,
-                     FoldingSetNodeID &TempID) {
+  static bool Equals(const SCEVPredicate &X, const FoldingSetNodeID &ID) {
     return ID == X.FastID;
   }
 };
@@ -713,7 +711,6 @@ public:
   getStrengthenedNoWrapFlagsFromBinOp(const OverflowingBinaryOperator *OBO);
 
   /// Notify this ScalarEvolution that \p User directly uses SCEVs in \p Ops.
-  LLVM_ABI void registerUser(const SCEV *User, ArrayRef<const SCEV *> Ops);
   LLVM_ABI void registerUser(const SCEV *User, ArrayRef<SCEVUse> Ops);
 
   /// Return true if the SCEV expression contains an undef value.
@@ -954,10 +951,13 @@ public:
   ///
   /// In the case that a relevant loop exit value cannot be computed, the
   /// original value V is returned.
-  LLVM_ABI const SCEV *getSCEVAtScope(const SCEV *S, const Loop *L);
+  ///
+  /// The result may carry use-specific no-wrap flags. Those hold only in
+  /// contexts reached via \p L's exit.
+  LLVM_ABI SCEVUse getSCEVAtScope(const SCEV *S, const Loop *L);
 
   /// This is a convenience function which does getSCEVAtScope(getSCEV(V), L).
-  LLVM_ABI const SCEV *getSCEVAtScope(Value *V, const Loop *L);
+  LLVM_ABI SCEVUse getSCEVAtScope(Value *V, const Loop *L);
 
   /// Test whether entry to the loop is protected by a conditional between LHS
   /// and RHS.  This is used to help avoid max expressions in loop trip
@@ -1151,6 +1151,10 @@ public:
   /// in a way that may effect its value, or which may disconnect it from a
   /// def-use chain linking it to a loop.
   LLVM_ABI void forgetValue(Value *V);
+
+  /// Batched forgetValue: invalidates all \p Values in one shared def-use walk,
+  /// avoiding the redundant re-traversal of overlapping users.
+  LLVM_ABI void forgetValues(ArrayRef<Value *> Values);
 
   /// Forget LCSSA phi node V of loop L to which a new predecessor was added,
   /// such that it may no longer be trivial.
@@ -1916,7 +1920,7 @@ private:
   /// This map contains entries for all the expressions that we attempt to
   /// compute getSCEVAtScope information for, which can be expensive in
   /// extreme cases.
-  DenseMap<const SCEV *, SmallVector<std::pair<const Loop *, const SCEV *>, 2>>
+  DenseMap<const SCEV *, SmallVector<std::pair<const Loop *, SCEVUse>, 2>>
       ValuesAtScopes;
 
   /// Reverse map for invalidation purposes: Stores of which SCEV and which
@@ -2078,7 +2082,7 @@ private:
 
   /// Implementation code for getSCEVAtScope; called at most once for each
   /// SCEV+Loop pair.
-  const SCEV *computeSCEVAtScope(const SCEV *S, const Loop *L);
+  SCEVUse computeSCEVAtScope(const SCEV *S, const Loop *L);
 
   /// Return the BackedgeTakenInfo for the given loop, lazily computing new
   /// values if the loop hasn't been analyzed yet. The returned result is

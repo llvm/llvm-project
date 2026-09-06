@@ -2473,68 +2473,74 @@ def : Pat<(int_nvvm_ui2f_rz i32:$a), (CVT_f32_u32 $a, CvtRZ)>;
 def : Pat<(int_nvvm_ui2f_rm i32:$a), (CVT_f32_u32 $a, CvtRM)>;
 def : Pat<(int_nvvm_ui2f_rp i32:$a), (CVT_f32_u32 $a, CvtRP)>;
 
-def : Pat<(int_nvvm_ff2bf16x2_rn f32:$a, f32:$b),      (CVT_bf16x2_f32 $a, $b, CvtRN)>;
-def : Pat<(int_nvvm_ff2bf16x2_rn_relu f32:$a, f32:$b), (CVT_bf16x2_f32 $a, $b, CvtRN_RELU)>;
-def : Pat<(int_nvvm_ff2bf16x2_rz f32:$a, f32:$b),      (CVT_bf16x2_f32 $a, $b, CvtRZ)>;
-def : Pat<(int_nvvm_ff2bf16x2_rz_relu f32:$a, f32:$b), (CVT_bf16x2_f32 $a, $b, CvtRZ_RELU)>;
-let Predicates = [PTX81, SM80] in {
-  def : Pat<(int_nvvm_ff2bf16x2_rn_satfinite f32:$a, f32:$b), (CVT_bf16x2_f32_sf $a, $b, CvtRN)>;
-  def : Pat<(int_nvvm_ff2bf16x2_rn_relu_satfinite f32:$a, f32:$b), (CVT_bf16x2_f32_sf $a, $b, CvtRN_RELU)>;
-  def : Pat<(int_nvvm_ff2bf16x2_rz_satfinite f32:$a, f32:$b), (CVT_bf16x2_f32_sf $a, $b, CvtRZ)>;
-  def : Pat<(int_nvvm_ff2bf16x2_rz_relu_satfinite f32:$a, f32:$b), (CVT_bf16x2_f32_sf $a, $b, CvtRZ_RELU)>;
-}
-let Predicates = [hasConvertWithStochasticRounding] in {
-def : Pat<(int_nvvm_ff2bf16x2_rs f32:$a, f32:$b, i32:$c),
-          (CVT_bf16x2_f32_rs $a, $b, $c, CvtRS)>;
-def : Pat<(int_nvvm_ff2bf16x2_rs_relu f32:$a, f32:$b, i32:$c),
-          (CVT_bf16x2_f32_rs $a, $b, $c, CvtRS_RELU)>;
-def : Pat<(int_nvvm_ff2bf16x2_rs_satfinite f32:$a, f32:$b, i32:$c), 
-          (CVT_bf16x2_f32_rs_sf $a, $b, $c, CvtRS)>;
-def : Pat<(int_nvvm_ff2bf16x2_rs_relu_satfinite f32:$a, f32:$b, i32:$c),  
-          (CVT_bf16x2_f32_rs_sf $a, $b, $c, CvtRS_RELU)>;
+// Utility to look up base and satfinite variants of a conversion intrinsic
+class ToCvtIntrinsics<string suffix> {
+  Intrinsic base = !cast<Intrinsic>("int_nvvm_" # suffix);
+  Intrinsic sf = !cast<Intrinsic>("int_nvvm_" # suffix # "_satfinite");
 }
 
-def : Pat<(int_nvvm_ff2f16x2_rn f32:$a, f32:$b),      (CVT_f16x2_f32 $a, $b, CvtRN)>;
-def : Pat<(int_nvvm_ff2f16x2_rn_relu f32:$a, f32:$b), (CVT_f16x2_f32 $a, $b, CvtRN_RELU)>;
-def : Pat<(int_nvvm_ff2f16x2_rz f32:$a, f32:$b),      (CVT_f16x2_f32 $a, $b, CvtRZ)>;
-def : Pat<(int_nvvm_ff2f16x2_rz_relu f32:$a, f32:$b), (CVT_f16x2_f32 $a, $b, CvtRZ_RELU)>;
-let Predicates = [PTX81, SM80] in {
-  def : Pat<(int_nvvm_ff2f16x2_rn_satfinite f32:$a, f32:$b), (CVT_f16x2_f32_sf $a, $b, CvtRN)>;
-  def : Pat<(int_nvvm_ff2f16x2_rn_relu_satfinite f32:$a, f32:$b), (CVT_f16x2_f32_sf $a, $b, CvtRN_RELU)>;
-  def : Pat<(int_nvvm_ff2f16x2_rz_satfinite f32:$a, f32:$b), (CVT_f16x2_f32_sf $a, $b, CvtRZ)>;
-  def : Pat<(int_nvvm_ff2f16x2_rz_relu_satfinite f32:$a, f32:$b), (CVT_f16x2_f32_sf $a, $b, CvtRZ_RELU)>;
+foreach rnd = ["rn", "rz"] in {
+  foreach relu = ["", "_relu"] in {
+    defvar BaseMode = !cast<PatLeaf>("Cvt" # !toupper(rnd # relu));
+
+    foreach pzo = [0, 1] in {
+      // An i1 immediate of one is matched as the sign-extended value -1.
+      defvar PZO = !if(pzo, -1, 0);
+      defvar Mode = CvtModeWithPZO<BaseMode, pzo>.Value;
+      defvar PZOPreds =
+          !if(pzo, [hasConvertWithPZOSupport]<Predicate>, []<Predicate>);
+      defvar SFPreds = !if(pzo, [hasConvertWithPZOSupport]<Predicate>,
+                                [PTX81, SM80]<Predicate>);
+
+      defvar FF2BF16X2 = ToCvtIntrinsics<"ff2bf16x2_" # rnd # relu>;
+      defvar FF2F16X2 = ToCvtIntrinsics<"ff2f16x2_" # rnd # relu>;
+      defvar F2BF16 = ToCvtIntrinsics<"f2bf16_" # rnd # relu>;
+      defvar F2F16 = ToCvtIntrinsics<"f2f16_" # rnd # relu>;
+
+      def : Pat<(FF2BF16X2.base f32:$a, f32:$b, PZO),
+                (CVT_bf16x2_f32 $a, $b, Mode)>, Requires<PZOPreds>;
+      def : Pat<(FF2F16X2.base f32:$a, f32:$b, PZO),
+                (CVT_f16x2_f32 $a, $b, Mode)>, Requires<PZOPreds>;
+      def : Pat<(F2BF16.base f32:$a, PZO), (CVT_bf16_f32 $a, Mode)>,
+            Requires<PZOPreds>;
+      def : Pat<(F2F16.base f32:$a, PZO), (CVT_f16_f32 $a, Mode)>,
+            Requires<PZOPreds>;
+
+      def : Pat<(FF2BF16X2.sf f32:$a, f32:$b, PZO),
+                (CVT_bf16x2_f32_sf $a, $b, Mode)>, Requires<SFPreds>;
+      def : Pat<(FF2F16X2.sf f32:$a, f32:$b, PZO),
+                (CVT_f16x2_f32_sf $a, $b, Mode)>, Requires<SFPreds>;
+      def : Pat<(F2BF16.sf f32:$a, PZO), (CVT_bf16_f32_sf $a, Mode)>,
+            Requires<SFPreds>;
+      def : Pat<(F2F16.sf f32:$a, PZO), (CVT_f16_f32_sf $a, Mode)>,
+            Requires<SFPreds>;
+    }
+  }
 }
 
-let Predicates = [hasConvertWithStochasticRounding] in {
-def : Pat<(int_nvvm_ff2f16x2_rs f32:$a, f32:$b, i32:$c),
-          (CVT_f16x2_f32_rs $a, $b, $c, CvtRS)>;
-def : Pat<(int_nvvm_ff2f16x2_rs_relu f32:$a, f32:$b, i32:$c),
-          (CVT_f16x2_f32_rs $a, $b, $c, CvtRS_RELU)>;
-def : Pat<(int_nvvm_ff2f16x2_rs_satfinite f32:$a, f32:$b, i32:$c), 
-          (CVT_f16x2_f32_rs_sf $a, $b, $c, CvtRS)>;
-def : Pat<(int_nvvm_ff2f16x2_rs_relu_satfinite f32:$a, f32:$b, i32:$c), 
-          (CVT_f16x2_f32_rs_sf $a, $b, $c, CvtRS_RELU)>;
-}
-def : Pat<(int_nvvm_f2bf16_rn f32:$a),      (CVT_bf16_f32 $a, CvtRN)>;
-def : Pat<(int_nvvm_f2bf16_rn_relu f32:$a), (CVT_bf16_f32 $a, CvtRN_RELU)>;
-def : Pat<(int_nvvm_f2bf16_rz f32:$a),      (CVT_bf16_f32 $a, CvtRZ)>;
-def : Pat<(int_nvvm_f2bf16_rz_relu f32:$a), (CVT_bf16_f32 $a, CvtRZ_RELU)>;
-let Predicates = [PTX81, SM80] in {
-  def : Pat<(int_nvvm_f2bf16_rz_satfinite f32:$a), (CVT_bf16_f32_sf $a, CvtRZ)>;
-  def : Pat<(int_nvvm_f2bf16_rz_relu_satfinite f32:$a), (CVT_bf16_f32_sf $a, CvtRZ_RELU)>;
-  def : Pat<(int_nvvm_f2bf16_rn_satfinite f32:$a), (CVT_bf16_f32_sf $a, CvtRN)>;
-  def : Pat<(int_nvvm_f2bf16_rn_relu_satfinite f32:$a), (CVT_bf16_f32_sf $a, CvtRN_RELU)>;
-}
+foreach relu = ["", "_relu"] in {
+  defvar BaseMode = !cast<PatLeaf>("CvtRS" # !toupper(relu));
 
-def : Pat<(int_nvvm_f2f16_rn f32:$a),      (CVT_f16_f32 $a, CvtRN)>;
-def : Pat<(int_nvvm_f2f16_rn_relu f32:$a), (CVT_f16_f32 $a, CvtRN_RELU)>;
-def : Pat<(int_nvvm_f2f16_rz f32:$a),      (CVT_f16_f32 $a, CvtRZ)>;
-def : Pat<(int_nvvm_f2f16_rz_relu f32:$a), (CVT_f16_f32 $a, CvtRZ_RELU)>;
-let Predicates = [PTX81, SM80] in {
-  def : Pat<(int_nvvm_f2f16_rz_satfinite f32:$a), (CVT_f16_f32_sf $a, CvtRZ)>;
-  def : Pat<(int_nvvm_f2f16_rz_relu_satfinite f32:$a), (CVT_f16_f32_sf $a, CvtRZ_RELU)>;
-  def : Pat<(int_nvvm_f2f16_rn_satfinite f32:$a), (CVT_f16_f32_sf $a, CvtRN)>;
-  def : Pat<(int_nvvm_f2f16_rn_relu_satfinite f32:$a), (CVT_f16_f32_sf $a, CvtRN_RELU)>;
+  foreach pzo = [0, 1] in {
+    defvar PZO = !if(pzo, -1, 0);
+    defvar Mode = CvtModeWithPZO<BaseMode, pzo>.Value;
+    defvar Preds =
+      !listconcat(
+        [hasConvertWithStochasticRounding]<Predicate>, 
+        !if(pzo, [hasConvertWithPZOSupport]<Predicate>, []<Predicate>));
+
+    defvar BF16X2 = ToCvtIntrinsics<"ff2bf16x2_rs" # relu>;
+    defvar F16X2 = ToCvtIntrinsics<"ff2f16x2_rs" # relu>;
+
+    def : Pat<(BF16X2.base f32:$a, f32:$b, i32:$c, PZO),
+              (CVT_bf16x2_f32_rs $a, $b, $c, Mode)>, Requires<Preds>;
+    def : Pat<(BF16X2.sf f32:$a, f32:$b, i32:$c, PZO),
+              (CVT_bf16x2_f32_rs_sf $a, $b, $c, Mode)>, Requires<Preds>;
+    def : Pat<(F16X2.base f32:$a, f32:$b, i32:$c, PZO),
+              (CVT_f16x2_f32_rs $a, $b, $c, Mode)>, Requires<Preds>;
+    def : Pat<(F16X2.sf f32:$a, f32:$b, i32:$c, PZO),
+              (CVT_f16x2_f32_rs_sf $a, $b, $c, Mode)>, Requires<Preds>;
+  }
 }
 
 def : Pat<(int_nvvm_lohi_i2d i32:$a, i32:$b), (V2I32toI64 $a, $b)>;
