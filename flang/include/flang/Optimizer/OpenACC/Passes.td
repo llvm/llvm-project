@@ -109,6 +109,24 @@ def ACCOptimizeFirstprivateMap
   let dependentDialects = ["mlir::acc::OpenACCDialect", "fir::FIROpsDialect"];
 }
 
+def ACCMapInfoPrep
+    : InterfacePass<"acc-fir-map-info-prep", "mlir::FunctionOpInterface"> {
+  let summary = "Materialize acc.map_info for FIR mappings and privatization";
+  let description = [{
+    Replaces FIR-typed OpenACC data-entry operations, and the data-exit
+    operations paired with them, with `acc.map_info`. FIR-specific facts
+    include attach points inferred from Fortran descriptors (allocatable,
+    pointer, and class), CFI `descKind`, mapped sizes, and `mapFlags` that
+    fold enter and exit clause effects. Privatized storage is wrapped with its
+    byte size and private parallel-level flags, forming the contract for the
+    runtime allocation and replication of that storage. The result is a single
+    representation of runtime map and allocation metadata that no longer
+    depends on FIR types or attributes.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect", "fir::FIROpsDialect",
+                           "mlir::arith::ArithDialect"];
+}
+
 def ACCDevicePtrToCUFKernel
     : Pass<"acc-device-ptr-to-cuf-kernel", "mlir::ModuleOp"> {
   let summary = "Pass device addresses to CUDA Fortran kernels launched inside "

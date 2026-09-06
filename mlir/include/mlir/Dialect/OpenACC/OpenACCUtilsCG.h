@@ -16,6 +16,7 @@
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCParMapping.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
@@ -188,6 +189,62 @@ FailureOr<bool> isPrivateLocalSharedMemoryCandidate(
 std::optional<int64_t> getPrivateLocalSharedMemoryUpperBoundBytes(
     PrivateLocalOp privateLocal, ComputeRegionOp computeRegion, ModuleOp module,
     const ACCToGPUMappingPolicy &policy, OpenACCSupport *support = nullptr);
+
+/// Returns true when `mapEntryOp` carries an attach point (`varPtrPtr`).
+bool hasAttachPoint(Operation *mapEntryOp);
+
+/// Returns descriptor kind from `acc.map_info`, or `none` for other ops.
+DataDescKind getDataDescKind(Operation *mapEntryOp);
+
+/// Returns descriptor value from `acc.map_info`. When `desc` is omitted and
+/// `descKind` is not `none`, returns `var` (the mapped object is the
+/// descriptor). Returns null for other ops.
+Value getDesc(Operation *mapEntryOp);
+
+/// Returns element size in bytes from `acc.map_info`, if present.
+std::optional<int64_t> getMapElementSize(Operation *mapEntryOp);
+
+/// Returns the optional `size` operand from `acc.map_info`, or null.
+Value getMapSize(Operation *mapEntryOp);
+
+/// Returns offload map-type flags from `acc.map_info`, if present.
+std::optional<MapFlags> getMapFlags(Operation *mapEntryOp);
+
+/// Compute the private and parallel-level map flags for privatized storage.
+/// Storage that names no parallel dimension is private without being
+/// replicated per level, so only the private flag is set.
+MapFlags computePrivatizeMapFlags(PrivatizeOp privatizeOp,
+                                  const ACCToGPUMappingPolicy &policy);
+
+/// Fold enter (+ paired exit) data-clause semantics into offload map flags.
+/// `ptrAndObj` is supplied by the caller from type-specific attach discovery.
+MapFlags computeDataClauseMapFlags(Operation *entryOp, bool ptrAndObj);
+
+/// True when another data clause of the same construct maps the same variable
+/// with a copy-back and no copy-in. One entry operation is emitted per clause,
+/// so a construct such as `create(a) copyout(a)` or `copyin(a) copyout(a)` maps
+/// `a` twice. The runtime keeps one mapping per variable and acts on it once,
+/// which makes the copy-back depend on whichever entry it processes: the entry
+/// that has no copy-back of its own must therefore carry `from` as well.
+bool hasCopyOutSibling(Operation *entryOp);
+
+/// Returns the data exit operations paired with the data entry result
+/// \p entryResult, which take it as their `accVar`.
+SmallVector<Operation *> getPairedDataExitOps(Value entryResult);
+
+/// Compute total mapped byte size for `acc.map_info`.
+/// Returns 0 when bounds or a non-`none` descriptor kind carry size, the
+/// mappable size when statically known, and -1 when the size cannot be
+/// determined statically. \p support sizes the members of aggregate types that
+/// belong to a dialect, such as a tuple holding dialect-specific references.
+int64_t computeMapInfoSizeBytes(Value var, Type varType, DataDescKind descKind,
+                                ValueRange bounds, const DataLayout &dataLayout,
+                                OpenACCSupport *support = nullptr);
+
+/// Record known extents of the source array on bounds that may describe a
+/// section. Dynamic / unknown extents are left unset.
+void populateSourceExtents(ValueRange bounds, ArrayRef<int64_t> shape,
+                           OpBuilder &builder);
 
 } // namespace acc
 } // namespace mlir
