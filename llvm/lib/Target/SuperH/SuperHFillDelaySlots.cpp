@@ -70,12 +70,16 @@ MachineInstr *SuperHFillDelaySlots::findSlotCandidate(Block &MBB, BlockIt MBBI) 
   MachineInstr &MI = *MBBI;
   auto *Prev = MBBI->getPrevNode();
 
-  // We might have a useful instruction above the instruction that
-  // loads our destination address.
-  if (MI.isCall() && Prev) {
-    if (!Prev->getPrevNode()->definesRegister(MI.getOperand(0).getReg(), TRI))
-      Prev = Prev->getPrevNode();
-  }
+  // Instructions that fall through should not get their delay slots filled.
+  if (MBB.getLastNonDebugInstr() == MBBI)
+    return nullptr;
+
+  // // We might have a useful instruction above the instruction that
+  // // loads our destination address.
+  // if (MI.isCall() && Prev) {
+  //   if (!Prev->getPrevNode()->definesRegister(MI.getOperand(0).getReg(), TRI))
+  //     Prev = Prev->getPrevNode();
+  // }
 
   // TODO:  Make this a while loop that keeps a list of "used" registers
   //        by instructions.
@@ -151,6 +155,7 @@ bool SuperHFillDelaySlots::expandMI(Block &MBB, BlockIt MBBI) {
   if (MI.hasDelaySlot()) {
     return fillDelaySlot(MBB, MBBI);
   }
+
   return false;
 }
 
