@@ -2141,7 +2141,9 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::VECREDUCE_FMAX:
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
-  case ISD::VECREDUCE_FMINIMUM:     return visitVECREDUCE(N);
+  case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+  case ISD::VECREDUCE_FMINIMUMNUM:  return visitVECREDUCE(N);
 #define BEGIN_REGISTER_VP_SDNODE(SDOPC, ...) case ISD::SDOPC:
 #include "llvm/IR/VPIntrinsics.def"
     return visitVPOp(N);
@@ -4721,9 +4723,9 @@ SDValue DAGCombiner::visitSUBSAT(SDNode *N) {
       for (unsigned NarrowBits = PowerOf2Ceil(ActiveBits);
            NarrowBits != 0 && NarrowBits < ScalarBits; NarrowBits *= 2) {
         unsigned Scale = ScalarBits / NarrowBits;
-        unsigned NumElts = VT.getVectorNumElements() * Scale;
+        ElementCount ScaledEC = VT.getVectorElementCount() * Scale;
         MVT NarrowSVT = MVT::getIntegerVT(NarrowBits);
-        MVT NarrowVT = MVT::getVectorVT(NarrowSVT, NumElts);
+        EVT NarrowVT = EVT::getVectorVT(*DAG.getContext(), NarrowSVT, ScaledEC);
 
         if (!TLI.isOperationLegalOrCustom(ISD::USUBSAT, NarrowVT))
           continue;
@@ -18444,7 +18446,8 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
   //   => int_vt (any_extend elt_vt:x)
   if (N0.getOpcode() == ISD::SCALAR_TO_VECTOR && VT.isScalarInteger()) {
     SDValue SrcScalar = N0.getOperand(0);
-    if (SrcScalar.getValueType().isScalarInteger())
+    EVT SrcVT = SrcScalar.getValueType();
+    if (SrcVT.isScalarInteger() && VT.bitsGT(SrcVT))
       return DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), VT, SrcScalar);
   }
 
@@ -18664,11 +18667,10 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
 
 // Returns true if floating point contraction is allowed on the FMUL-SDValue
 // `N`
-static bool isContractableFMUL(const TargetOptions &Options, SDValue N) {
+static bool isContractableFMUL(SDValue N) {
   assert(N.getOpcode() == ISD::FMUL);
 
-  return Options.AllowFPOpFusion == FPOpFusion::Fast ||
-         N->getFlags().hasAllowContract();
+  return N->getFlags().hasAllowContract();
 }
 
 /// Try to perform FMA combining on a given FADD node.
@@ -19220,8 +19222,6 @@ SDValue DAGCombiner::visitFMULForFMADistributiveCombine(SDNode *N) {
 
   assert(N->getOpcode() == ISD::FMUL && "Expected FMUL Operation");
 
-  const TargetOptions &Options = DAG.getTarget().Options;
-
   // The transforms below are incorrect when x == 0 and y == inf, because the
   // intermediate multiplication produces a nan.
   SDValue FAdd = N0.getOpcode() == ISD::FADD ? N0 : N1;
@@ -19230,7 +19230,7 @@ SDValue DAGCombiner::visitFMULForFMADistributiveCombine(SDNode *N) {
 
   // Floating-point multiply-add without intermediate rounding.
   bool HasFMA =
-      isContractableFMUL(Options, SDValue(N, 0)) &&
+      isContractableFMUL(SDValue(N, 0)) &&
       (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::FMA, VT)) &&
       TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT);
 
@@ -21047,15 +21047,16 @@ SDValue DAGCombiner::visitFMinMax(SDNode *N) {
     }
   }
 
-  // There are no VECREDUCE variants of FMINIMUMNUM or FMAXIMUMNUM
-  if (Opc == ISD::FMINIMUMNUM || Opc == ISD::FMAXIMUMNUM)
-    return SDValue();
+  unsigned ReduceOpc;
+  if (PropAllNaNsToQNaNs)
+    ReduceOpc = IsMin ? ISD::VECREDUCE_FMINIMUM : ISD::VECREDUCE_FMAXIMUM;
+  else if (PropOnlySNaNsToQNaNs)
+    ReduceOpc = IsMin ? ISD::VECREDUCE_FMIN : ISD::VECREDUCE_FMAX;
+  else
+    ReduceOpc = IsMin ? ISD::VECREDUCE_FMINIMUMNUM : ISD::VECREDUCE_FMAXIMUMNUM;
 
-  if (SDValue SD = reassociateReduction(
-          PropAllNaNsToQNaNs
-              ? (IsMin ? ISD::VECREDUCE_FMINIMUM : ISD::VECREDUCE_FMAXIMUM)
-              : (IsMin ? ISD::VECREDUCE_FMIN : ISD::VECREDUCE_FMAX),
-          Opc, SDLoc(N), VT, N0, N1, Flags))
+  if (SDValue SD =
+          reassociateReduction(ReduceOpc, Opc, SDLoc(N), VT, N0, N1, Flags))
     return SD;
 
   return SDValue();

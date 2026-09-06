@@ -2221,8 +2221,16 @@
 #define SYS_timer_gettime __NR_timer_gettime
 #endif
 
+#ifdef __NR_timer_gettime64
+#define SYS_timer_gettime64 __NR_timer_gettime64
+#endif
+
 #ifdef __NR_timer_settime
 #define SYS_timer_settime __NR_timer_settime
+#endif
+
+#ifdef __NR_timer_settime64
+#define SYS_timer_settime64 __NR_timer_settime64
 #endif
 
 #ifdef __NR_timerfd

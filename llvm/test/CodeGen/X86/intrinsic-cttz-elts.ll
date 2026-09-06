@@ -196,5 +196,72 @@ define i32 @ctz_zero_v8i1() {
   ret i32 %res
 }
 
+; Irregular predicate vectors widen to a power-of-two number of lanes. The
+; widened lanes must be active so an all-zero input returns the original lane
+; count, without requiring an irregular INSERT_SUBVECTOR during legalization.
+define i32 @ctz_zero_v17i1() {
+; CHECK-LABEL: ctz_zero_v17i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [84281096,16909060,84281096,16909060]
+; CHECK-NEXT:    pmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; CHECK-NEXT:    pmaxub %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    psrld $16, %xmm0
+; CHECK-NEXT:    pmaxub %xmm1, %xmm0
+; CHECK-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-NEXT:    psrlw $8, %xmm1
+; CHECK-NEXT:    pmaxub %xmm0, %xmm1
+; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    movb $16, %cl
+; CHECK-NEXT:    subb %al, %cl
+; CHECK-NEXT:    movzbl %cl, %eax
+; CHECK-NEXT:    addl $16, %eax
+; CHECK-NEXT:    retq
+;
+; AVX512-LABEL: ctz_zero_v17i1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovzxbw {{.*#+}} xmm0 = [240,242,244,246,248,250,252,254]
+; AVX512-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    addb $17, %al
+; AVX512-NEXT:    movzbl %al, %eax
+; AVX512-NEXT:    addl $16, %eax
+; AVX512-NEXT:    retq
+  %res = call i32 @llvm.experimental.cttz.elts.i32.v17i1(<17 x i1> zeroinitializer, i1 false)
+  ret i32 %res
+}
+
+define i32 @ctz_zero_v31i1() {
+; CHECK-LABEL: ctz_zero_v31i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [16777216,16777216,16777216,16777216]
+; CHECK-NEXT:    pmaxub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-NEXT:    psrld $24, %xmm1
+; CHECK-NEXT:    psrld $16, %xmm0
+; CHECK-NEXT:    pmaxub %xmm1, %xmm0
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    movb $16, %cl
+; CHECK-NEXT:    subb %al, %cl
+; CHECK-NEXT:    movzbl %cl, %eax
+; CHECK-NEXT:    addl $16, %eax
+; CHECK-NEXT:    retq
+;
+; AVX512-LABEL: ctz_zero_v31i1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovzxbw {{.*#+}} xmm0 = [255,255,255,255,255,255,255,254]
+; AVX512-NEXT:    vpminub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    addb $17, %al
+; AVX512-NEXT:    movzbl %al, %eax
+; AVX512-NEXT:    addl $16, %eax
+; AVX512-NEXT:    retq
+  %res = call i32 @llvm.experimental.cttz.elts.i32.v31i1(<31 x i1> zeroinitializer, i1 false)
+  ret i32 %res
+}
+
 declare i8 @llvm.experimental.cttz.elts.i8.v8i16(<8 x i16>, i1)
 declare i16 @llvm.experimental.cttz.elts.i16.v4i32(<4 x i32>, i1)

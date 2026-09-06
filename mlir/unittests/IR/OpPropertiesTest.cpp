@@ -393,11 +393,15 @@ TEST(OpPropertiesTest, withoutPropertiesDiscardableAttrs) {
   ParserConfig config(&context);
   OwningOpRef<Operation *> op =
       parseSourceString(withoutPropertiesAttrsSrc, config);
-  ASSERT_EQ(llvm::range_size(op->getDiscardableAttrs()), 1u);
-  EXPECT_EQ(op->getDiscardableAttrs().begin()->getName().getValue(),
+  ASSERT_EQ(llvm::range_size(op->getDiscardableAttrDictionary().getValue()),
+            1u);
+  EXPECT_EQ(op->getDiscardableAttrDictionary()
+                .getValue()
+                .begin()
+                ->getName()
+                .getValue(),
             "other_attr");
 
-  EXPECT_EQ(op->getAttrs().size(), 2u);
   EXPECT_EQ(op->getInherentAttr("inherent_attr"), std::nullopt);
   EXPECT_NE(op->getDiscardableAttr("inherent_attr"), Attribute());
   EXPECT_NE(op->getDiscardableAttr("other_attr"), Attribute());

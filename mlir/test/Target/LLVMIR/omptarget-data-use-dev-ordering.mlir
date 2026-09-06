@@ -7,9 +7,9 @@
 
 module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"], omp.version = #omp.version<version = 50>} {
   llvm.func @mix_use_device_ptr_and_addr_and_map_(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr, %arg3: !llvm.ptr, %arg4: !llvm.ptr, %arg5: !llvm.ptr, %arg11: !llvm.ptr, %arg12: !llvm.ptr) {
-    %0 = llvm.mlir.constant(0 : index) : i64
-    %1 = llvm.mlir.constant(2 : index) : i64
-    %2 = llvm.mlir.constant(1 : index) : i64
+    %0 = llvm.mlir.constant(0 : i64) : i64
+    %1 = llvm.mlir.constant(2 : i64) : i64
+    %2 = llvm.mlir.constant(1 : i64) : i64
     %3 = omp.map.bounds lower_bound(%0 : i64) upper_bound(%1 : i64) extent(%1 : i64) stride(%2 : i64) start_idx(%0 : i64) stride_in_bytes(true)
     %4 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(i64)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     %5 = omp.map.info var_ptr(%arg1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
@@ -36,9 +36,9 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
   }
 
   llvm.func @mix_use_device_ptr_and_addr_and_map_2(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr, %arg3: !llvm.ptr, %arg4: !llvm.ptr, %arg5: !llvm.ptr, %arg11: !llvm.ptr, %arg12: !llvm.ptr) {
-    %0 = llvm.mlir.constant(0 : index) : i64
-    %1 = llvm.mlir.constant(2 : index) : i64
-    %2 = llvm.mlir.constant(1 : index) : i64
+    %0 = llvm.mlir.constant(0 : i64) : i64
+    %1 = llvm.mlir.constant(2 : i64) : i64
+    %2 = llvm.mlir.constant(1 : i64) : i64
     %3 = omp.map.bounds lower_bound(%0 : i64) upper_bound(%1 : i64) extent(%1 : i64) stride(%2 : i64) start_idx(%0 : i64) stride_in_bytes(true)
     %4 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(i64)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     %5 = omp.map.info var_ptr(%arg1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr

@@ -1426,14 +1426,18 @@ public:
     return isX86VectorCallAggregateSmallEnough(NumMembers);
   }
 
-  ABIArgInfo classifyArgForArm64ECVarArg(QualType Ty) const override {
+  ABIArgInfo classifyArgForArm64ECVarArg(QualType Ty,
+                                         bool IsNamedArg) const override {
     unsigned FreeSSERegs = 0;
-    return classify(Ty, FreeSSERegs, /*IsReturnType=*/false,
-                    llvm::CallingConv::C);
+    ClassifyKind Kind =
+        IsNamedArg ? ClassifyKind::FixedArgument : ClassifyKind::VarArg;
+    return classify(Ty, FreeSSERegs, Kind, llvm::CallingConv::C);
   }
 
 private:
-  ABIArgInfo classify(QualType Ty, unsigned &FreeSSERegs, bool IsReturnType,
+  enum class ClassifyKind { Return, FixedArgument, VarArg };
+
+  ABIArgInfo classify(QualType Ty, unsigned &FreeSSERegs, ClassifyKind Kind,
                       unsigned CC) const;
   ABIArgInfo reclassifyHvaArgForVectorCall(QualType Ty, unsigned &FreeSSERegs,
                                            const ABIArgInfo &current) const;
@@ -2207,8 +2211,9 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
       bool BitField = i->isBitField();
 
-      // Ignore padding bit-fields.
-      if (BitField && i->isUnnamedBitField())
+      // Ignore zero-length bit-fields. Other unnamed bit-fields are real
+      // storage and classify like named ones, matching GCC.
+      if (BitField && i->isZeroLengthBitField())
         continue;
 
       // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger than
@@ -2249,7 +2254,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       // structure to be passed in memory even if unaligned, and
       // therefore they can straddle an eightbyte.
       if (BitField) {
-        assert(!i->isUnnamedBitField());
+        assert(!i->isZeroLengthBitField());
         uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
         uint64_t Size = i->getBitWidthValue();
 
@@ -3451,15 +3456,26 @@ ABIArgInfo WinX86_64ABIInfo::reclassifyHvaArgForVectorCall(
 }
 
 ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
-                                      bool IsReturnType, unsigned CC) const {
+                                      ClassifyKind Kind, unsigned CC) const {
   bool IsVectorCall = CC == llvm::CallingConv::X86_VectorCall;
   bool IsRegCall = CC == llvm::CallingConv::X86_RegCall;
 
   if (Ty->isVoidType())
     return ABIArgInfo::getIgnore();
 
-  if (const auto *ED = Ty->getAsEnumDecl())
+  bool PromoteScopedEnum = false;
+  if (const auto *ED = Ty->getAsEnumDecl()) {
     Ty = ED->getIntegerType();
+    PromoteScopedEnum = Kind == ClassifyKind::VarArg && ED->isScoped() &&
+                        getContext().isPromotableIntegerType(Ty);
+  }
+
+  // MSVC extends scoped enums with a sub-int underlying type when they are
+  // passed through an ellipsis. Unlike unscoped enums, scoped enums are not
+  // subject to the language's default argument promotions, so handle the
+  // extension as part of the ABI classification.
+  if (PromoteScopedEnum)
+    return ABIArgInfo::getExtend(Ty);
 
   TypeInfo Info = getContext().getTypeInfo(Ty);
   uint64_t Width = Info.Width;
@@ -3467,7 +3483,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
 
   const RecordType *RT = Ty->getAsCanonical<RecordType>();
   if (RT) {
-    if (!IsReturnType) {
+    if (Kind != ClassifyKind::Return) {
       if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(RT, getCXXABI()))
         return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                        RAA == CGCXXABI::RAA_DirectInMemory);
@@ -3487,7 +3503,8 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     if (IsRegCall) {
       if (FreeSSERegs >= NumElts) {
         FreeSSERegs -= NumElts;
-        if (IsReturnType || Ty->isBuiltinType() || Ty->isVectorType())
+        if (Kind == ClassifyKind::Return || Ty->isBuiltinType() ||
+            Ty->isVectorType())
           return ABIArgInfo::getDirect();
         return ABIArgInfo::getExpand();
       }
@@ -3496,10 +3513,11 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
           /*ByVal=*/false);
     } else if (IsVectorCall) {
       if (FreeSSERegs >= NumElts &&
-          (IsReturnType || Ty->isBuiltinType() || Ty->isVectorType())) {
+          (Kind == ClassifyKind::Return || Ty->isBuiltinType() ||
+           Ty->isVectorType())) {
         FreeSSERegs -= NumElts;
         return ABIArgInfo::getDirect();
-      } else if (IsReturnType) {
+      } else if (Kind == ClassifyKind::Return) {
         return ABIArgInfo::getExpand();
       } else if (!Ty->isBuiltinType() && !Ty->isVectorType()) {
         // HVAs are delayed and reclassified in the 2nd step.
@@ -3554,7 +3572,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
       // If it's a parameter type, the normal ABI rule is that arguments larger
       // than 8 bytes are passed indirectly. GCC follows it. We follow it too,
       // even though it isn't particularly efficient.
-      if (!IsReturnType)
+      if (Kind != ClassifyKind::Return)
         return ABIArgInfo::getIndirect(
             Align, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
             /*ByVal=*/false);
@@ -3640,7 +3658,8 @@ void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   }
 
   if (!getCXXABI().classifyReturnType(FI))
-    FI.getReturnInfo() = classify(FI.getReturnType(), FreeSSERegs, true, CC);
+    FI.getReturnInfo() =
+        classify(FI.getReturnType(), FreeSSERegs, ClassifyKind::Return, CC);
 
   if (IsVectorCall) {
     // We can use up to 6 SSE register parameters with vectorcall.
@@ -3658,7 +3677,10 @@ void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
     // registers are left.
     unsigned *MaybeFreeSSERegs =
         (IsVectorCall && ArgNum >= 6) ? &ZeroSSERegs : &FreeSSERegs;
-    I.info = classify(I.type, *MaybeFreeSSERegs, false, CC);
+    ClassifyKind Kind = ArgNum >= FI.getNumRequiredArgs()
+                            ? ClassifyKind::VarArg
+                            : ClassifyKind::FixedArgument;
+    I.info = classify(I.type, *MaybeFreeSSERegs, Kind, CC);
     ++ArgNum;
   }
 

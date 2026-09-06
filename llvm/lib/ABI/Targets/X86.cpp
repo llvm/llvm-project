@@ -525,9 +525,6 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
     // If this is a C++ record, classify the bases first.
     if (RT->isCXXRecord()) {
       for (const auto &Base : RT->getBaseClasses()) {
-        // A class with a virtual base has a non-trivial copy constructor, so
-        // getRecordArgABI() above returned before we got here.
-        assert(!Base.IsVirtualBase && "Unexpected base class!");
 
         // Classify this field.
         //
@@ -560,7 +557,9 @@ void X86_64TargetInfo::classify(const Type *T, uint64_t OffsetBase, Class &Lo,
       uint64_t Offset = OffsetBase + Field.OffsetInBits;
       bool BitField = Field.IsBitField;
 
-      if (BitField && Field.IsUnnamedBitfield)
+      // Ignore zero-length bit-fields. Other unnamed bit-fields are real
+      // storage and classify like named ones, matching GCC.
+      if (BitField && Field.BitFieldWidth == 0)
         continue;
 
       if (Size > 128 &&
@@ -958,9 +957,6 @@ static bool bitsContainNoUserData(const Type *Ty, unsigned StartBit,
     if (RT->isCXXRecord()) {
       for (unsigned I = 0; I < RT->getNumBaseClasses(); ++I) {
         const FieldInfo &Base = RT->getBaseClasses()[I];
-        // This only runs for types being passed in registers, which cannot
-        // have virtual bases.
-        assert(!Base.IsVirtualBase && "Unexpected base class!");
         if (Base.OffsetInBits >= EndBit)
           continue;
 

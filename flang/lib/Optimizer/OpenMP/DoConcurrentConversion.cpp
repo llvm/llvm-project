@@ -856,7 +856,7 @@ private:
 
         auto privatizer = mlir::omp::PrivateClauseOp::create(
             rewriter, localizer.getLoc(), sym.getLeafReference().str() + ".omp",
-            localizer.getTypeAttr().getValue(),
+            /*sym_visibility=*/nullptr, localizer.getTypeAttr().getValue(),
             mlir::omp::DataSharingClauseType::Private);
 
         cloneFIRRegionToOMP(rewriter, localizer.getInitRegion(),
@@ -895,7 +895,7 @@ private:
         if (!ompReducer) {
           ompReducer = mlir::omp::DeclareReductionOp::create(
               rewriter, firReducer.getLoc(), ompReducerName,
-              firReducer.getTypeAttr().getValue(),
+              /*sym_visibility=*/nullptr, firReducer.getTypeAttr().getValue(),
               firReducer.getByrefElementTypeAttr());
 
           cloneFIRRegionToOMP(rewriter, firReducer.getAllocRegion(),

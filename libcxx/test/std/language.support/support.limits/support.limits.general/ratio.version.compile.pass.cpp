@@ -48,7 +48,7 @@
 #    error "__cpp_lib_ratio should not be defined before c++26"
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  ifndef __cpp_lib_ratio
 #    error "__cpp_lib_ratio should be defined in c++26"
@@ -57,6 +57,15 @@
 #    error "__cpp_lib_ratio should have the value 202306L in c++26"
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  ifndef __cpp_lib_ratio
+#    error "__cpp_lib_ratio should be defined in c++29"
+#  endif
+#  if __cpp_lib_ratio != 202306L
+#    error "__cpp_lib_ratio should have the value 202306L in c++29"
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on
