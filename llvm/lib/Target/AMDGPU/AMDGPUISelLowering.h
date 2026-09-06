@@ -231,6 +231,13 @@ public:
   bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtType, EVT ExtVT,
                              std::optional<unsigned> ByteOffset) const override;
 
+  /// If extracting a subvector of type \p ResVT starting at element \p Index
+  /// out of a vector of type \p SrcVT is a plain sub register reference,
+  /// return the sub register index that describes it. Otherwise return
+  /// AMDGPU::NoSubRegister.
+  virtual unsigned getExtractSubvectorSubReg(EVT ResVT, EVT SrcVT,
+                                             unsigned Index) const;
+
   bool isLoadBitCastBeneficial(EVT, EVT, const SelectionDAG &DAG,
                                const MachineMemOperand &MMO) const final;
 

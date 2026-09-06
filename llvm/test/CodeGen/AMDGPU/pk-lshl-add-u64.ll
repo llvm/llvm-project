@@ -111,12 +111,12 @@ define amdgpu_kernel void @pk_lshl_add_u64_s2s(<2 x i64> %v, <2 x i64> %a) {
 ; GFX1251-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-NEXT:    s_lshl_b64 s[0:1], s[8:9], 2
 ; GFX1251-NEXT:    s_lshl_b64 s[2:3], s[10:11], 2
-; GFX1251-NEXT:    v_mov_b64_e32 v[0:1], s[12:13]
-; GFX1251-NEXT:    v_mov_b64_e32 v[2:3], s[14:15]
-; GFX1251-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
-; GFX1251-NEXT:    v_mov_b64_e32 v[6:7], s[2:3]
+; GFX1251-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX1251-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1251-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GFX1251-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
 ; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1251-NEXT:    v_pk_add_nc_u64 v[0:3], v[4:7], v[0:3]
+; GFX1251-NEXT:    v_pk_add_nc_u64 v[0:3], v[0:3], v[4:7]
 ; GFX1251-NEXT:    flat_store_b128 v[0:1], v[0:3]
 ; GFX1251-NEXT:    s_endpgm
   %shl = shl <2 x i64> %v, <i64 2, i64 2>
@@ -189,12 +189,12 @@ define amdgpu_kernel void @pk_lshl_add_u64_s2s_shift2_3(<2 x i64> %v, <2 x i64> 
 ; GFX1251-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-NEXT:    s_lshl_b64 s[0:1], s[8:9], 2
 ; GFX1251-NEXT:    s_lshl_b64 s[2:3], s[10:11], 3
-; GFX1251-NEXT:    v_mov_b64_e32 v[0:1], s[12:13]
-; GFX1251-NEXT:    v_mov_b64_e32 v[2:3], s[14:15]
-; GFX1251-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
-; GFX1251-NEXT:    v_mov_b64_e32 v[6:7], s[2:3]
+; GFX1251-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX1251-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1251-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GFX1251-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
 ; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1251-NEXT:    v_pk_add_nc_u64 v[0:3], v[4:7], v[0:3]
+; GFX1251-NEXT:    v_pk_add_nc_u64 v[0:3], v[0:3], v[4:7]
 ; GFX1251-NEXT:    flat_store_b128 v[0:1], v[0:3]
 ; GFX1251-NEXT:    s_endpgm
   %shl = shl <2 x i64> %v, <i64 2, i64 3>
@@ -216,12 +216,12 @@ define amdgpu_kernel void @pk_lshl_add_u64_s2s_shift2_4(<2 x i64> %v, <2 x i64> 
 ; GFX1251-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-NEXT:    s_lshl_b64 s[0:1], s[8:9], 2
 ; GFX1251-NEXT:    s_lshl_b64 s[2:3], s[10:11], 4
-; GFX1251-NEXT:    v_mov_b64_e32 v[0:1], s[12:13]
-; GFX1251-NEXT:    v_mov_b64_e32 v[2:3], s[14:15]
-; GFX1251-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
-; GFX1251-NEXT:    v_mov_b64_e32 v[6:7], s[2:3]
+; GFX1251-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX1251-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1251-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GFX1251-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
 ; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1251-NEXT:    v_pk_add_nc_u64 v[0:3], v[4:7], v[0:3]
+; GFX1251-NEXT:    v_pk_add_nc_u64 v[0:3], v[0:3], v[4:7]
 ; GFX1251-NEXT:    flat_store_b128 v[0:1], v[0:3]
 ; GFX1251-NEXT:    s_endpgm
   %shl = shl <2 x i64> %v, <i64 2, i64 4>
@@ -241,12 +241,12 @@ define amdgpu_kernel void @pk_lshl_add_u64_s2s_shift2_5(<2 x i64> %v, <2 x i64> 
 ; GFX1251-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-NEXT:    s_lshl_b64 s[0:1], s[8:9], 2
 ; GFX1251-NEXT:    s_lshl_b64 s[2:3], s[10:11], 5
-; GFX1251-NEXT:    v_mov_b64_e32 v[0:1], s[12:13]
-; GFX1251-NEXT:    v_mov_b64_e32 v[2:3], s[14:15]
-; GFX1251-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
-; GFX1251-NEXT:    v_mov_b64_e32 v[6:7], s[2:3]
+; GFX1251-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX1251-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX1251-NEXT:    v_mov_b64_e32 v[4:5], s[12:13]
+; GFX1251-NEXT:    v_mov_b64_e32 v[6:7], s[14:15]
 ; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1251-NEXT:    v_pk_add_nc_u64 v[0:3], v[4:7], v[0:3]
+; GFX1251-NEXT:    v_pk_add_nc_u64 v[0:3], v[0:3], v[4:7]
 ; GFX1251-NEXT:    flat_store_b128 v[0:1], v[0:3]
 ; GFX1251-NEXT:    s_endpgm
   %shl = shl <2 x i64> %v, <i64 2, i64 5>

@@ -1125,6 +1125,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::SIGN_EXTEND_INREG,
                        ISD::ANY_EXTEND,
                        ISD::EXTRACT_VECTOR_ELT,
+                       ISD::EXTRACT_SUBVECTOR,
                        ISD::INSERT_VECTOR_ELT,
                        ISD::FCOPYSIGN});
 
@@ -2424,15 +2425,77 @@ bool SITargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   return true;
 }
 
+unsigned SITargetLowering::getExtractSubvectorSubReg(EVT ResVT, EVT SrcVT,
+                                                     unsigned Index) const {
+  if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
+    return AMDGPU::NoSubRegister;
+
+  // Both types have to be assigned a register class, otherwise the result
+  // cannot be named as a sub register of the source register.
+  if (!ResVT.isSimple() || !SrcVT.isSimple() || !isTypeLegal(ResVT) ||
+      !isTypeLegal(SrcVT))
+    return AMDGPU::NoSubRegister;
+
+  // A single register wide result is deliberately not described as a sub
+  // register reference: reading one register out of a tuple costs the same
+  // whether it is spelled as an extract_subvector or as an extract_vector_elt,
+  // and keeping the element form lets the combiner see what each element holds.
+  unsigned SizeInBits = ResVT.getSizeInBits();
+  if (SizeInBits <= 32)
+    return AMDGPU::NoSubRegister;
+
+  // Registers are 32 bits wide, so a piece that does not start and end on a
+  // register boundary has to be assembled by real instructions.
+  unsigned OffsetInBits = Index * SrcVT.getScalarSizeInBits();
+  if (SizeInBits % 32 != 0 || OffsetInBits % 32 != 0)
+    return AMDGPU::NoSubRegister;
+
+  // Isel matches this as an EXTRACT_SUBREG through patterns that have to spell
+  // out the sub register index, so a run of registers is only usable here if
+  // SIRegisterInfo.td declares an index naming it. Widths it does not declare
+  // still get an index, but only one synthesized to describe 16 bit lanes,
+  // which no pattern can refer to. Saying yes to a width the patterns do not
+  // cover leaves an unselectable extract_subvector behind, so this list has to
+  // stay a subset of SubRegTupleWidths there.
+  static constexpr unsigned NameableWidths[] = {2, 3, 4, 5, 6, 8, 16};
+  unsigned NumRegs = SizeInBits / 32;
+  if (!is_contained(NameableWidths, NumRegs))
+    return AMDGPU::NoSubRegister;
+
+  unsigned SubReg =
+      SIRegisterInfo::getSubRegFromChannelOrNone(OffsetInBits / 32, NumRegs);
+  if (SubReg == AMDGPU::NoSubRegister)
+    return AMDGPU::NoSubRegister;
+
+  // Divergence is not known here, so require the sub register to be usable
+  // with the source register class regardless of which register file the
+  // value ends up in.
+  const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+  for (bool IsDivergent : {false, true}) {
+    const TargetRegisterClass *SrcRC =
+        getRegClassFor(SrcVT.getSimpleVT(), IsDivergent);
+    if (!TRI->getSubClassWithSubReg(SrcRC, SubReg))
+      return AMDGPU::NoSubRegister;
+  }
+
+  return SubReg;
+}
+
 TargetLowering::ExtractSubvectorCost
 SITargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
                                           unsigned Index) const {
   if (!isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, ResVT))
     return ExtractSubvectorCost::Expensive;
 
+  // A plain sub register reference is free, and isel turns it into an
+  // EXTRACT_SUBREG. Everything else still goes through the elementwise
+  // lowering in AMDGPUTargetLowering::LowerEXTRACT_SUBVECTOR.
+  if (getExtractSubvectorSubReg(ResVT, SrcVT, Index) != AMDGPU::NoSubRegister)
+    return ExtractSubvectorCost::Free;
+
   // TODO: Add more cases that are cheap.
   if (Index == 0)
-    return ExtractSubvectorCost::Free;
+    return ExtractSubvectorCost::Cheap;
   return ExtractSubvectorCost::Expensive;
 }
 
@@ -16978,6 +17041,33 @@ SITargetLowering::performExtractVectorEltCombine(SDNode *N,
   unsigned VecSize = VecVT.getSizeInBits();
   unsigned VecEltSize = VecEltVT.getSizeInBits();
 
+  // extract_vector_elt (extract_subvector X, I), J
+  //   -> extract_vector_elt X, I + J
+  //
+  // A free extract is a subregister reference, so reading an element out of it
+  // reads the same register as reading that element out of the vector it came
+  // from. Going straight to the source lets the subvector stop being
+  // referenced, so it no longer needs a register of its own.
+  if (Vec.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
+    SDValue Src = Vec.getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    if (auto *EltIdx = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
+      // The action for EXTRACT_VECTOR_ELT is registered on the type of the
+      // vector being read, so the source is what decides whether reading the
+      // element straight out of it is really legal.
+      if (getExtractSubvectorSubReg(VecVT, SrcVT,
+                                    Vec.getConstantOperandVal(1)) !=
+              AMDGPU::NoSubRegister &&
+          isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT, SrcVT)) {
+        SDValue NewExt = DAG.getExtractVectorElt(SDLoc(N), ResVT, Src,
+                                                 Vec.getConstantOperandVal(1) +
+                                                     EltIdx->getZExtValue());
+        NewExt->setIROrder(Src->getIROrder());
+        return NewExt;
+      }
+    }
+  }
+
   if ((Vec.getOpcode() == ISD::FNEG || Vec.getOpcode() == ISD::FABS) &&
       allUsesHaveSourceMods(N)) {
     SDLoc SL(N);
@@ -17126,6 +17216,38 @@ SITargetLowering::performExtractVectorEltCombine(SDNode *N,
   }
 
   return SDValue();
+}
+
+// extract_subvector (extract_subvector X, I), J -> extract_subvector X, I + J
+//
+// The generic combiner only does this when the inner extract has a single use,
+// because in general each extract it leaves behind is an instruction. A free
+// extract is just a subregister reference, so here it is worth repeating for
+// every use: the intermediate vector stops being referenced and no longer needs
+// a register of its own, which matters most for the wide tuples this reads
+// from.
+SDValue
+SITargetLowering::performExtractSubvectorCombine(SDNode *N,
+                                                 DAGCombinerInfo &DCI) const {
+  SDValue Src = N->getOperand(0);
+  if (Src.getOpcode() != ISD::EXTRACT_SUBVECTOR || Src.hasOneUse())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  SDValue Outer = Src.getOperand(0);
+  unsigned Start = Src.getConstantOperandVal(1) + N->getConstantOperandVal(1);
+
+  // The combined index is relative to a wider vector than the one the inner
+  // extract indexed into, and an extract_subvector index has to stay a multiple
+  // of the number of elements it produces.
+  if (Start % VT.getVectorMinNumElements() != 0)
+    return SDValue();
+
+  if (getExtractSubvectorSubReg(VT, Outer.getValueType(), Start) ==
+      AMDGPU::NoSubRegister)
+    return SDValue();
+
+  return DCI.DAG.getExtractSubvector(SDLoc(N), VT, Outer, Start);
 }
 
 SDValue
@@ -19142,6 +19264,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   }
   case ISD::EXTRACT_VECTOR_ELT:
     return performExtractVectorEltCombine(N, DCI);
+  case ISD::EXTRACT_SUBVECTOR:
+    return performExtractSubvectorCombine(N, DCI);
   case ISD::INSERT_VECTOR_ELT:
     return performInsertVectorEltCombine(N, DCI);
   case ISD::FP_ROUND:
@@ -19164,22 +19288,59 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   return AMDGPUTargetLowering::PerformDAGCombine(N, DCI);
 }
 
-/// Helper function for adjustWritemask
-static unsigned SubIdx2Lane(unsigned Idx) {
-  switch (Idx) {
-  default:
-    return ~0u;
-  case AMDGPU::sub0:
-    return 0;
-  case AMDGPU::sub1:
-    return 1;
-  case AMDGPU::sub2:
-    return 2;
-  case AMDGPU::sub3:
-    return 3;
-  case AMDGPU::sub4:
-    return 4; // Possible with TFE/LWE
+/// An EXTRACT_SUBREG reading \p NumLanes consecutive registers of a MIMG
+/// result, starting at \p FirstLane.
+struct MIMGLaneUse {
+  SDNode *User;
+  unsigned FirstLane;
+  unsigned NumLanes;
+};
+
+/// Helper function for adjustWritemask. Collect the EXTRACT_SUBREG users of
+/// \p Node into \p Lanes, together with the range of lanes each one reads.
+/// \p LaneOffset is the lane \p Node itself starts at.
+///
+/// An EXTRACT_SUBREG naming several registers is first looked through, since
+/// the reads of the individual registers describe the live channels more
+/// precisely. Only when it is used as a unit is it recorded as spanning a
+/// range.
+///
+/// \returns false if any use cannot be described as a lane read.
+static bool collectMIMGLaneUsers(SDNode *Node, unsigned LaneOffset,
+                                 const SIRegisterInfo &TRI,
+                                 SmallVectorImpl<MIMGLaneUse> &Lanes) {
+  for (SDUse &Use : Node->uses()) {
+    // Don't look at users of the chain.
+    if (Use.getResNo() != 0)
+      continue;
+
+    SDNode *User = Use.getUser();
+    if (!User->isMachineOpcode() ||
+        User->getMachineOpcode() != TargetOpcode::EXTRACT_SUBREG)
+      return false;
+
+    unsigned SubReg = User->getConstantOperandVal(1);
+    unsigned Offset = TRI.getSubRegIdxOffset(SubReg);
+    unsigned Size = TRI.getSubRegIdxSize(SubReg);
+    if (Offset % 32 != 0 || Size % 32 != 0)
+      return false;
+
+    unsigned FirstLane = LaneOffset + Offset / 32;
+    unsigned NumLanes = Size / 32;
+    if (NumLanes == 1) {
+      Lanes.push_back({User, FirstLane, 1});
+      continue;
+    }
+
+    size_t Rollback = Lanes.size();
+    if (collectMIMGLaneUsers(User, FirstLane, TRI, Lanes))
+      continue;
+
+    Lanes.truncate(Rollback);
+    Lanes.push_back({User, FirstLane, NumLanes});
   }
+
+  return true;
 }
 
 /// Adjust the writemask of MIMG, VIMAGE or VSAMPLE instructions
@@ -19217,31 +19378,36 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
   }
 
   // Try to figure out the used register components
-  for (SDUse &Use : Node->uses()) {
+  SmallVector<MIMGLaneUse, 8> LaneUses;
+  if (!collectMIMGLaneUsers(Node, 0, *Subtarget->getRegisterInfo(), LaneUses))
+    return Node;
 
-    // Don't look at users of the chain.
-    if (Use.getResNo() != 0)
-      continue;
-
-    SDNode *User = Use.getUser();
-
-    // Abort if we can't understand the usage
-    if (!User->isMachineOpcode() ||
-        User->getMachineOpcode() != TargetOpcode::EXTRACT_SUBREG)
+  for (const MIMGLaneUse &LU : LaneUses) {
+    if (LU.FirstLane + LU.NumLanes > std::size(Users))
       return Node;
 
-    // Lane means which subreg of %vgpra_vgprb_vgprc_vgprd is used.
-    // Note that subregs are packed, i.e. Lane==0 is the first bit set
-    // in OldDmask, so it can be any of X,Y,Z,W; Lane==1 is the second bit
-    // set, etc.
-    Lane = SubIdx2Lane(User->getConstantOperandVal(1));
-    if (Lane == ~0u)
+    // The TFE/LWE result is not a texture channel, so a read covering several
+    // lanes at once cannot be described as reading channels if it also takes
+    // that one in.
+    if (UsesTFC && LU.NumLanes > 1 && LU.FirstLane <= TFCLane &&
+        TFCLane < LU.FirstLane + LU.NumLanes)
       return Node;
 
-    // Check if the use is for the TFE/LWE generated result at VGPRn+1.
-    if (UsesTFC && Lane == TFCLane) {
-      Users[Lane] = User;
-    } else {
+    for (Lane = LU.FirstLane; Lane != LU.FirstLane + LU.NumLanes; ++Lane) {
+      // Abort if we have more than one user per component.
+      if (Users[Lane])
+        return Node;
+      Users[Lane] = LU.User;
+
+      // Check if the use is for the TFE/LWE generated result at VGPRn+1.
+      if (UsesTFC && Lane == TFCLane)
+        continue;
+
+      // Lane means which subreg of %vgpra_vgprb_vgprc_vgprd is used.
+      // Note that subregs are packed, i.e. Lane==0 is the first bit set
+      // in OldDmask, so it can be any of X,Y,Z,W; Lane==1 is the second bit
+      // set, etc.
+      //
       // Set which texture component corresponds to the lane.
       unsigned Comp;
       for (unsigned i = 0, Dmask = OldDmask; (i <= Lane) && (Dmask != 0); i++) {
@@ -19249,11 +19415,6 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
         Dmask &= ~(1 << Comp);
       }
 
-      // Abort if we have more than one user per component.
-      if (Users[Lane])
-        return Node;
-
-      Users[Lane] = User;
       NewDmask |= 1 << Comp;
     }
   }
@@ -19274,6 +19435,26 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
   // Abort if there's no change
   if (NewDmask == OldDmask)
     return Node;
+
+  // Work out where each lane ends up once the unused channels are dropped.
+  // Lane order is channel order, so the lanes that survive keep their relative
+  // positions, which means a run of adjacent lanes stays adjacent and can
+  // still be named by a single sub register index.
+  unsigned NewLaneOf[std::size(Users)];
+  for (unsigned I = 0, New = 0; I != std::size(Users); ++I) {
+    NewLaneOf[I] = New;
+    // NoChannels turned an arbitrary channel on below, and it takes up lane 0
+    // even though nothing reads it.
+    if (Users[I] || (I == 0 && NoChannels))
+      ++New;
+  }
+
+  // Give up if any of the reads cannot be named in its new position.
+  for (const MIMGLaneUse &LU : LaneUses) {
+    if (SIRegisterInfo::getSubRegFromChannelOrNone(
+            NewLaneOf[LU.FirstLane], LU.NumLanes) == AMDGPU::NoSubRegister)
+      return Node;
+  }
 
   unsigned BitsSet = llvm::popcount(NewDmask);
 
@@ -19315,46 +19496,38 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
   }
 
   if (NewChannels == 1) {
-    assert(Node->hasNUsesOfValue(1, 0));
+    // One channel and no TFE/LWE result, so exactly one lane is read.
+    assert(Node->hasNUsesOfValue(1, 0) && LaneUses.size() == 1 &&
+           LaneUses[0].NumLanes == 1);
+    SDNode *User = LaneUses[0].User;
     SDNode *Copy =
         DAG.getMachineNode(TargetOpcode::COPY, SDLoc(Node),
-                           Users[Lane]->getValueType(0), SDValue(NewNode, 0));
-    DAG.ReplaceAllUsesWith(Users[Lane], Copy);
+                           User->getValueType(0), SDValue(NewNode, 0));
+    DAG.ReplaceAllUsesWith(User, Copy);
     return nullptr;
   }
 
   // Update the users of the node with the new indices
-  for (unsigned i = 0, Idx = AMDGPU::sub0; i < 5; ++i) {
-    SDNode *User = Users[i];
-    if (!User) {
-      // Handle the special case of NoChannels. We set NewDmask to 1 above, but
-      // Users[0] is still nullptr because channel 0 doesn't really have a use.
-      if (i || !NoChannels)
-        continue;
-    } else {
-      SDValue Op = DAG.getTargetConstant(Idx, SDLoc(User), MVT::i32);
-      SDNode *NewUser = DAG.UpdateNodeOperands(User, SDValue(NewNode, 0), Op);
-      if (NewUser != User) {
-        DAG.ReplaceAllUsesWith(SDValue(User, 0), SDValue(NewUser, 0));
-        DAG.RemoveDeadNode(User);
-      }
+  for (const MIMGLaneUse &LU : LaneUses) {
+    unsigned NewFirstLane = NewLaneOf[LU.FirstLane];
+
+    // A read that now spans the whole result is no longer a sub register
+    // reference, since no index names a register in its entirety.
+    if (NewFirstLane == 0 && LU.NumLanes == NewChannels) {
+      SDNode *Copy =
+          DAG.getMachineNode(TargetOpcode::COPY, SDLoc(Node),
+                             LU.User->getValueType(0), SDValue(NewNode, 0));
+      DAG.ReplaceAllUsesWith(LU.User, Copy);
+      continue;
     }
 
-    switch (Idx) {
-    default:
-      break;
-    case AMDGPU::sub0:
-      Idx = AMDGPU::sub1;
-      break;
-    case AMDGPU::sub1:
-      Idx = AMDGPU::sub2;
-      break;
-    case AMDGPU::sub2:
-      Idx = AMDGPU::sub3;
-      break;
-    case AMDGPU::sub3:
-      Idx = AMDGPU::sub4;
-      break;
+    unsigned Idx =
+        SIRegisterInfo::getSubRegFromChannel(NewFirstLane, LU.NumLanes);
+    SDValue Op = DAG.getTargetConstant(Idx, SDLoc(LU.User), MVT::i32);
+    SDNode *NewUser = DAG.UpdateNodeOperands(LU.User, SDValue(NewNode, 0), Op);
+    if (NewUser != LU.User) {
+      DAG.ReplaceAllUsesWith(SDValue(LU.User, 0), SDValue(NewUser, 0));
+      DAG.RemoveDeadNode(LU.User);
     }
   }
 

@@ -824,11 +824,23 @@ bool AMDGPUTargetLowering::ShouldShrinkFPConstant(EVT VT) const {
   return (ScalarVT != MVT::f32 && ScalarVT != MVT::f64);
 }
 
+unsigned AMDGPUTargetLowering::getExtractSubvectorSubReg(EVT ResVT, EVT SrcVT,
+                                                         unsigned Index) const {
+  return AMDGPU::NoSubRegister;
+}
+
 bool AMDGPUTargetLowering::shouldReduceLoadWidth(
     SDNode *N, ISD::LoadExtType ExtTy, EVT NewVT,
     std::optional<unsigned> ByteOffset) const {
   // TODO: This may be worth removing. Check regression tests for diffs.
   if (!TargetLoweringBase::shouldReduceLoadWidth(N, ExtTy, NewVT, ByteOffset))
+    return false;
+
+  // WidenOrSplitVectorLoad legalizes a 3 element vector load by loading 4
+  // elements and extracting the low 3 back out. Narrowing a load down to 3
+  // elements would just be undone by that, and the two would keep undoing each
+  // other.
+  if (NewVT.isVector() && NewVT.getVectorNumElements() == 3)
     return false;
 
   unsigned NewSize = NewVT.getStoreSizeInBits();
@@ -1634,6 +1646,13 @@ SDValue AMDGPUTargetLowering::LowerEXTRACT_SUBVECTOR(SDValue Op,
   unsigned Start = Op.getConstantOperandVal(1);
   EVT VT = Op.getValueType();
   EVT SrcVT = Op.getOperand(0).getValueType();
+
+  // A free extract is a sub register reference, which isel turns into an
+  // EXTRACT_SUBREG. This has to be checked before the 16-bit case below:
+  // rewriting a free extract into a build_vector only gets folded straight back
+  // into the extract by the combiner, and legalizing that rewrites it again.
+  if (getExtractSubvectorSubReg(VT, SrcVT, Start) != AMDGPU::NoSubRegister)
+    return Op;
 
   if (VT.getScalarSizeInBits() == 16 && Start % 2 == 0) {
     unsigned NumElt = VT.getVectorNumElements();

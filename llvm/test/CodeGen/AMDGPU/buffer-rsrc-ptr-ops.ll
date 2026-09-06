@@ -26,7 +26,7 @@ define amdgpu_kernel void @buffer_ptr_vector_ops(ptr addrspace(1) %somewhere) {
 ; SDAG-LABEL: buffer_ptr_vector_ops:
 ; SDAG:       ; %bb.0: ; %main_body
 ; SDAG-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x24
-; SDAG-NEXT:    v_mov_b32_e32 v8, 0
+; SDAG-NEXT:    v_mov_b32_e32 v12, 0
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    s_load_dwordx8 s[0:7], s[8:9], 0x0
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -34,13 +34,17 @@ define amdgpu_kernel void @buffer_ptr_vector_ops(ptr addrspace(1) %somewhere) {
 ; SDAG-NEXT:    v_mov_b32_e32 v1, s1
 ; SDAG-NEXT:    v_mov_b32_e32 v2, s2
 ; SDAG-NEXT:    v_mov_b32_e32 v3, s3
-; SDAG-NEXT:    v_mov_b32_e32 v4, s4
-; SDAG-NEXT:    v_mov_b32_e32 v5, s5
-; SDAG-NEXT:    v_mov_b32_e32 v6, s6
-; SDAG-NEXT:    v_mov_b32_e32 v7, s7
+; SDAG-NEXT:    v_mov_b32_e32 v4, s0
+; SDAG-NEXT:    v_mov_b32_e32 v5, s1
+; SDAG-NEXT:    v_mov_b32_e32 v6, s2
+; SDAG-NEXT:    v_mov_b32_e32 v7, s3
+; SDAG-NEXT:    v_mov_b32_e32 v8, s4
+; SDAG-NEXT:    v_mov_b32_e32 v9, s5
+; SDAG-NEXT:    v_mov_b32_e32 v10, s6
+; SDAG-NEXT:    v_mov_b32_e32 v11, s7
 ; SDAG-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
-; SDAG-NEXT:    global_store_dwordx4 v8, v[0:3], s[8:9] offset:48
-; SDAG-NEXT:    global_store_dwordx4 v8, v[4:7], s[8:9] offset:32
+; SDAG-NEXT:    global_store_dwordx4 v12, v[4:7], s[8:9] offset:48
+; SDAG-NEXT:    global_store_dwordx4 v12, v[8:11], s[8:9] offset:32
 ; SDAG-NEXT:    s_endpgm
 main_body:
   %buffers = load <2 x ptr addrspace(8)>, ptr addrspace(1) %somewhere

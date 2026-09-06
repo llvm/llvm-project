@@ -28366,8 +28366,17 @@ SDValue DAGCombiner::visitEXTRACT_SUBVECTOR(SDNode *N) {
                             V.getOperand(0), NewIndex);
             return DAG.getBitcast(NVT, NewExtract);
           }
+          // The action for EXTRACT_VECTOR_ELT is registered on the type of the
+          // vector being read, so once operations have been legalized SrcVT is
+          // what decides whether the replacement is really legal. Reading from
+          // an illegal source vector would be promoted straight back into the
+          // extract_subvector we started from.
           if (NewExtEC.isScalar() &&
-              TLI.isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT, ScalarVT)) {
+              TLI.isOperationLegalOrCustom(ISD::EXTRACT_VECTOR_ELT, SrcVT) &&
+              !(TLI.getTypeAction(*DAG.getContext(), NVT) ==
+                    TargetLoweringBase::TypePromoteInteger &&
+                TLI.getTypeAction(*DAG.getContext(), SrcVT) !=
+                    TargetLoweringBase::TypePromoteInteger)) {
             SDValue NewIndex = DAG.getVectorIdxConstant(IndexValScaled, DL);
             SDValue NewExtract =
                 DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ScalarVT,
