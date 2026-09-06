@@ -43,7 +43,7 @@ define i64 @func64(i64 %a, i64 %b) {
 
 define i128 @func128(i128 %a, i128 %b) {
 ; CHECK-LABEL: func128:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s4, 0, %s1
 ; CHECK-NEXT:    or %s5, 0, %s0
 ; CHECK-NEXT:    lea %s0, __multi3@lo
@@ -100,7 +100,7 @@ define i64 @func64z(i64 %a, i64 %b) {
 
 define i128 @func128z(i128 %a, i128 %b) {
 ; CHECK-LABEL: func128z:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s4, 0, %s1
 ; CHECK-NEXT:    or %s5, 0, %s0
 ; CHECK-NEXT:    lea %s0, __multi3@lo
@@ -159,7 +159,7 @@ define i64 @funci64(i64 %a) {
 
 define i128 @funci128(i128 %a) {
 ; CHECK-LABEL: funci128:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s2, __multi3@lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __multi3@hi(, %s2)
@@ -212,7 +212,7 @@ define i64 @funci64z(i64 %a) {
 
 define i128 @funci128z(i128 %a) {
 ; CHECK-LABEL: funci128z:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s2, __multi3@lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __multi3@hi(, %s2)

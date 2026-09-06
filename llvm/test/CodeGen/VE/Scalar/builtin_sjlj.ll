@@ -9,7 +9,7 @@
 ; Function Attrs: noinline nounwind optnone
 define signext i32 @t_setjmp() {
 ; CHECK-LABEL: t_setjmp:
-; CHECK:       .LBB{{[0-9]+}}_5:
+; CHECK:       .LBB{{[0-9]+}}_4:
 ; CHECK-NEXT:    st %s18, 48(, %s9) # 8-byte Folded Spill
 ; CHECK-NEXT:    st %s19, 56(, %s9) # 8-byte Folded Spill
 ; CHECK-NEXT:    st %s20, 64(, %s9) # 8-byte Folded Spill
@@ -69,8 +69,8 @@ define signext i32 @t_setjmp() {
 ; PIC-NEXT:    st %s16, 32(, %s11)
 ; PIC-NEXT:    or %s9, 0, %s11
 ; PIC-NEXT:    lea %s11, -176(, %s11)
-; PIC-NEXT:    brge.l %s11, %s8, .LBB0_5
-; PIC-NEXT:  # %bb.4:
+; PIC-NEXT:    brge.l %s11, %s8, .LBB0_4
+; PIC-NEXT:  # %bb.5:
 ; PIC-NEXT:    ld %s61, 24(, %s14)
 ; PIC-NEXT:    or %s62, 0, %s0
 ; PIC-NEXT:    lea %s63, 315
@@ -79,7 +79,7 @@ define signext i32 @t_setjmp() {
 ; PIC-NEXT:    shm.l %s11, 16(%s61)
 ; PIC-NEXT:    monc
 ; PIC-NEXT:    or %s0, 0, %s62
-; PIC-NEXT:  .LBB0_5:
+; PIC-NEXT:  .LBB0_4:
 ; PIC-NEXT:    st %s18, 48(, %s9) # 8-byte Folded Spill
 ; PIC-NEXT:    st %s19, 56(, %s9) # 8-byte Folded Spill
 ; PIC-NEXT:    st %s20, 64(, %s9) # 8-byte Folded Spill
@@ -160,7 +160,7 @@ declare i32 @llvm.eh.sjlj.setjmp(ptr)
 ; Function Attrs: noinline nounwind optnone
 define void @t_longjmp() {
 ; CHECK-LABEL: t_longjmp:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, buf@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s0, buf@hi(, %s0)
@@ -178,8 +178,8 @@ define void @t_longjmp() {
 ; PIC-NEXT:    st %s16, 32(, %s11)
 ; PIC-NEXT:    or %s9, 0, %s11
 ; PIC-NEXT:    lea %s11, -176(, %s11)
-; PIC-NEXT:    brge.l.t %s11, %s8, .LBB1_2
-; PIC-NEXT:  # %bb.1:
+; PIC-NEXT:    brge.l.t %s11, %s8, .LBB1_1
+; PIC-NEXT:  # %bb.2:
 ; PIC-NEXT:    ld %s61, 24(, %s14)
 ; PIC-NEXT:    or %s62, 0, %s0
 ; PIC-NEXT:    lea %s63, 315
@@ -188,7 +188,7 @@ define void @t_longjmp() {
 ; PIC-NEXT:    shm.l %s11, 16(%s61)
 ; PIC-NEXT:    monc
 ; PIC-NEXT:    or %s0, 0, %s62
-; PIC-NEXT:  .LBB1_2:
+; PIC-NEXT:  .LBB1_1:
 ; PIC-NEXT:    lea %s15, _GLOBAL_OFFSET_TABLE_@pc_lo(-24)
 ; PIC-NEXT:    and %s15, %s15, (32)0
 ; PIC-NEXT:    sic %s16

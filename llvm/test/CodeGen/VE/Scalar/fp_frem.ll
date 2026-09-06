@@ -34,7 +34,7 @@
 ; Function Attrs: norecurse nounwind readnone
 define float @frem_float_var(float %0, float %1) {
 ; CHECK-LABEL: frem_float_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s2, fmodf@lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s12, fmodf@hi(, %s2)
@@ -47,7 +47,7 @@ define float @frem_float_var(float %0, float %1) {
 ; Function Attrs: norecurse nounwind readnone
 define double @frem_double_var(double %0, double %1) {
 ; CHECK-LABEL: frem_double_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s2, fmod@lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s12, fmod@hi(, %s2)
@@ -60,7 +60,7 @@ define double @frem_double_var(double %0, double %1) {
 ; Function Attrs: norecurse nounwind readnone
 define fp128 @frem_quad_var(fp128 %0, fp128 %1) {
 ; CHECK-LABEL: frem_quad_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s4, fmodl@lo
 ; CHECK-NEXT:    and %s4, %s4, (32)0
 ; CHECK-NEXT:    lea.sl %s12, fmodl@hi(, %s4)
@@ -73,7 +73,7 @@ define fp128 @frem_quad_var(fp128 %0, fp128 %1) {
 ; Function Attrs: norecurse nounwind readnone
 define float @frem_float_zero(float %0) {
 ; CHECK-LABEL: frem_float_zero:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s1, 0, %s0
 ; CHECK-NEXT:    lea %s0, fmodf@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
@@ -88,7 +88,7 @@ define float @frem_float_zero(float %0) {
 ; Function Attrs: norecurse nounwind readnone
 define double @frem_double_zero(double %0) {
 ; CHECK-LABEL: frem_double_zero:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s1, 0, %s0
 ; CHECK-NEXT:    lea %s0, fmod@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
@@ -103,7 +103,7 @@ define double @frem_double_zero(double %0) {
 ; Function Attrs: norecurse nounwind readnone
 define fp128 @frem_quad_zero(fp128 %0) {
 ; CHECK-LABEL: frem_quad_zero:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s2, 0, %s0
 ; CHECK-NEXT:    or %s3, 0, %s1
 ; CHECK-NEXT:    lea %s0, .LCPI{{[0-9]+}}_0@lo
@@ -123,7 +123,7 @@ define fp128 @frem_quad_zero(fp128 %0) {
 ; Function Attrs: norecurse nounwind readnone
 define float @frem_float_cont(float %0) {
 ; CHECK-LABEL: frem_float_cont:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s1, 0, %s0
 ; CHECK-NEXT:    lea %s0, fmodf@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
@@ -138,7 +138,7 @@ define float @frem_float_cont(float %0) {
 ; Function Attrs: norecurse nounwind readnone
 define double @frem_double_cont(double %0) {
 ; CHECK-LABEL: frem_double_cont:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s1, 0, %s0
 ; CHECK-NEXT:    lea %s0, fmod@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
@@ -153,7 +153,7 @@ define double @frem_double_cont(double %0) {
 ; Function Attrs: norecurse nounwind readnone
 define fp128 @frem_quad_cont(fp128 %0) {
 ; CHECK-LABEL: frem_quad_cont:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s2, 0, %s0
 ; CHECK-NEXT:    or %s3, 0, %s1
 ; CHECK-NEXT:    lea %s0, .LCPI{{[0-9]+}}_0@lo

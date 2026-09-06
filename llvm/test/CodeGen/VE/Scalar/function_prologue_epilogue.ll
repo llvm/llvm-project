@@ -51,8 +51,8 @@ define i32 @func_alloca(i32 signext %0) {
 ; CHECK-LABEL: func_alloca:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    adds.l %s11, -16, %s11
-; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB2_2
-; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    brge.l.t %s11, %s8, .LBB2_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ld %s61, 24(, %s14)
 ; CHECK-NEXT:    or %s62, 0, %s0
 ; CHECK-NEXT:    lea %s63, 315
@@ -61,7 +61,7 @@ define i32 @func_alloca(i32 signext %0) {
 ; CHECK-NEXT:    shm.l %s11, 16(%s61)
 ; CHECK-NEXT:    monc
 ; CHECK-NEXT:    or %s0, 0, %s62
-; CHECK-NEXT:  .LBB2_2:
+; CHECK-NEXT:  .LBB2_1:
 ; CHECK-NEXT:    stl %s0, 12(, %s11)
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -69,8 +69,8 @@ define i32 @func_alloca(i32 signext %0) {
 ; PIC-LABEL: func_alloca:
 ; PIC:       # %bb.0:
 ; PIC-NEXT:    adds.l %s11, -16, %s11
-; PIC-NEXT:    brge.l.t %s11, %s8, .LBB2_2
-; PIC-NEXT:  # %bb.1:
+; PIC-NEXT:    brge.l.t %s11, %s8, .LBB2_1
+; PIC-NEXT:  # %bb.2:
 ; PIC-NEXT:    ld %s61, 24(, %s14)
 ; PIC-NEXT:    or %s62, 0, %s0
 ; PIC-NEXT:    lea %s63, 315
@@ -79,7 +79,7 @@ define i32 @func_alloca(i32 signext %0) {
 ; PIC-NEXT:    shm.l %s11, 16(%s61)
 ; PIC-NEXT:    monc
 ; PIC-NEXT:    or %s0, 0, %s62
-; PIC-NEXT:  .LBB2_2:
+; PIC-NEXT:  .LBB2_1:
 ; PIC-NEXT:    stl %s0, 12(, %s11)
 ; PIC-NEXT:    adds.l %s11, 16, %s11
 ; PIC-NEXT:    b.l.t (, %s10)

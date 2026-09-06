@@ -2,7 +2,7 @@
 
 define i64 @leam(i64 %x) nounwind {
 ; CHECK-LABEL: leam:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    lea %s0, 8(%s11)
 ; CHECK-NEXT:    #NO_APP

@@ -2,7 +2,7 @@
 
 define ptr @test1() nounwind {
 ; CHECK-LABEL: test1:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s0, 0, %s9
 ; CHECK-NEXT:    or %s11, 0, %s9
 entry:
@@ -12,7 +12,7 @@ entry:
 
 define ptr @test2() nounwind {
 ; CHECK-LABEL: test2:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld %s0, (, %s9)
 ; CHECK-NEXT:    ld %s0, (, %s0)
 ; CHECK-NEXT:    or %s11, 0, %s9
