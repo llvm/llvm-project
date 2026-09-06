@@ -311,9 +311,13 @@ public:
   bool ExpandMOVSZX_RR(MachineInstrBuilder &MIB, bool IsSigned, MVT MVTDst,
                        MVT MVTSrc) const;
 
+  /// Move from memory and expand register class without extension
+  bool ExpandMOVX_RM(MachineInstrBuilder &MIB, unsigned Opc, MVT MVTDst,
+                     MVT MVTSrc) const;
+
   /// Move from memory and extend
-  bool ExpandMOVSZX_RM(MachineInstrBuilder &MIB, bool IsSigned,
-                       const MCInstrDesc &Desc, MVT MVTDst, MVT MVTSrc) const;
+  bool ExpandMOVSZX_RM(MachineInstrBuilder &MIB, bool IsSigned, unsigned Opc,
+                       MVT MVTDst, MVT MVTSrc) const;
 
   /// Push/Pop to/from stack
   bool ExpandPUSH_POP(MachineInstrBuilder &MIB, const MCInstrDesc &Desc,

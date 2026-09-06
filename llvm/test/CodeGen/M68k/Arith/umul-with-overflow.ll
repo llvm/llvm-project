@@ -4,13 +4,9 @@
 define zeroext i8 @umul_i8(i8 signext %a, i8 signext %b) nounwind ssp {
 ; CHECK-LABEL: umul_i8:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    moveq #0, %d0
-; CHECK-NEXT:    move.b (11,%sp), %d0
-; CHECK-NEXT:    moveq #0, %d1
-; CHECK-NEXT:    move.b (7,%sp), %d1
-; CHECK-NEXT:    muls %d0, %d1
-; CHECK-NEXT:    moveq #0, %d0
-; CHECK-NEXT:    move.w %d1, %d0
+; CHECK-NEXT:    move.b (7,%sp), %d0
+; CHECK-NEXT:    move.b (11,%sp), %d1
+; CHECK-NEXT:    muls %d1, %d0
 ; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    rts
 entry:

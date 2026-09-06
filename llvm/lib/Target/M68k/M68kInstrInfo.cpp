@@ -436,7 +436,7 @@ bool M68kInstrInfo::ExpandMOVI(MachineInstrBuilder &MIB, MVT MVTSize) const {
 
 bool M68kInstrInfo::ExpandMOVX_RR(MachineInstrBuilder &MIB, MVT MVTDst,
                                   MVT MVTSrc) const {
-  unsigned Move = MVTDst == MVT::i16 ? M68k::MOV16rr : M68k::MOV32rr;
+  unsigned Move = MVTSrc == MVT::i8 ? M68k::MOV8dd : M68k::MOV16rr;
   Register Dst = MIB->getOperand(0).getReg();
   Register Src = MIB->getOperand(1).getReg();
 
@@ -451,19 +451,19 @@ bool M68kInstrInfo::ExpandMOVX_RR(MachineInstrBuilder &MIB, MVT MVTDst,
   assert(RCDst != RCSrc && "You cannot use the same Reg Classes with MOVX_RR");
   (void)RCSrc;
 
-  // We need to find the super source register that matches the size of Dst
-  unsigned SSrc = RI.getMatchingMegaReg(Src, RCDst);
-  assert(SSrc && "No viable MEGA register available");
+  unsigned SubDst =
+      RI.getSubReg(Dst, MVTSrc == MVT::i8 ? M68k::MxSubRegIndex8Lo
+                                          : M68k::MxSubRegIndex16Lo);
+  assert(SubDst && "No viable SUB register available");
 
-  // If it happens to that super source register is the destination register
-  // we do nothing
-  if (Dst == SSrc) {
+  // If source is a subregister of destination, we do nothing
+  if (SubDst == Src) {
     LLVM_DEBUG(dbgs() << "Remove " << *MIB.getInstr() << '\n');
     MIB->eraseFromParent();
   } else { // otherwise we need to MOV
     LLVM_DEBUG(dbgs() << "Expand " << *MIB.getInstr() << " to MOV\n");
     MIB->setDesc(get(Move));
-    MIB->getOperand(1).setReg(SSrc);
+    MIB->getOperand(0).setReg(SubDst);
   }
 
   return true;
@@ -489,47 +489,53 @@ bool M68kInstrInfo::ExpandMOVSZX_RR(MachineInstrBuilder &MIB, bool IsSigned,
   assert(RCDst != RCSrc && "You cannot use the same Reg Classes with MOVSX_RR");
   (void)RCSrc;
 
-  // We need to find the super source register that matches the size of Dst
-  unsigned SSrc = RI.getMatchingMegaReg(Src, RCDst);
-  assert(SSrc && "No viable MEGA register available");
+  // Move source into subreg of the destination.
+  unsigned SubDst =
+      RI.getSubReg(Dst, MVTSrc == MVT::i8 ? M68k::MxSubRegIndex8Lo
+                                          : M68k::MxSubRegIndex16Lo);
+  assert(SubDst && "No viable SUB register available");
 
   MachineBasicBlock &MBB = *MIB->getParent();
   DebugLoc DL = MIB->getDebugLoc();
 
+  unsigned Move;
+  if (MVTSrc == MVT::i8)
+    Move = M68k::MOV8dd;
+  else
+    Move = M68k::MOV16rr;
+
   // It's more efficient to clear the destination and *then* move, rather than
   // move and zext.
-  if (Dst != SSrc && !IsSigned) {
+  if (SubDst != Src && !IsSigned) {
     LLVM_DEBUG(dbgs() << "Clear and Move" << '\n');
 
     buildClearRegister(Dst, MBB, MIB.getInstr(), DL);
 
-    if (MVTSrc == MVT::i8) {
-      unsigned SubDst = RI.getSubReg(Dst, M68k::MxSubRegIndex8Lo);
-      BuildMI(MBB, MIB.getInstr(), DL, get(M68k::MOV8dd), SubDst).addReg(Src);
-    } else { // i16
-      unsigned SubDst = RI.getSubReg(Dst, M68k::MxSubRegIndex16Lo);
-      BuildMI(MBB, MIB.getInstr(), DL, get(M68k::MOV16dd), SubDst).addReg(Src);
-    }
+    MIB->setDesc(get(Move));
+    MIB->getOperand(0).setReg(SubDst);
+    return true;
+  }
+
+  // Special case where move to AR16 automatically sign-extends to 32 bits.
+  // Even an in-place move (move.w a0,a0) will do so.
+  if (M68k::AR32RegClass.contains(Dst) && IsSigned) {
+    LLVM_DEBUG(dbgs() << "Move (implicit Sign Extend)" << '\n');
+    MIB->setDesc(get(M68k::MOV16ar));
+    MIB->getOperand(0).setReg(SubDst);
+    return true;
+  }
+
+  if (SubDst != Src) {
+    LLVM_DEBUG(dbgs() << "Move and " << '\n');
+    BuildMI(MBB, MIB.getInstr(), DL, get(Move), SubDst).addReg(Src);
+  }
+
+  if (IsSigned) {
+    LLVM_DEBUG(dbgs() << "Sign Extend" << '\n');
+    AddSExt(MBB, MIB.getInstr(), DL, Dst, MVTSrc, MVTDst);
   } else {
-
-    unsigned Move;
-    if (MVTDst == MVT::i16)
-      Move = M68k::MOV16dd;
-    else // i32
-      Move = M68k::MOV32dd;
-
-    if (Dst != SSrc) {
-      LLVM_DEBUG(dbgs() << "Move and " << '\n');
-      BuildMI(MBB, MIB.getInstr(), DL, get(Move), Dst).addReg(SSrc);
-    }
-
-    if (IsSigned) {
-      LLVM_DEBUG(dbgs() << "Sign Extend" << '\n');
-      AddSExt(MBB, MIB.getInstr(), DL, Dst, MVTSrc, MVTDst);
-    } else {
-      LLVM_DEBUG(dbgs() << "Zero Extend" << '\n');
-      AddZExt(MBB, MIB.getInstr(), DL, Dst, MVTSrc, MVTDst);
-    }
+    LLVM_DEBUG(dbgs() << "Zero Extend" << '\n');
+    AddZExt(MBB, MIB.getInstr(), DL, Dst, MVTSrc, MVTDst);
   }
 
   MIB->eraseFromParent();
@@ -537,18 +543,14 @@ bool M68kInstrInfo::ExpandMOVSZX_RR(MachineInstrBuilder &MIB, bool IsSigned,
   return true;
 }
 
-bool M68kInstrInfo::ExpandMOVSZX_RM(MachineInstrBuilder &MIB, bool IsSigned,
-                                    const MCInstrDesc &Desc, MVT MVTDst,
-                                    MVT MVTSrc) const {
-  LLVM_DEBUG(dbgs() << "Expand " << *MIB.getInstr() << " to ");
+bool M68kInstrInfo::ExpandMOVX_RM(MachineInstrBuilder &MIB, unsigned Opc,
+                                  MVT MVTDst, MVT MVTSrc) const {
+  LLVM_DEBUG(dbgs() << "Expand " << *MIB.getInstr() << " to LOAD" << '\n');
 
+  const MCInstrDesc &Desc = get(Opc);
   Register Dst = MIB->getOperand(0).getReg();
 
-  // We need the subreg of Dst to make instruction verifier happy because the
-  // real machine instruction consumes and produces values of the same size and
-  // the registers the will be used here fall into different classes and this
-  // makes IV cry. We could use a bigger operation, but this will put some
-  // pressure on cache and memory, so no.
+  // Load source into subreg of the destination.
   unsigned SubDst =
       RI.getSubReg(Dst, MVTSrc == MVT::i8 ? M68k::MxSubRegIndex8Lo
                                           : M68k::MxSubRegIndex16Lo);
@@ -557,6 +559,34 @@ bool M68kInstrInfo::ExpandMOVSZX_RM(MachineInstrBuilder &MIB, bool IsSigned,
   // Make this a plain move
   MIB->setDesc(Desc);
   MIB->getOperand(0).setReg(SubDst);
+
+  return true;
+}
+
+bool M68kInstrInfo::ExpandMOVSZX_RM(MachineInstrBuilder &MIB, bool IsSigned,
+                                    unsigned Opc, MVT MVTDst,
+                                    MVT MVTSrc) const {
+  LLVM_DEBUG(dbgs() << "Expand " << *MIB.getInstr() << " to ");
+
+  const MCInstrDesc &Desc = get(Opc);
+  Register Dst = MIB->getOperand(0).getReg();
+
+  // Load source into subreg of the destination.
+  unsigned SubDst =
+      RI.getSubReg(Dst, MVTSrc == MVT::i8 ? M68k::MxSubRegIndex8Lo
+                                          : M68k::MxSubRegIndex16Lo);
+  assert(SubDst && "No viable SUB register available");
+
+  // Make this a plain move
+  MIB->setDesc(Desc);
+  MIB->getOperand(0).setReg(SubDst);
+
+  // Special case where move to AR16 automatically sign-extends to 32 bits. In
+  // that case, we're already done.
+  if (M68k::AR32RegClass.contains(Dst) && IsSigned) {
+    LLVM_DEBUG(dbgs() << "LOAD (implicit Sign Extend)" << '\n');
+    return true;
+  }
 
   MachineBasicBlock::iterator I = MIB.getInstr();
   MachineBasicBlock &MBB = *MIB->getParent();
@@ -758,16 +788,16 @@ void M68kInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // upper bits will be undefined.
   // 8 -> 16
   else if (M68k::DR8RegClass.contains(SrcReg) &&
-           M68k::XR16RegClass.contains(DstReg)) {
+           M68k::DR16RegClass.contains(DstReg)) {
     Opc = M68k::MOVXd16d8;
     // 8 -> 32
   } else if (M68k::DR8RegClass.contains(SrcReg) &&
-             M68k::XR32RegClass.contains(DstReg)) {
+             M68k::DR32RegClass.contains(DstReg)) {
     Opc = M68k::MOVXd32d8;
     // 16 -> 32
   } else if (M68k::XR16RegClass.contains(SrcReg) &&
              M68k::XR32RegClass.contains(DstReg)) {
-    Opc = M68k::MOVXd32d16;
+    Opc = M68k::MOVXr32r16;
   }
 
   // Copy from CCR
