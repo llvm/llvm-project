@@ -493,8 +493,15 @@ CodeGenTypes::arrangeCXXStructorDeclaration(GlobalDecl GD) {
                            : getCXXABI().hasMostDerivedReturn(GD)
                                ? CGM.getContext().VoidPtrTy
                                : Context.VoidTy;
-  return arrangeLLVMFunctionInfo(resultType, FnInfoOpts::IsInstanceMethod,
-                                 argTypes, extInfo, paramInfos, required, MD);
+  // Herbception: a `throws` constructor must carry the error discriminant
+  // through its (normally void) return slot, exactly like an ordinary throws
+  // function, so its body can propagate errors and its callers can read the
+  // discriminant. (Destructors and `return_failure{E}` are not permitted on
+  // constructors, so only the `throws` spec applies here.)
+  return arrangeLLVMFunctionInfo(
+      resultType, FnInfoOpts::IsInstanceMethod, argTypes, extInfo, paramInfos,
+      required, MD, FTP.getTypePtr()->hasBasicThrowsSpec(),
+      getHerbceptionErrorType(*this, FTP.getTypePtr()));
 }
 
 static CanQualTypeList getArgTypesForCall(ASTContext &ctx,
@@ -564,9 +571,13 @@ const CGFunctionInfo &CodeGenTypes::arrangeCXXConstructorCall(
                                 ArgTypes.size());
   }
 
-  return arrangeLLVMFunctionInfo(ResultType, FnInfoOpts::IsInstanceMethod,
-                                 ArgTypes, Info, ParamInfos, Required,
-                                 ABIInfoFD);
+  // Herbception: a call to a `throws` constructor carries the error
+  // discriminant in its (normally void) return slot, so the call site must
+  // agree with the constructor's definition ABI.
+  return arrangeLLVMFunctionInfo(
+      ResultType, FnInfoOpts::IsInstanceMethod, ArgTypes, Info, ParamInfos,
+      Required, ABIInfoFD, FPT.getTypePtr()->hasBasicThrowsSpec(),
+      getHerbceptionErrorType(*this, FPT.getTypePtr()));
 }
 
 /// Arrange the argument and result information for the declaration or
@@ -7034,8 +7045,32 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         EmitBlock(OkBB);
       } else {
         CGM.getDiags().Report(
-             Loc, diag::err_herbceptions_non_throws_call_throws);
+            Loc, diag::err_herbceptions_non_throws_call_throws);
       }
+    } else {
+      // A bare throws call escaping into a `throws` function with no enclosing
+      // catch-throws handler. Sema wraps ordinary (CallExpr) throws calls in
+      // `try(expr)`, but it does not wrap constructor/destructor calls or
+      // indirect calls, so auto-propagate the error here: store the payload
+      // into the return slot, set the discriminant, and take the error path.
+      assert(this->ReturnValue.isValid() &&
+             "throws function has no return value slot");
+      llvm::BasicBlock *OkBB = createBasicBlock("herb.autoprop.ok");
+      llvm::BasicBlock *ErrBB = createBasicBlock("herb.autoprop.err");
+      Builder.CreateCondBr(Disc, ErrBB, OkBB);
+      EmitBlock(ErrBB);
+      {
+        RunCleanupsScope CleanupScope(*this);
+        if (Payload->getType() != this->ReturnValue.getElementType())
+          Payload = Builder.CreateBitCast(
+              Payload, this->ReturnValue.getElementType());
+        auto *I = Builder.CreateStore(Payload, this->ReturnValue);
+        addInstToCurrentSourceAtom(I, I->getValueOperand());
+        Builder.CreateStore(Disc, HerbceptionDiscriminant);
+        CleanupScope.ForceCleanup();
+        EmitBranchThroughCleanup(ReturnBlock);
+      }
+      EmitBlock(OkBB);
     }
   }
 
