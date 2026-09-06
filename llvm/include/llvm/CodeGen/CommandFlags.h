@@ -87,8 +87,6 @@ LLVM_ABI std::string getTrapFuncName();
 
 LLVM_ABI bool getUseCtors();
 
-LLVM_ABI bool getDisableIntegratedAS();
-
 LLVM_ABI bool getDataSections();
 LLVM_ABI std::optional<bool> getExplicitDataSections();
 
