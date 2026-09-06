@@ -17,7 +17,6 @@
 #include <iostream>
 #include <print>
 
-#include "__rcu/rcu_domain.h"
 #include "make_test_thread.h"
 #include "test_macros.h"
 
