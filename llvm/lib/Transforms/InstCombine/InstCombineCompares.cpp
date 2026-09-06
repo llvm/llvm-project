@@ -9079,6 +9079,69 @@ static Instruction *foldFCmpFAbsFSubIntToFP(FCmpInst &I, InstCombinerImpl &IC) {
   return new ICmpInst(ResultPred, A, B);
 }
 
+// fcmp pred (uitofp X), (uitofp Y) --> icmp upred X, Y
+// fcmp pred (sitofp X), (sitofp Y) --> icmp spred X, Y
+// Valid when both integers are exactly representable in the float: int->fp is
+// never NaN and keeps their ordering. canBeCastedExactlyIntToFP() uses range
+// info, so this also fires for range-limited operands (e.g. masked values).
+static Instruction *foldFCmpTwoIntToFP(FCmpInst &I, InstCombinerImpl &IC) {
+  Value *X, *Y;
+  bool IsSigned;
+  if (match(I.getOperand(0), m_UIToFP(m_Value(X))) &&
+      match(I.getOperand(1), m_UIToFP(m_Value(Y))))
+    IsSigned = false;
+  else if (match(I.getOperand(0), m_SIToFP(m_Value(X))) &&
+           match(I.getOperand(1), m_SIToFP(m_Value(Y))))
+    IsSigned = true;
+  else
+    return nullptr;
+
+  // Only handle a matching integer type on both sides.
+  if (X->getType() != Y->getType())
+    return nullptr;
+
+  Type *FPTy = I.getOperand(0)->getType();
+  if (!IC.canBeCastedExactlyIntToFP(X, FPTy, IsSigned, &I) ||
+      !IC.canBeCastedExactlyIntToFP(Y, FPTy, IsSigned, &I))
+    return nullptr;
+
+  // Neither operand can be NaN, so ordered and unordered predicates match.
+  ICmpInst::Predicate Pred;
+  switch (I.getPredicate()) {
+  case FCmpInst::FCMP_OEQ:
+  case FCmpInst::FCMP_UEQ:
+    Pred = ICmpInst::ICMP_EQ;
+    break;
+  case FCmpInst::FCMP_ONE:
+  case FCmpInst::FCMP_UNE:
+    Pred = ICmpInst::ICMP_NE;
+    break;
+  case FCmpInst::FCMP_OGT:
+  case FCmpInst::FCMP_UGT:
+    Pred = IsSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
+    break;
+  case FCmpInst::FCMP_OGE:
+  case FCmpInst::FCMP_UGE:
+    Pred = IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
+    break;
+  case FCmpInst::FCMP_OLT:
+  case FCmpInst::FCMP_ULT:
+    Pred = IsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
+    break;
+  case FCmpInst::FCMP_OLE:
+  case FCmpInst::FCMP_ULE:
+    Pred = IsSigned ? ICmpInst::ICMP_SLE : ICmpInst::ICMP_ULE;
+    break;
+  case FCmpInst::FCMP_ORD:
+    return IC.replaceInstUsesWith(I, ConstantInt::getTrue(I.getType()));
+  case FCmpInst::FCMP_UNO:
+    return IC.replaceInstUsesWith(I, ConstantInt::getFalse(I.getType()));
+  default:
+    return nullptr;
+  }
+  return new ICmpInst(Pred, X, Y);
+}
+
 static Instruction *foldFCmpWithFloorAndCeil(FCmpInst &I,
                                              InstCombinerImpl &IC) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
@@ -9394,6 +9457,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
     return R;
 
   if (Instruction *R = foldFCmpFAbsFSubIntToFP(I, *this))
+    return R;
+
+  if (Instruction *R = foldFCmpTwoIntToFP(I, *this))
     return R;
 
   if (Instruction *R = foldSqrtWithFcmpZero(I, *this))
