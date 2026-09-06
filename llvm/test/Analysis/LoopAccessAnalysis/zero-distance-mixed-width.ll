@@ -9,10 +9,9 @@
 define void @load32_store64_stride8(ptr %base, i32 %before, i64 %after) {
 ; CHECK-LABEL: 'load32_store64_stride8'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            %value = load i32, ptr %p, align 1 ->
 ; CHECK-NEXT:            store i64 %after, ptr %p, align 1
 ; CHECK-EMPTY:
@@ -52,10 +51,9 @@ exit:
 define void @load8_store16_stride2(ptr %base, i8 %before, i16 %after) {
 ; CHECK-LABEL: 'load8_store16_stride2'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            %value = load i8, ptr %p, align 1 ->
 ; CHECK-NEXT:            store i16 %after, ptr %p, align 1
 ; CHECK-EMPTY:
@@ -95,10 +93,9 @@ exit:
 define void @load8_store64_stride8(ptr %base, i8 %before, i64 %after) {
 ; CHECK-LABEL: 'load8_store64_stride8'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            %value = load i8, ptr %p, align 1 ->
 ; CHECK-NEXT:            store i64 %after, ptr %p, align 1
 ; CHECK-EMPTY:
@@ -138,10 +135,9 @@ exit:
 define void @load24_store64_stride8(ptr %base, i24 %before, i64 %after) {
 ; CHECK-LABEL: 'load24_store64_stride8'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            %value = load i24, ptr %p, align 1 ->
 ; CHECK-NEXT:            store i64 %after, ptr %p, align 1
 ; CHECK-EMPTY:
@@ -181,10 +177,9 @@ exit:
 define void @load32_store64_stride16(ptr %base, i32 %before, i64 %after) {
 ; CHECK-LABEL: 'load32_store64_stride16'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            %value = load i32, ptr %p, align 1 ->
 ; CHECK-NEXT:            store i64 %after, ptr %p, align 1
 ; CHECK-EMPTY:
@@ -224,10 +219,9 @@ exit:
 define void @load32_store64_reverse(ptr %base, i32 %before, i64 %after) {
 ; CHECK-LABEL: 'load32_store64_reverse'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            %value = load i32, ptr %p, align 1 ->
 ; CHECK-NEXT:            store i64 %after, ptr %p, align 1
 ; CHECK-EMPTY:
@@ -267,10 +261,9 @@ exit:
 define void @load64_store32_stride8(ptr %base, i64 %before, i32 %after) {
 ; CHECK-LABEL: 'load64_store32_stride8'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            %value = load i64, ptr %p, align 1 ->
 ; CHECK-NEXT:            store i32 %after, ptr %p, align 1
 ; CHECK-EMPTY:
@@ -310,10 +303,9 @@ exit:
 define void @store64_load32_stride8(ptr %base, i32 %before, i64 %after) {
 ; CHECK-LABEL: 'store64_load32_stride8'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            store i64 %after, ptr %p, align 1 ->
 ; CHECK-NEXT:            %value = load i32, ptr %p, align 1
 ; CHECK-EMPTY:
@@ -351,10 +343,9 @@ exit:
 define void @store32_store64_stride8(ptr %base, i32 %first, i64 %second) {
 ; CHECK-LABEL: 'store32_store64_stride8'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            store i32 %first, ptr %p, align 1 ->
 ; CHECK-NEXT:            store i64 %second, ptr %q, align 1
 ; CHECK-EMPTY:
@@ -389,10 +380,9 @@ exit:
 define void @load32_store64_dynamic_trip_count(ptr %base, i64 %n,
 ; CHECK-LABEL: 'load32_store64_dynamic_trip_count'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            %value = load i32, ptr %p, align 1 ->
 ; CHECK-NEXT:            store i64 %after, ptr %p, align 1
 ; CHECK-EMPTY:

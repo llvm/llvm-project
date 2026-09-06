@@ -2377,8 +2377,17 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // Negative distances are not plausible dependencies.
   if (SE.isKnownNonPositive(Dist)) {
     if (SE.isKnownNonNegative(Dist)) {
-      if (HasSameSize) {
-        // Write to the same location with the same size.
+      if (HasSameSize || CommonStride) {
+        // Equal-sized accesses to the same location are forward.
+        //
+        // Invariant from getDependenceDistanceStrideAndSize: both accesses have
+        // non-zero strides in the same direction, each a multiple of its type's
+        // allocation size in bytes.
+        //
+        // When CommonStride is present, its value is therefore at least as
+        // large as either access size. With equal starting addresses, different
+        // iterations cannot overlap, leaving only a loop-independent forward
+        // dependence, even for mixed sizes.
         return Dependence::Forward;
       }
       LLVM_DEBUG(dbgs() << "LAA: possibly zero dependence difference but "
