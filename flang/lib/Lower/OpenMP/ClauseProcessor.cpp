@@ -2119,6 +2119,18 @@ bool ClauseProcessor::processReduction(
     llvm::SmallVectorImpl<Object> &outReductionObjects,
     llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache)
     const {
+  std::optional<ReductionModifier> commonModifier;
+  findRepeatableClause<omp::clause::Reduction>(
+      [&](const omp::clause::Reduction &clause, const parser::CharBlock &) {
+        const auto &modifier =
+            std::get<std::optional<ReductionModifier>>(clause.t);
+        ReductionModifier effectiveModifier =
+            modifier.value_or(ReductionModifier::Default);
+        if (commonModifier && *commonModifier != effectiveModifier)
+          TODO(currentLocation, "REDUCTION clauses with different modifiers");
+        commonModifier = effectiveModifier;
+      });
+
   return findRepeatableClause<omp::clause::Reduction>(
       [&](const omp::clause::Reduction &clause, const parser::CharBlock &) {
         llvm::SmallVector<mlir::Value> reductionVars;

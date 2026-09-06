@@ -77,6 +77,16 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -o - %t/scope-udr-element.f90 2>&1 | FileCheck %s --check-prefix=SCOPE-UDR-ELEMENT
 ! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/do-udr-element.f90 2>&1 | FileCheck %s --check-prefix=DO-UDR-ELEMENT
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %t/do-udr-element.f90 2>&1 | FileCheck %s --check-prefix=DO-UDR-ELEMENT
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/do-mixed-task-first-section.f90 2>&1 | FileCheck %s --check-prefix=MIXED-TASK-FIRST-SECTION
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/do-mixed-task-first-section.f90 2>&1 | FileCheck %s --check-prefix=MIXED-TASK-FIRST-SECTION
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/do-mixed-task-last-section.f90 2>&1 | FileCheck %s --check-prefix=MIXED-TASK-LAST-SECTION
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/do-mixed-task-last-section.f90 2>&1 | FileCheck %s --check-prefix=MIXED-TASK-LAST-SECTION
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/do-mixed-task-first.f90 2>&1 | FileCheck %s --check-prefix=MIXED-TASK-FIRST
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/do-mixed-task-first.f90 2>&1 | FileCheck %s --check-prefix=MIXED-TASK-FIRST
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/do-mixed-task-last.f90 2>&1 | FileCheck %s --check-prefix=MIXED-TASK-LAST
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/do-mixed-task-last.f90 2>&1 | FileCheck %s --check-prefix=MIXED-TASK-LAST
+! RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/do-equivalent-modifiers.f90 | FileCheck %s --check-prefix=EQUIVALENT-MODIFIERS --implicit-check-not="not yet implemented"
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/do-equivalent-modifiers.f90 | FileCheck %s --check-prefix=EQUIVALENT-MODIFIERS --implicit-check-not="not yet implemented"
 
 ! An array element or section in a task reduction and the implicitly
 ! firstprivate base array are represented by separate block arguments. Reject
@@ -118,6 +128,15 @@
 ! SECTIONS-UDR-ELEMENT: not yet implemented: REDUCTION of an array element using a user-defined reduction
 ! SCOPE-UDR-ELEMENT: not yet implemented: REDUCTION of an array element using a user-defined reduction
 ! DO-UDR-ELEMENT: not yet implemented: REDUCTION of an array element using a user-defined reduction
+! MIXED-TASK-FIRST-SECTION: not yet implemented: REDUCTION with TASK modifier of a partial array section
+! MIXED-TASK-LAST-SECTION: not yet implemented: REDUCTION with TASK modifier of a partial array section
+! MIXED-TASK-FIRST: not yet implemented: REDUCTION clauses with different modifiers
+! MIXED-TASK-LAST: not yet implemented: REDUCTION clauses with different modifiers
+
+! EQUIVALENT-MODIFIERS-LABEL: func.func @_QPequivalent_default_modifiers
+! EQUIVALENT-MODIFIERS: omp.wsloop {{.*}}reduction(mod: defaultmod
+! EQUIVALENT-MODIFIERS-LABEL: func.func @_QPequivalent_task_modifiers
+! EQUIVALENT-MODIFIERS: omp.wsloop {{.*}}reduction(mod: task
 
 !--- task.f90
 subroutine task_reduction_element(a)
@@ -473,6 +492,75 @@ subroutine do_udr_element(a)
   !$omp do reduction(myred : a(2))
   do i = 1, 1
     a(2) = a(2) + i
+  end do
+  !$omp end do
+end subroutine
+
+!--- do-mixed-task-first-section.f90
+subroutine do_mixed_task_first_section(a, x)
+  integer :: a(4), x, i
+  !$omp declare reduction(myred : integer : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1)
+  !$omp do reduction(task, myred : a(2:3)) reduction(default, + : x)
+  do i = 1, 1
+    a(2:3) = a(2:3) + i
+    x = x + i
+  end do
+  !$omp end do
+end subroutine
+
+!--- do-mixed-task-last-section.f90
+subroutine do_mixed_task_last_section(a, x)
+  integer :: a(4), x, i
+  !$omp declare reduction(myred : integer : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1)
+  !$omp do reduction(default, + : x) reduction(task, myred : a(2:3))
+  do i = 1, 1
+    a(2:3) = a(2:3) + i
+    x = x + i
+  end do
+  !$omp end do
+end subroutine
+
+!--- do-mixed-task-first.f90
+subroutine do_mixed_task_first(x, y)
+  integer :: x, y, i
+  !$omp do reduction(task, + : x) reduction(+ : y)
+  do i = 1, 1
+    x = x + i
+    y = y + i
+  end do
+  !$omp end do
+end subroutine
+
+!--- do-mixed-task-last.f90
+subroutine do_mixed_task_last(x, y)
+  integer :: x, y, i
+  !$omp do reduction(+ : y) reduction(task, + : x)
+  do i = 1, 1
+    x = x + i
+    y = y + i
+  end do
+  !$omp end do
+end subroutine
+
+!--- do-equivalent-modifiers.f90
+subroutine equivalent_default_modifiers(x, y)
+  integer :: x, y, i
+  !$omp do reduction(default, + : x) reduction(+ : y)
+  do i = 1, 1
+    x = x + i
+    y = y + i
+  end do
+  !$omp end do
+end subroutine
+
+subroutine equivalent_task_modifiers(x, y)
+  integer :: x, y, i
+  !$omp do reduction(task, + : x) reduction(task, + : y)
+  do i = 1, 1
+    x = x + i
+    y = y + i
   end do
   !$omp end do
 end subroutine
