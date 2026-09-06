@@ -12,6 +12,7 @@
 // <rcu>
 
 #include <atomic>
+#include <cstddef>
 #include <rcu>
 #include <shared_mutex>
 #include <stop_token>
@@ -28,11 +29,14 @@
 constexpr int num_reader = 4;
 const std::chrono::seconds test_time(10);
 
+
 struct alignas(128) MyObject : public std::rcu_obj_base<MyObject> {
   std::string data_;
+  std::atomic<size_t>& destruction_count_;
 
   inline static int instance_count = 0;
-  MyObject() : data_(std::to_string(instance_count++) + " instance very very very long string") {}
+  MyObject(std::atomic<size_t>& count) : data_(std::to_string(instance_count++) + " instance very very very long string"), destruction_count_(count) {}
+  ~MyObject() {destruction_count_.fetch_add(1, std::memory_order_relaxed);}
 
   void doWork() {
     auto spin_for = [](std::chrono::microseconds us) {
@@ -47,11 +51,13 @@ struct alignas(128) MyObject : public std::rcu_obj_base<MyObject> {
 
 
 void test_read_write_lock() {
-  MyObject* globalObjRWLock = new MyObject();
+  std::atomic<size_t> destruction_count = 0;
+  MyObject* globalObjRWLock = new MyObject(destruction_count);
   std::shared_mutex globalObjMutex;
 
   std::vector<std::jthread> readers;
   readers.reserve(num_reader);
+
 
   auto reader_func = [&globalObjRWLock, &globalObjMutex](std::stop_token token) {
     int read_count = 0;
@@ -63,10 +69,10 @@ void test_read_write_lock() {
     std::println("Reader thread read {} times", read_count);
   };
 
-  auto writer_func = [&globalObjRWLock, &globalObjMutex](std::stop_token token) {
+  auto writer_func = [&globalObjRWLock, &globalObjMutex, &destruction_count](std::stop_token token) {
     int write_count = 0;
     while (!token.stop_requested()) {
-      auto newObj = new MyObject();
+      auto newObj = new MyObject(destruction_count);
       std::unique_lock<std::shared_mutex> lock(globalObjMutex);
       auto oldObj     = globalObjRWLock;
       globalObjRWLock = newObj;
@@ -89,14 +95,17 @@ void test_read_write_lock() {
     reader.request_stop();
   }
   writer.request_stop();
+  std::println("Writer thread destruction {} times", destruction_count.load());
 }
 
 void test_rcu() {
+  std::atomic<size_t> destruction_count = 0;
   std::rcu_domain& dom = std::rcu_default_domain();
-  std::atomic<MyObject*> global_obj_rcu = new MyObject();
+  std::atomic<MyObject*> global_obj_rcu = new MyObject(destruction_count);
 
   std::vector<std::jthread> readers;
   readers.reserve(num_reader);
+
 
   auto reader_func = [&dom, &global_obj_rcu](std::stop_token token) {
     int read_count = 0;
@@ -110,10 +119,10 @@ void test_rcu() {
     std::println("RCU Reader thread read {} times", read_count);
   };
 
-  auto writer_func = [&global_obj_rcu](std::stop_token token) {
+  auto writer_func = [&global_obj_rcu, &destruction_count](std::stop_token token) {
     int write_count = 0;
     while (!token.stop_requested()) {
-      auto newObj = new MyObject();
+      auto newObj = new MyObject(destruction_count);
       auto oldObj = global_obj_rcu.exchange(newObj, std::memory_order_relaxed);
       oldObj->retire();
       ++write_count;
@@ -124,7 +133,7 @@ void test_rcu() {
 
   auto syncer_func = [&dom](std::stop_token token) {
     while (!token.stop_requested()) {
-      std::rcu_synchronize(dom);
+     std::rcu_synchronize(dom);
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
   };
@@ -143,6 +152,7 @@ void test_rcu() {
   writer.request_stop();
   syncer.request_stop();
   std::rcu_synchronize(dom);
+  std::println("RCU Writer thread destruction {} times", destruction_count.load());
 }
 
 int main(int, char**) {

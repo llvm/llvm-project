@@ -11,7 +11,7 @@
 #define _LIBCPP___RCU_RCU_DOMAIN_H
 
 #include <__config>
-#include <__functional/function.h>
+#include <__functional/function_ref.h>
 #include <__memory/unique_ptr.h>
 #include <__utility/move.h>
 
@@ -25,11 +25,26 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 #if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_THREADS && _LIBCPP_HAS_EXPERIMENTAL_RCU
 
 struct __rcu_node {
-  function<void()> __callback_{};
-  __rcu_node* __next_ = nullptr;
+  function_ref<void()> __callback_ = std::cw<[] {}>;
+  __rcu_node* __next_              = nullptr;
 
   _LIBCPP_HIDE_FROM_ABI __rcu_node() {}
   _LIBCPP_HIDE_FROM_ABI ~__rcu_node() {}
+};
+
+template <class _Tp, class _Deleter>
+struct __rcu_node_with_deleter : __rcu_node {
+  _Tp* __obj_;
+  _LIBCPP_NO_UNIQUE_ADDRESS _Deleter __deleter_ = _Deleter();
+
+  _LIBCPP_HIDE_FROM_ABI __rcu_node_with_deleter(_Tp* __obj, _Deleter __deleter) : __obj_(__obj), __deleter_(__deleter) {
+    __callback_ = function_ref<void()>(std::cw<&__rcu_node_with_deleter::__destroy>, this);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI void __destroy() const {
+    __deleter_(__obj_);
+    delete this;
+  }
 };
 
 class _LIBCPP_EXPORTED_FROM_ABI rcu_domain {
@@ -46,11 +61,7 @@ class _LIBCPP_EXPORTED_FROM_ABI rcu_domain {
 
   template <class _Tp, class _Dp = default_delete<_Tp>>
   _LIBCPP_HIDE_FROM_ABI void __rcu_retire_hidden_friend(_Tp* __tp, _Dp __deleter, rcu_domain& __dom) {
-    auto* __node        = new __rcu_node();
-    __node->__callback_ = [__tp, __node, __deleter = std::move(__deleter)]() mutable {
-      __deleter(__tp);
-      delete __node;
-    };
+    auto* __node = new __rcu_node_with_deleter<_Tp, _Dp>(__tp, std::move(__deleter));
     __dom.__retire(__node);
   }
 
