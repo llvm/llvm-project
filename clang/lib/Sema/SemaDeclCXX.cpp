@@ -4245,7 +4245,8 @@ ExprResult Sema::ConvertMemberDefaultInitExpression(FieldDecl *FD,
           ? InitializationKind::CreateDirectList(InitExpr->getBeginLoc(),
                                                  InitExpr->getBeginLoc(),
                                                  InitExpr->getEndLoc())
-          : InitializationKind::CreateCopy(InitExpr->getBeginLoc(), InitLoc);
+          : InitializationKind::CreateCopy(InitExpr->getBeginLoc(),
+                                           InitExpr->getBeginLoc());
   InitializationSequence Seq(*this, Entity, Kind, InitExpr);
   return Seq.Perform(*this, Entity, Kind, InitExpr);
 }
