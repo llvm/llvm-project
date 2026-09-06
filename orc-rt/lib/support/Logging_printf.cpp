@@ -13,7 +13,7 @@
 
 #include "orc-rt-c/support/Logging.h"
 
-#include "orc-rt-internal/bedrock/Environment.h"
+#include "orc-rt-internal/support/Environment.h"
 
 #include <algorithm>
 #include <cstdarg>

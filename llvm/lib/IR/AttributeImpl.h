@@ -351,14 +351,7 @@ public:
   iterator begin() const { return getTrailingObjects(); }
   iterator end() const { return begin() + NumAttrs; }
 
-  void Profile(FoldingSetNodeID &ID) const {
-    Profile(ID, ArrayRef(begin(), end()));
-  }
-
-  static void Profile(FoldingSetNodeID &ID, ArrayRef<Attribute> AttrList) {
-    for (const auto &Attr : AttrList)
-      Attr.Profile(ID);
-  }
+  ArrayRef<Attribute> getKey() const { return getTrailingObjects(NumAttrs); }
 };
 
 //===----------------------------------------------------------------------===//
@@ -402,8 +395,9 @@ public:
   iterator begin() const { return getTrailingObjects(); }
   iterator end() const { return begin() + NumAttrSets; }
 
-  void Profile(FoldingSetNodeID &ID) const;
-  static void Profile(FoldingSetNodeID &ID, ArrayRef<AttributeSet> Nodes);
+  ArrayRef<AttributeSet> getKey() const {
+    return getTrailingObjects(NumAttrSets);
+  }
 
   void dump() const;
 };

@@ -851,13 +851,14 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
   }
 
   case CK_PointerToBoolean:
-  case CK_MemberPointerToBoolean: {
-    PrimType PtrT = classifyPrim(SubExpr->getType());
-
     if (!this->visit(SubExpr))
       return false;
-    return this->emitIsNonNull(PtrT, E);
-  }
+    return this->emitIsNonNullPtr(E);
+
+  case CK_MemberPointerToBoolean:
+    if (!this->visit(SubExpr))
+      return false;
+    return this->emitIsNonNullMemberPtr(E);
 
   case CK_IntegralComplexToBoolean:
   case CK_FloatingComplexToBoolean: {
@@ -4354,11 +4355,9 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
         if (IsNoThrow) {
           if (!this->emitDupPtr(E))
             return false;
-          if (!this->emitNullPtr(0, nullptr, E))
+          if (!this->emitIsNonNullPtr(E))
             return false;
-          if (!this->emitEQPtr(E))
-            return false;
-          if (!this->jumpTrue(EndLabel, E))
+          if (!this->jumpFalse(EndLabel, E))
             return false;
         }
 
@@ -6955,6 +6954,7 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
   if (!this->visitStmt(EndStmt))
     return false;
 
+  LocalScope<Emitter> CondScope(this);
   // Now the condition as well as the loop variable assignment.
   this->fallthrough(CondLabel);
   this->emitLabel(CondLabel);
@@ -6977,6 +6977,8 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
       return false;
   }
 
+  if (!CondScope.destroyLocals())
+    return false;
   if (!this->jump(CondLabel, S))
     return false;
 
