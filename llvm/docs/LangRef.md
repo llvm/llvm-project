@@ -7778,12 +7778,21 @@ Example (assuming 64-bit pointers):
 
 #### '`callees`' Metadata
 
-`callees` metadata may be attached to indirect call sites. If `callees`
-metadata is attached to a call site, and any callee is not among the set of
-functions provided by the metadata, the behavior is undefined. The intent of
-this metadata is to facilitate optimizations such as indirect-call promotion.
-For example, in the code below, the call instruction may only target the
-`add` or `sub` functions:
+`callees` metadata may be attached to indirect call sites.
+Its operands provide an exhaustive list of possible callees.
+The list may be conservative: a listed function need not be dynamically feasible, but on every defined execution of the call the callee must be one of the listed functions.
+The order and duplication of operands are semantically irrelevant.
+The intent of this metadata is to facilitate optimizations such as indirect-call promotion.
+
+An empty node is an exhaustive empty set, so executing the call has undefined behavior.
+If the metadata is absent, no exhaustive callee information is provided.
+
+Each operand must refer to a `Function`.
+If any operand does not, the entire attachment provides no information and must be ignored.
+This includes null operands left behind when a function referenced only through metadata is deleted.
+An attachment on a non-indirect call likewise provides no information.
+
+For example, in the code below, the call instruction may only target the `add` or `sub` functions:
 
 ```llvm
 %result = call i64 %binop(i64 %x, i64 %y), !callees !0
