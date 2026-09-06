@@ -44,3 +44,71 @@ define void @memset(i64 %len) {
   call void @llvm.memset.p0.i64(ptr %dst, i8 0, i64 %len, i1 false)
   ret void
 }
+
+; The align attribute on a memory intrinsic is not proof of an access (the
+; length may be zero and the pointer poison), so it must not be used to
+; infer the alignment of other accesses to the same pointer.
+define void @memset_attr_does_not_seed_store(ptr %p, i64 %len) {
+; CHECK-LABEL: define void @memset_attr_does_not_seed_store(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[LEN:%.*]]) {
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[P]], i8 0, i64 [[LEN]], i1 false)
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0.i64(ptr align 16 %p, i8 0, i64 %len, i1 false)
+  store i32 0, ptr %p
+  ret void
+}
+
+define i32 @memcpy_attr_does_not_seed_load_store(ptr %dst, ptr %src, i64 %len) {
+; CHECK-LABEL: define i32 @memcpy_attr_does_not_seed_load_store(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]]) {
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[DST]], ptr align 32 [[SRC]], i64 [[LEN]], i1 false)
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[SRC]], align 4
+; CHECK-NEXT:    store i32 [[V]], ptr [[DST]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  call void @llvm.memcpy.p0.p0.i64(ptr align 16 %dst, ptr align 32 %src, i64 %len, i1 false)
+  %v = load i32, ptr %src
+  store i32 %v, ptr %dst
+  ret i32 %v
+}
+
+define void @memset_attr_does_not_seed_dominated_store(ptr %p, i64 %len, i1 %c) {
+; CHECK-LABEL: define void @memset_attr_does_not_seed_dominated_store(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[LEN:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[P]], i8 0, i64 [[LEN]], i1 false)
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[EXIT:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[Q:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+; CHECK-NEXT:    store i32 0, ptr [[Q]], align 4
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @llvm.memset.p0.i64(ptr align 16 %p, i8 0, i64 %len, i1 false)
+  br i1 %c, label %then, label %exit
+
+then:
+  %q = getelementptr inbounds i8, ptr %p, i64 8
+  store i32 0, ptr %q
+  br label %exit
+
+exit:
+  ret void
+}
+
+; A real store does prove the alignment, so the memset may still use it.
+define void @store_seeds_memset(ptr %p, i64 %len) {
+; CHECK-LABEL: define void @store_seeds_memset(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[LEN:%.*]]) {
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 16
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[P]], i8 0, i64 [[LEN]], i1 false)
+; CHECK-NEXT:    ret void
+;
+  store i32 0, ptr %p, align 16
+  call void @llvm.memset.p0.i64(ptr %p, i8 0, i64 %len, i1 false)
+  ret void
+}
