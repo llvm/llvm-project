@@ -151,13 +151,14 @@ define void @test_abi_exts_call(ptr %addr) {
   ret void
 }
 
+; zeroext on callee is not inherited.
 ; CHECK-LABEL: name: test_zext_in_callee
 ; CHECK: bb.1 (%ir-block.0):
 ; CHECK:   liveins: $x0
 ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
 ; CHECK:   [[LOAD:%[0-9]+]]:_(i8) = G_LOAD [[COPY]](p0) :: (load (i8) from %ir.addr)
 ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-; CHECK:   [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[LOAD]](i8)
+; CHECK:   [[ZEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[LOAD]](i8)
 ; CHECK:   $w0 = COPY [[ZEXT]](i32)
 ; CHECK:   BL @has_zext_param, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0
 ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
@@ -169,13 +170,14 @@ define void @test_zext_in_callee(ptr %addr) {
   ret void
 }
 
+; signext on callee is not inherited.
 ; CHECK-LABEL: name: test_sext_in_callee
 ; CHECK: bb.1 (%ir-block.0):
 ; CHECK:   liveins: $x0
 ; CHECK:   [[COPY:%[0-9]+]]:_(p0) = COPY $x0
 ; CHECK:   [[LOAD:%[0-9]+]]:_(i8) = G_LOAD [[COPY]](p0) :: (load (i8) from %ir.addr)
 ; CHECK:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-; CHECK:   [[SEXT:%[0-9]+]]:_(i32) = G_SEXT [[LOAD]](i8)
+; CHECK:   [[SEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[LOAD]](i8)
 ; CHECK:   $w0 = COPY [[SEXT]](i32)
 ; CHECK:   BL @has_sext_param, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0
 ; CHECK:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
@@ -364,7 +366,7 @@ define void @call_returns_array_size0_struct() {
 
 ; Test extends on return values.
 
-; This should notice that the return value from has_zext_return is zero
+; This should *not* assume that the return value from has_zext_return is zero
 ; extended.
 declare zeroext i16 @has_zext_return()
 define i32 @test_zext_return_from_callee() {
@@ -374,8 +376,7 @@ define i32 @test_zext_return_from_callee() {
   ; CHECK-NEXT:   BL @has_zext_return, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $w0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
-  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(i32) = G_ASSERT_ZEXT [[COPY]], 16
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[ASSERT_ZEXT]](i32)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[TRUNC]](i16)
   ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
@@ -403,7 +404,7 @@ define i32 @test_zext_return_from_callee2() {
   ret i32 %ext
 }
 
-; This should notice that the return value from has_sext_return is sign
+; This should *not* assume that the return value from has_sext_return is sign
 ; extended.
 declare signext i16 @has_sext_return()
 define i32 @test_sext_return_from_callee() {
@@ -413,8 +414,7 @@ define i32 @test_sext_return_from_callee() {
   ; CHECK-NEXT:   BL @has_sext_return, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit-def $w0
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
-  ; CHECK-NEXT:   [[ASSERT_SEXT:%[0-9]+]]:_(i32) = G_ASSERT_SEXT [[COPY]], 16
-  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[ASSERT_SEXT]](i32)
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(i32) = G_SEXT [[TRUNC]](i16)
   ; CHECK-NEXT:   $w0 = COPY [[SEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0

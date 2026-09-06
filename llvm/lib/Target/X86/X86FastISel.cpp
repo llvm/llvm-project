@@ -3177,8 +3177,8 @@ static unsigned computeBytesPoppedByCalleeForSRet(const X86Subtarget *Subtarget,
     return 0;
 
   if (CB)
-    if (CB->arg_empty() || !CB->paramHasAttr(0, Attribute::StructRet) ||
-        CB->paramHasAttr(0, Attribute::InReg) || Subtarget->isTargetMCU())
+    if (CB->arg_empty() || !CB->hasStructRetAttr() ||
+        CB->hasABIParamAttr(0, Attribute::InReg) || Subtarget->isTargetMCU())
       return 0;
 
   return 4;

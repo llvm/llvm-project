@@ -7,25 +7,15 @@ target triple = "wasm32-unknown-unknown"
 
 declare i32 @foo(i1 signext noundef, i32 noundef)
 
-; callsite_signext and callsite_nosignext must emit equivalent codes
+; callsite_signext and callsite_nosignext should emit different code,
+; as the signext is not inherited from the callee.
 
 define i32 @callsite_nosignext() {
 ; CHECK-LABEL: callsite_nosignext:
 ; CHECK:         .functype callsite_nosignext () -> (i32)
-; CHECK-NEXT:    .local i32, i32, i32
 ; CHECK-NEXT:  # %bb.0: # %start
 ; CHECK-NEXT:    i32.const 1
-; CHECK-NEXT:    local.set 0
 ; CHECK-NEXT:    i32.const 0
-; CHECK-NEXT:    local.set 1
-; CHECK-NEXT:    i32.const 31
-; CHECK-NEXT:    local.set 2
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i32.shr_s
-; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call foo
 ; CHECK-NEXT:    return
 ;
@@ -35,7 +25,7 @@ define i32 @callsite_nosignext() {
 ; NO-FAST-ISEL-NEXT:  # %bb.0: # %start
 ; NO-FAST-ISEL-NEXT:    i32.const 0
 ; NO-FAST-ISEL-NEXT:    local.set 0
-; NO-FAST-ISEL-NEXT:    i32.const -1
+; NO-FAST-ISEL-NEXT:    i32.const 1
 ; NO-FAST-ISEL-NEXT:    local.get 0
 ; NO-FAST-ISEL-NEXT:    call foo
 ; NO-FAST-ISEL-NEXT:    return
@@ -81,21 +71,15 @@ start:
 
 declare i32 @foo2(i1 zeroext noundef, i32 noundef)
 
-; callsite_zeroext and callsite_nozeroext must emit equivalent codes
+; callsite_zeroext and callsite_nozeroext should emit different code,
+; as the zeroext is not inherited from the callee.
 
 define i32 @callsite_nozeroext() {
 ; CHECK-LABEL: callsite_nozeroext:
 ; CHECK:         .functype callsite_nozeroext () -> (i32)
-; CHECK-NEXT:    .local i32, i32
 ; CHECK-NEXT:  # %bb.0: # %start
 ; CHECK-NEXT:    i32.const 1
-; CHECK-NEXT:    local.set 0
 ; CHECK-NEXT:    i32.const 0
-; CHECK-NEXT:    local.set 1
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 1
-; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    call foo2
 ; CHECK-NEXT:    return
 ;

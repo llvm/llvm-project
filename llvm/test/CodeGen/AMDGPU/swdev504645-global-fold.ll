@@ -34,7 +34,7 @@ define void @test_load_zext() #0 {
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   %reloc = call i32 @llvm.amdgcn.reloc.constant(metadata !0)
-  call void @has_spgr_args(i32 %reloc)
+  call void @has_spgr_args(i32 inreg %reloc)
   ret void
 }
 

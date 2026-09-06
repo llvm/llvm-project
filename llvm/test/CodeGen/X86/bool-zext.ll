@@ -53,7 +53,7 @@ define zeroext i1 @bar3() nounwind ssp {
 ; X64-NEXT:    callq foo2@PLT
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
-  %call = call i1 @foo2() nounwind
+  %call = call zeroext i1 @foo2() nounwind
   ret i1 %call
 }
 

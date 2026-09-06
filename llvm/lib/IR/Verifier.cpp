@@ -4038,7 +4038,7 @@ void Verifier::visitCallBase(CallBase &Call) {
   // make sure the underlying alloca/parameter it comes from has a swifterror as
   // well.
   for (unsigned i = 0, e = FTy->getNumParams(); i != e; ++i) {
-    if (Call.paramHasAttr(i, Attribute::SwiftError)) {
+    if (Call.hasABIParamAttr(i, Attribute::SwiftError)) {
       Value *SwiftErrorArg = Call.getArgOperand(i);
       if (auto AI = dyn_cast<AllocaInst>(SwiftErrorArg->stripInBoundsOffsets())) {
         Check(AI->isSwiftError(),
@@ -4087,7 +4087,7 @@ void Verifier::visitCallBase(CallBase &Call) {
               Call);
     }
 
-    if (Call.paramHasAttr(i, Attribute::Preallocated)) {
+    if (Call.hasABIParamAttr(i, Attribute::Preallocated)) {
       Value *ArgVal = Call.getArgOperand(i);
       bool hasOB =
           Call.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0;
@@ -4798,7 +4798,7 @@ void Verifier::verifySwiftErrorCall(CallBase &Call,
                                     const Value *SwiftErrorVal) {
   for (const auto &I : llvm::enumerate(Call.args())) {
     if (I.value() == SwiftErrorVal) {
-      Check(Call.paramHasAttr(I.index(), Attribute::SwiftError),
+      Check(Call.hasABIParamAttr(I.index(), Attribute::SwiftError),
             "swifterror value when used in a callsite should be marked "
             "with swifterror attribute",
             SwiftErrorVal, Call);
@@ -6462,7 +6462,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         FoundCall = true;
         size_t NumPreallocatedArgs = 0;
         for (unsigned i = 0; i < UseCall->arg_size(); i++) {
-          if (UseCall->paramHasAttr(i, Attribute::Preallocated)) {
+          if (UseCall->hasABIParamAttr(i, Attribute::Preallocated)) {
             ++NumPreallocatedArgs;
           }
         }

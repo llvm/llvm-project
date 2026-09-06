@@ -34,7 +34,7 @@ define void @test_80() {
 ; CHECK-NEXT:  .LCPI0_0:
 ; CHECK-NEXT:    .long 68 @ 0x44
   %a = alloca %type_80
-  call void @func_80(ptr null, ptr %a)
+  call void @func_80(ptr null, ptr byval(%type_80) %a)
   ret void
 }
 
@@ -77,6 +77,6 @@ define void @test_4000() {
 ; CHECK-NEXT:  .LCPI1_0:
 ; CHECK-NEXT:    .long 3988 @ 0xf94
   %a = alloca %type_4000
-  call void @func_4000(ptr null, ptr %a)
+  call void @func_4000(ptr null, ptr byval(%type_4000) %a)
   ret void
 }

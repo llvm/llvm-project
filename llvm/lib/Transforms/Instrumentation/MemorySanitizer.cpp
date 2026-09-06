@@ -9098,8 +9098,8 @@ struct VarArgSystemZHelper : public VarArgHelperBase {
     // 64-bit integer representing the same number, using sign or zero
     // extension". Shadow for an integer argument has the same type as the
     // argument itself, so it can be sign or zero extended as well.
-    bool ZExt = CB.paramHasAttr(ArgNo, Attribute::ZExt);
-    bool SExt = CB.paramHasAttr(ArgNo, Attribute::SExt);
+    bool ZExt = CB.hasABIParamAttr(ArgNo, Attribute::ZExt);
+    bool SExt = CB.hasABIParamAttr(ArgNo, Attribute::SExt);
     if (ZExt) {
       assert(!SExt);
       return ShadowExtension::Zero;

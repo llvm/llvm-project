@@ -287,17 +287,17 @@ TEST(Attributes, MismatchedABIAttrs) {
 
   {
     auto *I = cast<CallBase>(&M->getFunction("g")->getEntryBlock().front());
-    ASSERT_TRUE(I->isByValArgument(0));
-    ASSERT_TRUE(I->getParamByValType(0));
+    ASSERT_FALSE(I->isByValArgument(0));
+    ASSERT_FALSE(I->getParamByValType(0));
   }
   {
     auto *I = cast<CallBase>(&M->getFunction("h")->getEntryBlock().front());
-    ASSERT_TRUE(I->getParamPreallocatedType(0));
+    ASSERT_FALSE(I->getParamPreallocatedType(0));
   }
   {
     auto *I = cast<CallBase>(&M->getFunction("i")->getEntryBlock().front());
-    ASSERT_TRUE(I->isInAllocaArgument(0));
-    ASSERT_TRUE(I->getParamInAllocaType(0));
+    ASSERT_FALSE(I->isInAllocaArgument(0));
+    ASSERT_FALSE(I->getParamInAllocaType(0));
   }
 }
 

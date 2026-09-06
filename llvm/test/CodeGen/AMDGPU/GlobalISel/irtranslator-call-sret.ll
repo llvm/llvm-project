@@ -80,7 +80,7 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
   %in.gep1 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %in.val, i32 0, i32 1
   store i8 3, ptr addrspace(5) %in.gep0
   store i32 8, ptr addrspace(5) %in.gep1
-  call void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32(ptr addrspace(5) %out.val, ptr addrspace(5) %in.val)
+  call void @external_void_func_sret_struct_i8_i32_byval_struct_i8_i32(ptr addrspace(5) sret({ i8, i32 }) %out.val, ptr addrspace(5) byval({ i8, i32 }) %in.val)
   %out.gep0 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %out.val, i32 0, i32 0
   %out.gep1 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %out.val, i32 0, i32 1
   %out.val0 = load i8, ptr addrspace(5) %out.gep0

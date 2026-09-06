@@ -2294,7 +2294,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
            "parameter");
     SmallVector<size_t, 4> PreallocatedOffsets;
     for (size_t i = 0; i < CLI.OutVals.size(); ++i) {
-      if (CLI.CB->paramHasAttr(i, Attribute::Preallocated)) {
+      if (CLI.CB->hasABIParamAttr(i, Attribute::Preallocated)) {
         PreallocatedOffsets.push_back(ArgLocs[i].getLocMemOffset());
       }
     }

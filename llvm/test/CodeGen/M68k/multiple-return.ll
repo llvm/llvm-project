@@ -61,7 +61,7 @@ define void @call_test1() {
 ; CHECK-NEXT:    rts
 start:
   %ret_val = alloca { i32, i32, i32, i32 }
-  call void @test1(ptr %ret_val)
+  call void @test1(ptr sret({ i32, i32, i32, i32 }) %ret_val)
   ret void
 }
 

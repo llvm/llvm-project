@@ -1,11 +1,10 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -argext-abi-check
 
 ; Test that it works to pass structs as outgoing call arguments when the
-; NoExt attribute is given, either in the call instruction or in the
-; prototype of the called function.
+; NoExt attribute is given on the call instruction.
 define void @caller() {
   call void @bar_Struct_32(i32 noext 123)
-  call void @bar_Struct_16(i16 123)
+  call void @bar_Struct_16(i16 noext 123)
   call void @bar_Struct_8(i8 noext 123)
   ret void
 }

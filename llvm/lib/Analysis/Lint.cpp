@@ -264,12 +264,13 @@ void Lint::visitCallBase(CallBase &I) {
 
         // Check that ABI attributes for the function and call-site match.
         unsigned ArgNo = AI->getOperandNo();
-        Attribute::AttrKind ABIAttributes[] = {
-            Attribute::ZExt,         Attribute::SExt,     Attribute::InReg,
-            Attribute::ByVal,        Attribute::ByRef,    Attribute::InAlloca,
-            Attribute::Preallocated, Attribute::StructRet};
         AttributeList CallAttrs = I.getAttributes();
-        for (Attribute::AttrKind Attr : ABIAttributes) {
+        for (Attribute::AttrKind Attr :
+             drop_begin(enum_seq(Attribute::None, Attribute::EndAttrKinds,
+                                 force_iteration_on_noniterable_enum))) {
+          if (!Attribute::isABIAttr(Attr))
+            continue;
+
           Attribute CallAttr = CallAttrs.getParamAttr(ArgNo, Attr);
           Attribute FnAttr = F->getParamAttribute(ArgNo, Attr);
           Check(CallAttr.isValid() == FnAttr.isValid(),
