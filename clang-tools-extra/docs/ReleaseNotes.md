@@ -100,12 +100,23 @@ infrastructure are described first, followed by tool-specific sections.
   `-std=cXX-or-earlier` values, mirroring the existing `-std=cXX-or-later`.
   New construct expands to the given standard and every earlier one.
 
+- On Windows, {program}`clang-tidy` will now better match mixes of forwards and
+  backwards slashes when using the `--line-filter` option. This also improves
+  piping from {program}`git` to {program}`clang-tidy-diff.py`, where slashes
+  will now be automatically normalized.
+
 #### New checks
 
 - New {doc}`llvm-invalid-regex-pattern
   <clang-tidy/checks/llvm/invalid-regex-pattern>` check.
 
   Detects malformed regex patterns defined in a single string literal.
+
+- New {doc}`modernize-use-to-underlying
+  <clang-tidy/checks/modernize/use-to-underlying>` check.
+
+  Finds casts from a scoped enumeration (`enum class`) to an integer type and
+  replaces them with a call to `std::to_underlying` (introduced in C++23).
 
 - New {doc}`performance-expensive-value-or
   <clang-tidy/checks/performance/expensive-value-or>` check.
@@ -146,6 +157,10 @@ infrastructure are described first, followed by tool-specific sections.
 - Fixed a crash in {doc}`bugprone-std-namespace-modification
   <clang-tidy/checks/bugprone/std-namespace-modification>` when checking
   lambda closure types used as template arguments.
+
+- Improved {doc}`cppcoreguidelines-missing-std-forward
+  <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by diagnosing
+  unforwarded `auto&&` parameters in C++20 abbreviated function templates.
 
 - Improved {doc}`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
@@ -206,6 +221,14 @@ infrastructure are described first, followed by tool-specific sections.
   - Fixed {option}`DefaultHungarianPrefix` being incorrectly diagnosed as an
     invalid option.
 
+  - Fixed invalid fixes when renaming parameter packs used in `sizeof...`
+    expressions.
+
+  - Added the {option}`TypedefInheritAnonTagConfig`, which checks a
+    typedef or type alias that provides the only name of an otherwise unnamed
+    tag, such as `typedef enum {} MyEnum;`, against the style configured for
+    that tag kind instead of the typedef or type alias style.
+    
   - Added support for naming lambda init-captures (e.g. `[Captured = Var]`) via
     the new `LambdaCapture` options. Simple, non-init captures continue to follow
     the naming style of the variable they capture.
@@ -218,10 +241,14 @@ infrastructure are described first, followed by tool-specific sections.
   option to allow customizing the set of ignored types.
 
 - Improved {doc}`readability-trailing-comma
-  <clang-tidy/checks/readability/trailing-comma>` check by fixing false
-  positives on designated initializers, where initializer lists synthesized
-  for intermediate subobjects caused the trailing comma of the enclosing
-  list to be incorrectly rewritten.
+  <clang-tidy/checks/readability/trailing-comma>` check:
+
+  - Fixed false positives on designated initializers, where initializer lists
+    synthesized for intermediate subobjects caused the trailing comma of the
+    enclosing list to be incorrectly rewritten.
+
+  - Fixed a false positive on empty brace initializers of types with default
+    member initializers.
 
 - Improved {doc}`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check by fixing spurious

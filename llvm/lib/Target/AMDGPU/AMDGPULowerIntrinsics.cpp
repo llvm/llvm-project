@@ -14,6 +14,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -164,6 +165,14 @@ bool AMDGPULowerIntrinsicsImpl::visitBarrier(IntrinsicInst &I) {
         (BarrierID >= AMDGPU::Barrier::NAMED_BARRIER_FIRST &&
          BarrierID <= AMDGPU::Barrier::NAMED_BARRIER_LAST))
       IsWorkgroupScope = true;
+    else if (I.getIntrinsicID() == Intrinsic::amdgcn_s_barrier_signal_isfirst &&
+             BarrierID == AMDGPU::Barrier::CLUSTER) {
+      I.getContext().diagnose(
+          DiagnosticInfoUnsupported(*I.getFunction(),
+                                    "s_barrier_signal_isfirst does not support "
+                                    "user_cluster_barrier_id (-3)",
+                                    I.getDebugLoc()));
+    }
   } else {
     assert(I.getIntrinsicID() == Intrinsic::amdgcn_s_barrier);
     IsWorkgroupScope = true;
