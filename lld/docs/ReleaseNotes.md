@@ -40,6 +40,10 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 * `__objc_stubs` entries are now ordered by the priority of the sections that
   call them, so that stubs reached from prioritized code are laid out together.
   This applies whenever section priorities exist, such as with `-order_file`.
+* Added support for Objective-C class-message stubs
+  (`_objc_msgSendClass$<selector>$_OBJC_CLASS_$_<class>`), which load the
+  class object, selector, and `objc_msgSend` target. Supported on arm64; other
+  architectures report an error.
 
 ### WebAssembly Improvements
 
