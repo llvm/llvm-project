@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implementation of orc-rt-internal/support/sys/DynamicLibrary.h on POSIX
+// Implementation of orc-rt-internal/bedrock/sys/DynamicLibrary.h on POSIX
 // systems, in terms of dlfcn.h.
 //
 //===----------------------------------------------------------------------===//
 
-#include "orc-rt-internal/support/sys/DynamicLibrary.h"
+#include "orc-rt-internal/bedrock/sys/DynamicLibrary.h"
 
 #include "orc-rt-internal/support/StringExtras.h"
 

@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_INTERNAL_SUPPORT_SYS_DYNAMICLIBRARY_H
-#define ORC_RT_INTERNAL_SUPPORT_SYS_DYNAMICLIBRARY_H
+#ifndef ORC_RT_INTERNAL_BEDROCK_SYS_DYNAMICLIBRARY_H
+#define ORC_RT_INTERNAL_BEDROCK_SYS_DYNAMICLIBRARY_H
 
 #include "orc-rt/support/Error.h"
 
@@ -45,4 +45,4 @@ lookupLibrarySymbols(void *Handle, const std::vector<std::string> &Names);
 
 } // namespace orc_rt::sys
 
-#endif // ORC_RT_INTERNAL_SUPPORT_SYS_DYNAMICLIBRARY_H
+#endif // ORC_RT_INTERNAL_BEDROCK_SYS_DYNAMICLIBRARY_H
