@@ -1810,6 +1810,7 @@ enum : unsigned {
 // LLVM-specific notes.
 enum {
   NT_LLVM_HWASAN_GLOBALS = 3,
+  NT_LLVM_DYNAMIC_DEBUGGING = 4,
 };
 
 // GNU note types.

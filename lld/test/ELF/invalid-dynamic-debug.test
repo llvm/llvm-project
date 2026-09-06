@@ -1,0 +1,161 @@
+REQUIRES: x86
+
+## This test simulates the input from dynamic debugging objects to test ELF LLD's handling
+## of various invalid situations.
+
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+## Create the "outer" optimized objects.
+RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux main.s -o main.o
+RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux foo.s -o foo.o
+
+## Create and embed the "inner" unoptimized objects to simulate dynamic debugging objects.
+## Note that the embedded `.debug_llvm_dyndbg` section should be aligned to 8.
+RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux main-unopt.s -o main-unopt.o
+RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux foo-unopt.s -o foo-unopt.o
+RUN: llvm-objcopy --add-section=.debug_llvm_dyndbg=main-unopt.o main.o
+RUN: llvm-objcopy --set-section-type=.debug_llvm_dyndbg=0x6fff4c10 \
+RUN:              --set-section-alignment=.debug_llvm_dyndbg=8 main.o
+RUN: llvm-objcopy --add-section=.debug_llvm_dyndbg=foo-unopt.o foo.o
+RUN: llvm-objcopy --set-section-type=.debug_llvm_dyndbg=0x6fff4c10 \
+RUN:              --set-section-alignment=.debug_llvm_dyndbg=8 foo.o
+
+## Create object without dynamic debugging.
+RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux no-dyndbg.s -o no-dyndbg.o
+
+## Default link.
+RUN: not ld.lld -o /dev/null main.o foo.o no-dyndbg.o 2>&1 | \
+RUN:   FileCheck -DERR_OR_WARN=error -DERR_OR_NOIEXEC_WARN=error \
+RUN:     --implicit-check-not=error: --implicit-check-not=warning: %s
+
+CHECK:      [[ERR_OR_WARN]]: undefined symbol: undef_no_dyndbg_inner
+CHECK-NEXT: >>> referenced by no-dyndbg.o:(.text.bar+0x1)
+CHECK-NEXT: >>> referenced by foo.o:(.debug_llvm_dyndbg+0x0)
+CHECK-EMPTY:
+CHECK-NEXT: [[ERR_OR_NOIEXEC_WARN]]: undefined hidden symbol: undef_hidden
+CHECK-NEXT: >>> referenced by main.o:(.debug_llvm_dyndbg+0x0)
+CHECK-EMPTY:
+CHECK-NEXT: [[ERR_OR_WARN]]: undefined symbol: undef_inner
+CHECK-NEXT: >>> referenced by main.o:(.debug_llvm_dyndbg+0x0)
+CHECK-EMPTY:
+CHECK-NEXT: error: undefined symbol: undef_weak_ver@v1
+CHECK-NEXT: >>> referenced by main.o:(.debug_llvm_dyndbg+0x0)
+CHECK-EMPTY:
+
+## Default link with reverse input file order.
+RUN: not ld.lld -o /dev/null no-dyndbg.o foo.o main.o 2>&1 | \
+RUN:   FileCheck -DERR_OR_WARN=error -DERR_OR_NOIEXEC_WARN=error --check-prefix=REVERSE \
+RUN:     --implicit-check-not=error: --implicit-check-not=warning: %s
+
+REVERSE:      [[ERR_OR_WARN]]: undefined symbol: undef_no_dyndbg_inner
+REVERSE-NEXT: >>> referenced by no-dyndbg.o:(.text.bar+0x1)
+REVERSE-NEXT: >>> referenced by <internal>:(.debug_llvm_dyndbg+0x0)
+REVERSE-EMPTY:
+REVERSE-NEXT: [[ERR_OR_NOIEXEC_WARN]]: undefined hidden symbol: undef_hidden
+REVERSE-NEXT: >>> referenced by foo.o:(.debug_llvm_dyndbg+0x0)
+REVERSE-EMPTY:
+REVERSE-NEXT: [[ERR_OR_WARN]]: undefined symbol: undef_inner
+REVERSE-NEXT: >>> referenced by foo.o:(.debug_llvm_dyndbg+0x0)
+REVERSE-EMPTY:
+REVERSE-NEXT: error: undefined symbol: undef_weak_ver@v1
+REVERSE-NEXT: >>> referenced by foo.o:(.debug_llvm_dyndbg+0x0)
+REVERSE-EMPTY:
+
+## Links with `--warn-unresolved-symbols`.
+RUN: not ld.lld --warn-unresolved-symbols -o /dev/null main.o foo.o no-dyndbg.o 2>&1 | \
+RUN:   FileCheck -DERR_OR_WARN=warning -DERR_OR_NOIEXEC_WARN=error \
+RUN:     --implicit-check-not=error: --implicit-check-not=warning: %s
+RUN: not ld.lld --warn-unresolved-symbols -o /dev/null no-dyndbg.o foo.o main.o 2>&1 | \
+RUN:   FileCheck -DERR_OR_WARN=warning -DERR_OR_NOIEXEC_WARN=error --check-prefix=REVERSE \
+RUN:     --implicit-check-not=error: --implicit-check-not=warning: %s
+
+## Links with `--noinhibit-exec`.
+RUN: not ld.lld --noinhibit-exec -o /dev/null main.o foo.o no-dyndbg.o 2>&1 | \
+RUN:   FileCheck -DERR_OR_WARN=warning -DERR_OR_NOIEXEC_WARN=warning \
+RUN:     --implicit-check-not=error: --implicit-check-not=warning: %s
+RUN: not ld.lld --noinhibit-exec -o /dev/null no-dyndbg.o foo.o main.o 2>&1 | \
+RUN:   FileCheck -DERR_OR_WARN=warning -DERR_OR_NOIEXEC_WARN=warning --check-prefix=REVERSE \
+RUN:     --implicit-check-not=error: --implicit-check-not=warning: %s
+
+## Links with `--unresolved-symbols=ignore-all`.
+RUN: not ld.lld --unresolved-symbols=ignore-all -o /dev/null main.o foo.o no-dyndbg.o 2>&1 | \
+RUN:   FileCheck -DERR_OR_WARN=warning -DFILE="main.o" --check-prefix=ERROR \
+RUN:     --implicit-check-not=error: --implicit-check-not=warning: %s
+RUN: not ld.lld --unresolved-symbols=ignore-all -o /dev/null no-dyndbg.o foo.o main.o 2>&1 | \
+RUN:   FileCheck -DERR_OR_WARN=warning -DFILE="foo.o" --check-prefix=ERROR \
+RUN:     --implicit-check-not=error: --implicit-check-not=warning: %s
+
+ERROR:      error: undefined hidden symbol: undef_hidden
+ERROR-NEXT: >>> referenced by [[FILE]]:(.debug_llvm_dyndbg+0x0)
+ERROR-EMPTY:
+ERROR-NEXT: error: undefined symbol: undef_weak_ver@v1
+ERROR-NEXT: >>> referenced by [[FILE]]:(.debug_llvm_dyndbg+0x0)
+
+#--- main.s
+# Optimized version of "main"
+
+.global main
+.type main,@function
+.section .text.main,"ax",@progbits
+main:
+  ret
+
+#--- main-unopt.s
+# Unoptimized version of "main"
+
+.weak undef_weak
+.weak undef_weak_ver
+.symver undef_weak_ver, undef_weak_ver@v1
+
+.hidden undef_hidden
+
+.global __dyndbg.main
+.hidden __dyndbg.main
+.type __dyndbg.main,@function
+.section .text.__dyndbg.main,"ax",@progbits
+__dyndbg.main:
+  call undef_inner
+  call undef_weak
+  call undef_weak_ver
+  call undef_hidden
+  ret
+
+#--- foo.s
+# Optimized version of "foo"
+
+.global foo
+.type foo,@function
+.section .text.foo,"ax",@progbits
+foo:
+  ret
+
+#--- foo-unopt.s
+# Unoptimized version of "foo"
+
+.weak undef_weak
+.weak undef_weak_ver
+.symver undef_weak_ver, undef_weak_ver@v1
+
+.hidden undef_hidden
+
+.global __dyndbg.foo
+.hidden __dyndbg.foo
+.type __dyndbg.foo,@function
+.section .text.__dyndbg.foo,"ax",@progbits
+__dyndbg.foo:
+  call undef_inner
+  call undef_weak
+  call undef_weak_ver
+  call undef_hidden
+  call undef_no_dyndbg_inner
+  ret
+
+#--- no-dyndbg.s
+# No dynamic debugging
+
+.global bar
+.type bar,@function
+.section .text.bar,"ax",@progbits
+bar:
+  call undef_no_dyndbg_inner
+  ret

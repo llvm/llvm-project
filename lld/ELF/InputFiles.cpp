@@ -643,6 +643,15 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       continue;
     }
 
+    if (sec.sh_type == SHT_LLVM_DYNDBG_ELF) {
+      if (check(obj.getSectionName(sec, shstrtab)) == dynDbgSecName) {
+        sections[i] = &InputSection::discarded;
+        dynDbgSec = std::make_unique<InputSection>(*this, sec, dynDbgSecName);
+        ctx.hasDynDbg = true;
+      }
+      continue;
+    }
+
     switch (ctx.arg.emachine) {
     case EM_ARM:
       if (sec.sh_type == SHT_ARM_ATTRIBUTES) {
@@ -830,7 +839,9 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     }
     switch (type) {
     case SHT_GROUP: {
-      if (!ctx.arg.relocatable)
+      // Discard groups for non-relocatable links and for embedded unoptimized
+      // dynamic debugging relocatable links.
+      if (!ctx.arg.relocatable || ctx.dynDbgRelocatable)
         sections[i] = &InputSection::discarded;
       // Use the verdict parse() recorded for this group instead of repeating
       // the signature hashing and comdatGroups lookup.
@@ -1248,6 +1259,71 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
                                 eSym.st_other, eSym.getType()});
     sym->isUsedInRegularObj = true;
     sym->referenced = true;
+  }
+
+  if (dynDbgSec)
+    initDynDbgSymbols();
+}
+
+// Add the undefined symbols of the embedded unoptimized dynamic debugging
+// object so that the outer link resolves the inner link's dependencies. Tag
+// those reached by an inner relocation against a SHT_PROGBITS SHF_ALLOC
+// section with `isDynDbgRef`; the rest are only needed by debug sections.
+template <class ELFT> void ObjFile<ELFT>::initDynDbgSymbols() {
+  MemoryBufferRef dbgMb(toStringRef(dynDbgSec->content()),
+                        mb.getBufferIdentifier());
+  std::unique_ptr<ELFFileBase> efb = createObjFile(ctx, dbgMb);
+  // Compare ekind (note ObjFile<ELFT>::classof only tests InputFile::kind()).
+  if (efb->ekind != ekind) {
+    Err(ctx) << this << ": " << dynDbgSecName
+             << " contains an incompatible ELF type";
+    return;
+  }
+  auto &dbgObj = cast<ObjFile<ELFT>>(*efb);
+  const object::ELFFile<ELFT> obj = dbgObj.getObj();
+
+  ArrayRef<Elf_Sym> dbgSyms = dbgObj.template getGlobalELFSyms<ELFT>();
+  SmallVector<bool, 0> globalUsed(dbgSyms.size());
+  auto setSymUsed = [&, firstGlobal = dbgObj.firstGlobal](uint32_t symIdx) {
+    if (symIdx >= firstGlobal)
+      globalUsed[symIdx - firstGlobal] = true;
+  };
+
+  for (const Elf_Shdr &sh : dbgObj.template getELFShdrs<ELFT>()) {
+    if (!isStaticRelSecType(sh.sh_type))
+      continue;
+    const Elf_Shdr &target = *CHECK2(obj.getSection(sh.sh_info), &dbgObj);
+    if (target.sh_type != SHT_PROGBITS || !(target.sh_flags & SHF_ALLOC))
+      continue;
+    if (sh.sh_type == SHT_CREL) {
+      auto [rels, relas] = CHECK2(obj.crels(sh), &dbgObj);
+      for (const Elf_Rel &r : rels)
+        setSymUsed(r.getSymbol(false));
+      for (const Elf_Rela &r : relas)
+        setSymUsed(r.getSymbol(false));
+    } else if (sh.sh_type == SHT_RELA) {
+      for (const Elf_Rela &r : CHECK2(obj.relas(sh), &dbgObj))
+        setSymUsed(r.getSymbol(ctx.arg.isMips64EL));
+    } else {
+      for (const Elf_Rel &r : CHECK2(obj.rels(sh), &dbgObj))
+        setSymUsed(r.getSymbol(ctx.arg.isMips64EL));
+    }
+  }
+
+  for (size_t i = 0, end = dbgSyms.size(); i != end; ++i) {
+    const Elf_Sym &s = dbgSyms[i];
+    if (s.st_shndx != SHN_UNDEF)
+      continue;
+    StringRef name = CHECK2(s.getName(dbgObj.stringTable), this);
+    Symbol *sym = ctx.symtab->addSymbol(
+        Undefined{this, name, s.getBinding(), s.st_other, s.getType()});
+    sym->isUsedInRegularObj = true;
+    sym->referenced = true;
+    if (globalUsed[i]) {
+      sym->isDynDbgRef = true;
+      if (sym->traced)
+        Msg(ctx) << this << ": dynamic debugging reference to " << name;
+    }
   }
 }
 

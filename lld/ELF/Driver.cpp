@@ -113,6 +113,18 @@ llvm::raw_fd_ostream Ctx::openAuxiliaryFile(llvm::StringRef filename,
   return {filename, ec, flags};
 }
 
+// Set up the parts of Ctx that both the top-level link and the nested dynamic
+// debugging link need. The caller initializes ctx.e beforehand.
+static void initContext(Ctx &ctx, LinkerScript &script, StringRef arg0) {
+  ctx.e.logName = args::getFilenameWithoutExe(arg0);
+  ctx.e.errorLimitExceededMsg = "too many errors emitted, stopping now (use "
+                                "--error-limit=0 to see all errors)";
+  ctx.script = &script;
+  ctx.symAux.emplace_back();
+  ctx.symtab = std::make_unique<SymbolTable>(ctx);
+  ctx.arg.progName = arg0;
+}
+
 namespace lld {
 namespace elf {
 bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
@@ -120,19 +132,9 @@ bool link(ArrayRef<const char *> args, llvm::raw_ostream &stdoutOS,
   // This driver-specific context will be freed later by unsafeLldMain().
   auto *context = new Ctx;
   Ctx &ctx = *context;
-
-  context->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
-  context->e.logName = args::getFilenameWithoutExe(args[0]);
-  context->e.errorLimitExceededMsg =
-      "too many errors emitted, stopping now (use "
-      "--error-limit=0 to see all errors)";
-
   LinkerScript script(ctx);
-  ctx.script = &script;
-  ctx.symAux.emplace_back();
-  ctx.symtab = std::make_unique<SymbolTable>(ctx);
-
-  ctx.arg.progName = args[0];
+  ctx.e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
+  initContext(ctx, script, args[0]);
 
   ctx.driver.linkerMain(args);
 
@@ -290,6 +292,11 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     ++nextGroupId;
   if (!deferLoad)
     loadFiles();
+}
+
+// Add an ELF input file directly.
+void LinkerDriver::addFile(std::unique_ptr<ELFFileBase> ef) {
+  files.push_back(std::move(ef));
 }
 
 // Add a given library by searching it from input search paths.
@@ -3240,6 +3247,46 @@ static void postParseObjectFile(ELFFileBase *file) {
   }
 }
 
+// Objects that support Dynamic Debugging contain an ELF Dynamic Debugging
+// section that embeds an unoptimized ELF file with debug information. We
+// extract these embedded ELF files to make a consolidated unoptimized
+// relocatable ELF file to embed in an ELF Dynamic Debugging section in the
+// output. See llvm/docs/DynamicDebugging.md for more details.
+template <class ELFT> static void linkDynamicDebug(Ctx &ctx) {
+  Ctx dctx;
+  LinkerScript script(dctx);
+  dctx.e.initialize(ctx.e.outs(), ctx.e.errs(), ctx.e.exitEarly,
+                    ctx.e.disableOutput);
+  initContext(dctx, script, ctx.arg.progName);
+  dctx.inDynDbgLink = true;
+  dctx.dynDbgRelocatable = !ctx.arg.relocatable;
+
+  for (auto *file : ctx.objectFiles) {
+    auto *obj = cast<ObjFile<ELFT>>(file);
+    if (obj->dynDbgSec) {
+      MemoryBufferRef mb(toStringRef(obj->dynDbgSec->content()),
+                         obj->mb.getBufferIdentifier());
+      dctx.driver.addFile(createObjFile(dctx, mb));
+    }
+  }
+
+  if (errCount(ctx))
+    return;
+
+  std::vector<const char *> args{
+      dctx.arg.progName.data(), "-r", "-o", "-",
+      dctx.saver.save(Twine("-O") + Twine(ctx.arg.optimize)).data()};
+  if (ctx.arg.resolveGroups)
+    args.push_back("--force-group-allocation");
+  dctx.driver.linkerMain(args);
+  if (errCount(dctx) > 0 || !dctx.dynDbgOutput) {
+    Err(ctx) << "failed to create relocatable dynamic debug object";
+    return;
+  }
+
+  ctx.dynDbgOutput = std::move(dctx.dynDbgOutput);
+}
+
 // Do actual linking. Note that when this function is called,
 // all linker scripts have already been parsed.
 template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
@@ -3258,6 +3305,14 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     ctx.symtab->addUnusedUndefined(name)->referenced = true;
 
   parseFiles(ctx, files);
+
+  // ICF is incompatible with dynamic debugging: the inner ELF references outer
+  // symbols that folding would merge away.
+  if (ctx.hasDynDbg && ctx.arg.icf != ICFLevel::None) {
+    Warn(ctx) << "ICF disabled because it is incompatible with dynamic "
+                 "debugging";
+    ctx.arg.icf = ICFLevel::None;
+  }
 
   // Create dynamic sections for dynamic linking and static PIE.
   ctx.hasDynsym = !ctx.sharedFiles.empty() || ctx.arg.isPic;
@@ -3531,6 +3586,13 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   if (canHaveMemtagGlobals(ctx)) {
     llvm::TimeTraceScope timeScope("Process memory tagged symbols");
     createTaggedSymbols(ctx);
+  }
+
+  if (ctx.hasDynDbg) {
+    llvm::TimeTraceScope timeScope("Link dynamic debugging");
+    linkDynamicDebug<ELFT>(ctx);
+    if (errCount(ctx))
+      return;
   }
 
   // Create synthesized sections such as .got and .plt. This is called before
