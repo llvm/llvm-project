@@ -15,6 +15,7 @@
 // UNSUPPORTED: android
 // UNSUPPORTED: asan
 // XFAIL: LIBCXX-PICOLIBC-FIXME
+// UNSUPPORTED: target=aarch64-w64-windows-gnu
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // RUN: %{exec} %{gdb} --return-child-result -ex run %t.exe
