@@ -1873,6 +1873,9 @@ def relaxed_fmax : SDNode<"WebAssemblyISD::RELAXED_FMAX", SDTFPBinOp>;
 
 def relaxed_pmin :
   PatFrag<(ops node:$lhs, node:$rhs), (pmin $lhs, $rhs), [{
+  if (!N->getOperand(0).getValueType().isFloatingPoint() ||
+      !N->getOperand(1).getValueType().isFloatingPoint())
+    return false;
   return (N->getFlags().hasNoNaNs() ||
           (CurDAG->isKnownNeverNaN(N->getOperand(0)) &&
            CurDAG->isKnownNeverNaN(N->getOperand(1)))) &&
@@ -1883,6 +1886,9 @@ def relaxed_pmin :
 
 def relaxed_pmax :
   PatFrag<(ops node:$lhs, node:$rhs), (pmax $lhs, $rhs), [{
+  if (!N->getOperand(0).getValueType().isFloatingPoint() ||
+      !N->getOperand(1).getValueType().isFloatingPoint())
+    return false;
   return (N->getFlags().hasNoNaNs() ||
           ((CurDAG->isKnownNeverNaN(N->getOperand(0))) &&
            CurDAG->isKnownNeverNaN(N->getOperand(1)))) &&
