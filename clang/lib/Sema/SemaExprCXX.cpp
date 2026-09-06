@@ -896,7 +896,7 @@ ExprResult Sema::ActOnCXXThrowThrows(Scope *S, SourceLocation OpLoc,
   }
 
   const FunctionProtoType *CurFPT =
-      CurFD ? CurFD->getType()->getAs<FunctionProtoType>() : nullptr;
+      CurFD ? (CurFD->getType().isNull() ? nullptr : CurFD->getType()->getAs<FunctionProtoType>()) : nullptr;
   const bool InThrowsFunction = CurFPT && CurFPT->hasThrowsSpec();
 
   // 'throw throws' belongs to the implicit-std::error ('throws') channel only.
@@ -1373,7 +1373,8 @@ ExprResult Sema::ActOnHerbceptionTry(SourceLocation TryLoc, Expr *Ex) {
   // `try(expr)` is only valid inside a function declared with 'throws' or
   // 'fails{E}'.
   const FunctionDecl *CurFD = getCurFunctionDecl();
-  if (!CurFD || !CurFD->getType()->getAs<FunctionProtoType>()->hasThrowsSpec()) {
+  if (!CurFD || CurFD->getType().isNull() ||
+      !CurFD->getType()->getAs<FunctionProtoType>()->hasThrowsSpec()) {
     Diag(TryLoc, diag::err_try_throws_outside_throws_function);
     return ExprError();
   }
@@ -1402,7 +1403,9 @@ ExprResult Sema::ActOnHerbceptionTry(SourceLocation TryLoc, Expr *Ex) {
   CXXRecordDecl *ErrorDomain = nullptr;
   if (const FunctionDecl *CurFD = getCurFunctionDecl()) {
     if (const auto *CurFPT =
-            CurFD->getType()->getAs<FunctionProtoType>();
+            CurFD->getType().isNull()
+                ? nullptr
+                : CurFD->getType()->getAs<FunctionProtoType>();
         CurFPT && CurFPT->hasBasicThrowsSpec()) {
       if (const CallExpr *Call = dyn_cast<CallExpr>(Ex->IgnoreParenImpCasts()))
         if (const FunctionDecl *FD =
@@ -1497,7 +1500,7 @@ ExprResult Sema::ActOnHerbceptionReturnFailure(SourceLocation FailureLoc, Expr *
   // must be of the explicit error type E.
   const FunctionDecl *CurFD = getCurFunctionDecl();
   const FunctionProtoType *CurFPT =
-      CurFD ? CurFD->getType()->getAs<FunctionProtoType>() : nullptr;
+      CurFD ? (CurFD->getType().isNull() ? nullptr : CurFD->getType()->getAs<FunctionProtoType>()) : nullptr;
   if (!CurFPT || !CurFPT->hasReturnFailureSpec()) {
     Diag(FailureLoc, diag::err_failure_outside_return_failure_function);
     return ExprError();
