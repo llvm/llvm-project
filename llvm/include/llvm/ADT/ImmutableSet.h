@@ -30,7 +30,6 @@
 #include <functional>
 #include <iterator>
 #include <new>
-#include <vector>
 
 namespace llvm {
 
@@ -379,7 +378,8 @@ public:
     // We need to clear the mutability bit in case we are
     // destroying the node as part of a sweep in ImutAVLFactory::recoverNodes().
     IsMutable = false;
-    factory->freeNodes.push_back(this);
+    this->Next = factory->freeNodes;
+    factory->freeNodes = this;
   }
 };
 
@@ -409,8 +409,10 @@ class ImutAVLFactory
   using key_type_ref = typename TreeTy::key_type_ref;
 
   uintptr_t Allocator;
-  std::vector<TreeTy*> createdNodes;
-  std::vector<TreeTy*> freeNodes;
+  SmallVector<TreeTy *, 0> createdNodes;
+
+  // We use next inside the TreeTy to build a single-linked freelist.
+  TreeTy *freeNodes = nullptr;
 
   bool ownsAllocator() const {
     return (Allocator & 0x1) == 0;
@@ -516,15 +518,15 @@ protected:
   //===--------------------------------------------------===//
 
   TreeTy* createNode(TreeTy* L, value_type_ref V, TreeTy* R) {
-    BumpPtrAllocator& A = getAllocator();
-    TreeTy* T;
-    if (!freeNodes.empty()) {
-      T = freeNodes.back();
-      freeNodes.pop_back();
+    TreeTy *T = freeNodes;
+    if (T) {
+      freeNodes = T->Next;
+      T->Next = nullptr;
       assert(T != L);
       assert(T != R);
     } else {
-      T = (TreeTy*) A.Allocate<TreeTy>();
+      BumpPtrAllocator &A = getAllocator();
+      T = (TreeTy *)A.Allocate<TreeTy>();
     }
     new (T) TreeTy(this, L, R, V, incrementHeight(L,R));
     createdNodes.push_back(T);
