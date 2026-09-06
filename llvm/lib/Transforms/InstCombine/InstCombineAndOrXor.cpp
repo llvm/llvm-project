@@ -726,7 +726,7 @@ static Value *foldLogOpOfMaskedICmps(Value *LHS, Value *RHS, bool IsAnd,
 Value *InstCombinerImpl::simplifyRangeCheck(CmpPredicate PredL, Value *LHS0,
                                             Value *LHS1, CmpPredicate PredR,
                                             Value *RHS0, Value *RHS1,
-                                            Value *RHS, bool Inverted) {
+                                            Instruction *CxtI, bool Inverted) {
   // Check the lower range comparison, e.g. x >= 0
   // InstCombine already ensured that if there is a constant it's on the RHS.
   ConstantInt *RangeStart = dyn_cast<ConstantInt>(LHS1);
@@ -772,7 +772,7 @@ Value *InstCombinerImpl::simplifyRangeCheck(CmpPredicate PredL, Value *LHS0,
   }
 
   // This simplification is only valid if the upper range is not negative.
-  KnownBits Known = computeKnownBits(RangeEnd, cast<Instruction>(RHS));
+  KnownBits Known = computeKnownBits(RangeEnd, CxtI);
   if (!Known.isNonNegative())
     return nullptr;
 
@@ -803,9 +803,8 @@ static Value *foldAndOrOfICmpsWithPow2AndWithZero(
     std::swap(LHS1, RHS1);
   }
 
-  if (RHS1 == LHS0) {
+  if (RHS1 == LHS0)
     std::swap(RHS0, RHS1);
-  }
 
   // Match the desired pattern:
   // LHS: (icmp eq/ne X, 0)
@@ -1395,7 +1394,7 @@ Value *InstCombinerImpl::foldAndOrOfICmpsUsingRanges(
   Value *NewV = V1;
   std::optional<ConstantRange> CR = CR1.exactUnionWith(CR2);
   if (!CR) {
-    if (!(LHSOneUse && RHSOneUse) || CR1.isWrappedSet() || CR2.isWrappedSet())
+    if (!LHSOneUse || !RHSOneUse || CR1.isWrappedSet() || CR2.isWrappedSet())
       return nullptr;
 
     // Check whether we have equal-size ranges that only differ by one bit.
@@ -3523,13 +3522,15 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
   if (!IsLogical) {
     // E.g. (icmp slt x, 0) | (icmp sgt x, n) --> icmp ugt x, n
     // E.g. (icmp sge x, 0) & (icmp slt x, n) --> icmp ult x, n
-    if (Value *V = simplifyRangeCheck(PredL, LHS0, LHS1, PredR, RHS0, RHS1, RHS,
+    if (Value *V = simplifyRangeCheck(PredL, LHS0, LHS1, PredR, RHS0, RHS1,
+                                      cast<Instruction>(RHS),
                                       /*Inverted=*/!IsAnd))
       return V;
 
     // E.g. (icmp sgt x, n) | (icmp slt x, 0) --> icmp ugt x, n
     // E.g. (icmp slt x, n) & (icmp sge x, 0) --> icmp ult x, n
-    if (Value *V = simplifyRangeCheck(PredR, RHS0, RHS1, PredL, LHS0, LHS1, LHS,
+    if (Value *V = simplifyRangeCheck(PredR, RHS0, RHS1, PredL, LHS0, LHS1,
+                                      cast<Instruction>(LHS),
                                       /*Inverted=*/!IsAnd))
       return V;
   }

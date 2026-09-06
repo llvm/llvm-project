@@ -121,7 +121,7 @@ public:
   Instruction *visitFDiv(BinaryOperator &I);
   Value *simplifyRangeCheck(CmpPredicate PredL, Value *LHS0, Value *LHS1,
                             CmpPredicate PredR, Value *RHS0, Value *RHS1,
-                            Value *RHS, bool Inverted);
+                            Instruction *CxtI, bool Inverted);
   Instruction *FoldOrOfLogicalAnds(Value *Op0, Value *Op1);
   Instruction *visitAnd(BinaryOperator &I);
   Instruction *visitOr(BinaryOperator &I);
