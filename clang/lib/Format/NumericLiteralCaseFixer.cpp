@@ -138,7 +138,25 @@ NumericLiteralCaseFixer::process(const Environment &Env,
   Token Tok;
   tooling::Replacements Result;
 
-  for (bool Skip = false; !Lex.LexFromRawLexer(Tok);) {
+  for (bool Skip = false, AfterHash = false, InInclude = false;
+       !Lex.LexFromRawLexer(Tok);) {
+    // Header names in #include/#import can contain pp-numbers such as the
+    // "16header" in <path/to/16header.h> that lex as numeric_constant but are
+    // not numeric literals, so skip literals on those directive lines.
+    if (Tok.isAtStartOfLine()) {
+      InInclude = false;
+      AfterHash = false;
+    }
+    if (AfterHash) {
+      AfterHash = false;
+      if (Tok.is(tok::raw_identifier)) {
+        const StringRef Kw = Tok.getRawIdentifier();
+        InInclude = (Kw == "include" || Kw == "include_next" || Kw == "import");
+      }
+    }
+    if (Tok.is(tok::hash) && Tok.isAtStartOfLine())
+      AfterHash = true;
+
     // Skip tokens that are too small to contain a formattable literal.
     // Size=2 is the smallest possible literal that could contain formattable
     // components, for example "1u".
@@ -157,7 +175,7 @@ NumericLiteralCaseFixer::process(const Environment &Env,
       continue;
     }
 
-    if (Skip || Tok.isNot(tok::numeric_constant) ||
+    if (Skip || Tok.isNot(tok::numeric_constant) || InInclude ||
         !AffectedRangeMgr.affectsCharSourceRange(
             CharSourceRange::getCharRange(Location, Tok.getEndLoc()))) {
       continue;
