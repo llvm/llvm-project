@@ -693,7 +693,7 @@ struct UnrollGatherPattern : public OpRewritePattern<vector::GatherOp> {
               strides);
       auto slicedGather = vector::GatherOp::create(
           rewriter, loc, targetType, gatherOp.getBase(), gatherOp.getOffsets(),
-          indexSubVec, maskSubVec, passThruSubVec);
+          indexSubVec, maskSubVec, passThruSubVec, gatherOp.getMaybeAlign());
 
       result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
           loc, slicedGather, result, elementOffsets, strides);
