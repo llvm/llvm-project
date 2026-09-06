@@ -21,6 +21,7 @@ include "mlir/Interfaces/InferIntDivisibilityOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
+include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def Affine_Dialect : Dialect {
@@ -139,7 +140,8 @@ def AffineForOp : Affine_Op<"for",
       "getLoopUpperBounds", "getYieldedValuesMutable",
       "replaceWithAdditionalYields", "getStaticTripCount"]>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface,
-     ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
+     ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
+     DeclareOpInterfaceMethods<PromotableRegionOpInterface>]> {
   let summary = "for operation";
   let description = [{
     Syntax:
