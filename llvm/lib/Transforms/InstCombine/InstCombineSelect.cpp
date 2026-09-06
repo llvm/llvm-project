@@ -3626,6 +3626,11 @@ foldSelectOfSymmetricSelect(SelectInst &OuterSelVal,
 /// and rewrite it as
 ///   %inner.sel = select i1 %cond.alternative, i8 %sel.outer.t, i8 %sel.inner.t
 ///   %sel.outer = select i1 %cond.inner, i8 %inner.sel, i8 %sel.inner.f
+///
+/// Also fold correlated poison-blocking conditions
+///   select (!A || B), (select (A && B), T, F), X
+/// into
+///   select A, (select B, T, X), F
 static Instruction *foldNestedSelects(SelectInst &OuterSelVal,
                                       InstCombiner::BuilderTy &Builder) {
   // We must start with a `select`.
@@ -3661,6 +3666,33 @@ static Instruction *foldNestedSelects(SelectInst &OuterSelVal,
   // Canonicalize inversion of the innermost `select`'s condition.
   if (match(InnerSel.Cond, m_Not(m_Value(InnerSel.Cond))))
     std::swap(InnerSel.TrueVal, InnerSel.FalseVal);
+
+  // Fold correlated poison-blocking logical selects:
+  //   C = A && B
+  //   G = !A || B
+  //   select G, (select C, T, F), X
+  //     --> select A, (select B, T, X), F
+  // Only the canonical poison-blocking select forms with this exact operand
+  // order are handled. Bitwise and/or, commuted operands and a 'not' with
+  // poison lanes may also be valid, but they have not been verified yet.
+  if (!IsAndVariant && isa<SelectInst>(OuterSel.Cond) &&
+      isa<SelectInst>(InnerSel.Cond)) {
+    Value *A, *B;
+    if (match(OuterSel.Cond,
+              m_LogicalOr(m_NotForbidPoison(m_Value(A)), m_Value(B))) &&
+        match(InnerSel.Cond, m_LogicalAnd(m_Specific(A), m_Specific(B)))) {
+      Value *NewInner = Builder.CreateSelectWithUnknownProfile(
+          B, InnerSel.TrueVal, OuterSel.FalseVal, DEBUG_TYPE);
+      NewInner->takeName(InnerSelVal);
+
+      auto *NewOuter = SelectInst::Create(A, NewInner, InnerSel.FalseVal);
+      setExplicitlyUnknownBranchWeightsIfProfiled(*NewOuter, DEBUG_TYPE,
+                                                  OuterSelVal.getFunction());
+      if (auto *FPOp = dyn_cast<FPMathOperator>(&OuterSelVal))
+        NewOuter->setFastMathFlags(FPOp->getFastMathFlags());
+      return NewOuter;
+    }
+  }
 
   Value *AltCond = nullptr;
   auto matchOuterCond = [OuterSel, IsAndVariant, &AltCond](auto m_InnerCond) {
