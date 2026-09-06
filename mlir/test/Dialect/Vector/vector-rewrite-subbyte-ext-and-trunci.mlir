@@ -203,11 +203,61 @@ func.func @aligned_trunci_nd(%a: vector<3x8x32xi32>) -> vector<3x8x32xi4> {
   return %0 : vector<3x8x32xi4>
 }
 
-func.func @aligned_trunci_i8_to_i2_no_match(%a: vector<8xi8>) -> vector<8xi2> {
-  // CHECK-NOT: arith.bitcast
-  // CHECK: arith.trunci %[[IN:.*]] : vector<8xi8> to vector<8xi2>
+// CHECK-LABEL: func.func @aligned_trunci_i8_to_i2(
+func.func @aligned_trunci_i8_to_i2(%a: vector<8xi8>) -> vector<8xi2> {
+// CHECK-SAME:    %[[IN:.*]]: vector<8xi8>) -> vector<8xi2> {
+// CHECK-DAG:       %[[LOW_MASK:.*]] = arith.constant dense<3> : vector<2xi8>
+// CHECK-DAG:       %[[CST_2:.*]] = arith.constant dense<2> : vector<2xi8>
+// CHECK-DAG:       %[[CST_4:.*]] = arith.constant dense<4> : vector<2xi8>
+// CHECK-DAG:       %[[CST_6:.*]] = arith.constant dense<6> : vector<2xi8>
+// CHECK:           %[[EVEN:.*]], %[[ODD:.*]] = vector.deinterleave %[[IN]] : vector<8xi8> -> vector<4xi8>
+// CHECK:           %[[ELEM0:.*]], %[[ELEM2:.*]] = vector.deinterleave %[[EVEN]] : vector<4xi8> -> vector<2xi8>
+// CHECK:           %[[ELEM1:.*]], %[[ELEM3:.*]] = vector.deinterleave %[[ODD]] : vector<4xi8> -> vector<2xi8>
+// CHECK:           %[[ZEROED0:.*]] = arith.andi %[[ELEM0]], %[[LOW_MASK]] : vector<2xi8>
+// CHECK:           %[[ZEROED1:.*]] = arith.andi %[[ELEM1]], %[[LOW_MASK]] : vector<2xi8>
+// CHECK:           %[[SHL1:.*]] = arith.shli %[[ZEROED1]], %[[CST_2]] : vector<2xi8>
+// CHECK:           %[[ZEROED2:.*]] = arith.andi %[[ELEM2]], %[[LOW_MASK]] : vector<2xi8>
+// CHECK:           %[[SHL2:.*]] = arith.shli %[[ZEROED2]], %[[CST_4]] : vector<2xi8>
+// CHECK:           %[[SHL3:.*]] = arith.shli %[[ELEM3]], %[[CST_6]] : vector<2xi8>
+// CHECK:           %[[MERGED01:.*]] = arith.ori %[[ZEROED0]], %[[SHL1]] : vector<2xi8>
+// CHECK:           %[[MERGED012:.*]] = arith.ori %[[MERGED01]], %[[SHL2]] : vector<2xi8>
+// CHECK:           %[[MERGED:.*]] = arith.ori %[[MERGED012]], %[[SHL3]] : vector<2xi8>
+// CHECK:           %[[I2:.*]] = vector.bitcast %[[MERGED]] : vector<2xi8> to vector<8xi2>
   %0 = arith.trunci %a : vector<8xi8> to vector<8xi2>
   return %0 : vector<8xi2>
+}
+
+// CHECK-LABEL: func.func @aligned_trunci_i32_to_i2(
+func.func @aligned_trunci_i32_to_i2(%a: vector<8xi32>) -> vector<8xi2> {
+// CHECK-SAME:    %[[IN:.*]]: vector<8xi32>) -> vector<8xi2> {
+// CHECK:           %[[I8:.*]] = arith.trunci %[[IN]] : vector<8xi32> to vector<8xi8>
+// CHECK:           %[[EVEN:.*]], %[[ODD:.*]] = vector.deinterleave %[[I8]] : vector<8xi8> -> vector<4xi8>
+// CHECK:           vector.deinterleave %[[EVEN]] : vector<4xi8> -> vector<2xi8>
+// CHECK:           vector.deinterleave %[[ODD]] : vector<4xi8> -> vector<2xi8>
+// CHECK-NOT:       arith.trunci
+// CHECK:           vector.bitcast {{.*}} : vector<2xi8> to vector<8xi2>
+  %0 = arith.trunci %a : vector<8xi32> to vector<8xi2>
+  return %0 : vector<8xi2>
+}
+
+// CHECK-LABEL: func.func @aligned_trunci_i8_to_i2_2d(
+func.func @aligned_trunci_i8_to_i2_2d(%a: vector<8x32xi8>) -> vector<8x32xi2> {
+// CHECK-SAME:    %[[IN:.*]]: vector<8x32xi8>) -> vector<8x32xi2> {
+// CHECK-NOT:       arith.trunci
+// CHECK:           %[[EVEN:.*]], %[[ODD:.*]] = vector.deinterleave %[[IN]] : vector<8x32xi8> -> vector<8x16xi8>
+// CHECK:           vector.deinterleave %[[EVEN]] : vector<8x16xi8> -> vector<8x8xi8>
+// CHECK:           vector.deinterleave %[[ODD]] : vector<8x16xi8> -> vector<8x8xi8>
+// CHECK:           vector.bitcast {{.*}} : vector<8x8xi8> to vector<8x32xi2>
+  %0 = arith.trunci %a : vector<8x32xi8> to vector<8x32xi2>
+  return %0 : vector<8x32xi2>
+}
+
+// CHECK-LABEL: func.func @unaligned_trunci_i8_to_i2(
+func.func @unaligned_trunci_i8_to_i2(%a: vector<6xi8>) -> vector<6xi2> {
+// CHECK-NOT:       vector.deinterleave
+// CHECK:           arith.trunci {{.*}} : vector<6xi8> to vector<6xi2>
+  %0 = arith.trunci %a : vector<6xi8> to vector<6xi2>
+  return %0 : vector<6xi2>
 }
 
 ///----------------------------------------------------------------------------------------
