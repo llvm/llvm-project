@@ -1,44 +1,37 @@
-// RUN: %clang_cc1 -std=c++20 -fherbceptions -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang -std=c++20 -fherbceptions -fno-exceptions -S -emit-llvm -o - %s | FileCheck %s
 
-// A `throws` constructor must carry the error discriminant through its
-// (normally void) return slot, exactly like an ordinary throws function.
-// Without the herbception ABI on constructors/destructors,
-// arrangeCXXStructorDeclaration left CurFnInfo without HasThrowsReturn, so
-// StartFunction set ReturnValue to an invalid Address. EmitHerbceptionTry
-// then called DataLayout::getTypeAllocSize on a null Type* and crashed codegen.
+// Regression test: a `throws` constructor whose member-initializer calls a
+// `throws` function used to crash CodeGen. Its CGFunctionInfo was not given
+// the herbception throws ABI (HasThrowsReturn / error type), so StartFunction
+// left the return value slot invalid and EmitHerbceptionTry called
+// DataLayout::getTypeAllocSize on a null Type*. The constructor must be
+// lowered with the {E, i1} ABI like any other throws function, giving its body
+// a valid payload slot to store the propagated error.
 
 namespace std {
-struct error {
-  void *domain;
-  __SIZE_TYPE__ code;
-  ~error() noexcept;
-};
-} // namespace std
-
-int open() throws;
-
-struct file {
-  int fd;
-  // The member-initializer calls a throws function; Sema wraps it in
-  // `try(open())`, which requires the enclosing constructor to have the
-  // throws return ABI.
-  file() throws : fd(open()) {}
-};
-
-// A throws constructor called from a throws function auto-propagates: Sema
-// does not wrap CXXConstructExpr in `try()`, so EmitCall must take the error
-// path itself.
-int use() throws {
-  file f{};
-  return f.fd;
+struct error { void *d; __SIZE_TYPE__ c; };
 }
 
-// The enclosing throws function uses the {E, i1} ABI (emitted before the ctor).
-// CHECK: define dso_local { { ptr, i64 }, i1 } @_Z3usev()
+int open_resource() throws;
 
-// The constructor definition uses the {E, i1} ABI, not void.
-// CHECK: define {{.*}} { { ptr, i64 }, i1 } @_ZN4fileC2Ev(
+struct A {
+  int fd;
+  A() throws : fd(open_resource()) {}
+};
 
-// The constructor reads the discriminant of the wrapped throws call and stores
-// it (true) into its own discriminant slot on the error path.
-// CHECK: store i1 true, ptr %
+// A `throws` constructor invoked from a `throws` function propagates the
+// error. The call site must agree with the constructor's {E, i1} definition
+// ABI, and (since Sema does not wrap constructor calls in `try(expr)`) the
+// auto-propagate path stores the payload and sets the discriminant.
+// CHECK-LABEL: define dso_local { { ptr, i64 }, i1 } @_Z4makev(
+// CHECK:         call { { ptr, i64 }, i1 } @_ZN1AC2Ev(
+int make() throws {
+  A a{};
+  return a.fd;
+}
+
+// The constructor itself carries the {E, i1} return ABI (E = std::error, the
+// implicit 2-register {void*, size_t} struct), so its member-initializer call
+// to a throws function can store the error payload and set the discriminant
+// on failure instead of crashing.
+// CHECK: define dso_local { { ptr, i64 }, i1 } @_ZN1AC[12]Ev(

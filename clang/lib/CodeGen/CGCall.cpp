@@ -491,13 +491,14 @@ CodeGenTypes::arrangeCXXStructorDeclaration(GlobalDecl GD) {
                            : getCXXABI().hasMostDerivedReturn(GD)
                                ? CGM.getContext().VoidPtrTy
                                : Context.VoidTy;
-  // Herbception: a `throws`/`fails{E}` constructor or destructor must carry
-  // the error discriminant through its (normally void) return slot, exactly
-  // like an ordinary throws function, so its body can propagate errors and
-  // its callers can read the discriminant.
+  // Herbception: a `throws` constructor must carry the error discriminant
+  // through its (normally void) return slot, exactly like an ordinary throws
+  // function, so its body can propagate errors and its callers can read the
+  // discriminant. (Destructors and `return_failure{E}` are not permitted on
+  // constructors, so only the `throws` spec applies here.)
   return arrangeLLVMFunctionInfo(
       resultType, FnInfoOpts::IsInstanceMethod, argTypes, extInfo, paramInfos,
-      required, MD, FTP.getTypePtr()->hasThrowsSpec(),
+      required, MD, FTP.getTypePtr()->hasBasicThrowsSpec(),
       getHerbceptionErrorType(*this, FTP.getTypePtr()));
 }
 
@@ -568,12 +569,12 @@ const CGFunctionInfo &CodeGenTypes::arrangeCXXConstructorCall(
                                 ArgTypes.size());
   }
 
-  // Herbception: a call to a `throws`/`fails{E}` constructor carries the
-  // error discriminant in its (normally void) return slot, so the call site
-  // must agree with the constructor's definition ABI.
+  // Herbception: a call to a `throws` constructor carries the error
+  // discriminant in its (normally void) return slot, so the call site must
+  // agree with the constructor's definition ABI.
   return arrangeLLVMFunctionInfo(
       ResultType, FnInfoOpts::IsInstanceMethod, ArgTypes, Info, ParamInfos,
-      Required, ABIInfoFD, FPT.getTypePtr()->hasThrowsSpec(),
+      Required, ABIInfoFD, FPT.getTypePtr()->hasBasicThrowsSpec(),
       getHerbceptionErrorType(*this, FPT.getTypePtr()));
 }
 
