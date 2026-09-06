@@ -3,6 +3,16 @@
 ; RUN: llvm-profdata merge --sample --extbinary --use-md5 %S/Inputs/indirect-call-csspgo.prof -o %t.md5
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.md5 -sample-profile-icp-relative-hotness=1  -pass-remarks=sample-profile -sample-profile-inline-size=0 -S -o /dev/null 2>&1 | FileCheck -check-prefix=ICP-HOT %s
 
+; Verify that composite encoding preserves hot indirect-call promotion.
+; RUN: llvm-profdata merge --sample --extbinary --extbinary-composite-prof \
+; RUN:   %S/Inputs/indirect-call-csspgo.prof -o %t.composite
+; RUN: llvm-profdata show --sample --show-sec-info-only %t.composite | \
+; RUN:   FileCheck -check-prefix=COMPOSITE %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.composite \
+; RUN:   -sample-profile-icp-relative-hotness=1 -pass-remarks=sample-profile \
+; RUN:   -sample-profile-inline-size=0 -S -o /dev/null 2>&1 | \
+; RUN:   FileCheck -check-prefix=ICP-HOT %s
+
 
 define void @test(ptr) #0 !dbg !3 {
 ;; Add two direct call to force top-down order for sample profile loader
@@ -64,3 +74,5 @@ attributes #0 = {"use-sample-profile"}
 
 ; ICP-HOT: remark: test.cc:4:0: '_Z3foov' inlined into 'test'
 ; ICP-HOT-NOT: remark
+
+; COMPOSITE: CompositeProfileSection

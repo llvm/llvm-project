@@ -1,0 +1,12 @@
+; These fixtures were written as v105 composite ExtBinary profiles, then only
+; their declared format versions were changed to 103 and 104. Composite
+; sections are not valid before version 105.
+
+; RUN: not llvm-profdata merge --sample \
+; RUN:   %S/Inputs/composite-version-103.profdata -o %t.v103 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=VERSION
+; RUN: not llvm-profdata merge --sample \
+; RUN:   %S/Inputs/composite-version-104.profdata -o %t.v104 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=VERSION
+
+; VERSION: Unsupported sample profile format version

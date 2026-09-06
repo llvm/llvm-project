@@ -378,6 +378,12 @@ Show basic information about each section in the profile. This option is
 only meaningful for sample-based profile in extbinary format.
 :::
 
+:::{option} --show-composite-info-only=[true|false]
+Show the per-function composite block structure. This option is only meaningful
+for sample-based profiles in the composite extbinary format, introduced in
+version 105.
+:::
+
 :::{option} --debug-info=<path>
 Specify the executable or `.dSYM` that contains debug info for the raw profile.
 When `--debug-info-correlate` or `--profile-correlate=debug-info` was used
