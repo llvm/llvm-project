@@ -111,8 +111,7 @@ define i32 @PR56119(i32 %e.coerce) {
 ; O1-LABEL: @PR56119(
 ; O1-NEXT:  entry:
 ; O1-NEXT:    [[CONV2:%.*]] = and i32 [[E_COERCE:%.*]], 255
-; O1-NEXT:    [[REM:%.*]] = urem i32 [[CONV2]], 255
-; O1-NEXT:    [[CMP:%.*]] = icmp eq i32 [[REM]], 7
+; O1-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CONV2]], 7
 ; O1-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; O1:       if.then:
 ; O1-NEXT:    tail call void (...) @foo()
