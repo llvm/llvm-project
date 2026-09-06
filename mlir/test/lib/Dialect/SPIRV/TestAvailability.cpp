@@ -208,8 +208,9 @@ struct ConvertToIntegerDotProd : RewritePattern {
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<SPIRVOp>(op, op->getResultTypes(),
-                                         op->getOperands(), op->getAttrs());
+    rewriter.replaceOpWithNewOp<SPIRVOp>(
+        op, op->getResultTypes(), op->getOperands(),
+        op->getDiscardableAttrDictionary().getValue());
     return success();
   }
 };

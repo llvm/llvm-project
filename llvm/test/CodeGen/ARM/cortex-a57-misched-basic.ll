@@ -5,7 +5,7 @@
 ; Check the latency for instructions for both generic and cortex-a57.
 ; SDIV should be scheduled at the block's begin (20 cyc of independent M unit).
 ;
-; CHECK:       ********** MI Scheduling **********
+; CHECK:       Current Schedule Region
 ; CHECK:      foo:%bb.0 entry
 
 ; GENERIC:    LDRi12

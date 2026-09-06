@@ -286,9 +286,6 @@ define dso_local void @NestedFor64(ptr %ar, i64 %n, i64 %m, i64 %o) #0 {
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[CMP3]], i1 [[CMP41]], i1 false
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[FOR_BODY_US_PREHEADER:%.*]], label [[FOR_END17:%.*]]
 ; CHECK:       for.body.us.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[O]], [[M]]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i32 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[O]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[M]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP3]], [[TMP4]]
@@ -296,13 +293,11 @@ define dso_local void @NestedFor64(ptr %ar, i64 %n, i64 %m, i64 %o) #0 {
 ; CHECK-NEXT:    br label [[FOR_BODY_US:%.*]]
 ; CHECK:       for.body.us:
 ; CHECK-NEXT:    [[I_04_US:%.*]] = phi i32 [ [[INC16_US:%.*]], [[FOR_BODY_US]] ], [ 0, [[FOR_BODY_US_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP2]], [[I_04_US]]
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[AR:%.*]], i32 [[TMP7]]
 ; CHECK-NEXT:    [[CONV7_US:%.*]] = sext i32 [[I_04_US]] to i64
-; CHECK-NEXT:    [[MUL_US:%.*]] = mul nsw i64 [[CONV7_US]], [[M]]
-; CHECK-NEXT:    [[MUL8_US:%.*]] = mul nsw i64 [[MUL_US]], [[O]]
+; CHECK-NEXT:    [[MUL_US:%.*]] = mul i64 [[CONV7_US]], [[M]]
+; CHECK-NEXT:    [[MUL8_US:%.*]] = mul i64 [[MUL_US]], [[O]]
 ; CHECK-NEXT:    [[IDX_EXT_US:%.*]] = trunc i64 [[MUL8_US]] to i32
-; CHECK-NEXT:    [[ADD_PTR_US:%.*]] = getelementptr inbounds i32, ptr [[AR]], i32 [[IDX_EXT_US]]
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i32, ptr [[AR:%.*]], i32 [[IDX_EXT_US]]
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 4 [[UGLYGEP]], i8 0, i32 [[TMP6]], i1 false)
 ; CHECK-NEXT:    [[INC16_US]] = add nuw nsw i32 [[I_04_US]], 1
 ; CHECK-NEXT:    [[CONV_US:%.*]] = sext i32 [[INC16_US]] to i64

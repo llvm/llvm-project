@@ -104,6 +104,154 @@ TEST(APFloatTest, isSignaling) {
   EXPECT_TRUE(APFloat::getSNaN(APFloat::IEEEsingle(), true, &payload).isSignaling());
 }
 
+TEST(APFloatTest, IsLosslesslyConvertibleToSelf) {
+  for (unsigned I = 0; I != APFloat::S_MaxSemantics + 1; ++I) {
+    const fltSemantics &Semantics =
+        APFloat::EnumToSemantics(static_cast<APFloat::Semantics>(I));
+    EXPECT_TRUE(
+        APFloatBase::isLosslesslyConvertibleTo(Semantics, Semantics, false))
+        << "Semantics = " << I;
+    EXPECT_TRUE(
+        APFloatBase::isLosslesslyConvertibleTo(Semantics, Semantics, true))
+        << "Semantics = " << I;
+  }
+}
+
+TEST(APFloatTest, IsLosslesslyConvertibleToKnownWiderSemantics) {
+  struct TestCase {
+    APFloat::Semantics From;
+    APFloat::Semantics To;
+    bool IgnoreNaNs;
+  };
+  const TestCase Cases[] = {
+      {APFloat::S_IEEEhalf, APFloat::S_IEEEsingle, true},
+      {APFloat::S_BFloat, APFloat::S_IEEEsingle, true},
+      {APFloat::S_IEEEsingle, APFloat::S_IEEEdouble, true},
+      {APFloat::S_IEEEdouble, APFloat::S_IEEEquad, true},
+      {APFloat::S_PPCDoubleDoubleLegacy, APFloat::S_IEEEquad, true},
+      {APFloat::S_Float8E5M2, APFloat::S_IEEEhalf, true},
+      {APFloat::S_Float8E5M2FNUZ, APFloat::S_IEEEsingle, false},
+      {APFloat::S_Float8E4M3, APFloat::S_IEEEhalf, true},
+      {APFloat::S_Float8E4M3FN, APFloat::S_IEEEhalf, false},
+      {APFloat::S_Float8E4M3FNUZ, APFloat::S_IEEEhalf, false},
+      {APFloat::S_Float8E4M3B11FNUZ, APFloat::S_IEEEhalf, false},
+      {APFloat::S_Float8E3M4, APFloat::S_IEEEhalf, true},
+      {APFloat::S_FloatTF32, APFloat::S_IEEEsingle, true},
+      {APFloat::S_Float8E8M0FNU, APFloat::S_x87DoubleExtended, false},
+      {APFloat::S_Float8E5M3FNU, APFloat::S_IEEEsingle, false},
+      {APFloat::S_Float6E3M2FN, APFloat::S_IEEEhalf, false},
+      {APFloat::S_Float6E2M3FN, APFloat::S_IEEEhalf, false},
+      {APFloat::S_Float4E2M1FN, APFloat::S_IEEEhalf, false},
+      {APFloat::S_x87DoubleExtended, APFloat::S_IEEEquad, true},
+  };
+
+  for (const TestCase &Case : Cases) {
+    const fltSemantics &From = APFloat::EnumToSemantics(Case.From);
+    const fltSemantics &To = APFloat::EnumToSemantics(Case.To);
+    EXPECT_TRUE(
+        APFloatBase::isLosslesslyConvertibleTo(From, To, Case.IgnoreNaNs))
+        << "From = " << Case.From << ", To = " << Case.To
+        << ", IgnoreNaNs = " << Case.IgnoreNaNs;
+  }
+}
+
+TEST(APFloatTest, IsLosslesslyConvertibleToRejectsInformationLoss) {
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(APFloat::IEEEhalf(),
+                                                      APFloat::IEEEsingle()));
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
+      APFloat::IEEEsingle(), APFloat::IEEEhalf(), true));
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
+      APFloat::Float8E4M3FN(), APFloat::Float8E4M3FNUZ(), true));
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
+      APFloat::Float4E2M1FN(), APFloat::Float8E8M0FNU(), true));
+
+  // IgnoreNaNs does not permit a NaN or infinity to change categories. Model
+  // possible future wider formats for combinations not currently present in
+  // the supported semantics.
+  fltSemantics WiderNanOnly = APFloat::IEEEsingle();
+  WiderNanOnly.nonFiniteBehavior = fltNonfiniteBehavior::NanOnly;
+  WiderNanOnly.nanEncoding = fltNanEncoding::AllOnes;
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(APFloat::IEEEhalf(),
+                                                      WiderNanOnly, true));
+
+  fltSemantics NarrowNanOnly = APFloat::IEEEhalf();
+  NarrowNanOnly.nonFiniteBehavior = fltNonfiniteBehavior::NanOnly;
+  NarrowNanOnly.nanEncoding = fltNanEncoding::AllOnes;
+  fltSemantics WiderFiniteOnly = APFloat::IEEEsingle();
+  WiderFiniteOnly.nonFiniteBehavior = fltNonfiniteBehavior::FiniteOnly;
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(NarrowNanOnly,
+                                                      WiderFiniteOnly, true));
+
+  // PPC double-double's low component is not described by its fltSemantics
+  // exponent and precision fields, so only identity is known to be lossless.
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
+      APFloat::PPCDoubleDouble(), APFloat::IEEEquad(), true));
+  EXPECT_FALSE(APFloatBase::isLosslesslyConvertibleTo(
+      APFloat::IEEEquad(), APFloat::PPCDoubleDouble(), true));
+}
+
+TEST(APFloatTest, LosslessConversionsPreserveRepresentativeValues) {
+  for (unsigned FromIndex = 0; FromIndex != APFloat::S_MaxSemantics + 1;
+       ++FromIndex) {
+    const fltSemantics &From =
+        APFloat::EnumToSemantics(static_cast<APFloat::Semantics>(FromIndex));
+    for (unsigned ToIndex = 0; ToIndex != APFloat::S_MaxSemantics + 1;
+         ++ToIndex) {
+      const fltSemantics &To =
+          APFloat::EnumToSemantics(static_cast<APFloat::Semantics>(ToIndex));
+      for (bool IgnoreNaNs : {false, true}) {
+        if (!APFloatBase::isLosslesslyConvertibleTo(From, To, IgnoreNaNs))
+          continue;
+
+        SCOPED_TRACE("From = " + std::to_string(FromIndex) +
+                     ", To = " + std::to_string(ToIndex) +
+                     ", IgnoreNaNs = " + std::to_string(IgnoreNaNs));
+        auto CheckValue = [&](APFloat Value) {
+          APFloat Original = Value;
+          bool WasNaN = Value.isNaN();
+          bool LosesInfo = false;
+          (void)Value.convert(To, APFloat::rmNearestTiesToEven, &LosesInfo);
+
+          if (WasNaN && IgnoreNaNs) {
+            EXPECT_TRUE(Value.isNaN());
+            return;
+          }
+
+          EXPECT_FALSE(LosesInfo);
+          bool LosesInfoOnReturn = false;
+          (void)Value.convert(From, APFloat::rmNearestTiesToEven,
+                              &LosesInfoOnReturn);
+          EXPECT_TRUE(Value.bitwiseIsEqual(Original));
+        };
+
+        CheckValue(APFloat::getLargest(From));
+        CheckValue(APFloat::getSmallest(From));
+        CheckValue(APFloat::getSmallestNormalized(From));
+        if (From.hasSignedRepr) {
+          CheckValue(APFloat::getLargest(From, true));
+          CheckValue(APFloat::getSmallest(From, true));
+          CheckValue(APFloat::getSmallestNormalized(From, true));
+        }
+        if (From.hasZero) {
+          CheckValue(APFloat::getZero(From));
+          if (From.hasSignedRepr)
+            CheckValue(APFloat::getZero(From, true));
+        }
+        if (APFloat::semanticsHasInf(From)) {
+          CheckValue(APFloat::getInf(From));
+          if (From.hasSignedRepr)
+            CheckValue(APFloat::getInf(From, true));
+        }
+        if (APFloat::semanticsHasNaN(From)) {
+          CheckValue(APFloat::getQNaN(From));
+          if (From.nonFiniteBehavior == fltNonfiniteBehavior::IEEE754)
+            CheckValue(APFloat::getSNaN(From));
+        }
+      }
+    }
+  }
+}
+
 TEST(APFloatTest, next) {
 
   APFloat test(APFloat::IEEEquad(), APFloat::uninitialized);
@@ -2331,6 +2479,74 @@ TEST(APFloatTest, Float8E8M0FNUNaNConvert) {
     EXPECT_EQ(APInt(APFloat::getSizeInBits(*Sem), ExpectedBits), bits);
     // The stored bit pattern, not just the category, has to say NaN.
     EXPECT_TRUE(APFloat(*Sem, bits).isNaN());
+  }
+}
+
+// Test that converting into a format that cannot represent the sign, or that
+// has no encoding for zero, reports the loss. The value that comes out is
+// still the one convert computed: the sign bit is carried into a format that
+// cannot spell it, and zero is replaced by the smallest normalized value. The
+// status is what tells a caller not to keep it.
+TEST(APFloatTest, ConvertLosesUnrepresentableSignAndZero) {
+  // Neither format has a sign; only Float8E8M0FNU also lacks a zero.
+  const fltSemantics *NoSignSemantics[] = {&APFloat::Float8E8M0FNU(),
+                                           &APFloat::Float8E5M3FNU()};
+
+  for (const fltSemantics *Sem : NoSignSemantics) {
+    // The magnitude converts exactly, so the sign is the whole of the loss.
+    APFloat test(-2.0);
+    bool losesInfo = false;
+    APFloat::opStatus status =
+        test.convert(*Sem, APFloat::rmNearestTiesToEven, &losesInfo);
+    EXPECT_TRUE(losesInfo);
+    EXPECT_EQ(status, APFloat::opInexact);
+    EXPECT_TRUE(test.isNegative());
+    EXPECT_EQ(-2.0, test.convertToDouble());
+
+    // The same magnitude without the sign has nothing to report.
+    test = APFloat(2.0);
+    losesInfo = true;
+    status = test.convert(*Sem, APFloat::rmNearestTiesToEven, &losesInfo);
+    EXPECT_FALSE(losesInfo);
+    EXPECT_EQ(status, APFloat::opOK);
+    EXPECT_FALSE(test.isNegative());
+    EXPECT_EQ(2.0, test.convertToDouble());
+  }
+
+  // Float8E8M0FNU has no zero either, and substitutes 2^-127 for one. That
+  // substitution is unsigned, so both zeros come out as the same value.
+  for (double Zero : {0.0, -0.0}) {
+    APFloat test(Zero);
+    bool losesInfo = false;
+    APFloat::opStatus status = test.convert(
+        APFloat::Float8E8M0FNU(), APFloat::rmNearestTiesToEven, &losesInfo);
+    EXPECT_TRUE(losesInfo);
+    EXPECT_EQ(status, APFloat::opInexact);
+    EXPECT_TRUE(test.isSmallestNormalized());
+    EXPECT_EQ(0x1.0p-127, test.convertToDouble());
+    EXPECT_EQ(APInt(8, 0), test.bitcastToAPInt());
+  }
+
+  // Float8E5M3FNU does have one, so a positive zero converts exactly, and a
+  // negative one keeps its value and loses only the sign.
+  {
+    APFloat test(0.0);
+    bool losesInfo = true;
+    APFloat::opStatus status = test.convert(
+        APFloat::Float8E5M3FNU(), APFloat::rmNearestTiesToEven, &losesInfo);
+    EXPECT_FALSE(losesInfo);
+    EXPECT_EQ(status, APFloat::opOK);
+    EXPECT_TRUE(test.isZero());
+    EXPECT_FALSE(test.isNegative());
+
+    test = APFloat(-0.0);
+    losesInfo = false;
+    status = test.convert(APFloat::Float8E5M3FNU(),
+                          APFloat::rmNearestTiesToEven, &losesInfo);
+    EXPECT_TRUE(losesInfo);
+    EXPECT_EQ(status, APFloat::opInexact);
+    EXPECT_TRUE(test.isZero());
+    EXPECT_TRUE(test.isNegative());
   }
 }
 
@@ -9881,13 +10097,14 @@ TEST(APFloatTest, ConvertDoubleToE8M0FNU) {
   EXPECT_EQ(status, APFloat::opOK);
 
   // For E8M0, zero encoding is represented as the smallest normalized value.
+  // That is a different value, so the conversion reports the loss.
   test = APFloat(APFloat::IEEEdouble(), "0.0");
   status = test.convert(APFloat::Float8E8M0FNU(), APFloat::rmNearestTiesToEven,
                         &losesInfo);
   EXPECT_TRUE(test.isSmallestNormalized());
   EXPECT_EQ(0x1.0p-127, test.convertToDouble());
-  EXPECT_FALSE(losesInfo);
-  EXPECT_EQ(status, APFloat::opOK);
+  EXPECT_TRUE(losesInfo);
+  EXPECT_EQ(status, APFloat::opInexact);
 
   // Test that the conversion of a power-of-two value is precise.
   test = APFloat(APFloat::IEEEdouble(), "8.0");
@@ -10765,6 +10982,7 @@ TEST(APFloatTest, getArbitraryFPFormatSizeInBits) {
   EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E4M3B11FNUZ"));
   EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E3M4"));
   EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E8M0FNU"));
+  EXPECT_EQ(8u, APFloat::getArbitraryFPFormatSizeInBits("Float8E5M3FNU"));
   EXPECT_EQ(6u, APFloat::getArbitraryFPFormatSizeInBits("Float6E3M2FN"));
   EXPECT_EQ(6u, APFloat::getArbitraryFPFormatSizeInBits("Float6E2M3FN"));
   EXPECT_EQ(4u, APFloat::getArbitraryFPFormatSizeInBits("Float4E2M1FN"));
@@ -10774,6 +10992,51 @@ TEST(APFloatTest, getArbitraryFPFormatSizeInBits) {
   EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits("Float8"));
   EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits("float4e2m1fn"));
   EXPECT_EQ(0u, APFloat::getArbitraryFPFormatSizeInBits("unknown"));
+}
+
+TEST(APFloatTest, getArbitraryFPSemantics) {
+  // Formats that can currently be lowered map to their semantics.
+  EXPECT_EQ(&APFloat::Float8E5M2(),
+            APFloat::getArbitraryFPSemantics("Float8E5M2"));
+  EXPECT_EQ(&APFloat::Float8E4M3FN(),
+            APFloat::getArbitraryFPSemantics("Float8E4M3FN"));
+  EXPECT_EQ(&APFloat::Float8E5M3FNU(),
+            APFloat::getArbitraryFPSemantics("Float8E5M3FNU"));
+  EXPECT_EQ(&APFloat::Float6E3M2FN(),
+            APFloat::getArbitraryFPSemantics("Float6E3M2FN"));
+  EXPECT_EQ(&APFloat::Float6E2M3FN(),
+            APFloat::getArbitraryFPSemantics("Float6E2M3FN"));
+  EXPECT_EQ(&APFloat::Float4E2M1FN(),
+            APFloat::getArbitraryFPSemantics("Float4E2M1FN"));
+
+  // Formats that are valid but cannot be lowered yet report no semantics.
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E5M2FNUZ"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E4M3"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E4M3FNUZ"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E4M3B11FNUZ"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E3M4"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8E8M0FNU"));
+
+  // Invalid formats report no semantics.
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics(""));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("Float8"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("float8e5m2"));
+  EXPECT_EQ(nullptr, APFloat::getArbitraryFPSemantics("unknown"));
+}
+
+// The two arbitrary FP format tables must agree: every format with lowerable
+// semantics reports the size of those semantics.
+TEST(APFloatTest, ArbitraryFPSemanticsMatchSizeInBits) {
+  for (StringRef Format :
+       {"Float8E5M2", "Float8E5M2FNUZ", "Float8E4M3", "Float8E4M3FN",
+        "Float8E4M3FNUZ", "Float8E4M3B11FNUZ", "Float8E3M4", "Float8E8M0FNU",
+        "Float8E5M3FNU", "Float6E3M2FN", "Float6E2M3FN", "Float4E2M1FN"}) {
+    ASSERT_TRUE(APFloat::isValidArbitraryFPFormat(Format)) << Format;
+    if (const fltSemantics *Sem = APFloat::getArbitraryFPSemantics(Format))
+      EXPECT_EQ(APFloat::getSizeInBits(*Sem),
+                APFloat::getArbitraryFPFormatSizeInBits(Format))
+          << Format;
+  }
 }
 
 TEST(APFloatTest, DecimalStringPreservesInexactStatus) {

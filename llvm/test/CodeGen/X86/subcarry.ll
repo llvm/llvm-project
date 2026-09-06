@@ -1578,12 +1578,11 @@ define <4 x i1> @no_subcarry_vector(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %y0,
 ; X86-NEXT:    movl 36(%esp), %eax
 ; X86-NEXT:    sbbl 68(%esp), %eax
 ; X86-NEXT:    setb %al
-; X86-NEXT:    addb %al, %al
 ; X86-NEXT:    cmpl 48(%esp), %ecx
 ; X86-NEXT:    movl 32(%esp), %ecx
 ; X86-NEXT:    sbbl 64(%esp), %ecx
 ; X86-NEXT:    movl 12(%esp), %ecx
-; X86-NEXT:    adcb $0, %al
+; X86-NEXT:    adcb %al, %al
 ; X86-NEXT:    shlb $2, %al
 ; X86-NEXT:    cmpl 44(%esp), %ecx
 ; X86-NEXT:    movl 28(%esp), %ecx

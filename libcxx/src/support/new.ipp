@@ -20,9 +20,15 @@ void __throw_bad_alloc_shim();
 
 #ifndef _LIBCPP_ASSERT_SHIM
 #  error _LIBCPP_ASSERT_SHIM should be defined
-#  define _LIBCPP_ASSERT_SHIM
+#  define _LIBCPP_ASSERT_SHIM // make the file parseable
 #endif
 
+enum class on_failure {
+  return_null,
+  throw_bad_alloc,
+};
+
+template <on_failure failure_mode>
 static void* operator_new_impl(std::size_t size) {
   if (size == 0)
     size = 1;
@@ -36,19 +42,18 @@ static void* operator_new_impl(std::size_t size) {
     else
       break;
   }
-  return p;
-}
-
-OVERRIDABLE_FUNCTION void* operator new(std::size_t size) _THROW_BAD_ALLOC {
-  void* p = operator_new_impl(size);
-  if (p == nullptr)
+  if (failure_mode == on_failure::throw_bad_alloc && !p)
     __throw_bad_alloc_shim();
   return p;
 }
 
+OVERRIDABLE_FUNCTION void* operator new(std::size_t size) _THROW_BAD_ALLOC {
+  return operator_new_impl<on_failure::throw_bad_alloc>(size);
+}
+
 [[gnu::weak]] void* operator new(size_t size, const std::nothrow_t&) noexcept {
-#  if !_LIBCPP_HAS_EXCEPTIONS
-#    if _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION
+#if !_LIBCPP_HAS_EXCEPTIONS
+#  if _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION
   _LIBCPP_ASSERT_SHIM(
       (!std::__is_function_overridden < void*(std::size_t), &operator new>()),
       "libc++ was configured with exceptions disabled and `operator new(size_t)` has been overridden, "
@@ -57,24 +62,24 @@ OVERRIDABLE_FUNCTION void* operator new(std::size_t size) _THROW_BAD_ALLOC {
       "it fails to allocate, making it impossible for `operator new(size_t, nothrow_t)` to fulfill its "
       "contract (since it should return nullptr upon failure). Please make sure you override "
       "`operator new(size_t, nothrow_t)` as well.");
-#    endif
+#  endif
 
-  return operator_new_impl(size);
-#  else
+  return operator_new_impl<on_failure::return_null>(size);
+#else
   void* p = nullptr;
   try {
     p = ::operator new(size);
   } catch (...) {
   }
   return p;
-#  endif
+#endif
 }
 
 OVERRIDABLE_FUNCTION void* operator new[](size_t size) _THROW_BAD_ALLOC { return ::operator new(size); }
 
 [[gnu::weak]] void* operator new[](size_t size, const std::nothrow_t&) noexcept {
-#  if !_LIBCPP_HAS_EXCEPTIONS
-#    if _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION
+#if !_LIBCPP_HAS_EXCEPTIONS
+#  if _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION
   _LIBCPP_ASSERT_SHIM(
       (!std::__is_function_overridden < void*(std::size_t), &operator new[]>()),
       "libc++ was configured with exceptions disabled and `operator new[](size_t)` has been overridden, "
@@ -83,17 +88,17 @@ OVERRIDABLE_FUNCTION void* operator new[](size_t size) _THROW_BAD_ALLOC { return
       "it fails to allocate, making it impossible for `operator new[](size_t, nothrow_t)` to fulfill its "
       "contract (since it should return nullptr upon failure). Please make sure you override "
       "`operator new[](size_t, nothrow_t)` as well.");
-#    endif
+#  endif
 
-  return operator_new_impl(size);
-#  else
+  return operator_new_impl<on_failure::return_null>(size);
+#else
   void* p = nullptr;
   try {
     p = ::operator new[](size);
   } catch (...) {
   }
   return p;
-#  endif
+#endif
 }
 
 [[gnu::weak]] void operator delete(void* ptr) noexcept { std::free(ptr); }
@@ -108,8 +113,9 @@ OVERRIDABLE_FUNCTION void* operator new[](size_t size) _THROW_BAD_ALLOC { return
 
 [[gnu::weak]] void operator delete[](void* ptr, size_t) noexcept { ::operator delete[](ptr); }
 
-#  if _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION
+#if _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION
 
+template <on_failure failure_mode>
 static void* operator_new_aligned_impl(std::size_t size, std::align_val_t alignment) {
   if (size == 0)
     size = 1;
@@ -127,19 +133,18 @@ static void* operator_new_aligned_impl(std::size_t size, std::align_val_t alignm
     else
       break;
   }
-  return p;
-}
-
-OVERRIDABLE_FUNCTION void* operator new(std::size_t size, std::align_val_t alignment) _THROW_BAD_ALLOC {
-  void* p = operator_new_aligned_impl(size, alignment);
-  if (p == nullptr)
+  if (failure_mode == on_failure::throw_bad_alloc && !p)
     __throw_bad_alloc_shim();
   return p;
 }
 
+OVERRIDABLE_FUNCTION void* operator new(std::size_t size, std::align_val_t alignment) _THROW_BAD_ALLOC {
+  return operator_new_aligned_impl<on_failure::throw_bad_alloc>(size, alignment);
+}
+
 [[gnu::weak]] void* operator new(size_t size, std::align_val_t alignment, const std::nothrow_t&) noexcept {
-#    if !_LIBCPP_HAS_EXCEPTIONS
-#      if _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION
+#  if !_LIBCPP_HAS_EXCEPTIONS
+#    if _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION
   _LIBCPP_ASSERT_SHIM(
       (!std::__is_function_overridden < void*(std::size_t, std::align_val_t), &operator new>()),
       "libc++ was configured with exceptions disabled and `operator new(size_t, align_val_t)` has been overridden, "
@@ -148,17 +153,17 @@ OVERRIDABLE_FUNCTION void* operator new(std::size_t size, std::align_val_t align
       "terminate in case it fails to allocate, making it impossible for `operator new(size_t, align_val_t, nothrow_t)` "
       "to fulfill its contract (since it should return nullptr upon failure). Please make sure you override "
       "`operator new(size_t, align_val_t, nothrow_t)` as well.");
-#      endif
+#    endif
 
-  return operator_new_aligned_impl(size, alignment);
-#    else
+  return operator_new_aligned_impl<on_failure::return_null>(size, alignment);
+#  else
   void* p = nullptr;
   try {
     p = ::operator new(size, alignment);
   } catch (...) {
   }
   return p;
-#    endif
+#  endif
 }
 
 OVERRIDABLE_FUNCTION void* operator new[](size_t size, std::align_val_t alignment) _THROW_BAD_ALLOC {
@@ -166,8 +171,8 @@ OVERRIDABLE_FUNCTION void* operator new[](size_t size, std::align_val_t alignmen
 }
 
 [[gnu::weak]] void* operator new[](size_t size, std::align_val_t alignment, const std::nothrow_t&) noexcept {
-#    if !_LIBCPP_HAS_EXCEPTIONS
-#      if _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION
+#  if !_LIBCPP_HAS_EXCEPTIONS
+#    if _LIBCPP_CAN_DETECT_OVERRIDDEN_FUNCTION
   _LIBCPP_ASSERT_SHIM(
       (!std::__is_function_overridden < void*(std::size_t, std::align_val_t), &operator new[]>()),
       "libc++ was configured with exceptions disabled and `operator new[](size_t, align_val_t)` has been overridden, "
@@ -176,17 +181,17 @@ OVERRIDABLE_FUNCTION void* operator new[](size_t size, std::align_val_t alignmen
       "terminate in case it fails to allocate, making it impossible for `operator new[](size_t, align_val_t, "
       "nothrow_t)` to fulfill its contract (since it should return nullptr upon failure). Please make sure you "
       "override `operator new[](size_t, align_val_t, nothrow_t)` as well.");
-#      endif
+#    endif
 
-  return operator_new_aligned_impl(size, alignment);
-#    else
+  return operator_new_aligned_impl<on_failure::return_null>(size, alignment);
+#  else
   void* p = nullptr;
   try {
     p = ::operator new[](size, alignment);
   } catch (...) {
   }
   return p;
-#    endif
+#  endif
 }
 
 [[gnu::weak]] void operator delete(void* ptr, std::align_val_t) noexcept { std::__libcpp_aligned_free(ptr); }
@@ -210,4 +215,4 @@ OVERRIDABLE_FUNCTION void* operator new[](size_t size, std::align_val_t alignmen
 [[gnu::weak]] void operator delete[](void* ptr, size_t, std::align_val_t alignment) noexcept {
   ::operator delete[](ptr, alignment);
 }
-#  endif // _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION
+#endif // _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION

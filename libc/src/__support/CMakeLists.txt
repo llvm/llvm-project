@@ -52,11 +52,27 @@ add_object_library(
 )
 
 add_header_library(
+  tlsf_table
+  HDRS
+    tlsf_table.h
+  DEPENDS
+    .block
+    .freelist
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.limits
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.math_extras
+)
+
+add_header_library(
   freestore
   HDRS
     freestore.h
   DEPENDS
     .freetrie
+    .tlsf_table
 )
 
 libc_set_definition(libc_freelist_malloc_size "LIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}")
@@ -331,6 +347,8 @@ add_header_library(
   DEPENDS
     .libc_assert
     libc.src.__support.CPP.array
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.config
     libc.src.string.memory_utils.inline_memset
 )
 
@@ -372,6 +390,15 @@ add_header_library(
   frac128
   HDRS
     frac128.h
+  DEPENDS
+    .big_int
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  frac64
+  HDRS
+    frac64.h
   DEPENDS
     .big_int
     libc.src.__support.macros.config

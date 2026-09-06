@@ -385,7 +385,8 @@ SBProcess SBCommandInterpreter::GetProcess() {
   if (IsValid()) {
     TargetSP target_sp(m_opaque_ptr->GetSelectedTarget());
     if (target_sp) {
-      std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
+      TargetAPIMutex api_lock = target_sp->GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
       process_sp = target_sp->GetProcessSP();
       sb_process.SetSP(process_sp);
     }
@@ -472,9 +473,12 @@ void SBCommandInterpreter::SourceInitFileInGlobalDirectory(
   result.Clear();
   if (IsValid()) {
     TargetSP target_sp(m_opaque_ptr->GetSelectedTarget());
-    std::unique_lock<std::recursive_mutex> lock;
-    if (target_sp)
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+    TargetAPIMutex api_lock;
+    std::unique_lock<TargetAPIMutex> guard;
+    if (target_sp) {
+      api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+      guard = std::unique_lock<TargetAPIMutex>(api_lock);
+    }
     m_opaque_ptr->SourceInitFileGlobal(result.ref());
   } else {
     result->AppendError("SBCommandInterpreter is not valid");
@@ -495,9 +499,12 @@ void SBCommandInterpreter::SourceInitFileInHomeDirectory(
   result.Clear();
   if (IsValid()) {
     TargetSP target_sp(m_opaque_ptr->GetSelectedTarget());
-    std::unique_lock<std::recursive_mutex> lock;
-    if (target_sp)
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+    TargetAPIMutex api_lock;
+    std::unique_lock<TargetAPIMutex> guard;
+    if (target_sp) {
+      api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+      guard = std::unique_lock<TargetAPIMutex>(api_lock);
+    }
     m_opaque_ptr->SourceInitFileHome(result.ref(), is_repl);
   } else {
     result->AppendError("SBCommandInterpreter is not valid");
@@ -511,9 +518,12 @@ void SBCommandInterpreter::SourceInitFileInCurrentWorkingDirectory(
   result.Clear();
   if (IsValid()) {
     TargetSP target_sp(m_opaque_ptr->GetSelectedTarget());
-    std::unique_lock<std::recursive_mutex> lock;
-    if (target_sp)
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+    TargetAPIMutex api_lock;
+    std::unique_lock<TargetAPIMutex> guard;
+    if (target_sp) {
+      api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+      guard = std::unique_lock<TargetAPIMutex>(api_lock);
+    }
     m_opaque_ptr->SourceInitFileCwd(result.ref());
   } else {
     result->AppendError("SBCommandInterpreter is not valid");

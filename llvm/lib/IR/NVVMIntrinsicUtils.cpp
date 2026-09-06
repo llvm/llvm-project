@@ -16,6 +16,16 @@
 using namespace llvm;
 using namespace nvvm;
 
+void nvvm::printEvictPolicyType(raw_ostream &OS, const Constant *ImmArgVal) {
+  const auto *CI = dyn_cast<ConstantInt>(ImmArgVal);
+  if (!CI ||
+      CI->getZExtValue() > static_cast<uint64_t>(EvictPolicyType::EVICT_LAST)) {
+    OS << "Unsupported evict policy";
+    return;
+  }
+  OS << getEvictPolicyName(static_cast<EvictPolicyType>(CI->getZExtValue()));
+}
+
 void nvvm::printTMAReductionOp(raw_ostream &OS, const Constant *ImmArgVal) {
   const auto *CI = dyn_cast<ConstantInt>(ImmArgVal);
   if (!CI || CI->getZExtValue() > static_cast<uint64_t>(TMAReductionOp::XOR))
@@ -42,6 +52,9 @@ void nvvm::printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal) {
     case Tcgen05MMAKind::I8:
       OS << "i8";
       return;
+    case Tcgen05MMAKind::TI16:
+      OS << "ti16";
+      return;
     }
   }
 }
@@ -62,6 +75,27 @@ void nvvm::printTcgen05CollectorUsageOp(raw_ostream &OS,
       return;
     case Tcgen05CollectorUsageOp::USE:
       OS << "use";
+      return;
+    }
+  }
+}
+
+void nvvm::printTcgen05MMACollectorBBuffer(raw_ostream &OS,
+                                           const Constant *ImmArgVal) {
+  if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
+    uint64_t Val = CI->getZExtValue();
+    switch (static_cast<Tcgen05MMACollectorBBuffer>(Val)) {
+    case Tcgen05MMACollectorBBuffer::B0:
+      OS << "b0";
+      return;
+    case Tcgen05MMACollectorBBuffer::B1:
+      OS << "b1";
+      return;
+    case Tcgen05MMACollectorBBuffer::B2:
+      OS << "b2";
+      return;
+    case Tcgen05MMACollectorBBuffer::B3:
+      OS << "b3";
       return;
     }
   }

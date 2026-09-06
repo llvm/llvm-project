@@ -854,6 +854,12 @@ static FailureOr<ConvolutionDimensions> inferConvolutionDimsImpl(
   return dimensions;
 }
 
+static DenseIntElementsAttr getInherentConvolutionAttr(LinalgOp linalgOp,
+                                                       StringRef name) {
+  return dyn_cast_or_null<DenseIntElementsAttr>(
+      linalgOp->getInherentAttr(name).value_or(Attribute{}));
+}
+
 /// Find at least 1 parallel (output_image) and reduction (filter_loop)
 /// dimension candidates that form a convolution subcomputation within
 /// `linalgOp`. The LHS is assumed to be the convolution input while the
@@ -898,8 +904,8 @@ mlir::linalg::inferConvolutionDims(LinalgOp linalgOp) {
   return inferConvolutionDimsImpl(
       indexingMaps, linalgOp.getIteratorTypesArray(), inputExprWalker,
       /*allowEmptyConvolvedDims=*/false,
-      linalgOp->getAttrOfType<DenseIntElementsAttr>("strides"),
-      linalgOp->getAttrOfType<DenseIntElementsAttr>("dilations"));
+      getInherentConvolutionAttr(linalgOp, "strides"),
+      getInherentConvolutionAttr(linalgOp, "dilations"));
 }
 
 FailureOr<ConvolutionDimensions>
@@ -1067,8 +1073,8 @@ mlir::linalg::detail::isConvolutionInterfaceImpl(
   if (dimensions) {
     FailureOr<ConvolutionDimensions> res = inferConvolutionDimsImpl(
         indexingMaps, iteratorTypes, inputExprWalker, allowEmptyConvolvedDims,
-        linalgOp->getAttrOfType<DenseIntElementsAttr>("strides"),
-        linalgOp->getAttrOfType<DenseIntElementsAttr>("dilations"));
+        getInherentConvolutionAttr(linalgOp, "strides"),
+        getInherentConvolutionAttr(linalgOp, "dilations"));
     assert(succeeded(res) && "unexpected failure to infer convolution dims");
     *dimensions = *res;
   }

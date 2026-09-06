@@ -52,7 +52,7 @@ class TestPlatformMacOSX(GDBRemoteTestBase):
         )
 
     @skipIfRemote
-    @skipUnlessDarwin
+    @requireDarwin
     @skipUnlessArch("arm64")
     def test_macos(self):
         self.platform_test(

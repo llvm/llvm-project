@@ -410,6 +410,8 @@ private:
                                        unsigned Abbrev);
   void writeDIObjCProperty(const DIObjCProperty *N,
                            SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+  void writeDIProperty(const DIProperty *N, SmallVectorImpl<uint64_t> &Record,
+                       unsigned Abbrev);
   void writeDIImportedEntity(const DIImportedEntity *N,
                              SmallVectorImpl<uint64_t> &Record,
                              unsigned Abbrev);
@@ -866,6 +868,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NO_DUPLICATE;
   case Attribute::NoFree:
     return bitc::ATTR_KIND_NOFREE;
+  case Attribute::NoFreeObj:
+    return bitc::ATTR_KIND_NOFREEOBJ;
   case Attribute::NoImplicitFloat:
     return bitc::ATTR_KIND_NO_IMPLICIT_FLOAT;
   case Attribute::NoInline:
@@ -1855,6 +1859,9 @@ static uint64_t getOptimizationFlags(const Value *V) {
   } else if (const auto *ICmp = dyn_cast<ICmpInst>(V)) {
     if (ICmp->hasSameSign())
       Flags |= 1 << bitc::ICMP_SAME_SIGN;
+  } else if (const auto *ASC = dyn_cast<AddrSpaceCastInst>(V)) {
+    if (ASC->hasNonNull())
+      Flags |= 1 << bitc::ASCI_NON_NULL;
   }
 
   return Flags;
@@ -2507,6 +2514,20 @@ void ModuleBitcodeWriter::writeDIObjCProperty(const DIObjCProperty *N,
   Record.push_back(VE.getMetadataOrNullID(N->getType()));
 
   Stream.EmitRecord(bitc::METADATA_OBJC_PROPERTY, Record, Abbrev);
+  Record.clear();
+}
+
+void ModuleBitcodeWriter::writeDIProperty(const DIProperty *N,
+                                          SmallVectorImpl<uint64_t> &Record,
+                                          unsigned Abbrev) {
+  Record.push_back(N->isDistinct());
+  Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
+  Record.push_back(VE.getMetadataOrNullID(N->getFile()));
+  Record.push_back(N->getLine());
+  Record.push_back(VE.getMetadataOrNullID(N->getType()));
+  Record.push_back(VE.getMetadataOrNullID(N->getBackingStorage()));
+
+  Stream.EmitRecord(bitc::METADATA_PROPERTY, Record, Abbrev);
   Record.clear();
 }
 
@@ -3590,8 +3611,9 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
     break;
   }
 
-  case Instruction::Store:
-    if (cast<StoreInst>(I).isAtomic()) {
+  case Instruction::Store: {
+    const auto &SI = cast<StoreInst>(I);
+    if (SI.isAtomic()) {
       Code = bitc::FUNC_CODE_INST_STOREATOMIC;
     } else {
       Code = bitc::FUNC_CODE_INST_STORE;
@@ -3601,14 +3623,17 @@ void ModuleBitcodeWriter::writeInstruction(const Instruction &I,
       AbbrevToUse = 0;
     if (pushValueAndType(I.getOperand(0), InstID, Vals)) // valty + val
       AbbrevToUse = 0;
-    Vals.push_back(getEncodedAlign(cast<StoreInst>(I).getAlign()));
-    Vals.push_back(cast<StoreInst>(I).isVolatile());
-    if (cast<StoreInst>(I).isAtomic()) {
-      Vals.push_back(getEncodedOrdering(cast<StoreInst>(I).getOrdering()));
-      Vals.push_back(
-          getEncodedSyncScopeID(cast<StoreInst>(I).getSyncScopeID()));
+    Vals.push_back(getEncodedAlign(SI.getAlign()));
+    Vals.push_back(SI.isVolatile());
+    if (SI.isAtomic()) {
+      Vals.push_back(getEncodedOrdering(SI.getOrdering()));
+      Vals.push_back(getEncodedSyncScopeID(SI.getSyncScopeID()));
+      if (SI.isElementwise())
+        Vals.push_back(1);
     }
     break;
+  }
+
   case Instruction::AtomicCmpXchg:
     Code = bitc::FUNC_CODE_INST_CMPXCHG;
     pushValueAndType(I.getOperand(0), InstID, Vals); // ptrty + ptr

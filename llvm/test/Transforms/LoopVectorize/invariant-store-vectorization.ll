@@ -356,6 +356,7 @@ define void @multiple_uniform_stores(ptr nocapture %var1, ptr nocapture readonly
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[VAR1:%.*]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[VAR2:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[ITR]], -1
+; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[ITR]], -1
 ; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER:%.*]]
 ; CHECK:       for.cond1.preheader:
 ; CHECK-NEXT:    [[INDVARS_IV23:%.*]] = phi i64 [ [[INDVARS_IV_NEXT24:%.*]], [[FOR_INC8:%.*]] ], [ 0, [[FOR_COND1_PREHEADER_PREHEADER]] ]
@@ -366,8 +367,7 @@ define void @multiple_uniform_stores(ptr nocapture %var1, ptr nocapture readonly
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[VAR1]], i64 [[INDVARS_IV23]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[J_022]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX5_PROMOTED:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = sub i32 [[ITR]], [[J_022]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP10]], -1
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP10]], [[J_022]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP6]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i64 [[TMP7]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP8]], 4

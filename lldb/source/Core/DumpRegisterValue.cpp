@@ -50,9 +50,9 @@ static void dump_type_value(const lldb_private::RegisterTypeFlags &flags_type,
       data_extractor);
   lldb_private::DumpValueObjectOptions dump_options;
   lldb_private::DumpValueObjectOptions::ChildPrintingDecider decider =
-      [](lldb_private::ConstString varname) {
+      [](llvm::StringRef varname) {
         // Unnamed bit-fields are padding that we don't want to show.
-        return varname.GetLength();
+        return varname.size();
       };
   dump_options.SetChildPrintingDecider(decider).SetHideRootType(true);
 
@@ -129,8 +129,7 @@ void lldb_private::DumpRegisterValue(const RegisterValue &reg_val, Stream &s,
       (reg_info.byte_size != 4 && reg_info.byte_size != 8))
     return;
 
-  CompilerType register_compiler_type = target_sp->GetRegisterType(
-      reg_info.name, *reg_info.register_type, reg_info.byte_size);
+  CompilerType register_compiler_type = target_sp->GetRegisterType(reg_info);
   if (!register_compiler_type.IsValid())
     return;
 

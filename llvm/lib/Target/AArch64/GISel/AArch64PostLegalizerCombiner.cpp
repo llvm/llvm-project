@@ -126,13 +126,13 @@ void applyExtractVecEltPairwiseAdd(
 
 bool isSignExtended(Register R, MachineRegisterInfo &MRI) {
   // TODO: check if extended build vector as well.
-  unsigned Opc = MRI.getVRegDef(R)->getOpcode();
-  return Opc == TargetOpcode::G_SEXT || Opc == TargetOpcode::G_SEXT_INREG;
+  return mi_match(R, MRI, m_GSExt(m_Reg())) ||
+         mi_match(R, MRI, m_GSExtInReg(m_Reg()));
 }
 
 bool isZeroExtended(Register R, MachineRegisterInfo &MRI) {
   // TODO: check if extended build vector as well.
-  return MRI.getVRegDef(R)->getOpcode() == TargetOpcode::G_ZEXT;
+  return mi_match(R, MRI, m_GZExt(m_Reg()));
 }
 
 bool matchAArch64MulConstCombine(

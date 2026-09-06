@@ -129,9 +129,9 @@ addPassesToGenerateCode(CodeGenTargetMachineImpl &TM, PassManagerBase &PM,
   const TargetOptions &Options = TM.Options;
   TargetLibraryInfoImpl TLII(TM.getTargetTriple(), Options.VecLib);
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
-  PM.add(new RuntimeLibraryInfoWrapper(
-      TM.getTargetTriple(), Options.ExceptionModel, Options.FloatABIType,
-      Options.EABIVersion, Options.MCOptions.ABIName, Options.VecLib));
+  PM.add(
+      new RuntimeLibraryInfoWrapper(Options.ExceptionModel, Options.EABIVersion,
+                                    Options.MCOptions.ABIName, Options.VecLib));
 
   invokeGlobalTargetPassConfigCallbacks(TM, PM, PassConfig);
 

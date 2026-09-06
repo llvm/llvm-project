@@ -101,9 +101,10 @@ void TestPointerLikeTypeInterfacePass::runOnOperation() {
 
   if (testMode == "cast") {
     func.walk([&](Operation *op) {
-      if (!op->hasAttr("test.cast"))
+      if (!op->hasDiscardableAttr("test.cast"))
         return;
-      auto destAttr = dyn_cast_or_null<TypeAttr>(op->getAttr("cast_dest"));
+      auto destAttr =
+          dyn_cast_or_null<TypeAttr>(op->getDiscardableAttr("cast_dest"));
       if (!destAttr || op->getNumResults() == 0)
         return;
       testGenCast(op, op->getResult(0), destAttr.getValue(), builder);
@@ -118,7 +119,7 @@ void TestPointerLikeTypeInterfacePass::runOnOperation() {
     // For store mode, also look for a test value to use
     Value testValue;
     func.walk([&](Operation *op) {
-      if (op->hasAttr("test.ptr")) {
+      if (op->hasDiscardableAttr("test.ptr")) {
         for (auto result : op->getResults()) {
           if (isa<PointerLikeType>(result.getType())) {
             candidates.push_back(
@@ -128,7 +129,7 @@ void TestPointerLikeTypeInterfacePass::runOnOperation() {
         }
       }
       // Collect value marked with test.value for store tests
-      if (testMode == "store" && op->hasAttr("test.value")) {
+      if (testMode == "store" && op->hasDiscardableAttr("test.value")) {
         if (op->getNumResults() > 0)
           testValue = op->getResult(0);
       }
@@ -154,7 +155,7 @@ void TestPointerLikeTypeInterfacePass::runOnOperation() {
     SmallVector<PointerCandidate> sources, destinations;
 
     func.walk([&](Operation *op) {
-      if (op->hasAttr("test.src_ptr")) {
+      if (op->hasDiscardableAttr("test.src_ptr")) {
         for (auto result : op->getResults()) {
           if (isa<PointerLikeType>(result.getType())) {
             sources.push_back(
@@ -163,7 +164,7 @@ void TestPointerLikeTypeInterfacePass::runOnOperation() {
           }
         }
       }
-      if (op->hasAttr("test.dest_ptr")) {
+      if (op->hasDiscardableAttr("test.dest_ptr")) {
         for (auto result : op->getResults()) {
           if (isa<PointerLikeType>(result.getType())) {
             destinations.push_back(
@@ -188,8 +189,9 @@ void TestPointerLikeTypeInterfacePass::walkAndPrint() {
   func.walk([&](Operation *op) {
     // Look for operations marked with "test.ptr", "test.src_ptr", or
     // "test.dest_ptr"
-    if (op->hasAttr("test.ptr") || op->hasAttr("test.src_ptr") ||
-        op->hasAttr("test.dest_ptr")) {
+    if (op->hasDiscardableAttr("test.ptr") ||
+        op->hasDiscardableAttr("test.src_ptr") ||
+        op->hasDiscardableAttr("test.dest_ptr")) {
       llvm::errs() << "Operation: ";
       op->print(llvm::errs());
       llvm::errs() << "\n";

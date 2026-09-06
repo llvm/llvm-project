@@ -163,8 +163,7 @@ def BufferDeallocationSimplificationPass
     some memref isn't deallocated twice (double free).
   }];
 
-  let dependentDialects = ["mlir::bufferization::BufferizationDialect",
-                           "mlir::arith::ArithDialect",
+  let dependentDialects = ["mlir::arith::ArithDialect",
                            "mlir::memref::MemRefDialect"];
 }
 

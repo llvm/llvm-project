@@ -27,12 +27,12 @@ program test
   !$acc end serial
 end program
 
-!CHECK: acc.copyin {{.*}} {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "d2"}
-!CHECK: acc.copyin {{.*}} {name = "d2%member0"}
-!CHECK: acc.copyin {{.*}} {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "d4"}
-!CHECK: acc.create {{.*}} {dataClause = #acc<data_clause acc_copyout>, name = "d4%member0"}
-!CHECK: acc.delete {{.*}} {dataClause = #acc<data_clause acc_copyin>, name = "d2%member0"}
-!CHECK: acc.copyout {{.*}} {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "d2"}
-!CHECK: acc.copyout {{.*}} {name = "d4%member0"}
-!CHECK: acc.copyout {{.*}} {dataClause = #acc<data_clause acc_copy>, implicit = true, name = "d4"}
+!CHECK: acc.copyin {{.*}} dataClause(acc_copy) implicit(true) name("d2")
+!CHECK: acc.copyin {{.*}} name("d2%member0")
+!CHECK: acc.copyin {{.*}} dataClause(acc_copy) implicit(true) name("d4")
+!CHECK: acc.create {{.*}} dataClause(acc_copyout) name("d4%member0")
+!CHECK: acc.delete {{.*}} dataClause(acc_copyin) name("d2%member0")
+!CHECK: acc.copyout {{.*}} dataClause(acc_copy) implicit(true) name("d2")
+!CHECK: acc.copyout {{.*}} name("d4%member0")
+!CHECK: acc.copyout {{.*}} dataClause(acc_copy) implicit(true) name("d4")
 
