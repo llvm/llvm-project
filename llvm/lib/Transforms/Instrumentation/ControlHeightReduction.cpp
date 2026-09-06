@@ -285,16 +285,18 @@ class CHRScope {
 
 class CHR {
  public:
-  CHR(Function &Fin, BlockFrequencyInfo &BFIin, DominatorTree &DTin,
-      ProfileSummaryInfo &PSIin, RegionInfo &RIin,
-      OptimizationRemarkEmitter &OREin)
-      : F(Fin), BFI(BFIin), DT(DTin), PSI(PSIin), RI(RIin), ORE(OREin) {}
+   CHR(Function &Fin, BlockFrequencyInfo &BFIin, DominatorTree &DTin,
+       ProfileSummaryInfo &PSIin, RegionInfo &RIin,
+       OptimizationRemarkEmitter &OREin)
+       : F(Fin), BFI(BFIin), DT(DTin), PSI(PSIin), RI(RIin), ORE(OREin),
+         HasBlockUniformityProfile(
+             F.getMetadata(LLVMContext::MD_block_uniformity_profile)) {}
 
-  ~CHR() {
-    for (CHRScope *Scope : Scopes) {
-      delete Scope;
-    }
-  }
+   ~CHR() {
+     for (CHRScope *Scope : Scopes) {
+       delete Scope;
+     }
+   }
 
   bool run();
 
@@ -375,6 +377,11 @@ class CHR {
   RegionInfo &RI;
   OptimizationRemarkEmitter &ORE;
   CHRStats Stats;
+
+  // A function attachment indicates that block and branch uniformity profile
+  // metadata is available. This preserves CHR's existing behavior when no
+  // uniformity profile was collected.
+  bool HasBlockUniformityProfile;
 
   // All the true-biased regions in the function
   DenseSet<Region *> TrueBiasedRegionsGlobal;
@@ -1329,6 +1336,36 @@ static bool hasAtLeastTwoBiasedBranches(CHRScope *Scope) {
 void CHR::filterScopes(SmallVectorImpl<CHRScope *> &Input,
                        SmallVectorImpl<CHRScope *> &Output) {
   for (CHRScope *Scope : Input) {
+    // Branch weights count individual lanes. A divergent branch can therefore
+    // look strongly biased even when every wave executes both paths. Avoid
+    // applying CHR to such a scope because duplicating its control flow may
+    // increase live ranges and register pressure without eliminating control
+    // flow for the wave. Select-only scopes are unaffected because branch
+    // uniformity profile describes only conditional branches.
+    if (HasBlockUniformityProfile) {
+      Instruction *DivergentBranch = nullptr;
+      auto FindDivergentBranch = [&](const DenseSet<Region *> &Regions) {
+        for (Region *R : Regions) {
+          Instruction *Branch = R->getEntry()->getTerminator();
+          if (!Branch->getMetadata(LLVMContext::MD_branch_uniformity_profile)) {
+            DivergentBranch = Branch;
+            return;
+          }
+        }
+      };
+      FindDivergentBranch(Scope->TrueBiasedRegions);
+      if (!DivergentBranch)
+        FindDivergentBranch(Scope->FalseBiasedRegions);
+      if (DivergentBranch) {
+        ORE.emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "DivergentBranch",
+                                          DivergentBranch)
+                 << "Drop scope containing a divergent branch";
+        });
+        continue;
+      }
+    }
+
     // Filter out the ones with only one region and no subs.
     if (!hasAtLeastTwoBiasedBranches(Scope)) {
       CHR_DEBUG(dbgs() << "Filtered out by biased branches truthy-regions "
