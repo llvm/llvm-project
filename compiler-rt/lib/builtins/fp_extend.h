@@ -157,13 +157,29 @@ static inline dst_rep_t construct_dst_rep(dst_rep_t sign, dst_rep_t exp, dst_rep
   return (sign << (dstBits - 1)) | (exp << (dstBits - 1 - dstExpBits)) | sigFrac;
 }
 
-// Two helper routines for conversion to and from the representation of
+// Helper routines for conversion to and from the representation of
 // floating-point data as integer values follow.
 
 static inline src_rep_t srcToRep(src_t x) {
   const union {
     src_t f;
     src_rep_t i;
+  } rep = {.f = x};
+  return rep.i;
+}
+
+static inline src_t srcFromRep(src_rep_t x) {
+  const union {
+    src_t f;
+    src_rep_t i;
+  } rep = {.i = x};
+  return rep.f;
+}
+
+static inline dst_rep_t dstToRep(dst_t x) {
+  const union {
+    dst_t f;
+    dst_rep_t i;
   } rep = {.f = x};
   return rep.i;
 }
