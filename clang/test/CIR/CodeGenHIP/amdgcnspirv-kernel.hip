@@ -10,6 +10,8 @@
 // Test that HIP kernels on AMDGCN-flavored SPIR-V get the spir_kernel
 // calling convention.
 
+// CIR: cir.cl.version = #cir.cl.version<2, 0>
+
 #define __global__ __attribute__((global))
 #define __device__ __attribute__((device))
 
