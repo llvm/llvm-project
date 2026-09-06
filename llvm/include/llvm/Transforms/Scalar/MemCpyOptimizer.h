@@ -86,6 +86,7 @@ private:
   bool performStackMoveOptzn(Instruction *Load, Instruction *Store,
                              Value *DestPtr, Value *SrcPtr, TypeSize Size,
                              BatchAAResults &BAA);
+  bool performByValSrcMoveOptzn(MemCpyInst *M, BatchAAResults &BAA);
   bool isMemMoveMemSetDependency(MemMoveInst *M);
 
   void eraseInstruction(Instruction *I);
