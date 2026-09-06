@@ -2893,6 +2893,52 @@ Instruction *InstCombinerImpl::foldICmpDivConstant(ICmpInst &Cmp,
   if (!match(Y, m_APInt(C2)))
     return nullptr;
 
+  // Fold icmp ugt (sdiv exact X,C2), C into direct range check on X
+  // since it's an exact division, X=Q*C2. we want to check Q> u C
+  // without performing the division actually at runtime.
+  //
+  // note- C2 can't be power of 2 here because visitSDiv already
+  // turns those into ashr shifts before we get here. That guarantees
+  // Prod-1 can never wrap around into signed minimum.
+  if (DivIsSigned && Div->isExact() && Pred == ICmpInst::ICMP_UGT) {
+    // skip div by zero,div by one,div by minus one (handled elsewhere)
+    if (C2->isZero() || C2->isOne() || C2->isAllOnes())
+      return nullptr;
+
+    bool Overflow = false;
+    // Prod= divisor C2 * Threshold C
+    // use signed multiplication to detect if it overflows
+    APInt Prod = C2->smul_ov(C, Overflow);
+
+    if (C2->isStrictlyPositive()) {
+      // Divisor is positive
+      if (Overflow) {
+        // if Prod overflows , no non negative Q can ever be > C
+        // so this is only true when X is negative
+        return new ICmpInst(ICmpInst::ICMP_SLT, X,
+                            ConstantInt::getNullValue(Ty));
+      } else {
+        // Q >u C turns into a straightforward check against X
+        return new ICmpInst(ICmpInst::ICMP_UGT, X, ConstantInt::get(Ty, Prod));
+      }
+    } else {
+      // divisor is negative
+      if (Overflow) {
+        // opposite of above: Q is > C only when Q is negative
+        // which means X has to positive here
+        return new ICmpInst(ICmpInst::ICMP_SGT, X,
+                            ConstantInt::getNullValue(Ty));
+
+      } else {
+        // it fits: bounded range around zero
+
+        Value *XMinusOne = Builder.CreateSub(X, ConstantInt::get(Ty, 1));
+        return new ICmpInst(ICmpInst::ICMP_ULT, XMinusOne,
+                            ConstantInt::get(Ty, Prod - 1));
+      }
+    }
+  }
+
   // FIXME: If the operand types don't match the type of the divide
   // then don't attempt this transform. The code below doesn't have the
   // logic to deal with a signed divide and an unsigned compare (and
@@ -6504,6 +6550,7 @@ Instruction *InstCombinerImpl::foldICmpWithTrunc(ICmpInst &ICmp) {
 }
 
 Instruction *InstCombinerImpl::foldICmpWithZextOrSext(ICmpInst &ICmp) {
+
   assert(isa<CastInst>(ICmp.getOperand(0)) && "Expected cast for operand 0");
   auto *CastOp0 = cast<CastInst>(ICmp.getOperand(0));
   Value *X;

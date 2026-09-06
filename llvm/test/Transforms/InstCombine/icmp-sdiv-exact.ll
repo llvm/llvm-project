@@ -5,8 +5,7 @@
 define i1 @test_c1p_c2p_fit(i8 %X) {
 ; CHECK-LABEL: define i1 @test_c1p_c2p_fit(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X]], 10
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[DIV]], 12
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X]], 120
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %div = sdiv exact i8 %X, 10
@@ -17,8 +16,7 @@ define i1 @test_c1p_c2p_fit(i8 %X) {
 define i1 @test_c1p_c2p_nfit(i8 %X) {
 ; CHECK-LABEL: define i1 @test_c1p_c2p_nfit(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X]], 20
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[DIV]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %div = sdiv exact i8 %X, 20
@@ -42,8 +40,7 @@ define i1 @test_c1n_c2p_fit(i8 %X) {
 define i1 @test_c1n_c2p_nfit(i8 %X) {
 ; CHECK-LABEL: define i1 @test_c1n_c2p_nfit(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X]], -20
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[DIV]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %div = sdiv exact i8 %X, -20
@@ -65,8 +62,7 @@ define i1 @test_c1p_c2n_fit(i8 %X) {
 define i1 @test_c1p_c2n_nfit(i8 %X) {
 ; CHECK-LABEL: define i1 @test_c1p_c2n_nfit(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X]], 20
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[DIV]], -7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %div = sdiv exact i8 %X, 20
@@ -90,8 +86,7 @@ define i1 @test_c1n_c2n_fit(i8 %X) {
 define i1 @test_c1n_c2n_nfit(i8 %X) {
 ; CHECK-LABEL: define i1 @test_c1n_c2n_nfit(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X]], -20
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[DIV]], -7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %div = sdiv exact i8 %X, -20
@@ -114,8 +109,7 @@ define i1 @test_isnt_exact(i8 %X) {
 define i1 @test_overflow_pos_divisor(i8 %X) {
 ; CHECK-LABEL: define i1 @test_overflow_pos_divisor(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X]], 10
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[DIV]], 13
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %div = sdiv exact i8 %X, 10
@@ -126,8 +120,7 @@ define i1 @test_overflow_pos_divisor(i8 %X) {
 define i1 @test_overflow_neg_divisor(i8 %X) {
 ; CHECK-LABEL: define i1 @test_overflow_neg_divisor(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X]], -10
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[DIV]], 13
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %div = sdiv exact i8 %X, -10
@@ -144,8 +137,7 @@ define i1 @test_signedmax_over_divisor(i8 %X) {
   ; Expected: icmp ugt i8 %X, 126
 ; CHECK-LABEL: define i1 @test_signedmax_over_divisor(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X]], 9
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[DIV]], 14
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X]], 126
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %div = sdiv exact i8 %X, 9
