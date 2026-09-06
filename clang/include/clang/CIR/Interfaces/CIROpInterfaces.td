@@ -23,8 +23,6 @@ let cppNamespace = "::cir" in {
   // that's useful for handling indirect calls and other details.
   def CIRCallOpInterface
       : OpInterface<"CIRCallOpInterface", [CallOpInterface]> {
-    // Currently we don't have any methods defined in CIRCallOpInterface. We'll
-    // add more methods as the upstreaming proceeds.
     let methods = [
       InterfaceMethod<
           "Return the operand at index 'i', accounts for indirect call or "
@@ -47,6 +45,24 @@ let cppNamespace = "::cir" in {
                       "bool", "getNothrow", (ins)>,
       InterfaceMethod<"Return the side effects of the call operation",
                       "cir::SideEffect", "getSideEffect", (ins)>,
+      InterfaceMethod<[{"Set the inline-kind of a call operation"}],
+                      "void", "setInlineKind", 
+                      (ins "std::optional<cir::InlineKind>":$kind), [{}], 
+                      /*defaultImplementation=*/[{
+                        $_op.setInlineKind(kind);
+                      }]>,
+      InterfaceMethod<[{"Get the inline-kind of a call operation"}],
+                      "std::optional<cir::InlineKind>", "getInlineKind", 
+                      (ins), [{}], 
+                      /*defaultImplementation=*/[{
+                        $_op.getInlineKind();
+                      }]>,
+      InterfaceMethod<[{"Get the inline-kind attribute name"}], 
+                      "mlir::StringAttr", "getInlineKindAttrName",
+                      (ins), [{}],
+                      /*defaultImplementation=*/[{
+                        $_op.getInlineKindAttrName();
+                      }]>,
     ];
   }
 

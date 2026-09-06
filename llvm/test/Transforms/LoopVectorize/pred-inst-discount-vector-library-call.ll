@@ -18,7 +18,7 @@ define void @pred_call_with_variant(ptr readonly %src, ptr noalias %dest, i64 %N
 ; VF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
 ; VF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
-; VF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 2
+; VF2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 1
 ; VF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
@@ -77,7 +77,7 @@ define void @pred_call_with_variant(ptr readonly %src, ptr noalias %dest, i64 %N
 ; VF8-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; VF8-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF8:       [[VECTOR_PH]]:
-; VF8-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; VF8-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
 ; VF8-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; VF8-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8:       [[VECTOR_BODY]]:

@@ -26,7 +26,8 @@ static constexpr lldb::addr_t kWasmSyntheticCFABase = 0x40000000;
 
 lldb::RegisterContextSP
 UnwindWasm::DoCreateRegisterContextForFrame(lldb_private::StackFrame *frame) {
-  if (m_frames.size() <= frame->GetFrameIndex())
+  const uint32_t concrete_frame_idx = frame->GetConcreteFrameIndex();
+  if (m_frames.size() <= concrete_frame_idx)
     return lldb::RegisterContextSP();
 
   ThreadSP thread = frame->GetThread();
@@ -34,8 +35,7 @@ UnwindWasm::DoCreateRegisterContextForFrame(lldb_private::StackFrame *frame) {
   ProcessWasm *wasm_process =
       static_cast<ProcessWasm *>(thread->GetProcess().get());
 
-  return std::make_shared<RegisterContextWasm>(*gdb_thread,
-                                               frame->GetConcreteFrameIndex(),
+  return std::make_shared<RegisterContextWasm>(*gdb_thread, concrete_frame_idx,
                                                wasm_process->GetRegisterInfo());
 }
 

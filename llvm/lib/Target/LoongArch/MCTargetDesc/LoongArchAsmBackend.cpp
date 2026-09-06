@@ -196,12 +196,8 @@ getRelocPairForSize(unsigned Size) {
   }
 }
 
-// Check if an R_LARCH_ALIGN relocation is needed for an alignment directive.
-// If conditions are met, compute the padding size and create a fixup encoding
-// the padding size in the addend. If MaxBytesToEmit is smaller than the padding
-// size, the fixup encodes MaxBytesToEmit in the higher bits and references a
-// per-section marker symbol.
-bool LoongArchAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
+// Check whether an alignment fragment needs linker relaxation.
+bool LoongArchAsmBackend::shouldRelaxAlign(const MCFragment &F) {
   // Alignments before the first linker-relaxable instruction have fixed sizes
   // and do not require relocations. Alignments after a linker-relaxable
   // instruction require a relocation, even if the STI specifies norelax.
@@ -213,16 +209,26 @@ bool LoongArchAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
   if (F.getLayoutOrder() <= Sec->firstLinkerRelaxable())
     return false;
 
-  // Use default handling unless linker relaxation is enabled and the
-  // MaxBytesToEmit >= the nop size.
   const unsigned MinNopLen = 4;
-  unsigned MaxBytesToEmit = F.getAlignMaxBytesToEmit();
-  if (MaxBytesToEmit < MinNopLen)
+  if (F.getAlignMaxBytesToEmit() < MinNopLen)
     return false;
-
-  Size = F.getAlignment().value() - MinNopLen;
   if (F.getAlignment() <= MinNopLen)
     return false;
+
+  return true;
+}
+
+// Check if an R_LARCH_ALIGN relocation is needed for an alignment directive.
+// If conditions are met, compute the padding size and create a fixup encoding
+// the padding size in the addend. If MaxBytesToEmit is smaller than the padding
+// size, the fixup encodes MaxBytesToEmit in the higher bits and references a
+// per-section marker symbol.
+bool LoongArchAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
+  if (!shouldRelaxAlign(F))
+    return false;
+
+  Size = F.getAlignment().value() - 4;
+  unsigned MaxBytesToEmit = F.getAlignMaxBytesToEmit();
 
   MCContext &Ctx = getContext();
   const MCExpr *Expr = nullptr;
@@ -436,14 +442,11 @@ void LoongArchAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
           isPCRelFixupResolved(Target.getSubSym(), F))
         return Fallback();
 
-      if (&SecA == &SecB) {
-        // If the section is not linker-relaxable, or if the fixup is in a .dwo
-        // section (where relocations are forbidden), we must resolve the
-        // difference directly. The computed Value in evaluateFixup is correct
-        // based on the current layout.
-        if (!SecA.isLinkerRelaxable() || SecCur.getName().ends_with(".dwo"))
-          return;
-      }
+      // In SecA == SecB case. If the section is not linker-relaxable, the
+      // FixedValue has already been calculated out in evaluateFixup,
+      // return true and avoid record relocations.
+      if (&SecA == &SecB && !SecA.isLinkerRelaxable())
+        return;
     }
 
     switch (Fixup.getKind()) {

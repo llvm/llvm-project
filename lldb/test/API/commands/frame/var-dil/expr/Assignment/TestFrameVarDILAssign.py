@@ -26,7 +26,7 @@ class TestFrameVarDILAssignment(TestBase):
         self.expect(
             "frame variable '1 = 1'",
             error=True,
-            substrs=["Not allowed to change the value of a constant"],
+            substrs=["value is not in a writable location"],
         )
 
         # Assigning to an int var
@@ -205,4 +205,50 @@ class TestFrameVarDILAssignment(TestBase):
             "frame variable 's = -32769'",
             error=True,
             substrs=["new value is too big"],
+        )
+
+        # Check that there can be only one assignment and only at top level
+        self.expect(
+            "frame variable 'i = i = 1'",
+            error=True,
+            substrs=["Assignment is allowed only at top level"],
+        )
+        self.expect(
+            "frame variable 'i = 1 - (i = 1)'",
+            error=True,
+            substrs=["Assignment is allowed only at top level"],
+        )
+        self.expect(
+            "frame variable '1 + (i = 1)'",
+            error=True,
+            substrs=["Assignment is allowed only at top level"],
+        )
+        self.expect(
+            "frame variable '(i = 1) + 1'",
+            error=True,
+            substrs=["Assignment is allowed only at top level"],
+        )
+        self.expect("frame variable '*(arr + 1) = 5'", substrs=["= 5"])
+
+        # Check that assignment is parsed correctly when combined
+        # with ternary conditional operator
+        self.expect("frame variable 'i = false ? 1 : 2'", substrs=["i = 2"])
+        self.expect(
+            "frame variable 'false ? i = 1 : i'",
+            error=True,
+            substrs=["Assignment is allowed only at top level"],
+        )
+        self.expect(
+            "frame variable 'false ? i : i = 1'",
+            error=True,
+            substrs=["Assignment is allowed only at top level"],
+        )
+        self.expect("frame variable '(false ? i : j) = 1'", substrs=["j = 1"])
+        self.expect(
+            "frame variable '(true ? arr[0] : arr[1]) = false ? 0 : 5'", substrs=["= 5"]
+        )
+        self.expect(
+            "frame variable 'true ? arr[0] : arr[1] = false ? 0 : 5'",
+            error=True,
+            substrs=["Assignment is allowed only at top level"],
         )

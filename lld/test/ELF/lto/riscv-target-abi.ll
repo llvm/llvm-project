@@ -14,7 +14,7 @@
 ; FLAGS-ABI-IGNORED-NEXT: EF_RISCV_FLOAT_ABI_DOUBLE (0x4)
 ; FLAGS-ABI-IGNORED-NEXT: ]
 
-;; Passing -mcpu that defaults to D makes the ABI valid again, so no warning.
+;; Passing -mcpu that has D makes the ABI valid again, so no warning.
 ; RUN: ld.lld -mllvm -mcpu=sifive-u74 -shared %t.bc -o %t.so 2>&1 | FileCheck %s --check-prefix=NOWARN --allow-empty
 ; RUN: llvm-readobj --file-headers %t.so | FileCheck %s --check-prefix=FLAGS-MCPU
 ; RUN: ld.lld -plugin-opt=mcpu=sifive-u74 -shared %t.bc -o %t.so 2>&1 | FileCheck %s --check-prefix=NOWARN --allow-empty

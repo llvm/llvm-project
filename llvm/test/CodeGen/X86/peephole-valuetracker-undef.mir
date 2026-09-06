@@ -1,0 +1,17 @@
+# RUN: llc -mtriple=x86_64-- -run-pass=peephole-opt -o - %s | FileCheck %s
+# A copy whose source is an undef register with no def must not crash the
+# peephole optimizer while it looks through the copy for a replacement source.
+
+---
+name: undef_subreg_copy
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: undef_subreg_copy
+    ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY undef %{{[0-9]+}}.sub_32bit:gr64
+    ; CHECK-NEXT: $eax = COPY [[COPY]]
+    ; CHECK-NEXT: RET64 implicit $eax
+    %1:gr32 = COPY undef %0.sub_32bit:gr64
+    $eax = COPY %1
+    RET64 implicit $eax
+...

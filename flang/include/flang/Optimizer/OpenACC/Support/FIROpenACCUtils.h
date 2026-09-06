@@ -16,6 +16,7 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/Region.h"
 #include "mlir/IR/Value.h"
 #include <string>
 
@@ -98,6 +99,16 @@ createOrGetReductionRecipe(mlir::OpBuilder &builder, mlir::Location loc,
 /// \param stripDeclare If true (default), also strips declare operations
 /// \return The original value after stripping all intermediate operations
 mlir::Value getOriginalDef(mlir::Value value, bool stripDeclare = true);
+
+/// Returns true if \p symbol, used by \p user, is valid in an OpenACC offload
+/// region for FIR. When \p definingOpPtr is provided, it is set to the
+/// defining operation of \p symbol if one is found.
+bool isValidSymbolUse(mlir::Operation *user, mlir::SymbolRefAttr symbol,
+                      mlir::Operation **definingOpPtr = nullptr);
+
+/// Returns true if \p val may be used from OpenACC region \p region without
+/// further implicit data mapping.
+bool isValidValueUse(mlir::Value val, mlir::Region &region);
 
 } // namespace acc
 } // namespace fir

@@ -145,11 +145,13 @@ public:
 
   void reportDanglingField(const Expr *IssueExpr,
                            const FieldDecl *DanglingField,
-                           const Expr *MovedExpr,
+                           const Expr *MovedExpr, bool IsCapturedByLambda,
                            SourceLocation ExpiryLoc) override {
-    unsigned DiagID = MovedExpr
-                          ? diag::warn_lifetime_safety_dangling_field_moved
-                          : diag::warn_lifetime_safety_dangling_field;
+    unsigned DiagID =
+        IsCapturedByLambda
+            ? diag::warn_lifetime_safety_dangling_field_lambda_capture
+            : (MovedExpr ? diag::warn_lifetime_safety_dangling_field_moved
+                         : diag::warn_lifetime_safety_dangling_field);
 
     S.Diag(IssueExpr->getExprLoc(), DiagID)
         << getDiagSubjectDescription(IssueExpr)
@@ -165,11 +167,16 @@ public:
 
   void reportDanglingGlobal(const Expr *IssueExpr,
                             const VarDecl *DanglingGlobal,
-                            const Expr *MovedExpr,
-                            SourceLocation ExpiryLoc) override {
-    unsigned DiagID = MovedExpr
-                          ? diag::warn_lifetime_safety_dangling_global_moved
-                          : diag::warn_lifetime_safety_dangling_global;
+                            const Expr *MovedExpr, SourceLocation ExpiryLoc,
+                            bool IsMain = false) override {
+    unsigned DiagID;
+    if (IsMain) {
+      DiagID = MovedExpr ? diag::warn_lifetime_safety_dangling_global_moved
+                         : diag::warn_lifetime_safety_dangling_global_in_main;
+    } else {
+      DiagID = MovedExpr ? diag::warn_lifetime_safety_dangling_global_moved
+                         : diag::warn_lifetime_safety_dangling_global;
+    }
 
     S.Diag(IssueExpr->getExprLoc(), DiagID)
         << getDiagSubjectDescription(IssueExpr)
@@ -680,16 +687,42 @@ private:
       return;
 
     const Expr *LastExpr = OriginExprChain.back();
-    std::string IssueStr = getDiagSubjectDescription(LastExpr);
+    const Expr *VisibleLastExpr = LastExpr;
+    std::string IssueStr = getDiagSubjectDescription(VisibleLastExpr);
 
     for (const Expr *CurrExpr : reverse(OriginExprChain.drop_back())) {
-      if (!shouldShowInAliasChain(CurrExpr, LastExpr))
+      if (!shouldShowInAliasChain(CurrExpr, VisibleLastExpr)) {
+        LastExpr = CurrExpr;
         continue;
-      S.Diag(CurrExpr->getBeginLoc(),
-             diag::note_lifetime_safety_aliases_storage)
-          << CurrExpr->getSourceRange() << getDiagSubjectDescription(CurrExpr)
-          << IssueStr;
+      }
+      std::optional<LifetimeBoundParamInfo> ParamInfo =
+          getTrackingInfoForCallArg(CurrExpr, LastExpr);
       LastExpr = CurrExpr;
+      if (ParamInfo) {
+        bool IsImplicitObject = isa<const CXXMethodDecl *>(*ParamInfo);
+        bool IsInferred = true;
+        std::string ParamName;
+        if (!IsImplicitObject) {
+          const auto *Param = cast<const ParmVarDecl *>(*ParamInfo);
+          if (const auto *Attr = Param->getAttr<LifetimeBoundAttr>())
+            IsInferred = Attr->isImplicit();
+          ParamName = Param->getIdentifier()
+                          ? "'" + Param->getNameAsString() + "'"
+                          : "'<unnamed>'";
+        } else if (const auto *Attr = getImplicitObjectParamLifetimeBoundAttr(
+                       cast<const CXXMethodDecl *>(*ParamInfo))) {
+          IsInferred = Attr->isImplicit();
+        }
+        S.Diag(CurrExpr->getBeginLoc(),
+               diag::note_lifetime_safety_aliases_storage_lifetimebound)
+            << CurrExpr->getSourceRange() << getDiagSubjectDescription(CurrExpr)
+            << IssueStr << IsImplicitObject << ParamName << IsInferred;
+      } else
+        S.Diag(CurrExpr->getBeginLoc(),
+               diag::note_lifetime_safety_aliases_storage)
+            << CurrExpr->getSourceRange() << getDiagSubjectDescription(CurrExpr)
+            << IssueStr;
+      VisibleLastExpr = CurrExpr;
     }
   }
 

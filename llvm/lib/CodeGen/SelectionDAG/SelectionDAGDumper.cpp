@@ -588,6 +588,10 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::VECREDUCE_FMAX:             return "vecreduce_fmax";
   case ISD::VECREDUCE_FMIN:             return "vecreduce_fmin";
   case ISD::VECREDUCE_FMAXIMUM:         return "vecreduce_fmaximum";
+  case ISD::VECREDUCE_FMINIMUMNUM:
+    return "vecreduce_fminimumnum";
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+    return "vecreduce_fmaximumnum";
   case ISD::VECREDUCE_FMINIMUM:         return "vecreduce_fminimum";
   case ISD::STACKMAP:
     return "stackmap";
@@ -609,6 +613,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
 
   case ISD::GET_ACTIVE_LANE_MASK:
     return "get_active_lane_mask";
+
+  case ISD::VECTOR_MATCH:
+    return "vector_match";
 
   case ISD::PARTIAL_REDUCE_UMLA:
     return "partial_reduce_umla";

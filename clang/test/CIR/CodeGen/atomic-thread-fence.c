@@ -55,7 +55,7 @@ void modifyWithThreadFence(DataPtr d) {
   // CIR:    cir.return
 
   // LLVM-LABEL: @modifyWithThreadFence
-  // LLVM:    %[[DATA:.*]] = alloca ptr, i64 1, align 8
+  // LLVM:    %[[DATA:.*]] = alloca ptr, align 8
   // LLVM:    fence seq_cst
   // LLVM:    %[[DATA_PTR:.*]] = load ptr, ptr %[[DATA]], align 8
   // LLVM:    %[[DATA_VALUE:.*]] = getelementptr inbounds nuw %struct.Data, ptr %[[DATA_PTR]], i32 0, i32 0
@@ -84,7 +84,7 @@ void modifyWithSignalFence(DataPtr d) {
   // CIR:    cir.return
 
   // LLVM-LABEL: @modifyWithSignalFence
-  // LLVM:    %[[DATA:.*]] = alloca ptr, i64 1, align 8
+  // LLVM:    %[[DATA:.*]] = alloca ptr, align 8
   // LLVM:    fence syncscope("singlethread") seq_cst
   // LLVM:    %[[DATA_PTR:.*]] = load ptr, ptr %[[DATA]], align 8
   // LLVM:    %[[DATA_VALUE:.*]] = getelementptr inbounds nuw %struct.Data, ptr %[[DATA_PTR]], i32 0, i32 0
@@ -115,8 +115,8 @@ void loadWithThreadFence(DataPtr d) {
   // CIR:    cir.return
 
   // LLVM-LABEL: @loadWithThreadFence
-  // LLVM:    %[[DATA:.*]] = alloca ptr, i64 1, align 8
-  // LLVM:    %[[DATA_TEMP:.*]] = alloca ptr, i64 1, align 8
+  // LLVM:    %[[DATA:.*]] = alloca ptr, align 8
+  // LLVM:    %[[DATA_TEMP:.*]] = alloca ptr, align 8
   // LLVM:    fence seq_cst
   // LLVM:    %[[DATA_PTR:.*]] = load ptr, ptr %[[DATA]], align 8
   // LLVM:    %[[DATA_VALUE:.*]] = getelementptr inbounds nuw %struct.Data, ptr %[[DATA_PTR]], i32 0, i32 1
@@ -152,8 +152,8 @@ void loadWithSignalFence(DataPtr d) {
   // CIR:    cir.return
 
   // LLVM-LABEL: @loadWithSignalFence
-  // LLVM:    %[[DATA:.*]] = alloca ptr, i64 1, align 8
-  // LLVM:    %[[DATA_TEMP:.*]] = alloca ptr, i64 1, align 8
+  // LLVM:    %[[DATA:.*]] = alloca ptr, align 8
+  // LLVM:    %[[DATA_TEMP:.*]] = alloca ptr, align 8
   // LLVM:    fence syncscope("singlethread") seq_cst
   // LLVM:    %[[DATA_PTR:.*]] = load ptr, ptr %[[DATA]], align 8
   // LLVM:    %[[DATA_VALUE:.*]] = getelementptr inbounds nuw %struct.Data, ptr %[[DATA_PTR]], i32 0, i32 1

@@ -811,7 +811,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       // system.
       PlatformSP platform_sp(target.GetPlatform());
       if (platform_sp) {
-        platform_sp->GetSharedModule(module_spec, process, m_module_sp, nullptr,
+        platform_sp->GetSharedModule(module_spec, target, m_module_sp, nullptr,
                                      nullptr);
       }
 

@@ -7,12 +7,12 @@
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
 !s128i = !cir.int<s, 128>
-!rec_Pair = !cir.struct<"Pair" {!s32i, !s32i}>
-!rec_Two = !cir.struct<"Two" {!s64i, !s64i}>
-!rec_Mixed = !cir.struct<"Mixed" {!s8i, !s32i}>
-!rec_CharBuf = !cir.struct<"CharBuf" {!cir.array<!s8i x 4>}>
-!rec_Char1 = !cir.struct<"Char1" {!cir.array<!s8i x 1>}>
-!rec_S1 = !cir.struct<"S1" {!s128i}>
+!rec_Pair = !cir.struct<"Pair" {data !s32i, data !s32i}>
+!rec_Two = !cir.struct<"Two" {data !s64i, data !s64i}>
+!rec_Mixed = !cir.struct<"Mixed" {data !s8i, data !s32i}>
+!rec_CharBuf = !cir.struct<"CharBuf" {data !cir.array<!s8i x 4>}>
+!rec_Char1 = !cir.struct<"Char1" {data !cir.array<!s8i x 1>}>
+!rec_S1 = !cir.struct<"S1" {data !s128i}>
 
 module attributes {
   cir.triple = "x86_64-unknown-linux-gnu",
@@ -120,7 +120,7 @@ module attributes {
 
   // An anonymous struct has no record-layout entry, so it defaults to
   // can-pass-in-registers and coerces like its named counterpart.
-  cir.func @take_anon(%arg0: !cir.struct<{!s32i, !s32i}>) {
+  cir.func @take_anon(%arg0: !cir.struct<{data !s32i, data !s32i}>) {
     cir.return
   }
 

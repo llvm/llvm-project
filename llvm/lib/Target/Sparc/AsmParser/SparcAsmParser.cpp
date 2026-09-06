@@ -1501,6 +1501,7 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op) {
 
   case AsmToken::Plus:
   case AsmToken::Minus:
+  case AsmToken::Tilde:
   case AsmToken::Integer:
   case AsmToken::LParen:
   case AsmToken::Dot:
@@ -1615,7 +1616,7 @@ MCRegister SparcAsmParser::matchRegisterName(const AsmToken &Tok,
   // %r0 - %r31
   int64_t RegNo = 0;
   if (Name.starts_with_insensitive("r") &&
-      !Name.substr(1, 2).getAsInteger(10, RegNo) && RegNo < 31) {
+      !Name.substr(1, 2).getAsInteger(10, RegNo) && RegNo <= 31) {
     RegKind = SparcOperand::rk_IntReg;
     return IntRegs[RegNo];
   }

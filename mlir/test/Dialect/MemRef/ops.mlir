@@ -57,8 +57,8 @@ func.func @alloca() {
   %3 = memref.alloca(%c1)[%c0] : memref<2x?xf32, affine_map<(d0, d1)[s0] -> (d0 + s0, d1)>, 1>
 
   // Alloca with no mappings, but with alignment.
-  // CHECK: %{{.*}} = memref.alloca() {alignment = 64 : i64} : memref<2xi32>
-  %4 = memref.alloca() {alignment = 64} : memref<2 x i32>
+  // CHECK: %{{.*}} = memref.alloca() alignment = 64 : memref<2xi32>
+  %4 = memref.alloca() alignment = 64 : memref<2 x i32>
 
   return
 }
@@ -278,18 +278,18 @@ func.func @zero_dim_no_idx(%arg0 : memref<i32>, %arg1 : memref<i32>, %arg2 : mem
 // CHECK-LABEL: func @load_store_alignment
 func.func @load_store_alignment(%memref: memref<4xi32>) {
   %c0 = arith.constant 0 : index
-  // CHECK: memref.load {{.*}} {alignment = 16 : i64}
-  %val = memref.load %memref[%c0] { alignment = 16 } : memref<4xi32>
-  // CHECK: memref.store {{.*}} {alignment = 16 : i64}
-  memref.store %val, %memref[%c0] { alignment = 16 } : memref<4xi32>
+  // CHECK: memref.load {{.*}} alignment(16) nontemporal(true) invariant(true)
+  %val = memref.load %memref[%c0] invariant(true) alignment(16) nontemporal(true) : memref<4xi32>
+  // CHECK: memref.store {{.*}} alignment(16) nontemporal(true)
+  memref.store %val, %memref[%c0] nontemporal(true) alignment(16) : memref<4xi32>
   return
 }
 
 // CHECK-LABEL: func @load_invariant
 func.func @load_invariant(%memref: memref<4xi32>) {
   %c0 = arith.constant 0 : index
-  // CHECK: memref.load {{.*}} {invariant = true}
-  %val = memref.load %memref[%c0] { invariant = true } : memref<4xi32>
+  // CHECK: memref.load {{.*}} invariant(true)
+  %val = memref.load %memref[%c0] invariant(true) : memref<4xi32>
   return
 }
 
@@ -662,4 +662,10 @@ func.func @memref_memory_space_cast(%src : memref<?xf32>) -> memref<?xf32, 1> {
 func.func @memref_transpose_map(%src : memref<?x?xf32>) -> memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>> {
   %dst = memref.transpose %src (i, j) -> (j, i) : memref<?x?xf32> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>>
   return %dst : memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>>
+}
+
+// CHECK-LABEL: func @memref_transpose_map_with_memory_space
+func.func @memref_transpose_map_with_memory_space(%src : memref<?x?xf32, 1>) -> memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>, 1> {
+  %dst = memref.transpose %src (i, j) -> (j, i) : memref<?x?xf32, 1> to memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>, 1>
+  return %dst : memref<?x?xf32, affine_map<(d0, d1)[s0] -> (d1 * s0 + d0)>, 1>
 }

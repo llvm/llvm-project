@@ -1770,13 +1770,13 @@ TEST(TripleTest, DefaultLongDoubleFormat) {
   EXPECT_EQ(
       LongDoubleFormat::IEEEquad,
       Triple("aarch64_32-unknown-linux-gnu").getDefaultLongDoubleFormat());
-  // ... except on Windows, Darwin, and Android, which use IEEE double.
+  // ... except on Windows and Darwin, which use IEEE double.
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("aarch64-pc-windows-msvc").getDefaultLongDoubleFormat());
   EXPECT_EQ(LongDoubleFormat::IEEEdouble,
             Triple("arm64-apple-macosx").getDefaultLongDoubleFormat());
   EXPECT_EQ(
-      LongDoubleFormat::IEEEdouble,
+      LongDoubleFormat::IEEEquad,
       Triple("aarch64-unknown-linux-android").getDefaultLongDoubleFormat());
 
   // ARM/Thumb use IEEE double.
@@ -3860,6 +3860,13 @@ TEST(TripleTest, isCompatibleWith) {
 
       {"amdgpu12.5-amd-amdhsa", "amdgpu12.50-amd-amdhsa", true},
       {"amdgpu12.5-amd-amdhsa", "amdgpu12.51-amd-amdhsa", true},
+
+      // amdgpu12.50s is its own major subarch: compatible only with itself.
+      {"amdgpu12.50s-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", true},
+      {"amdgpu12.5-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", false},
+      {"amdgpu12.50-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", false},
+      {"amdgpu12.51-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", false},
+      {"amdgpu12-amd-amdhsa", "amdgpu12.50s-amd-amdhsa", false},
 
       {"amdgpu13-amd-amdhsa", "amdgpu13.10-amd-amdhsa", true},
 

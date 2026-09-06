@@ -13,8 +13,9 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/fixed_point/fx_rep.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
+#include "src/__support/macros/properties/types.h"
 #include "src/__support/uint128.h"
+#include "src/__support/wchar/string_converter.h"
 #include "test/UnitTest/TestLogger.h"
 
 #if __STDC_HOSTED__
@@ -73,7 +74,22 @@ cpp::string_view describeValue(const cpp::string &Value) { return Value; }
 cpp::string_view describeValue(cpp::string_view Value) { return Value; }
 
 cpp::string describeValue(cpp::wstring_view Value) {
-  // TODO: Print `Value` as UTF-8 once `StringConverter` supports `wchar_t`.
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
+  LIBC_NAMESPACE::internal::mbstate State;
+  LIBC_NAMESPACE::internal::StringConverter<wchar_t> StringConv(
+      Value.data(), &State, /* dstlen = */ SIZE_MAX, Value.size());
+
+  cpp::string S;
+  for (auto Conv = StringConv.pop<char8_t>(); Conv.has_value();
+       Conv = StringConv.pop<char8_t>()) {
+    S += static_cast<char>(*Conv);
+  }
+
+  if (S.empty() && !Value.empty())
+    S = cpp::string("<Failed Conversion To UTF-8>");
+
+  return S;
+#else  // LIBC_TYPES_WCHAR_T_IS_UTF32
   if (Value.empty())
     return "{}";
 
@@ -86,6 +102,7 @@ cpp::string describeValue(cpp::wstring_view Value) {
   S += cpp::to_string(Value.back());
   S += '}';
   return S;
+#endif // LIBC_TYPES_WCHAR_T_IS_UTF32
 }
 
 template <typename ValType>

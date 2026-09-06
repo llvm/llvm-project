@@ -49,3 +49,13 @@ uint3 test_uint3(float3 p0) { return f32tof16(p0); }
 // SPIRV-NOT: call i32 @llvm.spv.packhalf2x16.i32.v2f32(<2 x float> %[[#]])
 // SPIRV: ret <4 x i32> %[[#]]
 uint4 test_uint4(float4 p0) { return f32tof16(p0); }
+
+// CHECK: define hidden noundef <5 x i32> @{{.*}}test_uint5
+// CHECK: %hlsl.f32tof16 = call <5 x i32> @llvm.dx.legacyf32tof16.v5f32(<5 x float> %[[#]])
+// CHECK: ret <5 x i32> %hlsl.f32tof16
+// CHECK: declare <5 x i32> @llvm.dx.legacyf32tof16.v5f32(<5 x float>)
+//
+// SPIRV: define hidden spir_func noundef <5 x i32> @{{.*}}test_uint5
+// SPIRV-COUNT-5: call i32 @llvm.spv.packhalf2x16.i32.v2f32(<2 x float> %[[#]])
+// SPIRV: ret <5 x i32>
+vector<uint, 5> test_uint5(vector<float, 5> p0) { return f32tof16(p0); }

@@ -1,0 +1,23 @@
+# RUN: llc -mtriple=riscv32 -x mir -run-pass=machineverifier \
+# RUN:     -verify-machineinstrs %s -o /dev/null
+# RUN: llc -mtriple=riscv64 -x mir -run-pass=machineverifier \
+# RUN:     -verify-machineinstrs %s -o /dev/null
+
+# PseudoTLSDESCCall is a returning call. A block ending in this instruction
+# may fall through to its layout successor.
+
+---
+name:            tlsdesc_call_fallthrough
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1
+    liveins: $x10, $x11
+
+    dead $x5 = PseudoTLSDESCCall killed $x11, 0, target-flags(riscv-tlsdesc-call) <mcsymbol .Ltlsdesc_hi0>, implicit-def $x10, implicit $x10
+
+  bb.1:
+    liveins: $x10
+    $x10 = ADD $x10, $x4
+    PseudoRET implicit $x10
+...
