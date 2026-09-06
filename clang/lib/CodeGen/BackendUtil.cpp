@@ -728,6 +728,15 @@ static void addSanitizers(const Triple &TargetTriple,
       MPM.addPass(createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
     }
 
+    if (LangOpts.Sanitize.has(SanitizerKind::ThreadDeadlock)) {
+      MPM.addPass(ModuleThreadSanitizerPass());
+      MPM.addPass(createModuleToFunctionPassAdaptor(ThreadSanitizerPass(
+          ThreadSanitizerOptions{/*InstrumentMemoryAccesses=*/false,
+                                 /*InstrumentAtomics=*/false,
+                                 /*InstrumentMemIntrinsics=*/false,
+                                 /*AlwaysInstrumentFuncEntryExit=*/true})));
+    }
+
     if (LangOpts.Sanitize.has(SanitizerKind::Type))
       MPM.addPass(TypeSanitizerPass());
 
