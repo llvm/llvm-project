@@ -113,6 +113,33 @@ func.func @test_signature_conversion_no_converter() {
 
 // -----
 
+// Do not assert when type conversion drops an SCF loop bound.
+func.func @test_scf_for_dropped_bound(%arg0: i32) {
+  // expected-error@+1 {{failed to legalize operation 'scf.for' that was explicitly marked illegal}}
+  %0 = scf.for %iv = %arg0 to %arg0 step %arg0 iter_args(%arg = %arg0) -> (i32) : i32 {
+    scf.yield %arg : i32
+  }
+  return
+}
+
+// -----
+
+// Do not assert when type conversion drops an SCF if condition.
+func.func @test_scf_if_dropped_condition() {
+  %cond = "test.context_op"() {drop_i1} : () -> i1
+  // expected-error@+1 {{failed to legalize operation 'scf.if' that was explicitly marked illegal}}
+  %result = scf.if %cond -> (i32) {
+    %value = "test.context_op"() : () -> i32
+    scf.yield %value : i32
+  } else {
+    %value = "test.context_op"() : () -> i32
+    scf.yield %value : i32
+  }
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @recursive_type_conversion
 func.func @recursive_type_conversion() {
   // CHECK:  !test.test_rec<outer_converted_type, smpla>

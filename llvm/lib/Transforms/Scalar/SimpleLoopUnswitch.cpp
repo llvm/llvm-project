@@ -1840,13 +1840,12 @@ static void deleteDeadBlocksFromLoop(Loop &L,
                  [&](BasicBlock *BB) { return DeadBlockSet.count(BB); });
 
   // Walk from this loop up through its parents removing all of the dead blocks.
-  LI.removeBlocksFromLoopAndAncestors(
-      &L, nullptr, [&](BasicBlock *BB) { return DeadBlockSet.count(BB); });
+  for (Loop *Cur = &L; Cur; Cur = Cur->getParentLoop())
+    LI.removeBlocksIf(*Cur,
+                      [&](BasicBlock *BB) { return DeadBlockSet.count(BB); });
 
-  // Now delete the dead child loops. Run the per-child deletion callbacks
-  // first, while the loop forest is still fully consistent (markLoopAsDeleted
-  // checks the child's position in it), then detach the dead children and
-  // destroy them.
+  // Delete the dead child loops here: recompute requires every loop's header
+  // to still be in the function, and these blocks are about to be erased.
   for (Loop *ChildL : L) {
     if (!DeadBlockSet.count(ChildL->getHeader()))
       continue;
@@ -1887,301 +1886,44 @@ static void deleteDeadBlocksFromLoop(Loop &L,
     BB->eraseFromParent();
 }
 
-/// Recompute the set of blocks in a loop after unswitching.
+/// Rebuild the loop forest after unswitching removes some subset of blocks and
+/// edges.
 ///
-/// This walks from the original headers predecessors to rebuild the loop. We
-/// take advantage of the fact that new blocks can't have been added, and so we
-/// filter by the original loop's blocks. This also handles potentially
-/// unreachable code that we don't want to explore but might be found examining
-/// the predecessors of the header.
+/// Child loops of \p L that ended up elsewhere in the nest are returned in
+/// \p HoistedLoops; ones that are no longer loops at all are reported to
+/// \p LoopUpdater and destroyed.
 ///
-/// If the original loop is no longer a loop, this will return an empty set. If
-/// it remains a loop, all the blocks within it will be added to the set
-/// (including those blocks in inner loops).
-static SmallPtrSet<const BasicBlock *, 16> recomputeLoopBlockSet(Loop &L,
-                                                                 LoopInfo &LI) {
-  SmallPtrSet<const BasicBlock *, 16> LoopBlockSet;
-
-  auto *PH = L.getLoopPreheader();
-  auto *Header = L.getHeader();
-
-  // A worklist to use while walking backwards from the header.
-  SmallVector<BasicBlock *, 16> Worklist;
-
-  // First walk the predecessors of the header to find the backedges. This will
-  // form the basis of our walk.
-  for (auto *Pred : predecessors(Header)) {
-    // Skip the preheader.
-    if (Pred == PH)
-      continue;
-
-    // Because the loop was in simplified form, the only non-loop predecessor
-    // is the preheader.
-    assert(L.contains(Pred) && "Found a predecessor of the loop header other "
-                               "than the preheader that is not part of the "
-                               "loop!");
-
-    // Insert this block into the loop set and on the first visit and, if it
-    // isn't the header we're currently walking, put it into the worklist to
-    // recurse through.
-    if (LoopBlockSet.insert(Pred).second && Pred != Header)
-      Worklist.push_back(Pred);
-  }
-
-  // If no backedges were found, we're done.
-  if (LoopBlockSet.empty())
-    return LoopBlockSet;
-
-  // We found backedges, recurse through them to identify the loop blocks.
-  while (!Worklist.empty()) {
-    BasicBlock *BB = Worklist.pop_back_val();
-    assert(LoopBlockSet.count(BB) && "Didn't put block into the loop set!");
-
-    // No need to walk past the header.
-    if (BB == Header)
-      continue;
-
-    // Because we know the inner loop structure remains valid we can use the
-    // loop structure to jump immediately across the entire nested loop.
-    // Further, because it is in loop simplified form, we can directly jump
-    // to its preheader afterward.
-    if (Loop *InnerL = LI.getLoopFor(BB))
-      if (InnerL != &L) {
-        assert(L.contains(InnerL) &&
-               "Should not reach a loop *outside* this loop!");
-        // The preheader is the only possible predecessor of the loop so
-        // insert it into the set and check whether it was already handled.
-        auto *InnerPH = InnerL->getLoopPreheader();
-        assert(L.contains(InnerPH) && "Cannot contain an inner loop block "
-                                      "but not contain the inner loop "
-                                      "preheader!");
-        if (!LoopBlockSet.insert(InnerPH).second)
-          // The only way to reach the preheader is through the loop body
-          // itself so if it has been visited the loop is already handled.
-          continue;
-
-        // Insert all of the blocks (other than those already present) into
-        // the loop set. We expect at least the block that led us to find the
-        // inner loop to be in the block set, but we may also have other loop
-        // blocks if they were already enqueued as predecessors of some other
-        // outer loop block.
-        for (auto *InnerBB : InnerL->blocks()) {
-          if (InnerBB == BB) {
-            assert(LoopBlockSet.count(InnerBB) &&
-                   "Block should already be in the set!");
-            continue;
-          }
-
-          LoopBlockSet.insert(InnerBB);
-        }
-
-        // Add the preheader to the worklist so we will continue past the
-        // loop body.
-        Worklist.push_back(InnerPH);
-        continue;
-      }
-
-    // Insert any predecessors that were in the original loop into the new
-    // set, and if the insert is successful, add them to the worklist.
-    for (auto *Pred : predecessors(BB))
-      if (L.contains(Pred) && LoopBlockSet.insert(Pred).second)
-        Worklist.push_back(Pred);
-  }
-
-  assert(LoopBlockSet.count(Header) && "Cannot fail to add the header!");
-
-  // We've found all the blocks participating in the loop, return our completed
-  // set.
-  return LoopBlockSet;
-}
-
-/// Rebuild a loop after unswitching removes some subset of blocks and edges.
-///
-/// The removal may have removed some child loops entirely but cannot have
-/// disturbed any remaining child loops. However, they may need to be hoisted
-/// to the parent loop (or to be top-level loops). The original loop may be
-/// completely removed.
-///
-/// The sibling loops resulting from this update are returned. If the original
-/// loop remains a valid loop, it will be the first entry in this list with all
-/// of the newly sibling loops following it.
-///
-/// Returns true if the loop remains a loop after unswitching, and false if it
-/// is no longer a loop after unswitching (and should not continue to be
-/// referenced).
-static bool rebuildLoopAfterUnswitch(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
-                                     LoopInfo &LI,
+/// Returns false if \p L is no longer a loop, in which case it should not
+/// continue to be referenced.
+static bool rebuildLoopAfterUnswitch(Loop &L, DominatorTree &DT, LoopInfo &LI,
                                      SmallVectorImpl<Loop *> &HoistedLoops,
-                                     ScalarEvolution *SE) {
-  auto *PH = L.getLoopPreheader();
+                                     ScalarEvolution *SE,
+                                     LPMUpdater &LoopUpdater) {
+  SmallVector<Loop *, 4> Children(L.begin(), L.end());
 
-  // Compute the actual parent loop from the exit blocks. Because we may have
-  // pruned some exits the loop may be different from the original parent.
-  Loop *ParentL = nullptr;
-  SmallVector<Loop *, 4> ExitLoops;
-  SmallVector<BasicBlock *, 4> ExitsInLoops;
-  ExitsInLoops.reserve(ExitBlocks.size());
-  for (auto *ExitBB : ExitBlocks)
-    if (Loop *ExitL = LI.getLoopFor(ExitBB)) {
-      ExitLoops.push_back(ExitL);
-      ExitsInLoops.push_back(ExitBB);
-      if (!ParentL || (ParentL != ExitL && ParentL->contains(ExitL)))
-        ParentL = ExitL;
-    }
+  SmallVector<std::pair<Loop *, BasicBlock *>, 4> Removed = LI.recompute(DT);
+  SmallPtrSet<Loop *, 4> RemovedSet;
+  for (Loop *RemovedL : make_first_range(Removed))
+    RemovedSet.insert(RemovedL);
 
-  // Recompute the blocks participating in this loop. This may be empty if it
-  // is no longer a loop.
-  auto LoopBlockSet = recomputeLoopBlockSet(L, LI);
+  for (Loop *ChildL : Children)
+    if (!RemovedSet.contains(ChildL) && ChildL->getParentLoop() != &L)
+      HoistedLoops.push_back(ChildL);
 
-  // If we still have a loop, we need to re-set the loop's parent as the exit
-  // block set changing may have moved it within the loop nest. Note that this
-  // can only happen when this loop has a parent as it can only hoist the loop
-  // *up* the nest.
-  if (!LoopBlockSet.empty() && L.getParentLoop() != ParentL) {
-    // Remove this loop's (original) blocks from all of the intervening loops.
-    LI.removeBlocksFromLoopAndAncestors(
-        L.getParentLoop(), ParentL,
-        [&](BasicBlock *BB) { return BB == PH || L.contains(BB); });
+  if (SE && !Removed.empty())
+    SE->forgetBlockAndLoopDispositions();
 
-    LI.changeLoopFor(PH, ParentL);
-    L.getParentLoop()->removeChildLoop(&L);
-    if (ParentL)
-      ParentL->addChildLoop(&L);
-    else
-      LI.addTopLevelLoop(&L);
+  for (auto [RemovedL, Header] : Removed) {
+    assert((RemovedL == &L || is_contained(Children, RemovedL)) &&
+           "Unswitching can only remove loops from the current nest!");
+    // The caller (postUnswitch) marks L itself as deleted; past this destroy
+    // its pointer serves only as a key.
+    if (RemovedL != &L)
+      LoopUpdater.markLoopAsDeleted(*RemovedL, Header->getName());
+    LI.destroy(RemovedL);
   }
 
-  // Now we update all the blocks which are no longer within the loop, building
-  // the set of them as they are removed.
-  SmallPtrSet<BasicBlock *, 16> UnloopedBlocks;
-  LI.removeBlocksIf(L, [&](BasicBlock *BB) {
-    if (LoopBlockSet.count(BB))
-      return false;
-    UnloopedBlocks.insert(BB);
-    return true;
-  });
-  if (LoopBlockSet.empty())
-    UnloopedBlocks.insert(PH);
-
-  // Sort the exits in ascending loop depth, we'll work backwards across these
-  // to process them inside out.
-  llvm::stable_sort(ExitsInLoops, [&](BasicBlock *LHS, BasicBlock *RHS) {
-    return LI.getLoopDepth(LHS) < LI.getLoopDepth(RHS);
-  });
-
-  // We'll build up a set for each exit loop.
-  SmallPtrSet<BasicBlock *, 16> NewExitLoopBlocks;
-  Loop *PrevExitL = L.getParentLoop(); // The deepest possible exit loop.
-
-  auto InUnlooped = [&](BasicBlock *BB) { return UnloopedBlocks.count(BB); };
-
-  SmallVector<BasicBlock *, 16> Worklist;
-  while (!UnloopedBlocks.empty() && !ExitsInLoops.empty()) {
-    assert(Worklist.empty() && "Didn't clear worklist!");
-    assert(NewExitLoopBlocks.empty() && "Didn't clear loop set!");
-
-    // Grab the next exit block, in decreasing loop depth order.
-    BasicBlock *ExitBB = ExitsInLoops.pop_back_val();
-    Loop &ExitL = *LI.getLoopFor(ExitBB);
-    assert(ExitL.contains(&L) && "Exit loop must contain the inner loop!");
-
-    // Erase all of the unlooped blocks from the loops between the previous
-    // exit loop and this exit loop. This works because the ExitInLoops list is
-    // sorted in increasing order of loop depth and thus we visit loops in
-    // decreasing order of loop depth.
-    LI.removeBlocksFromLoopAndAncestors(PrevExitL, &ExitL, InUnlooped);
-    PrevExitL = &ExitL;
-
-    // Walk the CFG back until we hit the cloned PH adding everything reachable
-    // and in the unlooped set to this exit block's loop.
-    Worklist.push_back(ExitBB);
-    do {
-      BasicBlock *BB = Worklist.pop_back_val();
-      // We can stop recursing at the cloned preheader (if we get there).
-      if (BB == PH)
-        continue;
-
-      for (BasicBlock *PredBB : predecessors(BB)) {
-        // If this pred has already been moved to our set or is part of some
-        // (inner) loop, no update needed.
-        if (!UnloopedBlocks.erase(PredBB)) {
-          assert((NewExitLoopBlocks.count(PredBB) ||
-                  ExitL.contains(LI.getLoopFor(PredBB))) &&
-                 "Predecessor not in a nested loop (or already visited)!");
-          continue;
-        }
-
-        // We just insert into the loop set here. We'll add these blocks to the
-        // exit loop after we build up the set in a deterministic order rather
-        // than the predecessor-influenced visit order.
-        bool Inserted = NewExitLoopBlocks.insert(PredBB).second;
-        (void)Inserted;
-        assert(Inserted && "Should only visit an unlooped block once!");
-
-        // And recurse through to its predecessors.
-        Worklist.push_back(PredBB);
-      }
-    } while (!Worklist.empty());
-
-    // If blocks in this exit loop were directly part of the original loop (as
-    // opposed to a child loop) update the map to point to this exit loop. This
-    // just updates a map and so the fact that the order is unstable is fine.
-    for (auto *BB : NewExitLoopBlocks)
-      if (Loop *BBL = LI.getLoopFor(BB))
-        if (BBL == &L || !L.contains(BBL))
-          LI.changeLoopFor(BB, &ExitL);
-
-    // We will remove the remaining unlooped blocks from this loop in the next
-    // iteration or below.
-    NewExitLoopBlocks.clear();
-  }
-
-  // Any remaining unlooped blocks are no longer part of any loop unless they
-  // are part of some child loop.
-  LI.removeBlocksFromLoopAndAncestors(PrevExitL, nullptr, InUnlooped);
-  for (auto *BB : UnloopedBlocks)
-    if (Loop *BBL = LI.getLoopFor(BB))
-      if (BBL == &L || !L.contains(BBL))
-        LI.changeLoopFor(BB, nullptr);
-
-  // Sink all the child loops whose headers are no longer in the loop set to
-  // the parent (or to be top level loops).
-  for (Loop *HoistedL : LI.takeChildrenIf(&L, [&](Loop *SubL) {
-         return !LoopBlockSet.count(SubL->getHeader());
-       })) {
-    HoistedLoops.push_back(HoistedL);
-
-    // To compute the new parent of this hoisted loop we look at where we
-    // placed the preheader above. We can't lookup the header itself because we
-    // retained the mapping from the header to the hoisted loop. But the
-    // preheader and header should have the exact same new parent computed
-    // based on the set of exit blocks from the original loop as the preheader
-    // is a predecessor of the header and so reached in the reverse walk. And
-    // because the loops were all in simplified form the preheader of the
-    // hoisted loop can't be part of some *other* loop.
-    if (auto *NewParentL = LI.getLoopFor(HoistedL->getLoopPreheader()))
-      NewParentL->addChildLoop(HoistedL);
-    else
-      LI.addTopLevelLoop(HoistedL);
-  }
-
-  // Actually delete the loop if nothing remained within it.
-  if (L.getBlocks().empty()) {
-    assert(L.getSubLoops().empty() &&
-           "Failed to remove all subloops from the original loop!");
-    if (Loop *ParentL = L.getParentLoop())
-      ParentL->removeChildLoop(llvm::find(*ParentL, &L));
-    else
-      LI.removeLoop(llvm::find(LI, &L));
-    // markLoopAsDeleted for L should be triggered by the caller (it is
-    // typically done within postUnswitch).
-    if (SE)
-      SE->forgetBlockAndLoopDispositions();
-    LI.destroy(&L);
-    return false;
-  }
-
-  return true;
+  return !RemovedSet.contains(&L);
 }
 
 /// Helper to visit a dominator subtree, invoking a callable on each node.
@@ -2574,7 +2316,7 @@ static void unswitchNontrivialInvariants(
 
   SmallVector<Loop *, 4> HoistedLoops;
   bool IsStillLoop =
-      rebuildLoopAfterUnswitch(L, ExitBlocks, LI, HoistedLoops, SE);
+      rebuildLoopAfterUnswitch(L, DT, LI, HoistedLoops, SE, LoopUpdater);
 
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
