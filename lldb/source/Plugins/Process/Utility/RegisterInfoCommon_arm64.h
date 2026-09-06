@@ -1,4 +1,4 @@
-//===-- RegisterInfoPOSIX_arm64.h -------------------------------*- C++ -*-===//
+//===-- RegisterInfoCommon_arm64.h -------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_ARM64_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_ARM64_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOCOMMON_ARM64_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOCOMMON_ARM64_H
 
 #include "RegisterInfoAndSetInterface.h"
 #include "lldb/Target/RegisterContext.h"
@@ -30,7 +30,7 @@ enum class SVEState : uint8_t {
   StreamingFPSIMD
 };
 
-class RegisterInfoPOSIX_arm64
+class RegisterInfoCommon_arm64
     : public lldb_private::RegisterInfoAndSetInterface {
 public:
   enum { GPRegSet = 0, FPRegSet };
@@ -101,7 +101,7 @@ public:
     uint64_t mdscr_el1;
   };
 
-  RegisterInfoPOSIX_arm64(const lldb_private::ArchSpec &target_arch,
+  RegisterInfoCommon_arm64(const lldb_private::ArchSpec &target_arch,
                           lldb_private::Flags opt_regsets);
 
   static size_t GetGPRSizeStatic();

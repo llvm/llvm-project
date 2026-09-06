@@ -13,7 +13,7 @@
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_loongarch.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_loongarch64.h"
+#include "Plugins/Process/Utility/RegisterInfoCommon_loongarch64.h"
 
 #include <asm/ptrace.h>
 
@@ -28,7 +28,7 @@ class NativeRegisterContextLinux_loongarch64
 public:
   NativeRegisterContextLinux_loongarch64(
       const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
-      std::unique_ptr<RegisterInfoPOSIX_loongarch64> register_info_up);
+      std::unique_ptr<RegisterInfoCommon_loongarch64> register_info_up);
 
   uint32_t GetRegisterSetCount() const override;
 
@@ -85,10 +85,10 @@ private:
   bool m_lasx_is_valid;
   bool m_refresh_hwdebug_info;
 
-  RegisterInfoPOSIX_loongarch64::GPR m_gpr;
-  RegisterInfoPOSIX_loongarch64::FPR m_fpr;
-  RegisterInfoPOSIX_loongarch64::LSX m_lsx;
-  RegisterInfoPOSIX_loongarch64::LASX m_lasx;
+  RegisterInfoCommon_loongarch64::GPR m_gpr;
+  RegisterInfoCommon_loongarch64::FPR m_fpr;
+  RegisterInfoCommon_loongarch64::LSX m_lsx;
+  RegisterInfoCommon_loongarch64::LASX m_lasx;
 
   bool IsGPR(unsigned reg) const;
 
@@ -104,7 +104,7 @@ private:
 
   uint32_t CalculateLasxOffset(const RegisterInfo *reg_info) const;
 
-  const RegisterInfoPOSIX_loongarch64 &GetRegisterInfo() const;
+  const RegisterInfoCommon_loongarch64 &GetRegisterInfo() const;
 
   llvm::Error ReadHardwareDebugInfo() override;
 

@@ -1,4 +1,4 @@
-//===-- RegisterInfoPOSIX_riscv64.cpp -------------------------------------===//
+//===-- RegisterInfoCommon_riscv64.cpp -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "RegisterInfoPOSIX_riscv64.h"
+#include "RegisterInfoCommon_riscv64.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Compiler.h"
@@ -15,7 +15,7 @@
 #include <stddef.h>
 
 #define GPR_OFFSET(idx) ((idx)*8 + 0)
-#define FPR_OFFSET(idx) ((idx)*8 + sizeof(RegisterInfoPOSIX_riscv64::GPR))
+#define FPR_OFFSET(idx) ((idx)*8 + sizeof(RegisterInfoCommon_riscv64::GPR))
 
 #define DECLARE_REGISTER_INFOS_RISCV64_STRUCT
 #include "RegisterInfos_riscv64.h"
@@ -52,7 +52,7 @@ static const lldb_private::RegisterSet g_reg_set_gpr_riscv64 = {
 static const lldb_private::RegisterSet g_reg_set_fpr_riscv64 = {
     "Floating Point Registers", "fpr", k_num_fpr_registers, nullptr};
 
-RegisterInfoPOSIX_riscv64::RegisterInfoPOSIX_riscv64(
+RegisterInfoCommon_riscv64::RegisterInfoCommon_riscv64(
     const lldb_private::ArchSpec &target_arch, lldb_private::Flags opt_regsets)
     : lldb_private::RegisterInfoAndSetInterface(target_arch),
       m_opt_regsets(opt_regsets) {
@@ -72,7 +72,7 @@ RegisterInfoPOSIX_riscv64::RegisterInfoPOSIX_riscv64(
   }
 }
 
-void RegisterInfoPOSIX_riscv64::AddRegSetGP() {
+void RegisterInfoCommon_riscv64::AddRegSetGP() {
   m_register_infos.resize(k_num_gpr_registers);
   memcpy(&m_register_infos[0], g_register_infos_riscv64_gpr,
          sizeof(g_register_infos_riscv64_gpr));
@@ -82,7 +82,7 @@ void RegisterInfoPOSIX_riscv64::AddRegSetGP() {
       std::make_pair(gpr_first_riscv, m_register_infos.size());
 }
 
-void RegisterInfoPOSIX_riscv64::AddRegSetFP() {
+void RegisterInfoCommon_riscv64::AddRegSetFP() {
   const uint32_t register_info_count = m_register_infos.size();
   const uint32_t register_set_count = m_register_sets.size();
 
@@ -106,28 +106,28 @@ void RegisterInfoPOSIX_riscv64::AddRegSetFP() {
       std::make_pair(register_info_count, m_register_infos.size());
 }
 
-uint32_t RegisterInfoPOSIX_riscv64::GetRegisterCount() const {
+uint32_t RegisterInfoCommon_riscv64::GetRegisterCount() const {
   return m_register_infos.size();
 }
 
-size_t RegisterInfoPOSIX_riscv64::GetGPRSize() const {
-  return sizeof(struct RegisterInfoPOSIX_riscv64::GPR);
+size_t RegisterInfoCommon_riscv64::GetGPRSize() const {
+  return sizeof(struct RegisterInfoCommon_riscv64::GPR);
 }
 
-size_t RegisterInfoPOSIX_riscv64::GetFPRSize() const {
-  return sizeof(struct RegisterInfoPOSIX_riscv64::FPR);
+size_t RegisterInfoCommon_riscv64::GetFPRSize() const {
+  return sizeof(struct RegisterInfoCommon_riscv64::FPR);
 }
 
 const lldb_private::RegisterInfo *
-RegisterInfoPOSIX_riscv64::GetRegisterInfo() const {
+RegisterInfoCommon_riscv64::GetRegisterInfo() const {
   return m_register_infos.data();
 }
 
-size_t RegisterInfoPOSIX_riscv64::GetRegisterSetCount() const {
+size_t RegisterInfoCommon_riscv64::GetRegisterSetCount() const {
   return m_register_sets.size();
 }
 
-size_t RegisterInfoPOSIX_riscv64::GetRegisterSetFromRegisterIndex(
+size_t RegisterInfoCommon_riscv64::GetRegisterSetFromRegisterIndex(
     uint32_t reg_index) const {
   for (const auto &regset_range : m_per_regset_regnum_range) {
     if (reg_index >= regset_range.second.first &&
@@ -137,12 +137,12 @@ size_t RegisterInfoPOSIX_riscv64::GetRegisterSetFromRegisterIndex(
   return LLDB_INVALID_REGNUM;
 }
 
-bool RegisterInfoPOSIX_riscv64::IsFPReg(unsigned reg) const {
+bool RegisterInfoCommon_riscv64::IsFPReg(unsigned reg) const {
   return llvm::is_contained(m_fp_regnum_collection, reg);
 }
 
 const lldb_private::RegisterSet *
-RegisterInfoPOSIX_riscv64::GetRegisterSet(size_t set_index) const {
+RegisterInfoCommon_riscv64::GetRegisterSet(size_t set_index) const {
   if (set_index < GetRegisterSetCount())
     return &m_register_sets[set_index];
   return nullptr;

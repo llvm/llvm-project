@@ -1,4 +1,4 @@
-//===-- RegisterInfoPOSIX_riscv32.cpp -------------------------------------===//
+//===-- RegisterInfoCommon_riscv32.cpp -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "RegisterInfoPOSIX_riscv32.h"
+#include "RegisterInfoCommon_riscv32.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Compiler.h"
@@ -15,17 +15,17 @@
 #include <stddef.h>
 
 #define GPR_OFFSET(idx) ((idx) * 4 + 0)
-#define FPR_OFFSET(idx) ((idx) * 4 + sizeof(RegisterInfoPOSIX_riscv32::GPR))
+#define FPR_OFFSET(idx) ((idx) * 4 + sizeof(RegisterInfoCommon_riscv32::GPR))
 
 #define REG_CONTEXT_SIZE                                                       \
-  (sizeof(RegisterInfoPOSIX_riscv32::GPR) +                                    \
-   sizeof(RegisterInfoPOSIX_riscv32::FPR))
+  (sizeof(RegisterInfoCommon_riscv32::GPR) +                                    \
+   sizeof(RegisterInfoCommon_riscv32::FPR))
 
 #define DECLARE_REGISTER_INFOS_RISCV32_STRUCT
 #include "RegisterInfos_riscv32.h"
 #undef DECLARE_REGISTER_INFOS_RISCV32_STRUCT
 
-const lldb_private::RegisterInfo *RegisterInfoPOSIX_riscv32::GetRegisterInfoPtr(
+const lldb_private::RegisterInfo *RegisterInfoCommon_riscv32::GetRegisterInfoPtr(
     const lldb_private::ArchSpec &target_arch) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::riscv32:
@@ -36,7 +36,7 @@ const lldb_private::RegisterInfo *RegisterInfoPOSIX_riscv32::GetRegisterInfoPtr(
   }
 }
 
-uint32_t RegisterInfoPOSIX_riscv32::GetRegisterInfoCount(
+uint32_t RegisterInfoCommon_riscv32::GetRegisterInfoCount(
     const lldb_private::ArchSpec &target_arch) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::riscv32:
@@ -96,35 +96,35 @@ static const lldb_private::RegisterSet g_reg_sets_riscv32[k_num_register_sets] =
      {"Floating Point Registers", "fpr", k_num_fpr_registers,
       g_fpr_regnums_riscv32}};
 
-RegisterInfoPOSIX_riscv32::RegisterInfoPOSIX_riscv32(
+RegisterInfoCommon_riscv32::RegisterInfoCommon_riscv32(
     const lldb_private::ArchSpec &target_arch, lldb_private::Flags opt_regsets)
     : lldb_private::RegisterInfoAndSetInterface(target_arch),
       m_register_info_p(GetRegisterInfoPtr(target_arch)),
       m_register_info_count(GetRegisterInfoCount(target_arch)),
       m_opt_regsets(opt_regsets) {}
 
-uint32_t RegisterInfoPOSIX_riscv32::GetRegisterCount() const {
+uint32_t RegisterInfoCommon_riscv32::GetRegisterCount() const {
   return m_register_info_count;
 }
 
-size_t RegisterInfoPOSIX_riscv32::GetGPRSize() const {
-  return sizeof(struct RegisterInfoPOSIX_riscv32::GPR);
+size_t RegisterInfoCommon_riscv32::GetGPRSize() const {
+  return sizeof(struct RegisterInfoCommon_riscv32::GPR);
 }
 
-size_t RegisterInfoPOSIX_riscv32::GetFPRSize() const {
-  return sizeof(struct RegisterInfoPOSIX_riscv32::FPR);
+size_t RegisterInfoCommon_riscv32::GetFPRSize() const {
+  return sizeof(struct RegisterInfoCommon_riscv32::FPR);
 }
 
 const lldb_private::RegisterInfo *
-RegisterInfoPOSIX_riscv32::GetRegisterInfo() const {
+RegisterInfoCommon_riscv32::GetRegisterInfo() const {
   return m_register_info_p;
 }
 
-size_t RegisterInfoPOSIX_riscv32::GetRegisterSetCount() const {
+size_t RegisterInfoCommon_riscv32::GetRegisterSetCount() const {
   return k_num_register_sets;
 }
 
-size_t RegisterInfoPOSIX_riscv32::GetRegisterSetFromRegisterIndex(
+size_t RegisterInfoCommon_riscv32::GetRegisterSetFromRegisterIndex(
     uint32_t reg_index) const {
   // coverity[unsigned_compare]
   if (reg_index >= gpr_first_riscv && reg_index <= gpr_last_riscv)
@@ -135,7 +135,7 @@ size_t RegisterInfoPOSIX_riscv32::GetRegisterSetFromRegisterIndex(
 }
 
 const lldb_private::RegisterSet *
-RegisterInfoPOSIX_riscv32::GetRegisterSet(size_t set_index) const {
+RegisterInfoCommon_riscv32::GetRegisterSet(size_t set_index) const {
   if (set_index < GetRegisterSetCount())
     return &g_reg_sets_riscv32[set_index];
   return nullptr;

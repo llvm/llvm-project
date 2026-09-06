@@ -1,4 +1,4 @@
-//===-- RegisterInfoPOSIX_loongarch64.cpp --------------------------------===//
+//===-- RegisterInfoCommon_loongarch64.cpp --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,32 +13,32 @@
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Compiler.h"
 
-#include "RegisterInfoPOSIX_loongarch64.h"
+#include "RegisterInfoCommon_loongarch64.h"
 
 #define GPR_OFFSET(idx) ((idx)*8 + 0)
-#define FPR_OFFSET(idx) ((idx)*8 + sizeof(RegisterInfoPOSIX_loongarch64::GPR))
-#define FCC_OFFSET(idx) ((idx)*1 + 32 * 8 + sizeof(RegisterInfoPOSIX_loongarch64::GPR))
-#define FCSR_OFFSET (8 * 1 + 32 * 8 + sizeof(RegisterInfoPOSIX_loongarch64::GPR))
+#define FPR_OFFSET(idx) ((idx)*8 + sizeof(RegisterInfoCommon_loongarch64::GPR))
+#define FCC_OFFSET(idx) ((idx)*1 + 32 * 8 + sizeof(RegisterInfoCommon_loongarch64::GPR))
+#define FCSR_OFFSET (8 * 1 + 32 * 8 + sizeof(RegisterInfoCommon_loongarch64::GPR))
 #define LSX_OFFSET(idx)                                                        \
-  ((idx) * 16 + sizeof(RegisterInfoPOSIX_loongarch64::GPR) +                   \
-   sizeof(RegisterInfoPOSIX_loongarch64::FPR))
+  ((idx) * 16 + sizeof(RegisterInfoCommon_loongarch64::GPR) +                   \
+   sizeof(RegisterInfoCommon_loongarch64::FPR))
 #define LASX_OFFSET(idx)                                                       \
-  ((idx) * 32 + sizeof(RegisterInfoPOSIX_loongarch64::GPR) +                   \
-   sizeof(RegisterInfoPOSIX_loongarch64::FPR) +                                \
-   sizeof(RegisterInfoPOSIX_loongarch64::LSX))
+  ((idx) * 32 + sizeof(RegisterInfoCommon_loongarch64::GPR) +                   \
+   sizeof(RegisterInfoCommon_loongarch64::FPR) +                                \
+   sizeof(RegisterInfoCommon_loongarch64::LSX))
 
 #define REG_CONTEXT_SIZE                                                       \
-  (sizeof(RegisterInfoPOSIX_loongarch64::GPR) +                                \
-   sizeof(RegisterInfoPOSIX_loongarch64::FPR) +                                \
-   sizeof(RegisterInfoPOSIX_loongarch64::LSX) +                                \
-   sizeof(RegisterInfoPOSIX_loongarch64::LASX))
+  (sizeof(RegisterInfoCommon_loongarch64::GPR) +                                \
+   sizeof(RegisterInfoCommon_loongarch64::FPR) +                                \
+   sizeof(RegisterInfoCommon_loongarch64::LSX) +                                \
+   sizeof(RegisterInfoCommon_loongarch64::LASX))
 
 #define DECLARE_REGISTER_INFOS_LOONGARCH64_STRUCT
 #include "RegisterInfos_loongarch64.h"
 #undef DECLARE_REGISTER_INFOS_LOONGARCH64_STRUCT
 
 const lldb_private::RegisterInfo *
-RegisterInfoPOSIX_loongarch64::GetRegisterInfoPtr(
+RegisterInfoCommon_loongarch64::GetRegisterInfoPtr(
     const lldb_private::ArchSpec &target_arch) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::loongarch64:
@@ -49,7 +49,7 @@ RegisterInfoPOSIX_loongarch64::GetRegisterInfoPtr(
   }
 }
 
-uint32_t RegisterInfoPOSIX_loongarch64::GetRegisterInfoCount(
+uint32_t RegisterInfoCommon_loongarch64::GetRegisterInfoCount(
     const lldb_private::ArchSpec &target_arch) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::loongarch64:
@@ -166,34 +166,34 @@ static const lldb_private::RegisterSet
         {"LASX Vector Registers", "lasx", k_num_lasx_registers,
          g_lasx_regnums_loongarch64}};
 
-RegisterInfoPOSIX_loongarch64::RegisterInfoPOSIX_loongarch64(
+RegisterInfoCommon_loongarch64::RegisterInfoCommon_loongarch64(
     const lldb_private::ArchSpec &target_arch, lldb_private::Flags flags)
     : lldb_private::RegisterInfoAndSetInterface(target_arch),
       m_register_info_p(GetRegisterInfoPtr(target_arch)),
       m_register_info_count(GetRegisterInfoCount(target_arch)) {}
 
-uint32_t RegisterInfoPOSIX_loongarch64::GetRegisterCount() const {
+uint32_t RegisterInfoCommon_loongarch64::GetRegisterCount() const {
   return m_register_info_count;
 }
 
-size_t RegisterInfoPOSIX_loongarch64::GetGPRSize() const {
-  return sizeof(struct RegisterInfoPOSIX_loongarch64::GPR);
+size_t RegisterInfoCommon_loongarch64::GetGPRSize() const {
+  return sizeof(struct RegisterInfoCommon_loongarch64::GPR);
 }
 
-size_t RegisterInfoPOSIX_loongarch64::GetFPRSize() const {
-  return sizeof(struct RegisterInfoPOSIX_loongarch64::FPR);
+size_t RegisterInfoCommon_loongarch64::GetFPRSize() const {
+  return sizeof(struct RegisterInfoCommon_loongarch64::FPR);
 }
 
 const lldb_private::RegisterInfo *
-RegisterInfoPOSIX_loongarch64::GetRegisterInfo() const {
+RegisterInfoCommon_loongarch64::GetRegisterInfo() const {
   return m_register_info_p;
 }
 
-size_t RegisterInfoPOSIX_loongarch64::GetRegisterSetCount() const {
+size_t RegisterInfoCommon_loongarch64::GetRegisterSetCount() const {
   return k_num_register_sets;
 }
 
-size_t RegisterInfoPOSIX_loongarch64::GetRegisterSetFromRegisterIndex(
+size_t RegisterInfoCommon_loongarch64::GetRegisterSetFromRegisterIndex(
     uint32_t reg_index) const {
   // coverity[unsigned_compare]
   if (reg_index >= gpr_first_loongarch && reg_index <= gpr_last_loongarch)
@@ -208,7 +208,7 @@ size_t RegisterInfoPOSIX_loongarch64::GetRegisterSetFromRegisterIndex(
 }
 
 const lldb_private::RegisterSet *
-RegisterInfoPOSIX_loongarch64::GetRegisterSet(size_t set_index) const {
+RegisterInfoCommon_loongarch64::GetRegisterSet(size_t set_index) const {
   if (set_index < GetRegisterSetCount())
     return &g_reg_sets_loongarch64[set_index];
   return nullptr;

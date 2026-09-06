@@ -10,7 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_ARM64_H
 
 #include "RegisterInfoInterface.h"
-#include "RegisterInfoPOSIX_arm64.h"
+#include "RegisterInfoCommon_arm64.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 
@@ -18,7 +18,7 @@ class RegisterContextPOSIX_arm64 : public lldb_private::RegisterContext {
 public:
   RegisterContextPOSIX_arm64(
       lldb_private::Thread &thread,
-      std::unique_ptr<RegisterInfoPOSIX_arm64> register_info);
+      std::unique_ptr<RegisterInfoCommon_arm64> register_info);
 
   ~RegisterContextPOSIX_arm64() override;
 
@@ -43,7 +43,7 @@ public:
   const char *GetRegisterName(unsigned reg);
 
 protected:
-  std::unique_ptr<RegisterInfoPOSIX_arm64> m_register_info_up;
+  std::unique_ptr<RegisterInfoCommon_arm64> m_register_info_up;
 
   virtual const lldb_private::RegisterInfo *GetRegisterInfo();
 
@@ -51,7 +51,7 @@ protected:
 
   bool IsFPR(unsigned reg);
 
-  size_t GetFPUSize() { return sizeof(RegisterInfoPOSIX_arm64::FPU); }
+  size_t GetFPUSize() { return sizeof(RegisterInfoCommon_arm64::FPU); }
 
   bool IsSVE(unsigned reg) const;
   bool IsPAuth(unsigned reg) const;

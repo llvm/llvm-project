@@ -10,7 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_RISCV64_H
 
 #include "Plugins/Process/Utility/RegisterContextPOSIX_riscv64.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv64.h"
+#include "Plugins/Process/Utility/RegisterInfoCommon_riscv64.h"
 
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Target/Thread.h"
@@ -37,7 +37,7 @@ public:
 protected:
   RegisterContextCorePOSIX_riscv64(
       lldb_private::Thread &thread,
-      std::unique_ptr<RegisterInfoPOSIX_riscv64> register_info,
+      std::unique_ptr<RegisterInfoCommon_riscv64> register_info,
       const lldb_private::DataExtractor &gpregset,
       llvm::ArrayRef<lldb_private::CoreNote> notes);
 

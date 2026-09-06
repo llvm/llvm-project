@@ -1,4 +1,4 @@
-//===-- RegisterInfoPOSIX_ppc64.cpp ---------------------------------------===//
+//===-- RegisterInfoCommon_ppc64.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,9 +13,9 @@
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Compiler.h"
 
-#include "RegisterInfoPOSIX_ppc64.h"
+#include "RegisterInfoCommon_ppc64.h"
 
-// Include RegisterInfoPOSIX_ppc64 to declare our g_register_infos_ppc64
+// Include RegisterInfoCommon_ppc64 to declare our g_register_infos_ppc64
 #define DECLARE_REGISTER_INFOS_PPC64_STRUCT
 #include "RegisterInfos_ppc64.h"
 #undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
@@ -48,7 +48,7 @@ GetRegisterInfoCount(const lldb_private::ArchSpec &target_arch) {
   }
 }
 
-RegisterInfoPOSIX_ppc64::RegisterInfoPOSIX_ppc64(
+RegisterInfoCommon_ppc64::RegisterInfoCommon_ppc64(
     const lldb_private::ArchSpec &target_arch)
     : lldb_private::RegisterInfoInterface(target_arch),
       m_register_info_p(GetRegisterInfoPtr(target_arch)),
@@ -66,13 +66,13 @@ RegisterInfoPOSIX_ppc64::RegisterInfoPOSIX_ppc64(
   }
 }
 
-size_t RegisterInfoPOSIX_ppc64::GetGPRSize() const { return m_gpr_size; }
+size_t RegisterInfoCommon_ppc64::GetGPRSize() const { return m_gpr_size; }
 
 const lldb_private::RegisterInfo *
-RegisterInfoPOSIX_ppc64::GetRegisterInfo() const {
+RegisterInfoCommon_ppc64::GetRegisterInfo() const {
   return m_register_info_p;
 }
 
-uint32_t RegisterInfoPOSIX_ppc64::GetRegisterCount() const {
+uint32_t RegisterInfoCommon_ppc64::GetRegisterCount() const {
   return m_register_info_count;
 }

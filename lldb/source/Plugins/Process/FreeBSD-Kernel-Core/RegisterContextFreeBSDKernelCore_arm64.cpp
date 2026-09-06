@@ -27,7 +27,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 RegisterContextFreeBSDKernelCore_arm64::RegisterContextFreeBSDKernelCore_arm64(
-    Thread &thread, std::unique_ptr<RegisterInfoPOSIX_arm64> register_info_up,
+    Thread &thread, std::unique_ptr<RegisterInfoCommon_arm64> register_info_up,
     lldb::addr_t pcb_addr)
     : RegisterContextPOSIX_arm64(thread, std::move(register_info_up)),
       m_pcb_addr(pcb_addr) {}

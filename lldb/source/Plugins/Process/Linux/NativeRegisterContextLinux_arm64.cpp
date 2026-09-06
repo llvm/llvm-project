@@ -16,7 +16,7 @@
 #include "Plugins/Process/Linux/Procfs.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "Plugins/Process/Utility/MemoryTagManagerAArch64MTE.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
+#include "Plugins/Process/Utility/RegisterInfoCommon_arm64.h"
 #include "Plugins/Process/Utility/RegisterTypeDetector_arm64.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
@@ -139,7 +139,7 @@ size_t NativeRegisterContextLinux_arm64::GetSetSize(
   switch (set) {
   case RegisterSetType::GPR:
     // Returns sizeof arm64 GPR ptrace buffer, which is different
-    // from GetGPRSize which returns sizeof RegisterInfoPOSIX_arm64::GPR.
+    // from GetGPRSize which returns sizeof RegisterInfoCommon_arm64::GPR.
     return sizeof(m_gpr_arm64);
   case RegisterSetType::FPR:
     return sizeof(m_fpr);
@@ -228,7 +228,7 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
                                           native_thread.GetID(), &regset,
                                           &ioVec, sizeof(sve_header))
             .Success())
-      opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskSVE);
+      opt_regsets.Set(RegisterInfoCommon_arm64::eRegsetMaskSVE);
 
     // We may have the Scalable Matrix Extension (SME) which adds a
     // streaming SVE mode. Systems can have SVE and/or SME.
@@ -238,7 +238,7 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
                                           native_thread.GetID(), &regset,
                                           &ioVec, sizeof(sve_header))
             .Success())
-      opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskSSVE);
+      opt_regsets.Set(RegisterInfoCommon_arm64::eRegsetMaskSSVE);
 
     sve::user_za_header za_header;
     ioVec.iov_base = &za_header;
@@ -248,7 +248,7 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
                                           native_thread.GetID(), &regset,
                                           &ioVec, sizeof(za_header))
             .Success())
-      opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskZA);
+      opt_regsets.Set(RegisterInfoCommon_arm64::eRegsetMaskZA);
 
     // SME's ZT0 is a 512 bit register.
     std::array<uint8_t, 64> zt_reg;
@@ -259,29 +259,29 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
                                           native_thread.GetID(), &regset,
                                           &ioVec, zt_reg.size())
             .Success())
-      opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskZT);
+      opt_regsets.Set(RegisterInfoCommon_arm64::eRegsetMaskZT);
 
     NativeProcessLinux &process = native_thread.GetProcess();
 
     std::optional<uint64_t> auxv_at_hwcap =
         process.GetAuxValue(AuxVector::AUXV_AT_HWCAP);
     if (auxv_at_hwcap && (*auxv_at_hwcap & HWCAP_PACA))
-      opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskPAuth);
+      opt_regsets.Set(RegisterInfoCommon_arm64::eRegsetMaskPAuth);
 
     std::optional<uint64_t> auxv_at_hwcap2 =
         process.GetAuxValue(AuxVector::AUXV_AT_HWCAP2);
     if (auxv_at_hwcap2) {
       if (*auxv_at_hwcap2 & HWCAP2_MTE)
-        opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskMTE);
+        opt_regsets.Set(RegisterInfoCommon_arm64::eRegsetMaskMTE);
       if (*auxv_at_hwcap2 & HWCAP2_FPMR)
-        opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskFPMR);
+        opt_regsets.Set(RegisterInfoCommon_arm64::eRegsetMaskFPMR);
       if (*auxv_at_hwcap & HWCAP_GCS)
-        opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskGCS);
+        opt_regsets.Set(RegisterInfoCommon_arm64::eRegsetMaskGCS);
       if (*auxv_at_hwcap2 & HWCAP2_POE)
-        opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskPOE);
+        opt_regsets.Set(RegisterInfoCommon_arm64::eRegsetMaskPOE);
     }
 
-    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskTLS);
+    opt_regsets.Set(RegisterInfoCommon_arm64::eRegsetMaskTLS);
 
     std::optional<uint64_t> auxv_at_hwcap3 =
         process.GetAuxValue(AuxVector::AUXV_AT_HWCAP3);
@@ -292,7 +292,7 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
                                            auxv_at_hwcap3.value_or(0));
 
     auto register_info_up =
-        std::make_unique<RegisterInfoPOSIX_arm64>(target_arch, opt_regsets);
+        std::make_unique<RegisterInfoCommon_arm64>(target_arch, opt_regsets);
     return std::make_unique<NativeRegisterContextLinux_arm64>(
         target_arch, native_thread, std::move(register_info_up));
   }
@@ -304,12 +304,12 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
 llvm::Expected<ArchSpec>
 NativeRegisterContextLinux::DetermineArchitecture(lldb::tid_t tid) {
   return DetermineArchitectureViaGPR(
-      tid, RegisterInfoPOSIX_arm64::GetGPRSizeStatic());
+      tid, RegisterInfoCommon_arm64::GetGPRSizeStatic());
 }
 
 NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
-    std::unique_ptr<RegisterInfoPOSIX_arm64> register_info_up)
+    std::unique_ptr<RegisterInfoCommon_arm64> register_info_up)
     : NativeRegisterContextRegisterInfo(native_thread,
                                         register_info_up.release()),
       NativeRegisterContextLinux(native_thread) {
@@ -331,9 +331,9 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
     m_sve_state = SVEState::Disabled;
 }
 
-RegisterInfoPOSIX_arm64 &
+RegisterInfoCommon_arm64 &
 NativeRegisterContextLinux_arm64::GetRegisterInfo() const {
-  return static_cast<RegisterInfoPOSIX_arm64 &>(*m_register_info_interface_up);
+  return static_cast<RegisterInfoCommon_arm64 &>(*m_register_info_interface_up);
 }
 
 uint32_t NativeRegisterContextLinux_arm64::GetRegisterSetCount() const {
@@ -1941,7 +1941,7 @@ void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
 
       // On every stop we configure SVE vector length by calling
       // ConfigureVectorLengthSVE regardless of current SVEState of this thread.
-      uint32_t vq = RegisterInfoPOSIX_arm64::eVectorQuadwordAArch64SVE;
+      uint32_t vq = RegisterInfoCommon_arm64::eVectorQuadwordAArch64SVE;
       if (sve::vl_valid(m_sve_header.vl))
         vq = sve::vq_from_vl(m_sve_header.vl);
 
@@ -1953,7 +1953,7 @@ void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
   if (!IsValid(RegisterSetType::ZA_HEADER)) {
     Status error = ReadZAHeader();
     if (error.Success()) {
-      uint32_t vq = RegisterInfoPOSIX_arm64::eVectorQuadwordAArch64SVE;
+      uint32_t vq = RegisterInfoCommon_arm64::eVectorQuadwordAArch64SVE;
       if (sve::vl_valid(m_za_header.vl))
         vq = sve::vq_from_vl(m_za_header.vl);
 

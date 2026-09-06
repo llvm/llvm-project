@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegisterInfoPOSIXDynamic_riscv32.h"
+#include "RegisterInfoCommonDynamic_riscv32.h"
 
 #include "lldb-riscv-register-enums.h"
 #include "lldb/lldb-defines.h"
@@ -22,16 +22,16 @@
 #include "Plugins/Process/Utility/RegisterInfos_riscv32.h"
 #undef DECLARE_REGISTER_INFOS_RISCV32_STRUCT
 
-RegisterInfoPOSIXDynamic_riscv32::RegisterInfoPOSIXDynamic_riscv32(
+RegisterInfoCommonDynamic_riscv32::RegisterInfoCommonDynamic_riscv32(
     const lldb_private::ArchSpec &target_arch)
     : lldb_private::RegisterInfoAndSetInterface(target_arch),
       m_target_arch(target_arch) {}
 
-uint32_t RegisterInfoPOSIXDynamic_riscv32::GetRegisterCount() const {
+uint32_t RegisterInfoCommonDynamic_riscv32::GetRegisterCount() const {
   return m_dyn_reg_infos.GetNumRegisters();
 }
 
-size_t RegisterInfoPOSIXDynamic_riscv32::GetGPRSize() const {
+size_t RegisterInfoCommonDynamic_riscv32::GetGPRSize() const {
   for (uint32_t set_idx = 0; set_idx < GetRegisterSetCount(); ++set_idx) {
     const lldb_private::RegisterSet *set =
         m_dyn_reg_infos.GetRegisterSet(set_idx);
@@ -41,7 +41,7 @@ size_t RegisterInfoPOSIXDynamic_riscv32::GetGPRSize() const {
   return 0;
 }
 
-size_t RegisterInfoPOSIXDynamic_riscv32::GetFPRSize() const {
+size_t RegisterInfoCommonDynamic_riscv32::GetFPRSize() const {
   for (uint32_t set_idx = 0; set_idx < GetRegisterSetCount(); ++set_idx) {
     const lldb_private::RegisterSet *set =
         m_dyn_reg_infos.GetRegisterSet(set_idx);
@@ -52,18 +52,18 @@ size_t RegisterInfoPOSIXDynamic_riscv32::GetFPRSize() const {
 }
 
 const lldb_private::RegisterInfo *
-RegisterInfoPOSIXDynamic_riscv32::GetRegisterInfo() const {
+RegisterInfoCommonDynamic_riscv32::GetRegisterInfo() const {
   return &*m_dyn_reg_infos
                .registers<lldb_private::DynamicRegisterInfo::
                               reg_collection_const_range>()
                .begin();
 }
 
-size_t RegisterInfoPOSIXDynamic_riscv32::GetRegisterSetCount() const {
+size_t RegisterInfoCommonDynamic_riscv32::GetRegisterSetCount() const {
   return m_dyn_reg_infos.GetNumRegisterSets();
 }
 
-size_t RegisterInfoPOSIXDynamic_riscv32::GetRegisterSetFromRegisterIndex(
+size_t RegisterInfoCommonDynamic_riscv32::GetRegisterSetFromRegisterIndex(
     uint32_t reg_index) const {
   for (size_t set_index = 0; set_index < m_dyn_reg_infos.GetNumRegisterSets();
        ++set_index) {
@@ -77,24 +77,24 @@ size_t RegisterInfoPOSIXDynamic_riscv32::GetRegisterSetFromRegisterIndex(
 }
 
 const lldb_private::RegisterSet *
-RegisterInfoPOSIXDynamic_riscv32::GetRegisterSet(size_t set_index) const {
+RegisterInfoCommonDynamic_riscv32::GetRegisterSet(size_t set_index) const {
   if (set_index < GetRegisterSetCount())
     return m_dyn_reg_infos.GetRegisterSet(set_index);
   return nullptr;
 }
 
-size_t RegisterInfoPOSIXDynamic_riscv32::SetRegisterInfo(
+size_t RegisterInfoCommonDynamic_riscv32::SetRegisterInfo(
     std::vector<lldb_private::DynamicRegisterInfo::Register> regs) {
   return m_dyn_reg_infos.SetRegisterInfo(std::move(regs), m_target_arch);
 }
 
 const lldb_private::RegisterInfo *
-RegisterInfoPOSIXDynamic_riscv32::GetRegisterInfo(
+RegisterInfoCommonDynamic_riscv32::GetRegisterInfo(
     llvm::StringRef reg_name) const {
   return m_dyn_reg_infos.GetRegisterInfo(reg_name);
 }
 
-void RegisterInfoPOSIXDynamic_riscv32::BuildCSRegInfos(
+void RegisterInfoCommonDynamic_riscv32::BuildCSRegInfos(
     llvm::ArrayRef<std::string> features,
     llvm::SmallVectorImpl<lldb_private::RegisterInfo> &cs_reg_infos) {
   cs_reg_infos.clear();
@@ -143,7 +143,7 @@ void RegisterInfoPOSIXDynamic_riscv32::BuildCSRegInfos(
     ConfigureCSRegInfos(feature, cs_reg_infos);
 }
 
-void RegisterInfoPOSIXDynamic_riscv32::ConfigureCSRegInfos(
+void RegisterInfoCommonDynamic_riscv32::ConfigureCSRegInfos(
     llvm::StringRef feature,
     llvm::SmallVectorImpl<lldb_private::RegisterInfo> &cs_reg_infos) {
   // Initialized on first use so that the patch set does not depend on the

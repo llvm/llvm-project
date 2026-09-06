@@ -15,7 +15,7 @@
 #include "gtest/gtest.h"
 
 #include "Plugins/Instruction/LoongArch/EmulateInstructionLoongArch.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_loongarch64.h"
+#include "Plugins/Process/Utility/RegisterInfoCommon_loongarch64.h"
 #include "Plugins/Process/Utility/lldb-loongarch-register-enums.h"
 
 using namespace llvm;
@@ -48,8 +48,8 @@ using namespace lldb_private;
 
 struct LoongArch64EmulatorTester : public EmulateInstructionLoongArch,
                                    testing::Test {
-  RegisterInfoPOSIX_loongarch64::GPR gpr;
-  RegisterInfoPOSIX_loongarch64::FPR fpr;
+  RegisterInfoCommon_loongarch64::GPR gpr;
+  RegisterInfoCommon_loongarch64::FPR fpr;
 
   LoongArch64EmulatorTester(
       std::string triple = "loongarch64-unknown-linux-gnu")

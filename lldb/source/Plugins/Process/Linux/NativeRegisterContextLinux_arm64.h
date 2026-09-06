@@ -14,7 +14,7 @@
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
 #include "Plugins/Process/Utility/LinuxPTraceDefines_arm64sve.h"
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_arm64.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
+#include "Plugins/Process/Utility/RegisterInfoCommon_arm64.h"
 
 #include "llvm/ADT/BitmaskEnum.h"
 
@@ -31,7 +31,7 @@ class NativeRegisterContextLinux_arm64
 public:
   NativeRegisterContextLinux_arm64(
       const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
-      std::unique_ptr<RegisterInfoPOSIX_arm64> register_info_up);
+      std::unique_ptr<RegisterInfoCommon_arm64> register_info_up);
 
   uint32_t GetRegisterSetCount() const override;
 
@@ -71,7 +71,7 @@ protected:
   void *GetGPRBuffer() override { return &m_gpr_arm64; }
 
   // GetGPRBufferSize returns sizeof arm64 GPR ptrace buffer, it is different
-  // from GetGPRSize which returns sizeof RegisterInfoPOSIX_arm64::GPR.
+  // from GetGPRSize which returns sizeof RegisterInfoCommon_arm64::GPR.
   size_t GetGPRBufferSize() { return sizeof(m_gpr_arm64); }
 
   void *GetFPRBuffer() override { return &m_fpr; }
@@ -155,7 +155,7 @@ private:
   struct user_pt_regs m_gpr_arm64{};
 
   /// Floating-point registers including extended register sets.
-  RegisterInfoPOSIX_arm64::FPU m_fpr{};
+  RegisterInfoCommon_arm64::FPU m_fpr{};
 
   SVEState m_sve_state = SVEState::Unknown;
   struct sve::user_sve_header m_sve_header{};
@@ -263,7 +263,7 @@ private:
   uint32_t CalculateFprOffset(const RegisterInfo *reg_info,
                               bool streaming_fpsimd) const;
 
-  RegisterInfoPOSIX_arm64 &GetRegisterInfo() const;
+  RegisterInfoCommon_arm64 &GetRegisterInfo() const;
 
   void ConfigureRegisterContext();
 

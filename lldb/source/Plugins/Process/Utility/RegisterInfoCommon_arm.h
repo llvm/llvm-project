@@ -1,4 +1,4 @@
-//===-- RegisterInfoPOSIX_arm.h ---------------------------------*- C++ -*-===//
+//===-- RegisterInfoCommon_arm.h ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_ARM_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_ARM_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOCOMMON_ARM_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOCOMMON_ARM_H
 
 #include "RegisterInfoAndSetInterface.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/lldb-private.h"
 
-class RegisterInfoPOSIX_arm : public lldb_private::RegisterInfoAndSetInterface {
+class RegisterInfoCommon_arm : public lldb_private::RegisterInfoAndSetInterface {
 public:
   enum { GPRegSet = 0, FPRegSet, TLSRegSet };
 
@@ -51,7 +51,7 @@ public:
     uint32_t wcr[16];
   };
 
-  RegisterInfoPOSIX_arm(const lldb_private::ArchSpec &target_arch,
+  RegisterInfoCommon_arm(const lldb_private::ArchSpec &target_arch,
                         bool has_tls_reg = false);
 
   size_t GetGPRSize() const override;
@@ -77,4 +77,4 @@ private:
   bool m_has_tls_reg;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOPOSIX_ARM_H
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOCOMMON_ARM_H

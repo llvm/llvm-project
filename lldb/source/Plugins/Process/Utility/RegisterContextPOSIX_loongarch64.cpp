@@ -23,7 +23,7 @@ using namespace lldb_private;
 
 RegisterContextPOSIX_loongarch64::RegisterContextPOSIX_loongarch64(
     lldb_private::Thread &thread,
-    std::unique_ptr<RegisterInfoPOSIX_loongarch64> register_info)
+    std::unique_ptr<RegisterInfoCommon_loongarch64> register_info)
     : lldb_private::RegisterContext(thread, 0),
       m_register_info_up(std::move(register_info)) {}
 
@@ -73,20 +73,20 @@ RegisterContextPOSIX_loongarch64::GetRegisterInfo() {
 
 bool RegisterContextPOSIX_loongarch64::IsGPR(unsigned int reg) {
   return m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
-         RegisterInfoPOSIX_loongarch64::GPRegSet;
+         RegisterInfoCommon_loongarch64::GPRegSet;
 }
 
 bool RegisterContextPOSIX_loongarch64::IsFPR(unsigned int reg) {
   return m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
-         RegisterInfoPOSIX_loongarch64::FPRegSet;
+         RegisterInfoCommon_loongarch64::FPRegSet;
 }
 
 bool RegisterContextPOSIX_loongarch64::IsLSX(unsigned int reg) {
   return m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
-         RegisterInfoPOSIX_loongarch64::LSXRegSet;
+         RegisterInfoCommon_loongarch64::LSXRegSet;
 }
 
 bool RegisterContextPOSIX_loongarch64::IsLASX(unsigned int reg) {
   return m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
-         RegisterInfoPOSIX_loongarch64::LASXRegSet;
+         RegisterInfoCommon_loongarch64::LASXRegSet;
 }

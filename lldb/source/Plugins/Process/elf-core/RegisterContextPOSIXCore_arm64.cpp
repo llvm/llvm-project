@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterContextPOSIXCore_arm64.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
+#include "Plugins/Process/Utility/RegisterInfoCommon_arm64.h"
 
 #include "Plugins/Process/Utility/AuxVector.h"
 #include "Plugins/Process/Utility/RegisterTypeDetector_arm64.h"
@@ -24,50 +24,50 @@ std::unique_ptr<RegisterContextCorePOSIX_arm64>
 RegisterContextCorePOSIX_arm64::Create(Thread &thread, const ArchSpec &arch,
                                        const DataExtractor &gpregset,
                                        llvm::ArrayRef<CoreNote> notes) {
-  Flags opt_regsets = RegisterInfoPOSIX_arm64::eRegsetMaskDefault;
+  Flags opt_regsets = RegisterInfoCommon_arm64::eRegsetMaskDefault;
 
   DataExtractor ssve_data =
       getRegset(notes, arch.GetTriple(), AARCH64_SSVE_Desc);
   if (ssve_data.GetByteSize() >= sizeof(sve::user_sve_header))
-    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskSSVE);
+    opt_regsets.Set(RegisterInfoCommon_arm64::eRegsetMaskSSVE);
 
   DataExtractor sve_data = getRegset(notes, arch.GetTriple(), AARCH64_SVE_Desc);
   if (sve_data.GetByteSize() >= sizeof(sve::user_sve_header))
-    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskSVE);
+    opt_regsets.Set(RegisterInfoCommon_arm64::eRegsetMaskSVE);
 
   // Pointer Authentication register set data is based on struct
   // user_pac_mask declared in ptrace.h. See reference implementation
   // in Linux kernel source at arch/arm64/include/uapi/asm/ptrace.h.
   DataExtractor pac_data = getRegset(notes, arch.GetTriple(), AARCH64_PAC_Desc);
   if (pac_data.GetByteSize() >= sizeof(uint64_t) * 2)
-    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskPAuth);
+    opt_regsets.Set(RegisterInfoCommon_arm64::eRegsetMaskPAuth);
 
   DataExtractor tls_data = getRegset(notes, arch.GetTriple(), AARCH64_TLS_Desc);
   // A valid note will always contain at least one register, "tpidr". It may
   // expand in future.
   if (tls_data.GetByteSize() >= sizeof(uint64_t))
-    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskTLS);
+    opt_regsets.Set(RegisterInfoCommon_arm64::eRegsetMaskTLS);
 
   DataExtractor za_data = getRegset(notes, arch.GetTriple(), AARCH64_ZA_Desc);
   // Nothing if ZA is not present, just the header if it is disabled.
   if (za_data.GetByteSize() >= sizeof(sve::user_za_header))
-    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskZA);
+    opt_regsets.Set(RegisterInfoCommon_arm64::eRegsetMaskZA);
 
   DataExtractor mte_data = getRegset(notes, arch.GetTriple(), AARCH64_MTE_Desc);
   if (mte_data.GetByteSize() >= sizeof(uint64_t))
-    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskMTE);
+    opt_regsets.Set(RegisterInfoCommon_arm64::eRegsetMaskMTE);
 
   DataExtractor zt_data = getRegset(notes, arch.GetTriple(), AARCH64_ZT_Desc);
   // Although ZT0 can be in a disabled state like ZA can, the kernel reports
   // its content as 0s in that state. Therefore even a disabled ZT0 will have
   // a note containing those 0s. ZT0 is a 512 bit / 64 byte register.
   if (zt_data.GetByteSize() >= 64)
-    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskZT);
+    opt_regsets.Set(RegisterInfoCommon_arm64::eRegsetMaskZT);
 
   DataExtractor fpmr_data =
       getRegset(notes, arch.GetTriple(), AARCH64_FPMR_Desc);
   if (fpmr_data.GetByteSize() >= sizeof(uint64_t))
-    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskFPMR);
+    opt_regsets.Set(RegisterInfoCommon_arm64::eRegsetMaskFPMR);
 
   DataExtractor gcs_data = getRegset(notes, arch.GetTriple(), AARCH64_GCS_Desc);
   struct __attribute__((packed)) gcs_regs {
@@ -76,24 +76,24 @@ RegisterContextCorePOSIX_arm64::Create(Thread &thread, const ArchSpec &arch,
     uint64_t gcspr_e0;
   };
   if (gcs_data.GetByteSize() >= sizeof(gcs_regs))
-    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskGCS);
+    opt_regsets.Set(RegisterInfoCommon_arm64::eRegsetMaskGCS);
 
   DataExtractor poe_data = getRegset(notes, arch.GetTriple(), AARCH64_POE_Desc);
   struct poe_regs {
     uint64_t por_el0_reg;
   };
   if (poe_data.GetByteSize() >= sizeof(poe_regs))
-    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskPOE);
+    opt_regsets.Set(RegisterInfoCommon_arm64::eRegsetMaskPOE);
 
   auto register_info_up =
-      std::make_unique<RegisterInfoPOSIX_arm64>(arch, opt_regsets);
+      std::make_unique<RegisterInfoCommon_arm64>(arch, opt_regsets);
   return std::unique_ptr<RegisterContextCorePOSIX_arm64>(
       new RegisterContextCorePOSIX_arm64(thread, std::move(register_info_up),
                                          gpregset, notes));
 }
 
 RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
-    Thread &thread, std::unique_ptr<RegisterInfoPOSIX_arm64> register_info,
+    Thread &thread, std::unique_ptr<RegisterInfoCommon_arm64> register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContextPOSIX_arm64(thread, std::move(register_info)) {
   ::memset(&m_sme_pseudo_regs, 0, sizeof(m_sme_pseudo_regs));

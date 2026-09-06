@@ -23,7 +23,7 @@ using namespace lldb_private;
 
 RegisterContextPOSIX_riscv64::RegisterContextPOSIX_riscv64(
     lldb_private::Thread &thread,
-    std::unique_ptr<RegisterInfoPOSIX_riscv64> register_info)
+    std::unique_ptr<RegisterInfoCommon_riscv64> register_info)
     : lldb_private::RegisterContext(thread, 0),
       m_register_info_up(std::move(register_info)) {}
 
@@ -73,7 +73,7 @@ RegisterContextPOSIX_riscv64::GetRegisterInfo() {
 
 bool RegisterContextPOSIX_riscv64::IsGPR(unsigned int reg) {
   return m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
-         RegisterInfoPOSIX_riscv64::GPRegSet;
+         RegisterInfoCommon_riscv64::GPRegSet;
 }
 
 bool RegisterContextPOSIX_riscv64::IsFPR(unsigned int reg) {

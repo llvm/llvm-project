@@ -27,21 +27,21 @@ using namespace lldb_private;
 
 bool RegisterContextPOSIX_arm::IsGPR(unsigned reg) {
   if (m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
-      RegisterInfoPOSIX_arm::GPRegSet)
+      RegisterInfoCommon_arm::GPRegSet)
     return true;
   return false;
 }
 
 bool RegisterContextPOSIX_arm::IsFPR(unsigned reg) {
   if (m_register_info_up->GetRegisterSetFromRegisterIndex(reg) ==
-      RegisterInfoPOSIX_arm::FPRegSet)
+      RegisterInfoCommon_arm::FPRegSet)
     return true;
   return false;
 }
 
 RegisterContextPOSIX_arm::RegisterContextPOSIX_arm(
     lldb_private::Thread &thread,
-    std::unique_ptr<RegisterInfoPOSIX_arm> register_info)
+    std::unique_ptr<RegisterInfoCommon_arm> register_info)
     : lldb_private::RegisterContext(thread, 0),
       m_register_info_up(std::move(register_info)) {}
 

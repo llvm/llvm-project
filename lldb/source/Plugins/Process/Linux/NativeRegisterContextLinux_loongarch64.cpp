@@ -12,7 +12,7 @@
 
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_loongarch64.h"
+#include "Plugins/Process/Utility/RegisterInfoCommon_loongarch64.h"
 #include "Plugins/Process/Utility/lldb-loongarch-register-enums.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -84,7 +84,7 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
   switch (target_arch.GetMachine()) {
   case llvm::Triple::loongarch64: {
     Flags opt_regsets;
-    auto register_info_up = std::make_unique<RegisterInfoPOSIX_loongarch64>(
+    auto register_info_up = std::make_unique<RegisterInfoCommon_loongarch64>(
         target_arch, opt_regsets);
     return std::make_unique<NativeRegisterContextLinux_loongarch64>(
         target_arch, native_thread, std::move(register_info_up));
@@ -101,7 +101,7 @@ NativeRegisterContextLinux::DetermineArchitecture(lldb::tid_t tid) {
 
 NativeRegisterContextLinux_loongarch64::NativeRegisterContextLinux_loongarch64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread,
-    std::unique_ptr<RegisterInfoPOSIX_loongarch64> register_info_up)
+    std::unique_ptr<RegisterInfoCommon_loongarch64> register_info_up)
     : NativeRegisterContextRegisterInfo(native_thread,
                                         register_info_up.release()),
       NativeRegisterContextLinux(native_thread) {
@@ -123,9 +123,9 @@ NativeRegisterContextLinux_loongarch64::NativeRegisterContextLinux_loongarch64(
   m_lasx_is_valid = false;
 }
 
-const RegisterInfoPOSIX_loongarch64 &
+const RegisterInfoCommon_loongarch64 &
 NativeRegisterContextLinux_loongarch64::GetRegisterInfo() const {
-  return static_cast<const RegisterInfoPOSIX_loongarch64 &>(
+  return static_cast<const RegisterInfoCommon_loongarch64 &>(
       NativeRegisterContextRegisterInfo::GetRegisterInfoInterface());
 }
 
@@ -369,22 +369,22 @@ Status NativeRegisterContextLinux_loongarch64::WriteAllRegisterValues(
 
 bool NativeRegisterContextLinux_loongarch64::IsGPR(unsigned reg) const {
   return GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
-         RegisterInfoPOSIX_loongarch64::GPRegSet;
+         RegisterInfoCommon_loongarch64::GPRegSet;
 }
 
 bool NativeRegisterContextLinux_loongarch64::IsFPR(unsigned reg) const {
   return GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
-         RegisterInfoPOSIX_loongarch64::FPRegSet;
+         RegisterInfoCommon_loongarch64::FPRegSet;
 }
 
 bool NativeRegisterContextLinux_loongarch64::IsLSX(unsigned reg) const {
   return GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
-         RegisterInfoPOSIX_loongarch64::LSXRegSet;
+         RegisterInfoCommon_loongarch64::LSXRegSet;
 }
 
 bool NativeRegisterContextLinux_loongarch64::IsLASX(unsigned reg) const {
   return GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
-         RegisterInfoPOSIX_loongarch64::LASXRegSet;
+         RegisterInfoCommon_loongarch64::LASXRegSet;
 }
 
 Status NativeRegisterContextLinux_loongarch64::ReadGPR() {

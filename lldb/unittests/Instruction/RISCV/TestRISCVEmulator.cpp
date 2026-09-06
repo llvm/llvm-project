@@ -16,8 +16,8 @@
 #include "lldb/Utility/RegisterValue.h"
 
 #include "Plugins/Instruction/RISCV/EmulateInstructionRISCV.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv32.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv64.h"
+#include "Plugins/Process/Utility/RegisterInfoCommon_riscv32.h"
+#include "Plugins/Process/Utility/RegisterInfoCommon_riscv64.h"
 #include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
 
 using namespace llvm;
@@ -25,8 +25,8 @@ using namespace lldb;
 using namespace lldb_private;
 
 struct RISCVEmulatorTester : public EmulateInstructionRISCV, testing::Test {
-  RegisterInfoPOSIX_riscv64::GPR gpr;
-  RegisterInfoPOSIX_riscv64::FPR fpr;
+  RegisterInfoCommon_riscv64::GPR gpr;
+  RegisterInfoCommon_riscv64::FPR fpr;
   uint8_t memory[1024] = {0};
 
   RISCVEmulatorTester(std::string triple = "riscv64-unknown-linux-gnu")

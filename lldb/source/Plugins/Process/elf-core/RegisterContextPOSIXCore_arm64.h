@@ -41,7 +41,7 @@ public:
 protected:
   RegisterContextCorePOSIX_arm64(
       lldb_private::Thread &thread,
-      std::unique_ptr<RegisterInfoPOSIX_arm64> register_info,
+      std::unique_ptr<RegisterInfoCommon_arm64> register_info,
       const lldb_private::DataExtractor &gpregset,
       llvm::ArrayRef<lldb_private::CoreNote> notes);
 
