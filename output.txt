@@ -1,0 +1,1144 @@
+
+Build with:
+
+	if %TARGETDIR% == stage1 (
+		cmake -GNinja %ROOT%/llvm -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER="%LLVM%/bin/clang-cl.exe" -DCMAKE_CXX_COMPILER="%LLVM%/bin/clang-cl.exe" -DCMAKE_LINKER="%LLVM%/bin/lld-link.exe" -DLLVM_ENABLE_PROJECTS="llvm;clang;lld;lldb" -DLLVM_ENABLE_LLD=ON -DCMAKE_CXX_FLAGS="%OPT_AVX%" -DCMAKE_C_FLAGS="%OPT_AVX%" -DLLVM_ENABLE_PDB=ON -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DLLVM_ENABLE_RPMALLOC=ON -DLLVM_ENABLE_LIBXML2=FORCE_ON -DLLDB_ENABLE_LIBXML2=OFF -DCLANG_ENABLE_LIBXML2=OFF -DLIBXML2_INCLUDE_DIRS=%LIBXML%/include/libxml2 -DLIBXML2_DEFINITIONS="/MT" -DLIBXML2_LIBRARIES=%LIBXML%/lib/libxml2s.lib -DLLDB_TEST_COMPILER="%LLVM%/bin/clang.exe" -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON -DLLVM_BUILD_LLVM_C_DYLIB=ON -DCMAKE_INSTALL_UCRT_LIBRARIES=ON -DLIBXML2_INCLUDE_DIR=%LIBXML%/include/libxml2 -DLIBXML2_LIBRARY=%LIBXML%/lib/libxml2s.lib  -DLLDB_LINK_STATIC_LIBXML2=ON -DLLVM_ENABLE_ASSERTIONS=ON -Dzstd_INCLUDE_DIR=C:/git/zstdbuild/install/include -Dzstd_LIBRARY=C:/git/zstdbuild/install/lib/zstd_static.lib -DLLVM_ENABLE_ZSTD=FORCE_ON -DLLVM_ENABLE_RUNTIMES=compiler-rt -DLLVM_TARGETS_TO_BUILD=X86
+	)
+
+
+C:\git\llvm-project>ninja check-runtimes -C stage1
+ninja: Entering directory `stage1'
+[0/5] Performing build step for 'builtins'ninja: no work to do.
+
+[1/5] No install step for 'builtins'
+[3/5] Performing configure step for 'runtimes'Not searching for unused variables given on the command line.
+loading initial cache file C:/git/llvm-project/stage1/projects/runtimes/tmp/runtimes-cache-Release.cmake
+CMake Warning at CMakeLists.txt:4 (message):
+  Your CMake version is 3.30.3.  Starting with LLVM 24, the minimum version
+  of CMake required to build LLVM will become 3.31.0, and using an older
+  CMake will become an error.  Please upgrade your CMake to at least 3.31.0
+  now to avoid issues in the future.
+
+
+-- Performing bootstrapping runtimes build.
+-- Precompiled headers enabled.
+-- LLVM host triple: x86_64-pc-windows-msvc
+-- LLVM default target triple: x86_64-pc-windows-msvc
+CMake Warning at C:/git/llvm-project/compiler-rt/CMakeLists.txt:8 (message):
+  Your CMake version is 3.30.3.  Starting with LLVM 24, the minimum version
+  of CMake required to build LLVM will become 3.31.0, and using an older
+  CMake will become an error.  Please upgrade your CMake to at least 3.31.0
+  now to avoid issues in the future.
+
+
+-- Compiler-RT supported architectures: x86_64
+-- Adding compiler-rt builtins test directory
+-- Builtin supported architectures: x86_64
+-- Adding compiler-rt interception test directory
+-- Skipping compiler-rt lsan test directory
+-- Adding compiler-rt ubsan test directory
+-- Adding compiler-rt sanitizer_common test directory
+-- Generated Sanitizer SUPPORTED_TOOLS list on "Windows" is "asan;ubsan"
+-- sanitizer_common tests on "Windows" will run against "asan;ubsan"
+-- Adding compiler-rt fuzzer test directory
+-- Adding compiler-rt metadata test directory
+-- Adding compiler-rt asan test directory
+-- Skipping compiler-rt rtsan test directory
+-- Skipping compiler-rt dfsan test directory
+-- Skipping compiler-rt msan test directory
+-- Skipping compiler-rt hwasan test directory
+-- Skipping compiler-rt tsan test directory
+-- Skipping compiler-rt tysan test directory
+-- Skipping compiler-rt safestack test directory
+-- Adding compiler-rt cfi test directory
+-- Skipping compiler-rt scudo_standalone test directory
+-- Skipping compiler-rt ubsan_minimal test directory
+-- Skipping compiler-rt gwp_asan test directory
+-- Skipping compiler-rt nsan test directory
+-- Skipping compiler-rt asan_abi test directory
+-- Adding compiler-rt profile test directory
+-- Skipping compiler-rt ctx_profile test directory
+-- Skipping compiler-rt memprof test directory
+-- Skipping compiler-rt xray test directory
+-- Adding compiler-rt orc test directory
+-- Adding compiler-rt shadowcallstack test directory
+-- check-shadowcallstack does nothing.
+-- Configuring done (2.5s)
+-- Generating done (1.4s)
+-- Build files have been written to: C:/git/llvm-project/stage1/runtimes/runtimes-bins
+
+[2/3] Running runtimes regression testsllvm-lit.py: C:\git\llvm-project\llvm\utils\lit\lit\llvm\config.py:64: note: using lit tools: C:\Program Files\Git\usr\bin\
+llvm-lit.py: C:\git\llvm-project\compiler-rt\test\fuzzer\lit.cfg.py:22: note: lsan feature unavailable
+llvm-lit.py: C:\git\llvm-project\compiler-rt\test\fuzzer\lit.cfg.py:31: note: msan feature unavailable
+FAIL: AddressSanitizer-Unit :: ./Asan-x86_64-calls-Dynamic-Test.exe/19/37 (1 of 2876)
+******************** TEST 'AddressSanitizer-Unit :: ./Asan-x86_64-calls-Dynamic-Test.exe/19/37' FAILED ********************
+Script(shard):
+--
+GTEST_OUTPUT=json:C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\lib\asan\tests\X86_64WindowsDynamicConfig\.\Asan-x86_64-calls-Dynamic-Test.exe-AddressSanitizer-Unit-43956-19-37.json GTEST_SHUFFLE=0 GTEST_TOTAL_SHARDS=37 GTEST_SHARD_INDEX=19 C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\lib\asan\tests\X86_64WindowsDynamicConfig\.\Asan-x86_64-calls-Dynamic-Test.exe
+--
+
+Script:
+--
+C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\lib\asan\tests\X86_64WindowsDynamicConfig\.\Asan-x86_64-calls-Dynamic-Test.exe --gtest_filter=AddressSanitizer.MemCpyOOBTest
+--
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(148): error: Death test: M::transfer(dest + 1, src, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(150): error: Death test: M::transfer((char*)(dest + length) - 1, src, 5)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(154): error: Death test: M::transfer(dest - 2, src, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(156): error: Death test: M::transfer((char*)dest - 3, src, 4)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(160): error: Death test: M::transfer(dest, src + 2, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(162): error: Death test: M::transfer(dest, (char*)(src + length) - 3, 6)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(166): error: Death test: M::transfer(dest, src - 1, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(168): error: Death test: M::transfer(dest, (char*)src - 6, 7)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(177): error: Death test: M::transfer(dest - 1, big_src, size * 2)
+    Result: died but not with expected error.
+  Expected: contains regular expression "located 1 bytes before"
+Actual msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(180): error: Death test: M::transfer(big_dest, src - 2, size * 2)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(148): error: Death test: M::transfer(dest + 1, src, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(150): error: Death test: M::transfer((char*)(dest + length) - 1, src, 5)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(154): error: Death test: M::transfer(dest - 2, src, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(156): error: Death test: M::transfer((char*)dest - 3, src, 4)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(160): error: Death test: M::transfer(dest, src + 2, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(162): error: Death test: M::transfer(dest, (char*)(src + length) - 3, 6)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(166): error: Death test: M::transfer(dest, src - 1, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(168): error: Death test: M::transfer(dest, (char*)src - 6, 7)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(177): error: Death test: M::transfer(dest - 1, big_src, size * 2)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(180): error: Death test: M::transfer(big_dest, src - 2, size * 2)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:148
+Death test: M::transfer(dest + 1, src, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:150
+Death test: M::transfer((char*)(dest + length) - 1, src, 5)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:154
+Death test: M::transfer(dest - 2, src, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:156
+Death test: M::transfer((char*)dest - 3, src, 4)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:160
+Death test: M::transfer(dest, src + 2, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:162
+Death test: M::transfer(dest, (char*)(src + length) - 3, 6)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:166
+Death test: M::transfer(dest, src - 1, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:168
+Death test: M::transfer(dest, (char*)src - 6, 7)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:177
+Death test: M::transfer(dest - 1, big_src, size * 2)
+    Result: died but not with expected error.
+  Expected: contains regular expression "located 1 bytes before"
+Actual msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:180
+Death test: M::transfer(big_dest, src - 2, size * 2)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:148
+Death test: M::transfer(dest + 1, src, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:150
+Death test: M::transfer((char*)(dest + length) - 1, src, 5)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:154
+Death test: M::transfer(dest - 2, src, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:156
+Death test: M::transfer((char*)dest - 3, src, 4)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:160
+Death test: M::transfer(dest, src + 2, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:162
+Death test: M::transfer(dest, (char*)(src + length) - 3, 6)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:166
+Death test: M::transfer(dest, src - 1, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:168
+Death test: M::transfer(dest, (char*)src - 6, 7)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:177
+Death test: M::transfer(dest - 1, big_src, size * 2)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:180
+Death test: M::transfer(big_dest, src - 2, size * 2)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+
+
+********************
+FAIL: AddressSanitizer-Unit :: ./Asan-x86_64-inline-Dynamic-Test.exe/19/37 (2 of 2876)
+******************** TEST 'AddressSanitizer-Unit :: ./Asan-x86_64-inline-Dynamic-Test.exe/19/37' FAILED ********************
+Script(shard):
+--
+GTEST_OUTPUT=json:C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\lib\asan\tests\X86_64WindowsDynamicConfig\.\Asan-x86_64-inline-Dynamic-Test.exe-AddressSanitizer-Unit-43956-19-37.json GTEST_SHUFFLE=0 GTEST_TOTAL_SHARDS=37 GTEST_SHARD_INDEX=19 C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\lib\asan\tests\X86_64WindowsDynamicConfig\.\Asan-x86_64-inline-Dynamic-Test.exe
+--
+
+Script:
+--
+C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\lib\asan\tests\X86_64WindowsDynamicConfig\.\Asan-x86_64-inline-Dynamic-Test.exe --gtest_filter=AddressSanitizer.MemCpyOOBTest
+--
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(148): error: Death test: M::transfer(dest + 1, src, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(150): error: Death test: M::transfer((char*)(dest + length) - 1, src, 5)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(154): error: Death test: M::transfer(dest - 2, src, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(156): error: Death test: M::transfer((char*)dest - 3, src, 4)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(160): error: Death test: M::transfer(dest, src + 2, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(162): error: Death test: M::transfer(dest, (char*)(src + length) - 3, 6)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(166): error: Death test: M::transfer(dest, src - 1, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(168): error: Death test: M::transfer(dest, (char*)src - 6, 7)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(177): error: Death test: M::transfer(dest - 1, big_src, size * 2)
+    Result: died but not with expected error.
+  Expected: contains regular expression "located 1 bytes before"
+Actual msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(180): error: Death test: M::transfer(big_dest, src - 2, size * 2)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(148): error: Death test: M::transfer(dest + 1, src, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(150): error: Death test: M::transfer((char*)(dest + length) - 1, src, 5)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(154): error: Death test: M::transfer(dest - 2, src, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(156): error: Death test: M::transfer((char*)dest - 3, src, 4)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(160): error: Death test: M::transfer(dest, src + 2, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(162): error: Death test: M::transfer(dest, (char*)(src + length) - 3, 6)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(166): error: Death test: M::transfer(dest, src - 1, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(168): error: Death test: M::transfer(dest, (char*)src - 6, 7)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(177): error: Death test: M::transfer(dest - 1, big_src, size * 2)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp(180): error: Death test: M::transfer(big_dest, src - 2, size * 2)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:148
+Death test: M::transfer(dest + 1, src, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:150
+Death test: M::transfer((char*)(dest + length) - 1, src, 5)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:154
+Death test: M::transfer(dest - 2, src, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:156
+Death test: M::transfer((char*)dest - 3, src, 4)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:160
+Death test: M::transfer(dest, src + 2, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:162
+Death test: M::transfer(dest, (char*)(src + length) - 3, 6)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:166
+Death test: M::transfer(dest, src - 1, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:168
+Death test: M::transfer(dest, (char*)src - 6, 7)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:177
+Death test: M::transfer(dest - 1, big_src, size * 2)
+    Result: died but not with expected error.
+  Expected: contains regular expression "located 1 bytes before"
+Actual msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:180
+Death test: M::transfer(big_dest, src - 2, size * 2)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:148
+Death test: M::transfer(dest + 1, src, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:150
+Death test: M::transfer((char*)(dest + length) - 1, src, 5)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:154
+Death test: M::transfer(dest - 2, src, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:156
+Death test: M::transfer((char*)dest - 3, src, 4)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:160
+Death test: M::transfer(dest, src + 2, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:162
+Death test: M::transfer(dest, (char*)(src + length) - 3, 6)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:166
+Death test: M::transfer(dest, src - 1, size)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:168
+Death test: M::transfer(dest, (char*)src - 6, 7)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:177
+Death test: M::transfer(dest - 1, big_src, size * 2)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+C:/git/llvm-project/compiler-rt/lib/asan/tests/asan_mem_test.cpp:180
+Death test: M::transfer(big_dest, src - 2, size * 2)
+    Result: failed to die.
+ Error msg:
+[  DEATH   ]
+
+
+
+********************
+FAIL: ORC-x86_64-windows :: TestCases/Windows/x86-64/trivial-jit-dlopen.c (3 of 2876, 3 of 3 attempts)
+******************** TEST 'ORC-x86_64-windows :: TestCases/Windows/x86-64/trivial-jit-dlopen.c' FAILED ********************
+Exit Code: 2
+
+Command Output (stdout):
+--
+# RUN: at line 5
+C:/git/llvm-project/stage1/./bin/clang.exe  --driver-mode=cl   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -MD -c -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\trivial-jit-dlopen.c.tmp.inits.o C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64/Inputs/standalone-dylib.c
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe --driver-mode=cl -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -MD -c -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\trivial-jit-dlopen.c.tmp.inits.o' 'C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64/Inputs/standalone-dylib.c'
+# RUN: at line 6
+C:/git/llvm-project/stage1/./bin/clang.exe  --driver-mode=cl   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -MD -c -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\trivial-jit-dlopen.c.tmp.test.o C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\trivial-jit-dlopen.c
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe --driver-mode=cl -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -MD -c -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\trivial-jit-dlopen.c.tmp.test.o' 'C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\trivial-jit-dlopen.c'
+# RUN: at line 7
+C:/git/llvm-project/stage1/./bin\llvm-jitlink -orc-runtime=C:/git/llvm-project/stage1/./lib/../lib/clang/24/lib/windows/liborc_rt-x86_64.a -no-process-syms=true -slab-allocate=64MB    -alias Platform:dlopen=__orc_rt_coff_jit_dlopen    -alias Platform:dlclose=__orc_rt_coff_jit_dlclose    C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\trivial-jit-dlopen.c.tmp.test.o -jd inits C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\trivial-jit-dlopen.c.tmp.inits.o -lmain | FileCheck C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\trivial-jit-dlopen.c
+# executed command: 'C:/git/llvm-project/stage1/./bin\llvm-jitlink' -orc-runtime=C:/git/llvm-project/stage1/./lib/../lib/clang/24/lib/windows/liborc_rt-x86_64.a -no-process-syms=true -slab-allocate=64MB -alias Platform:dlopen=__orc_rt_coff_jit_dlopen -alias Platform:dlclose=__orc_rt_coff_jit_dlclose 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\trivial-jit-dlopen.c.tmp.test.o' -jd inits 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\trivial-jit-dlopen.c.tmp.inits.o' -lmain
+# .---command stderr------------
+# | C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# `-----------------------------
+# error: command failed with exit status: 1
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\trivial-jit-dlopen.c'
+# .---command stderr------------
+# | FileCheck error: '<stdin>' is empty.
+# | FileCheck command line:  filecheck.exe C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\trivial-jit-dlopen.c
+# `-----------------------------
+# error: command failed with exit status: 2
+
+--
+
+********************
+FAIL: ORC-x86_64-windows :: TestCases/Windows/x86-64/atexit-order.c (4 of 2876, 3 of 3 attempts)
+******************** TEST 'ORC-x86_64-windows :: TestCases/Windows/x86-64/atexit-order.c' FAILED ********************
+Exit Code: 1
+
+Command Output (stdout):
+--
+# RUN: at line 1
+C:/git/llvm-project/stage1/./bin/clang.exe  --driver-mode=cl   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -MD -c -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\atexit-order.c.tmp C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\atexit-order.c
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe --driver-mode=cl -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -MD -c -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\atexit-order.c.tmp' 'C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\atexit-order.c'
+# RUN: at line 2
+C:/git/llvm-project/stage1/./bin\llvm-jitlink -orc-runtime=C:/git/llvm-project/stage1/./lib/../lib/clang/24/lib/windows/liborc_rt-x86_64.a -no-process-syms=true -slab-allocate=64MB C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\atexit-order.c.tmp 2>&1 | FileCheck C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\atexit-order.c
+# executed command: 'C:/git/llvm-project/stage1/./bin\llvm-jitlink' -orc-runtime=C:/git/llvm-project/stage1/./lib/../lib/clang/24/lib/windows/liborc_rt-x86_64.a -no-process-syms=true -slab-allocate=64MB 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\atexit-order.c.tmp'
+# note: command had no output on stdout or stderr
+# error: command failed with exit status: 1
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\atexit-order.c'
+# .---command stderr------------
+# | C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\atexit-order.c:3:11: error: CHECK: expected string not found in input
+# | // CHECK: Entering main
+# |           ^
+# | <stdin>:1:1: note: scanning from here
+# | C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# | ^
+# | <stdin>:1:20: note: possible intended match here
+# | C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# |                    ^
+# |
+# | Input file: <stdin>
+# | Check file: C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\atexit-order.c
+# |
+# | -dump-input=help explains the following input dump.
+# |
+# | Input was:
+# | <<<<<<
+# |            1: C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# | check:3'0    {                                                                                         } search range (exclusive bounds)
+# | check:3'1                                                                                                error: no match found in search range
+# | check:3'2                        ?                                                                       possible intended match
+# | >>>>>>
+# `-----------------------------
+# error: command failed with exit status: 1
+
+--
+
+********************
+FAIL: ORC-x86_64-windows :: TestCases/Windows/x86-64/static-initializer.S (5 of 2876, 3 of 3 attempts)
+******************** TEST 'ORC-x86_64-windows :: TestCases/Windows/x86-64/static-initializer.S' FAILED ********************
+Exit Code: 1
+
+Command Output (stdout):
+--
+# RUN: at line 6
+C:/git/llvm-project/stage1/./bin/clang.exe    -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -c -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\static-initializer.S.tmp C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\static-initializer.S
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -c -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\static-initializer.S.tmp' 'C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\static-initializer.S'
+# RUN: at line 7
+C:/git/llvm-project/stage1/./bin\llvm-jitlink -orc-runtime=C:/git/llvm-project/stage1/./lib/../lib/clang/24/lib/windows/liborc_rt-x86_64.a -no-process-syms=true -slab-allocate=64MB C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\static-initializer.S.tmp
+# executed command: 'C:/git/llvm-project/stage1/./bin\llvm-jitlink' -orc-runtime=C:/git/llvm-project/stage1/./lib/../lib/clang/24/lib/windows/liborc_rt-x86_64.a -no-process-syms=true -slab-allocate=64MB 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\static-initializer.S.tmp'
+# .---command stderr------------
+# | C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# `-----------------------------
+# error: command failed with exit status: 1
+
+--
+
+********************
+FAIL: ORC-x86_64-windows :: TestCases/Windows/x86-64/priority-static-initializer.c (6 of 2876, 3 of 3 attempts)
+******************** TEST 'ORC-x86_64-windows :: TestCases/Windows/x86-64/priority-static-initializer.c' FAILED ********************
+Exit Code: 1
+
+Command Output (stdout):
+--
+# RUN: at line 1
+C:/git/llvm-project/stage1/./bin/clang.exe  --driver-mode=cl   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -MD -c -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\priority-static-initializer.c.tmp C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\priority-static-initializer.c
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe --driver-mode=cl -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -MD -c -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\priority-static-initializer.c.tmp' 'C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\priority-static-initializer.c'
+# RUN: at line 2
+C:/git/llvm-project/stage1/./bin\llvm-jitlink -orc-runtime=C:/git/llvm-project/stage1/./lib/../lib/clang/24/lib/windows/liborc_rt-x86_64.a -no-process-syms=true -slab-allocate=64MB C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\priority-static-initializer.c.tmp 2>&1 | FileCheck C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\priority-static-initializer.c
+# executed command: 'C:/git/llvm-project/stage1/./bin\llvm-jitlink' -orc-runtime=C:/git/llvm-project/stage1/./lib/../lib/clang/24/lib/windows/liborc_rt-x86_64.a -no-process-syms=true -slab-allocate=64MB 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\priority-static-initializer.c.tmp'
+# note: command had no output on stdout or stderr
+# error: command failed with exit status: 1
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\priority-static-initializer.c'
+# .---command stderr------------
+# | C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\priority-static-initializer.c:3:11: error: CHECK: expected string not found in input
+# | // CHECK: init1
+# |           ^
+# | <stdin>:1:1: note: scanning from here
+# | C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# | ^
+# | <stdin>:1:3: note: possible intended match here
+# | C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# |   ^
+# |
+# | Input file: <stdin>
+# | Check file: C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\priority-static-initializer.c
+# |
+# | -dump-input=help explains the following input dump.
+# |
+# | Input was:
+# | <<<<<<
+# |            1: C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# | check:3'0    {                                                                                         } search range (exclusive bounds)
+# | check:3'1                                                                                                error: no match found in search range
+# | check:3'2       ?                                                                                        possible intended match
+# | >>>>>>
+# `-----------------------------
+# error: command failed with exit status: 1
+
+--
+
+********************
+FAIL: ORC-x86_64-windows :: TestCases/Windows/x86-64/hello-world.c (7 of 2876, 3 of 3 attempts)
+******************** TEST 'ORC-x86_64-windows :: TestCases/Windows/x86-64/hello-world.c' FAILED ********************
+Exit Code: 1
+
+Command Output (stdout):
+--
+# RUN: at line 1
+C:/git/llvm-project/stage1/./bin/clang.exe  --driver-mode=cl   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -MD -c -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\hello-world.c.tmp C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\hello-world.c
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe --driver-mode=cl -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -MD -c -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\hello-world.c.tmp' 'C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\hello-world.c'
+# RUN: at line 2
+C:/git/llvm-project/stage1/./bin\llvm-jitlink -orc-runtime=C:/git/llvm-project/stage1/./lib/../lib/clang/24/lib/windows/liborc_rt-x86_64.a -no-process-syms=true -slab-allocate=64MB C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\hello-world.c.tmp 2>&1 | FileCheck C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\hello-world.c
+# executed command: 'C:/git/llvm-project/stage1/./bin\llvm-jitlink' -orc-runtime=C:/git/llvm-project/stage1/./lib/../lib/clang/24/lib/windows/liborc_rt-x86_64.a -no-process-syms=true -slab-allocate=64MB 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\hello-world.c.tmp'
+# note: command had no output on stdout or stderr
+# error: command failed with exit status: 1
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\hello-world.c'
+# .---command stderr------------
+# | C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\hello-world.c:3:11: error: CHECK: expected string not found in input
+# | // CHECK: Hello, world!
+# |           ^
+# | <stdin>:1:1: note: scanning from here
+# | C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# | ^
+# | <stdin>:1:32: note: possible intended match here
+# | C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# |                                ^
+# |
+# | Input file: <stdin>
+# | Check file: C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\hello-world.c
+# |
+# | -dump-input=help explains the following input dump.
+# |
+# | Input was:
+# | <<<<<<
+# |            1: C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# | check:3'0    {                                                                                         } search range (exclusive bounds)
+# | check:3'1                                                                                                error: no match found in search range
+# | check:3'2                                    ?                                                           possible intended match
+# | >>>>>>
+# `-----------------------------
+# error: command failed with exit status: 1
+
+--
+
+********************
+FAIL: ORC-x86_64-windows :: TestCases/Windows/x86-64/trivial-atexit.c (8 of 2876, 3 of 3 attempts)
+******************** TEST 'ORC-x86_64-windows :: TestCases/Windows/x86-64/trivial-atexit.c' FAILED ********************
+Exit Code: 1
+
+Command Output (stdout):
+--
+# RUN: at line 1
+C:/git/llvm-project/stage1/./bin/clang.exe  --driver-mode=cl   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -MD -c -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\trivial-atexit.c.tmp C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\trivial-atexit.c
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe --driver-mode=cl -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -MD -c -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\trivial-atexit.c.tmp' 'C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\trivial-atexit.c'
+# RUN: at line 2
+C:/git/llvm-project/stage1/./bin\llvm-jitlink -orc-runtime=C:/git/llvm-project/stage1/./lib/../lib/clang/24/lib/windows/liborc_rt-x86_64.a -no-process-syms=true -slab-allocate=64MB C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\trivial-atexit.c.tmp 2>&1 | FileCheck C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\trivial-atexit.c
+# executed command: 'C:/git/llvm-project/stage1/./bin\llvm-jitlink' -orc-runtime=C:/git/llvm-project/stage1/./lib/../lib/clang/24/lib/windows/liborc_rt-x86_64.a -no-process-syms=true -slab-allocate=64MB 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\trivial-atexit.c.tmp'
+# note: command had no output on stdout or stderr
+# error: command failed with exit status: 1
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\trivial-atexit.c'
+# .---command stderr------------
+# | C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\trivial-atexit.c:3:11: error: CHECK: expected string not found in input
+# | // CHECK: Entering main
+# |           ^
+# | <stdin>:1:1: note: scanning from here
+# | C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# | ^
+# | <stdin>:1:20: note: possible intended match here
+# | C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# |                    ^
+# |
+# | Input file: <stdin>
+# | Check file: C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\trivial-atexit.c
+# |
+# | -dump-input=help explains the following input dump.
+# |
+# | Input was:
+# | <<<<<<
+# |            1: C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# | check:3'0    {                                                                                         } search range (exclusive bounds)
+# | check:3'1                                                                                                error: no match found in search range
+# | check:3'2                        ?                                                                       possible intended match
+# | >>>>>>
+# `-----------------------------
+# error: command failed with exit status: 1
+
+--
+
+********************
+FAIL: ORC-x86_64-windows :: TestCases/Windows/x86-64/priority-static-initializer-three.c (9 of 2876, 3 of 3 attempts)
+******************** TEST 'ORC-x86_64-windows :: TestCases/Windows/x86-64/priority-static-initializer-three.c' FAILED ********************
+Exit Code: 1
+
+Command Output (stdout):
+--
+# RUN: at line 1
+C:/git/llvm-project/stage1/./bin/clang.exe  --driver-mode=cl   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -MD -c -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\priority-static-initializer-three.c.tmp C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\priority-static-initializer-three.c
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe --driver-mode=cl -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -MD -c -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\priority-static-initializer-three.c.tmp' 'C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\priority-static-initializer-three.c'
+# RUN: at line 2
+C:/git/llvm-project/stage1/./bin\llvm-jitlink -orc-runtime=C:/git/llvm-project/stage1/./lib/../lib/clang/24/lib/windows/liborc_rt-x86_64.a -no-process-syms=true -slab-allocate=64MB C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\priority-static-initializer-three.c.tmp 2>&1 | FileCheck C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\priority-static-initializer-three.c
+# executed command: 'C:/git/llvm-project/stage1/./bin\llvm-jitlink' -orc-runtime=C:/git/llvm-project/stage1/./lib/../lib/clang/24/lib/windows/liborc_rt-x86_64.a -no-process-syms=true -slab-allocate=64MB 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\priority-static-initializer-three.c.tmp'
+# note: command had no output on stdout or stderr
+# error: command failed with exit status: 1
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\priority-static-initializer-three.c'
+# .---command stderr------------
+# | C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\priority-static-initializer-three.c:3:11: error: CHECK: expected string not found in input
+# | // CHECK: init1
+# |           ^
+# | <stdin>:1:1: note: scanning from here
+# | C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# | ^
+# | <stdin>:1:3: note: possible intended match here
+# | C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# |   ^
+# |
+# | Input file: <stdin>
+# | Check file: C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\priority-static-initializer-three.c
+# |
+# | -dump-input=help explains the following input dump.
+# |
+# | Input was:
+# | <<<<<<
+# |            1: C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# | check:3'0    {                                                                                         } search range (exclusive bounds)
+# | check:3'1                                                                                                error: no match found in search range
+# | check:3'2       ?                                                                                        possible intended match
+# | >>>>>>
+# `-----------------------------
+# error: command failed with exit status: 1
+
+--
+
+********************
+FAIL: ORC-x86_64-windows :: TestCases/Windows/x86-64/sehframe-handling.cpp (10 of 2876, 3 of 3 attempts)
+******************** TEST 'ORC-x86_64-windows :: TestCases/Windows/x86-64/sehframe-handling.cpp' FAILED ********************
+Exit Code: 1
+
+Command Output (stdout):
+--
+# RUN: at line 1
+C:/git/llvm-project/stage1/./bin/clang.exe  --driver-mode=cl   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -EHsc -MD -c -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\sehframe-handling.cpp.tmp C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\sehframe-handling.cpp
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe --driver-mode=cl -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -EHsc -MD -c -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\sehframe-handling.cpp.tmp' 'C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\sehframe-handling.cpp'
+# RUN: at line 2
+C:/git/llvm-project/stage1/./bin\llvm-jitlink -orc-runtime=C:/git/llvm-project/stage1/./lib/../lib/clang/24/lib/windows/liborc_rt-x86_64.a -no-process-syms=true -slab-allocate=64MB C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\sehframe-handling.cpp.tmp
+# executed command: 'C:/git/llvm-project/stage1/./bin\llvm-jitlink' -orc-runtime=C:/git/llvm-project/stage1/./lib/../lib/clang/24/lib/windows/liborc_rt-x86_64.a -no-process-syms=true -slab-allocate=64MB 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\sehframe-handling.cpp.tmp'
+# .---command stderr------------
+# | C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# `-----------------------------
+# error: command failed with exit status: 1
+
+--
+
+********************
+FAIL: ORC-x86_64-windows :: TestCases/Windows/x86-64/static-initializer.cpp (11 of 2876, 3 of 3 attempts)
+******************** TEST 'ORC-x86_64-windows :: TestCases/Windows/x86-64/static-initializer.cpp' FAILED ********************
+Exit Code: 1
+
+Command Output (stdout):
+--
+# RUN: at line 1
+C:/git/llvm-project/stage1/./bin/clang.exe  --driver-mode=cl   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -MD -c -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\static-initializer.cpp.tmp C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\static-initializer.cpp
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe --driver-mode=cl -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -MD -c -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\static-initializer.cpp.tmp' 'C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\static-initializer.cpp'
+# RUN: at line 2
+C:/git/llvm-project/stage1/./bin\llvm-jitlink -orc-runtime=C:/git/llvm-project/stage1/./lib/../lib/clang/24/lib/windows/liborc_rt-x86_64.a -no-process-syms=true -slab-allocate=64MB C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\static-initializer.cpp.tmp
+# executed command: 'C:/git/llvm-project/stage1/./bin\llvm-jitlink' -orc-runtime=C:/git/llvm-project/stage1/./lib/../lib/clang/24/lib/windows/liborc_rt-x86_64.a -no-process-syms=true -slab-allocate=64MB 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\static-initializer.cpp.tmp'
+# .---command stderr------------
+# | C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# `-----------------------------
+# error: command failed with exit status: 1
+
+--
+
+********************
+FAIL: ORC-x86_64-windows :: TestCases/Windows/x86-64/hello-world.cpp (13 of 2876, 3 of 3 attempts)
+******************** TEST 'ORC-x86_64-windows :: TestCases/Windows/x86-64/hello-world.cpp' FAILED ********************
+Exit Code: 1
+
+Command Output (stdout):
+--
+# RUN: at line 1
+C:/git/llvm-project/stage1/./bin/clang.exe  --driver-mode=cl   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -MD -c -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\hello-world.cpp.tmp C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\hello-world.cpp
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe --driver-mode=cl -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -MD -c -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\hello-world.cpp.tmp' 'C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\hello-world.cpp'
+# RUN: at line 2
+C:/git/llvm-project/stage1/./bin\llvm-jitlink -orc-runtime=C:/git/llvm-project/stage1/./lib/../lib/clang/24/lib/windows/liborc_rt-x86_64.a -no-process-syms=true -slab-allocate=64MB C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\hello-world.cpp.tmp 2>&1 | FileCheck C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\hello-world.cpp
+# executed command: 'C:/git/llvm-project/stage1/./bin\llvm-jitlink' -orc-runtime=C:/git/llvm-project/stage1/./lib/../lib/clang/24/lib/windows/liborc_rt-x86_64.a -no-process-syms=true -slab-allocate=64MB 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\orc\X86_64WindowsConfig\TestCases\Windows\x86-64\Output\hello-world.cpp.tmp'
+# note: command had no output on stdout or stderr
+# error: command failed with exit status: 1
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\hello-world.cpp'
+# .---command stderr------------
+# | C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\hello-world.cpp:3:11: error: CHECK: expected string not found in input
+# | // CHECK: Hello, world!
+# |           ^
+# | <stdin>:1:1: note: scanning from here
+# | C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# | ^
+# | <stdin>:1:32: note: possible intended match here
+# | C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# |                                ^
+# |
+# | Input file: <stdin>
+# | Check file: C:\git\llvm-project\compiler-rt\test\orc\TestCases\Windows\x86-64\hello-world.cpp
+# |
+# | -dump-input=help explains the following input dump.
+# |
+# | Input was:
+# | <<<<<<
+# |            1: C:\git\llvm-project\stage1\.\bin\llvm-jitlink.exe: -orc-runtime requires process symbols
+# | check:3'0    {                                                                                         } search range (exclusive bounds)
+# | check:3'1                                                                                                error: no match found in search range
+# | check:3'2                                    ?                                                           possible intended match
+# | >>>>>>
+# `-----------------------------
+# error: command failed with exit status: 1
+
+--
+
+********************
+FAIL: AddressSanitizer-x86_64-windows-dynamic :: TestCases/Windows/intercept_memcpy.cpp (14 of 2876, 3 of 3 attempts)
+******************** TEST 'AddressSanitizer-x86_64-windows-dynamic :: TestCases/Windows/intercept_memcpy.cpp' FAILED ********************
+Exit Code: 1
+
+Command Output (stdout):
+--
+# RUN: at line 1
+C:/git/llvm-project/stage1/./bin/clang-cl.exe  -fsanitize=address -Wno-deprecated-declarations -WX -D_HAS_EXCEPTIONS=0 -gline-tables-only -gcodeview -gcolumn-info   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -MD -Od C:\git\llvm-project\compiler-rt\test\asan\TestCases\Windows\intercept_memcpy.cpp -FeC:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Windows\Output\intercept_memcpy.cpp.tmp
+# executed command: C:/git/llvm-project/stage1/./bin/clang-cl.exe -fsanitize=address -Wno-deprecated-declarations -WX -D_HAS_EXCEPTIONS=0 -gline-tables-only -gcodeview -gcolumn-info -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -MD -Od 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\Windows\intercept_memcpy.cpp' '-FeC:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Windows\Output\intercept_memcpy.cpp.tmp'
+# RUN: at line 2
+not  C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Windows\Output\intercept_memcpy.cpp.tmp 2>&1 | FileCheck C:\git\llvm-project\compiler-rt\test\asan\TestCases\Windows\intercept_memcpy.cpp
+# executed command: not 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Windows\Output\intercept_memcpy.cpp.tmp'
+# note: command had no output on stdout or stderr
+# error: command failed with exit status: 1
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\Windows\intercept_memcpy.cpp'
+# .---command stderr------------
+# | C:\git\llvm-project\compiler-rt\test\asan\TestCases\Windows\intercept_memcpy.cpp:23:11: error: CHECK: expected string not found in input
+# | // CHECK: AddressSanitizer: stack-buffer-overflow on address [[ADDR:0x[0-9a-f]+]]
+# |           ^
+# | <stdin>:1:16: note: scanning from here
+# | Initial test OK
+# |                ^
+# | <stdin>:1:16: note: pattern attempts to capture variables: "ADDR"
+# | Initial test OK
+# |                ^
+# |
+# | Input file: <stdin>
+# | Check file: C:\git\llvm-project\compiler-rt\test\asan\TestCases\Windows\intercept_memcpy.cpp
+# |
+# | -dump-input=help explains the following input dump.
+# |
+# | Input was:
+# | <<<<<<
+# |             1: Initial test OK
+# | check:23'0                   { } search range (exclusive bounds)
+# | check:23'1                       error: no match found in search range
+# | check:23'2                       pattern attempts to capture variables: "ADDR"
+# | >>>>>>
+# `-----------------------------
+# error: command failed with exit status: 1
+
+--
+
+********************
+FAIL: AddressSanitizer-x86_64-windows-dynamic :: TestCases/memset_test.cpp (87 of 2876, 3 of 3 attempts)
+******************** TEST 'AddressSanitizer-x86_64-windows-dynamic :: TestCases/memset_test.cpp' FAILED ********************
+Exit Code: 1
+
+Command Output (stdout):
+--
+# RUN: at line 3
+C:/git/llvm-project/stage1/./bin/clang.exe  -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O0 -DTEST_MEMSET C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp && not  C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp 2>&1 |      FileCheck C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp --check-prefix=CHECK-MEMSET
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O0 -DTEST_MEMSET 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: not 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' --check-prefix=CHECK-MEMSET
+# RUN: at line 5
+C:/git/llvm-project/stage1/./bin/clang.exe  -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O1 -DTEST_MEMSET C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp && not  C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp 2>&1 |      FileCheck C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp --check-prefix=CHECK-MEMSET
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O1 -DTEST_MEMSET 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: not 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' --check-prefix=CHECK-MEMSET
+# RUN: at line 7
+C:/git/llvm-project/stage1/./bin/clang.exe  -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O2 -DTEST_MEMSET C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp && not  C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp 2>&1 |      FileCheck C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp --check-prefix=CHECK-MEMSET
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O2 -DTEST_MEMSET 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: not 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' --check-prefix=CHECK-MEMSET
+# RUN: at line 9
+C:/git/llvm-project/stage1/./bin/clang.exe  -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O3 -DTEST_MEMSET C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp && not  C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp 2>&1 |      FileCheck C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp --check-prefix=CHECK-MEMSET
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O3 -DTEST_MEMSET 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: not 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' --check-prefix=CHECK-MEMSET
+# RUN: at line 12
+C:/git/llvm-project/stage1/./bin/clang.exe  -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O0 -DTEST_MEMCPY C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp && not  C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp 2>&1 |      FileCheck C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp --check-prefix=CHECK-MEMCPY
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O0 -DTEST_MEMCPY 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: not 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' --check-prefix=CHECK-MEMCPY
+# RUN: at line 14
+C:/git/llvm-project/stage1/./bin/clang.exe  -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O1 -DTEST_MEMCPY C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp && not  C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp 2>&1 |      FileCheck C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp --check-prefix=CHECK-MEMCPY
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O1 -DTEST_MEMCPY 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: not 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' --check-prefix=CHECK-MEMCPY
+# RUN: at line 16
+C:/git/llvm-project/stage1/./bin/clang.exe  -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O2 -DTEST_MEMCPY C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp && not  C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp 2>&1 |      FileCheck C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp --check-prefix=CHECK-MEMCPY
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O2 -DTEST_MEMCPY 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: not 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' --check-prefix=CHECK-MEMCPY
+# RUN: at line 18
+C:/git/llvm-project/stage1/./bin/clang.exe  -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O3 -DTEST_MEMCPY C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp && not  C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp 2>&1 |      FileCheck C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp --check-prefix=CHECK-MEMCPY
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O3 -DTEST_MEMCPY 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: not 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' --check-prefix=CHECK-MEMCPY
+# RUN: at line 21
+C:/git/llvm-project/stage1/./bin/clang.exe  -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O0 -DTEST_MEMMOVE C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp && not  C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp 2>&1 |      FileCheck C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp --check-prefix=CHECK-MEMMOVE
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O0 -DTEST_MEMMOVE 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: not 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' --check-prefix=CHECK-MEMMOVE
+# RUN: at line 23
+C:/git/llvm-project/stage1/./bin/clang.exe  -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O1 -DTEST_MEMMOVE C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp && not  C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp 2>&1 |      FileCheck C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp --check-prefix=CHECK-MEMMOVE
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O1 -DTEST_MEMMOVE 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: not 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' --check-prefix=CHECK-MEMMOVE
+# RUN: at line 25
+C:/git/llvm-project/stage1/./bin/clang.exe  -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O2 -DTEST_MEMMOVE C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp && not  C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp 2>&1 |      FileCheck C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp --check-prefix=CHECK-MEMMOVE
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O2 -DTEST_MEMMOVE 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: not 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' --check-prefix=CHECK-MEMMOVE
+# RUN: at line 27
+C:/git/llvm-project/stage1/./bin/clang.exe  -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O3 -DTEST_MEMMOVE C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp && not  C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp 2>&1 |      FileCheck C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp --check-prefix=CHECK-MEMMOVE
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O3 -DTEST_MEMMOVE 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: not 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' --check-prefix=CHECK-MEMMOVE
+# RUN: at line 30
+C:/git/llvm-project/stage1/./bin/clang.exe  -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O2 -DTEST_MEMCPY_SIZE_OVERFLOW C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp -o C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp && not  C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp 2>&1 |      FileCheck C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp --check-prefix=CHECK-MEMCPY_SIZE_OVERFLOW
+# executed command: C:/git/llvm-project/stage1/./bin/clang.exe -fsanitize=address -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer -fno-optimize-sibling-calls -gline-tables-only -gcodeview -gcolumn-info -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -shared-libasan -D_MT -D_DLL -Wl,-nodefaultlib:libcmt,-defaultlib:msvcrt,-defaultlib:oldnames -O2 -DTEST_MEMCPY_SIZE_OVERFLOW 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' -o 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: not 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Output\memset_test.cpp.tmp'
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp' --check-prefix=CHECK-MEMCPY_SIZE_OVERFLOW
+# .---command stderr------------
+# | C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp:64:33: error: CHECK-MEMCPY_SIZE_OVERFLOW: expected string not found in input
+# |  // CHECK-MEMCPY_SIZE_OVERFLOW: AddressSanitizer: negative-size-param: (size=-1)
+# |                                 ^
+# | <stdin>:1:1: note: scanning from here
+# | =================================================================
+# | ^
+# | <stdin>:16:1: note: possible intended match here
+# | AddressSanitizer can not provide additional info.
+# | ^
+# |
+# | Input file: <stdin>
+# | Check file: C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp
+# |
+# | -dump-input=help explains the following input dump.
+# |
+# | Input was:
+# | <<<<<<
+# |             1: =================================================================
+# | check:64'0    {                                                                    search range start (exclusive)
+# | check:64'1                                                                         error: no match found in search range
+# |             2: ==28480==ERROR: AddressSanitizer: access-violation on unknown address 0x123c734e0000 (pc 0x7ffa52290cfe bp 0x00d71d6ff890 sp 0x00d71d6ff858 T0)
+# |             3: ==28480==The signal is caused by a READ memory access.
+# |             4:  #0 0x7ffa52290cfd (C:\WINDOWS\SYSTEM32\VCRUNTIME140.dll+0x180010cfd)
+# |             5:  #1 0x7ff7dd451065 in main C:\git\llvm-project\compiler-rt\test\asan\TestCases\memset_test.cpp:63:3
+# |             6:  #2 0x7ff7dd4528b3 in invoke_main D:\a\_work\1\s\src\vctools\crt\vcstartup\src\startup\exe_common.inl:78
+# |             .
+# |             .
+# |             .
+# |            11: ==28480==Register values:
+# |            12: rax = 123c734a0080 rbx = 7ffa88fbada0 rcx = 123c734df1a0 rdx = 123c734dffa0
+# |            13: rdi = 1fe73480000 rsi = ffffffff rbp = d71d6ff890 rsp = d71d6ff858
+# |            14: r8 = fffffffffffc0edf r9 = ffffffffffffffe0 r10 = 7ffa52280000 r11 = 7ffa8909df45
+# |            15: r12 = 0 r13 = 0 r14 = 0 r15 = 0
+# |            16: AddressSanitizer can not provide additional info.
+# | check:64'2     ?                                                   possible intended match
+# |            17: SUMMARY: AddressSanitizer: access-violation (C:\WINDOWS\SYSTEM32\VCRUNTIME140.dll+0x180010cfd)
+# |            18: ==28480==ABORTING
+# | check:64'3                       } search range end (exclusive)
+# | >>>>>>
+# `-----------------------------
+# error: command failed with exit status: 1
+
+--
+
+********************
+FAIL: AddressSanitizer-x86_64-windows-dynamic :: TestCases/Windows/dll_intercept_memcpy_indirect.cpp (88 of 2876, 3 of 3 attempts)
+******************** TEST 'AddressSanitizer-x86_64-windows-dynamic :: TestCases/Windows/dll_intercept_memcpy_indirect.cpp' FAILED ********************
+Exit Code: 1
+
+Command Output (stdout):
+--
+# RUN: at line 1
+C:/git/llvm-project/stage1/./bin/clang-cl.exe  -fsanitize=address -Wno-deprecated-declarations -WX -D_HAS_EXCEPTIONS=0 -gline-tables-only -gcodeview -gcolumn-info   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -MD -Od C:\git\llvm-project\compiler-rt\test\asan\TestCases\Windows/dll_host.cpp -FeC:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Windows\Output\dll_intercept_memcpy_indirect.cpp.tmp
+# executed command: C:/git/llvm-project/stage1/./bin/clang-cl.exe -fsanitize=address -Wno-deprecated-declarations -WX -D_HAS_EXCEPTIONS=0 -gline-tables-only -gcodeview -gcolumn-info -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -MD -Od 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\Windows/dll_host.cpp' '-FeC:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Windows\Output\dll_intercept_memcpy_indirect.cpp.tmp'
+# RUN: at line 2
+C:/git/llvm-project/stage1/./bin/clang-cl.exe  -fsanitize=address -Wno-deprecated-declarations -WX -D_HAS_EXCEPTIONS=0 -gline-tables-only -gcodeview -gcolumn-info   -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta   -MD -LD -Od C:\git\llvm-project\compiler-rt\test\asan\TestCases\Windows\dll_intercept_memcpy_indirect.cpp -FeC:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Windows\Output\dll_intercept_memcpy_indirect.cpp.tmp.dll
+# executed command: C:/git/llvm-project/stage1/./bin/clang-cl.exe -fsanitize=address -Wno-deprecated-declarations -WX -D_HAS_EXCEPTIONS=0 -gline-tables-only -gcodeview -gcolumn-info -Wthread-safety -Wthread-safety-reference -Wthread-safety-beta -MD -LD -Od 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\Windows\dll_intercept_memcpy_indirect.cpp' '-FeC:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Windows\Output\dll_intercept_memcpy_indirect.cpp.tmp.dll'
+# .---command stdout------------
+# |    Creating library C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Windows\Output\dll_intercept_memcpy_indirect.cpp.tmp.lib and object C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Windows\Output\dll_intercept_memcpy_indirect.cpp.tmp.exp
+# `-----------------------------
+# RUN: at line 3
+not  C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Windows\Output\dll_intercept_memcpy_indirect.cpp.tmp C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Windows\Output\dll_intercept_memcpy_indirect.cpp.tmp.dll 2>&1 | FileCheck C:\git\llvm-project\compiler-rt\test\asan\TestCases\Windows\dll_intercept_memcpy_indirect.cpp
+# executed command: not 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Windows\Output\dll_intercept_memcpy_indirect.cpp.tmp' 'C:\git\llvm-project\stage1\runtimes\runtimes-bins\compiler-rt\test\asan\X86_64WindowsDynamicConfig\TestCases\Windows\Output\dll_intercept_memcpy_indirect.cpp.tmp.dll'
+# note: command had no output on stdout or stderr
+# error: command failed with exit status: 1
+# executed command: FileCheck 'C:\git\llvm-project\compiler-rt\test\asan\TestCases\Windows\dll_intercept_memcpy_indirect.cpp'
+# .---command stderr------------
+# | C:\git\llvm-project\compiler-rt\test\asan\TestCases\Windows\dll_intercept_memcpy_indirect.cpp:25:11: error: CHECK: expected string not found in input
+# | // CHECK: AddressSanitizer: stack-buffer-overflow on address [[ADDR:0x[0-9a-f]+]]
+# |           ^
+# | <stdin>:1:16: note: scanning from here
+# | Initial test OK
+# |                ^
+# | <stdin>:1:16: note: pattern attempts to capture variables: "ADDR"
+# | Initial test OK
+# |                ^
+# |
+# | Input file: <stdin>
+# | Check file: C:\git\llvm-project\compiler-rt\test\asan\TestCases\Windows\dll_intercept_memcpy_indirect.cpp
+# |
+# | -dump-input=help explains the following input dump.
+# |
+# | Input was:
+# | <<<<<<
+# |             1: Initial test OK
+# | check:25'0                   { } search range (exclusive bounds)
+# | check:25'1                       error: no match found in search range
+# | check:25'2                       pattern attempts to capture variables: "ADDR"
+# | >>>>>>
+# `-----------------------------
+# error: command failed with exit status: 1
+
+--
+
+********************
+********************
+Failed Tests (15):
+  AddressSanitizer-Unit :: ./Asan-x86_64-calls-Dynamic-Test.exe/AddressSanitizer/MemCpyOOBTest
+  AddressSanitizer-Unit :: ./Asan-x86_64-inline-Dynamic-Test.exe/AddressSanitizer/MemCpyOOBTest
+  AddressSanitizer-x86_64-windows-dynamic :: TestCases/Windows/dll_intercept_memcpy_indirect.cpp
+  AddressSanitizer-x86_64-windows-dynamic :: TestCases/Windows/intercept_memcpy.cpp
+  AddressSanitizer-x86_64-windows-dynamic :: TestCases/memset_test.cpp
+  ORC-x86_64-windows :: TestCases/Windows/x86-64/atexit-order.c
+  ORC-x86_64-windows :: TestCases/Windows/x86-64/hello-world.c
+  ORC-x86_64-windows :: TestCases/Windows/x86-64/hello-world.cpp
+  ORC-x86_64-windows :: TestCases/Windows/x86-64/priority-static-initializer-three.c
+  ORC-x86_64-windows :: TestCases/Windows/x86-64/priority-static-initializer.c
+  ORC-x86_64-windows :: TestCases/Windows/x86-64/sehframe-handling.cpp
+  ORC-x86_64-windows :: TestCases/Windows/x86-64/static-initializer.S
+  ORC-x86_64-windows :: TestCases/Windows/x86-64/static-initializer.cpp
+  ORC-x86_64-windows :: TestCases/Windows/x86-64/trivial-atexit.c
+  ORC-x86_64-windows :: TestCases/Windows/x86-64/trivial-jit-dlopen.c
+
+
+Testing Time: 175.21s
+
+Total Discovered Tests: 3328
+  Unsupported      : 1507 (45.28%)
+  Passed           : 1770 (53.19%)
+  Expectedly Failed:   36 (1.08%)
+  Failed           :   15 (0.45%)
+
+FAILED: [code=1] CMakeFiles/check-runtimes C:/git/llvm-project/stage1/runtimes/runtimes-bins/CMakeFiles/check-runtimes
+C:\WINDOWS\system32\cmd.exe /C "cd /D C:\git\llvm-project\stage1\runtimes\runtimes-bins && C:\Users\alex_\AppData\Local\Programs\Python\Python312\python3.exe C:/git/llvm-project/stage1/./bin/llvm-lit.py -sv C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/builtins/TestCases C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/builtins/Unit/X86_64WindowsConfig C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/interception/Unit C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/ubsan/Standalone-x86_64 C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/ubsan/AddressSanitizer-x86_64 C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/sanitizer_common/asan-x86_64-Windows C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/sanitizer_common/ubsan-x86_64-Windows C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/sanitizer_common/Unit C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/fuzzer/unit C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/fuzzer/X86_64DefaultWindowsConfig C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/metadata C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/asan/X86_64WindowsConfig C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/asan/Unit/X86_64WindowsConfig C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/asan/X86_64WindowsDynamicConfig C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/asan/Unit/X86_64WindowsDynamicConfig C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/cfi/Standalone-lld-x86_64 C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/cfi/Devirt-lld-x86_64 C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/cfi/Standalone-lld-thinlto-x86_64 C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/cfi/Devirt-lld-thinlto-x86_64 C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/profile/Profile-x86_64 C:/git/llvm-project/stage1/runtimes/runtimes-bins/compiler-rt/test/orc/X86_64WindowsConfig"
+ninja: build stopped: subcommand failed.
+
+FAILED: [code=1] runtimes/CMakeFiles/check-runtimes C:/git/llvm-project/stage1/runtimes/CMakeFiles/check-runtimes
+C:\WINDOWS\system32\cmd.exe /C "cd /D C:\git\llvm-project\stage1\runtimes\runtimes-bins && "C:\Program Files\CMake\bin\cmake.exe" --build C:/git/llvm-project/stage1/runtimes/runtimes-bins/ --target check-runtimes --config Release"
+ninja: build stopped: subcommand failed.
