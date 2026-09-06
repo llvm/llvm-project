@@ -631,6 +631,12 @@ LLVM_ABI FunctionPass *createSelectOptimizePass();
 
 LLVM_ABI FunctionPass *createInlineAsmPreparePass();
 
+/// Merges adjacent, fixed-size, non-entry-block allocas into a single
+/// alloca plus constant-offset getelementptrs, so instruction selection
+/// only ever sees one dynamic stack allocation per merged run instead of
+/// one per original alloca. \see MergeAllocas.cpp
+LLVM_ABI FunctionPass *createMergeAllocasPass();
+
 /// Creates Windows Secure Hot Patch pass. \see WindowsSecureHotPatching.cpp
 LLVM_ABI ModulePass *createWindowsSecureHotPatchingPass();
 

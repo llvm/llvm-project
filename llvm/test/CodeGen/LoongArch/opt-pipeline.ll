@@ -78,11 +78,14 @@
 ; LAXX-NEXT:       Prepare inline asm insts
 ; LAXX-NEXT:       Safe Stack instrumentation pass
 ; LAXX-NEXT:       Insert stack protectors
-; LAXX-NEXT:       Module Verifier
-; LAXX-NEXT:       Basic Alias Analysis (stateless AA impl)
-; LAXX-NEXT:       Function Alias Analysis Results
 ; LAXX-NEXT:       Cycle Info Analysis
 ; LAXX-NEXT:       Post-Dominator Tree Construction
+; LAXX-NEXT:       Branch Probability Analysis
+; LAXX-NEXT:       Basic Alias Analysis (stateless AA impl)
+; LAXX-NEXT:       Function Alias Analysis Results
+; LAXX-NEXT:       Merge adjacent fixed-size allocas
+; LAXX-NEXT:       Module Verifier
+; LAXX-NEXT:       Function Alias Analysis Results
 ; LAXX-NEXT:       Branch Probability Analysis
 ; LAXX-NEXT:       Assignment Tracking Analysis
 ; LAXX-NEXT:       Lazy Branch Probability Analysis

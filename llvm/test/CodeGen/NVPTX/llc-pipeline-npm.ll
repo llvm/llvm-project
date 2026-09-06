@@ -125,6 +125,7 @@
 ; O2-NEXT:   inline-asm-prepare
 ; O2-NEXT:   safe-stack
 ; O2-NEXT:   stack-protector
+; O2-NEXT:   merge-allocas
 ; O2-NEXT:   verify
 ; O2-NEXT: nvptx-asm-printer-begin
 ; O2-NEXT: function

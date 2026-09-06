@@ -232,6 +232,7 @@ LLVM_ABI void initializeMachineUniformityAnalysisPassPass(PassRegistry &);
 LLVM_ABI void initializeMachineVerifierLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeMemoryDependenceWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeMemorySSAWrapperPassPass(PassRegistry &);
+LLVM_ABI void initializeMergeAllocasLegacyPass(PassRegistry &);
 LLVM_ABI void initializeModuleSummaryIndexWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeModuloScheduleTestPass(PassRegistry &);
 LLVM_ABI void initializeNaryReassociateLegacyPassPass(PassRegistry &);

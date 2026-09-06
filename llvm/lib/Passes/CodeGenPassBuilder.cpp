@@ -58,6 +58,7 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/MachineSink.h"
 #include "llvm/CodeGen/MachineVerifier.h"
+#include "llvm/CodeGen/MergeAllocas.h"
 #include "llvm/CodeGen/OptimizePHIs.h"
 #include "llvm/CodeGen/PEI.h"
 #include "llvm/CodeGen/PHIElimination.h"
@@ -503,6 +504,16 @@ void CodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
   // only protect functions that have corresponding attributes.
   addFunctionPass(SafeStackPass(TM), PMW);
   addFunctionPass(StackProtectorPass(TM), PMW);
+
+  // Merge 'allocas` after SafeStack/StackProtector, not before: both inspect
+  // individual allocas' types/sizes to decide what needs protecting, and
+  // merging first would replace that per-alloca picture with one opaque
+  // combined buffer, changing their heuristics' input. Whatever plain
+  // AllocaInsts remain once they're done is the correct, reduced candidate set
+  // for merging. The MergeAllocas pass requires a lot of other passes to run,
+  // so we skip it for non-opt builds.
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addFunctionPass(MergeAllocasPass(), PMW);
 
   if (Opt.PrintISelInput)
     addFunctionPass(PrintFunctionPass(
