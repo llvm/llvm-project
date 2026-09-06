@@ -461,6 +461,10 @@ bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
       continue;
     }
     for (EhSectionPiece *fde : rec->fdes) {
+      // Discard zero-range FDE, otherwise it would displace the FDE of the
+      // next function, which shares its address.
+      if (hasZeroPcRange(ctx, *fde, enc))
+        continue;
       // The FDE has passed `isFdeLive`, so the first relocation's symbol is a
       // live Defined.
       auto *isec = cast<EhInputSection>(fde->sec);

@@ -12,15 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-// Pattern Matching Support
-
-def GetLo32XForm : SDNodeXForm<imm, [{
-  // Transformation function: get the low 32 bits.
-  return getI32Imm((uint32_t)N->getZExtValue(), SDLoc(N));
-}]>;
-
-
-//===----------------------------------------------------------------------===//
 // Random Pseudo Instructions.
 
 // PIC base construction.  This expands to code that looks like this:

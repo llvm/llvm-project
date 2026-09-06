@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_IR_LLVMCONTEXTIMPL_H
 #define LLVM_LIB_IR_LLVMCONTEXTIMPL_H
 
+#include "AttributeImpl.h"
 #include "ConstantsContext.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -52,12 +53,7 @@
 
 namespace llvm {
 
-class AttributeImpl;
-class AttributeListImpl;
-class AttributeSetNode;
 class BasicBlock;
-class ConstantRangeAttributeImpl;
-class ConstantRangeListAttributeImpl;
 struct DiagnosticHandler;
 class DbgMarker;
 class ElementCount;
@@ -1629,13 +1625,27 @@ public:
       FPSplatConstants;
 
   FoldingSet<AttributeImpl> AttrsSet;
-  FoldingSet<AttributeListImpl> AttrsLists;
-  FoldingSet<AttributeSetNode> AttrsSetNodes;
+  UniquingSet<AttributeListImpl> AttrsLists;
+  UniquingSet<AttributeSetNode> AttrsSetNodes;
 
   StringMap<MDString, BumpPtrAllocator> MDStringCache;
   DenseMap<Value *, ValueAsMetadata *> ValuesAsMetadata;
   DenseMap<Metadata *, MetadataAsValue *> MetadataAsValues;
   DenseSet<DIArgList *, DIArgListInfo> DIArgLists;
+
+  uint32_t NextMetadataPrintID = 0;
+
+  uint32_t allocateMetadataPrintID() { return NextMetadataPrintID++; }
+
+  void getAllMetadataNodes(SmallVectorImpl<MDNode *> &Nodes) const;
+
+  uint32_t getMetadataPrintID(const MDNode *N) const {
+    return N->getHeader().MetadataPrintID;
+  }
+
+  void setMetadataPrintID(MDNode *N, uint32_t ID) {
+    N->getHeader().MetadataPrintID = ID;
+  }
 
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   DenseSet<CLASS *, CLASS##Info> CLASS##s;
@@ -1649,6 +1659,10 @@ public:
   // one object can destroy them.  Keep track of them here so we can delete
   // them on context teardown.
   std::vector<MDNode *> DistinctMDNodes;
+
+  // Temporary nodes are caller-owned, but track live ones for persistent
+  // metadata print IDs.
+  DenseSet<MDNode *> TemporaryMDNodes;
 
   // ConstantRangeListAttributeImpl is a TrailingObjects/ArrayRef of
   // ConstantRange. Since this is a dynamically sized class, it's not

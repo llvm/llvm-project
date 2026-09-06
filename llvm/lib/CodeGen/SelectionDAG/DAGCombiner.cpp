@@ -18808,11 +18808,10 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
 
 // Returns true if floating point contraction is allowed on the FMUL-SDValue
 // `N`
-static bool isContractableFMUL(const TargetOptions &Options, SDValue N) {
+static bool isContractableFMUL(SDValue N) {
   assert(N.getOpcode() == ISD::FMUL);
 
-  return Options.AllowFPOpFusion == FPOpFusion::Fast ||
-         N->getFlags().hasAllowContract();
+  return N->getFlags().hasAllowContract();
 }
 
 /// Try to perform FMA combining on a given FADD node.
@@ -18821,7 +18820,6 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   SDValue N1 = N->getOperand(1);
   EVT VT = N->getValueType(0);
   SDLoc SL(N);
-  const TargetOptions &Options = DAG.getTarget().Options;
 
   // Floating-point multiply-add with intermediate rounding.
   bool HasFMAD = (LegalOperations && TLI.isFMADLegal(DAG, N));
@@ -18835,8 +18833,9 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
   if (!HasFMAD && !HasFMA)
     return SDValue();
 
-  bool AllowFusionGlobally =
-      Options.AllowFPOpFusion == FPOpFusion::Fast || HasFMAD;
+  // FMAD (with intermediate rounding) is always safe to form; FMA requires the
+  // contract fast-math flag.
+  bool AllowFusionGlobally = HasFMAD;
   // If the addition is not contractable, do not combine.
   if (!AllowFusionGlobally && !N->getFlags().hasAllowContract())
     return SDValue();
@@ -19052,7 +19051,6 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDLoc SL(N);
 
-  const TargetOptions &Options = DAG.getTarget().Options;
   // Floating-point multiply-add with intermediate rounding.
   bool HasFMAD = (LegalOperations && TLI.isFMADLegal(DAG, N));
 
@@ -19066,8 +19064,9 @@ SDValue DAGCombiner::visitFSUBForFMACombine(SDNode *N) {
     return SDValue();
 
   const SDNodeFlags Flags = N->getFlags();
-  bool AllowFusionGlobally =
-      (Options.AllowFPOpFusion == FPOpFusion::Fast || HasFMAD);
+  // FMAD (with intermediate rounding) is always safe to form; FMA requires the
+  // contract fast-math flag.
+  bool AllowFusionGlobally = HasFMAD;
 
   // If the subtraction is not contractable, do not combine.
   if (!AllowFusionGlobally && !N->getFlags().hasAllowContract())
@@ -19364,8 +19363,6 @@ SDValue DAGCombiner::visitFMULForFMADistributiveCombine(SDNode *N) {
 
   assert(N->getOpcode() == ISD::FMUL && "Expected FMUL Operation");
 
-  const TargetOptions &Options = DAG.getTarget().Options;
-
   // The transforms below are incorrect when x == 0 and y == inf, because the
   // intermediate multiplication produces a nan.
   SDValue FAdd = N0.getOpcode() == ISD::FADD ? N0 : N1;
@@ -19374,7 +19371,7 @@ SDValue DAGCombiner::visitFMULForFMADistributiveCombine(SDNode *N) {
 
   // Floating-point multiply-add without intermediate rounding.
   bool HasFMA =
-      isContractableFMUL(Options, SDValue(N, 0)) &&
+      isContractableFMUL(SDValue(N, 0)) &&
       (!LegalOperations || TLI.isOperationLegalOrCustom(ISD::FMA, VT)) &&
       TLI.isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT);
 

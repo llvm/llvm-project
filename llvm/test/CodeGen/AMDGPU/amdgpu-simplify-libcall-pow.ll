@@ -5987,7 +5987,7 @@ define float @test_pow_f32__y_known_integral_nearbyint_assume(float %x, float %y
 ;
   %y = call float @llvm.nearbyint.f32(float %y.arg)
   %y.fabs = call float @llvm.fabs.f32(float %y)
-  %y.is.finite = fcmp one float %y.fabs, 0x7FF0000000000000
+  %y.is.finite = fcmp one float %y.fabs, +inf
   call void @llvm.assume(i1 %y.is.finite)
   %pow = tail call float @_Z3powff(float %x, float %y)
   ret float %pow
@@ -6014,7 +6014,7 @@ define float @test_pow_f32__y_known_integral_nearbyint_assume_arg_input(float %x
 ; NOPRELINK-NEXT:    ret float [[POW]]
 ;
   %y.arg.fabs = call float @llvm.fabs.f32(float %y.arg)
-  %is.finite = fcmp one float %y.arg.fabs, 0x7FF0000000000000
+  %is.finite = fcmp one float %y.arg.fabs, +inf
   call void @llvm.assume(i1 %is.finite)
   %y = call float @llvm.nearbyint.f32(float %y.arg)
   %pow = tail call float @_Z3powff(float %x, float %y)
