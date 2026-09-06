@@ -10893,8 +10893,11 @@ void SelectionDAGBuilder::visitVACopy(const CallInst &I) {
 SDValue SelectionDAGBuilder::lowerRangeToAssertZExt(SelectionDAG &DAG,
                                                     const Instruction &I,
                                                     SDValue Op) {
-  std::optional<ConstantRange> CR = getRange(I);
+  return lowerRangeToAssertZExt(DAG, getRange(I), Op);
+}
 
+SDValue SelectionDAGBuilder::lowerRangeToAssertZExt(
+    SelectionDAG &DAG, std::optional<ConstantRange> CR, SDValue Op) {
   if (!CR || CR->isFullSet() || CR->isEmptySet() || CR->isUpperWrapped())
     return Op;
 
@@ -12244,6 +12247,9 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
           OutVal = DAG.getNode(ISD::AssertNoFPClass, dl, OutVal.getValueType(),
                                OutVal, SDNoFPClass);
         }
+        if (NumValues == 1 && VT.isInteger() &&
+            !isa<LoadSDNode, AtomicSDNode>(OutVal))
+          OutVal = SDB->lowerRangeToAssertZExt(DAG, Arg.getRange(), OutVal);
         ArgValues.push_back(OutVal);
       }
 
