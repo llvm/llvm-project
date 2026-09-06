@@ -6940,6 +6940,7 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
   if (!this->visitStmt(EndStmt))
     return false;
 
+  LocalScope<Emitter> CondScope(this);
   // Now the condition as well as the loop variable assignment.
   this->fallthrough(CondLabel);
   this->emitLabel(CondLabel);
@@ -6962,6 +6963,8 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
       return false;
   }
 
+  if (!CondScope.destroyLocals())
+    return false;
   if (!this->jump(CondLabel, S))
     return false;
 
