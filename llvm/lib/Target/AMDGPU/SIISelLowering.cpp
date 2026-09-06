@@ -7627,9 +7627,11 @@ SDValue SITargetLowering::splitTernaryVectorOp(SDValue Op,
   assert(VT.isVector() && VT.getVectorElementCount().isKnownEven());
 
   SDValue Op0 = Op.getOperand(0);
-  auto [Lo0, Hi0] = Op0.getValueType().isVector()
-                        ? DAG.SplitVectorOperand(Op.getNode(), 0)
-                        : std::pair(Op0, Op0);
+  SDValue Lo0, Hi0;
+  if (Op0.getValueType().isVector())
+    std::tie(Lo0, Hi0) = DAG.SplitVectorOperand(Op.getNode(), 0);
+  else
+    Lo0 = Hi0 = DAG.getFreeze(Op0);
 
   auto [Lo1, Hi1] = DAG.SplitVectorOperand(Op.getNode(), 1);
   auto [Lo2, Hi2] = DAG.SplitVectorOperand(Op.getNode(), 2);
