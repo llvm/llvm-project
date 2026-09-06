@@ -56,6 +56,7 @@ class _LIBCPP_EXPORTED_FROM_ABI rcu_domain {
 
   friend rcu_domain& rcu_default_domain() noexcept;
   friend void rcu_synchronize(rcu_domain&) noexcept;
+  friend void rcu_barrier(rcu_domain&) noexcept;
 
   static rcu_domain& __rcu_default_domain() noexcept;
 
