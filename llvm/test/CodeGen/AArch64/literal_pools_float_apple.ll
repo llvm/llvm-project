@@ -27,7 +27,7 @@ define float @float_1mov() {
 ; APPLE-NEXT:    mov w8, #2143289344 ; =0x7fc00000
 ; APPLE-NEXT:    fmov s0, w8
 ; APPLE-NEXT:    ret
-  ret float 0x7FF8000000000000
+  ret float +qnan
 }
 
 define float @float_2mov() {

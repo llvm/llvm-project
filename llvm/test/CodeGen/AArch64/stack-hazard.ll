@@ -3084,8 +3084,8 @@ define void @call_with_doubles() "aarch64_pstate_sm_compatible" {
 ; CHECK1024-NEXT:    add sp, sp, #1056
 ; CHECK1024-NEXT:    b calld
 entry:
-  %call = tail call i32 @calld(double 0x7FF8000000000000)
-  %call.1 = tail call i32 @calld(double 0x7FF8000000000000)
+  %call = tail call i32 @calld(double +qnan)
+  %call.1 = tail call i32 @calld(double +qnan)
   ret void
 }
 declare i32 @calld(double) "aarch64_pstate_sm_compatible"

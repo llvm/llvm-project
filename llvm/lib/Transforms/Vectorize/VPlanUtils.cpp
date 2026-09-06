@@ -12,7 +12,9 @@
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -20,6 +22,7 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
@@ -378,8 +381,8 @@ bool vputils::isAddressSCEVForCost(const SCEV *Addr, ScalarEvolution &SE,
 unsigned vputils::getOpcode(const VPValue *V) {
   return TypeSwitch<const VPValue *, unsigned>(V)
       .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe,
-            VPReplicateRecipe, VPWidenPHIRecipe>(
-          [](auto *I) { return I->getOpcode(); })
+            VPReplicateRecipe, VPWidenPHIRecipe, VPWidenLoadRecipe,
+            VPWidenLoadEVLRecipe>([](auto *I) { return I->getOpcode(); })
       .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
           [](auto *I) {
             // For recipes that do not directly map to LLVM IR instructions,
@@ -1009,7 +1012,12 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       }
     }
 
-    return Builder.createScalarCast(Opcode, Op, S->getType(), DL);
+    std::optional<VPIRFlags> Flags;
+    if (Opcode == Instruction::ZExt)
+      Flags =
+          VPIRFlags::NonNegFlagsTy(SE.isKnownNonNegative(Cast->getOperand()));
+
+    return Builder.createScalarCast(Opcode, Op, S->getType(), DL, Flags);
   }
   case scUMaxExpr:
   case scSMaxExpr:
@@ -1149,6 +1157,100 @@ SmallVector<VPUser *> vputils::collectUsersRecursively(VPValue *V) {
       Users.insert_range(V->users());
   }
   return Users.takeVector();
+}
+
+/// Returns \p Num / \p Denom as a BranchProbability, clamped so a ratio that is
+/// neither zero nor one does not round to zero or one. BlockFrequencyInfo also
+/// keeps a zero-weight edge distinguishable from an unreachable one.
+static BranchProbability getBranchProbabilityKeepingPartial(uint64_t Num,
+                                                            uint64_t Denom) {
+  BranchProbability P = BranchProbability::getBranchProbability(Num, Denom);
+  if (Num == 0 || Num == Denom)
+    return P;
+  return BranchProbability::getRaw(std::clamp(
+      P.getNumerator(), 1u, BranchProbability::getDenominator() - 1));
+}
+
+BranchProbability vputils::getExecutionProbability(BlockFrequency Freq) {
+  return getBranchProbabilityKeepingPartial(Freq.getFrequency(),
+                                            AlwaysExecutesFreq);
+}
+
+/// Returns the probability of reaching each unique successor of \p VPBB, taken
+/// from the branch weights recorded on its terminator, or unknown if not
+/// available. See llvm::getBranchProbability in
+/// llvm/Transforms/Utils/LoopUtils.h for the IR version.
+static SmallVector<std::pair<const VPBasicBlock *, BranchProbability>, 2>
+getSuccessorProbabilities(const VPBasicBlock *VPBB) {
+  ArrayRef<VPBlockBase *> Successors = VPBB->getSuccessors();
+  // With a single successor the edge is always taken and needs no weights.
+  if (VPBlockBase *Succ = VPBB->getSingleSuccessor())
+    return {{cast<VPBasicBlock>(Succ), BranchProbability::getOne()}};
+
+  // Take the branch weights off the terminator. Without usable weights all
+  // successors have unknown probability; zero the weights, so the accumulation
+  // below still visits each of them.
+  SmallVector<uint32_t> Weights;
+  auto *Term = dyn_cast_if_present<VPInstruction>(VPBB->getTerminator());
+  if (!Term ||
+      !extractBranchWeights(Term->getMetadata(LLVMContext::MD_prof), Weights) ||
+      Weights.size() != Successors.size())
+    Weights.assign(Successors.size(), 0);
+  uint64_t Total = sum_of(Weights, uint64_t(0));
+
+  // Sum the weights of parallel edges to the same successor, so that the
+  // division below rounds once per successor rather than once per edge.
+  SmallMapVector<const VPBasicBlock *, uint64_t, 2> WeightPerSuccessor;
+  for (const auto &[Succ, Weight] : zip_equal(Successors, Weights))
+    WeightPerSuccessor[cast<VPBasicBlock>(Succ)] += Weight;
+
+  return map_to_vector<2>(WeightPerSuccessor, [Total](const auto &SuccWeight) {
+    auto [Succ, Weight] = SuccWeight;
+    if (Total == 0)
+      return std::make_pair(Succ, BranchProbability::getUnknown());
+    return std::make_pair(Succ,
+                          getBranchProbabilityKeepingPartial(Weight, Total));
+  });
+}
+
+/// Returns \p Freq scaled by \p Prob, rounding up to 1 instead of 0 to keep a
+/// rarely executed block distinguishable from an unreachable one.
+static BlockFrequency scaleKeepingNonZero(BlockFrequency Freq,
+                                          BranchProbability Prob) {
+  BlockFrequency Scaled = Freq * Prob;
+  if (Scaled == BlockFrequency() && Freq != BlockFrequency() && !Prob.isZero())
+    return BlockFrequency(1);
+  return Scaled;
+}
+
+DenseMap<const VPBasicBlock *, std::optional<BlockFrequency>>
+vputils::computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks) {
+  assert(!Blocks.empty() && "expected at least the header block");
+  // Push each block's frequency along its outgoing edges. Blocks is a DAG in
+  // reverse post-order (the loop region's backedge is implicit), so a block's
+  // frequency is final by the time it is visited.
+  DenseMap<const VPBasicBlock *, std::optional<BlockFrequency>> Frequencies;
+  Frequencies.reserve(Blocks.size());
+  // The header (first block) always executes, the others start out unreachable.
+  Frequencies[Blocks.front()] = BlockFrequency(AlwaysExecutesFreq);
+  for (VPBasicBlock *VPBB : Blocks.drop_front())
+    Frequencies[VPBB] = BlockFrequency();
+
+  for (VPBasicBlock *VPBB : Blocks) {
+    std::optional<BlockFrequency> SrcFreq = Frequencies.at(VPBB);
+    for (const auto &[Succ, EdgeProb] : getSuccessorProbabilities(VPBB)) {
+      std::optional<BlockFrequency> &SuccFreq = Frequencies.at(Succ);
+      // An unknown edge or predecessor poisons the successor.
+      if (!SrcFreq || EdgeProb.isUnknown() || !SuccFreq) {
+        SuccFreq = std::nullopt;
+        continue;
+      }
+      // The sum can only exceed AlwaysExecutesFreq by rounding.
+      SuccFreq = std::min(BlockFrequency(AlwaysExecutesFreq),
+                          *SuccFreq + scaleKeepingNonZero(*SrcFreq, EdgeProb));
+    }
+  }
+  return Frequencies;
 }
 
 VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,

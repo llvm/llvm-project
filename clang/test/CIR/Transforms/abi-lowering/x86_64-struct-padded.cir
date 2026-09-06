@@ -13,10 +13,16 @@
 !rec_NoRegs = !cir.struct<"NoRegs" {data !s32i, pad !cir.array<!u8i x 12>}>
 !rec_S1 = !cir.struct<"S1" {data !s16i, data !s16i, data !s16i}>
 !rec_anon_pad = !cir.struct<{data !rec_S1, pad !cir.array<!s8i x 2>}>
-!rec_UnnamedUnit = !cir.struct<"UnnamedUnit" {data !s32i, empty !u32i, pad !cir.array<!u8i x 8>}>
-!rec_Zw = !cir.struct<"Zw" {data !s32i, bitfield !cir.array<!u32i x 0>, pad !cir.array<!u8i x 12>}>
-!rec_ZwWide = !cir.struct<"ZwWide" {data !s8i, pad !cir.array<!u8i x 7>, bitfield !cir.array<!s64i x 0>, data !s8i}>
-!rec_UnitSSE = !cir.struct<"UnitSSE" {data !cir.double, empty !u32i, pad !cir.array<!u8i x 4>}>
+!rec_UnnamedUnit =
+    !cir.struct<"UnnamedUnit" {data !s32i,
+                               empty !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 32, unnamed>]>,
+                               pad !cir.array<!u8i x 8>}>
+!rec_Zw = !cir.struct<"Zw" {data !s32i, empty !cir.bitfield<[#cir.bitfield_decl<!u32i, 0, unnamed>]>, pad !cir.array<!u8i x 12>}>
+!rec_ZwWide = !cir.struct<"ZwWide" {data !s8i, pad !cir.array<!u8i x 7>, empty !cir.bitfield<[#cir.bitfield_decl<!s64i, 0, unnamed>]>, data !s8i}>
+!rec_UnitSSE =
+    !cir.struct<"UnitSSE" {data !cir.double,
+                           empty !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 32, unnamed>]>,
+                           pad !cir.array<!u8i x 4>}>
 !rec_PadByte = !cir.struct<"PadByte" {data !u8i, pad !cir.array<!u8i x 3>}>
 !rec_PadByte2 = !cir.struct<"PadByte2" {data !u8i, pad !u8i}>
 
@@ -129,13 +135,16 @@ module attributes {
 
   // CHECK: cir.func{{.*}} @take_zw_wide(%arg0: !u64i, %arg1: !s8i)
 
-  // The empty field occupies the four bytes at offset 8. It should split into a
-  // double and an !u32i.
+  // The unit of unnamed bit-fields occupies the four bytes at offset 8, and it
+  // holds data, so the second eightbyte is passed as well as the first.
   cir.func @take_unit_sse(%arg0: !rec_UnitSSE) {
     cir.return
   }
 
-  // FIXME: A bug in the ABI library causes the second arg to be misclassified.
+  // FIXME: classic codegen passes the second eightbyte as an i32.  The width
+  // comes out wrong here because llvm/lib/ABI skips a field marked as an
+  // unnamed bit-field when it looks for the type at an offset, so the eightbyte
+  // has nothing to narrow to.
   // CHECK: cir.func{{.*}} @take_unit_sse(%arg0: !cir.double, %arg1: !u64i)
 
   // A record that is padding throughout apart from one byte still coerces to

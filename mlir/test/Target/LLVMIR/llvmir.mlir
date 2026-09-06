@@ -3051,6 +3051,52 @@ llvm.func @save_reg_params_call() {
 
 llvm.func @f()
 
+// CHECK-LABEL: @uniform_work_group_size
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @uniform_work_group_size() attributes { uniform_work_group_size } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "uniform-work-group-size"
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @uniform_work_group_size_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @uniform_work_group_size_call() {
+  llvm.call @f() {uniform_work_group_size} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "uniform-work-group-size"
+
+// -----
+
+llvm.func @f()
+llvm.func @__gxx_personality_v0(...) -> i32
+
+// CHECK-LABEL: @uniform_work_group_size_invoke
+// CHECK: invoke void @f() #[[ATTRS:[0-9]+]]
+llvm.func @uniform_work_group_size_invoke() attributes {personality = @__gxx_personality_v0} {
+  llvm.invoke @f() to ^bb2 unwind ^bb1 {uniform_work_group_size} : () -> ()
+^bb1:
+  %0 = llvm.landingpad cleanup : !llvm.struct<(ptr, i32)>
+  llvm.return
+^bb2:
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "uniform-work-group-size"
+
+// -----
+
+llvm.func @f()
+
 // CHECK-LABEL: @zero_call_used_regs_1
 // CHECK-SAME: #[[ATTRS:[0-9]+]]
 llvm.func @zero_call_used_regs_1() attributes { zero_call_used_regs = "skip"} {

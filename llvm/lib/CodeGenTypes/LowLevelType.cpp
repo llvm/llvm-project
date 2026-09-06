@@ -16,7 +16,7 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
-std::atomic<bool> LLT::ExtendedLLT{false};
+std::atomic<bool> LLT::ExtendedLLT = false;
 
 static LLT::FpSemantics getFpSemanticsForMVT(MVT VT) {
   switch (VT.getScalarType().SimpleTy) {

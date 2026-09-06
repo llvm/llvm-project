@@ -713,8 +713,11 @@ public:
   }
 
 private:
-  // Written from TargetMachine constructors during parallel ThinLTO; atomic
-  // avoids a data race when multiple backends enable extended LLTs.
+  // Enabled during target construction, which may run concurrently. Relaxed
+  // ordering suffices because the flag publishes no other state.
+  //
+  // FIXME: Scope this per target rather than globally:
+  // https://github.com/llvm/llvm-project/issues/219517.
   LLVM_ABI static std::atomic<bool> ExtendedLLT;
 };
 

@@ -30,6 +30,8 @@ namespace pwd {
 struct ReadLineResult {
   size_t bytes_read;
   bool truncated;
+  // True only when no data was read because the file stream reached EOF.
+  bool eof;
 };
 
 // Forward declaration of record parser for flat database files.
@@ -52,8 +54,10 @@ private:
   // fixed, bounded buffer without dynamic heap allocations or realloc.
   LIBC_INLINE static ErrorOr<ReadLineResult> read_line(File *f,
                                                        cpp::span<char> buf) {
-    if (!f || buf.size() < 2)
+    if (!f)
       return Error(EINVAL);
+    if (buf.size() < 2)
+      return Error(ERANGE);
 
     File::FileLock lock(f);
     size_t bytes_read = 0;
@@ -70,6 +74,8 @@ private:
       if (ch == '\n')
         break;
     }
+
+    bool eof = (bytes_read == 0);
 
     auto read_span = buf.first(bytes_read);
     if (result.value == 1 && !read_span.empty() && read_span.back() != '\n') {
@@ -92,7 +98,7 @@ private:
       --bytes_read;
 
     buf[bytes_read] = '\0';
-    return ReadLineResult{bytes_read, truncated};
+    return ReadLineResult{bytes_read, truncated, eof};
   }
 
 public:
@@ -137,7 +143,8 @@ public:
   }
 
   // Reads and parses the next record from the database. Returns true if an
-  // entry was read, false if EOF was reached, or an Error on failure.
+  // entry was read, false if EOF was reached, or an Error on failure. Blank
+  // lines are skipped.
   LIBC_INLINE ErrorOr<bool> getnext(EntryType *entry, cpp::span<char> buffer) {
     if (!entry)
       return Error(EINVAL);
@@ -148,21 +155,27 @@ public:
         return Error(res.error());
     }
 
-    auto result = read_line(file, buffer);
-    if (!result.has_value())
-      return Error(result.error());
+    while (true) {
+      auto result = read_line(file, buffer);
+      if (!result.has_value())
+        return Error(result.error());
 
-    ReadLineResult res = result.value();
-    if (res.bytes_read == 0)
-      return false; // EOF
+      ReadLineResult res = result.value();
+      if (res.eof)
+        return false; // EOF
 
-    if (res.truncated)
-      return Error(ERANGE);
+      // Skip blank lines.
+      if (res.bytes_read == 0)
+        continue;
 
-    if (parse_line(buffer.first(res.bytes_read + 1), entry))
-      return true;
+      if (res.truncated)
+        return Error(ERANGE);
 
-    return Error(EINVAL);
+      if (parse_line(buffer.first(res.bytes_read + 1), entry))
+        return true;
+
+      return Error(EINVAL);
+    }
   }
 
   // Searches for a record matching a given predicate. Returns true if the
@@ -186,6 +199,16 @@ public:
         return true;
     }
   }
+};
+
+// RAII wrapper around FlatFileDatabase for stack-local database operations.
+// Automatically closes the database file stream on destruction.
+template <typename EntryType>
+class ScopedFlatFileDatabase : public FlatFileDatabase<EntryType> {
+public:
+  using FlatFileDatabase<EntryType>::FlatFileDatabase;
+
+  LIBC_INLINE ~ScopedFlatFileDatabase() { this->enddb(); }
 };
 
 } // namespace pwd

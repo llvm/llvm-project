@@ -109,9 +109,9 @@ define float @test_finite_assumed_nsz(float %x, float %y, float %z) {
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %fabs.x = call float @llvm.fabs.f32(float %x)
-  %is.finite.x = fcmp one float %fabs.x, 0x7FF0000000000000
+  %is.finite.x = fcmp one float %fabs.x, +inf
   %fabs.y = call float @llvm.fabs.f32(float %y)
-  %is.finite.y = fcmp one float %fabs.y, 0x7FF0000000000000
+  %is.finite.y = fcmp one float %fabs.y, +inf
   call void @llvm.assume(i1 %is.finite.x)
   call void @llvm.assume(i1 %is.finite.y)
   %call = call nsz float @llvm.amdgcn.fma.legacy(float %x, float %y, float %z)
@@ -131,9 +131,9 @@ define float @test_finite_assumed(float %x, float %y, float %z) {
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
   %fabs.x = call float @llvm.fabs.f32(float %x)
-  %is.finite.x = fcmp one float %fabs.x, 0x7FF0000000000000
+  %is.finite.x = fcmp one float %fabs.x, +inf
   %fabs.y = call float @llvm.fabs.f32(float %y)
-  %is.finite.y = fcmp one float %fabs.y, 0x7FF0000000000000
+  %is.finite.y = fcmp one float %fabs.y, +inf
   call void @llvm.assume(i1 %is.finite.x)
   call void @llvm.assume(i1 %is.finite.y)
   %call = call float @llvm.amdgcn.fma.legacy(float %x, float %y, float %z)

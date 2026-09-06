@@ -28,7 +28,7 @@ ELSE:                                             ; preds = %main_body
   br i1 %15, label %IF13, label %ENDIF
 
 ENDIF:                                            ; preds = %IF13, %ELSE, %main_body
-  %temp.0 = phi float [ 0xFFF8000000000000, %main_body ], [ 0.000000e+00, %ELSE ], [ 0.000000e+00, %IF13 ]
+  %temp.0 = phi float [ -qnan, %main_body ], [ 0.000000e+00, %ELSE ], [ 0.000000e+00, %IF13 ]
   %temp1.0 = phi float [ 0.000000e+00, %main_body ], [ %23, %IF13 ], [ 0.000000e+00, %ELSE ]
   %temp2.0 = phi float [ 1.000000e+00, %main_body ], [ 0.000000e+00, %ELSE ], [ 0.000000e+00, %IF13 ]
   %temp3.0 = phi float [ 5.000000e-01, %main_body ], [ 0.000000e+00, %ELSE ], [ 0.000000e+00, %IF13 ]

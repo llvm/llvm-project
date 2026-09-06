@@ -17,38 +17,6 @@
 #include "llvm/Target/TargetOptions.h"
 using namespace llvm;
 
-/// DisableFramePointerElim - This returns true if frame pointer elimination
-/// optimization should be disabled for the given machine function.
-bool TargetOptions::DisableFramePointerElim(const MachineFunction &MF) const {
-  FramePointerKind FP = MF.getFrameInfo().getFramePointerPolicy();
-  switch (FP) {
-  case FramePointerKind::All:
-    return true;
-  case FramePointerKind::NonLeaf:
-  case FramePointerKind::NonLeafNoReserve:
-    return MF.getFrameInfo().hasCalls();
-  case FramePointerKind::None:
-  case FramePointerKind::Reserved:
-    return false;
-  }
-  llvm_unreachable("unknown frame pointer flag");
-}
-
-bool TargetOptions::FramePointerIsReserved(const MachineFunction &MF) const {
-  FramePointerKind FP = MF.getFrameInfo().getFramePointerPolicy();
-  switch (FP) {
-  case FramePointerKind::All:
-  case FramePointerKind::NonLeaf:
-  case FramePointerKind::Reserved:
-    return true;
-  case FramePointerKind::NonLeafNoReserve:
-    return MF.getFrameInfo().hasCalls();
-  case FramePointerKind::None:
-    return false;
-  }
-  llvm_unreachable("unknown frame pointer flag");
-}
-
 /// HonorSignDependentRoundingFPMath - Return true if the codegen must assume
 /// that the rounding mode of the FPU can change from its default.
 bool TargetOptions::HonorSignDependentRoundingFPMath() const {
