@@ -133,6 +133,7 @@ class LiveIntervals;
 class MachineFunction;
 class MachineInstr;
 class MachineLoopInfo;
+class MachineSchedSearchRegion;
 class RegisterClassInfo;
 class SchedDFSResult;
 class TargetInstrInfo;
@@ -305,6 +306,31 @@ public:
   virtual void releaseBottomNode(SUnit *SU) = 0;
 };
 
+/// Interface for transforming one complete legal schedule into another.
+///
+/// The incoming complete schedule is denoted as Founder. It can be either
+/// the initial serialized nodenum schedule before scheduler runs or the
+/// completed schedule after scheduler ran.
+struct LLVM_ABI MachineSchedCompleteScheduleOptimizer {
+public:
+  virtual ~MachineSchedCompleteScheduleOptimizer();
+
+  /// Optimize Founder and write a complete region-local SUnit permutation to
+  /// Result. Return false to preserve Founder. The caller validates generic
+  /// permutation and strong-dependency legality before applying Result.
+  virtual bool optimizeCompleteSchedule(const MachineSchedSearchRegion &Region,
+                                        ArrayRef<unsigned> Founder,
+                                        SmallVectorImpl<unsigned> &Result) = 0;
+
+  /// Perform any additional client-specific validation that is not represented
+  /// by strong DAG dependencies. This is called only for a complete,
+  /// dependency-preserving result returned by optimizeCompleteSchedule().
+  virtual bool validateCompleteSchedule(const MachineSchedSearchRegion &Region,
+                                        ArrayRef<unsigned> Result) {
+    return true;
+  }
+};
+
 /// ScheduleDAGMI is an implementation of ScheduleDAGInstrs that simply
 /// schedules machine instructions according to the given MachineSchedStrategy
 /// without much extra book-keeping. This is the common functionality between
@@ -315,6 +341,10 @@ protected:
   LiveIntervals *LIS;
   MachineBlockFrequencyInfo *MBFI;
   std::unique_ptr<MachineSchedStrategy> SchedImpl;
+
+  /// Optional optimizer invoked after SchedImpl has materialized a complete
+  /// schedule for a region.
+  std::unique_ptr<MachineSchedCompleteScheduleOptimizer> PostSchedOptimizer;
 
   /// Ordered list of DAG postprocessing steps.
   std::vector<std::unique_ptr<ScheduleDAGMutation>> Mutations;
@@ -363,6 +393,11 @@ public:
       Mutations.push_back(std::move(Mutation));
   }
 
+  /// Install an optimizer that may replace the complete schedule produced by
+  /// SchedImpl. ScheduleDAGMI takes ownership of the optimizer.
+  void setPostScheduleOptimizer(
+      std::unique_ptr<MachineSchedCompleteScheduleOptimizer> Optimizer);
+
   MachineBasicBlock::iterator top() const { return CurrentTop; }
   MachineBasicBlock::iterator bottom() const { return CurrentBottom; }
 
@@ -395,6 +430,18 @@ protected:
   /// instances of ScheduleDAGMI to perform custom DAG postprocessing.
   void postProcessDAG();
 
+  /// Invoke PostSchedOptimizer on the materialized schedule, if present.
+  /// This runs only after every SUnit has been scheduled. It does not rebuild
+  /// ready queues or the register-pressure state used while selecting nodes.
+  void runPostScheduleOptimizer();
+
+  /// Apply a complete region-local SUnit order to the instruction stream.
+  /// The order must already have been validated against the current DAG.
+  /// Target DAGs may override this to update target metadata derived from the
+  /// final instruction order, but should delegate instruction movement and
+  /// generic liveness maintenance to the base implementation.
+  virtual void applyCompleteSchedule(ArrayRef<unsigned> Order);
+
   /// Release ExitSU predecessors and setup scheduler queues.
   void initQueues(ArrayRef<SUnit*> TopRoots, ArrayRef<SUnit*> BotRoots);
 
@@ -426,6 +473,8 @@ protected:
 /// machine instructions while updating LiveIntervals and tracking regpressure.
 class LLVM_ABI ScheduleDAGMILive : public ScheduleDAGMI {
 protected:
+  void applyCompleteSchedule(ArrayRef<unsigned> Order) override;
+
   RegisterClassInfo *RegClassInfo;
 
   /// Information about DAG subtrees. If DFSResult is NULL, then SchedulerTrees
