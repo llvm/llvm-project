@@ -16,6 +16,9 @@
 // UNSUPPORTED: asan
 // XFAIL: LIBCXX-PICOLIBC-FIXME
 // UNSUPPORTED: target=aarch64-w64-windows-gnu
+//
+// GDB doesn't support PDB debug info format
+// UNSUPPORTED: msvc
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // RUN: %{exec} %{gdb} --return-child-result -ex run %t.exe

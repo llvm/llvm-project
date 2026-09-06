@@ -14,6 +14,9 @@
 // UNSUPPORTED: asan
 // XFAIL: LIBCXX-PICOLIBC-FIXME
 
+// GDB doesn't support PDB debug info format
+// UNSUPPORTED: msvc
+
 // RUN: %{cxx} %{flags} %s %{compile_flags} %{link_flags} -o %t.exe -g
 // RUN: %{exec} %{gdb} %t.exe -ex "source %S/breakpoint__gdb.py"
 
