@@ -4,8 +4,6 @@
 
 Code coverage is a software testing metric that measures the proportion of source code executed while running an automated test suite. It provides insight into test thoroughness by identifying untested functions, dead code paths, and unexercised conditional branches across library entrypoints and internal utilities.
 
-### Modified Condition / Decision Coverage (MC/DC)
-
 LLVM-libc supports Modified Condition / Decision Coverage (MC/DC). MC/DC evaluates compound boolean decisions composed of multiple sub-conditions (such as `if (A && (B || C))`). Under MC/DC criteria, each individual boolean condition must:
 * Evaluate to both true and false across the test suite.
 * Demonstrate that it can independently affect the outcome of the overall decision while other conditions remain fixed.
@@ -14,7 +12,7 @@ This provides rigorous structural verification for safety-critical algorithms wi
 
 ## Continuous Profiling Architecture
 
-This PR uses Clang's [continuous profiling mode](https://clang.llvm.org/docs/UsersManual.html#cmdoption-fprofile-continuous) (`-fprofile-continuous`) to record execution metrics directly into memory-mapped profile files during test execution.
+LLVM-libc uses Clang's [continuous profiling mode](https://clang.llvm.org/docs/UsersManual.html#cmdoption-fprofile-continuous) (`-fprofile-continuous`) to record execution metrics directly into memory-mapped profile files during test execution.
 
 ### Compiler Counter Relocation
 When compiled with `-fprofile-continuous`, Clang configures the LLVM code generator (`-mllvm -runtime-counter-relocation=true`) so that execution counter increments reference a dynamic base pointer (`*(bias + &counter) += 1`). Each branch and basic block counter dynamically resolves to an address within a dedicated profile buffer mapped at program startup.
