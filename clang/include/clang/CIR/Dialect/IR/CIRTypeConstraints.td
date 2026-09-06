@@ -367,6 +367,16 @@ def CIR_AnyBitwiseType
                 "integer, boolean, or vector of bool or integer">;
 
 //===----------------------------------------------------------------------===//
+// Matrix Type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixElementType
+    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyIntOrFloatType, CIR_AnyPtrType],
+                "any cir boolean, integer, floating point or pointer type"> {
+  let cppFunctionName = "isValidMatrixTypeElementType";
+}
+
+//===----------------------------------------------------------------------===//
 // Data member type predicates
 //===----------------------------------------------------------------------===//
 

@@ -1,0 +1,32 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+
+module  {
+
+// expected-error @below {{failed to verify 'element_type'}}
+cir.global external @vec_b = #cir.zero : !cir.matrix<4 x 4 x !cir.array<!s32i x 10>>
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @invalid_row_number() {
+  // expected-error@+1 {{the number of matrix rows must be non-zero}}
+  %3 = cir.alloca !cir.matrix<0 x 4 x !s32i>, !cir.ptr<!cir.matrix<0 x 4 x !s32i>>
+  cir.return
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @invalid_column_number() {
+  // expected-error@+1 {{the number of matrix columns must be non-zero}}
+  %3 = cir.alloca !cir.matrix<4 x 0 x !s32i>, !cir.ptr<!cir.matrix<4 x 0 x !s32i>>
+  cir.return
+
+}

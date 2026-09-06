@@ -1584,6 +1584,36 @@ void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
 }
 
 //===----------------------------------------------------------------------===//
+// MatrixType Definitions
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize cir::MatrixType::getTypeSizeInBits(
+    const ::mlir::DataLayout &dataLayout,
+    ::mlir::DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(
+      getRowNum() * getColumnNum() *
+      dataLayout.getTypeSizeInBits(getElementType()));
+}
+
+uint64_t
+cir::MatrixType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                                 ::mlir::DataLayoutEntryListRef params) const {
+  // This hook answers in bytes, not bits.
+  return llvm::PowerOf2Ceil(
+      llvm::divideCeil(dataLayout.getTypeSizeInBits(*this), 8u));
+}
+
+mlir::LogicalResult cir::MatrixType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    mlir::Type elementType, uint64_t row, uint64_t column) {
+  if (row == 0)
+    return emitError() << "the number of matrix rows must be non-zero";
+  if (column == 0)
+    return emitError() << "the number of matrix columns must be non-zero";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // AddressSpace definitions
 //===----------------------------------------------------------------------===//
 

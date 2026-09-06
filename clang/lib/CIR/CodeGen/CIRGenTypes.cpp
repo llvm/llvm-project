@@ -606,6 +606,14 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     break;
   }
 
+  case Type::ConstantMatrix: {
+    const ConstantMatrixType *mt = cast<ConstantMatrixType>(ty);
+    const mlir::Type elemTy = convertType(mt->getElementType());
+    resultType =
+        cir::MatrixType::get(elemTy, mt->getNumRows(), mt->getNumColumns());
+    break;
+  }
+
   case Type::Enum: {
     const auto *ed = ty->castAsEnumDecl();
     if (auto integerType = ed->getIntegerType(); !integerType.isNull())
@@ -689,11 +697,6 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
 mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
                                           bool forBitField) {
-  if (qualType->isConstantMatrixType()) {
-    cgm.errorNYI("Matrix type conversion");
-    return cgm.sInt32Ty;
-  }
-
   mlir::Type convertedType = convertType(qualType);
 
   assert(!forBitField && "Bit fields NYI");
