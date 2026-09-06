@@ -1582,7 +1582,9 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   }
 
   OptimizePM.addPass(Float2IntPass());
-  OptimizePM.addPass(LowerConstantIntrinsicsPass());
+  // Defer until LTO post-link where some constants may become known.
+  if (!isLTOPreLink(LTOPhase))
+    OptimizePM.addPass(LowerConstantIntrinsicsPass());
 
   if (EnableMatrix) {
     OptimizePM.addPass(LowerMatrixIntrinsicsPass());
@@ -2122,6 +2124,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MPM.addPass(NoRecurseLTOInferencePass());
   // Stop here at -O1.
   if (Level == OptimizationLevel::O1) {
+    MPM.addPass(createModuleToFunctionPassAdaptor(
+        LowerConstantIntrinsicsPass(), PTO.EagerlyInvalidateAnalyses));
+
     // The LowerTypeTestsPass needs to run to lower type metadata and the
     // type.test intrinsics. The pass does nothing if CFI is disabled.
     MPM.addPass(LowerTypeTestsPass(ExportSummary, nullptr));
@@ -2287,6 +2292,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   MainFPM.addPass(DSEPass());
   MainFPM.addPass(MoveAutoInitPass());
   MainFPM.addPass(MergedLoadStoreMotionPass());
+
+  MainFPM.addPass(LowerConstantIntrinsicsPass());
 
   invokeVectorizerStartEPCallbacks(MainFPM, Level);
 

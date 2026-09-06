@@ -34,6 +34,10 @@ LIBC_INLINE int vfprintf_impl(::FILE *__restrict file,
   port.recv([&](rpc::Buffer *buffer, uint32_t) {
     args_size = static_cast<size_t>(buffer->data[0]);
   });
+  // Use the vlist's static alloca size when it is exact and known.
+  if (size_t n = __builtin_object_size(vlist, /*max=*/0);
+      n == __builtin_object_size(vlist, /*min=*/2))
+    args_size = n;
   port.send_n(vlist, args_size);
 
   uint32_t ret = 0;
