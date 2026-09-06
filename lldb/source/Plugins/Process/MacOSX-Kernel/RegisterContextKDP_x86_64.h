@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_REGISTERCONTEXTKDP_X86_64_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_REGISTERCONTEXTKDP_X86_64_H
 
-#include "Plugins/Process/Utility/RegisterContextDarwin_x86_64.h"
+#include "Plugins/Process/Common/RegisterContext/Darwin/RegisterContextDarwin_x86_64.h"
 
 class ThreadKDP;
 

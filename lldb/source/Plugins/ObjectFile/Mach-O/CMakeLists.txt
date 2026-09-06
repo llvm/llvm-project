@@ -5,10 +5,10 @@ add_lldb_library(lldbPluginObjectFileMachO PLUGIN
   LINK_COMPONENTS
     Support
   LINK_LIBS
+    lldbProcessContextSupport
     lldbCore
     lldbHost
     lldbSymbol
     lldbTarget
     lldbUtility
-    lldbPluginProcessUtility
   )

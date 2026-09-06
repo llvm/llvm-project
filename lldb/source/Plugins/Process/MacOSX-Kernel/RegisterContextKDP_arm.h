@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_REGISTERCONTEXTKDP_ARM_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_MACOSX_KERNEL_REGISTERCONTEXTKDP_ARM_H
 
-#include "Plugins/Process/Utility/RegisterContextDarwin_arm.h"
+#include "Plugins/Process/Common/RegisterContext/Darwin/RegisterContextDarwin_arm.h"
 
 class ThreadKDP;
 

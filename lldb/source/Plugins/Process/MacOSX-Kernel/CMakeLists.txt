@@ -21,6 +21,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     ThreadKDP.cpp
 
     LINK_LIBS
+      lldbProcessContextSupport
       lldbBreakpoint
       lldbCore
       lldbHost
@@ -30,7 +31,6 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
       lldbUtility
       lldbPluginDynamicLoaderDarwinKernel
       lldbPluginDynamicLoaderStatic
-      lldbPluginProcessUtility
     )
 
   add_dependencies(lldbPluginProcessMacOSXKernel
