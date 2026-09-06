@@ -944,6 +944,10 @@ public:
   /// handlers that may be listening.
   InFlightDiagnostic emitRemark(const Twine &message = {});
 
+  /// Emit remarks about this operation for each message, reporting up to any
+  /// diagnostic handlers that may be listening.
+  InFlightDiagnostic emitRemark(const ArrayRef<Twine> messages);
+
   /// Returns the properties storage size.
   int getPropertiesStorageSize() const {
     return ((int)propertiesStorageSize) * 8;

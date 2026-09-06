@@ -196,6 +196,15 @@ Diagnostic &Diagnostic::attachNote(std::optional<Location> noteLoc) {
 /// Allow a diagnostic to be converted to 'failure'.
 Diagnostic::operator LogicalResult() const { return failure(); }
 
+/// Clears all payload data (arguments, strings, notes, metadata) while
+/// preserving location and severity.
+void Diagnostic::clear() {
+  arguments.clear();
+  strings.clear();
+  notes.clear();
+  metadata.clear();
+}
+
 //===----------------------------------------------------------------------===//
 // InFlightDiagnostic
 //===----------------------------------------------------------------------===//
@@ -206,15 +215,20 @@ InFlightDiagnostic::operator LogicalResult() const {
   return failure(isActive());
 }
 
-/// Reports the diagnostic to the engine.
-void InFlightDiagnostic::report() {
+/// Reports the diagnostic to the engine. If keepEngine is true, retains the
+/// engine reference to allow further appending to this diagnostic.
+void InFlightDiagnostic::report(bool keepEngine) {
   // If this diagnostic is still inflight and it hasn't been abandoned, then
   // report it.
   if (isInFlight()) {
     owner->emit(std::move(*impl));
-    owner = nullptr;
+    if (!keepEngine)
+      owner = nullptr;
   }
-  impl.reset();
+  if (keepEngine)
+    impl->clear();
+  else
+    impl.reset();
 }
 
 /// Abandons this diagnostic.

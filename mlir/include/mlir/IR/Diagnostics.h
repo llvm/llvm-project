@@ -288,6 +288,10 @@ public:
   /// Returns the current list of diagnostic metadata.
   SmallVectorImpl<DiagnosticArgument> &getMetadata() { return metadata; }
 
+  /// Clears all payload data (arguments, strings, notes, metadata) while
+  /// preserving location and severity.
+  void clear();
+
 private:
   Diagnostic(const Diagnostic &rhs) = delete;
   Diagnostic &operator=(const Diagnostic &rhs) = delete;
@@ -371,8 +375,9 @@ public:
   /// active.
   Diagnostic *getUnderlyingDiagnostic() { return impl ? &*impl : nullptr; }
 
-  /// Reports the diagnostic to the engine.
-  void report();
+  /// Reports the diagnostic to the engine. If keepEngine is true, retains the
+  /// engine reference to allow further appending to this diagnostic.
+  void report(bool keepEngine = false);
 
   /// Abandons this diagnostic so that it will no longer be reported.
   void abandon();
