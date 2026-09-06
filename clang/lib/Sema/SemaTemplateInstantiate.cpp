@@ -1778,6 +1778,16 @@ namespace {
                          [](const auto &TA) { return TA.isDependent(); }))
           return CXXRecordDecl::LambdaDependencyKind::LDK_AlwaysDependent;
       }
+      // Substituting dependent template arguments yields another templated
+      // entity, so a lambda in it is dependent, like any lambda written in a
+      // template. TransformLambdaExpr cannot tell that from the DeclContext
+      // alone, e.g. when the template parameters of a deduction guide are
+      // rewritten in terms of those of the guide synthesized for an alias
+      // template, the lambda in the return type `A<T, decltype([](T) {})>` is
+      // substituted in an unevaluated, file-scope context and would otherwise
+      // become never-dependent although it still refers to T.
+      if (TemplateArgs.isAnyArgInstantiationDependent())
+        return CXXRecordDecl::LambdaDependencyKind::LDK_AlwaysDependent;
       return inherited::ComputeLambdaDependency(LSI);
     }
 

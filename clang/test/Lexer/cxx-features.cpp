@@ -99,6 +99,10 @@
 #error "wrong value for __cpp_aggregate_paren_init"
 #endif
 
+#if check(deduction_guides, 0, 0, 0, 201703, 201907, 201907, 201907)
+#error "wrong value for __cpp_deduction_guides"
+#endif
+
 #if defined(CHAR8_T) ? check(char8_t, 202207, 202207, 202207, 202207, 202207, 202207, 202207) : \
     defined(NO_CHAR8_T) ? check(char8_t, 0, 0, 0, 0, 0, 0, 0) : \
     check(char8_t, 0, 0, 0, 0, 202207, 202207, 202207)
@@ -201,11 +205,6 @@
 
 #if check(if_constexpr, 0, 0, 0, 201606, 201606, 201606, 201606)
 #error "wrong value for __cpp_if_constexpr"
-#endif
-
-#if check(deduction_guides, 0, 0, 0, 201703, 201703, 201703, 201703)
-// FIXME: 201907 in C++20
-#error "wrong value for __cpp_deduction_guides"
 #endif
 
 #if check(nontype_template_parameter_auto, 0, 0, 0, 201606, 201606, 201606, 201606)

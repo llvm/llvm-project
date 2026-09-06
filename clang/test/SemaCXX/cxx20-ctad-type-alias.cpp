@@ -553,7 +553,6 @@ void foo() { test<{1, 2, 3}>(); }
 
 } // namespace GH113518
 
-// FIXME: This is accepted by GCC: https://gcc.godbolt.org/z/f3rMfbacz
 namespace GH125821 {
 template<typename T>
 struct A { A(T){} };
@@ -564,7 +563,8 @@ using Proxy = T;
 template<typename T>
 using C = Proxy< A<T> >;
 
-C test{ 42 }; // expected-error {{no viable constructor or deduction guide for deduction of template arguments}}
+C test{ 42 };
+static_assert(__is_same(decltype(test), A<int>));
 
 } // namespace GH125821
 
@@ -629,3 +629,205 @@ template <typename T> using S3 = S2<T>; // expected-note {{candidate function no
                                         // expected-note {{cannot deduce template arguments for 'GH190517::S3' from 'GH190517::S1<char>'}}
 S3 foo(42); // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'S3'}}
 }
+
+// Template parameters of the alias template that appear in a synthesized
+// deduction guide only through the default template arguments of other
+// template parameters cannot be deduced from the constructor arguments. They
+// get a default template argument deduced from the return type of the
+// underlying deduction guide instead, and the template parameters of the
+// synthesized guide are ordered so that default template arguments only refer
+// to preceding ones.
+namespace synthesized_default_args {
+template <class T> struct hash {};
+template <class T> struct alloc {};
+template <class It> struct iter_traits { using value_type = typename It::value_type; };
+struct Iter { using value_type = int; };
+
+template <class Key, class Hash = hash<Key>, class Alloc = alloc<Key>>
+struct Set {
+  Set();
+  template <class It> Set(It, It);
+  template <class It> Set(It, It, Hash);
+};
+template <class It,
+          class Hash = hash<typename iter_traits<It>::value_type>,
+          class Alloc = alloc<typename iter_traits<It>::value_type>>
+Set(It, It, Hash = Hash(), Alloc = Alloc())
+    -> Set<typename iter_traits<It>::value_type, Hash, Alloc>;
+
+// Like std::unordered_set: the alias merely renames the class template.
+template <class Key, class Hash = hash<Key>, class Alloc = alloc<Key>>
+using MySet = Set<Key, Hash, Alloc>;
+// The alias has fewer template parameters than the class template.
+template <class Key, class Hash = hash<Key>>
+using MySet2 = Set<Key, Hash>;
+// The alias has a different default template argument, which wins.
+template <class Key, class Hash = hash<Key*>, class Alloc = alloc<Key>>
+using MySet3 = Set<Key, Hash, Alloc>; // #MySet3
+
+void f(Iter b, Iter e) {
+  MySet s1(b, e);
+  static_assert(__is_same(decltype(s1), Set<int, hash<int>, alloc<int>>));
+  MySet s2(b, e, hash<long>());
+  static_assert(__is_same(decltype(s2), Set<int, hash<long>, alloc<int>>));
+  MySet2 s3(b, e);
+  static_assert(__is_same(decltype(s3), Set<int, hash<int>, alloc<int>>));
+  MySet3 s4(b, e);
+  static_assert(__is_same(decltype(s4), Set<int, hash<int*>, alloc<int>>));
+  MySet s5 = s1;
+  static_assert(__is_same(decltype(s5), decltype(s1)));
+
+  // The non-deduced template parameter 'It' of the underlying guide now comes
+  // first, followed by 'Key' with its synthesized default template argument.
+  MySet3 s6(b, e, 1, 2, 3); // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'MySet3'}}
+  // expected-note@#MySet3 {{implicit deduction guide declared as 'template <class It, class Key = typename iter_traits<It>::value_type, class Hash = hash<Key *>, class Alloc = alloc<Key>> requires __is_deducible(synthesized_default_args::MySet3, Set<typename iter_traits<It>::value_type, Hash, Alloc>) MySet3(It, It, Hash, Alloc) -> Set<typename iter_traits<It>::value_type, Hash, Alloc>'}}
+  // expected-note@#MySet3 4 {{implicit deduction guide declared as}}
+  // expected-note@#MySet3 {{requires at most 4 arguments, but 5 were provided}}
+  // expected-note@#MySet3 {{requires 3 arguments, but 5 were provided}}
+  // expected-note@#MySet3 {{requires 2 arguments, but 5 were provided}}
+  // expected-note@#MySet3 {{requires 1 argument, but 5 were provided}}
+  // expected-note@#MySet3 {{requires 0 arguments, but 5 were provided}}
+}
+
+// A template parameter of the alias that is deducible from some constructor
+// arguments only.
+template <class T, class A = alloc<T>> struct Vec {
+  template <class It> Vec(It, It);
+  template <class It> Vec(It, It, A);
+};
+template <class It, class A = alloc<typename iter_traits<It>::value_type>>
+Vec(It, It, A = A()) -> Vec<typename iter_traits<It>::value_type, A>;
+template <class T> using MyVec = Vec<T, hash<T>>;
+
+void g(Iter b, Iter e) {
+  MyVec v1(b, e);
+  static_assert(__is_same(decltype(v1), Vec<int, hash<int>>));
+  MyVec v2(b, e, hash<int>());
+  static_assert(__is_same(decltype(v2), Vec<int, hash<int>>));
+}
+
+// The underlying guide is constrained, and the alias is a member of a class
+// template.
+template <class T> concept Any = true;
+template <class Key, class Hash = hash<Key>> struct CSet {
+  CSet();
+  template <class It> CSet(It, It);
+};
+template <class It, class Hash = hash<typename iter_traits<It>::value_type>>
+  requires Any<It> && Any<Hash>
+CSet(It, It, Hash = Hash()) -> CSet<typename iter_traits<It>::value_type, Hash>;
+
+template <class U> struct Outer {
+  template <class Key, class Hash = hash<Key>> using MyCSet = CSet<Key, Hash>;
+};
+
+void h(Iter b, Iter e) {
+  Outer<long>::MyCSet s1(b, e);
+  static_assert(__is_same(decltype(s1), CSet<int, hash<int>>));
+}
+template <class U> void h2(Iter b, Iter e) {
+  typename Outer<U>::MyCSet s(b, e);
+  static_assert(__is_same(decltype(s), CSet<int, hash<int>>));
+}
+template void h2<char>(Iter, Iter);
+
+// A template template parameter of the alias refers to another template
+// parameter of the alias in its own template parameter list, so it must follow
+// that one when the template parameters of the synthesized guide are reordered.
+template <auto> struct Def {};
+template <class Key, class Cmp = hash<Key>, template <Cmp> class TT = Def>
+struct TSet {
+  template <class It> TSet(It, It, Cmp);
+};
+template <class It, class Cmp, template <Cmp> class TT = Def>
+TSet(It, It, Cmp) -> TSet<typename iter_traits<It>::value_type, Cmp, TT>;
+template <class Key, class Cmp = hash<Key>, template <Cmp> class TT = Def>
+using MyTSet = TSet<Key, Cmp, TT>; // #MyTSet
+
+void t(Iter b, Iter e) {
+  MyTSet s1(b, e, hash<int>());
+  static_assert(__is_same(decltype(s1), TSet<int, hash<int>, Def>));
+
+  MyTSet s2(b, e, 1, 2); // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'MyTSet'}}
+  // expected-note@#MyTSet {{implicit deduction guide declared as 'template <class It, class Key = typename iter_traits<It>::value_type, class Cmp = hash<Key>, template <Cmp> class TT = Def> requires __is_deducible(synthesized_default_args::MyTSet, TSet<typename iter_traits<It>::value_type, Cmp, TT>) MyTSet(It, It, Cmp) -> TSet<typename iter_traits<It>::value_type, Cmp, TT>'}}
+  // expected-note@#MyTSet 2 {{implicit deduction guide declared as}}
+  // expected-note@#MyTSet 2 {{requires 3 arguments, but 4 were provided}}
+  // expected-note@#MyTSet {{requires 1 argument, but 4 were provided}}
+}
+} // namespace synthesized_default_args
+
+namespace nttp_deduced_from_alias_in_nondeduced_param_type {
+// The template parameter B of the deduction guide of basic_fn is deduced as
+// the constant `false` from the alias fn_ref, while the type of the
+// non-deduced template parameter `enable_if_t<!bool_constant<B>::value, int>`
+// refers to it; this used to crash when rewriting that type for the deduction
+// guide of fn_ref.
+template <bool B> struct bool_constant { static constexpr bool value = B; };
+using false_type = bool_constant<false>;
+using true_type = bool_constant<true>;
+template <bool, class T = void> struct enable_if {};
+template <class T> struct enable_if<true, T> { using type = T; };
+template <bool B, class T = void> using enable_if_t = typename enable_if<B, T>::type;
+
+template <class T, class C> struct function {
+  template <class U, enable_if_t<!C::value, int> = 0>
+  function(U) noexcept {}
+};
+
+template <class T> function(T) -> function<T, false_type>;
+
+template <class T, bool B> using basic_fn = function<T, bool_constant<B>>;
+
+template <class T> using fn_ref = basic_fn<T, false>;
+template <class T> using fn_disabled = basic_fn<T, true>;
+// expected-note@-1 {{candidate template ignored: could not match 'nttp_deduced_from_alias_in_nondeduced_param_type::function<T, bool_constant<true>>' against 'int'}}
+// expected-note@-2 {{implicit deduction guide declared as 'template <class T> requires __is_deducible(nttp_deduced_from_alias_in_nondeduced_param_type::basic_fn, nttp_deduced_from_alias_in_nondeduced_param_type::function<T, bool_constant<true>>) && __is_deducible(nttp_deduced_from_alias_in_nondeduced_param_type::fn_disabled, nttp_deduced_from_alias_in_nondeduced_param_type::function<T, bool_constant<true>>) fn_disabled(nttp_deduced_from_alias_in_nondeduced_param_type::function<T, bool_constant<true>>) -> nttp_deduced_from_alias_in_nondeduced_param_type::function<T, bool_constant<true>>'}}
+// expected-note@-3 {{candidate template ignored: constraints not satisfied [with T = int]}}
+// expected-note@-4 {{cannot deduce template arguments for 'nttp_deduced_from_alias_in_nondeduced_param_type::fn_disabled' from 'function<int, false_type>' (aka 'function<int, bool_constant<false>>')}}
+// expected-note@-5 {{implicit deduction guide declared as 'template <class T> requires __is_deducible(nttp_deduced_from_alias_in_nondeduced_param_type::basic_fn, function<T, false_type>) && __is_deducible(nttp_deduced_from_alias_in_nondeduced_param_type::fn_disabled, function<T, false_type>) fn_disabled(T) -> function<T, false_type>'}}
+
+fn_ref f = 0;
+static_assert(__is_same(decltype(f), function<int, false_type>));
+
+// The deduction guide derived from the constructor is not formed, as
+// substituting B = true into `enable_if_t<!bool_constant<B>::value, int>` fails.
+fn_disabled g = 0; // expected-error {{no viable constructor or deduction guide for deduction of template arguments of 'fn_disabled'}}
+
+template <class T, int N> struct Arr {
+  template <class U, int M = N, enable_if_t<(M > 0), int> = 0>
+  Arr(T (&)[M], U = {}) {}
+};
+template <class T> using Arr3 = Arr<T, 3>;
+int arr3[3];
+Arr3 a3(arr3, 0);
+static_assert(__is_same(decltype(a3), Arr<int, 3>));
+} // namespace nttp_deduced_from_alias_in_nondeduced_param_type
+
+namespace lambda_in_alias_rhs {
+// The lambda in the RHS of the alias is rewritten in terms of the template
+// parameters of the synthesized deduction guide, and must remain dependent
+// there, so that it is instantiated along with the guide. Otherwise, the call
+// operator of the closure type in the deduced type would keep the parameter
+// type T.
+template <class T, class F> struct A {
+  constexpr A(T t, F f = {}) : v(f(t)) {}
+  int v;
+};
+
+template <class T> using AA = A<T, decltype([](T x) { return x + 1; })>;
+constexpr AA a{41};
+static_assert(a.v == 42);
+
+// The lambda comes from the RHS of the alias that AAA is equivalent to.
+template <class T> using AAA = AA<T>;
+constexpr AAA aa{1};
+static_assert(aa.v == 2);
+
+template <class T, class F> struct B {
+  B(T, F f = {}) { f({}); }
+};
+
+template <class T> using BB = B<T, decltype([](T) {})>;
+BB b{0};
+
+} // namespace lambda_in_alias_rhs

@@ -202,3 +202,43 @@ void foo() {
 // CHECK-NEXT: | | | |   `-TemplateTypeParm {{.*}} 'U'
 
 } // namespace GH124715
+
+// A template parameter of the alias template that cannot be deduced from the
+// constructor arguments gets a default template argument deduced from the
+// return type of the underlying deduction guide ('Key' below), and the template
+// parameters of the synthesized guide are ordered so that default template
+// arguments only refer to preceding ones ('It' comes first).
+namespace synthesized_default_args {
+
+template <class T> struct hash {};
+
+template <class It> struct iter_traits {
+  using value_type = typename It::value_type;
+};
+
+struct Iter { using value_type = int; };
+
+template <class Key, class Hash = hash<Key>> struct Set {
+  template <class It> Set(It, It);
+};
+
+template <class It, class Hash = hash<typename iter_traits<It>::value_type>>
+Set(It, It, Hash = Hash()) -> Set<typename iter_traits<It>::value_type, Hash>;
+
+template <class Key, class Hash = hash<Key>> using MySet = Set<Key, Hash>;
+void f(Iter b, Iter e) { MySet s(b, e); }
+
+// CHECK:      <deduction guide for MySet> 'auto (synthesized_default_args::Set<Key, Hash>) -> synthesized_default_args::Set<Key, Hash>'
+// CHECK:      `-FunctionTemplateDecl {{.*}} <deduction guide for MySet>
+// CHECK-NEXT:   |-TemplateTypeParmDecl {{.*}} class depth 0 index 0 It
+// CHECK-NEXT:   |-TemplateTypeParmDecl {{.*}} class depth 0 index 1 Key
+// CHECK-NEXT:   | `-TemplateArgument type 'typename iter_traits<It>::value_type':'synthesized_default_args::iter_traits<type-parameter-0-0>::value_type'
+// CHECK-NEXT:   |   `-DependentNameType {{.*}} 'typename iter_traits<It>::value_type' dependent
+// CHECK-NEXT:   |-TemplateTypeParmDecl {{.*}} class depth 0 index 2 Hash
+// CHECK-NEXT:   | `-TemplateArgument type 'hash<Key>':'synthesized_default_args::hash<type-parameter-0-1>'
+// CHECK:        |-CXXDeductionGuideDecl {{.*}} <deduction guide for MySet> 'auto (It, It, Hash) -> Set<typename iter_traits<It>::value_type, Hash>'
+// CHECK-NEXT:   | |-ParmVarDecl {{.*}} 'It'
+// CHECK-NEXT:   | |-ParmVarDecl {{.*}} 'It'
+// CHECK-NEXT:   | `-ParmVarDecl {{.*}} 'Hash'
+// CHECK-NEXT:   `-CXXDeductionGuideDecl {{.*}} used <deduction guide for MySet> 'auto (synthesized_default_args::Iter, synthesized_default_args::Iter, synthesized_default_args::hash<int>) -> Set<typename iter_traits<synthesized_default_args::Iter>::value_type, synthesized_default_args::hash<int>>' implicit_instantiation
+} // namespace synthesized_default_args

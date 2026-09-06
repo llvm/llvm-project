@@ -542,6 +542,37 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed an issue where `__typeof__` incorrectly rejected cv-qualified function types.
 
+- Class template argument deduction through an alias template now works when
+  the right-hand side of the alias names another alias template that cannot
+  have deduction guides of its own, such as an identity alias
+  (`template <class T> using Identity = T;`). The deduction guides are now
+  derived from the first template in the chain that can have them, per the
+  equivalence rule of `[temp.alias]p2`, matching GCC. (#GH125821)
+
+- Class template argument deduction through an alias template now works when
+  a template parameter of the alias only appears in the synthesized deduction
+  guide through default template arguments, such as `Key` in
+  `template <class Key, class Hash = std::hash<Key>> using MySet = std::unordered_set<Key, Hash>;`
+  when deducing `MySet s(first, last);`. Such a template parameter now gets a
+  default template argument deduced from the return type of the underlying
+  deduction guide (here `Key` becomes the iterator's value type), instead of
+  being undeducible.
+
+- Fixed a crash in class template argument deduction through an alias template
+  when the alias fixes a non-type template parameter of the underlying template
+  to a constant (e.g. `template <class T> using A = S<T, false>;`) and a
+  non-deduced template parameter of a constructor or deduction guide refers to
+  it in its type, such as `std::enable_if_t<!B, int> = 0`. If that type becomes
+  invalid with the constant substituted, the deduction guide is now silently
+  not synthesized for the alias instead of crashing, matching GCC.
+
+- Fixed a crash in class template argument deduction when the deduced type
+  contains the closure type of a lambda from the right-hand side of an alias
+  template (`template <class T> using A = S<T, decltype([](T) {})>;`) or from
+  the return type of a user-written deduction guide. The lambda is now
+  instantiated along with the deduction guide, and its closure type is created
+  in the scope enclosing the guide so that it can be mangled, matching GCC.
+
 - Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
 
 - Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
