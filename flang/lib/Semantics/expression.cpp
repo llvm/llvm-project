@@ -2720,12 +2720,14 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
                 }
                 return true;
               }};
-          auto result{ResolveGeneric(
+          auto result{CheckAndResolveGenericReference(
               generic, arguments, adjustment, isSubroutine, SymbolVector{})};
           sym = result.specific;
           if (!sym) {
-            EmitGenericResolutionError(generic, result.failedDueToAmbiguity,
-                isSubroutine, arguments, result.tried, adjustment);
+            if (!result.errorReported) {
+              EmitGenericResolutionError(generic, result.failedDueToAmbiguity,
+                  isSubroutine, arguments, result.tried, adjustment);
+            }
             return std::nullopt;
           }
           // re-resolve the name to the specific binding
@@ -3339,6 +3341,29 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
   return {nullptr, false, std::move(tried)};
 }
 
+auto ExpressionAnalyzer::CheckAndResolveGenericReference(const Symbol &symbol,
+    const ActualArguments &actuals, const AdjustActuals &adjustActuals,
+    bool isSubroutine, SymbolVector &&tried, bool mightBeStructureConstructor)
+    -> GenericResolution {
+  const Symbol &ultimate{symbol.GetUltimate()};
+  // Attr::INTRINSIC is set for specific intrinsic names such as DSIN as well,
+  // and a reference to one of those is not a reference to a generic procedure.
+  if ((ultimate.has<semantics::GenericDetails>() ||
+          (ultimate.attrs().test(semantics::Attr::INTRINSIC) &&
+              context_.intrinsics().IsGenericIntrinsic(
+                  ultimate.name().ToString()))) &&
+      semantics::CheckConditionalArgsInGenericReference(
+          actuals, GetContextualMessages())) {
+    // Not resolving also leaves the parse tree symbol generic, so a second
+    // analysis of the expression reports the violation again.
+    GenericResolution result;
+    result.errorReported = true;
+    return result;
+  }
+  return ResolveGeneric(symbol, actuals, adjustActuals, isSubroutine,
+      std::move(tried), mightBeStructureConstructor);
+}
+
 const Symbol &ExpressionAnalyzer::AccessSpecific(
     const Symbol &originalGeneric, const Symbol &specific) {
   if (const auto *hosted{
@@ -3454,12 +3479,15 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
   bool isExplicitIntrinsic{ultimate.attrs().test(semantics::Attr::INTRINSIC)};
   const Symbol *resolution{nullptr};
   SymbolVector tried;
+  bool errorReported{false};
   if (isGenericInterface || isExplicitIntrinsic) {
     ExpressionAnalyzer::AdjustActuals noAdjustment;
-    auto result{ResolveGeneric(*symbol, arguments, noAdjustment, isSubroutine,
-        SymbolVector{}, mightBeStructureConstructor)};
+    auto result{
+        CheckAndResolveGenericReference(*symbol, arguments, noAdjustment,
+            isSubroutine, SymbolVector{}, mightBeStructureConstructor)};
     resolution = result.specific;
     dueToAmbiguity = result.failedDueToAmbiguity;
+    errorReported = result.errorReported;
     tried = std::move(result.tried);
     if (IsCudaDeviceIntrinsicShadowedByHostProcedure(
             name.source, context_, resolution, isSubroutine)) {
@@ -3502,7 +3530,7 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
           ProcedureDesignator{std::move(specificCall->specificIntrinsic)},
           std::move(specificCall->arguments)};
     } else {
-      if (isGenericInterface) {
+      if (isGenericInterface && !errorReported) {
         AdjustActuals noAdjustment;
         EmitGenericResolutionError(*symbol, dueToAmbiguity, isSubroutine,
             arguments, tried, noAdjustment);
