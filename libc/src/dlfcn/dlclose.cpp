@@ -18,14 +18,15 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, dlclose, (void *handle)) {
-  elf::ModuleSet &set = elf::loaded_modules();
+  elf::ModuleSet *modules = elf::process_modules();
   cpp::lock_guard lock(dl::dl_mutex);
 
   size_t index = 0;
-  if (!set.linked || !dl::index_for(handle, index)) {
+  if (modules == nullptr || !modules->linked || !dl::index_for(handle, index)) {
     dl::set_error("dlclose was given a handle that dlopen did not return");
     return -1;
   }
+  elf::ModuleSet &set = *modules;
   if (set.references[index] == 0) {
     dl::set_error("shared object is already closed");
     return -1;

@@ -81,6 +81,35 @@ public:
     }
   }
 
+  // How many symbols .dynsym holds. The section header is not mapped, so the
+  // count is worked out from the hash table: every symbol at or above
+  // symoffset is on exactly one chain, and the chains end at the highest
+  // index there is.
+  LIBC_INLINE uint32_t count() const {
+    if (header_ == nullptr)
+      return 0;
+    uint32_t last = header_->symoffset;
+    for (uint32_t i = 0; i < header_->nbuckets; ++i)
+      if (buckets_[i] > last)
+        last = buckets_[i];
+    if (last < header_->symoffset)
+      return header_->symoffset;
+    // Walk to the end of the chain the highest bucket starts.
+    while ((chain_[last - header_->symoffset] & 1) == 0)
+      ++last;
+    return last + 1;
+  }
+
+  LIBC_INLINE const ElfW(Sym) * symbol(uint32_t index) const {
+    return symtab_ == nullptr ? nullptr : &symtab_[index];
+  }
+
+  LIBC_INLINE const char *name(uint32_t index) const {
+    if (symtab_ == nullptr || strtab_ == nullptr)
+      return nullptr;
+    return strtab_ + symtab_[index].st_name;
+  }
+
 private:
   LIBC_INLINE bool bloom_may_contain(uint32_t hash) const {
     if (header_->bloom_size == 0)

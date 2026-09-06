@@ -19,13 +19,14 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, dlsym,
                    (void *__restrict handle, const char *__restrict name)) {
-  elf::ModuleSet &set = elf::loaded_modules();
+  elf::ModuleSet *modules = elf::process_modules();
   cpp::lock_guard lock(dl::dl_mutex);
 
-  if (!set.linked) {
+  if (modules == nullptr || !modules->linked) {
     dl::set_error("dlsym is only available in a dynamically linked process");
     return nullptr;
   }
+  elf::ModuleSet &set = *modules;
   if (name == nullptr) {
     dl::set_error("dlsym was given no symbol name");
     return nullptr;

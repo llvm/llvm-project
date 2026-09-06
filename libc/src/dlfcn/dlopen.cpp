@@ -213,15 +213,19 @@ LLVM_LIBC_FUNCTION(void *, dlopen, (const char *path, int)) {
   const ElfW(Addr) caller =
       reinterpret_cast<ElfW(Addr)>(__builtin_return_address(0));
 
-  elf::ModuleSet &set = elf::loaded_modules();
+  // A statically linked program has no module set at all: the record is
+  // weak and nothing defines it, so the pointer is null rather than a set
+  // that says it is not linked.
+  elf::ModuleSet *modules = elf::process_modules();
   cpp::lock_guard lock(dl::dl_mutex);
 
   // Without a loader there is no module set to add to, and nothing the caller
   // opened could be linked against the program.
-  if (!set.linked) {
+  if (modules == nullptr || !modules->linked) {
     dl::set_error("dlopen is only available in a dynamically linked process");
     return nullptr;
   }
+  elf::ModuleSet &set = *modules;
   // A null path asks for a handle to the main program.
   if (path == nullptr)
     return dl::handle_for(0);
