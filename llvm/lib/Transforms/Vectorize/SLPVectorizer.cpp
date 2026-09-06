@@ -18705,29 +18705,29 @@ InstructionCost BoUpSLP::getSpillCost() {
   // be queried many times during the spill cost scan, and each computation
   // involves two potentially expensive TTI virtual calls.
   SmallDenseMap<const IntrinsicInst *, bool> NoCallIntrinsicCache;
-  auto NoCallIntrinsicOrDoesNotReturn = [this, &NoCallIntrinsicCache](
-                                            const Instruction *I) {
-    const auto *CB = dyn_cast<CallBase>(I);
-    if (!CB)
-      return false;
-    if (CB->doesNotReturn())
-      return true;
-    const auto *II = dyn_cast<IntrinsicInst>(CB);
-    if (!II)
-      return false;
-    if (II->isAssumeLikeIntrinsic())
-      return true;
-    auto [It, Inserted] = NoCallIntrinsicCache.try_emplace(II);
-    if (!Inserted)
-      return It->second;
-    IntrinsicCostAttributes ICA(II->getIntrinsicID(), *II);
-    InstructionCost IntrCost = TTI->getIntrinsicInstrCost(ICA, CostKind);
-    InstructionCost CallCost = TTI->getCallInstrCost(
-        nullptr, II->getType(), ICA.getArgTypes(), CostKind);
-    bool Res = IntrCost < CallCost;
-    It->second = Res;
-    return Res;
-  };
+  auto NoCallIntrinsicOrDoesNotReturn =
+      [this, &NoCallIntrinsicCache](const Instruction *I) {
+        const auto *CB = dyn_cast<CallBase>(I);
+        if (!CB)
+          return false;
+        if (CB->doesNotReturn())
+          return true;
+        const auto *II = dyn_cast<IntrinsicInst>(CB);
+        if (!II)
+          return false;
+        if (II->isAssumeLikeIntrinsic())
+          return true;
+        auto [It, Inserted] = NoCallIntrinsicCache.try_emplace(II);
+        if (!Inserted)
+          return It->second;
+        IntrinsicCostAttributes ICA(II->getIntrinsicID(), *II);
+        InstructionCost IntrCost = TTI->getIntrinsicInstrCost(ICA, CostKind);
+        InstructionCost CallCost = TTI->getCallInstrCost(
+            nullptr, II->getType(), ICA.getArgTypes(), CostKind);
+        bool Res = IntrCost < CallCost;
+        It->second = Res;
+        return Res;
+      };
 
   // Maps last instruction in the entry to the last instruction for the one of
   // operand entries and the flag. If the flag is true, there are no calls in
