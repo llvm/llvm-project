@@ -534,9 +534,11 @@ OpFoldResult spirv::SModOp::fold(FoldAdaptor adaptor) {
           return c;
         if (b.isNegative()) {
           APInt zero = APInt::getZero(c.getBitWidth());
-          return a.isNegative() ? (zero - c) : (b + c);
+          return a.isNegative() ? (std::move(zero) - c) : (b + std::move(c));
         }
-        return a.isNegative() ? (b - c) : c;
+        if (a.isNegative())
+          return b - std::move(c);
+        return c;
       });
   return div0OrOverflow ? Attribute() : res;
 }
@@ -642,7 +644,7 @@ OpFoldResult spirv::SNegateOp::fold(FoldAdaptor adaptor) {
   return constFoldUnaryOp<IntegerAttr>(
       adaptor.getOperands(), [](const APInt &a) {
         APInt zero = APInt::getZero(a.getBitWidth());
-        return zero - a;
+        return std::move(zero) - a;
       });
 }
 
@@ -745,11 +747,10 @@ OpFoldResult spirv::LogicalNotOp::fold(FoldAdaptor adaptor) {
   // According to the SPIR-V spec:
   //
   // Complement the bits of Operand.
-  return constFoldUnaryOp<IntegerAttr>(adaptor.getOperands(),
-                                       [](const APInt &a) {
-                                         APInt zero = APInt::getZero(1);
-                                         return a == 1 ? zero : (zero + 1);
-                                       });
+  return constFoldUnaryOp<IntegerAttr>(
+      adaptor.getOperands(), [](const APInt &a) {
+        return a == 1 ? APInt::getZero(1) : APInt::getAllOnes(1);
+      });
 }
 
 void spirv::LogicalNotOp::getCanonicalizationPatterns(
