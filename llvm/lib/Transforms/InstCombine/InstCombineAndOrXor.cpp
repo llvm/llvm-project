@@ -4324,25 +4324,18 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
       // --> (trunc (lshr X, S) & (C0 | C1) (and similar cases)
       // A = trunc (lshr X, S) B = lshr (trunc X), S
       const APInt *ShiftAmt;
-      Value *Wide, *Narrow;
-      if (match(A, m_Trunc(m_LShr(m_Value(X), m_APInt(ShiftAmt))))) {
-        Wide = A;
-        Narrow = B;
-      } else if (match(B, m_Trunc(m_LShr(m_Value(X), m_APInt(ShiftAmt))))) {
-        Wide = B;
-        Narrow = A;
-      } else {
-        return nullptr;
+      if (match(A, m_Trunc(m_LShr(m_Value(X), m_APInt(ShiftAmt)))) &&
+          match(B, m_LShr(m_Trunc(m_Specific(X)), m_SpecificInt(*ShiftAmt)))) {
+        return BinaryOperator::CreateAnd(
+            A, ConstantInt::get(I.getType(), *C0 | *C1));
       }
-
-      if (!match(Narrow,
-                 m_LShr(m_Trunc(m_Specific(X)), m_SpecificInt(*ShiftAmt)))) {
-        return nullptr;
+      // A = lshr (trunc X), S
+      // B = trunc (lshr X, S)
+      if (match(B, m_Trunc(m_LShr(m_Value(X), m_APInt(ShiftAmt)))) &&
+          match(A, m_LShr(m_Trunc(m_Specific(X)), m_SpecificInt(*ShiftAmt)))) {
+        return BinaryOperator::CreateAnd(
+            B, ConstantInt::get(I.getType(), *C0 | *C1));
       }
-
-      APInt CombinedMask = *C0 | *C1;
-      return BinaryOperator::CreateAnd(
-          Wide, ConstantInt::get(I.getType(), CombinedMask));
     }
 
     // Don't try to form a select if it's unlikely that we'll get rid of at

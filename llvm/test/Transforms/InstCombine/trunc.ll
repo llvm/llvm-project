@@ -1500,3 +1500,46 @@ define i32 @separate_truncs_i32_reverse(i64 %x) {
   %result = or i32 %field.lo, %field.hi
   ret i32 %result
 }
+
+define i32 @separate_truncs_i32_multiuse(i64 %x) {
+; CHECK-LABEL: @separate_truncs_i32_multiuse(
+; CHECK-NEXT:    %[[SHIFT:.*]] = lshr i64 %x, 16
+; CHECK-NEXT:    %[[TRUNC:.*]] = trunc i64 %[[SHIFT]] to i32
+; CHECK-NEXT:    call void @use(i32 %[[TRUNC]])
+; CHECK-NEXT:    %[[MASK:.*]] = and i32 %[[TRUNC]], 130816
+; CHECK-NEXT:    ret i32 %[[MASK]]
+; 
+  %wide.shift = lshr i64 %x, 16
+  %wide = trunc i64 %wide.shift to i32
+  call void @use(i32 %wide)
+  %field.hi = and i32 %wide, 65536
+
+  %x.narrow = trunc i64 %x to i32
+  %narrow.shift = lshr i32 %x.narrow, 16
+  %field.lo = and i32 %narrow.shift, 65280
+
+  %result = or i32 %field.hi, %field.lo
+  ret i32 %result
+}
+
+define i32 @separate_truncs_i32_reverse_multiuse(i64 %x) {
+; CHECK-LABEL: @separate_truncs_i32_reverse_multiuse(
+; CHECK-NEXT:    %[[NARROW:.*]] = trunc i64 %x to i32
+; CHECK-NEXT:    call void @use(i32 %[[NARROW]])
+; CHECK-NEXT:    %[[SHIFT:.*]] = lshr i64 %x, 16
+; CHECK-NEXT:    %[[TRUNC:.*]] = trunc i64 %[[SHIFT]] to i32
+; CHECK-NEXT:    %[[MASK:.*]] = and i32 %[[TRUNC]], 130816
+; CHECK-NEXT:    ret i32 %[[MASK]]
+;
+  %x.narrow = trunc i64 %x to i32
+  call void @use(i32 %x.narrow)
+  %narrow.shift = lshr i32 %x.narrow, 16
+  %field.lo = and i32 %narrow.shift, 65280
+
+  %wide.shift = lshr i64 %x, 16 
+  %wide = trunc i64 %wide.shift to i32
+  %field.hi = and i32 %wide, 65536
+
+  %result = or i32 %field.lo, %field.hi
+  ret i32 %result
+}
