@@ -9171,8 +9171,12 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     }
 
     SDValue Pg = getPredicateForVector(DAG, DL, VT);
-    SDValue NewCttzElts =
-        DAG.getNode(AArch64ISD::CTTZ_ELTS, DL, MVT::i64, Pg, CttzOp);
+    // We preserve the poison semantics here to avoid the poison path from being
+    // affected by the checks emitted for the no-poison case.
+    unsigned Opcode = Op.getOpcode() == ISD::CTTZ_ELTS_ZERO_POISON
+                          ? AArch64ISD::CTTZ_ELTS_ZERO_POISON
+                          : AArch64ISD::CTTZ_ELTS;
+    SDValue NewCttzElts = DAG.getNode(Opcode, DL, MVT::i64, Pg, CttzOp);
     return DAG.getZExtOrTrunc(NewCttzElts, DL, Op.getValueType());
   }
   }
