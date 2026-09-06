@@ -612,13 +612,10 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
     opts.disabledIntegerKinds.push_back(16);
 
   if (const llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_mabi_EQ)) {
-    opts.abi = a->getValue();
     llvm::StringRef V = a->getValue();
-    if (V == "vec-extabi") {
-      opts.EnableAIXExtendedAltivecABI = true;
-    } else if (V == "vec-default") {
-      opts.EnableAIXExtendedAltivecABI = false;
-    }
+    // Normalize "vec-default" to an empty ABI name; the AIX extended Altivec
+    // ABI is carried to the backend as the "vec-extabi" target-abi module flag.
+    opts.abi = V == "vec-default" ? "" : V.str();
   }
 
   opts.SplitMachineFunctions =

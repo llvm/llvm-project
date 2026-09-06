@@ -211,6 +211,12 @@ public:
   bool isSVR4ABI() const { return !isAIXABI(); }
   bool isELFv2ABI() const;
 
+  /// Returns true when the AIX extended Altivec ABI ("vec-extabi") is in
+  /// effect, allowing use of the nonvolatile vector registers.
+  bool isAIXExtendedAltivecABI() const {
+    return TargetABI == PPC_ABI_AIX_EXTABI;
+  }
+
   bool is64BitELFABI() const { return isSVR4ABI() && isPPC64(); }
   bool is32BitELFABI() const { return isSVR4ABI() && !isPPC64(); }
   bool isUsingPCRelativeCalls() const;
