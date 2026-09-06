@@ -1,0 +1,23 @@
+static_library("Common") {
+  output_name = "lldbProcessContextSupport"
+  configs += [ "//llvm/utils/gn/build:lldb_code" ]
+  deps = [
+    "//lldb/source/Register",
+    "//lldb/source/Target",
+    "//lldb/source/Utility",
+    "//llvm/lib/Support",
+  ]
+
+  include_dirs = [ "//lldb/source" ]
+  sources = [
+    "RegisterContext/POSIX/RegisterContextPOSIX_arm.cpp",
+    "RegisterContext/POSIX/RegisterContextPOSIX_arm64.cpp",
+    "RegisterContext/POSIX/RegisterContextPOSIX_loongarch64.cpp",
+    "RegisterContext/POSIX/RegisterContextPOSIX_powerpc.cpp",
+    "RegisterContext/POSIX/RegisterContextPOSIX_ppc64le.cpp",
+    "RegisterContext/POSIX/RegisterContextPOSIX_riscv32.cpp",
+    "RegisterContext/POSIX/RegisterContextPOSIX_riscv64.cpp",
+    "RegisterContext/POSIX/RegisterContextPOSIX_s390x.cpp",
+    "RegisterContext/POSIX/RegisterContextPOSIX_x86.cpp",
+  ]
+}

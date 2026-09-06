@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNELCORE_ARM_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNELCORE_ARM_H
 
-#include "Plugins/Process/Utility/RegisterContextPOSIX_arm.h"
+#include "Plugins/Process/Common/RegisterContext/POSIX/RegisterContextPOSIX_arm.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 
 class RegisterContextFreeBSDKernelCore_arm : public RegisterContextPOSIX_arm {

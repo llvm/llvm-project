@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_RISCV64_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_RISCV64_H
 
-#include "Plugins/Process/Utility/RegisterContextPOSIX_riscv64.h"
+#include "Plugins/Process/Common/RegisterContext/POSIX/RegisterContextPOSIX_riscv64.h"
 #include "Register/Common/RegisterInfoCommon_riscv64.h"
 
 #include "Plugins/Process/elf-core/RegisterUtilities.h"

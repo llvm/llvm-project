@@ -17,7 +17,7 @@
 
 #include "Plugins/Process/FreeBSD/NativeProcessFreeBSD.h"
 // for register enum definitions
-#include "Plugins/Process/Utility/RegisterContextPOSIX_powerpc.h"
+#include "Plugins/Process/Common/RegisterContext/POSIX/RegisterContextPOSIX_powerpc.h"
 
 // clang-format off
 #include <sys/param.h>

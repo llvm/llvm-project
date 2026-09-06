@@ -23,6 +23,7 @@ endif()
 
 add_subdirectory(FreeBSD-Kernel-Core)
 add_subdirectory(MacOSX-Kernel)
+add_subdirectory(Common)
 add_subdirectory(NativeCommon)
 add_subdirectory(scripted)
 add_subdirectory(gdb-remote)

@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Register/Linux/RegisterInfoLinux_s390x.h"
-#include "Plugins/Process/Utility/RegisterContextPOSIX_s390x.h"
+#include "Register/Arch/RegisterContext_s390x.h"
+#include "Register/Arch/lldb-s390x-register-enums.h"
+#include "lldb/lldb-defines.h"
 
 using namespace lldb_private;
 using namespace lldb;

@@ -21,7 +21,7 @@
 #include "llvm/Support/Compiler.h"
 
 #include "RegisterContextPOSIX_s390x.h"
-#include "RegisterContext_s390x.h"
+#include "Register/Arch/RegisterContext_s390x.h"
 
 using namespace lldb_private;
 using namespace lldb;

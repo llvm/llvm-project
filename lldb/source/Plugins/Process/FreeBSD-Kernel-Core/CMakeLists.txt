@@ -24,6 +24,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
     LINK_COMPONENTS
       Support
     LINK_LIBS
+      lldbProcessContextSupport
       lldbCore
       lldbTarget
       kvm
