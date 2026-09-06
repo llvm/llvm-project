@@ -428,8 +428,7 @@ void t_constant_size_partial_init() {
 // CHECK:    cir.store{{.*}} %[[CONST_THREE]], %[[ELEM_2_PTR]] : !s32i, !cir.ptr<!s32i>
 // CHECK:    %[[OFFSET2:.*]] = cir.const #cir.int<1> : !s32i
 // CHECK:    %[[ELEM_3_PTR:.*]] = cir.ptr_stride %[[ELEM_2_PTR]], %[[OFFSET2]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
-// CHECK:    %[[INIT_SIZE:.*]] = cir.const #cir.int<12> : !u64i
-// CHECK:    %[[REMAINING_SIZE:.*]] = cir.sub %[[ALLOCATION_SIZE]], %[[INIT_SIZE]] : !u64i
+// CHECK:    %[[REMAINING_SIZE:.*]] = cir.const #cir.int<52> : !u64i
 // CHECK:    %[[VOID_PTR:.*]] = cir.cast bitcast %[[ELEM_3_PTR]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
 // CHECK:    %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
 // CHECK:    cir.libc.memset %[[REMAINING_SIZE]] bytes at %[[VOID_PTR]]{{.*}} to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i

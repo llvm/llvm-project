@@ -2911,22 +2911,27 @@ mlir::LogicalResult cir::FuncOp::verify() {
 // AddOp / SubOp
 //===----------------------------------------------------------------------===//
 
-// The integer-only type constraint on these ops makes the nsw/nuw/sat flag
-// type checks unnecessary. Only the mutual-exclusivity between nsw/nuw and
-// sat needs to be verified.
-
-LogicalResult cir::AddOp::verify() {
-  if (getSaturated() && (getNoSignedWrap() || getNoUnsignedWrap()))
-    return emitOpError()
-           << "the nsw/nuw flags and the saturated flag are mutually exclusive";
+static LogicalResult verifyAddSubFlags(Operation *op, Type type, bool nsw,
+                                       bool nuw, bool sat) {
+  if ((nsw && nuw) || (sat && (nsw || nuw)))
+    return op->emitOpError()
+           << "the nsw, nuw, and saturated flags are mutually exclusive";
+  if (nsw && !cir::isSIntOrVectorOfSIntType(type))
+    return op->emitOpError() << "the nsw flag requires a signed integer type";
+  if (nuw && !cir::isUIntOrVectorOfUIntType(type))
+    return op->emitOpError()
+           << "the nuw flag requires an unsigned integer type";
   return mlir::success();
 }
 
+LogicalResult cir::AddOp::verify() {
+  return verifyAddSubFlags(getOperation(), getType(), getNoSignedWrap(),
+                           getNoUnsignedWrap(), getSaturated());
+}
+
 LogicalResult cir::SubOp::verify() {
-  if (getSaturated() && (getNoSignedWrap() || getNoUnsignedWrap()))
-    return emitOpError()
-           << "the nsw/nuw flags and the saturated flag are mutually exclusive";
-  return mlir::success();
+  return verifyAddSubFlags(getOperation(), getType(), getNoSignedWrap(),
+                           getNoUnsignedWrap(), getSaturated());
 }
 
 //===----------------------------------------------------------------------===//
@@ -3148,6 +3153,71 @@ OpFoldResult cir::NotOp::fold(FoldAdaptor adaptor) {
   }
 
   return {};
+}
+
+//===----------------------------------------------------------------------===//
+// AddOp & SubOp
+//===----------------------------------------------------------------------===//
+
+// Constant-fold integer add/sub. Honors nsw/nuw by folding to poison on the
+// corresponding overflow, and folds saturated arithmetic by clamping.
+static OpFoldResult foldAddSubConst(mlir::Type ty, const APInt &lhs,
+                                    const APInt &rhs, bool isSub, bool nsw,
+                                    bool nuw, bool sat) {
+  bool isSigned = mlir::cast<cir::IntType>(ty).isSigned();
+  if (sat) {
+    APInt res = isSub ? (isSigned ? lhs.ssub_sat(rhs) : lhs.usub_sat(rhs))
+                      : (isSigned ? lhs.sadd_sat(rhs) : lhs.uadd_sat(rhs));
+    return cir::IntAttr::get(ty, res);
+  }
+
+  bool poison = false;
+  if (nsw) {
+    bool overflow = false;
+    (void)(isSub ? lhs.ssub_ov(rhs, overflow) : lhs.sadd_ov(rhs, overflow));
+    poison |= overflow;
+  }
+  if (nuw) {
+    bool overflow = false;
+    (void)(isSub ? lhs.usub_ov(rhs, overflow) : lhs.uadd_ov(rhs, overflow));
+    poison |= overflow;
+  }
+  if (poison)
+    return cir::PoisonAttr::get(ty);
+
+  return cir::IntAttr::get(ty, isSub ? (lhs - rhs) : (lhs + rhs));
+}
+
+OpFoldResult cir::AddOp::fold(FoldAdaptor adaptor) {
+  if (mlir::isa_and_present<cir::PoisonAttr>(adaptor.getLhs()))
+    return adaptor.getLhs();
+  if (mlir::isa_and_present<cir::PoisonAttr>(adaptor.getRhs()))
+    return adaptor.getRhs();
+
+  auto lhs = mlir::dyn_cast_if_present<cir::IntAttr>(adaptor.getLhs());
+  auto rhs = mlir::dyn_cast_if_present<cir::IntAttr>(adaptor.getRhs());
+  if (!lhs || !rhs)
+    return {};
+
+  return foldAddSubConst(getType(), lhs.getValue(), rhs.getValue(),
+                         /*isSub=*/false, getNoSignedWrap(),
+                         getNoUnsignedWrap(), getSaturated());
+}
+
+OpFoldResult cir::SubOp::fold(FoldAdaptor adaptor) {
+  if (mlir::isa_and_present<cir::PoisonAttr>(adaptor.getLhs()))
+    return adaptor.getLhs();
+  if (mlir::isa_and_present<cir::PoisonAttr>(adaptor.getRhs()))
+    return adaptor.getRhs();
+
+  auto lhs = mlir::dyn_cast_if_present<cir::IntAttr>(adaptor.getLhs());
+  auto rhs = mlir::dyn_cast_if_present<cir::IntAttr>(adaptor.getRhs());
+  if (!lhs || !rhs)
+    return {};
+
+  return foldAddSubConst(getType(), lhs.getValue(), rhs.getValue(),
+                         /*isSub=*/true, getNoSignedWrap(), getNoUnsignedWrap(),
+                         getSaturated());
 }
 
 //===----------------------------------------------------------------------===//
