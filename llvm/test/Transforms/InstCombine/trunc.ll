@@ -1543,3 +1543,4 @@ define i32 @separate_truncs_i32_reverse_multiuse(i64 %x) {
   %result = or i32 %field.lo, %field.hi
   ret i32 %result
 }
+
