@@ -394,7 +394,7 @@ OpFoldResult ICmpOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
-// Printing, parsing and verification for LLVM::AllocaOp.
+// Printing, parsing, verification and canonicalization for LLVM::AllocaOp.
 //===----------------------------------------------------------------------===//
 
 void AllocaOp::print(OpAsmPrinter &p) {
@@ -466,6 +466,25 @@ LogicalResult AllocaOp::verify() {
     return emitOpError()
            << "this target extension type cannot be used in alloca";
 
+  return success();
+}
+
+LogicalResult AllocaOp::canonicalize(AllocaOp op, PatternRewriter &rewriter) {
+  // Convert `alloca Ty, C` to the canonical `alloca [C x Ty], 1` form.
+  APInt numElements;
+  if (!matchPattern(op.getArraySize(), m_ConstantInt(&numElements)) ||
+      numElements.isOne() || numElements.getActiveBits() > 64)
+    return failure();
+
+  Type arrayType =
+      LLVMArrayType::get(op.getElemType(), numElements.getZExtValue());
+  Value one = ConstantOp::create(rewriter, op.getLoc(), rewriter.getI32Type(),
+                                 /*value=*/1);
+  auto newAlloca = AllocaOp::create(
+      rewriter, op.getLoc(), op.getType(), one, op.getAlignmentAttr(),
+      arrayType, op.getInalloca());
+  newAlloca->setDiscardableAttrs(op->getDiscardableAttrDictionary());
+  rewriter.replaceOp(op, newAlloca);
   return success();
 }
 
