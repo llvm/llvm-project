@@ -1880,6 +1880,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   // --thinlto-jobs=. If unspecified, cap the number of threads since
   // overhead outweighs optimization for used parallel algorithms for the
   // non-LTO parts.
+  parallel::strategy = available_concurrency();
   if (auto *arg = args.getLastArg(OPT_threads)) {
     StringRef v(arg->getValue());
     unsigned threads = 0;
