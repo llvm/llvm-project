@@ -33,6 +33,7 @@
 #include "Targets/RISCV.h"
 #include "Targets/SPIR.h"
 #include "Targets/Sparc.h"
+#include "Targets/SuperH.h"
 #include "Targets/SystemZ.h"
 #include "Targets/TCE.h"
 #include "Targets/VE.h"
@@ -550,6 +551,13 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
                                                                     Opts);
     default:
       return std::make_unique<SparcV9TargetInfo>(Triple, Opts);
+    }
+    
+  case llvm::Triple::sh:
+  case llvm::Triple::shl:
+    switch (os) {
+    default:
+      return std::make_unique<SuperHTargetInfo>(Triple, Opts);
     }
 
   case llvm::Triple::systemz:

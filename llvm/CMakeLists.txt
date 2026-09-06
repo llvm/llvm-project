@@ -604,6 +604,7 @@ set(LLVM_ALL_EXPERIMENTAL_TARGETS
   CSKY
   M68k
   Xtensa
+  SuperH
 )
 
 # List of targets with JIT support:

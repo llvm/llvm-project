@@ -80,6 +80,8 @@ public:
     riscv64,     // RISC-V (64-bit, little endian): riscv64
     riscv32be,   // RISC-V (32-bit, big endian): riscv32be
     riscv64be,   // RISC-V (64-bit, big endian): riscv64be
+    sh,          // SuperH (big endian): sh
+    shl,         // SuperH (little endian): shl
     sparc,       // Sparc: sparc
     sparcv9,     // Sparcv9: Sparcv9
     sparcel,     // Sparc: (endianness = little). NB: 'Sparcle' is a CPU variant
@@ -1188,6 +1190,11 @@ public:
 
   /// Tests whether the target is SPARC.
   bool isSPARC() const { return isSPARC32() || isSPARC64(); }
+
+  /// Tests whether the target is SuperH.
+  bool isSuperH() const { 
+    return getArch() == Triple::sh || getArch() == Triple::shl;
+  }
 
   /// Tests whether the target is SystemZ.
   bool isSystemZ() const { return getArch() == Triple::systemz; }
