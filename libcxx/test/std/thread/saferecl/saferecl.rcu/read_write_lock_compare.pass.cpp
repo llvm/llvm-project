@@ -22,7 +22,6 @@
 #include <print>
 #include <string>
 
-#include "__rcu/rcu_domain.h"
 #include "make_test_thread.h"
 #include "test_macros.h"
 
@@ -133,7 +132,7 @@ void test_rcu() {
 
   auto syncer_func = [&dom](std::stop_token token) {
     while (!token.stop_requested()) {
-     std::rcu_synchronize(dom);
+     std::rcu_barrier(dom);
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
   };
@@ -151,8 +150,8 @@ void test_rcu() {
   }
   writer.request_stop();
   syncer.request_stop();
-  std::rcu_synchronize(dom);
-  std::println("RCU Writer thread destruction {} times", destruction_count.load());
+  std::rcu_barrier(dom);
+  std::println("RCU collector thread destruction {} times", destruction_count.load());
 }
 
 int main(int, char**) {
