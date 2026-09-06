@@ -15,6 +15,7 @@
 #include "bolt/Passes/BranchLivenessUtils.h"
 #include "bolt/Passes/RegAnalysis.h"
 #include "bolt/Utils/CommandLineOpts.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
@@ -1453,6 +1454,8 @@ void LongJmpPass::relaxUnconditionalBranches(
   struct CrossClusterBranch {
     MCInst *Inst;
     const MCSymbol *TargetSymbol;
+    uint64_t SourceOffset;
+    uint64_t TargetOffset;
     unsigned SourceCluster;
     unsigned TargetCluster;
   };
@@ -1494,8 +1497,9 @@ void LongJmpPass::relaxUnconditionalBranches(
         if (isWithinClusterRange(SourceOffset, TargetOffset))
           continue;
 
-        CrossClusterBranches.push_back(
-            {&Inst, TargetSymbol, SourceCluster, TargetCluster});
+        CrossClusterBranches.push_back({&Inst, TargetSymbol, SourceOffset,
+                                        TargetOffset, SourceCluster,
+                                        TargetCluster});
       }
     }
   }
@@ -1540,15 +1544,41 @@ void LongJmpPass::relaxUnconditionalBranches(
       [&](const CrossClusterBranch &Branch) -> const MCSymbol * {
     const unsigned SourceCluster = Branch.SourceCluster;
     const unsigned TargetCluster = Branch.TargetCluster;
-    BinaryFunction *FirstThunk = nullptr;
-    const MCSymbol *NextTarget = Branch.TargetSymbol;
-
     const bool IsForward = SourceCluster < TargetCluster;
     const unsigned NumHops = IsForward ? TargetCluster - SourceCluster
                                        : SourceCluster - TargetCluster;
-    for (unsigned I = 0; I < NumHops; ++I) {
-      const unsigned Cluster =
-          IsForward ? TargetCluster - I - 1 : TargetCluster + I + 1;
+
+    auto getClusterAtHop = [&](const unsigned Hop) {
+      return IsForward ? SourceCluster + Hop : SourceCluster - Hop;
+    };
+
+    auto getThunkOffset = [&](const unsigned Cluster) {
+      const FragmentCluster &FC = Clusters[Cluster];
+      return IsForward ? FC.getEndOffset() : FC.StartOffset;
+    };
+
+    SmallVector<unsigned> ThunkClusters;
+    uint64_t CurrentOffset = Branch.SourceOffset;
+    unsigned NextHop = 0;
+    while (!isWithinClusterRange(CurrentOffset, Branch.TargetOffset)) {
+      unsigned BestHop = -1u;
+      for (unsigned Hop = NextHop; Hop < NumHops; ++Hop) {
+        const unsigned Cluster = getClusterAtHop(Hop);
+        if (!isWithinClusterRange(CurrentOffset, getThunkOffset(Cluster)))
+          break;
+        BestHop = Hop;
+      }
+
+      assert(BestHop != -1u && "expected reachable branch thunk");
+      const unsigned BestCluster = getClusterAtHop(BestHop);
+      ThunkClusters.push_back(BestCluster);
+      CurrentOffset = getThunkOffset(BestCluster);
+      NextHop = BestHop + 1;
+    }
+
+    BinaryFunction *FirstThunk = nullptr;
+    const MCSymbol *NextTarget = Branch.TargetSymbol;
+    for (const unsigned Cluster : llvm::reverse(ThunkClusters)) {
       FirstThunk = getOrCreateBranchThunk(
           Clusters[Cluster], Branch.TargetSymbol, NextTarget, IsForward);
       NextTarget = FirstThunk->getSymbol();

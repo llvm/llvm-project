@@ -69,7 +69,7 @@
 # CHECK-BOLT: BOLT-INFO: 2 long thunks created
 # CHECK-BOLT: BOLT-INFO: 2 long thunks reused
 # CHECK-BOLT: BOLT-INFO: relaxed 8 cross-cluster branches
-# CHECK-BOLT: BOLT-INFO: 16 branch thunks created
+# CHECK-BOLT: BOLT-INFO: 12 branch thunks created
 
 # CHECK-BOLT-HFE: BOLT-INFO: built 4 function fragment cluster(s)
 # CHECK-BOLT-HFE-NEXT: BOLT-INFO: cluster: 0
@@ -90,7 +90,7 @@
 # CHECK-BOLT-HFE: BOLT-INFO: 1 long thunks created
 # CHECK-BOLT-HFE: BOLT-INFO: 1 long thunks reused
 # CHECK-BOLT-HFE: BOLT-INFO: relaxed 8 cross-cluster branches
-# CHECK-BOLT-HFE: BOLT-INFO: 16 branch thunks created
+# CHECK-BOLT-HFE: BOLT-INFO: 12 branch thunks created
 
 # CHECK-SECTIONS: .text
 # CHECK-SECTIONS: .text.cold
