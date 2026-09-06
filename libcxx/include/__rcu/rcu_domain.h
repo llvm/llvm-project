@@ -27,9 +27,6 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 struct __rcu_node {
   function_ref<void()> __callback_ = std::cw<[] {}>;
   __rcu_node* __next_              = nullptr;
-
-  _LIBCPP_HIDE_FROM_ABI __rcu_node() {}
-  _LIBCPP_HIDE_FROM_ABI ~__rcu_node() {}
 };
 
 template <class _Tp, class _Deleter>

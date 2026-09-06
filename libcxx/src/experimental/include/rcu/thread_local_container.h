@@ -15,8 +15,8 @@
 #include <__rcu/rcu_domain.h>
 
 #include <atomic>
-#include <optional>
 #include <mutex>
+#include <optional>
 #include <vector>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -53,8 +53,9 @@ class thread_local_container {
 
   static void deregister_instance(Tp& obj) {
     lock_guard<std::mutex> lg(mtx_);
-    instances_.erase(remove_if(instances_.begin(), instances_.end(), [&obj](Tp* instance) { return instance == &obj; }),
-                     instances_.end());
+    instances_.erase(
+        std::remove_if(instances_.begin(), instances_.end(), [&obj](Tp* instance) { return instance == &obj; }),
+        instances_.end());
   }
 
 public:
