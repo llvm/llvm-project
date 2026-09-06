@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -67,7 +68,7 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
 
   setSchedulingPreference(Sched::RegPressure);
   setSupportsUnalignedAtomics(false);
-  setStackPointerRegisterToSaveRestore(RegInfo->getStackRegister());
+  // setStackPointerRegisterToSaveRestore(RegInfo->getStackRegister());
 
   // Loads and stores are legal
   for (MVT VT : MVT::integer_valuetypes()) {
@@ -122,6 +123,7 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
   setBooleanVectorContents(ZeroOrOneBooleanContent);
   setJumpIsExpensive(false);
   setMinFunctionAlignment(Align(4));
+  setMinStackArgumentAlignment(Align(4));
 }
 
 //===----------------------------------------------------------------------===//
@@ -576,10 +578,7 @@ SDValue SuperHTargetLowering::LowerCall(CallLoweringInfo &CLI, SmallVectorImpl<S
 
   // Create the CALLSEQ_END node.
   Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, InGlue, DL);
-
-  if (!Ins.empty()) {
-    InGlue = Chain.getValue(1);
-  }
+  InGlue = Chain.getValue(1);
 
   return LowerCallResult(Chain, InGlue, CallConv, IsVarArg, Ins, DL, DAG, InVals);
 }
@@ -601,6 +600,7 @@ SDValue SuperHTargetLowering::LowerCallResult(
   for (CCValAssign const &RVLoc : RVLocs) {
     Chain = DAG.getCopyFromReg(Chain, dl, RVLoc.getLocReg(), RVLoc.getValVT(), InGlue)
                 .getValue(1);
+
     InGlue = Chain.getValue(2);
     InVals.push_back(Chain.getValue(0));
   }
@@ -778,7 +778,6 @@ SDValue SuperHTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) cons
 //                                INSERTERS
 //===----------------------------------------------------------------------===//
 //===----------------------------------------------------------------------===//
-
 
 
 

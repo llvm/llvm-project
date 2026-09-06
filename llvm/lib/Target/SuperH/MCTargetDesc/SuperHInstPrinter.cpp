@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 
@@ -45,17 +46,6 @@ void SuperHInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   OS << getRegName(Reg);
 }
 
-void SuperHInstPrinter::printMemri(const MCInst *MI, unsigned OpNo, raw_ostream &OS) {
-  const MCOperand &Op0 = MI->getOperand(OpNo);
-  const MCOperand &Op1 = MI->getOperand(OpNo+1);
-  OS << "@(" << Op1.getImm() << "," << getRegName(Op0.getReg()) << ")";
-}
-
-void SuperHInstPrinter::printDisp(const MCInst *MI, unsigned OpNo, raw_ostream &OS) {
-  const MCOperand &Op = MI->getOperand(OpNo);
-  OS << Op.getImm();
-}
-
 void SuperHInstPrinter::printImm(const MCInst *MI, unsigned OpNo, raw_ostream &OS) {
   const MCOperand &Op = MI->getOperand(OpNo);
   OS << "#" << Op.getImm();
@@ -76,7 +66,14 @@ void SuperHInstPrinter::printIRegDec(const MCInst *MI, unsigned OpNo, raw_ostrea
   OS << "@-" << getRegName(Op.getReg());
 }
 
-void SuperHInstPrinter::printPCRelImm(const MCInst *MI, uint64_t Address, 
+template<int Scale>
+void SuperHInstPrinter::printDisp(const MCInst *MI, unsigned OpNo, raw_ostream &OS) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  OS << Op.getImm();
+}
+
+template<int Scale>
+void SuperHInstPrinter::printPCRel(const MCInst *MI, uint64_t Address, 
                                       unsigned OpNo, raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
 
@@ -92,6 +89,19 @@ void SuperHInstPrinter::printPCRelImm(const MCInst *MI, uint64_t Address,
   if (Op.isImm()) {
     O << "@(" << Op.getImm() << ",pc)";
   }
+}
+
+template<int Scale>
+void SuperHInstPrinter::printMemri(const MCInst *MI, unsigned OpNo, raw_ostream &OS) {
+
+  // Skip "Uses" operands, as some Memri operations are destinations.
+  if (MI->getOperand(OpNo+1).isReg())
+    OpNo++;
+
+  const MCOperand &Op0 = MI->getOperand(OpNo);
+  const MCOperand &Op1 = MI->getOperand(OpNo+1);
+
+  OS << "@(" << Op1.getImm() << "," << getRegName(Op0.getReg()) << ")";
 }
 
 void SuperHInstPrinter::printCPInstOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O) {

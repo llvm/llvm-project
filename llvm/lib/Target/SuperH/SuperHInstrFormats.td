@@ -88,12 +88,12 @@ class SHSelectPseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
 
 class SHLoadPseudo<dag outs, dag ins, string asmstr, list<dag> pattern> 
       : SHPseudo<outs, ins, asmstr, pattern> {
-  let usesCustomInserter = 1;
+  let mayLoad = 1;
 }
 
 class SHStorePseudo<dag outs, dag ins, string asmstr, list<dag> pattern> 
       : SHPseudo<outs, ins, asmstr, pattern> {
-  let usesCustomInserter = 1;
+  let mayStore = 1;
 }
 
 
@@ -224,7 +224,7 @@ class InstRmRnD4<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> pa
   bits<4> disp;
   let Inst{11-8} = Rn;
   let Inst{7-4} = Rm;
-  let Inst{0-3} = disp;
+  let Inst{3-0} = disp;
 }
 
 //===----------------------------------------------------------------------===//
@@ -242,7 +242,7 @@ class InstRnD4<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> patt
   bits<4> Rn;
   bits<4> disp;
   let Inst{7-4} = Rn;
-  let Inst{0-3} = disp;
+  let Inst{3-0} = disp;
 }
 
 //===----------------------------------------------------------------------===//
@@ -260,7 +260,7 @@ class InstRmD4<bits<16> opcode, dag outs, dag ins, string asmstr, list<dag> patt
   bits<4> Rm;
   bits<4> disp;
   let Inst{7-4} = Rm;
-  let Inst{0-3} = disp;
+  let Inst{3-0} = disp;
 }
 
 //===----------------------------------------------------------------------===//

@@ -65,6 +65,7 @@ void SuperHMCInstLower::lowerInstruction(const MachineInstr &MI,
       // Ignore all implicit register operands.
       if (MO.isImplicit())
         continue;
+
       MCOp = MCOperand::createReg(MO.getReg());
       break;
     case MachineOperand::MO_Immediate:

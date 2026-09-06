@@ -14,6 +14,7 @@
 #include "SuperHFixupKinds.h"
 #include "SuperHMCTargetDesc.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -71,12 +72,21 @@ public:
 
   unsigned getExprOpValue(const MCInst &MI, const MCExpr *Expr,
                           SmallVectorImpl<MCFixup> &Fixups,
-                          const MCSubtargetInfo &STI) const;
+                          const MCSubtargetInfo &STI,
+                          int64_t Shift) const;
 
   unsigned getBranchTargetOpValue(const MCInst &MI, unsigned OpNo,
                           SmallVectorImpl<MCFixup> &Fixups,
                           const MCSubtargetInfo &STI) const;
+  
+  // Displacement
+  template<int Scale>
+  unsigned getDispOpValue(const MCInst &MI, unsigned OpNo,
+                          SmallVectorImpl<MCFixup> &Fixups,
+                          const MCSubtargetInfo &STI) const;
 
+  // PC-relative displacement.
+  template<int Scale>
   unsigned getPCRelOpValue(const MCInst &MI, unsigned OpNo,
                           SmallVectorImpl<MCFixup> &Fixups,
                           const MCSubtargetInfo &STI) const;
@@ -201,28 +211,73 @@ void SuperHMCCodeEmitter::encodeInstruction(const MCInst &MI,
   ++MCNumEmitted;
 }
 
+
+
+
+//===----------------------------------------------------------------------===//
+//                              Branch Target
+//===----------------------------------------------------------------------===//
+
 unsigned SuperHMCCodeEmitter::getBranchTargetOpValue(const MCInst &MI, unsigned OpNo,
                                                      SmallVectorImpl<MCFixup> &Fixups,
                                                      const MCSubtargetInfo &STI) const {
   return getMachineOpValue(MI, MI.getOperand(OpNo), Fixups, STI);
 }
 
-unsigned SuperHMCCodeEmitter::getPCRelOpValue(const MCInst &MI, unsigned OpNo,
+
+
+
+//===----------------------------------------------------------------------===//
+//                                Displacement
+//===----------------------------------------------------------------------===//
+
+template<int Scale>
+unsigned SuperHMCCodeEmitter::getDispOpValue(const MCInst &MI, unsigned OpNo,
                                               SmallVectorImpl<MCFixup> &Fixups,
                                               const MCSubtargetInfo &STI) const {
+  // Skip base register if found.
+  if (MI.getOperand(OpNo).isReg())
+    OpNo++;
+
+  auto MO = MI.getOperand(OpNo);
+  if (MO.isImm())
+    return (MO.getImm() / Scale);
+
+  assert(MO.isExpr() && "Expected Expression");
   return getMachineOpValue(MI, MI.getOperand(OpNo), Fixups, STI);
 }
 
-unsigned SuperHMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCExpr *Expr,
-                                             SmallVectorImpl<MCFixup> &Fixups,
-                                             const MCSubtargetInfo &STI) const {
+
+
+
+
+//===----------------------------------------------------------------------===//
+//                          PC-Relative Displacement
+//===----------------------------------------------------------------------===//
+
+template<int Scale>
+unsigned SuperHMCCodeEmitter::getPCRelOpValue(const MCInst &MI, unsigned OpNo,
+                                              SmallVectorImpl<MCFixup> &Fixups,
+                                              const MCSubtargetInfo &STI) const {
+  auto MO = MI.getOperand(OpNo);
+  if (MO.isImm())
+    return MO.getImm() / Scale;
+
+  assert(MO.isExpr() && "Expected Expression");
+  return getExprOpValue(MI, MO.getExpr(), Fixups, STI, Scale);
+}
+
+unsigned 
+SuperHMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCExpr *Expr,
+                                    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI, 
+                                    int64_t Shift) const {
   if (!Expr)
     return 0;
 
   switch(Expr->getKind()) {
   case MCExpr::ExprKind::Binary: {
-    unsigned Res = getExprOpValue(MI, static_cast<const MCBinaryExpr *>(Expr)->getLHS(), Fixups, STI);
-    Res += getExprOpValue(MI, static_cast<const MCBinaryExpr *>(Expr)->getRHS(), Fixups, STI);
+    unsigned Res = getExprOpValue(MI, static_cast<const MCBinaryExpr *>(Expr)->getLHS(), Fixups, STI, Shift);
+    Res += getExprOpValue(MI, static_cast<const MCBinaryExpr *>(Expr)->getRHS(), Fixups, STI, Shift);
     return Res;
   }
   case MCExpr::ExprKind::Target: {
@@ -259,7 +314,7 @@ unsigned SuperHMCCodeEmitter::getMachineOpValue(const MCInst &MI,
     return MO.getImm();
 
   assert(MO.isExpr() && "Expected Expression");
-  return getExprOpValue(MI, MO.getExpr(), Fixups, STI);
+  return getExprOpValue(MI, MO.getExpr(), Fixups, STI, 0);
 }
 
 MCCodeEmitter *llvm::createSuperHMCCodeEmitter(const MCInstrInfo &MCII,

@@ -68,11 +68,18 @@ private:
 // for filling delay slots.
 MachineInstr *SuperHFillDelaySlots::findSlotCandidate(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
+  auto *Prev = MBBI->getPrevNode();
 
+  // We might have a useful instruction above the instruction that
+  // loads our destination address.
+  if (MI.isCall() && Prev) {
+    if (!Prev->getPrevNode()->definesRegister(MI.getOperand(0).getReg(), TRI))
+      Prev = Prev->getPrevNode();
+  }
 
   // TODO:  Make this a while loop that keeps a list of "used" registers
   //        by instructions.
-  if (auto *Prev = MBBI->getPrevNode()) {
+  if (Prev) {
     unsigned Opcode = Prev->getOpcode();
 
     // If we encounter a branch instruction, then it's no longer safe to

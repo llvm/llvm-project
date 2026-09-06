@@ -28,12 +28,14 @@ class SuperHTargetMachine;
 FunctionPass *createSuperHISelDag(SuperHTargetMachine &TM, CodeGenOptLevel OptLevel);
 FunctionPass *createSuperHFillDelaySlotsPass();
 FunctionPass *createSuperHConstantIslandPass();
+FunctionPass *createSuperHExpandPseudoPass();
 
 void initializeSuperHDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeSuperHAsmPrinterPass(PassRegistry &);
 void initializeSuperHAsmPrinterPass(PassRegistry &);
 void initializeSuperHFillDelaySlotsPass(PassRegistry &);
 void initializeSuperHConstantIslandsPass(PassRegistry &);
+void initializeSuperHExpandPseudoPass(PassRegistry &);
 } // namespace llvm
 
 

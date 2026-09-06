@@ -126,6 +126,18 @@ class SHRegIndirectClass<string op> : SHOpClass<"IReg" # op> {
 // Operands
 //===--------------------------------------------------------------------------===//
 
+// Operand with Scaling
+class SHScaledOp<ValueType vt, string name, int scale, bit encode = 1>
+      : Operand<vt> {
+
+  defvar Scale = !cond(!gt(scale, 0) : "<" # scale # ">", true : "");
+  defvar Suffix = Scale;
+
+  let PrintMethod = "print" # name # Suffix;
+  let EncoderMethod = !cond(encode : "get" # name # "OpValue" # Suffix, true : "");
+}
+
+
 // Immediate
 class SHImmOp<int width, ValueType vt>
       : Operand<vt>, ImmLeaf<vt, [{ return isInt<}] # width # [{>(Imm); }]> {
@@ -139,50 +151,65 @@ class SHImmOp<int width, ValueType vt>
       return false;
     }];
 }
+
 def imm8 : SHImmOp<8, i32>;
 
 // Displacement
-class SHDispOp<int width, ValueType vt>
-      : Operand<vt>, PatLeaf<(imm), [{ return isUInt<}] # width # [{>(N->getZExtValue()); }]> {
-    let ParserMatchClass = SHDispClass<width>;
-    let OperandType = "OPERAND_IMMEDIATE";
-    let PrintMethod = "printDisp";
-    let MCOperandPredicate = [{
-        int64_t Imm;
-        if (MCOp.evaluateAsConstantImm(Imm))
-            return isUInt<#width>(Imm);
-        return MCOp.isBareSymbolRef();
-    }];
+class SHDispOp<int width, ValueType vt, int scale = 0>
+      : SHScaledOp<vt, "Disp", scale>, 
+        PatLeaf<(imm), [{ return isUInt<}] # width # [{>(N->getZExtValue()); }]> {
+  let ParserMatchClass = SHDispClass<width>;
+  let OperandType = "OPERAND_IMMEDIATE";
+  let MCOperandPredicate = [{
+      int64_t Imm;
+      if (MCOp.evaluateAsConstantImm(Imm))
+          return isUInt<#width>(Imm);
+      return MCOp.isBareSymbolRef();
+  }];
 }
-def disp4   : SHDispOp<4, i4>;
-def disp8   : SHDispOp<8, i8>;
-def disp12  : SHDispOp<12, i16>;
 
-// PC-Relative Adressing
-class SHPCRelOp<int width, ValueType vt>
-      : Operand<vt>, PatLeaf<(imm), [{ return isUInt<}] # width # [{>(N->getZExtValue()); }]> {
-  let ParserMatchClass = SHPCRelClass<>;
+// Displacement
+def disp4     : SHDispOp<4,  i4,  1>;
+def disp4x2   : SHDispOp<4,  i4,  2>;
+def disp4x4   : SHDispOp<4,  i4,  4>;
+def disp8     : SHDispOp<8,  i8,  1>;
+def disp8x2   : SHDispOp<8,  i8,  2>;
+def disp8x4   : SHDispOp<8,  i8,  4>;
+def disp12    : SHDispOp<12, i16, 1>;
+
+// Memory Operand
+class SHMemriOp<RegisterClass rc, Operand dt, int scale = 0>
+      : SHScaledOp<iPTR, "Memri", scale, 0>,
+        PatLeaf<(imm), [{ return isUInt<32>(N->getSExtValue()); }]>  {
+  let OperandType = "OPERAND_MEMORY";
+  let MIOperandInfo = (ops rc, dt);
+}
+
+def memri     : SHMemriOp<GPR, i32imm,  1>;
+def memri4    : SHMemriOp<GPR, disp4,   1>;
+def memri4x2  : SHMemriOp<GPR, disp4x2, 2>;
+def memri4x4  : SHMemriOp<GPR, disp4x4, 4>;
+def memri8x2  : SHMemriOp<GPR, disp8,   2>;
+def memri8x4  : SHMemriOp<GPR, disp8,   4>;
+
+// PCRel Operand
+class SHPCRelOp<ValueType vt, int scale = 0>
+      : SHScaledOp<vt, "PCRel", scale>,
+        PatLeaf<(imm), [{ return isUInt<}] # width # [{>(N->getZExtValue()); }]>  {
   let OperandType = "OPERAND_PCREL";
-  let EncoderMethod = "getPCRelOpValue";
-  let DecoderMethod = "DecodePCRelDisp";
-  let PrintMethod = "printPCRelImm";
-    let MCOperandPredicate = [{
-        int64_t Imm;
-        if (MCOp.evaluateAsConstantImm(Imm))
-            return isUInt<#width>(Imm);
-        return MCOp.isBareSymbolRef();
-    }];
 }
 
-def pcrel8       : SHPCRelOp<8, i8>;
-def pcrel12      : SHPCRelOp<12, i16>;
+def pcrel8   : SHPCRelOp<i8>;
+def pcrel8x2 : SHPCRelOp<i8, 2>;
+def pcrel8x4 : SHPCRelOp<i8, 4>;
+def pcrel12  : SHPCRelOp<i16>;
 
 // Branch Targets
 def brtarget       : Operand<OtherVT> {
   let ParserMatchClass = SHPCRelClass<>;
   let EncoderMethod = "getBranchTargetOpValue";
   let DecoderMethod = "DecodeBranchTarget";
-  let PrintMethod = "printPCRelImm";
+  let PrintMethod = "printPCRel<1>";
   let OperandType = "OPERAND_PCREL";
 }
 
@@ -201,14 +228,6 @@ class SHIndirectRegOp<RegisterClass regClass, string op>
 def IGPR    : SHIndirectRegOp<GPR, "">;
 def IGPRInc : SHIndirectRegOp<GPR, "Inc">;
 def IGPRDec : SHIndirectRegOp<GPR, "Dec">;
-
-// Register Indirect with Displacement @(disp,Rm)
-def memri : Operand<iPTR> {
-  let MIOperandInfo = (ops GPR, disp8);
-  let OperandType = "OPERAND_MEMORY";
-  let EncoderMethod = "getMemriOpValue";
-  let PrintMethod = "printMemri";
-}
 
 // Addressing mode pattern reg+disp
 let WantsRoot = true in
@@ -278,23 +297,23 @@ def MOVI          : InstRnI8<0b1110000000000000,
                             [(set i32:$Rn, imm:$imm)]>;
 
 // mova @(disp, PC), R0
-let hasSideEffects = 0, mayLoad = 1, Defs = [R0], isDelayIllegal = 1 in
+let hasSideEffects = 0, mayLoad = 1, Uses = [PC], Defs = [R0], isDelayIllegal = 1 in
 def MOVA          : InstD8<0b1100011100000000,
-                            (outs), (ins pcrel8:$disp),
-                            "mova $disp,r0",
-                            []>;
+                          (outs), (ins pcrel8x4:$disp),
+                          "mova $disp,r0",
+                          []>;
 
 // mov.w @(disp,PC), Rn 
-let hasSideEffects = 0, mayLoad = 1, isDelayIllegal = 1 in
+let hasSideEffects = 0, mayLoad = 1, Uses = [PC], isDelayIllegal = 1 in
 def MOVWI         : InstRnD8<0b1001000000000000,
-                            (outs GPR:$Rn), (ins pcrel8:$disp),
+                            (outs GPR:$Rn), (ins pcrel8x2:$disp),
                             "mov.w $disp,$Rn",
                             [(set i32:$Rn, (sextloadi16 constpool:$disp))]>;
 
 // mov.l @(disp,PC), Rn 
-let hasSideEffects = 0, mayLoad = 1, isDelayIllegal = 1 in
+let hasSideEffects = 0, mayLoad = 1, Uses = [PC], isDelayIllegal = 1 in
 def MOVLI         : InstRnD8<0b1101000000000000,
-                            (outs GPR:$Rn), (ins pcrel8:$disp),
+                            (outs GPR:$Rn), (ins pcrel8x4:$disp),
                             "mov.l $disp,$Rn",
                             [(set i32:$Rn, (load constpool:$disp))]>;
 
@@ -333,19 +352,19 @@ let hasSideEffects = 0, mayLoad = 1, isReMaterializable = 1 in {
   def MOVBL             : InstRmRn<0b0110000000000000,
                                   (outs GPR:$Rn), (ins IGPR:$Rm),
                                   "mov.b $Rm,$Rn",
-                                  [(set i32:$Rn, (sextloadi8 IGPR:$Rm))]>;
+                                  []>;
 
   // mov.w @Rm, Rn
   def MOVWL             : InstRmRn<0b0110000000000001,
                                   (outs GPR:$Rn), (ins IGPR:$Rm),
                                   "mov.w $Rm,$Rn",
-                                  [(set i32:$Rn, (sextloadi16 IGPR:$Rm))]>;
+                                  []>;
 
   // mov.l @Rm, Rn
   def MOVLL             : InstRmRn<0b0110000000000010,
                                   (outs GPR:$Rn), (ins IGPR:$Rm),
                                   "mov.l $Rm,$Rn",
-                                  [(set i32:$Rn, (load IGPR:$Rm))]>;
+                                  []>;
 
   // mov.b @Rm+, Rn
   let isDelayIllegal = 1 in
@@ -371,22 +390,22 @@ let hasSideEffects = 0, mayLoad = 1, isReMaterializable = 1 in {
   // mov.b @(disp, Rm), R0
   let Defs = [R0] in
   def MOVBL4            : InstRmD4<0b1000010000000000,
-                                  (outs), (ins (memri $Rm, $disp):$src),
+                                  (outs), (ins (memri4 $Rm, $disp):$src),
                                   "mov.b $src,R0",
-                                  [(set R0, (sextloadi8 addr:$src))]>;
+                                  []>;
   
   // mov.w @(disp, Rm), R0
   let Defs = [R0] in
   def MOVWL4            : InstRmD4<0b1000010100000000,
-                                  (outs), (ins (memri $Rm, $disp):$src),
+                                  (outs), (ins (memri4x2 $Rm, $disp):$src),
                                   "mov.w $src,R0",
-                                  [(set R0, (sextloadi16 addr:$src))]>;
+                                  []>;
   
   // mov.l @(disp, Rm), Rn
   def MOVLL4          : InstRmRnD4<0b0101000000000000,
-                                  (outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
+                                  (outs GPR:$Rn), (ins (memri4x4 $Rm, $disp):$src),
                                   "mov.l $src,$Rn",
-                                  [(set i32:$Rn, (load addr:$src))]>;
+                                  []>;
 
   // mov.b @(R0,Rm),Rn
   let Uses = [R0] in
@@ -444,19 +463,19 @@ let hasSideEffects = 0, mayStore = 1 in {
   def MOVBS             : InstRmRn<0b0010000000000000,
                                   (outs), (ins GPR:$Rm, IGPR:$Rn),
                                   "mov.b $Rm,$Rn",
-                                  [(truncstorei8 i32:$Rm, i32:$Rn)]>;
+                                  []>;
 
   // mov.w Rm, @Rn
   def MOVWS             : InstRmRn<0b0010000000000001,
                                   (outs), (ins GPR:$Rm, IGPR:$Rn),
                                   "mov.w $Rm,$Rn",
-                                  [(truncstorei16 i32:$Rm, i32:$Rn)]>;
+                                  []>;
 
   // mov.l Rm, @Rn
   def MOVLS             : InstRmRn<0b0010000000000010,
                                   (outs), (ins GPR:$Rm, IGPR:$Rn),
                                   "mov.l $Rm,$Rn",
-                                  [/*(store i32:$Rm, i32:$Rn)*/]>;
+                                  []>;
 
   // mov.b Rm, @-Rn
   let isDelayIllegal = 1 in
@@ -482,22 +501,22 @@ let hasSideEffects = 0, mayStore = 1 in {
   // mov.b R0, @(disp, Rn)
   let Uses = [R0] in
   def MOVBS4            : InstRnD4<0b1000000000000000,
-                                  (outs), (ins (memri $Rn, $disp):$dst),
+                                  (outs), (ins (memri4 $Rn, $disp):$dst),
                                   "mov.b r0,$dst",
-                                  [/*(truncstorei8 i32, addr:$dst)*/]>;
+                                  []>;
   
   // mov.w R0, @(disp, Rn)
   let Uses = [R0] in
   def MOVWS4            : InstRnD4<0b1000000100000000,
-                                  (outs), (ins (memri $Rn, $disp):$dst),
+                                  (outs), (ins (memri4x2 $Rn, $disp):$dst),
                                   "mov.w r0,$dst",
-                                  [/*(truncstorei16 i32, addr:$dst)*/]>;
+                                  []>;
   
   // mov.l Rm, @(disp, Rn)
   def MOVLS4          : InstRmRnD4<0b0001000000000000,
-                                  (outs), (ins GPR:$Rm, (memri $Rn, $disp):$dst),
+                                  (outs), (ins GPR:$Rm, (memri4x4 $Rn, $disp):$dst),
                                   "mov.l $Rm,$dst",
-                                  [(store i32:$Rm, addr:$dst)]>;
+                                  []>;
 
   // mov.b Rm,@(R0,Rn)
   let Uses = [R0] in
@@ -1380,14 +1399,6 @@ def : Pat<(sext_inreg i32:$src, i1),  (EXTSB i32:$src)>;
 def : Pat<(sext_inreg i32:$src, i8),  (EXTSB i32:$src)>;
 def : Pat<(sext_inreg i32:$src, i16), (EXTSW i32:$src)>;
 
-//===--------------------------------------------------------------------------===//
-// Truncating Store
-//===--------------------------------------------------------------------------===//
-
-// def : Pat<(truncstorei8  i32:$src, i32:$dst), (MOVBRmRni i32:$src, i32:$dst)>;
-// def : Pat<(truncstorei16 i32:$src, i32:$dst), (MOVWRmRni i32:$src, i32:$dst)>;
-
-
 
 //===--------------------------------------------------------------------------===//
 //===--------------------------------------------------------------------------===//
@@ -1416,6 +1427,36 @@ def Select32    : SHSelectPseudo<(outs GPR:$dst),
                                 "; Select32 PSEUDO",
                                 [(set i32:$dst,
                                  (SHselectcc i32:$src, i32:$src2, imm:$cc))]>;
+
+//===--------------------------------------------------------------------------===//
+// Frame Load/Store
+//===--------------------------------------------------------------------------===//
+
+// LOAD FROM FRAME
+def MOVBLFR : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
+                          "! MOVBLFR $src, $Rn",
+                          [(set i32:$Rn, (extloadi8 addr:$src))]>;
+
+def MOVWLFR : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
+                          "! MOVWLFR $src, $Rn",
+                          [(set i32:$Rn, (extloadi16 addr:$src))]>;
+
+def MOVLLFR : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
+                          "! MOVLLFR $src, $Rn",
+                          [(set i32:$Rn, (load addr:$src))]>;
+
+// STORE TO FRAME
+def MOVBSFR : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
+                           "! MOVBSFR $src, $dst",
+                           [(truncstorei8 i32:$src, addr:$dst)]>;
+
+def MOVWSFR : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
+                           "! MOVWSFR $src, $dst",
+                           [(truncstorei16 i32:$src, addr:$dst)]>;
+
+def MOVLSFR : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
+                           "! MOVLSFR $src, $dst",
+                           [(store i32:$src, addr:$dst)]>;
 
 //===--------------------------------------------------------------------------===//
 // Stack Frame

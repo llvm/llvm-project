@@ -51,9 +51,14 @@ private:
   void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printCPInstOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 
-  void printPCRelImm(const MCInst *MI, uint64_t Address, unsigned OpNo, raw_ostream &O);
-  void printDisp(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+  template<int Scale>
+  void printPCRel(const MCInst *MI, uint64_t Address, unsigned OpNo, raw_ostream &O);
+  
+  template<int Scale>
   void printMemri(const MCInst *MI, unsigned OpNo, raw_ostream &O);
+
+  template<int Scale>
+  void printDisp(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printImm(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printIReg(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printIRegInc(const MCInst *MI, unsigned OpNo, raw_ostream &O);
