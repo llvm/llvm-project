@@ -32,6 +32,7 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <atomic>
+#include <mutex>
 
 using namespace llvm;
 using namespace lto;
@@ -465,7 +466,11 @@ static int run(int argc, char **argv) {
   // sure to report the error and then at the end (after joining cleanly)
   // exit(1).
   std::atomic<bool> HasErrors{false};
+  // ThinLTO backends emit diagnostics concurrently; serialize writes to
+  // errs() so raw_fd_ostream buffering is not raced (TSan).
+  std::mutex DiagMutex;
   Conf.DiagHandler = [&](const DiagnosticInfo &DI) {
+    std::lock_guard<std::mutex> Lock(DiagMutex);
     DiagnosticPrinterRawOStream DP(errs());
     DI.print(DP);
     errs() << '\n';

@@ -1,4 +1,5 @@
 # REQUIRES: asserts, backtrace, x86-registered-target
+# UNSUPPORTED: tsan
 
 # RUN: not --crash llc -mtriple=x86_64-pc-linux-gnu -passes=trigger-crash-machine-function -filetype=null %s 2>&1 | \
 # RUN: FileCheck %s --check-prefix=CHECK-MACHINE-FUNCTION

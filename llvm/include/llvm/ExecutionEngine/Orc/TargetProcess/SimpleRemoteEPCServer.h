@@ -111,6 +111,16 @@ public:
         logAllUnhandledErrors(std::move(Err), errs(), "SimpleRemoteEPCServer ");
       };
 
+    // Set up services before starting the transport. Otherwise an incoming
+    // message can race with SimpleExecutorDylibManager construction (TSan
+    // reports use of the service mutex while DenseMap/DenseSet members are
+    // still being initialized).
+    Server->Services = std::move(S.services());
+    Server->Services.push_back(
+        std::make_unique<rt_bootstrap::SimpleExecutorDylibManager>());
+    for (auto &Service : Server->Services)
+      Service->addBootstrapSymbols(S.bootstrapSymbols());
+
     // Attempt to create transport.
     auto T = TransportT::Create(
         *Server, std::forward<TransportTCtorArgTs>(TransportTCtorArgs)...);
@@ -119,13 +129,6 @@ public:
     Server->T = std::move(*T);
     if (auto Err = Server->T->start())
       return std::move(Err);
-
-    // If transport creation succeeds then start up services.
-    Server->Services = std::move(S.services());
-    Server->Services.push_back(
-        std::make_unique<rt_bootstrap::SimpleExecutorDylibManager>());
-    for (auto &Service : Server->Services)
-      Service->addBootstrapSymbols(S.bootstrapSymbols());
 
     if (auto Err = Server->sendSetupMessage(std::move(S.BootstrapMap),
                                             std::move(S.BootstrapSymbols)))
