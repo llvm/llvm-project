@@ -1160,6 +1160,11 @@ public:
     VisitType(T);
   }
 
+  void VisitWebAssemblyTableType(const WebAssemblyTableType *T) {
+    AddQualType(T->getElementType());
+    VisitType(T);
+  }
+
   void VisitPointerType(const PointerType *T) {
     AddQualType(T->getPointeeType());
     VisitType(T);

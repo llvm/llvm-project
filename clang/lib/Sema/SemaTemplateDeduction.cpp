@@ -2542,6 +2542,7 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
     case Type::DeducedTemplateSpecialization:
     case Type::PackExpansion:
     case Type::Pipe:
+    case Type::WebAssemblyTable:
     case Type::ArrayParameter:
     case Type::HLSLAttributedResource:
     case Type::HLSLInlineSpirv:
@@ -7263,6 +7264,7 @@ MarkUsedTemplateParameters(ASTContext &Ctx, QualType T,
   case Type::ObjCObjectPointer:
   case Type::UnresolvedUsing:
   case Type::Pipe:
+  case Type::WebAssemblyTable:
   case Type::BitInt:
   case Type::HLSLInlineSpirv:
   case Type::OverflowBehavior:
