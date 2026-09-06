@@ -5063,6 +5063,13 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
       context_.Say(GetContext().clauseSource,
           "The SINK and SOURCE dependence types can only be used with the ORDERED directive, used here in the %s construct"_err_en_US,
           parser::omp::GetUpperName(dir, version));
+    } else if (dir == llvm::omp::OMPD_taskwait &&
+        taskDep->GetTaskDepType() ==
+            parser::OmpTaskDependenceType::Value::Mutexinoutset) {
+      // A depend clause on a taskwait construct must not have
+      // mutexinoutset as dependence-type.
+      context_.Say(GetContext().clauseSource,
+          "A DEPEND clause on a TASKWAIT construct must not have MUTEXINOUTSET as dependence type"_err_en_US);
     }
   }
   if (taskDep) {

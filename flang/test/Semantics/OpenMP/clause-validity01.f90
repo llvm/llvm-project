@@ -504,6 +504,8 @@ use omp_lib
   !$omp taskyield
   !$omp barrier
   !$omp taskwait
+  !ERROR: A DEPEND clause on a TASKWAIT construct must not have MUTEXINOUTSET as dependence type
+  !$omp taskwait depend(mutexinoutset: x)
   !ERROR: 'task-dependence-type' modifier is required
   !ERROR: The SINK and SOURCE dependence types can only be used with the ORDERED directive, used here in the TASKWAIT construct
   !WARNING: 'dependence-type' modifier is no longer supported in OpenMP v5.2 on DEPEND clause
