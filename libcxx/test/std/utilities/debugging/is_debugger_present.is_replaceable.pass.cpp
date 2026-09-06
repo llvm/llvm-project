@@ -18,15 +18,9 @@
 #include <cassert>
 #include <debugging>
 
-#ifdef _WIN32
-#  define DLLIMPORT __declspec(dllimport)
-#else
-#  define DLLIMPORT
-#endif
-
 static int canary = 0;
 
-DLLIMPORT bool std::is_debugger_present() noexcept {
+bool std::is_debugger_present() noexcept {
   canary = 1;
   return true;
 }
