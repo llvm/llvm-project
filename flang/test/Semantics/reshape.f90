@@ -16,9 +16,9 @@ program reshaper
   integer :: array6(2,3) = RESHAPE([(n, n=1,6)], RESHAPE([(n, n=1,6)], [2,3]))
   !ERROR: 'shape=' argument must be an array of rank 1
   integer :: array7(2,3) = RESHAPE([(n, n=1,4)], 343)
-  !ERROR: Actual argument for 'pad=' has bad type or kind 'INTEGER(8)'
+  !ERROR: Actual argument for 'pad=' has type 'INTEGER(8)', but 'source=' has type 'INTEGER(4)'
   integer :: array8(2,3) = RESHAPE([(n, n=1,4)], [2,3], [99_8])
-  !ERROR: Actual argument for 'pad=' has bad type or kind 'REAL(4)'
+  !ERROR: Actual argument for 'pad=' has type 'REAL(4)', but 'source=' has type 'INTEGER(4)'
   real :: array9(2,3) = RESHAPE([(n, n=1,4)], [2,3], [99.9])
   !ERROR: Invalid 'order=' argument ([INTEGER(4)::2_4,3_4]) in RESHAPE
   real :: array10(2,3) = RESHAPE([(n,n=1,4)],[2,3],[99],[2,3])
