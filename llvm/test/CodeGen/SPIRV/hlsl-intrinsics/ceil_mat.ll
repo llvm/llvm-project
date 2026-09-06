@@ -33,8 +33,7 @@ entry:
 define internal void @ceil_half9() {
 entry:
   ; CHECK-LABEL: %{{[0-9]+}} = OpFunction %{{[0-9]+}} None %{{[0-9]+}} ; -- Begin function ceil_half9
-  ; CHECK: %{{[0-9]+}} = OpExtInst %[[#vec4f16]] %[[#ext]] Ceil
-  ; CHECK: %{{[0-9]+}} = OpExtInst %[[#vec4f16]] %[[#ext]] Ceil
+  ; CHECK-COUNT-2: %{{[0-9]+}} = OpExtInst %[[#vec4f16]] %[[#ext]] Ceil
   ; CHECK: %{{[0-9]+}} = OpExtInst %[[#f16]] %[[#ext]] Ceil
   %va = load <9 x half>, ptr addrspace(10) @wide_f16_9
   %r = call <9 x half> @llvm.ceil.v9f16(<9 x half> %va)
