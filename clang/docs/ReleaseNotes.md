@@ -507,6 +507,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
 - Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
+- Fixed an assertion failure when a fixed point type was used in arithmetic with a `_BitInt` or overflow behavior type; the combination is now diagnosed as invalid operands. (#GH191701)
 
 #### Bug Fixes to Compiler Builtins
 
