@@ -1138,6 +1138,7 @@ LongJmpPass::buildClusterLayout(BinaryContext &BC,
 
     if (FC.NumFragments == 0) {
       FC.StartSectionName = Fragment.SectionName;
+      FC.StartOffset = FragmentOffset;
       FC.FirstFunctionIndex = Fragment.FunctionIndex;
     }
 
@@ -1228,6 +1229,8 @@ void LongJmpPass::relaxCalls(BinaryContext &BC,
   struct CrossClusterCall {
     MCInst *Inst;
     const MCSymbol *TargetSymbol;
+    uint64_t SourceOffset;
+    uint64_t TargetOffset;
     unsigned SourceCluster;
     unsigned TargetCluster;
   };
@@ -1238,8 +1241,20 @@ void LongJmpPass::relaxCalls(BinaryContext &BC,
                : Call.TargetCluster - Call.SourceCluster;
   };
 
-  SmallVector<CrossClusterCall> AdjacentClusterCalls;
-  SmallVector<CrossClusterCall> RemoteClusterCalls;
+  auto canUseShortThunk = [&](const CrossClusterCall &Call) {
+    if (Call.TargetCluster == -1u)
+      return false;
+
+    const bool IsForward = Call.SourceCluster < Call.TargetCluster;
+    const FragmentCluster &Source = Clusters[Call.SourceCluster];
+    const uint64_t ThunkOffset =
+        IsForward ? Source.getEndOffset() : Source.StartOffset;
+    return isWithinClusterRange(Call.SourceOffset, ThunkOffset) &&
+           isWithinClusterRange(ThunkOffset, Call.TargetOffset);
+  };
+
+  SmallVector<CrossClusterCall> ShortThunkCalls;
+  SmallVector<CrossClusterCall> LongThunkCalls;
   for (BinaryFunction *BF : OutputFunctions) {
     if (!BC.shouldEmit(*BF) || BF->isPatch())
       continue;
@@ -1275,21 +1290,20 @@ void LongJmpPass::relaxCalls(BinaryContext &BC,
           continue;
 
         // If not found use -1 so the computed distance is out of range.
-        unsigned TargetCluster = Found ? It->second : -1;
+        unsigned TargetCluster = Found ? It->second : -1u;
         if (TargetCluster == SourceCluster)
           continue;
 
         // A target with a cluster was mapped by the layout builder, so it
         // also has an offset. Otherwise use -1 so the computed distance is
         // conservatively treated as out of range.
-        const uint64_t TargetOffset = Found ? SymToOffset[TargetSymbol] : -1;
+        const uint64_t TargetOffset = Found ? SymToOffset[TargetSymbol] : -1ULL;
         if (isWithinClusterRange(SourceOffset, TargetOffset))
           continue;
 
-        CrossClusterCall Call{&Inst, TargetSymbol, SourceCluster,
-                              TargetCluster};
-        auto &Calls = clusterDistance(Call) == 1 ? AdjacentClusterCalls
-                                                 : RemoteClusterCalls;
+        CrossClusterCall Call{&Inst,        TargetSymbol,  SourceOffset,
+                              TargetOffset, SourceCluster, TargetCluster};
+        auto &Calls = canUseShortThunk(Call) ? ShortThunkCalls : LongThunkCalls;
         Calls.push_back(Call);
       }
     }
@@ -1386,7 +1400,7 @@ void LongJmpPass::relaxCalls(BinaryContext &BC,
 
   // Process farthest calls first so closer remote calls can reuse long thunks
   // already placed at adjacent cluster boundaries.
-  llvm::stable_sort(RemoteClusterCalls,
+  llvm::stable_sort(LongThunkCalls,
                     [&](const CrossClusterCall &A, const CrossClusterCall &B) {
                       return clusterDistance(A) > clusterDistance(B);
                     });
@@ -1398,19 +1412,19 @@ void LongJmpPass::relaxCalls(BinaryContext &BC,
     BC.MIB->replaceBranchTarget(*Call.Inst, Thunk->getSymbol(), BC.Ctx.get());
   };
 
-  for (CrossClusterCall &Call : AdjacentClusterCalls)
+  for (CrossClusterCall &Call : ShortThunkCalls)
     relaxCall(Call, /*IsShort=*/true);
 
-  for (CrossClusterCall &Call : RemoteClusterCalls)
+  for (CrossClusterCall &Call : LongThunkCalls)
     relaxCall(Call, /*IsShort=*/false);
 
-  if (!AdjacentClusterCalls.empty())
-    BC.outs() << "BOLT-INFO: relaxed " << AdjacentClusterCalls.size()
-              << " adjacent cluster calls with thunks\n";
+  if (!ShortThunkCalls.empty())
+    BC.outs() << "BOLT-INFO: relaxed " << ShortThunkCalls.size()
+              << " short cluster calls with thunks\n";
 
-  if (!RemoteClusterCalls.empty())
-    BC.outs() << "BOLT-INFO: relaxed " << RemoteClusterCalls.size()
-              << " remote cluster calls with thunks\n";
+  if (!LongThunkCalls.empty())
+    BC.outs() << "BOLT-INFO: relaxed " << LongThunkCalls.size()
+              << " long cluster calls with thunks\n";
 
   if (NumShortThunks)
     BC.outs() << "BOLT-INFO: " << NumShortThunks << " short thunks created\n";
