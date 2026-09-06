@@ -76,7 +76,6 @@ CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
 CGOPT_EXP(CodeGenFileType, FileType)
 CGOPT(FramePointerKind, FramePointerUsage)
-CGOPT(bool, EnableAIXExtendedAltivecABI)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFPMath)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFP32Math)
 CGOPT(FloatABI::ABIType, FloatABIForCalls)
@@ -281,11 +280,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::desc("Don't place zero-initialized symbols into bss section"),
       cl::init(false));
   CGBINDOPT(DontPlaceZerosInBSS);
-
-  static cl::opt<bool> EnableAIXExtendedAltivecABI(
-      "vec-extabi", cl::desc("Enable the AIX Extended Altivec ABI."),
-      cl::init(false));
-  CGBINDOPT(EnableAIXExtendedAltivecABI);
 
   static cl::opt<bool> EnableGuaranteedTailCallOpt(
       "tailcallopt",
@@ -551,7 +545,6 @@ codegen::getBBSectionsMode(llvm::TargetOptions &Options) {
 TargetOptions
 codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   TargetOptions Options;
-  Options.EnableAIXExtendedAltivecABI = getEnableAIXExtendedAltivecABI();
   Options.NoZerosInBSS = getDontPlaceZerosInBSS();
   Options.GuaranteedTailCallOpt = getEnableGuaranteedTailCallOpt();
   Options.StackSymbolOrdering = getStackSymbolOrdering();

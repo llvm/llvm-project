@@ -1,6 +1,6 @@
-; RUN:  llc < %s -mtriple powerpc64-ibm-aix-xcoff -vec-extabi -mcpu=pwr8 2>&1
+; RUN:  llc < %s -mtriple powerpc64-ibm-aix-xcoff -target-abi=vec-extabi -mcpu=pwr8 2>&1
 ;       | FileCheck %s --check-prefix=ASM64
-; RUN:  llc < %s -mtriple powerpc-ibm-aix-xcoff -vec-extabi -mcpu=pwr8 2>&1
+; RUN:  llc < %s -mtriple powerpc-ibm-aix-xcoff -target-abi=vec-extabi -mcpu=pwr8 2>&1
 ;       | FileCheck %s --check-prefix=ASM32
 
 @f1 = global float 0.000000e+00, align 4
