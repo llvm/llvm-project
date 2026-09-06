@@ -147,26 +147,29 @@ rarely have to include this file directly).
   efficient to use the `InstVisitor` class to dispatch over the instruction
   type directly.
 
-`isa_and_present<>`:
+`isa_and_present<>` and `isa_and_nonnull<>`:
   The `isa_and_present<>` operator works just like the `isa<>` operator,
   except that it allows for a null pointer as an argument (which it then
   returns `false`).  This can sometimes be useful, allowing you to combine
   several null checks into one. Similar to `isa<>` operator, you can specify
   more than one class to check.
+  `isa_and_nonnull<>` is currently an alias of `isa_and_present<>`.
 
-`cast_if_present<>`:
+`cast_if_present<>` and `cast_or_null<>`:
   The `cast_if_present<>` operator works just like the `cast<>` operator,
   except that it allows for a null pointer as an argument (which it then
   propagates).  This can sometimes be useful, allowing you to combine several
   null checks into one.
+  `cast_or_null<>` is currently an alias of `cast_if_present<>`.
 
-`dyn_cast_if_present<>`:
+`dyn_cast_if_present<>` and `dyn_cast_or_null<>`:
   The `dyn_cast_if_present<>` operator works just like the `dyn_cast<>`
   operator, except that it allows for a null pointer as an argument (which it
   then propagates).  This can sometimes be useful, allowing you to combine
   several null checks into one.
+  `dyn_cast_or_null<>` is currently an alias of `dyn_cast_if_present<>`.
 
-These five templates can be used with any classes, whether they have a v-table
+These six templates can be used with any classes, whether they have a v-table
 or not.  If you want to add support for these templates, see the document
 {doc}`How to set up LLVM-style RTTI for your class hierarchy <HowToSetUpLLVMStyleRTTI>`
 
