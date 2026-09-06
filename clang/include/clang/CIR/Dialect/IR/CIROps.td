@@ -4951,6 +4951,7 @@ def CIR_CoroIdOp : CIR_CoroIntrinsicOp<"id",
     (`coro.alloc`, `coro.begin`, `coro.free`, etc.), tying them all to the
     same coroutine instance.
   }];
+  let llvmOp = "CoroIdOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -4965,6 +4966,7 @@ def CIR_CoroAllocOp : CIR_CoroIntrinsicOp<"alloc", (ins Token:$id),
     allocated frame. Returns `true` if the coroutine frame must be allocated,
     or `false` otherwise.
   }];
+  let llvmOp = "CoroAllocOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -4980,6 +4982,7 @@ def CIR_CoroBeginOp : CIR_CoroIntrinsicOp<"begin",
     from `coro.intrinsic.id`, and `coroframeAddr` points to the memory used
     for the coroutine frame. Returns the coroutine handle.
   }];
+  let llvmOp = "CoroBeginOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -4998,6 +5001,7 @@ def CIR_CoroEndOp : CIR_CoroIntrinsicOp<"end",
     indicates whether this occurrence of `coro.intrinsic.end` lies on the
     unwind path (`true`) or the normal control-flow path (`false`).
   }];
+  let llvmOp = "CoroEndOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -5014,6 +5018,7 @@ def CIR_CoroFreeOp : CIR_CoroIntrinsicOp<"free",
     be passed to the deallocation function to free the coroutine frame, or a
     null pointer if the coroutine frame was not dynamically allocated.
   }];
+  let llvmOp = "CoroFreeOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -5026,6 +5031,7 @@ def CIR_CoroSizeOp : CIR_CoroIntrinsicOp<"size", (ins),
   let description = [{
     Returns the size, in bytes, of the coroutine frame.
   }];
+  let llvmOp = "CoroSizeOp";
 }
 
 //===----------------------------------------------------------------------===//
