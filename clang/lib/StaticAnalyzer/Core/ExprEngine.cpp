@@ -1822,6 +1822,11 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       break;
     }
 
+    case Stmt::CThisExprClass:
+      // Only appears as the synthetic base of a MemberExpr in attribute
+      // arguments, which are never part of the analyzed CFG.
+      llvm_unreachable("CThisExpr should not reach the analyzer");
+
     case Stmt::ParenExprClass:
       llvm_unreachable("ParenExprs already handled.");
     case Stmt::GenericSelectionExprClass:
