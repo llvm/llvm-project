@@ -158,3 +158,11 @@ a7ba8dcad76476478100c228a31d9c48391b1e03
 
 # [NFC][clang] Split clang/lib/CodeGen/CGBuiltin.cpp into target-specific files (#132252)
 7f920e2e5f70b25c79adbc0b1005b1d1286d4681
+
+# [WebAssembly] clang-format, clang-tidy, and typo fixes
+eb85a8e8073eb60b773f53b0cc3915b035c37ee9
+f77bbc0b34f98a6e866a72ccd8ff18bee9fa4dc8
+18c56a07623e496480854f4927bcf1ba5213d177
+7ce5edf1eaa3eec541f53d11c01e495ee539989e
+f208f6311b6ea3468b35deab208e307f8a59781b
+7a6b9825cea828916c9f23293f167473b6a61d4e

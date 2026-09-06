@@ -602,8 +602,8 @@ void ExprEngine::handleConstructor(const Expr *E, ExplodedNode *Pred,
     }
 
     // The target region is found from construction context.
-    std::tie(State, Target) = handleConstructionContext(CE, State, currBldrCtx,
-                                                        SF, CC, CallOpts, Idx);
+    std::tie(State, Target) =
+        handleConstructionContext(CE, State, SF, CC, CallOpts, Idx);
     break;
   }
   case CXXConstructionKind::VirtualBase: {

@@ -4230,6 +4230,102 @@ static bool CheckCompatibleDistinctUltimates(SemanticsContext &context,
   return true; // don't try to merge generics (or whatever)
 }
 
+static bool AreSameProcedureForUseAssociation(
+    SemanticsContext &context, const Symbol &p1, const Symbol &p2) {
+  const Symbol &ultimate1{p1.GetUltimate()};
+  const Symbol &ultimate2{p2.GetUltimate()};
+  if (&ultimate1 == &ultimate2) {
+    return true;
+  } else if (ultimate1.name() != ultimate2.name()) {
+    return false;
+  } else if (ultimate1.attrs().test(Attr::INTRINSIC) ||
+      ultimate2.attrs().test(Attr::INTRINSIC)) {
+    return ultimate1.attrs().test(Attr::INTRINSIC) &&
+        ultimate2.attrs().test(Attr::INTRINSIC);
+  }
+  if (!IsProcedure(ultimate1) || IsPointer(ultimate1) ||
+      !IsProcedure(ultimate2) || IsPointer(ultimate2) ||
+      ClassifyProcedure(ultimate1) != ClassifyProcedure(ultimate2)) {
+    return false;
+  }
+  auto classification{ClassifyProcedure(ultimate1)};
+  if (classification == ProcedureDefinitionClass::Module) {
+    return AreSameModuleSymbol(ultimate1, ultimate2);
+  }
+  if (classification != ProcedureDefinitionClass::External) {
+    return false;
+  }
+  const auto *subp1{ultimate1.detailsIf<SubprogramDetails>()};
+  const auto *subp2{ultimate2.detailsIf<SubprogramDetails>()};
+  if (!subp1 || !subp1->isInterface() || !subp2 || !subp2->isInterface()) {
+    return false;
+  }
+  auto chars1{evaluate::characteristics::Procedure::Characterize(
+      ultimate1, context.foldingContext())};
+  auto chars2{evaluate::characteristics::Procedure::Characterize(
+      ultimate2, context.foldingContext())};
+  return chars1 && chars2 && *chars1 == *chars2;
+}
+
+static bool HasCUDADummyDataAttribute(const Symbol &procedure) {
+  if (const auto *subp{
+          procedure.GetUltimate().detailsIf<SubprogramDetails>()}) {
+    for (const Symbol *dummy : subp->dummyArgs()) {
+      if (dummy && GetCUDADataAttr(dummy)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+struct IntrinsicModuleUseAssociationRule {
+  const char *moduleName;
+  const char *genericName;
+  bool (*matches)(SemanticsContext &, const GenericDetails &, const Symbol &);
+};
+
+static bool MatchesCublasGemm(SemanticsContext &context,
+    const GenericDetails &generic, const Symbol &other) {
+  const Symbol *specific{generic.specific()};
+  if (!specific ||
+      !AreSameProcedureForUseAssociation(context, *specific, other)) {
+    return false;
+  }
+  bool containsSpecific{false};
+  bool hasCUDAOverload{false};
+  for (const Symbol &candidate : generic.specificProcs()) {
+    containsSpecific |= &candidate.GetUltimate() == &specific->GetUltimate();
+    hasCUDAOverload |= HasCUDADummyDataAttribute(candidate);
+  }
+  return containsSpecific && hasCUDAOverload;
+}
+
+static const IntrinsicModuleUseAssociationRule *
+FindIntrinsicModuleUseAssociationRule(
+    SemanticsContext &context, const Symbol &generic, const Symbol &other) {
+  // Add entries here for intrinsic module generics that should take precedence
+  // over an equivalent external interface during USE association.
+  static const IntrinsicModuleUseAssociationRule rules[]{
+      {"cublas", "sgemm", MatchesCublasGemm},
+      {"cublas", "dgemm", MatchesCublasGemm},
+      {"cublas", "zgemm", MatchesCublasGemm},
+  };
+  const Scope &owner{generic.GetUltimate().owner()};
+  if (!owner.IsModule() || !owner.parent().IsIntrinsicModules() ||
+      !owner.GetName()) {
+    return nullptr;
+  }
+  for (const auto &rule : rules) {
+    if (owner.GetName().value() == rule.moduleName &&
+        generic.GetUltimate().name() == rule.genericName &&
+        rule.matches(context, generic.get<GenericDetails>(), other)) {
+      return &rule;
+    }
+  }
+  return nullptr;
+}
+
 void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
     Symbol &originalLocal, const Symbol &useSymbol) {
   Symbol *localSymbol{&originalLocal};
@@ -4457,6 +4553,40 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       return false;
     }
   }};
+
+  auto warnIntrinsicModuleUseAssociation{[&](const Symbol &generic) {
+    const Scope &owner{generic.GetUltimate().owner()};
+    if (auto *msg{context().Warn(
+            common::LanguageFeature::PreferIntrinsicModuleUseAssociation,
+            location,
+            "USE association selects intrinsic '%s' generic '%s' over an equivalent external interface"_warn_en_US,
+            owner.GetName().value(), generic.GetUltimate().name())}) {
+      msg->Attach(location,
+          "this extension can be disabled (-fno-prefer-intrinsic-module-use-association)"_en_US);
+    }
+  }};
+
+  if (context().IsEnabled(
+          common::LanguageFeature::PreferIntrinsicModuleUseAssociation)) {
+    if (localSymbol->has<UseDetails>() && !localGeneric && useGeneric &&
+        localProcedure &&
+        FindIntrinsicModuleUseAssociationRule(
+            context(), useUltimate, *localProcedure)) {
+      warnIntrinsicModuleUseAssociation(useUltimate);
+      EraseSymbol(*localSymbol);
+      Symbol &newSymbol{MakeSymbol(localName,
+          useUltimate.attrs() & ~Attrs{Attr::PUBLIC, Attr::PRIVATE},
+          UseDetails{localName, useUltimate})};
+      newSymbol.flags() = useSymbol.flags();
+      return;
+    } else if (localSymbol->has<UseDetails>() && localGeneric && !useGeneric &&
+        useProcedure &&
+        FindIntrinsicModuleUseAssociationRule(
+            context(), localUltimate, *useProcedure)) {
+      warnIntrinsicModuleUseAssociation(localUltimate);
+      return;
+    }
+  }
 
   // When two non-generic procedures arrived, try to combine them.
   const Symbol *combinedProcedure{nullptr};
@@ -10580,6 +10710,21 @@ void ResolveNamesVisitor::PreSpecificationConstruct(
       spec.u);
 }
 
+static bool IsCallOfDeclaredEntity(
+    const parser::Call &call, const std::list<parser::EntityDecl> &entities) {
+  // Pure query: do not resolve names or modify symbols/scopes.
+  const auto &procDesignator{std::get<parser::ProcedureDesignator>(call.t)};
+  if (const auto *name{std::get_if<parser::Name>(&procDesignator.u)}) {
+    for (const auto &ent : entities) {
+      const auto &objName{std::get<parser::ObjectName>(ent.t)};
+      if (name->source == objName.source) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 void ResolveNamesVisitor::EarlyDummyTypeDeclaration(
     const parser::Statement<common::Indirection<parser::TypeDeclarationStmt>>
         &stmt) {
@@ -10595,6 +10740,10 @@ void ResolveNamesVisitor::EarlyDummyTypeDeclaration(
             // nonempty argument list, to prevent implicitly typing names
             // that might appear.  (TODO: But maybe INTEGER(KIND(n)) after
             // an explicit declaration of 'n' would be useful.)
+            return;
+          }
+          if (IsCallOfDeclaredEntity(*call, entities)) {
+            // Avoid implicitly typing the entity referenced by the KIND call.
             return;
           }
         } else if (!parser::Unwrap<parser::KindSelector::StarSize>(*kind) &&
@@ -10765,16 +10914,17 @@ void ResolveNamesVisitor::FinishSpecificationPart(
         // OpenACC) would incorrectly route every allocatable through the CUDA
         // Fortran managed descriptor pipeline.
         if (context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CudaManaged) &&
-            context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CUDA))
-          object->set_cudaDataAttr(common::CUDADataAttr::Managed);
-        // Implicitly treat allocatable arrays as pinned when feature is
-        // enabled.
-        else if (IsAllocatable(symbol) &&
-            context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CudaPinned))
-          object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+                common::LanguageFeature::CUDA)) {
+          if (context().languageFeatures().IsEnabled(
+                  common::LanguageFeature::CudaManaged))
+            object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+          // Implicitly treat allocatable arrays as pinned when feature is
+          // enabled.
+          else if (IsAllocatable(symbol) &&
+              context().languageFeatures().IsEnabled(
+                  common::LanguageFeature::CudaPinned))
+            object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+        }
       }
     }
   }

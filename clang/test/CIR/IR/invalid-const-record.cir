@@ -1,7 +1,7 @@
 // RUN: cir-opt %s -verify-diagnostics -split-input-file
 
 !s32i = !cir.int<s, 32>
-!rec_anon_struct = !cir.struct< packed {!s32i, !s32i, !cir.array<!s32i x 8>}>
+!rec_anon_struct = !cir.struct< packed {data !s32i, data !s32i, data !cir.array<!s32i x 8>}>
 
 // expected-error @below {{expected !cir.struct or !cir.union type}}
 cir.global external @e = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.zero : !cir.array<!s32i x 8>}> : !cir.ptr<!rec_anon_struct>
@@ -9,7 +9,7 @@ cir.global external @e = #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !
 // -----
 
 !s32i = !cir.int<s, 32>
-!rec_anon_struct = !cir.struct< packed {!s32i, !s32i, !cir.array<!s32i x 8>}>
+!rec_anon_struct = !cir.struct< packed {data !s32i, data !s32i, data !cir.array<!s32i x 8>}>
 
 // expected-error @below {{number of elements must match}}
 cir.global external @e = #cir.const_record<{#cir.int<1> : !s32i, #cir.zero : !cir.array<!s32i x 8>}> : !rec_anon_struct
@@ -17,7 +17,7 @@ cir.global external @e = #cir.const_record<{#cir.int<1> : !s32i, #cir.zero : !ci
 // -----
 
 !s32i = !cir.int<s, 32>
-!rec_anon_struct = !cir.struct< packed {!s32i, !s32i, !cir.array<!s32i x 8>}>
+!rec_anon_struct = !cir.struct< packed {data !s32i, data !s32i, data !cir.array<!s32i x 8>}>
 
 // expected-error @below {{element at index 1 has type '!cir.float' but the expected type for this element is '!cir.int<s, 32>'}}
 cir.global external @e = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.000000e+00> : !cir.float, #cir.zero : !cir.array<!s32i x 8>}> : !rec_anon_struct
@@ -26,7 +26,7 @@ cir.global external @e = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.00000
 
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
-!rec_U = !cir.union<"U" {!s32i, !u8i}, padding = {!cir.array<!u8i x 3>}>
+!rec_U = !cir.union<"U" {data !s32i, data !u8i}, padding = {!cir.array<!u8i x 3>}>
 
 // A union constant must have exactly one element (the active member).
 // expected-error @below {{union constant must have exactly one element, got 2}}
@@ -36,7 +36,7 @@ cir.global external @u = #cir.const_record<{#cir.int<5> : !s32i, #cir.int<7> : !
 
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
-!rec_U = !cir.union<"U" {!s32i, !u8i}, padding = {!cir.array<!u8i x 3>}>
+!rec_U = !cir.union<"U" {data !s32i, data !u8i}, padding = {!cir.array<!u8i x 3>}>
 
 // expected-error @below {{union constant must have exactly one element, got 0}}
 cir.global external @u = #cir.const_record<{}> : !rec_U
@@ -45,7 +45,7 @@ cir.global external @u = #cir.const_record<{}> : !rec_U
 
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
-!rec_U = !cir.union<"U" {!s32i, !u8i}, padding = {!cir.array<!u8i x 3>}>
+!rec_U = !cir.union<"U" {data !s32i, data !u8i}, padding = {!cir.array<!u8i x 3>}>
 
 // The single element's type must be one of the union's member types.
 // expected-error @below {{union element type '!cir.float' is not a member of}}
@@ -55,7 +55,7 @@ cir.global external @u = #cir.const_record<{#cir.fp<2.000000e+00> : !cir.float}>
 
 !s8i = !cir.int<s, 8>
 !s32i = !cir.int<s, 32>
-!rec_S = !cir.struct<"S" {!s32i, !cir.array<!s8i x 0>}>
+!rec_S = !cir.struct<"S" {data !s32i, data !cir.array<!s8i x 0>}>
 
 // The flexible array member (trailing zero-length array) must be initialized
 // with an array; a non-array initializer is rejected.
@@ -66,7 +66,7 @@ cir.global external @fam_non_array = #cir.const_record<{#cir.int<3> : !s32i, #ci
 
 !s8i = !cir.int<s, 8>
 !s32i = !cir.int<s, 32>
-!rec_S = !cir.struct<"S" {!s32i, !cir.array<!s8i x 0>}>
+!rec_S = !cir.struct<"S" {data !s32i, data !cir.array<!s8i x 0>}>
 
 // The flexible array member initializer must have the same element type as the
 // declared zero-length array.
@@ -77,7 +77,7 @@ cir.global external @fam_wrong_elt = #cir.const_record<{#cir.int<3> : !s32i, #ci
 
 !s8i = !cir.int<s, 8>
 !s32i = !cir.int<s, 32>
-!rec_F = !cir.struct<"F" {!s32i, !cir.array<!s8i x 2>}>
+!rec_F = !cir.struct<"F" {data !s32i, data !cir.array<!s8i x 2>}>
 
 // The oversized-array relaxation only applies when the declared trailing array
 // is zero-length; a non-zero-length array still requires an exact type match.

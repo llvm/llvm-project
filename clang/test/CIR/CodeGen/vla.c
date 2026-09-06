@@ -407,9 +407,9 @@ void vla_subscript_expr() {
 // CIR: %[[ELEM_5_PTR:.*]] = cir.ptr_stride %[[VLA_A_PTR]], %[[CONST_5]] : (!cir.ptr<!s32i>, !s64i) -> !cir.ptr<!s32i>
 // CIR: cir.store {{.*}} %[[CONST_0_VAL]], %[[ELEM_5_PTR]] : !s32i, !cir.ptr<!s32i>
 
-// LLVM: %[[A_ADDR:.*]] = alloca ptr, i64 1, align 8
-// LLVM: %[[N_ADDR:.*]] = alloca i64, i64 1, align 8
-// LLVM: %[[COMPOUND_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM: %[[A_ADDR:.*]] = alloca ptr, align 8
+// LLVM: %[[N_ADDR:.*]] = alloca i64, align 8
+// LLVM: %[[COMPOUND_ADDR:.*]] = alloca ptr, align 8
 // LLVM: store i64 5, ptr %[[N_ADDR]], align 8
 // LLVM: %[[TMP_N:.*]] = load i64, ptr %[[N_ADDR]], align 8
 // LLVM: store ptr %[[A_ADDR]], ptr %[[COMPOUND_ADDR]], align 8
@@ -529,8 +529,8 @@ void complex_vla_cast(int n) {
 // CIR:   }
 
 // LLVM: define {{.*}} void @complex_vla_cast
-// LLVM:   %[[LEN_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[SAVED_STACK:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[LEN_ADDR:.*]] = alloca i32, align 4
+// LLVM:   %[[SAVED_STACK:.*]] = alloca ptr, align 8
 // LLVM:   store i32 %{{.*}}, ptr %[[LEN_ADDR]], align 4
 // LLVM:   %[[LEN:.*]] = load i32, ptr %[[LEN_ADDR]], align 4
 // LLVM:   %[[LEN_SIZE_T:.*]] = sext i32 %[[LEN]] to i64

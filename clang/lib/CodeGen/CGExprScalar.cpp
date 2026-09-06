@@ -786,6 +786,7 @@ public:
     if (E->isStoredAsBoolean())
       return llvm::ConstantInt::get(ConvertType(E->getType()),
                                     E->getBoolValue());
+    assert(E->getType()->isIntegerType() && "not a scalar type trait");
     assert(E->getAPValue().isInt() && "APValue type not supported");
     return llvm::ConstantInt::get(ConvertType(E->getType()),
                                   E->getAPValue().getInt());
@@ -4105,17 +4106,42 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
     // the loaded integer to double, performing FP arithmetics, and truncation
     // back as a single atomic operation. Integer promotion is still
     // semantically safe.
-    bool CanEmitAtomicRMW =
-        !AtomicValueTy->isBooleanType() && AtomicValueTy->isIntegerType() &&
-        ResultTy->isIntegerType() &&
-        !(AtomicValueTy->isUnsignedIntegerType() &&
-          CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
-        CGF.getLangOpts().getSignedOverflowBehavior() !=
-            LangOptions::SOB_Trapping;
+    bool CanEmitAtomicRMW;
+    if (AtomicValueTy->isFloatingType()) {
+      llvm::Type *IRTy = CGF.ConvertType(AtomicValueTy);
+      uint64_t StoreBits = CGF.CGM.getDataLayout().getTypeStoreSizeInBits(IRTy);
+      // Floating atomicrmw operations cannot model constrained FP semantics.
+      CanEmitAtomicRMW =
+          !OpInfo.FPFeatures.isFPConstrained() &&
+          CGF.getContext().hasSameUnqualifiedType(AtomicValueTy, ResultTy) &&
+          llvm::isPowerOf2_64(StoreBits);
+    } else {
+      CanEmitAtomicRMW =
+          !AtomicValueTy->isBooleanType() && AtomicValueTy->isIntegerType() &&
+          ResultTy->isIntegerType() &&
+          !(AtomicValueTy->isUnsignedIntegerType() &&
+            CGF.SanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
+          CGF.getLangOpts().getSignedOverflowBehavior() !=
+              LangOptions::SOB_Trapping;
+    }
     if (CanEmitAtomicRMW) {
       llvm::AtomicRMWInst::BinOp AtomicOp = llvm::AtomicRMWInst::BAD_BINOP;
       llvm::Instruction::BinaryOps Op;
-      switch (OpInfo.Opcode) {
+      if (AtomicValueTy->isFloatingType()) {
+        switch (OpInfo.Opcode) {
+        case BO_AddAssign:
+          AtomicOp = llvm::AtomicRMWInst::FAdd;
+          Op = llvm::Instruction::FAdd;
+          break;
+        case BO_SubAssign:
+          AtomicOp = llvm::AtomicRMWInst::FSub;
+          Op = llvm::Instruction::FSub;
+          break;
+        default:
+          break;
+        }
+      } else {
+        switch (OpInfo.Opcode) {
         // We don't have atomicrmw operands for *, %, /, <<, >>
         case BO_MulAssign: case BO_DivAssign:
         case BO_RemAssign:
@@ -4144,6 +4170,7 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
           break;
         default:
           llvm_unreachable("Invalid compound assignment type");
+        }
       }
       if (AtomicOp != llvm::AtomicRMWInst::BAD_BINOP) {
         llvm::Value *Amt = CGF.EmitToMemory(
@@ -4982,10 +5009,10 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
   // Otherwise, this is a pointer subtraction.
 
   // Do the raw subtraction part.
-  llvm::Value *LHS
-    = Builder.CreatePtrToInt(op.LHS, CGF.PtrDiffTy, "sub.ptr.lhs.cast");
-  llvm::Value *RHS
-    = Builder.CreatePtrToInt(op.RHS, CGF.PtrDiffTy, "sub.ptr.rhs.cast");
+  llvm::Value *LHS =
+      Builder.CreatePtrToInt(op.LHS, CGF.PtrDiffTy, "sub.ptr.lhs.cast");
+  llvm::Value *RHS =
+      Builder.CreatePtrToInt(op.RHS, CGF.PtrDiffTy, "sub.ptr.rhs.cast");
   Value *diffInChars = Builder.CreateSub(LHS, RHS, "sub.ptr.sub");
 
   // Okay, figure out the element size.
@@ -5367,6 +5394,9 @@ Value *ScalarExprEmitter::EmitCompare(const BinaryOperator *E,
     // vector integer type and return it (don't convert to bool).
     if (LHSTy->isVectorType() || LHSTy->isSveVLSBuiltinType())
       return Builder.CreateSExt(Result, ConvertType(E->getType()), "sext");
+
+    if (LHSTy->isMatrixType())
+      return Result;
 
   } else {
     // Complex Comparison: can only be an equality comparison.

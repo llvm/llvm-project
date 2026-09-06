@@ -124,7 +124,7 @@
 //   func.func @test() {
 //     %scalar = memref.alloca() {acc.var_name = "n"} : memref<i32>
 //     %copyin = acc.copyin varPtr(%scalar : memref<i32>) -> memref<i32>
-//                 {dataClause = #acc<data_clause acc_copy>,
+//                 {dataClause = #acc.data_clause<acc_copy>,
 //                  implicit = true, name = "n"}
 //     acc.kernels dataOperands(%copyin : memref<i32>) {
 //       %val = memref.load %copyin[] : memref<i32>
@@ -132,7 +132,7 @@
 //     }
 //     acc.copyout accPtr(%copyin : memref<i32>)
 //                 to varPtr(%scalar : memref<i32>)
-//                 {dataClause = #acc<data_clause acc_copy>,
+//                 {dataClause = #acc.data_clause<acc_copy>,
 //                  implicit = true, name = "n"}
 //   }
 //
@@ -153,7 +153,7 @@
 //     %array = memref.alloca() {acc.var_name = "arr"} : memref<100xf32>
 //     %copyin = acc.copyin varPtr(%array : memref<100xf32>)
 //                 -> memref<100xf32>
-//                 {dataClause = #acc<data_clause acc_copy>,
+//                 {dataClause = #acc.data_clause<acc_copy>,
 //                  implicit = true, name = "arr"}
 //     acc.parallel dataOperands(%copyin : memref<100xf32>) {
 //       %c0 = arith.constant 0 : index
@@ -162,7 +162,7 @@
 //     }
 //     acc.copyout accPtr(%copyin : memref<100xf32>)
 //                 to varPtr(%array : memref<100xf32>)
-//                 {dataClause = #acc<data_clause acc_copy>,
+//                 {dataClause = #acc.data_clause<acc_copy>,
 //                  implicit = true, name = "arr"}
 //   }
 //
@@ -175,7 +175,7 @@
 //       %c0 = arith.constant 0 : index
 //       %val = memref.load %array[%c0] : memref<100xf32>
 //       acc.yield
-//     } attributes {defaultAttr = #acc<defaultvalue present>}
+//     } attributes {defaultAttr = #acc.defaultvalue<present>}
 //   }
 //
 // After:
@@ -185,13 +185,13 @@
 //                  -> memref<100xf32>
 //                  {implicit = true, name = "arr"}
 //     acc.parallel dataOperands(%present : memref<100xf32>)
-//                  attributes {defaultAttr = #acc<defaultvalue present>} {
+//                  attributes {defaultAttr = #acc.defaultvalue<present>} {
 //       %c0 = arith.constant 0 : index
 //       %val = memref.load %present[%c0] : memref<100xf32>
 //       acc.yield
 //     }
 //     acc.delete accPtr(%present : memref<100xf32>)
-//                {dataClause = #acc<data_clause acc_present>,
+//                {dataClause = #acc.data_clause<acc_present>,
 //                 implicit = true, name = "arr"}
 //   }
 //
@@ -215,7 +215,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <type_traits>
 
@@ -458,6 +457,15 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
       typeCategory, acc::VariableTypeCategory::aggregate);
   Location loc = computeConstructOp->getLoc();
 
+  if (acc::isDeviceValue(var)) {
+    // If the variable is device data, use deviceptr clause.
+    LLVM_DEBUG(llvm::dbgs() << "Using deviceptr clause because variable is "
+                               "device data\n");
+    return acc::DevicePtrOp::create(builder, loc, var,
+                                    /*structured=*/true, /*implicit=*/true,
+                                    accSupport.getVariableName(var));
+  }
+
   Operation *op = nullptr;
   op = getOriginalDataClauseOpForAlias(var, builder, computeConstructOp,
                                        dominatingDataClauses);
@@ -480,16 +488,6 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
                                   /*structured=*/true, /*implicit=*/true,
                                   accSupport.getVariableName(var),
                                   acc::getBounds(op));
-  }
-
-  if (acc::isDeviceValue(var)) {
-    // Variable is device data with no existing dominating mapping: use
-    // deviceptr clause.
-    LLVM_DEBUG(llvm::dbgs() << "Using deviceptr clause because variable is "
-                               "device data\n");
-    return acc::DevicePtrOp::create(builder, loc, var,
-                                    /*structured=*/true, /*implicit=*/true,
-                                    accSupport.getVariableName(var));
   }
 
   if (isScalar) {
@@ -532,8 +530,8 @@ Operation *ACCImplicitData::generateDataClauseOpForCandidate(
       newDataOp = acc::PresentOp::create(builder, loc, var,
                                          /*structured=*/true, /*implicit=*/true,
                                          accSupport.getVariableName(var));
-      newDataOp->setAttr(acc::getFromDefaultClauseAttrName(),
-                         builder.getUnitAttr());
+      newDataOp->setDiscardableAttr(acc::getFromDefaultClauseAttrName(),
+                                    builder.getUnitAttr());
     } else {
       auto copyinOp =
           acc::CopyinOp::create(builder, loc, var,
@@ -704,35 +702,6 @@ static void insertInSortedOrder(SmallVector<Value> &sortedDataClauseOperands,
   }
 }
 
-/// A present() clause on a device value always holds. Erase it to allow the
-/// implicit data to generate an acc.deviceptr for it.
-template <typename OpT>
-static void foldPresentDeviceValue(OpT computeConstructOp) {
-  SmallVector<Value> remainingOperands;
-  SmallVector<acc::PresentOp> toErase;
-  for (Value var : computeConstructOp.getDataClauseOperands()) {
-    if (auto presentOp =
-            dyn_cast_if_present<acc::PresentOp>(var.getDefiningOp())) {
-      if (acc::isDeviceValue(presentOp.getVar())) {
-        toErase.push_back(presentOp);
-        continue;
-      }
-    }
-    remainingOperands.push_back(var);
-  }
-  if (toErase.empty())
-    return;
-
-  computeConstructOp.getDataClauseOperandsMutable().assign(remainingOperands);
-  for (acc::PresentOp presentOp : toErase) {
-    Operation *exitOp = findDataExitOp(presentOp);
-    assert(exitOp && exitOp->getNumResults() == 0);
-    presentOp.getAccVar().replaceAllUsesWith(presentOp.getVar());
-    exitOp->erase();
-    presentOp->erase();
-  }
-}
-
 template <typename OpT>
 void ACCImplicitData::generateImplicitDataOps(
     ModuleOp &module, OpT computeConstructOp,
@@ -821,24 +790,19 @@ void ACCImplicitData::runOnOperation() {
 
   acc::OpenACCSupport &accSupport = getAnalysis<acc::OpenACCSupport>();
 
-  SmallVector<Operation *> computeConstructOps;
   module.walk([&](Operation *op) {
-    if (isa<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(op))
-      computeConstructOps.push_back(op);
+    if (isa<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(op)) {
+      assert(op->getNumRegions() == 1 && "must have 1 region");
+
+      auto defaultClause = acc::getDefaultAttr(op);
+      llvm::TypeSwitch<Operation *, void>(op)
+          .Case<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(
+              [&](auto op) {
+                generateImplicitDataOps(module, op, defaultClause, accSupport);
+              })
+          .Default([&](Operation *) {});
+    }
   });
-
-  for (Operation *op : computeConstructOps) {
-    assert(op->getNumRegions() == 1 && "must have 1 region");
-
-    auto defaultClause = acc::getDefaultAttr(op);
-    llvm::TypeSwitch<Operation *, void>(op)
-        .Case<ACC_COMPUTE_CONSTRUCT_OPS, acc::KernelEnvironmentOp>(
-            [&](auto op) {
-              foldPresentDeviceValue(op);
-              generateImplicitDataOps(module, op, defaultClause, accSupport);
-            })
-        .Default([&](Operation *) {});
-  }
 }
 
 } // namespace

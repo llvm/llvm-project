@@ -115,8 +115,8 @@ define void @implied_wrap_predicate(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[A3:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[A3]], 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP0]], i64 add (i64 ptrtoaddr (ptr @h to i64), i64 1))
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[A3]]
-; CHECK-NEXT:    [[TMP20:%.*]] = add i64 [[TMP2]], -9
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], -9
+; CHECK-NEXT:    [[TMP20:%.*]] = sub i64 [[TMP2]], [[A3]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i64 [[TMP20]], 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP4]], 4
@@ -199,8 +199,8 @@ define void @no_signed_wrap_iv_via_btc(ptr %dst, i32 %N) mustprogress {
 ; CHECK:       [[LOOP_PREHEADER]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], 1
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[SUB4]], i32 [[TMP0]])
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[SMAX]], [[N]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP7]], 100
+; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[SMAX]], 100
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i32 [[TMP7]], [[N]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

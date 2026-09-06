@@ -333,7 +333,7 @@ func.func @test_add_inv_or_terminal_symbol(%arg0: memref<9x9xi32>, %arg1: i1) {
   %29 = tensor.empty() : tensor<10xf16>
   memref.alloca_scope {
     %dim_30 = tensor.dim %29, %idx0 : tensor<10xf16>
-    %alloc_31 = memref.alloc(%idx0, %idx0) {alignment = 64 : i64} : memref<?x?xf16>
+    %alloc_31 = memref.alloc(%idx0, %idx0) alignment = 64 : memref<?x?xf16>
     affine.for %arg3 = 0 to %dim_30 {
       %207 = affine.load %alloc_31[%idx0, %idx0] : memref<?x?xf16>
       affine.store %207, %alloc_31[%idx0, %idx0] : memref<?x?xf16>

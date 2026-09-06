@@ -1,6 +1,39 @@
+# Helper function to set up dependencies if they exist.
+function(add_type_header name)
+  cmake_parse_arguments(
+    "TYPE_HEADER"
+    "" # Optional arguments
+    "HDR;DEST_HDR" # Single value arguments
+    "DEPENDS" # Multi-value arguments
+    ${ARGN}
+  )
+  if(TYPE_HEADER_DEST_HDR)
+    set(dest_header_arg DEST_HDR ${TYPE_HEADER_DEST_HDR})
+  endif()
+  set(deps)
+  if(TARGET libc.include.llvm-libc-types.${LIBC_TARGET_OS}.${name})
+    list(APPEND deps .${LIBC_TARGET_OS}.${name})
+  endif()
+  if(TARGET libc.include.llvm-libc-types.${LIBC_TARGET_ARCHITECTURE}.${name})
+    list(APPEND deps .${LIBC_TARGET_ARCHITECTURE}.${name})
+  endif()
+  if(TYPE_HEADER_DEPENDS)
+    list(APPEND deps ${TYPE_HEADER_DEPENDS})
+  endif()
+  add_header(
+    ${name}
+    HDR
+      ${TYPE_HEADER_HDR}
+    ${dest_header_arg}
+    DEPENDS
+      ${deps}
+  )
+endfunction()
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
+
 add_header(off64_t HDR off64_t.h)
 add_header(size_t HDR size_t.h)
 add_header(
@@ -67,11 +100,11 @@ add_header(
 )
 add_header(ldiv_t HDR ldiv_t.h)
 add_header(lldiv_t HDR lldiv_t.h)
-if(TARGET libc.include.llvm-libc-types.${LIBC_TARGET_OS}.loff_t)
-  add_header(loff_t HDR loff_t.h DEPENDS .${LIBC_TARGET_OS}.loff_t)
-else()
-  add_header(loff_t HDR loff_t.h)
-endif()
+add_type_header(
+  loff_t
+  HDR
+    loff_t.h
+)
 add_header(FILE HDR FILE.h)
 add_header(fd_set HDR fd_set.h DEPENDS libc.include.llvm-libc-macros.sys_select_macros)
 add_header(fenv_t HDR fenv_t.h)
@@ -119,14 +152,29 @@ add_header(pthread_spinlock_t HDR pthread_spinlock_t.h DEPENDS .pid_t)
 add_header(pthread_t HDR pthread_t.h DEPENDS .__thread_type)
 add_header(pthread_id_np_t HDR pthread_id_np_t.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(rlim_t HDR rlim_t.h)
+add_header(sem_t HDR sem_t.h DEPENDS .__futex_word)
 add_header(time_t HDR time_t_64.h DEST_HDR time_t.h)
 add_header(timer_t HDR timer_t.h)
+add_header(sig_t HDR sig_t.h)
 add_header(sighandler_t HDR sighandler_t.h)
 add_header(stack_t HDR stack_t.h DEPENDS .size_t)
 add_header(suseconds_t HDR suseconds_t.h)
 add_header(struct_dirent HDR struct_dirent.h DEPENDS .ino_t .off_t .reclen_t)
 add_header(struct_posix_dent HDR struct_posix_dent.h DEPENDS .ino_t .off_t .reclen_t)
 add_header(struct_dl_phdr_info HDR struct_dl_phdr_info.h DEPENDS .size_t libc.include.llvm-libc-macros.link_macros)
+add_header(
+  struct_link_map
+  HDR struct_link_map.h
+  DEPENDS
+    libc.include.llvm-libc-macros.link_macros
+)
+add_header(
+  struct_r_debug
+  HDR struct_r_debug.h
+  DEPENDS
+    .struct_link_map
+    libc.include.llvm-libc-macros.link_macros
+)
 add_header(dl_info HDR Dl_info.h)
 add_header(struct_f_owner_ex HDR struct_f_owner_ex.h DEPENDS .pid_t)
 add_header(struct_flock HDR struct_flock.h DEPENDS .off_t .pid_t)
@@ -159,30 +207,6 @@ add_header(union_sigval HDR union_sigval.h)
 add_header(siginfo_t HDR siginfo_t.h DEPENDS .union_sigval .pid_t .uid_t .clock_t)
 add_header(sig_atomic_t HDR sig_atomic_t.h)
 add_header(sigset_t HDR sigset_t.h DEPENDS libc.include.llvm-libc-macros.signal_macros)
-set(mcontext_deps)
-set(ucontext_deps .sigset_t .stack_t)
-
-if(LIBC_TARGET_ARCHITECTURE STREQUAL "x86_64")
-  add_header(
-    mcontext_t_arch
-    HDR
-      x86_64/mcontext_t.h
-  )
-  add_header(
-    ucontext_t_arch
-    HDR
-      x86_64/ucontext_t.h
-    DEPENDS
-      .mcontext_t_arch
-      .sigset_t
-      .stack_t
-  )
-  list(APPEND mcontext_deps .mcontext_t_arch)
-  list(APPEND ucontext_deps .ucontext_t_arch)
-endif()
-
-add_header(mcontext_t HDR mcontext_t.h DEPENDS ${mcontext_deps})
-add_header(ucontext_t HDR ucontext_t.h DEPENDS .mcontext_t ${ucontext_deps})
 add_header(u_char HDR u_char.h)
 add_header(u_int32_t HDR u_int32_t.h)
 add_header(uint HDR uint.h)
@@ -190,7 +214,9 @@ add_header(__jmp_buf HDR __jmp_buf.h DEPENDS .sigset_t)
 add_header(jmp_buf HDR jmp_buf.h DEPENDS .__jmp_buf)
 add_header(sigjmp_buf HDR sigjmp_buf.h DEPENDS .__jmp_buf)
 add_header(struct_sigaction HDR struct_sigaction.h DEPENDS .sigset_t .siginfo_t)
+add_header(struct_sigevent HDR struct_sigevent.h DEPENDS .union_sigval .pthread_attr_t .pid_t)
 add_header(struct_timespec HDR struct_timespec.h DEPENDS .time_t)
+add_header(struct_itimerspec HDR struct_itimerspec.h DEPENDS .struct_timespec)
 add_header(
   struct_stat
   HDR struct_stat.h
@@ -200,6 +226,12 @@ add_header(
 )
 add_header(struct_tm HDR struct_tm.h)
 add_header(struct_passwd HDR struct_passwd.h DEPENDS .uid_t .gid_t)
+add_header(struct_group HDR struct_group.h DEPENDS .gid_t)
+add_type_header(
+  struct_sysinfo
+  HDR
+    struct_sysinfo.h
+)
 add_header(struct_utsname HDR struct_utsname.h)
 add_header(thrd_start_t HDR thrd_start_t.h)
 add_header(thrd_t HDR thrd_t.h DEPENDS .__thread_type)
@@ -233,6 +265,7 @@ add_header(wctype_t HDR wctype_t.h)
 add_header(sa_family_t HDR sa_family_t.h)
 add_header(socklen_t HDR socklen_t.h)
 add_header(struct_sockaddr HDR struct_sockaddr.h DEPENDS .sa_family_t)
+add_header(struct_addrinfo HDR struct_addrinfo.h DEPENDS .socklen_t .struct_sockaddr)
 add_header(struct_sockaddr_in HDR struct_sockaddr_in.h DEPENDS .in_port_t .sa_family_t .struct_in_addr)
 add_header(
   struct_sockaddr_in6
@@ -578,6 +611,15 @@ add_header(
   DEPENDS
     .Elf64_Half
 )
+
+# Arch-specific types
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
+endif()
+
+add_type_header(mcontext_t HDR mcontext_t.h)
+add_type_header(ucontext_t HDR ucontext_t.h)
+add_type_header(struct_user_regs_struct HDR struct_user_regs_struct.h)
 
 # UEFI
 add_header(EFI_GUID HDR EFI_GUID.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)

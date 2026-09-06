@@ -82,11 +82,11 @@ public:
   bool WarnBeforeDetach() const override { return false; }
 
   // Process Memory
-  size_t ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                    lldb_private::Status &error) override;
+  size_t ReadMemory(const lldb_private::ProcessAddress &addr, void *buf,
+                    size_t size, lldb_private::Status &error) override;
 
-  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      lldb_private::Status &error) override;
+  size_t DoReadMemory(const lldb_private::ProcessAddress &addr, void *buf,
+                      size_t size, lldb_private::Status &error) override;
 
   // We do not implement DoReadMemoryTags. Instead all the work is done in
   // ReadMemoryTags which avoids having to unpack and repack tags.

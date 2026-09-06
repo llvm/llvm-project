@@ -188,6 +188,19 @@ if(COMPILER_RT_ASAN_ENABLE_EXCEPTIONS AND COMPILER_RT_HAS_FEXCEPTIONS_FLAG)
   list(APPEND ASAN_CXX_CFLAGS -fexceptions)
   list(REMOVE_ITEM ASAN_DYNAMIC_CXX_CFLAGS -fno-exceptions)
   list(APPEND ASAN_DYNAMIC_CXX_CFLAGS -fexceptions)
+  # The throwing version of operator new throws standard exceptions such as
+  # std::bad_alloc. Under -fno-rtti, clang emits a private type_info for
+  # these exceptions that a `catch` statement in a user's program, referencing
+  # type_info provided by the C++ standard library linked into the program,
+  # can't match on Mach-O.
+  # See this example of the behavior:
+  #      https://stackoverflow.com/questions/21737201/problems-throwing-and-catching-exceptions-on-os-x-with-fno-rtti
+  # To avoid this, when available, enable RTTI for all potentially throwing TUs
+  # (ASAN_CXX_SOURCES).
+  remove_rtti_flags(ASAN_CXX_CFLAGS)
+  append_rtti_flag(ON ASAN_CXX_CFLAGS)
+  remove_rtti_flags(ASAN_DYNAMIC_CXX_CFLAGS)
+  append_rtti_flag(ON ASAN_DYNAMIC_CXX_CFLAGS)
   if(TARGET cxx-headers OR HAVE_LIBCXX)
     list(APPEND ASAN_CXX_CFLAGS ${COMPILER_RT_CXX_CFLAGS})
     list(APPEND ASAN_DYNAMIC_CXX_CFLAGS ${COMPILER_RT_CXX_CFLAGS})

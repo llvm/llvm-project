@@ -1,35 +1,35 @@
-; RUN: llc -mtriple=armv7 -mattr=+neon -mcpu=swift %s -o - | FileCheck %s
-; RUN: llc -mtriple=armv7 -mattr=+neon -mcpu=cortex-a8 %s -o - | FileCheck --check-prefix=CHECK-NONEONFP %s
-; RUN: llc -mtriple=armv7 -mattr=-neon -mcpu=cortex-a8 %s -o - | FileCheck --check-prefix=CHECK-NONEON %s
+; RUN: llc -mtriple=armv7-none-eabihf -mattr=+neon -mcpu=swift %s -o - | FileCheck %s
+; RUN: llc -mtriple=armv7-none-eabihf -mattr=+neon -mcpu=cortex-a8 %s -o - | FileCheck --check-prefix=CHECK-NONEONFP %s
+; RUN: llc -mtriple=armv7-none-eabihf -mattr=-neon -mcpu=cortex-a8 %s -o - | FileCheck --check-prefix=CHECK-NONEON %s
 
-; RUN: llc -mtriple=thumbv7m -mcpu=cortex-m4 %s -o - \
+; RUN: llc -mtriple=thumbv7m-none-eabihf -mcpu=cortex-m4 %s -o - \
 ; RUN: | FileCheck --check-prefix=CHECK-NO-XO %s
 
-; RUN: llc -mtriple=thumbv7m -mattr=+execute-only -mcpu=cortex-m4 %s -o - \
+; RUN: llc -mtriple=thumbv7m-none-eabihf -mattr=+execute-only -mcpu=cortex-m4 %s -o - \
 ; RUN: | FileCheck --check-prefix=CHECK-XO-FLOAT --check-prefix=CHECK-XO-DOUBLE %s
 
-; RUN: llc -mtriple=thumbv7meb -mattr=+execute-only -mcpu=cortex-m4 %s -o - \
+; RUN: llc -mtriple=thumbv7meb-none-eabihf -mattr=+execute-only -mcpu=cortex-m4 %s -o - \
 ; RUN: | FileCheck --check-prefix=CHECK-XO-FLOAT --check-prefix=CHECK-XO-DOUBLE-BE  --check-prefix=CHECK-XO-DOUBLE-BE-FPREGS %s
 
 ; RUN: llc -mtriple=thumbv7meb -mattr=+execute-only -mcpu=cortex-m3 %s -o - \
 ; RUN: | FileCheck --check-prefix=CHECK-XO-DOUBLE-BE %s
 
-; RUN: llc -mtriple=thumbv7m -mattr=+execute-only -mcpu=cortex-m4 -relocation-model=ropi %s -o - \
+; RUN: llc -mtriple=thumbv7m-none-eabihf -mattr=+execute-only -mcpu=cortex-m4 -relocation-model=ropi %s -o - \
 ; RUN: | FileCheck --check-prefix=CHECK-XO-ROPI %s
 
-; RUN: llc -mtriple=thumbv8m.main -mattr=fp-armv8 %s -o - \
+; RUN: llc -mtriple=thumbv8m.main-none-eabihf -mattr=fp-armv8 %s -o - \
 ; RUN: | FileCheck --check-prefix=CHECK-NO-XO %s
 
-; RUN: llc -mtriple=thumbv8m.main -mattr=+execute-only -mattr=fp-armv8 %s -o - \
+; RUN: llc -mtriple=thumbv8m.main-none-eabihf -mattr=+execute-only -mattr=fp-armv8 %s -o - \
 ; RUN: | FileCheck --check-prefix=CHECK-XO-FLOAT --check-prefix=CHECK-XO-DOUBLE %s
 
-; RUN: llc -mtriple=thumbv8m.maineb -mattr=+execute-only -mattr=fp-armv8 %s -o - \
+; RUN: llc -mtriple=thumbv8m.maineb-none-eabihf -mattr=+execute-only -mattr=fp-armv8 %s -o - \
 ; RUN: | FileCheck --check-prefix=CHECK-XO-FLOAT --check-prefix=CHECK-XO-DOUBLE-BE %s
 
-; RUN: llc -mtriple=thumbv8m.main -mattr=+execute-only -mattr=fp-armv8 -relocation-model=ropi %s -o - \
+; RUN: llc -mtriple=thumbv8m.main-none-eabihf -mattr=+execute-only -mattr=fp-armv8 -relocation-model=ropi %s -o - \
 ; RUN: | FileCheck --check-prefix=CHECK-XO-ROPI %s
 
-define arm_aapcs_vfpcc float @test_vmov_f32() {
+define float @test_vmov_f32() {
 ; CHECK-LABEL: test_vmov_f32:
 ; CHECK: vmov.f32 d0, #1.0
 
@@ -37,7 +37,7 @@ define arm_aapcs_vfpcc float @test_vmov_f32() {
   ret float 1.0
 }
 
-define arm_aapcs_vfpcc float @test_vmov_imm() {
+define float @test_vmov_imm() {
 ; CHECK-LABEL: test_vmov_imm:
 ; CHECK: vmov.i32 d0, #0
 
@@ -54,7 +54,7 @@ define arm_aapcs_vfpcc float @test_vmov_imm() {
   ret float 0.0
 }
 
-define arm_aapcs_vfpcc float @test_vmvn_imm() {
+define float @test_vmvn_imm() {
 ; CHECK-LABEL: test_vmvn_imm:
 ; CHECK: vmvn.i32 d0, #0xb0000000
 
@@ -71,7 +71,7 @@ define arm_aapcs_vfpcc float @test_vmvn_imm() {
   ret float 8589934080.0
 }
 
-define arm_aapcs_vfpcc double @test_vmov_f64() {
+define double @test_vmov_f64() {
 ; CHECK-LABEL: test_vmov_f64:
 ; CHECK: vmov.f64 d0, #1.0
 
@@ -81,7 +81,7 @@ define arm_aapcs_vfpcc double @test_vmov_f64() {
   ret double 1.0
 }
 
-define arm_aapcs_vfpcc double @test_vmov_double_imm() {
+define double @test_vmov_double_imm() {
 ; CHECK-LABEL: test_vmov_double_imm:
 ; CHECK: vmov.i32 d0, #0
 
@@ -103,7 +103,7 @@ define arm_aapcs_vfpcc double @test_vmov_double_imm() {
   ret double 0.0
 }
 
-define arm_aapcs_vfpcc double @test_vmvn_double_imm() {
+define double @test_vmvn_double_imm() {
 ; CHECK-LABEL: test_vmvn_double_imm:
 ; CHECK: vmvn.i32 d0, #0xb0000000
 
@@ -127,7 +127,7 @@ define arm_aapcs_vfpcc double @test_vmvn_double_imm() {
 
 ; Make sure we don't ignore the high half of 64-bit values when deciding whether
 ; a vmov/vmvn is possible.
-define arm_aapcs_vfpcc double @test_notvmvn_double_imm() {
+define double @test_notvmvn_double_imm() {
 ; CHECK-LABEL: test_notvmvn_double_imm:
 ; CHECK: vldr d0, {{.?LCPI[0-9]+_[0-9]+}}
 
@@ -151,7 +151,7 @@ define arm_aapcs_vfpcc double @test_notvmvn_double_imm() {
   ret double 0x4fffffffffffffff
 }
 
-define arm_aapcs_vfpcc float @lower_const_f32_xo() {
+define float @lower_const_f32_xo() {
 ; CHECK-NO-XO-LABEL: lower_const_f32_xo
 ; CHECK-NO-XO: vldr {{s[0-9]+}}, {{.?LCPI[0-9]+_[0-9]+}}
 
@@ -163,7 +163,7 @@ define arm_aapcs_vfpcc float @lower_const_f32_xo() {
   ret float 0x3FDA6E9780000000
 }
 
-define arm_aapcs_vfpcc double @lower_const_f64_xo() {
+define double @lower_const_f64_xo() {
 ; CHECK-NO-XO-LABEL: lower_const_f64_xo
 ; CHECK-NO-XO: vldr {{d[0-9]+}}, {{.?LCPI[0-9]+_[0-9]+}}
 
@@ -194,7 +194,7 @@ define arm_aapcs_vfpcc double @lower_const_f64_xo() {
 ; We need to make sure that the constant pools are placed in
 ; the data section when generating execute-only code:
 
-define arm_aapcs_vfpcc float @lower_fpconst_select(float %f) {
+define float @lower_fpconst_select(float %f) {
 
 ; CHECK-NO-XO-LABEL: lower_fpconst_select
 ; CHECK-NO-XO: adr [[REG:r[0-9]+]], [[LABEL:.?LCPI[0-9]+_[0-9]+]]

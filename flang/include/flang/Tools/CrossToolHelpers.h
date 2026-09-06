@@ -206,10 +206,4 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
       Opts.NoGPULib);
 }
 
-[[maybe_unused]] static void setOpenMPIntegerWrapAround(
-    mlir::ModuleOp module, bool value) {
-  module.getOperation()->setAttr("omp.integer_wrap_around",
-      mlir::omp::IntegerWrapAroundAttr::get(module.getContext(), value));
-}
-
 #endif // FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H

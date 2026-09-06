@@ -97,9 +97,6 @@ struct TransferReadPermutationLowering
     // TODO: support 0-d corner case.
     if (op.getTransferRank() == 0)
       return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
-    // TODO: Support transfer_read inside MaskOp case.
-    if (maskOp)
-      return rewriter.notifyMatchFailure(op, "Masked case not supported");
 
     SmallVector<unsigned> permutation;
     AffineMap map = op.getPermutationMap();
@@ -135,15 +132,28 @@ struct TransferReadPermutationLowering
     // Generate new transfer_read operation.
     VectorType newReadType = VectorType::get(
         newVectorShape, op.getVectorType().getElementType(), newScalableDims);
-    Value newRead = vector::TransferReadOp::create(
+    Operation *newRead = vector::TransferReadOp::create(
         rewriter, op.getLoc(), newReadType, op.getBase(), op.getIndices(),
         AffineMapAttr::get(newMap), op.getPadding(), op.getMask(),
         newInBoundsAttr);
 
-    // Transpose result of transfer_read.
     SmallVector<int64_t> transposePerm(permutation.begin(), permutation.end());
-    return vector::TransposeOp::create(rewriter, op.getLoc(), newRead,
-                                       transposePerm)
+
+    // Re-apply an enclosing vector.mask. Its mask is indexed in memory order,
+    // so only the passthru has to be transposed.
+    if (maskOp) {
+      Value passthru = maskOp.getPassthru();
+      if (passthru)
+        passthru =
+            vector::TransposeOp::create(rewriter, op.getLoc(), passthru,
+                                        invertPermutationVector(transposePerm));
+      newRead =
+          vector::maskOperation(rewriter, newRead, maskOp.getMask(), passthru);
+    }
+
+    // Transpose result of transfer_read.
+    return vector::TransposeOp::create(rewriter, op.getLoc(),
+                                       newRead->getResult(0), transposePerm)
         .getResult();
   }
 };
@@ -175,9 +185,6 @@ struct TransferWritePermutationLowering
     // TODO: support 0-d corner case.
     if (op.getTransferRank() == 0)
       return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
-    // TODO: Support transfer_write inside MaskOp case.
-    if (maskOp)
-      return rewriter.notifyMatchFailure(op, "Masked case not supported");
 
     SmallVector<unsigned> permutation;
     AffineMap map = op.getPermutationMap();
@@ -213,8 +220,15 @@ struct TransferWritePermutationLowering
     auto newWrite = vector::TransferWriteOp::create(
         rewriter, op.getLoc(), newVec, op.getBase(), op.getIndices(),
         AffineMapAttr::get(newMap), op.getMask(), newInBoundsAttr);
+
+    // Re-apply an enclosing vector.mask. Its mask is indexed in memory order,
+    // so transposing the written vector leaves it unchanged.
+    Operation *rewritten = newWrite;
+    if (maskOp)
+      rewritten = vector::maskOperation(rewriter, newWrite, maskOp.getMask());
+
     if (newWrite.hasPureTensorSemantics())
-      return newWrite.getResult();
+      return rewritten->getResult(0);
     // In the memref case there's no return value. Use empty value to signal
     // success.
     return Value();

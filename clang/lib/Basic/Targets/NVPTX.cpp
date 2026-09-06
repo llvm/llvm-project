@@ -66,13 +66,17 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   NoAsmVariants = true;
   GPU = OffloadArch::getUnused();
 
+  // Architectures are in the feature map only to gate builtins; the backend
+  // takes the architecture from `target-cpu`.
+#define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)        \
+  ReadOnlyFeatures.insert(NAME);
+#include "llvm/TargetParser/NVPTXTargetParser.def"
+
   // PTX supports f16 as a fundamental type.
   HasFastHalfType = true;
   HasFloat16 = true;
 
-  // TODO: Make shortptr a proper ABI?
-  DataLayoutString =
-      Triple.computeDataLayout(Opts.NVPTXUseShortPointers ? "shortptr" : "");
+  DataLayoutString = Triple.computeDataLayout();
 
   // If possible, get a TargetInfo for our host triple, so we can match its
   // types.
@@ -158,6 +162,14 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   //   as its double type, but that's not necessarily true on the host.
   //   TODO: nvcc emits a warning when using long double on device; we should
   //   do the same.
+}
+
+bool NVPTXTargetInfo::setABI(const std::string &Name) {
+  if (Name != "shortptr")
+    return false;
+
+  resetDataLayout(getTriple().computeDataLayout(Name));
+  return true;
 }
 
 ArrayRef<const char *> NVPTXTargetInfo::getGCCRegNames() const {

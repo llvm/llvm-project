@@ -1,0 +1,48 @@
+## Test that llvm-nm --print-armap prints the archive map for GOFF archives,
+## including inline z/OS attribute flags on each symbol line.
+##
+## All 8 combinations of the 3 known attribute bits are exercised, plus two
+## symbols with unknown bits set to cover the '?' flag:
+##   bit 2 (0x4): 64-bit  (AMODE == ESD_AMODE_64)
+##   bit 1 (0x2): XPLink  (LinkageType == ESD_LT_XPLink)
+##   bit 0 (0x1): WSA     (parent ED namespace == ESD_NS_Parts)
+##   bits above 0x7:      unknown, printed as '?'
+##
+## symunk uses the highest bit (0x80000000) — the least likely to ever become
+## a known value — so that if new low bits are defined in the future, this
+## test still covers a genuinely unknown bit.
+## symall uses 0xffffffff so that adding any new known value will cause this
+## CHECK line to fail.
+##
+## The archive is generated directly using generate_zos_archive.py.
+
+# RUN: rm -rf %t.dir && mkdir -p %t.dir
+
+# RUN: %python %S/../../Object/Inputs/generate_zos_archive.py \
+# RUN:   --output %t.dir/test.a             \
+# RUN:   --member "test.o:hex:abcdabcd"     \
+# RUN:   --symtab "sym000:0:0"              \
+# RUN:   --symtab "sym001:0:1"              \
+# RUN:   --symtab "sym010:0:2"              \
+# RUN:   --symtab "sym011:0:3"              \
+# RUN:   --symtab "sym100:0:4"              \
+# RUN:   --symtab "sym101:0:5"              \
+# RUN:   --symtab "sym110:0:6"              \
+# RUN:   --symtab "sym111:0:7"              \
+# RUN:   --symtab "symunk:0:2147483648"     \
+# RUN:   --symtab "symall:0:4294967295"
+
+# RUN: llvm-nm --print-armap %t.dir/test.a | FileCheck %s
+
+## For z/OS archives, each symbol line includes (flags: <hex> [description]).
+# CHECK:      Archive map
+# CHECK-NEXT: sym000 in test.o (flags: 0x00000000 [none])
+# CHECK-NEXT: sym001 in test.o (flags: 0x00000001 [WSA])
+# CHECK-NEXT: sym010 in test.o (flags: 0x00000002 [XPLink])
+# CHECK-NEXT: sym011 in test.o (flags: 0x00000003 [XPLink + WSA])
+# CHECK-NEXT: sym100 in test.o (flags: 0x00000004 [64-bit])
+# CHECK-NEXT: sym101 in test.o (flags: 0x00000005 [64-bit + WSA])
+# CHECK-NEXT: sym110 in test.o (flags: 0x00000006 [64-bit + XPLink])
+# CHECK-NEXT: sym111 in test.o (flags: 0x00000007 [64-bit + XPLink + WSA])
+# CHECK-NEXT: symunk in test.o (flags: 0x80000000 [?])
+# CHECK-NEXT: symall in test.o (flags: 0xffffffff [64-bit + XPLink + WSA + ?])

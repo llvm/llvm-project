@@ -54,7 +54,7 @@ static void createSharedMemoryGlobal(fir::FirOpBuilder &builder,
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToEnd(gpuMod.getBody());
 
-  mlir::StringAttr linkage = isDynamic ? builder.createExternalLinkage()
+  fir::LinkageAttr linkage = isDynamic ? builder.createExternalLinkage()
                                        : builder.createInternalLinkage();
   llvm::SmallVector<mlir::NamedAttribute> attrs;
   auto globalOpName = mlir::OperationName(fir::GlobalOp::getOperationName(),
