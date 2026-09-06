@@ -744,13 +744,12 @@ define i32 @test_ctlz_sub_zero_poison(i32 %arg) {
   ret i32 %sel
 }
 
-define i32 @test_ctlz_sub_wrong_const(i32 %arg) {
-; CHECK-LABEL: @test_ctlz_sub_wrong_const(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[ARG:%.*]], 0
-; CHECK-NEXT:    [[CTZ:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[ARG]], i1 true)
+define i32 @fold_ctlz_sub_one(i32 %arg) {
+; CHECK-LABEL: @fold_ctlz_sub_one(
+; CHECK-NEXT:    [[CTLZ_NONZERO:%.*]] = or i32 [[ARG:%.*]], 1
+; CHECK-NEXT:    [[CTZ:%.*]] = call range(i32 0, 32) i32 @llvm.ctlz.i32(i32 [[CTLZ_NONZERO]], i1 true)
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i32 32, [[CTZ]]
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 1, i32 [[SUB]]
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %cmp = icmp eq i32 %arg, 0
   %ctz = call i32 @llvm.ctlz.i32(i32 %arg, i1 true)
@@ -1007,6 +1006,141 @@ define <2 x i32> @test_cttz_not_bw_odd_mul_vec_nonsplat(<2 x i32> %x) {
   %cmp = icmp ne <2 x i32> %x, zeroinitializer
   %res = select <2 x i1> %cmp, <2 x i32> %ct, <2 x i32> splat (i32 123)
   ret <2 x i32> %res
+}
+
+define i64 @fold_ctlz_hex_digits(i64 noundef %x) {
+; CHECK-LABEL: @fold_ctlz_hex_digits(
+; CHECK-NEXT:    [[CTLZ_NONZERO:%.*]] = or i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[LZ:%.*]] = call range(i64 0, 64) i64 @llvm.ctlz.i64(i64 [[CTLZ_NONZERO]], i1 true)
+; CHECK-NEXT:    [[BIAS:%.*]] = sub nuw nsw i64 67, [[LZ]]
+; CHECK-NEXT:    [[DIGITS:%.*]] = lshr i64 [[BIAS]], 2
+; CHECK-NEXT:    ret i64 [[DIGITS]]
+;
+  %iszero = icmp eq i64 %x, 0
+  %lz = call i64 @llvm.ctlz.i64(i64 %x, i1 true)
+  %bias = sub nuw nsw i64 67, %lz
+  %digits = lshr i64 %bias, 2
+  %result = select i1 %iszero, i64 1, i64 %digits
+  ret i64 %result
+}
+
+define i64 @fold_ctlz_hex_digits_ne_commuted(i64 noundef %x) {
+; CHECK-LABEL: @fold_ctlz_hex_digits_ne_commuted(
+; CHECK-NEXT:    [[CTLZ_NONZERO:%.*]] = or i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[LZ:%.*]] = call range(i64 0, 64) i64 @llvm.ctlz.i64(i64 [[CTLZ_NONZERO]], i1 true)
+; CHECK-NEXT:    [[BIAS:%.*]] = sub nuw nsw i64 67, [[LZ]]
+; CHECK-NEXT:    [[DIGITS:%.*]] = lshr i64 [[BIAS]], 2
+; CHECK-NEXT:    ret i64 [[DIGITS]]
+;
+  %isnotzero = icmp ne i64 0, %x
+  %lz = call i64 @llvm.ctlz.i64(i64 %x, i1 true)
+  %bias = sub nuw nsw i64 67, %lz
+  %digits = lshr i64 %bias, 2
+  %result = select i1 %isnotzero, i64 %digits, i64 1
+  ret i64 %result
+}
+
+define i64 @fold_ctlz_hex_digits_exact(i64 noundef %x) {
+; CHECK-LABEL: @fold_ctlz_hex_digits_exact(
+; CHECK-NEXT:    [[CTLZ_NONZERO:%.*]] = or i64 [[X:%.*]], 1
+; CHECK-NEXT:    [[LZ:%.*]] = call range(i64 0, 64) i64 @llvm.ctlz.i64(i64 [[CTLZ_NONZERO]], i1 true)
+; CHECK-NEXT:    [[BIAS:%.*]] = sub nuw nsw i64 67, [[LZ]]
+; CHECK-NEXT:    [[DIGITS:%.*]] = lshr i64 [[BIAS]], 2
+; CHECK-NEXT:    ret i64 [[DIGITS]]
+;
+  %iszero = icmp eq i64 %x, 0
+  %lz = call i64 @llvm.ctlz.i64(i64 %x, i1 true)
+  %bias = sub nuw nsw i64 67, %lz
+  %digits = lshr exact i64 %bias, 2
+  %result = select i1 %iszero, i64 1, i64 %digits
+  ret i64 %result
+}
+
+; The transform requires is_zero_poison=true.
+define i64 @do_not_fold_ctlz_hex_digits_defined_zero(i64 noundef %x) {
+; CHECK-LABEL: @do_not_fold_ctlz_hex_digits_defined_zero(
+; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i64 [[X:%.*]], 0
+; CHECK-NEXT:    [[LZ:%.*]] = call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 [[X]], i1 false)
+; CHECK-NEXT:    [[BIAS:%.*]] = sub nuw nsw i64 67, [[LZ]]
+; CHECK-NEXT:    [[DIGITS:%.*]] = lshr i64 [[BIAS]], 2
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[ISZERO]], i64 1, i64 [[DIGITS]]
+; CHECK-NEXT:    ret i64 [[RESULT]]
+;
+  %iszero = icmp eq i64 %x, 0
+  %lz = call i64 @llvm.ctlz.i64(i64 %x, i1 false)
+  %bias = sub nuw nsw i64 67, %lz
+  %digits = lshr i64 %bias, 2
+  %result = select i1 %iszero, i64 1, i64 %digits
+  ret i64 %result
+}
+
+; The expression evaluated at X == 0 does not match the selected zero value.
+define i64 @do_not_fold_ctlz_hex_digits_wrong_zero_value(i64 noundef %x) {
+; CHECK-LABEL: @do_not_fold_ctlz_hex_digits_wrong_zero_value(
+; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i64 [[X:%.*]], 0
+; CHECK-NEXT:    [[LZ:%.*]] = call range(i64 0, 65) i64 @llvm.ctlz.i64(i64 [[X]], i1 true)
+; CHECK-NEXT:    [[BIAS:%.*]] = sub nuw nsw i64 67, [[LZ]]
+; CHECK-NEXT:    [[DIGITS:%.*]] = lshr i64 [[BIAS]], 2
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[ISZERO]], i64 2, i64 [[DIGITS]]
+; CHECK-NEXT:    ret i64 [[RESULT]]
+;
+  %iszero = icmp eq i64 %x, 0
+  %lz = call i64 @llvm.ctlz.i64(i64 %x, i1 true)
+  %bias = sub nuw nsw i64 67, %lz
+  %digits = lshr i64 %bias, 2
+  %result = select i1 %iszero, i64 2, i64 %digits
+  ret i64 %result
+}
+
+; Clearing is_zero_poison removes the select and drops nuw, so the X | 1
+; fallback is not used here.
+define i16 @fold_ctlz_drop_nuw_on_zero(i16 noundef %x) {
+; CHECK-LABEL: @fold_ctlz_drop_nuw_on_zero(
+; CHECK-NEXT:    [[LZ:%.*]] = call range(i16 0, 17) i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[BIAS:%.*]] = sub nsw i16 10, [[LZ]]
+; CHECK-NEXT:    [[DIGITS:%.*]] = lshr i16 [[BIAS]], 1
+; CHECK-NEXT:    ret i16 [[DIGITS]]
+;
+  %iszero = icmp eq i16 %x, 0
+  %lz = call i16 @llvm.ctlz.i16(i16 %x, i1 true)
+  %bias = sub nuw i16 10, %lz
+  %digits = lshr i16 %bias, 1
+  %result = select i1 %iszero, i16 32765, i16 %digits
+  ret i16 %result
+}
+
+; Clearing is_zero_poison removes the select and drops nsw, so the X | 1
+; fallback is not used here.
+define i16 @fold_ctlz_drop_nsw_on_zero(i16 noundef %x) {
+; CHECK-LABEL: @fold_ctlz_drop_nsw_on_zero(
+; CHECK-NEXT:    [[LZ:%.*]] = call range(i16 0, 17) i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[BIAS:%.*]] = sub nuw i16 -32760, [[LZ]]
+; CHECK-NEXT:    [[DIGITS:%.*]] = lshr i16 [[BIAS]], 1
+; CHECK-NEXT:    ret i16 [[DIGITS]]
+;
+  %iszero = icmp eq i16 %x, 0
+  %lz = call i16 @llvm.ctlz.i16(i16 %x, i1 true)
+  %bias = sub nsw i16 -32760, %lz
+  %digits = lshr i16 %bias, 1
+  %result = select i1 %iszero, i16 16380, i16 %digits
+  ret i16 %result
+}
+
+; Clearing is_zero_poison removes the select and drops exact, so the X | 1
+; fallback is not used here.
+define i16 @fold_ctlz_drop_exact_on_zero(i16 noundef %x) {
+; CHECK-LABEL: @fold_ctlz_drop_exact_on_zero(
+; CHECK-NEXT:    [[LZ:%.*]] = call range(i16 0, 17) i16 @llvm.ctlz.i16(i16 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[BIAS:%.*]] = sub nuw nsw i16 20, [[LZ]]
+; CHECK-NEXT:    [[DIGITS:%.*]] = lshr i16 [[BIAS]], 2
+; CHECK-NEXT:    ret i16 [[DIGITS]]
+;
+  %iszero = icmp eq i16 %x, 0
+  %lz = call i16 @llvm.ctlz.i16(i16 %x, i1 true)
+  %bias = sub i16 20, %lz
+  %digits = lshr exact i16 %bias, 2
+  %result = select i1 %iszero, i16 1, i16 %digits
+  ret i16 %result
 }
 
 declare i16 @llvm.ctlz.i16(i16, i1)

@@ -1788,6 +1788,46 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     return replaceInstUsesWith(Sel, FalseVal);
   }
 
+  // F(BW) did not match the value selected for X == 0. Reuse a zero-poison
+  // ctlz found while simplifying FalseVal above and try F(BW - 1). This
+  // corresponds to replacing ctlz(X, true) with ctlz(X | 1, true).
+  for (Instruction *I : DropFlags) {
+    auto *Ctlz = dyn_cast<IntrinsicInst>(I);
+    if (!Ctlz || Ctlz->getIntrinsicID() != Intrinsic::ctlz ||
+        !match(Ctlz->getArgOperand(1), m_One()))
+      continue;
+
+    Value *X = Ctlz->getArgOperand(0);
+    if (!X->getType()->isIntegerTy())
+      continue;
+
+    if (!((CmpLHS == X && match(CmpRHS, m_Zero())) ||
+          (CmpRHS == X && match(CmpLHS, m_Zero()))))
+      continue;
+
+    Constant *CtlzOfOne =
+        ConstantInt::get(X->getType(), X->getType()->getIntegerBitWidth() - 1);
+    SmallVector<Instruction *> FallbackDropFlags;
+    if (simplifyWithOpReplaced(FalseVal, Ctlz, CtlzOfOne, SQ,
+                               /* AllowRefinement */ false,
+                               &FallbackDropFlags) != TrueVal)
+      continue;
+
+    Builder.SetInsertPoint(Ctlz);
+    Value *NonZero =
+        Builder.CreateOr(X, ConstantInt::get(X->getType(), 1), "ctlz.nonzero");
+    replaceOperand(*Ctlz, 0, NonZero);
+    Ctlz->dropPoisonGeneratingAnnotations();
+    Worklist.add(Ctlz);
+
+    for (Instruction *FlaggedI : FallbackDropFlags) {
+      FlaggedI->dropPoisonGeneratingAnnotations();
+      Worklist.add(FlaggedI);
+    }
+
+    return replaceInstUsesWith(Sel, FalseVal);
+  }
+
   Constant *CmpC;
   if (FalseVal->getType()->isIntOrIntVectorTy(1) &&
       match(FalseVal, m_NUWTrunc(m_Specific(CmpLHS))) &&
