@@ -600,3 +600,12 @@ EncodedFramePtrReg codeview::encodeFramePtrReg(RegisterId Reg, CPUType CPU) {
   }
   return EncodedFramePtrReg::None;
 }
+
+Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
+                                            AssociationSym &Assoc) {
+  error(IO.mapEnum(Assoc.AssociationKind));
+  error(IO.mapInteger(Assoc.CodeOffset));
+  error(IO.mapInteger(Assoc.Segment));
+
+  return Error::success();
+}

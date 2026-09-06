@@ -1098,6 +1098,26 @@ public:
   uint32_t RecordOffset = 0;
 };
 
+/// `S_ASSOCIATION` - Associates a symbol with another one.
+///
+/// For coroutines, the associated symbol is the primary coroutine function in
+/// case this symbol is contained in an init/resume/destroy coroutine. It's also
+/// present in the primary coroutine function where it points to one of the
+/// generated init/resume/destroy symbols.
+class AssociationSym : public SymbolRecord {
+public:
+  explicit AssociationSym(SymbolRecordKind Kind) : SymbolRecord(Kind) {}
+  explicit AssociationSym(uint32_t RecordOffset)
+      : SymbolRecord(SymbolRecordKind::AssociationSym),
+        RecordOffset(RecordOffset) {}
+
+  AssociationKind AssociationKind = AssociationKind::None;
+  uint32_t CodeOffset = 0;
+  uint16_t Segment = 0;
+
+  uint32_t RecordOffset = 0;
+};
+
 LLVM_ABI Expected<CVSymbol> readSymbolFromStream(BinaryStreamRef Stream,
                                                  uint32_t Offset);
 
