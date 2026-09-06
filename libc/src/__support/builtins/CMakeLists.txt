@@ -243,6 +243,7 @@ add_header_library(
     truncdfsf2.h
   DEPENDS
     libc.src.__support.builtins.fpconvert_helper
+    libc.src.__support.macros.config
 )
 
 add_header_library(
