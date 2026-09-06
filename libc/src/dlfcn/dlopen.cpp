@@ -8,6 +8,8 @@
 
 #include "dlopen.h"
 
+#include "hdr/func/free.h"
+#include "hdr/func/malloc.h"
 #include "src/__support/CPP/mutex.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/newfstatat.h"
 #include "src/__support/common.h"
@@ -129,6 +131,68 @@ bool already_loaded(const elf::ModuleSet &set, const char *name) {
   return false;
 }
 
+// Makes room for one more module, moving the set onto the heap once the fixed
+// block the startup linker filled in is full. The arrays are reached through
+// pointers precisely so that they can be replaced here; nothing that holds
+// the load lock may hold a pointer into them across this call.
+//
+// The arrays that were replaced are not freed. __tls_get_addr and the
+// creation of a thread read them without a lock, and one of those may be
+// part way through when this runs. They are left as they were, which is
+// still right for what such a reader asks, and cost no more than the arrays
+// that replaced them, since each is half the size of the next.
+bool make_room(elf::ModuleSet &set) {
+  if (set.count < set.capacity)
+    return true;
+
+  const size_t capacity = set.capacity * 2;
+  auto *modules =
+      static_cast<elf::Module *>(malloc(capacity * sizeof(elf::Module)));
+  auto *mappings = static_cast<elf::MappedModule *>(
+      malloc(capacity * sizeof(elf::MappedModule)));
+  auto *tls_offsets =
+      static_cast<intptr_t *>(malloc(capacity * sizeof(intptr_t)));
+  auto *references = static_cast<size_t *>(malloc(capacity * sizeof(size_t)));
+  if (modules == nullptr || mappings == nullptr || tls_offsets == nullptr ||
+      references == nullptr) {
+    free(modules);
+    free(mappings);
+    free(tls_offsets);
+    free(references);
+    return false;
+  }
+
+  for (size_t i = 0; i < set.count; ++i) {
+    modules[i] = set.modules[i];
+    mappings[i] = set.mappings[i];
+    tls_offsets[i] = set.tls_offsets[i];
+    references[i] = set.references[i];
+  }
+
+  __atomic_store_n(&set.modules, modules, __ATOMIC_RELEASE);
+  __atomic_store_n(&set.mappings, mappings, __ATOMIC_RELEASE);
+  __atomic_store_n(&set.tls_offsets, tls_offsets, __ATOMIC_RELEASE);
+  set.references = references;
+  set.capacity = capacity;
+  return true;
+}
+
+// Holds the write lock for as long as the module set is being changed, and no
+// longer: the initialisers of what was opened run after it is let go.
+class WriteGuard {
+public:
+  WriteGuard() { dl::dl_write_lock.lock(); }
+  ~WriteGuard() { release(); }
+  void release() {
+    if (held_)
+      dl::dl_write_lock.unlock();
+    held_ = false;
+  }
+
+private:
+  bool held_ = true;
+};
+
 void run_init_array(const elf::Module &module) {
   auto array = module.dynamic().address(DT_INIT_ARRAY);
   auto size = module.dynamic().value(DT_INIT_ARRAYSZ);
@@ -171,8 +235,9 @@ LLVM_LIBC_FUNCTION(void *, dlopen, (const char *path, int)) {
     }
   }
 
-  if (set.count >= set.capacity) {
-    dl::set_error("too many shared objects are open");
+  WriteGuard write;
+  if (!make_room(set)) {
+    dl::set_error("cannot make room for another shared object");
     return nullptr;
   }
 
@@ -224,7 +289,7 @@ LLVM_LIBC_FUNCTION(void *, dlopen, (const char *path, int)) {
     requester.for_each_needed([&](const char *name) {
       if (failed || already_loaded(set, name))
         return;
-      if (set.count >= set.capacity) {
+      if (!make_room(set)) {
         failed = true;
         missing = name;
         return;
