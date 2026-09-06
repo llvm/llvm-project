@@ -11252,20 +11252,11 @@ bool ScalarEvolution::isKnownMultipleOf(
   if (M == 1)
     return true;
 
-  // Recursively check AddRec operands. An AddRecExpr S is a multiple of M if S
-  // starts with a multiple of M and at every iteration step S only adds
-  // multiples of M.
-  if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S))
-    return isKnownMultipleOf(AddRec->getStart(), M, Predicates) &&
-           isKnownMultipleOf(AddRec->getStepRecurrence(*this), M, Predicates);
-
   // For a constant, check that "S % M == 0".
   if (auto *Cst = dyn_cast<SCEVConstant>(S)) {
     APInt C = Cst->getAPInt();
     return C.urem(M) == 0;
   }
-
-  // TODO: Also check other SCEV expressions, i.e., SCEVAddRecExpr, etc.
 
   // Basic tests have failed.
   // Check "S % M == 0" at compile time and record runtime Assumptions.
@@ -11284,6 +11275,26 @@ bool ScalarEvolution::isKnownMultipleOf(
 
   if (!Predicates)
     return false;
+
+  // Look through AddRec, Add, and Mul expressions to improve the precision of
+  // added predicates. S is a multiple of M if S starts with a multiple of M and
+  // at every iteration step S only adds multiples of M. This doesn't hold in
+  // wrapping arithmetic.
+  if (isa<SCEVAddRecExpr, SCEVAddExpr, SCEVMulExpr>(S))
+    if (cast<SCEVNAryExpr>(S)->getNoWrapFlags() != SCEV::FlagAnyWrap &&
+        all_of(S->operands(), [&](SCEVUse Op) {
+          return isKnownMultipleOf(Op, M, Predicates);
+        }))
+      return true;
+
+  // Similarly, look through MinMax to improve the precision of added
+  // predicates. There is no wrapping arithmetic to consider, as the operations
+  // just return one of its operands.
+  if (isa<SCEVMinMaxExpr>(S))
+    if (any_of(S->operands(), [&](SCEVUse Op) {
+          return isKnownMultipleOf(Op, M, Predicates);
+        }))
+      return true;
 
   const SCEVPredicate *P = getComparePredicate(ICmpInst::ICMP_EQ, SmodM, Zero);
 
