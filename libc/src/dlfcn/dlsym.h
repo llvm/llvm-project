@@ -15,6 +15,10 @@ namespace LIBC_NAMESPACE_DECL {
 
 void *dlsym(void *__restrict, const char *__restrict);
 
+namespace internal {
+void *dlsym_impl(void *__restrict handle, const char *__restrict name);
+} // namespace internal
+
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_DLFCN_DLSYM_H

@@ -56,8 +56,9 @@ const ElfW(Sym) * enclosing_symbol(const elf::Module &module,
 // Says which object an address is in, and which symbol of it. Unlike the rest
 // of dlfcn this reports failure with zero rather than with a message, and it
 // leaves dlerror alone, which is what every other implementation does.
-LLVM_LIBC_FUNCTION(int, dladdr,
-                   (const void *__restrict addr, Dl_info *__restrict info)) {
+namespace internal {
+
+int dladdr_impl(const void *__restrict addr, Dl_info *__restrict info) {
   if (info == nullptr)
     return 0;
 
@@ -90,6 +91,13 @@ LLVM_LIBC_FUNCTION(int, dladdr,
         reinterpret_cast<void *>(module->load_bias() + symbol->st_value);
   }
   return 1;
+}
+
+} // namespace internal
+
+LLVM_LIBC_FUNCTION(int, dladdr,
+                   (const void *__restrict addr, Dl_info *__restrict info)) {
+  return internal::dladdr_impl(addr, info);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -41,8 +41,9 @@ void *search_from(const elf::ModuleSet &set, size_t from, const char *name) {
 
 } // anonymous namespace
 
-LLVM_LIBC_FUNCTION(void *, dlsym,
-                   (void *__restrict handle, const char *__restrict name)) {
+namespace internal {
+
+void *dlsym_impl(void *__restrict handle, const char *__restrict name) {
   // Which module the call is returning to, for RTLD_NEXT. Taken before
   // anything else, so nothing stands between this and the caller.
   const ElfW(Addr) caller =
@@ -100,6 +101,13 @@ LLVM_LIBC_FUNCTION(void *, dlsym,
     return nullptr;
   }
   return reinterpret_cast<void *>(module.load_bias() + symbol->st_value);
+}
+
+} // namespace internal
+
+LLVM_LIBC_FUNCTION(void *, dlsym,
+                   (void *__restrict handle, const char *__restrict name)) {
+  return internal::dlsym_impl(handle, name);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

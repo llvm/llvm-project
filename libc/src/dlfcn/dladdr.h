@@ -22,6 +22,10 @@ namespace LIBC_NAMESPACE_DECL {
 
 int dladdr(const void *__restrict, Dl_info *__restrict);
 
+namespace internal {
+int dladdr_impl(const void *__restrict addr, Dl_info *__restrict info);
+} // namespace internal
+
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_DLFCN_DLADDR_H
