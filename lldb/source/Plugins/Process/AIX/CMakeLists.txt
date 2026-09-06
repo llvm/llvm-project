@@ -7,6 +7,7 @@ add_lldb_library(lldbPluginProcessAIX
   LINK_COMPONENTS
     Support
   LINK_LIBS
+    lldbNativeProcessSupport
     lldbCore
     lldbHost
     lldbSymbol

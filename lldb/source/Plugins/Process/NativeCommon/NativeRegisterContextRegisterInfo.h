@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_NATIVEREGISTERCONTEXTREGISTERINFO_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_NATIVEREGISTERCONTEXTREGISTERINFO_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_NATIVECOMMON_NATIVEREGISTERCONTEXTREGISTERINFO_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_NATIVECOMMON_NATIVEREGISTERCONTEXTREGISTERINFO_H
 
 #include <memory>
 
-#include "RegisterInfoInterface.h"
+#include "Register/RegisterInfoInterface.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
 
 namespace lldb_private {
