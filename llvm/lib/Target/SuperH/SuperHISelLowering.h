@@ -30,6 +30,11 @@ class SuperHTargetLowering : public TargetLowering  {
 public:
   SuperHTargetLowering(const TargetMachine &TM, const SuperHSubtarget &STI);
 
+  /// ReplaceNodeResults - Replace a node with an illegal result type
+  /// with a new node built out of custom code.
+  void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                                           SelectionDAG &DAG) const override;
+
   // LowerToConstantPool - SuperH's compressed instruction set means that 
   // immediates and displacements can not be larger than 8 bits. 
   // As such we need to store said immediates and displacements within 

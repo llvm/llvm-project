@@ -98,7 +98,10 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ConstantPool, MVT::i32, Custom);
   setOperationAction(ISD::ExternalSymbol, MVT::i32, Custom);
   setOperationAction(ISD::BlockAddress, MVT::i32, Custom);
-  setOperationAction(ISD::Constant, MVT::i32, Custom);
+  
+  for (MVT VT : MVT::integer_valuetypes()) {
+    setOperationAction(ISD::Constant, VT, Custom);
+  }
 
   setOperationAction(ISD::BR_CC, MVT::i8, Custom);
   setOperationAction(ISD::BR_CC, MVT::i16, Custom);
@@ -114,10 +117,6 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SETCC, MVT::i16, Custom);
   setOperationAction(ISD::SETCC, MVT::i32, Custom);
   setOperationAction(ISD::SETCC, MVT::i64, Custom);
-
-  // for (MVT VT : MVT::integer_valuetypes()) {
-  //   setOperationAction(ISD::SIGN_EXTEND_INREG, VT, Expand);
-  // }
 
   setBooleanContents(ZeroOrOneBooleanContent);
   setBooleanVectorContents(ZeroOrOneBooleanContent);
@@ -188,6 +187,38 @@ SDValue SuperHTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue TargetCC = DAG.getCondCode(CC);
 
   return DAG.getNode(SHISD::BRCOND, DL, MVT::Other, Chain, Dest, TargetCC, Cmp);
+}
+
+
+
+
+//===----------------------------------------------------------------------===//
+//                              TYPE LOWERING
+//===----------------------------------------------------------------------===//
+
+void 
+SuperHTargetLowering::ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results, 
+                                         SelectionDAG &DAG) const {
+  DEBUG_FN_PRINT()
+
+  SDLoc DL(N);
+
+  switch (N->getOpcode()) {
+  case ISD::Constant: {
+    if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(N)) {
+      Results.push_back(DAG.getConstant(C->getSExtValue(), DL, MVT::i32));
+    }
+    break;
+  }
+  default: {
+    SDValue Res = LowerOperation(SDValue(N, 0), DAG);
+
+    for (unsigned I = 0, E = Res->getNumValues(); I != E; ++I)
+      Results.push_back(Res.getValue(I));
+
+    break;
+  }
+  }
 }
 
 
@@ -693,12 +724,12 @@ SDValue SuperHTargetLowering::LowerMUL(SDValue Op, SelectionDAG &DAG) const {
     llvm_unreachable("Unexpected type for ");
 
   case MVT::i8: {
-    MachineSDNode *MUL = DAG.getMachineNode(SH::MULL, DL, VT, Op.getOperand(0), Op.getOperand(1));
+    MachineSDNode *MUL = DAG.getMachineNode(SH::MULU, DL, VT, Op.getOperand(0), Op.getOperand(1));
     return DAG.getCopyFromReg(SDValue(MUL, 0), DL, SH::MACLO, VT);
   }
 
   case MVT::i16: {
-    MachineSDNode *MUL = DAG.getMachineNode(SH::MULL, DL, VT, Op.getOperand(0), Op.getOperand(1));
+    MachineSDNode *MUL = DAG.getMachineNode(SH::MULS, DL, VT, Op.getOperand(0), Op.getOperand(1));
     return DAG.getCopyFromReg(SDValue(MUL, 0), DL, SH::MACLO, VT);
   }
 

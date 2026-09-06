@@ -1372,34 +1372,6 @@ def TRAPA             : InstI8<0b1100001100000000,
 include "SuperHInstrDSP.td"
 
 
-
-
-
-//===--------------------------------------------------------------------------===//
-//===--------------------------------------------------------------------------===//
-//                            Non-Instruction Patterns
-//===--------------------------------------------------------------------------===//
-//===--------------------------------------------------------------------------===//
-
-//===--------------------------------------------------------------------------===//
-// Zero-Extend Load
-//===--------------------------------------------------------------------------===//
-
-// def : Pat<(i32 (zextloadi1  i32:$src)), (EXTUBRmRn (MOVBRmiRn i32:$src))>;
-// def : Pat<(i32 (zextloadi8  i32:$src)), (EXTUBRmRn (MOVBRmiRn i32:$src))>;
-// def : Pat<(i32 (zextloadi16 i32:$src)), (EXTUWRmRn (MOVWRmiRn i32:$src))>;
-// def : Pat<(i32 (extloadi1   i32:$src)), (EXTSBRmRn (MOVBRmiRn i32:$src))>;
-// def : Pat<(i32 (extloadi8   i32:$src)), (EXTSBRmRn (MOVBRmiRn i32:$src))>;
-// def : Pat<(i32 (extloadi16  i32:$src)), (EXTSWRmRn (MOVWRmiRn i32:$src))>;
-// def : Pat<(i32 (sextloadi1  i32:$src)), (EXTSBRmRn (MOVBRmiRn i32:$src))>;
-// def : Pat<(i32 (sextloadi8  i32:$src)), (EXTSBRmRn (MOVBRmiRn i32:$src))>;
-// def : Pat<(i32 (sextloadi16 i32:$src)), (EXTSWRmRn (MOVWRmiRn i32:$src))>;
-
-def : Pat<(sext_inreg i32:$src, i1),  (EXTSB i32:$src)>;
-def : Pat<(sext_inreg i32:$src, i8),  (EXTSB i32:$src)>;
-def : Pat<(sext_inreg i32:$src, i16), (EXTSW i32:$src)>;
-
-
 //===--------------------------------------------------------------------------===//
 //===--------------------------------------------------------------------------===//
 //                              Pseudo instructions
@@ -1435,11 +1407,11 @@ def Select32    : SHSelectPseudo<(outs GPR:$dst),
 // LOAD FROM FRAME
 def MOVBLFR : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
                           "! MOVBLFR $src, $Rn",
-                          [(set i32:$Rn, (extloadi8 addr:$src))]>;
+                          [(set i32:$Rn, (sextloadi8 addr:$src))]>;
 
 def MOVWLFR : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
                           "! MOVWLFR $src, $Rn",
-                          [(set i32:$Rn, (extloadi16 addr:$src))]>;
+                          [(set i32:$Rn, (sextloadi16 addr:$src))]>;
 
 def MOVLLFR : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
                           "! MOVLLFR $src, $Rn",
@@ -1484,3 +1456,25 @@ def ADJCALLSTACKUP : SHPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                             "!ADJCALLSTACKUP $amt1",
                             [(SHCallSeqEnd timm:$amt1, timm:$amt2)]>;
 }
+
+
+
+
+//===--------------------------------------------------------------------------===//
+//===--------------------------------------------------------------------------===//
+//                            Non-Instruction Patterns
+//===--------------------------------------------------------------------------===//
+//===--------------------------------------------------------------------------===//
+
+//===--------------------------------------------------------------------------===//
+// Zero-Extend Load
+//===--------------------------------------------------------------------------===//
+
+def : Pat<(i32 (sextloadi1  addr:$src)), (MOVBLFR addr:$src)>;
+def : Pat<(i32 (zextloadi1  addr:$src)), (EXTUB (MOVBLFR addr:$src))>;
+def : Pat<(i32 (zextloadi8  addr:$src)), (EXTUB (MOVBLFR addr:$src))>;
+def : Pat<(i32 (zextloadi16 addr:$src)), (EXTUW (MOVWLFR addr:$src))>;
+
+def : Pat<(sext_inreg i32:$src, i1),  (EXTSB i32:$src)>;
+def : Pat<(sext_inreg i32:$src, i8),  (EXTSB i32:$src)>;
+def : Pat<(sext_inreg i32:$src, i16), (EXTSW i32:$src)>;
