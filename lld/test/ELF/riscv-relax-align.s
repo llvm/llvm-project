@@ -84,7 +84,7 @@
 # CHECKR:       <_start>:
 # CHECKR-NEXT:          lui     a0, 0x0
 # CHECKR-NEXT:          0000000000000000:  R_RISCV_HI20         _start
-# CHECKR-NEXT:          0000000000000000:  R_RISCV_RELAX        *ABS*
+# CHECKR-NEXT:          0000000000000000:  R_RISCV_RELAX        {{\$xrv.*}}
 # CHECKR-EMPTY:
 # CHECKR-NEXT:  <a>:
 # CHECKR-NEXT:          addi    a0, a0, 0x2

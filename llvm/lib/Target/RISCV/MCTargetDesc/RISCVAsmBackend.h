@@ -20,6 +20,7 @@ namespace llvm {
 class MCAssembler;
 class MCObjectTargetWriter;
 class raw_ostream;
+class RISCVELFStreamer;
 
 class RISCVAsmBackend : public MCAsmBackend {
 protected:
@@ -29,6 +30,8 @@ protected:
   const MCTargetOptions &TargetOptions;
   // Temporary symbol used to check whether a PC-relative fixup is resolved.
   MCSymbol *PCRelTemp = nullptr;
+
+  RISCVELFStreamer *ELFStreamer = nullptr;
 
   bool isPCRelFixupResolved(const MCSymbol *SymA, const MCFragment &F);
 
@@ -75,6 +78,8 @@ public:
                     const MCSubtargetInfo *STI) const override;
 
   const MCTargetOptions &getTargetOptions() const { return TargetOptions; }
+
+  void setELFStreamer(RISCVELFStreamer *S) { ELFStreamer = S; }
 };
 }
 
