@@ -467,6 +467,41 @@ func.func @vector_store_2D(%mem: memref<4x4xf16>, %v: vector<4x4xf16>) {
 
 // -----
 
+// The tiles at offsets [0, 2] and [2, 2] are 4 bytes past a 16-byte boundary.
+func.func @vector_load_2D_alignment(%mem: memref<4x4xf16>) -> vector<4x4xf16> {
+  %c0 = arith.constant 0 : index
+  %0 = vector.load %mem[%c0, %c0] alignment = 16 nontemporal = true : memref<4x4xf16>, vector<4x4xf16>
+  return %0 : vector<4x4xf16>
+}
+
+// CHECK-LABEL: func.func @vector_load_2D_alignment(
+// CHECK-SAME:  %[[ARG:.*]]: memref<4x4xf16>) -> vector<4x4xf16> {
+  // CHECK: %[[C2:.*]] = arith.constant 2 : index
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: vector.load %[[ARG]][%[[C0]], %[[C0]]] alignment = 16 nontemporal = true : memref<4x4xf16>, vector<2x2xf16>
+  // CHECK: vector.load %[[ARG]][%[[C0]], %[[C2]]] alignment = 4 nontemporal = true : memref<4x4xf16>, vector<2x2xf16>
+  // CHECK: vector.load %[[ARG]][%[[C2]], %[[C0]]] alignment = 16 nontemporal = true : memref<4x4xf16>, vector<2x2xf16>
+  // CHECK: vector.load %[[ARG]][%[[C2]], %[[C2]]] alignment = 4 nontemporal = true : memref<4x4xf16>, vector<2x2xf16>
+
+// -----
+
+func.func @vector_store_2D_alignment(%mem: memref<4x4xf16>, %v: vector<4x4xf16>) {
+  %c0 = arith.constant 0 : index
+  vector.store %v, %mem[%c0, %c0] alignment = 16 nontemporal = true : memref<4x4xf16>, vector<4x4xf16>
+  return
+}
+
+// CHECK-LABEL: func.func @vector_store_2D_alignment(
+// CHECK-SAME:  %[[ARG0:.*]]: memref<4x4xf16>, %[[ARG1:.*]]: vector<4x4xf16>) {
+  // CHECK: %[[C2:.*]] = arith.constant 2 : index
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: vector.store %{{.*}}, %[[ARG0]][%[[C0]], %[[C0]]] alignment = 16 nontemporal = true : memref<4x4xf16>, vector<2x2xf16>
+  // CHECK: vector.store %{{.*}}, %[[ARG0]][%[[C0]], %[[C2]]] alignment = 4 nontemporal = true : memref<4x4xf16>, vector<2x2xf16>
+  // CHECK: vector.store %{{.*}}, %[[ARG0]][%[[C2]], %[[C0]]] alignment = 16 nontemporal = true : memref<4x4xf16>, vector<2x2xf16>
+  // CHECK: vector.store %{{.*}}, %[[ARG0]][%[[C2]], %[[C2]]] alignment = 4 nontemporal = true : memref<4x4xf16>, vector<2x2xf16>
+
+// -----
+
 func.func @vector_step() -> vector<32xindex> {
     %0 = vector.step : vector<32xindex>
     return %0 : vector<32xindex>
