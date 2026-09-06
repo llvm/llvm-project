@@ -1,8 +1,5 @@
 # Modules
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

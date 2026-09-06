@@ -1,8 +1,5 @@
 # `-fbounds-safety`: Enforcing bounds safety for C
 
-```{contents}
-:local:
-```
 
 ## Overview
 

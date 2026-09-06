@@ -1,8 +1,5 @@
 # HLSL Entry Functions
 
-```{contents}
-:local: true
-```
 
 ## Usage
 

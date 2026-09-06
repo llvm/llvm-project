@@ -1,9 +1,5 @@
 # Clang Language Extensions
 
-```{contents}
-:depth: 1
-:local: true
-```
 
 ```{toctree}
 :hidden: true

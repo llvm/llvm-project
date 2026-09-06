@@ -9,9 +9,6 @@ The checker also provides a configuration interface for extending the default se
 by providing a configuration file to the in [YAML](http://llvm.org/docs/YamlIO.html#introduction-to-yaml) format.
 This documentation describes the syntax of the configuration file and gives the informal semantics of the configuration options.
 
-```{contents}
-:local: true
-```
 
 (clangsa-taint-configuration-overview)=
 

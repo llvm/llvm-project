@@ -1,8 +1,5 @@
 # Clang SYCL Linker
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

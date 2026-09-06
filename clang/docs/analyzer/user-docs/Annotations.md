@@ -18,9 +18,6 @@ Note that attributes that are labeled **Clang-specific** are not
 recognized by GCC. Their use can be conditioned using preprocessor macros
 (examples included on this page).
 
-```{contents}
-:local: true
-```
 
 ## General Purpose Annotations
 
