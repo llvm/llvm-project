@@ -381,6 +381,18 @@ std::string llvm::getUniqueModuleId(Module *M) {
   return ("." + Str).str();
 }
 
+void llvm::externalizeGlobal(GlobalValue &GV) {
+  if (GV.hasLocalLinkage()) {
+    GV.setLinkage(GlobalValue::ExternalLinkage);
+    GV.setVisibility(GlobalValue::HiddenVisibility);
+  }
+
+  // Unnamed entities must be named consistently between modules. setName will
+  // give a distinct name to each such entity.
+  if (!GV.hasName())
+    GV.setName("__llvmsplit_unnamed");
+}
+
 GlobalVariable *llvm::embedBufferInModule(Module &M, MemoryBufferRef Buf,
                                           StringRef SectionName,
                                           Align Alignment,

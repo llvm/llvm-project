@@ -136,6 +136,14 @@ filterDeadComdatFunctions(SmallVectorImpl<Function *> &DeadComdatFunctions);
 /// unique identifier for this module, so we return the empty string.
 LLVM_ABI std::string getUniqueModuleId(Module *M);
 
+/// If \p GV has local linkage, promote it to external + hidden visibility so
+/// it can be referenced across module partitions. Unnamed entities are given
+/// a stable name so they are named consistently across partitions.
+///
+/// Used by module splitting utilities (SplitModule, AMDGPUSplitModule, ...)
+/// to prepare a module for partitioning.
+LLVM_ABI void externalizeGlobal(GlobalValue &GV);
+
 /// Embed the memory buffer \p Buf into the module \p M as a global using the
 /// specified section name. Also provide a metadata entry to identify it in the
 /// module using the same section name. If \p SectionExclude is true !exclude

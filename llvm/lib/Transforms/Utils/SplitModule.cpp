@@ -36,6 +36,7 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cassert>
 #include <iterator>
@@ -203,18 +204,6 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
   }
 }
 
-static void externalize(GlobalValue *GV) {
-  if (GV->hasLocalLinkage()) {
-    GV->setLinkage(GlobalValue::ExternalLinkage);
-    GV->setVisibility(GlobalValue::HiddenVisibility);
-  }
-
-  // Unnamed entities must be named consistently between modules. setName will
-  // give a distinct name to each such entity.
-  if (!GV->hasName())
-    GV->setName("__llvmsplit_unnamed");
-}
-
 // Returns whether GV should be in partition (0-based) I of N.
 static bool isInPartition(const GlobalValue *GV, unsigned I, unsigned N) {
   if (const GlobalObject *Root = getGVPartitioningRoot(GV))
@@ -242,13 +231,13 @@ void llvm::SplitModule(
     bool PreserveLocals, bool RoundRobin) {
   if (!PreserveLocals) {
     for (Function &F : M)
-      externalize(&F);
+      externalizeGlobal(F);
     for (GlobalVariable &GV : M.globals())
-      externalize(&GV);
+      externalizeGlobal(GV);
     for (GlobalAlias &GA : M.aliases())
-      externalize(&GA);
+      externalizeGlobal(GA);
     for (GlobalIFunc &GIF : M.ifuncs())
-      externalize(&GIF);
+      externalizeGlobal(GIF);
   }
 
   // This performs splitting without a need for externalization, which might not
