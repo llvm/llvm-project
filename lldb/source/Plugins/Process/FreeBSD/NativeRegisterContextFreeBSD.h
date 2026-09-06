@@ -9,7 +9,7 @@
 #ifndef lldb_NativeRegisterContextFreeBSD_h
 #define lldb_NativeRegisterContextFreeBSD_h
 
-#include "Plugins/Process/Utility/NativeRegisterContextRegisterInfo.h"
+#include "Plugins/Process/NativeCommon/NativeRegisterContextRegisterInfo.h"
 
 namespace lldb_private {
 namespace process_freebsd {

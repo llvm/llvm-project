@@ -9,7 +9,7 @@
 #ifndef liblldb_NativeRegisterContextWindows_h_
 #define liblldb_NativeRegisterContextWindows_h_
 
-#include "Plugins/Process/Utility/NativeRegisterContextRegisterInfo.h"
+#include "Plugins/Process/NativeCommon/NativeRegisterContextRegisterInfo.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/Utility/DataBufferHeap.h"
 

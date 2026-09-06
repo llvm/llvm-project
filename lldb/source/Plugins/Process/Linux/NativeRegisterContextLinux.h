@@ -9,7 +9,7 @@
 #ifndef lldb_NativeRegisterContextLinux_h
 #define lldb_NativeRegisterContextLinux_h
 
-#include "Plugins/Process/Utility/NativeRegisterContextRegisterInfo.h"
+#include "Plugins/Process/NativeCommon/NativeRegisterContextRegisterInfo.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/Target/MemoryTagManager.h"
 #include "llvm/Support/Error.h"

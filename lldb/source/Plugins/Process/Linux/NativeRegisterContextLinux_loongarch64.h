@@ -12,7 +12,7 @@
 #define lldb_NativeRegisterContextLinux_loongarch64_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
-#include "Plugins/Process/Utility/NativeRegisterContextDBReg_loongarch.h"
+#include "Plugins/Process/NativeCommon/NativeRegisterContextDBReg_loongarch.h"
 #include "Register/Common/RegisterInfoCommon_loongarch64.h"
 
 #include <asm/ptrace.h>

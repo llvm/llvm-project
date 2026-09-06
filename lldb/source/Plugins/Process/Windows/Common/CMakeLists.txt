@@ -24,6 +24,7 @@ add_lldb_library(lldbPluginProcessWindowsCommon PLUGIN
   LINK_COMPONENTS
     Support
   LINK_LIBS
+    lldbNativeProcessSupport
     lldbCore
     lldbHost
     lldbInterpreter

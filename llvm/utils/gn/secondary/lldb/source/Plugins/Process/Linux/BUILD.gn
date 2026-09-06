@@ -4,6 +4,7 @@ static_library("Linux") {
   deps = [
     "//lldb/source/Core",
     "//lldb/source/Host",
+    "//lldb/source/Plugins/Process/NativeCommon",
     "//lldb/source/Plugins/Process/POSIX",
     "//lldb/source/Plugins/Process/Utility",
     "//lldb/source/Symbol",

@@ -10,6 +10,7 @@ add_lldb_library(lldbPluginProcessFreeBSD
   LINK_COMPONENTS
     Support
   LINK_LIBS
+    lldbNativeProcessSupport
     lldbHost
     lldbSymbol
     lldbTarget

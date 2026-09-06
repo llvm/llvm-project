@@ -12,7 +12,7 @@
 // context for 64-bit server.
 
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
-#include "Plugins/Process/Utility/NativeRegisterContextDBReg.h"
+#include "Plugins/Process/NativeCommon/NativeRegisterContextDBReg.h"
 #include "lldb/Utility/Status.h"
 
 namespace lldb_private {
