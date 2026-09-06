@@ -63,7 +63,7 @@ void foo(int Value) {
 
 ```{option} WarnOnUnfixable
 When `true`, emit a warning for cases where the check can't output a
-Fix-It. These can occur with declarations inside the `else` branch that
+fix-it. These can occur with declarations inside the `else` branch that
 would have an extended lifetime if the `else` branch was removed.
 Default is `true`.
 ```
