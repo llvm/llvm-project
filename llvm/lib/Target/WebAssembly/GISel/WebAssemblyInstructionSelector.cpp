@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
@@ -173,6 +174,19 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetLowering &TLI = *STI.getTargetLowering();
 
+  if (I.isPHI()) {
+    const Register DefReg = I.getOperand(0).getReg();
+
+    const TargetRegisterClass *DefRC =
+        TRI.getConstrainedRegClassForOperand(I.getOperand(0), MRI);
+
+    if (!DefRC)
+      return false;
+
+    I.setDesc(TII.get(TargetOpcode::PHI));
+    return RBI.constrainGenericRegister(DefReg, *DefRC, MRI) != nullptr;
+  }
+
   if (!I.isPreISelOpcode()) {
     if (I.isCopy())
       return selectCopy(I, MRI);
@@ -280,6 +294,36 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
     I.setDesc(TII.get(NewOpc));
     I.getOperand(1).setTargetFlags(OperandFlags);
     constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+
+    return true;
+  }
+  case G_BRJT: {
+    auto JT = I.getOperand(1);
+    auto Index = I.getOperand(2);
+
+    assert(JT.getTargetFlags() == 0 && "WebAssembly doesn't set target flags");
+
+    MachineIRBuilder B(I);
+
+    MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
+    const auto &MBBs = MJTI->getJumpTables()[JT.getIndex()].MBBs;
+
+    LLT IndexTy = MRI.getType(Index.getReg());
+    bool IndexIsI64 = IndexTy.getSizeInBits() == 64;
+    auto MIB = B.buildInstr(IndexIsI64 ? WebAssembly::BR_TABLE_I64
+                                       : WebAssembly::BR_TABLE_I32)
+                   .add(Index);
+
+    for (auto *MBB : MBBs)
+      MIB.addMBB(MBB);
+
+    // Add the first MBB as a dummy default target for now. This will be
+    // replaced with the proper default target (and the preceding range check
+    // eliminated) if possible by WebAssemblyFixBrTableDefaults.
+    MIB.addMBB(*MBBs.begin());
+
+    constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+    I.eraseFromParent();
 
     return true;
   }
