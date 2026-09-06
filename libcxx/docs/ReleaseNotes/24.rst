@@ -38,6 +38,8 @@ What's New in Libc++ 24.0.0?
 Implemented Papers
 ------------------
 
+- P2546R5: Debugging support (`Github <https://llvm.org/PR105392>`__)
+- P2810R4: ``is_debugger_present`` is_replaceable(`Github <https://llvm.org/PR105422>`__)
 - P3052R2: ``view_interface::at()`` (`Github <https://llvm.org/PR204395>`__)
 - P0493R5: Atomic minimum/maximum (`Github <https://llvm.org/PR105418>`__)
 - P3059R2: Making user-defined constructors of view iterators/sentinels private (`Github <https://github.com/llvm/llvm-project/issues/189599>`__)

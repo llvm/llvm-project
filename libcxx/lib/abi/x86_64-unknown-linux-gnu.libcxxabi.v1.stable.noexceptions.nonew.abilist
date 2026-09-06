@@ -584,6 +584,7 @@
 {'is_defined': True, 'name': '_ZNSt3__111timed_mutexC2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__111timed_mutexD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__111timed_mutexD2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__112__breakpointEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__do_nothingEPv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__get_sp_mutEPKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__112__next_primeEm', 'type': 'FUNC'}
@@ -1176,6 +1177,7 @@
 {'is_defined': True, 'name': '_ZNSt3__119__thread_local_dataEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__119is_debugger_presentEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__120__atomic_wait_nativeILm4EEEvPKvS2_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__120__get_collation_nameEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__120__libcpp_atomic_waitEPVKNS_17__cxx_atomic_implIiNS_22__cxx_atomic_base_implIiEEEEi', 'type': 'FUNC'}
@@ -1613,6 +1615,7 @@
 {'is_defined': True, 'name': '_ZTINSt3__112strstreambufE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__112system_errorE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__113basic_filebufIcNS_11char_traitsIcEEEE', 'size': 24, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTINSt3__113basic_filebufIwNS_11char_traitsIwEEEE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__113basic_istreamIcNS_11char_traitsIcEEEE', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__113basic_istreamIwNS_11char_traitsIwEEEE', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__113basic_ostreamIcNS_11char_traitsIcEEEE', 'size': 40, 'type': 'OBJECT'}
@@ -1747,6 +1750,7 @@
 {'is_defined': True, 'name': '_ZTSNSt3__112strstreambufE', 'size': 23, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__112system_errorE', 'size': 23, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__113basic_filebufIcNS_11char_traitsIcEEEE', 'size': 47, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTSNSt3__113basic_filebufIwNS_11char_traitsIwEEEE', 'size': 47, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__113basic_istreamIcNS_11char_traitsIcEEEE', 'size': 47, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__113basic_istreamIwNS_11char_traitsIwEEEE', 'size': 47, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__113basic_ostreamIcNS_11char_traitsIcEEEE', 'size': 47, 'type': 'OBJECT'}
@@ -1885,6 +1889,7 @@
 {'is_defined': True, 'name': '_ZTVNSt3__112strstreambufE', 'size': 128, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__112system_errorE', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__113basic_filebufIcNS_11char_traitsIcEEEE', 'size': 128, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTVNSt3__113basic_filebufIwNS_11char_traitsIwEEEE', 'size': 128, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__113basic_istreamIcNS_11char_traitsIcEEEE', 'size': 80, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__113basic_istreamIwNS_11char_traitsIwEEEE', 'size': 80, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__113basic_ostreamIcNS_11char_traitsIcEEEE', 'size': 80, 'type': 'OBJECT'}
@@ -2002,6 +2007,3 @@
 {'is_defined': True, 'name': '_ZTv0_n24_NSt3__114basic_iostreamIcNS_11char_traitsIcEEED1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZTv0_n24_NSt3__19strstreamD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZTv0_n24_NSt3__19strstreamD1Ev', 'type': 'FUNC'}
-{'name': '_ZTINSt3__113basic_filebufIwNS_11char_traitsIwEEEE', 'size': 24, 'type': 'OBJECT', 'is_defined': True}
-{'name': '_ZTSNSt3__113basic_filebufIwNS_11char_traitsIwEEEE', 'size': 47, 'type': 'OBJECT', 'is_defined': True}
-{'name': '_ZTVNSt3__113basic_filebufIwNS_11char_traitsIwEEEE', 'size': 128, 'type': 'OBJECT', 'is_defined': True}
