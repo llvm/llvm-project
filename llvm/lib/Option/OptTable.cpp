@@ -193,8 +193,7 @@ OptTable::suggestValueCompletions(StringRef Option, StringRef Arg) const {
   // Search all options and return possible values.
   for (size_t I = FirstSearchableIndex, E = OptionInfos.size(); I < E; I++) {
     const Info &In = OptionInfos[I];
-    if (!In.ValuesOffset.value() ||
-        !optionMatches(*StrTable, PrefixesTable, In, Option))
+    if (!In.hasValues() || !optionMatches(*StrTable, PrefixesTable, In, Option))
       continue;
 
     SmallVector<StringRef, 8> Candidates;
@@ -222,13 +221,11 @@ OptTable::findByPrefix(StringRef Cur, Visibility VisibilityMask,
     if (In.Flags & DisableFlags)
       continue;
 
-    StringRef HelpText = (*StrTable)[In.HelpTextOffset];
-
     StringRef Name = In.getName(*StrTable, PrefixesTable);
     for (auto PrefixOffset : In.getPrefixOffsets(PrefixesTable)) {
       StringRef Prefix = (*StrTable)[PrefixOffset];
       std::string S = (Twine(Prefix) + Name + "\t").str();
-      S += HelpText;
+      S += (*StrTable)[In.HelpTextOffset];
       if (StringRef(S).starts_with(Cur) && S != std::string(Cur) + "\t")
         Ret.push_back(S);
     }

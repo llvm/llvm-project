@@ -338,8 +338,8 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   array_pod_sort(PrefixesUnion.begin(), PrefixesUnion.end());
 
   llvm::StringToOffsetTable Table;
-  // An empty string that is not at offset zero, for fields that are explicitly
-  // set to it; see writeOptionalStrOffset.
+  // An empty string that is not at offset zero, for a HelpText<"">; see
+  // writeHelpTextOffset.
   const unsigned ExplicitlyEmptyOffset =
       Table.GetOrAddStringOffset(StringRef("\0", 1));
   // We can add all the prefixes via the union.

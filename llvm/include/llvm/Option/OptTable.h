@@ -61,7 +61,7 @@ public:
   };
 
   /// Returns the values produced by TableGen `ValuesCode` for an option ID, or
-  /// the empty string. Generated code supplies this; see ValuesCodeFn.
+  /// the empty string. The generated table supplies getOptionValuesCode().
   using ValuesCodeFnTy = StringRef (*)(unsigned);
 
   /// Entry for a single option instance in the option data table.
@@ -91,9 +91,8 @@ public:
     /// The alias arguments as a \0 separated list terminated by an empty
     /// string, e.g. "foo\0bar\0".
     StringTable::Offset AliasArgsOffset;
-
-    bool hasAliasArgs() const { return AliasArgsOffset.value() != 0; }
-    /// The possible values as a comma separated list; see ValuesCodeTable.
+    /// The possible values as a comma separated list, empty for an option whose
+    /// values only getOptionValuesCode() knows.
     StringTable::Offset ValuesOffset;
     // Offset into OptTable's SubCommandIDsTable.
     unsigned SubCommandIDsOffset;
@@ -115,6 +114,8 @@ public:
     /// Whether the .td supplied a help text. An explicitly empty one is not the
     /// same as none: it marks the option as deliberately undocumented.
     bool hasHelpText() const { return HelpTextOffset.value() != 0; }
+    bool hasAliasArgs() const { return AliasArgsOffset.value() != 0; }
+    bool hasValues() const { return ValuesOffset.value() != 0; }
 
     bool hasSubCommands() const { return SubCommandIDsOffset != 0; }
 
