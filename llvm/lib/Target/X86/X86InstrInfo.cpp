@@ -5521,6 +5521,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       // and are harmless.
       MachineInstr *Consumer = nullptr;
       X86::CondCode ConsumerCC = X86::COND_INVALID;
+      bool IsCMOV = false;
       bool FlagsRedefinedAfterConsumer = false;
       for (MachineBasicBlock::iterator It =
                std::next(MachineBasicBlock::iterator(CmpInstr));
