@@ -1,10 +1,10 @@
-; RUN: llc < %s -mtriple=aarch64-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-linux-gnu -fp-contract=fast | FileCheck %s
 define float @mul_add(float %a, float %b, float %c) local_unnamed_addr #0 {
 ; CHECK-LABEL: %entry
 ; CHECK: fmadd {{s[0-9]+}}, {{s[0-9]+}}, {{s[0-9]+}}
   entry:
-    %mul = fmul contract float %a, %b
-    %add = fadd contract float %mul, %c
+    %mul = fmul float %a, %b
+    %add = fadd float %mul, %c
     ret float %add
 }
 
