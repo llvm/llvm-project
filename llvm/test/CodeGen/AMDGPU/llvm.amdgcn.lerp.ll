@@ -7,14 +7,13 @@ declare i32 @llvm.amdgcn.lerp(i32, i32, i32) #0
 define amdgpu_kernel void @v_lerp(ptr addrspace(1) %out, i32 %src) nounwind {
 ; GCN-SDAG-LABEL: v_lerp:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GCN-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-SDAG-NEXT:    s_movk_i32 s3, 0x64
+; GCN-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-SDAG-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-SDAG-NEXT:    v_lerp_u8 v2, v0, s3, s3
+; GCN-SDAG-NEXT:    s_movk_i32 s3, 0x64
+; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-SDAG-NEXT:    v_lerp_u8 v2, v2, s3, s3
 ; GCN-SDAG-NEXT:    flat_store_dword v[0:1], v2
 ; GCN-SDAG-NEXT:    s_endpgm
 ;
@@ -37,14 +36,14 @@ define amdgpu_kernel void @v_lerp(ptr addrspace(1) %out, i32 %src) nounwind {
 define amdgpu_kernel void @v_lerp_non_immediate(ptr addrspace(1) %out, i32 %src, i32 %a, i32 %b) nounwind {
 ; GCN-SDAG-LABEL: v_lerp_non_immediate:
 ; GCN-SDAG:       ; %bb.0:
-; GCN-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
-; GCN-SDAG-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
+; GCN-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-SDAG-NEXT:    s_load_dword s4, s[4:5], 0x34
 ; GCN-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-SDAG-NEXT:    v_mov_b32_e32 v0, s1
-; GCN-SDAG-NEXT:    v_mov_b32_e32 v1, s2
-; GCN-SDAG-NEXT:    v_lerp_u8 v2, s0, v0, v1
-; GCN-SDAG-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-SDAG-NEXT:    v_mov_b32_e32 v1, s5
+; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, s3
+; GCN-SDAG-NEXT:    v_mov_b32_e32 v3, s4
+; GCN-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-SDAG-NEXT:    v_lerp_u8 v2, s2, v2, v3
 ; GCN-SDAG-NEXT:    flat_store_dword v[0:1], v2
 ; GCN-SDAG-NEXT:    s_endpgm
 ;

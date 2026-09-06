@@ -11,18 +11,19 @@ define amdgpu_kernel void @fma_mix_f16 (ptr addrspace(1) %a, ptr addrspace(1) %b
   ; GFX11-REAL16-NEXT: {{  $}}
   ; GFX11-REAL16-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; GFX11-REAL16-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
-  ; GFX11-REAL16-NEXT:   [[S_LOAD_DWORDX8_IMM:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s256) from %ir.a.kernarg.offset, align 4, addrspace 4)
-  ; GFX11-REAL16-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub1
-  ; GFX11-REAL16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub0
+  ; GFX11-REAL16-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s128) from %ir.a.kernarg.offset, align 4, addrspace 4)
+  ; GFX11-REAL16-NEXT:   [[S_LOAD_DWORDX4_IMM1:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s128) from %ir.c.kernarg.offset, align 4, addrspace 4)
+  ; GFX11-REAL16-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
+  ; GFX11-REAL16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
   ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY3]], %subreg.sub0, killed [[COPY2]], %subreg.sub1
-  ; GFX11-REAL16-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub3
-  ; GFX11-REAL16-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub2
+  ; GFX11-REAL16-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
+  ; GFX11-REAL16-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
   ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY5]], %subreg.sub0, killed [[COPY4]], %subreg.sub1
-  ; GFX11-REAL16-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub5
-  ; GFX11-REAL16-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub4
+  ; GFX11-REAL16-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM1]].sub1
+  ; GFX11-REAL16-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM1]].sub0
   ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY7]], %subreg.sub0, killed [[COPY6]], %subreg.sub1
-  ; GFX11-REAL16-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub7
-  ; GFX11-REAL16-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub6
+  ; GFX11-REAL16-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM1]].sub3
+  ; GFX11-REAL16-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM1]].sub2
   ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1
   ; GFX11-REAL16-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-REAL16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
@@ -38,7 +39,7 @@ define amdgpu_kernel void @fma_mix_f16 (ptr addrspace(1) %a, ptr addrspace(1) %b
   ; GFX11-REAL16-NEXT:   [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[V_ADD_F16_t16_e64_]], %subreg.lo16, killed [[DEF]], %subreg.hi16
   ; GFX11-REAL16-NEXT:   [[V_FMA_MIX_F16_t16_:%[0-9]+]]:vgpr_16 = nofpexcept V_FMA_MIX_F16_t16 0, killed [[GLOBAL_LOAD_DWORD_SADDR]], 0, killed [[GLOBAL_LOAD_DWORD_SADDR1]], 8, killed [[REG_SEQUENCE4]], 0, 0, 0, implicit $mode, implicit $exec
-  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_SHORT_SADDR_t16 killed [[V_MOV_B32_e32_]], killed [[V_FMA_MIX_F16_t16_]], killed [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s16) into %ir.4, addrspace 1)
+  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_SHORT_SADDR_t16 killed [[V_MOV_B32_e32_]], killed [[V_FMA_MIX_F16_t16_]], killed [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s16) into %ir.out.load6, addrspace 1)
   ; GFX11-REAL16-NEXT:   S_ENDPGM 0
   ;
   ; GFX11-FAKE16-LABEL: name: fma_mix_f16
@@ -47,18 +48,19 @@ define amdgpu_kernel void @fma_mix_f16 (ptr addrspace(1) %a, ptr addrspace(1) %b
   ; GFX11-FAKE16-NEXT: {{  $}}
   ; GFX11-FAKE16-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; GFX11-FAKE16-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
-  ; GFX11-FAKE16-NEXT:   [[S_LOAD_DWORDX8_IMM:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s256) from %ir.a.kernarg.offset, align 4, addrspace 4)
-  ; GFX11-FAKE16-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub1
-  ; GFX11-FAKE16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub0
+  ; GFX11-FAKE16-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s128) from %ir.a.kernarg.offset, align 4, addrspace 4)
+  ; GFX11-FAKE16-NEXT:   [[S_LOAD_DWORDX4_IMM1:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s128) from %ir.c.kernarg.offset, align 4, addrspace 4)
+  ; GFX11-FAKE16-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
+  ; GFX11-FAKE16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
   ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY3]], %subreg.sub0, killed [[COPY2]], %subreg.sub1
-  ; GFX11-FAKE16-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub3
-  ; GFX11-FAKE16-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub2
+  ; GFX11-FAKE16-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
+  ; GFX11-FAKE16-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
   ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY5]], %subreg.sub0, killed [[COPY4]], %subreg.sub1
-  ; GFX11-FAKE16-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub5
-  ; GFX11-FAKE16-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub4
+  ; GFX11-FAKE16-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM1]].sub1
+  ; GFX11-FAKE16-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM1]].sub0
   ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY7]], %subreg.sub0, killed [[COPY6]], %subreg.sub1
-  ; GFX11-FAKE16-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub7
-  ; GFX11-FAKE16-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub6
+  ; GFX11-FAKE16-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM1]].sub3
+  ; GFX11-FAKE16-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM1]].sub2
   ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1
   ; GFX11-FAKE16-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-FAKE16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
@@ -73,7 +75,7 @@ define amdgpu_kernel void @fma_mix_f16 (ptr addrspace(1) %a, ptr addrspace(1) %b
   ; GFX11-FAKE16-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX11-FAKE16-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[DEF]]
   ; GFX11-FAKE16-NEXT:   [[V_FMA_MIXLO_F16_:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_MIXLO_F16 0, killed [[GLOBAL_LOAD_DWORD_SADDR]], 0, killed [[GLOBAL_LOAD_DWORD_SADDR1]], 8, killed [[V_ADD_F16_fake16_e64_]], 0, [[COPY10]], 0, 0, implicit $mode, implicit $exec
-  ; GFX11-FAKE16-NEXT:   GLOBAL_STORE_SHORT_SADDR killed [[V_MOV_B32_e32_]], killed [[V_FMA_MIXLO_F16_]], killed [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s16) into %ir.4, addrspace 1)
+  ; GFX11-FAKE16-NEXT:   GLOBAL_STORE_SHORT_SADDR killed [[V_MOV_B32_e32_]], killed [[V_FMA_MIXLO_F16_]], killed [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s16) into %ir.out.load6, addrspace 1)
   ; GFX11-FAKE16-NEXT:   S_ENDPGM 0
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

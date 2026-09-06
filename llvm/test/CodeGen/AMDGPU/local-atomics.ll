@@ -10,9 +10,12 @@
 ; SICIVI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; GCN-DAG: s_load_dword [[SPTR:s[0-9]+]],
+; SI-DAG: s_load_dword s{{[0-9]+}}, s[4:5], 0xb
+; SI-DAG: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x9
+; CIVI-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x9|0x24}}
+; GFX9-DAG: s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN-DAG: v_mov_b32_e32 [[DATA:v[0-9]+]], 4
-; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[SPTR]]
+; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], s{{[0-9]+}}
 ; GCN: ds_wrxchg_rtn_b32 [[RESULT:v[0-9]+]], [[VPTR]], [[DATA]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
@@ -57,9 +60,12 @@ define amdgpu_kernel void @lds_atomic_xchg_ret_f32_offset(ptr addrspace(1) %out,
 ; SICIVI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; GCN-DAG: s_load_dword [[SPTR:s[0-9]+]],
+; SI-DAG: s_load_dword s{{[0-9]+}}, s[4:5], 0xb
+; SI-DAG: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x9
+; CIVI-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, {{0x9|0x24}}
+; GFX9-DAG: s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GCN-DAG: v_mov_b32_e32 [[DATA:v[0-9]+]], 4
-; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[SPTR]]
+; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], s{{[0-9]+}}
 ; GCN: ds_add_rtn_u32 [[RESULT:v[0-9]+]], [[VPTR]], [[DATA]]
 ; GCN: buffer_store_dword [[RESULT]],
 ; GCN: s_endpgm
@@ -410,9 +416,9 @@ define amdgpu_kernel void @lds_atomic_umax_ret_i32_offset(ptr addrspace(1) %out,
 ; SICIVI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; GCN-DAG: s_load_dword [[SPTR:s[0-9]+]],
+; GCN-DAG: s_load_dword s{{[0-9]+}}, s[4:5], {{0x9|0x24}}
 ; GCN-DAG: v_mov_b32_e32 [[DATA:v[0-9]+]], 4
-; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[SPTR]]
+; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], s{{[0-9]+}}
 ; GCN: ds_wrxchg_rtn_b32 [[RESULT:v[0-9]+]], [[VPTR]], [[DATA]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_xchg_noret_i32(ptr addrspace(3) %ptr) nounwind {
@@ -436,9 +442,9 @@ define amdgpu_kernel void @lds_atomic_xchg_noret_i32_offset(ptr addrspace(3) %pt
 ; SICIVI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; GCN-DAG: s_load_dword [[SPTR:s[0-9]+]],
+; GCN-DAG: s_load_dword s{{[0-9]+}}, s[4:5], {{0x9|0x24}}
 ; GCN-DAG: v_mov_b32_e32 [[DATA:v[0-9]+]], 4
-; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[SPTR]]
+; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], s{{[0-9]+}}
 ; GCN: ds_add_u32 [[VPTR]], [[DATA]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_add_noret_i32(ptr addrspace(3) %ptr) nounwind {

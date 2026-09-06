@@ -69,11 +69,12 @@ define amdgpu_kernel void @lds_atomic_add_ret_i64(ptr addrspace(1) %out, ptr add
 ; SICIVI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; SI-DAG: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xb
-; GFX89-DAG: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
+; SI-DAG: s_load_dword s{{[0-9]+}}, s[4:5], 0xb
+; SI-DAG: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x9
+; GFX89-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x24
 ; GCN-DAG: v_mov_b32_e32 v[[LOVDATA:[0-9]+]], 9
 ; GCN-DAG: v_mov_b32_e32 v[[HIVDATA:[0-9]+]], 0
-; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
+; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], s{{[0-9]+}}
 ; GCN: ds_add_rtn_u64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[VPTR]], v[[[LOVDATA]]:[[HIVDATA]]] offset:32
 ; GCN: buffer_store_dwordx2 [[RESULT]],
 ; GCN: s_endpgm
@@ -656,11 +657,12 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i64(ptr addrspace(1) %out, ptr add
 ; SICIVI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; SI-DAG: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xb
-; GFX89-DAG: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
+; SI-DAG: s_load_dword s{{[0-9]+}}, s[4:5], 0xb
+; SI-DAG: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x9
+; GFX89-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x24
 ; GCN-DAG: v_mov_b32_e32 v[[LOVDATA:[0-9]+]], 9
 ; GCN-DAG: v_mov_b32_e32 v[[HIVDATA:[0-9]+]], 0
-; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
+; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], s{{[0-9]+}}
 ; GCN: ds_inc_rtn_u64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[VPTR]], v[[[LOVDATA]]:[[HIVDATA]]] offset:32
 ; GCN: buffer_store_dwordx2 [[RESULT]],
 ; GCN: s_endpgm
@@ -715,11 +717,12 @@ define amdgpu_kernel void @lds_atomic_dec_ret_i64(ptr addrspace(1) %out, ptr add
 ; SICIVI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; SI-DAG: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xb
-; GFX89-DAG: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x2c
+; SI-DAG: s_load_dword s{{[0-9]+}}, s[4:5], 0xb
+; SI-DAG: s_load_dwordx2 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x9
+; GFX89-DAG: s_load_dwordx4 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0x24
 ; GCN-DAG: v_mov_b32_e32 v[[LOVDATA:[0-9]+]], 9
 ; GCN-DAG: v_mov_b32_e32 v[[HIVDATA:[0-9]+]], 0
-; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
+; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], s{{[0-9]+}}
 ; GCN: ds_dec_rtn_u64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[VPTR]], v[[[LOVDATA]]:[[HIVDATA]]] offset:32
 ; GCN: buffer_store_dwordx2 [[RESULT]],
 ; GCN: s_endpgm

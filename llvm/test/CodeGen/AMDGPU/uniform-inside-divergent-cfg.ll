@@ -4,45 +4,43 @@
 define amdgpu_kernel void @div_unif_div(ptr addrspace(1) %out, float %ubeta, i32 %m) {
 ; CHECK-LABEL: div_unif_div:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x2c
+; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; CHECK-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, s1, v0
-; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    s_and_saveexec_b32 s2, vcc_lo
+; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, s3, v0
+; CHECK-NEXT:    s_mov_b32 s3, 0
+; CHECK-NEXT:    s_and_saveexec_b32 s4, vcc_lo
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_8
 ; CHECK-NEXT:  ; %bb.1: ; %A
-; CHECK-NEXT:    v_cmp_eq_f32_e64 s0, s0, 0
-; CHECK-NEXT:    s_mov_b32 s1, exec_lo
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
+; CHECK-NEXT:    v_cmp_eq_f32_e64 s2, s2, 0
+; CHECK-NEXT:    s_mov_b32 s3, exec_lo
+; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s2
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_7
 ; CHECK-NEXT:  ; %bb.2: ; %B
-; CHECK-NEXT:    s_mov_b32 s0, exec_lo
+; CHECK-NEXT:    s_mov_b32 s2, exec_lo
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:    v_cmpx_lt_u32_e32 2, v0
-; CHECK-NEXT:    s_xor_b32 s0, exec_lo, s0
+; CHECK-NEXT:    s_xor_b32 s2, exec_lo, s2
 ; CHECK-NEXT:  ; %bb.3: ; %B2
 ; CHECK-NEXT:    v_mul_u32_u24_e32 v1, 3, v0
 ; CHECK-NEXT:  ; %bb.4: ; %Flow
-; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
+; CHECK-NEXT:    s_and_not1_saveexec_b32 s2, s2
 ; CHECK-NEXT:  ; %bb.5: ; %B1
 ; CHECK-NEXT:    v_add_nc_u32_e32 v1, 7, v0
-; CHECK-NEXT:  ; %bb.6: ; %Flow3
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; CHECK-NEXT:  ; %bb.6: ; %Flow4
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; CHECK-NEXT:    s_or_b32 s1, s1, exec_lo
+; CHECK-NEXT:    s_or_b32 s3, s3, exec_lo
 ; CHECK-NEXT:    s_branch .LBB0_8
 ; CHECK-NEXT:  .LBB0_7:
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 1
 ; CHECK-NEXT:  .LBB0_8: ; %join
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
-; CHECK-NEXT:    s_and_saveexec_b32 s0, s1
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s4
+; CHECK-NEXT:    s_and_saveexec_b32 s2, s3
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_10
 ; CHECK-NEXT:  ; %bb.9: ; %do.store
-; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; CHECK-NEXT:  .LBB0_10: ; %exit
 ; CHECK-NEXT:    s_endpgm
@@ -85,41 +83,41 @@ exit:
 define amdgpu_kernel void @unif_div(ptr addrspace(1) %out, float %u1, float %u2, i32 %m) {
 ; CHECK-LABEL: unif_div:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c
+; CHECK-NEXT:    s_clause 0x1
+; CHECK-NEXT:    s_load_b32 s6, s[4:5], 0x34
+; CHECK-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; CHECK-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_and_b32 v0, 0x3ff, v0
+; CHECK-NEXT:    s_mov_b32 s5, 0
+; CHECK-NEXT:    s_mov_b32 s4, exec_lo
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_mov_b32 s3, 0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, s2, v0
-; CHECK-NEXT:    s_and_saveexec_b32 s2, vcc_lo
+; CHECK-NEXT:    v_cmpx_gt_u32_e32 s6, v0
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_7
 ; CHECK-NEXT:  ; %bb.1: ; %A
-; CHECK-NEXT:    v_cmp_eq_f32_e64 s0, s0, 0
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
+; CHECK-NEXT:    v_cmp_eq_f32_e64 s2, s2, 0
+; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s2
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB1_4
 ; CHECK-NEXT:  ; %bb.2: ; %B
-; CHECK-NEXT:    v_cmp_eq_f32_e64 s0, s1, 0
-; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s0
+; CHECK-NEXT:    v_cmp_eq_f32_e64 s2, s3, 0
+; CHECK-NEXT:    s_and_b32 vcc_lo, exec_lo, s2
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB1_5
 ; CHECK-NEXT:  ; %bb.3: ; %C
 ; CHECK-NEXT:    v_add_nc_u32_e32 v1, 7, v0
 ; CHECK-NEXT:    s_branch .LBB1_6
 ; CHECK-NEXT:  .LBB1_4:
-; CHECK-NEXT:    s_mov_b32 s3, exec_lo
+; CHECK-NEXT:    s_mov_b32 s5, exec_lo
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 1
 ; CHECK-NEXT:    s_branch .LBB1_7
 ; CHECK-NEXT:  .LBB1_5: ; %D
 ; CHECK-NEXT:    v_mul_u32_u24_e32 v1, 3, v0
 ; CHECK-NEXT:  .LBB1_6: ; %join
-; CHECK-NEXT:    s_or_b32 s3, exec_lo, exec_lo
+; CHECK-NEXT:    s_or_b32 s5, exec_lo, exec_lo
 ; CHECK-NEXT:  .LBB1_7: ; %join
-; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s2
-; CHECK-NEXT:    s_and_saveexec_b32 s0, s3
+; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s4
+; CHECK-NEXT:    s_and_saveexec_b32 s2, s5
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_9
 ; CHECK-NEXT:  ; %bb.8: ; %do.store
-; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; CHECK-NEXT:  .LBB1_9: ; %exit
 ; CHECK-NEXT:    s_endpgm

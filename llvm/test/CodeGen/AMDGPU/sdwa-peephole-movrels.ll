@@ -7,8 +7,7 @@
 define amdgpu_kernel void @extract_wo_offset_shl(ptr addrspace(1) %out, i32 %in) {
 ; GFX8-LABEL: extract_wo_offset_shl:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX8-NEXT:    s_load_dword s2, s[8:9], 0x8
+; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, 1
 ; GFX8-NEXT:    s_add_i32 s12, s12, s17
 ; GFX8-NEXT:    v_mov_b32_e32 v1, 2
@@ -31,17 +30,15 @@ define amdgpu_kernel void @extract_wo_offset_shl(ptr addrspace(1) %out, i32 %in)
 ; GFX8-NEXT:    v_movrels_b32_e32 v0, v0
 ; GFX8-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX8-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 16, v0
-; GFX8-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8-NEXT:    v_mov_b32_e32 v1, s1
-; GFX8-NEXT:    flat_store_dword v[0:1], v2
+; GFX8-NEXT:    v_mov_b32_e32 v16, s0
+; GFX8-NEXT:    v_mov_b32_e32 v17, s1
+; GFX8-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX8-NEXT:    flat_store_dword v[16:17], v0
 ; GFX8-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: extract_wo_offset_shl:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    s_load_dword s2, s[8:9], 0x8
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 1
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 2
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 3

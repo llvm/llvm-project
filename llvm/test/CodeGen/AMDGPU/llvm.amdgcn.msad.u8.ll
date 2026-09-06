@@ -11,15 +11,16 @@ declare i32 @llvm.amdgcn.msad.u8(i32, i32, i32) #0
 define amdgpu_kernel void @v_msad_u8(ptr addrspace(1) %out, i32 %src) {
 ; GFX600-SDAG-LABEL: v_msad_u8:
 ; GFX600-SDAG:       ; %bb.0:
-; GFX600-SDAG-NEXT:    s_load_dword s6, s[4:5], 0xb
-; GFX600-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; GFX600-SDAG-NEXT:    s_movk_i32 s4, 0x64
-; GFX600-SDAG-NEXT:    s_mov_b32 s3, 0xf000
-; GFX600-SDAG-NEXT:    s_mov_b32 s2, -1
+; GFX600-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
 ; GFX600-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX600-SDAG-NEXT:    v_mov_b32_e32 v0, s6
-; GFX600-SDAG-NEXT:    v_msad_u8 v0, v0, s4, s4
-; GFX600-SDAG-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GFX600-SDAG-NEXT:    s_movk_i32 s3, 0x64
+; GFX600-SDAG-NEXT:    s_mov_b32 s7, 0xf000
+; GFX600-SDAG-NEXT:    s_mov_b32 s6, -1
+; GFX600-SDAG-NEXT:    v_mov_b32_e32 v0, s2
+; GFX600-SDAG-NEXT:    s_mov_b32 s4, s0
+; GFX600-SDAG-NEXT:    s_mov_b32 s5, s1
+; GFX600-SDAG-NEXT:    v_msad_u8 v0, v0, s3, s3
+; GFX600-SDAG-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GFX600-SDAG-NEXT:    s_endpgm
 ;
 ; GFX600-GISEL-LABEL: v_msad_u8:
@@ -36,14 +37,13 @@ define amdgpu_kernel void @v_msad_u8(ptr addrspace(1) %out, i32 %src) {
 ;
 ; GFX803-SDAG-LABEL: v_msad_u8:
 ; GFX803-SDAG:       ; %bb.0:
-; GFX803-SDAG-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; GFX803-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX803-SDAG-NEXT:    s_movk_i32 s3, 0x64
+; GFX803-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX803-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX803-SDAG-NEXT:    v_mov_b32_e32 v0, s2
-; GFX803-SDAG-NEXT:    v_msad_u8 v2, v0, s3, s3
+; GFX803-SDAG-NEXT:    s_movk_i32 s3, 0x64
+; GFX803-SDAG-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX803-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX803-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; GFX803-SDAG-NEXT:    v_msad_u8 v2, v2, s3, s3
 ; GFX803-SDAG-NEXT:    flat_store_dword v[0:1], v2
 ; GFX803-SDAG-NEXT:    s_endpgm
 ;
@@ -85,14 +85,16 @@ define amdgpu_kernel void @v_msad_u8(ptr addrspace(1) %out, i32 %src) {
 define amdgpu_kernel void @v_msad_u8_non_immediate(ptr addrspace(1) %out, i32 %src, i32 %a, i32 %b) {
 ; GFX600-SDAG-LABEL: v_msad_u8_non_immediate:
 ; GFX600-SDAG:       ; %bb.0:
-; GFX600-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xb
-; GFX600-SDAG-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; GFX600-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GFX600-SDAG-NEXT:    s_load_dword s8, s[4:5], 0xd
 ; GFX600-SDAG-NEXT:    s_mov_b32 s7, 0xf000
 ; GFX600-SDAG-NEXT:    s_mov_b32 s6, -1
 ; GFX600-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX600-SDAG-NEXT:    v_mov_b32_e32 v0, s1
-; GFX600-SDAG-NEXT:    v_mov_b32_e32 v1, s2
-; GFX600-SDAG-NEXT:    v_msad_u8 v0, s0, v0, v1
+; GFX600-SDAG-NEXT:    v_mov_b32_e32 v0, s3
+; GFX600-SDAG-NEXT:    v_mov_b32_e32 v1, s8
+; GFX600-SDAG-NEXT:    s_mov_b32 s4, s0
+; GFX600-SDAG-NEXT:    s_mov_b32 s5, s1
+; GFX600-SDAG-NEXT:    v_msad_u8 v0, s2, v0, v1
 ; GFX600-SDAG-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GFX600-SDAG-NEXT:    s_endpgm
 ;
@@ -111,14 +113,14 @@ define amdgpu_kernel void @v_msad_u8_non_immediate(ptr addrspace(1) %out, i32 %s
 ;
 ; GFX803-SDAG-LABEL: v_msad_u8_non_immediate:
 ; GFX803-SDAG:       ; %bb.0:
-; GFX803-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
-; GFX803-SDAG-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
+; GFX803-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX803-SDAG-NEXT:    s_load_dword s4, s[4:5], 0x34
 ; GFX803-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX803-SDAG-NEXT:    v_mov_b32_e32 v0, s1
-; GFX803-SDAG-NEXT:    v_mov_b32_e32 v1, s2
-; GFX803-SDAG-NEXT:    v_msad_u8 v2, s0, v0, v1
-; GFX803-SDAG-NEXT:    v_mov_b32_e32 v0, s4
-; GFX803-SDAG-NEXT:    v_mov_b32_e32 v1, s5
+; GFX803-SDAG-NEXT:    v_mov_b32_e32 v2, s3
+; GFX803-SDAG-NEXT:    v_mov_b32_e32 v3, s4
+; GFX803-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; GFX803-SDAG-NEXT:    v_mov_b32_e32 v1, s1
+; GFX803-SDAG-NEXT:    v_msad_u8 v2, s2, v2, v3
 ; GFX803-SDAG-NEXT:    flat_store_dword v[0:1], v2
 ; GFX803-SDAG-NEXT:    s_endpgm
 ;
@@ -138,13 +140,13 @@ define amdgpu_kernel void @v_msad_u8_non_immediate(ptr addrspace(1) %out, i32 %s
 ; GFX13-LABEL: v_msad_u8_non_immediate:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    s_clause 0x1
-; GFX13-NEXT:    s_load_b96 s[0:2], s[4:5], 0x2c nv
-; GFX13-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24 nv
+; GFX13-NEXT:    s_load_b32 s6, s[4:5], 0x34 nv
+; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s2
+; GFX13-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s6
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_msad_u8 v0, s0, s1, v0
-; GFX13-NEXT:    global_store_b32 v1, v0, s[4:5]
+; GFX13-NEXT:    v_msad_u8 v0, s2, s3, v0
+; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13-NEXT:    s_endpgm
   %result= call i32 @llvm.amdgcn.msad.u8(i32 %src, i32 %a, i32 %b) #0
   store i32 %result, ptr addrspace(1) %out, align 4
