@@ -21,14 +21,13 @@ func.func @one_d_loop(%A : memref<?xf32>, %B : memref<?xf32>) {
   // CHECK-BLOCKS-NEXT: gpu.launch blocks(%[[B0:.*]], %[[B1:.*]], %[[B2:.*]]) in (%{{.*}} = %[[BOUND]], %{{.*}} = %[[ONE]], %{{.*}} = %[[ONE]]) threads(%[[T0:.*]], %[[T1:.*]], %[[T2:.*]]) in (%{{.*}} = %[[ONE]], %{{.*}} = %[[ONE]], %{{.*}} = %[[ONE]])
   affine.for %i = 0 to 42 {
   // CHECK-THREADS-NEXT: %[[INDEX:.*]] = arith.addi %{{.*}}, %[[T0]]
-  // CHECK-THREADS-NEXT: memref.load %{{.*}}[%[[INDEX]]]
+  // CHECK-THREADS-NEXT: affine.load %{{.*}}[%[[INDEX]]]
   // CHECK-BLOCKS-NEXT: %[[INDEX:.*]] = arith.addi %{{.*}}, %[[B0]]
-  // CHECK-BLOCKS-NEXT: memref.load %{{.*}}[%[[INDEX]]]
-    %0 = memref.load %A[%i] : memref<?xf32>
-    memref.store %0, %B[%i] : memref<?xf32>
+  // CHECK-BLOCKS-NEXT: affine.load %{{.*}}[%[[INDEX]]]
+    %0 = affine.load %A[%i] : memref<?xf32>
+    affine.store %0, %B[%i] : memref<?xf32>
     // CHECK-THREADS: gpu.terminator
     // CHECK-BLOCKS: gpu.terminator
   }
   return
 }
-
