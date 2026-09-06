@@ -201,12 +201,9 @@ define float @v_rsq_clamp_undef_f32() #0 {
 ; GFX1170:       ; %bb.0:
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1170-NEXT:    v_rsq_f32_e32 v0, s0
-; GFX1170-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
-; GFX1170-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX1170-NEXT:    s_min_f32 s0, s0, 0x7f7fffff
-; GFX1170-NEXT:    s_max_f32 s0, s0, 0xff7fffff
-; GFX1170-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GFX1170-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1170-NEXT:    v_mov_b32_e32 v1, 0xff7fffff
+; GFX1170-NEXT:    s_delay_alu instid0(TRANS32_DEP_1) | instid1(VALU_DEP_1)
+; GFX1170-NEXT:    v_minmax_num_f32 v0, v0, 0x7f7fffff, v1
 ; GFX1170-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: v_rsq_clamp_undef_f32:

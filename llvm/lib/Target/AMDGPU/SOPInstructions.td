@@ -943,8 +943,8 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
   let isReMaterializable = 1 in {
     let isCommutable = 1 in {
       def S_ADD_F32 : SOP2_F32_Inst<"s_add_f32", any_fadd>;
-      def S_MIN_F32 : SOP2_F32_Inst<"s_min_f32", fminnum_like>;
-      def S_MAX_F32 : SOP2_F32_Inst<"s_max_f32", fmaxnum_like>;
+      def S_MIN_F32 : SOP2_F32<"s_min_f32">;
+      def S_MAX_F32 : SOP2_F32<"s_max_f32">;
       def S_MUL_F32 : SOP2_F32_Inst<"s_mul_f32", any_fmul>;
 
       let FixedSize = 1 in
@@ -959,8 +959,8 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
         def S_MUL_F16 : SOP2_F16_Inst<"s_mul_f16", any_fmul>;
       } // End FPDPRounding
 
-      def S_MIN_F16 : SOP2_F16_Inst<"s_min_f16", fminnum_like>;
-      def S_MAX_F16 : SOP2_F16_Inst<"s_max_f16", fmaxnum_like>;
+      def S_MIN_F16 : SOP2_F16<"s_min_f16">;
+      def S_MAX_F16 : SOP2_F16<"s_max_f16">;
     } // End isCommutable = 1
 
     let FPDPRounding = 1 in
@@ -997,6 +997,21 @@ let SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
     // isCommutable = 1, AddedComplexity = 20
 } // End SubtargetPredicate = HasSALUFloatInsts, mayRaiseFPException = 1,
   // Uses = [MODE], SchedRW = [WriteSFPU]
+
+let OtherPredicates = [HasSALUFMinNumFMaxNumInsts] in {
+  def : GCNPat<(f32 (UniformBinFrag<fminnum_like> (f32 SSrc_f32:$src0),
+                                                  (f32 SSrc_f32:$src1))),
+               (S_MIN_F32 SSrc_f32:$src0, SSrc_f32:$src1)>;
+  def : GCNPat<(f32 (UniformBinFrag<fmaxnum_like> (f32 SSrc_f32:$src0),
+                                                  (f32 SSrc_f32:$src1))),
+               (S_MAX_F32 SSrc_f32:$src0, SSrc_f32:$src1)>;
+  def : GCNPat<(f16 (UniformBinFrag<fminnum_like> (f16 SSrc_f16:$src0),
+                                                  (f16 SSrc_f16:$src1))),
+               (S_MIN_F16 SSrc_f16:$src0, SSrc_f16:$src1)>;
+  def : GCNPat<(f16 (UniformBinFrag<fmaxnum_like> (f16 SSrc_f16:$src0),
+                                                  (f16 SSrc_f16:$src1))),
+               (S_MAX_F16 SSrc_f16:$src0, SSrc_f16:$src1)>;
+}
 
 // On GFX12 MIN/MAX instructions do not read MODE register.
 let SubtargetPredicate = isGFX12Plus, mayRaiseFPException = 1, isCommutable = 1,

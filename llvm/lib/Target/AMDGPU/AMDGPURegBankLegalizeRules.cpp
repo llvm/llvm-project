@@ -1687,6 +1687,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16}})
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
 
+  bool hasSMINNUMMAXNUMPattern = ST->hasSALUFMinNumFMaxNumInsts();
   addRulesForGOpcs({G_FMINNUM_IEEE, G_FMAXNUM_IEEE, G_FMINNUM, G_FMAXNUM,
                     G_FMINIMUMNUM, G_FMAXIMUMNUM},
                    Standard)
@@ -1696,10 +1697,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64}})
       .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16}})
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}})
-      .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16}}, hasSALUFloat)
-      .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}}, !hasSALUFloat)
-      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}}, hasSALUFloat)
-      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}}, !hasSALUFloat);
+      .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16}}, hasSMINNUMMAXNUMPattern)
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}}, !hasSMINNUMMAXNUMPattern)
+      .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}}, hasSMINNUMMAXNUMPattern)
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}}, !hasSMINNUMMAXNUMPattern);
 
   addRulesForGOpcs({G_FPTRUNC})
       .Any({{DivS16, S32}, {{Vgpr16}, {Vgpr32}}})
