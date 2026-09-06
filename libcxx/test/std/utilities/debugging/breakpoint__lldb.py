@@ -51,19 +51,6 @@ def run_test(debugger):
     if stopped_thread is None:
         fail("Could not find thread stopped by std::breakpoint")
 
-    is_wow64_breakpoint = (  # 32 bit Windows work around
-        platform_name == "Windows"
-        and "0x4000001f" in stopped_thread.GetStopDescription(256)
-    )
-
-    if is_wow64_breakpoint:
-        print("Stepping past WOW64 breakpoint", file=sys.stderr)
-        process.Continue()
-        for t in process.threads:
-            if t.GetStopReason() == stop_reason:
-                stopped_thread = t
-                break
-
     found_main = False
     for frame in stopped_thread:
         if not frame.IsValid():
