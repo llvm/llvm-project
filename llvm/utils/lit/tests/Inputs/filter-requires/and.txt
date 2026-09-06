@@ -1,0 +1,3 @@
+# REQUIRES: Half, true
+# REQUIRES: Int16
+# RUN: echo and

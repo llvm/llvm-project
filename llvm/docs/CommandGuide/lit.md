@@ -326,6 +326,12 @@ Run only those tests that previously failed. Tests that have been newly added
 but not yet run are not included.
 :::
 
+:::{option} --filter-requires EXPR
+Select `REQUIRES` alternatives matching `EXPR` with identical positive features
+and caller-authorized negatives. `Base` selects tests without requirements.
+Bypasses requirement availability checks, but other eligibility checks remain.
+:::
+
 :::{option} --xfail LIST
 Treat those tests whose name is in the semicolon separated list `LIST` as
 `XFAIL`. This can be helpful when one does not want to modify the test
