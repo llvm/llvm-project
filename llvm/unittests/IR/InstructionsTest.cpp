@@ -174,13 +174,16 @@ TEST(InstructionsTest, CalleesMetadataDecoding) {
   MDNode *Valid = MDB.createCallees({Target0});
   Direct->setMetadata(LLVMContext::MD_callees, Valid);
   Callees.push_back(Target1);
-  EXPECT_FALSE(Direct->getCalleesMetadata(Callees));
-  EXPECT_TRUE(Callees.empty());
+  ASSERT_TRUE(Direct->getCalleesMetadata(Callees));
+  ASSERT_EQ(Callees.size(), 1u);
+  EXPECT_EQ(Callees[0], Target0);
 
+  // Decoding validates the attachment, not the identity of the called operand.
   InlineAsmCall->setMetadata(LLVMContext::MD_callees, Valid);
   Callees.push_back(Target1);
-  EXPECT_FALSE(InlineAsmCall->getCalleesMetadata(Callees));
-  EXPECT_TRUE(Callees.empty());
+  ASSERT_TRUE(InlineAsmCall->getCalleesMetadata(Callees));
+  ASSERT_EQ(Callees.size(), 1u);
+  EXPECT_EQ(Callees[0], Target0);
 
   Function *Invoker =
       Function::Create(CallerTy, GlobalValue::ExternalLinkage, "invoker", M);
@@ -197,6 +200,59 @@ TEST(InstructionsTest, CalleesMetadataDecoding) {
   ASSERT_EQ(Callees.size(), 2u);
   EXPECT_EQ(Callees[0], Target1);
   EXPECT_EQ(Callees[1], Target0);
+}
+
+TEST(InstructionsTest, CalleesMetadataSurvivesCalleeSimplification) {
+  LLVMContext C;
+  Module M("test", C);
+  FunctionType *CalleeTy = FunctionType::get(Type::getVoidTy(C), false);
+  Function *Allowed =
+      Function::Create(CalleeTy, GlobalValue::ExternalLinkage, "allowed", M);
+  Function *Excluded =
+      Function::Create(CalleeTy, GlobalValue::ExternalLinkage, "excluded", M);
+  FunctionType *CallerTy =
+      FunctionType::get(Type::getVoidTy(C), PointerType::getUnqual(C), false);
+  Function *Caller =
+      Function::Create(CallerTy, GlobalValue::ExternalLinkage, "caller", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", Caller);
+  CallInst *Call = CallInst::Create(CalleeTy, Caller->getArg(0), {}, "", Entry);
+  ReturnInst::Create(C, Entry);
+
+  MDBuilder MDB(C);
+  MDNode *MD = MDB.createCallees({Allowed});
+  Call->setMetadata(LLVMContext::MD_callees, MD);
+  SmallVector<Function *, 4> Callees;
+  auto CheckList = [&] {
+    ASSERT_TRUE(Call->getCalleesMetadata(Callees));
+    ASSERT_EQ(Callees.size(), 1u);
+    EXPECT_EQ(Callees[0], Allowed);
+    EXPECT_EQ(Call->getMetadata(LLVMContext::MD_callees), MD);
+  };
+  ASSERT_TRUE(Call->isIndirectCall());
+  CheckList();
+
+  // A proven direct target in the list satisfies the unchanged constraint.
+  Call->setCalledOperand(Allowed);
+  ASSERT_FALSE(Call->isIndirectCall());
+  CheckList();
+
+  // Executing this call would be UB, but the attachment is still well-formed.
+  // The decoder must not discard it when simplification exposes the mismatch.
+  Call->setCalledOperand(Excluded);
+  CheckList();
+
+  // Other constant operands must not erase the constraint either.
+  Call->setCalledOperand(ConstantPointerNull::get(PointerType::getUnqual(C)));
+  CheckList();
+
+  // Empty is still distinct from absence after a call becomes direct.
+  Call->setCalledOperand(Allowed);
+  Call->setMetadata(LLVMContext::MD_callees, MDNode::get(C, {}));
+  EXPECT_TRUE(Call->getCalleesMetadata(Callees));
+  EXPECT_TRUE(Callees.empty());
+  Call->setMetadata(LLVMContext::MD_callees, nullptr);
+  EXPECT_FALSE(Call->getCalleesMetadata(Callees));
+  EXPECT_TRUE(Callees.empty());
 }
 
 TEST(InstructionsTest, CalleesMetadataRejectsMalformedOperands) {

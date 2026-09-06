@@ -132,7 +132,7 @@ public:
   //===------------------------------------------------------------------===//
 
   /// Return metadata indicating the exhaustive list of possible callees of
-  /// indirect calls.
+  /// calls.
   LLVM_ABI MDNode *createCallees(ArrayRef<Function *> Callees);
 
   //===------------------------------------------------------------------===//
