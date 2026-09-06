@@ -638,6 +638,17 @@ llvm.func @taskwait_nowait() {
 
 // -----
 
+llvm.func @dispatch_nowait() {
+  // expected-error@below {{not yet implemented: Unhandled clause nowait in omp.dispatch operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.dispatch}}
+  omp.dispatch nowait {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
 llvm.func @teams_allocate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.teams operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.teams}}

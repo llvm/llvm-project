@@ -2426,6 +2426,37 @@ def MaskedOp : OpenMP_Op<"masked", traits = [
 }
 
 //===----------------------------------------------------------------------===//
+// [Spec 5.2] 7.6 dispatch Construct
+//===----------------------------------------------------------------------===//
+def DispatchOp : OpenMP_Op<"dispatch", traits = [
+    AttrSizedOperandSegments, NoRegionArguments
+  ], clauses = [
+    // TODO: Complete clause list (device, depend, is_device_ptr).
+    OpenMP_NocontextClause, OpenMP_NovariantsClause, OpenMP_NowaitClause
+  ], singleRegion = true> {
+  let summary = "dispatch construct";
+  let description = [{
+    The dispatch construct enables the invocation of a variant of a
+    base procedure. It was introduced in OpenMP 5.0; the section numbers cited
+    here follow the OpenMP 5.2 spec (7.6). At the source level (C/C++/Fortran)
+    the structured block of a dispatch construct is a single expression
+    statement containing a function or subroutine call. That is a restriction on
+    the source form, not an invariant of this op: the region may contain
+    multiple blocks and control flow (for example, a runtime base/variant
+    branch).
+
+    The producer of the region is responsible for materializing the base/variant
+    selection inside the region. The `nocontext` and `novariants` operands are
+    retained on the op only so the producer can read them back during call
+    lowering; the LLVM IR translation deliberately ignores these operands.
+  }] # clausesDescription;
+
+  let builders = [
+    OpBuilder<(ins CArg<"const DispatchOperands &">:$clauses)>
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // [Spec 5.2] 6.5 allocate Directive
 //===----------------------------------------------------------------------===//
 def AllocateDirOp : OpenMP_Op<"allocate_dir", [AttrSizedOperandSegments], clauses = [
