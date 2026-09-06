@@ -614,9 +614,11 @@ TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::frexpf128(
                                   Float128(0.0), &frexpf128_exp));
   EXPECT_EQ(0, frexpf128_exp);
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::ilogbf128(Float128(1.0)));
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicalf128(Float128(0.0)));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::isnanf128(Float128(0.0)));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::issignalingf128(Float128(0.0)));
+  EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llogbf128(Float128(1.0)));
   EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llrintf128(Float128(0.0)));
   EXPECT_EQ(0LL, LIBC_NAMESPACE::shared::llroundf128(Float128(0.0)));
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::logbf128(Float128(1.0)));
@@ -641,7 +643,6 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                          float128(0.0), float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(1.0f, LIBC_NAMESPACE::shared::fsqrtf128(float128(1.0f)));
 
-  EXPECT_EQ(3, LIBC_NAMESPACE::shared::ilogbf128(float128(8.0)));
   ASSERT_FP_EQ(float128(8 << 5),
                LIBC_NAMESPACE::shared::ldexpf128(float128(8), 5));
   ASSERT_FP_EQ(float128(-1 * (8 << 5)),
@@ -649,8 +650,6 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::dfmaf128(
                         float128(0.0), float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::dsqrtf128(float128(0.0)));
-
-  EXPECT_EQ(0L, LIBC_NAMESPACE::shared::llogbf128(float128(1.0)));
 
   EXPECT_FP_EQ(bfloat16(5.0), LIBC_NAMESPACE::shared::bf16addf128(
                                   float128(2.0), float128(3.0)));

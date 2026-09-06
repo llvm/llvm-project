@@ -3975,8 +3975,8 @@ add_header_library(
     ilogbf128.h
   DEPENDS
     libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.manipulation_functions
-    libc.include.llvm-libc-types.float128
 )
 
 add_header_library(
@@ -4054,8 +4054,8 @@ add_header_library(
     llogbf128.h
   DEPENDS
     libc.src.__support.macros.config
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.manipulation_functions
-    libc.include.llvm-libc-types.float128
 )
 
 add_header_library(

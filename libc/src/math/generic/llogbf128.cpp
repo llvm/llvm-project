@@ -7,10 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/llogbf128.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/math/llogbf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(long, llogbf128, (float128 x)) { return math::llogbf128(x); }
+using LIBC_NAMESPACE::fputil::Float128;
+
+LLVM_LIBC_FUNCTION(long, llogbf128, (float128 x)) {
+    return math::llogbf128(
+        cpp::bit_cast<Float128>(x));
+}
 
 } // namespace LIBC_NAMESPACE_DECL
