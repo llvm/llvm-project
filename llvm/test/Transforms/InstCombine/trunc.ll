@@ -1553,3 +1553,41 @@ define i1 @neg_trunc_nuw_lshr(i8 %x, i8 %c) {
   %ret = trunc nuw i8 %lshr to i1
   ret i1 %ret
 }
+
+define i32 @separate_truncs_i32(i64 %x) {
+; CHECK-LABEL: @separate_truncs_i32(
+; CHECK-NEXT:    %[[SHIFT:.*]] = lshr i64 %x, 16
+; CHECK-NEXT:    %[[TRUNC:.*]] = trunc i64 %[[SHIFT]] to i32
+; CHECK-NEXT:    %[[MASK:.*]] = and i32 %[[TRUNC]], 130816
+; CHECK-NEXT:    ret i32 %[[MASK]]
+;
+  %wide.shift = lshr i64 %x, 16
+  %wide = trunc i64 %wide.shift to i32
+  %field.hi = and i32 %wide, 65536
+
+  %x.narrow = trunc i64 %x to i32
+  %narrow.shift = lshr i32 %x.narrow, 16
+  %field.lo = and i32 %narrow.shift, 65280
+
+  %result = or i32 %field.hi, %field.lo
+  ret i32 %result
+}
+
+define i32 @separate_truncs_i32_reverse(i64 %x) {
+; CHECK-LABEL: @separate_truncs_i32_reverse(
+; CHECK-NEXT:    %[[SHIFT:.*]] = lshr i64 %x, 16
+; CHECK-NEXT:    %[[TRUNC:.*]] = trunc i64 %[[SHIFT]] to i32
+; CHECK-NEXT:    %[[MASK:.*]] = and i32 %[[TRUNC]], 130816
+; CHECK-NEXT:    ret i32 %[[MASK]]
+;
+  %x.narrow = trunc i64 %x to i32
+  %narrow.shift = lshr i32 %x.narrow, 16
+  %field.lo = and i32 %narrow.shift, 65280
+
+  %wide.shift = lshr i64 %x, 16 
+  %wide = trunc i64 %wide.shift to i32
+  %field.hi = and i32 %wide, 65536
+
+  %result = or i32 %field.lo, %field.hi
+  ret i32 %result
+}
