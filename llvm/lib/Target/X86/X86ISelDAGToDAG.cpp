@@ -3689,6 +3689,7 @@ static bool addrMayUseNonFixedFrameIndex(SDValue Addr,
                                          unsigned Depth = 0) {
   if (auto *FI = dyn_cast<FrameIndexSDNode>(Addr))
     return !MFI.isFixedObjectIndex(FI->getIndex());
+  // Assume the worst if we can't see the whole address expression.
   if (Depth >= SelectionDAG::MaxRecursionDepth)
     return true;
   switch (Addr.getOpcode()) {
