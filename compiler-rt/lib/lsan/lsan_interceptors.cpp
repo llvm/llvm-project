@@ -35,6 +35,41 @@
 
 using namespace __lsan;
 
+// Dispatches to the stack-capturing variant only when double-free detection is
+// enabled. The capturing helpers are out of line so that the stack trace buffer
+// is not reserved in this frame when the feature is off; the pc and bp of this
+// frame are passed along so that the captured stack still starts here, at the
+// intercepted function, and not inside the helper.
+#define LSAN_FREE_BODY(p)                        \
+  do {                                           \
+    if (flags()->detect_double_free) {           \
+      GET_CURRENT_PC_BP;                         \
+      lsan_free_with_stack((p), pc, bp);         \
+    } else {                                     \
+      lsan_free((p), nullptr);                   \
+    }                                            \
+  } while (0)
+
+#define LSAN_FREE_SIZED_BODY(p, size)                  \
+  do {                                                 \
+    if (flags()->detect_double_free) {                 \
+      GET_CURRENT_PC_BP;                               \
+      lsan_free_sized_with_stack((p), (size), pc, bp); \
+    } else {                                           \
+      lsan_free_sized((p), (size), nullptr);           \
+    }                                                  \
+  } while (0)
+
+#define LSAN_FREE_ALIGNED_SIZED_BODY(p, alignment, size)                    \
+  do {                                                                      \
+    if (flags()->detect_double_free) {                                      \
+      GET_CURRENT_PC_BP;                                                    \
+      lsan_free_aligned_sized_with_stack((p), (alignment), (size), pc, bp); \
+    } else {                                                                \
+      lsan_free_aligned_sized((p), (alignment), (size), nullptr);           \
+    }                                                                       \
+  } while (0)
+
 extern "C" {
 int pthread_attr_init(void *attr);
 int pthread_attr_destroy(void *attr);
@@ -81,7 +116,7 @@ INTERCEPTOR(void, free, void *p) {
   if (DlsymAlloc::PointerIsMine(p))
     return DlsymAlloc::Free(p);
   ENSURE_LSAN_INITED;
-  lsan_free(p);
+  LSAN_FREE_BODY(p);
 }
 
 #  if SANITIZER_INTERCEPT_FREE_SIZED
@@ -91,7 +126,7 @@ INTERCEPTOR(void, free_sized, void *p, uptr size) {
   if (DlsymAlloc::PointerIsMine(p))
     return DlsymAlloc::Free(p);
   ENSURE_LSAN_INITED;
-  lsan_free_sized(p, size);
+  LSAN_FREE_SIZED_BODY(p, size);
 }
 #    define LSAN_MAYBE_INTERCEPT_FREE_SIZED INTERCEPT_FUNCTION(free_sized)
 #  else
@@ -105,7 +140,7 @@ INTERCEPTOR(void, free_aligned_sized, void *p, uptr alignment, uptr size) {
   if (DlsymAlloc::PointerIsMine(p))
     return DlsymAlloc::Free(p);
   ENSURE_LSAN_INITED;
-  lsan_free_aligned_sized(p, alignment, size);
+  LSAN_FREE_ALIGNED_SIZED_BODY(p, alignment, size);
 }
 #    define LSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED \
       INTERCEPT_FUNCTION(free_aligned_sized)
@@ -263,9 +298,9 @@ INTERCEPTOR(int, mprobe, void *ptr) {
   if (!nothrow && UNLIKELY(!res)) ReportOutOfMemory(size, &stack);\
   return res;
 
-#define OPERATOR_DELETE_BODY\
-  ENSURE_LSAN_INITED;\
-  lsan_free(ptr);
+#define OPERATOR_DELETE_BODY \
+  ENSURE_LSAN_INITED;        \
+  LSAN_FREE_BODY(ptr);
 
 // On OS X it's not enough to just provide our own 'operator new' and
 // 'operator delete' implementations, because they're going to be in the runtime

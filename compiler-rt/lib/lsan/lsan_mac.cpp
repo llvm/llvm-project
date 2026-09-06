@@ -84,7 +84,7 @@ extern "C" void lsan_dispatch_call_block_and_release(void *block) {
   lsan_register_worker_thread(context->parent_tid);
   // Call the original dispatcher for the block.
   context->func(context->block);
-  lsan_free(context);
+  lsan_free(context, nullptr);
 }
 
 }  // namespace __lsan

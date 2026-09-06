@@ -20,17 +20,30 @@
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
 
-#define GET_STACK_TRACE(max_size, fast)                                        \
-  __sanitizer::BufferedStackTrace stack;                                       \
-  stack.Unwind(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(), nullptr, fast, \
-               max_size);
+// Unwinds from an explicit frame. The free interceptors capture their stack in
+// an out-of-line helper (see lsan_allocator.h) and pass their own pc and bp
+// along, so that the reported stack starts at the intercepted function and not
+// at the helper.
+#define GET_STACK_TRACE_AT(pc, bp, max_size, fast) \
+  __sanitizer::BufferedStackTrace stack;           \
+  stack.Unwind((pc), (bp), nullptr, fast, max_size);
+
+#define GET_STACK_TRACE(max_size, fast)                               \
+  GET_STACK_TRACE_AT(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(), \
+                     max_size, fast)
 
 #define GET_STACK_TRACE_FATAL \
   GET_STACK_TRACE(kStackTraceMax, common_flags()->fast_unwind_on_fatal)
 
-#define GET_STACK_TRACE_MALLOC                                      \
-  GET_STACK_TRACE(__sanitizer::common_flags()->malloc_context_size, \
+#define GET_STACK_TRACE_MALLOC                         \
+  GET_STACK_TRACE(common_flags()->malloc_context_size, \
                   common_flags()->fast_unwind_on_malloc)
+
+// Like GET_STACK_TRACE_MALLOC, but unwinds from an explicit frame.
+#define GET_STACK_TRACE_FREE_AT(pc, bp)                   \
+  GET_STACK_TRACE_AT((pc), (bp),                          \
+                     common_flags()->malloc_context_size, \
+                     common_flags()->fast_unwind_on_malloc)
 
 #define GET_STACK_TRACE_THREAD GET_STACK_TRACE(kStackTraceMax, true)
 

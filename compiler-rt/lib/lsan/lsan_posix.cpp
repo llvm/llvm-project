@@ -100,6 +100,7 @@ static void BeforeFork() {
   VReport(2, "BeforeFork tid: %llu\n", GetTid());
   LockGlobal();
   LockThreads();
+  LockDoubleFree();
   LockAllocator();
   StackDepotLockBeforeFork();
 }
@@ -107,6 +108,7 @@ static void BeforeFork() {
 static void AfterFork(bool fork_child) {
   StackDepotUnlockAfterFork(fork_child);
   UnlockAllocator();
+  UnlockDoubleFree();
   UnlockThreads();
   UnlockGlobal();
   VReport(2, "AfterFork tid: %llu\n", GetTid());

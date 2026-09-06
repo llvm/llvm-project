@@ -76,6 +76,17 @@ static void InitializeFlags() {
 
   InitializeCommonFlags();
 
+#if SANITIZER_APPLE || SANITIZER_NETBSD
+  // The fork handling on these platforms does not go through the LSan
+  // pthread_atfork hooks that protect the double-free side table.
+  if (f->detect_double_free) {
+    Report(
+        "WARNING: LeakSanitizer: detect_double_free is not supported on this "
+        "platform, disabling it.\n");
+    f->detect_double_free = false;
+  }
+#endif
+
   if (Verbosity()) ReportUnrecognizedFlags();
 
   if (common_flags()->help) parser.PrintFlagDescriptions();

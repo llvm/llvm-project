@@ -40,6 +40,39 @@ To use LeakSanitizer in stand-alone mode, link your program with
 link step, so that it would link in proper LeakSanitizer run-time library
 into the final executable.
 
+### Double-free detection
+
+Stand-alone LeakSanitizer can optionally report a call to `free` on an
+allocation that has already been freed. The check is disabled by default;
+enable it at run time through `LSAN_OPTIONS`:
+
+```console
+$ clang -g -O0 -fno-omit-frame-pointer -fsanitize=leak double-free.c -o double-free
+$ LSAN_OPTIONS=detect_double_free=1 ./double-free
+==1234==ERROR: LeakSanitizer: attempting double-free on 0x504000000010 in thread T0:
+The second free occurred here:
+...
+The first free occurred here:
+...
+The memory was allocated here:
+...
+SUMMARY: LeakSanitizer: double-free
+```
+
+A double free is undefined behavior, so build a reproducer at `-O0`: an
+optimizing compiler may delete the second `free` before the runtime can
+observe it.
+
+Validating the freed pointer is a prerequisite for the check, so while the
+option is enabled a `free` of a pointer the allocator never returned is
+reported as well, as `bad-free`. Both reports are fatal.
+`double_free_max_entries` bounds the state kept for large allocations, whose
+metadata does not survive the first free; its default is `65536`.
+
+The option applies to stand-alone LeakSanitizer only, and is not supported on
+macOS or NetBSD. Under AddressSanitizer or HWAddressSanitizer the allocator
+comes from that tool; use its own double-free diagnostics instead.
+
 ## Security Considerations
 
 LeakSanitizer is a bug detection tool and its runtime is not meant to be

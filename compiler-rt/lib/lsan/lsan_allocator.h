@@ -23,7 +23,7 @@ namespace __lsan {
 
 void *Allocate(const StackTrace &stack, uptr size, uptr alignment,
                bool cleared);
-void Deallocate(void *p);
+void Deallocate(void *p, const StackTrace *free_stack);
 void *Reallocate(const StackTrace &stack, void *p, uptr new_size,
                  uptr alignment);
 uptr GetMallocUsableSize(const void *p);
@@ -36,19 +36,52 @@ void AllocatorThreadStart();
 void AllocatorThreadFinish();
 void InitializeAllocator();
 
+// Locks protecting the double-free side table, for the fork handlers.
+void LockDoubleFree();
+void UnlockDoubleFree();
+
 const bool kAlwaysClearMemory = true;
 
+// Lifetime of a chunk, stored in ChunkMetadata::allocated.
+//
+// kChunkFreeing is a transient state used by double-free detection: the thread
+// that won the race to free the chunk has claimed it but has not published
+// ChunkMetadata::free_stack_id yet.
+enum ChunkState : u8 {
+  kChunkFree = 0,
+  kChunkAllocated = 1,
+  kChunkFreeing = 2,
+};
+
+// Appending free_stack_id to the natural 32-bit layout would have grown the
+// per-chunk metadata to 20 bytes, so requested_size is stored as a separate
+// word there and the leftover bitfield space is left unused.
+//
+// `allocated` is accessed atomically through the first byte of the struct, so
+// it shares its storage unit with the bitfields that follow it and a plain
+// store to one of those is a read-modify-write over it. Every such store made
+// while a chunk can be freed concurrently would therefore have to go through
+// the same atomic word. Today only IgnoreObject() does that (see the comment
+// there); the allocation path writes the bitfields while the chunk is still
+// kChunkFree, where a losing compare-exchange writes nothing, and the free
+// path never touches them.
 struct ChunkMetadata {
-  u8 allocated : 8;  // Must be first.
+  u8 allocated : 8;  // Must be first. Holds a ChunkState.
   ChunkTag tag : 2;
 #if SANITIZER_WORDSIZE == 64
   uptr requested_size : 54;
 #else
-  uptr requested_size : 32;
   uptr padding : 22;
+  u32 requested_size;
 #endif
   u32 stack_trace_id;
+  // Stack of the first free().
+  u32 free_stack_id;
 };
+
+static_assert(sizeof(ChunkMetadata) == 4 * sizeof(u32),
+              "ChunkMetadata must stay 16 bytes: it is stored for every "
+              "allocator chunk.");
 
 #if !SANITIZER_CAN_USE_ALLOCATOR64
 template <typename AddressSpaceViewTy>
@@ -130,9 +163,26 @@ int lsan_posix_memalign(void **memptr, uptr alignment, uptr size,
 void *lsan_aligned_alloc(uptr alignment, uptr size, const StackTrace &stack);
 void *lsan_memalign(uptr alignment, uptr size, const StackTrace &stack);
 void *lsan_malloc(uptr size, const StackTrace &stack);
-void lsan_free(void *p);
-void lsan_free_sized(void *p, uptr size);
-void lsan_free_aligned_sized(void *p, uptr alignment, uptr size);
+void lsan_free(void *p, const StackTrace *free_stack);
+void lsan_free_sized(void *p, uptr size, const StackTrace *free_stack);
+void lsan_free_aligned_sized(void *p, uptr alignment, uptr size,
+                             const StackTrace *free_stack);
+
+// free() variants that capture the calling stack for double-free reporting.
+//
+// These are deliberately out of line. A BufferedStackTrace is about 2 KiB, and
+// in most of these interceptors the compiler reserves it in the frame on entry
+// even though it is only used on one branch. Capturing inline therefore grows
+// the frame of most free() and operator delete() calls, including when
+// detect_double_free is disabled.
+//
+// The caller passes its own pc and bp so that the captured stack starts at the
+// intercepted function rather than at the helper.
+void NOINLINE lsan_free_with_stack(void *p, uptr pc, uptr bp);
+void NOINLINE lsan_free_sized_with_stack(void *p, uptr size, uptr pc, uptr bp);
+void NOINLINE lsan_free_aligned_sized_with_stack(void *p, uptr alignment,
+                                                 uptr size, uptr pc, uptr bp);
+
 void *lsan_realloc(void *p, uptr size, const StackTrace &stack);
 void *lsan_reallocarray(void *p, uptr nmemb, uptr size,
                         const StackTrace &stack);

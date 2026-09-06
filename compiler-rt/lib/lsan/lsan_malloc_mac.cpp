@@ -42,11 +42,13 @@ using namespace __lsan;
 #define COMMON_MALLOC_VALLOC(size) \
   GET_STACK_TRACE_MALLOC; \
   void *p = lsan_valloc(size, stack)
-#define COMMON_MALLOC_FREE(ptr) \
-  lsan_free(ptr)
-#  define COMMON_MALLOC_FREE_SIZED(ptr, size) lsan_free_sized(ptr, size)
+// Double-free detection is not supported on this platform, so no free stack is
+// captured here; see InitializeFlags() in lsan.cpp.
+#  define COMMON_MALLOC_FREE(ptr) lsan_free(ptr, nullptr)
+#  define COMMON_MALLOC_FREE_SIZED(ptr, size) \
+    lsan_free_sized(ptr, size, nullptr)
 #  define COMMON_MALLOC_FREE_ALIGNED_SIZED(ptr, alignment, size) \
-    lsan_free_aligned_sized(ptr, alignment, size)
+    lsan_free_aligned_sized(ptr, alignment, size, nullptr)
 #  define COMMON_MALLOC_SIZE(ptr) uptr size = lsan_mz_size(ptr)
 #  define COMMON_MALLOC_FILL_STATS(zone, stats)
 #  define COMMON_MALLOC_REPORT_UNKNOWN_REALLOC(ptr, zone_ptr, zone_name)    \

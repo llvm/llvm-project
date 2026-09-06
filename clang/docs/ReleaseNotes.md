@@ -540,6 +540,11 @@ features cannot lower the translation-unit ABI level;
 
 ### Sanitizers
 
+- Standalone LeakSanitizer now supports optional double-free detection, enabled
+  with `LSAN_OPTIONS=detect_double_free=1`. While it is enabled, an invalid free
+  is also reported as a diagnostic instead of crashing. See the LeakSanitizer
+  documentation for details.
+
 ### Python Binding Changes
 
 ### OpenMP Support

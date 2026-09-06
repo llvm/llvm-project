@@ -23,6 +23,21 @@ LSAN_FLAG(
     "Aggregate two objects into one leak if this many stack frames match. If "
     "zero, the entire stack trace must match.")
 LSAN_FLAG(int, max_leaks, 0, "The number of leaks reported.")
+LSAN_FLAG(bool, detect_double_free, false,
+          "Detect calls to free() on an allocation that was already freed. "
+          "Validating the pointer is a prerequisite for the check, so while "
+          "this is enabled an invalid free is reported as a diagnostic "
+          "instead of reaching the allocator and crashing. Stand-alone "
+          "LeakSanitizer only: under AddressSanitizer or "
+          "HWAddressSanitizer the allocator, and its own double-free "
+          "detection, come from that tool instead and this flag does "
+          "nothing.")
+LSAN_FLAG(int, double_free_max_entries, 65536,
+          "Maximum number of freed large allocations remembered for "
+          "double-free detection. The oldest entry is evicted once the limit "
+          "is reached. Zero means unlimited; values above 4194304 are capped. "
+          "Chunks served by the primary allocator are unaffected: they are "
+          "tracked in their own metadata.")
 
 // Flags controlling the root set of reachable memory.
 LSAN_FLAG(bool, use_globals, true,
