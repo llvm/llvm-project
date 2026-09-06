@@ -579,7 +579,7 @@ TEST(WalkAST, CleanupAttr) {
            "void foo() { __attribute__((__cleanup__(^freep))) char* x = 0; }");
 }
 
-// Objective-C Test
+// Objective-C Tests
 
 TEST(WalkAST, ObjCInterfaceTypeLoc) {
   testWalk(R"objc(
@@ -606,7 +606,7 @@ TEST(WalkAST, ObjCImplementationDeclDependsOnInterface) {
            {"-x", "objective-c"});
 }
 
-TEST(WalkAST, ObjCMessageExprFunctionArg) {
+TEST(WalkAST, ObjCClassFunctionArg) {
   testWalk(R"objc(
     @interface $explicit^MyClass
     @end
