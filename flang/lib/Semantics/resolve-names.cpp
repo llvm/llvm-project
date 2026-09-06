@@ -1356,6 +1356,7 @@ public:
   bool Pre(const parser::AcSpec &);
   bool Pre(const parser::AcImpliedDo &);
   bool Pre(const parser::DataImpliedDo &);
+  bool Pre(const parser::DataStmt &);
   bool Pre(const parser::DataIDoObject &);
   bool Pre(const parser::DataStmtObject &);
   bool Pre(const parser::DataStmtValue &);
@@ -8920,6 +8921,18 @@ bool ConstructVisitor::Pre(const parser::DataStmtObject &x) {
       },
       x.u);
   return false;
+}
+
+bool ConstructVisitor::Pre(const parser::DataStmt &) {
+  // C1506: an interface body may not contain a DATA statement.
+  if (const Symbol *symbol{currScope().symbol()}) {
+    if (const auto *subp{symbol->detailsIf<SubprogramDetails>()};
+        subp && subp->isInterface()) {
+      Say(currStmtSource().value(),
+          "A DATA statement may not appear in an interface body"_err_en_US);
+    }
+  }
+  return true;
 }
 
 bool ConstructVisitor::Pre(const parser::DataStmtValue &x) {
