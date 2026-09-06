@@ -60,8 +60,9 @@ public:
     const char *Usage;
   };
 
-  /// Returns the values produced by TableGen `ValuesCode` for an option ID, or
-  /// the empty string. The generated table supplies getOptionValuesCode().
+  /// Values of options declared with TableGen `ValuesCode`: only the generated
+  /// code knows them, so they cannot go in the string table. The generated
+  /// table supplies getOptionValuesCode() for this.
   using ValuesCodeFnTy = StringRef (*)(unsigned);
 
   /// Entry for a single option instance in the option data table.
@@ -115,7 +116,6 @@ public:
     /// same as none: it marks the option as deliberately undocumented.
     bool hasHelpText() const { return HelpTextOffset.value() != 0; }
     bool hasAliasArgs() const { return AliasArgsOffset.value() != 0; }
-    bool hasValues() const { return ValuesOffset.value() != 0; }
 
     bool hasSubCommands() const { return SubCommandIDsOffset != 0; }
 
@@ -193,8 +193,6 @@ private:
   /// The subcommand IDs table.
   ArrayRef<unsigned> SubCommandIDsTable;
 
-  /// Values of options declared with TableGen `ValuesCode`: only the generated
-  /// code knows them, so they cannot go in the string table.
   ValuesCodeFnTy ValuesCodeFn = nullptr;
 
   bool GroupedShortOptions = false;
@@ -233,8 +231,9 @@ private:
   }
 
   StringRef getOptionValues(const Info &I) const {
-    StringRef Values = (*StrTable)[I.ValuesOffset];
-    return Values.empty() && ValuesCodeFn ? ValuesCodeFn(I.ID) : Values;
+    if (StringRef Values = (*StrTable)[I.ValuesOffset]; !Values.empty())
+      return Values;
+    return ValuesCodeFn ? ValuesCodeFn(I.ID) : StringRef();
   }
 
   std::unique_ptr<Arg> parseOneArgGrouped(InputArgList &Args,
@@ -247,8 +246,9 @@ protected:
            ArrayRef<StringTable::Offset> PrefixesTable,
            ArrayRef<Info> OptionInfos, bool IgnoreCase = false,
            ArrayRef<SubCommand> SubCommands = {},
-           ArrayRef<unsigned> SubCommandIDsTable = {},
-           ValuesCodeFnTy ValuesCodeFn = nullptr);
+           ArrayRef<unsigned> SubCommandIDsTable = {});
+
+  void setValuesCodeFn(ValuesCodeFnTy Fn) { ValuesCodeFn = Fn; }
 
   /// Build (or rebuild) the PrefixChars member.
   void buildPrefixChars();
@@ -509,8 +509,7 @@ protected:
                            ArrayRef<StringTable::Offset> PrefixesTable,
                            ArrayRef<Info> OptionInfos, bool IgnoreCase = false,
                            ArrayRef<SubCommand> SubCommands = {},
-                           ArrayRef<unsigned> SubCommandIDsTable = {},
-                           ValuesCodeFnTy ValuesCodeFn = nullptr);
+                           ArrayRef<unsigned> SubCommandIDsTable = {});
 };
 
 class PrecomputedOptTable : public OptTable {
@@ -521,10 +520,9 @@ protected:
                       ArrayRef<StringTable::Offset> PrefixesUnionOffsets,
                       bool IgnoreCase = false,
                       ArrayRef<SubCommand> SubCommands = {},
-                      ArrayRef<unsigned> SubCommandIDsTable = {},
-                      ValuesCodeFnTy ValuesCodeFn = nullptr)
+                      ArrayRef<unsigned> SubCommandIDsTable = {})
       : OptTable(StrTable, PrefixesTable, OptionInfos, IgnoreCase, SubCommands,
-                 SubCommandIDsTable, ValuesCodeFn) {
+                 SubCommandIDsTable) {
     for (auto PrefixOffset : PrefixesUnionOffsets)
       PrefixesUnion.push_back(StrTable[PrefixOffset]);
     buildPrefixChars();

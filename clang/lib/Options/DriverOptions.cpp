@@ -41,9 +41,9 @@ class DriverOptTable : public PrecomputedOptTable {
 public:
   DriverOptTable()
       : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                            OptionPrefixesUnion, /*IgnoreCase=*/false,
-                            /*SubCommands=*/{}, /*SubCommandIDsTable=*/{},
-                            getOptionValuesCode) {}
+                            OptionPrefixesUnion) {
+    setValuesCodeFn(getOptionValuesCode);
+  }
 };
 } // anonymous namespace
 

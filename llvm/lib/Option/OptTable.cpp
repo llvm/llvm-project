@@ -78,12 +78,10 @@ OptTable::OptTable(const StringTable &StrTable,
                    ArrayRef<StringTable::Offset> PrefixesTable,
                    ArrayRef<Info> OptionInfos, bool IgnoreCase,
                    ArrayRef<SubCommand> SubCommands,
-                   ArrayRef<unsigned> SubCommandIDsTable,
-                   ValuesCodeFnTy ValuesCodeFn)
+                   ArrayRef<unsigned> SubCommandIDsTable)
     : StrTable(&StrTable), PrefixesTable(PrefixesTable),
       OptionInfos(OptionInfos), IgnoreCase(IgnoreCase),
-      SubCommands(SubCommands), SubCommandIDsTable(SubCommandIDsTable),
-      ValuesCodeFn(ValuesCodeFn) {
+      SubCommands(SubCommands), SubCommandIDsTable(SubCommandIDsTable) {
   // Explicitly zero initialize the error to work around a bug in array
   // value-initialization on MinGW with gcc 4.3.5.
 
@@ -193,11 +191,14 @@ OptTable::suggestValueCompletions(StringRef Option, StringRef Arg) const {
   // Search all options and return possible values.
   for (size_t I = FirstSearchableIndex, E = OptionInfos.size(); I < E; I++) {
     const Info &In = OptionInfos[I];
-    if (!In.hasValues() || !optionMatches(*StrTable, PrefixesTable, In, Option))
+    if (!optionMatches(*StrTable, PrefixesTable, In, Option))
+      continue;
+    StringRef Values = getOptionValues(In);
+    if (Values.empty())
       continue;
 
     SmallVector<StringRef, 8> Candidates;
-    getOptionValues(In).split(Candidates, ",", -1, false);
+    Values.split(Candidates, ",", -1, false);
 
     std::vector<std::string> Result;
     for (StringRef Val : Candidates)
@@ -615,7 +616,8 @@ static std::string getOptionHelpName(const OptTable &Opts, OptSpecifier Id) {
     llvm_unreachable("Invalid option with help text.");
 
   case Option::MultiArgClass:
-    if (StringRef MetaVarName = O.getMetaVar(); !MetaVarName.empty()) {
+    if (StringRef MetaVarName = Opts.getOptionMetaVar(Id);
+        !MetaVarName.empty()) {
       // For MultiArgs, metavar is full list of all argument names.
       Name += ' ';
       Name += MetaVarName;
@@ -639,7 +641,8 @@ static std::string getOptionHelpName(const OptTable &Opts, OptSpecifier Id) {
     [[fallthrough]];
   case Option::JoinedClass: case Option::CommaJoinedClass:
   case Option::JoinedAndSeparateClass:
-    if (StringRef MetaVarName = O.getMetaVar(); !MetaVarName.empty())
+    if (StringRef MetaVarName = Opts.getOptionMetaVar(Id);
+        !MetaVarName.empty())
       Name += MetaVarName;
     else
       Name += "<value>";
@@ -841,10 +844,9 @@ GenericOptTable::GenericOptTable(const StringTable &StrTable,
                                  ArrayRef<StringTable::Offset> PrefixesTable,
                                  ArrayRef<Info> OptionInfos, bool IgnoreCase,
                                  ArrayRef<SubCommand> SubCommands,
-                                 ArrayRef<unsigned> SubCommandIDsTable,
-                                 ValuesCodeFnTy ValuesCodeFn)
+                                 ArrayRef<unsigned> SubCommandIDsTable)
     : OptTable(StrTable, PrefixesTable, OptionInfos, IgnoreCase, SubCommands,
-               SubCommandIDsTable, ValuesCodeFn) {
+               SubCommandIDsTable) {
 
   std::set<StringRef> TmpPrefixesUnion;
   for (auto const &Info : OptionInfos.drop_front(FirstSearchableIndex))
