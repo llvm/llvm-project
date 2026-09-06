@@ -76,8 +76,9 @@ class rcu_domain_impl {
 
   friend class rcu_domain;
 
-  rcu_singly_list_view update_phase_and_wait() noexcept {
-    retired_queue_stage1_.__splice_back(retired_queue_stage0_);
+  void update_phase_and_wait() noexcept {
+    rcu_singly_list_view working_queue;
+    working_queue.__splice_back(retired_queue_stage0_);
 
     // Flip the global phase
     auto old_phase = global_reader_phase_.fetch_xor(reader_states::grace_period_phase_mask, std::memory_order_relaxed);
@@ -92,10 +93,8 @@ class rcu_domain_impl {
     }
     grace_period_waiting_flag_.store(false, std::memory_order_relaxed);
 
-    rcu_singly_list_view ready_callbacks;
-    ready_callbacks.__splice_back(retired_queue_stage2_);
     retired_queue_stage2_.__splice_back(retired_queue_stage1_);
-    return ready_callbacks;
+    retired_queue_stage1_.__splice_back(working_queue);
   }
 
   bool any_reader_in_ongoing_grace_period(reader_states::state_type __global_phase) noexcept {
@@ -152,23 +151,34 @@ public:
     retired_queue_stage0_.__push_front(node);
   }
 
-  void synchronize() noexcept {
+  void synchronize(bool invoke_callback) noexcept {
     __cxx_atomic_thread_fence(memory_order_seq_cst);
     std::unique_lock lk(grace_period_mutex_);
 
-    auto ready_callbacks = update_phase_and_wait();
+    update_phase_and_wait();
 
-    // Invoke the ready callbacks outside of the grace period mutex
-    lk.unlock();
-    ready_callbacks.__for_each([](auto* node) { node->__callback_(); });
-    lk.lock();
+    if (invoke_callback) {
+      rcu_singly_list_view ready_callbacks;
+      ready_callbacks.__splice_back(retired_queue_stage2_);
+
+      // Invoke the ready callbacks outside of the grace period mutex
+      lk.unlock();
+      ready_callbacks.__for_each([](auto* node) { node->__callback_(); });
+      lk.lock();
+    }
 
     __barrier();
-    ready_callbacks = update_phase_and_wait();
+    update_phase_and_wait();
 
-    // Invoke the ready callbacks outside of the grace period mutex
     lk.unlock();
-    ready_callbacks.__for_each([](auto* node) { node->__callback_(); });
+
+    if (invoke_callback) {
+      rcu_singly_list_view ready_callbacks;
+      ready_callbacks.__splice_back(retired_queue_stage2_);
+
+      // Invoke the ready callbacks outside of the grace period mutex
+      ready_callbacks.__for_each([](auto* node) { node->__callback_(); });
+    }
     __cxx_atomic_thread_fence(memory_order_seq_cst);
   }
 
@@ -198,9 +208,9 @@ void rcu_domain::__retire(__rcu_node* node) noexcept { __pimpl_->retire(node); }
 
 rcu_domain& rcu_default_domain() noexcept { return rcu_domain::__rcu_default_domain(); }
 
-void rcu_synchronize(rcu_domain& dom) noexcept { dom.__pimpl_->synchronize(); }
+void rcu_synchronize(rcu_domain& dom) noexcept { dom.__pimpl_->synchronize(false); }
 
-void rcu_barrier(rcu_domain& dom) noexcept { rcu_synchronize(dom); }
+void rcu_barrier(rcu_domain& dom) noexcept { dom.__pimpl_->synchronize(true); }
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
