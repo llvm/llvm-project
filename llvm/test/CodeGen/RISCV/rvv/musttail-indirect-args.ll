@@ -58,9 +58,9 @@ define <vscale x 32 x i32> @caller_musttail_scalable_mixed(<vscale x 32 x i32> %
 ; CHECK-NEXT:    vl8re32.v v0, (a1)
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vadd.vv v24, v8, v24
+; CHECK-NEXT:    vadd.vv v0, v16, v0
 ; CHECK-NEXT:    vs8r.v v24, (a0)
-; CHECK-NEXT:    vadd.vv v24, v16, v0
-; CHECK-NEXT:    vs8r.v v24, (a1)
+; CHECK-NEXT:    vs8r.v v0, (a1)
 ; CHECK-NEXT:    tail callee_musttail_scalable
   %s = add <vscale x 32 x i32> %x, %y
   %r = musttail call <vscale x 32 x i32> @callee_musttail_scalable(<vscale x 32 x i32> %x, <vscale x 32 x i32> %s)

@@ -482,10 +482,10 @@ define <16 x float> @mul_subadd_ps512_partial(<16 x float> %C, <16 x float> %D, 
 define <16 x float> @mul_subadd_ps512_partial_avx(<16 x float> %C, <16 x float> %D, <16 x float> %B) {
 ; NOFMA-LABEL: mul_subadd_ps512_partial_avx:
 ; NOFMA:       # %bb.0:
+; NOFMA-NEXT:    vmulps %ymm3, %ymm1, %ymm1
 ; NOFMA-NEXT:    vmulps %ymm2, %ymm0, %ymm0
 ; NOFMA-NEXT:    vmovaps {{.*#+}} ymm2 = [0,1,2,3,4,6,7,u]
 ; NOFMA-NEXT:    vpermilps %ymm2, %ymm0, %ymm0
-; NOFMA-NEXT:    vmulps %ymm3, %ymm1, %ymm1
 ; NOFMA-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[0,0,0,0]
 ; NOFMA-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm3
 ; NOFMA-NEXT:    vblendps {{.*#+}} ymm3 = ymm0[0,1,2,3,4,5,6],ymm3[7]
@@ -522,10 +522,10 @@ define <16 x float> @mul_subadd_ps512_partial_avx(<16 x float> %C, <16 x float> 
 ;
 ; FMA3_256-LABEL: mul_subadd_ps512_partial_avx:
 ; FMA3_256:       # %bb.0:
+; FMA3_256-NEXT:    vmulps %ymm3, %ymm1, %ymm1
 ; FMA3_256-NEXT:    vmulps %ymm2, %ymm0, %ymm0
 ; FMA3_256-NEXT:    vmovaps {{.*#+}} ymm2 = [0,1,2,3,4,6,7,u]
 ; FMA3_256-NEXT:    vpermilps %ymm2, %ymm0, %ymm0
-; FMA3_256-NEXT:    vmulps %ymm3, %ymm1, %ymm1
 ; FMA3_256-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[0,0,0,0]
 ; FMA3_256-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm3
 ; FMA3_256-NEXT:    vblendps {{.*#+}} ymm3 = ymm0[0,1,2,3,4,5,6],ymm3[7]
@@ -592,10 +592,10 @@ define <16 x float> @mul_subadd_ps512_partial_avx(<16 x float> %C, <16 x float> 
 ;
 ; FMA4-LABEL: mul_subadd_ps512_partial_avx:
 ; FMA4:       # %bb.0:
+; FMA4-NEXT:    vmulps %ymm3, %ymm1, %ymm1
 ; FMA4-NEXT:    vmulps %ymm2, %ymm0, %ymm0
 ; FMA4-NEXT:    vmovaps {{.*#+}} ymm2 = [0,1,2,3,4,6,7,u]
 ; FMA4-NEXT:    vpermilps %ymm2, %ymm0, %ymm0
-; FMA4-NEXT:    vmulps %ymm3, %ymm1, %ymm1
 ; FMA4-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[0,0,0,0]
 ; FMA4-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm3
 ; FMA4-NEXT:    vblendps {{.*#+}} ymm3 = ymm0[0,1,2,3,4,5,6],ymm3[7]
