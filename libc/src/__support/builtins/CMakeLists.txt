@@ -247,17 +247,6 @@ add_header_library(
 )
 
 add_header_library(
-  cmp_helper
-  HDRS
-    cmp_helper.h
-  DEPENDS
-    libc.src.__support.FPUtil.comparison_operations
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.attributes
-    libc.src.__support.macros.config
-)
-
-add_header_library(
   fixdfdi
   HDRS
     fixdfdi.h
