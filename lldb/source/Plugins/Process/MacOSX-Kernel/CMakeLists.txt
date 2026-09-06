@@ -30,7 +30,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
       lldbUtility
       lldbPluginDynamicLoaderDarwinKernel
       lldbPluginDynamicLoaderStatic
-      lldbPluginProcessUtility
+      lldbPluginRegisterDarwin
     )
 
   add_dependencies(lldbPluginProcessMacOSXKernel
