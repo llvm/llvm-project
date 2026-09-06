@@ -642,6 +642,16 @@ void MachineOutliner::emitOutlinedFunctionRemark(OutlinedFunction &OF) {
   MORE.emit(R);
 }
 
+static stable_hash hashInstruction(const MachineInstr &MI) {
+  // Globals with local linkage are qualified with their module's source file
+  // name so that same-named locals in different modules do not match when hash
+  // sequences are compared across modules.
+  return stableHashValue(MI, /*HashVRegs=*/false,
+                         /*HashConstantPoolIndices=*/false,
+                         /*HashMemOperands=*/false,
+                         /*SourceQualifyLocalGlobals=*/true);
+}
+
 struct MatchedEntry {
   unsigned StartIdx;
   unsigned EndIdx;
@@ -673,7 +683,7 @@ static SmallVector<MatchedEntry> getMatchedEntries(InstructionMapper &Mapper) {
 
   auto getStableHashAndFollow =
       [](const MachineInstr &MI, const HashNode *CurrNode) -> const HashNode * {
-    stable_hash StableHash = stableHashValue(MI);
+    stable_hash StableHash = hashInstruction(MI);
     if (!StableHash)
       return nullptr;
     auto It = CurrNode->Successors.find(StableHash);
@@ -856,7 +866,7 @@ void MachineOutliner::computeAndPublishHashSequence(MachineFunction &MF,
   SmallVector<stable_hash> OutlinedHashSequence;
   for (auto &MBB : MF) {
     for (auto &NewMI : MBB) {
-      stable_hash Hash = stableHashValue(NewMI);
+      stable_hash Hash = hashInstruction(NewMI);
       if (!Hash) {
         OutlinedHashSequence.clear();
         break;
