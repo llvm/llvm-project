@@ -116,6 +116,8 @@ const int PTHREAD_MUTEX_RECURSIVE_NP = 2;
 #endif
 #if !SANITIZER_FREEBSD && !SANITIZER_APPLE && !SANITIZER_NETBSD
 const int EPOLL_CTL_ADD = 1;
+const int EPOLL_CTL_MOD = 3;
+const u32 EPOLLONESHOT = 1U << 30;
 #endif
 const int SIGILL = 4;
 const int SIGTRAP = 5;
@@ -2082,7 +2084,10 @@ TSAN_INTERCEPTOR(int, epoll_ctl, int epfd, int op, int fd, void *ev) {
     FdAccess(thr, pc, epfd);
   if (epfd >= 0 && fd >= 0)
     FdAccess(thr, pc, fd);
-  if (op == EPOLL_CTL_ADD && epfd >= 0) {
+  const bool add = op == EPOLL_CTL_ADD;
+  const bool rearm_oneshot =
+      op == EPOLL_CTL_MOD && ev && (*reinterpret_cast<u32*>(ev) & EPOLLONESHOT);
+  if ((add || rearm_oneshot) && epfd >= 0) {
     FdPollAdd(thr, pc, epfd, fd);
     FdRelease(thr, pc, epfd);
   }
