@@ -1440,14 +1440,16 @@ static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
   // width matches the actual allocation size.
   // The caller stores it via a bitcasted address to preserve the bit pattern
   // (fir.convert from integer to !fir.logical normalizes nonzero -> true).
-  // Sub-byte and non-byte-multiple LOGICAL mappings (e.g. --kind-mapping=l4:1)
-  // are not supported: APInt::getSplat requires the destination width >= 8.
-  // CHARACTER kind mappings with sub-byte or non-byte-multiple widths are
-  // similarly unsupported and are guarded in genInitLocalStore / genInitLocal.
+  // Sub-byte and non-byte-multiple LOGICAL mappings are not supported:
+  //   - sub-byte (e.g. l4:1): APInt::getSplat requires destination width >= 8.
+  //   - non-byte-multiple (e.g. l4:12): makeIntCst(12) builds an i12 splat of
+  //     0xAA -> 0xAAA, which occupies bytes AA 0A rather than AA AA -- the
+  //     high nibble of the second byte is not filled by the byte pattern.
   if (auto logTy = mlir::dyn_cast<fir::LogicalType>(eleTy)) {
     unsigned bits = builder.getKindMap().getLogicalBitsize(logTy.getFKind());
-    if (bits < 8)
-      TODO(loc, "-finit-local= with a sub-byte LOGICAL kind mapping");
+    if (bits < 8 || bits % 8 != 0)
+      TODO(loc, "-finit-local= with a sub-byte or non-byte-multiple "
+                "LOGICAL kind mapping");
     return makeIntCst(bits);
   }
   // All types that pass shouldInitLocal and reach genInitLocalStore are
@@ -1485,16 +1487,29 @@ static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
       // bytes.  Use KindMapping to get the true byte width under any
       // --kind-mapping override.
       int64_t nUnits = charTy.hasConstantLen() ? charTy.getLen() : 0;
-      // A sub-byte or non-byte-multiple CHARACTER kind mapping is not
-      // supported for hex initialization (same restriction as LOGICAL).
-      // getCharacterBitsize / 8 would truncate to zero (sub-byte) or give
-      // a wrong stride (non-byte-multiple), so emit a controlled diagnostic.
+      // This block is hex-only; zero mode falls through to fir.zero_bits
+      // below, which fills the whole !fir.char<k,n> object at once and is
+      // correct at any kind width.
+      //
+      // Use the code unit's allocation stride rather than charBits / 8.
+      // charBits / 8 is the semantic byte width, but LLVM pads iN types to
+      // their ABI alignment: e.g. i24 has a 4-byte stride on most targets,
+      // so charBits/8 = 3 would leave the last byte of each code unit
+      // uninitialised.  The stride formula alignTo(ceil(charBits/8), ABI)
+      // handles all widths including sub-byte ones (i1 rounds up to i8,
+      // which has a 1-byte stride) so no diagnostic is needed here.
       unsigned charBits =
           builder.getKindMap().getCharacterBitsize(charTy.getFKind());
-      if (charBits < 8 || charBits % 8 != 0)
-        TODO(loc, "-finit-local= with a sub-byte or non-byte-multiple "
-                  "CHARACTER kind mapping");
-      int64_t kindBytes = charBits / 8;
+      // ceil(charBits/8), clamped to at least 1 byte for sub-byte kinds.
+      unsigned charByteWidth = std::max(1u, (charBits + 7) / 8);
+      const mlir::DataLayout &charDL = builder.getDataLayout();
+      // Round up to the nearest byte-multiple before querying the DataLayout
+      // so that getIntegerType always receives a multiple-of-8 width.
+      mlir::Type charElemTy =
+          builder.getIntegerType(std::max(8u, llvm::alignTo(charBits, 8u)));
+      int64_t kindBytes = static_cast<int64_t>(llvm::alignTo(
+          static_cast<uint64_t>(charByteWidth),
+          static_cast<uint64_t>(charDL.getTypeABIAlignment(charElemTy))));
       int64_t nBytes = nUnits * kindBytes;
       if (nBytes > 0) {
         mlir::Type idxTy = builder.getIndexType();
@@ -1747,16 +1762,31 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
       mlir::Value lenIdx = builder.createConvert(loc, idxTy, rtLen);
       mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
       mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-      // For kind>1 (UTF-16/32) the runtime length is in code units; multiply
-      // by the kind byte width to get the total byte count.  Use KindMapping
-      // so a --kind-mapping override is respected.
-      // Same sub-byte / non-byte-multiple guard as the fixed-length path.
+      // This stride computation applies to all modes (zero and hex), not just
+      // hex.  Unlike the fixed-length path -- where zero mode emits a single
+      // fir.zero_bits over the whole !fir.char<k,n> object -- the runtime-
+      // length path always strides by kindBytes regardless of mode, so the
+      // correct stride is required in both cases.  Gating on hex would
+      // reintroduce a half-storage fill under a non-byte-multiple mapping
+      // (e.g. a1:12) in zero mode.
+      //
+      // Use the DataLayout allocation stride rather than charBits / 8.
+      // charBits / 8 is the semantic byte width; LLVM pads iN types to their
+      // ABI alignment, so e.g. i24 has a 4-byte stride on most targets.
+      // The formula alignTo(ceil(charBits/8), ABI) handles all widths
+      // including sub-byte ones (i1 rounds up to i8, 1-byte stride) so no
+      // diagnostic is needed here either.
+      // e.g. a1:1 (i1->i8, stride 1), a1:12 (i12->i16, stride 2),
+      //      a1:24 (i24->i32, stride 4).
       unsigned charBitsRt =
           builder.getKindMap().getCharacterBitsize(charTy.getFKind());
-      if (charBitsRt < 8 || charBitsRt % 8 != 0)
-        TODO(loc, "-finit-local= with a sub-byte or non-byte-multiple "
-                  "CHARACTER kind mapping");
-      int64_t kindBytes = charBitsRt / 8;
+      unsigned charByteWidthRt = std::max(1u, (charBitsRt + 7) / 8);
+      const mlir::DataLayout &charDLRt = builder.getDataLayout();
+      mlir::Type charElemTyRt =
+          builder.getIntegerType(std::max(8u, llvm::alignTo(charBitsRt, 8u)));
+      int64_t kindBytes = static_cast<int64_t>(llvm::alignTo(
+          static_cast<uint64_t>(charByteWidthRt),
+          static_cast<uint64_t>(charDLRt.getTypeABIAlignment(charElemTyRt))));
       if (kindBytes > 1) {
         mlir::Value kindCst =
             builder.createIntegerConstant(loc, idxTy, kindBytes);
