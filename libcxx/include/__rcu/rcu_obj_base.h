@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___RCU_RCU_OBJ_BASE_H
 #define _LIBCPP___RCU_RCU_OBJ_BASE_H
 
-#include "__configuration/attributes.h"
 #include <__config>
 #include <__functional/function_ref.h>
 #include <__memory/unique_ptr.h> // for default_delete
@@ -29,13 +28,12 @@ template <class _Tp, class _Dp = default_delete<_Tp>>
 class rcu_obj_base : private __rcu_node {
 public:
   _LIBCPP_HIDE_FROM_ABI void retire(_Dp __deleter = _Dp(), rcu_domain& __dom = rcu_default_domain()) noexcept {
-    __deleter_  = std::move(__deleter);
-    __callback_ = function_ref<void()>(std::cw<&rcu_obj_base::__destroy>, this);
+    __deleter_ = std::move(__deleter);
     __dom.__retire(this);
   }
 
 protected:
-  _LIBCPP_HIDE_FROM_ABI rcu_obj_base()                               = default;
+  _LIBCPP_HIDE_FROM_ABI rcu_obj_base() { __callback_ = function_ref<void()>(std::cw<&rcu_obj_base::__destroy>, this); }
   _LIBCPP_HIDE_FROM_ABI rcu_obj_base(const rcu_obj_base&)            = default;
   _LIBCPP_HIDE_FROM_ABI rcu_obj_base(rcu_obj_base&&)                 = default;
   _LIBCPP_HIDE_FROM_ABI rcu_obj_base& operator=(const rcu_obj_base&) = default;
