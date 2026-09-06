@@ -3,7 +3,7 @@
 ; Function Attrs: norecurse nounwind readnone
 define i128 @divi128(i128, i128) {
 ; CHECK-LABEL: divi128:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s4, __divti3@lo
 ; CHECK-NEXT:    and %s4, %s4, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __divti3@hi(, %s4)
@@ -37,7 +37,7 @@ define signext i32 @divi32(i32 signext %a, i32 signext %b) {
 ; Function Attrs: norecurse nounwind readnone
 define i128 @divu128(i128, i128) {
 ; CHECK-LABEL: divu128:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s4, __udivti3@lo
 ; CHECK-NEXT:    and %s4, %s4, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __udivti3@hi(, %s4)
@@ -123,7 +123,7 @@ define zeroext i8 @divu8(i8 zeroext %a, i8 zeroext %b) {
 ; Function Attrs: norecurse nounwind readnone
 define i128 @divi128ri(i128) {
 ; CHECK-LABEL: divi128ri:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s2, __divti3@lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __divti3@hi(, %s2)
@@ -163,7 +163,7 @@ define signext i32 @divi32ri(i32 signext %a, i32 signext %b) {
 ; Function Attrs: norecurse nounwind readnone
 define i128 @divu128ri(i128) {
 ; CHECK-LABEL: divu128ri:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s2, __udivti3@lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __udivti3@hi(, %s2)
@@ -201,7 +201,7 @@ define zeroext i32 @divu32ri(i32 zeroext %a, i32 zeroext %b) {
 ; Function Attrs: norecurse nounwind readnone
 define i128 @divi128li(i128) {
 ; CHECK-LABEL: divi128li:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s3, 0, %s1
 ; CHECK-NEXT:    or %s2, 0, %s0
 ; CHECK-NEXT:    lea %s0, __divti3@lo
@@ -239,7 +239,7 @@ define signext i32 @divi32li(i32 signext %a, i32 signext %b) {
 ; Function Attrs: norecurse nounwind readnone
 define i128 @divu128li(i128) {
 ; CHECK-LABEL: divu128li:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s3, 0, %s1
 ; CHECK-NEXT:    or %s2, 0, %s0
 ; CHECK-NEXT:    lea %s0, __udivti3@lo

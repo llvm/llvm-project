@@ -66,7 +66,7 @@ declare double @llvm.copysign.f64(double, double)
 ; Function Attrs: nounwind readnone
 define fp128 @copysign_quad_var(fp128 %0, fp128 %1) {
 ; CHECK-LABEL: copysign_quad_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    st %s3, 16(, %s11)
 ; CHECK-NEXT:    st %s2, 24(, %s11)
 ; CHECK-NEXT:    st %s1, (, %s11)
@@ -116,7 +116,7 @@ define double @copysign_double_zero(double %0) {
 ; Function Attrs: nounwind readnone
 define fp128 @copysign_quad_zero(fp128 %0) {
 ; CHECK-LABEL: copysign_quad_zero:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s2, .LCPI{{[0-9]+}}_0@lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s2, .LCPI{{[0-9]+}}_0@hi(, %s2)
@@ -172,7 +172,7 @@ define double @copysign_double_const(double %0) {
 ; Function Attrs: nounwind readnone
 define fp128 @copysign_quad_const(fp128 %0) {
 ; CHECK-LABEL: copysign_quad_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s2, .LCPI{{[0-9]+}}_0@lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s2, .LCPI{{[0-9]+}}_0@hi(, %s2)

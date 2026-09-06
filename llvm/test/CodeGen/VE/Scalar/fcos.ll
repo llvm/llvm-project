@@ -32,7 +32,7 @@
 ; Function Attrs: nounwind readnone
 define float @fcos_float_var(float %0) {
 ; CHECK-LABEL: fcos_float_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s1, cosf@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    lea.sl %s12, cosf@hi(, %s1)
@@ -48,7 +48,7 @@ declare float @llvm.cos.f32(float)
 ; Function Attrs: nounwind readnone
 define double @fcos_double_var(double %0) {
 ; CHECK-LABEL: fcos_double_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s1, cos@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
 ; CHECK-NEXT:    lea.sl %s12, cos@hi(, %s1)
@@ -64,7 +64,7 @@ declare double @llvm.cos.f64(double)
 ; Function Attrs: nounwind readnone
 define fp128 @fcos_quad_var(fp128 %0) {
 ; CHECK-LABEL: fcos_quad_var:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s2, cosl@lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s12, cosl@hi(, %s2)
@@ -98,7 +98,7 @@ define double @fcos_double_zero() {
 ; Function Attrs: nounwind readnone
 define fp128 @fcos_quad_zero() {
 ; CHECK-LABEL: fcos_quad_zero:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, .LCPI{{[0-9]+}}_0@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s2, .LCPI{{[0-9]+}}_0@hi(, %s0)
@@ -135,7 +135,7 @@ define double @fcos_double_const() {
 ; Function Attrs: nounwind readnone
 define fp128 @fcos_quad_const() {
 ; CHECK-LABEL: fcos_quad_const:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, .LCPI{{[0-9]+}}_0@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s2, .LCPI{{[0-9]+}}_0@hi(, %s0)
