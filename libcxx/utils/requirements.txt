@@ -1,5 +1,6 @@
 -r ci/lnt/requirements.txt
 click
+matplotlib
 numpy
 pandas
 plotly
