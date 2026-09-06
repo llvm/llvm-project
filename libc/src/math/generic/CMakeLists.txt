@@ -1943,6 +1943,7 @@ add_entrypoint_object(
   HDRS
     ../logbf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.logbf128
     libc.src.errno.errno
 )

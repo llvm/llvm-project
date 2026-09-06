@@ -1177,6 +1177,9 @@ math_test(
 math_test(
     name = "logbf128",
     hdrs = ["LogbTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
