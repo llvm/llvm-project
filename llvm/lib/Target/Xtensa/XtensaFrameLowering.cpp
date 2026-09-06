@@ -88,19 +88,22 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
     // new_offset = SP + diff_to_128_aligned_address
     // This is safe to do because we increased the stack size by MaxAlignment.
     MCRegister Reg, RegMisAlign;
+    int SP0FI = XtensaFI->getRealignSP0FrameIndex();
     if (MaxAlignment > 32) {
       TII.loadImmediate(MBB, MBBI, &RegMisAlign, MaxAlignment - 1);
       TII.loadImmediate(MBB, MBBI, &Reg, MaxAlignment);
       BuildMI(MBB, MBBI, DL, TII.get(Xtensa::AND))
           .addReg(RegMisAlign, RegState::Define)
-          .addReg(FP)
+          .addReg(SP)
           .addReg(RegMisAlign);
       BuildMI(MBB, MBBI, DL, TII.get(Xtensa::SUB), RegMisAlign)
           .addReg(Reg)
           .addReg(RegMisAlign);
+      // pad == RegMisAlign; realign upward: SP = SP + pad. Keep pad live if it
+      // is still needed below to reconstruct the original SP.
       BuildMI(MBB, MBBI, DL, TII.get(Xtensa::ADD), SP)
           .addReg(SP)
-          .addReg(RegMisAlign, RegState::Kill);
+          .addReg(RegMisAlign, getKillRegState(SP0FI == -1));
     }
 
     // Store FP register in A8, because FP may be used to pass function
@@ -130,6 +133,24 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
           MCCFIInstruction::cfiDefCfaOffset(nullptr, StackSize));
       BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex);
+    }
+
+    // Incoming stack arguments are addressed relative to the caller's stack
+    // pointer, which equals the value of SP right after ENTRY -- i.e. the SP
+    // we just realigned away from. Recover it (original SP = realigned SP -
+    // pad) and stash it in its slot; eliminateFrameIndex reloads it to resolve
+    // those (fixed) frame objects. Emitted after the frame pointer setup so
+    // that the slot's frame index resolves correctly when hasFP.
+    if (SP0FI != -1) {
+      assert(MaxAlignment > 32 &&
+             "entry-SP slot reserved for a frame that is not realigned");
+      BuildMI(MBB, MBBI, DL, TII.get(Xtensa::SUB), RegMisAlign)
+          .addReg(SP)
+          .addReg(RegMisAlign, RegState::Kill);
+      BuildMI(MBB, MBBI, DL, TII.get(Xtensa::S32I))
+          .addReg(RegMisAlign, RegState::Kill)
+          .addFrameIndex(SP0FI)
+          .addImm(0);
     }
   } else {
     // No need to allocate space on the stack.
@@ -374,6 +395,21 @@ void XtensaFrameLowering::processFunctionBeforeFrameFinalized(
   bool IsLargeFunction = !isInt<18>(MF.estimateFunctionSizeInBytes());
   if (IsLargeFunction)
     ScavSlotsNum = std::max(ScavSlotsNum, 1u);
+
+  // A dynamically realigned frame (windowed ABI) moves SP away from the value
+  // it had on entry, which is the base incoming stack arguments are addressed
+  // against. If the function has any incoming stack (fixed) arguments, reserve
+  // a slot to preserve the entry SP; eliminateFrameIndex reloads it through a
+  // scavenged register. Two scavenging slots: the entry-SP reload register can
+  // be live at the same point as the register the generic path scavenges to
+  // materialize an out-of-range offset.
+  if (STI.isWindowedABI() && MFI.getMaxAlign().value() > 32 &&
+      MFI.getObjectIndexBegin() < 0) {
+    const TargetRegisterClass &RC = Xtensa::ARRegClass;
+    XtensaFI->setRealignSP0FrameIndex(MFI.CreateStackObject(
+        TRI->getSpillSize(RC), TRI->getSpillAlign(RC), false));
+    ScavSlotsNum = std::max(ScavSlotsNum, 2u);
+  }
 
   const TargetRegisterClass &RC = Xtensa::ARRegClass;
   unsigned Size = TRI->getSpillSize(RC);
