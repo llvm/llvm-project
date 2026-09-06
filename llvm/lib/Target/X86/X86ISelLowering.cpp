@@ -50782,6 +50782,162 @@ static SDValue combineMulToPMADD52(SDNode *N, const SDLoc &DL,
   return SDValue();
 }
 
+// The operands fit the float mantissa exactly so one float divide recovers
+// the exact quotient.
+static SDValue
+combineIntDivRemViaExactFPDiv(SDNode *N, MVT FPSclVT, bool IsSigned, bool IsRem,
+                              bool IsStrict, SelectionDAG &DAG,
+                              TargetLowering::DAGCombinerInfo &DCI,
+                              const X86Subtarget &Subtarget, const SDLoc &DL) {
+  EVT VT = N->getValueType(0);
+  SDValue Dividend = N->getOperand(0);
+  SDValue Divisor = N->getOperand(1);
+  EVT FPVT = VT.changeVectorElementType(*DAG.getContext(), FPSclVT);
+
+  // Unsigned i32 needs FP_TO_UINT(f64->u32) which is emulated and a loss
+  // for latency and code size before AVX2.
+  if (!IsStrict && !IsSigned && VT.getScalarSizeInBits() == 32 &&
+      !Subtarget.hasAVX2())
+    return SDValue();
+
+  // Nothing will split an illegal FP type after type legalization and the
+  // strict SAE divide is 512-bit only.
+  bool FPVTUsable = IsStrict
+                        ? FPVT.getSizeInBits() <= 512
+                        : DCI.isBeforeLegalize() ||
+                              DAG.getTargetLoweringInfo().isTypeLegal(FPVT);
+
+  // Halve the divide while the integer halves stay legal.
+  if (!FPVTUsable) {
+    if (VT.is256BitVector() || VT.is512BitVector()) {
+      EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
+      if (DAG.getTargetLoweringInfo().isTypeLegal(HalfVT))
+        return splitVectorIntBinary(SDValue(N, 0), DAG, DL);
+    }
+    return SDValue();
+  }
+
+  unsigned ToFP = IsSigned ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
+  SDValue X = DAG.getNode(ToFP, DL, FPVT, Dividend);
+  SDValue Y = DAG.getNode(ToFP, DL, FPVT, Divisor);
+  SDValue Q;
+  if (IsStrict) {
+    // The converts are exact so only the divide and the truncate can
+    // raise flags.
+    unsigned WideElts = 512 / FPSclVT.getSizeInBits(); // 16 f32 or 8 f64
+    MVT WideFP = MVT::getVectorVT(FPSclVT, WideElts);
+    // Only an f64 quotient of i64 operands needs the qq convert to come back
+    // whole. Everything else fits i32 lanes.
+    MVT WideIScl = MVT::i32;
+    if (VT.getScalarSizeInBits() == 64 && FPSclVT == MVT::f64)
+      WideIScl = MVT::i64;
+    MVT WideI = MVT::getVectorVT(WideIScl, WideElts);
+    SDValue RN = DAG.getTargetConstant(X86::STATIC_ROUNDING::TO_NEAREST_INT, DL,
+                                       MVT::i32); // {rn-sae}
+    SDValue Quot =
+        DAG.getNode(X86ISD::FDIV_RND, DL, WideFP,
+                    widenSubVector(X, false, Subtarget, DAG, DL, 512),
+                    widenSubVector(Y, false, Subtarget, DAG, DL, 512), RN);
+    unsigned FromFP = IsSigned ? X86ISD::CVTTP2SI_SAE : X86ISD::CVTTP2UI_SAE;
+    Q = DAG.getNode(FromFP, DL, WideI, Quot); // vcvttp*2dq/qq {sae}
+    MVT NarrowI = MVT::getVectorVT(WideIScl, VT.getVectorNumElements());
+    Q = extractSubVector(Q, 0, DAG, DL, NarrowI.getSizeInBits());
+    Q = IsSigned ? DAG.getSExtOrTrunc(Q, DL, VT)
+                 : DAG.getZExtOrTrunc(Q, DL, VT);
+  } else {
+    unsigned FromFP = IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
+    Q = DAG.getNode(FromFP, DL, VT, DAG.getNode(ISD::FDIV, DL, FPVT, X, Y));
+  }
+  if (!IsRem)
+    return Q;
+  // rem = dividend - quotient * divisor
+  return DAG.getNode(ISD::SUB, DL, VT, Dividend,
+                     DAG.getNode(ISD::MUL, DL, VT, Q, Divisor));
+}
+
+// i64: the quotient doesn't fit f64 exactly, so build it from two
+// rounded-down reciprocal multiplies, one of the dividend and one of its
+// remainder. {rd/ru-sae} rounding is 512-bit so AVX512DQ only.
+static SDValue combineInt64DivRemViaFPReciprocal(SDNode *N, bool IsSigned,
+                                                 bool IsRem, SelectionDAG &DAG,
+                                                 const X86Subtarget &Subtarget,
+                                                 const SDLoc &DL) {
+  EVT VT = N->getValueType(0);
+  SDValue Dividend = N->getOperand(0);
+  SDValue Divisor = N->getOperand(1);
+
+  // The rounded FP steps below run in a zmm so VT has to widen into one, and
+  // one lane does not pay for the chain.
+  if (VT.getSizeInBits() > 512 || VT.getVectorNumElements() < 2)
+    return SDValue();
+
+  bool Widen = VT != MVT::v8i64;
+  // The chain multiplies twice on its critical path, so v2i64 only pays
+  // off where vpmullq is fast.
+  if (VT == MVT::v2i64 && Subtarget.isPMULLQSlow())
+    return SDValue();
+
+  MVT FPVT = MVT::v8f64;
+  SDValue RD = DAG.getTargetConstant(X86::STATIC_ROUNDING::TO_NEG_INF, DL,
+                                     MVT::i32); // {rd-sae}
+  SDValue RU = DAG.getTargetConstant(X86::STATIC_ROUNDING::TO_POS_INF, DL,
+                                     MVT::i32); // {ru-sae}
+  auto UToF = [&](SDValue V, SDValue Rnd) {     // vcvtuqq2pd
+    if (Widen)
+      V = widenSubVector(V, false, Subtarget, DAG, DL, 512);
+    return DAG.getNode(X86ISD::UINT_TO_FP_RND, DL, FPVT, V, Rnd);
+  };
+  auto FToU = [&](SDValue V) { // vcvtpd2uqq {rd-sae}
+    SDValue R = DAG.getNode(X86ISD::CVTP2UI_RND, DL, MVT::v8i64, V, RD);
+    if (Widen)
+      R = extractSubVector(R, 0, DAG, DL, VT.getSizeInBits());
+    return R;
+  };
+  auto FMul = [&](SDValue A, SDValue B) { // vmulpd {rd-sae}
+    return DAG.getNode(X86ISD::FMUL_RND, DL, FPVT, A, B, RD);
+  };
+
+  // For a signed divide, work on absolute values and reapply the sign below.
+  SDValue A = IsSigned ? DAG.getNode(ISD::ABS, DL, VT, Dividend) : Dividend;
+  SDValue B = IsSigned ? DAG.getNode(ISD::ABS, DL, VT, Divisor) : Divisor;
+
+  // b_rcp = round_down(1.0 / round_up(double(b)))
+  SDValue Recip =
+      DAG.getNode(X86ISD::FDIV_RND, DL, FPVT, DAG.getConstantFP(1.0, DL, FPVT),
+                  UToF(B, RU), RD);
+  // first = round_down(uint64(round_down(double(a)) * b_rcp))
+  SDValue First = FToU(FMul(UToF(A, RD), Recip));
+  // rem = a - first * b
+  SDValue Rem =
+      DAG.getNode(ISD::SUB, DL, VT, A, DAG.getNode(ISD::MUL, DL, VT, First, B));
+  // second = round_down(uint64(round_down(double(rem)) * b_rcp))
+  SDValue Second = FToU(FMul(UToF(Rem, RD), Recip));
+  SDValue Quot = DAG.getNode(ISD::ADD, DL, VT, First, Second);
+  // rem = a - (first + second) * b, which may still be >= b (off by one)
+  Rem = DAG.getNode(ISD::SUB, DL, VT, Rem,
+                    DAG.getNode(ISD::MUL, DL, VT, Second, B));
+  EVT CCVT = DAG.getTargetLoweringInfo().getSetCCResultType(
+      DAG.getDataLayout(), *DAG.getContext(), VT);
+  SDValue Ge = DAG.getSetCC(DL, CCVT, Rem, B, ISD::SETUGE);
+  // Correct the off-by-one: +1 on the quotient, -b on the remainder (still
+  // magnitudes if signed).
+  SDValue Mag;
+  if (IsRem)
+    Mag = DAG.getSelect(DL, VT, Ge, DAG.getNode(ISD::SUB, DL, VT, Rem, B), Rem);
+  else
+    Mag = DAG.getNode(ISD::SUB, DL, VT, Quot, DAG.getSExtOrTrunc(Ge, DL, VT));
+  if (!IsSigned)
+    return Mag;
+  // A quotient is negative when the operand signs differ. A remainder takes
+  // the dividend's sign.
+  SDValue SignSrc =
+      IsRem ? Dividend : DAG.getNode(ISD::XOR, DL, VT, Dividend, Divisor);
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  SDValue IsNeg = DAG.getSetCC(DL, CCVT, SignSrc, Zero, ISD::SETLT);
+  return DAG.getSelect(DL, VT, IsNeg, DAG.getNode(ISD::SUB, DL, VT, Zero, Mag),
+                       Mag);
+}
+
 // x86 has no vector integer divide instructions. Lower vector
 // UDIV/SDIV/UREM/SREM through float division instead of scalarizing into N
 // scalar hardware divides.
@@ -50840,92 +50996,56 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   auto BothFitFP = [&](const fltSemantics &Sem) {
     return FitsFP(Dividend, Sem) && FitsFP(Divisor, Sem);
   };
-  // i8/i16/i32: the operands fit the float mantissa
-  // exactly so one float divide recovers the exact quotient.
-  if (EltBits > 32)
+
+  // i64 needs the qq converts which is AVX512DQ only.
+  bool NarrowI64 = EltBits == 64 && Subtarget.hasDQI() &&
+                   Subtarget.useAVX512Regs() &&
+                   BothFitFP(APFloat::IEEEdouble());
+
+  // i8/i16/i32 and narrow value i64 take one exact float divide.
+  bool UseExactFPDiv = EltBits <= 32 || NarrowI64;
+  if (!UseExactFPDiv && EltBits != 64)
     return SDValue();
 
   // f32 recovers the quotient exactly when both operands fit in 24 bits
   MVT FPSclVT = MVT::f64;
-  if (EltBits <= 16 || BothFitFP(APFloat::IEEEsingle()))
+  if (UseExactFPDiv && (EltBits <= 16 || BothFitFP(APFloat::IEEEsingle())))
     FPSclVT = MVT::f32;
-  EVT FPVT = VT.changeVectorElementType(*DAG.getContext(), FPSclVT);
 
   bool IsStrict = DAG.getMachineFunction().getFunction().hasFnAttribute(
       Attribute::StrictFP);
-  if (IsStrict) {
-    // The SAE forms are 512-bit only. Inputs widen into a zmm below, which
-    // requires 512-bit types to be legal.
-    if (!Subtarget.useAVX512Regs())
+
+  // The SAE forms are 512-bit only. Inputs widen into a zmm below, which
+  // requires 512-bit types to be legal.
+  if (IsStrict && !Subtarget.useAVX512Regs())
+    return SDValue();
+
+  if (!UseExactFPDiv && (!Subtarget.hasDQI() || !Subtarget.useAVX512Regs()))
+    return SDValue();
+
+  // Widen a non-power-of-two lane count to get a machine type, but only
+  // while it still fits one divide. Two chains lose to a chain plus a scalar.
+  unsigned NumElts = VT.getVectorNumElements();
+  bool Needs512 = IsStrict || !UseExactFPDiv;
+  if (Needs512 && !isPowerOf2_32(NumElts)) {
+    if (NextPowerOf2(NumElts) * FPSclVT.getSizeInBits() > 512)
       return SDValue();
-    // Widen a non-power-of-two lane count to get a machine type, but only
-    // while it still fits one divide. Two chains lose to a chain plus a scalar.
-    unsigned NumElts = VT.getVectorNumElements();
-    if (!isPowerOf2_32(NumElts)) {
-      if (NextPowerOf2(NumElts) * FPSclVT.getSizeInBits() > 512)
-        return SDValue();
-      SDValue WideDividend = DAG.WidenVector(Dividend, DL);
-      EVT WideVT = WideDividend.getValueType();
-      SDValue WideDivisor = DAG.WidenVector(Divisor, DL);
-      SDValue Wide = DAG.getNode(Opc, DL, WideVT, WideDividend, WideDivisor);
-      return DAG.getExtractSubvector(DL, VT, Wide, 0);
-    }
-  } else if (!IsSigned && VT.getScalarSizeInBits() == 32 &&
-             !Subtarget.hasAVX2()) {
-    // Unsigned i32 needs FP_TO_UINT(f64->u32) which is emulated and a loss
-    // for latency and code size before AVX2.
-    return SDValue();
+    Dividend = DAG.WidenVector(Dividend, DL);
+    Divisor = DAG.WidenVector(Divisor, DL);
+    N = DAG.getNode(Opc, DL, Dividend.getValueType(), Dividend, Divisor)
+            .getNode();
   }
 
-  // Nothing will split an illegal FP type after type legalization and the
-  // strict SAE divide is 512-bit only.
-  bool FPVTUsable = IsStrict
-                        ? FPVT.getSizeInBits() <= 512
-                        : DCI.isBeforeLegalize() ||
-                              DAG.getTargetLoweringInfo().isTypeLegal(FPVT);
-
-  // Halve the divide while the integer halves stay legal.
-  if (!FPVTUsable) {
-    if (VT.is256BitVector() || VT.is512BitVector()) {
-      EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
-      if (DAG.getTargetLoweringInfo().isTypeLegal(HalfVT))
-        return splitVectorIntBinary(SDValue(N, 0), DAG, DL);
-    }
-    return SDValue();
-  }
-
-  unsigned ToFP = IsSigned ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
-  SDValue X = DAG.getNode(ToFP, DL, FPVT, Dividend);
-  SDValue Y = DAG.getNode(ToFP, DL, FPVT, Divisor);
-  SDValue Q;
-  if (IsStrict) {
-    // The converts are exact so only the divide and the truncate can
-    // raise flags.
-    unsigned WideElts = 512 / FPSclVT.getSizeInBits(); // 16 f32 or 8 f64
-    MVT WideFP = MVT::getVectorVT(FPSclVT, WideElts);
-    MVT WideIScl = MVT::i32;
-    MVT WideI = MVT::getVectorVT(WideIScl, WideElts);
-    SDValue RN = DAG.getTargetConstant(X86::STATIC_ROUNDING::TO_NEAREST_INT, DL,
-                                       MVT::i32); // {rn-sae}
-    SDValue Quot =
-        DAG.getNode(X86ISD::FDIV_RND, DL, WideFP,
-                    widenSubVector(X, false, Subtarget, DAG, DL, 512),
-                    widenSubVector(Y, false, Subtarget, DAG, DL, 512), RN);
-    unsigned FromFP = IsSigned ? X86ISD::CVTTP2SI_SAE : X86ISD::CVTTP2UI_SAE;
-    Q = DAG.getNode(FromFP, DL, WideI, Quot); // vcvttp*2dq/qq {sae}
-    MVT NarrowI = MVT::getVectorVT(WideIScl, VT.getVectorNumElements());
-    Q = extractSubVector(Q, 0, DAG, DL, NarrowI.getSizeInBits());
-    Q = IsSigned ? DAG.getSExtOrTrunc(Q, DL, VT)
-                 : DAG.getZExtOrTrunc(Q, DL, VT);
-  } else {
-    unsigned FromFP = IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
-    Q = DAG.getNode(FromFP, DL, VT, DAG.getNode(ISD::FDIV, DL, FPVT, X, Y));
-  }
-  if (!IsRem)
-    return Q;
-  // rem = dividend - quotient * divisor
-  return DAG.getNode(ISD::SUB, DL, VT, Dividend,
-                     DAG.getNode(ISD::MUL, DL, VT, Q, Divisor));
+  SDValue Res =
+      UseExactFPDiv
+          ? combineIntDivRemViaExactFPDiv(N, FPSclVT, IsSigned, IsRem, IsStrict,
+                                          DAG, DCI, Subtarget, DL)
+          : combineInt64DivRemViaFPReciprocal(N, IsSigned, IsRem, DAG,
+                                              Subtarget, DL);
+  // Narrow a widened result back to VT.
+  if (Res && Res.getValueType() != VT)
+    Res = DAG.getExtractSubvector(DL, VT, Res, 0);
+  return Res;
 }
 
 static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
