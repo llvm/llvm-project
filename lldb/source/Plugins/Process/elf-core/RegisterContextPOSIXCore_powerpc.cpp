@@ -19,7 +19,7 @@ using namespace lldb_private;
 RegisterContextCorePOSIX_powerpc::RegisterContextCorePOSIX_powerpc(
     Thread &thread, RegisterInfoInterface *register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
-    : RegisterContextPOSIX_powerpc(thread, 0, register_info) {
+    : RegisterContextCore_powerpc(thread, 0, register_info) {
   m_gpr_buffer = std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
                                                   gpregset.GetByteSize());
   m_gpr.SetData(m_gpr_buffer);

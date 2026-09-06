@@ -33,7 +33,7 @@ RegisterContextCorePOSIX_riscv64::Create(Thread &thread, const ArchSpec &arch,
 RegisterContextCorePOSIX_riscv64::RegisterContextCorePOSIX_riscv64(
     Thread &thread, std::unique_ptr<RegisterInfo_riscv64> register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
-    : RegisterContextPOSIX_riscv64(thread, std::move(register_info)) {
+    : RegisterContextCore_riscv64(thread, std::move(register_info)) {
 
   m_gpr.SetData(std::make_shared<DataBufferHeap>(gpregset.GetDataStart(),
                                                  gpregset.GetByteSize()));

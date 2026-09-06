@@ -1,0 +1,23 @@
+static_library("Core") {
+  output_name = "lldbPluginRegisterCore"
+  configs += [ "//llvm/utils/gn/build:lldb_code" ]
+  deps = [
+    "//lldb/source/Register",
+    "//lldb/source/Target",
+    "//lldb/source/Utility",
+    "//llvm/lib/Support",
+  ]
+
+  include_dirs = [ "//lldb/source" ]
+  sources = [
+    "RegisterContextCore_arm.cpp",
+    "RegisterContextCore_arm64.cpp",
+    "RegisterContextCore_loongarch64.cpp",
+    "RegisterContextCore_powerpc.cpp",
+    "RegisterContextCore_ppc64le.cpp",
+    "RegisterContextCore_riscv32.cpp",
+    "RegisterContextCore_riscv64.cpp",
+    "RegisterContextCore_s390x.cpp",
+    "RegisterContextCore_x86.cpp",
+  ]
+}

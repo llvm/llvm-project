@@ -9,11 +9,11 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_PPC64LE_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_PPC64LE_H
 
-#include "Plugins/Process/Utility/RegisterContextPOSIX_ppc64le.h"
+#include "Plugins/Register/Core/RegisterContextCore_ppc64le.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Utility/DataExtractor.h"
 
-class RegisterContextCorePOSIX_ppc64le : public RegisterContextPOSIX_ppc64le {
+class RegisterContextCorePOSIX_ppc64le : public RegisterContextCore_ppc64le {
 public:
   RegisterContextCorePOSIX_ppc64le(
       lldb_private::Thread &thread,

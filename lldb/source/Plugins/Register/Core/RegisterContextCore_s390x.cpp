@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIX_s390x.cpp ------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,7 @@
 #include "lldb/Utility/Scalar.h"
 #include "llvm/Support/Compiler.h"
 
-#include "RegisterContextPOSIX_s390x.h"
+#include "RegisterContextCore_s390x.h"
 #include "Register/Arch/RegisterContext_s390x.h"
 
 using namespace lldb_private;
@@ -69,15 +69,15 @@ static const RegisterSet g_reg_sets_s390x[k_num_register_sets] = {
      g_fpu_regnums_s390x},
 };
 
-bool RegisterContextPOSIX_s390x::IsGPR(unsigned reg) {
+bool RegisterContextCore_s390x::IsGPR(unsigned reg) {
   return reg <= m_reg_info.last_gpr; // GPRs come first.
 }
 
-bool RegisterContextPOSIX_s390x::IsFPR(unsigned reg) {
+bool RegisterContextCore_s390x::IsFPR(unsigned reg) {
   return (m_reg_info.first_fpr <= reg && reg <= m_reg_info.last_fpr);
 }
 
-RegisterContextPOSIX_s390x::RegisterContextPOSIX_s390x(
+RegisterContextCore_s390x::RegisterContextCore_s390x(
     Thread &thread, uint32_t concrete_frame_idx,
     RegisterInfoInterface *register_info)
     : RegisterContext(thread, concrete_frame_idx) {
@@ -98,48 +98,48 @@ RegisterContextPOSIX_s390x::RegisterContextPOSIX_s390x(
   }
 }
 
-RegisterContextPOSIX_s390x::~RegisterContextPOSIX_s390x() = default;
+RegisterContextCore_s390x::~RegisterContextCore_s390x() = default;
 
-void RegisterContextPOSIX_s390x::Invalidate() {}
+void RegisterContextCore_s390x::Invalidate() {}
 
-void RegisterContextPOSIX_s390x::InvalidateAllRegisters() {}
+void RegisterContextCore_s390x::InvalidateAllRegisters() {}
 
-const RegisterInfo *RegisterContextPOSIX_s390x::GetRegisterInfo() {
+const RegisterInfo *RegisterContextCore_s390x::GetRegisterInfo() {
   return m_register_info_up->GetRegisterInfo();
 }
 
 const RegisterInfo *
-RegisterContextPOSIX_s390x::GetRegisterInfoAtIndex(size_t reg) {
+RegisterContextCore_s390x::GetRegisterInfoAtIndex(size_t reg) {
   if (reg < m_reg_info.num_registers)
     return &GetRegisterInfo()[reg];
   else
     return nullptr;
 }
 
-size_t RegisterContextPOSIX_s390x::GetRegisterCount() {
+size_t RegisterContextCore_s390x::GetRegisterCount() {
   return m_reg_info.num_registers;
 }
 
-unsigned RegisterContextPOSIX_s390x::GetRegisterOffset(unsigned reg) {
+unsigned RegisterContextCore_s390x::GetRegisterOffset(unsigned reg) {
   assert(reg < m_reg_info.num_registers && "Invalid register number.");
   return GetRegisterInfo()[reg].byte_offset;
 }
 
-unsigned RegisterContextPOSIX_s390x::GetRegisterSize(unsigned reg) {
+unsigned RegisterContextCore_s390x::GetRegisterSize(unsigned reg) {
   assert(reg < m_reg_info.num_registers && "Invalid register number.");
   return GetRegisterInfo()[reg].byte_size;
 }
 
-const char *RegisterContextPOSIX_s390x::GetRegisterName(unsigned reg) {
+const char *RegisterContextCore_s390x::GetRegisterName(unsigned reg) {
   assert(reg < m_reg_info.num_registers && "Invalid register offset.");
   return GetRegisterInfo()[reg].name;
 }
 
-bool RegisterContextPOSIX_s390x::IsRegisterSetAvailable(size_t set_index) {
+bool RegisterContextCore_s390x::IsRegisterSetAvailable(size_t set_index) {
   return set_index < k_num_register_sets;
 }
 
-size_t RegisterContextPOSIX_s390x::GetRegisterSetCount() {
+size_t RegisterContextCore_s390x::GetRegisterSetCount() {
   size_t sets = 0;
   for (size_t set = 0; set < k_num_register_sets; ++set) {
     if (IsRegisterSetAvailable(set))
@@ -149,7 +149,7 @@ size_t RegisterContextPOSIX_s390x::GetRegisterSetCount() {
   return sets;
 }
 
-const RegisterSet *RegisterContextPOSIX_s390x::GetRegisterSet(size_t set) {
+const RegisterSet *RegisterContextCore_s390x::GetRegisterSet(size_t set) {
   if (IsRegisterSetAvailable(set)) {
     switch (m_register_info_up->GetTargetArchitecture().GetMachine()) {
     case llvm::Triple::systemz:
