@@ -1,4 +1,4 @@
-//===-- RegisterContextLinux_x86_64.cpp -----------------------------------===//
+//===-- RegisterInfoLinux_x86_64.cpp -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "RegisterContextLinux_x86_64.h"
-#include "RegisterContextLinux_i386.h"
+#include "RegisterInfoLinux_x86_64.h"
+#include "RegisterInfoLinux_i386.h"
 #include "RegisterContext_x86.h"
 #include "lldb-x86-register-enums.h"
 #include "lldb/lldb-defines.h"
@@ -96,8 +96,8 @@ GetRegisterInfo_i386(const lldb_private::ArchSpec &arch) {
   // Allocate RegisterInfo only once
   if (g_register_infos.empty()) {
     // Copy the register information from base class
-    std::unique_ptr<RegisterContextLinux_i386> reg_interface(
-        new RegisterContextLinux_i386(arch));
+    std::unique_ptr<RegisterInfoLinux_i386> reg_interface(
+        new RegisterInfoLinux_i386(arch));
     const RegisterInfo *base_info = reg_interface->GetRegisterInfo();
     g_register_infos.insert(g_register_infos.end(), &base_info[0],
                             &base_info[k_num_registers_i386]);
@@ -152,9 +152,9 @@ static uint32_t GetUserRegisterInfoCount(const ArchSpec &target_arch) {
   }
 }
 
-RegisterContextLinux_x86_64::RegisterContextLinux_x86_64(
+RegisterInfoLinux_x86_64::RegisterInfoLinux_x86_64(
     const ArchSpec &target_arch)
-    : lldb_private::RegisterContextLinux_x86(
+    : lldb_private::RegisterInfoLinux_x86(
           target_arch,
           {"orig_rax",
            nullptr,
@@ -171,16 +171,16 @@ RegisterContextLinux_x86_64::RegisterContextLinux_x86_64(
       m_register_info_count(GetRegisterInfoCount(target_arch)),
       m_user_register_count(GetUserRegisterInfoCount(target_arch)) {}
 
-size_t RegisterContextLinux_x86_64::GetGPRSizeStatic() { return sizeof(GPR); }
+size_t RegisterInfoLinux_x86_64::GetGPRSizeStatic() { return sizeof(GPR); }
 
-const RegisterInfo *RegisterContextLinux_x86_64::GetRegisterInfo() const {
+const RegisterInfo *RegisterInfoLinux_x86_64::GetRegisterInfo() const {
   return m_register_info_p;
 }
 
-uint32_t RegisterContextLinux_x86_64::GetRegisterCount() const {
+uint32_t RegisterInfoLinux_x86_64::GetRegisterCount() const {
   return m_register_info_count;
 }
 
-uint32_t RegisterContextLinux_x86_64::GetUserRegisterCount() const {
+uint32_t RegisterInfoLinux_x86_64::GetUserRegisterCount() const {
   return m_user_register_count;
 }

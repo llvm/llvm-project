@@ -1,4 +1,4 @@
-//===-- RegisterContextOpenBSD_i386.cpp -----------------------------------===//
+//===-- RegisterInfoFreeBSD_i386.cpp -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "RegisterContextOpenBSD_i386.h"
+#include "RegisterInfoFreeBSD_i386.h"
 #include "RegisterContext_x86.h"
 #include "lldb-x86-register-enums.h"
 #include "lldb/lldb-defines.h"
@@ -14,27 +14,30 @@
 using namespace lldb_private;
 using namespace lldb;
 
-// /usr/include/machine/reg.h
+// https://cgit.freebsd.org/src/tree/sys/x86/include/reg.h?h=stable/14
 struct GPR {
-  uint32_t eax;
-  uint32_t ecx;
-  uint32_t edx;
-  uint32_t ebx;
-  uint32_t esp;
-  uint32_t ebp;
-  uint32_t esi;
-  uint32_t edi;
-  uint32_t eip;
-  uint32_t eflags;
-  uint32_t cs;
-  uint32_t ss;
-  uint32_t ds;
-  uint32_t es;
   uint32_t fs;
+  uint32_t es;
+  uint32_t ds;
+  uint32_t edi;
+  uint32_t esi;
+  uint32_t ebp;
+  uint32_t isp;
+  uint32_t ebx;
+  uint32_t edx;
+  uint32_t ecx;
+  uint32_t eax;
+  uint32_t trapno;
+  uint32_t err;
+  uint32_t eip;
+  uint32_t cs;
+  uint32_t eflags;
+  uint32_t esp;
+  uint32_t ss;
   uint32_t gs;
 };
 
-struct dbreg {
+struct DBG {
   uint32_t dr[8]; /* debug registers */
                   /* Index 0-3: debug address registers */
                   /* Index 4-5: reserved */
@@ -47,23 +50,26 @@ using FPR_i386 = FXSAVE;
 struct UserArea {
   GPR gpr;
   FPR_i386 i387;
+  DBG dbg;
 };
 
 #define DR_SIZE sizeof(uint32_t)
-#define DR_OFFSET(reg_index) (LLVM_EXTENSION offsetof(dbreg, dr[reg_index]))
+#define DR_OFFSET(reg_index)                                                   \
+  (LLVM_EXTENSION offsetof(UserArea, dbg) +                                    \
+   LLVM_EXTENSION offsetof(DBG, dr[reg_index]))
 
 // Include RegisterInfos_i386 to declare our g_register_infos_i386 structure.
 #define DECLARE_REGISTER_INFOS_I386_STRUCT
 #include "RegisterInfos_i386.h"
 #undef DECLARE_REGISTER_INFOS_I386_STRUCT
 
-RegisterContextOpenBSD_i386::RegisterContextOpenBSD_i386(
+RegisterInfoFreeBSD_i386::RegisterInfoFreeBSD_i386(
     const ArchSpec &target_arch)
     : RegisterInfoInterface(target_arch) {}
 
-size_t RegisterContextOpenBSD_i386::GetGPRSize() const { return sizeof(GPR); }
+size_t RegisterInfoFreeBSD_i386::GetGPRSize() const { return sizeof(GPR); }
 
-const RegisterInfo *RegisterContextOpenBSD_i386::GetRegisterInfo() const {
+const RegisterInfo *RegisterInfoFreeBSD_i386::GetRegisterInfo() const {
   switch (GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:
     return g_register_infos_i386;
@@ -73,7 +79,7 @@ const RegisterInfo *RegisterContextOpenBSD_i386::GetRegisterInfo() const {
   }
 }
 
-uint32_t RegisterContextOpenBSD_i386::GetRegisterCount() const {
+uint32_t RegisterInfoFreeBSD_i386::GetRegisterCount() const {
   return static_cast<uint32_t>(sizeof(g_register_infos_i386) /
                                sizeof(g_register_infos_i386[0]));
 }

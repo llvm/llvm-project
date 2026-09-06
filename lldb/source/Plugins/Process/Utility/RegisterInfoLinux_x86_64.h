@@ -1,4 +1,4 @@
-//===-- RegisterContextLinux_s390x.h ----------------------------*- C++ -*-===//
+//===-- RegisterInfoLinux_x86_64.h ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTLINUX_S390X_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTLINUX_S390X_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOLINUX_X86_64_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOLINUX_X86_64_H
 
-#include "RegisterInfoInterface.h"
+#include "Plugins/Process/Utility/RegisterInfoLinux_x86.h"
 
-class RegisterContextLinux_s390x : public lldb_private::RegisterInfoInterface {
+class RegisterInfoLinux_x86_64
+    : public lldb_private::RegisterInfoLinux_x86 {
 public:
-  RegisterContextLinux_s390x(const lldb_private::ArchSpec &target_arch);
+  RegisterInfoLinux_x86_64(const lldb_private::ArchSpec &target_arch);
 
-  size_t GetGPRSize() const override;
+  static size_t GetGPRSizeStatic();
+  size_t GetGPRSize() const override { return GetGPRSizeStatic(); }
 
   const lldb_private::RegisterInfo *GetRegisterInfo() const override;
 

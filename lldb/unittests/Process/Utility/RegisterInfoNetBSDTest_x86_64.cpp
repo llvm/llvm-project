@@ -1,4 +1,4 @@
-//===-- RegisterContextNetBSDTest_x86_64.cpp ------------------------------===//
+//===-- RegisterInfoNetBSDTest_x86_64.cpp ------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,8 +17,8 @@
 #include "gtest/gtest.h"
 
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
-#include "Plugins/Process/Utility/RegisterContextNetBSD_i386.h"
-#include "Plugins/Process/Utility/RegisterContextNetBSD_x86_64.h"
+#include "Plugins/Process/Utility/RegisterInfoNetBSD_i386.h"
+#include "Plugins/Process/Utility/RegisterInfoNetBSD_x86_64.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -41,9 +41,9 @@ static std::pair<size_t, size_t> GetRegParams(RegisterInfoInterface &ctx,
 #define EXPECT_DBR_X86_64(num)                                                 \
   EXPECT_OFF(dr##num##_x86_64, offsetof(dbreg, dr[num]), sizeof(dbreg::dr[num]))
 
-TEST(RegisterContextNetBSDTest, x86_64) {
+TEST(RegisterInfoNetBSDTest, x86_64) {
   ArchSpec arch{"x86_64-unknown-netbsd"};
-  RegisterContextNetBSD_x86_64 reg_ctx{arch};
+  RegisterInfoNetBSD_x86_64 reg_ctx{arch};
 
   EXPECT_GPR_X86_64(rdi, _REG_RDI);
   EXPECT_GPR_X86_64(rsi, _REG_RSI);

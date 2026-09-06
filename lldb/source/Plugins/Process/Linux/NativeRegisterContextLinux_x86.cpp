@@ -12,8 +12,8 @@
 
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/NativeThreadLinux.h"
-#include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
-#include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
+#include "Plugins/Process/Utility/RegisterInfoLinux_i386.h"
+#include "Plugins/Process/Utility/RegisterInfoLinux_x86_64.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
@@ -276,22 +276,22 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
 llvm::Expected<ArchSpec>
 NativeRegisterContextLinux::DetermineArchitecture(lldb::tid_t tid) {
   return DetermineArchitectureViaGPR(
-      tid, RegisterContextLinux_x86_64::GetGPRSizeStatic());
+      tid, RegisterInfoLinux_x86_64::GetGPRSizeStatic());
 }
 
 // NativeRegisterContextLinux_x86 members.
 
-static std::unique_ptr<RegisterContextLinux_x86>
+static std::unique_ptr<RegisterInfoLinux_x86>
 CreateRegisterInfoInterface(const ArchSpec &target_arch) {
   if (HostInfo::GetArchitecture().GetAddressByteSize() == 4) {
-    // 32-bit hosts run with a RegisterContextLinux_i386 context.
-    return std::make_unique<RegisterContextLinux_i386>(target_arch);
+    // 32-bit hosts run with a RegisterInfoLinux_i386 context.
+    return std::make_unique<RegisterInfoLinux_i386>(target_arch);
   } else {
     assert((HostInfo::GetArchitecture().GetAddressByteSize() == 8) &&
            "Register setting path assumes this is a 64-bit host");
     // X86_64 hosts know how to work with 64-bit and 32-bit EXEs using the
     // x86_64 register context.
-    return std::make_unique<RegisterContextLinux_x86_64>(target_arch);
+    return std::make_unique<RegisterInfoLinux_x86_64>(target_arch);
   }
 }
 

@@ -1,4 +1,4 @@
-//===-- RegisterContextLinux_s390x.cpp ------------------------------------===//
+//===-- RegisterInfoLinux_s390x.cpp ------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegisterContextLinux_s390x.h"
+#include "RegisterInfoLinux_s390x.h"
 #include "RegisterContextPOSIX_s390x.h"
 
 using namespace lldb_private;
@@ -47,23 +47,23 @@ static uint32_t GetUserRegisterInfoCount(const ArchSpec &target_arch) {
   }
 }
 
-RegisterContextLinux_s390x::RegisterContextLinux_s390x(
+RegisterInfoLinux_s390x::RegisterInfoLinux_s390x(
     const ArchSpec &target_arch)
     : lldb_private::RegisterInfoInterface(target_arch),
       m_register_info_p(GetRegisterInfoPtr(target_arch)),
       m_register_info_count(GetRegisterInfoCount(target_arch)),
       m_user_register_count(GetUserRegisterInfoCount(target_arch)) {}
 
-const RegisterInfo *RegisterContextLinux_s390x::GetRegisterInfo() const {
+const RegisterInfo *RegisterInfoLinux_s390x::GetRegisterInfo() const {
   return m_register_info_p;
 }
 
-uint32_t RegisterContextLinux_s390x::GetRegisterCount() const {
+uint32_t RegisterInfoLinux_s390x::GetRegisterCount() const {
   return m_register_info_count;
 }
 
-uint32_t RegisterContextLinux_s390x::GetUserRegisterCount() const {
+uint32_t RegisterInfoLinux_s390x::GetUserRegisterCount() const {
   return m_user_register_count;
 }
 
-size_t RegisterContextLinux_s390x::GetGPRSize() const { return 0; }
+size_t RegisterInfoLinux_s390x::GetGPRSize() const { return 0; }

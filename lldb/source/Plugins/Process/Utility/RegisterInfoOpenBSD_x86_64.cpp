@@ -1,4 +1,4 @@
-//===-- RegisterContextOpenBSD_x86_64.cpp ---------------------------------===//
+//===-- RegisterInfoOpenBSD_x86_64.cpp ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "RegisterContextOpenBSD_x86_64.h"
+#include "RegisterInfoOpenBSD_x86_64.h"
 #include "RegisterContext_x86.h"
 #include "lldb-x86-register-enums.h"
 #include "lldb/lldb-defines.h"
@@ -89,18 +89,18 @@ PrivateGetRegisterCount(const lldb_private::ArchSpec &target_arch) {
   }
 }
 
-RegisterContextOpenBSD_x86_64::RegisterContextOpenBSD_x86_64(
+RegisterInfoOpenBSD_x86_64::RegisterInfoOpenBSD_x86_64(
     const ArchSpec &target_arch)
     : lldb_private::RegisterInfoInterface(target_arch),
       m_register_info_p(PrivateGetRegisterInfoPtr(target_arch)),
       m_register_count(PrivateGetRegisterCount(target_arch)) {}
 
-size_t RegisterContextOpenBSD_x86_64::GetGPRSize() const { return sizeof(GPR); }
+size_t RegisterInfoOpenBSD_x86_64::GetGPRSize() const { return sizeof(GPR); }
 
-const RegisterInfo *RegisterContextOpenBSD_x86_64::GetRegisterInfo() const {
+const RegisterInfo *RegisterInfoOpenBSD_x86_64::GetRegisterInfo() const {
   return m_register_info_p;
 }
 
-uint32_t RegisterContextOpenBSD_x86_64::GetRegisterCount() const {
+uint32_t RegisterInfoOpenBSD_x86_64::GetRegisterCount() const {
   return m_register_count;
 }

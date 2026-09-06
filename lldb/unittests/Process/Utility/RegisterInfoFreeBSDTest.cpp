@@ -1,4 +1,4 @@
-//===-- RegisterContextFreeBSDTests.cpp -----------------------------------===//
+//===-- RegisterInfoFreeBSDTests.cpp -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,9 +17,9 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-#include "Plugins/Process/Utility/RegisterContextFreeBSD_i386.h"
-#include "Plugins/Process/Utility/RegisterContextFreeBSD_powerpc.h"
-#include "Plugins/Process/Utility/RegisterContextFreeBSD_x86_64.h"
+#include "Plugins/Process/Utility/RegisterInfoFreeBSD_i386.h"
+#include "Plugins/Process/Utility/RegisterInfoFreeBSD_powerpc.h"
+#include "Plugins/Process/Utility/RegisterInfoFreeBSD_x86_64.h"
 #include "Plugins/Process/Utility/RegisterContextPOSIX_powerpc.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
@@ -49,9 +49,9 @@ std::pair<size_t, size_t> GetRegParams(RegisterInfoInterface &ctx,
 #define EXPECT_DBR_X86_64(num)                                                 \
   EXPECT_OFF(dr##num##_x86_64, offsetof(dbreg, dr[num]), sizeof(dbreg::dr[num]))
 
-TEST(RegisterContextFreeBSDTest, x86_64) {
+TEST(RegisterInfoFreeBSDTest, x86_64) {
   ArchSpec arch{"x86_64-unknown-freebsd"};
-  RegisterContextFreeBSD_x86_64 reg_ctx{arch};
+  RegisterInfoFreeBSD_x86_64 reg_ctx{arch};
 
   EXPECT_GPR_X86_64(r15);
   EXPECT_GPR_X86_64(r14);
@@ -156,9 +156,9 @@ TEST(RegisterContextFreeBSDTest, x86_64) {
   EXPECT_OFF(dr##num##_i386, offsetof(native_i386_dbregs, dr[num]),            \
              sizeof(native_i386_dbregs::dr[num]))
 
-TEST(RegisterContextFreeBSDTest, i386) {
+TEST(RegisterInfoFreeBSDTest, i386) {
   ArchSpec arch{"i686-unknown-freebsd"};
-  RegisterContextFreeBSD_i386 reg_ctx{arch};
+  RegisterInfoFreeBSD_i386 reg_ctx{arch};
 
 #if defined(__i386__)
   using native_i386_regs = ::reg;
@@ -251,7 +251,7 @@ TEST(RegisterContextFreeBSDTest, i386) {
               ::testing::Pair(offsetof(vfp_state, fbsd_reg) + base_offset,     \
                               sizeof(vfp_state::fbsd_reg)))
 
-TEST(RegisterContextFreeBSDTest, arm) {
+TEST(RegisterInfoFreeBSDTest, arm) {
   ArchSpec arch{"arm-unknown-freebsd"};
   RegisterInfoPOSIX_arm reg_ctx{arch};
 
@@ -322,7 +322,7 @@ TEST(RegisterContextFreeBSDTest, arm) {
               ::testing::Pair(offsetof(fpreg, fbsd_reg) + base_offset,         \
                               sizeof(fpreg::fbsd_reg)))
 
-TEST(RegisterContextFreeBSDTest, arm64) {
+TEST(RegisterInfoFreeBSDTest, arm64) {
   Flags opt_regsets = RegisterInfoPOSIX_arm64::eRegsetMaskDefault;
   ArchSpec arch{"aarch64-unknown-freebsd"};
   RegisterInfoPOSIX_arm64 reg_ctx{arch, opt_regsets};
@@ -412,9 +412,9 @@ TEST(RegisterContextFreeBSDTest, arm64) {
               ::testing::Pair(offsetof(fpreg, fbsd_reg) + base_offset,         \
                               sizeof(fpreg::fbsd_reg)))
 
-TEST(RegisterContextFreeBSDTest, powerpc32) {
+TEST(RegisterInfoFreeBSDTest, powerpc32) {
   ArchSpec arch{"powerpc-unknown-freebsd"};
-  RegisterContextFreeBSD_powerpc32 reg_ctx{arch};
+  RegisterInfoFreeBSD_powerpc32 reg_ctx{arch};
 
   EXPECT_GPR_PPC(r0, fixreg[0]);
   EXPECT_GPR_PPC(r1, fixreg[1]);

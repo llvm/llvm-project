@@ -1,4 +1,4 @@
-//===-- RegisterContextLinux_i386.cpp -------------------------------------===//
+//===-- RegisterInfoLinux_i386.cpp -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "RegisterContextLinux_i386.h"
+#include "RegisterInfoLinux_i386.h"
 #include "RegisterContext_x86.h"
 #include "lldb-x86-register-enums.h"
 #include "lldb/lldb-defines.h"
@@ -88,9 +88,9 @@ struct UserArea {
 #include "RegisterInfos_i386.h"
 #undef DECLARE_REGISTER_INFOS_I386_STRUCT
 
-RegisterContextLinux_i386::RegisterContextLinux_i386(
+RegisterInfoLinux_i386::RegisterInfoLinux_i386(
     const ArchSpec &target_arch)
-    : RegisterContextLinux_x86(
+    : RegisterInfoLinux_x86(
           target_arch,
           {"orig_eax",
            nullptr,
@@ -104,9 +104,9 @@ RegisterContextLinux_i386::RegisterContextLinux_i386(
            nullptr,
            nullptr}) {}
 
-size_t RegisterContextLinux_i386::GetGPRSizeStatic() { return sizeof(GPR); }
+size_t RegisterInfoLinux_i386::GetGPRSizeStatic() { return sizeof(GPR); }
 
-const RegisterInfo *RegisterContextLinux_i386::GetRegisterInfo() const {
+const RegisterInfo *RegisterInfoLinux_i386::GetRegisterInfo() const {
   switch (GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
@@ -117,11 +117,11 @@ const RegisterInfo *RegisterContextLinux_i386::GetRegisterInfo() const {
   }
 }
 
-uint32_t RegisterContextLinux_i386::GetRegisterCount() const {
+uint32_t RegisterInfoLinux_i386::GetRegisterCount() const {
   return static_cast<uint32_t>(sizeof(g_register_infos_i386) /
                                sizeof(g_register_infos_i386[0]));
 }
 
-uint32_t RegisterContextLinux_i386::GetUserRegisterCount() const {
+uint32_t RegisterInfoLinux_i386::GetUserRegisterCount() const {
   return static_cast<uint32_t>(k_num_user_registers_i386);
 }

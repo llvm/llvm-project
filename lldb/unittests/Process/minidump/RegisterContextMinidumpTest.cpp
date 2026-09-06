@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
-#include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
+#include "Plugins/Process/Utility/RegisterInfoLinux_i386.h"
+#include "Plugins/Process/Utility/RegisterInfoLinux_x86_64.h"
 #include "Plugins/Process/minidump/RegisterContextMinidump_x86_32.h"
 #include "Plugins/Process/minidump/RegisterContextMinidump_x86_64.h"
 #include "Plugins/Process/minidump/RegisterContextMinidump_ARM.h"
@@ -53,7 +53,7 @@ TEST(RegisterContextMinidump, ConvertMinidumpContext_x86_32) {
                                      sizeof(Context));
 
   ArchSpec arch("i386-pc-linux");
-  auto RegInterface = std::make_unique<RegisterContextLinux_i386>(arch);
+  auto RegInterface = std::make_unique<RegisterInfoLinux_i386>(arch);
   lldb::DataBufferSP Buf =
       ConvertMinidumpContext_x86_32(ContextRef, RegInterface.get());
   ASSERT_EQ(RegInterface->GetGPRSize(), Buf->GetByteSize());
@@ -114,7 +114,7 @@ TEST(RegisterContextMinidump, ConvertMinidumpContext_x86_64) {
                                      sizeof(Context));
 
   ArchSpec arch("x86_64-pc-linux");
-  auto RegInterface = std::make_unique<RegisterContextLinux_x86_64>(arch);
+  auto RegInterface = std::make_unique<RegisterInfoLinux_x86_64>(arch);
   lldb::DataBufferSP Buf =
       ConvertMinidumpContext_x86_64(ContextRef, RegInterface.get());
   ASSERT_EQ(RegInterface->GetGPRSize(), Buf->GetByteSize());

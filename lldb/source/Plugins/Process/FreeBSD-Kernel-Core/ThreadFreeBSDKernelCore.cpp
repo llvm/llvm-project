@@ -12,8 +12,8 @@
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/Log.h"
 
-#include "Plugins/Process/Utility/RegisterContextFreeBSD_i386.h"
-#include "Plugins/Process/Utility/RegisterContextFreeBSD_x86_64.h"
+#include "Plugins/Process/Utility/RegisterInfoFreeBSD_i386.h"
+#include "Plugins/Process/Utility/RegisterInfoFreeBSD_x86_64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64le.h"
@@ -88,12 +88,12 @@ ThreadFreeBSDKernelCore::CreateRegisterContextForFrame(StackFrame *frame) {
     case llvm::Triple::x86:
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_i386>(
-              *this, new RegisterContextFreeBSD_i386(arch), m_pcb_addr);
+              *this, new RegisterInfoFreeBSD_i386(arch), m_pcb_addr);
       break;
     case llvm::Triple::x86_64:
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_x86_64>(
-              *this, new RegisterContextFreeBSD_x86_64(arch), m_pcb_addr);
+              *this, new RegisterInfoFreeBSD_x86_64(arch), m_pcb_addr);
       break;
     default:
       assert(false &&

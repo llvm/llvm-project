@@ -1,4 +1,4 @@
-//===-- RegisterContextFreeBSD_powerpc.cpp --------------------------------===//
+//===-- RegisterInfoFreeBSD_powerpc.cpp --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include "RegisterContextFreeBSD_powerpc.h"
+#include "RegisterInfoFreeBSD_powerpc.h"
 #include "RegisterContextPOSIX_powerpc.h"
 #include <vector>
 
@@ -174,60 +174,60 @@ typedef struct _VMX {
 #include "RegisterInfos_powerpc.h"
 #undef DECLARE_REGISTER_INFOS_POWERPC_STRUCT
 
-RegisterContextFreeBSD_powerpc::RegisterContextFreeBSD_powerpc(
+RegisterInfoFreeBSD_powerpc::RegisterInfoFreeBSD_powerpc(
     const ArchSpec &target_arch)
     : RegisterInfoInterface(target_arch) {}
 
-RegisterContextFreeBSD_powerpc::~RegisterContextFreeBSD_powerpc() = default;
+RegisterInfoFreeBSD_powerpc::~RegisterInfoFreeBSD_powerpc() = default;
 
-size_t RegisterContextFreeBSD_powerpc::GetGPRSize() const {
+size_t RegisterInfoFreeBSD_powerpc::GetGPRSize() const {
   // This is an 'abstract' base, so no GPR struct.
   return 0;
 }
 
-const RegisterInfo *RegisterContextFreeBSD_powerpc::GetRegisterInfo() const {
+const RegisterInfo *RegisterInfoFreeBSD_powerpc::GetRegisterInfo() const {
   llvm_unreachable("Abstract class!");
   return nullptr;
 }
 
-uint32_t RegisterContextFreeBSD_powerpc::GetRegisterCount() const { return 0; }
+uint32_t RegisterInfoFreeBSD_powerpc::GetRegisterCount() const { return 0; }
 
-RegisterContextFreeBSD_powerpc32::RegisterContextFreeBSD_powerpc32(
+RegisterInfoFreeBSD_powerpc32::RegisterInfoFreeBSD_powerpc32(
     const ArchSpec &target_arch)
-    : RegisterContextFreeBSD_powerpc(target_arch) {}
+    : RegisterInfoFreeBSD_powerpc(target_arch) {}
 
-RegisterContextFreeBSD_powerpc32::~RegisterContextFreeBSD_powerpc32() = default;
+RegisterInfoFreeBSD_powerpc32::~RegisterInfoFreeBSD_powerpc32() = default;
 
-size_t RegisterContextFreeBSD_powerpc32::GetGPRSize() const {
+size_t RegisterInfoFreeBSD_powerpc32::GetGPRSize() const {
   return sizeof(GPR32);
 }
 
-const RegisterInfo *RegisterContextFreeBSD_powerpc32::GetRegisterInfo() const {
+const RegisterInfo *RegisterInfoFreeBSD_powerpc32::GetRegisterInfo() const {
   return g_register_infos_powerpc32;
 }
 
-uint32_t RegisterContextFreeBSD_powerpc32::GetRegisterCount() const {
+uint32_t RegisterInfoFreeBSD_powerpc32::GetRegisterCount() const {
   return static_cast<uint32_t>(sizeof(g_register_infos_powerpc32) /
                                sizeof(g_register_infos_powerpc32[0]));
 }
 
-RegisterContextFreeBSD_powerpc64::RegisterContextFreeBSD_powerpc64(
+RegisterInfoFreeBSD_powerpc64::RegisterInfoFreeBSD_powerpc64(
     const ArchSpec &target_arch)
-    : RegisterContextFreeBSD_powerpc(target_arch) {}
+    : RegisterInfoFreeBSD_powerpc(target_arch) {}
 
-RegisterContextFreeBSD_powerpc64::~RegisterContextFreeBSD_powerpc64() = default;
+RegisterInfoFreeBSD_powerpc64::~RegisterInfoFreeBSD_powerpc64() = default;
 
-size_t RegisterContextFreeBSD_powerpc64::GetGPRSize() const {
+size_t RegisterInfoFreeBSD_powerpc64::GetGPRSize() const {
   return sizeof(GPR64);
 }
 
-const RegisterInfo *RegisterContextFreeBSD_powerpc64::GetRegisterInfo() const {
+const RegisterInfo *RegisterInfoFreeBSD_powerpc64::GetRegisterInfo() const {
   if (GetTargetArchitecture().GetMachine() == llvm::Triple::ppc)
     return g_register_infos_powerpc64_32;
   return g_register_infos_powerpc64;
 }
 
-uint32_t RegisterContextFreeBSD_powerpc64::GetRegisterCount() const {
+uint32_t RegisterInfoFreeBSD_powerpc64::GetRegisterCount() const {
   return static_cast<uint32_t>(sizeof(g_register_infos_powerpc64) /
                                sizeof(g_register_infos_powerpc64[0]));
 }

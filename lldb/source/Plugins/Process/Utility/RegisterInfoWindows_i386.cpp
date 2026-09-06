@@ -1,4 +1,4 @@
-//===-- RegisterContextWindows_i386.cpp -----------------------------------===//
+//===-- RegisterInfoWindows_i386.cpp -----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegisterContextWindows_i386.h"
+#include "RegisterInfoWindows_i386.h"
 #include "RegisterContext_x86.h"
 #include "lldb-x86-register-enums.h"
 #include "lldb/lldb-defines.h"
@@ -69,22 +69,22 @@ static RegisterInfo g_register_infos_i386[] = {
 // clang-format on
 } // namespace
 
-RegisterContextWindows_i386::RegisterContextWindows_i386(
+RegisterInfoWindows_i386::RegisterInfoWindows_i386(
     const ArchSpec &target_arch)
     : lldb_private::RegisterInfoInterface(target_arch) {
   assert(target_arch.GetMachine() == llvm::Triple::x86);
 }
 
-const RegisterInfo *RegisterContextWindows_i386::GetRegisterInfo() const {
+const RegisterInfo *RegisterInfoWindows_i386::GetRegisterInfo() const {
   return g_register_infos_i386;
 }
 
-uint32_t RegisterContextWindows_i386::GetRegisterCount() const {
+uint32_t RegisterInfoWindows_i386::GetRegisterCount() const {
   return std::size(g_register_infos_i386);
 }
 
-uint32_t RegisterContextWindows_i386::GetUserRegisterCount() const {
+uint32_t RegisterInfoWindows_i386::GetUserRegisterCount() const {
   return std::size(g_register_infos_i386);
 }
 
-size_t RegisterContextWindows_i386::GetGPRSize() const { return sizeof(GPR); }
+size_t RegisterInfoWindows_i386::GetGPRSize() const { return sizeof(GPR); }

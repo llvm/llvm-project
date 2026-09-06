@@ -1,4 +1,4 @@
-//===-- RegisterContextNetBSD_x86_64.cpp ----------------------------------===//
+//===-- RegisterInfoNetBSD_x86_64.cpp ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegisterContextNetBSD_x86_64.h"
-#include "RegisterContextNetBSD_i386.h"
+#include "RegisterInfoNetBSD_x86_64.h"
+#include "RegisterInfoNetBSD_i386.h"
 #include "RegisterContext_x86.h"
 #include "lldb-x86-register-enums.h"
 #include "lldb/lldb-defines.h"
@@ -99,8 +99,8 @@ GetRegisterInfo_i386(const lldb_private::ArchSpec &arch) {
   // Allocate RegisterInfo only once
   if (g_register_infos.empty()) {
     // Copy the register information from base class
-    std::unique_ptr<RegisterContextNetBSD_i386> reg_interface(
-        new RegisterContextNetBSD_i386(arch));
+    std::unique_ptr<RegisterInfoNetBSD_i386> reg_interface(
+        new RegisterInfoNetBSD_i386(arch));
     const RegisterInfo *base_info = reg_interface->GetRegisterInfo();
     g_register_infos.insert(g_register_infos.end(), &base_info[0],
                             &base_info[k_num_registers_i386]);
@@ -158,23 +158,23 @@ PrivateGetUserRegisterCount(const lldb_private::ArchSpec &target_arch) {
   }
 }
 
-RegisterContextNetBSD_x86_64::RegisterContextNetBSD_x86_64(
+RegisterInfoNetBSD_x86_64::RegisterInfoNetBSD_x86_64(
     const ArchSpec &target_arch)
     : lldb_private::RegisterInfoInterface(target_arch),
       m_register_info_p(PrivateGetRegisterInfoPtr(target_arch)),
       m_register_count(PrivateGetRegisterCount(target_arch)),
       m_user_register_count(PrivateGetUserRegisterCount(target_arch)) {}
 
-size_t RegisterContextNetBSD_x86_64::GetGPRSize() const { return sizeof(GPR); }
+size_t RegisterInfoNetBSD_x86_64::GetGPRSize() const { return sizeof(GPR); }
 
-const RegisterInfo *RegisterContextNetBSD_x86_64::GetRegisterInfo() const {
+const RegisterInfo *RegisterInfoNetBSD_x86_64::GetRegisterInfo() const {
   return m_register_info_p;
 }
 
-uint32_t RegisterContextNetBSD_x86_64::GetRegisterCount() const {
+uint32_t RegisterInfoNetBSD_x86_64::GetRegisterCount() const {
   return m_register_count;
 }
 
-uint32_t RegisterContextNetBSD_x86_64::GetUserRegisterCount() const {
+uint32_t RegisterInfoNetBSD_x86_64::GetUserRegisterCount() const {
   return m_user_register_count;
 }

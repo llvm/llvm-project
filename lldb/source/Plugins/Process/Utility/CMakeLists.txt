@@ -4,18 +4,18 @@ set_property(DIRECTORY PROPERTY LLDB_PLUGIN_KIND ProcessUtility)
 add_lldb_library(lldbRegister NO_PLUGIN_DEPENDENCIES
   PARTIAL_SOURCES_INTENDED
   RegisterContext_x86.cpp
-  RegisterContextFreeBSD_i386.cpp
-  RegisterContextFreeBSD_powerpc.cpp
-  RegisterContextFreeBSD_x86_64.cpp
-  RegisterContextLinux_i386.cpp
-  RegisterContextLinux_x86_64.cpp
-  RegisterContextLinux_s390x.cpp
-  RegisterContextNetBSD_i386.cpp
-  RegisterContextNetBSD_x86_64.cpp
-  RegisterContextOpenBSD_i386.cpp
-  RegisterContextOpenBSD_x86_64.cpp
-  RegisterContextWindows_i386.cpp
-  RegisterContextWindows_x86_64.cpp
+  RegisterInfoFreeBSD_i386.cpp
+  RegisterInfoFreeBSD_powerpc.cpp
+  RegisterInfoFreeBSD_x86_64.cpp
+  RegisterInfoLinux_i386.cpp
+  RegisterInfoLinux_x86_64.cpp
+  RegisterInfoLinux_s390x.cpp
+  RegisterInfoNetBSD_i386.cpp
+  RegisterInfoNetBSD_x86_64.cpp
+  RegisterInfoOpenBSD_i386.cpp
+  RegisterInfoOpenBSD_x86_64.cpp
+  RegisterInfoWindows_i386.cpp
+  RegisterInfoWindows_x86_64.cpp
   RegisterTypeDetector_arm64.cpp
   RegisterInfos_x86_64_with_base_shared.cpp
   RegisterInfoPOSIX_arm.cpp

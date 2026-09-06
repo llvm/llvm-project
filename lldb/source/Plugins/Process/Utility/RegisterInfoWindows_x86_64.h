@@ -1,4 +1,4 @@
-//===-- RegisterContextWindows_x86_64.h --- ---------------------*- C++ -*-===//
+//===-- RegisterInfoWindows_x86_64.h --- ---------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTWINDOWS_X86_64_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTWINDOWS_X86_64_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOWINDOWS_X86_64_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERINFOWINDOWS_X86_64_H
 
 #include "RegisterInfoInterface.h"
 
-class RegisterContextWindows_x86_64
+class RegisterInfoWindows_x86_64
     : public lldb_private::RegisterInfoInterface {
 public:
-  RegisterContextWindows_x86_64(const lldb_private::ArchSpec &target_arch);
+  RegisterInfoWindows_x86_64(const lldb_private::ArchSpec &target_arch);
 
   size_t GetGPRSize() const override;
 
