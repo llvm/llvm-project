@@ -325,7 +325,7 @@ def TypeOfTest : GICombineRule<
 // CHECK-NEXT:     <match_root>mi:(CodeGenInstructionPattern G_ZEXT operands:[<def>$dst, $src] (MIFlags (set MachineInstr::FmReassoc) (unset MachineInstr::FmNoNans, MachineInstr::FmArcp)))
 // CHECK-NEXT:   )
 // CHECK-NEXT:   (ApplyPats
-// CHECK-NEXT:     <apply_root>__MIFlagsTest_apply_0:(CodeGenInstructionPattern G_MUL operands:[<def>$dst, $src, $src] (MIFlags (set MachineInstr::FmReassoc) (unset MachineInstr::FmNsz, MachineInstr::FmArcp) (copy mi)))
+// CHECK-NEXT:     <apply_root>__MIFlagsTest_apply_0:(CodeGenInstructionPattern G_MUL operands:[<def>$dst, $src, $src] (MIFlags (set MachineInstr::FmReassoc, MachineInstr::SameSign) (unset MachineInstr::FmNsz, MachineInstr::FmArcp) (copy mi)))
 // CHECK-NEXT:   )
 // CHECK-NEXT:   (OperandTable MatchPats
 // CHECK-NEXT:     dst -> mi
@@ -339,7 +339,7 @@ def TypeOfTest : GICombineRule<
 def MIFlagsTest : GICombineRule<
   (defs root:$dst),
   (match (G_ZEXT $dst, $src, (MIFlags FmReassoc, (not FmNoNans, FmArcp))):$mi),
-  (apply (G_MUL $dst, $src, $src, (MIFlags $mi, FmReassoc, (not FmNsz, FmArcp))))>;
+  (apply (G_MUL $dst, $src, $src, (MIFlags $mi, FmReassoc, SameSign, (not FmNsz, FmArcp))))>;
 
 // CHECK-NEXT: (CombineRule name:IntrinTest0 id:12 root:a
 // CHECK-NEXT:   (MatchPats

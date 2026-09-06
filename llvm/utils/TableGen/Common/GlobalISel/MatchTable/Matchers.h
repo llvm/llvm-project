@@ -2251,6 +2251,7 @@ private:
   SmallPtrSet<const Record *, 4> DeadImplicitDefs;
 
   std::vector<const InstructionMatcher *> CopiedFlags;
+  std::vector<StringRef> RootFlagsToDrop;
   std::vector<StringRef> SetFlags;
   std::vector<StringRef> UnsetFlags;
   std::vector<unsigned> MergeInsnIDs;
@@ -2283,6 +2284,7 @@ public:
   unsigned getInsnID() const { return InsnID; }
   const CodeGenInstruction *getCGI() const { return I; }
 
+  void addRootMIFlagsToDrop(StringRef Flag) { RootFlagsToDrop.push_back(Flag); }
   void addSetMIFlags(StringRef Flag) { SetFlags.push_back(Flag); }
   void addUnsetMIFlags(StringRef Flag) { UnsetFlags.push_back(Flag); }
   void addCopiedMIFlags(const InstructionMatcher &IM) {

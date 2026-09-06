@@ -21,7 +21,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 
 // CHECK:      const uint8_t *GenMyCombiner::getMatchTable() const {
 // CHECK-NEXT:   constexpr static uint8_t MatchTable0[] = {
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 0*/ GIMT_Encode4(73), // Rule ID 0 //
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 0*/ GIMT_Encode4(85), // Rule ID 0 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule0Enabled),
 // CHECK-NEXT:       GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_MUL),
 // CHECK-NEXT:       GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s8,
@@ -39,13 +39,15 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
 // CHECK-NEXT:       GIR_RootToRootCopy, /*OpIdx*/1, // b
 // CHECK-NEXT:       GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/2, // c
+// CHECK-NEXT:       GIR_UnsetMIFlags, /*InsnID*/0, GIMT_Encode4(MachineInstr::getPoisonGeneratingFlags()),
 // CHECK-NEXT:       GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::G_ADD),
 // CHECK-NEXT:       GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/0, // a
 // CHECK-NEXT:       GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/1, // b
 // CHECK-NEXT:       GIR_AddSimpleTempRegister, /*InsnID*/1, /*TempRegID*/0,
+// CHECK-NEXT:       GIR_UnsetMIFlags, /*InsnID*/1, GIMT_Encode4(MachineInstr::getPoisonGeneratingFlags()),
 // CHECK-NEXT:       GIR_EraseRootFromParent_Done,
-// CHECK-NEXT:     // Label 0: @73
+// CHECK-NEXT:     // Label 0: @85
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     }; // Size: 74 bytes
+// CHECK-NEXT:     }; // Size: 86 bytes
 // CHECK-NEXT:   return MatchTable0;
 // CHECK-NEXT: }
