@@ -48,6 +48,7 @@ public:
   const MCInstrDesc &getBrCond(ISD::CondCode CC) const;
 
   // Instruction Info
+  unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
   /// Return the noop instruction to use for a noop.
   MCInst getNop() const override;
@@ -93,11 +94,6 @@ public:
 
   bool isBranchOffsetInRange(unsigned BranchOpc,
                              int64_t BrOffset) const override;
-
-  void insertIndirectBranch(MachineBasicBlock &MBB,
-                            MachineBasicBlock &NewDestBB,
-                            MachineBasicBlock &RestoreBB, const DebugLoc &DL,
-                            int64_t BrOffset, RegScavenger *RS) const override;
 };
 
 const SuperHInstrInfo *createSuperHInstrInfo(const SuperHSubtarget &STI);

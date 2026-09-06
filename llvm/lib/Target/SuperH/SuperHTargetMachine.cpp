@@ -32,6 +32,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSuperHTarget() {
 
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeSuperHAsmPrinterPass(Registry);
+  initializeSuperHExpandPseudoPass(Registry);
   initializeSuperHFillDelaySlotsPass(Registry);
   initializeSuperHConstantIslandsPass(Registry);
   initializeSuperHDAGToDAGISelLegacyPass(Registry);
@@ -48,6 +49,7 @@ public:
     : TargetPassConfig(TM, PM) {}
 
   bool addInstSelector() override;
+  void addPreSched2() override;
   void addPreEmitPass2() override;
   SuperHTargetMachine &getSuperHTargetMachine() const {
     return getTM<SuperHTargetMachine>();
@@ -59,7 +61,11 @@ bool SuperHPassConfig::addInstSelector() {
   return false;
 }
 
+void SuperHPassConfig::addPreSched2() {
+}
+
 void SuperHPassConfig::addPreEmitPass2() {
+  addPass(createSuperHExpandPseudoPass());
   addPass(createSuperHFillDelaySlotsPass());
 
   // Inserts Constant Islands. Block sizes cannot be increased after this point,

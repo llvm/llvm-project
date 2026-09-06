@@ -26,10 +26,6 @@ def RetCC_SH : CallingConv<[
   CCIfType<[i1, i8, i16],  CCPromoteToType<i32>>,
   CCIfType<[i32],  CCAssignToReg<[R0, R1, R2, R3]>>,
   CCIfType<[i64],  CCAssignToReg<[R0, R1]>>,
-
-  // Anything that doesn't fit in registers should be spilled.
-  CCIfType<[i32], CCAssignToStack<4, 4>>,
-  CCIfType<[i64], CCAssignToStack<8, 4>>,
 ]>;
 
 //===----------------------------------------------------------------------===//
