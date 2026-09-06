@@ -6801,17 +6801,12 @@ static Instruction *processUZExtIdiom(ICmpInst &I, Value *Val,
   if (!isa<IntegerType>(Val->getType()))
     return nullptr;
 
-  auto *Instr = dyn_cast<Instruction>(Val);
-  if (!Instr)
-    return nullptr;
-
+  auto *Instr = cast<Instruction>(Val);
   unsigned Opcode = Instr->getOpcode();
   assert(Opcode == Instruction::Add || Opcode == Instruction::Mul);
 
   auto *LHS = cast<ZExtInst>(Instr->getOperand(0)),
        *RHS = cast<ZExtInst>(Instr->getOperand(1));
-  assert(LHS->getOpcode() == Instruction::ZExt);
-  assert(RHS->getOpcode() == Instruction::ZExt);
   Value *A = LHS->getOperand(0), *B = RHS->getOperand(0);
 
   // Calculate type and width of the result produced by add/mul.with.overflow.
