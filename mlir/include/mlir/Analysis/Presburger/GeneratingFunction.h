@@ -17,6 +17,8 @@
 #include "mlir/Analysis/Presburger/Fraction.h"
 #include "mlir/Analysis/Presburger/Matrix.h"
 
+#include <utility>
+
 namespace mlir {
 namespace presburger {
 namespace detail {
@@ -53,7 +55,8 @@ public:
   GeneratingFunction(unsigned numParam, SmallVector<int> signs,
                      std::vector<ParamPoint> nums,
                      std::vector<std::vector<Point>> dens)
-      : numParam(numParam), signs(signs), numerators(nums), denominators(dens) {
+      : numParam(numParam), signs(std::move(signs)),
+        numerators(std::move(nums)), denominators(std::move(dens)) {
 #ifndef NDEBUG
     for (const ParamPoint &term : numerators)
       assert(term.getNumRows() == numParam + 1 &&
@@ -64,11 +67,21 @@ public:
 
   unsigned getNumParams() const { return numParam; }
 
-  SmallVector<int> getSigns() const { return signs; }
+  const SmallVector<int> &getSigns() const & { return signs; }
+  SmallVector<int> getSigns() && { return std::move(signs); }
+  SmallVector<int> getSigns() const && { return signs; }
 
-  std::vector<ParamPoint> getNumerators() const { return numerators; }
+  const std::vector<ParamPoint> &getNumerators() const & { return numerators; }
+  std::vector<ParamPoint> getNumerators() && { return std::move(numerators); }
+  std::vector<ParamPoint> getNumerators() const && { return numerators; }
 
-  std::vector<std::vector<Point>> getDenominators() const {
+  const std::vector<std::vector<Point>> &getDenominators() const & {
+    return denominators;
+  }
+  std::vector<std::vector<Point>> getDenominators() && {
+    return std::move(denominators);
+  }
+  std::vector<std::vector<Point>> getDenominators() const && {
     return denominators;
   }
 
@@ -84,8 +97,9 @@ public:
 
     std::vector<std::vector<Point>> sumDenominators = denominators;
     llvm::append_range(sumDenominators, gf.denominators);
-    return GeneratingFunction(numParam, sumSigns, sumNumerators,
-                              sumDenominators);
+    return GeneratingFunction(numParam, std::move(sumSigns),
+                              std::move(sumNumerators),
+                              std::move(sumDenominators));
   }
 
   llvm::raw_ostream &print(llvm::raw_ostream &os) const {
