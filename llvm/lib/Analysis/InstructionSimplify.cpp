@@ -3216,7 +3216,9 @@ static void getUnsignedMonotonicValues(SmallPtrSetImpl<Value *> &Res, Value *V,
       getUnsignedMonotonicValues(Res, I->getOperand(0), Type, Q, Depth);
       break;
     case Instruction::Call:
-      if (match(I, m_Intrinsic<Intrinsic::usub_sat>(m_Value(X))))
+      // usub.sat(X, Y) ule X, ctpop(X) ule X
+      if (match(I, m_Intrinsic<Intrinsic::usub_sat>(m_Value(X))) ||
+          match(I, m_Ctpop(m_Value(X))))
         getUnsignedMonotonicValues(Res, X, Type, Q, Depth);
       break;
     default:
