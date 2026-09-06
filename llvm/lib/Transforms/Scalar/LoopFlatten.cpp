@@ -126,9 +126,10 @@ struct FlattenInfo {
                                    // tripcount. Also used to recognise a
                                    // linear expression that will be replaced.
 
-  SmallPtrSet<Value *, 4> LinearIVUses;  // Contains the linear expressions
-                                         // of the form i*M+j that will be
-                                         // replaced.
+  SmallPtrSet<Value *, 4> LinearIVUses; // Contains the linear expressions
+                                        // of the form i*M+j that will be
+                                        // replaced.
+  DenseMap<Value *, Value *> LinearIVUseToMul;
 
   BinaryOperator *InnerIncrement = nullptr;  // Uses of induction variables in
   BinaryOperator *OuterIncrement = nullptr;  // loop control statements that
@@ -254,6 +255,7 @@ struct FlattenInfo {
       LLVM_DEBUG(dbgs() << "Found. This sse is optimisable\n");
       ValidOuterPHIUses.insert(MatchedMul);
       LinearIVUses.insert(U);
+      LinearIVUseToMul[U] = MatchedMul;
       return true;
     }
 
@@ -859,6 +861,32 @@ static bool CanWidenIV(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
       MaxLegalType->getScalarSizeInBits() <
           InnerType->getScalarSizeInBits() * 2) {
     LLVM_DEBUG(dbgs() << "Can't widen the IV\n");
+    return false;
+  }
+
+  // When flattening after widening, narrow integer linear IV uses are replaced
+  // with a truncation of the widened flattened IV back to their original type.
+  // Only do this if the flattened trip count is known to fit in that original
+  // type, otherwise preserved SCEV expressions for the outer loop may retain
+  // no-wrap facts that are no longer valid for the larger flattened iteration
+  // space. forgetLoop() cannot repair this because SCEV expression flags are
+  // uniqued and cannot be weakened in place.
+  if (any_of(FI.LinearIVUses,
+             [&FI, MaxLegalType](Value *V) {
+               auto *BO = dyn_cast<OverflowingBinaryOperator>(V);
+               auto *Mul = dyn_cast_if_present<OverflowingBinaryOperator>(
+                   FI.LinearIVUseToMul.lookup(V));
+               bool HasLinearIVNoWrap =
+                   BO && Mul &&
+                   ((BO->hasNoUnsignedWrap() && Mul->hasNoUnsignedWrap()) ||
+                    (BO->hasNoSignedWrap() && Mul->hasNoSignedWrap()));
+               return V->getType()->isIntegerTy() &&
+                      V->getType()->getScalarSizeInBits() <
+                          MaxLegalType->getScalarSizeInBits() &&
+                      !HasLinearIVNoWrap;
+             }) &&
+      checkOverflow(FI, DT, AC) != OverflowResult::NeverOverflows) {
+    LLVM_DEBUG(dbgs() << "Can't widen linear IV replacement that may wrap\n");
     return false;
   }
 
