@@ -88,3 +88,14 @@ union A {
 A a;
 bool b = a == a;
 }
+
+namespace GH194605 {
+struct S {
+  int [[clang::address_space(1)]] i; // expected-error {{field may not be qualified with an address space}}
+  bool operator==(const S &) const = default;
+};
+
+static_assert(!__is_trivially_equality_comparable(S));
+
+bool f(const S &a, const S &b) { return a == b; }
+}
