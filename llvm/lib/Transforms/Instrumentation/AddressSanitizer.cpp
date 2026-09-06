@@ -380,6 +380,16 @@ static cl::opt<uint64_t>
                     cl::desc("offset of asan shadow mapping [EXPERIMENTAL]"),
                     cl::Hidden, cl::init(0));
 
+static cl::opt<uint64_t> ClMappingMin(
+    "asan-mapping-min",
+    cl::desc("Omit shadow memory checks for pointers below this address"),
+    cl::Hidden, cl::init(0));
+
+static cl::opt<uint64_t> ClMappingMax(
+    "asan-mapping-max",
+    cl::desc("Omit shadow memory checks for pointers above this address"),
+    cl::Hidden, cl::init(0));
+
 // Optimization flags. Not user visible, used mostly for testing
 // and benchmarking the tool.
 
@@ -486,6 +496,8 @@ namespace {
 struct ShadowMapping {
   int Scale;
   uint64_t Offset;
+  std::optional<uint64_t> Min;
+  std::optional<uint64_t> Max;
   bool OrShadowOffset;
   bool InGlobal;
 };
@@ -611,6 +623,14 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
 
   if (ClMappingOffset.getNumOccurrences() > 0) {
     Mapping.Offset = ClMappingOffset;
+  }
+
+  if (ClMappingMin.getNumOccurrences() > 0) {
+    Mapping.Min = ClMappingMin;
+  }
+
+  if (ClMappingMax.getNumOccurrences() > 0) {
+    Mapping.Max = ClMappingMax;
   }
 
   // OR-ing shadow offset if more efficient (at least on x86) if the offset
@@ -865,6 +885,8 @@ struct AddressSanitizer {
                                        Value *SizeArgument);
   Instruction *genAMDGPUReportBlock(IRBuilder<> &IRB, Value *Cond,
                                     bool Recover);
+  Instruction *instrumentRangeLimitedAddress(Instruction *InsertBefore,
+                                             Value *Addr);
   void instrumentUnusualSizeOrAlignment(Instruction *I,
                                         Instruction *InsertBefore, Value *Addr,
                                         TypeSize TypeStoreSize, bool IsWrite,
@@ -1988,6 +2010,32 @@ Instruction *AddressSanitizer::genAMDGPUReportBlock(IRBuilder<> &IRB,
       Inserter.insertFunction(kAMDGPUUnreachableName, IRB.getVoidTy()), {});
 }
 
+Instruction *
+AddressSanitizer::instrumentRangeLimitedAddress(Instruction *InsertBefore,
+                                                Value *Addr) {
+  if (Mapping.Min) {
+    // Insert a cmp+br to skip sanitizing low addresses, such as ROM.
+    IRBuilder<> IRB(InsertBefore);
+    Value *AddrInt = IRB.CreatePtrToAddr(Addr);
+    Value *Cmp = IRB.CreateICmpUGE(
+        AddrInt, ConstantInt::get(AddrInt->getType(), *Mapping.Min));
+    Value *SkipLanding = SplitBlockAndInsertIfThen(Cmp, InsertBefore, false);
+    InsertBefore = cast<Instruction>(SkipLanding);
+  }
+
+  if (Mapping.Max) {
+    // Insert a cmp+br to skip sanitising high addresses, such as device memory.
+    IRBuilder<> IRB(InsertBefore);
+    Value *AddrInt = IRB.CreatePtrToAddr(Addr);
+    Value *Cmp = IRB.CreateICmpULE(
+        AddrInt, ConstantInt::get(AddrInt->getType(), *Mapping.Max));
+    Value *SkipLanding = SplitBlockAndInsertIfThen(Cmp, InsertBefore, false);
+    InsertBefore = cast<Instruction>(SkipLanding);
+  }
+
+  return InsertBefore;
+}
+
 void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
                                          Instruction *InsertBefore, Value *Addr,
                                          MaybeAlign Alignment,
@@ -2001,6 +2049,8 @@ void AddressSanitizer::instrumentAddress(Instruction *OrigIns,
     if (!InsertBefore)
       return;
   }
+
+  InsertBefore = instrumentRangeLimitedAddress(InsertBefore, Addr);
 
   InstrumentationIRBuilder IRB(InsertBefore);
   size_t AccessSizeIndex = TypeStoreSizeToSizeIndex(TypeStoreSize);
