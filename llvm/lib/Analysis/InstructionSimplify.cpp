@@ -6929,19 +6929,19 @@ static Value *simplifySVEIntReduction(Intrinsic::ID IID, Type *ReturnType,
 
 static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
                                       Value *Op0, Value *Op1, FastMathFlags FMF,
-                                      const SimplifyQuery &Q) {
+                                      const SimplifyQuery &Q,
+                                      Function *CxtF = nullptr) {
   unsigned BitWidth = ReturnType->getScalarSizeInBits();
   switch (IID) {
   case Intrinsic::get_active_lane_mask: {
     if (match(Op1, m_Zero()))
       return ConstantInt::getFalse(ReturnType);
 
-    if (!Q.CxtI)
+    if (!CxtF)
       break;
 
-    const Function *F = Q.CxtI->getFunction();
     auto *ScalableTy = dyn_cast<ScalableVectorType>(ReturnType);
-    Attribute Attr = F->getFnAttribute(Attribute::VScaleRange);
+    Attribute Attr = CxtF->getFnAttribute(Attribute::VScaleRange);
     if (ScalableTy && Attr.isValid()) {
       std::optional<unsigned> VScaleMax = Attr.getVScaleRangeMax();
       if (!VScaleMax)
@@ -7395,7 +7395,8 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     return simplifyUnaryIntrinsic(IID, Args[0], FMF, Q);
 
   if (NumOperands == 2)
-    return simplifyBinaryIntrinsic(IID, ReturnType, Args[0], Args[1], FMF, Q);
+    return simplifyBinaryIntrinsic(IID, ReturnType, Args[0], Args[1], FMF, Q,
+                                   CxtF);
 
   // Handle intrinsics with 3 or more arguments.
   switch (IID) {

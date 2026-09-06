@@ -1318,6 +1318,31 @@ VPIRValue *vputils::tryToFoldLiveIns(VPSingleDefRecipe &R,
     case Instruction::ExtractElement:
       assert(!Ops[0]->getType()->isVectorTy() && "Live-ins should be scalar");
       return Ops[0];
+    case VPInstruction::ActiveLaneMask:
+    case VPInstruction::WideActiveLaneMask: {
+      uint64_t Multiplier = 1;
+      if (Opcode == VPInstruction::WideActiveLaneMask) {
+        // Optimizing WideALM can only happen after the Plan is unrolled.
+        if (!Plan.isUnrolled())
+          return nullptr;
+        Multiplier = cast<ConstantInt>(Ops[2])->getZExtValue();
+        Ops.pop_back();
+      }
+      Type *I1Ty = IntegerType::getInt1Ty(Plan.getContext());
+      ElementCount MaxVF =
+          max_element(Plan.vectorFactors(), ElementCount::isKnownLT)
+              ->multiplyCoefficientBy(Multiplier);
+
+      if (auto *C = dyn_cast_if_present<Constant>(Folder.FoldIntrinsic(
+              Intrinsic::get_active_lane_mask, Ops,
+              VectorType::get(I1Ty, MaxVF), {}, Plan.getIRFunction())))
+        // We cannot handle vector constants that are not all-true or all-false,
+        // because they would not be collapsable to a scalar constant, that
+        // would be necessary for live-in simplification. We do not produce ALMs
+        // foldable to false at the moment.
+        if (C->isOneValue())
+          return ConstantInt::getTrue(I1Ty);
+    }
     }
     return nullptr;
   };

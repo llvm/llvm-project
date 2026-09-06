@@ -5080,6 +5080,10 @@ public:
     return getScalarHeader()->getIRBasicBlock()->getDataLayout();
   }
 
+  Function *getIRFunction() const {
+    return getScalarHeader()->getIRBasicBlock()->getParent();
+  }
+
   void addVF(ElementCount VF) { VFs.insert(VF); }
 
   void setVF(ElementCount VF) {
