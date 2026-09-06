@@ -68,32 +68,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  setbuf
-  SRCS
-    setbuf.cpp
-  HDRS
-    setbuf.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.hdr.types.off_t
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  setvbuf
-  SRCS
-    setvbuf.cpp
-  HDRS
-    setvbuf.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.hdr.types.FILE
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
   sscanf
   SRCS
     sscanf.cpp
@@ -274,6 +248,8 @@ add_stdio_entrypoint_object(ftell)
 add_stdio_entrypoint_object(fseeko)
 add_stdio_entrypoint_object(fileno)
 add_stdio_entrypoint_object(ftello)
+add_stdio_entrypoint_object(setbuf)
+add_stdio_entrypoint_object(setvbuf)
 add_stdio_entrypoint_object(fflush)
 add_stdio_entrypoint_object(clearerr)
 add_stdio_entrypoint_object(clearerr_unlocked)
