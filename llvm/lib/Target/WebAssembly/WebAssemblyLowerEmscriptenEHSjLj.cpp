@@ -402,9 +402,6 @@ ModulePass *llvm::createWebAssemblyLowerEmscriptenEHSjLjLegacyPass() {
 
 static bool canThrow(const Value *V) {
   if (const auto *F = dyn_cast<const Function>(V)) {
-    // Intrinsics cannot throw
-    if (F->isIntrinsic())
-      return false;
     StringRef Name = F->getName();
     // leave setjmp and longjmp (mostly) alone, we process them properly later
     if (Name == "setjmp" || Name == "longjmp" || Name == "emscripten_longjmp")
