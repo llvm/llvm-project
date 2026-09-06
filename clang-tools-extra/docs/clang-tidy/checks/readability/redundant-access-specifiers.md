@@ -1,51 +1,48 @@
-.. title:: clang-tidy - readability-redundant-access-specifiers
+```{title} clang-tidy - readability-redundant-access-specifiers
+```
 
-readability-redundant-access-specifiers
-=======================================
+# readability-redundant-access-specifiers
 
 Finds classes, structs, and unions containing redundant member (field and
 method) access specifiers.
 
-Example
--------
+## Example
 
-.. code-block:: c++
+```c++
+class Foo {
+public:
+  int x;
+  int y;
+public:
+  int z;
+protected:
+  int a;
+public:
+  int c;
+}
+```
 
-  class Foo {
-  public:
-    int x;
-    int y;
-  public:
-    int z;
-  protected:
-    int a;
-  public:
-    int c;
-  }
-
-In the example above, the second ``public`` declaration can be removed without
+In the example above, the second `public` declaration can be removed without
 any changes of behavior.
 
-Options
--------
+## Options
 
-.. option:: CheckFirstDeclaration
+```{option} CheckFirstDeclaration
+When `true`, the check will also diagnose if the first access
+specifier declaration is redundant (e.g. `private` inside `class`,
+or `public` inside `struct` or `union`).
+Default is `false`.
+```
 
-   If set to `true`, the check will also diagnose if the first access
-   specifier declaration is redundant (e.g. ``private`` inside ``class``,
-   or ``public`` inside ``struct`` or ``union``).
-   Default is `false`.
+### Example
 
-Example
-^^^^^^^
+```c++
+struct Bar {
+public:
+  int x;
+}
+```
 
-.. code-block:: c++
-
-  struct Bar {
-  public:
-    int x;
-  }
-
-If `CheckFirstDeclaration` option is enabled, a warning about redundant
-access specifier will be emitted, because ``public`` is the default member access
+If {option}`CheckFirstDeclaration` is enabled, a warning about redundant
+access specifier will be emitted, because `public` is the default member access
 for structs.
