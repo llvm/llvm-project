@@ -599,9 +599,10 @@ struct VPlanTransforms {
   static void optimizeFindIVReductions(VPlan &Plan,
                                        PredicatedScalarEvolution &PSE, Loop &L);
 
-  /// Detect and create partial reduction recipes for scaled reductions in
-  /// \p Plan. Must be called after recipe construction. If partial reductions
-  /// are only valid for a subset of VFs in Range, Range.End is updated.
+  /// Detect and create partial reduction recipes for scaled or unordered
+  /// reductions in \p Plan. Must be called after recipe construction. If
+  /// partial reductions are only valid for a subset of VFs in Range, Range.End
+  /// is updated.
   static void createPartialReductions(VPlan &Plan, VPCostContext &CostCtx,
                                       VFRange &Range);
 
