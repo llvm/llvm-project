@@ -1198,6 +1198,16 @@ static void DiagnoseStaticSpecifierRestrictions(Parser &P,
   }
 }
 
+bool Parser::isLambdaSpecifier() {
+  return Tok.isOneOf(tok::kw_mutable, tok::arrow, tok::kw___attribute,
+                     tok::kw_constexpr, tok::kw_consteval, tok::kw_static,
+                     tok::kw___private, tok::kw___global, tok::kw___local,
+                     tok::kw___constant, tok::kw___generic, tok::kw_groupshared,
+                     tok::kw_requires, tok::kw_noexcept) ||
+         Tok.isRegularKeywordAttribute() ||
+         (Tok.is(tok::l_square) && NextToken().is(tok::l_square));
+}
+
 ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
                      LambdaIntroducer &Intro) {
   SourceLocation LambdaBeginLoc = Intro.Range.getBegin();
@@ -1343,14 +1353,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     HasParentheses = true;
   }
 
-  HasSpecifiers =
-      Tok.isOneOf(tok::kw_mutable, tok::arrow, tok::kw___attribute,
-                  tok::kw_constexpr, tok::kw_consteval, tok::kw_static,
-                  tok::kw___private, tok::kw___global, tok::kw___local,
-                  tok::kw___constant, tok::kw___generic, tok::kw_groupshared,
-                  tok::kw_requires, tok::kw_noexcept) ||
-      Tok.isRegularKeywordAttribute() ||
-      (Tok.is(tok::l_square) && NextToken().is(tok::l_square));
+  HasSpecifiers = isLambdaSpecifier();
 
   if (HasSpecifiers && !HasParentheses && !getLangOpts().CPlusPlus23) {
     // It's common to forget that one needs '()' before 'mutable', an

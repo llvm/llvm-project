@@ -796,6 +796,34 @@ bool Parser::TrySkipAttributes() {
   return true;
 }
 
+bool Parser::hasLambdaLikeContinuation() {
+  RevertingTentativeParsingAction TPA(*this);
+  ConsumeBracket();
+  if (!SkipUntil(tok::r_square, StopAtSemi | StopAtCodeCompletion))
+    return false;
+
+  // Consume tokens that could also begin the declaration following a
+  // Microsoft attribute. Require a lambda-like continuation after them.
+  while (true) {
+    if (!TrySkipAttributes())
+      return false;
+
+    if (Tok.isOneOf(tok::l_paren, tok::l_brace, tok::less, tok::arrow,
+                    tok::kw_requires, tok::kw_noexcept))
+      return true;
+
+    // CUDA and HIP permit the __noinline__ keyword among attributes after the
+    // capture list. TrySkipAttributes does not recognize this keyword form.
+    if (getLangOpts().CUDA && TryConsumeToken(tok::kw___noinline__))
+      continue;
+
+    if (!isLambdaSpecifier())
+      return false;
+
+    ConsumeToken();
+  }
+}
+
 Parser::TPResult Parser::TryParsePtrOperatorSeq() {
   while (true) {
     if (TryAnnotateOptionalCXXScopeToken(true))
@@ -1774,6 +1802,10 @@ Parser::TPResult Parser::TryParseParameterDeclarationClause(
                                   /*OuterMightBeMessageSend*/ true) !=
         CXX11AttributeKind::NotAttributeSpecifier)
       return TPResult::True;
+
+    if ((getLangOpts().MicrosoftExt || getLangOpts().HLSL) &&
+        Tok.is(tok::l_square) && hasLambdaLikeContinuation())
+      return TPResult::False;
 
     ParsedAttributes attrs(AttrFactory);
     MaybeParseMicrosoftAttributes(attrs);
