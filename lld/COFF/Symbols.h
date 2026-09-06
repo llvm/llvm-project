@@ -107,9 +107,10 @@ protected:
   explicit Symbol(Kind k, StringRef n = "")
       : symbolKind(k), isExternal(true), isCOMDAT(false),
         writtenToSymtab(false), isUsedInRegularObj(false),
-        pendingArchiveLoad(false), isGCRoot(false), isRuntimePseudoReloc(false),
-        deferUndefined(false), canInline(true), isWeak(false), isAntiDep(false),
-        nameSize(n.size()), nameData(n.empty() ? nullptr : n.data()) {
+        hasUndefinedReference(false), pendingArchiveLoad(false),
+        isGCRoot(false), isRuntimePseudoReloc(false), deferUndefined(false),
+        canInline(true), isWeak(false), isAntiDep(false), nameSize(n.size()),
+        nameData(n.empty() ? nullptr : n.data()) {
     assert((!n.empty() || k <= LastDefinedCOFFKind) &&
            "If the name is empty, the Symbol must be a DefinedCOFF.");
   }
@@ -127,6 +128,11 @@ public:
 
   // True if this symbol was referenced by a regular (non-bitcode) object.
   unsigned isUsedInRegularObj : 1;
+
+  // True if an actual undefined reference to this symbol was observed.
+  // Unlike isUsedInRegularObj, this is not set merely because a regular object
+  // defines the symbol.
+  unsigned hasUndefinedReference : 1;
 
   // True if we've seen both a lazy and an undefined symbol with this symbol
   // name, which means that we have enqueued an archive member load and should
@@ -518,19 +524,22 @@ union SymbolUnion {
 };
 
 template <typename T, typename... ArgT>
-void replaceSymbol(Symbol *s, ArgT &&... arg) {
+T *replaceSymbol(Symbol *s, ArgT &&...arg) {
   static_assert(std::is_trivially_destructible<T>(),
                 "Symbol types must be trivially destructible");
-  static_assert(sizeof(T) <= sizeof(SymbolUnion), "Symbol too small");
+  static_assert(sizeof(T) <= sizeof(SymbolUnion), "SymbolUnion too small");
   static_assert(alignof(T) <= alignof(SymbolUnion),
                 "SymbolUnion not aligned enough");
   assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr &&
          "Not a Symbol");
   bool canInline = s->canInline;
   bool isUsedInRegularObj = s->isUsedInRegularObj;
-  new (s) T(std::forward<ArgT>(arg)...);
-  s->canInline = canInline;
-  s->isUsedInRegularObj = isUsedInRegularObj;
+  bool hasUndefinedReference = s->hasUndefinedReference;
+  T *replacement = new (s) T(std::forward<ArgT>(arg)...);
+  replacement->canInline = canInline;
+  replacement->isUsedInRegularObj = isUsedInRegularObj;
+  replacement->hasUndefinedReference = hasUndefinedReference;
+  return replacement;
 }
 } // namespace coff
 

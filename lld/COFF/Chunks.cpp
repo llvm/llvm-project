@@ -33,7 +33,8 @@ using llvm::support::ulittle32_t;
 namespace lld::coff {
 
 SectionChunk::SectionChunk(ObjFile *f, const coff_section *h, Kind k)
-    : Chunk(k), file(f), header(h), repl(this) {
+    : Chunk(k), file(f), header(h), keepUnique(false), discardedByCOMDAT(false),
+      replaceableCOMDAT(false), repl(this) {
   // Initialize relocs.
   if (file)
     setRelocs(file->getCOFFObj()->getRelocations(header));
@@ -570,6 +571,27 @@ void SectionChunk::addAssociative(SectionChunk *child) {
   assert(prev->assocChildren == next);
   prev->assocChildren = child;
   child->assocChildren = next;
+  child->replaceableCOMDAT = isInReplaceableCOMDATGroup();
+
+  // An associative section can be discovered after its parent has already
+  // lost a same-object LARGEST competition.
+  if (discardedByCOMDAT) {
+    child->live = false;
+    child->discardedByCOMDAT = true;
+  }
+}
+
+void SectionChunk::discardCOMDATGroup() {
+  assert(selection != IMAGE_COMDAT_SELECT_ASSOCIATIVE &&
+         "an associative COMDAT cannot be discarded as a group leader");
+
+  live = false;
+  discardedByCOMDAT = true;
+
+  for (SectionChunk &child : children()) {
+    child.live = false;
+    child.discardedByCOMDAT = true;
+  }
 }
 
 static uint8_t getBaserelType(const coff_relocation &rel,

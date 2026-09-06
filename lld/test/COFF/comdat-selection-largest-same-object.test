@@ -1,0 +1,135 @@
+# REQUIRES: x86
+
+# Two LARGEST candidates can occur in one symbol table. The replacement is
+# processed before late secondary symbols and before pending associative
+# definitions. Neither may publish a definition from the losing group.
+
+# RUN: split-file %s %t.dir
+# RUN: yaml2obj %t.dir/candidates.yaml -o %t.candidates.obj
+# RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj \
+# RUN:   %t.dir/provider.s -o %t.provider.obj
+# RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj \
+# RUN:   %t.dir/root.s -o %t.root.obj
+# RUN: llvm-lib -machine:amd64 -out:%t.provider.lib %t.provider.obj
+# RUN: lld-link /opt:ref /entry:entry /subsystem:console /nodefaultlib \
+# RUN:   %t.candidates.obj %t.provider.lib %t.root.obj \
+# RUN:   /map:%t.map /out:%t.exe
+# RUN: FileCheck %s --check-prefix=MAP < %t.map
+# RUN: llvm-objdump -s %t.exe | FileCheck %s --check-prefix=IMAGE \
+# RUN:   --implicit-check-not=11111111 --implicit-check-not=22
+
+# MAP-DAG: late_small{{.*}}provider.obj
+# MAP-DAG: assoc_small{{.*}}provider.obj
+# IMAGE: Contents of section .text:
+# IMAGE: 44444444
+# IMAGE: Contents of section .rdata:
+# IMAGE: 77777777
+# IMAGE: 88888888
+
+#--- candidates.yaml
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+  Characteristics: []
+sections:
+  - Name: '.text$one'
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT,
+                       IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: '1122'
+    SizeOfRawData: 2
+  - Name: '.text$two'
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT,
+                       IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: '4444444444444444444444444444444444444444444444444444444444444444'
+    SizeOfRawData: 32
+  - Name: '.rdata$assoc'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT,
+                       IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: '11111111'
+    SizeOfRawData: 4
+symbols:
+  - Name: '.text$one'
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 2
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 0
+      Number: 1
+      Selection: IMAGE_COMDAT_SELECT_LARGEST
+  - Name: leader
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+  - Name: '.rdata$assoc'
+    Value: 0
+    SectionNumber: 3
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 4
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 0
+      Number: 1
+      Selection: IMAGE_COMDAT_SELECT_ASSOCIATIVE
+  - Name: '.text$two'
+    Value: 0
+    SectionNumber: 2
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 32
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 0
+      Number: 2
+      Selection: IMAGE_COMDAT_SELECT_LARGEST
+  - Name: leader
+    Value: 0
+    SectionNumber: 2
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+  - Name: late_small
+    Value: 1
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+  - Name: assoc_small
+    Value: 0
+    SectionNumber: 3
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+...
+
+#--- provider.s
+        .section .rdata$provider, "dr"
+        .globl late_small
+late_small:
+        .long 0x77777777
+        .globl assoc_small
+assoc_small:
+        .long 0x88888888
+
+#--- root.s
+        .text
+        .globl entry
+entry:
+        leaq leader(%rip), %rax
+        movl late_small(%rip), %ecx
+        movl assoc_small(%rip), %edx
+        retq

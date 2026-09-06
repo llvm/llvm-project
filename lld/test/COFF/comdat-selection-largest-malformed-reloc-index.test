@@ -1,0 +1,106 @@
+# REQUIRES: x86
+#
+# Relocations in an object using replaceable-COMDAT provenance tracking must
+# not index outside the symbol table or target an auxiliary-symbol slot. Both
+# forms are malformed input and must be diagnosed without dereferencing a null
+# Symbol pointer.
+#
+# RUN: split-file %s %t.dir
+# RUN: yaml2obj %t.dir/aux.yaml -o %t.aux.obj
+# RUN: yaml2obj %t.dir/oob.yaml -o %t.oob.obj
+#
+# RUN: not lld-link /dll /noentry /nodefaultlib /opt:noref \
+# RUN:   %t.aux.obj /out:%t.aux.dll 2>&1 | FileCheck %s --check-prefix=AUX
+# RUN: not lld-link /dll /noentry /nodefaultlib /opt:noref \
+# RUN:   %t.oob.obj /out:%t.oob.dll 2>&1 | FileCheck %s --check-prefix=OOB
+#
+# AUX: error: {{.*}}: relocation refers to invalid symbol index 1
+# AUX-NOT: PLEASE submit a bug report
+# OOB: error: {{.*}}: relocation refers to invalid symbol index 65535
+# OOB-NOT: PLEASE submit a bug report
+#
+#--- aux.yaml
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ ]
+sections:
+  - Name: .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE,
+                       IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: '00000000'
+    Relocations:
+      - VirtualAddress: 0
+        SymbolTableIndex: 1
+        Type: IMAGE_REL_AMD64_ADDR32
+  - Name: '.rdata$largest'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT,
+                       IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: '01020304'
+symbols:
+  # Raw index 0 is this section symbol, and raw index 1 is its auxiliary
+  # section-definition record. The relocation above deliberately targets 1.
+  - Name: '.rdata$largest'
+    Value: 0
+    SectionNumber: 2
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 4
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 0
+      Number: 2
+      Selection: IMAGE_COMDAT_SELECT_LARGEST
+  - Name: leader
+    Value: 0
+    SectionNumber: 2
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+...
+#
+#--- oob.yaml
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ ]
+sections:
+  - Name: .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE,
+                       IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: '00000000'
+    Relocations:
+      - VirtualAddress: 0
+        SymbolTableIndex: 65535
+        Type: IMAGE_REL_AMD64_ADDR32
+  - Name: '.rdata$largest'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT,
+                       IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: '01020304'
+symbols:
+  - Name: '.rdata$largest'
+    Value: 0
+    SectionNumber: 2
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 4
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 0
+      Number: 2
+      Selection: IMAGE_COMDAT_SELECT_LARGEST
+  - Name: leader
+    Value: 0
+    SectionNumber: 2
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+...

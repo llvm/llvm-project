@@ -1,0 +1,99 @@
+# REQUIRES: x86
+#
+# A larger LARGEST candidate is only committed after readSection() succeeds.
+# If the candidate is filtered (here via IMAGE_SCN_LNK_REMOVE), the previously
+# selected group must remain intact. This protects the replacement as a
+# transaction: selection can be proposed before section ingestion, but the old
+# group is not discarded until the replacement chunk actually exists.
+#
+# RUN: split-file %s %t.dir
+# RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj \
+# RUN:   %t.dir/small.s -o %t.small.obj
+# RUN: yaml2obj %t.dir/removed-large.yaml -o %t.removed-large.obj
+# RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj \
+# RUN:   %t.dir/root.s -o %t.root.obj
+# RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj \
+# RUN:   %t.dir/any-small.s -o %t.any-small.obj
+# RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj \
+# RUN:   %t.dir/any-large.s -o %t.any-large.obj
+#
+# RUN: lld-link /dll /noentry /nodefaultlib /opt:noref /include:leader \
+# RUN:   %t.small.obj %t.removed-large.obj %t.root.obj /out:%t.dll
+# RUN: llvm-objdump -s %t.dll | FileCheck %s
+#
+# CHECK: Contents of section .text:
+# CHECK: 11111111
+# CHECK-NOT: 44444444
+#
+# A filtered candidate must not commit an ANY/LARGEST compatibility promotion
+# either. The third ANY candidate therefore follows the first-ANY-wins rule.
+# RUN: lld-link /dll /noentry /nodefaultlib /opt:noref /include:leader \
+# RUN:   %t.any-small.obj %t.removed-large.obj %t.any-large.obj \
+# RUN:   /out:%t.promotion.dll
+# RUN: llvm-objdump -s %t.promotion.dll | FileCheck %s --check-prefix=PROMOTION
+# RUN: lld-link /dll /noentry /nodefaultlib /opt:noref /include:leader \
+# RUN:   %t.removed-large.obj %t.any-small.obj /out:%t.filtered-first.dll
+# RUN: llvm-objdump -s %t.filtered-first.dll | \
+# RUN:   FileCheck %s --check-prefix=PROMOTION
+#
+# PROMOTION: 11111111
+# PROMOTION-NOT: 33333333
+#
+#--- small.s
+        .section .text$largest, "xr", largest, leader
+        .globl leader
+leader:
+        .long 0x11111111
+#
+#--- root.s
+        .text
+        .globl root
+root:
+        leaq leader(%rip), %rax
+        retq
+#
+#--- any-small.s
+        .section .text$largest, "xr", discard, leader
+        .globl leader
+leader:
+        .long 0x11111111
+#
+#--- any-large.s
+        .section .text$largest, "xr", discard, leader
+        .globl leader
+leader:
+        .space 32, 0x33
+#
+#--- removed-large.yaml
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ ]
+sections:
+  - Name: '.text$largest'
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT,
+                       IMAGE_SCN_LNK_REMOVE, IMAGE_SCN_MEM_EXECUTE,
+                       IMAGE_SCN_MEM_READ ]
+    Alignment: 1
+    SectionData: '44444444444444444444444444444444'
+symbols:
+  - Name: '.text$largest'
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length: 16
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum: 0
+      Number: 1
+      Selection: IMAGE_COMDAT_SELECT_LARGEST
+  - Name: leader
+    Value: 0
+    SectionNumber: 1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_EXTERNAL
+...
