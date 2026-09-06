@@ -2714,6 +2714,37 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     }
     break;
   }
+  case TargetOpcode::G_INSERT_VECTOR_ELT: {
+    GInsertVectorElement &Insert = cast<GInsertVectorElement>(MI);
+    Register InVec = Insert.getVectorReg();
+    Register InVal = Insert.getElementReg();
+    Register EltNo = Insert.getIndexReg();
+    LLT VecVT = MRI.getType(InVec);
+    LLT ValTy = MRI.getType(InVal);
+    if (VecVT.isScalableVector()) {
+      unsigned VecSignBits = computeNumSignBits(InVec, APInt(1, 1), Depth + 1);
+      if (ValTy.getScalarSizeInBits() != TyBits)
+        return VecSignBits;
+      unsigned ValSignBits = computeNumSignBits(InVal, APInt(1, 1), Depth + 1);
+      return std::min(VecSignBits, ValSignBits);
+    }
+    std::optional<APInt> ConstEltNo = getIConstantVRegVal(EltNo, MRI);
+    unsigned NumElts = VecVT.getNumElements();
+    bool DemandedVal = true;
+    APInt DemandedVecElts = DemandedElts;
+    if (ConstEltNo && ConstEltNo->ult(NumElts)) {
+      unsigned EltIdx = ConstEltNo->getZExtValue();
+      DemandedVal = !!DemandedElts[EltIdx];
+      DemandedVecElts.clearBit(EltIdx);
+    }
+    unsigned MinSignBits = std::numeric_limits<unsigned>::max();
+    if (DemandedVal && ValTy.getScalarSizeInBits() == TyBits)
+      MinSignBits = computeNumSignBits(InVal, APInt(1, 1), Depth + 1);
+    if (!!DemandedVecElts)
+      MinSignBits = std::min(
+          MinSignBits, computeNumSignBits(InVec, DemandedVecElts, Depth + 1));
+    return MinSignBits;
+  }
   case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
     GExtractVectorElement &Extract = cast<GExtractVectorElement>(MI);
     Register InVec = Extract.getVectorReg();
