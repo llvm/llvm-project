@@ -5735,6 +5735,64 @@ X86TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
   return BaseT::getAddressComputationCost(PtrTy, SE, Ptr, CostKind);
 }
 
+InstructionCost X86TTIImpl::getPartialReductionCost(
+    unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+    ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+    TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+    TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
+  auto ExpandCost = [&]() {
+    return BaseT::getPartialReductionCost(Opcode, InputTypeA, InputTypeB,
+                                          AccumType, VF, OpAExtend, OpBExtend,
+                                          BinOp, CostKind, FMF);
+  };
+
+  // The dot product instructions multiply-accumulate i8 x i8 -> i32,
+  // i16 x i16 -> i32 or bf16 x bf16 -> f32. Partial reductions may also
+  // multiply inputs extended from different types, which they can't handle.
+  if (VF.isScalable() || !BinOp || OpAExtend == TTI::PR_None ||
+      OpBExtend == TTI::PR_None || InputTypeA != InputTypeB)
+    return ExpandCost();
+
+  unsigned Opc;
+  if (Opcode == Instruction::Add && *BinOp == Instruction::Mul &&
+      AccumType->isIntegerTy(32) &&
+      (InputTypeA->isIntegerTy(8) || InputTypeA->isIntegerTy(16))) {
+    if (OpAExtend != OpBExtend)
+      Opc = ISD::PARTIAL_REDUCE_SUMLA;
+    else if (OpAExtend == TTI::PR_SignExtend)
+      Opc = ISD::PARTIAL_REDUCE_SMLA;
+    else
+      Opc = ISD::PARTIAL_REDUCE_UMLA;
+  } else if (Opcode == Instruction::FAdd && *BinOp == Instruction::FMul &&
+             AccumType->isFloatTy() && InputTypeA->isBFloatTy()) {
+    // VDPBF16PS, like the expansion, reassociates the additions and fuses the
+    // multiplications.
+    if (!FMF || !FMF->allowReassoc() || !FMF->allowContract())
+      return InstructionCost::getInvalid();
+    Opc = ISD::PARTIAL_REDUCE_FMLA;
+  } else {
+    return ExpandCost();
+  }
+
+  unsigned Ratio =
+      AccumType->getScalarSizeInBits() / InputTypeA->getScalarSizeInBits();
+  if (!VF.isKnownMultipleOf(Ratio))
+    return ExpandCost();
+
+  // One dot product per legal accumulator vector. Accumulators narrower than
+  // a legal vector are widened by expanding the partial reduction instead.
+  auto *AccVecTy = VectorType::get(AccumType, VF.divideCoefficientBy(Ratio));
+  auto *InputVecTy = VectorType::get(InputTypeA, VF);
+  std::pair<InstructionCost, MVT> AccLT = getTypeLegalizationCost(AccVecTy);
+  std::pair<InstructionCost, MVT> InputLT = getTypeLegalizationCost(InputVecTy);
+  if (AccLT.second.getFixedSizeInBits() >
+          AccVecTy->getPrimitiveSizeInBits().getFixedValue() ||
+      !TLI->isPartialReduceMLALegalOrCustom(Opc, AccLT.second, InputLT.second))
+    return ExpandCost();
+
+  return AccLT.first;
+}
+
 InstructionCost
 X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                        std::optional<FastMathFlags> FMF,
