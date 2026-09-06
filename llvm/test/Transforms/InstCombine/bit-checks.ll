@@ -1369,11 +1369,10 @@ define i1 @no_masks_with_logical_or2(i32 %a, i32 %b, i32 noundef %c) {
 
 define i1 @no_masks_with_logical_or_trunc_nuw(i32 %a, i32 %b, i32 noundef %c) {
 ; CHECK-LABEL: @no_masks_with_logical_or_trunc_nuw(
-; CHECK-NEXT:    [[CMP1:%.*]] = trunc nuw i32 [[A:%.*]] to i1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[B:%.*]], 63
-; CHECK-NEXT:    [[OR1:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP2]]
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[C:%.*]], 0
-; CHECK-NEXT:    [[OR2:%.*]] = or i1 [[OR1]], [[CMP3]]
+; CHECK-NEXT:    [[C:%.*]] = or i32 [[C1:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[C]], 0
+; CHECK-NEXT:    [[OR2:%.*]] = select i1 [[CMP3]], i1 true, i1 [[CMP2]]
 ; CHECK-NEXT:    ret i1 [[OR2]]
 ;
   %cmp1 = trunc nuw i32 %a to i1
@@ -1386,11 +1385,10 @@ define i1 @no_masks_with_logical_or_trunc_nuw(i32 %a, i32 %b, i32 noundef %c) {
 
 define <2 x i1> @no_masks_with_logical_or_vec_trunc_nuw(<2 x i32> %a, <2 x i32> %b, <2 x i32> noundef %c) {
 ; CHECK-LABEL: @no_masks_with_logical_or_vec_trunc_nuw(
-; CHECK-NEXT:    [[CMP1:%.*]] = trunc nuw <2 x i32> [[A:%.*]] to <2 x i1>
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne <2 x i32> [[B:%.*]], splat (i32 63)
-; CHECK-NEXT:    [[OR1:%.*]] = select <2 x i1> [[CMP1]], <2 x i1> splat (i1 true), <2 x i1> [[CMP2]]
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne <2 x i32> [[C:%.*]], zeroinitializer
-; CHECK-NEXT:    [[OR2:%.*]] = or <2 x i1> [[OR1]], [[CMP3]]
+; CHECK-NEXT:    [[C:%.*]] = or <2 x i32> [[C1:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne <2 x i32> [[C]], zeroinitializer
+; CHECK-NEXT:    [[OR2:%.*]] = select <2 x i1> [[CMP3]], <2 x i1> splat (i1 true), <2 x i1> [[CMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[OR2]]
 ;
   %cmp1 = trunc nuw <2 x i32> %a to <2 x i1>

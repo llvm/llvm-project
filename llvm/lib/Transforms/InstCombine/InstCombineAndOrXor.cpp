@@ -3449,8 +3449,8 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
                                           bool IsLogical) {
   CmpPredicate PredL, PredR;
   Value *LHS0, *LHS1, *RHS0, *RHS1;
-  if (!match(LHS, m_ICmp(PredL, m_Value(LHS0), m_Value(LHS1))) ||
-      !match(RHS, m_ICmp(PredR, m_Value(RHS0), m_Value(RHS1))))
+  if (!match(LHS, m_ICmpLike(PredL, m_Value(LHS0), m_Value(LHS1))) ||
+      !match(RHS, m_ICmpLike(PredR, m_Value(RHS0), m_Value(RHS1))))
     return nullptr;
 
   bool LHSOneUse = LHS->hasOneUse();
@@ -3494,17 +3494,20 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
     return V;
   // We can convert this case to bitwise and, because both operands are used
   // on the LHS, and as such poison from both will propagate.
-  if (Value *V = foldAndOrOfICmpsWithConstEq(
-          PredR, RHS0, RHS1, RHS, PredL, LHS0, LHS1, LHSOneUse, IsAnd,
-          /*IsLogical=*/false, Builder, Q, I)) {
-    // If RHS is still used, we should drop samesign flag.
-    if (IsLogical && PredR.hasSameSign() && !RHS->use_empty()) {
-      auto *CmpR = cast<ICmpInst>(RHS);
-      CmpR->setSameSign(false);
-      addToWorklist(CmpR);
+  // Can not handle RHS = trunc nuw as it is not same as icmp ne 0 for all
+  // values
+  if (isa<ICmpInst>(RHS))
+    if (Value *V = foldAndOrOfICmpsWithConstEq(
+            PredR, RHS0, RHS1, RHS, PredL, LHS0, LHS1, LHSOneUse, IsAnd,
+            /*IsLogical=*/false, Builder, Q, I)) {
+      // If RHS is still used, we should drop samesign flag.
+      if (IsLogical && PredR.hasSameSign() && !RHS->use_empty()) {
+        auto *CmpR = cast<ICmpInst>(RHS);
+        CmpR->setSameSign(false);
+        addToWorklist(CmpR);
+      }
+      return V;
     }
-    return V;
-  }
 
   if (Value *V = foldIsPowerOf2OrZero(PredL, LHS0, LHS1, PredR, RHS0, RHS1,
                                       IsAnd, Builder, *this))
