@@ -1351,9 +1351,11 @@ public:
     ValueRange indices = op.getIndices();
 
     if (isa<VectorType>(source.getType())) {
-      rewriter.replaceOpWithNewOp<vector::StoreOp>(op, source, base, indices);
+      rewriter.replaceOpWithNewOp<vector::StoreOp>(
+          op, source, base, indices, op.getNontemporal(), op.getMaybeAlign());
     } else {
-      rewriter.replaceOpWithNewOp<memref::StoreOp>(op, source, base, indices);
+      rewriter.replaceOpWithNewOp<memref::StoreOp>(
+          op, source, base, indices, op.getNontemporal(), op.getMaybeAlign());
     }
     rewriter.eraseOp(broadcast);
     return success();
