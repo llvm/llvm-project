@@ -14,6 +14,8 @@
   define void @bitcast_s64_fpr_gpr() { ret void }
   define void @bitcast_s64_v2f32_fpr() { ret void }
   define void @bitcast_s64_v8i8_fpr() { ret void }
+  define void @bitcast_i16_gpr_to_f16_fpr() { ret void }
+  define void @bitcast_f16_fpr_to_i16_gpr() { ret void }
 ...
 
 ---
@@ -256,4 +258,46 @@ body:             |
     %0(i64) = COPY $d0
     %1(<8 x i8>) = G_BITCAST %0
     $x0 = COPY %1(<8 x i8>)
+...
+
+---
+name:            bitcast_i16_gpr_to_f16_fpr
+legalized:       true
+regBankSelected: true
+
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: fpr }
+
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: bitcast_i16_gpr_to_f16_fpr
+    ; CHECK: [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[FMOVWSr:%[0-9]+]]:fpr32 = FMOVWSr [[DEF]]
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr16 = COPY [[FMOVWSr]].hsub
+    ; CHECK-NEXT: RET_ReallyLR implicit [[COPY1]]
+    %0(i16) = G_IMPLICIT_DEF
+    %1(f16) = G_BITCAST %0
+    RET_ReallyLR implicit %1
+...
+
+---
+name:            bitcast_f16_fpr_to_i16_gpr
+legalized:       true
+regBankSelected: true
+
+registers:
+  - { id: 0, class: fpr }
+  - { id: 1, class: gpr }
+
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: bitcast_f16_fpr_to_i16_gpr
+    ; CHECK: [[DEF:%[0-9]+]]:fpr16 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG [[DEF]], %subreg.hsub
+    ; CHECK-NEXT: [[FMOVSWr:%[0-9]+]]:gpr32 = FMOVSWr [[SUBREG_TO_REG]]
+    ; CHECK-NEXT: RET_ReallyLR implicit [[FMOVSWr]]
+    %0(f16) = G_IMPLICIT_DEF
+    %1(i16) = G_BITCAST %0
+    RET_ReallyLR implicit %1
 ...

@@ -963,6 +963,48 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
     return false;
   }
 
+  if (I.getOpcode() == TargetOpcode::G_BITCAST &&
+      RBI.getSizeInBits(DstReg, MRI, TRI) == TypeSize::getFixed(16)) {
+    if (DstRegBank.getID() == AArch64::FPRRegBankID &&
+        SrcRegBank.getID() == AArch64::GPRRegBankID) {
+      if (!SrcReg.isPhysical() &&
+          !RBI.constrainGenericRegister(SrcReg, AArch64::GPR32RegClass, MRI))
+        return false;
+      if (!DstReg.isPhysical() &&
+          !RBI.constrainGenericRegister(DstReg, AArch64::FPR16RegClass, MRI))
+        return false;
+
+      Register FPR32 = MRI.createVirtualRegister(&AArch64::FPR32RegClass);
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(AArch64::FMOVWSr))
+          .addDef(FPR32)
+          .addUse(SrcReg);
+      I.setDesc(TII.get(TargetOpcode::COPY));
+      I.getOperand(1).setReg(FPR32);
+      I.getOperand(1).setSubReg(AArch64::hsub);
+      return true;
+    }
+
+    if (DstRegBank.getID() == AArch64::GPRRegBankID &&
+        SrcRegBank.getID() == AArch64::FPRRegBankID) {
+      if (!SrcReg.isPhysical() &&
+          !RBI.constrainGenericRegister(SrcReg, AArch64::FPR16RegClass, MRI))
+        return false;
+      if (!DstReg.isPhysical() &&
+          !RBI.constrainGenericRegister(DstReg, AArch64::GPR32RegClass, MRI))
+        return false;
+
+      Register FPR32 = MRI.createVirtualRegister(&AArch64::FPR32RegClass);
+      BuildMI(*I.getParent(), I, I.getDebugLoc(),
+              TII.get(TargetOpcode::SUBREG_TO_REG))
+          .addDef(FPR32)
+          .addUse(SrcReg)
+          .addImm(AArch64::hsub);
+      I.setDesc(TII.get(AArch64::FMOVSWr));
+      I.getOperand(1).setReg(FPR32);
+      return true;
+    }
+  }
+
   // Is this a copy? If so, then we may need to insert a subregister copy.
   if (I.isCopy()) {
     // Yes. Check if there's anything to fix up.
