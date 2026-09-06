@@ -168,6 +168,66 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
+// WidenableLattice
+//===----------------------------------------------------------------------===//
+
+/// A `Lattice<ValueT>` whose virtual `join` overload at framework merge
+/// sites is bounded by a per-state widening budget, guaranteeing
+/// termination on infinite-height value lattices that don't carry their
+/// own widening operator (integer ranges, constant intervals, ...).
+///
+/// Sparse data-flow analyses propagate lattices in two ways:
+///   * Through the analysis's transfer-function callback, which calls
+///     the *non-virtual* `join(const ValueT &)` overload directly. This
+///     path is unaffected by the widening, preserving precision on
+///     straight-line code.
+///   * At framework merge sites (block-arg / region-successor /
+///     callable-arg joins), where `SparseForwardDataFlowAnalysis::join`
+///     dispatches through the *virtual*
+///     `join(const AbstractSparseLattice &)` overload. After this state
+///     has absorbed `Budget` strict refinements on the merge path, the
+///     next merge forces the value to a derived-supplied
+///     `getWidenedValue()` (typically the lattice's top element).
+///
+/// Derived classes must override `getWidenedValue()`. `Budget` should be
+/// chosen large enough that naturally bounded loop-carried values
+/// converge to a tight fixpoint, but small enough to cut off unbounded
+/// `+1`-style ratchets in a small multiple of the lattice's logical
+/// height.
+///
+/// Note: only `join` is intercepted; `meet` is left unchanged. Backward
+/// analyses requiring a budget on `meet` should subclass `Lattice`
+/// directly with a dual (bottom-element) widening hook.
+template <typename ValueT, unsigned Budget>
+class WidenableLattice : public Lattice<ValueT> {
+public:
+  using Lattice<ValueT>::Lattice;
+  // Bring the inherited non-virtual `join(const ValueT &)` overload into
+  // scope; the virtual override below would otherwise hide it for
+  // direct-value joins from transfer functions.
+  using Lattice<ValueT>::join;
+
+  /// Returns the value this lattice is widened to once the merge budget
+  /// is exhausted. Typically the top element of the value lattice
+  /// (e.g. `IntegerValueRange::getMaxRange(getAnchor())`).
+  virtual ValueT getWidenedValue() const = 0;
+
+  ChangeResult join(const AbstractSparseLattice &rhs) override {
+    ChangeResult changed = Lattice<ValueT>::join(rhs);
+    if (mergeChangeCount >= Budget)
+      return changed | Lattice<ValueT>::join(getWidenedValue());
+    if (changed == ChangeResult::Change)
+      ++mergeChangeCount;
+    return changed;
+  }
+
+private:
+  /// Number of strict refinements absorbed via the virtual
+  /// `join(const AbstractSparseLattice &)` overload.
+  unsigned mergeChangeCount = 0;
+};
+
+//===----------------------------------------------------------------------===//
 // AbstractSparseForwardDataFlowAnalysis
 //===----------------------------------------------------------------------===//
 
