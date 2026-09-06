@@ -441,8 +441,9 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       OS << "#undef VALUES_CODE\n";
     }
   }
-  // A function keeps these strings out of a relocated table. Option IDs use the
-  // OPT_ prefix; a table with a different prefix cannot use ValuesCode.
+  // A function keeps these strings out of a relocated table. It names OPT_ IDs,
+  // so include this block after the option enum; a table that uses a different
+  // ID prefix cannot use ValuesCode.
   OS << "static llvm::StringRef getOptionValuesCode(unsigned ID) {\n";
   OS << "  switch (ID) {\n";
   for (const Record *R : ValuesCodeOpts)

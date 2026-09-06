@@ -69,6 +69,8 @@ public:
   struct Info {
     unsigned PrefixesOffset;
     StringTable::Offset PrefixedNameOffset;
+    /// Offset 0 means the .td supplied no HelpText. A HelpText<""> maps to a
+    /// distinct empty string, marking the option deliberately undocumented.
     StringTable::Offset HelpTextOffset;
     // Help text for specific visibilities. A list of pairs, where each pair
     // is a list of visibilities and a specific help string for those
@@ -89,8 +91,6 @@ public:
     unsigned int Visibility;
     unsigned short GroupID;
     unsigned short AliasID;
-    /// The alias arguments as a \0 separated list terminated by an empty
-    /// string, e.g. "foo\0bar\0".
     StringTable::Offset AliasArgsOffset;
     /// The possible values as a comma separated list, empty for an option whose
     /// values only getOptionValuesCode() knows.
@@ -112,8 +112,6 @@ public:
                                                  getNumPrefixes(PrefixesTable));
     }
 
-    /// Whether the .td supplied a help text. An explicitly empty one is not the
-    /// same as none: it marks the option as deliberately undocumented.
     bool hasHelpText() const { return HelpTextOffset.value() != 0; }
     bool hasAliasArgs() const { return AliasArgsOffset.value() != 0; }
 
@@ -231,9 +229,10 @@ private:
   }
 
   StringRef getOptionValues(const Info &I) const {
-    if (StringRef Values = (*StrTable)[I.ValuesOffset]; !Values.empty())
-      return Values;
-    return ValuesCodeFn ? ValuesCodeFn(I.ID) : StringRef();
+    StringRef Values = (*StrTable)[I.ValuesOffset];
+    if (Values.empty() && ValuesCodeFn)
+      Values = ValuesCodeFn(I.ID);
+    return Values;
   }
 
   std::unique_ptr<Arg> parseOneArgGrouped(InputArgList &Args,

@@ -641,8 +641,7 @@ static std::string getOptionHelpName(const OptTable &Opts, OptSpecifier Id) {
     [[fallthrough]];
   case Option::JoinedClass: case Option::CommaJoinedClass:
   case Option::JoinedAndSeparateClass:
-    if (StringRef MetaVarName = Opts.getOptionMetaVar(Id);
-        !MetaVarName.empty())
+    if (StringRef MetaVarName = Opts.getOptionMetaVar(Id); !MetaVarName.empty())
       Name += MetaVarName;
     else
       Name += "<value>";

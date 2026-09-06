@@ -117,7 +117,8 @@ public:
     return Owner->getOption(Info->AliasID);
   }
 
-  /// Get the alias arguments; see Info::AliasArgsOffset for the encoding.
+  /// Get the alias arguments as a \0 separated list.
+  /// E.g. ["foo", "bar"] would be returned as "foo\0bar\0".
   const char *getAliasArgs() const {
     assert(Info && "Must have a valid info!");
     assert(Owner && "Must have a valid owner!");
@@ -147,14 +148,14 @@ public:
   StringRef getHelpText() const {
     assert(Info && "Must have a valid info!");
     assert(Owner && "Must have a valid owner!");
-    return Owner->getStrTable()[Info->HelpTextOffset];
+    return Owner->getOptionHelpText(Info->ID);
   }
 
   /// Get the meta-variable list for this option.
   StringRef getMetaVar() const {
     assert(Info && "Must have a valid info!");
     assert(Owner && "Must have a valid owner!");
-    return Owner->getStrTable()[Info->MetaVarOffset];
+    return Owner->getOptionMetaVar(Info->ID);
   }
 
   unsigned getNumArgs() const { return Info->Param; }
