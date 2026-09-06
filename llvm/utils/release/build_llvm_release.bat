@@ -10,7 +10,7 @@ goto begin
 echo Script for building the LLVM installer on Windows,
 echo used for the releases at https://github.com/llvm/llvm-project/releases
 echo.
-echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64] [--skip-checkout] [--local-python] [--force-msvc] [--fast-build]
+echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64] [--skip-checkout] [--local-python] [--force-msvc] [--fast-build] [--enhanced-pgo] [--enable-thinlto] [--enable-pdb]
 echo.
 echo Options:
 echo --version: [required] version to build
@@ -21,6 +21,11 @@ echo --arm64: build and test arm64 variant
 echo --skip-checkout: use local git checkout instead of downloading src.zip
 echo --local-python: use installed Python and does not try to use a specific version (3.11)
 echo --force-msvc: use MSVC compiler for stage0, even if clang-cl is present
+echo --enhanced-pgo: train the instrumented stage1 clang by building LLVMSupport instead of
+echo   the legacy single-file Sema.cpp training step, and use the resulting profile for
+echo   stage2 (64-bit builds only).
+echo --enable-thinlto: build stage2 with ThinLTO (64-bit builds only)
+echo --enable-pdb: generate PDB debug info files for stage2 and include them as an additional artifact (64-bit builds only)
 echo.
 echo Note: At least one variant to build is required.
 echo.
@@ -41,6 +46,9 @@ set skip-checkout=
 set local-python=
 set force-msvc=
 set fast-build=
+set enhanced-pgo=
+set enable-thinlto=
+set enable-pdb=
 call :parse_args %*
 
 if "%help%" NEQ "" goto usage
@@ -355,16 +363,75 @@ set cmake_flags=%all_cmake_flags:\=/%
 
 mkdir build_%arch%
 cd build_%arch%
-if "%fast-build%" neq "true" (
+REM --fast-build skips PGO training for CI speed on time-constrained
+REM runners (see build_llvm_release.bat's usage doc), but --enhanced-pgo
+REM is an explicit, deliberate opt-in and should not be silently defeated
+REM by it; only skip training when enhanced-pgo was not also requested.
+if "%fast-build%" == "true" if "%enhanced-pgo%" neq "true" (
+  echo Skipping PGO training due to --fast-build.
+) else (
   call :do_generate_profile || exit /b 1
 )
+set lto_cmake_flag=
+if "%enable-thinlto%" == "true" set lto_cmake_flag=-DLLVM_ENABLE_LTO=Thin
 cmake -GNinja %cmake_flags% ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;flang;mlir" ^
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;openmp" ^
+  %lto_cmake_flag% ^
   %common_lldb_flags% ^
   -DPYTHON_HOME=%PYTHONHOME% ^
   %cmake_profile_flags% %llvm_src%\llvm || exit /b 1
 ninja || exit /b 1
+
+:: generate tarball with install toolchain only off
+if "%arch%"=="amd64" (
+  set filename=clang+llvm-%version%-x86_64-pc-windows-msvc
+) else (
+  set filename=clang+llvm-%version%-aarch64-pc-windows-msvc
+)
+set main_install_dir=%build_dir%/%filename%
+set pdb_install_dir=%build_dir%/%filename%-pdb-root
+REM LLVM_ENABLE_PDB flips the /Zi compile flag, which invalidates every
+REM object file from the build above and forces a full recompile+relink.
+REM That recompile does not depend on the test suite or WiX packaging
+REM below, so kick it off now in a separate build directory and let it
+REM run concurrently with them, hiding most/all of its wall-clock cost
+REM instead of paying for it serially at the end. LLVM_ENABLE_PDB is
+REM still never set for the MSI/WiX "ninja package" build below:
+REM bundling PDBs into the WiX-generated MSI causes CPack/WiX packaging
+REM failures, so PDBs are packaged separately as their own tarball
+REM instead.
+if "%enable-pdb%" == "true" (
+  cd ..
+  mkdir build_%arch%_pdb
+  cd build_%arch%_pdb
+  cmake -GNinja %cmake_flags% ^
+    -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;flang;mlir" ^
+    -DLLVM_ENABLE_RUNTIMES="compiler-rt;openmp" ^
+    %lto_cmake_flag% ^
+    %common_lldb_flags% ^
+    -DPYTHON_HOME=%PYTHONHOME% ^
+    %cmake_profile_flags% -DLLVM_INSTALL_TOOLCHAIN_ONLY=OFF ^
+    -DCMAKE_INSTALL_PREFIX=%pdb_install_dir% ^
+    -DLLVM_ENABLE_PDB=ON ^
+    %llvm_src%\llvm || exit /b 1
+  del /q ..\pdb_build.done 2>nul
+  REM Use "start /min" (a genuinely separate, minimized console) rather
+  REM than "start /b" (which shares the parent's console/IO handles):
+  REM the background job's own console output can otherwise bleed into
+  REM and interleave with this foreground script's captured output
+  REM despite the ">" file redirection below, consistent with
+  REM console-handle contention between the two concurrently-running
+  REM processes. A dedicated console avoids sharing those handles at all.
+  REM "/v:on" + "^!errorlevel^!" (rather than "%%errorlevel%%") is
+  REM required so ninja's real exit code is captured. Without delayed
+  REM expansion, cmd.exe substitutes %errorlevel% once when the whole
+  REM "cmd1 & cmd2" line is parsed (before ninja even runs), so it would
+  REM always report the pre-existing errorlevel instead of ninja's
+  REM result.
+  start "pdb_build" /min cmd /v:on /c "ninja install > ..\pdb_build.log 2>&1 & echo ^!errorlevel^! > ..\pdb_build.done" < nul
+  cd ..\build_%arch%
+)
 ninja check-llvm || exit /b 1
 ninja check-clang || exit /b 1
 ninja check-lld || exit /b 1
@@ -378,20 +445,59 @@ REM ninja check-mlir || exit /b 1
 REM ninja check-lldb || exit /b 1
 ninja package || exit /b 1
 
-:: generate tarball with install toolchain only off
-if "%arch%"=="amd64" (
-  set filename=clang+llvm-%version%-x86_64-pc-windows-msvc
-) else (
-  set filename=clang+llvm-%version%-aarch64-pc-windows-msvc
+if "%enable-pdb%" == "true" (
+  call :wait_for_pdb_build || exit /b 1
 )
 cmake -GNinja %cmake_flags% %cmake_profile_flags% -DLLVM_INSTALL_TOOLCHAIN_ONLY=OFF ^
-  -DCMAKE_INSTALL_PREFIX=%build_dir%/%filename% %llvm_src%\llvm || exit /b 1
+  -DCMAKE_INSTALL_PREFIX=%main_install_dir% ^
+  %llvm_src%\llvm || exit /b 1
 ninja install || exit /b 1
 :: check llvm_config is present & returns something
-%build_dir%/%filename%/bin/llvm-config.exe --bindir || exit /b 1
+%main_install_dir%/bin/llvm-config.exe --bindir || exit /b 1
 cd ..
+if "%enable-pdb%" == "true" (
+  :: Package PDBs from the separate PDB-enabled install tree so the main
+  :: archive can still come from the clean non-PDB install tree above.
+  set pdb_filename=%filename%-pdb
+  REM Use a plain relative directory name here, not the absolute
+  REM %pdb_install_dir% path: on this runner "pushd" fails with
+  REM "The system cannot find the drive specified" when given an
+  REM absolute path that mixes backslash and forward-slash separators
+  REM (as %pdb_install_dir% does, since it's built with a "/" against
+  REM the backslash-based %build_dir%). cwd is already %build_dir%
+  REM (see "cd .." above), and %filename%-pdb-root is a direct child
+  REM of it, so the relative form below is equivalent and avoids the
+  REM issue entirely.
+  pushd %filename%-pdb-root
+  7z a -ttar -so ..\!pdb_filename!.tar bin\*.pdb lib\*.pdb | 7z a -txz -si ..\!pdb_filename!.tar.xz
+  popd
+)
 7z a -ttar -so %filename%.tar %filename% | 7z a -txz -si %filename%.tar.xz
 
+exit /b 0
+
+::==============================================================================
+:: Poll for the concurrent PDB build kicked off earlier in this function to
+:: finish, and propagate its exit code. Must be a standalone function (not
+:: an inline goto/label inside a parenthesized if-block) since cmd.exe does
+:: not reliably support jumping to a label defined inside the same
+:: "( ... )" block.
+::==============================================================================
+:wait_for_pdb_build
+if not exist ..\pdb_build.done (
+  ping -n 6 127.0.0.1 >nul
+  goto :wait_for_pdb_build
+)
+REM Use "for /f" rather than "set /p" to read the exit code: "for /f"
+REM tokenizes on whitespace and strips it, whereas "set /p" would take any
+REM trailing spaces/junk in the file literally, breaking the "== 0" check
+REM below even when the underlying build actually succeeded.
+set pdb_build_rc=
+for /f %%r in (..\pdb_build.done) do set pdb_build_rc=%%r
+if not "%pdb_build_rc%" == "0" (
+  type ..\pdb_build.log
+  exit /b 1
+)
 exit /b 0
 
 ::==============================================================================
@@ -503,18 +609,35 @@ cmake -GNinja %cmake_flags% -DLLVM_TARGETS_TO_BUILD=Native ^
 ninja clang || exit /b 1
 set instrumented_clang=%cd:\=/%/bin/clang-cl.exe
 cd ..
-REM Use that to build part of llvm to generate a profile.
 mkdir train
 cd train
-cmake -GNinja %cmake_flags% ^
-  -DCMAKE_C_COMPILER=%instrumented_clang% ^
-  -DCMAKE_CXX_COMPILER=%instrumented_clang% ^
-  -DLLVM_ENABLE_PROJECTS=clang ^
-  -DLLVM_TARGETS_TO_BUILD=Native ^
-  %llvm_src%\llvm || exit /b 1
-REM Drop profiles generated from running cmake; those are not representative.
-del ..\instrument\profiles\*.profraw
-ninja tools/clang/lib/Sema/CMakeFiles/obj.clangSema.dir/Sema.cpp.obj
+if "%enhanced-pgo%" == "true" (
+  REM Build LLVMSupport with the instrumented clang to generate a broad profile.
+  REM This mirrors Linux and Mac perf-training approach.
+  cmake -GNinja ^
+    -DCMAKE_BUILD_TYPE=Release ^
+    -DCMAKE_C_COMPILER=%instrumented_clang% ^
+    -DCMAKE_CXX_COMPILER=%instrumented_clang% ^
+    -DLLVM_TARGETS_TO_BUILD=Native ^
+    -DLLVM_ENABLE_PROJECTS="" ^
+    -DLLVM_ENABLE_RUNTIMES="" ^
+    %llvm_src%\llvm || exit /b 1
+  REM Drop profiles generated from running cmake; those are not representative.
+  del ..\instrument\profiles\*.profraw
+  ninja LLVMSupport || exit /b 1
+) else (
+  REM Use instrumented build of clang to compile a complex single file to
+  REM deliver minimum build times.
+  cmake -GNinja %cmake_flags% ^
+    -DCMAKE_C_COMPILER=%instrumented_clang% ^
+    -DCMAKE_CXX_COMPILER=%instrumented_clang% ^
+    -DLLVM_ENABLE_PROJECTS=clang ^
+    -DLLVM_TARGETS_TO_BUILD=Native ^
+    %llvm_src%\llvm || exit /b 1
+  REM Drop profiles generated from running cmake; those are not representative.
+  del ..\instrument\profiles\*.profraw
+  ninja tools/clang/lib/Sema/CMakeFiles/obj.clangSema.dir/Sema.cpp.obj || exit /b 1
+)
 cd ..
 set profile=%cd:\=/%/profile.profdata
 %stage0_bin_dir%\llvm-profdata merge -output=%profile% instrument\profiles\*.profraw || exit /b 1
