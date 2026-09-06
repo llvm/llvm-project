@@ -5501,34 +5501,20 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
           break;
         }
       // Nothing between the SETCCr and the branch may clobber EFLAGS or
-      // touch the discriminant register. Any call-sequence adjustment is
-      // harmless here: the discriminant was already materialized from CF
-      // into a register by HERB_SETCCr, so even if ADJCALLSTACKUP lowers
-      // to an add that clobbers EFLAGS, the TEST8ri reads the register,
-      // not the live CF.
-      auto IsHarmlessAdjCallStack = [](const MachineInstr &MI) {
-        switch (MI.getOpcode()) {
-        default:
-          return false;
-        case X86::ADJCALLSTACKDOWN32:
-        case X86::ADJCALLSTACKUP32:
-        case X86::ADJCALLSTACKDOWN64:
-        case X86::ADJCALLSTACKUP64:
-          return true;
-        }
-      };
+      // touch the discriminant register. This fold turns the branch into a
+      // direct jb/jae on live CF and erases the HERB_SETCCr, so while the
+      // TEST8ri reads the register rather than the flags, the rewritten
+      // consumer would read live CF: any EFLAGS modifier in between (an
+      // ALU op, or ADJCALLSTACKUP lowering to an add) would corrupt the
+      // discriminant and must disqualify the fold.
       for (MachineBasicBlock::iterator It =
                std::next(MachineBasicBlock::iterator(SetB));
-           Clean && It != MachineBasicBlock::iterator(CmpInstr); ++It)
-        if (IsHarmlessAdjCallStack(*It))
-          continue;
+           Clean && It != MachineBasicBlock::iterator(CmpInstr); ++It) {
+        if (It->modifiesRegister(X86::EFLAGS, TRI))
+          Clean = false;
         else if (It->readsRegister(DiscReg, TRI))
           Clean = false;
-        else if (It->modifiesRegister(X86::EFLAGS, TRI)) {
-          if (!It->readsRegister(X86::EFLAGS, TRI))
-            continue;
-          Clean = false;
-        }
+      }
       // Look for a single EFLAGS consumer (JCC or CMOV with E/NE condition)
       // that reads the TEST's flags.  After the consumer, an EFLAGS modifier
       // resets flag state, so subsequent EFLAGS readers observe the new flags
@@ -5563,11 +5549,10 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         if (ModifiesEFLAGS) {
           if (Consumer)
             FlagsRedefinedAfterConsumer = true;
-          else if (!It->readsRegister(DiscReg, TRI)) {
-            // Harmless flag clobber before consumer (e.g. MOV32r0).
-            ++It;
-            continue;
-          } else {
+          else {
+            // A flag clobber between the TEST and the consumer would sit
+            // between the call and the rewritten jb/jae on live CF, so it
+            // is not harmless.
             Clean = false;
             break;
           }

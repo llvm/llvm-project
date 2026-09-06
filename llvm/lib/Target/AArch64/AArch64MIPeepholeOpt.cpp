@@ -392,6 +392,18 @@ bool AArch64MIPeepholeOptImpl::visitHERB_CSET(MachineInstr &MI) {
   if (!Branch)
     return false;
 
+  // This fold rewrites the branch into Bcc on live NZCV and erases the
+  // HERB_CSET, so nothing between the HERB_CSET and the branch may modify
+  // NZCV (e.g. an ALU op scheduled in between); otherwise the rewritten
+  // Bcc would test a clobbered flag instead of the post-call carry.
+  if (Branch->getParent() != MI.getParent())
+    return false;
+  const TargetRegisterInfo &TRI = TII->getRegisterInfo();
+  for (auto It = std::next(MachineBasicBlock::iterator(MI));
+       It != MachineBasicBlock::iterator(Branch); ++It)
+    if (It->modifiesRegister(AArch64::NZCV, &TRI))
+      return false;
+
   unsigned BrOpc = Branch->getOpcode();
   bool IsCBZ;
   if (BrOpc == AArch64::CBZW || BrOpc == AArch64::CBZX)
