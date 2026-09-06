@@ -7,6 +7,14 @@ add_header_library(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.macros.attributes
     libc.src.__support.macros.c
+  fixint_helper
+  HDRS
+    fixint_helper.h
+  DEPENDS
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -634,6 +642,74 @@ add_header_library(
     libc.hdr.stdint_proxy
     libc.include.llvm-libc-types.float128
     libc.src.__support.builtins.floatint_helper
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  fixtfsi
+  HDRS
+    fixtfsi.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.builtins.fixint_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fixtfdi
+  HDRS
+    fixtfdi.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.builtins.fixint_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fixtfti
+  HDRS
+    fixtfti.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.builtins.fixint_helper
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+)
+
+add_header_library(
+  fixunstfsi
+  HDRS
+    fixunstfsi.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.builtins.fixint_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fixunstfdi
+  HDRS
+    fixunstfdi.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.builtins.fixint_helper
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fixunstfti
+  HDRS
+    fixunstfti.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.builtins.fixint_helper
     libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
 )
