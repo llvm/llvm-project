@@ -30,6 +30,8 @@ protected:
   // Temporary symbol used to check whether a PC-relative fixup is resolved.
   MCSymbol *PCRelTemp = nullptr;
 
+  class RISCVELFStreamer *ELFStreamer = nullptr;
+
   bool isPCRelFixupResolved(const MCSymbol *SymA, const MCFragment &F);
 
   StringMap<MCSymbol *> VendorSymbols;
@@ -75,6 +77,8 @@ public:
                     const MCSubtargetInfo *STI) const override;
 
   const MCTargetOptions &getTargetOptions() const { return TargetOptions; }
+
+  void setELFStreamer(RISCVELFStreamer *S) { ELFStreamer = S; }
 };
 }
 

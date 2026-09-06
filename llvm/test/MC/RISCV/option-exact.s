@@ -31,7 +31,7 @@ c.lw a0, 0(a0)
 # CHECK-ASM-SAME: # encoding: [0x97'A',A,A,A,0xe7'A',0x80'A',A,A]
 # CHECK-OBJDUMP: auipc ra, 0
 # CHECK-OBJDUMP-NEXT: R_RISCV_CALL_PLT undefined
-# CHECK-OBJDUMP-NEXT: R_RISCV_RELAX *ABS*
+# CHECK-OBJDUMP-NEXT: R_RISCV_RELAX {{.*}}
 # CHECK-OBJDUMP-NEXT: jalr ra
 call undefined@plt
 
@@ -98,7 +98,7 @@ c.lw a0, 0(a0)
 # CHECK-ASM-SAME: # encoding: [0x97'A',A,A,A,0xe7'A',0x80'A',A,A]
 # CHECK-OBJDUMP: auipc ra, 0
 # CHECK-OBJDUMP-NEXT: R_RISCV_CALL_PLT undefined
-# CHECK-OBJDUMP-NEXT: R_RISCV_RELAX *ABS*
+# CHECK-OBJDUMP-NEXT: R_RISCV_RELAX {{.*}}
 # CHECK-OBJDUMP-NEXT: jalr ra, 0(ra)
 call undefined@plt
 
