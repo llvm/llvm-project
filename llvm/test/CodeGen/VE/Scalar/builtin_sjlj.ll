@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=ve | FileCheck %s
-; RUN: llc < %s -mtriple=ve -relocation-model=pic | \
+; RUN: llc < %s -mtriple=ve -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=ve -relocation-model=pic -verify-machineinstrs | \
 ; RUN:     FileCheck %s -check-prefix=PIC
 
 %struct.__jmp_buf_tag = type { [25 x i64], i64, [16 x i64] }
