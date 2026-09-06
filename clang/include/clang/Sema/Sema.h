@@ -854,6 +854,31 @@ enum AttrName { Target, TargetClones, TargetVersion };
 
 void inferNoReturnAttr(Sema &S, Decl *D);
 
+namespace sema {
+/// Proxy class to parse a list of tokens and/or code strings.
+///
+/// This is really intended to provide access to 'Parser' without making the
+/// Sema library depend on the Parser library. We sometimes may want to generate
+/// implicit AST nodes, but doing so by calling various ActOnXY() functions in
+/// hopefully the right order and with the right arguments is both verbose and
+/// fragile; instead, we'd much rather write regular C++ code and just parse it;
+/// the APIs defined in this class facilitate this.
+class TokenInjectionHandler {
+protected:
+  TokenInjectionHandler() = default;
+
+public:
+  virtual ~TokenInjectionHandler() = default;
+
+  /// Parse 'Code' as a single expression. Any identifier token whose name is
+  /// equal to a key in 'Replacements' will be replaced with the corresponding
+  /// token in the map before parsing.
+  virtual ExprResult
+  ParseAsExpression(StringRef Code, const llvm::StringMap<Token> &Replacements,
+                    SourceLocation InjectionLoc) = 0;
+};
+} // namespace sema
+
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wattributes"
@@ -1262,8 +1287,16 @@ public:
   /// For example, user-defined classes, built-in "id" type, etc.
   Scope *TUScope;
 
+  /// Proxy object that calls into the parser to perform string injection.
+  std::unique_ptr<sema::TokenInjectionHandler> TokenInjectionHandler = nullptr;
+
   void incrementMSManglingNumber() const {
     return CurScope->incrementMSManglingNumber();
+  }
+
+  void setTokenInjectionHandler(
+      std::unique_ptr<sema::TokenInjectionHandler> InjectionHandler) {
+    TokenInjectionHandler = std::move(InjectionHandler);
   }
 
   /// Try to recover by turning the given expression into a
@@ -11172,7 +11205,7 @@ public:
       SourceLocation CoawaitLoc,
       ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps,
       BuildForRangeKind Kind, bool IsConstexpr,
-      StmtResult *RebuildResult = nullptr,
+      bool AccessibleViaNameLookup = false, StmtResult *RebuildResult = nullptr,
       llvm::function_ref<StmtResult()> RebuildWithDereference = {},
       IdentifierInfo *BeginName = nullptr, IdentifierInfo *EndName = nullptr);
 

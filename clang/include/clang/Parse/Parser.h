@@ -282,6 +282,7 @@ public:
   friend class PoisonSEHIdentifiersRAIIObject;
   friend class ParenBraceBracketBalancer;
   friend class BalancedDelimiterTracker;
+  class TokenInjectionHandlerImpl;
 
   Parser(Preprocessor &PP, Sema &Actions, bool SkipFunctionBodies);
   ~Parser() override;

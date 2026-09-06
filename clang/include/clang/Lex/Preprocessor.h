@@ -1823,6 +1823,11 @@ public:
   /// Lex the next token for this preprocessor.
   void Lex(Token &Result);
 
+  /// Lex all tokens in 'Code' into 'Tokens' as though we were expanding a macro
+  /// that expands to 'Code' at location 'Loc'.
+  bool LexTokensInString(SmallVectorImpl<Token> &Tokens, StringRef Code,
+                         SourceLocation Loc);
+
   /// Lex all tokens for this preprocessor until (and excluding) end of file.
   void LexTokensUntilEOF(std::vector<Token> *Tokens = nullptr);
 

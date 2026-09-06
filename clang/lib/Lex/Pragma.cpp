@@ -279,17 +279,17 @@ void Preprocessor::Handle_Pragma(Token &Tok) {
   // The _Pragma is lexically sound.  Destringize according to C11 6.10.9.1.
   prepare_PragmaString(StrVal);
 
-  // Plop the string (including the newline and trailing null) into a buffer
-  // where we can lex it.
-  Token TmpTok;
-  TmpTok.startToken();
-  CreateString(StrVal, TmpTok);
-  SourceLocation TokLoc = TmpTok.getLocation();
-
   // Make and enter a lexer object so that we lex and expand the tokens just
   // like any others.
-  std::unique_ptr<Lexer> TL = Lexer::Create_PragmaLexer(
-      TokLoc, PragmaLoc, RParenLoc, StrVal.size(), *this);
+  std::unique_ptr<Lexer> TL =
+      Lexer::CreateScratchLexer(StrVal, PragmaLoc, RParenLoc, *this);
+
+  // Ensure that the lexer thinks it is inside a directive, so that end \n will
+  // return an EOD token.
+  TL->ParsingPreprocessorDirective = true;
+
+  // This lexer really is for _Pragma.
+  TL->Is_PragmaLexer = true;
 
   EnterSourceFileWithLexer(std::move(TL), nullptr);
 

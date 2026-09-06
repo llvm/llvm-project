@@ -1194,6 +1194,55 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
       continue;
     }
 
+    // Annotation token that tells the parser to build the 'begin' and 'end'
+    // declarations for an iterating expansion statement; this is used inside
+    // the lambda that computes the expansion size (see also
+    // Sema::ComputeExpansionSize()).
+    //
+    // The annotation token is followed by 2 identifier tokens, which indicate
+    // the variable names for the begin and end variable, respectively.
+    //
+    // We handle this here because this results in *two* statements, not one,
+    // and moreover, this annotation token shouldn't appear in any other context
+    // anyway.
+    //
+    // The reason this is a single annotation token is that the code that builds
+    // 'begin' and 'end' only supports building both at once.
+    if (Tok.is(tok::annot_expansion_stmt_declare_begin_end)) {
+      auto *RangeVarDecl = static_cast<VarDecl *>(Tok.getAnnotationValue());
+      ConsumeAnnotationToken();
+
+      assert(Tok.is(tok::identifier));
+      IdentifierInfo *BeginName = Tok.getIdentifierInfo();
+      ConsumeToken();
+
+      assert(Tok.is(tok::identifier));
+      IdentifierInfo *EndName = Tok.getIdentifierInfo();
+      ConsumeToken();
+
+      SourceLocation Loc = RangeVarDecl->getBeginLoc();
+      Sema::ForRangeBeginEndInfo Info = Actions.BuildCXXForRangeBeginEndVars(
+          getCurScope(), RangeVarDecl, RangeVarDecl->getBeginLoc(),
+          /*CoawaitLoc=*/{},
+          /*LifetimeExtendTemps=*/{}, Sema::BFRK_Build, /*Constexpr=*/false,
+          /*AccessibleViaNameLookup=*/true,
+          /*RebuildResult=*/nullptr, /*RebuildWithDereference=*/nullptr,
+          BeginName, EndName);
+      if (!Info.isValid())
+        continue;
+
+      StmtResult BeginStmt = Actions.ActOnDeclStmt(
+          Actions.ConvertDeclToDeclGroup(Info.BeginVar), Loc, Loc);
+      StmtResult EndStmt = Actions.ActOnDeclStmt(
+          Actions.ConvertDeclToDeclGroup(Info.EndVar), Loc, Loc);
+      if (BeginStmt.isInvalid() || EndStmt.isInvalid())
+        continue;
+
+      Stmts.push_back(BeginStmt.get());
+      Stmts.push_back(EndStmt.get());
+      continue;
+    }
+
     if (ConsumeNullStmt(Stmts))
       continue;
 

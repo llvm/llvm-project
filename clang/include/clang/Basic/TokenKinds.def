@@ -758,6 +758,12 @@ ANNOTATION(decltype)     // annotation for a decltype expression,
                          // e.g., "decltype(foo.bar())"
 ANNOTATION(pack_indexing_type) // annotation for an indexed pack of type,
                               // e.g., "T...[expr]"
+ANNOTATION(value_decl) // a "ValueDecl *" to which we should build an lvalue DeclRefExpr
+ANNOTATION(expansion_stmt_declare_begin_end) // a "ValueDecl *" that is the "range"
+                                             // variable of an iterating expansion
+                                             // statement using which we should build
+                                             // declarations for "begin" and "end"
+ANNOTATION(expr) // an "ExprResult"
 
 // Annotation for #pragma unused(...)
 // For each argument inside the parentheses the pragma handler will produce

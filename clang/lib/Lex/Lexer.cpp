@@ -236,14 +236,10 @@ void Lexer::resetExtendedTokenMode() {
     SetCommentRetentionState(PP->getCommentRetentionState());
 }
 
-/// Create_PragmaLexer: Lexer constructor - Create a new lexer object for
-/// _Pragma expansion.  This has a variety of magic semantics that this method
-/// sets up.
+/// CreateScratchLexer: Lexer constructor - Create a new lexer object that
+/// places 'Code' in the scratch buffer and lexes from it.
 ///
-/// On entrance to this routine, TokStartLoc is a macro location which has a
-/// spelling loc that indicates the bytes to be lexed for the token and an
-/// expansion location that indicates where all lexed tokens should be
-/// "expanded from".
+/// This is used to implement _Pragma as well as string injection.
 ///
 /// TODO: It would really be nice to make _Pragma just be a wrapper around a
 /// normal lexer that remaps tokens as they fly by.  This would require making
@@ -251,10 +247,17 @@ void Lexer::resetExtendedTokenMode() {
 /// interface that could handle this stuff.  This would pull GetMappedTokenLoc
 /// out of the critical path of the lexer!
 ///
-std::unique_ptr<Lexer> Lexer::Create_PragmaLexer(
-    SourceLocation SpellingLoc, SourceLocation ExpansionLocStart,
-    SourceLocation ExpansionLocEnd, unsigned TokLen, Preprocessor &PP) {
+std::unique_ptr<Lexer>
+Lexer::CreateScratchLexer(StringRef Code, SourceLocation ExpansionLocStart,
+                          SourceLocation ExpansionLocEnd, Preprocessor &PP) {
   SourceManager &SM = PP.getSourceManager();
+
+  // Plop the string into a buffer where we can lex it.
+  Token TmpTok;
+  TmpTok.startToken();
+  PP.CreateString(Code, TmpTok);
+  SourceLocation SpellingLoc = TmpTok.getLocation();
+  unsigned TokLen = Code.size();
 
   // Create the lexer as if we were going to lex the file normally.
   FileID SpellingFID = SM.getFileID(SpellingLoc);
@@ -276,12 +279,6 @@ std::unique_ptr<Lexer> Lexer::Create_PragmaLexer(
                                      ExpansionLocStart,
                                      ExpansionLocEnd, TokLen);
 
-  // Ensure that the lexer thinks it is inside a directive, so that end \n will
-  // return an EOD token.
-  L->ParsingPreprocessorDirective = true;
-
-  // This lexer really is for _Pragma.
-  L->Is_PragmaLexer = true;
   return L;
 }
 
@@ -3264,8 +3261,9 @@ bool Lexer::LexEndOfFile(Token &Result, const char *CurPtr) {
   }
 
   // If we are in raw mode, return this event as an EOF token.  Let the caller
-  // that put us in raw mode handle the event.
-  if (isLexingRawMode()) {
+  // that put us in raw mode handle the event. Likewise if we're lexing from
+  // an injected string.
+  if (isLexingRawMode() || LexingInjectedString) {
     Result.startToken();
     BufferPtr = BufferEnd;
     FormTokenWithChars(Result, BufferEnd, tok::eof);

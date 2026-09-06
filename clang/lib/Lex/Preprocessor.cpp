@@ -578,6 +578,25 @@ Module *Preprocessor::getCurrentModuleImplementation() {
   return getHeaderSearchInfo().lookupModule(getLangOpts().ModuleName);
 }
 
+bool Preprocessor::LexTokensInString(SmallVectorImpl<Token> &Tokens,
+                                     StringRef Code, SourceLocation Loc) {
+  std::unique_ptr<Lexer> L = Lexer::CreateScratchLexer(Code, Loc, Loc, *this);
+  L->LexingInjectedString = true;
+  EnterSourceFileWithLexer(std::move(L), /*Dir=*/nullptr);
+  for (;;) {
+    Token Tok;
+    Lex(Tok);
+    Tokens.push_back(Tok);
+    if (Tok.is(tok::eof)) {
+      // Ignore the return value of HandleEndOfFile(): it tells us whether we
+      // should call Lex() again to get the next token, which we don't want to
+      // to do here anyway.
+      HandleEndOfFile(Tok, /*isEndOfMacro=*/false);
+      return false;
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Preprocessor Initialization Methods
 //===----------------------------------------------------------------------===//
