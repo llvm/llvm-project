@@ -95,6 +95,9 @@ class LongJmpPass : public BinaryFunctionPass {
     /// Estimated size of the cluster in bytes.
     uint64_t Size{0};
 
+    /// Estimated output offset of the cluster.
+    uint64_t StartOffset{0};
+
     /// Number of function fragments in the cluster.
     size_t NumFragments{0};
 
@@ -122,6 +125,8 @@ class LongJmpPass : public BinaryFunctionPass {
     StringRef getThunkSectionName(bool IsForward) const {
       return IsForward ? EndSectionName : StartSectionName;
     }
+
+    uint64_t getEndOffset() const { return StartOffset + Size; }
   };
 
   struct FragmentClusterLayout {
