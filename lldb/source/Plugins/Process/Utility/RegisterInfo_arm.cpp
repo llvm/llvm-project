@@ -1,10 +1,10 @@
-//===-- RegisterInfoPOSIX_arm.cpp -----------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 
 #include <cassert>
 #include <cstddef>
@@ -13,37 +13,37 @@
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Compiler.h"
 
-#include "RegisterInfoPOSIX_arm.h"
+#include "RegisterInfo_arm.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
 // Based on RegisterContextDarwin_arm.cpp
 #define GPR_OFFSET(idx) ((idx)*4)
-#define FPU_OFFSET(idx) ((idx)*4 + sizeof(RegisterInfoPOSIX_arm::GPR))
+#define FPU_OFFSET(idx) ((idx)*4 + sizeof(RegisterInfo_arm::GPR))
 #define FPSCR_OFFSET                                                           \
-  (LLVM_EXTENSION offsetof(RegisterInfoPOSIX_arm::FPU, fpscr) +                \
-   sizeof(RegisterInfoPOSIX_arm::GPR))
+  (LLVM_EXTENSION offsetof(RegisterInfo_arm::FPU, fpscr) +                \
+   sizeof(RegisterInfo_arm::GPR))
 #define TLS_OFFSET                                                             \
-  (sizeof(RegisterInfoPOSIX_arm::GPR) + sizeof(RegisterInfoPOSIX_arm::FPU))
+  (sizeof(RegisterInfo_arm::GPR) + sizeof(RegisterInfo_arm::FPU))
 #define EXC_OFFSET(idx)                                                        \
-  ((idx) * 4 + sizeof(RegisterInfoPOSIX_arm::GPR) +                            \
-   sizeof(RegisterInfoPOSIX_arm::FPU) + sizeof(RegisterInfoPOSIX_arm::TLS))
+  ((idx) * 4 + sizeof(RegisterInfo_arm::GPR) +                            \
+   sizeof(RegisterInfo_arm::FPU) + sizeof(RegisterInfo_arm::TLS))
 #define DBG_OFFSET(reg)                                                        \
-  ((LLVM_EXTENSION offsetof(RegisterInfoPOSIX_arm::DBG, reg) +                 \
-    sizeof(RegisterInfoPOSIX_arm::GPR) + sizeof(RegisterInfoPOSIX_arm::FPU) +  \
-    sizeof(RegisterInfoPOSIX_arm::TLS) + sizeof(RegisterInfoPOSIX_arm::EXC)))
+  ((LLVM_EXTENSION offsetof(RegisterInfo_arm::DBG, reg) +                 \
+    sizeof(RegisterInfo_arm::GPR) + sizeof(RegisterInfo_arm::FPU) +  \
+    sizeof(RegisterInfo_arm::TLS) + sizeof(RegisterInfo_arm::EXC)))
 
 #define DEFINE_DBG(reg, i)                                                     \
-  #reg, NULL, sizeof(((RegisterInfoPOSIX_arm::DBG *) NULL)->reg[i]),           \
+  #reg, NULL, sizeof(((RegisterInfo_arm::DBG *) NULL)->reg[i]),           \
                       DBG_OFFSET(reg[i]), eEncodingUint, eFormatHex,           \
                                  {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    \
                                   LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM,    \
                                   dbg_##reg##i },                              \
                                   NULL, NULL, NULL,
 #define REG_CONTEXT_SIZE                                                       \
-  (sizeof(RegisterInfoPOSIX_arm::GPR) + sizeof(RegisterInfoPOSIX_arm::FPU) +   \
-   sizeof(RegisterInfoPOSIX_arm::EXC))
+  (sizeof(RegisterInfo_arm::GPR) + sizeof(RegisterInfo_arm::FPU) +   \
+   sizeof(RegisterInfo_arm::EXC))
 
 // Include RegisterInfos_arm to declare our g_register_infos_arm structure.
 #define DECLARE_REGISTER_INFOS_ARM_STRUCT
@@ -163,32 +163,32 @@ static const RegisterSet g_reg_sets_arm[k_num_register_sets_with_tls] = {
     {"Thread Local Storage Registers", "tls", k_num_tls_registers,
      g_tls_regnums_arm}};
 
-RegisterInfoPOSIX_arm::RegisterInfoPOSIX_arm(
+RegisterInfo_arm::RegisterInfo_arm(
     const lldb_private::ArchSpec &target_arch, bool has_tls_reg)
     : lldb_private::RegisterInfoAndSetInterface(target_arch),
       m_register_info_p(GetRegisterInfoPtr(target_arch)),
       m_register_info_count(GetRegisterInfoCount(target_arch)),
       m_has_tls_reg(has_tls_reg) {}
 
-size_t RegisterInfoPOSIX_arm::GetGPRSize() const {
-  return sizeof(struct RegisterInfoPOSIX_arm::GPR);
+size_t RegisterInfo_arm::GetGPRSize() const {
+  return sizeof(struct RegisterInfo_arm::GPR);
 }
 
-size_t RegisterInfoPOSIX_arm::GetFPRSize() const {
-  return sizeof(struct RegisterInfoPOSIX_arm::FPU);
+size_t RegisterInfo_arm::GetFPRSize() const {
+  return sizeof(struct RegisterInfo_arm::FPU);
 }
 
 const lldb_private::RegisterInfo *
-RegisterInfoPOSIX_arm::GetRegisterInfo() const {
+RegisterInfo_arm::GetRegisterInfo() const {
   return m_register_info_p;
 }
 
-size_t RegisterInfoPOSIX_arm::GetRegisterSetCount() const {
+size_t RegisterInfo_arm::GetRegisterSetCount() const {
   return m_has_tls_reg ? k_num_register_sets_with_tls
                        : k_num_register_sets_without_tls;
 }
 
-size_t RegisterInfoPOSIX_arm::GetRegisterSetFromRegisterIndex(
+size_t RegisterInfo_arm::GetRegisterSetFromRegisterIndex(
     uint32_t reg_index) const {
   if (reg_index <= gpr_cpsr)
     return GPRegSet;
@@ -200,12 +200,12 @@ size_t RegisterInfoPOSIX_arm::GetRegisterSetFromRegisterIndex(
 }
 
 const lldb_private::RegisterSet *
-RegisterInfoPOSIX_arm::GetRegisterSet(size_t set_index) const {
+RegisterInfo_arm::GetRegisterSet(size_t set_index) const {
   if (set_index < GetRegisterSetCount())
     return &g_reg_sets_arm[set_index];
   return nullptr;
 }
 
-uint32_t RegisterInfoPOSIX_arm::GetRegisterCount() const {
+uint32_t RegisterInfo_arm::GetRegisterCount() const {
   return m_register_info_count;
 }
