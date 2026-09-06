@@ -482,6 +482,9 @@ features cannot lower the translation-unit ABI level;
   dimension that is a zero integer constant, as in `struct Empty vla[n]` or
   `int vla[n][0]`. (#GH28328)
 
+- Fixed a missing `-Wconstant-conversion` diagnostic for `signed char` array
+  initialization. (#GH181730)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
