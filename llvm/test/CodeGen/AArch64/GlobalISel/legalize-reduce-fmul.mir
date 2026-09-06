@@ -13,11 +13,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x f32>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x f32>) = COPY $q1
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(<4 x f32>) = G_FMUL [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(<4 x f32>) = nnan ninf nsz arcp contract afn reassoc G_FMUL [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x f32>), [[UV1:%[0-9]+]]:_(<2 x f32>) = G_UNMERGE_VALUES [[FMUL]](<4 x f32>)
-    ; CHECK-NEXT: [[FMUL1:%[0-9]+]]:_(<2 x f32>) = G_FMUL [[UV]], [[UV1]]
+    ; CHECK-NEXT: [[FMUL1:%[0-9]+]]:_(<2 x f32>) = nnan ninf nsz arcp contract afn reassoc G_FMUL [[UV]], [[UV1]]
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(f32), [[UV3:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[FMUL1]](<2 x f32>)
-    ; CHECK-NEXT: [[FMUL2:%[0-9]+]]:_(f32) = G_FMUL [[UV2]], [[UV3]]
+    ; CHECK-NEXT: [[FMUL2:%[0-9]+]]:_(f32) = nnan ninf nsz arcp contract afn reassoc G_FMUL [[UV2]], [[UV3]]
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(f32) = COPY [[FMUL2]](f32)
     ; CHECK-NEXT: $s0 = COPY [[COPY2]](f32)
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
