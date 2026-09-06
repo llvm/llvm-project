@@ -29,44 +29,43 @@ class rcu_thread_local_list_view;
 
 class rcu_singly_list_view {
 private:
-  __rcu_node* __head_ = nullptr;
-  __rcu_node* __tail_ = nullptr;
+  __rcu_node* head_ = nullptr;
+  __rcu_node* tail_ = nullptr;
 
 public:
-  void __splice_back(rcu_singly_list_view& __other) noexcept {
-    if (__other.__head_ == nullptr) {
+  void splice_back(rcu_singly_list_view& other) noexcept {
+    if (other.head_ == nullptr) {
       return;
     }
-    if (__head_ == nullptr) {
-      __head_ = __other.__head_;
-      __tail_ = __other.__tail_;
+    if (head_ == nullptr) {
+      head_ = other.head_;
+      tail_ = other.tail_;
     } else {
-      __tail_->__next_ = __other.__head_;
-      __tail_          = __other.__tail_;
+      tail_->__next_ = other.head_;
+      tail_          = other.tail_;
     }
-    __other.__head_ = nullptr;
-    __other.__tail_ = nullptr;
+    other.head_ = nullptr;
+    other.tail_ = nullptr;
   }
 
-  void __splice_back(rcu_thread_local_list_view& __other) noexcept;
+  void splice_back(rcu_thread_local_list_view& __other) noexcept;
 
-
-  template <class _Func>
-  void __for_each(_Func&& __f) noexcept {
-    __rcu_node* __current = __head_;
-    while (__current != nullptr) {
+  template <class Func>
+  void for_each(Func&& f) noexcept {
+    __rcu_node* current = head_;
+    while (current != nullptr) {
       // __f could delete __current, so we need to get the next pointer first
-      auto __next = __current->__next_;
-      __f(__current);
-      __current = __next;
+      auto __next = current->__next_;
+      f(current);
+      current = __next;
     }
   }
 };
 
 class rcu_thread_local_list_view {
-  struct alignas(2*sizeof(void*)) thread_entry {
-    __rcu_node* __head_ = nullptr;
-    __rcu_node* __tail_ = nullptr;
+  struct alignas(2 * sizeof(void*)) thread_entry {
+    __rcu_node* head_ = nullptr;
+    __rcu_node* tail_ = nullptr;
   };
 
   using per_thread_entries = thread_local_container<thread_entry>;
@@ -74,40 +73,40 @@ class rcu_thread_local_list_view {
   friend class rcu_singly_list_view;
 
 public:
-  void __push_front(__rcu_node* __node) noexcept {
+  void push_front(__rcu_node* node) noexcept {
     atomic_ref<thread_entry> entry_ref = per_thread_entries::get_current_thread_instance();
     auto expected_entry                = entry_ref.load(std::memory_order_relaxed);
-    auto original_next = __node->__next_;
+    auto original_next                 = node->__next_;
     while (true) {
       auto new_entry = [&] {
-        if (expected_entry.__head_ == nullptr) {
-          return thread_entry{__node, __node};
+        if (expected_entry.head_ == nullptr) {
+          return thread_entry{node, node};
         } else {
-          __node->__next_ = expected_entry.__head_;
-          return thread_entry{__node, expected_entry.__tail_};
+          node->__next_ = expected_entry.head_;
+          return thread_entry{node, expected_entry.tail_};
         }
       }();
       if (entry_ref.compare_exchange_weak(
               expected_entry, new_entry, std::memory_order_acq_rel, std::memory_order_relaxed)) {
         break;
       } else {
-        __node->__next_ = original_next;
+        node->__next_ = original_next;
       }
     }
   }
 };
 
-void rcu_singly_list_view::__splice_back(rcu_thread_local_list_view& __other) noexcept {
+void rcu_singly_list_view::splice_back(rcu_thread_local_list_view& __other) noexcept {
   using thread_entry             = rcu_thread_local_list_view::thread_entry;
   const auto splice_single_entry = [this](atomic_ref<thread_entry> entry_ref) noexcept {
-    if (entry_ref.load(std::memory_order_relaxed).__head_ == nullptr) {
+    if (entry_ref.load(std::memory_order_relaxed).head_ == nullptr) {
       return;
     }
     auto entry = entry_ref.exchange(thread_entry{nullptr, nullptr}, std::memory_order_acq_rel);
     rcu_singly_list_view tmp;
-    tmp.__head_ = entry.__head_;
-    tmp.__tail_ = entry.__tail_;
-    this->__splice_back(tmp);
+    tmp.head_ = entry.head_;
+    tmp.tail_ = entry.tail_;
+    this->splice_back(tmp);
   };
   rcu_thread_local_list_view::per_thread_entries::for_each(splice_single_entry);
 }
