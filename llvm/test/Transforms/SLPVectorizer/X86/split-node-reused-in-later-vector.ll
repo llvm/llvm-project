@@ -4,18 +4,16 @@
 define i1 @test() {
 ; CHECK-LABEL: define i1 @test() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 0, 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i1> <i1 poison, i1 false>, i1 [[TMP1]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = select <2 x i1> [[TMP2]], <2 x i32> <i32 1, i32 0>, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i32> [[TMP4]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 undef, i32 undef, i32 undef, i32 undef>, <8 x i32> [[TMP10]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 1, i32 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = freeze <8 x i32> poison
 ; CHECK-NEXT:    [[TMP21:%.*]] = select <8 x i1> zeroinitializer, <8 x i32> [[TMP20]], <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> poison, i32 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[TMP5]], <8 x i32> poison, <8 x i32> <i32 poison, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i32> <i32 0, i32 undef, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, <8 x i32> [[TMP6]], <8 x i32> <i32 0, i32 9, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP22:%.*]] = mul <8 x i32> [[TMP11]], zeroinitializer
 ; CHECK-NEXT:    [[TMP23:%.*]] = urem <8 x i32> [[TMP22]], splat (i32 46337)
-; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <8 x i32> [[TMP23]], <8 x i32> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 2, i32 5, i32 3, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP25:%.*]] = add <8 x i32> [[TMP21]], [[TMP24]]
-; CHECK-NEXT:    [[TMP26:%.*]] = or <8 x i32> [[TMP21]], [[TMP24]]
+; CHECK-NEXT:    [[TMP25:%.*]] = add <8 x i32> [[TMP21]], [[TMP23]]
+; CHECK-NEXT:    [[TMP26:%.*]] = or <8 x i32> [[TMP21]], [[TMP23]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <8 x i32> [[TMP25]], <8 x i32> [[TMP26]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 5, i32 14, i32 7>
 ; CHECK-NEXT:    [[TMP28:%.*]] = urem <8 x i32> [[TMP27]], splat (i32 46337)
 ; CHECK-NEXT:    [[TMP29:%.*]] = icmp ult <8 x i32> [[TMP28]], zeroinitializer

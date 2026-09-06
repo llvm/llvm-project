@@ -309,11 +309,6 @@ public:
   applyCombineBuildVectorOfBitcast(MachineInstr &MI,
                                    SmallVector<Register> &Ops) const;
 
-  /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
-  /// Returns true if MI changed.
-  ///
-  /// \pre MI.getOpcode() == G_SHUFFLE_VECTOR.
-  LLVM_ABI bool tryCombineShuffleVector(MachineInstr &MI) const;
   /// Check if the G_SHUFFLE_VECTOR \p MI can be replaced by a
   /// concat_vectors.
   /// \p Ops will contain the operands needed to produce the flattened
@@ -501,10 +496,6 @@ public:
   applyCombineTruncOfShift(MachineInstr &MI,
                            std::pair<MachineInstr *, LLT> &MatchInfo) const;
 
-  /// Return true if any explicit use operand on \p MI is defined by a
-  /// G_IMPLICIT_DEF.
-  LLVM_ABI bool matchAnyExplicitUseIsUndef(MachineInstr &MI) const;
-
   /// Return true if all register explicit use operands on \p MI are defined by
   /// a G_IMPLICIT_DEF.
   LLVM_ABI bool matchAllExplicitUsesAreUndef(MachineInstr &MI) const;
@@ -576,9 +567,6 @@ public:
 
   /// Optimize (x op x) -> x
   LLVM_ABI bool matchBinOpSameVal(MachineInstr &MI) const;
-
-  /// Check if operand \p OpIdx is undef.
-  LLVM_ABI bool matchOperandIsUndef(MachineInstr &MI, unsigned OpIdx) const;
 
   /// Check if operand \p MO is known to be a power of 2. When \p OrNegative
   /// is true, also match operands whose negation is a power of 2 (i.e. whose
@@ -861,10 +849,6 @@ public:
   // Combine truncusat_u(fptoui(x)) -> fptoui_sat(x)
   LLVM_ABI bool matchTruncUSatUToFPTOUISat(MachineInstr &MI,
                                            MachineInstr &SrcMI) const;
-
-  /// Try to transform \p MI by using all of the above
-  /// combine functions. Returns true if changed.
-  LLVM_ABI bool tryCombine(MachineInstr &MI) const;
 
   /// Match:
   ///   (G_UMULO x, 2) -> (G_UADDO x, x)

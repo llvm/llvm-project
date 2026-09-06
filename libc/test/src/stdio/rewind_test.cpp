@@ -22,7 +22,7 @@ using LIBC_NAMESPACE::cpp::scope_exit;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
 TEST_F(LlvmLibcRewindTest, WriteRewindRead) {
-  constexpr char FILENAME[] = APPEND_LIBC_TEST("testdata/rewind.test");
+  constexpr char FILENAME[] = "testdata/rewind.test";
   auto FILEPATH = libc_make_test_file_path(FILENAME);
   constexpr char FIRST_DATA[] = "123456789";
 

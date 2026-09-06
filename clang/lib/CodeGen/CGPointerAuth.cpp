@@ -14,6 +14,7 @@
 #include "CGCXXABI.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "clang/AST/Attr.h"
 #include "clang/CodeGen/CodeGenABITypes.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
 #include "llvm/Analysis/ValueTracking.h"

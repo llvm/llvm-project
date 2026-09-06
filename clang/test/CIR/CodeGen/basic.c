@@ -45,8 +45,8 @@ int f1(int i) {
 // CIR-NEXT:   cir.return %[[R]] : !s32i
 
 //      LLVM: define{{.*}} i32 @f1(i32 noundef %[[IP:.*]])
-// LLVM-NEXT:   %[[I_PTR:.*]] = alloca i32, i64 1, align 4
-// LLVM-NEXT:   %[[RV:.*]] = alloca i32, i64 1, align 4
+// LLVM-NEXT:   %[[I_PTR:.*]] = alloca i32, align 4
+// LLVM-NEXT:   %[[RV:.*]] = alloca i32, align 4
 // LLVM-NEXT:   store i32 %[[IP]], ptr %[[I_PTR]], align 4
 // LLVM-NEXT:   %[[I_IGNORED:.*]] = load i32, ptr %[[I_PTR]], align 4
 // LLVM-NEXT:   %[[I:.*]] = load i32, ptr %[[I_PTR]], align 4
@@ -72,7 +72,7 @@ int f2(void) { return 3; }
 // CIR-NEXT:   cir.return %[[R]] : !s32i
 
 //      LLVM: define{{.*}} i32 @f2()
-// LLVM-NEXT:   %[[RV:.*]] = alloca i32, i64 1, align 4
+// LLVM-NEXT:   %[[RV:.*]] = alloca i32, align 4
 // LLVM-NEXT:   store i32 3, ptr %[[RV]], align 4
 // LLVM-NEXT:   %[[R:.*]] = load i32, ptr %[[RV]], align 4
 // LLVM-NEXT:   ret i32 %[[R]]
@@ -97,8 +97,8 @@ int f3(void) {
 // CIR-NEXT:   cir.return %[[R]] : !s32i
 
 //      LLVM: define{{.*}} i32 @f3()
-// LLVM-NEXT:   %[[RV:.*]] = alloca i32, i64 1, align 4
-// LLVM-NEXT:   %[[I_PTR:.*]] = alloca i32, i64 1, align 4
+// LLVM-NEXT:   %[[RV:.*]] = alloca i32, align 4
+// LLVM-NEXT:   %[[I_PTR:.*]] = alloca i32, align 4
 // LLVM-NEXT:   store i32 3, ptr %[[I_PTR]], align 4
 // LLVM-NEXT:   %[[I:.*]] = load i32, ptr %[[I_PTR]], align 4
 // LLVM-NEXT:   store i32 %[[I]], ptr %[[RV]], align 4
@@ -180,7 +180,7 @@ int f6(void) {
 // CIR-NEXT:   cir.return %[[R]] : !s32i
 
 // LLVM:      define{{.*}} i32 @f6()
-// LLVM-NEXT:   %[[RV_PTR:.*]] = alloca i32, i64 1, align 4
+// LLVM-NEXT:   %[[RV_PTR:.*]] = alloca i32, align 4
 // LLVM-NEXT:   %[[GV:.*]] = load i32, ptr @gv, align 4
 // LLVM-NEXT:   store i32 %[[GV]], ptr %[[RV_PTR]], align 4
 // LLVM-NEXT:   %[[RV:.*]] = load i32, ptr %[[RV_PTR]], align 4
@@ -206,9 +206,9 @@ int f7(int a, int b, int c) {
 // CIR:  %[[RETVAL:.*]] = cir.add nsw %[[A]], %[[B_PLUS_C]] : !s32i
 
 // LLVM: define{{.*}} i32 @f7
-// LLVM:   %[[A_PTR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[B_PTR:.*]] = alloca i32, i64 1, align 4
-// LLVM:   %[[C_PTR:.*]] = alloca i32, i64 1, align 4
+// LLVM:   %[[A_PTR:.*]] = alloca i32, align 4
+// LLVM:   %[[B_PTR:.*]] = alloca i32, align 4
+// LLVM:   %[[C_PTR:.*]] = alloca i32, align 4
 // LLVM:   %[[A:.*]] = load i32, ptr %[[A_PTR]], align 4
 // LLVM:   %[[B:.*]] = load i32, ptr %[[B_PTR]], align 4
 // LLVM:   %[[C:.*]] = load i32, ptr %[[C_PTR]], align 4
@@ -240,7 +240,7 @@ int f8(int *p) {
 // CIR:    %[[STAR_P:.*]] = cir.load{{.*}} %[[P2]] : !cir.ptr<!s32i>, !s32i
 
 // LLVM: define{{.*}} i32 @f8
-// LLVM:   %[[P_PTR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[P_PTR:.*]] = alloca ptr, align 8
 // LLVM:   %[[P:.*]] = load ptr, ptr %[[P_PTR]], align 8
 // LLVM:   store i32 2, ptr %[[P]], align 4
 // LLVM:   %[[P2:.*]] = load ptr, ptr %[[P_PTR]], align 8
@@ -275,7 +275,7 @@ void f10(int arg0, ...) {}
 // CIR-NEXT:   cir.return
 
 //      LLVM: define{{.*}} void @f10(i32 noundef %[[ARG0:.*]], ...)
-// LLVM-NEXT:   %[[ARG0_PTR:.*]] = alloca i32, i64 1, align 4
+// LLVM-NEXT:   %[[ARG0_PTR:.*]] = alloca i32, align 4
 // LLVM-NEXT:   store i32 %[[ARG0]], ptr %[[ARG0_PTR]], align 4
 // LLVM-NEXT:   ret void
 

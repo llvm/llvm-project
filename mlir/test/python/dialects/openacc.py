@@ -162,7 +162,7 @@ def testParallelMemcpy():
     # CHECK:               %[[LOAD_0:.*]] = memref.load %[[COPYIN_0]]{{\[}}%[[INDEX_CAST_0]]] : memref<?xf32>
     # CHECK:               memref.store %[[LOAD_0]], %[[CREATE_0]]{{\[}}%[[INDEX_CAST_0]]] : memref<?xf32>
     # CHECK:               acc.yield
-    # CHECK:             } attributes {independent = [#acc.device_type<none>]}
+    # CHECK:             } independent
     # CHECK:             acc.yield
     # CHECK:           }
     # CHECK:           acc.delete accPtr(%[[COPYIN_0]] : memref<?xf32>)

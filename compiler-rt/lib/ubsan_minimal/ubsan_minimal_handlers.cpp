@@ -10,7 +10,18 @@
 #if defined(KERNEL_USE)
 extern "C" void ubsan_message(const char *msg);
 static void message(const char *msg) { ubsan_message(msg); }
-#elif SANITIZER_GPU
+#elif SANITIZER_AMDGPU || SANITIZER_NVPTX
+// Manually declared until we hook up the C headers correctly.
+extern "C" {
+struct FILE;
+extern FILE *stderr;
+int fprintf(FILE *stream, const char *fmt, ...);
+}
+template <typename... Args>
+static void message(const char *msg, Args &&...args) {
+  fprintf(stderr, msg, args...);
+}
+#elif SANITIZER_SPIRV
 extern "C" int printf(const char *fmt, ...);
 template <typename... Args>
 static void message(const char *msg, Args &&...args) {
@@ -141,6 +152,14 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error_fatal, const char *kind,
   __ubsan_report_error(kind, caller);
 }
 
+static void NORETURN die() {
+#if SANITIZER_GPU
+  __builtin_verbose_trap("ubsan", "unrecoverable error");
+#else
+  abort();
+#endif
+}
+
 #if defined(__ANDROID__)
 extern "C" __attribute__((weak)) void android_set_abort_message(const char *);
 static void abort_with_message(const char *kind, uintptr_t caller) {
@@ -148,14 +167,10 @@ static void abort_with_message(const char *kind, uintptr_t caller) {
   format_msg(kind, caller, msg_buf, msg_buf + sizeof(msg_buf));
   if (&android_set_abort_message)
     android_set_abort_message(msg_buf);
-  abort();
-}
-#elif SANITIZER_GPU
-static void abort_with_message(const char *kind, uintptr_t caller) {
-  __builtin_verbose_trap("ubsan", "unrecoverable error");
+  die();
 }
 #else
-static void abort_with_message(const char *kind, uintptr_t caller) { abort(); }
+static void abort_with_message(const char *, uintptr_t) { die(); }
 #endif
 
 #if SANITIZER_DEBUG
@@ -166,7 +181,7 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
   message(file);
   message(":?? : "); // FIXME: Show line number.
   message(cond);
-  abort();
+  die();
 }
 } // namespace __sanitizer
 #endif

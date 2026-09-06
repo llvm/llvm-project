@@ -385,41 +385,21 @@ define <8 x bfloat> @uitofp_v8i64_to_v8bf16(<8 x i64> %a) {
 ;
 
 define i32 @fptosi_bf16_to_i32(bfloat %a) {
-; BF16-LABEL: fptosi_bf16_to_i32:
-; BF16:       # %bb.0:
-; BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm0
-; BF16-NEXT:    vcvttss2si %xmm0, %eax
-; BF16-NEXT:    retq
-;
-; AVX10_2-LABEL: fptosi_bf16_to_i32:
-; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vmovw %xmm0, %eax
-; AVX10_2-NEXT:    shll $16, %eax
-; AVX10_2-NEXT:    vmovd %eax, %xmm0
-; AVX10_2-NEXT:    vcvttss2si %xmm0, %eax
-; AVX10_2-NEXT:    retq
+; CHECK-LABEL: fptosi_bf16_to_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpslld $16, %xmm0, %xmm0
+; CHECK-NEXT:    vcvttss2si %xmm0, %eax
+; CHECK-NEXT:    retq
   %cvt = fptosi bfloat %a to i32
   ret i32 %cvt
 }
 
 define i64 @fptosi_bf16_to_i64(bfloat %a) {
-; BF16-LABEL: fptosi_bf16_to_i64:
-; BF16:       # %bb.0:
-; BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm0
-; BF16-NEXT:    vcvttss2si %xmm0, %rax
-; BF16-NEXT:    retq
-;
-; AVX10_2-LABEL: fptosi_bf16_to_i64:
-; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vmovw %xmm0, %eax
-; AVX10_2-NEXT:    shll $16, %eax
-; AVX10_2-NEXT:    vmovd %eax, %xmm0
-; AVX10_2-NEXT:    vcvttss2si %xmm0, %rax
-; AVX10_2-NEXT:    retq
+; CHECK-LABEL: fptosi_bf16_to_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpslld $16, %xmm0, %xmm0
+; CHECK-NEXT:    vcvttss2si %xmm0, %rax
+; CHECK-NEXT:    retq
   %cvt = fptosi bfloat %a to i64
   ret i64 %cvt
 }
@@ -447,29 +427,12 @@ define <4 x i32> @fptosi_v4bf16_to_v4i32(<4 x bfloat> %a) {
 }
 
 define <2 x i32> @fptosi_v2bf16_to_v2i32(<2 x bfloat> %a) {
-; BF16-LABEL: fptosi_v2bf16_to_v2i32:
-; BF16:       # %bb.0:
-; BF16-NEXT:    vpextrw $1, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm1
-; BF16-NEXT:    vmovd %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm0
-; BF16-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; BF16-NEXT:    vcvttps2dq %xmm0, %xmm0
-; BF16-NEXT:    retq
-;
-; AVX10_2-LABEL: fptosi_v2bf16_to_v2i32:
-; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vmovw %xmm0, %eax
-; AVX10_2-NEXT:    shll $16, %eax
-; AVX10_2-NEXT:    vmovd %eax, %xmm1
-; AVX10_2-NEXT:    vpextrw $1, %xmm0, %eax
-; AVX10_2-NEXT:    shll $16, %eax
-; AVX10_2-NEXT:    vmovd %eax, %xmm0
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX10_2-NEXT:    vcvttps2dq %xmm0, %xmm0
-; AVX10_2-NEXT:    retq
+; CHECK-LABEL: fptosi_v2bf16_to_v2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm0
+; CHECK-NEXT:    retq
   %cvt = fptosi <2 x bfloat> %a to <2 x i32>
   ret <2 x i32> %cvt
 }
@@ -488,14 +451,11 @@ define <16 x i32> @fptosi_v16bf16_to_v16i32(<16 x bfloat> %a) {
 define <2 x i64> @fptosi_v2bf16_to_v2i64(<2 x bfloat> %a) {
 ; BF16-LABEL: fptosi_v2bf16_to_v2i64:
 ; BF16:       # %bb.0:
-; BF16-NEXT:    vpextrw $1, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm1
+; BF16-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BF16-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm0[1],xmm1[2],xmm0[3],xmm1[4],xmm0[5],xmm1[6],xmm0[7]
 ; BF16-NEXT:    vcvttss2si %xmm1, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm1
-; BF16-NEXT:    vmovd %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm0
+; BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; BF16-NEXT:    vcvttss2si %xmm0, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm0
 ; BF16-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -516,29 +476,26 @@ define <2 x i64> @fptosi_v2bf16_to_v2i64(<2 x bfloat> %a) {
 define <4 x i64> @fptosi_v4bf16_to_v4i64(<4 x bfloat> %a) {
 ; BF16-LABEL: fptosi_v4bf16_to_v4i64:
 ; BF16:       # %bb.0:
-; BF16-NEXT:    vpextrw $3, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm1
+; BF16-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BF16-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm0[1],xmm1[2],xmm0[3],xmm1[4],xmm0[5],xmm1[6],xmm0[7]
 ; BF16-NEXT:    vcvttss2si %xmm1, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm1
-; BF16-NEXT:    vpextrw $2, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm2
+; BF16-NEXT:    vpslld $16, %xmm0, %xmm2
 ; BF16-NEXT:    vcvttss2si %xmm2, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm2
 ; BF16-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; BF16-NEXT:    vpextrw $1, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
+; BF16-NEXT:    vpextrw $3, %xmm0, %eax
 ; BF16-NEXT:    vmovd %eax, %xmm2
+; BF16-NEXT:    vpslld $16, %xmm2, %xmm2
 ; BF16-NEXT:    vcvttss2si %xmm2, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm2
-; BF16-NEXT:    vmovd %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
+; BF16-NEXT:    vpextrw $2, %xmm0, %eax
 ; BF16-NEXT:    vmovd %eax, %xmm0
+; BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; BF16-NEXT:    vcvttss2si %xmm0, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm0
 ; BF16-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; BF16-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; BF16-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; BF16-NEXT:    retq
 ;
 ; AVX10_2-LABEL: fptosi_v4bf16_to_v4i64:
@@ -556,51 +513,46 @@ define <8 x i64> @fptosi_v8bf16_to_v8i64(<8 x bfloat> %a) {
 ; BF16-LABEL: fptosi_v8bf16_to_v8i64:
 ; BF16:       # %bb.0:
 ; BF16-NEXT:    vpextrw $7, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
 ; BF16-NEXT:    vmovd %eax, %xmm1
+; BF16-NEXT:    vpslld $16, %xmm1, %xmm1
 ; BF16-NEXT:    vcvttss2si %xmm1, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm1
 ; BF16-NEXT:    vpextrw $6, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
 ; BF16-NEXT:    vmovd %eax, %xmm2
+; BF16-NEXT:    vpslld $16, %xmm2, %xmm2
 ; BF16-NEXT:    vcvttss2si %xmm2, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm2
 ; BF16-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; BF16-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; BF16-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; BF16-NEXT:    vcvttss2si %xmm3, %rax
+; BF16-NEXT:    vmovq %rax, %xmm3
 ; BF16-NEXT:    vpextrw $5, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm2
+; BF16-NEXT:    vmovd %eax, %xmm4
+; BF16-NEXT:    vpslld $16, %xmm4, %xmm4
+; BF16-NEXT:    vcvttss2si %xmm4, %rax
+; BF16-NEXT:    vmovq %rax, %xmm4
+; BF16-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm4[0]
+; BF16-NEXT:    vinserti128 $1, %xmm1, %ymm3, %ymm1
+; BF16-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0],xmm0[1],xmm2[2],xmm0[3],xmm2[4],xmm0[5],xmm2[6],xmm0[7]
 ; BF16-NEXT:    vcvttss2si %xmm2, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm2
-; BF16-NEXT:    vpextrw $4, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm3
+; BF16-NEXT:    vpslld $16, %xmm0, %xmm3
 ; BF16-NEXT:    vcvttss2si %xmm3, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm3
 ; BF16-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; BF16-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
 ; BF16-NEXT:    vpextrw $3, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm2
-; BF16-NEXT:    vcvttss2si %xmm2, %rax
-; BF16-NEXT:    vmovq %rax, %xmm2
+; BF16-NEXT:    vmovd %eax, %xmm3
+; BF16-NEXT:    vpslld $16, %xmm3, %xmm3
+; BF16-NEXT:    vcvttss2si %xmm3, %rax
+; BF16-NEXT:    vmovq %rax, %xmm3
 ; BF16-NEXT:    vpextrw $2, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm3
-; BF16-NEXT:    vcvttss2si %xmm3, %rax
-; BF16-NEXT:    vmovq %rax, %xmm3
-; BF16-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; BF16-NEXT:    vpextrw $1, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm3
-; BF16-NEXT:    vcvttss2si %xmm3, %rax
-; BF16-NEXT:    vmovq %rax, %xmm3
-; BF16-NEXT:    vmovd %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
 ; BF16-NEXT:    vmovd %eax, %xmm0
+; BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; BF16-NEXT:    vcvttss2si %xmm0, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm0
 ; BF16-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
-; BF16-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; BF16-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
 ; BF16-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; BF16-NEXT:    retq
 ;
@@ -619,41 +571,21 @@ define <8 x i64> @fptosi_v8bf16_to_v8i64(<8 x bfloat> %a) {
 ;
 
 define i32 @fptoui_bf16_to_i32(bfloat %a) {
-; BF16-LABEL: fptoui_bf16_to_i32:
-; BF16:       # %bb.0:
-; BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm0
-; BF16-NEXT:    vcvttss2usi %xmm0, %eax
-; BF16-NEXT:    retq
-;
-; AVX10_2-LABEL: fptoui_bf16_to_i32:
-; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vmovw %xmm0, %eax
-; AVX10_2-NEXT:    shll $16, %eax
-; AVX10_2-NEXT:    vmovd %eax, %xmm0
-; AVX10_2-NEXT:    vcvttss2usi %xmm0, %eax
-; AVX10_2-NEXT:    retq
+; CHECK-LABEL: fptoui_bf16_to_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpslld $16, %xmm0, %xmm0
+; CHECK-NEXT:    vcvttss2usi %xmm0, %eax
+; CHECK-NEXT:    retq
   %cvt = fptoui bfloat %a to i32
   ret i32 %cvt
 }
 
 define i64 @fptoui_bf16_to_i64(bfloat %a) {
-; BF16-LABEL: fptoui_bf16_to_i64:
-; BF16:       # %bb.0:
-; BF16-NEXT:    vpextrw $0, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm0
-; BF16-NEXT:    vcvttss2usi %xmm0, %rax
-; BF16-NEXT:    retq
-;
-; AVX10_2-LABEL: fptoui_bf16_to_i64:
-; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vmovw %xmm0, %eax
-; AVX10_2-NEXT:    shll $16, %eax
-; AVX10_2-NEXT:    vmovd %eax, %xmm0
-; AVX10_2-NEXT:    vcvttss2usi %xmm0, %rax
-; AVX10_2-NEXT:    retq
+; CHECK-LABEL: fptoui_bf16_to_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpslld $16, %xmm0, %xmm0
+; CHECK-NEXT:    vcvttss2usi %xmm0, %rax
+; CHECK-NEXT:    retq
   %cvt = fptoui bfloat %a to i64
   ret i64 %cvt
 }
@@ -681,29 +613,12 @@ define <4 x i32> @fptoui_v4bf16_to_v4i32(<4 x bfloat> %a) {
 }
 
 define <2 x i32> @fptoui_v2bf16_to_v2i32(<2 x bfloat> %a) {
-; BF16-LABEL: fptoui_v2bf16_to_v2i32:
-; BF16:       # %bb.0:
-; BF16-NEXT:    vpextrw $1, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm1
-; BF16-NEXT:    vmovd %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm0
-; BF16-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
-; BF16-NEXT:    vcvttps2udq %xmm0, %xmm0
-; BF16-NEXT:    retq
-;
-; AVX10_2-LABEL: fptoui_v2bf16_to_v2i32:
-; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vmovw %xmm0, %eax
-; AVX10_2-NEXT:    shll $16, %eax
-; AVX10_2-NEXT:    vmovd %eax, %xmm1
-; AVX10_2-NEXT:    vpextrw $1, %xmm0, %eax
-; AVX10_2-NEXT:    shll $16, %eax
-; AVX10_2-NEXT:    vmovd %eax, %xmm0
-; AVX10_2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
-; AVX10_2-NEXT:    vcvttps2udq %xmm0, %xmm0
-; AVX10_2-NEXT:    retq
+; CHECK-LABEL: fptoui_v2bf16_to_v2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; CHECK-NEXT:    vcvttps2udq %xmm0, %xmm0
+; CHECK-NEXT:    retq
   %cvt = fptoui <2 x bfloat> %a to <2 x i32>
   ret <2 x i32> %cvt
 }
@@ -722,14 +637,11 @@ define <16 x i32> @fptoui_v16bf16_to_v16i32(<16 x bfloat> %a) {
 define <2 x i64> @fptoui_v2bf16_to_v2i64(<2 x bfloat> %a) {
 ; BF16-LABEL: fptoui_v2bf16_to_v2i64:
 ; BF16:       # %bb.0:
-; BF16-NEXT:    vpextrw $1, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm1
+; BF16-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BF16-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm0[1],xmm1[2],xmm0[3],xmm1[4],xmm0[5],xmm1[6],xmm0[7]
 ; BF16-NEXT:    vcvttss2usi %xmm1, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm1
-; BF16-NEXT:    vmovd %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm0
+; BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; BF16-NEXT:    vcvttss2usi %xmm0, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm0
 ; BF16-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -750,29 +662,26 @@ define <2 x i64> @fptoui_v2bf16_to_v2i64(<2 x bfloat> %a) {
 define <4 x i64> @fptoui_v4bf16_to_v4i64(<4 x bfloat> %a) {
 ; BF16-LABEL: fptoui_v4bf16_to_v4i64:
 ; BF16:       # %bb.0:
-; BF16-NEXT:    vpextrw $3, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm1
+; BF16-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; BF16-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm0[1],xmm1[2],xmm0[3],xmm1[4],xmm0[5],xmm1[6],xmm0[7]
 ; BF16-NEXT:    vcvttss2usi %xmm1, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm1
-; BF16-NEXT:    vpextrw $2, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm2
+; BF16-NEXT:    vpslld $16, %xmm0, %xmm2
 ; BF16-NEXT:    vcvttss2usi %xmm2, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm2
 ; BF16-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; BF16-NEXT:    vpextrw $1, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
+; BF16-NEXT:    vpextrw $3, %xmm0, %eax
 ; BF16-NEXT:    vmovd %eax, %xmm2
+; BF16-NEXT:    vpslld $16, %xmm2, %xmm2
 ; BF16-NEXT:    vcvttss2usi %xmm2, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm2
-; BF16-NEXT:    vmovd %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
+; BF16-NEXT:    vpextrw $2, %xmm0, %eax
 ; BF16-NEXT:    vmovd %eax, %xmm0
+; BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; BF16-NEXT:    vcvttss2usi %xmm0, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm0
 ; BF16-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
-; BF16-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; BF16-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; BF16-NEXT:    retq
 ;
 ; AVX10_2-LABEL: fptoui_v4bf16_to_v4i64:
@@ -790,51 +699,46 @@ define <8 x i64> @fptoui_v8bf16_to_v8i64(<8 x bfloat> %a) {
 ; BF16-LABEL: fptoui_v8bf16_to_v8i64:
 ; BF16:       # %bb.0:
 ; BF16-NEXT:    vpextrw $7, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
 ; BF16-NEXT:    vmovd %eax, %xmm1
+; BF16-NEXT:    vpslld $16, %xmm1, %xmm1
 ; BF16-NEXT:    vcvttss2usi %xmm1, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm1
 ; BF16-NEXT:    vpextrw $6, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
 ; BF16-NEXT:    vmovd %eax, %xmm2
+; BF16-NEXT:    vpslld $16, %xmm2, %xmm2
 ; BF16-NEXT:    vcvttss2usi %xmm2, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm2
 ; BF16-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
+; BF16-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; BF16-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; BF16-NEXT:    vcvttss2usi %xmm3, %rax
+; BF16-NEXT:    vmovq %rax, %xmm3
 ; BF16-NEXT:    vpextrw $5, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm2
+; BF16-NEXT:    vmovd %eax, %xmm4
+; BF16-NEXT:    vpslld $16, %xmm4, %xmm4
+; BF16-NEXT:    vcvttss2usi %xmm4, %rax
+; BF16-NEXT:    vmovq %rax, %xmm4
+; BF16-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm4[0]
+; BF16-NEXT:    vinserti128 $1, %xmm1, %ymm3, %ymm1
+; BF16-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0],xmm0[1],xmm2[2],xmm0[3],xmm2[4],xmm0[5],xmm2[6],xmm0[7]
 ; BF16-NEXT:    vcvttss2usi %xmm2, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm2
-; BF16-NEXT:    vpextrw $4, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm3
+; BF16-NEXT:    vpslld $16, %xmm0, %xmm3
 ; BF16-NEXT:    vcvttss2usi %xmm3, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm3
 ; BF16-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; BF16-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
 ; BF16-NEXT:    vpextrw $3, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm2
-; BF16-NEXT:    vcvttss2usi %xmm2, %rax
-; BF16-NEXT:    vmovq %rax, %xmm2
+; BF16-NEXT:    vmovd %eax, %xmm3
+; BF16-NEXT:    vpslld $16, %xmm3, %xmm3
+; BF16-NEXT:    vcvttss2usi %xmm3, %rax
+; BF16-NEXT:    vmovq %rax, %xmm3
 ; BF16-NEXT:    vpextrw $2, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm3
-; BF16-NEXT:    vcvttss2usi %xmm3, %rax
-; BF16-NEXT:    vmovq %rax, %xmm3
-; BF16-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm3[0],xmm2[0]
-; BF16-NEXT:    vpextrw $1, %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
-; BF16-NEXT:    vmovd %eax, %xmm3
-; BF16-NEXT:    vcvttss2usi %xmm3, %rax
-; BF16-NEXT:    vmovq %rax, %xmm3
-; BF16-NEXT:    vmovd %xmm0, %eax
-; BF16-NEXT:    shll $16, %eax
 ; BF16-NEXT:    vmovd %eax, %xmm0
+; BF16-NEXT:    vpslld $16, %xmm0, %xmm0
 ; BF16-NEXT:    vcvttss2usi %xmm0, %rax
 ; BF16-NEXT:    vmovq %rax, %xmm0
 ; BF16-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
-; BF16-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; BF16-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
 ; BF16-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; BF16-NEXT:    retq
 ;

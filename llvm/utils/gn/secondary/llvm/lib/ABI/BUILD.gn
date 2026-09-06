@@ -9,6 +9,7 @@ static_library("ABI") {
     "FunctionInfo.cpp",
     "IRTypeMapper.cpp",
     "TargetInfo.cpp",
+    "Targets/AArch64.cpp",
     "Targets/BPF.cpp",
     "Targets/X86.cpp",
     "Types.cpp",

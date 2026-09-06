@@ -44,7 +44,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
-#include <atomic>
 #include <optional>
 
 using namespace llvm;
@@ -5071,8 +5070,15 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
   CASE_ND(SHL32ri)
   CASE_ND(SHL64ri) {
     unsigned ShAmt = getTruncatedShiftCount(MI, 2);
-    if (isTruncatedShiftCountForLEA(ShAmt))
-      return false;
+    // Converting to LEA only pays off when the shifted operand stays live,
+    // since it spares a register copy; when the shift is the operand's only
+    // user, reusing the flags is strictly better.
+    if (isTruncatedShiftCountForLEA(ShAmt)) {
+      Register SrcReg = MI.getOperand(1).getReg();
+      const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+      if (!SrcReg.isVirtual() || !MRI.hasOneNonDBGUse(SrcReg))
+        return false;
+    }
     return ShAmt != 0;
   }
 
@@ -5476,7 +5482,8 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   if (SrcReg2.isPhysical())
     return false;
   MachineInstr *SrcRegDef = MRI->getVRegDef(SrcReg);
-  assert(SrcRegDef && "Must have a definition (SSA)");
+  if (!SrcRegDef)
+    return false;
 
   MachineInstr *MI = nullptr;
   MachineInstr *Sub = nullptr;
@@ -8606,7 +8613,9 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
       break;
     case X86::AVX512_512_SETALLONES:
       IsAllOnes = true;
-      [[fallthrough]];
+      Ty = FixedVectorType::get(Type::getInt32Ty(MF.getFunction().getContext()),
+                                16);
+      break;
     case X86::AVX1_SETALLONES:
     case X86::AVX2_SETALLONES:
     case X86::AVX512_256_SETALLONES:
@@ -8687,7 +8696,7 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
   }
   return foldMemoryOperandImpl(MF, MI, Ops[0], MOs, InsertPt,
                                /*Size=*/0, Alignment, /*AllowCommute=*/true,
-                               CopyMI);
+                               CopyMI, VRM);
 }
 
 MachineInstr *

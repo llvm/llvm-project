@@ -5,20 +5,22 @@ define void @test(ptr %p, float %conv, i64 %n) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr [[P:%.*]], float [[CONV:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[CONV]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP:.*]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[OUT:%.*]] = phi ptr [ [[P]], %[[ENTRY]] ], [ [[OUT_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[M2:%.*]] = fmul float [[CONV]], 0.000000e+00
-; CHECK-NEXT:    [[M3:%.*]] = fmul float [[CONV]], 0.000000e+00
 ; CHECK-NEXT:    [[S0:%.*]] = fsub float 0.000000e+00, [[CONV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> <float poison, float poison, float poison, float -0.000000e+00>, float [[S0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[M2]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[TMP1]], float [[M3]], i64 2
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd contract <4 x float> <float -0.000000e+00, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, [[TMP2]]
-; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[OUT]], align 4
+; CHECK-NEXT:    store float [[S0]], ptr [[OUT]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[O1:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 4
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd contract <2 x float> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    store <2 x float> [[TMP3]], ptr [[O1]], align 4
+; CHECK-NEXT:    [[O3:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 12
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[O3]], align 4
 ; CHECK-NEXT:    [[OUT_NEXT]] = getelementptr inbounds i8, ptr [[OUT]], i64 16
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
