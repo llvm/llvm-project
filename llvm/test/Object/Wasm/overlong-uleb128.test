@@ -1,0 +1,18 @@
+# RUN: yaml2obj %s -o %t.wasm
+# RUN: not llvm-objdump -h %t.wasm 2>&1 | FileCheck %s
+
+# CHECK: llvm-objdump: error: '{{.*}}.wasm': uleb128 too big for uint64
+
+--- !WASM
+FileHeader:
+  Version: 0x00000001
+Sections:
+  - Type: GLOBAL
+    Globals:
+      - Index: 0
+        Type: I32
+        Mutable: false
+        InitExpr:
+          Extended: true
+          Body: 23C1C1C1C1C1C1C1C1C1C1C10B
+...
