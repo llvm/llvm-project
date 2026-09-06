@@ -267,4 +267,7 @@ class Directive<list<Spelling> ss> {
 
   // The languages that allow this directive. Default: all languages.
   list<SourceLanguage> languages = [L_C, L_Fortran];
+
+  // The OpenMP version at which the directive gained the "pure" property.
+  int pureSince = 0x7FFFFFFF;
 }

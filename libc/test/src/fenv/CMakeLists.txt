@@ -9,8 +9,7 @@ add_libc_test(
   DEPENDS
     libc.src.fenv.fegetround
     libc.src.fenv.fesetround
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
 )
 
 add_libc_test(
@@ -25,8 +24,7 @@ add_libc_test(
     libc.src.fenv.fesetexcept
     libc.src.fenv.fetestexcept
     libc.src.__support.FPUtil.fenv_impl
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
 )
 
 add_libc_test(
@@ -42,8 +40,7 @@ add_libc_test(
     libc.src.fenv.fesetround
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.macros.properties.os
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
 )
 
 add_libc_test(
@@ -57,8 +54,7 @@ add_libc_test(
     libc.src.fenv.fesetexceptflag
     libc.src.fenv.fetestexceptflag
     libc.src.__support.FPUtil.fenv_impl
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
 )
 
 add_libc_test(
@@ -71,8 +67,7 @@ add_libc_test(
     libc.include.signal
     libc.src.fenv.feupdateenv
     libc.src.__support.FPUtil.fenv_impl
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
 )
 
 add_libc_test(
@@ -84,8 +79,7 @@ add_libc_test(
   DEPENDS
     libc.src.fenv.feclearexcept
     libc.src.__support.FPUtil.fenv_impl
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
 )
 
 add_libc_test(
@@ -98,8 +92,7 @@ add_libc_test(
     libc.src.fenv.fedisableexcept
     libc.src.fenv.feenableexcept
     libc.src.fenv.fegetexcept
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
 )
 
 if(NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
@@ -121,9 +114,8 @@ if(NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
       libc.src.fenv.feraiseexcept
       libc.src.fenv.fetestexcept
       libc.src.__support.FPUtil.fenv_impl
-    LINK_LIBRARIES
-      LibcFPExceptionHelpers
-      LibcFPTestHelpers
+      libc.test.UnitTest.FPExceptMatcher
+      libc.test.UnitTest.FPTestHelpers
   )
 
   add_fp_unittest(
@@ -136,8 +128,7 @@ if(NOT (LLVM_USE_SANITIZER OR (${LIBC_TARGET_OS} STREQUAL "windows")
       libc.hdr.fenv_macros
       libc.src.fenv.feholdexcept
       libc.src.__support.FPUtil.fenv_impl
-    LINK_LIBRARIES
-      LibcFPExceptionHelpers
-      LibcFPTestHelpers
+      libc.test.UnitTest.FPExceptMatcher
+      libc.test.UnitTest.FPTestHelpers
   )
 endif()

@@ -104,9 +104,10 @@ define float @tanh_f32_neg_abs(float %src)  {
 define amdgpu_ps float @tanh_f32_scalar(float inreg %src) {
 ; GFX1250-LABEL: tanh_f32_scalar:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_tanh_f32_e32 v0, s0
 ; GFX1250-NEXT:    ; return to shader part epilog
 ;
@@ -122,9 +123,10 @@ define amdgpu_ps float @tanh_f32_scalar(float inreg %src) {
 define amdgpu_ps float @tanh_f32_constant_4.0() {
 ; GFX1250-LABEL: tanh_f32_constant_4.0:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_tanh_f32_e32 v0, 4.0
 ; GFX1250-NEXT:    ; return to shader part epilog
 ;
@@ -139,9 +141,10 @@ define amdgpu_ps float @tanh_f32_constant_4.0() {
 define amdgpu_ps float @tanh_f32_constant_100.0() {
 ; GFX1250-LABEL: tanh_f32_constant_100.0:
 ; GFX1250:       ; %bb.0:
-; GFX1250-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    v_tanh_f32_e32 v0, 0x42c80000
 ; GFX1250-NEXT:    ; return to shader part epilog
 ;
@@ -156,31 +159,35 @@ define amdgpu_ps float @tanh_f32_constant_100.0() {
 define amdgpu_ps float @tanh_undef_f32() {
 ; GFX1250-SDAG-REAL16-LABEL: tanh_undef_f32:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-SDAG-REAL16-NEXT:    v_nop
 ; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG-REAL16-NEXT:    v_nop
+; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: tanh_undef_f32:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-SDAG-FAKE16-NEXT:    v_nop
 ; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG-FAKE16-NEXT:    v_nop
+; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-REAL16-LABEL: tanh_undef_f32:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-GISEL-REAL16-NEXT:    v_nop
 ; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-REAL16-NEXT:    v_nop
+; GFX1250-GISEL-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-REAL16-NEXT:    v_tanh_f32_e32 v0, s0
 ; GFX1250-GISEL-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: tanh_undef_f32:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-GISEL-FAKE16-NEXT:    v_nop
 ; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-FAKE16-NEXT:    v_nop
+; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-FAKE16-NEXT:    v_tanh_f32_e32 v0, s0
 ; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 ;
@@ -500,33 +507,37 @@ define half @tanh_f16_neg_abs(half %src)  {
 define amdgpu_ps half @tanh_f16_scalar(half inreg %src) {
 ; GFX1250-SDAG-REAL16-LABEL: tanh_f16_scalar:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-SDAG-REAL16-NEXT:    v_nop
 ; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG-REAL16-NEXT:    v_nop
+; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-REAL16-NEXT:    v_tanh_f16_e32 v0.l, s0
 ; GFX1250-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: tanh_f16_scalar:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-SDAG-FAKE16-NEXT:    v_nop
 ; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG-FAKE16-NEXT:    v_nop
+; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-FAKE16-NEXT:    v_tanh_f16_e32 v0, s0
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-REAL16-LABEL: tanh_f16_scalar:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-GISEL-REAL16-NEXT:    v_nop
 ; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-REAL16-NEXT:    v_nop
+; GFX1250-GISEL-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-REAL16-NEXT:    v_tanh_f16_e32 v0.l, s0
 ; GFX1250-GISEL-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: tanh_f16_scalar:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-GISEL-FAKE16-NEXT:    v_nop
 ; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-FAKE16-NEXT:    v_nop
+; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-FAKE16-NEXT:    v_tanh_f16_e32 v0, s0
 ; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 ;
@@ -556,33 +567,37 @@ define amdgpu_ps half @tanh_f16_scalar(half inreg %src) {
 define amdgpu_ps half @tanh_f16_constant_4.0() {
 ; GFX1250-SDAG-REAL16-LABEL: tanh_f16_constant_4.0:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-SDAG-REAL16-NEXT:    v_nop
 ; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG-REAL16-NEXT:    v_nop
+; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-REAL16-NEXT:    v_tanh_f16_e32 v0.l, 4.0
 ; GFX1250-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: tanh_f16_constant_4.0:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-SDAG-FAKE16-NEXT:    v_nop
 ; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG-FAKE16-NEXT:    v_nop
+; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-FAKE16-NEXT:    v_tanh_f16_e32 v0, 4.0
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-REAL16-LABEL: tanh_f16_constant_4.0:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-GISEL-REAL16-NEXT:    v_nop
 ; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-REAL16-NEXT:    v_nop
+; GFX1250-GISEL-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-REAL16-NEXT:    v_tanh_f16_e32 v0.l, 4.0
 ; GFX1250-GISEL-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: tanh_f16_constant_4.0:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-GISEL-FAKE16-NEXT:    v_nop
 ; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-FAKE16-NEXT:    v_nop
+; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-FAKE16-NEXT:    v_tanh_f16_e32 v0, 4.0
 ; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 ;
@@ -612,33 +627,37 @@ define amdgpu_ps half @tanh_f16_constant_4.0() {
 define amdgpu_ps half @tanh_f16_constant_100.0() {
 ; GFX1250-SDAG-REAL16-LABEL: tanh_f16_constant_100.0:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-SDAG-REAL16-NEXT:    v_nop
 ; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG-REAL16-NEXT:    v_nop
+; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-REAL16-NEXT:    v_tanh_f16_e32 v0.l, 0x5640
 ; GFX1250-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: tanh_f16_constant_100.0:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-SDAG-FAKE16-NEXT:    v_nop
 ; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG-FAKE16-NEXT:    v_nop
+; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-FAKE16-NEXT:    v_tanh_f16_e32 v0, 0x5640
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-REAL16-LABEL: tanh_f16_constant_100.0:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-GISEL-REAL16-NEXT:    v_nop
 ; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-REAL16-NEXT:    v_nop
+; GFX1250-GISEL-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-REAL16-NEXT:    v_tanh_f16_e32 v0.l, 0x5640
 ; GFX1250-GISEL-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: tanh_f16_constant_100.0:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-GISEL-FAKE16-NEXT:    v_nop
 ; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-FAKE16-NEXT:    v_nop
+; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-FAKE16-NEXT:    v_tanh_f16_e32 v0, 0x5640
 ; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 ;
@@ -668,31 +687,35 @@ define amdgpu_ps half @tanh_f16_constant_100.0() {
 define amdgpu_ps half @tanh_undef_f16() {
 ; GFX1250-SDAG-REAL16-LABEL: tanh_undef_f16:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-SDAG-REAL16-NEXT:    v_nop
 ; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG-REAL16-NEXT:    v_nop
+; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: tanh_undef_f16:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-SDAG-FAKE16-NEXT:    v_nop
 ; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG-FAKE16-NEXT:    v_nop
+; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-REAL16-LABEL: tanh_undef_f16:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-GISEL-REAL16-NEXT:    v_nop
 ; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-REAL16-NEXT:    v_nop
+; GFX1250-GISEL-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-REAL16-NEXT:    v_tanh_f16_e32 v0.l, s0
 ; GFX1250-GISEL-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: tanh_undef_f16:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-GISEL-FAKE16-NEXT:    v_nop
 ; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-FAKE16-NEXT:    v_nop
+; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-FAKE16-NEXT:    v_tanh_f16_e32 v0, s0
 ; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 ;
@@ -1012,33 +1035,37 @@ define bfloat @tanh_bf16_neg_abs(bfloat %src)  {
 define amdgpu_ps bfloat @tanh_bf16_scalar(bfloat inreg %src) {
 ; GFX1250-SDAG-REAL16-LABEL: tanh_bf16_scalar:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-SDAG-REAL16-NEXT:    v_nop
 ; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG-REAL16-NEXT:    v_nop
+; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-REAL16-NEXT:    v_tanh_bf16_e32 v0.l, s0
 ; GFX1250-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: tanh_bf16_scalar:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-SDAG-FAKE16-NEXT:    v_nop
 ; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG-FAKE16-NEXT:    v_nop
+; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-FAKE16-NEXT:    v_tanh_bf16_e32 v0, s0
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-REAL16-LABEL: tanh_bf16_scalar:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-GISEL-REAL16-NEXT:    v_nop
 ; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-REAL16-NEXT:    v_nop
+; GFX1250-GISEL-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-REAL16-NEXT:    v_tanh_bf16_e32 v0.l, s0
 ; GFX1250-GISEL-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: tanh_bf16_scalar:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-GISEL-FAKE16-NEXT:    v_nop
 ; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-FAKE16-NEXT:    v_nop
+; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-FAKE16-NEXT:    v_tanh_bf16_e32 v0, s0
 ; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 ;
@@ -1068,54 +1095,58 @@ define amdgpu_ps bfloat @tanh_bf16_scalar(bfloat inreg %src) {
 define amdgpu_ps bfloat @tanh_bf16_constant_4.0() {
 ; GFX1250-SDAG-REAL16-LABEL: tanh_bf16_constant_4.0:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-SDAG-REAL16-NEXT:    v_nop
 ; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-SDAG-REAL16-NEXT:    v_tanh_bf16_e32 v0.l, 4.0
+; GFX1250-SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG-REAL16-NEXT:    v_nop
+; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-SDAG-REAL16-NEXT:    v_tanh_bf16_e64 v0.l, 4.0 op_sel:[1,0]
 ; GFX1250-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: tanh_bf16_constant_4.0:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-SDAG-FAKE16-NEXT:    v_nop
 ; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-SDAG-FAKE16-NEXT:    v_tanh_bf16_e32 v0, 4.0
+; GFX1250-SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG-FAKE16-NEXT:    v_nop
+; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v0, 4.0 op_sel:[1,0]
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-REAL16-LABEL: tanh_bf16_constant_4.0:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-GISEL-REAL16-NEXT:    v_nop
 ; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-REAL16-NEXT:    v_tanh_bf16_e32 v0.l, 4.0
+; GFX1250-GISEL-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-REAL16-NEXT:    v_nop
+; GFX1250-GISEL-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-GISEL-REAL16-NEXT:    v_tanh_bf16_e64 v0.l, 4.0 op_sel:[1,0]
 ; GFX1250-GISEL-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: tanh_bf16_constant_4.0:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-GISEL-FAKE16-NEXT:    v_nop
 ; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-FAKE16-NEXT:    v_tanh_bf16_e32 v0, 4.0
+; GFX1250-GISEL-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-FAKE16-NEXT:    v_nop
+; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-GISEL-FAKE16-NEXT:    v_tanh_bf16_e64 v0, 4.0 op_sel:[1,0]
 ; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX13-SDAG-REAL16-LABEL: tanh_bf16_constant_4.0:
 ; GFX13-SDAG-REAL16:       ; %bb.0:
-; GFX13-SDAG-REAL16-NEXT:    v_tanh_bf16_e32 v0.l, 4.0
+; GFX13-SDAG-REAL16-NEXT:    v_tanh_bf16_e64 v0.l, 4.0 op_sel:[1,0]
 ; GFX13-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX13-SDAG-FAKE16-LABEL: tanh_bf16_constant_4.0:
 ; GFX13-SDAG-FAKE16:       ; %bb.0:
-; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e32 v0, 4.0
+; GFX13-SDAG-FAKE16-NEXT:    v_tanh_bf16_e64 v0, 4.0 op_sel:[1,0]
 ; GFX13-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX13-GISEL-REAL16-LABEL: tanh_bf16_constant_4.0:
 ; GFX13-GISEL-REAL16:       ; %bb.0:
-; GFX13-GISEL-REAL16-NEXT:    v_tanh_bf16_e32 v0.l, 4.0
+; GFX13-GISEL-REAL16-NEXT:    v_tanh_bf16_e64 v0.l, 4.0 op_sel:[1,0]
 ; GFX13-GISEL-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX13-GISEL-FAKE16-LABEL: tanh_bf16_constant_4.0:
 ; GFX13-GISEL-FAKE16:       ; %bb.0:
-; GFX13-GISEL-FAKE16-NEXT:    v_tanh_bf16_e32 v0, 4.0
+; GFX13-GISEL-FAKE16-NEXT:    v_tanh_bf16_e64 v0, 4.0 op_sel:[1,0]
 ; GFX13-GISEL-FAKE16-NEXT:    ; return to shader part epilog
   %tanh = call bfloat @llvm.amdgcn.tanh.bf16(bfloat 4.0)
   ret bfloat %tanh
@@ -1124,33 +1155,37 @@ define amdgpu_ps bfloat @tanh_bf16_constant_4.0() {
 define amdgpu_ps bfloat @tanh_bf16_constant_100.0() {
 ; GFX1250-SDAG-REAL16-LABEL: tanh_bf16_constant_100.0:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-SDAG-REAL16-NEXT:    v_nop
 ; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG-REAL16-NEXT:    v_nop
+; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-REAL16-NEXT:    v_tanh_bf16_e32 v0.l, 0x42c8
 ; GFX1250-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: tanh_bf16_constant_100.0:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-SDAG-FAKE16-NEXT:    v_nop
 ; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG-FAKE16-NEXT:    v_nop
+; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-FAKE16-NEXT:    v_tanh_bf16_e32 v0, 0x42c8
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-REAL16-LABEL: tanh_bf16_constant_100.0:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-GISEL-REAL16-NEXT:    v_nop
 ; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-REAL16-NEXT:    v_nop
+; GFX1250-GISEL-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-REAL16-NEXT:    v_tanh_bf16_e32 v0.l, 0x42c8
 ; GFX1250-GISEL-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: tanh_bf16_constant_100.0:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-GISEL-FAKE16-NEXT:    v_nop
 ; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-FAKE16-NEXT:    v_nop
+; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-FAKE16-NEXT:    v_tanh_bf16_e32 v0, 0x42c8
 ; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 ;
@@ -1180,31 +1215,35 @@ define amdgpu_ps bfloat @tanh_bf16_constant_100.0() {
 define amdgpu_ps bfloat @tanh_undef_bf16() {
 ; GFX1250-SDAG-REAL16-LABEL: tanh_undef_bf16:
 ; GFX1250-SDAG-REAL16:       ; %bb.0:
-; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-SDAG-REAL16-NEXT:    v_nop
 ; GFX1250-SDAG-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG-REAL16-NEXT:    v_nop
+; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: tanh_undef_bf16:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
-; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-SDAG-FAKE16-NEXT:    v_nop
 ; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-SDAG-FAKE16-NEXT:    v_nop
+; GFX1250-SDAG-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-REAL16-LABEL: tanh_undef_bf16:
 ; GFX1250-GISEL-REAL16:       ; %bb.0:
-; GFX1250-GISEL-REAL16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-GISEL-REAL16-NEXT:    v_nop
 ; GFX1250-GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-REAL16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-REAL16-NEXT:    v_nop
+; GFX1250-GISEL-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-REAL16-NEXT:    v_tanh_bf16_e32 v0.l, s0
 ; GFX1250-GISEL-REAL16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: tanh_undef_bf16:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
-; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1250-GISEL-FAKE16-NEXT:    v_nop
 ; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-GISEL-FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-GISEL-FAKE16-NEXT:    v_nop
+; GFX1250-GISEL-FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-FAKE16-NEXT:    v_tanh_bf16_e32 v0, s0
 ; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 ;

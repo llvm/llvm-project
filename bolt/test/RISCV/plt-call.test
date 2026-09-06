@@ -1,0 +1,44 @@
+// Verify that PLTCall optimization works on RISC-V.
+
+// RUN: split-file %s %t.dir
+// RUN: llvm-mc -triple=riscv64 -filetype=obj -o %t.dir/main.o %t.dir/main.s
+// RUN: llvm-mc -triple=riscv64 -filetype=obj -o %t.dir/lib.o %t.dir/lib.s
+// RUN: ld.lld -shared -soname libplt.so -o %t.dir/libplt.so %t.dir/lib.o
+// RUN: ld.lld --no-pie --emit-relocs -z now \
+// RUN:   -dynamic-linker /lib/ld.so.1 %t.dir/main.o %t.dir/libplt.so \
+// RUN:   -o %t.exe
+// RUN: llvm-bolt %t.exe -o %t.bolt --plt=all --print-plt \
+// RUN:   --print-only=_start | FileCheck %s
+
+// Call to foo.
+// CHECK:      auipc t3, %pcrel_hi(foo@GOT) # Label: [[FOO_HI:\.Lpcrel_hi[0-9]+]]
+// CHECK-NEXT: ld t3, %pcrel_lo([[FOO_HI]])(t3)
+// CHECK-NEXT: jalr t3 # PLTCall: 1
+
+// Tail call to bar.
+// CHECK:      auipc t3, %pcrel_hi(bar@GOT) # Label: [[BAR_HI:\.Lpcrel_hi[0-9]+]]
+// CHECK-NEXT: ld t3, %pcrel_lo([[BAR_HI]])(t3)
+// CHECK-NEXT: jr t3 # TAILCALL # PLTCall: 1
+
+//--- main.s
+  .text
+  .globl _start
+  .type _start, @function
+_start:
+  call foo
+  tail bar
+  .size _start, .-_start
+
+//--- lib.s
+  .text
+  .globl foo
+  .type foo, @function
+foo:
+  ret
+  .size foo, .-foo
+
+  .globl bar
+  .type bar, @function
+bar:
+  ret
+  .size bar, .-bar

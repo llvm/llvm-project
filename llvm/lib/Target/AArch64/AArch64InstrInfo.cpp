@@ -24,7 +24,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
@@ -865,6 +864,211 @@ unsigned AArch64InstrInfo::insertBranch(
   return 2;
 }
 
+AArch64CC::CondCode AArch64InstrInfo::insertCmpForCondBr(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, const DebugLoc &DL,
+    ArrayRef<MachineOperand> Cond) const {
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+
+  // Parse the condition code, see parseCondBranch() above.
+  AArch64CC::CondCode CC;
+  switch (Cond.size()) {
+  default:
+    llvm_unreachable("Unknown condition opcode in Cond");
+  case 1: // b.cc
+    CC = AArch64CC::CondCode(Cond[0].getImm());
+    break;
+  case 3: { // cbz/cbnz
+    // We must insert a compare against 0.
+    bool Is64Bit;
+    switch (Cond[1].getImm()) {
+    default:
+      llvm_unreachable("Unknown branch opcode in Cond");
+    case AArch64::CBZW:
+      Is64Bit = false;
+      CC = AArch64CC::EQ;
+      break;
+    case AArch64::CBZX:
+      Is64Bit = true;
+      CC = AArch64CC::EQ;
+      break;
+    case AArch64::CBNZW:
+      Is64Bit = false;
+      CC = AArch64CC::NE;
+      break;
+    case AArch64::CBNZX:
+      Is64Bit = true;
+      CC = AArch64CC::NE;
+      break;
+    }
+    Register SrcReg = Cond[2].getReg();
+    if (Is64Bit) {
+      // cmp reg, #0 is actually subs xzr, reg, #0.
+      MRI.constrainRegClass(SrcReg, &AArch64::GPR64spRegClass);
+      BuildMI(MBB, MI, DL, get(AArch64::SUBSXri), AArch64::XZR)
+          .addReg(SrcReg)
+          .addImm(0)
+          .addImm(0);
+    } else {
+      MRI.constrainRegClass(SrcReg, &AArch64::GPR32spRegClass);
+      BuildMI(MBB, MI, DL, get(AArch64::SUBSWri), AArch64::WZR)
+          .addReg(SrcReg)
+          .addImm(0)
+          .addImm(0);
+    }
+  } break;
+  case 4: { // tbz/tbnz
+    // We must insert a tst instruction.
+    switch (Cond[1].getImm()) {
+    default:
+      llvm_unreachable("Unknown branch opcode in Cond");
+    case AArch64::TBZW:
+    case AArch64::TBZX:
+      CC = AArch64CC::EQ;
+      break;
+    case AArch64::TBNZW:
+    case AArch64::TBNZX:
+      CC = AArch64CC::NE;
+      break;
+    }
+    // cmp reg, #foo is actually ands xzr, reg, #1<<foo.
+    if (Cond[1].getImm() == AArch64::TBZW || Cond[1].getImm() == AArch64::TBNZW)
+      BuildMI(MBB, MI, DL, get(AArch64::ANDSWri), AArch64::WZR)
+          .addReg(Cond[2].getReg())
+          .addImm(
+              AArch64_AM::encodeLogicalImmediate(1ull << Cond[3].getImm(), 32));
+    else
+      BuildMI(MBB, MI, DL, get(AArch64::ANDSXri), AArch64::XZR)
+          .addReg(Cond[2].getReg())
+          .addImm(
+              AArch64_AM::encodeLogicalImmediate(1ull << Cond[3].getImm(), 64));
+  } break;
+  case 5: { // cb
+    // We must insert a cmp, that is a subs
+    //            0       1   2    3    4
+    // Cond is { -1, Opcode, CC, Op0, Op1 }
+    unsigned SubsOpc, SubsDestReg;
+    bool IsImm = false;
+    CC = static_cast<AArch64CC::CondCode>(Cond[2].getImm());
+    switch (Cond[1].getImm()) {
+    default:
+      llvm_unreachable("Unknown branch opcode in Cond");
+    case AArch64::CBWPri:
+      SubsOpc = AArch64::SUBSWri;
+      SubsDestReg = AArch64::WZR;
+      IsImm = true;
+      break;
+    case AArch64::CBXPri:
+      SubsOpc = AArch64::SUBSXri;
+      SubsDestReg = AArch64::XZR;
+      IsImm = true;
+      break;
+    case AArch64::CBWPrr:
+      SubsOpc = AArch64::SUBSWrr;
+      SubsDestReg = AArch64::WZR;
+      IsImm = false;
+      break;
+    case AArch64::CBXPrr:
+      SubsOpc = AArch64::SUBSXrr;
+      SubsDestReg = AArch64::XZR;
+      IsImm = false;
+      break;
+    }
+
+    if (IsImm) {
+      MRI.constrainRegClass(Cond[3].getReg(), getRegClass(get(SubsOpc), 1));
+      BuildMI(MBB, MI, DL, get(SubsOpc), SubsDestReg)
+          .addReg(Cond[3].getReg())
+          .addImm(Cond[4].getImm())
+          .addImm(0);
+    } else {
+      MRI.constrainRegClass(Cond[3].getReg(), getRegClass(get(SubsOpc), 1));
+      MRI.constrainRegClass(Cond[4].getReg(), getRegClass(get(SubsOpc), 2));
+      BuildMI(MBB, MI, DL, get(SubsOpc), SubsDestReg)
+          .addReg(Cond[3].getReg())
+          .addReg(Cond[4].getReg());
+    }
+  } break;
+  case 7: { // cb[b,h]
+    // We must insert a cmp, that is a subs, but also zero- or sign-extensions
+    // that have been folded. For the first operand we codegen an explicit
+    // extension, for the second operand we fold the extension into cmp.
+    //            0       1   2    3    4    5      6
+    // Cond is { -1, Opcode, CC, Op0, Op1, Ext0, Ext1 }
+
+    // We need a new register for the now explicitly extended register
+    Register Reg = Cond[4].getReg();
+    if (Cond[5].getImm() != AArch64_AM::InvalidShiftExtend) {
+      unsigned ExtOpc;
+      unsigned ExtBits;
+      AArch64_AM::ShiftExtendType ExtendType =
+          AArch64_AM::getExtendType(Cond[5].getImm());
+      switch (ExtendType) {
+      default:
+        llvm_unreachable("Unknown shift-extend for CB instruction");
+      case AArch64_AM::SXTB:
+        assert(
+            Cond[1].getImm() == AArch64::CBBAssertExt &&
+            "Unexpected compare-and-branch instruction for SXTB shift-extend");
+        ExtOpc = AArch64::SBFMWri;
+        ExtBits = AArch64_AM::encodeLogicalImmediate(0xff, 32);
+        break;
+      case AArch64_AM::SXTH:
+        assert(
+            Cond[1].getImm() == AArch64::CBHAssertExt &&
+            "Unexpected compare-and-branch instruction for SXTH shift-extend");
+        ExtOpc = AArch64::SBFMWri;
+        ExtBits = AArch64_AM::encodeLogicalImmediate(0xffff, 32);
+        break;
+      case AArch64_AM::UXTB:
+        assert(
+            Cond[1].getImm() == AArch64::CBBAssertExt &&
+            "Unexpected compare-and-branch instruction for UXTB shift-extend");
+        ExtOpc = AArch64::ANDWri;
+        ExtBits = AArch64_AM::encodeLogicalImmediate(0xff, 32);
+        break;
+      case AArch64_AM::UXTH:
+        assert(
+            Cond[1].getImm() == AArch64::CBHAssertExt &&
+            "Unexpected compare-and-branch instruction for UXTH shift-extend");
+        ExtOpc = AArch64::ANDWri;
+        ExtBits = AArch64_AM::encodeLogicalImmediate(0xffff, 32);
+        break;
+      }
+
+      // Build the explicit extension of the first operand
+      Reg = MRI.createVirtualRegister(&AArch64::GPR32spRegClass);
+      MachineInstrBuilder MBBI =
+          BuildMI(MBB, MI, DL, get(ExtOpc), Reg).addReg(Cond[4].getReg());
+      if (ExtOpc != AArch64::ANDWri)
+        MBBI.addImm(0);
+      MBBI.addImm(ExtBits);
+    }
+
+    // Now, subs with an extended second operand
+    if (Cond[6].getImm() != AArch64_AM::InvalidShiftExtend) {
+      AArch64_AM::ShiftExtendType ExtendType =
+          AArch64_AM::getExtendType(Cond[6].getImm());
+      MRI.constrainRegClass(Reg, MRI.getRegClass(Cond[3].getReg()));
+      MRI.constrainRegClass(Cond[3].getReg(), &AArch64::GPR32spRegClass);
+      BuildMI(MBB, MI, DL, get(AArch64::SUBSWrx), AArch64::WZR)
+          .addReg(Cond[3].getReg())
+          .addReg(Reg)
+          .addImm(AArch64_AM::getArithExtendImm(ExtendType, 0));
+    } // If no extension is needed, just a regular subs
+    else {
+      MRI.constrainRegClass(Reg, MRI.getRegClass(Cond[3].getReg()));
+      MRI.constrainRegClass(Cond[3].getReg(), &AArch64::GPR32spRegClass);
+      BuildMI(MBB, MI, DL, get(AArch64::SUBSWrr), AArch64::WZR)
+          .addReg(Cond[3].getReg())
+          .addReg(Reg);
+    }
+
+    CC = static_cast<AArch64CC::CondCode>(Cond[2].getImm());
+  } break;
+  }
+  return CC;
+}
+
 bool llvm::optimizeTerminators(MachineBasicBlock *MBB,
                                const TargetInstrInfo &TII) {
   for (MachineInstr &MI : MBB->terminators()) {
@@ -916,7 +1120,7 @@ bool llvm::optimizeTerminators(MachineBasicBlock *MBB,
 static unsigned removeCopies(const MachineRegisterInfo &MRI, unsigned VReg) {
   while (Register::isVirtualRegister(VReg)) {
     const MachineInstr *DefMI = MRI.getVRegDef(VReg);
-    if (!DefMI->isFullCopy())
+    if (!DefMI || !DefMI->isFullCopy())
       return VReg;
     VReg = DefMI->getOperand(1).getReg();
   }
@@ -934,6 +1138,8 @@ static unsigned canFoldIntoCSel(const MachineRegisterInfo &MRI, unsigned VReg,
 
   bool Is64Bit = AArch64::GPR64allRegClass.hasSubClassEq(MRI.getRegClass(VReg));
   const MachineInstr *DefMI = MRI.getVRegDef(VReg);
+  if (!DefMI)
+    return 0;
   unsigned Opc = 0;
   unsigned SrcReg = 0;
   switch (DefMI->getOpcode()) {
@@ -1075,204 +1281,9 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
                                     const DebugLoc &DL, Register DstReg,
                                     ArrayRef<MachineOperand> Cond,
                                     Register TrueReg, Register FalseReg) const {
+
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
-
-  // Parse the condition code, see parseCondBranch() above.
-  AArch64CC::CondCode CC;
-  switch (Cond.size()) {
-  default:
-    llvm_unreachable("Unknown condition opcode in Cond");
-  case 1: // b.cc
-    CC = AArch64CC::CondCode(Cond[0].getImm());
-    break;
-  case 3: { // cbz/cbnz
-    // We must insert a compare against 0.
-    bool Is64Bit;
-    switch (Cond[1].getImm()) {
-    default:
-      llvm_unreachable("Unknown branch opcode in Cond");
-    case AArch64::CBZW:
-      Is64Bit = false;
-      CC = AArch64CC::EQ;
-      break;
-    case AArch64::CBZX:
-      Is64Bit = true;
-      CC = AArch64CC::EQ;
-      break;
-    case AArch64::CBNZW:
-      Is64Bit = false;
-      CC = AArch64CC::NE;
-      break;
-    case AArch64::CBNZX:
-      Is64Bit = true;
-      CC = AArch64CC::NE;
-      break;
-    }
-    Register SrcReg = Cond[2].getReg();
-    if (Is64Bit) {
-      // cmp reg, #0 is actually subs xzr, reg, #0.
-      MRI.constrainRegClass(SrcReg, &AArch64::GPR64spRegClass);
-      BuildMI(MBB, I, DL, get(AArch64::SUBSXri), AArch64::XZR)
-          .addReg(SrcReg)
-          .addImm(0)
-          .addImm(0);
-    } else {
-      MRI.constrainRegClass(SrcReg, &AArch64::GPR32spRegClass);
-      BuildMI(MBB, I, DL, get(AArch64::SUBSWri), AArch64::WZR)
-          .addReg(SrcReg)
-          .addImm(0)
-          .addImm(0);
-    }
-    break;
-  }
-  case 4: { // tbz/tbnz
-    // We must insert a tst instruction.
-    switch (Cond[1].getImm()) {
-    default:
-      llvm_unreachable("Unknown branch opcode in Cond");
-    case AArch64::TBZW:
-    case AArch64::TBZX:
-      CC = AArch64CC::EQ;
-      break;
-    case AArch64::TBNZW:
-    case AArch64::TBNZX:
-      CC = AArch64CC::NE;
-      break;
-    }
-    // cmp reg, #foo is actually ands xzr, reg, #1<<foo.
-    if (Cond[1].getImm() == AArch64::TBZW || Cond[1].getImm() == AArch64::TBNZW)
-      BuildMI(MBB, I, DL, get(AArch64::ANDSWri), AArch64::WZR)
-          .addReg(Cond[2].getReg())
-          .addImm(
-              AArch64_AM::encodeLogicalImmediate(1ull << Cond[3].getImm(), 32));
-    else
-      BuildMI(MBB, I, DL, get(AArch64::ANDSXri), AArch64::XZR)
-          .addReg(Cond[2].getReg())
-          .addImm(
-              AArch64_AM::encodeLogicalImmediate(1ull << Cond[3].getImm(), 64));
-    break;
-  }
-  case 5: { // cb
-    // We must insert a cmp, that is a subs
-    //            0       1   2    3    4
-    // Cond is { -1, Opcode, CC, Op0, Op1 }
-
-    unsigned SubsOpc, SubsDestReg;
-    bool IsImm = false;
-    CC = static_cast<AArch64CC::CondCode>(Cond[2].getImm());
-    switch (Cond[1].getImm()) {
-    default:
-      llvm_unreachable("Unknown branch opcode in Cond");
-    case AArch64::CBWPri:
-      SubsOpc = AArch64::SUBSWri;
-      SubsDestReg = AArch64::WZR;
-      IsImm = true;
-      break;
-    case AArch64::CBXPri:
-      SubsOpc = AArch64::SUBSXri;
-      SubsDestReg = AArch64::XZR;
-      IsImm = true;
-      break;
-    case AArch64::CBWPrr:
-      SubsOpc = AArch64::SUBSWrr;
-      SubsDestReg = AArch64::WZR;
-      IsImm = false;
-      break;
-    case AArch64::CBXPrr:
-      SubsOpc = AArch64::SUBSXrr;
-      SubsDestReg = AArch64::XZR;
-      IsImm = false;
-      break;
-    }
-
-    if (IsImm)
-      BuildMI(MBB, I, DL, get(SubsOpc), SubsDestReg)
-          .addReg(Cond[3].getReg())
-          .addImm(Cond[4].getImm())
-          .addImm(0);
-    else
-      BuildMI(MBB, I, DL, get(SubsOpc), SubsDestReg)
-          .addReg(Cond[3].getReg())
-          .addReg(Cond[4].getReg());
-  } break;
-  case 7: { // cb[b,h]
-    // We must insert a cmp, that is a subs, but also zero- or sign-extensions
-    // that have been folded. For the first operand we codegen an explicit
-    // extension, for the second operand we fold the extension into cmp.
-    //            0       1   2    3    4    5      6
-    // Cond is { -1, Opcode, CC, Op0, Op1, Ext0, Ext1 }
-
-    // We need a new register for the now explicitly extended register
-    Register Reg = Cond[4].getReg();
-    if (Cond[5].getImm() != AArch64_AM::InvalidShiftExtend) {
-      unsigned ExtOpc;
-      unsigned ExtBits;
-      AArch64_AM::ShiftExtendType ExtendType =
-          AArch64_AM::getExtendType(Cond[5].getImm());
-      switch (ExtendType) {
-      default:
-        llvm_unreachable("Unknown shift-extend for CB instruction");
-      case AArch64_AM::SXTB:
-        assert(
-            Cond[1].getImm() == AArch64::CBBAssertExt &&
-            "Unexpected compare-and-branch instruction for SXTB shift-extend");
-        ExtOpc = AArch64::SBFMWri;
-        ExtBits = AArch64_AM::encodeLogicalImmediate(0xff, 32);
-        break;
-      case AArch64_AM::SXTH:
-        assert(
-            Cond[1].getImm() == AArch64::CBHAssertExt &&
-            "Unexpected compare-and-branch instruction for SXTH shift-extend");
-        ExtOpc = AArch64::SBFMWri;
-        ExtBits = AArch64_AM::encodeLogicalImmediate(0xffff, 32);
-        break;
-      case AArch64_AM::UXTB:
-        assert(
-            Cond[1].getImm() == AArch64::CBBAssertExt &&
-            "Unexpected compare-and-branch instruction for UXTB shift-extend");
-        ExtOpc = AArch64::ANDWri;
-        ExtBits = AArch64_AM::encodeLogicalImmediate(0xff, 32);
-        break;
-      case AArch64_AM::UXTH:
-        assert(
-            Cond[1].getImm() == AArch64::CBHAssertExt &&
-            "Unexpected compare-and-branch instruction for UXTH shift-extend");
-        ExtOpc = AArch64::ANDWri;
-        ExtBits = AArch64_AM::encodeLogicalImmediate(0xffff, 32);
-        break;
-      }
-
-      // Build the explicit extension of the first operand
-      Reg = MRI.createVirtualRegister(&AArch64::GPR32spRegClass);
-      MachineInstrBuilder MBBI =
-          BuildMI(MBB, I, DL, get(ExtOpc), Reg).addReg(Cond[4].getReg());
-      if (ExtOpc != AArch64::ANDWri)
-        MBBI.addImm(0);
-      MBBI.addImm(ExtBits);
-    }
-
-    // Now, subs with an extended second operand
-    if (Cond[6].getImm() != AArch64_AM::InvalidShiftExtend) {
-      AArch64_AM::ShiftExtendType ExtendType =
-          AArch64_AM::getExtendType(Cond[6].getImm());
-      MRI.constrainRegClass(Reg, MRI.getRegClass(Cond[3].getReg()));
-      MRI.constrainRegClass(Cond[3].getReg(), &AArch64::GPR32spRegClass);
-      BuildMI(MBB, I, DL, get(AArch64::SUBSWrx), AArch64::WZR)
-          .addReg(Cond[3].getReg())
-          .addReg(Reg)
-          .addImm(AArch64_AM::getArithExtendImm(ExtendType, 0));
-    } // If no extension is needed, just a regular subs
-    else {
-      MRI.constrainRegClass(Reg, MRI.getRegClass(Cond[3].getReg()));
-      MRI.constrainRegClass(Cond[3].getReg(), &AArch64::GPR32spRegClass);
-      BuildMI(MBB, I, DL, get(AArch64::SUBSWrr), AArch64::WZR)
-          .addReg(Cond[3].getReg())
-          .addReg(Reg);
-    }
-
-    CC = static_cast<AArch64CC::CondCode>(Cond[2].getImm());
-  } break;
-  }
+  AArch64CC::CondCode CC = insertCmpForCondBr(MBB, I, DL, Cond);
 
   unsigned Opc = 0;
   const TargetRegisterClass *RC = nullptr;
@@ -2590,11 +2601,11 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       FirstEpilogSEH = std::next(FirstEpilogSEH);
     BuildMI(MBB, FirstEpilogSEH, DL, TII->get(AArch64::ADRP))
         .addReg(AArch64::X0, RegState::Define)
-        .addMBB(TargetMBB);
+        .addMBB(TargetMBB, AArch64II::MO_PAGE);
     BuildMI(MBB, FirstEpilogSEH, DL, TII->get(AArch64::ADDXri))
         .addReg(AArch64::X0, RegState::Define)
         .addReg(AArch64::X0)
-        .addMBB(TargetMBB)
+        .addMBB(TargetMBB, AArch64II::MO_PAGEOFF | AArch64II::MO_NC)
         .addImm(0);
     TargetMBB->setMachineBlockAddressTaken();
     return true;
@@ -5741,37 +5752,33 @@ static const MachineInstrBuilder &AddSubReg(const MachineInstrBuilder &MIB,
   return MIB.addReg(Reg, State, SubIdx);
 }
 
-static bool forwardCopyWillClobberTuple(unsigned DestReg, unsigned SrcReg,
-                                        unsigned NumRegs) {
-  // We really want the positive remainder mod 32 here, that happens to be
-  // easily obtainable with a mask.
-  return ((DestReg - SrcReg) & 0x1f) < NumRegs;
-}
-
 void AArch64InstrInfo::copyPhysRegTuple(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator I,
                                         const DebugLoc &DL, MCRegister DestReg,
                                         MCRegister SrcReg, bool KillSrc,
-                                        unsigned Opcode,
                                         ArrayRef<unsigned> Indices) const {
   assert(Subtarget.hasNEON() && "Unexpected register copy without NEON");
   const TargetRegisterInfo *TRI = &getRegisterInfo();
   uint16_t DestEncoding = TRI->getEncodingValue(DestReg);
   uint16_t SrcEncoding = TRI->getEncodingValue(SrcReg);
   unsigned NumRegs = Indices.size();
+  MCRegister DestSubReg = TRI->getSubReg(DestReg, Indices[0]);
+  assert(!AArch64::PNRRegClass.contains(DestSubReg) &&
+         "Unexpected predicate tuple copy");
+  unsigned MaxRegs = AArch64::PPRRegClass.contains(DestSubReg) ? 15 : 31;
 
   int SubReg = 0, End = NumRegs, Incr = 1;
-  if (forwardCopyWillClobberTuple(DestEncoding, SrcEncoding, NumRegs)) {
+  // Copy in reverse if a forward copy will clobber the tuple
+  if (((DestEncoding - SrcEncoding) & MaxRegs) < NumRegs) {
     SubReg = NumRegs - 1;
     End = -1;
     Incr = -1;
   }
 
   for (; SubReg != End; SubReg += Incr) {
-    const MachineInstrBuilder MIB = BuildMI(MBB, I, DL, get(Opcode));
-    AddSubReg(MIB, DestReg, Indices[SubReg], RegState::Define, TRI);
-    AddSubReg(MIB, SrcReg, Indices[SubReg], {}, TRI);
-    AddSubReg(MIB, SrcReg, Indices[SubReg], getKillRegState(KillSrc), TRI);
+    DestSubReg = TRI->getSubReg(DestReg, Indices[SubReg]);
+    MCRegister SrcSubReg = TRI->getSubReg(SrcReg, Indices[SubReg]);
+    copyPhysRegImpl(MBB, I, DL, DestSubReg, SrcSubReg, KillSrc);
   }
 }
 
@@ -5832,13 +5839,12 @@ static bool mustAvoidNeonAtMBBI(const AArch64Subtarget &Subtarget,
   return !Subtarget.hasSMEFA64() && isInStreamingCallSiteRegion(MBB, I);
 }
 
-void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator I,
-                                   const DebugLoc &DL, Register DestReg,
-                                   Register SrcReg, bool KillSrc,
-                                   bool RenamableDest,
-                                   bool RenamableSrc) const {
-  ++NumCopyInstrs;
+void AArch64InstrInfo::copyPhysRegImpl(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator I,
+                                       const DebugLoc &DL, Register DestReg,
+                                       Register SrcReg, bool KillSrc,
+                                       bool RenamableDest,
+                                       bool RenamableSrc) const {
   if (AArch64::GPR32spRegClass.contains(DestReg) &&
       AArch64::GPR32spRegClass.contains(SrcReg)) {
     if (DestReg == AArch64::WSP || SrcReg == AArch64::WSP) {
@@ -5991,6 +5997,16 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  // Copy a predicate register pair by copying the individual sub-registers.
+  if (AArch64::PPR2RegClass.contains(DestReg) &&
+      AArch64::PPR2RegClass.contains(SrcReg)) {
+    assert(Subtarget.isSVEorStreamingSVEAvailable() &&
+           "Unexpected SVE predicate register.");
+    static const unsigned Indices[] = {AArch64::psub0, AArch64::psub1};
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
+    return;
+  }
+
   // Copy a Z register by ORRing with itself.
   if (AArch64::ZPRRegClass.contains(DestReg) &&
       AArch64::ZPRRegClass.contains(SrcReg)) {
@@ -6010,8 +6026,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     assert(Subtarget.isSVEorStreamingSVEAvailable() &&
            "Unexpected SVE register.");
     static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6022,8 +6037,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
            "Unexpected SVE register.");
     static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1,
                                        AArch64::zsub2};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6036,8 +6050,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
            "Unexpected SVE register.");
     static const unsigned Indices[] = {AArch64::zsub0, AArch64::zsub1,
                                        AArch64::zsub2, AArch64::zsub3};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORR_ZZZ,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6046,8 +6059,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::DDDDRegClass.contains(SrcReg)) {
     static const unsigned Indices[] = {AArch64::dsub0, AArch64::dsub1,
                                        AArch64::dsub2, AArch64::dsub3};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv8i8,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6056,8 +6068,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::DDDRegClass.contains(SrcReg)) {
     static const unsigned Indices[] = {AArch64::dsub0, AArch64::dsub1,
                                        AArch64::dsub2};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv8i8,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6065,8 +6076,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (AArch64::DDRegClass.contains(DestReg) &&
       AArch64::DDRegClass.contains(SrcReg)) {
     static const unsigned Indices[] = {AArch64::dsub0, AArch64::dsub1};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv8i8,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6075,8 +6085,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::QQQQRegClass.contains(SrcReg)) {
     static const unsigned Indices[] = {AArch64::qsub0, AArch64::qsub1,
                                        AArch64::qsub2, AArch64::qsub3};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv16i8,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6085,8 +6094,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       AArch64::QQQRegClass.contains(SrcReg)) {
     static const unsigned Indices[] = {AArch64::qsub0, AArch64::qsub1,
                                        AArch64::qsub2};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv16i8,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6094,8 +6102,7 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   if (AArch64::QQRegClass.contains(DestReg) &&
       AArch64::QQRegClass.contains(SrcReg)) {
     static const unsigned Indices[] = {AArch64::qsub0, AArch64::qsub1};
-    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, AArch64::ORRv16i8,
-                     Indices);
+    copyPhysRegTuple(MBB, I, DL, DestReg, SrcReg, KillSrc, Indices);
     return;
   }
 
@@ -6359,6 +6366,18 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
          << "\n";
 #endif
   llvm_unreachable("unimplemented reg-to-reg copy");
+}
+
+void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator I,
+                                   const DebugLoc &DL, Register DestReg,
+                                   Register SrcReg, bool KillSrc,
+                                   bool RenamableDest,
+                                   bool RenamableSrc) const {
+  ++NumCopyInstrs;
+  copyPhysRegImpl(MBB, I, DL, DestReg, SrcReg, KillSrc, RenamableDest,
+                  RenamableSrc);
+  return;
 }
 
 static void storeRegPairToStackSlot(const TargetRegisterInfo &TRI,
@@ -7550,11 +7569,9 @@ static bool isCombineInstrCandidateFP(const MachineInstr &Inst) {
   case AArch64::FSUBv2f32:
   case AArch64::FSUBv2f64:
   case AArch64::FSUBv4f32:
-    TargetOptions Options = Inst.getParent()->getParent()->getTarget().Options;
-    // We can fuse FADD/FSUB with FMUL, if fusion is either allowed globally by
-    // the target options or if FADD/FSUB has the contract fast-math flag.
-    return Options.AllowFPOpFusion == FPOpFusion::Fast ||
-           Inst.getFlag(MachineInstr::FmContract);
+    // We can fuse FADD/FSUB with FMUL, if FADD/FSUB has the contract fast-math
+    // flag.
+    return Inst.getFlag(MachineInstr::FmContract);
   }
   return false;
 }
@@ -10090,15 +10107,19 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     return false;
 
   MachineInstr *DefMI = MRI->getVRegDef(VReg);
+  if (!DefMI)
+    return false;
 
   // Look through COPY instructions to find definition.
   while (DefMI->isCopy()) {
     Register CopyVReg = DefMI->getOperand(1).getReg();
+    if (!CopyVReg.isVirtual())
+      return false;
     if (!MRI->hasOneNonDBGUse(CopyVReg))
       return false;
-    if (!MRI->hasOneDef(CopyVReg))
-      return false;
     DefMI = MRI->getVRegDef(CopyVReg);
+    if (!DefMI)
+      return false;
   }
 
   switch (DefMI->getOpcode()) {
@@ -10125,7 +10146,8 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     if (!NewReg.isVirtual())
       return false;
 
-    assert(!MRI->def_empty(NewReg) && "Register must be defined.");
+    if (!MRI->getVRegDef(NewReg))
+      return false;
 
     MachineBasicBlock &RefToMBB = *MBB;
     MachineBasicBlock *TBB = MI.getOperand(1).getMBB();
@@ -11763,7 +11785,7 @@ void AArch64InstrInfo::createPauthEpilogueInstr(MachineBasicBlock &MBB,
   if (AFL.getArgumentStackToRestore(MF, MBB)) {
     Builder.addReg(AArch64::X17, RegState::ImplicitDefine);
     Builder.addReg(AArch64::X16, RegState::ImplicitDefine);
-    if (Subtarget.hasPAuthLR())
+    if (AFI->branchProtectionPAuthLR())
       Builder.addReg(AArch64::X15, RegState::ImplicitDefine);
     return;
   }
@@ -12075,7 +12097,7 @@ static bool isDefinedOutside(Register Reg, const MachineBasicBlock *BB) {
   if (!Reg.isVirtual())
     return false;
   const MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
-  return MRI.getVRegDef(Reg)->getParent() != BB;
+  return MRI.getDefBlock(Reg) != BB;
 }
 
 /// If Reg is an induction variable, return true and set some parameters

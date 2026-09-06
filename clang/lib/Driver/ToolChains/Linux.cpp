@@ -886,7 +886,9 @@ void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
   if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                     true) ||
       Args.hasArg(options::OPT_nostdlib) ||
-      Args.hasArg(options::OPT_no_hip_rt) || Args.hasArg(options::OPT_r))
+      Args.hasArg(options::OPT_no_hip_rt) || Args.hasArg(options::OPT_r) ||
+      Args.hasFlag(options::OPT_foffload_via_llvm,
+                   options::OPT_fno_offload_via_llvm, false))
     return;
 
   llvm::SmallVector<std::pair<StringRef, StringRef>> Libraries;

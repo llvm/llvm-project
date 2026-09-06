@@ -317,5 +317,5 @@ innermost.loop.j1:
 
 !3 = distinct !{!3, !4, !5, !6}
 !4 = !{!"llvm.loop.vectorize.width", i32 4}
-!5 = !{!"llvm.loop.vectorize.scalable.enable", i1 false}
+!5 = !{!"llvm.loop.vectorize.scalable.disable"}
 !6 = !{!"llvm.loop.vectorize.enable"}

@@ -21,13 +21,13 @@ struct Trivial {
     decltype(&Other::x) ptr;
 };
 
-// CIR-BEFORE-DAG: !rec_Other = !cir.struct<"Other" {!s32i}>
-// CIR-BEFORE-DAG: !rec_Trivial = !cir.struct<"Trivial" {!s32i, !cir.double, !cir.data_member<!s32i in !rec_Other>}>
-// CIR-BEFORE-DAG: !rec_WithMemPtr = !cir.struct<"WithMemPtr" {!s32i, !cir.double, !cir.method<!cir.func<(!cir.ptr<!rec_Other>, !s32i, !cir.float)> in !rec_Other>}>
-// CIR-AFTER-DAG: !rec_Other = !cir.struct<"Other" {!s32i}>
-// CIR-AFTER-DAG: !rec_Trivial = !cir.struct<"Trivial" {!s32i, !cir.double, !s64i}>
-// CIR-AFTER-DAG: !rec_anon_struct = !cir.struct<{!s64i, !s64i}>
-// CIR-AFTER-DAG: !rec_WithMemPtr = !cir.struct<"WithMemPtr" {!s32i, !cir.double, !rec_anon_struct}>
+// CIR-BEFORE-DAG: !rec_Other = !cir.struct<"Other" {data !s32i}>
+// CIR-BEFORE-DAG: !rec_Trivial = !cir.struct<"Trivial" {data !s32i, data !cir.double, data !cir.data_member<!s32i in !rec_Other>}>
+// CIR-BEFORE-DAG: !rec_WithMemPtr = !cir.struct<"WithMemPtr" {data !s32i, data !cir.double, data !cir.method<!cir.func<(!cir.ptr<!rec_Other>, !s32i, !cir.float)> in !rec_Other>}>
+// CIR-AFTER-DAG: !rec_Other = !cir.struct<"Other" {data !s32i}>
+// CIR-AFTER-DAG: !rec_Trivial = !cir.struct<"Trivial" {data !s32i, data !cir.double, data !s64i}>
+// CIR-AFTER-DAG: !rec_anon_struct = !cir.struct<{data !s64i, data !s64i}>
+// CIR-AFTER-DAG: !rec_WithMemPtr = !cir.struct<"WithMemPtr" {data !s32i, data !cir.double, data !rec_anon_struct}>
 
 // LLVM-DAG: %struct.WithMemPtr = type { i32, double, { i64, i64 } }
 // LLVM-DAG: %struct.Trivial = type { i32, double, i64 }

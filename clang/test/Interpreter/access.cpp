@@ -11,5 +11,19 @@ B::u* foo() { return nullptr; }
 B::u * B::foo() { return nullptr; }
 // CHECK-NOT: error: 'u' is a private member of 'B'
 
-int p = B::p; 
+class C { struct S { S(); ~S(); int f(); bool operator!() const; }; };
+
+C::S::S() {}
+// CHECK-NOT: error: 'S' is a private member of 'C'
+
+C::S::~S() {}
+// CHECK-NOT: error: 'S' is a private member of 'C'
+
+int C::S::f() { return 0; }
+// CHECK-NOT: error: 'S' is a private member of 'C'
+
+bool C::S::operator!() const { return true; }
+// CHECK-NOT: error: 'S' is a private member of 'C'
+
+int p = B::p;
 // CHECK: error: 'p' is a private member of 'B'

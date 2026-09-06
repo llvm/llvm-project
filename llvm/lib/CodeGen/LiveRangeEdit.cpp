@@ -192,9 +192,8 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
   return true;
 }
 
-bool LiveRangeEdit::useIsKill(const LiveInterval &LI,
+bool LiveRangeEdit::useIsKill(const LiveInterval &LI, const MachineInstr &MI,
                               const MachineOperand &MO) const {
-  const MachineInstr &MI = *MO.getParent();
   SlotIndex Idx = LIS.getInstructionIndex(MI).getRegSlot();
   if (LI.Query(Idx).isKill())
     return true;
@@ -283,7 +282,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
     // Always shrink COPY uses that probably come from live range splitting.
     if ((MI->readsVirtualRegister(Reg) &&
          (MO.isDef() || TII.isCopyInstr(*MI))) ||
-        (MO.readsReg() && (MRI.hasOneNonDBGUse(Reg) || useIsKill(LI, MO))))
+        (MO.readsReg() && (MRI.hasOneNonDBGUse(Reg) || useIsKill(LI, *MI, MO))))
       ToShrink.insert(&LI);
     else if (MO.readsReg())
       HasLiveVRegUses = true;

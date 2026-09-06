@@ -16,15 +16,15 @@ struct Output {
 // CHECK-SPIRV-DAG:    @A4 = external hidden thread_local addrspace(8) global float, !spirv.Decorations ![[#METADATA_0:]]
 // CHECK-SPIRV-DAG:    @A2 = external hidden thread_local addrspace(8) global float, !spirv.Decorations ![[#METADATA_2:]]
 
-// CHECK: %Idx = getelementptr inbounds nuw %struct.Input, ptr %input, i32 0, i32 0
-// CHECK: %[[#tmp:]] = load float, ptr %Idx, align 1
-// CHECK: %a = getelementptr inbounds nuw %struct.Output, ptr %agg.result, i32 0, i32 0
-// CHECK: store float %[[#tmp]], ptr %a, align 1
+// CHECK: %[[IDX0:.*]] = getelementptr inbounds nuw %struct.Input, ptr %{{.*}}, i32 0, i32 0
+// CHECK: %[[LOAD0:.*]] = load float, ptr %[[IDX0]], align 1
+// CHECK: %[[A:.*]] = getelementptr inbounds nuw %struct.Output, ptr %{{.*}}, i32 0, i32 0
+// CHECK: store float %[[LOAD0]], ptr %[[A]], align 1
 
-// CHECK: %Idx1 = getelementptr inbounds nuw %struct.Input, ptr %input, i32 0, i32 0
-// CHECK: %[[#tmp:]] = load float, ptr %Idx1, align 1
-// CHECK: %b = getelementptr inbounds nuw %struct.Output, ptr %agg.result, i32 0, i32 1
-// CHECK: store float %[[#tmp]], ptr %b, align 1
+// CHECK: %[[IDX1:.*]] = getelementptr inbounds nuw %struct.Input, ptr %{{.*}}, i32 0, i32 0
+// CHECK: %[[LOAD1:.*]] = load float, ptr %[[IDX1]], align 1
+// CHECK: %[[B:.*]] = getelementptr inbounds nuw %struct.Output, ptr %{{.*}}, i32 0, i32 1
+// CHECK: store float %[[LOAD1]], ptr %[[B]], align 1
 
 Output main(Input input) {
   Output o;
@@ -35,18 +35,18 @@ Output main(Input input) {
 
 // Code generated in the entrypoint wrapper:
 
-// CHECK: %[[#OUTPUT:]] = alloca %struct.Output, align 8
+// CHECK: %[[OUTPUT:.*]] = alloca %struct.Output, align 8
 
-// CHECK-SPIRV: call spir_func void @_Z4main5Input(ptr %[[#OUTPUT]], ptr %[[#]])
-// CHECK-DXIL:  call void @_Z4main5Input(ptr %[[#OUTPUT]], ptr %[[#]])
+// CHECK-SPIRV: call spir_func void @_Z4main5Input(ptr %[[OUTPUT]], ptr %{{.*}})
+// CHECK-DXIL:  call void @_Z4main5Input(ptr %[[OUTPUT]], ptr %{{.*}})
 
-// CHECK: %[[#TMP:]] = load %struct.Output, ptr %[[#OUTPUT]], align 4
-// CHECK: %[[#VAL:]] = extractvalue %struct.Output %[[#TMP]], 0
-// CHECK-SPIRV:        store float %[[#VAL]], ptr addrspace(8) @A4, align 4
-// CHECK-DXIL:         call void @llvm.dx.store.output.f32(i32 4, i32 0, i32 0, i8 0, float %[[#VAL]])
-// CHECK: %[[#VAL:]] = extractvalue %struct.Output %[[#TMP]], 1
-// CHECK-SPIRV:        store float %[[#VAL]], ptr addrspace(8) @A2, align 4
-// CHECK-DXIL:         call void @llvm.dx.store.output.f32(i32 4, i32 0, i32 0, i8 0, float %[[#VAL]])
+// CHECK: %[[TMP:.*]] = load %struct.Output, ptr %[[OUTPUT]], align 4
+// CHECK: %[[VAL0:.*]] = extractvalue %struct.Output %[[TMP]], 0
+// CHECK-SPIRV:        store float %[[VAL0]], ptr addrspace(8) @A4, align 4
+// CHECK-DXIL:         call void @llvm.dx.store.output.f32(i32 0, i32 0, i8 0, float %[[VAL0]])
+// CHECK: %[[VAL1:.*]] = extractvalue %struct.Output %[[TMP]], 1
+// CHECK-SPIRV:        store float %[[VAL1]], ptr addrspace(8) @A2, align 4
+// CHECK-DXIL:         call void @llvm.dx.store.output.f32(i32 1, i32 0, i8 0, float %[[VAL1]])
 
 // CHECK-SPIRV-DAG: ![[#METADATA_0]] = !{![[#METADATA_1:]]}
 // CHECK-SPIRV-DAG: ![[#METADATA_2]] = !{![[#METADATA_3:]]}

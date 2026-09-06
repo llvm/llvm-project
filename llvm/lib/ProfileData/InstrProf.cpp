@@ -101,6 +101,10 @@ static std::string getInstrProfErrString(instrprof_error Err,
   case instrprof_error::bad_header:
     OS << "invalid instrumentation profile data (file header is corrupt)";
     break;
+  case instrprof_error::header_size_mismatch:
+    OS << "invalid instrumentation profile data (file is incomplete or header "
+          "is corrupt)";
+    break;
   case instrprof_error::unsupported_version:
     OS << "unsupported instrumentation profile format version";
     break;
@@ -168,8 +172,7 @@ static std::string getInstrProfErrString(instrprof_error Err,
     OS << "excessively large counter value suggests corrupted profile data";
     break;
   case instrprof_error::coverage_count_mismatch:
-    OS << "cannot merge single-byte-coverage profiles with count "
-          "(non-coverage) profiles";
+    OS << "cannot merge single-byte and incrementing counter profiles";
     break;
   }
 

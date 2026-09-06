@@ -178,17 +178,21 @@ namespace cwg2858 { // cwg2858: 19
 
 template<typename... Ts>
 struct A {
-  // FIXME: The nested-name-specifier in the following friend declarations are declarative,
-  // but we don't treat them as such (yet).
   friend void Ts...[0]::f();
+  // since-cxx26-error@-1 {{a pack indexing specifier cannot be used in a nested name specifier of a friend declaration}}
   template<typename U>
   friend void Ts...[0]::g();
+  // since-cxx26-error@-1 {{a pack indexing specifier cannot be used in a nested name specifier of a friend declaration}}
 
   friend struct Ts...[0]::B;
-  // FIXME: The index of the pack-index-specifier is printed as a memory address in the diagnostic.
+  // since-cxx26-error@-1 {{a pack indexing specifier cannot be used in a nested name specifier of a friend declaration}}
   template<typename U>
   friend struct Ts...[0]::C;
-  // since-cxx26-warning@-1 {{dependent nested name specifier 'Ts...[0]' for friend template declaration is not supported; ignoring this friend declaration}}
+  // since-cxx26-error@-1 {{a pack indexing specifier cannot be used in a nested name specifier of a friend declaration}}
+
+  template<typename U>
+  friend struct Ts...[0]::template B<U>::C;
+  // since-cxx26-error@-1 {{a pack indexing specifier cannot be used in a nested name specifier of a friend declaration}}
 };
 
 #endif

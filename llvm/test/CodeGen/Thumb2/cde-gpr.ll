@@ -17,7 +17,7 @@ declare i32 @llvm.arm.cde.cx3a(i32 immarg, i32, i32, i32, i32 immarg)
 declare { i32, i32 } @llvm.arm.cde.cx3d(i32 immarg, i32, i32, i32 immarg)
 declare { i32, i32 } @llvm.arm.cde.cx3da(i32 immarg, i32, i32, i32, i32, i32 immarg)
 
-define arm_aapcs_vfpcc i32 @test_cx1() {
+define i32 @test_cx1() {
 ; CHECK-LABEL: test_cx1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cx1 p0, r0, #123
@@ -27,7 +27,7 @@ entry:
   ret i32 %0
 }
 
-define arm_aapcs_vfpcc i32 @test_cx1a(i32 %acc) {
+define i32 @test_cx1a(i32 %acc) {
 ; CHECK-LABEL: test_cx1a:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cx1a p0, r0, #345
@@ -37,7 +37,7 @@ entry:
   ret i32 %0
 }
 
-define arm_aapcs_vfpcc i64 @test_cx1d() {
+define i64 @test_cx1d() {
 ; CHECK-LABEL: test_cx1d:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cx1d p1, r0, r1, #567
@@ -53,7 +53,7 @@ entry:
   ret i64 %6
 }
 
-define arm_aapcs_vfpcc i64 @test_cx1da(i64 %acc) {
+define i64 @test_cx1da(i64 %acc) {
 ; CHECK-LABEL: test_cx1da:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $r1 killed $r1 killed $r0_r1 def $r0_r1
@@ -74,7 +74,7 @@ entry:
   ret i64 %9
 }
 
-define arm_aapcs_vfpcc i32 @test_cx2(i32 %n) {
+define i32 @test_cx2(i32 %n) {
 ; CHECK-LABEL: test_cx2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cx2 p0, r0, r0, #11
@@ -84,7 +84,7 @@ entry:
   ret i32 %0
 }
 
-define arm_aapcs_vfpcc i32 @test_cx2a(i32 %acc, i32 %n) {
+define i32 @test_cx2a(i32 %acc, i32 %n) {
 ; CHECK-LABEL: test_cx2a:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cx2a p1, r0, r1, #22
@@ -94,7 +94,7 @@ entry:
   ret i32 %0
 }
 
-define arm_aapcs_vfpcc i64 @test_cx2d(i32 %n) #0 {
+define i64 @test_cx2d(i32 %n) #0 {
 ; CHECK-LABEL: test_cx2d:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cx2d p1, r0, r1, r0, #33
@@ -110,7 +110,7 @@ entry:
   ret i64 %6
 }
 
-define arm_aapcs_vfpcc i64 @test_cx2da(i64 %acc, i32 %n) {
+define i64 @test_cx2da(i64 %acc, i32 %n) {
 ; CHECK-LABEL: test_cx2da:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $r1 killed $r1 killed $r0_r1 def $r0_r1
@@ -131,7 +131,7 @@ entry:
   ret i64 %9
 }
 
-define arm_aapcs_vfpcc i32 @test_cx3(i32 %n, i32 %m) {
+define i32 @test_cx3(i32 %n, i32 %m) {
 ; CHECK-LABEL: test_cx3:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cx3 p0, r0, r0, r1, #1
@@ -141,7 +141,7 @@ entry:
   ret i32 %0
 }
 
-define arm_aapcs_vfpcc i32 @test_cx3a(i32 %acc, i32 %n, i32 %m) {
+define i32 @test_cx3a(i32 %acc, i32 %n, i32 %m) {
 ; CHECK-LABEL: test_cx3a:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cx3a p1, r0, r1, r2, #2
@@ -151,7 +151,7 @@ entry:
   ret i32 %0
 }
 
-define arm_aapcs_vfpcc i64 @test_cx3d(i32 %n, i32 %m) {
+define i64 @test_cx3d(i32 %n, i32 %m) {
 ; CHECK-LABEL: test_cx3d:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    cx3d p1, r0, r1, r0, r1, #3
@@ -167,7 +167,7 @@ entry:
   ret i64 %6
 }
 
-define arm_aapcs_vfpcc i64 @test_cx3da(i64 %acc, i32 %n, i32 %m) {
+define i64 @test_cx3da(i64 %acc, i32 %n, i32 %m) {
 ; CHECK-LABEL: test_cx3da:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    @ kill: def $r1 killed $r1 killed $r0_r1 def $r0_r1

@@ -70,9 +70,8 @@ static void printIRHeader(raw_ostream &out, StringRef title, Pass *pass,
   pass->printAsTextualPipeline(out);
   if (printModuleScope) {
     out << " ('" << op->getName() << "' operation";
-    if (auto symbolName =
-            op->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName()))
-      out << ": @" << symbolName.getValue();
+    if (auto symbol = dyn_cast<SymbolOpInterface>(op))
+      out << ": @" << symbol.getName();
     out << ")";
   }
   out << " //----- //\n";
@@ -230,10 +229,8 @@ getOpAndSymbolNames(Operation *op, StringRef passName,
   ++counters.try_emplace(op, -1).first->second;
   while (iter) {
     countPrefix.push_back(counters[iter]);
-    StringAttr symbolNameAttr =
-        iter->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName());
-    std::string symbolName =
-        symbolNameAttr ? symbolNameAttr.str() : "no-symbol-name";
+    auto symbol = dyn_cast<SymbolOpInterface>(iter);
+    std::string symbolName = symbol ? symbol.getName().str() : "no-symbol-name";
     llvm::replace(symbolName, '/', '_');
     llvm::replace(symbolName, '\\', '_');
 

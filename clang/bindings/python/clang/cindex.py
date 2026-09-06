@@ -1261,8 +1261,8 @@ class CursorKind(BaseEnumeration):
     # Windows Structured Exception Handling's leave statement.
     SEH_LEAVE_STMT = 247
 
-    # OpenMP ordered directive.
-    OMP_ORDERED_DIRECTIVE = 248
+    # OpenMP ordered-standalone directive.
+    OMP_ORDERED_STANDALONE_DIRECTIVE = 248
 
     # OpenMP atomic directive.
     OMP_ATOMIC_DIRECTIVE = 249
@@ -1455,6 +1455,9 @@ class CursorKind(BaseEnumeration):
 
     # OpenMP split directive.
     OMP_SPLIT_DIRECTIVE = 312
+
+    # OpenMP ordered-blockassoc directive.
+    OMP_ORDERED_BLOCK_ASSOC_DIRECTIVE = 313
 
     # OpenACC Compute Construct.
     OPEN_ACC_COMPUTE_DIRECTIVE = 320

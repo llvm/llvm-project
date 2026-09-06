@@ -177,3 +177,185 @@ loop:
 exit:
   ret void
 }
+
+; The pointer AddRec has a negative step, so its start is the highest accessed
+; address and it is the *lowest* accessed address that is unknown when
+; evaluating at the symbolic max BTC may wrap.
+; FIXME: Currently the bounds are incorrect.
+define void @symbolic_max_btc_may_wrap_negative_step(ptr %P, ptr %S) {
+; CHECK-LABEL: 'symbolic_max_btc_may_wrap_negative_step'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %ptr.iv = phi ptr [ %P, %entry ], [ %ptr.iv.next, %loop ]
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:        ptr %S
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: (-4 + inttoptr (i32 -1 to ptr))<nsw> High: (4 + %P))
+; CHECK-NEXT:            Member: {%P,+,-4}<nw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %S High: (4 + %S))
+; CHECK-NEXT:            Member: %S
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %ptr.iv = phi ptr [ %P, %entry ], [ %ptr.iv.next, %loop ]
+  %l = load i32, ptr %S
+  store i32 %l, ptr %ptr.iv, align 4
+  %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i32 -4
+  %iv.next = add nsw i32 %iv, 1
+  %c.2 = icmp slt i32 %iv.next, %l
+  br i1 %c.2, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Same as @symbolic_max_btc_may_wrap_negative_step, but with a non-constant
+; step that is known to be negative.
+; FIXME: Currently the bounds are incorrect.
+define void @symbolic_max_btc_may_wrap_non_constant_negative_step(ptr %P, ptr %S, i32 %step) {
+; CHECK-LABEL: 'symbolic_max_btc_may_wrap_non_constant_negative_step'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %ptr.iv = phi ptr [ %P, %entry ], [ %ptr.iv.next, %loop ]
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:        ptr %S
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: ((-4 + inttoptr (i32 -1 to ptr))<nsw> umin %P) High: (4 + ((-4 + inttoptr (i32 -1 to ptr))<nsw> umax %P))<nsw>)
+; CHECK-NEXT:            Member: {%P,+,(-1 + (-1 * (zext i16 (trunc i32 %step to i16) to i32))<nsw>)<nsw>}<nw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %S High: (4 + %S))
+; CHECK-NEXT:            Member: %S
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %step.masked = and i32 %step, 65535
+  %step.neg = sub i32 -1, %step.masked
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %ptr.iv = phi ptr [ %P, %entry ], [ %ptr.iv.next, %loop ]
+  %l = load i32, ptr %S
+  store i32 %l, ptr %ptr.iv, align 4
+  %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i32 %step.neg
+  %iv.next = add nsw i32 %iv, 1
+  %c.2 = icmp slt i32 %iv.next, %l
+  br i1 %c.2, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Same as @symbolic_max_btc_may_wrap_negative_step, but with a non-constant
+; step that is known to be non-negative, so the start is the lowest accessed
+; address and only the upper bound has to be widened.
+; FIXME: Currently the bounds are incorrect.
+define void @symbolic_max_btc_may_wrap_non_constant_non_negative_step(ptr %P, ptr %S, i32 %step) {
+; CHECK-LABEL: 'symbolic_max_btc_may_wrap_non_constant_non_negative_step'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %ptr.iv = phi ptr [ %P, %entry ], [ %ptr.iv.next, %loop ]
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:        ptr %S
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: ((-4 + inttoptr (i32 -1 to ptr))<nsw> umin %P) High: (4 + ((-4 + inttoptr (i32 -1 to ptr))<nsw> umax %P))<nsw>)
+; CHECK-NEXT:            Member: {%P,+,(zext i16 (trunc i32 %step to i16) to i32)}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %S High: (4 + %S))
+; CHECK-NEXT:            Member: %S
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %step.masked = and i32 %step, 65535
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %ptr.iv = phi ptr [ %P, %entry ], [ %ptr.iv.next, %loop ]
+  %l = load i32, ptr %S
+  store i32 %l, ptr %ptr.iv, align 4
+  %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i32 %step.masked
+  %iv.next = add nsw i32 %iv, 1
+  %c.2 = icmp slt i32 %iv.next, %l
+  br i1 %c.2, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; The step direction is unknown, so neither end of the accessed range is known
+; when evaluating at the symbolic max BTC.
+; FIXME: Currently the bounds are incorrect.
+define void @symbolic_max_btc_may_wrap_unknown_step_direction(ptr %P, ptr %S, i32 %step.a, i32 %step.b) {
+; CHECK-LABEL: 'symbolic_max_btc_may_wrap_unknown_step_direction'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %ptr.iv = phi ptr [ %P, %entry ], [ %ptr.iv.next, %loop ]
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:        ptr %S
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: ((-4 + inttoptr (i32 -1 to ptr))<nsw> umin %P) High: (4 + ((-4 + inttoptr (i32 -1 to ptr))<nsw> umax %P))<nsw>)
+; CHECK-NEXT:            Member: {%P,+,(%step.a + %step.b)}<nw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %S High: (4 + %S))
+; CHECK-NEXT:            Member: %S
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %step = add i32 %step.a, %step.b
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %ptr.iv = phi ptr [ %P, %entry ], [ %ptr.iv.next, %loop ]
+  %l = load i32, ptr %S
+  store i32 %l, ptr %ptr.iv, align 4
+  %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i32 %step
+  %iv.next = add nsw i32 %iv, 1
+  %c.2 = icmp slt i32 %iv.next, %l
+  br i1 %c.2, label %loop, label %exit
+
+exit:
+  ret void
+}

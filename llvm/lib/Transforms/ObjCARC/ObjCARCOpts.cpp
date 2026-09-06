@@ -133,9 +133,6 @@ static const Value *FindSingleUseIdentifiedObject(const Value *Arg) {
 //
 // The second retain and autorelease can be deleted.
 
-// TODO: Autorelease calls followed by objc_autoreleasePoolPop calls (perhaps in
-// ObjC++ code after inlining) can be turned into plain release calls.
-
 // TODO: Critical-edge splitting. If the optimial insertion point is
 // a critical edge, the current algorithm has to fail, because it doesn't
 // know how to split edges. It should be possible to make the optimizer
@@ -499,6 +496,14 @@ class ObjCARCOpt {
 
   DenseMap<BasicBlock *, ColorVector> BlockEHColors;
 
+  /// Cache mapping autorelease instructions to their following
+  /// autoreleasePoolPop in the same basic block (or nullptr if none).
+  DenseMap<Instruction *, Instruction *> FollowingPoolPopCache;
+
+  /// Find the autoreleasePoolPop that will drain the given autorelease
+  /// instruction in the same basic block, skipping nested pools.
+  Instruction *FindFollowingAutoreleasePoolPop(Instruction *AutoreleaseInst);
+
   bool OptimizeRetainRVCall(Function &F, Instruction *RetainRV);
   void OptimizeAutoreleaseRVCall(Function &F, Instruction *AutoreleaseRV,
                                  ARCInstKind &Class);
@@ -601,6 +606,66 @@ class ObjCARCOpt {
 };
 } // end anonymous namespace
 
+/// Find the autoreleasePoolPop that will drain the given autorelease
+/// instruction in the same basic block, skipping over nested pools.
+///
+/// Since objc_autorelease does not change the refcount (it only registers the
+/// object for a deferred release at pool drain), we can move the release to
+/// just before the pool pop instead of converting in place. This avoids the
+/// need to check for uses of the pointer between the autorelease and the pop.
+Instruction *
+ObjCARCOpt::FindFollowingAutoreleasePoolPop(Instruction *AutoreleaseInst) {
+  assert(GetBasicARCInstKind(AutoreleaseInst) == ARCInstKind::Autorelease);
+
+  auto It = FollowingPoolPopCache.find(AutoreleaseInst);
+  if (It != FollowingPoolPopCache.end()) {
+    // The cached value is a raw pointer to a pool pop. The cache is only
+    // consulted during OptimizeIndividualCalls, which runs before
+    // OptimizeAutoreleasePools can erase pool pops.
+    return It->second;
+  }
+
+  BasicBlock *BB = AutoreleaseInst->getParent();
+
+  SmallVector<SmallVector<Instruction *, 2>, 4> AutoreleasesByDepth(1);
+  AutoreleasesByDepth[0].push_back(AutoreleaseInst);
+
+  unsigned Depth = 0;
+  for (BasicBlock::iterator I = std::next(AutoreleaseInst->getIterator()),
+                            E = BB->end();
+       I != E; ++I) {
+    ARCInstKind Class = GetBasicARCInstKind(&*I);
+
+    if (Class == ARCInstKind::AutoreleasepoolPush) {
+      if (++Depth >= AutoreleasesByDepth.size())
+        AutoreleasesByDepth.emplace_back();
+      else
+        assert(AutoreleasesByDepth[Depth].empty() &&
+               "reused bucket must be empty");
+    } else if (Class == ARCInstKind::AutoreleasepoolPop) {
+      for (Instruction *J : AutoreleasesByDepth[Depth])
+        FollowingPoolPopCache[J] = &*I;
+      AutoreleasesByDepth[Depth].clear();
+      if (Depth == 0)
+        return &*I;
+      --Depth;
+    } else if (Class == ARCInstKind::Autorelease) {
+      AutoreleasesByDepth[Depth].push_back(&*I);
+    } else if (Class == ARCInstKind::Call || Class == ARCInstKind::CallOrUser) {
+      // A call can push or pop an autorelease pool, which dynamically
+      // changes the pool stack. We cannot rely on the syntactic scan anymore.
+      // Break out and cache the nullptr result for all accumulated
+      // autoreleases.
+      break;
+    }
+  }
+
+  for (const auto &Autoreleases : AutoreleasesByDepth)
+    for (Instruction *I : Autoreleases)
+      FollowingPoolPopCache[I] = nullptr;
+  return nullptr;
+}
+
 /// Turn objc_retainAutoreleasedReturnValue into objc_retain if the operand is
 /// not a return value.
 bool
@@ -610,9 +675,9 @@ ObjCARCOpt::OptimizeRetainRVCall(Function &F, Instruction *RetainRV) {
   if (const Instruction *Call = dyn_cast<CallBase>(Arg)) {
     if (Call->getParent() == RetainRV->getParent()) {
       BasicBlock::const_iterator I(Call);
-      ++I;
-      while (IsNoopInstruction(&*I))
+      do
         ++I;
+      while (IsNoopInstruction(&*I));
       if (&*I == RetainRV)
         return false;
     } else if (const InvokeInst *II = dyn_cast<InvokeInst>(Call)) {
@@ -761,6 +826,8 @@ void ObjCARCOpt::OptimizeIndividualCalls(Function &F) {
   LLVM_DEBUG(dbgs() << "\n== ObjCARCOpt::OptimizeIndividualCalls ==\n");
   // Reset all the flags in preparation for recomputing them.
   UsedInThisFunction = 0;
+  // Clear the autorelease pool pop cache for this function
+  FollowingPoolPopCache.clear();
 
   // Store any delayed AutoreleaseRV intrinsics, so they can be easily paired
   // with RetainRV and UnsafeClaimRV.
@@ -986,19 +1053,53 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(Function &F, Instruction *Inst,
       Changed = true;
       ++NumAutoreleases;
 
-      // Create the declaration lazily.
       LLVMContext &C = Inst->getContext();
-
       Function *Decl = EP.get(ARCRuntimeEntryPointKind::Release);
       CallInst *NewCall = CallInst::Create(Decl, Call->getArgOperand(0), "",
                                            Call->getIterator());
       NewCall->setMetadata(MDKindCache.get(ARCMDKindID::ImpreciseRelease),
                            MDNode::get(C, {}));
 
-      LLVM_DEBUG(dbgs() << "Replacing autorelease{,RV}(x) with objc_release(x) "
-                           "since x is otherwise unused.\nOld: "
+      LLVM_DEBUG(
+          dbgs() << "Replacing objc_autorelease(x) with objc_release(x)\n");
+
+      FollowingPoolPopCache.erase(Call);
+      EraseInstruction(Call);
+      Inst = NewCall;
+      Class = ARCInstKind::Release;
+    }
+  }
+
+  // objc_autorelease(x) -> objc_release(x) moved to just before the
+  // autoreleasePoolPop. Since autorelease only registers a deferred release
+  // at pool drain time without changing the refcount, placing the release at
+  // the drain point is semantically equivalent and avoids use-after-free
+  // concerns with in-place conversion.
+  if (Class == ARCInstKind::Autorelease) {
+    if (Instruction *PoolPop = FindFollowingAutoreleasePoolPop(Inst)) {
+      CallInst *Call = cast<CallInst>(Inst);
+      Changed = true;
+      ++NumAutoreleases;
+
+      LLVMContext &C = Inst->getContext();
+      Function *Decl = EP.get(ARCRuntimeEntryPointKind::Release);
+      CallInst *NewCall = CallInst::Create(Decl, Call->getArgOperand(0), "",
+                                           PoolPop->getIterator());
+      NewCall->setMetadata(MDKindCache.get(ARCMDKindID::ImpreciseRelease),
+                           MDNode::get(C, {}));
+
+      LLVM_DEBUG(dbgs() << "Converting autorelease to release before pool pop."
+                           "\nOld: "
                         << *Call << "\nNew: " << *NewCall << "\n");
 
+      assert(Call->getType() == Call->getArgOperand(0)->getType() &&
+             "objc_autorelease result and argument types must match");
+      Call->replaceAllUsesWith(Call->getArgOperand(0));
+      // Inserting each release before the pop in visitation order changes the
+      // drain order from LIFO to FIFO. This is acceptable because the pass
+      // already does not preserve pool drain order elsewhere (e.g., the
+      // use_empty() conversion above releases immediately in place).
+      FollowingPoolPopCache.erase(Call);
       EraseInstruction(Call);
       Inst = NewCall;
       Class = ARCInstKind::Release;
@@ -1163,6 +1264,7 @@ void ObjCARCOpt::OptimizeIndividualCallImpl(Function &F, Instruction *Inst,
     }
     // Erase the original call.
     LLVM_DEBUG(dbgs() << "Erasing: " << *CInst << "\n");
+    FollowingPoolPopCache.erase(CInst);
     EraseInstruction(CInst);
   } while (!Worklist.empty());
 }
@@ -2368,6 +2470,7 @@ void ObjCARCOpt::OptimizeReturns(Function &F) {
     LLVM_DEBUG(dbgs() << "Erasing: " << *Retain << "\nErasing: " << *Autorelease
                       << "\n");
     BundledInsts->eraseInst(Retain);
+    FollowingPoolPopCache.erase(Autorelease);
     EraseInstruction(Autorelease);
   }
 }

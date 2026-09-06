@@ -33,7 +33,7 @@ define double @test(ptr %0, double %1) {
 ;
   %3 = getelementptr i8, ptr %0, i64 8
   %4 = load double, ptr %0, align 8
-  %5 = tail call double @llvm.exp.f64(double 0x7FF8000000000000)
+  %5 = tail call double @llvm.exp.f64(double +qnan)
   %6 = fadd double %4, 0.000000e+00
   %7 = fmul double %1, 0.000000e+00
   %8 = fadd double %6, %7

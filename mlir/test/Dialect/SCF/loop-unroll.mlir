@@ -5,6 +5,8 @@
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 annotate=true' | FileCheck %s --check-prefix UNROLL-BY-2-ANNOTATE
 // RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-factor=6 unroll-up-to-factor=true}))" | FileCheck %s --check-prefix UNROLL-UP-TO
 // RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-factor=5 cleanup-unroll=true}))" | FileCheck %s --check-prefix CLEANUP-UNROLL-BY-5
+// RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=3 promote-single-iteration=false' | FileCheck %s --check-prefix NO-PROMOTE-BY-3
+// RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=3 promote-single-iteration=true' | FileCheck %s --check-prefix PROMOTE-BY-3
 // RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll))" --split-input-file | FileCheck %s
 
 func.func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
@@ -660,3 +662,119 @@ func.func @unroll_unsigned_i2_step2_bug2() -> (i32, i32) {
 // UNROLL-BY-2:       arith.addi
 // UNROLL-BY-2:       arith.muli
 // UNROLL-BY-2:       return
+
+// -----
+
+// Test unrolling by 3 on a 10-iteration loop, which leaves a single-iteration
+// epilogue. Exercises the promote-single-iteration option: when false the
+// epilogue stays an scf.for; when true it is promoted to a memref.store.
+func.func @static_loop_unroll_by_3_no_promote_epilogue(%arg0 : memref<?xf32>) {
+  %0 = arith.constant 7.0 : f32
+  %lb = arith.constant 0 : index
+  %ub = arith.constant 10 : index
+  %step = arith.constant 1 : index
+  scf.for %i0 = %lb to %ub step %step {
+    memref.store %0, %arg0[%i0] : memref<?xf32>
+  }
+  return
+}
+// Promotion disabled keeps the epilogue as an scf.for.
+//
+// NO-PROMOTE-BY-3-LABEL: func @static_loop_unroll_by_3_no_promote_epilogue
+//       NO-PROMOTE-BY-3: scf.for %{{.*}} = %c0 to %c9 step %c3
+//  NO-PROMOTE-BY-3: memref.store
+//  NO-PROMOTE-BY-3: memref.store
+//  NO-PROMOTE-BY-3: memref.store
+//       NO-PROMOTE-BY-3: scf.for %{{.*}} = %c9 to %c10 step %c1
+//  NO-PROMOTE-BY-3: memref.store
+
+// With promotion enabled, the single-iteration epilogue is promoted out of the
+// loop.
+//
+// PROMOTE-BY-3-LABEL: func @static_loop_unroll_by_3_no_promote_epilogue
+//       PROMOTE-BY-3: scf.for %{{.*}} = %c0 to %c9 step %c3
+//  PROMOTE-BY-3: memref.store
+//  PROMOTE-BY-3: memref.store
+//  PROMOTE-BY-3: memref.store
+// PROMOTE-BY-3-NOT: scf.for
+//  PROMOTE-BY-3: memref.store
+
+// -----
+
+// Dynamic bounds with a constant zero step: splitForOpAtPoint fails the static
+// step check, so unrolling does not rewrite the loop.
+func.func @dynamic_unroll_zero_step(%lb: index, %ub: index,
+                                    %mem: memref<?xf32>) {
+  %0 = arith.constant 7.0 : f32
+  %step = arith.constant 0 : index
+  scf.for %i0 = %lb to %ub step %step {
+    memref.store %0, %mem[%i0] : memref<?xf32>
+  }
+  return
+}
+// UNROLL-BY-2-LABEL: func @dynamic_unroll_zero_step
+//  UNROLL-BY-2-SAME: %[[LB:.*]]: index, %[[UB:.*]]: index
+//       UNROLL-BY-2: scf.for %{{.*}} = %[[LB]] to %[[UB]] step %{{.*}}
+//  UNROLL-BY-2-NEXT:   memref.store
+//  UNROLL-BY-2-NEXT: }
+//  UNROLL-BY-2-NEXT: return
+
+// -----
+
+// `scf.for` has a statically known trip count whenever the lower and the upper
+// bound are the same value, even when that value is not a constant. Unrolling
+// must not read the bounds as constants in that case.
+func.func @unroll_static_trip_count_dynamic_equal_bounds(%arg0: index, %arg1: memref<?xf32>) {
+  %0 = arith.constant 7.0 : f32
+  scf.for %i0 = %arg0 to %arg0 step %arg0 {
+    memref.store %0, %arg1[%i0] : memref<?xf32>
+  }
+  return
+}
+// UNROLL-BY-2-LABEL: func @unroll_static_trip_count_dynamic_equal_bounds
+//       UNROLL-BY-2:   scf.for
+//       UNROLL-BY-2:     memref.store
+//       UNROLL-BY-2:     memref.store
+//       UNROLL-BY-2:   scf.for
+//       UNROLL-BY-2:     memref.store
+
+// -----
+
+// Same, for the single-iteration case recognised from a zero lower bound and an
+// upper bound equal to the step. Here the lower bound is a constant but the
+// other two are not.
+func.func @unroll_static_trip_count_dynamic_ub_eq_step(%arg0: index, %arg1: memref<?xf32>) {
+  %0 = arith.constant 7.0 : f32
+  %c0 = arith.constant 0 : index
+  scf.for %i0 = %c0 to %arg0 step %arg0 {
+    memref.store %0, %arg1[%i0] : memref<?xf32>
+  }
+  return
+}
+// UNROLL-BY-2-LABEL: func @unroll_static_trip_count_dynamic_ub_eq_step
+//       UNROLL-BY-2:   scf.for
+//       UNROLL-BY-2:     memref.store
+//       UNROLL-BY-2:     memref.store
+//       UNROLL-BY-2:   scf.for
+//       UNROLL-BY-2:     memref.store
+
+// -----
+
+// Same, for an upper bound that is a constant offset from a non-constant lower
+// bound. The trip count is known, the lower and upper bound are not constants.
+func.func @unroll_static_trip_count_ub_offset_from_lb(%arg0: index, %arg1: memref<?xf32>) {
+  %0 = arith.constant 7.0 : f32
+  %c4 = arith.constant 4 : index
+  %c16 = arith.constant 16 : index
+  %ub = arith.addi %arg0, %c16 overflow<nsw> : index
+  scf.for %i0 = %arg0 to %ub step %c4 {
+    memref.store %0, %arg1[%i0] : memref<?xf32>
+  }
+  return
+}
+// UNROLL-BY-2-LABEL: func @unroll_static_trip_count_ub_offset_from_lb
+//       UNROLL-BY-2:   scf.for
+//       UNROLL-BY-2:     memref.store
+//       UNROLL-BY-2:     memref.store
+//       UNROLL-BY-2:   scf.for
+//       UNROLL-BY-2:     memref.store

@@ -32,8 +32,8 @@ end
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
 ! CHECK: acc.set device_num(%[[C0]] : i32)
 
-! CHECK: acc.set attributes {device_type = #acc.device_type<star>}
+! CHECK: acc.set device_type(#acc.device_type<star>)
 
-! CHECK: acc.set attributes {device_type = #acc.device_type<multicore>}
+! CHECK: acc.set device_type(#acc.device_type<multicore>)
 
 

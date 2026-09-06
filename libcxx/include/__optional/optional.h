@@ -40,13 +40,13 @@
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/is_relocatable.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_scalar.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_assignable.h>
 #include <__type_traits/is_trivially_constructible.h>
 #include <__type_traits/is_trivially_destructible.h>
-#include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/negation.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_cvref.h>

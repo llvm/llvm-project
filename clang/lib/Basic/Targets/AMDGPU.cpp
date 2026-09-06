@@ -16,6 +16,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetID.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 using namespace clang;
@@ -197,8 +198,10 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
                                             Triple.getSubArch())
                                       : llvm::AMDGPU::parseArchAMDGCN(Opts.CPU))
                   : llvm::AMDGPU::parseArchR600(Opts.CPU)),
-      GPUFeatures(Triple.isAMDGCN() ? llvm::AMDGPU::getArchAttrAMDGCN(GPUKind)
-                                    : llvm::AMDGPU::getArchAttrR600(GPUKind)) {
+      GPUFeatures(
+          Triple.isAMDGCN()
+              ? llvm::AMDGPU::FEATURE_NONE
+              : static_cast<unsigned>(llvm::AMDGPU::getArchAttrR600(GPUKind))) {
   resetDataLayout();
 
   AddrSpaceMap = &AMDGPUAddrSpaceMap;
@@ -215,7 +218,10 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   // should just be assumed true for the dummy target.
   HasFastHalfType = true;
   HasFloat16 = true;
-  WavefrontSize = (GPUFeatures & llvm::AMDGPU::FEATURE_WAVE32) ? 32 : 64;
+  WavefrontSize = llvm::AMDGPU::getFeatureBitset(GPUKind).test(
+                      llvm::AMDGPU::FEAT_SUPPORTS_WAVE32)
+                      ? 32
+                      : 64;
 
   // Set pointer width and alignment for the generic address space.
   PointerWidth = PointerAlign = getPointerWidthV(LangAS::Default);
@@ -229,7 +235,8 @@ AMDGPUTargetInfo::AMDGPUTargetInfo(const llvm::Triple &Triple,
   }
 
   MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
-  CUMode = !(GPUFeatures & llvm::AMDGPU::FEATURE_WGP);
+  CUMode = !llvm::AMDGPU::getFeatureBitset(GPUKind).test(
+      llvm::AMDGPU::FEAT_SUPPORTS_WGP);
 
   for (auto F : {"image-insts", "gws", "vmem-to-lds-load-insts", "supports-wgp",
                  "supports-wave32", "xnack-support", "sramecc-support",

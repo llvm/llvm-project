@@ -30,6 +30,16 @@ add_dependencies(flang-rt-test-depends
   flang_rt.runtime.unittest
 )
 
+# Unittests are C++ binaries. CMake still treats flang_rt.runtime as a Fortran
+# target, so it appends the Fortran compiler's implicit link libraries, which
+# include -lflang_rt.runtime. When the shared runtime is built, that flag
+# resolves to the shared library in the compiler's resource directory, which is
+# not a loader search path, so record that directory in the RPATH of the
+# unittests.
+if (FLANG_RT_ENABLE_SHARED)
+  list(APPEND CMAKE_BUILD_RPATH "${RUNTIMES_OUTPUT_RESOURCE_LIB_DIR}")
+endif ()
+
 if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
   add_compile_options("-Wno-suggest-override")
 endif()

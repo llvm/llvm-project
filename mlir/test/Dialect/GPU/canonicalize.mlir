@@ -14,7 +14,7 @@ func.func @fold_wait_op_test1() {
 // -----
 
 // CHECK-LABEL: func @erase_barriers
-//       CHECK-NEXT: gpu.barrier{{$}}
+//       CHECK-NEXT: gpu.barrier{{ *}}{{$}}
 //       CHECK-NEXT: return
 func.func @erase_barriers() {
   gpu.barrier
@@ -23,7 +23,7 @@ func.func @erase_barriers() {
 }
 
 // CHECK-LABEL: func @erase_barriers_first_full_fence
-//       CHECK-NEXT: gpu.barrier{{$}}
+//       CHECK-NEXT: gpu.barrier{{ *}}{{$}}
 //       CHECK-NEXT: return
 func.func @erase_barriers_first_full_fence() {
   gpu.barrier
@@ -32,7 +32,7 @@ func.func @erase_barriers_first_full_fence() {
 }
 
 // CHECK-LABEL: func @erase_barriers_second_full_fence
-//       CHECK-NEXT: gpu.barrier{{$}}
+//       CHECK-NEXT: gpu.barrier{{ *}}{{$}}
 //       CHECK-NEXT: return
 func.func @erase_barriers_second_full_fence() {
   gpu.barrier memfence [#gpu.address_space<workgroup>]
