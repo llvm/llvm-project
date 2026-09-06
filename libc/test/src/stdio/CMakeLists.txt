@@ -635,6 +635,63 @@ add_libc_test(
     libc.src.stdio.fwrite
 )
 
+add_libc_test(
+  fgetpos_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    fgetpos_test.cpp
+  DEPENDS
+    libc.hdr.stdio_macros
+    libc.hdr.types.fpos_t
+    libc.hdr.types.wint_t
+    libc.src.stdio.fclose
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.fgetpos
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.stdio.fseek
+    libc.src.stdio.fwrite
+    libc.src.stdio.setvbuf
+    libc.src.stdio.ungetc
+    libc.src.wchar.fgetwc
+    libc.src.wchar.fputwc
+    libc.src.wchar.fwide
+    libc.src.wchar.mbsinit
+    libc.src.wchar.ungetwc
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  fsetpos_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    fsetpos_test.cpp
+  DEPENDS
+    libc.hdr.stdio_macros
+    libc.hdr.types.fpos_t
+    libc.hdr.types.wint_t
+    libc.src.stdio.fclose
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.fgetpos
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.stdio.fseek
+    libc.src.stdio.fsetpos
+    libc.src.stdio.fwrite
+    libc.src.stdio.setvbuf
+    libc.src.stdio.ungetc
+    libc.src.wchar.fgetwc
+    libc.src.wchar.fputwc
+    libc.src.wchar.fwide
+    libc.src.wchar.mbsinit
+    libc.src.wchar.ungetwc
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
 # Create an output directory for any temporary test files.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testdata)
 
