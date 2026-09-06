@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_IR_LLVMCONTEXTIMPL_H
 #define LLVM_LIB_IR_LLVMCONTEXTIMPL_H
 
+#include "AttributeImpl.h"
 #include "ConstantsContext.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -52,12 +53,7 @@
 
 namespace llvm {
 
-class AttributeImpl;
-class AttributeListImpl;
-class AttributeSetNode;
 class BasicBlock;
-class ConstantRangeAttributeImpl;
-class ConstantRangeListAttributeImpl;
 struct DiagnosticHandler;
 class DbgMarker;
 class ElementCount;
@@ -1629,8 +1625,8 @@ public:
       FPSplatConstants;
 
   FoldingSet<AttributeImpl> AttrsSet;
-  FoldingSet<AttributeListImpl> AttrsLists;
-  FoldingSet<AttributeSetNode> AttrsSetNodes;
+  UniquingSet<AttributeListImpl> AttrsLists;
+  UniquingSet<AttributeSetNode> AttrsSetNodes;
 
   StringMap<MDString, BumpPtrAllocator> MDStringCache;
   DenseMap<Value *, ValueAsMetadata *> ValuesAsMetadata;
