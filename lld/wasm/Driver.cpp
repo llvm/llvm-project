@@ -922,9 +922,138 @@ static DefinedGlobal *createGlobalVariable(StringRef name, bool isMutable,
   return symtab->addSyntheticGlobal(name, flags, g);
 }
 
-static DefinedGlobal *createOptionalGlobal(StringRef name, bool isMutable) {
+static DefinedGlobal *createOptionalGlobal(StringRef name, bool isMutable,
+                                           bool force = false) {
   InputGlobal *g = createGlobal(name, isMutable);
-  return symtab->addOptionalGlobalSymbol(name, g);
+  return symtab->addOptionalGlobalSymbol(name, g, force);
+}
+
+static DefinedData *
+materializeOptionalDataSymbol(StringRef name, DefinedData *&slot, bool force) {
+  if (slot)
+    return slot;
+  slot = symtab->addOptionalDataSymbol(name, 0, force);
+  return slot;
+}
+
+static DefinedData *materializeOptionalDataLayoutSymbol(StringRef name,
+                                                        DefinedData *&slot,
+                                                        bool force) {
+  if (slot)
+    return slot;
+  if (ctx.isPic) {
+    ctx.arg.allowUndefinedSymbols.insert(name);
+    return nullptr;
+  }
+  return materializeOptionalDataSymbol(name, slot, force);
+}
+
+// Materialize a known optional linker-created symbol when required by a stub
+// library dependency. Returns a defined symbol, or nullptr if the name is not
+// a known optional linker symbol (or cannot be created in the current config).
+static Symbol *resolveStubDependency(StringRef name) {
+  if (ctx.arg.relocatable)
+    return nullptr;
+
+  if (name == "__dso_handle") {
+    materializeOptionalDataSymbol(name, ctx.sym.dsoHandle, true);
+    return symtab->find(name);
+  }
+  if (name == "__data_end") {
+    materializeOptionalDataLayoutSymbol(name, ctx.sym.dataEnd, true);
+    return symtab->find(name);
+  }
+  if (name == "__rodata_start") {
+    materializeOptionalDataLayoutSymbol(name, ctx.sym.rodataStart, true);
+    return symtab->find(name);
+  }
+  if (name == "__rodata_end") {
+    materializeOptionalDataLayoutSymbol(name, ctx.sym.rodataEnd, true);
+    return symtab->find(name);
+  }
+  if (name == "__stack_low") {
+    materializeOptionalDataLayoutSymbol(name, ctx.sym.stackLow, true);
+    return symtab->find(name);
+  }
+  if (name == "__stack_high") {
+    materializeOptionalDataLayoutSymbol(name, ctx.sym.stackHigh, true);
+    return symtab->find(name);
+  }
+  if (name == "__global_base") {
+    materializeOptionalDataLayoutSymbol(name, ctx.sym.globalBase, true);
+    return symtab->find(name);
+  }
+  if (name == "__heap_base") {
+    materializeOptionalDataLayoutSymbol(name, ctx.sym.heapBase, true);
+    return symtab->find(name);
+  }
+  if (name == "__heap_end") {
+    materializeOptionalDataLayoutSymbol(name, ctx.sym.heapEnd, true);
+    return symtab->find(name);
+  }
+  if (name == "__memory_base" && !ctx.isPic) {
+    if (!ctx.sym.memoryBase)
+      ctx.sym.memoryBase = createOptionalGlobal(name, false, true);
+    return symtab->find(name);
+  }
+  if (name == "__table_base" && !ctx.isPic) {
+    if (!ctx.sym.tableBase)
+      ctx.sym.tableBase = createOptionalGlobal(name, false, true);
+    return symtab->find(name);
+  }
+  if (name == "__wasm_first_page_end") {
+    materializeOptionalDataSymbol(name, ctx.sym.firstPageEnd, true);
+    if (ctx.sym.firstPageEnd)
+      ctx.sym.firstPageEnd->setVA(ctx.arg.pageSize);
+    return symtab->find(name);
+  }
+  if (name == "__tls_base" && !ctx.sym.tlsBase) {
+    ctx.sym.tlsBase = createOptionalGlobal(name, false, true);
+    return symtab->find(name);
+  }
+  return nullptr;
+}
+
+static void createOptionalSymbols() {
+  if (ctx.arg.relocatable)
+    return;
+
+  if (!ctx.sym.dsoHandle)
+    materializeOptionalDataSymbol("__dso_handle", ctx.sym.dsoHandle, false);
+
+  materializeOptionalDataLayoutSymbol("__data_end", ctx.sym.dataEnd, false);
+  materializeOptionalDataLayoutSymbol("__rodata_start", ctx.sym.rodataStart,
+                                      false);
+  materializeOptionalDataLayoutSymbol("__rodata_end", ctx.sym.rodataEnd, false);
+  materializeOptionalDataLayoutSymbol("__stack_low", ctx.sym.stackLow, false);
+  materializeOptionalDataLayoutSymbol("__stack_high", ctx.sym.stackHigh, false);
+  materializeOptionalDataLayoutSymbol("__global_base", ctx.sym.globalBase,
+                                      false);
+  materializeOptionalDataLayoutSymbol("__heap_base", ctx.sym.heapBase, false);
+  materializeOptionalDataLayoutSymbol("__heap_end", ctx.sym.heapEnd, false);
+
+  // for pic, __memory_base and __table_base are handled in
+  // createSyntheticSymbols.
+  if (!ctx.isPic) {
+    if (!ctx.sym.memoryBase)
+      ctx.sym.memoryBase = createOptionalGlobal("__memory_base", false);
+    if (!ctx.sym.tableBase)
+      ctx.sym.tableBase = createOptionalGlobal("__table_base", false);
+  }
+
+  if (!ctx.sym.firstPageEnd)
+    materializeOptionalDataSymbol("__wasm_first_page_end", ctx.sym.firstPageEnd,
+                                  false);
+  if (ctx.sym.firstPageEnd)
+    ctx.sym.firstPageEnd->setVA(ctx.arg.pageSize);
+
+  // TLS object files may be linked into single-threaded programs, so
+  // __tls_base must always be defined. In this case it is immutable and points
+  // directly to the start of the `.tdata` segment. __tls_size and __tls_align
+  // are omitted since they are only used by __wasm_init_tls, which is not
+  // created in this case.
+  if (!ctx.sym.tlsBase)
+    ctx.sym.tlsBase = createOptionalGlobal("__tls_base", false);
 }
 
 // Create ABI-defined synthetic symbols
@@ -1007,52 +1136,6 @@ static void createSyntheticSymbols() {
   }
 }
 
-static void createOptionalSymbols() {
-  if (ctx.arg.relocatable)
-    return;
-
-  ctx.sym.dsoHandle = symtab->addOptionalDataSymbol("__dso_handle");
-
-  auto addDataLayoutSymbol = [&](StringRef s) -> DefinedData * {
-    // Data layout symbols are either defined by lld, or (in the case
-    // of PIC code) defined by the dynamic linker / embedder.
-    if (ctx.isPic) {
-      ctx.arg.allowUndefinedSymbols.insert(s);
-      return nullptr;
-    } else {
-      return symtab->addOptionalDataSymbol(s);
-    }
-  };
-
-  ctx.sym.dataEnd = addDataLayoutSymbol("__data_end");
-  ctx.sym.rodataStart = addDataLayoutSymbol("__rodata_start");
-  ctx.sym.rodataEnd = addDataLayoutSymbol("__rodata_end");
-  ctx.sym.stackLow = addDataLayoutSymbol("__stack_low");
-  ctx.sym.stackHigh = addDataLayoutSymbol("__stack_high");
-  ctx.sym.globalBase = addDataLayoutSymbol("__global_base");
-  ctx.sym.heapBase = addDataLayoutSymbol("__heap_base");
-  ctx.sym.heapEnd = addDataLayoutSymbol("__heap_end");
-
-  // for pic, __memory_base and __table_base are handled in
-  // createSyntheticSymbols.
-  if (!ctx.isPic) {
-    ctx.sym.memoryBase = createOptionalGlobal("__memory_base", false);
-    ctx.sym.tableBase = createOptionalGlobal("__table_base", false);
-  }
-
-  ctx.sym.firstPageEnd = symtab->addOptionalDataSymbol("__wasm_first_page_end");
-  if (ctx.sym.firstPageEnd)
-    ctx.sym.firstPageEnd->setVA(ctx.arg.pageSize);
-
-  // TLS object files may be linked into single-threaded programs, so
-  // __tls_base must always be defined. In this case it is immutable and points
-  // directly to the start of the `.tdata` segment. __tls_size and __tls_align
-  // are omitted since they are only used by __wasm_init_tls, which is not
-  // created in this case.
-  if (!ctx.sym.tlsBase)
-    ctx.sym.tlsBase = createOptionalGlobal("__tls_base", false);
-}
-
 static void processStubLibrariesPreLTO() {
   log("-- processStubLibrariesPreLTO");
   for (auto &stub_file : ctx.stubFiles) {
@@ -1101,6 +1184,8 @@ static bool addStubSymbolDeps(const StubFile *stub_file, Symbol *sym,
   bool depsAdded = false;
   for (const auto dep : deps) {
     auto *needed = symtab->find(dep);
+    if (!needed || needed->isUndefined())
+      needed = resolveStubDependency(dep);
     if (!needed) {
       error(toString(stub_file) + ": undefined symbol: " + dep +
             ". Required by " + toString(*sym));
