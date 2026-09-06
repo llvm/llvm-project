@@ -1301,15 +1301,10 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M) {
       // instructions.
       // FIXME: This should be based off of the maximum size in B of an outlined
       // call versus the size in B of the MBB.
-      unsigned NumNonDebugInstrs = 0;
-      for (const MachineInstr &MI : MBB.instrs()) {
-        if (MI.isDebugInstr())
-          continue;
-        ++NumNonDebugInstrs;
-        if (NumNonDebugInstrs >= MinMBBSize)
-          break;
-      }
-      if (NumNonDebugInstrs < MinMBBSize) {
+      if (!hasNItemsOrMore(
+              instructionsWithoutDebug(MBB.instr_begin(), MBB.instr_end(),
+                                       /* SkipPseudoOp */ false),
+              MinMBBSize)) {
         LLVM_DEBUG(dbgs() << "    SKIP: MBB size less than minimum size of "
                           << MinMBBSize << "\n");
         continue;
