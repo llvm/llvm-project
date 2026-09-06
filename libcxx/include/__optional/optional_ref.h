@@ -78,6 +78,9 @@ public:
   static_assert(!is_same_v<remove_cv_t<_Tp>, nullopt_t>, "instantiation of optional with nullopt_t is ill-formed");
 
 private:
+  template <class>
+  friend class optional;
+
   _Tp* __value_ = nullptr;
 
   template <class _Up>

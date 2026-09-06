@@ -321,6 +321,39 @@ constexpr bool test_ref() {
     assert(&(*o2) == &j);
   }
 
+  // optional<T> -> optional<T&> GH #220332
+  { // &, &&
+    int i = 42;
+    int j = 43;
+    int k = 44;
+
+    std::optional<int> opt{i};
+
+    std::same_as<std::optional<int&>> decltype(auto) o = opt.transform([&](auto) -> int& { return j; });
+    assert(o == 43);
+    assert(&(*o) == &j);
+
+    std::same_as<std::optional<int&>> decltype(auto) o2 = std::move(opt).transform([&](auto) -> int& { return k; });
+    assert(o2 == 44);
+    assert(&(*o2) == &k);
+  }
+
+  { // const&, const&&
+    int i = 42;
+    int j = 43;
+    int k = 44;
+
+    const std::optional<int> opt{i};
+
+    std::same_as<std::optional<int&>> decltype(auto) o = opt.transform([&](auto) -> int& { return j; });
+    assert(o == 43);
+    assert(&(*o) == &j);
+
+    std::same_as<std::optional<int&>> decltype(auto) o2 = std::move(opt).transform([&](auto) -> int& { return k; });
+    assert(o2 == 44);
+    assert(&(*o2) == &k);
+  }
+
   return true;
 }
 #endif
