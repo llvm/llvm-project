@@ -494,12 +494,18 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
 
     // The merged region is entered whenever either of the original regions was,
     // so use the higher, i.e. more conservative, of their entry frequencies.
+    // If only one of the two is known, the higher one is unknown, so the
+    // result must be unknown too.
     VPBranchOnMaskRecipe *Guard2 = Region2->getEntryBranchOnMask();
     std::optional<BlockFrequency> Freq1 =
         Region1->getEntryBranchOnMask()->getExecutionFrequency();
     std::optional<BlockFrequency> Freq2 = Guard2->getExecutionFrequency();
-    if (Freq1 && Freq2 && *Freq2 < *Freq1)
-      Guard2->setExecutionFrequency(Freq1, Plan.getContext());
+    if (Freq1 && Freq2) {
+      if (*Freq2 < *Freq1)
+        Guard2->setExecutionFrequency(Freq1, Plan.getContext());
+    } else if (Freq2) {
+      Guard2->clearExecutionFrequency();
+    }
 
     // Note: No fusion-preventing memory dependencies are expected in either
     // region. Such dependencies should be rejected during earlier dependence
