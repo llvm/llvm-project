@@ -94,6 +94,9 @@ protected:
 
   bool IsLittleEndian;
 
+  /// The selected ABI variant.
+  PPCABI TargetABI = PPC_ABI_UNKNOWN;
+
   POPCNTDKind HasPOPCNTD;
 
   const PPCTargetMachine &TM;
@@ -115,7 +118,7 @@ public:
   /// of the specified triple.
   ///
   PPCSubtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU, StringRef FS,
-               const PPCTargetMachine &TM);
+               StringRef ABIName, const PPCTargetMachine &TM);
 
   ~PPCSubtarget() override;
 

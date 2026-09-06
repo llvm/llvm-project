@@ -1941,7 +1941,8 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
 }
 
 void PPCLinuxAsmPrinter::emitStartOfAsmFile(Module &M) {
-  if (static_cast<const PPCTargetMachine &>(TM).isELFv2ABI()) {
+  if (PPCTargetMachine::computeABI(M.getTargetTriple(),
+                                   TM.getTargetABIName(M)) == PPC_ABI_ELFv2) {
     PPCTargetStreamer *TS =
       static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
     TS->emitAbiVersion(2);

@@ -983,9 +983,8 @@ bool PPCTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
 bool PPCTTIImpl::isNumRegsMajorCostOfLSR() const { return false; }
 
 bool PPCTTIImpl::shouldBuildRelLookupTables() const {
-  const PPCTargetMachine &TM = ST->getTargetMachine();
   // XCOFF hasn't implemented lowerRelativeReference, disable non-ELF for now.
-  if (!TM.isELFv2ABI())
+  if (!ST->isELFv2ABI())
     return false;
   return BaseT::shouldBuildRelLookupTables();
 }
