@@ -24,10 +24,12 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Linkage.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Frontend/ASTUnit.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Annotations/Annotations.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cassert>
 #include <memory>
@@ -36,6 +38,14 @@
 using namespace clang::ast_matchers;
 using namespace clang::tooling;
 using namespace clang;
+using ::testing::AllOf;
+using ::testing::Not;
+using ::testing::Pointee;
+
+MATCHER(IsStandardLayout, "") { return arg.isStandardLayout(); }
+MATCHER(IsStandardLayoutUnionMember, "") {
+  return arg.isStandardLayoutUnionMember();
+}
 
 TEST(Decl, CleansUpAPValues) {
   MatchFinder Finder;
@@ -1028,4 +1038,391 @@ TEST(Decl, ObjCPropertyDeclNameForDiagnostic) {
   ExtP->getNameForDiagnostic(ExtPQualifiedOS, Ctx.getPrintingPolicy(),
                              /*Qualified=*/true);
   EXPECT_EQ(ExtPQualifiedOS.str(), "-[MyClass extensionProp]");
+}
+
+class StandardLayoutUnionMemberTest : public ::testing::Test {
+protected:
+  std::unique_ptr<ASTUnit> AST;
+  ASTContext *Ctx = nullptr;
+
+  void buildAST(StringRef Code, ArrayRef<std::string> Args = {"-std=c++11"}) {
+    AST = tooling::buildASTFromCodeWithArgs(Code, Args);
+    ASSERT_NE(AST, nullptr);
+    Ctx = &AST->getASTContext();
+  }
+
+  const CXXRecordDecl *findRecord(StringRef Name) const {
+    assert(Ctx && "ASTContext not initialized");
+    return selectFirst<CXXRecordDecl>(
+        "d",
+        match(cxxRecordDecl(hasName(Name), isDefinition()).bind("d"), *Ctx));
+  }
+
+  const CXXRecordDecl *findTemplate(StringRef Name,
+                                    StringRef TemplateArg) const {
+    assert(Ctx && "ASTContext not initialized");
+    return selectFirst<CXXRecordDecl>(
+        "d", match(classTemplateSpecializationDecl(
+                       hasName(Name), isDefinition(),
+                       hasTemplateArgument(
+                           0, refersToType(asString(TemplateArg.str()))))
+                       .bind("d"),
+                   *Ctx));
+  }
+
+  // Matches a standard-layout union member.
+  auto IsSLUnionMember() {
+    return Pointee(AllOf(IsStandardLayout(), IsStandardLayoutUnionMember()));
+  }
+
+  // Matches a standard-layout type that is not a member of a standard-layout
+  // union.
+  auto IsStandaloneSL() {
+    return Pointee(
+        AllOf(IsStandardLayout(), Not(IsStandardLayoutUnionMember())));
+  }
+
+  // Matches a non-standard-layout type.
+  auto IsNonSL() {
+    return Pointee(
+        AllOf(Not(IsStandardLayout()), Not(IsStandardLayoutUnionMember())));
+  }
+};
+
+TEST_F(StandardLayoutUnionMemberTest, StandaloneStruct) {
+  buildAST(R"cc(
+    struct StandaloneSL {
+      int x;
+    };
+  )cc");
+
+  EXPECT_THAT(findRecord("StandaloneSL"), IsStandaloneSL());
+}
+
+TEST_F(StandardLayoutUnionMemberTest, NonStandardLayoutStruct) {
+  buildAST(R"cc(
+    struct NonSL {
+      virtual void foo();
+    };
+  )cc");
+
+  EXPECT_THAT(findRecord("NonSL"), IsNonSL());
+}
+
+TEST_F(StandardLayoutUnionMemberTest, StandardLayoutUnion) {
+  buildAST(R"cc(
+    struct SLInUnion {
+      int x;
+    };
+
+    union SLUnion {
+      SLInUnion u;
+    };
+  )cc");
+
+  EXPECT_THAT(findRecord("SLUnion"), IsStandaloneSL());
+  EXPECT_THAT(findRecord("SLInUnion"), IsSLUnionMember());
+}
+
+TEST_F(StandardLayoutUnionMemberTest, RecurseFieldTypes) {
+  buildAST(R"cc(
+    struct SLMember {
+      int x;
+    };
+
+    struct SLInUnion {
+      SLMember x;
+    };
+
+    union SLUnion {
+      SLInUnion u;
+    };
+  )cc");
+
+  EXPECT_THAT(findRecord("SLUnion"), IsStandaloneSL());
+  EXPECT_THAT(findRecord("SLInUnion"), IsSLUnionMember());
+  EXPECT_THAT(findRecord("SLMember"), IsSLUnionMember());
+}
+
+TEST_F(StandardLayoutUnionMemberTest, TemplatedMember) {
+  buildAST(R"cc(
+    template <typename T>
+    struct TemplatedSL {
+      T x;
+    };
+
+    union TemplatedUnion {
+      TemplatedSL<int> a;
+      TemplatedSL<float> b;
+    };
+  )cc");
+
+  EXPECT_THAT(findRecord("TemplatedUnion"), IsStandaloneSL());
+  EXPECT_THAT(findTemplate("TemplatedSL", "int"), IsSLUnionMember());
+  EXPECT_THAT(findTemplate("TemplatedSL", "float"), IsSLUnionMember());
+}
+
+TEST_F(StandardLayoutUnionMemberTest, NonStandardLayoutUnion) {
+  buildAST(R"cc(
+    struct NonSL {
+      virtual void foo();
+    };
+
+    struct SLInNonSLUnion {
+      int x;
+    };
+
+    union NonSLUnion {
+      SLInNonSLUnion s;
+      NonSL n;
+    };
+  )cc");
+
+  EXPECT_THAT(findRecord("NonSLUnion"), Pointee(Not(IsStandardLayout())));
+  EXPECT_THAT(findRecord("NonSL"), IsNonSL());
+  EXPECT_THAT(findRecord("SLInNonSLUnion"), IsStandaloneSL());
+}
+
+TEST_F(StandardLayoutUnionMemberTest, NestedStruct) {
+  buildAST(R"cc(
+    union NestedUnion {
+      struct NestedSL {
+        int a;
+      } n;
+    };
+  )cc");
+
+  EXPECT_THAT(findRecord("NestedUnion"), IsStandaloneSL());
+  EXPECT_THAT(findRecord("NestedSL"), IsSLUnionMember());
+}
+
+TEST_F(StandardLayoutUnionMemberTest, Array) {
+  buildAST(R"cc(
+    struct SLInArray {
+      int x;
+    };
+    struct SLInMultiArray {
+      int y;
+    };
+    union ArrayUnion {
+      SLInArray arr[3];
+      SLInMultiArray multi_arr[2][4];
+      int raw;
+    };
+  )cc");
+
+  EXPECT_THAT(findRecord("ArrayUnion"), IsStandaloneSL());
+  EXPECT_THAT(findRecord("SLInArray"), IsSLUnionMember());
+  EXPECT_THAT(findRecord("SLInMultiArray"), IsSLUnionMember());
+}
+
+TEST_F(StandardLayoutUnionMemberTest, CVQualified) {
+  buildAST(R"cc(
+    struct SLConst {
+      int x;
+    };
+    struct SLVolatile {
+      int y;
+    };
+    union CVUnion {
+      const SLConst c;
+      volatile SLVolatile v;
+      int raw;
+    };
+  )cc");
+
+  EXPECT_THAT(findRecord("CVUnion"), IsStandaloneSL());
+  EXPECT_THAT(findRecord("SLConst"), IsSLUnionMember());
+  EXPECT_THAT(findRecord("SLVolatile"), IsSLUnionMember());
+}
+
+TEST_F(StandardLayoutUnionMemberTest, GenericUnionTemplate) {
+  buildAST(R"cc(
+    template <typename T>
+    union GenericUnion {
+      T val;
+      int raw;
+    };
+    struct SLInGenericUnion {
+      int x;
+    };
+    GenericUnion<SLInGenericUnion> u;
+  )cc");
+
+  EXPECT_THAT(findRecord("SLInGenericUnion"), IsSLUnionMember());
+}
+
+TEST_F(StandardLayoutUnionMemberTest, AnonymousUnion) {
+  buildAST(R"cc(
+    struct SLInAnonUnion {
+      int x;
+    };
+    struct EnclosingStruct {
+      union {
+        SLInAnonUnion a;
+        int b;
+      };
+    };
+  )cc");
+
+  EXPECT_THAT(findRecord("SLInAnonUnion"), IsSLUnionMember());
+}
+
+TEST_F(StandardLayoutUnionMemberTest, Inheritance) {
+  buildAST(R"cc(
+    struct EmptyBase {};
+    struct SLDerived : EmptyBase {
+      int x;
+    };
+    union DerivedUnion {
+      SLDerived d;
+      int raw;
+    };
+  )cc");
+
+  EXPECT_THAT(findRecord("DerivedUnion"), IsStandaloneSL());
+  EXPECT_THAT(findRecord("SLDerived"), IsSLUnionMember());
+  EXPECT_THAT(findRecord("EmptyBase"), IsSLUnionMember());
+}
+
+TEST_F(StandardLayoutUnionMemberTest, TypedefInheritance) {
+  buildAST(R"cc(
+    typedef struct EmptyBase {} EmptyBaseAlias;
+    struct SLDerived : EmptyBaseAlias {
+      int y;
+    };
+    union DerivedUnion {
+      SLDerived d;
+      int raw;
+    };
+  )cc");
+
+  EXPECT_THAT(findRecord("DerivedUnion"), IsStandaloneSL());
+  EXPECT_THAT(findRecord("SLDerived"), IsSLUnionMember());
+  EXPECT_THAT(findRecord("EmptyBase"), IsSLUnionMember());
+}
+
+TEST_F(StandardLayoutUnionMemberTest, MultipleInheritance) {
+  buildAST(R"cc(
+    struct EmptyBase1 {};
+    struct EmptyBase2 {};
+    struct SLDerived : EmptyBase1, EmptyBase2 {
+      int x;
+    };
+    union DerivedUnion {
+      SLDerived d;
+      int raw;
+    };
+  )cc");
+
+  EXPECT_THAT(findRecord("DerivedUnion"), IsStandaloneSL());
+  EXPECT_THAT(findRecord("SLDerived"), IsSLUnionMember());
+  EXPECT_THAT(findRecord("EmptyBase1"), IsSLUnionMember());
+  EXPECT_THAT(findRecord("EmptyBase2"), IsSLUnionMember());
+}
+
+TEST_F(StandardLayoutUnionMemberTest, InheritanceNonEmptyBase) {
+  buildAST(R"cc(
+    struct SLBase {
+      int y;
+    };
+    struct EmptyDerived : SLBase {};
+    union DerivedUnion {
+      EmptyDerived d;
+      int raw;
+    };
+  )cc");
+
+  EXPECT_THAT(findRecord("DerivedUnion"), IsStandaloneSL());
+  EXPECT_THAT(findRecord("EmptyDerived"), IsSLUnionMember());
+  EXPECT_THAT(findRecord("SLBase"), IsSLUnionMember());
+}
+
+TEST_F(StandardLayoutUnionMemberTest, TypedefInheritanceNonEmptyBase) {
+  buildAST(R"cc(
+    typedef struct SLBase {
+      int y;
+    } SLBaseAlias;
+    struct EmptyDerived : SLBaseAlias {};
+    union DerivedUnion {
+      EmptyDerived d;
+      int raw;
+    };
+  )cc");
+
+  EXPECT_THAT(findRecord("DerivedUnion"), IsStandaloneSL());
+  EXPECT_THAT(findRecord("EmptyDerived"), IsSLUnionMember());
+  EXPECT_THAT(findRecord("SLBase"), IsSLUnionMember());
+}
+
+TEST_F(StandardLayoutUnionMemberTest, RecurseInheritance) {
+  buildAST(R"cc(
+    struct SLBaseMember {
+      int x;
+    };
+    struct SLBase {
+      SLBaseMember y;
+    };
+    struct EmptyDerived : SLBase {};
+    union DerivedUnion {
+      EmptyDerived d;
+      int raw;
+    };
+  )cc");
+
+  EXPECT_THAT(findRecord("DerivedUnion"), IsStandaloneSL());
+  EXPECT_THAT(findRecord("EmptyDerived"), IsSLUnionMember());
+  EXPECT_THAT(findRecord("SLBase"), IsSLUnionMember());
+  EXPECT_THAT(findRecord("SLBaseMember"), IsSLUnionMember());
+}
+
+TEST_F(StandardLayoutUnionMemberTest, AnonymousTypedefStruct) {
+  buildAST(R"cc(
+    typedef struct {
+      int x;
+    } AnonTypedefSL;
+
+    union AnonTypedefUnion {
+      AnonTypedefSL s;
+      int raw;
+    };
+  )cc");
+
+  const auto *TD = selectFirst<TypedefDecl>(
+      "d", match(typedefDecl(hasName("AnonTypedefSL")).bind("d"), *Ctx));
+  ASSERT_NE(TD, nullptr);
+  const auto *AnonRecord = TD->getUnderlyingType()->getAsCXXRecordDecl();
+
+  EXPECT_THAT(findRecord("AnonTypedefUnion"), IsStandaloneSL());
+  EXPECT_THAT(AnonRecord, IsSLUnionMember());
+}
+
+TEST_F(StandardLayoutUnionMemberTest, IgnorePointerMembers) {
+  buildAST(R"cc(
+    struct SLPointerInUnion {
+      int x;
+    };
+
+    union SLUnion {
+      SLPointerInUnion* u;
+    };
+  )cc");
+
+  EXPECT_THAT(findRecord("SLUnion"), IsStandaloneSL());
+  EXPECT_THAT(findRecord("SLPointerInUnion"), IsStandaloneSL());
+}
+
+TEST_F(StandardLayoutUnionMemberTest, IgnoreReferenceMembers) {
+  buildAST(R"cc(
+    struct SLReferenceInUnion {
+      int x;
+    };
+
+    union SLUnion {
+      SLReferenceInUnion& u;
+    };
+  )cc");
+
+  EXPECT_THAT(findRecord("SLUnion"), IsStandaloneSL());
+  EXPECT_THAT(findRecord("SLReferenceInUnion"), IsStandaloneSL());
 }
