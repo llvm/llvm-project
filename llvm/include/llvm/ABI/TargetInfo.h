@@ -46,11 +46,12 @@ struct ABICompatInfo {
   bool ClassifyIntegerMMXAsSSE : 1;
   bool HonorsRevision98 : 1;
   bool Clang11Compat : 1;
+  bool ClassifyUnnamedBitFields : 1;
 
   ABICompatInfo()
       : PassInt128VectorsInMem(true), ReturnCXXRecordGreaterThan128InMem(true),
         ClassifyIntegerMMXAsSSE(true), HonorsRevision98(true),
-        Clang11Compat(true) {}
+        Clang11Compat(true), ClassifyUnnamedBitFields(true) {}
 
   /// Return flags matching the ABI emitted by the given Clang major version.
   // TODO: fill in per-version flag overrides.
