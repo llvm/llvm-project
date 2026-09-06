@@ -36,22 +36,22 @@ define void @Bork(i64 %range.0.0, i64 %range.0.1, i64 %size) personality ptr @__
 ; CHECK-NEXT:    std 28, 144(31) # 8-byte Folded Spill
 ; CHECK-NEXT:    stdux 4, 1, 3
 ; CHECK-NEXT:    addi 3, 1, 112
-; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:  .Ltmp0: # EH_LABEL
 ; CHECK-NEXT:    bl Foo
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:  .Ltmp1:
+; CHECK-NEXT:  .Ltmp1: # EH_LABEL
 ; CHECK-NEXT:  # %bb.1: # %bb30.preheader
 ; CHECK-NEXT:    addi 28, 31, 120
 ; CHECK-NEXT:    cmpldi 30, 0
 ; CHECK-NEXT:    beq 0, .LBB0_4
 ; CHECK-NEXT:  .LBB0_2: # %cond_true
 ; CHECK-NEXT:    #
-; CHECK-NEXT:  .Ltmp3:
+; CHECK-NEXT:  .Ltmp3: # EH_LABEL
 ; CHECK-NEXT:    mr 3, 29
 ; CHECK-NEXT:    mr 4, 28
 ; CHECK-NEXT:    bl Bar
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:  .Ltmp4:
+; CHECK-NEXT:  .Ltmp4: # EH_LABEL
 ; CHECK-NEXT:  # %bb.3: # %invcont23
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    ld 3, 128(31)
@@ -69,16 +69,14 @@ define void @Bork(i64 %range.0.0, i64 %range.0.1, i64 %size) personality ptr @__
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 ; CHECK-NEXT:  .LBB0_5: # %unwind.loopexit.split-lp
-; CHECK-NEXT:  .Ltmp2:
-; CHECK-NEXT:    b .LBB0_7
-; CHECK-NEXT:  .LBB0_6: # %unwind.loopexit
-; CHECK-NEXT:  .Ltmp5:
-; CHECK-NEXT:  .LBB0_7: # %unwind
+; CHECK-NEXT:  .Ltmp2: # EH_LABEL
 ; CHECK-NEXT:    ld 4, 0(1)
 ; CHECK-NEXT:    mr 1, 27
 ; CHECK-NEXT:    std 4, 0(1)
 ; CHECK-NEXT:    bl _Unwind_Resume
 ; CHECK-NEXT:    nop
+; CHECK-NEXT:  .LBB0_6: # %unwind.loopexit
+; CHECK-NEXT:  .Ltmp5: # EH_LABEL
 entry:
 	%effectiveRange = alloca %struct.Range, align 8		; <ptr> [#uses=2]
 	%tmp4 = call ptr @llvm.stacksave()		; <ptr> [#uses=1]

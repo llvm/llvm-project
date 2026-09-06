@@ -158,13 +158,11 @@ define void @_ZNK10wxDateTime6FormatEPKwRKNS_8TimeZoneE(ptr noalias sret(%struct
 ; CHECK-NEXT:    retl $4
 ; CHECK-NEXT:  LBB0_20: ## %lpad.loopexit.split-lp
 ; CHECK-NEXT:  Ltmp15: ## EH_LABEL
-; CHECK-NEXT:    jmp LBB0_22
 ; CHECK-NEXT:  LBB0_21: ## %lpad8185
 ; CHECK-NEXT:  Ltmp12: ## EH_LABEL
 ; CHECK-NEXT:    jmp LBB0_22
 ; CHECK-NEXT:  LBB0_19: ## %lpad.loopexit
 ; CHECK-NEXT:  Ltmp18: ## EH_LABEL
-; CHECK-NEXT:    jmp LBB0_22
 ; CHECK-NEXT:  Lfunc_end0:
 entry:
 	br i1 %foo, label %bb116.i, label %bb115.critedge.i

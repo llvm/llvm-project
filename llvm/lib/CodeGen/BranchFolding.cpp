@@ -1423,6 +1423,17 @@ static bool areConditionalsEqual(ArrayRef<MachineOperand> CurCond,
                      });
 }
 
+static bool isOnlyLandingPads(MachineBasicBlock &MBB) {
+  bool SeenLandingPad = false;
+  for (const MachineInstr &MI : MBB) {
+    if (!MI.isEHLabel() && !MI.isBranch() && !MI.isDebugInstr())
+      return false;
+    if (MI.isEHLabel())
+      SeenLandingPad = true;
+  }
+  return SeenLandingPad;
+}
+
 bool BranchFolder::OptimizeBlock(MachineBasicBlock *MBB) {
   bool MadeChange = false;
   MachineFunction &MF = *MBB->getParent();
@@ -1593,6 +1604,20 @@ ReoptimizeBlock:
       // one.
       TII->removeBranch(PrevBB);
       PrevBB.removeSuccessor(CurTBB);
+      MadeChange = true;
+      ++NumBranchOpts;
+      goto ReoptimizeBlock;
+    }
+
+    // If we have a block that consists solely of an EH_LABEL instruction and
+    // the previous block branches to the destination of this block, we can
+    // remove the branch.
+    bool TerminateInSameBlock =
+        CurFBB == PriorFBB &&
+        (MBB->canFallThrough() && &*FallThrough == PriorTBB);
+    if (isOnlyLandingPads(*MBB) && TerminateInSameBlock) {
+      TII->removeBranch(PrevBB);
+      PrevBB.removeSuccessor(PriorTBB);
       MadeChange = true;
       ++NumBranchOpts;
       goto ReoptimizeBlock;
