@@ -4151,6 +4151,18 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_exp2:
   case LibFunc_exp2f:
     return optimizeExp2(CI, Builder);
+  case LibFunc_scalbn:
+  case LibFunc_scalbnf:
+  case LibFunc_scalbnl:
+    // LLVM floating-point types have radix 2, so scalbn is equivalent to
+    // ldexp. Do not replace a libcall that may set errno.
+    if (CI->doesNotAccessMemory()) {
+      Value *NewCall =
+          Builder.CreateLdexp(CI->getArgOperand(0), CI->getArgOperand(1), CI);
+      NewCall->takeName(CI);
+      return copyFlags(*CI, NewCall);
+    }
+    return nullptr;
   case LibFunc_fabsf:
   case LibFunc_fabs:
   case LibFunc_fabsl:
