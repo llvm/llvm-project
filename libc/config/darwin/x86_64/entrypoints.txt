@@ -184,7 +184,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     #libc.src.math.hypotf
     #libc.src.math.ilogb
     #libc.src.math.ilogbf
-    #libc.src.math.ilogbf128b
+    #libc.src.math.ilogbf128
     #libc.src.math.ilogbl
     #libc.src.math.iscanonicalf128
     #libc.src.math.isnanf128
@@ -313,6 +313,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.issignalingbf16
   libc.src.math.ldexpbf16
   libc.src.math.llogbbf16
+  libc.src.math.llogbf128
   libc.src.math.llrintbf16
   libc.src.math.llroundbf16
   libc.src.math.log_bf16

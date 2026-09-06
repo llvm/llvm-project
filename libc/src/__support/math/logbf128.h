@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_LOGBF128_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_LOGBF128_H
 
-#include "src/__support/FPUtil/float128.h"
 #include "src/__support/FPUtil/ManipulationFunctions.h"
+#include "src/__support/FPUtil/float128.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
@@ -20,9 +20,7 @@ namespace math {
 
 using LIBC_NAMESPACE::fputil::Float128;
 
-LIBC_INLINE constexpr Float128 logbf128(Float128 x) { 
-    return fputil::logb(x); 
-}
+LIBC_INLINE constexpr Float128 logbf128(Float128 x) { return fputil::logb(x); }
 
 } // namespace math
 

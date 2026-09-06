@@ -16,7 +16,7 @@ using LIBC_NAMESPACE::fputil::Float128;
 
 LLVM_LIBC_FUNCTION(float128, frexpf128, (float128 x, int *exp)) {
   return cpp::bit_cast<float128>(
-    math::frexpf128(cpp::bit_cast<Float128>(x), exp));
+      math::frexpf128(cpp::bit_cast<Float128>(x), exp));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
