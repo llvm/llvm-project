@@ -5835,6 +5835,25 @@ AAFoldRuntimeCall &AAFoldRuntimeCall::createForPosition(const IRPosition &IRP,
   return *AA;
 }
 
+/// Bound the if-cascade AAIndirectCallInfo builds for an indirect call. Device
+/// code routes many parallel regions through a single runtime dispatcher, so a
+/// call site there can see every outlined region in the module; specializing
+/// all of them costs more in code size and compile time than the direct calls
+/// are worth.
+///
+/// This is a threshold on the call site rather than a limit on how many callees
+/// get specialized: the Attributor asks about each callee with the same total,
+/// so a site above the threshold keeps its indirect call instead of getting
+/// this many direct ones plus a fallback.
+static constexpr unsigned MaxCalleesForSpecialization = 3;
+
+static bool shouldSpecializeIndirectCallee(Attributor &,
+                                           const AbstractAttribute &,
+                                           CallBase &, Function &,
+                                           unsigned NumAssumedCallees) {
+  return NumAssumedCallees <= MaxCalleesForSpecialization;
+}
+
 PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!containsOpenMP(M))
     return PreservedAnalyses::all();
@@ -5921,6 +5940,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   AC.OREGetter = OREGetter;
   AC.PassName = DEBUG_TYPE;
   AC.InitializationCallback = OpenMPOpt::registerAAsForFunction;
+  AC.IndirectCalleeSpecializationCallback = shouldSpecializeIndirectCallee;
   AC.IPOAmendableCB = [](const Function &F) {
     return F.hasFnAttribute("kernel");
   };
@@ -6001,6 +6021,7 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
   AC.OREGetter = OREGetter;
   AC.PassName = DEBUG_TYPE;
   AC.InitializationCallback = OpenMPOpt::registerAAsForFunction;
+  AC.IndirectCalleeSpecializationCallback = shouldSpecializeIndirectCallee;
 
   Attributor A(Functions, InfoCache, AC);
 
