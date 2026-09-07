@@ -2559,7 +2559,7 @@ static bool diagnoseFunctionLikeMacro(Sema &SemaRef, DeclarationName Name,
       if (MI && MI->isFunctionLike()) {
         SemaRef.Diag(TypoLoc,
                      diag::err_undeclared_var_use_suggest_func_like_macro)
-            << II ->getName();
+            << II->getName();
         SemaRef.Diag(MI->getDefinitionLoc(),
                      diag::note_function_like_macro_requires_parens)
             << II->getName();
@@ -2591,41 +2591,6 @@ Sema::DecomposeUnqualifiedId(const UnqualifiedId &Id,
     NameInfo = GetNameFromUnqualifiedId(Id);
     TemplateArgs = nullptr;
   }
-}
-
-static void emitEmptyLookupTypoDiagnostic(
-    const TypoCorrection &TC, Sema &SemaRef, const CXXScopeSpec &SS,
-    DeclarationName Typo, SourceLocation TypoLoc, ArrayRef<Expr *> Args,
-    unsigned DiagnosticID, unsigned DiagnosticSuggestID) {
-  DeclContext *Ctx =
-      SS.isEmpty() ? nullptr : SemaRef.computeDeclContext(SS, false);
-  if (!TC) {
-    // Emit a special diagnostic for failed member lookups.
-    // FIXME: computing the declaration context might fail here (?)
-    if (Ctx)
-      SemaRef.Diag(TypoLoc, diag::err_no_member) << Typo << Ctx
-                                                 << SS.getRange();
-    else if (diagnoseFunctionLikeMacro(SemaRef, Typo, TypoLoc))
-      return;
-    else
-      SemaRef.Diag(TypoLoc, DiagnosticID) << Typo;
-    return;
-  }
-
-  std::string CorrectedStr = TC.getAsString(SemaRef.getLangOpts());
-  bool DroppedSpecifier =
-      TC.WillReplaceSpecifier() && Typo.getAsString() == CorrectedStr;
-  unsigned NoteID = TC.getCorrectionDeclAs<ImplicitParamDecl>()
-                        ? diag::note_implicit_param_decl
-                        : diag::note_previous_decl;
-  if (!Ctx)
-    SemaRef.diagnoseTypo(TC, SemaRef.PDiag(DiagnosticSuggestID) << Typo,
-                         SemaRef.PDiag(NoteID));
-  else
-    SemaRef.diagnoseTypo(TC, SemaRef.PDiag(diag::err_no_member_suggest)
-                                 << Typo << Ctx << DroppedSpecifier
-                                 << SS.getRange(),
-                         SemaRef.PDiag(NoteID));
 }
 
 bool Sema::DiagnoseDependentMemberLookup(const LookupResult &R) {
