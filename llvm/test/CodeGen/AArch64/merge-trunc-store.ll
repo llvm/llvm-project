@@ -839,3 +839,36 @@ define void @i32_to_i8_wrong_order(i32 %x, ptr %p0) {
   store i8 %t1, ptr %p2, align 1
   ret void
 }
+
+; Negative test - the pattern only becomes visible after type legalization here,
+; because the stored bytes are forwarded from the earlier stores. Merging would
+; need an i16 truncate/bswap, and i16 is not a legal type, so the fold must not
+; run this late.
+
+define void @merge_i16_illegal_after_type_legalization(i64 %x, ptr %p, ptr noalias %q) {
+; CHECK-LABEL: merge_i16_illegal_after_type_legalization:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov x8, xzr
+; CHECK-NEXT:    lsr x9, x0, #8
+; CHECK-NEXT:    strb w0, [x2]
+; CHECK-NEXT:    ldr x8, [x8]
+; CHECK-NEXT:    strb w9, [x1]
+; CHECK-NEXT:    strb w9, [x8]
+; CHECK-NEXT:    strb w0, [x8, #1]
+; CHECK-NEXT:    strb wzr, [x1]
+; CHECK-NEXT:    ret
+  %b = load ptr, ptr null, align 8
+  %sh = lshr i64 %x, 8
+  %t1 = trunc i64 %sh to i8
+  store i8 %t1, ptr %p, align 1
+  %fwd1 = load i8, ptr %p, align 1
+  store i8 %fwd1, ptr %b, align 1
+  %t0 = trunc i64 %x to i8
+  store i8 %t0, ptr %q, align 1
+  %b2 = load ptr, ptr null, align 8
+  %b2p1 = getelementptr i8, ptr %b2, i64 1
+  %fwd0 = load i8, ptr %q, align 1
+  store i8 %fwd0, ptr %b2p1, align 1
+  store i8 0, ptr %p, align 1
+  ret void
+}
