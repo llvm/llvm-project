@@ -19,7 +19,9 @@ typedef std::vector<pthread_t> thread_vector;
 pseudo_barrier_t g_barrier;
 int g_breakpoint = 0;
 int g_sigusr1_count = 0;
-uint32_t g_watchme;
+
+alignas(16) uint32_t g_watchme;
+uint32_t g_watchme_padding[4];
 
 struct action_args {
   int delay;
