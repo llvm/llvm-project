@@ -52,11 +52,13 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM IR
 
-* LLVM now assigns persistent print IDs to metadata nodes. Keeping these IDs
-  stable across repeated debug and pass output makes changes easier to follow:
-  unchanged metadata keeps the same number as passes modify the module. The
-  numbering and definition order can differ from earlier releases, so tests
-  of intermediate output may need updated expectations.
+* LLVM now assigns persistent print IDs to metadata nodes. Reusing these IDs
+  avoids repeated module-wide scans to rebuild metadata numbering, which can
+  significantly speed up debug and pass printing on large modules. Keeping
+  the IDs stable also makes repeated output easier to compare: unchanged
+  metadata keeps the same number as passes modify the module. The numbering
+  and definition order can differ from earlier releases, so tests of
+  intermediate output may need updated expectations.
 
   LLVM's standard final-output paths renumber metadata in canonical order.
   This gives consecutive IDs with no gaps and makes the final IR easier to
