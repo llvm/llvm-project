@@ -1416,7 +1416,7 @@ define i8 @PR14613_smax(i8 %x) {
 
 define i8 @PR46271(<2 x i8> %x) {
 ; CHECK-LABEL: @PR46271(
-; CHECK-NEXT:    [[NOT:%.*]] = call <2 x i8> @llvm.smax.v2i8(<2 x i8> [[X:%.*]], <2 x i8> splat (i8 -1))
+; CHECK-NEXT:    [[NOT:%.*]] = call <2 x i8> @llvm.smax.v2i8(<2 x i8> [[X:%.*]], <2 x i8> <i8 poison, i8 -1>)
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <2 x i8> [[NOT]], i64 1
 ; CHECK-NEXT:    [[R1:%.*]] = xor i8 [[R]], -1
 ; CHECK-NEXT:    ret i8 [[R1]]
