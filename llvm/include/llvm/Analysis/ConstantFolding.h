@@ -19,6 +19,7 @@
 #ifndef LLVM_ANALYSIS_CONSTANTFOLDING_H
 #define LLVM_ANALYSIS_CONSTANTFOLDING_H
 
+#include "llvm/ADT/APFloat.h"
 #include "llvm/Support/Compiler.h"
 #include <stdint.h>
 
@@ -107,6 +108,13 @@ LLVM_ABI Constant *
 ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS, Constant *RHS,
                            const DataLayout &DL, const Instruction *I,
                            bool AllowNonDeterministic = true);
+
+/// Evaluate \p NativeFP on \p V using the host libm, then convert the result to
+/// \p Ty. Returns nullptr if the host call raised a non-inexact floating-point
+/// exception, or if \p DenormMode is invalid or dynamic.
+LLVM_ABI Constant *
+ConstantFoldFP(double (*NativeFP)(double), const APFloat &V, Type *Ty,
+               DenormalMode DenormMode = DenormalMode::getIEEE());
 
 /// Attempt to flush float point constant according to denormal mode set in the
 /// instruction's parent function attributes. If so, return a zero with the
