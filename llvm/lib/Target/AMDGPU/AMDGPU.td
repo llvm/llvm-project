@@ -989,6 +989,10 @@ defm CubeInsts : AMDGPUSubtargetFeature<"cube-insts",
   "Has v_cube* instructions"
 >;
 
+defm IndexedResources : AMDGPUSubtargetFeature<"indexed-resources",
+  "Has indexed resources"
+>;
+
 defm LerpInst : AMDGPUSubtargetFeature<"lerp-inst",
   "Has v_lerp_u8 instruction"
 >;
@@ -1344,6 +1348,11 @@ defm FlatSignedOffset : AMDGPUSubtargetFeature<"flat-signed-offset",
 
 defm RequiresInitialUnclausedVmem : AMDGPUSubtargetFeature<"requires-initial-unclause-vmem",
   "Hardware entrypoints require first VMEM instruction to be unclaused",
+  GenPredicate=false
+>;
+
+defm SlowMaxMinMulI64Insts : AMDGPUSubtargetFeature<"slow-max-min-mul-i64-insts",
+  "64-bit integer max/min/mul VALU instructions are slower than expanding to an equivalent code sequence",
   GenPredicate=false
 >;
 
@@ -2480,6 +2489,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureNeedsTDMDrain,
    FeatureNeedsAligned2addrDS,
    FeatureNoSleepForever,
+   FeatureSlowMaxMinMulI64Insts,
    ])>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2506,6 +2516,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
    FeatureNoSleepForever,
+   FeatureSlowMaxMinMulI64Insts,
    ])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2627,6 +2638,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtPkNormVOP3Insts,
    FeatureSmemPrefetchInsts,
    FeatureAsyncLoadToLDSInsts,
+   FeatureIndexedResources
 ]>;
 
 def FeatureISAVersion13_Generic: FeatureSet<

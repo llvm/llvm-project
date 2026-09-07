@@ -623,11 +623,12 @@ StringRef llvm::AMDGPU::getSchedStrategy(const Function &F) {
 static void
 diagnoseUnsupportedCoExecSchedulerSelection(const Function &F,
                                             const GCNSubtarget &ST) {
-  if (ST.hasGFX1250Insts())
+  if (ST.hasGFX1250Insts() || ST.hasGFX950Insts())
     return;
 
   F.getContext().diagnose(DiagnosticInfoUnsupported(
-      F, "'amdgpu-sched-strategy'='coexec' is only supported for gfx1250",
+      F,
+      "'amdgpu-sched-strategy'='coexec' is only supported for gfx1250/gfx950",
       DiagnosticLocation(), DS_Warning));
 }
 
@@ -715,7 +716,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULowerKernelAttributesPass(*PR);
   initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(*PR);
   initializeAMDGPUPostLegalizerCombinerPass(*PR);
-  initializeAMDGPUPreLegalizerCombinerPass(*PR);
+  initializeAMDGPUPreLegalizerCombinerLegacyPass(*PR);
   initializeAMDGPURegBankCombinerPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
@@ -1788,8 +1789,8 @@ bool GCNPassConfig::addIRTranslator() {
 }
 
 void GCNPassConfig::addPreLegalizeMachineIR() {
-  bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
-  addPass(createAMDGPUPreLegalizeCombiner(IsOptNone));
+  bool IsOptLevelNone = getOptLevel() == CodeGenOptLevel::None;
+  addPass(createAMDGPUPreLegalizeCombinerLegacyPass(IsOptLevelNone));
   addPass(new LocalizerLegacy());
 }
 

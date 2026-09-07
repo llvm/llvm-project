@@ -1128,25 +1128,6 @@ multiclass VPatBinaryFPVL_VV_VF_RM<SDPatternOperator vop, string instruction_nam
   }
 }
 
-multiclass VPatBinaryFPVL_R_VF<SDPatternOperator vop, string instruction_name,
-                               bit isSEWAware = 0> {
-  foreach fvti = AllFloatVectors in {
-    let Predicates = GetVTypePredicates<fvti>.Predicates in
-    def : Pat<(fvti.Vector (vop (SplatFPOp fvti.ScalarRegClass:$rs2),
-                                fvti.RegClass:$rs1,
-                                (fvti.Vector fvti.RegClass:$passthru),
-                                (fvti.Mask VMV0:$vm),
-                                VLOpFrag)),
-              (!cast<Instruction>(
-                           !if(isSEWAware,
-                               instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK",
-                               instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_MASK"))
-                           fvti.RegClass:$passthru,
-                           fvti.RegClass:$rs1, fvti.ScalarRegClass:$rs2,
-                           (fvti.Mask VMV0:$vm), GPR:$vl, fvti.Log2SEW, TAIL_AGNOSTIC)>;
-  }
-}
-
 multiclass VPatBinaryFPVL_R_VF_RM<SDPatternOperator vop, string instruction_name,
                                   list<VTypeInfo> vtilist = AllFloatVectors,
                                   bit isSEWAware = 0> {
