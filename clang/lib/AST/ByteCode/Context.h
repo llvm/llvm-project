@@ -95,7 +95,7 @@ public:
   /// bytes belonging to the same storage (stack, heap allocation,
   /// global variable) are considered.
   std::optional<uint64_t> tryEvaluateObjectSize(State &Parent, const Expr *E,
-                                                unsigned Kind);
+                                                unsigned Kind, bool IsDynamic);
 
   std::optional<bool> evaluateWithSubstitution(State &Parent,
                                                const FunctionDecl *Callee,

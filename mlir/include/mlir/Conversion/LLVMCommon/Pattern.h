@@ -344,8 +344,9 @@ public:
   matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     return LLVM::detail::oneToOneRewrite(
-        op, TargetOp::getOperationName(), adaptor.getOperands(), op->getAttrs(),
-        /*propertiesAttr=*/Attribute{}, *this->getTypeConverter(), rewriter);
+        op, TargetOp::getOperationName(), adaptor.getOperands(),
+        op->getDiscardableAttrDictionary().getValue(),
+        op->getPropertiesAsAttribute(), *this->getTypeConverter(), rewriter);
   }
 };
 

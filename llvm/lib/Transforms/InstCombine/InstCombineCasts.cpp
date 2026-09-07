@@ -1613,11 +1613,20 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
   if (SrcTy->isIntOrIntVectorTy(1) && Zext.hasNonNeg())
     return replaceInstUsesWith(Zext, Constant::getNullValue(Zext.getType()));
 
+  // zext nneg means Src is non-negative and we can treat this as an sext.
+  // Evaluating as a signed type means that any constant operands will be
+  // sign-extended instead of zero-extended, which means that, if the
+  // expression tree contains only no-signed-wrap arithmetic, the sign bits in
+  // the final result should be enough that we avoid having to clear the high
+  // bits.
+  bool EvaluateAsSigned =
+      Zext.hasNonNeg() && TypeEvaluationHelper::canEvaluateSExtd(Src, DestTy);
+
   // Try to extend the entire expression tree to the wide destination type.
-  unsigned BitsToClear;
+  unsigned BitsToClear = 0;
   if (shouldChangeType(SrcTy, DestTy) &&
-      TypeEvaluationHelper::canEvaluateZExtd(Src, DestTy, BitsToClear, *this,
-                                             &Zext)) {
+      (EvaluateAsSigned || TypeEvaluationHelper::canEvaluateZExtd(
+                               Src, DestTy, BitsToClear, *this, &Zext))) {
     assert(BitsToClear <= SrcTy->getScalarSizeInBits() &&
            "Can't clear more bits than in SrcTy");
 
@@ -1626,7 +1635,7 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
         dbgs() << "ICE: EvaluateInDifferentType converting expression type"
                   " to avoid zero extend: "
                << Zext << '\n');
-    Value *Res = EvaluateInDifferentType(Src, DestTy, false);
+    Value *Res = EvaluateInDifferentType(Src, DestTy, EvaluateAsSigned);
     assert(Res->getType() == DestTy);
 
     // Preserve debug values referring to Src if the zext is its last use.
@@ -1638,10 +1647,14 @@ Instruction *InstCombinerImpl::visitZExt(ZExtInst &Zext) {
     uint32_t DestBitSize = DestTy->getScalarSizeInBits();
 
     // If the high bits are already filled with zeros, just replace this
-    // cast with the result.
-    if (MaskedValueIsZero(
-            Res, APInt::getHighBitsSet(DestBitSize, DestBitSize - SrcBitsKept),
-            &Zext))
+    // cast with the result. If we've evaluated as a signed expressions then
+    // instead check that the high bits are the sign bit, which we know is zero.
+    if (EvaluateAsSigned
+            ? (ComputeNumSignBits(Res, &Zext) > DestBitSize - SrcBitsKept)
+            : MaskedValueIsZero(
+                  Res,
+                  APInt::getHighBitsSet(DestBitSize, DestBitSize - SrcBitsKept),
+                  &Zext))
       return replaceInstUsesWith(Zext, Res);
 
     // We need to emit an AND to clear the high bits.
