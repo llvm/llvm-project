@@ -20,6 +20,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
 #include "src/__support/threads/thread.h"
+#include "src/__support/threads/thread_attributes.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -31,12 +32,20 @@ LLVM_LIBC_FUNCTION(int, pthread_getattr_np,
   LIBC_CRASH_ON_NULLPTR(attr);
   auto *thread = reinterpret_cast<Thread *>(&th);
 
-  uint32_t detach_state =
-      thread->attrib->detach_state.load(cpp::MemoryOrder::RELAXED);
-  attr->__detachstate =
-      (detach_state == static_cast<uint32_t>(DetachState::DETACHED))
-          ? PTHREAD_CREATE_DETACHED
-          : PTHREAD_CREATE_JOINABLE;
+  switch (static_cast<DetachState>(
+      thread->attrib->detach_state.load(cpp::MemoryOrder::RELAXED))) {
+  case DetachState::DETACHED:
+    attr->__detachstate = PTHREAD_CREATE_DETACHED;
+    break;
+  case DetachState::JOINABLE:
+    attr->__detachstate = PTHREAD_CREATE_JOINABLE;
+    break;
+  case DetachState::EXITING:
+    // We don't know what was the detach state of the thread before it started
+    // exiting, but even if we did, we could not read it reliably as the memory
+    // backing thread->attrib can go away any moment.
+    __builtin_unreachable();
+  }
   attr->__stack = thread->attrib->stack;
   attr->__stacksize = thread->attrib->stacksize;
   attr->__guardsize = thread->attrib->guardsize;

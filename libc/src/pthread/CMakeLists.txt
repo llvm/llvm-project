@@ -983,6 +983,7 @@ add_entrypoint_object(
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
     libc.src.__support.threads.thread
+    libc.src.__support.threads.thread_attributes
 )
 
 add_entrypoint_object(

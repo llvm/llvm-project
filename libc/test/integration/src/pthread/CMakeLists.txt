@@ -309,7 +309,6 @@ add_integration_test(
     libc.src.pthread.pthread_attr_init
     libc.src.pthread.pthread_attr_setdetachstate
     libc.src.pthread.pthread_attr_setstack
-    libc.src.pthread.pthread_barrier_destroy
     libc.src.pthread.pthread_barrier_init
     libc.src.pthread.pthread_barrier_wait
     libc.src.pthread.pthread_create
