@@ -1308,14 +1308,6 @@ SPIRVNonSemanticDebugHandler::resolveDebugLocTarget(const MachineInstr *MI) {
     assert(MI && "Merge instruction must be followed by a terminator");
   }
 
-  // Both regions are implicitly closed at each basic block boundary. They are
-  // tracked separately because a DebugScope region usually spans several
-  // DebugLine regions, and either one can skip emission on a cache miss.
-  if (LastLineMI && MI->getParent() != LastLineMI->getParent())
-    LastLineMI = nullptr;
-  if (LastScopeMI && MI->getParent() != LastScopeMI->getParent())
-    LastScopeMI = nullptr;
-
   return MI;
 }
 
@@ -1324,6 +1316,12 @@ void SPIRVNonSemanticDebugHandler::emitDebugScopeForInstruction(
   assert(DebugFunctionDefinitionEmitted &&
          "DebugFunctionDefinition must be emitted");
   assert(CurrentMAI && "CurrentMAI must be set");
+
+  // The region is implicitly closed at each basic block boundary, so a
+  // LastScopeMI from another block must be dropped before it is read below:
+  // the new block needs its own DebugScope, and has no region left to close.
+  if (LastScopeMI && MI->getParent() != LastScopeMI->getParent())
+    LastScopeMI = nullptr;
 
   SPIRV::ModuleAnalysisInfo &MAI = *CurrentMAI;
   MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
@@ -1376,6 +1374,12 @@ void SPIRVNonSemanticDebugHandler::emitDebugLineForInstruction(
   assert(DebugFunctionDefinitionEmitted &&
          "DebugFunctionDefinition must be emitted");
   assert(CurrentMAI && "CurrentMAI must be set");
+
+  // The region is implicitly closed at each basic block boundary, so a
+  // LastLineMI from another block must be dropped before it is read below:
+  // the new block needs its own DebugLine, and has no region left to close.
+  if (LastLineMI && MI->getParent() != LastLineMI->getParent())
+    LastLineMI = nullptr;
 
   SPIRV::ModuleAnalysisInfo &MAI = *CurrentMAI;
   MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);

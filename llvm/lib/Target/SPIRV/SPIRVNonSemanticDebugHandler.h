@@ -168,7 +168,6 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   bool DebugFunctionDefinitionEmitted = false;
 
   const MachineInstr *LastLineMI = nullptr;
-
   const MachineInstr *LastScopeMI = nullptr;
 
 public:
