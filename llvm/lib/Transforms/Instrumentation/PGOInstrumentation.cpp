@@ -447,13 +447,8 @@ static const char *ValueProfKindDescr[] = {
 #include "llvm/ProfileData/InstrProfData.inc"
 };
 
-// Create a COMDAT variable INSTR_PROF_RAW_VERSION_VAR to make the runtime
-// aware this is an ir_level profile so it can set the version flag.
-static GlobalVariable *
-createIRLevelProfileFlagVar(Module &M,
-                            PGOInstrumentationType InstrumentationType) {
-  const StringRef VarName(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
-  Type *IntTy64 = Type::getInt64Ty(M.getContext());
+static uint64_t
+getIRLevelProfileVersion(PGOInstrumentationType InstrumentationType) {
   uint64_t ProfileVersion = (INSTR_PROF_RAW_VERSION | VARIANT_MASK_IR_PROF);
   if (InstrumentationType == PGOInstrumentationType::CSFDO)
     ProfileVersion |= VARIANT_MASK_CSIR_PROF;
@@ -471,9 +466,21 @@ createIRLevelProfileFlagVar(Module &M,
     ProfileVersion |= VARIANT_MASK_BYTE_COVERAGE;
   if (PGOTemporalInstrumentation)
     ProfileVersion |= VARIANT_MASK_TEMPORAL_PROF;
+  return ProfileVersion;
+}
+
+// Create a COMDAT variable INSTR_PROF_RAW_VERSION_VAR to make the runtime
+// aware this is an ir_level profile so it can set the version flag.
+static GlobalVariable *
+createIRLevelProfileFlagVar(Module &M,
+                            PGOInstrumentationType InstrumentationType) {
+  const StringRef VarName(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
+  Type *IntTy64 = Type::getInt64Ty(M.getContext());
   auto IRLevelVersionVariable = new GlobalVariable(
       M, IntTy64, true, GlobalValue::WeakAnyLinkage,
-      Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)), VarName);
+      Constant::getIntegerValue(
+          IntTy64, APInt(64, getIRLevelProfileVersion(InstrumentationType))),
+      VarName);
   IRLevelVersionVariable->setVisibility(GlobalValue::HiddenVisibility);
 
   Triple TT(M.getTargetTriple());
@@ -482,6 +489,22 @@ createIRLevelProfileFlagVar(Module &M,
     IRLevelVersionVariable->setComdat(M.getOrInsertComdat(VarName));
   }
   return IRLevelVersionVariable;
+}
+
+// CS instrumentation creates the raw-version variable before LTO. Refresh the
+// prevailing definition because the LTO backend may use a newer raw format or
+// add variant bits for instrumentation inserted only in the backend.
+static void
+updateIRLevelProfileFlagVar(Module &M,
+                            PGOInstrumentationType InstrumentationType) {
+  const StringRef VarName(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
+  GlobalVariable *IRLevelVersionVariable = M.getNamedGlobal(VarName);
+  if (!IRLevelVersionVariable || IRLevelVersionVariable->isDeclaration())
+    return;
+
+  Type *IntTy64 = Type::getInt64Ty(M.getContext());
+  IRLevelVersionVariable->setInitializer(Constant::getIntegerValue(
+      IntTy64, APInt(64, getIRLevelProfileVersion(InstrumentationType))));
 }
 
 namespace {
@@ -2017,6 +2040,8 @@ static bool InstrumentAllFunctions(
   // (before LTO/ThinLTO linking) to create these variables.
   if (InstrumentationType == PGOInstrumentationType::FDO)
     createIRLevelProfileFlagVar(M, InstrumentationType);
+  else if (InstrumentationType == PGOInstrumentationType::CSFDO)
+    updateIRLevelProfileFlagVar(M, InstrumentationType);
 
   Triple TT(M.getTargetTriple());
   LLVMContext &Ctx = M.getContext();
