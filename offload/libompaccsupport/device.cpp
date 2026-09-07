@@ -84,6 +84,12 @@ DeviceTy::~DeviceTy() {
 }
 
 llvm::Error DeviceTy::init() {
+  if (olCreateContext(1, &DeviceHandle, &Context)) {
+    return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
+                                     "failed to create context for device %d\n",
+                                     DeviceID);
+  }
+
   OMPT_IF_BUILT_AND_INITIALIZED({
     GenericDeviceTy &GenericDevice = RTL->getDevice(RTLDeviceID);
     std::string ComputeUnitKind = GenericDevice.getComputeUnitKind();
@@ -121,6 +127,15 @@ llvm::Error DeviceTy::init() {
                                        DeviceID);
   }
 
+  return llvm::Error::success();
+}
+
+llvm::Error DeviceTy::deinit() {
+  if (olDestroyContext(Context)) {
+    return error::createOffloadError(
+        error::ErrorCode::BACKEND_FAILURE,
+        "failed to destroy context for device %d\n", DeviceID);
+  }
   return llvm::Error::success();
 }
 
@@ -304,8 +319,18 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
           omp_initial_device, HstPtrBegin, DeviceID, TgtPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  return RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
-                                AsyncInfo);
+  ol_queue_handle_t queue = AsyncInfo.getQueue();
+  if (!queue)
+    return OFFLOAD_FAIL;
+
+  if (auto Res = olMemcpy(queue, TgtPtrBegin, DeviceHandle, HstPtrBegin,
+                          PM->getHostDevice(), Size)) {
+    REPORT() << "Failure to copy data from host to device. Pointers: host "
+             << "= " << HstPtrBegin << ", device = " << TgtPtrBegin
+             << ", size = " << Size << ": " << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 // Retrieve data from device
@@ -324,8 +349,17 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
           DeviceID, TgtPtrBegin, omp_initial_device, HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  return RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
-                                  AsyncInfo);
+  ol_queue_handle_t queue = AsyncInfo.getQueue();
+  if (!queue)
+    return OFFLOAD_FAIL;
+  if (auto Res = olMemcpy(queue, HstPtrBegin, PM->getHostDevice(), TgtPtrBegin,
+                          DeviceHandle, Size)) {
+    REPORT() << "Failure to copy data from device to host. Pointers: host "
+             << "= " << HstPtrBegin << ", device = " << TgtPtrBegin
+             << ", size = " << Size << ": " << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 // Copy data from current device to destination device directly
@@ -342,12 +376,19 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
           RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
-  if (!AsyncInfo) {
-    return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
-                              Size);
+
+  ol_queue_handle_t queue = AsyncInfo.getQueue();
+  if (!queue)
+    return OFFLOAD_FAIL;
+  if (auto Res = olMemcpy(queue, DstPtr, DstDev.DeviceHandle, SrcPtr,
+                          DeviceHandle, Size)) {
+    REPORT() << "Failure to copy data from device (" << RTLDeviceID
+             << ") to device (" << DstDev.RTLDeviceID
+             << "). Pointers: host = " << SrcPtr << ", device = " << DstPtr
+             << ", size = " << Size << ": " << Res->Details;
+    return OFFLOAD_FAIL;
   }
-  return RTL->data_exchange_async(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID,
-                                  DstPtr, Size, AsyncInfo);
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t DeviceTy::dataFence(AsyncInfoTy &AsyncInfo) {
@@ -877,11 +918,28 @@ bool DeviceTy::isDataExchangable(const DeviceTy &DstDevice) {
 }
 
 int32_t DeviceTy::synchronize(AsyncInfoTy &AsyncInfo) {
-  return RTL->synchronize(RTLDeviceID, AsyncInfo);
+  ol_queue_handle_t Queue = AsyncInfo.getQueue();
+  if (!Queue)
+    return OFFLOAD_SUCCESS;
+  if (auto Res = olSyncQueue(Queue)) {
+    REPORT() << "Failure to synchronize stream " << Queue << ": "
+             << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t DeviceTy::queryAsync(AsyncInfoTy &AsyncInfo) {
-  return RTL->query_async(RTLDeviceID, AsyncInfo);
+  ol_queue_handle_t Queue = AsyncInfo.getQueue();
+  if (!Queue)
+    return OFFLOAD_SUCCESS;
+
+  bool isComplete;
+  if (auto Res = olQueryQueue(Queue, &isComplete)) {
+    REPORT() << "Failure to query stream " << Queue << ": " << Res->Details;
+    return OFFLOAD_FAIL;
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 int32_t DeviceTy::createEvent(void **Event) {
