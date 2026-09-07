@@ -638,13 +638,17 @@ llvm.func @taskwait_nowait() {
 
 // -----
 
-llvm.func @dispatch_nowait() {
-  // expected-error@below {{not yet implemented: Unhandled clause nowait in omp.dispatch operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.dispatch}}
-  omp.dispatch nowait {
-    omp.terminator
+// `nowait` on dispatch is unimplemented for OpenMP <= 5.1; from 5.2 it has no
+// effect and is accepted (see openmp-dispatch.mlir).
+module attributes {omp.version = #omp.version<version = 51>} {
+  llvm.func @dispatch_nowait() {
+    // expected-error@below {{not yet implemented: Unhandled clause nowait in omp.dispatch operation}}
+    // expected-error@below {{LLVM Translation failed for operation: omp.dispatch}}
+    omp.dispatch nowait {
+      omp.terminator
+    }
+    llvm.return
   }
-  llvm.return
 }
 
 // -----
