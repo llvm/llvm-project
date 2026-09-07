@@ -6,4 +6,5 @@ CHECK: 0x00000000: Compile Unit: length = 0x00000008, format = DWARF32, version 
 
 CHECK: 0x0000000b: DW_TAG_compile_unit [1]
 
-## FIXME: Support --linker parallel
+## The parallel backend produces the same output; see
+## DWARFLinkerParallel/empty-CU.test.
