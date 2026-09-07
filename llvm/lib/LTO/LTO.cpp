@@ -203,6 +203,9 @@ std::string llvm::computeLTOCacheKey(
   AddString(Conf.DefaultTriple);
   AddString(Conf.DwoDir);
   AddUint8(Conf.Dtlto);
+  AddUint8(Conf.RunCSIRInstr);
+  if (Conf.RunCSIRInstr)
+    AddString(Conf.CSIRProfile);
 
   // Include the hash for the current module
   auto ModHash = Index.getModuleHash(ModuleID);
@@ -376,6 +379,19 @@ std::string llvm::computeLTOCacheKey(
 
   if (!Conf.SampleProfile.empty()) {
     auto FileOrErr = MemoryBuffer::getFile(Conf.SampleProfile);
+    if (FileOrErr) {
+      Hasher.update(FileOrErr.get()->getBuffer());
+
+      if (!Conf.ProfileRemapping.empty()) {
+        FileOrErr = MemoryBuffer::getFile(Conf.ProfileRemapping);
+        if (FileOrErr)
+          Hasher.update(FileOrErr.get()->getBuffer());
+      }
+    }
+  }
+
+  if (!Conf.RunCSIRInstr && !Conf.CSIRProfile.empty()) {
+    auto FileOrErr = MemoryBuffer::getFile(Conf.CSIRProfile);
     if (FileOrErr) {
       Hasher.update(FileOrErr.get()->getBuffer());
 
