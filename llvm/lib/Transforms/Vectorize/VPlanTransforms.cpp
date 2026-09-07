@@ -1097,15 +1097,6 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   auto *VectorPH = cast<VPBasicBlock>(VectorRegion->getSinglePredecessor());
   VPBuilder VectorPHBuilder(VectorPH, VectorPH->getFirstNonPhi());
-  DenseMap<std::pair<VPValue *, VPValue *>, VPValue *> EndValues;
-  auto GetEndValue = [&](VPWidenInductionRecipe *WideIV,
-                         VPValue *IVEnd) -> VPValue * {
-    auto [It, Inserted] = EndValues.try_emplace({WideIV, IVEnd});
-    if (Inserted)
-      It->second =
-          tryToComputeEndValueForInduction(WideIV, VectorPHBuilder, IVEnd);
-    return It->second;
-  };
 
   VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
   // If we branch to the latch exit on TC == VTC, then the IVs at the latch
@@ -1119,6 +1110,29 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
                                           m_Specific(VTC)))))
     TC = VTC;
 
+  // Map of {IV, iterations} -> IV value @ iterations
+  DenseMap<std::pair<VPValue *, VPValue *>, VPValue *> EndValues;
+  // Try to get the value of WideIV after reaching VPBB.
+  auto GetEndValue = [&](VPWidenInductionRecipe *WideIV,
+                         VPBasicBlock *VPBB) -> VPValue * {
+    VPValue *Iterations;
+    // We reach the latch exit at TC iterations.
+    if (Plan.isExitBlock(VPBB) &&
+        is_contained(VPBB->predecessors(), MiddleVPBB))
+      Iterations = TC;
+    // We reach the scalar preheader at VTC iterations.
+    else if (VPBB == Plan.getScalarPreheader())
+      Iterations = VTC;
+    // Otherwise we don't know how many iterations we've processed at VPBB.
+    else
+      return nullptr;
+    auto [It, Inserted] = EndValues.try_emplace({WideIV, Iterations});
+    if (Inserted)
+      It->second =
+          tryToComputeEndValueForInduction(WideIV, VectorPHBuilder, Iterations);
+    return It->second;
+  };
+
   for (VPRecipeBase &R : make_early_inc_range(*MiddleVPBB)) {
     VPValue *Op;
     if (!match(&R, m_ExitingIVValue(m_VPValue(Op))))
@@ -1126,17 +1140,7 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
     auto *WideIV = cast<VPWidenInductionRecipe>(Op);
     for (VPUser *U : to_vector(R.getVPSingleValue()->users())) {
       auto *UR = cast<VPRecipeBase>(U);
-      VPValue *EndIV;
-      // Optimize latch exit users at TC iterations.
-      if (Plan.isExitBlock(UR->getParent()) &&
-          is_contained(UR->getParent()->predecessors(), MiddleVPBB))
-        EndIV = TC;
-      // Optimize scalar preheader users at VTC iterations.
-      else if (UR->getParent() == Plan.getScalarPreheader())
-        EndIV = VTC;
-      else
-        continue;
-      if (VPValue *EndValue = GetEndValue(WideIV, EndIV))
+      if (VPValue *EndValue = GetEndValue(WideIV, UR->getParent()))
         UR->replaceUsesOfWith(R.getVPSingleValue(), EndValue);
     }
     if (R.getVPSingleValue()->getNumUsers() == 0)
@@ -1152,7 +1156,8 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
         VPValue *Escape = nullptr;
         if (PredVPBB == MiddleVPBB) {
           Escape = optimizeLatchExitInductionUser(
-              Plan, ExitIRI->getOperand(Idx), bind_back(GetEndValue, TC), PSE);
+              Plan, ExitIRI->getOperand(Idx), bind_back(GetEndValue, ExitVPBB),
+              PSE);
           if (!Escape)
             Escape = optimizeLatchExitIVUserViaSCEV(
                 Plan, ExitIRI->getOperand(Idx), PSE, TC, L);
