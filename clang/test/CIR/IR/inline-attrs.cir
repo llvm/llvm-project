@@ -36,5 +36,21 @@ module {
 
   // CHECK: cir.func inline_hint private @inline_hint_decl(!s32i) -> !s32i
   cir.func inline_hint private @inline_hint_decl(!s32i) -> !s32i
+
+  cir.func private @callee()
+//  // CHECK-LABEL: cir.func no_inline dso_local @caller()
+  cir.func no_inline dso_local @caller() {
+     cir.call @callee() {inline_kind = #cir.inline_kind<always_inline>} : () -> ()
+     // CHECK: cir.call @callee() {inline_kind = #cir.inline_kind<always_inline>} : () -> ()
+     cir.call @callee() {inline_kind = #cir.inline_kind<no_inline>} : () -> ()
+     // CHECK: cir.call @callee() {inline_kind = #cir.inline_kind<no_inline>} : () -> ()
+     cir.call @callee() {inline_kind = #cir.inline_kind<inline_hint>} : () -> ()
+     // CHECK: cir.call @callee() {inline_kind = #cir.inline_kind<inline_hint>} : () -> ()
+     cir.call @callee() {inline_kind = 2} : () -> ()
+     // CHECK: cir.call @callee() : () -> ()
+     cir.call @callee() {inline_kind = 6} : () -> ()
+     // CHECK: cir.call @callee() : () -> ()
+    cir.return
+  }
 }
 

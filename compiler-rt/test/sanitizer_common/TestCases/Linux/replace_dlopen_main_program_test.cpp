@@ -13,6 +13,8 @@
 // Flag has no effect with dynamic runtime
 // UNSUPPORTED: asan-dynamic-runtime
 
+// UNSUPPORTED: rtsan
+
 #include <dlfcn.h>
 #include <stdio.h>
 #include <stdlib.h>

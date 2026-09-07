@@ -22,7 +22,7 @@ std::optional<Pointer> MemberPointer::toPointer(const Context &Ctx) const {
   if (!Base.isBlockPointer())
     return std::nullopt;
 
-  unsigned BlockMDSize = Base.block()->getDescriptor()->getMetadataSize();
+  unsigned BlockMDSize = Base.block()->getMetadataSize();
 
   if (PtrOffset >= 0) {
     // If the resulting base would be too small, return nullopt.

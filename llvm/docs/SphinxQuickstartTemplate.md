@@ -160,6 +160,29 @@ without any syntax highlighting like this:
 ```
 
 
+## Sphinx Directives
+
+Sphinx directives that contain rich, formatted Markdown content should use
+[colon fences][colon_fence] instead of backtick fences. This keeps directive
+containers visually distinct from code blocks while still allowing normal
+Markdown markup inside the directive.
+
+:::{note}
+Use colon fences for rich directives such as `{note}`, `{warning}`, `{option}`,
+and similar content blocks.
+:::
+
+Prefer triple backtick fences for code regions and literal examples:
+
+```cpp
+int value = 0;
+```
+
+Keep `{eval-rst}` blocks fenced with backticks, because their contents are
+reStructuredText rather than Markdown.
+
+[colon_fence]: https://myst-parser.readthedocs.io/en/latest/syntax/optional.html#syntax-colon-fence
+
 ## Generating the documentation
 
 You can generate the HTML documentation from the sources locally if you want to

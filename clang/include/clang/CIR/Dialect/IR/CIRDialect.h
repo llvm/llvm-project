@@ -83,7 +83,11 @@ private:
 
 /// Look up the RecordLayoutAttr for a named record in the module's
 /// cir.record_layouts dictionary.  Asserts if the entry is missing.
-RecordLayoutAttr getRecordLayout(mlir::ModuleOp module, mlir::StringAttr name);
+RecordLayoutAttr getRecordLayout(mlir::ModuleOp mod, mlir::StringAttr name);
+
+/// Same lookup as getRecordLayout, but returns a null attribute instead of
+/// asserting when the record has no layout entry.
+RecordLayoutAttr tryGetRecordLayout(mlir::ModuleOp mod, mlir::StringAttr name);
 } // namespace cir
 
 // TableGen'erated files for MLIR dialects require that a macro be defined when

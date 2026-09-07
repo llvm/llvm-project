@@ -300,5 +300,16 @@ JITEngine::process(StringRef Image, target::plugin::GenericDeviceTy &Device) {
     return Device.doJITPostProcessing(std::move(MB));
   };
 
-  return compile(Image, ComputeUnitKind, PostProcessing);
+  auto ImageOrError = compile(Image, ComputeUnitKind, PostProcessing);
+
+  if (SaveImageFileName.isPresent() && ImageOrError) {
+    std::error_code EC;
+    raw_fd_ostream OS(SaveImageFileName.get(), EC);
+    if (EC)
+      return createStringError(error::ErrorCode::HOST_IO,
+                               "saving JIT image file\n");
+    OS << ImageOrError.get()->getBuffer();
+    OS.close();
+  }
+  return ImageOrError;
 }

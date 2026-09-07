@@ -14,15 +14,16 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::linuxkernel {
 
 void MustCheckErrsCheck::registerMatchers(MatchFinder *Finder) {
-  auto ErrFn =
+  const auto ErrFn =
       functionDecl(hasAnyName("ERR_PTR", "PTR_ERR", "IS_ERR", "IS_ERR_OR_NULL",
                               "ERR_CAST", "PTR_ERR_OR_ZERO"));
-  auto NonCheckingStmts = stmt(anyOf(compoundStmt(), labelStmt()));
+  const auto NonCheckingStmts = stmt(anyOf(compoundStmt(), labelStmt()));
   Finder->addMatcher(
       callExpr(callee(ErrFn), hasParent(NonCheckingStmts)).bind("call"), this);
 
-  auto ReturnToCheck = returnStmt(hasReturnValue(callExpr(callee(ErrFn))));
-  auto ReturnsErrFn = functionDecl(hasDescendant(ReturnToCheck));
+  const auto ReturnToCheck =
+      returnStmt(hasReturnValue(callExpr(callee(ErrFn))));
+  const auto ReturnsErrFn = functionDecl(hasDescendant(ReturnToCheck));
   Finder->addMatcher(callExpr(callee(ReturnsErrFn), hasParent(NonCheckingStmts))
                          .bind("transitive_call"),
                      this);

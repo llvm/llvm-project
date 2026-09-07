@@ -24,31 +24,19 @@
 using namespace llvm;
 
 namespace {
-class NVPTXReplaceImageHandles : public MachineFunctionPass {
-private:
-  static char ID;
+class NVPTXReplaceImageHandles {
   DenseSet<MachineInstr *> InstrsToRemove;
 
 public:
-  NVPTXReplaceImageHandles();
+  bool run(MachineFunction &MF);
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  StringRef getPassName() const override {
-    return "NVPTX Replace Image Handles";
-  }
 private:
   bool processInstr(MachineInstr &MI);
   bool replaceImageHandle(MachineOperand &Op, MachineFunction &MF);
 };
 } // namespace
 
-char NVPTXReplaceImageHandles::ID = 0;
-
-NVPTXReplaceImageHandles::NVPTXReplaceImageHandles()
-  : MachineFunctionPass(ID) {}
-
-bool NVPTXReplaceImageHandles::runOnMachineFunction(MachineFunction &MF) {
+bool NVPTXReplaceImageHandles::run(MachineFunction &MF) {
   bool Changed = false;
   InstrsToRemove.clear();
 
@@ -1808,11 +1796,11 @@ bool NVPTXReplaceImageHandles::replaceImageHandle(MachineOperand &Op,
       // For CUDA, we preserve the param loads coming from function arguments
       return false;
 
-    assert(TexHandleDef.getOperand(7).isSymbol() && "Load is not a symbol!");
-    StringRef Sym = TexHandleDef.getOperand(7).getSymbolName();
+    assert(TexHandleDef.getOperand(7).isMCSymbol() && "Load is not a symbol!");
+    MCSymbol *Sym = TexHandleDef.getOperand(7).getMCSymbol();
     InstrsToRemove.insert(&TexHandleDef);
-    Op.ChangeToES(Sym.data());
-    MFI->getImageHandleSymbolIndex(Sym);
+    Op.ChangeToMCSymbol(Sym);
+    MFI->addImageHandleSymbol(Sym);
     return true;
   }
   case NVPTX::texsurf_handles: {
@@ -1836,6 +1824,37 @@ bool NVPTXReplaceImageHandles::replaceImageHandle(MachineOperand &Op,
   }
 }
 
-MachineFunctionPass *llvm::createNVPTXReplaceImageHandlesPass() {
-  return new NVPTXReplaceImageHandles();
+namespace {
+class NVPTXReplaceImageHandlesLegacyPass : public MachineFunctionPass {
+public:
+  static char ID;
+  NVPTXReplaceImageHandlesLegacyPass() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return NVPTXReplaceImageHandles().run(MF);
+  }
+
+  StringRef getPassName() const override {
+    return "NVPTX Replace Image Handles";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+};
+} // namespace
+
+char NVPTXReplaceImageHandlesLegacyPass::ID = 0;
+
+MachineFunctionPass *llvm::createNVPTXReplaceImageHandlesLegacyPass() {
+  return new NVPTXReplaceImageHandlesLegacyPass();
+}
+
+PreservedAnalyses
+NVPTXReplaceImageHandlesPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  if (!NVPTXReplaceImageHandles().run(MF))
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }

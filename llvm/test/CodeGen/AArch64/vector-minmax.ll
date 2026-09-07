@@ -98,7 +98,7 @@ define <1 x i64> @smax_v1i64(<1 x i64> %a, <1 x i64> %b){
 ; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-SVE-NEXT:    ret
 entry:
-  %0 = call <1 x i64> @llvm.smax.v2i64(<1 x i64> %a, <1 x i64> %b)
+  %0 = call <1 x i64> @llvm.smax.v1i64(<1 x i64> %a, <1 x i64> %b)
   ret <1 x i64> %0
 }
 

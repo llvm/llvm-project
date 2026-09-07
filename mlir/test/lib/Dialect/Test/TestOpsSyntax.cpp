@@ -456,7 +456,8 @@ void PolyForOp::print(OpAsmPrinter &p) {
 
 void PolyForOp::getAsmBlockArgumentNames(Region &region,
                                          OpAsmSetValueNameFn setNameFn) {
-  auto arrayAttr = getOperation()->getAttrOfType<ArrayAttr>("arg_names");
+  auto arrayAttr =
+      getOperation()->getDiscardableAttrOfType<ArrayAttr>("arg_names");
   if (!arrayAttr)
     return;
   auto args = getRegion().front().getArguments();

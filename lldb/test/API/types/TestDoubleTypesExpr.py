@@ -20,7 +20,7 @@ class DoubleTypesExprTestCase(AbstractBase.GenericTester):
         """Test that double-type variable expressions are evaluated correctly."""
         self.build_and_run_expr("double.cpp", set(["double"]))
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_double_type_from_block(self):
         """Test that double-type variables are displayed correctly from a block."""
         self.build_and_run_expr("double.cpp", set(["double"]), bc=True)

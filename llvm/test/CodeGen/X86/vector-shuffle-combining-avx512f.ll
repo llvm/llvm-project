@@ -1194,3 +1194,46 @@ define <8 x i64> @PR179008(ptr %p0) {
   %shuf = shufflevector <8 x i64> %load, <8 x i64> <i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 0, i64 0, i64 0>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 13, i32 14, i32 15>
   ret <8 x i64> %shuf
 }
+
+define <16 x float> @PR218379(ptr %p0, ptr %p1) nounwind {
+; X86-LABEL: PR218379:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    calll 0
+; X86-NEXT:    vmovaps %ymm0, %ymm0
+; X86-NEXT:    vmovaps %zmm0, (%edi)
+; X86-NEXT:    vmovaps %zmm0, (%esi)
+; X86-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    retl
+;
+; X64-LABEL: PR218379:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %r14
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    movq %rsi, %rbx
+; X64-NEXT:    movq %rdi, %r14
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    callq *%rax
+; X64-NEXT:    vmovaps %ymm0, %ymm0
+; X64-NEXT:    vmovaps %zmm0, (%r14)
+; X64-NEXT:    vmovaps %zmm0, (%rbx)
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X64-NEXT:    addq $8, %rsp
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    popq %r14
+; X64-NEXT:    retq
+  %call = call <8 x float> null()
+  %fr = freeze <8 x float> poison
+  %shuffle = shufflevector <8 x float> %call, <8 x float> %fr, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <16 x float> %shuffle, ptr %p0
+  %shuffle1 = shufflevector <8 x float> %call, <8 x float> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <16 x float> %shuffle1, ptr %p1
+  %shuffle2 = shufflevector <8 x float> zeroinitializer, <8 x float> %fr, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
+  ret <16 x float> %shuffle2
+}

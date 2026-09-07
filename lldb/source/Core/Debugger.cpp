@@ -2358,15 +2358,14 @@ bool Debugger::StartEventHandlerThread() {
     // is up and running and listening to events before we return from this
     // function. We do this by listening to events for the
     // eBroadcastBitEventThreadIsListening from the m_sync_broadcaster
-    ConstString full_name("lldb.debugger.event-handler");
-    ListenerSP listener_sp(
-        Listener::MakeListener(full_name.AsCString(nullptr)));
+    llvm::StringRef full_name("lldb.debugger.event-handler");
+    ListenerSP listener_sp(Listener::MakeListener(full_name));
     listener_sp->StartListeningForEvents(&m_sync_broadcaster,
                                          eBroadcastBitEventThreadIsListening);
 
     llvm::StringRef thread_name =
-        full_name.GetLength() < llvm::get_max_thread_name_length()
-            ? full_name.GetStringRef()
+        full_name.size() < llvm::get_max_thread_name_length()
+            ? full_name
             : "dbg.evt-handler";
 
     // Use larger 8MB stack for this thread

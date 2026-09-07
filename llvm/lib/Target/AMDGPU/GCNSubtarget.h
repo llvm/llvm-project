@@ -23,6 +23,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <optional>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AMDGPUGenSubtargetInfo.inc"
@@ -83,9 +84,11 @@ protected:
   // Data (VMEM) cache line size in bytes; set from TableGen subtarget features.
   unsigned DataCacheLineSize = 0;
 
+  /// The width, in bits, of the num_records field of a buffer resource (V#),
+  /// set from tablegen subtarget features, 0 is unknown.
+  unsigned BufferResourceNumRecordsWidth = 0;
+
   // Dynamically set bits that enable features.
-  bool DynamicVGPR = false;
-  bool DynamicVGPRBlockSize32 = false;
   bool ScalarizeGlobal = false;
   const bool BufferOOBRelaxed;
   const bool TBufferOOBRelaxed;
@@ -353,6 +356,14 @@ public:
   bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
   bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
 
+  /// Return the width, in bits, of the num_records field of a buffer resource
+  /// (V#) on this subtarget, or std::nullopt if not yet known.
+  std::optional<unsigned> getBufferResourceNumRecordsWidth() const {
+    if (BufferResourceNumRecordsWidth == 0)
+      return std::nullopt;
+    return BufferResourceNumRecordsWidth;
+  }
+
   bool isCuModeEnabled() const { return EnableCuMode; }
 
   bool isPreciseMemoryEnabled() const { return EnablePreciseMemory; }
@@ -477,9 +488,6 @@ public:
   void setScalarizeGlobalBehavior(bool b) { ScalarizeGlobal = b; }
   bool getScalarizeGlobalBehavior() const { return ScalarizeGlobal; }
 
-  // static wrappers
-  static bool hasHalfRate64Ops(const TargetSubtargetInfo &STI);
-
   // XXX - Why is this here if it isn't in the default pass set?
   bool enableEarlyIfConversion() const override { return true; }
 
@@ -488,6 +496,8 @@ public:
 
   void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
                                  const SchedRegion &Region) const override;
+
+  void overridePipelinerPolicy(MachinePipelinerPolicy &Policy) const override;
 
   void mirFileLoaded(MachineFunction &MF) const override;
 
@@ -577,6 +587,12 @@ public:
   // Shift amount of a 64 bit shift cannot be a highest allocated register
   // if also at the end of the allocation block.
   bool hasShift64HighRegBug() const { return HasGFX90AInsts; }
+
+  // v_dot2c_f32_f16 unconditionally flushes f16 subnormal inputs to zero
+  // regardless of the MODE register, unlike v_fma_mix_f32 which respects it.
+  bool dot2UnconditionalFlush() const {
+    return HasGFX90AInsts && !HasGFX940Insts;
+  }
 
   // Has one cycle hazard on transcendental instruction feeding a
   // non transcendental VALU.
@@ -928,12 +944,12 @@ public:
 
   /// \returns Minimum flat work group size supported by the subtarget.
   unsigned getMinFlatWorkGroupSize() const override {
-    return AMDGPU::IsaInfo::getMinFlatWorkGroupSize(*this);
+    return AMDGPU::getMinFlatWorkGroupSize();
   }
 
   /// \returns Maximum flat work group size supported by the subtarget.
   unsigned getMaxFlatWorkGroupSize() const override {
-    return AMDGPU::IsaInfo::getMaxFlatWorkGroupSize();
+    return AMDGPU::getMaxFlatWorkGroupSize();
   }
 
   /// \returns Number of waves per execution unit required to support the given
@@ -946,7 +962,7 @@ public:
   /// \returns Minimum number of waves per execution unit supported by the
   /// subtarget.
   unsigned getMinWavesPerEU() const override {
-    return AMDGPU::IsaInfo::getMinWavesPerEU(*this);
+    return AMDGPU::getMinWavesPerEU();
   }
 
   void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
@@ -968,11 +984,6 @@ public:
   // \returns true if the subtarget needs S_WAIT_ALU 0 before S_GETREG_B32 on
   // STATUS, STATE_PRIV, EXCP_FLAG_PRIV, or EXCP_FLAG_USER.
   bool requiresWaitIdleBeforeGetReg() const { return HasGFX1250Insts; }
-
-  bool isDynamicVGPREnabled() const { return DynamicVGPR; }
-  unsigned getDynamicVGPRBlockSize() const {
-    return DynamicVGPRBlockSize32 ? 32 : 16;
-  }
 
   bool requiresDisjointEarlyClobberAndUndef() const override {
     // AMDGPU doesn't care if early-clobber and undef operands are allocated
@@ -1037,6 +1048,22 @@ public:
 
   bool requiresWaitOnWorkgroupReleaseFence(bool TgSplit) const {
     return getGeneration() >= GFX10 || TgSplit;
+  }
+
+  bool useDFAforSMS() const override { return false; }
+
+  bool enableWindowScheduler() const override { return false; }
+
+  // \returns true if ISel should select the native i64 min/max instructions
+  // (V_MIN/MAX_{I|U}64).
+  bool useMinMaxI64Insts() const {
+    return hasMinMaxI64Insts() && !hasSlowMaxMinMulI64Insts();
+  }
+
+  // \returns true if ISel should select the native i64 mul instruction
+  // V_MUL_U64.
+  bool useVMulU64Inst() const {
+    return hasVMulU64Inst() && !hasSlowMaxMinMulI64Insts();
   }
 };
 

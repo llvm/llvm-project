@@ -1170,8 +1170,17 @@ struct NonNarrowingCastsOptimization : public OpRewritePattern<tosa::CastOp> {
       return rewriter.notifyMatchFailure(castOp,
                                          "inner cast operation is narrowing");
 
+    // Bail out of the canonicalization if (inner) cast(input_unsigned=false) ->
+    // (outer) cast(input_unsigned=true)
+    if (!innerCastOp.getInputUnsigned() && castOp.getInputUnsigned()) {
+      return rewriter.notifyMatchFailure(
+          castOp, "avoid rewriting cast(input_unsigned=false) -> "
+                  "cast(input_unsigned=true)");
+    }
+
     rewriter.replaceOpWithNewOp<tosa::CastOp>(castOp, outerOutputType,
-                                              innerCastInput);
+                                              innerCastInput,
+                                              innerCastOp.getInputUnsigned());
 
     return success();
   }
@@ -2025,7 +2034,8 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
     }
 
     if (llvm::isa<IntegerType>(inETy) && llvm::isa<FloatType>(outETy)) {
-      auto unsign = llvm::cast<IntegerType>(inETy).isUnsignedInteger();
+      const bool unsign = llvm::cast<IntegerType>(inETy).isUnsignedInteger() ||
+                          adaptor.getInputUnsigned();
       APFloat splatVal(llvm::cast<FloatType>(outETy).getFloatSemantics());
       splatVal.convertFromAPInt(operand.getSplatValue<APInt>(), !unsign,
                                 llvm::RoundingMode::NearestTiesToEven);
@@ -2045,7 +2055,8 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
 
     if (llvm::isa<IntegerType>(inETy) && llvm::isa<IntegerType>(outETy)) {
       const auto inIntType = llvm::cast<IntegerType>(inETy);
-      auto unsignIn = inIntType.isUnsignedInteger();
+      const bool unsignIn =
+          inIntType.isUnsignedInteger() || adaptor.getInputUnsigned();
       bool trunc =
           inETy.getIntOrFloatBitWidth() > outETy.getIntOrFloatBitWidth();
       auto intVal = operand.getSplatValue<APInt>();
@@ -2117,13 +2128,18 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
   if (!inputTy.getElementType().isIntOrIndexOrFloat())
     return {};
 
+  // Constants must have static shape.
+  if (!outputTy.hasStaticShape())
+    return {};
+
+  // Reshaping a resource-backed constant only requires updating its type.
+  if (auto operand = llvm::dyn_cast_if_present<DenseResourceElementsAttr>(
+          adaptor.getInput1()))
+    return DenseResourceElementsAttr::get(outputTy, operand.getRawHandle());
+
   // reshape(const(x)) -> const(reshape-attr(x))
   if (auto operand =
           llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput1())) {
-    // Constants must have static shape.
-    if (!outputTy.hasStaticShape())
-      return {};
-
     // Okay to duplicate splat constants.
     if (operand.isSplat())
       return SplatElementsAttr::get(outputTy,

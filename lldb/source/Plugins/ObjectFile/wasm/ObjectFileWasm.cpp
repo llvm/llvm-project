@@ -256,12 +256,13 @@ bool ObjectFileWasm::DecodeNextSection(lldb::offset_t *offset_ptr) {
 
     uint32_t section_length = payload_len - (c.tell() - prev_offset);
     m_sect_infos.push_back(section_info{*offset_ptr + c.tell(), section_length,
-                                        section_id, ConstString(*sect_name)});
+                                        section_id, std::move(*sect_name)});
     *offset_ptr += (c.tell() + section_length);
   } else if (section_id <= llvm::wasm::WASM_SEC_LAST_KNOWN) {
     m_sect_infos.push_back(section_info{*offset_ptr + c.tell(),
                                         static_cast<uint32_t>(payload_len),
-                                        section_id, ConstString()});
+                                        section_id,
+                                        {}});
     *offset_ptr += (c.tell() + payload_len);
   } else {
     // Invalid section id.
@@ -812,14 +813,14 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
 
   for (const section_info &sect_info : m_sect_infos) {
     SectionType section_type = eSectionTypeOther;
-    ConstString section_name;
+    std::string section_name;
     offset_t file_offset = sect_info.offset & 0xffffffff;
     addr_t vm_addr = sect_info.offset;
     size_t vm_size = sect_info.size;
 
     if (llvm::wasm::WASM_SEC_CODE == sect_info.id) {
       section_type = eSectionTypeCode;
-      section_name = ConstString("code");
+      section_name = "code";
 
       // A code address in DWARF for WebAssembly is the offset of an
       // instruction relative within the Code section of the WebAssembly file.
@@ -827,7 +828,7 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
       // Code section.
       vm_addr = 0;
     } else {
-      section_type = GetSectionTypeFromName(sect_info.name.GetStringRef());
+      section_type = GetSectionTypeFromName(sect_info.name);
       if (section_type == eSectionTypeOther)
         continue;
       section_name = sect_info.name;
@@ -838,18 +839,18 @@ void ObjectFileWasm::CreateSections(SectionList &unified_section_list) {
     }
 
     SectionSP section_sp = std::make_shared<Section>(
-        GetModule(),    // Module to which this section belongs.
-        this,           // ObjectFile to which this section belongs and
-                        // should read section data from.
-        section_type,   // Section ID.
-        section_name,   // Section name.
-        section_type,   // Section type.
-        vm_addr,        // VM address.
-        vm_size,        // VM size in bytes of this section.
-        file_offset,    // Offset of this section in the file.
-        sect_info.size, // Size of the section as found in the file.
-        0,              // Alignment of the section
-        0);             // Flags for this section.
+        GetModule(),  // Module to which this section belongs.
+        this,         // ObjectFile to which this section belongs and
+                      // should read section data from.
+        section_type, // Section ID.
+        ConstString(section_name), // Section name.
+        section_type,              // Section type.
+        vm_addr,                   // VM address.
+        vm_size,                   // VM size in bytes of this section.
+        file_offset,               // Offset of this section in the file.
+        sect_info.size,            // Size of the section as found in the file.
+        0,                         // Alignment of the section
+        0);                        // Flags for this section.
     m_sections_up->AddSection(section_sp);
     unified_section_list.AddSection(section_sp);
   }
@@ -1136,8 +1137,45 @@ DataExtractor ObjectFileWasm::ReadImageData(offset_t offset, uint32_t size) {
   return data;
 }
 
+UUID ObjectFileWasm::GetUUID() {
+  if (m_uuid)
+    return m_uuid;
+
+  // A Wasm module carries the identifier a linker gave it in a custom section,
+  // as a vector of bytes. It is the only thing that tells one build of a module
+  // from another, so a module linked without one cannot be identified at all.
+  static constexpr llvm::StringLiteral g_sect_name_build_id("build_id");
+  for (const section_info &sect_info : m_sect_infos) {
+    if (g_sect_name_build_id != sect_info.name)
+      continue;
+
+    DataExtractor section_data =
+        ReadImageData(sect_info.offset, sect_info.size);
+    llvm::DataExtractor data = section_data.GetAsLLVM();
+    llvm::DataExtractor::Cursor c(0);
+    llvm::Expected<uint32_t> length = GetULEB32(data, c);
+    if (!length) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Object), length.takeError(),
+                     "failed to parse the build id length: {0}");
+      return m_uuid;
+    }
+    llvm::SmallVector<uint8_t, 32> id(*length, 0);
+    data.getU8(c, id.data(), id.size());
+    if (!c) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Object), c.takeError(),
+                     "failed to parse the build id: {0}");
+      return m_uuid;
+    }
+    m_uuid = UUID(id);
+    break;
+  }
+
+  return m_uuid;
+}
+
 std::optional<FileSpec> ObjectFileWasm::GetExternalDebugInfoFileSpec() {
-  static ConstString g_sect_name_external_debug_info("external_debug_info");
+  static constexpr llvm::StringLiteral g_sect_name_external_debug_info(
+      "external_debug_info");
 
   for (const section_info &sect_info : m_sect_infos) {
     if (g_sect_name_external_debug_info == sect_info.name) {
@@ -1185,7 +1223,7 @@ void ObjectFileWasm::Dump(Stream *s) {
 
 void ObjectFileWasm::DumpSectionHeader(llvm::raw_ostream &ostream,
                                        const section_info &sh) {
-  ostream << llvm::left_justify(sh.name.GetStringRef(), 16) << " "
+  ostream << llvm::left_justify(sh.name, 16) << " "
           << llvm::format_hex(sh.offset, 10) << " "
           << llvm::format_hex(sh.size, 10) << " " << llvm::format_hex(sh.id, 6)
           << "\n";

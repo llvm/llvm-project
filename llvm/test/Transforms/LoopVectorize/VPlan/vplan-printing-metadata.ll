@@ -23,13 +23,13 @@ define void @test_widen_metadata(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep.A> = getelementptr inbounds ir<%A>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.A>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]> (!tbaa !0)
-; CHECK-NEXT:      WIDEN-CAST ir<%conv> = sitofp ir<%lv> to float (!fpmath !4)
-; CHECK-NEXT:      WIDEN ir<%mul> = fmul ir<%conv>, ir<2.000000e+00> (!fpmath !4)
+; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]> (!tbaa !{{[0-9]+}})
+; CHECK-NEXT:      WIDEN-CAST ir<%conv> = sitofp ir<%lv> to float (!fpmath !{{[0-9]+}})
+; CHECK-NEXT:      WIDEN ir<%mul> = fmul ir<%conv>, ir<2.000000e+00> (!fpmath !{{[0-9]+}})
 ; CHECK-NEXT:      WIDEN-CAST ir<%conv.back> = fptosi ir<%mul> to i32
 ; CHECK-NEXT:      CLONE ir<%gep.B> = getelementptr inbounds ir<%B>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.B>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%conv.back> (!tbaa !0)
+; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%conv.back> (!tbaa !{{[0-9]+}})
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -51,12 +51,12 @@ define void @test_widen_metadata(ptr noalias %A, ptr noalias %B, i32 %n) {
 ; CHECK-NEXT:  ir-bb<loop>:
 ; CHECK-NEXT:    IR   %i = phi i32 [ 0, %entry ], [ %i.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK-NEXT:    IR   %gep.A = getelementptr inbounds i32, ptr %A, i32 %i
-; CHECK-NEXT:    IR   %lv = load i32, ptr %gep.A, align 4, !tbaa !0, !range !3
-; CHECK-NEXT:    IR   %conv = sitofp i32 %lv to float, !fpmath !4
-; CHECK-NEXT:    IR   %mul = fmul float %conv, 2.000000e+00, !fpmath !4
+; CHECK-NEXT:    IR   %lv = load i32, ptr %gep.A, align 4, !tbaa !{{[0-9]+}}, !range !{{[0-9]+}}
+; CHECK-NEXT:    IR   %conv = sitofp i32 %lv to float, !fpmath !{{[0-9]+}}
+; CHECK-NEXT:    IR   %mul = fmul float %conv, 2.000000e+00, !fpmath !{{[0-9]+}}
 ; CHECK-NEXT:    IR   %conv.back = fptosi float %mul to i32
 ; CHECK-NEXT:    IR   %gep.B = getelementptr inbounds i32, ptr %B, i32 %i
-; CHECK-NEXT:    IR   store i32 %conv.back, ptr %gep.B, align 4, !tbaa !0
+; CHECK-NEXT:    IR   store i32 %conv.back, ptr %gep.B, align 4, !tbaa !{{[0-9]+}}
 ; CHECK-NEXT:    IR   %i.next = add i32 %i, 1
 ; CHECK-NEXT:    IR   %cond = icmp eq i32 %i.next, %n
 ; CHECK-NEXT:  No successors
@@ -104,11 +104,11 @@ define void @test_intrinsic_with_metadata(ptr noalias %A, ptr noalias %B, i32 %n
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep.A> = getelementptr inbounds ir<%A>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds float, ir<%gep.A>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]> (!tbaa !0)
-; CHECK-NEXT:      WIDEN-INTRINSIC ir<%sqrt> = call llvm.sqrt(ir<%lv>) (!fpmath !3)
+; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]> (!tbaa !{{[0-9]+}})
+; CHECK-NEXT:      WIDEN-INTRINSIC ir<%sqrt> = call llvm.sqrt(ir<%lv>) (!fpmath !{{[0-9]+}})
 ; CHECK-NEXT:      CLONE ir<%gep.B> = getelementptr inbounds ir<%B>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds float, ir<%gep.B>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%sqrt> (!tbaa !0)
+; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%sqrt> (!tbaa !{{[0-9]+}})
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -130,10 +130,10 @@ define void @test_intrinsic_with_metadata(ptr noalias %A, ptr noalias %B, i32 %n
 ; CHECK-NEXT:  ir-bb<loop>:
 ; CHECK-NEXT:    IR   %i = phi i32 [ 0, %entry ], [ %i.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK-NEXT:    IR   %gep.A = getelementptr inbounds float, ptr %A, i32 %i
-; CHECK-NEXT:    IR   %lv = load float, ptr %gep.A, align 4, !tbaa !0
-; CHECK-NEXT:    IR   %sqrt = call float @llvm.sqrt.f32(float %lv), !fpmath !3
+; CHECK-NEXT:    IR   %lv = load float, ptr %gep.A, align 4, !tbaa !{{[0-9]+}}
+; CHECK-NEXT:    IR   %sqrt = call float @llvm.sqrt.f32(float %lv), !fpmath !{{[0-9]+}}
 ; CHECK-NEXT:    IR   %gep.B = getelementptr inbounds float, ptr %B, i32 %i
-; CHECK-NEXT:    IR   store float %sqrt, ptr %gep.B, align 4, !tbaa !0
+; CHECK-NEXT:    IR   store float %sqrt, ptr %gep.B, align 4, !tbaa !{{[0-9]+}}
 ; CHECK-NEXT:    IR   %i.next = add i32 %i, 1
 ; CHECK-NEXT:    IR   %cond = icmp eq i32 %i.next, %n
 ; CHECK-NEXT:  No successors
@@ -178,13 +178,13 @@ define void @test_widen_with_multiple_metadata(ptr noalias %A, ptr noalias %B, i
 ; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep.A> = getelementptr inbounds ir<%A>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.A>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]> (!tbaa !0)
+; CHECK-NEXT:      WIDEN ir<%lv> = load vp<[[VP5]]> (!tbaa !{{[0-9]+}})
 ; CHECK-NEXT:      WIDEN-CAST ir<%conv> = sitofp ir<%lv> to float
 ; CHECK-NEXT:      WIDEN ir<%mul> = fmul ir<%conv>, ir<2.000000e+00>
 ; CHECK-NEXT:      WIDEN-CAST ir<%conv.back> = fptosi ir<%mul> to i32
 ; CHECK-NEXT:      CLONE ir<%gep.B> = getelementptr inbounds ir<%B>, vp<[[VP4]]>
 ; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.B>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%conv.back> (!tbaa !0)
+; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%conv.back> (!tbaa !{{[0-9]+}})
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -206,12 +206,12 @@ define void @test_widen_with_multiple_metadata(ptr noalias %A, ptr noalias %B, i
 ; CHECK-NEXT:  ir-bb<loop>:
 ; CHECK-NEXT:    IR   %i = phi i32 [ 0, %entry ], [ %i.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK-NEXT:    IR   %gep.A = getelementptr inbounds i32, ptr %A, i32 %i
-; CHECK-NEXT:    IR   %lv = load i32, ptr %gep.A, align 4, !tbaa !0, !range !3
+; CHECK-NEXT:    IR   %lv = load i32, ptr %gep.A, align 4, !tbaa !{{[0-9]+}}, !range !{{[0-9]+}}
 ; CHECK-NEXT:    IR   %conv = sitofp i32 %lv to float
 ; CHECK-NEXT:    IR   %mul = fmul float %conv, 2.000000e+00
 ; CHECK-NEXT:    IR   %conv.back = fptosi float %mul to i32
 ; CHECK-NEXT:    IR   %gep.B = getelementptr inbounds i32, ptr %B, i32 %i
-; CHECK-NEXT:    IR   store i32 %conv.back, ptr %gep.B, align 4, !tbaa !0
+; CHECK-NEXT:    IR   store i32 %conv.back, ptr %gep.B, align 4, !tbaa !{{[0-9]+}}
 ; CHECK-NEXT:    IR   %i.next = add i32 %i, 1
 ; CHECK-NEXT:    IR   %cond = icmp eq i32 %i.next, %n
 ; CHECK-NEXT:  No successors

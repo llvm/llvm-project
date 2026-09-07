@@ -66,6 +66,8 @@
 // RUN:   -fuse-ld=lld -flto -O3 -### 2>&1 | FileCheck --check-prefix=O3 %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu --sysroot=%S/Inputs/basic_cross_linux_tree %s \
 // RUN:   -fuse-ld=lld -flto -Ofast -### 2>&1 | FileCheck --check-prefix=O3 %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu --sysroot=%S/Inputs/basic_cross_linux_tree %s \
+// RUN:   -fuse-ld=lld -flto -O4 -### 2>&1 | FileCheck --check-prefix=O3 %s
 
 // O1: -plugin-opt=O1
 // O2: -plugin-opt=O2

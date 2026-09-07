@@ -226,7 +226,9 @@ static void foreachMemoryAccess(MemorySSA *MSSA, Loop *L,
 using PointersAndHasReadsOutsideSet =
     std::pair<SmallSetVector<Value *, 8>, bool>;
 static SmallVector<PointersAndHasReadsOutsideSet, 0>
-collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L);
+collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA,
+                           DominatorTree *DT, ICFLoopSafetyInfo *SafetyInfo,
+                           Loop *L);
 
 namespace {
 struct LoopInvariantCodeMotion {
@@ -458,8 +460,7 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
   BasicBlock *Preheader = L->getLoopPreheader();
 
   // Compute loop safety information.
-  ICFLoopSafetyInfo SafetyInfo;
-  SafetyInfo.computeLoopSafetyInfo(L);
+  ICFLoopSafetyInfo SafetyInfo(L);
 
   // We want to visit all of the instructions in this loop... that are not parts
   // of our subloops (they have already had their invariants hoisted out of
@@ -520,7 +521,7 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
       do {
         LocalPromoted = false;
         for (auto [PointerMustAliases, HasReadsOutsideSet] :
-             collectPromotionCandidates(MSSA, AA, L)) {
+             collectPromotionCandidates(MSSA, AA, DT, &SafetyInfo, L)) {
           LocalPromoted |= promoteLoopAccessesToScalars(
               PointerMustAliases, ExitBlocks, InsertPts, MSSAInsertPts, PIC, LI,
               DT, AC, TLI, TTI, L, MSSAU, &SafetyInfo, ORE,
@@ -984,8 +985,8 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
                match(&I, m_Intrinsic<Intrinsic::invariant_start>());
       };
       auto MustExecuteWithoutWritesBefore = [&](Instruction &I) {
-        return SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop) &&
-               SafetyInfo->doesNotWriteMemoryBefore(I, CurLoop);
+        return SafetyInfo->isGuaranteedToExecute(I, DT) &&
+               SafetyInfo->doesNotWriteMemoryBefore(I);
       };
       if ((IsInvariantStart(I) || isGuard(&I)) &&
           CurLoop->hasLoopInvariantOperands(&I) &&
@@ -1797,7 +1798,7 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
       // The check on hasMetadataOtherThanDebugLoc is to prevent us from burning
       // time in isGuaranteedToExecute if we don't actually have anything to
       // drop.  It is a compile time optimization, not required for correctness.
-      !SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop)) {
+      !SafetyInfo->isGuaranteedToExecute(I, DT)) {
     I.dropUBImplyingAttrsAndMetadata();
   }
 
@@ -1830,8 +1831,7 @@ static bool isSafeToExecuteUnconditionally(
       isSafeToSpeculativelyExecute(&Inst, CtxI, AC, DT, TLI))
     return true;
 
-  bool GuaranteedToExecute =
-      SafetyInfo->isGuaranteedToExecute(Inst, DT, CurLoop);
+  bool GuaranteedToExecute = SafetyInfo->isGuaranteedToExecute(Inst, DT);
 
   if (!GuaranteedToExecute) {
     auto *LI = dyn_cast<LoadInst>(&Inst);
@@ -2130,7 +2130,7 @@ bool llvm::promoteLoopAccessesToScalars(
 
         if (!LoadIsGuaranteedToExecute)
           LoadIsGuaranteedToExecute =
-              SafetyInfo->isGuaranteedToExecute(*UI, DT, CurLoop);
+              SafetyInfo->isGuaranteedToExecute(*UI, DT);
 
         // Note that proving a load safe to speculate requires proving
         // sufficient alignment at the target location.  Proving it guaranteed
@@ -2160,8 +2160,7 @@ bool llvm::promoteLoopAccessesToScalars(
         // alignment than any other guaranteed stores, in which case we can
         // raise the alignment on the promoted store.
         Align InstAlignment = Store->getAlign();
-        bool GuaranteedToExecute =
-            SafetyInfo->isGuaranteedToExecute(*UI, DT, CurLoop);
+        bool GuaranteedToExecute = SafetyInfo->isGuaranteedToExecute(*UI, DT);
         StoreIsGuaranteedToExecute |= GuaranteedToExecute;
         if (GuaranteedToExecute) {
           DereferenceableInPH = true;
@@ -2335,17 +2334,23 @@ static void foreachMemoryAccess(MemorySSA *MSSA, Loop *L,
 // The bool indicates whether there might be reads outside the set, in which
 // case only loads may be promoted.
 static SmallVector<PointersAndHasReadsOutsideSet, 0>
-collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L) {
+collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA,
+                           DominatorTree *DT, ICFLoopSafetyInfo *SafetyInfo,
+                           Loop *L) {
   BatchAAResults BatchAA(*AA);
   AliasSetTracker AST(BatchAA);
 
   auto IsPotentiallyPromotable = [L](const Instruction *I) {
     if (const auto *SI = dyn_cast<StoreInst>(I)) {
       const Value *PtrOp = SI->getPointerOperand();
+      if (isStrongerThanMonotonic(SI->getOrdering()))
+        return false;
       return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
     }
     if (const auto *LI = dyn_cast<LoadInst>(I)) {
       const Value *PtrOp = LI->getPointerOperand();
+      if (isStrongerThanMonotonic(LI->getOrdering()))
+        return false;
       return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
     }
     return false;
@@ -2356,7 +2361,22 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA, Loop *L) {
   foreachMemoryAccess(MSSA, L, [&](Instruction *I) {
     if (IsPotentiallyPromotable(I)) {
       AttemptingPromotion.insert(I);
-      AST.add(I);
+      if (StoreInst *SI = dyn_cast<StoreInst>(I);
+          SI && !SafetyInfo->isGuaranteedToExecute(*SI, DT)) {
+        // Promotion requires inserting a new store at the loop exits; we need
+        // to prove that store doesn't alias anything, in addition to proving
+        // aliasing for the stores we're removing. The new store is executed
+        // unconditionally, so when we're proving aliasing for that store, we
+        // can't rely on AA tags for stores which are conditionally executed.
+        //
+        // As a future improvement, we could avoid stripping AA tags in more
+        // cases. isGuaranteedToExecute() is stronger than what we need.
+        // We only need to prove that every exit from the loop is dominated
+        // by a store to the same location with the same AA tag.
+        AST.addWithoutAATags(SI);
+      } else {
+        AST.add(I);
+      }
     }
   });
 

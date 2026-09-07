@@ -83,8 +83,10 @@ public:
         getLineTableForUnit(DWARFUnit *U,
                             function_ref<void(Error)> RecoverableErrHandler) = 0;
     virtual void clearLineTableForUnit(DWARFUnit *U) = 0;
-    virtual Expected<const DWARFDebugFrame *> getDebugFrame() = 0;
-    virtual Expected<const DWARFDebugFrame *> getEHFrame() = 0;
+    virtual Expected<const DWARFDebugFrame *>
+    getDebugFrame(bool ParseCFIProgram) = 0;
+    virtual Expected<const DWARFDebugFrame *>
+    getEHFrame(bool ParseCFIProgram) = 0;
     virtual const DWARFDebugMacro *getDebugMacinfo() = 0;
     virtual const DWARFDebugMacro *getDebugMacinfoDWO() = 0;
     virtual const DWARFDebugMacro *getDebugMacro() = 0;
@@ -310,10 +312,15 @@ public:
   const DWARFDebugAranges *getDebugAranges();
 
   /// Get a pointer to the parsed frame information object.
-  Expected<const DWARFDebugFrame *> getDebugFrame();
+  ///
+  /// If \p ParseCFIProgram is false, the returned object has not decoded the
+  /// CFI instruction program of its entries; use
+  /// DWARFDebugFrame::parseCFIProgram() to decode the ones that are needed.
+  Expected<const DWARFDebugFrame *> getDebugFrame(bool ParseCFIProgram = true);
 
-  /// Get a pointer to the parsed eh frame information object.
-  Expected<const DWARFDebugFrame *> getEHFrame();
+  /// Get a pointer to the parsed eh frame information object. See
+  /// getDebugFrame() for \p ParseCFIProgram.
+  Expected<const DWARFDebugFrame *> getEHFrame(bool ParseCFIProgram = true);
 
   /// Get a pointer to the parsed DebugMacinfo information object.
   const DWARFDebugMacro *getDebugMacinfo();

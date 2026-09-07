@@ -439,6 +439,8 @@ static void setPhysLiveRegs(LiveRegUnits &LiveUnits, LiveRegs PhysLiveRegs) {
 
 [[maybe_unused]] bool isCallStartOpcode(unsigned Opc) {
   switch (Opc) {
+  case AArch64::BLR:
+  case AArch64::BLRA:
   case AArch64::TLSDESC_CALLSEQ:
   case AArch64::TLSDESC_AUTH_CALLSEQ:
   case AArch64::ADJCALLSTACKDOWN:

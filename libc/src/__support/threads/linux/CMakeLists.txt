@@ -1,3 +1,19 @@
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE}/tcb.h)
+  add_header_library(
+    tcb
+    HDRS
+      tcb.h
+      ${LIBC_TARGET_ARCHITECTURE}/tcb.h
+    DEPENDS
+      libc.hdr.offsetof_macros
+      libc.hdr.stdint_proxy
+      libc.src.__support.threads.thread_attributes
+      libc.src.__support.macros.attributes
+      libc.src.__support.macros.config
+      libc.src.__support.macros.properties.architectures
+  )
+endif()
+
 add_header_library(
   futex_word_type
   HDRS
@@ -34,6 +50,7 @@ add_object_library(
     libc.include.sys_syscall
     libc.hdr.fcntl_macros
     libc.hdr.errno_macros
+    libc.hdr.sched_macros
     libc.hdr.sys_mman_macros
     libc.src.errno.errno
     libc.src.__support.CPP.atomic
@@ -55,9 +72,9 @@ add_object_library(
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
     -fno-omit-frame-pointer # This allows us to sniff out the thread args from
-                            # the new thread's stack reliably.
-    -Wno-frame-address      # Yes, calling __builtin_return_address with a
-                            # value other than 0 is dangerous. We know.
+    # the new thread's stack reliably.
+    -Wno-frame-address # Yes, calling __builtin_return_address with a
+  # value other than 0 is dangerous. We know.
 )
 
 add_header_library(

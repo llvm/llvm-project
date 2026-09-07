@@ -232,8 +232,8 @@ define i1 @or_eq_0_i8(<16 x i8> %x) {
 define i1 @or_eq_0_i64(<2 x i64> %x) {
 ; CHECK-LABEL: define i1 @or_eq_0_i64(
 ; CHECK-SAME: <2 x i64> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RED:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[RED]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i64> [[X]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %red = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> %x)

@@ -1059,10 +1059,7 @@ bool PythonException::Matches(PyObject *exc) const {
 const char read_exception_script[] = R"(
 import sys
 from traceback import print_exception
-if sys.version_info.major < 3:
-  from StringIO import StringIO
-else:
-  from io import StringIO
+from io import StringIO
 def main(exc_type, exc_value, tb):
   f = StringIO()
   print_exception(exc_type, exc_value, tb, file=f)

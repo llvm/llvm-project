@@ -1,4 +1,5 @@
 ; RUN: llc < %s
+; UNSUPPORTED: target=sparc{{.*}}
 
 @.str = internal constant [14 x i8] c"%lld %d %d %d\00"
 

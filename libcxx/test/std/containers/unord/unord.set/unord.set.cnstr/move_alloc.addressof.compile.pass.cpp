@@ -32,4 +32,5 @@ void test() {
   const A a;
   std::unordered_set<operator_hijacker, H, P, A> so;
   std::unordered_set<operator_hijacker, H, P, A> s(std::move(so), a);
+  (void)s;
 }

@@ -18,7 +18,6 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
@@ -2073,6 +2072,22 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     CurDAG->RemoveDeadNode(Node);
     return;
   }
+  case RISCVISD::MQWACC:
+  case RISCVISD::MQRWACC: {
+    assert(!Subtarget->is64Bit() && Subtarget->hasStdExtP() &&
+           "Unexpected opcode");
+
+    SDValue Op0 = buildGPRPair(CurDAG, DL, MVT::Untyped, Node->getOperand(0),
+                               Node->getOperand(1));
+    unsigned Opc = Opcode == RISCVISD::MQRWACC ? RISCV::MQRWACC : RISCV::MQWACC;
+    MachineSDNode *New = CurDAG->getMachineNode(
+        Opc, DL, MVT::Untyped, Op0, Node->getOperand(2), Node->getOperand(3));
+    auto [Lo, Hi] = extractGPRPair(CurDAG, DL, SDValue(New, 0));
+    ReplaceUses(SDValue(Node, 0), Lo);
+    ReplaceUses(SDValue(Node, 1), Hi);
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
   case RISCVISD::ADDD:
     // Try to match WMACC pattern: ADDD where one operand pair comes from a
     // widening multiply.
@@ -3597,10 +3612,6 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
 /// compressible) standard load/store instructions.
 bool RISCVDAGToDAGISel::SelectAddrRegImm26(SDValue Addr, SDValue &Base,
                                            SDValue &Offset) {
-
-  if (SelectAddrFrameIndex(Addr, Base, Offset))
-    return true;
-
   SDLoc DL(Addr);
   MVT VT = Addr.getSimpleValueType();
 
@@ -3720,9 +3731,10 @@ bool RISCVDAGToDAGISel::SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base,
     int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
     assert(!isInt<12>(CVal) && "simm12 not already handled?");
 
-    // Handle immediates in the range [-4096,-2049] or [2017, 4065]. We can save
+    // Handle immediates in the range [-4096,-2049] or [2017, 4063]. We can save
     // one instruction by folding adjustment (-2048 or 2016) into the address.
-    if ((-2049 >= CVal && CVal >= -4096) || (4065 >= CVal && CVal >= 2017)) {
+    // The upper bound keeps CVal - 2016 within simm12 ([−2048, 2047]).
+    if ((-2049 >= CVal && CVal >= -4096) || (4063 >= CVal && CVal >= 2017)) {
       int64_t Adj = CVal < 0 ? -2048 : 2016;
       int64_t AdjustedOffset = CVal - Adj;
       Base =
@@ -4009,12 +4021,15 @@ bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
 /// \p ExpectedCCVal indicates the condition code to attempt to match (e.g.
 /// ISD::SETNE).
 bool RISCVDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
-                                    SDValue &Val) {
+                                    SDValue &Val, bool OneUse) {
   assert(ISD::isIntEqualitySetCC(ExpectedCCVal) &&
          "Unexpected condition code!");
 
   // We're looking for a setcc.
   if (N->getOpcode() != ISD::SETCC)
+    return false;
+
+  if (OneUse && !N->hasOneUse())
     return false;
 
   // Must be an equality comparison.
@@ -5102,10 +5117,14 @@ bool RISCVDAGToDAGISel::doPeepholeNoRegPassThru() {
 
 // This pass converts a legalized DAG into a RISCV-specific DAG, ready
 // for instruction scheduling.
-FunctionPass *llvm::createRISCVISelDag(RISCVTargetMachine &TM,
-                                       CodeGenOptLevel OptLevel) {
+FunctionPass *llvm::createRISCVISelDagLegacyPass(RISCVTargetMachine &TM,
+                                                 CodeGenOptLevel OptLevel) {
   return new RISCVDAGToDAGISelLegacy(TM, OptLevel);
 }
+
+RISCVISelDAGToDAGPass::RISCVISelDAGToDAGPass(RISCVTargetMachine &TM,
+                                             CodeGenOptLevel OptLevel)
+    : SelectionDAGISelPass(std::make_unique<RISCVDAGToDAGISel>(TM, OptLevel)) {}
 
 char RISCVDAGToDAGISelLegacy::ID = 0;
 

@@ -12,11 +12,11 @@ from lldbsuite.test import lldbutil
 exe_name = "AttachDenied"  # Must match Makefile
 
 
-@skipIfNoSignals
+@requireSignals
 class AttachDeniedTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipIfWindows
+    @requirePOSIX
     @skipIfiOSSimulator
     @skipIfDarwinEmbedded  # ptrace(ATTACH_REQUEST...) won't work on ios/tvos/etc
     @skipIfAsan # Times out inconsistently under asan
