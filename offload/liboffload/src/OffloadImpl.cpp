@@ -1531,5 +1531,9 @@ GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform) {
 }
 } // namespace tmp
 
+extern "C" int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device) {
+  return Device->DeviceNum;
+}
+
 } // namespace offload
 } // namespace llvm
