@@ -10,14 +10,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/DialectRegistry.h"
-#include "mlir/InitAllDialects.h"
 #include "mlir/Tools/mlir-lsp-server/MlirLspServerMain.h"
 #include "clang/CIR/InitAllDialects.h"
 
 int main(int argc, char **argv) {
   mlir::DialectRegistry registry;
-  mlir::registerAllDialects(registry);
   cir::registerAllDialects(registry);
+  registry.insert<mlir::LLVM::LLVMDialect, mlir::memref::MemRefDialect>();
   return failed(mlir::MlirLspServerMain(argc, argv, registry));
 }

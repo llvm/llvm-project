@@ -17,9 +17,10 @@
 #include "mlir/Dialect/OpenMP/Utils/Utils.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/InitAllTranslations.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Target/LLVMIR/Dialect/All.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
 #include "mlir/Tools/mlir-translate/MlirTranslateMain.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
 
@@ -172,7 +173,9 @@ void registerToLLVMTranslation() {
       [](mlir::DialectRegistry &registry) {
         cir::registerAllDialects(registry);
         registry.insert<mlir::func::FuncDialect>();
-        mlir::registerAllToLLVMIRTranslations(registry);
+        mlir::registerBuiltinDialectTranslation(registry);
+        mlir::registerLLVMDialectTranslation(registry);
+        mlir::registerOpenMPDialectTranslation(registry);
         cir::direct::registerCIRDialectTranslation(registry);
       });
 }
