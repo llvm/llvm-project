@@ -469,6 +469,12 @@ public:
 
   virtual unsigned getRegUsageForType(Type *Ty) const { return 1; }
 
+  virtual std::optional<SmallBitVector> getResultRegisterReuseMask(
+      unsigned Opcode, Type *ResultType,
+      ArrayRef<TTI::RegisterUsageOperandInfo> Operands) const {
+    return std::nullopt;
+  }
+
   virtual bool shouldBuildLookupTables() const { return true; }
 
   virtual bool shouldBuildLookupTablesForConstant(Constant *C) const {

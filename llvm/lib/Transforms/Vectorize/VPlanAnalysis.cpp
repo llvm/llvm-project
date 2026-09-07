@@ -77,6 +77,16 @@ bool VPDominatorTree::properlyDominates(const VPRecipeBase *A,
   return Base::properlyDominates(ParentA, ParentB);
 }
 
+bool VPRegisterUsage::exceedsMaxNumRegs(unsigned ClassID,
+                                        const TargetTransformInfo &TTI,
+                                        unsigned OverrideMaxNumRegs) const {
+  unsigned AvailableRegs = OverrideMaxNumRegs > 0
+                               ? OverrideMaxNumRegs
+                               : TTI.getNumberOfRegisters(ClassID);
+  return MaxLocalUsers.lookup(ClassID) + LoopInvariantRegs.lookup(ClassID) >
+         AvailableRegs;
+}
+
 InstructionCost
 VPRegisterUsage::spillCost(const TargetTransformInfo &TTI,
                            TargetTransformInfo::TargetCostKind CostKind,
@@ -105,7 +115,10 @@ VPRegisterUsage::spillCost(const TargetTransformInfo &TTI,
 
 SmallVector<VPRegisterUsage, 8>
 llvm::calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
-                                    const TargetTransformInfo &TTI) {
+                                    const TargetTransformInfo &TTI,
+                                    VPRegisterUsageMode Mode) {
+  bool IncludeDefinitionPressure =
+      Mode == VPRegisterUsageMode::ConservativePeak;
   DenseSet<VPRecipeBase *> EphemeralRecipes;
   collectEphemeralRecipesForVPlan(Plan, EphemeralRecipes);
 
@@ -185,12 +198,21 @@ llvm::calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
   SmallVector<VPRegisterUsage, 8> RUs(VFs.size());
   SmallVector<SmallMapVector<unsigned, unsigned, 4>, 8> MaxUsages(VFs.size());
 
-  LLVM_DEBUG(dbgs() << "LV(REG): Calculating max register usage:\n");
+  LLVM_DEBUG({
+    dbgs() << "LV(REG): Calculating ";
+    if (IncludeDefinitionPressure)
+      dbgs() << "conservative ";
+    dbgs() << "max register usage:\n";
+  });
 
   const auto &TTICapture = TTI;
-  auto GetRegUsage = [&TTICapture](Type *Ty, ElementCount VF) -> unsigned {
+  auto GetRegUsage = [&TTICapture, IncludeDefinitionPressure](
+                         Type *Ty, ElementCount VF) -> unsigned {
+    // Conservative mode also accounts for scalable i1 predicates that consume
+    // target mask registers even when i1 is not a legal scalable data element.
     if (Ty->isTokenTy() || !VectorType::isValidElementType(Ty) ||
         (VF.isScalable() &&
+         !(IncludeDefinitionPressure && Ty->isIntegerTy(1)) &&
          !TTICapture.isElementTypeLegalForScalableVector(Ty)))
       return 0;
     return TTICapture.getRegUsageForType(VectorType::get(Ty, VF));
@@ -235,7 +257,8 @@ llvm::calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
       // there is no previous entry for ClassID.
       SmallMapVector<unsigned, unsigned, 4> RegUsage;
 
-      for (auto *VPV : OpenIntervals) {
+      auto GetRegisterUsage =
+          [&](VPValue *VPV) -> std::optional<std::pair<unsigned, unsigned>> {
         // Skip artificial values or values that weren't present in the original
         // loop.
         // TODO: Remove skipping values that weren't present in the original
@@ -244,7 +267,7 @@ llvm::calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
         if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe,
                 VPBranchOnMaskRecipe>(VPV) ||
             match(VPV, m_ExtractLastPart(m_VPValue())))
-          continue;
+          return std::nullopt;
 
         if (VFs[J].isScalar() || VPV == CanIV ||
             isa<VPReplicateRecipe, VPDerivedIVRecipe,
@@ -256,22 +279,103 @@ llvm::calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
               TTI.getRegisterClassForType(false, VPV->getScalarType());
           // FIXME: The target might use more than one register for the type
           // even in the scalar case.
-          RegUsage[ClassID] += 1;
-        } else {
-          // The output from scaled phis and scaled reductions actually has
-          // fewer lanes than the VF.
-          unsigned ScaleFactor =
-              vputils::getVFScaleFactor(VPV->getDefiningRecipe());
-          ElementCount VF = VFs[J];
-          if (ScaleFactor > 1) {
-            VF = VFs[J].divideCoefficientBy(ScaleFactor);
-            LLVM_DEBUG(dbgs() << "LV(REG): Scaled down VF from " << VFs[J]
-                              << " to " << VF << " for " << *R << "\n";);
+          return std::make_pair(ClassID, 1);
+        }
+
+        // The output from scaled phis and scaled reductions actually has fewer
+        // lanes than the VF.
+        unsigned ScaleFactor =
+            vputils::getVFScaleFactor(VPV->getDefiningRecipe());
+        ElementCount VF = VFs[J];
+        if (ScaleFactor > 1) {
+          VF = VFs[J].divideCoefficientBy(ScaleFactor);
+          LLVM_DEBUG(dbgs() << "LV(REG): Scaled down VF from " << VFs[J]
+                            << " to " << VF << " for " << *R << "\n";);
+        }
+
+        Type *ScalarTy = VPV->getScalarType();
+        unsigned ClassID = TTI.getRegisterClassForType(true, ScalarTy);
+        return std::make_pair(ClassID, GetRegUsage(ScalarTy, VF));
+      };
+
+      auto AddRegisterUsage = [&](VPValue *VPV) {
+        if (auto Usage = GetRegisterUsage(VPV))
+          RegUsage[Usage->first] += Usage->second;
+      };
+
+      for (auto *VPV : OpenIntervals)
+        AddRegisterUsage(VPV);
+
+      // Conservative mode also samples the current result unless the target
+      // can reuse an operand whose live range ends at this recipe.
+      if (IncludeDefinitionPressure && VFs[J].isVector() &&
+          R->getNumDefinedValues() == 1 &&
+          Ends.contains(R->getVPSingleValue())) {
+        VPValue *DefV = R->getVPSingleValue();
+        unsigned Opcode = vputils::getOpcode(DefV);
+        bool HasValidTypes =
+            VectorType::isValidElementType(DefV->getScalarType()) &&
+            all_of(R->operands(), [](VPValue *Op) {
+              return VectorType::isValidElementType(Op->getScalarType());
+            });
+        if (Opcode && HasValidTypes) {
+          SmallVector<TTI::RegisterUsageOperandInfo, 2> OperandInfos;
+          for (VPValue *Op : R->operands()) {
+            Type *SourceType = nullptr;
+            unsigned DefOpcode = vputils::getOpcode(Op);
+            VPRecipeBase *DefR = Op->getDefiningRecipe();
+            Type *ScalarSourceType = nullptr;
+            if (Instruction::isCast(DefOpcode) && DefR &&
+                DefR->getNumOperands() == 1)
+              ScalarSourceType = DefR->getOperand(0)->getScalarType();
+            else if (auto *I = dyn_cast_or_null<Instruction>(
+                         Op->getUnderlyingValue())) {
+              DefOpcode = I->getOpcode();
+              if (auto *CastI = dyn_cast<CastInst>(I))
+                ScalarSourceType = CastI->getSrcTy();
+            }
+            if (ScalarSourceType &&
+                VectorType::isValidElementType(ScalarSourceType))
+              SourceType = VectorType::get(ScalarSourceType, VFs[J]);
+            OperandInfos.push_back(
+                {VectorType::get(Op->getScalarType(), VFs[J]), SourceType,
+                 DefOpcode, vputils::isUniformAcrossVFsAndUFs(Op)});
           }
 
-          Type *ScalarTy = VPV->getScalarType();
-          unsigned ClassID = TTI.getRegisterClassForType(true, ScalarTy);
-          RegUsage[ClassID] += GetRegUsage(ScalarTy, VF);
+          Type *ResultType = VectorType::get(DefV->getScalarType(), VFs[J]);
+          if (auto ReusableOperands = TTI.getResultRegisterReuseMask(
+                  Opcode, ResultType, OperandInfos)) {
+            assert(ReusableOperands->size() == R->getNumOperands() &&
+                   "target returned invalid reusable operand mask");
+            if (ReusableOperands->size() == R->getNumOperands()) {
+              if (auto ResultUsage = GetRegisterUsage(DefV)) {
+                auto [ResultClassID, ResultRegisters] = *ResultUsage;
+                unsigned ReusableRegisters = 0;
+                SmallPtrSet<VPValue *, 2> CheckedOperands;
+                for (unsigned I = 0, E = R->getNumOperands(); I != E; ++I) {
+                  VPValue *Op = R->getOperand(I);
+                  if (EndPoint.lookup(Op) != Idx + 1 ||
+                      !CheckedOperands.insert(Op).second)
+                    continue;
+                  bool AllUsesReusable =
+                      all_of(seq<unsigned>(0, E), [&](unsigned J) {
+                        return R->getOperand(J) != Op ||
+                               ReusableOperands->test(J);
+                      });
+                  if (!AllUsesReusable)
+                    continue;
+                  auto OperandUsage = GetRegisterUsage(Op);
+                  if (!OperandUsage || OperandUsage->first != ResultClassID)
+                    continue;
+                  ReusableRegisters =
+                      std::max(ReusableRegisters, OperandUsage->second);
+                }
+                RegUsage[ResultClassID] +=
+                    ResultRegisters -
+                    std::min(ResultRegisters, ReusableRegisters);
+              }
+            }
+          }
         }
       }
 

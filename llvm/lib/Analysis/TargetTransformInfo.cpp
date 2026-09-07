@@ -607,6 +607,12 @@ unsigned TargetTransformInfo::getRegUsageForType(Type *Ty) const {
   return TTIImpl->getRegUsageForType(Ty);
 }
 
+std::optional<SmallBitVector> TargetTransformInfo::getResultRegisterReuseMask(
+    unsigned Opcode, Type *ResultType,
+    ArrayRef<RegisterUsageOperandInfo> Operands) const {
+  return TTIImpl->getResultRegisterReuseMask(Opcode, ResultType, Operands);
+}
+
 bool TargetTransformInfo::shouldBuildLookupTables() const {
   return TTIImpl->shouldBuildLookupTables();
 }

@@ -26,6 +26,9 @@ class InstructionCost;
 
 struct VPCostContext;
 
+/// Controls how register usage is estimated for a VPlan.
+enum class VPRegisterUsageMode { LiveIntervals, ConservativePeak };
+
 // Collect a VPlan's ephemeral recipes (those used only by an assume).
 void collectEphemeralRecipesForVPlan(VPlan &Plan,
                                      DenseSet<VPRecipeBase *> &EphRecipes);
@@ -40,6 +43,12 @@ struct VPRegisterUsage {
   /// The key is ClassID of target-provided register class.
   SmallMapVector<unsigned, unsigned, 4> MaxLocalUsers;
 
+  /// Check if the estimated pressure for register class \p ClassID exceeds
+  /// the number of available registers for the target. If non-zero,
+  /// OverrideMaxNumRegs is used in place of the target's number of registers.
+  bool exceedsMaxNumRegs(unsigned ClassID, const TargetTransformInfo &TTI,
+                         unsigned OverrideMaxNumRegs = 0) const;
+
   /// Calculate the estimated cost of any spills due to using more registers
   /// than the number available for the target. If non-zero, OverrideMaxNumRegs
   /// is used in place of the target's number of registers.
@@ -51,10 +60,11 @@ struct VPRegisterUsage {
 /// Estimate the register usage for \p Plan and vectorization factors in \p VFs
 /// by calculating the highest number of values that are live at a single
 /// location as a rough estimate. Returns the register usage for each VF in \p
-/// VFs.
-SmallVector<VPRegisterUsage, 8>
-calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
-                              const TargetTransformInfo &TTI);
+/// VFs. Conservative mode also accounts for target-specific result/operand
+/// register-reuse constraints at operation definitions.
+LLVM_ABI_FOR_TEST SmallVector<VPRegisterUsage, 8> calculateRegisterUsageForPlan(
+    VPlan &Plan, ArrayRef<ElementCount> VFs, const TargetTransformInfo &TTI,
+    VPRegisterUsageMode Mode = VPRegisterUsageMode::LiveIntervals);
 
 } // end namespace llvm
 

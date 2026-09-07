@@ -24,6 +24,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/Uniformity.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/InterestingMemoryOperand.h"
@@ -64,7 +65,6 @@ class ProfileSummaryInfo;
 class RecurrenceDescriptor;
 class SCEV;
 class ScalarEvolution;
-class SmallBitVector;
 class StoreInst;
 class SwitchInst;
 class TargetLibraryInfo;
@@ -1032,6 +1032,29 @@ public:
 
   /// Returns the estimated number of registers required to represent \p Ty.
   LLVM_ABI unsigned getRegUsageForType(Type *Ty) const;
+
+  /// Describes an operand when estimating register pressure at the definition
+  /// of a vectorized operation.
+  struct RegisterUsageOperandInfo {
+    /// The type of the vectorized operand.
+    Type *ValueType = nullptr;
+    /// The source type if the operand is defined by a cast, or null otherwise.
+    Type *SourceType = nullptr;
+    /// The IR opcode defining the operand, or zero if it is unknown.
+    unsigned DefOpcode = 0;
+    /// Whether the operand is uniform across all vector lanes and parts.
+    bool IsUniform = false;
+  };
+
+  /// Return the operands of the vectorized operation described by IR
+  /// \p Opcode, \p ResultType, and \p Operands whose register storage may
+  /// be reused for the result. A set bit identifies a reusable operand, an
+  /// empty mask means that the result requires separate register storage from
+  /// all operands, and std::nullopt means that the target does not model the
+  /// operation. A returned mask must contain one bit per operand.
+  LLVM_ABI std::optional<SmallBitVector>
+  getResultRegisterReuseMask(unsigned Opcode, Type *ResultType,
+                             ArrayRef<RegisterUsageOperandInfo> Operands) const;
 
   /// Return true if switches should be turned into lookup tables for the
   /// target.
