@@ -12,7 +12,6 @@ global:
     "llvm::omp::target::plugin::GenericPluginTy::create_interop(int, int, interop_spec_t*)";
     "llvm::omp::target::plugin::GenericPluginTy::data_alloc(int, long, void*, int)";
     "llvm::omp::target::plugin::GenericPluginTy::data_delete(int, void*, int)";
-    "llvm::omp::target::plugin::GenericPluginTy::data_fence(int, __tgt_async_info*)";
     "llvm::omp::target::plugin::GenericPluginTy::data_lock(int, void*, long, void**)";
     "llvm::omp::target::plugin::GenericPluginTy::data_notify_mapped(int, void*, long)";
     "llvm::omp::target::plugin::GenericPluginTy::data_notify_unmapped(int, void*)";

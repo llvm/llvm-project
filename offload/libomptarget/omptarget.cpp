@@ -832,10 +832,10 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 ///
 /// (4) and (1) are both trying to modify the device memory corresponding to
 /// `&p`. So, if we decide that (4) should do an attachment, we also need to
-/// ensure that (4) happens after (1) is complete.
-///
-/// For this purpose, we insert a data_fence before the first
-/// pointer-attachment, (3), to ensure that all pending transfers finish first.
+/// ensure that (4) happens after (1) is complete. Since all supported
+/// backends execute enqueued work on a given queue in submission order, this
+/// is already guaranteed as long as (1) and (4) are submitted to the same
+/// queue, without requiring an explicit fence.
 int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
                          AsyncInfoTy &AsyncInfo) {
   // Report all tracked allocations from both main loop and ATTACH processing
@@ -862,7 +862,6 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
                       << "LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS is true";
 
   int Ret = OFFLOAD_SUCCESS;
-  bool IsFirstPointerAttachment = true;
   for (size_t EntryIdx = 0; EntryIdx < StateInfo.AttachEntries.size();
        ++EntryIdx) {
     const auto &AttachEntry = StateInfo.AttachEntries[EntryIdx];
@@ -950,18 +949,6 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
       continue;
     TargetPointerResultTy &PtrTPR = *PtrTPROpt;
     void **TgtPtrBase = reinterpret_cast<void **>(PtrTPR.TargetPointer);
-
-    // Insert a data-fence before the first pointer-attachment.
-    if (IsFirstPointerAttachment) {
-      IsFirstPointerAttachment = false;
-      ODBG(ODT_Mapping)
-          << "Inserting a data fence before the first pointer attachment.";
-      Ret = Device.dataFence(AsyncInfo);
-      if (Ret != OFFLOAD_SUCCESS) {
-        REPORT() << "Failed to insert data fence.";
-        return OFFLOAD_FAIL;
-      }
-    }
 
     // Do the pointer-attachment, i.e. update the device pointer to point to
     // device pointee.
