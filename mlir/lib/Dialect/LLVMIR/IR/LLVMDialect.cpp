@@ -483,9 +483,9 @@ LogicalResult AllocaOp::canonicalize(AllocaOp op, PatternRewriter &rewriter) {
       LLVMArrayType::get(op.getElemType(), numElements.getZExtValue());
   Value one = ConstantOp::create(rewriter, op.getLoc(), rewriter.getI32Type(),
                                  /*value=*/1);
-  auto newAlloca = AllocaOp::create(
-      rewriter, op.getLoc(), op.getType(), one, op.getAlignmentAttr(),
-      arrayType, op.getInalloca());
+  auto newAlloca =
+      AllocaOp::create(rewriter, op.getLoc(), op.getType(), one,
+                       op.getAlignmentAttr(), arrayType, op.getInalloca());
   newAlloca->setDiscardableAttrs(op->getDiscardableAttrDictionary());
   rewriter.replaceOp(op, newAlloca);
   return success();
