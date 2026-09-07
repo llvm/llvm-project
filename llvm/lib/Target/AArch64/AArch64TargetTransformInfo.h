@@ -356,6 +356,9 @@ public:
         DataType->getPrimitiveSizeInBits() < 128)
       return false;
 
+    if (!isa<VectorType>(DataType))
+      return isElementTypeLegalForScalableVector(DataType);
+
     // For types where Promotion is possible to i32/i64 types and SME2p2/SVE2p2
     // is not available, ensure the promoted scalar type is legal.
     if (is_contained({8u, 16u}, DataType->getScalarSizeInBits()) &&
