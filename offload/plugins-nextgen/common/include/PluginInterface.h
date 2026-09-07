@@ -1755,9 +1755,6 @@ public:
   /// Returns if the plugin can support automatic copy.
   int32_t use_auto_zero_copy(int32_t DeviceId);
 
-  /// Returns if the associated storage is accessible for a given device.
-  int32_t is_accessible_ptr(int32_t DeviceId, const void *Ptr, size_t Size);
-
   /// Look up a global symbol in the given binary.
   int32_t get_global(__tgt_device_binary Binary, uint64_t Size,
                      const char *Name, void **DevicePtr);
