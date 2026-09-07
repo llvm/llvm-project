@@ -394,10 +394,30 @@ class ReplaceableMetadataImpl {
 public:
   using OwnerTy = MetadataTracking::OwnerTy;
 
+  struct UseEntry {
+    void *Ref = nullptr;
+    OwnerTy Owner = nullptr;
+  };
+
 private:
   LLVMContext &Context;
-  uint64_t NextIndex = 0;
-  SmallDenseMap<void *, std::pair<OwnerTy, uint64_t>, 4> UseMap;
+
+  // Stores uses in insertion order, with dropped uses tombstoned (Ref =
+  // nullptr) to avoid shifting elements. Lookups use a two-tier hybrid
+  // strategy:
+  // - Small Mode (<= 4 uses): Scans linearly without auxiliary data structures.
+  // - Large Mode (>= 5 uses): Registers reverse lookups (Ref -> index) in
+  //   LLVMContextImpl::MetadataUseMap to maintain O(1) dropRef and moveRef.
+  SmallVector<UseEntry, 4> UseMap;
+
+  // The number of tombstones in UseMap.
+  unsigned NumDead = 0;
+
+  // True if we have switched to large mode. Once switched, we stay in
+  // large mode until UseMap becomes empty.
+  bool IsLarge = false;
+
+  template <bool IsLargeMode> void compact();
 
 public:
   ReplaceableMetadataImpl(LLVMContext &Context) : Context(Context) {}
@@ -426,12 +446,15 @@ public:
   /// is resolved.
   LLVM_ABI void resolveAllUses(bool ResolveUsers = true);
 
-  unsigned getNumUses() const { return UseMap.size(); }
+  unsigned getNumUses() const { return UseMap.size() - NumDead; }
 
 private:
+  SmallVector<UseEntry, 8> getLiveUses() const;
+  bool hasRef(void *Ref) const;
   void addRef(void *Ref, OwnerTy Owner);
   void dropRef(void *Ref);
   void moveRef(void *Ref, void *New, const Metadata &MD);
+  void clear();
 
   /// Lazily construct RAUW support on MD.
   ///

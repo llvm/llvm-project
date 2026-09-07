@@ -36,7 +36,9 @@ LLVMContextImpl::LLVMContextImpl(LLVMContext &C)
       PPC_FP128Ty(C, Type::PPC_FP128TyID), X86_AMXTy(C, Type::X86_AMXTyID),
       Int1Ty(C, 1), Int8Ty(C, 8), Int16Ty(C, 16), Int32Ty(C, 32),
       Int64Ty(C, 64), Int128Ty(C, 128), Byte1Ty(C, 1), Byte8Ty(C, 8),
-      Byte16Ty(C, 16), Byte32Ty(C, 32), Byte64Ty(C, 64), Byte128Ty(C, 128) {}
+      Byte16Ty(C, 16), Byte32Ty(C, 32), Byte64Ty(C, 64), Byte128Ty(C, 128) {
+  MetadataUseMap.emplace();
+}
 
 void LLVMContextImpl::getAllMetadataNodes(
     SmallVectorImpl<MDNode *> &Nodes) const {
@@ -67,6 +69,10 @@ LLVMContextImpl::~LLVMContextImpl() {
   assert((Metadatas.empty() || MetadataRecycleSize + 1 == Metadatas.size()) &&
          "Values with metadata have been leaked");
 #endif
+
+  // Reset MetadataUseMap in one batch; subsequent dropRef calls will skip map
+  // lookups.
+  MetadataUseMap.reset();
 
   // Drop references for MDNodes.  Do this before Values get deleted to avoid
   // unnecessary RAUW when nodes are still unresolved.
