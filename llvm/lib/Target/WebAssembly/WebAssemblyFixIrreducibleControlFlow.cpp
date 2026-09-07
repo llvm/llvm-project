@@ -330,21 +330,6 @@ static void makeFallthroughExplicitIfNeeded(MachineBasicBlock *MBB,
       .addMBB(Fallthrough);
 }
 
-static void redirectSuccessor(MachineBasicBlock *Pred,
-                              MachineBasicBlock *OldSucc,
-                              MachineBasicBlock *NewSucc) {
-  // Explicit MBB operands, if any.
-  for (MachineInstr &Term : Pred->terminators()) {
-    for (MachineOperand &MO : Term.explicit_uses()) {
-      if (MO.isMBB() && MO.getMBB() == OldSucc)
-        MO.setMBB(NewSucc);
-    }
-  }
-
-  // CFG successor list.
-  Pred->replaceSuccessor(OldSucc, NewSucc);
-}
-
 /// Fix irreducible SCCs whose entries include an EH pad without routing
 /// exceptional edges through normal dispatch blocks.
 ///
@@ -476,7 +461,7 @@ static bool cloneEHPadEntriesForBackedges(const BlockSet &Entries,
 
       // (5) Keep the exceptional successor direct-to-EHPad. We change the
       // target from the original EH pad to its clone, not to a routing block.
-      redirectSuccessor(Pred, EHPadEntry, Clone);
+      Pred->ReplaceUsesOfBlockWith(EHPadEntry, Clone);
 
       LLVM_DEBUG({
         dbgs() << "  created cloned EH pad ";
