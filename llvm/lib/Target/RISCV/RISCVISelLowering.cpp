@@ -5363,8 +5363,6 @@ static SDValue getSingleShuffleSrc(MVT VT, SDValue V1, SDValue V2) {
 static unsigned getLMULOctuple(MVT ContainerVT) {
   assert(ContainerVT.isScalableVector() && "Expected scalable vector type");
   unsigned MinSize = ContainerVT.getSizeInBits().getKnownMinValue();
-  if (ContainerVT.getVectorElementType() == MVT::i1)
-    MinSize *= 8;
   assert(isPowerOf2_32(MinSize) && MinSize >= 8 && MinSize <= 512 &&
          "Unexpected LMUL");
   return MinSize / (RISCV::RVVBitsPerBlock / 8);
