@@ -24,7 +24,26 @@ __declspec(noalias) void noalias_def(int *x) {}
 // LLVM: define dso_local void @noalias_def({{.*}}) [[NA_DEF:#[0-9]+]]
 // OGCG: define dso_local void @noalias_def({{.*}}) [[NA_DEF:#[0-9]+]]
 
-// LLVM-DAG: attributes [[NA]] = { nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
-// OGCG-DAG: attributes [[NA]] = { nounwind memory(argmem: readwrite, inaccessiblemem: readwrite)
-// LLVM-DAG: attributes [[NA_DEF]] = { {{.*}}nounwind{{.*}}memory(argmem: readwrite, inaccessiblemem: readwrite)
-// OGCG-DAG: attributes [[NA_DEF]] = { {{.*}}nounwind{{.*}}memory(argmem: readwrite, inaccessiblemem: readwrite)
+// Def attribute groups are emitted before the call-site group. Reject
+// willreturn anywhere on those lines; NoAliasAttr must not add it.
+// LLVM: attributes [[NA_DEF]] = {
+// LLVM-NOT: willreturn
+// LLVM-SAME: nounwind
+// LLVM-NOT: willreturn
+// LLVM-SAME: memory(argmem: readwrite, inaccessiblemem: readwrite)
+// LLVM-NOT: willreturn
+// LLVM-SAME: }
+// LLVM: attributes [[NA]] = {
+// LLVM-NOT: willreturn
+// LLVM-SAME: nounwind memory(argmem: readwrite, inaccessiblemem: readwrite) }
+
+// OGCG: attributes [[NA_DEF]] = {
+// OGCG-NOT: willreturn
+// OGCG-SAME: nounwind
+// OGCG-NOT: willreturn
+// OGCG-SAME: memory(argmem: readwrite, inaccessiblemem: readwrite)
+// OGCG-NOT: willreturn
+// OGCG-SAME: }
+// OGCG: attributes [[NA]] = {
+// OGCG-NOT: willreturn
+// OGCG-SAME: nounwind memory(argmem: readwrite, inaccessiblemem: readwrite) }
