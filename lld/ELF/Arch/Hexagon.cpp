@@ -450,7 +450,7 @@ void Hexagon::relocate(uint8_t *loc, const Relocation &rel,
   case R_HEX_32:
   case R_HEX_32_PCREL:
   case R_HEX_DTPREL_32:
-    or32le(loc, val);
+    write32le(loc, val);
     break;
   case R_HEX_32_6_X:
   case R_HEX_GD_GOT_32_6_X:

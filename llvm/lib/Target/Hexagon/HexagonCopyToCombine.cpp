@@ -602,6 +602,19 @@ void HexagonCopyToCombine::combine(MachineInstr &I1, MachineInstr &I2,
                isGreaterThanNBitTFRI<16>(I1) && isGreaterThanNBitTFRI<16>(I2);
 
   MachineBasicBlock::iterator InsertPt(DoInsertAtI1 ? I1 : I2);
+
+  // The emitCombine* helpers below take their DebugLoc from InsertPt, i.e. from
+  // only one of the two instructions being combined. If that instruction has no
+  // DebugLoc (e.g. a materialized constant) but the other one does, the source
+  // location of the surviving instruction would be lost. This matters for
+  // inlined functions: a dropped DebugLoc can remove the sole instruction that
+  // carries an inlined scope, causing its DW_TAG_inlined_subroutine (and the
+  // DW_AT_inline abstract instance) to disappear from the debug info. Merge the
+  // two DebugLocs, preferring a non-empty one, and apply it to the new combine.
+  DebugLoc CombinedDL = I1.getDebugLoc();
+  if (!CombinedDL)
+    CombinedDL = I2.getDebugLoc();
+
   // Emit combine.
   if (IsHiReg && IsLoReg)
     emitCombineRR(InsertPt, DoubleRegDest, HiOperand, LoOperand);
@@ -613,6 +626,15 @@ void HexagonCopyToCombine::combine(MachineInstr &I1, MachineInstr &I2,
     emitConst64(InsertPt, DoubleRegDest, HiOperand, LoOperand);
   else
     emitCombineII(InsertPt, DoubleRegDest, HiOperand, LoOperand);
+
+  // The new combine instruction was inserted immediately before InsertPt.
+  // If it ended up without a DebugLoc, restore the merged one so the source
+  // location (and any inlined scope) of the combined instructions is preserved.
+  if (CombinedDL) {
+    MachineBasicBlock::iterator NewMI = std::prev(InsertPt);
+    if (!NewMI->getDebugLoc())
+      NewMI->setDebugLoc(CombinedDL);
+  }
 
   // Move debug instructions along with I1 if it's being
   // moved towards I2.

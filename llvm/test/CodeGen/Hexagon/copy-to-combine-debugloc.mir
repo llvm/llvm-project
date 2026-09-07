@@ -1,0 +1,122 @@
+# RUN: llc -mtriple=hexagon -run-pass=hexagon-copy-combine %s -o - | FileCheck %s
+
+## The Hexagon Copy-To-Combine pass fuses two register-transfer instructions
+## (here `A2_tfrsi 100` and `A2_tfrsi @g`) into a single `A4_combineii`. The new
+## instruction must keep a source location from the combined instructions. If it
+## does not, the DebugLoc carrying an inlined scope can be dropped, which in turn
+## removes the corresponding DW_TAG_inlined_subroutine (and the DW_AT_inline
+## abstract instance) from the emitted debug info for the inlined callee.
+##
+## `renamable $r3 = A2_tfrsi 100` has no DebugLoc while
+## `renamable $r2 = A2_tfrsi @g` carries the inlined location `!28`. The combine
+## must inherit `!28` rather than an empty location.
+
+# In MIR output the metadata table is printed before the function bodies, so
+# capture the inlined DILocation id first, then verify the combine in main uses
+# it. leaf's own combine keeps a (non-inlined) location as well.
+# CHECK: [[INLDL:![0-9]+]] = !DILocation(line: 3, column: 21, scope: !{{[0-9]+}}, inlinedAt: !{{[0-9]+}})
+
+# CHECK-LABEL: name: leaf
+# CHECK: A4_combineii 100, @g, debug-location !{{[0-9]+}}
+
+# CHECK-LABEL: name: main
+## The combine formed inside main must retain the inlined DebugLoc, not an
+## empty one taken from the constant `A2_tfrsi 100`.
+# CHECK: A4_combineii 100, @g, debug-location [[INLDL]]{{$}}
+
+--- |
+  target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
+  target triple = "hexagon"
+
+  @g = common dso_local global i32 0, align 4, !dbg !0
+
+  define dso_local void @leaf() local_unnamed_addr #0 !dbg !16 {
+  entry:
+    %0 = load volatile i32, ptr @g, align 4, !dbg !19, !tbaa !20
+    %add = add nsw i32 %0, 100, !dbg !21
+    store volatile i32 %add, ptr @g, align 4, !dbg !22, !tbaa !20
+    ret void, !dbg !23
+  }
+
+  define dso_local noundef i32 @main() local_unnamed_addr #1 !dbg !24 {
+  entry:
+    tail call void @barrier() #3, !dbg !27
+    %0 = load volatile i32, ptr @g, align 4, !dbg !28, !tbaa !20
+    %add.i = add nsw i32 %0, 100, !dbg !31
+    store volatile i32 %add.i, ptr @g, align 4, !dbg !32, !tbaa !20
+    ret i32 0, !dbg !33
+  }
+
+  declare !dbg !34 dso_local void @barrier() local_unnamed_addr #2
+
+  attributes #0 = { nounwind "target-cpu"="hexagonv68" }
+  attributes #1 = { nounwind "target-cpu"="hexagonv68" }
+  attributes #2 = { "target-cpu"="hexagonv68" }
+  attributes #3 = { nounwind }
+
+  !llvm.dbg.cu = !{!2}
+  !llvm.module.flags = !{!7, !8, !9}
+  !llvm.ident = !{!10}
+
+  !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
+  !1 = distinct !DIGlobalVariable(name: "g", scope: !2, file: !3, line: 1, type: !5, isLocal: false, isDefinition: true)
+  !2 = distinct !DICompileUnit(language: DW_LANG_C11, file: !3, producer: "Clang 23.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, globals: !4, splitDebugInlining: false, debugInfoForProfiling: true, nameTableKind: None)
+  !3 = !DIFile(filename: "repro.c", directory: "/tmp")
+  !4 = !{!0}
+  !5 = !DIDerivedType(tag: DW_TAG_volatile_type, baseType: !6)
+  !6 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !7 = !{i32 7, !"Dwarf Version", i32 4}
+  !8 = !{i32 2, !"Debug Info Version", i32 3}
+  !9 = !{i32 7, !"frame-pointer", i32 2}
+  !10 = !{!"Clang 23.0"}
+  !13 = !{!"int", !14, i64 0}
+  !14 = !{!"omnipotent char", !15, i64 0}
+  !15 = !{!"Simple C/C++ TBAA"}
+  !16 = distinct !DISubprogram(name: "leaf", scope: !3, file: !3, line: 3, type: !17, scopeLine: 3, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2)
+  !17 = !DISubroutineType(types: !18)
+  !18 = !{null}
+  !19 = !DILocation(line: 3, column: 21, scope: !16)
+  !20 = !{!13, !13, i64 0}
+  !21 = !DILocation(line: 3, column: 21, scope: !16)
+  !22 = !DILocation(line: 3, column: 21, scope: !16)
+  !23 = !DILocation(line: 3, column: 29, scope: !16)
+  !24 = distinct !DISubprogram(name: "main", scope: !3, file: !3, line: 4, type: !25, scopeLine: 4, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2)
+  !25 = !DISubroutineType(types: !26)
+  !26 = !{!6}
+  !27 = !DILocation(line: 4, column: 18, scope: !24)
+  !28 = !DILocation(line: 3, column: 21, scope: !16, inlinedAt: !29)
+  !29 = distinct !DILocation(line: 4, column: 29, scope: !30)
+  !30 = !DILexicalBlockFile(scope: !24, file: !3, discriminator: 2)
+  !31 = !DILocation(line: 3, column: 21, scope: !16, inlinedAt: !29)
+  !32 = !DILocation(line: 3, column: 21, scope: !16, inlinedAt: !29)
+  !33 = !DILocation(line: 4, column: 37, scope: !24)
+  !34 = !DISubprogram(name: "barrier", scope: !3, file: !3, line: 2, type: !17, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
+...
+---
+name:            leaf
+alignment:       16
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    renamable $r3 = A2_tfrsi 100
+    renamable $r2 = A2_tfrsi @g, debug-location !19
+    L4_add_memopw_io killed renamable $r2, 0, killed renamable $r3, debug-location !22 :: (volatile store (s32) into @g, !tbaa !20), (volatile dereferenceable load (s32) from @g, !tbaa !20)
+    PS_jmpret $r31, implicit-def dead $pc, debug-location !23
+...
+---
+name:            main
+alignment:       16
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack:    true
+  hasCalls:        true
+body:             |
+  bb.0.entry:
+    $r29 = frame-setup S2_allocframe $r29, 0, implicit-def $r30, implicit $framekey, implicit $framelimit, implicit $r30, implicit $r31, debug-location !27 :: (store (s32) into stack)
+    J2_call @barrier, hexagoncsr, implicit-def dead $pc, implicit-def dead $r31, implicit $r29, implicit-def $r29, debug-location !27
+    $r0 = A2_tfrsi 0, debug-location !33
+    renamable $r3 = A2_tfrsi 100
+    renamable $r2 = A2_tfrsi @g, debug-location !28
+    L4_add_memopw_io killed renamable $r2, 0, killed renamable $r3, debug-location !32 :: (volatile store (s32) into @g, !tbaa !20), (volatile dereferenceable load (s32) from @g, !tbaa !20)
+    $d15 = L4_return $r30, implicit-def $pc, implicit-def $r29, implicit $framekey, implicit-def dead $pc, implicit $r0, debug-location !33
+...
