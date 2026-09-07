@@ -686,6 +686,9 @@ features cannot lower the translation-unit ABI level;
   `this` via a member access through a dependent base class.
 - Fixed `DiagnoseUnguardedAvailability::TraverseIfStmt` dereferencing a nullptr
   on `if consteval {}`. (#GH220004)
+- Fixed a non-deterministic crash when a concept specialization is
+  deserialized from a module or precompiled header and its own template
+  arguments are read reentrantly. (#GH191361)
 
 ### OpenACC Specific Changes
 
