@@ -8,6 +8,7 @@
 
 #include "src/sched/getcpu.h"
 
+#include "src/__support/OSUtil/linux/vdso.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
@@ -18,7 +19,10 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, getcpu, (unsigned int *cpu, unsigned int *node)) {
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_getcpu, cpu, node, nullptr);
+  vdso::TypedSymbol<vdso::VDSOSym::GetCpu> vdso_getcpu;
+  int ret = vdso_getcpu ? vdso_getcpu(cpu, node, nullptr)
+                        : LIBC_NAMESPACE::syscall_impl<int>(SYS_getcpu, cpu,
+                                                            node, nullptr);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;
