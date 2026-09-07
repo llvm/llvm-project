@@ -121,8 +121,8 @@ enum LiveRegs : uint8_t {
 /// Holds the virtual registers live physical registers have been saved to.
 struct PhysRegSave {
   LiveRegs PhysLiveRegs;
-  Register StatusFlags = AArch64::NoRegister;
-  Register X0Save = AArch64::NoRegister;
+  Register StatusFlags = Register();
+  Register X0Save = Register();
 };
 
 /// Contains the needed ZA state (and live registers) at an instruction. That is
@@ -168,12 +168,12 @@ public:
 
   /// Get or create agnostic ZA buffer pointer in \p MF.
   Register getAgnosticZABufferPtr(MachineFunction &MF) {
-    if (AgnosticZABufferPtr != AArch64::NoRegister)
+    if (AgnosticZABufferPtr.isValid())
       return AgnosticZABufferPtr;
     Register BufferPtr =
         MF.getInfo<AArch64FunctionInfo>()->getEarlyAllocSMESaveBuffer();
     AgnosticZABufferPtr =
-        BufferPtr != AArch64::NoRegister
+        BufferPtr.isValid()
             ? BufferPtr
             : MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
     return AgnosticZABufferPtr;
@@ -192,13 +192,13 @@ public:
   bool needsSaveBuffer() const {
     assert(!(TPIDR2BlockFI && AgnosticZABufferPtr) &&
            "Cannot have both a TPIDR2 block and agnostic ZA buffer");
-    return TPIDR2BlockFI || AgnosticZABufferPtr != AArch64::NoRegister;
+    return TPIDR2BlockFI || AgnosticZABufferPtr.isValid();
   }
 
 private:
   std::optional<int> ZT0SaveFI;
   std::optional<int> TPIDR2BlockFI;
-  Register AgnosticZABufferPtr = AArch64::NoRegister;
+  Register AgnosticZABufferPtr = Register();
 };
 
 StringRef getZAStateString(ZAState State) {
@@ -785,13 +785,13 @@ void MachineSMEABI::restorePhyRegSave(const PhysRegSave &RegSave,
                                       MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator MBBI,
                                       DebugLoc DL) {
-  if (RegSave.StatusFlags != AArch64::NoRegister)
+  if (RegSave.StatusFlags.isValid())
     BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSR))
         .addImm(AArch64SysReg::NZCV)
         .addReg(RegSave.StatusFlags)
         .addReg(AArch64::NZCV, RegState::ImplicitDefine);
 
-  if (RegSave.X0Save != AArch64::NoRegister)
+  if (RegSave.X0Save.isValid())
     BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::COPY),
             RegSave.PhysLiveRegs & LiveRegs::W0_HI ? AArch64::X0 : AArch64::W0)
         .addReg(RegSave.X0Save);
@@ -878,7 +878,7 @@ void MachineSMEABI::emitAllocateLazySaveBuffer(
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::RDSVLI_XI), SVL).addImm(1);
 
   // 1. Allocate the lazy save buffer.
-  if (Buffer == AArch64::NoRegister) {
+  if (!Buffer.isValid()) {
     // TODO: On Windows, we allocate the lazy save buffer in SelectionDAG (so
     // Buffer != AArch64::NoRegister). This is done to reuse the existing
     // expansions (which can insert stack checks). This works, but it means we
