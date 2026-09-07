@@ -403,7 +403,7 @@ bool X86ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
             TII->get(Uses64BitFramePtr ? X86::MOV64rr : X86::MOV32rr), StackPtr)
         .addReg(DestAddr.getReg());
     if (STI->hasSHSTK()) {
-      unsigned PopOpcode = Uses64BitFramePtr ? X86::POP64r : X86::POP32r;
+      unsigned PopOpcode = STI->is64Bit() ? X86::POP64r : X86::POP32r;
       unsigned JumpOpcode = X86::JMP32r;
       if (Uses64BitFramePtr)
         JumpOpcode = STI->isTargetWin64() || STI->isTargetUEFI64()
