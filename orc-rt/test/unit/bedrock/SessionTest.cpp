@@ -19,6 +19,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
 
 #include <chrono>

@@ -11037,8 +11037,12 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
       continue;
     }
     LRAvailableEverywhere &= LRU.available(AArch64::LR);
+    // RangeBegin may point at a debug instruction because the mapper ignores
+    // debug instructions wherever they appear. Only count non-debug
+    // instructions so debug info cannot make a short range outlinable.
     RangeBegin = MI.getIterator();
-    ++RangeLen;
+    if (!MI.isDebugInstr())
+      ++RangeLen;
   }
   // Above loop misses the last (or only) range. If we are still safe, then
   // let's save the range.

@@ -31,7 +31,7 @@ entry:
 ; CHECK: br label %if.then, !dbg ![[DBG3:[0-9]+]]
 
 ; CHECK: ![[DBG1]] = !DILocation(line: 10, column: 7,
-; CHECK: ![[DBG2]] = !DILocation(line: 10, column: 7,
+; CHECK: ![[DBG2]] = distinct !DILocation(line: 10, column: 7,
 ; CHECK: ![[DBG3]] = !DILocation(line: 10, column: 7,
 
 
