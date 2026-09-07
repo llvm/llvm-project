@@ -966,6 +966,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
          /*PrivateSegmentSize=*/static_cast<uint32_t>(RU.PrivateSegmentSize),
          /*Occupancy=*/Occupancy,
          /*UsesFullSIMDMode=*/AMDGPU::isFullSIMDMode(STM),
+         /*UsesWave32=*/STM.getWavefrontSize() == 32,
          /*UsesVCC=*/RU.UsesVCC,
          /*UsesFlatScratch=*/RU.UsesFlatScratch,
          /*HasDynStack=*/RU.HasDynamicallySizedStack,

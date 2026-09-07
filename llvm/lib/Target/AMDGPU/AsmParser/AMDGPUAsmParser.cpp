@@ -6985,6 +6985,7 @@ bool AMDGPUAsmParser::ParseDirectiveAMDGPUInfo() {
       FI.HasDynStack = !!(Flags & AMDGPU::FuncInfoFlags::FUNC_HAS_DYN_STACK);
       FI.UsesFullSIMDMode =
           !!(Flags & AMDGPU::FuncInfoFlags::FUNC_FULL_SIMD_MODE);
+      FI.UsesWave32 = !!(Flags & AMDGPU::FuncInfoFlags::FUNC_WAVE32);
       HasScalarAttrs = true;
     } else if (Dir == "num_sgpr") {
       int64_t Val;
