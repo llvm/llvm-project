@@ -98,5 +98,7 @@ DenseMap<const InputSectionBase *, int> elf::runBalancedPartitioning(
   return orderer.computeOrder(profilePath, compressionSortSpecs,
                               forFunctionCompression, forDataCompression,
                               compressionSortStartupFunctions, verbose,
-                              sections, rootSymbolToSectionIdxs);
+                              sections, rootSymbolToSectionIdxs,
+                              /*initialStartupSectionIdxs=*/{},
+                              /*prefixStartupSectionIdxs=*/{});
 }
