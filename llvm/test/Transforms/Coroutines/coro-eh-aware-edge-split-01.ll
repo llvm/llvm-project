@@ -86,7 +86,7 @@ declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 ; CHECK-NEXT:    [[COND_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 25
 ; CHECK-NEXT:    store i1 [[COND]], ptr [[COND_SPILL_ADDR]], align 1
 ; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 24
-; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret void
 ;
 ;
