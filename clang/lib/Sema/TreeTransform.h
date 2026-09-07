@@ -16183,7 +16183,12 @@ TreeTransform<Derived>::TransformCXXTemporaryObjectExpr(
       !ArgumentChanged) {
     // FIXME: Instantiation-specific
     SemaRef.MarkFunctionReferenced(E->getBeginLoc(), Constructor);
-    return SemaRef.MaybeBindToTemporary(E);
+    // The immediate-invocation wrapper was stripped by TransformConstantExpr;
+    // put it back before binding the temporary, as SemaInit does.
+    ExprResult Res = SemaRef.CheckForImmediateInvocation(E, Constructor);
+    if (Res.isInvalid())
+      return ExprError();
+    return SemaRef.MaybeBindToTemporary(Res.get());
   }
 
   SourceLocation LParenLoc = T->getTypeLoc().getEndLoc();

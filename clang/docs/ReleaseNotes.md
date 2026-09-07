@@ -645,6 +645,9 @@ features cannot lower the translation-unit ABI level;
   (#GH214128)
 - Fixed a crash when a coroutine keyword appeared inside a mem-initializer on a
   function that is not a constructor. (#GH194298)
+- Fixed a crash (and, without assertions, a call to a consteval function being
+  emitted) when a temporary created with a `consteval` constructor, such as
+  `S{1}`, was instantiated from a function template. (#GH219272)
 
 #### Bug Fixes to AST Handling
 
