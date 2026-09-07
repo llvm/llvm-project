@@ -7,7 +7,6 @@ global:
   extern "C++" {
     error::OffloadError::ID;
     "error::OffloadErrCategory()";
-    "llvm::omp::target::RPCServerTy::registerCallback(unsigned int (*)(void*, unsigned int))";
     "llvm::omp::target::plugin::GenericPluginTy::async_barrier(omp_interop_val_t*)";
     "llvm::omp::target::plugin::GenericPluginTy::create_interop(int, int, interop_spec_t*)";
     "llvm::omp::target::plugin::GenericPluginTy::data_alloc(int, long, void*, int)";

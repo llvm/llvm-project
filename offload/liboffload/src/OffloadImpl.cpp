@@ -465,6 +465,10 @@ Error olGetPlatformInfoSize_impl(ol_platform_handle_t Platform,
 
 Error olPlatformRegisterRPCCallback_impl(ol_platform_handle_t Platform,
                                          ol_platform_rpc_cb_t Callback) {
+  if (!Platform->Plugin || !Platform->Plugin->is_initialized() ||
+      Platform->Plugin->getNumDevices() == 0)
+    return Error::success();
+
   Platform->Plugin->getRPCServer().registerCallback(Callback);
   return Error::success();
 }
