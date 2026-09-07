@@ -614,6 +614,11 @@ features cannot lower the translation-unit ABI level;
   in a token that was lexed and cached before the first occurrence was parsed.
   (#GH214128)
 
+- Fixed an assertion failure when explicitly instantiating a nested member
+  through a nested-name-specifier whose template argument was ill-formed. The
+  resulting error-recovery placeholder was being treated as a genuinely
+  dependent name instead of an already-diagnosed error. (#GH220525)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
