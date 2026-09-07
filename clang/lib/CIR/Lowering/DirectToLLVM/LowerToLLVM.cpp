@@ -2373,11 +2373,9 @@ cir::direct::CIRToLLVMVecMaskedLoadOpLowering::matchAndRewrite(
   unsigned alignment =
       (unsigned)opAlign.value_or(dataLayout.getTypeABIAlignment(llvmResTy));
 
-  mlir::IntegerAttr alignAttr = rewriter.getI32IntegerAttr(alignment);
-
   auto newLoad = mlir::LLVM::MaskedLoadOp::create(
       rewriter, op.getLoc(), llvmResTy, adaptor.getAddr(), adaptor.getMask(),
-      adaptor.getPassThru(), alignAttr);
+      adaptor.getPassThru(), alignment);
 
   rewriter.replaceOp(op, newLoad.getResult());
   return mlir::success();
