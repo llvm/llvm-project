@@ -688,3 +688,27 @@ TEST(Reductions, InfSums) {
   auto t3{RTNAME(SumReal4)(*infMinusInf, __FILE__, __LINE__)};
   EXPECT_NE(t3, t3) << t3;
 }
+
+TEST(Reductions, NegZeroProduct) {
+  auto intVector{MakeArray<TypeCategory::Integer, 4>(
+      std::vector<int>{2}, std::vector<std::int32_t>{0, -1})};
+  int resultI4{RTNAME(ProductInteger4)(*intVector, __FILE__, __LINE__)};
+  EXPECT_EQ(resultI4, 0);
+  EXPECT_NE(resultI4, 1 << 31); // not -0 but -2^31 in two's complement
+  auto realVector{MakeArray<TypeCategory::Real, 4>(
+      std::vector<int>{2}, std::vector<float>{0.0f, -1.0f})};
+  float resultR4{RTNAME(ProductReal4)(*realVector, __FILE__, __LINE__)};
+  EXPECT_EQ(resultR4, 0.0f);
+  EXPECT_TRUE(std::signbit(resultR4));
+  auto complexVector1{MakeArray<TypeCategory::Complex, 4>(std::vector<int>{2},
+      std::vector<std::complex<float>>{{0.0f, 1.0f}, {-1.0f, 0.0f}})};
+  std::complex<float> resultC4;
+  RTNAME(CppProductComplex4)(resultC4, *complexVector1, __FILE__, __LINE__);
+  EXPECT_EQ(resultC4.real(), 0.0f);
+  EXPECT_TRUE(std::signbit(resultC4.real()));
+  auto complexVector2{MakeArray<TypeCategory::Complex, 4>(std::vector<int>{2},
+      std::vector<std::complex<float>>{{0.0f, 0.0f}, {-1.0f, -1.0f}})};
+  RTNAME(CppProductComplex4)(resultC4, *complexVector2, __FILE__, __LINE__);
+  EXPECT_EQ(resultC4.imag(), 0.0f);
+  EXPECT_TRUE(std::signbit(resultC4.imag()));
+}
