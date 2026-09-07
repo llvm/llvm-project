@@ -18,25 +18,9 @@ define amdgpu_kernel void @lds_promoted_alloca_select_invalid_pointer_operand() 
 define amdgpu_kernel void @lds_promote_alloca_select_two_derived_pointers(i32 %a, i32 %b) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @lds_promote_alloca_select_two_derived_pointers(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call noalias nonnull dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP1]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[TMP2]], align 4, !invariant.load [[META0:![0-9]+]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP1]], i64 2
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(4) [[TMP4]], align 4, !range [[RNG1:![0-9]+]], !invariant.load [[META0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP3]], 16
-; CHECK-NEXT:    [[TMP7:%.*]] = call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NEXT:    [[TMP8:%.*]] = call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.y()
-; CHECK-NEXT:    [[TMP9:%.*]] = call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.z()
-; CHECK-NEXT:    [[TMP10:%.*]] = mul nuw nsw i32 [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[TMP10]], [[TMP7]]
-; CHECK-NEXT:    [[TMP12:%.*]] = mul nuw nsw i32 [[TMP8]], [[TMP5]]
-; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP13]], [[TMP9]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [256 x [16 x i32]], ptr addrspace(3) @lds_promote_alloca_select_two_derived_pointers.alloca, i32 0, i32 [[TMP14]]
-; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(3) [[TMP15]], i32 0, i32 [[A]]
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(3) [[TMP15]], i32 0, i32 [[B]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 poison, ptr addrspace(3) [[PTR0]], ptr addrspace(3) [[PTR1]]
-; CHECK-NEXT:    store i32 0, ptr addrspace(3) [[SELECT]], align 4
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <16 x i32> poison
+; CHECK-NEXT:    [[PROMOTEALLOCA_IDX:%.*]] = select i1 poison, i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i32> [[ALLOCA]], i32 0, i32 [[PROMOTEALLOCA_IDX]]
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca [16 x i32], align 4, addrspace(5)
@@ -73,25 +57,7 @@ define amdgpu_kernel void @lds_promote_alloca_select_two_allocas(i32 %a, i32 %b)
 define amdgpu_kernel void @lds_promote_alloca_select_two_derived_constant_pointers() #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @lds_promote_alloca_select_two_derived_constant_pointers(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call noalias nonnull dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP1]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(4) [[TMP2]], align 4, !invariant.load [[META0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP1]], i64 2
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr addrspace(4) [[TMP4]], align 4, !range [[RNG1]], !invariant.load [[META0]]
-; CHECK-NEXT:    [[TMP6:%.*]] = lshr i32 [[TMP3]], 16
-; CHECK-NEXT:    [[TMP7:%.*]] = call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NEXT:    [[TMP8:%.*]] = call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.y()
-; CHECK-NEXT:    [[TMP9:%.*]] = call range(i32 0, 256) i32 @llvm.amdgcn.workitem.id.z()
-; CHECK-NEXT:    [[TMP10:%.*]] = mul nuw nsw i32 [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP11:%.*]] = mul i32 [[TMP10]], [[TMP7]]
-; CHECK-NEXT:    [[TMP12:%.*]] = mul nuw nsw i32 [[TMP8]], [[TMP5]]
-; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP11]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP13]], [[TMP9]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [256 x [16 x i32]], ptr addrspace(3) @lds_promote_alloca_select_two_derived_constant_pointers.alloca, i32 0, i32 [[TMP14]]
-; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(3) [[TMP15]], i32 0, i32 1
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(3) [[TMP15]], i32 0, i32 3
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 poison, ptr addrspace(3) [[PTR0]], ptr addrspace(3) [[PTR1]]
-; CHECK-NEXT:    store i32 0, ptr addrspace(3) [[SELECT]], align 4
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <16 x i32> poison
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca [16 x i32], align 4, addrspace(5)
@@ -102,19 +68,13 @@ define amdgpu_kernel void @lds_promote_alloca_select_two_derived_constant_pointe
   ret void
 }
 
-; FIXME: Can be promoted, but we'd have to recursively show that the select
-; operands all point to the same alloca.
-
 define amdgpu_kernel void @lds_promoted_alloca_select_input_select(i32 %a, i32 %b, i32 %c, i1 %c1, i1 %c2) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @lds_promoted_alloca_select_input_select(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [16 x i32], align 4, addrspace(5)
-; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[A]]
-; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[B]]
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[C]]
-; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 [[C1]], ptr addrspace(5) [[PTR0]], ptr addrspace(5) [[PTR1]]
-; CHECK-NEXT:    [[SELECT1:%.*]] = select i1 [[C2]], ptr addrspace(5) [[SELECT0]], ptr addrspace(5) [[PTR2]]
-; CHECK-NEXT:    store i32 0, ptr addrspace(5) [[SELECT1]], align 4
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <16 x i32> poison
+; CHECK-NEXT:    [[PROMOTEALLOCA_IDX:%.*]] = select i1 [[C1]], i32 [[A]], i32 [[B]]
+; CHECK-NEXT:    [[PROMOTEALLOCA_IDX1:%.*]] = select i1 [[C2]], i32 [[PROMOTEALLOCA_IDX]], i32 [[C]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i32> [[ALLOCA]], i32 0, i32 [[PROMOTEALLOCA_IDX1]]
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca [16 x i32], align 4, addrspace(5)
@@ -173,9 +133,9 @@ define amdgpu_kernel void @select_null_rhs(ptr addrspace(1) nocapture %arg, i32 
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call noalias nonnull dereferenceable(64) ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP0]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4, !invariant.load [[META0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4, !invariant.load [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP0]], i64 2
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(4) [[TMP3]], align 4, !range [[RNG2:![0-9]+]], !invariant.load [[META0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(4) [[TMP3]], align 4, !range [[RNG1:![0-9]+]], !invariant.load [[META0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP2]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = call range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[TMP7:%.*]] = call range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.y()
@@ -213,7 +173,7 @@ define amdgpu_kernel void @select_null_lhs(ptr addrspace(1) nocapture %arg, i32 
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr addrspace(4) [[TMP1]], align 4, !invariant.load [[META0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr addrspace(4) [[TMP0]], i64 2
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(4) [[TMP3]], align 4, !range [[RNG2]], !invariant.load [[META0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr addrspace(4) [[TMP3]], align 4, !range [[RNG1]], !invariant.load [[META0]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr i32 [[TMP2]], 16
 ; CHECK-NEXT:    [[TMP6:%.*]] = call range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NEXT:    [[TMP7:%.*]] = call range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.y()
@@ -247,6 +207,5 @@ attributes #0 = { norecurse nounwind "amdgpu-waves-per-eu"="1,1" "amdgpu-flat-wo
 attributes #1 = { norecurse nounwind }
 ;.
 ; CHECK: [[META0]] = !{}
-; CHECK: [[RNG1]] = !{i32 0, i32 257}
-; CHECK: [[RNG2]] = !{i32 0, i32 1025}
+; CHECK: [[RNG1]] = !{i32 0, i32 1025}
 ;.

@@ -95,6 +95,10 @@ struct GEPToVectorIndex {
   ConstantInt *VarShift = nullptr;   // defaults to 0
   ConstantInt *ConstIndex = nullptr; // defaults to 0
   Value *Full = nullptr;
+  // The root pointer this GEP chain is based on: either a group member alloca
+  // (constant lane) or a pointer phi/select of members (dynamic lane). The
+  // final lane index is (this GEP's within-object offset) + lane(BasePtr).
+  Value *BasePtr = nullptr;
 };
 
 struct MemTransferInfo {
@@ -103,16 +107,42 @@ struct MemTransferInfo {
 };
 
 // Analysis for planning the different strategies of alloca promotion.
+//
+// An AllocaAnalysis represents a *group* of one or more allocas that must be
+// promoted together because their pointers are merged by a phi or select. The
+// common case is a singleton group (Members == {Alloca}). When promoting to
+// vector, the whole group becomes a single combined vector value; each member
+// occupies a contiguous lane range starting at Vector.BaseLane[member].
 struct AllocaAnalysis {
-  AllocaInst *Alloca = nullptr;
+  AllocaInst *Alloca = nullptr; // Primary member (lane 0).
   DenseSet<Value *> Pointers;
   SmallVector<Use *> Uses;
   unsigned Score = 0;
-  bool HaveSelectOrPHI = false;
+  // True if some phi/select merges this alloca's pointer with null or a
+  // non-alloca object. Such merges are still fine for LDS promotion, but they
+  // disable vector grouping (we can't assign the other operand a lane).
+  bool HaveUnpromotableMerge = false;
+
+  // All member allocas of this group, in lane order (Members[0] == Alloca).
+  SmallVector<AllocaInst *> Members;
+  // Other allocas this group is directly linked to via a phi/select of
+  // pointers. Used to form groups; empty once grouping is complete.
+  SmallVector<AllocaInst *> Links;
+
   struct {
     FixedVectorType *Ty = nullptr;
+    // Lane offset of each member alloca within the combined vector.
+    DenseMap<AllocaInst *, unsigned> BaseLane;
+    // Cache of computed lane-index values for pointer phis/selects, so cyclic
+    // pointer phis terminate and are only materialized once.
+    DenseMap<Value *, Value *> IndexCache;
     SmallVector<Instruction *> Worklist;
     SmallVector<Instruction *> UsersToRemove;
+    // Pointer phis/selects that merge group members. Replaced by parallel lane
+    // -index phis/selects and removed (RAUW poison) after promotion. A
+    // SetVector because a merge is a use of multiple members and would
+    // otherwise be recorded once per member.
+    SmallSetVector<Instruction *, 4> PtrMerges;
     MapVector<GetElementPtrInst *, GEPToVectorIndex> GEPVectorIdx;
     MapVector<MemTransferInst *, MemTransferInfo> TransferInfo;
   } Vector;
@@ -121,7 +151,11 @@ struct AllocaAnalysis {
     SmallVector<User *> Worklist;
   } LDS;
 
-  explicit AllocaAnalysis(AllocaInst *Alloca) : Alloca(Alloca) {}
+  explicit AllocaAnalysis(AllocaInst *Alloca) : Alloca(Alloca) {
+    Members.push_back(Alloca);
+  }
+
+  bool isGroup() const { return Members.size() > 1; }
 };
 
 // Shared implementation which can do both promotion to vector and to LDS.
@@ -280,6 +314,51 @@ bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
   };
 
   SmallVector<Instruction *, 4> WorkList({AA.Alloca});
+
+  // Classify the "other" operand of a pointer phi/select (i.e. an operand not
+  // derived from Cur). Returns false if the merge makes the alloca entirely
+  // unpromotable (merged with an unknown object). Otherwise records links to
+  // any other allocas (for grouping).
+  //
+  // The operand may itself be a chain of phis/selects (e.g. a phi of a phi), so
+  // we look through them to find the set of underlying root allocas. Visited
+  // guards against cyclic pointer phis.
+  SmallPtrSet<Value *, 8> Visited;
+  std::function<bool(Value *)> ClassifyMergeOperand = [&](Value *Other) -> bool {
+    Other = Other->stripPointerCasts();
+    if (AA.Pointers.contains(Other))
+      return true; // Derived from the same pointer.
+    if (!Visited.insert(Other).second)
+      return true; // Already classified (or on a phi cycle).
+
+    if (isa<ConstantPointerNull, ConstantAggregateZero>(Other)) {
+      // Fine for LDS (null stays null), but we can't give it a vector lane.
+      AA.HaveUnpromotableMerge = true;
+      return true;
+    }
+
+    Value *Obj = getUnderlyingObject(Other);
+    // getUnderlyingObject looks through GEPs/casts but not phi/select; recurse
+    // through those to reach the root allocas.
+    if (auto *Phi = dyn_cast<PHINode>(Obj)) {
+      for (Value *In : Phi->incoming_values())
+        if (!ClassifyMergeOperand(In))
+          return false;
+      return true;
+    }
+    if (auto *SI = dyn_cast<SelectInst>(Obj)) {
+      return ClassifyMergeOperand(SI->getTrueValue()) &&
+             ClassifyMergeOperand(SI->getFalseValue());
+    }
+    auto *OtherAI = dyn_cast<AllocaInst>(Obj);
+    if (!OtherAI)
+      return false;
+
+    if (OtherAI != AA.Alloca)
+      AA.Links.push_back(OtherAI);
+    return true;
+  };
+
   while (!WorkList.empty()) {
     auto *Cur = WorkList.pop_back_val();
     if (find(AA.Pointers, Cur) != AA.Pointers.end())
@@ -297,30 +376,23 @@ bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
       if (isa<GetElementPtrInst>(U.getUser())) {
         WorkList.push_back(Inst);
       } else if (auto *SI = dyn_cast<SelectInst>(Inst)) {
-        // Only promote a select if we know that the other select operand is
-        // from another pointer that will also be promoted.
-        if (!binaryOpIsDerivedFromSameAlloca(AA.Alloca, Cur, SI, 1, 2))
-          return RejectUser(Inst, "select from mixed objects");
+        // A select may merge this alloca's pointer with another promotable
+        // alloca (recorded as a link for grouping), with the same alloca, or
+        // with null. Anything else is rejected.
+        if (!ClassifyMergeOperand(SI->getTrueValue()) ||
+            !ClassifyMergeOperand(SI->getFalseValue()))
+          return RejectUser(Inst, "select from incompatible alloca");
         WorkList.push_back(Inst);
-        AA.HaveSelectOrPHI = true;
       } else if (auto *Phi = dyn_cast<PHINode>(Inst)) {
-        // Repeat for phis.
-
-        // TODO: Handle more complex cases. We should be able to replace loops
-        // over arrays.
-        switch (Phi->getNumIncomingValues()) {
-        case 1:
-          break;
-        case 2:
-          if (!binaryOpIsDerivedFromSameAlloca(AA.Alloca, Cur, Phi, 0, 1))
-            return RejectUser(Inst, "phi from mixed objects");
-          break;
-        default:
-          return RejectUser(Inst, "phi with too many operands");
-        }
+        // Repeat for phis. Every incoming value must be derived from a
+        // promotable alloca (this one or a linked one).
+        bool AllOk = true;
+        for (Value *Incoming : Phi->incoming_values())
+          AllOk &= ClassifyMergeOperand(Incoming);
+        if (!AllOk)
+          return RejectUser(Inst, "phi with incompatible alloca");
 
         WorkList.push_back(Inst);
-        AA.HaveSelectOrPHI = true;
       }
     }
   }
@@ -376,27 +448,86 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
       VGPRBudgetRatio;
 
   std::vector<AllocaAnalysis> Allocas;
-  for (Instruction &I : F.getEntryBlock()) {
-    if (AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
+  {
+    // Collect uses for every candidate alloca independently. This also
+    // records phi/select links between distinct allocas (see collectAllocaUses).
+    std::vector<AllocaAnalysis> Raw;
+    DenseMap<AllocaInst *, int> Index; // -> position in Raw, or -1 if rejected.
+    for (Instruction &I : F.getEntryBlock()) {
+      auto *AI = dyn_cast<AllocaInst>(&I);
       // Array allocations are probably not worth handling, since an allocation
       // of the array type is the canonical form.
-      if (!AI->isStaticAlloca() || AI->isArrayAllocation())
+      if (!AI || !AI->isStaticAlloca() || AI->isArrayAllocation())
         continue;
-
       LLVM_DEBUG(dbgs() << "Analyzing: " << *AI << '\n');
-
       AllocaAnalysis AA{AI};
-      if (collectAllocaUses(AA)) {
-        analyzePromoteToVector(AA);
-        if (PromoteToLDS)
-          analyzePromoteToLDS(AA);
-        if (AA.Vector.Ty || AA.LDS.Enable) {
-          scoreAlloca(AA);
-          Allocas.push_back(std::move(AA));
+      if (!collectAllocaUses(AA)) {
+        Index[AI] = -1;
+        continue;
+      }
+      Index[AI] = Raw.size();
+      Raw.push_back(std::move(AA));
+    }
+
+    for (int I = 0, E = Raw.size(); I != E; ++I) {
+      bool Promotable = true;
+      for (AllocaInst *Linked : Raw[I].Links) {
+        // If this alloca is not promotable, the whole group is not promotable
+        // as well.
+        if (Index[Linked] == -1) {
+          // The whole group can not be promoted
+          Promotable = false;
+          break;
         }
+      }
+
+      if (Promotable && !Raw[I].Uses.empty()) {
+        for (AllocaInst *Linked : Raw[I].Links) {
+          // We have an linked alloca which appears earlier, this is not leader.
+          //
+          assert(Index[Linked] > I && "This should be leader alloca\n");
+          // Pull from the other member alloca into the current alloca, which
+          // is the leader.
+          AllocaAnalysis &LeaderAA = Raw[I];
+          AllocaAnalysis &MemberAA = Raw[Index[Linked]];
+
+          // Merge the uses into the leader alloca.
+          append_range(LeaderAA.Uses, MemberAA.Uses);
+          // Clear member uses so that it will be skipped later.
+          MemberAA.Uses.clear();
+
+          LeaderAA.Pointers.insert_range(MemberAA.Pointers);
+          LeaderAA.Members.push_back(MemberAA.Alloca);
+          LeaderAA.HaveUnpromotableMerge |= MemberAA.HaveUnpromotableMerge;
+        }
+        // We only need to process leader alloca for later steps.
+        Allocas.push_back(Raw[I]);
       }
     }
   }
+
+  // Allocas that are merged by phi/select would have duplicated Use entries,
+  // remove them while preserving order.
+  for (AllocaAnalysis &AA : Allocas) {
+    if (!AA.isGroup())
+      continue;
+    SmallPtrSet<Use *, 16> Seen;
+    llvm::erase_if(AA.Uses, [&](Use *U) { return !Seen.insert(U).second; });
+  }
+
+  for (AllocaAnalysis &AA : Allocas) {
+    analyzePromoteToVector(AA);
+    // LDS promotion is not group-aware; only attempt it for singletons.
+    if (PromoteToLDS && !AA.isGroup())
+      analyzePromoteToLDS(AA);
+  }
+
+  // Drop non-promotable alloca.
+  llvm::erase_if(Allocas, [](const AllocaAnalysis &AA) {
+    return !AA.Vector.Ty && !AA.LDS.Enable;
+  });
+  for (AllocaAnalysis &AA : Allocas)
+    scoreAlloca(AA);
 
   stable_sort(Allocas,
               [](const auto &A, const auto &B) { return A.Score > B.Score; });
@@ -413,10 +544,13 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   SetVector<IntrinsicInst *> DeferredIntrs;
   for (AllocaAnalysis &AA : Allocas) {
     if (AA.Vector.Ty) {
-      std::optional<TypeSize> Size = AA.Alloca->getAllocationSize(DL);
-      assert(Size); // Expected to succeed on non-array alloca.
-      const unsigned AllocaCost = Size->getFixedValue() * 8;
-      // First, check if we have enough budget to vectorize this alloca.
+      unsigned AllocaCost = 0;
+      for (AllocaInst *Member : AA.Members) {
+        std::optional<TypeSize> Size = Member->getAllocationSize(DL);
+        assert(Size); // Expected to succeed on non-array alloca.
+        AllocaCost += Size->getFixedValue() * 8;
+      }
+      // First, check if we have enough budget to vectorize this group.
       if (AllocaCost <= VectorizationBudget) {
         promoteAllocaToVector(AA);
         Changed = true;
@@ -464,17 +598,56 @@ static bool isSupportedMemset(MemSetInst *I, AllocaInst *AI,
 }
 
 static Value *calculateVectorIndex(Value *Ptr, AllocaAnalysis &AA) {
-  IRBuilder<> B(Ptr->getContext());
-
+  LLVMContext &Ctx = Ptr->getContext();
   Ptr = Ptr->stripPointerCasts();
-  if (Ptr == AA.Alloca)
-    return B.getInt32(0);
+
+  // Already computed (also breaks cycles for pointer phis).
+  auto Cached = AA.Vector.IndexCache.find(Ptr);
+  if (Cached != AA.Vector.IndexCache.end())
+    return Cached->second;
+
+  const auto BaseLaneConst = [&](AllocaInst *Member) -> Value * {
+    return ConstantInt::get(Type::getInt32Ty(Ctx),
+                            AA.Vector.BaseLane.lookup(Member));
+  };
+
+  // A pointer that is directly one of the member allocas indexes lane
+  // BaseLane[member].
+  if (auto *AI = dyn_cast<AllocaInst>(Ptr)) {
+    Value *Idx = BaseLaneConst(AI);
+    AA.Vector.IndexCache[Ptr] = Idx;
+    return Idx;
+  }
+
+  // Pointer phi: build a parallel phi of lane indices. Insert and cache it
+  // before recursing so self-referential phis terminate.
+  if (auto *Phi = dyn_cast<PHINode>(Ptr)) {
+    IRBuilder<> B(Phi);
+    PHINode *IdxPhi =
+        B.CreatePHI(B.getInt32Ty(), Phi->getNumIncomingValues(), "promotealloca.idx");
+    AA.Vector.IndexCache[Ptr] = IdxPhi;
+    for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I)
+      IdxPhi->addIncoming(calculateVectorIndex(Phi->getIncomingValue(I), AA),
+                          Phi->getIncomingBlock(I));
+    return IdxPhi;
+  }
+
+  // Pointer select: select between the two operand lane indices.
+  if (auto *SI = dyn_cast<SelectInst>(Ptr)) {
+    Value *T = calculateVectorIndex(SI->getTrueValue(), AA);
+    Value *F = calculateVectorIndex(SI->getFalseValue(), AA);
+    IRBuilder<> B(SI);
+    Value *Idx = B.CreateSelect(SI->getCondition(), T, F, "promotealloca.idx");
+    AA.Vector.IndexCache[Ptr] = Idx;
+    return Idx;
+  }
 
   auto *GEP = cast<GetElementPtrInst>(Ptr);
   auto I = AA.Vector.GEPVectorIdx.find(GEP);
   assert(I != AA.Vector.GEPVectorIdx.end() && "Must have entry for GEP!");
 
   if (!I->second.Full) {
+    IRBuilder<> B(Ctx);
     Value *Result = nullptr;
     B.SetInsertPoint(GEP);
 
@@ -499,14 +672,24 @@ static Value *calculateVectorIndex(Value *Ptr, AllocaAnalysis &AA) {
     if (!Result)
       Result = B.getInt32(0);
 
+    // Offset by the lane of the root pointer this GEP is based on. For a member
+    // alloca this is its constant base lane; for a pointer phi/select it is the
+    // parallel lane-index value.
+    if (I->second.BasePtr != AA.Alloca || AA.isGroup()) {
+      Value *BaseIdx = calculateVectorIndex(I->second.BasePtr, AA);
+      if (auto *C = dyn_cast<ConstantInt>(BaseIdx); !C || !C->isZero())
+        Result = B.CreateAdd(Result, BaseIdx);
+    }
+
     I->second.Full = Result;
   }
 
+  AA.Vector.IndexCache[Ptr] = I->second.Full;
   return I->second.Full;
 }
 
 static std::optional<GEPToVectorIndex>
-computeGEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
+computeGEPToVectorIndex(GetElementPtrInst *GEP, AllocaAnalysis &AA,
                         Type *VecElemTy, const DataLayout &DL) {
   // TODO: Extracting a "multiple of X" from a GEP might be a useful generic
   // helper.
@@ -541,7 +724,9 @@ computeGEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
     CurPtr = CurGEP->getPointerOperand();
   }
 
-  assert(CurPtr == Alloca && "GEP not based on alloca");
+  // This should either points to the alloca or known phi/select.
+  assert(isa<AllocaInst>(CurPtr) ||
+         (isa<PHINode, SelectInst>(CurPtr) /*&& AA.Pointers.contains(CurPtr)*/));
 
   int64_t VecElemSize = DL.getTypeAllocSize(VecElemTy);
   if (VarOffsets.size() > 1)
@@ -555,6 +740,7 @@ computeGEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   APInt IndexQuot = ConstOffset.sdiv(VecElemSize);
 
   GEPToVectorIndex Result;
+  Result.BasePtr = CurPtr;
 
   if (!ConstOffset.isZero())
     Result.ConstIndex = ConstantInt::get(Ctx, IndexQuot.sextOrTrunc(BW));
@@ -903,11 +1089,6 @@ static BasicBlock::iterator skipToNonAllocaInsertPt(BasicBlock &BB,
 
 FixedVectorType *
 AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
-  if (DisablePromoteAllocaToVector) {
-    LLVM_DEBUG(dbgs() << "  Promote alloca to vectors is disabled\n");
-    return nullptr;
-  }
-
   auto *VectorTy = dyn_cast<FixedVectorType>(AllocaTy);
   if (auto *ArrayTy = dyn_cast<ArrayType>(AllocaTy)) {
     uint64_t NumElems = 1;
@@ -966,15 +1147,58 @@ AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
 }
 
 void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
-  if (AA.HaveSelectOrPHI) {
-    LLVM_DEBUG(dbgs() << "  Cannot convert to vector due to select or phi\n");
+  // A phi/select that merges with null or a non-alloca object can't be given a
+  // vector lane, so the whole group is unpromotable to vector.
+  if (AA.HaveUnpromotableMerge) {
+    LLVM_DEBUG(dbgs() << "  Cannot convert to vector due to merge with "
+                         "null/unknown object\n");
     return;
   }
 
-  Type *AllocaTy = AA.Alloca->getAllocatedType();
-  AA.Vector.Ty = getVectorTypeForAlloca(AllocaTy);
-  if (!AA.Vector.Ty)
+  if (DisablePromoteAllocaToVector) {
+    LLVM_DEBUG(dbgs() << "  Promote alloca to vectors is disabled\n");
     return;
+  }
+
+  // Find a valid common element type and assign each member a contiguous lane
+  // range in the combined vector.
+  Type *CombinedEltTy = nullptr;
+  unsigned TotalElems = 0;
+  for (AllocaInst *Member : AA.Members) {
+    Type *MemberTy = Member->getAllocatedType();
+    unsigned ElemCnt;
+    if (MemberTy->isSingleValueType() && !MemberTy->isVectorTy()) {
+      if (CombinedEltTy && CombinedEltTy != MemberTy)
+        return;
+
+      CombinedEltTy = MemberTy;
+      ElemCnt = 1;
+    } else {
+      MemberTy = getVectorTypeForAlloca(MemberTy);
+      // Failed to find a proper vector type or found a different element type,
+      // abort promotion.
+      if (!MemberTy ||
+          (CombinedEltTy && CombinedEltTy != MemberTy->getScalarType()))
+        return;
+      CombinedEltTy = MemberTy->getScalarType();
+      ElemCnt = cast<FixedVectorType>(MemberTy)->getNumElements();
+    }
+
+
+    AA.Vector.BaseLane[Member] = TotalElems;
+    TotalElems += ElemCnt;
+  }
+
+  AA.Vector.Ty = FixedVectorType::get(CombinedEltTy, TotalElems);
+  // Re-check the combined vector against the register-size limit.
+  const unsigned MaxElements =
+      (MaxVectorRegs * 32) / DL.getTypeSizeInBits(CombinedEltTy);
+  if (TotalElems > MaxElements) {
+    LLVM_DEBUG(dbgs() << "  Combined group vector " << *AA.Vector.Ty
+                      << " exceeds the register budget\n");
+    AA.Vector.Ty = nullptr;
+    return;
+  }
 
   const auto RejectUser = [&](Instruction *Inst, Twine Msg) {
     LLVM_DEBUG(dbgs() << "  Cannot promote alloca to vector: " << Msg << "\n"
@@ -987,6 +1211,13 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
   assert(ElementSize > 0);
   for (auto *U : AA.Uses) {
     Instruction *Inst = cast<Instruction>(U->getUser());
+
+    // Pointer phis/selects merging group members are handled by rewriting them
+    // to lane-index phis/selects during promotion.
+    if (isa<PHINode, SelectInst>(Inst) && Inst->getType()->isPointerTy()) {
+      AA.Vector.PtrMerges.insert(Inst);
+      continue;
+    }
 
     if (Value *Ptr = getLoadStorePointerOperand(Inst)) {
       assert(!isa<StoreInst>(Inst) ||
@@ -1005,8 +1236,8 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
 
       Ptr = Ptr->stripPointerCasts();
 
-      // Alloca already accessed as vector.
-      if (Ptr == AA.Alloca &&
+      // Alloca already accessed as vector for single alloca group case.
+      if (!AA.isGroup() && Ptr == AA.Alloca &&
           DL.getTypeStoreSize(AA.Alloca->getAllocatedType()) ==
               DL.getTypeStoreSize(AccessTy)) {
         AA.Vector.Worklist.push_back(Inst);
@@ -1023,7 +1254,7 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
     if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
       // If we can't compute a vector index from this GEP, then we can't
       // promote this alloca to vector.
-      auto Index = computeGEPToVectorIndex(GEP, AA.Alloca, VecEltTy, DL);
+      auto Index = computeGEPToVectorIndex(GEP, AA, VecEltTy, DL);
       if (!Index)
         return RejectUser(Inst, "cannot compute vector index for GEP");
 
@@ -1033,12 +1264,14 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
     }
 
     if (MemSetInst *MSI = dyn_cast<MemSetInst>(Inst);
-        MSI && isSupportedMemset(MSI, AA.Alloca, DL)) {
+        MSI && !AA.isGroup() && isSupportedMemset(MSI, AA.Alloca, DL)) {
       AA.Vector.Worklist.push_back(Inst);
       continue;
     }
 
     if (MemTransferInst *TransferInst = dyn_cast<MemTransferInst>(Inst)) {
+      if (AA.isGroup())
+        return RejectUser(Inst, "mem transfer in grouped alloca not supported");
       if (TransferInst->isVolatile())
         return RejectUser(Inst, "mem transfer inst is volatile");
 
@@ -1187,6 +1420,16 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
     I->eraseFromParent();
   }
 
+  // The pointer phis/selects merging group members are now dead. Drop them
+  // before the GEPs they reference. RAUW with poison first so chained merges
+  // can be erased in any order.
+  for (Instruction *I : AA.Vector.PtrMerges)
+    I->replaceAllUsesWith(PoisonValue::get(I->getType()));
+  for (Instruction *I : AA.Vector.PtrMerges) {
+    assert(I->use_empty());
+    I->eraseFromParent();
+  }
+
   // Delete all the users that are known to be removeable.
   for (Instruction *I : reverse(AA.Vector.UsersToRemove)) {
     I->dropDroppableUses();
@@ -1194,9 +1437,11 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
     I->eraseFromParent();
   }
 
-  // Alloca should now be dead too.
-  assert(AA.Alloca->use_empty());
-  AA.Alloca->eraseFromParent();
+  // All member allocas should now be dead too.
+  for (AllocaInst *Member : AA.Members) {
+    assert(Member->use_empty());
+    Member->eraseFromParent();
+  }
 }
 
 std::pair<Value *, Value *>

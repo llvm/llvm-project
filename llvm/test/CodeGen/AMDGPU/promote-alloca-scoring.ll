@@ -2,10 +2,10 @@
 ; REQUIRES: asserts
 
 ; CHECK-LABEL: Analyzing:   %simpleuser = alloca [4 x i64], align 4, addrspace(5)
+; CHECK-NEXT: Analyzing:   %manyusers = alloca [4 x i64], align 4, addrspace(5)
 ; CHECK-NEXT: Scoring:   %simpleuser = alloca [4 x i64], align 4, addrspace(5)
 ; CHECK-NEXT:   [+1]:   store i64 42, ptr addrspace(5) %simpleuser, align 8
 ; CHECK-NEXT:   => Final Score:1
-; CHECK-LABEL: Analyzing:   %manyusers = alloca [4 x i64], align 4, addrspace(5)
 ; CHECK-NEXT: Scoring:   %manyusers = alloca [4 x i64], align 4, addrspace(5)
 ; CHECK-NEXT:   [+1]:   store i64 %v0.add, ptr addrspace(5) %manyusers.1, align 8
 ; CHECK-NEXT:   [+1]:   %v0 = load i64, ptr addrspace(5) %manyusers.1, align 8
