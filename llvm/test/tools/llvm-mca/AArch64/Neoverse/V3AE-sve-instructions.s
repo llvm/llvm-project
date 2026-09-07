@@ -3369,24 +3369,24 @@
 # CHECK-NEXT:  1      2     0.50                        uzp2	z31.d, z31.d, z31.d
 # CHECK-NEXT:  1      2     0.50                        uzp2	z31.h, z31.h, z31.h
 # CHECK-NEXT:  1      2     0.50                        uzp2	z31.s, z31.s, z31.s
-# CHECK-NEXT:  2      3     1.00                        whilege	p15.b, w0, wzr
-# CHECK-NEXT:  2      3     1.00                        whilege	p15.b, wzr, w0
-# CHECK-NEXT:  2      3     1.00                        whilege	p15.b, x0, xzr
-# CHECK-NEXT:  2      3     1.00                        whilege	p15.b, xzr, x0
-# CHECK-NEXT:  2      3     1.00                        whilege	p15.d, w0, wzr
-# CHECK-NEXT:  2      3     1.00                        whilege	p15.d, x0, xzr
-# CHECK-NEXT:  2      3     1.00                        whilege	p15.h, w0, wzr
-# CHECK-NEXT:  2      3     1.00                        whilege	p15.h, x0, xzr
-# CHECK-NEXT:  2      3     1.00                        whilege	p15.s, w0, wzr
-# CHECK-NEXT:  2      3     1.00                        whilege	p15.s, x0, xzr
-# CHECK-NEXT:  2      3     1.00                        whilerw	p15.b, x30, x30
-# CHECK-NEXT:  2      3     1.00                        whilerw	p15.d, x30, x30
-# CHECK-NEXT:  2      3     1.00                        whilerw	p15.h, x30, x30
-# CHECK-NEXT:  2      3     1.00                        whilerw	p15.s, x30, x30
-# CHECK-NEXT:  2      3     1.00                        whilewr	p15.b, x30, x30
-# CHECK-NEXT:  2      3     1.00                        whilewr	p15.d, x30, x30
-# CHECK-NEXT:  2      3     1.00                        whilewr	p15.h, x30, x30
-# CHECK-NEXT:  2      3     1.00                        whilewr	p15.s, x30, x30
+# CHECK-NEXT:  1      2     0.50                        whilege	p15.b, w0, wzr
+# CHECK-NEXT:  1      2     0.50                        whilege	p15.b, wzr, w0
+# CHECK-NEXT:  1      2     0.50                        whilege	p15.b, x0, xzr
+# CHECK-NEXT:  1      2     0.50                        whilege	p15.b, xzr, x0
+# CHECK-NEXT:  1      2     0.50                        whilege	p15.d, w0, wzr
+# CHECK-NEXT:  1      2     0.50                        whilege	p15.d, x0, xzr
+# CHECK-NEXT:  1      2     0.50                        whilege	p15.h, w0, wzr
+# CHECK-NEXT:  1      2     0.50                        whilege	p15.h, x0, xzr
+# CHECK-NEXT:  1      2     0.50                        whilege	p15.s, w0, wzr
+# CHECK-NEXT:  1      2     0.50                        whilege	p15.s, x0, xzr
+# CHECK-NEXT:  1      2     0.50                        whilerw	p15.b, x30, x30
+# CHECK-NEXT:  1      2     0.50                        whilerw	p15.d, x30, x30
+# CHECK-NEXT:  1      2     0.50                        whilerw	p15.h, x30, x30
+# CHECK-NEXT:  1      2     0.50                        whilerw	p15.s, x30, x30
+# CHECK-NEXT:  1      2     0.50                        whilewr	p15.b, x30, x30
+# CHECK-NEXT:  1      2     0.50                        whilewr	p15.d, x30, x30
+# CHECK-NEXT:  1      2     0.50                        whilewr	p15.h, x30, x30
+# CHECK-NEXT:  1      2     0.50                        whilewr	p15.s, x30, x30
 # CHECK-NEXT:  1      2     1.00           *      U     wrffr	p0.b
 # CHECK-NEXT:  1      2     1.00           *      U     wrffr	p15.b
 # CHECK-NEXT:  1      2     0.50                        xar	z0.b, z0.b, z1.b, #1
@@ -3457,7 +3457,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     245.00 245.00 651.00 401.88 303.88 41.88  41.88  41.88  41.88  41.88  41.88  406.00 2380.50 1905.50
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     245.00 245.00 651.00 392.88 294.88 41.88  41.88  41.88  41.88  41.88  41.88  406.00 2380.50 1905.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
@@ -6820,24 +6820,24 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   uzp2	z31.d, z31.d, z31.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   uzp2	z31.h, z31.h, z31.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   uzp2	z31.s, z31.s, z31.s
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     whilege	p15.b, w0, wzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     whilege	p15.b, wzr, w0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     whilege	p15.b, x0, xzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     whilege	p15.b, xzr, x0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     whilege	p15.d, w0, wzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     whilege	p15.d, x0, xzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     whilege	p15.h, w0, wzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     whilege	p15.h, x0, xzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     whilege	p15.s, w0, wzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     whilege	p15.s, x0, xzr
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     whilerw	p15.b, x30, x30
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     whilerw	p15.d, x30, x30
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     whilerw	p15.h, x30, x30
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     whilerw	p15.s, x30, x30
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     whilewr	p15.b, x30, x30
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     whilewr	p15.d, x30, x30
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     whilewr	p15.h, x30, x30
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -      -      -      -      -     whilewr	p15.s, x30, x30
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     whilege	p15.b, w0, wzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     whilege	p15.b, wzr, w0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     whilege	p15.b, x0, xzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     whilege	p15.b, xzr, x0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     whilege	p15.d, w0, wzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     whilege	p15.d, x0, xzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     whilege	p15.h, w0, wzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     whilege	p15.h, x0, xzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     whilege	p15.s, w0, wzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     whilege	p15.s, x0, xzr
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     whilerw	p15.b, x30, x30
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     whilerw	p15.d, x30, x30
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     whilerw	p15.h, x30, x30
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     whilerw	p15.s, x30, x30
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     whilewr	p15.b, x30, x30
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     whilewr	p15.d, x30, x30
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     whilewr	p15.h, x30, x30
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -     whilewr	p15.s, x30, x30
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -     wrffr	p0.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -     wrffr	p15.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50   xar	z0.b, z0.b, z1.b, #1

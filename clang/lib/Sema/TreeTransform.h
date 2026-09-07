@@ -8619,8 +8619,6 @@ TreeTransform<Derived>::TransformSwitchStmt(SwitchStmt *S) {
 
   // Transform the body of the switch statement.
   StmtResult Body = getDerived().TransformStmt(S->getBody());
-  if (Body.isInvalid())
-    return StmtError();
 
   // Complete the switch statement.
   return getDerived().RebuildSwitchStmtBody(S->getSwitchLoc(), Switch.get(),

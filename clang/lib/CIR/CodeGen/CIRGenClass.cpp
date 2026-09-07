@@ -20,6 +20,7 @@
 #include "clang/AST/Type.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -152,12 +153,6 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
   }
 
   cgf.emitInitializerForField(field, lhs, memberInit->getInit());
-}
-
-static bool isInitializerOfDynamicClass(const CXXCtorInitializer *baseInit) {
-  const Type *baseType = baseInit->getBaseClass();
-  const auto *baseClassDecl = baseType->castAsCXXRecordDecl();
-  return baseClassDecl->isDynamicClass();
 }
 
 namespace {
@@ -344,7 +339,7 @@ void CIRGenFunction::emitCtorPrologue(const CXXConstructorDecl *cd,
   auto emitInitializer = [&](CXXCtorInitializer *baseInit) {
     if (cgm.getCodeGenOpts().StrictVTablePointers &&
         cgm.getCodeGenOpts().OptimizationLevel > 0 &&
-        isInitializerOfDynamicClass(baseInit)) {
+        CodeGenUtils::isInitializerOfDynamicClass(baseInit)) {
       // It's OK to continue after emitting the error here. The missing code
       // just "launders" the 'this' pointer.
       cgm.errorNYI(cd->getSourceRange(),

@@ -20,7 +20,7 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 typedef void (*new_handler)();
 _LIBCPP_EXPORTED_FROM_ABI new_handler set_new_handler(new_handler) _NOEXCEPT;
-_LIBCPP_EXPORTED_FROM_ABI new_handler get_new_handler() _NOEXCEPT;
+[[__nodiscard__]] _LIBCPP_EXPORTED_FROM_ABI new_handler get_new_handler() _NOEXCEPT;
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
