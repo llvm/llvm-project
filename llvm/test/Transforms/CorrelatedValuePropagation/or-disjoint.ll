@@ -7,8 +7,7 @@ define i1 @or_disjoint(i8 %x) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i8 [[X]], 8
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
 ; CHECK-NEXT:    [[O:%.*]] = or disjoint i8 [[X]], 32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[O]], 40
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %c = icmp uge i8 %x, 8
   call void @llvm.assume(i1 %c)
@@ -39,8 +38,7 @@ define i1 @or_disjoint_upper_bound(i8 %x) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X]], 24
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
 ; CHECK-NEXT:    [[O:%.*]] = or disjoint i8 [[X]], 32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i8 [[O]], 55
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %c = icmp ult i8 %x, 24
   call void @llvm.assume(i1 %c)
