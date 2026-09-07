@@ -272,6 +272,9 @@ class IRTranslatorImpl {
   /// emitted.
   bool translateBitCast(const User &U, MachineIRBuilder &MIRBuilder);
 
+  /// Translate an LLVM bytecast into generic IR.
+  bool translateByteCast(const User &U, MachineIRBuilder &MIRBuilder);
+
   /// Translate an LLVM load instruction into generic IR.
   bool translateLoad(const User &U, MachineIRBuilder &MIRBuilder);
 
@@ -2366,6 +2369,11 @@ bool IRTranslatorImpl::translateBitCast(const User &U,
     return translateCast(TargetOpcode::G_PTRTOINT, U, MIRBuilder);
 
   return translateCast(TargetOpcode::G_BITCAST, U, MIRBuilder);
+}
+
+bool IRTranslatorImpl::translateByteCast(const User &U,
+                                         MachineIRBuilder &MIRBuilder) {
+  return translateBitCast(U, MIRBuilder);
 }
 
 bool IRTranslatorImpl::translateCast(unsigned Opcode, const User &U,

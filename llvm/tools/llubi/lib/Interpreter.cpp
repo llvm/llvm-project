@@ -2799,16 +2799,19 @@ public:
     setResult(SVI, std::move(Res));
   }
 
-  void visitBitCastInst(BitCastInst &BCI) {
+  void visitBitCastLike(CastInst &CI) {
     // The conversion is done as if the value had been stored to memory and read
     // back as the target type.
     SmallVector<Byte> Bytes;
-    Bytes.resize(Ctx.getEffectiveTypeStoreSize(BCI.getType()),
+    Bytes.resize(Ctx.getEffectiveTypeStoreSize(CI.getType()),
                  Byte::concrete(0));
-    Ctx.toBytes(getValue(BCI.getOperand(0)), BCI.getOperand(0)->getType(),
-                Bytes);
-    setResult(BCI, Ctx.fromBytes(Bytes, BCI.getType()));
+    Ctx.toBytes(getValue(CI.getOperand(0)), CI.getOperand(0)->getType(), Bytes);
+    setResult(CI, Ctx.fromBytes(Bytes, CI.getType()));
   }
+
+  void visitBitCastInst(BitCastInst &BCI) { visitBitCastLike(BCI); }
+
+  void visitByteCastInst(ByteCastInst &BCI) { visitBitCastLike(BCI); }
 
   void visitFreezeInst(FreezeInst &FI) {
     AnyValue Val = getValue(FI.getOperand(0));

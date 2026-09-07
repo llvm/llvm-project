@@ -418,6 +418,7 @@ private:
   void visitPtrToAddrInst(PtrToAddrInst &I);
   void visitPtrToIntInst(PtrToIntInst &I);
   void visitBitCastInst(BitCastInst &I);
+  void visitByteCastInst(ByteCastInst &I);
   void visitAddrSpaceCastInst(AddrSpaceCastInst &I);
   void visitPHINode(PHINode &PN);
   void visitCallBase(CallBase &Call);
@@ -2879,6 +2880,10 @@ void Verifier::visitConstantExpr(const ConstantExpr *CE) {
     Check(CastInst::castIsValid(Instruction::BitCast, CE->getOperand(0),
                                 CE->getType()),
           "Invalid bitcast", CE);
+  else if (CE->getOpcode() == Instruction::ByteCast)
+    Check(CastInst::castIsValid(Instruction::ByteCast, CE->getOperand(0),
+                                CE->getType()),
+          "Invalid bytecast", CE);
   else if (CE->getOpcode() == Instruction::PtrToAddr)
     checkPtrToAddr(CE->getOperand(0)->getType(), CE->getType(), *CE);
 }
@@ -3904,6 +3909,13 @@ void Verifier::visitBitCastInst(BitCastInst &I) {
   Check(
       CastInst::castIsValid(Instruction::BitCast, I.getOperand(0), I.getType()),
       "Invalid bitcast", &I);
+  visitInstruction(I);
+}
+
+void Verifier::visitByteCastInst(ByteCastInst &I) {
+  Check(CastInst::castIsValid(Instruction::ByteCast, I.getOperand(0),
+                              I.getType()),
+        "Invalid bytecast", &I);
   visitInstruction(I);
 }
 

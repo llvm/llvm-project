@@ -23,7 +23,7 @@ define void @main() {
   %byte_with_provenance = load b8, ptr %alloca
   %vec_bytes1 = insertelement <4 x b8> <b8 0, b8 poison, b8 poison, b8 poison>, b8 %byte_undef, i32 2
   %vec_bytes2 = insertelement <4 x b8> %vec_bytes1, b8 %byte_with_provenance, i32 3
-  %bytes = bitcast <4 x b8> %vec_bytes2 to b32
+  %bytes = bytecast <4 x b8> %vec_bytes2 to b32
   %bytes_freeze = freeze b32 %bytes
   ret void
 }
@@ -45,7 +45,7 @@ define void @main() {
 ; CHECK-NEXT:   %byte_with_provenance = load b8, ptr %alloca, align 1 => b8 00001000(00011001) 
 ; CHECK-NEXT:   %vec_bytes1 = insertelement <4 x b8> <b8 0, b8 poison, b8 poison, b8 poison>, b8 %byte_undef, i32 2 => { b8 0x00 , b8 0x!! , b8 0x!! , b8 0x!!  }
 ; CHECK-NEXT:   %vec_bytes2 = insertelement <4 x b8> %vec_bytes1, b8 %byte_with_provenance, i32 3 => { b8 0x00 , b8 0x!! , b8 0x!! , b8 00001000(00011001)  }
-; CHECK-NEXT:   %bytes = bitcast <4 x b8> %vec_bytes2 to b32 => b32 0x00 0x!! 0x!! 00001000(00011001) 
+; CHECK-NEXT:   %bytes = bytecast <4 x b8> %vec_bytes2 to b32 => b32 0x00 0x!! 0x!! 00001000(00011001) 
 ; CHECK-NEXT:   %bytes_freeze = freeze b32 %bytes => b32 0x00 0x13 0xF8 00001000(00011001) 
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

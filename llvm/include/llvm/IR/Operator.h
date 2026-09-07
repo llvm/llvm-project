@@ -610,6 +610,30 @@ struct OperandTraits<BitCastOperator>
 
 DEFINE_TRANSPARENT_OPERAND_ACCESSORS(BitCastOperator, Value)
 
+class ByteCastOperator
+    : public ConcreteOperator<Operator, Instruction::ByteCast> {
+  friend class ByteCastInst;
+  friend class ConstantExpr;
+
+public:
+  /// Transparently provide more efficient getOperand methods.
+  DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
+
+  Type *getSrcTy() const {
+    return getOperand(0)->getType();
+  }
+
+  Type *getDestTy() const {
+    return getType();
+  }
+};
+
+template <>
+struct OperandTraits<ByteCastOperator>
+    : public FixedNumOperandTraits<ByteCastOperator, 1> {};
+
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ByteCastOperator, Value)
+
 class AddrSpaceCastOperator
     : public ConcreteOperator<Operator, Instruction::AddrSpaceCast> {
   friend class AddrSpaceCastInst;

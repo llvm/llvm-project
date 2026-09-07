@@ -2859,6 +2859,8 @@ bool CastInst::isNoopCast(Instruction::CastOps Opcode,
       return false;
     case Instruction::BitCast:
       return true;  // BitCast never modifies bits.
+    case Instruction::ByteCast:
+      return true;  // ByteCast never modifies bits.
     case Instruction::PtrToAddr:
     case Instruction::PtrToInt:
       return DL.getIntPtrType(SrcTy)->getScalarSizeInBits() ==
@@ -2918,6 +2920,26 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
   // same reason.
   const unsigned numCastOps =
     Instruction::CastOpsEnd - Instruction::CastOpsBegin;
+
+  // ByteCast deliberately has a non-contiguous opcode so introducing it does
+  // not renumber existing instructions. Handle combinations involving it
+  // conservatively before indexing the contiguous cast table.
+  if (firstOp == Instruction::ByteCast ||
+      secondOp == Instruction::ByteCast) {
+    bool FirstIsNoop = firstOp == Instruction::BitCast ||
+                       firstOp == Instruction::ByteCast;
+    bool SecondIsNoop = secondOp == Instruction::BitCast ||
+                        secondOp == Instruction::ByteCast;
+    if (!FirstIsNoop || !SecondIsNoop)
+      return 0;
+
+    Instruction::CastOps Result =
+        SrcTy->isByteOrByteVectorTy() || DstTy->isByteOrByteVectorTy()
+            ? Instruction::ByteCast
+            : Instruction::BitCast;
+    return castIsValid(Result, SrcTy, DstTy) ? Result : 0;
+  }
+
   // clang-format off
   static const uint8_t CastResults[numCastOps][numCastOps] = {
     // T        F  F  U  S  F  F  P  P  I  B  A  -+
@@ -3125,6 +3147,8 @@ CastInst *CastInst::Create(Instruction::CastOps op, Value *S, Type *Ty,
   case IntToPtr:      return new IntToPtrInst      (S, Ty, Name, InsertBefore);
   case BitCast:
     return new BitCastInst(S, Ty, Name, InsertBefore);
+  case ByteCast:
+    return new ByteCastInst(S, Ty, Name, InsertBefore);
   case AddrSpaceCast:
     return new AddrSpaceCastInst(S, Ty, Name, InsertBefore);
   default:
@@ -3272,6 +3296,12 @@ bool CastInst::isBitOrNoopPointerCastable(Type *SrcTy, Type *DestTy,
   return isBitCastable(SrcTy, DestTy);
 }
 
+static Instruction::CastOps getNoopCastOpcode(Type *SrcTy, Type *DestTy) {
+  if (SrcTy->isByteOrByteVectorTy() || DestTy->isByteOrByteVectorTy())
+    return Instruction::ByteCast;
+  return Instruction::BitCast;
+}
+
 // Provide a way to get a "cast" where the cast opcode is inferred from the
 // types and size of the operand. This, basically, is a parallel of the
 // logic in the castIsValid function below.  This axiom should hold:
@@ -3308,15 +3338,30 @@ CastInst::getCastOpcode(
       DestTy->getPrimitiveSizeInBits().getFixedValue(); // 0 for ptr
 
   // Run through the possibilities ...
-  if (DestTy->isByteTy()) {     // Casting to byte
-    if (SrcTy->isIntegerTy()) { // Casting from integral
-      assert(DestBits == SrcBits && "Illegal cast from integer to byte type");
-      return BitCast;
+  if (DestTy->isByteOrByteVectorTy()) { // Casting to byte
+    if (SrcTy->isIntegerTy() || SrcTy->isByteOrByteVectorTy()) {
+      assert(DestBits == SrcBits && "Illegal cast to byte type");
+      return ByteCast;
     } else if (SrcTy->isPointerTy()) { // Casting from pointer
       assert(DestBits == SrcBits && "Illegal cast from pointer to byte type");
-      return BitCast;
+      return ByteCast;
+    } else if (SrcTy->isFloatingPointTy()) {
+      assert(DestBits == SrcBits && "Illegal cast to byte type");
+      return ByteCast;
     }
     llvm_unreachable("Illegal cast to byte type");
+  } else if (SrcTy->isByteOrByteVectorTy()) { // Casting from byte
+    if (DestTy->isIntegerTy() || DestTy->isFloatingPointTy()) {
+      assert(DestBits == SrcBits && "Illegal cast from byte type");
+      return ByteCast;
+    } else if (DestTy->isPointerTy()) {
+      assert(DestBits == SrcBits && "Illegal cast from byte to pointer type");
+      return ByteCast;
+    } else if (DestTy->isVectorTy()) {
+      assert(DestBits == SrcBits && "Illegal cast from byte type");
+      return ByteCast;
+    }
+    llvm_unreachable("Illegal cast from byte type");
   } else if (DestTy->isIntegerTy()) {               // Casting to integral
     if (SrcTy->isIntegerTy()) {                     // Casting from integral
       if (DestBits < SrcBits)
@@ -3327,7 +3372,7 @@ CastInst::getCastOpcode(
         else
           return ZExt;                              // unsigned -> ZEXT
       } else {
-        return BitCast;                             // Same size, No-op cast
+        return getNoopCastOpcode(SrcTy, DestTy);  // Same size, No-op cast
       }
     } else if (SrcTy->isFloatingPointTy()) {        // Casting from floating pt
       if (DestIsSigned)
@@ -3337,7 +3382,7 @@ CastInst::getCastOpcode(
     } else if (SrcTy->isVectorTy()) {
       assert(DestBits == SrcBits &&
              "Casting vector to integer of different width");
-      return BitCast;                             // Same size, no-op cast
+      return getNoopCastOpcode(SrcTy, DestTy);    // Same size, no-op cast
     } else {
       assert(SrcTy->isPointerTy() &&
              "Casting from a value that is not first-class type");
@@ -3355,18 +3400,18 @@ CastInst::getCastOpcode(
       } else if (DestBits > SrcBits) {
         return FPExt;                               // FP -> larger FP
       } else  {
-        return BitCast;                             // same size, no-op cast
+        return getNoopCastOpcode(SrcTy, DestTy);  // same size, no-op cast
       }
     } else if (SrcTy->isVectorTy()) {
       assert(DestBits == SrcBits &&
              "Casting vector to floating point of different width");
-      return BitCast;                             // same size, no-op cast
+      return getNoopCastOpcode(SrcTy, DestTy);  // same size, no-op cast
     }
     llvm_unreachable("Casting pointer or non-first class to float");
   } else if (DestTy->isVectorTy()) {
     assert(DestBits == SrcBits &&
            "Illegal cast to vector (wrong type or size)");
-    return BitCast;
+    return getNoopCastOpcode(SrcTy, DestTy);
   } else if (DestTy->isPointerTy()) {
     if (SrcTy->isPointerTy()) {
       if (DestTy->getPointerAddressSpace() != SrcTy->getPointerAddressSpace())
@@ -3448,8 +3493,8 @@ CastInst::castIsValid(Instruction::CastOps op, Type *SrcTy, Type *DstTy) {
     PointerType *SrcPtrTy = dyn_cast<PointerType>(SrcTy->getScalarType());
     PointerType *DstPtrTy = dyn_cast<PointerType>(DstTy->getScalarType());
 
-    // BitCast implies a no-op cast of type only. No bits change.
-    // However, you can't cast pointers to anything but pointers/bytes.
+    // Keep accepting legacy bitcasts involving byte types while producers and
+    // tests migrate to the dedicated ByteCast opcode.
     if ((SrcPtrTy && DstTy->isByteOrByteVectorTy()) ||
         (SrcTy->isByteOrByteVectorTy() && DstPtrTy))
       return true;
@@ -3474,6 +3519,22 @@ CastInst::castIsValid(Instruction::CastOps op, Type *SrcTy, Type *DstTy) {
       return DstEC == ElementCount::getFixed(1);
 
     return true;
+  }
+  case Instruction::ByteCast: {
+    bool SrcHasByte = SrcTy->isByteOrByteVectorTy();
+    bool DstHasByte = DstTy->isByteOrByteVectorTy();
+    if (!SrcHasByte && !DstHasByte)
+      return false;
+
+    PointerType *SrcPtrTy = dyn_cast<PointerType>(SrcTy->getScalarType());
+    PointerType *DstPtrTy = dyn_cast<PointerType>(DstTy->getScalarType());
+
+    // As with legacy byte-related bitcasts, opaque pointers do not provide
+    // enough type information to compare widths here.
+    if ((SrcPtrTy && DstHasByte) || (SrcHasByte && DstPtrTy))
+      return true;
+
+    return SrcTy->getPrimitiveSizeInBits() == DstTy->getPrimitiveSizeInBits();
   }
   case Instruction::AddrSpaceCast: {
     PointerType *SrcPtrTy = dyn_cast<PointerType>(SrcTy->getScalarType());
@@ -3568,6 +3629,12 @@ BitCastInst::BitCastInst(Value *S, Type *Ty, const Twine &Name,
                          InsertPosition InsertBefore)
     : CastInst(Ty, BitCast, S, Name, InsertBefore) {
   assert(castIsValid(getOpcode(), S, Ty) && "Illegal BitCast");
+}
+
+ByteCastInst::ByteCastInst(Value *S, Type *Ty, const Twine &Name,
+                           InsertPosition InsertBefore)
+    : CastInst(Ty, ByteCast, S, Name, InsertBefore) {
+  assert(castIsValid(getOpcode(), S, Ty) && "Illegal ByteCast");
 }
 
 AddrSpaceCastInst::AddrSpaceCastInst(Value *S, Type *Ty, const Twine &Name,
@@ -4543,6 +4610,10 @@ IntToPtrInst *IntToPtrInst::cloneImpl() const {
 
 BitCastInst *BitCastInst::cloneImpl() const {
   return new BitCastInst(getOperand(0), getType());
+}
+
+ByteCastInst *ByteCastInst::cloneImpl() const {
+  return new ByteCastInst(getOperand(0), getType());
 }
 
 AddrSpaceCastInst *AddrSpaceCastInst::cloneImpl() const {

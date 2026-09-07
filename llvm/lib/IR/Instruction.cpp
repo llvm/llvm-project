@@ -883,6 +883,7 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   case PtrToAddr:     return "ptrtoaddr";
   case PtrToInt:      return "ptrtoint";
   case BitCast:       return "bitcast";
+  case ByteCast:      return "bytecast";
   case AddrSpaceCast: return "addrspacecast";
 
   // Other instructions...

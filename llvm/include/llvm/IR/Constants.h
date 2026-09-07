@@ -1362,6 +1362,8 @@ public:
                                         bool OnlyIfReduced = false);
   LLVM_ABI static Constant *getBitCast(Constant *C, Type *Ty,
                                        bool OnlyIfReduced = false);
+  LLVM_ABI static Constant *getByteCast(Constant *C, Type *Ty,
+                                        bool OnlyIfReduced = false);
   LLVM_ABI static Constant *getAddrSpaceCast(Constant *C, Type *Ty,
                                              bool OnlyIfReduced = false);
 

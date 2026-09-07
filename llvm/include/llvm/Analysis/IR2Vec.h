@@ -311,9 +311,7 @@ public:
   };
 
   /// Vocabulary layout constants
-#define LAST_OTHER_INST(NUM) static constexpr unsigned MaxOpcodes = NUM;
-#include "llvm/IR/Instruction.def"
-#undef LAST_OTHER_INST
+  static constexpr unsigned MaxOpcodes = Instruction::ByteCast;
 
   static constexpr unsigned MaxTypeIDs = Type::TypeID::TargetExtTyID + 1;
   static constexpr unsigned MaxCanonicalTypeIDs =
