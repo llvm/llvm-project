@@ -52,18 +52,23 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM IR
 
-* LLVM now assigns persistent print IDs to metadata nodes. This keeps metadata
-  IDs stable across repeated debug and pass output, but can change their
-  numbering and ordering compared with earlier releases. Standalone metadata
-  printing now uses numbered definitions such as `!1 = !DIFile(...)` instead
-  of pointer-based forms such as `<0x...> = !DIFile(...)`. Tools and tests that
-  compare such output may need updating. LLVM's standard final-output paths
-  renumber metadata IDs into a contiguous sequence in canonical order before
-  emitting a complete module. C++ clients that call `Module::print()` directly
-  do not renumber automatically and may see different metadata numbering and
-  definition ordering compared with earlier releases. Such clients can call
-  `Module::renumberMetadataForAssembly()` immediately before final output when
-  canonical numbering is required.
+* LLVM now assigns persistent print IDs to metadata nodes. Keeping these IDs
+  stable across repeated debug and pass output makes changes easier to follow:
+  unchanged metadata keeps the same number as passes modify the module. The
+  numbering and definition order can differ from earlier releases, so tests
+  of intermediate output may need updated expectations.
+
+  LLVM's standard final-output paths renumber metadata in canonical order.
+  This gives consecutive IDs with no gaps and makes the final IR easier to
+  read. C++ clients that call `Module::print()` directly do not renumber
+  automatically. For final IR output, these clients should call
+  `Module::renumberMetadataForAssembly()` immediately before printing. Keep
+  persistent IDs for intermediate dumps so their numbering remains stable.
+
+  Standalone metadata printing now uses numbered definitions such as
+  `!1 = !DIFile(...)` instead of pointer-based forms such as
+  `<0x...> = !DIFile(...)`. Tools and tests that compare such output may need
+  updating.
 
 * Added `llvm.vector.reduce.fmaximumnum` and `llvm.vector.reduce.fminimumnum`
   intrinsics, the reduction variants of `llvm.maximumnum` and
