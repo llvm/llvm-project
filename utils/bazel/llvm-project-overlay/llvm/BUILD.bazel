@@ -1909,6 +1909,7 @@ cc_library(
     deps = [
         ":AggressiveInstCombine",
         ":Analysis",
+        ":AsmParser",
         ":BinaryFormat",
         ":Core",
         ":InstCombine",
@@ -2234,6 +2235,7 @@ cc_library(
     deps = [
         ":AggressiveInstCombine",
         ":Analysis",
+        ":AsmParser",
         ":BinaryFormat",
         ":BitReader",
         ":BitWriter",

@@ -1081,6 +1081,26 @@ print *, [(j,j=1,10)]
   are noted only as warnings when they appear in code known to be
   dead anyway at compilation time.
 
+* A reference with a constant subscript that is out of range is accepted
+  with a warning rather than rejected with an error.  A subscript value is
+  required to be within its bounds only when the reference is executed
+  (F'2023 9.5.3.1 paragraph 2), so a reference that never runs does not
+  render a program nonconforming; that case cannot be recognized in general
+  -- consider a procedure whose only call site is in dead code, or one that
+  is never called at all.  Note that the warning, not an error, is also what
+  appears when the reference *is* executed.  The endpoints of array sections
+  get the same treatment.  Cosubscripts do not: their requirement is F'2023
+  9.6 paragraph 2 and a cosubscript list determines an image index, so an
+  out-of-cobounds constant cosubscript remains an error.  Neither do an
+  out-of-range subscript in a reference to a named constant array, an
+  out-of-range `DATA` statement designator, or an out-of-range substring;
+  those remain errors as well.
+  Use `-fno-out-of-bounds-subscripts` to make these references errors again,
+  or `-Wno-out-of-bounds-subscripts` to silence the warning entirely.
+  Note that a module file compiled with the warning may produce errors in a
+  dependent compilation that uses `-fno-out-of-bounds-subscripts`, since the
+  interface is re-analyzed there; those errors point into the module file.
+
 ## Behavior in cases where the standard is clear but disputed
 
 * Unless one uses `-ffast-math`, directly or by implication,

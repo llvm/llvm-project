@@ -176,3 +176,44 @@ TEST_F(LlvmLibcFlatFileDbTest, MalformedLineReturnsEinval) {
 
   db.enddb();
 }
+
+TEST_F(LlvmLibcFlatFileDbTest, BlankLinesSkipped) {
+  const char *content = "\n\nuser1:secret1\n\n\nuser2:secret2\n\n";
+  HermeticFile test_file(libc_make_test_file_path("flat_db_blank.test"),
+                         content);
+
+  LIBC_NAMESPACE::pwd::ScopedFlatFileDatabase<SimpleTestEntry> db(
+      test_file.get_path());
+  char buffer[128];
+  SimpleTestEntry entry;
+
+  // First record (skipping leading blank lines)
+  auto r1 = db.getnext(&entry, buffer);
+  ASSERT_TRUE(r1.has_value());
+  ASSERT_TRUE(r1.value());
+  ASSERT_STREQ(entry.key, "user1");
+  ASSERT_STREQ(entry.val, "secret1");
+
+  // Second record (skipping consecutive blank lines)
+  auto r2 = db.getnext(&entry, buffer);
+  ASSERT_TRUE(r2.has_value());
+  ASSERT_TRUE(r2.value());
+  ASSERT_STREQ(entry.key, "user2");
+  ASSERT_STREQ(entry.val, "secret2");
+
+  // EOF (skipping trailing blank lines)
+  auto r3 = db.getnext(&entry, buffer);
+  ASSERT_TRUE(r3.has_value());
+  ASSERT_FALSE(r3.value());
+
+  // Rewind and lookup across blank lines
+  db.setdb();
+  auto matcher = [](const SimpleTestEntry &e) {
+    return LIBC_NAMESPACE::cpp::string_view(e.key) == "user2";
+  };
+  auto lookup_res = db.lookup(matcher, &entry, buffer);
+  ASSERT_TRUE(lookup_res.has_value());
+  ASSERT_TRUE(lookup_res.value());
+  ASSERT_STREQ(entry.key, "user2");
+  ASSERT_STREQ(entry.val, "secret2");
+}

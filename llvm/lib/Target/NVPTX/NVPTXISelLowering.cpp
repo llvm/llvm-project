@@ -5713,10 +5713,6 @@ bool NVPTXTargetLowering::allowFMA(MachineFunction &MF,
   if (OptLevel == CodeGenOptLevel::None)
     return false;
 
-  // Honor TargetOptions flags that explicitly say fusion is okay.
-  if (MF.getTarget().Options.AllowFPOpFusion == FPOpFusion::Fast)
-    return true;
-
   return false;
 }
 

@@ -5546,8 +5546,8 @@ libc_support_library(
     hdrs = ["src/__support/math/fmaximum_magf128.h"],
     deps = [
         ":__support_fputil_basic_operations",
+        ":__support_fputil_float128",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -5575,8 +5575,8 @@ libc_support_library(
     hdrs = ["src/__support/math/fmaximum_mag_numf128.h"],
     deps = [
         ":__support_fputil_basic_operations",
+        ":__support_fputil_float128",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -5632,8 +5632,8 @@ libc_support_library(
     hdrs = ["src/__support/math/fmaximum_numf128.h"],
     deps = [
         ":__support_fputil_basic_operations",
+        ":__support_fputil_float128",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -5794,8 +5794,8 @@ libc_support_library(
     hdrs = ["src/__support/math/fminimum_magf128.h"],
     deps = [
         ":__support_fputil_basic_operations",
+        ":__support_fputil_float128",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -5851,8 +5851,8 @@ libc_support_library(
     hdrs = ["src/__support/math/fminimum_mag_numf128.h"],
     deps = [
         ":__support_fputil_basic_operations",
+        ":__support_fputil_float128",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -5908,8 +5908,8 @@ libc_support_library(
     hdrs = ["src/__support/math/fminimum_numf128.h"],
     deps = [
         ":__support_fputil_basic_operations",
+        ":__support_fputil_float128",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -6983,6 +6983,8 @@ libc_support_library(
         ":__support_fputil_nearest_integer_operations",
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_architectures",
         ":__support_macros_properties_compiler",
         ":__support_macros_properties_cpu_features",
     ],
@@ -7064,6 +7066,8 @@ libc_support_library(
         ":__support_fputil_nearest_integer_operations",
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_architectures",
         ":__support_macros_properties_compiler",
         ":__support_macros_properties_cpu_features",
     ],
@@ -7870,8 +7874,8 @@ libc_support_library(
     hdrs = ["src/__support/math/fdimf128.h"],
     deps = [
         ":__support_fputil_basic_operations",
+        ":__support_fputil_float128",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -11761,6 +11765,8 @@ libc_math_function(
 libc_math_function(
     name = "fdimf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_fdimf128",
     ],
 )
@@ -11985,6 +11991,8 @@ libc_math_function(
 libc_math_function(
     name = "fmaximum_magf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_fmaximum_magf128",
     ],
 )
@@ -12027,6 +12035,8 @@ libc_math_function(
 libc_math_function(
     name = "fmaximum_mag_numf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_fmaximum_mag_numf128",
     ],
 )
@@ -12062,6 +12072,8 @@ libc_math_function(
 libc_math_function(
     name = "fmaximum_numf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_fmaximum_numf128",
     ],
 )
@@ -12171,6 +12183,8 @@ libc_math_function(
 libc_math_function(
     name = "fminimum_magf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_fminimum_magf128",
     ],
 )
@@ -12206,6 +12220,8 @@ libc_math_function(
 libc_math_function(
     name = "fminimum_mag_numf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_fminimum_mag_numf128",
     ],
 )
@@ -12241,6 +12257,8 @@ libc_math_function(
 libc_math_function(
     name = "fminimum_numf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_fminimum_numf128",
     ],
 )
