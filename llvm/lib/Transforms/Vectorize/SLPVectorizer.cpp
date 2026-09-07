@@ -4480,9 +4480,7 @@ private:
         } while (It != P.first->Scalars.end());
       }
       return all_of(PotentiallyReorderedEntriesCount,
-                    [&](const std::pair<const TreeEntry *, unsigned> &P) {
-                      return P.second == NumOps - 1;
-                    });
+                    [&](const auto &P) { return P.second == NumOps - 1; });
     }
 
     SmallVector<ScheduleCopyableData *>

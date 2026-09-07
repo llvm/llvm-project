@@ -760,9 +760,8 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
 
   // Now that we succeeded creating the launch operation, also update the
   // bounds.
-  for (auto bound : launchBounds)
-    launchOp.setOperand(getLaunchOpArgumentNum(std::get<0>(bound)),
-                        std::get<1>(bound));
+  for (const auto &bound : launchBounds)
+    launchOp.setOperand(getLaunchOpArgumentNum(bound.first), bound.second);
 
   rewriter.eraseOp(parallelOp);
   return success();
