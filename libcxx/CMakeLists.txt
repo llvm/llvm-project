@@ -643,50 +643,7 @@ function(cxx_add_module_flags target)
   endif()
 endfunction()
 
-string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
-
-# Sanitizer flags =============================================================
-
-function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
-  set(SANITIZER_FLAGS)
-  set(USE_SANITIZER "${USE_SANITIZER}")
-  # NOTE: LLVM_USE_SANITIZER checks for a UNIX like system instead of MSVC.
-  # But we don't have LLVM_ON_UNIX so checking for MSVC is the best we can do.
-  if (USE_SANITIZER AND NOT MSVC)
-    append_flags_if_supported(SANITIZER_FLAGS "-fno-omit-frame-pointer")
-    append_flags_if_supported(SANITIZER_FLAGS "-gline-tables-only")
-
-    if (NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" AND
-            NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "RELWITHDEBINFO")
-      append_flags_if_supported(SANITIZER_FLAGS "-gline-tables-only")
-    endif()
-    if (USE_SANITIZER STREQUAL "Address")
-      append_flags(SANITIZER_FLAGS "-fsanitize=address")
-    elseif (USE_SANITIZER STREQUAL "HWAddress")
-      append_flags(SANITIZER_FLAGS "-fsanitize=hwaddress")
-    elseif (USE_SANITIZER MATCHES "Memory(WithOrigins)?")
-      append_flags(SANITIZER_FLAGS -fsanitize=memory)
-      if (USE_SANITIZER STREQUAL "MemoryWithOrigins")
-        append_flags(SANITIZER_FLAGS "-fsanitize-memory-track-origins")
-      endif()
-    elseif (USE_SANITIZER STREQUAL "Undefined")
-      append_flags(SANITIZER_FLAGS "-fsanitize=undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
-    elseif (USE_SANITIZER STREQUAL "Address;Undefined" OR
-            USE_SANITIZER STREQUAL "Undefined;Address")
-      append_flags(SANITIZER_FLAGS "-fsanitize=address,undefined" "-fno-sanitize=vptr,function" "-fno-sanitize-recover=all")
-    elseif (USE_SANITIZER STREQUAL "Thread")
-      append_flags(SANITIZER_FLAGS -fsanitize=thread)
-    elseif (USE_SANITIZER STREQUAL "DataFlow")
-      append_flags(SANITIZER_FLAGS -fsanitize=dataflow)
-    else()
-      message(WARNING "Unsupported value of LLVM_USE_SANITIZER: ${USE_SANITIZER}")
-    endif()
-  elseif(USE_SANITIZER AND MSVC)
-    message(WARNING "LLVM_USE_SANITIZER is not supported on this platform.")
-  endif()
-  set(${OUT_VAR} "${SANITIZER_FLAGS}" PARENT_SCOPE)
-endfunction()
-
+include(GetSanitizerFlags)
 get_sanitizer_flags(SANITIZER_FLAGS "${LLVM_USE_SANITIZER}")
 add_library(cxx-sanitizer-flags INTERFACE)
 target_compile_options(cxx-sanitizer-flags INTERFACE ${SANITIZER_FLAGS})
