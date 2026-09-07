@@ -1851,6 +1851,120 @@ ASTReader::readSLocOffset(ModuleFile *F, unsigned Index) {
   }
 }
 
+llvm::Expected<std::pair<SourceLocation::UIntTy, unsigned>>
+ASTReader::readSLocFileEntry(ModuleFile *F, unsigned Index) {
+  BitstreamCursor &Cursor = F->SLocEntryCursor;
+  SavedStreamPosition SavedPosition(Cursor);
+  if (llvm::Error Err = Cursor.JumpToBit(F->SLocEntryOffsetsBase +
+                                         F->SLocEntryOffsets[Index]))
+    return std::move(Err);
+
+  Expected<llvm::BitstreamEntry> MaybeEntry = Cursor.advance();
+  if (!MaybeEntry)
+    return MaybeEntry.takeError();
+
+  llvm::BitstreamEntry Entry = MaybeEntry.get();
+  if (Entry.Kind != llvm::BitstreamEntry::Record)
+    return llvm::createStringError(
+        std::errc::illegal_byte_sequence,
+        "incorrectly-formatted source location entry in AST file");
+
+  RecordData Record;
+  StringRef Blob;
+  Expected<unsigned> MaybeSLOC = Cursor.readRecord(Entry.ID, Record, &Blob);
+  if (!MaybeSLOC)
+    return MaybeSLOC.takeError();
+
+  switch (MaybeSLOC.get()) {
+  default:
+    return llvm::createStringError(
+        std::errc::illegal_byte_sequence,
+        "incorrectly-formatted source location entry in AST file");
+  case SM_SLOC_FILE_ENTRY:
+    return std::make_pair(F->SLocEntryBaseOffset + Record[0],
+                          unsigned(Record[4]));
+  case SM_SLOC_BUFFER_ENTRY:
+  case SM_SLOC_EXPANSION_ENTRY:
+    return std::make_pair(F->SLocEntryBaseOffset + Record[0], 0u);
+  }
+}
+
+void ASTReader::canonicalizePathForIdentity(SmallVectorImpl<char> &Path) const {
+  FileMgr.makeAbsolutePath(Path, /*Canonicalize=*/true);
+}
+
+void ASTReader::buildLoadedInputFiles() {
+  LoadedInputFilesBuilt = true;
+  // ModuleManager hands modules out in index order, so the copy we settle on
+  // for a file does not depend on the order things happened to be loaded in.
+  for (ModuleFile &F : ModuleMgr) {
+    for (unsigned I = 0, N = F.InputFilesLoaded.size(); I != N; ++I) {
+      InputFileInfo FI = getInputFileInfo(F, I + 1);
+      if (FI.UnresolvedImportedFilename.empty())
+        continue;
+      // An overridden input holds a buffer rather than the contents of the
+      // path it names, so its path and size describe nothing we can match on.
+      if (FI.Overridden)
+        continue;
+      auto Filename =
+          ResolveImportedPath(PathBuf, FI.UnresolvedImportedFilename, F);
+      SmallString<128> Key(*Filename);
+      canonicalizePathForIdentity(Key);
+      LoadedInputFiles[Key].push_back({FI.StoredSize, &F, I + 1});
+    }
+  }
+}
+
+ASTReader::LoadedFileLoc ASTReader::getLoadedInputFileLoc(ModuleFile &F,
+                                                          unsigned InputID) {
+  auto Known = LoadedInputFileLocs.find(&F);
+  if (Known == LoadedInputFileLocs.end()) {
+    llvm::DenseMap<unsigned, LoadedFileLoc> Locs;
+    for (unsigned I = 0; I != F.LocalNumSLocEntries; ++I) {
+      auto MaybeEntry = readSLocFileEntry(&F, I);
+      if (!MaybeEntry) {
+        consumeError(MaybeEntry.takeError());
+        continue;
+      }
+      auto [Offset, ID] = *MaybeEntry;
+      if (!ID)
+        continue;
+      // A module writes its entries in order, so the first entry naming an
+      // input file is the one we want.
+      Locs.try_emplace(
+          ID, LoadedFileLoc{FileID::get(F.SLocEntryBaseID + I), Offset});
+    }
+    Known = LoadedInputFileLocs.try_emplace(&F, std::move(Locs)).first;
+  }
+
+  auto It = Known->second.find(InputID);
+  return It == Known->second.end() ? LoadedFileLoc() : It->second;
+}
+
+ASTReader::LoadedFileLoc ASTReader::getLoadedFileLoc(StringRef Path,
+                                                     off_t Size) {
+  if (!LoadedInputFilesBuilt)
+    buildLoadedInputFiles();
+
+  SmallString<128> Key(Path);
+  canonicalizePathForIdentity(Key);
+  auto Known = LoadedInputFiles.find(Key);
+  if (Known == LoadedInputFiles.end())
+    return LoadedFileLoc();
+
+  for (const LoadedInputFile &In : Known->second) {
+    if (In.Size != Size)
+      continue;
+    // A module that has the file as an input may still have left its source
+    // location entries out, in which case it has no copy to point at and we
+    // keep looking.
+    LoadedFileLoc Loc = getLoadedInputFileLoc(*In.F, In.InputID);
+    if (Loc.FID.isValid())
+      return Loc;
+  }
+  return LoadedFileLoc();
+}
+
 int ASTReader::getSLocEntryID(SourceLocation::UIntTy SLocOffset) {
   auto SLocMapI =
       GlobalSLocOffsetMap.find(SourceManager::MaxLoadedOffset - SLocOffset - 1);

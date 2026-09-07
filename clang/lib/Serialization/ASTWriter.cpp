@@ -5562,26 +5562,6 @@ static void AddLazyVectorEmiitedDecls(ASTWriter &Writer, Vector &Vec,
   }
 }
 
-FileID ASTWriter::getLoadedCopyFileID(const FileEntry *FE) {
-  const SourceManager &SM = PP->getSourceManager();
-  if (!LoadedCopyFileIDsBuilt) {
-    // Keying on the FileEntry keeps two files with the same name and size
-    // distinct.
-    LoadedCopyFileIDsBuilt = true;
-    for (unsigned I = 0, N = SM.loaded_sloc_entry_size(); I != N; ++I) {
-      bool Invalid = false;
-      const SrcMgr::SLocEntry &E = SM.getLoadedSLocEntry(I, &Invalid);
-      if (Invalid || !E.isFile())
-        continue;
-      if (OptionalFileEntryRef OE = E.getFile().getContentCache().OrigEntry)
-        LoadedCopyFileIDs.try_emplace(&OE->getFileEntry(),
-                                      FileID::get(-int(I) - 2));
-    }
-  }
-  auto It = LoadedCopyFileIDs.find(FE);
-  return It == LoadedCopyFileIDs.end() ? FileID() : It->second;
-}
-
 void ASTWriter::computeNonAffectingInputFiles() {
   SourceManager &SrcMgr = PP->getSourceManager();
   unsigned N = SrcMgr.local_sloc_entry_size();
@@ -5684,16 +5664,19 @@ void ASTWriter::computeNonAffectingInputFiles() {
     // A module we import may already have this input file. If it does, we
     // point our locations at its copy instead of writing a second set of
     // entries for the same text. The input file record is still written, so
-    // validation continues to work.
-    FileID LoadedFID = getLoadedCopyFileID(&Cache->OrigEntry->getFileEntry());
-    if (!LoadedFID.isValid())
+    // validation continues to work. We ask by path and size, which a module
+    // records for every input it has, so the answer comes out of what it
+    // wrote and its own entries stay untouched.
+    if (!hasChain())
+      continue;
+    ASTReader::LoadedFileLoc Loaded = getChain()->getLoadedFileLoc(
+        Cache->OrigEntry->getName(), Cache->OrigEntry->getSize());
+    if (Loaded.FID.isInvalid())
       continue;
 
     IsSLocAffecting[I] = false;
     IsSLocFileEntryAffecting[I] = true;
-    MarkNonAffecting(FID,
-                     int64_t(SLoc->getOffset()) -
-                         int64_t(SrcMgr.getSLocEntry(LoadedFID).getOffset()));
+    MarkNonAffecting(FID, int64_t(SLoc->getOffset()) - int64_t(Loaded.Offset));
   }
 
   if (!PP->getHeaderSearchInfo().getHeaderSearchOpts().ModulesIncludeVFSUsage)

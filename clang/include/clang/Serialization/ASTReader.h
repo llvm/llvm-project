@@ -1449,6 +1449,47 @@ private:
   };
 
 public:
+  /// Where a loaded module keeps its copy of a file: the FileID naming it and
+  /// the offset its locations start at. The FileID is invalid when no loaded
+  /// module has the file.
+  struct LoadedFileLoc {
+    FileID FID;
+    SourceLocation::UIntTy Offset = 0;
+  };
+
+  /// Where a loaded module keeps the input file with resolved path \p Path and
+  /// size \p Size.
+  LoadedFileLoc getLoadedFileLoc(StringRef Path, off_t Size);
+
+private:
+  /// An input file of a loaded module, as its own serialized data describes
+  /// it.
+  struct LoadedInputFile {
+    off_t Size;
+    ModuleFile *F;
+    unsigned InputID;
+  };
+
+  /// The input files of every loaded module, keyed by resolved path, in module
+  /// index order. Filled on first use.
+  llvm::StringMap<SmallVector<LoadedInputFile, 1>> LoadedInputFiles;
+  bool LoadedInputFilesBuilt = false;
+
+  /// For each module we have walked, where it keeps each of its input files.
+  /// We walk a module only once something asks about a file it has.
+  llvm::DenseMap<ModuleFile *, llvm::DenseMap<unsigned, LoadedFileLoc>>
+      LoadedInputFileLocs;
+
+  void canonicalizePathForIdentity(SmallVectorImpl<char> &Path) const;
+  void buildLoadedInputFiles();
+  LoadedFileLoc getLoadedInputFileLoc(ModuleFile &F, unsigned InputID);
+
+  /// Read the offset and input file index out of the file entry at local index
+  /// \p Index in \p F. The index is zero for an entry that is not a file.
+  llvm::Expected<std::pair<SourceLocation::UIntTy, unsigned>>
+  readSLocFileEntry(ModuleFile *F, unsigned Index);
+
+public:
   /// Get the buffer for resolving paths.
   SmallString<0> &getPathBuf() { return PathBuf; }
 
