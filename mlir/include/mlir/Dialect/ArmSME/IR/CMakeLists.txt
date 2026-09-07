@@ -1,4 +1,5 @@
 add_mlir_dialect(ArmSME arm_sme ArmSME)
+add_dependencies(mlir-generic-headers MLIRArmSMEIncGen)
 
 # Generate declarations and definitions of ArmSME Ops
 set(LLVM_TARGET_DEFINITIONS ArmSMEOps.td)

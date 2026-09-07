@@ -1,4 +1,5 @@
 add_mlir_dialect(NVGPU nvgpu)
+add_dependencies(mlir-generic-headers MLIRNVGPUIncGen)
 add_mlir_doc(NVGPUOps NVGPU Dialects/ -gen-dialect-doc -dialect nvgpu)
 
 set(LLVM_TARGET_DEFINITIONS NVGPUOps.td)

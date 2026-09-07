@@ -7,6 +7,6 @@ add_mlir_dialect_tablegen_target(MLIRTransformsPassIncGen)
 
 set(LLVM_TARGET_DEFINITIONS DialectInlinerInterface.td)
 mlir_tablegen(DialectInlinerInterface.h.inc -gen-dialect-interface-decls)
-add_mlir_dialect_tablegen_target(MLIRTransformsDialectInterfaceIncGen)
+add_mlir_generic_tablegen_target(MLIRTransformsDialectInterfaceIncGen)
 
 add_mlir_doc(Passes GeneralPasses ./ -gen-pass-doc)

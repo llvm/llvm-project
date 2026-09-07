@@ -1,4 +1,5 @@
 add_mlir_dialect(Vector vector)
+add_dependencies(mlir-generic-headers MLIRVectorIncGen)
 add_mlir_doc(VectorOps VectorOps Dialects/ -gen-op-doc -dialect=vector)
 
 # Add Vector operations
