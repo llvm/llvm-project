@@ -6044,6 +6044,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             << Name << Triple.getArchName();
     }
     A->render(Args, CmdArgs);
+    // Codegen TLI is built in runCodeGenPipeline from -fast-library=.
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back(Args.MakeArgString("-fast-library=" + Name));
   }
 
   if (Args.hasFlag(options::OPT_fmerge_all_constants,
