@@ -132,8 +132,7 @@ public:
   static fir::GlobalOp tryCreating(
       fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type symTy,
       llvm::StringRef globalName, fir::LinkageAttr linkage, bool isConst,
-      const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>>
-          &constant,
+      const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC>> &constant,
       cuf::DataAttributeAttr dataAttr, bool setDefaultAlignment = true) {
     DenseGlobalBuilder globalBuilder;
     globalBuilder.tryConvertingToAttributes(builder, constant);
