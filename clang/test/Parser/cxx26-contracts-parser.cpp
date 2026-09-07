@@ -22,6 +22,9 @@ concept C = true;
 template <typename T>
 int constrained(T value) requires C<T> pre(value > T{});
 
+template <typename T>
+int constrained_invalid(T value) pre(value > T{}) requires C<T>; // expected-error {{trailing requires clause must appear before contract specifiers}}
+
 struct S {
   int member(int value) pre(value > 0) post(result: result > value);
   int member2(int value) post(result: result > value) pre(value > 0);
