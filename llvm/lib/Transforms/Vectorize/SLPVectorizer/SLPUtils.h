@@ -180,6 +180,10 @@ bool isReverseOrder(ArrayRef<unsigned> Order);
 /// size \p Sz, which are not identity submasks.
 bool isRepeatedNonIdentityClusteredMask(ArrayRef<int> Mask, unsigned Sz);
 
+/// Fills unset elements of \p Order (marked with the sentinel value equal to
+/// the order size) with the corresponding elements of \p SecondaryOrder,
+/// skipping already used indices, or with the identity order if
+/// \p SecondaryOrder is empty.
 void combineOrders(MutableArrayRef<unsigned> Order,
                    ArrayRef<unsigned> SecondaryOrder);
 
