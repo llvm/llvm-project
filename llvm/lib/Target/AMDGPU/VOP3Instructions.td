@@ -1935,12 +1935,12 @@ let SubtargetPredicate = isGFX1250Plus in {
 let SubtargetPredicate = HasFP6BF6ToF16BF16F32ConversionScaleInsts,
     ReadsModeReg = 0, Constraints = "@earlyclobber $vdst" in {
   let WaveSizePredicate = isWave32 in {
-    defm V_CVT_SCALE_PK32_BF16_BF6 : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_bf16_bf6", VOP_V32BF16_V6I32_I32, null_frag>;
-    defm V_CVT_SCALE_PK32_BF16_FP6 : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_bf16_fp6", VOP_V32BF16_V6I32_I32, null_frag>;
-    defm V_CVT_SCALE_PK32_F16_BF6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_f16_bf6",  VOP_V32F16_V6I32_I32,  null_frag>;
-    defm V_CVT_SCALE_PK32_F16_FP6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_f16_fp6",  VOP_V32F16_V6I32_I32,  null_frag>;
-    defm V_CVT_SCALE_PK32_F32_BF6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_f32_bf6",  VOP_V32F32_V6I32_I32,  null_frag>;
-    defm V_CVT_SCALE_PK32_F32_FP6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_f32_fp6",  VOP_V32F32_V6I32_I32,  null_frag>;
+    defm V_CVT_SCALE_PK32_BF16_BF6 : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_bf16_bf6", VOP_V32BF16_V6I32_I32, int_amdgcn_cvt_scale_pk32_bf16_bf6>;
+    defm V_CVT_SCALE_PK32_BF16_FP6 : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_bf16_fp6", VOP_V32BF16_V6I32_I32, int_amdgcn_cvt_scale_pk32_bf16_fp6>;
+    defm V_CVT_SCALE_PK32_F16_BF6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_f16_bf6",  VOP_V32F16_V6I32_I32,  int_amdgcn_cvt_scale_pk32_f16_bf6>;
+    defm V_CVT_SCALE_PK32_F16_FP6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_f16_fp6",  VOP_V32F16_V6I32_I32,  int_amdgcn_cvt_scale_pk32_f16_fp6>;
+    defm V_CVT_SCALE_PK32_F32_BF6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_f32_bf6",  VOP_V32F32_V6I32_I32,  int_amdgcn_cvt_scale_pk32_f32_bf6>;
+    defm V_CVT_SCALE_PK32_F32_FP6  : VOP3CvtScaleSelInst<"v_cvt_scale_pk32_f32_fp6",  VOP_V32F32_V6I32_I32,  int_amdgcn_cvt_scale_pk32_f32_fp6>;
   } // End WaveSizePredicate = isWave32
 } // End SubtargetPredicate = HasFP6BF6ToF16BF16F32ConversionScaleInsts
 
