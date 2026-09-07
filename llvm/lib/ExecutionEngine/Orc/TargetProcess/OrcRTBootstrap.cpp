@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "OrcRTBootstrap.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/OrcRTBootstrap.h"
 
 #include "llvm/ExecutionEngine/Orc/Shared/SPSCI/CallSPSCI.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SPSCI/MemoryAccessSPSCI.h"

@@ -529,7 +529,7 @@ static void printIRBlockReference(raw_ostream &OS, const BasicBlock &BB,
     if (F == MST.getCurrentFunction()) {
       Slot = MST.getLocalSlot(&BB);
     } else if (const Module *M = F->getParent()) {
-      ModuleSlotTracker CustomMST(M, /*ShouldInitializeAllMetadata=*/false);
+      ModuleSlotTracker CustomMST(M);
       CustomMST.incorporateFunction(*F);
       Slot = CustomMST.getLocalSlot(&BB);
     }
