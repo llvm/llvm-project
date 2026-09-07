@@ -77,7 +77,7 @@ for (int mm = 1; mm <= MONTHS_IN_A_YEAR; ++mm) {
 
 For integral literals by default only `0` and `1` (and `-1`) integer values
 are accepted without a warning. This can be overridden with the
-{option}`IgnoredIntegerValues` option. Negative values are accepted if their
+{option}`IgnoredIntegerValues`. Negative values are accepted if their
 absolute value is present in the {option}`IgnoredIntegerValues` list.
 
 As a special case for integral values, all powers of two can be accepted
@@ -85,7 +85,7 @@ without warning by enabling the {option}`IgnorePowersOf2IntegerValues` option.
 
 For floating point literals by default the `0.0` floating point value is
 accepted without a warning. The set of ignored floating point literals can
-be configured using the {option}`IgnoredFloatingPointValues` option.
+be configured using the {option}`IgnoredFloatingPointValues`.
 For each value in that set, the given string value is converted to a
 floating-point value representation used by the target architecture. If a
 floating-point literal value compares equal to one of the converted values,
@@ -101,7 +101,7 @@ single-precision form and double-precision form are accepted (for example, if
 Scientific notation is supported for both source code input and option.
 Alternatively, the check for the floating point numbers can be disabled for
 all floating point values by enabling the
-{option}`IgnoreAllFloatingPointValues` option.
+{option}`IgnoreAllFloatingPointValues`.
 
 Since values `0` and `0.0` are so common as the base counter of loops,
 or initialization values for sums, they are always accepted without warning,

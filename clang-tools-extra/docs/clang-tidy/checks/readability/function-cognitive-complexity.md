@@ -152,8 +152,8 @@ int function3(bool var1, bool var2) {
 ```
 
 In the last example, the check will flag `function3` if the
-{option}`Threshold` option is set to `2` or smaller. If the
-{option}`DescribeBasicIncrements` option is set to `true`,
+{option}`Threshold` is set to `2` or smaller. If the
+{option}`DescribeBasicIncrements` is set to `true`,
 it will additionally flag the two `if` statements with the amounts by which they
 increase to the complexity of the function and the current nesting level.
 
