@@ -76,6 +76,9 @@ endif()
 
 add_library(orc-rt-bedrock-objects OBJECT ${ORC_RT_BEDROCK_SOURCES})
 
+set_target_properties(orc-rt-bedrock-objects PROPERTIES
+  POSITION_INDEPENDENT_CODE ${ORC_RT_ENABLE_PIC})
+
 target_link_libraries(orc-rt-bedrock-objects PUBLIC orc-rt-headers)
 
 # Apply RTTI and exceptions compile flags
