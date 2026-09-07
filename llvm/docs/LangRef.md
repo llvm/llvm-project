@@ -7897,6 +7897,70 @@ section is not marked as readable or writable and it uses the section flag
 !0 = !{}
 ```
 
+(md_block_uniformity_profile)=
+
+#### '`block.uniformity.profile`' Metadata
+
+`block.uniformity.profile` metadata records observed SIMT execution uniformity
+from an instrumentation profile. It may be attached to a function definition
+or a terminator instruction and must be an empty metadata node.
+
+On a function definition, this metadata indicates that a uniformity profile
+was loaded. On a terminator, it indicates that the profile classified the
+basic block as usually executing with all lanes active. This classification
+may tolerate some divergent executions in the profile. A function attachment
+without any annotated terminators can represent a profile in which no instrumented block was
+uniform. An unannotated block is not known to be uniform; it may be divergent
+or lack a uniformity observation.
+
+Block uniformity does not describe the uniformity of a branch decision. For
+example, all lanes may reach a block and then take different successors. See
+{ref}`branch.uniformity.profile <md_branch_uniformity_profile>` for branch
+decisions.
+
+This metadata is a profile hint for optimization profitability. It does not
+guarantee uniform execution on other inputs and must not be used to justify
+transformations that require uniformity for correctness.
+
+```llvm
+define void @example(i1 %condition) !block.uniformity.profile !0 {
+entry:
+  br i1 %condition, label %then, label %else, !block.uniformity.profile !0
+then:
+  ret void
+else:
+  ret void
+}
+
+!0 = !{}
+```
+
+(md_branch_uniformity_profile)=
+
+#### '`branch.uniformity.profile`' Metadata
+
+`branch.uniformity.profile` metadata records that a profile classified a
+conditional branch as usually uniform across lanes in a SIMT execution group.
+It may be attached only to a conditional branch instruction and must be an
+empty metadata node. A uniform decision means the lanes choose the same
+successor on that execution; the chosen successor can vary between executions.
+The profile classification may tolerate some divergent executions.
+
+An unannotated branch is not known to be uniform. Optimizations can use the
+function-level {ref}`block.uniformity.profile <md_block_uniformity_profile>`
+attachment to distinguish a function with uniformity profile information from
+one without it.
+
+This metadata is a profile hint for optimization profitability. It does not
+guarantee that the branch is uniform on other inputs and must not be used to
+justify transformations that require uniformity for correctness.
+
+```llvm
+br i1 %condition, label %then, label %else, !branch.uniformity.profile !0
+
+!0 = !{}
+```
+
 #### '`unpredictable`' Metadata
 
 `unpredictable` metadata may be attached to any branch, select, or switch
