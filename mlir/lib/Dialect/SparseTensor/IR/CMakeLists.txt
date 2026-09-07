@@ -39,7 +39,10 @@ add_mlir_dialect_library(MLIRSparseTensorDialect
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SparseTensor
 
   DEPENDS
+  MLIRBufferizationEnumsIncGen
+  MLIRBufferizationTypeInterfacesIncGen
   MLIRSparseTensorAttrDefsIncGen
+  MLIRSparseTensorInterfacesIncGen
   MLIRSparseTensorOpsIncGen
   MLIRSparseTensorTypesIncGen
 

@@ -28,6 +28,7 @@ add_mlir_dialect_library(
   MLIRPtrOpsIncGen
   MLIRPtrOpsEnumsGen
   MLIRPtrMemorySpaceInterfacesIncGen
+  MLIRTransformsDialectInterfaceIncGen
   LINK_LIBS
   PUBLIC
   MLIRIR

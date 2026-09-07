@@ -7,7 +7,7 @@ add_clang_library(clangCIRLoweringCommon
   CIRPasses.cpp
   LoweringHelpers.cpp
 
-  LINK_LIBS
+  LINK_LIBS PUBLIC
   clangCIR
   MLIRCIR
   MLIRCIRTransforms

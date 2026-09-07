@@ -6,6 +6,7 @@ add_mlir_dialect_library(MLIRIndexDialect
 
   DEPENDS
   MLIRIndexOpsIncGen
+  MLIRTransformsDialectInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRDialect

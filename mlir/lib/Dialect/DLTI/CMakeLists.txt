@@ -4,6 +4,7 @@ add_mlir_dialect_library(MLIRDLTIDialect
   Traits.cpp
 
   DEPENDS
+  MLIRDLTIAttrsIncGen
   MLIRDLTIIncGen
 
   LINK_LIBS PUBLIC

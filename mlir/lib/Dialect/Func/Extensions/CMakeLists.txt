@@ -10,6 +10,9 @@ add_mlir_extension_library(MLIRFuncInlinerExtension
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Func/Extensions
 
+  DEPENDS
+  MLIRTransformsDialectInterfaceIncGen
+
   LINK_LIBS PUBLIC
   MLIRControlFlowDialect
   MLIRInferTypeOpInterface

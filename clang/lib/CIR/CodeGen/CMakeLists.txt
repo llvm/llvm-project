@@ -64,7 +64,7 @@ add_clang_library(clangCIR
   MLIRCIR
   MLIRCIROpInterfacesIncGen
 
-  LINK_LIBS
+  LINK_LIBS PUBLIC
   clangAST
   clangBasic
   clangCodeGenUtils

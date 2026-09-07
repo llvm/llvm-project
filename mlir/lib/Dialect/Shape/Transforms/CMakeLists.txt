@@ -8,7 +8,15 @@ add_mlir_dialect_library(MLIRShapeOpsTransforms
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/ShapeOps/Transforms
 
   DEPENDS
+  MLIRArithOpsIncGen
+  MLIRBufferizationEnumsIncGen
+  MLIRBufferizationOpsIncGen
+  MLIRBufferizationTypeInterfacesIncGen
+  MLIRDialectUtilsIncGen
+  MLIRFuncOpsIncGen
+  MLIRShapeOpsIncGen
   MLIRShapeTransformsIncGen
+  MLIRTensorOpsIncGen
   )
 
 target_link_libraries(MLIRShapeOpsTransforms

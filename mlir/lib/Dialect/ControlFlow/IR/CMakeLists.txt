@@ -5,7 +5,10 @@ add_mlir_dialect_library(MLIRControlFlowDialect
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/ControlFlow/IR
 
   DEPENDS
+  MLIRBufferizationEnumsIncGen
+  MLIRBufferizationTypeInterfacesIncGen
   MLIRControlFlowOpsIncGen
+  MLIRTransformsDialectInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRArithDialect

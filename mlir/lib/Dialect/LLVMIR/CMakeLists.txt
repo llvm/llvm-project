@@ -37,6 +37,7 @@ add_mlir_dialect_library(MLIRLLVMDialect
   MLIRLLVMTranslationDialectInterfaceIncGen
   MLIRLLVMTypesIncGen
   MLIROpenMPOpsIncGen
+  MLIRTransformsDialectInterfaceIncGen
   intrinsics_gen
 
   LINK_COMPONENTS
@@ -97,6 +98,7 @@ add_mlir_dialect_library(MLIRROCDLDialect
   MLIRGPUCompilationAttrInterfacesIncGen
   MLIRROCDLOpsIncGen
   MLIRROCDLConversionsIncGen
+  MLIRTransformsDialectInterfaceIncGen
   intrinsics_gen
 
   LINK_COMPONENTS

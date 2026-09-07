@@ -13,8 +13,10 @@ add_clang_library(MLIRCIRInterfaces
   MLIRCIRTypeInterfacesIncGen
   MLIRCIRLoopOpInterfaceIncGen
   MLIRCIROpInterfacesIncGen
+  MLIRCIRTypeConstraintsIncGen
 
-  LINK_LIBS
+  LINK_LIBS PUBLIC
   MLIRIR
+  MLIRPtrMemorySpaceInterfaces
   MLIRSupport
  )

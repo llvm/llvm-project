@@ -7,6 +7,7 @@ add_mlir_dialect_library(MLIRMathDialect
 
   DEPENDS
   MLIRMathOpsIncGen
+  MLIRTransformsDialectInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRArithDialect

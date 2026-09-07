@@ -6,6 +6,7 @@ add_mlir_dialect_library(MLIRShardDialect
 
   DEPENDS
   MLIRShardIncGen
+  MLIRTransformsDialectInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRArithDialect

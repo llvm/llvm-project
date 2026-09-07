@@ -14,7 +14,7 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   MLIRCIROpsIncGen
   MLIRCIROpInterfacesIncGen
 
-  LINK_LIBS
+  LINK_LIBS PUBLIC
   clangCIRLoweringCommon
   MLIRCIR
   MLIRCIRTargetLowering

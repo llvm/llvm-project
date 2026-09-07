@@ -5,7 +5,10 @@ add_mlir_dialect_library(MLIRFuncDialect
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Func
 
   DEPENDS
+  MLIRBufferizationEnumsIncGen
+  MLIRBufferizationTypeInterfacesIncGen
   MLIRFuncOpsIncGen
+  MLIRTransformsDialectInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRCallInterfaces

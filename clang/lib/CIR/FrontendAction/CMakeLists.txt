@@ -14,7 +14,7 @@ add_clang_library(clangCIRFrontendAction
   MLIRCIROpInterfacesIncGen
   MLIRBuiltinOpsIncGen
 
-  LINK_LIBS
+  LINK_LIBS PUBLIC
   clangAST
   clangBasic
   clangFrontend

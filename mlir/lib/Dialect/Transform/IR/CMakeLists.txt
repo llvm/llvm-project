@@ -5,11 +5,6 @@ add_mlir_dialect_library(MLIRTransformDialect
   TransformTypes.cpp
   Utils.cpp
 
-  DEPENDS
-  MLIRTransformDialectIncGen
-  MLIRTransformOpsIncGen
-  MLIRTransformTypesIncGen
-
   LINK_LIBS PUBLIC
   MLIRCastInterfaces
   MLIRFunctionInterfaces

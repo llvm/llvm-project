@@ -16,10 +16,10 @@ add_mlir_doc(TransformTypes TransformTypes Dialects/ -gen-typedef-doc -dialect=t
 set(LLVM_TARGET_DEFINITIONS TransformAttrs.td)
 mlir_tablegen(TransformDialectEnums.h.inc -gen-enum-decls)
 mlir_tablegen(TransformDialectEnums.cpp.inc -gen-enum-defs)
-add_mlir_generic_tablegen_target(MLIRTransformDialectEnumIncGen)
+add_mlir_dialect_tablegen_target(MLIRTransformDialectEnumIncGen)
 mlir_tablegen(TransformAttrs.h.inc -gen-attrdef-decls)
 mlir_tablegen(TransformAttrs.cpp.inc -gen-attrdef-defs)
-add_mlir_generic_tablegen_target(MLIRTransformDialectAttributesIncGen)
+add_mlir_dialect_tablegen_target(MLIRTransformDialectAttributesIncGen)
 
 add_mlir_dialect(TransformOps transform)
 add_mlir_doc(TransformOps TransformOps Dialects/ -gen-op-doc -dialect=transform)

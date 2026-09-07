@@ -5,7 +5,9 @@ add_mlir_dialect_library(MLIRArmNeonDialect
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/ArmNeon
 
   DEPENDS
+  MLIRArithOpsIncGen
   MLIRArmNeonIncGen
+  MLIRVectorIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR

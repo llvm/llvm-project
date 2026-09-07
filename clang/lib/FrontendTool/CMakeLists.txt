@@ -51,7 +51,7 @@ add_clang_library(clangFrontendTool
   ClangDriverOptions
   ${deps}
 
-  LINK_LIBS
+  LINK_LIBS PUBLIC
   ${link_libs}
   )
 

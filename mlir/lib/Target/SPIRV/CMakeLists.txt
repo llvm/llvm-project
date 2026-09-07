@@ -10,6 +10,10 @@ set(LLVM_OPTIONAL_SOURCES
 add_mlir_translation_library(MLIRSPIRVBinaryUtils
   SPIRVBinaryUtils.cpp
 
+  DEPENDS
+  MLIRSPIRVEnumAvailabilityIncGen
+  MLIRSPIRVEnumsIncGen
+
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRSupport

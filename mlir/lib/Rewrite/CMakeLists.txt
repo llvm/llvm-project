@@ -8,6 +8,8 @@ add_mlir_library(MLIRRewrite
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Rewrite
 
   DEPENDS
+  MLIRPDLInterpOpsIncGen
+  MLIRPDLOpsIncGen
   mlir-generic-headers
   MLIRConversionPassIncGen
 

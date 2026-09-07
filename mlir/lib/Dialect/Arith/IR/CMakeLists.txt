@@ -22,6 +22,9 @@ add_mlir_dialect_library(MLIRArithDialect
   DEPENDS
   MLIRArithOpsIncGen
   MLIRArithOpsInterfacesIncGen
+  MLIRBufferizationEnumsIncGen
+  MLIRBufferizationTypeInterfacesIncGen
+  MLIRTransformsDialectInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRCastInterfaces
