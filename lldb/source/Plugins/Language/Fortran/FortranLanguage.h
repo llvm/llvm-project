@@ -5,11 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// \file
-/// This file defines the Fortran language plugin.
-///
-//===----------------------------------------------------------------------===//
 
 #ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_FORTRAN_FORTRANLANGUAGE_H
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_FORTRAN_FORTRANLANGUAGE_H
@@ -33,7 +28,6 @@ public:
     return lldb::eLanguageTypeFortran90;
   }
 
-  // Static Functions
   static void Initialize();
 
   static void Terminate();
@@ -42,7 +36,6 @@ public:
 
   static llvm::StringRef GetPluginNameStatic();
 
-  // PluginInterface protocol
   llvm::StringRef GetPluginName() override;
 
   uint32_t GetPluginVersion();

@@ -5,11 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// \file
-/// This file tests the Fortran plugin features.
-///
-//===----------------------------------------------------------------------===//
 
 #include "Plugins/Language/Fortran/FortranLanguage.h"
 #include "TestingSupport/SubsystemRAII.h"
@@ -20,21 +15,17 @@
 
 using namespace lldb_private;
 
-/// Returns the name of the LLDB plugin for the given language or an empty
-/// string if there is no fitting plugin.
-static llvm::StringRef GetPluginName(lldb::LanguageType language) {
-  if (Language *language_plugin = Language::FindPlugin(language))
-    return language_plugin->GetPluginName();
-  return "";
-}
-
 TEST(FortranLanguage, LookupFortranLanguageByLanguageType) {
   SubsystemRAII<FortranLanguage> langs;
 
-  EXPECT_EQ(GetPluginName(lldb::eLanguageTypeFortran77), "fortran");
-  EXPECT_EQ(GetPluginName(lldb::eLanguageTypeFortran90), "fortran");
-  EXPECT_EQ(GetPluginName(lldb::eLanguageTypeFortran95), "fortran");
-  EXPECT_EQ(GetPluginName(lldb::eLanguageTypeFortran03), "fortran");
-  EXPECT_EQ(GetPluginName(lldb::eLanguageTypeFortran08), "fortran");
-  EXPECT_EQ(GetPluginName(lldb::eLanguageTypeFortran18), "fortran");
+  const auto types = {
+      lldb::eLanguageTypeFortran77, lldb::eLanguageTypeFortran90,
+      lldb::eLanguageTypeFortran95, lldb::eLanguageTypeFortran03,
+      lldb::eLanguageTypeFortran08, lldb::eLanguageTypeFortran18};
+
+  for (lldb::LanguageType lang_type : types) {
+    Language *lang = Language::FindPlugin(lang_type);
+    ASSERT_NE(lang, nullptr);
+    EXPECT_EQ(lang->GetPluginName(), "fortran");
+  }
 }
