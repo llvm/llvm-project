@@ -1875,7 +1875,8 @@ def CIR_SideEffect : CIR_I32EnumAttr<
     "SideEffect", "allowed side effects of a function", [
       I32EnumAttrCase<"All", 0, "all">,
       I32EnumAttrCase<"Pure", 1, "pure">,
-      I32EnumAttrCase<"Const", 2, "const">
+      I32EnumAttrCase<"Const", 2, "const">,
+      I32EnumAttrCase<"InaccessibleOrErrno", 3, "inaccessible_or_errno">
 ]> {
   let description = [{
     The side effect attribute specifies the possible side effects of a function
@@ -1889,6 +1890,10 @@ def CIR_SideEffect : CIR_I32EnumAttr<
       `__attribute__((pure))`.
     - const: The function or callee may not read or write data from memory. This
       has the same effect as the GNU C/C++ attribute `__attribute__((const))`.
+    - inaccessible_or_errno: The function or callee may only access inaccessible
+      memory and errno. This matches LLVM
+      `memory(inaccessiblemem: readwrite, errnomem: write)` used for sane
+      `operator new` calls.
 
     Examples:
 
@@ -1896,6 +1901,7 @@ def CIR_SideEffect : CIR_I32EnumAttr<
     %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i
     %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(pure)
     %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(const)
+    %2 = cir.call @alloc(%0) : (!u64i) -> !cir.ptr<!void> side_effect(inaccessible_or_errno)
     ```
   }];
 }

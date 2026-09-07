@@ -372,8 +372,16 @@ void CIRGenModule::constructAttributeList(
       addAttributesFromFunctionProtoType(
           getBuilder(), attrs, func->getType()->getAs<FunctionProtoType>());
 
-      // TODO(cir): When doing 'return attrs' we need to cover the 'NoAlias' for
-      // global allocation functions here.
+      // A sane operator new returns a non-aliasing pointer and does not read
+      // or write accessible memory. Classic applies this only at call sites.
+      if (attrOnCallSite && func->isReplaceableGlobalAllocationFunction() &&
+          codeGenOpts.AssumeSaneOperatorNew &&
+          func->getDeclName().isAnyOperatorNew()) {
+        retAttrs.set(mlir::LLVM::LLVMDialect::getNoAliasAttrName(),
+                     mlir::UnitAttr::get(&getMLIRContext()));
+        sideEffect = cir::SideEffect::InaccessibleOrErrno;
+      }
+
       assert(!cir::MissingFeatures::opCallAttrs());
 
       const CXXMethodDecl *md = dyn_cast<CXXMethodDecl>(func);
