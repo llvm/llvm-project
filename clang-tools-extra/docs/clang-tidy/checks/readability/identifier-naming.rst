@@ -403,10 +403,10 @@ After if AggressiveDependentMemberLookup is `true`:
     identifier, in addition to whatever casing, prefix and suffix are
     otherwise configured for its kind.
 
-For example using values of:
+For example using values:
 
-   - AllowTrailingUnderscore of `true`
-   - LocalVariableCase of ``camelBack``
+   - :option:`AllowTrailingUnderscore` is `true`
+   - :option:`LocalVariableCase` is `camelBack`
 
 Transforms names as follows:
 
