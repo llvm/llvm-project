@@ -20,12 +20,11 @@ define amdgpu_ps i64 @uniform_v_to_s_i64(double inreg %a, double inreg %b) {
 ; GFX11-LABEL: uniform_v_to_s_i64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_max_f64 v[0:1], s[0:1], s[2:3]
-; GFX11-NEXT:    v_cmp_u_f64_e64 s0, s[0:1], s[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7ff80000, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_cmp_o_f64_e64 vcc_lo, s[0:1], s[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_cndmask_b32 v1, 0x7ff80000, v1 :: v_dual_cndmask_b32 v0, 0, v0
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
   %max0 = call double @llvm.maximum.f64(double %a, double %b)
@@ -78,12 +77,11 @@ define amdgpu_ps double @uniform_v_to_s_double(double inreg %a, double inreg %b)
 ; GFX11-LABEL: uniform_v_to_s_double:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_max_f64 v[0:1], s[0:1], s[2:3]
-; GFX11-NEXT:    v_cmp_u_f64_e64 s0, s[0:1], s[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7ff80000, s0
-; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_cmp_o_f64_e64 vcc_lo, s[0:1], s[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_dual_cndmask_b32 v1, 0x7ff80000, v1 :: v_dual_cndmask_b32 v0, 0, v0
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ; return to shader part epilog
   %max0 = call double @llvm.maximum.f64(double %a, double %b)

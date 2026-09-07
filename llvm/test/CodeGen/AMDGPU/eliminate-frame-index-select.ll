@@ -57,7 +57,7 @@ define void @wobble() #0 {
 ; CHECK-NEXT:  .LBB0_1: ; %bb1
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_lshrrev_b32_e64 v0, 5, s33
-; CHECK-NEXT:    s_cmp_eq_u32 s4, 0
+; CHECK-NEXT:    s_cmp_lg_u32 s4, 0
 ; CHECK-NEXT:    flat_store_dword v[41:42], v41
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
@@ -70,8 +70,8 @@ define void @wobble() #0 {
 ; CHECK-NEXT:    s_mov_b32 s13, s52
 ; CHECK-NEXT:    s_mov_b32 s14, s51
 ; CHECK-NEXT:    s_mov_b32 s15, s50
-; CHECK-NEXT:    s_cselect_b32 s4, 0, s5
-; CHECK-NEXT:    s_cselect_b32 s5, 4, s54
+; CHECK-NEXT:    s_cselect_b32 s4, s5, 0
+; CHECK-NEXT:    s_cselect_b32 s5, s54, 4
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
