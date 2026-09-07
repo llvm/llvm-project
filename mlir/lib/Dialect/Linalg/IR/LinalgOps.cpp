@@ -5237,17 +5237,27 @@ void ElementwiseOp::print(OpAsmPrinter &p) {
 void ElementwiseOp::regionBuilder(
     ImplicitLocOpBuilder &b, Block &block, ArrayRef<NamedAttribute> attrs,
     function_ref<InFlightDiagnostic()> emitError) {
-  ElementwiseKind elemwiseKind;
+  std::optional<ElementwiseKind> elemwiseKind;
   for (auto attr : attrs) {
     if (attr.getName() == b.getStringAttr("kind")) {
       auto kindAttr = dyn_cast<ElementwiseKindAttr>(attr.getValue());
-      assert(kindAttr && "op kind attribute incorrectly set");
+      if (!kindAttr) {
+        if (emitError)
+          emitError() << "'kind' must be an ElementwiseKindAttr";
+        return;
+      }
       elemwiseKind = kindAttr.getValue();
       break;
     }
   }
 
-  ArityGroupAndKind groupAndKind = getArityGroupAndKind(elemwiseKind);
+  if (!elemwiseKind) {
+    if (emitError)
+      emitError() << "missing required 'kind' attribute";
+    return;
+  }
+
+  ArityGroupAndKind groupAndKind = getArityGroupAndKind(*elemwiseKind);
   auto arityGroup = groupAndKind.arityGroup;
   auto kind = groupAndKind.kind;
   if (emitError && block.getNumArguments() !=
