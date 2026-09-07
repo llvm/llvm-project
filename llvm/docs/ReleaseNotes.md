@@ -238,6 +238,12 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the CodeGen infrastructure
 
+* Fixed a crash
+  ([#214750](https://github.com/llvm/llvm-project/issues/214750)) when
+  compiling a function containing a static alloca of `(size_t)-1` bytes, whose
+  size collided with the sentinel value MachineFrameInfo used to mark dead
+  stack objects.
+
 ### Changes to the Metadata Info
 
 ### Changes to the Debug Info
@@ -247,6 +253,11 @@ Makes programs 10x faster by doing Special New Thing.
 * llvm-mca no longer defaults -mcpu to "native"
 
 ### Changes to LLDB
+
+* `platform.plugin.wasm.runtime-args` now precede the port argument on the Wasm
+  runtime's command line instead of following it. A runtime that dispatches on a
+  leading subcommand can therefore name that subcommand through this setting,
+  rather than needing a wrapper script.
 
 #### SBAPI
 
