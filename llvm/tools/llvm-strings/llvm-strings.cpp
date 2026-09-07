@@ -201,9 +201,6 @@ static void strings(raw_ostream &OS, StringRef FileName, StringRef Contents) {
       P = reinterpret_cast<const char *>(UP);
       break;
     }
-
-    default:
-      llvm_unreachable("unhandled encoding");
     }
 
     return Ch;
