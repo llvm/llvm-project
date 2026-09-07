@@ -67,7 +67,7 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
          "${LLVM_EXPERIMENTAL_TARGETS_TO_BUILD}")
 
   string(REPLACE ";" "$<SEMICOLON>" llvm_enable_projects_arg
-         "${LLVM_ENABLE_PROJECTS}")
+         "$CACHE{LLVM_ENABLE_PROJECTS}")
   string(REPLACE ";" "$<SEMICOLON>" llvm_external_projects_arg
          "${LLVM_EXTERNAL_PROJECTS}")
   string(REPLACE ";" "$<SEMICOLON>" llvm_enable_runtimes_arg

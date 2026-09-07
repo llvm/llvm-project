@@ -270,6 +270,15 @@ if(LIBOMP_ENABLE_ARM64X)
   set(RUNTIMES_arm64ec-pc-windows-msvc_LIBOMP_ENABLE_ARM64X ON)
 endif()
 
+list(REMOVE_DUPLICATES LLVM_ENABLE_PROJECTS)
+
+# The cache entry contains the projects explicitly requested by the user, while
+# LLVM_ENABLE_PROJECTS may also contain projects added to satisfy dependencies.
+set(llvm_explicit_projects "$CACHE{LLVM_ENABLE_PROJECTS}")
+if(llvm_explicit_projects STREQUAL "all")
+  set(llvm_explicit_projects ${LLVM_ALL_PROJECTS})
+endif()
+
 # LLVM_ENABLE_PROJECTS_USED is `ON` if the user has ever used the
 # `LLVM_ENABLE_PROJECTS` CMake cache variable.  This exists for
 # several reasons:
@@ -293,7 +302,11 @@ if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
     string(TOUPPER "${proj}" upper_proj)
     string(REGEX REPLACE "-" "_" upper_proj ${upper_proj})
     if ("${proj}" IN_LIST LLVM_ENABLE_PROJECTS)
-      message(STATUS "${proj} project is enabled")
+      if ("${proj}" IN_LIST llvm_explicit_projects)
+        message(STATUS "${proj} project is enabled")
+      else()
+        message(STATUS "${proj} project is enabled as a dependency")
+      endif()
       set(SHOULD_ENABLE_PROJECT TRUE)
       set(PROJ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
       if(NOT EXISTS "${PROJ_DIR}" OR NOT IS_DIRECTORY "${PROJ_DIR}")
@@ -312,9 +325,9 @@ if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
       set(SHOULD_ENABLE_PROJECT FALSE)
     endif()
     # Force `LLVM_TOOL_${upper_proj}_BUILD` variables to have values that
-    # corresponds with `LLVM_ENABLE_PROJECTS`. This prevents the user setting
-    # `LLVM_TOOL_${upper_proj}_BUILD` variables externally. At some point
-    # we should deprecate allowing users to set these variables by turning them
+    # correspond with `LLVM_ENABLE_PROJECTS`. This prevents the user setting
+    # `LLVM_TOOL_${upper_proj}_BUILD` variables externally. At some point we
+    # should deprecate allowing users to set these variables by turning them
     # into normal CMake variables rather than cache variables.
     set(LLVM_TOOL_${upper_proj}_BUILD
       ${SHOULD_ENABLE_PROJECT}
@@ -324,6 +337,7 @@ if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
   endforeach()
 endif()
 unset(SHOULD_ENABLE_PROJECT)
+unset(llvm_explicit_projects)
 
 # Build llvm with ccache if the package is present
 set(LLVM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
