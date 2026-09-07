@@ -8,6 +8,7 @@
 
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Core/Architecture.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Interpreter/Interfaces/ScriptedStackFrameRecognizerInterface.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
@@ -16,22 +17,21 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/ScriptedMetadata.h"
+#include "llvm/Support/FormatVariadic.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
 class ScriptedRecognizedStackFrame : public RecognizedStackFrame {
-  bool m_hidden;
-  lldb::StackFrameSP m_most_relevant_frame;
-  lldb::ValueObjectSP m_exception;
-
 public:
   ScriptedRecognizedStackFrame(ValueObjectListSP args, bool hidden,
                                lldb::StackFrameSP most_relevant_frame,
                                lldb::ValueObjectSP exception,
-                               std::string stop_desc)
+                               std::string stop_desc,
+                               lldb::ThreadPlanSP step_through_plan_sp)
       : m_hidden(hidden), m_most_relevant_frame(std::move(most_relevant_frame)),
-        m_exception(std::move(exception)) {
+        m_exception(std::move(exception)),
+        m_thread_plan_sp(std::move(step_through_plan_sp)) {
     m_arguments = std::move(args);
     m_stop_desc = std::move(stop_desc);
   }
@@ -40,6 +40,14 @@ public:
     return m_most_relevant_frame;
   }
   lldb::ValueObjectSP GetExceptionObject() override { return m_exception; }
+
+  lldb::ThreadPlanSP GetStepThroughPlan() override { return m_thread_plan_sp; }
+
+protected:
+  bool m_hidden;
+  lldb::StackFrameSP m_most_relevant_frame;
+  lldb::ValueObjectSP m_exception;
+  lldb::ThreadPlanSP m_thread_plan_sp;
 };
 
 ScriptedStackFrameRecognizer::ScriptedStackFrameRecognizer(
@@ -55,7 +63,14 @@ ScriptedStackFrameRecognizer::ScriptedStackFrameRecognizer(
   ScriptedMetadata scripted_metadata(m_python_class, nullptr);
   auto obj_or_err = m_interface_sp->CreatePluginObject(scripted_metadata);
   if (!obj_or_err) {
-    llvm::consumeError(obj_or_err.takeError());
+    // CreatePluginObject has no error-return channel back to the command
+    // handler that requested this recognizer, so report the detailed error
+    // (which may include a Python backtrace) via the diagnostic system.
+    Debugger::ReportError(
+        llvm::formatv("failed to create ScriptedStackFrameRecognizer: {0}",
+                      llvm::toString(obj_or_err.takeError()))
+            .str(),
+        interpreter->GetDebugger().GetID());
     m_interface_sp.reset();
   }
 }
@@ -78,10 +93,14 @@ ScriptedStackFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame) {
       m_interface_sp->SelectMostRelevantFrame(frame);
   lldb::ValueObjectSP exception = m_interface_sp->GetException(frame);
   std::string stop_desc = m_interface_sp->GetStopDescription(frame);
+  // We only do step through if we're at the zeroth frame:
+  lldb::ThreadPlanSP step_through_sp;
+  if (frame->GetConcreteFrameIndex() == 0)
+    step_through_sp = m_interface_sp->GetStepThroughPlan(frame->GetThread());
 
   return RecognizedStackFrameSP(new ScriptedRecognizedStackFrame(
       args_synthesized, hidden, std::move(most_relevant), std::move(exception),
-      std::move(stop_desc)));
+      std::move(stop_desc), std::move(step_through_sp)));
 }
 
 void StackFrameRecognizerManager::BumpGeneration() {

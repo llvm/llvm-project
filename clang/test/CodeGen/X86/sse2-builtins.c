@@ -566,6 +566,7 @@ __m128i test_mm_cvtpd_epi32(__m128d A) {
   // CHECK: call <4 x i32> @llvm.x86.sse2.cvtpd2dq(<2 x double> %{{.*}})
   return _mm_cvtpd_epi32(A);
 }
+TEST_CONSTEXPR(match_v4si(_mm_cvtpd_epi32((__m128d){12.0, -45.0}), 12, -45, 0, 0));
 
 __m128 test_mm_cvtpd_ps(__m128d A) {
   // CHECK-LABEL: test_mm_cvtpd_ps
@@ -580,6 +581,7 @@ __m128i test_mm_cvtps_epi32(__m128 A) {
   // CHECK: call <4 x i32> @llvm.x86.sse2.cvtps2dq(<4 x float> %{{.*}})
   return _mm_cvtps_epi32(A);
 }
+TEST_CONSTEXPR(match_v4si(_mm_cvtps_epi32((__m128){-96.0f, +32.0f, -12.0f, +0.0f}), -96, 32, -12, 0));
 
 __m128d test_mm_cvtps_pd(__m128 A) {
   // CHECK-LABEL: test_mm_cvtps_pd
@@ -601,6 +603,7 @@ int test_mm_cvtsd_si32(__m128d A) {
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.cvtsd2si(<2 x double> %{{.*}})
   return _mm_cvtsd_si32(A);
 }
+TEST_CONSTEXPR(_mm_cvtsd_si32((__m128d){+45.0, -12.0}) == 45);
 
 #ifdef __x86_64__
 long long test_mm_cvtsd_si64(__m128d A) {
@@ -608,6 +611,8 @@ long long test_mm_cvtsd_si64(__m128d A) {
   // X64: call {{.*}}i64 @llvm.x86.sse2.cvtsd2si64(<2 x double> %{{.*}})
   return _mm_cvtsd_si64(A);
 }
+TEST_CONSTEXPR(_mm_cvtsd_si64((__m128d){-78.0, +32.0}) == -78LL);
+TEST_CONSTEXPR(_mm_cvtsd_si64((__m128d){0x1p62f}) == (1LL << 62));
 #endif
 
 __m128 test_mm_cvtsd_ss(__m128 A, __m128d B) {
@@ -682,18 +687,21 @@ __m128i test_mm_cvttpd_epi32(__m128d A) {
   // CHECK: call <4 x i32> @llvm.x86.sse2.cvttpd2dq(<2 x double> %{{.*}})
   return _mm_cvttpd_epi32(A);
 }
+TEST_CONSTEXPR(match_v4si(_mm_cvttpd_epi32((__m128d){+45.0, -96.0}), 45, -96, 0, 0));
 
 __m128i test_mm_cvttps_epi32(__m128 A) {
   // CHECK-LABEL: test_mm_cvttps_epi32
   // CHECK: call <4 x i32> @llvm.x86.sse2.cvttps2dq(<4 x float> %{{.*}})
   return _mm_cvttps_epi32(A);
 }
+TEST_CONSTEXPR(match_v4si(_mm_cvttps_epi32((__m128){-16.0f, +34.0f, -2.0f, +1.0f}), -16, 34, -2, 1));
 
 int test_mm_cvttsd_si32(__m128d A) {
   // CHECK-LABEL: test_mm_cvttsd_si32
   // CHECK: call {{.*}}i32 @llvm.x86.sse2.cvttsd2si(<2 x double> %{{.*}})
   return _mm_cvttsd_si32(A);
 }
+TEST_CONSTEXPR(_mm_cvttsd_si32((__m128d){-326.0, -96.0}) == -326);
 
 #ifdef __x86_64__
 long long test_mm_cvttsd_si64(__m128d A) {
@@ -701,6 +709,8 @@ long long test_mm_cvttsd_si64(__m128d A) {
   // X64: call {{.*}}i64 @llvm.x86.sse2.cvttsd2si64(<2 x double> %{{.*}})
   return _mm_cvttsd_si64(A);
 }
+TEST_CONSTEXPR(_mm_cvttsd_si64((__m128d){-78.0, +45.0}) == -78LL);
+TEST_CONSTEXPR(_mm_cvttsd_si64((__m128d){0x1p61f}) == (1LL << 61));
 #endif
 
 __m128d test_mm_div_pd(__m128d A, __m128d B) {

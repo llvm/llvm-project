@@ -228,4 +228,6 @@ void test_copy_ctor_exceptions() {
 int main(int, char**) {
   test_allocation_exceptions();
   test_copy_ctor_exceptions();
+
+  return 0;
 }

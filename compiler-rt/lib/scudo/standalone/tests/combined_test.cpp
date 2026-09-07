@@ -50,15 +50,36 @@ template <class AllocatorT>
 void checkMemoryTaggingMaybe(AllocatorT *Allocator, void *P, scudo::uptr Size,
                              scudo::uptr Alignment) {
   const scudo::uptr MinAlignment = 1UL << SCUDO_MIN_ALIGNMENT_LOG;
-  Size = scudo::roundUp(Size, MinAlignment);
+  const scudo::uptr PageSize = scudo::getPageSizeCached();
   if (Allocator->useMemoryTaggingTestOnly()) {
     SCUDO_EXPECT_DEATH(reinterpret_cast<char *>(P)[-1] = 'A', "");
   }
-  if (isPrimaryAllocation<AllocatorT>(Size, Alignment)
-          ? Allocator->useMemoryTaggingTestOnly()
-          : Alignment == MinAlignment &&
-                AllocatorT::SecondaryT::getGuardPageSize() > 0) {
-    SCUDO_EXPECT_DEATH(reinterpret_cast<char *>(P)[Size] = 'A', "");
+  bool ShouldDie = false;
+  scudo::uptr DeathOffset = Size;
+
+  if (isPrimaryAllocation<AllocatorT>(Size, Alignment)) {
+    if (Allocator->useMemoryTaggingTestOnly()) {
+      ShouldDie = true;
+      DeathOffset = scudo::roundUp(Size, MinAlignment);
+    }
+  } else {
+    // Secondary allocation
+    if (Alignment == MinAlignment &&
+        AllocatorT::SecondaryT::getGuardPageSize() > 0) {
+      ShouldDie = true;
+      if (Allocator->useMemoryTaggingTestOnly()) {
+        // If MTE is enabled, Secondary allocator forces PageSize alignment,
+        // so the guard page starts at the next PageSize boundary.
+        DeathOffset = scudo::roundUp(Size, PageSize);
+      } else {
+        // Otherwise, it starts at the next MinAlignment boundary.
+        DeathOffset = scudo::roundUp(Size, MinAlignment);
+      }
+    }
+  }
+
+  if (ShouldDie) {
+    SCUDO_EXPECT_DEATH(reinterpret_cast<char *>(P)[DeathOffset] = 'A', "");
   }
 }
 
@@ -560,7 +581,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, IterateOverChunks) {
         EXPECT_NE(std::find(V->begin(), V->end(), P), V->end());
       },
       reinterpret_cast<void *>(&V));
-  Allocator->enable();
+  Allocator->enable(/*IsChild*/ false);
   for (auto P : V)
     Allocator->deallocate(P, Origin);
 }
@@ -1348,7 +1369,7 @@ void VerifyIterateOverUsableSize(AllocatorT &Allocator) {
         (*Pointers)[reinterpret_cast<void *>(Base)] = Size;
       },
       reinterpret_cast<void *>(&Pointers));
-  Allocator.enable();
+  Allocator.enable(/*IsChild*/ false);
 
   for (auto [Ptr, IterateSize] : Pointers) {
     EXPECT_NE(0U, IterateSize)
@@ -1538,7 +1559,7 @@ TEST(ScudoCombinedTest, QuarantineIterateOverChunks) {
         (*Pointers)[Base] = Size;
       },
       reinterpret_cast<void *>(&Pointers));
-  Allocator->enable();
+  Allocator->enable(/*IsChild*/ false);
 
   for (const auto [Base, Size] : Pointers) {
     EXPECT_TRUE(false) << "Unexpected pointer found in iterateOverChunks "
@@ -2206,7 +2227,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, AllocAfterFork) {
     pid_t Pid = fork();
     if (Pid == 0) {
       // Child process: enable the allocator and allocate.
-      Allocator->enable();
+      Allocator->enable(/*IsChild*/ true);
       for (size_t SizeLog = 3; SizeLog <= 20; SizeLog++) {
         const scudo::uptr Size = 1UL << SizeLog;
         void *P = Allocator->allocate(Size, Origin);
@@ -2221,7 +2242,7 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, AllocAfterFork) {
       _exit(10);
     }
     // Parent process: enable the allocator and wait for child.
-    Allocator->enable();
+    Allocator->enable(/*IsChild*/ false);
     EXPECT_NE(-1, Pid);
     int Status;
     EXPECT_EQ(Pid, waitpid(Pid, &Status, 0));

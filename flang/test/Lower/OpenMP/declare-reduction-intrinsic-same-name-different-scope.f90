@@ -44,8 +44,8 @@ end module m
 
 ! Two distinct scoped ops, one per subroutine scope. The global builtin name is
 ! never used for a user reduction (the collision-fix signal).
-! CHECK-DAG: omp.declare_reduction @"{{_QQ[A-Za-z0-9_.]*sum_scope[A-Za-z0-9_.]*op\.\+[A-Za-z0-9_.]*}}" : !fir.ref
-! CHECK-DAG: omp.declare_reduction @"{{_QQ[A-Za-z0-9_.]*prod_scope[A-Za-z0-9_.]*op\.\+[A-Za-z0-9_.]*}}" : !fir.ref
+! CHECK-DAG: omp.declare_reduction @"{{_QQ[A-Za-z0-9_.]*sum_scope[A-Za-z0-9_.]*op\.\+[A-Za-z0-9_.]*}}" byref_element_type({{.*}}) : !fir.ref
+! CHECK-DAG: omp.declare_reduction @"{{_QQ[A-Za-z0-9_.]*prod_scope[A-Za-z0-9_.]*op\.\+[A-Za-z0-9_.]*}}" byref_element_type({{.*}}) : !fir.ref
 ! CHECK-NOT: @add_reduction
 
 ! Each subroutine's clause binds the op scoped to its own subroutine, so the two

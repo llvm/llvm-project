@@ -160,8 +160,9 @@ def have_host_out_of_process_jit_feature_support():
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             input=testcode,
+            timeout=5,
         )
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return False
 
     if clang_repl_cmd.returncode == 0:

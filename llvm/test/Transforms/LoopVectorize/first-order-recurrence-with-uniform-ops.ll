@@ -12,7 +12,7 @@ define i32 @recurence_uniform_load(ptr %src, ptr noalias %dst, i64 %n) {
 ; UNROLL-NO-IC-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 8
 ; UNROLL-NO-IC-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-IC:       [[VECTOR_PH]]:
-; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
+; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 7
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; UNROLL-NO-IC-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC]], align 4
 ; UNROLL-NO-IC-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -46,7 +46,7 @@ define i32 @recurence_uniform_load(ptr %src, ptr noalias %dst, i64 %n) {
 ; UNROLL-NO-VF-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 2
 ; UNROLL-NO-VF-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_PH]]:
-; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP1]], 2
+; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP1]], 1
 ; UNROLL-NO-VF-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP1]], [[N_MOD_VF]]
 ; UNROLL-NO-VF-NEXT:    [[TMP3:%.*]] = load i32, ptr [[SRC]], align 4
 ; UNROLL-NO-VF-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -80,7 +80,7 @@ define i32 @recurence_uniform_load(ptr %src, ptr noalias %dst, i64 %n) {
 ; SINK-AFTER-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; SINK-AFTER-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SINK-AFTER:       [[VECTOR_PH]]:
-; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
 ; SINK-AFTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; SINK-AFTER-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC]], align 4
 ; SINK-AFTER-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -252,7 +252,7 @@ define i32 @uniform_widened_recurrence_resume(ptr %src, ptr %dst, i64 %n) {
 ; UNROLL-NO-IC-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; UNROLL-NO-IC-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-IC:       [[VECTOR_PH]]:
-; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
+; UNROLL-NO-IC-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 7
 ; UNROLL-NO-IC-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; UNROLL-NO-IC-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC]], align 4, !alias.scope [[META6:![0-9]+]]
 ; UNROLL-NO-IC-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i64 0
@@ -313,7 +313,7 @@ define i32 @uniform_widened_recurrence_resume(ptr %src, ptr %dst, i64 %n) {
 ; UNROLL-NO-VF-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_PH]]:
-; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 2
+; UNROLL-NO-VF-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 1
 ; UNROLL-NO-VF-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; UNROLL-NO-VF-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC]], align 4, !alias.scope [[META6:![0-9]+]]
 ; UNROLL-NO-VF-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP1]], 24124
@@ -367,7 +367,7 @@ define i32 @uniform_widened_recurrence_resume(ptr %src, ptr %dst, i64 %n) {
 ; SINK-AFTER-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; SINK-AFTER-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; SINK-AFTER:       [[VECTOR_PH]]:
-; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; SINK-AFTER-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
 ; SINK-AFTER-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; SINK-AFTER-NEXT:    [[TMP1:%.*]] = load i32, ptr [[SRC]], align 4, !alias.scope [[META6:![0-9]+]]
 ; SINK-AFTER-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i64 0

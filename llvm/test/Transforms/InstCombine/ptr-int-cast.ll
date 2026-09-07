@@ -87,9 +87,14 @@ define <4 x ptr> @test7(<4 x i128> %arg) nounwind {
   ret <4 x ptr> %p1
 }
 
+; Folding this would lose %ptr provenance exposure.
 define i64 @ptrtoint_gep_sub(ptr %ptr, i64 %end.addr) {
 ; CHECK-LABEL: @ptrtoint_gep_sub(
-; CHECK-NEXT:    ret i64 [[END_ADDR:%.*]]
+; CHECK-NEXT:    [[PTR_ADDR:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[SIZE:%.*]] = sub i64 [[END_ADDR1:%.*]], [[PTR_ADDR]]
+; CHECK-NEXT:    [[END:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[SIZE]]
+; CHECK-NEXT:    [[END_ADDR:%.*]] = ptrtoint ptr [[END]] to i64
+; CHECK-NEXT:    ret i64 [[END_ADDR]]
 ;
   %ptr.addr = ptrtoint ptr %ptr to i64
   %size = sub i64 %end.addr, %ptr.addr

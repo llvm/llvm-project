@@ -167,6 +167,9 @@ let HasPassthruOp = true, HasMaskOp = true in {
   def riscv_cttz_vl       : RVSDNode<"CTTZ_VL",       SDT_RISCVIntUnOp_VL>;
   def riscv_ctpop_vl      : RVSDNode<"CTPOP_VL",      SDT_RISCVIntUnOp_VL>;
 
+  def riscv_clmul_vl  : RVSDNode<"CLMUL_VL",  SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
+  def riscv_clmulh_vl : RVSDNode<"CLMULH_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
+
   // Averaging adds of signed integers.
   def riscv_avgfloors_vl  : RVSDNode<"AVGFLOORS_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
   // Averaging adds of unsigned integers.
@@ -1122,25 +1125,6 @@ multiclass VPatBinaryFPVL_VV_VF_RM<SDPatternOperator vop, string instruction_nam
                                vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
                                vti.ScalarRegClass, isSEWAware>;
       }
-  }
-}
-
-multiclass VPatBinaryFPVL_R_VF<SDPatternOperator vop, string instruction_name,
-                               bit isSEWAware = 0> {
-  foreach fvti = AllFloatVectors in {
-    let Predicates = GetVTypePredicates<fvti>.Predicates in
-    def : Pat<(fvti.Vector (vop (SplatFPOp fvti.ScalarRegClass:$rs2),
-                                fvti.RegClass:$rs1,
-                                (fvti.Vector fvti.RegClass:$passthru),
-                                (fvti.Mask VMV0:$vm),
-                                VLOpFrag)),
-              (!cast<Instruction>(
-                           !if(isSEWAware,
-                               instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_E"#fvti.SEW#"_MASK",
-                               instruction_name#"_V"#fvti.ScalarSuffix#"_"#fvti.LMul.MX#"_MASK"))
-                           fvti.RegClass:$passthru,
-                           fvti.RegClass:$rs1, fvti.ScalarRegClass:$rs2,
-                           (fvti.Mask VMV0:$vm), GPR:$vl, fvti.Log2SEW, TAIL_AGNOSTIC)>;
   }
 }
 
@@ -2659,6 +2643,34 @@ foreach fvti = AllFloatAndBF16Vectors in {
                    fvti.RegClass:$passthru, fvti.RegClass:$rs2,
                    (fvti.Scalar fvti.ScalarRegClass:$rs1),
                    (fvti.Mask VMV0:$vm), GPR:$vl, fvti.Log2SEW)>;
+  }
+}
+
+// Match vmerge with a splat that is a bitcast integer splat of the
+// floating-point type (e.g. when the scalar type doesn't have native
+// FP splat support, such as f16 or bf16).
+foreach fvti = !listconcat(AllFP16Vectors, AllBF16Vectors) in {
+  defvar ivti = GetIntVTypeInfo<fvti>.Vti;
+  let Predicates = GetVTypePredicates<ivti>.Predicates in {
+  def : Pat<(fvti.Vector (riscv_vmerge_vl (fvti.Mask VMV0:$vm),
+                                          (fvti.Vector (bitconvert
+                                            (ivti.Vector (SplatPat XLenVT:$rs1)))),
+                                          fvti.RegClass:$rs2,
+                                          fvti.RegClass:$passthru,
+                                          VLOpFrag)),
+            (!cast<Instruction>("PseudoVMERGE_VXM_"#fvti.LMul.MX)
+                 fvti.RegClass:$passthru, fvti.RegClass:$rs2, GPR:$rs1, (fvti.Mask VMV0:$vm),
+                 GPR:$vl, fvti.Log2SEW)>;
+
+  def : Pat<(fvti.Vector (riscv_vmerge_vl (fvti.Mask VMV0:$vm),
+                                          (fvti.Vector (bitconvert
+                                            (ivti.Vector (SplatPat_simm5 simm5:$rs1)))),
+                                          fvti.RegClass:$rs2,
+                                          fvti.RegClass:$passthru,
+                                          VLOpFrag)),
+            (!cast<Instruction>("PseudoVMERGE_VIM_"#fvti.LMul.MX)
+                 fvti.RegClass:$passthru, fvti.RegClass:$rs2, simm5:$rs1, (fvti.Mask VMV0:$vm),
+                 GPR:$vl, fvti.Log2SEW)>;
   }
 }
 

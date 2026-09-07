@@ -31,6 +31,19 @@ TEST(BuildNamespaceTest, DifferentKinds) {
   EXPECT_NE(CU, LU);
 }
 
+TEST(BuildNamespaceTest, WithKind) {
+  BuildNamespace Bare(BuildNamespaceKind::StaticLibrary, "libmulti");
+  BuildNamespace Wrapper =
+      Bare.withKind(BuildNamespaceKind::MultiArchStaticLibrary);
+
+  // The name is preserved and only the kind changes.
+  EXPECT_EQ(Wrapper, BuildNamespace(BuildNamespaceKind::MultiArchStaticLibrary,
+                                    "libmulti"));
+  // The original is left unmodified.
+  EXPECT_EQ(Bare,
+            BuildNamespace(BuildNamespaceKind::StaticLibrary, "libmulti"));
+}
+
 // NestedBuildNamespace Tests
 
 TEST(NestedBuildNamespaceTest, DefaultConstruction) {

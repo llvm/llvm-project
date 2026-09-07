@@ -530,6 +530,32 @@ bool Loop::isSafeToClone() const {
   return true;
 }
 
+bool Loop::isSafeToCloneConditionally(const DominatorTree &DT) const {
+  if (!isSafeToClone())
+    return false;
+
+  for (BasicBlock *BB : this->blocks()) {
+    for (Instruction &I : *BB) {
+      // Token-like values cannot be used in PHI nodes, so cloning is only
+      // possible if all their uses are contained in the loop. Uses within
+      // the loop (even across blocks) are fine: cloning only requires
+      // forming phis for values that are live-out of the loop.
+      if (I.getType()->isTokenLikeTy()) {
+        for (const Use &U : I.uses()) {
+          if (!loopContainsUser(*this, *BB, U, DT))
+            return false;
+        }
+      }
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
+        assert(!CB->cannotDuplicate() && "Checked by isSafeToClone().");
+        if (CB->isConvergent())
+          return false;
+      }
+    }
+  }
+  return true;
+}
+
 MDNode *Loop::getLoopID() const {
   MDNode *LoopID = nullptr;
 
@@ -1271,10 +1297,8 @@ void LoopInfoWrapperPass::verifyAnalysis() const {
   // -verify-loop-info option can enable this. In order to perform some
   // checking by default, LoopPass has been taught to call verifyLoop manually
   // during loop pass sequences.
-  if (VerifyLoopInfo) {
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    LI.verify(DT);
-  }
+  if (VerifyLoopInfo)
+    LI.verify();
 }
 
 void LoopInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
@@ -1289,8 +1313,7 @@ void LoopInfoWrapperPass::print(raw_ostream &OS, const Module *) const {
 PreservedAnalyses LoopVerifierPass::run(Function &F,
                                         FunctionAnalysisManager &AM) {
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
-  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  LI.verify(DT);
+  LI.verify();
   return PreservedAnalyses::all();
 }
 

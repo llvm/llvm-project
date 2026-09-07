@@ -344,6 +344,48 @@ void OpenMPDialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
+// Dialect operation attribute verification
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyDeclareTargetAttr(Operation *op, Attribute attr) {
+  if (!isa<DeclareTargetInterface>(op))
+    return op->emitError() << "omp.declare_target can only be applied to "
+                              "DeclareTargetInterface ops";
+
+  auto declareTargetAttr = dyn_cast<DeclareTargetAttr>(attr);
+  if (!declareTargetAttr)
+    return op->emitError()
+           << "omp.declare_target must be an #omp.declaretarget attribute";
+
+  if (isa<mlir::FunctionOpInterface>(op)) {
+    if (declareTargetAttr.getAutomap())
+      return op->emitOpError()
+             << "omp.declare_target 'automap' is not valid on functions";
+
+    // TODO: Disallow the `local` clause (OpenMP 6.0).
+    if (declareTargetAttr.getCaptureClause().getValue() ==
+        mlir::omp::DeclareTargetCaptureClause::link)
+      return op->emitOpError()
+             << "omp.declare_target 'link' is not valid on functions";
+  } else {
+    // TODO: Disallow the `indirect` clause (OpenMP 5.1).
+    if (declareTargetAttr.getImplicit())
+      return op->emitOpError()
+             << "omp.declare_target 'implicit' is only valid on functions";
+  }
+  return success();
+}
+
+LogicalResult
+OpenMPDialect::verifyOperationAttribute(Operation *op,
+                                        NamedAttribute attribute) {
+  if (attribute.getName() == "omp.declare_target")
+    return verifyDeclareTargetAttr(op, attribute.getValue());
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Parser and printer for Allocate Clause
 //===----------------------------------------------------------------------===//
 
@@ -618,6 +660,92 @@ static void printAlignedClause(OpAsmPrinter &p, Operation *op,
     p << alignedVars[i] << " : " << alignedVars[i].getType();
     p << " -> " << (*alignments)[i];
   }
+}
+
+static LogicalResult verifyAllocateClause(
+    Operation *op, ValueRange allocateVars, ValueRange allocatorVars,
+    DenseI64ArrayAttr allocateAlignments,
+    DenseI64ArrayAttr allocatePrivateIndices, ValueRange privateVars = {},
+    ArrayAttr privateSyms = nullptr, bool requirePrivateIndices = false) {
+  if (allocateVars.size() != allocatorVars.size())
+    return op->emitError(
+        "expected equal sizes for allocate and allocator variables");
+
+  if (allocateVars.empty()) {
+    if (allocateAlignments)
+      return op->emitError(
+          "unexpected allocate alignments without allocate variables");
+    if (allocatePrivateIndices)
+      return op->emitError(
+          "unexpected allocate private indices without allocate variables");
+    return success();
+  }
+
+  if (allocateAlignments) {
+    ArrayRef<int64_t> alignments = allocateAlignments.asArrayRef();
+    if (alignments.size() != allocateVars.size())
+      return op->emitError(
+          "expected as many allocate alignments as allocate variables");
+    for (int64_t alignment : alignments) {
+      if (alignment < 0)
+        return op->emitError("expected non-negative allocate alignments");
+      if (alignment != 0 && (alignment & (alignment - 1)) != 0)
+        return op->emitError(
+            "expected positive allocate alignments to be powers of two");
+    }
+  }
+
+  if (!allocatePrivateIndices) {
+    if (requirePrivateIndices)
+      return op->emitError(
+          "expected an allocate private index for each allocate variable");
+    return success();
+  }
+
+  ArrayRef<int64_t> indices = allocatePrivateIndices.asArrayRef();
+  if (indices.size() != allocateVars.size())
+    return op->emitError(
+        "expected as many allocate private indices as allocate variables");
+
+  DenseSet<int64_t> usedPrivateSlots;
+  for (auto [allocateVar, privateIndex] :
+       llvm::zip_equal(allocateVars, indices)) {
+    if (privateIndex < 0 ||
+        static_cast<uint64_t>(privateIndex) >= privateVars.size())
+      return op->emitError("allocate private index is out of range");
+    if (!usedPrivateSlots.insert(privateIndex).second)
+      return op->emitError(
+          "allocate private index refers to a private variable more than once");
+
+    Value privateVar = privateVars[privateIndex];
+    if (allocateVar.getType() != privateVar.getType())
+      return op->emitError()
+             << "type mismatch between allocate variable and private variable "
+                "at index "
+             << privateIndex;
+
+    if (!privateSyms ||
+        static_cast<uint64_t>(privateIndex) >= privateSyms.size())
+      return op->emitError(
+          "allocate private index does not have a privatizer symbol");
+
+    auto privateSym = dyn_cast<SymbolRefAttr>(privateSyms[privateIndex]);
+    if (!privateSym)
+      return op->emitError(
+          "allocate private index does not reference a privatizer symbol");
+    PrivateClauseOp privatizer =
+        SymbolTable::lookupNearestSymbolFrom<PrivateClauseOp>(op, privateSym);
+    if (!privatizer)
+      return op->emitError() << "failed to lookup privatizer op with symbol: '"
+                             << privateSym << "'";
+    if (privatizer.getDataSharingType() != DataSharingClauseType::Private &&
+        privatizer.getDataSharingType() != DataSharingClauseType::FirstPrivate)
+      return op->emitError(
+          "allocate private index must refer to private or firstprivate "
+          "storage");
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2212,6 +2340,9 @@ static ParseResult parseMapClause(OpAsmParser &parser,
     if (mapTypeMod == "is_device_ptr")
       mapTypeBits |= ClauseMapFlags::is_device_ptr;
 
+    if (mapTypeMod == "target_param")
+      mapTypeBits |= ClauseMapFlags::target_param;
+
     return success();
   };
 
@@ -2243,6 +2374,8 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
     mapTypeStrs.push_back("close");
   if (mapTypeToBool(mapFlags, ClauseMapFlags::present))
     mapTypeStrs.push_back("present");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::target_param))
+    mapTypeStrs.push_back("target_param");
 
   // special handling of to/from/tofrom/delete and release/alloc, release +
   // alloc are the abscense of one of the other flags, whereas tofrom requires
@@ -2648,9 +2781,10 @@ LogicalResult TargetUpdateOp::verify() {
 void TargetOp::build(OpBuilder &builder, OperationState &state,
                      const TargetExtOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  // TODO Store clauses in op: allocateVars, allocatorVars.
   TargetOp::build(
-      builder, state, /*allocate_vars=*/{}, /*allocator_vars=*/{},
+      builder, state, clauses.allocateVars, clauses.allocatorVars,
+      makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
+      makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
       makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
       makeArrayAttr(ctx, clauses.dependIteratedKinds), clauses.dependIterated,
       clauses.device, clauses.dynGroupprivateAccessGroup,
@@ -2715,6 +2849,12 @@ static bool targetInReductionCapturedBy(Value inReductionVar, Value mapVarPtr) {
 }
 
 LogicalResult TargetOp::verify() {
+  if (failed(verifyAllocateClause(
+          getOperation(), getAllocateVars(), getAllocatorVars(),
+          getAllocateAlignmentsAttr(), getAllocatePrivateIndicesAttr(),
+          getPrivateVars(), getPrivateSymsAttr())))
+    return failure();
+
   if (getKernelType() == TargetExecMode::bare && !isCombined())
     return emitOpError() << "bare kernel requires 'omp.combined'";
 
@@ -2860,7 +3000,9 @@ LogicalResult TargetOp::verifyRegions() {
 void ParallelOp::build(OpBuilder &builder, OperationState &state,
                        ArrayRef<NamedAttribute> attributes) {
   ParallelOp::build(builder, state, /*allocate_vars=*/ValueRange(),
-                    /*allocator_vars=*/ValueRange(), /*if_expr=*/nullptr,
+                    /*allocator_vars=*/ValueRange(),
+                    /*allocate_alignments=*/nullptr,
+                    /*allocate_private_indices=*/nullptr, /*if_expr=*/nullptr,
                     /*num_threads_vars=*/ValueRange(),
                     /*private_vars=*/ValueRange(),
                     /*private_syms=*/nullptr, /*private_needs_barrier=*/nullptr,
@@ -2874,6 +3016,8 @@ void ParallelOp::build(OpBuilder &builder, OperationState &state,
                        const ParallelOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   ParallelOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
+                    makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
+                    makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
                     clauses.ifExpr, clauses.numThreadsVars, clauses.privateVars,
                     makeArrayAttr(ctx, clauses.privateSyms),
                     clauses.privateNeedsBarrier, clauses.procBindKind,
@@ -2926,11 +3070,13 @@ static LogicalResult verifyPrivateVarList(OpType &op) {
 }
 
 LogicalResult ParallelOp::verify() {
-  if (getAllocateVars().size() != getAllocatorVars().size())
-    return emitError(
-        "expected equal sizes for allocate and allocator variables");
-
   if (failed(verifyPrivateVarList(*this)))
+    return failure();
+  if (failed(verifyAllocateClause(
+          getOperation(), getAllocateVars(), getAllocatorVars(),
+          getAllocateAlignmentsAttr(), getAllocatePrivateIndicesAttr(),
+          getPrivateVars(), getPrivateSymsAttr(),
+          /*requirePrivateIndices=*/true)))
     return failure();
 
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
@@ -2984,6 +3130,8 @@ void TeamsOp::build(OpBuilder &builder, OperationState &state,
   // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
   TeamsOp::build(
       builder, state, clauses.allocateVars, clauses.allocatorVars,
+      makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
+      makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
       clauses.dynGroupprivateAccessGroup, clauses.dynGroupprivateFallback,
       clauses.dynGroupprivateSize, clauses.ifExpr, clauses.numTeamsLower,
       clauses.numTeamsUpperVars, /*private_vars=*/{}, /*private_syms=*/nullptr,
@@ -3033,10 +3181,11 @@ LogicalResult TeamsOp::verify() {
       (getNumTeamsLower() || !getNumTeamsUpperVars().empty()))
     return emitOpError() << "'num_teams' not allowed in SPMD-no-loop kernels";
 
-  // Check for allocate clause restrictions
-  if (getAllocateVars().size() != getAllocatorVars().size())
-    return emitError(
-        "expected equal sizes for allocate and allocator variables");
+  if (failed(verifyAllocateClause(
+          getOperation(), getAllocateVars(), getAllocatorVars(),
+          getAllocateAlignmentsAttr(), getAllocatePrivateIndicesAttr(),
+          getPrivateVars(), getPrivateSymsAttr())))
+    return failure();
 
   if (failed(verifyDynGroupprivateClause(
           op, getDynGroupprivateAccessGroupAttr(),
@@ -3071,6 +3220,8 @@ void SectionsOp::build(OpBuilder &builder, OperationState &state,
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
   SectionsOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
+                    makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
+                    makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
                     clauses.nowait, /*private_vars=*/{},
                     /*private_syms=*/nullptr, /*private_needs_barrier=*/nullptr,
                     clauses.reductionMod, clauses.reductionVars,
@@ -3082,9 +3233,11 @@ LogicalResult SectionsOp::verify() {
   if (isCombined())
     return emitOpError() << "cannot be a non-innermost combined construct leaf";
 
-  if (getAllocateVars().size() != getAllocatorVars().size())
-    return emitError(
-        "expected equal sizes for allocate and allocator variables");
+  if (failed(verifyAllocateClause(
+          getOperation(), getAllocateVars(), getAllocatorVars(),
+          getAllocateAlignmentsAttr(), getAllocatePrivateIndicesAttr(),
+          getPrivateVars(), getPrivateSymsAttr())))
+    return failure();
 
   return verifyReductionVarList(*this, getReductionSyms(), getReductionVars(),
                                 getReductionByref());
@@ -3109,6 +3262,8 @@ void ScopeOp::build(OpBuilder &builder, OperationState &state,
                     const ScopeOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   ScopeOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
+                 makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
+                 makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
                  clauses.nowait, clauses.privateVars,
                  makeArrayAttr(ctx, clauses.privateSyms),
                  clauses.privateNeedsBarrier, clauses.reductionMod,
@@ -3118,9 +3273,11 @@ void ScopeOp::build(OpBuilder &builder, OperationState &state,
 }
 
 LogicalResult ScopeOp::verify() {
-  if (getAllocateVars().size() != getAllocatorVars().size())
-    return emitError(
-        "expected equal sizes for allocate and allocator variables");
+  if (failed(verifyAllocateClause(
+          getOperation(), getAllocateVars(), getAllocatorVars(),
+          getAllocateAlignmentsAttr(), getAllocatePrivateIndicesAttr(),
+          getPrivateVars(), getPrivateSymsAttr())))
+    return failure();
 
   if (failed(verifyPrivateVarList(*this)))
     return failure();
@@ -3138,6 +3295,8 @@ void SingleOp::build(OpBuilder &builder, OperationState &state,
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: privateVars, privateSyms, privateNeedsBarrier
   SingleOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
+                  makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
+                  makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
                   clauses.copyprivateVars,
                   makeArrayAttr(ctx, clauses.copyprivateSyms), clauses.nowait,
                   /*private_vars=*/{}, /*private_syms=*/nullptr,
@@ -3145,10 +3304,11 @@ void SingleOp::build(OpBuilder &builder, OperationState &state,
 }
 
 LogicalResult SingleOp::verify() {
-  // Check for allocate clause restrictions
-  if (getAllocateVars().size() != getAllocatorVars().size())
-    return emitError(
-        "expected equal sizes for allocate and allocator variables");
+  if (failed(verifyAllocateClause(
+          getOperation(), getAllocateVars(), getAllocatorVars(),
+          getAllocateAlignmentsAttr(), getAllocatePrivateIndicesAttr(),
+          getPrivateVars(), getPrivateSymsAttr())))
+    return failure();
 
   return verifyCopyprivateVarList(*this, getCopyprivateVars(),
                                   getCopyprivateSyms());
@@ -3340,6 +3500,8 @@ LogicalResult LoopOp::verifyRegions() {
 void WsloopOp::build(OpBuilder &builder, OperationState &state,
                      ArrayRef<NamedAttribute> attributes) {
   build(builder, state, /*allocate_vars=*/{}, /*allocator_vars=*/{},
+        /*allocate_alignments=*/nullptr,
+        /*allocate_private_indices=*/nullptr,
         /*linear_vars=*/ValueRange(), /*linear_step_vars=*/ValueRange(),
         /*linear_var_types*/ nullptr, /*linear_modifiers=*/nullptr,
         /*nowait=*/false, /*order=*/nullptr, /*order_mod=*/nullptr,
@@ -3356,20 +3518,27 @@ void WsloopOp::build(OpBuilder &builder, OperationState &state,
 void WsloopOp::build(OpBuilder &builder, OperationState &state,
                      const WsloopOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  // TODO: Store clauses in op: allocateVars, allocatorVars
   WsloopOp::build(
-      builder, state,
-      /*allocate_vars=*/{}, /*allocator_vars=*/{}, clauses.linearVars,
-      clauses.linearStepVars, clauses.linearVarTypes, clauses.linearModifiers,
-      clauses.nowait, clauses.order, clauses.orderMod, clauses.ordered,
-      clauses.privateVars, makeArrayAttr(ctx, clauses.privateSyms),
-      clauses.privateNeedsBarrier, clauses.reductionMod, clauses.reductionVars,
+      builder, state, clauses.allocateVars, clauses.allocatorVars,
+      makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
+      makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
+      clauses.linearVars, clauses.linearStepVars, clauses.linearVarTypes,
+      clauses.linearModifiers, clauses.nowait, clauses.order, clauses.orderMod,
+      clauses.ordered, clauses.privateVars,
+      makeArrayAttr(ctx, clauses.privateSyms), clauses.privateNeedsBarrier,
+      clauses.reductionMod, clauses.reductionVars,
       makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
       makeArrayAttr(ctx, clauses.reductionSyms), clauses.scheduleKind,
       clauses.scheduleChunk, clauses.scheduleMod, clauses.scheduleSimd);
 }
 
 LogicalResult WsloopOp::verify() {
+  if (failed(verifyAllocateClause(
+          getOperation(), getAllocateVars(), getAllocatorVars(),
+          getAllocateAlignmentsAttr(), getAllocatePrivateIndicesAttr(),
+          getPrivateVars(), getPrivateSymsAttr())))
+    return failure();
+
   if (failed(
           verifyLinearModifiers(*this, getLinearModifiers(), getLinearVars())))
     return failure();
@@ -3506,12 +3675,15 @@ LogicalResult SimdOp::verifyRegions() {
 
 void DistributeOp::build(OpBuilder &builder, OperationState &state,
                          const DistributeOperands &clauses) {
-  DistributeOp::build(builder, state, clauses.allocateVars,
-                      clauses.allocatorVars, clauses.distScheduleStatic,
-                      clauses.distScheduleChunkSize, clauses.order,
-                      clauses.orderMod, clauses.privateVars,
-                      makeArrayAttr(builder.getContext(), clauses.privateSyms),
-                      clauses.privateNeedsBarrier);
+  DistributeOp::build(
+      builder, state, clauses.allocateVars, clauses.allocatorVars,
+      makeDenseI64ArrayAttr(builder.getContext(), clauses.allocateAlignments),
+      makeDenseI64ArrayAttr(builder.getContext(),
+                            clauses.allocatePrivateIndices),
+      clauses.distScheduleStatic, clauses.distScheduleChunkSize, clauses.order,
+      clauses.orderMod, clauses.privateVars,
+      makeArrayAttr(builder.getContext(), clauses.privateSyms),
+      clauses.privateNeedsBarrier);
 }
 
 LogicalResult DistributeOp::verify() {
@@ -3519,9 +3691,11 @@ LogicalResult DistributeOp::verify() {
     return emitOpError() << "chunk size set without "
                             "dist_schedule_static being present";
 
-  if (getAllocateVars().size() != getAllocatorVars().size())
-    return emitError(
-        "expected equal sizes for allocate and allocator variables");
+  if (failed(verifyAllocateClause(
+          getOperation(), getAllocateVars(), getAllocatorVars(),
+          getAllocateAlignmentsAttr(), getAllocatePrivateIndicesAttr(),
+          getPrivateVars(), getPrivateSymsAttr())))
+    return failure();
 
   if (failed(verifyPrivateVarList(*this)))
     return failure();
@@ -3672,6 +3846,8 @@ void TaskOp::build(OpBuilder &builder, OperationState &state,
   TaskOp::build(
       builder, state, clauses.iterated, clauses.affinityVars,
       clauses.allocateVars, clauses.allocatorVars,
+      makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
+      makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
       makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
       makeArrayAttr(ctx, clauses.dependIteratedKinds), clauses.dependIterated,
       clauses.final, clauses.ifExpr, clauses.inReductionVars,
@@ -3683,6 +3859,12 @@ void TaskOp::build(OpBuilder &builder, OperationState &state,
 }
 
 LogicalResult TaskOp::verify() {
+  if (failed(verifyAllocateClause(
+          getOperation(), getAllocateVars(), getAllocatorVars(),
+          getAllocateAlignmentsAttr(), getAllocatePrivateIndicesAttr(),
+          getPrivateVars(), getPrivateSymsAttr())))
+    return failure();
+
   LogicalResult verifyDependVars =
       verifyDependVarList(*this, getDependKinds(), getDependVars(),
                           getDependIteratedKinds(), getDependIterated());
@@ -3704,12 +3886,20 @@ void TaskgroupOp::build(OpBuilder &builder, OperationState &state,
                         const TaskgroupOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   TaskgroupOp::build(builder, state, clauses.allocateVars,
-                     clauses.allocatorVars, clauses.taskReductionVars,
+                     clauses.allocatorVars,
+                     makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
+                     makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices),
+                     clauses.taskReductionVars,
                      makeDenseBoolArrayAttr(ctx, clauses.taskReductionByref),
                      makeArrayAttr(ctx, clauses.taskReductionSyms));
 }
 
 LogicalResult TaskgroupOp::verify() {
+  if (failed(verifyAllocateClause(
+          getOperation(), getAllocateVars(), getAllocatorVars(),
+          getAllocateAlignmentsAttr(), getAllocatePrivateIndicesAttr())))
+    return failure();
+
   return verifyReductionVarList(*this, getTaskReductionSyms(),
                                 getTaskReductionVars(),
                                 getTaskReductionByref());
@@ -3724,7 +3914,9 @@ void TaskloopContextOp::build(OpBuilder &builder, OperationState &state,
   MLIRContext *ctx = builder.getContext();
   TaskloopContextOp::build(
       builder, state, clauses.allocateVars, clauses.allocatorVars,
-      clauses.final, clauses.grainsizeMod, clauses.grainsize, clauses.ifExpr,
+      makeDenseI64ArrayAttr(ctx, clauses.allocateAlignments),
+      makeDenseI64ArrayAttr(ctx, clauses.allocatePrivateIndices), clauses.final,
+      clauses.grainsizeMod, clauses.grainsize, clauses.ifExpr,
       clauses.inReductionVars,
       makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
       makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
@@ -3745,11 +3937,12 @@ TaskloopWrapperOp TaskloopContextOp::getLoopOp() {
 }
 
 LogicalResult TaskloopContextOp::verify() {
-  if (getAllocateVars().size() != getAllocatorVars().size())
-    return emitError(
-        "expected equal sizes for allocate and allocator variables");
-
   if (failed(verifyPrivateVarList(*this)))
+    return failure();
+  if (failed(verifyAllocateClause(
+          getOperation(), getAllocateVars(), getAllocatorVars(),
+          getAllocateAlignmentsAttr(), getAllocatePrivateIndicesAttr(),
+          getPrivateVars(), getPrivateSymsAttr())))
     return failure();
 
   if (failed(verifyReductionVarList(*this, getReductionSyms(),
@@ -4218,7 +4411,7 @@ void CanonicalLoopOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/true);
 
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 mlir::ParseResult CanonicalLoopOp::parse(::mlir::OpAsmParser &parser,
@@ -4306,7 +4499,7 @@ void UnrollHeuristicOp::build(::mlir::OpBuilder &odsBuilder,
 void UnrollHeuristicOp::print(OpAsmPrinter &p) {
   p << '(' << getApplyee() << ')';
 
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 mlir::ParseResult UnrollHeuristicOp::parse(::mlir::OpAsmParser &parser,
@@ -4348,6 +4541,74 @@ UnrollHeuristicOp::getGenerateesODSOperandIndexAndLength() {
 }
 
 //===----------------------------------------------------------------------===//
+// UnrollFullOp
+//===----------------------------------------------------------------------===//
+
+void UnrollFullOp::build(::mlir::OpBuilder &odsBuilder,
+                         ::mlir::OperationState &odsState, ::mlir::Value cli) {
+  odsState.addOperands(cli);
+}
+
+void UnrollFullOp::print(OpAsmPrinter &p) {
+  p << '(' << getApplyee() << ')';
+
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
+}
+
+mlir::ParseResult UnrollFullOp::parse(::mlir::OpAsmParser &parser,
+                                      ::mlir::OperationState &result) {
+  auto cliType = CanonicalLoopInfoType::get(parser.getContext());
+
+  if (parser.parseLParen())
+    return failure();
+
+  OpAsmParser::UnresolvedOperand applyee;
+  if (parser.parseOperand(applyee) ||
+      parser.resolveOperand(applyee, cliType, result.operands))
+    return failure();
+
+  if (parser.parseRParen())
+    return failure();
+
+  // Optional output loop; full unrolling has none.
+  if (!parser.parseOptionalArrow()) {
+    if (parser.parseLParen() || parser.parseRParen())
+      return failure();
+  }
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return mlir::success();
+}
+
+std::pair<unsigned, unsigned>
+UnrollFullOp::getApplyeesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_applyee);
+}
+
+std::pair<unsigned, unsigned>
+UnrollFullOp::getGenerateesODSOperandIndexAndLength() {
+  return {0, 0};
+}
+
+LogicalResult UnrollFullOp::verify() {
+  auto [create, gen, cons] = decodeCli(getApplyee());
+  if (!gen)
+    return emitOpError() << "applyee CLI has no generator";
+
+  // Full unrolling leaves no loop, so the trip count must be constant. Only
+  // omp.canonical_loop states one.
+  if (auto loop = dyn_cast<CanonicalLoopOp>(gen->getOwner())) {
+    if (!matchPattern(loop.getTripCount(), m_Constant()))
+      return emitOpError() << "applyee loop must have a constant trip count";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // UnrollPartialOp
 //===----------------------------------------------------------------------===//
 
@@ -4362,7 +4623,10 @@ void UnrollPartialOp::build(::mlir::OpBuilder &odsBuilder,
 void UnrollPartialOp::print(OpAsmPrinter &p) {
   p << '(' << getApplyee() << ')';
 
-  p.printOptionalAttrDict((*this)->getAttrs());
+  SmallVector<NamedAttribute> attrs((*this)->getDiscardableAttrs());
+  attrs.emplace_back(getUnrollFactorAttrName(), getUnrollFactorAttr());
+  llvm::sort(attrs);
+  p.printOptionalAttrDict(attrs);
 }
 
 mlir::ParseResult UnrollPartialOp::parse(::mlir::OpAsmParser &parser,
@@ -4607,11 +4871,37 @@ std::pair<unsigned, unsigned> FuseOp::getGenerateesODSOperandIndexAndLength() {
 
 void CriticalDeclareOp::build(OpBuilder &builder, OperationState &state,
                               const CriticalDeclareOperands &clauses) {
-  CriticalDeclareOp::build(builder, state, clauses.symName, clauses.hint);
+  CriticalDeclareOp::build(builder, state, clauses.symName,
+                           clauses.symVisibility, clauses.hint);
 }
 
 LogicalResult CriticalDeclareOp::verify() {
   return verifySynchronizationHint(*this, getHint());
+}
+
+LogicalResult CriticalOp::verify() {
+  SymbolRefAttr currentName = getNameAttr();
+
+  CriticalOp parentCritical = (*this)->getParentOfType<CriticalOp>();
+
+  while (parentCritical) {
+    SymbolRefAttr parentName = parentCritical.getNameAttr();
+
+    if (currentName == parentName) {
+      if (currentName) {
+        return emitOpError() << "cannot be nested inside another omp.critical "
+                                "region with the same name ("
+                             << currentName << ")";
+      } else {
+        return emitOpError() << "cannot be nested inside another unnamed "
+                                "omp.critical region";
+      }
+    }
+
+    parentCritical = parentCritical->getParentOfType<CriticalOp>();
+  }
+
+  return success();
 }
 
 LogicalResult CriticalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
@@ -4730,7 +5020,7 @@ LogicalResult AtomicReadOp::verify() {
 
   int64_t version = 50;
   if (auto moduleOp = getOperation()->getParentOfType<ModuleOp>())
-    if (Attribute verAttr = moduleOp->getAttr("omp.version"))
+    if (Attribute verAttr = moduleOp->getDiscardableAttr("omp.version"))
       version = llvm::cast<VersionAttr>(verAttr).getVersion();
 
   if (auto mo = getMemoryOrder()) {
@@ -4756,7 +5046,7 @@ LogicalResult AtomicWriteOp::verify() {
 
   int64_t version = 50;
   if (auto moduleOp = getOperation()->getParentOfType<ModuleOp>())
-    if (Attribute verAttr = moduleOp->getAttr("omp.version"))
+    if (Attribute verAttr = moduleOp->getDiscardableAttr("omp.version"))
       version = llvm::cast<VersionAttr>(verAttr).getVersion();
 
   if (auto mo = getMemoryOrder()) {
@@ -4796,7 +5086,7 @@ LogicalResult AtomicUpdateOp::verify() {
 
   int64_t version = 50;
   if (auto moduleOp = getOperation()->getParentOfType<ModuleOp>())
-    if (Attribute verAttr = moduleOp->getAttr("omp.version"))
+    if (Attribute verAttr = moduleOp->getDiscardableAttr("omp.version"))
       version = llvm::cast<VersionAttr>(verAttr).getVersion();
 
   if (auto mo = getMemoryOrder()) {
@@ -4836,6 +5126,12 @@ AtomicUpdateOp AtomicCaptureOp::getAtomicUpdateOp() {
   return dyn_cast<AtomicUpdateOp>(getSecondOp());
 }
 
+AtomicCompareOp AtomicCaptureOp::getAtomicCompareOp() {
+  if (auto op = dyn_cast<AtomicCompareOp>(getFirstOp()))
+    return op;
+  return dyn_cast<AtomicCompareOp>(getSecondOp());
+}
+
 LogicalResult AtomicCaptureOp::verify() {
   return verifySynchronizationHint(*this, getHint());
 }
@@ -4844,12 +5140,13 @@ LogicalResult AtomicCaptureOp::verifyRegions() {
   if (verifyRegionsCommon().failed())
     return mlir::failure();
 
-  if (getFirstOp()->getAttr("hint") || getSecondOp()->getAttr("hint"))
+  if (getFirstOp()->getInherentAttr("hint").value_or(Attribute{}) ||
+      getSecondOp()->getInherentAttr("hint").value_or(Attribute{}))
     return emitOpError(
         "operations inside capture region must not have hint clause");
 
-  if (getFirstOp()->getAttr("memory_order") ||
-      getSecondOp()->getAttr("memory_order"))
+  if (getFirstOp()->getInherentAttr("memory_order").value_or(Attribute{}) ||
+      getSecondOp()->getInherentAttr("memory_order").value_or(Attribute{}))
     return emitOpError(
         "operations inside capture region must not have memory_order clause");
   return success();
@@ -4862,6 +5159,16 @@ LogicalResult AtomicCaptureOp::verifyRegions() {
 LogicalResult AtomicCompareOp::verify() {
   if (verifyCommon().failed())
     return mlir::failure();
+  // OpenMP 5.2 [15.8.3]: the fail clause argument must be one of seq_cst,
+  // acquire or relaxed ('release' and 'acq_rel' are not valid failure
+  // orderings and map to invalid cmpxchg failure orderings).
+  if (auto failOrder = getFailMemoryOrder()) {
+    if (*failOrder != ClauseMemoryOrderKind::Seq_cst &&
+        *failOrder != ClauseMemoryOrderKind::Acquire &&
+        *failOrder != ClauseMemoryOrderKind::Relaxed)
+      return emitOpError(
+          "fail_memory_order must be 'seq_cst', 'acquire' or 'relaxed'");
+  }
   return verifySynchronizationHint(*this, getHint());
 }
 
@@ -5011,7 +5318,7 @@ void PrivateClauseOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                             TypeRange /*result_types*/, StringAttr symName,
                             TypeAttr type) {
   PrivateClauseOp::build(
-      odsBuilder, odsState, symName, type,
+      odsBuilder, odsState, symName, /*sym_visibility=*/nullptr, type,
       DataSharingClauseTypeAttr::get(odsBuilder.getContext(),
                                      DataSharingClauseType::Private));
 }

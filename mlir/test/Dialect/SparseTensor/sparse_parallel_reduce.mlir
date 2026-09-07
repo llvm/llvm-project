@@ -21,8 +21,8 @@
 //   CHECK-DAG:  %[[TMP_c16:.*]] = arith.constant 16 : index
 //   CHECK-DAG:  %[[TMP_c0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:  %[[TMP_c1:.*]] = arith.constant 1 : index
-//   CHECK-DAG:  %[[TMP_0:.*]] = sparse_tensor.positions %[[TMP_arg0]] {level = 1 : index}
-//   CHECK-DAG:  %[[TMP_1:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] {level = 1 : index}
+//   CHECK-DAG:  %[[TMP_0:.*]] = sparse_tensor.positions %[[TMP_arg0]] level = 1
+//   CHECK-DAG:  %[[TMP_1:.*]] = sparse_tensor.coordinates %[[TMP_arg0]] level = 1
 //   CHECK-DAG:  %[[TMP_2:.*]] = sparse_tensor.values %[[TMP_arg0]]
 //   CHECK-DAG:  %[[TMP_3:.*]] = bufferization.to_buffer %[[TMP_arg1]] : tensor<32xf32> to memref<32xf32>
 //   CHECK-DAG:  %[[TMP_4:.*]] = bufferization.to_buffer %[[TMP_arg2]] : tensor<16xf32> to memref<16xf32>

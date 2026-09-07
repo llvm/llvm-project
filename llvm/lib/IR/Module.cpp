@@ -682,6 +682,30 @@ void Module::setCodeModel(CodeModel::Model CL) {
   addModuleFlag(ModFlagBehavior::Error, "Code Model", CL);
 }
 
+LongDoubleFormat Module::getLongDoubleFormat() const {
+  if (auto *Val =
+          dyn_cast_or_null<MDString>(getModuleFlag("long-double-type"))) {
+    if (std::optional<LongDoubleFormat> Format =
+            parseLongDoubleFormat(Val->getString()))
+      return *Format;
+  }
+
+  return getTargetTriple().getDefaultLongDoubleFormat();
+}
+
+void Module::setLongDoubleFormat(LongDoubleFormat Format) {
+  addModuleFlag(ModFlagBehavior::Error, "long-double-type",
+                MDString::get(getContext(), getLongDoubleFormatName(Format)));
+}
+
+FloatABI::ABIType Module::getFloatABI() const {
+  if (auto *Val = dyn_cast_or_null<MDString>(getModuleFlag("float-abi")))
+    return *FloatABI::parseABIType(Val->getString());
+  // Without an explicit flag, fall back to the ABI implied by the target
+  // triple.
+  return getTargetTriple().getDefaultFloatABI();
+}
+
 std::optional<uint64_t> Module::getLargeDataThreshold() const {
   auto *Val =
       cast_or_null<ConstantAsMetadata>(getModuleFlag("Large Data Threshold"));

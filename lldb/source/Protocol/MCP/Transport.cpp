@@ -22,3 +22,32 @@ void Transport::Log(StringRef message) {
   if (m_log_callback)
     m_log_callback(message);
 }
+
+llvm::Error Transport::ReplyWithParseError(StringRef raw_message,
+                                           StringRef reason) {
+  llvm::Expected<json::Value> value = json::parse(raw_message);
+  if (!value) {
+    // JSON-RPC forbids guessing an id, and malformed JSON carries none.
+    consumeError(value.takeError());
+    return llvm::Error::success();
+  }
+
+  const json::Object *object = value->getAsObject();
+  if (!object)
+    return llvm::Error::success();
+
+  // A message without an id is a notification, which takes no response.
+  const json::Value *raw_id = object->get("id");
+  if (!raw_id)
+    return llvm::Error::success();
+
+  Id id;
+  if (std::optional<StringRef> str = raw_id->getAsString())
+    id = str->str();
+  else if (std::optional<int64_t> num = raw_id->getAsInteger())
+    id = *num;
+  else
+    return llvm::Error::success();
+
+  return Send(Response{id, mcp::Error{eErrorCodeInvalidRequest, reason.str()}});
+}

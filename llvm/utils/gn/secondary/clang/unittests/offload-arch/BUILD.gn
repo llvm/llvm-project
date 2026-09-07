@@ -1,0 +1,18 @@
+import("//third-party/unittest/unittest.gni")
+
+unittest("OffloadArchTests") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/Basic",
+    "//llvm/lib/Support",
+    "//llvm/lib/Testing/Support",
+  ]
+  sources = [
+    "//clang/tools/offload-arch/AMDGPUArchByKFD.cpp",
+    "OffloadArchTest.cpp",
+  ]
+
+  if (current_os == "win") {
+    sources += [ "//clang/tools/offload-arch/AMDGPUArchByHIP.cpp" ]
+  }
+}

@@ -241,3 +241,18 @@ namespace InheritedCtor {
 
   SS ss{42};
 }
+
+namespace InvalidStaticInvoker {
+  auto foo = [](bar) { int j; return j; }; // both-error {{unknown type name 'bar'}}
+  constexpr int (*baz)(int) = foo;
+  int i = baz(42);
+}
+
+namespace UnknownSizeArrayInEvaluateString {
+  void foo() {
+    constexpr char K[] = {'\0'; // both-error {{expected '}'}} \
+                                // both-note {{to match this}}
+    __builtin_verbose_trap("bar", K); // both-error {{argument to __builtin_verbose_trap must be a pointer to a constant string}}
+  }
+  }
+} // both-error {{extraneous closing brace}}

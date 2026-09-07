@@ -30,10 +30,12 @@
     _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++17-extensions")                                                             \
     _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++20-extensions")                                                             \
     _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++23-extensions")                                                             \
+    _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++26-extensions")                                                             \
     _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++14-extensions")                                                               \
     _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++17-extensions")                                                               \
     _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++20-extensions")                                                               \
-    _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++23-extensions")
+    _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++23-extensions")                                                               \
+    _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++26-extensions")
 #  define _LIBCPP_POP_EXTENSION_DIAGNOSTICS _LIBCPP_DIAGNOSTIC_POP
 #  define _LIBCPP_PUSH_ABI_PRAGMA_DIAGNOSTICS                                                                          \
     _LIBCPP_DIAGNOSTIC_PUSH _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wpragma-clang-attribute")                               \

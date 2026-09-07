@@ -25,15 +25,16 @@
 
 namespace llvm {
 
-class Type;
-class FunctionType;
-class Function;
-class LLVMContext;
-class Module;
+class APInt;
 class AttributeList;
 class AttributeSet;
-class raw_ostream;
 class Constant;
+class Function;
+class FunctionType;
+class LLVMContext;
+class Module;
+class raw_ostream;
+class Type;
 
 /// This namespace contains an enum with a value for every intrinsic/builtin
 /// function known by LLVM. The enum values are returned by
@@ -326,6 +327,11 @@ LLVM_ABI void printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS,
                           const Constant *ImmArgVal);
 
 LLVM_ABI void printFPClassMask(raw_ostream &OS, const Constant *ImmArgVal);
+
+/// Returns true if \p Value satisfies the range constraints specified for
+/// argument \p ArgIdx of intrinsic \p IID.
+LLVM_ABI bool isImmArgValueInRangeSet(ID IID, unsigned ArgIdx,
+                                      const APInt &Value);
 
 } // namespace Intrinsic
 

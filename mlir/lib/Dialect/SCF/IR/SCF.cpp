@@ -277,6 +277,11 @@ void ExecuteRegionOp::getSuccessorRegions(
   regions.push_back(RegionSuccessor(getOperation()));
 }
 
+void ExecuteRegionOp::getRegionInvocationBounds(
+    ArrayRef<Attribute>, SmallVectorImpl<InvocationBounds> &bounds) {
+  bounds.emplace_back(/*lb=*/1, /*ub=*/1);
+}
+
 ValueRange ExecuteRegionOp::getSuccessorInputs(RegionSuccessor successor) {
   return successor.isOperation() ? ValueRange(getOperation()->getResults())
                                  : ValueRange();
@@ -1009,9 +1014,13 @@ void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ForOpTensorCastFolder>(context);
   populateRegionBranchOpInterfaceCanonicalizationPatterns(
       results, ForOp::getOperationName());
+  // Inline single-iteration loops before applying the generic region branch op
+  // canonicalizations, which may otherwise remove tied iter_args and results
+  // independently.
   populateRegionBranchOpInterfaceInliningPattern(
       results, ForOp::getOperationName(),
-      /*replBuilderFn=*/[](OpBuilder &builder, Location loc, Value value) {
+      /*replBuilderFn=*/
+      [](OpBuilder &builder, Location loc, Value value) {
         // scf.for has only one non-successor input value: the loop induction
         // variable. In case of a single acyclic path through the op, the IV can
         // be safely replaced with the lower bound.
@@ -1019,7 +1028,9 @@ void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
         assert(blockArg.getArgNumber() == 0 && "expected induction variable");
         auto forOp = cast<ForOp>(blockArg.getOwner()->getParentOp());
         return forOp.getLowerBound();
-      });
+      },
+      /*matcherFn=*/::mlir::detail::defaultMatcherFn,
+      /*benefit=*/2);
 }
 
 std::optional<APInt> ForOp::getConstantStep() {
@@ -3462,17 +3473,25 @@ struct WhileMoveIfDown : public OpRewritePattern<scf::WhileOp> {
     Location loc = op.getLoc();
 
     // Replace uses of ifOp results in the conditionOp with the yielded values
-    // from the ifOp branches.
+    // from the ifOp branches: the after-region argument takes the `then` value,
+    // while the condition operand -- which becomes a while result once the
+    // condition is false -- takes the `else` value.
+    //
+    // The same ifOp result may be forwarded to several condition operands, so
+    // assign into the specific operand instead of replacing all uses of the
+    // ifOp result, which would also rewrite the operands not yet visited.
     for (auto [idx, arg] : llvm::enumerate(conditionOp.getArgs())) {
       auto it = llvm::find(ifOp->getResults(), arg);
-      if (it != ifOp->getResults().end()) {
-        size_t ifOpIdx = it.getIndex();
-        Value thenValue = ifOp.thenYield()->getOperand(ifOpIdx);
-        Value elseValue = ifOp.elseYield()->getOperand(ifOpIdx);
-
-        rewriter.replaceAllUsesWith(ifOp->getResults()[ifOpIdx], elseValue);
-        rewriter.replaceAllUsesWith(op.getAfterArguments()[idx], thenValue);
-      }
+      if (it == ifOp->getResults().end())
+        continue;
+      size_t ifOpIdx = it.getIndex();
+      rewriter.replaceAllUsesWith(op.getAfterArguments()[idx],
+                                  ifOp.thenYield()->getOperand(ifOpIdx));
+      unsigned argIdx = idx;
+      Value elseValue = ifOp.elseYield()->getOperand(ifOpIdx);
+      rewriter.modifyOpInPlace(conditionOp, [&] {
+        conditionOp.getArgsMutable()[argIdx].assign(elseValue);
+      });
     }
 
     // Collect additional used values from before region.

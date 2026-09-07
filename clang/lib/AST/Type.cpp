@@ -93,7 +93,7 @@ bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
          // to implicitly cast into the default address space.
          (A == LangAS::Default &&
           (B == LangAS::cuda_constant || B == LangAS::cuda_device ||
-           B == LangAS::cuda_shared)) ||
+           B == LangAS::cuda_shared || B == LangAS::amdgpu_barrier)) ||
          // In HLSL, the this pointer for member functions points to the default
          // address space. This causes a problem if the structure is in
          // a different address space. We want to allow casting from these
@@ -1639,6 +1639,24 @@ struct SubstObjCTypeArgsVisitor
   }
 };
 
+struct StripNullabilityTypeVisitor
+    : public SimpleTransformVisitor<StripNullabilityTypeVisitor> {
+  using BaseType = SimpleTransformVisitor<StripNullabilityTypeVisitor>;
+
+  explicit StripNullabilityTypeVisitor(ASTContext &ctx) : BaseType(ctx) {}
+
+  QualType VisitAttributedType(const AttributedType *attrType) {
+    QualType type(attrType, 0);
+    if (AttributedType::stripOuterNullability(type)) {
+      while (AttributedType::stripOuterNullability(type)) {
+      }
+      return BaseType::recurse(type);
+    }
+
+    return BaseType::VisitAttributedType(attrType);
+  }
+};
+
 struct StripObjCKindOfTypeVisitor
     : public SimpleTransformVisitor<StripObjCKindOfTypeVisitor> {
   using BaseType = SimpleTransformVisitor<StripObjCKindOfTypeVisitor>;
@@ -1713,6 +1731,14 @@ QualType QualType::stripObjCKindOfType(const ASTContext &constCtx) const {
   // FIXME: Because ASTContext::getAttributedType() is non-const.
   auto &ctx = const_cast<ASTContext &>(constCtx);
   StripObjCKindOfTypeVisitor visitor(ctx);
+  return visitor.recurse(*this);
+}
+
+QualType QualType::stripNullability(const ASTContext &constCtx) const {
+  // FIXME: SimpleTransformVisitor currently takes a non-const ASTContext
+  // because some rebuild paths use non-const ASTContext factory APIs.
+  auto &ctx = const_cast<ASTContext &>(constCtx);
+  StripNullabilityTypeVisitor visitor(ctx);
   return visitor.recurse(*this);
 }
 
@@ -2314,6 +2340,8 @@ bool Type::isSignedIntegerOrEnumerationType() const {
 bool Type::hasSignedIntegerRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isSignedIntegerOrEnumerationType();
+  if (const auto *MT = dyn_cast<MatrixType>(CanonicalType))
+    return MT->getElementType()->isSignedIntegerOrEnumerationType();
 
   if (const auto *BT = dyn_cast<BuiltinType>(CanonicalType)) {
     switch (BT->getKind()) {
@@ -3671,6 +3699,10 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
   case Id:                                                                     \
     return #Name;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId)                                      \
+  case Id:                                                                     \
+    return Name;
+#include "clang/Basic/SPIRVTypes.def"
   }
 
   llvm_unreachable("Invalid builtin type.");
@@ -3735,8 +3767,6 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
     return "aarch64_sve_pcs";
   case CC_IntelOclBicc:
     return "intel_ocl_bicc";
-  case CC_SpirFunction:
-    return "spir_function";
   case CC_DeviceKernel:
     return "device_kernel";
   case CC_Swift:
@@ -4017,7 +4047,7 @@ bool FunctionProtoType::isTemplateVariadic() const {
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
                                 const QualType *ArgTys, unsigned NumParams,
                                 const ExtProtoInfo &epi,
-                                const ASTContext &Context, bool Canonical) {
+                                const ASTContext &Context) {
   // We have to be careful not to get ambiguous profile encodings.
   // Note that valid type pointers are never ambiguous with anything else.
   //
@@ -4056,7 +4086,9 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
     for (QualType Ex : epi.ExceptionSpec.Exceptions)
       ID.AddPointer(Ex.getAsOpaquePtr());
   } else if (isComputedNoexcept(epi.ExceptionSpec.Type)) {
-    epi.ExceptionSpec.NoexceptExpr->Profile(ID, Context, Canonical);
+    // getFunctionTypeInternal compares noexcept expressions after the lookup,
+    // so the key only needs their canonical form.
+    epi.ExceptionSpec.NoexceptExpr->Profile(ID, Context, /*Canonical=*/true);
   } else if (epi.ExceptionSpec.Type == EST_Uninstantiated ||
              epi.ExceptionSpec.Type == EST_Unevaluated) {
     ID.AddPointer(epi.ExceptionSpec.SourceDecl->getCanonicalDecl());
@@ -4086,7 +4118,7 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID,
                                 const ASTContext &Ctx) {
   Profile(ID, getReturnType(), param_type_begin(), getNumParams(),
-          getExtProtoInfo(), Ctx, isCanonicalUnqualified());
+          getExtProtoInfo(), Ctx);
 }
 
 TypeCoupledDeclRefInfo::TypeCoupledDeclRefInfo(ValueDecl *D, bool Deref)
@@ -5120,9 +5152,8 @@ LinkageInfo LinkageComputer::computeTypeLinkageInfo(const Type *T) {
     return computeTypeLinkageInfo(
         cast<OverflowBehaviorType>(T)->getUnderlyingType());
   case Type::HLSLAttributedResource:
-    return computeTypeLinkageInfo(cast<HLSLAttributedResourceType>(T)
-                                      ->getContainedType()
-                                      ->getCanonicalTypeInternal());
+    return computeTypeLinkageInfo(
+        cast<HLSLAttributedResourceType>(T)->getWrappedType());
   case Type::HLSLInlineSpirv:
     return LinkageInfo::external();
   }
@@ -5258,6 +5289,8 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
     case BuiltinType::BuiltinFn:
     case BuiltinType::NullPtr:
     case BuiltinType::IncompleteMatrixIdx:
@@ -5492,6 +5525,31 @@ bool Type::isCUDADeviceBuiltinTextureType() const {
   return false;
 }
 
+static bool isAMDGPUNamedBarrierTypeImpl(const Type *Ty, bool AllowWrappers) {
+  // This query does not care about qualifiers at all.
+  Ty = Ty->getUnqualifiedDesugaredType();
+
+  // Unwrap arrays.
+  while (isa<ArrayType>(Ty))
+    Ty = Ty->getArrayElementTypeNoTypeQual()->getUnqualifiedDesugaredType();
+
+  if (const auto *BT = dyn_cast<BuiltinType>(Ty))
+    return BT->getKind() == BuiltinType::AMDGPUNamedWorkgroupBarrier;
+  if (AllowWrappers) {
+    if (const auto *RT = dyn_cast<RecordType>(Ty))
+      return RT->getDecl()->hasAttr<AMDGPUNamedBarrierWrapperAttr>();
+  }
+  return false;
+}
+
+bool Type::isAMDGPUNamedBarrierType() const {
+  return isAMDGPUNamedBarrierTypeImpl(this, /*AllowWrappers=*/false);
+}
+
+bool Type::isAMDGPUNamedBarrierTypeOrWrapper() const {
+  return isAMDGPUNamedBarrierTypeImpl(this, /*AllowWrappers=*/true);
+}
+
 bool Type::hasSizedVLAType() const {
   if (!isVariablyModifiedType())
     return false;
@@ -5685,20 +5743,18 @@ DeducedType::DeducedType(TypeClass TC, DeducedKind DK,
 }
 
 AutoType::AutoType(DeducedKind DK, QualType DeducedAsTypeOrCanon,
-                   AutoTypeKeyword Keyword, TemplateDecl *TypeConstraintConcept,
+                   AutoTypeKeyword Keyword, TemplateName TypeConstraintConcept,
                    ArrayRef<TemplateArgument> TypeConstraintArgs)
     : DeducedType(Auto, DK, DeducedAsTypeOrCanon) {
   AutoTypeBits.Keyword = llvm::to_underlying(Keyword);
   AutoTypeBits.NumArgs = TypeConstraintArgs.size();
   this->TypeConstraintConcept = TypeConstraintConcept;
-  assert(TypeConstraintConcept || AutoTypeBits.NumArgs == 0);
-  if (TypeConstraintConcept) {
-    auto Dep = TypeDependence::None;
-    if (const auto *TTP =
-            dyn_cast<TemplateTemplateParmDecl>(TypeConstraintConcept))
-      Dep = TypeDependence::DependentInstantiation |
-            (TTP->isParameterPack() ? TypeDependence::UnexpandedPack
-                                    : TypeDependence::None);
+  assert(!TypeConstraintConcept.isNull() || AutoTypeBits.NumArgs == 0);
+  if (!TypeConstraintConcept.isNull()) {
+    assert(TypeConstraintConcept.isConceptName() &&
+           "type-constraint does not name a concept");
+
+    auto Dep = toTypeDependence(TypeConstraintConcept.getDependence());
 
     auto *ArgBuffer =
         const_cast<TemplateArgument *>(getTypeConstraintArguments().data());
@@ -5715,11 +5771,11 @@ AutoType::AutoType(DeducedKind DK, QualType DeducedAsTypeOrCanon,
 
 void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                        DeducedKind DK, QualType Deduced,
-                       AutoTypeKeyword Keyword, TemplateDecl *CD,
+                       AutoTypeKeyword Keyword, TemplateName CD,
                        ArrayRef<TemplateArgument> Arguments) {
   DeducedType::Profile(ID, DK, Deduced);
   ID.AddInteger(llvm::to_underlying(Keyword));
-  ID.AddPointer(CD);
+  CD.Profile(ID);
   for (const TemplateArgument &Arg : Arguments)
     Arg.Profile(ID, Context);
 }
@@ -5950,6 +6006,41 @@ std::string FunctionEffectWithCondition::description() const {
   if (Cond.getCondition() != nullptr)
     Result += "(expr)";
   return Result;
+}
+
+TypeDependence
+HLSLAttributedResourceType::computeDependence(QualType Contained,
+                                              const Attributes &Attrs) {
+  TypeDependence Deps = TypeDependence::None;
+  if (!Contained.isNull())
+    Deps |= Contained->getDependence();
+  if (Attrs.SampleCountExpr)
+    Deps |= toTypeDependence(Attrs.SampleCountExpr->getDependence());
+  return Deps;
+}
+
+HLSLAttributedResourceType::HLSLAttributedResourceType(QualType Wrapped,
+                                                       QualType Contained,
+                                                       const Attributes &Attrs)
+    : Type(HLSLAttributedResource, QualType(),
+           computeDependence(Contained, Attrs)),
+      WrappedType(Wrapped), ContainedType(Contained), Attrs(Attrs) {}
+
+void HLSLAttributedResourceType::Profile(llvm::FoldingSetNodeID &ID,
+                                         const ASTContext &Ctx,
+                                         QualType Wrapped, QualType Contained,
+                                         const Attributes &Attrs) {
+  ID.AddPointer(Wrapped.getAsOpaquePtr());
+  ID.AddPointer(Contained.getAsOpaquePtr());
+  ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
+  ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceDimension));
+  ID.AddBoolean(Attrs.IsROV);
+  ID.AddBoolean(Attrs.RawBuffer);
+  ID.AddBoolean(Attrs.IsCounter);
+  ID.AddBoolean(Attrs.IsArray);
+  ID.AddBoolean(Attrs.SampleCountExpr != nullptr);
+  if (Attrs.SampleCountExpr)
+    Attrs.SampleCountExpr->Profile(ID, Ctx, /*Canonical=*/true);
 }
 
 const HLSLAttributedResourceType *

@@ -192,19 +192,19 @@ void FileSpec::SetFile(llvm::StringRef pathname, Style style) {
     // If we have no path after normalization set the path to the current
     // directory. This matches what python does and also a few other path
     // utilities.
-    m_filename.SetString(".");
+    m_filename = ".";
     return;
   }
 
   // Split path into filename and directory. We rely on the underlying char
   // pointer to be nullptr when the components are empty.
   llvm::StringRef filename = llvm::sys::path::filename(resolved, m_style);
-  if(!filename.empty())
-    m_filename.SetString(filename);
+  if (!filename.empty())
+    m_filename = filename;
 
   llvm::StringRef directory = llvm::sys::path::parent_path(resolved, m_style);
-  if(!directory.empty())
-    m_directory.SetString(directory);
+  if (!directory.empty())
+    m_directory = directory;
 }
 
 void FileSpec::SetFile(llvm::StringRef path, const llvm::Triple &triple) {
@@ -216,14 +216,18 @@ void FileSpec::SetFile(llvm::StringRef path, const llvm::Triple &triple) {
 //
 //  if (file_spec)
 //  {}
-FileSpec::operator bool() const { return m_filename || m_directory; }
+FileSpec::operator bool() const {
+  return !m_filename.empty() || !m_directory.empty();
+}
 
 // Logical NOT operator. This allows code to check any FileSpec objects to see
 // if they are invalid using code such as:
 //
 //  if (!file_spec)
 //  {}
-bool FileSpec::operator!() const { return !m_directory && !m_filename; }
+bool FileSpec::operator!() const {
+  return m_directory.empty() && m_filename.empty();
+}
 
 bool FileSpec::DirectoryEquals(const FileSpec &rhs) const {
   if (IsCaseSensitive() || rhs.IsCaseSensitive())
@@ -259,8 +263,8 @@ Stream &lldb_private::operator<<(Stream &s, const FileSpec &f) {
 // Clear this object by releasing both the directory and filename string values
 // and making them both the empty string.
 void FileSpec::Clear() {
-  m_directory.Clear();
-  m_filename.Clear();
+  m_directory.clear();
+  m_filename.clear();
   PathWasModified();
 }
 
@@ -285,7 +289,7 @@ int FileSpec::Compare(const FileSpec &a, const FileSpec &b, bool full) {
   // full compare. This allows for matching when we just have a filename in one
   // of the FileSpec objects.
 
-  if (full || (a.m_directory && b.m_directory)) {
+  if (full || (!a.m_directory.empty() && !b.m_directory.empty())) {
     if (case_sensitive)
       result = a.GetDirectory().compare(b.GetDirectory());
     else
@@ -338,7 +342,7 @@ void FileSpec::Dump(llvm::raw_ostream &s) const {
   std::string path{GetPath(true)};
   s << path;
   char path_separator = GetPreferredPathSeparator(m_style);
-  if (!m_filename && !path.empty() && path.back() != path_separator)
+  if (m_filename.empty() && !path.empty() && path.back() != path_separator)
     s << path_separator;
 }
 
@@ -352,22 +356,22 @@ llvm::json::Value FileSpec::ToJSON() const {
 FileSpec::Style FileSpec::GetPathStyle() const { return m_style; }
 
 void FileSpec::SetDirectory(llvm::StringRef directory) {
-  m_directory = ConstString(directory);
+  m_directory = directory;
   PathWasModified();
 }
 
 void FileSpec::SetFilename(llvm::StringRef filename) {
-  m_filename = ConstString(filename);
+  m_filename = filename;
   PathWasModified();
 }
 
 void FileSpec::ClearFilename() {
-  m_filename.Clear();
+  m_filename.clear();
   PathWasModified();
 }
 
 void FileSpec::ClearDirectory() {
-  m_directory.Clear();
+  m_directory.clear();
   PathWasModified();
 }
 
@@ -391,32 +395,30 @@ std::string FileSpec::GetPath(bool denormalize) const {
 
 void FileSpec::GetPath(llvm::SmallVectorImpl<char> &path,
                        bool denormalize) const {
-  path.append(m_directory.GetStringRef().begin(),
-              m_directory.GetStringRef().end());
+  path.append(m_directory.begin(), m_directory.end());
   // Since the path was normalized and all paths use '/' when stored in these
   // objects, we don't need to look for the actual syntax specific path
   // separator, we just look for and insert '/'.
-  if (m_directory && m_filename && m_directory.GetStringRef().back() != '/' &&
-      m_filename.GetStringRef().back() != '/')
+  if (!m_directory.empty() && !m_filename.empty() &&
+      m_directory.back() != '/' && m_filename.back() != '/')
     path.insert(path.end(), '/');
-  path.append(m_filename.GetStringRef().begin(),
-              m_filename.GetStringRef().end());
+  path.append(m_filename.begin(), m_filename.end());
   if (denormalize && !path.empty())
     Denormalize(path, m_style);
 }
 
 llvm::StringRef FileSpec::GetFileNameExtension() const {
-  return llvm::sys::path::extension(m_filename.GetStringRef(), m_style);
+  return llvm::sys::path::extension(m_filename, m_style);
 }
 
 llvm::StringRef FileSpec::GetFileNameStrippingExtension() const {
-  return llvm::sys::path::stem(m_filename.GetStringRef(), m_style);
+  return llvm::sys::path::stem(m_filename, m_style);
 }
 
 // Return the size in bytes that this object takes in memory. This returns the
 // size in bytes of this object, not any shared string values it may refer to.
 size_t FileSpec::MemorySize() const {
-  return m_filename.MemorySize() + m_directory.MemorySize();
+  return m_filename.size() + m_directory.size();
 }
 
 FileSpec
@@ -473,8 +475,8 @@ bool FileSpec::RemoveLastPathComponent() {
 std::vector<llvm::StringRef> FileSpec::GetComponents() const {
   std::vector<llvm::StringRef> components;
 
-  auto dir_begin = llvm::sys::path::begin(m_directory.GetStringRef(), m_style);
-  auto dir_end = llvm::sys::path::end(m_directory.GetStringRef());
+  auto dir_begin = llvm::sys::path::begin(m_directory, m_style);
+  auto dir_end = llvm::sys::path::end(m_directory);
 
   for (auto iter = dir_begin; iter != dir_end; ++iter) {
     if (*iter == "/" || *iter == ".")
@@ -483,8 +485,8 @@ std::vector<llvm::StringRef> FileSpec::GetComponents() const {
     components.push_back(*iter);
   }
 
-  if (!m_filename.IsEmpty() && m_filename != "/" && m_filename != ".")
-    components.push_back(m_filename.GetStringRef());
+  if (!m_filename.empty() && m_filename != "/" && m_filename != ".")
+    components.push_back(m_filename);
 
   return components;
 }

@@ -31,7 +31,7 @@ B2:
   br i1 %cmp, label %B30.1, label %B30.2
 
 B30.1:
-  %sub = fsub <4 x float> %v0, splat (float 0x7FF8000000000000)
+  %sub = fsub <4 x float> %v0, splat (float +qnan)
   br label %B30.2
 
 B30.2:
@@ -77,7 +77,7 @@ bb:
   %tmp3 = bitcast i32 %tmp1 to float
   %tmp4 = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float %tmp3, float %tmp3, <8 x i32> poison, <4 x i32> poison, i1 0, i32 0, i32 0)
   %tmp5 = extractelement <4 x float> %tmp4, i32 0
-  %tmp6 = fmul float %tmp5, 0x7FF8000000000000
+  %tmp6 = fmul float %tmp5, +qnan
   %tmp7 = fadd float %tmp6, %tmp6
   %tmp8 = insertelement <4 x i32> %tmp2, i32 %tmp, i32 1
   store <4 x i32> %tmp8, ptr addrspace(1) poison, align 16
@@ -97,20 +97,15 @@ bb11:                                             ; preds = %bb9
 define amdgpu_kernel void @partially_undef_copy() #0 {
 ; CHECK-LABEL: partially_undef_copy:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_mov_b32 s3, 0xf000
+; CHECK-NEXT:    s_mov_b32 s2, -1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    v_mov_b32_e32 v5, 5
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 6
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_mov_b32_e32 v0, v5
-; CHECK-NEXT:    v_mov_b32_e32 v1, v6
-; CHECK-NEXT:    v_mov_b32_e32 v2, v7
-; CHECK-NEXT:    v_mov_b32_e32 v3, v8
-; CHECK-NEXT:    v_mov_b32_e32 v0, v6
-; CHECK-NEXT:    s_mov_b32 s3, 0xf000
-; CHECK-NEXT:    s_mov_b32 s2, -1
-; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
+; CHECK-NEXT:    buffer_store_dwordx4 v[6:9], off, s[0:3], 0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    v_nop

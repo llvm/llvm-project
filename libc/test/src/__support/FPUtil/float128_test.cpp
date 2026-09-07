@@ -9,6 +9,7 @@
 #include "hdr/limits_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/float128.h"
+#include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -80,22 +81,48 @@ TEST(LlvmLibcFloat128Test, IntegerConversion) {
   ASSERT_EQ(static_cast<int>(Float128(-1.9)), -1);
   ASSERT_EQ(static_cast<int>(Float128(1.9f)), 1);
 
-  // Extreme values
+  // Border values
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
   ASSERT_EQ(static_cast<int>(Float128(INT_MAX)), INT_MAX);
   ASSERT_EQ(static_cast<int>(Float128(INT_MIN)), INT_MIN);
   ASSERT_EQ(static_cast<long long>(Float128(LLONG_MAX)), LLONG_MAX);
   ASSERT_EQ(static_cast<long long>(Float128(LLONG_MIN)), LLONG_MIN);
   ASSERT_EQ(static_cast<unsigned>(Float128(UINT_MAX)), UINT_MAX);
-  ASSERT_EQ(static_cast<unsigned>(Float128(0U)), 0U);
+  EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_INVALID), 0);
 
   // FP exceptions
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
-  ASSERT_EQ(static_cast<int>(FPBits::quiet_nan().get_val()), 0);
+  ASSERT_EQ(static_cast<int>(FPBits::quiet_nan().get_val()), INT_MAX);
   EXPECT_FP_EXCEPTION(FE_INVALID);
 
   LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
-  ASSERT_EQ(static_cast<int>(FPBits::inf().get_val()), 0);
+  ASSERT_EQ(static_cast<int>(FPBits::inf().get_val()), INT_MAX);
   EXPECT_FP_EXCEPTION(FE_INVALID);
+
+  // Extreme values
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  ASSERT_EQ(static_cast<int>(Float128(1e300)), INT_MAX);
+  EXPECT_FP_EXCEPTION(FE_INVALID);
+
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  ASSERT_EQ(static_cast<int>(Float128(-1e300)), INT_MIN);
+  EXPECT_FP_EXCEPTION(FE_INVALID);
+
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  ASSERT_EQ(static_cast<int>(FPBits::inf(Sign::NEG).get_val()), INT_MIN);
+  EXPECT_FP_EXCEPTION(FE_INVALID);
+
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  ASSERT_EQ(static_cast<int>(FPBits::inf(Sign::POS).get_val()), INT_MAX);
+  EXPECT_FP_EXCEPTION(FE_INVALID);
+
+  // Small values
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  ASSERT_EQ(static_cast<int>(Float128(1e-300)), 0);
+  ASSERT_EQ(static_cast<int>(Float128(-1e-300)), 0);
+  ASSERT_EQ(static_cast<int>(Float128(0.5)), 0);
+  ASSERT_EQ(static_cast<int>(Float128(-0.5)), 0);
+  EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_INVALID), 0);
 }
 
 TEST(LlvmLibcFloat128Test, FromIntegralTypes) {
@@ -106,4 +133,35 @@ TEST(LlvmLibcFloat128Test, FromIntegralTypes) {
   ASSERT_TRUE(Float128(7U) == Float128(7.0f));
   ASSERT_TRUE(Float128(-7LL) == Float128(-7.0));
   ASSERT_TRUE(Float128(123456789LL) == Float128(123456789.0));
+
+  // 2147483648.0 or 2^31 is out of bound in signed and not in unsigned
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  ASSERT_EQ(static_cast<int>(Float128(2147483648.0)), INT_MAX);
+  EXPECT_FP_EXCEPTION(FE_INVALID);
+
+  LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+  ASSERT_EQ(static_cast<unsigned>(Float128(2147483648.0)), 2147483648U);
+  EXPECT_EQ(LIBC_NAMESPACE::fputil::test_except(FE_INVALID), 0);
 }
+
+#ifdef LIBC_TYPES_HAS_FLOAT128
+TEST(LlvmLibcFloat128Test, NativeFloat128Conversion) {
+  // native to emulated float128
+  ASSERT_TRUE(Float128(static_cast<float128>(0.0)) == Float128(0.0));
+  ASSERT_TRUE(Float128(static_cast<float128>(1.5)) == Float128(1.5));
+  ASSERT_TRUE(Float128(static_cast<float128>(-1.5)) == Float128(-1.5));
+  ASSERT_TRUE(Float128(static_cast<float128>(1e300)) == Float128(1e300));
+
+  // emulated to native float128
+  ASSERT_TRUE(static_cast<float128>(Float128(0.0)) ==
+              static_cast<float128>(0.0));
+  ASSERT_TRUE(static_cast<float128>(Float128(3.14)) ==
+              static_cast<float128>(3.14));
+  ASSERT_TRUE(static_cast<float128>(Float128(-3.14)) ==
+              static_cast<float128>(-3.14));
+  ASSERT_TRUE(static_cast<float128>(FPBits::inf(Sign::POS).get_val()) ==
+              static_cast<float128>(FPBits::inf(Sign::POS).get_val()));
+  ASSERT_TRUE(static_cast<float128>(Float128(1e-300)) ==
+              static_cast<float128>(1e-300));
+}
+#endif // LIBC_TYPES_HAS_FLOAT128

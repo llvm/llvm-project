@@ -162,11 +162,22 @@ override LD := $(CC)
 # A kind of linker. It always gets retrieved from CC.
 override LDC := $(CC_TYPE)
 
+# The bare path to the C++ compiler before it is converted into a shell word on windows.
+CXX_PATH := $(CXX)
+
 ifeq "$(HOST_OS)" "Windows_NT"
        # This function enframes the full path with the platform specific quotes. This is necessary to run the c++ executable
        # properly under 'sh' on Windows host (prevent the path breakage because of Windows style path separators).
        override CXX := $(QUOTE)$(CXX)$(QUOTE)
 endif
+
+# Dependency tracking for build tools. For example, if a build rule
+# use uses $(CC) to compile a source file, add
+#
+#    $(call tool_prereq $(CC))
+#
+# as a dependency to the rule.
+tool_prereq = $(wildcard $(firstword $(1)))
 
 #----------------------------------------------------------------------
 # Handle SDKROOT for the cross platform builds.
@@ -174,8 +185,7 @@ endif
 
 ifeq "$(OS)" "Darwin"
     ifeq "$(SDKROOT)" ""
-	# We haven't otherwise set the SDKROOT, so set it now to macosx
-	SDKROOT := $(shell xcrun --sdk macosx --show-sdk-path)
+        $(error SDKROOT must be set on Darwin)
     endif
     SYSROOT_FLAGS := -isysroot "$(SDKROOT)"
     GCC_TOOLCHAIN_FLAGS :=
@@ -581,7 +591,10 @@ endif
 #----------------------------------------------------------------------
 # Make the dSYM file from the executable if $(MAKE_DSYM) != "NO"
 #----------------------------------------------------------------------
-$(DSYM) : $(EXE)
+$(DSYM) : $(EXE) \
+          $(call tool_prereq,$(DS)) \
+          $(call tool_prereq,$(OBJCOPY)) \
+          $(call tool_prereq,$(DWP))
 ifeq "$(OS)" "Darwin"
 ifneq "$(MAKE_DSYM)" "NO"
 	"$(DS)" $(DSFLAGS) -o "$(DSYM)" "$(EXE)"
@@ -657,20 +670,20 @@ endif
 #----------------------------------------------------------------------
 
 ifneq "$(PCH_OUTPUT)" ""
-$(PCH_OUTPUT) : $(PCH_CXX_SOURCE)
+$(PCH_OUTPUT) : $(PCH_CXX_SOURCE) $(call tool_prereq,$(CXX_PATH))
 	$(CXX) $(CXXFLAGS) -x c++-header -o $@ $<
 endif
 
-%.o: %.c %.d
+%.o: %.c %.d $(call tool_prereq,$(CC))
 	$(CC) $(CFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
 
-%.o: %.cpp %.d $(PCH_OUTPUT)
+%.o: %.cpp %.d $(PCH_OUTPUT) $(call tool_prereq,$(CXX_PATH))
 	$(CXX) $(PCHFLAGS) $(CXXFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
 
-%.o: %.m %.d
+%.o: %.m %.d $(call tool_prereq,$(CC))
 	$(CC) $(CFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
 
-%.o: %.mm %.d
+%.o: %.mm %.d $(call tool_prereq,$(CXX_PATH))
 	$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
 
 #----------------------------------------------------------------------

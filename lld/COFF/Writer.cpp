@@ -267,7 +267,7 @@ private:
   void sortBySectionOrder(std::vector<Chunk *> &chunks);
   void fixPartialSectionChars(StringRef name, uint32_t chars);
   bool fixGnuImportChunks();
-  void fixTlsAlignment();
+  void fixTlsAlignment(SymbolTable &symtab);
   PartialSection *createPartialSection(StringRef name, uint32_t outChars);
   PartialSection *findPartialSection(StringRef name, uint32_t outChars);
 
@@ -815,7 +815,7 @@ void Writer::run() {
     // Fix up the alignment in the TLS Directory's characteristic field,
     // if a specific alignment value is needed
     if (tlsAlignment)
-      fixTlsAlignment();
+      ctx.forEachSymtab([&](SymbolTable &symtab) { fixTlsAlignment(symtab); });
   }
 
   if (!ctx.config.pdbPath.empty() && ctx.config.debug) {
@@ -2940,6 +2940,24 @@ void Writer::createDynamicRelocs() {
                              LOAD_CONFIG_TABLE * sizeof(data_directory) +
                              offsetof(data_directory, Size),
                          ctx.symtab.loadConfigSize);
+
+  auto nativeTlsUsed =
+      dyn_cast_or_null<Defined>(ctx.hybridSymtab->findUnderscore("_tls_used"));
+  auto ecTlsUsed =
+      dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore("_tls_used"));
+  if (nativeTlsUsed || ecTlsUsed) {
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           dataDirOffset64 +
+                               TLS_TABLE * sizeof(data_directory) +
+                               offsetof(data_directory, RelativeVirtualAddress),
+                           Arm64XRelocVal(ecTlsUsed));
+    if (!nativeTlsUsed || !ecTlsUsed)
+      ctx.dynamicRelocs->add(
+          IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+          dataDirOffset64 + TLS_TABLE * sizeof(data_directory) +
+              offsetof(data_directory, Size),
+          ecTlsUsed ? sizeof(coff_tls_directory64) : 0);
+  }
 }
 
 PartialSection *Writer::createPartialSection(StringRef name,
@@ -2958,9 +2976,9 @@ PartialSection *Writer::findPartialSection(StringRef name, uint32_t outChars) {
   return nullptr;
 }
 
-void Writer::fixTlsAlignment() {
+void Writer::fixTlsAlignment(SymbolTable &symtab) {
   Defined *tlsSym =
-      dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore("_tls_used"));
+      dyn_cast_or_null<Defined>(symtab.findUnderscore("_tls_used"));
   if (!tlsSym)
     return;
 

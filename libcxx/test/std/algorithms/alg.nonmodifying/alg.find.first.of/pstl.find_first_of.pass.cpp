@@ -101,7 +101,7 @@ struct Test {
         assert(std::find_first_of(
                    policy, Iter1(std::begin(a)), Iter1(std::end(a)), Iter2(std::begin(b)), Iter2(std::end(b))) ==
                Iter1(std::begin(a) + i));
-        a[i] = i;
+        a[i] = static_cast<int>(i);
       });
     }
   }

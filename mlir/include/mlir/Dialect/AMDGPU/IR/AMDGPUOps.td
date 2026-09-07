@@ -409,8 +409,10 @@ def AMDGPU_RawBufferLoadOp :
     - The cache coherency bits are off
   }];
   let assemblyFormat = [{
+    `boundsCheck` `(` $boundsCheck `)`
     attr-dict $memref `[` $indices `]`
-      (`sgprOffset` $sgprOffset^)? `:`
+      oilist (`indexOffset` `(` $indexOffset `)`
+            | `sgprOffset` `(` $sgprOffset `)`) `:`
       type($memref) (`,` type($indices)^)? `->` type($value)
   }];
   let hasCanonicalizer = 1;
@@ -448,8 +450,10 @@ def AMDGPU_RawBufferStoreOp :
     instruction is constructed.
   }];
   let assemblyFormat = [{
+    `boundsCheck` `(` $boundsCheck `)`
     attr-dict $value `->` $memref `[` $indices `]`
-      (`sgprOffset` $sgprOffset^)? `:`
+      oilist (`indexOffset` `(` $indexOffset `)`
+            | `sgprOffset` `(` $sgprOffset `)`) `:`
       type($value) `->` type($memref) (`,` type($indices)^)?
   }];
   let hasCanonicalizer = 1;
@@ -490,8 +494,10 @@ def AMDGPU_RawBufferAtomicCmpswapOp :
     instruction is constructed.
   }];
   let assemblyFormat = [{
+    `boundsCheck` `(` $boundsCheck `)`
     attr-dict $src `,` $cmp `->` $memref `[` $indices `]`
-      (`sgprOffset` $sgprOffset^)? `:`
+      oilist (`indexOffset` `(` $indexOffset `)`
+            | `sgprOffset` `(` $sgprOffset `)`) `:`
       type($value) `->` type($memref) `,` type($indices)
   }];
   let hasCanonicalizer = 1;
@@ -532,8 +538,10 @@ def AMDGPU_RawBufferAtomicFaddOp :
     instruction is constructed.
   }];
   let assemblyFormat = [{
+    `boundsCheck` `(` $boundsCheck `)`
     attr-dict $value `->` $memref `[` $indices `]`
-      (`sgprOffset` $sgprOffset^)? `:`
+      oilist (`indexOffset` `(` $indexOffset `)`
+            | `sgprOffset` `(` $sgprOffset `)`) `:`
       type($value) `->` type($memref) `,` type($indices)
   }];
   let hasCanonicalizer = 1;
@@ -574,8 +582,10 @@ def AMDGPU_RawBufferAtomicFmaxOp :
     instruction is constructed.
   }];
   let assemblyFormat = [{
+    `boundsCheck` `(` $boundsCheck `)`
     attr-dict $value `->` $memref `[` $indices `]`
-      (`sgprOffset` $sgprOffset^)? `:`
+      oilist (`indexOffset` `(` $indexOffset `)`
+            | `sgprOffset` `(` $sgprOffset `)`) `:`
       type($value) `->` type($memref) `,` type($indices)
   }];
   let hasCanonicalizer = 1;
@@ -615,8 +625,10 @@ def AMDGPU_RawBufferAtomicSmaxOp :
     instruction is constructed.
   }];
   let assemblyFormat = [{
+    `boundsCheck` `(` $boundsCheck `)`
     attr-dict $value `->` $memref `[` $indices `]`
-      (`sgprOffset` $sgprOffset^)? `:`
+      oilist (`indexOffset` `(` $indexOffset `)`
+            | `sgprOffset` `(` $sgprOffset `)`) `:`
       type($value) `->` type($memref) `,` type($indices)
   }];
   let hasCanonicalizer = 1;
@@ -656,8 +668,10 @@ def AMDGPU_RawBufferAtomicUminOp :
     instruction is constructed.
   }];
   let assemblyFormat = [{
+    `boundsCheck` `(` $boundsCheck `)`
     attr-dict $value `->` $memref `[` $indices `]`
-      (`sgprOffset` $sgprOffset^)? `:`
+      oilist (`indexOffset` `(` $indexOffset `)`
+            | `sgprOffset` `(` $sgprOffset `)`) `:`
       type($value) `->` type($memref) `,` type($indices)
   }];
   let hasCanonicalizer = 1;
@@ -770,7 +784,11 @@ def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
   }];
   let results = (outs AnyType:$result);
   let assemblyFormat = [{
-    $old $src $kind (`(` $permArgument^ `)`)? attr-dict `:` type($result)
+    $old $src enum($kind) (`(` $permArgument^ `)`)?
+    oilist (`row_mask` `(` $row_mask `)`
+          | `bank_mask` `(` $bank_mask `)`
+          | `bound_ctrl` `(` $bound_ctrl `)`)
+    attr-dict `:` type($result)
   }];
   let hasVerifier = 1;
 }
@@ -811,7 +829,7 @@ def AMDGPU_PermlaneSwapOp : AMDGPU_Op<"permlane_swap", [Pure, AllTypesMatch<["re
     Example:
     ```mlir
     %0 = amdgpu.permlane_swap %src 16 : f16
-    %1 = amdgpu.permlane_swap %src 32 { fetch_inactive = true, bound_ctrl = true } : f16
+    %1 = amdgpu.permlane_swap %src 32 fetch_inactive(true) bound_ctrl(true) : f16
     ```
 
     Operands:
@@ -833,7 +851,10 @@ def AMDGPU_PermlaneSwapOp : AMDGPU_Op<"permlane_swap", [Pure, AllTypesMatch<["re
                        DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl);
   let results = (outs AnyIntegerOrFloatOr1DVector:$result);
   let assemblyFormat = [{
-    $src $row_length attr-dict `:` type($result)
+    $src $row_length
+    oilist (`fetch_inactive` `(` $fetch_inactive `)`
+          | `bound_ctrl` `(` $bound_ctrl `)`)
+    attr-dict `:` type($result)
   }];
   let hasVerifier = 1;
 }
@@ -858,8 +879,8 @@ def AMDGPU_PermlaneVarOp : AMDGPU_Op<"permlane_var",
 
     Example:
     ```mlir
-    %0 = amdgpu.permlane_var %src, %sel { cross = false } : f16
-    %1 = amdgpu.permlane_var %src, %sel { cross = true } : f32
+    %0 = amdgpu.permlane_var %src, %sel : f16
+    %1 = amdgpu.permlane_var %src, %sel cross(true) : f32
     ```
 
     Note: Lowering is only supported on GFX12+.
@@ -871,7 +892,11 @@ def AMDGPU_PermlaneVarOp : AMDGPU_Op<"permlane_var",
                        DefaultValuedAttr<BoolAttr, "false">:$bound_ctrl);
   let results = (outs AnyIntegerOrFloatOr1DVector:$result);
   let assemblyFormat = [{
-    $src `,` $selector attr-dict `:` type($result)
+    $src `,` $selector
+    oilist (`cross` `(` $cross `)`
+          | `fetch_inactive` `(` $fetch_inactive `)`
+          | `bound_ctrl` `(` $bound_ctrl `)`)
+    attr-dict `:` type($result)
   }];
 }
 
@@ -919,7 +944,7 @@ def AMDGPU_SchedBarrierOp :
     defined by the ROCDL scheduling group mask enum.
   }];
   let assemblyFormat = [{
-    `allow` `=` $opts attr-dict
+    `allow` `=` enum($opts) attr-dict
   }];
 }
 
@@ -1067,15 +1092,22 @@ def AMDGPU_MFMAOp :
       %0 = amdgpu.mfma 16x16x16 %matA * %matB + %matC
         : vector<4xf16>, vector<4xf16>, vector<4xf32>
 
-      %1 = amdgpu.mfma 32x32x1 %matD * %matE + %matF
-        { abid = 1 : i32, cbsz = 1 : i32, blocks = 2 : i32 }
-        blgp = bcast_second_32 : f32, f32, vector<32xf32>
+      %1 = amdgpu.mfma blocks(2) 32x32x1 %matD * %matE + %matF
+        abid(1) blgp(bcast_second_32) cbsz(1)
+        : f32, f32, vector<32xf32>
     ```
   }];
   let assemblyFormat = [{
+    (`blocks` `(` $blocks^ `)`)?
     custom<MNKDimensionList>($m, $n, $k) $sourceA `*` $sourceB `+` $destC
+    oilist (`abid` `(` $abid `)`
+          | `blgp` `(` enum($blgp) `)`
+          | `cbsz` `(` $cbsz `)`
+          | `reducePrecision` $reducePrecision
+          | `negateA` $negateA
+          | `negateB` $negateB
+          | `negateC` $negateC)
     attr-dict
-    `blgp` `=` $blgp
     `:` type($sourceA) `,` type($sourceB) `,` type($destC)
   }];
   let hasVerifier = 1;
@@ -1136,6 +1168,10 @@ def AMDGPU_WMMAOp :
   }];
   let assemblyFormat = [{
     custom<MNKDimensionList>($m, $n, $k) $sourceA `*` $sourceB `+` $destC
+    oilist (`subwordOffset` `(` $subwordOffset `)`
+          | `unsignedA` $unsignedA
+          | `unsignedB` $unsignedB
+          | `clamp` $clamp)
     attr-dict
     `:` type($sourceA) `,` type($sourceB) `,` type($destC)
   }];
@@ -1182,9 +1218,9 @@ def AMDGPU_DotOp :
     Example:
     ```mlir
     %r0 = amdgpu.dot %a * %b + %c : vector<4xi8>, vector<4xi8>, i32
-    %r1 = amdgpu.dot %a * %b + %c {unsignedA, unsignedB, clamp}
+    %r1 = amdgpu.dot %a * %b + %c unsignedA unsignedB clamp
         : vector<8xi4>, vector<8xi4>, i32
-    %r2 = amdgpu.dot %a * %b + %c {unsignedB}
+    %r2 = amdgpu.dot %a * %b + %c unsignedB
         : vector<4xi8>, vector<4xi8>, i32
     %r3 = amdgpu.dot %a * %b + %c : vector<2xf16>, vector<2xf16>, f32
     %r4 = amdgpu.dot %a * %b + %c : vector<2xf16>, vector<2xf16>, f16
@@ -1193,7 +1229,11 @@ def AMDGPU_DotOp :
     ```
   }];
   let assemblyFormat = [{
-    $sourceA `*` $sourceB `+` $destC attr-dict
+    $sourceA `*` $sourceB `+` $destC
+      oilist (`unsignedA` $unsignedA
+            | `unsignedB` $unsignedB
+            | `clamp` $clamp)
+      attr-dict
       `:` type($sourceA) `,` type($sourceB) `,` type($destC)
   }];
   let hasVerifier = 1;
@@ -1266,6 +1306,7 @@ def AMDGPU_SparseMFMAOp :
   let assemblyFormat = [{
     custom<MNKDimensionList>($m, $n, $k) $sourceA `*` $sourceB `+` $destC
     `sparse` `(` $sparseIdx `:` type($sparseIdx) `)`
+    oilist (`abid` `(` $abid `)` | `cbsz` `(` $cbsz `)`)
     attr-dict
     `:` type($sourceA) `,` type($sourceB) `,` type($destC)
   }];
@@ -1362,6 +1403,12 @@ def AMDGPU_SparseWMMAOp :
   let assemblyFormat = [{
     custom<MNKDimensionList>($m, $n, $k) $sourceA `*` $sourceB `+` $destC
     `sparse` `(` $sparseIdx `:` type($sparseIdx) `)`
+    oilist (`unsignedA` $unsignedA
+          | `unsignedB` $unsignedB
+          | `reuseA` $reuseA
+          | `reuseB` $reuseB
+          | `clamp` $clamp
+          | `wave64` $wave64)
     attr-dict
     `:` type($sourceA) `,` type($sourceB) `,` type($destC)
   }];
@@ -1693,6 +1740,8 @@ def AMDGPU_ScaledWMMAOp
     custom<MNKDimensionList>($m, $n, $k) ` `
     `(` $scaleA `*` $sourceA `)` `*`
     `(` $scaleB `*` $sourceB `)` `+` $destC
+    `a_first_scale_lane` `=` $a_first_scale_lane
+    `b_first_scale_lane` `=` $b_first_scale_lane
     attr-dict
     `:` type($scaleA) `,` type($sourceA) `,` type($scaleB) `,` type($sourceB) `,` type($destC)
   }];
@@ -2248,7 +2297,8 @@ def AMDGPU_GlobalPrefetchOp :
   }];
 
   let assemblyFormat = [{
-    $src `[` $indices `]` $temporalHint $cacheScope (`speculative` $speculative^)? attr-dict `:` qualified(type($src))
+    $src `[` $indices `]` enum($temporalHint) enum($cacheScope)
+    (`speculative` $speculative^)? attr-dict `:` qualified(type($src))
   }];
 
   let hasVerifier = 1;

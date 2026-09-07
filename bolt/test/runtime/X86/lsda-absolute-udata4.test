@@ -1,0 +1,18 @@
+# REQUIRES: x86_64-linux
+
+## This test verifies that when emitting LSDA with absolute addresses allocated
+## above 0x7fffffff, the udata encoding is used, preventing
+## incorrect sign extension.
+
+# RUN: llvm-mc --filetype=obj --triple x86_64-unknown-linux \
+# RUN:   %S/../../X86/split-all-lptrampoline.s -o %t.o
+# RUN: %clangxx -fuse-ld=lld -no-pie %t.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt %t.exe --split-functions --split-strategy=all --split-eh \
+# RUN:   --custom-allocation-vma=0x80000000 -o %t.bolt -v=2 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=CHECK-BOLT
+# RUN: llvm-readelf -x .gcc_except_table %t.bolt | \
+# RUN:   FileCheck %s --check-prefix=CHECK-LSDA
+# RUN: %t.bolt
+
+# CHECK-BOLT: falling back to generating absolute-address exception ranges for main
+# CHECK-LSDA: 03000000 00{{....}}03

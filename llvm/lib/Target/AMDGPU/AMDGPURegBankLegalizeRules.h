@@ -52,6 +52,8 @@ enum UniformityLLTOpPredicateID {
   UniS64,
   UniS128,
 
+  UniBF16,
+
   DivS1,
   DivS16,
   DivS32,

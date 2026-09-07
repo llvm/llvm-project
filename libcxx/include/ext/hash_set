@@ -572,11 +572,6 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const hash_multiset<_Value, _Hash, 
 
 } // namespace __gnu_cxx
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <concepts>
-#    include <iterator>
-#    include <type_traits>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_HASH_SET

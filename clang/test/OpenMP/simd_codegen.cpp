@@ -861,7 +861,7 @@ S8 s8(0);
 
 // TERM_DEBUG-NOT: line: 0,
 // TERM_DEBUG: distinct !DISubprogram(linkageName: "_GLOBAL__sub_I_simd_codegen.cpp",
-// OMP5-DAG: ![[NOVECT:.+]] = !{!"llvm.loop.vectorize.enable", i1 false}
+// OMP5-DAG: ![[NOVECT:.+]] = !{!"llvm.loop.vectorize.disable"}
 // OMP5-DAG: ![[DISABLE_VECT]] = distinct !{{.*}}![[NOVECT]]{{[,}]}}
 #endif // HEADER
 

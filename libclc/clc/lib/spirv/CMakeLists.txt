@@ -8,5 +8,8 @@ libclc_add_sources(${LIBCLC_CLC_TARGET} FILES
   math/clc_fmin.cl
   math/clc_runtime_has_hw_fma32.cl
   math/clc_sw_fma.cl
-  subnormal_config.cl
 )
+
+if(NOT LIBCLC_TARGET_OS STREQUAL "vulkan")
+  libclc_add_sources(${LIBCLC_CLC_TARGET} FILES subnormal_config.cl)
+endif()

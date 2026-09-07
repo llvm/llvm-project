@@ -2148,6 +2148,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::FnRetThunkExtern;
   case bitc::ATTR_KIND_FLATTEN:
     return Attribute::Flatten;
+  case bitc::ATTR_KIND_HYBRID_PATCHABLE:
+    return Attribute::HybridPatchable;
   case bitc::ATTR_KIND_INLINE_HINT:
     return Attribute::InlineHint;
   case bitc::ATTR_KIND_IN_REG:
@@ -2176,6 +2178,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoDuplicate;
   case bitc::ATTR_KIND_NOFREE:
     return Attribute::NoFree;
+  case bitc::ATTR_KIND_NOFREEOBJ:
+    return Attribute::NoFreeObj;
   case bitc::ATTR_KIND_NO_IMPLICIT_FLOAT:
     return Attribute::NoImplicitFloat;
   case bitc::ATTR_KIND_NO_INLINE:
@@ -5368,6 +5372,9 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
             cast<TruncInst>(I)->setHasNoUnsignedWrap(true);
           if (Record[OpNum] & (1 << bitc::TIO_NO_SIGNED_WRAP))
             cast<TruncInst>(I)->setHasNoSignedWrap(true);
+        } else if (Opc == Instruction::AddrSpaceCast) {
+          if (Record[OpNum] & (1 << bitc::ASCI_NON_NULL))
+            cast<AddrSpaceCastInst>(I)->setNonNull(true);
         }
         if (isa<FPMathOperator>(I)) {
           uint64_t Flags = Record[OpNum];
@@ -6543,7 +6550,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     }
     case bitc::FUNC_CODE_INST_STOREATOMIC:
     case bitc::FUNC_CODE_INST_STOREATOMIC_OLD: {
-      // STOREATOMIC: [ptrty, ptr, val, align, vol, ordering, ssid]
+      // STOREATOMIC: [ptrty, ptr, val, align, vol, ordering, ssid,
+      // elementwise?]
       unsigned OpNum = 0;
       Value *Val, *Ptr;
       unsigned PtrTypeID, ValTypeID;
@@ -6560,7 +6568,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           return error("Invalid store atomic record");
       }
 
-      if (OpNum + 4 != Record.size())
+      if (OpNum + 4 != Record.size() && OpNum + 5 != Record.size())
         return error("Invalid store atomic record");
 
       if (Error Err = typeCheckLoadStoreInst(Val->getType(), Ptr->getType()))
@@ -6579,7 +6587,14 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return Err;
       if (!Align)
         return error("Alignment missing from atomic store");
-      I = new StoreInst(Val, Ptr, Record[OpNum + 1], *Align, Ordering, SSID);
+
+      bool IsElementwise = Record.size() > OpNum + 4 && Record[OpNum + 4];
+
+      I = new StoreInst(
+          Val, Ptr,
+          LoadStoreInstProperties{/*IsVolatile=*/Record[OpNum + 1] != 0, *Align,
+                                  Ordering, SSID, IsElementwise},
+          /*InsertBefore=*/nullptr);
       InstructionList.push_back(I);
       break;
     }

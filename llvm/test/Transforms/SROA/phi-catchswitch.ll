@@ -6,7 +6,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 %struct.foo = type { i32 }
-declare i32 @__gxx_wasm_personality_v0(...)
+declare i32 @__gxx_wasm_personality_v0(ptr)
 declare void @foo()
 
 ; Tests if the SROA pass correctly bails out on rewriting PHIs in a catchswitch

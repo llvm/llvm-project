@@ -51,3 +51,34 @@ RecordArgABI TargetInfo::getRecordArgABI(const Type *Ty) const {
     return RAA_Default;
   return getRecordArgABI(RT);
 }
+
+const Type *TargetInfo::useFirstFieldIfTransparentUnion(const Type *Ty) const {
+  if (const auto *RT = dyn_cast<RecordType>(Ty)) {
+    if (RT->isUnion() && RT->isTransparentUnion()) {
+      auto Fields = RT->getFields();
+      assert(!Fields.empty() && "transparent union cannot be empty");
+      return Fields.front().FieldType;
+    }
+  }
+  return Ty;
+}
+
+bool TargetInfo::maybeCommonClassifyReturnType(FunctionInfo &FI) const {
+  const abi::Type *Ty = FI.getReturnType();
+
+  // TODO: When Microsoft ABI is supported, CXX records may need different
+  // handling here (see MicrosoftCXXABI::classifyReturnType in Clang).
+  if (const auto *RT = llvm::dyn_cast<abi::RecordType>(Ty)) {
+    if (!RT->canPassInRegisters()) {
+      // A record that cannot pass in registers (e.g. a non-trivial copy/dtor)
+      // is returned indirectly with ByVal=false. This is the RAA path and is
+      // distinct from getIndirectReturnResult (plain aggregates), which uses
+      // ByVal=true.
+      FI.getReturnInfo() =
+          ArgInfo::getIndirect(RT->getAlignment(), /*ByVal=*/false);
+      return true;
+    }
+  }
+
+  return false;
+}

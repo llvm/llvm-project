@@ -31,8 +31,7 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[A]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -48,7 +47,7 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; SVE-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP7]])
 ; SVE-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP13]], <vscale x 4 x i1> [[TMP4]]
 ; SVE-NEXT:    [[TMP10]] = select i1 [[TMP8]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
@@ -119,8 +118,7 @@ define ptr @simple_csa_ptr_select(i64 %N, ptr %data, i64 %a, ptr %init) {
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 1
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[A]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
@@ -139,7 +137,7 @@ define ptr @simple_csa_ptr_select(i64 %N, ptr %data, i64 %a, ptr %init) {
 ; SVE-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.nxv2i1(<vscale x 2 x i1> [[TMP8]])
 ; SVE-NEXT:    [[TMP10]] = select i1 [[TMP9]], <vscale x 2 x i1> [[TMP7]], <vscale x 2 x i1> [[TMP4]]
 ; SVE-NEXT:    [[TMP11]] = select i1 [[TMP9]], <vscale x 2 x ptr> [[WIDE_LOAD]], <vscale x 2 x ptr> [[VEC_PHI]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
 ; SVE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
@@ -192,7 +190,7 @@ define float @simple_csa_float_select(i64 %N, ptr %data, float %a) {
 ; NEON-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 20
 ; NEON-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NEON:       [[VECTOR_PH]]:
-; NEON-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; NEON-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; NEON-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NEON-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[A]], i64 0
 ; NEON-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
@@ -241,8 +239,7 @@ define float @simple_csa_float_select(i64 %N, ptr %data, float %a) {
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x float> poison, float [[A]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x float> [[BROADCAST_SPLATINSERT]], <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer
@@ -258,7 +255,7 @@ define float @simple_csa_float_select(i64 %N, ptr %data, float %a) {
 ; SVE-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP7]])
 ; SVE-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[TMP4]]
 ; SVE-NEXT:    [[TMP10]] = select i1 [[TMP8]], <vscale x 4 x float> [[WIDE_LOAD]], <vscale x 4 x float> [[VEC_PHI]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
 ; SVE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
@@ -395,13 +392,12 @@ define i32 @multi_use_cmp_for_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[A]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; SVE-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; SVE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP3]], i64 0
+; SVE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP1]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; SVE-NEXT:    br label %[[LOOP:.*]]
 ; SVE:       [[LOOP]]:
@@ -418,7 +414,7 @@ define i32 @multi_use_cmp_for_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; SVE-NEXT:    [[TMP10]] = select i1 [[TMP9]], <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i1> [[TMP5]]
 ; SVE-NEXT:    [[TMP11]] = select i1 [[TMP9]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
 ; SVE-NEXT:    [[TMP12]] = select <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i64> [[VEC_IND]], <vscale x 4 x i64> [[VEC_PHI3]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
 ; SVE-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; SVE-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
@@ -612,7 +608,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; NEON-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; NEON-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NEON:       [[VECTOR_PH]]:
-; NEON-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; NEON-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; NEON-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NEON-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[THRESHOLD]], i64 0
 ; NEON-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -675,8 +671,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[THRESHOLD]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -699,7 +694,7 @@ define i32 @int_select_with_extra_arith_payload(i64 %N, ptr readonly %A, ptr rea
 ; SVE-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP12]])
 ; SVE-NEXT:    [[TMP14]] = select i1 [[TMP13]], <vscale x 4 x i1> [[TMP11]], <vscale x 4 x i1> [[TMP4]]
 ; SVE-NEXT:    [[TMP15]] = select i1 [[TMP13]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
@@ -783,8 +778,7 @@ define i8 @simple_csa_byte_select(i64 %N, ptr %data, i8 %a) {
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 4
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[A]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
@@ -800,7 +794,7 @@ define i8 @simple_csa_byte_select(i64 %N, ptr %data, i8 %a) {
 ; SVE-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP7]])
 ; SVE-NEXT:    [[TMP9]] = select i1 [[TMP8]], <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i1> [[TMP4]]
 ; SVE-NEXT:    [[TMP10]] = select i1 [[TMP8]], <vscale x 16 x i8> [[WIDE_LOAD]], <vscale x 16 x i8> [[VEC_PHI]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
@@ -850,7 +844,7 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; NEON-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 8
 ; NEON-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; NEON:       [[VECTOR_PH]]:
-; NEON-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 8
+; NEON-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 7
 ; NEON-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; NEON-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
 ; NEON-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -910,8 +904,7 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
 ; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; SVE-NEXT:    [[TMP14:%.*]] = shl nuw i64 [[TMP3]], 1
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP14]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[A]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -936,7 +929,7 @@ define i32 @simple_csa_int_select_use_interleave(i64 %N, ptr %data, i32 %a) {
 ; SVE-NEXT:    [[TMP16]] = select i1 [[TMP8]], <vscale x 4 x i1> [[TMP19]], <vscale x 4 x i1> [[TMP15]]
 ; SVE-NEXT:    [[TMP10]] = select i1 [[TMP8]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
 ; SVE-NEXT:    [[TMP18]] = select i1 [[TMP8]], <vscale x 4 x i32> [[WIDE_LOAD2]], <vscale x 4 x i32> [[VEC_PHI1]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP14]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP11]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
@@ -1021,8 +1014,7 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[THRESHOLD]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -1042,7 +1034,7 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; SVE-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP8]])
 ; SVE-NEXT:    [[TMP10]] = select i1 [[TMP9]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[TMP4]]
 ; SVE-NEXT:    [[TMP11]] = select i1 [[TMP9]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
@@ -1140,8 +1132,7 @@ define i32 @simple_csa_int_divide(ptr noalias %a, ptr noalias %b, i32 %default_v
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[THRESHOLD]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -1160,7 +1151,7 @@ define i32 @simple_csa_int_divide(ptr noalias %a, ptr noalias %b, i32 %default_v
 ; SVE-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP9]])
 ; SVE-NEXT:    [[TMP11]] = select i1 [[TMP10]], <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i1> [[TMP4]]
 ; SVE-NEXT:    [[TMP12]] = select i1 [[TMP10]], <vscale x 4 x i32> [[TMP8]], <vscale x 4 x i32> [[VEC_PHI]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
@@ -1261,15 +1252,14 @@ define i32 @csa_load_nested_ifs(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 2
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[THRESHOLD]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[DEFAULT_VAL]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; SVE-NEXT:    [[TMP4:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; SVE-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP3]], i64 0
+; SVE-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP1]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT3]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; SVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; SVE:       [[VECTOR_BODY]]:
@@ -1288,7 +1278,7 @@ define i32 @csa_load_nested_ifs(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; SVE-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP11]])
 ; SVE-NEXT:    [[TMP13]] = select i1 [[TMP12]], <vscale x 4 x i1> [[TMP9]], <vscale x 4 x i1> [[TMP5]]
 ; SVE-NEXT:    [[TMP14]] = select i1 [[TMP12]], <vscale x 4 x i32> [[WIDE_MASKED_LOAD5]], <vscale x 4 x i32> [[VEC_PHI]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT4]]
 ; SVE-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]
@@ -1791,11 +1781,10 @@ define i32 @csa_find_last_phi_use_iv(ptr noalias %mask, ptr noalias %src, ptr no
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 4
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    [[TMP4:%.*]] = call <vscale x 16 x i32> @llvm.stepvector.nxv16i32()
-; SVE-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP3]] to i32
+; SVE-NEXT:    [[TMP5:%.*]] = trunc i64 [[TMP1]] to i32
 ; SVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP5]], i64 0
 ; SVE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
 ; SVE-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1815,7 +1804,7 @@ define i32 @csa_find_last_phi_use_iv(ptr noalias %mask, ptr noalias %src, ptr no
 ; SVE-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1> [[TMP12]])
 ; SVE-NEXT:    [[TMP14]] = select i1 [[TMP13]], <vscale x 16 x i1> [[TMP8]], <vscale x 16 x i1> [[TMP6]]
 ; SVE-NEXT:    [[TMP15]] = select i1 [[TMP13]], <vscale x 16 x i32> [[TMP11]], <vscale x 16 x i32> [[VEC_PHI]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; SVE-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
@@ -1930,8 +1919,7 @@ define i32 @csa_multiple_find_last_phi_reductions(ptr noalias %mask, ptr noalias
 ; SVE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; SVE:       [[VECTOR_PH]]:
-; SVE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 4
-; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
+; SVE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; SVE-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; SVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; SVE:       [[VECTOR_BODY]]:
@@ -1955,7 +1943,7 @@ define i32 @csa_multiple_find_last_phi_reductions(ptr noalias %mask, ptr noalias
 ; SVE-NEXT:    [[TMP15]] = select i1 [[TMP13]], <vscale x 16 x i32> [[TMP9]], <vscale x 16 x i32> [[VEC_PHI]]
 ; SVE-NEXT:    [[TMP16]] = select i1 [[TMP13]], <vscale x 16 x i1> [[TMP7]], <vscale x 16 x i1> [[TMP5]]
 ; SVE-NEXT:    [[TMP17]] = select i1 [[TMP13]], <vscale x 16 x i32> [[TMP11]], <vscale x 16 x i32> [[VEC_PHI1]]
-; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; SVE-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; SVE-NEXT:    br i1 [[TMP18]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
 ; SVE:       [[MIDDLE_BLOCK]]:
@@ -2120,4 +2108,4 @@ exit:
 
 !1 = distinct !{!1, !2, !3}
 !2 = !{!"llvm.loop.interleave.count", i32 2}
-!3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.enable"}

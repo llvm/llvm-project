@@ -1240,6 +1240,7 @@ public:
   void writeTo(uint8_t *buf) override;
   InputSection *getTargetInputSection() const;
   bool assignOffsets();
+  void sortByDestination();
 
   // When true, round up reported size of section to 4 KiB. See comment
   // in addThunkSection() for more details.
@@ -1329,8 +1330,7 @@ template <typename ELFT> void writeEhdr(Ctx &, uint8_t *buf);
 template <typename ELFT> void writePhdrs(Ctx &, uint8_t *buf);
 
 Defined *addSyntheticLocal(Ctx &ctx, StringRef name, uint8_t type,
-                           uint64_t value, uint64_t size,
-                           InputSectionBase &section);
+                           uint64_t value, uint64_t size, SectionBase &section);
 
 void addVerneed(Ctx &, Symbol &ss);
 

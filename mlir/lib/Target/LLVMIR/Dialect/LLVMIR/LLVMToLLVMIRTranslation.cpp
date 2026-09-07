@@ -210,52 +210,28 @@ convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
   return success();
 }
 
-/// Recursively converts an MLIR metadata attribute to an LLVM metadata node.
-static llvm::Metadata *
-convertMetadataAttr(Attribute attr, llvm::IRBuilderBase &builder,
-                    LLVM::ModuleTranslation &moduleTranslation) {
-  return llvm::TypeSwitch<Attribute, llvm::Metadata *>(attr)
-      .Case<LLVM::MDStringAttr>([&](auto a) -> llvm::Metadata * {
-        return llvm::MDString::get(builder.getContext(),
-                                   a.getValue().getValue());
-      })
-      .Case<LLVM::MDConstantAttr>([&](auto a) -> llvm::Metadata * {
-        IntegerAttr intAttr = llvm::dyn_cast<IntegerAttr>(a.getValue());
-        if (!intAttr)
-          return nullptr;
-        return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-            llvm::Type::getIntNTy(builder.getContext(),
-                                  intAttr.getType().getIntOrFloatBitWidth()),
-            intAttr.getValue()));
-      })
-      .Case<LLVM::MDFuncAttr>([&](auto a) -> llvm::Metadata * {
-        if (llvm::Function *fn =
-                moduleTranslation.lookupFunction(a.getName().getValue()))
-          return llvm::ValueAsMetadata::get(fn);
-        return nullptr;
-      })
-      .Case<LLVM::MDNodeAttr>([&](auto a) -> llvm::Metadata * {
-        SmallVector<llvm::Metadata *> operands;
-        for (Attribute op : a.getOperands())
-          operands.push_back(
-              convertMetadataAttr(op, builder, moduleTranslation));
-        return llvm::MDNode::get(builder.getContext(), operands);
-      })
-      .Default([](auto) -> llvm::Metadata * { return nullptr; });
-}
-
-static void convertNamedMetadataOp(StringRef metadataName, ArrayAttr nodes,
-                                   llvm::IRBuilderBase &builder,
-                                   LLVM::ModuleTranslation &moduleTranslation) {
+static LogicalResult
+convertNamedMetadataOp(NamedMetadataOp op,
+                       LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
   llvm::NamedMDNode *namedMD =
-      llvmModule->getOrInsertNamedMetadata(metadataName);
-  for (Attribute nodeAttr : nodes) {
-    llvm::Metadata *md =
-        convertMetadataAttr(nodeAttr, builder, moduleTranslation);
-    if (auto *mdNode = llvm::dyn_cast_or_null<llvm::MDNode>(md))
-      namedMD->addOperand(mdNode);
+      llvmModule->getOrInsertNamedMetadata(op.getMetadataName());
+  for (Attribute nodeAttr : op.getNodes()) {
+    FailureOr<llvm::Metadata *> md =
+        moduleTranslation.convertMetadataAttr(nodeAttr, [&]() {
+          return op.emitError() << "failed to convert named metadata '"
+                                << op.getMetadataName() << "': ";
+        });
+    if (failed(md))
+      return failure();
+    auto *mdNode = llvm::dyn_cast_if_present<llvm::MDNode>(*md);
+    if (!mdNode) {
+      return op.emitError() << "failed to convert named metadata '"
+                            << op.getMetadataName() << "'";
+    }
+    namedMD->addOperand(mdNode);
   }
+  return success();
 }
 
 static void convertLinkerOptionsOp(ArrayAttr options,
@@ -535,6 +511,9 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
                                            "zero-call-used-regs",
                                            zcsr.getValue()));
+    if (callOp.getUniformWorkGroupSizeAttr())
+      call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
+                                           "uniform-work-group-size"));
     if (StringAttr trapFunc = callOp.getTrapFuncNameAttr())
       call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
                                            "trap-func-name",
@@ -663,7 +642,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                               invOp.getOpBundleTags(), moduleTranslation);
     ArrayRef<llvm::Value *> operandsRef(operands);
     llvm::InvokeInst *result;
-    if (auto attr = opInst.getAttrOfType<FlatSymbolRefAttr>("callee")) {
+    if (auto attr = invOp.getCalleeAttr()) {
       if (llvm::Function *function =
               moduleTranslation.lookupFunction(attr.getValue())) {
         result = builder.CreateInvoke(
@@ -689,6 +668,12 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
           operandsRef.drop_front(), opBundles);
     }
     result->setCallingConv(convertCConvToLLVM(invOp.getCConv()));
+    if (invOp.getUniformWorkGroupSizeAttr())
+      result->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
+                                             "uniform-work-group-size"));
+    moduleTranslation.convertFunctionAttrCollection(
+        invOp.getDefaultFuncAttrsAttr(), result,
+        ModuleTranslation::convertDefaultFuncAttr);
     if (failed(moduleTranslation.convertArgAndResultAttrs(invOp, result)))
       return failure();
     moduleTranslation.mapBranch(invOp, result);
