@@ -367,8 +367,9 @@ vputils::getStrideExpr(const VPValue *Ptr, PredicatedScalarEvolution &PSE,
   assert(Ptr->getScalarType()->isPointerTy() && "Ptr must be pointer type");
   ScalarEvolution &SE = *PSE.getSE();
   const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, &L);
-  if (isa<SCEVCouldNotCompute>(PtrSCEV))
+  if (!isa<SCEVAddRecExpr>(PtrSCEV))
     return std::nullopt;
+  SCEVNoWrapFlags NWFlags = cast<SCEVAddRecExpr>(PtrSCEV)->getNoWrapFlags();
   const SCEV *PointerBase = SE.getPointerBase(PtrSCEV);
   const SCEV *StrideExpr = SE.removePointerBase(PtrSCEV);
   Type *StrideTy = StrideExpr->getType();
@@ -377,7 +378,6 @@ vputils::getStrideExpr(const VPValue *Ptr, PredicatedScalarEvolution &PSE,
   if (!match(StrideExpr, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step),
                                              m_SpecificLoop(&L))))
     return std::nullopt;
-  SCEVNoWrapFlags NWFlags = cast<SCEVAddRecExpr>(StrideExpr)->getNoWrapFlags();
   const SCEV *Base =
       SE.getAddExpr(PointerBase, SE.getNoopOrSignExtend(Start, StrideTy));
   const DataLayout &DL = SE.getDataLayout();
