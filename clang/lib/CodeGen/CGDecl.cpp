@@ -1501,8 +1501,10 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
   CharUnits alignment = getContext().getDeclAlign(&D);
 
   // If the type is variably-modified, emit all the VLA sizes for it.
-  if (Ty->isVariablyModifiedType())
-    EmitVariablyModifiedType(Ty);
+  if (Ty->isVariablyModifiedType()) {
+    QualType DesugaredTy = Ty.getDesugaredType(getContext());
+    EmitVariablyModifiedType(DesugaredTy);
+  }
 
   auto *DI = getDebugInfo();
   bool EmitDebugInfo = DI && CGM.getCodeGenOpts().hasReducedDebugInfo();
