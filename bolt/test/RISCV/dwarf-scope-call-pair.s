@@ -3,16 +3,18 @@
 ## bytes. The parent scope ends at the AUIPC of the second call, while its child
 ## ends at the intervening compressed NOP. Losing the AUIPC offset maps the
 ## parent's high_pc inside the preceding rewritten call and makes the child
-## extend beyond its parent.
+## extend beyond its parent. Also check that the replacement NOP retains the
+## source line associated with the original AUIPC.
 
 # REQUIRES: system-linux
 
 # RUN: llvm-mc -triple riscv64 -mattr=+c -filetype obj -o %t.o %s
-# RUN: ld.lld --no-relax --emit-relocs -e foo -o %t %t.o
-# RUN: llvm-bolt --update-debug-sections -o %t.bolt %t
+# RUN: ld.lld --no-relax --emit-relocs --section-start=.text=0x10000 \
+# RUN:   --section-start=.callee=0x400000 -e foo -o %t %t.o
+# RUN: llvm-bolt --update-debug-sections --skip-funcs=callee -o %t.bolt %t
 # RUN: llvm-dwarfdump --verify %t.bolt
 # RUN: llvm-objdump -d --no-show-raw-insn %t.bolt > %t.out
-# RUN: llvm-dwarfdump --debug-info %t.bolt >> %t.out
+# RUN: llvm-dwarfdump --debug-info --debug-line %t.bolt >> %t.out
 # RUN: FileCheck %s < %t.out
 
 # CHECK-LABEL: <foo>:
@@ -26,6 +28,7 @@
 # CHECK:      DW_TAG_lexical_block
 # CHECK:      DW_AT_low_pc
 # CHECK-NEXT: DW_AT_high_pc {{.*}}0x{{0*}}[[PARENT_END]])
+# CHECK:      0x{{0*}}[[PARENT_END]] 30
 
         .text
         .option norvc
@@ -42,13 +45,13 @@ foo:
         .option norvc
 .Lparent_end:
         call    callee
+.Lret:
         ret
 .Lfoo_end:
         .size   foo, .-foo
 
-        .skip   (1 << 21)
-
         .globl  callee
+        .section .callee,"ax",@progbits
         .p2align 2
         .type   callee,@function
 callee:
@@ -113,9 +116,9 @@ callee:
         .byte   1                       # DW_TAG_compile_unit
         .asciz  "test producer"
         .quad   .Lfoo_begin
-        .long   .Lcallee_end-.Lfoo_begin
+        .long   .Lfoo_end-.Lfoo_begin
         .asciz  "dwarf-scope-call-pair.s"
-        .long   .Lline_table_start
+        .long   .Lline_table_start      # DW_AT_stmt_list
         .byte   2                       # DW_TAG_subprogram
         .asciz  "foo"
         .quad   .Lfoo_begin
@@ -152,6 +155,29 @@ callee:
         .uleb128 0                      # File size
         .byte   0                       # File table terminator
 .Lline_prologue_end:
+        .byte   0, 9, 2                 # DW_LNE_set_address
+        .quad   .Lfoo_begin
+        .byte   3                       # DW_LNS_advance_line
+        .sleb128 9                      # Line 10
+        .byte   1                       # DW_LNS_copy
+        .byte   2                       # DW_LNS_advance_pc
+        .uleb128 .Lchild_end-.Lfoo_begin
+        .byte   3                       # DW_LNS_advance_line
+        .sleb128 10                     # Line 20
+        .byte   1                       # DW_LNS_copy
+        .byte   2                       # DW_LNS_advance_pc
+        .uleb128 .Lparent_end-.Lchild_end
+        .byte   3                       # DW_LNS_advance_line
+        .sleb128 10                     # Line 30
+        .byte   1                       # DW_LNS_copy
+        .byte   2                       # DW_LNS_advance_pc
+        .uleb128 .Lret-.Lparent_end
+        .byte   3                       # DW_LNS_advance_line
+        .sleb128 10                     # Line 40
+        .byte   1                       # DW_LNS_copy
+        .byte   2                       # DW_LNS_advance_pc
+        .uleb128 .Lfoo_end-.Lret
+        .byte   0, 1, 1                 # DW_LNE_end_sequence
 .Lline_table_end:
 
         .section ".note.GNU-stack","",@progbits
