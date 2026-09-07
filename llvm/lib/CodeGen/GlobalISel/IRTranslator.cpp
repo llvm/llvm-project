@@ -2357,23 +2357,34 @@ bool IRTranslatorImpl::translateBitCast(const User &U,
     return translateCopy(U, *U.getOperand(0), MIRBuilder);
   }
 
+  return translateCast(TargetOpcode::G_BITCAST, U, MIRBuilder);
+}
+
+bool IRTranslatorImpl::translateByteCast(const User &U,
+                                         MachineIRBuilder &MIRBuilder) {
+  Type *SrcTy = U.getOperand(0)->getType();
+  Type *DstTy = U.getType();
+
+  // If we're casting to the source type, we can reuse the source vreg.
+  if (getLLTForType(*SrcTy, *DL) == getLLTForType(*DstTy, *DL)) {
+    if (isa<ConstantInt>(U.getOperand(0)))
+      return translateCast(TargetOpcode::G_CONSTANT_FOLD_BARRIER, U,
+                           MIRBuilder);
+    return translateCopy(U, *U.getOperand(0), MIRBuilder);
+  }
+
   // Only the scalar byte<->ptr crossing is redirected to G_INTTOPTR/G_PTRTOINT,
   // which is the well-typed MIR shape for that boundary. Vector byte<->ptr
   // (e.g. <N x b32> -> ptr produced by mixed-type load coalescing) and other
-  // legacy ptr/non-ptr IR bitcasts (AMDGPU iN<->p3 kernarg packing, etc.)
-  // keep their historical G_BITCAST lowering — G_INTTOPTR has no vector-src
-  // -> scalar-ptr form, and downstream passes already handle G_BITCAST.
+  // legacy ptr/non-ptr IR bytecasts keep their historical G_BITCAST lowering —
+  // G_INTTOPTR has no vector-src -> scalar-ptr form, and downstream passes
+  // already handle G_BITCAST.
   if (DstTy->isPointerTy() && SrcTy->isByteTy())
     return translateCast(TargetOpcode::G_INTTOPTR, U, MIRBuilder);
   if (SrcTy->isPointerTy() && DstTy->isByteTy())
     return translateCast(TargetOpcode::G_PTRTOINT, U, MIRBuilder);
 
   return translateCast(TargetOpcode::G_BITCAST, U, MIRBuilder);
-}
-
-bool IRTranslatorImpl::translateByteCast(const User &U,
-                                         MachineIRBuilder &MIRBuilder) {
-  return translateBitCast(U, MIRBuilder);
 }
 
 bool IRTranslatorImpl::translateCast(unsigned Opcode, const User &U,

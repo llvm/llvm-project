@@ -37,10 +37,10 @@ define void @byte_constant(ptr addrspace(1) %p) {
   ret void
 }
 
-; bitcast b64 -> ptr crosses the pointer/non-pointer boundary, which
+; bytecast b64 -> ptr crosses the pointer/non-pointer boundary, which
 ; G_BITCAST cannot express; lower it as G_INTTOPTR.
-define void @bitcast_b64_to_p1(b64 %b) {
-  ; CHECK-LABEL: name: bitcast_b64_to_p1
+define void @bytecast_b64_to_p1(b64 %b) {
+  ; CHECK-LABEL: name: bytecast_b64_to_p1
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
@@ -51,14 +51,14 @@ define void @bitcast_b64_to_p1(b64 %b) {
   ; CHECK-NEXT:   [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[MV]](i64)
   ; CHECK-NEXT:   G_STORE [[C]](i64), [[INTTOPTR]](p1) :: (store (i64) into %ir.p, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
-  %p = bitcast b64 %b to ptr addrspace(1)
+  %p = bytecast b64 %b to ptr addrspace(1)
   store i64 0, ptr addrspace(1) %p
   ret void
 }
 
 ; Inverse direction lowers to G_PTRTOINT.
-define void @bitcast_p1_to_b64(ptr addrspace(1) %p) {
-  ; CHECK-LABEL: name: bitcast_p1_to_b64
+define void @bytecast_p1_to_b64(ptr addrspace(1) %p) {
+  ; CHECK-LABEL: name: bytecast_p1_to_b64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
@@ -69,14 +69,14 @@ define void @bitcast_p1_to_b64(ptr addrspace(1) %p) {
   ; CHECK-NEXT:   [[PTRTOINT:%[0-9]+]]:_(i64) = G_PTRTOINT [[MV]](p1)
   ; CHECK-NEXT:   G_STORE [[PTRTOINT]](i64), [[DEF]](p0) :: (store (i64) into `ptr poison`)
   ; CHECK-NEXT:   SI_RETURN
-  %b = bitcast ptr addrspace(1) %p to b64
+  %b = bytecast ptr addrspace(1) %p to b64
   store b64 %b, ptr poison
   ret void
 }
 
-; Byte and same-sized integer share an LLT, so this bitcast collapses to a copy.
-define void @bitcast_b64_to_i64(b64 %b, ptr addrspace(1) %p) {
-  ; CHECK-LABEL: name: bitcast_b64_to_i64
+; Byte and same-sized integer share an LLT, so this bytecast collapses to a copy.
+define void @bytecast_b64_to_i64(b64 %b, ptr addrspace(1) %p) {
+  ; CHECK-LABEL: name: bytecast_b64_to_i64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
   ; CHECK-NEXT: {{  $}}
@@ -88,14 +88,14 @@ define void @bitcast_b64_to_i64(b64 %b, ptr addrspace(1) %p) {
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY2]](i32), [[COPY3]](i32)
   ; CHECK-NEXT:   G_STORE [[MV]](i64), [[MV1]](p1) :: (store (i64) into %ir.p, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
-  %i = bitcast b64 %b to i64
+  %i = bytecast b64 %b to i64
   store i64 %i, ptr addrspace(1) %p
   ret void
 }
 
 ; Same-LLT direction: integer to byte is also a copy.
-define void @bitcast_i64_to_b64(i64 %i, ptr addrspace(1) %p) {
-  ; CHECK-LABEL: name: bitcast_i64_to_b64
+define void @bytecast_i64_to_b64(i64 %i, ptr addrspace(1) %p) {
+  ; CHECK-LABEL: name: bytecast_i64_to_b64
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
   ; CHECK-NEXT: {{  $}}
@@ -107,15 +107,15 @@ define void @bitcast_i64_to_b64(i64 %i, ptr addrspace(1) %p) {
   ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY2]](i32), [[COPY3]](i32)
   ; CHECK-NEXT:   G_STORE [[MV]](i64), [[MV1]](p1) :: (store (i64) into %ir.p, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
-  %b = bitcast i64 %i to b64
+  %b = bytecast i64 %i to b64
   store b64 %b, ptr addrspace(1) %p
   ret void
 }
 
 ; Byte to floating point: distinct LLTs in extended mode, equal in default mode.
 ; AMDGPU runs in default mode, so this collapses to a copy.
-define void @bitcast_b64_to_double(b64 %b, ptr addrspace(1) %p) {
-  ; CHECK-LABEL: name: bitcast_b64_to_double
+define void @bytecast_b64_to_double(b64 %b, ptr addrspace(1) %p) {
+  ; CHECK-LABEL: name: bytecast_b64_to_double
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
   ; CHECK-NEXT: {{  $}}
@@ -128,7 +128,7 @@ define void @bitcast_b64_to_double(b64 %b, ptr addrspace(1) %p) {
   ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(f64) = G_BITCAST [[MV]](i64)
   ; CHECK-NEXT:   G_STORE [[BITCAST]](f64), [[MV1]](p1) :: (store (f64) into %ir.p, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
-  %d = bitcast b64 %b to double
+  %d = bytecast b64 %b to double
   store double %d, ptr addrspace(1) %p
   ret void
 }
