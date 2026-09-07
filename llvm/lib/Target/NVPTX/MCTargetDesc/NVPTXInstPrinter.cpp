@@ -24,7 +24,6 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include <cctype>
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -99,6 +98,11 @@ void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum,
     if (Imm & NVPTX::PTXCvtMode::SATFINITE_FLAG)
       O << ".satfinite";
     return;
+  } else if (Modifier == "pzo") {
+    // PZO flag
+    if (Imm & NVPTX::PTXCvtMode::PZO_FLAG)
+      O << ".pzo";
+    return;
   } else if (Modifier == "relu") {
     // RELU flag
     if (Imm & NVPTX::PTXCvtMode::RELU_FLAG)
@@ -144,6 +148,16 @@ void NVPTXInstPrinter::printCvtMode(const MCInst *MI, int OpNum,
     }
   }
   llvm_unreachable("Invalid conversion modifier");
+}
+
+void NVPTXInstPrinter::printFPRoundingMode(const MCInst *MI, int OpNum,
+                                           const MCSubtargetInfo &,
+                                           raw_ostream &O) {
+  const auto RM =
+      static_cast<APFloat::roundingMode>(MI->getOperand(OpNum).getImm());
+  const StringRef Name = nvvm::GetRoundingModeName(RM);
+  assert(!Name.empty() && "Invalid FP rounding mode");
+  O << Name;
 }
 
 void NVPTXInstPrinter::printFTZFlag(const MCInst *MI, int OpNum,

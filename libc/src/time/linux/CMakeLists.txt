@@ -106,6 +106,38 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  timer_gettime
+  SRCS
+    timer_gettime.cpp
+  HDRS
+    ../timer_gettime.h
+  DEPENDS
+    libc.hdr.types.struct_itimerspec
+    libc.hdr.types.timer_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.timer_gettime
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  timer_settime
+  SRCS
+    timer_settime.cpp
+  HDRS
+    ../timer_settime.h
+  DEPENDS
+    libc.hdr.types.struct_itimerspec
+    libc.hdr.types.timer_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.timer_settime
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   tz_variables
   SRCS
     tz_variables.cpp

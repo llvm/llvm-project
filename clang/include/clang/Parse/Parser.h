@@ -3004,6 +3004,13 @@ private:
                                            SourceLocation StartLoc,
                                            SourceLocation EndLoc);
 
+  TemplateNameKind isPackIndexingTemplateName(UnqualifiedId &Name,
+                                              TemplateTy &Template);
+
+  bool AnnotatePackIndexingTemplateName(CXXScopeSpec &SS, UnqualifiedId &Name,
+                                        TemplateTy Template,
+                                        TemplateNameKind TNK);
+
   /// Return true if the next token should be treated as a [[]] attribute,
   /// or as a keyword that behaves like one.  The former is only true if
   /// [[]] attributes are enabled, whereas the latter is true whenever
@@ -7730,6 +7737,17 @@ public:
   /// \endverbatim
   ///
   Decl *ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope);
+
+  /// ParseFunctionBody - Parse the body of a function definition. The
+  /// '= default' and '= delete' forms are handled by the caller.
+  ///
+  /// \verbatim
+  ///       function-body:
+  ///         ctor-initializer[opt] compound-statement
+  ///         function-try-block
+  /// \endverbatim
+  ///
+  Decl *ParseFunctionBody(Decl *D, ParseScope &BodyScope);
 
   /// When in code-completion, skip parsing of the function/method body
   /// unless the body contains the code-completion point.

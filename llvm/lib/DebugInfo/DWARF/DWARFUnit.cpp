@@ -508,6 +508,12 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
   if ((CUDieOnly && !DieArray.empty()) || DieArray.size() > 1)
     return Error::success(); // Already parsed.
 
+  // A childless unit DIE is a complete DieArray on its own, so the size check
+  // above misses it. Re-extracting reallocates the vector and dangles every
+  // outstanding DWARFDie.
+  if (DieArray.size() == 1 && !DieArray.front().hasChildren())
+    return Error::success();
+
   bool HasCUDie = !DieArray.empty();
   extractDIEsToVector(!HasCUDie, !CUDieOnly, DieArray);
 

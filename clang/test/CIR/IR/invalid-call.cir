@@ -100,7 +100,7 @@ cir.func @f15() {
 cir.func private @f16()
 cir.func @f17() {
   // expected-error@+2{{failed to parse CIR_InlineKindAttr parameter 'value' which is to be a `::cir::InlineKind`}}
-  // expected-error@below{{expected ::cir::InlineKind to be one of: no_inline, always_inline, inline_hint}}
+  // expected-error@below{{expected one of [no_inline, always_inline, inline_hint] for inlineKind}}
   cir.call @f16() { inline_kind = #cir.inline_kind<nonsense> } : () -> () 
   cir.return
 }

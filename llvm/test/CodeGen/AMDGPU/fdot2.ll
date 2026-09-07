@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=amdgpu10.11 -denormal-fp-math-f32=preserve-sign < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX10-DL-UNSAFE,GFX10-CONTRACT
 ; RUN: llc -mtriple=amdgpu10.12 -denormal-fp-math-f32=preserve-sign < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX10-DL-UNSAFE,GFX10-CONTRACT
 ; RUN: llc -mtriple=amdgpu9.06 -denormal-fp-math-f32=preserve-sign < %s | FileCheck %s  -check-prefixes=GCN,GFX906
-; RUN: llc -mtriple=amdgpu9.06 -denormal-fp-math=preserve-sign -fp-contract=fast < %s | FileCheck %s  -check-prefixes=GCN,GFX906-CONTRACT
-; RUN: llc -mtriple=amdgpu9.06 -denormal-fp-math=ieee -fp-contract=fast < %s | FileCheck %s  -check-prefixes=GCN,GFX906-DENORM-CONTRACT
+; RUN: llc -mtriple=amdgpu9.06 -denormal-fp-math=preserve-sign < %s | FileCheck %s  -check-prefixes=GCN,GFX906-CONTRACT
+; RUN: llc -mtriple=amdgpu9.06 -denormal-fp-math=ieee < %s | FileCheck %s  -check-prefixes=GCN,GFX906-DENORM-CONTRACT
 ; RUN: llc -mtriple=amdgpu9.06 -denormal-fp-math-f32=preserve-sign -mattr="+dot7-insts,-dot10-insts" < %s | FileCheck %s  -check-prefixes=GCN,GFX906-DOT10-DISABLED
 ; RUN: llc -mtriple=amdgpu9.0a -denormal-fp-math-f32=preserve-sign < %s | FileCheck %s  -check-prefixes=GCN,GFX90A-PS
 ; RUN: llc -mtriple=amdgpu9.0a -denormal-fp-math-f32=ieee < %s | FileCheck %s  -check-prefixes=GCN,GFX90A-IEEE
