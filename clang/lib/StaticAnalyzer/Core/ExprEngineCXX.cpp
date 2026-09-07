@@ -106,7 +106,7 @@ SVal ExprEngine::makeElementRegion(ProgramStateRef State, SVal LValue,
                                    QualType &Ty, bool &IsArray, unsigned Idx) {
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
 
-  if (ASTContext &Ctx = SVB.getContext(); Ctx.getAsArrayType(Ty)) {
+  if (const ASTContext &Ctx = SVB.getContext(); Ctx.getAsArrayType(Ty)) {
     Ty = Ctx.getBaseElementType(Ty);
     LValue = State->getLValue(Ty, SVB.makeArrayIndex(Idx), LValue);
     IsArray = true;
