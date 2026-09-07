@@ -167,6 +167,10 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
 
   bool DebugFunctionDefinitionEmitted = false;
 
+  // Instruction that opened the DebugLine / DebugScope region currently in
+  // effect, or nullptr when no region is open. The two are tracked separately
+  // because a DebugScope region usually spans several DebugLine regions, and
+  // either one can skip emission on a cache miss.
   const MachineInstr *LastLineMI = nullptr;
   const MachineInstr *LastScopeMI = nullptr;
 
