@@ -960,14 +960,18 @@ bool LLTOperandMatcher::hasValue() const {
 }
 
 void LLTOperandMatcher::emitPredicateOpcodes(MatchTable &Table) const {
-  if (InsnVarID == 0) {
-    Table << MatchTable::Opcode("GIM_RootCheckType");
+  if (InsnVarID == 0 && OpIdx <= 8) {
+    Table << MatchTable::Opcode("GIM_RootCheckType" + llvm::to_string(OpIdx));
   } else {
-    Table << MatchTable::Opcode("GIM_CheckType") << MatchTable::Comment("MI")
-          << MatchTable::ULEB128Value(InsnVarID);
+    if (InsnVarID == 0) {
+      Table << MatchTable::Opcode("GIM_RootCheckType");
+    } else {
+      Table << MatchTable::Opcode("GIM_CheckType") << MatchTable::Comment("MI")
+            << MatchTable::ULEB128Value(InsnVarID);
+    }
+    Table << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx);
   }
-  Table << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx)
-        << MatchTable::Comment("Type") << getValue().Record
+  Table << MatchTable::Comment("Type") << getValue().Record
         << MatchTable::LineBreak;
 }
 
@@ -1026,15 +1030,20 @@ bool RegisterBankOperandMatcher::isIdentical(const PredicateMatcher &B) const {
 }
 
 void RegisterBankOperandMatcher::emitPredicateOpcodes(MatchTable &Table) const {
-  if (InsnVarID == 0) {
-    Table << MatchTable::Opcode("GIM_RootCheckRegBankForClass");
+  if (InsnVarID == 0 && OpIdx <= 8) {
+    Table << MatchTable::Opcode("GIM_RootCheckRegBankForClass" +
+                                llvm::to_string(OpIdx));
   } else {
-    Table << MatchTable::Opcode("GIM_CheckRegBankForClass")
-          << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID);
+    if (InsnVarID == 0) {
+      Table << MatchTable::Opcode("GIM_RootCheckRegBankForClass");
+    } else {
+      Table << MatchTable::Opcode("GIM_CheckRegBankForClass")
+            << MatchTable::Comment("MI") << MatchTable::ULEB128Value(InsnVarID);
+    }
+    Table << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx);
   }
 
-  Table << MatchTable::Comment("Op") << MatchTable::ULEB128Value(OpIdx)
-        << MatchTable::Comment("RC")
+  Table << MatchTable::Comment("RC")
         << MatchTable::NamedValue(2, RC.getQualifiedIdName())
         << MatchTable::LineBreak;
 }
@@ -1680,18 +1689,24 @@ OperandRenderer::~OperandRenderer() = default;
 void CopyRenderer::emitRenderOpcodes(MatchTable &Table, unsigned NewInsnID,
                                      unsigned OldInsnID, unsigned OldOpIdx,
                                      StringRef Name, bool ForVariadic) {
-  if (!ForVariadic && NewInsnID == 0 && OldInsnID == 0) {
-    Table << MatchTable::Opcode("GIR_RootToRootCopy");
+  if (!ForVariadic && NewInsnID == 0 && OldInsnID == 0 && OldOpIdx <= 8) {
+    Table << MatchTable::Opcode("GIR_RootToRootCopy" +
+                                llvm::to_string(OldOpIdx));
   } else {
-    Table << MatchTable::Opcode(ForVariadic ? "GIR_CopyRemaining" : "GIR_Copy")
-          << MatchTable::Comment("NewInsnID")
-          << MatchTable::ULEB128Value(NewInsnID)
-          << MatchTable::Comment("OldInsnID")
-          << MatchTable::ULEB128Value(OldInsnID);
+    if (!ForVariadic && NewInsnID == 0 && OldInsnID == 0) {
+      Table << MatchTable::Opcode("GIR_RootToRootCopy");
+    } else {
+      Table << MatchTable::Opcode(ForVariadic ? "GIR_CopyRemaining"
+                                              : "GIR_Copy")
+            << MatchTable::Comment("NewInsnID")
+            << MatchTable::ULEB128Value(NewInsnID)
+            << MatchTable::Comment("OldInsnID")
+            << MatchTable::ULEB128Value(OldInsnID);
+    }
+    Table << MatchTable::Comment("OpIdx") << MatchTable::ULEB128Value(OldOpIdx);
   }
 
-  Table << MatchTable::Comment("OpIdx") << MatchTable::ULEB128Value(OldOpIdx)
-        << MatchTable::Comment(Name) << MatchTable::LineBreak;
+  Table << MatchTable::Comment(Name) << MatchTable::LineBreak;
 }
 
 void CopyRenderer::emitRenderOpcodes(MatchTable &Table) const {
