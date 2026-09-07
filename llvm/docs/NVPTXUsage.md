@@ -1028,6 +1028,114 @@ If the given pointer in the generic address space refers to memory which falls
 within the state space of the intrinsic (and therefore could be safely address
 space casted to this space), 1 is returned, otherwise 0 is returned.
 
+### Structured Sparsity Intrinsics
+
+The `llvm.nvvm.spcompress.*` and `llvm.nvvm.spdecompress.*` intrinsics model
+the PTX `spcompress` and `spdecompress` instructions. They require PTX ISA 9.4
+and `sm_107a`.
+
+The intrinsic types representing `mdata`, `cdata`, and `data` are overloaded.
+A bundle of one 32-bit register is represented by `i32`, and a bundle of `N`
+registers is represented by `<N x i32>`. The actual intrinsic names include
+the corresponding LLVM overload suffixes.
+
+The three trailing arguments are immediate qualifiers with the following
+encodings:
+
+| Argument                | Values                    | PTX qualifiers                         |
+| ----------------------- | ------------------------- | -------------------------------------- |
+| `%elem_size`            | `8`, `16`                 | `.b8`, `.b16`                          |
+| `%idx_size`             | `2`, `4`                  | `.b2`, `.b4`                           |
+| `%repeat_factor`        | `0`, `1`, ..., `6`        | `.x1`, `.x2`, ..., `.x64`              |
+
+The repeat factor `num` is `1 << %repeat_factor`.
+
+#### '`llvm.nvvm.spcompress.sp2to4`' Intrinsic
+
+##### Syntax:
+
+```llvm
+declare {MDataTy, CDataTy} @llvm.nvvm.spcompress.sp2to4(
+    DataTy %data, i32 %spdesc, i32 immarg %elem_size,
+    i32 immarg %idx_size, i32 immarg %repeat_factor)
+```
+
+##### Overview:
+
+This intrinsic compresses the dense vector `%data` using 2:4 structured
+sparsity. It returns the selected element indices as `mdata` and the selected
+elements as `cdata`. The number of 32-bit registers in each bundle is:
+
+| Bundle  | Register count                              |
+| ------- | ------------------------------------------- |
+| `data`  | `2 * num`                                   |
+| `cdata` | `num`                                       |
+| `mdata` | `ceil(num * %idx_size / %elem_size)`        |
+
+The combined `mdata`, `cdata`, and `data` bundle size must not exceed 253
+registers.
+
+The `%spdesc` operand specifies the selection operation and the element data
+type:
+
+| Bits | Description         | Values                                                                    |
+| ---- | ------------------- | ------------------------------------------------------------------------- |
+| 0-1  | Selection operation | `0`: max, `1`: maxabs, `2`: min, `3`: minabs                              |
+| 2-4  | Element data type   | `0`: f16/u8, `1`: bf16/s8, `2`: e5m2, `3`: e4m3, `4`: e3m2, `5`: e2m3     |
+| 5-31 | Reserved            | `0`                                                                       |
+
+The element data type must be consistent with `%elem_size`. When the metadata
+occupies less than 32 bits, it is zero-extended to fill its `i32` register.
+The operation treats negative zero as less than positive zero. NaN elements
+are always selected; when multiple selections satisfy the same comparison,
+the selected indices are implementation-specific.
+
+For more information, see the
+[PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-spcompress).
+
+#### '`llvm.nvvm.spdecompress.*`' Intrinsics
+
+##### Syntax:
+
+```llvm
+declare DataTy @llvm.nvvm.spdecompress.{sp1to2,sp1to4,sp1to8,sp1to16,
+                                        sp2to4,sp2to8,sp2to16,
+                                        sp4to8,sp4to16}(
+    MDataTy %mdata, CDataTy %cdata, i32 immarg %elem_size,
+    i32 immarg %idx_size, i32 immarg %repeat_factor)
+```
+
+##### Overview:
+
+These intrinsics decompress the structured sparse vector `%cdata` into a
+dense `data` vector. The intrinsic name specifies the number of source and
+target elements in each group. For example, `sp2to4` maps two compressed
+elements into a group of four dense elements using the indices in `%mdata`.
+Dense positions not selected by the metadata are set to zero.
+
+For an intrinsic named `spXtoY`, the number of 32-bit registers in each bundle
+is:
+
+| Bundle  | Register count                                      |
+| ------- | --------------------------------------------------- |
+| `mdata` | `ceil(X * %idx_size * num / 32)`                    |
+| `cdata` | `ceil(X * %elem_size * num / 32)`                   |
+| `data`  | `ceil(Y * %elem_size * num / 32)`                   |
+
+The following conditions must hold:
+
+- `X * %elem_size <= 32`.
+- `%idx_size` is `2` only when `Y <= 4`.
+- `32 <= Y * %elem_size * num <= 4096`.
+- The combined `mdata`, `cdata`, and `data` bundle size does not exceed 253
+  registers.
+
+The behavior is implementation-specific if a metadata index does not identify
+a position in its target group.
+
+For more information, see the
+[PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-spdecompress).
+
 ### Narrow Floating-Point Conversion intrinsics
 
 These intrinsics perform conversions involving narrow floating-point formats.
