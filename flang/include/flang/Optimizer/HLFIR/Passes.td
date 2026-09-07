@@ -106,6 +106,26 @@ def InlineHLFIRAssign : Pass<"inline-hlfir-assign"> {
 
 def InlineHLFIRCopy : Pass<"inline-hlfir-copy"> {
   let summary = "Inline hlfir.copy_in and hlfir.copy_out operations";
+  let description = [{
+    Replaces eligible `hlfir.copy_in` and `hlfir.copy_out` operations with an
+    explicit temporary and element-wise copy. The temporary allocation uses the
+    small-array threshold from the module's `fir.allocation_policy` attribute.
+  }];
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::DLTIDialect", "mlir::LLVM::LLVMDialect",
+    "mlir::arith::ArithDialect"
+  ];
+  // Normally taken from the fir.allocation_policy module attribute; this
+  // option overrides it, and only when set explicitly.
+  let options = [
+    Option<"smallArrayThresholdBytes", "small-array-threshold", "uint64_t",
+           /*default=*/"fir::AllocationPolicy::smallArrayThresholdBytesDefault",
+           "When provided, override the small array threshold from the "
+           "fir.allocation_policy module attribute. "
+           "Copy-in buffers whose size is a compile-time constant of at most "
+           "this many bytes are allocated on the stack. Bigger buffers, and "
+           "buffers with a runtime size, are allocated on the heap.">
+  ];
 }
 
 def PropagateFortranVariableAttributes : Pass<"propagate-fortran-attrs"> {
