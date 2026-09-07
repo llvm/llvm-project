@@ -240,18 +240,27 @@ bool InstructionSelectImpl::selectMachineFunction(MachineFunction &MF) {
   }
 
   for (MachineBasicBlock &MBB : MF) {
-    if (MBB.empty())
-      continue;
-
     if (!SelectedBlocks.contains(&MBB)) {
       // This is an unreachable block and therefore hasn't been selected, since
       // the main selection loop above uses a postorder block traversal.
       // We delete all the instructions in this block since it's unreachable.
       MBB.clear();
+
+      // Clearing dropped the terminators that encoded this block's successors,
+      // which can leave an empty MBB with a stale successor list.
+      // Therefore, trim leftover successors and PHI uses the same way
+      // UnreachableMachineBlockElim does.
       // Don't delete the block in case the block has it's address taken or is
       // still being referenced by a phi somewhere.
+      while (!MBB.succ_empty()) {
+        (*MBB.succ_begin())->removePHIsIncomingValuesForPredecessor(MBB);
+        MBB.removeSuccessor(MBB.succ_begin());
+      }
       continue;
     }
+
+    if (MBB.empty())
+      continue;
     // Try to find redundant copies b/w vregs of the same register class.
     for (auto MII = MBB.rbegin(), End = MBB.rend(); MII != End;) {
       MachineInstr &MI = *MII;

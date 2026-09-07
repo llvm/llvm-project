@@ -3913,25 +3913,20 @@ bool IRTranslatorImpl::translateCallBr(const User &U,
   if (!translateIntrinsic(I, IID, MIRBuilder))
     return false;
 
-  // Retrieve successors.
-  SmallPtrSet<BasicBlock *, 8> Dests = {I.getDefaultDest()};
+  // Retrieve successors. Intrinsic callbr models implicit control flow (e.g.
+  // amdgcn.kill); the selected instruction does not name the indirect dest as a
+  // machine operand, so it is not a machine successor. Match
+  // SelectionDAGBuilder::visitCallBr, which only adds indirect dests for
+  // inline asm (still unsupported here).
   MachineBasicBlock *Return = &getMBB(*I.getDefaultDest());
 
   // Update successor info.
   addSuccessorWithProb(CallBrMBB, Return, BranchProbability::getOne());
-
-  // Add indirect targets as successors. For intrinsic callbr, these represent
-  // implicit control flow (e.g., the "kill" path for amdgcn.kill). We mark them
-  // with setIsInlineAsmBrIndirectTarget so the machine verifier accepts them as
-  // valid successors, even though they're not from inline asm.
-  for (BasicBlock *Dest : I.getIndirectDests()) {
-    MachineBasicBlock &Target = getMBB(*Dest);
-    Target.setIsInlineAsmBrIndirectTarget();
-    Target.setLabelMustBeEmitted();
-    // Don't add duplicate machine successors.
-    if (Dests.insert(Dest).second)
-      addSuccessorWithProb(CallBrMBB, &Target, BranchProbability::getZero());
-  }
+  // TODO: For most of the cases where there is an intrinsic callbr, we're
+  // having exactly one indirect target, which will be unreachable. As soon as
+  // this changes, we might need to enhance
+  // Target->setIsInlineAsmBrIndirectTarget or add something similar for
+  // intrinsic indirect branches.
 
   CallBrMBB->normalizeSuccProbs();
 
