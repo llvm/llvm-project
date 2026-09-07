@@ -189,11 +189,12 @@ llvm::calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
 
   const auto &TTICapture = TTI;
   auto GetRegUsage = [&TTICapture](Type *Ty, ElementCount VF) -> unsigned {
-    if (Ty->isTokenTy() || !VectorType::isValidElementType(Ty) ||
+    Type *EltTy = Ty->getScalarType();
+    if (Ty->isTokenTy() || !VectorType::isValidElementType(EltTy) ||
         (VF.isScalable() &&
-         !TTICapture.isElementTypeLegalForScalableVector(Ty)))
+         !TTICapture.isElementTypeLegalForScalableVector(EltTy)))
       return 0;
-    return TTICapture.getRegUsageForType(VectorType::get(Ty, VF));
+    return TTICapture.getRegUsageForType(toVectorTy(Ty, VF));
   };
 
   VPValue *CanIV = LoopRegion->getCanonicalIV();
@@ -246,6 +247,10 @@ llvm::calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
             match(VPV, m_ExtractLastPart(m_VPValue())))
           continue;
 
+        // For REVEC, the initial type might be a vector.
+        Type *InitialTy = VPV->getScalarType();
+        Type *EltTy = InitialTy->getScalarType();
+
         if (VFs[J].isScalar() || VPV == CanIV ||
             isa<VPReplicateRecipe, VPDerivedIVRecipe,
                 VPCurrentIterationPHIRecipe, VPScalarIVStepsRecipe>(VPV) ||
@@ -253,7 +258,7 @@ llvm::calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
             (isa<VPReductionPHIRecipe>(VPV) &&
              (cast<VPReductionPHIRecipe>(VPV))->isInLoop())) {
           unsigned ClassID =
-              TTI.getRegisterClassForType(false, VPV->getScalarType());
+              TTI.getRegisterClassForType(InitialTy->isVectorTy(), EltTy);
           // FIXME: The target might use more than one register for the type
           // even in the scalar case.
           RegUsage[ClassID] += 1;
@@ -269,9 +274,8 @@ llvm::calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
                               << " to " << VF << " for " << *R << "\n";);
           }
 
-          Type *ScalarTy = VPV->getScalarType();
-          unsigned ClassID = TTI.getRegisterClassForType(true, ScalarTy);
-          RegUsage[ClassID] += GetRegUsage(ScalarTy, VF);
+          unsigned ClassID = TTI.getRegisterClassForType(true, EltTy);
+          RegUsage[ClassID] += GetRegUsage(InitialTy, VF);
         }
       }
 
@@ -305,12 +309,13 @@ llvm::calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
     for (auto *In : LoopInvariants) {
       // FIXME: The target might use more than one register for the type
       // even in the scalar case.
-      bool IsScalar = vputils::onlyScalarValuesUsed(In);
+      bool OnlyFirstLane = vputils::onlyScalarValuesUsed(In);
+      Type *InitialTy = In->getScalarType();
 
-      ElementCount VF = IsScalar ? ElementCount::getFixed(1) : VFs[Idx];
-      unsigned ClassID =
-          TTI.getRegisterClassForType(VF.isVector(), In->getScalarType());
-      Invariant[ClassID] += GetRegUsage(In->getScalarType(), VF);
+      ElementCount VF = OnlyFirstLane ? ElementCount::getFixed(1) : VFs[Idx];
+      unsigned ClassID = TTI.getRegisterClassForType(
+          VF.isVector() || InitialTy->isVectorTy(), InitialTy->getScalarType());
+      Invariant[ClassID] += GetRegUsage(InitialTy, VF);
     }
 
     LLVM_DEBUG({
