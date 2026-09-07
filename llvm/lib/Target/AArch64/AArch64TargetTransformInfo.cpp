@@ -4604,18 +4604,21 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
     // Fixed-length vectors wider than 128 bits therefore need
     // [splice]/index/pred/splat/cmp/pred-mov when scalarizing inserts for those
     // lanes, so model them as more expensive than ordinary NEON lane accesses.
-    // Extracts to integer types require extra mov from FPR -> GPR.
-    if (ST->useSVEForFixedLengthVectors() && isa<FixedVectorType>(Ty) &&
-        !Ty->isBFloatTy()) {
+    if (ST->useSVEForFixedLengthVectors()) {
       InstructionCost Cost = CostKind == TTI::TCK_CodeSize
                                  ? 1
                                  : ST->getVectorInsertExtractBaseCost();
       unsigned LowElts = AArch64::SVEBitsPerBlock / Ty->getScalarSizeInBits();
-      if (Index >= LowElts) {
-        if (Opcode == Instruction::InsertElement)
+      if (Opcode == Instruction::InsertElement) {
+        if (Index >= LowElts)
           Cost += 3;
-        else if (Opcode == Instruction::ExtractElement &&
-                 Ty->getScalarType()->isIntegerTy())
+      } else if (Opcode == Instruction::ExtractElement) {
+        unsigned ExtRange = 4 * LowElts;
+        // Extract >512b needs mov-imm+whilels+lastb
+        if (Index >= ExtRange)
+          Cost += 2;
+        // Integer extracts (>128b, <512b) require extra mov from FPR -> GPR.
+        else if (Index >= LowElts && Ty->getScalarType()->isIntegerTy())
           Cost += 1;
       }
       return Cost;
