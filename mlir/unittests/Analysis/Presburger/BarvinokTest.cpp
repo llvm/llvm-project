@@ -310,3 +310,42 @@ TEST(BarvinokTest, solveParametricEquations) {
   EXPECT_EQ(solution.at(0, 0), Fraction(1, 2));
   EXPECT_EQ(solution.at(1, 0), 1);
 }
+
+TEST(BarvinokTest, findParticularSolution) {
+  // The system:
+  //   2x + y = p + 4
+  //    x + y = p + 3
+  // Solution should be x = 1, y = p + 2,
+  // and no constraints on p should be involved.
+  {
+    IntMatrix eq = makeIntMatrix(2, 2, {{2, 1}, {1, 1}});
+    IntMatrix constant = makeIntMatrix(2, 2, {{1, 4}, {1, 3}});
+    auto [constraint, solution] = findParticularSolution(eq, constant);
+
+    auto universe = IntegerRelation::getUniverse(constraint.getSpace());
+    EXPECT_TRUE(universe.isEqual(constraint));
+
+    // x = 0p + 1
+    EXPECT_EQ(solution(0, 0), 0);
+    EXPECT_EQ(solution(0, 1), 1);
+    // y = 1p + 2
+    EXPECT_EQ(solution(1, 0), 1);
+    EXPECT_EQ(solution(1, 1), 2);
+  }
+
+  // The system:
+  //   2x = p
+  // Solution should be x = p/2, and p must be divisible by 2.
+  {
+    IntMatrix eq = makeIntMatrix(1, 1, {{2}});
+    IntMatrix constant = makeIntMatrix(1, 2, {{1, 0}});
+    auto [constraint, solution] = findParticularSolution(eq, constant);
+
+    IntegerRelation expected =
+        parseIntegerPolyhedron("(p): (p - 2 * (p floordiv 2) == 0)");
+    EXPECT_TRUE(expected.isEqual(constraint));
+
+    EXPECT_EQ(solution(0, 0), Fraction(1, 2));
+    EXPECT_EQ(solution(0, 1), 0);
+  }
+}
