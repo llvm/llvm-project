@@ -1,3 +1,6 @@
 add_subdirectory(CPlusPlus)
 add_subdirectory(CLanguages)
 add_subdirectory(ObjC)
+if(LLDB_ENABLE_FORTRAN)  
+  add_subdirectory(Fortran)
+endif()

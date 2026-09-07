@@ -3,3 +3,7 @@ set_property(DIRECTORY PROPERTY LLDB_PLUGIN_KIND TypeSystem)
 set_property(DIRECTORY PROPERTY LLDB_TOLERATED_PLUGIN_DEPENDENCIES SymbolFile)
 
 add_subdirectory(Clang)
+
+if(LLDB_ENABLE_FORTRAN)
+  add_subdirectory(Fortran)
+endif()
