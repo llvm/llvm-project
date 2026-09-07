@@ -8603,6 +8603,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::vector_deinterleave8:
     visitVectorDeinterleave(I, 8);
     return;
+  case Intrinsic::vector_repeat: {
+    SDValue Vec = getValue(I.getOperand(0));
+    EVT ResultVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    setValue(&I, DAG.getNode(ISD::VECTOR_REPEAT, sdl, ResultVT, Vec));
+    return;
+  }
   case Intrinsic::experimental_vector_compress:
     setValue(&I, DAG.getNode(ISD::VECTOR_COMPRESS, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
