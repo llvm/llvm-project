@@ -70,6 +70,7 @@ public:
     mips64,      // MIPS64: mips64, mips64r6, mipsn32, mipsn32r6
     mips64el,    // MIPS64EL: mips64el, mips64r6el, mipsn32el, mipsn32r6el
     msp430,      // MSP430: msp430
+    nanomips,    // nanoMIPS: nanomips
     ppc,         // PPC: powerpc
     ppcle,       // PPCLE: powerpc (little endian)
     ppc64,       // PPC64: powerpc64, ppu
@@ -1129,6 +1130,9 @@ public:
   bool isMIPS64() const {
     return getArch() == Triple::mips64 || getArch() == Triple::mips64el;
   }
+
+  /// Tests whether the target is nanoMIPS.
+  bool isNanoMips() const { return getArch() == Triple::nanomips; }
 
   /// Tests whether the target is MIPS (little and big endian, 32- or 64-bit).
   bool isMIPS() const { return isMIPS32() || isMIPS64(); }
