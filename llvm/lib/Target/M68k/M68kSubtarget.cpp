@@ -24,6 +24,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -49,10 +50,11 @@ void M68kSubtarget::anchor() {}
 
 M68kSubtarget::M68kSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                              const M68kTargetMachine &TM)
-    : M68kGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), TM(TM),
-      InstrInfo(initializeSubtargetDependencies(CPU, TT, FS, TM)),
-      FrameLowering(*this, this->getStackAlignment()), TLInfo(TM, *this),
-      TargetTriple(TT) {
+    : M68kGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
+      UseXGOT(this->useXGOT()), TM(TM), InstrInfo(initializeSubtargetDependencies(CPU, TT, FS, TM)),
+      FrameLowering(*this, this->getStackAlignment()),
+      TLInfo(TM, *this), TargetTriple(TT),
+      TSInfo() {
   TSInfo = std::make_unique<M68kSelectionDAGInfo>();
 
   CallLoweringInfo.reset(new M68kCallLowering(*getTargetLowering()));
