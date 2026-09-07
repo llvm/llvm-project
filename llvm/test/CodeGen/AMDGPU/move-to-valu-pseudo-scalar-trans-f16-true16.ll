@@ -9,7 +9,7 @@ define amdgpu_kernel void @exp_f16(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s16) from %ir.ptr.load, addrspace 1)
+  ; CHECK-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile load (s16) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]], %subreg.lo16, [[DEF]], %subreg.hi16
   ; CHECK-NEXT:   [[V_EXP_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_EXP_F16_t16_e64 0, killed [[REG_SEQUENCE]].lo16, 0, 0, 0, implicit $mode, implicit $exec
@@ -32,7 +32,7 @@ define amdgpu_kernel void @log_f16(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s16) from %ir.ptr.load, addrspace 1)
+  ; CHECK-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile load (s16) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]], %subreg.lo16, [[DEF]], %subreg.hi16
   ; CHECK-NEXT:   [[V_LOG_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_LOG_F16_t16_e64 0, killed [[REG_SEQUENCE]].lo16, 0, 0, 0, implicit $mode, implicit $exec
@@ -55,7 +55,7 @@ define amdgpu_kernel void @rcp_f16(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s16) from %ir.ptr.load, addrspace 1)
+  ; CHECK-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile load (s16) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]], %subreg.lo16, [[DEF]], %subreg.hi16
   ; CHECK-NEXT:   [[V_RCP_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_RCP_F16_t16_e64 0, killed [[REG_SEQUENCE]].lo16, 0, 0, 0, implicit $mode, implicit $exec
@@ -78,7 +78,7 @@ define amdgpu_kernel void @rsq_f16(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s16) from %ir.ptr.load, addrspace 1)
+  ; CHECK-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile load (s16) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]], %subreg.lo16, [[DEF]], %subreg.hi16
   ; CHECK-NEXT:   [[V_RSQ_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_RSQ_F16_t16_e64 0, killed [[REG_SEQUENCE]].lo16, 0, 0, 0, implicit $mode, implicit $exec
@@ -101,7 +101,7 @@ define amdgpu_kernel void @sqrt_f16(ptr addrspace(1) %ptr) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s64) from %ir.ptr.kernarg.offset, align 4, addrspace 4)
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile "amdgpu-noclobber" load (s16) from %ir.ptr.load, addrspace 1)
+  ; CHECK-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 [[S_LOAD_DWORDX2_IMM]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec :: (volatile load (s16) from %ir.ptr.load, addrspace 1)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]], %subreg.lo16, [[DEF]], %subreg.hi16
   ; CHECK-NEXT:   [[V_SQRT_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_SQRT_F16_t16_e64 0, killed [[REG_SEQUENCE]].lo16, 0, 0, 0, implicit $mode, implicit $exec

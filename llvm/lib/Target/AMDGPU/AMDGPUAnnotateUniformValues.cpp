@@ -78,10 +78,10 @@ void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
   if (!isEntryFunc)
     return;
 
-  // If I is atomic, it might see the effects of concurrent clobbering accesses,
-  // so local clobber analysis is not sufficient to ensure that it sees the
-  // initial value.
-  if (I.isAtomic())
+  // If I is atomic or volatile, it might see the effects of concurrent
+  // clobbering accesses, so local clobber analysis is not sufficient to ensure
+  // that it sees the initial value.
+  if (!I.isSimple())
     return;
 
   bool GlobalLoad = I.getPointerAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
