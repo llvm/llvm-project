@@ -140,3 +140,50 @@ void b() {
 // CHECK-NOT: define {{.*}}foo{{.*}}()
 
 } // namespace GH61142
+
+namespace GH219272 {
+
+consteval void f() {}
+void g();
+
+struct S {
+  consteval S() { f(); }
+  consteval S(int) { f(); }
+  consteval S(int, int) { f(); }
+};
+
+struct D {
+  consteval D(int) { f(); }
+  constexpr ~D() {
+    if (!__builtin_is_constant_evaluated())
+      g();
+  }
+};
+
+template <typename T> void dtor(T) { (void)D{1}; }
+template <typename T> void braces(T) { (void)S{1}; }
+template <typename T> void parens(T) { (void)S(1, 2); }
+template <typename T> void empty_braces(T) { (void)S{}; }
+template <typename T> void lambda(T) { [](auto) { (void)S{1}; }(0); }
+template <typename T> struct C {
+  void m() { (void)S{1}; }
+};
+template <typename T> void member(T) { C<T>{}.m(); }
+
+template void dtor<int>(int);
+template void braces<int>(int);
+template void parens<int>(int);
+template void empty_braces<int>(int);
+template void lambda<int>(int);
+template void member<int>(int);
+
+// The temporary is constant-evaluated, but its destructor still runs.
+// CHECK: define {{.*}} @_ZN8GH2192724dtorIiEEvT_(
+// CHECK-NOT: call {{.*}}GH2192721DC
+// CHECK: call void @_ZN8GH2192721DD1Ev(
+
+// Make sure the consteval constructors are neither called nor emitted.
+// CHECK-NOT: call {{.*}}GH2192721{{S|D}}C
+// CHECK-NOT: define {{.*}}GH2192721{{S|D}}C
+
+} // namespace GH219272
