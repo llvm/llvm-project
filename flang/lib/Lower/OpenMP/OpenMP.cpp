@@ -193,30 +193,6 @@ hasPartialArrayReductionObject(llvm::ArrayRef<Object> reductionObjects,
   return false;
 }
 
-static void
-checkTaskModifierPartialArrayReduction(mlir::Location loc,
-                                       semantics::SemanticsContext &semaCtx,
-                                       const List<Clause> &clauses) {
-  bool found = false;
-  ClauseFinder::findRepeatableClause<clause::Reduction>(
-      clauses,
-      [&](const clause::Reduction &reductionClause, const parser::CharBlock &) {
-        if (found)
-          return;
-
-        using ReductionModifier = clause::Reduction::ReductionModifier;
-        const auto &modifier =
-            std::get<std::optional<ReductionModifier>>(reductionClause.t);
-        if (!modifier || *modifier != ReductionModifier::Task)
-          return;
-
-        const ObjectList &objects = std::get<ObjectList>(reductionClause.t);
-        found = hasPartialArrayReductionObject(objects, semaCtx);
-      });
-  if (found)
-    TODO(loc, "REDUCTION with TASK modifier of a partial array section");
-}
-
 static bool isArrayElementReductionObject(const Object &object) {
   return object.ref() && object.ref()->Rank() == 0 &&
          evaluate::IsArrayElement(*object.ref(), /*intoSubstring=*/false);
@@ -225,100 +201,6 @@ static bool isArrayElementReductionObject(const Object &object) {
 static bool
 hasArrayElementReductionObject(llvm::ArrayRef<Object> reductionObjects) {
   return llvm::any_of(reductionObjects, isArrayElementReductionObject);
-}
-
-static bool isUserDefinedReductionOperator(
-    const clause::ReductionOperator &reductionOperator, const Object &object,
-    lower::AbstractConverter &converter, semantics::SemanticsContext &semaCtx) {
-  const semantics::Symbol *objectSymbol = object.sym();
-  const semantics::DeclTypeSpec *objectType =
-      objectSymbol ? objectSymbol->GetUltimate().GetType() : nullptr;
-  if (!objectType)
-    return false;
-
-  return common::visit(
-      common::visitors{
-          [&](const clause::DefinedOperator &definedOperator) {
-            return common::visit(
-                common::visitors{
-                    [&](const clause::DefinedOperator::IntrinsicOperator &op) {
-                      using IntrinsicOperator =
-                          clause::DefinedOperator::IntrinsicOperator;
-                      switch (op) {
-                      case IntrinsicOperator::Add:
-                      case IntrinsicOperator::Multiply:
-                      case IntrinsicOperator::AND:
-                      case IntrinsicOperator::OR:
-                      case IntrinsicOperator::EQV:
-                      case IntrinsicOperator::NEQV:
-                        break;
-                      default:
-                        return false;
-                      }
-
-                      parser::CharBlock mangledName =
-                          semantics::omp::MangledIntrinsicOperatorReductionName(
-                              ReductionProcessor::toParserIntrinsicOperator(op),
-                              semaCtx);
-                      return semantics::omp::FindUserReductionSymbol(
-                                 converter.getCurrentScope(), mangledName,
-                                 objectType) != nullptr;
-                    },
-                    [&](const clause::DefinedOperator::DefinedOpName &op) {
-                      const semantics::Symbol *operatorSymbol = op.v.sym();
-                      return operatorSymbol &&
-                             semantics::omp::FindOperatorUserReductionSymbol(
-                                 converter.getCurrentScope(), *operatorSymbol,
-                                 objectType);
-                    },
-                },
-                definedOperator.u);
-          },
-          [&](const clause::ProcedureDesignator &procedureDesignator) {
-            const semantics::Symbol *symbol = procedureDesignator.v.sym();
-            return (symbol &&
-                    symbol->GetUltimate()
-                        .detailsIf<semantics::UserReductionDetails>()) ||
-                   ReductionProcessor::findUserDefinedReductionForIntrinsic(
-                       converter.getCurrentScope(), procedureDesignator,
-                       objectType) != nullptr;
-          },
-      },
-      reductionOperator.u);
-}
-
-template <typename ReductionClause>
-static bool
-hasUserDefinedArrayElementReduction(const List<Clause> &clauses,
-                                    lower::AbstractConverter &converter,
-                                    semantics::SemanticsContext &semaCtx) {
-  bool found = false;
-  ClauseFinder::findRepeatableClause<ReductionClause>(
-      clauses,
-      [&](const ReductionClause &reductionClause, const parser::CharBlock &) {
-        if (found)
-          return;
-
-        const auto &reductionOperators =
-            std::get<clause::ReductionOperatorList>(reductionClause.t);
-        assert(reductionOperators.size() == 1 &&
-               "expected one reduction operator");
-        const ObjectList &objects = std::get<ObjectList>(reductionClause.t);
-        found = llvm::any_of(objects, [&](const Object &object) {
-          return isArrayElementReductionObject(object) &&
-                 isUserDefinedReductionOperator(reductionOperators.front(),
-                                                object, converter, semaCtx);
-        });
-      });
-  return found;
-}
-
-static void checkUserDefinedArrayElementReduction(
-    mlir::Location loc, lower::AbstractConverter &converter,
-    semantics::SemanticsContext &semaCtx, const List<Clause> &clauses) {
-  if (hasUserDefinedArrayElementReduction<clause::Reduction>(clauses, converter,
-                                                             semaCtx))
-    TODO(loc, "REDUCTION of an array element using a user-defined reduction");
 }
 
 /// Structure holding the information needed to create and bind entry block
@@ -2574,8 +2456,6 @@ static void genParallelClauses(
     cp.processNumThreads(stmtCtx, clauseOps);
 
   cp.processProcBind(clauseOps);
-  checkTaskModifierPartialArrayReduction(loc, semaCtx, clauses);
-  checkUserDefinedArrayElementReduction(loc, converter, semaCtx, clauses);
   cp.processReduction(loc, clauseOps, reductionObjects);
 }
 
@@ -2597,8 +2477,6 @@ genSectionsClauses(lower::AbstractConverter &converter,
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
   cp.processNowait(clauseOps);
-  checkTaskModifierPartialArrayReduction(loc, semaCtx, clauses);
-  checkUserDefinedArrayElementReduction(loc, converter, semaCtx, clauses);
   cp.processReduction(loc, clauseOps, reductionObjects);
   // TODO Support delayed privatization.
 }
@@ -2699,8 +2577,6 @@ static void genScopeClauses(lower::AbstractConverter &converter,
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAllocate(clauseOps);
   cp.processNowait(clauseOps);
-  checkTaskModifierPartialArrayReduction(loc, semaCtx, clauses);
-  checkUserDefinedArrayElementReduction(loc, converter, semaCtx, clauses);
   cp.processReduction(loc, clauseOps, reductionObjects);
 }
 
@@ -2927,8 +2803,6 @@ static void genWsloopClauses(
   cp.processNowait(clauseOps);
   cp.processOrder(clauseOps);
   cp.processOrdered(clauseOps);
-  checkTaskModifierPartialArrayReduction(loc, semaCtx, clauses);
-  checkUserDefinedArrayElementReduction(loc, converter, semaCtx, clauses);
   cp.processReduction(loc, clauseOps, reductionObjects, reductionVarCache);
   cp.processSchedule(stmtCtx, clauseOps);
   cp.processLinear(clauseOps);
@@ -4487,11 +4361,6 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   genTaskClauses(converter, semaCtx, symTable, stmtCtx, item->clauses, loc,
                  clauseOps, inReductionObjects);
 
-  if (hasUserDefinedArrayElementReduction<clause::InReduction>(
-          item->clauses, converter, semaCtx))
-    TODO(loc, "TASK construct with IN_REDUCTION of an array element using a "
-              "user-defined reduction");
-
   if (hasPartialArrayReductionObject(inReductionObjects, semaCtx))
     TODO(loc, "TASK construct with IN_REDUCTION of a partial array section");
 
@@ -4545,12 +4414,6 @@ genTaskgroupOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   llvm::SmallVector<Object> taskReductionObjects;
   genTaskgroupClauses(converter, semaCtx, item->clauses, loc, clauseOps,
                       taskReductionObjects);
-
-  if (hasUserDefinedArrayElementReduction<clause::TaskReduction>(
-          item->clauses, converter, semaCtx))
-    TODO(loc,
-         "TASKGROUP construct with TASK_REDUCTION of an array element using a "
-         "user-defined reduction");
 
   if (hasPartialArrayReductionObject(taskReductionObjects, semaCtx))
     TODO(loc,
@@ -5147,16 +5010,6 @@ static mlir::omp::TaskloopContextOp genStandaloneTaskloop(
                            /*shouldCollectPreDeterminedSymbols=*/true,
                            enableDelayedPrivatization, symTable);
   dsp.processStep1(&taskloopClauseOps);
-
-  if (hasUserDefinedArrayElementReduction<clause::InReduction>(
-          item->clauses, converter, semaCtx))
-    TODO(loc,
-         "TASKLOOP construct with IN_REDUCTION of an array element using a "
-         "user-defined reduction");
-  if (hasUserDefinedArrayElementReduction<clause::Reduction>(
-          item->clauses, converter, semaCtx))
-    TODO(loc, "TASKLOOP construct with REDUCTION of an array element using a "
-              "user-defined reduction");
 
   llvm::ArrayRef<const semantics::Symbol *> privatizedSymbols =
       enableDelayedPrivatization ? dsp.getDelayedPrivSymbols()

@@ -103,17 +103,17 @@
 ! EAGER-TASKLOOP-REDUCTION: not yet implemented: TASKLOOP construct with REDUCTION of an array element or section whose base array is privatized
 ! EAGER-TASKLOOP-IN-SECTION: not yet implemented: TASKLOOP construct with IN_REDUCTION of an array element or section whose base array is privatized
 ! EAGER-TASKLOOP-REDUCTION-SECTION: not yet implemented: TASKLOOP construct with REDUCTION of an array element or section whose base array is privatized
-! EAGER-TASKLOOP-UDR-SECTION: not yet implemented: TASKLOOP construct with REDUCTION of an array element or section whose base array is privatized
-! TASK-CROSS-SCOPE-BOUNDS: not yet implemented: TASKGROUP construct with TASK_REDUCTION of a partial array section
-! TASKLOOP-UDR-SHARED-SECTION: not yet implemented: TASKLOOP construct with REDUCTION of a partial array section
+! EAGER-TASKLOOP-UDR-SECTION: not yet implemented: REDUCTION of a partial array section using a user-defined reduction
+! TASK-CROSS-SCOPE-BOUNDS: not yet implemented: TASK_REDUCTION of a partial array section using a user-defined reduction
+! TASKLOOP-UDR-SHARED-SECTION: not yet implemented: REDUCTION of a partial array section using a user-defined reduction
 ! TASKLOOP-IN-SHARED-SECTION: not yet implemented: TASKLOOP construct with IN_REDUCTION of a partial array section
 ! EAGER-TASK-SHARED-ELEMENT: not yet implemented: TASK construct with IN_REDUCTION of an array element when delayed privatization is disabled
 ! EAGER-TASK-SHARED-FULL-SECTION: not yet implemented: TASK construct with IN_REDUCTION when delayed privatization is disabled
-! TASK-UDR-SHARED-ELEMENT: not yet implemented: TASK construct with IN_REDUCTION of an array element using a user-defined reduction
-! TASKGROUP-UDR-ELEMENT: not yet implemented: TASKGROUP construct with TASK_REDUCTION of an array element using a user-defined reduction
-! TASKLOOP-UDR-SHARED-ELEMENT: not yet implemented: TASKLOOP construct with REDUCTION of an array element using a user-defined reduction
-! TASKLOOP-MAX-UDR-SHARED-ELEMENT: not yet implemented: TASKLOOP construct with REDUCTION of an array element using a user-defined reduction
-! TASKLOOP-IN-UDR-SHARED-ELEMENT: not yet implemented: TASKLOOP construct with IN_REDUCTION of an array element using a user-defined reduction
+! TASK-UDR-SHARED-ELEMENT: not yet implemented: IN_REDUCTION of an array element using a user-defined reduction
+! TASKGROUP-UDR-ELEMENT: not yet implemented: TASK_REDUCTION of an array element using a user-defined reduction
+! TASKLOOP-UDR-SHARED-ELEMENT: not yet implemented: REDUCTION of an array element using a user-defined reduction
+! TASKLOOP-MAX-UDR-SHARED-ELEMENT: not yet implemented: REDUCTION of an array element using a user-defined reduction
+! TASKLOOP-IN-UDR-SHARED-ELEMENT: not yet implemented: IN_REDUCTION of an array element using a user-defined reduction
 ! TASK-SHARED-SECTION: not yet implemented: TASK construct with IN_REDUCTION of a partial array section
 ! TARGET-ELEMENT: not yet implemented: TARGET construct with IN_REDUCTION of an array element
 ! PARALLEL-TASK-UDR-SECTION: not yet implemented: REDUCTION with TASK modifier of a partial array section
