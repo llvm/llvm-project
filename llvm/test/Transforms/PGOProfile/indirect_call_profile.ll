@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes=pgo-instr-gen -S | FileCheck %s --check-prefix=GEN
-; RUN: opt < %s -passes=pgo-instr-gen,instrprof -vp-static-alloc=true -S | FileCheck %s --check-prefix=LOWER
-; RUN: opt < %s -passes=pgo-instr-gen,instrprof -vp-static-alloc=false -S | FileCheck %s --check-prefix=LOWER
+; RUN: opt < %s -passes=pgo-instr-gen,instrprof -S | FileCheck %s --check-prefixes=LOWER,STATIC
+; RUN: opt < %s -passes=pgo-instr-gen,instrprof -vp-static-alloc=false -S | FileCheck %s --check-prefixes=LOWER,DYNAMIC
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -18,13 +18,26 @@ $vp_inline = comdat any
 ;; We allow a linkonce profd to be private if the function does not use value profiling.
 ; LOWER:      @__profd_novp_inline.[[HASH:[0-9]+]] = private global {{.*}} @__profc_novp_inline.[[HASH]]
 ; LOWER-SAME:   ptr @novp_inline
-; LOWER:      @__profd_foo = private {{.*}} @__profc_foo
+
+; STATIC:     @__profvp_foo = {{.*}} zeroinitializer, section "__llvm_prf_vals"
+
+; LOWER:      @__profd_foo =
+; LOWER-SAME:   ptr @__profc_foo
+; STATIC-SAME:  ptr @__profvp_foo
+; DYNAMIC-SAME: ptr null
+; LOWER-SAME:   [3 x i16] [i16 1, i16 0, i16 0]
+; LOWER-SAME:   section "__llvm_prf_data"
 
 ;; __profd_vp_inline.[[#]] is referenced by code and may be referenced by other
 ;; text sections due to inlining. It can't be local because a linker error would
 ;; occur if a prevailing text section references the non-prevailing local symbol.
 ; LOWER:      @__profd_vp_inline.[[FOO_HASH:[0-9]+]] = linkonce_odr hidden {{.*}} @__profc_vp_inline.[[FOO_HASH]]
 ; LOWER-SAME:   ptr @vp_inline
+
+; STATIC:     @__llvm_prf_vnodes = {{.*}} [{{[0-9]+}} x { i64, i64, ptr }] zeroinitializer, section "__llvm_prf_vnds"
+
+; LOWER:      @llvm.used =
+; STATIC-SAME:  ptr @__llvm_prf_vnodes
 
 define linkonce_odr void @novp_inline() comdat {
   ret void
@@ -96,4 +109,3 @@ declare i32 @llvm.eh.typeid.for(ptr) #0
 declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()
-
