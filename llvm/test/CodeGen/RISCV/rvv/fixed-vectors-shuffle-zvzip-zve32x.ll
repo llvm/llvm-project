@@ -11,8 +11,8 @@ define void @deinterleave_v4i32_even(ptr %in, ptr %out) {
 ; ZVL64B:       # %bb.0: # %entry
 ; ZVL64B-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
 ; ZVL64B-NEXT:    vle32.v v8, (a0)
-; ZVL64B-NEXT:    vunzipe.v v10, v8
 ; ZVL64B-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; ZVL64B-NEXT:    vunzipe.v v10, v8
 ; ZVL64B-NEXT:    vse32.v v10, (a1)
 ; ZVL64B-NEXT:    ret
 ;
@@ -21,9 +21,8 @@ define void @deinterleave_v4i32_even(ptr %in, ptr %out) {
 ; ZVL128B-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; ZVL128B-NEXT:    vle32.v v8, (a0)
 ; ZVL128B-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; ZVL128B-NEXT:    vslidedown.vi v9, v8, 2
-; ZVL128B-NEXT:    vslideup.vi v8, v9, 1
-; ZVL128B-NEXT:    vse32.v v8, (a1)
+; ZVL128B-NEXT:    vunzipe.v v10, v8
+; ZVL128B-NEXT:    vse32.v v10, (a1)
 ; ZVL128B-NEXT:    ret
 entry:
   %v = load <4 x i32>, ptr %in, align 4
@@ -37,8 +36,8 @@ define void @deinterleave_v4i32_odd(ptr %in, ptr %out) {
 ; ZVL64B:       # %bb.0: # %entry
 ; ZVL64B-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
 ; ZVL64B-NEXT:    vle32.v v8, (a0)
-; ZVL64B-NEXT:    vunzipo.v v10, v8
 ; ZVL64B-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; ZVL64B-NEXT:    vunzipo.v v10, v8
 ; ZVL64B-NEXT:    vse32.v v10, (a1)
 ; ZVL64B-NEXT:    ret
 ;
@@ -47,8 +46,7 @@ define void @deinterleave_v4i32_odd(ptr %in, ptr %out) {
 ; ZVL128B-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; ZVL128B-NEXT:    vle32.v v8, (a0)
 ; ZVL128B-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; ZVL128B-NEXT:    vslidedown.vi v9, v8, 2
-; ZVL128B-NEXT:    vpairo.vv v10, v8, v9
+; ZVL128B-NEXT:    vunzipo.v v10, v8
 ; ZVL128B-NEXT:    vse32.v v10, (a1)
 ; ZVL128B-NEXT:    ret
 entry:
@@ -258,8 +256,8 @@ define void @deinterleave_v4f32_even(ptr %in, ptr %out) {
 ; ZVL64B:       # %bb.0: # %entry
 ; ZVL64B-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
 ; ZVL64B-NEXT:    vle32.v v8, (a0)
-; ZVL64B-NEXT:    vunzipe.v v10, v8
 ; ZVL64B-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; ZVL64B-NEXT:    vunzipe.v v10, v8
 ; ZVL64B-NEXT:    vse32.v v10, (a1)
 ; ZVL64B-NEXT:    ret
 ;
@@ -268,9 +266,8 @@ define void @deinterleave_v4f32_even(ptr %in, ptr %out) {
 ; ZVL128B-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; ZVL128B-NEXT:    vle32.v v8, (a0)
 ; ZVL128B-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; ZVL128B-NEXT:    vslidedown.vi v9, v8, 2
-; ZVL128B-NEXT:    vslideup.vi v8, v9, 1
-; ZVL128B-NEXT:    vse32.v v8, (a1)
+; ZVL128B-NEXT:    vunzipe.v v10, v8
+; ZVL128B-NEXT:    vse32.v v10, (a1)
 ; ZVL128B-NEXT:    ret
 entry:
   %v = load <4 x float>, ptr %in, align 4
@@ -284,8 +281,8 @@ define void @deinterleave_v4f32_odd(ptr %in, ptr %out) {
 ; ZVL64B:       # %bb.0: # %entry
 ; ZVL64B-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
 ; ZVL64B-NEXT:    vle32.v v8, (a0)
-; ZVL64B-NEXT:    vunzipo.v v10, v8
 ; ZVL64B-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; ZVL64B-NEXT:    vunzipo.v v10, v8
 ; ZVL64B-NEXT:    vse32.v v10, (a1)
 ; ZVL64B-NEXT:    ret
 ;
@@ -294,8 +291,7 @@ define void @deinterleave_v4f32_odd(ptr %in, ptr %out) {
 ; ZVL128B-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; ZVL128B-NEXT:    vle32.v v8, (a0)
 ; ZVL128B-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; ZVL128B-NEXT:    vslidedown.vi v9, v8, 2
-; ZVL128B-NEXT:    vpairo.vv v10, v8, v9
+; ZVL128B-NEXT:    vunzipo.v v10, v8
 ; ZVL128B-NEXT:    vse32.v v10, (a1)
 ; ZVL128B-NEXT:    ret
 entry:

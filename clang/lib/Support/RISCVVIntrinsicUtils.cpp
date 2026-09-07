@@ -1145,7 +1145,6 @@ llvm::SmallVector<PrototypeDescriptor> RVVIntrinsic::computeBuiltinTypes(
         NewPrototype.insert(NewPrototype.begin() + NF + 1,
                             PrototypeDescriptor::Mask);
     } else {
-      // If IsMasked, insert PrototypeDescriptor:Mask as first input operand.
       if (MaskedPrototypeHasResultMask)
         NewPrototype.insert(
             NewPrototype.begin() + 1,

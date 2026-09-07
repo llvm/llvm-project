@@ -21,8 +21,10 @@ let Predicates = [HasStdExtZvzip] in {
     def VZIP_VV : VALUVV<0b111110, OPMVV, "vzip.vv">;
   }
 
-  def VUNZIPE_V : VALUVs2NoVm<0b010010, 0b01011, OPMVV, "vunzipe.v">;
-  def VUNZIPO_V : VALUVs2NoVm<0b010010, 0b01111, OPMVV, "vunzipo.v">;
+  let ReadsPastVL = 1 in {
+    def VUNZIPE_V : VALUVs2NoVm<0b010010, 0b01011, OPMVV, "vunzipe.v">;
+    def VUNZIPO_V : VALUVs2NoVm<0b010010, 0b01111, OPMVV, "vunzipo.v">;
+  }
 
   let Constraints = "@earlyclobber $vd" in {
     let VS1VS2Constraint = Vrgather in {
@@ -91,14 +93,14 @@ multiclass VPseudoVZIP {
   }
 }
 
-// vunzipe.v/vunzipo.v is narrowing-like and don't need @earlyclobber 
+// vunzipe.v/vunzipo.v are narrowing-like and do not need @earlyclobber
 // if the source has an LMUL <= 1. The destination register group
 // can overlap with the lowest-numbered part of the source register group.
 multiclass VPseudoVUNZIP {
   foreach m = MxListW in {
     defvar wm = !cast<LMULInfo>("V_" # octuple_to_str<!shl(m.octuple, 1)>.ret);
-    let VLMul = wm.value in {
-      def "_V_" # wm.MX : VPseudoUnaryNoMask<m.vrclass, wm.vrclass,
+    let VLMul = m.value in {
+      def "_V_" # m.MX : VPseudoUnaryNoMask<m.vrclass, wm.vrclass,
                             !if(!ge(m.octuple, 8), "@earlyclobber $rd", ""),
                             TargetConstraintType=2>,
                           SchedUnary<"WriteVIALUV", "ReadVIALUV", m.MX,
@@ -126,7 +128,7 @@ multiclass VPatVUnzipIntrinsic<string intrinsic_name,
     let append Predicates = GetVTypeMinimalPredicates<vti>.Predicates in {
       def : VPatUnaryNoMask<intrinsic_name, instruction_name, "V",
                             vti.Vector, wti.Vector, vti.Log2SEW,
-                            wti.LMul, vti.RegClass, wti.RegClass>;
+                            vti.LMul, vti.RegClass, wti.RegClass>;
     }
   }
 }
@@ -210,7 +212,7 @@ multiclass VPatVUNZIP<SDPatternOperator op, string instruction_name> {
     let append Predicates = GetVTypeMinimalPredicates<vti>.Predicates in {
       def : VPatUnaryVLNoMask_V<op, instruction_name, "V",
                                 vti.Vector, wti.Vector, vti.Log2SEW,
-                                wti.LMul, vti.RegClass, wti.RegClass>;
+                                vti.LMul, vti.RegClass, wti.RegClass>;
     }
   }
 }

@@ -7,7 +7,7 @@
 define <vscale x 1 x i8> @test_vunzipo_i8mf8(<vscale x 1 x i8> %passthru, <vscale x 2 x i8> %arg1, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_i8mf8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v9
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x i8> @llvm.riscv.vunzipo(
@@ -21,7 +21,7 @@ define <vscale x 1 x i8> @test_vunzipo_i8mf8(<vscale x 1 x i8> %passthru, <vscal
 define <vscale x 2 x i8> @test_vunzipo_i8mf4(<vscale x 2 x i8> %passthru, <vscale x 4 x i8> %arg1, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_i8mf4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v9
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i8> @llvm.riscv.vunzipo(
@@ -35,7 +35,7 @@ define <vscale x 2 x i8> @test_vunzipo_i8mf4(<vscale x 2 x i8> %passthru, <vscal
 define <vscale x 4 x i8> @test_vunzipo_i8mf2(<vscale x 4 x i8> %passthru, <vscale x 8 x i8> %arg1, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_i8mf2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v9
 ; CHECK-NEXT:    ret
   %a = call <vscale x 4 x i8> @llvm.riscv.vunzipo(
@@ -49,7 +49,7 @@ define <vscale x 4 x i8> @test_vunzipo_i8mf2(<vscale x 4 x i8> %passthru, <vscal
 define <vscale x 8 x i8> @test_vunzipo_i8m1(<vscale x 8 x i8> %passthru, <vscale x 16 x i8> %arg1, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_i8m1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m2, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v10
 ; CHECK-NEXT:    ret
   %a = call <vscale x 8 x i8> @llvm.riscv.vunzipo(
@@ -63,7 +63,7 @@ define <vscale x 8 x i8> @test_vunzipo_i8m1(<vscale x 8 x i8> %passthru, <vscale
 define <vscale x 16 x i8> @test_vunzipo_i8m2(<vscale x 16 x i8> %passthru, <vscale x 32 x i8> %arg1, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_i8m2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m4, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v12
 ; CHECK-NEXT:    ret
   %a = call <vscale x 16 x i8> @llvm.riscv.vunzipo(
@@ -77,7 +77,7 @@ define <vscale x 16 x i8> @test_vunzipo_i8m2(<vscale x 16 x i8> %passthru, <vsca
 define <vscale x 32 x i8> @test_vunzipo_i8m4(<vscale x 32 x i8> %passthru, <vscale x 64 x i8> %arg1, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_i8m4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v16
 ; CHECK-NEXT:    ret
   %a = call <vscale x 32 x i8> @llvm.riscv.vunzipo(
@@ -91,7 +91,7 @@ define <vscale x 32 x i8> @test_vunzipo_i8m4(<vscale x 32 x i8> %passthru, <vsca
 define <vscale x 1 x i16> @test_vunzipo_i16mf4(<vscale x 1 x i16> %passthru, <vscale x 2 x i16> %arg1, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_i16mf4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v9
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x i16> @llvm.riscv.vunzipo(
@@ -105,7 +105,7 @@ define <vscale x 1 x i16> @test_vunzipo_i16mf4(<vscale x 1 x i16> %passthru, <vs
 define <vscale x 2 x i16> @test_vunzipo_i16mf2(<vscale x 2 x i16> %passthru, <vscale x 4 x i16> %arg1, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_i16mf2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v9
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i16> @llvm.riscv.vunzipo(
@@ -119,7 +119,7 @@ define <vscale x 2 x i16> @test_vunzipo_i16mf2(<vscale x 2 x i16> %passthru, <vs
 define <vscale x 4 x i16> @test_vunzipo_i16m1(<vscale x 4 x i16> %passthru, <vscale x 8 x i16> %arg1, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_i16m1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v10
 ; CHECK-NEXT:    ret
   %a = call <vscale x 4 x i16> @llvm.riscv.vunzipo(
@@ -133,7 +133,7 @@ define <vscale x 4 x i16> @test_vunzipo_i16m1(<vscale x 4 x i16> %passthru, <vsc
 define <vscale x 8 x i16> @test_vunzipo_i16m2(<vscale x 8 x i16> %passthru, <vscale x 16 x i16> %arg1, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_i16m2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v12
 ; CHECK-NEXT:    ret
   %a = call <vscale x 8 x i16> @llvm.riscv.vunzipo(
@@ -147,7 +147,7 @@ define <vscale x 8 x i16> @test_vunzipo_i16m2(<vscale x 8 x i16> %passthru, <vsc
 define <vscale x 16 x i16> @test_vunzipo_i16m4(<vscale x 16 x i16> %passthru, <vscale x 32 x i16> %arg1, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_i16m4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v16
 ; CHECK-NEXT:    ret
   %a = call <vscale x 16 x i16> @llvm.riscv.vunzipo(
@@ -161,7 +161,7 @@ define <vscale x 16 x i16> @test_vunzipo_i16m4(<vscale x 16 x i16> %passthru, <v
 define <vscale x 1 x i32> @test_vunzipo_i32mf2(<vscale x 1 x i32> %passthru, <vscale x 2 x i32> %arg1, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_i32mf2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v9
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x i32> @llvm.riscv.vunzipo(
@@ -175,7 +175,7 @@ define <vscale x 1 x i32> @test_vunzipo_i32mf2(<vscale x 1 x i32> %passthru, <vs
 define <vscale x 2 x i32> @test_vunzipo_i32m1(<vscale x 2 x i32> %passthru, <vscale x 4 x i32> %arg1, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_i32m1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v10
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i32> @llvm.riscv.vunzipo(
@@ -189,7 +189,7 @@ define <vscale x 2 x i32> @test_vunzipo_i32m1(<vscale x 2 x i32> %passthru, <vsc
 define <vscale x 4 x i32> @test_vunzipo_i32m2(<vscale x 4 x i32> %passthru, <vscale x 8 x i32> %arg1, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_i32m2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v12
 ; CHECK-NEXT:    ret
   %a = call <vscale x 4 x i32> @llvm.riscv.vunzipo(
@@ -203,7 +203,7 @@ define <vscale x 4 x i32> @test_vunzipo_i32m2(<vscale x 4 x i32> %passthru, <vsc
 define <vscale x 8 x i32> @test_vunzipo_i32m4(<vscale x 8 x i32> %passthru, <vscale x 16 x i32> %arg1, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_i32m4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v16
 ; CHECK-NEXT:    ret
   %a = call <vscale x 8 x i32> @llvm.riscv.vunzipo(
@@ -217,7 +217,7 @@ define <vscale x 8 x i32> @test_vunzipo_i32m4(<vscale x 8 x i32> %passthru, <vsc
 define <vscale x 1 x i64> @test_vunzipo_i64m1(<vscale x 1 x i64> %passthru, <vscale x 2 x i64> %arg1, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_i64m1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v10
 ; CHECK-NEXT:    ret
   %a = call <vscale x 1 x i64> @llvm.riscv.vunzipo(
@@ -231,7 +231,7 @@ define <vscale x 1 x i64> @test_vunzipo_i64m1(<vscale x 1 x i64> %passthru, <vsc
 define <vscale x 2 x i64> @test_vunzipo_i64m2(<vscale x 2 x i64> %passthru, <vscale x 4 x i64> %arg1, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_i64m2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v12
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i64> @llvm.riscv.vunzipo(
@@ -245,7 +245,7 @@ define <vscale x 2 x i64> @test_vunzipo_i64m2(<vscale x 2 x i64> %passthru, <vsc
 define <vscale x 4 x i64> @test_vunzipo_i64m4(<vscale x 4 x i64> %passthru, <vscale x 8 x i64> %arg1, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_i64m4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v16
 ; CHECK-NEXT:    ret
   %a = call <vscale x 4 x i64> @llvm.riscv.vunzipo(
@@ -262,7 +262,7 @@ define <vscale x 4 x i64> @test_vunzipo_i64m4(<vscale x 4 x i64> %passthru, <vsc
 define <vscale x 1 x half> @test_vunzipo_f16mf4(<vscale x 1 x half> %passthru, <vscale x 2 x half> %src, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_f16mf4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v9
 ; CHECK-NEXT:    ret
   %r = call <vscale x 1 x half> @llvm.riscv.vunzipo(
@@ -276,7 +276,7 @@ define <vscale x 1 x half> @test_vunzipo_f16mf4(<vscale x 1 x half> %passthru, <
 define <vscale x 2 x half> @test_vunzipo_f16mf2(<vscale x 2 x half> %passthru, <vscale x 4 x half> %src, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_f16mf2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v9
 ; CHECK-NEXT:    ret
   %r = call <vscale x 2 x half> @llvm.riscv.vunzipo(
@@ -290,7 +290,7 @@ define <vscale x 2 x half> @test_vunzipo_f16mf2(<vscale x 2 x half> %passthru, <
 define <vscale x 4 x half> @test_vunzipo_f16m1(<vscale x 4 x half> %passthru, <vscale x 8 x half> %src, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_f16m1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v10
 ; CHECK-NEXT:    ret
   %r = call <vscale x 4 x half> @llvm.riscv.vunzipo(
@@ -304,7 +304,7 @@ define <vscale x 4 x half> @test_vunzipo_f16m1(<vscale x 4 x half> %passthru, <v
 define <vscale x 8 x half> @test_vunzipo_f16m2(<vscale x 8 x half> %passthru, <vscale x 16 x half> %src, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_f16m2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v12
 ; CHECK-NEXT:    ret
   %r = call <vscale x 8 x half> @llvm.riscv.vunzipo(
@@ -318,7 +318,7 @@ define <vscale x 8 x half> @test_vunzipo_f16m2(<vscale x 8 x half> %passthru, <v
 define <vscale x 16 x half> @test_vunzipo_f16m4(<vscale x 16 x half> %passthru, <vscale x 32 x half> %src, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_f16m4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v16
 ; CHECK-NEXT:    ret
   %r = call <vscale x 16 x half> @llvm.riscv.vunzipo(
@@ -333,7 +333,7 @@ define <vscale x 16 x half> @test_vunzipo_f16m4(<vscale x 16 x half> %passthru, 
 define <vscale x 1 x bfloat> @test_vunzipo_bf16mf4(<vscale x 1 x bfloat> %passthru, <vscale x 2 x bfloat> %src, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_bf16mf4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v9
 ; CHECK-NEXT:    ret
   %r = call <vscale x 1 x bfloat> @llvm.riscv.vunzipo(
@@ -347,7 +347,7 @@ define <vscale x 1 x bfloat> @test_vunzipo_bf16mf4(<vscale x 1 x bfloat> %passth
 define <vscale x 2 x bfloat> @test_vunzipo_bf16mf2(<vscale x 2 x bfloat> %passthru, <vscale x 4 x bfloat> %src, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_bf16mf2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v9
 ; CHECK-NEXT:    ret
   %r = call <vscale x 2 x bfloat> @llvm.riscv.vunzipo(
@@ -361,7 +361,7 @@ define <vscale x 2 x bfloat> @test_vunzipo_bf16mf2(<vscale x 2 x bfloat> %passth
 define <vscale x 4 x bfloat> @test_vunzipo_bf16m1(<vscale x 4 x bfloat> %passthru, <vscale x 8 x bfloat> %src, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_bf16m1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v10
 ; CHECK-NEXT:    ret
   %r = call <vscale x 4 x bfloat> @llvm.riscv.vunzipo(
@@ -375,7 +375,7 @@ define <vscale x 4 x bfloat> @test_vunzipo_bf16m1(<vscale x 4 x bfloat> %passthr
 define <vscale x 8 x bfloat> @test_vunzipo_bf16m2(<vscale x 8 x bfloat> %passthru, <vscale x 16 x bfloat> %src, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_bf16m2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v12
 ; CHECK-NEXT:    ret
   %r = call <vscale x 8 x bfloat> @llvm.riscv.vunzipo(
@@ -389,7 +389,7 @@ define <vscale x 8 x bfloat> @test_vunzipo_bf16m2(<vscale x 8 x bfloat> %passthr
 define <vscale x 16 x bfloat> @test_vunzipo_bf16m4(<vscale x 16 x bfloat> %passthru, <vscale x 32 x bfloat> %src, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_bf16m4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v16
 ; CHECK-NEXT:    ret
   %r = call <vscale x 16 x bfloat> @llvm.riscv.vunzipo(
@@ -404,7 +404,7 @@ define <vscale x 16 x bfloat> @test_vunzipo_bf16m4(<vscale x 16 x bfloat> %passt
 define <vscale x 1 x float> @test_vunzipo_f32mf2(<vscale x 1 x float> %passthru, <vscale x 2 x float> %src, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_f32mf2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v9
 ; CHECK-NEXT:    ret
   %r = call <vscale x 1 x float> @llvm.riscv.vunzipo(
@@ -418,7 +418,7 @@ define <vscale x 1 x float> @test_vunzipo_f32mf2(<vscale x 1 x float> %passthru,
 define <vscale x 2 x float> @test_vunzipo_f32m1(<vscale x 2 x float> %passthru, <vscale x 4 x float> %src, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_f32m1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v10
 ; CHECK-NEXT:    ret
   %r = call <vscale x 2 x float> @llvm.riscv.vunzipo(
@@ -432,7 +432,7 @@ define <vscale x 2 x float> @test_vunzipo_f32m1(<vscale x 2 x float> %passthru, 
 define <vscale x 4 x float> @test_vunzipo_f32m2(<vscale x 4 x float> %passthru, <vscale x 8 x float> %src, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_f32m2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v12
 ; CHECK-NEXT:    ret
   %r = call <vscale x 4 x float> @llvm.riscv.vunzipo(
@@ -446,7 +446,7 @@ define <vscale x 4 x float> @test_vunzipo_f32m2(<vscale x 4 x float> %passthru, 
 define <vscale x 8 x float> @test_vunzipo_f32m4(<vscale x 8 x float> %passthru, <vscale x 16 x float> %src, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_f32m4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v16
 ; CHECK-NEXT:    ret
   %r = call <vscale x 8 x float> @llvm.riscv.vunzipo(
@@ -461,7 +461,7 @@ define <vscale x 8 x float> @test_vunzipo_f32m4(<vscale x 8 x float> %passthru, 
 define <vscale x 1 x double> @test_vunzipo_f64m1(<vscale x 1 x double> %passthru, <vscale x 2 x double> %src, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_f64m1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v10
 ; CHECK-NEXT:    ret
   %r = call <vscale x 1 x double> @llvm.riscv.vunzipo(
@@ -475,7 +475,7 @@ define <vscale x 1 x double> @test_vunzipo_f64m1(<vscale x 1 x double> %passthru
 define <vscale x 2 x double> @test_vunzipo_f64m2(<vscale x 2 x double> %passthru, <vscale x 4 x double> %src, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_f64m2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v12
 ; CHECK-NEXT:    ret
   %r = call <vscale x 2 x double> @llvm.riscv.vunzipo(
@@ -489,7 +489,7 @@ define <vscale x 2 x double> @test_vunzipo_f64m2(<vscale x 2 x double> %passthru
 define <vscale x 4 x double> @test_vunzipo_f64m4(<vscale x 4 x double> %passthru, <vscale x 8 x double> %src, iXLen %vl) nounwind {
 ; CHECK-LABEL: test_vunzipo_f64m4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, ma
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, ma
 ; CHECK-NEXT:    vunzipo.v v8, v16
 ; CHECK-NEXT:    ret
   %r = call <vscale x 4 x double> @llvm.riscv.vunzipo(
