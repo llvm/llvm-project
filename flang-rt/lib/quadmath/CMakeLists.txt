@@ -106,8 +106,11 @@ if (FLANG_RUNTIME_F128_MATH_LIB)
       )
   endif ()
 elseif (HAVE_LDBL_MANT_DIG_113)
-  # We can use 'long double' versions from libc.
-  check_library_exists(m sinl "" FOUND_LIBM)
+  # TODO: this check uses --unwindlib=none which makes it fail when sanitizers
+  # are being used.
+  # # We can use 'long double' versions from libc.
+  # check_library_exists(m sinl "" FOUND_LIBM)
+  set(FOUND_LIBM ON)
   if (FOUND_LIBM)
     target_compile_definitions(FortranFloat128MathILib INTERFACE
       HAS_LIBM
