@@ -45,6 +45,18 @@ llvm.func @canonicalize_constant_array_alloca() -> !llvm.ptr {
 
 // -----
 
+// CHECK-LABEL: @canonicalize_nested_array_alloca
+llvm.func @canonicalize_nested_array_alloca() -> !llvm.ptr {
+  // CHECK-NEXT: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NEXT: %[[ALLOCA:.*]] = llvm.alloca %[[ONE]] x !llvm.array<4 x array<2 x i32>> : (i32) -> !llvm.ptr
+  %c4 = arith.constant 4 : i64
+  %alloca = llvm.alloca %c4 x !llvm.array<2 x i32> : (i64) -> !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ALLOCA]] : !llvm.ptr
+  llvm.return %alloca : !llvm.ptr
+}
+
+// -----
+
 // CHECK-LABEL: @canonicalize_zero_array_alloca
 llvm.func @canonicalize_zero_array_alloca() -> !llvm.ptr {
   // CHECK-NEXT: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32

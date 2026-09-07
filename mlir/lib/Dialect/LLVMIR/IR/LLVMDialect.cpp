@@ -479,7 +479,7 @@ LogicalResult AllocaOp::canonicalize(AllocaOp op, PatternRewriter &rewriter) {
       numElements.isOne() || numElements.getActiveBits() > 64)
     return failure();
 
-  Type arrayType =
+  auto arrayType =
       LLVMArrayType::get(op.getElemType(), numElements.getZExtValue());
   Value one = ConstantOp::create(rewriter, op.getLoc(), rewriter.getI32Type(),
                                  /*value=*/1);
