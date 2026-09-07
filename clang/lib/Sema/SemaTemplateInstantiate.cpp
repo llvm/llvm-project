@@ -2014,7 +2014,7 @@ bool TemplateInstantiator::instantiateMissingDeclsToScopeForConcepts(Decl *PD) {
       for (auto *VD : *Pack)
         Current->InstantiatedLocal(PD, VD);
     }
-    break;
+    return false;
   }
 
   auto *OldParm = dyn_cast<ParmVarDecl>(PD);
