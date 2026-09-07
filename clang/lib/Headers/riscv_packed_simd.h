@@ -67,8 +67,8 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
   }
 
 #define __packed_extract(name, rty, ty, max_idx)                               \
-  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(                     \
-      ty __v, const unsigned __idx)                                            \
+  static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __v,              \
+                                                          unsigned __idx)      \
       __attribute__((__enable_if__(                                            \
           __idx <= (max_idx),                                                  \
           "index must be a constant integer from 0 to " #max_idx))) {          \
