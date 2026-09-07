@@ -31,6 +31,10 @@ static const MCPhysReg O32IntRegs[4] = {Mips::A0, Mips::A1, Mips::A2, Mips::A3};
 static const MCPhysReg Mips64IntRegs[8] = {
     Mips::A0_64, Mips::A1_64, Mips::A2_64, Mips::A3_64,
     Mips::T0_64, Mips::T1_64, Mips::T2_64, Mips::T3_64};
+
+static const MCPhysReg P32IntRegs[8] = {Mips::A0_NM, Mips::A1_NM, Mips::A2_NM,
+                                        Mips::A3_NM, Mips::A4_NM, Mips::A5_NM,
+                                        Mips::A6_NM, Mips::A7_NM};
 }
 
 ArrayRef<MCPhysReg> MipsABIInfo::GetByValArgRegs() const {
@@ -38,6 +42,8 @@ ArrayRef<MCPhysReg> MipsABIInfo::GetByValArgRegs() const {
     return ArrayRef(O32IntRegs);
   if (IsN32() || IsN64())
     return ArrayRef(Mips64IntRegs);
+  if (IsP32())
+    return ArrayRef(P32IntRegs);
   llvm_unreachable("Unhandled ABI");
 }
 
@@ -50,13 +56,15 @@ ArrayRef<MCPhysReg> MipsABIInfo::getVarArgRegs(bool isGP64bit) const {
   }
   if (IsN32() || IsN64())
     return ArrayRef(Mips64IntRegs);
+  if (IsP32())
+    return ArrayRef(P32IntRegs);
   llvm_unreachable("Unhandled ABI");
 }
 
 unsigned MipsABIInfo::GetCalleeAllocdArgSizeInBytes(CallingConv::ID CC) const {
   if (IsO32())
     return CC != CallingConv::Fast ? 16 : 0;
-  if (IsN32() || IsN64())
+  if (IsN32() || IsN64() || IsP32())
     return 0;
   llvm_unreachable("Unhandled ABI");
 }
@@ -68,37 +76,45 @@ MipsABIInfo MipsABIInfo::computeTargetABI(const Triple &TT, StringRef ABIName) {
     return MipsABIInfo::N32();
   if (ABIName.starts_with("n64"))
     return MipsABIInfo::N64();
+  if (ABIName.starts_with("p32"))
+    return MipsABIInfo::P32();
   if (TT.isABIN32())
     return MipsABIInfo::N32();
   assert(ABIName.empty() && "Unknown ABI option for MIPS");
 
   if (TT.isMIPS64())
     return MipsABIInfo::N64();
+  if (TT.isNanoMips())
+    return MipsABIInfo::P32();
   return MipsABIInfo::O32();
 }
 
 unsigned MipsABIInfo::GetStackPtr() const {
-  return ArePtrs64bit() ? Mips::SP_64 : Mips::SP;
+  return ArePtrs64bit() ? Mips::SP_64 : IsP32() ? Mips::SP_NM : Mips::SP;
 }
 
 unsigned MipsABIInfo::GetFramePtr() const {
-  return ArePtrs64bit() ? Mips::FP_64 : Mips::FP;
+  return ArePtrs64bit() ? Mips::FP_64 : IsP32() ? Mips::FP_NM : Mips::FP;
 }
 
 unsigned MipsABIInfo::GetBasePtr() const {
-  return ArePtrs64bit() ? Mips::S7_64 : Mips::S7;
+  return ArePtrs64bit() ? Mips::S7_64 : IsP32() ? Mips::S7_NM : Mips::S7;
 }
 
 unsigned MipsABIInfo::GetGlobalPtr() const {
-  return ArePtrs64bit() ? Mips::GP_64 : Mips::GP;
+  return ArePtrs64bit() ? Mips::GP_64 : IsP32() ? Mips::GP_NM : Mips::GP;
 }
 
 unsigned MipsABIInfo::GetNullPtr() const {
-  return ArePtrs64bit() ? Mips::ZERO_64 : Mips::ZERO;
+  return ArePtrs64bit() ? Mips::ZERO_64 : IsP32() ? Mips::ZERO_NM : Mips::ZERO;
+}
+
+unsigned MipsABIInfo::GetRetReg() const {
+  return ArePtrs64bit() ? Mips::RA_64 : IsP32() ? Mips::RA_NM : Mips::RA;
 }
 
 unsigned MipsABIInfo::GetZeroReg() const {
-  return AreGprs64bit() ? Mips::ZERO_64 : Mips::ZERO;
+  return AreGprs64bit() ? Mips::ZERO_64 : IsP32() ? Mips::ZERO_NM : Mips::ZERO;
 }
 
 unsigned MipsABIInfo::GetPtrAdduOp() const {

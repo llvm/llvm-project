@@ -150,7 +150,8 @@ def FeatureMips64r6    : SubtargetFeature<"mips64r6", "MipsArchVersion",
                                  FeatureNaN2008, FeatureAbs2008]>;
 def FeatureNanoMips    : SubtargetFeature<"nanomips", "MipsArchVersion",
                                 "NanoMips",
-                                "NanoMips ISA Support [experimental]">;
+                                "NanoMips ISA Support [experimental]",
+                                [FeatureNoABICalls]>;
 def FeatureSym32       : SubtargetFeature<"sym32", "HasSym32", "true",
                                           "Symbols are 32 bit on Mips64">;
 
