@@ -485,7 +485,11 @@ Error olPlatformRegisterRPCCallback_impl(ol_platform_handle_t Platform,
                                          ol_platform_rpc_cb_t Callback) {
   if (Error Err = Platform->init())
     return Err;
-  Platform->Plugin->getRPCServer().registerCallback(Callback);
+  GenericPluginTy *Plugin = Platform->Plugin.get();
+  if (Plugin->getNumDevices() == 0)
+    return Error::success();
+
+  Plugin->getRPCServer().registerCallback(Callback);
   return Error::success();
 }
 
