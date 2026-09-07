@@ -28,15 +28,11 @@ global:
     "llvm::omp::target::plugin::GenericPluginTy::flush_queue(omp_interop_val_t*)";
     "llvm::omp::target::plugin::GenericPluginTy::get_function(__tgt_device_binary, char const*, void**)";
     "llvm::omp::target::plugin::GenericPluginTy::get_global(__tgt_device_binary, unsigned long, char const*, void**)";
-    "llvm::omp::target::plugin::GenericPluginTy::init()";
-    "llvm::omp::target::plugin::GenericPluginTy::deinit()";
-    "llvm::omp::target::plugin::GenericPluginTy::init_device(int)";
     "llvm::omp::target::plugin::GenericPluginTy::initialize_record_replay(int, long, void*, bool, bool, bool, bool, char const*, char const*)";
     "llvm::omp::target::plugin::GenericPluginTy::isDeviceCompatible(int, llvm::StringRef)";
     "llvm::omp::target::plugin::GenericPluginTy::isPluginCompatible(llvm::StringRef)";
     "llvm::omp::target::plugin::GenericPluginTy::is_accessible_ptr(int, void const*, unsigned long)";
     "llvm::omp::target::plugin::GenericPluginTy::is_data_exchangable(int, int)";
-    "llvm::omp::target::plugin::GenericPluginTy::is_device_initialized(int) const";
     "llvm::omp::target::plugin::GenericPluginTy::is_initialized() const";
     "llvm::omp::target::plugin::GenericPluginTy::launch_kernel(int, void*, llvm::omp::target::plugin::KernelLaunchArgsTy&, __tgt_async_info*)";
     "llvm::omp::target::plugin::GenericPluginTy::load_binary(int, __tgt_device_image*, __tgt_device_binary*)";
@@ -58,6 +54,7 @@ global:
     # Temporary helpers to help transition of libomptarget to liboffload.
     __ol_tgt_setInfoFlag;
     __ol_tgt_GetPluginFromPlatform;
+    __ol_tgt_GetPluginDeviceId;
   };
 local:
   *;
