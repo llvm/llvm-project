@@ -1101,7 +1101,7 @@ inline std::string FunctionSelector::format() const {
 }
 
 struct FunctionTableSelectorKey {
-  std::optional<llvm::SmallVector<IdentifierID, 2>> Parameters;
+  std::optional<llvm::SmallVector<IdentifierID, 4>> Parameters;
   std::optional<FunctionObjectSelector> Object;
 };
 
