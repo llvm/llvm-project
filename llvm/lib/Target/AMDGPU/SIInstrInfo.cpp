@@ -1172,10 +1172,12 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       WideOpcode = AMDGPU::V_PK_MOV_B32;
   }
 
-  const TargetRegisterClass *WideRC{};
+  const TargetRegisterClass *WideDstRC{}, *WideSrcRC{};
   if (WideOpcode != AMDGPU::INSTRUCTION_LIST_END) {
+    const MCInstrDesc &Desc = get(WideOpcode);
     unsigned SrcOp = WideOpcode == AMDGPU::V_PK_MOV_B32 ? 2 : 1;
-    WideRC = getRegClass(get(WideOpcode), SrcOp);
+    WideDstRC = getRegClass(Desc, 0);
+    WideSrcRC = getRegClass(Desc, SrcOp);
   }
 
   // If there is an overlap, we can't kill the super-register on the last
@@ -1200,7 +1202,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     unsigned SubIdx =
         Forward ? SubIndices[Idx] : SubIndices[SubIndices.size() - Idx - 1];
 
-    if (WideRC && Idx + 1 < SubIndices.size()) {
+    if (WideDstRC && WideSrcRC && Idx + 1 < SubIndices.size()) {
       unsigned Channel = RI.getChannelFromSubReg(SubIdx);
       if (!Forward)
         --Channel;
@@ -1209,8 +1211,8 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       Register WideDst = RI.getSubReg(DestReg, WideSubIdx);
       Register WideSrc = RI.getSubReg(SrcReg, WideSubIdx);
 
-      if (WideDst && WideSrc && WideRC->contains(WideDst) &&
-          WideRC->contains(WideSrc)) {
+      if (WideDst && WideSrc && WideDstRC->contains(WideDst) &&
+          WideSrcRC->contains(WideSrc)) {
         SubIdx = WideSubIdx;
         NumRegs = 2;
         ThisOpcode = WideOpcode;
