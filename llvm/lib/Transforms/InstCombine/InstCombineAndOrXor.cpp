@@ -3430,12 +3430,63 @@ static Value *foldAndOrOfICmpEqConstantAndICmp(ICmpInst *LHS, ICmpInst *RHS,
       Other);
 }
 
+static Value *foldSignedAddOverflowCheck(ICmpInst *Cmp0, ICmpInst *Cmp1,
+                                         bool IsAnd,
+                                         InstCombiner::BuilderTy &Builder) {
+  if (!IsAnd)
+    return nullptr;
+
+  auto IsSignBitCheck = [](ICmpInst *Cmp, bool Expected) {
+    const APInt *C;
+    if (!match(Cmp->getOperand(1), m_APInt(C)))
+      return false;
+    bool TrueIfSigned;
+    if (!isSignBitCheck(Cmp->getPredicate(), *C, TrueIfSigned))
+      return false;
+    return TrueIfSigned == Expected;
+  };
+
+  ICmpInst *SignEqCmp = nullptr;
+  ICmpInst *SignDiffCmp = nullptr;
+  if (IsSignBitCheck(Cmp0, false) && IsSignBitCheck(Cmp1, true)) {
+    SignEqCmp = Cmp0;
+    SignDiffCmp = Cmp1;
+  } else if (IsSignBitCheck(Cmp0, true) && IsSignBitCheck(Cmp1, false)) {
+    SignEqCmp = Cmp1;
+    SignDiffCmp = Cmp0;
+  } else {
+    return nullptr;
+  }
+
+  Value *A, *B;
+  if (!match(SignEqCmp->getOperand(0), m_c_Xor(m_Value(A), m_Value(B))))
+    return nullptr;
+
+  Value *Sum, *AOrB;
+  if (!match(SignDiffCmp->getOperand(0), m_c_Xor(m_Value(Sum), m_Value(AOrB))))
+    return nullptr;
+
+  if (AOrB != A && AOrB != B)
+    return nullptr;
+
+  if (!match(Sum, m_c_Add(m_Specific(A), m_Specific(B))))
+    return nullptr;
+
+  Function *F = Intrinsic::getOrInsertDeclaration(
+      Cmp0->getModule(), Intrinsic::sadd_with_overflow, A->getType());
+  Value *Call = Builder.CreateCall(F, {A, B});
+  return Builder.CreateExtractValue(Call, 1);
+}
+
 /// Fold (icmp)&(icmp) or (icmp)|(icmp) if possible.
 /// If IsLogical is true, then the and/or is in select form and the transform
 /// must be poison-safe.
 Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
                                           Instruction &I, bool IsAnd,
                                           bool IsLogical) {
+  if (Value *V = foldSignedAddOverflowCheck(LHS, RHS, IsAnd, Builder))
+    return V;
+
   const SimplifyQuery Q = SQ.getWithInstruction(&I);
 
   ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
