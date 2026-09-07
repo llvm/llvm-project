@@ -11,6 +11,8 @@
 
 double tan(double);
 double exp(double);
+double atan2(double, double);
+double expm1(double);
 float tanf(float);
 double cbrt(double);
 
@@ -25,6 +27,18 @@ double call_exp(double x) { return exp(x) + x; }
 // AMD: callq{{.*}}amd_fastexp
 // STD-LABEL: call_exp:
 // STD: callq{{.*}}exp
+
+double call_atan2(double y, double x) { return atan2(y, x) + x; }
+// AMD-LABEL: call_atan2:
+// AMD: callq{{.*}}amd_fastatan2
+// STD-LABEL: call_atan2:
+// STD: callq{{.*}}atan2
+
+double call_expm1(double x) { return expm1(x) + x; }
+// AMD-LABEL: call_expm1:
+// AMD: callq{{.*}}amd_fastexpm1
+// STD-LABEL: call_expm1:
+// STD: callq{{.*}}expm1
 
 // Single-precision variant is rewritten too.
 float call_tanf(float x) { return tanf(x) + x; }

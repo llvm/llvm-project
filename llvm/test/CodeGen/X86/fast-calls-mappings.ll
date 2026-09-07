@@ -13,7 +13,10 @@ declare float @powf(float, float)
 declare double @acos(double)
 declare float @acosf(float)
 declare double @atan(double)
+declare double @atan2(double, double)
+declare double @__atan2_finite(double, double)
 declare double @cos(double)
+declare double @expm1(double)
 declare float @sinf(float)
 declare double @erf(double)
 declare double @__exp_finite(double)
@@ -56,6 +59,23 @@ define double @call_atan(double %x) #0 {
 }
 ; AMD-LABEL: call_atan:
 ; AMD: callq{{.*}}amd_fastatan
+
+; Two-argument inverse-trig: atan2 -> amd_fastatan2
+define double @call_atan2(double %y, double %x) #0 {
+  %r = call double @atan2(double %y, double %x)
+  %a = fadd double %r, %x
+  ret double %a
+}
+; AMD-LABEL: call_atan2:
+; AMD: callq{{.*}}amd_fastatan2
+
+define double @call_atan2_finite(double %y, double %x) #0 {
+  %r = call double @__atan2_finite(double %y, double %x)
+  %a = fadd double %r, %x
+  ret double %a
+}
+; AMD-LABEL: call_atan2_finite:
+; AMD: callq{{.*}}amd_fastatan2
 
 ; Single-precision inverse-trig: acosf -> amd_fastacosf
 define float @call_acosf(float %x) #0 {
@@ -110,6 +130,15 @@ define double @call_exp_finite(double %x) #0 {
 }
 ; AMD-LABEL: call_exp_finite:
 ; AMD: callq{{.*}}amd_fastexp
+
+; expm1(double) -> amd_fastexpm1
+define double @call_expm1(double %x) #0 {
+  %r = call double @expm1(double %x)
+  %a = fadd double %r, %x
+  ret double %a
+}
+; AMD-LABEL: call_expm1:
+; AMD: callq{{.*}}amd_fastexpm1
 
 ; cbrt has no fast library mapping and must not be rewritten.
 define double @call_cbrt_unmapped(double %x) #0 {
