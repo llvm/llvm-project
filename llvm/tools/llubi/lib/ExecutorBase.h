@@ -60,6 +60,10 @@ struct Frame {
   SmallVector<IntrusiveRefCntPtr<MemoryObject>> Allocas;
   // Values of arguments and executed instructions in this function.
   DenseMap<Value *, AnyValue> ValueMap;
+  // The provenances to be updated after the function returns or unwinds.
+  using CapturedProvenanceList =
+      SmallVector<std::pair<IntrusiveRefCntPtr<Provenance>, CaptureInfo>>;
+  CapturedProvenanceList CapturedProvenances;
 
   // Reserved for in-flight subroutines.
   Function *ResolvedCallee = nullptr;
@@ -71,7 +75,8 @@ struct Frame {
 
   Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
         ArrayRef<AnyValue> Args, AnyValue &RetVal,
-        const TargetLibraryInfoImpl &TLIImpl);
+        const TargetLibraryInfoImpl &TLIImpl,
+        CapturedProvenanceList CapturedProvenance);
 };
 
 enum class DiagnosticKind {

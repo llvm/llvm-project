@@ -107,8 +107,10 @@ static bool violatesDereferenceableBytesAttr(const AnyValue &V, uint64_t Bytes,
     return true;
   }
 
-  auto *MO = Ctx.checkProvenance(Ptr, [&](const Provenance &) {
-    // TODO: check read_provenance
+  auto *MO = Ctx.checkProvenance(Ptr, [&](const Provenance &Prov) {
+    CaptureComponents CC = Prov.capability();
+    if (!capturesAnyProvenance(CC))
+      return false;
     // TODO: check nofree for attributes/metadata.
     return true;
   });
@@ -924,7 +926,8 @@ public:
       : ExecutorBase(C, H), DL(Ctx.getDataLayout()),
         Lib(Ctx, Handler, DL, static_cast<ExecutorBase &>(*this)) {
     CallStack.emplace_back(F, /*CallSite=*/nullptr, /*LastFrame=*/nullptr, Args,
-                           RetVal, Ctx.getTLIImpl());
+                           RetVal, Ctx.getTLIImpl(),
+                           Frame::CapturedProvenanceList{});
   }
 
   void visitReturnInst(ReturnInst &RI) {
@@ -2099,6 +2102,7 @@ public:
 
     // Handle parameter attributes (Attributes from resolved callee should be
     // applied if available).
+    Frame::CapturedProvenanceList Captures;
     for (auto [I, Arg] : enumerate(CB.args())) {
       Type *ArgTy = Arg->getType();
       AnyValue &ArgVal = CalleeArgs[I];
@@ -2158,6 +2162,17 @@ public:
         }
       }
       handleAttributes(ArgTy, ArgVal, AttrsAtCallSite, AttrsAtCallee);
+
+      // Handle captures
+      if (ArgVal.isPointer() && !CB.isByValArgument(I)) {
+        CaptureInfo CI =
+            AttrsAtCallSite.getCaptureInfo() & AttrsAtCallee.getCaptureInfo();
+        if (CI != CaptureInfo::all()) {
+          auto NewProv = ArgVal.asPointer().provenance().clone();
+          Captures.emplace_back(NewProv, CI);
+          ArgVal = ArgVal.asPointer().getWithNewProvenance(std::move(NewProv));
+        }
+      }
     }
 
     CurrentFrame->ResolvedCallee = Callee;
@@ -2181,7 +2196,7 @@ public:
       AnyValue &RetVal = CurrentFrame->CalleeRetVal;
       CurrentFrame->State = FrameState::Pending;
       CallStack.emplace_back(*Callee, &CB, CurrentFrame, Args, RetVal,
-                             Ctx.getTLIImpl());
+                             Ctx.getTLIImpl(), std::move(Captures));
     }
   }
 
@@ -2867,6 +2882,23 @@ public:
       if (Top.State == FrameState::Exit) {
         assert((Top.Func.getReturnType()->isVoidTy() || !Top.RetVal.isNone()) &&
                "Expected return value to be set on function exit.");
+        // Apply captures attributes
+        for (auto &[Prov, CI] : Top.CapturedProvenances) {
+          if (Top.RetVal.isPointer()) {
+            auto &PtrVal = Top.RetVal.asPointer();
+            if (&PtrVal.provenance() == Prov.get()) {
+              CaptureComponents Capability = PtrVal.provenance().capability();
+              if ((Capability & CI.getRetComponents()) !=
+                  (Capability & CI.getOtherComponents())) {
+                // We have to create a copy of provenance.
+                auto NewProv = Prov->clone();
+                NewProv->captureCapability(CI.getRetComponents());
+                Top.RetVal = PtrVal.getWithNewProvenance(std::move(NewProv));
+              }
+            }
+          }
+          Prov->captureCapability(CI.getOtherComponents());
+        }
         Handler.onFunctionExit(Top.Func, Top.RetVal);
         // Free stack objects allocated in this frame.
         for (auto &Obj : Top.Allocas)
