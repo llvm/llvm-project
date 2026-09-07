@@ -1,5 +1,5 @@
-## Show that the --disassemble-symbols switch takes demangled names when
-## --demangle is specified, otherwise the switch takes mangled names.
+## Show that --disassemble-symbols and --disassemble=<symbol> take demangled
+## names when --demangle is specified, otherwise they take mangled names.
 
 # RUN: yaml2obj %s -o %t.o
 
@@ -19,6 +19,15 @@
 # RUN: llvm-objdump -C --disassemble-symbols='std::allocator<wchar_t>::allocator()' %t.o 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=DEMANGLED-MULTI
 
+## --disassemble=<symbol> preserves commas and implies disassembly. It can be
+## repeated or combined with --disassemble-symbols to select multiple symbols.
+# RUN: llvm-objdump -C --disassemble='foo(int, int)' %t.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=COMMA --implicit-check-not=warning: --implicit-check-not='>:'
+# RUN: llvm-objdump -C --disassemble='foo(int, int)' --disassemble='bar(int, int)' %t.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=COMMA,SECOND --implicit-check-not=warning: --implicit-check-not='>:'
+# RUN: llvm-objdump -C --disassemble-symbols='foo()' --disassemble='foo(int, int)' %t.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefixes=DEMANGLED,COMMA --implicit-check-not=warning: --implicit-check-not='>:'
+
 # MANGLED: <_Z3foov>:
 # MANGLED-MISS: warning: '{{.*}}': failed to disassemble missing symbol foo
 
@@ -31,6 +40,9 @@
 # DEMANGLED-MULTI: <std::allocator<wchar_t>::allocator()>:
 # DEMANGLED-MULTI: <std::allocator<wchar_t>::allocator()>:
 
+# COMMA:  <foo(int, int)>:
+# SECOND: <bar(int, int)>:
+
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64
@@ -42,7 +54,7 @@ Sections:
     Type:  SHT_PROGBITS
     Flags: [SHF_ALLOC, SHF_EXECINSTR]
     Address: 0x1000
-    Content: 9090909090
+    Content: 90909090909090
 Symbols:
   - Name:    _Z3foov
     Value:   0x1000
@@ -58,4 +70,10 @@ Symbols:
     Section: .text
   - Name:    _ZNSaIwEC2Ev
     Value:   0x1004
+    Section: .text
+  - Name:    _Z3fooii
+    Value:   0x1005
+    Section: .text
+  - Name:    _Z3barii
+    Value:   0x1006
     Section: .text

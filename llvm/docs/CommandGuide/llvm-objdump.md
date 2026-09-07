@@ -37,12 +37,26 @@ Disassemble all sections found in the input files.
 :::
 
 :::{option} --disassemble-symbols=<symbol1[,symbol2,...]>
-:::
-
-:::{option} --disassemble=symbol1 --disassemble=symbol2 ...
 Disassemble only the specified symbols. Takes demangled symbol names when
 {option}`--demangle` is specified, otherwise takes mangled symbol names.
 Implies {option}`--disassemble`.
+
+Each argument is split on commas. To select a symbol whose name contains commas,
+use `--disassemble=<symbol>` instead.
+:::
+
+:::{option} --disassemble=<symbol>
+Disassemble only the specified symbol. Takes a demangled symbol name when
+{option}`--demangle` is specified, otherwise takes a mangled symbol name.
+Implies {option}`--disassemble`.
+
+The argument is a single symbol name, including any commas. Repeat the option to
+select multiple symbols, for example:
+
+```sh
+llvm-objdump --demangle --disassemble='foo(int, int)' \
+  --disassemble='bar(int, int)' input.o
+```
 :::
 
 :::{option} --dwarf=<value>
