@@ -337,6 +337,10 @@ class IRTranslatorImpl {
   /// Common code for translating normal calls or invokes.
   bool translateCallBase(const CallBase &CB, MachineIRBuilder &MIRBuilder);
 
+  /// Translate libcalls for which TargetLibraryInfo enables optimized codegen.
+  bool translateOptimizedLibCall(const CallInst &CI,
+                                 MachineIRBuilder &MIRBuilder);
+
   /// Translate call instruction.
   /// \pre \p U is a call instruction.
   bool translateCall(const User &U, MachineIRBuilder &MIRBuilder);
@@ -3613,6 +3617,42 @@ bool IRTranslatorImpl::translateCallBase(const CallBase &CB,
   return Success;
 }
 
+bool IRTranslatorImpl::translateOptimizedLibCall(const CallInst &CI,
+                                                 MachineIRBuilder &MIRBuilder) {
+  const Function *F = CI.getCalledFunction();
+  if (!F || F->hasLocalLinkage() || F->isIntrinsic() || CI.isNoBuiltin() ||
+      !F->hasName())
+    return false;
+
+  LibFunc Func = LibInfo->getLibFunc(*F);
+  if (!LibInfo->hasOptimizedCodeGen(Func))
+    return false;
+
+  unsigned Opcode;
+  switch (Func) {
+  default:
+    return false;
+  case LibFunc_sqrt:
+  case LibFunc_sqrtf:
+  case LibFunc_sqrtl:
+  case LibFunc_sqrt_finite:
+  case LibFunc_sqrtf_finite:
+  case LibFunc_sqrtl_finite:
+    Opcode = TargetOpcode::G_FSQRT;
+    break;
+  }
+
+  // The ordinary libcall is still required when it may set errno or when
+  // strict floating-point exception behavior is requested.
+  if (!CI.onlyReadsMemory() || CI.isStrictFP())
+    return false;
+
+  MIRBuilder.buildInstr(Opcode, {getOrCreateVReg(CI)},
+                        {getOrCreateVReg(*CI.getArgOperand(0))},
+                        MachineInstr::copyFlagsFromInstruction(CI));
+  return true;
+}
+
 bool IRTranslatorImpl::translateCall(const User &U,
                                      MachineIRBuilder &MIRBuilder) {
   if (!mayTranslateUserTypes(U))
@@ -3641,6 +3681,11 @@ bool IRTranslatorImpl::translateCall(const User &U,
 
   Intrinsic::ID ID = F ? F->getIntrinsicID() : Intrinsic::not_intrinsic;
   if (!F || ID == Intrinsic::not_intrinsic) {
+    if (translateOptimizedLibCall(CI, MIRBuilder)) {
+      diagnoseDontCall(CI);
+      return true;
+    }
+
     if (translateCallBase(CI, MIRBuilder)) {
       diagnoseDontCall(CI);
       return true;
