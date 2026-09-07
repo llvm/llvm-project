@@ -1057,6 +1057,10 @@ public:
   /// consecutive or part of an interleave group.
   bool isLegalMaskedLoadOrStore(Instruction *I, ElementCount VF) const;
 
+  /// Returns true if the target machine supports gather or scatter for \p I's
+  /// data type and alignment.
+  bool isLegalGatherOrScatter(Instruction *I, ElementCount VF) const;
+
   /// Check if \p Instr belongs to any interleaved access group.
   bool isAccessInterleaved(Instruction *Instr) const {
     return InterleaveInfo.isInterleaved(Instr);
@@ -2369,6 +2373,13 @@ bool LoopVectorizationCostModel::isLegalMaskedLoadOrStore(
                                          getLoadStoreAddressSpace(I));
 }
 
+bool LoopVectorizationCostModel::isLegalGatherOrScatter(Instruction *I,
+                                                        ElementCount VF) const {
+  assert((isa<LoadInst, StoreInst>(I)));
+  return Config.isLegalGatherOrScatter(isa<LoadInst>(I), getLoadStoreType(I),
+                                       getLoadStoreAlignment(I), VF);
+}
+
 bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
                                                          ElementCount VF) {
   if (!isPredicatedInst(I))
@@ -2392,7 +2403,7 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
     bool IsConsecutive = Legal->isConsecutivePtr(getLoadStoreType(I),
                                                  getLoadStorePointerOperand(I));
     return !(IsConsecutive && isLegalMaskedLoadOrStore(I, VF)) &&
-           !Config.isLegalGatherOrScatter(I, VF);
+           !isLegalGatherOrScatter(I, VF);
   }
   case Instruction::UDiv:
   case Instruction::SDiv:
@@ -4441,9 +4452,8 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         };
 
         const InstructionCost GatherScatterCost =
-            Config.isLegalGatherOrScatter(&I, VF)
-                ? getGatherScatterCost(&I, VF)
-                : InstructionCost::getInvalid();
+            isLegalGatherOrScatter(&I, VF) ? getGatherScatterCost(&I, VF)
+                                           : InstructionCost::getInvalid();
 
         // Load: Scalar load + broadcast
         // Store: Scalar store + isLoopInvariantStoreValue ? 0 : extract
@@ -4488,7 +4498,7 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
       }
 
       InstructionCost GatherScatterCost =
-          Config.isLegalGatherOrScatter(&I, VF)
+          isLegalGatherOrScatter(&I, VF)
               ? getGatherScatterCost(&I, VF) * NumAccesses
               : InstructionCost::getInvalid();
 
