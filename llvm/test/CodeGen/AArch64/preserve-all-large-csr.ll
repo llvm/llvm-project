@@ -21,6 +21,8 @@ define preserve_allcc void @trigger_stack_spill() {
 ; CHECK-LABEL: trigger_stack_spill:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp q31, q30, [sp, #-544]! // 32-byte Folded Spill
+; CHECK-NEXT:    stp x10, x9, [sp, #424] // 16-byte Folded Spill
+; CHECK-NEXT:    add x9, sp, #520
 ; CHECK-NEXT:    stp q29, q28, [sp, #32] // 32-byte Folded Spill
 ; CHECK-NEXT:    stp q27, q26, [sp, #64] // 32-byte Folded Spill
 ; CHECK-NEXT:    stp q25, q24, [sp, #96] // 32-byte Folded Spill
@@ -35,14 +37,12 @@ define preserve_allcc void @trigger_stack_spill() {
 ; CHECK-NEXT:    str x15, [sp, #384] // 8-byte Spill
 ; CHECK-NEXT:    stp x14, x13, [sp, #392] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x12, x11, [sp, #408] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x10, x9, [sp, #424] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x29, x30, [sp, #440] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x28, x27, [sp, #456] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x26, x25, [sp, #472] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x24, x23, [sp, #488] // 16-byte Folded Spill
 ; CHECK-NEXT:    stp x22, x21, [sp, #504] // 16-byte Folded Spill
-; CHECK-NEXT:    str x20, [sp, #520] // 8-byte Spill
-; CHECK-NEXT:    str x19, [sp, #528] // 8-byte Spill
+; CHECK-NEXT:    stp x20, x19, [x9] // 16-byte Folded Spill
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 560
 ; CHECK-NEXT:    .cfi_offset w19, -16
@@ -91,11 +91,11 @@ define preserve_allcc void @trigger_stack_spill() {
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
 ; CHECK-NEXT:    add sp, sp, #16
+; CHECK-NEXT:    add x19, sp, #520
 ; CHECK-NEXT:    ldp x22, x21, [sp, #504] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x19, [sp, #528] // 8-byte Reload
-; CHECK-NEXT:    ldp x24, x23, [sp, #488] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x20, [sp, #520] // 8-byte Reload
+; CHECK-NEXT:    ldp x20, x19, [x19] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldr x15, [sp, #384] // 8-byte Reload
+; CHECK-NEXT:    ldp x24, x23, [sp, #488] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x26, x25, [sp, #472] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x28, x27, [sp, #456] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp, #440] // 16-byte Folded Reload

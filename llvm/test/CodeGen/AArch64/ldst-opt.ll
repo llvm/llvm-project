@@ -1888,10 +1888,10 @@ define void @merge_zr32_2_offset(ptr %p) {
 ;
 ; STRICTALIGN-LABEL: merge_zr32_2_offset:
 ; STRICTALIGN:       // %bb.0: // %entry
-; STRICTALIGN-NEXT:    str wzr, [x0, #504]
-; STRICTALIGN-NEXT:    str wzr, [x0, #508]
-; STRICTALIGN-NEXT:    str wzr, [x0, #512]
-; STRICTALIGN-NEXT:    str wzr, [x0, #516]
+; STRICTALIGN-NEXT:    add x9, x0, #504
+; STRICTALIGN-NEXT:    stp wzr, wzr, [x9]
+; STRICTALIGN-NEXT:    add x9, x0, #512
+; STRICTALIGN-NEXT:    stp wzr, wzr, [x9]
 ; STRICTALIGN-NEXT:    ret
 entry:
   %p0 = getelementptr i32, ptr %p, i32 126
@@ -1917,9 +1917,9 @@ define void @no_merge_zr32_2_offset(ptr %p) {
 ;
 ; STRICTALIGN-LABEL: no_merge_zr32_2_offset:
 ; STRICTALIGN:       // %bb.0: // %entry
-; STRICTALIGN-NEXT:    str wzr, [x0, #4096]
-; STRICTALIGN-NEXT:    str wzr, [x0, #4100]
+; STRICTALIGN-NEXT:    add x9, x0, #1, lsl #12 // =4096
 ; STRICTALIGN-NEXT:    str wzr, [x0, #4104]
+; STRICTALIGN-NEXT:    stp wzr, wzr, [x9]
 ; STRICTALIGN-NEXT:    str wzr, [x0, #4108]
 ; STRICTALIGN-NEXT:    ret
 entry:
