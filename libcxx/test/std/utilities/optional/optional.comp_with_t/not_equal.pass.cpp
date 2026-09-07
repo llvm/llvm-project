@@ -6,18 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// REQUIRES: std-at-least-c++17
 // <optional>
 
 // template <class T, class U> constexpr bool operator!=(const optional<T>& x, const U& v);
 // template <class T, class U> constexpr bool operator!=(const U& v, const optional<T>& x);
 
 #include <optional>
+#include <type_traits>
 
 #include "test_comparisons.h"
 #include "test_macros.h"
 
 #if TEST_STD_VER >= 26
+#  define STATIC_ASSERT_OPTIONAL_CMP static_assert
+#else
+#  define STATIC_ASSERT_OPTIONAL_CMP LIBCPP_STATIC_ASSERT
+#endif
 
 struct tester {};
 
@@ -32,7 +37,7 @@ constexpr bool operator!=(const T& t, const tester& a) {
 
 template <class T, class U>
 constexpr std::optional<bool> try_cmp_neq(const T& t, const U& u) {
-  if constexpr (requires { t != u; })
+  if constexpr (HasOperatorNotEqual<const T, const U>)
     return t != u;
   else
     return {};
@@ -40,25 +45,23 @@ constexpr std::optional<bool> try_cmp_neq(const T& t, const U& u) {
 
 // Test SFINAE.
 
-static_assert(HasOperatorNotEqual<int, std::optional<int>>);
-static_assert(HasOperatorNotEqual<int, std::optional<EqualityComparable>>);
-static_assert(HasOperatorNotEqual<EqualityComparable, std::optional<EqualityComparable>>);
+STATIC_ASSERT_OPTIONAL_CMP(HasOperatorNotEqual<int, std::optional<int>>);
+STATIC_ASSERT_OPTIONAL_CMP(HasOperatorNotEqual<int, std::optional<EqualityComparable>>);
+STATIC_ASSERT_OPTIONAL_CMP(HasOperatorNotEqual<EqualityComparable, std::optional<EqualityComparable>>);
 
-static_assert(!HasOperatorNotEqual<NonComparable, std::optional<NonComparable>>);
-static_assert(!HasOperatorNotEqual<NonComparable, std::optional<EqualityComparable>>);
+STATIC_ASSERT_OPTIONAL_CMP(!HasOperatorNotEqual<NonComparable, std::optional<NonComparable>>);
+STATIC_ASSERT_OPTIONAL_CMP(!HasOperatorNotEqual<NonComparable, std::optional<EqualityComparable>>);
 
-static_assert(HasOperatorNotEqual<std::optional<int>, int>);
-static_assert(HasOperatorNotEqual<std::optional<EqualityComparable>, int>);
-static_assert(HasOperatorNotEqual<std::optional<EqualityComparable>, EqualityComparable>);
+STATIC_ASSERT_OPTIONAL_CMP(HasOperatorNotEqual<std::optional<int>, int>);
+STATIC_ASSERT_OPTIONAL_CMP(HasOperatorNotEqual<std::optional<EqualityComparable>, int>);
+STATIC_ASSERT_OPTIONAL_CMP(HasOperatorNotEqual<std::optional<EqualityComparable>, EqualityComparable>);
 
-static_assert(!HasOperatorNotEqual<std::optional<NonComparable>, NonComparable>);
-static_assert(!HasOperatorNotEqual<std::optional<EqualityComparable>, NonComparable>);
+STATIC_ASSERT_OPTIONAL_CMP(!HasOperatorNotEqual<std::optional<NonComparable>, NonComparable>);
+STATIC_ASSERT_OPTIONAL_CMP(!HasOperatorNotEqual<std::optional<EqualityComparable>, NonComparable>);
 
 // LWG4072: avoid ambiguity with optional's own comparison operators
-static_assert(try_cmp_neq(std::optional<int>{}, std::optional<tester>{}) == std::optional<bool>{});
-static_assert(try_cmp_neq(std::optional<int>{}, std::optional<int>{}) == std::optional<bool>{false});
-
-#endif
+STATIC_ASSERT_OPTIONAL_CMP(try_cmp_neq(std::optional<int>{}, std::optional<tester>{}) == std::optional<bool>{});
+STATIC_ASSERT_OPTIONAL_CMP(try_cmp_neq(std::optional<int>{}, std::optional<int>{}) == std::optional<bool>{false});
 
 using std::optional;
 
