@@ -595,9 +595,7 @@ public:
   __declspec(dllimport) static  const  int  StaticConstFieldEqualInit = 1;
   __declspec(dllimport) static  const  int  StaticConstFieldBraceInit{1};
   __declspec(dllimport) constexpr static int ConstexprField = 1;
-#if __cplusplus < 201703L && !defined(MS)
-  // expected-note@+2{{attribute is here}}
-#endif
+  // expected-note@+1{{attribute is here}}
   __declspec(dllimport) constexpr static int ConstexprFieldDef = 1;
 };
 
@@ -643,9 +641,7 @@ inline void ImportMembers::staticInlineDef() {}
 
        int  ImportMembers::StaticFieldDef; // expected-error{{definition of dllimport static field not allowed}}
 const  int  ImportMembers::StaticConstFieldDef = 1; // expected-error{{definition of dllimport static field not allowed}}
-#if __cplusplus < 201703L && !defined(MS)
-// expected-error@+2{{definition of dllimport static field not allowed}}
-#endif
+// expected-error@+1{{definition of dllimport static field not allowed}}
 constexpr int ImportMembers::ConstexprFieldDef;
 
 
@@ -682,10 +678,8 @@ __declspec(dllimport)        void ImportMemberDefs::staticInlineDecl() {}
 
 __declspec(dllimport)        int  ImportMemberDefs::StaticField; // expected-error{{definition of dllimport static field not allowed}} expected-note{{attribute is here}}
 __declspec(dllimport) const  int  ImportMemberDefs::StaticConstField = 1; // expected-error{{definition of dllimport static field not allowed}} expected-note{{attribute is here}}
-#if __cplusplus < 201703L && !defined(MS)
-// expected-error@+3{{definition of dllimport static field not allowed}}
-// expected-note@+2{{attribute is here}}
-#endif
+// expected-error@+2{{definition of dllimport static field not allowed}}
+// expected-note@+1{{attribute is here}}
 __declspec(dllimport) constexpr int ImportMemberDefs::ConstexprField;
 
 
@@ -900,6 +894,9 @@ struct ImportMemberTmpl {
   template<typename T> __declspec(dllimport) static const  int  StaticConstFieldEqualInit = 1;
   template<typename T> __declspec(dllimport) static const  int  StaticConstFieldBraceInit{1};
   template<typename T> __declspec(dllimport) constexpr static int ConstexprField = 1;
+#ifdef MS
+ // expected-note@+2{{attribute is here}}
+#endif
   template<typename T> __declspec(dllimport) constexpr static int ConstexprFieldDef = 1;
 #endif // __has_feature(cxx_variable_templates)
 };
@@ -926,7 +923,7 @@ template<typename T> inline void ImportMemberTmpl::staticInlineDef() {} // expec
 template<typename T>        int  ImportMemberTmpl::StaticFieldDef; // expected-error{{definition of dllimport static field not allowed}}
 template<typename T> const  int  ImportMemberTmpl::StaticConstFieldDef = 1; // expected-error{{definition of dllimport static field not allowed}}
 #ifdef MS
-template<typename T> constexpr int ImportMemberTmpl::ConstexprFieldDef;
+template<typename T> constexpr int ImportMemberTmpl::ConstexprFieldDef; // expected-error{{definition of dllimport static field not allowed}}
 #endif
 #endif // __has_feature(cxx_variable_templates)
 
@@ -1192,9 +1189,7 @@ public:
   __declspec(dllimport) static  const  int  StaticConstFieldEqualInit = 1;
   __declspec(dllimport) static  const  int  StaticConstFieldBraceInit{1};
   __declspec(dllimport) constexpr static int ConstexprField = 1;
-#if __cplusplus < 201703L && !defined(MS)
-  // expected-note@+2{{attribute is here}}
-#endif
+  // expected-note@+1{{attribute is here}}
   __declspec(dllimport) constexpr static int ConstexprFieldDef = 1;
 };
 
@@ -1239,9 +1234,7 @@ template<typename T>        void ImportClassTmplMembers<T>::staticInlineDecl() {
 
 template<typename T>        int  ImportClassTmplMembers<T>::StaticFieldDef; // expected-warning{{definition of dllimport static field}}
 template<typename T> const  int  ImportClassTmplMembers<T>::StaticConstFieldDef = 1; // expected-warning{{definition of dllimport static field}}
-#if __cplusplus < 201703L && !defined(MS)
-// expected-warning@+2{{definition of dllimport static field}}
-#endif
+// expected-warning@+1{{definition of dllimport static field}}
 template<typename T> constexpr int ImportClassTmplMembers<T>::ConstexprFieldDef;
 
 
@@ -1380,7 +1373,7 @@ struct ImportClsTmplMemTmpl {
   template<typename U> __declspec(dllimport) static const  int  StaticConstFieldBraceInit{1};
   template<typename U> __declspec(dllimport) constexpr static int ConstexprField = 1;
 #ifdef MS
-  template<typename U> __declspec(dllimport) constexpr static int ConstexprFieldDef = 1;
+  template<typename U> __declspec(dllimport) constexpr static int ConstexprFieldDef = 1;  // expected-note{{attribute is here}}
 #endif
 #endif // __has_feature(cxx_variable_templates)
 };
@@ -1407,7 +1400,7 @@ template<typename T> template<typename U> inline void ImportClsTmplMemTmpl<T>::s
 template<typename T> template<typename U>        int  ImportClsTmplMemTmpl<T>::StaticFieldDef; // expected-warning{{definition of dllimport static field}}
 template<typename T> template<typename U> const  int  ImportClsTmplMemTmpl<T>::StaticConstFieldDef = 1; // expected-warning{{definition of dllimport static field}}
 #ifdef MS
-template<typename T> template<typename U> constexpr int ImportClsTmplMemTmpl<T>::ConstexprFieldDef;
+template<typename T> template<typename U> constexpr int ImportClsTmplMemTmpl<T>::ConstexprFieldDef; // expected-warning {{definition of dllimport static field}}
 #endif
 #endif // __has_feature(cxx_variable_templates)
 
