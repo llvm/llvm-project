@@ -1817,41 +1817,13 @@ llvm::Error ASTReader::ReadSourceManagerBlock(ModuleFile &F) {
 
 llvm::Expected<SourceLocation::UIntTy>
 ASTReader::readSLocOffset(ModuleFile *F, unsigned Index) {
-  BitstreamCursor &Cursor = F->SLocEntryCursor;
-  SavedStreamPosition SavedPosition(Cursor);
-  if (llvm::Error Err = Cursor.JumpToBit(F->SLocEntryOffsetsBase +
-                                         F->SLocEntryOffsets[Index]))
-    return std::move(Err);
-
-  Expected<llvm::BitstreamEntry> MaybeEntry = Cursor.advance();
-  if (!MaybeEntry)
-    return MaybeEntry.takeError();
-
-  llvm::BitstreamEntry Entry = MaybeEntry.get();
-  if (Entry.Kind != llvm::BitstreamEntry::Record)
-    return llvm::createStringError(
-        std::errc::illegal_byte_sequence,
-        "incorrectly-formatted source location entry in AST file");
-
-  RecordData Record;
-  StringRef Blob;
-  Expected<unsigned> MaybeSLOC = Cursor.readRecord(Entry.ID, Record, &Blob);
-  if (!MaybeSLOC)
-    return MaybeSLOC.takeError();
-
-  switch (MaybeSLOC.get()) {
-  default:
-    return llvm::createStringError(
-        std::errc::illegal_byte_sequence,
-        "incorrectly-formatted source location entry in AST file");
-  case SM_SLOC_FILE_ENTRY:
-  case SM_SLOC_BUFFER_ENTRY:
-  case SM_SLOC_EXPANSION_ENTRY:
-    return F->SLocEntryBaseOffset + Record[0];
-  }
+  Expected<SLocEntryInfo> MaybeInfo = readSLocFileEntry(F, Index);
+  if (!MaybeInfo)
+    return MaybeInfo.takeError();
+  return MaybeInfo->Offset;
 }
 
-llvm::Expected<std::pair<SourceLocation::UIntTy, unsigned>>
+llvm::Expected<ASTReader::SLocEntryInfo>
 ASTReader::readSLocFileEntry(ModuleFile *F, unsigned Index) {
   BitstreamCursor &Cursor = F->SLocEntryCursor;
   SavedStreamPosition SavedPosition(Cursor);
@@ -1881,11 +1853,11 @@ ASTReader::readSLocFileEntry(ModuleFile *F, unsigned Index) {
         std::errc::illegal_byte_sequence,
         "incorrectly-formatted source location entry in AST file");
   case SM_SLOC_FILE_ENTRY:
-    return std::make_pair(F->SLocEntryBaseOffset + Record[0],
-                          unsigned(Record[4]));
+    return SLocEntryInfo{F->SLocEntryBaseOffset + Record[0],
+                         static_cast<unsigned>(Record[4])};
   case SM_SLOC_BUFFER_ENTRY:
   case SM_SLOC_EXPANSION_ENTRY:
-    return std::make_pair(F->SLocEntryBaseOffset + Record[0], 0u);
+    return SLocEntryInfo{F->SLocEntryBaseOffset + Record[0], 0};
   }
 }
 
@@ -1926,13 +1898,14 @@ ASTReader::LoadedFileLoc ASTReader::getLoadedInputFileLoc(ModuleFile &F,
         consumeError(MaybeEntry.takeError());
         continue;
       }
-      auto [Offset, ID] = *MaybeEntry;
-      if (!ID)
+      const SLocEntryInfo &Info = *MaybeEntry;
+      if (!Info.InputID)
         continue;
       // A module writes its entries in order, so the first entry naming an
       // input file is the one we want.
       Locs.try_emplace(
-          ID, LoadedFileLoc{FileID::get(F.SLocEntryBaseID + I), Offset});
+          Info.InputID,
+          LoadedFileLoc{FileID::get(F.SLocEntryBaseID + I), Info.Offset});
     }
     Known = LoadedInputFileLocs.try_emplace(&F, std::move(Locs)).first;
   }

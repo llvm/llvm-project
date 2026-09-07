@@ -1484,10 +1484,17 @@ private:
   void buildLoadedInputFiles();
   LoadedFileLoc getLoadedInputFileLoc(ModuleFile &F, unsigned InputID);
 
-  /// Read the offset and input file index out of the file entry at local index
-  /// \p Index in \p F. The index is zero for an entry that is not a file.
-  llvm::Expected<std::pair<SourceLocation::UIntTy, unsigned>>
-  readSLocFileEntry(ModuleFile *F, unsigned Index);
+  /// The offset an SLoc entry's locations start at, and the index of the input
+  /// file it names. \c InputID is zero for an entry that is not a file.
+  struct SLocEntryInfo {
+    SourceLocation::UIntTy Offset = 0;
+    unsigned InputID = 0;
+  };
+
+  /// Read the offset and input file index out of the SLoc entry at local index
+  /// \p Index in \p F.
+  llvm::Expected<SLocEntryInfo> readSLocFileEntry(ModuleFile *F,
+                                                  unsigned Index);
 
 public:
   /// Get the buffer for resolving paths.

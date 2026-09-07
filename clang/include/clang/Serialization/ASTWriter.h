@@ -546,6 +546,10 @@ private:
   /// the loaded copy we point at. This is \c Begin-LoadedBase, always negative
   /// since loaded offsets sit above local ones, and zero for a range with no
   /// copy.
+  ///
+  /// Unlike the two vectors above, this one is indexed by range, so entry
+  /// \c I belongs to \c NonAffectingRanges[I]. Those two carry a leading zero
+  /// and hold the adjustment that applies before the range of the same index.
   std::vector<int64_t> NonAffectingRedirectAdjustments;
 
   /// Whether the control block has been written. It records import locations,
@@ -570,6 +574,10 @@ private:
   /// Returns \p Loc translated into the module file that already has its file,
   /// or an invalid location if we kept the file.
   SourceLocation getRedirectedLocation(SourceLocation Loc) const;
+
+  /// Returns the index of the first non-affecting range that does not end
+  /// before \p Offset, or \c NonAffectingRanges.size() if every range does.
+  unsigned getNonAffectingRangeLowerBound(SourceLocation::UIntTy Offset) const;
 
   /// Returns an adjusted \c FileID, accounting for any non-affecting input
   /// files.

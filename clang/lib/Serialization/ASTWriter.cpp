@@ -5576,8 +5576,9 @@ void ASTWriter::computeNonAffectingInputFiles() {
 
   // Unlike a SourceLocation, a FileID is written as an index into our own SLoc
   // table, so it cannot name a file we leave out. Collect the files something
-  // still refers to by FileID. Only a local file can be named that way, so we
-  // keep the same checks the loops that write these tables make.
+  // still refers to by FileID, mirroring the conditions under which the loops
+  // that write these tables emit one. Only local files can be named that way,
+  // and we skip the invalid FileID so it never becomes a key here.
   llvm::DenseSet<FileID> NamedFileIDs;
   if (SrcMgr.getMainFileID().isValid())
     NamedFileIDs.insert(SrcMgr.getMainFileID());
@@ -5586,7 +5587,7 @@ void ASTWriter::computeNonAffectingInputFiles() {
       if (L.first.ID > 0)
         NamedFileIDs.insert(L.first);
   for (const auto &F : PP->getDiagnostics().DiagStatesByLoc.Files)
-    if (F.second.HasLocalTransitions && F.first.isValid())
+    if (F.first.isValid() && F.second.HasLocalTransitions)
       NamedFileIDs.insert(F.first);
 
   unsigned FileIDAdjustment = 0;
@@ -5676,8 +5677,12 @@ void ASTWriter::computeNonAffectingInputFiles() {
 
     IsSLocAffecting[I] = false;
     IsSLocFileEntryAffecting[I] = true;
-    MarkNonAffecting(FID, int64_t(SLoc->getOffset()) - int64_t(Loaded.Offset));
+    MarkNonAffecting(FID, static_cast<int64_t>(SLoc->getOffset()) -
+                              static_cast<int64_t>(Loaded.Offset));
   }
+
+  assert(NonAffectingRedirectAdjustments.size() == NonAffectingRanges.size() &&
+         "Every non-affecting range needs a redirect adjustment");
 
   if (!PP->getHeaderSearchInfo().getHeaderSearchOpts().ModulesIncludeVFSUsage)
     return;
@@ -6851,25 +6856,20 @@ SourceLocation ASTWriter::getRedirectedLocation(SourceLocation Loc) const {
   if (PP->getSourceManager().isLoadedOffset(Offset))
     return SourceLocation();
 
-  // The same search getAdjustment does.
-  auto Contains = [](const SourceRange &Range, SourceLocation::UIntTy Offset) {
-    return Range.getEnd().getOffset() < Offset;
-  };
-  auto It = llvm::lower_bound(NonAffectingRanges, Offset, Contains);
-  if (It == NonAffectingRanges.end())
+  unsigned Idx = getNonAffectingRangeLowerBound(Offset);
+  if (Idx == NonAffectingRanges.size())
     return SourceLocation();
 
-  // lower_bound also lands here for an offset before the range, so check that
-  // the offset really is inside it.
-  if (Offset < It->getBegin().getOffset())
+  // The search only rules out ranges ending before the offset, so check that
+  // the offset really is inside the one we landed on.
+  if (Offset < NonAffectingRanges[Idx].getBegin().getOffset())
     return SourceLocation();
 
-  unsigned Idx = std::distance(NonAffectingRanges.begin(), It);
   int64_t Adjustment = NonAffectingRedirectAdjustments[Idx];
   if (!Adjustment)
     return SourceLocation();
-  return SourceLocation::getFromRawEncoding(
-      static_cast<SourceLocation::UIntTy>(int64_t(Offset) - Adjustment));
+  return SourceLocation::getFileLoc(static_cast<SourceLocation::UIntTy>(
+      static_cast<int64_t>(Offset) - Adjustment));
 }
 
 SourceLocation ASTWriter::getAdjustedLocation(SourceLocation Loc) const {
@@ -6910,13 +6910,17 @@ ASTWriter::getAdjustment(SourceLocation::UIntTy Offset) const {
   if (Offset < NonAffectingRanges.front().getBegin().getOffset())
     return 0;
 
-  auto Contains = [](const SourceRange &Range, SourceLocation::UIntTy Offset) {
+  return NonAffectingOffsetAdjustments[getNonAffectingRangeLowerBound(Offset)];
+}
+
+unsigned
+ASTWriter::getNonAffectingRangeLowerBound(SourceLocation::UIntTy Offset) const {
+  auto EndsBefore = [](const SourceRange &Range,
+                       SourceLocation::UIntTy Offset) {
     return Range.getEnd().getOffset() < Offset;
   };
-
-  auto It = llvm::lower_bound(NonAffectingRanges, Offset, Contains);
-  unsigned Idx = std::distance(NonAffectingRanges.begin(), It);
-  return NonAffectingOffsetAdjustments[Idx];
+  auto It = llvm::lower_bound(NonAffectingRanges, Offset, EndsBefore);
+  return std::distance(NonAffectingRanges.begin(), It);
 }
 
 void ASTWriter::AddFileID(FileID FID, RecordDataImpl &Record) {
