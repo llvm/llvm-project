@@ -3710,11 +3710,11 @@ static bool addrMayUseNonFixedFrameIndex(SDValue Addr,
 bool X86DAGToDAGISel::checkTCRetEnoughRegs(SDNode *N) const {
   assert(N->getOpcode() == X86ISD::TC_RETURN);
   // X86tcret args: (*chain, ptr, imm, regs..., glue)
-  auto *Load = cast<LoadSDNode>(N->getOperand(1));
+  const SDValue &BasePtr = cast<LoadSDNode>(N->getOperand(1))->getBasePtr();
 
   // The tail call executes after the epilogue, where only fixed stack objects
   // can still be addressed (the stack may end up realigned).
-  if (addrMayUseNonFixedFrameIndex(Load->getBasePtr(), MF->getFrameInfo()))
+  if (addrMayUseNonFixedFrameIndex(BasePtr, MF->getFrameInfo()))
     return false;
 
   // Check that there is enough volatile registers to load the callee address.
@@ -3748,7 +3748,6 @@ bool X86DAGToDAGISel::checkTCRetEnoughRegs(SDNode *N) const {
   if (Subtarget->is32Bit()) {
     // FIXME: This was carried from X86tcret_1reg which was used for 32-bit,
     // but it could apply to 64-bit too.
-    const SDValue &BasePtr = Load->getBasePtr();
     if (isa<FrameIndexSDNode>(BasePtr)) {
       LoadGPRs -= 2; // Base is fixed index off ESP; no regs needed.
     } else if (BasePtr.getOpcode() == X86ISD::Wrapper &&
