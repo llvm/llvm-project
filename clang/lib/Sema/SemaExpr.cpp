@@ -1757,10 +1757,6 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
 
   // At this point, we have two different arithmetic types.
 
-  if ((LHSType->isFixedPointType() && RHSType->isBitIntType()) ||
-      (LHSType->isBitIntType() && RHSType->isFixedPointType()))
-    return QualType();
-
   // Diagnose attempts to convert between __ibm128, __float128 and long double
   // where such conversions currently can't be handled.
   if (unsupportedTypeConversion(*this, LHSType, RHSType))
@@ -1781,8 +1777,14 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
     return handleComplexIntConversion(*this, LHS, RHS, LHSType, RHSType,
                                       ACK == ArithConvKind::CompAssign);
 
-  if (LHSType->isFixedPointType() || RHSType->isFixedPointType())
+  if (LHSType->isFixedPointType() || RHSType->isFixedPointType()) {
+    // ISO/IEC TR 18037 4.1.4 only defines conversions between fixed point
+    // types and the standard integer types, so reject e.g. _BitInt or overflow
+    // behavior types.
+    if (!LHSType->getAs<BuiltinType>() || !RHSType->getAs<BuiltinType>())
+      return QualType();
     return handleFixedPointConversion(*this, LHSType, RHSType);
+  }
 
   if (LHSType->isOverflowBehaviorType() || RHSType->isOverflowBehaviorType())
     return handleOverflowBehaviorTypeConversion(
@@ -8983,10 +8985,9 @@ QualType Sema::CheckConditionalOperands(ExprResult &Cond, ExprResult &LHS,
   // If both operands have arithmetic type, do the usual arithmetic conversions
   // to find a common type: C99 6.5.15p3,5.
   if (LHSTy->isArithmeticType() && RHSTy->isArithmeticType()) {
-    // Disallow invalid arithmetic conversions, such as those between bit-
-    // precise integers types of different sizes, or between a bit-precise
-    // integer and another type.
-    if (ResTy.isNull() && (LHSTy->isBitIntType() || RHSTy->isBitIntType())) {
+    // Disallow invalid arithmetic conversions, such as those between a
+    // bit-precise integer and a fixed point type.
+    if (ResTy.isNull()) {
       Diag(QuestionLoc, diag::err_typecheck_cond_incompatible_operands)
           << LHSTy << RHSTy << LHS.get()->getSourceRange()
           << RHS.get()->getSourceRange();
