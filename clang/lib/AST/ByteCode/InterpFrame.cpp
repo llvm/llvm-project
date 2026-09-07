@@ -15,7 +15,6 @@
 #include "MemberPointer.h"
 #include "Pointer.h"
 #include "PrimType.h"
-#include "Program.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
@@ -32,12 +31,10 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func,
     : Caller(Caller), S(S), Func(Func), RetPC(RetPC),
       Args(static_cast<char *>(S.Stk.top())), ArgSize(ArgSize),
       Depth(Caller ? Caller->Depth + 1 : 0) {
+  assert(Func);
 #ifndef NDEBUG
   FrameOffset = S.Stk.size();
 #endif
-
-  if (!Func)
-    return;
 
   FuncFlags |= Func->hasRVO() * HasRVOFlag;
   FuncFlags |= Func->hasThisPointer() * HasThisFlag;
@@ -163,7 +160,7 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
 
   const ASTContext &ASTCtx = S.getASTContext();
   const Expr *CallExpr = Caller->getExpr(getRetOpPC());
-  const FunctionDecl *F = getCallee();
+  const FunctionDecl *F = Func->getDecl();
   auto PrintingPolicy = ASTCtx.getPrintingPolicy();
   PrintingPolicy.SuppressLambdaBody = true;
 

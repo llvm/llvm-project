@@ -552,6 +552,63 @@ TEST(FoldingSetTest, TokenSurvivesGrowth) {
   EXPECT_EQ(201u, Set.size());
 }
 
+// FoldingSetTrait::Equals compares against the looked-up ID instead
+// of rebuilding the node's profile.
+struct EqNode : FoldingSetNode {
+  unsigned X;
+  explicit EqNode(unsigned X) : X(X) {}
+
+  void Profile(FoldingSetNodeID &ID) const { ID.AddInteger(X); }
+  void Profile(FoldingSetNodeID &ID, TestContext Ctx) const {
+    ID.AddInteger(X ^ Ctx.Value);
+  }
+};
+
+unsigned EqCalls = 0;
+} // namespace
+
+namespace llvm {
+template <> struct FoldingSetTrait<EqNode> : DefaultFoldingSetTrait<EqNode> {
+  static bool Equals(EqNode &N, const FoldingSetNodeID &ID) {
+    ++EqCalls;
+    FoldingSetNodeIDRef Ref = ID.getRef();
+    return Ref.size() == 1 && Ref[0] == N.X;
+  }
+};
+
+template <>
+struct ContextualFoldingSetTrait<EqNode, TestContext>
+    : DefaultContextualFoldingSetTrait<EqNode, TestContext> {
+  static bool Equals(EqNode &N, const FoldingSetNodeID &ID, TestContext Ctx) {
+    ++EqCalls;
+    FoldingSetNodeIDRef Ref = ID.getRef();
+    return Ref.size() == 1 && Ref[0] == (N.X ^ Ctx.Value);
+  }
+};
+} // namespace llvm
+
+namespace {
+
+TEST(FoldingSetTest, TraitEqualsOverride) {
+  FoldingSet<EqNode> Set;
+  EqNode N(1), NCopy(1);
+  Set.getOrInsert(&N);
+
+  EqCalls = 0;
+  EXPECT_EQ(&N, Set.getOrInsert(&NCopy));
+  EXPECT_EQ(1u, EqCalls);
+}
+
+TEST(FoldingSetTest, ContextualTraitEqualsOverride) {
+  ContextualFoldingSet<EqNode, TestContext> Set(TestContext{0xABCD});
+  EqNode N(1), NCopy(1);
+  Set.getOrInsert(&N);
+
+  EqCalls = 0;
+  EXPECT_EQ(&N, Set.getOrInsert(&NCopy));
+  EXPECT_EQ(1u, EqCalls);
+}
+
 // FoldingSetNode is a non-first base, so lookup()'s two-step cast must adjust.
 struct KeyedPair : NonEmptyBase, FoldingSetNode {
   unsigned A, B;
@@ -644,8 +701,8 @@ static_assert(std::is_same_v<UniquingSetInfo<RefKeyNode>::KeyTy,
                              std::pair<unsigned, unsigned>>,
               "KeyTy must decay to a value type");
 
-// A node with no getKey(): the Info supplies the three-member contract itself,
-// and the key aliases storage owned by the node.
+// A node with no getKey(): the Info supplies the whole contract itself, and the
+// key aliases storage owned by the node.
 struct VectorNode : FoldingSetNode {
   SmallVector<unsigned, 4> Elts;
   explicit VectorNode(ArrayRef<unsigned> E) : Elts(E) {}
@@ -659,6 +716,10 @@ struct VectorNodeInfo {
     for (unsigned E : Key)
       H = detail::combineHashValue(H, DenseMapInfo<unsigned>::getHashValue(E));
     return H;
+  }
+  // Compare against the node's storage rather than building a key from it.
+  static bool isEqual(const KeyTy &Key, const VectorNode &N) {
+    return Key == KeyTy(N.Elts);
   }
 };
 
