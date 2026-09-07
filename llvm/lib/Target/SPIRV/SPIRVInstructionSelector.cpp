@@ -1980,8 +1980,8 @@ static void addMemoryOperands(MachineMemOperand *MemOp,
     SpvMemOp |= static_cast<uint32_t>(SPIRV::MemoryOperand::Volatile);
   if (MemOp->isNonTemporal())
     SpvMemOp |= static_cast<uint32_t>(SPIRV::MemoryOperand::Nontemporal);
-  // Aligned memory operand requires the Kernel capability.
-  if (!ST->isShader() && MemOp->getAlign().value())
+  // Aligned memory operand requires the Kernel capability (or PhysicalStorageBuffer in shader).
+  if ((!ST->isShader() || MemOp->getAddrSpace() == 1) && MemOp->getAlign().value())
     SpvMemOp |= static_cast<uint32_t>(SPIRV::MemoryOperand::Aligned);
 
   [[maybe_unused]] MachineInstr *AliasList = nullptr;
@@ -5115,12 +5115,19 @@ bool SPIRVInstructionSelector::selectGEP(Register ResVReg,
        Opcode == SPIRV::OpUntypedAccessChainKHR ||
        Opcode == SPIRV::OpUntypedInBoundsAccessChainKHR);
 
-  assert((!IsAccessChainOpcode || (getImm(I.getOperand(4), MRI) &&
-                                   foldImm(I.getOperand(4), MRI) == 0)) &&
-         "Cannot translate GEP to OpAccessChain.");
+  assert((!IsAccessChainOpcode ||
+          GR.getPointerStorageClass(ResType) ==
+              SPIRV::StorageClass::PhysicalStorageBufferEXT ||
+          (getImm(I.getOperand(4), MRI) && foldImm(I.getOperand(4), MRI) == 0)) &&
+         "Cannot translate GEP to OpAccessChain. First index must be 0.");
 
   // Adding indices.
-  const unsigned StartingIndex = IsAccessChainOpcode ? 5 : 4;
+  const unsigned StartingIndex =
+      (IsAccessChainOpcode &&
+       GR.getPointerStorageClass(ResType) !=
+           SPIRV::StorageClass::PhysicalStorageBufferEXT)
+          ? 5
+          : 4;
   for (unsigned i = StartingIndex; i < I.getNumExplicitOperands(); ++i)
     Res.addUse(I.getOperand(i).getReg());
   Res.constrainAllUses(TII, TRI, RBI);
