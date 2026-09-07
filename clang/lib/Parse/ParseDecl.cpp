@@ -7641,6 +7641,13 @@ void Parser::ParseParameterDeclarationClause(
                                   : DeclaratorContext::Prototype);
     ParseDeclarator(ParmDeclarator);
 
+    // A parameter declarator can spell a function type, but it is adjusted to
+    // a pointer-to-function type. Parse contract specifiers here to diagnose
+    // them and recover instead of treating them as an unexpected parameter
+    // list token.
+    if (getContractSpecifierKind())
+      ParseContractSpecifiers(ParmDeclarator);
+
     if (ThisLoc.isValid())
       ParmDeclarator.SetRangeBegin(ThisLoc);
 

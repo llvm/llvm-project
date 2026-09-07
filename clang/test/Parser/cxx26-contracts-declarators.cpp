@@ -75,3 +75,8 @@ int (*function_pointer)(int) pre(true); // expected-error {{contract specifiers 
 extern int (&function_reference)(int) pre(true); // expected-error {{contract specifiers can only be applied to function declarations}}
 
 typedef int FunctionTypedef(int) pre(true); // expected-error {{contract specifiers can only be applied to function declarations}}
+
+void foo(int bar() pre(true)) {} // expected-error {{contract specifiers can only be applied to function declarations}}
+
+using ftype = void();
+ftype foo pre(true);

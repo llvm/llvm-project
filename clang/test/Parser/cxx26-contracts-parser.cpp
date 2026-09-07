@@ -24,6 +24,7 @@ int constrained(T value) requires C<T> pre(value > T{});
 
 struct S {
   int member(int value) pre(value > 0) post(result: result > value);
+  int member2(int value) post(result: result > value) pre(value > 0);
   virtual int virtual_member(int value) const final pre(value > 0);
 };
 
@@ -31,6 +32,12 @@ int S::member(int value) pre(value > 0) post(result: result > value) {
   contract_assert(value > 0);
   contract_assert [[maybe_unused]] (value < 100);
   return value;
+}
+
+int test_contextual_keyword() {
+  int pre = 32;
+  int post = 34;
+  return pre + post;
 }
 
 void lambdas() {
@@ -57,3 +64,13 @@ void missing_assert_lparen() {
 int missing_pre_lparen() pre true;
 // expected-error@-1 {{expected '(' after 'pre'}}
 // expected-error@-2 {{expected function body after function declarator}}
+
+class base {
+public:
+  virtual int member(int v) pre(v > 0) post(r: r > 0);
+};
+
+class inherited : public base {
+public:
+  int member(int v) override pre(v > 0) post(r: r > 0);
+};

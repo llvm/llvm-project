@@ -2469,7 +2469,9 @@ StmtResult Parser::ParseBreakStatement() {
 
 StmtResult Parser::ParseContractAssertStatement() {
   assert(Tok.is(tok::kw_contract_assert) && "expected contract_assert");
-  if (!getLangOpts().Contracts)
+  if (!getLangOpts().CPlusPlus26)
+    Diag(Tok, diag::err_contracts_require_cxx26);
+  else if (!getLangOpts().Contracts)
     Diag(Tok, diag::err_contracts_disabled);
   SourceLocation ContractAssertLoc = ConsumeToken();
 

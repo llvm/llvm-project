@@ -2593,9 +2593,6 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
     if (BitfieldSize.isInvalid())
       SkipUntil(tok::comma, StopAtSemi | StopBeforeMatch);
   } else {
-    // Requires clause can't follow 'override' but contracts can follow
-    // 'override'. Even if we don't support virtual functions with contractcs,
-    // we should diagnose at the sema stage instead of the parser stage.
     if (Tok.isNot(tok::kw_requires)) {
       ParseOptionalCXX11VirtSpecifierSeq(
           VS, getCurrentClass().IsInterface,
