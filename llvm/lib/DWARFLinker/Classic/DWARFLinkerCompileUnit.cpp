@@ -170,7 +170,9 @@ void CompileUnit::addFunctionRange(uint64_t FuncLowPc, uint64_t FuncHighPc,
 }
 
 void CompileUnit::noteRangeAttribute(const DIE &Die, PatchLocation Attr) {
-  if (Die.getTag() == dwarf::DW_TAG_compile_unit) {
+  // The unit root's ranges bound the unit, so they are replaced with the
+  // extents the linker kept rather than mapped through like an ordinary DIE's.
+  if (isUnitRootDIE(Die)) {
     UnitRangeAttribute = Attr;
     return;
   }

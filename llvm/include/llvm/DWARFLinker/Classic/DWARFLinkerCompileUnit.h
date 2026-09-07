@@ -145,6 +145,17 @@ public:
     return nullptr;
   }
 
+  /// Check whether \p Die is this unit's root DIE, which owns the attributes
+  /// that bound the unit and so are replaced with the extents the linker kept.
+  /// The root is identified by being the output unit DIE rather than by its
+  /// tag: DWARFv5 section 3.1.1 gives a full or a partial compilation unit
+  /// entry the same address range attributes, encoding the ranges generated
+  /// for that unit, and DWARFContext::compile_units() hands both kinds to the
+  /// linker on the same path.
+  bool isUnitRootDIE(const DIE &Die) const {
+    return &Die == getOutputUnitDIE();
+  }
+
   dwarf::Tag getTag() const { return OrigUnit.getUnitDIE().getTag(); }
 
   bool hasODR() const { return HasODR; }
