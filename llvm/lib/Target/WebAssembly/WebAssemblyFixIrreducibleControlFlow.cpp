@@ -283,17 +283,6 @@ static void cloneInstrIntoBlock(MachineInstr &MI, MachineBasicBlock *Clone,
   Clone->push_back(NewMI);
 }
 
-static bool explicitlyBranchesTo(const MachineBasicBlock *MBB,
-                                 const MachineBasicBlock *Target) {
-  for (const MachineInstr &Term : MBB->terminators()) {
-    for (const MachineOperand &MO : Term.explicit_uses()) {
-      if (MO.isMBB() && MO.getMBB() == Target)
-        return true;
-    }
-  }
-  return false;
-}
-
 static MachineBasicBlock *
 getImplicitFallthroughSuccessor(MachineBasicBlock *MBB) {
   MachineBasicBlock *Fallthrough = MBB->getFallThrough(false);
@@ -310,8 +299,7 @@ static void makeFallthroughExplicitIfNeeded(MachineBasicBlock *MBB,
 
   // MBB currently reaches Fallthrough by layout fallthrough. Preserve that
   // edge before inserting another block after MBB.
-  BuildMI(*MBB, MBB->end(), DebugLoc(), TII.get(WebAssembly::BR))
-      .addMBB(Fallthrough);
+  TII.insertUnconditionalBranch(*MBB, Fallthrough, DebugLoc());
 }
 
 /// Fix irreducible SCCs whose entries include an EH pad without routing
@@ -438,8 +426,7 @@ static bool cloneEHPadEntriesForBackedges(const BlockSet &Entries,
       // (4) The cloned EH pad is not laid out before the original fallthrough
       // successor, so make that edge explicit if the original used fallthrough.
       if (EHPadFallthrough)
-        BuildMI(*Clone, Clone->end(), DebugLoc(), TII.get(WebAssembly::BR))
-            .addMBB(EHPadFallthrough);
+        TII.insertUnconditionalBranch(*Clone, EHPadFallthrough, DebugLoc());
 
       Blocks.insert(Clone);
 
