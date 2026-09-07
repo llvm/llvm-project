@@ -3015,20 +3015,18 @@ define <8 x i16> @test_pmulhw_shift_v8i16_i64_32(<8 x i16> %a, <8 x i16> %b) {
 ;
 ; AVX2-LABEL: test_pmulhw_shift_v8i16_i64_32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
-; AVX2-NEXT:    vpmovsxwq %xmm2, %ymm2
+; AVX2-NEXT:    vpmovsxwq %xmm0, %ymm2
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; AVX2-NEXT:    vpmovsxwq %xmm0, %ymm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
-; AVX2-NEXT:    vpmovsxwq %xmm3, %ymm3
+; AVX2-NEXT:    vpmovsxwq %xmm1, %ymm3
 ; AVX2-NEXT:    vpmuldq %ymm3, %ymm2, %ymm2
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
 ; AVX2-NEXT:    vpmovsxwq %xmm1, %ymm1
 ; AVX2-NEXT:    vpmuldq %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpsrlq $32, %ymm2, %ymm1
-; AVX2-NEXT:    vpsrlq $32, %ymm0, %ymm0
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm2[1,2,3],ymm0[4],ymm2[5,6,7],ymm0[8],ymm2[9,10,11],ymm0[12],ymm2[13,14,15]
-; AVX2-NEXT:    vpblendw {{.*#+}} ymm1 = ymm1[0],ymm2[1,2,3],ymm1[4],ymm2[5,6,7],ymm1[8],ymm2[9,10,11],ymm1[12],ymm2[13,14,15]
-; AVX2-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [4,5,128,128,128,128,128,128,12,13,128,128,128,128,128,128,20,21,128,128,128,128,128,128,28,29,128,128,128,128,128,128]
+; AVX2-NEXT:    vpshufb %ymm1, %ymm2, %ymm2
+; AVX2-NEXT:    vpshufb %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpackusdw %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]

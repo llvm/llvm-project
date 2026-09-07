@@ -18,9 +18,8 @@ define <8 x float> @expand(<4 x float> %a) {
 ;
 ; AVX512F-LABEL: expand:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3,4,5,6,7]
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512F-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,2,3],zero,zero,zero,zero,ymm0[4,5,6,7],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX512F-NEXT:    ret{{[l|q]}}
    %res = shufflevector <4 x float> %a, <4 x float> zeroinitializer, <8 x i32> <i32 0, i32 5, i32 1, i32 5, i32 5, i32 5, i32 5, i32 5>
    ret <8 x float> %res

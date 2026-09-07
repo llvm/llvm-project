@@ -177,8 +177,7 @@ define <16 x i16> @hadd_reverse_v16i16(<16 x i16> %a0, <16 x i16> %a1) nounwind 
 ; AVX2-LABEL: hadd_reverse_v16i16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vphaddw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpshuflw {{.*#+}} ymm0 = ymm0[3,2,1,0,4,5,6,7,11,10,9,8,12,13,14,15]
-; AVX2-NEXT:    vpshufhw {{.*#+}} ymm0 = ymm0[0,1,2,3,7,6,5,4,8,9,10,11,15,14,13,12]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[6,7,4,5,2,3,0,1,14,15,12,13,10,11,8,9,22,23,20,21,18,19,16,17,30,31,28,29,26,27,24,25]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,0,1]
 ; AVX2-NEXT:    retq
   %lhs = shufflevector <16 x i16> %a0, <16 x i16> %a1, <16 x i32> <i32 15, i32 13, i32 11, i32 9, i32 31, i32 29, i32 27, i32 25, i32 7, i32 5, i32 3, i32 1, i32 23, i32 21, i32 19, i32 17>

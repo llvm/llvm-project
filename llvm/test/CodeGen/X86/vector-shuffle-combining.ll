@@ -3656,20 +3656,12 @@ define <8 x float> @PR213251() {
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2,3,4,5,6,7]
 ; AVX1-NEXT:    retq
 ;
-; AVX2-SLOW-LABEL: PR213251:
-; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    movl $1, (%rax)
-; AVX2-SLOW-NEXT:    vbroadcastss {{.*#+}} xmm0 = [NaN,NaN,NaN,NaN]
-; AVX2-SLOW-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX2-SLOW-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2,3,4,5,6,7]
-; AVX2-SLOW-NEXT:    retq
-;
-; AVX2-FAST-LABEL: PR213251:
-; AVX2-FAST:       # %bb.0:
-; AVX2-FAST-NEXT:    movl $1, (%rax)
-; AVX2-FAST-NEXT:    vmovd {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
-; AVX2-FAST-NEXT:    vpshufb {{.*#+}} ymm0 = zero,zero,zero,zero,ymm0[0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX2-FAST-NEXT:    retq
+; AVX2-LABEL: PR213251:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    movl $1, (%rax)
+; AVX2-NEXT:    vmovd {{.*#+}} xmm0 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = zero,zero,zero,zero,ymm0[0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; AVX2-NEXT:    retq
   store i32 1, ptr poison, align 4
   %f.promoted = load i32, ptr poison, align 4
   %tobool.not12 = icmp eq i32 %f.promoted, 0

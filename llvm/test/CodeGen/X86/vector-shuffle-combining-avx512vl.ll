@@ -75,8 +75,10 @@ define void @PR142995(ptr %p0, ptr %p1, ptr %p2) nounwind #0 {
 ; X86-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [4,0,10,0,4,4,14,0]
 ; X86-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; X86-NEXT:    vpermi2d %ymm2, %ymm0, %ymm1
-; X86-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0],ymm4[1],ymm1[2,3,4,5,6,7]
-; X86-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2],ymm2[3],ymm0[4,5,6,7]
+; X86-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm0
+; X86-NEXT:    vpmovsxbd {{.*#+}} ymm3 = [0,15,2,0,4,5,6,7]
+; X86-NEXT:    vpermi2d %ymm0, %ymm1, %ymm3
+; X86-NEXT:    vpblendd {{.*#+}} ymm0 = ymm3[0,1,2],ymm2[3],ymm3[4,5,6,7]
 ; X86-NEXT:    vmovdqu %ymm0, (%eax)
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    vzeroupper
@@ -106,8 +108,10 @@ define void @PR142995(ptr %p0, ptr %p1, ptr %p2) nounwind #0 {
 ; X64-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [4,0,10,0,4,4,14,0]
 ; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; X64-NEXT:    vpermi2d %ymm2, %ymm0, %ymm1
-; X64-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0],ymm4[1],ymm1[2,3,4,5,6,7]
-; X64-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2],ymm2[3],ymm0[4,5,6,7]
+; X64-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm0
+; X64-NEXT:    vpmovsxbd {{.*#+}} ymm3 = [0,15,2,0,4,5,6,7]
+; X64-NEXT:    vpermi2d %ymm0, %ymm1, %ymm3
+; X64-NEXT:    vpblendd {{.*#+}} ymm0 = ymm3[0,1,2],ymm2[3],ymm3[4,5,6,7]
 ; X64-NEXT:    vmovdqu %ymm0, (%rdx)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
