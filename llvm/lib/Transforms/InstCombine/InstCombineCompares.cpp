@@ -15,6 +15,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/CmpInstAnalysis.h"
 #include "llvm/Analysis/ConstantFolding.h"
@@ -3762,8 +3763,18 @@ Instruction *InstCombinerImpl::foldICmpBinOpEqualityWithConstant(
     // (A + C2) != C --> A != (C - C2)
     // TODO: Remove the one-use limitation? See discussion in D58633.
     if (Constant *C2 = dyn_cast<Constant>(BOp1)) {
+      Constant *NewRHS = ConstantExpr::getSub(RHS, C2);
       if (BO->hasOneUse())
-        return new ICmpInst(Pred, BOp0, ConstantExpr::getSub(RHS, C2));
+        return new ICmpInst(Pred, BOp0, NewRHS);
+
+      // If the add has other uses, the rewrite is still profitable if the
+      // compare folds away.
+      if (!AC.assumptionsFor(BOp0).empty() || !DC.conditionsFor(BOp0).empty()) {
+        Constant *NewRHS = ConstantExpr::getSub(RHS, C2);
+        if (Value *V = simplifyICmpInst(Pred, BOp0, NewRHS,
+                                        SQ.getWithInstruction(&Cmp)))
+          return replaceInstUsesWith(Cmp, V);
+      }
     } else if (C.isZero()) {
       // Replace ((add A, B) != 0) with (A != -B) if A or B is
       // efficiently invertible, or if the add has just this one use.

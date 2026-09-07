@@ -3612,8 +3612,7 @@ define i1 @multiuse_add_eq_implied_false(i64 %n, ptr %p) {
 ; CHECK:       if:
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    store i64 [[ADD]], ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[ADD]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -3637,8 +3636,7 @@ define i1 @multiuse_add_eq_implied_true(i64 %n, ptr %p) {
 ; CHECK:       if:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[N]], -1
 ; CHECK-NEXT:    store i64 [[ADD]], ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[ADD]], 6
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -3661,8 +3659,7 @@ define i1 @multiuse_add_ne_implied_by_assume(i64 %n, ptr %p) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[N]], -1
 ; CHECK-NEXT:    store i64 [[ADD]], ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[ADD]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %c = icmp ugt i64 %n, 10
   call void @llvm.assume(i1 %c)
