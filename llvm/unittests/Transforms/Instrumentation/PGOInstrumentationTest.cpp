@@ -197,7 +197,7 @@ struct PGOInstrumentationUseTest : Test, WithParamInterface<bool> {};
 INSTANTIATE_TEST_SUITE_P(ExistingMetadata, PGOInstrumentationUseTest,
                          Values(false, true));
 
-TEST_P(PGOInstrumentationUseTest, BlockUniformityMetadataUsesPresence) {
+TEST_P(PGOInstrumentationUseTest, UniformityMetadataUsesPresence) {
   static constexpr StringRef Code = R"(
     define i32 @f(i1 %cond) {
     entry:
@@ -278,14 +278,30 @@ TEST_P(PGOInstrumentationUseTest, BlockUniformityMetadataUsesPresence) {
     ASSERT_THAT(UseFunction, NotNull());
     if (GetParam()) {
       MDNode *UniformMD = MDNode::get(Context, {});
+      UseFunction->setMetadata(LLVMContext::MD_uniformity_profile, UniformMD);
       for (BasicBlock &BB : *UseFunction)
         BB.getTerminator()->setMetadata(
             LLVMContext::MD_block_uniformity_profile, UniformMD);
+      UseFunction->getEntryBlock().getTerminator()->setMetadata(
+          LLVMContext::MD_branch_uniformity_profile, UniformMD);
     }
     ModulePassManager UseMPM;
     UseMPM.addPass(PGOInstrumentationUse("/profile.profdata", "", false, FS));
     UseMPM.run(*UseModule, MAM);
     EXPECT_FALSE(verifyModule(*UseModule, &errs()));
+
+    MDNode *FunctionMD =
+        UseFunction->getMetadata(LLVMContext::MD_uniformity_profile);
+    ASSERT_THAT(FunctionMD, NotNull());
+    EXPECT_EQ(FunctionMD->getNumOperands(), 0u);
+
+    auto *Branch =
+        cast<CondBrInst>(UseFunction->getEntryBlock().getTerminator());
+    MDNode *BranchMD =
+        Branch->getMetadata(LLVMContext::MD_branch_uniformity_profile);
+    EXPECT_EQ(BranchMD != nullptr, UniformityMask == 3);
+    if (BranchMD)
+      EXPECT_EQ(BranchMD->getNumOperands(), 0u);
 
     for (unsigned I = 0; I < NumCounters; ++I) {
       BasicBlock *BB = nullptr;
