@@ -1,0 +1,162 @@
+## Deciding which types are deduplication candidates means asking where the
+## scope holding a type ends, and a unit root ends it whatever tag it carries.
+## Answering that with "is this entry namespace-like", which the linker already
+## had, would also answer a second question asked of the same predicate: how
+## much of an imported unit a DW_TAG_imported_unit drags in. A partial unit is
+## what dwz emits and what DW_TAG_imported_unit names, so this test pins the
+## import path against the scope change.
+##
+## U01:  namespace ns { struct S {}; }
+## U02:  // DW_TAG_imported_unit of U01
+##       void foo1() { ... }
+##
+## Nothing in U01 is referenced from U02, so the import is the only thing
+## keeping it alive and its contents disappear if the import stops recursing.
+## This test passes both before and after the fix: it exists to fail if the two
+## predicates are ever merged back together.
+##
+## Only the parallel backend is linked. The classic backend aborts on
+## DW_TAG_imported_unit in fixupForwardReferences() with "Offset being queried
+## before it's been computed", for a DW_TAG_compile_unit root just as much as
+## for a DW_TAG_partial_unit one, which makes it a separate defect from
+## anything about partial units.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-dwarfutil --linker parallel %t.o %t.out
+# RUN: llvm-dwarfdump --debug-info %t.out | FileCheck %s
+
+# CHECK:      0x[[U01:[0-9a-f]{8}]]: DW_TAG_partial_unit
+# CHECK-NEXT:   DW_AT_producer ("by_hand")
+# CHECK-NEXT:   DW_AT_name ("U01")
+# CHECK:        DW_TAG_namespace
+# CHECK-NEXT:     DW_AT_name ("ns")
+# CHECK:          DW_TAG_structure_type
+# CHECK-NEXT:       DW_AT_name ("S")
+# CHECK:      DW_TAG_compile_unit
+# CHECK-NEXT:   DW_AT_producer ("by_hand")
+# CHECK-NEXT:   DW_AT_name ("U02")
+# CHECK:        DW_TAG_imported_unit
+# CHECK-NEXT:     DW_AT_import (0x00000000[[U01]] "U01")
+# CHECK:        DW_TAG_subprogram
+# CHECK-NEXT:     DW_AT_name ("foo1")
+
+## Two DWARFv5 units. The first is a partial unit defining struct S in
+## namespace ns and holding no code; the second is a compile unit that imports
+## it and has the only function. Each root carries its own
+## DW_AT_str_offsets_base, so the strings the linker rewrites into
+## DW_FORM_strx stay resolvable on output; the linker does not synthesize that
+## attribute for a partial unit root by itself.
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x10
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    Flags:           [  ]
+    Content:        "0400000005000000"
+DWARF:
+  debug_abbrev:
+    - ID:    0
+      Table:
+      - Tag:      DW_TAG_partial_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_namespace
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_structure_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_byte_size
+            Form:      DW_FORM_data1
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_str_offsets_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_imported_unit
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_import
+            Form:      DW_FORM_ref_addr
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_partial
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: U01
+            - Value: 0x04
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: ns
+        - AbbrCode: 3
+          Values:
+            - CStr: S
+            - Value: 0x8
+        - AbbrCode: 0
+        - AbbrCode: 0
+    - Version:  5
+      UnitType: DW_UT_compile
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 4
+          Values:
+            - CStr: by_hand
+            - CStr: U02
+            - Value: 0x04
+            - Value: 0x1130
+            - Value: 0x10
+            - Value: 0x8
+        - AbbrCode: 6
+          Values:
+            - Value: 0x0c
+        - AbbrCode: 5
+          Values:
+            - CStr: foo1
+            - Value: 0x1130
+            - Value: 0x10
+        - AbbrCode: 0
+...
