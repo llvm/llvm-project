@@ -3411,12 +3411,12 @@ static const MSInheritanceAttr *findMSInheritanceAttr(const CXXRecordDecl *RD) {
   return nullptr;
 }
 
-static Error syncMSInheritanceAttr(ASTImporter &Importer,
-                                   CXXRecordDecl *FromRD,
+static Error syncMSInheritanceAttr(ASTImporter &Importer, CXXRecordDecl *FromRD,
                                    CXXRecordDecl *ToRD) {
   assert(ToRD && "ToRD shouldn't be null");
   assert(FromRD && "FromRD shouldn't be null");
-  assert(Importer.getToContext().getTargetInfo().getCXXABI().isMicrosoft() && "Called with non-Microsoft ABIs");
+  assert(Importer.getToContext().getTargetInfo().getCXXABI().isMicrosoft() &&
+         "Called with non-Microsoft ABIs");
 
   CXXRecordDecl *ToLatest = ToRD->getMostRecentDecl();
   if (ToLatest->hasAttr<MSInheritanceAttr>())
@@ -10088,8 +10088,8 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
     // current implementation of CTU mode, that only allows imports within the
     // same language.
     assert(isa<CXXRecordDecl>(FromD) && "FromD expected to be a CXXRecordDecl");
-    if (Error Err = syncMSInheritanceAttr(
-            *this, cast<CXXRecordDecl>(FromD), RD))
+    if (Error Err =
+            syncMSInheritanceAttr(*this, cast<CXXRecordDecl>(FromD), RD))
       return std::move(Err);
   }
 
