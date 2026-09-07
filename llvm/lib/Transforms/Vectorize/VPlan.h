@@ -1323,10 +1323,18 @@ public:
     // WideActiveLaneMask is used for control flow and is unrolled by widening,
     // with one extract vector created per unroll part.
     WideActiveLaneMask,
+    // Signature: (VFMultiple, Address, Alignment) -> Wide Vector
+    // Loads a single wide vector of `VFMultiple * VF` elements. VFMultiple must
+    // divide UF. After unrolling, each section of VF elements in the wide
+    // vector corresponds to an unroll part.
+    VFMultipleLoad,
+    // Signature: (VFMultiple, Address, Alignment, Vectors...)
+    // Concatenates VFMultiple vector operands into a single wide vector of
+    // `VFMultiple * VF` elements and stores it. After unrolling, each vector
+    // operand corresponds to an unroll part.
+    VFMultipleStore,
     // Extracts each unrolled part of a (VF * UF) widened vector/mask.
     ExtractVectorForPart,
-    // Concatenates its unrolled part operands into one widened vector.
-    ConcatVectorParts,
     ExplicitVectorLength,
     // Represents the incoming loop-invariant alias-mask. All memory accesses
     // in the loop must stay within the active lanes.
@@ -1530,6 +1538,7 @@ public:
     case VPInstruction::BranchOnCond:
     case VPInstruction::BranchOnTwoConds:
     case VPInstruction::BranchOnCount:
+    case VPInstruction::VFMultipleStore:
       return false;
     default:
       return true;
@@ -3763,10 +3772,6 @@ protected:
   /// Whether the memory access is masked.
   bool IsMasked = false;
 
-  /// Multiple of VF used to widen this memory operation. The final operation
-  /// loads or stores VF * VFMultiple elements
-  unsigned VFMultiple = 1;
-
   void setMask(VPValue *Mask) {
     assert(!IsMasked && "cannot re-set mask");
     if (!Mask)
@@ -3813,12 +3818,6 @@ public:
   InstructionCost computeCost(ElementCount VF, VPCostContext &Ctx) const;
 
   Instruction &getIngredient() const { return Ingredient; }
-
-  /// Set the VF multiple for this memory operation.
-  void setVFMultiple(unsigned VFMultiple) { this->VFMultiple = VFMultiple; }
-
-  /// Returns the VF multiple of this memory operation.
-  unsigned getVFMultiple() const { return VFMultiple; }
 };
 
 /// A recipe for widening load operations, using the address to load from and an
@@ -3834,11 +3833,8 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPSingleDefRecipe,
   }
 
   VPWidenLoadRecipe *clone() override {
-    auto *R =
-        new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(), getMask(),
-                              Consecutive, *this, getDebugLoc());
-    R->setVFMultiple(VFMultiple);
-    return R;
+    return new VPWidenLoadRecipe(cast<LoadInst>(Ingredient), getAddr(),
+                                 getMask(), Consecutive, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenLoadSC);
@@ -3942,11 +3938,9 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPRecipeBase,
   }
 
   VPWidenStoreRecipe *clone() override {
-    auto *R = new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getAddr(),
-                                     getStoredValue(), getMask(), Consecutive,
-                                     *this, getDebugLoc());
-    R->setVFMultiple(VFMultiple);
-    return R;
+    return new VPWidenStoreRecipe(cast<StoreInst>(Ingredient), getAddr(),
+                                  getStoredValue(), getMask(), Consecutive,
+                                  *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenStoreSC);

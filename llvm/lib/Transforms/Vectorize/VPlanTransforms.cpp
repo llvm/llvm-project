@@ -3995,6 +3995,8 @@ void VPlanTransforms::scaleMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
   if (UF == 1)
     return;
 
+  Type *IVTy = Plan.getVectorLoopRegion()->getCanonicalIVType();
+
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
@@ -4032,7 +4034,30 @@ void VPlanTransforms::scaleMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
           Opcode, AccessType, VF, UF, /*IsMasked=*/false, CastHint);
       assert((VFMultiple != 0 && UF % VFMultiple == 0) &&
              "VFMultiple must divide UF");
-      MemOp->setVFMultiple(VFMultiple);
+
+      if (VFMultiple == 1)
+        continue;
+
+      VPBuilder Builder(VPBB, R.getIterator());
+
+      VPValue *Ptr = MemOp->getAddr();
+      VPValue *VFMultipleVPV = Plan.getConstantInt(IVTy, VFMultiple);
+      VPValue *Align = Plan.getConstantInt(IVTy, MemOp->getAlign().value());
+
+      if (Opcode == Instruction::Load) {
+        VPValue *OldLoad = R.getVPSingleValue();
+        VPValue *Load = Builder.createNaryOp(
+            VPInstruction::VFMultipleLoad, {VFMultipleVPV, Ptr, Align}, nullptr,
+            {}, {}, DebugLoc::getUnknown(), "", OldLoad->getScalarType());
+        OldLoad->replaceAllUsesWith(Load);
+      } else {
+        assert(Opcode == Instruction::Store);
+        Builder.createNaryOp(VPInstruction::VFMultipleStore,
+                             {VFMultipleVPV, Ptr, Align, StoredValue},
+                             R.getDebugLoc());
+      }
+
+      R.eraseFromParent();
     }
   }
 }
