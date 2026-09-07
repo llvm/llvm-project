@@ -28,9 +28,21 @@ define void @stlf_conflict_backward_misaligned(ptr noalias %A, i64 %n) {
 ; STLF-ON:       [[FOR_BODY]]:
 ; STLF-ON-NEXT:    [[I:%.*]] = phi i64 [ 8, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
 ; STLF-ON-NEXT:    [[B0:%.*]] = add i64 [[I]], -5
+; STLF-ON-NEXT:    [[B1:%.*]] = add i64 [[I]], -4
+; STLF-ON-NEXT:    [[B2:%.*]] = add i64 [[I]], -3
+; STLF-ON-NEXT:    [[B3:%.*]] = add i64 [[I]], -2
 ; STLF-ON-NEXT:    [[P0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B0]]
-; STLF-ON-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P0]], align 4
-; STLF-ON-NEXT:    [[TMP1:%.*]] = add nsw <4 x i32> [[TMP0]], <i32 1, i32 2, i32 3, i32 4>
+; STLF-ON-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B1]]
+; STLF-ON-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B2]]
+; STLF-ON-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B3]]
+; STLF-ON-NEXT:    [[L0:%.*]] = load i32, ptr [[P0]], align 4
+; STLF-ON-NEXT:    [[L1:%.*]] = load i32, ptr [[P1]], align 4
+; STLF-ON-NEXT:    [[L2:%.*]] = load i32, ptr [[P2]], align 4
+; STLF-ON-NEXT:    [[L3:%.*]] = load i32, ptr [[P3]], align 4
+; STLF-ON-NEXT:    [[TMP2:%.*]] = add nsw i32 [[L0]], 1
+; STLF-ON-NEXT:    [[TMP3:%.*]] = add nsw i32 [[L1]], 2
+; STLF-ON-NEXT:    [[TMP4:%.*]] = add nsw i32 [[L2]], 3
+; STLF-ON-NEXT:    [[TMP5:%.*]] = add nsw i32 [[L3]], 4
 ; STLF-ON-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 1
 ; STLF-ON-NEXT:    [[I2:%.*]] = add nuw nsw i64 [[I]], 2
 ; STLF-ON-NEXT:    [[I3:%.*]] = add nuw nsw i64 [[I]], 3
@@ -38,13 +50,9 @@ define void @stlf_conflict_backward_misaligned(ptr noalias %A, i64 %n) {
 ; STLF-ON-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I1]]
 ; STLF-ON-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I2]]
 ; STLF-ON-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I3]]
-; STLF-ON-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
 ; STLF-ON-NEXT:    store i32 [[TMP2]], ptr [[GEP0]], align 4
-; STLF-ON-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP1]], i64 1
 ; STLF-ON-NEXT:    store i32 [[TMP3]], ptr [[GEP1]], align 4
-; STLF-ON-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP1]], i64 2
 ; STLF-ON-NEXT:    store i32 [[TMP4]], ptr [[GEP2]], align 4
-; STLF-ON-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP1]], i64 3
 ; STLF-ON-NEXT:    store i32 [[TMP5]], ptr [[GEP3]], align 4
 ; STLF-ON-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
 ; STLF-ON-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]

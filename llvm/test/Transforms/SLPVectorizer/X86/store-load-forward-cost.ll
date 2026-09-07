@@ -31,9 +31,21 @@ define void @stlf_recurrence(ptr noalias %A, i64 %n) {
 ; PENALTY:       [[FOR_BODY]]:
 ; PENALTY-NEXT:    [[I:%.*]] = phi i64 [ 8, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
 ; PENALTY-NEXT:    [[B0:%.*]] = add i64 [[I]], -5
+; PENALTY-NEXT:    [[B1:%.*]] = add i64 [[I]], -4
+; PENALTY-NEXT:    [[B2:%.*]] = add i64 [[I]], -3
+; PENALTY-NEXT:    [[B3:%.*]] = add i64 [[I]], -2
 ; PENALTY-NEXT:    [[P0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B0]]
-; PENALTY-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P0]], align 4
-; PENALTY-NEXT:    [[TMP1:%.*]] = add nsw <4 x i32> [[TMP0]], <i32 1, i32 2, i32 3, i32 4>
+; PENALTY-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B1]]
+; PENALTY-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B2]]
+; PENALTY-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B3]]
+; PENALTY-NEXT:    [[L0:%.*]] = load i32, ptr [[P0]], align 4
+; PENALTY-NEXT:    [[L1:%.*]] = load i32, ptr [[P1]], align 4
+; PENALTY-NEXT:    [[L2:%.*]] = load i32, ptr [[P2]], align 4
+; PENALTY-NEXT:    [[L3:%.*]] = load i32, ptr [[P3]], align 4
+; PENALTY-NEXT:    [[TMP2:%.*]] = add nsw i32 [[L0]], 1
+; PENALTY-NEXT:    [[TMP3:%.*]] = add nsw i32 [[L1]], 2
+; PENALTY-NEXT:    [[TMP4:%.*]] = add nsw i32 [[L2]], 3
+; PENALTY-NEXT:    [[TMP5:%.*]] = add nsw i32 [[L3]], 4
 ; PENALTY-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 1
 ; PENALTY-NEXT:    [[I2:%.*]] = add nuw nsw i64 [[I]], 2
 ; PENALTY-NEXT:    [[I3:%.*]] = add nuw nsw i64 [[I]], 3
@@ -41,13 +53,9 @@ define void @stlf_recurrence(ptr noalias %A, i64 %n) {
 ; PENALTY-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I1]]
 ; PENALTY-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I2]]
 ; PENALTY-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I3]]
-; PENALTY-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
 ; PENALTY-NEXT:    store i32 [[TMP2]], ptr [[GEP0]], align 4
-; PENALTY-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP1]], i64 1
 ; PENALTY-NEXT:    store i32 [[TMP3]], ptr [[GEP1]], align 4
-; PENALTY-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP1]], i64 2
 ; PENALTY-NEXT:    store i32 [[TMP4]], ptr [[GEP2]], align 4
-; PENALTY-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP1]], i64 3
 ; PENALTY-NEXT:    store i32 [[TMP5]], ptr [[GEP3]], align 4
 ; PENALTY-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
 ; PENALTY-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]

@@ -57,14 +57,41 @@ define void @stlf_profitable(ptr noalias %A, i64 %n) {
 ; VETO:       [[FOR_BODY]]:
 ; VETO-NEXT:    [[I:%.*]] = phi i64 [ 8, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
 ; VETO-NEXT:    [[BI0:%.*]] = add i64 [[I]], -5
+; VETO-NEXT:    [[BI1:%.*]] = add i64 [[I]], -4
+; VETO-NEXT:    [[BI2:%.*]] = add i64 [[I]], -3
+; VETO-NEXT:    [[BI3:%.*]] = add i64 [[I]], -2
 ; VETO-NEXT:    [[BG0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BI0]]
-; VETO-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[BG0]], align 4
-; VETO-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[TMP0]], <i32 1, i32 2, i32 3, i32 4>
-; VETO-NEXT:    [[TMP2:%.*]] = mul <4 x i32> [[TMP1]], [[TMP1]]
-; VETO-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP2]], <i32 7, i32 8, i32 9, i32 10>
-; VETO-NEXT:    [[TMP4:%.*]] = mul <4 x i32> [[TMP3]], [[TMP1]]
-; VETO-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP4]], <i32 11, i32 12, i32 13, i32 14>
-; VETO-NEXT:    [[TMP6:%.*]] = mul <4 x i32> [[TMP5]], [[TMP3]]
+; VETO-NEXT:    [[BG1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BI1]]
+; VETO-NEXT:    [[BG2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BI2]]
+; VETO-NEXT:    [[BG3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BI3]]
+; VETO-NEXT:    [[L0:%.*]] = load i32, ptr [[BG0]], align 4
+; VETO-NEXT:    [[L1:%.*]] = load i32, ptr [[BG1]], align 4
+; VETO-NEXT:    [[L2:%.*]] = load i32, ptr [[BG2]], align 4
+; VETO-NEXT:    [[L3:%.*]] = load i32, ptr [[BG3]], align 4
+; VETO-NEXT:    [[A0:%.*]] = add i32 [[L0]], 1
+; VETO-NEXT:    [[B0:%.*]] = mul i32 [[A0]], [[A0]]
+; VETO-NEXT:    [[C0:%.*]] = add i32 [[B0]], 7
+; VETO-NEXT:    [[D0:%.*]] = mul i32 [[C0]], [[A0]]
+; VETO-NEXT:    [[E0:%.*]] = add i32 [[D0]], 11
+; VETO-NEXT:    [[TMP7:%.*]] = mul i32 [[E0]], [[C0]]
+; VETO-NEXT:    [[A1:%.*]] = add i32 [[L1]], 2
+; VETO-NEXT:    [[B1:%.*]] = mul i32 [[A1]], [[A1]]
+; VETO-NEXT:    [[C1:%.*]] = add i32 [[B1]], 8
+; VETO-NEXT:    [[D1:%.*]] = mul i32 [[C1]], [[A1]]
+; VETO-NEXT:    [[E1:%.*]] = add i32 [[D1]], 12
+; VETO-NEXT:    [[TMP8:%.*]] = mul i32 [[E1]], [[C1]]
+; VETO-NEXT:    [[A2:%.*]] = add i32 [[L2]], 3
+; VETO-NEXT:    [[B2:%.*]] = mul i32 [[A2]], [[A2]]
+; VETO-NEXT:    [[C2:%.*]] = add i32 [[B2]], 9
+; VETO-NEXT:    [[D2:%.*]] = mul i32 [[C2]], [[A2]]
+; VETO-NEXT:    [[E2:%.*]] = add i32 [[D2]], 13
+; VETO-NEXT:    [[TMP9:%.*]] = mul i32 [[E2]], [[C2]]
+; VETO-NEXT:    [[A3:%.*]] = add i32 [[L3]], 4
+; VETO-NEXT:    [[B3:%.*]] = mul i32 [[A3]], [[A3]]
+; VETO-NEXT:    [[C3:%.*]] = add i32 [[B3]], 10
+; VETO-NEXT:    [[D3:%.*]] = mul i32 [[C3]], [[A3]]
+; VETO-NEXT:    [[E3:%.*]] = add i32 [[D3]], 14
+; VETO-NEXT:    [[TMP10:%.*]] = mul i32 [[E3]], [[C3]]
 ; VETO-NEXT:    [[I1:%.*]] = add nuw nsw i64 [[I]], 1
 ; VETO-NEXT:    [[I2:%.*]] = add nuw nsw i64 [[I]], 2
 ; VETO-NEXT:    [[I3:%.*]] = add nuw nsw i64 [[I]], 3
@@ -72,13 +99,9 @@ define void @stlf_profitable(ptr noalias %A, i64 %n) {
 ; VETO-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I1]]
 ; VETO-NEXT:    [[G2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I2]]
 ; VETO-NEXT:    [[G3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I3]]
-; VETO-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP6]], i64 0
 ; VETO-NEXT:    store i32 [[TMP7]], ptr [[G0]], align 4
-; VETO-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP6]], i64 1
 ; VETO-NEXT:    store i32 [[TMP8]], ptr [[G1]], align 4
-; VETO-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP6]], i64 2
 ; VETO-NEXT:    store i32 [[TMP9]], ptr [[G2]], align 4
-; VETO-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP6]], i64 3
 ; VETO-NEXT:    store i32 [[TMP10]], ptr [[G3]], align 4
 ; VETO-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
 ; VETO-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]

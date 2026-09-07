@@ -329,8 +329,8 @@ struct MCSchedModel {
   // StoreLoadForwardingPenalty is the typical number of extra cycles a load
   // stalls when hardware store-to-load forwarding fails (the load's bytes are
   // not fully contained in a single, recent store, so it must wait for the
-  // store to drain to cache). Consumed by the SLP vectorizer when a widened
-  // store would break forwarding for a nearby loop-carried load.
+  // store to drain to cache). Consumed by the SLP vectorizer when widening a
+  // load or store would break forwarding for a nearby loop-carried access.
   // The failed-forwarding stall is roughly 10-15 cycles on current cores, so
   // the default uses a conservative 10 cycles for targets that do not override
   // it; individual targets may set a more precise value (e.g. Zen4 uses 13).

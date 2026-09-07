@@ -336,8 +336,8 @@ static cl::opt<unsigned> SLPRuntimeAliasChecksMaxScalarCostPercent(
 
 static cl::opt<bool> EnableSLPStoreLoadForwardCheck(
     "slp-store-load-forward-check", cl::init(true), cl::Hidden,
-    cl::desc("Add a cost penalty to store chains whose vectorization would "
-             "break store-to-load forwarding in SLP"));
+    cl::desc("Add a cost penalty to SLP trees whose load or store widening "
+             "would break store-to-load forwarding"));
 
 // Limit the number of alias checks. The limit is chosen so that
 // it has no negative effect on the llvm benchmarks.
@@ -730,11 +730,18 @@ public:
   /// holding live values over call sites.
   InstructionCost getSpillCost();
 
-  /// \returns true if widening the store chain anchored at \p BaseStore into a
-  /// vector store of \p VF elements would break store-to-load forwarding for a
-  /// nearby loop-carried load (a short, misaligned backward dependence). Used
-  /// to add an STLF penalty to the store entry's cost.
-  bool findStoreLoadForwardingConflict(StoreInst *BaseStore, unsigned VF);
+  /// \returns true if the store chain anchored at \p BaseStore, widened to
+  /// \p VF elements, and a nearby loop-carried load cannot use store-to-load
+  /// forwarding. When \p OnlyLoad is non-null, inspect only that load and use
+  /// \p LoadSizeOverride as its effective width in bytes.
+  bool findStoreLoadForwardingConflict(
+      StoreInst *BaseStore, unsigned VF, LoadInst *OnlyLoad = nullptr,
+      std::optional<uint64_t> LoadSizeOverride = std::nullopt);
+
+  /// \returns true if widening \p BaseLoad to \p VF elements creates a
+  /// forwarding hazard with a same-base store not handled by the current
+  /// vector store entry.
+  bool findStoreLoadForwardingHazardForLoad(LoadInst *BaseLoad, unsigned VF);
 
   TargetTransformInfo::TargetCostKind getCostKind() const { return CostKind; }
 
@@ -19380,6 +19387,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   SmallDenseMap<const TreeEntry *, InstructionCost> NodesCosts;
   SmallPtrSet<Value *, 4> CheckedExtracts;
   SmallSetVector<TreeEntry *, 4> GatheredLoadsNodes;
+  SmallPtrSet<const TreeEntry *, 4> NonTrimmableSTLFNodes;
   SmallDenseMap<const TreeEntry *, InstructionCost> ExtractCosts;
   LLVM_DEBUG(dbgs() << "SLP: Calculating cost for tree of size "
                     << VectorizableTree.size() << ".\n");
@@ -19468,6 +19476,27 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
            "Expected gather nodes with users only.");
 
     InstructionCost C = getEntryCost(&TE, VectorizedVals, CheckedExtracts);
+    // Also model hazards introduced by a vector load node when the relevant
+    // stores are not part of the current vectorized store tree.
+    if (EnableSLPStoreLoadForwardCheck && TE.hasState() &&
+        TE.State == TreeEntry::Vectorize &&
+        TE.getOpcode() == Instruction::Load &&
+        (CostKind == TTI::TCK_RecipThroughput ||
+         CostKind == TTI::TCK_Latency)) {
+      auto *BaseLoad = cast<LoadInst>(TE.getMainOp());
+      if (findStoreLoadForwardingHazardForLoad(BaseLoad,
+                                               TE.getVectorFactor())) {
+        Type *VecTy = getWidenedType(BaseLoad->getType(), TE.getVectorFactor());
+        InstructionCost Penalty =
+            TTI->getStoreLoadForwardingConflictCost(VecTy, CostKind);
+        if (Penalty != 0) {
+          C += Penalty;
+          for (const TreeEntry *NonTrimmable = &TE; NonTrimmable;
+               NonTrimmable = NonTrimmable->UserTreeIndex.UserTE)
+            NonTrimmableSTLFNodes.insert(NonTrimmable);
+        }
+      }
+    }
     uint64_t Scale = 0;
     bool CostIsFree = C == 0;
     // For gather/buildvector (and split-vectorize) entries, prefer the
@@ -19634,6 +19663,7 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
   while (!Worklist.empty() && std::get<0>(Worklist.top().second) > 0) {
     TreeEntry *TE = Worklist.top().first;
     if (TE->isGather() || TE->Idx == 0 || DeletedNodes.contains(TE) ||
+        NonTrimmableSTLFNodes.contains(TE) ||
         isa<StructType>(getValueType(TE->Scalars.front())) ||
         // Exit early if the parent node is split node and any of scalars is
         // used in other split nodes.
@@ -28926,8 +28956,9 @@ getConstantLoopStrideInBytes(Value *Ptr, ScalarEvolution &SE, const Loop *L) {
   return StepVal.getSExtValue();
 }
 
-bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
-                                              unsigned VF) {
+bool BoUpSLP::findStoreLoadForwardingConflict(
+    StoreInst *BaseStore, unsigned VF, LoadInst *OnlyLoad,
+    std::optional<uint64_t> LoadSizeOverride) {
   assert(BaseStore && "Expected a valid base store");
 
   Type *ValueTy = BaseStore->getValueOperand()->getType();
@@ -28964,6 +28995,12 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
   Value *StoreBase = getUnderlyingObject(BaseStore->getPointerOperand());
   const auto CandidateLoads = [&] {
     SmallPtrSet<LoadInst *, 8> Loads;
+    if (OnlyLoad) {
+      if (OnlyLoad->isSimple() &&
+          getUnderlyingObject(OnlyLoad->getPointerOperand()) == StoreBase)
+        Loads.insert(OnlyLoad);
+      return Loads;
+    }
     for (BasicBlock *BB : StoreL->blocks())
       for (Instruction &I : *BB)
         if (auto *LoadI = dyn_cast<LoadInst>(&I))
@@ -28982,6 +29019,17 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
     // Only loads in the store's loop share its loop-carried dependence.
     if (LI->getLoopFor(LoadI->getParent()) != StoreL)
       continue;
+    const TreeEntry *WidenedLoadEntry = nullptr;
+    for (const TreeEntry *LTE : getTreeEntries(LoadI)) {
+      if (LTE->isGather() || DeletedNodes.contains(LTE) ||
+          TransformedToGatherNodes.contains(LTE))
+        continue;
+      if (LTE->hasState() && LTE->State == TreeEntry::Vectorize &&
+          LTE->getOpcode() == Instruction::Load) {
+        WidenedLoadEntry = LTE;
+        break;
+      }
+    }
     std::optional<int64_t> Diff =
         getPointersDiff(ValueTy, BaseStore->getPointerOperand(),
                         LoadI->getType(), LoadI->getPointerOperand(), *DL, *SE,
@@ -29002,16 +29050,10 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
     TypeSize LoadTypeSize = DL->getTypeStoreSize(LoadI->getType());
     uint64_t LoadElementSize =
         LoadTypeSize.isScalable() ? 0 : LoadTypeSize.getFixedValue();
-    for (const TreeEntry *LTE : getTreeEntries(LoadI)) {
-      if (LTE->isGather() || DeletedNodes.contains(LTE) ||
-          TransformedToGatherNodes.contains(LTE))
-        continue;
-      if (LTE->hasState() && LTE->State == TreeEntry::Vectorize &&
-          LTE->getOpcode() == Instruction::Load) {
-        LoadElementSize *= LTE->Scalars.size();
-        break;
-      }
-    }
+    if (LoadSizeOverride)
+      LoadElementSize = *LoadSizeOverride;
+    else if (WidenedLoadEntry)
+      LoadElementSize *= WidenedLoadEntry->Scalars.size();
     // A conflict is only a real hazard if a future iteration's load actually
     // re-reads the bytes this store wrote. With a common positive loop-carried
     // stride S, equal for the load and the store, the store's bytes are re-read
@@ -29052,6 +29094,46 @@ bool BoUpSLP::findStoreLoadForwardingConflict(StoreInst *BaseStore,
     }
   }
 
+  return false;
+}
+
+bool BoUpSLP::findStoreLoadForwardingHazardForLoad(LoadInst *BaseLoad,
+                                                   unsigned VF) {
+  TypeSize ScalarLoadSize = DL->getTypeStoreSize(BaseLoad->getType());
+  if (ScalarLoadSize.isScalable() || ScalarLoadSize.getFixedValue() == 0)
+    return false;
+  uint64_t VectorLoadBytes = VF * ScalarLoadSize.getFixedValue();
+  const Loop *LoadL = LI->getLoopFor(BaseLoad->getParent());
+  if (!LoadL)
+    return false;
+
+  Value *LoadBase = getUnderlyingObject(BaseLoad->getPointerOperand());
+  for (BasicBlock *BB : LoadL->blocks()) {
+    for (Instruction &I : *BB) {
+      auto *StoreI = dyn_cast<StoreInst>(&I);
+      if (!StoreI || !StoreI->isSimple() ||
+          getUnderlyingObject(StoreI->getPointerOperand()) != LoadBase)
+        continue;
+
+      bool HandledByStoreCost = false;
+      for (const TreeEntry *StoreE : getTreeEntries(StoreI)) {
+        if (!StoreE->hasState() || StoreE->State != TreeEntry::Vectorize ||
+            StoreE->getOpcode() != Instruction::Store ||
+            DeletedNodes.contains(StoreE) ||
+            TransformedToGatherNodes.contains(StoreE))
+          continue;
+        HandledByStoreCost = true;
+        break;
+      }
+      if (HandledByStoreCost)
+        continue;
+      // Expanded and strided stores remain load-side: they represent masked
+      // or non-contiguous narrow writes, not one store containing the load.
+      if (findStoreLoadForwardingConflict(StoreI, /*VF=*/1, BaseLoad,
+                                          VectorLoadBytes))
+        return true;
+    }
+  }
   return false;
 }
 
