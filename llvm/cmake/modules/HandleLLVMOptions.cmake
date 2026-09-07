@@ -578,14 +578,12 @@ endif()
 
 # set stack reserved size to ~10MB
 set(_is_exe "$<STREQUAL:$<TARGET_PROPERTY:TYPE>,EXECUTABLE>")
-if(MSVC)
+if(MSVC OR (CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC"))
   # CMake previously automatically set this value for MSVC builds, but the
   # behavior was changed in CMake 2.8.11 (Issue 12437) to use the MSVC default
   # value (1 MB) which is not enough for us in tasks such as parsing recursive
   # C++ templates in Clang.
   add_link_options("$<${_is_exe}:LINKER:/STACK:10000000>")
-elseif(WIN32 AND LINKER_IS_LLD_LINK)
-  add_link_options(-Xlinker /STACK:10000000)
 elseif(MINGW OR CYGWIN)
   add_link_options("$<${_is_exe}:LINKER:--stack,16777216>")
 
