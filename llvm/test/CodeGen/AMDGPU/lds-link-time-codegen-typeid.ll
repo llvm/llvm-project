@@ -167,48 +167,51 @@ define amdgpu_kernel void @kern() {
 ; CHECK-DAG: R_AMDGPU_ABS64 taker
 ; CHECK-DAG: R_AMDGPU_ABS64 kern
 
+; COM: FUNC_FULL_SIMD_MODE (0x8) is set in every scope below: gfx9 has no CU
+; COM: mode, so a work-group always runs on all four SIMDs. @icaller adds
+; COM: FUNC_USES_VCC (0x1) for 9, and @kern adds FUNC_HAS_DYN_STACK (0x2) too.
 ; ASM-DAG:    .amdgpu_info void_void
-; ASM-DAG:      .amdgpu_flags 0
+; ASM-DAG:      .amdgpu_flags 8
 ; ASM-DAG:      .amdgpu_typeid "v"
 ; ASM-DAG:    .end_amdgpu_info
 ; ASM-DAG:    .amdgpu_info i32_i32
-; ASM-DAG:      .amdgpu_flags 0
+; ASM-DAG:      .amdgpu_flags 8
 ; ASM-DAG:      .amdgpu_typeid "ii"
 ; ASM-DAG:    .end_amdgpu_info
 ; ASM-DAG:    .amdgpu_info void_ptr_i32
-; ASM-DAG:      .amdgpu_flags 0
+; ASM-DAG:      .amdgpu_flags 8
 ; ASM-DAG:      .amdgpu_typeid "vli"
 ; ASM-DAG:    .end_amdgpu_info
 ; ASM-DAG:    .amdgpu_info i64_i64_i64
-; ASM-DAG:      .amdgpu_flags 0
+; ASM-DAG:      .amdgpu_flags 8
 ; ASM-DAG:      .amdgpu_typeid "lll"
 ; ASM-DAG:    .end_amdgpu_info
 ; ASM-DAG:    .amdgpu_info float_float
-; ASM-DAG:      .amdgpu_flags 0
+; ASM-DAG:      .amdgpu_flags 8
 ; ASM-DAG:      .amdgpu_typeid "ii"
 ; ASM-DAG:    .end_amdgpu_info
 ; ASM-DAG:    .amdgpu_info ptr_addrspaces
-; ASM-DAG:      .amdgpu_flags 0
+; ASM-DAG:      .amdgpu_flags 8
 ; ASM-DAG:      .amdgpu_typeid "vlii"
 ; ASM-DAG:    .end_amdgpu_info
 ; ASM-DAG:    .amdgpu_info vectors
-; ASM-DAG:      .amdgpu_flags 0
+; ASM-DAG:      .amdgpu_flags 8
 ; ASM-DAG:      .amdgpu_typeid "iiiiliiiiiiii"
 ; ASM-DAG:    .end_amdgpu_info
 ; ASM-DAG:    .amdgpu_info promoted_small_ints
-; ASM-DAG:      .amdgpu_flags 0
+; ASM-DAG:      .amdgpu_flags 8
 ; ASM-DAG:      .amdgpu_typeid "viii"
 ; ASM-DAG:    .end_amdgpu_info
 ; ASM-DAG:    .amdgpu_info wide_scalars
-; ASM-DAG:      .amdgpu_flags 0
+; ASM-DAG:      .amdgpu_flags 8
 ; ASM-DAG:      .amdgpu_typeid "lliiii"
 ; ASM-DAG:    .end_amdgpu_info
 ; ASM-DAG:    .amdgpu_info byval_struct_private
-; ASM-DAG:      .amdgpu_flags 0
+; ASM-DAG:      .amdgpu_flags 8
 ; ASM-DAG:      .amdgpu_typeid "vi"
 ; ASM-DAG:    .end_amdgpu_info
 ; ASM-DAG:    .amdgpu_info byref_struct_constant
-; ASM-DAG:      .amdgpu_flags 0
+; ASM-DAG:      .amdgpu_flags 8
 ; ASM-DAG:      .amdgpu_typeid "vl"
 ; ASM-DAG:    .end_amdgpu_info
 ; COM: Address-taken declaration: only the type-ID appears in its scope, with
@@ -235,7 +238,7 @@ define amdgpu_kernel void @kern() {
 ; COM: with their plain-pointer counterparts: "vi" (AS 5) and "vl" (AS 4) each
 ; COM: appear once despite two call sites apiece.
 ; ASM-DAG:    .amdgpu_info icaller
-; ASM-DAG:      .amdgpu_flags 1
+; ASM-DAG:      .amdgpu_flags 9
 ; ASM-DAG:      .amdgpu_indirect_call "v"
 ; ASM-DAG:      .amdgpu_indirect_call "vlii"
 ; ASM-DAG:      .amdgpu_indirect_call "iiiiliiiiiiii"
@@ -246,7 +249,7 @@ define amdgpu_kernel void @kern() {
 ; ASM-DAG:      .amdgpu_indirect_call "vli"
 ; ASM-DAG:    .end_amdgpu_info
 ; ASM-DAG:    .amdgpu_info taker
-; ASM-DAG:      .amdgpu_flags 0
+; ASM-DAG:      .amdgpu_flags 8
 ; ASM-DAG:      .amdgpu_num_vgpr {{[0-9]+}}
 ; ASM-DAG:    .end_amdgpu_info
 ; COM: The kernel scope is present but carries no type IDs of its own (kernels

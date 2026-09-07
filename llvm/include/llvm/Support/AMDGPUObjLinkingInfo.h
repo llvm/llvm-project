@@ -68,7 +68,9 @@ enum class FuncInfoFlags : uint32_t {
   FUNC_USES_VCC = 1U << 0,
   FUNC_USES_FLAT_SCRATCH = 1U << 1,
   FUNC_HAS_DYN_STACK = 1U << 2,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/FUNC_HAS_DYN_STACK),
+  /// Function uses full SIMD mode. If unset, the function uses half SIMD mode.
+  FUNC_FULL_SIMD_MODE = 1U << 3,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/FUNC_FULL_SIMD_MODE),
 };
 
 } // namespace AMDGPU
