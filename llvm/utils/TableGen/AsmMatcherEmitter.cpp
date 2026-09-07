@@ -1546,7 +1546,7 @@ void AsmMatcherInfo::buildOperandMatchInfo() {
     }
 
     // Generate operand match info for each mnemonic/operand class pair.
-    for (const auto [CI, OpMask] : OpClassMask) {
+    for (const auto &[CI, OpMask] : OpClassMask) {
       OperandMatchInfo.push_back(
           OperandMatchEntry::create(MI.get(), CI, OpMask));
     }
@@ -2609,7 +2609,7 @@ static void emitGetRegClassFromMatchKindFunc(AsmMatcherInfo &Info,
       It->second = nullptr; // Mark as ambiguous
     }
   }
-  for (const auto [UserCI, RegCI] : UserClassToRegClassMap) {
+  for (const auto &[UserCI, RegCI] : UserClassToRegClassMap) {
     if (RegCI && isDefinedRegisterClass(Info, RegCI->ClassName)) {
       OS << "  case " << UserCI->Name << ":\n";
       OS << "    return &get" << Info.Target.getName() << "MCRegisterClass("

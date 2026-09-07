@@ -801,7 +801,7 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
       Loc.print(OS);
       OS << ": ";
       OS << kVTableProfPrefix;
-      for (const auto [TypeName, Count] : *Map) {
+      for (const auto &[TypeName, Count] : *Map) {
         OS << TypeName << ":" << Count << " ";
       }
       OS << "\n";
@@ -826,7 +826,7 @@ std::error_code SampleProfileWriterText::writeSample(const FunctionSamples &S) {
       Loc.print(OS);
       OS << ": ";
       OS << kVTableProfPrefix;
-      for (const auto [TypeId, Count] : *Map) {
+      for (const auto &[TypeId, Count] : *Map) {
         OS << TypeId << ":" << Count << " ";
       }
       OS << "\n";

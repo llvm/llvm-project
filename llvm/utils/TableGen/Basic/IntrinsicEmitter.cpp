@@ -776,7 +776,7 @@ static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
 
   // Find the max number of attributes to create the local array.
   unsigned MaxNumAttrs = 0;
-  for (const auto [IntPtr, UniqueID] : UniqAttributes) {
+  for (const auto &[IntPtr, UniqueID] : UniqAttributes) {
     const CodeGenIntrinsic &Int = *IntPtr;
     ArgAttrIDSubTable SubTable;
 
