@@ -72,4 +72,4 @@ module attributes {
 // LLVM: define fp128 @quad(fp128 %{{.+}})
 // LLVM: define x86_fp80 @x87(x86_fp80 %{{.+}})
 // LLVM: define x86_fp80 @raw_f80(x86_fp80 %{{.+}})
-// LLVM: define void @take_sld(ptr noalias noundef byval(%struct.SLD) align 16 %{{.+}})
+// LLVM: define void @take_sld(ptr noundef byval(%struct.SLD) align 16 %{{.+}})

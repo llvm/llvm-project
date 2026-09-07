@@ -1810,31 +1810,21 @@ let TargetPrefix = "nvvm" in {
   }
 
   //
-  // Add
+  // FAdd
   //
 
   let IntrProperties = [IntrNoMem, IntrSpeculatable, Commutative,
-                        IntrNoCreateUndefOrPoison] in {
-    foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
-      foreach ftz = ["", "_ftz"] in {
-        foreach sat = ["", "_sat"] in {
-          def int_nvvm_add # rnd # ftz # sat # _f : NVVMBuiltin,
-            DefaultAttrsIntrinsic<[llvm_float_ty], [llvm_float_ty, llvm_float_ty]>;
-        } // sat
-      } // ftz
-      def int_nvvm_add # rnd # _d : NVVMBuiltin,
-          DefaultAttrsIntrinsic<[llvm_double_ty], [llvm_double_ty, llvm_double_ty]>;
-    }
-    
-    foreach ftz = ["", "_ftz"] in {
-      def int_nvvm_add_rn # ftz # _sat_f16 : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_half_ty], [llvm_half_ty, llvm_half_ty]>;
-
-      def int_nvvm_add_rn # ftz # _sat_v2f16 : NVVMBuiltin,
-        DefaultAttrsIntrinsic<[llvm_v2f16_ty], [llvm_v2f16_ty, llvm_v2f16_ty]>;
-        
-    } // ftz
-  }
+                        IntrNoCreateUndefOrPoison, ImmArg<ArgIndex<2>>,
+                        Range<ArgIndex<2>, 0, 4>,
+                        ArgInfo<ArgIndex<2>,
+                                [ArgName<"rnd">,
+                                 ImmArgPrinter<"printFPRoundingMode">]>] in
+    foreach ftz = ["", "_ftz"] in
+      foreach sat = ["", "_sat"] in
+        def int_nvvm_fadd # ftz # sat :
+          DefaultAttrsIntrinsic<[llvm_anyfloat_ty],
+                                [LLVMMatchType<0>, LLVMMatchType<0>,
+                                 llvm_i32_ty]>;
 
   //
   // Dot Product
@@ -1951,16 +1941,20 @@ let TargetPrefix = "nvvm" in {
     foreach relu = ["", "_relu"] in {
       foreach satfinite = ["", "_satfinite"] in {
         def int_nvvm_ff2bf16x2_ # rnd # relu # satfinite : NVVMBuiltin,
-            PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty]>;
+            PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
 
         def int_nvvm_ff2f16x2_ # rnd # relu # satfinite : NVVMBuiltin,
-            PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty]>;
+            PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty, llvm_i1_ty],
+                          [ImmArg<ArgIndex<2>, DefaultValue<0>>]>;
 
         def int_nvvm_f2bf16_ # rnd # relu # satfinite : NVVMBuiltin,
-            PureIntrinsic<[llvm_bfloat_ty], [llvm_float_ty]>;
+            PureIntrinsic<[llvm_bfloat_ty], [llvm_float_ty, llvm_i1_ty], 
+                          [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
 
         def int_nvvm_f2f16_ # rnd # relu # satfinite : NVVMBuiltin,
-            PureIntrinsic<[llvm_half_ty], [llvm_float_ty]>;
+            PureIntrinsic<[llvm_half_ty], [llvm_float_ty, llvm_i1_ty], 
+                          [ImmArg<ArgIndex<1>, DefaultValue<0>>]>;
       }
     }
   }
@@ -1970,10 +1964,10 @@ let TargetPrefix = "nvvm" in {
   foreach relu = ["", "_relu"] in {
     foreach satfinite = ["", "_satfinite"] in {
       def int_nvvm_ff2f16x2_rs # relu # satfinite : NVVMBuiltin,
-          PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty]>;
+          PureIntrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i1_ty], [ImmArg<ArgIndex<3>, DefaultValue<0>>]>;
 
       def int_nvvm_ff2bf16x2_rs # relu # satfinite : NVVMBuiltin,
-          PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty]>;
+          PureIntrinsic<[llvm_v2bf16_ty], [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i1_ty], [ImmArg<ArgIndex<3>, DefaultValue<0>>]>;
     }
   }
 
@@ -2116,6 +2110,34 @@ let TargetPrefix = "nvvm" in {
 
     def int_nvvm_ue5m3x2_to_bf16x2_rn # satfinite # _scale_n2_ue8m0
         : PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty, llvm_i16_ty]>;
+  }
+
+  foreach satfinite = ["", "_satfinite"] in {
+    foreach rnd = ["rn", "rz"] in {
+      def int_nvvm_ff_to_ue5m3x2_ # rnd # satfinite
+          : PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
+      def int_nvvm_ff_to_ue5m3x2_ # rnd # satfinite # _scale_n1_ue8m0
+          : PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty, llvm_i16_ty]>;
+
+      def int_nvvm_f16x2_to_ue5m3x2_ # rnd # satfinite
+          : PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty]>;
+      def int_nvvm_f16x2_to_ue5m3x2_ # rnd # satfinite # _scale_n1_ue8m0
+          : PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty, llvm_i16_ty]>;
+
+      def int_nvvm_bf16x2_to_ue5m3x2_ # rnd # satfinite
+          : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
+      def int_nvvm_bf16x2_to_ue5m3x2_ # rnd # satfinite # _scale_n1_ue8m0
+          : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty, llvm_i16_ty]>;
+    }
+
+    def int_nvvm_ff_to_ue5m3x2_rp # satfinite
+        : PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
+
+    def int_nvvm_f16x2_to_ue5m3x2_rp # satfinite
+        : PureIntrinsic<[llvm_i16_ty], [llvm_v2f16_ty]>;
+
+    def int_nvvm_bf16x2_to_ue5m3x2_rp # satfinite
+        : PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
   }
 
   //

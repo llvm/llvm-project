@@ -61,9 +61,13 @@ static cl::opt<bool> DisableI2pP2iOpt(
 //                            AllocaInst Class
 //===----------------------------------------------------------------------===//
 
+TypeSize AllocaInst::getAllocationBaseSize(const DataLayout &DL) const {
+  return DL.getTypeAllocSize(getAllocatedType());
+}
+
 std::optional<TypeSize>
 AllocaInst::getAllocationSize(const DataLayout &DL) const {
-  TypeSize Size = DL.getTypeAllocSize(getAllocatedType());
+  TypeSize Size = getAllocationBaseSize(DL);
   // Zero-sized types can return early since 0 * N = 0 for any array size N.
   if (Size.isZero())
     return Size;

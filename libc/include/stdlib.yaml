@@ -116,6 +116,13 @@ functions:
     return_type: char *
     arguments:
       - type: const char *
+  - name: getloadavg
+    standards:
+      - bsd
+    return_type: int
+    arguments:
+      - type: double[]
+      - type: int
   - name: labs
     standards:
       - stdc

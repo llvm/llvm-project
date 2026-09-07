@@ -131,6 +131,13 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       v4s1,  v4s8,  v4s16, v4s32, v4s64,  v8s1,   v8s8,  v8s16,
       v8s32, v8s64, v16s1, v16s8, v16s16, v16s32, v16s64};
 
+  auto allShaderScalarsAndVectors = {
+      s1,   s8,   s16,   s32,   s64,   s128, v2s1, v2s8,  v2s16, v2s32, v2s64,
+      v3s1, v3s8, v3s16, v3s32, v3s64, v4s1, v4s8, v4s16, v4s32, v4s64};
+
+  auto &allowedScalarsAndVectors =
+      ST.isShader() ? allShaderScalarsAndVectors : allScalarsAndVectors;
+
   auto allIntScalarsAndVectors = {
       s8,    s16,   s32,   s64,   s128,   v2s8,   v2s16, v2s32, v2s64,
       v3s8,  v3s16, v3s32, v3s64, v4s8,   v4s16,  v4s32, v4s64, v8s8,
@@ -140,6 +147,16 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   auto allBoolVectors = {v2s1, v3s1, v4s1, v8s1, v16s1};
 
   auto allIntScalars = {s8, s16, s32, s64, s128};
+
+  auto allShaderIntVectors = {v2s8,  v2s16, v2s32, v2s64, v3s8,  v3s16,
+                              v3s32, v3s64, v4s8,  v4s16, v4s32, v4s64};
+
+  auto allIntVectors = {v2s8,  v2s16, v2s32, v2s64,  v3s8,   v3s16, v3s32,
+                        v3s64, v4s8,  v4s16, v4s32,  v4s64,  v8s8,  v8s16,
+                        v8s32, v8s64, v16s8, v16s16, v16s32, v16s64};
+
+  auto &allowedIntVectorTypes =
+      ST.isShader() ? allShaderIntVectors : allIntVectors;
 
   auto allFloatScalarsAndF16Vector2AndVector4s = {s16, s32, s64, v2s16, v4s16};
 
@@ -356,11 +373,16 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS,
                                G_BITREVERSE, G_SADDSAT, G_UADDSAT, G_SSUBSAT,
                                G_USUBSAT, G_SCMP, G_UCMP})
-      .legalFor(allIntScalarsAndVectors)
+      .legalFor(allIntScalars)
+      .legalFor(allowedIntVectorTypes)
       .legalIf(ExtendedIntScalarsAndVectors)
       // LLVM i1 maps to OpTypeBool, not OpTypeInt.
       .scalarizeIf(typeInSet(0, allBoolVectors), 0)
-      .minScalar(0, s32);
+      .minScalar(0, s32)
+      .fewerElementsIf(vectorElementCountIsGreaterThan(0, MaxVectorSize),
+                       LegalizeMutations::changeElementCountTo(
+                           0, ElementCount::getFixed(MaxVectorSize)))
+      .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder({G_SSHLSAT, G_USHLSAT}).lower();
 
@@ -385,7 +407,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .legalIf(typeOfLongVectors(0, IsLongVecs));
 
   getActionDefinitionsBuilder({G_TRUNC, G_ZEXT, G_SEXT, G_ANYEXT})
-      .legalForCartesianProduct(allScalarsAndVectors)
+      .legalForCartesianProduct(allowedScalarsAndVectors)
       .legalIf(ExtendedScalarsAndVectorsProduct)
       .legalIf(typeOfLongVectors(0, IsLongVecs))
       .moreElementsToNextPow2(0)
