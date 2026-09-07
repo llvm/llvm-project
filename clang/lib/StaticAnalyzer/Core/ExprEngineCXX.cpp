@@ -105,9 +105,8 @@ void ExprEngine::performTrivialCopy(ExplodedNodeSet &Dst, ExplodedNode *Pred,
 SVal ExprEngine::makeElementRegion(ProgramStateRef State, SVal LValue,
                                    QualType &Ty, bool &IsArray, unsigned Idx) {
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
-  ASTContext &Ctx = SVB.getContext();
 
-  if (Ctx.getAsArrayType(Ty)) {
+  if (ASTContext &Ctx = SVB.getContext(); Ctx.getAsArrayType(Ty)) {
     Ty = Ctx.getBaseElementType(Ty);
     LValue = State->getLValue(Ty, SVB.makeArrayIndex(Idx), LValue);
     IsArray = true;
