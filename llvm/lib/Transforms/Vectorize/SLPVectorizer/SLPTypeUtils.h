@@ -72,13 +72,13 @@ FixedVectorType *getMaskedDivRemType(const TargetTransformInfo &TTI,
 bool hasFullVectorsOrPowerOf2(const TargetTransformInfo &TTI, Type *Ty,
                               unsigned Sz, bool ReVec);
 
-/// True when \p VectorizeNonPowerOf2 is set and \p NumElts is a supported
+/// True when \p AllowNonPowerOf2 is set and \p NumElts is a supported
 /// non-power-of-2 width: \p NumElts + 1 must be a power of two (e.g. 3 or 7
 /// lanes, i.e. almost a full power-of-2 register).
-bool isAllowedNonPowerOf2VF(unsigned NumElts, bool VectorizeNonPowerOf2);
+bool isAllowedNonPowerOf2VF(unsigned NumElts, bool AllowNonPowerOf2);
 
 /// Returns number of parts, the type \p VecTy will be split at the codegen
-/// phase. If the type is going to be scalarized or does not uses whole
+/// phase. If the type is going to be scalarized or does not use whole
 /// registers, returns 1.
 unsigned
 getNumberOfParts(const TargetTransformInfo &TTI, Type *VecTy, Type *ScalarTy,

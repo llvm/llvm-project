@@ -125,8 +125,8 @@ bool hasFullVectorsOrPowerOf2(const TargetTransformInfo &TTI, Type *Ty,
          Sz % NumParts == 0;
 }
 
-bool isAllowedNonPowerOf2VF(unsigned NumElts, bool VectorizeNonPowerOf2) {
-  return VectorizeNonPowerOf2 && has_single_bit(NumElts + 1);
+bool isAllowedNonPowerOf2VF(unsigned NumElts, bool AllowNonPowerOf2) {
+  return AllowNonPowerOf2 && has_single_bit(NumElts + 1);
 }
 
 unsigned getNumberOfParts(const TargetTransformInfo &TTI, Type *VecTy,
