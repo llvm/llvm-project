@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "config/app.h"
 #include "hdr/sys_mman_macros.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/mmap.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/munmap.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
-#include "src/__support/threads/thread.h"
+#include "src/__support/threads/tcb.h"
 #include "src/string/memory_utils/inline_memcpy.h"
-#include "startup/linux/do_start.h"
 
 #include <arm_acle.h>
 #include <sys/syscall.h>
@@ -33,20 +33,20 @@ void init_tls(TLSDescriptor &tls_descriptor) {
   // aarch64 follows the variant 1 TLS layout:
   //
   // 1. First entry is the dynamic thread vector pointer
-  // 2. Second entry is a 8-byte reserved word.
+  // 2. Second entry is a 8-byte reserved word (used for attrib).
   // 3. Padding for alignment.
   // 4. The TLS data from the ELF image.
   //
   // The thread pointer points to the first entry.
 
-  const uintptr_t size_of_pointers = 2 * sizeof(uintptr_t);
+  const uintptr_t TCB_SIZE = sizeof(ThreadControlBlock);
   uintptr_t padding = 0;
   const uintptr_t ALIGNMENT_MASK = app.tls.align - 1;
-  uintptr_t diff = size_of_pointers & ALIGNMENT_MASK;
+  uintptr_t diff = TCB_SIZE & ALIGNMENT_MASK;
   if (diff != 0)
     padding += (ALIGNMENT_MASK - diff) + 1;
 
-  uintptr_t alloc_size = size_of_pointers + padding + app.tls.size;
+  uintptr_t alloc_size = TCB_SIZE + padding + app.tls.size;
 
   ErrorOr<void *> mmap_ret =
       linux_syscalls::mmap(nullptr, alloc_size, PROT_READ | PROT_WRITE,
@@ -54,7 +54,7 @@ void init_tls(TLSDescriptor &tls_descriptor) {
   if (!mmap_ret.has_value())
     syscall_impl<long>(SYS_exit, 1);
   uintptr_t thread_ptr = uintptr_t(mmap_ret.value());
-  uintptr_t tls_addr = thread_ptr + size_of_pointers + padding;
+  uintptr_t tls_addr = thread_ptr + TCB_SIZE + padding;
   inline_memcpy(reinterpret_cast<char *>(tls_addr),
                 reinterpret_cast<const char *>(app.tls.address),
                 app.tls.init_size);

@@ -235,6 +235,9 @@ namespace llvm {
                                                    unsigned &Read,
                                                    const SlotMapping *Slots);
 
+    LLVM_ABI bool parseMetadataDefinitions(SlotMapping &Slots,
+                                           ArrayRef<SMLoc> DefinitionEnds);
+
     LLVMContext &getContext() { return Context; }
 
   private:

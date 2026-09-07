@@ -1,7 +1,7 @@
-// RUN: %clangxx -fsanitize=realtime %s -o %t
+// RUN: %clangxx -fsanitize=realtime %s -DTEMP_FILE='"'"%t.txt"'"' -o %t
 // RUN: %env_rtsan_opts="halt_on_error=false" %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK-RTSAN,CHECK
 
-// RUN: %clangxx %s -o %t
+// RUN: %clangxx %s -DTEMP_FILE='"'"%t.txt"'"' -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
 // UNSUPPORTED: ios
@@ -17,7 +17,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-const char *GetTemporaryFilePath() { return "/tmp/rtsan_syscall_test.txt"; }
+const char *GetTemporaryFilePath() { return TEMP_FILE; }
 
 void custom_assert(bool condition, const char *message) {
   if (!condition) {

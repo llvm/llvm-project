@@ -337,22 +337,20 @@ define <2 x i64> @testv2i64u(<2 x i64> %in) nounwind {
 ;
 ; AVX512CDVL-LABEL: testv2i64u:
 ; AVX512CDVL:       # %bb.0:
-; AVX512CDVL-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX512CDVL-NEXT:    vpaddq %xmm1, %xmm0, %xmm1
-; AVX512CDVL-NEXT:    vpandn %xmm1, %xmm0, %xmm0
+; AVX512CDVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512CDVL-NEXT:    vpsubq %xmm0, %xmm1, %xmm1
+; AVX512CDVL-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512CDVL-NEXT:    vplzcntq %xmm0, %xmm0
-; AVX512CDVL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [64,64]
-; AVX512CDVL-NEXT:    vpsubq %xmm0, %xmm1, %xmm0
+; AVX512CDVL-NEXT:    vpxorq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0
 ; AVX512CDVL-NEXT:    retq
 ;
 ; AVX512CD-LABEL: testv2i64u:
 ; AVX512CD:       # %bb.0:
-; AVX512CD-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX512CD-NEXT:    vpaddq %xmm1, %xmm0, %xmm1
-; AVX512CD-NEXT:    vpandn %xmm1, %xmm0, %xmm0
+; AVX512CD-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512CD-NEXT:    vpsubq %xmm0, %xmm1, %xmm1
+; AVX512CD-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512CD-NEXT:    vplzcntq %zmm0, %zmm0
-; AVX512CD-NEXT:    vpmovsxbq {{.*#+}} xmm1 = [64,64]
-; AVX512CD-NEXT:    vpsubq %xmm0, %xmm1, %xmm0
+; AVX512CD-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512CD-NEXT:    vzeroupper
 ; AVX512CD-NEXT:    retq
 ;
@@ -807,22 +805,21 @@ define <4 x i32> @testv4i32u(<4 x i32> %in) nounwind {
 ;
 ; AVX512CDVL-LABEL: testv4i32u:
 ; AVX512CDVL:       # %bb.0:
-; AVX512CDVL-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX512CDVL-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
-; AVX512CDVL-NEXT:    vpandn %xmm1, %xmm0, %xmm0
+; AVX512CDVL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512CDVL-NEXT:    vpsubd %xmm0, %xmm1, %xmm1
+; AVX512CDVL-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512CDVL-NEXT:    vplzcntd %xmm0, %xmm0
-; AVX512CDVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [32,32,32,32]
-; AVX512CDVL-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX512CDVL-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512CDVL-NEXT:    retq
 ;
 ; AVX512CD-LABEL: testv4i32u:
 ; AVX512CD:       # %bb.0:
-; AVX512CD-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX512CD-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
-; AVX512CD-NEXT:    vpandn %xmm1, %xmm0, %xmm0
+; AVX512CD-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512CD-NEXT:    vpsubd %xmm0, %xmm1, %xmm1
+; AVX512CD-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX512CD-NEXT:    vplzcntd %zmm0, %zmm0
-; AVX512CD-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [32,32,32,32]
-; AVX512CD-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX512CD-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [31,31,31,31]
+; AVX512CD-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX512CD-NEXT:    vzeroupper
 ; AVX512CD-NEXT:    retq
 ;

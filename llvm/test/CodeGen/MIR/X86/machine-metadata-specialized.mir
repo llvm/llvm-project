@@ -1,0 +1,38 @@
+# RUN: llc -mtriple=x86_64 -run-pass=none -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64 -run-pass=none -o - %s | llc -mtriple=x86_64 -x mir -run-pass=none -filetype=null
+
+--- |
+  define void @test() {
+    ret void
+  }
+...
+---
+name: test
+machineMetadataNodes:
+  - '!0 = !DILocation(line: 1, scope: !1)'
+  - '!1 = distinct !DISubprogram(name: "test", scope: !2, file: !2, line: 1, type: !3, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !6, retainedNodes: !7)'
+  - '!2 = !DIFile(filename: "test.c", directory: "/tmp")'
+  - '!3 = !DISubroutineType(types: !4)'
+  - '!4 = !{null}'
+  - '!5 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)'
+  - '!6 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)'
+  - '!7 = !{}'
+  - '!8 = !DILocalVariable(name: "x", scope: !1, file: !2, line: 1, type: !5)'
+  - '!9 = !DILocalVariable(name: "y", scope: !1, file: !2, line: 2, type: !5)'
+  - '!10 = !DILocation(line: 2, scope: !1)'
+entry_values:
+  - { entry-value-register: '$rax', debug-info-variable: '!9', debug-info-expression: '!DIExpression(DW_OP_LLVM_entry_value, 1)',
+      debug-info-location: '!10' }
+# CHECK: entry_values:
+# CHECK:   - { entry-value-register: '$rax', debug-info-variable: '![[ENTRY_VAR:[0-9]+]]', debug-info-expression: '!DIExpression(DW_OP_LLVM_entry_value, 1)',
+# CHECK:       debug-info-location: '!DILocation(line: 2, scope: ![[SP:[0-9]+]])' }
+body: |
+  bb.0:
+    ; CHECK: machineMetadataNodes:
+    ; CHECK-DAG: - '![[SP]] = distinct !DISubprogram(name: "test"
+    ; CHECK-DAG: - '![[VAR:[0-9]+]] = !DILocalVariable(name: "x", scope: ![[SP]]
+    ; CHECK-DAG: - '![[ENTRY_VAR]] = !DILocalVariable(name: "y", scope: ![[SP]]
+    ; CHECK: DBG_VALUE $rax, $noreg, ![[VAR]], !DIExpression(), debug-location !DILocation(line: 1, scope: ![[SP]])
+    DBG_VALUE $rax, $noreg, !8, !DIExpression(), debug-location !0
+    RET 0
+...

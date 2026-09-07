@@ -1190,7 +1190,7 @@ def MemRef_GetGlobalOp : MemRef_Op<"get_global",
 // GlobalOp
 //===----------------------------------------------------------------------===//
 
-def MemRef_GlobalOp : MemRef_Op<"global", [Symbol,
+def MemRef_GlobalOp : MemRef_Op<"global", [SymbolName, SymbolVisibility, Symbol,
     DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]> {
   let summary = "declare or define a global memref variable";
   let description = [{
