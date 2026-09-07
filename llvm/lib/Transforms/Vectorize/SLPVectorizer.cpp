@@ -19,6 +19,7 @@
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "SLPVectorizer/SLPCompatibilityAnalysis.h"
 #include "SLPVectorizer/SLPCostAnalysis.h"
+#include "SLPVectorizer/SLPMemoryUtils.h"
 #include "SLPVectorizer/SLPTypeUtils.h"
 #include "SLPVectorizer/SLPUtils.h"
 #include "llvm/ADT/DenseMap.h"
@@ -5699,144 +5700,6 @@ BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
   return std::move(CurrentOrder);
 }
 
-static bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
-                                  const TargetLibraryInfo &TLI,
-                                  bool CompareOpcodes = true) {
-  if (getUnderlyingObject(Ptr1, RecursionMaxDepth) !=
-      getUnderlyingObject(Ptr2, RecursionMaxDepth))
-    return false;
-  auto *GEP1 = dyn_cast<GetElementPtrInst>(Ptr1);
-  auto *GEP2 = dyn_cast<GetElementPtrInst>(Ptr2);
-  return (!GEP1 || GEP1->getNumOperands() == 2) &&
-         (!GEP2 || GEP2->getNumOperands() == 2) &&
-         (((!GEP1 || isConstant(GEP1->getOperand(1))) &&
-           (!GEP2 || isConstant(GEP2->getOperand(1)))) ||
-          !CompareOpcodes ||
-          (GEP1 && GEP2 &&
-           getSameOpcode({GEP1->getOperand(1), GEP2->getOperand(1)}, TLI)));
-}
-
-/// Calculates minimal alignment as a common alignment.
-template <typename T>
-static Align computeCommonAlignment(ArrayRef<Value *> VL) {
-  Align CommonAlignment = cast<T>(VL.consume_front())->getAlign();
-  for (Value *V : VL)
-    CommonAlignment = std::min(CommonAlignment, cast<T>(V)->getAlign());
-  return CommonAlignment;
-}
-
-/// Checks if the provided list of pointers \p Pointers represents the strided
-/// pointers for type ElemTy. If they are not, nullptr is returned.
-/// Otherwise, SCEV* of the stride value is returned.
-/// If `PointerOps` can be rearanged into the following sequence:
-/// ```
-/// %x + c_0 * stride,
-/// %x + c_1 * stride,
-/// %x + c_2 * stride
-/// ...
-/// ```
-/// where each `c_i` is constant. The SCEV of the `stride` will be returned.
-static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
-                                     const DataLayout &DL, ScalarEvolution &SE,
-                                     SmallVectorImpl<unsigned> &SortedIndices) {
-  SmallVector<const SCEV *> SCEVs;
-  const SCEV *PtrSCEVLowest = nullptr;
-  const SCEV *PtrSCEVHighest = nullptr;
-  // Find lower/upper pointers from the PointerOps (i.e. with lowest and highest
-  // addresses).
-  for (Value *Ptr : PointerOps) {
-    const SCEV *PtrSCEV = SE.getSCEV(Ptr);
-    if (!PtrSCEV)
-      return nullptr;
-    SCEVs.push_back(PtrSCEV);
-    if (!PtrSCEVLowest && !PtrSCEVHighest) {
-      PtrSCEVLowest = PtrSCEVHighest = PtrSCEV;
-      continue;
-    }
-    const SCEV *Diff = SE.getMinusSCEV(PtrSCEV, PtrSCEVLowest);
-    if (isa<SCEVCouldNotCompute>(Diff))
-      return nullptr;
-    if (Diff->isNonConstantNegative()) {
-      PtrSCEVLowest = PtrSCEV;
-      continue;
-    }
-    const SCEV *Diff1 = SE.getMinusSCEV(PtrSCEVHighest, PtrSCEV);
-    if (isa<SCEVCouldNotCompute>(Diff1))
-      return nullptr;
-    if (Diff1->isNonConstantNegative()) {
-      PtrSCEVHighest = PtrSCEV;
-      continue;
-    }
-  }
-  // Dist = PtrSCEVHighest - PtrSCEVLowest;
-  const SCEV *Dist = SE.getMinusSCEV(PtrSCEVHighest, PtrSCEVLowest);
-  if (isa<SCEVCouldNotCompute>(Dist))
-    return nullptr;
-  int Size = DL.getTypeStoreSize(ElemTy);
-  auto TryGetStride = [&](const SCEV *Dist,
-                          const SCEV *Multiplier) -> const SCEV * {
-    if (const auto *M = dyn_cast<SCEVMulExpr>(Dist)) {
-      if (M->getOperand(0) == Multiplier)
-        return M->getOperand(1);
-      if (M->getOperand(1) == Multiplier)
-        return M->getOperand(0);
-      return nullptr;
-    }
-    if (Multiplier == Dist)
-      return SE.getConstant(Dist->getType(), 1);
-    return SE.getUDivExactExpr(Dist, Multiplier);
-  };
-  // Stride_in_elements = Dist / element_size * (num_elems - 1).
-  const SCEV *Stride = nullptr;
-  if (Size != 1 || SCEVs.size() > 1) {
-    const SCEV *Sz = SE.getConstant(Dist->getType(), Size * (SCEVs.size() - 1));
-    Stride = TryGetStride(Dist, Sz);
-    if (!Stride)
-      return nullptr;
-  }
-  if (!Stride || isa<SCEVConstant>(Stride))
-    return nullptr;
-  // Iterate through all pointers and check if all distances are
-  // unique multiple of Stride.
-  using DistOrdPair = std::pair<int64_t, int>;
-  auto Compare = llvm::less_first();
-  std::set<DistOrdPair, decltype(Compare)> Offsets(Compare);
-  bool IsConsecutive = true;
-  for (const auto [Idx, PtrSCEV] : enumerate(SCEVs)) {
-    unsigned Dist = 0;
-    if (PtrSCEV != PtrSCEVLowest) {
-      const SCEV *Diff = SE.getMinusSCEV(PtrSCEV, PtrSCEVLowest);
-      const SCEV *Coeff = TryGetStride(Diff, Stride);
-      if (!Coeff)
-        return nullptr;
-      const auto *SC = dyn_cast<SCEVConstant>(Coeff);
-      if (!SC || isa<SCEVCouldNotCompute>(SC))
-        return nullptr;
-      if (!SE.getMinusSCEV(PtrSCEV, SE.getAddExpr(PtrSCEVLowest,
-                                                  SE.getMulExpr(Stride, SC)))
-               ->isZero())
-        return nullptr;
-      Dist = SC->getAPInt().getZExtValue();
-    }
-    // If the strides are not the same or repeated, we can't vectorize.
-    if ((Dist / Size) * Size != Dist || (Dist / Size) >= SCEVs.size())
-      return nullptr;
-    auto Res = Offsets.emplace(Dist, Idx);
-    if (!Res.second)
-      return nullptr;
-    // Consecutive order if the inserted element is the last one.
-    IsConsecutive = IsConsecutive && std::next(Res.first) == Offsets.end();
-  }
-  SortedIndices.clear();
-  if (!IsConsecutive) {
-    // Fill SortedIndices array only if it is non-consecutive.
-    SortedIndices.resize(PointerOps.size());
-    for (const auto [Idx, Pair] : enumerate(Offsets))
-      SortedIndices[Idx] = Pair.second;
-  }
-  return Stride;
-}
-
 /// Builds compress-like mask for shuffles for the given \p PointerOps, ordered
 /// with \p Order.
 /// \return true if the mask represents strided access, false - otherwise.
@@ -6527,7 +6390,8 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
       return LoadsState::Gather;
 
     if (!all_of(PointerOps, [&](Value *P) {
-          return arePointersCompatible(P, PointerOps.front(), *TLI);
+          return arePointersCompatible(P, PointerOps.front(), *TLI,
+                                       RecursionMaxDepth);
         }))
       return LoadsState::Gather;
 
@@ -14047,7 +13911,8 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
         }
         for (LoadInst *RLI : LIt->second) {
           if (arePointersCompatible(RLI->getPointerOperand(),
-                                    LI->getPointerOperand(), *TLI)) {
+                                    LI->getPointerOperand(), *TLI,
+                                    RecursionMaxDepth)) {
             hash_code SubKey = hash_value(RLI->getPointerOperand());
             return SubKey;
           }
@@ -30610,7 +30475,8 @@ public:
             }
             for (LoadInst *RLI : LIt->second) {
               if (arePointersCompatible(RLI->getPointerOperand(),
-                                        LI->getPointerOperand(), TLI)) {
+                                        LI->getPointerOperand(), TLI,
+                                        RecursionMaxDepth)) {
                 hash_code SubKey = hash_value(RLI->getPointerOperand());
                 return SubKey;
               }
