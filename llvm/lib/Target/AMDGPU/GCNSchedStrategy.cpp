@@ -1481,7 +1481,8 @@ int RewriteMFMAFormStage::findBestChainCount(
     LLVM_DEBUG(dbgs() << "RewriteMFMA probe: N=" << Mid << " Cost=" << Cost
                       << "\n");
 
-    if (Cost < BestCost) {
+    // Update when profitalbe only since the initial cost might be positive.
+    if (Cost <= 0 && Cost < BestCost) {
       BestCost = Cost;
       BestN = Mid;
     }
