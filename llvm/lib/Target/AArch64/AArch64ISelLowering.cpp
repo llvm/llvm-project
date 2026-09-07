@@ -30144,15 +30144,12 @@ static SDValue performDUPCombine(SDNode *N,
     if (auto *LD = dyn_cast<LoadSDNode>(Op)) {
       if (Subtarget->preferSVEVectors() &&
           Subtarget->isSVEorStreamingSVEAvailable() && Op->hasOneUse() &&
-          VT.getScalarType().isInteger()) {
+          VT.getScalarType().isInteger() &&
+          VT.getScalarType() != LD->getMemoryVT().getScalarType()) {
         EVT ScalableVT = getContainerForFixedLengthVector(DCI.DAG, VT);
-        // Using SVE Vectors with the same scalar type is not profitable
-        if (!(ScalableVT.getScalarType() ==
-              LD->getMemoryVT().getScalarType())) {
-          SDValue SplatNode =
-              DCI.DAG.getNode(ISD::SPLAT_VECTOR, DL, ScalableVT, Op);
-          return convertFromScalableVector(DCI.DAG, VT, SplatNode);
-        }
+        SDValue SplatNode =
+            DCI.DAG.getNode(ISD::SPLAT_VECTOR, DL, ScalableVT, Op);
+        return convertFromScalableVector(DCI.DAG, VT, SplatNode);
       }
       ISD::LoadExtType ExtType = LD->getExtensionType();
       EVT MemVT = LD->getMemoryVT();
