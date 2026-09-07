@@ -4,35 +4,15 @@
 target triple = "aarch64-unknown-linux-gnu"
 
 ; TC=5, MaxVF=4, IC=3
-; IC=3 should be rejected for a loop of TC=5 as it won't leave 1 scalar iteration remainder
+; IC=3 should be rejected for a loop of TC=5 as there is no VF it could choose that
+; would result in a single VF*IC iteration with at most 1 scalar iteration.
 define void @tc5_forced_ic3_i32(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-LABEL: define void @tc5_forced_ic3_i32(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[VECTOR_PH:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    br label %[[VECTOR_BODY1:.*]]
-; CHECK:       [[VECTOR_BODY1]]:
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 2
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 2
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = add nsw i32 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP12:%.*]] = add nsw i32 [[TMP10]], 1
-; CHECK-NEXT:    [[TMP9:%.*]] = add nsw i32 [[TMP6]], 1
-; CHECK-NEXT:    store i32 [[TMP8]], ptr [[B]], align 4
-; CHECK-NEXT:    store i32 [[TMP12]], ptr [[TMP7]], align 4
-; CHECK-NEXT:    store i32 [[TMP9]], ptr [[TMP3]], align 4
-; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
-; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:  [[SCALAR_PH:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 3, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP_A]], align 4
@@ -40,7 +20,7 @@ define void @tc5_forced_ic3_i32(ptr noalias %a, ptr noalias %b) #0 {
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], 5
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT1:.*]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT1:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -63,7 +43,3 @@ exit:
 }
 
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
-;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
-; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-;.

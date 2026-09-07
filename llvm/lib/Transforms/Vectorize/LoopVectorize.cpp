@@ -3074,12 +3074,12 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     // allow this form of transformation as this will increase CodeSize.
     unsigned EffectiveIC = UserIC > 0 ? UserIC : 1;
     unsigned MaxVFForTC = llvm::bit_floor(TC.getFixedValue());
-    if (TC.getFixedValue() - MaxVFForTC <= 1 &&
+    if (TC.getFixedValue() - MaxVFForTC <= 1 && MaxVFForTC / EffectiveIC > 1 &&
         MaxVFForTC <= (MaxFactors.FixedVF.getFixedValue() * EffectiveIC) &&
         !Config.OptForSize) {
       unsigned VF = MaxVFForTC / EffectiveIC;
       LLVM_DEBUG(dbgs() << "LV: Picking MaxVF=" << VF
-                        << " with 1 scalar iteration remaining.\n");
+                        << " with at most 1 scalar iteration remaining.\n");
       MaxFactors.FixedVF = ElementCount::getFixed(VF);
       MaxFactors.ScalableVF = ElementCount::getScalable(0);
       return MaxFactors;
