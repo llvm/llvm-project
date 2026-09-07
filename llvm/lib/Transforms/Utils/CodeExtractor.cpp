@@ -960,7 +960,6 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::NoReturn:
       case Attribute::NoSync:
       case Attribute::ReturnsTwice:
-      case Attribute::ContainsReturnsTwiceCall:
       case Attribute::Speculatable:
       case Attribute::StackAlignment:
       case Attribute::WillReturn:

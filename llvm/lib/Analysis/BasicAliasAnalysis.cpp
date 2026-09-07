@@ -263,8 +263,7 @@ CaptureComponents EarliestEscapeAnalysis::getCapturesBefore(
     // A `longjmp` may re-enter the function at any `returns_twice` call
     // (e.g. `setjmp`), If the function contains such a call, conservatively
     // treat the object as captured.
-    if (DT.getRoot()->getParent()->hasFnAttribute(
-            Attribute::ContainsReturnsTwiceCall))
+    if (containsReturnsTwiceCall())
       return false;
 
     return true;
@@ -272,6 +271,13 @@ CaptureComponents EarliestEscapeAnalysis::getCapturesBefore(
   if (IsNotCapturedBefore())
     return CaptureComponents::None;
   return Iter.first->second.second.WithoutRet;
+}
+
+bool EarliestEscapeAnalysis::containsReturnsTwiceCall() {
+  if (!ContainsReturnsTwiceCall)
+    ContainsReturnsTwiceCall =
+        DT.getRoot()->getParent()->callsFunctionThatReturnsTwice();
+  return *ContainsReturnsTwiceCall;
 }
 
 void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {
