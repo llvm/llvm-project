@@ -170,10 +170,10 @@ static SPIRVTypeInst deduceTypeFromUses(Register Reg, MachineFunction &MF,
     case TargetOpcode::G_FADD:
     case TargetOpcode::G_FSUB:
     case TargetOpcode::G_FMUL:
-    case TargetOpcode::G_FCEIL:
     case TargetOpcode::G_FDIV:
     case TargetOpcode::G_FEXP:
     case TargetOpcode::G_FEXP2:
+    case TargetOpcode::G_FCEIL:
     case TargetOpcode::G_FFLOOR:
     case TargetOpcode::G_FREM:
     case TargetOpcode::G_FMA:
