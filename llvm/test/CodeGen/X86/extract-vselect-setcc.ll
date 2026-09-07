@@ -21,13 +21,13 @@ define void @PR117684(i1 %cond, <8 x float> %vec, ptr %ptr1, ptr %ptr2) #0 {
 ; CHECK-NEXT:    retq
   %cmp = fcmp olt <8 x float> %vec, zeroinitializer
   %sel1 = select <8 x i1> %cmp, <8 x float> zeroinitializer, <8 x float>
-  <float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000,
-  float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000>
+  <float +qnan, float +qnan, float +qnan, float +qnan,
+  float +qnan, float +qnan, float +qnan, float +qnan>
   %fmul1 = fmul <8 x float> zeroinitializer, %sel1
   %shuffle = shufflevector <8 x float> %fmul1, <8 x float> zeroinitializer, <8 x i32> zeroinitializer
   %fmul2 = fmul <8 x float> %shuffle,
-  <float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000,
-  float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000000000000>
+  <float +qnan, float +qnan, float +qnan, float +qnan,
+  float +qnan, float +qnan, float +qnan, float +qnan>
   %sel2 = select i1 %cond, ptr %ptr1, ptr %ptr2
   store <8 x float> %fmul2, ptr %sel2, align 4
   %fmul3 = fmul <8 x float> %shuffle, zeroinitializer

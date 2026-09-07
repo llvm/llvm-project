@@ -427,6 +427,7 @@ static bool IsMaybeAtomicWrite(const evaluate::Assignment &assign) {
 // (ultimate) symbol vectors together with the source form distinguishes
 // different variables and different constant subscripts (e.g. a(1) vs a(2))
 // while treating host-associated and ultimate references as equal.
+#ifndef NDEBUG
 static bool IsSameAtomicVariable(const SomeExpr &x, const SomeExpr &y) {
   if (x == y) {
     return true;
@@ -434,6 +435,7 @@ static bool IsSameAtomicVariable(const SomeExpr &x, const SomeExpr &y) {
   return evaluate::GetSymbolVector(x) == evaluate::GetSymbolVector(y) &&
       x.AsFortran() == y.AsFortran();
 }
+#endif
 
 static void SetExpr(parser::TypedExpr &expr, MaybeExpr value) {
   if (value) {

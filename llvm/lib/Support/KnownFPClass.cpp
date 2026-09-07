@@ -614,7 +614,7 @@ KnownFPClass KnownFPClass::exp(const KnownFPClass &KnownSrc) {
 void KnownFPClass::propagateCanonicalizingSrc(const KnownFPClass &Src,
                                               DenormalMode Mode) {
   propagateDenormal(Src, Mode);
-  propagateNonNaN(Src, /*PreserveSign=*/true);
+  propagateNonNaN(Src);
 }
 
 KnownFPClass KnownFPClass::log(const KnownFPClass &KnownSrc,
@@ -835,7 +835,7 @@ KnownFPClass KnownFPClass::fptrunc(const KnownFPClass &KnownSrc) {
   if (KnownSrc.cannotBeOrderedLessThanZero())
     Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
 
-  Known.propagateNonNaN(KnownSrc, true);
+  Known.propagateNonNaN(KnownSrc);
 
   // Infinity needs a range check.
   return Known;
@@ -849,7 +849,7 @@ KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
   // Integer results cannot be subnormal.
   Known.knownNot(fcSubnormal);
 
-  Known.propagateNonNaN(KnownSrc, true);
+  Known.propagateNonNaN(KnownSrc);
 
   // Pass through infinities, except PPC_FP128 is a special case for
   // intrinsics other than trunc.
@@ -901,7 +901,7 @@ KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
                                  const APInt &ConstantRangeExpMax,
                                  const fltSemantics &Flt, DenormalMode Mode) {
   KnownFPClass Known;
-  Known.propagateNonNaN(KnownSrc, /*PreserveSign=*/true);
+  Known.propagateNonNaN(KnownSrc);
 
   // Sign is preserved, but underflows may produce zeroes.
   if (KnownSrc.isKnownNever(fcNegative))

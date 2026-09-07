@@ -19,8 +19,11 @@
 
 namespace mlir {
 class DataLayout;
+class Location;
 class ModuleOp;
+class OpBuilder;
 class Type;
+class Value;
 
 namespace acc {
 
@@ -49,6 +52,12 @@ getTypeSizeAndAlignment(Type ty, ModuleOp module, const DataLayout &dl,
 std::optional<TypeSizeAndAlignment>
 getTypeSizeAndAlignment(Type ty, ModuleOp module,
                         OpenACCSupport *support = nullptr);
+
+/// Cast \p value to \p resultType via PointerLikeType::genCast when needed.
+/// Returns \p value unchanged if types already match. Emits an error and
+/// returns \p value if no cast can be generated.
+Value castPointerLikeTypeIfNeeded(OpBuilder &builder, Location loc, Value value,
+                                  Type resultType);
 
 } // namespace acc
 } // namespace mlir

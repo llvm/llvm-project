@@ -42,6 +42,8 @@ public:
                     raw_ostream &O, StringRef Modifier = {});
   void printCmpMode(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                     raw_ostream &O, StringRef Modifier = {});
+  void printFPRoundingMode(const MCInst *MI, int OpNum,
+                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printAtomicCode(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                        raw_ostream &O, StringRef Modifier = {});
   void printEvictionAndPrefetchHint(const MCInst *MI, int OpNum,
