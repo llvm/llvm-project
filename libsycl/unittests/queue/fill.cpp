@@ -19,12 +19,11 @@ TEST(Queue, Fill) {
   mock::MockWrapper Mock;
   sycl::queue Q;
 
-  int a;
-  int *Ptr = &a;
-  int Pattern;
+  int *Ptr = reinterpret_cast<int *>(1);
+  int Pattern = 42;
   int *PatternPtr = &Pattern;
   constexpr int FillCount = 32;
-  constexpr int FillBytes = FillCount * sizeof(int);
+  constexpr std::size_t FillBytes = FillCount * sizeof(int);
 
   EXPECT_CALL(Mock.get(), olMemFill(_, Ptr, sizeof(int), PatternPtr, FillBytes))
       .Times(3);
@@ -34,7 +33,7 @@ TEST(Queue, Fill) {
   Q.fill(Ptr, Pattern, FillCount, std::vector<sycl::event>{E});
 }
 
-TEST(Queue, FillZeroBytes) {
+TEST(Queue, FillZeroCount) {
   mock::MockWrapper Mock;
   sycl::queue Q;
   EXPECT_CALL(Mock.get(), olWaitEvents(_, _, 1)).Times(2);

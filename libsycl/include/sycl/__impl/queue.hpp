@@ -442,9 +442,9 @@ public:
   event memcpy(void *dest, const void *src, std::size_t numBytes,
                const std::vector<event> &depEvents);
 
-  /// Submits a memset operation for USM accessible on the device associated
-  /// with the queue. Equivalent to a fill operation with an unsigned char
-  /// pattern.
+  /// Submits a memset operation on a USM allocation that must be accessible
+  /// on the device associated with the queue. Equivalent to a fill operation
+  /// with an unsigned char pattern.
   ///
   /// \param ptr is the pointer to memory to be set.
   /// \param value is the value the memory should be filled with, interpreted
@@ -455,9 +455,9 @@ public:
     return memset(ptr, value, numBytes, std::vector<event>{});
   }
 
-  /// Submits a memset operation for USM accessible on the device associated
-  /// with the queue. Equivalent to a fill operation with an unsigned char
-  /// pattern.
+  /// Submits a memset operation on a USM allocation that must be accessible
+  /// on the device associated with the queue. Equivalent to a fill operation
+  /// with an unsigned char pattern.
   ///
   /// \param ptr is the pointer to memory to be set.
   /// \param value is the value the memory should be filled with, interpreted
@@ -470,9 +470,9 @@ public:
     return memset(ptr, value, numBytes, std::vector<event>{depEvent});
   }
 
-  /// Submits a memset operation for USM accessible on the device associated
-  /// with the queue. Equivalent to a fill operation with an unsigned char
-  /// pattern.
+  /// Submits a memset operation on a USM allocation that must be accessible
+  /// on the device associated with the queue. Equivalent to a fill operation
+  /// with an unsigned char pattern.
   ///
   /// \param ptr is the pointer to memory to be set.
   /// \param value is the value the memory should be filled with, interpreted
@@ -486,24 +486,24 @@ public:
     return fill(ptr, static_cast<unsigned char>(value), numBytes, depEvents);
   }
 
-  /// Submits a fill operation that replicates a pattern into USM accessible
-  /// on the device associated with the queue.
+  /// Submits a fill operation that replicates a pattern into a USM allocation
+  /// that must be accessible on the device associated with the queue.
   ///
   /// \param ptr is the pointer to memory to be filled.
   /// \param pattern is the pattern to be replicated.
-  /// \param count is the number of times the pattern is filled.
+  /// \param count is the number of times the pattern is replicated.
   /// \return an event that represents the status of the operation.
   template <typename T>
   event fill(void *ptr, const T &pattern, std::size_t count) {
     return fill(ptr, pattern, count, std::vector<event>{});
   }
 
-  /// Submits a fill operation that replicates a pattern into USM accessible
-  /// on the device associated with the queue.
+  /// Submits a fill operation that replicates a pattern into a USM allocation
+  /// that must be accessible on the device associated with the queue.
   ///
   /// \param ptr is the pointer to memory to be filled.
   /// \param pattern is the pattern to be replicated.
-  /// \param count is the number of times the pattern is filled.
+  /// \param count is the number of times the pattern is replicated.
   /// \param depEvent is an event that represents a dependency for the
   /// operation.
   /// \return an event that represents the status of the operation.
@@ -512,12 +512,12 @@ public:
     return fill(ptr, pattern, count, std::vector<event>{depEvent});
   }
 
-  /// Submits a fill operation that replicates a pattern into USM accessible
-  /// on the device associated with the queue.
+  /// Submits a fill operation that replicates a pattern into a USM allocation
+  /// that must be accessible on the device associated with the queue.
   ///
   /// \param ptr is the pointer to memory to be filled.
   /// \param pattern is the pattern to be replicated.
-  /// \param count is the number of times the pattern is filled.
+  /// \param count is the number of times the pattern is replicated.
   /// \param depEvents is a vector of events that represent dependencies for the
   /// operation.
   /// \return an event that represents the status of the operation.
@@ -620,15 +620,16 @@ private:
   /// \return an event representing last kernel invocation.
   event getLastEvent();
 
-  /// Submits a fill operation that replicates a pattern into USM accessible
-  /// on the device associated with the queue.
+  /// Submits a fill operation that replicates a pattern into a USM allocation
+  /// that must be accessible on the device associated with the queue.
   ///
   /// \param Ptr is the pointer to memory to be filled.
   /// \param Pattern is the pattern to be replicated.
   /// \param PatternSize is the size of the pattern in bytes.
-  /// \param Count is the number of times the pattern is filled.
+  /// \param Count is the number of times the pattern is replicated.
   /// \param DepEvents is a vector of events that represent dependencies for the
   /// operation.
+  /// \return an event that represents the status of the operation.
   event fillImpl(void *Ptr, const void *Pattern, std::size_t PatternSize,
                  std::size_t Count, const std::vector<event> &DepEvents);
 

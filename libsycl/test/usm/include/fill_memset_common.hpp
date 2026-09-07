@@ -1,13 +1,12 @@
 #include <sycl/sycl.hpp>
 
-#include <array>
 #include <cassert>
 
 constexpr std::size_t DataSize = 1024;
 constexpr int Pattern = 42;
 
 template <typename DataT> bool verify(DataT *Ptr) {
-  for (int I = 0; I < DataSize; ++I)
+  for (std::size_t I = 0; I < DataSize; ++I)
     if (Ptr[I] != Pattern)
       return false;
   return true;
@@ -20,21 +19,20 @@ void test(sycl::queue &Q, DataT *Ptr, OpT Op) {
 
   if constexpr (VerifyOnDevice) {
     bool *Result = sycl::malloc_shared<bool>(1, Q);
-    Q.single_task<class Verify>([=]() { verify(Ptr); });
+    Q.single_task<class Verify>([=]() { *Result = verify(Ptr); });
     Q.wait();
-    assert(Result);
+    assert(*Result);
     sycl::free(Result, Q);
   } else {
-    Q.wait();
     assert(verify(Ptr));
   }
   sycl::free(Ptr, Q);
 }
 
 template <typename DataT, typename OpT> void runTests(sycl::queue &Q, OpT Op) {
-  test<false>(Q, sycl::malloc_host<DataT>(1024, Q), Op);
-  test<true>(Q, sycl::malloc_host<DataT>(1024, Q), Op);
-  test<false>(Q, sycl::malloc_shared<DataT>(1024, Q), Op);
-  test<true>(Q, sycl::malloc_shared<DataT>(1024, Q), Op);
-  test<true>(Q, sycl::malloc_device<DataT>(1024, Q), Op);
+  test<false>(Q, sycl::malloc_host<DataT>(DataSize, Q), Op);
+  test<true>(Q, sycl::malloc_host<DataT>(DataSize, Q), Op);
+  test<false>(Q, sycl::malloc_shared<DataT>(DataSize, Q), Op);
+  test<true>(Q, sycl::malloc_shared<DataT>(DataSize, Q), Op);
+  test<true>(Q, sycl::malloc_device<DataT>(DataSize, Q), Op);
 }

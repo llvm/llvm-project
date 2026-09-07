@@ -19,8 +19,7 @@ TEST(Queue, Memset) {
   mock::MockWrapper Mock;
   sycl::queue Q;
 
-  int a;
-  int *Ptr = &a;
+  int *Ptr = reinterpret_cast<int *>(1);
   constexpr int FillCount = 32;
   int Pattern = 42;
 

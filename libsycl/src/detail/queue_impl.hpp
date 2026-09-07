@@ -130,9 +130,10 @@ public:
   ///
   /// \param Ptr is the pointer to memory to be filled.
   /// \param Pattern is the pattern to be replicated.
-  /// \param PatternSize is the size of the pattern.
+  /// \param PatternSize is the size of the pattern in bytes.
   /// \param Count is the number of times the pattern is filled.
   /// \param DepEvents is a vector of dependencies for the operation.
+  /// \return an event impl object that represents the status of the operation.
   EventImplPtr fill(void *Ptr, const void *Pattern, std::size_t PatternSize,
                     std::size_t Count,
                     const std::vector<EventImplPtr> &DepEvents);
