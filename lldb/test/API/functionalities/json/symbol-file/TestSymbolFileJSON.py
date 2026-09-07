@@ -13,8 +13,6 @@ class TargetSymbolsFileJSON(TestBase):
         self.source = "main.c"
 
     @no_debug_info_test
-    @skipIfWindows  
-    @skipIfWasm 
     def test_symbol_file_json_address(self):
         """Test that 'target symbols add' can load the symbols from a JSON file using file addresses."""
 
