@@ -18626,6 +18626,86 @@ static SDValue combinePExtWideningAddSub(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combinePExtWideningAddAcc(SDNode *N, SelectionDAG &DAG,
+                                         const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasStdExtP() || !Subtarget.is64Bit())
+    return SDValue();
+
+  if (N->getOpcode() != ISD::ADD)
+    return SDValue();
+
+  MVT VT = N->getSimpleValueType(0);
+  if (VT != MVT::v4i16 && VT != MVT::v2i32)
+    return SDValue();
+
+  auto MatchExtend = [](SDValue V, unsigned ExtendOpcode, MVT SrcVT,
+                        SDValue &Src) -> bool {
+    if (V.getOpcode() != ExtendOpcode || !V.hasOneUse() ||
+        V.getOperand(0).getSimpleValueType() != SrcVT)
+      return false;
+    Src = V.getOperand(0);
+    return true;
+  };
+
+  auto Match = [&](SDValue V, SDValue &Acc, SDValue &A, SDValue &B,
+                   bool &IsSExt) -> bool {
+    unsigned ExtendOpcode = V.getOpcode();
+    if (ExtendOpcode != ISD::SIGN_EXTEND && ExtendOpcode != ISD::ZERO_EXTEND)
+      return false;
+
+    MVT SrcVT = VT == MVT::v4i16 ? MVT::v4i8 : MVT::v2i16;
+    if (!MatchExtend(V, ExtendOpcode, SrcVT, B))
+      return false;
+
+    SDValue Add = V == N->getOperand(0) ? N->getOperand(1) : N->getOperand(0);
+    if (Add.getOpcode() != ISD::ADD || !Add.hasOneUse())
+      return false;
+
+    if (MatchExtend(Add.getOperand(0), ExtendOpcode, SrcVT, A))
+      Acc = Add.getOperand(1);
+    else if (MatchExtend(Add.getOperand(1), ExtendOpcode, SrcVT, A))
+      Acc = Add.getOperand(0);
+    else
+      return false;
+
+    if (Acc.getValueType() != VT)
+      return false;
+
+    IsSExt = ExtendOpcode == ISD::SIGN_EXTEND;
+    return true;
+  };
+
+  SDValue Acc, A, B;
+  bool IsSExt;
+  if (!Match(N->getOperand(0), Acc, A, B, IsSExt) &&
+      !Match(N->getOperand(1), Acc, A, B, IsSExt))
+    return SDValue();
+
+  if (VT == MVT::v4i16 && !IsSExt)
+    return SDValue();
+
+  SDLoc DL(N);
+  MVT LegalSrcVT = VT == MVT::v4i16 ? MVT::v8i8 : MVT::v4i16;
+  MVT SrcVT = VT == MVT::v4i16 ? MVT::v4i8 : MVT::v2i16;
+  A = DAG.getNode(ISD::CONCAT_VECTORS, DL, LegalSrcVT, A, DAG.getUNDEF(SrcVT));
+  B = DAG.getNode(ISD::CONCAT_VECTORS, DL, LegalSrcVT, B, DAG.getUNDEF(SrcVT));
+
+  SDValue Zip = DAG.getNode(RISCVISD::PZIP, DL, LegalSrcVT, A, B);
+  if (VT == MVT::v4i16) {
+    SDValue ZipAsVT = DAG.getBitcast(VT, Zip);
+    SDValue Low = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, ZipAsVT,
+                              DAG.getValueType(MVT::v4i8));
+    SDValue High = DAG.getNode(RISCVISD::PSRA, DL, VT, ZipAsVT,
+                               DAG.getConstant(8, DL, MVT::i64));
+    return DAG.getNode(ISD::ADD, DL, VT,
+                       DAG.getNode(ISD::ADD, DL, VT, Acc, Low), High);
+  }
+
+  SDValue Ones = DAG.getConstant(1, DL, LegalSrcVT);
+  unsigned Opc = IsSExt ? RISCVISD::PM2ADDA_H : RISCVISD::PM2ADDAU_H;
+  return DAG.getNode(Opc, DL, VT, Acc, Zip, Ones);
+}
+
 static SDValue performADDCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const RISCVSubtarget &Subtarget) {
@@ -18643,6 +18723,8 @@ static SDValue performADDCombine(SDNode *N,
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
+    return V;
+  if (SDValue V = combinePExtWideningAddAcc(N, DAG, Subtarget))
     return V;
   if (SDValue V = combinePExtWideningAddSub(N, DAG, Subtarget))
     return V;
