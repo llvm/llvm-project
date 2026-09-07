@@ -26,12 +26,15 @@ bool MultipleInheritanceCheck::isInterface(const CXXBaseSpecifier &Base) {
   if (!Node)
     return true;
 
-  assert(Node->isCompleteDefinition());
+  if (!Node->hasDefinition())
+    return false;
 
   // Short circuit the lookup if we have analyzed this record before.
   if (const auto CachedValue = InterfaceMap.find(Node);
       CachedValue != InterfaceMap.end())
     return CachedValue->second;
+
+  InterfaceMap.try_emplace(Node, false);
 
   // To be an interface, a class must have...
   const bool CurrentClassIsInterface =
@@ -47,7 +50,7 @@ bool MultipleInheritanceCheck::isInterface(const CXXBaseSpecifier &Base) {
         return M->isUserProvided() && !M->isPureVirtual() && !M->isStatic();
       });
 
-  InterfaceMap.try_emplace(Node, CurrentClassIsInterface);
+  InterfaceMap[Node] = CurrentClassIsInterface;
   return CurrentClassIsInterface;
 }
 
