@@ -75,6 +75,7 @@ if not config.llvm_tree_available:
 
 #TODO: hack, need to check per sanitizer and also whether
 # sanitizers are on. Also this is not going to work on Windows at all.
+# TODO: do we need to --no-whole-archive after all this?
 flang_args.extend([
     f"-Wl,--whole-archive,{config.clang_runtime_dir}/libclang_rt.asan_static.a,--no-whole-archive",
     f"-Wl,--whole-archive,{config.clang_runtime_dir}/libclang_rt.asan.a,--no-whole-archive",
