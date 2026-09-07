@@ -165,3 +165,31 @@ body:             |
     RET_ReallyLR implicit $d0
 
 ...
+---
+name:            fsqrt
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: fsqrt
+    ; CHECK: %res:_(f64) = G_FCONSTANT double 2.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %a:_(f64) = G_FCONSTANT double 4.0
+    %res:_(f64) = G_FSQRT %a
+    $d0 = COPY %res(f64)
+    RET_ReallyLR implicit $d0
+
+...
+---
+name:            flog2
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: flog2
+    ; CHECK: %res:_(f64) = G_FCONSTANT double 3.000000e+00
+    ; CHECK-NEXT: $d0 = COPY %res(f64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+    %a:_(f64) = G_FCONSTANT double 8.0
+    %res:_(f64) = G_FLOG2 %a
+    $d0 = COPY %res(f64)
+    RET_ReallyLR implicit $d0
+
+...
