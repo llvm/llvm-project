@@ -3,7 +3,7 @@
 // compilation such a launch must be accepted (treated as a host-side launch)
 // rather than rejected as an unsupported device-side kernel launch.
 
-// RUN: %clang_cc1 -fsyntax-only -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip -fincremental-extensions -verify %s
+// RUN: %clang_cc1 -fsyntax-only -triple amdgpu7.00-amd-amdhsa -fcuda-is-device -x hip -fincremental-extensions -verify %s
 // expected-no-diagnostics
 
 #define __global__ __attribute__((global))

@@ -810,7 +810,8 @@ SDValue R600TargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const 
 
   if (VT == MVT::f32) {
     DAGCombinerInfo DCI(DAG, AfterLegalizeVectorOps, true, nullptr);
-    SDValue MinMax = combineFMinMaxLegacy(DL, VT, LHS, RHS, True, False, CC, DCI);
+    SDValue MinMax = combineFMinMaxLegacy(DL, VT, LHS, RHS, True, False, CC,
+                                          SDNodeFlags(), DCI);
     if (MinMax)
       return MinMax;
   }
