@@ -100,6 +100,11 @@ infrastructure are described first, followed by tool-specific sections.
   `-std=cXX-or-earlier` values, mirroring the existing `-std=cXX-or-later`.
   New construct expands to the given standard and every earlier one.
 
+- On Windows, {program}`clang-tidy` will now better match mixes of forwards and
+  backwards slashes when using the `--line-filter` option. This also improves
+  piping from {program}`git` to {program}`clang-tidy-diff.py`, where slashes
+  will now be automatically normalized.
+
 #### New checks
 
 - New {doc}`llvm-invalid-regex-pattern
@@ -215,6 +220,9 @@ infrastructure are described first, followed by tool-specific sections.
 
   - Fixed {option}`DefaultHungarianPrefix` being incorrectly diagnosed as an
     invalid option.
+
+  - Fixed invalid fixes when renaming parameter packs used in `sizeof...`
+    expressions.
 
   - Added the {option}`TypedefInheritAnonTagConfig`, which checks a
     typedef or type alias that provides the only name of an otherwise unnamed

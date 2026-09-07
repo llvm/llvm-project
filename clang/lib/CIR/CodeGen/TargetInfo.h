@@ -37,10 +37,12 @@ bool isEmptyFieldForLayout(const ASTContext &context, const FieldDecl *fd);
 /// if the [[no_unique_address]] attribute would have made them empty.
 bool isEmptyRecordForLayout(const ASTContext &context, QualType t);
 
-/// isEmptyFieldForABI - Return true if the field is "empty", that is, it is an
-/// unnamed bit-field or an (array of) empty record(s).  C++ record fields are
-/// never empty unless marked [[no_unique_address]], and that exception applies
-/// only to records, not arrays of records.
+/// isEmptyFieldForABI - Return true if the field is "empty", that is, it is a
+/// zero-width bit-field or an (array of) empty record(s).  An unnamed
+/// bit-field wider than zero bits is not empty: it is storage the classifier
+/// reads like a named bit-field's.  C++ record fields are never empty unless
+/// marked [[no_unique_address]], and that exception applies only to records,
+/// not arrays of records.
 bool isEmptyFieldForABI(const ASTContext &context, const FieldDecl *fd);
 
 /// isEmptyRecordForABI - Return true if a structure contains only empty base
