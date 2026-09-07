@@ -76,21 +76,23 @@ static Instruction *getContextInstForUse(Use &U) {
 }
 
 /// Returns the closest program point dominating all uses of \p I, or nullptr if
-/// \p I has no uses or all of them are in unreachable blocks.
+/// \p I has no uses.
 static Instruction *findCommonDominatorOfUses(Instruction &I,
                                               DominatorTree &DT) {
   Instruction *CommonDom = nullptr;
   unsigned NumUses = 0;
   for (Use &U : I.uses()) {
-    ++NumUses;
-    if (NumUses == 16)
-      return nullptr;
+    // Conservatively use original instruction, if there are too many uses.
+    if (++NumUses == 16)
+      return &I;
     Instruction *UserI = getContextInstForUse(U);
     CommonDom =
         CommonDom ? DT.findNearestCommonDominator(CommonDom, UserI) : UserI;
   }
+  if (!CommonDom)
+    return &I;
   // Uses in unreachable blocks are not in the dominator tree.
-  return CommonDom && DT.getNode(CommonDom->getParent()) ? CommonDom : nullptr;
+  return DT.getNode(CommonDom->getParent()) ? CommonDom : &I;
 }
 
 namespace {

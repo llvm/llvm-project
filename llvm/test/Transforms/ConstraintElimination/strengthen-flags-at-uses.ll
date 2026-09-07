@@ -259,7 +259,7 @@ define void @sub_16_uses_fact_at_def(i64 %a, i64 %b) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i64 [[A]], [[B]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i64 [[A]], [[B]]
 ; CHECK-NEXT:    br label %[[USE_BB:.*]]
 ; CHECK:       [[USE_BB]]:
 ; CHECK-NEXT:    call void @use(i64 [[SUB]])
@@ -313,7 +313,7 @@ define i64 @sub_single_use_in_unreachable_block(i64 %a, i64 %b) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i64 [[A]], [[B]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i64 [[A]], [[B]]
 ; CHECK-NEXT:    ret i64 0
 ; CHECK:       [[UNREACHABLE_BB:.*:]]
 ; CHECK-NEXT:    call void @use(i64 [[SUB]])
@@ -337,7 +337,7 @@ define i64 @sub_uses_in_two_unreachable_blocks(i64 %a, i64 %b) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i64 [[A]], [[B]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nuw i64 [[A]], [[B]]
 ; CHECK-NEXT:    ret i64 0
 ; CHECK:       [[UNREACHABLE_BB_1:.*:]]
 ; CHECK-NEXT:    call void @use(i64 [[SUB]])
