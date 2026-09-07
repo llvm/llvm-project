@@ -3799,47 +3799,18 @@ define <16 x float> @deinterleave_interleave2(<16 x float> %arg) {
 ; V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; V-NEXT:    vnsrl.wx v12, v8, a0
 ; V-NEXT:    vnsrl.wi v14, v8, 0
-; V-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
-; V-NEXT:    vslidedown.vi v8, v12, 4
-; V-NEXT:    vslidedown.vi v10, v14, 4
-; V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; V-NEXT:    vzext.vf2 v16, v8
-; V-NEXT:    vsll.vx v16, v16, a0
-; V-NEXT:    li a0, 170
-; V-NEXT:    vmv.s.x v0, a0
-; V-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; V-NEXT:    vwaddu.vv v8, v14, v12
-; V-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; V-NEXT:    vzext.vf2 v14, v10
 ; V-NEXT:    li a0, -1
-; V-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; V-NEXT:    vwmaccu.vx v8, a0, v12
-; V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; V-NEXT:    vmerge.vvm v12, v14, v16, v0
-; V-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; V-NEXT:    vslideup.vi v8, v12, 8
 ; V-NEXT:    ret
 ;
 ; ZVZIP-LABEL: deinterleave_interleave2:
 ; ZVZIP:       # %bb.0: # %entry
 ; ZVZIP-NEXT:    li a0, 32
 ; ZVZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; ZVZIP-NEXT:    vnsrl.wx v14, v8, a0
-; ZVZIP-NEXT:    vnsrl.wi v16, v8, 0
-; ZVZIP-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
-; ZVZIP-NEXT:    vslidedown.vi v8, v14, 4
-; ZVZIP-NEXT:    vslidedown.vi v10, v16, 4
-; ZVZIP-NEXT:    li a0, 170
-; ZVZIP-NEXT:    vmv.s.x v0, a0
-; ZVZIP-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; ZVZIP-NEXT:    vzip.vv v12, v9, v8
-; ZVZIP-NEXT:    vzip.vv v8, v10, v11
-; ZVZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; ZVZIP-NEXT:    vmerge.vvm v12, v8, v12, v0
-; ZVZIP-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; ZVZIP-NEXT:    vzip.vv v8, v16, v14
-; ZVZIP-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; ZVZIP-NEXT:    vslideup.vi v8, v12, 8
+; ZVZIP-NEXT:    vnsrl.wx v12, v8, a0
+; ZVZIP-NEXT:    vnsrl.wi v14, v8, 0
+; ZVZIP-NEXT:    vzip.vv v8, v14, v12
 ; ZVZIP-NEXT:    ret
 entry:
   %0 = call { <8 x float>, <8 x float> } @llvm.vector.deinterleave2.v16f32(<16 x float> %arg)

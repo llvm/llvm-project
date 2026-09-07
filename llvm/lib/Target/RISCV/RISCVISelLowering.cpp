@@ -22895,6 +22895,33 @@ static SDValue performCONCAT_VECTORSCombine(SDNode *N, SelectionDAG &DAG,
   if (!TLI.isTypeLegal(VT))
     return SDValue();
 
+  // If inputs of concat_vectors are output of 2 way interleave
+  // transform it to wider shuffle for fixed length vector.
+  // i.e.
+  // concat_vectors((vector_interleave X, Y):0,
+  //                (vector_interleave X, Y):1)
+  //   --> vector_shuffle(concat_vectors(X, Y), undef,
+  //                      <0, N, 1, N + 1, ...>)
+  if (N->getNumOperands() == 2) {
+    SDValue Lo = N->getOperand(0);
+    SDValue Hi = N->getOperand(1);
+    SDNode *Interleave = Lo.getNode();
+    EVT PartVT = Lo.getValueType();
+    if (PartVT.isFixedLengthVector() &&
+        Lo.getOpcode() == ISD::VECTOR_INTERLEAVE &&
+        Hi.getNode() == Interleave && Interleave->getNumOperands() == 2 &&
+        Lo.hasOneUse() && Hi.hasOneUse() &&
+        TLI.getVectorInterleaveAction(ISD::VECTOR_INTERLEAVE, 2, PartVT) ==
+            TargetLowering::Expand) {
+      unsigned NumElts = PartVT.getVectorNumElements();
+      SDValue Concat =
+          DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Interleave->getOperand(0),
+                      Interleave->getOperand(1));
+      return DAG.getVectorShuffle(VT, DL, Concat, DAG.getUNDEF(VT),
+                                  createInterleaveMask(NumElts, 2));
+    }
+  }
+
   // TODO: Potentially extend this to scalable vectors
   if (VT.isScalableVector())
     return SDValue();
