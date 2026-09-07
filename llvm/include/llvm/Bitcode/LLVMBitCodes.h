@@ -471,6 +471,7 @@ enum CastOpcodes {
   CAST_BITCAST = 11,
   CAST_ADDRSPACECAST = 12,
   CAST_PTRTOADDR = 13,
+  CAST_BYTECAST = 14,
 };
 
 /// UnaryOpcodes - These are values used in the bitcode files to encode which
