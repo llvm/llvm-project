@@ -21,16 +21,16 @@ define void @masked_store_f64(ptr %p, <4 x i1> %m4, <8 x i1> %m8, <16 x i1> %m16
 ;
 ; AVX2-LABEL: 'masked_store_f64'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.masked.store.v4f64.p0(<4 x double> poison, ptr align 8 %p, <4 x i1> %m4)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.store.v8f64.p0(<8 x double> poison, ptr align 8 %p, <8 x i1> %m8)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.masked.store.v16f64.p0(<16 x double> poison, ptr align 8 %p, <16 x i1> %m16)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: call void @llvm.masked.store.v32f64.p0(<32 x double> poison, ptr align 8 %p, <32 x i1> %m32)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: call void @llvm.masked.store.v8f64.p0(<8 x double> poison, ptr align 8 %p, <8 x i1> %m8)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: call void @llvm.masked.store.v16f64.p0(<16 x double> poison, ptr align 8 %p, <16 x i1> %m16)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 92 for instruction: call void @llvm.masked.store.v32f64.p0(<32 x double> poison, ptr align 8 %p, <32 x i1> %m32)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512-LABEL: 'masked_store_f64'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v4f64.p0(<4 x double> poison, ptr align 8 %p, <4 x i1> %m4)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v8f64.p0(<8 x double> poison, ptr align 8 %p, <8 x i1> %m8)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v16f64.p0(<16 x double> poison, ptr align 8 %p, <16 x i1> %m16)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: call void @llvm.masked.store.v32f64.p0(<32 x double> poison, ptr align 8 %p, <32 x i1> %m32)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: call void @llvm.masked.store.v16f64.p0(<16 x double> poison, ptr align 8 %p, <16 x i1> %m16)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 12 for instruction: call void @llvm.masked.store.v32f64.p0(<32 x double> poison, ptr align 8 %p, <32 x i1> %m32)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call void @llvm.masked.store.v4f64.p0(<4 x double> poison, ptr %p, i32 8, <4 x i1> %m4)
@@ -49,14 +49,14 @@ define void @masked_load_f64(ptr %p, <4 x i1> %m4, <8 x i1> %m8, <16 x i1> %m16)
 ;
 ; AVX2-LABEL: 'masked_load_f64'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %l4 = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 %p, <4 x i1> %m4, <4 x double> poison)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %l8 = call <8 x double> @llvm.masked.load.v8f64.p0(ptr align 8 %p, <8 x i1> %m8, <8 x double> poison)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %l16 = call <16 x double> @llvm.masked.load.v16f64.p0(ptr align 8 %p, <16 x i1> %m16, <16 x double> poison)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %l8 = call <8 x double> @llvm.masked.load.v8f64.p0(ptr align 8 %p, <8 x i1> %m8, <8 x double> poison)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %l16 = call <16 x double> @llvm.masked.load.v16f64.p0(ptr align 8 %p, <16 x i1> %m16, <16 x double> poison)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512-LABEL: 'masked_load_f64'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %l4 = call <4 x double> @llvm.masked.load.v4f64.p0(ptr align 8 %p, <4 x i1> %m4, <4 x double> poison)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %l8 = call <8 x double> @llvm.masked.load.v8f64.p0(ptr align 8 %p, <8 x i1> %m8, <8 x double> poison)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %l16 = call <16 x double> @llvm.masked.load.v16f64.p0(ptr align 8 %p, <16 x i1> %m16, <16 x double> poison)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %l16 = call <16 x double> @llvm.masked.load.v16f64.p0(ptr align 8 %p, <16 x i1> %m16, <16 x double> poison)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %l4 = call <4 x double> @llvm.masked.load.v4f64.p0(ptr %p, i32 8, <4 x i1> %m4, <4 x double> poison)
@@ -74,14 +74,14 @@ define void @masked_store_i64(ptr %p, <4 x i1> %m4, <8 x i1> %m8, <16 x i1> %m16
 ;
 ; AVX2-LABEL: 'masked_store_i64'
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: call void @llvm.masked.store.v4i64.p0(<4 x i64> poison, ptr align 8 %p, <4 x i1> %m4)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: call void @llvm.masked.store.v8i64.p0(<8 x i64> poison, ptr align 8 %p, <8 x i1> %m8)
-; AVX2-NEXT:  Cost Model: Found an estimated cost of 32 for instruction: call void @llvm.masked.store.v16i64.p0(<16 x i64> poison, ptr align 8 %p, <16 x i1> %m16)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: call void @llvm.masked.store.v8i64.p0(<8 x i64> poison, ptr align 8 %p, <8 x i1> %m8)
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 44 for instruction: call void @llvm.masked.store.v16i64.p0(<16 x i64> poison, ptr align 8 %p, <16 x i1> %m16)
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512-LABEL: 'masked_store_i64'
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v4i64.p0(<4 x i64> poison, ptr align 8 %p, <4 x i1> %m4)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: call void @llvm.masked.store.v8i64.p0(<8 x i64> poison, ptr align 8 %p, <8 x i1> %m8)
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: call void @llvm.masked.store.v16i64.p0(<16 x i64> poison, ptr align 8 %p, <16 x i1> %m16)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: call void @llvm.masked.store.v16i64.p0(<16 x i64> poison, ptr align 8 %p, <16 x i1> %m16)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call void @llvm.masked.store.v4i64.p0(<4 x i64> poison, ptr %p, i32 8, <4 x i1> %m4)

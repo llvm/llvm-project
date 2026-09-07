@@ -36,7 +36,7 @@ define <16 x i64> @sel_v16i64(<16 x i1> %m, <16 x i64> %a, <16 x i64> %b) {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i64> %s
 ;
 ; AVX512-LABEL: 'sel_v16i64'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %s = select <16 x i1> %m, <16 x i64> %a, <16 x i64> %b
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %s = select <16 x i1> %m, <16 x i64> %a, <16 x i64> %b
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i64> %s
 ;
   %s = select <16 x i1> %m, <16 x i64> %a, <16 x i64> %b

@@ -20,7 +20,7 @@ define <16 x i64> @gather_v16i64(<16 x ptr> %ptrs, <16 x i1> %m, <16 x i64> %pas
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i64> %g
 ;
 ; AVX512-LABEL: 'gather_v16i64'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %g = call <16 x i64> @llvm.masked.gather.v16i64.v16p0(<16 x ptr> align 8 %ptrs, <16 x i1> %m, <16 x i64> %pass)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %g = call <16 x i64> @llvm.masked.gather.v16i64.v16p0(<16 x ptr> align 8 %ptrs, <16 x i1> %m, <16 x i64> %pass)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x i64> %g
 ;
   %g = call <16 x i64> @llvm.masked.gather.v16i64.v16p0(<16 x ptr> %ptrs, i32 8, <16 x i1> %m, <16 x i64> %pass)
@@ -33,7 +33,7 @@ define void @scatter_v16i64(<16 x i64> %v, <16 x ptr> %ptrs, <16 x i1> %m) {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; AVX512-LABEL: 'scatter_v16i64'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: call void @llvm.masked.scatter.v16i64.v16p0(<16 x i64> %v, <16 x ptr> align 8 %ptrs, <16 x i1> %m)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: call void @llvm.masked.scatter.v16i64.v16p0(<16 x i64> %v, <16 x ptr> align 8 %ptrs, <16 x i1> %m)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   call void @llvm.masked.scatter.v16i64.v16p0(<16 x i64> %v, <16 x ptr> %ptrs, i32 8, <16 x i1> %m)
@@ -46,7 +46,7 @@ define <16 x double> @gather_v16f64(<16 x ptr> %ptrs, <16 x i1> %m, <16 x double
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x double> %g
 ;
 ; AVX512-LABEL: 'gather_v16f64'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %g = call <16 x double> @llvm.masked.gather.v16f64.v16p0(<16 x ptr> align 8 %ptrs, <16 x i1> %m, <16 x double> %pass)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %g = call <16 x double> @llvm.masked.gather.v16f64.v16p0(<16 x ptr> align 8 %ptrs, <16 x i1> %m, <16 x double> %pass)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <16 x double> %g
 ;
   %g = call <16 x double> @llvm.masked.gather.v16f64.v16p0(<16 x ptr> %ptrs, i32 8, <16 x i1> %m, <16 x double> %pass)
@@ -59,7 +59,7 @@ define <32 x i64> @gather_v32i64(<32 x ptr> %ptrs, <32 x i1> %m, <32 x i64> %pas
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <32 x i64> %g
 ;
 ; AVX512-LABEL: 'gather_v32i64'
-; AVX512-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %g = call <32 x i64> @llvm.masked.gather.v32i64.v32p0(<32 x ptr> align 8 %ptrs, <32 x i1> %m, <32 x i64> %pass)
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %g = call <32 x i64> @llvm.masked.gather.v32i64.v32p0(<32 x ptr> align 8 %ptrs, <32 x i1> %m, <32 x i64> %pass)
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <32 x i64> %g
 ;
   %g = call <32 x i64> @llvm.masked.gather.v32i64.v32p0(<32 x ptr> %ptrs, i32 8, <32 x i1> %m, <32 x i64> %pass)
