@@ -95,5 +95,5 @@ struct S {
   bool operator==(const S &) const = default;
 };
 
-bool f(const S &a, const S &b) { return a == b; }
+static_assert(S{} == S{});
 }
