@@ -900,7 +900,7 @@ bool llvm::isReadOnlyLoop(
     SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   for (BasicBlock *BB : L->blocks()) {
     for (Instruction &I : *BB) {
-      // Debug values and pseudo-probes are placeholders with side effects but
+      // Pseudo-probes are placeholders with side effects but
       // no real memory access, and do not affect dereferenceability.
       if (I.isDebugOrPseudoInst())
         continue;
