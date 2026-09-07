@@ -2257,8 +2257,9 @@ public:
   ///
   /// If an entire block is mappable, then its range is [MBB.begin(), MBB.end())
   ///
-  /// All instructions not present in an outlinable range are considered
-  /// illegal.
+  /// All non-debug instructions not present in an outlinable range are
+  /// considered illegal. Debug instructions are ignored wherever they appear,
+  /// so each gap between ranges must contain a non-debug instruction.
   virtual SmallVector<
       std::pair<MachineBasicBlock::iterator, MachineBasicBlock::iterator>>
   getOutlinableRanges(MachineBasicBlock &MBB, unsigned &Flags) const {

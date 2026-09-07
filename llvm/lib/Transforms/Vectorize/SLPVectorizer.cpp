@@ -271,13 +271,6 @@ static cl::opt<bool> VectorizeOnceUsed(
     cl::desc("Use instructions with the single user as standalone "
              "vectorization seeds."));
 
-/// True when \p slp-vectorize-non-power-of-2 is enabled and \p NumElts is a
-/// supported non-power-of-2 width: \p NumElts + 1 must be a power of two
-/// (e.g. 3 or 7 lanes, i.e. almost a full power-of-2 register).
-static bool isAllowedNonPowerOf2VF(unsigned NumElts) {
-  return VectorizeNonPowerOf2 && has_single_bit(NumElts + 1);
-}
-
 /// Enables vectorization of copyable elements.
 static cl::opt<bool> VectorizeCopyableElements(
     "slp-copyable-elements", cl::init(true), cl::Hidden,
@@ -351,143 +344,6 @@ static const int MinScheduleRegionSize = 16;
 
 /// Maximum allowed number of operands in the PHI nodes.
 static const unsigned MaxPHINumOperands = 128;
-
-/// Checks if the vector of instructions can be represented as a shuffle, like:
-/// %x0 = extractelement <4 x i8> %x, i32 0
-/// %x3 = extractelement <4 x i8> %x, i32 3
-/// %y1 = extractelement <4 x i8> %y, i32 1
-/// %y2 = extractelement <4 x i8> %y, i32 2
-/// %x0x0 = mul i8 %x0, %x0
-/// %x3x3 = mul i8 %x3, %x3
-/// %y1y1 = mul i8 %y1, %y1
-/// %y2y2 = mul i8 %y2, %y2
-/// %ins1 = insertelement <4 x i8> poison, i8 %x0x0, i32 0
-/// %ins2 = insertelement <4 x i8> %ins1, i8 %x3x3, i32 1
-/// %ins3 = insertelement <4 x i8> %ins2, i8 %y1y1, i32 2
-/// %ins4 = insertelement <4 x i8> %ins3, i8 %y2y2, i32 3
-/// ret <4 x i8> %ins4
-/// can be transformed into:
-/// %1 = shufflevector <4 x i8> %x, <4 x i8> %y, <4 x i32> <i32 0, i32 3, i32 5,
-///                                                         i32 6>
-/// %2 = mul <4 x i8> %1, %1
-/// ret <4 x i8> %2
-/// Mask will return the Shuffle Mask equivalent to the extracted elements.
-/// TODO: Can we split off and reuse the shuffle mask detection from
-/// ShuffleVectorInst/getShuffleCost?
-static std::optional<TargetTransformInfo::ShuffleKind>
-isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
-                     AssumptionCache *AC) {
-  const auto *It = find_if(VL, IsaPred<ExtractElementInst>);
-  if (It == VL.end())
-    return std::nullopt;
-  unsigned Size = accumulate(VL, 0u, [](unsigned S, Value *V) {
-    auto *EI = dyn_cast<ExtractElementInst>(V);
-    if (!EI)
-      return S;
-    auto *VTy = dyn_cast<FixedVectorType>(EI->getVectorOperandType());
-    if (!VTy)
-      return S;
-    return std::max(S, VTy->getNumElements());
-  });
-
-  Value *Vec1 = nullptr;
-  Value *Vec2 = nullptr;
-  bool HasNonUndefVec = any_of(VL, [&](Value *V) {
-    auto *EE = dyn_cast<ExtractElementInst>(V);
-    if (!EE)
-      return false;
-    Value *Vec = EE->getVectorOperand();
-    if (isa<UndefValue>(Vec))
-      return false;
-    return isGuaranteedNotToBePoison(Vec, AC);
-  });
-  enum ShuffleMode { Unknown, Select, Permute };
-  ShuffleMode CommonShuffleMode = Unknown;
-  Mask.assign(VL.size(), PoisonMaskElem);
-  for (unsigned I = 0, E = VL.size(); I < E; ++I) {
-    // Undef, or a copyable lane modeled on an extract main op, can be
-    // represented as an undef element in a vector.
-    if (isa<UndefValue>(VL[I]))
-      continue;
-    auto *EI = dyn_cast<ExtractElementInst>(VL[I]);
-    if (!EI)
-      continue;
-    if (isa<ScalableVectorType>(EI->getVectorOperandType()))
-      return std::nullopt;
-    auto *Vec = EI->getVectorOperand();
-    // We can extractelement from undef or poison vector.
-    if (isUndefVector</*isPoisonOnly=*/true>(Vec).all())
-      continue;
-    // All vector operands must have the same number of vector elements.
-    if (isa<UndefValue>(Vec)) {
-      Mask[I] = I;
-    } else {
-      if (isa<UndefValue>(EI->getIndexOperand()))
-        continue;
-      auto *Idx = dyn_cast<ConstantInt>(EI->getIndexOperand());
-      if (!Idx)
-        return std::nullopt;
-      // Undefined behavior if Idx is negative or >= Size.
-      if (Idx->getValue().uge(Size))
-        continue;
-      unsigned IntIdx = Idx->getValue().getZExtValue();
-      Mask[I] = IntIdx;
-    }
-    if (isUndefVector(Vec).all() && HasNonUndefVec)
-      continue;
-    // For correct shuffling we have to have at most 2 different vector operands
-    // in all extractelement instructions.
-    if (!Vec1 || Vec1 == Vec) {
-      Vec1 = Vec;
-    } else if (!Vec2 || Vec2 == Vec) {
-      Vec2 = Vec;
-      Mask[I] += Size;
-    } else {
-      return std::nullopt;
-    }
-    if (CommonShuffleMode == Permute)
-      continue;
-    // If the extract index is not the same as the operation number, it is a
-    // permutation.
-    if (Mask[I] % Size != I) {
-      CommonShuffleMode = Permute;
-      continue;
-    }
-    CommonShuffleMode = Select;
-  }
-  // If we're not crossing lanes in different vectors, consider it as blending.
-  if (CommonShuffleMode == Select && Vec2)
-    return TargetTransformInfo::SK_Select;
-  // If Vec2 was never used, we have a permutation of a single vector, otherwise
-  // we have permutation of 2 vectors.
-  return Vec2 ? TargetTransformInfo::SK_PermuteTwoSrc
-              : TargetTransformInfo::SK_PermuteSingleSrc;
-}
-
-/// Returns number of parts, the type \p VecTy will be split at the codegen
-/// phase. If the type is going to be scalarized or does not uses whole
-/// registers, returns 1.
-static unsigned
-getNumberOfParts(const TargetTransformInfo &TTI, Type *VecTy, Type *ScalarTy,
-                 const unsigned Limit = std::numeric_limits<unsigned>::max()) {
-  if (isa<StructType>(VecTy))
-    return 1;
-  unsigned NumParts = TTI.getNumberOfParts(VecTy);
-  if (NumParts == 0 || NumParts >= Limit)
-    return 1;
-  unsigned Sz = getNumElements(VecTy);
-  unsigned ScalarSz = getNumElements(ScalarTy);
-  Type *ElementTy = toScalarizedTy(VecTy);
-  unsigned PWSz = getFullVectorNumberOfElements(TTI, ElementTy, Sz, SLPReVec);
-  if (NumParts >= Sz || PWSz % NumParts != 0 ||
-      (PWSz / NumParts) % ScalarSz != 0 ||
-      !hasFullVectorsOrPowerOf2(TTI, ElementTy, PWSz / NumParts, SLPReVec))
-    return 1;
-  const unsigned NumElts = PWSz / NumParts;
-  if (divideCeil(Sz, NumElts) != NumParts)
-    return 1;
-  return NumParts;
-}
 
 /// Bottom Up SLP Vectorizer.
 class slpvectorizer::BoUpSLP {
@@ -923,7 +779,8 @@ public:
     auto [It, Inserted] =
         NumberOfPartsCache.try_emplace(std::make_tuple(VecTy, ScalarTy, Limit));
     if (Inserted)
-      It->second = ::getNumberOfParts(*TTI, VecTy, ScalarTy, Limit);
+      It->second = slpvectorizer::getNumberOfParts(*TTI, VecTy, ScalarTy,
+                                                   SLPReVec, Limit);
     return It->second;
   }
 
@@ -7254,11 +7111,11 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
       }
     }
     if (Sz == 2 && TE.getVectorFactor() == 4 &&
-        ::getNumberOfParts(
+        slpvectorizer::getNumberOfParts(
             *TTI,
             getWidenedType(getValueType(TE.Scalars.front(), SLPReVec),
                            2 * TE.getVectorFactor()),
-            getValueType(TE.Scalars.front(), SLPReVec)) == 1)
+            getValueType(TE.Scalars.front(), SLPReVec), SLPReVec) == 1)
       return std::nullopt;
     if (TE.ReuseShuffleIndices.size() % Sz != 0)
       return std::nullopt;
@@ -9169,7 +9026,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
     SmallVector<std::pair<ArrayRef<Value *>, LoadsState>> Results;
     unsigned StartIdx = 0;
     SmallVector<int> CandidateVFs;
-    if (isAllowedNonPowerOf2VF(MaxVF))
+    if (isAllowedNonPowerOf2VF(MaxVF, VectorizeNonPowerOf2))
       CandidateVFs.push_back(MaxVF);
     for (int NumElts = getFloorFullVectorNumberOfElements(
              *TTI, Loads.front()->getType(), MaxVF, SLPReVec);
@@ -10754,9 +10611,10 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
     auto *VecTy = cast<VectorType>(getWidenedType(ScalarTy, VL.size()));
     auto *UniquesVecTy =
         cast<VectorType>(getWidenedType(ScalarTy, NumUniqueScalarValues));
-    const unsigned NumParts = ::getNumberOfParts(TTI, VecTy, ScalarTy);
+    const unsigned NumParts =
+        slpvectorizer::getNumberOfParts(TTI, VecTy, ScalarTy, SLPReVec);
     const unsigned UniquesNumParts =
-        ::getNumberOfParts(TTI, UniquesVecTy, ScalarTy);
+        slpvectorizer::getNumberOfParts(TTI, UniquesVecTy, ScalarTy, SLPReVec);
     // No need to schedule scalars and only single register used? Use original
     // scalars, do not pack.
     if (!RequireScheduling) {
@@ -15026,10 +14884,10 @@ void BoUpSLP::transformNodes() {
           bool IsSplat = isSplat(Slice);
           bool IsTwoRegisterSplat = true;
           if (IsSplat && VF == 2) {
-            unsigned NumRegs2VF = ::getNumberOfParts(
+            unsigned NumRegs2VF = slpvectorizer::getNumberOfParts(
                 *TTI,
                 getWidenedType(getValueType(Slice.front(), SLPReVec), 2 * VF),
-                getValueType(Slice.front(), SLPReVec));
+                getValueType(Slice.front(), SLPReVec), SLPReVec);
             IsTwoRegisterSplat = NumRegs2VF == 2;
           }
           if (Slices.empty() || !IsSplat || !IsTwoRegisterSplat ||
@@ -16201,8 +16059,8 @@ public:
     }
     assert(!CommonMask.empty() && "Expected non-empty common mask.");
     auto *MaskVecTy = getWidenedType(ScalarTy, Mask.size());
-    unsigned NumParts =
-        ::getNumberOfParts(TTI, MaskVecTy, ScalarTy, Mask.size());
+    unsigned NumParts = slpvectorizer::getNumberOfParts(
+        TTI, MaskVecTy, ScalarTy, SLPReVec, Mask.size());
     unsigned SliceSize = getPartNumElems(Mask.size(), NumParts);
     const auto *It = find_if(Mask, not_equal_to(PoisonMaskElem));
     unsigned Part = std::distance(Mask.begin(), It) / SliceSize;
@@ -16217,8 +16075,8 @@ public:
     }
     assert(!CommonMask.empty() && "Expected non-empty common mask.");
     auto *MaskVecTy = getWidenedType(ScalarTy, Mask.size());
-    unsigned NumParts =
-        ::getNumberOfParts(TTI, MaskVecTy, ScalarTy, Mask.size());
+    unsigned NumParts = slpvectorizer::getNumberOfParts(
+        TTI, MaskVecTy, ScalarTy, SLPReVec, Mask.size());
     unsigned SliceSize = getPartNumElems(Mask.size(), NumParts);
     const auto *It = find_if(Mask, not_equal_to(PoisonMaskElem));
     unsigned Part = std::distance(Mask.begin(), It) / SliceSize;
@@ -17124,6 +16982,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       }
 
       auto *I = cast<Instruction>(UniqueValues[Idx]);
+      // Undef/poison extract indices form holes in the reused source vector,
+      // such lanes are free.
+      std::optional<unsigned> ExtIdx = getExtractIndex(I);
+      if (!ExtIdx)
+        return InstructionCost(TTI::TCC_Free);
       if (!SrcVecTy) {
         if (ShuffleOrOp == Instruction::ExtractElement) {
           auto *EE = cast<ExtractElementInst>(I);
@@ -17146,8 +17009,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           // Use getExtractWithExtendCost() to calculate the cost of
           // extractelement/ext pair.
           InstructionCost Cost = TTI->getExtractWithExtendCost(
-              Ext->getOpcode(), Ext->getType(), SrcVecTy, *getExtractIndex(I),
-              CostKind);
+              Ext->getOpcode(), Ext->getType(), SrcVecTy, *ExtIdx, CostKind);
           // Subtract the cost of s|zext which is subtracted separately.
           Cost -= TTI->getCastInstrCost(
               Ext->getOpcode(), Ext->getType(), I->getType(),
@@ -17157,7 +17019,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       }
       if (DemandedElts.isZero())
         DemandedElts = APInt::getZero(getNumElements(SrcVecTy));
-      DemandedElts.setBit(*getExtractIndex(I));
+      DemandedElts.setBit(*ExtIdx);
       return InstructionCost(TTI::TCC_Free);
     };
     auto GetVectorCost = [&, &TTI = *TTI](InstructionCost CommonCost) {
@@ -18701,29 +18563,29 @@ InstructionCost BoUpSLP::getSpillCost() {
   // be queried many times during the spill cost scan, and each computation
   // involves two potentially expensive TTI virtual calls.
   SmallDenseMap<const IntrinsicInst *, bool> NoCallIntrinsicCache;
-  auto NoCallIntrinsicOrDoesNotReturn = [this, &NoCallIntrinsicCache](
-                                            const Instruction *I) {
-    const auto *CB = dyn_cast<CallBase>(I);
-    if (!CB)
-      return false;
-    if (CB->doesNotReturn())
-      return true;
-    const auto *II = dyn_cast<IntrinsicInst>(CB);
-    if (!II)
-      return false;
-    if (II->isAssumeLikeIntrinsic())
-      return true;
-    auto [It, Inserted] = NoCallIntrinsicCache.try_emplace(II);
-    if (!Inserted)
-      return It->second;
-    IntrinsicCostAttributes ICA(II->getIntrinsicID(), *II);
-    InstructionCost IntrCost = TTI->getIntrinsicInstrCost(ICA, CostKind);
-    InstructionCost CallCost = TTI->getCallInstrCost(
-        nullptr, II->getType(), ICA.getArgTypes(), CostKind);
-    bool Res = IntrCost < CallCost;
-    It->second = Res;
-    return Res;
-  };
+  auto NoCallIntrinsicOrDoesNotReturn =
+      [this, &NoCallIntrinsicCache](const Instruction *I) {
+        const auto *CB = dyn_cast<CallBase>(I);
+        if (!CB)
+          return false;
+        if (CB->doesNotReturn())
+          return true;
+        const auto *II = dyn_cast<IntrinsicInst>(CB);
+        if (!II)
+          return false;
+        if (II->isAssumeLikeIntrinsic())
+          return true;
+        auto [It, Inserted] = NoCallIntrinsicCache.try_emplace(II);
+        if (!Inserted)
+          return It->second;
+        IntrinsicCostAttributes ICA(II->getIntrinsicID(), *II);
+        InstructionCost IntrCost = TTI->getIntrinsicInstrCost(ICA, CostKind);
+        InstructionCost CallCost = TTI->getCallInstrCost(
+            nullptr, II->getType(), ICA.getArgTypes(), CostKind);
+        bool Res = IntrCost < CallCost;
+        It->second = Res;
+        return Res;
+      };
 
   // Maps last instruction in the entry to the last instruction for the one of
   // operand entries and the flag. If the flag is true, there are no calls in
@@ -23619,14 +23481,20 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           return CI && CI->getValue() == CI->getBitWidth() - 1;
         }))
       I->setHasNoSignedWrap(/*b=*/false);
-    // Keep the intersected samesign unless the compared operands were
-    // narrowed (the sign relation may change in the narrower type) or a
-    // converted lane's adjusted constant flips the sign.
+    // Keep the intersected samesign unless narrowing changed the sign of some
+    // compared operand (it neither sign-extends from the narrow type nor has
+    // a known-zero narrow sign bit), or a converted lane's adjusted constant
+    // flips the sign.
     if (auto *ICmp = dyn_cast<ICmpInst>(I); ICmp && It == MinBWs.end()) {
-      bool Narrowed = MinBWs.contains(getOperandEntry(E, 0)) ||
-                      MinBWs.contains(getOperandEntry(E, 1));
+      bool SignChange =
+          ICmp->getOperand(0)->getType()->getScalarType() !=
+              VL0->getOperand(0)->getType()->getScalarType() &&
+          ((!GetOperandSignedness(0) &&
+            !isKnownNonNegative(ICmp->getOperand(0), SimplifyQuery(*DL))) ||
+           (!GetOperandSignedness(1) &&
+            !isKnownNonNegative(ICmp->getOperand(1), SimplifyQuery(*DL))));
       CmpInst::Predicate P0 = cast<CmpInst>(E->getMainOp())->getPredicate();
-      bool SignFlip = !Narrowed && any_of(E->Scalars, [&](Value *Scalar) {
+      bool SignFlip = !SignChange && any_of(E->Scalars, [&](Value *Scalar) {
         auto *LaneCI = dyn_cast<ICmpInst>(Scalar);
         if (!LaneCI)
           return false;
@@ -23637,7 +23505,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             CmpSamePredicateHelper::getAdjustedConstant(LaneCI, P0);
         return AdjC && AdjC->isNegative() != OrigC->isNegative();
       });
-      if (Narrowed || SignFlip)
+      if (SignChange || SignFlip)
         ICmp->setSameSign(/*B=*/false);
     }
     return I;
@@ -24041,6 +23909,37 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       }
 
       CmpInst::Predicate P0 = cast<CmpInst>(VL0)->getPredicate();
+      // A compare with both operands narrowed to the same type preserves the
+      // result only if the predicate matches the operand signedness: signed
+      // predicates need both operands sign-extended from the narrow type,
+      // unsigned predicates need both zero-extended, equality needs the same
+      // extension on both sides; operands with a known-zero narrow sign bit
+      // match any predicate. Otherwise, extend the operands back to the
+      // original compared type.
+      auto *LTy = cast<FixedVectorType>(L->getType());
+      auto *OrigOpTy =
+          dyn_cast<IntegerType>(VL0->getOperand(0)->getType()->getScalarType());
+      if (OrigOpTy && L->getType() == R->getType() &&
+          LTy->getElementType()->getIntegerBitWidth() <
+              OrigOpTy->getBitWidth()) {
+        bool IsSigned0 = GetOperandSignedness(0);
+        bool IsSigned1 = GetOperandSignedness(1);
+        bool NonNeg0 = isKnownNonNegative(L, SimplifyQuery(*DL));
+        bool NonNeg1 = isKnownNonNegative(R, SimplifyQuery(*DL));
+        bool KeepNarrowTy;
+        if (ICmpInst::isSigned(P0))
+          KeepNarrowTy = (IsSigned0 || NonNeg0) && (IsSigned1 || NonNeg1);
+        else if (ICmpInst::isUnsigned(P0))
+          KeepNarrowTy = (!IsSigned0 || NonNeg0) && (!IsSigned1 || NonNeg1);
+        else
+          KeepNarrowTy = IsSigned0 == IsSigned1 || NonNeg0 || NonNeg1;
+        if (!KeepNarrowTy) {
+          Type *CastTy = getWidenedType(OrigOpTy, LTy->getNumElements());
+          L = Builder.CreateIntCast(L, CastTy, IsSigned0);
+          R = Builder.CreateIntCast(R, CastTy, IsSigned1);
+        }
+      }
+
       Value *V = Builder.CreateCmp(P0, L, R);
       V = PropagateIRFlags(V);
       // Do not cast for cmps.
@@ -26490,13 +26389,14 @@ void BoUpSLP::optimizeGatherSequence() {
     // Check if the last undefs actually change the final number of used vector
     // registers.
     return SM1.size() - LastUndefsCnt > 1 &&
-           ::getNumberOfParts(*TTI, SI1->getType(),
-                              SI1->getType()->getElementType()) ==
-               ::getNumberOfParts(
+           slpvectorizer::getNumberOfParts(*TTI, SI1->getType(),
+                                           SI1->getType()->getElementType(),
+                                           SLPReVec) ==
+               slpvectorizer::getNumberOfParts(
                    *TTI,
                    getWidenedType(SI1->getType()->getElementType(),
                                   SM1.size() - LastUndefsCnt),
-                   SI1->getType()->getElementType());
+                   SI1->getType()->getElementType(), SLPReVec);
   };
   // Perform O(N^2) search over the gather/shuffle sequences and merge identical
   // instructions. TODO: We can further optimize this scan if we split the
@@ -28981,7 +28881,7 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
     bool IsAllowedSize =
         hasFullVectorsOrPowerOf2(*TTI, ValOps.front()->getType(), ValOps.size(),
                                  SLPReVec) ||
-        isAllowedNonPowerOf2VF(ValOps.size());
+        isAllowedNonPowerOf2VF(ValOps.size(), VectorizeNonPowerOf2);
     if ((!IsAllowedSize && S && S.getOpcode() != Instruction::Load &&
          (!S.getMainOp()->isSafeToRemove() ||
           any_of(ValOps.getArrayRef(),
@@ -29334,7 +29234,7 @@ bool StoreChainContext::initializeContext(
   // First try a supported non-power-of-2 VF (see isAllowedNonPowerOf2VF).
   unsigned NonPowerOf2VF = 0;
   unsigned CandVF = std::clamp<unsigned>(Operands.size(), MinVF, MaxVF);
-  if (isAllowedNonPowerOf2VF(CandVF)) {
+  if (isAllowedNonPowerOf2VF(CandVF, VectorizeNonPowerOf2)) {
     NonPowerOf2VF = CandVF;
     assert(NonPowerOf2VF != MaxVF &&
            "Non-power-of-2 VF should not be equal to MaxVF");
@@ -30001,7 +29901,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   unsigned Sz = R.getVectorElementSize(I0);
   unsigned MinVF = R.getMinVF(Sz);
   unsigned MaxVF =
-      std::max<unsigned>(isAllowedNonPowerOf2VF(VL.size())
+      std::max<unsigned>(isAllowedNonPowerOf2VF(VL.size(), VectorizeNonPowerOf2)
                              ? VL.size()
                              : getFloorFullVectorNumberOfElements(
                                    *TTI, ScalarTy, VL.size(), SLPReVec),
@@ -30037,7 +29937,8 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
       unsigned ActualVF = std::min(MaxInst - I, VF);
 
       if (!hasFullVectorsOrPowerOf2(*TTI, ScalarTy, ActualVF, SLPReVec) &&
-          (ActualVF != VL.size() || !isAllowedNonPowerOf2VF(ActualVF)))
+          (ActualVF != VL.size() ||
+           !isAllowedNonPowerOf2VF(ActualVF, VectorizeNonPowerOf2)))
         continue;
 
       if (MaxVFOnly && ActualVF < MaxVF)
@@ -31377,7 +31278,7 @@ public:
         ReduxWidth = getFloorFullVectorNumberOfElements(TTI, ScalarTy,
                                                         ReduxWidth, SLPReVec);
         VectorType *Tp = cast<VectorType>(getWidenedType(ScalarTy, ReduxWidth));
-        NumParts = ::getNumberOfParts(TTI, Tp, ScalarTy);
+        NumParts = slpvectorizer::getNumberOfParts(TTI, Tp, ScalarTy, SLPReVec);
         NumRegs =
             TTI.getNumberOfRegisters(TTI.getRegisterClassForType(true, Tp));
         while (NumParts > NumRegs) {
@@ -31385,7 +31286,8 @@ public:
           ReduxWidth = bit_floor(ReduxWidth - 1);
           VectorType *Tp =
               cast<VectorType>(getWidenedType(ScalarTy, ReduxWidth));
-          NumParts = ::getNumberOfParts(TTI, Tp, ScalarTy);
+          NumParts =
+              slpvectorizer::getNumberOfParts(TTI, Tp, ScalarTy, SLPReVec);
           NumRegs =
               TTI.getNumberOfRegisters(TTI.getRegisterClassForType(true, Tp));
         }
@@ -31393,7 +31295,7 @@ public:
           ReduxWidth = bit_floor(ReduxWidth);
         return ReduxWidth;
       };
-      if (!isAllowedNonPowerOf2VF(ReduxWidth))
+      if (!isAllowedNonPowerOf2VF(ReduxWidth, VectorizeNonPowerOf2))
         ReduxWidth = GetVectorFactor(ReduxWidth);
       ReduxWidth = std::min(ReduxWidth, MaxElts);
 
@@ -31945,14 +31847,15 @@ public:
       ReduxWidth = getFloorFullVectorNumberOfElements(TTI, ScalarTy, ReduxWidth,
                                                       SLPReVec);
       Type *Tp = getWidenedType(ScalarTy, ReduxWidth);
-      unsigned NumParts = ::getNumberOfParts(TTI, Tp, ScalarTy);
+      unsigned NumParts =
+          slpvectorizer::getNumberOfParts(TTI, Tp, ScalarTy, SLPReVec);
       unsigned NumRegs =
           TTI.getNumberOfRegisters(TTI.getRegisterClassForType(true, Tp));
       while (NumParts > NumRegs) {
         assert(ReduxWidth > 0 && "ReduxWidth is unexpectedly 0.");
         ReduxWidth = bit_floor(ReduxWidth - 1);
         Type *Tp = getWidenedType(ScalarTy, ReduxWidth);
-        NumParts = ::getNumberOfParts(TTI, Tp, ScalarTy);
+        NumParts = slpvectorizer::getNumberOfParts(TTI, Tp, ScalarTy, SLPReVec);
         NumRegs =
             TTI.getNumberOfRegisters(TTI.getRegisterClassForType(true, Tp));
       }
