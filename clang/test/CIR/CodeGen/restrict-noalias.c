@@ -77,18 +77,26 @@ int *test_malloc_with_dealloc(void) { return malloc_with_dealloc(); }
 // CIR: cir.call @malloc_with_dealloc() : () -> !cir.ptr<!s32i>
 // CIR-NOT: llvm.noalias
 
-// LLVM: define dso_local {{.*}}ptr @malloc_with_dealloc()
+// Bracket the return-attribute region. An unrestricted {{.*}} before ptr would
+// let FileCheck consume an incorrect noalias and still satisfy the -NOT.
+// LLVM: define dso_local
 // LLVM-NOT: noalias
-// LLVM: define dso_local {{.*}}ptr @malloc_with_dealloc_idx()
+// LLVM-SAME: ptr @malloc_with_dealloc()
+// LLVM: define dso_local
 // LLVM-NOT: noalias
-// LLVM: define dso_local {{.*}}ptr @test_malloc_with_dealloc()
-// LLVM:   call {{.*}}ptr @malloc_with_dealloc()
-// LLVM-NOT: call noalias
+// LLVM-SAME: ptr @malloc_with_dealloc_idx()
+// LLVM: define {{.*}} @test_malloc_with_dealloc()
+// LLVM: call
+// LLVM-NOT: noalias
+// LLVM-SAME: ptr @malloc_with_dealloc()
 
-// OGCG: define dso_local {{.*}}ptr @malloc_with_dealloc()
+// OGCG: define dso_local
 // OGCG-NOT: noalias
-// OGCG: define dso_local {{.*}}ptr @malloc_with_dealloc_idx()
+// OGCG-SAME: ptr @malloc_with_dealloc()
+// OGCG: define dso_local
 // OGCG-NOT: noalias
-// OGCG: define dso_local {{.*}}ptr @test_malloc_with_dealloc()
-// OGCG:   call {{.*}}ptr @malloc_with_dealloc()
-// OGCG-NOT: call noalias
+// OGCG-SAME: ptr @malloc_with_dealloc_idx()
+// OGCG: define {{.*}} @test_malloc_with_dealloc()
+// OGCG: call
+// OGCG-NOT: noalias
+// OGCG-SAME: ptr @malloc_with_dealloc()
