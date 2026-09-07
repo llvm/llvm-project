@@ -8993,10 +8993,23 @@ static void HandleAnnotateTypeAttr(TypeProcessingState &State,
 static void HandleLifetimeBoundAttr(TypeProcessingState &State,
                                     QualType &CurType,
                                     ParsedAttr &Attr) {
-  if (State.getDeclarator().isDeclarationOfFunction()) {
+  Declarator &D = State.getDeclarator();
+  if (D.isDeclarationOfFunction()) {
     CurType = State.getAttributedType(
         createSimpleAttr<LifetimeBoundAttr>(State.getSema().Context, Attr),
         CurType, CurType);
+    return;
+  }
+  // An attribute-specifier-seq after an array bound appertains to the array
+  // type ([dcl.array]p1), so it lands on the array chunk rather than on the
+  // parameter:
+  //   int *f(const char (&s)[4] [[clang::lifetimebound]]);
+  // Apply it to the parameter, as the GNU spelling already does.
+  if (D.isPrototypeContext() &&
+      D.getTypeObject(State.getCurrentChunkIndex()).Kind ==
+          DeclaratorChunk::Array) {
+    moveAttrFromListToList(Attr, State.getCurrentAttributes(),
+                           D.getAttributes());
     return;
   }
   State.getSema().Diag(Attr.getLoc(), diag::err_attribute_wrong_decl_type)

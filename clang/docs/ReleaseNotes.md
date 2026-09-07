@@ -534,6 +534,11 @@ features cannot lower the translation-unit ABI level;
   written after the declarator-id, where it appertains to the declared entity
   rather than to a declarator chunk. (#GH196982, #GH111463)
 
+- `[[clang::lifetimebound]]` is no longer rejected when written after a
+  parameter's array bound (e.g. `const char (&s)[N] [[clang::lifetimebound]]`);
+  it now marks the parameter, as `__attribute__((lifetimebound))` already did.
+  (#GH221221)
+
 #### Bug Fixes to C++ Support
 
 - Fixed a false type mismatch when a typedef naming an anonymous enumeration

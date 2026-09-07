@@ -81,6 +81,12 @@ View param_default(View a = View()) {
   return a;
 }
 
+const char *arr_ref_param(const char (&a)[2]) {
+  // CHECK: :[[@LINE-1]]:45: warning: parameter in intra-TU function should be marked
+  // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:45-[[@LINE-2]]:45}:" {{\[\[}}clang::lifetimebound]]"
+  return a;
+}
+
 int *arr_default(int a[2] = nullptr) {
   // CHECK: :[[@LINE-1]]:23: warning: parameter in intra-TU function should be marked
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:23-[[@LINE-2]]:23}:" {{\[\[}}clang::lifetimebound]]"

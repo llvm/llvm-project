@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -std=c2x -verify %s
 
 int *ptr_param(int *param [[clang::lifetimebound]]);
+int *array_param(int param[4] [[clang::lifetimebound]]);
 int *ptr_param_gnu(int *param __attribute__((lifetimebound)));
 int *ptr_param_redecl(int *param);
 int *ptr_param_redecl(int *param [[clang::lifetimebound]]);

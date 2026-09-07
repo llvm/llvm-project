@@ -28,6 +28,13 @@ namespace usage_invalid {
   int (*(*func_ptr_ptr)(int) [[clang::lifetimebound]])(int); // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
   struct X {};
   int (X::*member_func_ptr)(int) [[clang::lifetimebound]]; // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
+
+  int attr_on_array_var[4] [[clang::lifetimebound]]; // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  void attr_on_array_param_void_return(int (&param)[4] [[clang::lifetimebound]]); // expected-error {{'lifetimebound' attribute cannot be applied to a parameter of a function that returns void; did you mean 'lifetime_capture_by(X)'}}
+  int *attr_on_array_param_with_args(int (&param)[4] [[clang::lifetimebound(42)]]); // expected-error {{takes no arguments}}
+  using attr_on_array_alias = int[4] [[clang::lifetimebound]]; // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}}
+  static_assert(sizeof(int[4] [[clang::lifetimebound]]) > 0); // expected-error {{'clang::lifetimebound' attribute only applies to parameters and implicit object parameters}} \
+                                                              // expected-warning {{'clang::lifetimebound' attribute ignored when parsing type}}
 }
 
 namespace usage_ok {
@@ -383,3 +390,33 @@ void test(StatusOr<FooView> foo1, StatusOr<NonAnnotatedFooView> foo2) {
   foo2 = NonAnnotatedFoo(); // expected-warning {{object backing 'foo2' will be destroyed at the end}}
 }
 } // namespace GH106372
+
+namespace array_params {
+  // An attribute written after an array bound is applied to the parameter.
+  const char *ref_to_array(const char (&a)[4] [[clang::lifetimebound]]) { return a; }
+  int *decayed_array(int a[4] [[clang::lifetimebound]]);
+  int *ptr_to_array(int (*a)[4] [[clang::lifetimebound]]);
+  template <int N> const char *dependent_ref_to_array(const char (&a)[N] [[clang::lifetimebound]]);
+  const char *gnu_ref_to_array(const char (&a)[4] __attribute__((lifetimebound)));
+
+  const char *test_ref_to_array() {
+    char a[4];
+    return ref_to_array(a); // expected-warning {{address of stack memory associated with local variable 'a' returned}}
+  }
+  int *test_decayed_array() {
+    int a[4];
+    return decayed_array(a); // expected-warning {{address of stack memory associated with local variable 'a' returned}}
+  }
+  int *test_ptr_to_array() {
+    int a[4];
+    return ptr_to_array(&a); // expected-warning {{address of stack memory associated with local variable 'a' returned}}
+  }
+  const char *test_dependent_ref_to_array() {
+    char a[4];
+    return dependent_ref_to_array(a); // expected-warning {{address of stack memory associated with local variable 'a' returned}}
+  }
+  const char *test_gnu_ref_to_array() {
+    char a[4];
+    return gnu_ref_to_array(a); // expected-warning {{address of stack memory associated with local variable 'a' returned}}
+  }
+} // namespace array_params
