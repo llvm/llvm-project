@@ -2995,7 +2995,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       MaxFactors.FixedVF.getFixedValue();
   if (MaxFactors.ScalableVF) {
     if (std::optional<uint64_t> MaxRuntimeScalableVF =
-            getMaxRuntimeElementCount(MaxFactors.ScalableVF, *TheFunction, TTI))
+            getMaxRuntimeElementCount(MaxFactors.ScalableVF, *TheFunction))
       MaxPowerOf2RuntimeVF =
           std::max(*MaxPowerOf2RuntimeVF, *MaxRuntimeScalableVF);
     else
@@ -3008,7 +3008,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch() &&
         !Legal->hasUncountableEarlyExit())
       return false;
-    uint64_t MaxVFtimesIC = MaxRuntimeVF * uint64_t(std::max(UserIC, 1u));
+    uint64_t MaxVFtimesIC = MaxRuntimeVF * std::max<uint64_t>(UserIC, 1);
     ScalarEvolution *SE = PSE.getSE();
     // Calling getSymbolicMaxBackedgeTakenCount enables support for loops
     // with uncountable exits. For countable loops, the symbolic maximum must
