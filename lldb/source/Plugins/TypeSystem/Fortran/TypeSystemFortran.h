@@ -410,8 +410,7 @@ public:
     return false;
   }
 
-  // Pointer here means C-style pointers.
-
+  // Pointer here means C-style pointers, not Fortran-style.
   bool IsPointerOrReferenceType(lldb::opaque_compiler_type_t type,
                                 CompilerType *pointee_type) override {
     return false;
