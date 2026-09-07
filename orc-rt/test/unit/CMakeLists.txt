@@ -7,22 +7,24 @@ if (NOT TARGET llvm_gtest)
   return ()
 endif ()
 
-# Adds a unit test suite for one layer. link_lib is the layer's library; the
-# remaining arguments are sources.
-function(add_orc_rt_unittest test_name link_lib)
-  add_unittest(OrcRTUnitTests ${test_name} ${ARGN} DISABLE_LLVM_LINK_LLVM_DYLIB)
+# Adds a unit test suite. Sources come first; LINK_LIBS names the object
+# libraries the suite links and must come last.
+function(add_orc_rt_unittest test_name)
+  cmake_parse_arguments(ARG "" "" "LINK_LIBS" ${ARGN})
+  add_unittest(OrcRTUnitTests ${test_name} ${ARG_UNPARSED_ARGUMENTS}
+    DISABLE_LLVM_LINK_LLVM_DYLIB)
   target_compile_options(${test_name} PRIVATE ${ORC_RT_COMPILE_FLAGS})
   # Shared test helpers (CommonTestUtils.h, DirectCaller.h, ...) live at the
   # root of this directory, so tests in the layer subdirectories can include
   # them by bare name.
   target_include_directories(${test_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-  target_link_libraries(${test_name} PRIVATE ${link_lib})
+  target_link_libraries(${test_name} PRIVATE ${ARG_LINK_LIBS})
 endfunction()
 
 # SupportTests links the Support objects and nothing else, so a new
-# support-to-bedrock dependency shows up here as a link error rather than
-# going unnoticed.
-add_orc_rt_unittest(SupportTests orc-rt-support
+# support-to-bedrock dependency shows up here as a link error rather than going
+# unnoticed. BedrockTests links both, Bedrock being a Support client.
+add_orc_rt_unittest(SupportTests
   support/AllocActionTest.cpp
   support/BitmaskEnumTest.cpp
   support/CAPICompileTest.c
@@ -61,9 +63,11 @@ add_orc_rt_unittest(SupportTests orc-rt-support
   support/sys/ErrnoTest.cpp
 
   tools/OptionParserTest.cpp
+
+  LINK_LIBS orc-rt-support-objects
   )
 
-add_orc_rt_unittest(BedrockTests orc-rt-bedrock
+add_orc_rt_unittest(BedrockTests
   bedrock/BootstrapInfoTest.cpp
   bedrock/ExecutorProcessInfoTest.cpp
   bedrock/InProcessControllerAccessTest.cpp
@@ -84,6 +88,8 @@ add_orc_rt_unittest(BedrockTests orc-rt-bedrock
 
   bedrock/sys/CPUFeaturesTest.cpp
   bedrock/sys/TargetTripleTest.cpp
+
+  LINK_LIBS orc-rt-bedrock-objects orc-rt-support-objects
   )
 
 # Build a shared library for NativeDylibManager tests.
