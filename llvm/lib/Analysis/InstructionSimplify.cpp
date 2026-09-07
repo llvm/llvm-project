@@ -5679,9 +5679,13 @@ static Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
     if (Op->getType() == Ty)
       return Op;
 
-  // ptrtoint (ptradd (Ptr, X - ptrtoint(Ptr))) -> X
+  // ptrtoaddr (ptradd (Ptr, X - ptrtoint/ptrtoaddr(Ptr))) -> X
+  // This is also valid for ptrtoint, but only if the (now unused) ptrtoint
+  // instruction is preserved for its provenance exposure side effect. As this
+  // is currently not the case, only fold ptrtoaddr, which does not expose
+  // provenance.
   Value *Ptr, *X;
-  if ((CastOpc == Instruction::PtrToInt || CastOpc == Instruction::PtrToAddr) &&
+  if (CastOpc == Instruction::PtrToAddr &&
       match(Op,
             m_PtrAdd(m_Value(Ptr),
                      m_Sub(m_Value(X), m_PtrToIntOrAddr(m_Deferred(Ptr))))) &&
