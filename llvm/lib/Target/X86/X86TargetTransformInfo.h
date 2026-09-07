@@ -271,7 +271,8 @@ private:
   bool supportsGather() const;
   InstructionCost getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                   Type *DataTy, const Value *Ptr,
-                                  Align Alignment, unsigned AddressSpace) const;
+                                  Align Alignment, unsigned AddressSpace,
+                                  const Value *Mask = nullptr) const;
 
   int getGatherOverhead() const;
   int getScatterOverhead() const;

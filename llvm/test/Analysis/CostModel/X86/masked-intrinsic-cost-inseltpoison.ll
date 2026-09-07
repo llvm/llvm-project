@@ -1909,7 +1909,7 @@ define <16 x float> @test_gather_16f32_const_mask(ptr %base, <16 x i32> %ind) {
 ; SKL-LABEL: 'test_gather_16f32_const_mask'
 ; SKL-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %sext_ind = sext <16 x i32> %ind to <16 x i64>
 ; SKL-NEXT:  Cost Model: Found costs of 0 for: %gep.v = getelementptr float, ptr %base, <16 x i64> %sext_ind
-; SKL-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:4 Lat:72 SizeLat:24 for: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> align 4 %gep.v, <16 x i1> splat (i1 true), <16 x float> undef)
+; SKL-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:2 Lat:68 SizeLat:20 for: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> align 4 %gep.v, <16 x i1> splat (i1 true), <16 x float> undef)
 ; SKL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x float> %res
 ;
 ; AVX512-LABEL: 'test_gather_16f32_const_mask'
@@ -1953,7 +1953,7 @@ define <16 x float> @test_gather_16f32_var_mask(ptr %base, <16 x i32> %ind, <16 
 ; SKL-LABEL: 'test_gather_16f32_var_mask'
 ; SKL-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %sext_ind = sext <16 x i32> %ind to <16 x i64>
 ; SKL-NEXT:  Cost Model: Found costs of 0 for: %gep.v = getelementptr float, ptr %base, <16 x i64> %sext_ind
-; SKL-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:4 Lat:72 SizeLat:24 for: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> align 4 %gep.v, <16 x i1> %mask, <16 x float> undef)
+; SKL-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:2 Lat:68 SizeLat:20 for: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> align 4 %gep.v, <16 x i1> %mask, <16 x float> undef)
 ; SKL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x float> %res
 ;
 ; AVX512-LABEL: 'test_gather_16f32_var_mask'
@@ -2051,7 +2051,7 @@ define <16 x float> @test_gather_16f32_const_mask2(ptr %base, <16 x i32> %ind) {
 ; SKL-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:3 SizeLat:2 for: %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> poison, <16 x i32> zeroinitializer
 ; SKL-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %sext_ind = sext <16 x i32> %ind to <16 x i64>
 ; SKL-NEXT:  Cost Model: Found costs of 0 for: %gep.random = getelementptr float, <16 x ptr> %broadcast.splat, <16 x i64> %sext_ind
-; SKL-NEXT:  Cost Model: Found costs of RThru:24 CodeSize:4 Lat:72 SizeLat:24 for: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> align 4 %gep.random, <16 x i1> splat (i1 true), <16 x float> undef)
+; SKL-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:2 Lat:68 SizeLat:20 for: %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> align 4 %gep.random, <16 x i1> splat (i1 true), <16 x float> undef)
 ; SKL-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x float> %res
 ;
 ; AVX512-LABEL: 'test_gather_16f32_const_mask2'
