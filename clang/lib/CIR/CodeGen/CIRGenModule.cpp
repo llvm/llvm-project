@@ -2538,6 +2538,11 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     emitDeclContext(cast<ExportDecl>(decl));
     break;
 
+  case Decl::Import:
+    // Nothing to emit for C++20 module imports. Initializers run through
+    // the imported module.
+    break;
+
   case Decl::Var:
   case Decl::Decomposition:
   case Decl::VarTemplateSpecialization: {
