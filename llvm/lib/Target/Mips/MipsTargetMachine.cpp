@@ -58,6 +58,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
   RegisterTargetMachine<MipselTargetMachine> Y(getTheMipselTarget());
   RegisterTargetMachine<MipsebTargetMachine> A(getTheMips64Target());
   RegisterTargetMachine<MipselTargetMachine> B(getTheMips64elTarget());
+  RegisterTargetMachine<NanoMipsTargetMachine> C(getTheNanoMipsTarget());
 
   PassRegistry *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
@@ -138,6 +139,16 @@ MipselTargetMachine::MipselTargetMachine(const Target &T, const Triple &TT,
                                          CodeGenOptLevel OL, bool JIT)
     : MipsTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, true) {}
 
+void NanoMipsTargetMachine::anchor() {}
+
+NanoMipsTargetMachine::NanoMipsTargetMachine(const Target &T, const Triple &TT,
+                                             StringRef CPU, StringRef FS,
+                                             const TargetOptions &Options,
+                                             std::optional<Reloc::Model> RM,
+                                             std::optional<CodeModel::Model> CM,
+                                             CodeGenOptLevel OL, bool JIT)
+    : MipsTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, true) {}
+
 const MipsSubtarget *
 MipsTargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
@@ -157,6 +168,8 @@ MipsTargetMachine::getSubtargetImpl(const Function &F) const {
   // we need to know whether or not the soft float flag is set on the
   // function, so we can enable it as a subtarget feature.
   bool softFloat = F.getFnAttribute("use-soft-float").getValueAsBool();
+  if (getTargetTriple().isNanoMips())
+    softFloat = true;
 
   if (hasMips16Attr)
     FS += FS.empty() ? "+mips16" : ",+mips16";

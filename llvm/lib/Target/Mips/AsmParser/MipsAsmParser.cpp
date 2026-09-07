@@ -121,16 +121,15 @@ private:
 } // end anonymous namespace
 
 const FeatureBitset MipsAssemblerOptions::AllArchRelatedMask = {
-    Mips::FeatureMips1, Mips::FeatureMips2, Mips::FeatureMips3,
-    Mips::FeatureMips3_32, Mips::FeatureMips3_32r2, Mips::FeatureMips4,
-    Mips::FeatureMips4_32, Mips::FeatureMips4_32r2, Mips::FeatureMips5,
-    Mips::FeatureMips5_32r2, Mips::FeatureMips32, Mips::FeatureMips32r2,
-    Mips::FeatureMips32r3, Mips::FeatureMips32r5, Mips::FeatureMips32r6,
-    Mips::FeatureMips64, Mips::FeatureMips64r2, Mips::FeatureMips64r3,
-    Mips::FeatureMips64r5, Mips::FeatureMips64r6, Mips::FeatureCnMips,
-    Mips::FeatureCnMipsP, Mips::FeatureFP64Bit, Mips::FeatureGP64Bit,
-    Mips::FeatureNaN2008
-};
+    Mips::FeatureMips1,      Mips::FeatureMips2,      Mips::FeatureMips3,
+    Mips::FeatureMips3_32,   Mips::FeatureMips3_32r2, Mips::FeatureMips4,
+    Mips::FeatureMips4_32,   Mips::FeatureMips4_32r2, Mips::FeatureMips5,
+    Mips::FeatureMips5_32r2, Mips::FeatureMips32,     Mips::FeatureMips32r2,
+    Mips::FeatureMips32r3,   Mips::FeatureMips32r5,   Mips::FeatureMips32r6,
+    Mips::FeatureMips64,     Mips::FeatureMips64r2,   Mips::FeatureMips64r3,
+    Mips::FeatureMips64r5,   Mips::FeatureMips64r6,   Mips::FeatureCnMips,
+    Mips::FeatureCnMipsP,    Mips::FeatureFP64Bit,    Mips::FeatureGP64Bit,
+    Mips::FeatureNaN2008,    Mips::FeatureNanoMips};
 
 namespace {
 
@@ -669,6 +668,10 @@ public:
 
   bool hasMips64r6() const {
     return getSTI().hasFeature(Mips::FeatureMips64r6);
+  }
+
+  bool hasNanoMips() const {
+    return getSTI().hasFeature(Mips::FeatureNanoMips);
   }
 
   bool hasDSP() const {

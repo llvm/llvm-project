@@ -148,6 +148,9 @@ def FeatureMips64r6    : SubtargetFeature<"mips64r6", "MipsArchVersion",
                                 "Mips64r6 ISA Support [experimental]",
                                 [FeatureMips32r6, FeatureMips64r5,
                                  FeatureNaN2008, FeatureAbs2008]>;
+def FeatureNanoMips    : SubtargetFeature<"nanomips", "MipsArchVersion",
+                                "NanoMips",
+                                "NanoMips ISA Support [experimental]">;
 def FeatureSym32       : SubtargetFeature<"sym32", "HasSym32", "true",
                                           "Symbols are 32 bit on Mips64">;
 
@@ -311,6 +314,7 @@ def : ProcessorModel<"p5600", MipsP5600Model, [ImplP5600]>;
 def : Proc<"r5900", [FeatureR5900]>;
 def : ProcessorModel<"i6400", MipsI6400Model, [ImplI6400]>;
 def : ProcessorModel<"i6500", MipsI6400Model, [ImplI6500]>;
+def : Proc<"nanomips", [FeatureNanoMips]>;
 
 def MipsAsmParser : AsmParser {
   let ShouldEmitMatchRegisterName = 0;

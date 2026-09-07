@@ -148,6 +148,10 @@ bool MipsMCCodeEmitter::isMips32r6(const MCSubtargetInfo &STI) const {
   return STI.hasFeature(Mips::FeatureMips32r6);
 }
 
+bool MipsMCCodeEmitter::isNanoMips(const MCSubtargetInfo &STI) const {
+  return STI.hasFeature(Mips::FeatureNanoMips);
+}
+
 void MipsMCCodeEmitter::EmitByte(unsigned char C, raw_ostream &OS) const {
   OS << (char)C;
 }

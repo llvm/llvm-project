@@ -851,7 +851,8 @@ void MipsTargetAsmStreamer::emitDirectiveModuleNoGINV() {
 // This part is for ELF object output.
 MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
                                              const MCSubtargetInfo &STI)
-    : MipsTargetStreamer(S), MicroMipsEnabled(false), STI(STI) {
+    : MipsTargetStreamer(S), MicroMipsEnabled(false), NanoMipsEnabled(false),
+      STI(STI) {
   MCAssembler &MCA = getStreamer().getAssembler();
   ELFObjectWriter &W = getStreamer().getWriter();
 
@@ -886,7 +887,8 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
 
   ABI = MipsABIInfo(
       STI.getTargetTriple().getArch() == Triple::ArchType::mipsel ||
-              STI.getTargetTriple().getArch() == Triple::ArchType::mips
+              STI.getTargetTriple().getArch() == Triple::ArchType::mips ||
+              STI.getTargetTriple().getArch() == Triple::ArchType::nanomips
           ? MipsABIInfo::O32()
           : MipsABIInfo::N64());
 
@@ -927,6 +929,11 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
   // Other options.
   if (Features[Mips::FeatureNaN2008])
     EFlags |= ELF::EF_MIPS_NAN2008;
+
+  if (STI.getTargetTriple().getArch() == Triple::ArchType::nanomips) {
+    NanoMipsEnabled = true;
+    Pic = false; // PIC not supported yet on nanoMIPS
+  }
 
   W.setELFHeaderEFlags(EFlags);
 }
@@ -996,21 +1003,27 @@ void MipsTargetELFStreamer::finish() {
   } else if (Features[Mips::FeatureMips64r2] || Features[Mips::FeatureMips64])
     EFlags |= ELF::EF_MIPS_32BITMODE;
 
-  // -mplt is not implemented but we should act as if it was
-  // given.
-  if (!Features[Mips::FeatureNoABICalls])
-    EFlags |= ELF::EF_MIPS_CPIC;
-
-  if (Pic)
-    EFlags |= ELF::EF_MIPS_PIC | ELF::EF_MIPS_CPIC;
+  if (!isNanoMipsEnabled()) {
+    // -mplt is not implemented but we should act as if it was
+    // given.
+    if (!Features[Mips::FeatureNoABICalls])
+      EFlags |= ELF::EF_MIPS_CPIC;
+    if (Pic)
+      EFlags |= ELF::EF_MIPS_PIC | ELF::EF_MIPS_CPIC;
+  } else {
+    if (Pic)
+      EFlags |= ELF::EF_NANOMIPS_PIC;
+  }
 
   W.setELFHeaderEFlags(EFlags);
 
-  // Emit all the option records.
-  // At the moment we are only emitting .Mips.options (ODK_REGINFO) and
-  // .reginfo.
-  MipsELFStreamer &MEF = static_cast<MipsELFStreamer &>(Streamer);
-  MEF.EmitMipsOptionRecords();
+  if (!isNanoMipsEnabled()) {
+    // Emit all the option records.
+    // At the moment we are only emitting .Mips.options (ODK_REGINFO) and
+    // .reginfo.
+    MipsELFStreamer &MEF = static_cast<MipsELFStreamer &>(Streamer);
+    MEF.EmitMipsOptionRecords();
+  }
 
   emitMipsAbiFlags();
 }
@@ -1114,30 +1127,33 @@ void MipsTargetELFStreamer::emitDirectiveEnd(StringRef Name) {
   MCContext &Context = MCA.getContext();
   MCStreamer &OS = getStreamer();
 
-  OS.pushSection();
-  MCSectionELF *Sec = Context.getELFSection(".pdr", ELF::SHT_PROGBITS, 0);
-  OS.switchSection(Sec);
-  Sec->setAlignment(Align(4));
-
   MCSymbol *Sym = Context.getOrCreateSymbol(Name);
   const auto *ExprRef = MCSymbolRefExpr::create(Sym, Context);
-  OS.emitValueImpl(ExprRef, 4);
 
-  OS.emitIntValue(GPRInfoSet ? GPRBitMask : 0, 4); // reg_mask
-  OS.emitIntValue(GPRInfoSet ? GPROffset : 0, 4);  // reg_offset
+  if (!isNanoMipsEnabled()) {
+    OS.pushSection();
+    MCSectionELF *Sec = Context.getELFSection(".pdr", ELF::SHT_PROGBITS, 0);
+    OS.switchSection(Sec);
+    Sec->setAlignment(Align(4));
 
-  OS.emitIntValue(FPRInfoSet ? FPRBitMask : 0, 4); // fpreg_mask
-  OS.emitIntValue(FPRInfoSet ? FPROffset : 0, 4);  // fpreg_offset
+    OS.emitValueImpl(ExprRef, 4);
 
-  OS.emitIntValue(FrameInfoSet ? FrameOffset : 0, 4); // frame_offset
-  OS.emitIntValue(FrameInfoSet ? FrameReg : 0, 4);    // frame_reg
-  OS.emitIntValue(FrameInfoSet ? ReturnReg : 0, 4);   // return_reg
+    OS.emitIntValue(GPRInfoSet ? GPRBitMask : 0, 4); // reg_mask
+    OS.emitIntValue(GPRInfoSet ? GPROffset : 0, 4);  // reg_offset
+
+    OS.emitIntValue(FPRInfoSet ? FPRBitMask : 0, 4); // fpreg_mask
+    OS.emitIntValue(FPRInfoSet ? FPROffset : 0, 4);  // fpreg_offset
+
+    OS.emitIntValue(FrameInfoSet ? FrameOffset : 0, 4); // frame_offset
+    OS.emitIntValue(FrameInfoSet ? FrameReg : 0, 4);    // frame_reg
+    OS.emitIntValue(FrameInfoSet ? ReturnReg : 0, 4);   // return_reg
+
+    OS.popSection();
+  }
 
   // The .end directive marks the end of a procedure. Invalidate
   // the information gathered up until this point.
   GPRInfoSet = FPRInfoSet = FrameInfoSet = false;
-
-  OS.popSection();
 
   // .end also implicitly sets the size.
   MCSymbol *CurPCSym = Context.createTempSymbol();
