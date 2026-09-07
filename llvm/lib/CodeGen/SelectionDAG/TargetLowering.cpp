@@ -10825,6 +10825,18 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
   EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
   SDValue Op = Node->getOperand(0);
   unsigned Len = VT.getScalarSizeInBits();
+
+  // Compute effective bit width from known bits
+  KnownBits Known = DAG.computeKnownBits(Op);
+  unsigned EffectiveLen = Known.countMaxActiveBits();
+
+  // Round up to 8-bit boundary for byte-oriented SWAR algorithm
+  if (EffectiveLen > 0 && EffectiveLen < Len) {
+    EffectiveLen = (EffectiveLen + 7) & ~7u;
+  } else {
+    EffectiveLen = Len;
+  }
+
   assert(VT.isInteger() && "CTPOP not implemented for this type.");
 
   // TODO: Add support for irregular type lengths.
@@ -10863,13 +10875,13 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
                                            DAG.getConstant(4, dl, ShVT))),
                    Mask0F);
 
-  if (Len <= 8)
+  if (EffectiveLen <= 8)
     return Op;
 
   // Avoid the multiply if we only have 2 bytes to add.
   // TODO: Only doing this for scalars because vectors weren't as obviously
   // improved.
-  if (Len == 16 && !VT.isVector()) {
+  if (EffectiveLen == 16 && !VT.isVector()) {
     // v = (v + (v >> 8)) & 0x00FF;
     return DAG.getNode(ISD::AND, dl, VT,
                      DAG.getNode(ISD::ADD, dl, VT, Op,
@@ -10887,7 +10899,7 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
     V = DAG.getNode(ISD::MUL, dl, VT, Op, Mask01);
   } else {
     V = Op;
-    for (unsigned Shift = 8; Shift < Len; Shift *= 2) {
+    for (unsigned Shift = 8; Shift < EffectiveLen; Shift *= 2) {
       SDValue ShiftC = DAG.getShiftAmountConstant(Shift, VT, dl);
       V = DAG.getNode(ISD::ADD, dl, VT, V,
                       DAG.getNode(ISD::SHL, dl, VT, V, ShiftC));
