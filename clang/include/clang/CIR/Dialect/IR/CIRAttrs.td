@@ -119,12 +119,10 @@ def CIR_SourceLanguageAttr : CIR_EnumAttr<CIR_SourceLanguage, "lang"> {
 // OffloadKindAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_OffloadKind : CIR_I32EnumAttr<"OffloadKind", "offload kind", [
+def CIR_OffloadKind : CIR_I32Enum<"OffloadKind", "offload kind", [
   I32EnumAttrCase<"Host", 0, "host">,
   I32EnumAttrCase<"Device", 1, "device">
-]> {
-  let genSpecializedAttr = 0;
-}
+]>;
 
 def CIR_OffloadKindAttr : CIR_EnumAttr<CIR_OffloadKind, "offload_kind"> {
   let summary = "Offload kind of a module in an offload container";
