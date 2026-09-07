@@ -38,8 +38,6 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
   TempFilePrefixRef.toVector(TempFilePrefix);
   CacheDirectoryPathRef.toVector(CacheDirectoryPath);
 
-  bool IsNFS = !sys::fs::is_local(CacheDirectoryPath);
-
   auto Func = [=](unsigned Task, StringRef Key,
                   const Twine &ModuleName) -> Expected<AddStreamFn> {
     // This choice of file name allows the cache to be pruned (see pruneCache()
@@ -52,6 +50,7 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
         Twine(EntryPath), sys::fs::OF_UpdateAtime, &ResultPath);
     std::error_code EC;
     if (FDOrErr) {
+      bool IsNFS = !sys::fs::is_local(CacheDirectoryPath);
       ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
           MemoryBuffer::getOpenFile(*FDOrErr, EntryPath,
                                     /*FileSize=*/-1,
