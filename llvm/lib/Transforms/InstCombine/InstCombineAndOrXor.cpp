@@ -4804,10 +4804,70 @@ static Instruction *foldXorToXor(BinaryOperator &I,
   return nullptr;
 }
 
+static Value *foldSignedSubOverflowCheck(ICmpInst *Cmp0, ICmpInst *Cmp1,
+                                         InstCombiner::BuilderTy &Builder) {
+  auto IsSignBitCheck = [](ICmpInst *Cmp, Value *&Val) {
+    const APInt *C;
+    if (!match(Cmp->getOperand(1), m_APInt(C)))
+      return false;
+    bool TrueIfSigned;
+    if (!isSignBitCheck(Cmp->getPredicate(), *C, TrueIfSigned))
+      return false;
+    if (TrueIfSigned) {
+      Val = Cmp->getOperand(0);
+      return true;
+    }
+    return false;
+  };
+
+  Value *SubVal = nullptr;
+  ICmpInst *CmpOther = nullptr;
+  if (IsSignBitCheck(Cmp0, SubVal)) {
+    CmpOther = Cmp1;
+  } else if (IsSignBitCheck(Cmp1, SubVal)) {
+    CmpOther = Cmp0;
+  } else {
+    return nullptr;
+  }
+
+  Value *A = nullptr, *B = nullptr;
+  ICmpInst::Predicate Pred = CmpOther->getPredicate();
+  bool IsNot = false;
+  if (Pred == ICmpInst::ICMP_SLT) {
+    A = CmpOther->getOperand(0);
+    B = CmpOther->getOperand(1);
+  } else if (Pred == ICmpInst::ICMP_SGT) {
+    A = CmpOther->getOperand(1);
+    B = CmpOther->getOperand(0);
+  } else if (Pred == ICmpInst::ICMP_SGE) {
+    A = CmpOther->getOperand(0);
+    B = CmpOther->getOperand(1);
+    IsNot = true;
+  } else if (Pred == ICmpInst::ICMP_SLE) {
+    A = CmpOther->getOperand(1);
+    B = CmpOther->getOperand(0);
+    IsNot = true;
+  } else {
+    return nullptr;
+  }
+
+  if (!match(SubVal, m_Sub(m_Specific(A), m_Specific(B))))
+    return nullptr;
+
+  Function *F = Intrinsic::getOrInsertDeclaration(
+      Cmp0->getModule(), Intrinsic::ssub_with_overflow, A->getType());
+  Value *Call = Builder.CreateCall(F, {A, B});
+  Value *Extract = Builder.CreateExtractValue(Call, 1);
+  return IsNot ? Builder.CreateNot(Extract) : Extract;
+}
+
 Value *InstCombinerImpl::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS,
                                         BinaryOperator &I) {
   assert(I.getOpcode() == Instruction::Xor && I.getOperand(0) == LHS &&
          I.getOperand(1) == RHS && "Should be 'xor' with these operands");
+
+  if (Value *V = foldSignedSubOverflowCheck(LHS, RHS, Builder))
+    return V;
 
   ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
   Value *LHS0 = LHS->getOperand(0), *LHS1 = LHS->getOperand(1);
