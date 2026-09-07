@@ -166,3 +166,28 @@ define i64 @add_pos_and_neg_const(i64 %x, i64 %a, i64 %b) {
   ret i64 %o2
 }
 
+; C is added on one value and subtracted (add of -C) on another, with no other
+; use anchoring either constant. Only one of C/-C should be materialized: one
+; ADD keeps C and the other becomes (sub X, C).
+define i64 @add_pos_and_neg_const_no_anchor(i64 %a, i64 %b) {
+; CHECK-LABEL: add_pos_and_neg_const_no_anchor:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a2, 4112
+; CHECK-NEXT:    addi a2, a2, 257
+; CHECK-NEXT:    lui a3, 1044464
+; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    slli a2, a2, 32
+; CHECK-NEXT:    addi a3, a3, -257
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    slli a3, a3, 32
+; CHECK-NEXT:    add a0, a0, a2
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    ret
+  %pa = add i64 %a, 72340172838076673
+  %na = add i64 %b, -72340172838076673
+  %o = xor i64 %pa, %na
+  ret i64 %o
+}
+
+
