@@ -61,3 +61,110 @@ loop:
 }
 
 declare double @llvm.fmuladd.f64(double, double, double)
+
+; The splat subtree for the splatted adds also forces extracts for their
+; scalar store uses; keeping it would reject the whole tree, so it must be
+; dropped and the splat gathers emitted as insertion sequences.
+define void @splat_subtree_with_scalar_uses(ptr noalias %out, ptr noalias %in) {
+; CHECK-LABEL: define void @splat_subtree_with_scalar_uses(
+; CHECK-SAME: ptr noalias [[OUT:%.*]], ptr noalias [[IN:%.*]]) {
+; CHECK-NEXT:  [[ENTRY_RTVEC:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[IN]], align 4
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 12
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[TMP9]], [[TMP7]]
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 16
+; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
+; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 20
+; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[ARRAYIDX7]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP11]], [[TMP10]]
+; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 24
+; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX8]], align 4
+; CHECK-NEXT:    [[ADD9:%.*]] = add i32 [[TMP12]], [[TMP5]]
+; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[ADD9]], [[ADD5]]
+; CHECK-NEXT:    [[ADD10:%.*]] = add i32 [[XOR]], [[TMP3]]
+; CHECK-NEXT:    store i32 [[ADD10]], ptr [[OUT]], align 4
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 28
+; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX6]], align 4
+; CHECK-NEXT:    [[ADD13:%.*]] = add i32 [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[XOR14:%.*]] = xor i32 [[ADD13]], [[ADD5]]
+; CHECK-NEXT:    [[ADD15:%.*]] = add i32 [[XOR14]], [[TMP3]]
+; CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 4
+; CHECK-NEXT:    store i32 [[ADD15]], ptr [[ARRAYIDX16]], align 4
+; CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 32
+; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[ARRAYIDX17]], align 4
+; CHECK-NEXT:    [[ADD18:%.*]] = add i32 [[TMP8]], [[TMP5]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[ADD18]], [[ADD5]]
+; CHECK-NEXT:    [[ADD4:%.*]] = add i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 8
+; CHECK-NEXT:    store i32 [[ADD4]], ptr [[ARRAYIDX21]], align 4
+; CHECK-NEXT:    [[ARRAYIDX22:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 36
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX22]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[XOR24:%.*]] = xor i32 [[ADD]], [[ADD5]]
+; CHECK-NEXT:    [[ADD25:%.*]] = add i32 [[XOR24]], [[TMP3]]
+; CHECK-NEXT:    [[ARRAYIDX26:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 12
+; CHECK-NEXT:    store i32 [[ADD25]], ptr [[ARRAYIDX26]], align 4
+; CHECK-NEXT:    [[ARRAYIDX27_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 16
+; CHECK-NEXT:    store i32 [[TMP5]], ptr [[ARRAYIDX27_SCALAR]], align 4
+; CHECK-NEXT:    [[ARRAYIDX28_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 24
+; CHECK-NEXT:    store i32 [[ADD5]], ptr [[ARRAYIDX28_SCALAR]], align 4
+; CHECK-NEXT:    [[ARRAYIDX29_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[OUT]], i64 32
+; CHECK-NEXT:    store i32 [[TMP3]], ptr [[ARRAYIDX29_SCALAR]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = load i32, ptr %in, align 4
+  %arrayidx1 = getelementptr inbounds nuw i8, ptr %in, i64 4
+  %1 = load i32, ptr %arrayidx1, align 4
+  %add = add i32 %1, %0
+  %arrayidx2 = getelementptr inbounds nuw i8, ptr %in, i64 8
+  %2 = load i32, ptr %arrayidx2, align 4
+  %arrayidx3 = getelementptr inbounds nuw i8, ptr %in, i64 12
+  %3 = load i32, ptr %arrayidx3, align 4
+  %add4 = add i32 %3, %2
+  %arrayidx5 = getelementptr inbounds nuw i8, ptr %in, i64 16
+  %4 = load i32, ptr %arrayidx5, align 4
+  %arrayidx6 = getelementptr inbounds nuw i8, ptr %in, i64 20
+  %5 = load i32, ptr %arrayidx6, align 4
+  %add7 = add i32 %5, %4
+  %arrayidx8 = getelementptr inbounds nuw i8, ptr %in, i64 24
+  %6 = load i32, ptr %arrayidx8, align 4
+  %add9 = add i32 %6, %add
+  %xor = xor i32 %add9, %add4
+  %add10 = add i32 %xor, %add7
+  store i32 %add10, ptr %out, align 4
+  %arrayidx12 = getelementptr inbounds nuw i8, ptr %in, i64 28
+  %7 = load i32, ptr %arrayidx12, align 4
+  %add13 = add i32 %7, %add
+  %xor14 = xor i32 %add13, %add4
+  %add15 = add i32 %xor14, %add7
+  %arrayidx16 = getelementptr inbounds nuw i8, ptr %out, i64 4
+  store i32 %add15, ptr %arrayidx16, align 4
+  %arrayidx17 = getelementptr inbounds nuw i8, ptr %in, i64 32
+  %8 = load i32, ptr %arrayidx17, align 4
+  %add18 = add i32 %8, %add
+  %xor19 = xor i32 %add18, %add4
+  %add20 = add i32 %xor19, %add7
+  %arrayidx21 = getelementptr inbounds nuw i8, ptr %out, i64 8
+  store i32 %add20, ptr %arrayidx21, align 4
+  %arrayidx22 = getelementptr inbounds nuw i8, ptr %in, i64 36
+  %9 = load i32, ptr %arrayidx22, align 4
+  %add23 = add i32 %9, %add
+  %xor24 = xor i32 %add23, %add4
+  %add25 = add i32 %xor24, %add7
+  %arrayidx26 = getelementptr inbounds nuw i8, ptr %out, i64 12
+  store i32 %add25, ptr %arrayidx26, align 4
+  %arrayidx27 = getelementptr inbounds nuw i8, ptr %out, i64 16
+  store i32 %add, ptr %arrayidx27, align 4
+  %arrayidx28 = getelementptr inbounds nuw i8, ptr %out, i64 24
+  store i32 %add4, ptr %arrayidx28, align 4
+  %arrayidx29 = getelementptr inbounds nuw i8, ptr %out, i64 32
+  store i32 %add7, ptr %arrayidx29, align 4
+  ret void
+}

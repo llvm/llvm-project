@@ -7569,11 +7569,9 @@ static bool isCombineInstrCandidateFP(const MachineInstr &Inst) {
   case AArch64::FSUBv2f32:
   case AArch64::FSUBv2f64:
   case AArch64::FSUBv4f32:
-    TargetOptions Options = Inst.getParent()->getParent()->getTarget().Options;
-    // We can fuse FADD/FSUB with FMUL, if fusion is either allowed globally by
-    // the target options or if FADD/FSUB has the contract fast-math flag.
-    return Options.AllowFPOpFusion == FPOpFusion::Fast ||
-           Inst.getFlag(MachineInstr::FmContract);
+    // We can fuse FADD/FSUB with FMUL, if FADD/FSUB has the contract fast-math
+    // flag.
+    return Inst.getFlag(MachineInstr::FmContract);
   }
   return false;
 }
@@ -11039,8 +11037,12 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
       continue;
     }
     LRAvailableEverywhere &= LRU.available(AArch64::LR);
+    // RangeBegin may point at a debug instruction because the mapper ignores
+    // debug instructions wherever they appear. Only count non-debug
+    // instructions so debug info cannot make a short range outlinable.
     RangeBegin = MI.getIterator();
-    ++RangeLen;
+    if (!MI.isDebugInstr())
+      ++RangeLen;
   }
   // Above loop misses the last (or only) range. If we are still safe, then
   // let's save the range.
