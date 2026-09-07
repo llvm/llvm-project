@@ -38,10 +38,18 @@ def main():
         exponent *= 2
         value *= value
 
-    for exponent, value_words in table:
-        print(f"// 5^{exponent}")
-        for word in value_words:
-            print(f"UINT64_C(0x{word:016X}),")
+    # This is included within an initializer.  Keep the generated layout in
+    # the form produced by clang-format: after the first entry, two 64-bit
+    # words fit on each indented line.
+    for index, (exponent, value_words) in enumerate(table):
+        indent = "" if index == 0 else "    "
+        print(f"{indent}// 5^{exponent}")
+        for word_index in range(0, len(value_words), 2):
+            line = ", ".join(
+                f"UINT64_C(0x{word:016X})"
+                for word in value_words[word_index : word_index + 2]
+            )
+            print(f"{indent}{line},")
 
 
 if __name__ == "__main__":

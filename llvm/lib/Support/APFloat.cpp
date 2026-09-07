@@ -17,8 +17,8 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -323,8 +323,7 @@ static unsigned int powerOfFivePartsForExponent(unsigned int power) {
   // 815 / 351 is an upper bound on log2(5).  Reserve an additional part for
   // tcFullMultiply, which writes the full product width even when its most
   // significant part is zero.
-  return 2 +
-         ((power * 815) / (351 * APFloatBase::integerPartWidth));
+  return 2 + ((power * 815) / (351 * APFloatBase::integerPartWidth));
 }
 
 unsigned int APFloatBase::semanticsPrecision(const fltSemantics &semantics) {
@@ -794,7 +793,8 @@ static_assert([] {
    DST must be at least one part larger than size of the answer.  */
 static unsigned int
 powerOf5(APFloatBase::integerPart *dst, unsigned int power) {
-  static const APFloatBase::integerPart firstEightPowers[] = { 1, 5, 25, 125, 625, 3125, 15625, 78125 };
+  static const APFloatBase::integerPart firstEightPowers[] = {
+      1, 5, 25, 125, 625, 3125, 15625, 78125};
 
   SmallVector<APFloatBase::integerPart, NumPow5PartsOnStack> scratch;
   scratch.resize_for_overwrite(powerOfFivePartsForExponent(power));
