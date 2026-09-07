@@ -595,3 +595,22 @@ define void @adc64mi_legacy(ptr %ptr, i64 %x, i64 %y) nounwind {
   store i64 %r, ptr %ptr
   ret void
 }
+
+define i32 @mul_overflow_apx(i32 %a, i8 %b, i8 %c) {
+; CHECK-LABEL: mul_overflow_apx:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax # encoding: [0x89,0xf0]
+; CHECK-NEXT:    xorl %ecx, %ecx # encoding: [0x31,0xc9]
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    mulb %dl # encoding: [0xf6,0xe2]
+; CHECK-NEXT:    seto %cl # encoding: [0x0f,0x90,0xc1]
+; CHECK-NEXT:    leal (%rdi,%rcx), %eax # encoding: [0x8d,0x04,0x0f]
+; CHECK-NEXT:    retq # encoding: [0xc3]
+  %umul = tail call { i8, i1 } @llvm.umul.with.overflow.i8(i8 %b, i8 %c)
+  %umul.overflow = extractvalue { i8, i1 } %umul, 1
+  %conv2 = zext i1 %umul.overflow to i32
+  %add = add i32 %a, %conv2
+  ret i32 %add
+}
+
+declare { i8, i1 } @llvm.umul.with.overflow.i8(i8, i8)
