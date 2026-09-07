@@ -5,11 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// \file
-/// This file contains the definition of the Fortran Type System.
-///
-//===----------------------------------------------------------------------===//
 
 #ifndef LLDB_SOURCE_PLUGINS_TYPESYSTEM_FORTRAN_TYPESYSTEMFORTRAN_H
 #define LLDB_SOURCE_PLUGINS_TYPESYSTEM_FORTRAN_TYPESYSTEMFORTRAN_H
@@ -356,8 +351,6 @@ public:
     return CompilerType();
   }
 
-  // Lookup a child given a name. This function will match base class names and
-  // member member names in "clang_type" only, not descendants.
   llvm::Expected<uint32_t>
   GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
                           llvm::StringRef name,
@@ -412,12 +405,12 @@ public:
   void Dump(llvm::raw_ostream &output, llvm::StringRef filter,
             bool show_color) override {}
 
-  /// This is used by swift.
+  /// This is used by Swift.
   bool IsRuntimeGeneratedType(lldb::opaque_compiler_type_t type) override {
     return false;
   }
 
-  // TODO: Determine if these methods should move to TypeSystemClang.
+  // Pointer here means C-style pointers.
 
   bool IsPointerOrReferenceType(lldb::opaque_compiler_type_t type,
                                 CompilerType *pointee_type) override {
@@ -491,4 +484,5 @@ private:
   const TypeSystemFortran &operator=(const TypeSystemFortran &) = delete;
 };
 } // namespace lldb_private
+
 #endif // LLDB_SOURCE_PLUGINS_TYPESYSTEM_FORTRAN_TYPESYSTEMFORTRAN_H

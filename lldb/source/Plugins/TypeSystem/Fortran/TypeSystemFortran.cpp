@@ -5,15 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-///
-/// \file
-/// This file implements the Fortran type system.
-///
-//===----------------------------------------------------------------------===//
+
 #include "TypeSystemFortran.h"
 
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/SymbolFile.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Target.h"
 
 using namespace lldb;
@@ -22,20 +19,6 @@ using namespace llvm;
 using namespace lldb_private::plugin::dwarf;
 
 LLDB_PLUGIN_DEFINE(TypeSystemFortran)
-
-/// Used to determine if TypeSystem supports the language passed in
-/// CreateInstance
-static bool IsLanguageSupported(lldb::LanguageType language) {
-  if (language == lldb::LanguageType::eLanguageTypeFortran77 ||
-      language == lldb::LanguageType::eLanguageTypeFortran90 ||
-      language == lldb::LanguageType::eLanguageTypeFortran95 ||
-      language == lldb::LanguageType::eLanguageTypeFortran03 ||
-      language == lldb::LanguageType::eLanguageTypeFortran08 ||
-      language == lldb::LanguageType::eLanguageTypeFortran18)
-    return true;
-
-  return false;
-}
 
 char TypeSystemFortran::ID;
 
@@ -52,12 +35,11 @@ void TypeSystemFortran::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-lldb::TypeSystemSP
-TypeSystemFortran::CreateInstance(lldb::LanguageType language, Module *module,
-                                  Target *target) {
-  if (IsLanguageSupported(language)) {
+TypeSystemSP TypeSystemFortran::CreateInstance(LanguageType language,
+                                               Module *module, Target *target) {
+  if (Language::LanguageIsFortran(language))
     return std::make_shared<TypeSystemFortran>();
-  }
+
   return TypeSystemSP();
 }
 
@@ -77,5 +59,5 @@ LanguageSet TypeSystemFortran::GetSupportedLanguagesForExpressions() {
 }
 
 bool TypeSystemFortran::SupportsLanguage(lldb::LanguageType language) {
-  return IsLanguageSupported(language);
+  return Language::LanguageIsFortran(language);
 }
