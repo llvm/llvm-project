@@ -201,6 +201,12 @@ if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
   endif ()
 endif()
 
+if (CLANG_ENABLE_CIR AND "clang" IN_LIST LLVM_ENABLE_PROJECTS AND
+    NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
+  message(STATUS "Enabling MLIR as a dependency of ClangIR")
+  list(APPEND LLVM_ENABLE_PROJECTS "mlir")
+endif()
+
 if ("lldb" IN_LIST LLVM_ENABLE_PROJECTS)
   if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
     message(STATUS "Enabling clang as a dependency of lldb")
