@@ -25,12 +25,6 @@
 ## Bitcode archive.
 # RUN: llvm-ar crs 4.a 1.bc 2.bc
 
-# RUN: ld.lld -o 1 main.o 1.a --fortran-common
-# RUN: llvm-objdump -D -j .data 1 | FileCheck --check-prefix=TEST1 %s
-
-# RUN: ld.lld -o 2 main.o --start-lib 1.o strong_data_only.o --end-lib --fortran-common
-# RUN: llvm-objdump -D -j .data 2 | FileCheck --check-prefix=TEST1 %s
-
 # RUN: ld.lld -o 3 main.o 2.a
 # RUN: llvm-objdump -t 3 | FileCheck --check-prefix=BSS %s
 
@@ -45,35 +39,24 @@
 # RUN: ld.lld -o 7 main.o 2.o --start-lib 1.o strong_data_only.o --end-lib
 # RUN: llvm-objdump -D -j .data 7 | FileCheck --check-prefix=TEST2 %s
 
-# RUN: not ld.lld -o 8 main.o 1.a strong_data_only.o --fortran-common 2>&1 | \
-# RUN:   FileCheck --check-prefix=ERR %s
+# RUN: ld.lld -o 8 main.o 1.a strong_data_only.o
+# RUN: llvm-objdump -D -j .data 8 | FileCheck --check-prefix=TEST1 %s
 
-# RUN: not ld.lld -o 9 main.o --start-lib 1.o 2.o --end-lib  strong_data_only.o --fortran-common 2>&1 | \
-# RUN:   FileCheck --check-prefix=ERR %s
+# RUN: ld.lld -o 9 main.o --start-lib 1.o 2.o --end-lib strong_data_only.o
+# RUN: llvm-objdump -D -j .data 9 | FileCheck --check-prefix=TEST1 %s
 
-# ERR: ld.lld: error: duplicate symbol: block
-
-# RUN: ld.lld --no-fortran-common -o 10 main.o 1.a
-# RUN: llvm-readobj --syms 10 | FileCheck --check-prefix=NFC %s
 # RUN: ld.lld -o 10 main.o 1.a
 # RUN: llvm-readobj --syms 10 | FileCheck --check-prefix=NFC %s
 
-# RUN: ld.lld --no-fortran-common -o 11 main.o --start-lib 1.o strong_data_only.o --end-lib
+# RUN: ld.lld  -o 11 main.o --start-lib 1.o strong_data_only.o --end-lib
 # RUN: llvm-readobj --syms 11 | FileCheck --check-prefix=NFC %s
 
-# RUN: ld.lld -o out main.o 4.a --fortran-common --lto-emit-asm
-# RUN: FileCheck --check-prefix=ASM %s < out.lto.s
-
-# RUN: rm out.lto.s
-# RUN: ld.lld -o out main.o --start-lib 1.bc 2.bc --end-lib --fortran-common --lto-emit-asm
-# RUN: FileCheck --check-prefix=ASM %s < out.lto.s
+# RUN: ld.lld -o out main.o 4.a -y block | FileCheck --check-prefix=LTO_COMMON_A %s
+# RUN: ld.lld -o out main.o --start-lib 1.bc 2.bc --end-lib -y block | \
+# RUN:   FileCheck --check-prefix=LTO_COMMON %s
 
 ## COMMON overrides weak. Don't extract 3.bc which provides a weak definition.
 # RUN: ld.lld main.o --start-lib 1.bc 3.bc --end-lib -y block | FileCheck --check-prefix=LTO_WEAK %s
-
-## Old FORTRAN that mixes use of COMMON blocks and BLOCK DATA requires that we
-## search through archives for non-tentative definitions (from the BLOCK DATA)
-## to replace the tentative definitions (from the COMMON block(s)).
 
 ## Ensure we have used the initialized definition of 'block' instead of a
 ## common definition.
@@ -104,10 +87,13 @@
 # MAP:       28 8 3.a(2.o):(.data)
 # MAP-NEXT:  28 1 block
 
-# ASM:         .type   block,@object
-# ASM:       block:
-# ASM-NEXT:    .long 5
-# ASM:         .size   block, 20
+# LTO_COMMON_A:     4.a(1.bc): common definition of block
+# LTO_COMMON_A:     <internal>: reference to block
+# LTO_COMMON_A-NOT: {{.}}
+
+# LTO_COMMON:     1.bc: common definition of block
+# LTO_COMMON:     <internal>: reference to block
+# LTO_COMMON-NOT: {{.}}
 
 # LTO_WEAK:     1.bc: common definition of block
 # LTO_WEAK:     <internal>: reference to block

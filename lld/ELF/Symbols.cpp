@@ -659,13 +659,6 @@ void Symbol::resolve(Ctx &ctx, const LazySymbol &other) {
     // See the comment in resolve(Ctx &, const Undefined &).
     if (isDefined()) {
       ctx.backwardReferences.erase(this);
-    } else if (isCommon() && ctx.arg.fortranCommon &&
-               other.file->shouldExtractForCommon(getName())) {
-      // For common objects, we want to look for global or weak definitions that
-      // should be extracted as the canonical definition instead.
-      ctx.backwardReferences.erase(this);
-      other.overwrite(*this);
-      other.extract(ctx);
     }
     return;
   }
