@@ -1,10 +1,7 @@
-name: Libc Patch Code Coverage
+name: Libc Patch Coverage
 
 permissions:
   contents: read
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 on:
   workflow_dispatch:
@@ -44,13 +41,27 @@ concurrency:
 jobs:
   pre-commit-coverage:
     timeout-minutes: 60
-    name: libc-pre-commit-coverage
+    name: libc-patch-coverage (${{ matrix.name }})
     runs-on: ubuntu-24.04
     container:
       image: ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:8fee4c9ce5a1fd095686593cd36e032c48a31b6ae575378c82accd1d86a08d59
     defaults:
       run:
         shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Line Coverage
+            enable_mcdc: "OFF"
+            sccache_key: libc_coverage_unified_v2_x86_64
+            artifact_name: libc-patch-coverage-report
+            report_title: "LLVM-libc Patch Coverage Report"
+          - name: MC/DC Coverage
+            enable_mcdc: "ON"
+            sccache_key: libc_mcdc_coverage_unified_x86_64
+            artifact_name: libc-patch-mcdc-coverage-report
+            report_title: "LLVM-libc Patch MC/DC Coverage Report"
     steps:
     - name: Checkout Code
       uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -63,7 +74,7 @@ jobs:
       uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
       with:
         max-size: 1G
-        key: libc_coverage_unified_v2_x86_64
+        key: ${{ matrix.sccache_key }}
         variant: sccache
 
     - name: Configure CMake
@@ -81,6 +92,7 @@ jobs:
           -DLLVM_ENABLE_RUNTIMES=libc
           -DLLVM_LIBC_FULL_BUILD=ON
           -DLIBC_ENABLE_COVERAGE=ON
+          -DLIBC_ENABLE_MCDC=${{ matrix.enable_mcdc }}
           -DLIBC_TEST_UNIT_TEST_ONLY=ON
           -DLIBC_TEST_SKIP_DEATH_TESTS=ON
           -DLIBC_TEST_SKIP_SHARED_TESTS=ON
@@ -159,7 +171,7 @@ jobs:
           echo "[LOG] No source files modified in libc/src/. Exiting successfully."
           echo "TARGETS=" >> $GITHUB_ENV
 
-          echo "## LLVM-libc Patch Coverage Report" > coverage_report.md
+          echo "## ${{ matrix.report_title }}" > coverage_report.md
           echo "" >> coverage_report.md
           echo "- **Base Branch:** [\`${BASE_REF}\` (${BASE_SHA:0:7})](https://github.com/${BASE_REPO}/commit/${BASE_SHA})" >> coverage_report.md
           echo "- **Head Commit:** [\`${HEAD_REF}\` (${HEAD_SHA:0:7})](https://github.com/${HEAD_REPO}/commit/${HEAD_SHA})" >> coverage_report.md
@@ -210,7 +222,7 @@ jobs:
           echo "[LOG] No standalone unit test targets to run."
           echo "TARGETS=" >> $GITHUB_ENV
 
-          echo "## LLVM-libc Patch Coverage Report" > coverage_report.md
+          echo "## ${{ matrix.report_title }}" > coverage_report.md
           echo "" >> coverage_report.md
           echo "- **Base Branch:** [\`${BASE_REF}\` (${BASE_SHA:0:7})](https://github.com/${BASE_REPO}/commit/${BASE_SHA})" >> coverage_report.md
           echo "- **Head Commit:** [\`${HEAD_REF}\` (${HEAD_SHA:0:7})](https://github.com/${HEAD_REPO}/commit/${HEAD_SHA})" >> coverage_report.md
@@ -246,7 +258,7 @@ jobs:
 
         if [ ! -f libc_full.profdata ] || [ ${#EXECUTABLES[@]} -eq 0 ]; then
           echo "[LOG] Notice: Profile data or instrumented executables not found. Generating non-coverage summary."
-          echo "## LLVM-libc Patch Coverage Report" > coverage_report.md
+          echo "## ${{ matrix.report_title }}" > coverage_report.md
           echo "" >> coverage_report.md
           echo "- **Base Branch:** [\`${BASE_REF}\` (${BASE_SHA:0:7})](https://github.com/${BASE_REPO}/commit/${BASE_SHA})" >> coverage_report.md
           echo "- **Head Commit:** [\`${HEAD_REF}\` (${HEAD_SHA:0:7})](https://github.com/${HEAD_REPO}/commit/${HEAD_SHA})" >> coverage_report.md
@@ -264,7 +276,7 @@ jobs:
         # 2. Generate git diff for modified libc source files
         git diff "$DIFF_BASE" HEAD -- libc/src/ > patch.diff
 
-        # 3. Run Diff Coverage Python Script using persisted commit metadata
+        # 3. Run Patch Coverage Python Script using persisted commit metadata
         PYTHONPATH="libc/utils/coverage" python3 libc/utils/coverage/diff_coverage.py patch.diff coverage.json "$BASE_SHA" "$HEAD_SHA" "$BASE_REF" "$HEAD_REF" "$TARGETS" "$BASE_REPO" "$HEAD_REPO" > coverage_report.md
         cat coverage_report.md >> $GITHUB_STEP_SUMMARY
         echo "[LOG] Coverage report successfully written to GITHUB_STEP_SUMMARY."
@@ -272,7 +284,7 @@ jobs:
     - name: Fallback Failure Summary
       if: failure() && !hashFiles('coverage_report.md')
       run: |
-        echo "## LLVM-libc Patch Coverage Report" > coverage_report.md
+        echo "## ${{ matrix.report_title }}" > coverage_report.md
         echo "" >> coverage_report.md
         echo "- **Base Branch:** [\`${BASE_REF:-main}\` (${BASE_SHA:0:7})](https://github.com/${BASE_REPO:-llvm/llvm-project}/commit/${BASE_SHA:-main})" >> coverage_report.md
         echo "- **Head Commit:** [\`${HEAD_REF:-HEAD}\` (${HEAD_SHA:0:7})](https://github.com/${HEAD_REPO:-llvm/llvm-project}/commit/${HEAD_SHA:-HEAD})" >> coverage_report.md
@@ -283,12 +295,11 @@ jobs:
 
         cat coverage_report.md >> $GITHUB_STEP_SUMMARY
 
-
     - name: Upload Patch Coverage Artifacts
-      if: always() && hashFiles('coverage_report.md')
+      if: ${{ !cancelled() && hashFiles('coverage_report.md') }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: libc-patch-coverage-report
+        name: ${{ matrix.artifact_name }}
         path: |
           coverage_report.md
           patch.diff

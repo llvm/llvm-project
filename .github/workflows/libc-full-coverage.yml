@@ -3,9 +3,6 @@ name: Libc Full Codebase Coverage
 permissions:
   contents: read
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
 on:
   # Daily overnight run at 02:00 UTC
   schedule:
@@ -29,13 +26,31 @@ concurrency:
 jobs:
   full-coverage:
     timeout-minutes: 60
-    name: libc-full-coverage
+    name: libc-full-coverage (${{ matrix.name }})
     runs-on: ubuntu-24.04
     container:
       image: ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:8fee4c9ce5a1fd095686593cd36e032c48a31b6ae575378c82accd1d86a08d59
     defaults:
       run:
         shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Line Coverage
+            enable_mcdc: "OFF"
+            llvm_cov_show_flags: ""
+            sccache_key: libc_coverage_unified_v2_x86_64
+            summary_artifact: libc-coverage-summary
+            html_artifact: libc-coverage-html
+            report_title: "LLVM-libc Coverage Report"
+          - name: MC/DC Coverage
+            enable_mcdc: "ON"
+            llvm_cov_show_flags: "--show-mcdc --show-mcdc-summary"
+            sccache_key: libc_mcdc_coverage_unified_x86_64
+            summary_artifact: libc-mcdc-coverage-summary
+            html_artifact: libc-mcdc-coverage-html
+            report_title: "LLVM-libc MC/DC Coverage Report"
     steps:
     - name: Checkout Code
       uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
@@ -47,7 +62,7 @@ jobs:
       uses: hendrikmuhs/ccache-action@d62db5f07c26379fc4b4e0916f098a92573c3b03 # v1.2.23
       with:
         max-size: 1G
-        key: libc_coverage_unified_v2_x86_64
+        key: ${{ matrix.sccache_key }}
         variant: sccache
 
     - name: Configure CMake
@@ -65,6 +80,7 @@ jobs:
           -DLLVM_ENABLE_RUNTIMES=libc
           -DLLVM_LIBC_FULL_BUILD=ON
           -DLIBC_ENABLE_COVERAGE=ON
+          -DLIBC_ENABLE_MCDC=${{ matrix.enable_mcdc }}
           -DLIBC_TEST_UNIT_TEST_ONLY=ON
           -DLIBC_TEST_SKIP_DEATH_TESTS=ON
           -DLIBC_TEST_SKIP_SHARED_TESTS=ON
@@ -101,7 +117,7 @@ jobs:
 
         if [ ! -f libc_full.profdata ] || [ ${#EXECUTABLES[@]} -eq 0 ]; then
           echo "[LOG] Warning: Profile data or test executables missing. Skipping report generation."
-          echo "### LLVM-libc Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "### ${{ matrix.report_title }}" >> $GITHUB_STEP_SUMMARY
           echo "No coverage data was generated for this run." >> $GITHUB_STEP_SUMMARY
           exit 0
         fi
@@ -116,10 +132,12 @@ jobs:
           "${EXECUTABLES[0]}" "${OBJECTS[@]}" \
           --show-directory-coverage \
           --show-branches=count \
+          ${{ matrix.llvm_cov_show_flags }} \
           --compilation-dir=. \
           --path-equivalence="$GITHUB_WORKSPACE,." \
           -ignore-filename-regex=".*(test|utils).*"
-        # 3. Run Codebase Coverage Analyzer
+
+        # 3. Run Full Codebase Coverage Analyzer
         PYTHONPATH="libc/utils/coverage" python3 libc/utils/coverage/codebase_coverage.py coverage.json "$COMMIT_SHA" "$BRANCH_REF" > coverage_summary.md
         cat coverage_summary.md >> $GITHUB_STEP_SUMMARY
         echo "[LOG] Post-commit summary report written to GITHUB_STEP_SUMMARY."
@@ -127,14 +145,14 @@ jobs:
     - name: Fallback Failure Summary
       if: failure() && !hashFiles('coverage.json')
       run: |
-        echo "### LLVM-libc Coverage Report" >> $GITHUB_STEP_SUMMARY
+        echo "### ${{ matrix.report_title }}" >> $GITHUB_STEP_SUMMARY
         echo "Workflow run encountered an error before coverage reports could be generated. Inspect job logs for details." >> $GITHUB_STEP_SUMMARY
 
     - name: Upload Coverage Summary Artifact
-      if: always() && hashFiles('coverage_summary.md')
+      if: ${{ !cancelled() && hashFiles('coverage_summary.md') }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: libc-coverage-summary
+        name: ${{ matrix.summary_artifact }}
         path: |
           coverage_summary.md
           coverage.json
@@ -143,10 +161,10 @@ jobs:
         overwrite: true
 
     - name: Upload HTML Coverage Artifact
-      if: always() && hashFiles('coverage_html/**')
+      if: ${{ !cancelled() && hashFiles('coverage_html/**') }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: libc-coverage-html
+        name: ${{ matrix.html_artifact }}
         path: coverage_html/
         retention-days: 14
         overwrite: true

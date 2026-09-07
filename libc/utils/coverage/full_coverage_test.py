@@ -1,10 +1,13 @@
-# ====- Unit tests for codebase_coverage.py ------------------*- python -*--==#
+# ===- Unit tests for full codebase coverage ----------------*- python -*--==#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 #
-# ==-------------------------------------------------------------------------==#
+# ==------------------------------------------------------------------------==#
+
+# To run these tests:
+# python3 -m unittest full_coverage_test.py
 
 """Unit tests for codebase_coverage.py."""
 
@@ -15,6 +18,7 @@ import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
+from typing import List, Optional
 from unittest.mock import patch
 
 # Ensure libc/utils/coverage is in sys.path when running from any working directory
@@ -30,6 +34,36 @@ from codebase_coverage import (
     main,
     render_full_report,
 )
+
+
+def _make_file_entry(
+    filename: str,
+    lines_total: int,
+    lines_covered: int,
+    func_total: int = 1,
+    func_covered: int = 1,
+    mcdc_total: int = 0,
+    mcdc_covered: int = 0,
+    mcdc_records: Optional[list] = None,
+) -> dict:
+    """Constructs a single file coverage record for llvm-cov JSON export."""
+    entry = {
+        "filename": filename,
+        "summary": {
+            "lines": {"count": lines_total, "covered": lines_covered},
+            "functions": {"count": func_total, "covered": func_covered},
+        },
+    }
+    if mcdc_total > 0 or mcdc_records:
+        entry["summary"]["mcdc"] = {"count": mcdc_total, "covered": mcdc_covered}
+    if mcdc_records is not None:
+        entry["mcdc_records"] = mcdc_records
+    return entry
+
+
+def _make_codebase_payload(files: List[dict]) -> dict:
+    """Wraps file coverage entries in the top-level llvm-cov JSON export structure."""
+    return {"data": [{"files": files}]}
 
 
 class TestDirectoryCoverageMetrics(unittest.TestCase):
@@ -118,99 +152,78 @@ class TestExtractFullCoverageStatistics(unittest.TestCase):
 
     def test_all_files_zero_lines_returns_none(self):
         """Payload containing only files with zero total lines must return None."""
-        payload = {
-            "data": [
-                {
-                    "files": [
-                        {
-                            "filename": "/workspace/libc/src/empty.cpp",
-                            "summary": {
-                                "lines": {"count": 0, "covered": 0},
-                                "functions": {"count": 0, "covered": 0},
-                            },
-                        }
-                    ]
-                }
+        payload = _make_codebase_payload(
+            [
+                _make_file_entry(
+                    "/workspace/libc/src/empty.cpp",
+                    lines_total=0,
+                    lines_covered=0,
+                    func_total=0,
+                    func_covered=0,
+                )
             ]
-        }
+        )
         self.assertIsNone(extract_full_coverage_statistics(payload))
 
     def test_all_files_excluded_returns_none(self):
         """Payload containing only test or utility files must return None."""
-        payload = {
-            "data": [
-                {
-                    "files": [
-                        {
-                            "filename": "/workspace/libc/test/src/math/sin_test.cpp",
-                            "summary": {
-                                "lines": {"count": 100, "covered": 100},
-                                "functions": {"count": 1, "covered": 1},
-                            },
-                        },
-                        {
-                            "filename": "/workspace/libc/utils/MPFRWrapper/MPFRUtils.cpp",
-                            "summary": {
-                                "lines": {"count": 200, "covered": 200},
-                                "functions": {"count": 2, "covered": 2},
-                            },
-                        },
-                    ]
-                }
+        payload = _make_codebase_payload(
+            [
+                _make_file_entry(
+                    "/workspace/libc/test/src/math/sin_test.cpp",
+                    lines_total=100,
+                    lines_covered=100,
+                ),
+                _make_file_entry(
+                    "/workspace/libc/utils/MPFRWrapper/MPFRUtils.cpp",
+                    lines_total=200,
+                    lines_covered=200,
+                    func_total=2,
+                    func_covered=2,
+                ),
             ]
-        }
+        )
         self.assertIsNone(extract_full_coverage_statistics(payload))
 
     def test_file_path_filtering(self):
         """Test and utility directories must be excluded from codebase coverage."""
-        payload = {
-            "data": [
-                {
-                    "files": [
-                        {
-                            "filename": "/workspace/libc/src/math/sin.cpp",
-                            "summary": {
-                                "lines": {"count": 100, "covered": 80},
-                                "functions": {"count": 2, "covered": 2},
-                            },
-                        },
-                        {
-                            # Test file: must be excluded
-                            "filename": "/workspace/libc/test/src/math/sin_test.cpp",
-                            "summary": {
-                                "lines": {"count": 500, "covered": 500},
-                                "functions": {"count": 5, "covered": 5},
-                            },
-                        },
-                        {
-                            # Utility file: must be excluded
-                            "filename": "/workspace/libc/utils/MPFRWrapper/MPFRUtils.cpp",
-                            "summary": {
-                                "lines": {"count": 300, "covered": 300},
-                                "functions": {"count": 4, "covered": 4},
-                            },
-                        },
-                        {
-                            # Non-src file: must be excluded
-                            "filename": "/workspace/libc/include/llvm-libc-types/size_t.h",
-                            "summary": {
-                                "lines": {"count": 50, "covered": 50},
-                                "functions": {"count": 1, "covered": 1},
-                            },
-                        },
-                        {
-                            # File with zero total lines: must be excluded
-                            "filename": "/workspace/libc/src/empty.cpp",
-                            "summary": {
-                                "lines": {"count": 0, "covered": 0},
-                                "functions": {"count": 0, "covered": 0},
-                            },
-                        },
-                    ]
-                }
+        payload = _make_codebase_payload(
+            [
+                _make_file_entry(
+                    "/workspace/libc/src/math/sin.cpp",
+                    lines_total=100,
+                    lines_covered=80,
+                    func_total=2,
+                    func_covered=2,
+                ),
+                _make_file_entry(
+                    "/workspace/libc/test/src/math/sin_test.cpp",
+                    lines_total=500,
+                    lines_covered=500,
+                    func_total=5,
+                    func_covered=5,
+                ),
+                _make_file_entry(
+                    "/workspace/libc/utils/MPFRWrapper/MPFRUtils.cpp",
+                    lines_total=300,
+                    lines_covered=300,
+                    func_total=4,
+                    func_covered=4,
+                ),
+                _make_file_entry(
+                    "/workspace/libc/include/llvm-libc-types/size_t.h",
+                    lines_total=50,
+                    lines_covered=50,
+                ),
+                _make_file_entry(
+                    "/workspace/libc/src/empty.cpp",
+                    lines_total=0,
+                    lines_covered=0,
+                    func_total=0,
+                    func_covered=0,
+                ),
             ]
-        }
-
+        )
         summary = extract_full_coverage_statistics(payload)
         self.assertIsNotNone(summary)
         self.assertEqual(summary.global_stats.lines_tot, 100)
@@ -222,37 +235,31 @@ class TestExtractFullCoverageStatistics(unittest.TestCase):
 
     def test_directory_bucketing_and_nested_paths(self):
         """Files within identical top-level directories or deep subpaths must aggregate properly."""
-        payload = {
-            "data": [
-                {
-                    "files": [
-                        {
-                            "filename": "/workspace/libc/src/math/sin.cpp",
-                            "summary": {
-                                "lines": {"count": 100, "covered": 60},
-                                "functions": {"count": 2, "covered": 1},
-                            },
-                        },
-                        {
-                            "filename": "/workspace/libc/src/math/cos.cpp",
-                            "summary": {
-                                "lines": {"count": 80, "covered": 80},
-                                "functions": {"count": 2, "covered": 2},
-                            },
-                        },
-                        {
-                            # Nested subpath under src/string/
-                            "filename": "/workspace/libc/src/string/memory_utils/op_builtin.cpp",
-                            "summary": {
-                                "lines": {"count": 120, "covered": 100},
-                                "functions": {"count": 4, "covered": 3},
-                            },
-                        },
-                    ]
-                }
+        payload = _make_codebase_payload(
+            [
+                _make_file_entry(
+                    "/workspace/libc/src/math/sin.cpp",
+                    lines_total=100,
+                    lines_covered=60,
+                    func_total=2,
+                    func_covered=1,
+                ),
+                _make_file_entry(
+                    "/workspace/libc/src/math/cos.cpp",
+                    lines_total=80,
+                    lines_covered=80,
+                    func_total=2,
+                    func_covered=2,
+                ),
+                _make_file_entry(
+                    "/workspace/libc/src/string/memory_utils/op_builtin.cpp",
+                    lines_total=120,
+                    lines_covered=100,
+                    func_total=4,
+                    func_covered=3,
+                ),
             ]
-        }
-
+        )
         summary = extract_full_coverage_statistics(payload)
         self.assertIsNotNone(summary)
         self.assertEqual(summary.global_stats.lines_tot, 300)
@@ -272,31 +279,24 @@ class TestExtractFullCoverageStatistics(unittest.TestCase):
 
     def test_mcdc_records_aggregation_and_decision_tracking(self):
         """MC/DC records must be parsed for total conditions and full decision verification."""
-        payload = {
-            "data": [
-                {
-                    "files": [
-                        {
-                            "filename": "/workspace/libc/src/math/fma.cpp",
-                            "summary": {
-                                "lines": {"count": 50, "covered": 50},
-                                "functions": {"count": 1, "covered": 1},
-                                "mcdc": {"count": 4, "covered": 3},
-                            },
-                            "mcdc_records": [
-                                # Fully verified decision: [True, True]
-                                [10, 5, 10, 20, 0, 0, 0, 0, 0, [True, True]],
-                                # Partially verified decision: [True, False]
-                                [25, 5, 25, 25, 0, 0, 0, 0, 0, [True, False]],
-                                # Malformed record: ignored
-                                [30, 5, 30, 20],
-                            ],
-                        }
-                    ]
-                }
+        payload = _make_codebase_payload(
+            [
+                _make_file_entry(
+                    "/workspace/libc/src/math/fma.cpp",
+                    lines_total=50,
+                    lines_covered=50,
+                    func_total=1,
+                    func_covered=1,
+                    mcdc_total=4,
+                    mcdc_covered=3,
+                    mcdc_records=[
+                        [10, 5, 10, 20, 0, 0, 0, 0, 0, [True, True]],
+                        [25, 5, 25, 25, 0, 0, 0, 0, 0, [True, False]],
+                        [30, 5, 30, 20],  # Malformed: ignored
+                    ],
+                )
             ]
-        }
-
+        )
         summary = extract_full_coverage_statistics(payload)
         self.assertIsNotNone(summary)
         self.assertTrue(summary.has_mcdc)
@@ -307,33 +307,25 @@ class TestExtractFullCoverageStatistics(unittest.TestCase):
 
     def test_malformed_and_empty_mcdc_records_ignored(self):
         """Malformed, non-list, or empty condition vectors must not count as valid decisions."""
-        payload = {
-            "data": [
-                {
-                    "files": [
-                        {
-                            "filename": "/workspace/libc/src/math/exp.cpp",
-                            "summary": {
-                                "lines": {"count": 50, "covered": 50},
-                                "functions": {"count": 1, "covered": 1},
-                                "mcdc": {"count": 2, "covered": 2},
-                            },
-                            "mcdc_records": [
-                                # Valid fully verified decision
-                                [10, 5, 10, 20, 0, 0, 0, 0, 0, [True]],
-                                # Empty list: not a valid decision
-                                [20, 5, 20, 20, 0, 0, 0, 0, 0, []],
-                                # Non-list 10th element: not a valid decision
-                                [30, 5, 30, 20, 0, 0, 0, 0, 0, None],
-                                # Record length < 10: not a valid decision
-                                [40, 5, 40, 20],
-                            ],
-                        }
-                    ]
-                }
+        payload = _make_codebase_payload(
+            [
+                _make_file_entry(
+                    "/workspace/libc/src/math/exp.cpp",
+                    lines_total=50,
+                    lines_covered=50,
+                    func_total=1,
+                    func_covered=1,
+                    mcdc_total=2,
+                    mcdc_covered=2,
+                    mcdc_records=[
+                        [10, 5, 10, 20, 0, 0, 0, 0, 0, [True]],
+                        [20, 5, 20, 20, 0, 0, 0, 0, 0, []],
+                        [30, 5, 30, 20, 0, 0, 0, 0, 0, None],
+                        [40, 5, 40, 20],
+                    ],
+                )
             ]
-        }
-
+        )
         summary = extract_full_coverage_statistics(payload)
         self.assertIsNotNone(summary)
         self.assertEqual(summary.global_stats.decisions_tot, 1)
@@ -437,7 +429,6 @@ class TestCodebaseReportFormatting(unittest.TestCase):
         )
         table = format_directory_breakdown_table(summary)
 
-        # Check alphabetical order in markdown output
         idx_ctype = table.find("`libc/src/ctype`")
         idx_math = table.find("`libc/src/math`")
         idx_string = table.find("`libc/src/string`")
@@ -528,21 +519,17 @@ class TestRenderFullReportEndToEnd(unittest.TestCase):
 
     def test_render_complete_report_without_mcdc(self):
         """Valid report without MC/DC must render line coverage and summary tables."""
-        payload = {
-            "data": [
-                {
-                    "files": [
-                        {
-                            "filename": "/workspace/libc/src/math/sin.cpp",
-                            "summary": {
-                                "lines": {"count": 100, "covered": 90},
-                                "functions": {"count": 2, "covered": 2},
-                            },
-                        }
-                    ]
-                }
+        payload = _make_codebase_payload(
+            [
+                _make_file_entry(
+                    "/workspace/libc/src/math/sin.cpp",
+                    lines_total=100,
+                    lines_covered=90,
+                    func_total=2,
+                    func_covered=2,
+                )
             ]
-        }
+        )
         buf = io.StringIO()
         with redirect_stdout(buf):
             render_full_report(payload)
@@ -555,26 +542,20 @@ class TestRenderFullReportEndToEnd(unittest.TestCase):
 
     def test_render_complete_report_with_mcdc(self):
         """Valid report with MC/DC must render full callouts, global table, and directory table."""
-        payload = {
-            "data": [
-                {
-                    "files": [
-                        {
-                            "filename": "/workspace/libc/src/math/sin.cpp",
-                            "summary": {
-                                "lines": {"count": 100, "covered": 90},
-                                "functions": {"count": 2, "covered": 2},
-                                "mcdc": {"count": 6, "covered": 6},
-                            },
-                            "mcdc_records": [
-                                [10, 5, 10, 20, 0, 0, 0, 0, 0, [True, True]]
-                            ],
-                        }
-                    ]
-                }
+        payload = _make_codebase_payload(
+            [
+                _make_file_entry(
+                    "/workspace/libc/src/math/sin.cpp",
+                    lines_total=100,
+                    lines_covered=90,
+                    func_total=2,
+                    func_covered=2,
+                    mcdc_total=6,
+                    mcdc_covered=6,
+                    mcdc_records=[[10, 5, 10, 20, 0, 0, 0, 0, 0, [True, True]]],
+                )
             ]
-        }
-
+        )
         buf = io.StringIO()
         with redirect_stdout(buf):
             render_full_report(payload)
@@ -590,81 +571,60 @@ class TestRenderFullReportEndToEnd(unittest.TestCase):
 class TestCommandLineInterface(unittest.TestCase):
     """Tests CLI invocation, arguments parsing, and file handling."""
 
-    def test_cli_execution_with_file(self):
+    def test_cli_execution(self):
         """CLI must read JSON coverage file from disk and write report to stdout."""
-        payload = {
-            "data": [
-                {
-                    "files": [
-                        {
-                            "filename": "/workspace/libc/src/math/sin.cpp",
-                            "summary": {
-                                "lines": {"count": 50, "covered": 40},
-                                "functions": {"count": 1, "covered": 1},
-                            },
-                        }
-                    ]
-                }
+        payload = _make_codebase_payload(
+            [
+                _make_file_entry(
+                    "/workspace/libc/src/math/sin.cpp",
+                    lines_total=50,
+                    lines_covered=40,
+                )
             ]
-        }
+        )
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = os.path.join(tmp_dir, "cov.json")
+            with open(tmp_path, "w") as tmp_file:
+                json.dump(payload, tmp_file)
 
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as tmp_file:
-            json.dump(payload, tmp_file)
-            tmp_path = tmp_file.name
-
-        try:
-            buf = io.StringIO()
-            with patch.object(
-                sys,
-                "argv",
-                ["codebase_coverage.py", tmp_path, "aabbccdd1122", "main"],
-            ):
-                with redirect_stdout(buf):
-                    main()
-            output = buf.getvalue()
-            self.assertIn("## LLVM-libc Full Codebase Coverage Report", output)
-            self.assertIn("`libc/src/math`", output)
-        finally:
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
-
-    def test_cli_execution_with_minimal_arguments(self):
-        """CLI must execute successfully when commit SHA and branch ref are omitted."""
-        payload = {
-            "data": [
-                {
-                    "files": [
-                        {
-                            "filename": "/workspace/libc/src/ctype/isalnum.cpp",
-                            "summary": {
-                                "lines": {"count": 20, "covered": 20},
-                                "functions": {"count": 1, "covered": 1},
-                            },
-                        }
-                    ]
-                }
-            ]
-        }
-
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as tmp_file:
-            json.dump(payload, tmp_file)
-            tmp_path = tmp_file.name
-
-        try:
             buf = io.StringIO()
             with patch.object(sys, "argv", ["codebase_coverage.py", tmp_path]):
                 with redirect_stdout(buf):
                     main()
             output = buf.getvalue()
             self.assertIn("## LLVM-libc Full Codebase Coverage Report", output)
-            self.assertIn("`libc/src/ctype`", output)
-        finally:
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
+            self.assertIn("`libc/src/math`", output)
+
+    def test_cli_execution_with_mcdc(self):
+        """CLI must render MC/DC breakdown tables when payload includes MC/DC records."""
+        payload = _make_codebase_payload(
+            [
+                _make_file_entry(
+                    "/workspace/libc/src/math/sin.cpp",
+                    lines_total=60,
+                    lines_covered=50,
+                    func_total=2,
+                    func_covered=2,
+                    mcdc_total=4,
+                    mcdc_covered=4,
+                    mcdc_records=[[10, 5, 10, 20, 0, 0, 0, 0, 0, [True, True]]],
+                )
+            ]
+        )
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = os.path.join(tmp_dir, "cov.json")
+            with open(tmp_path, "w") as tmp_file:
+                json.dump(payload, tmp_file)
+
+            buf = io.StringIO()
+            with patch.object(sys, "argv", ["codebase_coverage.py", tmp_path]):
+                with redirect_stdout(buf):
+                    main()
+            output = buf.getvalue()
+            self.assertIn("## LLVM-libc Full Codebase Coverage Report", output)
+            self.assertIn("`libc/src/math`", output)
+            self.assertIn("MC/DC Conditions", output)
+            self.assertIn("Decisions (Verified / Total)", output)
 
     def test_cli_nonexistent_file_exits_with_error(self):
         """CLI must exit with code 1 when targeted file does not exist."""
@@ -682,23 +642,18 @@ class TestCommandLineInterface(unittest.TestCase):
 
     def test_cli_invalid_json_exits_with_error(self):
         """CLI must exit with code 1 when targeted file contains invalid JSON syntax."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".json", delete=False
-        ) as tmp_file:
-            tmp_file.write("INVALID JSON CONTENT")
-            tmp_path = tmp_file.name
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = os.path.join(tmp_dir, "cov.json")
+            with open(tmp_path, "w") as tmp_file:
+                tmp_file.write("INVALID JSON CONTENT")
 
-        stderr_buf = io.StringIO()
-        try:
+            stderr_buf = io.StringIO()
             with patch.object(sys, "argv", ["codebase_coverage.py", tmp_path]):
                 with patch("sys.stderr", stderr_buf):
                     with self.assertRaises(SystemExit) as cm:
                         main()
                     self.assertEqual(cm.exception.code, 1)
             self.assertIn("Error: Failed to parse coverage JSON", stderr_buf.getvalue())
-        finally:
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
 
 
 if __name__ == "__main__":
