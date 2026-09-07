@@ -17,10 +17,10 @@ module attributes {omp.is_target_device = false} {
 
 // CHECK-LABEL:   llvm.func @_QPchar_array(
 // CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr) {
-// CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant(9 : index) : i64
-// CHECK:           %[[VAL_1:.*]] = llvm.mlir.constant(0 : index) : i64
-// CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK:           %[[VAL_3:.*]] = llvm.mlir.constant(10 : index) : i64
+// CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant(9 : i64) : i64
+// CHECK:           %[[VAL_1:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:           %[[VAL_3:.*]] = llvm.mlir.constant(10 : i64) : i64
 // CHECK:           %[[VAL_4:.*]] = omp.map.bounds lower_bound(%[[VAL_1]] : i64) upper_bound(%[[VAL_0]] : i64) extent(%[[VAL_3]] : i64) stride(%[[VAL_2]] : i64) start_idx(%[[VAL_2]] : i64)
 // CHECK:           %[[VAL_5:.*]] = omp.map.bounds lower_bound(%[[VAL_1]] : i64) upper_bound(%[[VAL_0]] : i64) extent(%[[VAL_3]] : i64) stride(%[[VAL_2]] : i64) start_idx(%[[VAL_2]] : i64)
 // CHECK:           %[[VAL_6:.*]] = llvm.mlir.constant(0 : i64) : i64
@@ -59,8 +59,8 @@ module attributes {omp.is_target_device = false} {
 // CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr) {
 // CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:           %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-// CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK:           %[[VAL_3:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK:           %[[VAL_2:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:           %[[VAL_3:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK:           %[[VAL_4:.*]] = llvm.mlir.constant(72 : i32) : i32
 // CHECK:           "llvm.intr.memcpy"(%[[VAL_1]], %[[ARG0]], %[[VAL_4]]) <{arg_attrs = [{{.*}}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:           %[[VAL_5:.*]] = llvm.getelementptr %[[VAL_1]][0, 7, %[[VAL_3]], 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>

@@ -17,7 +17,6 @@
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/CodeGen/MIRFSDiscriminatorOptions.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
-#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstr.h"

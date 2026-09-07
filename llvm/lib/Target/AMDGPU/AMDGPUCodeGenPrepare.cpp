@@ -16,7 +16,6 @@
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIModeRegisterDefaults.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -29,7 +28,6 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
@@ -746,8 +744,9 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
     // sqrt: sqrt's ninf/nsz don't say anything about the quotient.
     IRBuilder<>::FastMathFlagGuard Guard(Builder);
     FastMathFlags NewFMF = DivFMF | SqrtFMF;
-    NewFMF.setNoInfs(DivFMF.noInfs() && SqrtFMF.noInfs());
-    NewFMF.setNoSignedZeros(DivFMF.noSignedZeros() && SqrtFMF.noSignedZeros());
+    FastMathFlags ValueFMF = FastMathFlags::intersectValue(DivFMF, SqrtFMF);
+    NewFMF.setNoInfs(ValueFMF.noInfs());
+    NewFMF.setNoSignedZeros(ValueFMF.noSignedZeros());
     Builder.setFastMathFlags(NewFMF);
 
     if (Den->getType()->isFloatTy()) {
@@ -2170,7 +2169,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFMinLike(IntrinsicInst &I) {
 // Expand llvm.sqrt.f32 calls with !fpmath metadata in a semi-fast way.
 bool AMDGPUCodeGenPrepareImpl::visitSqrt(IntrinsicInst &Sqrt) {
   Type *Ty = Sqrt.getType()->getScalarType();
-  if (!Ty->isFloatTy() && (!Ty->isHalfTy() || ST.has16BitInsts()))
+  if (!Ty->isFloatTy())
     return false;
 
   const FPMathOperator *FPOp = cast<const FPMathOperator>(&Sqrt);

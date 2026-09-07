@@ -228,6 +228,7 @@ struct MissingFeatures {
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
   static bool emitConstrainedFPCall() { return false; }
   static bool emitLifetimeMarkers() { return false; }
+  static bool lifetimeMarkersBypass() { return false; }
   static bool emitLValueAlignmentAssumption() { return false; }
   static bool emitNullCheckForDeleteCalls() { return false; }
   static bool emitNullabilityCheck() { return false; }
@@ -302,7 +303,6 @@ struct MissingFeatures {
   static bool vaArgABILowering() { return false; }
   static bool vectorConstants() { return false; }
   static bool vlas() { return false; }
-  static bool vtableInitialization() { return false; }
   static bool vtableEmitMetadata() { return false; }
   static bool vtableRelativeLayout() { return false; }
   static bool weakRefReference() { return false; }

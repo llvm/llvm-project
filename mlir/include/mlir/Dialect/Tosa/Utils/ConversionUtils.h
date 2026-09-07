@@ -101,10 +101,10 @@ TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
 
   SmallVector<ShapedTypeComponents> returnedShapes;
   if (shapeInterface
-          .inferReturnTypeComponents(op.getContext(), builder.getLoc(),
-                                     op->getOperands(), op->getAttrDictionary(),
-                                     op->getPropertiesStorage(),
-                                     op->getRegions(), returnedShapes)
+          .inferReturnTypeComponents(
+              op.getContext(), builder.getLoc(), op->getOperands(),
+              op->getDiscardableAttrDictionary(), op->getPropertiesStorage(),
+              op->getRegions(), returnedShapes)
           .failed())
     return op;
 
@@ -113,7 +113,7 @@ TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
   // different bit-width types and does not have a TypeAttr to define the
   // target type.
   auto result = op->getResult(0);
-  auto predictedShape = returnedShapes[0];
+  const auto &predictedShape = returnedShapes[0];
   auto currentKnowledge = ValueKnowledge::getKnowledgeFromType(resultTy);
 
   // Compute the knowledge based on the inferred type.

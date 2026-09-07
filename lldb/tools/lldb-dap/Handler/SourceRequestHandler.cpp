@@ -30,7 +30,7 @@ namespace lldb_dap {
 llvm::Expected<protocol::SourceResponseBody>
 SourceRequestHandler::Run(const protocol::SourceArguments &args) const {
 
-  uint32_t source_ref =
+  src_ref_t source_ref =
       args.source ? args.source->sourceReference.value_or(args.sourceReference)
                   : args.sourceReference;
   const std::optional<lldb::addr_t> source_addr_opt =

@@ -52,7 +52,6 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/IPO.h"
@@ -221,8 +220,10 @@ MachineFunctionInfo *ARMBaseTargetMachine::createMachineFunctionInfo(
           const Function *Callee = CB->getCalledFunction();
           F.getContext().diagnose(DiagnosticInfoUnsupported(
               F,
-              (Callee ? Twine("call to '") + Callee->getName() + "'"
-                      : Twine("indirect call")) +
+              (Callee ? Twine("'") + F.getName() + "' calls '" +
+                            Callee->getName() + "', which"
+                      : Twine("'") + F.getName() +
+                            "' makes an indirect call that") +
                   " expects a hard-float calling convention" +
                   FPRegsUnavailableMsg,
               CB->getDebugLoc()));
@@ -514,7 +515,7 @@ bool ARMPassConfig::addRegBankSelect() {
 }
 
 bool ARMPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   return false;
 }
 
@@ -618,7 +619,7 @@ void ARMPassConfig::addPreEmitPass2() {
     // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
-    addPass(createEHContGuardTargetsPass());
+    addPass(createEHContGuardTargetsLegacy());
   }
 }
 

@@ -166,6 +166,15 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "emutls",
+    srcs = [
+        "lib/builtins/emutls.c",
+    ],
+    hdrs = glob(["lib/builtins/*.h"]),
+    linkstatic = True,
+)
+
 filegroup(
     name = "fuzzer_installed_hdrs",
     srcs = glob(["include/fuzzer/*.h"]),

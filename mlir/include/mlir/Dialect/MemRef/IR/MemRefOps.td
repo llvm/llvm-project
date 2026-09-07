@@ -1190,7 +1190,7 @@ def MemRef_GetGlobalOp : MemRef_Op<"get_global",
 // GlobalOp
 //===----------------------------------------------------------------------===//
 
-def MemRef_GlobalOp : MemRef_Op<"global", [Symbol,
+def MemRef_GlobalOp : MemRef_Op<"global", [SymbolName, SymbolVisibility, Symbol,
     DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]> {
   let summary = "declare or define a global memref variable";
   let description = [{
@@ -2432,6 +2432,7 @@ def SubViewOp : MemRef_OpWithOffsetSizesAndStrides<"subview", [
 def MemRef_TransposeOp : MemRef_Op<"transpose", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
     DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
+    DeclareOpInterfaceMethods<ViewLikeOpInterface>,
     Pure]>,
     Arguments<(ins AnyStridedMemRef:$in, AffineMapAttr:$permutation)>,
     Results<(outs AnyStridedMemRef)> {

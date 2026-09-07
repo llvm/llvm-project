@@ -48,6 +48,7 @@ static_library("LLVMLoongArchCodeGen") {
     "LoongArchISelDAGToDAG.cpp",
     "LoongArchISelLowering.cpp",
     "LoongArchInstrInfo.cpp",
+    "LoongArchLateBranchOpt.cpp",
     "LoongArchMCInstLower.cpp",
     "LoongArchMergeBaseOffset.cpp",
     "LoongArchOptWInstrs.cpp",

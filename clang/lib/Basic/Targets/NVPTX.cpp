@@ -66,6 +66,12 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   NoAsmVariants = true;
   GPU = OffloadArch::getUnused();
 
+  // Architectures are in the feature map only to gate builtins; the backend
+  // takes the architecture from `target-cpu`.
+#define NVPTX_GPU(NAME, KIND, VIRTUAL, SM_ID, MIN_VER, MAX_VER, SUFFIX)        \
+  ReadOnlyFeatures.insert(NAME);
+#include "llvm/TargetParser/NVPTXTargetParser.def"
+
   // PTX supports f16 as a fundamental type.
   HasFastHalfType = true;
   HasFloat16 = true;

@@ -43,6 +43,11 @@ protected:
   const ABIType *Ptr;
   const ABIType *Void;
   const ABIType *Matrix;
+  const ABIType *BitInt7;
+  const ABIType *UBitInt7;
+  const ABIType *BitInt65;
+  const ABIType *BitInt128;
+  const ABIType *BitInt129;
 
   AArch64TargetInfoTest()
       : TB(Alloc), Bool(TB.getIntegerType(1, llvm::Align(1), /*Signed=*/false)),
@@ -58,7 +63,17 @@ protected:
         F64(TB.getFloatType(llvm::APFloat::IEEEdouble(), llvm::Align(8))),
         Ptr(TB.getPointerType(64, llvm::Align(8))), Void(TB.getVoidType()),
         Matrix(TB.getArrayType(F32, /*NumElements=*/4, /*SizeInBits=*/128,
-                               /*IsMatrixType=*/true)) {}
+                               /*IsMatrixType=*/true)),
+        BitInt7(TB.getIntegerType(7, llvm::Align(1), /*Signed=*/true,
+                                  /*IsBitInt=*/true)),
+        UBitInt7(TB.getIntegerType(7, llvm::Align(1), /*Signed=*/false,
+                                   /*IsBitInt=*/true)),
+        BitInt65(TB.getIntegerType(65, llvm::Align(16), /*Signed=*/true,
+                                   /*IsBitInt=*/true)),
+        BitInt128(TB.getIntegerType(128, llvm::Align(16), /*Signed=*/true,
+                                    /*IsBitInt=*/true)),
+        BitInt129(TB.getIntegerType(129, llvm::Align(16), /*Signed=*/true,
+                                    /*IsBitInt=*/true)) {}
 };
 
 static void expectUncoercedDirect(const ArgInfo &Info) {
@@ -71,6 +86,13 @@ static void expectExtendInteger(const ArgInfo &Info, const ABIType *Ty,
   EXPECT_TRUE(Info.isExtend());
   EXPECT_EQ(Info.isSignExt(), IsSigned);
   EXPECT_EQ(Info.getCoerceToType(), Ty);
+}
+
+static void expectAlignedIndirect(const ArgInfo &Info, llvm::Align Align,
+                                  bool ByVal = false) {
+  EXPECT_TRUE(Info.isIndirect());
+  EXPECT_EQ(Info.getIndirectAlign(), Align);
+  EXPECT_EQ(Info.getIndirectByVal(), ByVal);
 }
 
 TEST_F(AArch64TargetInfoTest, ClassifyReturnVoidIsIgnore) {
@@ -143,6 +165,64 @@ TEST_F(AArch64TargetInfoTest, ClassifyReturnScalarsDirectAAPCSSoft) {
   }
 }
 
+// _BitInt types no wider than 128 bits are returned directly under AAPCS.
+// Wider _BitInt types are returned indirectly.
+TEST_F(AArch64TargetInfoTest, ClassifyReturnBitIntAAPCS) {
+  std::unique_ptr<TargetInfo> TI =
+      createAArch64TargetInfo(TB, AArch64ABIKind::AAPCS);
+
+  for (const ABIType *RetTy : {BitInt7, UBitInt7, BitInt65, BitInt128}) {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, RetTy, {});
+    FI->getReturnInfo() = ArgInfo::getIgnore();
+    TI->computeInfo(*FI);
+    expectUncoercedDirect(FI->getReturnInfo());
+  }
+
+  std::unique_ptr<FunctionInfo> FI =
+      FunctionInfo::create(llvm::CallingConv::C, BitInt129, {});
+  FI->getReturnInfo() = ArgInfo::getIgnore();
+  TI->computeInfo(*FI);
+  expectAlignedIndirect(FI->getReturnInfo(), llvm::Align(16), /*ByVal=*/true);
+}
+
+// DarwinPCS extends promotable _BitInt returns. Other _BitInt types no wider
+// than 128 bits are returned directly. Wider _BitInt types are returned
+// indirectly.
+TEST_F(AArch64TargetInfoTest, ClassifyReturnBitIntDarwin) {
+  std::unique_ptr<TargetInfo> TI =
+      createAArch64TargetInfo(TB, AArch64ABIKind::DarwinPCS);
+
+  for (const ABIType *RetTy : {BitInt65, BitInt128}) {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, RetTy, {});
+    FI->getReturnInfo() = ArgInfo::getIgnore();
+    TI->computeInfo(*FI);
+    expectUncoercedDirect(FI->getReturnInfo());
+  }
+
+  {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, BitInt7, {});
+    FI->getReturnInfo() = ArgInfo::getIgnore();
+    TI->computeInfo(*FI);
+    expectExtendInteger(FI->getReturnInfo(), BitInt7, /*IsSigned=*/true);
+  }
+  {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, UBitInt7, {});
+    FI->getReturnInfo() = ArgInfo::getIgnore();
+    TI->computeInfo(*FI);
+    expectExtendInteger(FI->getReturnInfo(), UBitInt7, /*IsSigned=*/false);
+  }
+
+  std::unique_ptr<FunctionInfo> FI =
+      FunctionInfo::create(llvm::CallingConv::C, BitInt129, {});
+  FI->getReturnInfo() = ArgInfo::getIgnore();
+  TI->computeInfo(*FI);
+  expectAlignedIndirect(FI->getReturnInfo(), llvm::Align(16), /*ByVal=*/true);
+}
+
 // Non-aggregate scalars, matrix types, and promotable integers take the Direct
 // return path under Win64.
 TEST_F(AArch64TargetInfoTest, ClassifyReturnScalarsDirectWin64) {
@@ -212,6 +292,60 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentScalarsDirectAAPCSSoft) {
   }
 }
 
+// _BitInt types no wider than 128 bits are passed directly under AAPCS.
+// Wider _BitInt types are passed indirectly without byval.
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentBitIntAAPCS) {
+  std::unique_ptr<TargetInfo> TI =
+      createAArch64TargetInfo(TB, AArch64ABIKind::AAPCS);
+
+  for (const ABIType *ArgTy : {BitInt7, UBitInt7, BitInt65, BitInt128}) {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {ArgTy});
+    TI->computeInfo(*FI);
+    expectUncoercedDirect(FI->getArgInfo(0).Info);
+  }
+
+  std::unique_ptr<FunctionInfo> FI =
+      FunctionInfo::create(llvm::CallingConv::C, Void, {BitInt129});
+  TI->computeInfo(*FI);
+  expectAlignedIndirect(FI->getArgInfo(0).Info, llvm::Align(16),
+                        /*ByVal=*/false);
+}
+
+// DarwinPCS extends promotable _BitInt arguments. Other _BitInt types no
+// wider than 128 bits are passed directly. Wider _BitInt types are passed
+// indirectly without byval.
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentBitIntDarwin) {
+  std::unique_ptr<TargetInfo> TI =
+      createAArch64TargetInfo(TB, AArch64ABIKind::DarwinPCS);
+
+  for (const ABIType *ArgTy : {BitInt65, BitInt128}) {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {ArgTy});
+    TI->computeInfo(*FI);
+    expectUncoercedDirect(FI->getArgInfo(0).Info);
+  }
+
+  {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {BitInt7});
+    TI->computeInfo(*FI);
+    expectExtendInteger(FI->getArgInfo(0).Info, BitInt7, /*IsSigned=*/true);
+  }
+  {
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {UBitInt7});
+    TI->computeInfo(*FI);
+    expectExtendInteger(FI->getArgInfo(0).Info, UBitInt7, /*IsSigned=*/false);
+  }
+
+  std::unique_ptr<FunctionInfo> FI =
+      FunctionInfo::create(llvm::CallingConv::C, Void, {BitInt129});
+  TI->computeInfo(*FI);
+  expectAlignedIndirect(FI->getArgInfo(0).Info, llvm::Align(16),
+                        /*ByVal=*/false);
+}
+
 // Non-aggregate scalars, matrix types, and promotable integers take the Direct
 // argument path under Win64.
 TEST_F(AArch64TargetInfoTest, ClassifyArgumentScalarsDirectWin64) {
@@ -224,6 +358,80 @@ TEST_F(AArch64TargetInfoTest, ClassifyArgumentScalarsDirectWin64) {
         FunctionInfo::create(llvm::CallingConv::C, Void, {ArgTy});
     TI->computeInfo(*FI);
     expectUncoercedDirect(FI->getArgInfo(0).Info);
+  }
+}
+
+// Transparent unions are classified as their first field type.
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentTransparentUnion) {
+  using llvm::abi::FieldInfo;
+  using llvm::abi::RecordFlags;
+  using llvm::abi::StructPacking;
+
+  // First field is i32; second field is ignored for classification.
+  const ABIType *TUInt = TB.getUnionType(
+      {FieldInfo(I32), FieldInfo(F32)}, llvm::TypeSize::getFixed(32),
+      llvm::Align(4), StructPacking::Default, RecordFlags::IsTransparent);
+
+  for (AArch64ABIKind Kind :
+       {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS, AArch64ABIKind::Win64,
+        AArch64ABIKind::AAPCSSoft}) {
+    std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Kind);
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {TUInt});
+    TI->computeInfo(*FI);
+    expectUncoercedDirect(FI->getArgInfo(0).Info);
+  }
+
+  // First field is a promotable integer: DarwinPCS extends; others are Direct.
+  const ABIType *TUChar = TB.getUnionType(
+      {FieldInfo(I8), FieldInfo(U8)}, llvm::TypeSize::getFixed(8),
+      llvm::Align(1), StructPacking::Default, RecordFlags::IsTransparent);
+
+  {
+    std::unique_ptr<TargetInfo> TI =
+        createAArch64TargetInfo(TB, AArch64ABIKind::DarwinPCS);
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {TUChar});
+    TI->computeInfo(*FI);
+    expectExtendInteger(FI->getArgInfo(0).Info, I8, /*IsSigned=*/true);
+  }
+
+  for (AArch64ABIKind Kind : {AArch64ABIKind::AAPCS, AArch64ABIKind::Win64,
+                              AArch64ABIKind::AAPCSSoft}) {
+    std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Kind);
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {TUChar});
+    TI->computeInfo(*FI);
+    expectUncoercedDirect(FI->getArgInfo(0).Info);
+  }
+}
+
+static void expectNaturalAlignIndirect(const ArgInfo &Info,
+                                       llvm::Align ExpectedAlign, bool ByVal) {
+  EXPECT_TRUE(Info.isIndirect());
+  EXPECT_EQ(Info.getIndirectAlign(), ExpectedAlign);
+  EXPECT_EQ(Info.getIndirectByVal(), ByVal);
+}
+
+// Records that cannot be passed in registers (e.g. non-trivial C++ types) are
+// classified as Indirect with ByVal=false under all AArch64 ABI kinds.
+TEST_F(AArch64TargetInfoTest, ClassifyArgumentRecordCannotPassInRegisters) {
+  // A record without CanPassInRegisters is treated like a C++ type with a
+  // non-trivial copy constructor or destructor.
+  const ABIType *CannotPass = TB.getRecordType(
+      {llvm::abi::FieldInfo(I32)}, llvm::TypeSize::getFixed(32), llvm::Align(4),
+      llvm::abi::StructPacking::Default, /*BaseClasses=*/{},
+      /*VirtualBaseClasses=*/{}, llvm::abi::RecordFlags::IsCXXRecord);
+
+  for (AArch64ABIKind Kind :
+       {AArch64ABIKind::AAPCS, AArch64ABIKind::DarwinPCS, AArch64ABIKind::Win64,
+        AArch64ABIKind::AAPCSSoft}) {
+    std::unique_ptr<TargetInfo> TI = createAArch64TargetInfo(TB, Kind);
+    std::unique_ptr<FunctionInfo> FI =
+        FunctionInfo::create(llvm::CallingConv::C, Void, {CannotPass});
+    TI->computeInfo(*FI);
+    expectNaturalAlignIndirect(FI->getArgInfo(0).Info, llvm::Align(4),
+                               /*ByVal=*/false);
   }
 }
 

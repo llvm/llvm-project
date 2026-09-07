@@ -1450,7 +1450,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BIstrncpy:
   case Builtin::BI__builtin_strncpy:
   case Builtin::BIstpncpy:
-  case Builtin::BI__builtin_stpncpy: {
+  case Builtin::BI__builtin_stpncpy:
+  case Builtin::BIstrlcat:
+  case Builtin::BI__builtin_strlcat: {
     // Whether these functions overflow depends on the runtime strlen of the
     // string, not just the buffer size, so emitting the "always overflow"
     // diagnostic isn't quite right. We should still diagnose passing a buffer
@@ -2314,7 +2316,7 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case llvm::Triple::ppc64le:
     return PPC().CheckPPCBuiltinFunctionCall(TI, BuiltinID, TheCall);
   case llvm::Triple::amdgpu:
-    return AMDGPU().CheckAMDGCNBuiltinFunctionCall(BuiltinID, TheCall);
+    return AMDGPU().CheckAMDGCNBuiltinFunctionCall(TI, BuiltinID, TheCall);
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
   case llvm::Triple::riscv32be:
@@ -3015,8 +3017,9 @@ static ExprResult BuiltinInvoke(Sema &S, CallExpr *TheCall) {
     if (MPT->isMemberDataPointer())
       return BinOp;
 
+    // Give the synthesized expression a valid source range for diagnostics.
     auto *MemCall = new (S.Context)
-        ParenExpr(SourceLocation(), SourceLocation(), BinOp.get());
+        ParenExpr(TheCall->getBeginLoc(), TheCall->getRParenLoc(), BinOp.get());
 
     return S.ActOnCallExpr(S.getCurScope(), MemCall, TheCall->getBeginLoc(),
                            Args.drop_front(2), TheCall->getRParenLoc());
@@ -4723,7 +4726,8 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
 }
 
 void Sema::CheckConstrainedAuto(const AutoType *AutoT, SourceLocation Loc) {
-  if (TemplateDecl *Decl = AutoT->getTypeConstraintConcept()) {
+  if (TemplateDecl *Decl =
+          AutoT->getTypeConstraintConcept().getAsTemplateDecl()) {
     DiagnoseUseOfDecl(Decl, Loc);
   }
 }
@@ -16591,19 +16595,13 @@ static bool isLayoutCompatibleUnion(const ASTContext &C, const RecordDecl *RD1,
                                                           RD2->fields());
 
   for (auto *Field1 : RD1->fields()) {
-    auto I = UnmatchedFields.begin();
-    auto E = UnmatchedFields.end();
-
-    for ( ; I != E; ++I) {
-      if (isLayoutCompatible(C, Field1, *I, /*IsUnionMember=*/true)) {
-        bool Result = UnmatchedFields.erase(*I);
-        (void) Result;
-        assert(Result);
-        break;
-      }
-    }
-    if (I == E)
+    auto It = llvm::find_if(UnmatchedFields, [&](const FieldDecl *Field2) {
+      return isLayoutCompatible(C, Field1, Field2, /*IsUnionMember=*/true);
+    });
+    if (It == UnmatchedFields.end())
       return false;
+    [[maybe_unused]] bool Result = UnmatchedFields.erase(*It);
+    assert(Result);
   }
 
   return UnmatchedFields.empty();

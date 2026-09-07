@@ -239,8 +239,8 @@ Status NativeProcessWindows::ReadMemory(const ProcessAddress &process_addr,
   return ProcessDebugger::ReadMemory(addr, buf, size, bytes_read);
 }
 
-Status NativeProcessWindows::WriteMemory(lldb::addr_t addr, const void *buf,
-                                         size_t size, size_t &bytes_written) {
+Status NativeProcessWindows::DoWriteMemory(lldb::addr_t addr, const void *buf,
+                                           size_t size, size_t &bytes_written) {
   return ProcessDebugger::WriteMemory(addr, buf, size, bytes_written);
 }
 

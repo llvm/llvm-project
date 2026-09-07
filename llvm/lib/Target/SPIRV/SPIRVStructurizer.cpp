@@ -10,7 +10,6 @@
 
 #include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
-#include "SPIRVStructurizerWrapper.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
@@ -1153,8 +1152,8 @@ FunctionPass *llvm::createSPIRVStructurizerPass() {
   return new SPIRVStructurizer();
 }
 
-PreservedAnalyses SPIRVStructurizerWrapper::run(Function &F,
-                                                FunctionAnalysisManager &AM) {
+PreservedAnalyses SPIRVStructurizerPass::run(Function &F,
+                                             FunctionAnalysisManager &AM) {
   LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
   ConvergenceRegionInfo &RegionInfo =
       AM.getResult<SPIRVConvergenceRegionAnalysis>(F);

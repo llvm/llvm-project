@@ -385,13 +385,13 @@ std::optional<Value> TosaReduceTransposes::buildMappedToValue(
   // turn "live" until the transpose being hoisted through this chain
   // is replaced with the proper value from the new chain.
 
-  return rewriter
-      .create(op->getLoc(), op->getName().getIdentifier(), operands,
-              RankedTensorType::get(
-                  applyTOSAPermutation(resultType.getShape(), hoistedPerms),
-                  resultType.getElementType()),
-              op->getAttrs())
-      ->getResult(0);
+  Type newResultType = RankedTensorType::get(
+      applyTOSAPermutation(resultType.getShape(), hoistedPerms),
+      resultType.getElementType());
+  OperationState state(op->getLoc(), op->getName(), operands, newResultType,
+                       op->getDiscardableAttrDictionary().getValue());
+  state.propertiesAttr = op->getPropertiesAsAttribute();
+  return rewriter.create(state)->getResult(0);
 }
 
 std::optional<Value> TosaReduceTransposes::buildMappedToValue(

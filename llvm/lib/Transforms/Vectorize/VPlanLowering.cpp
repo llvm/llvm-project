@@ -23,7 +23,6 @@
 #include "VPlanUtils.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
@@ -87,7 +86,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
   // Introduce a new VPWidenIntOrFpInductionRecipe if profitable.
   auto *VecTy = VectorType::get(CanIVTy, VF);
   InstructionCost BroadcastCost = TTI.getShuffleCost(
-      TargetTransformInfo::SK_Broadcast, VecTy, VecTy, {}, CostKind);
+      TargetTransformInfo::SK_Broadcast, VecTy, VecTy, CostKind);
   InstructionCost PHICost = TTI.getCFInstrCost(Instruction::PHI, CostKind);
   if (PHICost > BroadcastCost)
     return;
@@ -733,7 +732,7 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
       if (User->usesScalars(VPV))
         continue;
       if (cast<VPRecipeBase>(User)->getParent() == VectorPreheader)
-        HoistPoint = HoistBlock->begin();
+        HoistPoint = HoistBlock->getFirstNonPhi();
       else
         assert(VPDT.dominates(VectorPreheader,
                               cast<VPRecipeBase>(User)->getParent()) &&
@@ -788,7 +787,7 @@ void VPlanTransforms::materializeBackedgeTakenCount(VPlan &Plan,
   if (BTC->user_empty())
     return;
 
-  VPBuilder Builder(VectorPH, VectorPH->begin());
+  VPBuilder Builder(VectorPH, VectorPH->getFirstNonPhi());
   auto *TCTy = Plan.getTripCount()->getScalarType();
   auto *TCMO =
       Builder.createSub(Plan.getTripCount(), Plan.getConstantInt(TCTy, 1),
@@ -888,7 +887,7 @@ void VPlanTransforms::materializeVectorTripCount(
 
   VPValue *TC = Plan.getTripCount();
   Type *TCTy = TC->getScalarType();
-  VPBasicBlock::iterator InsertPt = VectorPHVPBB->begin();
+  VPBasicBlock::iterator InsertPt = VectorPHVPBB->getFirstNonPhi();
   if (auto *StepR = Step->getDefiningRecipe()) {
     assert(VPDominatorTree(Plan).dominates(StepR->getParent(), VectorPHVPBB) &&
            "Step VPBB must dominate VectorPHVPBB");
@@ -957,7 +956,7 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
     return;
   }
 
-  VPBuilder Builder(VectorPH, VectorPH->begin());
+  VPBuilder Builder(VectorPH, VectorPH->getFirstNonPhi());
   Type *TCTy = Plan.getTripCount()->getScalarType();
   VPValue &VF = Plan.getVF();
   VPValue &VFxUF = Plan.getVFxUF();
@@ -1003,8 +1002,8 @@ VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheckVPBB,
 
     // TODO: Only freeze the required pointer (not both src and sink).
     if (Check.NeedsFreeze) {
-      Src = Builder.createScalarFreeze(Src, AddrType, DebugLoc::getUnknown());
-      Sink = Builder.createScalarFreeze(Sink, AddrType, DebugLoc::getUnknown());
+      Src = Builder.createScalarFreeze(Src, DebugLoc::getUnknown());
+      Sink = Builder.createScalarFreeze(Sink, DebugLoc::getUnknown());
     }
 
     // TODO: Generate loop_dependence_raw_mask when there's a read-after-write
@@ -1089,17 +1088,13 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
                     ->getDebugLoc();
   VPSCEVExpander Expander(Builder, SE, DL);
 
-  // Expand VPExpandSCEVRecipes to VPInstructions using VPSCEVExpander. During
-  // the transition, unsupported VPExpandSCEVRecipes are skipped and left for
-  // late expansion.
+  // Expand VPExpandSCEVRecipes to VPInstructions using VPSCEVExpander.
   for (VPRecipeBase &R : make_early_inc_range(*Entry)) {
     auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpSCEV || ExpSCEV->user_empty())
       continue;
     Builder.setInsertPoint(ExpSCEV);
-    VPValue *Expanded = Expander.tryToExpand(ExpSCEV->getSCEV());
-    if (!Expanded)
-      continue;
+    VPValue *Expanded = Expander.expand(ExpSCEV->getSCEV());
     ExpSCEV->replaceAllUsesWith(Expanded);
     // TripCount should not be used after expansion to VPInstructions. Reset to
     // poison to avoid dangling references.

@@ -203,7 +203,7 @@
 #define LLVM_TEMPLATE_ABI LLVM_ABI
 #define LLVM_EXPORT_TEMPLATE
 #define LLVM_ABI_EXPORT LLVM_ABI
-#elif defined(__MACH__) || defined(__WASM__) || defined(__EMSCRIPTEN__)
+#elif defined(__MACH__) || defined(__wasm__) || defined(__EMSCRIPTEN__)
 #define LLVM_ABI __attribute__((visibility("default")))
 #define LLVM_TEMPLATE_ABI
 #define LLVM_EXPORT_TEMPLATE
