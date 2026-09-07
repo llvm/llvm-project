@@ -2,9 +2,10 @@
 ; RUN: opt -passes=loop-vectorize -mtriple=aarch64-unknown-linux-gnu -mattr=+sve2 \
 ; RUN:     -S < %s | FileCheck %s
 
-; Check that loops with non-native deinterleaving factors are not vectorized.
-; This patch prohibits vectorization with INTERLEAVE-GROUP, but the loop
-; is still vectorized via widening because vector inserts/extracts are currently
+; Check that loops with non-native deinterleaving factors are not vectorized
+; using deinterleaving.
+; Vectorization is prohibited with INTERLEAVE-GROUP, but the loop
+; is still vectorized via scalarization because vector inserts/extracts are currently
 ; costed too cheaply for SVE. The insert/extract costs are addressed in a
 ; subsequent patch, which should prevent this loop from being vectorized.
 
