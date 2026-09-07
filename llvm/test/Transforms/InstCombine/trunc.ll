@@ -664,7 +664,7 @@ define i32 @trunc_nuw_shl_nuw_nsw_3_i32_i64(i64 %val) {
 define i32 @trunc_nuw_nsw_shl_nsw_3_i32_i64(i64 %val) {
 ; CHECK-LABEL: @trunc_nuw_nsw_shl_nsw_3_i32_i64(
 ; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc nsw i64 [[VAL:%.*]] to i32
-; CHECK-NEXT:    [[TRUNC:%.*]] = shl nuw nsw i32 [[VAL_TR]], 3
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl nsw i32 [[VAL_TR]], 3
 ; CHECK-NEXT:    ret i32 [[TRUNC]]
 ;
   %shl = shl nsw i64 %val, 3
@@ -676,7 +676,7 @@ define i32 @trunc_nuw_nsw_shl_nsw_3_i32_i64(i64 %val) {
 define i32 @trunc_nuw_shl_3_i32_i64(i64 %val) {
 ; CHECK-LABEL: @trunc_nuw_shl_3_i32_i64(
 ; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc i64 [[VAL:%.*]] to i32
-; CHECK-NEXT:    [[TRUNC:%.*]] = shl nuw i32 [[VAL_TR]], 3
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl i32 [[VAL_TR]], 3
 ; CHECK-NEXT:    ret i32 [[TRUNC]]
 ;
   %shl = shl i64 %val, 3
@@ -700,7 +700,7 @@ define i32 @trunc_shl_nuw_nsw_3_i32_i64(i64 %val) {
 define i32 @trunc_nuw_shl_nsw_3_i32_i64(i64 %val) {
 ; CHECK-LABEL: @trunc_nuw_shl_nsw_3_i32_i64(
 ; CHECK-NEXT:    [[VAL_TR:%.*]] = trunc i64 [[VAL:%.*]] to i32
-; CHECK-NEXT:    [[TRUNC:%.*]] = shl nuw i32 [[VAL_TR]], 3
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl i32 [[VAL_TR]], 3
 ; CHECK-NEXT:    ret i32 [[TRUNC]]
 ;
   %shl = shl nsw i64 %val, 3
@@ -711,7 +711,7 @@ define i32 @trunc_nuw_shl_nsw_3_i32_i64(i64 %val) {
 define i4 @trunc_nuw_shl_i6_to_i4(i6 %x, i6 %y) {
 ; CHECK-LABEL: @trunc_nuw_shl_i6_to_i4(
 ; CHECK-NEXT:    [[X_TR:%.*]] = trunc i6 [[X:%.*]] to i4
-; CHECK-NEXT:    [[TRUNC:%.*]] = shl nuw i4 [[X_TR]], 3
+; CHECK-NEXT:    [[TRUNC:%.*]] = shl i4 [[X_TR]], 3
 ; CHECK-NEXT:    ret i4 [[TRUNC]]
 ;
   %shl = shl i6 %x, 3
@@ -1564,4 +1564,3 @@ define i1 @neg_trunc_nuw_lshr(i8 %x, i8 %c) {
   %ret = trunc nuw i8 %lshr to i1
   ret i1 %ret
 }
-
