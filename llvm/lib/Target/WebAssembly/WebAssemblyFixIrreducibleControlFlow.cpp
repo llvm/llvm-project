@@ -296,26 +296,10 @@ static bool explicitlyBranchesTo(const MachineBasicBlock *MBB,
 
 static MachineBasicBlock *
 getImplicitFallthroughSuccessor(MachineBasicBlock *MBB) {
-  auto Next = std::next(MBB->getIterator());
-  if (Next == MBB->getParent()->end())
+  MachineBasicBlock *Fallthrough = MBB->getFallThrough(false);
+  if (!Fallthrough || Fallthrough->isEHPad())
     return nullptr;
-
-  MachineBasicBlock *LayoutSucc = &*Next;
-
-  // If the next block is not a successor, there is no fallthrough successor.
-  if (!MBB->isSuccessor(LayoutSucc))
-    return nullptr;
-
-  // Do not create an explicit branch to an EH pad. EH successors must remain
-  // exceptional successors, not normal branch targets.
-  if (LayoutSucc->isEHPad())
-    return nullptr;
-
-  // Already explicit, not a fallthrough successor.
-  if (explicitlyBranchesTo(MBB, LayoutSucc))
-    return nullptr;
-
-  return LayoutSucc;
+  return Fallthrough;
 }
 
 static void makeFallthroughExplicitIfNeeded(MachineBasicBlock *MBB,
