@@ -38,15 +38,15 @@ StringRef FortranLanguage::GetPluginName() { return GetPluginNameStatic(); }
 uint32_t FortranLanguage::GetPluginVersion() { return 1; }
 
 Language *FortranLanguage::CreateInstance(LanguageType language) {
-  if (Language::LanguageIsFortran(language)) {
+  if (Language::LanguageIsFortran(language))
     return new FortranLanguage();
-  }
+
   return nullptr;
 }
 
 bool FortranLanguage::IsSourceFile(StringRef file_path) const {
   const auto suffixes = {".f90", ".f",   ".f95", ".f03", ".f08",
-                         ".f18", ".for", ".ftn", ".fpp", ",f77"};
+                         ".f18", ".for", ".ftn", ".fpp", ".f77"};
   for (auto suffix : suffixes) {
     if (file_path.ends_with_insensitive(suffix))
       return true;
