@@ -26,6 +26,7 @@ public:
   SemaX86(Sema &S);
 
   bool CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall);
+  bool CheckBuiltinVUnpackBImm(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckBuiltinGatherScatterScale(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckBuiltinTileArguments(unsigned BuiltinID, CallExpr *TheCall);
   bool CheckBuiltinTileArgumentsRange(CallExpr *TheCall, ArrayRef<int> ArgNums);

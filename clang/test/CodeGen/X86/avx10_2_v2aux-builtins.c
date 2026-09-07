@@ -19,8 +19,9 @@ __m128i test_mm_mask_cvtps_bf8(__m128i __W, __mmask8 __U, __m128 __A) {
 
 __m128i test_mm_maskz_cvtps_bf8(__mmask8 __U, __m128 __A) {
   // CHECK-LABEL: @test_mm_maskz_cvtps_bf8(
+  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtps2bf8128(<4 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2bf8128(<4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
   return _mm_maskz_cvtps_bf8(__U, __A);
 }
 
@@ -38,8 +39,9 @@ __m128i test_mm256_mask_cvtps_bf8(__m128i __W, __mmask8 __U, __m256 __A) {
 
 __m128i test_mm256_maskz_cvtps_bf8(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm256_maskz_cvtps_bf8(
+  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtps2bf8256(<8 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2bf8256(<8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
   return _mm256_maskz_cvtps_bf8(__U, __A);
 }
 
@@ -78,8 +80,9 @@ __m128i test_mm_mask_cvts_ps_bf8(__m128i __W, __mmask8 __U, __m128 __A) {
 
 __m128i test_mm_maskz_cvts_ps_bf8(__mmask8 __U, __m128 __A) {
   // CHECK-LABEL: @test_mm_maskz_cvts_ps_bf8(
+  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtps2bf8s128(<4 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2bf8s128(<4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
   return _mm_maskz_cvts_ps_bf8(__U, __A);
 }
 
@@ -97,8 +100,9 @@ __m128i test_mm256_mask_cvts_ps_bf8(__m128i __W, __mmask8 __U, __m256 __A) {
 
 __m128i test_mm256_maskz_cvts_ps_bf8(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm256_maskz_cvts_ps_bf8(
+  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtps2bf8s256(<8 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2bf8s256(<8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
   return _mm256_maskz_cvts_ps_bf8(__U, __A);
 }
 
@@ -137,8 +141,9 @@ __m128i test_mm_mask_cvtps_hf8(__m128i __W, __mmask8 __U, __m128 __A) {
 
 __m128i test_mm_maskz_cvtps_hf8(__mmask8 __U, __m128 __A) {
   // CHECK-LABEL: @test_mm_maskz_cvtps_hf8(
+  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtps2hf8128(<4 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2hf8128(<4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
   return _mm_maskz_cvtps_hf8(__U, __A);
 }
 
@@ -156,8 +161,9 @@ __m128i test_mm256_mask_cvtps_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
 
 __m128i test_mm256_maskz_cvtps_hf8(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm256_maskz_cvtps_hf8(
+  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtps2hf8256(<8 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2hf8256(<8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
   return _mm256_maskz_cvtps_hf8(__U, __A);
 }
 
@@ -196,8 +202,9 @@ __m128i test_mm_mask_cvts_ps_hf8(__m128i __W, __mmask8 __U, __m128 __A) {
 
 __m128i test_mm_maskz_cvts_ps_hf8(__mmask8 __U, __m128 __A) {
   // CHECK-LABEL: @test_mm_maskz_cvts_ps_hf8(
+  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtps2hf8s128(<4 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2hf8s128(<4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
   return _mm_maskz_cvts_ps_hf8(__U, __A);
 }
 
@@ -215,8 +222,9 @@ __m128i test_mm256_mask_cvts_ps_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
 
 __m128i test_mm256_maskz_cvts_ps_hf8(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm256_maskz_cvts_ps_hf8(
+  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtps2hf8s256(<8 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtps2hf8s256(<8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
   return _mm256_maskz_cvts_ps_hf8(__U, __A);
 }
 
@@ -255,8 +263,9 @@ __m128i test_mm_mask_cvtrops_hf8(__m128i __W, __mmask8 __U, __m128 __A) {
 
 __m128i test_mm_maskz_cvtrops_hf8(__mmask8 __U, __m128 __A) {
   // CHECK-LABEL: @test_mm_maskz_cvtrops_hf8(
+  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtrops2hf8128(<4 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtrops2hf8128(<4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
   return _mm_maskz_cvtrops_hf8(__U, __A);
 }
 
@@ -274,8 +283,9 @@ __m128i test_mm256_mask_cvtrops_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
 
 __m128i test_mm256_maskz_cvtrops_hf8(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm256_maskz_cvtrops_hf8(
+  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtrops2hf8256(<8 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtrops2hf8256(<8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
   return _mm256_maskz_cvtrops_hf8(__U, __A);
 }
 
@@ -314,8 +324,9 @@ __m128i test_mm_mask_cvts_rops_hf8(__m128i __W, __mmask8 __U, __m128 __A) {
 
 __m128i test_mm_maskz_cvts_rops_hf8(__mmask8 __U, __m128 __A) {
   // CHECK-LABEL: @test_mm_maskz_cvts_rops_hf8(
+  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtrops2hf8s128(<4 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtrops2hf8s128(<4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
   return _mm_maskz_cvts_rops_hf8(__U, __A);
 }
 
@@ -333,8 +344,9 @@ __m128i test_mm256_mask_cvts_rops_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
 
 __m128i test_mm256_maskz_cvts_rops_hf8(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm256_maskz_cvts_rops_hf8(
+  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtrops2hf8s256(<8 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtrops2hf8s256(<8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
   return _mm256_maskz_cvts_rops_hf8(__U, __A);
 }
 
@@ -373,8 +385,9 @@ __m128i test_mm_mask_cvtbiasps_bf8(__m128i __W, __mmask8 __U, __m128i __A, __m12
 
 __m128i test_mm_maskz_cvtbiasps_bf8(__mmask8 __U, __m128i __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_maskz_cvtbiasps_bf8(
+  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtbiasps2bf8128(<4 x i32> %{{.*}}, <4 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2bf8128(<4 x i32> %{{.*}}, <4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
   return _mm_maskz_cvtbiasps_bf8(__U, __A, __B);
 }
 
@@ -392,8 +405,9 @@ __m128i test_mm256_mask_cvtbiasps_bf8(__m128i __W, __mmask8 __U, __m256i __A, __
 
 __m128i test_mm256_maskz_cvtbiasps_bf8(__mmask8 __U, __m256i __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_maskz_cvtbiasps_bf8(
+  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtbiasps2bf8256(<8 x i32> %{{.*}}, <8 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2bf8256(<8 x i32> %{{.*}}, <8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
   return _mm256_maskz_cvtbiasps_bf8(__U, __A, __B);
 }
 
@@ -432,8 +446,9 @@ __m128i test_mm_mask_cvts_biasps_bf8(__m128i __W, __mmask8 __U, __m128i __A, __m
 
 __m128i test_mm_maskz_cvts_biasps_bf8(__mmask8 __U, __m128i __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_maskz_cvts_biasps_bf8(
+  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtbiasps2bf8s128(<4 x i32> %{{.*}}, <4 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2bf8s128(<4 x i32> %{{.*}}, <4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
   return _mm_maskz_cvts_biasps_bf8(__U, __A, __B);
 }
 
@@ -451,8 +466,9 @@ __m128i test_mm256_mask_cvts_biasps_bf8(__m128i __W, __mmask8 __U, __m256i __A, 
 
 __m128i test_mm256_maskz_cvts_biasps_bf8(__mmask8 __U, __m256i __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_maskz_cvts_biasps_bf8(
+  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtbiasps2bf8s256(<8 x i32> %{{.*}}, <8 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2bf8s256(<8 x i32> %{{.*}}, <8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
   return _mm256_maskz_cvts_biasps_bf8(__U, __A, __B);
 }
 
@@ -491,8 +507,9 @@ __m128i test_mm_mask_cvtbiasps_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m12
 
 __m128i test_mm_maskz_cvtbiasps_hf8(__mmask8 __U, __m128i __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_maskz_cvtbiasps_hf8(
+  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtbiasps2hf8128(<4 x i32> %{{.*}}, <4 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2hf8128(<4 x i32> %{{.*}}, <4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
   return _mm_maskz_cvtbiasps_hf8(__U, __A, __B);
 }
 
@@ -510,8 +527,9 @@ __m128i test_mm256_mask_cvtbiasps_hf8(__m128i __W, __mmask8 __U, __m256i __A, __
 
 __m128i test_mm256_maskz_cvtbiasps_hf8(__mmask8 __U, __m256i __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_maskz_cvtbiasps_hf8(
+  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtbiasps2hf8256(<8 x i32> %{{.*}}, <8 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2hf8256(<8 x i32> %{{.*}}, <8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
   return _mm256_maskz_cvtbiasps_hf8(__U, __A, __B);
 }
 
@@ -550,8 +568,9 @@ __m128i test_mm_mask_cvts_biasps_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m
 
 __m128i test_mm_maskz_cvts_biasps_hf8(__mmask8 __U, __m128i __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_maskz_cvts_biasps_hf8(
+  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtbiasps2hf8s128(<4 x i32> %{{.*}}, <4 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2hf8s128(<4 x i32> %{{.*}}, <4 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
   return _mm_maskz_cvts_biasps_hf8(__U, __A, __B);
 }
 
@@ -569,8 +588,9 @@ __m128i test_mm256_mask_cvts_biasps_hf8(__m128i __W, __mmask8 __U, __m256i __A, 
 
 __m128i test_mm256_maskz_cvts_biasps_hf8(__mmask8 __U, __m256i __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_maskz_cvts_biasps_hf8(
+  // CHECK: [[RES:%.*]] = call <16 x i8> @llvm.x86.avx10.vcvtbiasps2hf8s256(<8 x i32> %{{.*}}, <8 x float> %{{.*}})
   // CHECK: zeroinitializer
-  // CHECK: call <16 x i8> @llvm.x86.avx10.mask.vcvtbiasps2hf8s256(<8 x i32> %{{.*}}, <8 x float> %{{.*}}, <16 x i8> %{{.*}}, i8 %{{.*}})
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i8> [[RES]], <16 x i8> %{{.*}}
   return _mm256_maskz_cvts_biasps_hf8(__U, __A, __B);
 }
 
@@ -984,65 +1004,65 @@ __m512i test_mm512_maskz_cvthf6_hf8(__mmask64 __U, __m512i __A) {
 
 __m128i test_mm_unpack_epi8(__m128i __A) {
   // CHECK-LABEL: @test_mm_unpack_epi8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vunpackb.128(<16 x i8> %{{.*}}, i8 1)
-  return _mm_unpack_epi8(__A, 1);
+  // CHECK: call <16 x i8> @llvm.x86.avx10.vunpackb.128(<16 x i8> %{{.*}}, i8 8)
+  return _mm_unpack_epi8(__A, 8);
 }
 
 __m128i test_mm_mask_unpack_epi8(__m128i __W, __mmask16 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_mask_unpack_epi8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vunpackb.128(<16 x i8> %{{.*}}, i8 1)
+  // CHECK: call <16 x i8> @llvm.x86.avx10.vunpackb.128(<16 x i8> %{{.*}}, i8 8)
   // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
-  return _mm_mask_unpack_epi8(__W, __U, __A, 1);
+  return _mm_mask_unpack_epi8(__W, __U, __A, 8);
 }
 
 __m128i test_mm_maskz_unpack_epi8(__mmask16 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_maskz_unpack_epi8(
-  // CHECK: call <16 x i8> @llvm.x86.avx10.vunpackb.128(<16 x i8> %{{.*}}, i8 1)
+  // CHECK: call <16 x i8> @llvm.x86.avx10.vunpackb.128(<16 x i8> %{{.*}}, i8 8)
   // CHECK: zeroinitializer
   // CHECK: select <16 x i1> %{{.*}}, <16 x i8> %{{.*}}, <16 x i8> %{{.*}}
-  return _mm_maskz_unpack_epi8(__U, __A, 1);
+  return _mm_maskz_unpack_epi8(__U, __A, 8);
 }
 
 __m256i test_mm256_unpack_epi8(__m256i __A) {
   // CHECK-LABEL: @test_mm256_unpack_epi8(
-  // CHECK: call <32 x i8> @llvm.x86.avx10.vunpackb.256(<32 x i8> %{{.*}}, i8 2)
-  return _mm256_unpack_epi8(__A, 2);
+  // CHECK: call <32 x i8> @llvm.x86.avx10.vunpackb.256(<32 x i8> %{{.*}}, i8 9)
+  return _mm256_unpack_epi8(__A, 9);
 }
 
 __m256i test_mm256_mask_unpack_epi8(__m256i __W, __mmask32 __U, __m256i __A) {
   // CHECK-LABEL: @test_mm256_mask_unpack_epi8(
-  // CHECK: call <32 x i8> @llvm.x86.avx10.vunpackb.256(<32 x i8> %{{.*}}, i8 2)
+  // CHECK: call <32 x i8> @llvm.x86.avx10.vunpackb.256(<32 x i8> %{{.*}}, i8 9)
   // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
-  return _mm256_mask_unpack_epi8(__W, __U, __A, 2);
+  return _mm256_mask_unpack_epi8(__W, __U, __A, 9);
 }
 
 __m256i test_mm256_maskz_unpack_epi8(__mmask32 __U, __m256i __A) {
   // CHECK-LABEL: @test_mm256_maskz_unpack_epi8(
-  // CHECK: call <32 x i8> @llvm.x86.avx10.vunpackb.256(<32 x i8> %{{.*}}, i8 2)
+  // CHECK: call <32 x i8> @llvm.x86.avx10.vunpackb.256(<32 x i8> %{{.*}}, i8 9)
   // CHECK: zeroinitializer
   // CHECK: select <32 x i1> %{{.*}}, <32 x i8> %{{.*}}, <32 x i8> %{{.*}}
-  return _mm256_maskz_unpack_epi8(__U, __A, 2);
+  return _mm256_maskz_unpack_epi8(__U, __A, 9);
 }
 
 __m512i test_mm512_unpack_epi8(__m512i __A) {
   // CHECK-LABEL: @test_mm512_unpack_epi8(
-  // CHECK: call <64 x i8> @llvm.x86.avx10.vunpackb.512(<64 x i8> %{{.*}}, i8 3)
-  return _mm512_unpack_epi8(__A, 3);
+  // CHECK: call <64 x i8> @llvm.x86.avx10.vunpackb.512(<64 x i8> %{{.*}}, i8 10)
+  return _mm512_unpack_epi8(__A, 10);
 }
 
 __m512i test_mm512_mask_unpack_epi8(__m512i __W, __mmask64 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_mask_unpack_epi8(
-  // CHECK: call <64 x i8> @llvm.x86.avx10.vunpackb.512(<64 x i8> %{{.*}}, i8 3)
+  // CHECK: call <64 x i8> @llvm.x86.avx10.vunpackb.512(<64 x i8> %{{.*}}, i8 10)
   // CHECK: select <64 x i1> %{{.*}}, <64 x i8> %{{.*}}, <64 x i8> %{{.*}}
-  return _mm512_mask_unpack_epi8(__W, __U, __A, 3);
+  return _mm512_mask_unpack_epi8(__W, __U, __A, 10);
 }
 
 __m512i test_mm512_maskz_unpack_epi8(__mmask64 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_maskz_unpack_epi8(
-  // CHECK: call <64 x i8> @llvm.x86.avx10.vunpackb.512(<64 x i8> %{{.*}}, i8 3)
+  // CHECK: call <64 x i8> @llvm.x86.avx10.vunpackb.512(<64 x i8> %{{.*}}, i8 10)
   // CHECK: zeroinitializer
   // CHECK: select <64 x i1> %{{.*}}, <64 x i8> %{{.*}}, <64 x i8> %{{.*}}
-  return _mm512_maskz_unpack_epi8(__U, __A, 3);
+  return _mm512_maskz_unpack_epi8(__U, __A, 10);
 }
 
 __m512i test_mm512_unpack_epi8_compose(__m512i __A) {
@@ -1062,6 +1082,13 @@ __m128i test_mm_unpack_epi8_compose(__m128i __A) {
   // CHECK-LABEL: @test_mm_unpack_epi8_compose(
   // CHECK: call <16 x i8> @llvm.x86.avx10.vunpackb.128(<16 x i8> %{{.*}}, i8 60)
   return _mm_unpack_epi8(__A, _MM_UNPACKB_SIZE(7) | _MM_UNPACKB_SEXT);
+}
+
+__m512i test_mm512_unpack_epi8_compose_example(__m512i __A) {
+  // CHECK-LABEL: @test_mm512_unpack_epi8_compose_example(
+  // CHECK: call <64 x i8> @llvm.x86.avx10.vunpackb.512(<64 x i8> %{{.*}}, i8 49)
+  return _mm512_unpack_epi8(
+      __A, _MM_UNPACKB_SIZE(4) | _MM_UNPACKB_START(1) | _MM_UNPACKB_SEXT);
 }
 
 __m128i test_mm_cvtss_epi32_epi8(__m128i __A) {

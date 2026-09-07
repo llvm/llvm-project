@@ -1016,7 +1016,15 @@ _mm512_maskz_cvthf6_hf8(__mmask64 __U, __m512i __A) {
 /// \param A
 ///    A 512-bit vector of [64 x i8].
 /// \param imm
-///    An immediate value specifying the unpack operation.
+///    An 8-bit immediate selecting the packed element size, start offset, and
+///    optional sign-extend for \c VUNPACKB. Compose it with
+///    \c _MM_UNPACKB_SIZE, \c _MM_UNPACKB_START, and optionally
+///    \c _MM_UNPACKB_SEXT. Omitting \c _MM_UNPACKB_SEXT zero-extends unpacked
+///    elements to 8 bits. \n
+///    Example:
+///    <c>_MM_UNPACKB_SIZE(4) | _MM_UNPACKB_START(1) | _MM_UNPACKB_SEXT</c>
+///
+/// \see { _MM_UNPACKB_SIZE _MM_UNPACKB_START _MM_UNPACKB_SEXT }
 /// \returns
 ///    A 512-bit vector of [64 x i8] containing the unpacked values.
 #define _mm512_unpack_epi8(A, imm)                                             \
@@ -1036,7 +1044,15 @@ _mm512_maskz_cvthf6_hf8(__mmask64 __U, __m512i __A) {
 /// \param A
 ///    A 512-bit vector of [64 x i8].
 /// \param imm
-///    An immediate value specifying the unpack operation.
+///    An 8-bit immediate selecting the packed element size, start offset, and
+///    optional sign-extend for \c VUNPACKB. Compose it with
+///    \c _MM_UNPACKB_SIZE, \c _MM_UNPACKB_START, and optionally
+///    \c _MM_UNPACKB_SEXT. Omitting \c _MM_UNPACKB_SEXT zero-extends unpacked
+///    elements to 8 bits. \n
+///    Example:
+///    <c>_MM_UNPACKB_SIZE(4) | _MM_UNPACKB_START(1) | _MM_UNPACKB_SEXT</c>
+///
+/// \see { _MM_UNPACKB_SIZE _MM_UNPACKB_START _MM_UNPACKB_SEXT }
 /// \returns
 ///    A 512-bit vector of [64 x i8] containing the unpacked values.
 #define _mm512_mask_unpack_epi8(W, U, A, imm)                                  \
@@ -1056,7 +1072,15 @@ _mm512_maskz_cvthf6_hf8(__mmask64 __U, __m512i __A) {
 /// \param A
 ///    A 512-bit vector of [64 x i8].
 /// \param imm
-///    An immediate value specifying the unpack operation.
+///    An 8-bit immediate selecting the packed element size, start offset, and
+///    optional sign-extend for \c VUNPACKB. Compose it with
+///    \c _MM_UNPACKB_SIZE, \c _MM_UNPACKB_START, and optionally
+///    \c _MM_UNPACKB_SEXT. Omitting \c _MM_UNPACKB_SEXT zero-extends unpacked
+///    elements to 8 bits. \n
+///    Example:
+///    <c>_MM_UNPACKB_SIZE(4) | _MM_UNPACKB_START(1) | _MM_UNPACKB_SEXT</c>
+///
+/// \see { _MM_UNPACKB_SIZE _MM_UNPACKB_START _MM_UNPACKB_SEXT }
 /// \returns
 ///    A 512-bit vector of [64 x i8] containing the unpacked values.
 #define _mm512_maskz_unpack_epi8(U, A, imm)                                    \

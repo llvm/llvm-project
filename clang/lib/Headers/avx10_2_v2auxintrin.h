@@ -83,8 +83,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_mask_cvtps_bf8(__m128i __W,
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtps_bf8(__mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_vcvtps2bf8_128_mask(
-      (__v4sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128(
+      (__mmask8)__U, (__v16qi)_mm_cvtps_bf8(__A), (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -145,8 +145,9 @@ _mm256_mask_cvtps_bf8(__m128i __W, __mmask8 __U, __m256 __A) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtps_bf8(__mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_vcvtps2bf8_256_mask(
-      (__v8sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128((__mmask8)__U,
+                                             (__v16qi)_mm256_cvtps_bf8(__A),
+                                             (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -206,8 +207,9 @@ _mm_mask_cvts_ps_bf8(__m128i __W, __mmask8 __U, __m128 __A) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvts_ps_bf8(__mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_vcvtps2bf8s_128_mask(
-      (__v4sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128((__mmask8)__U,
+                                             (__v16qi)_mm_cvts_ps_bf8(__A),
+                                             (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -267,8 +269,9 @@ _mm256_mask_cvts_ps_bf8(__m128i __W, __mmask8 __U, __m256 __A) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvts_ps_bf8(__mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_vcvtps2bf8s_256_mask(
-      (__v8sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128((__mmask8)__U,
+                                             (__v16qi)_mm256_cvts_ps_bf8(__A),
+                                             (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -329,8 +332,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS128 _mm_mask_cvtps_hf8(__m128i __W,
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtps_hf8(__mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_vcvtps2hf8_128_mask(
-      (__v4sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128(
+      (__mmask8)__U, (__v16qi)_mm_cvtps_hf8(__A), (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -390,8 +393,9 @@ _mm256_mask_cvtps_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtps_hf8(__mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_vcvtps2hf8_256_mask(
-      (__v8sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128((__mmask8)__U,
+                                             (__v16qi)_mm256_cvtps_hf8(__A),
+                                             (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -451,8 +455,9 @@ _mm_mask_cvts_ps_hf8(__m128i __W, __mmask8 __U, __m128 __A) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvts_ps_hf8(__mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_vcvtps2hf8s_128_mask(
-      (__v4sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128((__mmask8)__U,
+                                             (__v16qi)_mm_cvts_ps_hf8(__A),
+                                             (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -512,8 +517,9 @@ _mm256_mask_cvts_ps_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvts_ps_hf8(__mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_vcvtps2hf8s_256_mask(
-      (__v8sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128((__mmask8)__U,
+                                             (__v16qi)_mm256_cvts_ps_hf8(__A),
+                                             (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -573,8 +579,9 @@ _mm_mask_cvtrops_hf8(__m128i __W, __mmask8 __U, __m128 __A) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtrops_hf8(__mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_vcvtrops2hf8_128_mask(
-      (__v4sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128((__mmask8)__U,
+                                             (__v16qi)_mm_cvtrops_hf8(__A),
+                                             (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -634,8 +641,9 @@ _mm256_mask_cvtrops_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtrops_hf8(__mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_vcvtrops2hf8_256_mask(
-      (__v8sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128((__mmask8)__U,
+                                             (__v16qi)_mm256_cvtrops_hf8(__A),
+                                             (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -695,8 +703,9 @@ _mm_mask_cvts_rops_hf8(__m128i __W, __mmask8 __U, __m128 __A) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvts_rops_hf8(__mmask8 __U, __m128 __A) {
-  return (__m128i)__builtin_ia32_vcvtrops2hf8s_128_mask(
-      (__v4sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128((__mmask8)__U,
+                                             (__v16qi)_mm_cvts_rops_hf8(__A),
+                                             (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __A
@@ -757,8 +766,9 @@ _mm256_mask_cvts_rops_hf8(__m128i __W, __mmask8 __U, __m256 __A) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvts_rops_hf8(__mmask8 __U, __m256 __A) {
-  return (__m128i)__builtin_ia32_vcvtrops2hf8s_256_mask(
-      (__v8sf)__A, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128((__mmask8)__U,
+                                             (__v16qi)_mm256_cvts_rops_hf8(__A),
+                                             (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -825,8 +835,9 @@ _mm_mask_cvtbiasps_bf8(__m128i __W, __mmask8 __U, __m128i __A, __m128 __B) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtbiasps_bf8(__mmask8 __U, __m128i __A, __m128 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2bf8_128_mask(
-      (__v4si)__A, (__v4sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128(
+      (__mmask8)__U, (__v16qi)_mm_cvtbiasps_bf8(__A, __B),
+      (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -893,8 +904,9 @@ _mm256_mask_cvtbiasps_bf8(__m128i __W, __mmask8 __U, __m256i __A, __m256 __B) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtbiasps_bf8(__mmask8 __U, __m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2bf8_256_mask(
-      (__v8si)__A, (__v8sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128(
+      (__mmask8)__U, (__v16qi)_mm256_cvtbiasps_bf8(__A, __B),
+      (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -961,8 +973,9 @@ _mm_mask_cvts_biasps_bf8(__m128i __W, __mmask8 __U, __m128i __A, __m128 __B) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvts_biasps_bf8(__mmask8 __U, __m128i __A, __m128 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2bf8s_128_mask(
-      (__v4si)__A, (__v4sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128(
+      (__mmask8)__U, (__v16qi)_mm_cvts_biasps_bf8(__A, __B),
+      (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1029,8 +1042,9 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts_biasps_bf8(
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvts_biasps_bf8(__mmask8 __U, __m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2bf8s_256_mask(
-      (__v8si)__A, (__v8sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128(
+      (__mmask8)__U, (__v16qi)_mm256_cvts_biasps_bf8(__A, __B),
+      (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1097,8 +1111,9 @@ _mm_mask_cvtbiasps_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m128 __B) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtbiasps_hf8(__mmask8 __U, __m128i __A, __m128 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2hf8_128_mask(
-      (__v4si)__A, (__v4sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128(
+      (__mmask8)__U, (__v16qi)_mm_cvtbiasps_hf8(__A, __B),
+      (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1165,8 +1180,9 @@ _mm256_mask_cvtbiasps_hf8(__m128i __W, __mmask8 __U, __m256i __A, __m256 __B) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtbiasps_hf8(__mmask8 __U, __m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2hf8_256_mask(
-      (__v8si)__A, (__v8sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128(
+      (__mmask8)__U, (__v16qi)_mm256_cvtbiasps_hf8(__A, __B),
+      (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1233,8 +1249,9 @@ _mm_mask_cvts_biasps_hf8(__m128i __W, __mmask8 __U, __m128i __A, __m128 __B) {
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvts_biasps_hf8(__mmask8 __U, __m128i __A, __m128 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2hf8s_128_mask(
-      (__v4si)__A, (__v4sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128(
+      (__mmask8)__U, (__v16qi)_mm_cvts_biasps_hf8(__A, __B),
+      (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert packed single-precision (32-bit) floating-point elements in \a __B
@@ -1301,8 +1318,9 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvts_biasps_hf8(
 ///    values, or zero where the mask bit is clear; the upper bytes are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvts_biasps_hf8(__mmask8 __U, __m256i __A, __m256 __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasps2hf8s_256_mask(
-      (__v8si)__A, (__v8sf)__B, (__v16qi)_mm_setzero_si128(), (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128(
+      (__mmask8)__U, (__v16qi)_mm256_cvts_biasps_hf8(__A, __B),
+      (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert packed BF8 (8-bit) floating-point elements in \a __A to packed
@@ -2050,7 +2068,7 @@ _mm256_maskz_cvthf6_hf8(__mmask32 __U, __m256i __A) {
 ///    Bits [1:0] of the immediate operand.
 #define _MM_UNPACKB_START(s) (((s) & 0x3) << 0)
 
-/// The \c sign \c ext field of the immediate operand of \c VUNPACKB,
+/// The \c sign-extend field of the immediate operand of \c VUNPACKB,
 ///    requesting that unpacked elements be sign-extended to 8 bits instead of
 ///    zero-extended.
 ///
@@ -2067,7 +2085,15 @@ _mm256_maskz_cvthf6_hf8(__mmask32 __U, __m256i __A) {
 /// \param A
 ///    A 128-bit vector of [16 x i8].
 /// \param imm
-///    An immediate value specifying the unpack operation.
+///    An 8-bit immediate selecting the packed element size, start offset, and
+///    optional sign-extend for \c VUNPACKB. Compose it with
+///    \c _MM_UNPACKB_SIZE, \c _MM_UNPACKB_START, and optionally
+///    \c _MM_UNPACKB_SEXT. Omitting \c _MM_UNPACKB_SEXT zero-extends unpacked
+///    elements to 8 bits. \n
+///    Example:
+///    <c>_MM_UNPACKB_SIZE(4) | _MM_UNPACKB_START(1) | _MM_UNPACKB_SEXT</c>
+///
+/// \see { _MM_UNPACKB_SIZE _MM_UNPACKB_START _MM_UNPACKB_SEXT }
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the unpacked values.
 #define _mm_unpack_epi8(A, imm)                                                \
@@ -2087,7 +2113,15 @@ _mm256_maskz_cvthf6_hf8(__mmask32 __U, __m256i __A) {
 /// \param A
 ///    A 128-bit vector of [16 x i8].
 /// \param imm
-///    An immediate value specifying the unpack operation.
+///    An 8-bit immediate selecting the packed element size, start offset, and
+///    optional sign-extend for \c VUNPACKB. Compose it with
+///    \c _MM_UNPACKB_SIZE, \c _MM_UNPACKB_START, and optionally
+///    \c _MM_UNPACKB_SEXT. Omitting \c _MM_UNPACKB_SEXT zero-extends unpacked
+///    elements to 8 bits. \n
+///    Example:
+///    <c>_MM_UNPACKB_SIZE(4) | _MM_UNPACKB_START(1) | _MM_UNPACKB_SEXT</c>
+///
+/// \see { _MM_UNPACKB_SIZE _MM_UNPACKB_START _MM_UNPACKB_SEXT }
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the unpacked values.
 #define _mm_mask_unpack_epi8(W, U, A, imm)                                     \
@@ -2107,7 +2141,15 @@ _mm256_maskz_cvthf6_hf8(__mmask32 __U, __m256i __A) {
 /// \param A
 ///    A 128-bit vector of [16 x i8].
 /// \param imm
-///    An immediate value specifying the unpack operation.
+///    An 8-bit immediate selecting the packed element size, start offset, and
+///    optional sign-extend for \c VUNPACKB. Compose it with
+///    \c _MM_UNPACKB_SIZE, \c _MM_UNPACKB_START, and optionally
+///    \c _MM_UNPACKB_SEXT. Omitting \c _MM_UNPACKB_SEXT zero-extends unpacked
+///    elements to 8 bits. \n
+///    Example:
+///    <c>_MM_UNPACKB_SIZE(4) | _MM_UNPACKB_START(1) | _MM_UNPACKB_SEXT</c>
+///
+/// \see { _MM_UNPACKB_SIZE _MM_UNPACKB_START _MM_UNPACKB_SEXT }
 /// \returns
 ///    A 128-bit vector of [16 x i8] containing the unpacked values.
 #define _mm_maskz_unpack_epi8(U, A, imm)                                       \
@@ -2125,7 +2167,15 @@ _mm256_maskz_cvthf6_hf8(__mmask32 __U, __m256i __A) {
 /// \param A
 ///    A 256-bit vector of [32 x i8].
 /// \param imm
-///    An immediate value specifying the unpack operation.
+///    An 8-bit immediate selecting the packed element size, start offset, and
+///    optional sign-extend for \c VUNPACKB. Compose it with
+///    \c _MM_UNPACKB_SIZE, \c _MM_UNPACKB_START, and optionally
+///    \c _MM_UNPACKB_SEXT. Omitting \c _MM_UNPACKB_SEXT zero-extends unpacked
+///    elements to 8 bits. \n
+///    Example:
+///    <c>_MM_UNPACKB_SIZE(4) | _MM_UNPACKB_START(1) | _MM_UNPACKB_SEXT</c>
+///
+/// \see { _MM_UNPACKB_SIZE _MM_UNPACKB_START _MM_UNPACKB_SEXT }
 /// \returns
 ///    A 256-bit vector of [32 x i8] containing the unpacked values.
 #define _mm256_unpack_epi8(A, imm)                                             \
@@ -2145,7 +2195,15 @@ _mm256_maskz_cvthf6_hf8(__mmask32 __U, __m256i __A) {
 /// \param A
 ///    A 256-bit vector of [32 x i8].
 /// \param imm
-///    An immediate value specifying the unpack operation.
+///    An 8-bit immediate selecting the packed element size, start offset, and
+///    optional sign-extend for \c VUNPACKB. Compose it with
+///    \c _MM_UNPACKB_SIZE, \c _MM_UNPACKB_START, and optionally
+///    \c _MM_UNPACKB_SEXT. Omitting \c _MM_UNPACKB_SEXT zero-extends unpacked
+///    elements to 8 bits. \n
+///    Example:
+///    <c>_MM_UNPACKB_SIZE(4) | _MM_UNPACKB_START(1) | _MM_UNPACKB_SEXT</c>
+///
+/// \see { _MM_UNPACKB_SIZE _MM_UNPACKB_START _MM_UNPACKB_SEXT }
 /// \returns
 ///    A 256-bit vector of [32 x i8] containing the unpacked values.
 #define _mm256_mask_unpack_epi8(W, U, A, imm)                                  \
@@ -2165,7 +2223,15 @@ _mm256_maskz_cvthf6_hf8(__mmask32 __U, __m256i __A) {
 /// \param A
 ///    A 256-bit vector of [32 x i8].
 /// \param imm
-///    An immediate value specifying the unpack operation.
+///    An 8-bit immediate selecting the packed element size, start offset, and
+///    optional sign-extend for \c VUNPACKB. Compose it with
+///    \c _MM_UNPACKB_SIZE, \c _MM_UNPACKB_START, and optionally
+///    \c _MM_UNPACKB_SEXT. Omitting \c _MM_UNPACKB_SEXT zero-extends unpacked
+///    elements to 8 bits. \n
+///    Example:
+///    <c>_MM_UNPACKB_SIZE(4) | _MM_UNPACKB_START(1) | _MM_UNPACKB_SEXT</c>
+///
+/// \see { _MM_UNPACKB_SIZE _MM_UNPACKB_START _MM_UNPACKB_SEXT }
 /// \returns
 ///    A 256-bit vector of [32 x i8] containing the unpacked values.
 #define _mm256_maskz_unpack_epi8(U, A, imm)                                    \

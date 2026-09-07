@@ -2279,8 +2279,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
   bool HasLeaf24Subleaf1 =
       HasLeaf24 && EAX >= 1 &&
       !getX86CpuIDAndInfoEx(0x24, 0x1, &EAX, &EBX, &ECX, &EDX);
-  Features["avx10v2aux"] =
-      HasAVX10 && HasLeaf24Subleaf1 && ((ECX >> 3) & 1) && HasAVX512Save;
+  Features["avx10v2aux"] = HasAVX10 && HasLeaf24Subleaf1 && ((ECX >> 3) & 1);
 
   return Features;
 }

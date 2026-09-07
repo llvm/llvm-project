@@ -247,3 +247,21 @@ define void @test_int_x86_avx10_mask_pmovssdb_store_512(ptr %ptr, <16 x i32> %a,
   call void @llvm.x86.avx10.mask.pmovss.db.mem.512(ptr %ptr, <16 x i32> %a, i16 %mask)
   ret void
 }
+
+define void @test_int_x86_avx10_pmovssdb_store_vtruncss_512(<16 x i32> %a, ptr %p) {
+; X64-LABEL: test_int_x86_avx10_pmovssdb_store_vtruncss_512:
+; X64:       # %bb.0:
+; X64-NEXT:    vpmovssdb %zmm0, (%rdi) # encoding: [0x62,0xf2,0x7e,0x48,0x41,0x07]
+; X64-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; X64-NEXT:    retq # encoding: [0xc3]
+;
+; X86-LABEL: test_int_x86_avx10_pmovssdb_store_vtruncss_512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-NEXT:    vpmovssdb %zmm0, (%eax) # encoding: [0x62,0xf2,0x7e,0x48,0x41,0x00]
+; X86-NEXT:    vzeroupper # encoding: [0xc5,0xf8,0x77]
+; X86-NEXT:    retl # encoding: [0xc3]
+  %t = call <16 x i8> @llvm.x86.avx10.mask.pmovss.db.512(<16 x i32> %a, <16 x i8> zeroinitializer, i16 -1)
+  store <16 x i8> %t, ptr %p
+  ret void
+}

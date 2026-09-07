@@ -244,6 +244,7 @@ X86_FEATURE_COMPAT(AMX_FP8,            "amx-fp8",                0, 120)
 X86_FEATURE_COMPAT(MOVRS,              "movrs",                  0, 121)
 X86_FEATURE_COMPAT(AMX_MOVRS,          "amx-movrs",              0, 122)
 X86_FEATURE_COMPAT(AVX512BMM,          "avx512bmm",              0, 123)
+X86_FEATURE_COMPAT(AVX10_V2_AUX,       "avx10v2aux",             0, 124)
 
 // Features we don't multiversion on.
 X86_FEATURE       (NF,                 "nf")
@@ -263,7 +264,6 @@ X86_FEATURE       (NDD,                "ndd")
 X86_FEATURE       (EGPR,               "egpr")
 X86_FEATURE       (ZU,                 "zu")
 X86_FEATURE       (JMPABS,             "jmpabs")
-X86_FEATURE       (AVX10_V2_AUX,       "avx10v2aux")
 
 // These features aren't really CPU features, but the frontend can set them.
 X86_FEATURE       (RETPOLINE_EXTERNAL_THUNK,    "retpoline-external-thunk")

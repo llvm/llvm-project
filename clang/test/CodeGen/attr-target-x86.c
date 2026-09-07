@@ -214,7 +214,7 @@ void f_x86_64_v4(void) {}
 __attribute__((target("avx10.1")))
 void f_avx10_1(void) {}
 
-// CHECK: [[f_avx10_v2_aux]] = {{.*}}"target-cpu"="i686" "target-features"="{{.*}}+avx10v2aux{{.*}}"
+// CHECK: [[f_avx10_v2_aux]] = {{.*}}"target-cpu"="i686" "target-features"="+avx,+avx10.1,+avx10v2aux,+avx2,+avx512bf16,+avx512bitalg,+avx512bw,+avx512cd,+avx512dq,+avx512f,+avx512fp16,+avx512ifma,+avx512vbmi,+avx512vbmi2,+avx512vl,+avx512vnni,+avx512vpopcntdq,+cmov,+crc32,+cx8,+f16c,+fma,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
 __attribute__((target("avx10v2aux")))
 void f_avx10_v2_aux(void) {}
 

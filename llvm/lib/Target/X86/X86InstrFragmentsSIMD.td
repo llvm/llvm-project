@@ -1672,11 +1672,11 @@ def X86MTruncUSStore : SDNode<"X86ISD::VMTRUNCSTOREUS",  SDTX86MaskedStore,
                        [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 // Vector truncating store with symmetric signed saturation
-def X86TruncSSStore : SDNode<"X86ISD::VTRUNCSTORSS",  SDTStore,
+def X86TruncSSStore : SDNode<"X86ISD::VTRUNCSTORESS",  SDTStore,
                        [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 // Vector truncating masked store with symmetric signed saturation
-def X86MTruncSSStore : SDNode<"X86ISD::VMTRUNCSTORSS",  SDTX86MaskedStore,
+def X86MTruncSSStore : SDNode<"X86ISD::VMTRUNCSTORESS",  SDTX86MaskedStore,
                        [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def truncstore_s_vi8 : PatFrag<(ops node:$val, node:$ptr),

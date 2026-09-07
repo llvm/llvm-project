@@ -40,19 +40,57 @@ multiclass avx10_v2aux_cvt_trunc_ps2i8<bits<8> opc, string OpcodeStr,
     }
   }
 
-  // InstAliases for x/y suffixes
+  // InstAliases for x/y suffixes. Priority 0 so they are accepted but not
+  // printed by default.
   def : InstAlias<OpcodeStr#"x\t{$src, $dst|$dst, $src}",
                   (!cast<Instruction>(NAME # "Z128rr") VR128X:$dst,
-                   VR128X:$src), 0>;
+                   VR128X:$src), 0, "att">;
+  def : InstAlias<OpcodeStr#"x\t{$src, $dst {${mask}}|$dst {${mask}}, $src}",
+                  (!cast<Instruction>(NAME # "Z128rrk") VR128X:$dst,
+                   VK4WM:$mask, VR128X:$src), 0, "att">;
+  def : InstAlias<OpcodeStr#"x\t{$src, $dst {${mask}} {z}|"
+                  "$dst {${mask}} {z}, $src}",
+                  (!cast<Instruction>(NAME # "Z128rrkz") VR128X:$dst,
+                   VK4WM:$mask, VR128X:$src), 0, "att">;
   def : InstAlias<OpcodeStr#"x\t{$src, $dst|$dst, $src}",
                   (!cast<Instruction>(NAME # "Z128rm") VR128X:$dst,
                    f128mem:$src), 0, "intel">;
+  def : InstAlias<OpcodeStr#"x\t{${src}{1to4}, $dst|$dst, ${src}{1to4}}",
+                  (!cast<Instruction>(NAME # "Z128rmb") VR128X:$dst,
+                   f32mem:$src), 0, "att">;
+  def : InstAlias<OpcodeStr#"x\t{${src}{1to4}, $dst {${mask}}|"
+                  "$dst {${mask}}, ${src}{1to4}}",
+                  (!cast<Instruction>(NAME # "Z128rmbk") VR128X:$dst,
+                   VK4WM:$mask, f32mem:$src), 0, "att">;
+  def : InstAlias<OpcodeStr#"x\t{${src}{1to4}, $dst {${mask}} {z}|"
+                  "$dst {${mask}} {z}, ${src}{1to4}}",
+                  (!cast<Instruction>(NAME # "Z128rmbkz") VR128X:$dst,
+                   VK4WM:$mask, f32mem:$src), 0, "att">;
+
   def : InstAlias<OpcodeStr#"y\t{$src, $dst|$dst, $src}",
                   (!cast<Instruction>(NAME # "Z256rr") VR128X:$dst,
-                   VR256X:$src), 0>;
+                   VR256X:$src), 0, "att">;
+  def : InstAlias<OpcodeStr#"y\t{$src, $dst {${mask}}|$dst {${mask}}, $src}",
+                  (!cast<Instruction>(NAME # "Z256rrk") VR128X:$dst,
+                   VK8WM:$mask, VR256X:$src), 0, "att">;
+  def : InstAlias<OpcodeStr#"y\t{$src, $dst {${mask}} {z}|"
+                  "$dst {${mask}} {z}, $src}",
+                  (!cast<Instruction>(NAME # "Z256rrkz") VR128X:$dst,
+                   VK8WM:$mask, VR256X:$src), 0, "att">;
   def : InstAlias<OpcodeStr#"y\t{$src, $dst|$dst, $src}",
                   (!cast<Instruction>(NAME # "Z256rm") VR128X:$dst,
                    f256mem:$src), 0, "intel">;
+  def : InstAlias<OpcodeStr#"y\t{${src}{1to8}, $dst|$dst, ${src}{1to8}}",
+                  (!cast<Instruction>(NAME # "Z256rmb") VR128X:$dst,
+                   f32mem:$src), 0, "att">;
+  def : InstAlias<OpcodeStr#"y\t{${src}{1to8}, $dst {${mask}}|"
+                  "$dst {${mask}}, ${src}{1to8}}",
+                  (!cast<Instruction>(NAME # "Z256rmbk") VR128X:$dst,
+                   VK8WM:$mask, f32mem:$src), 0, "att">;
+  def : InstAlias<OpcodeStr#"y\t{${src}{1to8}, $dst {${mask}} {z}|"
+                  "$dst {${mask}} {z}, ${src}{1to8}}",
+                  (!cast<Instruction>(NAME # "Z256rmbkz") VR128X:$dst,
+                   VK8WM:$mask, f32mem:$src), 0, "att">;
 
   // Explicit patterns for Z256 (8 source elements, VK8WM mask)
   // Unmasked
