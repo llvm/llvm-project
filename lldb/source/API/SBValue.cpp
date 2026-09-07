@@ -473,18 +473,57 @@ lldb::SBValue SBValue::CreateValueFromExpression(const char *name,
                                                  SBExpressionOptions &options) {
   LLDB_INSTRUMENT_VA(this, name, expression, options);
 
-  lldb::SBValue sb_value;
+  lldb::ValueObjectSP new_value_sp;
+  StackFrameSP frame_sp(GetFrame().GetFrameSP());
+  TargetSP target_sp(GetTarget().GetSP());
+  // If enabled, attempt to use DIL to evaluate the expression.
+  bool DIL_success = false;
+  if (frame_sp && target_sp) {
+    bool use_DIL = target_sp->GetUseDILForCreatingValues();
+    if (use_DIL) {
+      Status error;
+      if (frame_sp) {
+        uint32_t expr_path_options =
+            StackFrame::eExpressionPathOptionCheckPtrVsMember |
+            StackFrame::eExpressionPathOptionsAllowDirectIVarAccess;
+        lldb::VariableSP var_sp;
+        new_value_sp = frame_sp->GetValueForVariableExpressionPath(
+            expression, eNoDynamicValues, expr_path_options, var_sp, error);
+      }
+      DIL_success = new_value_sp && new_value_sp->GetError().Success();
+    }
+  }
+
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  lldb::ValueObjectSP new_value_sp;
-  if (value_sp) {
+  // Fall back to full expression evaluation if DIL did not succeed.
+  if (!DIL_success && value_sp) {
     ExecutionContext exe_ctx(value_sp->GetExecutionContextRef());
     new_value_sp = value_sp->CreateChildValueObjectFromExpression(
         name, expression, exe_ctx, options.ref());
-    if (new_value_sp)
-      new_value_sp->SetName(name);
   }
+
+  if (new_value_sp)
+    new_value_sp->SetName(name);
+  lldb::SBValue sb_value;
   sb_value.SetSP(new_value_sp);
+
+  Log *log = GetLog(LLDBLog::Expressions);
+  if (new_value_sp && new_value_sp->GetError().Success())
+    LLDB_LOGF(log,
+              "** [SBValue::CreateValueFromExpression] Expression result: "
+              "(%s) %s = %s (evaluated by: %s) **",
+              new_value_sp->GetTypeName().GetCString(),
+              new_value_sp->GetName().GetCString(),
+              new_value_sp->GetValueAsCString(),
+              DIL_success ? "DIL" : "UserExpression");
+  else
+    LLDB_LOGF(log,
+              "** [SBValue::CreateValueFromExpression] Expression evaluation "
+              "failed: %s **",
+              new_value_sp ? new_value_sp->GetError().AsCString()
+                           : "unknown error");
+
   return sb_value;
 }
 

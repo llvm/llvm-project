@@ -281,6 +281,10 @@ public:
 
   void SetUseDIL(ExecutionContext *exe_ctx, bool b);
 
+  bool GetUseDILForCreatingValues() const;
+
+  void SetUseDILForCreatingValues(bool b);
+
   void SetRequireHardwareBreakpoints(bool b);
 
   bool GetRequireHardwareBreakpoints() const;

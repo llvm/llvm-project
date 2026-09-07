@@ -7,6 +7,9 @@ let Definition = "target_experimental", Path = "target.experimental" in {
   def UseDIL : Property<"use-DIL", "Boolean">,
     Global, DefaultTrue,
     Desc<"If true, use the DIL implementation for frame variable evaluation.">;
+  def UseDILForCreatingValues: Property<"use-DIL-for-creating-values", "Boolean">,
+    Global, DefaultTrue,
+    Desc<"If true, use the DIL implementation to create variables from expressions.">;
 }
 
 let Definition = "target", Path = "target" in {
