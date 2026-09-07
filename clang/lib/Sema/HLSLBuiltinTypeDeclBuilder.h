@@ -112,6 +112,8 @@ public:
                                                 bool IsArray = false);
   BuiltinTypeDeclBuilder &addTextureLoadMSMethods(ResourceDimension Dim,
                                                   bool IsArray = false);
+  BuiltinTypeDeclBuilder &addRWTextureLoadMethods(ResourceDimension Dim,
+                                                  bool IsArray = false);
   BuiltinTypeDeclBuilder &addByteAddressBufferLoadMethods();
   BuiltinTypeDeclBuilder &addByteAddressBufferStoreMethods();
   BuiltinTypeDeclBuilder &addByteAddressBufferInterlockedMethods();

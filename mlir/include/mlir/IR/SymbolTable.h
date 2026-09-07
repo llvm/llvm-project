@@ -118,6 +118,9 @@ public:
   /// Returns the name of the given symbol operation, aborting if no symbol is
   /// present.
   static StringAttr getSymbolName(Operation *symbol);
+  /// Compatibility alias for generated interface code that still refers to the
+  /// symbol name attribute by convention.
+  static StringRef getSymbolAttrName() { return "sym_name"; }
 
   /// Sets the name of the given symbol operation.
   static void setSymbolName(Operation *symbol, StringAttr name);
@@ -463,28 +466,29 @@ public:
 template <typename ConcreteType>
 class SymbolVisibility : public TraitBase<ConcreteType, SymbolVisibility> {
 public:
-  SymbolTable::Visibility getVisibility() {
+  ::mlir::SymbolTable::Visibility getVisibility() {
     auto concrete = cast<ConcreteType>(this->getOperation());
     StringAttr visibility = concrete.getSymVisibilityAttr();
     if (!visibility || visibility.getValue() == "public")
-      return SymbolTable::Visibility::Public;
+      return ::mlir::SymbolTable::Visibility::Public;
     if (visibility.getValue() == "private")
-      return SymbolTable::Visibility::Private;
+      return ::mlir::SymbolTable::Visibility::Private;
     assert(visibility.getValue() == "nested" && "invalid symbol visibility");
-    return SymbolTable::Visibility::Nested;
+    return ::mlir::SymbolTable::Visibility::Nested;
   }
 
-  void setVisibility(SymbolTable::Visibility visibility) {
+  void setVisibility(::mlir::SymbolTable::Visibility visibility) {
     auto concrete = cast<ConcreteType>(this->getOperation());
-    if (visibility == SymbolTable::Visibility::Public) {
+    if (visibility == ::mlir::SymbolTable::Visibility::Public) {
       concrete.setSymVisibilityAttr({});
       return;
     }
-    assert((visibility == SymbolTable::Visibility::Private ||
-            visibility == SymbolTable::Visibility::Nested) &&
+    assert((visibility == ::mlir::SymbolTable::Visibility::Private ||
+            visibility == ::mlir::SymbolTable::Visibility::Nested) &&
            "invalid symbol visibility");
-    StringRef value =
-        visibility == SymbolTable::Visibility::Private ? "private" : "nested";
+    StringRef value = visibility == ::mlir::SymbolTable::Visibility::Private
+                          ? "private"
+                          : "nested";
     concrete.setSymVisibilityAttr(
         StringAttr::get(this->getOperation()->getContext(), value));
   }

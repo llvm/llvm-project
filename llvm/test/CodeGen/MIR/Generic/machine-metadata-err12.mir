@@ -1,0 +1,19 @@
+# RUN: not llc -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# This test ensures that diagnostics for multiline machine metadata definitions
+# point into the correct list item.
+
+--- |
+  define i32 @t0() {
+    ret i32 0
+  }
+...
+---
+name: t0
+machineMetadataNodes:
+  - |
+    !9 = !{
+      invalid
+    }
+  - '!10 = !{}'
+...
+# CHECK: [[@LINE-4]]:{{[0-9]+}}: expected metadata operand

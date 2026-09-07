@@ -8,6 +8,8 @@ import lit.TestRunner
 import lit.util
 from lit.formats.base import TestFormat
 
+import lldbflakes
+
 
 class LLDBTest(TestFormat):
     def __init__(self, dotest_cmd):
@@ -33,6 +35,11 @@ class LLDBTest(TestFormat):
                     )
 
     def execute(self, test, litConfig):
+        return lldbflakes.execute_with_reruns(
+            lambda: lit.Test.Result(*self._execute_once(test, litConfig))
+        )
+
+    def _execute_once(self, test, litConfig):
         if litConfig.noExecute:
             return lit.Test.PASS, ""
 

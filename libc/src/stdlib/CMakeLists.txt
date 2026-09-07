@@ -340,6 +340,7 @@ add_header_library(
     libc.hdr.stdint_proxy
     libc.include.stdlib
     libc.src.__support.CPP.cstddef
+    libc.src.__support.CPP.utility
     libc.src.string.memory_utils.inline_memcpy
 )
 
@@ -607,6 +608,13 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.realpath
 )
 
+add_entrypoint_object(
+  getloadavg
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getloadavg
+)
+
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
@@ -782,8 +790,6 @@ add_entrypoint_object(
     atexit.cpp
   HDRS
     atexit.h
-  CXX_STANDARD
-    20 # For constinit
   DEPENDS
     .exit_handler
 )
@@ -794,8 +800,6 @@ add_entrypoint_object(
     at_quick_exit.cpp
   HDRS
     at_quick_exit.h
-  CXX_STANDARD
-    20 # For constinit
   DEPENDS
     .exit_handler
     .atexit
@@ -857,3 +861,4 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.system
 )
+
