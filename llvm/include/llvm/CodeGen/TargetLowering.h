@@ -2177,6 +2177,16 @@ public:
   /// Return the preferred loop alignment.
   virtual Align getPrefLoopAlignment(MachineLoop *ML = nullptr) const;
 
+  /// Return the preferred alignment for MBB when it is being aligned as part
+  /// of ML. Callers that have no specific block should use the one-argument
+  /// hook. Targets with block-specific loop alignment requirements can
+  /// override this hook; AMDGPU requires MBB to be non-null. The default
+  /// preserves existing one-argument overrides.
+  virtual Align getPrefLoopAlignment(MachineLoop *ML,
+                                     const MachineBasicBlock *MBB) const {
+    return getPrefLoopAlignment(ML);
+  }
+
   /// Return the maximum amount of bytes allowed to be emitted when padding for
   /// alignment
   virtual unsigned
