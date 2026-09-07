@@ -2192,6 +2192,15 @@ public:
     return Diags->Report(Tok.getLocation(), DiagID);
   }
 
+  DiagnosticBuilder DiagCompat(SourceLocation Loc,
+                               unsigned CompatDiagID) const {
+    return Diag(Loc, DiagnosticIDs::getCompatDiagId(LangOpts, CompatDiagID));
+  }
+
+  DiagnosticBuilder DiagCompat(const Token &Tok, unsigned CompatDiagID) const {
+    return Diag(Tok, DiagnosticIDs::getCompatDiagId(LangOpts, CompatDiagID));
+  }
+
   /// Return the 'spelling' of the token at the given
   /// location; does not go up to the spelling location or down to the
   /// expansion location.

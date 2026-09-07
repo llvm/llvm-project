@@ -9226,7 +9226,8 @@ static Expected<Function *> createOutlinedFunction(
     const OpenMPIRBuilder::TargetKernelDefaultAttrs &DefaultAttrs,
     StringRef FuncName, SmallVectorImpl<Value *> &Inputs,
     OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc,
-    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB) {
+    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB,
+    DebugLoc OutlinedFnLoc) {
   SmallVector<Type *> ParameterTypes;
   if (OMPBuilder.Config.isTargetDevice()) {
     // All parameters to target devices are passed as pointers
@@ -9273,8 +9274,11 @@ static Expected<Function *> createOutlinedFunction(
   // Save insert point.
   IRBuilder<>::InsertPointGuard IPG(Builder);
   // We will generate the entries in the outlined function but the debug
-  // location may still be pointing to the parent function. Reset it now.
-  Builder.SetCurrentDebugLocation(llvm::DebugLoc());
+  // location is still pointing to the parent function, which is the wrong
+  // scope. OutlinedFnLoc, when the caller provides one, is the same source
+  // position scoped to the subprogram that will be attached to the outlined
+  // function, so it is what everything emitted below needs.
+  Builder.SetCurrentDebugLocation(OutlinedFnLoc);
 
   // Generate the region into the function.
   BasicBlock *EntryBB = BasicBlock::Create(Builder.getContext(), "entry", Func);
@@ -9302,6 +9306,14 @@ static Expected<Function *> createOutlinedFunction(
   if (!AfterIP)
     return AfterIP.takeError();
   Builder.SetInsertPoint(ExitBB);
+  // The body callback builds the body with its own IRBuilder and cannot reach
+  // this one directly. But a body holding another OpenMP construct, a nested
+  // parallel say, calls OpenMPIRBuilder::createParallel, and that can leave
+  // this Builder pointing at the wrong debug location, or at none at all. The
+  // epilogue below belongs to the target construct rather than to whatever the
+  // body emitted last, so re-establish the location the prologue was emitted
+  // with.
+  Builder.SetCurrentDebugLocation(OutlinedFnLoc);
 
   // Insert target deinit call in the device compilation pass.
   if (OMPBuilder.Config.isTargetDevice())
@@ -9603,13 +9615,14 @@ static Error emitTargetOutlinedFunction(
     Function *&OutlinedFn, Constant *&OutlinedFnID,
     SmallVectorImpl<Value *> &Inputs,
     OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc,
-    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB) {
+    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB,
+    DebugLoc OutlinedFnLoc) {
 
   OpenMPIRBuilder::FunctionGenCallback &&GenerateOutlinedFunction =
       [&](StringRef EntryFnName) {
         return createOutlinedFunction(OMPBuilder, Builder, DefaultAttrs,
                                       EntryFnName, Inputs, CBFunc,
-                                      ArgAccessorFuncCB);
+                                      ArgAccessorFuncCB, OutlinedFnLoc);
       };
 
   return OMPBuilder.emitTargetRegionFunction(
@@ -10232,7 +10245,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTarget(
     OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB,
     CustomMapperCallbackTy CustomMapperCB, const DependenciesInfo &Dependencies,
     bool HasNowait, Value *DynCGroupMem,
-    OMPDynGroupprivateFallbackType DynCGroupMemFallback) {
+    OMPDynGroupprivateFallbackType DynCGroupMemFallback,
+    DebugLoc OutlinedFnLoc) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -10246,7 +10260,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTarget(
   // and ArgAccessorFuncCB
   if (Error Err = emitTargetOutlinedFunction(
           *this, Builder, IsOffloadEntry, EntryInfo, DefaultAttrs, OutlinedFn,
-          OutlinedFnID, Inputs, CBFunc, ArgAccessorFuncCB))
+          OutlinedFnID, Inputs, CBFunc, ArgAccessorFuncCB, OutlinedFnLoc))
     return Err;
 
   // If we are not on the target device, then we need to generate code

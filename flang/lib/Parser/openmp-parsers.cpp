@@ -1460,11 +1460,26 @@ TYPE_PARSER(construct<OmpIteration>(name, maybe(Parser<OmpIterationOffset>{})))
 
 TYPE_PARSER(construct<OmpIterationVector>(nonemptyList(Parser<OmpIteration>{})))
 
-TYPE_PARSER(construct<OmpDoacross>(
-    // Don't parse the modifier list as "maybe", or otherwise the parser will
-    // always succeed (never allowing TaskDep in OmpDependClause).
-    nonemptyList(Parser<OmpDoacross::Modifier>{}),
-    maybe(":"_tok >> Parser<OmpIterationVector>{})))
+struct OmpDoacrossParser {
+  using resultType = OmpDoacross;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    auto modifier{nonemptyList(Parser<OmpDoacross::Modifier>{})};
+    if (auto &&modList{modifier.Parse(state)}) {
+      if (attempt(":"_tok).Parse(state)) {
+        auto vector{Parser<OmpIterationVector>{}};
+        if (auto &&iterVec{attempt(vector).Parse(state)}) {
+          return OmpDoacross{std::move(*modList), std::move(*iterVec)};
+        }
+      }
+      return OmpDoacross{
+          std::move(*modList), std::optional<OmpIterationVector>{}};
+    }
+    return std::nullopt;
+  }
+};
+
+TYPE_PARSER(construct<OmpDoacross>(OmpDoacrossParser{}))
 
 TYPE_CONTEXT_PARSER("Omp Depend clause"_en_US,
     construct<OmpDependClause>(
