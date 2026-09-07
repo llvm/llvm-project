@@ -1,3 +1,5 @@
+include(HandleFlags)
+
 function(get_sanitizer_flags OUT_VAR  USE_SANITIZER)
   set(SANITIZER_FLAGS)
   set(USE_SANITIZER "${USE_SANITIZER}")

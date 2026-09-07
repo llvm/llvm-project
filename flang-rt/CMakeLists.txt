@@ -18,6 +18,10 @@ if (NOT LLVM_RUNTIMES_BUILD)
     ")
 endif ()
 
+list(INSERT CMAKE_MODULE_PATH 0
+  "${CMAKE_CURRENT_SOURCE_DIR}/../runtimes/cmake/Modules"
+  )
+
 set(LLVM_SUBPROJECT_TITLE "Flang-RT")
 set(FLANG_RT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(FLANG_RT_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}")
@@ -183,11 +187,12 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
   endif()
 endif()  # Clang
 
-# HACK !!!
-if(LLVM_USE_SANITIZER)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address,undefined")
-endif()
-
+include(GetSanitizerFlags)
+get_sanitizer_flags(SANITIZER_FLAGS "${LLVM_USE_SANITIZER}")
+add_library(flang-rt-sanitizer-flags INTERFACE)
+target_compile_options(flang-rt-sanitizer-flags INTERFACE
+  $<$<COMPILE_LANGUAGE:CXX>:${SANITIZER_FLAGS}>
+)
 
 ########################
 # System Introspection #
