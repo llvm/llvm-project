@@ -19,14 +19,16 @@
 #define LC_MESSAGES 5
 #define LC_ALL 6
 
-#define LC_GLOBAL_LOCALE ((locale_t)(-1))
-
 #define LC_CTYPE_MASK (1 << LC_CTYPE)
 #define LC_NUMERIC_MASK (1 << LC_NUMERIC)
 #define LC_TIME_MASK (1 << LC_TIME)
 #define LC_COLLATE_MASK (1 << LC_COLLATE)
 #define LC_MONETARY_MASK (1 << LC_MONETARY)
 #define LC_MESSAGES_MASK (1 << LC_MESSAGES)
-#define LC_ALL_MASK 0x7fffffff
+#define LC_ALL_MASK                                                            \
+  (LC_CTYPE_MASK | LC_NUMERIC_MASK | LC_TIME_MASK | LC_COLLATE_MASK |          \
+   LC_MONETARY_MASK | LC_MESSAGES_MASK)
+
+#define LC_GLOBAL_LOCALE ((locale_t)(-1))
 
 #endif // LLVM_LIBC_MACROS_LOCALE_MACROS_H
