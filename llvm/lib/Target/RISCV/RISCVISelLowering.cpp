@@ -5379,8 +5379,18 @@ isLegalVTForZvzipDeinterleavedOperand(MVT VT, const RISCVSubtarget &Subtarget) {
 static bool
 isLegalVTForZvzipInterleavedOperand(MVT VT, const RISCVSubtarget &Subtarget) {
   MVT ContainerVT = VT;
-  if (VT.isFixedLengthVector())
-    ContainerVT = getContainerForFixedLengthVector(VT, Subtarget);
+  if (VT.isFixedLengthVector()) {
+    // VT is the interleaved result type, but lowerZvzipVZIP maps each
+    // half-sized input to a scalable container before doubling that container
+    // for the result. Mirror that order here because the minimum scalable
+    // container size means mapping VT directly is not necessarily equivalent.
+    // For example, interleaving two <2 x i32> inputs at VLEN=128 requires an
+    // m2 result container, while mapping the <4 x i32> result directly yields
+    // m1.
+    ContainerVT = getContainerForFixedLengthVector(
+        VT.getHalfNumVectorElementsVT(), Subtarget);
+    ContainerVT = ContainerVT.getDoubleNumVectorElementsVT();
+  }
   unsigned EltBits = VT.getScalarSizeInBits();
   unsigned LMULOctuple = getLMULOctuple(ContainerVT);
   // Perform 2 * SEW <= LMUL * min(ELEN, VLEN) check.

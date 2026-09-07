@@ -70,17 +70,11 @@ define void @interleave_v2i32(ptr %pa, ptr %pb, ptr %out) {
 ; ZVL128B-LABEL: interleave_v2i32:
 ; ZVL128B:       # %bb.0: # %entry
 ; ZVL128B-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; ZVL128B-NEXT:    vle32.v v8, (a1)
-; ZVL128B-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; ZVL128B-NEXT:    vslideup.vi v9, v8, 1
-; ZVL128B-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; ZVL128B-NEXT:    vle32.v v10, (a0)
-; ZVL128B-NEXT:    vmv.v.i v0, 10
-; ZVL128B-NEXT:    vmv.v.v v11, v10
+; ZVL128B-NEXT:    vle32.v v11, (a1)
+; ZVL128B-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
+; ZVL128B-NEXT:    vzip.vv v8, v10, v11
 ; ZVL128B-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; ZVL128B-NEXT:    vslideup.vi v9, v8, 2
-; ZVL128B-NEXT:    vslideup.vi v11, v10, 1
-; ZVL128B-NEXT:    vmerge.vvm v8, v11, v9, v0
 ; ZVL128B-NEXT:    vse32.v v8, (a2)
 ; ZVL128B-NEXT:    ret
 entry:
@@ -157,9 +151,8 @@ define void @interleave_v2i16(ptr %pa, ptr %pb, ptr %out) {
 ; ZVL128B-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
 ; ZVL128B-NEXT:    vle16.v v8, (a0)
 ; ZVL128B-NEXT:    vle16.v v9, (a1)
-; ZVL128B-NEXT:    vwaddu.vv v10, v8, v9
-; ZVL128B-NEXT:    li a0, -1
-; ZVL128B-NEXT:    vwmaccu.vx v10, a0, v9
+; ZVL128B-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
+; ZVL128B-NEXT:    vzip.vv v10, v8, v9
 ; ZVL128B-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVL128B-NEXT:    vse16.v v10, (a2)
 ; ZVL128B-NEXT:    ret
@@ -237,9 +230,8 @@ define void @interleave_v2i8(ptr %pa, ptr %pb, ptr %out) {
 ; ZVL128B-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; ZVL128B-NEXT:    vle8.v v8, (a0)
 ; ZVL128B-NEXT:    vle8.v v9, (a1)
-; ZVL128B-NEXT:    vwaddu.vv v10, v8, v9
-; ZVL128B-NEXT:    li a0, -1
-; ZVL128B-NEXT:    vwmaccu.vx v10, a0, v9
+; ZVL128B-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
+; ZVL128B-NEXT:    vzip.vv v10, v8, v9
 ; ZVL128B-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; ZVL128B-NEXT:    vse8.v v10, (a2)
 ; ZVL128B-NEXT:    ret
@@ -315,17 +307,11 @@ define void @interleave_v2f32(ptr %pa, ptr %pb, ptr %out) {
 ; ZVL128B-LABEL: interleave_v2f32:
 ; ZVL128B:       # %bb.0: # %entry
 ; ZVL128B-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
-; ZVL128B-NEXT:    vle32.v v8, (a1)
-; ZVL128B-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; ZVL128B-NEXT:    vslideup.vi v9, v8, 1
-; ZVL128B-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
 ; ZVL128B-NEXT:    vle32.v v10, (a0)
-; ZVL128B-NEXT:    vmv.v.i v0, 10
-; ZVL128B-NEXT:    vmv.v.v v11, v10
+; ZVL128B-NEXT:    vle32.v v11, (a1)
+; ZVL128B-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
+; ZVL128B-NEXT:    vzip.vv v8, v10, v11
 ; ZVL128B-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; ZVL128B-NEXT:    vslideup.vi v9, v8, 2
-; ZVL128B-NEXT:    vslideup.vi v11, v10, 1
-; ZVL128B-NEXT:    vmerge.vvm v8, v11, v9, v0
 ; ZVL128B-NEXT:    vse32.v v8, (a2)
 ; ZVL128B-NEXT:    ret
 entry:
@@ -402,9 +388,8 @@ define void @interleave_v2f16(ptr %pa, ptr %pb, ptr %out) {
 ; ZVL128B-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
 ; ZVL128B-NEXT:    vle16.v v8, (a0)
 ; ZVL128B-NEXT:    vle16.v v9, (a1)
-; ZVL128B-NEXT:    vwaddu.vv v10, v8, v9
-; ZVL128B-NEXT:    li a0, -1
-; ZVL128B-NEXT:    vwmaccu.vx v10, a0, v9
+; ZVL128B-NEXT:    vsetivli zero, 4, e16, m1, ta, ma
+; ZVL128B-NEXT:    vzip.vv v10, v8, v9
 ; ZVL128B-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVL128B-NEXT:    vse16.v v10, (a2)
 ; ZVL128B-NEXT:    ret
