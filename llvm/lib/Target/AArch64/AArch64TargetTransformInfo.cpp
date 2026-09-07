@@ -4608,20 +4608,17 @@ InstructionCost AArch64TTIImpl::getVectorInstrCostHelper(
       InstructionCost Cost = CostKind == TTI::TCK_CodeSize
                                  ? 1
                                  : ST->getVectorInsertExtractBaseCost();
-      unsigned LowElts = AArch64::SVEBitsPerBlock / Ty->getScalarSizeInBits();
-      if (Opcode == Instruction::InsertElement) {
-        if (Index >= LowElts)
-          Cost += 3;
-      } else if (Opcode == Instruction::ExtractElement) {
-        unsigned ExtRange = 4 * LowElts;
-        // Extract >512b needs mov-imm+whilels+lastb
-        if (Index >= ExtRange)
-          Cost += 2;
+      if (Index * Ty->getScalarSizeInBits() < 128)
+        return Cost;
+      if (Index * Ty->getScalarSizeInBits() < 512 &&
+          Opcode == Instruction::ExtractElement)
         // Integer extracts (>128b, <512b) require extra mov from FPR -> GPR.
-        else if (Index >= LowElts && Ty->getScalarType()->isIntegerTy())
-          Cost += 1;
-      }
-      return Cost;
+        return Ty->getScalarType()->isIntegerTy() ? Cost + 1 : Cost;
+      if (Opcode == Instruction::ExtractElement)
+        return Cost + 2; // cost of mov imm + whilels + lastb
+      if (Opcode == Instruction::InsertElement)
+        return Cost + 3; // cost of insert with cmp/splice
+      llvm_unreachable("unexpected opcode");
     }
 
     // This is recognising a LD1 single-element structure to one lane of one
