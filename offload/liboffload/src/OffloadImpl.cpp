@@ -41,8 +41,10 @@ struct ol_platform_impl_t {
   /// Initialize the associated plugin and devices.
   llvm::Error init();
 
-  /// Direct access to the plugin, may be uninitialized if accessed here.
+  bool Initialized = false;
   std::unique_ptr<GenericPluginTy> Plugin;
+
+  bool isInitialized() const { return Initialized; }
 
   llvm::SmallVector<std::unique_ptr<ol_device_impl_t>> Devices;
 };
@@ -51,20 +53,61 @@ struct ol_platform_impl_t {
 // we add some additional data here for now to avoid churn in the plugin
 // interface.
 struct ol_device_impl_t {
-  ol_device_impl_t(int DeviceNum, GenericDeviceTy *Device,
-                   ol_platform_impl_t &Platform, InfoTreeNode &&DevInfo)
-      : DeviceNum(DeviceNum), Device(Device), Platform(Platform),
-        Info(std::forward<InfoTreeNode>(DevInfo)) {}
-
+  ol_device_impl_t(int DeviceNum, ol_platform_impl_t &Platform)
+      : DeviceNum(DeviceNum), Platform(Platform) {}
   int DeviceNum;
-  GenericDeviceTy *Device;
   ol_platform_impl_t &Platform;
+
+  llvm::Error init() {
+    if (!Platform.isInitialized()) {
+      if (auto Err = Platform.init())
+        return Err;
+    }
+
+    if (llvm::Error Err = Platform.Plugin->initDevice(DeviceNum))
+      return Err;
+
+    Device = &Platform.Plugin->getDevice(DeviceNum);
+    llvm::Expected<InfoTreeNode> InfoOrErr = Device->obtainInfo();
+    if (!InfoOrErr)
+      return InfoOrErr.takeError();
+    Info = std::move(*InfoOrErr);
+
+    return llvm::Error::success();
+  }
+
+  llvm::Expected<GenericDeviceTy *> getDevice() {
+    if (!Device) {
+      if (llvm::Error Err = init())
+        return Err;
+    }
+
+    return Device;
+  }
+
+  GenericDeviceTy *getDeviceWithoutInit() const { return Device; }
+
+  llvm::Expected<InfoTreeNode &> getInfo() {
+    if (!Device) {
+      if (llvm::Error Err = init())
+        return Err;
+    }
+
+    return Info;
+  }
+
+private:
+  GenericDeviceTy *Device = nullptr;
   InfoTreeNode Info;
 };
 
 llvm::Error ol_platform_impl_t::destroy() { return Plugin->deinit(); }
 
 llvm::Error ol_platform_impl_t::init() {
+  if (Initialized)
+    return llvm::Error::success();
+  Initialized = true;
+
   if (!Plugin)
     return llvm::Error::success();
 
@@ -72,15 +115,7 @@ llvm::Error ol_platform_impl_t::init() {
     return Err;
 
   for (auto Id = 0, End = Plugin->getNumDevices(); Id != End; Id++) {
-    if (llvm::Error Err = Plugin->initDevice(Id))
-      return Err;
-
-    GenericDeviceTy *Device = &Plugin->getDevice(Id);
-    llvm::Expected<InfoTreeNode> Info = Device->obtainInfo();
-    if (llvm::Error Err = Info.takeError())
-      return Err;
-    Devices.emplace_back(std::make_unique<ol_device_impl_t>(Id, Device, *this,
-                                                            std::move(*Info)));
+    Devices.emplace_back(std::make_unique<ol_device_impl_t>(Id, *this));
   }
 
   return llvm::Error::success();
@@ -161,7 +196,7 @@ struct ol_context_impl_t {
 
   ol_device_handle_t findDevice(plugin::GenericDeviceTy *Device) const {
     for (auto *D : Devices)
-      if (D->Device == Device)
+      if (D->getDeviceWithoutInit() == Device)
         return D;
     return nullptr;
   }
@@ -170,8 +205,11 @@ struct ol_context_impl_t {
                                   TargetAllocTy Kind, size_t Alignment) {
     if (auto Err = requireDevice(Device))
       return std::move(Err);
-    return PluginCtx->allocate(*Device->Device, Size, /*HostPtr=*/nullptr, Kind,
-                               Alignment);
+    auto DeviceOrErr = Device->getDevice();
+    if (!DeviceOrErr)
+      return DeviceOrErr.takeError();
+    return PluginCtx->allocate(**DeviceOrErr, Size, /*HostPtr=*/nullptr,
+                               Kind, Alignment);
   }
 
   llvm::Error deallocate(void *Ptr) { return PluginCtx->deallocate(Ptr); }
@@ -198,10 +236,12 @@ struct ol_context_impl_t {
       return nullptr;
     auto &Bucket = It->second;
 
+    GenericDeviceTy *DeviceImpl = llvm::cantFail(Device->getDevice());
+
     // As queues are pulled and popped from this list, longer running queues
     // naturally bubble to the start of the array. Hence looping backwards.
     for (auto Q = Bucket.rbegin(); Q != Bucket.rend(); Q++) {
-      if (!Device->Device->hasPendingWork(*Q)) {
+      if (!DeviceImpl->hasPendingWork(*Q)) {
         auto OutstandingQueue = *Q;
         *Q = Bucket.back();
         Bucket.pop_back();
@@ -223,8 +263,13 @@ struct ol_context_impl_t {
     llvm::Error Result = Plugin::success();
     for (auto &Bucket : OutstandingQueues) {
       auto *Device = Bucket.first;
+      auto DeviceOrErr = Device->getDevice();
+      if (!DeviceOrErr) {
+        Result = llvm::joinErrors(std::move(Result), DeviceOrErr.takeError());
+        continue;
+      }
       for (auto *AI : Bucket.second)
-        if (auto Err = Device->Device->synchronize(AI, /*Release=*/true))
+        if (auto Err = (*DeviceOrErr)->synchronize(AI, /*Release=*/true))
           Result = llvm::joinErrors(std::move(Result), std::move(Err));
     }
     OutstandingQueues.clear();
@@ -322,14 +367,6 @@ Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
   } while (false);
 #include "Shared/Targets.def"
 
-  // Eagerly initialize all of the plugins and devices. We need to make sure
-  // that the platform is initialized at a consistent point to maintain the
-  // expected teardown order in the vendor libraries.
-  for (auto &Platform : Context.Platforms) {
-    if (Error Err = Platform->init())
-      return Err;
-  }
-
   Context.TracingEnabled = std::getenv("OFFLOAD_TRACE");
   Context.ValidationEnabled = !std::getenv("OFFLOAD_DISABLE_VALIDATION");
 
@@ -374,7 +411,8 @@ Error olShutDown_impl() {
 
   for (auto &Platform : OldContext->Platforms) {
     // Host plugin is nullptr and has no deinit
-    if (!Platform->Plugin || !Platform->Plugin->is_initialized())
+    if (!Platform->isInitialized() || !Platform->Plugin ||
+        !Platform->Plugin->is_initialized())
       continue;
 
     if (auto Res = Platform->destroy())
@@ -472,14 +510,21 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   // AMD doesn't provide the global memory size (trivially) with the device info
   // struct, so use the plugin interface
   case OL_DEVICE_INFO_GLOBAL_MEM_SIZE: {
+    auto DeviceOrErr = Device->getDevice();
+    if (!DeviceOrErr)
+      return DeviceOrErr.takeError();
     uint64_t Mem;
-    if (auto Err = Device->Device->getDeviceMemorySize(Mem))
+    if (auto Err = (*DeviceOrErr)->getDeviceMemorySize(Mem))
       return Err;
     return Info.write<uint64_t>(Mem);
   } break;
 
-  case OL_DEVICE_INFO_DRIVER_ID:
-    return Info.write<uint32_t>(Device->Device->getDriverId());
+  case OL_DEVICE_INFO_DRIVER_ID: {
+    auto DeviceOrErr = Device->getDevice();
+    if (!DeviceOrErr)
+      return DeviceOrErr.takeError();
+    return Info.write<uint32_t>((*DeviceOrErr)->getDriverId());
+  } break;
 
   default:
     break;
@@ -489,7 +534,11 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getDeviceInfo enum '%i' is invalid", PropName);
 
-  auto EntryOpt = Device->Info.get(static_cast<DeviceInfo>(PropName));
+  auto InfoOrErr = Device->getInfo();
+  if (!InfoOrErr)
+    return InfoOrErr.takeError();
+
+  auto EntryOpt = InfoOrErr->get(static_cast<DeviceInfo>(PropName));
   if (!EntryOpt)
     return makeError(ErrorCode::UNIMPLEMENTED,
                      "plugin did not provide a response for this information");
@@ -602,6 +651,8 @@ Error olGetDeviceInfoSize_impl(ol_device_handle_t Device,
 
 Error olIterateDevices_impl(ol_device_iterate_cb_t Callback, void *UserData) {
   for (auto &Platform : OffloadContext::get().Platforms) {
+    if (auto Err = Platform->init())
+      return Err;
     for (auto &Device : Platform->Devices) {
       if (!Callback(Device.get(), UserData)) {
         return Error::success();
@@ -617,25 +668,38 @@ Error olCreateContext_impl(size_t DevicesCount, ol_device_handle_t *Devices,
   ol_platform_impl_t *Platform = &Devices[0]->Platform;
   llvm::SmallVector<ol_device_handle_t> DeviceList;
   llvm::SmallVector<plugin::GenericDeviceTy *> PluginDevices;
+
+  auto DeviceOrErr0 = Devices[0]->getDevice();
+  if (!DeviceOrErr0)
+    return DeviceOrErr0.takeError();
+  auto RTLDevice0 = *DeviceOrErr0;
+
   DeviceList.reserve(DevicesCount);
   PluginDevices.reserve(DevicesCount);
   for (size_t I = 0; I < DevicesCount; I++) {
+    auto DeviceOrErr = Devices[I]->getDevice();
+    if (!DeviceOrErr)
+      return DeviceOrErr.takeError();
+    GenericDeviceTy *RTLDevice = *DeviceOrErr;
+
     if (&Devices[I]->Platform != Platform)
       return createOffloadError(
           ErrorCode::INVALID_DEVICE,
           "all devices in a context must belong to the same platform");
-    if (Devices[I]->Device->getDriverId() != Devices[0]->Device->getDriverId())
+    if (RTLDevice->getDriverId() != RTLDevice0->getDriverId())
       return createOffloadError(
           ErrorCode::INVALID_DEVICE,
           "all devices in a context must have the same driver ID");
     DeviceList.push_back(Devices[I]);
-    PluginDevices.push_back(Devices[I]->Device);
+    PluginDevices.push_back(RTLDevice);
   }
 
   // The host plugin has no GenericPluginTy instance; skip the plugin-side
   // context in that case and just record the device set.
   std::unique_ptr<plugin::PluginContextTy> PluginCtx;
   if (Platform->Plugin) {
+    if (auto Err = Platform->init())
+      return Err;
     auto PluginCtxOrErr = Platform->Plugin->createPluginContext(PluginDevices);
     if (!PluginCtxOrErr)
       return PluginCtxOrErr.takeError();
@@ -828,16 +892,20 @@ Error olCreateQueue_impl(ol_context_handle_t Context, ol_device_handle_t Device,
   auto CreatedQueue =
       std::make_unique<ol_queue_impl_t>(nullptr, Context, Device);
 
+  auto DeviceOrErr = Device->getDevice();
+  if (!DeviceOrErr)
+    return DeviceOrErr.takeError();
+
   auto OutstandingQueue = Context->getOutstandingQueue(Device);
   if (OutstandingQueue) {
     // The queue is empty, but we still need to sync it to release any temporary
     // memory allocations or do other cleanup.
     if (auto Err =
-            Device->Device->synchronize(OutstandingQueue, /*Release=*/false))
+            (*DeviceOrErr)->synchronize(OutstandingQueue, /*Release=*/false))
       return Err;
     CreatedQueue->AsyncInfo = OutstandingQueue;
   } else if (auto Err = Context->PluginCtx->initAsyncInfo(
-                 *Device->Device, &(CreatedQueue->AsyncInfo))) {
+                 **DeviceOrErr, &(CreatedQueue->AsyncInfo))) {
     return Err;
   }
 
@@ -848,17 +916,22 @@ Error olCreateQueue_impl(ol_context_handle_t Context, ol_device_handle_t Device,
 Error olDestroyQueue_impl(ol_queue_handle_t Queue) {
   auto *Device = Queue->Device;
   auto *Context = Queue->Context;
+  auto DeviceOrErr = Device->getDevice();
+  if (!DeviceOrErr)
+    return DeviceOrErr.takeError();
+  auto *DeviceImpl = *DeviceOrErr;
+
   // This is safe; as soon as olDestroyQueue is called it is not possible to add
   // any more work to the queue, so if it's finished now it will remain finished
   // forever.
-  auto Res = Device->Device->hasPendingWork(Queue->AsyncInfo);
+  auto Res = DeviceImpl->hasPendingWork(Queue->AsyncInfo);
   if (!Res)
     return Res.takeError();
 
   if (!*Res) {
     // The queue is complete, so sync it and throw it back into the pool.
-    if (auto Err = Device->Device->synchronize(Queue->AsyncInfo,
-                                               /*Release=*/true))
+    if (auto Err = DeviceImpl->synchronize(Queue->AsyncInfo,
+                                           /*Release=*/true))
       return Err;
   } else {
     // The queue still has outstanding work. Store it so we can check it later.
@@ -875,7 +948,10 @@ Error olSyncQueue_impl(ol_queue_handle_t Queue) {
     // We don't need to release the queue and we would like the ability for
     // other offload threads to submit work concurrently, so pass "false" here
     // so we don't release the underlying queue object.
-    if (auto Err = Queue->Device->Device->synchronize(Queue->AsyncInfo, false))
+    auto DeviceOrErr = Queue->Device->getDevice();
+    if (!DeviceOrErr)
+      return DeviceOrErr.takeError();
+    if (auto Err = (*DeviceOrErr)->synchronize(Queue->AsyncInfo, false))
       return Err;
   }
 
@@ -884,7 +960,10 @@ Error olSyncQueue_impl(ol_queue_handle_t Queue) {
 
 Error olWaitEvents_impl(ol_queue_handle_t Queue, ol_event_handle_t *Events,
                         size_t NumEvents) {
-  auto *Device = Queue->Device->Device;
+  auto DeviceOrErr = Queue->Device->getDevice();
+  if (!DeviceOrErr)
+    return DeviceOrErr.takeError();
+  auto *Device = *DeviceOrErr;
 
   for (size_t I = 0; I < NumEvents; I++) {
     auto *Event = Events[I];
@@ -916,7 +995,10 @@ Error olGetQueueInfoImplDetail(ol_queue_handle_t Queue,
   case OL_QUEUE_INFO_CONTEXT:
     return Info.write<ol_context_handle_t>(Queue->Context);
   case OL_QUEUE_INFO_EMPTY: {
-    auto Pending = Queue->Device->Device->hasPendingWork(Queue->AsyncInfo);
+    auto DeviceOrErr = Queue->Device->getDevice();
+    if (!DeviceOrErr)
+      return DeviceOrErr.takeError();
+    auto Pending = (*DeviceOrErr)->hasPendingWork(Queue->AsyncInfo);
     if (auto Err = Pending.takeError())
       return Err;
     return Info.write<bool>(!*Pending);
@@ -944,7 +1026,11 @@ Error olSyncEvent_impl(ol_event_handle_t Event) {
   if (!Event->EventInfo)
     return Plugin::success();
 
-  if (auto Res = Event->Device->Device->syncEvent(Event->EventInfo))
+  auto DeviceOrErr = Event->Device->getDevice();
+  if (!DeviceOrErr)
+    return DeviceOrErr.takeError();
+
+  if (auto Res = (*DeviceOrErr)->syncEvent(Event->EventInfo))
     return Res;
 
   return Error::success();
@@ -964,8 +1050,13 @@ Error olGetEventElapsedTime_impl(ol_event_handle_t StartEvent,
         ErrorCode::INVALID_DEVICE,
         "StartEvent and EndEvent must belong to the same device");
 
-  auto ElapsedTimeOrErr = StartEvent->Device->Device->getEventElapsedTime(
-      StartEvent->EventInfo, EndEvent->EventInfo);
+  auto DeviceOrErr = StartEvent->Device->getDevice();
+  if (!DeviceOrErr)
+    return DeviceOrErr.takeError();
+
+  auto ElapsedTimeOrErr =
+      (*DeviceOrErr)
+          ->getEventElapsedTime(StartEvent->EventInfo, EndEvent->EventInfo);
   if (!ElapsedTimeOrErr)
     return ElapsedTimeOrErr.takeError();
 
@@ -974,10 +1065,15 @@ Error olGetEventElapsedTime_impl(ol_event_handle_t StartEvent,
 }
 
 Error olDestroyEvent_impl(ol_event_handle_t Event) {
-  if (Event->EventInfo)
-    if (auto Res = Event->Device->Device->destroyEvent(Event->EventInfo,
-                                                       Event->ProfilingEnabled))
+  if (Event->EventInfo) {
+    auto DeviceOrErr = Event->Device->getDevice();
+    if (!DeviceOrErr)
+      return DeviceOrErr.takeError();
+    if (auto Res =
+            (*DeviceOrErr)
+                ->destroyEvent(Event->EventInfo, Event->ProfilingEnabled))
       return Res;
+  }
 
   return olDestroy(Event);
 }
@@ -997,8 +1093,11 @@ Error olGetEventInfoImplDetail(ol_event_handle_t Event,
     if (!Event->EventInfo)
       return Info.write<bool>(true);
 
-    auto Res = Queue->Device->Device->isEventComplete(Event->EventInfo,
-                                                      Queue->AsyncInfo);
+    auto DeviceOrErr = Queue->Device->getDevice();
+    if (!DeviceOrErr)
+      return DeviceOrErr.takeError();
+    auto Res =
+        (*DeviceOrErr)->isEventComplete(Event->EventInfo, Queue->AsyncInfo);
     if (auto Err = Res.takeError())
       return Err;
     return Info.write<bool>(*Res);
@@ -1027,15 +1126,19 @@ Error olCreateEvent_impl(ol_queue_handle_t Queue, ol_event_flags_t Flags,
   auto Event = std::make_unique<ol_event_impl_t>(nullptr, Queue->Device, Queue,
                                                  EnableProfiling);
 
-  if (auto Err = Queue->Device->Device->createEvent(&Event->EventInfo,
-                                                    EnableProfiling))
+  auto DeviceOrErr = Queue->Device->getDevice();
+  if (!DeviceOrErr)
+    return DeviceOrErr.takeError();
+  auto *DeviceImpl = *DeviceOrErr;
+
+  if (auto Err = DeviceImpl->createEvent(&Event->EventInfo, EnableProfiling))
     return Err;
 
-  if (auto Err = Queue->Device->Device->recordEvent(
-          Event->EventInfo, Queue->AsyncInfo, EnableProfiling)) {
+  if (auto Err = DeviceImpl->recordEvent(Event->EventInfo, Queue->AsyncInfo,
+                                         EnableProfiling)) {
     if (Event->EventInfo) {
-      if (auto DestroyErr = Queue->Device->Device->destroyEvent(
-              Event->EventInfo, EnableProfiling))
+      if (auto DestroyErr =
+              DeviceImpl->destroyEvent(Event->EventInfo, EnableProfiling))
         return joinErrors(std::move(Err), std::move(DestroyErr));
     }
 
@@ -1052,33 +1155,42 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
   bool IsDstHost = DstDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
   bool IsSrcHost = SrcDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
 
+  auto DstDeviceImplOrErr = DstDevice->getDevice();
+  if (!DstDeviceImplOrErr)
+    return DstDeviceImplOrErr.takeError();
+  auto SrcDeviceImplOrErr = SrcDevice->getDevice();
+  if (!SrcDeviceImplOrErr)
+    return SrcDeviceImplOrErr.takeError();
+  auto *DstDeviceImpl = *DstDeviceImplOrErr;
+  auto *SrcDeviceImpl = *SrcDeviceImplOrErr;
+
   if (IsDstHost && IsSrcHost) {
     if (!Queue) {
       std::memcpy(DstPtr, SrcPtr, Size);
       return Error::success();
     }
 
-    return Queue->Device->Device->dataMemcpy(DstPtr, SrcPtr, Size,
-                                             Queue->AsyncInfo);
+    auto QueueDeviceOrErr = Queue->Device->getDevice();
+    if (!QueueDeviceOrErr)
+      return QueueDeviceOrErr.takeError();
+    return (*QueueDeviceOrErr)
+        ->dataMemcpy(DstPtr, SrcPtr, Size, Queue->AsyncInfo);
   }
 
   // If no queue is given the memcpy will be synchronous
   auto QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
 
   if (IsDstHost) {
-    if (auto Res =
-            SrcDevice->Device->dataRetrieve(DstPtr, SrcPtr, Size, QueueImpl))
+    if (auto Res = SrcDeviceImpl->dataRetrieve(DstPtr, SrcPtr, Size, QueueImpl))
       return Res;
   } else if (IsSrcHost) {
-    if (auto Res =
-            DstDevice->Device->dataSubmit(DstPtr, SrcPtr, Size, QueueImpl))
+    if (auto Res = DstDeviceImpl->dataSubmit(DstPtr, SrcPtr, Size, QueueImpl))
       return Res;
   } else if (SrcDevice->Platform.Plugin == DstDevice->Platform.Plugin &&
              SrcDevice->Platform.Plugin->isDataExchangable(
-                 SrcDevice->Device->getDeviceId(),
-                 DstDevice->Device->getDeviceId())) {
-    if (auto Res = SrcDevice->Device->dataExchange(SrcPtr, *DstDevice->Device,
-                                                   DstPtr, Size, QueueImpl))
+                 SrcDeviceImpl->getDeviceId(), DstDeviceImpl->getDeviceId())) {
+    if (auto Res = SrcDeviceImpl->dataExchange(SrcPtr, *DstDeviceImpl, DstPtr,
+                                               Size, QueueImpl))
       return Res;
   } else {
     if (Queue)
@@ -1089,9 +1201,9 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
     if (!Buffer)
       return createOffloadError(ErrorCode::OUT_OF_RESOURCES,
                                 "Couldn't allocate a buffer for transfer");
-    Error Res = SrcDevice->Device->dataRetrieve(Buffer, SrcPtr, Size, nullptr);
+    Error Res = SrcDeviceImpl->dataRetrieve(Buffer, SrcPtr, Size, nullptr);
     if (!Res)
-      Res = DstDevice->Device->dataSubmit(DstPtr, Buffer, Size, nullptr);
+      Res = DstDeviceImpl->dataSubmit(DstPtr, Buffer, Size, nullptr);
 
     free(Buffer);
     return Res;
@@ -1102,8 +1214,11 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
 
 Error olMemFill_impl(ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
                      const void *PatternPtr, size_t FillSize) {
-  return Queue->Device->Device->dataFill(Ptr, PatternPtr, PatternSize, FillSize,
-                                         Queue->AsyncInfo);
+  auto DeviceOrErr = Queue->Device->getDevice();
+  if (!DeviceOrErr)
+    return DeviceOrErr.takeError();
+  return (*DeviceOrErr)
+      ->dataFill(Ptr, PatternPtr, PatternSize, FillSize, Queue->AsyncInfo);
 }
 
 Error olMemPrefetch_impl(ol_queue_handle_t Queue, size_t Count,
@@ -1113,8 +1228,11 @@ Error olMemPrefetch_impl(ol_queue_handle_t Queue, size_t Count,
     return Error::success();
 
   bool ToHost = (Flags & OL_MEM_MIGRATION_FLAG_DEVICE_TO_HOST) != 0;
-  return Queue->Device->Device->dataPrefetch(Count, Mems, Sizes, ToHost,
-                                             Queue->AsyncInfo);
+  auto DeviceOrErr = Queue->Device->getDevice();
+  if (!DeviceOrErr)
+    return DeviceOrErr.takeError();
+  return (*DeviceOrErr)
+      ->dataPrefetch(Count, Mems, Sizes, ToHost, Queue->AsyncInfo);
 }
 
 Error olCreateProgram_impl(ol_context_handle_t Context,
@@ -1124,8 +1242,13 @@ Error olCreateProgram_impl(ol_context_handle_t Context,
     return Err;
 
   StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);
-  Expected<plugin::DeviceImageTy *> Res = Device->Device->loadBinary(
-      Device->Device->Plugin, Buffer, Context->PluginCtx.get());
+  auto DeviceOrErr = Device->getDevice();
+  if (!DeviceOrErr)
+    return DeviceOrErr.takeError();
+  auto *DeviceImpl = *DeviceOrErr;
+
+  Expected<plugin::DeviceImageTy *> Res = DeviceImpl->loadBinary(
+      DeviceImpl->Plugin, Buffer, Context->PluginCtx.get());
   if (!Res)
     return Res.takeError();
   assert(*Res && "loadBinary returned nullptr");
@@ -1137,9 +1260,8 @@ Error olCreateProgram_impl(ol_context_handle_t Context,
 Error olIsValidBinary_impl(ol_device_handle_t Device, const void *ProgData,
                            size_t ProgDataSize, bool *IsValid) {
   StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);
-  *IsValid = Device->Device ? Device->Device->Plugin.isDeviceCompatible(
-                                  Device->Device->getDeviceId(), Buffer)
-                            : false;
+  *IsValid =
+      Device->Platform.Plugin->isDeviceCompatible(Device->DeviceNum, Buffer);
   return Error::success();
 }
 
@@ -1164,7 +1286,11 @@ Error olCalculateOptimalOccupancy_impl(ol_device_handle_t Device,
                               "provided symbol is not a kernel");
   auto *KernelImpl = std::get<GenericKernelTy *>(Kernel->PluginImpl);
 
-  auto Res = KernelImpl->maxGroupSize(*Device->Device, DynamicMemSize);
+  auto DeviceOrErr = Device->getDevice();
+  if (!DeviceOrErr)
+    return DeviceOrErr.takeError();
+
+  auto Res = KernelImpl->maxGroupSize(**DeviceOrErr, DynamicMemSize);
   if (auto Err = Res.takeError())
     return Err;
 
@@ -1181,7 +1307,10 @@ Error olGetKernelMaxCooperativeGroupCount_impl(
     return createOffloadError(ErrorCode::SYMBOL_KIND,
                               "provided symbol is not a kernel");
 
-  GenericDeviceTy *DeviceImpl = Device->Device;
+  auto DeviceOrErr = Device->getDevice();
+  if (!DeviceOrErr)
+    return DeviceOrErr.takeError();
+  GenericDeviceTy *DeviceImpl = *DeviceOrErr;
   auto *KernelImpl = std::get<GenericKernelTy *>(Kernel->PluginImpl);
 
   // Extract work group size from LaunchSizeArgs
@@ -1207,7 +1336,6 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
                           const ol_kernel_launch_prop_t *Properties,
                           size_t NumArgs, void **ArgPtrs,
                           const size_t *ArgSizes) {
-  auto *DeviceImpl = Device->Device;
   if (Queue && Device != Queue->Device) {
     return createOffloadError(
         ErrorCode::INVALID_DEVICE,
@@ -1217,6 +1345,11 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   if (Kernel->Kind != OL_SYMBOL_KIND_KERNEL)
     return createOffloadError(ErrorCode::SYMBOL_KIND,
                               "provided symbol is not a kernel");
+
+  auto DeviceOrErr = Device->getDevice();
+  if (!DeviceOrErr)
+    return DeviceOrErr.takeError();
+  auto *DeviceImpl = *DeviceOrErr;
 
   auto *QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
   KernelLaunchArgsTy LaunchArgs{};
@@ -1397,14 +1530,22 @@ Error olGetSymbolInfoSize_impl(ol_symbol_handle_t Symbol,
 Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
                                 ol_host_function_cb_t Callback,
                                 void *UserData) {
-  return Queue->Device->Device->enqueueHostCall(Callback, UserData,
-                                                Queue->AsyncInfo);
+  auto DeviceOrErr = Queue->Device->getDevice();
+  if (!DeviceOrErr)
+    return DeviceOrErr.takeError();
+  return (*DeviceOrErr)->enqueueHostCall(Callback, UserData, Queue->AsyncInfo);
 }
 
 Error olMemRegister_impl(ol_device_handle_t Device, void *Ptr, size_t Size,
                          ol_memory_register_flags_t Flags, void **LockedPtr) {
-  Expected<void *> LockedPtrOrErr = Device->Device->registerMemory(
-      Ptr, Size, Flags & OL_MEMORY_REGISTER_FLAG_LOCK_MEMORY);
+  auto DeviceOrErr = Device->getDevice();
+  if (!DeviceOrErr)
+    return DeviceOrErr.takeError();
+
+  Expected<void *> LockedPtrOrErr =
+      (*DeviceOrErr)
+          ->registerMemory(Ptr, Size,
+                           Flags & OL_MEMORY_REGISTER_FLAG_LOCK_MEMORY);
   if (!LockedPtrOrErr)
     return LockedPtrOrErr.takeError();
 
@@ -1415,14 +1556,21 @@ Error olMemRegister_impl(ol_device_handle_t Device, void *Ptr, size_t Size,
 
 Error olMemUnregister_impl(ol_device_handle_t Device, void *Ptr,
                            ol_memory_register_flags_t Flags) {
-  return Device->Device->unregisterMemory(
-      Ptr, Flags & OL_MEMORY_REGISTER_FLAG_UNLOCK_MEMORY);
+  auto DeviceOrErr = Device->getDevice();
+  if (!DeviceOrErr)
+    return DeviceOrErr.takeError();
+  return (*DeviceOrErr)
+      ->unregisterMemory(Ptr, Flags & OL_MEMORY_REGISTER_FLAG_UNLOCK_MEMORY);
 }
 
 Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
   if (Queue->AsyncInfo->Queue) {
-    if (auto Err = Queue->Device->Device->queryAsync(Queue->AsyncInfo, false,
-                                                     IsQueueWorkCompleted))
+    auto DeviceOrErr = Queue->Device->getDevice();
+    if (!DeviceOrErr)
+      return DeviceOrErr.takeError();
+    if (auto Err =
+            (*DeviceOrErr)
+                ->queryAsync(Queue->AsyncInfo, false, IsQueueWorkCompleted))
       return Err;
   } else if (IsQueueWorkCompleted) {
     // No underlying queue means there's no work to complete.
