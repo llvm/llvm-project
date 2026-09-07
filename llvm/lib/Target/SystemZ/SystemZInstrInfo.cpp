@@ -571,9 +571,8 @@ bool SystemZInstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
 bool SystemZInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
                                        ArrayRef<MachineOperand> Pred,
                                        Register DstReg, Register TrueReg,
-                                       Register FalseReg, int &CondCycles,
-                                       int &TrueCycles,
-                                       int &FalseCycles) const {
+                                       Register FalseReg,
+                                       SelectExpansion &Exp) const {
   // Not all subtargets have LOCR instructions.
   if (!STI.hasLoadStoreOnCond())
     return false;
@@ -592,9 +591,9 @@ bool SystemZInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
        SystemZ::GRX32BitRegClass.hasSubClassEq(RC)) ||
       SystemZ::GR32BitRegClass.hasSubClassEq(RC) ||
       SystemZ::GR64BitRegClass.hasSubClassEq(RC)) {
-    CondCycles = 2;
-    TrueCycles = 2;
-    FalseCycles = 2;
+    Exp.CondCycles = 2;
+    Exp.TrueCycles = 2;
+    Exp.FalseCycles = 2;
     return true;
   }
 
