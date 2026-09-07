@@ -409,7 +409,7 @@ define amdgpu_kernel void @test_call_external_void_func_i1_signext(i32) #0 {
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i1) = G_LOAD [[DEF]](p1) :: (volatile "amdgpu-noclobber" load (i1) from `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i1) = G_LOAD [[DEF]](p1) :: (volatile load (i1) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i1_signext
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -469,7 +469,7 @@ define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) #0 {
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i1) = G_LOAD [[DEF]](p1) :: (volatile "amdgpu-noclobber" load (i1) from `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i1) = G_LOAD [[DEF]](p1) :: (volatile load (i1) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i1_zeroext
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -588,7 +588,7 @@ define amdgpu_kernel void @test_call_external_void_func_i8_signext(i32) #0 {
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i8) = G_LOAD [[DEF]](p1) :: (volatile "amdgpu-noclobber" load (i8) from `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i8) = G_LOAD [[DEF]](p1) :: (volatile load (i8) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i8_signext
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -649,7 +649,7 @@ define amdgpu_kernel void @test_call_external_void_func_i8_zeroext(i32) #0 {
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i8) = G_LOAD [[DEF]](p1) :: (volatile "amdgpu-noclobber" load (i8) from `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i8) = G_LOAD [[DEF]](p1) :: (volatile load (i8) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i8_zeroext
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -767,7 +767,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_signext(i32) #0 {
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i16) = G_LOAD [[DEF]](p1) :: (volatile "amdgpu-noclobber" load (i16) from `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i16) = G_LOAD [[DEF]](p1) :: (volatile load (i16) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i16_signext
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -827,7 +827,7 @@ define amdgpu_kernel void @test_call_external_void_func_i16_zeroext(i32) #0 {
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i16) = G_LOAD [[DEF]](p1) :: (volatile "amdgpu-noclobber" load (i16) from `ptr addrspace(1) poison`, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i16) = G_LOAD [[DEF]](p1) :: (volatile load (i16) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i16_zeroext
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1165,7 +1165,7 @@ define amdgpu_kernel void @test_call_external_void_func_i48(i32) #0 {
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i48) = G_LOAD [[DEF]](p1) :: (volatile "amdgpu-noclobber" load (i48) from `ptr addrspace(1) poison`, align 8, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i48) = G_LOAD [[DEF]](p1) :: (volatile load (i48) from `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i48
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1227,7 +1227,7 @@ define amdgpu_kernel void @test_call_external_void_func_i48_signext(i32) #0 {
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i48) = G_LOAD [[DEF]](p1) :: (volatile "amdgpu-noclobber" load (i48) from `ptr addrspace(1) poison`, align 8, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i48) = G_LOAD [[DEF]](p1) :: (volatile load (i48) from `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i48_signext
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1289,7 +1289,7 @@ define amdgpu_kernel void @test_call_external_void_func_i48_zeroext(i32) #0 {
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i48) = G_LOAD [[DEF]](p1) :: (volatile "amdgpu-noclobber" load (i48) from `ptr addrspace(1) poison`, align 8, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i48) = G_LOAD [[DEF]](p1) :: (volatile load (i48) from `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_i48_zeroext
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]

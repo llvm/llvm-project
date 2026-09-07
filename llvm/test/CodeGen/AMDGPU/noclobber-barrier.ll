@@ -870,7 +870,7 @@ define amdgpu_kernel void @monotonic_load(ptr addrspace(1) noalias %out, ptr add
 define amdgpu_kernel void @volatile_load(ptr addrspace(1) noalias %out, ptr addrspace(1) %p1) {
 ; CHECK-LABEL: define amdgpu_kernel void @volatile_load(
 ; CHECK-SAME: ptr addrspace(1) noalias [[OUT:%.*]], ptr addrspace(1) [[P1:%.*]]) {
-; CHECK-NEXT:    [[LD:%.*]] = load volatile i32, ptr addrspace(1) [[P1]], align 4, !amdgpu.noclobber [[META0]]
+; CHECK-NEXT:    [[LD:%.*]] = load volatile i32, ptr addrspace(1) [[P1]], align 4
 ; CHECK-NEXT:    store atomic i32 [[LD]], ptr addrspace(1) [[OUT]] seq_cst, align 4
 ; CHECK-NEXT:    ret void
 ;
