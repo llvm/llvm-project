@@ -2077,7 +2077,7 @@ bool IndVarSimplify::run(Loop *L) {
   Changed |= rewriteNonIntegerIVs(L);
 
   // Create a rewriter object which we'll use to transform the code with.
-  SCEVExpander Rewriter(*SE, "indvars");
+  SCEVExpander Rewriter(*SE, "indvars", true, MSSAU.get());
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   Rewriter.setDebugType(DEBUG_TYPE);
 #endif

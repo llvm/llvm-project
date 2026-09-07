@@ -680,7 +680,8 @@ bool SimplifyIndvar::replaceIVUserWithLoopInvariant(Instruction *I) {
   if (NeedToEmitLCSSAPhis) {
     SmallVector<Instruction *, 1> NeedsLCSSAPhis;
     NeedsLCSSAPhis.push_back(cast<Instruction>(Invariant));
-    formLCSSAForInstructions(NeedsLCSSAPhis, *DT, *LI, SE);
+    formLCSSAForInstructions(NeedsLCSSAPhis, *DT, *LI, SE, nullptr, nullptr,
+                             Rewriter.getMemorySSAUpdater());
     LLVM_DEBUG(dbgs() << " INDVARS: Replacement breaks LCSSA form"
                       << " inserting LCSSA Phis" << '\n');
   }

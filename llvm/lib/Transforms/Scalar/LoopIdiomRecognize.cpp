@@ -1107,7 +1107,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   unsigned DestAS = DestPtr->getType()->getPointerAddressSpace();
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
   IRBuilder<> Builder(Preheader->getTerminator());
-  SCEVExpander Expander(*SE, "loop-idiom");
+  SCEVExpander Expander(*SE, "loop-idiom", true, MSSAU.get());
   SCEVExpanderCleaner ExpCleaner(Expander);
 
   Type *DestInt8PtrTy = Builder.getPtrTy(DestAS);
@@ -1367,7 +1367,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   // header.  This allows us to insert code for it in the preheader.
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
   IRBuilder<> Builder(Preheader->getTerminator());
-  SCEVExpander Expander(*SE, "loop-idiom");
+  SCEVExpander Expander(*SE, "loop-idiom", true, MSSAU.get());
 
   SCEVExpanderCleaner ExpCleaner(Expander);
 
@@ -2249,7 +2249,7 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
 
   IRBuilder<> Builder(Preheader->getTerminator());
   Builder.SetCurrentDebugLocation(CurLoop->getStartLoc());
-  SCEVExpander Expander(*SE, "strlen_idiom");
+  SCEVExpander Expander(*SE, "strlen_idiom", true, MSSAU.get());
   Value *MaterialzedBase = Expander.expandCodeFor(
       Verifier.LoadBaseEv, Verifier.LoadBaseEv->getType(),
       Builder.GetInsertPoint());
@@ -3792,7 +3792,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
       Val->getName() + ".numactivebits", /*HasNUW=*/true,
       /*HasNSW=*/Bitwidth != 2);
 
-  SCEVExpander Expander(*SE, "loop-idiom");
+  SCEVExpander Expander(*SE, "loop-idiom", true, MSSAU.get());
   Expander.setInsertPoint(&*Builder.GetInsertPoint());
   Value *ExtraOffset = Expander.expandCodeFor(ExtraOffsetExpr);
 

@@ -36,6 +36,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/IR/DebugInfo.h"
@@ -48,6 +49,7 @@
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
+#include <optional>
 using namespace llvm;
 
 #define DEBUG_TYPE "lcssa"
@@ -78,13 +80,12 @@ using LoopExitBlocksTy = SmallDenseMap<Loop *, SmallVector<BasicBlock *, 1>>;
 /// For every instruction from the worklist, check to see if it has any uses
 /// that are outside the current loop.  If so, insert LCSSA PHI nodes and
 /// rewrite the uses.
-static bool
-formLCSSAForInstructionsImpl(SmallVectorImpl<Instruction *> &Worklist,
-                             const DominatorTree &DT, const LoopInfo &LI,
-                             ScalarEvolution *SE,
-                             SmallVectorImpl<PHINode *> *PHIsToRemove,
-                             SmallVectorImpl<PHINode *> *InsertedPHIs,
-                             LoopExitBlocksTy &LoopExitBlocks) {
+static bool formLCSSAForInstructionsImpl(
+    SmallVectorImpl<Instruction *> &Worklist, const DominatorTree &DT,
+    const LoopInfo &LI, ScalarEvolution *SE,
+    SmallVectorImpl<PHINode *> *PHIsToRemove,
+    SmallVectorImpl<PHINode *> *InsertedPHIs, LoopExitBlocksTy &LoopExitBlocks,
+    MemorySSAUpdater *MSSAU) {
   SmallVector<Use *, 16> UsesToRewrite;
   SmallSetVector<PHINode *, 16> LocalPHIsToRemove;
   PredIteratorCache PredCache;
@@ -141,8 +142,11 @@ formLCSSAForInstructionsImpl(SmallVectorImpl<Instruction *> &Worklist,
 
     if (DropLifetimeMarkers) {
       // Use-list order is arbitrary, so wait until all markers are collected.
-      for (Instruction *Marker : LifetimeMarkers)
+      for (Instruction *Marker : LifetimeMarkers) {
+        if (MSSAU)
+          MSSAU->removeMemoryAccess(Marker);
         Marker->eraseFromParent();
+      }
       Changed = true;
     }
 
@@ -329,11 +333,12 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
                                     const DominatorTree &DT, const LoopInfo &LI,
                                     ScalarEvolution *SE,
                                     SmallVectorImpl<PHINode *> *PHIsToRemove,
-                                    SmallVectorImpl<PHINode *> *InsertedPHIs) {
+                                    SmallVectorImpl<PHINode *> *InsertedPHIs,
+                                    MemorySSAUpdater *MSSAU) {
   LoopExitBlocksTy LoopExitBlocks;
 
   return formLCSSAForInstructionsImpl(Worklist, DT, LI, SE, PHIsToRemove,
-                                      InsertedPHIs, LoopExitBlocks);
+                                      InsertedPHIs, LoopExitBlocks, MSSAU);
 }
 
 // Compute the set of BasicBlocks in the loop `L` dominating at least one exit.
@@ -380,8 +385,8 @@ static void computeBlocksDominatingExits(
 }
 
 static bool formLCSSAImpl(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
-                          ScalarEvolution *SE,
-                          LoopExitBlocksTy &LoopExitBlocks) {
+                          ScalarEvolution *SE, LoopExitBlocksTy &LoopExitBlocks,
+                          MemorySSAUpdater *MSSAU) {
   bool Changed = false;
 
 #ifdef EXPENSIVE_CHECKS
@@ -437,7 +442,7 @@ static bool formLCSSAImpl(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
   }
 
   Changed = formLCSSAForInstructionsImpl(Worklist, DT, *LI, SE, nullptr,
-                                         nullptr, LoopExitBlocks);
+                                         nullptr, LoopExitBlocks, MSSAU);
 
   assert(L.isLCSSAForm(DT));
 
@@ -445,40 +450,43 @@ static bool formLCSSAImpl(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
 }
 
 bool llvm::formLCSSA(Loop &L, const DominatorTree &DT, const LoopInfo *LI,
-                     ScalarEvolution *SE) {
+                     ScalarEvolution *SE, MemorySSAUpdater *MSSAU) {
   LoopExitBlocksTy LoopExitBlocks;
 
-  return formLCSSAImpl(L, DT, LI, SE, LoopExitBlocks);
+  return formLCSSAImpl(L, DT, LI, SE, LoopExitBlocks, MSSAU);
 }
 
 /// Process a loop nest depth first.
 static bool formLCSSARecursivelyImpl(Loop &L, const DominatorTree &DT,
                                      const LoopInfo *LI, ScalarEvolution *SE,
-                                     LoopExitBlocksTy &LoopExitBlocks) {
+                                     LoopExitBlocksTy &LoopExitBlocks,
+                                     MemorySSAUpdater *MSSAU) {
   bool Changed = false;
 
   // Recurse depth-first through inner loops.
   for (Loop *SubLoop : L.getSubLoops())
-    Changed |= formLCSSARecursivelyImpl(*SubLoop, DT, LI, SE, LoopExitBlocks);
+    Changed |=
+        formLCSSARecursivelyImpl(*SubLoop, DT, LI, SE, LoopExitBlocks, MSSAU);
 
-  Changed |= formLCSSAImpl(L, DT, LI, SE, LoopExitBlocks);
+  Changed |= formLCSSAImpl(L, DT, LI, SE, LoopExitBlocks, MSSAU);
   return Changed;
 }
 
 /// Process a loop nest depth first.
 bool llvm::formLCSSARecursively(Loop &L, const DominatorTree &DT,
-                                const LoopInfo *LI, ScalarEvolution *SE) {
+                                const LoopInfo *LI, ScalarEvolution *SE,
+                                MemorySSAUpdater *MSSAU) {
   LoopExitBlocksTy LoopExitBlocks;
 
-  return formLCSSARecursivelyImpl(L, DT, LI, SE, LoopExitBlocks);
+  return formLCSSARecursivelyImpl(L, DT, LI, SE, LoopExitBlocks, MSSAU);
 }
 
 /// Process all loops in the function, inner-most out.
 static bool formLCSSAOnAllLoops(const LoopInfo *LI, const DominatorTree &DT,
-                                ScalarEvolution *SE) {
+                                ScalarEvolution *SE, MemorySSAUpdater *MSSAU) {
   bool Changed = false;
   for (const auto &L : *LI)
-    Changed |= formLCSSARecursively(*L, DT, LI, SE);
+    Changed |= formLCSSARecursively(*L, DT, LI, SE, MSSAU);
   return Changed;
 }
 
@@ -551,14 +559,20 @@ bool LCSSAWrapperPass::runOnFunction(Function &F) {
   auto *SEWP = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
   SE = SEWP ? &SEWP->getSE() : nullptr;
 
-  return formLCSSAOnAllLoops(LI, *DT, SE);
+  std::optional<MemorySSAUpdater> MSSAU;
+  if (auto *MSSA = getAnalysisIfAvailable<MemorySSAWrapperPass>())
+    MSSAU.emplace(&MSSA->getMSSA());
+  return formLCSSAOnAllLoops(LI, *DT, SE, MSSAU ? &*MSSAU : nullptr);
 }
 
 PreservedAnalyses LCSSAPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto *SE = AM.getCachedResult<ScalarEvolutionAnalysis>(F);
-  if (!formLCSSAOnAllLoops(&LI, DT, SE))
+  std::optional<MemorySSAUpdater> MSSAU;
+  if (auto *MSSA = AM.getCachedResult<MemorySSAAnalysis>(F))
+    MSSAU.emplace(&MSSA->getMSSA());
+  if (!formLCSSAOnAllLoops(&LI, DT, SE, MSSAU ? &*MSSAU : nullptr))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;

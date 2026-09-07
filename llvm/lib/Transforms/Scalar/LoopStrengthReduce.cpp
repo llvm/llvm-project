@@ -6241,7 +6241,7 @@ void LSRInstance::ImplementSolution(
     }
 
   auto InsertedInsts = InsertedNonLCSSAInsts.takeVector();
-  formLCSSAForInstructions(InsertedInsts, DT, LI, &SE);
+  formLCSSAForInstructions(InsertedInsts, DT, LI, &SE, nullptr, nullptr, MSSAU);
 
   for (const IVChain &Chain : IVChainVec) {
     GenerateIVChain(Chain, DeadInsts);
@@ -6313,8 +6313,8 @@ LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
       MSSAU(MSSAU), AMK(PreferredAddresingMode.getNumOccurrences() > 0
                             ? PreferredAddresingMode
                             : TTI.getPreferredAddressingMode(L, &SE)),
-      Rewriter(SE, "lsr", PreserveLCSSA), ShouldPreserveLCSSA(PreserveLCSSA),
-      BaselineCost(L, SE, TTI, AMK) {
+      Rewriter(SE, "lsr", PreserveLCSSA, MSSAU),
+      ShouldPreserveLCSSA(PreserveLCSSA), BaselineCost(L, SE, TTI, AMK) {
   // If LoopSimplify form is not available, stay out of trouble.
   if (!L->isLoopSimplifyForm())
     return;
@@ -7229,7 +7229,7 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   // skip the updates in each loop iteration.
   if (L->isRecursivelyLCSSAForm(DT, LI) && L->getExitBlock()) {
     SmallVector<WeakTrackingVH, 16> DeadInsts;
-    SCEVExpander Rewriter(SE, "lsr", true);
+    SCEVExpander Rewriter(SE, "lsr", true, MSSAU.get());
     int Rewrites = rewriteLoopExitValues(L, &LI, &TLI, &SE, &TTI, Rewriter, &DT,
                                          UnusedIndVarInLoop, DeadInsts);
     Rewriter.clear();
