@@ -16821,12 +16821,13 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
       = cast<CXXConversionDecl>(
                          Best->Conversions[0].UserDefined.ConversionFunction);
 
+    // FoundDecl may be a UsingShadowDecl naming the conversion function.
+    assert(Conv == Best->FoundDecl.getDecl()->getUnderlyingDecl() &&
+           "Found Decl & conversion-to-functionptr should be same, right?!");
     CheckMemberOperatorAccess(LParenLoc, Object.get(), nullptr,
                               Best->FoundDecl);
-    if (DiagnoseUseOfDecl(Best->FoundDecl, LParenLoc))
+    if (DiagnoseUseOfDecl(Conv, LParenLoc))
       return ExprError();
-    assert(Conv == Best->FoundDecl.getDecl() &&
-             "Found Decl & conversion-to-functionptr should be same, right?!");
     // We selected one of the surrogate functions that converts the
     // object parameter to a function pointer. Perform the conversion
     // on the object argument, then let BuildCallExpr finish the job.
