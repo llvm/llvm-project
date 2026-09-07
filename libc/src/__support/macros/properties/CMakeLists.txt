@@ -36,6 +36,7 @@ add_header_library(
     libc.hdr.float_macros
     libc.hdr.stdint_proxy
     libc.include.llvm-libc-macros.float16_macros
+    libc.include.llvm-libc-macros.bfloat16_macros
     libc.include.llvm-libc-types.float128
 )
 

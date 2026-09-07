@@ -374,6 +374,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "llvm_libc_macros_bfloat16_macros",
+    hdrs = ["include/llvm-libc-macros/bfloat16-macros.h"],
+)
+
+libc_support_library(
     name = "llvm_libc_types_cfloat128",
     hdrs = ["include/llvm-libc-types/cfloat128.h"],
     deps = [

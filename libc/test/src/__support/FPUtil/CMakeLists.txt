@@ -1,6 +1,18 @@
 add_custom_target(libc-fputil-tests)
 
 add_fp_unittest(
+  builtin_bfloat16_test
+  SUITE
+    libc-fputil-tests
+  SRCS
+    builtin_bfloat16_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.properties.types
+)
+
+add_fp_unittest(
   dyadic_float_test
   NEED_MPFR
   SUITE
