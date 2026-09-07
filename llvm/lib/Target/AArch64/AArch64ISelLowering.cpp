@@ -30118,7 +30118,7 @@ static SDValue performSelectCombine(SDNode *N,
 
 static SDValue performDUPCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
-                                 const AArch64Subtarget *SubTarget) {
+                                 const AArch64Subtarget *Subtarget) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
   // If "v2i32 DUP(x)" and "v4i32 DUP(x)" both exist, use an extract from the
@@ -30142,17 +30142,17 @@ static SDValue performDUPCombine(SDNode *N,
     //   v4i32 = SCALAR_TO_VECTOR (i32 (zextloadi8 addr)) ; Matches to ldr b0
     //   v4i32 = DUPLANE32 (v4i32), 0
     if (auto *LD = dyn_cast<LoadSDNode>(Op)) {
-      if (SubTarget->preferSVEVectors() &&
-          SubTarget->isSVEorStreamingSVEAvailable() && Op->hasOneUse() &&
+      if (Subtarget->preferSVEVectors() &&
+          Subtarget->isSVEorStreamingSVEAvailable() && Op->hasOneUse() &&
           VT.getScalarType().isInteger()) {
-        EVT ScalaleVT = getContainerForFixedLengthVector(DCI.DAG, VT);
-        SDValue SplatNode =
-            DCI.DAG.getNode(ISD::SPLAT_VECTOR, DL, ScalaleVT, Op);
-        // Using SVE on 64bit Vectors with the same scalar type is not
-        // profitable
-        if (!(VT.is64BitVector() && SplatNode.getValueType().getScalarType() ==
-                                        LD->getMemoryVT().getScalarType()))
+        EVT ScalableVT = getContainerForFixedLengthVector(DCI.DAG, VT);
+        // Using SVE Vectors with the same scalar type is not profitable
+        if (!(ScalableVT.getScalarType() ==
+              LD->getMemoryVT().getScalarType())) {
+          SDValue SplatNode =
+              DCI.DAG.getNode(ISD::SPLAT_VECTOR, DL, ScalableVT, Op);
           return convertFromScalableVector(DCI.DAG, VT, SplatNode);
+        }
       }
       ISD::LoadExtType ExtType = LD->getExtensionType();
       EVT MemVT = LD->getMemoryVT();

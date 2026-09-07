@@ -1023,7 +1023,7 @@ def FeatureLimited64bitVectorMulBandwidth : SubtargetFeature<
     [], InlineIgnore>;
 
 def FeaturePreferSVEVectors : SubtargetFeature <
-    "prefer vectors to be SVE", "PreferSVEVectors", "true",
+    "prefer-sve-vectors", "PreferSVEVectors", "true",
     "Prefer Vectors to use SVE", [], InlineIgnore>;
 
 //===----------------------------------------------------------------------===//

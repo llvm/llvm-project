@@ -604,7 +604,8 @@ def TuneNeoverseV3 : SubtargetFeature<"neoversev3", "ARMProcFamily", "NeoverseV3
                                       FeatureUseFixedOverScalableIfEqualCost,
                                       FeatureAvoidLDAPUR,
                                       FeaturePredictableSelectIsExpensive,
-                                      FeatureMaxInterleaveFactor4]>;
+                                      FeatureMaxInterleaveFactor4,
+                                      FeaturePreferSVEVectors]>;
 
 def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "NeoverseV3AE",
                                       "Neoverse V3AE ARM processors", [
