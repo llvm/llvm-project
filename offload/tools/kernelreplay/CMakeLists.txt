@@ -6,6 +6,7 @@ llvm_update_compile_flags(llvm-omp-kernel-replay)
 
 target_include_directories(llvm-omp-kernel-replay PRIVATE
   ${LIBOMPTARGET_INCLUDE_DIR}
+  ${CMAKE_CURRENT_BINARY_DIR}/../../liboffload/API
 )
 target_link_libraries(llvm-omp-kernel-replay PRIVATE
   LLVMSupport

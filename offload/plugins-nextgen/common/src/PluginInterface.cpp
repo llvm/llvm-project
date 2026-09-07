@@ -1627,72 +1627,6 @@ int32_t GenericPluginTy::data_notify_unmapped(int32_t DeviceId, void *HstPtr) {
   return OFFLOAD_SUCCESS;
 }
 
-int32_t GenericPluginTy::data_submit(int32_t DeviceId, void *TgtPtr,
-                                     void *HstPtr, int64_t Size) {
-  return data_submit_async(DeviceId, TgtPtr, HstPtr, Size,
-                           /*AsyncInfoPtr=*/nullptr);
-}
-
-int32_t GenericPluginTy::data_submit_async(int32_t DeviceId, void *TgtPtr,
-                                           void *HstPtr, int64_t Size,
-                                           __tgt_async_info *AsyncInfoPtr) {
-  auto Err = getDevice(DeviceId).dataSubmit(TgtPtr, HstPtr, Size, AsyncInfoPtr);
-  if (Err) {
-    REPORT() << "Failure to copy data from host to device. Pointers: host "
-             << "= " << HstPtr << ", device = " << TgtPtr << ", size = " << Size
-             << ": " << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::data_retrieve(int32_t DeviceId, void *HstPtr,
-                                       void *TgtPtr, int64_t Size) {
-  return data_retrieve_async(DeviceId, HstPtr, TgtPtr, Size,
-                             /*AsyncInfoPtr=*/nullptr);
-}
-
-int32_t GenericPluginTy::data_retrieve_async(int32_t DeviceId, void *HstPtr,
-                                             void *TgtPtr, int64_t Size,
-                                             __tgt_async_info *AsyncInfoPtr) {
-  auto Err =
-      getDevice(DeviceId).dataRetrieve(HstPtr, TgtPtr, Size, AsyncInfoPtr);
-  if (Err) {
-    REPORT() << "Failure to copy data from device to host. Pointers: host "
-             << "= " << HstPtr << ", device = " << TgtPtr << ", size = " << Size
-             << ": " << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::data_exchange(int32_t SrcDeviceId, void *SrcPtr,
-                                       int32_t DstDeviceId, void *DstPtr,
-                                       int64_t Size) {
-  return data_exchange_async(SrcDeviceId, SrcPtr, DstDeviceId, DstPtr, Size,
-                             /*AsyncInfoPtr=*/nullptr);
-}
-
-int32_t GenericPluginTy::data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
-                                             int DstDeviceId, void *DstPtr,
-                                             int64_t Size,
-                                             __tgt_async_info *AsyncInfo) {
-  GenericDeviceTy &SrcDevice = getDevice(SrcDeviceId);
-  GenericDeviceTy &DstDevice = getDevice(DstDeviceId);
-  auto Err = SrcDevice.dataExchange(SrcPtr, DstDevice, DstPtr, Size, AsyncInfo);
-  if (Err) {
-    REPORT() << "Failure to copy data from device (" << SrcDeviceId
-             << ") to device (" << DstDeviceId
-             << "). Pointers: host = " << SrcPtr << ", device = " << DstPtr
-             << ", size = " << Size << ": " << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
 int32_t GenericPluginTy::launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
                                        KernelLaunchArgsTy &LaunchArgs,
                                        __tgt_async_info *AsyncInfoPtr) {
@@ -1701,30 +1635,6 @@ int32_t GenericPluginTy::launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
   if (Err) {
     REPORT() << "Failure to run target region " << TgtEntryPtr << " in device "
              << DeviceId << ": " << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::synchronize(int32_t DeviceId,
-                                     __tgt_async_info *AsyncInfoPtr) {
-  auto Err = getDevice(DeviceId).synchronize(AsyncInfoPtr);
-  if (Err) {
-    REPORT() << "Failure to synchronize stream " << AsyncInfoPtr->Queue << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::query_async(int32_t DeviceId,
-                                     __tgt_async_info *AsyncInfoPtr) {
-  auto Err = getDevice(DeviceId).queryAsync(AsyncInfoPtr);
-  if (Err) {
-    REPORT() << "Failure to query stream " << AsyncInfoPtr->Queue << ": "
-             << toString(std::move(Err));
     return OFFLOAD_FAIL;
   }
 

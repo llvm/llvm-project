@@ -50,6 +50,7 @@ struct DeviceTy {
   GenericPluginTy *RTL;
   int32_t RTLDeviceID;
   ol_device_handle_t DeviceHandle;
+  ol_context_handle_t Context;
 
   DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID,
            ol_device_handle_t DeviceHandle);
@@ -61,6 +62,9 @@ struct DeviceTy {
 
   /// Try to initialize the device and return any failure.
   llvm::Error init();
+
+  /// Deinitialize the OpenMP device.
+  llvm::Error deinit();
 
   /// Provide access to the mapping handler.
   MappingInfoTy &getMappingInfo() { return MappingInfo; }
@@ -188,9 +192,6 @@ struct DeviceTy {
   }
 
 private:
-  /// Deinitialize the device (and plugin).
-  void deinit();
-
   /// All offload entries available on this device.
   using DeviceOffloadEntriesMapTy =
       llvm::DenseMap<llvm::StringRef, OffloadEntryTy>;
