@@ -42,6 +42,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
@@ -2074,6 +2075,22 @@ llvm::Value *CodeGenFunction::emitScalarConstant(
   return Constant.getValue();
 }
 
+static bool isInvariantLoad(CodeGenFunction &CGF, LangAS TypeAS,
+                            llvm::Value *Ptr) {
+  if (TypeAS == LangAS::opencl_constant)
+    return true;
+
+  // CUDA represents constant memory as a declaration attribute, so the
+  // expression type uses the default address space. Recover the storage
+  // address space from the underlying global after the address-space cast.
+  if (!CGF.getLangOpts().CUDAIsDevice)
+    return false;
+  const auto *GV =
+      llvm::dyn_cast<llvm::GlobalValue>(llvm::getUnderlyingObject(Ptr));
+  return GV && GV->getAddressSpace() == CGF.getContext().getTargetAddressSpace(
+                                            LangAS::cuda_constant);
+}
+
 llvm::Value *CodeGenFunction::EmitLoadOfScalar(LValue lvalue,
                                                SourceLocation Loc) {
   return EmitLoadOfScalar(lvalue.getAddress(), lvalue.isVolatile(),
@@ -2248,7 +2265,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
       Addr.withElementType(convertTypeForLoadStore(Ty, Addr.getElementType()));
 
   llvm::LoadInst *Load = Builder.CreateLoad(Addr, Volatile);
-  if (Ty.getAddressSpace() == LangAS::opencl_constant)
+  if (isInvariantLoad(*this, Ty.getAddressSpace(), Addr.getBasePointer()))
     Load->setMetadata(llvm::LLVMContext::MD_invariant_load,
                       llvm::MDNode::get(Load->getContext(), {}));
   if (isNontemporal) {
