@@ -2348,6 +2348,18 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   if (IsWin64Prologue && TRI->hasStackRealignment(MF)) {
     assert(HasFP && "There should be a frame pointer if stack is realigned.");
     BuildStackAlignAND(MBB, MBBI, DL, SPOrEstablisher, MaxAlign);
+
+    // The establisher frame the runtime hands to outlined helpers, such as SEH
+    // filters, is the value we just masked, and the offsets @llvm.localescape
+    // hands out are relative to the result. Since the AND strips a
+    // run-time-variable amount, helpers cannot reach the locals with a constant
+    // offset; record the mask so they can redo the realignment instead, the way
+    // a funclet prologue does. See the @llvm.eh.recoverfp lowering.
+    if (!IsFunclet &&
+        (isAsynchronousEHPersonality(Personality) || MF.hasEHFunclets())) {
+      MF.getWinEHFuncInfo()->SEHFrameAlignMask = -(int64_t)MaxAlign;
+      MF.getWinEHFuncInfo()->SEHSetFrameOffset = 0;
+    }
   }
 
   // We already dealt with stack realignment and funclets above.

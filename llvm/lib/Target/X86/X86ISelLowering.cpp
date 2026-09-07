@@ -26928,8 +26928,41 @@ static SDValue recoverFramePointer(SelectionDAG &DAG, const Function *Fn,
   // Return EntryEBP + ParentFrameOffset for x64. This adjusts from RSP after
   // prologue to RBP in the parent function.
   const X86Subtarget &Subtarget = DAG.getSubtarget<X86Subtarget>();
-  if (Subtarget.is64Bit())
-    return DAG.getNode(ISD::ADD, dl, PtrVT, EntryEBP, ParentFrameOffset);
+  if (Subtarget.is64Bit()) {
+    SDValue ParentFP =
+        DAG.getNode(ISD::ADD, dl, PtrVT, EntryEBP, ParentFrameOffset);
+
+    // If the parent dynamically realigned its stack then the offsets handed out
+    // by llvm.localescape are relative to the realigned stack (or base)
+    // pointer, which is a dynamic distance below the establisher frame. Redo
+    // the realignment to get back to it, just like a funclet prologue does.
+    // ParentFrameOffset is zero in that case, and the mask is a no-op when the
+    // parent did not realign its stack.
+    MCSymbol *AlignMaskSym =
+        MF.getContext().getOrCreateParentFrameAlignMaskSymbol(
+            GlobalValue::dropLLVMManglingEscape(Fn->getName()));
+
+    // All the filter needs is the parent's alignment, and emitting the parent
+    // records it on the symbol. So when the parent comes first, as it does for
+    // helpers the frontend outlines, read the alignment back and fold it in: a
+    // no-op mask drops the masking entirely, and any other mask becomes a
+    // plain immediate. The symbol is still unassigned if the parent has not
+    // been emitted yet, and then we have to reference it and let the assembler
+    // fill it in.
+    SDValue AlignMask;
+    if (AlignMaskSym->isVariable())
+      if (const auto *CE =
+              dyn_cast<MCConstantExpr>(AlignMaskSym->getVariableValue())) {
+        if (CE->getValue() == -1)
+          return ParentFP;
+        AlignMask = DAG.getSignedConstant(CE->getValue(), dl, PtrVT);
+      }
+
+    if (!AlignMask)
+      AlignMask = DAG.getNode(ISD::LOCAL_RECOVER, dl, PtrVT,
+                              DAG.getMCSymbol(AlignMaskSym, PtrVT));
+    return DAG.getNode(ISD::AND, dl, PtrVT, ParentFP, AlignMask);
+  }
 
   int RegNodeSize = getSEHRegistrationNodeSize(Fn);
   // RegNodeBase = EntryEBP - RegNodeSize

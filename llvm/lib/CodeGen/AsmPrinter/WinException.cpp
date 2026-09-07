@@ -573,11 +573,23 @@ void WinException::emitCSpecificHandlerTable(const MachineFunction *MF) {
     // llvm.eh.recoverfp.
     StringRef FLinkageName =
         GlobalValue::dropLLVMManglingEscape(MF->getFunction().getName());
+    // llvm.eh.recoverfp recovers the register the offsets handed out by
+    // llvm.localescape are relative to as
+    //
+    //   (EstablisherFrame + $parent_frame_offset) & $parent_frame_align_mask
+    //
+    // Frame lowering fills both quantities in when it emits the prologue.
     MCSymbol *ParentFrameOffset =
         Ctx.getOrCreateParentFrameOffsetSymbol(FLinkageName);
     const MCExpr *MCOffset =
         MCConstantExpr::create(FuncInfo.SEHSetFrameOffset, Ctx);
     Asm->OutStreamer->emitAssignment(ParentFrameOffset, MCOffset);
+
+    MCSymbol *ParentFrameAlignMask =
+        Ctx.getOrCreateParentFrameAlignMaskSymbol(FLinkageName);
+    const MCExpr *MCAlignMask =
+        MCConstantExpr::create(FuncInfo.SEHFrameAlignMask, Ctx);
+    Asm->OutStreamer->emitAssignment(ParentFrameAlignMask, MCAlignMask);
   }
 
   // Use the assembler to compute the number of table entries through label
