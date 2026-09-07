@@ -12,6 +12,7 @@
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
@@ -34,6 +35,8 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Type.h"
 #include "llvm/Support/UndefPoison.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
@@ -1010,7 +1013,8 @@ SmallVector<APFloat>
 llvm::ConstantFoldUnaryFPOp(unsigned Opcode, LLT DstTy, Register Src,
                             const MachineRegisterInfo &MRI) {
   LLT DstEltTy = DstTy.getScalarType();
-  auto Fold = [Opcode, DstEltTy](const APFloat &V) -> APFloat {
+  auto Fold = [Opcode, DstEltTy,
+               &MRI](const APFloat &V) -> std::optional<APFloat> {
     APFloat Result(V);
     bool Unused;
     switch (Opcode) {
@@ -1043,22 +1047,21 @@ llvm::ConstantFoldUnaryFPOp(unsigned Opcode, LLT DstTy, Register Src,
                      APFloat::rmNearestTiesToEven, &Unused);
       return Result;
     case TargetOpcode::G_FSQRT:
-      Result.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
-                     &Unused);
-      Result = APFloat(std::sqrt(Result.convertToDouble()));
-      break;
-    case TargetOpcode::G_FLOG2:
-      Result.convert(APFloat::IEEEdouble(), APFloat::rmNearestTiesToEven,
-                     &Unused);
-      Result = APFloat(std::log2(Result.convertToDouble()));
-      break;
+    case TargetOpcode::G_FLOG2: {
+      Type *Ty =
+          Type::getFloatingPointTy(MRI.getMF().getFunction().getContext(),
+                                   getFltSemanticForLLT(DstEltTy));
+      Constant *C = ConstantFoldFP(Opcode == TargetOpcode::G_FSQRT
+                                       ? static_cast<double (*)(double)>(sqrt)
+                                       : static_cast<double (*)(double)>(log2),
+                                   V, Ty);
+      if (!C)
+        return std::nullopt;
+      return cast<ConstantFP>(C)->getValueAPF();
+    }
     default:
       llvm_unreachable("unexpected opcode in ConstantFoldUnaryFPOp");
     }
-    // Only G_FSQRT and G_FLOG2 reach here; convert the double result back to
-    // the source (== destination) semantics.
-    Result.convert(V.getSemantics(), APFloat::rmNearestTiesToEven, &Unused);
-    return Result;
   };
 
   auto tryFoldScalar = [&](Register R) -> std::optional<APFloat> {
