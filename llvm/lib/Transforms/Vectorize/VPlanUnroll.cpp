@@ -295,7 +295,8 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
 
 void UnrollState::unrollMemOpWithVFMultiple(VPRecipeBase &R,
                                             unsigned VFMultiple) {
-  assert(VFMultiple > 1 && UF % VFMultiple == 0);
+  assert(VFMultiple > 1 && UF % VFMultiple == 0 &&
+         "expected VFMultiple to divide UF");
   SmallVector<VPRecipeBase *, 4> Groups(UF / VFMultiple, nullptr);
   Groups[0] = &R;
 
@@ -361,10 +362,11 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     }
   }
 
-  if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(&R);
-      WidenMem && WidenMem->getVFMultiple() > 1) {
-    unrollMemOpWithVFMultiple(R, WidenMem->getVFMultiple());
-    return;
+  if (auto *WidenMem = dyn_cast<VPWidenMemoryRecipe>(&R)) {
+    if (WidenMem && WidenMem->getVFMultiple() > 1) {
+      unrollMemOpWithVFMultiple(R, WidenMem->getVFMultiple());
+      return;
+    }
   }
 
   if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
