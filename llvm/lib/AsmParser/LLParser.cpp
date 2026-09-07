@@ -1349,6 +1349,7 @@ bool LLParser::parseAliasOrIFunc(const std::string &Name, unsigned NameID,
   Constant *Aliasee;
   LocTy AliaseeLoc = Lex.getLoc();
   if (Lex.getKind() != lltok::kw_bitcast &&
+      Lex.getKind() != lltok::kw_bytecast &&
       Lex.getKind() != lltok::kw_getelementptr &&
       Lex.getKind() != lltok::kw_addrspacecast &&
       Lex.getKind() != lltok::kw_inttoptr) {
@@ -4684,6 +4685,7 @@ bool LLParser::parseValID(ValID &ID, PerFunctionState *PFS, Type *ExpectedTy) {
 
   case lltok::kw_trunc:
   case lltok::kw_bitcast:
+  case lltok::kw_bytecast:
   case lltok::kw_addrspacecast:
   case lltok::kw_inttoptr:
   case lltok::kw_ptrtoaddr:
@@ -7880,6 +7882,7 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
   }
   case lltok::kw_sext:
   case lltok::kw_bitcast:
+  case lltok::kw_bytecast:
   case lltok::kw_fptoui:
   case lltok::kw_fptosi:
   case lltok::kw_inttoptr:

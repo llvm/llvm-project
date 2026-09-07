@@ -963,6 +963,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   INSTKEYWORD(ptrtoaddr,   PtrToAddr);
   INSTKEYWORD(ptrtoint,    PtrToInt);
   INSTKEYWORD(bitcast,     BitCast);
+  INSTKEYWORD(bytecast,    ByteCast);
   INSTKEYWORD(addrspacecast, AddrSpaceCast);
   INSTKEYWORD(select,      Select);
   INSTKEYWORD(va_arg,      VAArg);

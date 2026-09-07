@@ -374,7 +374,8 @@ public:
 
   /// Determine if the Opcode is one of the CastInst instructions.
   static inline bool isCast(unsigned Opcode) {
-    return Opcode >= CastOpsBegin && Opcode < CastOpsEnd;
+    return (Opcode >= CastOpsBegin && Opcode < CastOpsEnd) ||
+           Opcode == ByteCast;
   }
 
   /// Determine if the Opcode is one of the FuncletPadInst instructions.

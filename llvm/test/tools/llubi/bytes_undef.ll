@@ -7,15 +7,15 @@ define void @main() {
   %undef = alloca b8
   %load_undef1 = load b8, ptr %undef
   %load_undef2 = load b8, ptr %undef
-  %bitcast_undef1 = bitcast b8 %load_undef1 to i8
-  %bitcast_undef2 = bitcast b8 %load_undef1 to i8
+  %bitcast_undef1 = bytecast b8 %load_undef1 to i8
+  %bitcast_undef2 = bytecast b8 %load_undef1 to i8
   ret void
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %undef = alloca b8, align 1 => ptr 0x8 [undef]
 ; CHECK-NEXT:   %load_undef1 = load b8, ptr %undef, align 1 => b8 0x!! 
 ; CHECK-NEXT:   %load_undef2 = load b8, ptr %undef, align 1 => b8 0x!! 
-; CHECK-NEXT:   %bitcast_undef1 = bitcast b8 %load_undef1 to i8 => poison
-; CHECK-NEXT:   %bitcast_undef2 = bitcast b8 %load_undef1 to i8 => poison
+; CHECK-NEXT:   %bitcast_undef1 = bytecast b8 %load_undef1 to i8 => poison
+; CHECK-NEXT:   %bitcast_undef2 = bytecast b8 %load_undef1 to i8 => poison
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

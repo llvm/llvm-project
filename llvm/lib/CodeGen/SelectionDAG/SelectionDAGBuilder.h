@@ -604,6 +604,7 @@ private:
   void visitPtrToInt(const User &I);
   void visitIntToPtr(const User &I);
   void visitBitCast(const User &I);
+  void visitByteCast(const User &I);
   void visitAddrSpaceCast(const User &I);
 
   void visitExtractElement(const User &I);

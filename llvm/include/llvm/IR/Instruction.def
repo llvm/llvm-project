@@ -196,6 +196,9 @@ HANDLE_CAST_INST(49, PtrToAddr, PtrToAddrInst) // Pointer -> Address
 HANDLE_CAST_INST(50, IntToPtr, IntToPtrInst)  // Integer -> Pointer
 HANDLE_CAST_INST(51, BitCast , BitCastInst )  // Type cast
 HANDLE_CAST_INST(52, AddrSpaceCast, AddrSpaceCastInst)  // addrspace cast
+// ByteCast uses the terminal opcode so existing opcodes remain stable. It is
+// handled explicitly where code relies on the contiguous cast range.
+HANDLE_CAST_INST(70, ByteCast, ByteCastInst)  // Byte type cast
   LAST_CAST_INST(52)
 
  FIRST_FUNCLETPAD_INST(53)

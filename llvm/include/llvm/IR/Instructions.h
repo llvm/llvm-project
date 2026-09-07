@@ -5183,6 +5183,34 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
+//                           ByteCastInst Class
+//===----------------------------------------------------------------------===//
+
+/// This class represents a byte type cast instruction.
+class ByteCastInst : public CastInst {
+protected:
+  friend class Instruction;
+  LLVM_ABI ByteCastInst *cloneImpl() const;
+
+public:
+  LLVM_ABI
+  ByteCastInst(Value *S,                  ///< The value to be casted
+               Type *Ty,                  ///< The type to casted to
+               const Twine &NameStr = "", ///< A name for the new instruction
+               InsertPosition InsertBefore =
+                   nullptr ///< Where to insert the new instruction
+  );
+
+  // Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const Instruction *I) {
+    return I->getOpcode() == ByteCast;
+  }
+  static bool classof(const Value *V) {
+    return isa<Instruction>(V) && classof(cast<Instruction>(V));
+  }
+};
+
+//===----------------------------------------------------------------------===//
 //                          AddrSpaceCastInst Class
 //===----------------------------------------------------------------------===//
 

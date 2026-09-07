@@ -201,7 +201,8 @@ MaterializedConstant Context::evaluateConstantExpression(ConstantExpr *CE) {
     }
     return MaterializedConstant(std::move(Vec), Src->isCacheable());
   }
-  case Instruction::BitCast: {
+  case Instruction::BitCast:
+  case Instruction::ByteCast: {
     Constant *SrcOp = CE->getOperand(0);
     const auto *Src = getConstantValue(SrcOp);
     if (!Src)

@@ -284,6 +284,8 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
   }
   case Instruction::BitCast:
     return FoldBitCast(V, DestTy);
+  case Instruction::ByteCast:
+    return FoldBitCast(V, DestTy);
   case Instruction::AddrSpaceCast:
   case Instruction::IntToPtr:
   case Instruction::PtrToAddr:

@@ -89,7 +89,7 @@ public:
            I->getOpcode() == Instruction::VAArg ||
            I->getOpcode() == Instruction::ExtractValue ||
            I->getOpcode() == Instruction::Freeze ||
-           (I->getOpcode() >= CastOpsBegin && I->getOpcode() < CastOpsEnd);
+           I->isCast();
   }
   static bool classof(const Value *V) {
     return isa<Instruction>(V) && classof(cast<Instruction>(V));
