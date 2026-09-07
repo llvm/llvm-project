@@ -17,6 +17,9 @@
 // GDB doesn't support PDB debug info format
 // UNSUPPORTED: msvc
 
+// https://sourceware.org/bugzilla/show_bug.cgi?id=22645
+// UNSUPPORTED: target=arm{{.*}}
+
 // RUN: %{cxx} %{flags} %s %{compile_flags} %{link_flags} -o %t.exe -g
 // RUN: %{exec} "%{gdb}" %t.exe -ex "source %S/breakpoint__gdb.py"
 // RUN: %{exec} %t.exe
