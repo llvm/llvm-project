@@ -65,7 +65,7 @@ private:
   std::string Buffer;
 };
 
-template <typename T> static llvm::Expected<T> roundtripJSON(const T &input) {
+template <typename T> llvm::Expected<T> roundtripJSON(const T &input) {
   std::string encoded;
   llvm::raw_string_ostream OS(encoded);
   OS << toJSON(input);
