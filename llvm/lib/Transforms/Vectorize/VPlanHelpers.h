@@ -163,6 +163,13 @@ public:
     return Lane;
   }
 
+  /// Returns the offset of this lane from the start of the last
+  /// <N x ElTy> subvector.
+  unsigned getOffsetInLastSubvec() const {
+    assert(LaneKind == Kind::ScalableLast);
+    return Lane;
+  }
+
   /// Returns an expression describing the lane index that can be used at
   /// runtime.
   Value *getAsRuntimeExpr(IRBuilderBase &Builder, const ElementCount &VF) const;
