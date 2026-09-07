@@ -463,8 +463,9 @@ def parse_args():
         type=_requires_filter,
         help="Select REQUIRES alternative groups with exactly the requested "
         "positive features and no unrequested exclusions. Supports &&, ||, !, "
-        "parentheses, and commas (AND), not wildcards. Base selects tests with "
-        "no REQUIRES entries. Bypasses REQUIRES feature availability checks, and "
+        "parentheses, and commas (AND), not regexes or wildcards. Feature names "
+        "are case-sensitive. Base selects tests with no REQUIRES entries. "
+        "Bypasses REQUIRES feature availability checks; "
         "the caller must schedule on capable devices. Nonmatching tests are "
         "excluded. WTT reports also omit unsupported tests in filtered runs.",
     )

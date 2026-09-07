@@ -327,9 +327,12 @@ but not yet run are not included.
 :::
 
 :::{option} --filter-requires EXPR
-Select `REQUIRES` alternatives matching `EXPR` with identical positive features
-and caller-authorized negatives. `Base` selects tests without requirements.
-Bypasses requirement availability checks, but other eligibility checks remain.
+Run only those tests with a `REQUIRES` alternative matching the requested positive
+features exactly and no extra exclusions. Names are case sensitive and commas mean
+AND. `Base` selects tests without requirements. Matching tests bypass `REQUIRES`
+availability checks. `UNSUPPORTED` and `XFAIL` still apply. Regexes are unsupported.
+The maximum test count applies before requirement matching. The caller must choose
+a suitable device.
 :::
 
 :::{option} --xfail LIST

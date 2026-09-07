@@ -139,6 +139,8 @@ class TestFilterRequires(unittest.TestCase):
         with patch.object(FilterRequires, "MAX_STEPS", 100):
             with self.assertRaisesRegex(ValueError, "normalization limit"):
                 FilterRequires(" && ".join(["(a || b)"] * 20))
+            with self.assertRaisesRegex(ValueError, "normalization limit"):
+                FilterRequires("Half").matches([" && ".join(["(a || b)"] * 20)])
         with self.assertRaisesRegex(ValueError, "nested too deeply"):
             FilterRequires("(" * 2000 + "Half" + ")" * 2000)
 
