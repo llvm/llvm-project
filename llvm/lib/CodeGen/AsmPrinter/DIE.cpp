@@ -139,9 +139,8 @@ DIEAbbrev &DIEAbbrevSet::uniqueAbbreviation(DIE &Die) {
   DIEAbbrev Abbrev = Die.generateAbbrev();
   Abbrev.Profile(ID);
 
-  void *InsertPos;
-  if (DIEAbbrev *Existing =
-          AbbreviationsSet.FindNodeOrInsertPos(ID, InsertPos)) {
+  FoldingSetInsertToken Token;
+  if (DIEAbbrev *Existing = AbbreviationsSet.lookup(ID, Token)) {
     Die.setAbbrevNumber(Existing->getNumber());
     return *Existing;
   }
@@ -153,7 +152,7 @@ DIEAbbrev &DIEAbbrevSet::uniqueAbbreviation(DIE &Die) {
   Die.setAbbrevNumber(Abbreviations.size());
 
   // Store it for lookup.
-  AbbreviationsSet.InsertNode(New, InsertPos);
+  AbbreviationsSet.insert(New, Token);
   return *New;
 }
 

@@ -1594,7 +1594,7 @@ CXXDeductionGuideDecl *Sema::DeclareAggregateDeductionGuideFromInitList(
   ID.AddPointer(Template);
   for (auto &T : ParamTypes)
     T.getCanonicalType().Profile(ID);
-  unsigned Hash = ID.ComputeHash();
+  unsigned Hash = ID.computeHash();
 
   auto Found = AggregateDeductionCandidates.find(Hash);
   if (Found != AggregateDeductionCandidates.end())
@@ -1607,6 +1607,7 @@ CXXDeductionGuideDecl *Sema::DeclareAggregateDeductionGuideFromInitList(
       AggregateDeductionCandidates[Hash] = GD;
       return GD;
     }
+    return nullptr;
   }
 
   if (CXXRecordDecl *DefRecord =

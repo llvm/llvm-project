@@ -1,7 +1,5 @@
 // RUN: mlir-opt -convert-scf-to-openmp='num-threads=4' %s | FileCheck %s
 
-// XFAIL: mlir-expensive-checks
-
 // CHECK-LABEL: @parallel
 func.func @parallel(%arg0: index, %arg1: index, %arg2: index,
                     %arg3: index, %arg4: index, %arg5: index) {

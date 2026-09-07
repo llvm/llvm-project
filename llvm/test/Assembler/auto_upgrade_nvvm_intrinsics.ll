@@ -124,6 +124,13 @@ declare void @llvm.nvvm.tcgen05.commit.mc.cg2(ptr, i16)
 declare void @llvm.nvvm.tcgen05.commit.mc.shared.cg1(ptr addrspace(3), i16)
 declare void @llvm.nvvm.tcgen05.commit.mc.shared.cg2(ptr addrspace(3), i16)
 
+declare void @llvm.nvvm.tcgen05.alloc.cg1(ptr, i32)
+declare void @llvm.nvvm.tcgen05.alloc.cg2(ptr, i32)
+declare void @llvm.nvvm.tcgen05.alloc.shared.cg1(ptr addrspace(3), i32)
+declare void @llvm.nvvm.tcgen05.alloc.shared.cg2(ptr addrspace(3), i32)
+declare void @llvm.nvvm.tcgen05.dealloc.cg1(ptr addrspace(6), i32)
+declare void @llvm.nvvm.tcgen05.dealloc.cg2(ptr addrspace(6), i32)
+
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i16 %mc, i64 %ch, i1 %f1, i1 %f2);
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i32 %d1, i16 %mc, i64 %ch, i1 %f1, i1 %f2);
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(ptr addrspace(3) %d, ptr addrspace(3) %bar, ptr %tm, i32 %d0, i32 %d1, i32 %d2, i16 %mc, i64 %ch, i1 %f1, i1 %f2);
@@ -503,6 +510,28 @@ define void @nvvm_tcgen05_commit_intrinsics(ptr %bar, ptr addrspace(3) %bar_shar
   ret void
 }
 
+; CHECK-LABEL: @nvvm_tcgen05_alloc_intrinsics
+define void @nvvm_tcgen05_alloc_intrinsics(ptr %dst, ptr addrspace(3) %dst_shared, i32 %ncols) {
+; CHECK: call void @llvm.nvvm.tcgen05.alloc.cg1.p0(ptr %dst, i32 %ncols, /* is_exclusive= */ i1 false)
+; CHECK: call void @llvm.nvvm.tcgen05.alloc.cg2.p0(ptr %dst, i32 %ncols, /* is_exclusive= */ i1 false)
+; CHECK: call void @llvm.nvvm.tcgen05.alloc.cg1.p3(ptr addrspace(3) %dst_shared, i32 %ncols, /* is_exclusive= */ i1 false)
+; CHECK: call void @llvm.nvvm.tcgen05.alloc.cg2.p3(ptr addrspace(3) %dst_shared, i32 %ncols, /* is_exclusive= */ i1 false)
+  call void @llvm.nvvm.tcgen05.alloc.cg1(ptr %dst, i32 %ncols)
+  call void @llvm.nvvm.tcgen05.alloc.cg2(ptr %dst, i32 %ncols)
+  call void @llvm.nvvm.tcgen05.alloc.shared.cg1(ptr addrspace(3) %dst_shared, i32 %ncols)
+  call void @llvm.nvvm.tcgen05.alloc.shared.cg2(ptr addrspace(3) %dst_shared, i32 %ncols)
+  ret void
+}
+
+; CHECK-LABEL: @nvvm_tcgen05_dealloc_intrinsics
+define void @nvvm_tcgen05_dealloc_intrinsics(ptr addrspace(6) %tmem_addr, i32 %ncols) {
+; CHECK: call void @llvm.nvvm.tcgen05.dealloc.cg1(ptr addrspace(6) %tmem_addr, i32 %ncols, /* is_exclusive= */ i1 false)
+; CHECK: call void @llvm.nvvm.tcgen05.dealloc.cg2(ptr addrspace(6) %tmem_addr, i32 %ncols, /* is_exclusive= */ i1 false)
+  call void @llvm.nvvm.tcgen05.dealloc.cg1(ptr addrspace(6) %tmem_addr, i32 %ncols)
+  call void @llvm.nvvm.tcgen05.dealloc.cg2(ptr addrspace(6) %tmem_addr, i32 %ncols)
+  ret void
+}
+
 ; CHECK-LABEL: @nvvm_tcgen05_commit_mc_16b_intrinsics
 define void @nvvm_tcgen05_commit_mc_16b_intrinsics(ptr %bar, ptr addrspace(3) %bar_shared, i16 %cta_mask) {
 ; CHECK: call void @llvm.nvvm.tcgen05.commit.mc.cg1.p0.i16(ptr %bar, i16 %cta_mask)
@@ -680,5 +709,29 @@ define void @nvvm_ex2_approx(float %a, double %b, half %c, <2 x half> %d) {
   %r2 = call double @llvm.nvvm.ex2.approx.d(double %b)
   %r3 = call <2 x half> @llvm.nvvm.ex2.approx.f16x2(<2 x half> %d)
   %r4 = call float @llvm.nvvm.ex2.approx.ftz.f(float %a)
+  ret void
+}
+
+define void @nvvm_add(float %a, double %b, half %c, <2 x half> %d) {
+; CHECK: call float @llvm.nvvm.fadd.f32(float %a, float %a, /* rnd=rn */ i32 1)
+; CHECK: call float @llvm.nvvm.fadd.ftz.f32(float %a, float %a, /* rnd=rz */ i32 0)
+; CHECK: call float @llvm.nvvm.fadd.sat.f32(float %a, float %a, /* rnd=rm */ i32 3)
+; CHECK: call float @llvm.nvvm.fadd.ftz.sat.f32(float %a, float %a, /* rnd=rp */ i32 2)
+; CHECK: call double @llvm.nvvm.fadd.f64(double %b, double %b, /* rnd=rn */ i32 1)
+; CHECK: call double @llvm.nvvm.fadd.f64(double %b, double %b, /* rnd=rz */ i32 0)
+; CHECK: call half @llvm.nvvm.fadd.sat.f16(half %c, half %c, /* rnd=rn */ i32 1)
+; CHECK: call half @llvm.nvvm.fadd.ftz.sat.f16(half %c, half %c, /* rnd=rn */ i32 1)
+; CHECK: call <2 x half> @llvm.nvvm.fadd.sat.v2f16(<2 x half> %d, <2 x half> %d, /* rnd=rn */ i32 1)
+; CHECK: call <2 x half> @llvm.nvvm.fadd.ftz.sat.v2f16(<2 x half> %d, <2 x half> %d, /* rnd=rn */ i32 1)
+  %r1 = call float @llvm.nvvm.add.rn.f(float %a, float %a)
+  %r2 = call float @llvm.nvvm.add.rz.ftz.f(float %a, float %a)
+  %r3 = call float @llvm.nvvm.add.rm.sat.f(float %a, float %a)
+  %r4 = call float @llvm.nvvm.add.rp.ftz.sat.f(float %a, float %a)
+  %r5 = call double @llvm.nvvm.add.rn.d(double %b, double %b)
+  %r6 = call double @llvm.nvvm.add.rz.d(double %b, double %b)
+  %r7 = call half @llvm.nvvm.add.rn.sat.f16(half %c, half %c)
+  %r8 = call half @llvm.nvvm.add.rn.ftz.sat.f16(half %c, half %c)
+  %r9 = call <2 x half> @llvm.nvvm.add.rn.sat.v2f16(<2 x half> %d, <2 x half> %d)
+  %r10 = call <2 x half> @llvm.nvvm.add.rn.ftz.sat.v2f16(<2 x half> %d, <2 x half> %d)
   ret void
 }

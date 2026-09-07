@@ -60,6 +60,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -4069,12 +4070,9 @@ SourceRange FunctionDecl::getReturnTypeSourceRange() const {
   if (!FTL)
     return SourceRange();
 
-  // Skip self-referential return types.
-  const SourceManager &SM = getASTContext().getSourceManager();
   SourceRange RTRange = FTL.getReturnLoc().getSourceRange();
   SourceLocation Boundary = getNameInfo().getBeginLoc();
-  if (RTRange.isInvalid() || Boundary.isInvalid() ||
-      !SM.isBeforeInTranslationUnit(RTRange.getEnd(), Boundary))
+  if (RTRange.isInvalid() || Boundary.isInvalid())
     return SourceRange();
 
   return RTRange;
@@ -4395,7 +4393,7 @@ FunctionDecl::getTemplateSpecializationArgsAsWritten() const {
 
 void FunctionDecl::setFunctionTemplateSpecialization(
     ASTContext &C, FunctionTemplateDecl *Template,
-    TemplateArgumentList *TemplateArgs, void *InsertPos,
+    TemplateArgumentList *TemplateArgs, llvm::FoldingSetInsertToken InsertToken,
     TemplateSpecializationKind TSK,
     const TemplateArgumentListInfo *TemplateArgsAsWritten,
     SourceLocation PointOfInstantiation) {
@@ -4415,7 +4413,7 @@ void FunctionDecl::setFunctionTemplateSpecialization(
           dyn_cast_if_present<MemberSpecializationInfo *>(
               TemplateOrSpecialization));
   TemplateOrSpecialization = Info;
-  Template->addSpecialization(Info, InsertPos);
+  Template->addSpecialization(Info, InsertToken);
 }
 
 void FunctionDecl::setDependentTemplateSpecialization(
@@ -4646,6 +4644,7 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
   case Builtin::BI__builtin___strlcpy_chk:
     return Builtin::BIstrlcpy;
 
+  case Builtin::BI__builtin_strlcat:
   case Builtin::BIstrlcat:
   case Builtin::BI__builtin___strlcat_chk:
     return Builtin::BIstrlcat;
@@ -4725,6 +4724,8 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
         return Builtin::BIbzero;
       if (FnInfo->isStr("bcopy"))
         return Builtin::BIbcopy;
+      if (FnInfo->isStr("strlcat"))
+        return Builtin::BIstrlcat;
     } else if (isInStdNamespace()) {
       if (FnInfo->isStr("free"))
         return Builtin::BIfree;

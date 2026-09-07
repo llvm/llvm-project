@@ -51,3 +51,14 @@ void main(S s) {}
 // CHECK: %[[E5:.*]] = call <4 x float> @llvm.dx.load.input.v4f32(i32 3, i32 5, i8 0, i32 poison)
 // CHECK: %[[E_ARRAY5:.*]] = insertvalue [2 x [3 x <4 x float>]] %[[E_ARRAY4]], <4 x float> %[[E5]], 1, 2
 // CHECK: %[[S3:.*]] = insertvalue %struct.S %[[S2]], [2 x [3 x <4 x float>]] %[[E_ARRAY5]], 3
+
+// CHECK: !dx.semantic.signatures = !{![[#ENTRY_SIG:]]}
+// CHECK: ![[#ENTRY_SIG]] = !{ptr @main, ![[#INPUT_SIG:]], null}
+// CHECK: ![[#INPUT_SIG]] = !{![[#A_SIG:]], ![[#B_SIG:]], ![[#D_SIG:]], ![[#E_SIG:]]}
+// CHECK: ![[#A_SIG]] = !{i32 0, !"A", i32 9, i32 0, ![[#ZERO_INDEX:]], i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+// CHECK: ![[#ZERO_INDEX]] = !{i32 0}
+// CHECK: ![[#B_SIG]] = !{i32 1, !"B", i32 9, i32 0, ![[#ZERO_INDEX]], i32 0, i32 1, i8 4, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+// CHECK: ![[#D_SIG]] = !{i32 2, !"D", i32 9, i32 0, ![[#D_INDICES:]], i32 0, i32 5, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+// CHECK: ![[#D_INDICES]] = !{i32 0, i32 1, i32 2, i32 3, i32 4}
+// CHECK: ![[#E_SIG]] = !{i32 3, !"E", i32 9, i32 0, ![[#E_INDICES:]], i32 0, i32 6, i8 4, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+// CHECK: ![[#E_INDICES]] = !{i32 0, i32 1, i32 2, i32 3, i32 4, i32 5}

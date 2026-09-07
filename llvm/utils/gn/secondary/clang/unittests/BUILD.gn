@@ -24,6 +24,7 @@ group("unittests") {
     "Support:ClangSupportTests",
     "Tooling:ToolingTests",
     "Tooling/Syntax:SyntaxTests",
+    "offload-arch:OffloadArchTests",
   ]
   if (clang_enable_static_analyzer) {
     deps += [

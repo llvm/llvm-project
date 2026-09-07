@@ -30,7 +30,7 @@ T tmain(T argc, S **argv) {
   {foo();}
   #pragma omp parallel master num_threads (S) // expected-error {{'S' does not refer to a value}}
   {foo();}
-  #pragma omp parallel master num_threads (argv[1]=2) // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error 2 {{expression must have integral or unscoped enumeration type, not 'char *'}}
+  #pragma omp parallel master num_threads (argv[1]=2) // expected-error 2 {{incompatible integer to pointer conversion assigning to 'char *' from 'int'}}
   {foo();}
   #pragma omp parallel master num_threads (argc + z)
   {foo();}
@@ -58,7 +58,7 @@ int main(int argc, char **argv) {
   {foo();}
   #pragma omp parallel master num_threads (S1) // expected-error {{'S1' does not refer to a value}}
   {foo();}
-  #pragma omp parallel master num_threads (argv[1]=2) // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{expression must have integral or unscoped enumeration type, not 'char *'}}
+  #pragma omp parallel master num_threads (argv[1]=2) // expected-error {{incompatible integer to pointer conversion assigning to 'char *' from 'int'}}
   {foo();}
   #pragma omp parallel master num_threads (num_threads(tmain<int, char, -1>(argc, argv) // expected-error 2 {{expected ')'}} expected-note 2 {{to match this '('}} expected-note {{in instantiation of function template specialization 'tmain<int, char, -1>' requested here}}
   {foo();}

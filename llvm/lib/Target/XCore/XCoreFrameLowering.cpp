@@ -24,7 +24,6 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Target/TargetOptions.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -215,8 +214,7 @@ XCoreFrameLowering::XCoreFrameLowering(const XCoreSubtarget &sti)
 }
 
 bool XCoreFrameLowering::hasFPImpl(const MachineFunction &MF) const {
-  return MF.getTarget().Options.DisableFramePointerElim(MF) ||
-         MF.getFrameInfo().hasVarSizedObjects();
+  return MF.disableFramePointerElim() || MF.getFrameInfo().hasVarSizedObjects();
 }
 
 void XCoreFrameLowering::emitPrologue(MachineFunction &MF,

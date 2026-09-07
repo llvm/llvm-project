@@ -98,7 +98,7 @@ void MachineLoopInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-MachineBasicBlock *MachineLoop::getTopBlock() {
+MachineBasicBlock *MachineLoop::getTopBlock() const {
   MachineBasicBlock *TopMBB = getHeader();
   MachineFunction::iterator Begin = TopMBB->getParent()->begin();
   if (TopMBB->getIterator() != Begin) {
@@ -113,7 +113,7 @@ MachineBasicBlock *MachineLoop::getTopBlock() {
   return TopMBB;
 }
 
-MachineBasicBlock *MachineLoop::getBottomBlock() {
+MachineBasicBlock *MachineLoop::getBottomBlock() const {
   MachineBasicBlock *BotMBB = getHeader();
   MachineFunction::iterator End = BotMBB->getParent()->end();
   if (BotMBB->getIterator() != std::prev(End)) {
@@ -269,7 +269,7 @@ bool MachineLoop::isLoopInvariant(MachineInstr &I,
         // then this use is safe to hoist.
         if (!isLoopInvariantImplicitPhysReg(Reg) &&
             !(TRI->isCallerPreservedPhysReg(Reg.asMCReg(), *I.getMF())) &&
-            !TII->isIgnorableUse(MO))
+            !TII->isIgnorableUse(I, I.getOperandNo(&MO)))
           return false;
         // Otherwise it's safe to move.
         continue;

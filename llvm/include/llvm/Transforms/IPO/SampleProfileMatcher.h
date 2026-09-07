@@ -233,7 +233,6 @@ private:
   // Match orphan IR functions to unused top-level profile entries by demangled
   // basename, without requiring a matched caller in the call graph.
   void matchFunctionsWithoutProfileByBasename();
-  void reportOrPersistProfileStats();
 };
 } // end namespace llvm
 #endif // LLVM_TRANSFORMS_IPO_SAMPLEPROFILEMATCHER_H

@@ -1604,8 +1604,7 @@ unsigned mlir::affine::getInnermostCommonLoopDepth(
   unsigned loopDepthLimit = std::numeric_limits<unsigned>::max();
   for (unsigned i = 0; i < numOps; ++i) {
     getAffineForIVs(*ops[i], &loops[i]);
-    loopDepthLimit =
-        std::min(loopDepthLimit, static_cast<unsigned>(loops[i].size()));
+    loopDepthLimit = std::min(loopDepthLimit, (unsigned)loops[i].size());
   }
 
   unsigned loopDepth = 0;
@@ -1754,7 +1753,8 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
   // Get slice bounds from slice union constraints 'sliceUnionCst'.
   sliceUnionCst.getSliceBounds(/*offset=*/0, numSliceLoopIVs,
                                opsA[0]->getContext(), &sliceUnion->lbs,
-                               &sliceUnion->ubs);
+                               &sliceUnion->ubs, /*closedUb=*/false,
+                               /*allowMultiResultUb=*/true);
 
   // Add slice bound operands of union.
   SmallVector<Value, 4> sliceBoundOperands;
@@ -1791,21 +1791,36 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
   return SliceComputationResult::Success;
 }
 
-// TODO: extend this to handle multiple result maps.
+/// Returns the number of iterations the slice bounded below by `lbMap` and
+/// above by `ubMap` runs for, where that is a constant.
+///
+/// An upper bound of several results is the min of them, so each result taken
+/// against the lower bound bounds the count from above and the smallest of
+/// those that comes out constant is the tightest constant bound there is. A
+/// tiled loop clamped at the end of the data has exactly this shape --
+/// `min(%i * 64 + 64, 1000)` over `%i * 64` -- where the tile-relative result
+/// gives the 64 and the extent gives nothing constant at all.
 static std::optional<uint64_t> getConstDifference(AffineMap lbMap,
                                                   AffineMap ubMap) {
-  assert(lbMap.getNumResults() == 1 && "expected single result bound map");
-  assert(ubMap.getNumResults() == 1 && "expected single result bound map");
+  assert(lbMap.getNumResults() == 1 && "expected single result lower bound");
+  assert(ubMap.getNumResults() >= 1 && "expected at least one upper bound");
   assert(lbMap.getNumDims() == ubMap.getNumDims());
   assert(lbMap.getNumSymbols() == ubMap.getNumSymbols());
   AffineExpr lbExpr(lbMap.getResult(0));
-  AffineExpr ubExpr(ubMap.getResult(0));
-  auto loopSpanExpr = simplifyAffineExpr(ubExpr - lbExpr, lbMap.getNumDims(),
-                                         lbMap.getNumSymbols());
-  auto cExpr = dyn_cast<AffineConstantExpr>(loopSpanExpr);
-  if (!cExpr)
-    return std::nullopt;
-  return cExpr.getValue();
+  std::optional<uint64_t> tripCount;
+  for (AffineExpr ubExpr : ubMap.getResults()) {
+    AffineExpr loopSpanExpr = simplifyAffineExpr(
+        ubExpr - lbExpr, lbMap.getNumDims(), lbMap.getNumSymbols());
+    auto cExpr = dyn_cast<AffineConstantExpr>(loopSpanExpr);
+    if (!cExpr)
+      continue;
+    if (cExpr.getValue() < 0)
+      return 0;
+    tripCount =
+        std::min(tripCount.value_or(std::numeric_limits<uint64_t>::max()),
+                 (uint64_t)cExpr.getValue());
+  }
+  return tripCount;
 }
 
 // Builds a map 'tripCountMap' from AffineForOp to constant trip count for loop
@@ -1899,7 +1914,8 @@ void mlir::affine::getComputationSliceState(
 
   // Get bounds for slice IVs in terms of other IVs, symbols, and constants.
   sliceCst.getSliceBounds(offset, numSliceLoopIVs, depSourceOp->getContext(),
-                          &sliceState->lbs, &sliceState->ubs);
+                          &sliceState->lbs, &sliceState->ubs,
+                          /*closedUb=*/false, /*allowMultiResultUb=*/true);
 
   // Set up bound operands for the slice's lower and upper bounds.
   SmallVector<Value, 4> sliceBoundOperands;

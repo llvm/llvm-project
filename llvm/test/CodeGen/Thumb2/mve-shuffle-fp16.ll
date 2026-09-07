@@ -944,12 +944,12 @@ define arm_aapcs_vfpcc <8 x half> @shuffle4step_f16(<32 x half> %src) {
 ; CHECKFP-NEXT:    vins.f16 s21, s3
 ; CHECKFP-NEXT:    vins.f16 s0, s2
 ; CHECKFP-NEXT:    vmov.f32 s24, s1
-; CHECKFP-NEXT:    vmov.f32 s26, s9
 ; CHECKFP-NEXT:    vmov.f32 s25, s5
+; CHECKFP-NEXT:    vmov.f32 s26, s9
 ; CHECKFP-NEXT:    vmov.f32 s27, s13
-; CHECKFP-NEXT:    vmov.f32 s2, s8
-; CHECKFP-NEXT:    vadd.f16 q4, q6, q4
 ; CHECKFP-NEXT:    vmov.f32 s1, s4
+; CHECKFP-NEXT:    vadd.f16 q4, q6, q4
+; CHECKFP-NEXT:    vmov.f32 s2, s8
 ; CHECKFP-NEXT:    vmov.f32 s3, s12
 ; CHECKFP-NEXT:    vadd.f16 q0, q0, q5
 ; CHECKFP-NEXT:    vadd.f16 q0, q0, q4

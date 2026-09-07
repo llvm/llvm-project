@@ -65,7 +65,7 @@ end subroutine
 ! CHECK:             omp.yield
 ! CHECK:           }
 ! CHECK:           omp.atomic.read %{{.*}}#0 = %{{.*}}#0 : !fir.ref<i32>, !fir.ref<i32>, i32
-! CHECK:         } {fail_only}
+! CHECK:         } fail_only
 subroutine cc_int_failonly(x, e, d, v)
   integer :: x, e, d, v
   !$omp atomic compare capture
@@ -89,9 +89,9 @@ end subroutine
 ! CHECK:           ^bb0(%[[XVAL:.*]]: i32):
 ! CHECK:             arith.cmpi eq, %[[XVAL]], %[[E_VAL]] : i32
 ! CHECK:             omp.yield
-! CHECK:           } {fail_memory_order = #omp<memoryorderkind acquire>}
+! CHECK:           } fail_memory_order(acquire)
 ! CHECK:           omp.atomic.read %{{.*}}#0 = %{{.*}}#0 : !fir.ref<i32>, !fir.ref<i32>, i32
-! CHECK:         } {fail_only}
+! CHECK:         } fail_only
 subroutine cc_int_failonly_fail(x, e, d, v)
   integer :: x, e, d, v
   !$omp atomic compare capture seq_cst fail(acquire)
@@ -162,7 +162,7 @@ end subroutine
 ! CHECK:             arith.cmpf oeq
 ! CHECK:           }
 ! CHECK:           omp.atomic.read %{{.*}} : !fir.ref<f32>, !fir.ref<f32>, f32
-! CHECK:         } {fail_only}
+! CHECK:         } fail_only
 subroutine cc_real_failonly(x, e, d, v)
   real :: x, e, d, v
   !$omp atomic compare capture
@@ -217,7 +217,7 @@ end subroutine
 ! CHECK:             arith.cmpi eq
 ! CHECK:           }
 ! CHECK:           omp.atomic.read %{{.*}} : !fir.ref<i32>, !fir.ref<i32>, i32
-! CHECK:         } {fail_only}
+! CHECK:         } fail_only
 subroutine cc_logical_failonly(x, e, d, v)
   logical :: x, e, d, v
   !$omp atomic compare capture
@@ -271,7 +271,7 @@ end subroutine
 ! CHECK:             fir.cmpc "oeq"
 ! CHECK:           }
 ! CHECK:           omp.atomic.read %{{.*}} : !fir.ref<complex<f32>>, !fir.ref<complex<f32>>, complex<f32>
-! CHECK:         } {fail_only}
+! CHECK:         } fail_only
 subroutine cc_complex_failonly(x, e, d, v)
   complex :: x, e, d, v
   !$omp atomic compare capture
@@ -358,7 +358,7 @@ end subroutine
 ! CHECK:           omp.atomic.read %{{.*}}#0 = %[[X:.*]]#0 : !fir.ref<i32>, !fir.ref<i32>, i32
 ! CHECK:           omp.atomic.compare %[[X]]#0 : !fir.ref<i32> {
 ! CHECK:             arith.cmpi eq
-! CHECK:           } {weak}
+! CHECK:           } weak
 ! CHECK:         }
 subroutine cc_weak_prefix(x, e, d, v)
   integer :: x, e, d, v
@@ -374,7 +374,7 @@ end subroutine
 ! CHECK:         omp.atomic.capture memory_order(relaxed) {
 ! CHECK:           omp.atomic.compare %{{.*}}#0 : !fir.ref<i32> {
 ! CHECK:             arith.cmpi eq
-! CHECK:           } {weak}
+! CHECK:           } weak
 ! CHECK:           omp.atomic.read %{{.*}} : !fir.ref<i32>, !fir.ref<i32>, i32
 ! CHECK:         }
 subroutine cc_weak_postfix(x, e, d, v)

@@ -1,7 +1,4 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports parameters of an empty or tag class and padded, packed, and
-// over-aligned record shapes.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
 struct Trivial { int x, y; };

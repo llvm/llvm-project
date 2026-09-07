@@ -822,7 +822,13 @@ APInt APInt::reverseBits() const {
   return Result;
 }
 
-APInt llvm::APIntOps::GreatestCommonDivisor(APInt A, APInt B) {
+APInt llvm::APIntOps::GreatestCommonDivisor(APInt A, APInt B, bool IsSigned) {
+  // Take absolute value if IsSigned.
+  if (IsSigned) {
+    A = A.abs();
+    B = B.abs();
+  }
+
   // Fast-path a common case.
   if (A == B) return A;
 

@@ -42,7 +42,7 @@ acc.reduction.recipe @reduction_add_memref_f64 : memref<f64> reduction_operator 
 
 func.func @par_reduction_clause_(%arg0: memref<f64>) {
   %cst = arith.constant 1.000000e+00 : f64
-  %red = acc.reduction varPtr(%arg0 : memref<f64>) recipe(@reduction_add_memref_f64) -> memref<f64> {name = "tmp"}
+  %red = acc.reduction varPtr(%arg0 : memref<f64>) recipe(@reduction_add_memref_f64) name("tmp") -> memref<f64>
   acc.parallel reduction(%red : memref<f64>) {
     %3 = memref.load %red[] : memref<f64>
     %4 = arith.addf %3, %cst fastmath<contract> : f64
@@ -74,7 +74,7 @@ func.func @par_reduction_clause_(%arg0: memref<f64>) {
 func.func @par_reduction_clause_serial(%arg0: memref<f64>) {
   %c1_i32 = arith.constant 1 : i32
   %cst = arith.constant 1.000000e+00 : f64
-  %red = acc.reduction varPtr(%arg0 : memref<f64>) recipe(@reduction_add_memref_f64) -> memref<f64> {name = "tmp"}
+  %red = acc.reduction varPtr(%arg0 : memref<f64>) recipe(@reduction_add_memref_f64) name("tmp") -> memref<f64>
   acc.parallel num_gangs({%c1_i32 : i32}) num_workers(%c1_i32 : i32) vector_length(%c1_i32 : i32) reduction(%red : memref<f64>) {
     %3 = memref.load %red[] : memref<f64>
     %4 = arith.addf %3, %cst fastmath<contract> : f64

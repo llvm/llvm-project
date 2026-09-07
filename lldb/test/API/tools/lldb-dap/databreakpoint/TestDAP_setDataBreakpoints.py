@@ -185,6 +185,9 @@ class TestDAP_setDataBreakpoints(DAPTestCaseBase):
         stop_event = session.continue_to_breakpoint(self.expect_not_none(bp_cond.id))
         self.assertEqual(session.top_frame_from(stop_event).locals["x"].value, "10")
 
+    # Test works but test program faults after continuing.
+    # https://github.com/llvm/llvm-project/issues/217961
+    @skipIf(oslist=["linux"], archs=["arm$"])
     @skipIfWindows
     def test_console_watchpoint_preserved(self):
         """Test setDataBreakpoints must not delete watchpoints created via the console."""

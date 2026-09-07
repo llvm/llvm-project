@@ -33,7 +33,6 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InstrTypes.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DivisionByConstantInfo.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -2889,13 +2888,6 @@ void CombinerHelper::applyCombineTruncOfShift(
   eraseInst(MI);
 }
 
-bool CombinerHelper::matchAnyExplicitUseIsUndef(MachineInstr &MI) const {
-  return any_of(MI.explicit_uses(), [this](const MachineOperand &MO) {
-    return MO.isReg() &&
-           getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MO.getReg(), MRI);
-  });
-}
-
 bool CombinerHelper::matchAllExplicitUsesAreUndef(MachineInstr &MI) const {
   return all_of(MI.explicit_uses(), [this](const MachineOperand &MO) {
     return !MO.isReg() ||
@@ -3130,19 +3122,6 @@ bool CombinerHelper::matchSelectSameVal(MachineInstr &MI) const {
   return matchEqualDefs(MI.getOperand(2), MI.getOperand(3)) &&
          canReplaceReg(MI.getOperand(0).getReg(), MI.getOperand(2).getReg(),
                        MRI);
-}
-
-bool CombinerHelper::matchBinOpSameVal(MachineInstr &MI) const {
-  return matchEqualDefs(MI.getOperand(1), MI.getOperand(2)) &&
-         canReplaceReg(MI.getOperand(0).getReg(), MI.getOperand(1).getReg(),
-                       MRI);
-}
-
-bool CombinerHelper::matchOperandIsUndef(MachineInstr &MI,
-                                         unsigned OpIdx) const {
-  MachineOperand &MO = MI.getOperand(OpIdx);
-  return MO.isReg() &&
-         getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF, MO.getReg(), MRI);
 }
 
 bool CombinerHelper::matchOperandIsKnownToBeAPowerOfTwo(
@@ -6290,14 +6269,25 @@ bool CombinerHelper::matchTruncSSatS(MachineInstr &MI,
 
   APInt SignedMax = APInt::getSignedMaxValue(NumDstBits).sext(NumSrcBits);
   APInt SignedMin = APInt::getSignedMinValue(NumDstBits).sext(NumSrcBits);
-  return mi_match(Src, MRI,
-                  m_GSMin(m_GSMax(m_Reg(MatchInfo),
-                                  m_SpecificICstOrSplat(SignedMin)),
-                          m_SpecificICstOrSplat(SignedMax))) ||
-         mi_match(Src, MRI,
-                  m_GSMax(m_GSMin(m_Reg(MatchInfo),
-                                  m_SpecificICstOrSplat(SignedMax)),
-                          m_SpecificICstOrSplat(SignedMin)));
+  if (mi_match(
+          Src, MRI,
+          m_GSMin(m_GSMax(m_Reg(MatchInfo), m_SpecificICstOrSplat(SignedMin)),
+                  m_SpecificICstOrSplat(SignedMax))))
+    return true;
+  if (mi_match(
+          Src, MRI,
+          m_GSMax(m_GSMin(m_Reg(MatchInfo), m_SpecificICstOrSplat(SignedMax)),
+                  m_SpecificICstOrSplat(SignedMin))))
+    return true;
+
+  // CVP in the midend will often transform trunc(smin(smax(..)) into
+  // trunc nsw(smin(..)) as the smax against INT_MIN never saturates.
+  if (MI.getFlag(MachineInstr::MIFlag::NoSWrap) &&
+      mi_match(Src, MRI,
+               m_GSMin(m_Reg(MatchInfo), m_SpecificICstOrSplat(SignedMax))))
+    return true;
+
+  return false;
 }
 
 void CombinerHelper::applyTruncSSatS(MachineInstr &MI,
@@ -6370,9 +6360,7 @@ bool CombinerHelper::matchTruncUSatUToFPTOUISat(MachineInstr &MI,
 bool CombinerHelper::matchRedundantNegOperands(MachineInstr &MI,
                                                BuildFnTy &MatchInfo) const {
   unsigned Opc = MI.getOpcode();
-  assert(Opc == TargetOpcode::G_FADD || Opc == TargetOpcode::G_FSUB ||
-         Opc == TargetOpcode::G_FMUL || Opc == TargetOpcode::G_FDIV ||
-         Opc == TargetOpcode::G_FMAD || Opc == TargetOpcode::G_FMA);
+  assert(Opc == TargetOpcode::G_FADD || Opc == TargetOpcode::G_FSUB);
 
   Register Dst = MI.getOperand(0).getReg();
   Register X = MI.getOperand(1).getReg();
@@ -6390,16 +6378,6 @@ bool CombinerHelper::matchRedundantNegOperands(MachineInstr &MI,
   else if (mi_match(Dst, MRI, m_GFSub(m_Reg(X), m_GFNeg(m_Reg(Y)))) &&
            isLegalOrBeforeLegalizer({TargetOpcode::G_FADD, {Type}})) {
     Opc = TargetOpcode::G_FADD;
-  }
-  // fold (fmul fneg(x), fneg(y)) -> (fmul x, y)
-  // fold (fdiv fneg(x), fneg(y)) -> (fdiv x, y)
-  // fold (fmad fneg(x), fneg(y), z) -> (fmad x, y, z)
-  // fold (fma fneg(x), fneg(y), z) -> (fma x, y, z)
-  else if ((Opc == TargetOpcode::G_FMUL || Opc == TargetOpcode::G_FDIV ||
-            Opc == TargetOpcode::G_FMAD || Opc == TargetOpcode::G_FMA) &&
-           mi_match(X, MRI, m_GFNeg(m_Reg(X))) &&
-           mi_match(Y, MRI, m_GFNeg(m_Reg(Y)))) {
-    // no opcode change
   } else
     return false;
 
@@ -6638,14 +6616,6 @@ bool CombinerHelper::matchCombineFAddFMAFMulToFMadOrFMA(
   unsigned PreferredFusedOpcode =
       HasFMAD ? TargetOpcode::G_FMAD : TargetOpcode::G_FMA;
 
-  // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
-  // prefer to fold the multiply with fewer uses.
-  if (Aggressive && isContractableFMul(*LHS.MI, AllowFusionGlobally) &&
-      isContractableFMul(*RHS.MI, AllowFusionGlobally)) {
-    if (hasMoreUses(*LHS.MI, *RHS.MI, MRI))
-      std::swap(LHS, RHS);
-  }
-
   MachineInstr *FMA = nullptr;
   Register Z;
   // fold (fadd (fma x, y, (fmul u, v)), z) -> (fma x, y, (fma u, v, z))
@@ -6855,7 +6825,7 @@ bool CombinerHelper::matchCombineFSubFMulToFMadOrFMA(
   DefinitionAndSourceRegister RHS = {Op2Def, Op2};
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
 
-  // If we have two choices trying to fold (fadd (fmul u, v), (fmul x, y)),
+  // If we have two choices trying to fold (fsub (fmul u, v), (fmul x, y)),
   // prefer to fold the multiply with fewer uses.
   int FirstMulHasFewerUses = true;
   if (isContractableFMul(*LHS.MI, AllowFusionGlobally) &&
