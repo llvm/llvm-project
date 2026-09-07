@@ -103,6 +103,7 @@ public:
   virtual unsigned adjustInliningThreshold(const CallBase *CB) const {
     return 0;
   }
+
   virtual bool allowSizeGrowth(const CallBase &Call) const {
     // If the normal destination of the invoke or the parent block of the call
     // site is unreachable-terminated, there is little point in inlining this
@@ -126,6 +127,7 @@ public:
       return false;
     return true;
   }
+
   virtual unsigned getCallerAllocaCost(const CallBase *CB,
                                        const AllocaInst *AI) const {
     return 0;

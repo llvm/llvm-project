@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -inline-call-penalty=0 -inline-threshold=1 -passes=inline -S < %s | FileCheck %s
+; RUN: opt -mtriple=amdgpu-amd-amdhsa -inline-call-penalty=0 -inline-threshold=1 -passes=inline -S < %s | FileCheck %s
 
 @g = external global i32
 
