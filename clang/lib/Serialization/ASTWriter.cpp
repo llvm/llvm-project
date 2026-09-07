@@ -5596,14 +5596,17 @@ void ASTWriter::computeNonAffectingInputFiles() {
 
   // Unlike a SourceLocation, a FileID is written as an index into our own SLoc
   // table, so it cannot name a file we leave out. Collect the files something
-  // still refers to by FileID.
+  // still refers to by FileID. Only a local file can be named that way, so we
+  // keep the same checks the loops that write these tables make.
   llvm::DenseSet<FileID> NamedFileIDs;
-  NamedFileIDs.insert(SrcMgr.getMainFileID());
+  if (SrcMgr.getMainFileID().isValid())
+    NamedFileIDs.insert(SrcMgr.getMainFileID());
   if (SrcMgr.hasLineTable())
     for (const auto &L : SrcMgr.getLineTable())
-      NamedFileIDs.insert(L.first);
+      if (L.first.ID > 0)
+        NamedFileIDs.insert(L.first);
   for (const auto &F : PP->getDiagnostics().DiagStatesByLoc.Files)
-    if (F.second.HasLocalTransitions)
+    if (F.second.HasLocalTransitions && F.first.isValid())
       NamedFileIDs.insert(F.first);
 
   unsigned FileIDAdjustment = 0;
