@@ -1623,16 +1623,6 @@ int32_t GenericPluginTy::launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
   return OFFLOAD_SUCCESS;
 }
 
-InfoTreeNode GenericPluginTy::obtain_device_info(int32_t DeviceId) {
-  auto InfoOrErr = getDevice(DeviceId).obtainInfo();
-  if (auto Err = InfoOrErr.takeError()) {
-    REPORT() << "Failure to obtain device " << DeviceId
-             << " info: " << toString(std::move(Err));
-    return InfoTreeNode{};
-  }
-  return std::move(*InfoOrErr);
-}
-
 void GenericPluginTy::set_info_flag(uint32_t NewInfoLevel) {
   std::atomic<uint32_t> &InfoLevel = getInfoLevelInternal();
   InfoLevel.store(NewInfoLevel);
