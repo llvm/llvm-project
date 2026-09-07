@@ -375,6 +375,29 @@ bool CapabilityExpr::equals(const CapabilityExpr &other) const {
          sx::equals(sexpr(), other.sexpr());
 }
 
+CapabilityExpr CapabilityExpr::operator!() const {
+  return CapabilityExpr(CapExpr.getPointer(), CapKind, !negative(),
+                        reentrant());
+}
+
+bool CapabilityExpr::matches(const CapabilityExpr &other) const {
+  return (negative() == other.negative()) &&
+         sx::matches(sexpr(), other.sexpr());
+}
+
+bool CapabilityExpr::matchesUniv(const CapabilityExpr &CapE) const {
+  return isUniversal() || matches(CapE);
+}
+
+bool CapabilityExpr::partiallyMatches(const CapabilityExpr &other) const {
+  return (negative() == other.negative()) &&
+         sx::partiallyMatches(sexpr(), other.sexpr());
+}
+
+bool CapabilityExpr::shouldIgnore() const { 
+  return sexpr() == nullptr; 
+}
+
 } // namespace threadSafety
 } // namespace clang
 
