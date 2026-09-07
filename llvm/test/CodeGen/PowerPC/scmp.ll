@@ -125,3 +125,82 @@ define i64 @scmp_64_64(i64 %x, i64 %y) nounwind {
   %1 = call i64 @llvm.scmp(i64 %x, i64 %y)
   ret i64 %1
 }
+
+define i8 @scmp_8_8_0(i8 signext %x) nounwind {
+; CHECK-LABEL: scmp_8_8_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sradi 4, 3, 63
+; CHECK-NEXT:    addic 3, 3, -1
+; CHECK-NEXT:    adde 3, 4, 4
+; CHECK-NEXT:    blr
+  %1 = call i8 @llvm.scmp(i8 %x, i8 0)
+  ret i8 %1
+}
+
+define i8 @scmp_8_16_0(i16 signext %x) nounwind {
+; CHECK-LABEL: scmp_8_16_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sradi 4, 3, 63
+; CHECK-NEXT:    addic 3, 3, -1
+; CHECK-NEXT:    adde 3, 4, 4
+; CHECK-NEXT:    blr
+  %1 = call i8 @llvm.scmp(i16 %x, i16 0)
+  ret i8 %1
+}
+
+define i8 @scmp_8_32_0(i32 %x) nounwind {
+; CHECK-LABEL: scmp_8_32_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    extsw 3, 3
+; CHECK-NEXT:    sradi 4, 3, 63
+; CHECK-NEXT:    addic 3, 3, -1
+; CHECK-NEXT:    adde 3, 4, 4
+; CHECK-NEXT:    blr
+  %1 = call i8 @llvm.scmp(i32 %x, i32 0)
+  ret i8 %1
+}
+
+define i8 @scmp_8_64_0(i64 %x) nounwind {
+; CHECK-LABEL: scmp_8_64_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sradi 4, 3, 63
+; CHECK-NEXT:    addic 3, 3, -1
+; CHECK-NEXT:    adde 3, 4, 4
+; CHECK-NEXT:    blr
+  %1 = call i8 @llvm.scmp(i64 %x, i64 0)
+  ret i8 %1
+}
+
+define i32 @scmp_32_32_0(i32 %x) nounwind {
+; CHECK-LABEL: scmp_32_32_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    extsw 3, 3
+; CHECK-NEXT:    sradi 4, 3, 63
+; CHECK-NEXT:    addic 3, 3, -1
+; CHECK-NEXT:    adde 3, 4, 4
+; CHECK-NEXT:    blr
+  %1 = call i32 @llvm.scmp(i32 %x, i32 0)
+  ret i32 %1
+}
+
+define i32 @scmp_32_64_0(i64 %x) nounwind {
+; CHECK-LABEL: scmp_32_64_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sradi 4, 3, 63
+; CHECK-NEXT:    addic 3, 3, -1
+; CHECK-NEXT:    adde 3, 4, 4
+; CHECK-NEXT:    blr
+  %1 = call i32 @llvm.scmp(i64 %x, i64 0)
+  ret i32 %1
+}
+
+define i64 @scmp_64_64_0(i64 %x) nounwind {
+; CHECK-LABEL: scmp_64_64_0:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sradi 4, 3, 63
+; CHECK-NEXT:    addic 3, 3, -1
+; CHECK-NEXT:    adde 3, 4, 4
+; CHECK-NEXT:    blr
+  %1 = call i64 @llvm.scmp(i64 %x, i64 0)
+  ret i64 %1
+}
