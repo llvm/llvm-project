@@ -63,10 +63,54 @@ bool PatternParser::parsePatternList(
                            ? List.getArgName(I)->getValue().str()
                            : ("__" + AnonPatNamePrefix + "_" + Twine(I)).str();
 
+    // Check for GIHasOneUse wrapper BEFORE parseInstructionPattern
+    // since GIHasOneUse is also a GIBuiltinInst.
+    if (const auto *DagArg = dyn_cast<DagInit>(Arg)) {
+      if (DagArg->getOperatorAsDef(DiagLoc)->getName() == "GIHasOneUse" &&
+          DagArg->getNumArgs() == 1 && isa<DagInit>(DagArg->getArg(0))) {
+        if (auto Pat = parseInstructionPattern(*DagArg->getArg(0), Name)) {
+          if (auto *CGP = dyn_cast<CodeGenInstructionPattern>(Pat.get()))
+            CGP->setHasOneUse();
+          else {
+            PrintError(
+                DiagLoc,
+                "GIHasOneUse can only wrap a CodeGenInstruction pattern");
+            return false;
+          }
+          if (!ParseAction(std::move(Pat)))
+            return false;
+          continue;
+        }
+      }
+    }
+
     if (auto Pat = parseInstructionPattern(*Arg, Name)) {
       if (!ParseAction(std::move(Pat)))
         return false;
       continue;
+    }
+
+    if (const auto *DagArg = dyn_cast<DagInit>(Arg)) {
+      if (DagArg->getOperatorAsDef(DiagLoc)->getName() == "GIHasOneUse") {
+        if (DagArg->getNumArgs() != 1) {
+          PrintError(DiagLoc,
+                     "GIHasOneUse expects exactly one instruction argument");
+          return false;
+        }
+        if (auto Pat = parseInstructionPattern(*DagArg->getArg(0), Name)) {
+          if (auto *CGP = dyn_cast<CodeGenInstructionPattern>(Pat.get()))
+            CGP->setHasOneUse();
+          else {
+            PrintError(
+                DiagLoc,
+                "GIHasOneUse can only wrap a CodeGenInstruction pattern");
+            return false;
+          }
+          if (!ParseAction(std::move(Pat)))
+            return false;
+          continue;
+        }
+      }
     }
 
     if (auto Pat = parseWipMatchOpcodeMatcher(*Arg, Name)) {
