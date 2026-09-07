@@ -1983,6 +1983,20 @@ cc_library(
 )
 
 cc_library(
+    name = "codegen_utils",
+    srcs = glob([
+        "lib/CodeGenUtils/*.cpp",
+    ]),
+    hdrs = glob(["include/clang/CodeGenUtils/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ast",
+        ":basic",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "codegen",
     srcs = glob([
         "lib/CodeGen/**/*.cpp",
@@ -2004,6 +2018,7 @@ cc_library(
         ":basic_riscv_andes_vector_builtin_cg_gen",
         ":basic_riscv_sifive_vector_builtin_cg_gen",
         ":basic_riscv_vector_builtin_cg_gen",
+        ":codegen_utils",
         ":driver",
         ":frontend",
         ":lex",

@@ -59,7 +59,8 @@ defm COPY_A#B :
   BULK_I<(outs), (ins i32imm_op:$dst_idx, i32imm_op:$src_idx,
                       rc:$dst, rc:$src, rc:$len),
          (outs), (ins i32imm_op:$dst_idx, i32imm_op:$src_idx),
-         [],
+         [(int_wasm_memory_copy (i32 timm:$dst_idx), (i32 timm:$src_idx),
+                                rc:$dst, rc:$src, rc:$len)],
          "memory.copy\t$dst_idx, $src_idx, $dst, $src, $len",
          "memory.copy\t$dst_idx, $src_idx", 0x0a>;
 
@@ -67,7 +68,7 @@ let mayStore = 1 in
 defm FILL_A#B :
   BULK_I<(outs), (ins i32imm_op:$idx, rc:$dst, I32:$value, rc:$size),
          (outs), (ins i32imm_op:$idx),
-         [],
+         [(int_wasm_memory_fill (i32 timm:$idx), rc:$dst, I32:$value, rc:$size)],
          "memory.fill\t$idx, $dst, $value, $size",
          "memory.fill\t$idx", 0x0b>;
 }

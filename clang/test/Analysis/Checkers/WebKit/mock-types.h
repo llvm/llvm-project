@@ -318,6 +318,7 @@ template <typename T, typename PtrTraits = RawPtrTraits<T>, typename RefDerefTra
   T *operator->() const { return PtrTraits::unwrap(t); }
   operator T &() const { return *PtrTraits::unwrap(t); }
   T* leakRef() { return PtrTraits::exchange(t, nullptr); }
+  [[nodiscard]] Ref copyRef() const { return Ref(*t); }
 };
 
 template <typename T> Ref<T> adoptRef(T& t) {
