@@ -690,7 +690,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGCNDPPCombineLegacyPass(*PR);
   initializeSILowerI1CopiesLegacyPass(*PR);
   initializeAMDGPUGlobalISelDivergenceLoweringLegacyPass(*PR);
-  initializeAMDGPURegBankSelectPass(*PR);
+  initializeAMDGPURegBankSelectLegacyPass(*PR);
   initializeAMDGPURegBankLegalizePass(*PR);
   initializeSILowerWWMCopiesLegacyPass(*PR);
   initializeAMDGPUMarkLastScratchLoadLegacyPass(*PR);
@@ -716,7 +716,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULowerKernelAttributesPass(*PR);
   initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(*PR);
   initializeAMDGPUPostLegalizerCombinerPass(*PR);
-  initializeAMDGPUPreLegalizerCombinerPass(*PR);
+  initializeAMDGPUPreLegalizerCombinerLegacyPass(*PR);
   initializeAMDGPURegBankCombinerPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
@@ -1789,8 +1789,8 @@ bool GCNPassConfig::addIRTranslator() {
 }
 
 void GCNPassConfig::addPreLegalizeMachineIR() {
-  bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
-  addPass(createAMDGPUPreLegalizeCombiner(IsOptNone));
+  bool IsOptLevelNone = getOptLevel() == CodeGenOptLevel::None;
+  addPass(createAMDGPUPreLegalizeCombinerLegacyPass(IsOptLevelNone));
   addPass(new LocalizerLegacy());
 }
 
@@ -1806,7 +1806,7 @@ void GCNPassConfig::addPreRegBankSelect() {
 }
 
 bool GCNPassConfig::addRegBankSelect() {
-  addPass(createAMDGPURegBankSelectPass());
+  addPass(createAMDGPURegBankSelectLegacyPass());
   addPass(createAMDGPURegBankLegalizePass());
   return false;
 }

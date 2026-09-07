@@ -100,6 +100,11 @@ infrastructure are described first, followed by tool-specific sections.
   `-std=cXX-or-earlier` values, mirroring the existing `-std=cXX-or-later`.
   New construct expands to the given standard and every earlier one.
 
+- On Windows, {program}`clang-tidy` will now better match mixes of forwards and
+  backwards slashes when using the `--line-filter` option. This also improves
+  piping from {program}`git` to {program}`clang-tidy-diff.py`, where slashes
+  will now be automatically normalized.
+
 #### New checks
 
 - New {doc}`llvm-invalid-regex-pattern
@@ -140,6 +145,10 @@ infrastructure are described first, followed by tool-specific sections.
   by suggesting a wider type of the same signedness as the original operands,
   instead of forcing a signed type, when a multiplication of two unsigned
   operands narrower than `int` is only signed due to integer promotion.
+
+- Improved {doc}`bugprone-macro-parentheses
+  <clang-tidy/checks/bugprone/macro-parentheses>` by fixing invalid fixes for
+  macro arguments used as names in alias declarations.
 
 - Fixed a crash in {doc}`bugprone-misplaced-operator-in-strlen-in-alloc
   <clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc>` when

@@ -587,7 +587,7 @@ class LLVM_ConstrainedFCmpIntrBase<string mnem>
         /*traits=*/[Pure, SameTypeOperands,
           TypesMatchWith<"result type has i1 element type and same shape as "
                          "operands", "arg_0", "res",
-                         "::getI1SameShape($_self)">,
+                         "::mlir::LLVM::getI1SameShape($_self)">,
           DeclareOpInterfaceMethods<FPExceptionBehaviorOpInterface>],
         /*requiresFastmath=*/1> {
   let arguments = (ins FCmpPredicate:$predicate,
