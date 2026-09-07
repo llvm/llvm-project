@@ -18454,6 +18454,10 @@ InstructionCost BoUpSLP::getSpillCost() {
       if (Entry->State == TreeEntry::SplitVectorize ||
           (Op->isGather() && allConstant(Op->Scalars)))
         continue;
+
+      // Reset the scan budget for analsysis of each edge.
+      Budget = 0;
+
       // A gather with all loop-invariant lanes is hoisted to the loop
       // preheader by optimizeGatherSequence, so its vector value becomes live
       // across any non-vectorized call in the loop body. Charge it like any
@@ -18469,7 +18473,6 @@ InstructionCost BoUpSLP::getSpillCost() {
             AddCosts(Op, GetSpillScale(Parent));
         continue;
       }
-      Budget = 0;
       BasicBlock *Pred = nullptr;
       if (auto *Phi = dyn_cast<PHINode>(Entry->getMainOp()))
         Pred = Phi->getIncomingBlock(Op->UserTreeIndex.EdgeIdx);
