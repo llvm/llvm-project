@@ -2490,6 +2490,18 @@ whether to skip the DPP optimization.
   ; Many expected active lanes: the DPP optimization is not skipped.
   %old1 = atomicrmw add ptr addrspace(3) @lds, i32 %val acq_rel, !amdgpu.expected.active.lanes !{i32 32}
 
+.. _amdgpu_noclobber:
+
+'``amdgpu.noclobber``' Metadata
+-------------------------------------------------
+
+If a ``load`` instruction marked as ``!amdgpu.noclobber`` may see any write
+other than the initialization of that location at kernel launch according to the
+:ref:`concurrent memory model<amdgpu-location-order>`, it returns ``undef``.
+
+This metadata can allow the AMDGPU compiler backend to emit scalar instead of
+vector load instructions.
+
 
 LLVM IR Attributes
 ==================

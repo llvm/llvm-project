@@ -19,6 +19,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/ReplaceConstant.h"
+#include "llvm/Support/AtomicOrdering.h"
 
 #define DEBUG_TYPE "amdgpu-memory-utils"
 
@@ -367,9 +368,6 @@ void removeFnAttrFromReachable(CallGraph &CG, Function *KernelRoot,
 bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
   Instruction *DefInst = Def->getMemoryInst();
 
-  if (isa<FenceInst>(DefInst))
-    return false;
-
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(DefInst)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::amdgcn_s_barrier:
@@ -393,15 +391,29 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
     }
   }
 
-  // Ignore atomics not aliasing with the original load, any atomic is a
-  // universal MemoryDef from MSSA's point of view too, just like a fence.
-  const auto checkNoAlias = [AA, Ptr](auto I) -> bool {
-    return I && AA->isNoAlias(I->getPointerOperand(), Ptr);
+  // Ignore non-acquire atomics not aliasing with the original load, any atomic
+  // is a universal MemoryDef from MSSA's point of view too, just like a fence.
+  // Acquire (or stronger) fences/atomics act as clobbers because they can bring
+  // in effects from other threads.
+  const auto MayAlias = [AA, Ptr](auto I) -> bool {
+    return !AA->isNoAlias(I->getPointerOperand(), Ptr);
   };
 
-  if (checkNoAlias(dyn_cast<AtomicCmpXchgInst>(DefInst)) ||
-      checkNoAlias(dyn_cast<AtomicRMWInst>(DefInst)))
-    return false;
+  if (const auto *F = dyn_cast<FenceInst>(DefInst))
+    return isAcquireOrStronger(F->getOrdering());
+
+  if (const auto *I = dyn_cast<AtomicRMWInst>(DefInst))
+    return isAcquireOrStronger(I->getOrdering()) || MayAlias(I);
+
+  if (const auto *I = dyn_cast<AtomicCmpXchgInst>(DefInst))
+    return isAcquireOrStronger(I->getMergedOrdering()) || MayAlias(I);
+
+  if (const auto *I = dyn_cast<LoadInst>(DefInst))
+    return isAcquireOrStronger(I->getOrdering());
+
+  // (Atomic) stores that don't alias do not clobber.
+  if (const auto *I = dyn_cast<StoreInst>(DefInst))
+    return MayAlias(I);
 
   return true;
 }
@@ -423,8 +435,8 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
   // case add all Defs to WorkList and continue going up and checking all
   // the definitions of this memory location until the root. When all the
   // defs are exhausted and came to the entry state we have no clobber.
-  // Along the scan ignore barriers and fences which are considered clobbers
-  // by the MemorySSA, but not really writing anything into the memory.
+  // Along the scan ignore barriers which are considered clobbers by the
+  // MemorySSA, but not really writing anything into the memory.
   while (!WorkList.empty()) {
     MemoryAccess *MA = WorkList.pop_back_val();
     if (!Visited.insert(MA).second)
