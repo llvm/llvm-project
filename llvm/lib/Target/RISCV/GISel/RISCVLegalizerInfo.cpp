@@ -237,6 +237,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtZbkc(), {sXLen})
       .unsupported();
 
+  getActionDefinitionsBuilder(G_CLMULH)
+      .legalFor(ST.hasStdExtZbkc(), {sXLen})
+      .unsupported();
+
   auto &CountZerosActions = getActionDefinitionsBuilder({G_CTLZ, G_CTTZ});
   auto &CountZerosPoisonActions =
       getActionDefinitionsBuilder({G_CTLZ_ZERO_POISON, G_CTTZ_ZERO_POISON});
@@ -845,6 +849,11 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   switch (IntrinsicID) {
   default:
     return false;
+  case Intrinsic::riscv_clmulh:
+    Helper.MIRBuilder.buildInstr(TargetOpcode::G_CLMULH, {MI.getOperand(0)},
+                                {MI.getOperand(2), MI.getOperand(3)});
+    MI.eraseFromParent();
+    return true;
   case Intrinsic::vacopy: {
     // vacopy arguments must be legal because of the intrinsic signature.
     // No need to check here.

@@ -7,6 +7,7 @@
 ; RUN:   | FileCheck %s --check-prefix=RV64ZBKC
 
 declare i64 @llvm.clmul.i64(i64, i64)
+declare i64 @llvm.riscv.clmulh.i64(i64, i64)
 
 define i64 @clmul_i64(i64 %a, i64 %b) {
 ; RV64ZBC-LABEL: clmul_i64:
@@ -19,5 +20,19 @@ define i64 @clmul_i64(i64 %a, i64 %b) {
 ; RV64ZBKC-NEXT:    clmul a0, a0, a1
 ; RV64ZBKC-NEXT:    ret
   %r = call i64 @llvm.clmul.i64(i64 %a, i64 %b)
+  ret i64 %r
+}
+
+define i64 @clmulh_i64(i64 %a, i64 %b) {
+; RV64ZBC-LABEL: clmulh_i64:
+; RV64ZBC:       # %bb.0:
+; RV64ZBC-NEXT:    clmulh a0, a0, a1
+; RV64ZBC-NEXT:    ret
+;
+; RV64ZBKC-LABEL: clmulh_i64:
+; RV64ZBKC:       # %bb.0:
+; RV64ZBKC-NEXT:    clmulh a0, a0, a1
+; RV64ZBKC-NEXT:    ret
+  %r = call i64 @llvm.riscv.clmulh.i64(i64 %a, i64 %b)
   ret i64 %r
 }
