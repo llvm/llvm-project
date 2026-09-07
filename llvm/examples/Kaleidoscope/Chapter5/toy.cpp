@@ -697,82 +697,70 @@ Value *IfExprAST::codegen() {
 //   br endcond, loop, endloop
 // outloop:
 Value *ForExprAST::codegen() {
-  // Emit the start code first, without 'variable' in scope.
+  // 1. Emit the start code first
   Value *StartVal = Start->codegen();
-  if (!StartVal)
-    return nullptr;
+  if (!StartVal) return nullptr;
 
-  // Make the new basic block for the loop header, inserting after current
-  // block.
   Function *TheFunction = Builder->GetInsertBlock()->getParent();
   BasicBlock *PreheaderBB = Builder->GetInsertBlock();
-  BasicBlock *LoopBB = BasicBlock::Create(*TheContext, "loop", TheFunction);
+  
+  // Create blocks. Note: We now have a separate Header and Body.
+  BasicBlock *HeaderBB = BasicBlock::Create(*TheContext, "loop.header", TheFunction);
+  BasicBlock *BodyBB = BasicBlock::Create(*TheContext, "loop.body", TheFunction);
+  BasicBlock *AfterBB = BasicBlock::Create(*TheContext, "afterloop", TheFunction);
 
-  // Insert an explicit fall through from the current block to the LoopBB.
-  Builder->CreateBr(LoopBB);
+  // Jump from the current block to the Header
+  Builder->CreateBr(HeaderBB);
+  Builder->SetInsertPoint(HeaderBB);
 
-  // Start insertion in LoopBB.
-  Builder->SetInsertPoint(LoopBB);
-
-  // Start the PHI node with an entry for Start.
-  PHINode *Variable =
-      Builder->CreatePHI(Type::getDoubleTy(*TheContext), 2, VarName);
+  // 2. PHI Node stays in the Header
+  PHINode *Variable = Builder->CreatePHI(Type::getDoubleTy(*TheContext), 2, VarName);
   Variable->addIncoming(StartVal, PreheaderBB);
 
-  // Within the loop, the variable is defined equal to the PHI node.  If it
-  // shadows an existing variable, we have to restore it, so save it now.
+  // Shadow the old variable
   Value *OldVal = NamedValues[VarName];
   NamedValues[VarName] = Variable;
 
-  // Emit the body of the loop.  This, like any other expr, can change the
-  // current BB.  Note that we ignore the value computed by the body, but don't
-  // allow an error.
-  if (!Body->codegen())
-    return nullptr;
+  // 3. MOVE CONDITION CHECK HERE (Before the Body)
+  Value *EndCond = End->codegen();
+  if (!EndCond) return nullptr;
 
-  // Emit the step value.
+  EndCond = Builder->CreateFCmpONE(
+      EndCond, ConstantFP::get(*TheContext, APFloat(0.0)), "loopcond");
+
+  // If condition is true, go to Body. If false, go to Afterloop.
+  Builder->CreateCondBr(EndCond, BodyBB, AfterBB);
+
+  // 4. Emit Body Block
+  Builder->SetInsertPoint(BodyBB);
+  if (!Body->codegen()) return nullptr;
+
+  // 5. Emit Step
   Value *StepVal = nullptr;
   if (Step) {
     StepVal = Step->codegen();
-    if (!StepVal)
-      return nullptr;
+    if (!StepVal) return nullptr;
   } else {
-    // If not specified, use 1.0.
     StepVal = ConstantFP::get(*TheContext, APFloat(1.0));
   }
 
   Value *NextVar = Builder->CreateFAdd(Variable, StepVal, "nextvar");
 
-  // Compute the end condition.
-  Value *EndCond = End->codegen();
-  if (!EndCond)
-    return nullptr;
+  // Loop back to the Header (to re-check the condition)
+  Builder->CreateBr(HeaderBB);
+  
+  // Add the back-edge to the PHI node
+  Variable->addIncoming(NextVar, BodyBB);
 
-  // Convert condition to a bool by comparing non-equal to 0.0.
-  EndCond = Builder->CreateFCmpONE(
-      EndCond, ConstantFP::get(*TheContext, APFloat(0.0)), "loopcond");
-
-  // Create the "after loop" block and insert it.
-  BasicBlock *LoopEndBB = Builder->GetInsertBlock();
-  BasicBlock *AfterBB =
-      BasicBlock::Create(*TheContext, "afterloop", TheFunction);
-
-  // Insert the conditional branch into the end of LoopEndBB.
-  Builder->CreateCondBr(EndCond, LoopBB, AfterBB);
-
-  // Any new code will be inserted in AfterBB.
+  // 6. Set insert point to Afterloop for subsequent code
   Builder->SetInsertPoint(AfterBB);
 
-  // Add a new entry to the PHI node for the backedge.
-  Variable->addIncoming(NextVar, LoopEndBB);
-
-  // Restore the unshadowed variable.
+  // Restore variable shadowing
   if (OldVal)
     NamedValues[VarName] = OldVal;
   else
     NamedValues.erase(VarName);
 
-  // for expr always returns 0.0.
   return Constant::getNullValue(Type::getDoubleTy(*TheContext));
 }
 
