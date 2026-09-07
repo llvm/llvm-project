@@ -33814,18 +33814,24 @@ static SDValue LowerCLMUL(SDValue Op, const X86Subtarget &Subtarget,
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
 
-  if (Op.getOpcode() == ISD::CLMUL && VT.isVectorOf(MVT::i32)) {
+  if (VT.isVectorOf(MVT::i32)) {
     // Without VPCLMULQDQ we have to split down to v4i32.
     if (!Subtarget.hasVPCLMULQDQ() && !VT.is128BitVector())
       return splitVectorIntBinary(Op, DAG, DL);
 
     // Use PCLMUL lo/hi imms to multiply <0,u,2,u> 32-bit elements.
     MVT MulVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
-    LHS = DAG.getBitcast(MulVT, LHS);
-    RHS = DAG.getBitcast(MulVT, RHS);
-    SDValue Res0 = DAG.getNode(X86ISD::PCLMULQDQ, DL, MulVT, LHS, RHS,
+    SDValue LHSLo = DAG.getBitcast(MulVT, LHS);
+    SDValue RHSLo = DAG.getBitcast(MulVT, RHS);
+    if (IsHigh) {
+      // CLMULH: Ensure the upper 32-bits are zero.
+      SDValue Mask = DAG.getTargetConstant(0xFFFFFFFFULL, DL, MulVT);
+      LHSLo = DAG.getNode(ISD::AND, DL, MulVT, LHSLo, Mask);
+      RHSLo = DAG.getNode(ISD::AND, DL, MulVT, RHSLo, Mask);
+    }
+    SDValue Res0 = DAG.getNode(X86ISD::PCLMULQDQ, DL, MulVT, LHSLo, RHSLo,
                                DAG.getTargetConstant(0x00, DL, MVT::i8));
-    SDValue Res2 = DAG.getNode(X86ISD::PCLMULQDQ, DL, MulVT, LHS, RHS,
+    SDValue Res2 = DAG.getNode(X86ISD::PCLMULQDQ, DL, MulVT, LHSLo, RHSLo,
                                DAG.getTargetConstant(0x11, DL, MVT::i8));
     // Shift down to handle <1,u,3,u> 32-bit elements.
     LHS = getTargetVShiftByConstNode(X86ISD::VSRLI, DL, MulVT, LHS, 32, DAG);
@@ -33839,7 +33845,7 @@ static SDValue LowerCLMUL(SDValue Op, const X86Subtarget &Subtarget,
                                DAG.getBitcast(VT, Res1));
     SDValue Res13 = getUnpackl(DAG, DL, VT, DAG.getBitcast(VT, Res2),
                                DAG.getBitcast(VT, Res3));
-    return getUnpackl(DAG, DL, VT, Res02, Res13);
+    return getUnpack(DAG, DL, VT, Res02, Res13, IsHigh);
   }
 
   // Just scalarize other vector cases and rely on shuffle combining to
