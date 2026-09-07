@@ -410,6 +410,8 @@ struct MemrefGlobalVariableModel
     Attribute memSpace = globalOp.getType().getMemorySpace();
     return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);
   }
+
+  bool isCompilerGenerated(Operation *op) const { return false; }
 };
 
 struct GPULaunchOffloadRegionModel

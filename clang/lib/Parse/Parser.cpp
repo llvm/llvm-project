@@ -1392,24 +1392,30 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     return Actions.ActOnFinishFunctionBody(Res, nullptr, false);
   }
 
+  return ParseFunctionBody(Res, BodyScope);
+}
+
+Decl *Parser::ParseFunctionBody(Decl *D, ParseScope &BodyScope) {
   if (Tok.is(tok::kw_try))
-    return ParseFunctionTryBlock(Res, BodyScope);
+    return ParseFunctionTryBlock(D, BodyScope);
 
   // If we have a colon, then we're probably parsing a C++
   // ctor-initializer.
   if (Tok.is(tok::colon)) {
-    ParseConstructorInitializer(Res);
+    ParseConstructorInitializer(D);
 
     // Recover from error.
     if (!Tok.is(tok::l_brace)) {
       BodyScope.Exit();
-      Actions.ActOnFinishFunctionBody(Res, nullptr);
-      return Res;
+      if (D)
+        D->getAsFunction()->setInvalidDecl();
+      Actions.ActOnFinishFunctionBody(D, nullptr);
+      return D;
     }
   } else
-    Actions.ActOnDefaultCtorInitializers(Res);
+    Actions.ActOnDefaultCtorInitializers(D);
 
-  return ParseFunctionStatementBody(Res, BodyScope);
+  return ParseFunctionStatementBody(D, BodyScope);
 }
 
 void Parser::SkipFunctionBody() {

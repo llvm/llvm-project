@@ -1,4 +1,5 @@
 // RUN: mlir-tblgen -gen-op-defs -I %S/../../include %s | FileCheck %s
+// RUN: mlir-tblgen -gen-op-defs -I %S/../../include %s | FileCheck %s --check-prefix=PROP-ENUM
 
 include "mlir/IR/OpBase.td"
 include "mlir/IR/EnumAttr.td"
@@ -133,8 +134,18 @@ def TestEnum : I32Enum<"TestEnum", "a test enum", [TestEnumCase0, TestEnumCase1]
 
 def TestEnumAttr : EnumAttr<TestDialect, TestEnum, "enum">;
 
-def TestPrettyEnumAttr : EnumAttr<TestDialect, TestEnum, "pretty_enum"> {
-  let assemblyFormat = "`<` $value `>`";
+def TestPrettyEnumAttr : EnumAttr<TestDialect, TestEnum, "pretty_enum">;
+
+def TestCustomEnum
+    : I32Enum<"TestCustomEnum", "an enum with custom attribute syntax", [
+        I32EnumCase<"Case0", 0>,
+        I32EnumCase<"Case1", 1>,
+      ]> {
+  let cppNamespace = "::test";
+}
+def TestCustomEnumAttr
+    : EnumAttr<TestDialect, TestCustomEnum, "custom_enum"> {
+  let assemblyFormat = "custom<Foo>($value)";
 }
 
 def TestNonKeywordEnumCase : I32EnumCase<"NonKeyword", 0, "non-keyword">;
@@ -144,24 +155,7 @@ def TestNonKeywordEnum
   let cppNamespace = "::test";
 }
 def TestNonKeywordEnumAttr
-    : EnumAttr<TestDialect, TestNonKeywordEnum, "non_keyword_enum"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-// Default-valued optional attributes have a non-optional getter.
-
-// CHECK-LABEL: DefaultOptionalEnumAttrOp::print
-// CHECK: auto caseValue = getAttr();
-def DefaultOptionalEnumAttrOp : TestFormat_Op<"($attr^)? attr-dict">,
-    Arguments<(ins DefaultValuedOptionalAttr<
-        TestEnumAttr, "::test::TestEnum::Case0">:$attr)>;
-
-// CHECK-LABEL: EnumAttrOp::parse
-// CHECK: symbolizeTestEnum
-// CHECK-LABEL: EnumAttrOp::print
-// CHECK: stringifyTestEnum
-def EnumAttrOp : TestFormat_Op<"$attr attr-dict">,
-    Arguments<(ins TestEnumAttr:$attr)>;
+    : EnumAttr<TestDialect, TestNonKeywordEnum, "non_keyword_enum">;
 
 // Unquoted bit enums use a separator-aware attribute parser instead of the
 // operation-level enum parser, which only accepts one keyword or string.
@@ -178,6 +172,67 @@ def TestBitEnum : I32BitEnum<"TestBitEnum", "a test bit enum",
 }
 
 def TestBitEnumAttr : EnumAttr<TestDialect, TestBitEnum, "bit_enum">;
+
+def TestCommaBitEnum
+    : I32BitEnum<"TestCommaBitEnum", "a comma-separated bit enum", [
+        TestBitEnumNone,
+        I32BitEnumCaseBit<"Bit0", 0>,
+        I32BitEnumCaseBit<"Bit1", 1>,
+      ]> {
+  let cppNamespace = "::test";
+  let printBitEnumQuoted = 0;
+  let separator = ",";
+}
+def TestCommaBitEnumAttr
+    : EnumAttr<TestDialect, TestCommaBitEnum, "comma_bit_enum">;
+
+// Comma-separated bit enums use square brackets to disambiguate their commas
+// from separators between prop-dict fields.
+
+// PROP-ENUM-LABEL: CommaBitEnumAttrPropDictOp::parsePropertiesFromKeyValueList
+// PROP-ENUM: parser.parseLSquare()
+// PROP-ENUM: symbolizeTestCommaBitEnum
+// PROP-ENUM: parser.parseOptionalComma()
+// PROP-ENUM: parser.parseRSquare()
+// PROP-ENUM-LABEL: CommaBitEnumAttrPropDictOp::_odsPrintPropertiesAsKeyValueList
+// PROP-ENUM: _odsPrinter << "["
+// PROP-ENUM: stringifyTestCommaBitEnum
+// PROP-ENUM: _odsPrinter << "]"
+def CommaBitEnumAttrPropDictOp : TestFormat_Op<"prop-dict attr-dict">,
+    Arguments<(ins TestCommaBitEnumAttr:$flags, I64Attr:$next)>;
+
+// Custom EnumAttr formats continue to use their own parser and printer.
+
+// PROP-ENUM-LABEL: CustomEnumAttrPropDictOp::parsePropertiesFromKeyValueList
+// PROP-ENUM: parseCustomAttributeWithFallback
+// PROP-ENUM-LABEL: CustomEnumAttrPropDictOp::_odsPrintPropertiesAsKeyValueList
+// PROP-ENUM: printStrippedAttrOrType
+def CustomEnumAttrPropDictOp : TestFormat_Op<"prop-dict attr-dict">,
+    Arguments<(ins TestCustomEnumAttr:$attr)>;
+
+// Keyed prop-dict fields strip the default EnumAttr body syntax.
+
+// PROP-ENUM-LABEL: DefaultEnumAttrPropDictOp::parsePropertiesFromKeyValueList
+// PROP-ENUM: symbolizeTestEnum
+// PROP-ENUM-LABEL: DefaultEnumAttrPropDictOp::_odsPrintPropertiesAsKeyValueList
+// PROP-ENUM: stringifyTestEnum
+def DefaultEnumAttrPropDictOp : TestFormat_Op<"prop-dict attr-dict">,
+    Arguments<(ins TestEnumAttr:$attr)>;
+
+// Default-valued optional attributes have a non-optional getter.
+
+// CHECK-LABEL: DefaultOptionalEnumAttrOp::print
+// CHECK: auto caseValue = getAttr();
+def DefaultOptionalEnumAttrOp : TestFormat_Op<"(enum($attr)^)? attr-dict">,
+    Arguments<(ins DefaultValuedOptionalAttr<
+        TestEnumAttr, "::test::TestEnum::Case0">:$attr)>;
+
+// CHECK-LABEL: EnumAttrOp::parse
+// CHECK: symbolizeTestEnum
+// CHECK-LABEL: EnumAttrOp::print
+// CHECK: stringifyTestEnum
+def EnumAttrOp : TestFormat_Op<"enum($attr) attr-dict">,
+    Arguments<(ins TestEnumAttr:$attr)>;
 
 // CHECK-LABEL: EnumAttrUnquotedBitOp::parse
 // CHECK: parseCustomAttributeWithFallback

@@ -23,6 +23,11 @@ mlir_tablegen(LLVMIntrinsicOps.h.inc -gen-op-decls)
 mlir_tablegen(LLVMIntrinsicOps.cpp.inc -gen-op-defs)
 add_mlir_dialect_tablegen_target(MLIRLLVMIntrinsicOpsIncGen)
 
+set(LLVM_TARGET_DEFINITIONS LLVMAllOps.td)
+mlir_tablegen(LLVMAllOps.h.inc -gen-op-decls -op-shard-count=8)
+mlir_tablegen(LLVMAllOps.cpp.inc -gen-op-defs -op-shard-count=8)
+add_mlir_dialect_tablegen_target(MLIRLLVMAllOpsIncGen)
+
 add_mlir_doc(LLVMOps LLVMOps Dialects/ -gen-op-doc -dialect=llvm)
 add_mlir_doc(LLVMIntrinsicOps LLVMIntrinsicOps Dialects/ -gen-op-doc -dialect=llvm)
 

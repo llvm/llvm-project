@@ -251,7 +251,7 @@ __device__ void nvvm_math(float f1, float f2, double d1, double d2) {
   float t3 = __nvvm_sqrt_rn_f(f1);
 // CHECK: call float @llvm.nvvm.rcp.rn.f
   float t4 = __nvvm_rcp_rn_f(f2);
-// CHECK: call float @llvm.nvvm.add.rn.f
+// CHECK: call float @llvm.nvvm.fadd.f32({{.*}}i32 1)
   float t5 = __nvvm_add_rn_f(f1, f2);
 
 // CHECK: call double @llvm.nvvm.fmax.d
@@ -1628,21 +1628,21 @@ __device__ void nvvm_min_max_sm86() {
 
 // CHECK-LABEL: nvvm_add_fma_f32_sat
 __device__ void nvvm_add_fma_f32_sat() {
-  // CHECK: call float @llvm.nvvm.add.rn.sat.f
+  // CHECK: call float @llvm.nvvm.fadd.sat.f32({{.*}}i32 1)
   __nvvm_add_rn_sat_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.add.rn.ftz.sat.f
+  // CHECK: call float @llvm.nvvm.fadd.ftz.sat.f32({{.*}}i32 1)
   __nvvm_add_rn_ftz_sat_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.add.rz.sat.f
+  // CHECK: call float @llvm.nvvm.fadd.sat.f32({{.*}}i32 0)
   __nvvm_add_rz_sat_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.add.rz.ftz.sat.f
+  // CHECK: call float @llvm.nvvm.fadd.ftz.sat.f32({{.*}}i32 0)
   __nvvm_add_rz_ftz_sat_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.add.rm.sat.f
+  // CHECK: call float @llvm.nvvm.fadd.sat.f32({{.*}}i32 3)
   __nvvm_add_rm_sat_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.add.rm.ftz.sat.f
+  // CHECK: call float @llvm.nvvm.fadd.ftz.sat.f32({{.*}}i32 3)
   __nvvm_add_rm_ftz_sat_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.add.rp.sat.f
+  // CHECK: call float @llvm.nvvm.fadd.sat.f32({{.*}}i32 2)
   __nvvm_add_rp_sat_f(1.0f, 2.0f);
-  // CHECK: call float @llvm.nvvm.add.rp.ftz.sat.f
+  // CHECK: call float @llvm.nvvm.fadd.ftz.sat.f32({{.*}}i32 2)
   __nvvm_add_rp_ftz_sat_f(1.0f, 2.0f);
 
   // CHECK: call float @llvm.nvvm.fma.rn.sat.f
@@ -1672,13 +1672,13 @@ __device__ void nvvm_add_fma_f32_sat() {
 
 // CHECK-LABEL: nvvm_add_mul_f16_sat
 __device__ void nvvm_add_mul_f16_sat() {
-  // CHECK: call half @llvm.nvvm.add.rn.sat.f16
+  // CHECK: call half @llvm.nvvm.fadd.sat.f16({{.*}}i32 1)
   __nvvm_add_rn_sat_f16(F16, F16_2);
-  // CHECK: call half @llvm.nvvm.add.rn.ftz.sat.f16
+  // CHECK: call half @llvm.nvvm.fadd.ftz.sat.f16({{.*}}i32 1)
   __nvvm_add_rn_ftz_sat_f16(F16, F16_2);
-  // CHECK: call <2 x half> @llvm.nvvm.add.rn.sat.v2f16
+  // CHECK: call <2 x half> @llvm.nvvm.fadd.sat.v2f16({{.*}}i32 1)
   __nvvm_add_rn_sat_v2f16(F16X2, F16X2_2);
-  // CHECK: call <2 x half> @llvm.nvvm.add.rn.ftz.sat.v2f16
+  // CHECK: call <2 x half> @llvm.nvvm.fadd.ftz.sat.v2f16({{.*}}i32 1)
   __nvvm_add_rn_ftz_sat_v2f16(F16X2, F16X2_2);
 
   // CHECK: call half @llvm.nvvm.mul.rn.sat.f16

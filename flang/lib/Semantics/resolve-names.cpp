@@ -3586,7 +3586,7 @@ bool ScopeHandler::ImplicitlyTypeForwardRef(Symbol &symbol) {
 }
 
 // Ensure that the symbol for an intrinsic procedure is marked with
-// the INTRINSIC attribute.  Also set PURE &/or ELEMENTAL as
+// the INTRINSIC attribute.  Also set SIMPLE, PURE &/or ELEMENTAL as
 // appropriate.
 void ScopeHandler::AcquireIntrinsicProcedureFlags(Symbol &symbol) {
   SetImplicitAttr(symbol, Attr::INTRINSIC);
@@ -3595,6 +3595,13 @@ void ScopeHandler::AcquireIntrinsicProcedureFlags(Symbol &symbol) {
   case evaluate::IntrinsicClass::elementalSubroutine:
     SetExplicitAttr(symbol, Attr::ELEMENTAL);
     SetExplicitAttr(symbol, Attr::PURE);
+    break;
+  case evaluate::IntrinsicClass::simpleElementalSubroutine:
+    SetExplicitAttr(symbol, Attr::ELEMENTAL);
+    SetExplicitAttr(symbol, Attr::SIMPLE);
+    break;
+  case evaluate::IntrinsicClass::simpleSubroutine:
+    SetExplicitAttr(symbol, Attr::SIMPLE);
     break;
   case evaluate::IntrinsicClass::impureSubroutine:
     break;
@@ -10914,16 +10921,17 @@ void ResolveNamesVisitor::FinishSpecificationPart(
         // OpenACC) would incorrectly route every allocatable through the CUDA
         // Fortran managed descriptor pipeline.
         if (context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CudaManaged) &&
-            context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CUDA))
-          object->set_cudaDataAttr(common::CUDADataAttr::Managed);
-        // Implicitly treat allocatable arrays as pinned when feature is
-        // enabled.
-        else if (IsAllocatable(symbol) &&
-            context().languageFeatures().IsEnabled(
-                common::LanguageFeature::CudaPinned))
-          object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+                common::LanguageFeature::CUDA)) {
+          if (context().languageFeatures().IsEnabled(
+                  common::LanguageFeature::CudaManaged))
+            object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+          // Implicitly treat allocatable arrays as pinned when feature is
+          // enabled.
+          else if (IsAllocatable(symbol) &&
+              context().languageFeatures().IsEnabled(
+                  common::LanguageFeature::CudaPinned))
+            object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
+        }
       }
     }
   }

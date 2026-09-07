@@ -7870,9 +7870,16 @@ int LLParser::parseInstruction(Instruction *&Inst, BasicBlock *BB,
       cast<TruncInst>(Inst)->setHasNoSignedWrap(true);
     return false;
   }
+  case lltok::kw_addrspacecast: {
+    bool NonNull = EatIfPresent(lltok::kw_nonnull);
+    if (parseCast(Inst, PFS, KeywordVal))
+      return true;
+    if (NonNull)
+      cast<AddrSpaceCastInst>(Inst)->setNonNull();
+    return false;
+  }
   case lltok::kw_sext:
   case lltok::kw_bitcast:
-  case lltok::kw_addrspacecast:
   case lltok::kw_fptoui:
   case lltok::kw_fptosi:
   case lltok::kw_inttoptr:
