@@ -2495,6 +2495,19 @@ def INT_NVVM_ADD_D :
   F_MATH_2_RNDOP_TY<"add.${rnd}.f64", F64RT, int_nvvm_fadd>;
 
 // mixed precision
+
+// FP_EXTEND to v2f32 is scalarized before isel, leaving one of two shapes
+// behind depending on whether the source lanes share a register.
+def fpextend_v2f32_from_packed : PatFrag<(ops node:$a),
+                                         (v2f32 (build_vector
+                                           (f32 (fpextend (extractelt node:$a, 0))),
+                                           (f32 (fpextend (extractelt node:$a, 1)))))>;
+
+def fpextend_v2f32_from_lanes : PatFrag<(ops node:$a0, node:$a1),
+                                        (v2f32 (build_vector
+                                          (f32 (fpextend node:$a0)),
+                                          (f32 (fpextend node:$a1))))>;
+
 foreach rnd = FPRoundingModes in {
   defvar rnd_imm = !cast<TImmLeaf>(StrJoin<"_", ["fp_rnd", rnd, "imm"]>.ret);
 
@@ -2508,6 +2521,41 @@ foreach rnd = FPRoundingModes in {
              (f32 (fpextend type:$a)),
              f32:$b, rnd_imm))]>,
         Requires<[SM100]>;
+
+  foreach t = [F16X2RT, BF16X2RT] in {
+    def INT_NVVM_MIXED_ADD_ # rnd # _f32x2_ # t.PtxType :
+      BasicNVPTXInst<(outs B64:$dst), (ins t.RC:$a, B64:$b),
+        StrJoin<".", ["add", rnd, "f32x2", t.PtxType, "f32x2"]>.ret,
+        [(set v2f32:$dst,
+          (int_nvvm_fadd (fpextend_v2f32_from_packed t.Ty:$a), v2f32:$b,
+                         rnd_imm))]>,
+      Requires<[SM107f]>;
+
+    def : Pat<(v2f32 (int_nvvm_fadd
+                       (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
+                                                  t.Ty.ElementType:$a1),
+                       v2f32:$b, rnd_imm)),
+              (!cast<Instruction>("INT_NVVM_MIXED_ADD_" # rnd # "_f32x2_" #
+                                  t.PtxType) (t.Ty (V2I16toI32 $a0, $a1)), $b)>,
+      Requires<[SM107f]>;
+  }
+}
+
+// mixed precision, downconverting
+foreach t = [F16X2RT, BF16X2RT] in {
+  defvar ftz = !if(!eq(t, F16X2RT), "ftz", "");
+  defvar AddOp = !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fadd", ftz]>.ret);
+  defvar CvtOp = !cast<Intrinsic>("int_nvvm_ff2" # t.PtxType # "_rz");
+
+  def INT_NVVM_MIXED_ADD_rz_ # t.PtxType # _f32x2 :
+    BasicNVPTXInst<(outs t.RC:$dst), (ins B64:$a, B64:$b),
+      StrJoin<".", ["add.rz", ftz, t.PtxType, "f32x2", "f32x2"]>.ret,
+      // The cvt packs its first argument into the high half of the result.
+      [(set t.Ty:$dst,
+        (CvtOp (extractelt (AddOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 1),
+               (extractelt (AddOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 0),
+               /*pzo=*/0))]>,
+    Requires<[SM107f]>;
 }
 
 // Pattern for fadd when there is no FTZ flag
@@ -2517,6 +2565,19 @@ let Predicates = [SM100, doNoF32FTZ] in {
   def : Pat<(f32 (fadd (f32 (fpextend bf16:$a)), f32:$b)),
             (INT_NVVM_MIXED_ADD_rn_f32_bf16 B16:$a, B32:$b)>;
 }
+
+let Predicates = [SM107f, doNoF32FTZ] in
+  foreach t = [F16X2RT, BF16X2RT] in {
+    defvar Inst = !cast<Instruction>("INT_NVVM_MIXED_ADD_rn_f32x2_" # t.PtxType);
+
+    def : Pat<(v2f32 (fadd (fpextend_v2f32_from_packed t.Ty:$a), v2f32:$b)),
+              (Inst $a, $b)>;
+
+    def : Pat<(v2f32 (fadd (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
+                                                      t.Ty.ElementType:$a1),
+                           v2f32:$b)),
+              (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b)>;
+  }
 
 //
 // Sub
