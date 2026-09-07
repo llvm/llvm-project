@@ -57,9 +57,6 @@ RUN git clone --depth 1 --branch 2026.06.24 https://github.com/microsoft/vcpkg.g
     rmdir /S /Q C:\vcpkg\downloads && \
     rmdir /S /Q C:\vcpkg\.git
 
-# Testing requires psutil
-RUN pip install psutil
-
 # configure Python encoding
 ENV PYTHONIOENCODING=UTF-8
 
@@ -113,7 +110,7 @@ RUN powershell -Command \
     rm actions-runner-win.zip
 
 # Set the LLVM_VERSION environment variable
-ENV LLVM_VERSION=22.1.4
+ENV LLVM_VERSION=23.1.0
 
 # Download and extract Clang compiler.
 # Create directories, download, extract, and clean up all in one layer

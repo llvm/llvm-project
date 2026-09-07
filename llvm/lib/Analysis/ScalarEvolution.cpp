@@ -970,6 +970,27 @@ static const SCEV *BinomialCoefficient(const SCEV *It, unsigned K,
                        SE.getTruncateOrZeroExtend(DivResult, ResultTy));
 }
 
+/// Attach \p UseFlags to \p Res as use-specific flags, but only if \p Res
+/// really is the two-operand \p ExprT over \p LHS and \p RHS - in either order,
+/// as operands get sorted by complexity.
+///
+/// Flags established for that operation say nothing about any other expression:
+/// a folded-away operand, a flattened nested expression or a distributed
+/// constant all give a different computation. They must not be attached to it,
+/// because an n-ary expression's no-wrap flags have to hold for all subsets and
+/// orders of its operands, and SCEVExpander relies on that when it stamps them
+/// on every partial sum or product it builds.
+template <typename ExprT>
+static SCEVUse withUseFlagsIfNotFolded(const SCEV *Res, SCEVUse LHS,
+                                       SCEVUse RHS,
+                                       SCEV::NoWrapFlags UseFlags) {
+  auto *E = dyn_cast<ExprT>(Res);
+  if (E && (equal(E->operands(), ArrayRef<SCEVUse>({LHS, RHS})) ||
+            equal(E->operands(), ArrayRef<SCEVUse>({RHS, LHS}))))
+    return {Res, UseFlags};
+  return Res;
+}
+
 /// Return the value of this chain of recurrences at the specified iteration
 /// number.  We can evaluate this recurrence by multiplying each element in the
 /// chain by the binomial coefficient corresponding to it.  In other words, we
@@ -983,11 +1004,13 @@ const SCEV *SCEVAddRecExpr::evaluateAtIteration(const SCEV *It,
   return evaluateAtIteration(operands(), It, SE);
 }
 
-const SCEV *SCEVAddRecExpr::evaluateAtIteration(ArrayRef<SCEVUse> Operands,
-                                                const SCEV *It,
-                                                ScalarEvolution &SE) {
+SCEVUse SCEVAddRecExpr::evaluateAtIteration(ArrayRef<SCEVUse> Operands,
+                                            const SCEV *It, ScalarEvolution &SE,
+                                            SCEV::NoWrapFlags UseFlags) {
   assert(Operands.size() > 0);
-  const SCEV *Result = Operands[0].getPointer();
+  assert((Operands.size() == 2 || UseFlags == SCEV::FlagAnyWrap) &&
+         "use-specific flags only supported for affine AddRecs");
+  SCEVUse Result = Operands[0].getPointer();
   for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
     // The computation is correct in the face of overflow provided that the
     // multiplication is performed _after_ the evaluation of the binomial
@@ -996,10 +1019,22 @@ const SCEV *SCEVAddRecExpr::evaluateAtIteration(ArrayRef<SCEVUse> Operands,
     if (isa<SCEVCouldNotCompute>(Coeff))
       return Coeff;
 
-    Result =
-        SE.getAddExpr(Result, SE.getMulExpr(Operands[i].getPointer(), Coeff));
+    const SCEV *Mul = SE.getMulExpr(Operands[i].getPointer(), Coeff);
+    Result = withUseFlagsIfNotFolded<SCEVAddExpr>(SE.getAddExpr(Result, Mul),
+                                                  Result, Mul, UseFlags);
   }
   return Result;
+}
+
+SCEVUse SCEVAddRecExpr::getExitValue(ScalarEvolution &SE) const {
+  const SCEV *BTC = SE.getBackedgeTakenCount(getLoop());
+  if (isa<SCEVCouldNotCompute>(BTC))
+    return BTC;
+  // The loop reaches iteration BTC, so the value this recurrence computes there
+  // is the value it had, and that did not wrap.
+  return evaluateAtIteration(operands(), BTC, SE,
+                             isAffine() ? getNoWrapFlags(SCEV::FlagNUW)
+                                        : SCEV::FlagAnyWrap);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1088,7 +1123,7 @@ const SCEV *ScalarEvolution::getPtrToAddrExpr(const SCEV *Op) {
             SCEVPtrToAddrExpr(ID.Intern(SCEVAllocator), U, Ty);
         UniqueSCEVs.insert(S, Token);
         S->computeAndSetCanonical(*this);
-        registerUser(S, U);
+        registerUser(S, {U});
         return static_cast<const SCEV *>(S);
       });
   assert(IntOp->getType()->isIntegerTy() &&
@@ -3048,7 +3083,7 @@ const SCEV *ScalarEvolution::getOrCreateUDivExpr(SCEVUse LHS, SCEVUse RHS) {
     S = new (SCEVAllocator) SCEVUDivExpr(ID.Intern(SCEVAllocator), LHS, RHS);
     UniqueSCEVs.insert(S, Token);
     S->computeAndSetCanonical(*this);
-    registerUser(S, ArrayRef<SCEVUse>({LHS, RHS}));
+    registerUser(S, {LHS, RHS});
   }
   return S;
 }
@@ -3446,8 +3481,7 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
   assert(LHS->getType() == RHS->getType() &&
          "SCEVUDivExpr operand types don't match!");
 
-  if (SCEV *S =
-          findExistingSCEVInCache(scUDivExpr, ArrayRef<SCEVUse>({LHS, RHS})))
+  if (SCEV *S = findExistingSCEVInCache(scUDivExpr, {LHS, RHS}))
     return S;
 
   // 0 udiv Y == 0
@@ -8663,6 +8697,19 @@ void ScalarEvolution::forgetValue(Value *V) {
   forgetMemoizedResults(ToForget);
 }
 
+void ScalarEvolution::forgetValues(ArrayRef<Value *> Values) {
+  SmallVector<Instruction *, 16> Worklist;
+  SmallPtrSet<Instruction *, 8> Visited;
+  SmallVector<SCEVUse, 8> ToForget;
+  for (Value *V : Values)
+    if (auto *I = dyn_cast<Instruction>(V))
+      if (Visited.insert(I).second)
+        Worklist.push_back(I);
+  visitAndClearUsers(Worklist, Visited, ToForget);
+
+  forgetMemoizedResults(ToForget);
+}
+
 void ScalarEvolution::forgetLcssaPhiWithNewPredecessor(Loop *L, PHINode *V) {
   // If SCEV looked through a trivial LCSSA phi node, we might have SCEV's
   // directly using a SCEVUnknown/SCEVAddRec defined in the loop. After an
@@ -9994,23 +10041,25 @@ const SCEV *ScalarEvolution::computeExitCountExhaustively(const Loop *L,
   return getCouldNotCompute();
 }
 
-const SCEV *ScalarEvolution::getSCEVAtScope(const SCEV *V, const Loop *L) {
-  SmallVector<std::pair<const Loop *, const SCEV *>, 2> &Values =
-      ValuesAtScopes[V];
+SCEVUse ScalarEvolution::getSCEVAtScope(const SCEV *V, const Loop *L) {
+  auto &Values = ValuesAtScopes[V];
   // Check to see if we've folded this expression at this loop before.
   for (auto &LS : Values)
     if (LS.first == L)
-      return LS.second ? LS.second : V;
+      return LS.second ? LS.second : SCEVUse(V);
 
   Values.emplace_back(L, nullptr);
 
   // Otherwise compute it.
-  const SCEV *C = computeSCEVAtScope(V, L);
+  SCEVUse C = computeSCEVAtScope(V, L);
   for (auto &LS : reverse(ValuesAtScopes[V]))
     if (LS.first == L) {
       LS.second = C;
+      // Record the dependency under the bare expression: invalidation walks
+      // expressions, and any use flags on C do not change which expression
+      // this is the value at scope of.
       if (!isa<SCEVConstant>(C))
-        ValuesAtScopesUsers[C].push_back({L, V});
+        ValuesAtScopesUsers[C.getPointer()].push_back({L, V});
       break;
     }
   return C;
@@ -10115,7 +10164,7 @@ const SCEV *ScalarEvolution::getWithOperands(const SCEV *S,
   llvm_unreachable("Unknown SCEV kind!");
 }
 
-const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
+SCEVUse ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
   switch (V->getSCEVType()) {
   case scConstant:
   case scVScale:
@@ -10128,7 +10177,7 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
     // Avoid performing the look-up in the common case where the specified
     // expression has no loop-variant portions.
     for (unsigned i = 0, e = AddRec->getNumOperands(); i != e; ++i) {
-      const SCEV *OpAtScope = getSCEVAtScope(AddRec->getOperand(i), L);
+      SCEVUse OpAtScope = getSCEVAtScope(AddRec->getOperand(i), L);
       if (OpAtScope == AddRec->getOperand(i))
         continue;
 
@@ -10155,14 +10204,10 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
     // If the scope is outside the addrec's loop, evaluate it by using the
     // loop exit value of the addrec.
     if (!AddRec->getLoop()->contains(L)) {
-      // To evaluate this recurrence, we need to know how many times the AddRec
-      // loop iterates.  Compute this now.
-      const SCEV *BackedgeTakenCount = getBackedgeTakenCount(AddRec->getLoop());
-      if (BackedgeTakenCount == getCouldNotCompute())
+      SCEVUse ExitValue = AddRec->getExitValue(*this);
+      if (isa<SCEVCouldNotCompute>(ExitValue))
         return AddRec;
-
-      // Then, evaluate the AddRec.
-      return AddRec->evaluateAtIteration(BackedgeTakenCount, *this);
+      return ExitValue;
     }
 
     return AddRec;
@@ -10183,7 +10228,7 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
     // Avoid performing the look-up in the common case where the specified
     // expression has no loop-variant portions.
     for (unsigned i = 0, e = Ops.size(); i != e; ++i) {
-      const SCEV *OpAtScope = getSCEVAtScope(Ops[i].getPointer(), L);
+      SCEVUse OpAtScope = getSCEVAtScope(Ops[i].getPointer(), L);
       if (OpAtScope != Ops[i].getPointer()) {
         // Okay, at least one of these operands is loop variant but might be
         // foldable.  Build a new instance of the folded commutative expression.
@@ -10314,7 +10359,7 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
   llvm_unreachable("Unknown SCEV type!");
 }
 
-const SCEV *ScalarEvolution::getSCEVAtScope(Value *V, const Loop *L) {
+SCEVUse ScalarEvolution::getSCEVAtScope(Value *V, const Loop *L) {
   return getSCEVAtScope(getSCEV(V), L);
 }
 
@@ -14652,7 +14697,7 @@ void ScalarEvolution::forgetMemoizedResultsImpl(const SCEV *S) {
   if (ScopeIt != ValuesAtScopes.end()) {
     for (const auto &Pair : ScopeIt->second)
       if (!isa_and_nonnull<SCEVConstant>(Pair.second))
-        llvm::erase(ValuesAtScopesUsers[Pair.second],
+        llvm::erase(ValuesAtScopesUsers[Pair.second.getPointer()],
                     std::make_pair(Pair.first, S));
     ValuesAtScopes.erase(ScopeIt);
   }
@@ -14660,7 +14705,11 @@ void ScalarEvolution::forgetMemoizedResultsImpl(const SCEV *S) {
   auto ScopeUserIt = ValuesAtScopesUsers.find(S);
   if (ScopeUserIt != ValuesAtScopesUsers.end()) {
     for (const auto &Pair : ScopeUserIt->second)
-      llvm::erase(ValuesAtScopes[Pair.second], std::make_pair(Pair.first, S));
+      // The recorded value at scope is a use of S, which may carry no-wrap
+      // flags that are not part of this key.
+      llvm::erase_if(ValuesAtScopes[Pair.second], [&](const auto &LS) {
+        return LS.first == Pair.first && LS.second.getPointer() == S;
+      });
     ValuesAtScopesUsers.erase(ScopeUserIt);
   }
 
@@ -14905,9 +14954,9 @@ void ScalarEvolution::verify() const {
     const SCEV *Value = ValueAndVec.first;
     for (const auto &LoopAndValueAtScope : ValueAndVec.second) {
       const Loop *L = LoopAndValueAtScope.first;
-      const SCEV *ValueAtScope = LoopAndValueAtScope.second;
+      SCEVUse ValueAtScope = LoopAndValueAtScope.second;
       if (!isa<SCEVConstant>(ValueAtScope)) {
-        auto It = ValuesAtScopesUsers.find(ValueAtScope);
+        auto It = ValuesAtScopesUsers.find(ValueAtScope.getPointer());
         if (It != ValuesAtScopesUsers.end() &&
             is_contained(It->second, std::make_pair(L, Value)))
           continue;
@@ -14925,8 +14974,11 @@ void ScalarEvolution::verify() const {
       const SCEV *Value = LoopAndValue.second;
       assert(!isa<SCEVConstant>(Value));
       auto It = ValuesAtScopes.find(Value);
-      if (It != ValuesAtScopes.end() &&
-          is_contained(It->second, std::make_pair(L, ValueAtScope)))
+      // The recorded value at scope may carry no-wrap flags that are not part
+      // of the key it is recorded under.
+      if (It != ValuesAtScopes.end() && any_of(It->second, [&](const auto &LS) {
+            return LS.first == L && LS.second.getPointer() == ValueAtScope;
+          }))
         continue;
       dbgs() << "Value: " << *Value << ", Loop: " << *L << ", ValueAtScope: "
              << *ValueAtScope << " missing in ValuesAtScopes\n";
@@ -15537,16 +15589,6 @@ PredicatedScalarEvolution::PredicatedScalarEvolution(ScalarEvolution &SE,
     : SE(SE), L(L) {
   SmallVector<const SCEVPredicate*, 4> Empty;
   Preds = std::make_unique<SCEVUnionPredicate>(Empty, SE);
-}
-
-void ScalarEvolution::registerUser(const SCEV *User,
-                                   ArrayRef<const SCEV *> Ops) {
-  for (const auto *Op : Ops)
-    // We do not expect that forgetting cached data for SCEVConstants will ever
-    // open any prospects for sharpening or introduce any correctness issues,
-    // so we don't bother storing their dependencies.
-    if (!isa<SCEVConstant>(Op))
-      SCEVUsers[Op].insert(User);
 }
 
 void ScalarEvolution::registerUser(const SCEV *User, ArrayRef<SCEVUse> Ops) {

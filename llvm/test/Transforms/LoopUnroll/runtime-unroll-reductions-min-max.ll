@@ -194,7 +194,7 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %min = phi float [ 0x7FF0000000000000, %entry ], [ %rdx.next, %loop ]
+  %min = phi float [ +inf, %entry ], [ %rdx.next, %loop ]
   %gep.a = getelementptr inbounds float, ptr %a, i64 %iv
   %1 = load float, ptr %gep.a, align 4
   %cmp = fcmp olt float %min, %1
@@ -263,7 +263,7 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %max = phi float [ 0xFFF0000000000000, %entry ], [ %rdx.next, %loop ]
+  %max = phi float [ -inf, %entry ], [ %rdx.next, %loop ]
   %gep.a = getelementptr inbounds float, ptr %a, i64 %iv
   %1 = load float, ptr %gep.a, align 4
   %cmp = fcmp ogt float %max, %1
@@ -338,7 +338,7 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %min = phi float [ 0x7FF0000000000000, %entry ], [ %rdx.next, %loop ]
+  %min = phi float [ +inf, %entry ], [ %rdx.next, %loop ]
   %gep.a = getelementptr inbounds float, ptr %a, i64 %iv
   %1 = load float, ptr %gep.a, align 4
   %cmp = fcmp nnan ninf nsz olt float %min, %1
@@ -410,7 +410,7 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %max = phi float [ 0xFFF0000000000000, %entry ], [ %rdx.next, %loop ]
+  %max = phi float [ -inf, %entry ], [ %rdx.next, %loop ]
   %gep.a = getelementptr inbounds float, ptr %a, i64 %iv
   %1 = load float, ptr %gep.a, align 4
   %cmp = fcmp nnan ninf nsz ogt float %max, %1
@@ -483,7 +483,7 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %min = phi float [ 0x7FF0000000000000, %entry ], [ %rdx.next, %loop ]
+  %min = phi float [ +inf, %entry ], [ %rdx.next, %loop ]
   %gep.a = getelementptr inbounds float, ptr %a, i64 %iv
   %1 = load float, ptr %gep.a, align 4
   %rdx.next = call nnan ninf nsz float @llvm.minnum.f32(float %min, float %1)
@@ -551,7 +551,7 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %max = phi float [ 0xFFF0000000000000, %entry ], [ %rdx.next, %loop ]
+  %max = phi float [ -inf, %entry ], [ %rdx.next, %loop ]
   %gep.a = getelementptr inbounds float, ptr %a, i64 %iv
   %1 = load float, ptr %gep.a, align 4
   %rdx.next = call nnan ninf nsz float @llvm.maxnum.f32(float %max, float %1)
