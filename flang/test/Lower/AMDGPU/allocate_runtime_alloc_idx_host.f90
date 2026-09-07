@@ -1,8 +1,8 @@
-! RUN: %flang -fopenmp-default-allocate=host -S -emit-llvm --offload-targets=amdgcn-amd-amdhsa -o - %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fopenmp-default-allocate=host -emit-hlfir %s -o - | FileCheck %s
 
 ! Verify that host mode does not insert OpenMPAllocatableSetAllocIdx calls.
 
-! CHECK-NOT: call void @_FortranAOpenMPAllocatableSetAllocIdx
+! CHECK-NOT: fir.call @_FortranAOpenMPAllocatableSetAllocIdx
 
 subroutine allocate_deallocate()
   real, allocatable :: x
