@@ -895,6 +895,26 @@ def GPRMM16AsmOperandMovePPairSecond : MipsAsmRegOperand {
   let PredicateMethod = "isMM16AsmRegMovePPairSecond";
 }
 
+def GPRNM32AsmOperand : MipsAsmRegOperand {
+  let Name = "GPRNM32AsmReg";
+  let PredicateMethod = "isGPRAsmReg";
+}
+
+class GPRNMAsmOperandClass<string Cname, string RegClass,
+                           list<AsmOperandClass> Supers = []>
+  : MipsAsmRegOperand {
+  let Name = "GPRNM" # Cname;
+  let PredicateMethod = "isGPRNMAsmReg<Mips::" # RegClass # ">";
+  let SuperClasses = Supers;
+}
+
+class COP0SelAsmOperandClass<string Cname, list<AsmOperandClass> Supers = []>
+  : MipsAsmRegOperand {
+  let Name = Cname;
+  let PredicateMethod = "isCOP0SelAsmReg";
+  let SuperClasses = Supers;
+}
+
 def ACC64DSPAsmOperand : MipsAsmRegOperand {
   let Name = "ACC64DSPAsmReg";
   let PredicateMethod = "isACCAsmReg";
@@ -987,6 +1007,89 @@ def GPRMM16OpndMovePPairFirst : RegisterOperand<GPRMM16MovePPairFirst> {
 
 def GPRMM16OpndMovePPairSecond : RegisterOperand<GPRMM16MovePPairSecond> {
   let ParserMatchClass = GPRMM16AsmOperandMovePPairSecond;
+}
+
+// In the following nanoMIPS operand definitions, the SuperClasses list passed
+// to GPRNMAsmOperandClass indirectly controls mnemonic-matching priority by
+// dictating the order in which instructions appear in the MatchTable.
+def GPRNM48Opnd : RegisterOperand<GPRNM32> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"48Reg5", "GPRNM32RegClassID",
+                                              []>;
+}
+
+def GPRNM32NZOpnd : RegisterOperand<GPRNM32NZ> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"32Reg5NZ", "GPRNM32NZRegClassID",
+                                              [GPRNM48Opnd.ParserMatchClass]>;
+}
+
+def GPRNM32Opnd : RegisterOperand<GPRNM32> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"32Reg5", "GPRNM32RegClassID",
+                                              [GPRNM32NZOpnd.ParserMatchClass]>;
+}
+
+def COP0SelOpnd : RegisterOperand<COP0Sel> {
+  let ParserMatchClass =
+    COP0SelAsmOperandClass<"COP0SelReg", [GPRNM32Opnd.ParserMatchClass]>;
+}
+
+def GPRNM4Opnd : RegisterOperand<GPRNM4> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"16Reg4x4", "GPRNM4RegClassID",
+                                              [GPRNM32Opnd.ParserMatchClass]>;
+}
+
+def GPRNM4ZOpnd : RegisterOperand<GPRNM4Z> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"16Reg4x4Z", "GPRNM4ZRegClassID",
+                                              [GPRNM32Opnd.ParserMatchClass]>;
+}
+
+def GPRNM16R5Opnd : RegisterOperand<GPRNM32> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"16Reg5", "GPRNM32RegClassID",
+                                              [GPRNM4Opnd.ParserMatchClass]>;
+}
+
+def GPRNM16R5NZOpnd : RegisterOperand<GPRNM32> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"16Reg5NZ", "GPRNM32NZRegClassID",
+                                              [GPRNM4Opnd.ParserMatchClass]>;
+}
+
+def GPRNM16R3Opnd : RegisterOperand<GPRNM3> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"16Reg3", "GPRNM3RegClassID",
+                                              [GPRNM16R5Opnd.ParserMatchClass]>;
+}
+
+def GPRNM16R3ZOpnd : RegisterOperand<GPRNM3Z> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"16Reg3Z", "GPRNM3ZRegClassID",
+                                              [GPRNM16R5Opnd.ParserMatchClass]>;
+}
+
+def GPRNMSPOpnd : RegisterOperand<GPRNMSP> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"RegSP", "GPRNMSPRegClassID",
+                                              [GPRNM16R3Opnd.ParserMatchClass]>;
+}
+
+def GPRNMGPOpnd : RegisterOperand<GPRNMGP> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"RegGP", "GPRNMGPRegClassID",
+                                              [GPRNM16R3Opnd.ParserMatchClass]>;
+}
+
+def GPRNMRAOpnd : RegisterOperand<GPRNMRA> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"RegRA", "GPRNMRARegClassID",
+                                             [GPRNM16R3Opnd.ParserMatchClass]>;
+}
+
+def GPRNM2R1Opnd : RegisterOperand<GPRNM2R1> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"2Reg1", "GPRNM2R1RegClassID",
+                                              [GPRNM4Opnd.ParserMatchClass]>;
+}
+
+def GPRNM2R2Opnd : RegisterOperand<GPRNM2R2> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"2Reg2", "GPRNM2R2RegClassID",
+                                              [GPRNM4Opnd.ParserMatchClass]>;
+}
+
+def GPRNM1R1Opnd : RegisterOperand<GPRNM1R1> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"1Reg1", "GPRNM1R1RegClassID",
+                                              [GPRNM4Opnd.ParserMatchClass]>;
 }
 
 def GPR64Opnd : RegisterOperand<GPR64> {

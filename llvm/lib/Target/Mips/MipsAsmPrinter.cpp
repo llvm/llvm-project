@@ -122,7 +122,10 @@ void MipsAsmPrinter::emitPseudoIndirectBranch(MCStreamer &OutStreamer,
   } else if (Subtarget->inMicroMipsMode())
     // microMIPS should use (JR_MM $rs)
     TmpInst0.setOpcode(Mips::JR_MM);
-  else {
+  else if (Subtarget->hasNanoMips()) {
+    // nanoMIPS should use (JRC_NM $rs)
+    TmpInst0.setOpcode(Mips::JRC_NM);
+  } else {
     // Everything else should use (JR $rs)
     TmpInst0.setOpcode(Mips::JR);
   }

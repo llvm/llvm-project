@@ -118,23 +118,23 @@ unsigned MipsABIInfo::GetZeroReg() const {
 }
 
 unsigned MipsABIInfo::GetPtrAdduOp() const {
-  return ArePtrs64bit() ? Mips::DADDu : Mips::ADDu;
+  return ArePtrs64bit() ? Mips::DADDu : IsP32() ? Mips::ADDu_NM : Mips::ADDu;
 }
 
 unsigned MipsABIInfo::GetPtrAddiuOp() const {
-  return ArePtrs64bit() ? Mips::DADDiu : Mips::ADDiu;
+  return ArePtrs64bit() ? Mips::DADDiu : IsP32() ? Mips::ADDIU_NM : Mips::ADDiu;
 }
 
 unsigned MipsABIInfo::GetPtrSubuOp() const {
-  return ArePtrs64bit() ? Mips::DSUBu : Mips::SUBu;
+  return ArePtrs64bit() ? Mips::DSUBu : IsP32() ? Mips::SUBu_NM : Mips::SUBu;
 }
 
 unsigned MipsABIInfo::GetPtrAndOp() const {
-  return ArePtrs64bit() ? Mips::AND64 : Mips::AND;
+  return ArePtrs64bit() ? Mips::AND64 : IsP32() ? Mips::AND_NM : Mips::AND;
 }
 
 unsigned MipsABIInfo::GetGPRMoveOp() const {
-  return ArePtrs64bit() ? Mips::OR64 : Mips::OR;
+  return ArePtrs64bit() ? Mips::OR64 : IsP32() ? Mips::OR_NM : Mips::OR;
 }
 
 unsigned MipsABIInfo::GetEhDataReg(unsigned I) const {

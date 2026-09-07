@@ -2344,9 +2344,9 @@ let AdditionalPredicates = [NotInMips16Mode, NotInMicroMips,
                              ISA_MIPS1_NOT_32R6_64R6;
 
 // Return instructions are matched as a RetRA instruction, then are expanded
-// into PseudoReturn/PseudoReturn64 after register allocation. Finally,
-// MipsAsmPrinter expands this into JR, JR64, JALR, or JALR64 depending on the
-// ISA.
+// into PseudoReturn/PseudoReturn64 after register allocation.
+// Finally, MipsAsmPrinter expands this into JR, JR64, JALR, JALR64 or JRC_NM
+// depending on the ISA.
 class PseudoReturnBase<RegisterOperand RO> : MipsPseudo<(outs), (ins RO:$rs),
                                                         []> {
   let isTerminator = 1;
@@ -3464,3 +3464,7 @@ include "MicroMips32r6InstrInfo.td"
 // Micromips DSP
 include "MicroMipsDSPInstrFormats.td"
 include "MicroMipsDSPInstrInfo.td"
+
+// nanoMIPS
+include "NanoMipsInstrFormats.td"
+include "NanoMipsInstrInfo.td"

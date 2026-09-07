@@ -1669,6 +1669,90 @@ public:
     return isRegIdx() && RegIdx.Kind & RegKind_MSACtrl && RegIdx.Index <= 7;
   }
 
+  bool isNM16AsmReg() const {
+    if (!(isRegIdx() && RegIdx.Kind))
+      return false;
+    return ((RegIdx.Index >= 4 && RegIdx.Index <= 7) ||
+            (RegIdx.Index >= 16 && RegIdx.Index <= 19));
+  }
+
+  bool isNM16ZeroAsmReg() const {
+    if (!(isRegIdx() && RegIdx.Kind))
+      return false;
+    return ((RegIdx.Index == 0) || (RegIdx.Index >= 4 && RegIdx.Index <= 7) ||
+            (RegIdx.Index >= 17 && RegIdx.Index <= 19));
+  }
+
+  bool isNM4AsmReg() const {
+    if (!(isRegIdx() && RegIdx.Kind))
+      return false;
+    return ((RegIdx.Index >= 4 && RegIdx.Index <= 11) ||
+            (RegIdx.Index >= 16 && RegIdx.Index <= 23));
+  }
+
+  bool isCOP0SelAsmReg() const {
+    if (!(isRegIdx() && RegIdx.Kind))
+      return false;
+    return RegIdx.Index <= 160;
+  }
+
+  bool isNM4ZeroAsmReg() const {
+    if (!(isRegIdx() && RegIdx.Kind))
+      return false;
+    return ((RegIdx.Index == 0) || (RegIdx.Index >= 4 && RegIdx.Index <= 10) ||
+            (RegIdx.Index >= 16 && RegIdx.Index <= 23));
+  }
+
+  bool isNM2R1AsmReg() const {
+    if (!(isRegIdx() && RegIdx.Kind))
+      return false;
+    return RegIdx.Index >= 4 && RegIdx.Index <= 7;
+  }
+
+  bool isNM2R2AsmReg() const {
+    if (!(isRegIdx() && RegIdx.Kind))
+      return false;
+    return RegIdx.Index >= 5 && RegIdx.Index <= 8;
+  }
+
+  bool isNM1R1AsmReg() const {
+    if (!(isRegIdx() && RegIdx.Kind))
+      return false;
+    return RegIdx.Index == 4 || RegIdx.Index == 5;
+  }
+
+  template <unsigned RegClassID = Mips::GPRNM32RegClassID>
+  bool isGPRNMAsmReg() const {
+    if (!(isRegIdx() && RegIdx.Kind))
+      return false;
+    switch (RegClassID) {
+    case Mips::GPRNMGPRegClassID:
+      return (RegIdx.Index == 28);
+    case Mips::GPRNMSPRegClassID:
+      return (RegIdx.Index == 29);
+    case Mips::GPRNMRARegClassID:
+      return (RegIdx.Index == 31);
+    case Mips::GPRNM32NZRegClassID:
+      return (RegIdx.Index > 0 && RegIdx.Index < 32);
+    case Mips::GPRNM3RegClassID:
+      return isNM16AsmReg();
+    case Mips::GPRNM3ZRegClassID:
+      return isNM16ZeroAsmReg();
+    case Mips::GPRNM4RegClassID:
+      return isNM4AsmReg();
+    case Mips::GPRNM4ZRegClassID:
+      return isNM4ZeroAsmReg();
+    case Mips::GPRNM2R1RegClassID:
+      return isNM2R1AsmReg();
+    case Mips::GPRNM2R2RegClassID:
+      return isNM2R2AsmReg();
+    case Mips::GPRNM1R1RegClassID:
+      return isNM1R1AsmReg();
+    default:
+      return RegIdx.Index < 32;
+    }
+  }
+
   /// getStartLoc - Get the location of the first token of this operand.
   SMLoc getStartLoc() const override { return StartLoc; }
   /// getEndLoc - Get the location of the last token of this operand.
