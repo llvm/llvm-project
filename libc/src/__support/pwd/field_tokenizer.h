@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_PWD_FIELD_TOKENIZER_H
-#define LLVM_LIBC_SRC_PWD_FIELD_TOKENIZER_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_PWD_FIELD_TOKENIZER_H
+#define LLVM_LIBC_SRC___SUPPORT_PWD_FIELD_TOKENIZER_H
 
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/span.h"
@@ -66,4 +66,4 @@ public:
 } // namespace pwd
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_PWD_FIELD_TOKENIZER_H
+#endif // LLVM_LIBC_SRC___SUPPORT_PWD_FIELD_TOKENIZER_H

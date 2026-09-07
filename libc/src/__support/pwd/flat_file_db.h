@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_PWD_FLAT_FILE_DB_H
-#define LLVM_LIBC_SRC_PWD_FLAT_FILE_DB_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_PWD_FLAT_FILE_DB_H
+#define LLVM_LIBC_SRC___SUPPORT_PWD_FLAT_FILE_DB_H
 
 #include "hdr/errno_macros.h"
 #include "hdr/stdio_macros.h"
@@ -214,4 +214,4 @@ public:
 } // namespace pwd
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_PWD_FLAT_FILE_DB_H
+#endif // LLVM_LIBC_SRC___SUPPORT_PWD_FLAT_FILE_DB_H
