@@ -261,3 +261,19 @@ entry:
   %4 = zext i1 %3 to i64
   ret i64 %4
 }
+
+; RV32-LABEL: test14:
+; RV32:       # %bb.0:
+; RV32:         ret
+;
+; RV64-LABEL: test14:
+; RV64:       # %bb.0:
+; RV64:         ret
+define i64 @test14(i1 %0) {
+  %2 = select i1 %0, i64 44587060572238, i64 0
+  %3 = and i64 %2, 1005072462
+  %4 = icmp eq i64 %3, 0
+  %5 = zext i1 %4 to i64
+  %6 = or i64 %2, %5
+  ret i64 %6
+}
