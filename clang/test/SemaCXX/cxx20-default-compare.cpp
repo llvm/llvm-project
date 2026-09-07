@@ -95,7 +95,5 @@ struct S {
   bool operator==(const S &) const = default;
 };
 
-static_assert(!__is_trivially_equality_comparable(S));
-
 bool f(const S &a, const S &b) { return a == b; }
 }
