@@ -523,8 +523,15 @@ ExprResult Parser::ParseExpansionInitList() {
   ExprVector InitExprs;
   bool SawError = false;
   while (Tok.isNot(tok::r_brace)) {
-    ExprResult Elem = Tok.is(tok::l_brace) ? ParseBraceInitializer()
-                                           : ParseAssignmentExpression();
+    ExprResult Elem;
+    {
+      // Each element is a full-expression of its own.
+      EnterExpressionEvaluationContext ElemCtx(
+          Actions, Actions.currentEvaluationContext().Context);
+      Elem = Tok.is(tok::l_brace) ? ParseBraceInitializer()
+                                  : ParseAssignmentExpression();
+      Elem = Actions.MaybeCreateExprWithCleanups(Elem);
+    }
 
     if (Tok.is(tok::code_completion)) {
       cutOffParsing();
@@ -532,8 +539,6 @@ ExprResult Parser::ParseExpansionInitList() {
       break;
     }
 
-    // Each element is a full-expression of its own.
-    Elem = Actions.MaybeCreateExprWithCleanups(Elem);
     if (Tok.is(tok::ellipsis))
       Elem = Actions.ActOnPackExpansion(Elem.get(), ConsumeToken());
 
