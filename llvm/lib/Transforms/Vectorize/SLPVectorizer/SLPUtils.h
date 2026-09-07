@@ -28,6 +28,7 @@
 #include <string>
 
 namespace llvm {
+class AssumptionCache;
 class Constant;
 class DataLayout;
 class Instruction;
@@ -160,6 +161,32 @@ void inversePermutation(ArrayRef<unsigned> Indices, SmallVectorImpl<int> &Mask);
 /// Reorders the list of scalars in accordance with the given \p Mask.
 void reorderScalars(SmallVectorImpl<Value *> &Scalars, ArrayRef<int> Mask);
 
+/// Reorders the given \p Reuses mask according to the given \p Mask. \p Reuses
+/// contains original mask for the scalars reused in the node. Procedure
+/// transform this mask in accordance with the given \p Mask.
+void reorderReuses(SmallVectorImpl<int> &Reuses, ArrayRef<int> Mask);
+
+/// Reorders the given \p Order according to the given \p Mask. \p Order - is
+/// the original order of the scalars. Procedure transforms the provided order
+/// in accordance with the given \p Mask. If the resulting \p Order is just an
+/// identity order, \p Order is cleared.
+void reorderOrder(SmallVectorImpl<unsigned> &Order, ArrayRef<int> Mask,
+                  bool BottomOrder = false);
+
+/// Check if \p Order represents reverse order.
+bool isReverseOrder(ArrayRef<unsigned> Order);
+
+/// Checks if the given mask is a "clustered" mask with the same clusters of
+/// size \p Sz, which are not identity submasks.
+bool isRepeatedNonIdentityClusteredMask(ArrayRef<int> Mask, unsigned Sz);
+
+/// Fills unset elements of \p Order (marked with the sentinel value equal to
+/// the order size) with the corresponding elements of \p SecondaryOrder,
+/// skipping already used indices, or with the identity order if
+/// \p SecondaryOrder is empty.
+void combineOrders(MutableArrayRef<unsigned> Order,
+                   ArrayRef<unsigned> SecondaryOrder);
+
 /// \returns True iff every value in \p VL has the same Type as the first.
 bool allSameType(ArrayRef<Value *> VL);
 
@@ -235,6 +262,13 @@ unsigned getShufflevectorNumGroups(ArrayRef<Value *> VL);
 /// the result is
 /// <0, 1, 2, 3, 12, 13, 14, 15, 16, 17, 18, 19, 28, 29, 30, 31>
 SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL);
+
+/// Checks if the values in \p VL can be represented as a shuffle of at most
+/// two vector operands (extractelement lanes). On success, \p Mask is the
+/// equivalent shuffle mask.
+std::optional<TargetTransformInfo::ShuffleKind>
+isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
+                     AssumptionCache *AC);
 
 /// Specifies the way the mask should be analyzed for undefs/poisonous elements
 /// in the shuffle mask.

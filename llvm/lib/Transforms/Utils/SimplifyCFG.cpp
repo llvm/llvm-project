@@ -1428,6 +1428,12 @@ bool SimplifyCFGOpt::performValueComparisonIntoPredecessorFolding(
     setFittedBranchWeights(*NewSI, Weights, /*IsExpected=*/false,
                            /*ElideAllZero=*/true);
 
+  // The new switch is only known to be unpredictable if both of the comparisons
+  // it was built from were unpredictable.
+  if (MDNode *Unpredictable = PTI->getMetadata(LLVMContext::MD_unpredictable))
+    if (TI->hasMetadata(LLVMContext::MD_unpredictable))
+      NewSI->setMetadata(LLVMContext::MD_unpredictable, Unpredictable);
+
   eraseTerminatorAndDCECond(PTI);
 
   // Okay, last check.  If BB is still a successor of PSI, then we must
@@ -5532,10 +5538,14 @@ bool SimplifyCFGOpt::simplifyBranchOnICmpChain(CondBrInst *BI,
     CondBrInst *NewBI = Builder.CreateCondBr(Cond, EdgeBB, DefaultBB);
     if (HasProfile)
       setBranchWeights(*NewBI, BranchWeights, /*IsExpected=*/false);
+    if (MDNode *Unpredictable = BI->getMetadata(LLVMContext::MD_unpredictable))
+      NewBI->setMetadata(LLVMContext::MD_unpredictable, Unpredictable);
     // We don't need to update PHI nodes since we don't add any new edges.
   } else {
     // Create the new switch instruction now.
     SwitchInst *New = Builder.CreateSwitch(CompVal, DefaultBB, Values.size());
+    if (MDNode *Unpredictable = BI->getMetadata(LLVMContext::MD_unpredictable))
+      New->setMetadata(LLVMContext::MD_unpredictable, Unpredictable);
     if (HasProfile) {
       // We know the weight of the default case. We don't know the weight of the
       // other cases, but rather than completely lose profiling info, we split
