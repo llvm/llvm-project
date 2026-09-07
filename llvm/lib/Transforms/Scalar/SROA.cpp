@@ -4825,9 +4825,7 @@ static Slice *findOverlappingCopySlice(Slice &S,
   if (auto *LI = dyn_cast<LoadInst>(I)) {
     if (!LI->hasOneUser())
       return nullptr;
-    J = dyn_cast<Instruction>(*LI->user_begin());
-    if (!J)
-      return nullptr;
+    J = cast<Instruction>(*LI->user_begin());
   } else if (auto *SI = dyn_cast<StoreInst>(I)) {
     J = dyn_cast<Instruction>(SI->getValueOperand());
     if (!J || !J->hasOneUser())
@@ -4915,7 +4913,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
       Instruction *I = cast<Instruction>(S.getUse()->getUser());
       bool ExtendsPastPartitionEnd = S.endOffset() > P.endOffset();
       Slice *CopyOverlap = findOverlappingCopySlice(S, SliceMap);
-      if (!S.isSplittable() || !(ExtendsPastPartitionEnd || CopyOverlap)) {
+      if (!S.isSplittable() || (!ExtendsPastPartitionEnd && !CopyOverlap)) {
         // If this is a load we have to track that it can't participate in any
         // pre-splitting. If this is a store of a load we have to track that
         // that load also can't participate in any pre-splitting.
@@ -4981,22 +4979,34 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
         //    empty if they are equal.
         //  * Initially inside the overlap and copied outside the overlap.
         // This should result in the first and last parts being promoted to
-        // scalars, which may result in the middle part now being an overlapping
-        // copy which will then be presplit in the same way in the next
-        // iteration of the SROA loop.
+        // scalars. If the middle part is an overlapping copy then we repeat
+        // this process until it isn't.
         uint64_t OverlapStart =
             std::max(S.beginOffset(), CopyOverlap->beginOffset());
         uint64_t OverlapEnd = std::min(S.endOffset(), CopyOverlap->endOffset());
         uint64_t OverlapSize = OverlapEnd - OverlapStart;
-        uint64_t NonOverlapSize =
-            (S.endOffset() - S.beginOffset()) - OverlapSize;
+        uint64_t SliceSize = S.endOffset() - S.beginOffset();
+        uint64_t NonOverlapSize = SliceSize - OverlapSize;
         if (OverlapSize < NonOverlapSize) {
+          // When the overlap area is smaller the middle part is initially
+          // and remains outside the overlap, so splitting once is enough.
           Offsets.Splits.push_back(OverlapSize);
           Offsets.Splits.push_back(NonOverlapSize);
         } else if (OverlapSize > NonOverlapSize) {
-          Offsets.Splits.push_back(NonOverlapSize);
-          Offsets.Splits.push_back(OverlapSize);
+          // When the overlap area is larger the middle part is initially and
+          // remains inside the overlap, so we repeatedly split it.
+          for (uint64_t Split = NonOverlapSize; Split <= SliceSize / 2;
+               Split += NonOverlapSize) {
+            Offsets.Splits.push_back(Split);
+            if (Split != SliceSize - Split) {
+              Offsets.Splits.push_back(SliceSize - Split);
+            }
+          }
+          // Sort the splits as they need to be in ascending order.
+          llvm::sort(Offsets.Splits);
         } else {
+          // Here the overlap and non-overlap size are the same, so the middle
+          // part is empty and the slice is split exactly in the center.
           Offsets.Splits.push_back(OverlapSize);
         }
       } else {
