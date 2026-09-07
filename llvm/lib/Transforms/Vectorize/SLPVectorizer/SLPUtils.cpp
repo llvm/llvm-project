@@ -25,6 +25,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
+#include <numeric>
 #include <string>
 #include <type_traits>
 
@@ -312,6 +313,103 @@ void reorderScalars(SmallVectorImpl<Value *> &Scalars, ArrayRef<int> Mask) {
   for (unsigned I = 0, E = Prev.size(); I < E; ++I)
     if (Mask[I] != PoisonMaskElem)
       Scalars[Mask[I]] = Prev[I];
+}
+
+void reorderReuses(SmallVectorImpl<int> &Reuses, ArrayRef<int> Mask) {
+  assert(!Mask.empty() && Reuses.size() == Mask.size() &&
+         "Expected non-empty mask.");
+  SmallVector<int> Prev(Reuses.begin(), Reuses.end());
+  Prev.swap(Reuses);
+  for (unsigned I = 0, E = Prev.size(); I < E; ++I)
+    if (Mask[I] != PoisonMaskElem)
+      Reuses[Mask[I]] = Prev[I];
+}
+
+void reorderOrder(SmallVectorImpl<unsigned> &Order, ArrayRef<int> Mask,
+                  bool BottomOrder) {
+  assert(!Mask.empty() && "Expected non-empty mask.");
+  unsigned Sz = Mask.size();
+  if (BottomOrder) {
+    SmallVector<unsigned> PrevOrder;
+    if (Order.empty()) {
+      PrevOrder.resize(Sz);
+      std::iota(PrevOrder.begin(), PrevOrder.end(), 0);
+    } else {
+      PrevOrder.swap(Order);
+    }
+    Order.assign(Sz, Sz);
+    for (unsigned I = 0; I < Sz; ++I)
+      if (Mask[I] != PoisonMaskElem)
+        Order[I] = PrevOrder[Mask[I]];
+    if (all_of(enumerate(Order), [&](const auto &Data) {
+          return Data.value() == Sz || Data.index() == Data.value();
+        })) {
+      Order.clear();
+      return;
+    }
+    fixupOrderingIndices(Order);
+    return;
+  }
+  SmallVector<int> MaskOrder;
+  if (Order.empty()) {
+    MaskOrder.resize(Sz);
+    std::iota(MaskOrder.begin(), MaskOrder.end(), 0);
+  } else {
+    inversePermutation(Order, MaskOrder);
+  }
+  reorderReuses(MaskOrder, Mask);
+  if (ShuffleVectorInst::isIdentityMask(MaskOrder, Sz)) {
+    Order.clear();
+    return;
+  }
+  Order.assign(Sz, Sz);
+  for (unsigned I = 0; I < Sz; ++I)
+    if (MaskOrder[I] != PoisonMaskElem)
+      Order[MaskOrder[I]] = I;
+  fixupOrderingIndices(Order);
+}
+
+bool isReverseOrder(ArrayRef<unsigned> Order) {
+  assert(!Order.empty() &&
+         "Order is empty. Please check it before using isReverseOrder.");
+  unsigned Sz = Order.size();
+  return all_of(enumerate(Order), [&](const auto &Pair) {
+    return Pair.value() == Sz || Sz - Pair.index() - 1 == Pair.value();
+  });
+}
+
+bool isRepeatedNonIdentityClusteredMask(ArrayRef<int> Mask, unsigned Sz) {
+  ArrayRef<int> FirstCluster = Mask.slice(0, Sz);
+  if (ShuffleVectorInst::isIdentityMask(FirstCluster, Sz))
+    return false;
+  for (unsigned I = Sz, E = Mask.size(); I < E; I += Sz) {
+    ArrayRef<int> Cluster = Mask.slice(I, Sz);
+    if (Cluster != FirstCluster)
+      return false;
+  }
+  return true;
+}
+
+void combineOrders(MutableArrayRef<unsigned> Order,
+                   ArrayRef<unsigned> SecondaryOrder) {
+  assert((SecondaryOrder.empty() || Order.size() == SecondaryOrder.size()) &&
+         "Expected same size of orders");
+  size_t Sz = Order.size();
+  SmallBitVector UsedIndices(Sz);
+  for (unsigned Idx : seq<unsigned>(0, Sz)) {
+    if (Order[Idx] != Sz)
+      UsedIndices.set(Order[Idx]);
+  }
+  if (SecondaryOrder.empty()) {
+    for (unsigned Idx : seq<unsigned>(0, Sz))
+      if (Order[Idx] == Sz && !UsedIndices.test(Idx))
+        Order[Idx] = Idx;
+  } else {
+    for (unsigned Idx : seq<unsigned>(0, Sz))
+      if (SecondaryOrder[Idx] != Sz && Order[Idx] == Sz &&
+          !UsedIndices.test(SecondaryOrder[Idx]))
+        Order[Idx] = SecondaryOrder[Idx];
+  }
 }
 
 bool allSameType(ArrayRef<Value *> VL) {
