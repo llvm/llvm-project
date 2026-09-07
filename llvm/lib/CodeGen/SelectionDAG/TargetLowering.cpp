@@ -7217,6 +7217,163 @@ turnVectorIntoSplatVector(MutableArrayRef<SDValue> Values,
   std::replace_if(Values.begin(), Values.end(), Predicate, Replacement);
 }
 
+/// Return true when \p FPSclVT holds every value \p V can take, so a round
+/// trip through it rounds nothing away.
+static bool isIntExactlyRepresentableInFP(SDValue V, MVT FPSclVT, bool IsSigned,
+                                          SelectionDAG &DAG) {
+  unsigned Precision = APFloat::semanticsPrecision(FPSclVT.getFltSemantics());
+  unsigned EltBits = V.getValueType().getScalarSizeInBits();
+  return IsSigned ? DAG.ComputeNumSignBits(V) + Precision > EltBits
+                  : DAG.computeKnownBits(V).countMaxActiveBits() <= Precision;
+}
+
+SDValue TargetLowering::emitIntDivRemViaFP(SDNode *N, EVT FPVT, bool IsSigned,
+                                           bool IsRem, bool IsStrict,
+                                           bool OperandsExact,
+                                           SelectionDAG &DAG) const {
+  // Only an exact divide is recoverable without a target refinement sequence.
+  if (!OperandsExact)
+    return SDValue();
+
+  SDLoc DL(N);
+  EVT IntVT = N->getValueType(0);
+  SDValue Dividend = N->getOperand(0);
+  SDValue Divisor = N->getOperand(1);
+
+  unsigned ToFP = IsSigned ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
+  unsigned FromFP = IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT;
+  SDValue X = DAG.getNode(ToFP, DL, FPVT, Dividend);
+  SDValue Y = DAG.getNode(ToFP, DL, FPVT, Divisor);
+  SDValue Q =
+      DAG.getNode(FromFP, DL, IntVT, DAG.getNode(ISD::FDIV, DL, FPVT, X, Y));
+  if (!IsRem)
+    return Q;
+  // rem = dividend - quotient * divisor
+  return DAG.getNode(ISD::SUB, DL, IntVT, Dividend,
+                     DAG.getNode(ISD::MUL, DL, IntVT, Q, Divisor));
+}
+
+SDValue TargetLowering::expandIntDivRemViaFP(SDNode *N, SelectionDAG &DAG,
+                                             CombineLevel Level) const {
+  EVT VT = N->getValueType(0);
+  // Everything below works on a constant lane count.
+  if (!VT.isFixedLengthVector())
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue Dividend = N->getOperand(0);
+  SDValue Divisor = N->getOperand(1);
+  unsigned Opc = N->getOpcode();
+
+  // Disabled lanes are poison and fdiv never traps, so ignore the mask.
+  if (Opc == ISD::MASKED_UDIV || Opc == ISD::MASKED_SDIV ||
+      Opc == ISD::MASKED_UREM || Opc == ISD::MASKED_SREM)
+    Opc = ISD::getUnmaskedBinOpOpcode(Opc);
+  bool IsRem = Opc == ISD::UREM || Opc == ISD::SREM;
+  bool IsSigned = Opc == ISD::SDIV || Opc == ISD::SREM;
+
+  bool IsStrict = DAG.getMachineFunction().getFunction().hasFnAttribute(
+      Attribute::StrictFP);
+  SmallVector<MVT, 2> Candidates;
+  unsigned RequiredBits = 0;
+  getIntDivRemFPExpansion(Candidates, RequiredBits, VT, IsSigned, IsStrict);
+  if (Candidates.empty())
+    return SDValue();
+
+  // If the result is only read back as scalar extracts, scalarization computes
+  // just the demanded lanes. Keep the vector operation when every lane is
+  // extracted, which occurs when non-power-of-two vectors are returned.
+  APInt ExtractedElts = APInt::getZero(VT.getVectorNumElements());
+  bool OnlyExtracts = true;
+  for (const SDNode *U : N->users()) {
+    if (U->getOpcode() != ISD::EXTRACT_VECTOR_ELT) {
+      OnlyExtracts = false;
+      break;
+    }
+    auto *Idx = dyn_cast<ConstantSDNode>(U->getOperand(1));
+    if (!Idx)
+      continue;
+    const APInt &IdxVal = Idx->getAPIntValue();
+    if (IdxVal.uge(VT.getVectorNumElements()))
+      continue;
+    ExtractedElts.setBit(IdxVal.getZExtValue());
+  }
+  if (OnlyExtracts && !ExtractedElts.isAllOnes())
+    return SDValue();
+
+  // Magic multiply lowers constant divisors cheaper than a divide.
+  if (DAG.isConstantIntBuildVectorOrConstantInt(Divisor))
+    return SDValue();
+
+  auto BothFitFP = [&](MVT FPSclVT) {
+    return isIntExactlyRepresentableInFP(Dividend, FPSclVT, IsSigned, DAG) &&
+           isIntExactlyRepresentableInFP(Divisor, FPSclVT, IsSigned, DAG);
+  };
+
+  // Take the narrowest type that holds both operands. When none does, pass the
+  // widest anyway, since a target may still recover the quotient from it.
+  MVT FPSclVT = Candidates.back();
+  bool OperandsExact = false;
+  for (MVT C : Candidates) {
+    if (!BothFitFP(C))
+      continue;
+    FPSclVT = C;
+    OperandsExact = true;
+    break;
+  }
+
+  EVT FPVT = VT.changeVectorElementType(*DAG.getContext(), FPSclVT);
+
+  // Nothing will split an illegal FP type after type legalization, and a form
+  // that only encodes at one width cannot hold an FP type wider than it.
+  bool FPVTUsable = RequiredBits
+                        ? FPVT.getSizeInBits() <= RequiredBits
+                        : Level == BeforeLegalizeTypes || isTypeLegal(FPVT);
+
+  // Halve the divide while the integer halves stay legal.
+  if (!FPVTUsable) {
+    if (VT.is256BitVector() || VT.is512BitVector()) {
+      EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
+      if (isTypeLegal(HalfVT)) {
+        SmallVector<SDValue, 3> LoOps, HiOps;
+        for (const SDValue &Op : N->ops()) {
+          auto [Lo, Hi] = DAG.SplitVector(Op, DL);
+          LoOps.push_back(Lo);
+          HiOps.push_back(Hi);
+        }
+        SDValue Lo = DAG.getNode(N->getOpcode(), DL, HalfVT, LoOps);
+        SDValue Hi = DAG.getNode(N->getOpcode(), DL, HalfVT, HiOps);
+        return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+      }
+    }
+    return SDValue();
+  }
+
+  SDValue Res = emitIntDivRemViaFP(N, FPVT, IsSigned, IsRem, IsStrict,
+                                   OperandsExact, DAG);
+
+  // Widen a non-power-of-two lane count to get a machine type, but only
+  // while it still fits one divide. Two chains lose to a chain plus a scalar.
+  unsigned NumElts = VT.getVectorNumElements();
+  if (!Res && RequiredBits && !isPowerOf2_32(NumElts) &&
+      NextPowerOf2(NumElts) * FPSclVT.getSizeInBits() <= RequiredBits) {
+    Dividend = DAG.WidenVector(Dividend, DL);
+    Divisor = DAG.WidenVector(Divisor, DL);
+    SDNode *WideN =
+        DAG.getNode(Opc, DL, Dividend.getValueType(), Dividend, Divisor)
+            .getNode();
+    EVT WideFPVT = Dividend.getValueType().changeVectorElementType(
+        *DAG.getContext(), FPSclVT);
+    Res = emitIntDivRemViaFP(WideN, WideFPVT, IsSigned, IsRem, IsStrict,
+                             OperandsExact, DAG);
+  }
+
+  // Narrow a widened result back to VT.
+  if (Res && Res.getValueType() != VT)
+    Res = DAG.getExtractSubvector(DL, VT, Res, 0);
+  return Res;
+}
+
 /// Given an ISD::UREM used only by an ISD::SETEQ or ISD::SETNE
 /// where the divisor and comparison target are constants,
 /// return a DAG expression that will generate the same comparison result
