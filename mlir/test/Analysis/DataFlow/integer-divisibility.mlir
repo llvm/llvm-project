@@ -1,4 +1,4 @@
-// RUN: mlir-opt --split-input-file --test-int-divisibility-analysis --allow-unregistered-dialect %s | FileCheck %s
+// RUN: mlir-opt --split-input-file --test-int-divisibility-analysis %s | FileCheck %s
 
 // CHECK-LABEL: @constant
 func.func @constant() -> index {

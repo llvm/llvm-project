@@ -93,3 +93,31 @@ module @test_non_private_addrspace {
     llvm.return
   }
 }
+
+// -----
+
+// The second shuffle operand is poison rather than a copy of the first one.
+// The mask only addresses elements of the first operand, so the slice is still
+// extractable and the oversized load must be split.
+module @test_poison_second_operand {
+  // CHECK-LABEL: llvm.func @test_poison_second_operand
+  // CHECK-SAME: %[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr, %[[ARG2:.*]]: !llvm.ptr
+  llvm.func @test_poison_second_operand(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
+    // CHECK-NOT: vector<32x
+    // CHECK: %[[LOAD0:.*]] = llvm.load %[[ARG0]] : !llvm.ptr -> vector<8xi16>
+    // CHECK: %[[BITCAST0:.*]] = llvm.bitcast %[[LOAD0]] : vector<8xi16> to vector<8xf16>
+    // CHECK: %[[GEP0:.*]] = llvm.getelementptr %[[ARG0]][8] : (!llvm.ptr) -> !llvm.ptr, i16
+    // CHECK: %[[LOAD1:.*]] = llvm.load %[[GEP0]] : !llvm.ptr -> vector<8xi16>
+    // CHECK: %[[BITCAST1:.*]] = llvm.bitcast %[[LOAD1]] : vector<8xi16> to vector<8xf16>
+    // CHECK: llvm.store %[[BITCAST0]], %[[ARG1]] : vector<8xf16>, !llvm.ptr
+    // CHECK: llvm.store %[[BITCAST1]], %[[ARG2]] : vector<8xf16>, !llvm.ptr
+    %poison = llvm.mlir.poison : vector<32xf16>
+    %0 = llvm.load %arg0 : !llvm.ptr -> vector<32xi16>
+    %1 = llvm.bitcast %0 : vector<32xi16> to vector<32xf16>
+    %2 = llvm.shufflevector %1, %poison [0, 1, 2, 3, 4, 5, 6, 7] : vector<32xf16>
+    %3 = llvm.shufflevector %1, %poison [8, 9, 10, 11, 12, 13, 14, 15] : vector<32xf16>
+    llvm.store %2, %arg1 : vector<8xf16>, !llvm.ptr
+    llvm.store %3, %arg2 : vector<8xf16>, !llvm.ptr
+    llvm.return
+  }
+}

@@ -54,7 +54,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -1465,8 +1464,7 @@ bool HexagonFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   // gated on stack size: the user/ABI-requested frame pointer is needed
   // regardless of whether the function currently has a stack frame.
   // Every other target checks DisableFramePointerElim unconditionally.
-  const TargetMachine &TM = MF.getTarget();
-  if (TM.Options.DisableFramePointerElim(MF) || !EliminateFramePointer)
+  if (MF.disableFramePointerElim() || !EliminateFramePointer)
     return true;
 
   if (MFI.getStackSize() > 0) {

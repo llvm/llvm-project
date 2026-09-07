@@ -1,5 +1,5 @@
-// RUN: mlir-opt --split-input-file --verify-diagnostics --tosa-infer-shapes --allow-unregistered-dialect %s | FileCheck %s --allow-unused-prefixes --check-prefixes=CHECK,DEFAULT
-// RUN: mlir-opt --split-input-file --verify-diagnostics --tosa-infer-shapes="convert-function-boundaries" --allow-unregistered-dialect %s | FileCheck %s --allow-unused-prefixes --check-prefixes=CHECK,FUNCBOUND
+// RUN: mlir-opt --split-input-file --verify-diagnostics --tosa-infer-shapes %s | FileCheck %s --allow-unused-prefixes --check-prefixes=CHECK,DEFAULT
+// RUN: mlir-opt --split-input-file --verify-diagnostics --tosa-infer-shapes="convert-function-boundaries" %s | FileCheck %s --allow-unused-prefixes --check-prefixes=CHECK,FUNCBOUND
 
 // CHECK-LABEL: @test_return
 func.func @test_return(%arg0 : tensor<4xf32>) -> tensor<*xf32> {
@@ -1657,8 +1657,8 @@ func.func @while_dont_crash(%arg0 : tensor<i32>) -> (tensor<*xi32>) {
     // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i32>
     %3 = tosa.add %arg1, %arg1 : (tensor<*xi32>, tensor<*xi32>) -> tensor<*xi32>
     // CHECK: %[[CAST:.+]] = tensor.cast %{{.*}} : tensor<i32> to tensor<*xi32>
-    // CHECK: "use"(%[[CAST]]) : (tensor<*xi32>) -> ()
-    "use"(%3) : (tensor<*xi32>) -> ()
+    // CHECK: "test.use"(%[[CAST]]) : (tensor<*xi32>) -> ()
+    "test.use"(%3) : (tensor<*xi32>) -> ()
     tosa.yield %3 : tensor<*xi32>
   }
   // DEFAULT: %[[CAST:.+]] = tensor.cast
@@ -1708,8 +1708,8 @@ func.func @while_dont_crash_nested(%arg0 : tensor<i32>) -> (tensor<*xi32>) {
       // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i32>
       %4 = tosa.add %arg2, %arg2 : (tensor<*xi32>, tensor<*xi32>) -> tensor<*xi32>
       // CHECK: %[[CAST:.+]] = tensor.cast %{{.*}} : tensor<i32> to tensor<*xi32>
-      // CHECK: "use"(%[[CAST]]) : (tensor<*xi32>) -> ()
-      "use"(%4) : (tensor<*xi32>) -> ()
+      // CHECK: "test.use"(%[[CAST]]) : (tensor<*xi32>) -> ()
+      "test.use"(%4) : (tensor<*xi32>) -> ()
       // CHECK:      tosa.yield
       // CHECK-SAME: tensor<i32>
       tosa.yield %4 : tensor<*xi32>

@@ -98,6 +98,7 @@ Transforms/OpenMP/custom_state_machines_remarks.ll
 Transforms/OpenMP/get_hardware_num_threads_in_block_fold.ll
 Transforms/OpenMP/gpu_state_machine_function_ptr_replacement.ll
 Transforms/OpenMP/parallel_region_merging.ll
+Transforms/OpenMP/parallel_region_merging_debug_loc.ll
 Transforms/OpenMP/single_threaded_execution.ll
 Transforms/OpenMP/spmdization.ll
 Transforms/OpenMP/spmdization_assumes.ll
@@ -110,6 +111,7 @@ Transforms/PreISelIntrinsicLowering/AArch64/expand-exp.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-fp-math.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-fp-math-binary.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-log.ll
+Transforms/SimplifyCFG/switch-select-remap.ll
 Transforms/StackProtector/cross-dso-cfi-stack-chk-fail.ll
 Transforms/TailCallElim/2010-06-26-MultipleReturnValues.ll
 Transforms/TailCallElim/accum_recursion.ll

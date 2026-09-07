@@ -110,4 +110,6 @@ std::optional<llvm::APFloat>
 EvalScalarMinMaxFp(const llvm::APFloat &A, const llvm::APFloat &B,
                    std::optional<llvm::APSInt> RoundingMode, bool IsMin);
 
+const Expr *ignorePointerCastsAndParens(const Expr *E);
+
 #endif
