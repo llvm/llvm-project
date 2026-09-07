@@ -1,8 +1,5 @@
 add_flang_tool(fir-opt fir-opt.cpp)
 
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
-
 if(FLANG_INCLUDE_TESTS)
   set(test_libs
     FIRTestAnalysis
@@ -33,13 +30,14 @@ target_link_libraries(fir-opt PRIVATE
 )
 
 mlir_target_link_libraries(fir-opt PRIVATE
-  ${dialect_libs}
-  ${extension_libs}
+  ${FLANG_MLIR_DIALECT_LIBS}
+  ${FLANG_MLIR_EXTENSION_LIBS}
 
   # TODO: these should be transitive dependencies from a target providing
   # "registerFIRPasses()"
   MLIRIR
   MLIRLLVMDialect
+  MLIRMemRefDialect
   MLIRPass
   MLIRFuncToLLVM
   MLIRTransforms

@@ -1,5 +1,3 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-
 add_flang_library(HLFIRDialect
   HLFIRDialect.cpp
   HLFIROps.cpp
@@ -19,9 +17,9 @@ add_flang_library(HLFIRDialect
   Remarks
 
   MLIR_DEPS
-  ${dialect_libs}
+  ${FLANG_MLIR_DIALECT_LIBS}
 
   MLIR_LIBS
   MLIRIR
-  ${dialect_libs}
+  ${FLANG_MLIR_DIALECT_LIBS}
 )

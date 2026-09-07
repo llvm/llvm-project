@@ -18,15 +18,11 @@ add_flang_library(FIRSupport
 
   MLIR_DEPS
   MLIRIR
-  ${dialect_libs}
-  ${extension_libs}
 
   MLIR_LIBS
   MLIRBuiltinToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
   MLIROpenMPToLLVMIRTranslation
-  MLIRRegisterAllDialects
-  MLIRRegisterAllExtensions
   MLIRTargetLLVMIRExport
   MLIRTargetLLVMIRImport
 )

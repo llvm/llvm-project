@@ -4,8 +4,6 @@ set(LLVM_LINK_COMPONENTS
 
 add_flang_tool(tco tco.cpp)
 llvm_update_compile_flags(tco)
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 target_link_libraries(tco PRIVATE
   CUFAttrs
   CUFDialect
@@ -27,8 +25,8 @@ target_link_libraries(tco PRIVATE
 )
 
 mlir_target_link_libraries(tco PRIVATE
-  ${dialect_libs}
-  ${extension_libs}
+  ${FLANG_MLIR_DIALECT_LIBS}
+  ${FLANG_MLIR_EXTENSION_LIBS}
   MLIRIR
   MLIRLLVMDialect
   MLIRBuiltinToLLVMIRTranslation

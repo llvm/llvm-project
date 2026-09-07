@@ -1,6 +1,3 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
-
 add_flang_library(flangFrontend
   CompilerInstance.cpp
   CompilerInvocation.cpp
@@ -70,8 +67,8 @@ add_flang_library(flangFrontend
 
   MLIR_DEPS
   MLIRIR
-  ${dialect_libs}
-  ${extension_libs}
+  ${FLANG_MLIR_DIALECT_LIBS}
+  ${FLANG_MLIR_EXTENSION_LIBS}
 
   MLIR_LIBS
   MLIRTransforms
@@ -79,8 +76,8 @@ add_flang_library(flangFrontend
   MLIRLLVMToLLVMIRTranslation
   MLIRSCFToControlFlow
   MLIRTargetLLVMIRImport
-  ${dialect_libs}
-  ${extension_libs}
+  ${FLANG_MLIR_DIALECT_LIBS}
+  ${FLANG_MLIR_EXTENSION_LIBS}
 
   CLANG_LIBS
   clangBasic

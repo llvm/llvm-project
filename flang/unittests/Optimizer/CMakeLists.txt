@@ -1,6 +1,3 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
-
 set(LLVM_LINK_COMPONENTS
   TargetParser
 )
@@ -58,7 +55,7 @@ DEPENDS
 
 if(NOT FLANG_STANDALONE_BUILD)
   add_dependencies(FlangOptimizerTests
-    ${dialect_libs})
+    ${FLANG_MLIR_DIALECT_LIBS})
 endif()
 
 target_link_libraries(FlangOptimizerTests
@@ -66,8 +63,8 @@ target_link_libraries(FlangOptimizerTests
   ${LIBS})
 mlir_target_link_libraries(FlangOptimizerTests
   PRIVATE
-  ${dialect_libs}
-  ${extension_libs}
+  ${FLANG_MLIR_DIALECT_LIBS}
+  ${FLANG_MLIR_EXTENSION_LIBS}
   MLIROpenACCDialect
   MLIROpenACCUtils
   )

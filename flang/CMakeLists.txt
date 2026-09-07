@@ -497,6 +497,31 @@ if (FLANG_INCLUDE_TESTS)
   add_compile_definitions(FLANG_INCLUDE_TESTS=1)
 endif()
 
+# Keep this list of external MLIR dialects in sync with FLANG_DIALECT_LIST in
+# InitFIR.h. Do not use MLIR_DIALECT_LIBS or MLIR_EXTENSION_LIBS here: those
+# global collections also contain dialects and extensions Flang never registers.
+set(FLANG_MLIR_DIALECT_LIBS
+  MLIRAffineDialect
+  MLIRArithDialect
+  MLIRComplexDialect
+  MLIRControlFlowDialect
+  MLIRDLTIDialect
+  MLIRFuncDialect
+  MLIRGPUDialect
+  MLIRIndexDialect
+  MLIRLLVMDialect
+  MLIRMathDialect
+  MLIRNVVMDialect
+  MLIROpenACCDialect
+  MLIROpenMPDialect
+  MLIRSCFDialect
+  MLIRVectorDialect
+)
+set(FLANG_MLIR_EXTENSION_LIBS
+  MLIRFuncInlinerExtension
+  MLIRLLVMIRTransforms
+)
+
 add_subdirectory(include)
 add_subdirectory(lib)
 add_subdirectory(cmake/modules)
@@ -597,4 +622,3 @@ install(
   COMPONENT flang-fortran-binding)
 add_llvm_install_targets(install-flang-fortran-binding
   COMPONENT flang-fortran-binding)
-

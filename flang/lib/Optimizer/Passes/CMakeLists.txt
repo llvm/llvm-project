@@ -1,6 +1,3 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
-
 add_flang_library(flangPasses
   CommandLineOpts.cpp
   Pipelines.cpp
@@ -17,8 +14,8 @@ add_flang_library(flangPasses
   Passes
 
   MLIR_LIBS
-  ${dialect_libs}
-  ${extension_libs}
+  ${FLANG_MLIR_DIALECT_LIBS}
+  ${FLANG_MLIR_EXTENSION_LIBS}
   MLIRComplexToStandard
   MLIRLLVMIRTransforms
   MLIRMathToFuncs

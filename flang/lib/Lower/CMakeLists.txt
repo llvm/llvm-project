@@ -1,6 +1,3 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
-
 add_flang_library(FortranLower
   Allocatable.cpp
   Bridge.cpp
@@ -76,12 +73,12 @@ add_flang_library(FortranLower
   Support
 
   MLIR_DEPS
-  ${dialect_libs}
-  ${extension_libs}
+  ${FLANG_MLIR_DIALECT_LIBS}
+  ${FLANG_MLIR_EXTENSION_LIBS}
 
   MLIR_LIBS
-  ${dialect_libs}
-  ${extension_libs}
+  ${FLANG_MLIR_DIALECT_LIBS}
+  ${FLANG_MLIR_EXTENSION_LIBS}
   MLIRAffineToStandard
   MLIRFuncDialect
   MLIRLLVMDialect

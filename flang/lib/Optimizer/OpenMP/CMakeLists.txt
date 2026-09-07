@@ -1,5 +1,3 @@
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-
 add_flang_library(FlangOpenMPTransforms
   AutomapToTargetData.cpp
   DoConcurrentConversion.cpp
@@ -29,7 +27,7 @@ add_flang_library(FlangOpenMPTransforms
   FortranUtils
 
   MLIR_DEPS
-  ${dialect_libs}
+  ${FLANG_MLIR_DIALECT_LIBS}
 
   MLIR_LIBS
   MLIRFuncDialect
@@ -38,7 +36,7 @@ add_flang_library(FlangOpenMPTransforms
   MLIRIR
   MLIRPass
   MLIRTransformUtils
-  ${dialect_libs}
+  ${FLANG_MLIR_DIALECT_LIBS}
 )
 
 add_subdirectory(Support)

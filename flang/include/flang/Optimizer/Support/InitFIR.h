@@ -37,7 +37,6 @@
 #include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
-#include "mlir/InitAllDialects.h"
 #include "mlir/Transforms/Passes.h"
 
 namespace fir::support {

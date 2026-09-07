@@ -18,10 +18,10 @@ add_flang_library(FIRTestAnalysis
   MLIRTestAnalysis
 
   MLIR_DEPS
-  ${dialect_libs}
+  ${FLANG_MLIR_DIALECT_LIBS}
 
   MLIR_LIBS
-  ${dialect_libs}
+  ${FLANG_MLIR_DIALECT_LIBS}
   MLIRFuncDialect
   MLIRLLVMDialect
   MLIRAnalysis
