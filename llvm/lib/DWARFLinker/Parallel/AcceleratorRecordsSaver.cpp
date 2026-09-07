@@ -73,6 +73,11 @@ void AcceleratorRecordsSaver::save(const DWARFDebugInfoEntry *InputDieEntry,
     if (const char *ShortName = InputDIE.getShortName())
       AttrInfo.Name = GlobalData.getStringPool().insert(ShortName).first;
 
+  // A unit root is none of the named entities DWARFv5 section 6.1.1.1 indexes;
+  // its DW_AT_name is the source file. Recognized by position, not by tag.
+  if (CompileUnit::isUnitRootDIE(InUnit.getDIEIndex(InputDieEntry)))
+    return;
+
   switch (InputDieEntry->getTag()) {
   case dwarf::DW_TAG_array_type:
   case dwarf::DW_TAG_class_type:
@@ -156,7 +161,6 @@ void AcceleratorRecordsSaver::save(const DWARFDebugInfoEntry *InputDieEntry,
       saveNamespaceRecord(InputDieEntry, AttrInfo.Name, OutDIE,
                           InputDieEntry->getTag(), TypeEntry);
   } break;
-  case dwarf::DW_TAG_compile_unit:
   case dwarf::DW_TAG_lexical_block: {
     // Nothing to do.
   } break;

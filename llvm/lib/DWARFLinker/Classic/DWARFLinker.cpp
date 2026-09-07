@@ -1952,8 +1952,11 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
   // FIXME: This is slightly wrong. An inline_subroutine without a
   // low_pc, but with AT_ranges might be interesting to get into the
   // accelerator tables too. For now stick with dsymutil's behavior.
+
+  // A unit root is none of the named entities DWARFv5 section 6.1.1.1 indexes;
+  // its DW_AT_name is the source file. Recognized by position, not by tag.
   if ((Info.InDebugMap || AttrInfo.HasLowPc || AttrInfo.HasRanges) &&
-      Tag != dwarf::DW_TAG_compile_unit &&
+      !Unit.isUnitRootDIE(*Die) &&
       getDIENames(InputDIE, AttrInfo, DebugStrPool, File, Unit,
                   Tag != dwarf::DW_TAG_inlined_subroutine)) {
     if (AttrInfo.MangledName && AttrInfo.MangledName != AttrInfo.Name)
