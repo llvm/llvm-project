@@ -1,0 +1,21 @@
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -run-pass=machine-cse -o - %s | FileCheck %s
+
+# If CSE fails while constraining a later result, restore the attributes of
+# every earlier result that was already constrained.
+
+---
+name: multi_def_constraint_failure
+isSSA: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: multi_def_constraint_failure
+    ; CHECK: %first0:vreg_64, %second0:sreg_64(s32) = V_MAD_U64_U32_e64
+    ; CHECK: %first1:vreg_64_align2, %second1:sreg_64(s64) = V_MAD_U64_U32_e64
+
+    %first0:vreg_64, %second0:sreg_64(s32) = V_MAD_U64_U32_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, 0, implicit $exec
+    %first1:vreg_64_align2, %second1:sreg_64(s64) = V_MAD_U64_U32_e64 $vgpr0, $vgpr1, $vgpr2_vgpr3, 0, implicit $exec
+    S_ENDPGM 0, implicit %first0, implicit %second0, implicit %first1, implicit %second1
+...

@@ -368,6 +368,12 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // synthesized from it. Set to 0 to inhibit unneeded pressure sets.
   bit GeneratePressureSet = true;
 
+  // Prevent the pressure set generated directly from this register class from
+  // being pruned as an insignificant subset of another pressure set. This is
+  // useful for small, highly constrained classes whose pressure must be
+  // tracked independently from overlapping larger classes.
+  bit PreservePressureSet = false;
+
   // Weight override for register pressure calculation. This is the value
   // TargetRegisterClass::getRegClassWeight() will return. The weight is in
   // units of pressure for this register class. If unset tablegen will

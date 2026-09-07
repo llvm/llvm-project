@@ -132,14 +132,12 @@ void RISCVCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
   // TODO: RISCVInsertReadWriteCSRPass
   // TODO: RISCVInsertWriteVXRMPass
   // TODO: RISCVLandingPadSetupPass
-
   // TODO: MachinePipelinerPass (no new pass manager port exists yet)
-
-  // TODO: RISCVVMV0EliminationPass
 }
 
 void RISCVCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None) {
+    addMachineFunctionPass(RISCVPostRAV0RewritePass(), PMW);
     // TODO: RISCVRedundantCopyEliminationPass
   }
 }
@@ -161,6 +159,7 @@ void RISCVCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   // outlined functions are removed erroneously.
   if (getOptLevel() >= CodeGenOptLevel::Default) {
     addMachineFunctionPass(MachineCopyPropagationPass(true), PMW);
+    addMachineFunctionPass(RISCVVSETVLICleanupPass(), PMW);
     // TODO: RISCVLateBranchOptPass
   }
   // The IndirectBranchTrackingPass inserts lpad and could have changed the

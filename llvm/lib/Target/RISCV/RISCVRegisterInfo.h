@@ -21,6 +21,14 @@
 
 namespace llvm {
 
+enum RISCVV0AccessKind : unsigned {
+  NoV0Access = 0,
+  PhysV0Use = 1 << 0,
+  PhysV0Def = 1 << 1,
+  VirtualV0Use = 1 << 2,
+  VirtualV0Def = 1 << 3,
+};
+
 namespace RISCVRI {
 enum : uint8_t {
   // The IsVRegClass value of this RegisterClass.
@@ -64,6 +72,14 @@ static inline unsigned getNF(uint8_t TSFlags) {
 struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   RISCVRegisterInfo(unsigned HwMode);
+
+  static bool isV0OnlyRegClass(const TargetRegisterClass *RC, unsigned SubReg,
+                               const TargetRegisterInfo &TRI);
+
+  static unsigned getV0AccessKind(const MachineInstr &MI,
+                                  const MachineRegisterInfo &MRI,
+                                  const TargetInstrInfo *TII,
+                                  const TargetRegisterInfo &TRI);
 
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const override;
@@ -147,6 +163,16 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   const TargetRegisterClass *
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
                             const MachineFunction &) const override;
+
+  bool shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
+                            unsigned DefSubReg,
+                            const TargetRegisterClass *SrcRC,
+                            unsigned SrcSubReg) const override;
+
+  bool shouldCoalesce(MachineInstr *MI, const TargetRegisterClass *SrcRC,
+                      unsigned SrcSubReg, const TargetRegisterClass *DstRC,
+                      unsigned DstSubReg, const TargetRegisterClass *NewRC,
+                      LiveIntervals &LIS) const override;
 
   void getOffsetOpcodes(const StackOffset &Offset,
                         SmallVectorImpl<uint64_t> &Ops) const override;

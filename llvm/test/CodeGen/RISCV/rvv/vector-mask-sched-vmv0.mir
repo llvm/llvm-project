@@ -1,0 +1,397 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=riscv64 -mattr=+v -run-pass=machine-scheduler \
+# RUN:   -riscv-disable-vector-mask-mutation \
+# RUN:   -misched-prera-direction=topdown -debug-only=machine-scheduler \
+# RUN:   -verify-machineinstrs -verify-misched -o /dev/null %s 2>&1 \
+# RUN:   | FileCheck %s
+# RUN: llc -mtriple=riscv64 -mattr=+v -run-pass=machine-scheduler \
+# RUN:   -riscv-disable-vector-mask-mutation \
+# RUN:   -misched-prera-direction=bottomup -debug-only=machine-scheduler \
+# RUN:   -verify-machineinstrs -verify-misched -o /dev/null %s 2>&1 \
+# RUN:   | FileCheck %s
+# RUN: llc -mtriple=riscv64 -mattr=+v -run-pass=machine-scheduler \
+# RUN:   -riscv-disable-vector-mask-mutation \
+# RUN:   -debug-only=machine-scheduler -verify-machineinstrs -verify-misched \
+# RUN:   -o /dev/null %s 2>&1 | FileCheck %s
+
+# VMV0 virtual registers are all allocated to V0. Check that the scheduler
+# models their hidden alias with explicit physical V0 accesses.
+
+# CHECK-LABEL: copy_from_v0_between_vmv0_uses:%bb.0
+# CHECK: SU(4): {{.*}}%out0:vrnov0 = PseudoVMERGE_VIM_M1
+# CHECK: Successors:
+# CHECK-NOT: SU(5): Ord  Latency=0 Artificial
+# CHECK: Pressure Diff
+# CHECK: SU(5): {{.*}}%saved:vr = COPY $v0
+# CHECK: Predecessors:
+# CHECK-DAG: SU(0): Ord  Latency=0 Artificial
+# CHECK-DAG: SU(1): Ord  Latency=0 Artificial
+# CHECK-NOT: SU(4): Ord  Latency=0 Artificial
+# CHECK: Successors:
+# CHECK-NOT: SU(6): Ord  Latency=0 Artificial
+# CHECK: Pressure Diff
+# CHECK: SU(6): {{.*}}%out1:vrnov0 = PseudoVMERGE_VIM_M1
+# CHECK: Predecessors:
+# CHECK-NOT: SU(5): Ord  Latency=0 Artificial
+# CHECK: Successors:
+---
+name: copy_from_v0_between_vmv0_uses
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v0, $v1, $v2, $v8, $v9
+
+    %mask0:vmv0 = COPY $v1
+    %mask1:vmv0 = COPY $v2
+    %false0:vrnov0 = COPY $v8
+    %false1:vrnov0 = COPY $v9
+    %out0:vrnov0 = PseudoVMERGE_VIM_M1 undef $noreg, %false0, 1, %mask0, 1, 3
+    %saved:vr = COPY $v0
+    %out1:vrnov0 = PseudoVMERGE_VIM_M1 undef $noreg, %false1, 1, %mask1, 1, 3
+...
+
+# CHECK-LABEL: copy_to_v0_between_vmv0_uses:%bb.0
+# CHECK: SU(5): {{.*}}%out0:vrnov0 = PseudoVMERGE_VIM_M1
+# CHECK: Successors:
+# CHECK-DAG: SU(6): Ord  Latency=0 Artificial
+# CHECK: SU(6): $v0 = COPY %newmask:vr
+# CHECK: Predecessors:
+# CHECK-DAG: SU(0): Ord  Latency=0 Artificial
+# CHECK-DAG: SU(1): Ord  Latency=0 Artificial
+# CHECK-DAG: SU(5): Ord  Latency=0 Artificial
+# CHECK: Successors:
+# CHECK-DAG: SU(7): Ord  Latency=0 Artificial
+# CHECK: SU(7): {{.*}}%out1:vrnov0 = PseudoVMERGE_VIM_M1
+---
+name: copy_to_v0_between_vmv0_uses
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v1, $v2, $v8, $v9, $v10
+
+    %mask0:vmv0 = COPY $v1
+    %mask1:vmv0 = COPY $v2
+    %false0:vrnov0 = COPY $v8
+    %false1:vrnov0 = COPY $v9
+    %newmask:vr = COPY $v10
+    %out0:vrnov0 = PseudoVMERGE_VIM_M1 undef $noreg, %false0, 1, %mask0, 1, 3
+    $v0 = COPY %newmask
+    %out1:vrnov0 = PseudoVMERGE_VIM_M1 undef $noreg, %false1, 1, %mask1, 1, 3
+...
+
+# CHECK-LABEL: general_physical_v0_access:%bb.0
+# CHECK: SU(4): {{.*}}%out0:vrnov0 = PseudoVMERGE_VIM_M1
+# CHECK: Successors:
+# CHECK-NOT: SU(5): Ord  Latency=0 Artificial
+# CHECK: Pressure Diff
+# CHECK: SU(5): {{.*}}%count:gpr = PseudoVCPOP_M_B8 $v0
+# CHECK: Predecessors:
+# CHECK-DAG: SU(0): Ord  Latency=0 Artificial
+# CHECK-DAG: SU(1): Ord  Latency=0 Artificial
+# CHECK-NOT: SU(4): Ord  Latency=0 Artificial
+# CHECK: Successors:
+# CHECK-NOT: SU(6): Ord  Latency=0 Artificial
+# CHECK: Pressure Diff
+# CHECK: SU(6): {{.*}}%out1:vrnov0 = PseudoVMERGE_VIM_M1
+# CHECK: Predecessors:
+# CHECK-NOT: SU(5): Ord  Latency=0 Artificial
+# CHECK: Successors:
+---
+name: general_physical_v0_access
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v0, $v1, $v2, $v8, $v9
+
+    %mask0:vmv0 = COPY $v1
+    %mask1:vmv0 = COPY $v2
+    %false0:vrnov0 = COPY $v8
+    %false1:vrnov0 = COPY $v9
+    %out0:vrnov0 = PseudoVMERGE_VIM_M1 undef $noreg, %false0, 1, %mask0, 1, 3
+    %count:gpr = PseudoVCPOP_M_B8 $v0, 1, 0
+    %out1:vrnov0 = PseudoVMERGE_VIM_M1 undef $noreg, %false1, 1, %mask1, 1, 3
+...
+
+# CHECK-LABEL: vmv0_def_between_physical_v0_accesses:%bb.0
+# CHECK: SU(0): {{.*}}%saved:vr = COPY $v0
+# CHECK: Successors:
+# CHECK-DAG: SU(2): Ord  Latency=0 Artificial
+# CHECK: SU(2): {{.*}}%mask:vmv0 = PseudoVMSET_M_B8
+# CHECK: Predecessors:
+# CHECK-DAG: SU(0): Ord  Latency=0 Artificial
+# CHECK: Successors:
+# CHECK-DAG: SU(4): Ord  Latency=0 Artificial
+# CHECK: SU(4): $v0 = COPY %newmask:vr
+# CHECK: Predecessors:
+# CHECK-DAG: SU(2): Ord  Latency=0 Artificial
+---
+name: vmv0_def_between_physical_v0_accesses
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v0, $v8, $x10
+
+    %saved:vr = COPY $v0
+    %avl:gprnox0 = COPY $x10
+    %mask:vmv0 = PseudoVMSET_M_B8 %avl, 0
+    %newmask:vr = COPY $v8
+    $v0 = COPY %newmask
+...
+
+# The COPY in SU(4) has both a VMV0 virtual use and a physical V0 def. It must
+# be ordered after all prior VMV0 accesses, before the following one, and must
+# not acquire a self-edge.
+# CHECK-LABEL: same_instruction_vmv0_and_physical_v0:%bb.0
+# CHECK: SU(4): $v0 = COPY %both:vmv0
+# CHECK: Predecessors:
+# CHECK-DAG: SU(3): Data Latency=4 Reg=%3
+# CHECK-DAG: SU(0): Ord  Latency=0 Artificial
+# CHECK-DAG: SU(2): Ord  Latency=0 Artificial
+# CHECK-NOT: SU(4):
+# CHECK: Successors:
+# CHECK-DAG: SU(5): Ord  Latency=0 Artificial
+# CHECK: Pressure Diff
+---
+name: same_instruction_vmv0_and_physical_v0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v1, $v2, $v8
+
+    %before:vmv0 = COPY $v1
+    %false:vrnov0 = COPY $v8
+    %out0:vrnov0 = PseudoVMERGE_VIM_M1 undef $noreg, %false, 1, %before, 1, 3
+    %both:vmv0 = COPY $v2
+    $v0 = COPY %both
+    %out1:vrnov0 = PseudoVMERGE_VIM_M1 undef $noreg, %false, 1, %both, 1, 3
+...
+
+# Keep the VMV0 accesses on either side of the physical V0 access independently
+# schedulable. The physical access must nevertheless be ordered after every
+# member of the first group and before every member of the second group.
+# CHECK-LABEL: independent_virtual_groups:%bb.0
+# CHECK: SU(4): {{.*}}%mask0:vmv0 = PseudoVMSET_M_B8
+# CHECK: Successors:
+# CHECK-NOT: SU(5): Ord  Latency=0 Artificial
+# CHECK-DAG: SU(6): Ord  Latency=0 Artificial
+# CHECK: Pressure Diff
+# CHECK: SU(5): {{.*}}%mask1:vmv0 = PseudoVMSET_M_B8
+# CHECK: Successors:
+# CHECK-NOT: SU(4): Ord  Latency=0 Artificial
+# CHECK-DAG: SU(6): Ord  Latency=0 Artificial
+# CHECK: Pressure Diff
+# CHECK: SU(6): {{.*}}%saved:vr = COPY $v0
+# CHECK: Predecessors:
+# CHECK-DAG: SU(4): Ord  Latency=0 Artificial
+# CHECK-DAG: SU(5): Ord  Latency=0 Artificial
+# CHECK: Successors:
+# CHECK-DAG: SU(7): Ord  Latency=0 Artificial
+# CHECK-DAG: SU(8): Ord  Latency=0 Artificial
+# CHECK: SU(7): {{.*}}%mask2:vmv0 = PseudoVMSET_M_B8
+# CHECK: Predecessors:
+# CHECK-DAG: SU(6): Ord  Latency=0 Artificial
+# CHECK-NOT: SU(8): Ord  Latency=0 Artificial
+# CHECK: Pressure Diff
+# CHECK: SU(8): {{.*}}%mask3:vmv0 = PseudoVMSET_M_B8
+# CHECK: Predecessors:
+# CHECK-DAG: SU(6): Ord  Latency=0 Artificial
+# CHECK-NOT: SU(7): Ord  Latency=0 Artificial
+# CHECK: Pressure Diff
+---
+name: independent_virtual_groups
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v0, $x10, $x11, $x12, $x13
+
+    %avl0:gprnox0 = COPY $x10
+    %avl1:gprnox0 = COPY $x11
+    %avl2:gprnox0 = COPY $x12
+    %avl3:gprnox0 = COPY $x13
+    %mask0:vmv0 = PseudoVMSET_M_B8 %avl0, 0
+    %mask1:vmv0 = PseudoVMSET_M_B8 %avl1, 0
+    %saved:vr = COPY $v0
+    %mask2:vmv0 = PseudoVMSET_M_B8 %avl2, 0
+    %mask3:vmv0 = PseudoVMSET_M_B8 %avl3, 0
+...
+
+# The mask operands have the broad VR register class in MRI, but the static
+# inline-asm operand constraint is VMV0. They must still alias physical V0.
+# CHECK-LABEL: static_vmv0_operand_constraint:%bb.0
+# CHECK: SU(2): INLINEASM {{.*}}reguse:VMV0], %mask0:vr
+# CHECK: Successors:
+# CHECK-DAG: SU(4): Ord  Latency=0 Artificial
+# CHECK: SU(4): $v0 = COPY %newmask:vr
+# CHECK: Predecessors:
+# CHECK-DAG: SU(2): Ord  Latency=0 Artificial
+# CHECK: Successors:
+# CHECK-DAG: SU(5): Ord  Latency=0 Artificial
+# CHECK: SU(5): INLINEASM {{.*}}reguse:VMV0], %mask1:vr
+---
+name: static_vmv0_operand_constraint
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v1, $v2, $v3
+
+    %mask0:vr = COPY $v1
+    %mask1:vr = COPY $v2
+    INLINEASM &"", attdialect, reguse:VMV0, %mask0
+    %newmask:vr = COPY $v3
+    $v0 = COPY %newmask
+    INLINEASM &"", attdialect, reguse:VMV0, %mask1
+...
+
+# The synthetic class guarantees only its first M1 subregister is V0. Check
+# that class-plus-subregister classification recognizes sub_vrm1_0 but does not
+# conservatively classify sub_vrm1_1 as V0-only.
+# CHECK-LABEL: synthetic_class_subregister:%bb.0
+# CHECK: SU(1): {{.*}}%low:vr = COPY %wide.sub_vrm1_0
+# CHECK: Successors:
+# CHECK-DAG: SU(3): Ord  Latency=0 Artificial
+# CHECK: Pressure Diff
+# CHECK: SU(2): {{.*}}%high:vr = COPY %wide.sub_vrm1_1
+# CHECK: Successors:
+# CHECK-NOT: SU(3): Ord  Latency=0 Artificial
+# CHECK: Pressure Diff
+# CHECK: SU(3): $v0 = COPY $v8
+# CHECK: Predecessors:
+# CHECK-DAG: SU(1): Ord  Latency=0 Artificial
+# CHECK-NOT: SU(2): Ord  Latency=0 Artificial
+# CHECK: Pressure Diff
+---
+name: synthetic_class_subregister
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v8
+
+    %wide:vrm2_with_sub_vrm1_0_in_vmv0 = IMPLICIT_DEF
+    %low:vr = COPY %wide.sub_vrm1_0
+    %high:vr = COPY %wide.sub_vrm1_1
+    $v0 = COPY $v8
+...
+
+# A virtual V0 read and a physical V0 read do not conflict. The earlier
+# virtual def must still be ordered before the physical read.
+# CHECK-LABEL: read_read_no_edge:%bb.0
+# CHECK: SU(1): {{.*}}%virtual_read:vr = COPY %mask:vmv0
+# CHECK: Successors:
+# CHECK-NOT: SU(2): Ord  Latency=0 Artificial
+# CHECK: Pressure Diff
+# CHECK: SU(2): {{.*}}%physical_read:vr = COPY $v0
+# CHECK: Predecessors:
+# CHECK-DAG: SU(0): Ord  Latency=0 Artificial
+# CHECK-NOT: SU(1): Ord  Latency=0 Artificial
+# CHECK: Successors:
+---
+name: read_read_no_edge
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v0, $v1
+
+    %mask:vmv0 = COPY $v1
+    %virtual_read:vr = COPY %mask
+    %physical_read:vr = COPY $v0
+...
+
+# Virtual write followed by physical read is a RAW conflict.
+# CHECK-LABEL: raw_virtual_write_physical_read:%bb.0
+# CHECK: SU(0): {{.*}}%mask:vmv0 = COPY $v1
+# CHECK: Successors:
+# CHECK-DAG: SU(1): Ord  Latency=0 Artificial
+# CHECK: SU(1): {{.*}}%saved:vr = COPY $v0
+# CHECK: Predecessors:
+# CHECK-DAG: SU(0): Ord  Latency=0 Artificial
+---
+name: raw_virtual_write_physical_read
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v0, $v1
+
+    %mask:vmv0 = COPY $v1
+    %saved:vr = COPY $v0
+...
+
+# Virtual read followed by physical write is a WAR conflict.
+# CHECK-LABEL: war_virtual_read_physical_write:%bb.0
+# CHECK: SU(1): {{.*}}%saved:vr = COPY %mask:vmv0
+# CHECK: Successors:
+# CHECK-DAG: SU(3): Ord  Latency=0 Artificial
+# CHECK: SU(3): $v0 = COPY %newmask:vr
+# CHECK: Predecessors:
+# CHECK-DAG: SU(1): Ord  Latency=0 Artificial
+---
+name: war_virtual_read_physical_write
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v1, $v2
+
+    %mask:vmv0 = COPY $v1
+    %saved:vr = COPY %mask
+    %newmask:vr = COPY $v2
+    $v0 = COPY %newmask
+...
+
+# Virtual write followed by physical write is a WAW conflict.
+# CHECK-LABEL: waw_virtual_write_physical_write:%bb.0
+# CHECK: SU(0): {{.*}}%mask:vmv0 = COPY $v1
+# CHECK: Successors:
+# CHECK-DAG: SU(2): Ord  Latency=0 Artificial
+# CHECK: SU(2): $v0 = COPY %newmask:vr
+# CHECK: Predecessors:
+# CHECK-DAG: SU(0): Ord  Latency=0 Artificial
+---
+name: waw_virtual_write_physical_write
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v1, $v2
+
+    %mask:vmv0 = COPY $v1
+    %newmask:vr = COPY $v2
+    $v0 = COPY %newmask
+...
+
+# A regmask clobber is a physical V0 def.
+# CHECK-LABEL: regmask_clobbers_v0:%bb.0
+# CHECK: SU(0): {{.*}}%mask:vmv0 = COPY $v1
+# CHECK: Successors:
+# CHECK-DAG: SU(1): Ord  Latency=0 Artificial
+# CHECK: SU(1): $x10 = ADDI $x10, 0, <regmask $x2>
+# CHECK: Predecessors:
+# CHECK-DAG: SU(0): Ord  Latency=0 Artificial
+---
+name: regmask_clobbers_v0
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v1, $x10
+
+    %mask:vmv0 = COPY $v1
+    $x10 = ADDI $x10, 0, CustomRegMask($x2)
+...
+
+# V0 accesses in bundle members are classified as accesses of the bundle SU.
+# CHECK-LABEL: bundled_physical_v0_read:%bb.0
+# CHECK: SU(0): {{.*}}%mask:vmv0 = COPY $v1
+# CHECK: Successors:
+# CHECK-DAG: SU(1): Ord  Latency=0 Artificial
+# CHECK: SU(1): BUNDLE
+# CHECK: Predecessors:
+# CHECK-DAG: SU(0): Ord  Latency=0 Artificial
+---
+name: bundled_physical_v0_read
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $v0, $v1
+
+    %mask:vmv0 = COPY $v1
+    BUNDLE {
+      dead %saved:vr = COPY $v0
+    }
+...

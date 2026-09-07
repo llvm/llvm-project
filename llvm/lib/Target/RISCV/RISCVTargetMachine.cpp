@@ -137,8 +137,9 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   initializeRISCVExpandPseudoPreEmitLegacyPass(*PR);
   initializeRISCVVectorPeepholeLegacyPass(*PR);
   initializeRISCVVLOptimizerLegacyPass(*PR);
-  initializeRISCVVMV0EliminationPass(*PR);
   initializeRISCVInsertVSETVLIPass(*PR);
+  initializeRISCVVSETVLICleanupLegacyPass(*PR);
+  initializeRISCVPostRAV0RewriteLegacyPass(*PR);
   initializeRISCVInsertReadWriteCSRPass(*PR);
   initializeRISCVInsertWriteVXRMPass(*PR);
   initializeRISCVDAGToDAGISelLegacyPass(*PR);
@@ -283,7 +284,11 @@ RISCVTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   const RISCVSubtarget &ST = C->MF->getSubtarget<RISCVSubtarget>();
   ScheduleDAGMILive *DAG = createSchedLive<RISCVPreRAMachineSchedStrategy>(C);
 
-  // Add MacroFusion mutation first with a higher priority than later clustering
+  if (ST.hasVInstructions())
+    DAG->addMutation(createRISCVV0AliasDAGMutation(DAG->TRI));
+
+  // Add correctness dependencies before the heuristic mutations below.
+  // Among the heuristics, macro fusion has higher priority than clustering.
   const auto &MacroFusions = ST.getMacroFusions();
   if (!MacroFusions.empty())
     DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
@@ -569,8 +574,10 @@ void RISCVPassConfig::addPreEmitPass() {
   // currently leads to incorrect code-gen, where copies to registers within
   // outlined functions are removed erroneously.
   if (TM->getOptLevel() >= CodeGenOptLevel::Default &&
-      EnableRISCVCopyPropagation)
+      EnableRISCVCopyPropagation) {
     addPass(createMachineCopyPropagationPass(true));
+    addPass(createRISCVVSETVLICleanupLegacyPass());
+  }
   if (TM->getOptLevel() >= CodeGenOptLevel::Default)
     addPass(createRISCVLateBranchOptPass());
   // The IndirectBranchTrackingPass inserts lpad and could have changed the
@@ -647,8 +654,6 @@ void RISCVPassConfig::addPreRegAlloc() {
 
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMachinePipeliner)
     addPass(&MachinePipelinerID);
-
-  addPass(createRISCVVMV0EliminationPass());
 }
 
 void RISCVPassConfig::addFastRegAlloc() {
@@ -656,8 +661,9 @@ void RISCVPassConfig::addFastRegAlloc() {
   TargetPassConfig::addFastRegAlloc();
 }
 
-
 void RISCVPassConfig::addPostRegAlloc() {
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createRISCVPostRAV0RewritePass());
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableRedundantCopyElimination)
     addPass(createRISCVRedundantCopyEliminationPass());

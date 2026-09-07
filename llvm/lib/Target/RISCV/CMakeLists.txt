@@ -62,6 +62,7 @@ add_llvm_target(RISCVCodeGen
   RISCVMergeBaseOffset.cpp
   RISCVMoveMerger.cpp
   RISCVOptWInstrs.cpp
+  RISCVPostRAV0Rewrite.cpp
   RISCVPromoteConstant.cpp
   RISCVPushPopOptimizer.cpp
   RISCVQCRelaxMarking.cpp
@@ -75,7 +76,7 @@ add_llvm_target(RISCVCodeGen
   RISCVVectorMaskDAGMutation.cpp
   RISCVVectorPeephole.cpp
   RISCVVLOptimizer.cpp
-  RISCVVMV0Elimination.cpp
+  RISCVVSETVLICleanup.cpp
   RISCVVSETVLIInfoAnalysis.cpp
   RISCVZacasABIFix.cpp
   RISCVZilsdOptimizer.cpp

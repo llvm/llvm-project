@@ -1,0 +1,55 @@
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv69 \
+# RUN:   -mattr=+hvxv69,+hvx-length128b -run-pass=early-tailduplication \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s
+
+--- |
+  define void @taildup_cleanup_preserves_subreg() { ret void }
+...
+---
+name: taildup_cleanup_preserves_subreg
+isSSA: true
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: taildup_cleanup_preserves_subreg
+  ; CHECK: bb.1:
+  ; CHECK: %[[SRC0:[0-9]+]]:hvxwr_with_wsub_lo = COPY $wr0
+  ; CHECK-NEXT: %[[COPY0:[0-9]+]]:hvxwr = COPY %[[SRC0]].wsub_lo
+  ; CHECK: bb.2:
+  ; CHECK: %[[SRC1:[0-9]+]]:hvxwr_with_wsub_lo = COPY $wr1
+  ; CHECK-NEXT: %[[COPY1:[0-9]+]]:hvxwr = COPY %[[SRC1]].wsub_lo
+  ; CHECK: bb.5:
+  ; CHECK: %[[PHI:[0-9]+]]:hvxwr = PHI %[[COPY0]], %bb.1, %[[COPY1]], %bb.2
+  ; CHECK-NEXT: %[[USE:[0-9]+]]:hvxwr = COPY %[[PHI]]
+  ; CHECK-NEXT: $w0 = COPY %[[USE]]
+
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $p0, $wr0, $wr1
+    J2_jumpt $p0, %bb.2, implicit-def $pc
+
+  bb.1:
+    successors: %bb.3
+    liveins: $wr0
+    %0:hvxwr_with_wsub_lo = COPY $wr0
+    J2_jump %bb.3, implicit-def $pc
+
+  bb.2:
+    successors: %bb.3
+    liveins: $wr1
+    %1:hvxwr_with_wsub_lo = COPY $wr1
+    J2_jump %bb.3, implicit-def $pc
+
+  bb.3:
+    successors: %bb.5
+    %2:hvxwr = PHI %0.wsub_lo, %bb.1, %1.wsub_lo, %bb.2
+    J2_jump %bb.5, implicit-def $pc
+
+  bb.4:
+    successors: %bb.4
+    J2_jump %bb.4, implicit-def $pc
+
+  bb.5:
+    %3:hvxwr = COPY %2
+    $w0 = COPY %3
+    PS_jmpret $r31, implicit $w0, implicit-def $pc
+...

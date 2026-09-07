@@ -144,8 +144,10 @@ define <16 x i1> @match_v16i8_v1i8(<16 x i8> %op1, <1 x i8> %op2, <16 x i1> %mas
 ; CHECK-LABEL: match_v16i8_v1i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vmv1r.v v11, v0
 ; CHECK-NEXT:    vrgather.vi v10, v9, 0
-; CHECK-NEXT:    vmseq.vv v0, v8, v10, v0.t
+; CHECK-NEXT:    vmseq.vv v11, v8, v10, v0.t
+; CHECK-NEXT:    vmv.v.v v0, v11
 ; CHECK-NEXT:    ret
   %r = tail call <16 x i1> @llvm.experimental.vector.match(<16 x i8> %op1, <1 x i8> %op2, <16 x i1> %mask)
   ret <16 x i1> %r

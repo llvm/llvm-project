@@ -1,0 +1,249 @@
+# RUN: llc -mtriple=riscv64 -mattr=+v -run-pass=early-tailduplication \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s
+
+# Tail duplication must not fold a VMV0 PHI use into a VR incoming value by
+# constraining the incoming value to VMV0. The VR is independently live with
+# another VMV0 value in bb.1, so narrowing it makes both values require V0.
+
+--- |
+  define void @taildup_vmv0_cross_class_phi() {
+    ret void
+  }
+  define void @taildup_ssa_updater_vmv0_phi_use() {
+    ret void
+  }
+  define void @taildup_ssa_updater_vmv0() {
+    ret void
+  }
+  define void @taildup_ssa_updater_same_subreg() {
+    ret void
+  }
+...
+---
+name: taildup_vmv0_cross_class_phi
+isSSA: true
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: taildup_vmv0_cross_class_phi
+  ; CHECK: %wide0:vr = PseudoVMSET_M_B8
+  ; CHECK: %other_mask:vmv0 = IMPLICIT_DEF
+  ; CHECK: %conflicting_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %wide0, %data, %other_mask{{.*}}
+  ; CHECK: %[[MASK0:[0-9]+]]:vmv0 = COPY %wide0
+  ; CHECK: PseudoVADD_VV_M1_MASK $noreg, %data, %data, %[[MASK0]]{{.*}}
+  ; CHECK: %wide1:vr = PseudoVMSET_M_B8
+  ; CHECK: %[[MASK1:[0-9]+]]:vmv0 = COPY %wide1
+  ; CHECK: PseudoVADD_VV_M1_MASK $noreg, %data, %data, %[[MASK1]]{{.*}}
+
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %cond:gpr = IMPLICIT_DEF
+    %data:vr = IMPLICIT_DEF
+    BNE %cond, $x0, %bb.2
+
+  bb.1:
+    successors: %bb.3
+
+    %avl0:gprnox0 = IMPLICIT_DEF
+    %wide0:vr = PseudoVMSET_M_B8 %avl0, 0
+    %other_mask:vmv0 = IMPLICIT_DEF
+    %conflicting_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %wide0, %data, %other_mask, -1, 3, 0
+    PseudoBR %bb.3
+
+  bb.2:
+    successors: %bb.3
+
+    %avl1:gprnox0 = IMPLICIT_DEF
+    %wide1:vr = PseudoVMSET_M_B8 %avl1, 0
+    PseudoBR %bb.3
+
+  bb.3:
+    successors: %bb.5
+
+    %tail_mask:vmv0 = PHI %wide0, %bb.1, %wide1, %bb.2
+    %tail_result:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %data, %data, %tail_mask, -1, 3, 0
+    PseudoBR %bb.5
+
+  bb.4:
+    successors: %bb.4
+
+    PseudoBR %bb.4
+
+  bb.5:
+    PseudoRET
+...
+
+# A copy materialized for a PHI use must be placed in the corresponding
+# incoming block so that its definition dominates the PHI operand.
+
+---
+name: taildup_ssa_updater_vmv0_phi_use
+isSSA: true
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: taildup_ssa_updater_vmv0_phi_use
+  ; CHECK: bb.5:
+  ; CHECK: %merged:vr = PHI
+  ; CHECK-NEXT: %[[MASK:[0-9]+]]:vmv0 = COPY %merged
+  ; CHECK-NEXT: PseudoBR %bb.6
+  ; CHECK: bb.6:
+  ; CHECK-NEXT: %phi_use:vmv0 = PHI %[[MASK]], %bb.5
+
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %cond:gpr = IMPLICIT_DEF
+    %data:vr = IMPLICIT_DEF
+    BNE %cond, $x0, %bb.2
+
+  bb.1:
+    successors: %bb.3
+
+    %avl0:gprnox0 = IMPLICIT_DEF
+    %wide0:vr = PseudoVMSET_M_B8 %avl0, 0
+    PseudoBR %bb.3
+
+  bb.2:
+    successors: %bb.3
+
+    %avl1:gprnox0 = IMPLICIT_DEF
+    %wide1:vr = PseudoVMSET_M_B8 %avl1, 0
+    PseudoBR %bb.3
+
+  bb.3 (machine-block-address-taken):
+    successors: %bb.5
+
+    %mask:vmv0 = PHI %wide0, %bb.1, %wide1, %bb.2
+    %inside:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %data, %data, %mask, -1, 3, 0
+    PseudoBR %bb.5
+
+  bb.4:
+    successors: %bb.4
+
+    PseudoBR %bb.4
+
+  bb.5:
+    successors: %bb.6
+
+    %merged:vr = PHI %mask, %bb.3
+    PseudoBR %bb.6
+
+  bb.6:
+    %phi_use:vmv0 = PHI %mask, %bb.5
+    %result:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %data, %data, %phi_use, -1, 3, 0
+    PseudoRET
+...
+
+
+# When tail duplication updates SSA, it can find an existing broad VR PHI
+# that computes the requested VMV0 value. Keep the PHI broad and materialize
+# an explicit copy for the narrow use instead of narrowing the whole live
+# range.
+
+---
+name: taildup_ssa_updater_vmv0
+isSSA: true
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: taildup_ssa_updater_vmv0
+  ; CHECK: %merged_b:vr = PHI
+  ; CHECK-NEXT: %[[MASK:[0-9]+]]:vmv0 = COPY %merged_b
+  ; CHECK-NEXT: %other_mask:vmv0 = IMPLICIT_DEF
+  ; CHECK-NEXT: %conflicting_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %merged_b, %data, %other_mask{{.*}}
+  ; CHECK-NEXT: %later_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %data, %data, %[[MASK]]{{.*}}
+
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %cond:gpr = IMPLICIT_DEF
+    %data:vr = IMPLICIT_DEF
+    BNE %cond, $x0, %bb.2
+
+  bb.1:
+    successors: %bb.3
+
+    %avl0:gprnox0 = IMPLICIT_DEF
+    %wide_a0:vr = PseudoVMSET_M_B8 %avl0, 0
+    %wide_b0:vr = PseudoVMSET_M_B8 %avl0, 0
+    PseudoBR %bb.3
+
+  bb.2:
+    successors: %bb.3
+
+    %avl1:gprnox0 = IMPLICIT_DEF
+    %wide_a1:vr = PseudoVMSET_M_B8 %avl1, 0
+    %wide_b1:vr = PseudoVMSET_M_B8 %avl1, 0
+    PseudoBR %bb.3
+
+  bb.3 (machine-block-address-taken):
+    successors: %bb.5
+
+    %mask_a:vmv0 = PHI %wide_a0, %bb.1, %wide_a1, %bb.2
+    %mask_b:vmv0 = PHI %wide_b0, %bb.1, %wide_b1, %bb.2
+    %inside:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %data, %data, %mask_a, -1, 3, 0
+    PseudoBR %bb.5
+
+  bb.4:
+    successors: %bb.4
+
+    PseudoBR %bb.4
+
+  bb.5:
+    %merged_b:vr = PHI %mask_b, %bb.3
+    %other_mask:vmv0 = IMPLICIT_DEF
+    %conflicting_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %merged_b, %data, %other_mask, -1, 3, 0
+    %later_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %data, %data, %mask_b, -1, 3, 0
+    PseudoRET
+...
+
+# The synthetic tuple class itself is not V0-only, but its sub_vrm1_0
+# projection is. MachineSSAUpdater must compare the same projection on both
+# sides when replacing %tuple.sub_vrm1_0 with %merged.sub_vrm1_0.
+#
+# Passing SrcSubReg=0 incorrectly treats this as a V0-only/non-V0-only
+# crossing and inserts an unnecessary whole-register COPY.
+---
+name: taildup_ssa_updater_same_subreg
+isSSA: true
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: taildup_ssa_updater_same_subreg
+  ; CHECK: bb.5:
+  ; CHECK-NEXT: %merged:vrm2_with_sub_vrm1_0_in_vmv0 = PHI
+  ; CHECK-NEXT: $v0 = COPY %merged.sub_vrm1_0
+  ; CHECK-NEXT: PseudoRET
+
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %cond:gpr = IMPLICIT_DEF
+    BNE %cond, $x0, %bb.2
+
+  bb.1:
+    successors: %bb.3
+
+    %tuple0:vrm2_with_sub_vrm1_0_in_vmv0 = IMPLICIT_DEF
+    PseudoBR %bb.3
+
+  bb.2:
+    successors: %bb.3
+
+    %tuple1:vrm2_with_sub_vrm1_0_in_vmv0 = IMPLICIT_DEF
+    PseudoBR %bb.3
+
+  bb.3 (machine-block-address-taken):
+    successors: %bb.5
+
+    %tuple:vrm2_with_sub_vrm1_0_in_vmv0 = PHI %tuple0, %bb.1, %tuple1, %bb.2
+    PseudoBR %bb.5
+
+  bb.4:
+    successors: %bb.4
+
+    PseudoBR %bb.4
+
+  bb.5:
+    %merged:vrm2_with_sub_vrm1_0_in_vmv0 = PHI %tuple, %bb.3
+    $v0 = COPY %tuple.sub_vrm1_0
+    PseudoRET
+...

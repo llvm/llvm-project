@@ -72,6 +72,8 @@ public:
 
 std::unique_ptr<ScheduleDAGMutation>
 createRISCVVectorMaskDAGMutation(const TargetRegisterInfo *TRI);
+std::unique_ptr<ScheduleDAGMutation>
+createRISCVV0AliasDAGMutation(const TargetRegisterInfo *TRI);
 
 } // namespace llvm
 

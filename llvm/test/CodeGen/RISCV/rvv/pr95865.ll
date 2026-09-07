@@ -35,9 +35,10 @@ define i32 @main(i1 %arg.1, i64 %arg.2, i1 %arg.3, i64 %arg.4, i1 %arg.5, <vscal
 ; CHECK-NEXT:    .cfi_offset s9, -88
 ; CHECK-NEXT:    .cfi_offset s10, -96
 ; CHECK-NEXT:    .cfi_offset s11, -104
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vmv1r.v v10, v0
 ; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    ld s0, 112(sp)
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    li a3, 8
 ; CHECK-NEXT:    li a5, 12
@@ -91,12 +92,13 @@ define i32 @main(i1 %arg.1, i64 %arg.2, i1 %arg.3, i64 %arg.4, i1 %arg.5, <vscal
 ; CHECK-NEXT:    # Parent Loop BB0_3 Depth=3
 ; CHECK-NEXT:    # Parent Loop BB0_4 Depth=4
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=5
+; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    add s11, s9, s5
 ; CHECK-NEXT:    vse32.v v8, (s11), v0.t
 ; CHECK-NEXT:    addi s11, s5, 4
-; CHECK-NEXT:    add s5, s5, s7
-; CHECK-NEXT:    vse32.v v8, (s5), v0.t
+; CHECK-NEXT:    add ra, s7, s5
 ; CHECK-NEXT:    mv s5, s11
+; CHECK-NEXT:    vse32.v v8, (ra), v0.t
 ; CHECK-NEXT:    bne s11, a6, .LBB0_5
 ; CHECK-NEXT:  # %bb.6: # %for.cond.cleanup15.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_4 Depth=4

@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=x86_64-- -run-pass=regallocfast -o - %s | FileCheck %s
-# RUN: llc -mtriple=x86_64-- -passes=regallocfast -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -run-pass=regallocfast -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -passes=regallocfast -verify-machineinstrs -o - %s | FileCheck %s
 
 # If the tied use is undef value, fastregalloc should free the def register.
 # There is no reload needed for the undef value.
@@ -33,5 +33,32 @@ body:             |
     MOVAPSmr %stack.0, 1, $noreg, 32, $noreg, %0
     MOVAPSmr %stack.0, 1, $noreg, 48, $noreg, killed %0
     RET 0
+...
 
+---
+name: tied_undef_passthru
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %1:gr32 = IMPLICIT_DEF
+    ; CHECK-LABEL: name: tied_undef_passthru
+    ; CHECK: renamable $ecx = CMOV32rr undef renamable $ecx, killed renamable $eax, 2, implicit undef $eflags
+    ; CHECK-NEXT: RET 0, implicit killed $ecx
+    %0:gr32 = CMOV32rr undef %0, %1:gr32, 2, implicit undef $eflags
+    $ecx = COPY %0
+    RET 0, implicit $ecx
+...
+
+---
+name: tied_undef_subreg
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %1:gr32 = IMPLICIT_DEF
+    ; CHECK-LABEL: name: tied_undef_subreg
+    ; CHECK: undef renamable $ecx = CMOV32rr undef renamable $ecx, killed renamable $eax, 2, implicit undef $eflags, implicit-def $rcx
+    ; CHECK-NEXT: RET 0, implicit killed $rcx
+    undef %0.sub_32bit:gr64_with_sub_8bit = CMOV32rr undef %0.sub_32bit, %1, 2, implicit undef $eflags
+    $rcx = COPY %0
+    RET 0, implicit $rcx
 ...

@@ -5438,6 +5438,16 @@ RISCVInstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
   if (RHS && RHS->isPHI())
     return nullptr;
 
+  // The software pipeliner can rewrite registers across classes without
+  // consulting shouldRewriteCopySrc. Until it models V0-only constraints,
+  // reject loops containing virtual V0 accesses. Physical V0 accesses remain
+  // fully visible to its normal dependency analysis.
+  unsigned V0Accesses = NoV0Access;
+  for (const MachineInstr &MI : *LoopBB)
+    V0Accesses |= RISCVRegisterInfo::getV0AccessKind(MI, MRI, this, RegInfo);
+  if (V0Accesses & (VirtualV0Use | VirtualV0Def))
+    return nullptr;
+
   return std::make_unique<RISCVPipelinerLoopInfo>(LHS, RHS, Cond);
 }
 

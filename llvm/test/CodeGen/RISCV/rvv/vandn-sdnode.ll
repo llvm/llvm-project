@@ -2564,9 +2564,9 @@ define <vscale x 1 x i8> @not_signbit_mask_nxv1i8(<vscale x 1 x i8> %a, <vscale 
 ; CHECK-LABEL: not_signbit_mask_nxv1i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vmsgt.vi v0, v8, -1
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vmerge.vvm v8, v10, v9, v0
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVKB-LABEL: not_signbit_mask_nxv1i8:

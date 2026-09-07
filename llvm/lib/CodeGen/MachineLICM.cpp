@@ -1556,7 +1556,10 @@ bool MachineLICMImpl::EliminateCSE(
       Register DupReg = Dup->getOperand(Idx).getReg();
       OrigRCs.push_back(MRI->getRegClass(DupReg));
 
-      if (!MRI->constrainRegClass(DupReg, MRI->getRegClass(Reg))) {
+      if (!TRI->shouldRewriteCopySrc(
+              MRI->getRegClass(Reg), MI->getOperand(Idx).getSubReg(),
+              MRI->getRegClass(DupReg), Dup->getOperand(Idx).getSubReg()) ||
+          !MRI->constrainRegClass(DupReg, MRI->getRegClass(Reg))) {
         // Restore old RCs if more than one defs.
         for (unsigned j = 0; j != i; ++j)
           MRI->setRegClass(Dup->getOperand(Defs[j]).getReg(), OrigRCs[j]);

@@ -1,0 +1,52 @@
+# RUN: llc -mtriple=riscv64 -mattr=+v \
+# RUN:   -run-pass=unreachable-mbb-elimination -verify-machineinstrs -o - %s \
+# RUN:   | FileCheck %s
+# RUN: llc -mtriple=riscv64 -mattr=+v \
+# RUN:   -passes=unreachable-mbb-elimination -verify-machineinstrs -o - %s \
+# RUN:   | FileCheck %s
+
+# Removing bb.1 leaves a single-input VMV0 PHI. Do not replace that PHI by
+# narrowing its ordinary VR input to VMV0.
+
+--- |
+  define void @unreachable_vmv0_cross_class_phi() {
+    ret void
+  }
+...
+---
+name: unreachable_vmv0_cross_class_phi
+isSSA: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.2
+
+    ; CHECK-LABEL: name: unreachable_vmv0_cross_class_phi
+    ; CHECK: bb.0:
+    ; CHECK: %src:vr = IMPLICIT_DEF
+    ; CHECK-NEXT: %other_mask:vmv0 = IMPLICIT_DEF
+    ; CHECK-NEXT: %data:vr = IMPLICIT_DEF
+    ; CHECK-NEXT: %conflicting_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %src, %data, %other_mask{{.*}}
+
+    %src:vr = IMPLICIT_DEF
+    %other_mask:vmv0 = IMPLICIT_DEF
+    %data:vr = IMPLICIT_DEF
+    %conflicting_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %src, %data, %other_mask, -1, 3, 0
+    PseudoBR %bb.2
+
+  bb.1:
+    successors: %bb.2
+
+    %dead:vmv0 = IMPLICIT_DEF
+    PseudoBR %bb.2
+
+  bb.2:
+    ; CHECK-NOT: %dead
+    ; CHECK: bb.1:
+    ; CHECK: %phi:vmv0 = COPY %src
+    ; CHECK-NEXT: %later_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %data, %data, %phi{{.*}}
+
+    %phi:vmv0 = PHI %src, %bb.0, %dead, %bb.1
+    %later_user:vrnov0 = PseudoVADD_VV_M1_MASK $noreg, %data, %data, %phi, -1, 3, 0
+    PseudoRET
+...
