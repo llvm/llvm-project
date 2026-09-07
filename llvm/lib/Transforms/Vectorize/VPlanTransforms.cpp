@@ -4038,12 +4038,11 @@ void VPlanTransforms::scaleMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
       if (VFMultiple == 1)
         continue;
 
-      VPBuilder Builder(VPBB, R.getIterator());
-
       VPValue *Ptr = MemOp->getAddr();
       VPValue *VFMultipleVPV = Plan.getConstantInt(IVTy, VFMultiple);
       VPValue *Align = Plan.getConstantInt(IVTy, MemOp->getAlign().value());
 
+      VPBuilder Builder(VPBB, R.getIterator());
       if (Opcode == Instruction::Load) {
         VPValue *OldLoad = R.getVPSingleValue();
         VPValue *Load = Builder.createNaryOp(
