@@ -60,6 +60,9 @@ class LoopSafetyInfo {
   // loop is entered.
   mutable DenseMap<const BasicBlock *, bool> GuaranteedToExecute;
 
+  bool allLoopPathsLeadToBlockImpl(const BasicBlock *BB,
+                                   const DominatorTree *DT) const;
+
 protected:
   const Loop *CurLoop;
 
@@ -86,9 +89,6 @@ public:
   LLVM_ABI bool allLoopPathsLeadToBlock(const BasicBlock *BB,
                                         const DominatorTree *DT) const;
 
-  LLVM_ABI bool allLoopPathsLeadToBlockImpl(const BasicBlock *BB,
-                                            const DominatorTree *DT) const;
-
   /// Returns true if the instruction in a loop is guaranteed to execute at
   /// least once (under the assumption that the loop is entered).
   virtual bool isGuaranteedToExecute(const Instruction &Inst,
@@ -111,7 +111,7 @@ class LLVM_ABI SimpleLoopSafetyInfo : public LoopSafetyInfo {
   void computeLoopSafetyInfo();
 
 public:
-  SimpleLoopSafetyInfo(const Loop *L) : LoopSafetyInfo(L) {
+  explicit SimpleLoopSafetyInfo(const Loop *L) : LoopSafetyInfo(L) {
     computeLoopSafetyInfo();
   }
 
@@ -139,7 +139,7 @@ class LLVM_ABI ICFLoopSafetyInfo : public LoopSafetyInfo {
   void computeLoopSafetyInfo();
 
 public:
-  ICFLoopSafetyInfo(const Loop *L) : LoopSafetyInfo(L) {
+  explicit ICFLoopSafetyInfo(const Loop *L) : LoopSafetyInfo(L) {
     computeLoopSafetyInfo();
   }
 
@@ -155,7 +155,7 @@ public:
   bool doesNotWriteMemoryBefore(const BasicBlock *BB) const;
 
   /// Returns true if we could not execute a memory-modifying instruction before
-  /// we execute \p I under assumption that the loopis entered.
+  /// we execute \p I under assumption that the loop is entered.
   bool doesNotWriteMemoryBefore(const Instruction &I) const;
 
   /// Inform the safety info that we are planning to insert a new instruction
