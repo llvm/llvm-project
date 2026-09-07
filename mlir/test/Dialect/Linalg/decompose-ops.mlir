@@ -416,3 +416,39 @@ func.func @destination_passing_style(
 // CANONICALIZECHECK-NEXT:     %[[S2:.+]] = arith.mulf %[[ARG4]], %[[ARG6]]
 // CANONICALIZECHECK-NEXT:     linalg.yield %[[ARG5]], %[[S2]]
 //      CANONICALIZECHECK:   return %[[GENERIC1]], %[[GENERIC2]]#1
+
+// -----
+
+// The peeled statement is expected to produce at least one result. Here the
+// first statement (`bufferization.dealloc_tensor`) has no results, so the
+// operation is not decomposed.
+#map0 = affine_map<(d0) -> (d0)>
+func.func @first_statement_no_result(%arg0 : tensor<27xi32>) -> tensor<27xi32> {
+  %init = tensor.empty() : tensor<27xi32>
+  %r = linalg.generic {
+    indexing_maps = [#map0, #map0],
+    iterator_types = ["parallel"]}
+    ins(%arg0 : tensor<27xi32>)
+    outs(%init : tensor<27xi32>) {
+    ^bb0(%b0 : i32, %b1 : i32):
+      bufferization.dealloc_tensor %init : tensor<27xi32>
+      %0 = arith.addi %b0, %b1 : i32
+      linalg.yield %0 : i32
+  } -> tensor<27xi32>
+  return %r : tensor<27xi32>
+}
+//  CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0) -> (d0)>
+//      CHECK: func.func @first_statement_no_result(
+//      CHECK:   %[[GENERIC:.+]] = linalg.generic
+//      CHECK:   bufferization.dealloc_tensor
+//      CHECK:   arith.addi
+//      CHECK:   linalg.yield
+//      CHECK:   return %[[GENERIC]]
+
+// CANONICALIZECHECK-DAG: #[[MAP0:.+]] = affine_map<(d0) -> (d0)>
+//      CANONICALIZECHECK: func.func @first_statement_no_result(
+//      CANONICALIZECHECK:   %[[GENERIC:.+]] = linalg.generic
+//      CANONICALIZECHECK:   bufferization.dealloc_tensor
+//      CANONICALIZECHECK:   arith.addi
+//      CANONICALIZECHECK:   linalg.yield
+//      CANONICALIZECHECK:   return %[[GENERIC]]
