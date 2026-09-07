@@ -74,8 +74,16 @@ lldb::addr_t IRMemoryMap::FindSpace(size_t size) {
 
     if (!alloc_error.Success())
       return LLDB_INVALID_ADDRESS;
-    else
+
+    // The process knows nothing about host-only allocations handed out by the
+    // guessing algorithm below, so the address it returned may collide with
+    // one of them.  Give the memory back and fall through to hunting for a
+    // free range above the existing allocations instead.
+    if (!IntersectsHostOnlyAllocation(ret, size))
       return ret;
+
+    process_sp->DeallocateMemory(ret);
+    ret = LLDB_INVALID_ADDRESS;
   }
 
   // At this point we know that we need to hunt.
@@ -238,6 +246,26 @@ bool IRMemoryMap::IntersectsAllocation(lldb::addr_t addr, size_t size) const {
     --iter;
     if (AllocationsIntersect(addr, size, iter->second.m_process_start,
                              iter->second.m_size))
+      return true;
+  }
+
+  return false;
+}
+
+bool IRMemoryMap::IntersectsHostOnlyAllocation(lldb::addr_t addr,
+                                               size_t size) const {
+  if (addr == LLDB_INVALID_ADDRESS)
+    return false;
+
+  // Unlike IntersectsAllocation, scan all allocations: the map's recorded
+  // extents for process-backed allocations may overlap each other (e.g.
+  // zero-sized requests over-record their size), so the disjoint-intervals
+  // assumption that allows a neighbors-only check does not hold.
+  for (const auto &[base, allocation] : m_allocations) {
+    if (allocation.m_policy != eAllocationPolicyHostOnly)
+      continue;
+    if (AllocationsIntersect(addr, size, allocation.m_process_start,
+                             allocation.m_size))
       return true;
   }
 
@@ -418,6 +446,26 @@ IRMemoryMap::Malloc(size_t size, uint8_t alignment, uint32_t permissions,
 
   lldb::addr_t mask = alignment - 1;
   aligned_address = (allocation_address + mask) & (~mask);
+
+  // A collision here means FindSpace or the process allocator returned an
+  // address that overlaps a live allocation.  Registering it anyway would
+  // silently fail (duplicate map key) or alias another allocation's memory,
+  // corrupting expression state in hard-to-debug ways.  Fail loudly instead.
+  //
+  // Only real (process-backed) allocations landing on top of a host-only
+  // allocation are a genuine collision: the process can't know about
+  // host-only address labels.  Overlaps among process-backed allocations are
+  // the process allocator's business, and our recorded extents may
+  // over-estimate the real reservation (e.g. for zero-sized requests), so
+  // don't second-guess them here.  Host-only allocations themselves come
+  // from FindSpace, which already avoids all existing allocations.
+  if (policy != eAllocationPolicyHostOnly &&
+      IntersectsHostOnlyAllocation(allocation_address, allocation_size)) {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Couldn't malloc: allocation at 0x%" PRIx64
+                                   " collides with an existing allocation",
+                                   allocation_address);
+  }
 
   m_allocations.emplace(
       std::piecewise_construct, std::forward_as_tuple(aligned_address),

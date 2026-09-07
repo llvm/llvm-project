@@ -728,6 +728,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
   if (frame.m_frame_process_address == LLDB_INVALID_ADDRESS) {
     error =
         lldb_private::Status::FromErrorString("Couldn't allocate stack frame");
+    return false;
   }
 
   int arg_index = 0;
@@ -743,7 +744,11 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
     lldb::addr_t ptr = args[arg_index];
 
-    frame.MakeArgument(&*ai, ptr);
+    if (!frame.MakeArgument(&*ai, ptr)) {
+      error = lldb_private::Status::FromErrorString(
+          "Couldn't write an argument into the interpreter's stack frame");
+      return false;
+    }
   }
 
   frame.Jump(&function.front());
