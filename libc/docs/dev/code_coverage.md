@@ -64,7 +64,9 @@ Generating coverage reports requires Clang, LLVM profile tools, CMake, and
 Ninja:
 
 * **Compiler:** Clang 18 or later (Clang 21 or later is required for MC/DC
-  instrumentation).
+  instrumentation). In full-build mode, `libclang_rt.profile.a` must not depend
+  on glibc fortification symbols; a compiler-rt built from the LLVM monorepo is
+  recommended.
 * **LLVM Utilities:** Matching major versions of `llvm-profdata` and `llvm-cov`.
 * **Build System:** CMake 3.28+ and Ninja.
 
@@ -113,10 +115,11 @@ outcomes across all LLVM-libc entrypoints and internal support utilities.
 
 ### 1. CMake Configuration
 
-Configures CMake to build LLVM-libc in overlay mode, setting
-`-DLIBC_ENABLE_COVERAGE=ON` to pass Clang's continuous profiling and coverage
-mapping flags to the compiler:
+Configures CMake to build LLVM-libc with code coverage enabled. Both overlay
+mode (`LLVM_LIBC_FULL_BUILD=OFF`) and full-build mode
+(`LLVM_LIBC_FULL_BUILD=ON`) are supported:
 
+#### Option A: Overlay Mode (Default)
 ```bash
 cmake -G Ninja -S runtimes -B build-cov \
   -DCMAKE_C_COMPILER=clang \
@@ -127,22 +130,37 @@ cmake -G Ninja -S runtimes -B build-cov \
   -DLIBC_ENABLE_COVERAGE=ON
 ```
 
-### 2. Build and Execute All Unit Tests
+#### Option B: Full-Build Mode
+```bash
+cmake -G Ninja -S runtimes -B build-cov \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DLLVM_ENABLE_RUNTIMES="libc" \
+  -DLLVM_LIBC_FULL_BUILD=ON \
+  -DLIBC_ENABLE_COVERAGE=ON
+```
 
-Compiles all libc unit test executables and executes them in parallel. As each
-test executes, its counters are mapped directly to disk via the OS page cache:
+### 2. Build and Execute Tests
+
+Compiles and executes test executables in parallel. In overlay mode, execute
+`libc-unit-tests`. In full-build mode, execute `libc-hermetic-tests`:
 
 ```bash
 export LLVM_PROFILE_FILE="libc_cov_%c%p.profraw"
+
+# In overlay mode (LLVM_LIBC_FULL_BUILD=OFF)
 ninja -k 0 -C build-cov libc-unit-tests
+
+# In full-build mode (LLVM_LIBC_FULL_BUILD=ON)
+ninja -k 0 -C build-cov libc-hermetic-tests
 ```
 
 :::{note}
-In LLVM-libc, `libc-unit-tests` builds and executes tests in a single
-invocation. The `-k 0` flag ensures Ninja continues executing all remaining
-test targets even if an individual edge-case test encounters an error. To only
-compile test binaries without immediately executing them, use
-`ninja -C build-cov libc-unit-tests-build`.
+The `-k 0` flag ensures Ninja continues executing all remaining test targets
+even if an individual edge-case test encounters an error. To only compile test
+binaries without immediately executing them, use
+`ninja -C build-cov libc-unit-tests-build` (or `libc-hermetic-tests-build`).
 :::
 
 ### 3. Merge Profile Counters
@@ -214,6 +232,7 @@ decision.
 Configures CMake with `-fcoverage-mcdc` alongside profiling flags, enabling the
 compiler frontend to generate boolean condition bitmaps for compound decisions:
 
+#### Option A: Overlay Mode (Default)
 ```bash
 cmake -G Ninja -S runtimes -B build-cov-mcdc \
   -DCMAKE_C_COMPILER=clang \
@@ -226,14 +245,33 @@ cmake -G Ninja -S runtimes -B build-cov-mcdc \
   -DCMAKE_CXX_FLAGS="-fcoverage-mcdc"
 ```
 
+#### Option B: Full-Build Mode
+```bash
+cmake -G Ninja -S runtimes -B build-cov-mcdc \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DLLVM_ENABLE_RUNTIMES="libc" \
+  -DLLVM_LIBC_FULL_BUILD=ON \
+  -DLIBC_ENABLE_COVERAGE=ON \
+  -DCMAKE_C_FLAGS="-fcoverage-mcdc" \
+  -DCMAKE_CXX_FLAGS="-fcoverage-mcdc"
+```
+
 ### 2. Build and Execute Tests
 
-Compiles and executes all unit tests with MC/DC instrumentation enabled, saving
-condition evaluation bitmasks into raw profile files upon completion:
+Compiles and executes test executables in parallel with MC/DC instrumentation
+enabled. In overlay mode, execute `libc-unit-tests`. In full-build mode, execute
+`libc-hermetic-tests`:
 
 ```bash
 export LLVM_PROFILE_FILE="libc_cov_%c%p.profraw"
+
+# In overlay mode (LLVM_LIBC_FULL_BUILD=OFF)
 ninja -k 0 -C build-cov-mcdc libc-unit-tests
+
+# In full-build mode (LLVM_LIBC_FULL_BUILD=ON)
+ninja -k 0 -C build-cov-mcdc libc-hermetic-tests
 ```
 
 ### 3. Merge Profiles

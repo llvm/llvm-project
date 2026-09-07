@@ -84,7 +84,18 @@ void *aligned_alloc(size_t align, size_t s) {
 
 void *malloc(size_t s) { return aligned_alloc(ALIGNMENT, s); }
 
+void *calloc(size_t num, size_t size) {
+  size_t total = num * size;
+  void *mem = malloc(total);
+  if (mem)
+    memset(mem, 0, total);
+  return mem;
+}
+
 void free(void *) {}
+
+int *__llvm_libc_errno() noexcept;
+int *__errno_location() { return __llvm_libc_errno(); }
 
 void *realloc(void *mem, size_t s) {
   if (mem == nullptr)

@@ -180,12 +180,6 @@ if(LIBC_ENABLE_COVERAGE)
     message(FATAL_ERROR
       "LIBC_ENABLE_COVERAGE is not supported on GPU or baremetal targets.")
   endif()
-  if(LLVM_LIBC_FULL_BUILD)
-    message(FATAL_ERROR
-      "LIBC_ENABLE_COVERAGE is only supported in overlay mode "
-      "(LLVM_LIBC_FULL_BUILD=OFF). Full build mode uses hermetic tests "
-      "which cannot link the compiler-rt profiling runtime.")
-  endif()
 endif()
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
