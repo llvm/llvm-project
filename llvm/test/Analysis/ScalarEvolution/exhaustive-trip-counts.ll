@@ -267,6 +267,108 @@ exit:
   ret i64 %sum
 }
 
+define i64 @test_fneg() {
+; CHECK-LABEL: 'test_fneg'
+; CHECK-NEXT:  Determining loop execution counts for: @test_fneg
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 7
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 7
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 7
+; CHECK-NEXT:  Loop %loop: Trip multiple is 8
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %fv = phi double [ 1.000000e+00, %entry ], [ %fv.next, %loop ]
+  call void @use(double %fv)
+  %fv.neg = fneg double %fv
+  %fv.next = fsub double %fv, %fv.neg
+  %iv.next = add i64 %iv, 1
+  %fcmp = fcmp une double %fv, 128.0
+  br i1 %fcmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv
+}
+
+define i64 @test_freeze() {
+; CHECK-LABEL: 'test_freeze'
+; CHECK-NEXT:  Determining loop execution counts for: @test_freeze
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 5
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 5
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 5
+; CHECK-NEXT:  Loop %loop: Trip multiple is 6
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  call void @dummy()
+  %iv.next = add i64 %iv, 1
+  %iv.fr = freeze i64 %iv
+  %icmp = icmp ne i64 %iv.fr, 5
+  br i1 %icmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv
+}
+
+define i64 @test_extract_insert_element() {
+; CHECK-LABEL: 'test_extract_insert_element'
+; CHECK-NEXT:  Determining loop execution counts for: @test_extract_insert_element
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 4
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 4
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 4
+; CHECK-NEXT:  Loop %loop: Trip multiple is 5
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %vec = phi <2 x i64> [ <i64 0, i64 3>, %entry ], [ %vec.next, %loop ]
+  call void @use.v2i64(<2 x i64> %vec)
+  %el = extractelement <2 x i64> %vec, i32 0
+  %el.next = add i64 %el, 1
+  %vec.next = insertelement <2 x i64> %vec, i64 %el.next, i32 0
+  %iv.next = add i64 %iv, 1
+  %icmp = icmp ne i64 %el, 4
+  br i1 %icmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv
+}
+
+define i64 @test_extract_insert_value() {
+; CHECK-LABEL: 'test_extract_insert_value'
+; CHECK-NEXT:  Determining loop execution counts for: @test_extract_insert_value
+; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 4
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 4
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 4
+; CHECK-NEXT:  Loop %loop: Trip multiple is 5
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %agg = phi { i64, i32 } [ { i64 0, i32 3 }, %entry ], [ %agg.next, %loop ]
+  call void @use.agg({ i64, i32 } %agg)
+  %fld = extractvalue { i64, i32 } %agg, 0
+  %fld.next = add i64 %fld, 1
+  %agg.next = insertvalue { i64, i32 } %agg, i64 %fld.next, 0
+  %iv.next = add i64 %iv, 1
+  %icmp = icmp ne i64 %fld, 4
+  br i1 %icmp, label %loop, label %exit
+
+exit:
+  ret i64 %iv
+}
+
 declare void @dummy()
 declare void @use(double %i)
+declare void @use.v2i64(<2 x i64>)
+declare void @use.agg({ i64, i32 })
 declare double @llvm.sin.f64(double)
