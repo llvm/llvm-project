@@ -130,25 +130,50 @@ class LongJmpPass : public BinaryFunctionPass {
   };
 
   struct FragmentClusterLayout {
+    struct Position {
+      unsigned Cluster;
+      uint64_t Offset;
+    };
+
     SmallVector<FragmentCluster, 4> Clusters;
-    DenseMap<const BinaryBasicBlock *, unsigned> BBToCluster;
-    DenseMap<const BinaryBasicBlock *, uint64_t> BBToOffset;
-    DenseMap<const MCSymbol *, unsigned> SymToCluster;
-    DenseMap<const MCSymbol *, uint64_t> SymToOffset;
+    DenseMap<const BinaryBasicBlock *, Position> BBLayout;
+    DenseMap<const MCSymbol *, Position> SymLayout;
+  };
+
+  struct CrossClusterReference {
+    MCInst *Inst;
+    const MCSymbol *TargetSymbol;
+    uint64_t SourceOffset;
+    uint64_t TargetOffset;
+    unsigned SourceCluster;
+    unsigned TargetCluster;
+  };
+
+  struct ClusteredReferences {
+    SmallVector<CrossClusterReference> ShortThunkCalls;
+    SmallVector<CrossClusterReference> OutOfLayoutLongThunkCalls;
+    SmallVector<SmallVector<CrossClusterReference>, 4> LongThunkCallsByDistance;
+    SmallVector<CrossClusterReference> CrossClusterBranches;
   };
 
   FragmentClusterLayout
   buildClusterLayout(BinaryContext &BC,
                      const BinaryFunctionListType &OutputFunctions);
 
+  /// Collect call and branch references that need cluster-level relaxation.
+  ClusteredReferences
+  collectClusteredReferences(BinaryContext &BC,
+                             const BinaryFunctionListType &OutputFunctions,
+                             const FragmentClusterLayout &Layout);
+
   /// Relax calls using function fragment clusters.
-  void relaxCalls(BinaryContext &BC, BinaryFunctionListType &OutputFunctions,
-                  FragmentClusterLayout &Layout);
+  void relaxCalls(BinaryContext &BC, FragmentClusterLayout &Layout,
+                  ClusteredReferences &References);
 
   /// Relax direct unconditional branches using function fragment clusters.
   void relaxUnconditionalBranches(BinaryContext &BC,
-                                  BinaryFunctionListType &OutputFunctions,
-                                  FragmentClusterLayout &Layout);
+                                  FragmentClusterLayout &Layout,
+                                  ClusteredReferences &References);
 
   /// Insert all thunks owned by the fragment cluster layout.
   void insertClusterThunks(BinaryFunctionListType &OutputFunctions,
