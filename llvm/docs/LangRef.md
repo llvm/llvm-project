@@ -1669,6 +1669,10 @@ Currently, only the following parameter attributes are defined:
     freed after that point. Other attributes such as `nofree` can be used
     to exclude frees.
 
+    `dereferenceable` implies a spurious read of `n` bytes (on function entry
+    for arguments and exit for return values). In particular, the bytes are
+    considered read for the purpose of `noalias`.
+
 (attr_dereferenceable_or_null)=
 
 `dereferenceable_or_null(<n>)`
