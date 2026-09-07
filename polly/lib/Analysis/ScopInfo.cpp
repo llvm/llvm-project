@@ -514,26 +514,6 @@ void MemoryAccess::updateDimensionality() {
   if (DimsAccess == 1) {
     isl::val V = isl::val(Ctx, ArrayElemSize);
     AccessRelation = AccessRelation.floordiv_val(V);
-  } else if (ElemBytes > ArrayElemSize) {
-    // A delinearized access has its subscripts in elements of the type it
-    // reads or writes, which is not the canonical element type of the array
-    // when some other access forced a smaller one. Restate the innermost
-    // subscript in canonical elements too; the outer ones count rows and are
-    // already stated in the sizes this access was delinearized against.
-    assert(ElemBytes % ArrayElemSize == 0 &&
-           "Loaded element size should be multiple of canonical element size");
-    isl::map Scale = isl::map::from_domain_and_range(
-        isl::set::universe(ArraySpace), isl::set::universe(ArraySpace));
-    for (auto i : seq<unsigned>(0, DimsArray - 1))
-      Scale = Scale.equate(isl::dim::in, i, isl::dim::out, i);
-
-    isl::local_space LS(Scale.get_space());
-    isl::constraint C = isl::constraint::alloc_equality(LS);
-    C = C.set_coefficient_si(isl::dim::in, DimsArray - 1,
-                             ElemBytes / ArrayElemSize);
-    C = C.set_coefficient_si(isl::dim::out, DimsArray - 1, -1);
-    Scale = Scale.add_constraint(C);
-    AccessRelation = AccessRelation.apply_range(Scale);
   }
 
   // We currently do this only if we added at least one dimension, which means
@@ -551,7 +531,14 @@ void MemoryAccess::updateDimensionality() {
   // access is larger than the canonical element type of the array.
   //
   // An access ((float *)A)[i] to an array char *A is modeled as
-  // {[i] -> A[o] : 4 i <= o <= 4 i + 3
+  // {[i] -> A[o] : 4 i <= o <= 4 i + 3}
+  //
+  // The subscript of a non-delinearized access was divided by ArrayElemSize
+  // above, which already stated it in canonical elements. A delinearized one
+  // still counts elements of the type it reads or writes, so it is scaled
+  // here instead. Only the innermost subscript is scaled: the outer ones count
+  // rows and are already stated in the sizes the access was delinearized
+  // against.
   if (ElemBytes > ArrayElemSize) {
     assert(ElemBytes % ArrayElemSize == 0 &&
            "Loaded element size should be multiple of canonical element size");
@@ -566,15 +553,18 @@ void MemoryAccess::updateDimensionality() {
 
     LS = isl::local_space(Map.get_space());
     int Num = ElemBytes / getScopArrayInfo()->getElemSizeInBytes();
+    int Scale = DimsAccess == 1 ? 1 : Num;
 
+    // Scale * i - o + (Num - 1) >= 0, that is o <= Scale * i + Num - 1.
     C = isl::constraint::alloc_inequality(LS);
     C = C.set_constant_val(isl::val(Ctx, Num - 1));
-    C = C.set_coefficient_si(isl::dim::in, DimsArray - 1, 1);
+    C = C.set_coefficient_si(isl::dim::in, DimsArray - 1, Scale);
     C = C.set_coefficient_si(isl::dim::out, DimsArray - 1, -1);
     Map = Map.add_constraint(C);
 
+    // o - Scale * i >= 0, that is o >= Scale * i.
     C = isl::constraint::alloc_inequality(LS);
-    C = C.set_coefficient_si(isl::dim::in, DimsArray - 1, -1);
+    C = C.set_coefficient_si(isl::dim::in, DimsArray - 1, -Scale);
     C = C.set_coefficient_si(isl::dim::out, DimsArray - 1, 1);
     C = C.set_constant_val(isl::val(Ctx, 0));
     Map = Map.add_constraint(C);
