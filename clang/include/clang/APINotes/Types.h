@@ -1038,19 +1038,19 @@ inline std::string FunctionObjectSelector::format() const {
   if (Volatile)
     Parts.push_back(std::string("Volatile: ") + (*Volatile ? "true" : "false"));
   if (Ref) {
-    std::string Ref = "Ref: ";
-    switch (*this->Ref) {
+    std::string RefPart = "Ref: ";
+    switch (*Ref) {
     case RQ_None:
-      Ref += "none";
+      RefPart += "none";
       break;
     case RQ_LValue:
-      Ref += "lvalue";
+      RefPart += "lvalue";
       break;
     case RQ_RValue:
-      Ref += "rvalue";
+      RefPart += "rvalue";
       break;
     }
-    Parts.push_back(Ref);
+    Parts.push_back(RefPart);
   }
 
   OS << "Object{";
@@ -1082,9 +1082,7 @@ inline bool operator!=(const FunctionSelector &LHS,
   return !(LHS == RHS);
 }
 
-inline std::string formatAPINotesFunctionSelector(
-    std::optional<llvm::ArrayRef<std::string>> Parameters,
-    std::optional<FunctionObjectSelector> Object) {
+inline std::string FunctionSelector::format() const {
   std::string Result;
   if (Parameters)
     Result = (llvm::Twine("Where.Parameters ") +
@@ -1102,15 +1100,8 @@ inline std::string formatAPINotesFunctionSelector(
   return Result;
 }
 
-inline std::string FunctionSelector::format() const {
-  std::optional<llvm::ArrayRef<std::string>> Parameters;
-  if (this->Parameters)
-    Parameters = llvm::ArrayRef<std::string>(*this->Parameters);
-  return formatAPINotesFunctionSelector(Parameters, Object);
-}
-
 struct FunctionTableSelectorKey {
-  std::optional<llvm::SmallVector<IdentifierID, 4>> Parameters;
+  std::optional<llvm::SmallVector<IdentifierID, 2>> Parameters;
   std::optional<FunctionObjectSelector> Object;
 };
 
@@ -1130,27 +1121,11 @@ struct FunctionTableKey {
       : parentContextID(ParentContextID), nameID(NameID),
         Selector(std::move(Selector)) {}
 
-  FunctionTableKey(uint32_t ParentContextID, uint32_t NameID,
-                   const llvm::SmallVectorImpl<IdentifierID> &ParameterTypeIDs)
-      : parentContextID(ParentContextID), nameID(NameID) {
-    Selector.Parameters.emplace(ParameterTypeIDs.begin(),
-                                ParameterTypeIDs.end());
-  }
-
   FunctionTableKey(std::optional<Context> ParentCtx, IdentifierID NameID,
                    FunctionTableSelectorKey Selector = {})
       : FunctionTableKey(ParentCtx ? ParentCtx->id.Value
                                    : static_cast<uint32_t>(-1),
                          NameID, std::move(Selector)) {}
-
-  FunctionTableKey(std::optional<Context> ParentCtx, IdentifierID NameID,
-                   const llvm::SmallVectorImpl<IdentifierID> &ParameterTypeIDs)
-      : FunctionTableKey(ParentCtx ? ParentCtx->id.Value
-                                   : static_cast<uint32_t>(-1),
-                         NameID) {
-    Selector.Parameters.emplace(ParameterTypeIDs.begin(),
-                                ParameterTypeIDs.end());
-  }
 
   llvm::hash_code hashValue() const {
     auto Hash = llvm::hash_combine(parentContextID, nameID,

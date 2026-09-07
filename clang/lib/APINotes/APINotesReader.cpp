@@ -66,15 +66,21 @@ static FunctionTableKey readFunctionTableKey(const uint8_t *Data,
              FunctionTableKeyBaseLength + ParameterCount * sizeof(uint32_t) &&
          "Unexpected function table key length");
 
-  llvm::SmallVector<IdentifierID, 4> ParameterTypeIDs;
-  ParameterTypeIDs.reserve(ParameterCount);
-  for (unsigned I = 0; I != ParameterCount; ++I)
-    ParameterTypeIDs.push_back(
-        endian::readNext<uint32_t, llvm::endianness::little>(Data));
+  FunctionTableSelectorKey Selector;
+  if (FunctionKeyFlags & FunctionKeyHasParameterSelector) {
+    auto &ParameterTypeIDs = Selector.Parameters.emplace();
+    ParameterTypeIDs.reserve(ParameterCount);
+    for (unsigned I = 0; I != ParameterCount; ++I)
+      ParameterTypeIDs.push_back(
+          endian::readNext<uint32_t, llvm::endianness::little>(Data));
+  } else {
+    assert(ParameterCount == 0 &&
+           "Function table key without parameter selector has parameters");
+  }
 
-  if (FunctionKeyFlags & FunctionKeyObjectRefLValue)
-    assert(!(FunctionKeyFlags & FunctionKeyObjectRefRValue) &&
-           "Unexpected function table key ref qualifier flags");
+  assert(!((FunctionKeyFlags & FunctionKeyObjectRefLValue) &&
+           (FunctionKeyFlags & FunctionKeyObjectRefRValue)) &&
+         "Unexpected function table key ref qualifier flags");
   assert(((FunctionKeyFlags & FunctionKeyObjectConstValue) == 0 ||
           (FunctionKeyFlags & FunctionKeyObjectConstPresent)) &&
          "Function table key const value requires presence flag");
@@ -85,33 +91,24 @@ static FunctionTableKey readFunctionTableKey(const uint8_t *Data,
            (FunctionKeyObjectRefLValue | FunctionKeyObjectRefRValue)) == 0 ||
           (FunctionKeyFlags & FunctionKeyObjectRefPresent)) &&
          "Function table key ref value requires presence flag");
-  std::optional<FunctionObjectSelector> ObjectSelector;
   if (FunctionKeyFlags & FunctionKeyObjectSelectorMask) {
-    FunctionObjectSelector Selector;
+    FunctionObjectSelector &ObjectSelector = Selector.Object.emplace();
     if (FunctionKeyFlags & FunctionKeyObjectConstPresent)
-      Selector.Const = (FunctionKeyFlags & FunctionKeyObjectConstValue) != 0;
+      ObjectSelector.Const =
+          (FunctionKeyFlags & FunctionKeyObjectConstValue) != 0;
     if (FunctionKeyFlags & FunctionKeyObjectVolatilePresent)
-      Selector.Volatile =
+      ObjectSelector.Volatile =
           (FunctionKeyFlags & FunctionKeyObjectVolatileValue) != 0;
     if (FunctionKeyFlags & FunctionKeyObjectRefPresent) {
       if (FunctionKeyFlags & FunctionKeyObjectRefLValue)
-        Selector.Ref = RQ_LValue;
+        ObjectSelector.Ref = RQ_LValue;
       else if (FunctionKeyFlags & FunctionKeyObjectRefRValue)
-        Selector.Ref = RQ_RValue;
+        ObjectSelector.Ref = RQ_RValue;
       else
-        Selector.Ref = RQ_None;
+        ObjectSelector.Ref = RQ_None;
     }
-    ObjectSelector = Selector;
   }
 
-  FunctionTableSelectorKey Selector;
-  if (FunctionKeyFlags & FunctionKeyHasParameterSelector)
-    Selector.Parameters.emplace(ParameterTypeIDs.begin(),
-                                ParameterTypeIDs.end());
-  else
-    assert(ParameterTypeIDs.empty() &&
-           "Broad function table key should not store parameters");
-  Selector.Object = ObjectSelector;
   return FunctionTableKey(CtxID, NameID, std::move(Selector));
 }
 

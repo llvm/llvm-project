@@ -388,7 +388,7 @@ inline std::optional<FunctionTableKey> getFunctionKeyImpl(
 
   FunctionTableSelectorKey KeySelector;
   if (Selector.Parameters) {
-    llvm::SmallVector<IdentifierID, 4> ParameterTypeIDs;
+    auto &ParameterTypeIDs = KeySelector.Parameters.emplace();
     ParameterTypeIDs.reserve(Selector.Parameters->size());
     for (const std::string &Parameter : *Selector.Parameters) {
       std::optional<IdentifierID> ParameterID = GetIdentifier(Parameter);
@@ -396,8 +396,6 @@ inline std::optional<FunctionTableKey> getFunctionKeyImpl(
         return std::nullopt;
       ParameterTypeIDs.push_back(*ParameterID);
     }
-    KeySelector.Parameters.emplace(ParameterTypeIDs.begin(),
-                                   ParameterTypeIDs.end());
   }
   KeySelector.Object = Selector.Object;
   return FunctionTableKey(ParentContextID, *NameID, std::move(KeySelector));
