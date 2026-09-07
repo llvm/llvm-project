@@ -323,7 +323,7 @@ define double @test_fma_nan_rm_d() {
 ; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.nvvm.fma.rm.d(double +qnan, double 1.000000e+00, double 0.000000e+00)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = call double @llvm.nvvm.fma.rm.d(double 0x7FF8000000000000, double 1.0, double 0.0)
+  %res = call double @llvm.nvvm.fma.rm.d(double +qnan, double 1.0, double 0.0)
   ret double %res
 }
 
@@ -332,7 +332,7 @@ define double @test_fma_nan_rn_d() {
 ; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.nvvm.fma.rn.d(double +qnan, double 1.000000e+00, double 0.000000e+00)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = call double @llvm.nvvm.fma.rn.d(double 0x7FF8000000000000, double 1.0, double 0.0)
+  %res = call double @llvm.nvvm.fma.rn.d(double +qnan, double 1.0, double 0.0)
   ret double %res
 }
 
@@ -341,7 +341,7 @@ define double @test_fma_nan_rp_d() {
 ; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.nvvm.fma.rp.d(double +qnan, double 1.000000e+00, double 0.000000e+00)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = call double @llvm.nvvm.fma.rp.d(double 0x7FF8000000000000, double 1.0, double 0.0)
+  %res = call double @llvm.nvvm.fma.rp.d(double +qnan, double 1.0, double 0.0)
   ret double %res
 }
 
@@ -350,7 +350,7 @@ define double @test_fma_nan_rz_d() {
 ; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.nvvm.fma.rz.d(double +qnan, double 1.000000e+00, double 0.000000e+00)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = call double @llvm.nvvm.fma.rz.d(double 0x7FF8000000000000, double 1.0, double 0.0)
+  %res = call double @llvm.nvvm.fma.rz.d(double +qnan, double 1.0, double 0.0)
   ret double %res
 }
 

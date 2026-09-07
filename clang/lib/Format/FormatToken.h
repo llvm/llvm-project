@@ -80,6 +80,7 @@ namespace format {
   TYPE(EnumLBrace)                                                             \
   TYPE(EnumRBrace)                                                             \
   TYPE(EnumUnderlyingTypeColon)                                                \
+  TYPE(ExportLBrace)                                                           \
   TYPE(FatArrow)                                                               \
   TYPE(ForEachMacro)                                                           \
   TYPE(FunctionAnnotationRParen)                                               \

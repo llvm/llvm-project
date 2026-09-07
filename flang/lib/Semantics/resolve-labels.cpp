@@ -1222,8 +1222,8 @@ void CheckAssignConstraints(const SourceStmtList &assigns,
   CheckAssignTargetConstraints(assigns, labels, context);
 }
 
-bool CheckConstraints(ParseTreeAnalyzer &&parseTreeAnalysis) {
-  auto &context{parseTreeAnalysis.ErrorHandler()};
+bool CheckConstraints(
+    const ParseTreeAnalyzer &parseTreeAnalysis, SemanticsContext &context) {
   for (const auto &programUnit : parseTreeAnalysis.ProgramUnits()) {
     const auto &dos{programUnit.doStmtSources};
     const auto &branches{programUnit.otherStmtSources};
@@ -1239,7 +1239,27 @@ bool CheckConstraints(ParseTreeAnalyzer &&parseTreeAnalysis) {
   return !context.AnyFatalError();
 }
 
-bool ValidateLabels(SemanticsContext &context, const parser::Program &program) {
-  return CheckConstraints(LabelAnalysis(context, program));
+// Record the statements that a branch may name, for lowering to consult when
+// it records the targets of a branch.  Statements are identified by source
+// position because a label is only unique within one program unit.
+static void RecordBranchTargets(
+    const ParseTreeAnalyzer &analysis, SemanticsContext &context) {
+  for (const auto &programUnit : analysis.ProgramUnits()) {
+    for (const auto &[label, info] : programUnit.targetStmts) {
+      if (info.labeledStmtClassificationSet.test(TargetStatementEnum::Branch)) {
+        context.RecordBranchTarget(info.parserCharBlock);
+      }
+    }
+  }
+}
+
+bool AnalyzeLabels(SemanticsContext &context, const parser::Program &program) {
+  ParseTreeAnalyzer analysis{LabelAnalysis(context, program)};
+  if (!CheckConstraints(analysis, context)) {
+    // The program will not be lowered, so there is nothing to record.
+    return false;
+  }
+  RecordBranchTargets(analysis, context);
+  return true;
 }
 } // namespace Fortran::semantics

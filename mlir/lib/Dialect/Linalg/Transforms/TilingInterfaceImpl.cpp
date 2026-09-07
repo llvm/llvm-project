@@ -1149,8 +1149,10 @@ struct PackOpTiling
     for (auto tile : packOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
-    Operation *tiledPackOp = PackOp::create(
-        b, loc, TypeRange{outSlice.getType()}, tiledOperands, op->getAttrs());
+    PackOp tiledPackOp =
+        PackOp::create(b, loc, TypeRange{outSlice.getType()}, tiledOperands,
+                       packOp.getProperties(),
+                       packOp->getDiscardableAttrDictionary().getValue());
 
     return TilingResult{
         {tiledPackOp},
@@ -1486,8 +1488,10 @@ struct PackOpTiling
     for (auto tile : packOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
-    Operation *tiledPackOp = PackOp::create(
-        b, loc, TypeRange{outSlice.getType()}, tiledOperands, op->getAttrs());
+    PackOp tiledPackOp =
+        PackOp::create(b, loc, TypeRange{outSlice.getType()}, tiledOperands,
+                       packOp.getProperties(),
+                       packOp->getDiscardableAttrDictionary().getValue());
 
     return TilingResult{
         {tiledPackOp},
@@ -1727,8 +1731,10 @@ struct UnPackOpTiling
     for (auto tile : unpackOp.getInnerTiles())
       tiledOperands.push_back(tile);
 
-    Operation *tiledUnpackOp = UnPackOp::create(
-        b, loc, TypeRange{sliceDest.getType()}, tiledOperands, op->getAttrs());
+    UnPackOp tiledUnpackOp =
+        UnPackOp::create(b, loc, TypeRange{sliceDest.getType()}, tiledOperands,
+                         unpackOp.getProperties(),
+                         unpackOp->getDiscardableAttrDictionary().getValue());
 
     if (isPerfectTilingCase)
       return TilingResult{{tiledUnpackOp},
@@ -1986,9 +1992,10 @@ struct UnPackOpTiling
       tiledOperands.push_back(tile);
 
     // Create tiled unpack op.
-    Operation *tiledUnPackOp =
+    UnPackOp tiledUnPackOp =
         UnPackOp::create(b, loc, TypeRange{extractDestSlice.getType()},
-                         tiledOperands, op->getAttrs());
+                         tiledOperands, unPackOp.getProperties(),
+                         unPackOp->getDiscardableAttrDictionary().getValue());
 
     return TilingResult{{tiledUnPackOp},
                         SmallVector<Value>(tiledUnPackOp->getResults()),

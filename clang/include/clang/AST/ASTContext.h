@@ -284,7 +284,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   // arguments. Since both dependent and dependency are on the same set,
   // we can end up in an infinite recursion when looking for a node if we used
   // a `FoldingSet`, since both could end up in the same bucket.
-  mutable llvm::DenseMap<llvm::FoldingSetNodeID, AutoType *> AutoTypes;
+  // Keyed by an interned FoldingSetNodeIDRef rather than a FoldingSetNodeID to
+  // avoid its large inline SmallVector in every bucket.
+  mutable llvm::DenseMap<llvm::FoldingSetNodeIDRef, AutoType *> AutoTypes;
   mutable llvm::FoldingSet<DeducedTemplateSpecializationType>
     DeducedTemplateSpecializationTypes;
   mutable llvm::FoldingSet<AtomicType> AtomicTypes;
@@ -311,6 +313,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
     SubstTemplateTemplateParmPacks;
   mutable llvm::ContextualFoldingSet<DeducedTemplateStorage, ASTContext &>
       DeducedTemplates;
+  mutable llvm::ContextualFoldingSet<PackIndexingTemplateStorage, ASTContext &>
+      PackIndexingTemplates;
 
   mutable llvm::ContextualFoldingSet<ArrayParameterType, ASTContext &>
       ArrayParameterTypes;
@@ -1956,7 +1960,7 @@ public:
 private:
   UnresolvedUsingType *getUnresolvedUsingTypeInternal(
       ElaboratedTypeKeyword Keyword, NestedNameSpecifier Qualifier,
-      const UnresolvedUsingTypenameDecl *D, void *InsertPos,
+      const UnresolvedUsingTypenameDecl *D, llvm::FoldingSetInsertToken Token,
       const Type *CanonicalType) const;
 
   TagType *getTagTypeInternal(ElaboratedTypeKeyword Keyword,
@@ -2678,6 +2682,11 @@ public:
                                                 unsigned Index,
                                                 bool Final) const;
 
+  TemplateName
+  getPackIndexingTemplateName(TemplateName Pattern, Expr *IndexExpr,
+                              bool FullySubstituted = false,
+                              ArrayRef<TemplateName> Expansions = {}) const;
+
   /// Represents a TemplateName which had some of its default arguments
   /// deduced. This both represents this default argument deduction as sugar,
   /// and provides the support for it's equivalences through canonicalization.
@@ -3267,12 +3276,14 @@ public:
   /// actually be an array type).
   QualType getBaseElementType(QualType QT) const;
 
-  /// Return number of constant array elements.
-  uint64_t getConstantArrayElementCount(const ConstantArrayType *CA) const;
+  /// Return number of (potentially nested) constant array elements.
+  static uint64_t getConstantArrayElementCount(const ConstantArrayType *CA);
 
-  /// Return number of elements initialized in an ArrayInitLoopExpr.
-  uint64_t
-  getArrayInitLoopExprElementCount(const ArrayInitLoopExpr *AILE) const;
+  /// Return number of elements initialized in a (potentially nested)
+  /// ArrayInitLoopExpr.
+  /// \c AILE may be null, in which case 0 is returned.
+  static uint64_t
+  getArrayInitLoopExprElementCount(const ArrayInitLoopExpr *AILE);
 
   /// Perform adjustment on the parameter type of a function.
   ///
@@ -4059,26 +4070,27 @@ inline void operator delete[](void *Ptr, const clang::ASTContext &C, size_t) {
   C.Deallocate(Ptr);
 }
 
-/// Create the representation of a LazyGenerationalUpdatePtr.
-template <typename Owner, typename T,
-          void (clang::ExternalASTSource::*Update)(Owner)>
-typename clang::LazyGenerationalUpdatePtr<Owner, T, Update>::ValueType
-    clang::LazyGenerationalUpdatePtr<Owner, T, Update>::makeValue(
-        const clang::ASTContext &Ctx, T Value) {
-  // Note, this is implemented here so that ExternalASTSource.h doesn't need to
-  // include ASTContext.h. We explicitly instantiate it for all relevant types
-  // in ASTContext.cpp.
-  if (auto *Source = Ctx.getExternalSource())
-    return new (Ctx) LazyData(Source, Value);
-  return Value;
-}
 template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
   static unsigned getHashValue(const FoldingSetNodeID &Val) {
-    return Val.ComputeHash();
+    return Val.computeHash();
   }
 
   static bool isEqual(const FoldingSetNodeID &LHS,
                       const FoldingSetNodeID &RHS) {
+    return LHS == RHS;
+  }
+};
+template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeIDRef> {
+  static unsigned getHashValue(FoldingSetNodeIDRef Val) {
+    return Val.computeHash();
+  }
+  static bool isEqual(FoldingSetNodeIDRef LHS, FoldingSetNodeIDRef RHS) {
+    return LHS == RHS;
+  }
+  static unsigned getHashValue(const FoldingSetNodeID &Val) {
+    return Val.computeHash();
+  }
+  static bool isEqual(const FoldingSetNodeID &LHS, FoldingSetNodeIDRef RHS) {
     return LHS == RHS;
   }
 };

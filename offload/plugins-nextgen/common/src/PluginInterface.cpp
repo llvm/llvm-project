@@ -137,7 +137,8 @@ GenericKernelTy::getKernelLaunchEnvironment(
     return AllocOrErr.takeError();
 
   // Remember to free the memory later.
-  AsyncInfoWrapper.freeAllocationAfterSynchronization(*AllocOrErr);
+  AsyncInfoWrapper.freeAllocationAfterSynchronization(
+      *AllocOrErr, TargetAllocTy::TARGET_ALLOC_DEVICE);
 
   /// Use the KLE in the __tgt_async_info to ensure a stable address for the
   /// async data transfer.
@@ -159,7 +160,8 @@ GenericKernelTy::getKernelLaunchEnvironment(
       return AllocOrErr.takeError();
     LocalKLE.ReductionBuffer = *AllocOrErr;
     // Remember to free the memory later.
-    AsyncInfoWrapper.freeAllocationAfterSynchronization(*AllocOrErr);
+    AsyncInfoWrapper.freeAllocationAfterSynchronization(
+        *AllocOrErr, TargetAllocTy::TARGET_ALLOC_DEVICE);
   }
 
   INFO(OMP_INFOTYPE_DATA_TRANSFER, GenericDevice.getDeviceId(),
@@ -288,7 +290,7 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice,
   DynBlockMemConfTy &DynBlockMemConf = *DynBlockMemConfOrErr;
   if (DynBlockMemConf.FallbackPtr)
     AsyncInfoWrapper.freeAllocationAfterSynchronization(
-        DynBlockMemConf.FallbackPtr);
+        DynBlockMemConf.FallbackPtr, TargetAllocTy::TARGET_ALLOC_DEVICE);
 
   auto KernelLaunchEnvOrErr =
       getKernelLaunchEnvironment(GenericDevice, LaunchArgs, DynBlockMemConf,
@@ -643,8 +645,9 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
 
   return deinitImpl();
 }
-Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
-                                                      StringRef InputTgtImage) {
+Expected<DeviceImageTy *>
+GenericDeviceTy::loadBinary(GenericPluginTy &Plugin, StringRef InputTgtImage,
+                            PluginContextTy *Context) {
   ODBG(OLDT_Init) << "Load data from image "
                   << static_cast<const void *>(InputTgtImage.bytes_begin());
 
@@ -672,7 +675,8 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
 
   // Load the binary and allocate the image object. Use the next available id
   // for the image id, which is the number of previously loaded images.
-  auto ImageOrErr = loadBinaryImpl(std::move(Buffer), LoadedImages.size());
+  auto ImageOrErr =
+      loadBinaryImpl(std::move(Buffer), LoadedImages.size(), Context);
   if (!ImageOrErr)
     return ImageOrErr.takeError();
   DeviceImageTy *Image = *ImageOrErr;
@@ -930,7 +934,7 @@ Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo,
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "invalid async info queue");
 
-  SmallVector<void *> AllocsToDelete{};
+  SmallVector<std::pair<void *, TargetAllocTy>> AllocsToDelete{};
   {
     std::lock_guard<std::mutex> AllocationGuard{AsyncInfo->Mutex};
 
@@ -943,8 +947,8 @@ Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo,
     std::swap(AllocsToDelete, AsyncInfo->AssociatedAllocations);
   }
 
-  for (auto *Ptr : AllocsToDelete)
-    if (auto Err = dataDelete(Ptr, TargetAllocTy::TARGET_ALLOC_DEVICE))
+  for (auto [Ptr, Kind] : AllocsToDelete)
+    if (auto Err = dataDelete(Ptr, Kind))
       return Err;
 
   return Plugin::success();
@@ -957,7 +961,34 @@ Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo,
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "invalid async info queue");
 
-  return queryAsyncImpl(*AsyncInfo, ReleaseQueue, IsQueueWorkCompleted);
+  bool WorkCompleted = false;
+  SmallVector<std::pair<void *, TargetAllocTy>> AllocsToDelete{};
+
+  {
+    // Query and collect under the mutex, as synchronize does. Querying outside
+    // it would let an operation issued in between have its allocations freed
+    // here while it is still using them.
+    std::lock_guard<std::mutex> AllocationGuard{AsyncInfo->Mutex};
+    if (auto Err = queryAsyncImpl(*AsyncInfo, ReleaseQueue, &WorkCompleted)) {
+      if (IsQueueWorkCompleted)
+        *IsQueueWorkCompleted = WorkCompleted;
+      return Err;
+    }
+
+    // A completed query is a completion point like synchronize(), and may be
+    // the only one this async info ever gets, so release its allocations here.
+    if (WorkCompleted)
+      std::swap(AllocsToDelete, AsyncInfo->AssociatedAllocations);
+  }
+
+  for (auto [Ptr, Kind] : AllocsToDelete)
+    if (auto Err = dataDelete(Ptr, Kind))
+      return Err;
+
+  if (IsQueueWorkCompleted)
+    *IsQueueWorkCompleted = WorkCompleted;
+
+  return Plugin::success();
 }
 
 Error GenericDeviceTy::memoryVAMap(void **Addr, void *VAddr, size_t *RSize) {
@@ -1513,7 +1544,7 @@ int32_t GenericPluginTy::load_binary(int32_t DeviceId,
 
   StringRef Buffer(reinterpret_cast<const char *>(TgtImage->ImageStart),
                    utils::getPtrDiff(TgtImage->ImageEnd, TgtImage->ImageStart));
-  auto ImageOrErr = Device.loadBinary(*this, Buffer);
+  auto ImageOrErr = Device.loadBinary(*this, Buffer, /*Context=*/nullptr);
   if (!ImageOrErr) {
     auto Err = ImageOrErr.takeError();
     REPORT() << "Failure to load binary image " << TgtImage << " on device "

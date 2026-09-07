@@ -410,6 +410,8 @@ private:
                                        unsigned Abbrev);
   void writeDIObjCProperty(const DIObjCProperty *N,
                            SmallVectorImpl<uint64_t> &Record, unsigned Abbrev);
+  void writeDIProperty(const DIProperty *N, SmallVectorImpl<uint64_t> &Record,
+                       unsigned Abbrev);
   void writeDIImportedEntity(const DIImportedEntity *N,
                              SmallVectorImpl<uint64_t> &Record,
                              unsigned Abbrev);
@@ -1857,6 +1859,9 @@ static uint64_t getOptimizationFlags(const Value *V) {
   } else if (const auto *ICmp = dyn_cast<ICmpInst>(V)) {
     if (ICmp->hasSameSign())
       Flags |= 1 << bitc::ICMP_SAME_SIGN;
+  } else if (const auto *ASC = dyn_cast<AddrSpaceCastInst>(V)) {
+    if (ASC->hasNonNull())
+      Flags |= 1 << bitc::ASCI_NON_NULL;
   }
 
   return Flags;
@@ -2509,6 +2514,20 @@ void ModuleBitcodeWriter::writeDIObjCProperty(const DIObjCProperty *N,
   Record.push_back(VE.getMetadataOrNullID(N->getType()));
 
   Stream.EmitRecord(bitc::METADATA_OBJC_PROPERTY, Record, Abbrev);
+  Record.clear();
+}
+
+void ModuleBitcodeWriter::writeDIProperty(const DIProperty *N,
+                                          SmallVectorImpl<uint64_t> &Record,
+                                          unsigned Abbrev) {
+  Record.push_back(N->isDistinct());
+  Record.push_back(VE.getMetadataOrNullID(N->getRawName()));
+  Record.push_back(VE.getMetadataOrNullID(N->getFile()));
+  Record.push_back(N->getLine());
+  Record.push_back(VE.getMetadataOrNullID(N->getType()));
+  Record.push_back(VE.getMetadataOrNullID(N->getBackingStorage()));
+
+  Stream.EmitRecord(bitc::METADATA_PROPERTY, Record, Abbrev);
   Record.clear();
 }
 

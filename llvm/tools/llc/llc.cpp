@@ -49,7 +49,6 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PGOOptions.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -561,8 +560,8 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
           << "X86 backend ignores --fp-contract setting; use IR fast-math "
              "flags instead.";
 
-    Options.BinutilsVersion =
-        TargetMachine::parseBinutilsVersion(BinutilsVersion);
+    Options.MCOptions.BinutilsVersion =
+        MCTargetOptions::parseBinutilsVersion(BinutilsVersion);
     Options.MCOptions.ShowMCEncoding = ShowMCEncoding;
     Options.MCOptions.AsmVerbose = AsmVerbose;
     Options.MCOptions.PreserveAsmComments = PreserveComments;

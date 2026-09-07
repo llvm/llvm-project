@@ -14,6 +14,7 @@
 
 #include "AVR.h"
 #include "AVRInstrInfo.h"
+#include "AVRMachineFunctionInfo.h"
 #include "AVRTargetMachine.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 
@@ -291,6 +292,38 @@ bool AVRExpandPseudo::expand<AVR::ADDWRdRr>(Block &MBB, BlockIt MBBI) {
 template <>
 bool AVRExpandPseudo::expand<AVR::ADCWRdRr>(Block &MBB, BlockIt MBBI) {
   return expandArith(AVR::ADCRdRr, AVR::ADCRdRr, MBB, MBBI);
+}
+
+template <>
+bool AVRExpandPseudo::expand<AVR::ADIWRdKP>(Block &MBB, BlockIt MBBI) {
+  const AVRSubtarget &STI = MBB.getParent()->getSubtarget<AVRSubtarget>();
+  MachineInstr &MI = *MBBI;
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = MI.getOperand(1).getReg();
+  int64_t Imm = MI.getOperand(2).getImm();
+  unsigned Opcode;
+
+  if (SrcReg != DstReg) {
+    TII->copyPhysReg(MBB, MI, MI.getDebugLoc(), DstReg, SrcReg, false, false,
+                     false);
+  }
+
+  if (isUInt<6>(Imm) && STI.hasADDSUBIW() &&
+      AVR::IWREGSRegClass.contains(DstReg)) {
+    Opcode = AVR::ADIWRdK;
+  } else {
+    Opcode = AVR::SUBIWRdK;
+    Imm = -Imm;
+  }
+
+  buildMI(MBB, MI, Opcode)
+      .addReg(DstReg, RegState::Define)
+      .addReg(DstReg, RegState::Kill)
+      .addImm(Imm)
+      .setOperandDead(3); // implicit-def $sreg
+
+  MI.eraseFromParent();
+  return true;
 }
 
 template <>
@@ -2586,6 +2619,37 @@ bool AVRExpandPseudo::expand<AVR::SPWRITE>(Block &MBB, BlockIt MBBI) {
   return true;
 }
 
+template <> bool AVRExpandPseudo::expand<AVR::FRMSP>(Block &MBB, BlockIt MBBI) {
+  MachineInstr &MI = *MBBI;
+  MachineFunction &MF = *MI.getMF();
+  AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
+  DebugLoc DL;
+  Register ASOPointer = MI.getOperand(0).getReg();
+  int64_t ASOAlignment = MI.getOperand(1).getImm();
+
+  StackOffset ASOOffset =
+      MF.getSubtarget<AVRSubtarget>()
+          .getFrameLowering()
+          ->getFrameIndexReference(MF, AFI->AlignedStackObjectIdx, ASOPointer);
+
+  TII->copyPhysReg(MBB, MI, DL, ASOPointer, AVR::R29R28, false, false, false);
+
+  buildMI(MBB, MI, AVR::ADIWRdKP)
+      .addReg(ASOPointer, RegState::Define)
+      .addReg(ASOPointer, RegState::Kill)
+      .addImm(ASOOffset.getFixed() + ASOAlignment - 1)
+      .setOperandDead(3); // implicit-def $sreg
+
+  buildMI(MBB, MI, AVR::ANDIWRdK)
+      .addReg(ASOPointer, RegState::Define)
+      .addReg(ASOPointer, RegState::Kill)
+      .addImm(-ASOAlignment)
+      .setOperandDead(3); // implicit-def $sreg
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   int Opcode = MBBI->getOpcode();
@@ -2597,6 +2661,7 @@ bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
   switch (Opcode) {
     EXPAND(AVR::ADDWRdRr);
     EXPAND(AVR::ADCWRdRr);
+    EXPAND(AVR::ADIWRdKP);
     EXPAND(AVR::SUBWRdRr);
     EXPAND(AVR::SUBIWRdK);
     EXPAND(AVR::SBCWRdRr);
@@ -2661,6 +2726,7 @@ bool AVRExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
     EXPAND(AVR::ZEXT);
     EXPAND(AVR::SPREAD);
     EXPAND(AVR::SPWRITE);
+    EXPAND(AVR::FRMSP);
   }
 #undef EXPAND
   return false;

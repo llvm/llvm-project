@@ -8077,11 +8077,16 @@ void OMPClauseWriter::VisitOMPFinalClause(OMPFinalClause *C) {
 }
 
 void OMPClauseWriter::VisitOMPNumThreadsClause(OMPNumThreadsClause *C) {
+  Record.push_back(C->varlist_size());
+  Record.writeEnum(C->getPrescriptivenessModifier());
+  Record.AddSourceLocation(C->getPrescriptivenessModifierLoc());
+  Record.writeEnum(C->getDimsModifier());
+  Record.AddSourceLocation(C->getDimsModifierLoc());
+  Record.AddStmt(C->getDimsModifierExpr());
   VisitOMPClauseWithPreInit(C);
-  Record.writeEnum(C->getModifier());
-  Record.AddStmt(C->getNumThreads());
-  Record.AddSourceLocation(C->getModifierLoc());
   Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *VE : C->varlist())
+    Record.AddStmt(VE);
 }
 
 void OMPClauseWriter::VisitOMPSafelenClause(OMPSafelenClause *C) {

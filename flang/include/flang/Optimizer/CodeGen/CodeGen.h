@@ -90,9 +90,11 @@ using LLVMIRLoweringPrinter =
 
 /// Convert the LLVM IR dialect to LLVM-IR proper
 std::unique_ptr<mlir::Pass> createLLVMDialectToLLVMPass(
-    llvm::raw_ostream &output,
-    LLVMIRLoweringPrinter printer =
-        [](llvm::Module &m, llvm::raw_ostream &out) { m.print(out, nullptr); });
+    llvm::raw_ostream &output, LLVMIRLoweringPrinter printer =
+                                   [](llvm::Module &m, llvm::raw_ostream &out) {
+                                     m.renumberMetadataForAssembly();
+                                     m.print(out, nullptr);
+                                   });
 
 /// Populate the given list with patterns that convert from FIR to LLVM.
 void populateFIRToLLVMConversionPatterns(

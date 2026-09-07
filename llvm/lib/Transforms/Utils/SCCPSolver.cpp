@@ -1094,7 +1094,7 @@ void SCCPInstVisitor::pushToWorkList(Instruction *I) {
   // same blocks that are after the current one, as they will be visited
   // anyway. We do have to push updates to earlier instructions (e.g. phi
   // nodes or loads of tracked globals).
-  if (CurI && I->getParent() == CurI->getParent() && !I->comesBefore(CurI))
+  if (CurI && I->getParent() == CurI->getParent() && CurI->comesBefore(I))
     return;
   // Only push instructions in already visited blocks. Otherwise we'll handle
   // it when we visit the block for the first time.
