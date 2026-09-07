@@ -38,6 +38,13 @@ class LLVM_ABI GISelValueTracking : public GISelChangeObserver {
   const DataLayout &DL;
   unsigned MaxDepth;
 
+  // The triple (Register, DemandedElts, Depth) used as worklist and cache key.
+  using WorkItem = std::tuple<Register, APInt, unsigned>;
+  // Items pending evaluation during the active top-level query.
+  SmallVector<WorkItem, 6> Stack;
+  // Memoised results for the current top-level query.
+  DenseMap<WorkItem, KnownBits> Results;
+
   void computeKnownBitsMin(Register Src0, Register Src1, KnownBits &Known,
                            const APInt &DemandedElts, unsigned Depth = 0);
 
@@ -55,6 +62,23 @@ class LLVM_ABI GISelValueTracking : public GISelChangeObserver {
   void computeKnownFPClass(Register R, const APInt &DemandedElts,
                            FPClassTest InterestedClasses, KnownFPClass &Known,
                            unsigned Depth);
+
+  void computeKnownBits(Register R, KnownBits &Known, const APInt &DemandedElts,
+                        unsigned Depth = 0);
+
+  bool getKnownBitsResult(const Register &Reg, const APInt &DemandedElts,
+                          unsigned Depth, KnownBits &Known) {
+    auto It = Results.find({Reg, DemandedElts, Depth});
+    if (It == Results.end())
+      return false;
+    Known = It->second;
+    return true;
+  }
+
+  void setKnownBitsResult(const Register &Reg, const APInt &DemandedElts,
+                          unsigned Depth, const KnownBits &Known) {
+    Results[{Reg, DemandedElts, Depth}] = Known;
+  }
 
 public:
   GISelValueTracking(MachineFunction &MF, unsigned MaxDepth = 6);
