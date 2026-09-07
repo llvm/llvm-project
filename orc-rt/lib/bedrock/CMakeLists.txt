@@ -77,7 +77,11 @@ endif()
 add_library(orc-rt-bedrock-objects OBJECT ${ORC_RT_BEDROCK_SOURCES})
 
 set_target_properties(orc-rt-bedrock-objects PROPERTIES
-  POSITION_INDEPENDENT_CODE ${ORC_RT_ENABLE_PIC})
+  POSITION_INDEPENDENT_CODE ${ORC_RT_ENABLE_PIC}
+  C_VISIBILITY_PRESET hidden
+  CXX_VISIBILITY_PRESET hidden
+  VISIBILITY_INLINES_HIDDEN ON
+)
 
 target_link_libraries(orc-rt-bedrock-objects PUBLIC orc-rt-headers)
 
