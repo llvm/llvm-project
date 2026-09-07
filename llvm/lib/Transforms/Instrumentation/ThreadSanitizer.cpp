@@ -109,7 +109,7 @@ namespace {
 /// ensures the __tsan_init function is in the list of global constructors for
 /// the module.
 struct ThreadSanitizer {
-  ThreadSanitizer() {
+  ThreadSanitizer(ThreadSanitizerOptions Options) : Options(Options) {
     // Check options and warn user.
     if (ClInstrumentReadBeforeWrite && ClCompoundReadBeforeWrite) {
       errs()
@@ -172,6 +172,7 @@ private:
   FunctionCallee TsanVptrUpdate;
   FunctionCallee TsanVptrLoad;
   FunctionCallee MemmoveFn, MemcpyFn, MemsetFn;
+  ThreadSanitizerOptions Options;
 };
 
 void insertModuleCtor(Module &M) {
@@ -186,7 +187,7 @@ void insertModuleCtor(Module &M) {
 
 PreservedAnalyses ThreadSanitizerPass::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
-  ThreadSanitizer TSan;
+  ThreadSanitizer TSan(Options);
   if (TSan.sanitizeFunction(F, FAM.getResult<TargetLibraryAnalysis>(F)))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -550,19 +551,21 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
   // (e.g. variables that do not escape, etc).
 
   // Instrument memory accesses only if we want to report bugs in the function.
-  if (ClInstrumentMemoryAccesses && SanitizeFunction)
+  if (ClInstrumentMemoryAccesses && Options.InstrumentMemoryAccesses &&
+      SanitizeFunction)
     for (const auto &II : AllLoadsAndStores) {
       Res |= instrumentLoadOrStore(II, DL);
     }
 
   // Instrument atomic memory accesses in any case (they can be used to
   // implement synchronization).
-  if (ClInstrumentAtomics)
+  if (ClInstrumentAtomics && Options.InstrumentAtomics)
     for (auto *Inst : AtomicAccesses) {
       Res |= instrumentAtomic(Inst, DL);
     }
 
-  if (ClInstrumentMemIntrinsics && SanitizeFunction)
+  if (ClInstrumentMemIntrinsics && Options.InstrumentMemIntrinsics &&
+      SanitizeFunction)
     for (auto *Inst : MemIntrinCalls) {
       Res |= instrumentMemIntrinsic(Inst);
     }
@@ -573,8 +576,10 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
       InsertRuntimeIgnores(F);
   }
 
-  // Instrument function entry/exit points if there were instrumented accesses.
-  if ((Res || HasCalls) && ClInstrumentFuncEntryExit) {
+  // Instrument function entry/exit points if there were instrumented accesses,
+  // or if all functions should be tracked (e.g. for tsan_deadlock).
+  if ((Res || HasCalls || Options.AlwaysInstrumentFuncEntryExit) &&
+      ClInstrumentFuncEntryExit) {
     InstrumentationIRBuilder IRB(&F.getEntryBlock(),
                                  F.getEntryBlock().getFirstNonPHIIt());
     auto ProgramAsPtrTy = PointerType::get(F.getParent()->getContext(),

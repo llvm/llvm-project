@@ -40,7 +40,8 @@ static const SanitizerMask NotAllowedWithExecuteOnly =
     SanitizerKind::Function | SanitizerKind::KCFI;
 static const SanitizerMask NeedsUnwindTables =
     SanitizerKind::Address | SanitizerKind::HWAddress | SanitizerKind::Type |
-    SanitizerKind::Thread | SanitizerKind::Memory | SanitizerKind::DataFlow |
+    SanitizerKind::Thread | SanitizerKind::ThreadDeadlock |
+    SanitizerKind::Memory | SanitizerKind::DataFlow |
     SanitizerKind::NumericalStability;
 static const SanitizerMask SupportsCoverage =
     SanitizerKind::Address | SanitizerKind::HWAddress |
@@ -739,6 +740,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                          SanitizerKind::Memory | SanitizerKind::Leak |
                          SanitizerKind::Thread),
       std::make_pair(SanitizerKind::Thread, SanitizerKind::Memory),
+      std::make_pair(SanitizerKind::Thread, SanitizerKind::ThreadDeadlock),
       std::make_pair(SanitizerKind::Leak,
                      SanitizerKind::Thread | SanitizerKind::Memory),
       std::make_pair(SanitizerKind::KernelAddress,

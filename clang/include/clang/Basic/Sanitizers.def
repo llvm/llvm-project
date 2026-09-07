@@ -79,6 +79,9 @@ SANITIZER("type", Type)
 // ThreadSanitizer
 SANITIZER("thread", Thread)
 
+// DeadlockSanitizer (ThreadSanitizer, with only the deadlock detection.)
+SANITIZER("thread-deadlock", ThreadDeadlock)
+
 // Numerical stability sanitizer.
 SANITIZER("numerical", NumericalStability)
 
