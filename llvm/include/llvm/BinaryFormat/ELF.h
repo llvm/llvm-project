@@ -322,6 +322,7 @@ enum {
   EM_RISCV = 243,         // RISC-V
   EM_LANAI = 244,         // Lanai 32-bit processor
   EM_BPF = 247,           // Linux kernel bpf virtual machine
+  EM_NANOMIPS = 249,      // MIPS Tech nanoMIPS architecture
   EM_VE = 251,            // NEC SX-Aurora VE
   EM_CSKY = 252,          // C-SKY 32-bit processor
   EM_LOONGARCH = 258,     // LoongArch
@@ -1103,6 +1104,37 @@ enum : unsigned {
 // ELF Relocation types for Xtensa
 enum {
 #include "ELFRelocs/Xtensa.def"
+};
+
+// nanoMIPS specific e_flags
+enum : unsigned {
+  // File may be relaxed by the linker.
+  EF_NANOMIPS_LINKRELAX = 0x00000001,
+  // File contains position independent code.
+  EF_NANOMIPS_PIC = 0x00000002,
+  // Indicates code compiled for a 64-bit machine in 32-bit mode
+  // (regs are 32-bits wide).
+  EF_NANOMIPS_32BITMODE = 0x00000004,
+  // Indicate that all data access in this object is GP-relative
+  EF_NANOMIPS_PID = 0x00000008,
+  // Indicate that this object does not use absolute addressing.
+  EF_NANOMIPS_PCREL = 0x00000010,
+  // Four bit nanoMIPS architecture field.
+  EF_NANOMIPS_ARCH = 0xf0000000,
+  // -march=32r6 code.
+  EF_NANOMIPS_ARCH_32R6 = 0x00000000,
+  // The ABI of the file.
+  EF_NANOMIPS_ABI = 0x0000f000,
+  // nanoMIPS ABI in 32 bit mode.
+  EF_NANOMIPS_ABI_P32 = 0x00001000,
+
+  // Machine variant if we know it.
+  EF_NANOMIPS_MACH = 0x00ff0000
+};
+
+// ELF Relocation types for nanoMIPS
+enum {
+#include "ELFRelocs/NanoMips.def"
 };
 
 #undef ELF_RELOC
