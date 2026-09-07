@@ -1,16 +1,22 @@
 // REQUIRES: aarch64-registered-target
 
-// DEFINE: %{common_flags} = -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall
 // DEFINE: %{optimize} = opt -passes=sroa -S
 
-// RUN: %clang_cc1                        %{common_flags} -fclangir -emit-cir -o - %s | FileCheck %s --check-prefixes=ALL,CIR
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS %{common_flags} -fclangir -emit-cir -o - %s | FileCheck %s --check-prefixes=ALL,CIR
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-cir -disable-O0-optnone -o - %s                | FileCheck %s --check-prefixes=ALL,CIR %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-cir -disable-O0-optnone -o - %s                | FileCheck %s --check-prefixes=ALL,CIR %}
 
-// RUN: %clang_cc1                        %{common_flags} -fclangir -emit-llvm -o - %s | %{optimize} | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS %{common_flags} -fclangir -emit-llvm -o - %s | %{optimize} | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve                        -fclangir -emit-llvm -disable-O0-optnone -o - %s | %{optimize} | FileCheck %s --check-prefixes=ALL,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS -fclangir -emit-llvm -disable-O0-optnone -o - %s | %{optimize} | FileCheck %s --check-prefixes=ALL,LLVM %}
 
-// RUN: %clang_cc1                        %{common_flags} -emit-llvm -o - %s | %{optimize} | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS %{common_flags} -emit-llvm -o - %s | %{optimize} | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR
+// RUN:                   %clang_cc1_cg_arm64_sve                                  -emit-llvm -disable-O0-optnone -o - %s | %{optimize} | FileCheck %s --check-prefixes=ALL,LLVM
+// RUN:                   %clang_cc1_cg_arm64_sve -DSVE_OVERLOADED_FORMS           -emit-llvm -disable-O0-optnone -o - %s | %{optimize} | FileCheck %s --check-prefixes=ALL,LLVM
+
+//=============================================================================
+// NOTES
+//
+// Tests for SVE DUP intrinsics
+//=============================================================================
+
 #include <arm_sve.h>
 
 #if defined __ARM_FEATURE_SME
@@ -35,9 +41,9 @@ svint8_t test_svdup_n_s8(int8_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!s8i) -> !cir.vector<[16] x !s8i>
 
-// LLVM_OGCG_CIR-SAME: i8{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.x.nxv16i8(i8 [[OP]])
-// LLVM_OGCG_CIR:    ret <vscale x 16 x i8> [[RES]]
+// LLVM-SAME: i8{{.*}} [[OP:%.*]])
+// LLVM:    [[RES:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.x.nxv16i8(i8 [[OP]])
+// LLVM:    ret <vscale x 16 x i8> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_s8,)(op);
 }
 
@@ -46,9 +52,9 @@ svint16_t test_svdup_n_s16(int16_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!s16i) -> !cir.vector<[8] x !s16i>
 
-// LLVM_OGCG_CIR-SAME: i16{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16 [[OP]])
-// LLVM_OGCG_CIR:    ret <vscale x 8 x i16> [[RES]]
+// LLVM-SAME: i16{{.*}} [[OP:%.*]])
+// LLVM:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16 [[OP]])
+// LLVM:    ret <vscale x 8 x i16> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_s16,)(op);
 }
 
@@ -57,9 +63,9 @@ svint32_t test_svdup_n_s32(int32_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!s32i) -> !cir.vector<[4] x !s32i>
 
-// LLVM_OGCG_CIR-SAME: i32{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 [[OP]])
-// LLVM_OGCG_CIR:    ret <vscale x 4 x i32> [[RES]]
+// LLVM-SAME: i32{{.*}} [[OP:%.*]])
+// LLVM:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 [[OP]])
+// LLVM:    ret <vscale x 4 x i32> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_s32,)(op);
 }
 
@@ -68,9 +74,9 @@ svint64_t test_svdup_n_s64(int64_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!s64i) -> !cir.vector<[2] x !s64i>
 
-// LLVM_OGCG_CIR-SAME: i64{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 [[OP]])
-// LLVM_OGCG_CIR:    ret <vscale x 2 x i64> [[RES]]
+// LLVM-SAME: i64{{.*}} [[OP:%.*]])
+// LLVM:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 [[OP]])
+// LLVM:    ret <vscale x 2 x i64> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_s64,)(op);
 }
 
@@ -79,9 +85,9 @@ svuint8_t test_svdup_n_u8(uint8_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!u8i) -> !cir.vector<[16] x !u8i>
 
-// LLVM_OGCG_CIR-SAME: i8{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.x.nxv16i8(i8 [[OP]])
-// LLVM_OGCG_CIR:    ret <vscale x 16 x i8> [[RES]]
+// LLVM-SAME: i8{{.*}} [[OP:%.*]])
+// LLVM:    [[RES:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.x.nxv16i8(i8 [[OP]])
+// LLVM:    ret <vscale x 16 x i8> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_u8,)(op);
 }
 
@@ -90,8 +96,8 @@ svuint16_t test_svdup_n_u16(uint16_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!u16i) -> !cir.vector<[8] x !u16i>
 
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16 [[OP]])
-// LLVM_OGCG_CIR:    ret <vscale x 8 x i16> [[RES]]
+// LLVM:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16 [[OP]])
+// LLVM:    ret <vscale x 8 x i16> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_u16,)(op);
 }
 
@@ -100,9 +106,9 @@ svuint32_t test_svdup_n_u32(uint32_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!u32i) -> !cir.vector<[4] x !u32i>
 
-// LLVM_OGCG_CIR-SAME: i32{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 [[OP]])
-// LLVM_OGCG_CIR:    ret <vscale x 4 x i32> [[RES]]
+// LLVM-SAME: i32{{.*}} [[OP:%.*]])
+// LLVM:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.x.nxv4i32(i32 [[OP]])
+// LLVM:    ret <vscale x 4 x i32> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_u32,)(op);
 }
 
@@ -111,9 +117,9 @@ svuint64_t test_svdup_n_u64(uint64_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!u64i) -> !cir.vector<[2] x !u64i>
 
-// LLVM_OGCG_CIR-SAME: i64{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 [[OP]])
-// LLVM_OGCG_CIR:    ret <vscale x 2 x i64> [[RES]]
+// LLVM-SAME: i64{{.*}} [[OP:%.*]])
+// LLVM:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.x.nxv2i64(i64 [[OP]])
+// LLVM:    ret <vscale x 2 x i64> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_u64,)(op);
 }
 
@@ -122,9 +128,9 @@ svfloat16_t test_svdup_n_f16(float16_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!cir.f16) -> !cir.vector<[8] x !cir.f16>
 
-// LLVM_OGCG_CIR-SAME: half{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.dup.x.nxv8f16(half [[OP]])
-// LLVM_OGCG_CIR:    ret <vscale x 8 x half> [[RES]]
+// LLVM-SAME: half{{.*}} [[OP:%.*]])
+// LLVM:    [[RES:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.dup.x.nxv8f16(half [[OP]])
+// LLVM:    ret <vscale x 8 x half> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_f16,)(op);
 }
 
@@ -133,9 +139,9 @@ svfloat32_t test_svdup_n_f32(float32_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!cir.float) -> !cir.vector<[4] x !cir.float>
 
-// LLVM_OGCG_CIR-SAME: float{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.dup.x.nxv4f32(float [[OP]])
-// LLVM_OGCG_CIR:    ret <vscale x 4 x float> [[RES]]
+// LLVM-SAME: float{{.*}} [[OP:%.*]])
+// LLVM:    [[RES:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.dup.x.nxv4f32(float [[OP]])
+// LLVM:    ret <vscale x 4 x float> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_f32,)(op);
 }
 
@@ -144,9 +150,9 @@ svfloat64_t test_svdup_n_f64(float64_t op) MODE_ATTR
 {
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!cir.double) -> !cir.vector<[2] x !cir.double>
 
-// LLVM_OGCG_CIR-SAME: double{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.dup.x.nxv2f64(double [[OP]])
-// LLVM_OGCG_CIR:    ret <vscale x 2 x double> [[RES]]
+// LLVM-SAME: double{{.*}} [[OP:%.*]])
+// LLVM:    [[RES:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.dup.x.nxv2f64(double [[OP]])
+// LLVM:    ret <vscale x 2 x double> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_f64,)(op);
 }
 
@@ -161,9 +167,9 @@ svint8_t test_svdup_n_s8_z(svbool_t pg, int8_t op) MODE_ATTR
 // CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %{{.*}}, %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[16] x !s8i>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i8{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i1> [[PG]], i8 [[OP]])
-// LLVM_OGCG_CIR:     ret {{.*}} [[RES]]
+// LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], i8{{.*}} [[OP:%.*]])
+// LLVM:    [[RES:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i1> [[PG]], i8 [[OP]])
+// LLVM:     ret {{.*}} [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_s8_z,)(pg, op);
 }
 
@@ -176,10 +182,10 @@ svint16_t test_svdup_n_s16_z(svbool_t pg, int16_t op) MODE_ATTR
 // CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !cir.vector<[8] x !s16i>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i16{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[PG_CONVERTED:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i1> [[PG_CONVERTED]], i16 [[OP]])
-// LLVM_OGCG_CIR:    ret {{.*}} [[RES]]
+// LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], i16{{.*}} [[OP:%.*]])
+// LLVM:    [[PG_CONVERTED:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
+// LLVM:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i1> [[PG_CONVERTED]], i16 [[OP]])
+// LLVM:    ret {{.*}} [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_s16_z,)(pg, op);
 }
 
@@ -192,10 +198,10 @@ svint32_t test_svdup_n_s32_z(svbool_t pg, int32_t op) MODE_ATTR
 // CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !s32i>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i32{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[PG_CONVERTED:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> [[PG_CONVERTED]], i32 [[OP]])
-// LLVM_OGCG_CIR:    ret {{.*}} [[RES]]
+// LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], i32{{.*}} [[OP:%.*]])
+// LLVM:    [[PG_CONVERTED:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
+// LLVM:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> [[PG_CONVERTED]], i32 [[OP]])
+// LLVM:    ret {{.*}} [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_s32_z,)(pg, op);
 }
 
@@ -208,10 +214,10 @@ svint64_t test_svdup_n_s64_z(svbool_t pg, int64_t op) MODE_ATTR
 // CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !s64i>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i64{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[PG_CONVERTED:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> [[PG_CONVERTED]], i64 [[OP]])
-// LLVM_OGCG_CIR:    ret {{.*}} [[RES]]
+// LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], i64{{.*}} [[OP:%.*]])
+// LLVM:    [[PG_CONVERTED:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
+// LLVM:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> [[PG_CONVERTED]], i64 [[OP]])
+// LLVM:    ret {{.*}} [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_s64_z,)(pg, op);
 }
 
@@ -222,9 +228,9 @@ svuint8_t test_svdup_n_u8_z(svbool_t pg, uint8_t op) MODE_ATTR
 // CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %{{.*}}, %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[16] x !u8i>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i8{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i1> [[PG]], i8 [[OP]])
-// LLVM_OGCG_CIR:    ret {{.*}} [[RES]]
+// LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], i8{{.*}} [[OP:%.*]])
+// LLVM:    [[RES:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> zeroinitializer, <vscale x 16 x i1> [[PG]], i8 [[OP]])
+// LLVM:    ret {{.*}} [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_u8_z,)(pg, op);
 }
 
@@ -237,10 +243,10 @@ svuint16_t test_svdup_n_u16_z(svbool_t pg, uint16_t op) MODE_ATTR
 // CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !cir.vector<[8] x !u16i>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i16{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[PG_CONVERTED:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i1> [[PG_CONVERTED]], i16 [[OP]])
-// LLVM_OGCG_CIR:    ret {{.*}} [[RES]]
+// LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], i16{{.*}} [[OP:%.*]])
+// LLVM:    [[PG_CONVERTED:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
+// LLVM:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> zeroinitializer, <vscale x 8 x i1> [[PG_CONVERTED]], i16 [[OP]])
+// LLVM:    ret {{.*}} [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_u16_z,)(pg, op);
 }
 
@@ -253,10 +259,10 @@ svuint32_t test_svdup_n_u32_z(svbool_t pg, uint32_t op) MODE_ATTR
 // CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !u32i>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i32{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[PG_CONVERTED:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> [[PG_CONVERTED]], i32 [[OP]])
-// LLVM_OGCG_CIR:    ret {{.*}} [[RES]]
+// LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], i32{{.*}} [[OP:%.*]])
+// LLVM:    [[PG_CONVERTED:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
+// LLVM:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> zeroinitializer, <vscale x 4 x i1> [[PG_CONVERTED]], i32 [[OP]])
+// LLVM:    ret {{.*}} [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_u32_z,)(pg, op);
 }
 
@@ -269,10 +275,10 @@ svuint64_t test_svdup_n_u64_z(svbool_t pg, uint64_t op) MODE_ATTR
 // CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !u64i>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i64{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[PG_CONVERTED:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> [[PG_CONVERTED]], i64 [[OP]])
-// LLVM_OGCG_CIR:    ret {{.*}} [[RES]]
+// LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], i64{{.*}} [[OP:%.*]])
+// LLVM:    [[PG_CONVERTED:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
+// LLVM:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> [[PG_CONVERTED]], i64 [[OP]])
+// LLVM:    ret {{.*}} [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_u64_z,)(pg, op);
 }
 
@@ -285,10 +291,10 @@ svfloat16_t test_svdup_n_f16_z(svbool_t pg, float16_t op) MODE_ATTR
 // CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[8] x !cir.f16>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], half{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[PG_CONVERTED:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.dup.nxv8f16(<vscale x 8 x half> zeroinitializer, <vscale x 8 x i1> [[PG_CONVERTED]], half [[OP]])
-// LLVM_OGCG_CIR:    ret {{.*}} [[RES]]
+// LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], half{{.*}} [[OP:%.*]])
+// LLVM:    [[PG_CONVERTED:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
+// LLVM:    [[RES:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.dup.nxv8f16(<vscale x 8 x half> zeroinitializer, <vscale x 8 x i1> [[PG_CONVERTED]], half [[OP]])
+// LLVM:    ret {{.*}} [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_f16_z,)(pg, op);
 }
 
@@ -301,10 +307,10 @@ svfloat32_t test_svdup_n_f32_z(svbool_t pg, float32_t op) MODE_ATTR
 // CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !cir.float>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], float{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[PG_CONVERTED:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.dup.nxv4f32(<vscale x 4 x float> zeroinitializer, <vscale x 4 x i1> [[PG_CONVERTED]], float [[OP]])
-// LLVM_OGCG_CIR:    ret {{.*}} [[RES]]
+// LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], float{{.*}} [[OP:%.*]])
+// LLVM:    [[PG_CONVERTED:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
+// LLVM:    [[RES:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.dup.nxv4f32(<vscale x 4 x float> zeroinitializer, <vscale x 4 x i1> [[PG_CONVERTED]], float [[OP]])
+// LLVM:    ret {{.*}} [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_f32_z,)(pg, op);
 }
 
@@ -317,10 +323,10 @@ svfloat64_t test_svdup_n_f64_z(svbool_t pg, float64_t op) MODE_ATTR
 // CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !cir.double>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], double{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[PG_CONVERTED:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double> zeroinitializer, <vscale x 2 x i1> [[PG_CONVERTED]], double [[OP]])
-// LLVM_OGCG_CIR:    ret {{.*}} [[RES]]
+// LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], double{{.*}} [[OP:%.*]])
+// LLVM:    [[PG_CONVERTED:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
+// LLVM:    [[RES:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double> zeroinitializer, <vscale x 2 x i1> [[PG_CONVERTED]], double [[OP]])
+// LLVM:    ret {{.*}} [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_f64_z,)(pg, op);
 }
 
@@ -333,9 +339,9 @@ svint8_t test_svdup_n_s8_m(svint8_t inactive, svbool_t pg, int8_t op) MODE_ATTR
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup" %{{.*}}, %{{.*}}, %{{.*}} :
 // CIR-SAME:        (!cir.vector<[16] x !s8i>, !cir.vector<[16] x !cir.int<u, 1>>, !s8i) -> !cir.vector<[16] x !s8i>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 16 x i8> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], i8{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> [[INACTIVE]], <vscale x 16 x i1> [[PG]], i8 [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+// LLVM-SAME: <vscale x 16 x i8> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], i8{{.*}} [[OP:%.*]])
+// LLVM:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> [[INACTIVE]], <vscale x 16 x i1> [[PG]], i8 [[OP]])
+// LLVM-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
   return SVE_ACLE_FUNC(svdup,_n,_s8_m,)(inactive, pg, op);
 }
 
@@ -347,10 +353,10 @@ svint16_t test_svdup_n_s16_m(svint16_t inactive, svbool_t pg, int16_t op) MODE_A
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" %{{.*}}, %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:    (!cir.vector<[8] x !s16i>, !cir.vector<[8] x !cir.int<u, 1>>, !s16i) -> !cir.vector<[8] x !s16i>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 8 x i16> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], i16{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[PG_CONVERTED:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR-NEXT:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> [[INACTIVE]], <vscale x 8 x i1> [[PG_CONVERTED]], i16 [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 8 x i16> [[RES]]
+// LLVM-SAME: <vscale x 8 x i16> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], i16{{.*}} [[OP:%.*]])
+// LLVM:    [[PG_CONVERTED:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
+// LLVM-NEXT:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> [[INACTIVE]], <vscale x 8 x i1> [[PG_CONVERTED]], i16 [[OP]])
+// LLVM-NEXT:    ret <vscale x 8 x i16> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_s16_m,)(inactive, pg, op);
 }
 
@@ -362,10 +368,10 @@ svint32_t test_svdup_n_s32_m(svint32_t inactive, svbool_t pg, int32_t op) MODE_A
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" %{{.*}}, %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:    (!cir.vector<[4] x !s32i>, !cir.vector<[4] x !cir.int<u, 1>>, !s32i) -> !cir.vector<[4] x !s32i>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 4 x i32> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], i32{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[PG_CONVERTED:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR-NEXT:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> [[INACTIVE]], <vscale x 4 x i1> [[PG_CONVERTED]], i32 [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 4 x i32> [[RES]]
+// LLVM-SAME: <vscale x 4 x i32> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], i32{{.*}} [[OP:%.*]])
+// LLVM:    [[PG_CONVERTED:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
+// LLVM-NEXT:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> [[INACTIVE]], <vscale x 4 x i1> [[PG_CONVERTED]], i32 [[OP]])
+// LLVM-NEXT:    ret <vscale x 4 x i32> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_s32_m,)(inactive, pg, op);
 }
 
@@ -377,10 +383,10 @@ svint64_t test_svdup_n_s64_m(svint64_t inactive, svbool_t pg, int64_t op) MODE_A
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" %{{.*}}, %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:   (!cir.vector<[2] x !s64i>, !cir.vector<[2] x !cir.int<u, 1>>, !s64i) -> !cir.vector<[2] x !s64i>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 2 x i64> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], i64{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[PG_CONVERTED:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR-NEXT:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> [[INACTIVE]], <vscale x 2 x i1> [[PG_CONVERTED]], i64 [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 2 x i64> [[RES]]
+// LLVM-SAME: <vscale x 2 x i64> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], i64{{.*}} [[OP:%.*]])
+// LLVM:    [[PG_CONVERTED:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
+// LLVM-NEXT:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> [[INACTIVE]], <vscale x 2 x i1> [[PG_CONVERTED]], i64 [[OP]])
+// LLVM-NEXT:    ret <vscale x 2 x i64> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_s64_m,)(inactive, pg, op);
 }
 
@@ -390,9 +396,9 @@ svuint8_t test_svdup_n_u8_m(svuint8_t inactive, svbool_t pg, uint8_t op) MODE_AT
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" %{{.*}}, %{{.*}}, %{{.*}} :
 // CIR-SAME:   (!cir.vector<[16] x !u8i>, !cir.vector<[16] x !cir.int<u, 1>>, !u8i) -> !cir.vector<[16] x !u8i>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 16 x i8> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], i8{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[PG_CONVERTED:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> [[INACTIVE]], <vscale x 16 x i1> [[PG]], i8 [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 16 x i8> [[PG_CONVERTED]]
+// LLVM-SAME: <vscale x 16 x i8> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], i8{{.*}} [[OP:%.*]])
+// LLVM:    [[PG_CONVERTED:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> [[INACTIVE]], <vscale x 16 x i1> [[PG]], i8 [[OP]])
+// LLVM-NEXT:    ret <vscale x 16 x i8> [[PG_CONVERTED]]
   return SVE_ACLE_FUNC(svdup,_n,_u8_m,)(inactive, pg, op);
 }
 
@@ -404,10 +410,10 @@ svuint16_t test_svdup_n_u16_m(svuint16_t inactive, svbool_t pg, uint16_t op) MOD
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" %{{.*}}, %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:   (!cir.vector<[8] x !u16i>, !cir.vector<[8] x !cir.int<u, 1>>, !u16i) -> !cir.vector<[8] x !u16i>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 8 x i16> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], i16{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[PG_CONVERTED:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR-NEXT:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> [[INACTIVE]], <vscale x 8 x i1> [[PG_CONVERTED]], i16 [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 8 x i16> [[RES]]
+// LLVM-SAME: <vscale x 8 x i16> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], i16{{.*}} [[OP:%.*]])
+// LLVM:    [[PG_CONVERTED:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
+// LLVM-NEXT:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> [[INACTIVE]], <vscale x 8 x i1> [[PG_CONVERTED]], i16 [[OP]])
+// LLVM-NEXT:    ret <vscale x 8 x i16> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_u16_m,)(inactive, pg, op);
 }
 
@@ -419,10 +425,10 @@ svuint32_t test_svdup_n_u32_m(svuint32_t inactive, svbool_t pg, uint32_t op) MOD
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" %{{.*}}, %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:   (!cir.vector<[4] x !u32i>, !cir.vector<[4] x !cir.int<u, 1>>, !u32i) -> !cir.vector<[4] x !u32i>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 4 x i32> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], i32{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[PG_CONVERTED:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR-NEXT:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> [[INACTIVE]], <vscale x 4 x i1> [[PG_CONVERTED]], i32 [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 4 x i32> [[RES]]
+// LLVM-SAME: <vscale x 4 x i32> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], i32{{.*}} [[OP:%.*]])
+// LLVM:    [[PG_CONVERTED:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
+// LLVM-NEXT:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> [[INACTIVE]], <vscale x 4 x i1> [[PG_CONVERTED]], i32 [[OP]])
+// LLVM-NEXT:    ret <vscale x 4 x i32> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_u32_m,)(inactive, pg, op);
 }
 
@@ -434,10 +440,10 @@ svuint64_t test_svdup_n_u64_m(svuint64_t inactive, svbool_t pg, uint64_t op) MOD
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" %{{.*}}, %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:   (!cir.vector<[2] x !u64i>, !cir.vector<[2] x !cir.int<u, 1>>, !u64i) -> !cir.vector<[2] x !u64i>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 2 x i64> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], i64{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[PG_CONVERTED:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR-NEXT:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> [[INACTIVE]], <vscale x 2 x i1> [[PG_CONVERTED]], i64 [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 2 x i64> [[RES]]
+// LLVM-SAME: <vscale x 2 x i64> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], i64{{.*}} [[OP:%.*]])
+// LLVM:    [[PG_CONVERTED:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
+// LLVM-NEXT:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> [[INACTIVE]], <vscale x 2 x i1> [[PG_CONVERTED]], i64 [[OP]])
+// LLVM-NEXT:    ret <vscale x 2 x i64> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_u64_m,)(inactive, pg, op);
 }
 
@@ -449,10 +455,10 @@ svfloat16_t test_svdup_n_f16_m(svfloat16_t inactive, svbool_t pg, float16_t op) 
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" %{{.*}}, %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:   (!cir.vector<[8] x !cir.f16>, !cir.vector<[8] x !cir.int<u, 1>>, !cir.f16) -> !cir.vector<[8] x !cir.f16>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 8 x half> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], half{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[PG_CONVERTED:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR-NEXT:    [[RES:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.dup.nxv8f16(<vscale x 8 x half> [[INACTIVE]], <vscale x 8 x i1> [[PG_CONVERTED]], half [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 8 x half> [[RES]]
+// LLVM-SAME: <vscale x 8 x half> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], half{{.*}} [[OP:%.*]])
+// LLVM:    [[PG_CONVERTED:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
+// LLVM-NEXT:    [[RES:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.dup.nxv8f16(<vscale x 8 x half> [[INACTIVE]], <vscale x 8 x i1> [[PG_CONVERTED]], half [[OP]])
+// LLVM-NEXT:    ret <vscale x 8 x half> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_f16_m,)(inactive, pg, op);
 }
 
@@ -464,10 +470,10 @@ svfloat32_t test_svdup_n_f32_m(svfloat32_t inactive, svbool_t pg, float32_t op) 
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" %{{.*}}, %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:   (!cir.vector<[4] x !cir.float>, !cir.vector<[4] x !cir.int<u, 1>>, !cir.float) -> !cir.vector<[4] x !cir.float>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 4 x float> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], float{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[PG_CONVERTED:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR-NEXT:    [[RES:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.dup.nxv4f32(<vscale x 4 x float> [[INACTIVE]], <vscale x 4 x i1> [[PG_CONVERTED]], float [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 4 x float> [[RES]]
+// LLVM-SAME: <vscale x 4 x float> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], float{{.*}} [[OP:%.*]])
+// LLVM:    [[PG_CONVERTED:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
+// LLVM-NEXT:    [[RES:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.dup.nxv4f32(<vscale x 4 x float> [[INACTIVE]], <vscale x 4 x i1> [[PG_CONVERTED]], float [[OP]])
+// LLVM-NEXT:    ret <vscale x 4 x float> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_f32_m,)(inactive, pg, op);
 }
 
@@ -479,10 +485,10 @@ svfloat64_t test_svdup_n_f64_m(svfloat64_t inactive, svbool_t pg, float64_t op) 
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" %{{.*}}, %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:   (!cir.vector<[2] x !cir.double>, !cir.vector<[2] x !cir.int<u, 1>>, !cir.double) -> !cir.vector<[2] x !cir.double>
 
-// LLVM_OGCG_CIR-SAME: <vscale x 2 x double> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], double{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:    [[PG_CONVERTED:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR-NEXT:    [[RES:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double> [[INACTIVE]], <vscale x 2 x i1> [[PG_CONVERTED]], double [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 2 x double> [[RES]]
+// LLVM-SAME: <vscale x 2 x double> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], double{{.*}} [[OP:%.*]])
+// LLVM:    [[PG_CONVERTED:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
+// LLVM-NEXT:    [[RES:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double> [[INACTIVE]], <vscale x 2 x i1> [[PG_CONVERTED]], double [[OP]])
+// LLVM-NEXT:    ret <vscale x 2 x double> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_f64_m,)(inactive, pg, op);
 }
 
@@ -496,9 +502,9 @@ svint8_t test_svdup_n_s8_x(svbool_t pg, int8_t op) MODE_ATTR
 // CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup" [[UNDEF]], %{{.*}}, %{{.*}} :
 // CIR-SAME:        (!cir.vector<[16] x !s8i>, !cir.vector<[16] x !cir.int<u, 1>>, !s8i) -> !cir.vector<[16] x !s8i>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 16 x i1> [[PG:%.*]], i8{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:         [[RES:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> [[PG]], i8 [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 16 x i8> [[RES]]
+// LLVM-SAME:    <vscale x 16 x i1> [[PG:%.*]], i8{{.*}} [[OP:%.*]])
+// LLVM:         [[RES:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> [[PG]], i8 [[OP]])
+// LLVM-NEXT:    ret <vscale x 16 x i8> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_s8_x,)(pg, op);
 }
 
@@ -511,10 +517,10 @@ svint16_t test_svdup_n_s16_x(svbool_t pg, int16_t op) MODE_ATTR
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" [[UNDEF]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:    (!cir.vector<[8] x !s16i>, !cir.vector<[8] x !cir.int<u, 1>>, !s16i) -> !cir.vector<[8] x !s16i>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 16 x i1> [[PG:%.*]], i16{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:         [[PG_CONVERTED:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR-NEXT:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> [[PG_CONVERTED]], i16 [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 8 x i16> [[RES]]
+// LLVM-SAME:    <vscale x 16 x i1> [[PG:%.*]], i16{{.*}} [[OP:%.*]])
+// LLVM:         [[PG_CONVERTED:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
+// LLVM-NEXT:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> [[PG_CONVERTED]], i16 [[OP]])
+// LLVM-NEXT:    ret <vscale x 8 x i16> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_s16_x,)(pg, op);
 }
 
@@ -527,10 +533,10 @@ svint32_t test_svdup_n_s32_x(svbool_t pg, int32_t op) MODE_ATTR
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" [[UNDEF]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:    (!cir.vector<[4] x !s32i>, !cir.vector<[4] x !cir.int<u, 1>>, !s32i) -> !cir.vector<[4] x !s32i>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 16 x i1> [[PG:%.*]], i32{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:         [[PG_CONVERTED:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR-NEXT:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> [[PG_CONVERTED]], i32 [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 4 x i32> [[RES]]
+// LLVM-SAME:    <vscale x 16 x i1> [[PG:%.*]], i32{{.*}} [[OP:%.*]])
+// LLVM:         [[PG_CONVERTED:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
+// LLVM-NEXT:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> [[PG_CONVERTED]], i32 [[OP]])
+// LLVM-NEXT:    ret <vscale x 4 x i32> [[RES]]
 //
   return SVE_ACLE_FUNC(svdup,_n,_s32_x,)(pg, op);
 }
@@ -544,10 +550,10 @@ svint64_t test_svdup_n_s64_x(svbool_t pg, int64_t op) MODE_ATTR
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" [[UNDEF]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:   (!cir.vector<[2] x !s64i>, !cir.vector<[2] x !cir.int<u, 1>>, !s64i) -> !cir.vector<[2] x !s64i>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 16 x i1> [[PG:%.*]], i64{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:         [[PG_CONVERTED:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR-NEXT:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> [[PG_CONVERTED]], i64 [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 2 x i64> [[RES]]
+// LLVM-SAME:    <vscale x 16 x i1> [[PG:%.*]], i64{{.*}} [[OP:%.*]])
+// LLVM:         [[PG_CONVERTED:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
+// LLVM-NEXT:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> [[PG_CONVERTED]], i64 [[OP]])
+// LLVM-NEXT:    ret <vscale x 2 x i64> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_s64_x,)(pg, op);
 }
 
@@ -558,9 +564,9 @@ svuint8_t test_svdup_n_u8_x(svbool_t pg, uint8_t op) MODE_ATTR
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" [[UNDEF]], %{{.*}}, %{{.*}} :
 // CIR-SAME:   (!cir.vector<[16] x !u8i>, !cir.vector<[16] x !cir.int<u, 1>>, !u8i) -> !cir.vector<[16] x !u8i>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 16 x i1> [[PG:%.*]], i8{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:         [[PG_CONVERTED:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> [[PG]], i8 [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 16 x i8> [[PG_CONVERTED]]
+// LLVM-SAME:    <vscale x 16 x i1> [[PG:%.*]], i8{{.*}} [[OP:%.*]])
+// LLVM:         [[PG_CONVERTED:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.dup.nxv16i8(<vscale x 16 x i8> undef, <vscale x 16 x i1> [[PG]], i8 [[OP]])
+// LLVM-NEXT:    ret <vscale x 16 x i8> [[PG_CONVERTED]]
   return SVE_ACLE_FUNC(svdup,_n,_u8_x,)(pg, op);
 }
 
@@ -573,10 +579,10 @@ svuint16_t test_svdup_n_u16_x(svbool_t pg, uint16_t op) MODE_ATTR
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" [[UNDEF]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:   (!cir.vector<[8] x !u16i>, !cir.vector<[8] x !cir.int<u, 1>>, !u16i) -> !cir.vector<[8] x !u16i>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 16 x i1> [[PG:%.*]], i16{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:         [[PG_CONVERTED:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR-NEXT:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> [[PG_CONVERTED]], i16 [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 8 x i16> [[RES]]
+// LLVM-SAME:    <vscale x 16 x i1> [[PG:%.*]], i16{{.*}} [[OP:%.*]])
+// LLVM:         [[PG_CONVERTED:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
+// LLVM-NEXT:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.nxv8i16(<vscale x 8 x i16> undef, <vscale x 8 x i1> [[PG_CONVERTED]], i16 [[OP]])
+// LLVM-NEXT:    ret <vscale x 8 x i16> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_u16_x,)(pg, op);
 }
 
@@ -589,10 +595,10 @@ svuint32_t test_svdup_n_u32_x(svbool_t pg, uint32_t op) MODE_ATTR
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" [[UNDEF]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:   (!cir.vector<[4] x !u32i>, !cir.vector<[4] x !cir.int<u, 1>>, !u32i) -> !cir.vector<[4] x !u32i>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 16 x i1> [[PG:%.*]], i32{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:         [[PG_CONVERTED:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR-NEXT:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> [[PG_CONVERTED]], i32 [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 4 x i32> [[RES]]
+// LLVM-SAME:    <vscale x 16 x i1> [[PG:%.*]], i32{{.*}} [[OP:%.*]])
+// LLVM:         [[PG_CONVERTED:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
+// LLVM-NEXT:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.dup.nxv4i32(<vscale x 4 x i32> undef, <vscale x 4 x i1> [[PG_CONVERTED]], i32 [[OP]])
+// LLVM-NEXT:    ret <vscale x 4 x i32> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_u32_x,)(pg, op);
 }
 
@@ -605,10 +611,10 @@ svuint64_t test_svdup_n_u64_x(svbool_t pg, uint64_t op) MODE_ATTR
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" [[UNDEF]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:   (!cir.vector<[2] x !u64i>, !cir.vector<[2] x !cir.int<u, 1>>, !u64i) -> !cir.vector<[2] x !u64i>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 16 x i1> [[PG:%.*]], i64{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:         [[PG_CONVERTED:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR-NEXT:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> [[PG_CONVERTED]], i64 [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 2 x i64> [[RES]]
+// LLVM-SAME:    <vscale x 16 x i1> [[PG:%.*]], i64{{.*}} [[OP:%.*]])
+// LLVM:         [[PG_CONVERTED:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
+// LLVM-NEXT:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.dup.nxv2i64(<vscale x 2 x i64> undef, <vscale x 2 x i1> [[PG_CONVERTED]], i64 [[OP]])
+// LLVM-NEXT:    ret <vscale x 2 x i64> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_u64_x,)(pg, op);
 }
 
@@ -621,10 +627,10 @@ svfloat16_t test_svdup_n_f16_x(svbool_t pg, float16_t op) MODE_ATTR
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" [[UNDEF]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:   (!cir.vector<[8] x !cir.f16>, !cir.vector<[8] x !cir.int<u, 1>>, !cir.f16) -> !cir.vector<[8] x !cir.f16>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 16 x i1> [[PG:%.*]], half{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:         [[PG_CONVERTED:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR-NEXT:    [[RES:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.dup.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> [[PG_CONVERTED]], half [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 8 x half> [[RES]]
+// LLVM-SAME:    <vscale x 16 x i1> [[PG:%.*]], half{{.*}} [[OP:%.*]])
+// LLVM:         [[PG_CONVERTED:%.*]] = call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG]])
+// LLVM-NEXT:    [[RES:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.dup.nxv8f16(<vscale x 8 x half> undef, <vscale x 8 x i1> [[PG_CONVERTED]], half [[OP]])
+// LLVM-NEXT:    ret <vscale x 8 x half> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_f16_x,)(pg, op);
 }
 
@@ -637,10 +643,10 @@ svfloat32_t test_svdup_n_f32_x(svbool_t pg, float32_t op) MODE_ATTR
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" [[UNDEF]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:   (!cir.vector<[4] x !cir.float>, !cir.vector<[4] x !cir.int<u, 1>>, !cir.float) -> !cir.vector<[4] x !cir.float>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 16 x i1> [[PG:%.*]], float{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:         [[PG_CONVERTED:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR-NEXT:    [[RES:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.dup.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x i1> [[PG_CONVERTED]], float [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 4 x float> [[RES]]
+// LLVM-SAME:    <vscale x 16 x i1> [[PG:%.*]], float{{.*}} [[OP:%.*]])
+// LLVM:         [[PG_CONVERTED:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
+// LLVM-NEXT:    [[RES:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.dup.nxv4f32(<vscale x 4 x float> undef, <vscale x 4 x i1> [[PG_CONVERTED]], float [[OP]])
+// LLVM-NEXT:    ret <vscale x 4 x float> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_f32_x,)(pg, op);
 }
 
@@ -653,10 +659,10 @@ svfloat64_t test_svdup_n_f64_x(svbool_t pg, float64_t op) MODE_ATTR
 // CIR:       cir.call_llvm_intrinsic "aarch64.sve.dup" [[UNDEF]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:   (!cir.vector<[2] x !cir.double>, !cir.vector<[2] x !cir.int<u, 1>>, !cir.double) -> !cir.vector<[2] x !cir.double>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 16 x i1> [[PG:%.*]], double{{.*}} [[OP:%.*]])
-// LLVM_OGCG_CIR:         [[PG_CONVERTED:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
-// LLVM_OGCG_CIR-NEXT:    [[RES:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> [[PG_CONVERTED]], double [[OP]])
-// LLVM_OGCG_CIR-NEXT:    ret <vscale x 2 x double> [[RES]]
+// LLVM-SAME:    <vscale x 16 x i1> [[PG:%.*]], double{{.*}} [[OP:%.*]])
+// LLVM:         [[PG_CONVERTED:%.*]] = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG]])
+// LLVM-NEXT:    [[RES:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.dup.nxv2f64(<vscale x 2 x double> undef, <vscale x 2 x i1> [[PG_CONVERTED]], double [[OP]])
+// LLVM-NEXT:    ret <vscale x 2 x double> [[RES]]
   return SVE_ACLE_FUNC(svdup,_n,_f64_x,)(pg, op);
 }
 
@@ -669,11 +675,11 @@ svint8_t test_svdup_lane_s8(svint8_t data, uint8_t index) MODE_ATTR
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u8i, !cir.vector<[16] x !u8i>
 // CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[16] x !s8i>, !cir.vector<[16] x !u8i>) -> !cir.vector<[16] x !s8i>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 16 x i8> [[DATA:%.*]], i8{{.*}} [[INDEX:%.*]])
-// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[INDEX]], i64 0
-// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.tbl.nxv16i8(<vscale x 16 x i8> [[DATA]], <vscale x 16 x i8> [[DOTSPLAT]])
-// LLVM_OGCG_CIR:    ret <vscale x 16 x i8> [[RES]]
+// LLVM-SAME:    <vscale x 16 x i8> [[DATA:%.*]], i8{{.*}} [[INDEX:%.*]])
+// LLVM:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[INDEX]], i64 0
+// LLVM:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// LLVM:    [[RES:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.tbl.nxv16i8(<vscale x 16 x i8> [[DATA]], <vscale x 16 x i8> [[DOTSPLAT]])
+// LLVM:    ret <vscale x 16 x i8> [[RES]]
   return SVE_ACLE_FUNC(svdup_lane,_s8,,)(data, index);
 }
 
@@ -683,11 +689,11 @@ svint16_t test_svdup_lane_s16(svint16_t data, uint16_t index) MODE_ATTR
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u16i, !cir.vector<[8] x !u16i>
 // CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[8] x !s16i>, !cir.vector<[8] x !u16i>) -> !cir.vector<[8] x !s16i>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 8 x i16> [[DATA:%.*]], i16{{.*}} [[INDEX:%.*]])
-// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[INDEX]], i64 0
-// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tbl.nxv8i16(<vscale x 8 x i16> [[DATA]], <vscale x 8 x i16> [[DOTSPLAT]])
-// LLVM_OGCG_CIR:    ret <vscale x 8 x i16> [[RES]]
+// LLVM-SAME:    <vscale x 8 x i16> [[DATA:%.*]], i16{{.*}} [[INDEX:%.*]])
+// LLVM:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[INDEX]], i64 0
+// LLVM:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tbl.nxv8i16(<vscale x 8 x i16> [[DATA]], <vscale x 8 x i16> [[DOTSPLAT]])
+// LLVM:    ret <vscale x 8 x i16> [[RES]]
   return SVE_ACLE_FUNC(svdup_lane,_s16,,)(data, index);
 }
 
@@ -697,11 +703,11 @@ svint32_t test_svdup_lane_s32(svint32_t data, uint32_t index) MODE_ATTR
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u32i, !cir.vector<[4] x !u32i>
 // CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[4] x !s32i>, !cir.vector<[4] x !u32i>) -> !cir.vector<[4] x !s32i>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 4 x i32> [[DATA:%.*]], i32{{.*}} [[INDEX:%.*]])
-// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[INDEX]], i64 0
-// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.tbl.nxv4i32(<vscale x 4 x i32> [[DATA]], <vscale x 4 x i32> [[DOTSPLAT]])
-// LLVM_OGCG_CIR:    ret <vscale x 4 x i32> [[RES]]
+// LLVM-SAME:    <vscale x 4 x i32> [[DATA:%.*]], i32{{.*}} [[INDEX:%.*]])
+// LLVM:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[INDEX]], i64 0
+// LLVM:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.tbl.nxv4i32(<vscale x 4 x i32> [[DATA]], <vscale x 4 x i32> [[DOTSPLAT]])
+// LLVM:    ret <vscale x 4 x i32> [[RES]]
   return SVE_ACLE_FUNC(svdup_lane,_s32,,)(data, index);
 }
 
@@ -711,11 +717,11 @@ svint64_t test_svdup_lane_s64(svint64_t data, uint64_t index) MODE_ATTR
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u64i, !cir.vector<[2] x !u64i>
 // CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[2] x !s64i>, !cir.vector<[2] x !u64i>) -> !cir.vector<[2] x !s64i>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 2 x i64> [[DATA:%.*]], i64{{.*}} [[INDEX:%.*]])
-// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[INDEX]], i64 0
-// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.tbl.nxv2i64(<vscale x 2 x i64> [[DATA]], <vscale x 2 x i64> [[DOTSPLAT]])
-// LLVM_OGCG_CIR:    ret <vscale x 2 x i64> [[RES]]
+// LLVM-SAME:    <vscale x 2 x i64> [[DATA:%.*]], i64{{.*}} [[INDEX:%.*]])
+// LLVM:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[INDEX]], i64 0
+// LLVM:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.tbl.nxv2i64(<vscale x 2 x i64> [[DATA]], <vscale x 2 x i64> [[DOTSPLAT]])
+// LLVM:    ret <vscale x 2 x i64> [[RES]]
   return SVE_ACLE_FUNC(svdup_lane,_s64,,)(data, index);
 }
 
@@ -725,11 +731,11 @@ svuint8_t test_svdup_lane_u8(svuint8_t data, uint8_t index) MODE_ATTR
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u8i, !cir.vector<[16] x !u8i>
 // CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[16] x !u8i>, !cir.vector<[16] x !u8i>) -> !cir.vector<[16] x !u8i>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 16 x i8> [[DATA:%.*]], i8{{.*}} [[INDEX:%.*]])
-// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[INDEX]], i64 0
-// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.tbl.nxv16i8(<vscale x 16 x i8> [[DATA]], <vscale x 16 x i8> [[DOTSPLAT]])
-// LLVM_OGCG_CIR:    ret <vscale x 16 x i8> [[RES]]
+// LLVM-SAME:    <vscale x 16 x i8> [[DATA:%.*]], i8{{.*}} [[INDEX:%.*]])
+// LLVM:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[INDEX]], i64 0
+// LLVM:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[DOTSPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+// LLVM:    [[RES:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.tbl.nxv16i8(<vscale x 16 x i8> [[DATA]], <vscale x 16 x i8> [[DOTSPLAT]])
+// LLVM:    ret <vscale x 16 x i8> [[RES]]
   return SVE_ACLE_FUNC(svdup_lane,_u8,,)(data, index);
 }
 
@@ -739,11 +745,11 @@ svuint16_t test_svdup_lane_u16(svuint16_t data, uint16_t index) MODE_ATTR
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u16i, !cir.vector<[8] x !u16i>
 // CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[8] x !u16i>, !cir.vector<[8] x !u16i>) -> !cir.vector<[8] x !u16i>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 8 x i16> [[DATA:%.*]], i16{{.*}} [[INDEX:%.*]])
-// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[INDEX]], i64 0
-// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tbl.nxv8i16(<vscale x 8 x i16> [[DATA]], <vscale x 8 x i16> [[DOTSPLAT]])
-// LLVM_OGCG_CIR:    ret <vscale x 8 x i16> [[RES]]
+// LLVM-SAME:    <vscale x 8 x i16> [[DATA:%.*]], i16{{.*}} [[INDEX:%.*]])
+// LLVM:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[INDEX]], i64 0
+// LLVM:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tbl.nxv8i16(<vscale x 8 x i16> [[DATA]], <vscale x 8 x i16> [[DOTSPLAT]])
+// LLVM:    ret <vscale x 8 x i16> [[RES]]
   return SVE_ACLE_FUNC(svdup_lane,_u16,,)(data, index);
 }
 
@@ -753,11 +759,11 @@ svuint32_t test_svdup_lane_u32(svuint32_t data, uint32_t index) MODE_ATTR
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u32i, !cir.vector<[4] x !u32i>
 // CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[4] x !u32i>, !cir.vector<[4] x !u32i>) -> !cir.vector<[4] x !u32i>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 4 x i32> [[DATA:%.*]], i32{{.*}} [[INDEX:%.*]])
-// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[INDEX]], i64 0
-// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.tbl.nxv4i32(<vscale x 4 x i32> [[DATA]], <vscale x 4 x i32> [[DOTSPLAT]])
-// LLVM_OGCG_CIR:    ret <vscale x 4 x i32> [[RES]]
+// LLVM-SAME:    <vscale x 4 x i32> [[DATA:%.*]], i32{{.*}} [[INDEX:%.*]])
+// LLVM:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[INDEX]], i64 0
+// LLVM:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM:    [[RES:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.tbl.nxv4i32(<vscale x 4 x i32> [[DATA]], <vscale x 4 x i32> [[DOTSPLAT]])
+// LLVM:    ret <vscale x 4 x i32> [[RES]]
   return SVE_ACLE_FUNC(svdup_lane,_u32,,)(data, index);
 }
 
@@ -767,11 +773,11 @@ svuint64_t test_svdup_lane_u64(svuint64_t data, uint64_t index) MODE_ATTR
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u64i, !cir.vector<[2] x !u64i>
 // CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[2] x !u64i>, !cir.vector<[2] x !u64i>) -> !cir.vector<[2] x !u64i>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 2 x i64> [[DATA:%.*]], i64{{.*}} [[INDEX:%.*]])
-// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[INDEX]], i64 0
-// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.tbl.nxv2i64(<vscale x 2 x i64> [[DATA]], <vscale x 2 x i64> [[DOTSPLAT]])
-// LLVM_OGCG_CIR:    ret <vscale x 2 x i64> [[RES]]
+// LLVM-SAME:    <vscale x 2 x i64> [[DATA:%.*]], i64{{.*}} [[INDEX:%.*]])
+// LLVM:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[INDEX]], i64 0
+// LLVM:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM:    [[RES:%.*]] = call <vscale x 2 x i64> @llvm.aarch64.sve.tbl.nxv2i64(<vscale x 2 x i64> [[DATA]], <vscale x 2 x i64> [[DOTSPLAT]])
+// LLVM:    ret <vscale x 2 x i64> [[RES]]
   return SVE_ACLE_FUNC(svdup_lane,_u64,,)(data, index);
 }
 
@@ -781,11 +787,11 @@ svfloat16_t test_svdup_lane_f16(svfloat16_t data, uint16_t index) MODE_ATTR
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u16i, !cir.vector<[8] x !u16i>
 // CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[8] x !cir.f16>, !cir.vector<[8] x !u16i>) -> !cir.vector<[8] x !cir.f16>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 8 x half> [[DATA:%.*]], i16{{.*}} [[INDEX:%.*]])
-// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[INDEX]], i64 0
-// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.tbl.nxv8f16(<vscale x 8 x half> [[DATA]], <vscale x 8 x i16> [[DOTSPLAT]])
-// LLVM_OGCG_CIR:    ret <vscale x 8 x half> [[RES]]
+// LLVM-SAME:    <vscale x 8 x half> [[DATA:%.*]], i16{{.*}} [[INDEX:%.*]])
+// LLVM:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[INDEX]], i64 0
+// LLVM:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// LLVM:    [[RES:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.tbl.nxv8f16(<vscale x 8 x half> [[DATA]], <vscale x 8 x i16> [[DOTSPLAT]])
+// LLVM:    ret <vscale x 8 x half> [[RES]]
   return SVE_ACLE_FUNC(svdup_lane,_f16,,)(data, index);
 }
 
@@ -795,11 +801,11 @@ svfloat32_t test_svdup_lane_f32(svfloat32_t data, uint32_t index) MODE_ATTR
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u32i, !cir.vector<[4] x !u32i>
 // CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[4] x !cir.float>, !cir.vector<[4] x !u32i>) -> !cir.vector<[4] x !cir.float>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 4 x float> [[DATA:%.*]], i32{{.*}} [[INDEX:%.*]])
-// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[INDEX]], i64 0
-// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.tbl.nxv4f32(<vscale x 4 x float> [[DATA]], <vscale x 4 x i32> [[DOTSPLAT]])
-// LLVM_OGCG_CIR:    ret <vscale x 4 x float> [[RES]]
+// LLVM-SAME:    <vscale x 4 x float> [[DATA:%.*]], i32{{.*}} [[INDEX:%.*]])
+// LLVM:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[INDEX]], i64 0
+// LLVM:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+// LLVM:    [[RES:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.tbl.nxv4f32(<vscale x 4 x float> [[DATA]], <vscale x 4 x i32> [[DOTSPLAT]])
+// LLVM:    ret <vscale x 4 x float> [[RES]]
   return SVE_ACLE_FUNC(svdup_lane,_f32,,)(data, index);
 }
 
@@ -809,10 +815,10 @@ svfloat64_t test_svdup_lane_f64(svfloat64_t data, uint64_t index) MODE_ATTR
 // CIR:   [[SPLAT:%.*]] = cir.vec.splat {{.*}} : !u64i, !cir.vector<[2] x !u64i>
 // CIR:   cir.call_llvm_intrinsic "aarch64.sve.tbl" {{.*}}, [[SPLAT]] : (!cir.vector<[2] x !cir.double>, !cir.vector<[2] x !u64i>) -> !cir.vector<[2] x !cir.double>
 
-// LLVM_OGCG_CIR-SAME:    <vscale x 2 x double> [[DATA:%.*]], i64{{.*}} [[INDEX:%.*]])
-// LLVM_OGCG_CIR:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[INDEX]], i64 0
-// LLVM_OGCG_CIR:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
-// LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.tbl.nxv2f64(<vscale x 2 x double> [[DATA]], <vscale x 2 x i64> [[DOTSPLAT]])
-// LLVM_OGCG_CIR:    ret <vscale x 2 x double> [[RES]]
+// LLVM-SAME:    <vscale x 2 x double> [[DATA:%.*]], i64{{.*}} [[INDEX:%.*]])
+// LLVM:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[INDEX]], i64 0
+// LLVM:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+// LLVM:    [[RES:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.tbl.nxv2f64(<vscale x 2 x double> [[DATA]], <vscale x 2 x i64> [[DOTSPLAT]])
+// LLVM:    ret <vscale x 2 x double> [[RES]]
   return SVE_ACLE_FUNC(svdup_lane,_f64,,)(data, index);
 }

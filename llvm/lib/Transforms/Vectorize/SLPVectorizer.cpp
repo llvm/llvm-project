@@ -5528,67 +5528,6 @@ BoUpSLP::~BoUpSLP() {
 #endif
 }
 
-/// Reorders the given \p Reuses mask according to the given \p Mask. \p Reuses
-/// contains original mask for the scalars reused in the node. Procedure
-/// transform this mask in accordance with the given \p Mask.
-static void reorderReuses(SmallVectorImpl<int> &Reuses, ArrayRef<int> Mask) {
-  assert(!Mask.empty() && Reuses.size() == Mask.size() &&
-         "Expected non-empty mask.");
-  SmallVector<int> Prev(Reuses.begin(), Reuses.end());
-  Prev.swap(Reuses);
-  for (unsigned I = 0, E = Prev.size(); I < E; ++I)
-    if (Mask[I] != PoisonMaskElem)
-      Reuses[Mask[I]] = Prev[I];
-}
-
-/// Reorders the given \p Order according to the given \p Mask. \p Order - is
-/// the original order of the scalars. Procedure transforms the provided order
-/// in accordance with the given \p Mask. If the resulting \p Order is just an
-/// identity order, \p Order is cleared.
-static void reorderOrder(SmallVectorImpl<unsigned> &Order, ArrayRef<int> Mask,
-                         bool BottomOrder = false) {
-  assert(!Mask.empty() && "Expected non-empty mask.");
-  unsigned Sz = Mask.size();
-  if (BottomOrder) {
-    SmallVector<unsigned> PrevOrder;
-    if (Order.empty()) {
-      PrevOrder.resize(Sz);
-      std::iota(PrevOrder.begin(), PrevOrder.end(), 0);
-    } else {
-      PrevOrder.swap(Order);
-    }
-    Order.assign(Sz, Sz);
-    for (unsigned I = 0; I < Sz; ++I)
-      if (Mask[I] != PoisonMaskElem)
-        Order[I] = PrevOrder[Mask[I]];
-    if (all_of(enumerate(Order), [&](const auto &Data) {
-          return Data.value() == Sz || Data.index() == Data.value();
-        })) {
-      Order.clear();
-      return;
-    }
-    fixupOrderingIndices(Order);
-    return;
-  }
-  SmallVector<int> MaskOrder;
-  if (Order.empty()) {
-    MaskOrder.resize(Sz);
-    std::iota(MaskOrder.begin(), MaskOrder.end(), 0);
-  } else {
-    inversePermutation(Order, MaskOrder);
-  }
-  reorderReuses(MaskOrder, Mask);
-  if (ShuffleVectorInst::isIdentityMask(MaskOrder, Sz)) {
-    Order.clear();
-    return;
-  }
-  Order.assign(Sz, Sz);
-  for (unsigned I = 0; I < Sz; ++I)
-    if (MaskOrder[I] != PoisonMaskElem)
-      Order[MaskOrder[I]] = I;
-  fixupOrderingIndices(Order);
-}
-
 std::optional<BoUpSLP::OrdersType>
 BoUpSLP::findReusedOrderedScalars(const BoUpSLP::TreeEntry &TE,
                                   bool TopToBottom, bool IgnoreReorder) {
@@ -5808,16 +5747,6 @@ static Align computeCommonAlignment(ArrayRef<Value *> VL) {
   for (Value *V : VL)
     CommonAlignment = std::min(CommonAlignment, cast<T>(V)->getAlign());
   return CommonAlignment;
-}
-
-/// Check if \p Order represents reverse order.
-static bool isReverseOrder(ArrayRef<unsigned> Order) {
-  assert(!Order.empty() &&
-         "Order is empty. Please check it before using isReverseOrder.");
-  unsigned Sz = Order.size();
-  return all_of(enumerate(Order), [&](const auto &Pair) {
-    return Pair.value() == Sz || Sz - Pair.index() - 1 == Pair.value();
-  });
 }
 
 /// Checks if the provided list of pointers \p Pointers represents the strided
@@ -7488,21 +7417,6 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
   return std::nullopt;
 }
 
-/// Checks if the given mask is a "clustered" mask with the same clusters of
-/// size \p Sz, which are not identity submasks.
-static bool isRepeatedNonIdentityClusteredMask(ArrayRef<int> Mask,
-                                               unsigned Sz) {
-  ArrayRef<int> FirstCluster = Mask.slice(0, Sz);
-  if (ShuffleVectorInst::isIdentityMask(FirstCluster, Sz))
-    return false;
-  for (unsigned I = Sz, E = Mask.size(); I < E; I += Sz) {
-    ArrayRef<int> Cluster = Mask.slice(I, Sz);
-    if (Cluster != FirstCluster)
-      return false;
-  }
-  return true;
-}
-
 void BoUpSLP::reorderNodeWithReuses(TreeEntry &TE, ArrayRef<int> Mask) const {
   // Reorder reuses mask.
   reorderReuses(TE.ReuseShuffleIndices, Mask);
@@ -7528,28 +7442,6 @@ void BoUpSLP::reorderNodeWithReuses(TreeEntry &TE, ArrayRef<int> Mask) const {
             *End = TE.ReuseShuffleIndices.end();
        It != End; std::advance(It, Sz))
     std::iota(It, std::next(It, Sz), 0);
-}
-
-static void combineOrders(MutableArrayRef<unsigned> Order,
-                          ArrayRef<unsigned> SecondaryOrder) {
-  assert((SecondaryOrder.empty() || Order.size() == SecondaryOrder.size()) &&
-         "Expected same size of orders");
-  size_t Sz = Order.size();
-  SmallBitVector UsedIndices(Sz);
-  for (unsigned Idx : seq<unsigned>(0, Sz)) {
-    if (Order[Idx] != Sz)
-      UsedIndices.set(Order[Idx]);
-  }
-  if (SecondaryOrder.empty()) {
-    for (unsigned Idx : seq<unsigned>(0, Sz))
-      if (Order[Idx] == Sz && !UsedIndices.test(Idx))
-        Order[Idx] = Idx;
-  } else {
-    for (unsigned Idx : seq<unsigned>(0, Sz))
-      if (SecondaryOrder[Idx] != Sz && Order[Idx] == Sz &&
-          !UsedIndices.test(SecondaryOrder[Idx]))
-        Order[Idx] = SecondaryOrder[Idx];
-  }
 }
 
 bool BoUpSLP::isProfitableToReorder() const {
