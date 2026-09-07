@@ -20045,7 +20045,7 @@ static SDValue performSETCCCombine(SDNode *N,
         isPowerOf2_32(-uint32_t(AndRHSInt)) && (N1Int & AndRHSInt) == N1Int) {
       unsigned ShiftBits = llvm::countr_zero(AndRHSInt);
       int64_t NewC = SignExtend64<32>(N1Int) >> ShiftBits;
-      if (NewC >= -2048 && NewC <= 2048) {
+      if (ShiftBits != 0 && NewC >= -2048 && NewC <= 2048) {
         SDValue SExt =
             DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, OpVT, N0.getOperand(0),
                         DAG.getValueType(MVT::i32));
