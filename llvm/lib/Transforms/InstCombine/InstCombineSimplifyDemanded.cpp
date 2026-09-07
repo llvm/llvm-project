@@ -2005,7 +2005,6 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       // passes through unchanged to every vector operand.
       Intrinsic::ID IID = II->getIntrinsicID();
       if (isTriviallyVectorizable(IID)) {
-        APInt PoisonEltsAcc(VWidth, 0);
         for (Use &Arg : II->args()) {
           unsigned OpNo = Arg.getOperandNo();
           // Scalar operands do not carry per-lane demand.
@@ -2013,12 +2012,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
             continue;
           APInt OpPoisonElts(VWidth, 0);
           simplifyAndSetOp(II, OpNo, DemandedElts, OpPoisonElts);
-          PoisonEltsAcc |= OpPoisonElts;
         }
-        // A result lane is poison if any operand lane is poison, but only for
-        // intrinsics that are known to propagate poison elementwise.
-        if (intrinsicPropagatesPoison(IID))
-          PoisonElts = PoisonEltsAcc;
       }
       break;
     }
