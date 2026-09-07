@@ -30,7 +30,6 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -327,7 +326,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
       for (auto T : {MVT::v2i64, MVT::v2f64})
         setOperationAction(Op, T, Expand);
 
-    // But saturating fp_to_int converstions are
+    // But saturating fp_to_int conversions are
     for (auto Op : {ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT}) {
       setOperationAction(Op, MVT::v4i32, Custom);
       if (Subtarget->hasFP16()) {
@@ -390,8 +389,8 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
         setOperationAction(Op, T, Expand);
 
   // There is no vector conditional select instruction
-  for (auto T :
-       {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64, MVT::v2f64})
+  for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
+                 MVT::v2f64, MVT::v8f16})
     setOperationAction(ISD::SELECT_CC, T, Expand);
 
   // We have custom switch handling.
@@ -608,7 +607,7 @@ static MachineBasicBlock *LowerFPToInt(MachineInstr &MI, DebugLoc DL,
 }
 
 // Lower a `MEMCPY` instruction into a CFG triangle around a `MEMORY_COPY`
-// instuction to handle the zero-length case.
+// instruction to handle the zero-length case.
 static MachineBasicBlock *LowerMemcpy(MachineInstr &MI, DebugLoc DL,
                                       MachineBasicBlock *BB,
                                       const TargetInstrInfo &TII, bool Int64) {
@@ -700,7 +699,7 @@ static MachineBasicBlock *LowerMemcpy(MachineInstr &MI, DebugLoc DL,
 }
 
 // Lower a `MEMSET` instruction into a CFG triangle around a `MEMORY_FILL`
-// instuction to handle the zero-length case.
+// instruction to handle the zero-length case.
 static MachineBasicBlock *LowerMemset(MachineInstr &MI, DebugLoc DL,
                                       MachineBasicBlock *BB,
                                       const TargetInstrInfo &TII, bool Int64) {
@@ -2122,7 +2121,7 @@ SDValue WebAssemblyTargetLowering::LowerGlobalAddress(SDValue Op,
 
   unsigned OperandFlags = 0;
   const GlobalValue *GV = GA->getGlobal();
-  // Since WebAssembly tables cannot yet be shared accross modules, we don't
+  // Since WebAssembly tables cannot yet be shared across modules, we don't
   // need special treatment for tables in PIC mode.
   if (isPositionIndependent() &&
       !WebAssembly::isWebAssemblyTableType(GV->getValueType())) {

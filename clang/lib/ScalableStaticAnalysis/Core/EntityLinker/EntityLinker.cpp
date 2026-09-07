@@ -60,11 +60,11 @@ static constexpr const char *NoMemberForTargetTriple =
 
 } // namespace ErrorMessages
 
-static NestedBuildNamespace
-resolveNamespace(const NestedBuildNamespace &LUNamespace,
-                 const NestedBuildNamespace &TUNamespace,
-                 const NestedBuildNamespace &EntityNamespace,
-                 EntityLinkageType Linkage) {
+NestedBuildNamespace
+clang::ssaf::resolveNamespace(const NestedBuildNamespace &LUNamespace,
+                              const NestedBuildNamespace &TUNamespace,
+                              const NestedBuildNamespace &EntityNamespace,
+                              EntityLinkageType Linkage) {
   switch (Linkage) {
   case EntityLinkageType::None:
   case EntityLinkageType::Internal:

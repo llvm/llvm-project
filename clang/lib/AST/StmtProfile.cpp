@@ -2243,7 +2243,11 @@ StmtProfiler::VisitLambdaExpr(const LambdaExpr *S) {
     else if (auto *FD = dyn_cast<FunctionDecl>(SubDecl))
       Call = FD;
 
-    if (!Call)
+    // Ignore implicit conversion functions and __invoke. They are not
+    // part of the lambda signature.
+    // Semantically, it is better to use `getLambdaCallOperator` but that may
+    // not be properly deserialized yet.
+    if (!Call || Call->getOverloadedOperator() != OO_Call)
       continue;
 
     Hasher.AddFunctionDecl(Call, /*SkipBody=*/true);

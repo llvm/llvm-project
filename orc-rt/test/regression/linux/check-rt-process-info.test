@@ -1,0 +1,4 @@
+# RUN: orc-rt-process-info-check --print-triple --print-page-size | FileCheck %s
+
+# CHECK: -linux
+# CHECK-NEXT: {{4096|16384}}

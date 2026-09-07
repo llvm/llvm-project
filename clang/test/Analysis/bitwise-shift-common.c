@@ -91,10 +91,7 @@ int too_large_right_operand_symbolic(int left, int right) {
 }
 
 unsigned huge_right_operand_symbolic(unsigned x, unsigned long long t) {
-  // FIXME: the 'Assuming' note below prints the literal via APInt's stream
-  // operator, which always formats as signed, so 18000000000000000000 comes
-  // out as a bogus negative. That is a bug in ConditionBRVisitor.
-  // expected-note@+2 {{Assuming 't' is >= -446744073709551616}}
+  // expected-note@+2 {{Assuming 't' is >= 18000000000000000000}}
   // expected-note@+1 {{Taking false branch}}
   if (t < 18000000000000000000ULL)
     return 0;

@@ -337,6 +337,12 @@ class RISCVSImmOp<int bitsNum> : RISCVOp {
 class RISCVSImmLeafOp<int bitsNum> :
   RISCVSImmOp<bitsNum>, ImmLeaf<XLenVT, "return isInt<" # bitsNum # ">(Imm);">;
 
+// Variant of RISCVSImmLeafOp for memory-operand offsets that may be omitted
+// entirely, e.g. "qc.e.lb a0, (a1)". See OptionalMemOffsetAsmOperand.
+class OptionalSImmLeafOp<int bitsNum> : RISCVSImmLeafOp<bitsNum> {
+  let ParserMatchClass = OptionalMemOffsetAsmOperand<SImmAsmOperand<bitsNum>>;
+}
+
 def FenceArg : AsmOperandClass {
   let Name = "FenceArg";
   let RenderMethod = "addFenceArgOperands";
@@ -1669,6 +1675,13 @@ def : PatGprSimm12<setult, SLTIU>;
 // These ComplexPatterns must be used in pairs.
 def riscv_setne : ComplexPattern<XLenVT, 1, "selectSETNE", [setcc]>;
 def riscv_seteq : ComplexPattern<XLenVT, 1, "selectSETEQ", [setcc]>;
+def riscv_setne_oneuse : ComplexPattern<XLenVT, 1, "selectSETNE<true>">;
+def riscv_seteq_oneuse : ComplexPattern<XLenVT, 1, "selectSETEQ<true>">;
+
+// Check that the value is known to be 0 or 1, i.e. a boolean value.
+def zero_or_one : PatLeaf<(XLenVT GPR:$src), [{
+  return CurDAG->computeKnownBits(SDValue(N, 0)).getMaxValue().ule(1);
+}]>;
 
 // Define pattern expansions for setcc operations that aren't directly
 // handled by a RISC-V instruction.

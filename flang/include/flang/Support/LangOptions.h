@@ -18,6 +18,7 @@
 #include <string>
 #include <vector>
 
+#include "llvm/Frontend/OpenMP/OMPVersion.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace Fortran::common {
@@ -100,6 +101,10 @@ public:
 
   /// List of triples passed in using -fopenmp-targets.
   std::vector<llvm::Triple> OMPTargetTriples;
+
+  llvm::omp::Version getOpenMPVersion() const {
+    return llvm::omp::Version(OpenMPVersion);
+  }
 
   LangOptions();
 };

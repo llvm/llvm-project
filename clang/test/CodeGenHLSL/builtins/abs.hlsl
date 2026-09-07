@@ -155,6 +155,13 @@ uint3 test_abs_uint3(uint3 p0) { return abs(p0); }
 // CHECK-NEXT: ret <4 x i32> [[Val]]
 uint4 test_abs_uint4(uint4 p0) { return abs(p0); }
 
+// CHECK-LABEL: define {{.*}}hlsl3abs{{.*}}(<5 x i32
+// CHECK: [[Alloca:%.*]] = alloca <5 x i32>
+// CHECK-NEXT: store <5 x i32> {{%.*}}, ptr [[Alloca]]
+// CHECK-NEXT: [[Val:%.*]] = load <5 x i32>, ptr [[Alloca]]
+// CHECK-NEXT: ret <5 x i32> [[Val]]
+vector<uint, 5> test_abs_uint5(vector<uint, 5> p0) { return abs(p0); }
+
 // CHECK-LABEL: define {{.*}}hlsl3abs{{.*}}(i64
 // CHECK: [[Alloca:%.*]] = alloca i64
 // CHECK-NEXT: store i64 {{%.*}}, ptr [[Alloca]]
