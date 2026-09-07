@@ -894,9 +894,8 @@ bool IdentifierNamingCheck::matchesStyle(
 
   if (!Name.consume_front(Style.Prefix))
     return false;
-  if (AllowTrailingUnderscore)
-    Name.consume_back("_");
-  if (!Name.consume_back(Style.Suffix))
+  if (!((AllowTrailingUnderscore && Name.consume_back(Style.Suffix + "_")) ||
+        Name.consume_back(Style.Suffix)))
     return false;
   if (IdentifierNamingCheck::HungarianPrefixType::HPT_Off != Style.HPType) {
     const std::string HNPrefix = HungarianNotation.getPrefix(Decl, HNOption);
@@ -1108,8 +1107,9 @@ std::string IdentifierNamingCheck::fixupWithStyle(
     const Decl *D, bool AllowTrailingUnderscore) const {
   Name.consume_front(Style.Prefix);
   const bool KeepTrailingUnderscore =
-      AllowTrailingUnderscore && Name.consume_back("_");
-  Name.consume_back(Style.Suffix);
+      AllowTrailingUnderscore && Name.consume_back(Style.Suffix + "_");
+  if (!KeepTrailingUnderscore)
+    Name.consume_back(Style.Suffix);
   std::string Fixed = fixupWithCase(
       Type, Name, D, Style, HNOption,
       Style.Case.value_or(IdentifierNamingCheck::CaseType::CT_AnyCase));

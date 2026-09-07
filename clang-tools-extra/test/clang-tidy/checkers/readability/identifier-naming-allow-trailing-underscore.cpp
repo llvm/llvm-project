@@ -6,6 +6,8 @@
 // RUN:     readability-identifier-naming.LambdaCaptureCase: camel_Snake_Back, \
 // RUN:     readability-identifier-naming.MemberCase: lower_case, \
 // RUN:     readability-identifier-naming.MemberSuffix: '_impl', \
+// RUN:     readability-identifier-naming.GlobalConstantCase: lower_case, \
+// RUN:     readability-identifier-naming.GlobalConstantSuffix: '_sfx_', \
 // RUN:   }}'
 
 // RUN: %check_clang_tidy -std=c++14-or-later -check-suffixes=ALLOWED %s \
@@ -18,6 +20,8 @@
 // RUN:     readability-identifier-naming.LambdaCaptureCase: camel_Snake_Back, \
 // RUN:     readability-identifier-naming.MemberCase: lower_case, \
 // RUN:     readability-identifier-naming.MemberSuffix: '_impl', \
+// RUN:     readability-identifier-naming.GlobalConstantCase: lower_case, \
+// RUN:     readability-identifier-naming.GlobalConstantSuffix: '_sfx_', \
 // RUN:   }}'
 
 void Positive(int TRANSLATOR) {
@@ -70,3 +74,15 @@ struct MemberSuffix {
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for member 'foo_impl_'
   // CHECK-FIXES: int foo_impl_impl;
 };
+
+const int good_sfx_ = 1;
+
+const int Bad_sfx_ = 1;
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: invalid case style for global constant 'Bad_sfx_'
+// CHECK-MESSAGES-ALLOWED: :[[@LINE-2]]:11: warning: invalid case style for global constant 'Bad_sfx_'
+// CHECK-FIXES: const int bad_sfx_ = 1;
+// CHECK-FIXES-ALLOWED: const int bad_sfx_ = 1;
+
+const int good_sfx__ = 1;
+// CHECK-MESSAGES: :[[@LINE-1]]:11: warning: invalid case style for global constant 'good_sfx__'
+// CHECK-FIXES: const int good_sfx_sfx_ = 1;
