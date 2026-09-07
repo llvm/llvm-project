@@ -131,6 +131,18 @@ public:
   void HandleTranslationUnit(ASTContext &C) override {
     Gen->HandleTranslationUnit(C);
 
+    mlir::ModuleOp MlirModule = Gen->getModule();
+    mlir::MLIRContext &MlirCtx = Gen->getMLIRContext();
+
+    SourceManager &ClangSourceMgr = C.getSourceManager();
+    FileID MainFileID = ClangSourceMgr.getMainFileID();
+    std::unique_ptr<llvm::MemoryBuffer> FileBuf =
+        llvm::MemoryBuffer::getMemBuffer(
+            ClangSourceMgr.getBufferOrFake(MainFileID));
+    llvm::SourceMgr MlirSourceMgr;
+    MlirSourceMgr.AddNewSourceBuffer(std::move(FileBuf), llvm::SMLoc());
+    mlir::SourceMgrDiagnosticHandler DiagnosticHandler(MlirSourceMgr, &MlirCtx);
+
     if (!FEOptions.ClangIRDisableCIRVerifier) {
       if (!Gen->verifyModule()) {
         // Verifier output already routed through ClangIRDiagnosticHandler.
@@ -143,9 +155,6 @@ public:
         return;
       }
     }
-
-    mlir::ModuleOp MlirModule = Gen->getModule();
-    mlir::MLIRContext &MlirCtx = Gen->getMLIRContext();
 
     if (!FEOptions.ClangIRDisablePasses) {
       std::string LibOptOptions = FEOptions.ClangIRLibOptOptions;
