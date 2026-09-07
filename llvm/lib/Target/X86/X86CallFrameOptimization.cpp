@@ -496,6 +496,26 @@ void X86CallFrameOptimizationImpl::collectCallInfo(
     if (*MMI != nullptr)
       return;
 
+  // If the push sequence needs alignment padding, PEI emits a stack adjust
+  // before the pushes and then resolves frame-index LEAs against that
+  // adjusted RSP. The LEA then captures the padding address instead of the
+  // local (PR210756). Keep the mov-to-stack form in that case.
+  if (!isAligned(TFL->getStackAlign(), Context.ExpectedDist)) {
+    for (MachineBasicBlock::iterator J = std::next(FrameSetup);
+         J != Context.Call->getIterator(); ++J) {
+      switch (J->getOpcode()) {
+      case X86::LEA16r:
+      case X86::LEA32r:
+      case X86::LEA64_32r:
+      case X86::LEA64r:
+        for (const MachineOperand &MO : J->operands())
+          if (MO.isFI())
+            return;
+        break;
+      }
+    }
+  }
+
   Context.UsePush = true;
 }
 
