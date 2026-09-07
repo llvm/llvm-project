@@ -2,6 +2,12 @@
 // RUN:   -mmlir --mlir-print-ir-before=cir-target-lowering \
 // RUN:   %s -o %t.cir 2> %t.pre.cir
 // RUN: FileCheck %s --check-prefix=CIR --input-file=%t.pre.cir
+// RUN: %clang_cc1 -x cl -triple spirv64-unknown-unknown -cl-std=CL2.0 \
+// RUN:   -fclangir -emit-llvm -O0 %s -o %t.cir.ll
+// RUN: FileCheck %s --check-prefix=LLVM --input-file=%t.cir.ll
+// RUN: %clang_cc1 -x cl -triple spirv64-unknown-unknown -cl-std=CL2.0 \
+// RUN:   -emit-llvm -O0 %s -o %t.ogcg.ll
+// RUN: FileCheck %s --check-prefix=LLVM --input-file=%t.ogcg.ll
 
 void address_space_conversions(global int *global_ptr,
                                generic int *generic_ptr,
@@ -12,33 +18,20 @@ void address_space_conversions(global int *global_ptr,
 }
 
 // CIR-LABEL: cir.func dso_local @address_space_conversions
+// CIR: cir.cast address_space
+// CIR-SAME: !cir.ptr<!s32i, lang_address_space(offload_global)>
+// CIR-SAME: !cir.ptr<!s32i, lang_address_space(offload_generic)>
+// CIR: cir.cast address_space
+// CIR-SAME: !cir.ptr<!s32i, lang_address_space(offload_private)>
+// CIR-SAME: !cir.ptr<!s32i, lang_address_space(offload_generic)>
+// CIR: cir.cast address_space
+// CIR-SAME: !cir.ptr<!s32i, lang_address_space(offload_generic)>
+// CIR-SAME: !cir.ptr<!s32i, lang_address_space(offload_global)>
 
-// Alloca slots for each parameter (outer type is pointer-to-pointer, no outer
-// address space yet — the inner pointer carries the OpenCL address space).
-// CIR:   %[[GLOBAL_PTR_ALLOCA:.*]] = cir.alloca "global_ptr" {{.*}} : !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_global)>>
-// CIR:   %[[GENERIC_PTR_ALLOCA:.*]] = cir.alloca "generic_ptr" {{.*}} : !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_generic)>>
-// CIR:   %[[PRIVATE_PTR_ALLOCA:.*]] = cir.alloca "private_ptr" {{.*}} : !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_private)>>
-
-// Each alloca is immediately cast to add offload_private on the outer pointer.
-// All subsequent loads/stores go through these cast results.
-// CIR:   %[[GLOBAL_SLOT:.*]] = cir.cast address_space %[[GLOBAL_PTR_ALLOCA]] : !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_global)>> -> !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_global)>, lang_address_space(offload_private)>
-// CIR:   cir.store %arg0, %[[GLOBAL_SLOT]] : !cir.ptr<!s32i, lang_address_space(offload_global)>, !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_global)>, lang_address_space(offload_private)>
-// CIR:   %[[GENERIC_SLOT:.*]] = cir.cast address_space %[[GENERIC_PTR_ALLOCA]] : !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_generic)>> -> !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_generic)>, lang_address_space(offload_private)>
-// CIR:   cir.store %arg1, %[[GENERIC_SLOT]] : !cir.ptr<!s32i, lang_address_space(offload_generic)>, !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_generic)>, lang_address_space(offload_private)>
-// CIR:   %[[PRIVATE_SLOT:.*]] = cir.cast address_space %[[PRIVATE_PTR_ALLOCA]] : !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_private)>> -> !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_private)>, lang_address_space(offload_private)>
-// CIR:   cir.store %arg2, %[[PRIVATE_SLOT]] : !cir.ptr<!s32i, lang_address_space(offload_private)>, !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_private)>, lang_address_space(offload_private)>
-
-// generic_ptr = global_ptr  -->  load global_ptr slot, cast global -> generic, store into generic_ptr slot
-// CIR:   %[[GLOBAL_VAL:.*]] = cir.load {{.*}} %[[GLOBAL_SLOT]] : !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_global)>, lang_address_space(offload_private)>, !cir.ptr<!s32i, lang_address_space(offload_global)>
-// CIR:   %[[GLOBAL_TO_GENERIC:.*]] = cir.cast address_space %[[GLOBAL_VAL]] : !cir.ptr<!s32i, lang_address_space(offload_global)> -> !cir.ptr<!s32i, lang_address_space(offload_generic)>
-// CIR:   cir.store {{.*}} %[[GLOBAL_TO_GENERIC]], %[[GENERIC_SLOT]] : !cir.ptr<!s32i, lang_address_space(offload_generic)>, !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_generic)>, lang_address_space(offload_private)>
-
-// generic_ptr = private_ptr  -->  load private_ptr slot, cast private -> generic, store into generic_ptr slot
-// CIR:   %[[PRIVATE_VAL:.*]] = cir.load {{.*}} %[[PRIVATE_SLOT]] : !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_private)>, lang_address_space(offload_private)>, !cir.ptr<!s32i, lang_address_space(offload_private)>
-// CIR:   %[[PRIVATE_TO_GENERIC:.*]] = cir.cast address_space %[[PRIVATE_VAL]] : !cir.ptr<!s32i, lang_address_space(offload_private)> -> !cir.ptr<!s32i, lang_address_space(offload_generic)>
-// CIR:   cir.store {{.*}} %[[PRIVATE_TO_GENERIC]], %[[GENERIC_SLOT]] : !cir.ptr<!s32i, lang_address_space(offload_generic)>, !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_generic)>, lang_address_space(offload_private)>
-
-// global_ptr = (global int *)generic_ptr  -->  load generic_ptr slot, cast generic -> global, store into global_ptr slot
-// CIR:   %[[GENERIC_VAL:.*]] = cir.load {{.*}} %[[GENERIC_SLOT]] : !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_generic)>, lang_address_space(offload_private)>, !cir.ptr<!s32i, lang_address_space(offload_generic)>
-// CIR:   %[[GENERIC_TO_GLOBAL:.*]] = cir.cast address_space %[[GENERIC_VAL]] : !cir.ptr<!s32i, lang_address_space(offload_generic)> -> !cir.ptr<!s32i, lang_address_space(offload_global)>
-// CIR:   cir.store {{.*}} %[[GENERIC_TO_GLOBAL]], %[[GLOBAL_SLOT]] : !cir.ptr<!s32i, lang_address_space(offload_global)>, !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_global)>, lang_address_space(offload_private)>
+// LLVM-LABEL: define {{.*}}void @address_space_conversions
+// LLVM-SAME: ptr addrspace(1) noundef
+// LLVM-SAME: ptr addrspace(4) noundef
+// LLVM-SAME: ptr noundef
+// LLVM: addrspacecast ptr addrspace(1) %{{.*}} to ptr addrspace(4)
+// LLVM: addrspacecast ptr %{{.*}} to ptr addrspace(4)
+// LLVM: addrspacecast ptr addrspace(4) %{{.*}} to ptr addrspace(1)

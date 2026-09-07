@@ -14,12 +14,11 @@
 #include "llvm/ExecutionEngine/Orc/InProcessMemoryAccess.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/OrcRTBootstrap.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/TargetExecutionUtils.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Process.h"
 #include "llvm/TargetParser/Host.h"
-
-#include "TargetProcess/OrcRTBootstrap.h"
 
 #define DEBUG_TYPE "orc"
 

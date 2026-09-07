@@ -2890,14 +2890,14 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_COMPRESS(SDNode *N, SDValue &Lo,
   MachinePointerInfo PtrInfo = MachinePointerInfo::getFixedStack(
       MF, cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex());
 
-  EVT MaskVT = LoMask.getValueType();
-  assert(MaskVT.getScalarType() == MVT::i1 && "Expected vector of i1s");
+  EVT LoMaskVT = LoMask.getValueType();
+  assert(LoMaskVT.getScalarType() == MVT::i1 && "Expected vector of i1s");
 
   // We store LoVec and then insert HiVec starting at offset=|1s| in LoMask.
-  EVT WideMaskVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
-                                    MaskVT.getVectorElementCount());
-  SDValue WideMask = DAG.getNode(ISD::ZERO_EXTEND, DL, WideMaskVT, LoMask);
-  SDValue Offset = DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i32, WideMask);
+  EVT WideLoMaskVT = EVT::getVectorVT(*DAG.getContext(), MVT::i32,
+                                      LoMaskVT.getVectorElementCount());
+  SDValue WideLoMask = DAG.getNode(ISD::ZERO_EXTEND, DL, WideLoMaskVT, LoMask);
+  SDValue Offset = DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i32, WideLoMask);
   Offset = TLI.getVectorElementPointer(DAG, StackPtr, VecVT, Offset);
 
   SDValue Chain = DAG.getEntryNode();
@@ -5534,6 +5534,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
       Res = WidenVecRes_UnaryOpWithTwoResults(N, ResNo);
     break;
   }
+  case ISD::PARTIAL_REDUCE_FMLA:
+    Res = WidenVecRes_PARTIAL_REDUCE_MLA(N);
+    break;
   }
 
   // If Res is null, the sub-method took care of registering the result.
@@ -7592,6 +7595,16 @@ SDValue DAGTypeLegalizer::WidenVecRes_STRICT_FSETCC(SDNode *N) {
   ReplaceValueWith(SDValue(N, 1), NewChain);
 
   return DAG.getBuildVector(WidenVT, dl, Scalars);
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_PARTIAL_REDUCE_MLA(SDNode *N) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  // Expand, then widen the result.
+  SDValue Expanded = TLI.expandPartialReduceMLA(N, DAG);
+  EVT WideVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  return DAG.getInsertSubvector(DL, DAG.getPOISON(WideVT), Expanded, 0);
 }
 
 //===----------------------------------------------------------------------===//

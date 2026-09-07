@@ -850,10 +850,6 @@ public:
   LLVM_ABI bool matchTruncUSatUToFPTOUISat(MachineInstr &MI,
                                            MachineInstr &SrcMI) const;
 
-  /// Try to transform \p MI by using all of the above
-  /// combine functions. Returns true if changed.
-  LLVM_ABI bool tryCombine(MachineInstr &MI) const;
-
   /// Match:
   ///   (G_UMULO x, 2) -> (G_UADDO x, x)
   ///   (G_SMULO x, 2) -> (G_SADDO x, x)

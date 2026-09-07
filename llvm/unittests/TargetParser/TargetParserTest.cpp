@@ -2821,6 +2821,9 @@ TEST(TargetParserTest, testAMDGPUfillAMDGPUFeatureMap) {
 
   EXPECT_TRUE(HasFeature("gfx1250", "smem-prefetch-insts"));
   EXPECT_TRUE(HasFeature("gfx950", "bf16-cvt-insts"));
+
+  // A capability feature is queried through the bitset only.
+  EXPECT_FALSE(HasFeature("gfx1030", "half-addressable-physical-local-memory"));
 }
 
 TEST(TargetParserTest, testAMDGPUgetFeatureBitset) {
@@ -2854,6 +2857,21 @@ TEST(TargetParserTest, testAMDGPUgetFeatureBitset) {
   SmallVector<StringRef, 0> Empty;
   AMDGPU::getFeatureNames(AMDGPU::getFeatureBitset(AMDGPU::GK_NONE), Empty);
   EXPECT_TRUE(Empty.empty());
+}
+
+TEST(TargetParserTest, testAMDGPUHalfAddressableLDSFeature) {
+  auto Has = [](AMDGPU::GPUKind AK) {
+    return AMDGPU::getFeatureBitset(AK).test(
+        AMDGPU::FEAT_HALF_ADDRESSABLE_PHYSICAL_LOCAL_MEMORY);
+  };
+
+  // Only gfx10/11/12 address half of the physical LDS block.
+  EXPECT_FALSE(Has(AMDGPU::GK_GFX900));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX1030));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX1100));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX1200));
+  EXPECT_FALSE(Has(AMDGPU::GK_GFX1250));
+  EXPECT_FALSE(Has(AMDGPU::GK_GFX1310));
 }
 
 TEST(TargetParserTest, testAMDGPUfillValidArchListAMDGCN) {
@@ -3165,6 +3183,8 @@ TEST(TargetParserTest, testAMDGPUgetNumWorkGroupSIMDs) {
 TEST(TargetParserTest, testAMDGPUgetLDSBankCount) {
   EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch702), 16u);
   EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch900), 32u);
+  EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch942), 32u);
+  EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch950), 64u);
   EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch1030), 32u);
   EXPECT_EQ(AMDGPU::getLDSBankCount(Triple::AMDGPUSubArch1200), 32u);
   // gfx12.5 doubled the bank count.
@@ -3172,6 +3192,7 @@ TEST(TargetParserTest, testAMDGPUgetLDSBankCount) {
 
   // The GPUKind overload resolves to the same values.
   EXPECT_EQ(AMDGPU::getLDSBankCount(AMDGPU::GK_GFX900), 32u);
+  EXPECT_EQ(AMDGPU::getLDSBankCount(AMDGPU::GK_GFX950), 64u);
   EXPECT_EQ(AMDGPU::getLDSBankCount(AMDGPU::GK_GFX1250), 64u);
   EXPECT_EQ(AMDGPU::getLDSBankCount(AMDGPU::GK_GFX1251), 64u);
 }

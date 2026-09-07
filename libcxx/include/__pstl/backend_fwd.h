@@ -117,6 +117,13 @@ struct __find_first_of;
 //                       _ForwardIterator2 __first2, _ForwardIterator2 __last2, _Predicate __pred) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __find_end;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Predicate>
+// optional<_ForwardIterator1>
+// operator()(_Policy&&, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
+//                       _ForwardIterator2 __first2, _ForwardIterator2 __last2, _Predicate __pred) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __for_each;
 // template <class _Policy, class _ForwardIterator, class _Function>
 // optional<__empty>
@@ -193,6 +200,18 @@ struct __merge;
 // operator()(_Policy&&, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
 //                       _ForwardIterator2 __first2, _ForwardIterator2 __last2,
 //                       _ForwardOutIterator __result, _Comp __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __max_element;
+// template <class _Policy, class _ForwardIterator, class _Compare>
+// optional<_ForwardIterator>
+// operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __min_element;
+// template <class _Policy, class _ForwardIterator, class _Compare>
+// optional<_ForwardIterator>
+// operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
 struct __search_n;
@@ -330,6 +349,13 @@ struct __reduce;
 // optional<_Tp>
 // operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last,
 //                       _Tp __init, _BinaryOperation __op) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
+struct __is_heap_until;
+// template <class _Policy, class _RandomAccessIterator, class _Comp>
+// optional<bool>
+// operator()(_Policy&& __policy, _RandomAccessIterator __first, _RandomAccessIterator __last,
+//                                _Comp __comp) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
 struct __is_sorted;

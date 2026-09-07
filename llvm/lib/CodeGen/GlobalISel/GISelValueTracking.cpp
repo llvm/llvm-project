@@ -75,12 +75,6 @@ Align GISelValueTracking::computeKnownAlignment(Register R, unsigned Depth) {
   }
 }
 
-KnownBits GISelValueTracking::getKnownBits(MachineInstr &MI) {
-  assert(MI.getNumExplicitDefs() == 1 &&
-         "expected single return generic instruction");
-  return getKnownBits(MI.getOperand(0).getReg());
-}
-
 KnownBits GISelValueTracking::getKnownBits(Register R) {
   const LLT Ty = MRI.getType(R);
   // Since the number of lanes in a scalable vector is unknown at compile time,
@@ -2296,6 +2290,13 @@ bool GISelValueTracking::isKnownNeverNaN(Register Val, bool SNaN) {
     return FPClass.isKnownNever(fcSNan);
 
   return FPClass.isKnownNeverNaN();
+}
+
+bool GISelValueTracking::isKnownNeverLogicalZero(Register Val, unsigned Depth) {
+  KnownFPClass Known = computeKnownFPClass(Val, fcZero | fcSubnormal, Depth);
+  LLT Ty = MRI.getType(Val).getScalarType();
+  return Known.isKnownNeverLogicalZero(
+      MF.getDenormalMode(getFltSemanticForLLT(Ty)));
 }
 
 /// Compute number of sign bits for the intersection of \p Src0 and \p Src1
