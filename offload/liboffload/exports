@@ -55,9 +55,9 @@ global:
     llvm::omp::target::ompt::Initialized;
     llvm::omp::target::ompt::lookupCallbackByCode;
     llvm::omp::target::ompt::lookupCallbackByName;
-    createPlugin_*;
     # Temporary helpers to help transition of libomptarget to liboffload.
     __ol_tgt_setInfoFlag;
+    __ol_tgt_GetPluginFromPlatform;
   };
 local:
   *;
