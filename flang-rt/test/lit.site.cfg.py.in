@@ -11,6 +11,8 @@ config.flang_rt_output_resource_lib_dir = "@RUNTIMES_OUTPUT_RESOURCE_LIB_DIR@"
 config.flang_rt_output_resource_mod_dir = "@RUNTIMES_OUTPUT_RESOURCE_MOD_DIR@"
 config.flang_rt_experimental_offload_support = "@FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT@"
 config.flang_rt_fortran_modules = @FLANG_RT_FORTRAN_MODULES@
+# TODO: somehow needs to know what the C++ compiler is.
+config.clang_runtime_dir = "/home/davspi01/LLVM-22.1.1-Linux-ARM64/lib/clang/22/lib/aarch64-unknown-linux-gnu"
 config.cc = "@CMAKE_C_COMPILER@"
 config.flang = "@CMAKE_Fortran_COMPILER@"
 config.osx_sysroot = path(r"@CMAKE_OSX_SYSROOT@")
