@@ -255,7 +255,7 @@ features cannot lower the translation-unit ABI level;
 
 - Added the AArch64 option `-mharden-pac-ret=load-return-address` to harden
   return address signing against PACMAN attacks. The option requires return
-  address signing to be enabled and emits a load of the return address before
+  address signing to be enabled and emits a load from the return address before
   returning, reducing the cache side channel used to guess pointer
   authentication codes. See
   {doc}`Return Address Authentication Hardening <ReturnAddressAuthenticationHardening>`

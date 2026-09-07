@@ -6,8 +6,7 @@
 // RUN: %clang -target aarch64-none-elf -S -emit-llvm -o - -mbranch-protection=pac-ret+leaf  %s | FileCheck %s --check-prefix=CHECK --check-prefix=ALL
 // RUN: %clang -target aarch64-none-elf -S -emit-llvm -o - -mbranch-protection=pac-ret+b-key %s | FileCheck %s --check-prefix=CHECK --check-prefix=B-KEY
 // RUN: %clang -target aarch64-none-elf -S -emit-llvm -o - -mbranch-protection=bti %s           | FileCheck %s --check-prefix=CHECK --check-prefix=BTE
-// RUN: %clang -target aarch64-none-elf -S -emit-llvm -o - -mbranch-protection=pac-ret -mharden-pac-ret=load-return-address %s | \
-//      FileCheck %s --check-prefix=CHECK --check-prefixes=HARDEN
+// RUN: %clang -target aarch64-none-elf -S -emit-llvm -o - -mbranch-protection=pac-ret -mharden-pac-ret=load-return-address %s | FileCheck %s --check-prefix=CHECK --check-prefix=HARDEN
 // RUN: %clang -target aarch64-windows-msvc -S -emit-llvm -o - -mbranch-protection=pac-ret %s | FileCheck %s --check-prefix=CHECK --check-prefix=WIN-PAC
 // RUN: %clang -target aarch64-windows-msvc -S -emit-llvm -o - -mbranch-protection=standard %s | FileCheck %s --check-prefix=CHECK --check-prefix=WIN-STD
 
@@ -71,13 +70,13 @@
 // WIN-PAC:    !{i32 8, !"sign-return-address-with-bkey", i32 2}
 // WIN-STD:    !{i32 8, !"sign-return-address-with-bkey", i32 2}
 
-// NONE-NOT:    !"sign-return-address-harden-load-return-address"
-// ALL-NOT:     !"sign-return-address-harden-load-return-address"
-// PART-NOT:    !"sign-return-address-harden-load-return-address"
-// BTE-NOT:     !"sign-return-address-harden-load-return-address"
-// HARDEN:      !{i32 8, !"sign-return-address-harden-load-return-address", i32 2}
-// B-KEY-NOT:   !"sign-return-address-harden-load-return-address"
-// WIN-PAC-NOT: !"sign-return-address-harden-load-return-address"
-// WIN-STD-NOT: !"sign-return-address-harden-load-return-address"
+// NONE-NOT:    !"sign-return-address-harden"
+// ALL-NOT:     !"sign-return-address-harden"
+// PART-NOT:    !"sign-return-address-harden"
+// BTE-NOT:     !"sign-return-address-harden"
+// HARDEN:      !{i32 1, !"sign-return-address-harden", !"load-return-address"}
+// B-KEY-NOT:   !"sign-return-address-harden"
+// WIN-PAC-NOT: !"sign-return-address-harden"
+// WIN-STD-NOT: !"sign-return-address-harden"
 
 void foo() {}

@@ -5992,7 +5992,7 @@ def msign_return_address_EQ : Joined<["-"], "msign-return-address=">,
 def mharden_pac_ret_EQ : Joined<["-"], "mharden-pac-ret=">,
   Visibility<[ClangOption, CC1Option]>,
   Flags<[TargetSpecific]>, Group<m_Group>,
-  HelpText<"Select the return address signing hardening scheme">,
+  HelpText<"Select the return address authentication hardening scheme">,
   Values<"none,load-return-address">, NormalizedValues<["None", "LoadReturnAddress"]>,
   NormalizedValuesScope<"LangOptions::SignReturnAddressHardeningKind">,
   MarshallingInfoEnum<LangOpts<"SignReturnAddressHardening">, "None">;

@@ -323,7 +323,7 @@ public:
   enum class SignReturnAddressHardeningKind {
     /// Regular return address signing.
     None,
-    /// Hardened return address signing with load of return address.
+    /// Hardened return address signing with load from the return address.
     LoadReturnAddress
   };
 
@@ -771,8 +771,8 @@ public:
     return getSignReturnAddressScope() == SignReturnAddressScopeKind::All;
   }
 
-  /// Check if return address signing hardening is enabled and uses load of
-  /// return address.
+  /// Check if return address signing hardening is enabled and uses load from
+  /// the return address.
   bool isSignReturnAddressHardenWithLoadReturnAddress() const {
     return getSignReturnAddressHardening() ==
            SignReturnAddressHardeningKind::LoadReturnAddress;

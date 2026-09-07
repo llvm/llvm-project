@@ -1394,13 +1394,6 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
   const Arg *HardenPACRetArg = Args.getLastArg(options::OPT_mharden_pac_ret_EQ);
   const Driver &D = TC.getDriver();
 
-  // Check CmdArgs because some toolchains bypass the driver args and add to
-  // the frontend args directly.
-  bool HasPtrauthReturns =
-      llvm::is_contained(CmdArgs, "-fptrauth-returns") ||
-      Args.hasFlagNoClaim(options::OPT_fptrauth_returns,
-                          options::OPT_fno_ptrauth_returns, false);
-
   if (HardenPACRetArg) {
     if (!isAArch64) {
       D.Diag(diag::err_drv_unsupported_opt_for_target)
@@ -1422,83 +1415,101 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
     }
   }
 
-  if (!A && (Triple.isOSOpenBSD() || Triple.isAndroid()) && isAArch64) {
-    CmdArgs.push_back("-msign-return-address=non-leaf");
-    CmdArgs.push_back("-msign-return-address-key=a_key");
-    CmdArgs.push_back("-mbranch-target-enforce");
+  // Check CmdArgs because some toolchains bypass the driver args and add to
+  // the frontend args directly.
+  bool HasPtrauthReturns =
+      llvm::is_contained(CmdArgs, "-fptrauth-returns") ||
+      Args.hasFlagNoClaim(options::OPT_fptrauth_returns,
+                          options::OPT_fno_ptrauth_returns, false);
+
+  auto RenderHardenPACRet = [&](StringRef Scope) {
+    if (!HardenPACRetArg)
+      return;
+    if (Scope == "none" && !HasPtrauthReturns)
+      D.Diag(diag::warn_harden_pac_ret_requires_pac_ret);
+    else
+      CmdArgs.push_back(Args.MakeArgString(Twine("-mharden-pac-ret=") +
+                                           HardenPACRetArg->getValue()));
+  };
+
+  if (!A) {
+    if ((Triple.isOSOpenBSD() || Triple.isAndroid()) && isAArch64) {
+      CmdArgs.push_back("-msign-return-address=non-leaf");
+      CmdArgs.push_back("-msign-return-address-key=a_key");
+      CmdArgs.push_back("-mbranch-target-enforce");
+      RenderHardenPACRet("non-leaf");
+    } else {
+      RenderHardenPACRet("none");
+    }
     return;
   }
 
-  if (A && !(isAArch64 || (Triple.isArmT32() && Triple.isArmMClass())))
+  if (!(isAArch64 || (Triple.isArmT32() && Triple.isArmMClass())))
     D.Diag(diag::warn_incompatible_branch_protection_option)
         << Triple.getArchName();
 
-  StringRef Scope = "none", Key;
-  bool IndirectBranches = false, BranchProtectionPAuthLR = false,
-       GuardedControlStack = false;
+  StringRef Scope, Key;
+  bool IndirectBranches, BranchProtectionPAuthLR, GuardedControlStack;
 
-  if (A) {
-    if (A->getOption().matches(options::OPT_msign_return_address_EQ)) {
-      Scope = A->getValue();
-      if (Scope != "none" && Scope != "non-leaf" && Scope != "all")
-        D.Diag(diag::err_drv_unsupported_option_argument)
-            << A->getSpelling() << Scope;
-      // This spelling cannot express a key, and AArch64 Windows only supports
-      // B-key, so default to it there as parseBranchProtection() does.
-      Key = isAArch64 && Triple.isOSWindows() ? "b_key" : "a_key";
-      IndirectBranches =
-          (Triple.isOSOpenBSD() || Triple.isAndroid()) && isAArch64;
-      BranchProtectionPAuthLR = false;
-      GuardedControlStack = false;
-    } else {
-      StringRef DiagMsg;
-      llvm::ARM::ParsedBranchProtection PBP;
-      bool EnablePAuthLR = false;
+  if (A->getOption().matches(options::OPT_msign_return_address_EQ)) {
+    Scope = A->getValue();
+    if (Scope != "none" && Scope != "non-leaf" && Scope != "all")
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << Scope;
+    // This spelling cannot express a key, and AArch64 Windows only supports
+    // B-key, so default to it there as parseBranchProtection() does.
+    Key = isAArch64 && Triple.isOSWindows() ? "b_key" : "a_key";
+    IndirectBranches =
+        (Triple.isOSOpenBSD() || Triple.isAndroid()) && isAArch64;
+    BranchProtectionPAuthLR = false;
+    GuardedControlStack = false;
+  } else {
+    StringRef DiagMsg;
+    llvm::ARM::ParsedBranchProtection PBP;
+    bool EnablePAuthLR = false;
 
-      // To know if we need to enable PAuth-LR As part of the standard branch
-      // protection option, it needs to be determined if the feature has been
-      // activated in the `march` argument. This information is stored within
-      // the CmdArgs variable and can be found using a search.
-      if (isAArch64) {
-        auto isPAuthLR = [](const char *member) {
-          llvm::AArch64::ExtensionInfo pauthlr_extension =
-              llvm::AArch64::getExtensionByID(llvm::AArch64::AEK_PAUTHLR);
-          return llvm::AArch64::StrTab[pauthlr_extension.PosTargetFeature] ==
-                 member;
-        };
+    // To know if we need to enable PAuth-LR As part of the standard branch
+    // protection option, it needs to be determined if the feature has been
+    // activated in the `march` argument. This information is stored within the
+    // CmdArgs variable and can be found using a search.
+    if (isAArch64) {
+      auto isPAuthLR = [](const char *member) {
+        llvm::AArch64::ExtensionInfo pauthlr_extension =
+            llvm::AArch64::getExtensionByID(llvm::AArch64::AEK_PAUTHLR);
+        return llvm::AArch64::StrTab[pauthlr_extension.PosTargetFeature] ==
+               member;
+      };
 
-        if (llvm::any_of(CmdArgs, isPAuthLR))
-          EnablePAuthLR = true;
-      }
-      if (!llvm::ARM::parseBranchProtection(A->getValue(), PBP, DiagMsg, Triple,
-                                            EnablePAuthLR))
-        D.Diag(diag::err_drv_unsupported_option_argument)
-            << A->getSpelling() << DiagMsg;
-      if (!isAArch64 && PBP.Key == "b_key")
-        D.Diag(diag::warn_unsupported_branch_protection)
-            << "b-key" << A->getAsString(Args);
-      Scope = PBP.Scope;
-      Key = PBP.Key;
-      BranchProtectionPAuthLR = PBP.BranchProtectionPAuthLR;
-      IndirectBranches = PBP.BranchTargetEnforcement;
-      GuardedControlStack = PBP.GuardedControlStack;
+      if (llvm::any_of(CmdArgs, isPAuthLR))
+        EnablePAuthLR = true;
     }
-
-    // GCS is currently untested with ptrauth-returns, but enabling this could
-    // be allowed in future after testing with a suitable system.
-    if (Scope != "none" || BranchProtectionPAuthLR || GuardedControlStack) {
-      if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
-        D.Diag(diag::err_drv_unsupported_opt_for_target)
-            << A->getAsString(Args) << Triple.getTriple();
-      else if (HasPtrauthReturns)
-        D.Diag(diag::err_drv_incompatible_options)
-            << A->getAsString(Args) << "-fptrauth-returns";
-    }
+    if (!llvm::ARM::parseBranchProtection(A->getValue(), PBP, DiagMsg, Triple,
+                                          EnablePAuthLR))
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << DiagMsg;
+    if (!isAArch64 && PBP.Key == "b_key")
+      D.Diag(diag::warn_unsupported_branch_protection)
+          << "b-key" << A->getAsString(Args);
+    Scope = PBP.Scope;
+    Key = PBP.Key;
+    BranchProtectionPAuthLR = PBP.BranchProtectionPAuthLR;
+    IndirectBranches = PBP.BranchTargetEnforcement;
+    GuardedControlStack = PBP.GuardedControlStack;
   }
 
-  if (A)
-    CmdArgs.push_back(
-        Args.MakeArgString(Twine("-msign-return-address=") + Scope));
+  // GCS is currently untested with ptrauth-returns, but enabling this could be
+  // allowed in future after testing with a suitable system.
+  if (Scope != "none" || BranchProtectionPAuthLR || GuardedControlStack) {
+    if (Triple.getEnvironment() == llvm::Triple::PAuthTest)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << Triple.getTriple();
+    else if (HasPtrauthReturns)
+      D.Diag(diag::err_drv_incompatible_options)
+          << A->getAsString(Args) << "-fptrauth-returns";
+  }
+
+  CmdArgs.push_back(
+      Args.MakeArgString(Twine("-msign-return-address=") + Scope));
   if (Scope != "none")
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-msign-return-address-key=") + Key));
@@ -1511,13 +1522,7 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
   if (GuardedControlStack)
     CmdArgs.push_back("-mguarded-control-stack");
 
-  if (HardenPACRetArg) {
-    if (Scope == "none" && !HasPtrauthReturns)
-      D.Diag(diag::warn_harden_pac_ret_requires_pac_ret);
-    else
-      CmdArgs.push_back(Args.MakeArgString(Twine("-mharden-pac-ret=") +
-                                           HardenPACRetArg->getValue()));
-  }
+  RenderHardenPACRet(Scope);
 }
 
 void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,

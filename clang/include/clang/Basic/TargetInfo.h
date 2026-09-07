@@ -1547,7 +1547,7 @@ public:
     return false;
   }
 
-  /// Parse the Return Address Signing Hardening specification.
+  /// Parse the Return Address Authentication Hardening specification.
   virtual std::optional<LangOptions::SignReturnAddressHardeningKind>
   parseSignReturnAddressHardening(StringRef Spec) const {
     return std::nullopt;

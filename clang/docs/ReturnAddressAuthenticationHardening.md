@@ -109,7 +109,7 @@ and with an incorrect one.
 - `mov x8, x30` copies the return address (LR and x30 are synonyms) to a
   temporary.
 - `xpaclri` strips the PAC code out of the return address in x30.
-- `ldr w30, [x30]` performs a load of the return address in x30.
+- `ldr w30, [x30]` performs a load from the return address in x30.
 - `ret x8` returns to the authenticated return address.
 
 The load operation brings the code into the cache even if the
@@ -118,7 +118,7 @@ loaded into the cache. Furthermore, the return operation uses the
 original return address before stripping, so the return address
 protection is still kept in place in a normal non-speculative execution.
 
-If FEAT_PAUTH is present, the code sequence can use instructions only
+If FEAT_PAuth is present, the code sequence can make use of instructions
 available with said feature with no change in semantics:
 
 ```asm
@@ -152,7 +152,7 @@ void function() {
 
 ## Caveats
 
-The load of return address brings the code into the shared
+The load from the return address brings the code into the shared
 instruction/data cache, therefore this cache level can't be used as an
 oracle to find out whether the authentication succeeded or not. However,
 in the case of authentication success, the code is also fetched into the
