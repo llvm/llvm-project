@@ -53,8 +53,8 @@ executed across parent and child processes directly to the profile file.
 Setting `-DLIBC_ENABLE_COVERAGE=ON` in the CMake configuration passes
 `-fprofile-instr-generate=libc_cov_%c%p.profraw`, `-fcoverage-mapping`, and
 `-fprofile-continuous` across all LLVM-libc compilation units and test link
-steps. This ensures uniform instrumentation across entrypoints and unit test
-harnesses.
+steps. This ensures uniform instrumentation across entrypoints, unit tests, and
+hermetic test harnesses.
 
 ## Running Code Coverage Locally
 
@@ -63,18 +63,18 @@ harnesses.
 Generating coverage reports requires Clang, LLVM profile tools, CMake, and
 Ninja:
 
-* **Compiler:** Clang 18 or later (Clang 21 or later is required for MC/DC
-  instrumentation). In full-build mode, `libclang_rt.profile.a` must not depend
-  on glibc fortification symbols; a compiler-rt built from the LLVM monorepo is
-  recommended.
+* **Compiler:** Clang 18 or later (Clang 21+ for MC/DC, Clang 24 / HEAD
+  recommended for full-build mode). In full-build mode, compiler-rt must match
+  the compiler version and cannot rely on distro-built libraries with glibc
+  source fortification.
 * **LLVM Utilities:** Matching major versions of `llvm-profdata` and `llvm-cov`.
 * **Linker:** `lld` is recommended when configuring full-build mode.
 * **Build System:** CMake 3.28+ and Ninja.
 
 #### Toolchain Discovery
 
-If your Linux distribution packages version-suffixed binaries (e.g. `clang-21`,
-`llvm-profdata-21`), discover and export them:
+If your Linux distribution packages version-suffixed binaries (e.g. `clang-24`,
+`llvm-profdata-24`), discover and export them:
 
 ```bash
 CLANG_MAJOR=$(clang --version | sed -n 's/.*version \([0-9]*\).*/\1/p')
@@ -95,17 +95,18 @@ Subsequent merge and report commands reference `$LLVM_PROFDATA` and `$LLVM_COV`.
 
 #### Building Clang with Profiling Support (Full-Build Mode)
 
-In full-build mode, hermetic tests link the compiler runtime profile library
-(`libclang_rt.profile.a`). If your system Clang was built against glibc with
-source fortification enabled, its profile library may contain unsatisfied
-dependencies (such as `__vfprintf_chk`). Building Clang and compiler-rt from
-the LLVM monorepo provides a clean profiling runtime:
+Full-build hermetic tests link `libclang_rt.profile.a`. Distro-built compiler-rt
+packages on distributions like Debian or Ubuntu are built with glibc source
+fortification enabled, which LLVM-libc does not support because it introduces
+unresolved symbols such as `__vfprintf_chk`. Furthermore, compiler-rt must
+match the exact version of the compiler used to build. The recommended approach
+is building Clang, lld, and compiler-rt from HEAD:
 
 ```bash
 cmake -G Ninja -S llvm -B build-clang \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX="$HOME/clang" \
-  -DLLVM_ENABLE_PROJECTS="clang;lld" \
+  -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld" \
   -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
   -DLLVM_USE_LINKER=lld
 ninja -C build-clang install
@@ -163,17 +164,20 @@ cmake -G Ninja -S runtimes -B build-cov \
 
 ### 2. Build and Execute Tests
 
-Compiles and executes test executables in parallel. In overlay mode, execute
-`libc-unit-tests`. In full-build mode, execute `libc-hermetic-tests`:
+Compiles and executes test executables in parallel. Run `libc-unit-tests` for
+unit tests, `libc-hermetic-tests` for hermetic tests, or both:
 
 ```bash
 export LLVM_PROFILE_FILE="libc_cov_%c%p.profraw"
 
-# In overlay mode (LLVM_LIBC_FULL_BUILD=OFF)
+# Run unit tests
 ninja -k 0 -C build-cov libc-unit-tests
 
-# In full-build mode (LLVM_LIBC_FULL_BUILD=ON)
+# Run hermetic tests (full-build mode)
 ninja -k 0 -C build-cov libc-hermetic-tests
+
+# Run both unit and hermetic tests
+ninja -k 0 -C build-cov libc-unit-tests libc-hermetic-tests
 ```
 
 :::{note}
@@ -291,17 +295,20 @@ cmake -G Ninja -S runtimes -B build-cov-mcdc \
 ### 2. Build and Execute Tests
 
 Compiles and executes test executables in parallel with MC/DC instrumentation
-enabled. In overlay mode, execute `libc-unit-tests`. In full-build mode, execute
-`libc-hermetic-tests`:
+enabled. Run `libc-unit-tests` for unit tests, `libc-hermetic-tests` for
+hermetic tests, or both:
 
 ```bash
 export LLVM_PROFILE_FILE="libc_cov_%c%p.profraw"
 
-# In overlay mode (LLVM_LIBC_FULL_BUILD=OFF)
+# Run unit tests
 ninja -k 0 -C build-cov-mcdc libc-unit-tests
 
-# In full-build mode (LLVM_LIBC_FULL_BUILD=ON)
+# Run hermetic tests (full-build mode)
 ninja -k 0 -C build-cov-mcdc libc-hermetic-tests
+
+# Run both unit and hermetic tests
+ninja -k 0 -C build-cov-mcdc libc-unit-tests libc-hermetic-tests
 ```
 
 ### 3. Merge Profiles

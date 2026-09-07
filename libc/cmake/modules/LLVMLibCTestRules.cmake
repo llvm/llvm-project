@@ -896,25 +896,16 @@ function(add_libc_hermetic test_name)
       "-Wl,-mllvm,-nvptx-emit-init-fini-kernel"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
-  else()
-    set(stdlib_opt -nostdlib)
-    if(LIBC_CC_SUPPORTS_NOSTDLIBPP)
-      set(stdlib_opt -nostdlib++)
-    else()
-      # Older version of gcc does not support `nostdlib++` flag. We use
-      # `nostdlib` and link against libgcc_s, which cannot be linked statically.
-      list(APPEND compiler_runtime ${LIBGCC_S_LOCATION})
-    endif()
-
+  elseif(LIBC_CC_SUPPORTS_NOSTDLIBPP)
     set(link_options
       -nolibc
       -nostartfiles
-      ${stdlib_opt}
+      -nostdlib++
       -static
       ${LIBC_LINK_OPTIONS_DEFAULT}
       ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
     )
-    if(LIBC_ENABLE_COVERAGE)
+    if(LIBC_ENABLE_COVERAGE AND NOT LIBC_TARGET_ARCHITECTURE_IS_AMDGPU AND NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
       list(APPEND link_options
         -noprofilelib
         -Wl,--allow-multiple-definition
@@ -922,10 +913,29 @@ function(add_libc_hermetic test_name)
       )
     endif()
     target_link_options(${fq_build_target_name} PRIVATE ${link_options})
+  else()
+    # Older version of gcc does not support `nostdlib++` flag.  We use
+    # `nostdlib` and link against libgcc_s, which cannot be linked statically.
+    set(link_options
+      -nolibc
+      -nostartfiles
+      -nostdlib
+      ${LIBC_LINK_OPTIONS_DEFAULT}
+      ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
+    )
+    if(LIBC_ENABLE_COVERAGE AND NOT LIBC_TARGET_ARCHITECTURE_IS_AMDGPU AND NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+      list(APPEND link_options
+        -noprofilelib
+        -Wl,--allow-multiple-definition
+        -u__llvm_profile_runtime
+      )
+    endif()
+    target_link_options(${fq_build_target_name} PRIVATE ${link_options})
+    list(APPEND compiler_runtime ${LIBGCC_S_LOCATION})
   endif()
 
   set(coverage_link_libs "")
-  if(LIBC_ENABLE_COVERAGE)
+  if(LIBC_ENABLE_COVERAGE AND NOT LIBC_TARGET_ARCHITECTURE_IS_AMDGPU AND NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     if(NOT LIBC_CLANG_PROFILE_LIB)
       execute_process(
         COMMAND ${CMAKE_CXX_COMPILER} --print-file-name=libclang_rt.profile.a
@@ -939,8 +949,6 @@ function(add_libc_hermetic test_name)
           OUTPUT_VARIABLE LIBC_CLANG_PROFILE_LIB
         )
       endif()
-      set(LIBC_CLANG_PROFILE_LIB "${LIBC_CLANG_PROFILE_LIB}" CACHE INTERNAL
-        "Path to compiler-rt profile library")
     endif()
     set(coverage_link_libs
       "${LIBC_CLANG_PROFILE_LIB}"
@@ -957,7 +965,11 @@ function(add_libc_hermetic test_name)
       ${coverage_link_libs}
       ${compiler_runtime}
   )
-  add_dependencies(${fq_build_target_name} ${fq_deps_list})
+  set(coverage_deps "")
+  if(LIBC_ENABLE_COVERAGE AND NOT LIBC_TARGET_ARCHITECTURE_IS_AMDGPU AND NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+    set(coverage_deps libc)
+  endif()
+  add_dependencies(${fq_build_target_name} ${fq_deps_list} ${coverage_deps})
 
   if(NOT HERMETIC_TEST_NO_RUN_POSTBUILD)
     if(LIBC_TEST_CMD)
