@@ -1,47 +1,47 @@
 # RUN: %{lit} -a --filter-requires=Half --filter-out=regex %S/Inputs/filter-requires | FileCheck %s --check-prefix=HALF
-# HALF: UNSUPPORTED{{:}} filter-requires :: and.txt
-# HALF: UNSUPPORTED{{:}} filter-requires :: base.txt
+# HALF: EXCLUDED{{:}} filter-requires :: and.txt
+# HALF: EXCLUDED{{:}} filter-requires :: base.txt
 # HALF: PASS: filter-requires :: features.txt
 # HALF: PASS: filter-requires :: half.txt
-# HALF: UNSUPPORTED{{:}} filter-requires :: negative.txt
-# HALF: UNSUPPORTED{{:}} filter-requires :: nested.txt
+# HALF: EXCLUDED{{:}} filter-requires :: negative.txt
+# HALF: EXCLUDED{{:}} filter-requires :: nested.txt
 # HALF: PASS: filter-requires :: or.txt
-# HALF: UNSUPPORTED{{:}} filter-requires :: true.txt
+# HALF: EXCLUDED{{:}} filter-requires :: true.txt
 # HALF: UNSUPPORTED{{:}} filter-requires :: unsupported.txt
 # HALF: XFAIL{{:}} filter-requires :: xfail.txt
 
 # RUN: %{lit} -a --filter-requires="Int16, Half" --filter-out=regex %S/Inputs/filter-requires | FileCheck %s --check-prefix=AND
 # AND: PASS: filter-requires :: and.txt
-# AND: UNSUPPORTED{{:}} filter-requires :: half.txt
+# AND: EXCLUDED{{:}} filter-requires :: half.txt
 # AND: PASS: filter-requires :: nested.txt
-# AND: UNSUPPORTED{{:}} filter-requires :: or.txt
+# AND: EXCLUDED{{:}} filter-requires :: or.txt
 
 # RUN: %{lit} -a --filter-requires="Half || Int16" --filter-out=regex %S/Inputs/filter-requires | FileCheck %s --check-prefix=OR
-# OR: UNSUPPORTED{{:}} filter-requires :: and.txt
+# OR: EXCLUDED{{:}} filter-requires :: and.txt
 # OR: PASS: filter-requires :: half.txt
-# OR: UNSUPPORTED{{:}} filter-requires :: nested.txt
+# OR: EXCLUDED{{:}} filter-requires :: nested.txt
 # OR: PASS: filter-requires :: or.txt
 
 # RUN: %{lit} -a --filter-requires="Half && !Double" --filter-out=regex %S/Inputs/filter-requires | FileCheck %s --check-prefix=NEGATIVE
 # NEGATIVE: PASS: filter-requires :: half.txt
 # NEGATIVE: PASS: filter-requires :: negative.txt
-# NEGATIVE: UNSUPPORTED{{:}} filter-requires :: nested.txt
+# NEGATIVE: EXCLUDED{{:}} filter-requires :: nested.txt
 
 # RUN: %{lit} -a --filter-requires="Half && Int16 && !Double" --filter-out=regex %S/Inputs/filter-requires | FileCheck %s --check-prefix=NESTED
 # NESTED: PASS: filter-requires :: and.txt
-# NESTED: UNSUPPORTED{{:}} filter-requires :: half.txt
+# NESTED: EXCLUDED{{:}} filter-requires :: half.txt
 # NESTED: PASS: filter-requires :: nested.txt
-# NESTED: UNSUPPORTED{{:}} filter-requires :: or.txt
+# NESTED: EXCLUDED{{:}} filter-requires :: or.txt
 
 # RUN: %{lit} -a --filter-requires=Base %S/Inputs/filter-requires | FileCheck %s --check-prefix=BASE
 # BASE: PASS: filter-requires :: base.txt
-# BASE: UNSUPPORTED{{:}} filter-requires :: half.txt
-# BASE: UNSUPPORTED{{:}} filter-requires :: true.txt
+# BASE: EXCLUDED{{:}} filter-requires :: half.txt
+# BASE: EXCLUDED{{:}} filter-requires :: true.txt
 # BASE: Passed{{ *}}: 1
 
 # RUN: %{lit} -a --filter-requires=true --filter-out=regex %S/Inputs/filter-requires | FileCheck %s --check-prefix=TRUE
-# TRUE: UNSUPPORTED{{:}} filter-requires :: base.txt
-# TRUE: UNSUPPORTED{{:}} filter-requires :: half.txt
+# TRUE: EXCLUDED{{:}} filter-requires :: base.txt
+# TRUE: EXCLUDED{{:}} filter-requires :: half.txt
 # TRUE: PASS: filter-requires :: true.txt
 # TRUE: Passed{{ *}}: 1
 
@@ -76,9 +76,9 @@
 
 # Like REQUIRES availability checks, group matching gates execution, not discovery.
 # RUN: %{lit} -a --max-tests=1 --filter-requires=Base %S/Inputs/filter-requires | FileCheck %s --check-prefix=MAX
-# MAX: UNSUPPORTED{{:}} filter-requires :: and.txt
+# MAX: EXCLUDED{{:}} filter-requires :: and.txt
 # MAX-NOT: PASS:
 
 # RUN: %{lit} -a --filter-requires=DoesNotExist %S/Inputs/filter-requires/half.txt | FileCheck %s --check-prefix=NO-MATCH
-# NO-MATCH: UNSUPPORTED{{:}} filter-requires :: half.txt
+# NO-MATCH: EXCLUDED{{:}} filter-requires :: half.txt
 # NO-MATCH: Test REQUIRES does not match --filter-requires 'DoesNotExist'

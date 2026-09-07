@@ -363,6 +363,7 @@ class WttReport(Report):
         passed = 0
         failed = 0
         unsupported = 0
+        unsupported_not_run = 0
         excluded = 0
         skipped = 0
 
@@ -376,6 +377,9 @@ class WttReport(Report):
 
             # UNSUPPORTED: report as Pass (feature not applicable on this device).
             if code == lit.Test.UNSUPPORTED:
+                if test.filter_requires is not None:
+                    unsupported_not_run += 1
+                    continue
                 file.write(f'<CTX ID="" Current={_wtt_attr(name)} Parent="WTTLOG" />\n')
                 file.write(
                     f'<StartTest Title={_wtt_attr(name)} TUID="" CA="{created_at}" LA="{created_at}">\n{rc("")}</StartTest>\n'
@@ -440,13 +444,15 @@ class WttReport(Report):
             )
 
         # Tally of tests omitted from results.
-        not_run = excluded + skipped
+        not_run = excluded + skipped + unsupported_not_run
         if not_run > 0:
             parts = []
             if excluded:
                 parts.append(f"{excluded} excluded")
             if skipped:
                 parts.append(f"{skipped} skipped")
+            if unsupported_not_run:
+                parts.append(f"{unsupported_not_run} unsupported")
             tally = _wtt_attr(
                 f"{not_run} test(s) were not run ({', '.join(parts)}) and are "
                 f"omitted from the pass/fail results."

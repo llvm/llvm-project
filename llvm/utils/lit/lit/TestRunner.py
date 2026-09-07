@@ -2146,7 +2146,7 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
             return lit.Test.Result(Test.UNRESOLVED, str(error))
         if not matches:
             return lit.Test.Result(
-                Test.UNSUPPORTED,
+                Test.EXCLUDED,
                 "Test REQUIRES does not match --filter-requires %r"
                 % str(test.filter_requires),
             )
