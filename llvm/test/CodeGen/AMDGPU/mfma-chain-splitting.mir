@@ -21,14 +21,7 @@ body: |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %p8:vreg_64_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   %agpr0:areg_1024 = IMPLICIT_DEF
-  ; CHECK-NEXT:   %agpr1:areg_1024 = IMPLICIT_DEF
-  ; CHECK-NEXT:   %agpr2:areg_1024 = IMPLICIT_DEF
-  ; CHECK-NEXT:   %agpr3:areg_1024 = IMPLICIT_DEF
-  ; CHECK-NEXT:   %agpr4:areg_1024 = IMPLICIT_DEF
-  ; CHECK-NEXT:   %agpr5:areg_1024 = IMPLICIT_DEF
-  ; CHECK-NEXT:   %agpr7:areg_256 = IMPLICIT_DEF
   ; CHECK-NEXT:   %initA:vreg_128_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:areg_128_align2 = COPY %initA
   ; CHECK-NEXT:   %initB:vreg_128_align2 = IMPLICIT_DEF
@@ -38,15 +31,22 @@ body: |
   ; CHECK-NEXT:   %initF:vreg_128_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   %initG:vreg_128_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   %initH:vreg_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   %agpr1:areg_1024 = IMPLICIT_DEF
+  ; CHECK-NEXT:   %p1:vreg_1024 = IMPLICIT_DEF
+  ; CHECK-NEXT:   %agpr2:areg_1024 = IMPLICIT_DEF
+  ; CHECK-NEXT:   %p2:vreg_1024 = IMPLICIT_DEF
+  ; CHECK-NEXT:   %agpr3:areg_1024 = IMPLICIT_DEF
+  ; CHECK-NEXT:   %p3:vreg_1024 = IMPLICIT_DEF
+  ; CHECK-NEXT:   %agpr4:areg_1024 = IMPLICIT_DEF
+  ; CHECK-NEXT:   %p4:vreg_1024 = IMPLICIT_DEF
+  ; CHECK-NEXT:   %agpr5:areg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   %initI:vreg_128_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   %initJ:vreg_128_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   %agpr7:areg_256 = IMPLICIT_DEF
+  ; CHECK-NEXT:   %p8:vreg_64_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   %initK:vreg_128_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   %initL:vreg_128_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   %initM:vreg_128_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   %p1:vreg_1024 = IMPLICIT_DEF
-  ; CHECK-NEXT:   %p2:vreg_1024 = IMPLICIT_DEF
-  ; CHECK-NEXT:   %p3:vreg_1024 = IMPLICIT_DEF
-  ; CHECK-NEXT:   %p4:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   %p5:vreg_1024 = IMPLICIT_DEF
   ; CHECK-NEXT:   SCHED_BARRIER 0
   ; CHECK-NEXT:   S_BRANCH %bb.1
