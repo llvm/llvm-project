@@ -310,7 +310,8 @@ bool MipsSEDAGToDAGISel::selectAddrFrameIndexOffset(
           SDValue Opnd0 = Base.getOperand(1).getOperand(0);
           if (isa<ConstantPoolSDNode>(Opnd0) || isa<JumpTableSDNode>(Opnd0))
             Base = Base.getOperand(0);
-          else if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Opnd0)) {
+          else if (GlobalAddressSDNode *GA =
+                       dyn_cast<GlobalAddressSDNode>(Opnd0)) {
             Base = Base.getOperand(0);
             const GlobalValue *GV = GA->getGlobal();
             int64_t GAOffset = GA->getOffset();
