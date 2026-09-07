@@ -68,6 +68,7 @@ Ninja:
   on glibc fortification symbols; a compiler-rt built from the LLVM monorepo is
   recommended.
 * **LLVM Utilities:** Matching major versions of `llvm-profdata` and `llvm-cov`.
+* **Linker:** `lld` is recommended when configuring full-build mode.
 * **Build System:** CMake 3.28+ and Ninja.
 
 #### Toolchain Discovery
@@ -91,6 +92,24 @@ export LLVM_COV=llvm-cov
 ```
 
 Subsequent merge and report commands reference `$LLVM_PROFDATA` and `$LLVM_COV`.
+
+#### Building Clang with Profiling Support (Full-Build Mode)
+
+In full-build mode, hermetic tests link the compiler runtime profile library
+(`libclang_rt.profile.a`). If your system Clang was built against glibc with
+source fortification enabled, its profile library may contain unsatisfied
+dependencies (such as `__vfprintf_chk`). Building Clang and compiler-rt from
+the LLVM monorepo provides a clean profiling runtime:
+
+```bash
+cmake -G Ninja -S llvm -B build-clang \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX="$HOME/clang" \
+  -DLLVM_ENABLE_PROJECTS="clang;lld" \
+  -DLLVM_ENABLE_RUNTIMES="compiler-rt" \
+  -DLLVM_USE_LINKER=lld
+ninja -C build-clang install
+```
 
 ---
 
@@ -135,6 +154,7 @@ cmake -G Ninja -S runtimes -B build-cov \
 cmake -G Ninja -S runtimes -B build-cov \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
+  -DLLVM_USE_LINKER=lld \
   -DCMAKE_BUILD_TYPE=Debug \
   -DLLVM_ENABLE_RUNTIMES="libc" \
   -DLLVM_LIBC_FULL_BUILD=ON \
@@ -200,6 +220,15 @@ percentages for each file:
   -ignore-filename-regex=".*(test|utils).*"
 ```
 
+To restrict the terminal report to a specific source file:
+
+```bash
+"$LLVM_COV" report \
+  -instr-profile=libc_full.profdata \
+  "${TEST_BINS[0]}" "${OBJECT_FLAGS[@]}" \
+  libc/src/string/strlen.cpp
+```
+
 #### Option 2: Interactive HTML Dashboard
 Generates an interactive HTML dashboard containing sortable directory metrics
 and syntax-highlighted source views:
@@ -250,6 +279,7 @@ cmake -G Ninja -S runtimes -B build-cov-mcdc \
 cmake -G Ninja -S runtimes -B build-cov-mcdc \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
+  -DLLVM_USE_LINKER=lld \
   -DCMAKE_BUILD_TYPE=Debug \
   -DLLVM_ENABLE_RUNTIMES="libc" \
   -DLLVM_LIBC_FULL_BUILD=ON \
