@@ -335,6 +335,11 @@ public:
   ///
   /// @{
 
+  /// \p DieIdx index of the DIE.
+  /// \returns true if the DIE is the unit's root, which is always at index
+  /// zero, whatever tag it carries.
+  static bool isUnitRootDIE(uint32_t DieIdx) { return DieIdx == 0; }
+
   /// \p Idx index of the DIE.
   /// \returns DieInfo descriptor.
   DIEInfo &getDIEInfo(unsigned Idx) { return DieInfoArray[Idx]; }
