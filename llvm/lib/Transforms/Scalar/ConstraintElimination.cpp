@@ -1127,7 +1127,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
   if (PeeledOnEdge && *PeeledOnEdge != ContinueOnTrue)
     return;
 
-  if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB) || InLoopSucc == &BB)
+  if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB))
     return;
 
   BasicBlock *LoopPred = L->getLoopPredecessor();

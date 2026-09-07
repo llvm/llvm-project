@@ -171,6 +171,9 @@ features cannot lower the translation-unit ABI level;
 
 #### C++20 Feature Support
 
+- Now clang-scan-deps in P1689 format can find the dependencies described in
+  module map file. See the documents of standard C++ modules for details.
+
 #### C++17 Feature Support
 
 #### Resolutions to C++ Defect Reports
