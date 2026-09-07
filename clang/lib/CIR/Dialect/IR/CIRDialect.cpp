@@ -1574,11 +1574,6 @@ void cir::IfOp::getSuccessorRegions(mlir::RegionBranchPoint point,
     regions.emplace_back(getOperation());
 }
 
-mlir::ValueRange cir::IfOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isOperation() ? ValueRange(getOperation()->getResults())
-                                 : ValueRange();
-}
-
 void cir::IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
                       bool withElseRegion, BuilderCallbackRef thenBuilder,
                       BuilderCallbackRef elseBuilder) {
@@ -1617,11 +1612,6 @@ void cir::ScopeOp::getSuccessorRegions(
 
   // If the condition isn't constant, both regions may be executed.
   regions.push_back(RegionSuccessor(&getScopeRegion()));
-}
-
-mlir::ValueRange cir::ScopeOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isOperation() ? ValueRange(getOperation()->getResults())
-                                 : ValueRange();
 }
 
 void cir::ScopeOp::build(
@@ -1700,11 +1690,6 @@ void cir::CleanupScopeOp::getSuccessorRegions(
   // Execution always proceeds from the body region to the cleanup region.
   regions.push_back(RegionSuccessor(&getBodyRegion()));
   regions.push_back(RegionSuccessor(&getCleanupRegion()));
-}
-
-mlir::ValueRange
-cir::CleanupScopeOp::getSuccessorInputs(RegionSuccessor successor) {
-  return ValueRange();
 }
 
 LogicalResult cir::CleanupScopeOp::canonicalize(CleanupScopeOp op,
@@ -1898,11 +1883,6 @@ void cir::CaseOp::getSuccessorRegions(
   regions.push_back(RegionSuccessor(&getCaseRegion()));
 }
 
-mlir::ValueRange cir::CaseOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isOperation() ? ValueRange(getOperation()->getResults())
-                                 : ValueRange();
-}
-
 void cir::CaseOp::build(OpBuilder &builder, OperationState &result,
                         ArrayAttr value, CaseOpKind kind,
                         OpBuilder::InsertPoint &insertPoint) {
@@ -1928,11 +1908,6 @@ void cir::SwitchOp::getSuccessorRegions(
   }
 
   region.push_back(RegionSuccessor(&getBody()));
-}
-
-mlir::ValueRange cir::SwitchOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isOperation() ? ValueRange(getOperation()->getResults())
-                                 : ValueRange();
 }
 
 void cir::SwitchOp::build(OpBuilder &builder, OperationState &result,
@@ -2188,11 +2163,6 @@ void cir::GlobalOp::getSuccessorRegions(
     regions.push_back(RegionSuccessor(ctorRegion));
   if (dtorRegion)
     regions.push_back(RegionSuccessor(dtorRegion));
-}
-
-mlir::ValueRange cir::GlobalOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isOperation() ? ValueRange(getOperation()->getResults())
-                                 : ValueRange();
 }
 
 static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
@@ -2982,11 +2952,6 @@ void cir::TernaryOp::getSuccessorRegions(
   regions.push_back(RegionSuccessor(&getFalseRegion()));
 }
 
-mlir::ValueRange cir::TernaryOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isOperation() ? ValueRange(getOperation()->getResults())
-                                 : ValueRange();
-}
-
 void cir::TernaryOp::build(
     OpBuilder &builder, OperationState &result, Value cond,
     function_ref<void(OpBuilder &, Location)> trueBuilder,
@@ -3290,18 +3255,6 @@ void cir::AwaitOp::getSuccessorRegions(
   regions.emplace_back(getOperation());
 }
 
-mlir::ValueRange cir::AwaitOp::getSuccessorInputs(RegionSuccessor successor) {
-  if (successor.isOperation())
-    return getOperation()->getResults();
-  if (successor == &getReady())
-    return getReady().getArguments();
-  if (successor == &getSuspend())
-    return getSuspend().getArguments();
-  if (successor == &getResume())
-    return getResume().getArguments();
-  llvm_unreachable("invalid region successor");
-}
-
 LogicalResult cir::AwaitOp::verify() {
   if (!isa<ConditionOp>(this->getReady().back().getTerminator()))
     return emitOpError("ready region must end with cir.condition");
@@ -3320,11 +3273,6 @@ void cir::CoroBodyOp::getSuccessorRegions(
   }
 
   regions.push_back(RegionSuccessor(&getBody()));
-}
-
-mlir::ValueRange
-cir::CoroBodyOp::getSuccessorInputs(RegionSuccessor successor) {
-  return ValueRange();
 }
 
 LogicalResult cir::CoroBodyOp::verify() {
@@ -3459,6 +3407,10 @@ LogicalResult cir::GetMethodOp::verify() {
 // GetMemberOp Definitions
 //===----------------------------------------------------------------------===//
 
+static mlir::Type memberPointeeType(cir::RecordType recordTy, unsigned idx) {
+  return cir::memberStorageType(recordTy.getMembers()[idx]);
+}
+
 LogicalResult cir::GetMemberOp::verify() {
   const auto recordTy = dyn_cast<RecordType>(getAddrTy().getPointee());
   if (!recordTy)
@@ -3467,7 +3419,11 @@ LogicalResult cir::GetMemberOp::verify() {
   if (recordTy.getMembers().size() <= getIndex())
     return emitError() << "member index out of bounds";
 
-  if (recordTy.getMembers()[getIndex()] != getType().getPointee())
+  mlir::Type pointeeTy = memberPointeeType(recordTy, getIndex());
+  if (!pointeeTy)
+    return emitError() << "member owns no storage to point at";
+
+  if (pointeeTy != getType().getPointee())
     return emitError() << "member type mismatch";
 
   return mlir::success();
@@ -3484,7 +3440,10 @@ LogicalResult cir::ExtractMemberOp::verify() {
   auto structTy = mlir::cast<cir::StructType>(getRecord().getType());
   if (structTy.getMembers().size() <= getIndex())
     return emitError() << "member index out of bounds";
-  if (structTy.getMembers()[getIndex()] != getType())
+  mlir::Type memberTy = structTy.getMembers()[getIndex()];
+  if (mlir::isa<cir::BitFieldType>(memberTy))
+    return emitError() << "cir.extract_member does not support bit-fields";
+  if (memberTy != getType())
     return emitError() << "member type mismatch";
   return mlir::success();
 }
@@ -3499,7 +3458,10 @@ LogicalResult cir::InsertMemberOp::verify() {
   auto structTy = mlir::cast<cir::StructType>(getRecord().getType());
   if (structTy.getMembers().size() <= getIndex())
     return emitError() << "member index out of bounds";
-  if (structTy.getMembers()[getIndex()] != getValue().getType())
+  mlir::Type memberTy = structTy.getMembers()[getIndex()];
+  if (mlir::isa<cir::BitFieldType>(memberTy))
+    return emitError() << "cir.insert_member does not support bit-fields";
+  if (memberTy != getValue().getType())
     return emitError() << "member type mismatch";
   // The op trait already checks that the types of $result and $record match.
   return mlir::success();
@@ -4429,11 +4391,6 @@ void cir::TryOp::getSuccessorRegions(
   // can remove the catch handler.
   for (mlir::Region &handlerRegion : this->getHandlerRegions())
     regions.push_back(mlir::RegionSuccessor(&handlerRegion));
-}
-
-mlir::ValueRange cir::TryOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isOperation() ? ValueRange(getOperation()->getResults())
-                                 : ValueRange();
 }
 
 LogicalResult cir::TryOp::verify() {
