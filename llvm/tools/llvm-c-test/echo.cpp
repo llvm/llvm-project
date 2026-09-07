@@ -814,6 +814,11 @@ struct FunCloner {
         Dst = LLVMBuildBitCast(Builder, V, CloneType(Src), Name);
         break;
       }
+      case LLVMByteCast: {
+        LLVMValueRef V = CloneValue(LLVMGetOperand(Src, 0));
+        Dst = LLVMBuildByteCast(Builder, V, CloneType(Src), Name);
+        break;
+      }
       case LLVMICmp: {
         LLVMIntPredicate Pred = LLVMGetICmpPredicate(Src);
         LLVMBool IsSameSign = LLVMGetICmpSameSign(Src);

@@ -5063,6 +5063,8 @@ LLVM_C_ABI LLVMValueRef LLVMBuildIntToPtr(LLVMBuilderRef, LLVMValueRef Val,
                                           LLVMTypeRef DestTy, const char *Name);
 LLVM_C_ABI LLVMValueRef LLVMBuildBitCast(LLVMBuilderRef, LLVMValueRef Val,
                                          LLVMTypeRef DestTy, const char *Name);
+LLVM_C_ABI LLVMValueRef LLVMBuildByteCast(LLVMBuilderRef, LLVMValueRef Val,
+                                          LLVMTypeRef DestTy, const char *Name);
 LLVM_C_ABI LLVMValueRef LLVMBuildAddrSpaceCast(LLVMBuilderRef, LLVMValueRef Val,
                                                LLVMTypeRef DestTy,
                                                const char *Name);
