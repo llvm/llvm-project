@@ -26,26 +26,26 @@ define void @test(ptr %B) {
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB.loaded = load i64, ptr %inB, align 8
 ; AVX1:  Cost of 2 for VF 2: WIDEN ir<%valB.loaded> = load vp<[[VP6:%[0-9]+]]>, ir<%canLoad>
 ; AVX1:  Cost of 2 for VF 4: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
-; AVX1:  Cost of 4 for VF 8: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
-; AVX1:  Cost of 8 for VF 16: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
-; AVX1:  Cost of 16 for VF 32: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
+; AVX1:  Cost of 8 for VF 8: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
+; AVX1:  Cost of 20 for VF 16: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
+; AVX1:  Cost of 44 for VF 32: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB.loaded = load i64, ptr %inB, align 8
 ; AVX2:  Cost of 2 for VF 2: WIDEN ir<%valB.loaded> = load vp<[[VP6:%[0-9]+]]>, ir<%canLoad>
 ; AVX2:  Cost of 2 for VF 4: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
-; AVX2:  Cost of 4 for VF 8: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
-; AVX2:  Cost of 8 for VF 16: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
-; AVX2:  Cost of 16 for VF 32: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
+; AVX2:  Cost of 8 for VF 8: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
+; AVX2:  Cost of 20 for VF 16: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
+; AVX2:  Cost of 44 for VF 32: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
 ;
 ; AVX512-LABEL: 'test'
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: %valB.loaded = load i64, ptr %inB, align 8
 ; AVX512:  Cost of 1 for VF 2: WIDEN ir<%valB.loaded> = load vp<[[VP6:%[0-9]+]]>, ir<%canLoad>
 ; AVX512:  Cost of 1 for VF 4: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
 ; AVX512:  Cost of 1 for VF 8: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
-; AVX512:  Cost of 2 for VF 16: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
-; AVX512:  Cost of 4 for VF 32: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
-; AVX512:  Cost of 8 for VF 64: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
+; AVX512:  Cost of 6 for VF 16: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
+; AVX512:  Cost of 16 for VF 32: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
+; AVX512:  Cost of 36 for VF 64: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
 ;
 entry:
   br label %for.body
