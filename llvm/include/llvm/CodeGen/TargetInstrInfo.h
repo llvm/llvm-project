@@ -743,6 +743,19 @@ public:
     return true;
   }
 
+  bool analyzeBranch(const MachineBasicBlock &MBB,
+                     const MachineBasicBlock *&TBB,
+                     const MachineBasicBlock *&FBB,
+                     SmallVectorImpl<MachineOperand> &Cond) const {
+    MachineBasicBlock *TempTBB = nullptr, *TempFBB = nullptr;
+    bool NotUnderstandable = analyzeBranch(const_cast<MachineBasicBlock &>(MBB),
+                                           TempTBB, TempFBB, Cond,
+                                           /*AllowModify=*/false);
+    TBB = TempTBB;
+    FBB = TempFBB;
+    return NotUnderstandable;
+  }
+
   /// Represents a predicate at the MachineFunction level.  The control flow a
   /// MachineBranchPredicate represents is:
   ///
