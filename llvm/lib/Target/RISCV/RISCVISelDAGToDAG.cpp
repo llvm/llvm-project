@@ -578,6 +578,9 @@ bool RISCVDAGToDAGISel::tryPExtNarrowUnsigned(SDNode *Node) {
 
     auto hasEnoughZeroBits = [MinZeroBits](SDNode *Node, SDValue Op) -> bool {
       VTSDNode *ChainedNode = dyn_cast<VTSDNode>(Op);
+      if (!ChainedNode)
+        return false;
+
       EVT FromTy = ChainedNode->getVT();
       EVT ToTy = Node->getValueType(0);
       return (ToTy.getSizeInBits() - FromTy.getSizeInBits()) >= MinZeroBits;
