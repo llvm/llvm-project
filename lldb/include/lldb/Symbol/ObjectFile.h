@@ -373,6 +373,12 @@ public:
     return FileSpecList();
   }
 
+  /// Whether a symbol that this object file has not itself tagged as a
+  /// re-export can still be shadowed by one of GetReExportedLibraries().
+  virtual bool ReExportedLibrariesShadowLocalDefinitions() const {
+    return false;
+  }
+
   /// Sets the load address for an entire module, assuming a rigid slide of
   /// sections, if possible in the implementation.
   ///

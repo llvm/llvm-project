@@ -50,7 +50,7 @@ do.body:
   %0 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x8f16(<4 x half> zeroinitializer, <4 x half> zeroinitializer, <16 x float> %v1, i32 0, i32 0, i32 0)
   %v2 = insertelement <16 x float> zeroinitializer, float %c_block_tile.sroa.961.0, i64 13
   %v3 = insertelement <16 x float> %v2, float %c_block_tile.sroa.994.0, i64 14
-  %v4 = insertelement <16 x float> %v3, float 0x7FF8000000000000, i64 0
+  %v4 = insertelement <16 x float> %v3, float +qnan, i64 0
   %1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x8f16(<4 x half> zeroinitializer, <4 x half> zeroinitializer, <16 x float> %v4, i32 0, i32 0, i32 0)
   %v5 = insertelement <16 x float> zeroinitializer, float %c_block_tile.sroa.1588.0, i64 0
   %v6 = insertelement <16 x float> zeroinitializer, float %c_block_tile.sroa.1687.0, i64 3

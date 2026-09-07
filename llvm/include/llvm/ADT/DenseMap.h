@@ -721,9 +721,9 @@ private:
 
   template <typename LookupKeyT>
   const BucketT *doFind(const LookupKeyT &Val) const {
-    auto [BucketsPtr, U, NumBuckets] = getRep();
-    if (NumBuckets == 0)
+    if (empty())
       return nullptr;
+    auto [BucketsPtr, U, NumBuckets] = getRep();
 
     const unsigned Mask = NumBuckets - 1;
     unsigned BucketNo = KeyInfoT::getHashValue(Val) & Mask;

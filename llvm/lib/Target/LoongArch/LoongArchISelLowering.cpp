@@ -7449,6 +7449,20 @@ static bool combine_CC(SDValue &LHS, SDValue &RHS, SDValue &CC, const SDLoc &DL,
     }
   }
 
+  // Fold (C1, C2, cond) -> (0, 0, seteq/setne)
+  if (isa<ConstantSDNode>(LHS) && isa<ConstantSDNode>(RHS)) {
+    const LoongArchTargetLowering *TLI = Subtarget.getTargetLowering();
+    EVT VT = LHS.getValueType();
+    EVT SetCCResVT =
+        TLI->getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+    if (SDValue Folded = DAG.FoldSetCC(SetCCResVT, LHS, RHS, CCVal, DL)) {
+      LHS = DAG.getConstant(0, DL, VT);
+      RHS = DAG.getConstant(0, DL, VT);
+      CC = DAG.getCondCode(!isNullConstant(Folded) ? ISD::SETEQ : ISD::SETNE);
+      return true;
+    }
+  }
+
   return false;
 }
 

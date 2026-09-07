@@ -378,7 +378,8 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
   if (IsVariadicFn && getTarget().getTriple().isWindowsArm64EC()) {
     // Arm64EC varargs functions use the x86_64 classification rules,
     // not the AArch64 ABI rules.
-    return WinX86_64CodegenInfo->getABIInfo().classifyArgForArm64ECVarArg(Ty);
+    return WinX86_64CodegenInfo->getABIInfo().classifyArgForArm64ECVarArg(
+        Ty, IsNamedArg);
   }
 
   // Handle illegal vector types here.

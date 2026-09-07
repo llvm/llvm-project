@@ -26,11 +26,6 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
   assert(Func);
   assert(FuncDecl->isThisDeclarationADefinition());
 
-  // Manually created functions that haven't been assigned proper
-  // parameters yet.
-  if (!FuncDecl->param_empty() && !FuncDecl->param_begin())
-    return;
-
   // Set up lambda captures.
   if (Func->isLambdaCallOperator()) {
     // Set up lambda capture to closure record field mapping.
@@ -209,9 +204,9 @@ bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &...Args, SourceInfo SI) {
   // The opcode is followed by arguments. The source info is
   // attached to the address after the opcode.
   emit(P, Code, Op, Success);
-  if (LocOverride)
-    SrcMap.push(Code.size(), *LocOverride);
-  else if (SI)
+
+  SI = LocOverride.value_or(SI);
+  if (SrcMap.empty() || SrcMap.back() != SI)
     SrcMap.push(Code.size(), SI);
 
   (..., emit(P, Code, Args, Success));

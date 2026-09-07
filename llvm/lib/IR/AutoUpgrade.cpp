@@ -1388,6 +1388,27 @@ static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
   return Intrinsic::not_intrinsic;
 }
 
+static bool isLegacyNVPTXBF16IntSignature(Function *F, Intrinsic::ID IID) {
+  FunctionType *NewFnTy = Intrinsic::getType(F->getContext(), IID);
+  FunctionType *OldFnTy = F->getFunctionType();
+  auto IsOldBF16StorageTy = [](Type *OldTy, Type *NewTy) {
+    return OldTy->getScalarType()->isIntegerTy() &&
+           OldTy->getPrimitiveSizeInBits() == NewTy->getPrimitiveSizeInBits();
+  };
+
+  if (!IsOldBF16StorageTy(OldFnTy->getReturnType(), NewFnTy->getReturnType()))
+    return false;
+
+  if (OldFnTy->getNumParams() != NewFnTy->getNumParams())
+    return false;
+
+  for (unsigned I = 0, E = OldFnTy->getNumParams(); I != E; ++I)
+    if (!IsOldBF16StorageTy(OldFnTy->getParamType(I), NewFnTy->getParamType(I)))
+      return false;
+
+  return true;
+}
+
 static Intrinsic::ID shouldUpgradeNVPTXTcgen05MMAIntrinsic(Function *F,
                                                            StringRef Name) {
   if (!Name.consume_front("tcgen05.mma."))
@@ -1398,6 +1419,34 @@ static Intrinsic::ID shouldUpgradeNVPTXTcgen05MMAIntrinsic(Function *F,
     return Intrinsic::not_intrinsic;
 
   return F->getIntrinsicID();
+}
+
+static std::optional<std::pair<Intrinsic::ID, RoundingMode>>
+getNVVMFAddUpgrade(StringRef Name) {
+  auto [Modifiers, Type] = Name.rsplit('.');
+  if (!is_contained({"f", "d", "f16", "v2f16"}, Type))
+    return std::nullopt;
+
+  std::optional<llvm::RoundingMode> RoundingMode =
+      StringSwitch<std::optional<llvm::RoundingMode>>(Modifiers.take_front(2))
+          .Case("rn", llvm::RoundingMode::NearestTiesToEven)
+          .Case("rz", llvm::RoundingMode::TowardZero)
+          .Case("rm", llvm::RoundingMode::TowardNegative)
+          .Case("rp", llvm::RoundingMode::TowardPositive)
+          .Default(std::nullopt);
+  if (!RoundingMode)
+    return std::nullopt;
+
+  Intrinsic::ID IID = StringSwitch<Intrinsic::ID>(Modifiers.drop_front(2))
+                          .Case("", Intrinsic::nvvm_fadd)
+                          .Case(".ftz", Intrinsic::nvvm_fadd_ftz)
+                          .Case(".sat", Intrinsic::nvvm_fadd_sat)
+                          .Case(".ftz.sat", Intrinsic::nvvm_fadd_ftz_sat)
+                          .Default(Intrinsic::not_intrinsic);
+  if (IID == Intrinsic::not_intrinsic)
+    return std::nullopt;
+
+  return std::make_pair(IID, *RoundingMode);
 }
 
 static bool consumeNVVMPtrAddrSpace(StringRef &Name) {
@@ -1908,9 +1957,10 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
 
       // Check for nvvm intrinsics that need a return type adjustment.
-      if (!F->getReturnType()->getScalarType()->isBFloatTy()) {
+      {
         Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
-        if (IID != Intrinsic::not_intrinsic) {
+        if (IID != Intrinsic::not_intrinsic &&
+            isLegacyNVPTXBF16IntSignature(F, IID)) {
           NewFn = nullptr;
           return true;
         }
@@ -1983,6 +2033,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       else if (Name.consume_front("fabs."))
         // nvvm.fabs.{f,ftz.f,d}
         Expand = Name == "f" || Name == "ftz.f" || Name == "d";
+      else if (Name.consume_front("add."))
+        // nvvm.add.<rnd>{.ftz}{.sat}.{f,d,f16,v2f16}
+        Expand = getNVVMFAddUpgrade(Name).has_value();
       else if (Name.consume_front("ex2.approx."))
         // nvvm.ex2.approx.{f,ftz.f,d,f16x2}
         Expand =
@@ -3062,6 +3115,16 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     Intrinsic::ID IID = (Name == "fabs.ftz.f") ? Intrinsic::nvvm_fabs_ftz
                                                : Intrinsic::nvvm_fabs;
     Rep = Builder.CreateUnaryIntrinsic(IID, CI->getArgOperand(0));
+  } else if (Name.consume_front("add.")) {
+    // nvvm.add.<rnd>{.ftz}{.sat}.{f,d,f16,v2f16}
+    auto FAdd = getNVVMFAddUpgrade(Name);
+    assert(FAdd && "unsupported nvvm.add.* intrinsic");
+    auto [IID, RoundingMode] = *FAdd;
+    Value *A = CI->getArgOperand(0);
+    Rep = Builder.CreateIntrinsic(
+        A->getType(), IID,
+        {A, CI->getArgOperand(1),
+         Builder.getInt32(static_cast<int>(RoundingMode))});
   } else if (Name.consume_front("ex2.approx.")) {
     // nvvm.ex2.approx.{f,ftz.f,d,f16x2}
     Intrinsic::ID IID = Name.starts_with("ftz") ? Intrinsic::nvvm_ex2_approx_ftz
@@ -3218,7 +3281,7 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
   } else {
     Intrinsic::ID IID = shouldUpgradeNVPTXBF16Intrinsic(Name);
     if (IID != Intrinsic::not_intrinsic &&
-        !F->getReturnType()->getScalarType()->isBFloatTy()) {
+        isLegacyNVPTXBF16IntSignature(F, IID)) {
       rename(F);
       Function *NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
       SmallVector<Value *, 2> Args;

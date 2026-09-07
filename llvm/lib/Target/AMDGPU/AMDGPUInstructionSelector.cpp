@@ -16,7 +16,6 @@
 #include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPURegisterBankInfo.h"
-#include "AMDGPUTargetMachine.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
@@ -3672,8 +3671,9 @@ Register AMDGPUInstructionSelector::matchSignExtendFromS32(Register Reg) const {
                        m_SpecificICst(31))))
     return Def->getOperand(1).getReg();
 
-  if (VT->signBitIsZero(Reg))
-    return matchZeroExtendFromS32(Reg);
+  Register ZextSrc = matchZeroExtendFromS32(Reg);
+  if (ZextSrc && VT->signBitIsZero(ZextSrc))
+    return ZextSrc;
 
   return Register();
 }

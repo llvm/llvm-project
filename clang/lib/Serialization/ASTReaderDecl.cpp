@@ -4616,17 +4616,19 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
 }
 
 void ASTReader::loadPendingDeclChain(Decl *FirstLocal, uint64_t LocalOffset) {
-  // Attach FirstLocal to the end of the decl chain.
   Decl *CanonDecl = FirstLocal->getCanonicalDecl();
+
+  Decl *MostRecent = ASTDeclReader::getMostRecentDecl(CanonDecl);
+  if (!MostRecent)
+    MostRecent = CanonDecl;
   if (FirstLocal != CanonDecl) {
-    Decl *PrevMostRecent = ASTDeclReader::getMostRecentDecl(CanonDecl);
-    ASTDeclReader::attachPreviousDecl(
-        *this, FirstLocal, PrevMostRecent ? PrevMostRecent : CanonDecl,
-        CanonDecl);
+    // Attach FirstLocal to the end of the decl chain.
+    ASTDeclReader::attachPreviousDecl(*this, FirstLocal, MostRecent, CanonDecl);
+    MostRecent = FirstLocal;
   }
 
   if (!LocalOffset) {
-    ASTDeclReader::attachLatestDecl(CanonDecl, FirstLocal);
+    ASTDeclReader::attachLatestDecl(CanonDecl, MostRecent);
     return;
   }
 
@@ -4658,7 +4660,6 @@ void ASTReader::loadPendingDeclChain(Decl *FirstLocal, uint64_t LocalOffset) {
 
   // FIXME: We have several different dispatches on decl kind here; maybe
   // we should instead generate one loop per kind and dispatch up-front?
-  Decl *MostRecent = FirstLocal;
   for (unsigned I = 0, N = Record.size(); I != N; ++I) {
     unsigned Idx = N - I - 1;
     auto *D = ReadDecl(*M, Record, Idx);
