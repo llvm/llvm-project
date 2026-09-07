@@ -211,6 +211,47 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBitsSVE_EXTRACT_SUBVECTOR) {
   EXPECT_EQ(DAG->ComputeNumSignBits(Op, DemandedElts), 7u);
 }
 
+TEST_F(AArch64SelectionDAGTest, ComputeNumSignBitsSVE_INSERT_SUBVECTOR) {
+  SDLoc Loc;
+  SDValue Src = DAG->getNode(ISD::SIGN_EXTEND, Loc, MVT::nxv4i32,
+                             DAG->getRegister(0, MVT::nxv4i8));
+  SDValue Sub = DAG->getNode(ISD::SIGN_EXTEND, Loc, MVT::nxv2i32,
+                             DAG->getRegister(1, MVT::nxv2i16));
+  SDValue SrcWithFewerSignBits = DAG->getNode(
+      ISD::SIGN_EXTEND, Loc, MVT::nxv4i32, DAG->getRegister(0, MVT::nxv4i16));
+  SDValue SubWithMoreSignBits = DAG->getNode(
+      ISD::SIGN_EXTEND, Loc, MVT::nxv2i32, DAG->getRegister(1, MVT::nxv2i8));
+
+  for (unsigned Idx : {0u, 2u}) {
+    SDValue Index = DAG->getConstant(Idx, Loc, MVT::i64);
+    SDValue Op =
+        DAG->getNode(ISD::INSERT_SUBVECTOR, Loc, MVT::nxv4i32, Src, Sub, Index);
+    EXPECT_EQ(DAG->ComputeNumSignBits(Op), 17u);
+
+    Op = DAG->getNode(ISD::INSERT_SUBVECTOR, Loc, MVT::nxv4i32,
+                      SrcWithFewerSignBits, SubWithMoreSignBits, Index);
+    EXPECT_EQ(DAG->ComputeNumSignBits(Op), 17u);
+  }
+}
+
+TEST_F(AArch64SelectionDAGTest,
+       ComputeNumSignBitsSVE_INSERT_SUBVECTOR_FixedSubvector) {
+  SDLoc Loc;
+  SDValue Src = DAG->getNode(ISD::SIGN_EXTEND, Loc, MVT::nxv4i32,
+                             DAG->getRegister(0, MVT::nxv4i8));
+  SDValue Lane0 = DAG->getNode(ISD::SIGN_EXTEND, Loc, MVT::i32,
+                               DAG->getRegister(1, MVT::i8));
+  SDValue Lane1 = DAG->getNode(ISD::SIGN_EXTEND, Loc, MVT::i32,
+                               DAG->getRegister(2, MVT::i16));
+  SDValue Sub = DAG->getBuildVector(MVT::v2i32, Loc, {Lane0, Lane1});
+
+  for (unsigned Idx : {0u, 2u}) {
+    SDValue Op = DAG->getNode(ISD::INSERT_SUBVECTOR, Loc, MVT::nxv4i32, Src,
+                              Sub, DAG->getConstant(Idx, Loc, MVT::i64));
+    EXPECT_EQ(DAG->ComputeNumSignBits(Op), 17u);
+  }
+}
+
 TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_VASHR) {
   SDLoc Loc;
   auto VecVT = MVT::v8i8;
