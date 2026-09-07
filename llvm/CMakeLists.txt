@@ -146,6 +146,10 @@ set(LLVM_EXTRA_PROJECTS "flang" "libc" "compiler-rt")
 set(LLVM_KNOWN_PROJECTS "${LLVM_ALL_PROJECTS};${LLVM_EXTRA_PROJECTS}")
 set(LLVM_ENABLE_PROJECTS "" CACHE STRING
     "Semicolon-separated list of projects to build (${LLVM_KNOWN_PROJECTS}), or \"all\".")
+# Internal-only list used to communicate projects that are configured to
+# satisfy another project's dependencies. Unlike LLVM_ENABLE_PROJECTS, these
+# projects are excluded from the default build and install.
+set(LLVM_DEPENDENCY_ONLY_PROJECTS "")
 # Make sure expansion happens first to not handle "all" in rest of the checks.
 if( LLVM_ENABLE_PROJECTS STREQUAL "all" )
   set( LLVM_ENABLE_PROJECTS ${LLVM_ALL_PROJECTS})
@@ -186,7 +190,7 @@ endforeach()
 if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
   if (NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
     message(STATUS "Enabling MLIR as a dependency to flang")
-    list(APPEND LLVM_ENABLE_PROJECTS "mlir")
+    list(APPEND LLVM_DEPENDENCY_ONLY_PROJECTS "mlir")
   endif()
 
   if (NOT "clang" IN_LIST LLVM_ENABLE_PROJECTS)
@@ -292,8 +296,13 @@ if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
   foreach(proj ${LLVM_KNOWN_PROJECTS} ${LLVM_EXTERNAL_PROJECTS})
     string(TOUPPER "${proj}" upper_proj)
     string(REGEX REPLACE "-" "_" upper_proj ${upper_proj})
-    if ("${proj}" IN_LIST LLVM_ENABLE_PROJECTS)
-      message(STATUS "${proj} project is enabled")
+    if ("${proj}" IN_LIST LLVM_ENABLE_PROJECTS OR
+        "${proj}" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+      if ("${proj}" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+        message(STATUS "${proj} project is enabled as a dependency")
+      else()
+        message(STATUS "${proj} project is enabled")
+      endif()
       set(SHOULD_ENABLE_PROJECT TRUE)
       set(PROJ_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../${proj}")
       if(NOT EXISTS "${PROJ_DIR}" OR NOT IS_DIRECTORY "${PROJ_DIR}")
@@ -312,9 +321,10 @@ if (LLVM_ENABLE_PROJECTS_USED OR NOT LLVM_ENABLE_PROJECTS STREQUAL "")
       set(SHOULD_ENABLE_PROJECT FALSE)
     endif()
     # Force `LLVM_TOOL_${upper_proj}_BUILD` variables to have values that
-    # corresponds with `LLVM_ENABLE_PROJECTS`. This prevents the user setting
-    # `LLVM_TOOL_${upper_proj}_BUILD` variables externally. At some point
-    # we should deprecate allowing users to set these variables by turning them
+    # correspond with `LLVM_ENABLE_PROJECTS` and
+    # `LLVM_DEPENDENCY_ONLY_PROJECTS`. This prevents the user setting
+    # `LLVM_TOOL_${upper_proj}_BUILD` variables externally. At some point we
+    # should deprecate allowing users to set these variables by turning them
     # into normal CMake variables rather than cache variables.
     set(LLVM_TOOL_${upper_proj}_BUILD
       ${SHOULD_ENABLE_PROJECT}

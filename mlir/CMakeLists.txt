@@ -270,14 +270,20 @@ add_subdirectory(lib/CAPI)
 
 if (MLIR_INCLUDE_TESTS)
   add_definitions(-DMLIR_INCLUDE_TESTS)
-  add_custom_target(MLIRUnitTests)
-  set_target_properties(MLIRUnitTests PROPERTIES FOLDER "MLIR/Tests")
-  if (TARGET llvm_gtest)
-    add_subdirectory(unittests)
+  if ("mlir" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+    # Make test support libraries available to dependent projects without
+    # registering MLIR's own unit and regression tests with check-all.
+    add_subdirectory(test/lib)
   else()
-    message(WARNING "gtest not found, unittests will not be available")
+    add_custom_target(MLIRUnitTests)
+    set_target_properties(MLIRUnitTests PROPERTIES FOLDER "MLIR/Tests")
+    if (TARGET llvm_gtest)
+      add_subdirectory(unittests)
+    else()
+      message(WARNING "gtest not found, unittests will not be available")
+    endif()
+    add_subdirectory(test)
   endif()
-  add_subdirectory(test)
 endif()
 # Tools needs to come late to ensure that MLIR_ALL_LIBS is populated.
 # Generally things after this point may depend on MLIR_ALL_LIBS or libMLIR.so.
