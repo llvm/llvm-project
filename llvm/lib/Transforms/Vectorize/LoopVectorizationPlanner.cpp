@@ -43,7 +43,7 @@ static cl::opt<bool> UseWiderVFIfCallVariantsPresent(
 
 static cl::opt<bool> ConsiderRegPressure(
     "vectorizer-consider-reg-pressure", cl::init(false), cl::Hidden,
-    cl::desc("Discard VFs if their register pressure is too high."));
+    cl::desc("Consider register pressure when selecting VFs."));
 
 static cl::opt<bool> ForceTargetSupportsScalableVectors(
     "force-target-supports-scalable-vectors", cl::init(false), cl::Hidden,
@@ -192,6 +192,23 @@ bool VFSelectionContext::shouldConsiderRegPressureForVF(ElementCount VF) const {
   return ElementCount::isKnownGT(
       VF, VF.isScalable() ? MaxPermissibleVFWithoutMaxBW.ScalableVF
                           : MaxPermissibleVFWithoutMaxBW.FixedVF);
+}
+
+bool VFSelectionContext::shouldDiscardMaxBandwidthVFForRegPressure(
+    ElementCount VF) const {
+  if (ConsiderRegPressure.getNumOccurrences() && !ConsiderRegPressure)
+    return false;
+
+  auto RegKind = VF.isScalable() ? TargetTransformInfo::RGK_ScalableVector
+                                 : TargetTransformInfo::RGK_FixedWidthVector;
+  ElementCount MaxVFWithoutMaxBW = VF.isScalable()
+                                       ? MaxPermissibleVFWithoutMaxBW.ScalableVF
+                                       : MaxPermissibleVFWithoutMaxBW.FixedVF;
+  return VF.isVector() && useMaxBandwidth(VF.isScalable()) &&
+         TTI.shouldMaximizeVectorBandwidth(RegKind) &&
+         TTI.shouldConsiderVectorizationRegPressure() &&
+         MaxVFWithoutMaxBW.isVector() &&
+         ElementCount::isKnownGT(VF, MaxVFWithoutMaxBW);
 }
 
 ElementCount VFSelectionContext::clampVFByMaxTripCount(
@@ -396,6 +413,7 @@ VFSelectionContext::getMaxLegalScalableVF(unsigned MaxSafeElements) {
 FixedScalableVFPair VFSelectionContext::computeFeasibleMaxVF(
     unsigned MaxTripCount, ElementCount UserVF, unsigned UserIC,
     bool FoldTailByMasking, bool RequiresScalarEpilogue) {
+  MaxPermissibleVFWithoutMaxBW = FixedScalableVFPair::getNone();
   auto [SmallestType, WidestType] = getSmallestAndWidestTypes();
 
   // Get the maximum safe dependence distance in bits computed by LAA.

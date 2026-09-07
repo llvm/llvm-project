@@ -1998,8 +1998,8 @@ public:
   /// processing \p Iters scalar iterations per vector iteration.
   LLVM_ABI bool preferEpilogueVectorization(ElementCount Iters) const;
 
-  /// \returns True if the loop vectorizer should discard any VFs where the
-  /// maximum register pressure exceeds getNumberOfRegisters.
+  /// \returns True if the loop vectorizer should account for register pressure
+  /// when selecting VFs.
   LLVM_ABI bool shouldConsiderVectorizationRegPressure() const;
 
   /// \returns True if the target wants to expand the given reduction intrinsic

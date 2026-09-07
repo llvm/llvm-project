@@ -484,7 +484,7 @@ bool RISCVTTIImpl::shouldMaximizeVectorBandwidth(
   // Size vector factors by the smallest type in the loop rather than the
   // widest, so loops mixing narrow and wide types can use the full vector
   // register bandwidth. Overly wide factors are pruned separately by register
-  // pressure estimation (shouldConsiderVectorizationRegPressure).
+  // pressure estimation.
   return K != TargetTransformInfo::RGK_Scalar && ST->hasVInstructions();
 }
 
@@ -3427,6 +3427,83 @@ unsigned RISCVTTIImpl::getRegUsageForType(Type *Ty) const {
   }
 
   return BaseT::getRegUsageForType(Ty);
+}
+
+std::optional<SmallBitVector> RISCVTTIImpl::getResultRegisterReuseMask(
+    unsigned Opcode, Type *ResultType,
+    ArrayRef<TTI::RegisterUsageOperandInfo> Operands) const {
+  bool UsesRVV = isa<ScalableVectorType>(ResultType)
+                     ? ST->hasVInstructions()
+                     : isa<FixedVectorType>(ResultType) &&
+                           ST->useRVVForFixedLengthVectors();
+  if (!UsesRVV || !ResultType->getScalarType()->isIntegerTy())
+    return std::nullopt;
+  auto ResultLT = getTypeLegalizationCost(ResultType);
+  if (ResultLT.first != 1 || !ResultLT.second.isVector())
+    return std::nullopt;
+
+  auto IsWideningTypePair = [this](Type *SrcType, Type *DstType) {
+    if (!SrcType || !DstType || !isa<VectorType>(SrcType) ||
+        !isa<VectorType>(DstType) || !SrcType->getScalarType()->isIntegerTy() ||
+        !DstType->getScalarType()->isIntegerTy())
+      return false;
+    if (cast<VectorType>(SrcType)->getElementCount() !=
+        cast<VectorType>(DstType)->getElementCount())
+      return false;
+
+    unsigned SrcWidth = SrcType->getScalarType()->getIntegerBitWidth();
+    unsigned DstWidth = DstType->getScalarType()->getIntegerBitWidth();
+    if (SrcWidth < 8 || DstWidth > ST->getELen() || SrcWidth >= DstWidth ||
+        DstWidth % SrcWidth != 0 || !isPowerOf2_32(DstWidth / SrcWidth))
+      return false;
+
+    auto SrcLT = getTypeLegalizationCost(SrcType);
+    auto *IntermediateType =
+        VectorType::get(IntegerType::get(DstType->getContext(), DstWidth / 2),
+                        cast<VectorType>(DstType));
+    auto IntermediateLT = getTypeLegalizationCost(IntermediateType);
+    return SrcLT.first == 1 && SrcLT.second.isVector() &&
+           IntermediateLT.first == 1 && IntermediateLT.second.isVector();
+  };
+
+  if ((Opcode != Instruction::Add && Opcode != Instruction::Sub) ||
+      Operands.size() != 2)
+    return std::nullopt;
+
+  auto IsWideningExtend = [ResultType, &IsWideningTypePair](
+                              const TTI::RegisterUsageOperandInfo &Op) {
+    if (Op.ValueType != ResultType || (Op.DefOpcode != Instruction::SExt &&
+                                       Op.DefOpcode != Instruction::ZExt))
+      return false;
+    return IsWideningTypePair(Op.SourceType, ResultType);
+  };
+
+  bool Ext0 = IsWideningExtend(Operands[0]);
+  bool Ext1 = IsWideningExtend(Operands[1]);
+  // VV/VX forms and WX forms use an early-clobber result that cannot reuse an
+  // operand vector register. A uniform extending operand lowers through a
+  // scalar register and selects the VX/WX form.
+  if ((Ext0 && Ext1) || (Ext0 && Operands[0].IsUniform) ||
+      (Ext1 && Operands[1].IsUniform))
+    return SmallBitVector(Operands.size());
+
+  // Widening add is commutative, while widening sub requires the extended
+  // narrow operand to be on the right. The wide operand may be tied to the
+  // result; VPlan determines whether its live range ends at this operation.
+  if (Opcode == Instruction::Add && Ext0 != Ext1) {
+    unsigned WideOpIdx = Ext0 ? 1 : 0;
+    SmallBitVector ReusableOperands(Operands.size());
+    if (!Operands[WideOpIdx].IsUniform)
+      ReusableOperands.set(WideOpIdx);
+    return ReusableOperands;
+  }
+  if (Opcode == Instruction::Sub && Ext1 && !Ext0) {
+    SmallBitVector ReusableOperands(Operands.size());
+    if (!Operands[0].IsUniform)
+      ReusableOperands.set(0);
+    return ReusableOperands;
+  }
+  return std::nullopt;
 }
 
 unsigned RISCVTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {

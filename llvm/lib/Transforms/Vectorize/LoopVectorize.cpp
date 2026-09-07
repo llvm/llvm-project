@@ -5798,11 +5798,18 @@ LoopVectorizationPlanner::computeBestVF() {
                                P->vectorFactors().end());
 
     SmallVector<VPRegisterUsage, 8> RUs;
+    SmallVector<VPRegisterUsage, 8> MaxBandwidthRUs;
     bool ConsiderRegPressure = any_of(VFs, [this](ElementCount VF) {
       return Config.shouldConsiderRegPressureForVF(VF);
     });
+    bool PruneMaxBandwidthVFs = any_of(VFs, [this](ElementCount VF) {
+      return Config.shouldDiscardMaxBandwidthVFForRegPressure(VF);
+    });
     if (ConsiderRegPressure)
       RUs = calculateRegisterUsageForPlan(*P, VFs, TTI);
+    if (PruneMaxBandwidthVFs)
+      MaxBandwidthRUs = calculateRegisterUsageForPlan(
+          *P, VFs, TTI, VPRegisterUsageMode::ConservativePeak);
 
     for (unsigned I = 0; I < VFs.size(); I++) {
       ElementCount VF = VFs[I];
@@ -5821,6 +5828,14 @@ LoopVectorizationPlanner::computeBestVF() {
             << "LV: Not considering vector loop of width " << VF
             << " because it would cause replicated blocks to be generated,"
             << " which isn't allowed when optimizing for size.\n");
+        continue;
+      }
+      if (Config.shouldDiscardMaxBandwidthVFForRegPressure(VF) &&
+          MaxBandwidthRUs[I].exceedsMaxNumRegs(
+              TTI.getRegisterClassForType(/*Vector=*/true), TTI,
+              ForceTargetNumVectorRegs)) {
+        LLVM_DEBUG(dbgs() << "LV(REG): Not considering vector loop of width "
+                          << VF << " because it uses too many registers\n");
         continue;
       }
 

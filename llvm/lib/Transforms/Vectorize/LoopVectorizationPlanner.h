@@ -762,6 +762,10 @@ public:
   /// \return True if register pressure should be considered for the given VF.
   bool shouldConsiderRegPressureForVF(ElementCount VF) const;
 
+  /// \return True if \p VF is a max-bandwidth candidate that should be
+  /// rejected when it exceeds the target's available registers.
+  bool shouldDiscardMaxBandwidthVFForRegPressure(ElementCount VF) const;
+
   /// \return True if scalable vectors are supported by the target or forced.
   bool supportsScalableVectors() const;
 

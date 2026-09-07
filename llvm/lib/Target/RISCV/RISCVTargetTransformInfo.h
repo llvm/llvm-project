@@ -139,6 +139,10 @@ public:
 
   unsigned getRegUsageForType(Type *Ty) const override;
 
+  std::optional<SmallBitVector> getResultRegisterReuseMask(
+      unsigned Opcode, Type *ResultType,
+      ArrayRef<TTI::RegisterUsageOperandInfo> Operands) const override;
+
   unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const override;
 
   bool preferAlternateOpcodeVectorization() const override;
