@@ -26,7 +26,7 @@ entry:
 !2 = !{i32 8, !"branch-target-enforcement", i32 1}
 !3 = !{i32 8, !"sign-return-address", i32 1}
 !4 = !{i32 8, !"sign-return-address-all", i32 0}
-!5 = !{i32 8, !"sign-return-address-harden-load-return-address", i32 1}
+!5 = !{i32 1, !"sign-return-address-harden", !"load-return-address"}
 
 ;; Set the uwtable attribute on ctor/dtor.
 ; CHECK: define internal void @asan.module_ctor() #[[#ATTR:]]
