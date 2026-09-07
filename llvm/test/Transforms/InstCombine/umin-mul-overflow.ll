@@ -3,11 +3,10 @@
 
 define i32 @test_mul_sat_32(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_mul_sat_32(
-; CHECK-NEXT:    [[ZA:%.*]] = zext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[ZB:%.*]] = zext i32 [[B:%.*]] to i64
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i64 [[ZA]], [[ZB]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[MUL]], i64 4294967295)
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i64 [[UMIN]] to i32
+; CHECK-NEXT:    [[UMUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[A:%.*]], i32 [[B:%.*]])
+; CHECK-NEXT:    [[UMUL_VALUE:%.*]] = extractvalue { i32, i1 } [[UMUL]], 0
+; CHECK-NEXT:    [[UMUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[UMUL]], 1
+; CHECK-NEXT:    [[TRUNC:%.*]] = select i1 [[UMUL_OVERFLOW]], i32 -1, i32 [[UMUL_VALUE]]
 ; CHECK-NEXT:    ret i32 [[TRUNC]]
 ;
   %za = zext i32 %a to i64
@@ -20,11 +19,10 @@ define i32 @test_mul_sat_32(i32 %a, i32 %b) {
 
 define i64 @test_mul_sat_64(i64 %a, i64 %b) {
 ; CHECK-LABEL: @test_mul_sat_64(
-; CHECK-NEXT:    [[ZA:%.*]] = zext i64 [[A:%.*]] to i128
-; CHECK-NEXT:    [[ZB:%.*]] = zext i64 [[B:%.*]] to i128
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i128 [[ZA]], [[ZB]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i128 @llvm.umin.i128(i128 [[MUL]], i128 18446744073709551615)
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i128 [[UMIN]] to i64
+; CHECK-NEXT:    [[UMUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 [[A:%.*]], i64 [[B:%.*]])
+; CHECK-NEXT:    [[UMUL_VALUE:%.*]] = extractvalue { i64, i1 } [[UMUL]], 0
+; CHECK-NEXT:    [[UMUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[UMUL]], 1
+; CHECK-NEXT:    [[TRUNC:%.*]] = select i1 [[UMUL_OVERFLOW]], i64 -1, i64 [[UMUL_VALUE]]
 ; CHECK-NEXT:    ret i64 [[TRUNC]]
 ;
   %za = zext i64 %a to i128
@@ -66,10 +64,9 @@ define i64 @test_add_sat_64(i64 %a, i64 %b) {
 
 define i9 @test_add_nsw_poison(i8 %a, i8 %b) {
 ; CHECK-LABEL: @test_add_nsw_poison(
-; CHECK-NEXT:    [[Y1:%.*]] = zext i8 [[B1:%.*]] to i9
-; CHECK-NEXT:    [[Y:%.*]] = zext i8 [[B:%.*]] to i9
-; CHECK-NEXT:    [[P:%.*]] = add nuw nsw i9 [[Y1]], [[Y]]
-; CHECK-NEXT:    ret i9 [[P]]
+; CHECK-NEXT:    [[B:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 [[B1:%.*]])
+; CHECK-NEXT:    [[Y:%.*]] = zext i8 [[B]] to i9
+; CHECK-NEXT:    ret i9 [[Y]]
 ;
   %x = zext i8 %a to i9
   %y = zext i8 %b to i9
@@ -123,14 +120,12 @@ define i64 @test_add_multiuse(i32 %a, i32 %b) {
 ; Positive test: mul has multi-use, but they are all truncs <= SrcBitWidth
 define i32 @test_mul_multiuse_trunc(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_mul_multiuse_trunc(
-; CHECK-NEXT:    [[ZA:%.*]] = zext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[ZB:%.*]] = zext i32 [[B:%.*]] to i64
-; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i64 [[ZA]], [[ZB]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[MUL]], i64 4294967295)
-; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc nuw i64 [[UMIN]] to i32
-; CHECK-NEXT:    [[UMUL_VALUE:%.*]] = trunc i64 [[MUL]] to i32
+; CHECK-NEXT:    [[UMUL:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 [[A:%.*]], i32 [[B:%.*]])
+; CHECK-NEXT:    [[UMUL_VALUE:%.*]] = extractvalue { i32, i1 } [[UMUL]], 0
+; CHECK-NEXT:    [[UMUL_OVERFLOW:%.*]] = extractvalue { i32, i1 } [[UMUL]], 1
+; CHECK-NEXT:    [[TRUNC1:%.*]] = select i1 [[UMUL_OVERFLOW]], i32 -1, i32 [[UMUL_VALUE]]
 ; CHECK-NEXT:    [[ZEXT:%.*]] = and i32 [[UMUL_VALUE]], 65535
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[ZEXT]], [[TRUNC1]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[TRUNC1]], [[ZEXT]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %za = zext i32 %a to i64
@@ -147,14 +142,10 @@ define i32 @test_mul_multiuse_trunc(i32 %a, i32 %b) {
 ; Positive test: add has multi-use, but they are all truncs <= SrcBitWidth
 define i32 @test_add_multiuse_trunc(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_add_multiuse_trunc(
-; CHECK-NEXT:    [[ZA:%.*]] = zext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[ZB:%.*]] = zext i32 [[B:%.*]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[ZA]], [[ZB]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[ADD]], i64 4294967295)
-; CHECK-NEXT:    [[TRUNC1:%.*]] = trunc nuw i64 [[UMIN]] to i32
-; CHECK-NEXT:    [[UADD:%.*]] = trunc i64 [[ADD]] to i32
+; CHECK-NEXT:    [[UADD:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TRUNC1:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[A]], i32 [[B]])
 ; CHECK-NEXT:    [[ZEXT:%.*]] = and i32 [[UADD]], 65535
-; CHECK-NEXT:    [[RES:%.*]] = add i32 [[ZEXT]], [[TRUNC1]]
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[TRUNC1]], [[ZEXT]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %za = zext i32 %a to i64
