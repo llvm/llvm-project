@@ -136,10 +136,9 @@ int dotest()
   unsigned num_delay_signal_threads = 0;
   unsigned num_delay_crash_threads = 0;
 
-  register_signal_handler(
-      SIGUSR1,
-      sigusr1_handler); // Break here and adjust
-                        // num_[breakpoint|watchpoint|signal|crash]_threads
+  // clang-format off
+  register_signal_handler(SIGUSR1, sigusr1_handler); // Break here and adjust num_[breakpoint|watchpoint|signal|crash]_threads
+  // clang-format on
 
   unsigned total_threads = num_breakpoint_threads + num_watchpoint_threads +
                            num_signal_threads + num_crash_threads +
