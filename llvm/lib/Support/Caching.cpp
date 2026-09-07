@@ -38,7 +38,7 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
   TempFilePrefixRef.toVector(TempFilePrefix);
   CacheDirectoryPathRef.toVector(CacheDirectoryPath);
 
-  bool OnNFS = !sys::fs::is_local(CacheDirectoryPath);
+  bool IsNFS = !sys::fs::is_local(CacheDirectoryPath);
 
   auto Func = [=](unsigned Task, StringRef Key,
                   const Twine &ModuleName) -> Expected<AddStreamFn> {
@@ -55,8 +55,8 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
       ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
           MemoryBuffer::getOpenFile(*FDOrErr, EntryPath,
                                     /*FileSize=*/-1,
-                                    /*RequiresNullTerminator=*/OnNFS,
-                                    /*IsVolatile=*/OnNFS);
+                                    /*RequiresNullTerminator=*/IsNFS,
+                                    /*IsVolatile=*/IsNFS);
       sys::fs::closeFile(*FDOrErr);
       if (MBOrErr) {
         AddBuffer(Task, ModuleName, std::move(*MBOrErr));
