@@ -1505,6 +1505,16 @@ Error olMemUnregister_impl(ol_device_handle_t Device, void *Ptr,
       Ptr, Flags & OL_MEMORY_REGISTER_FLAG_UNLOCK_MEMORY);
 }
 
+Error olMemIsAccessible_impl(ol_device_handle_t Device, const void *Ptr,
+                             size_t Size, bool *IsAccessible) {
+  auto AccessibleOrErr = Device->Device->isAccessiblePtr(Ptr, Size);
+  if (!AccessibleOrErr)
+    return AccessibleOrErr.takeError();
+
+  *IsAccessible = *AccessibleOrErr;
+  return Error::success();
+}
+
 Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
   if (Queue->AsyncInfo->Queue) {
     if (auto Err = Queue->Device->Device->queryAsync(Queue->AsyncInfo, false,
