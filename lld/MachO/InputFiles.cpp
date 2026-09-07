@@ -51,6 +51,7 @@
 #include "ObjC.h"
 #include "OutputSection.h"
 #include "OutputSegment.h"
+#include "Sections.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -868,6 +869,7 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
     std::vector<uint32_t> &symbolIndices = symbolsBySection[i];
     uint64_t sectionAddr = sectionHeaders[i].addr;
     uint32_t sectionAlign = 1u << sectionHeaders[i].align;
+    uint64_t sectionSize = sectionHeaders[i].size;
 
     // Some sections have already been split into subsections during
     // parseSections(), so we simply need to match Symbols to the corresponding
@@ -896,21 +898,26 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       return StringRef(strtab + sym.n_strx);
     };
 
-    // arm64 instructions must be 4-byte aligned, so a symbol in a code section
-    // whose guaranteed alignment is lower than that names a function that can
-    // never be executed. ld64 diagnoses this, so we do too. Note that we check
-    // each symbol rather than each subsection: an alt-entry symbol does not
-    // induce a new subsection, but it is still an entry point that has to be
-    // aligned.
-    const bool checkCodeAlign = target->cpuType == CPU_TYPE_ARM64 &&
-                                (sections[i]->flags & S_ATTR_PURE_INSTRUCTIONS);
+    // arm64 and arm64_32 instructions must be 4-byte aligned, so a symbol in
+    // a code section whose guaranteed alignment is lower than that names a
+    // function that can never be executed. ld64 diagnoses this, so we do too.
+    // Note that we check each symbol rather than each subsection: an alt-entry
+    // symbol does not induce a new subsection, but it is still an entry point
+    // that has to be aligned.
+    const bool checkCodeAlign =
+        is_contained({CPU_TYPE_ARM64, CPU_TYPE_ARM64_32}, target->cpuType) &&
+        lld::macho::sections::isCodeSection(sections[i]->name,
+                                            sections[i]->segname,
+                                            sections[i]->flags);
 
-    // Mach-O reserves the 'l' and 'L' prefixes for labels that the assembler
-    // generates for its own use, such as the ltmp0 anchor it emits for each
-    // section. Those do not name functions, so ld64 does not warn about them.
+    // Mach-O reserves the 'L' prefix for labels that the assembler generates
+    // for its own use, such as the Lloh<N> labels that anchor LOH groups, and
+    // ld64 does not warn about them. It also does not warn about the
+    // assembler's non-external ltmp<N> section anchors. User-defined
+    // 'l'-prefixed symbols are diagnosed, whether local or external.
     auto isAssemblerTemp = [](const NList &sym, StringRef name) {
-      return !(sym.n_type & N_EXT) &&
-             (name.starts_with("l") || name.starts_with("L"));
+      return name.starts_with("L") ||
+             (!(sym.n_type & N_EXT) && name.starts_with("ltmp"));
     };
 
     // Calculate symbol sizes and create subsections by splitting the sections
@@ -930,8 +937,12 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       const uint32_t symIndex = symbolIndices[j];
       const NList &sym = nList[symIndex];
       StringRef name = getSymName(sym);
+        // A symbol in an empty section names no instruction bytes, so it is not
+        // diagnosed.
+      uint64_t sectionOffset = sym.n_value - sectionAddr;
       if (checkCodeAlign && !isAssemblerTemp(sym, name) &&
-          MinAlign(sectionAlign, sym.n_value - sectionAddr) < 4)
+          sectionSize != 0 &&
+          MinAlign(sectionAlign, sectionOffset) < 4)
         warn("arm64 function not 4-byte aligned: " + name + " from " +
              toString(this));
       Subsection &subsec = subsections.back();

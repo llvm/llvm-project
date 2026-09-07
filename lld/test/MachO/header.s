@@ -25,5 +25,4 @@
 # DYLIB-NEXT: MH_MAGIC_64{{(_64)?}}  [[CPU]]  [[SUBTYPE]]  [[CAPS]]  DYLIB    {{.*}} NOUNDEFS DYLDLINK TWOLEVEL NO_REEXPORTED_DYLIBS{{$}}
 
 .globl _main
-.p2align 2
 _main:

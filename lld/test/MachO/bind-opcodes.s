@@ -152,6 +152,9 @@
 # BIND-EMPTY:
 
 #--- foo.s
+## These are data placeholders, not functions; keep them out of a code
+## section.
+.section __TEXT,__datafoo,regular
 .globl _foo, _bar
 _foo:
   .space 4
@@ -182,5 +185,6 @@ ptr _bar
 ptr _foo
 
 .globl _main
+.p2align 2
 .text
 _main:

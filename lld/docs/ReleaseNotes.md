@@ -41,10 +41,10 @@ from the [LLVM releases web site](https://llvm.org/releases/).
   call them, so that stubs reached from prioritized code are laid out together.
   This applies whenever section priorities exist, such as with `-order_file`.
 
-* arm64 function symbols that are not guaranteed to be 4-byte aligned now
-  produce a warning, matching ld64. Hand-written assembly that omits an
-  explicit `.p2align 2` may need one, and links that pass `-fatal_warnings`
-  may start to fail.
+* arm64 and arm64_32 function symbols that are not guaranteed to be 4-byte
+  aligned now produce a warning, matching ld64. Hand-written assembly that
+  omits an explicit `.p2align 2` may need one, and links that pass
+  `-fatal_warnings` may start to fail.
 
 ### WebAssembly Improvements
 

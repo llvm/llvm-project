@@ -9,7 +9,6 @@
 ## __debug_info is one such section that gets special-case handling.
 
 .text
-.p2align 2
 _foo:
 
 .section __DWARF,__debug_info,regular,debug
