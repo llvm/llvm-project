@@ -42,6 +42,7 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
@@ -1995,6 +1996,23 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   }
   config->ltoObjPath = args.getLastArgValue(OPT_object_path_lto);
   config->ltoNewPmPasses = args.getLastArgValue(OPT_lto_newpm_passes);
+  if (const Arg *arg = args.getLastArg(OPT_opt_remarks_filename))
+    config->optRemarksFilename = arg->getValue();
+  if (const Arg *arg = args.getLastArg(OPT_opt_remarks_hotness_threshold)) {
+    auto threshold = remarks::parseHotnessThresholdOption(arg->getValue());
+    if (threshold) {
+      config->optRemarksHotnessThreshold = *threshold;
+    } else {
+      consumeError(threshold.takeError());
+      error(arg->getSpelling() + ": invalid argument '" + arg->getValue() +
+            "', only integer or 'auto' is supported");
+    }
+  }
+  if (const Arg *arg = args.getLastArg(OPT_opt_remarks_passes))
+    config->optRemarksPasses = arg->getValue();
+  config->optRemarksWithHotness = args.hasArg(OPT_opt_remarks_with_hotness);
+  if (const Arg *arg = args.getLastArg(OPT_opt_remarks_format))
+    config->optRemarksFormat = arg->getValue();
   config->thinLTOCacheDir = args.getLastArgValue(OPT_cache_path_lto);
   config->thinLTOCachePolicy = getLTOCachePolicy(args);
   config->thinLTOEmitImportsFiles = args.hasArg(OPT_thinlto_emit_imports_files);
