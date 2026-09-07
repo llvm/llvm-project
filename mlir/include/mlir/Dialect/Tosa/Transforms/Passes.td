@@ -204,17 +204,17 @@ def TosaGatherScatterHardeningPass
   let summary = "Clamp TOSA gather and scatter indices to valid bounds";
   let description = [{
     Bounds the indices used by each gather and scatter with TOSA minimum and
-    maximum operations so that all accesses are in bounds. When the same
-    indices value is used by several gather or scatter operations that require
-    identical bounds, one bounding sequence is shared by all of them. Other
-    users continue to use the original indices.
+    maximum operations so that all accesses are in bounds. This improves
+    security in the context of untrusted TOSA graph by preventing memory access
+    outside values (gather) and values_out (scatter) tensor.
 
-    The indexed dimension must be statically known and non-empty.
+    Each operation is rewritten independently; a subsequent CSE pass is
+    required to share bounding ops between gather/scatter with the same input
+    and bounds. Other users continue to use the original indices.
+
+    Currently the pass only supports static index dimensions and fails
+    otherwise.
   }];
-
-  let dependentDialects = [
-    "tosa::TosaDialect"
-  ];
 }
 
 def TosaNarrowI64ToI32Pass : Pass<"tosa-narrow-i64-to-i32", "func::FuncOp"> {

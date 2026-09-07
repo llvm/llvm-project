@@ -1,11 +1,11 @@
 // RUN: mlir-opt %s -tosa-gather-scatter-hardening -split-input-file | FileCheck %s
 
 // CHECK-LABEL: func.func @gather(
-// CHECK: %[[ZERO:.*]] = "tosa.const"() <{values = dense<0> : tensor<1x1xi32>}> : () -> tensor<1x1xi32>
-// CHECK: %[[UPPER:.*]] = "tosa.const"() <{values = dense<20> : tensor<1x1xi32>}> : () -> tensor<1x1xi32>
+// CHECK-DAG: %[[OTHER_USE:.*]] = tosa.add %arg1, %arg2
+// CHECK-DAG: %[[ZERO:.*]] = "tosa.const"() <{values = dense<0> : tensor<1x1xi32>}> : () -> tensor<1x1xi32>
+// CHECK-DAG: %[[UPPER:.*]] = "tosa.const"() <{values = dense<20> : tensor<1x1xi32>}> : () -> tensor<1x1xi32>
 // CHECK: %[[NONNEGATIVE:.*]] = tosa.maximum %arg1, %[[ZERO]]
 // CHECK: %[[CLAMPED:.*]] = tosa.minimum %[[NONNEGATIVE]], %[[UPPER]]
-// CHECK: %[[OTHER_USE:.*]] = tosa.add %arg1, %arg2
 // CHECK: %[[GATHER:.*]] = tosa.gather %arg0, %[[CLAMPED]]
 // CHECK: return %[[GATHER]], %[[OTHER_USE]]
 func.func @gather(%arg0: tensor<3x21x5xi8>, %arg1: tensor<3x6xi32>,
@@ -18,20 +18,18 @@ func.func @gather(%arg0: tensor<3x21x5xi8>, %arg1: tensor<3x6xi32>,
 
 // -----
 
-// One bounding sequence is shared by gather and scatter when their bounds
-// match.
+// Matching bounds produce equivalent, independent sequences for a subsequent
+// CSE pass to consolidate.
 
 // CHECK-LABEL: func.func @shared_indices(
-// CHECK: %[[ZERO:.*]] = "tosa.const"() <{values = dense<0> : tensor<1x1xi32>}> : () -> tensor<1x1xi32>
-// CHECK: %[[UPPER:.*]] = "tosa.const"() <{values = dense<20> : tensor<1x1xi32>}> : () -> tensor<1x1xi32>
-// CHECK: %[[NONNEGATIVE:.*]] = tosa.maximum %arg2, %[[ZERO]]
-// CHECK: %[[CLAMPED:.*]] = tosa.minimum %[[NONNEGATIVE]], %[[UPPER]]
-// CHECK-NOT: tosa.maximum
-// CHECK-NOT: tosa.minimum
-// CHECK: %[[GATHER:.*]] = tosa.gather %arg0, %[[CLAMPED]]
-// CHECK: %[[SCATTER:.*]] = tosa.scatter %arg1, %[[CLAMPED]], %arg3
-// CHECK-NOT: tosa.maximum
-// CHECK-NOT: tosa.minimum
+// CHECK-DAG: %[[ZERO:.*]] = "tosa.const"() <{values = dense<0> : tensor<1x1xi32>}> : () -> tensor<1x1xi32>
+// CHECK-DAG: %[[UPPER:.*]] = "tosa.const"() <{values = dense<20> : tensor<1x1xi32>}> : () -> tensor<1x1xi32>
+// CHECK: %[[GATHER_NONNEGATIVE:.*]] = tosa.maximum %arg2, %[[ZERO]]
+// CHECK: %[[GATHER_CLAMPED:.*]] = tosa.minimum %[[GATHER_NONNEGATIVE]], %[[UPPER]]
+// CHECK: %[[GATHER:.*]] = tosa.gather %arg0, %[[GATHER_CLAMPED]]
+// CHECK: %[[SCATTER_NONNEGATIVE:.*]] = tosa.maximum %arg2, %[[ZERO]]
+// CHECK: %[[SCATTER_CLAMPED:.*]] = tosa.minimum %[[SCATTER_NONNEGATIVE]], %[[UPPER]]
+// CHECK: %[[SCATTER:.*]] = tosa.scatter %arg1, %[[SCATTER_CLAMPED]], %arg3
 // CHECK: return %[[GATHER]], %[[SCATTER]]
 func.func @shared_indices(%arg0: tensor<2x21x3xf32>,
                           %arg1: tensor<2x21x3xf32>,
@@ -41,32 +39,6 @@ func.func @shared_indices(%arg0: tensor<2x21x3xf32>,
   %0 = tosa.gather %arg0, %arg2 : (tensor<2x21x3xf32>, tensor<2x4xi32>) -> tensor<2x4x3xf32>
   %1 = tosa.scatter %arg1, %arg2, %arg3 : (tensor<2x21x3xf32>, tensor<2x4xi32>, tensor<2x4x3xf32>) -> tensor<2x21x3xf32>
   return %0, %1 : tensor<2x4x3xf32>, tensor<2x21x3xf32>
-}
-
-// -----
-
-// Gather and scatter get separate bounding sequences when their bounds differ.
-
-// CHECK-LABEL: func.func @different_bounds(
-// CHECK: %[[SCATTER_ZERO:.*]] = "tosa.const"() <{values = dense<0> : tensor<1x1xi32>}> : () -> tensor<1x1xi32>
-// CHECK: %[[SCATTER_UPPER:.*]] = "tosa.const"() <{values = dense<51> : tensor<1x1xi32>}> : () -> tensor<1x1xi32>
-// CHECK: %[[SCATTER_NONNEGATIVE:.*]] = tosa.maximum %arg2, %[[SCATTER_ZERO]]
-// CHECK: %[[SCATTER_CLAMPED:.*]] = tosa.minimum %[[SCATTER_NONNEGATIVE]], %[[SCATTER_UPPER]]
-// CHECK: %[[GATHER_ZERO:.*]] = "tosa.const"() <{values = dense<0> : tensor<1x1xi32>}> : () -> tensor<1x1xi32>
-// CHECK: %[[GATHER_UPPER:.*]] = "tosa.const"() <{values = dense<20> : tensor<1x1xi32>}> : () -> tensor<1x1xi32>
-// CHECK: %[[GATHER_NONNEGATIVE:.*]] = tosa.maximum %arg2, %[[GATHER_ZERO]]
-// CHECK: %[[GATHER_CLAMPED:.*]] = tosa.minimum %[[GATHER_NONNEGATIVE]], %[[GATHER_UPPER]]
-// CHECK: %[[GATHER:.*]] = tosa.gather %arg0, %[[GATHER_CLAMPED]]
-// CHECK: %[[SCATTER:.*]] = tosa.scatter %arg1, %[[SCATTER_CLAMPED]], %arg3
-// CHECK: return %[[GATHER]], %[[SCATTER]]
-func.func @different_bounds(%arg0: tensor<2x21x3xf32>,
-                            %arg1: tensor<2x52x3xf32>,
-                            %arg2: tensor<2x4xi32>,
-                            %arg3: tensor<2x4x3xf32>)
-    -> (tensor<2x4x3xf32>, tensor<2x52x3xf32>) {
-  %0 = tosa.gather %arg0, %arg2 : (tensor<2x21x3xf32>, tensor<2x4xi32>) -> tensor<2x4x3xf32>
-  %1 = tosa.scatter %arg1, %arg2, %arg3 : (tensor<2x52x3xf32>, tensor<2x4xi32>, tensor<2x4x3xf32>) -> tensor<2x52x3xf32>
-  return %0, %1 : tensor<2x4x3xf32>, tensor<2x52x3xf32>
 }
 
 // -----
