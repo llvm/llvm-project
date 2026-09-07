@@ -2215,6 +2215,29 @@ static bool replaceMaskWithCompareForScalarPlan(VPlan &Plan,
   return MadeChange;
 }
 
+/// Return true if the branch \p Term with condition \p Cond (null if \p Term
+/// has no condition operand) is the vector loop's latch check.
+static bool isVectorLatchCheck(VPRecipeBase *Term, VPValue *Cond, VPlan &Plan) {
+  // BranchOnCount compares the canonical IV increment against the vector trip
+  // count, plus an offset for epilogue loops.
+  VPValue *Offset = nullptr;
+  auto m_CanIVInc = m_Add(m_VPValue(), m_Specific(&Plan.getVFxUF()));
+  if (match(Term,
+            m_BranchOnCount(
+                m_CombineOr(m_CanIVInc, m_c_Add(m_CanIVInc, m_VPValue(Offset))),
+                m_VPValue())))
+    return !Offset || Offset->isDefinedOutsideLoopRegions();
+
+  if (!Cond)
+    return false;
+
+  // The active-lane-mask form used when the tail is folded by masking.
+  return match(Cond,
+               m_Not(m_ExtractVectorForPart(
+                   m_WideActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue()),
+                   m_ZeroInt())));
+}
+
 /// Try to simplify the branch condition of \p Plan. This may restrict the
 /// resulting plan to \p BestVF and \p BestUF.
 static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
@@ -2223,22 +2246,13 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *ExitingVPBB = VectorRegion->getExitingBasicBlock();
   auto *Term = &ExitingVPBB->back();
-  VPValue *Cond;
-  VPValue *Offset = nullptr;
-  auto m_CanIVInc = m_Add(m_VPValue(), m_Specific(&Plan.getVFxUF()));
-  // Check if the branch condition compares the canonical IV increment (for main
-  // loop), or the canonical IV increment plus an offset (for epilog loop).
-  bool MatchedCanIVInc =
-      match(Term,
-            m_BranchOnCount(
-                m_CombineOr(m_CanIVInc, m_c_Add(m_CanIVInc, m_VPValue(Offset))),
-                m_VPValue())) &&
-      (!Offset || Offset->isDefinedOutsideLoopRegions());
-  if (MatchedCanIVInc ||
-      match(Term,
-            m_BranchOnCond(m_Not(m_ExtractVectorForPart(
-                m_WideActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue()),
-                m_ZeroInt()))))) {
+
+  // Find the branch condition, if there is one.
+  VPValue *Cond = nullptr;
+  if (!match(Term, m_BranchOnCond(m_VPValue(Cond))))
+    match(Term, m_BranchOnTwoConds(m_VPValue(), m_VPValue(Cond)));
+
+  if (isVectorLatchCheck(Term, Cond, Plan)) {
     // Try to simplify the branch condition if VectorTC <= VF * UF when the
     // latch terminator is BranchOnCount or
     // BranchOnCond(Not(ExtractVectorForPart(WideActiveLaneMask), 0))
@@ -2254,13 +2268,8 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
     const SCEV *C = SE.getElementCount(VectorTripCount->getType(), NumElements);
     if (!SE.isKnownPredicate(CmpInst::ICMP_ULE, VectorTripCount, C))
       return false;
-  } else if (match(Term, m_BranchOnCond(m_VPValue(Cond))) ||
-             match(Term, m_BranchOnTwoConds(m_VPValue(), m_VPValue(Cond)))) {
-    // For BranchOnCond, check if we can prove the condition to be true using VF
-    // and UF.
-    if (!isConditionTrueViaVFAndUF(Cond, Plan, BestVF, BestUF, PSE))
-      return false;
-  } else {
+  } else if (!Cond ||
+             !isConditionTrueViaVFAndUF(Cond, Plan, BestVF, BestUF, PSE)) {
     return false;
   }
 
