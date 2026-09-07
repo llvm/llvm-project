@@ -222,6 +222,59 @@ module {
 // -----
 
 module attributes { dlti.dl_spec = #dlti.dl_spec<
+  i8 = dense<8> : vector<2xi64>,
+  i24 = dense<[32, 64]> : vector<2xi64>,
+  f80 = dense<128> : vector<2xi64>
+>} {
+  // CHECK-LABEL: @struct_element_allocation_size
+  func.func @struct_element_allocation_size() {
+    // A packed element still occupies its allocation size, including padding.
+    // CHECK: alignment = 1
+    // CHECK-SAME: bitsize = 128
+    // CHECK-SAME: size = 16
+    "test.data_layout_query"() : () -> !llvm.struct<packed (f80)>
+
+    // The i8 follows the 16-byte allocation of f80, not its 10-byte store size.
+    // CHECK: alignment = 1
+    // CHECK-SAME: bitsize = 136
+    // CHECK-SAME: size = 17
+    "test.data_layout_query"() : () -> !llvm.struct<packed (f80, i8)>
+
+    // Packing suppresses alignment gaps before elements and at the struct end.
+    // CHECK: alignment = 1
+    // CHECK-SAME: bitsize = 144
+    // CHECK-SAME: size = 18
+    "test.data_layout_query"() : () -> !llvm.struct<packed (i8, f80, i8)>
+
+    // Unpacked structs also use element allocation sizes.
+    // CHECK: alignment = 16
+    // CHECK-SAME: bitsize = 256
+    // CHECK-SAME: size = 32
+    "test.data_layout_query"() : () -> !llvm.struct<(f80, i8)>
+
+    // Integer allocation sizes use ABI alignment, not preferred alignment.
+    // CHECK: alignment = 1
+    // CHECK-SAME: bitsize = 40
+    // CHECK-SAME: size = 5
+    "test.data_layout_query"() : () -> !llvm.struct<packed (i24, i8)>
+
+    // The corrected size propagates through nested structs and arrays.
+    // CHECK: alignment = 1
+    // CHECK-SAME: bitsize = 144
+    // CHECK-SAME: size = 18
+    "test.data_layout_query"() : () -> !llvm.struct<packed (struct<packed (f80, i8)>, i8)>
+
+    // CHECK: alignment = 1
+    // CHECK-SAME: bitsize = 272
+    // CHECK-SAME: size = 34
+    "test.data_layout_query"() : () -> !llvm.array<2 x struct<packed (f80, i8)>>
+    return
+  }
+}
+
+// -----
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<!llvm.struct<()>, dense<[32, 32]> : vector<2xi64>>
 >} {
     // CHECK: @spec
