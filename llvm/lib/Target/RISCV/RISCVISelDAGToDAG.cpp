@@ -148,27 +148,50 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
       // selectNegImm. Skip INT64_MIN too, whose negation is itself.
       if (isInt<32>(Imm) || Imm == INT64_MIN)
         break;
-      // Reusing a register is free, so require only that -C is no more
-      // expensive to materialize than C.
-      int OrigCost = RISCVMatInt::getIntMatCost(APInt(64, Imm), 64, *Subtarget,
-                                                /*CompressionCost=*/true);
-      int NegCost = RISCVMatInt::getIntMatCost(APInt(64, -Imm), 64, *Subtarget,
-                                               /*CompressionCost=*/true);
-      if (NegCost > OrigCost)
-        break;
-      // Only rewrite when -C is anchored by a use that is not itself an ADD, so
-      // -C is materialized regardless of this transform. If -C were only used
-      // by other ADDs, each of those could be rewritten to use C instead, and
-      // forcing -C here would leave both C and -C materialized.
-      bool HasNegConst = any_of(CurDAG->allnodes(), [&](const SDNode &Node) {
+      // Look for existing constant nodes for Imm and -Imm, and whether either
+      // has a user other than an ADD, i.e. is materialized regardless of this
+      // fold.
+      bool NegExists = false, NegAnchored = false, PosAnchored = false;
+      for (const SDNode &Node : CurDAG->allnodes()) {
         auto *C = dyn_cast<ConstantSDNode>(&Node);
-        if (!C || C->getSimpleValueType(0) != VT || C->getSExtValue() != -Imm)
-          return false;
-        return any_of(Node.users(), [](const SDNode *U) {
+        if (!C || C->getSimpleValueType(0) != VT)
+          continue;
+        int64_t V = C->getSExtValue();
+        if (V != Imm && V != -Imm)
+          continue;
+        bool NonAddUser = any_of(Node.users(), [](const SDNode *U) {
           return U->getOpcode() != ISD::ADD;
         });
-      });
-      if (!HasNegConst)
+        if (V == -Imm) {
+          NegExists = true;
+          NegAnchored |= NonAddUser;
+        } else {
+          PosAnchored |= NonAddUser;
+        }
+      }
+      // Reuse is only free if -Imm is already in the DAG.
+      if (!NegExists)
+        break;
+      // Pick which of Imm/-Imm should be the surviving constant, so exactly
+      // one of the pair is materialized and any ADDs of the other reuse it:
+      //  - if -Imm is materialized anyway, reuse it (rewrite to SUB);
+      //  - else if Imm is materialized anyway, keep the ADD so it reuses Imm;
+      //  - else keep the cheaper constant, breaking ties towards the positive
+      //    value so both ADDs of a C/-C pair agree on the survivor.
+      bool Rewrite;
+      if (NegAnchored)
+        Rewrite = true;
+      else if (PosAnchored)
+        Rewrite = false;
+      else {
+        int PosCost = RISCVMatInt::getIntMatCost(APInt(64, Imm), 64, *Subtarget,
+                                                 /*CompressionCost=*/true);
+        int NegCost =
+            RISCVMatInt::getIntMatCost(APInt(64, -Imm), 64, *Subtarget,
+                                       /*CompressionCost=*/true);
+        Rewrite = NegCost != PosCost ? NegCost < PosCost : Imm < 0;
+      }
+      if (!Rewrite)
         break;
       SDLoc DL(N);
       // getConstant uniques onto the existing -C node, so it is shared.
