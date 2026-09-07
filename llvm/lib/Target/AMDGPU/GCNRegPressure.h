@@ -592,6 +592,21 @@ LLVM_ABI void dumpMaxRegPressure(MachineFunction &MF,
                                  LiveIntervals &LIS,
                                  const MachineLoopInfo *MLI);
 
+/// Estimate VGPR pressure using greedy, non-splitting register allocation
+/// simulation, accounting for live interval interference.
+/// \param RegionBegin Start iterator of the region
+/// \param RegionEnd End iterator of the region
+/// \param LiveIns Live-in registers for the region
+/// \param LIS LiveIntervals analysis
+/// \param MRI MachineRegisterInfo
+/// \param TRI Target register info
+/// \returns estimated VGPR pressure
+unsigned estimateGreedyVGPRPressure(
+    MachineBasicBlock::const_iterator RegionBegin,
+    MachineBasicBlock::const_iterator RegionEnd,
+    const GCNRPTracker::LiveRegSet &LiveIns, const LiveIntervals &LIS,
+    const MachineRegisterInfo &MRI, const SIRegisterInfo &TRI);
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_AMDGPU_GCNREGPRESSURE_H

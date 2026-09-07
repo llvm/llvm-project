@@ -14,6 +14,8 @@
 #include "GCNRegPressure.h"
 #include "AMDGPU.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/CodeGen/LiveIntervalUnion.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
@@ -651,8 +653,8 @@ bool GCNDownwardRPTracker::reset(const MachineInstr &MI,
                                  MachineBasicBlock::const_iterator End,
                                  const LiveRegSet *LiveRegsCopy) {
   MBBEnd = MI.getParent()->end();
-  assert(End == MBBEnd ||
-         End->getParent()->end() == MBBEnd && "end unrelated to MI block");
+  assert((End == MBBEnd || End->getParent()->end() == MBBEnd) &&
+         "end unrelated to MI block");
   NextMI = &MI;
   NextMI = skipDebugInstructionsForward(NextMI, End);
 
@@ -1213,3 +1215,84 @@ LLVM_DUMP_METHOD void llvm::dumpMaxRegPressure(MachineFunction &MF,
   }
 }
 #endif
+
+unsigned llvm::estimateGreedyVGPRPressure(
+    MachineBasicBlock::const_iterator RegionBegin,
+    MachineBasicBlock::const_iterator RegionEnd,
+    const GCNRPTracker::LiveRegSet &LiveIns, const LiveIntervals &LIS,
+    const MachineRegisterInfo &MRI, const SIRegisterInfo &TRI) {
+
+  SetVector<const LiveInterval *> IntervalSet;
+  IntervalSet.reserve(LiveIns.size());
+
+  auto checkAndCollect = [&](Register VReg) {
+    if (!VReg.isVirtual() || !LIS.hasInterval(VReg))
+      return;
+
+    const TargetRegisterClass *RC = MRI.getRegClass(VReg);
+    if (!TRI.hasVGPRs(RC))
+      return;
+
+    const LiveInterval &LI = LIS.getInterval(VReg);
+    IntervalSet.insert(&LI);
+  };
+
+  // Collect live-ins
+  for (const auto &[RegNum, LaneMask] : LiveIns) {
+    checkAndCollect(Register(RegNum));
+  }
+
+  // Collect defs in region
+  for (MachineBasicBlock::const_iterator I = RegionBegin; I != RegionEnd; ++I) {
+    for (const MachineOperand &MO : I->operands()) {
+      if (!MO.isReg() || !MO.isDef())
+        continue;
+      checkAndCollect(MO.getReg());
+    }
+  }
+
+  SmallVector<const LiveInterval *> Intervals = IntervalSet.takeVector();
+  llvm::sort(Intervals, [](const LiveInterval *LHS, const LiveInterval *RHS) {
+    return LHS->beginIndex() < RHS->beginIndex();
+  });
+
+  LiveIntervalUnion::Allocator Alloc;
+  std::vector<LiveIntervalUnion> Slots;
+  unsigned MaxSlotUsed = 0;
+
+  // Simulate greedy register allocation, assuming unlimited number
+  // of physical registers (slots).
+  for (const LiveInterval *LI : Intervals) {
+    const TargetRegisterClass *RC = MRI.getRegClass(LI->reg());
+    unsigned Width =
+        std::max<unsigned>(1, TRI.getRegSizeInBits(*RC).getFixedValue() / 32);
+    unsigned Alignment =
+        std::max<unsigned>(1, TRI.getRegClassAlignmentNumBits(RC) / 32);
+
+    unsigned Start = 0;
+    while (true) {
+      unsigned End = Start + Width;
+      if (Slots.size() < End)
+        Slots.resize(End, LiveIntervalUnion(Alloc));
+
+      bool Fits = true;
+      for (unsigned Idx = Start; Idx < End; Idx++) {
+        LiveIntervalUnion::Query Q(*LI, Slots[Idx]);
+        if (Q.checkInterference()) {
+          Start = alignTo(Idx + 1, Alignment);
+          Fits = false;
+          break;
+        }
+      }
+
+      if (Fits) {
+        for (unsigned Idx = Start; Idx < End; Idx++)
+          Slots[Idx].unify(*LI, *LI);
+        MaxSlotUsed = std::max(MaxSlotUsed, End);
+        break;
+      }
+    }
+  }
+
+  return MaxSlotUsed;
+}
