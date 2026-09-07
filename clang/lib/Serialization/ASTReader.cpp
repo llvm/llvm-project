@@ -1853,11 +1853,14 @@ ASTReader::readSLocFileEntry(ModuleFile *F, unsigned Index) {
         std::errc::illegal_byte_sequence,
         "incorrectly-formatted source location entry in AST file");
   case SM_SLOC_FILE_ENTRY:
-    return SLocEntryInfo{F->SLocEntryBaseOffset + Record[0],
-                         static_cast<unsigned>(Record[4])};
+    return SLocEntryInfo{
+        static_cast<SourceLocation::UIntTy>(F->SLocEntryBaseOffset + Record[0]),
+        static_cast<unsigned>(Record[4])};
   case SM_SLOC_BUFFER_ENTRY:
   case SM_SLOC_EXPANSION_ENTRY:
-    return SLocEntryInfo{F->SLocEntryBaseOffset + Record[0], 0};
+    return SLocEntryInfo{
+        static_cast<SourceLocation::UIntTy>(F->SLocEntryBaseOffset + Record[0]),
+        0};
   }
 }
 
