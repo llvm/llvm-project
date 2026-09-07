@@ -296,7 +296,10 @@ bool AArch64TargetMachine::isGlobalISelOptNone() const {
           !GlobalISelFlag);
 }
 
-void AArch64TargetMachine::reset() { SubtargetMap.clear(); }
+void AArch64TargetMachine::reset() {
+  SubtargetMap.clear();
+  LastSubtarget = nullptr;
+}
 
 //===----------------------------------------------------------------------===//
 // AArch64 Lowering public interface.
@@ -436,6 +439,10 @@ AArch64TargetMachine::~AArch64TargetMachine() = default;
 
 const AArch64Subtarget *
 AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  if (LastSubtarget && LastSubtargetAttrs == FnAttrs)
+    return LastSubtarget;
+
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
   Attribute TuneAttr = F.getFnAttribute("tune-cpu");
   Attribute FSAttr = F.getFnAttribute("target-features");
@@ -503,7 +510,9 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   if (IsStreaming && !I->hasSME())
     reportFatalUsageError("streaming SVE functions require SME");
 
-  return I.get();
+  LastSubtargetAttrs = FnAttrs;
+  LastSubtarget = I.get();
+  return LastSubtarget;
 }
 
 // Encourage placing FORM_TRANSPOSED_REG immediately before the instruction that
