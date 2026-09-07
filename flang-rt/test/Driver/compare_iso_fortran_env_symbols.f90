@@ -1,4 +1,6 @@
 ! UNSUPPORTED: offload-cuda, system-windows
+! ASAN changes the size of the symbols in the runtime.
+! UNSUPPORTED: asan
 ! REQUIRES: fortran-modules
 
 ! RUN: %flang -c -funsigned %S/../../lib/runtime/iso_fortran_env_impl.f90 -o %t.f90.o

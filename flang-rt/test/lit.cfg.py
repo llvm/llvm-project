@@ -118,3 +118,6 @@ if config.flang_rt_fortran_modules:
 # Set OBJECT_MODE=64 as tools on AIX default to 32-bit.
 if "system-aix" in config.available_features:
     config.environment["OBJECT_MODE"] = "64"
+
+# TODO: check LLVM_USE_SANITIZER?
+config.available_features.add("asan")
