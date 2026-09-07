@@ -103,6 +103,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Passes/TriggerCrashPasses.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"

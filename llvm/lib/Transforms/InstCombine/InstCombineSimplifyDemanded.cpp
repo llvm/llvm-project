@@ -2129,7 +2129,7 @@ static Value *simplifyDemandedFPClassFabs(KnownFPClass &Known, Value *Src,
   if ((DemandedMask & fcInf) == fcNone)
     KnownSrc.knownNot(fcInf);
 
-  if (KnownSrc.SignBit == false ||
+  if (KnownSrc.getSignBit() == false ||
       ((DemandedMask & fcNan) == fcNone && KnownSrc.isKnownNever(fcNegative)))
     return Src;
 
@@ -2212,7 +2212,7 @@ static Value *simplifyDemandedFPClassFnegFabs(KnownFPClass &Known, Value *Src,
     KnownSrc.knownNot(fcInf);
 
   // If the source value is known negative, we can directly fold to it.
-  if (KnownSrc.SignBit == true)
+  if (KnownSrc.getSignBit() == true)
     return Src;
 
   // If the only sign bit difference is for 0, ignore it with nsz.
@@ -2241,10 +2241,11 @@ static Value *simplifyDemandedFPClassCopysignMag(Value *MagSrc,
         KnownSrc.isKnownAlways(PosOrZero))
       return MagSrc;
   } else {
-    if ((DemandedMask & ~fcNegative) == fcNone && KnownSrc.SignBit == true)
+    if ((DemandedMask & ~fcNegative) == fcNone && KnownSrc.getSignBit() == true)
       return MagSrc;
 
-    if ((DemandedMask & ~fcPositive) == fcNone && KnownSrc.SignBit == false)
+    if ((DemandedMask & ~fcPositive) == fcNone &&
+        KnownSrc.getSignBit() == false)
       return MagSrc;
   }
 
@@ -2424,7 +2425,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         KnownSrc.knownNot(fcInf);
 
       // fneg(fabs(x)) => fneg(x)
-      if (KnownSrc.SignBit == false)
+      if (KnownSrc.getSignBit() == false)
         return replaceOperand(*I, 0, FNegFAbsSrc);
 
       // fneg(fabs(x)) => fneg(x), ignoring -0 if nsz.
@@ -2932,8 +2933,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       KnownFPClass KnownSign =
           computeKnownFPClass(CI->getArgOperand(1), fcAllFlags, SQ, Depth + 1);
-      if (KnownMag.SignBit && KnownSign.SignBit &&
-          *KnownMag.SignBit == *KnownSign.SignBit)
+      if (KnownMag.getSignBit() && KnownSign.getSignBit() &&
+          *KnownMag.getSignBit() == *KnownSign.getSignBit())
         return CI->getOperand(0);
 
       // TODO: Call argument attribute not considered
@@ -2941,13 +2942,13 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (FMF.noNaNs())
         KnownSign.knownNot(fcNan);
 
-      if (KnownSign.SignBit == false) {
+      if (KnownSign.getSignBit() == false) {
         CI->dropUBImplyingAttrsAndMetadata();
         CI->setOperand(1, ConstantFP::getZero(VTy));
         return I;
       }
 
-      if (KnownSign.SignBit == true) {
+      if (KnownSign.getSignBit() == true) {
         CI->dropUBImplyingAttrsAndMetadata();
         CI->setOperand(1, ConstantFP::get(VTy, -1.0));
         return I;
@@ -3706,8 +3707,8 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
       if (FMF.noNaNs())
         KnownSign.knownNot(fcNan);
 
-      if (KnownSign.SignBit && KnownMag.SignBit &&
-          *KnownSign.SignBit == *KnownMag.SignBit)
+      if (KnownSign.getSignBit() && KnownMag.getSignBit() &&
+          *KnownSign.getSignBit() == *KnownMag.getSignBit())
         return Mag;
 
       Known = KnownFPClass::copysign(KnownMag, KnownSign);

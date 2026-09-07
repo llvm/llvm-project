@@ -966,29 +966,34 @@ void Sema::InstantiateAttrs(const MultiLevelTemplateArgumentList &TemplateArgs,
             dyn_cast<ReqdWorkGroupSizeAttr>(TmplAttr)) {
       instantiateDependentReqdWorkGroupSizeAttr(*this, TemplateArgs,
                                                 *ReqdWorkGroupSize, New);
+      continue;
     }
 
     if (const auto *AMDGPUFlatWorkGroupSize =
             dyn_cast<AMDGPUFlatWorkGroupSizeAttr>(TmplAttr)) {
       instantiateDependentAMDGPUFlatWorkGroupSizeAttr(
           *this, TemplateArgs, *AMDGPUFlatWorkGroupSize, New);
+      continue;
     }
 
     if (const auto *AMDGPUFlatWorkGroupSize =
             dyn_cast<AMDGPUWavesPerEUAttr>(TmplAttr)) {
       instantiateDependentAMDGPUWavesPerEUAttr(*this, TemplateArgs,
                                                *AMDGPUFlatWorkGroupSize, New);
+      continue;
     }
 
     if (const auto *AMDGPUMaxNumWorkGroups =
             dyn_cast<AMDGPUMaxNumWorkGroupsAttr>(TmplAttr)) {
       instantiateDependentAMDGPUMaxNumWorkGroupsAttr(
           *this, TemplateArgs, *AMDGPUMaxNumWorkGroups, New);
+      continue;
     }
 
     if (const auto *CUDAClusterDims = dyn_cast<CUDAClusterDimsAttr>(TmplAttr)) {
       instantiateDependentCUDAClusterDimsAttr(*this, TemplateArgs,
                                               *CUDAClusterDims, New);
+      continue;
     }
 
     if (const auto *ParamAttr = dyn_cast<HLSLParamModifierAttr>(TmplAttr)) {

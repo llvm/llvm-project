@@ -27,6 +27,19 @@
 
 TEXTURE<float4> t;
 
+// `mips` caches its own copy of the resource handle, so the initializer has to
+// write `__handle` into it as well. Leaving it uninitialized makes
+// `t.mips[N][...]` load from a poison handle.
+// CHECK: define linkonce_odr hidden void @hlsl::[[TEXTURE]]<float vector[4]>::__createFromImplicitBinding(
+// CHECK: %[[NEW_HANDLE:.*]] = call target("dx.Texture", <4 x float>, 0, 0, 0, [[DXIL_TY]]) @llvm.dx.resource.handlefromimplicitbinding
+// CHECK: %[[HANDLE_GEP:.*]] = getelementptr {{.*}} %"class.hlsl::[[TEXTURE]]", ptr %[[TMP:.*]], i32 0, i32 0
+// CHECK: store target("dx.Texture", <4 x float>, 0, 0, 0, [[DXIL_TY]]) %[[NEW_HANDLE]], ptr %[[HANDLE_GEP]]
+// CHECK: %[[HANDLE_GEP2:.*]] = getelementptr {{.*}} %"class.hlsl::[[TEXTURE]]", ptr %[[TMP]], i32 0, i32 0
+// CHECK: %[[HANDLE:.*]] = load target("dx.Texture", <4 x float>, 0, 0, 0, [[DXIL_TY]]), ptr %[[HANDLE_GEP2]]
+// CHECK: %[[MIPS_GEP:.*]] = getelementptr {{.*}} %"class.hlsl::[[TEXTURE]]", ptr %[[TMP]], i32 0, i32 1
+// CHECK: %[[MIPS_HANDLE_GEP:.*]] = getelementptr {{.*}} %"struct.hlsl::[[TEXTURE]]<>::mips_type", ptr %[[MIPS_GEP]], i32 0, i32 0
+// CHECK: store target("dx.Texture", <4 x float>, 0, 0, 0, [[DXIL_TY]]) %[[HANDLE]], ptr %[[MIPS_HANDLE_GEP]]
+
 // CHECK: define internal {{.*}} <4 x float> @test_mips(float vector[[[COORD_DIM]]])(<[[COORD_DIM]] x float> {{.*}} %loc)
 // CHECK: entry:
 // CHECK: %[[LOC_ADDR:.*]] = alloca <[[COORD_DIM]] x float>

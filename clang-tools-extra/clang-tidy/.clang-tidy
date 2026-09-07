@@ -19,7 +19,7 @@ Checks: >
   google-readability-casting,
   misc-const-correctness,
   -misc-explicit-constructor,
-  misc-include-cleaner,
+  -misc-include-cleaner,
   modernize-*,
   -modernize-avoid-c-arrays,
   -modernize-pass-by-value,

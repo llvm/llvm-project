@@ -61,7 +61,7 @@ static Value *traverseGEPOffsets(const DataLayout &DL, IRBuilder<> &Builder,
   Value *Offset = nullptr;
 
   while (Ptr) {
-    if (auto *II = dyn_cast<IntrinsicInst>(Ptr)) {
+    if ([[maybe_unused]] auto *II = dyn_cast<IntrinsicInst>(Ptr)) {
       assert((II->getIntrinsicID() == Intrinsic::dx_resource_getpointer ||
               II->getIntrinsicID() == Intrinsic::dx_resource_getbasepointer) &&
              "Resource access through unexpected intrinsic");
@@ -825,47 +825,45 @@ getAccessIndices(Instruction *I, SmallSetVector<Instruction *, 16> &DeadInsts,
     assert(NumEdges != 0 && "Malformed Phi Node");
 
     IRBuilder<> Builder(Phi);
-    PHINode *GetPtrPhi = PHINode::Create(Builder.getInt32Ty(), NumEdges);
-    PHINode *HandlePhi = PHINode::Create(Builder.getInt32Ty(), NumEdges);
+    std::unique_ptr<PHINode> GetPtrPhi(
+        PHINode::Create(Builder.getInt32Ty(), NumEdges));
+    std::unique_ptr<PHINode> HandlePhi(
+        PHINode::Create(Builder.getInt32Ty(), NumEdges));
 
-    // Register a ref to this phi for a recursive phi
+    // Register a ref to this phi for a recursive phi. This is safe to add to
+    // the map even if we end up deleting newly created phi below since we can't
+    // possibly have a constant value if we recursed.
     if (Phi->getType()->isTargetExtTy())
-      VisitedPhis[Phi] = HandlePhi;
+      VisitedPhis[Phi] = HandlePhi.get();
 
-    bool HasGetPtr = true;
     for (unsigned Idx = 0; Idx < NumEdges; Idx++) {
       auto *BB = Phi->getIncomingBlock(Idx);
       auto *V = dyn_cast<Instruction>(Phi->getIncomingValue(Idx));
       auto AccessIdx = getAccessIndices(V, DeadInsts, VisitedPhis);
-      HasGetPtr &= AccessIdx.hasGetPtrIdx();
-      if (HasGetPtr)
+      if (AccessIdx.hasGetPtrIdx())
         GetPtrPhi->addIncoming(AccessIdx.GetPtrIdx, BB);
       HandlePhi->addIncoming(AccessIdx.HandleIdx, BB);
     }
 
-    if (HasGetPtr)
-      Builder.Insert(GetPtrPhi);
-    else
-      GetPtrPhi = nullptr;
-
-    Builder.Insert(HandlePhi);
-
-    DeadInsts.insert(Phi);
-
-    Value *GetPtrIdx = GetPtrPhi;
-    Value *HandleIdx = HandlePhi;
-
-    if (GetPtrPhi)
-      if (Value *ConstantGetPtr = GetPtrPhi->hasConstantValue()) {
-        GetPtrIdx = ConstantGetPtr;
-        DeadInsts.insert(GetPtrPhi);
-      }
-
-    if (Value *ConstantHandle = HandlePhi->hasConstantValue()) {
-      HandleIdx = ConstantHandle;
-      DeadInsts.insert(HandlePhi);
+    Value *GetPtrIdx;
+    if (GetPtrPhi->getNumIncomingValues() == 0)
+      GetPtrIdx = nullptr;
+    else if (Value *ConstantGetPtr = GetPtrPhi->hasConstantValue())
+      GetPtrIdx = ConstantGetPtr;
+    else {
+      GetPtrIdx = GetPtrPhi.release();
+      Builder.Insert(GetPtrIdx);
     }
 
+    Value *HandleIdx;
+    if (Value *ConstantHandle = HandlePhi->hasConstantValue())
+      HandleIdx = ConstantHandle;
+    else {
+      HandleIdx = HandlePhi.release();
+      Builder.Insert(HandleIdx);
+    }
+
+    DeadInsts.insert(Phi);
     return {GetPtrIdx, HandleIdx};
   }
 

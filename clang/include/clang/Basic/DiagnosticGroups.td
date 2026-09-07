@@ -621,6 +621,12 @@ Warning to detect dangling global references.
   }];
 }
 
+def LifetimeSafetyDanglingGlobalInMain : DiagGroup<"lifetime-safety-dangling-global-in-main"> {
+  code Documentation = [{
+Warning to detect dangling global references in main function.
+  }];
+}
+
 def LifetimeSafetyDanglingGlobalMoved : DiagGroup<"lifetime-safety-dangling-global-moved"> {
   code Documentation = [{
 Warning to detect dangling global references.
@@ -675,6 +681,7 @@ def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
                                     LifetimeSafetyDanglingFieldMoved,
                                     LifetimeSafetyDanglingFieldLambdaCapture,
                                     LifetimeSafetyDanglingGlobalMoved,
+                                    LifetimeSafetyDanglingGlobalInMain,
                                     LifetimeSafetyInvalidation]>;
 
 def LifetimeSafety : DiagGroup<"lifetime-safety",
