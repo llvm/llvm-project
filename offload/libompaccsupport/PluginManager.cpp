@@ -12,7 +12,6 @@
 
 #include "PluginManager.h"
 #include "OffloadPolicy.h"
-#include "OpenMP/OMPT/Interface.h"
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
 #include "device.h"
@@ -20,10 +19,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <memory>
-
-#ifdef OMPT_SUPPORT
-using namespace llvm::omp::target::ompt;
-#endif
 
 using namespace llvm;
 using namespace llvm::sys;
@@ -59,11 +54,11 @@ void PluginManager::deinit() {
   TIMESCOPE();
   ODBG(ODT_Deinit) << "Unloading RTLs...";
 
-  OMPT_IF_BUILT_AND_INITIALIZED({
+  {
     auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
     for (DeviceTy &Device : devices(ExclusiveDevicesAccessor))
-      performOmptCallback(device_finalize, Device.DeviceID);
-  });
+      Device.deinit();
+  }
 
   for (auto &Plugin : Plugins) {
     if (!Plugin->is_initialized())

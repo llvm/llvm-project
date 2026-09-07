@@ -127,6 +127,16 @@ llvm::Error DeviceTy::init() {
   return llvm::Error::success();
 }
 
+void DeviceTy::deinit() {
+  OMPT_IF_BUILT_AND_INITIALIZED(performOmptCallback(device_finalize, DeviceID));
+
+  if (auto Err = RTL->deinitDevice(RTLDeviceID)) {
+    std::string InfoMsg = toString(std::move(Err));
+    ODBG(ODT_Deinit) << "Failed to deinit device " << DeviceID << ": "
+                     << InfoMsg;
+  }
+}
+
 // Extract the mapping of host function pointers to device function pointers
 // from the entry table. Functions marked as 'indirect' in OpenMP will have
 // offloading entries generated for them which map the host's function pointer
