@@ -1876,7 +1876,7 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  2      5     0.50    *                   testq	$7, (%rax)
 # CHECK-NEXT:  1      1     0.25                        testq	%rsi, %rdi
 # CHECK-NEXT:  2      5     0.50    *                   testq	%rsi, (%rax)
-# CHECK-NEXT:  1      100   0.25    *             U     ud2
+# CHECK-NEXT:  1      100   0.25    *                   ud2
 # CHECK-NEXT:  1      100   0.25                  U     wrmsr
 # CHECK-NEXT:  1      1     0.25                        xaddb	%bl, %cl
 # CHECK-NEXT:  1      100   0.25    *      *            xaddb	%bl, (%rcx)
