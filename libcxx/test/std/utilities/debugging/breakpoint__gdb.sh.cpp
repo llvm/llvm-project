@@ -8,17 +8,20 @@
 
 // REQUIRES: std-at-least-c++26
 // REQUIRES: host-has-gdb-with-python
-// UNSUPPORTED: android
+
 // UNSUPPORTED: availability-debugging-missing
+// UNSUPPORTED: android
+
 // LeakSanitizer does not work under ptrace
 // UNSUPPORTED: asan
-// XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // GDB doesn't support PDB debug info format
 // UNSUPPORTED: msvc
 
 // https://sourceware.org/bugzilla/show_bug.cgi?id=22645
 // UNSUPPORTED: target=arm{{.*}}
+
+// XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s %{compile_flags} %{link_flags} -o %t.exe -g
 // RUN: %{exec} %{gdb} %t.exe -ex "source %S/breakpoint__gdb.py"

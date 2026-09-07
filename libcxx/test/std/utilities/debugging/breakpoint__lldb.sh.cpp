@@ -8,12 +8,13 @@
 
 // REQUIRES: std-at-least-c++26
 // REQUIRES: host-has-lldb
-// The Android libc++ tests are run on a non-Android host, connected to an
-// Android device over adb.
+
+// The Android libc++ tests are run on a non-Android host, connected to an Android device over adb.
 // UNSUPPORTED: android
 // UNSUPPORTED: availability-debugging-missing
+
 // XFAIL: LIBCXX-PICOLIBC-FIXME
-//
+
 // Debugging 32-bit applications using 64-bit debugger doesn't work very well.
 // XFAIL: target=i686-w64-windows-gnu
 

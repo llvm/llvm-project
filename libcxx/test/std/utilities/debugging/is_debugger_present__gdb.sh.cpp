@@ -8,17 +8,20 @@
 
 // REQUIRES: std-at-least-c++26
 // REQUIRES: host-has-gdb-with-python
-// The Android libc++ tests are run on a non-Android host, connected to an
-// Android device over adb. gdb needs special support to make this work (e.g.
-// gdbclient.py, ndk-gdb.py, gdbserver), and the Android organization doesn't
-// support gdb anymore, favoring lldb instead.
+
+// Android org doesn't support GDB anymore.
 // UNSUPPORTED: android
+
+// LeakSanitizer does not work under ptrace
 // UNSUPPORTED: asan
-// XFAIL: LIBCXX-PICOLIBC-FIXME
-// UNSUPPORTED: target=aarch64-w64-windows-gnu
-//
+
 // GDB doesn't support PDB debug info format
 // UNSUPPORTED: msvc
+
+// Installed GDB on windows-on-arm is x86_64 only
+// UNSUPPORTED: target=aarch64-w64-windows-gnu
+
+// XFAIL: LIBCXX-PICOLIBC-FIXME
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // RUN: %{exec} %{gdb} --return-child-result -ex run %t.exe
