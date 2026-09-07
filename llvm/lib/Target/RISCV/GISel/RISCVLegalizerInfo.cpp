@@ -851,7 +851,7 @@ bool RISCVLegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return false;
   case Intrinsic::riscv_clmulh:
     Helper.MIRBuilder.buildInstr(TargetOpcode::G_CLMULH, {MI.getOperand(0)},
-                                {MI.getOperand(2), MI.getOperand(3)});
+                                 {MI.getOperand(2), MI.getOperand(3)});
     MI.eraseFromParent();
     return true;
   case Intrinsic::vacopy: {
