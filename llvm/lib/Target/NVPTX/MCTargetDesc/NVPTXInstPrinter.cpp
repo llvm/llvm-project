@@ -474,6 +474,117 @@ void NVPTXInstPrinter::printMmaCode(const MCInst *MI, int OpNum,
   llvm_unreachable("Unknown Modifier");
 }
 
+static void printSPRegList(NVPTXInstPrinter *Printer, const MCInst *MI,
+                           unsigned FirstOp, unsigned NumOps,
+                           const MCSubtargetInfo &STI, raw_ostream &O) {
+  O << "{";
+  for (unsigned I = 0; I != NumOps; ++I) {
+    if (I != 0)
+      O << ", ";
+    Printer->printOperand(MI, FirstOp + I, STI, O);
+  }
+  O << "}";
+}
+
+void NVPTXInstPrinter::printSPQualifier(const MCInst *MI, int OpNum,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O, StringRef Modifier) {
+  if (Modifier.empty()) {
+    printOperand(MI, OpNum, STI, O);
+    return;
+  }
+
+  unsigned Imm = MI->getOperand(OpNum).getImm();
+  if (Modifier == "elem_size") {
+    StringRef ElemSize =
+        nvvm::getSPElemSizeName(static_cast<nvvm::SPElemSize>(Imm));
+    assert(!ElemSize.empty() && "invalid SP elem_size");
+    O << ElemSize;
+    return;
+  }
+
+  if (Modifier == "idx_size") {
+    StringRef IdxSize =
+        nvvm::getSPIdxSizeName(static_cast<nvvm::SPIdxSize>(Imm));
+    assert(!IdxSize.empty() && "invalid SP idx_size");
+    O << IdxSize;
+    return;
+  }
+
+  if (Modifier == "repeat_factor") {
+    StringRef RepeatFactor =
+        nvvm::getSPRepeatFactorName(static_cast<nvvm::SPLg2RepeatFactor>(Imm));
+    assert(!RepeatFactor.empty() && "invalid SP repeat_factor");
+    O << RepeatFactor;
+    return;
+  }
+
+  if (Modifier == "spfactor") {
+    unsigned NumTgt = MI->getOperand(OpNum + 1).getImm();
+    assert(nvvm::isValidSPDecompressFactor(Imm, NumTgt) && "invalid spfactor");
+    O << ".sp::" << Imm << ":" << NumTgt;
+    return;
+  }
+
+  auto GetSPLayout = [&](auto GetLayout) {
+    return GetLayout(Imm,
+                     static_cast<unsigned>(MI->getOperand(OpNum + 1).getImm()),
+                     static_cast<unsigned>(MI->getOperand(OpNum + 2).getImm()));
+  };
+
+  auto PrintSPRegLists = [&](unsigned FirstOp0, unsigned NumOps0,
+                             unsigned FirstOp1, unsigned NumOps1,
+                             unsigned FirstOp2, unsigned NumOps2) {
+    printSPRegList(this, MI, FirstOp0, NumOps0, STI, O);
+    O << ", ";
+    printSPRegList(this, MI, FirstOp1, NumOps1, STI, O);
+    O << ", ";
+    printSPRegList(this, MI, FirstOp2, NumOps2, STI, O);
+  };
+
+  if (Modifier == "spcompress_ops") {
+    auto Layout = GetSPLayout(nvvm::getSPCompressLayout);
+    assert(Layout && "invalid spcompress qualifiers");
+
+    unsigned FirstVariableOp = OpNum + 3;
+    assert(static_cast<unsigned>(OpNum) ==
+               Layout->MetadataSize + Layout->CompressedDataSize &&
+           MI->getNumOperands() == FirstVariableOp + Layout->DataSize + 1 &&
+           "invalid spcompress operand layout");
+
+    PrintSPRegLists(0, Layout->MetadataSize, Layout->MetadataSize,
+                    Layout->CompressedDataSize, FirstVariableOp,
+                    Layout->DataSize);
+    O << ", ";
+    printOperand(MI, FirstVariableOp + Layout->DataSize, STI, O);
+    return;
+  }
+
+  if (Modifier == "spdecompress_ops") {
+    unsigned NumSrc = MI->getOperand(OpNum + 3).getImm();
+    unsigned NumTgt = MI->getOperand(OpNum + 4).getImm();
+    auto Layout = GetSPLayout(
+        [&](unsigned ElemSize, unsigned IdxSize, unsigned Lg2RepeatFactor) {
+          return nvvm::getSPDecompressLayout(NumSrc, NumTgt, ElemSize, IdxSize,
+                                             Lg2RepeatFactor);
+        });
+    assert(Layout && "invalid spdecompress qualifiers");
+
+    unsigned FirstVariableOp = OpNum + 5;
+    assert(static_cast<unsigned>(OpNum) == Layout->DataSize &&
+           MI->getNumOperands() == FirstVariableOp + Layout->MetadataSize +
+                                       Layout->CompressedDataSize &&
+           "invalid spdecompress operand layout");
+
+    PrintSPRegLists(0, Layout->DataSize, FirstVariableOp, Layout->MetadataSize,
+                    FirstVariableOp + Layout->MetadataSize,
+                    Layout->CompressedDataSize);
+    return;
+  }
+
+  llvm_unreachable(formatv("Unknown Modifier: {}", Modifier).str().c_str());
+}
+
 void NVPTXInstPrinter::printMemOperand(const MCInst *MI, int OpNum,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &O, StringRef Modifier) {

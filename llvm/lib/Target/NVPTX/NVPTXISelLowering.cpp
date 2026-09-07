@@ -3197,6 +3197,97 @@ static SDValue lowerIntrinsicWChain(SDValue Op, SelectionDAG &DAG) {
   }
 }
 
+static bool needsSPCompressScalarization(SDNode *N) {
+  bool NeedsScalarize =
+      N->getValueType(0).isVector() || N->getValueType(1).isVector();
+  for (const SDValue &Operand : N->ops())
+    NeedsScalarize |= Operand.getValueType().isVector();
+  return NeedsScalarize;
+}
+
+static SDValue lowerSPCompress(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+
+  if (!needsSPCompressScalarization(N))
+    return Op;
+
+  SmallVector<SDValue, 4> Ops;
+  for (const SDValue &Operand : N->ops()) {
+    if (Operand.getValueType().isVector())
+      DAG.ExtractVectorElements(Operand, Ops);
+    else
+      Ops.push_back(Operand);
+  }
+
+  if (N->getValueType(0).isVector() || N->getValueType(1).isVector()) {
+    SmallVector<EVT, 4> ResultTys;
+    for (const EVT VT : N->values()) {
+      if (VT.isVector())
+        ResultTys.append(VT.getVectorNumElements(), VT.getVectorElementType());
+      else
+        ResultTys.push_back(VT);
+    }
+
+    SDValue Lowered = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ResultTys, Ops);
+
+    SmallVector<SDValue, 2> Retvals;
+    for (unsigned NewI = 0, I = 0, E = N->getNumValues(); I != E; ++I) {
+      if (EVT VT = N->getValueType(I); VT.isVector()) {
+        SmallVector<SDValue> Elements;
+        for (auto NewE = NewI + VT.getVectorNumElements(); NewI != NewE; ++NewI)
+          Elements.push_back(Lowered.getValue(NewI));
+        Retvals.push_back(DAG.getBuildVector(VT, DL, Elements));
+      } else {
+        Retvals.push_back(Lowered.getValue(NewI));
+        ++NewI;
+      }
+    }
+
+    return DAG.getMergeValues(Retvals, DL);
+  }
+
+  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, N->getVTList(), Ops);
+}
+
+static SDValue lowerSPDecompress(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+  EVT ResVT0 = N->getValueType(0);
+  // Every valid layout with a scalar data result also has scalar mdata and
+  // cdata operands, so only vector results require scalarization here.
+  if (!ResVT0.isVector())
+    return Op;
+
+  unsigned NumElts = ResVT0.getVectorNumElements();
+  EVT EltVT = ResVT0.getVectorElementType();
+  SmallVector<EVT, 4> ListVTs(NumElts, EltVT);
+  SDVTList ResVTs = DAG.getVTList(ListVTs);
+
+  SmallVector<SDValue, 4> Ops;
+  Ops.push_back(N->getOperand(0));
+
+  for (unsigned I = 1; I < N->getNumOperands(); ++I) {
+    SDValue Op = N->getOperand(I);
+    EVT OpVT = Op.getValueType();
+    if (OpVT.isVector()) {
+      for (unsigned J = 0, E = OpVT.getVectorNumElements(); J != E; ++J)
+        Ops.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
+                                  OpVT.getVectorElementType(), Op,
+                                  DAG.getIntPtrConstant(J, DL)));
+    } else {
+      Ops.push_back(Op);
+    }
+  }
+
+  SDValue NewNode = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ResVTs, Ops);
+
+  SmallVector<SDValue, 4> ScalarRes;
+  for (unsigned I = 0; I < NumElts; ++I)
+    ScalarRes.push_back(NewNode.getValue(I));
+  return DAG.getBuildVector(ResVT0, DL, ScalarRes);
+}
+
 static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
   switch (Op->getConstantOperandVal(0)) {
   default:
@@ -3225,6 +3316,20 @@ static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_f32x4_to_e2m1x4_rs_satfinite:
   case Intrinsic::nvvm_f32x4_to_e2m1x4_rs_relu_satfinite:
     return lowerCvtRSIntrinsics(Op, DAG);
+
+  case Intrinsic::nvvm_spcompress_sp2to4:
+    return lowerSPCompress(Op, DAG);
+
+  case Intrinsic::nvvm_spdecompress_sp1to2:
+  case Intrinsic::nvvm_spdecompress_sp1to4:
+  case Intrinsic::nvvm_spdecompress_sp1to8:
+  case Intrinsic::nvvm_spdecompress_sp1to16:
+  case Intrinsic::nvvm_spdecompress_sp2to4:
+  case Intrinsic::nvvm_spdecompress_sp2to8:
+  case Intrinsic::nvvm_spdecompress_sp2to16:
+  case Intrinsic::nvvm_spdecompress_sp4to8:
+  case Intrinsic::nvvm_spdecompress_sp4to16:
+    return lowerSPDecompress(Op, DAG);
   }
 }
 
@@ -7318,6 +7423,23 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
     if (!isSupportedFAdd(N->getValueType(0), STI, IID, RoundingMode))
       return diagnoseUnsupportedFAdd(N, DCI.DAG, IID, RoundingMode);
     return combineFAddWithNeg(N, DCI.DAG, IID, RoundingMode);
+  }
+  case Intrinsic::nvvm_spcompress_sp2to4:
+    if (needsSPCompressScalarization(N))
+      return lowerSPCompress(SDValue(N, 0), DCI.DAG);
+    break;
+  case Intrinsic::nvvm_spdecompress_sp1to2:
+  case Intrinsic::nvvm_spdecompress_sp1to4:
+  case Intrinsic::nvvm_spdecompress_sp1to8:
+  case Intrinsic::nvvm_spdecompress_sp1to16:
+  case Intrinsic::nvvm_spdecompress_sp2to4:
+  case Intrinsic::nvvm_spdecompress_sp2to8:
+  case Intrinsic::nvvm_spdecompress_sp2to16:
+  case Intrinsic::nvvm_spdecompress_sp4to8:
+  case Intrinsic::nvvm_spdecompress_sp4to16: {
+    if (N->getValueType(0).isVector())
+      return lowerSPDecompress(SDValue(N, 0), DCI.DAG);
+    break;
   }
   }
   return SDValue();

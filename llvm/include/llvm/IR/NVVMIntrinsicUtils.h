@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Intrinsics.h"
@@ -193,6 +194,133 @@ enum class MBarrierLayout : uint8_t {
   V1 = 1,
 };
 
+enum class SPElemSize : uint64_t {
+  B8 = 8,
+  B16 = 16,
+};
+
+enum class SPIdxSize : uint64_t {
+  B2 = 2,
+  B4 = 4,
+};
+
+enum class SPLg2RepeatFactor : uint64_t {
+  X1 = 0,
+  X2 = 1,
+  X4 = 2,
+  X8 = 3,
+  X16 = 4,
+  X32 = 5,
+  X64 = 6,
+};
+
+struct SPOperandLayout {
+  unsigned MetadataSize;
+  unsigned CompressedDataSize;
+  unsigned DataSize;
+};
+
+// PTX limits the combined vector size of the mdata, cdata, and data operands
+// of spcompress and spdecompress to 253 32-bit registers.
+inline constexpr unsigned MaxSPOperandRegisters = 253;
+
+inline StringRef getSPElemSizeName(SPElemSize ElemSize) {
+  static constexpr EnumStringDef<SPElemSize> SPElemSizeNameDefs[] = {
+      {{".b8"}, SPElemSize::B8},
+      {{".b16"}, SPElemSize::B16},
+  };
+  static constexpr auto SPElemSizeNames =
+      BUILD_ENUM_STRINGS(SPElemSizeNameDefs);
+  return EnumStrings(SPElemSizeNames).toString(ElemSize);
+}
+
+inline StringRef getSPIdxSizeName(SPIdxSize IdxSize) {
+  static constexpr EnumStringDef<SPIdxSize> SPIdxSizeNameDefs[] = {
+      {{".b2"}, SPIdxSize::B2},
+      {{".b4"}, SPIdxSize::B4},
+  };
+  static constexpr auto SPIdxSizeNames = BUILD_ENUM_STRINGS(SPIdxSizeNameDefs);
+  return EnumStrings(SPIdxSizeNames).toString(IdxSize);
+}
+
+inline StringRef getSPRepeatFactorName(SPLg2RepeatFactor Lg2RepeatFactor) {
+  static constexpr EnumStringDef<SPLg2RepeatFactor> SPRepeatFactorNameDefs[] = {
+      {{".x1"}, SPLg2RepeatFactor::X1},   {{".x2"}, SPLg2RepeatFactor::X2},
+      {{".x4"}, SPLg2RepeatFactor::X4},   {{".x8"}, SPLg2RepeatFactor::X8},
+      {{".x16"}, SPLg2RepeatFactor::X16}, {{".x32"}, SPLg2RepeatFactor::X32},
+      {{".x64"}, SPLg2RepeatFactor::X64},
+  };
+  static constexpr auto SPRepeatFactorNames =
+      BUILD_ENUM_STRINGS(SPRepeatFactorNameDefs);
+  return EnumStrings(SPRepeatFactorNames).toString(Lg2RepeatFactor);
+}
+
+inline unsigned getSPRepeatFactor(unsigned Lg2RepeatFactor) {
+  return 1U << Lg2RepeatFactor;
+}
+
+inline bool isValidSPDecompressFactor(unsigned NumSrc, unsigned NumTgt) {
+  switch (NumSrc) {
+  case 1:
+    return NumTgt == 2 || NumTgt == 4 || NumTgt == 8 || NumTgt == 16;
+  case 2:
+    return NumTgt == 4 || NumTgt == 8 || NumTgt == 16;
+  case 4:
+    return NumTgt == 8 || NumTgt == 16;
+  default:
+    return false;
+  }
+}
+
+inline std::optional<SPOperandLayout>
+getSPCompressLayout(unsigned ElemSize, unsigned IdxSize,
+                    unsigned Lg2RepeatFactor) {
+  if (getSPElemSizeName(static_cast<SPElemSize>(ElemSize)).empty() ||
+      getSPIdxSizeName(static_cast<SPIdxSize>(IdxSize)).empty() ||
+      getSPRepeatFactorName(static_cast<SPLg2RepeatFactor>(Lg2RepeatFactor))
+          .empty())
+    return std::nullopt;
+
+  unsigned RepeatFactor = getSPRepeatFactor(Lg2RepeatFactor);
+  SPOperandLayout Layout = {
+      divideCeil(RepeatFactor * IdxSize, ElemSize),
+      RepeatFactor,
+      RepeatFactor * 2,
+  };
+  if (Layout.MetadataSize + Layout.CompressedDataSize + Layout.DataSize >
+      MaxSPOperandRegisters)
+    return std::nullopt;
+  return Layout;
+}
+
+inline std::optional<SPOperandLayout>
+getSPDecompressLayout(unsigned NumSrc, unsigned NumTgt, unsigned ElemSize,
+                      unsigned IdxSize, unsigned Lg2RepeatFactor) {
+  if (!isValidSPDecompressFactor(NumSrc, NumTgt) ||
+      getSPElemSizeName(static_cast<SPElemSize>(ElemSize)).empty() ||
+      getSPIdxSizeName(static_cast<SPIdxSize>(IdxSize)).empty() ||
+      getSPRepeatFactorName(static_cast<SPLg2RepeatFactor>(Lg2RepeatFactor))
+          .empty())
+    return std::nullopt;
+  if (NumSrc * ElemSize > 32 || (IdxSize == 2 && NumTgt > 4))
+    return std::nullopt;
+
+  unsigned RepeatFactor = getSPRepeatFactor(Lg2RepeatFactor);
+  unsigned DataBits = NumTgt * ElemSize * RepeatFactor;
+  if (DataBits < 32 || DataBits > 4096)
+    return std::nullopt;
+
+  SPOperandLayout Layout = {
+      divideCeil(NumSrc * IdxSize * RepeatFactor, 32),
+      divideCeil(NumSrc * ElemSize * RepeatFactor, 32),
+      divideCeil(DataBits, 32),
+  };
+  if (Layout.MetadataSize + Layout.CompressedDataSize + Layout.DataSize >
+      MaxSPOperandRegisters)
+    return std::nullopt;
+  return Layout;
+}
+
 LLVM_ABI void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
 
 LLVM_ABI void printMBarrierLayout(raw_ostream &OS, const Constant *ImmArgVal);
@@ -209,6 +337,10 @@ LLVM_ABI void printTcgen05CollectorUsageOp(raw_ostream &OS,
 
 LLVM_ABI void printTcgen05MMACollectorBBuffer(raw_ostream &OS,
                                               const Constant *ImmArgVal);
+
+LLVM_ABI void printSPElemSize(raw_ostream &OS, const Constant *ImmArgVal);
+LLVM_ABI void printSPIdxSize(raw_ostream &OS, const Constant *ImmArgVal);
+LLVM_ABI void printSPRepeatFactor(raw_ostream &OS, const Constant *ImmArgVal);
 
 LLVM_ABI void printTensormapElemType(raw_ostream &OS,
                                      const Constant *ImmArgVal);

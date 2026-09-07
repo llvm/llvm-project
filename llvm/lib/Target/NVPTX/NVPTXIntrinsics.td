@@ -7443,6 +7443,76 @@ foreach space = ["tensor", "shared"] in {
   } // cta_group
 } // space
 
+def SPQualifier : Operand<i32> {
+  let PrintMethod = "printSPQualifier";
+}
+
+class SPRegList<int NumRegs, string Prefix> {
+  dag Dag = !dag(outs, !listsplat(B32, NumRegs),
+                 !foreach(I, !range(NumRegs), Prefix # I));
+}
+
+class SPFactorName<int NumSrc, int NumTgt> {
+  string ret = ".sp::" # NumSrc # ":" # NumTgt;
+}
+
+// mdata + cdata = ceil(repeat_factor * idx_size / elem_size) + repeat_factor,
+// where the repeat_factor operand encodes the exponent.
+// The first group is shared by .b8.b2 and .b16.b4. The next groups are the
+// additional unique counts for .b16.b2 and .b8.b4.
+defvar SPCOMPRESS_OPCODE_CASES =
+    !sort(NumResultRegs,
+          !listconcat([2, 3, 5, 10, 20, 40, 80], [9, 18, 36, 72],
+                      [6, 12, 24, 48, 96]),
+          NumResultRegs);
+
+// data = ceil(num_tgt * elem_size * repeat_factor / 32), where repeat_factor is
+// encoded as an exponent. The legal spdecompress layouts produce all
+// power-of-two data register counts from 1 to 128.
+defvar SPDECOMPRESS_OPCODE_CASES =
+    !listconcat(!foreach(lg2_rpf, !range(0, NVVM_SP_LG2_REPEAT_FACTOR_LIMIT),
+                         !shl(1, lg2_rpf)),
+                [128]);
+
+class SPCOMPRESS_INST<int NumResultRegs, int NumSrc, int NumTgt>
+    : NVPTXInst<(outs), (ins), "?", []> {
+  let OutOperandList = SPRegList<NumResultRegs, "r">.Dag;
+  let InOperandList = (ins SPQualifier:$elem_size,
+                           SPQualifier:$idx_size,
+                           SPQualifier:$repeat_factor,
+                           variable_ops);
+  let AsmString = "spcompress${elem_size:elem_size}${idx_size:idx_size}"
+                  # SPFactorName<NumSrc, NumTgt>.ret
+                  # "${repeat_factor:repeat_factor} "
+                  "${elem_size:spcompress_ops};";
+  let Predicates = [hasSPCompress];
+}
+
+// SP qualifier operands control the PTX spelling and operand partitioning.
+// The opcode only encodes the number of physical result registers.
+foreach NumResultRegs = SPCOMPRESS_OPCODE_CASES in
+  def SPCOMPRESS_OUT_ # NumResultRegs : SPCOMPRESS_INST<NumResultRegs, 2, 4>;
+
+class SPDECOMPRESS_INST<int NumResultRegs>
+    : NVPTXInst<(outs), (ins), "?", []> {
+  let OutOperandList = SPRegList<NumResultRegs, "r">.Dag;
+  let InOperandList = (ins SPQualifier:$elem_size,
+                           SPQualifier:$idx_size,
+                           SPQualifier:$repeat_factor,
+                           SPQualifier:$num_src,
+                           SPQualifier:$num_tgt,
+                           variable_ops);
+  let AsmString = "spdecompress${elem_size:elem_size}${idx_size:idx_size}"
+                  "${num_src:spfactor}${repeat_factor:repeat_factor} "
+                  "${elem_size:spdecompress_ops};";
+  let Predicates = [hasSPCompress];
+}
+
+// SP qualifier operands control the PTX spelling and operand partitioning.
+// The opcode only encodes the number of physical result registers.
+foreach NumResultRegs = SPDECOMPRESS_OPCODE_CASES in
+  def SPDECOMPRESS_OUT_ # NumResultRegs : SPDECOMPRESS_INST<NumResultRegs>;
+
 //
 // tensormap.replace Instructions
 //

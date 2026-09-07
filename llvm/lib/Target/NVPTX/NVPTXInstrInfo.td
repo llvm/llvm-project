@@ -183,6 +183,9 @@ def hasTensormapReplaceSupport : SubtargetPredicate;
 //  - conversions involving ue5m3x2
 def hasRubinFamilySupport : PredOr<[SM107f]>;
 
+// Checks sparse compression/decompression instruction support.
+def hasSPCompress : PredOr<[SM107a]>;
+
 // Checks tcgen05.shift instruction support.
 def hasTcgen05ShiftSupport : PredOr<[SM100a, SM103a, SM110a]>;
 

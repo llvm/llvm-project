@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/NVVMIntrinsicUtils.h"
-#include "llvm/ADT/StringRef.h"
 
 using namespace llvm;
 using namespace nvvm;
@@ -125,6 +124,22 @@ void nvvm::printTcgen05MMACollectorBBuffer(raw_ostream &OS,
       return;
     }
   }
+}
+
+void nvvm::printSPElemSize(raw_ostream &OS, const Constant *ImmArgVal) {
+  if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal))
+    OS << getSPElemSizeName(static_cast<SPElemSize>(CI->getZExtValue()));
+}
+
+void nvvm::printSPIdxSize(raw_ostream &OS, const Constant *ImmArgVal) {
+  if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal))
+    OS << getSPIdxSizeName(static_cast<SPIdxSize>(CI->getZExtValue()));
+}
+
+void nvvm::printSPRepeatFactor(raw_ostream &OS, const Constant *ImmArgVal) {
+  if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal))
+    OS << getSPRepeatFactorName(
+        static_cast<SPLg2RepeatFactor>(CI->getZExtValue()));
 }
 
 void nvvm::printTensormapElemType(raw_ostream &OS, const Constant *ImmArgVal) {

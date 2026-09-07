@@ -145,6 +145,10 @@ def llvm_local_ptr_ty   : LLVMQualPointerType<5>;         // (local)ptr
 def llvm_tmem_ptr_ty    : LLVMQualPointerType<6>;         // (tensor memory)ptr
 def llvm_shared_cluster_ptr_ty : LLVMQualPointerType<7>;  // (shared_cluster)ptr
 
+// A RangeList is a RangeSet with singleton closed ranges for each listed value.
+class RangeList<ArgIndex idx, list<int> values>
+    : RangeSet<idx, !foreach(value, values, [value, value])>;
+
 //
 // MISC
 //
@@ -1312,6 +1316,23 @@ class NVVMPureIntrinsic<list<LLVMType> ret_types,
                     string name = ""> :
   DefaultAttrsIntrinsic<ret_types, param_types,
                         intr_properties # [IntrNoMem, IntrSpeculatable], name> {}
+
+defvar NVVM_SP_LG2_REPEAT_FACTOR_LIMIT = 7;
+
+class NVVM_SP_ARGPROPS<ArgIndex ElemSizeIdx, ArgIndex IdxSizeIdx,
+                       ArgIndex RepeatFactorIdx> {
+  list<IntrinsicProperty> Prop = [
+    RangeList<ElemSizeIdx, [8, 16]>,
+    RangeList<IdxSizeIdx, [2, 4]>,
+    Range<RepeatFactorIdx, 0, NVVM_SP_LG2_REPEAT_FACTOR_LIMIT>,
+    ArgInfo<ElemSizeIdx, [ArgName<"elem_size">,
+                          ImmArgPrinter<"printSPElemSize">]>,
+    ArgInfo<IdxSizeIdx, [ArgName<"idx_size">,
+                         ImmArgPrinter<"printSPIdxSize">]>,
+    ArgInfo<RepeatFactorIdx, [ArgName<"repeat_factor">,
+                              ImmArgPrinter<"printSPRepeatFactor">]>
+  ];
+}
 
 // For im2col mode the number of offsets is (dim - 2).
 // For im2col_w / im2col_w_128 modes it is always 2 (wHalo and wOffset),
@@ -4124,5 +4145,43 @@ def int_nvvm_tensormap_replace_fill_mode :
      Range<ArgIndex<1>, 0, 2>,
      ArgInfo<ArgIndex<1>, [ArgName<"fill_mode">, 
                            ImmArgPrinter<"printTensormapFillMode">]>]>;
+
+//
+// spcompress intrinsics
+//
+
+class SPCompress :
+  DefaultAttrsIntrinsicFlags<
+    [llvm_anyint_ty,  // mdata
+     llvm_anyint_ty], // cdata
+    [llvm_anyint_ty,  // data
+     llvm_i32_ty],    // spdesc
+    [llvm_i32_ty,     // elem_size
+     llvm_i32_ty,     // idx_size
+     llvm_i32_ty],    // repeat_factor: 0..6 for .x1 .. .x64
+    !listconcat([IntrNoMem, IntrSpeculatable],
+                NVVM_SP_ARGPROPS<ArgIndex<2>, ArgIndex<3>, ArgIndex<4>>.Prop)>;
+
+def int_nvvm_spcompress_sp2to4 : SPCompress;
+
+//
+// spdecompress intrinsics
+//
+
+class SPDecompress :
+  DefaultAttrsIntrinsicFlags<
+    [llvm_anyint_ty], // data
+    [llvm_anyint_ty,  // mdata
+     llvm_anyint_ty], // cdata
+    [llvm_i32_ty,     // elem_size
+     llvm_i32_ty,     // idx_size
+     llvm_i32_ty],    // repeat_factor: 0..6 for .x1 .. .x64
+    !listconcat([IntrNoMem, IntrSpeculatable],
+                NVVM_SP_ARGPROPS<ArgIndex<2>, ArgIndex<3>, ArgIndex<4>>.Prop)>;
+
+foreach num_src = [1, 2, 4] in
+  foreach num_tgt = [2, 4, 8, 16] in
+    if !lt(num_src, num_tgt) then
+      def int_nvvm_spdecompress_sp # num_src # to # num_tgt : SPDecompress;
 
 } // let TargetPrefix = "nvvm"
