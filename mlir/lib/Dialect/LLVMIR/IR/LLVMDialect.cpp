@@ -3770,8 +3770,6 @@ LogicalResult LLVM::ConstantOp::verify() {
     return emitOpError()
            << "only supports integer, float, string or elements attributes";
   }
-
-  return success();
 }
 
 bool LLVM::ConstantOp::isBuildableWith(Attribute value, Type type) {
