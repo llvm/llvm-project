@@ -318,10 +318,6 @@ public:
   /// signed system implies it or because ValueTracking can prove it.
   bool isKnownNonNegative(Value *V) const;
 
-  /// Returns true if \p V is known to be non-positive, either because the
-  /// signed system implies it or because ValueTracking can prove it.
-  bool isKnownNonPositive(Value *V) const;
-
   void addFact(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
                unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
 
@@ -917,12 +913,6 @@ bool ConstraintInfo::isKnownNonNegative(Value *V) const {
          ::isKnownNonNegative(V, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1);
 }
 
-bool ConstraintInfo::isKnownNonPositive(Value *V) const {
-  return doesHold(CmpInst::ICMP_SLE, V, ConstantInt::get(V->getType(), 0)) ||
-         computeKnownBits(V, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1)
-             .isNonPositive();
-}
-
 void ConstraintInfo::transferToOtherSystem(
     CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
     unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack) {
@@ -1326,9 +1316,9 @@ static bool canStrengthenFlags(Instruction *I) {
     // canonicalized to Add.
     return !BO->hasNoUnsignedWrap() && !isa<Constant>(BO->getOperand(1));
   case Instruction::Add:
-    // A + B does not wrap signed, if one operand is non-negative and the
-    // other is non-positive.
-    return !BO->hasNoSignedWrap();
+    // NSW/NUW can be refined using constant ranges.
+    return (!BO->hasNoUnsignedWrap() || !BO->hasNoSignedWrap()) &&
+           isa<Constant>(BO->getOperand(1));
   case Instruction::Mul:
   case Instruction::Shl:
     if (BO->hasNoUnsignedWrap() && BO->hasNoSignedWrap())
@@ -1371,13 +1361,45 @@ static bool doesHoldInRange(const ConstraintInfo &Info, Value *Op,
   return true;
 }
 
+static bool tryToStrengthenBinOpFlags(Instruction *I, Value *Op0, Value *Op1,
+                                      ConstraintInfo &Info) {
+  auto *C = dyn_cast<ConstantInt>(Op1);
+  if (!C)
+    return false;
+
+  // For a constant Op1, the ranges of Op0 for which the operation does not
+  // wrap are known exactly; check if the systems imply one of them.
+  bool Changed = false;
+  auto Opcode = static_cast<Instruction::BinaryOps>(I->getOpcode());
+  using OBO = OverflowingBinaryOperator;
+  ConstantRange Other(C->getValue());
+  if (!I->hasNoUnsignedWrap() &&
+      doesHoldInRange(Info, Op0,
+                      ConstantRange::makeGuaranteedNoWrapRegion(
+                          Opcode, Other, OBO::NoUnsignedWrap),
+                      /*Signed=*/false)) {
+    LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
+    I->setHasNoUnsignedWrap();
+    Changed = true;
+  }
+  if (!I->hasNoSignedWrap() &&
+      doesHoldInRange(Info, Op0,
+                      ConstantRange::makeGuaranteedNoWrapRegion(
+                          Opcode, Other, OBO::NoSignedWrap),
+                      /*Signed=*/true)) {
+    LLVM_DEBUG(dbgs() << "Adding nsw to " << *I << "\n");
+    I->setHasNoSignedWrap();
+    Changed = true;
+  }
+  return Changed;
+}
+
 /// Try to strengthen \p I's poison generating flags using \p Info. Returns
 /// true if \p I was modified.
 static bool tryToStrengthenFlags(Instruction *I, ConstraintInfo &Info,
                                  SmallVectorImpl<Instruction *> &ToRemove) {
   assert(canStrengthenFlags(I) && "not a candidate for flag strengthening");
 
-  using OBO = OverflowingBinaryOperator;
   Value *Op0 = I->getOperand(0), *Op1 = I->getOperand(1);
   switch (I->getOpcode()) {
   case Instruction::Sub: {
@@ -1388,48 +1410,12 @@ static bool tryToStrengthenFlags(Instruction *I, ConstraintInfo &Info,
     I->setHasNoUnsignedWrap();
     return true;
   }
-  case Instruction::Add: {
-    // Op0 + Op1 does not wrap signed, if one operand is non-negative and the
-    // other is non-positive.
-    auto IsNonNegativeAndNonPositive = [&Info](Value *NonNegOp,
-                                               Value *NonPosOp) {
-      return Info.isKnownNonNegative(NonNegOp) &&
-             Info.isKnownNonPositive(NonPosOp);
-    };
-    if (!IsNonNegativeAndNonPositive(Op0, Op1) &&
-        !IsNonNegativeAndNonPositive(Op1, Op0))
-      return false;
-    LLVM_DEBUG(dbgs() << "Adding nsw to " << *I << "\n");
-    I->setHasNoSignedWrap();
-    return true;
-  }
+  case Instruction::Add:
+    return tryToStrengthenBinOpFlags(I, Op0, Op1, Info);
   case Instruction::Mul:
   case Instruction::Shl: {
     auto Opcode = static_cast<Instruction::BinaryOps>(I->getOpcode());
-    bool Changed = false;
-    // For a constant Op1, the ranges of Op0 for which the operation does not
-    // wrap are known exactly; check if the systems imply one of them.
-    if (auto *C = dyn_cast<ConstantInt>(Op1)) {
-      ConstantRange Other(C->getValue());
-      if (!I->hasNoUnsignedWrap() &&
-          doesHoldInRange(Info, Op0,
-                          ConstantRange::makeGuaranteedNoWrapRegion(
-                              Opcode, Other, OBO::NoUnsignedWrap),
-                          /*Signed=*/false)) {
-        LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
-        I->setHasNoUnsignedWrap();
-        Changed = true;
-      }
-      if (!I->hasNoSignedWrap() &&
-          doesHoldInRange(Info, Op0,
-                          ConstantRange::makeGuaranteedNoWrapRegion(
-                              Opcode, Other, OBO::NoSignedWrap),
-                          /*Signed=*/true)) {
-        LLVM_DEBUG(dbgs() << "Adding nsw to " << *I << "\n");
-        I->setHasNoSignedWrap();
-        Changed = true;
-      }
-    }
+    bool Changed = tryToStrengthenBinOpFlags(I, Op0, Op1, Info);
     if (!I->hasNoUnsignedWrap() && I->hasNoSignedWrap() &&
         Info.isKnownNonNegative(Op0) &&
         (Opcode == Instruction::Shl || Info.isKnownNonNegative(Op1))) {

@@ -103,7 +103,7 @@ define void @phi_loop_3(i8 %x, i1 %c) {
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP_LATCH]], label [[LOOP_EXIT:%.*]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ult i8 [[IV_NEXT]], 3
 ; CHECK-NEXT:    br i1 [[EC]], label [[LOOP]], label [[LOOP_EXIT]]
 ; CHECK:       loop.exit:

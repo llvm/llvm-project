@@ -164,7 +164,7 @@ define void @add_rec_decreasing_add_rec_positive_to_negative(i8 noundef %len) {
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i8 [[K_0]], 5
 ; CHECK-NEXT:    call void @use(i1 [[CMP_NOT_I]])
-; CHECK-NEXT:    [[K_DEC]] = add i8 [[K_0]], -1
+; CHECK-NEXT:    [[K_DEC]] = add nsw i8 [[K_0]], -1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
