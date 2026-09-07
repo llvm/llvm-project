@@ -1675,9 +1675,6 @@ public:
                         KernelLaunchArgsTy &LaunchArgs,
                         __tgt_async_info *AsyncInfoPtr);
 
-  /// Obtain information about the given device.
-  InfoTreeNode obtain_device_info(int32_t DeviceId);
-
   /// Remove the event from the plugin.
   void set_info_flag(uint32_t NewInfoLevel);
 
