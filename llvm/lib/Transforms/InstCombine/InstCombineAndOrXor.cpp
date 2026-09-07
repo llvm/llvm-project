@@ -3522,15 +3522,13 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
   if (!IsLogical) {
     // E.g. (icmp slt x, 0) | (icmp sgt x, n) --> icmp ugt x, n
     // E.g. (icmp sge x, 0) & (icmp slt x, n) --> icmp ult x, n
-    if (Value *V = simplifyRangeCheck(PredL, LHS0, LHS1, PredR, RHS0, RHS1,
-                                      cast<Instruction>(RHS),
+    if (Value *V = simplifyRangeCheck(PredL, LHS0, LHS1, PredR, RHS0, RHS1, &I,
                                       /*Inverted=*/!IsAnd))
       return V;
 
     // E.g. (icmp sgt x, n) | (icmp slt x, 0) --> icmp ugt x, n
     // E.g. (icmp slt x, n) & (icmp sge x, 0) --> icmp ult x, n
-    if (Value *V = simplifyRangeCheck(PredR, RHS0, RHS1, PredL, LHS0, LHS1,
-                                      cast<Instruction>(LHS),
+    if (Value *V = simplifyRangeCheck(PredR, RHS0, RHS1, PredL, LHS0, LHS1, &I,
                                       /*Inverted=*/!IsAnd))
       return V;
   }
