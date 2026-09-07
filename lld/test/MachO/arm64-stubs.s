@@ -48,10 +48,12 @@
 
 #--- foo.s
 .globl _foo
+.p2align 2
 _foo:
 
 #--- bar.s
 .globl _bar
+.p2align 2
 _bar:
 
 #--- test.s

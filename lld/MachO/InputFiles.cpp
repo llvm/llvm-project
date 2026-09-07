@@ -896,6 +896,23 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       return StringRef(strtab + sym.n_strx);
     };
 
+    // arm64 instructions must be 4-byte aligned, so a symbol in a code section
+    // whose guaranteed alignment is lower than that names a function that can
+    // never be executed. ld64 diagnoses this, so we do too. Note that we check
+    // each symbol rather than each subsection: an alt-entry symbol does not
+    // induce a new subsection, but it is still an entry point that has to be
+    // aligned.
+    const bool checkCodeAlign = target->cpuType == CPU_TYPE_ARM64 &&
+                                (sections[i]->flags & S_ATTR_PURE_INSTRUCTIONS);
+
+    // Mach-O reserves the 'l' and 'L' prefixes for labels that the assembler
+    // generates for its own use, such as the ltmp0 anchor it emits for each
+    // section. Those do not name functions, so ld64 does not warn about them.
+    auto isAssemblerTemp = [](const NList &sym, StringRef name) {
+      return !(sym.n_type & N_EXT) &&
+             (name.starts_with("l") || name.starts_with("L"));
+    };
+
     // Calculate symbol sizes and create subsections by splitting the sections
     // along symbol boundaries.
     // We populate subsections by repeatedly splitting the last (highest
@@ -913,6 +930,10 @@ void ObjFile::parseSymbols(ArrayRef<typename LP::section> sectionHeaders,
       const uint32_t symIndex = symbolIndices[j];
       const NList &sym = nList[symIndex];
       StringRef name = getSymName(sym);
+      if (checkCodeAlign && !isAssemblerTemp(sym, name) &&
+          MinAlign(sectionAlign, sym.n_value - sectionAddr) < 4)
+        warn("arm64 function not 4-byte aligned: " + name + " from " +
+             toString(this));
       Subsection &subsec = subsections.back();
       InputSection *isec = subsec.isec;
 

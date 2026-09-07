@@ -34,6 +34,7 @@ _foo:
 
 #--- test.s
 .globl _main
+.p2align 2
 _main:
   bl _foo
   ret

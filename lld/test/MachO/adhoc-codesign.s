@@ -103,10 +103,12 @@
 
 #--- foo.s
 .globl _foo
+.p2align 2
 _foo:
   ret
 
 #--- main.s
 .globl _main
+.p2align 2
 _main:
   ret

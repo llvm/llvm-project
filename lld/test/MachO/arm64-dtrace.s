@@ -13,6 +13,7 @@
 
 #--- arm64-dtrace.s
 	.globl	_main
+.p2align 2
 _main:
 	bl	___dtrace_isenabled$Foo$added$v1
 	.reference	___dtrace_typedefs$Foo$v2

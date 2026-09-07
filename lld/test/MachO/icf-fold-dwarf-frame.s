@@ -30,6 +30,7 @@
 # Due to padding, we need to emit a throwaway FDE for each personality, so that
 # subsequent FDEs are the same size and can be folded
 # TODO: Could we detect padding differences and fold anyway?
+.p2align 2
 _padA:
   .cfi_startproc
   .cfi_personality 155, _p0

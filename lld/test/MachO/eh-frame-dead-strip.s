@@ -28,6 +28,7 @@
 
 #--- strong.s
 .globl _fun
+.p2align 2
 _fun:
   .cfi_startproc
   ## cfi_escape cannot be encoded in compact unwind
@@ -38,6 +39,7 @@ _fun:
 #--- weak.s
 .globl _fun
 .weak_definition _fun
+.p2align 2
 _fun:
   .cfi_startproc
   ## cfi_escape cannot be encoded in compact unwind

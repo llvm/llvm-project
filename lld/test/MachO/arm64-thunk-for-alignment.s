@@ -18,6 +18,7 @@
 
 #--- foo.s
 
+.p2align 2
 _foo:
   b _bar
 

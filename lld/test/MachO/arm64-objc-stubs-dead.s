@@ -16,6 +16,7 @@
 .section __TEXT,__text
 
 .globl _foo
+.p2align 2
 _foo:
   bl  _objc_msgSend$length
   ret

@@ -23,6 +23,7 @@
 .text
 
 .globl _main
+.p2align 2
 _main:
   bl _foo
   bl _extern_sym
@@ -40,6 +41,7 @@ _spacer1:
 .space 0x4000000
 
 .section __TEXT,__lcxx_override,regular,pure_instructions
+.p2align 2
 _bar:
   bl _extern_sym
   ret

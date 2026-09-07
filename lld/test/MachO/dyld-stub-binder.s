@@ -46,11 +46,13 @@
 
 #--- foo.s
 .globl _foo
+.p2align 2
 _foo:
 
 #--- bar.s
 .text
 .globl _bar
+.p2align 2
 _bar:
   bl _foo
   ret

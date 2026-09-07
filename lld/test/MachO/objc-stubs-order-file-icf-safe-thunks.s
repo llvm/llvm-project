@@ -23,6 +23,7 @@
 #--- input.s
 .text
 .globl _cold
+.p2align 2
 _cold:
   bl _objc_msgSend$cold
   ret

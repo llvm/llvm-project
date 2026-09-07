@@ -7,6 +7,7 @@
 # CHECK: error: {{.*}}test.o: linker optimization hint spans multiple sections
 
 .globl _main
+.p2align 2
 _main:
 L1:
   adrp x0, _target@PAGE

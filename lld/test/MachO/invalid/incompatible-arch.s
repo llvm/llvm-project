@@ -49,5 +49,6 @@
 # CROSS-SIM2: {{.*}}test_x86_ios_sim.o has platform iOS Simulator, which is different from target platform watchOS Simulator
 
 .globl _main
+.p2align 2
 _main:
   ret

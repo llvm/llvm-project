@@ -45,6 +45,7 @@ _main:
 
 #--- foobar.s
 .globl _foo, _bar
+.p2align 2
 _foo:
   .space 0
 _bar:
