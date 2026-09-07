@@ -5,12 +5,12 @@ define amdgpu_kernel void @lds_promoted_alloca_select_invalid_pointer_operand() 
 ; CHECK-LABEL: define amdgpu_kernel void @lds_promoted_alloca_select_invalid_pointer_operand(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 undef, ptr addrspace(5) poison, ptr addrspace(5) [[ALLOCA]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 poison, ptr addrspace(5) poison, ptr addrspace(5) [[ALLOCA]]
 ; CHECK-NEXT:    store i32 0, ptr addrspace(5) [[SELECT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca i32, align 4, addrspace(5)
-  %select = select i1 undef, ptr addrspace(5) poison, ptr addrspace(5) %alloca
+  %select = select i1 poison, ptr addrspace(5) poison, ptr addrspace(5) %alloca
   store i32 0, ptr addrspace(5) %select, align 4
   ret void
 }
@@ -35,14 +35,14 @@ define amdgpu_kernel void @lds_promote_alloca_select_two_derived_pointers(i32 %a
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [256 x [16 x i32]], ptr addrspace(3) @lds_promote_alloca_select_two_derived_pointers.alloca, i32 0, i32 [[TMP14]]
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(3) [[TMP15]], i32 0, i32 [[A]]
 ; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(3) [[TMP15]], i32 0, i32 [[B]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 undef, ptr addrspace(3) [[PTR0]], ptr addrspace(3) [[PTR1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 poison, ptr addrspace(3) [[PTR0]], ptr addrspace(3) [[PTR1]]
 ; CHECK-NEXT:    store i32 0, ptr addrspace(3) [[SELECT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %ptr0 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %a
   %ptr1 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %b
-  %select = select i1 undef, ptr addrspace(5) %ptr0, ptr addrspace(5) %ptr1
+  %select = select i1 poison, ptr addrspace(5) %ptr0, ptr addrspace(5) %ptr1
   store i32 0, ptr addrspace(5) %select, align 4
   ret void
 }
@@ -56,7 +56,7 @@ define amdgpu_kernel void @lds_promote_alloca_select_two_allocas(i32 %a, i32 %b)
 ; CHECK-NEXT:    [[ALLOCA1:%.*]] = alloca i32, i32 16, align 4, addrspace(5)
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr inbounds i32, ptr addrspace(5) [[ALLOCA0]], i32 [[A]]
 ; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr inbounds i32, ptr addrspace(5) [[ALLOCA1]], i32 [[B]]
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 undef, ptr addrspace(5) [[PTR0]], ptr addrspace(5) [[PTR1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 poison, ptr addrspace(5) [[PTR0]], ptr addrspace(5) [[PTR1]]
 ; CHECK-NEXT:    store i32 0, ptr addrspace(5) [[SELECT]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -64,7 +64,7 @@ define amdgpu_kernel void @lds_promote_alloca_select_two_allocas(i32 %a, i32 %b)
   %alloca1 = alloca i32, i32 16, align 4, addrspace(5)
   %ptr0 = getelementptr inbounds i32, ptr addrspace(5) %alloca0, i32 %a
   %ptr1 = getelementptr inbounds i32, ptr addrspace(5) %alloca1, i32 %b
-  %select = select i1 undef, ptr addrspace(5) %ptr0, ptr addrspace(5) %ptr1
+  %select = select i1 poison, ptr addrspace(5) %ptr0, ptr addrspace(5) %ptr1
   store i32 0, ptr addrspace(5) %select, align 4
   ret void
 }
@@ -90,14 +90,14 @@ define amdgpu_kernel void @lds_promote_alloca_select_two_derived_constant_pointe
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [256 x [16 x i32]], ptr addrspace(3) @lds_promote_alloca_select_two_derived_constant_pointers.alloca, i32 0, i32 [[TMP14]]
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(3) [[TMP15]], i32 0, i32 1
 ; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(3) [[TMP15]], i32 0, i32 3
-; CHECK-NEXT:    [[SELECT:%.*]] = select i1 undef, ptr addrspace(3) [[PTR0]], ptr addrspace(3) [[PTR1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 poison, ptr addrspace(3) [[PTR0]], ptr addrspace(3) [[PTR1]]
 ; CHECK-NEXT:    store i32 0, ptr addrspace(3) [[SELECT]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca [16 x i32], align 4, addrspace(5)
   %ptr0 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 1
   %ptr1 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 3
-  %select = select i1 undef, ptr addrspace(5) %ptr0, ptr addrspace(5) %ptr1
+  %select = select i1 poison, ptr addrspace(5) %ptr0, ptr addrspace(5) %ptr1
   store i32 0, ptr addrspace(5) %select, align 4
   ret void
 }
@@ -138,12 +138,12 @@ define amdgpu_kernel void @lds_promoted_alloca_select_input_phi(i32 %a, i32 %b, 
 ; CHECK-NEXT:    br i1 [[C0]], label %[[BB1:.*]], label %[[BB2:.*]]
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds [16 x i32], ptr addrspace(5) [[ALLOCA]], i32 0, i32 [[C]]
-; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 undef, ptr addrspace(5) poison, ptr addrspace(5) [[PTR2]]
+; CHECK-NEXT:    [[SELECT0:%.*]] = select i1 poison, ptr addrspace(5) poison, ptr addrspace(5) [[PTR2]]
 ; CHECK-NEXT:    store i32 0, ptr addrspace(5) [[PTR1]], align 4
 ; CHECK-NEXT:    br label %[[BB2]]
 ; CHECK:       [[BB2]]:
 ; CHECK-NEXT:    [[PHI_PTR:%.*]] = phi ptr addrspace(5) [ [[PTR0]], %[[ENTRY]] ], [ [[SELECT0]], %[[BB1]] ]
-; CHECK-NEXT:    [[SELECT1:%.*]] = select i1 undef, ptr addrspace(5) [[PHI_PTR]], ptr addrspace(5) [[PTR1]]
+; CHECK-NEXT:    [[SELECT1:%.*]] = select i1 poison, ptr addrspace(5) [[PHI_PTR]], ptr addrspace(5) [[PTR1]]
 ; CHECK-NEXT:    store i32 0, ptr addrspace(5) [[SELECT1]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -156,13 +156,13 @@ entry:
 
 if:
   %ptr2 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 %c
-  %select0 = select i1 undef, ptr addrspace(5) poison, ptr addrspace(5) %ptr2
+  %select0 = select i1 poison, ptr addrspace(5) poison, ptr addrspace(5) %ptr2
   store i32 0, ptr addrspace(5) %ptr1
   br label %endif
 
 endif:
   %phi.ptr = phi ptr addrspace(5) [ %ptr0, %entry ], [ %select0, %if ]
-  %select1 = select i1 undef, ptr addrspace(5) %phi.ptr, ptr addrspace(5) %ptr1
+  %select1 = select i1 poison, ptr addrspace(5) %phi.ptr, ptr addrspace(5) %ptr1
   store i32 0, ptr addrspace(5) %select1, align 4
   ret void
 }
