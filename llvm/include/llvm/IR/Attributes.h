@@ -18,6 +18,7 @@
 #include "llvm-c/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Alignment.h"
@@ -29,6 +30,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <utility>
 
 namespace llvm {
@@ -40,7 +42,6 @@ class AttributeListImpl;
 class AttributeSetNode;
 class ConstantRange;
 class ConstantRangeList;
-class FoldingSetNodeID;
 class Function;
 class LLVMContext;
 class Instruction;
@@ -131,6 +132,7 @@ public:
     TombstoneKey,          ///< Use as Tombstone key for DenseMap of AttrKind
   };
 
+  static const unsigned NumEnumAttrKinds = LastEnumAttr - FirstEnumAttr + 1;
   static const unsigned NumIntAttrKinds = LastIntAttr - FirstIntAttr + 1;
   static const unsigned NumTypeAttrKinds = LastTypeAttr - FirstTypeAttr + 1;
 
@@ -375,8 +377,6 @@ public:
   /// Less-than operator. Useful for sorting the attributes list.
   LLVM_ABI bool operator<(Attribute A) const;
 
-  LLVM_ABI void Profile(FoldingSetNodeID &ID) const;
-
   /// Return a raw pointer that uniquely identifies this attribute.
   void *getRawPointer() const {
     return pImpl;
@@ -533,6 +533,17 @@ template <> struct DenseMapInfo<AttributeSet, void> {
 
   static bool isEqual(AttributeSet LHS, AttributeSet RHS) { return LHS == RHS; }
 };
+
+namespace hashing::detail {
+// Attribute and AttributeSet are trivial wrappers whose operator== is pointer
+// equality, so hashing the bytes is equivalent to hashing the values. Define
+// is_hashable_data to pick the contiguous hash_combine_range path.
+template <> struct is_hashable_data<Attribute> : std::true_type {};
+template <> struct is_hashable_data<AttributeSet> : std::true_type {};
+static_assert(std::has_unique_object_representations_v<Attribute> &&
+                  std::has_unique_object_representations_v<AttributeSet>,
+              "hashing the bytes requires unique object representations");
+} // namespace hashing::detail
 
 //===----------------------------------------------------------------------===//
 /// \class

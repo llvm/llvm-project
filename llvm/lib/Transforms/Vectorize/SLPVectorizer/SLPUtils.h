@@ -28,6 +28,7 @@
 #include <string>
 
 namespace llvm {
+class AssumptionCache;
 class Constant;
 class DataLayout;
 class Instruction;
@@ -235,6 +236,13 @@ unsigned getShufflevectorNumGroups(ArrayRef<Value *> VL);
 /// the result is
 /// <0, 1, 2, 3, 12, 13, 14, 15, 16, 17, 18, 19, 28, 29, 30, 31>
 SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL);
+
+/// Checks if the values in \p VL can be represented as a shuffle of at most
+/// two vector operands (extractelement lanes). On success, \p Mask is the
+/// equivalent shuffle mask.
+std::optional<TargetTransformInfo::ShuffleKind>
+isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
+                     AssumptionCache *AC);
 
 /// Specifies the way the mask should be analyzed for undefs/poisonous elements
 /// in the shuffle mask.

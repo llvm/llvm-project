@@ -1023,6 +1023,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::RESET_FPMODE, MVT::Other, Custom);
 
   setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i128, Custom);
+  for (MVT Ty : {MVT::f16, MVT::bf16, MVT::f32, MVT::f64})
+    setOperationAction(ISD::ATOMIC_LOAD_FSUB, Ty, Expand);
   if (!Subtarget->hasLSE() && !Subtarget->outlineAtomics()) {
     setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i32, LibCall);
     setOperationAction(ISD::ATOMIC_LOAD_SUB, MVT::i64, LibCall);
@@ -18972,15 +18974,13 @@ bool AArch64TargetLowering::isProfitableToHoist(Instruction *I) const {
         User->getOpcode() == Instruction::FAdd))
     return true;
 
-  const TargetOptions &Options = getTargetMachine().Options;
   const Function *F = I->getFunction();
   const DataLayout &DL = F->getDataLayout();
   Type *Ty = User->getOperand(0)->getType();
 
   return !(isFMAFasterThanFMulAndFAdd(*F, Ty) &&
            isOperationLegalOrCustom(ISD::FMA, getValueType(DL, Ty)) &&
-           (Options.AllowFPOpFusion == FPOpFusion::Fast ||
-            I->getFastMathFlags().allowContract()));
+           I->getFastMathFlags().allowContract());
 }
 
 // All 32-bit GPR operations implicitly zero the high-half of the corresponding
@@ -33123,9 +33123,10 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(
   // If LSFE is available and FP exceptions are not observable, use atomic FP
   // instructions in preference to expansion.
   const Function &F = *AI->getFunction();
-  if (Subtarget->hasLSFE() && !F.isStrictFP() &&
+  if (Subtarget->hasLSFE() && Size < 128 && !F.isStrictFP() &&
       F.getFnAttribute("no-trapping-math").getValueAsBool() &&
       (AI->getOperation() == AtomicRMWInst::FAdd ||
+       AI->getOperation() == AtomicRMWInst::FSub ||
        AI->getOperation() == AtomicRMWInst::FMax ||
        AI->getOperation() == AtomicRMWInst::FMin ||
        AI->getOperation() == AtomicRMWInst::FMaximum ||

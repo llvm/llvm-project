@@ -37,12 +37,12 @@
 !rec_UArrEmpty = !cir.union<"UArrEmpty" {data !cir.array<!rec_E x 2>, data !s8i}>
 !rec_UArr8Empty = !cir.union<"UArr8Empty" {data !cir.array<!rec_E x 8>, data !s8i}>
 !rec_UBigEmptyInt = !cir.union<"UBigEmptyInt" {data !rec_EBig, data !s32i}, padding = {!cir.array<!u8i x 28>}>
-!rec_UEmptyUnnamedBits = !cir.union<"UEmptyUnnamedBits" {data !cir.array<!rec_E x 4>, empty !cir.array<!u8i x 3>}>
+!rec_UEmptyUnnamedBits = !cir.union<"UEmptyUnnamedBits" {data !cir.array<!rec_E x 4>, empty !cir.bitfield<!cir.array<!u8i x 3>, [#cir.bitfield_decl<!s32i, 24, unnamed>]>}>
 !rec_SFloats = !cir.struct<"SFloats" {data !cir.float, data !cir.float}>
 !rec_UEmptyFloats = !cir.union<"UEmptyFloats" {data !rec_E, data !rec_SFloats}>
 !u32i = !cir.int<u, 32>
-!rec_UBitSpans = !cir.union<"UBitSpans" {bitfield !u32i}>
-!rec_UBitPlusLong = !cir.union<"UBitPlusLong" {bitfield !u32i, data !s64i}>
+!rec_UBitSpans = !cir.union<"UBitSpans" {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 20>]>}>
+!rec_UBitPlusLong = !cir.union<"UBitPlusLong" {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 20>]>, data !s64i}>
 
 module attributes {
   cir.triple = "x86_64-unknown-linux-gnu",
@@ -307,13 +307,13 @@ module attributes {
 
   // CHECK: cir.func{{.*}} @take_two_empty(%arg0: !s32i)
 
-  // Only data members are classified, so the unnamed bit-field's storage is
-  // not mapped and the union is left holding nothing that supplies bytes.
+  // An unnamed bit-field is storage no variant names, but it holds data for
+  // the ABI, so the union is classified from it and passed in a register.
   cir.func @take_empty_unnamed_bits(%arg0: !rec_UEmptyUnnamedBits) {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_empty_unnamed_bits()
+  // CHECK: cir.func{{.*}} @take_empty_unnamed_bits(%arg0: !u32i)
 
   // The remaining member decides the class, so a pair of floats in one
   // eightbyte still coerces to a vector rather than an integer.
@@ -486,7 +486,7 @@ module attributes {
 // LLVM: define void @take_arr8_empty(i8 %{{.+}})
 // LLVM: define void @take_big_empty_int(ptr noundef byval(%union.UBigEmptyInt) align 32 %{{.+}})
 // LLVM: define void @take_two_empty(i32 %{{.+}})
-// LLVM: define void @take_empty_unnamed_bits()
+// LLVM: define void @take_empty_unnamed_bits(i32 %{{[^,)]+}})
 // LLVM: define void @take_empty_floats(<2 x float> %{{.+}})
 // LLVM: define void @take_bit_spans(i32 %{{.+}})
 // LLVM: define void @take_bit_plus_long(i64 %{{.+}})
