@@ -101,12 +101,13 @@ features cannot lower the translation-unit ABI level;
 - On MIPS N32/N64, an `__int128` now correctly start in an even-numbered register
   or 16-byte aligned stack slot, matching GCC.
 
-- On x86-64 System V, a non-zero-width unnamed bit-field now classifies the
-  eightbytes it occupies as INTEGER, like a named bit-field, matching GCC.
-  Aggregates where this changes the classification may be passed or returned
-  differently -- a struct holding a run of `__int128` bit-fields, for example,
-  now travels in the two integer registers the ABI assigns it. This also fixes
-  a crash when such a struct was passed or returned. (#GH202205)
+- Except on PlayStation, on x86-64 System V a non-zero-width unnamed bit-field
+  now classifies the eightbytes it occupies as INTEGER, like a named bit-field,
+  matching GCC. Aggregates where this changes the classification may be passed
+  or returned differently -- a struct holding a run of `__int128` bit-fields,
+  for example, now travels in the two integer registers the ABI assigns it.
+  This also fixes a crash when such a struct was passed or returned.
+  `-fclang-abi-compat=23` restores the previous behavior. (#GH202205)
 
 ### AST Dumping Potentially Breaking Changes
 
@@ -169,6 +170,9 @@ features cannot lower the translation-unit ABI level;
 #### C++23 Feature Support
 
 #### C++20 Feature Support
+
+- Now clang-scan-deps in P1689 format can find the dependencies described in
+  module map file. See the documents of standard C++ modules for details.
 
 #### C++17 Feature Support
 
@@ -260,6 +264,14 @@ features cannot lower the translation-unit ABI level;
 ### Modified Compiler Flags
 
 - All options of the `-fzero-call-used-regs` compiler flag are now allowed on RISC-V.
+
+- `-funique-internal-linkage-names` now gives internal global variables a
+  unique `.__uniq.<module-hash>` suffix, as it already does for functions. This
+  helps profiling tools distinguish static variables with the same name in
+  different source files. LLVM can demangle these suffixes for both functions
+  and data symbols. GNU libiberty can demangle suffixed function symbols, but
+  leaves suffixed data symbols unchanged. The option remains opt-in, and
+  variables with explicit assembly labels keep their original names.
 
 ### Removed Compiler Flags
 
@@ -656,8 +668,14 @@ features cannot lower the translation-unit ABI level;
   threshold to the target's `size_t` width instead of using a fixed
   threshold of `1 << 60` regardless of the target.
 - Fixed a crash when generating fake uses for parameters of bodyless destructors with `-fextend-variable-liveness`.
+- Fixed a crash when filling in the ``TypeLoc`` for an ``AttributedType``
+  that was inherited from a different declarator, for example when
+  ``__typeof__`` resolves to the type of another, already-processed
+  declaration. (#GH217489)
 - Fixed an assertion failure when instantiating a block that captures
   `this` via a member access through a dependent base class.
+- Fixed `DiagnoseUnguardedAvailability::TraverseIfStmt` dereferencing a nullptr
+  on `if consteval {}`. (#GH220004)
 
 ### OpenACC Specific Changes
 

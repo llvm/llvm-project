@@ -69,6 +69,40 @@ static mlir::Value emitUnaryNVVMIntrinsic(CIRGenFunction &cgf,
       .getResult();
 }
 
+/// Emit a CIR LLVMIntrinsicCallOp for an NVVM fadd intrinsic, which takes the
+/// rounding mode as a trailing operand.
+static mlir::Value emitNVVMFAdd(CIRGenFunction &cgf, const CallExpr *expr,
+                                llvm::StringRef intrinsicName,
+                                llvm::APFloat::roundingMode rm) {
+  auto &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
+  mlir::Value lhs = cgf.emitScalarExpr(expr->getArg(0));
+  mlir::Value rhs = cgf.emitScalarExpr(expr->getArg(1));
+  mlir::Value rnd =
+      builder.getConstInt(loc, builder.getSInt32Ty(), static_cast<int>(rm));
+  return cir::LLVMIntrinsicCallOp::create(builder, loc,
+                                          builder.getStringAttr(intrinsicName),
+                                          lhs.getType(), {lhs, rhs, rnd})
+      .getResult();
+}
+
+static mlir::Value emitBar0Reduction(CIRGenFunction &cgf, const CallExpr *expr,
+                                     llvm::StringRef intrinsicName,
+                                     bool returnsPred) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(expr->getExprLoc());
+  mlir::Type si32Ty = builder.getSInt32Ty();
+  mlir::Value zero = builder.getNullValue(si32Ty, loc);
+  mlir::Value pred = builder.createCompare(
+      loc, cir::CmpOpKind::ne, cgf.emitScalarExpr(expr->getArg(0)), zero);
+  mlir::Type resultTy = returnsPred ? mlir::Type(builder.getBoolTy()) : si32Ty;
+  mlir::Value result = builder.emitIntrinsicCallOp(
+      loc, intrinsicName, resultTy, mlir::ValueRange{zero, pred});
+  if (returnsPred)
+    result = builder.createBoolToInt(result, si32Ty);
+  return result;
+}
+
 static mlir::Value makeScopedAtomicRMW(CIRGenFunction &cgf,
                                        const CallExpr *expr,
                                        cir::AtomicFetchKind kind,
@@ -171,17 +205,13 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__nvvm_atom_cas_gen_i:
   case NVPTX::BI__nvvm_atom_cas_gen_l:
   case NVPTX::BI__nvvm_atom_cas_gen_ll:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-    // success flag.
+    return emitAtomicCmpXchg(expr, /*returnBool=*/false, cir::MemOrder::Relaxed,
+                             cir::MemOrder::Relaxed,
+                             cir::SyncScopeKind::System);
   case NVPTX::BI__nvvm_atom_add_gen_f:
   case NVPTX::BI__nvvm_atom_add_gen_d:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return makeScopedAtomicRMW(*this, expr, cir::AtomicFetchKind::Add,
+                               cir::SyncScopeKind::System);
   case NVPTX::BI__nvvm_atom_inc_gen_ui:
     return makeBinaryAtomicValue(cir::AtomicFetchKind::UIncWrap, expr,
                                  /*originalArgType=*/nullptr,
@@ -367,18 +397,16 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
   case NVPTX::BI__nvvm_atom_cta_cas_gen_i:
   case NVPTX::BI__nvvm_atom_cta_cas_gen_l:
   case NVPTX::BI__nvvm_atom_cta_cas_gen_ll:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitAtomicCmpXchg(expr, /*returnBool=*/false, cir::MemOrder::Relaxed,
+                             cir::MemOrder::Relaxed,
+                             cir::SyncScopeKind::Workgroup);
   case NVPTX::BI__nvvm_atom_sys_cas_gen_us:
   case NVPTX::BI__nvvm_atom_sys_cas_gen_i:
   case NVPTX::BI__nvvm_atom_sys_cas_gen_l:
   case NVPTX::BI__nvvm_atom_sys_cas_gen_ll:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitAtomicCmpXchg(expr, /*returnBool=*/false, cir::MemOrder::Relaxed,
+                             cir::MemOrder::Relaxed,
+                             cir::SyncScopeKind::System);
   case NVPTX::BI__nvvm_match_all_sync_i32p:
   case NVPTX::BI__nvvm_match_all_sync_i64p:
     cgm.errorNYI(expr->getSourceRange(),
@@ -811,6 +839,61 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
     return emitUnaryNVVMIntrinsic(*this, expr, "nvvm.ex2.approx");
   case NVPTX::BI__nvvm_ex2_approx_ftz_f:
     return emitUnaryNVVMIntrinsic(*this, expr, "nvvm.ex2.approx.ftz");
+  case NVPTX::BI__nvvm_add_rn_f:
+  case NVPTX::BI__nvvm_add_rn_d:
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd",
+                        llvm::APFloat::rmNearestTiesToEven);
+  case NVPTX::BI__nvvm_add_rz_f:
+  case NVPTX::BI__nvvm_add_rz_d:
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd", llvm::APFloat::rmTowardZero);
+  case NVPTX::BI__nvvm_add_rm_f:
+  case NVPTX::BI__nvvm_add_rm_d:
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd",
+                        llvm::APFloat::rmTowardNegative);
+  case NVPTX::BI__nvvm_add_rp_f:
+  case NVPTX::BI__nvvm_add_rp_d:
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd",
+                        llvm::APFloat::rmTowardPositive);
+  case NVPTX::BI__nvvm_add_rn_ftz_f:
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz",
+                        llvm::APFloat::rmNearestTiesToEven);
+  case NVPTX::BI__nvvm_add_rz_ftz_f:
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz",
+                        llvm::APFloat::rmTowardZero);
+  case NVPTX::BI__nvvm_add_rm_ftz_f:
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz",
+                        llvm::APFloat::rmTowardNegative);
+  case NVPTX::BI__nvvm_add_rp_ftz_f:
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz",
+                        llvm::APFloat::rmTowardPositive);
+  case NVPTX::BI__nvvm_add_rn_sat_f:
+  case NVPTX::BI__nvvm_add_rn_sat_f16:
+  case NVPTX::BI__nvvm_add_rn_sat_v2f16:
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.sat",
+                        llvm::APFloat::rmNearestTiesToEven);
+  case NVPTX::BI__nvvm_add_rz_sat_f:
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.sat",
+                        llvm::APFloat::rmTowardZero);
+  case NVPTX::BI__nvvm_add_rm_sat_f:
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.sat",
+                        llvm::APFloat::rmTowardNegative);
+  case NVPTX::BI__nvvm_add_rp_sat_f:
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.sat",
+                        llvm::APFloat::rmTowardPositive);
+  case NVPTX::BI__nvvm_add_rn_ftz_sat_f:
+  case NVPTX::BI__nvvm_add_rn_ftz_sat_f16:
+  case NVPTX::BI__nvvm_add_rn_ftz_sat_v2f16:
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz.sat",
+                        llvm::APFloat::rmNearestTiesToEven);
+  case NVPTX::BI__nvvm_add_rz_ftz_sat_f:
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz.sat",
+                        llvm::APFloat::rmTowardZero);
+  case NVPTX::BI__nvvm_add_rm_ftz_sat_f:
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz.sat",
+                        llvm::APFloat::rmTowardNegative);
+  case NVPTX::BI__nvvm_add_rp_ftz_sat_f:
+    return emitNVVMFAdd(*this, expr, "nvvm.fadd.ftz.sat",
+                        llvm::APFloat::rmTowardPositive);
   case NVPTX::BI__nvvm_ldg_h:
   case NVPTX::BI__nvvm_ldg_h2:
     cgm.errorNYI(expr->getSourceRange(),
@@ -997,20 +1080,16 @@ CIRGenFunction::emitNVPTXBuiltinExpr(unsigned builtinId, const CallExpr *expr) {
         mlir::ValueRange{emitScalarExpr(expr->getArg(0)),
                          emitScalarExpr(expr->getArg(1))});
   case NVPTX::BI__nvvm_bar0_and:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBar0Reduction(*this, expr,
+                             "nvvm.barrier.cta.red.and.aligned.all",
+                             /*returnsPred=*/true);
   case NVPTX::BI__nvvm_bar0_or:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBar0Reduction(*this, expr, "nvvm.barrier.cta.red.or.aligned.all",
+                             /*returnsPred=*/true);
   case NVPTX::BI__nvvm_bar0_popc:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented NVPTX builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBar0Reduction(*this, expr,
+                             "nvvm.barrier.cta.red.popc.aligned.all",
+                             /*returnsPred=*/false);
 
   default:
     return std::nullopt;

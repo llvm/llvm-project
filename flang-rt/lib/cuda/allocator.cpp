@@ -154,7 +154,6 @@ int findAsyncDeviceAllocation(void *ptr) {
 
 void insertAsyncDeviceAllocation(
     void *ptr, std::size_t size, cudaStream_t stream) {
-  CriticalSection critical{asyncDeviceAllocationTableLock};
   initAsyncDeviceAllocations();
   if (numDeviceAllocations >= maxDeviceAllocations) {
     doubleAllocationArray();
@@ -227,6 +226,7 @@ int RTDECL(CUFSetAssociatedStream)(void *p, cudaStream_t stream) {
   if (pos >= 0) {
     asyncDeviceAllocations[pos].stream = stream;
   } else {
+    CriticalSection critical{asyncDeviceAllocationTableLock};
     insertAsyncDeviceAllocation(p, 0, stream);
   }
   return StatOk;
@@ -255,6 +255,7 @@ void *CUFAllocDevice(std::size_t sizeInBytes,
     } else {
       CUDA_REPORT_IF_ERROR(
           cudaMallocAsync(&p, sizeInBytes, (cudaStream_t)*asyncObject));
+      CriticalSection critical{asyncDeviceAllocationTableLock};
       insertAsyncDeviceAllocation(p, sizeInBytes, (cudaStream_t)*asyncObject);
     }
   }

@@ -145,8 +145,11 @@ void load_struct_to_atomic_struct() {
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_T>
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!rec_anon_struct>
 // CIR: %[[AGG_TMP_ADDR:.*]] = cir.alloca "agg.tmp.ensured" {{.*}} : !cir.ptr<!rec_anon_struct>
-// CIR: %[[AGG_TMP_ZERO:.*]] = cir.get_global @__const.load_struct_to_atomic_struct.agg.tmp.ensured : !cir.ptr<!rec_anon_struct>
-// CIR: cir.copy %[[AGG_TMP_ZERO]] to %[[AGG_TMP_ADDR]] : !cir.ptr<!rec_anon_struct>
+// CIR: %[[AGG_TMP_I8:.*]] = cir.cast bitcast %[[AGG_TMP_ADDR]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u8i>
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !u8i
+// CIR: %[[CONST_4:.*]] = cir.const #cir.int<4> : !u64i
+// CIR: %[[AGG_TMP_VOID_PTR:.*]] = cir.cast bitcast %[[AGG_TMP_I8]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
+// CIR: cir.libc.memset %[[CONST_4]] bytes at %[[AGG_TMP_VOID_PTR]] {{.*}} to %[[CONST_0]] : !cir.ptr<!void>, !u8i, !u64i
 // CIR: %[[AGG_TMP_PTR:.*]] = cir.get_member %[[AGG_TMP_ADDR]][0] {name = "value_addr"} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_T>
 // CIR: cir.copy %[[A_ADDR]] {{.*}} to %[[AGG_TMP_PTR]] {{.*}} : !cir.ptr<!rec_T>
 // CIR: %[[AGG_TMP_ADDR_U32:.*]] = cir.cast bitcast %[[AGG_TMP_ADDR]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u32i>
@@ -157,7 +160,7 @@ void load_struct_to_atomic_struct() {
 // LLVM: %[[A_ADDR:.*]] = alloca %struct.T, align 1
 // LLVM: %[[B_ADDR:.*]] = alloca { %struct.T, [1 x i8] }, align 4
 // LLVM: %[[AGG_TMP_ADDR:.*]] = alloca { %struct.T, [1 x i8] }, align 4
-// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[AGG_TMP_ADDR]], ptr align 1 @__const.load_struct_to_atomic_struct.agg.tmp.ensured, i64 4, i1 false)
+// LLVM: call void @llvm.memset.p0.i64(ptr align 4 %[[AGG_TMP_ADDR]], i8 0, i64 4, i1 false)
 // LLVM: %[[AGG_TMP_PTR:.*]] = getelementptr inbounds nuw { %struct.T, [1 x i8] }, ptr %[[AGG_TMP_ADDR]], i32 0, i32 0
 // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[AGG_TMP_PTR]], ptr align 1 %[[A_ADDR]], i64 3, i1 false)
 // LLVM: %[[AGG_TMP:.*]] = load i32, ptr %[[AGG_TMP_ADDR]], align 4
