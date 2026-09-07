@@ -3370,7 +3370,7 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
       A->claim();
     } else if (A->getOption().hasFlag(options::LinkerInput)) {
       // Just treat as object type, we could make a special type for this if
-      // necessary. <---
+      // necessary.
       Inputs.push_back(std::make_pair(types::TY_Object, A));
 
     } else if (A->getOption().matches(options::OPT_x)) {
