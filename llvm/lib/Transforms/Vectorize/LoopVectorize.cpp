@@ -1918,26 +1918,20 @@ static bool isIndvarOverflowCheckKnownFalse(
           Cost->PSE, Cost->TheLoop,
           /*CanUseConstantMax=*/true, /*CanExcludeZeroTrips=*/false,
           /*ComputeUpperBoundOnly=*/true)) {
-    uint64_t MaxVF = VF.getKnownMinValue();
-    uint64_t MaxTC = TC->getKnownMinValue();
-    if (VF.isScalable() || TC->isScalable()) {
-      std::optional<unsigned> MaxVScale =
-          getMaxVScale(*Cost->TheFunction, Cost->TTI);
-      if (!MaxVScale)
-        return false;
-      if (VF.isScalable())
-        MaxVF *= *MaxVScale;
-      if (TC->isScalable())
-        MaxTC *= *MaxVScale;
-    }
+    // Compute the maximum runtime values of VF and the trip count.
+    std::optional<uint64_t> MaxStep =
+        getMaxRuntimeElementCount(VF * MaxUF, *Cost->TheFunction);
+    std::optional<uint64_t> MaxTC =
+        getMaxRuntimeElementCount(*TC, *Cost->TheFunction);
+    if (!MaxStep || !MaxTC)
+      return false;
 
     // Bail out if the maximum trip count is not representable in the induction
     // variable's type.
-    if (MaxUIntTripCount.ult(MaxTC))
+    if (MaxUIntTripCount.ult(*MaxTC))
       return false;
 
-    uint64_t MaxStep = MaxVF * MaxUF;
-    return (MaxUIntTripCount - MaxTC).ugt(MaxStep);
+    return (MaxUIntTripCount - *MaxTC).ugt(*MaxStep);
   }
 
   return false;
@@ -3000,7 +2994,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   std::optional<unsigned> MaxPowerOf2RuntimeVF =
       MaxFactors.FixedVF.getFixedValue();
   if (MaxFactors.ScalableVF) {
-    std::optional<unsigned> MaxVScale = getMaxVScale(*TheFunction, TTI);
+    std::optional<unsigned> MaxVScale = getMaxVScale(*TheFunction);
     if (MaxVScale) {
       MaxPowerOf2RuntimeVF = std::max<unsigned>(
           *MaxPowerOf2RuntimeVF,
@@ -5756,9 +5750,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
                  /*OnlyLatches=*/true);
   RUN_VPLAN_PASS(VPlanTransforms::materializeBackedgeTakenCount, BestVPlan,
                  VectorPH);
-  std::optional<uint64_t> MaxRuntimeStep;
-  if (auto MaxVScale = getMaxVScale(*OrigLoop->getHeader()->getParent(), TTI))
-    MaxRuntimeStep = uint64_t(*MaxVScale) * BestVF.getKnownMinValue() * BestUF;
+  std::optional<uint64_t> MaxRuntimeStep = getMaxRuntimeElementCount(
+      BestVF * BestUF, *OrigLoop->getHeader()->getParent());
+
   assert((LI->getUniqueLatchExitBlock(*OrigLoop) || RequiresScalarEpilogue) &&
          "loops not exiting via the latch without required epilogue?");
   RUN_VPLAN_PASS(VPlanTransforms::materializeVectorTripCount, BestVPlan,
@@ -6290,6 +6284,71 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
 // optimizations.
 static void printOptimizedVPlan(VPlan &) {}
 
+#ifndef NDEBUG
+/// Cross-check vputils::computeExecutionFrequencies for the loop region of
+/// \p Plan against BlockFrequencyInfo for the blocks of \p OrigLoop.
+/// FIXME: Temporary verification aid, to be removed.
+static bool verifyExecutionFrequenciesMatchBFI(VPlan &Plan, Loop *OrigLoop,
+                                               LoopInfo *LI,
+                                               LoopVectorizationCostModel &CM) {
+  // Limited to inner loops with the latch as only exiting block and no extra
+  // VPBBs without a matching IR BB (as introduced by tail folding).
+  if (Plan.isOuterLoop() ||
+      OrigLoop->getExitingBlock() != OrigLoop->getLoopLatch() ||
+      Plan.hasTailFolded())
+    return true;
+
+  // Visit the region's blocks in the same order as introduceMasksAndLinearize.
+  // Both are reverse post-orders of the same CFG, so indices correspond.
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getVectorLoopRegion()->getEntryBasicBlock());
+  auto Blocks = to_vector(VPBlockUtils::blocksAs<VPBasicBlock>(RPOT));
+  assert(Blocks.size() == OrigLoop->getNumBlocks() &&
+         "loop region and original loop must have the same blocks");
+
+  LoopBlocksRPO OrigRPO(OrigLoop);
+  OrigRPO.perform(LI);
+
+  // Only request the expensive BFI once the cheap bail-outs are past.
+  BlockFrequencyInfo &BFI = CM.getBFI();
+  uint64_t HeaderFreq = BFI.getBlockFreq(OrigLoop->getHeader()).getFrequency();
+  if (HeaderFreq == 0)
+    return true;
+
+  // BFI's fixed-point mass propagation loses up to 1 ULP per edge, so bound the
+  // error by the number of edges in the region.
+  uint64_t Edges = 0;
+  for (const VPBasicBlock *VPBB : Blocks)
+    Edges += VPBB->getNumSuccessors();
+  uint64_t Tolerance = Edges + BranchProbability::getDenominator() / HeaderFreq;
+
+  DenseMap<const VPBasicBlock *, std::optional<BlockFrequency>> Frequencies =
+      vputils::computeExecutionFrequencies(Blocks);
+  for (const auto &[VPBB, BB] :
+       zip_equal(drop_begin(Blocks), drop_begin(OrigRPO))) {
+    // Compare at BranchProbability's coarser resolution, which is as precise as
+    // BFI's frequencies get.
+    std::optional<BlockFrequency> Freq = Frequencies.lookup(VPBB);
+    if (!Freq)
+      continue;
+    BranchProbability Computed = vputils::getExecutionProbability(*Freq);
+
+    // Clamp to the header's frequency, which BFI's rounding may exceed.
+    uint64_t BBFreq = BFI.getBlockFreq(BB).getFrequency();
+    BranchProbability Expected = BranchProbability::getBranchProbability(
+        std::min(BBFreq, HeaderFreq), HeaderFreq);
+    if (AbsoluteDifference(Computed.getNumerator(), Expected.getNumerator()) <=
+        Tolerance)
+      continue;
+
+    errs() << "Block frequency mismatch for " << VPBB->getName() << ": VPlan "
+           << Computed << ", BlockFrequencyInfo " << Expected << "\n";
+    return false;
+  }
+  return true;
+}
+#endif
+
 VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   bool IsInnerLoop = OrigLoop->isInnermost();
 
@@ -6375,6 +6434,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
                  getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()));
   if (CM->foldTailByMasking())
     RUN_VPLAN_PASS(VPlanTransforms::foldTailByMasking, *VPlan0);
+
+  assert(verifyExecutionFrequenciesMatchBFI(*VPlan0, OrigLoop, LI, *CM) &&
+         "execution frequencies do not match the loop's block frequencies");
   RUN_VPLAN_PASS(VPlanTransforms::introduceMasksAndLinearize, *VPlan0);
 
   return VPlan0;

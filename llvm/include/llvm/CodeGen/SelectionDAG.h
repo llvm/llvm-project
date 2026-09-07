@@ -1086,16 +1086,6 @@ public:
   LLVM_ABI SDValue getBitcastedAnyExtOrTrunc(SDValue Op, const SDLoc &DL,
                                              EVT VT);
 
-  /// Convert Op, which must be of integer type, to the
-  /// integer type VT, by first bitcasting (from potential vector) to
-  /// corresponding scalar type then either sign-extending or truncating it.
-  LLVM_ABI SDValue getBitcastedSExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
-
-  /// Convert Op, which must be of integer type, to the
-  /// integer type VT, by first bitcasting (from potential vector) to
-  /// corresponding scalar type then either zero-extending or truncating it.
-  LLVM_ABI SDValue getBitcastedZExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
-
   /// Return the expression required to zero extend the Op
   /// value assuming it was the smaller SrcTy value.
   LLVM_ABI SDValue getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT);
@@ -2580,6 +2570,13 @@ public:
   /// location that the 'Base' load is loading from.
   LLVM_ABI bool areNonVolatileConsecutiveLoads(LoadSDNode *LD, LoadSDNode *Base,
                                                unsigned Bytes, int Dist) const;
+
+  /// Return true if stores are next to each other and can be merged. Check that
+  /// both are nonvolatile and if \p ST is storing \p Bytes bytes to a location
+  /// that is \p Dist units away from the location that \p Base is storing to.
+  LLVM_ABI bool areNonVolatileConsecutiveStores(StoreSDNode *ST,
+                                                StoreSDNode *Base,
+                                                unsigned Bytes, int Dist) const;
 
   /// Infer alignment of a load / store address. Return std::nullopt if it
   /// cannot be inferred.

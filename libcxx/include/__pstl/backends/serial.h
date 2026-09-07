@@ -15,6 +15,7 @@
 #include <__algorithm/for_each.h>
 #include <__algorithm/is_heap_until.h>
 #include <__algorithm/merge.h>
+#include <__algorithm/min_element.h>
 #include <__algorithm/mismatch.h>
 #include <__algorithm/reverse.h>
 #include <__algorithm/search.h>
@@ -132,6 +133,15 @@ struct __merge<__serial_backend_tag, _ExecutionPolicy> {
         std::move(__last2),
         std::move(__outit),
         std::forward<_Comp>(__comp));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __min_element<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Compare>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp) const noexcept {
+    return std::min_element(std::move(__first), std::move(__last), std::move(__comp));
   }
 };
 

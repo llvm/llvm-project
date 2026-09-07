@@ -5,7 +5,7 @@
 // - User-requested final phase - binary or assembly.
 
 //
-// Test the phases generated when using the new offloading driver.
+// Test the phases generated for CUDA offloading.
 //
 // RUN: %clang -### --target=powerpc64le-ibm-linux-gnu -ccc-print-phases -fgpu-rdc \
 // RUN:   --offload-arch=sm_52 --offload-arch=sm_70 %s 2>&1 | FileCheck --check-prefix=NEW-DRIVER-RDC %s
@@ -83,7 +83,7 @@
 // NON-CUDA-INPUT-NEXT: 24: clang-linker-wrapper, {18, 23}, image, (host-cuda)
 
 //
-// Test the phases using the new driver in LTO-mode.
+// Test the phases in LTO-mode.
 //
 // RUN: %clang -### -target powerpc64le-ibm-linux-gnu -ccc-print-phases \
 // RUN:        --offload-arch=sm_70 --offload-arch=sm_52 -foffload-lto -fgpu-rdc -c %s 2>&1 \
@@ -107,7 +107,7 @@
 // LTO-NEXT: 16: assembler, {15}, object, (host-cuda)
 
 //
-// Test that the new driver does not create actions for invalid architectures.
+// Test that invalid architectures do not create actions.
 //
 // RUN: not %clang -### --target=powerpc64le-ibm-linux-gnu \
 // RUN:        -ccc-print-phases --offload-arch=sm_999 -fgpu-rdc -c %s 2>&1 \

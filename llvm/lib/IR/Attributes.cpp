@@ -801,10 +801,6 @@ bool Attribute::operator<(Attribute A) const {
   return *pImpl < *A.pImpl;
 }
 
-void Attribute::Profile(FoldingSetNodeID &ID) const {
-  ID.AddPointer(pImpl);
-}
-
 enum AttributeProperty {
   FnAttr = (1 << 0),
   ParamAttr = (1 << 1),
@@ -1277,10 +1273,8 @@ std::string AttributeSet::getAsString(bool InAttrGrp) const {
 
 bool AttributeSet::hasParentContext(LLVMContext &C) const {
   assert(hasAttributes() && "empty AttributeSet doesn't refer to any context");
-  FoldingSetNodeID ID;
-  SetNode->Profile(ID);
   FoldingSetInsertToken Token;
-  return C.pImpl->AttrsSetNodes.lookup(ID, Token) == SetNode;
+  return C.pImpl->AttrsSetNodes.lookup(SetNode->getKey(), Token) == SetNode;
 }
 
 AttributeSet::iterator AttributeSet::begin() const {
@@ -1325,20 +1319,12 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C,
 
 AttributeSetNode *AttributeSetNode::getSorted(LLVMContext &C,
                                               ArrayRef<Attribute> SortedAttrs) {
+  assert(llvm::is_sorted(SortedAttrs) && "Expected sorted attributes!");
   if (SortedAttrs.empty())
     return nullptr;
 
-  // Build a key to look up the existing attributes.
-  LLVMContextImpl *pImpl = C.pImpl;
-  FoldingSetNodeID ID;
-
-  assert(llvm::is_sorted(SortedAttrs) && "Expected sorted attributes!");
-  for (const auto &Attr : SortedAttrs)
-    Attr.Profile(ID);
-
   FoldingSetInsertToken Token;
-  AttributeSetNode *PA =
-    pImpl->AttrsSetNodes.lookup(ID, Token);
+  AttributeSetNode *PA = C.pImpl->AttrsSetNodes.lookup(SortedAttrs, Token);
 
   // If we didn't find any existing attributes of the same shape then create a
   // new one and insert it.
@@ -1346,7 +1332,7 @@ AttributeSetNode *AttributeSetNode::getSorted(LLVMContext &C,
     // Coallocate entries after the AttributeSetNode itself.
     void *Mem = ::operator new(totalSizeToAlloc<Attribute>(SortedAttrs.size()));
     PA = new (Mem) AttributeSetNode(SortedAttrs);
-    pImpl->AttrsSetNodes.insert(PA, Token);
+    C.pImpl->AttrsSetNodes.insert(PA, Token);
   }
 
   // Return the AttributeSetNode that we found or created.
@@ -1512,16 +1498,6 @@ AttributeListImpl::AttributeListImpl(ArrayRef<AttributeSet> Sets)
         AvailableSomewhereAttrs.addAttribute(I.getKindAsEnum());
 }
 
-void AttributeListImpl::Profile(FoldingSetNodeID &ID) const {
-  Profile(ID, ArrayRef(begin(), end()));
-}
-
-void AttributeListImpl::Profile(FoldingSetNodeID &ID,
-                                ArrayRef<AttributeSet> Sets) {
-  for (const auto &Set : Sets)
-    ID.AddPointer(Set.SetNode);
-}
-
 bool AttributeListImpl::hasAttrSomewhere(Attribute::AttrKind Kind,
                                         unsigned *Index) const {
   if (!AvailableSomewhereAttrs.hasAttribute(Kind))
@@ -1555,12 +1531,8 @@ AttributeList AttributeList::getImpl(LLVMContext &C,
   assert(!AttrSets.empty() && "pointless AttributeListImpl");
 
   LLVMContextImpl *pImpl = C.pImpl;
-  FoldingSetNodeID ID;
-  AttributeListImpl::Profile(ID, AttrSets);
-
   FoldingSetInsertToken Token;
-  AttributeListImpl *PA =
-      pImpl->AttrsLists.lookup(ID, Token);
+  AttributeListImpl *PA = pImpl->AttrsLists.lookup(AttrSets, Token);
 
   // If we didn't find any existing attributes of the same shape then
   // create a new one and insert it.
@@ -2085,10 +2057,8 @@ AttributeSet AttributeList::getAttributes(unsigned Index) const {
 
 bool AttributeList::hasParentContext(LLVMContext &C) const {
   assert(!isEmpty() && "an empty attribute list has no parent context");
-  FoldingSetNodeID ID;
-  pImpl->Profile(ID);
   FoldingSetInsertToken Token;
-  return C.pImpl->AttrsLists.lookup(ID, Token) == pImpl;
+  return C.pImpl->AttrsLists.lookup(pImpl->getKey(), Token) == pImpl;
 }
 
 AttributeList::iterator AttributeList::begin() const {
