@@ -255,10 +255,9 @@ static void test_child_thread_dynamic_detach() {
 
 TEST_MAIN() {
   // Barriers cannot be destroyed safely due to issue #221680.
-  ASSERT_EQ(
-      LIBC_NAMESPACE::pthread_barrier_init(&ready_barrier, nullptr, 2), 0);
-  ASSERT_EQ(
-      LIBC_NAMESPACE::pthread_barrier_init(&done_barrier, nullptr, 2), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_barrier_init(&ready_barrier, nullptr, 2),
+            0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_barrier_init(&done_barrier, nullptr, 2), 0);
 
   test_main_thread();
   test_child_thread_default();
