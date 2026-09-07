@@ -956,20 +956,12 @@ llvm::getLoopEstimatedTripCount(Loop *L,
   // indicates that, each time execution reaches the peeled iterations,
   // execution is estimated to exit them without reaching the remaining loop's
   // header.
-  //
-  // Even if the probability of reaching a loop's header is low, if it is
-  // reached, it is the start of an iteration.  Consequently, some passes
-  // historically assume that llvm::getLoopEstimatedTripCount always returns a
-  // positive count or std::nullopt.  Thus, return std::nullopt when
-  // llvm.loop.estimated_trip_count is 0.
   if (std::optional<unsigned> TC =
           getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount)) {
     LLVM_DEBUG(dbgs() << "getLoopEstimatedTripCount: "
                       << LLVMLoopEstimatedTripCount << " metadata has trip "
-                      << "count of " << *TC
-                      << (*TC == 0 ? " (returning std::nullopt)" : "")
-                      << " for " << DbgLoop(L) << "\n");
-    return *TC == 0 ? std::nullopt : TC;
+                      << "count of " << *TC << " for " << DbgLoop(L) << "\n");
+    return TC;
   }
 
   // Estimate the trip count from latch branch weights.
@@ -1206,6 +1198,8 @@ unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
   case Intrinsic::vector_reduce_fmin:
   case Intrinsic::vector_reduce_fmaximum:
   case Intrinsic::vector_reduce_fminimum:
+  case Intrinsic::vector_reduce_fmaximumnum:
+  case Intrinsic::vector_reduce_fminimumnum:
     return Instruction::FCmp;
   default:
     llvm_unreachable("Unexpected ID");
@@ -1255,6 +1249,10 @@ Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(Intrinsic::ID RdxID) {
     return Intrinsic::minimum;
   case Intrinsic::vector_reduce_fmaximum:
     return Intrinsic::maximum;
+  case Intrinsic::vector_reduce_fminimumnum:
+    return Intrinsic::minimumnum;
+  case Intrinsic::vector_reduce_fmaximumnum:
+    return Intrinsic::maximumnum;
   }
 }
 
@@ -1305,6 +1303,10 @@ RecurKind llvm::getMinMaxReductionRecurKind(Intrinsic::ID RdxID) {
     return RecurKind::FMaximum;
   case Intrinsic::vector_reduce_fminimum:
     return RecurKind::FMinimum;
+  case Intrinsic::vector_reduce_fmaximumnum:
+    return RecurKind::FMaximumNum;
+  case Intrinsic::vector_reduce_fminimumnum:
+    return RecurKind::FMinimumNum;
   default:
     return RecurKind::None;
   }
@@ -1796,11 +1798,11 @@ static bool hasHardUserWithinLoop(const Loop *L, const Instruction *I) {
 struct RewritePhi {
   PHINode *PN;               // For which PHI node is this replacement?
   unsigned Ith;              // For which incoming value?
-  const SCEV *ExpansionSCEV; // The SCEV of the incoming value we are rewriting.
+  SCEVUse ExpansionSCEV;     // The SCEV of the incoming value we are rewriting.
   Instruction *ExpansionPoint; // Where we'd like to expand that SCEV?
   bool HighCost;               // Is this expansion a high-cost?
 
-  RewritePhi(PHINode *P, unsigned I, const SCEV *Val, Instruction *ExpansionPt,
+  RewritePhi(PHINode *P, unsigned I, SCEVUse Val, Instruction *ExpansionPt,
              bool H)
       : PN(P), Ith(I), ExpansionSCEV(Val), ExpansionPoint(ExpansionPt),
         HighCost(H) {}
@@ -1971,7 +1973,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
         // expressions which are true for all exits (so as to maximize
         // expression reuse by the SCEVExpander), but resort to per-exit
         // evaluation if that fails.
-        const SCEV *ExitValue = SE->getSCEVAtScope(Inst, L->getParentLoop());
+        SCEVUse ExitValue = SE->getSCEVAtScope(Inst, L->getParentLoop());
         if (isa<SCEVCouldNotCompute>(ExitValue) ||
             !SE->isLoopInvariant(ExitValue, L) ||
             !Rewriter.isSafeToExpand(ExitValue)) {
@@ -2002,7 +2004,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
 
         // Check if expansions of this SCEV would count as being high cost.
         bool HighCost = Rewriter.isHighCostExpansion(
-            ExitValue, L, SCEVCheapExpansionBudget, TTI, Inst);
+            ExitValue.getPointer(), L, SCEVCheapExpansionBudget, TTI, Inst);
 
         // Note that we must not perform expansions until after
         // we query *all* the costs, because if we perform temporary expansion

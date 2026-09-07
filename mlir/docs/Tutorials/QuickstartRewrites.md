@@ -35,7 +35,7 @@ operations are generated from. To define an operation one needs to specify:
     values that affect the behavior of the op) that are the inputs of/define the
     behavior of the operation. The input operands may be named, the attributes
     must be named.
-*   The result(s) of the operation. These may again named or not.
+*   The result(s) of the operation. These may again be named or not.
 *   Documentation of the operation. This includes a one-line summary as well as
     a longer human-readable description of the operation.
 *   Dialect specific information. Additional information could be added to the
@@ -114,10 +114,10 @@ definition but the order of arguments of the dags do need to match.
 To specify a pattern, both the source and resultant ops need to be defined using
 TableGen.
 
-If this were a more advance pattern that the current framework could not express
-as destination then one could use a general native code fallback method. This
-consists of defining a pattern as well as adding a C++ function to perform the
-replacement:
+If this were a more advanced pattern that the current framework could not
+express as destination then one could use a general native code fallback method.
+This consists of defining a pattern as well as adding a C++ function to perform
+the replacement:
 
 ```tablegen
 def createTFLLeakyRelu : NativeCodeCall<
@@ -163,7 +163,7 @@ use to collect all the generated patterns inside `patterns` and then use
 
 Many simple rewrites can be expressed with a `matchAndRewrite` style  of
 pattern, e.g. when converting a multiply by a power of two into a shift.  For
-these cases, the you can define the pattern as a simple function:
+these cases, you can define the pattern as a simple function:
 
 ```c++
 static LogicalResult

@@ -45,6 +45,9 @@ def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
 // DECL:     return parser.emitError(loc, "expected one of [none, tagged, Bit1, Bit2, Bit3, BitGroup] for An example bit enum, got: ") << enumKeyword;
 // DECL:   }
 
+// DECL: struct FieldParser<std::optional<::MyBitEnum>, std::optional<::MyBitEnum>> {
+// DECL:   static constexpr bool isKeyValueCompositional = false;
+
 // DECL: inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, ::MyBitEnum value) {
 // DECL:   auto valueStr = stringifyEnum(value);
 // DECL:   switch (value) {
@@ -57,6 +60,11 @@ def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
 // DECL:   if (underlyingValue && !llvm::has_single_bit(underlyingValue))
 // DECL:     return p << '"' << valueStr << '"';
 // DECL:   return p << valueStr;
+
+// DECL: struct FieldParser<::MyCommaSeparatedBitEnum, ::MyCommaSeparatedBitEnum> {
+// DECL:   static constexpr bool isKeyValueCompositional = false;
+// DECL: struct FieldParser<std::optional<::MyCommaSeparatedBitEnum>, std::optional<::MyCommaSeparatedBitEnum>> {
+// DECL:   static constexpr bool isKeyValueCompositional = false;
 
 // DECL: enum class MyI8Enum : uint8_t {
 // DECL:   a = 254,
@@ -129,6 +137,7 @@ def MyNonQuotedPrintBitEnum
     [None, Bit0, Bit1, Bit2, Bit3, BitGroup]>;
 
 // DECL: struct FieldParser<::MyNonQuotedPrintBitEnum, ::MyNonQuotedPrintBitEnum> {
+// DECL:   static constexpr bool isKeyValueCompositional = true;
 // DECL:   template <typename ParserT>
 // DECL:   static FailureOr<::MyNonQuotedPrintBitEnum> parse(ParserT &parser) {
 // DECL:     ::MyNonQuotedPrintBitEnum flags = {};
@@ -148,6 +157,12 @@ def MyNonQuotedPrintBitEnum
 // DECL:     } while (::mlir::succeeded(parser.parseOptionalVerticalBar()));
 // DECL:     return flags;
 // DECL:   }
+
+def MyCommaSeparatedBitEnum
+  : I32BitEnum<"MyCommaSeparatedBitEnum", "Comma-separated bit enum",
+    [None, Bit0, Bit1]> {
+  let separator = ", ";
+}
 
 // DECL: inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, ::MyNonQuotedPrintBitEnum value) {
 // DECL:   auto valueStr = stringifyEnum(value);

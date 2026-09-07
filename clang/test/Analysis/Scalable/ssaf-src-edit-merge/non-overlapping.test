@@ -1,0 +1,31 @@
+# Non-overlapping replacements from two inputs both survive the merge.
+# Conflicts are detected per-(file, offset) so disjoint offsets yield no
+# tool-level "conflict:" line, and exit is 0.
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir
+# Real source file required so groupReplacements doesn't drop the entries.
+# 80 bytes is plenty for both Offset=10 and Offset=20.
+# RUN: printf '%%80s' '' > %t.dir/foo.cpp
+
+# RUN: cp %S/Inputs/non-overlapping-a.tpl.yaml %t.dir/a.yaml
+# RUN: cp %S/Inputs/non-overlapping-b.tpl.yaml %t.dir/b.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" %t.dir/a.yaml %t.dir/b.yaml
+
+# RUN: clang-ssaf-src-edit-merge -o %t.dir/merged.yaml %t.dir/a.yaml %t.dir/b.yaml \
+# RUN:   2> %t.dir/stderr.txt
+
+# Output contains both replacements.
+# RUN: FileCheck --input-file=%t.dir/merged.yaml --check-prefix=MERGED %s
+# MERGED: MainSourceFile:
+# MERGED-SAME: foo.cpp
+# MERGED: Offset:
+# MERGED-SAME: 10
+# MERGED: ReplacementText: X
+# MERGED: Offset:
+# MERGED-SAME: 20
+# MERGED: ReplacementText: Y
+
+# No "conflict:" lines on stderr.
+# RUN: FileCheck --input-file=%t.dir/stderr.txt --allow-empty --check-prefix=NOSTDERR %s
+# NOSTDERR-NOT: conflict:

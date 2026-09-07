@@ -18,9 +18,9 @@ declare void @a()
 ; CHECK: expected a MDNode triple
 ; CHECK: !""
 ; CHECK: expected a MDNode triple
-; CHECK: !3 = !{ptr @a, ptr @b}
+; CHECK: !{{[0-9]+}} = !{ptr @a, ptr @b}
 ; CHECK: expected a MDNode triple
-; CHECK: !4 = !{ptr @a, ptr @b, i64 32, i64 32}
+; CHECK: !{{[0-9]+}} = !{ptr @a, ptr @b, i64 32, i64 32}
 ; CHECK: expected a Function or null
 ; CHECK: !"a"
 ; CHECK: expected a Function or null

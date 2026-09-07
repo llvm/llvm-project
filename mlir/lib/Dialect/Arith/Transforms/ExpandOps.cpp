@@ -662,6 +662,266 @@ struct F8E8M0TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
   }
 };
 
+/// Expand an ExtF from F8E5M2. F8E5M2 uses a 5-bit exponent with bias 15 and a
+/// 2-bit mantissa, i.e. it is bit-for-bit the high byte of an IEEE F16 value
+/// (same exponent field and bias), including infinities and NaNs. The exact
+/// F16 value is therefore obtained by placing the 8 F8E5M2 bits into the high
+/// byte of an i16. The F16 value is then converted to the requested result
+/// type with the native (LLVM-lowerable) extf/truncf.
+struct F8E5M2ExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
+  using Base::Base;
+  LogicalResult matchAndRewrite(arith::ExtFOp op,
+                                PatternRewriter &rewriter) const final {
+    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    Value operand = op.getOperand();
+    Type operandTy = operand.getType();
+    Type resultTy = op.getType();
+    Type operandETy = getElementTypeOrSelf(operandTy);
+    Type resultETy = getElementTypeOrSelf(resultTy);
+
+    if (!llvm::isa<Float8E5M2Type>(operandETy))
+      return rewriter.notifyMatchFailure(op, "not a ext of F8E5M2");
+
+    Type i8Ty = cloneToShapedType(operandTy, b.getI8Type());
+    Type i16Ty = cloneToShapedType(operandTy, b.getI16Type());
+    Type f16Ty = cloneToShapedType(operandTy, b.getF16Type());
+
+    Value bitcast = arith::BitcastOp::create(b, i8Ty, operand);
+    Value exti = arith::ExtUIOp::create(b, i16Ty, bitcast);
+    Value c8 = createConst(op.getLoc(), i16Ty, 8, rewriter);
+    Value f16Bits = arith::ShLIOp::create(b, exti, c8);
+    Value f16 = arith::BitcastOp::create(b, f16Ty, f16Bits);
+
+    Value result = f16;
+    if (!resultETy.isF16()) {
+      if (resultETy.getIntOrFloatBitWidth() < 16)
+        result = arith::TruncFOp::create(b, resultTy, f16, nullptr,
+                                         op.getFastmathAttr());
+      else
+        result = arith::ExtFOp::create(b, resultTy, f16, op.getFastmathAttr());
+    }
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+/// Expand a TruncF to F8E5M2. The input is first reduced to F16 (which shares
+/// the F8E5M2 exponent layout and bias) using the native truncf, then the low
+/// 8 mantissa bits of the F16 value are dropped with round-to-nearest-even.
+/// The rounding-bias trick is borrowed from the BF16 converter: adding the
+/// bias may carry into the exponent field, which is exactly the desired
+/// behavior since F16 and F8E5M2 share the same exponent bias. NaN is handled
+/// separately.
+struct F8E5M2TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
+  using Base::Base;
+  LogicalResult matchAndRewrite(arith::TruncFOp op,
+                                PatternRewriter &rewriter) const final {
+    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    Value operand = op.getOperand();
+    Type operandTy = operand.getType();
+    Type resultTy = op.getType();
+    Type operandETy = getElementTypeOrSelf(operandTy);
+    Type resultETy = getElementTypeOrSelf(resultTy);
+
+    if (!llvm::isa<Float8E5M2Type>(resultETy))
+      return rewriter.notifyMatchFailure(op, "not a trunc to F8E5M2");
+    if (op.getRoundingmodeAttr())
+      return rewriter.notifyMatchFailure(
+          op, "only applicable to default rounding mode.");
+
+    Type i8Ty = cloneToShapedType(operandTy, b.getI8Type());
+    Type i16Ty = cloneToShapedType(operandTy, b.getI16Type());
+    Type f16Ty = cloneToShapedType(operandTy, b.getF16Type());
+
+    Value h16 = operand;
+    if (!operandETy.isF16())
+      h16 = arith::TruncFOp::create(b, f16Ty, operand, nullptr,
+                                    op.getFastmathAttr());
+
+    Value isNan = arith::CmpFOp::create(b, arith::CmpFPredicate::UNE, h16, h16);
+    Value h16Bits = arith::BitcastOp::create(b, i16Ty, h16);
+    // Rounding bias constants for dropping the low 8 mantissa bits.
+    Value c7F = createConst(op.getLoc(), i16Ty, 0x7f, rewriter);
+    Value c8 = createConst(op.getLoc(), i16Ty, 8, rewriter);
+    Value c1 = createConst(op.getLoc(), i16Ty, 1, rewriter);
+    Value bit8 =
+        arith::AndIOp::create(b, arith::ShRUIOp::create(b, h16Bits, c8), c1);
+    Value roundingBias = arith::AddIOp::create(b, bit8, c7F);
+    Value biased = arith::AddIOp::create(b, h16Bits, roundingBias);
+    Value biasedAndShifted = arith::ShRUIOp::create(b, biased, c8);
+    Value normalCaseResult = arith::TruncIOp::create(b, i8Ty, biasedAndShifted);
+    // Quiet NaN for F8E5M2 (exponent all ones, mantissa MSB set).
+    Value cNan = createConst(op.getLoc(), i8Ty, 0x7e, rewriter);
+    Value select = arith::SelectOp::create(b, isNan, cNan, normalCaseResult);
+    Value result = arith::BitcastOp::create(b, resultTy, select);
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+/// Expand an ExtF from F8E4M3FN. F8E4M3FN uses a 4-bit exponent with bias 7, a
+/// 3-bit mantissa, no infinities and a single NaN encoding (S.1111.111). The
+/// 7 magnitude bits (EEEE.MMM) are placed into the high mantissa/exponent bits
+/// of an F16 by shifting left by 7, producing an F16 whose value equals the
+/// desired magnitude scaled by 2^-8 (the F16 bias is 15 while F8E4M3FN's is
+/// 7). Multiplying by 256 in F32 recovers the true magnitude for both normal
+/// and subnormal inputs. The sign bit and the NaN encoding are re-applied
+/// explicitly.
+struct F8E4M3FNExtFOpConverter : public OpRewritePattern<arith::ExtFOp> {
+  using Base::Base;
+  LogicalResult matchAndRewrite(arith::ExtFOp op,
+                                PatternRewriter &rewriter) const final {
+    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    Value operand = op.getOperand();
+    Type operandTy = operand.getType();
+    Type resultTy = op.getType();
+    Type operandETy = getElementTypeOrSelf(operandTy);
+    Type resultETy = getElementTypeOrSelf(resultTy);
+
+    if (!llvm::isa<Float8E4M3FNType>(operandETy))
+      return rewriter.notifyMatchFailure(op, "not a ext of F8E4M3FN");
+
+    Type i8Ty = cloneToShapedType(operandTy, b.getI8Type());
+    Type i16Ty = cloneToShapedType(operandTy, b.getI16Type());
+    Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
+    Type f16Ty = cloneToShapedType(operandTy, b.getF16Type());
+    Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
+
+    Value bits = arith::BitcastOp::create(b, i8Ty, operand);
+    Value c7F8 = createConst(op.getLoc(), i8Ty, 0x7f, rewriter);
+    Value mag8 = arith::AndIOp::create(b, bits, c7F8);
+    // Build an F16 equal to the magnitude times 2^-8.
+    Value mag16 = arith::ExtUIOp::create(b, i16Ty, mag8);
+    Value c7 = createConst(op.getLoc(), i16Ty, 7, rewriter);
+    Value g16Bits = arith::ShLIOp::create(b, mag16, c7);
+    Value g16 = arith::BitcastOp::create(b, f16Ty, g16Bits);
+    Value gF32 = arith::ExtFOp::create(b, f32Ty, g16, op.getFastmathAttr());
+    Value c256 =
+        createFloatConst(op.getLoc(), f32Ty, APFloat(256.0f), rewriter);
+    Value magF32 = arith::MulFOp::create(b, gF32, c256, op.getFastmathAttr());
+    // Re-apply the sign bit into the F32 result.
+    Value magI32 = arith::BitcastOp::create(b, i32Ty, magF32);
+    Value c80I8 = createConst(op.getLoc(), i8Ty, 0x80, rewriter);
+    Value sign8 = arith::AndIOp::create(b, bits, c80I8);
+    Value sign32 = arith::ExtUIOp::create(b, i32Ty, sign8);
+    Value c24 = createConst(op.getLoc(), i32Ty, 24, rewriter);
+    Value signBit = arith::ShLIOp::create(b, sign32, c24);
+    Value signedI32 = arith::OrIOp::create(b, magI32, signBit);
+    Value signedF32 = arith::BitcastOp::create(b, f32Ty, signedI32);
+    // NaN encoding is magnitude == 0x7f.
+    Value isNan =
+        arith::CmpIOp::create(b, arith::CmpIPredicate::eq, mag8, c7F8);
+    Value cNan32 = createConst(op.getLoc(), i32Ty, 0x7fc00000, rewriter);
+    Value nanSigned = arith::OrIOp::create(b, cNan32, signBit);
+    Value nanF32 = arith::BitcastOp::create(b, f32Ty, nanSigned);
+    Value resultF32 = arith::SelectOp::create(b, isNan, nanF32, signedF32);
+
+    Value result = resultF32;
+    if (!resultETy.isF32()) {
+      if (resultETy.getIntOrFloatBitWidth() < 32)
+        result = arith::TruncFOp::create(b, resultTy, resultF32, nullptr,
+                                         op.getFastmathAttr());
+      else
+        result =
+            arith::ExtFOp::create(b, resultTy, resultF32, op.getFastmathAttr());
+    }
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+/// Expand a TruncF to F8E4M3FN. The magnitude is scaled by 2^-8 and reduced to
+/// F16 (undoing the bias difference so the F16 value equals the magnitude times
+/// 2^-8). The low 7 bits of the F16 encoding are then dropped with
+/// round-to-nearest-even to recover the 7 magnitude bits. F8E4M3FN has no
+/// infinity, so any input that overflows the maximum representable magnitude
+/// (448), as well as infinities and NaNs, maps to the F8E4M3FN NaN encoding to
+/// match the LLVM APFloat NanOnly overflow behavior and the OCP FP8 (E4M3)
+/// spec.
+struct F8E4M3FNTruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
+  using Base::Base;
+  LogicalResult matchAndRewrite(arith::TruncFOp op,
+                                PatternRewriter &rewriter) const final {
+    ImplicitLocOpBuilder b(op.getLoc(), rewriter);
+    Value operand = op.getOperand();
+    Type operandTy = operand.getType();
+    Type resultTy = op.getType();
+    Type operandETy = getElementTypeOrSelf(operandTy);
+    Type resultETy = getElementTypeOrSelf(resultTy);
+
+    if (!llvm::isa<Float8E4M3FNType>(resultETy))
+      return rewriter.notifyMatchFailure(op, "not a trunc to F8E4M3FN");
+    if (op.getRoundingmodeAttr())
+      return rewriter.notifyMatchFailure(
+          op, "only applicable to default rounding mode.");
+
+    Type i8Ty = cloneToShapedType(operandTy, b.getI8Type());
+    Type i16Ty = cloneToShapedType(operandTy, b.getI16Type());
+    Type i32Ty = cloneToShapedType(operandTy, b.getI32Type());
+    Type f16Ty = cloneToShapedType(operandTy, b.getF16Type());
+    Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
+
+    Value f32 = operand;
+    if (!operandETy.isF32()) {
+      if (operandETy.getIntOrFloatBitWidth() < 32)
+        f32 = arith::ExtFOp::create(b, f32Ty, operand, op.getFastmathAttr());
+      else
+        f32 = arith::TruncFOp::create(b, f32Ty, operand, nullptr,
+                                      op.getFastmathAttr());
+    }
+
+    Value isNan = arith::CmpFOp::create(b, arith::CmpFPredicate::UNE, f32, f32);
+    // Split sign and magnitude.
+    Value f32Bits = arith::BitcastOp::create(b, i32Ty, f32);
+    Value cSignMask = createConst(op.getLoc(), i32Ty, 0x80000000, rewriter);
+    Value cAbsMask = createConst(op.getLoc(), i32Ty, 0x7fffffff, rewriter);
+    Value signBits = arith::AndIOp::create(b, f32Bits, cSignMask);
+    Value absBits = arith::AndIOp::create(b, f32Bits, cAbsMask);
+    Value absF32 = arith::BitcastOp::create(b, f32Ty, absBits);
+    // F8E4M3FN has no infinity: a magnitude above the round-to-nearest-even
+    // overflow boundary (464 = 448 + half an ulp) or an infinity maps to NaN.
+    Value cOverflow =
+        createFloatConst(op.getLoc(), f32Ty, APFloat(464.0f), rewriter);
+    Value isOverflow =
+        arith::CmpFOp::create(b, arith::CmpFPredicate::OGT, absF32, cOverflow);
+    // Clamp to the F8E4M3FN maximum magnitude (448) so the finite path stays
+    // well-defined; overflowing inputs are replaced by NaN below.
+    Value cMax =
+        createFloatConst(op.getLoc(), f32Ty, APFloat(448.0f), rewriter);
+    absF32 = arith::MinNumFOp::create(b, absF32, cMax);
+    Value cInv256 =
+        createFloatConst(op.getLoc(), f32Ty, APFloat(0.00390625f), rewriter);
+    Value scaled = arith::MulFOp::create(b, absF32, cInv256, nullptr);
+    Value h16 = arith::TruncFOp::create(b, f16Ty, scaled, nullptr,
+                                        op.getFastmathAttr());
+    Value h16Bits = arith::BitcastOp::create(b, i16Ty, h16);
+    // Drop the low 7 bits with round-to-nearest-even.
+    Value c3F = createConst(op.getLoc(), i16Ty, 0x3f, rewriter);
+    Value c7 = createConst(op.getLoc(), i16Ty, 7, rewriter);
+    Value c1 = createConst(op.getLoc(), i16Ty, 1, rewriter);
+    Value bit7 =
+        arith::AndIOp::create(b, arith::ShRUIOp::create(b, h16Bits, c7), c1);
+    Value roundingBias = arith::AddIOp::create(b, bit7, c3F);
+    Value biased = arith::AddIOp::create(b, h16Bits, roundingBias);
+    Value shifted = arith::ShRUIOp::create(b, biased, c7);
+    Value mag8 = arith::TruncIOp::create(b, i8Ty, shifted);
+    Value c7F8 = createConst(op.getLoc(), i8Ty, 0x7f, rewriter);
+    mag8 = arith::AndIOp::create(b, mag8, c7F8);
+    // Re-apply the sign.
+    Value c24 = createConst(op.getLoc(), i32Ty, 24, rewriter);
+    Value sign8 = arith::TruncIOp::create(
+        b, i8Ty, arith::ShRUIOp::create(b, signBits, c24));
+    Value res8 = arith::OrIOp::create(b, mag8, sign8);
+    // NaN input or an overflowing/infinite magnitude maps to the NaN encoding.
+    Value isNanOrOverflow = arith::OrIOp::create(b, isNan, isOverflow);
+    Value cNan8 = createConst(op.getLoc(), i8Ty, 0x7f, rewriter);
+    Value res = arith::SelectOp::create(b, isNanOrOverflow, cNan8, res8);
+    Value result = arith::BitcastOp::create(b, resultTy, res);
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 struct ScalingExtFOpConverter : public OpRewritePattern<arith::ScalingExtFOp> {
   using Base::Base;
   LogicalResult matchAndRewrite(arith::ScalingExtFOp op,
@@ -874,6 +1134,10 @@ struct ArithExpandOpsPass
       arith::populateExpandF8E8M0Patterns(patterns);
     if (includeF4E2M1)
       arith::populateExpandF4E2M1Patterns(patterns);
+    if (includeF8E5M2)
+      arith::populateExpandF8E5M2Patterns(patterns);
+    if (includeF8E4M3FN)
+      arith::populateExpandF8E4M3FNPatterns(patterns);
     if (includeFlushDenormals) {
       arith::populateExpandFlushDenormalsPatterns(patterns);
       // Only IEEE-like floating-point types are expanded by the pattern;
@@ -889,33 +1153,39 @@ struct ArithExpandOpsPass
           });
     }
 
-    target.addDynamicallyLegalOp<arith::ExtFOp>(
-      [=](arith::ExtFOp op) {
-        Type inETy = getElementTypeOrSelf(op.getOperand().getType());
-        Type outETy = getElementTypeOrSelf(op.getType());
-        bool legalTypes = true;
-        if (includeBf16)
-          legalTypes &= !(inETy.isBF16() && outETy.isF32());
-        if (includeF8E8M0)
-          legalTypes &= !llvm::isa<Float8E8M0FNUType>(inETy);
-        if (includeF4E2M1)
-          legalTypes &= !llvm::isa<Float4E2M1FNType>(inETy);
-        return legalTypes;
-      });
+    target.addDynamicallyLegalOp<arith::ExtFOp>([=](arith::ExtFOp op) {
+      Type inETy = getElementTypeOrSelf(op.getOperand().getType());
+      Type outETy = getElementTypeOrSelf(op.getType());
+      bool legalTypes = true;
+      if (includeBf16)
+        legalTypes &= !(inETy.isBF16() && outETy.isF32());
+      if (includeF8E8M0)
+        legalTypes &= !llvm::isa<Float8E8M0FNUType>(inETy);
+      if (includeF4E2M1)
+        legalTypes &= !llvm::isa<Float4E2M1FNType>(inETy);
+      if (includeF8E5M2)
+        legalTypes &= !llvm::isa<Float8E5M2Type>(inETy);
+      if (includeF8E4M3FN)
+        legalTypes &= !llvm::isa<Float8E4M3FNType>(inETy);
+      return legalTypes;
+    });
 
-    target.addDynamicallyLegalOp<arith::TruncFOp>(
-      [=](arith::TruncFOp op)  {
-        Type inETy = getElementTypeOrSelf(op.getOperand().getType());
-        Type outETy = getElementTypeOrSelf(op.getType());
-        bool legalTypes = true;
-        if (includeBf16)
-          legalTypes &= !(inETy.isF32() && outETy.isBF16());
-        if (includeF8E8M0)
-          legalTypes &= !(llvm::isa<Float8E8M0FNUType>(outETy));
-        if (includeF4E2M1)
-          legalTypes &= !llvm::isa<Float4E2M1FNType>(outETy);
-        return legalTypes;
-      });
+    target.addDynamicallyLegalOp<arith::TruncFOp>([=](arith::TruncFOp op) {
+      Type inETy = getElementTypeOrSelf(op.getOperand().getType());
+      Type outETy = getElementTypeOrSelf(op.getType());
+      bool legalTypes = true;
+      if (includeBf16)
+        legalTypes &= !(inETy.isF32() && outETy.isBF16());
+      if (includeF8E8M0)
+        legalTypes &= !(llvm::isa<Float8E8M0FNUType>(outETy));
+      if (includeF4E2M1)
+        legalTypes &= !llvm::isa<Float4E2M1FNType>(outETy);
+      if (includeF8E5M2)
+        legalTypes &= !llvm::isa<Float8E5M2Type>(outETy);
+      if (includeF8E4M3FN)
+        legalTypes &= !llvm::isa<Float8E4M3FNType>(outETy);
+      return legalTypes;
+    });
 
     // clang-format on
     if (failed(applyPartialConversion(getOperation(), target,
@@ -940,6 +1210,16 @@ void mlir::arith::populateExpandBFloat16Patterns(RewritePatternSet &patterns) {
 
 void mlir::arith::populateExpandF4E2M1Patterns(RewritePatternSet &patterns) {
   patterns.add<F4E2M1ExtFOpConverter, F4E2M1TruncFOpConverter>(
+      patterns.getContext());
+}
+
+void mlir::arith::populateExpandF8E5M2Patterns(RewritePatternSet &patterns) {
+  patterns.add<F8E5M2ExtFOpConverter, F8E5M2TruncFOpConverter>(
+      patterns.getContext());
+}
+
+void mlir::arith::populateExpandF8E4M3FNPatterns(RewritePatternSet &patterns) {
+  patterns.add<F8E4M3FNExtFOpConverter, F8E4M3FNTruncFOpConverter>(
       patterns.getContext());
 }
 

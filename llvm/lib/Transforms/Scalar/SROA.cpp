@@ -233,8 +233,6 @@ class SROA {
   /// We can do this to a select if its only uses are loads
   /// and if either the operand to the select can be loaded unconditionally,
   ///        or if we are allowed to perform CFG modifications.
-  /// If found an intervening bitcast with a single use of the load,
-  /// allow the promotion.
   static std::optional<RewriteableMemOps>
   isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG);
 
@@ -1478,6 +1476,32 @@ LLVM_DUMP_METHOD void AllocaSlices::dump() const { print(dbgs()); }
 
 #endif // !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
+/// Find a common load/store type used through a pointer PHI or select.
+///
+/// Look through a PHI or select to see if all of its users are loads or stores
+/// of one common type. Whether those accesses can be speculated does not affect
+/// the type they use and is checked separately when attempting promotion.
+static Type *findCommonTypeThroughPHIOrSelect(Instruction &I) {
+  assert((isa<PHINode, SelectInst>(I)) && "expected a PHI or select");
+  Type *Ty = nullptr;
+
+  for (User *U : I.users()) {
+    Type *UserTy = nullptr;
+    if (auto *LI = dyn_cast<LoadInst>(U))
+      UserTy = LI->getType();
+    else if (auto *Store = dyn_cast<StoreInst>(U))
+      // Slice building rejects stores of the PHI-or-select-derived pointer, so
+      // it must be the store's pointer operand here.
+      UserTy = Store->getValueOperand()->getType();
+
+    if (!UserTy || (Ty && Ty != UserTy))
+      return nullptr;
+    Ty = UserTy;
+  }
+
+  return Ty;
+}
+
 /// Walk the range of a partitioning looking for a common type to cover this
 /// sequence of slices.
 static std::pair<Type *, IntegerType *>
@@ -1501,6 +1525,9 @@ findCommonType(AllocaSlices::const_iterator B, AllocaSlices::const_iterator E,
       UserTy = LI->getType();
     } else if (StoreInst *SI = dyn_cast<StoreInst>(U->getUser())) {
       UserTy = SI->getValueOperand()->getType();
+    } else if (isa<PHINode, SelectInst>(U->getUser())) {
+      UserTy =
+          findCommonTypeThroughPHIOrSelect(*cast<Instruction>(U->getUser()));
     }
 
     if (IntegerType *UserITy = dyn_cast_or_null<IntegerType>(UserTy)) {
@@ -1612,7 +1639,8 @@ static bool isSafePHIToSpeculate(PHINode &PN) {
     // If this pointer is always safe to load, or if we can prove that there
     // is already a load in the block, then we can move the load to the pred
     // block.
-    if (isSafeToLoadUnconditionally(InVal, MaxAlign, LoadSize, DL, TI))
+    if (isSafeToLoadUnconditionally(InVal, MaxAlign, LoadSize,
+                                    SimplifyQuery(DL, TI)))
       continue;
 
     return false;
@@ -1708,8 +1736,8 @@ isSafeLoadOfSelectToSpeculate(LoadInst &LI, SelectInst &SI, bool PreserveCFG) {
 
   const DataLayout &DL = SI.getDataLayout();
   for (Value *Value : {SI.getTrueValue(), SI.getFalseValue()})
-    if (isSafeToLoadUnconditionally(Value, LI.getType(), LI.getAlign(), DL,
-                                    &LI))
+    if (isSafeToLoadUnconditionally(Value, LI.getType(), LI.getAlign(),
+                                    SimplifyQuery(DL, &LI)))
       Spec.setAsSpeculatable(/*isTrueVal=*/Value == SI.getTrueValue());
     else if (PreserveCFG)
       return Spec;
@@ -1722,9 +1750,6 @@ SROA::isSafeSelectToSpeculate(SelectInst &SI, bool PreserveCFG) {
   RewriteableMemOps Ops;
 
   for (User *U : SI.users()) {
-    if (auto *BC = dyn_cast<BitCastInst>(U); BC && BC->hasOneUse())
-      U = *BC->user_begin();
-
     if (auto *Store = dyn_cast<StoreInst>(U)) {
       // Note that atomic stores can be transformed; atomic semantics do not
       // have any meaning for a local alloca. Stores are not speculatable,
@@ -2047,6 +2072,11 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
       return false;
     if (!S.isSplittable())
       return false; // Skip any unsplittable intrinsics.
+    if (isa<MemSetInst>(MI)) {
+      Type *SplatTy = Type::getIntNTy(Ty->getContext(), ElementSize * 8);
+      if (!canConvertValue(DL, SplatTy, Ty->getElementType(), VScale))
+        return false;
+    }
   } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U->getUser())) {
     if (!II->isLifetimeStartOrEnd() && !II->isDroppable())
       return false;

@@ -34,8 +34,6 @@ module attributes {
   // CHECK:        %[[SLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
   // CHECK:        %[[CAST:.*]] = cir.cast bitcast %[[FP]] : !cir.ptr<!cir.func<(!rec_Big) -> !s64i>> -> !cir.ptr<!cir.func<(!cir.ptr<!rec_Big>) -> !s64i>>
   // CHECK:        %{{.*}} = cir.call %[[CAST]](%[[SLOT]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Big>) -> !s64i>>, !cir.ptr<!rec_Big>
-  // CHECK-SAME:     llvm.byval = !rec_Big
-  // CHECK-SAME:     llvm.noalias
-  // CHECK-SAME:     llvm.noundef
+  // CHECK-SAME:     llvm.byval = !rec_Big, llvm.noundef
 
 }

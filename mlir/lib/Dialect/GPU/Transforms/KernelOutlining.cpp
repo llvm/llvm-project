@@ -394,8 +394,9 @@ public:
     // If any new module was inserted in this module, annotate this module as
     // a container module.
     if (modified)
-      getOperation()->setAttr(gpu::GPUDialect::getContainerModuleAttrName(),
-                              UnitAttr::get(&getContext()));
+      getOperation()->setDiscardableAttr(
+          gpu::GPUDialect::getContainerModuleAttrName(),
+          UnitAttr::get(&getContext()));
   }
 
 private:
@@ -429,7 +430,8 @@ private:
     // If a valid data layout spec was provided, attach it to the kernel module.
     // Otherwise, the default data layout will be used.
     if (dataLayoutSpec)
-      kernelModule->setAttr(DLTIDialect::kDataLayoutAttrName, dataLayoutSpec);
+      kernelModule->setDiscardableAttr(DLTIDialect::kDataLayoutAttrName,
+                                       dataLayoutSpec);
 
     SymbolTable symbolTable(kernelModule);
     symbolTable.insert(kernelFunc);

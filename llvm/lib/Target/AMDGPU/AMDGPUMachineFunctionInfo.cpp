@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMachineFunctionInfo.h"
-#include "AMDGPU.h"
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
