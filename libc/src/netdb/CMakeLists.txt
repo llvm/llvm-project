@@ -11,6 +11,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  gai_strerror
+  SRCS
+    gai_strerror.cpp
+  HDRS
+    gai_strerror.h
+  DEPENDS
+    libc.hdr.netdb_macros
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
   getaddrinfo
   SRCS
     getaddrinfo.cpp

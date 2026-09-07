@@ -226,6 +226,9 @@ public:
   const CIRGenFunctionInfo &arrangeFreeFunctionCall(const CallArgList &args,
                                                     const FunctionType *fnType);
 
+  /// Convert a clang calling convention to a CIR calling convention.
+  cir::CallingConv clangCallConvToCIRCallConv(clang::CallingConv cc);
+
   const CIRGenFunctionInfo &
   arrangeCIRFunctionInfo(CanQualType returnType, bool isInstanceMethod,
                          llvm::ArrayRef<CanQualType> argTypes,

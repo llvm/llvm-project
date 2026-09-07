@@ -2,6 +2,12 @@
 // RUN:   -Wno-deprecated-attributes -mmlir \
 // RUN:   --mlir-print-ir-before=cir-target-lowering %s -o %t.cir 2> %t.pre.cir
 // RUN: FileCheck %s --check-prefix=CIR --input-file=%t.pre.cir
+// RUN: %clang_cc1 -x cl -triple spirv64-unknown-unknown -cl-std=CL2.0 \
+// RUN:   -fclangir -emit-llvm -O0 -Wno-deprecated-attributes %s -o %t.cir.ll
+// RUN: FileCheck %s --check-prefix=LLVM --input-file=%t.cir.ll
+// RUN: %clang_cc1 -x cl -triple spirv64-unknown-unknown -cl-std=CL2.0 \
+// RUN:   -emit-llvm -O0 -Wno-deprecated-attributes %s -o %t.ogcg.ll
+// RUN: FileCheck %s --check-prefix=LLVM --input-file=%t.ogcg.ll
 
 typedef global int *global_int_ptr;
 
@@ -19,6 +25,15 @@ void pointer_types(
 // CIR-SAME: !cir.ptr<!s32i, lang_address_space(offload_generic)>
 // CIR-SAME: !cir.ptr<!s32i, lang_address_space(offload_global_device)>
 // CIR-SAME: !cir.ptr<!s32i, lang_address_space(offload_global_host)>
+
+// LLVM-LABEL: define {{.*}}void @pointer_types
+// LLVM-SAME: ptr noundef
+// LLVM-SAME: ptr addrspace(3) noundef
+// LLVM-SAME: ptr addrspace(1) noundef
+// LLVM-SAME: ptr addrspace(2) noundef
+// LLVM-SAME: ptr addrspace(4) noundef
+// LLVM-SAME: ptr addrspace(5) noundef
+// LLVM-SAME: ptr addrspace(6) noundef
 
 // The outer pointer addresses a private pointer object, whose stored pointer
 // value addresses global memory.
@@ -41,3 +56,9 @@ void local_pointer_value(global int *ptr) {
 // CIR: cir.store {{.*}}, %[[SAVED_ADDR]]
 // CIR-SAME: !cir.ptr<!s32i, lang_address_space(offload_global)>
 // CIR-SAME: !cir.ptr<!cir.ptr<!s32i, lang_address_space(offload_global)>, lang_address_space(offload_private)>
+
+// LLVM-LABEL: define {{.*}}void @local_pointer_value
+// LLVM-SAME: ptr addrspace(1) noundef
+// LLVM: alloca ptr addrspace(1)
+// LLVM: load ptr addrspace(1)
+// LLVM: store ptr addrspace(1)

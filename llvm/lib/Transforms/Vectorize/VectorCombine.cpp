@@ -6156,11 +6156,13 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
       return false;
 
     unsigned ChainOperand = CurrentUses.front()->getOperandNo();
-    if (any_of(CurrentUses, [&](Use *U) {
-          auto *Inst = cast<Instruction>(U->getUser());
-          return Inst != FirstInst && (U->getOperandNo() != ChainOperand ||
-                                       !FirstInst->isSameOperationAs(Inst));
-        }))
+    bool MismatchedUse = any_of(CurrentUses, [&](Use *U) {
+      auto *Inst = cast<Instruction>(U->getUser());
+      return Inst != FirstInst && (U->getOperandNo() != ChainOperand ||
+                                   !FirstInst->isSameOperationAs(
+                                       Inst, Instruction::CompareCallTargets));
+    });
+    if (MismatchedUse)
       return false;
 
     auto GetSplatOrScalar = [](Value *V) {
