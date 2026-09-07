@@ -56,6 +56,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/ModuloSchedule.h"
 #include "llvm/CodeGen/Register.h"
@@ -226,19 +227,19 @@ static cl::opt<WindowSchedulingFlag> WindowSchedulingOption(
                           "Use window algorithm instead of SMS algorithm.")));
 
 unsigned SwingSchedulerDAG::Circuits::MaxPaths = 5;
-char MachinePipeliner::ID = 0;
+char MachinePipelinerLegacy::ID = 0;
 #ifndef NDEBUG
 int MachinePipeliner::NumTries = 0;
 #endif
-char &llvm::MachinePipelinerID = MachinePipeliner::ID;
+char &llvm::MachinePipelinerID = MachinePipelinerLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(MachinePipeliner, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(MachinePipelinerLegacy, DEBUG_TYPE,
                       "Modulo Software Pipelining", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
-INITIALIZE_PASS_END(MachinePipeliner, DEBUG_TYPE,
+INITIALIZE_PASS_END(MachinePipelinerLegacy, DEBUG_TYPE,
                     "Modulo Software Pipelining", false, false)
 
 namespace {
@@ -359,38 +360,100 @@ private:
 
 } // end anonymous namespace
 
-/// The "main" function for implementing Swing Modulo Scheduling.
-bool MachinePipeliner::runOnMachineFunction(MachineFunction &mf) {
-  if (skipFunction(mf.getFunction()))
-    return false;
+MachinePipeliner::MachinePipeliner(MachineFunction &MF,
+                                   const MachineLoopInfo &MLI,
+                                   LiveIntervals &LIS, AAResults &AA,
+                                   MachineOptimizationRemarkEmitter &ORE,
+                                   RegisterClassInfo &RegClassInfo)
+    : MF(&MF), ORE(&ORE), MLI(&MLI), TII(MF.getSubtarget().getInstrInfo()),
+      RegClassInfo(&RegClassInfo), LIS(&LIS), AA(&AA), TM(&MF.getTarget()) {}
 
+/// The "main" function for implementing Swing Modulo Scheduling.
+bool MachinePipeliner::run() {
+  bool Changed = false;
+  for (const auto &L : *MLI)
+    Changed |= scheduleLoop(*L);
+
+  return Changed;
+}
+
+static bool runMachinePipeliner(
+    MachineFunction &MF, function_ref<const MachineLoopInfo &()> GetMLI,
+    function_ref<LiveIntervals &()> GetLIS, function_ref<AAResults &()> GetAA,
+    function_ref<MachineOptimizationRemarkEmitter &()> GetORE,
+    function_ref<RegisterClassInfo &()> GetRCI) {
   if (!EnableSWP)
     return false;
 
-  if (mf.getFunction().getAttributes().hasFnAttr(Attribute::OptimizeForSize) &&
+  if (MF.getFunction().getAttributes().hasFnAttr(Attribute::OptimizeForSize) &&
       !EnableSWPOptSize.getPosition())
     return false;
 
-  if (!mf.getSubtarget().enableMachinePipeliner())
+  if (!MF.getSubtarget().enableMachinePipeliner())
     return false;
 
   // Cannot pipeline loops without instruction itineraries if we are using
   // DFA for the pipeliner.
-  if (mf.getSubtarget().useDFAforSMS() &&
-      (!mf.getSubtarget().getInstrItineraryData() ||
-       mf.getSubtarget().getInstrItineraryData()->isEmpty()))
+  if (MF.getSubtarget().useDFAforSMS() &&
+      (!MF.getSubtarget().getInstrItineraryData() ||
+       MF.getSubtarget().getInstrItineraryData()->isEmpty()))
     return false;
 
-  MF = &mf;
-  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
-  RegClassInfo = &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
-  TII = MF->getSubtarget().getInstrInfo();
+  MachinePipeliner MP(MF, GetMLI(), GetLIS(), GetAA(), GetORE(), GetRCI());
+  return MP.run();
+}
 
-  for (const auto &L : *MLI)
-    scheduleLoop(*L);
+bool MachinePipelinerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
 
-  return false;
+  return runMachinePipeliner(
+      MF,
+      [&]() -> const MachineLoopInfo & {
+        return getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+      },
+      [&]() -> LiveIntervals & {
+        return getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+      },
+      [&]() -> AAResults & {
+        return getAnalysis<AAResultsWrapperPass>().getAAResults();
+      },
+      [&]() -> MachineOptimizationRemarkEmitter & {
+        return getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
+      },
+      [&]() -> RegisterClassInfo & {
+        return getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+      });
+}
+
+PreservedAnalyses
+MachinePipelinerPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  if (!runMachinePipeliner(
+          MF,
+          [&]() -> const MachineLoopInfo & {
+            return MFAM.getResult<MachineLoopAnalysis>(MF);
+          },
+          [&]() -> LiveIntervals & {
+            return MFAM.getResult<LiveIntervalsAnalysis>(MF);
+          },
+          [&]() -> AAResults & {
+            return MFAM
+                .getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                .getManager()
+                .getResult<AAManager>(MF.getFunction());
+          },
+          [&]() -> MachineOptimizationRemarkEmitter & {
+            return MFAM.getResult<MachineOptimizationRemarkEmitterAnalysis>(MF);
+          },
+          [&]() -> RegisterClassInfo & {
+            return MFAM.getResult<MachineRegisterClassAnalysis>(MF);
+          }))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserve<MachineRegisterClassAnalysis>();
+  return PA;
 }
 
 /// Attempt to perform the SMS algorithm on the specified loop. This function is
@@ -632,8 +695,7 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
 
 void MachinePipeliner::preprocessPhiNodes(MachineBasicBlock &B) {
   MachineRegisterInfo &MRI = MF->getRegInfo();
-  SlotIndexes &Slots =
-      *getAnalysis<LiveIntervalsWrapperPass>().getLIS().getSlotIndexes();
+  SlotIndexes &Slots = *LIS->getSlotIndexes();
 
   for (MachineInstr &PI : B.phis()) {
     MachineOperand &DefOp = PI.getOperand(0);
@@ -668,10 +730,8 @@ void MachinePipeliner::preprocessPhiNodes(MachineBasicBlock &B) {
 bool MachinePipeliner::swingModuloScheduler(MachineLoop &L) {
   assert(L.getBlocks().size() == 1 && "SMS works on single blocks only.");
 
-  AliasAnalysis *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  SwingSchedulerDAG SMS(
-      *this, L, getAnalysis<LiveIntervalsWrapperPass>().getLIS(), *RegClassInfo,
-      II_setByPragma, LI.LoopPipelinerInfo.get(), AA);
+  SwingSchedulerDAG SMS(*this, L, *LIS, *RegClassInfo, II_setByPragma,
+                        LI.LoopPipelinerInfo.get(), AA);
 
   MachineBasicBlock *MBB = L.getHeader();
   // The kernel should not include any terminator instructions.  These
@@ -694,7 +754,7 @@ bool MachinePipeliner::swingModuloScheduler(MachineLoop &L) {
   return SMS.hasNewSchedule();
 }
 
-void MachinePipeliner::getAnalysisUsage(AnalysisUsage &AU) const {
+void MachinePipelinerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AAResultsWrapperPass>();
   AU.addPreserved<AAResultsWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
@@ -710,11 +770,10 @@ bool MachinePipeliner::runWindowScheduler(MachineLoop &L) {
   MachineSchedContext Context;
   Context.MF = MF;
   Context.MLI = MLI;
-  Context.TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-  Context.AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  Context.LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  Context.RegClassInfo =
-      &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+  Context.TM = TM;
+  Context.AA = AA;
+  Context.LIS = LIS;
+  Context.RegClassInfo = RegClassInfo;
   WindowScheduler WS(&Context, L);
   return WS.run();
 }

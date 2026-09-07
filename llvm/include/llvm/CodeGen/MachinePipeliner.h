@@ -57,8 +57,10 @@
 namespace llvm {
 
 class AAResults;
+class LiveIntervals;
 class NodeSet;
 class SMSchedule;
+class TargetMachine;
 
 extern LLVM_ABI cl::opt<bool> SwpEnableCopyToPhi;
 extern LLVM_ABI cl::opt<int> SwpForceIssueWidth;
@@ -73,14 +75,17 @@ struct MachinePipelinerPolicy {
 
 /// The main class in the implementation of the target independent
 /// software pipeliner pass.
-class LLVM_ABI MachinePipeliner : public MachineFunctionPass {
+class LLVM_ABI MachinePipeliner {
 public:
   MachineFunction *MF = nullptr;
   MachineOptimizationRemarkEmitter *ORE = nullptr;
   const MachineLoopInfo *MLI = nullptr;
   const InstrItineraryData *InstrItins = nullptr;
   const TargetInstrInfo *TII = nullptr;
-  const RegisterClassInfo *RegClassInfo = nullptr;
+  RegisterClassInfo *RegClassInfo = nullptr;
+  LiveIntervals *LIS = nullptr;
+  AAResults *AA = nullptr;
+  const TargetMachine *TM = nullptr;
   bool disabledByPragma = false;
   unsigned II_setByPragma = 0;
 
@@ -100,13 +105,13 @@ public:
   };
   LoopInfo LI;
 
-  static char ID;
+  MachinePipeliner(MachineFunction &MF, const MachineLoopInfo &MLI,
+                   LiveIntervals &LIS, AAResults &AA,
+                   MachineOptimizationRemarkEmitter &ORE,
+                   RegisterClassInfo &RegClassInfo);
 
-  MachinePipeliner() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  /// Run the software pipeliner over all loops in the function.
+  bool run();
 
 private:
   void preprocessPhiNodes(MachineBasicBlock &B);
@@ -117,6 +122,24 @@ private:
   bool runWindowScheduler(MachineLoop &L);
   bool useSwingModuloScheduler();
   bool useWindowScheduler(bool Changed);
+};
+
+class LLVM_ABI MachinePipelinerLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  MachinePipelinerLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+};
+
+class LLVM_ABI MachinePipelinerPass
+    : public OptionalPassInfoMixin<MachinePipelinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
 };
 
 /// Represents a dependence between two instruction.
