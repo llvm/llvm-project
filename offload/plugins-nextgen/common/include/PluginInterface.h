@@ -1084,10 +1084,6 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
-  /// Instert a data fence between previous data operations and the following
-  /// operations if necessary for the device
-  virtual Error dataFence(__tgt_async_info *AsyncInfo) = 0;
-
   /// Exchange data between devices (device to device transfer). Calling this
   /// function is only valid if GenericPlugin::isDataExchangable() passing the
   /// two devices returns true.
@@ -1704,10 +1700,6 @@ public:
   int32_t data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
                               int DstDeviceId, void *DstPtr, int64_t Size,
                               __tgt_async_info *AsyncInfo);
-
-  /// Places a fence between previous data movements and following data
-  /// movements if necessary on the device
-  int32_t data_fence(int32_t DeviceId, __tgt_async_info *AsyncInfo);
 
   /// Begin executing a kernel on the given device.
   int32_t launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
