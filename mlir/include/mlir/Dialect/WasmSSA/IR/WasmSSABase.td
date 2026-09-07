@@ -14,6 +14,7 @@ include "mlir/IR/OpBase.td"
 
 def WasmSSA_Dialect : Dialect {
   let name = "wasmssa";
+  let useStrictPropertiesInAssemblyFormat = 1;
   let cppNamespace = "::mlir::wasmssa";
   let description = [{
     The `wasmssa` dialect is intended to represent WebAssembly

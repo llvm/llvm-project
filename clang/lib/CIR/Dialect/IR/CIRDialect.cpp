@@ -282,11 +282,11 @@ static void printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer,
 }
 
 mlir::OptionalParseResult
-parseGlobalAddressSpaceValue(mlir::AsmParser &p,
-                             mlir::ptr::MemorySpaceAttrInterface &attr);
+parseGlobalMemorySpace(mlir::AsmParser &p,
+                       mlir::ptr::MemorySpaceAttrInterface &attr);
 
-void printGlobalAddressSpaceValue(mlir::AsmPrinter &printer, cir::GlobalOp op,
-                                  mlir::ptr::MemorySpaceAttrInterface attr);
+void printGlobalMemorySpace(mlir::AsmPrinter &printer, cir::GlobalOp op,
+                            mlir::ptr::MemorySpaceAttrInterface attr);
 
 //===----------------------------------------------------------------------===//
 // AllocaOp
@@ -620,8 +620,8 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
   if (mlir::isa<cir::BlockAddrDiffAttr, cir::BlockAddrInfoAttr,
                 cir::ConstArrayAttr, cir::ConstVectorAttr,
                 cir::ConstComplexAttr, cir::ConstRecordAttr,
-                cir::GlobalViewAttr, cir::PoisonAttr, cir::TypeInfoAttr,
-                cir::VTableAttr>(attrType))
+                cir::GlobalOffsetAttr, cir::GlobalViewAttr, cir::PoisonAttr,
+                cir::TypeInfoAttr, cir::VTableAttr>(attrType))
     return success();
 
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
@@ -2416,7 +2416,7 @@ void cir::FuncOp::build(OpBuilder &builder, OperationState &result,
                         StringRef name, FuncType type,
                         GlobalLinkageKind linkage, CallingConv callingConv) {
   result.addRegion();
-  result.addAttribute(SymbolTable::getSymbolAttrName(),
+  result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(name));
   result.addAttribute(getFunctionTypeAttrName(result.name),
                       TypeAttr::get(type));
@@ -2500,7 +2500,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
     state.addAttribute(dsoLocalNameAttr, parser.getBuilder().getUnitAttr());
 
   StringAttr nameAttr;
-  if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(nameAttr, getSymNameAttrName(state.name),
                              state.attributes))
     return failure();
   llvm::SmallVector<OpAsmParser::Argument, 8> arguments;
@@ -3262,19 +3262,32 @@ void cir::AwaitOp::build(OpBuilder &builder, OperationState &result,
 
 void cir::AwaitOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  // If any index all the underlying regions branch back to the parent
-  // operation.
-  if (!point.isParent()) {
-    regions.emplace_back(getOperation());
+  assert(point.isParent() || point.getTerminatorPredecessorOrNull());
+
+  // Execution always starts in the ready region.
+  if (point.isParent()) {
+    regions.emplace_back(&getReady());
     return;
   }
 
+  mlir::Region *parentRegion =
+      point.getTerminatorPredecessorOrNull()->getParentRegion();
+
+  // Branching from ready: the cir.condition terminating it selects between
+  // suspending and resuming. Keep in sync with
+  // ConditionOp::getSuccessorRegions.
+  //
   // TODO: retrieve information from the promise and only push the
   // necessary ones. Example: `std::suspend_never` on initial or final
   // await's might allow suspend region to be skipped.
-  regions.push_back(RegionSuccessor(&this->getReady()));
-  regions.push_back(RegionSuccessor(&this->getSuspend()));
-  regions.push_back(RegionSuccessor(&this->getResume()));
+  if (&getReady() == parentRegion) {
+    regions.emplace_back(&getResume());
+    regions.emplace_back(&getSuspend());
+    return;
+  }
+
+  // Branching from suspend or resume: exit to the parent operation.
+  regions.emplace_back(getOperation());
 }
 
 mlir::ValueRange cir::AwaitOp::getSuccessorInputs(RegionSuccessor successor) {
@@ -4453,15 +4466,43 @@ LogicalResult cir::TryOp::verify() {
     if (mlir::isa<cir::UnwindAttr>(typeAttr))
       continue;
 
-    // A catch handler region must start with cir.begin_catch, optionally
-    // preceded by a single cir.construct_catch_param that performs any
-    // pre-begin_catch initialization for the catch parameter.
+    // Nothing may run in a catch handler before cir.begin_catch, so it has to
+    // be the handler region's first operation, with two exceptions.
+    //
+    // When lifetime markers are enabled, the catch parameter's storage can be
+    // marked by a cir.lifetime.start. That parameter is the only variable
+    // whose lifetime begins before the catch is entered, so there is at most
+    // one such marker. Its lifetime-end cleanup has to run after the catch
+    // handler is finished (or exited by an exception unwind), so if there is a
+    // lifetime begin marker, it is followed by a cir.cleanup.scope that
+    // encloses the the rest of the handler with a cir.lifetime.end in its
+    // cleanup region.
+    //
+    // A cir.construct_catch_param may also precede cir.begin_catch, to
+    // perform any pre-begin_catch initialization of the catch parameter.
     if (entryBlock.empty())
       return emitOpError("catch handler region must not be empty");
+
     mlir::Operation *firstOp = &entryBlock.front();
+    if (mlir::isa<cir::LifetimeStartOp>(firstOp)) {
+      mlir::Operation *next = firstOp->getNextNode();
+      auto lifetimeScope = mlir::dyn_cast_if_present<cir::CleanupScopeOp>(next);
+      if (!lifetimeScope)
+        return emitOpError("'cir.lifetime.start' in a catch handler region "
+                           "must be followed by the 'cir.cleanup.scope' of "
+                           "its lifetime-end cleanup");
+      if (lifetimeScope.getBodyRegion().empty())
+        return emitOpError(
+            "'cir.lifetime.start' in a catch handler region must be "
+            "followed by the 'cir.cleanup.scope' of its lifetime-end "
+            "cleanup");
+      mlir::Block &scopeBody = lifetimeScope.getBodyRegion().front();
+      firstOp = scopeBody.empty() ? nullptr : &scopeBody.front();
+    }
+
     if (mlir::isa_and_present<cir::ConstructCatchParamOp>(firstOp))
       firstOp = firstOp->getNextNode();
-    if (!firstOp || !mlir::isa<cir::BeginCatchOp>(firstOp))
+    if (!mlir::isa_and_present<cir::BeginCatchOp>(firstOp))
       return emitOpError(
           "catch handler region must start with 'cir.begin_catch'");
   }
@@ -4618,6 +4659,54 @@ LogicalResult cir::LifetimeStartOp::verify() {
 
 LogicalResult cir::LifetimeEndOp::verify() {
   return verifyProducedBy<cir::AllocaOp>(*this, getPtr(), "ptr");
+}
+
+//===----------------------------------------------------------------------===//
+// MemChrOp
+//===----------------------------------------------------------------------===//
+
+/// Reads a fundamental integer width from a signless i32 attribute.
+static std::optional<unsigned> getRecordedIntegerWidth(mlir::Attribute attr) {
+  auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(attr);
+  if (!intAttr || !intAttr.getType().isSignlessInteger(32))
+    return std::nullopt;
+  int64_t width = intAttr.getInt();
+  if (width < 0 ||
+      !cir::isValidFundamentalIntWidth(static_cast<unsigned>(width)))
+    return std::nullopt;
+  return static_cast<unsigned>(width);
+}
+
+LogicalResult cir::MemChrOp::verify() {
+  auto moduleOp = (*this)->getParentOfType<mlir::ModuleOp>();
+  if (!moduleOp)
+    return emitOpError("expects an enclosing module");
+
+  // libc memchr uses pointers in the target's default address space.
+  if (mlir::cast<cir::PointerType>(getSrc().getType()).getAddrSpace())
+    return emitOpError("src must be in the default address space");
+
+  auto checkWidth = [&](cir::IntType type, llvm::StringRef operandName,
+                        llvm::StringRef attrName) -> LogicalResult {
+    mlir::Attribute attr = moduleOp->getAttr(attrName);
+    if (!attr)
+      return emitOpError("expects the module to record ") << attrName;
+    std::optional<unsigned> width = getRecordedIntegerWidth(attr);
+    if (!width)
+      return emitOpError("requires ")
+             << attrName
+             << " to be a signless i32 holding a fundamental integer width";
+    if (type.getWidth() != *width)
+      return emitOpError() << operandName << " must have the width recorded in "
+                           << attrName;
+    return success();
+  };
+
+  if (failed(checkWidth(getPattern().getType(), "pattern",
+                        cir::CIRDialect::getIntTypeWidthAttrName())))
+    return failure();
+  return checkWidth(getLen().getType(), "len",
+                    cir::CIRDialect::getSizeTypeWidthAttrName());
 }
 
 //===----------------------------------------------------------------------===//

@@ -55,6 +55,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
@@ -63,7 +65,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <algorithm>
@@ -72,7 +73,6 @@
 #include <cstdint>
 #include <iterator>
 #include <optional>
-#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -522,7 +522,7 @@ VectorizePTXValueVTs(const SmallVectorImpl<EVT> &ValueVTs,
 // NVPTXTargetLowering Constructor.
 NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                                          const NVPTXSubtarget &STI)
-    : TargetLowering(TM, STI), nvTM(&TM), STI(STI), GlobalUniqueCallSite(0) {
+    : TargetLowering(TM, STI), STI(STI), GlobalUniqueCallSite(0) {
   // always lower memset, memcpy, and memmove intrinsics to load/store
   // instructions, rather
   // then generating calls to memset, mempcy or memmove.
@@ -1276,6 +1276,15 @@ static SDValue correctParamType(SDValue V, EVT ExpectedVT,
   return V;
 }
 
+static SDValue getSymbolNode(SelectionDAG &DAG, MCSymbol *Sym, EVT T) {
+  return DAG.getNode(NVPTXISD::Symbol, SDLoc(), T, DAG.getMCSymbol(Sym, T));
+}
+
+static SDValue getSymbolNode(SelectionDAG &DAG, const Twine &Name, EVT T) {
+  MCContext &Ctx = DAG.getMachineFunction().getContext();
+  return getSymbolNode(DAG, Ctx.getOrCreateSymbol(Name), T);
+}
+
 SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                        SmallVectorImpl<SDValue> &InVals) const {
 
@@ -1352,8 +1361,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   const SDValue VADeclareParam =
       CLI.Args.size() > FirstVAArg
-          ? MakeDeclareArrayParam(getCallParamSymbol(DAG, FirstVAArg, MVT::i32),
-                                  Align(STI.getMaxRequiredAlignment()), 0)
+          ? MakeDeclareArrayParam(
+                getCallParamSymbolNode(DAG, FirstVAArg, MVT::i32),
+                Align(STI.getMaxRequiredAlignment()), 0)
           : SDValue();
 
   // Args.size() and Outs.size() need not match.
@@ -1384,7 +1394,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     const bool IsByVal = Arg.IsByVal;
 
     const SDValue ParamSymbol =
-        getCallParamSymbol(DAG, IsVAArg ? FirstVAArg : ArgI, MVT::i32);
+        getCallParamSymbolNode(DAG, IsVAArg ? FirstVAArg : ArgI, MVT::i32);
 
     assert((!IsByVal || Arg.IndirectType) &&
            "byval arg must have indirect type");
@@ -1538,7 +1548,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Handle Result
   if (!Ins.empty()) {
-    const SDValue RetSymbol = DAG.getExternalSymbol("retval0", MVT::i32);
+    const SDValue RetSymbol = getSymbolNode(DAG, "retval0", MVT::i32);
     const unsigned ResultSize = DL.getTypeAllocSize(RetTy);
     if (shouldPassAsArray(RetTy)) {
       const Align RetAlign =
@@ -1627,7 +1637,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     const Align RetAlign =
         getPTXParamAlign(CB, RetTy, AttributeList::ReturnIndex, DL);
-    const SDValue RetSymbol = DAG.getExternalSymbol("retval0", MVT::i32);
+    const SDValue RetSymbol = getSymbolNode(DAG, "retval0", MVT::i32);
 
     // PTX Interoperability Guide 3.3(A): [Integer] Values shorter than
     // 32-bits are sign extended or zero extended, depending on whether
@@ -3638,7 +3648,7 @@ SDValue NVPTXTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   EVT PtrVT = TLI->getPointerTy(DAG.getDataLayout());
 
   // Store the address of unsized array <function>_vararg[] in the ap object.
-  SDValue VAReg = getParamSymbol(DAG, /* vararg */ -1, PtrVT);
+  SDValue VAReg = getParamSymbolNode(DAG, /* vararg */ -1, PtrVT);
 
   const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
   return DAG.getStore(Op.getOperand(0), DL, VAReg, Op.getOperand(1),
@@ -4063,21 +4073,16 @@ bool NVPTXTargetLowering::splitValueIntoRegisterParts(
   return false;
 }
 
-// This creates target external symbol for a function parameter.
-// Name of the symbol is composed from its index and the function name.
-// Negative index corresponds to special parameter (unsized array) used for
-// passing variable arguments.
-SDValue NVPTXTargetLowering::getParamSymbol(SelectionDAG &DAG, int I,
-                                            EVT T) const {
-  StringRef SavedStr = nvTM->getStrPool().save(
-      getParamName(&DAG.getMachineFunction().getFunction(), I));
-  return DAG.getExternalSymbol(SavedStr.data(), T);
+SDValue NVPTXTargetLowering::getParamSymbolNode(SelectionDAG &DAG, int I,
+                                                EVT T) const {
+  const MachineFunction &MF = DAG.getMachineFunction();
+  return getSymbolNode(
+      DAG, getParamSymbol(MF.getContext(), &MF.getFunction(), I), T);
 }
 
-SDValue NVPTXTargetLowering::getCallParamSymbol(SelectionDAG &DAG, int I,
-                                                EVT T) const {
-  const StringRef SavedStr = nvTM->getStrPool().save("param" + Twine(I));
-  return DAG.getExternalSymbol(SavedStr.data(), T);
+SDValue NVPTXTargetLowering::getCallParamSymbolNode(SelectionDAG &DAG, int I,
+                                                    EVT T) const {
+  return getSymbolNode(DAG, "param" + Twine(I), T);
 }
 
 SDValue NVPTXTargetLowering::LowerFormalArguments(
@@ -4128,7 +4133,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       continue;
     }
 
-    SDValue ArgSymbol = getParamSymbol(DAG, ParamI, PtrVT);
+    SDValue ArgSymbol = getParamSymbolNode(DAG, ParamI, PtrVT);
 
     // In the following cases, assign a node order of "i+1"
     // to newly created nodes. The SDNodes for params have to
@@ -4225,7 +4230,7 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   const DataLayout &DL = DAG.getDataLayout();
   LLVMContext &Ctx = *DAG.getContext();
 
-  const SDValue RetSymbol = DAG.getExternalSymbol("func_retval0", MVT::i32);
+  const SDValue RetSymbol = getSymbolNode(DAG, "func_retval0", MVT::i32);
   const auto RetAlign =
       getPTXParamAlign(&F, RetTy, AttributeList::ReturnIndex, DL);
 
@@ -5587,21 +5592,15 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
   }
 }
 
-// Helper for getting a function parameter name. Name is composed from
-// its index and the function name. Negative index corresponds to special
-// parameter (unsized array) used for passing variable arguments.
-std::string NVPTXTargetLowering::getParamName(const Function *F,
+// Helper for getting a function parameter symbol. Its name is composed from
+// the function name and the parameter index. Negative index corresponds to the
+// special parameter (unsized array) used for passing variable arguments.
+MCSymbol *NVPTXTargetLowering::getParamSymbol(MCContext &Ctx, const Function *F,
                                               int Idx) const {
-  std::string ParamName;
-  raw_string_ostream ParamStr(ParamName);
-
-  ParamStr << getTargetMachine().getSymbol(F)->getName();
+  const StringRef FuncName = getTargetMachine().getSymbol(F)->getName();
   if (Idx < 0)
-    ParamStr << "_vararg";
-  else
-    ParamStr << "_param_" << Idx;
-
-  return ParamName;
+    return Ctx.getOrCreateSymbol(FuncName + "_vararg");
+  return Ctx.getOrCreateSymbol(FuncName + "_param_" + Twine(Idx));
 }
 
 /// isLegalAddressingMode - Return true if the addressing mode represented

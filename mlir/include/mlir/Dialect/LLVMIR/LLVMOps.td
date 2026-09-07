@@ -1401,7 +1401,8 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
 }
 
 def LLVM_GlobalOp : LLVM_Op<"mlir.global",
-    [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, Symbol]> {
+    [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, SymbolName,
+     SymbolVisibility, Symbol]> {
   let arguments = (ins
     TypeAttr:$global_type,
     UnitAttr:$constant,
@@ -1415,10 +1416,13 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     DefaultValuedAttr<ConfinedAttr<I32Attr, [IntNonNegative]>, "0">:$addr_space,
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
     OptionalAttr<StrAttr>:$section,
+    OptionalAttr<FlatSymbolRefAttr>:$associated,
+    OptionalAttr<ArrayAttr>:$absolute_symbol,
     OptionalAttr<SymbolRefAttr>:$comdat,
     OptionalAttr<DIGlobalVariableExpressionArrayAttr>:$dbg_exprs,
     DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_,
-    OptionalAttr<ArrayAttr>:$target_specific_attrs
+    OptionalAttr<ArrayAttr>:$target_specific_attrs,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
   let summary = "LLVM dialect global.";
   let description = [{
@@ -1514,6 +1518,25 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     ```mlir
     // Alignment is optional
     llvm.mlir.global private constant @y(dense<1.0> : tensor<8xf32>) { alignment = 32 : i64 } : !llvm.array<8 x f32>
+    ```
+
+    The optional `associated` attribute models LLVM IR `!associated` metadata
+    on a global. It is a symbol reference to another global object (or an
+    alias of one) and is used to emit `SHF_LINK_ORDER` on ELF.
+
+    The optional `absolute_symbol` attribute models LLVM IR `!absolute_symbol`
+    metadata. It is an array of integer attributes forming one or more
+    `[lower, upper)` range pairs for the global's address, using the same
+    encoding as LLVM `range` metadata. The pair `[-1, -1]` represents the
+    full set.
+
+    Examples:
+
+    ```mlir
+    llvm.mlir.global external @b(0 : i32) : i32
+    llvm.mlir.global external @a(0 : i32) {associated = @b} : i32
+
+    llvm.mlir.global external @abs_sym() {absolute_symbol = [0 : i64, 42 : i64]} : i8
     ```
 
     The `target_specific_attrs` attribute provides a mechanism to preserve
@@ -1647,7 +1670,8 @@ def LLVM_GlobalDtorsOp : LLVM_Op<"mlir.global_dtors", [
 }
 
 def LLVM_AliasOp : LLVM_Op<"mlir.alias",
-    [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, Symbol]> {
+    [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, SymbolName,
+     SymbolVisibility, Symbol]> {
   let arguments = (ins
     TypeAttr:$alias_type,
     StrAttr:$sym_name,
@@ -1655,7 +1679,8 @@ def LLVM_AliasOp : LLVM_Op<"mlir.alias",
     UnitAttr:$dso_local,
     DefaultValuedAttr<LLVM_TLSMode, "mlir::LLVM::ThreadLocalMode::NotThreadLocal">:$tls_mode,
     OptionalAttr<UnnamedAddr>:$unnamed_addr,
-    DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_
+    DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
   let summary = "LLVM dialect alias.";
   let description = [{
@@ -1726,7 +1751,8 @@ def LLVM_AliasOp : LLVM_Op<"mlir.alias",
 }
 
 def LLVM_IFuncOp : LLVM_Op<"mlir.ifunc",
-    [IsolatedFromAbove, Symbol, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+    [IsolatedFromAbove, SymbolName, SymbolVisibility, Symbol,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let arguments = (ins
     SymbolNameAttr:$sym_name,
     TypeAttr:$i_func_type,
@@ -1736,7 +1762,8 @@ def LLVM_IFuncOp : LLVM_Op<"mlir.ifunc",
     UnitAttr:$dso_local,
     DefaultValuedAttr<ConfinedAttr<I32Attr, [IntNonNegative]>, "0">:$address_space,
     DefaultValuedAttr<UnnamedAddr, "mlir::LLVM::UnnamedAddr::None">:$unnamed_addr,
-    DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_
+    DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
   let summary = "LLVM dialect ifunc";
   let description = [{
@@ -1779,7 +1806,8 @@ def LLVM_IFuncOp : LLVM_Op<"mlir.ifunc",
   ];
 
   let assemblyFormat = [{
-    custom<LLVMLinkage>($linkage) ($visibility_^)? ($unnamed_addr^)?
+    ($sym_visibility^)? custom<LLVMLinkage>($linkage)
+    ($visibility_^)? ($unnamed_addr^)?
     $sym_name `:` $i_func_type `,` $resolver_type $resolver attr-dict
   }];
   let hasVerifier = 1;
@@ -1967,10 +1995,12 @@ def LLVM_IndirectBrOp : LLVM_TerminatorOp<"indirectbr",
   }];
 }
 
-def LLVM_ComdatSelectorOp : LLVM_Op<"comdat_selector", [Symbol]> {
+def LLVM_ComdatSelectorOp
+    : LLVM_Op<"comdat_selector", [SymbolName, SymbolVisibility, Symbol]> {
   let arguments = (ins
     SymbolNameAttr:$sym_name,
-    Comdat:$comdat
+    Comdat:$comdat,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
 
   let summary = "LLVM dialect comdat selector declaration";
@@ -1986,12 +2016,15 @@ def LLVM_ComdatSelectorOp : LLVM_Op<"comdat_selector", [Symbol]> {
     llvm.mlir.global internal constant @has_any_comdat(1 : i64) comdat(@__llvm_comdat::@any) : i64
     ```
   }];
-  let assemblyFormat = "$sym_name $comdat attr-dict";
+  let assemblyFormat = "($sym_visibility^)? $sym_name $comdat attr-dict";
 }
 
-def LLVM_ComdatOp : LLVM_Op<"comdat", [NoTerminator, NoRegionArguments, SymbolTable, Symbol]> {
+def LLVM_ComdatOp
+    : LLVM_Op<"comdat", [NoTerminator, NoRegionArguments, SymbolTable,
+                          SymbolName, SymbolVisibility, Symbol]> {
   let arguments = (ins
-    SymbolNameAttr:$sym_name
+    SymbolNameAttr:$sym_name,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
   let summary = "LLVM dialect comdat region";
 
@@ -2012,12 +2045,13 @@ def LLVM_ComdatOp : LLVM_Op<"comdat", [NoTerminator, NoRegionArguments, SymbolTa
   let skipDefaultBuilders = 1;
   let builders = [OpBuilder<(ins "StringRef":$symName)>];
 
-  let assemblyFormat = "$sym_name $body attr-dict";
+  let assemblyFormat = "($sym_visibility^)? $sym_name $body attr-dict";
   let hasRegionVerifier = 1;
 }
 
 def LLVM_LLVMFuncOp : LLVM_Op<"func", [
-    AffineScope, AutomaticAllocationScope, IsolatedFromAbove, FunctionOpInterface
+    AffineScope, AutomaticAllocationScope, IsolatedFromAbove, SymbolName,
+    SymbolVisibility, FunctionOpInterface
   ]> {
   let summary = "LLVM dialect function.";
 

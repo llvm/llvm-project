@@ -1333,10 +1333,12 @@ FIRToMemRef::getFIRConvert(Operation *memOp, Operation *op,
 ///      `index_cast` if they need an index-typed result.
 ///
 ///   4. `arith.addi %a, %b`
-///      -> recursively canonicalize both operands, and if their result
-///      types match, build a new `arith.addi` at the same location. If
-///      the canonicalized operand types diverge, returns the original op
-///      untouched (the caller can still `index_cast` externally).
+///      -> recursively canonicalize both operands. If neither operand
+///      changed, the original op is returned as-is. Otherwise, if the
+///      canonicalized operand types match, build a new `arith.addi` at the
+///      same location, carrying over the original overflow flags.
+///      If the canonicalized operand types diverge, returns the original
+///      op untouched (the caller can still `index_cast` externally).
 ///
 /// Only these four patterns fire -- this is intentionally a narrow peephole,
 /// not a general folder. Multiplication, sub, cast chains through other ops,
@@ -1372,8 +1374,17 @@ Value FIRToMemRef::canonicalizeIndex(Value index,
   if (auto add = dyn_cast<arith::AddIOp>(op)) {
     Value lhs = canonicalizeIndex(add.getLhs(), rewriter);
     Value rhs = canonicalizeIndex(add.getRhs(), rewriter);
-    if (lhs.getType() == rhs.getType())
+    // Neither operand simplified, so a rebuilt op would be an exact duplicate.
+    // Reuse the original instead.
+    if (lhs == add.getLhs() && rhs == add.getRhs())
+      return index;
+    if (lhs.getType() == rhs.getType()) {
+      // Carry over overflow flags when width unchanged only.
+      if (lhs.getType() == add.getType())
+        return arith::AddIOp::create(rewriter, op->getLoc(), lhs, rhs,
+                                     add.getOverflowFlags());
       return arith::AddIOp::create(rewriter, op->getLoc(), lhs, rhs);
+    }
   }
   return index;
 }

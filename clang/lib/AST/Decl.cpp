@@ -4070,12 +4070,9 @@ SourceRange FunctionDecl::getReturnTypeSourceRange() const {
   if (!FTL)
     return SourceRange();
 
-  // Skip self-referential return types.
-  const SourceManager &SM = getASTContext().getSourceManager();
   SourceRange RTRange = FTL.getReturnLoc().getSourceRange();
   SourceLocation Boundary = getNameInfo().getBeginLoc();
-  if (RTRange.isInvalid() || Boundary.isInvalid() ||
-      !SM.isBeforeInTranslationUnit(RTRange.getEnd(), Boundary))
+  if (RTRange.isInvalid() || Boundary.isInvalid())
     return SourceRange();
 
   return RTRange;
@@ -4396,7 +4393,7 @@ FunctionDecl::getTemplateSpecializationArgsAsWritten() const {
 
 void FunctionDecl::setFunctionTemplateSpecialization(
     ASTContext &C, FunctionTemplateDecl *Template,
-    TemplateArgumentList *TemplateArgs, void *InsertPos,
+    TemplateArgumentList *TemplateArgs, llvm::FoldingSetInsertToken InsertToken,
     TemplateSpecializationKind TSK,
     const TemplateArgumentListInfo *TemplateArgsAsWritten,
     SourceLocation PointOfInstantiation) {
@@ -4416,7 +4413,7 @@ void FunctionDecl::setFunctionTemplateSpecialization(
           dyn_cast_if_present<MemberSpecializationInfo *>(
               TemplateOrSpecialization));
   TemplateOrSpecialization = Info;
-  Template->addSpecialization(Info, InsertPos);
+  Template->addSpecialization(Info, InsertToken);
 }
 
 void FunctionDecl::setDependentTemplateSpecialization(

@@ -45,26 +45,6 @@ parseFloatLiteral(mlir::AsmParser &parser,
                   mlir::FailureOr<llvm::APFloat> &value,
                   cir::FPTypeInterface fpType);
 
-//===----------------------------------------------------------------------===//
-// AddressSpaceAttr
-//===----------------------------------------------------------------------===//
-
-mlir::ParseResult parseAddressSpaceValue(mlir::AsmParser &p,
-                                         cir::LangAddressSpace &addrSpace) {
-  llvm::SMLoc loc = p.getCurrentLocation();
-  mlir::FailureOr<cir::LangAddressSpace> result =
-      mlir::FieldParser<cir::LangAddressSpace>::parse(p);
-  if (mlir::failed(result))
-    return p.emitError(loc, "expected address space keyword");
-  addrSpace = result.value();
-  return mlir::success();
-}
-
-void printAddressSpaceValue(mlir::AsmPrinter &p,
-                            cir::LangAddressSpace addrSpace) {
-  p << cir::stringifyEnum(addrSpace);
-}
-
 static mlir::ParseResult parseConstPtr(mlir::AsmParser &parser,
                                        mlir::IntegerAttr &value);
 

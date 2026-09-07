@@ -716,9 +716,34 @@ def : SchedAlias<WriteBitTestSetRegRMW, Zn2WriteBTRSCm>;
 
 // PDEP PEXT.
 // r,r,r.
-def : InstRW<[WriteMicrocoded], (instregex "PDEP(32|64)rr", "PEXT(32|64)rr")>;
 // r,r,m.
-def : InstRW<[WriteMicrocoded], (instregex "PDEP(32|64)rm", "PEXT(32|64)rm")>;
+def Zn2WritePDEP32rr : SchedWriteRes<[Zn2ALU, Zn2Multiplier]> {
+  let Latency = 53;
+  let NumMicroOps = 95;
+  let ReleaseAtCycles = [1, 53];
+}
+def : InstRW<[Zn2WritePDEP32rr], (instrs PDEP32rr, PEXT32rr)>;
+
+def Zn2WritePDEP32rm : SchedWriteRes<[Zn2ALU, Zn2Multiplier, Zn2AGU]> {
+  let Latency = 56;
+  let NumMicroOps = 96;
+  let ReleaseAtCycles = [1, 55, 1];
+}
+def : InstRW<[Zn2WritePDEP32rm], (instrs PDEP32rm, PEXT32rm)>;
+
+def Zn2WritePDEP64rr : SchedWriteRes<[Zn2ALU, Zn2Multiplier]> {
+  let Latency = 86;
+  let NumMicroOps = 165;
+  let ReleaseAtCycles = [1, 86];
+}
+def : InstRW<[Zn2WritePDEP64rr], (instrs PDEP64rr, PEXT64rr)>;
+
+def Zn2WritePDEP64rm : SchedWriteRes<[Zn2ALU, Zn2Multiplier, Zn2AGU]> {
+  let Latency = 89;
+  let NumMicroOps = 166;
+  let ReleaseAtCycles = [1, 89, 1];
+}
+def : InstRW<[Zn2WritePDEP64rm], (instrs PDEP64rm, PEXT64rm)>;
 
 // RCR RCL.
 // m,i.

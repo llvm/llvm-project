@@ -14,7 +14,6 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
@@ -404,18 +403,6 @@ bool llvm::isInstructionTriviallyDead(Instruction *I,
                                       const TargetLibraryInfo *TLI) {
   if (!I->use_empty())
     return false;
-  return wouldInstructionBeTriviallyDead(I, TLI);
-}
-
-bool llvm::wouldInstructionBeTriviallyDeadOnUnusedPaths(
-    Instruction *I, const TargetLibraryInfo *TLI) {
-  // Instructions that are "markers" and have implied meaning on code around
-  // them (without explicit uses), are not dead on unused paths.
-  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
-    if (II->getIntrinsicID() == Intrinsic::stacksave ||
-        II->getIntrinsicID() == Intrinsic::launder_invariant_group ||
-        II->isLifetimeStartOrEnd())
-      return false;
   return wouldInstructionBeTriviallyDead(I, TLI);
 }
 
@@ -2601,7 +2588,6 @@ CallInst *llvm::createCallMatchingInvoke(InvokeInst *II) {
                                        II->getCalledOperand(), Args, OpBundles);
   NewCall->setCallingConv(II->getCallingConv());
   NewCall->setAttributes(II->getAttributes());
-  NewCall->setDebugLoc(II->getDebugLoc());
   NewCall->copyMetadata(*II);
 
   // If the invoke had profile metadata, try converting them for CallInst.

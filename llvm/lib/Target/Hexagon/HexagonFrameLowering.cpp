@@ -373,60 +373,65 @@ static Register getMaxCalleeSavedReg(ArrayRef<CalleeSavedInfo> CSI,
 /// frame to be already in place.
 static bool needsStackFrame(const MachineBasicBlock &MBB, const BitVector &CSR,
                             const HexagonRegisterInfo &HRI) {
-    for (const MachineInstr &MI : MBB) {
-      if (MI.isCall())
+  const MachineFunction *MF = MBB.getParent();
+  if (&MBB == &MF->front() && MF->getInfo<HexagonMachineFunctionInfo>()
+                                  ->getStackAlignBaseReg()
+                                  .isValid())
+    return true;
+
+  for (const MachineInstr &MI : MBB) {
+    if (MI.isCall())
+      return true;
+    unsigned Opc = MI.getOpcode();
+    switch (Opc) {
+    case Hexagon::PS_alloca:
+      return true;
+    default:
+      break;
+    }
+    // Check individual operands.
+    for (const MachineOperand &MO : MI.operands()) {
+      // While the presence of a frame index does not prove that a stack
+      // frame will be required, all frame indexes should be within alloc-
+      // frame/deallocframe. Otherwise, the code that translates a frame
+      // index into an offset would have to be aware of the placement of
+      // the frame creation/destruction instructions.
+      if (MO.isFI())
         return true;
-      unsigned Opc = MI.getOpcode();
-      switch (Opc) {
-        case Hexagon::PS_alloca:
-        case Hexagon::PS_aligna:
-          return true;
-        default:
-          break;
-      }
-      // Check individual operands.
-      for (const MachineOperand &MO : MI.operands()) {
-        // While the presence of a frame index does not prove that a stack
-        // frame will be required, all frame indexes should be within alloc-
-        // frame/deallocframe. Otherwise, the code that translates a frame
-        // index into an offset would have to be aware of the placement of
-        // the frame creation/destruction instructions.
-        if (MO.isFI())
-          return true;
-        if (MO.isReg()) {
-          Register R = MO.getReg();
-          // Debug instructions may refer to $noreg.
-          if (!R)
-            continue;
-          // Virtual registers will need scavenging, which then may require
-          // a stack slot.
-          if (R.isVirtual())
-            return true;
-          for (MCPhysReg S : HRI.subregs_inclusive(R))
-            if (CSR[S])
-              return true;
+      if (MO.isReg()) {
+        Register R = MO.getReg();
+        // Debug instructions may refer to $noreg.
+        if (!R)
           continue;
-        }
-        if (MO.isRegMask()) {
-          // A regmask would normally have all callee-saved registers marked
-          // as preserved, so this check would not be needed, but in case of
-          // ever having other regmasks (for other calling conventions),
-          // make sure they would be processed correctly.
-          const uint32_t *BM = MO.getRegMask();
-          for (int x = CSR.find_first(); x >= 0; x = CSR.find_next(x)) {
-            unsigned R = x;
-            // If this regmask does not preserve a CSR, a frame will be needed.
-            if (!(BM[R/32] & (1u << (R%32))))
-              return true;
-          }
+        // Virtual registers will need scavenging, which then may require
+        // a stack slot.
+        if (R.isVirtual())
+          return true;
+        for (MCPhysReg S : HRI.subregs_inclusive(R))
+          if (CSR[S])
+            return true;
+        continue;
+      }
+      if (MO.isRegMask()) {
+        // A regmask would normally have all callee-saved registers marked
+        // as preserved, so this check would not be needed, but in case of
+        // ever having other regmasks (for other calling conventions),
+        // make sure they would be processed correctly.
+        const uint32_t *BM = MO.getRegMask();
+        for (int x = CSR.find_first(); x >= 0; x = CSR.find_next(x)) {
+          unsigned R = x;
+          // If this regmask does not preserve a CSR, a frame will be needed.
+          if (!(BM[R / 32] & (1u << (R % 32))))
+            return true;
         }
       }
     }
-    return false;
+  }
+  return false;
 }
 
-  /// Returns true if MBB has a machine instructions that indicates a tail call
-  /// in the block.
+/// Returns true if MBB has a machine instructions that indicates a tail call
+/// in the block.
 static bool hasTailCall(const MachineBasicBlock &MBB) {
     MachineBasicBlock::const_iterator I = MBB.getLastNonDebugInstr();
     if (I == MBB.end())
@@ -608,7 +613,14 @@ void HexagonFrameLowering::emitPrologue(MachineFunction &MF,
     findShrunkPrologEpilog(MF, PrologB, EpilogB);
 
   bool PrologueStubs = false;
-  insertCSRSpillsInBlock(*PrologB, CSI, HRI, PrologueStubs);
+  MachineBasicBlock::iterator AfterCSR =
+      insertCSRSpillsInBlock(*PrologB, CSI, HRI, PrologueStubs);
+  // Insert PS_aligna after all CSR spills.
+  // PS_aligna initializes the AP register with an aligned
+  // value derived from FP. Since AP is a callee-saved register, its original
+  // value must be saved before it is overwritten, and it must be defined
+  // before any AP-relative stack accesses.
+  insertAlignaInBlock(*PrologB, AfterCSR);
   insertPrologueInBlock(*PrologB, PrologueStubs);
   // Insert the SCS prologue after all FrameSetup instructions so that it
   // follows allocframe and any CSR spills in the instruction stream.  The
@@ -1196,6 +1208,23 @@ void HexagonFrameLowering::inlineStackProbe(
   }
 }
 
+void HexagonFrameLowering::insertAlignaInBlock(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertPt) const {
+  MachineFunction &MF = *MBB.getParent();
+  Register AP =
+      MF.getInfo<HexagonMachineFunctionInfo>()->getStackAlignBaseReg();
+  if (!AP.isValid())
+    return;
+
+  assert(needsAligna(MF) && "Unexpected stack align base register");
+
+  auto &HII = *MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
+  Align MaxAlign = std::max(MF.getFrameInfo().getMaxAlign(), getStackAlign());
+  DebugLoc DL = MBB.findDebugLoc(InsertPt);
+  BuildMI(MBB, InsertPt, DL, HII.get(Hexagon::PS_aligna), AP)
+      .addImm(MaxAlign.value());
+}
+
 void HexagonFrameLowering::updateEntryPaths(MachineFunction &MF,
       MachineBasicBlock &SaveB) const {
   SetVector<unsigned> Worklist;
@@ -1627,13 +1656,13 @@ HexagonFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
   return StackOffset::getFixed(RealOffset);
 }
 
-bool HexagonFrameLowering::insertCSRSpillsInBlock(MachineBasicBlock &MBB,
-      const CSIVect &CSI, const HexagonRegisterInfo &HRI,
-      bool &PrologueStubs) const {
-  if (CSI.empty())
-    return true;
-
+MachineBasicBlock::iterator HexagonFrameLowering::insertCSRSpillsInBlock(
+    MachineBasicBlock &MBB, const CSIVect &CSI, const HexagonRegisterInfo &HRI,
+    bool &PrologueStubs) const {
   MachineBasicBlock::iterator MI = MBB.begin();
+  if (CSI.empty())
+    return MI;
+
   PrologueStubs = false;
   MachineFunction &MF = *MBB.getParent();
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
@@ -1692,25 +1721,7 @@ bool HexagonFrameLowering::insertCSRSpillsInBlock(MachineBasicBlock &MBB,
     }
   }
 
-  // Move PS_aligna to after all CSR spills (both inline and spill-function
-  // paths). PS_aligna initializes the AP register (e.g. R16) with an aligned
-  // value derived from FP. Since AP is a callee-saved register, its original
-  // value must be saved before it is overwritten, and it must be defined
-  // before any AP-relative stack accesses.
-  // MI points to the first non-spill instruction; all spills are before it.
-  auto &HFI = *MF.getSubtarget<HexagonSubtarget>().getFrameLowering();
-  if (const MachineInstr *AlignaI = HFI.getAlignaInstr(MF)) {
-    MachineInstr *AI = const_cast<MachineInstr *>(AlignaI);
-    // PS_aligna is always created in EntryBB during ISEL. Since PS_aligna
-    // causes needsStackFrame() to return true, EntryBB will be included in
-    // the set of blocks needing a frame. Because EntryBB dominates all blocks,
-    // shrink-wrapping will always place PrologB at EntryBB when PS_aligna
-    // exists. Therefore, this assertion should always hold.
-    assert(AI->getParent() == &MBB && "PS_aligna not in prologue block");
-    MBB.splice(MI, AI->getParent(), AI->getIterator());
-  }
-
-  return true;
+  return MI;
 }
 
 bool HexagonFrameLowering::insertCSRRestoresInBlock(MachineBasicBlock &MBB,
@@ -1788,28 +1799,6 @@ MachineBasicBlock::iterator HexagonFrameLowering::eliminateCallFramePseudoInstr(
   return MBB.erase(I);
 }
 
-void HexagonFrameLowering::processFunctionBeforeFrameFinalized(
-    MachineFunction &MF, RegScavenger *RS) const {
-  // If this function has uses aligned stack and also has variable sized stack
-  // objects, then we need to map all spill slots to fixed positions, so that
-  // they can be accessed through FP. Otherwise they would have to be accessed
-  // via AP, which may not be available at the particular place in the program.
-  MachineFrameInfo &MFI = MF.getFrameInfo();
-  bool HasAlloca = MFI.hasVarSizedObjects();
-  bool NeedsAlign = (MFI.getMaxAlign() > getStackAlign());
-
-  if (!HasAlloca || !NeedsAlign)
-    return;
-
-  // Set the physical aligned-stack base address register.
-  MCRegister AP;
-  if (const MachineInstr *AI = getAlignaInstr(MF))
-    AP = AI->getOperand(0).getReg();
-  auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
-  assert(!AP.isValid() || AP.isPhysical());
-  HMFI.setStackAlignBaseReg(AP);
-}
-
 /// Returns true if there are no caller-saved registers available in class RC.
 static bool needToReserveScavengingSpillSlots(MachineFunction &MF,
       const HexagonRegisterInfo &HRI, const TargetRegisterClass *RC) {
@@ -1873,6 +1862,8 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
   // only, it still needs to be saved/restored.
   Register AP =
       MF.getInfo<HexagonMachineFunctionInfo>()->getStackAlignBaseReg();
+  assert((!needsAligna(MF) || AP.isValid()) &&
+         "AP must be assigned before register allocation");
   if (AP.isValid()) {
     Reserved[AP] = false;
     // Unreserve super-regs if no other subregisters are reserved.
@@ -2371,6 +2362,16 @@ void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (MF.getInfo<HexagonMachineFunctionInfo>()->hasEHReturn())
     for (const MCPhysReg *R = HRI.getCalleeSavedRegs(&MF); *R; ++R)
       SavedRegs.set(*R);
+
+  // If the function needs dynamic stack realignment, AP is a callee-saved
+  // register that gets overwritten by the PS_aligna emitted in the prologue
+  // but PS_aligna is created during emitPrologue, which runs after this hook.
+  if (needsAligna(MF)) {
+    Register AP =
+        MF.getInfo<HexagonMachineFunctionInfo>()->getStackAlignBaseReg();
+    assert(AP.isValid() && "AP must be assigned before register allocation");
+    SavedRegs.set(AP);
+  }
 
   // Replace predicate register pseudo spill code.
   SmallVector<Register,8> NewRegs;
@@ -2941,15 +2942,6 @@ bool HexagonFrameLowering::needsAligna(const MachineFunction &MF) const {
   // may not be complete yet. Assume that we will need PS_aligna if there
   // are variable-sized objects.
   return true;
-}
-
-const MachineInstr *HexagonFrameLowering::getAlignaInstr(
-      const MachineFunction &MF) const {
-  for (auto &B : MF)
-    for (auto &I : B)
-      if (I.getOpcode() == Hexagon::PS_aligna)
-        return &I;
-  return nullptr;
 }
 
 /// Adds all callee-saved registers as implicit uses or defs to the

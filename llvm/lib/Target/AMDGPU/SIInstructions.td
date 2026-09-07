@@ -1431,18 +1431,6 @@ def : GCNPat <
   (SI_DEMOTE_I1 SCSrc_i1:$src, -1)
 >;
 
-  // TODO: we could add more variants for other types of conditionals
-
-def : GCNPat <
-  (i64 (int_amdgcn_icmp i1:$src, (i1 0), (i32 33))),
-  (COPY $src) // Return the SGPRs representing i1 src
->;
-
-def : GCNPat <
-  (i32 (int_amdgcn_icmp i1:$src, (i1 0), (i32 33))),
-  (COPY $src) // Return the SGPRs representing i1 src
->;
-
 //===----------------------------------------------------------------------===//
 // VOP1 Patterns
 //===----------------------------------------------------------------------===//
@@ -4387,18 +4375,18 @@ def : GCNPat<
 
 multiclass BFMPatterns <ValueType vt, PatFrag SHL, PatFrag ADD, InstSI BFM> {
   def : GCNPat <
-    (vt (SHL (vt (add (vt (shl 1, vt:$a)), -1)), vt:$b)),
+    (vt (SHL (vt (add (vt (shl 1, i32:$a)), -1)), i32:$b)),
     (BFM $a, $b)
   >;
 
   def : GCNPat <
-    (vt (ADD (vt (shl 1, vt:$a)), -1)),
+    (vt (ADD (vt (shl 1, i32:$a)), -1)),
     (BFM $a, (i32 0))
   >;
 }
 
 defm : BFMPatterns <i32, UniformBinFrag<shl>, UniformBinFrag<add>, S_BFM_B32>;
-// FIXME: defm : BFMPatterns <i64, UniformBinFrag<shl>, UniformBinFrag<add>, S_BFM_B64>;
+defm : BFMPatterns <i64, UniformBinFrag<shl>, UniformBinFrag<add>, S_BFM_B64>;
 defm : BFMPatterns <i32, DivergentBinFrag<shl>, DivergentBinFrag<add>, V_BFM_B32_e64>;
 
 // Bitfield extract patterns

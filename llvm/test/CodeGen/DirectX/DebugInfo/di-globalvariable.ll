@@ -1,4 +1,5 @@
 ; RUN: llc %s -o - | FileCheck %s
+; RUN: llc %s -o - | FileCheck %s --check-prefix=NO-DUP
 
 target triple = "dxil-unknown-shadermodel6.3-library"
 
@@ -23,6 +24,12 @@ define void @foo() {
 ; CHECK-DAG: DXIL: ![[GVY]]: additional data: ptr @y
 ; CHECK-DAG: ![[FILE]] = !DIFile(filename: "cu.cpp", directory: "/tmp")
 ; CHECK-DAG: ![[TYPE]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+
+; NO-DUP: ![[GVY:[0-9]+]] = !DIGlobalVariable(name: "y"
+; NO-DUP-NOT: ![[GVY]] =
+; NO-DUP: ![[GVX:[0-9]+]] = !DIGlobalVariable(name: "x"
+; NO-DUP-NOT: ![[GVX]] =
+; NO-DUP-NOT: ![[GVY]] =
 
 !llvm.dbg.cu = !{!4}
 !llvm.module.flags = !{!8, !9}

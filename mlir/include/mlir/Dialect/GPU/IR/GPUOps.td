@@ -45,7 +45,8 @@ class GPU_IndexOp<string mnemonic, list<Trait> traits = []> :
         DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>])>,
     Arguments<(ins GPU_DimensionAttr:$dimension,
                    OptionalAttr<IndexAttr>:$upper_bound)>, Results<(outs Index)> {
-  let assemblyFormat = "$dimension (`upper_bound` $upper_bound^)? attr-dict";
+  let assemblyFormat =
+      "enum($dimension) (`upper_bound` $upper_bound^)? attr-dict";
   let extraClassDefinition = [{
     void $cppClass::getAsmResultNames(
         llvm::function_ref<void(mlir::Value, mlir::StringRef)> setNameFn) {
@@ -346,7 +347,8 @@ def GPU_OptionalDimSizeHintAttr : ConfinedAttr<OptionalAttr<DenseI32ArrayAttr>,
 >;
 
 def GPU_GPUFuncOp : GPU_Op<"func", [
-    HasParent<"GPUModuleOp">, AutomaticAllocationScope, FunctionOpInterface,
+    HasParent<"GPUModuleOp">, AutomaticAllocationScope, SymbolName,
+    SymbolVisibility, FunctionOpInterface,
     IsolatedFromAbove, AffineScope
   ]> {
   let summary = "Function executable on a GPU";
@@ -419,7 +421,9 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     attribution.
   }];
 
-  let arguments = (ins TypeAttrOf<FunctionType>:$function_type,
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility,
+                       TypeAttrOf<FunctionType>:$function_type,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
                        OptionalAttr<DictArrayAttr>:$res_attrs,
                        OptionalAttr<DictArrayAttr>:$workgroup_attrib_attrs,
@@ -447,7 +451,7 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
     bool isKernel() {
       if (getKernel())
         return true;
-      return (*this)->getAttrOfType<UnitAttr>(
+      return (*this)->getDiscardableAttrOfType<UnitAttr>(
           GPUDialect::getKernelFuncAttrName()) != nullptr;
     }
 
@@ -1212,7 +1216,7 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
   let results = (outs AnyIntegerOrFloat:$result);
 
   let regions = (region AnyRegion:$body);
-  let assemblyFormat = [{ custom<AllReduceOperation>($op) $value
+  let assemblyFormat = [{ (enum($op)^)? $value
                           (`uniform` $uniform^)? $body attr-dict
                           `:` functional-type(operands, results) }];
 
@@ -1291,7 +1295,7 @@ def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType,
     }]>
   ];
 
-  let assemblyFormat = [{ custom<AllReduceOperation>($op) $value
+  let assemblyFormat = [{ enum($op) $value
                           (`uniform` $uniform^)?
                           (`cluster` `(` `size` `=` $cluster_size^ (`,` `stride` `=` $cluster_stride^)? `)`)? attr-dict
                           `:` functional-type(operands, results) }];
@@ -1375,7 +1379,7 @@ def GPU_ShuffleOp : GPU_Op<
   }];
 
   let assemblyFormat = [{
-    $mode $value `,` $offset `,` $width attr-dict `:` type($value)
+    enum($mode) $value `,` $offset `,` $width attr-dict `:` type($value)
   }];
 
   let builders = [
@@ -1543,7 +1547,8 @@ def GPU_InitializeNamedBarrierOp
 
 def GPU_GPUModuleOp : GPU_Op<"module", [
       IsolatedFromAbove, DataLayoutOpInterface, HasDefaultDLTIDataLayout,
-      NoRegionArguments, SymbolTable, Symbol] # GraphRegionNoTerminator.traits> {
+      NoRegionArguments, SymbolTable, SymbolName, SymbolVisibility,
+      Symbol] # GraphRegionNoTerminator.traits> {
   let summary = "A top level compilation unit containing code to be run on a GPU.";
   let description = [{
     GPU module contains code that is intended to be run on a GPU. A host device
@@ -1593,11 +1598,12 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
 
   let arguments = (ins
       SymbolNameAttr:$sym_name,
+      OptionalAttr<StrAttr>:$sym_visibility,
       OptionalAttr<GPUNonEmptyTargetArrayAttr>:$targets,
       OptionalAttr<OffloadingTranslationAttr>:$offloadingHandler);
   let regions = (region SizedRegion<1>:$bodyRegion);
   let assemblyFormat = [{
-    $sym_name
+    ($sym_visibility^)? $sym_name
     (`<` $offloadingHandler^ `>`)?
     ($targets^)? attr-dict-with-keyword $bodyRegion
   }];
@@ -1617,8 +1623,10 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
   let hasVerifier = 1;
 }
 
-def GPU_BinaryOp : GPU_Op<"binary", [Symbol]>, Arguments<(ins
+def GPU_BinaryOp
+    : GPU_Op<"binary", [SymbolName, SymbolVisibility, Symbol]>, Arguments<(ins
       SymbolNameAttr:$sym_name,
+      OptionalAttr<StrAttr>:$sym_visibility,
       OptionalAttr<OffloadingTranslationAttr>:$offloadingHandler,
       ConfinedAttr<GPUObjectArrayAttr, [ArrayMinCount<1>]>:$objects)
     > {
@@ -1657,7 +1665,8 @@ def GPU_BinaryOp : GPU_Op<"binary", [Symbol]>, Arguments<(ins
   ];
   let skipDefaultBuilders = 1;
   let assemblyFormat = [{
-    $sym_name custom<OffloadingHandler>($offloadingHandler) attr-dict $objects
+    ($sym_visibility^)? $sym_name
+    custom<OffloadingHandler>($offloadingHandler) attr-dict $objects
   }];
 }
 
@@ -2254,7 +2263,7 @@ def GPU_SubgroupMmaElementwiseOp : GPU_Op<"subgroup_mma_elementwise",
   }];
 
   let assemblyFormat = [{
-    $opType $args attr-dict `:` functional-type($args, $res)
+    enum($opType) $args attr-dict `:` functional-type($args, $res)
   }];
 }
 
@@ -2574,7 +2583,7 @@ def GPU_Create2To4SpMatOp : GPU_Op<"create_2to4_spmat", [GPU_AsyncOpInterface]> 
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
-     `{` $pruneFlag `}` $rows `,` $cols `,` $memref attr-dict `:` type($memref)
+     `{` enum($pruneFlag) `}` $rows `,` $cols `,` $memref attr-dict `:` type($memref)
   }];
 }
 
@@ -2677,7 +2686,7 @@ def GPU_SpMVBufferSizeOp : GPU_Op<"spmv_buffer_size", [GPU_AsyncOpInterface]> {
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
-    $spmatA (`{` $modeA^ `}`)? `,` $dnX `,` $dnY attr-dict  `into` $computeType
+    $spmatA (`{` enum($modeA)^ `}`)? `,` $dnX `,` $dnY attr-dict  `into` $computeType
   }];
 }
 
@@ -2727,7 +2736,7 @@ def GPU_SpMVOp : GPU_Op<"spmv", [GPU_AsyncOpInterface]> {
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
-    $spmatA (`{` $modeA^ `}`)? `,` $dnX `,` $dnY `,` $buffer attr-dict `:` type($buffer) `into` $computeType
+    $spmatA (`{` enum($modeA)^ `}`)? `,` $dnX `,` $dnY `,` $buffer attr-dict `:` type($buffer) `into` $computeType
   }];
 }
 
@@ -2780,7 +2789,9 @@ def GPU_SpMMBufferSizeOp : GPU_Op<"spmm_buffer_size", [GPU_AsyncOpInterface, Att
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
-    $spmatA (`{` $modeA^ `}`)? `,` $dnmatB (`{` $modeB^ `}`)? `,` $dnmatC attr-dict `:` type($bufferSzs) `into` $computeType
+    $spmatA (`{` enum($modeA)^ `}`)? `,` $dnmatB
+    (`{` enum($modeB)^ `}`)? `,` $dnmatC attr-dict `:` type($bufferSzs)
+    `into` $computeType
   }];
 }
 
@@ -2833,7 +2844,9 @@ def GPU_SpMMOp : GPU_Op<"spmm", [GPU_AsyncOpInterface, AttrSizedOperandSegments]
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
-    $spmatA (`{` $modeA^ `}`)? `,` $dnmatB (`{` $modeB^ `}`)? `,` $dnmatC `,` $buffers attr-dict `:` type($buffers) `into` $computeType
+    $spmatA (`{` enum($modeA)^ `}`)? `,` $dnmatB
+    (`{` enum($modeB)^ `}`)? `,` $dnmatC `,` $buffers attr-dict `:`
+    type($buffers) `into` $computeType
   }];
 }
 
@@ -2885,7 +2898,8 @@ def GPU_SDDMMBufferSizeOp : GPU_Op<"sddmm_buffer_size", [GPU_AsyncOpInterface]> 
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
-    $dnmatA (`{` $modeA^ `}`)? `,` $dnmatB (`{` $modeB^ `}`)? `,` $spmatC attr-dict `into` $computeType
+    $dnmatA (`{` enum($modeA)^ `}`)? `,` $dnmatB
+    (`{` enum($modeB)^ `}`)? `,` $spmatC attr-dict `into` $computeType
   }];
 }
 
@@ -2938,7 +2952,9 @@ def GPU_SDDMMOp : GPU_Op<"sddmm", [GPU_AsyncOpInterface]> {
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
-    $dnmatA (`{` $modeA^ `}`)? `,` $dnmatB (`{` $modeB^ `}`)? `,` $spmatC `,` $buffer attr-dict `:` type($buffer) `into` $computeType
+    $dnmatA (`{` enum($modeA)^ `}`)? `,` $dnmatB
+    (`{` enum($modeB)^ `}`)? `,` $spmatC `,` $buffer attr-dict `:`
+    type($buffer) `into` $computeType
   }];
 }
 
@@ -3071,7 +3087,9 @@ def GPU_SpGEMMWorkEstimationOrComputeOp : GPU_Op<"spgemm_work_estimation_or_comp
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
-    `{` $kind `}` $spmatA (`{` $modeA^ `}`)? `,` $spmatB (`{` $modeB^ `}`)? `,` $spmatC `,` $desc `,` $bufferSz `,` $buffer attr-dict `:` $computeType `into` type($buffer)
+    `{` enum($kind) `}` $spmatA (`{` enum($modeA)^ `}`)? `,` $spmatB
+    (`{` enum($modeB)^ `}`)? `,` $spmatC `,` $desc `,` $bufferSz `,`
+    $buffer attr-dict `:` $computeType `into` type($buffer)
   }];
 }
 
@@ -3122,7 +3140,8 @@ def GPU_SpGEMMCopyOp : GPU_Op<"spgemm_copy", [GPU_AsyncOpInterface]> {
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
-    $spmatA (`{` $modeA^ `}`)? `,` $spmatB (`{` $modeB^ `}`)? `,` $spmatC `,` $desc attr-dict `:` $computeType
+    $spmatA (`{` enum($modeA)^ `}`)? `,` $spmatB
+    (`{` enum($modeB)^ `}`)? `,` $spmatC `,` $desc attr-dict `:` $computeType
   }];
 }
 
@@ -3362,7 +3381,7 @@ def GPU_SubgroupBroadcastOp : GPU_Op<"subgroup_broadcast",
   }];
   let results = (outs AnyType:$result);
   let assemblyFormat = [{
-    $src `,` $broadcast_type ($lane^)? attr-dict `:` type($result)
+    $src `,` enum($broadcast_type) ($lane^)? attr-dict `:` type($result)
   }];
   let hasFolder = 1;
   let hasVerifier = 1;

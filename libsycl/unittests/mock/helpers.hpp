@@ -100,8 +100,9 @@ public:
   MOCK_METHOD(ol_result_t, olSyncQueue, (ol_queue_handle_t Queue));
   MOCK_METHOD(ol_result_t, olDestroyEvent, (ol_event_handle_t Event));
   MOCK_METHOD(ol_result_t, olCreateProgram,
-              (ol_device_handle_t Device, const void *ProgData,
-               size_t ProgDataSize, ol_program_handle_t *Program));
+              (ol_context_handle_t Context, ol_device_handle_t Device,
+               const void *ProgData, size_t ProgDataSize,
+               ol_program_handle_t *Program));
 
   MOCK_METHOD(ol_result_t, olGetSymbol,
               (ol_program_handle_t Program, const char *Name,

@@ -49,7 +49,7 @@ class TestFrameVarDILPointerDereference(TestBase):
 
         # Check that * is not allowed in simple mode, but allowed in legacy mode
         frame = thread.GetFrameAtIndex(0)
-        simple = frame.GetValueForVariablePath("*p_int0", lldb.eDILModeSimple)
-        legacy = frame.GetValueForVariablePath("*p_int0", lldb.eDILModeLegacy)
+        simple = frame.GetValueForVariablePathWithMode("*p_int0", lldb.eDILModeSimple)
+        legacy = frame.GetValueForVariablePathWithMode("*p_int0", lldb.eDILModeLegacy)
         self.assertFailure(simple.GetError())
         self.assertSuccess(legacy.GetError())

@@ -26,6 +26,10 @@
 #include <sys/ptrace.h>
 #include <sys/uio.h>
 
+#ifndef PTRACE_GETREGSET
+#define PTRACE_GETREGSET 0x4204
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_linux;

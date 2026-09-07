@@ -982,9 +982,9 @@ void CIRGenFunction::emitLambdaDelegatingInvokeBody(const CXXMethodDecl *md) {
     const TemplateArgumentList *tal = md->getTemplateSpecializationArgs();
     FunctionTemplateDecl *callOpTemplate =
         callOp->getDescribedFunctionTemplate();
-    void *InsertPos = nullptr;
+    llvm::FoldingSetInsertToken InsertToken;
     FunctionDecl *correspondingCallOpSpecialization =
-        callOpTemplate->findSpecialization(tal->asArray(), InsertPos);
+        callOpTemplate->findSpecialization(tal->asArray(), InsertToken);
     assert(correspondingCallOpSpecialization);
     callOp = cast<CXXMethodDecl>(correspondingCallOpSpecialization);
   }

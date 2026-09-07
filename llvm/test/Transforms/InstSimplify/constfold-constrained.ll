@@ -195,7 +195,7 @@ define double @nonfinite_04() #0 {
 ; CHECK-NEXT:    ret double +inf
 ;
 entry:
-  %result = call double @llvm.experimental.constrained.trunc.f64(double 0x7ff0000000000000, metadata !"fpexcept.strict") #0
+  %result = call double @llvm.experimental.constrained.trunc.f64(double +inf, metadata !"fpexcept.strict") #0
   ret double %result
 }
 

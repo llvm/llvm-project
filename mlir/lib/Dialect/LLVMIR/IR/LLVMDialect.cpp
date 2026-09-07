@@ -50,6 +50,13 @@ using mlir::LLVM::tailcallkind::getMaxEnumValForTailCallKind;
 
 static constexpr const char kElemTypeAttrName[] = "elem_type";
 
+static NamedAttrList getAttrsForPrinting(Operation *op) {
+  NamedAttrList attrs(op->getRawDictionaryAttrs());
+  op->getName().walkInherentAttrs(
+      op, [&](StringRef name, Attribute &attr) { attrs.set(name, attr); });
+  return attrs;
+}
+
 static auto processFMFAttr(ArrayRef<NamedAttribute> attrs) {
   SmallVector<NamedAttribute, 8> filteredAttrs(
       llvm::make_filter_range(attrs, [&](NamedAttribute attr) {
@@ -278,14 +285,15 @@ static std::optional<ParseResult> parseOpBundles(
 void ICmpOp::print(OpAsmPrinter &p) {
   p << " \"" << stringifyICmpPredicate(getPredicate()) << "\" " << getOperand(0)
     << ", " << getOperand(1);
-  p.printOptionalAttrDict((*this)->getAttrs(), {"predicate"});
+  p.printOptionalAttrDict(getAttrsForPrinting(*this).getAttrs(), {"predicate"});
   p << " : " << getLhs().getType();
 }
 
 void FCmpOp::print(OpAsmPrinter &p) {
   p << " \"" << stringifyFCmpPredicate(getPredicate()) << "\" " << getOperand(0)
     << ", " << getOperand(1);
-  p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()), {"predicate"});
+  p.printOptionalAttrDict(processFMFAttr(getAttrsForPrinting(*this).getAttrs()),
+                          {"predicate"});
   p << " : " << getLhs().getType();
 }
 
@@ -397,13 +405,10 @@ void AllocaOp::print(OpAsmPrinter &p) {
     p << " inalloca";
 
   p << ' ' << getArraySize() << " x " << getElemType();
+  NamedAttrList attrs((*this)->getDiscardableAttrDictionary().getValue());
   if (getAlignment() && *getAlignment() != 0)
-    p.printOptionalAttrDict((*this)->getAttrs(),
-                            {kElemTypeAttrName, getInallocaAttrName()});
-  else
-    p.printOptionalAttrDict(
-        (*this)->getAttrs(),
-        {getAlignmentAttrName(), kElemTypeAttrName, getInallocaAttrName()});
+    attrs.append(getAlignmentAttrName(), getAlignmentAttr());
+  p.printOptionalAttrDict(attrs);
   p << " : " << funcTy;
 }
 
@@ -1379,7 +1384,7 @@ void CallOp::print(OpAsmPrinter &p) {
                    getOpBundleOperands().getTypes(), getOpBundleTags());
   }
 
-  p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()),
+  p.printOptionalAttrDict(processFMFAttr(getAttrsForPrinting(*this).getAttrs()),
                           {getCalleeAttrName(), getTailCallKindAttrName(),
                            getVarCalleeTypeAttrName(), getCConvAttrName(),
                            getOperandSegmentSizesAttrName(),
@@ -1707,7 +1712,7 @@ void InvokeOp::print(OpAsmPrinter &p) {
                    getOpBundleOperands().getTypes(), getOpBundleTags());
   }
 
-  p.printOptionalAttrDict((*this)->getAttrs(),
+  p.printOptionalAttrDict(getAttrsForPrinting(*this).getAttrs(),
                           {getCalleeAttrName(), getOperandSegmentSizeAttr(),
                            getCConvAttrName(), getVarCalleeTypeAttrName(),
                            getOpBundleSizesAttrName(),
@@ -1887,7 +1892,7 @@ void LandingpadOp::print(OpAsmPrinter &p) {
       << value.getType() << ") ";
   }
 
-  p.printOptionalAttrDict((*this)->getAttrs(), {"cleanup"});
+  p.printOptionalAttrDict(getAttrsForPrinting(*this).getAttrs(), {"cleanup"});
 
   p << ": " << getType();
 }
@@ -2405,8 +2410,8 @@ void GlobalOp::build(OpBuilder &builder, OperationState &result, Type type,
                      bool dsoLocal, ThreadLocalMode threadModel,
                      SymbolRefAttr comdat, ArrayRef<NamedAttribute> attrs,
                      ArrayRef<Attribute> dbgExprs) {
-  result.addAttribute(getSymNameAttrName(result.name),
-                      builder.getStringAttr(name));
+  result.getOrAddProperties<Properties>().sym_name =
+      builder.getStringAttr(name);
   result.addAttribute(getGlobalTypeAttrName(result.name), TypeAttr::get(type));
   result.addAttribute(
       getTlsModeAttrName(result.name),
@@ -2480,12 +2485,11 @@ void GlobalOp::print(OpAsmPrinter &p) {
   // Note that the alignment attribute is printed using the
   // default syntax here, even though it is an inherent attribute
   // (as defined in https://mlir.llvm.org/docs/LangRef/#attributes)
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          {SymbolTable::getSymbolAttrName(),
-                           getGlobalTypeAttrName(), getConstantAttrName(),
-                           getValueAttrName(), getLinkageAttrName(),
-                           getUnnamedAddrAttrName(), getTlsModeAttrName(),
-                           getVisibility_AttrName(), getComdatAttrName()});
+  p.printOptionalAttrDict(
+      (*this)->getAttrs(),
+      {getSymNameAttrName(), getGlobalTypeAttrName(), getConstantAttrName(),
+       getValueAttrName(), getLinkageAttrName(), getUnnamedAddrAttrName(),
+       getTlsModeAttrName(), getVisibility_AttrName(), getComdatAttrName()});
 
   // Print the trailing type unless it's a string global.
   if (llvm::dyn_cast_or_null<StringAttr>(getValueOrNull()))
@@ -2536,6 +2540,7 @@ template <typename OpType>
 static ParseResult parseCommonGlobalAndAlias(OpAsmParser &parser,
                                              OperationState &result) {
   MLIRContext *ctx = parser.getContext();
+
   // Parse optional linkage, default to External.
   result.addAttribute(
       OpType::getLinkageAttrName(result.name),
@@ -2724,6 +2729,27 @@ LogicalResult GlobalOp::verify() {
       return emitError() << "alignment attribute is not a power of 2";
   }
 
+  if (FlatSymbolRefAttr associated = getAssociatedAttr()) {
+    if (associated.getValue() == getSymName())
+      return emitOpError("associated cannot refer to the global itself");
+  }
+
+  if (ArrayAttr absSym = getAbsoluteSymbolAttr()) {
+    if (absSym.empty() || absSym.size() % 2 != 0)
+      return emitOpError(
+          "absolute_symbol must contain one or more integer range pairs");
+    Type pairType;
+    for (Attribute attr : absSym) {
+      auto intAttr = dyn_cast<IntegerAttr>(attr);
+      if (!intAttr)
+        return emitOpError("absolute_symbol operands must be integers");
+      if (!pairType)
+        pairType = intAttr.getType();
+      else if (intAttr.getType() != pairType)
+        return emitOpError("absolute_symbol range pair types must match");
+    }
+  }
+
   return success();
 }
 
@@ -2842,10 +2868,9 @@ void AliasOp::print(OpAsmPrinter &p) {
 
   p.printSymbolName(getSymName());
   p.printOptionalAttrDict((*this)->getAttrs(),
-                          {SymbolTable::getSymbolAttrName(),
-                           getAliasTypeAttrName(), getLinkageAttrName(),
-                           getUnnamedAddrAttrName(), getTlsModeAttrName(),
-                           getVisibility_AttrName()});
+                          {getSymNameAttrName(), getAliasTypeAttrName(),
+                           getLinkageAttrName(), getUnnamedAddrAttrName(),
+                           getTlsModeAttrName(), getVisibility_AttrName()});
 
   // Print the trailing type.
   p << " : " << getType() << ' ';
@@ -2950,7 +2975,7 @@ void IFuncOp::build(OpBuilder &builder, OperationState &result, StringRef name,
                     Linkage linkage, LLVM::Visibility visibility) {
   return build(builder, result, name, iFuncType, resolverName, resolverType,
                linkage, /*dso_local=*/false, /*address_space=*/0,
-               UnnamedAddr::None, visibility);
+               UnnamedAddr::None, visibility, /*sym_visibility=*/nullptr);
 }
 
 LogicalResult IFuncOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
@@ -3085,7 +3110,7 @@ void LLVMFuncOp::build(OpBuilder &builder, OperationState &result,
                        ArrayRef<DictionaryAttr> argAttrs,
                        std::optional<uint64_t> functionEntryCount) {
   result.addRegion();
-  result.addAttribute(SymbolTable::getSymbolAttrName(),
+  result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(name));
   result.addAttribute(getFunctionTypeAttrName(result.name),
                       TypeAttr::get(type));
@@ -3200,7 +3225,7 @@ ParseResult LLVMFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   bool isVariadic;
 
   auto signatureLocation = parser.getCurrentLocation();
-  if (parser.parseSymbolName(nameAttr, SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(nameAttr, getSymNameAttrName(result.name),
                              result.attributes) ||
       function_interface_impl::parseFunctionSignatureWithArguments(
           parser, /*allowVariadic=*/true, entryArgs, isVariadic, resultTypes,
@@ -3326,6 +3351,10 @@ LogicalResult LLVMFuncOp::verify() {
     return failure();
 
   if (isExternal()) {
+    if (getFunctionEntryCountAttr())
+      return emitOpError() << "external functions cannot have "
+                           << getFunctionEntryCountAttrName() << " attribute";
+
     if (getLinkage() != LLVM::Linkage::External &&
         getLinkage() != LLVM::Linkage::ExternWeak)
       return emitOpError() << "external functions must have '"
@@ -3479,7 +3508,7 @@ static int64_t getNumElements(Type t) {
 
 /// Determine the element type of `type`. Supported types are `VectorType`,
 /// `TensorType`, and `LLVMArrayType`. Everything else is treated as a scalar.
-static Type getElementType(Type type) {
+Type LLVM::getConstantElementType(Type type) {
   while (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(type))
     type = arrayType.getElementType();
   if (auto vecType = dyn_cast<VectorType>(type))
@@ -3651,13 +3680,52 @@ LogicalResult LLVM::ConstantOp::verify() {
     return success();
   };
 
+  // Check that an integer attribute whose element type is `attributeIntType`
+  // is compatible with a type whose element type is `constantElementType`.
+  //
+  // Contrary to floats, integers must match exactly. An integer attribute
+  // carries no information that the corresponding LLVM type cannot represent,
+  // so any difference in width, signedness, or in `index` versus a fixed-width
+  // integer indicates a malformed constant. Note that `index` never reaches
+  // this check as a constant type, since it is not LLVM dialect-compatible.
+  auto verifyIntegerSemantics = [this](Type attributeIntType,
+                                       Type constantElementType,
+                                       StringRef description) -> LogicalResult {
+    if (attributeIntType != constantElementType)
+      return emitOpError() << "attribute and type have different integer "
+                           << description << "s: " << attributeIntType
+                           << " vs. " << constantElementType;
+    return success();
+  };
+
   // Verification of IntegerAttr, FloatAttr, ElementsAttr, ArrayAttr.
-  if (isa<IntegerAttr>(getValue())) {
+  if (auto intAttr = dyn_cast<IntegerAttr>(getValue())) {
     if (!llvm::isa<IntegerType>(getType()))
       return emitOpError() << "expected integer type";
+    return verifyIntegerSemantics(intAttr.getType(), getType(), "type");
   } else if (auto floatAttr = dyn_cast<FloatAttr>(getValue())) {
     return verifyFloatSemantics(floatAttr.getValue().getSemantics(), getType());
   } else if (auto elementsAttr = dyn_cast<ElementsAttr>(getValue())) {
+    // Check that the element type of the attribute is compatible with the
+    // element type of the constant. Shared by the scalable and the fixed-size
+    // paths, since element types must agree either way.
+    auto verifyElementTypes = [&](ElementsAttr attr) -> LogicalResult {
+      Type attrElmType = LLVM::getConstantElementType(attr.getType());
+      Type resultElmType = LLVM::getConstantElementType(getType());
+      if (auto floatType = dyn_cast<FloatType>(attrElmType))
+        return verifyFloatSemantics(floatType.getFloatSemantics(),
+                                    resultElmType);
+
+      if (isa<IntegerType, IndexType>(attrElmType)) {
+        if (!isa<IntegerType>(resultElmType))
+          return emitOpError(
+              "expected integer element type for integer elements attribute");
+        return verifyIntegerSemantics(attrElmType, resultElmType,
+                                      "element type");
+      }
+      return success();
+    };
+
     if (hasScalableVectorType(getType())) {
       // The exact number of elements of a scalable vector is unknown, so we
       // allow only splat attributes.
@@ -3665,7 +3733,7 @@ LogicalResult LLVM::ConstantOp::verify() {
       if (!splatElementsAttr)
         return emitOpError()
                << "scalable vector type requires a splat attribute";
-      return success();
+      return verifyElementTypes(splatElementsAttr);
     }
     if (!isa<VectorType, LLVM::LLVMArrayType>(getType()))
       return emitOpError() << "expected vector or array type";
@@ -3678,15 +3746,7 @@ LogicalResult LLVM::ConstantOp::verify() {
              << getNumElements(getType()) << " vs. " << attrNumElements;
     }
 
-    Type attrElmType = getElementType(elementsAttr.getType());
-    Type resultElmType = getElementType(getType());
-    if (auto floatType = dyn_cast<FloatType>(attrElmType))
-      return verifyFloatSemantics(floatType.getFloatSemantics(), resultElmType);
-
-    if (isa<IntegerType>(attrElmType) && !isa<IntegerType>(resultElmType)) {
-      return emitOpError(
-          "expected integer element type for integer elements attribute");
-    }
+    return verifyElementTypes(elementsAttr);
   } else if (auto arrayAttr = dyn_cast<ArrayAttr>(getValue())) {
 
     // The case where the constant is LLVMStructType has already been handled.
@@ -4052,8 +4112,7 @@ OpFoldResult LLVM::ShlOp::fold(FoldAdaptor adaptor) {
   if (!rhs)
     return {};
 
-  if (rhs.getValue().getZExtValue() >=
-      getLhs().getType().getIntOrFloatBitWidth())
+  if (rhs.getValue().uge(getLhs().getType().getIntOrFloatBitWidth()))
     return {}; // TODO: Fold into poison.
 
   auto lhs = dyn_cast_or_null<IntegerAttr>(adaptor.getLhs());
@@ -4204,7 +4263,7 @@ void CallIntrinsicOp::print(OpAsmPrinter &p) {
                    getOpBundleOperands().getTypes(), getOpBundleTagsAttr());
   }
 
-  p.printOptionalAttrDict(processFMFAttr((*this)->getAttrs()),
+  p.printOptionalAttrDict(processFMFAttr(getAttrsForPrinting(*this).getAttrs()),
                           {getOperandSegmentSizesAttrName(),
                            getOpBundleSizesAttrName(), getIntrinAttrName(),
                            getOpBundleTagsAttrName(), getArgAttrsAttrName(),

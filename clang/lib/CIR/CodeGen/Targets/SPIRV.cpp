@@ -32,25 +32,15 @@ public:
   SPIRVTargetCIRGenInfo(CIRGenTypes &cgt)
       : TargetCIRGenInfo(std::make_unique<SPIRVABIInfo>(cgt)) {}
 
-  void setTargetAttributes(const clang::Decl *decl, mlir::Operation *global,
-                           CIRGenModule &cgm) const override {
-    auto globalValue = mlir::cast<cir::CIRGlobalValueInterface>(global);
-    if (globalValue.isDeclaration())
-      return;
-
-    const auto *fd = dyn_cast_or_null<FunctionDecl>(decl);
-    if (!fd)
-      return;
-
-    if (cgm.getLangOpts().OpenCL &&
-        DeviceKernelAttr::isOpenCLSpelling(fd->getAttr<DeviceKernelAttr>())) {
-      auto func = mlir::cast<cir::FuncOp>(global);
-      func.setCallingConv(cir::CallingConv::SpirKernel);
-    }
-  }
-
   cir::CallingConv getDeviceKernelCallingConv() const override {
     return cir::CallingConv::SpirKernel;
+  }
+
+  void setCUDAKernelCallingConvention(const FunctionType *&ft) const override {
+    // Convert HIP kernels to SPIR-V kernels.
+    if (getABIInfo().cgt.getASTContext().getLangOpts().HIP)
+      ft = getABIInfo().cgt.getASTContext().adjustFunctionType(
+          ft, ft->getExtInfo().withCallingConv(CC_DeviceKernel));
   }
 };
 

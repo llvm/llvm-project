@@ -340,7 +340,7 @@ define float @degenerate_fmul_posinf(float %x) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs.x = call float @llvm.fabs.f32(float %x)
-  %mul.fabs.x = fmul float %fabs.x, 0x7FF0000000000000
+  %mul.fabs.x = fmul float %fabs.x, +inf
   %x.is.zero = fcmp oeq float %x, 0.0
   %select = select i1 %x.is.zero, float %mul.fabs.x, float %fabs.x
   ret float %select
@@ -356,7 +356,7 @@ define float @degenerate_fmul_neginf(float %x) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %fabs.x = call float @llvm.fabs.f32(float %x)
-  %mul.fabs.x = fmul float %fabs.x, 0xFFF0000000000000
+  %mul.fabs.x = fmul float %fabs.x, -inf
   %x.is.zero = fcmp oeq float %x, 0.0
   %select = select i1 %x.is.zero, float %mul.fabs.x, float %fabs.x
   ret float %select

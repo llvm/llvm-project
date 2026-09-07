@@ -109,4 +109,4 @@ void arg_bitint128(_BitInt(128) x) {}
 // CHECK: define{{.*}} void @arg_bitint128(i128 noundef %{{.*}})
 
 void arg_bitint129(_BitInt(129) x) {}
-// CHECK: define{{.*}} void @arg_bitint129(ptr nofree noundef align 16 dead_on_return dereferenceable(32) %{{.*}})
+// CHECK: define{{.*}} void @arg_bitint129(ptr nofreeobj noundef align 16 dead_on_return dereferenceable(32) %{{.*}})

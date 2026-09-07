@@ -37,7 +37,8 @@ main_body:
 
 ; GCN-LABEL: {{^}}buffer_load_format_d16_xyzw:
 ; UNPACKED: buffer_load_format_d16_xyzw v[{{[0-9]+}}:[[HI:[0-9]+]]], off, s[{{[0-9]+:[0-9]+}}], 0
-; UNPACKED: v_mov_b32_e32 v{{[0-9]+}}, v[[HI]]
+; UNPACKED: v_perm_b32 [[PERM:v[0-9]+]], v{{[0-9]+}}, v[[HI]], s{{[0-9]+}}
+; UNPACKED: v_lshrrev_b32_e32 v{{[0-9]+}}, 16, [[PERM]]
 
 ; PACKED: buffer_load_format_d16_xyzw v[{{[0-9]+}}:[[HI:[0-9]+]]], off, s[{{[0-9]+:[0-9]+}}], 0
 ; PACKED: v_lshrrev_b32_e32 v{{[0-9]+}}, 16, v[[HI]]

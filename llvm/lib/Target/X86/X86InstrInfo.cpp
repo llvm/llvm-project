@@ -44,7 +44,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
-#include <atomic>
 #include <optional>
 
 using namespace llvm;
@@ -8607,7 +8606,9 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
       break;
     case X86::AVX512_512_SETALLONES:
       IsAllOnes = true;
-      [[fallthrough]];
+      Ty = FixedVectorType::get(Type::getInt32Ty(MF.getFunction().getContext()),
+                                16);
+      break;
     case X86::AVX1_SETALLONES:
     case X86::AVX2_SETALLONES:
     case X86::AVX512_256_SETALLONES:

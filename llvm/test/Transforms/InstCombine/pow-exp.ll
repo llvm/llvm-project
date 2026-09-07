@@ -349,7 +349,7 @@ define double @pow_inf_base(double %e) {
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn double @pow(double +inf, double [[E:%.*]])
 ; CHECK-NEXT:    ret double [[CALL]]
 ;
-  %call = tail call afn nnan ninf double @pow(double 0x7FF0000000000000, double %e)
+  %call = tail call afn nnan ninf double @pow(double +inf, double %e)
   ret double %call
 }
 
@@ -434,7 +434,7 @@ define float @powf_inf_base(float %e) {
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float +inf, float [[E:%.*]])
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
-  %call = tail call afn nnan ninf float @powf(float 0x7FF0000000000000, float %e)
+  %call = tail call afn nnan ninf float @powf(float +inf, float %e)
   ret float %call
 }
 
