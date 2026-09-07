@@ -2828,7 +2828,9 @@ def AVRSystemLibrary
                              AVR_BUILTIN>,
               __divmodsi4, __udivmodsi4,
               // Trigonometric rtlib functions
-              avr_sin, avr_cos)>;
+              avr_sin, avr_cos,
+
+              __stack_chk_fail, __stack_chk_guard)>;
 
 //===----------------------------------------------------------------------===//
 // DXIL Runtime Libcalls

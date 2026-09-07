@@ -19,7 +19,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
-#include <cstdint>
 
 #define DEBUG_TYPE "scev-division"
 
