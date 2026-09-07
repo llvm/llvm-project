@@ -1185,6 +1185,33 @@ For more information, see [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread
 
 ### Arithmetic Intrinsics
 
+Some of these intrinsics take the rounding mode as an `i32` immediate operand
+instead of encoding it in the intrinsic name. The accepted values match the
+`llvm::RoundingMode` enumeration and are described in the following table:
+
+(fp-rounding-modes)=
+
+```{list-table} Floating-Point Rounding Modes
+:widths: 15 15 70
+:header-rows: 1
+
+   * - Value
+     - Rounding Mode
+     - Description
+   * - 0
+     - `rz`
+     - Round towards zero
+   * - 1
+     - `rn`
+     - Round to nearest, with ties to even
+   * - 2
+     - `rp`
+     - Round towards positive infinity
+   * - 3
+     - `rm`
+     - Round towards negative infinity
+```
+
 #### '`llvm.nvvm.fabs.*`' Intrinsic
 
 ##### Syntax:
@@ -1284,29 +1311,65 @@ used in the '`llvm.nvvm.idp4a.[us].u`' variants, while sign-extension is used
 with '`llvm.nvvm.idp4a.[us].s`' variants. The dot product of these 4-element
 vectors is added to `%c` to produce the return.
 
-#### '`llvm.nvvm.add.*`' Half-precision Intrinsics
+#### '`llvm.nvvm.fadd.*`' Intrinsics
 
 ##### Syntax:
 
-```llvm
-declare half @llvm.nvvm.add.rn.sat.f16(half %a, half %b)
-declare <2 x half> @llvm.nvvm.add.rn.sat.v2f16(<2 x half> %a, <2 x half> %b)
+This is an overloaded intrinsic. The '`.ftz`' and '`.sat`' modifiers are
+optional.
 
-declare half @llvm.nvvm.add.rn.ftz.sat.f16(half %a, half %b)
-declare <2 x half> @llvm.nvvm.add.rn.ftz.sat.v2f16(<2 x half> %a, <2 x half> %b)
+```llvm
+declare half         @llvm.nvvm.fadd{.ftz}{.sat}.f16(half %a, half %b, i32 immarg %rnd)
+declare <2 x half>   @llvm.nvvm.fadd{.ftz}{.sat}.v2f16(<2 x half> %a, <2 x half> %b, i32 immarg %rnd)
+declare bfloat       @llvm.nvvm.fadd.bf16(bfloat %a, bfloat %b, i32 immarg %rnd)
+declare <2 x bfloat> @llvm.nvvm.fadd.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, i32 immarg %rnd)
+declare float        @llvm.nvvm.fadd{.ftz}{.sat}.f32(float %a, float %b, i32 immarg %rnd)
+declare <2 x float>  @llvm.nvvm.fadd{.ftz}.v2f32(<2 x float> %a, <2 x float> %b, i32 immarg %rnd)
+declare double       @llvm.nvvm.fadd.f64(double %a, double %b, i32 immarg %rnd)
 ```
 
 ##### Overview:
 
-The '`llvm.nvvm.add.*`' intrinsics perform an addition operation with the
-specified rounding mode and modifiers.
+The '`llvm.nvvm.fadd.*`' intrinsics add `%a` and `%b` using the rounding mode
+selected by `%rnd` and the modifiers present in the intrinsic name. They
+correspond directly to the `add` PTX instruction.
 
 ##### Semantics:
 
-The '`.sat`' modifier performs a saturating addition where the result is
-clamped to `[0.0, 1.0]` and `NaN` results are flushed to `+0.0f`.
+`%rnd` selects the rounding mode applied to the result, see
+{ref}`fp-rounding-modes`.
+
 The '`.ftz`' modifier flushes subnormal inputs and results to sign-preserving
 zero.
+The '`.sat`' modifier performs a saturating addition where the result is
+clamped to `[0.0, 1.0]` and `NaN` results are flushed to `+0.0f`.
+
+Not every combination of operand type, rounding mode and modifier maps to a
+PTX instruction. The supported combinations are:
+
+```{list-table}
+:widths: 25 25 25
+:header-rows: 1
+
+   * - Operand Type
+     - Rounding Modes
+     - Modifiers
+   * - `half`, `<2 x half>`
+     - `rn`
+     - `.ftz`, `.sat`
+   * - `bfloat`, `<2 x bfloat>`
+     - `rn`
+     - None
+   * - `float`
+     - `rn`, `rz`, `rp`, `rm`
+     - `.ftz`, `.sat`
+   * - `<2 x float>`
+     - `rn`, `rz`, `rp`, `rm`
+     - `.ftz`
+   * - `double`
+     - `rn`, `rz`, `rp`, `rm`
+     - None
+```
 
 #### '`llvm.nvvm.mul.*`' Half-precision Intrinsics
 
