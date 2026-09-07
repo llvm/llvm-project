@@ -3433,10 +3433,93 @@ static Value *foldAndOrOfICmpEqConstantAndICmp(ICmpInst *LHS, ICmpInst *RHS,
 /// Fold (icmp)&(icmp) or (icmp)|(icmp) if possible.
 /// If IsLogical is true, then the and/or is in select form and the transform
 /// must be poison-safe.
+static Value *
+foldSignedAddSubBitwiseOverflowCheck(ICmpInst *Cmp0, ICmpInst *Cmp1, bool IsAnd,
+                                     InstCombiner::BuilderTy &Builder) {
+  if (!IsAnd)
+    return nullptr;
+
+  auto IsSignBitCheck = [](ICmpInst *Cmp, bool &Expected) {
+    const APInt *C;
+    if (!match(Cmp->getOperand(1), m_APInt(C)))
+      return false;
+    bool TrueIfSigned;
+    if (!isSignBitCheck(Cmp->getPredicate(), *C, TrueIfSigned))
+      return false;
+    Expected = TrueIfSigned;
+    return true;
+  };
+
+  bool Cmp0Expected, Cmp1Expected;
+  if (!IsSignBitCheck(Cmp0, Cmp0Expected) ||
+      !IsSignBitCheck(Cmp1, Cmp1Expected))
+    return nullptr;
+
+  ICmpInst *SignEqCmp = nullptr;
+  ICmpInst *SignDiffCmp = nullptr;
+
+  if (!Cmp0Expected && Cmp1Expected) {
+    SignEqCmp = Cmp0;
+    SignDiffCmp = Cmp1;
+  } else if (Cmp0Expected && !Cmp1Expected) {
+    SignEqCmp = Cmp1;
+    SignDiffCmp = Cmp0;
+  }
+
+  auto MatchPattern = [&](ICmpInst *SignEq, ICmpInst *SignDiff,
+                          bool IsSub) -> Value * {
+    Value *A, *B;
+    if (!match(SignEq->getOperand(0), m_c_Xor(m_Value(A), m_Value(B))))
+      return nullptr;
+
+    Value *Math, *AOrB;
+    if (!match(SignDiff->getOperand(0), m_c_Xor(m_Value(Math), m_Value(AOrB))))
+      return nullptr;
+
+    if (AOrB != A && AOrB != B) {
+      std::swap(Math, AOrB);
+      if (AOrB != A && AOrB != B)
+        return nullptr;
+    }
+
+    if (IsSub) {
+      if (match(Math, m_Sub(m_Specific(A), m_Specific(B))) && AOrB == A)
+        ; // Matched sub
+      else if (match(Math, m_Sub(m_Specific(B), m_Specific(A))) && AOrB == B)
+        std::swap(A, B);
+      else
+        return nullptr;
+    } else {
+      if (!match(Math, m_c_Add(m_Specific(A), m_Specific(B))))
+        return nullptr;
+    }
+
+    Intrinsic::ID IID =
+        IsSub ? Intrinsic::ssub_with_overflow : Intrinsic::sadd_with_overflow;
+    Function *F = Intrinsic::getOrInsertDeclaration(SignEq->getModule(), IID,
+                                                    A->getType());
+    Value *Call = Builder.CreateCall(F, {A, B});
+    return Builder.CreateExtractValue(Call, 1);
+  };
+
+  if (SignEqCmp && SignDiffCmp)
+    return MatchPattern(SignEqCmp, SignDiffCmp, /*IsSub=*/false);
+  else if (Cmp0Expected && Cmp1Expected) {
+    if (Value *V = MatchPattern(Cmp0, Cmp1, /*IsSub=*/true))
+      return V;
+    if (Value *V = MatchPattern(Cmp1, Cmp0, /*IsSub=*/true))
+      return V;
+  }
+  return nullptr;
+}
+
 Value *InstCombinerImpl::foldAndOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
                                           Instruction &I, bool IsAnd,
                                           bool IsLogical) {
   const SimplifyQuery Q = SQ.getWithInstruction(&I);
+
+  if (Value *V = foldSignedAddSubBitwiseOverflowCheck(LHS, RHS, IsAnd, Builder))
+    return V;
 
   ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
   Value *LHS0 = LHS->getOperand(0), *RHS0 = RHS->getOperand(0);
