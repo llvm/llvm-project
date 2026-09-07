@@ -98,8 +98,10 @@ void UseAfterLifetimeEnd::checkEndFunction(const ReturnStmt *RS,
 }
 
 static SourceRange getRegionDeclRange(const MemRegion *Source) {
-  if (const auto *VR = dyn_cast_or_null<VarRegion>(Source))
-    return VR->getDecl()->getSourceRange();
+  if (const auto *VR = dyn_cast_or_null<VarRegion>(Source)) {
+    const VarDecl *VD = VR->getDecl();
+    return SourceRange(VD->getLocation());
+  }
   return SourceRange();
 }
 

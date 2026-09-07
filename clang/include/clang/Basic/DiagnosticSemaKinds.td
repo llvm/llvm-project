@@ -31,6 +31,13 @@ defm templ_default_in_function_templ : CXX11Compat<
 defm template_arg_extra_parens : CXX11Compat<
   "parentheses around address non-type template argument are">;
 defm typename_outside_of_template : CXX11Compat<"'typename' outside of a template is">;
+defm template_arg_object_internal : CXX11Compat<
+  "non-type template argument referring to %select{function|object}0 %1 with "
+  "internal linkage is">;
+defm template_outside_of_template : CXX11Compat<
+  "use of 'template' keyword outside of a template is">;
+defm explicit_conversion_functions : CXX11Compat<
+  "explicit conversion functions are">;
 
 // C++14 compatibility with C++11 and earlier.
 defm constexpr_type_definition : CXX14Compat<
@@ -40,10 +47,14 @@ defm constexpr_local_var : CXX14Compat<
 defm constexpr_body_multiple_return : CXX14Compat<
   "multiple return statements in constexpr function is">;
 defm variable_template : CXX14Compat<"variable templates are">;
+defm init_capture : CXX14Compat<"initialized lambda captures are">;
 
 // C++17 compatibility with C++14 and earlier.
 defm decomp_decl : CXX17Compat<"structured binding declarations are">;
 defm inline_variable : CXX17Compat<"inline variables are">;
+defm for_range_begin_end_types_differ : CXX17Compat<
+  "'begin' and 'end' returning different types (%0 and %1) is">;
+defm star_this_lambda_capture : CXX17Compat<"by value capture of '*this' is">;
 
 // C++20 compatibility with C++17 and earlier.
 defm decomp_decl_spec
@@ -63,17 +74,32 @@ defm ctad_for_alias_templates
     : CXX20Compat<"class template argument deduction for alias templates is">;
 defm implicit_typename
     : CXX20Compat<"missing 'typename' prior to dependent type name %0 is">;
-
 defm auto_param : CXX20Compat<"'auto' parameters are">;
+defm using_decl_scoped_enumerator : CXX20Compat<
+  "using declaration naming a scoped enumerator is">;
+defm init_capture_pack : CXX20Compat<"initialized lambda capture packs are">;
+defm equals_this_lambda_capture : CXX20Compat<
+  "explicit capture of 'this' with a capture default of '=' is">;
+defm capture_binding : CXX20Compat<"captured structured bindings are">;
+defm defaulted_comparison : CXX20Compat<"defaulted comparison operators are">;
 
 // C++23 compatibility with C++20 and earlier.
 defm constexpr_static_var : CXX23Compat<
   "definition of a %select{static|thread_local}1 variable "
   "in a constexpr %select{function|constructor}0 "
   "is">;
+defm operator_overload_static : CXX23Compat<
+  "declaring overloaded %0 as 'static' is">;
+
+defm auto_expr : CXX23Compat<"'auto' as a functional-style cast is">;
 
 // C++26 compatibility with C++23 and earlier.
 defm decomp_decl_cond : CXX26Compat<"structured binding declaration in a condition is">;
+defm pack_indexing : CXX26Compat<"pack indexing is">;
+defm placeholder_var_definition : CXX26Compat<"placeholder variables are">;
+
+// C++29 compatibility with C++26 and earlier.
+defm pack_indexing_template : CXX29Compat<"pack indexing for template names is">;
 
 // Compatibility warnings duplicated across multiple language versions.
 foreach std = [14, 20, 23] in {
@@ -548,10 +574,10 @@ def warn_import_implementation_partition_unit_in_interface_unit : Warning<
 
 def warn_parameter_size: Warning<
   "%0 is a large (%1 bytes) pass-by-value argument; "
-  "pass it by reference instead ?">, InGroup<LargeByValueCopy>;
+  "pass it by reference instead?">, InGroup<LargeByValueCopy>;
 def warn_return_value_size: Warning<
   "return value of %0 is a large (%1 bytes) pass-by-value object; "
-  "pass it by reference instead ?">, InGroup<LargeByValueCopy>;
+  "pass it by reference instead?">, InGroup<LargeByValueCopy>;
 def warn_return_value_udt: Warning<
   "%0 has C-linkage specified, but returns user-defined type %1 which is "
   "incompatible with C">, InGroup<ReturnTypeCLinkage>;
@@ -715,12 +741,6 @@ def err_using_decl_can_not_refer_to_namespace : Error<
   "using declaration cannot refer to a namespace">;
 def note_namespace_using_decl : Note<
   "did you mean 'using namespace'?">;
-def warn_cxx17_compat_using_decl_scoped_enumerator: Warning<
-  "using declaration naming a scoped enumerator is incompatible with "
-  "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
-def ext_using_decl_scoped_enumerator : ExtWarn<
-  "using declaration naming a scoped enumerator is a C++20 extension">,
-  InGroup<CXX20>;
 def err_using_decl_constructor : Error<
   "using declaration cannot refer to a constructor">;
 def warn_cxx98_compat_using_decl_constructor : Warning<
@@ -1934,16 +1954,6 @@ def err_friend_not_first_in_declaration : Error<
   "'friend' must appear first in a non-function declaration">;
 def err_using_decl_friend : Error<
   "cannot befriend target of using declaration">;
-def warn_template_qualified_friend_unsupported
-    : Warning<
-          "dependent nested name specifier %0 for friend class declaration is "
-          "not supported; turning off access control for %1">,
-      InGroup<UnsupportedFriend>;
-def warn_template_qualified_friend_ignored
-    : Warning<"dependent nested name specifier %0 for friend template "
-              "declaration is "
-              "not supported; ignoring this friend declaration">,
-      InGroup<UnsupportedFriend>;
 def ext_friend_tag_redecl_outside_namespace : ExtWarn<
   "unqualified friend declaration referring to type outside of the nearest "
   "enclosing namespace is a Microsoft extension; add a nested name specifier">,
@@ -1953,6 +1963,16 @@ def err_friend_template_decl_multiple_specifiers: Error<
   "a friend declaration that befriends a template must contain exactly one type-specifier">;
 def friend_template_decl_malformed_pack_expansion : Error<
   "friend declaration expands pack %0 that is declared it its own template parameter list">;
+def err_pack_indexing_in_friend : Error<
+  "a pack indexing specifier cannot be used in a nested name specifier of a "
+  "friend declaration">;
+def err_dependent_friend_not_member_of_template_spec : Error<
+  "%0 does not name a class template">;
+def err_dependent_friend_not_member : Error<
+  "friend declaration does not name a member of a class template specialization">;
+def err_dependent_friend_undeduced_params : Error<
+  "%select{template parameter|template parameters}0 of friend declaration "
+  "cannot be deduced from %1">;
 
 def err_invalid_base_in_interface : Error<
   "interface type cannot inherit from "
@@ -2728,9 +2748,6 @@ def err_auto_new_ctor_multiple_expressions : Error<
 def err_auto_expr_init_paren_braces : Error<
   "cannot deduce actual type for %1 from "
   "%select{parenthesized|nested}0 initializer list">;
-def warn_cxx20_compat_auto_expr : Warning<
-  "'auto' as a functional-style cast is incompatible with C++ standards "
-  "before C++23">, InGroup<CXXPre23Compat>, DefaultIgnore;
 def err_auto_missing_trailing_return : Error<
   "'auto' return without trailing return type; deduced return types are a "
   "C++14 extension">;
@@ -2970,12 +2987,6 @@ def err_for_range_incomplete_type : Error<
   "cannot use incomplete type %0 as a range">;
 def err_for_range_iter_deduction_failure : Error<
   "cannot use type %0 as an iterator">;
-def ext_for_range_begin_end_types_differ : ExtWarn<
-  "'begin' and 'end' returning different types (%0 and %1) is a C++17 extension">,
-  InGroup<CXX17>;
-def warn_for_range_begin_end_types_differ : Warning<
-  "'begin' and 'end' returning different types (%0 and %1) is incompatible "
-  "with C++ standards before C++17">, InGroup<CXXPre17Compat>, DefaultIgnore;
 def note_in_for_range: Note<
   "when looking up '%select{begin|end}0' function for range expression "
   "of type %1">;
@@ -5325,11 +5336,16 @@ def note_ovl_candidate_deduced_mismatch : Note<
     "adjusted type of %select{|element of }4argument}1,2%3">;
 def note_ovl_candidate_non_deduced_mismatch : Note<
     "candidate template ignored: could not match %diff{$ against $|types}0,1">;
+def note_friend_template_non_deduced_mismatch : Note<
+    "candidate friend template ignored: could not match "
+    "%diff{$ against $|types}0,1">;
 // This note is needed because the above note would sometimes print two
 // different types with the same name.  Remove this note when the above note
 // can handle that case properly.
 def note_ovl_candidate_non_deduced_mismatch_qualified : Note<
     "candidate template ignored: could not match %q0 against %q1">;
+def note_friend_template_non_deduced_mismatch_qualified : Note<
+    "candidate friend template ignored: could not match %q0 against %q1">;
 
 // Note that we don't treat templates differently for this diagnostic.
 def note_ovl_candidate_arity : Note<"candidate "
@@ -5789,13 +5805,6 @@ def err_template_arg_method : Error<
 def err_template_arg_object_no_linkage : Error<
   "non-type template argument refers to %select{function|object}0 %1 that "
   "does not have linkage">;
-def warn_cxx98_compat_template_arg_object_internal : Warning<
-  "non-type template argument referring to %select{function|object}0 %1 with "
-  "internal linkage is incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
-def ext_template_arg_object_internal : ExtWarn<
-  "non-type template argument referring to %select{function|object}0 %1 with "
-  "internal linkage is a C++11 extension">, InGroup<CXX11>;
 def err_template_arg_thread_local : Error<
   "non-type template argument refers to thread-local object">;
 def note_template_arg_internal_object : Note<
@@ -6245,11 +6254,6 @@ def note_referenced_type_template : Note<
   "%select{class|type alias}0 template declared here">;
 def err_template_kw_missing
     : Error<"missing 'template' keyword prior to dependent template name %0">;
-def ext_template_outside_of_template : ExtWarn<
-  "'template' keyword outside of a template">, InGroup<CXX11>;
-def warn_cxx98_compat_template_outside_of_template : Warning<
-  "use of 'template' keyword outside of a template is incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
 
 def err_non_type_template_in_nested_name_specifier : Error<
   "qualified name refers into a specialization of %select{function|variable}0 "
@@ -6319,12 +6323,6 @@ def err_expected_name_of_pack : Error<
 
 def err_pack_index_out_of_bound : Error<
   "invalid index %0 for pack %1 of size %2">;
-
-def ext_pack_indexing : ExtWarn<
-  "pack indexing is a C++2c extension">, InGroup<CXX26>;
-def warn_cxx23_pack_indexing : Warning<
-  "pack indexing is incompatible with C++ standards before C++2c">,
-  DefaultIgnore, InGroup<CXXPre26Compat>;
 
 def err_pack_outside_template : Error<
   "pack declaration outside of template">;
@@ -7533,11 +7531,6 @@ def err_using_placeholder_variable : Error<
   "ambiguous reference to placeholder '_', which is defined multiple times">;
 def note_reference_placeholder : Note<
   "placeholder declared here">;
-def ext_placeholder_var_definition : ExtWarn<
-  "placeholder variables are a C++2c extension">, InGroup<CXX26>;
-def warn_cxx23_placeholder_var_definition : Warning<
-  "placeholder variables are incompatible with C++ standards before C++2c">,
-  DefaultIgnore, InGroup<CXXPre26Compat>;
 
 def ext_sizeof_alignof_function_type : Extension<
   "invalid application of '%0' to a function type">, InGroup<PointerArith>;
@@ -8969,11 +8962,6 @@ let CategoryName = "Lambda Issue" in {
     "%select{| explicitly}1 captured here">;
 
   // C++14 lambda init-captures.
-  def warn_cxx11_compat_init_capture : Warning<
-    "initialized lambda captures are incompatible with C++ standards "
-    "before C++14">, InGroup<CXXPre14Compat>, DefaultIgnore;
-  def ext_init_capture : ExtWarn<
-    "initialized lambda captures are a C++14 extension">, InGroup<CXX14>;
   def err_init_capture_no_expression : Error<
     "initializer missing for lambda capture %0">;
   def err_init_capture_multiple_expressions : Error<
@@ -8985,11 +8973,6 @@ let CategoryName = "Lambda Issue" in {
     "cannot deduce type for lambda capture %0 from initializer of type %2">;
   def err_init_capture_deduction_failure_from_init_list : Error<
     "cannot deduce type for lambda capture %0 from initializer list">;
-  def warn_cxx17_compat_init_capture_pack : Warning<
-    "initialized lambda capture packs are incompatible with C++ standards "
-    "before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
-  def ext_init_capture_pack : ExtWarn<
-    "initialized lambda pack captures are a C++20 extension">, InGroup<CXX20>;
 
   // C++14 generic lambdas.
   def warn_cxx11_compat_generic_lambda : Warning<
@@ -8998,24 +8981,11 @@ let CategoryName = "Lambda Issue" in {
   def err_lambda_explicit_temp_spec : Error<
     "a member of a lambda should not be explicitly %select{specialized|instantiated}0">;
 
-  // C++17 '*this' captures.
-  def warn_cxx14_compat_star_this_lambda_capture : Warning<
-    "by value capture of '*this' is incompatible with C++ standards before C++17">,
-     InGroup<CXXPre17Compat>, DefaultIgnore;
-  def ext_star_this_lambda_capture_cxx17 : ExtWarn<
-    "capture of '*this' by copy is a C++17 extension">, InGroup<CXX17>;
-
   // C++17 parameter shadows capture
   def err_parameter_shadow_capture : Error<
     "a lambda parameter cannot shadow an explicitly captured entity">;
 
   // C++20 [=, this] captures.
-  def warn_cxx17_compat_equals_this_lambda_capture : Warning<
-    "explicit capture of 'this' with a capture default of '=' is incompatible "
-    "with C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
-  def ext_equals_this_lambda_capture_cxx20 : ExtWarn<
-    "explicit capture of 'this' with a capture default of '=' "
-    "is a C++20 extension">, InGroup<CXX20>;
   def warn_deprecated_this_capture : Warning<
     "implicit capture of 'this' with a capture default of '=' is deprecated">,
     InGroup<DeprecatedThisCapture>;
@@ -9840,6 +9810,11 @@ def err_cuda_host_shared : Error<
     "%select{__device__|__global__|__host__|__host__ __device__}0 functions">;
 def err_cuda_nonstatic_constdev: Error<"__constant__, __device__, and "
     "__managed__ are not allowed on non-static local variables">;
+def err_cuda_invalid_use_of_managedvar: Error<"invalid use of a __managed__ "
+    "variable">;
+def note_cuda_managed_var_in_glob_init : Note<"__managed__ variable shall not "
+    "be used in initialization of an object with static or thread local "
+    "storage duration">;
 def err_cuda_address_space_gpuvar: Error<"__constant__, __device__, and "
     "__shared__ variables must use default address space">;
 def err_cuda_grid_constant_not_allowed : Error<
@@ -10331,12 +10306,6 @@ def err_local_nested_class_invalid_scope : Error<
   "nested local class %0 must be defined in the same block scope as %1">;
 def err_capture_binding_openmp : Error<
   "capturing a structured binding is not yet supported in OpenMP">;
-def ext_capture_binding : ExtWarn<
-  "captured structured bindings are a C++20 extension">, InGroup<CXX20>;
-def warn_cxx17_compat_capture_binding : Warning<
-  "captured structured bindings are incompatible with "
-  "C++ standards before C++20">,
-  InGroup<CXXPre20Compat>, DefaultIgnore;
 
 def err_static_data_member_not_allowed_in_local_class : Error<
   "static data member %0 not allowed in local %sub{select_tag_type_kind}2 %1">;
@@ -10388,11 +10357,6 @@ def err_operator_overload_needs_class_or_enum : Error<
   "or enumeration type">;
 
 def err_operator_overload_variadic : Error<"overloaded %0 cannot be variadic">;
-def warn_cxx20_compat_operator_overload_static : Warning<
-  "declaring overloaded %0 as 'static' is incompatible with C++ standards "
-  "before C++23">, InGroup<CXXPre23Compat>, DefaultIgnore;
-def ext_operator_overload_static : ExtWarn<
-  "declaring overloaded %0 as 'static' is a C++23 extension">, InGroup<CXX23>;
 def err_operator_overload_static : Error<
   "overloaded %0 cannot be a static member function">;
 def err_operator_overload_default_arg : Error<
@@ -10535,13 +10499,6 @@ def warn_conv_to_void_not_used : Warning<
 def warn_not_compound_assign : Warning<
   "use of unary operator that may be intended as compound assignment (%0=)">;
 
-// C++11 explicit conversion operators
-def ext_explicit_conversion_functions : ExtWarn<
-  "explicit conversion functions are a C++11 extension">, InGroup<CXX11>;
-def warn_cxx98_compat_explicit_conversion_functions : Warning<
-  "explicit conversion functions are incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
-
 // C++11 defaulted functions
 def err_defaulted_special_member_params : Error<
   "an explicitly-defaulted %sub{select_special_member_kind}0 cannot "
@@ -10603,11 +10560,6 @@ def note_vbase_moved_here : Note<
 def select_defaulted_comparison_kind : TextSubstitution<
   "%select{<ERROR>|equality|three-way|equality|relational}0 comparison "
   "operator">;
-def ext_defaulted_comparison : ExtWarn<
-  "defaulted comparison operators are a C++20 extension">, InGroup<CXX20>;
-def warn_cxx17_compat_defaulted_comparison : Warning<
-  "defaulted comparison operators are incompatible with C++ standards "
-  "before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 def err_defaulted_comparison_template : Error<
   "comparison operator template cannot be defaulted">;
 def err_defaulted_comparison_num_args : Error<
@@ -11082,6 +11034,10 @@ def warn_lifetime_safety_dangling_global_moved
       "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyDanglingGlobalMoved>,
       DefaultIgnore;
+def warn_lifetime_safety_dangling_global_in_main
+    : Warning<"stack memory associated with %0 escapes to the %1 which will dangle after main returns">,
+      InGroup<LifetimeSafetyDanglingGlobalInMain>,
+      DefaultIgnore;
 
 def warn_lifetime_safety_lifetimebound_violation
     : Warning<"could not verify that the return value can be lifetime bound to %select{an unnamed parameter|'%1'|the implicit this parameter}0">,
@@ -11118,7 +11074,7 @@ def note_lifetime_safety_escapes_to_static_storage_here: Note<"escapes to this s
 def note_lifetime_safety_lifetimebound_here: Note<"'lifetimebound' attribute appears here on the definition">;
 def note_lifetime_safety_aliases_storage : Note<"%0 aliases the storage of %1">;
 def note_lifetime_safety_aliases_storage_lifetimebound : Note<
-  "%0 aliases the storage of %1 because %select{parameter %3|the implicit object parameter}2 is lifetimebound">;
+  "%0 aliases the storage of %1 because %select{parameter %3|the implicit object parameter}2 is %select{marked as|inferred as}4 lifetimebound">;
 
 def warn_lifetime_safety_intra_tu_param_suggestion
     : Warning<"parameter in intra-TU function should be marked "
@@ -11459,14 +11415,6 @@ def err_noreturn_has_return_expr : Error<
 def warn_noreturn_coroutine : Warning<
   "coroutine %0 cannot be declared 'noreturn' as it always returns a coroutine handle">,
   InGroup<InvalidNoreturn>;
-def err_carries_dependency_missing_on_first_decl : Error<
-  "%select{function|parameter}0 declared '[[carries_dependency]]' "
-  "after its first declaration">;
-def note_carries_dependency_missing_first_decl : Note<
-  "declaration missing '[[carries_dependency]]' attribute is here">;
-def err_carries_dependency_param_not_function_decl : Error<
-  "'[[carries_dependency]]' attribute only allowed on parameter in a function "
-  "declaration or lambda">;
 def err_block_not_allowed_on : Error<
   "'__block' is not allowed on %enum_select<NotAllowedBlockVarReason>{"
   "%NonlocalVariable{a nonlocal variable}|"
@@ -12320,6 +12268,10 @@ def err_omp_loop_bad_collapse_var : Error<
   "cannot use variable %1 in collapsed imperfectly-nested loop %select{init|condition|increment}0 statement">;
 def err_omp_loop_var_reused_in_collapsed_loop : Error<
   "loop iteration variable %0 cannot be reused in a nested loop of a collapsed loop nest">;
+def err_omp_collapse_stacked_tile : Error<
+  "cannot %select{collapse|apply a loop transformation to}0 the intra-tile loop "
+  "of a '#pragma omp tile' that is nested inside another loop-transforming "
+  "directive; OpenMP permits this construct, but it is not yet supported">;
 def err_omp_simd_region_cannot_use_stmt : Error<
   "'%0' statement cannot be used in OpenMP simd region">;
 def warn_omp_loop_64_bit_var : Warning<
@@ -12836,8 +12788,7 @@ def err_omp_modifier_requires_version : Error<
   "'%0' modifier in '%1' clause requires OpenMP %2 or later">;
 def err_omp_unexpected_num_exprs
     : Error<"unexpected number of expressions in '%0' clause (expected %1, have %2)">;
-def err_omp_incompatible_modifiers
-    : Error<"'%0' modifier cannot be specified with '%1' modifier in '%2' clause">;
+def err_omp_malformed_complex_modifier : Error<"malformed '%0' complex modifier in '%1' clause">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
@@ -13354,7 +13305,7 @@ def warn_invalid_default_version_priority
 
 // three-way comparison operator diagnostics
 def err_implied_comparison_category_type_not_found : Error<
-  "cannot %select{use builtin operator '<=>'|default 'operator<=>'}1 "
+  "cannot %select{use builtin operator '<=>'|default 'operator<=>'|compute order}1 "
   "because type '%0' was not found; include <compare>">;
 def err_spaceship_argument_narrowing : Error<
   "argument to 'operator<=>' "
@@ -13478,11 +13429,11 @@ def err_builtin_matrix_invalid_member
     : Error<"invalid matrix member '%0' expected %1">;
 
 def warn_mismatched_import : Warning<
-  "import %select{module|name}0 (%1) does not match the import %select{module|name}0 (%2) of the "
+  "%select{import module|import name|export name}0 (%1) does not match the %select{import module|import name|export name}0 (%2) of the "
   "previous declaration">,
   InGroup<IgnoredAttributes>;
 def warn_import_on_definition : Warning<
-  "import %select{module|name}0 cannot be applied to a function with a definition">,
+  "import %select{module|name}0 cannot be applied to a %select{function|variable}1 with a definition">,
   InGroup<IgnoredAttributes>;
 
 def err_preserve_field_info_not_field : Error<
@@ -13675,6 +13626,9 @@ def err_riscv_type_requires_extension : Error<
   "RISC-V type %0 requires the '%1' extension">;
 def err_riscv_attribute_interrupt_requires_extension : Error<
   "RISC-V 'interrupt' attribute '%0' requires extension '%1'">;
+def warn_riscv_attribute_interrupt_duplicate_type : Warning<
+  "RISC-V 'interrupt' attribute type '%0' specified more than once">,
+  InGroup<DiagGroup<"duplicate-interrupt-type">>;
 def err_riscv_attribute_interrupt_invalid_combination : Error<
   "RISC-V 'interrupt' attribute contains invalid combination of interrupt types">;
 def err_riscv_builtin_invalid_twiden : Error<"RISC-V XSfmm twiden must be 1, 2 or 4">;
@@ -14322,6 +14276,8 @@ def note_amdgpu_named_barrier_reason_inherited : Note<
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+def err_invalid_sync_scope
+    : Error<"unsupported atomic synchronization scope '%0'">;
 def err_amdgcn_processor_is_arg_not_literal
     : Error<"the argument to __builtin_amdgcn_processor_is must be a string "
             "literal">;

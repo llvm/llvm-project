@@ -10,6 +10,8 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
+#include "llvm/Support/BlockFrequency.h"
+#include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -195,7 +197,7 @@ getEarlyExits(const VPlan &Plan, const VPBlockBase *MiddleVPBB);
 VPScalarIVStepsRecipe *createScalarIVSteps(
     VPlan &Plan, InductionDescriptor::InductionKind Kind,
     Instruction::BinaryOps InductionOpcode, FPMathOperator *FPBinOp,
-    Instruction *TruncI, VPIRValue *StartV, VPValue *Step, DebugLoc DL,
+    Instruction *TruncI, VPValue *StartV, VPValue *Step, DebugLoc DL,
     VPBuilder &Builder, const VPIRFlags::WrapFlagsTy &Flags = {});
 
 /// Scalarize a VPWidenPointerInductionRecipe by replacing it with a PtrAdd
@@ -221,6 +223,21 @@ SmallVector<VPUser *> collectUsersRecursively(VPValue *V);
 VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R, ArrayRef<VPValue *> Operands,
                             const DataLayout &DL);
 
+/// Denominator of the frequencies computed by computeExecutionFrequencies, i.e.
+/// the frequency of a block that always executes. Wider than
+/// BranchProbability's 31-bit one, which truncates rarely executed blocks to 0.
+inline constexpr uint64_t AlwaysExecutesFreq = 1ULL << 63;
+
+/// Returns \p Freq as a BranchProbability, relative to AlwaysExecutesFreq.
+BranchProbability getExecutionProbability(BlockFrequency Freq);
+
+/// Computes for each block in \p Blocks, which must be in reverse post-order,
+/// the frequency with which it executes relative to the first (header) block.
+/// The frequency of a block is the sum over its incoming edges, or std::nullopt
+/// if any edge on a path reaching it lacks branch weights.
+DenseMap<const VPBasicBlock *, std::optional<BlockFrequency>>
+computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks);
+
 namespace detail {
 
 /// Template-independent implementation for pullOutPermutations.
@@ -245,12 +262,16 @@ void pullOutPermutations(VPlan &Plan, Match_t Perm, Builder Build) {
 } // namespace vputils
 
 /// Lightweight SCEV-to-VPlan expander. Converts SCEV expressions into
-/// VPInstructions where possible, and returning nullptr for unsupported
-/// expressions (like adds, casts, min/max).
+/// VPInstructions and live-ins. SCEVAddRecExprs are wrapped in a
+/// VPExpandSCEVRecipe to be expanded to IR later.
 class VPSCEVExpander {
   VPBuilder &Builder;
   ScalarEvolution &SE;
   DebugLoc DL;
+
+  /// When true, nested SCEVUDivExprs are expanded so that they cannot divide by
+  /// zero, matching SCEVExpander's SafeUDivMode.
+  bool SafeUDivMode = false;
 
   /// Try to find a loop-invariant IR value in the plan's entry block whose
   /// SCEV matches \p S. Returns the corresponding live-in VPValue, or nullptr
@@ -261,9 +282,8 @@ public:
   VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL)
       : Builder(Builder), SE(SE), DL(DL) {}
 
-  /// Try to expand \p S into recipes and live-ins using the builder. Returns
-  /// nullptr if \p S cannot be expanded yet.
-  VPValue *tryToExpand(const SCEV *S);
+  /// Expand \p S into recipes and live-ins using the builder.
+  VPValue *expand(const SCEV *S);
 };
 //===----------------------------------------------------------------------===//
 // Utilities for modifying predecessors and successors of VPlan blocks.

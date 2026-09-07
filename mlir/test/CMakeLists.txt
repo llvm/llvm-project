@@ -40,13 +40,13 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
   option(MLIR_RUN_CUDA_SM90_TESTS "Run CUDA H100 tests.")
   option(MLIR_RUN_ARM_SVE_TESTS "Run Arm SVE tests.")
   option(MLIR_RUN_ARM_SME_TESTS "Run Arm SME tests.")
-  option(MLIR_RUN_ARM_I8MM_TESTS "Run Arm I8MM tests.")
+  option(MLIR_RUN_ARM_NEON_TESTS "Run Arm Neon tests.")
 
   # Check whether an emulator is required - if yes then make sure that it's
   # been set.
   check_emulator(MLIR_RUN_ARM_SVE_TESTS "HWCAP_SVE" ARM_EMULATOR_EXECUTABLE)
   check_emulator(MLIR_RUN_ARM_SME_TESTS "HWCAP2_SME" ARM_EMULATOR_EXECUTABLE)
-  check_emulator(MLIR_RUN_ARM_I8MM_TESTS "HWCAP2_I8MM" ARM_EMULATOR_EXECUTABLE)
+  check_emulator(MLIR_RUN_ARM_NEON_TESTS "HWCAP2_I8MM" ARM_EMULATOR_EXECUTABLE)
 
   # The native target may not be enabled when cross compiling, raise an error.
   if(NOT MLIR_ENABLE_EXECUTION_ENGINE)
@@ -73,6 +73,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_INCLUDE_SPIRV_TOOLS_TESTS
   LLVM_HAS_AMDGPU_TARGET
   MLIR_ENABLE_BINDINGS_PYTHON
+  MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   MLIR_ENABLE_PYTHON_STABLE_ABI
   MLIR_ENABLE_CUDA_RUNNER
   MLIR_ENABLE_ROCM_RUNNER
@@ -84,7 +85,7 @@ llvm_canonicalize_cmake_booleans(
   MLIR_RUN_X86_TESTS
   MLIR_RUN_ARM_SVE_TESTS
   MLIR_RUN_ARM_SME_TESTS
-  MLIR_RUN_ARM_I8MM_TESTS
+  MLIR_RUN_ARM_NEON_TESTS
   MLIR_RUN_CUDA_SM80_TESTS
   MLIR_RUN_CUDA_SM80_LT_TESTS
   MLIR_RUN_CUDA_SM90_TESTS
@@ -169,8 +170,13 @@ set(MLIR_TEST_DEPENDS ${MLIR_TEST_DEPENDS}
 # useless binaries.
 if(LLVM_ENABLE_PIC AND TARGET ${LLVM_NATIVE_ARCH})
   list(APPEND MLIR_TEST_DEPENDS
-    mlir-runner
     llc
+  )
+endif()
+# The native target may be available but the execution engine may not.
+if(LLVM_ENABLE_PIC AND MLIR_ENABLE_EXECUTION_ENGINE)
+  list(APPEND MLIR_TEST_DEPENDS
+    mlir-runner
     mlir_async_runtime
     mlir-capi-execution-engine-test
     mlir-capi-global-constructors-test

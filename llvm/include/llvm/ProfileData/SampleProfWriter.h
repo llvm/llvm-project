@@ -130,6 +130,8 @@ public:
   virtual void setUseMD5() {}
   virtual void setPartialProfile() {}
   virtual void setUseCtxSplitLayout() {}
+  virtual void setUseMD5ProfileSymbolList() {}
+  virtual void setUseMD5IndexedTables() {}
 
   void setFormatVersion(uint64_t V) {
     assert(sampleprof::formatVersionIsSupported(V) &&
@@ -316,6 +318,10 @@ public:
     resetSecLayout(SectionLayout::CtxSplitLayout);
   }
 
+  void setUseMD5ProfileSymbolList() override { UseMD5ProfSymList = true; }
+
+  void setUseMD5IndexedTables() override { UseMD5IndexedTables = true; }
+
   void resetSecLayout(SectionLayout SL) {
     verifySecLayout(SL);
 #ifndef NDEBUG
@@ -422,6 +428,12 @@ private:
   MapVector<SampleContext, uint64_t> FuncOffsetTable;
   // Whether to use MD5 to represent string.
   bool UseMD5 = false;
+  // Whether to write the profile symbol list as 64-bit MD5 hashes in Eytzinger
+  // layout.
+  bool UseMD5ProfSymList = false;
+  // Whether to write MD5-based indexed NameTable and parallel FuncOffsetTable
+  // in Eytzinger layout.
+  bool UseMD5IndexedTables = false;
   size_t NumNested = 0;
   size_t NumFlat = 0;
 

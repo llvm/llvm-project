@@ -237,6 +237,7 @@ def AddDebugInfo : Pass<"add-debug-info", "mlir::ModuleOp"> {
            [{::llvm::cl::values(
             clEnumValN(mlir::LLVM::DIEmissionKind::Full, "Full", "Emit full debug info"),
             clEnumValN(mlir::LLVM::DIEmissionKind::LineTablesOnly, "LineTablesOnly", "Emit line tables only"),
+            clEnumValN(mlir::LLVM::DIEmissionKind::DebugDirectivesOnly, "DebugDirectivesOnly", "Emit line info directives only"),
             clEnumValN(mlir::LLVM::DIEmissionKind::None, "None", "Emit no debug information")
           )}]
            >,
@@ -282,6 +283,35 @@ def SimplifyIntrinsics : Pass<"simplify-intrinsics", "mlir::ModuleOp"> {
     Option<"enableExperimental", "enable-experimental", "bool",
            /*default=*/"false",
            "Enable experimental code that may not always work correctly">
+  ];
+}
+
+def CudaHeapAllocPromotion
+    : Pass<"cuda-heap-alloc-promotion", "mlir::func::FuncOp"> {
+  let summary = "Allocate dynamically sized automatic variables in CUDA "
+                "unified or managed memory.";
+  let description = [{
+    Under -gpu=mem:unified|managed, which sets fir.cuda_heap_alloc on the
+    module, rewrite the dynamically sized fir.alloca of the user variables into
+    fir.allocmem/fir.freemem pairs marked with that mode, so that codegen calls
+    the matching allocator entry points instead of libc malloc and free. The
+    host pointer of such a variable has to be device accessible, so this is a
+    correctness requirement of those modes rather than a placement heuristic:
+    the pass runs on its own instead of being part of whichever array
+    allocation pass the pipeline happens to select. The pairs it creates are
+    marked fir.must_be_heap, which keeps those passes from moving them back to
+    the stack. Without the module attribute the pass does nothing.
+
+    Under mem:unified every host address is device accessible, including the
+    stack, so there the promotion is a placement choice that -fstack-arrays
+    opts out of. Under mem:managed only what the managed allocator hands out
+    is, so the promotion always happens.
+  }];
+  let dependentDialects = ["fir::FIROpsDialect"];
+  let options = [
+    Option<"stackArrays", "stack-arrays", "bool", /*default=*/"false",
+           "Keep the automatic arrays of mem:unified on the stack, as "
+           "requested by -fstack-arrays.">
   ];
 }
 
@@ -377,7 +407,7 @@ def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {
   let dependentDialects = ["mlir::LLVM::LLVMDialect"];
 }
 
-def SimplifyRegionLite : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
+def SimplifyRegionLite : Pass<"simplify-region-lite"> {
   let summary = "Region simplification";
   let description = [{
     Run region DCE and erase unreachable blocks in regions.
@@ -529,6 +559,18 @@ def CUFAllocDelay : Pass<"cuf-alloc-delay", "::mlir::func::FuncOp"> {
 def CUFAllocationConversion : Pass<"cuf-allocation-convert", "mlir::ModuleOp"> {
   let summary = "Convert allocation related CUF operations to runtime calls";
   let dependentDialects = ["fir::FIROpsDialect"];
+  let options = [
+    Option<"descriptorAllocFunction", "descriptor-alloc-function",
+           "std::string", /*default=*/"",
+           "Name of the function to call to allocate CUDA Fortran descriptors. "
+           "Must have the same signature as CUFAllocDescriptor. "
+           "Defaults to CUFAllocDescriptor.">,
+    Option<"descriptorFreeFunction", "descriptor-free-function",
+           "std::string", /*default=*/"",
+           "Name of the function to call to free CUDA Fortran descriptors. "
+           "Must have the same signature as CUFFreeDescriptor. "
+           "Defaults to CUFFreeDescriptor.">
+  ];
 }
 
 def CUFOpConversion : Pass<"cuf-convert", "mlir::ModuleOp"> {
@@ -749,7 +791,9 @@ def LoopInvariantCodeMotion : Pass<"flang-licm", "::mlir::func::FuncOp"> {
             clEnumValN(::fir::LICMNestedHoistingMode::None,
                        "none", "Do not hoist from nested regions"),
             clEnumValN(::fir::LICMNestedHoistingMode::Cheap,
-                       "cheap", "Only hoist cheap ops like fir.convert"),
+                       "cheap", "Only hoist cheap ops like fir.convert, "
+                                "fir.address_of, and scalar or descriptor "
+                                "loads"),
             clEnumValN(::fir::LICMNestedHoistingMode::Aggressive,
                        "aggressive", "Hoist all safe invariant ops")
            )}]>];

@@ -69,6 +69,7 @@ add_clang_library(clangCIR
   LINK_LIBS
   clangAST
   clangBasic
+  clangCodeGenUtils
   clangLex
   ${dialect_libs}
   CIRRegisterAllDialects

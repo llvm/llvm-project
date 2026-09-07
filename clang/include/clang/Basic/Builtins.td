@@ -3917,6 +3917,7 @@ def StrlCpy : GNULibBuiltin<"string.h"> {
 def StrlCat : GNULibBuiltin<"string.h"> {
   let Spellings = ["strlcat"];
   let Prototype = "size_t(char*, char const*, size_t)";
+  let AddBuiltinPrefixedAlias = 1;
 }
 
 def ObjcMsgSend : ObjCLibBuiltin<"objc_message.h"> {
@@ -5317,6 +5318,12 @@ def HLSLResourceGetPointerTyped : Builtin {
   let Prototype = "void(...)";
 }
 
+def HLSLMaybeTransposeMatrix : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_transpose_if_memory_is_row_major"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def HLSLResourceLoadWithStatus : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_load_with_status"];
   let Attributes = [NoThrow];
@@ -5331,6 +5338,12 @@ def HLSLResourceLoadWithStatusTyped : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLResourceLoadLevel : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_load_level"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceLoadMS : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_load_ms"];
   let Attributes = [NoThrow];
   let Prototype = "void(...)";
 }
@@ -5539,6 +5552,18 @@ def HLSLInterlockedAdd : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void (...)";
 }
 
+def HLSLInterlockedAnd : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_and"];
+  let Attributes = [NoThrow];
+  let Prototype = "void (...)";
+}
+
+def HLSLInterlockedMin : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_interlocked_min"];
+  let Attributes = [NoThrow];
+  let Prototype = "void (...)";
+}
+
 def HLSLInterlockedOr : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_interlocked_or"];
   let Attributes = [NoThrow];
@@ -5709,12 +5734,6 @@ def HLSLMad : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLMul : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_mul"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
-  let Prototype = "void(...)";
-}
-
-def HLSLNormalize : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_normalize"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }

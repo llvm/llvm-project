@@ -107,6 +107,7 @@ public:
   // class is defined below.
   using PopulateDefaultAttrsFn =
       llvm::unique_function<void(const OperationName &, NamedAttrList &) const>;
+  using InherentAttrVisitor = llvm::function_ref<void(StringRef, Attribute &)>;
   using PrintAssemblyFn =
       llvm::unique_function<void(Operation *, OpAsmPrinter &, StringRef) const>;
   using VerifyInvariantsFn =
@@ -136,7 +137,8 @@ public:
                                                      StringRef name) = 0;
     virtual void setInherentAttr(Operation *op, StringAttr name,
                                  Attribute value) = 0;
-    virtual void populateInherentAttrs(Operation *op, NamedAttrList &attrs) = 0;
+    virtual void walkInherentAttrs(Operation *op,
+                                   InherentAttrVisitor visitor) = 0;
     virtual LogicalResult
     verifyInherentAttrs(OperationName opName, NamedAttrList &attributes,
                         function_ref<InFlightDiagnostic()> emitError) = 0;
@@ -225,7 +227,7 @@ protected:
     std::optional<Attribute> getInherentAttr(Operation *op,
                                              StringRef name) final;
     void setInherentAttr(Operation *op, StringAttr name, Attribute value) final;
-    void populateInherentAttrs(Operation *op, NamedAttrList &attrs) final;
+    void walkInherentAttrs(Operation *op, InherentAttrVisitor visitor) final;
     LogicalResult
     verifyInherentAttrs(OperationName opName, NamedAttrList &attributes,
                         function_ref<InFlightDiagnostic()> emitError) final;
@@ -416,9 +418,15 @@ public:
     return getImpl()->setInherentAttr(op, name, value);
   }
 
-  void populateInherentAttrs(Operation *op, NamedAttrList &attrs) const {
-    return getImpl()->populateInherentAttrs(op, attrs);
+  /// Visit the inherent attributes stored in the properties of `op`. The
+  /// visitor may replace an attribute by assigning to the attribute value.
+  void walkInherentAttrs(Operation *op, InherentAttrVisitor visitor) const {
+    getImpl()->walkInherentAttrs(op, visitor);
   }
+
+  /// Append the inherent attributes stored in the properties of `op` to
+  /// `attrs`.
+  void populateInherentAttrs(Operation *op, NamedAttrList &attrs) const;
   /// This method exists for backward compatibility purpose when using
   /// properties to store inherent attributes, it enables validating the
   /// attributes when parsed from the older generic syntax pre-Properties.
@@ -607,11 +615,11 @@ public:
       llvm_unreachable(
           "Can't call setInherentAttr on operation with empty properties");
     }
-    void populateInherentAttrs(Operation *op, NamedAttrList &attrs) final {
+    void walkInherentAttrs(Operation *op, InherentAttrVisitor visitor) final {
       if constexpr (hasProperties) {
         auto concreteOp = cast<ConcreteOp>(op);
-        ConcreteOp::populateInherentAttrs(concreteOp->getContext(),
-                                          concreteOp.getProperties(), attrs);
+        ConcreteOp::walkInherentAttrs(concreteOp->getContext(),
+                                      concreteOp.getProperties(), visitor);
       }
     }
     LogicalResult
@@ -955,6 +963,12 @@ private:
   mutable llvm::PointerIntPair<Attribute, 1, bool> dictionarySorted;
 };
 
+inline void OperationName::populateInherentAttrs(Operation *op,
+                                                 NamedAttrList &attrs) const {
+  walkInherentAttrs(
+      op, [&](StringRef name, Attribute &attr) { attrs.append(name, attr); });
+}
+
 //===----------------------------------------------------------------------===//
 // OperationState
 //===----------------------------------------------------------------------===//
@@ -984,6 +998,10 @@ struct OperationState {
   Attribute propertiesAttr;
 
 private:
+  /// The deleter and setter are non-null whenever `properties` is, and are
+  /// only called after checking it. Coverity misses this invariant and flags
+  /// the empty `function_ref`s as uninitialized.
+  // coverity[uninit_member]
   PropertyRef properties;
   llvm::function_ref<void(PropertyRef)> propertiesDeleter;
   llvm::function_ref<void(PropertyRef, const PropertyRef)> propertiesSetter;

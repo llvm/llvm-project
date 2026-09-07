@@ -294,6 +294,18 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
     CI.getHeaderSearchOpts().ModulesIgnoreMacros.clear();
   }
 
+  // Remove any header search paths that are explicitly ignored.
+  if (!CI.getHeaderSearchOpts().ModulesIgnoreSearchPaths.empty()) {
+    llvm::erase_if(
+        CI.getHeaderSearchOpts().UserEntries,
+        [&CI](const HeaderSearchOptions::Entry &E) {
+          return CI.getHeaderSearchOpts().ModulesIgnoreSearchPaths.contains(
+              llvm::CachedHashString(E.Path));
+        });
+    // Remove the now unused option.
+    CI.getHeaderSearchOpts().ModulesIgnoreSearchPaths.clear();
+  }
+
   return CI;
 }
 

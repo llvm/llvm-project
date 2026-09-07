@@ -1,10 +1,10 @@
 ! REQUIRES: openmp_runtime
-! RUN: %not_todo_cmd %flang_fc1 -cpp -DBARE -emit-llvm %openmp_flags -fopenmp-version=52 -o - %s 2>&1 | FileCheck %s
-! RUN: %not_todo_cmd %flang_fc1 -cpp -DTRAITS -emit-llvm %openmp_flags -fopenmp-version=52 -o - %s 2>&1 | FileCheck %s
-! RUN: %not_todo_cmd %flang_fc1 -cpp -DMEMSPACE -emit-llvm %openmp_flags -fopenmp-version=52 -o - %s 2>&1 | FileCheck %s
-! RUN: %not_todo_cmd %flang_fc1 -cpp -DMEMSPACE_TRAITS -emit-llvm %openmp_flags -fopenmp-version=52 -o - %s 2>&1 | FileCheck %s
-! RUN: %not_todo_cmd %flang_fc1 -cpp -DTRAITS_MEMSPACE -emit-llvm %openmp_flags -fopenmp-version=52 -o - %s 2>&1 | FileCheck %s
-! RUN: %not_todo_cmd %flang_fc1 -cpp -DLEGACY -emit-llvm %openmp_flags -fopenmp-version=52 -o - %s 2>&1 | FileCheck %s
+! RUN: %not_todo_cmd %flang_fc1 -cpp -DBARE -emit-hlfir %openmp_flags -fopenmp-version=52 -o - %s 2>&1 | FileCheck %s
+! RUN: %not_todo_cmd %flang_fc1 -cpp -DTRAITS -emit-hlfir %openmp_flags -fopenmp-version=52 -o - %s 2>&1 | FileCheck %s
+! RUN: %not_todo_cmd %flang_fc1 -cpp -DMEMSPACE -emit-hlfir %openmp_flags -fopenmp-version=52 -o - %s 2>&1 | FileCheck %s
+! RUN: %not_todo_cmd %flang_fc1 -cpp -DMEMSPACE_TRAITS -emit-hlfir %openmp_flags -fopenmp-version=52 -o - %s 2>&1 | FileCheck %s
+! RUN: %not_todo_cmd %flang_fc1 -cpp -DTRAITS_MEMSPACE -emit-hlfir %openmp_flags -fopenmp-version=52 -o - %s 2>&1 | FileCheck %s
+! RUN: %not_todo_cmd %flang_fc1 -cpp -DLEGACY -emit-hlfir %openmp_flags -fopenmp-version=52 -o - %s 2>&1 | FileCheck %s
 
 ! Every shape that semantics accepts must reach the established "not yet
 ! implemented" lowering boundary for USES_ALLOCATORS. Each shape needs its own

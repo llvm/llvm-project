@@ -218,6 +218,7 @@ bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
         Ctx.diagnose(
             DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
       });
+  MMI.getTarget().verifyOptionsConsistency(M);
   return false;
 }
 
@@ -242,5 +243,6 @@ MachineModuleAnalysis::run(Module &M, ModuleAnalysisManager &) {
         Ctx.diagnose(
             DiagnosticInfoSrcMgr(SMD, M.getName(), IsInlineAsm, LocCookie));
       });
+  MMI.getTarget().verifyOptionsConsistency(M);
   return Result(MMI);
 }

@@ -43,7 +43,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/JSON.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -661,8 +660,7 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
 bool InputFile::Symbol::isLibcall(
     const TargetLibraryInfo &TLI,
     const RTLIB::RuntimeLibcallsInfo &Libcalls) const {
-  LibFunc F;
-  if (TLI.getLibFunc(IRName, F) && TLI.has(F))
+  if (TLI.has(TLI.getLibFunc(IRName)))
     return true;
   return Libcalls.getSupportedLibcallImpl(IRName) != RTLIB::Unsupported;
 }

@@ -440,6 +440,12 @@ CMake configuration time. The available options are:
 
   ABI impact: changes the iterator type of ``std::array``, its size and its layout.
 
+- ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL`` -- changes the iterator type of ``std::optional`` to a
+  bounded iterator that keeps track of whether it's within the bounds of its container and asserts it
+  on every dereference and when performing iterator arithmetic.
+
+  ABI impact: changes the iterator type of ``std::optional``.
+
 - ``_LIBCPP_ABI_BOUNDED_ITERATORS_IN_INPLACE_VECTOR`` -- changes the iterator type of
   ``inplace_vector`` to a bounded iterator that keeps track of whether it's within the
   bounds of the original container and asserts it on every dereference and when
@@ -538,7 +544,7 @@ Hardened containers status
       - ❌
     * - ``optional``
       - ✅
-      - N/A
+      - ✅
     * - ``function``
       - ❌
       - N/A

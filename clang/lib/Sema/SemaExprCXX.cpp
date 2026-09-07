@@ -1567,6 +1567,9 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
       Inits = MultiExprArg(ILE->getInits(), ILE->getNumInits());
     }
 
+    if (Ty->getAs<AutoType>())
+      DiagCompat(TyBeginLoc, diag_compat::auto_expr) << FullRange;
+
     if (Inits.empty())
       return ExprError(Diag(TyBeginLoc, diag::err_auto_expr_init_no_expression)
                        << Ty << FullRange);
@@ -1575,10 +1578,6 @@ Sema::BuildCXXTypeConstructExpr(TypeSourceInfo *TInfo,
       return ExprError(Diag(FirstBad->getBeginLoc(),
                             diag::err_auto_expr_init_multiple_expressions)
                        << Ty << FullRange);
-    }
-    if (getLangOpts().CPlusPlus23) {
-      if (Ty->getAs<AutoType>())
-        Diag(TyBeginLoc, diag::warn_cxx20_compat_auto_expr) << FullRange;
     }
     Expr *Deduce = Inits[0];
     if (isa<InitListExpr>(Deduce))

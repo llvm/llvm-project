@@ -1,0 +1,2 @@
+# The PDB Global Symbol Stream
+
