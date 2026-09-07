@@ -512,7 +512,7 @@ define void @casts() {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v16f32u16 = call <16 x i16> @llvm.fptoui.sat.v16i16.v16f32(<16 x float> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v16f32s32 = call <16 x i32> @llvm.fptosi.sat.v16i32.v16f32(<16 x float> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v16f32u32 = call <16 x i32> @llvm.fptoui.sat.v16i32.v16f32(<16 x float> undef)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %v16f32s64 = call <16 x i64> @llvm.fptosi.sat.v16i64.v16f32(<16 x float> undef)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %v16f32s64 = call <16 x i64> @llvm.fptosi.sat.v16i64.v16f32(<16 x float> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 69 for instruction: %v16f32u64 = call <16 x i64> @llvm.fptoui.sat.v16i64.v16f32(<16 x float> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 49 for instruction: %v16f64s1 = call <16 x i1> @llvm.fptosi.sat.v16i1.v16f64(<16 x double> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v16f64u1 = call <16 x i1> @llvm.fptoui.sat.v16i1.v16f64(<16 x double> undef)
@@ -522,7 +522,7 @@ define void @casts() {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v16f64u16 = call <16 x i16> @llvm.fptoui.sat.v16i16.v16f64(<16 x double> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v16f64s32 = call <16 x i32> @llvm.fptosi.sat.v16i32.v16f64(<16 x double> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v16f64u32 = call <16 x i32> @llvm.fptoui.sat.v16i32.v16f64(<16 x double> undef)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 76 for instruction: %v16f64s64 = call <16 x i64> @llvm.fptosi.sat.v16i64.v16f64(<16 x double> undef)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %v16f64s64 = call <16 x i64> @llvm.fptosi.sat.v16i64.v16f64(<16 x double> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %v16f64u64 = call <16 x i64> @llvm.fptoui.sat.v16i64.v16f64(<16 x double> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -615,7 +615,7 @@ define void @casts() {
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v16f32u16 = call <16 x i16> @llvm.fptoui.sat.v16i16.v16f32(<16 x float> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v16f32s32 = call <16 x i32> @llvm.fptosi.sat.v16i32.v16f32(<16 x float> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v16f32u32 = call <16 x i32> @llvm.fptoui.sat.v16i32.v16f32(<16 x float> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16f32s64 = call <16 x i64> @llvm.fptosi.sat.v16i64.v16f32(<16 x float> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v16f32s64 = call <16 x i64> @llvm.fptosi.sat.v16i64.v16f32(<16 x float> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 11 for instruction: %v16f32u64 = call <16 x i64> @llvm.fptoui.sat.v16i64.v16f32(<16 x float> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 49 for instruction: %v16f64s1 = call <16 x i1> @llvm.fptosi.sat.v16i1.v16f64(<16 x double> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v16f64u1 = call <16 x i1> @llvm.fptoui.sat.v16i1.v16f64(<16 x double> undef)
@@ -625,7 +625,7 @@ define void @casts() {
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v16f64u16 = call <16 x i16> @llvm.fptoui.sat.v16i16.v16f64(<16 x double> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v16f64s32 = call <16 x i32> @llvm.fptosi.sat.v16i32.v16f64(<16 x double> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 15 for instruction: %v16f64u32 = call <16 x i32> @llvm.fptoui.sat.v16i32.v16f64(<16 x double> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 18 for instruction: %v16f64s64 = call <16 x i64> @llvm.fptosi.sat.v16i64.v16f64(<16 x double> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 22 for instruction: %v16f64s64 = call <16 x i64> @llvm.fptosi.sat.v16i64.v16f64(<16 x double> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %v16f64u64 = call <16 x i64> @llvm.fptoui.sat.v16i64.v16f64(<16 x double> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -1054,7 +1054,7 @@ define void @fp16() {
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 178 for instruction: %v16f16u16 = call <16 x i16> @llvm.fptoui.sat.v16i16.v16f16(<16 x half> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 178 for instruction: %v16f16s32 = call <16 x i32> @llvm.fptosi.sat.v16i32.v16f16(<16 x half> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 176 for instruction: %v16f16u32 = call <16 x i32> @llvm.fptoui.sat.v16i32.v16f16(<16 x half> undef)
-; AVX512F-NEXT:  Cost Model: Found an estimated cost of 186 for instruction: %v16f16s64 = call <16 x i64> @llvm.fptosi.sat.v16i64.v16f16(<16 x half> undef)
+; AVX512F-NEXT:  Cost Model: Found an estimated cost of 190 for instruction: %v16f16s64 = call <16 x i64> @llvm.fptosi.sat.v16i64.v16f16(<16 x half> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 183 for instruction: %v16f16u64 = call <16 x i64> @llvm.fptoui.sat.v16i64.v16f16(<16 x half> undef)
 ; AVX512F-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
@@ -1107,7 +1107,7 @@ define void @fp16() {
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 178 for instruction: %v16f16u16 = call <16 x i16> @llvm.fptoui.sat.v16i16.v16f16(<16 x half> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 178 for instruction: %v16f16s32 = call <16 x i32> @llvm.fptosi.sat.v16i32.v16f16(<16 x half> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 176 for instruction: %v16f16u32 = call <16 x i32> @llvm.fptoui.sat.v16i32.v16f16(<16 x half> undef)
-; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 186 for instruction: %v16f16s64 = call <16 x i64> @llvm.fptosi.sat.v16i64.v16f16(<16 x half> undef)
+; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 190 for instruction: %v16f16s64 = call <16 x i64> @llvm.fptosi.sat.v16i64.v16f16(<16 x half> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 183 for instruction: %v16f16u64 = call <16 x i64> @llvm.fptoui.sat.v16i64.v16f16(<16 x half> undef)
 ; AVX512DQ-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;

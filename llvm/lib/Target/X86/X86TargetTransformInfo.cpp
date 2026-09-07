@@ -3492,6 +3492,40 @@ InstructionCost X86TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 }
 
+// Additive cost of "predicate fanout" (mask expansion) for a predicated op
+// whose value/data operand legalizes into more register parts than its mask.
+//
+// A predicated op (select, masked load/store, gather/scatter) produces its
+// mask as a compact <N x i1>: a compare result kept in one k-register on
+// AVX-512, or a single narrow vector on SSE/AVX.  When the data type legalizes
+// into more register parts than that mask, codegen has to materialize a
+// sub-mask for every extra data part -- a kshiftr out of the k-register on
+// AVX-512, or a vector unpack/sign-extend on SSE/AVX -- each feeding a separate
+// per-part op.  The per-part cost tables price the op linearly in data parts
+// and miss this fanout, so per-lane cost stays flat as the type widens; with
+// MaximizeBandwidth sizing VF from the narrowest type, nothing then penalizes
+// over-widening and predicated loops blow up.
+//
+// Charge FanoutCostPerPart per extra part.  Two caveats worth stating:
+//   - The metric assumes the i1 mask legalizes into no more parts than the
+//     data; that holds on X86 (masks come from compares, kept compact).  A
+//     MaskParts of 0 (unexpected legalization) disables the charge.
+//   - The constant is not an absolute latency.  It only has to be large enough
+//     that the part-matched VF beats the loop vectorizer's tie-break toward the
+//     widest VF (a value of 2 tied and lost).  It is orthogonal to the
+//     promotion / expansion mask shuffles priced in getMaskedMemoryOpCost,
+//     which cover data promotion and padding the mask to the legalized element
+//     count -- not per-part sub-mask distribution.
+static InstructionCost getPredicateFanoutCost(const X86TTIImpl &TTI,
+                                              Type *DataVTy, Type *MaskVTy) {
+  constexpr unsigned FanoutCostPerPart = 4;
+  unsigned DataParts = TTI.getNumberOfParts(DataVTy);
+  unsigned MaskParts = TTI.getNumberOfParts(MaskVTy);
+  if (DataParts > MaskParts && MaskParts > 0)
+    return InstructionCost((DataParts - MaskParts) * FanoutCostPerPart);
+  return InstructionCost(0);
+}
+
 InstructionCost X86TTIImpl::getCmpSelInstrCost(
     unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
     TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
@@ -3508,6 +3542,18 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(
 
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
+
+  // Mask-expansion (predicate fanout); see getPredicateFanoutCost.  Gated to
+  // AVX-512 on purpose: a vector select is pervasive and on SSE/AVX its blend
+  // mask is already priced by the per-part tables, so charging the fanout there
+  // over-penalizes ordinary (non predicated-memory) loops and shrinks their VF.
+  // On AVX-512 the k-register -> wide-data kshiftr is a real cost the tables
+  // miss.  The masked memory / gather / scatter fanout is charged on all
+  // subtargets because it fires only on genuinely predicated memory ops.
+  InstructionCost MaskExpCost = 0;
+  if (Opcode == Instruction::Select && ST->hasAVX512() &&
+      isa<VectorType>(ValTy) && isa_and_nonnull<VectorType>(CondTy))
+    MaskExpCost = getPredicateFanoutCost(*this, ValTy, CondTy);
 
   InstructionCost ExtraCost = 0;
   if (Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) {
@@ -3735,52 +3781,52 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(
   if (ST->useSLMArithCosts())
     if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + *KindCost);
+        return LT.first * (ExtraCost + *KindCost) + MaskExpCost;
 
   if (ST->hasBWI())
     if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + *KindCost);
+        return LT.first * (ExtraCost + *KindCost) + MaskExpCost;
 
   if (ST->hasAVX512())
     if (const auto *Entry = CostTableLookup(AVX512CostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + *KindCost);
+        return LT.first * (ExtraCost + *KindCost) + MaskExpCost;
 
   if (ST->hasAVX2())
     if (const auto *Entry = CostTableLookup(AVX2CostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + *KindCost);
+        return LT.first * (ExtraCost + *KindCost) + MaskExpCost;
 
   if (ST->hasXOP())
     if (const auto *Entry = CostTableLookup(XOPCostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + *KindCost);
+        return LT.first * (ExtraCost + *KindCost) + MaskExpCost;
 
   if (ST->hasAVX())
     if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + *KindCost);
+        return LT.first * (ExtraCost + *KindCost) + MaskExpCost;
 
   if (ST->hasSSE42())
     if (const auto *Entry = CostTableLookup(SSE42CostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + *KindCost);
+        return LT.first * (ExtraCost + *KindCost) + MaskExpCost;
 
   if (ST->hasSSE41())
     if (const auto *Entry = CostTableLookup(SSE41CostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + *KindCost);
+        return LT.first * (ExtraCost + *KindCost) + MaskExpCost;
 
   if (ST->hasSSE2())
     if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + *KindCost);
+        return LT.first * (ExtraCost + *KindCost) + MaskExpCost;
 
   if (ST->hasSSE1())
     if (const auto *Entry = CostTableLookup(SSE1CostTbl, ISD, MTy))
       if (auto KindCost = Entry->Cost[CostKind])
-        return LT.first * (ExtraCost + *KindCost);
+        return LT.first * (ExtraCost + *KindCost) + MaskExpCost;
 
   // Assume a 3cy latency for fp select ops.
   if (CostKind == TTI::TCK_Latency && Opcode == Instruction::Select)
@@ -3788,7 +3834,8 @@ InstructionCost X86TTIImpl::getCmpSelInstrCost(
       return 3;
 
   return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                   Op1Info, Op2Info, I);
+                                   Op1Info, Op2Info, I) +
+         MaskExpCost;
 }
 
 unsigned X86TTIImpl::getAtomicMemIntrinsicMaxElementSize() const { return 16; }
@@ -5679,12 +5726,22 @@ X86TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                            CostKind, {}, 0, MaskTy);
   }
 
+  // Mask-expansion (predicate fanout); see getPredicateFanoutCost.  Only a
+  // variable predicate needs a per-part sub-mask materialized; a constant /
+  // all-ones mask is folded by CodeGen and pays no fanout.
+  InstructionCost MaskExpCost = 0;
+  if (MICA.getVariableMask()) {
+    auto *MaskVecTy =
+        FixedVectorType::get(Type::getInt1Ty(SrcVTy->getContext()), NumElem);
+    MaskExpCost = getPredicateFanoutCost(*this, SrcVTy, MaskVecTy);
+  }
+
   // Pre-AVX512 - each maskmov load costs 2 + store costs ~8.
   if (!ST->hasAVX512())
-    return Cost + LT.first * (IsLoad ? 2 : 8);
+    return Cost + LT.first * (IsLoad ? 2 : 8) + MaskExpCost;
 
-  // AVX-512 masked load/store is cheaper
-  return Cost + LT.first;
+  // AVX-512 masked load/store is cheaper.
+  return Cost + LT.first + MaskExpCost;
 }
 
 InstructionCost X86TTIImpl::getPointersChainCost(
@@ -6701,8 +6758,19 @@ X86TTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
 
   assert(SrcVTy->isVectorTy() && "Unexpected data type for Gather/Scatter");
   unsigned AddressSpace = MICA.getAddressSpace();
-  return getGSVectorCost(Opcode, CostKind, SrcVTy, Ptr, Alignment,
-                         AddressSpace);
+  InstructionCost Cost =
+      getGSVectorCost(Opcode, CostKind, SrcVTy, Ptr, Alignment, AddressSpace);
+
+  // Mask-expansion (predicate fanout); see getPredicateFanoutCost.  Only a
+  // variable predicate needs a per-part sub-mask materialized; a constant /
+  // all-ones mask is folded by CodeGen and pays no fanout.
+  if (MICA.getVariableMask()) {
+    auto *MaskVecTy =
+        FixedVectorType::get(Type::getInt1Ty(SrcVTy->getContext()),
+                             cast<FixedVectorType>(SrcVTy)->getNumElements());
+    Cost += getPredicateFanoutCost(*this, SrcVTy, MaskVecTy);
+  }
+  return Cost;
 }
 
 bool X86TTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,

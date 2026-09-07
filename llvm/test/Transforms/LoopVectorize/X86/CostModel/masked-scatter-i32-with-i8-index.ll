@@ -50,10 +50,10 @@ define void @test() {
 ; AVX512:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i32 %valB, ptr %out, align 4
 ; AVX512:  Cost of 5 for VF 2: REPLICATE store ir<%valB>, ir<%out>
 ; AVX512:  Cost of 10.5 for VF 4: REPLICATE store ir<%valB>, ir<%out>
-; AVX512:  Cost of 10 for VF 8: WIDEN store ir<%out>, ir<%valB>, ir<%canStore>
-; AVX512:  Cost of 18 for VF 16: WIDEN store ir<%out>, ir<%valB>, ir<%canStore>
-; AVX512:  Cost of 36 for VF 32: WIDEN store ir<%out>, ir<%valB>, ir<%canStore>
-; AVX512:  Cost of 72 for VF 64: WIDEN store ir<%out>, ir<%valB>, ir<%canStore>
+; AVX512:  Cost of 10 for VF 8: WIDEN store ir<%out>, ir<%valB>, ir<%canStore> (!vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
+; AVX512:  Cost of 18 for VF 16: WIDEN store ir<%out>, ir<%valB>, ir<%canStore> (!vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
+; AVX512:  Cost of 40 for VF 32: WIDEN store ir<%out>, ir<%valB>, ir<%canStore> (!vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
+; AVX512:  Cost of 84 for VF 64: WIDEN store ir<%out>, ir<%valB>, ir<%canStore> (!vplan.execution.frequency 5764607523034234880 (62.5%, estimated))
 ;
 entry:
   br label %for.body
