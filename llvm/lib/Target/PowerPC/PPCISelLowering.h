@@ -214,6 +214,8 @@ namespace llvm {
 
     bool hasSPE() const;
 
+    bool useFPRegsForHalfType() const override;
+
     MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
       return MVT::i32;
     }

@@ -834,6 +834,16 @@ void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
                            const TargetInfo *Aux) {
   if (HasAltivec)
     Opts.AltiVec = 1;
+  if (Opts.PPCFloat16) {
+    if (FloatABI == SoftFloat)
+      Diags.Report(diag::err_opt_not_valid_with_opt)
+          << "-mfloat16" << "-msoft-float";
+    else if (!(ArchDefs & ArchDefinePwr8))
+      Diags.Report(diag::err_opt_not_valid_with_opt)
+          << "-mfloat16" << getTargetOpts().CPU;
+    else
+      HasFloat16 = true;
+  }
   TargetInfo::adjust(Diags, Opts, Aux);
   if (LongDoubleFormat != &llvm::APFloat::IEEEdouble())
     LongDoubleFormat = Opts.PPCIEEELongDouble
