@@ -99,6 +99,7 @@
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
@@ -126,6 +127,7 @@
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Coroutines/CoroInstr.h"
 #include <algorithm>
@@ -163,6 +165,10 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
 
   /// Keep track which DISubprogram is attached to which function.
   DenseMap<const DISubprogram *, const Function *> DISubprogramAttachments;
+
+  /// For each visited DIScope, whether walking its scope chain reaches a
+  /// repeated node.
+  DenseMap<const Metadata *, bool> DIScopeChainReachesCycle;
 
   /// Track all DICompileUnits visited.
   SmallPtrSet<const Metadata *, 2> CUVisited;
@@ -269,6 +275,7 @@ public:
 
     InstsInThisBlock.clear();
     DebugFnArgs.clear();
+    DIScopeChainReachesCycle.clear();
     LandingPadResultTy = nullptr;
     SawFrameEscape = false;
     SiblingFuncletInfo.clear();
@@ -314,6 +321,7 @@ public:
 
     verifyDeoptimizeCallingConvs();
     DISubprogramAttachments.clear();
+    DIScopeChainReachesCycle.clear();
     return !Broken;
   }
 
@@ -359,7 +367,7 @@ private:
   void visitNoFPClassMetadata(Instruction &I, MDNode *Range, Type *Ty);
   void visitNoaliasAddrspaceMetadata(Instruction &I, MDNode *Range, Type *Ty);
   void visitDereferenceableMetadata(Instruction &I, MDNode *MD);
-  void visitNofreeMetadata(Instruction &I, MDNode *MD);
+  void visitNoFreeObjMetadata(Instruction &I, MDNode *MD);
   void visitProfMetadata(Instruction &I, MDNode *MD);
   void visitCallStackMetadata(MDNode *MD);
   void visitMemProfMetadata(Instruction &I, MDNode *MD);
@@ -380,6 +388,9 @@ private:
 #include "llvm/IR/Metadata.def"
   void visitDIType(const DIType &N);
   void visitDIScope(const DIScope &N);
+  void visitDIScopeChain(const DIScope &N);
+  bool hasDIScopeCycle(const Metadata *S);
+  DISubprogram *getSubprogram(Metadata *LocalScope);
   void visitDIVariable(const DIVariable &N);
   void visitDILexicalBlockBase(const DILexicalBlockBase &N);
   void visitDITemplateParameter(const DITemplateParameter &N);
@@ -949,6 +960,57 @@ void Verifier::visitNamedMDNode(const NamedMDNode &NMD) {
   }
 }
 
+/// Parent scope operand of \p S, or null if \p S has no parent (a \c DIFile,
+/// \c DICompileUnit, or non-scope). Mirrors \c DIScope::getScope() without
+/// asserting on unexpected metadata kinds.
+static const Metadata *getRawDIScopeParent(const Metadata *S) {
+  if (!S)
+    return nullptr;
+  if (auto *T = dyn_cast<DIType>(S))
+    return T->getRawScope();
+  if (auto *SP = dyn_cast<DISubprogram>(S))
+    return SP->getRawScope();
+  if (auto *LB = dyn_cast<DILexicalBlockBase>(S))
+    return LB->getRawScope();
+  if (auto *NS = dyn_cast<DINamespace>(S))
+    return NS->getRawScope();
+  if (auto *CB = dyn_cast<DICommonBlock>(S))
+    return CB->getRawScope();
+  if (auto *M = dyn_cast<DIModule>(S))
+    return M->getRawScope();
+  return nullptr;
+}
+
+/// True if following the scope operand from \p S repeats a node.
+bool Verifier::hasDIScopeCycle(const Metadata *S) {
+  SmallPtrSet<const Metadata *, 8> Seen;
+  auto CacheSeen = [&](bool HasCycle) {
+    for (const Metadata *M : Seen)
+      DIScopeChainReachesCycle[M] = HasCycle;
+    return HasCycle;
+  };
+
+  while (auto *Scope = dyn_cast_or_null<DIScope>(S)) {
+    auto It = DIScopeChainReachesCycle.find(Scope);
+    bool IsInCache = It != DIScopeChainReachesCycle.end();
+    if (IsInCache)
+      return CacheSeen(It->second);
+    bool AlreadySeen = !Seen.insert(Scope).second;
+    if (AlreadySeen) // New cycle detected
+      return CacheSeen(true);
+    // No new cycle detected
+    S = getRawDIScopeParent(Scope);
+  }
+
+  // Finished walking node chain without detecting any cycles
+  return CacheSeen(false);
+}
+
+void Verifier::visitDIScopeChain(const DIScope &N) {
+  CheckDI(!hasDIScopeCycle(&N), "DIScope scope chain must not contain a cycle",
+          &N);
+}
+
 void Verifier::visitMDNode(const MDNode &BaseMD,
                            AreDebugLocsAllowed AllowLocs) {
   // Only visit each node once.  Metadata can be mutually recursive, so this
@@ -976,6 +1038,10 @@ void Verifier::visitMDNode(const MDNode &BaseMD,
     break;
 #include "llvm/IR/Metadata.def"
     }
+
+    // A scope chain must terminate.
+    if (const auto *S = dyn_cast<DIScope>(CurrentMD))
+      visitDIScopeChain(*S);
 
     for (const Metadata *Op : CurrentMD->operands()) {
       if (!Op)
@@ -1557,7 +1623,7 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
               "invalid retained nodes, retained node is not local", &N, Node,
               RetainedNode);
 
-      DISubprogram *RetainedNodeSP = RetainedNodeScope->getSubprogram();
+      DISubprogram *RetainedNodeSP = getSubprogram(RetainedNodeScope);
       DICompileUnit *RetainedNodeUnit =
           RetainedNodeSP ? RetainedNodeSP->getUnit() : nullptr;
       CheckDI(
@@ -1771,6 +1837,21 @@ void Verifier::visitDIObjCProperty(const DIObjCProperty &N) {
     CheckDI(isType(T), "invalid type ref", &N, T);
   if (auto *F = N.getRawFile())
     CheckDI(isa<DIFile>(F), "invalid file", &N, F);
+}
+
+void Verifier::visitDIProperty(const DIProperty &N) {
+  CheckDI(N.getTag() == dwarf::DW_TAG_property, "invalid tag", &N);
+  if (auto *T = N.getRawType())
+    CheckDI(isType(T), "invalid type ref", &N, T);
+  if (auto *F = N.getRawFile())
+    CheckDI(isa<DIFile>(F), "invalid file", &N, F);
+  // DWARF allows a property getter to forward to a subprogram, variable, or
+  // constant too, but the backend only knows how to forward to a member.
+  if (DINode *BackingStorage = N.getBackingStorage()) {
+    auto *DT = dyn_cast<DIDerivedType>(BackingStorage);
+    CheckDI(DT && DT->getTag() == dwarf::DW_TAG_member,
+            "property backing storage must be a member", &N, BackingStorage);
+  }
 }
 
 void Verifier::visitDIImportedEntity(const DIImportedEntity &N) {
@@ -1997,13 +2078,15 @@ Verifier::visitModuleFlag(const MDNode *Op,
           "module flag identifiers must be unique (or of 'require' type)", ID);
   }
 
-  if (ID->getString() == "wchar_size") {
+  StringRef Name = ID->getString();
+  if (Name == "wchar_size") {
     ConstantInt *Value
       = mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
     Check(Value, "wchar_size metadata requires constant integer argument");
+    return;
   }
 
-  if (ID->getString() == "long-double-type") {
+  if (Name == "long-double-type") {
     Check(MFB == Module::Error,
           "long-double-type module flag must use 'error' merge behavior", Op);
     const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
@@ -2011,9 +2094,10 @@ Verifier::visitModuleFlag(const MDNode *Op,
     if (Value)
       Check(parseLongDoubleFormat(Value->getString()).has_value(),
             "invalid long-double-type metadata value", Op);
+    return;
   }
 
-  if (ID->getString() == "float-abi") {
+  if (Name == "float-abi") {
     Check(MFB == Module::Error,
           "float-abi module flag must use 'error' merge behavior", Op);
     const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
@@ -2021,26 +2105,37 @@ Verifier::visitModuleFlag(const MDNode *Op,
     if (Value)
       Check(FloatABI::parseABIType(Value->getString()).has_value(),
             "invalid float-abi metadata value", Op);
+    return;
   }
 
-  if (ID->getString() == "Linker Options") {
+  if (Name == "target-abi") {
+    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
+    Check(Value && !Value->getString().empty(),
+          "target-abi metadata requires a non-empty string argument", Op);
+    return;
+  }
+
+  if (Name == "Linker Options") {
     // If the llvm.linker.options named metadata exists, we assume that the
     // bitcode reader has upgraded the module flag. Otherwise the flag might
     // have been created by a client directly.
     Check(M.getNamedMetadata("llvm.linker.options"),
           "'Linker Options' named metadata no longer supported");
+    return;
   }
 
-  if (ID->getString() == "SemanticInterposition") {
+  if (Name == "SemanticInterposition") {
     ConstantInt *Value =
         mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
     Check(Value,
           "SemanticInterposition metadata requires constant integer argument");
+    return;
   }
 
-  if (ID->getString() == "CG Profile") {
+  if (Name == "CG Profile") {
     for (const MDOperand &MDO : cast<MDNode>(Op->getOperand(2))->operands())
       visitModuleFlagCGProfileEntry(MDO);
+    return;
   }
 
   // Target-specific module flag checks.
@@ -3373,6 +3468,10 @@ void Verifier::visitFunction(const Function &F) {
     if (!Seen.insert(Scope).second)
       return;
 
+    // Cycles are diagnosed when the DIScope nodes themselves are visited.
+    if (hasDIScopeCycle(Scope))
+      return;
+
     DISubprogram *SP = Scope->getSubprogram();
 
     // Scope and SP could be the same MDNode and we don't want to skip
@@ -3980,6 +4079,12 @@ void Verifier::visitCallBase(CallBase &Call) {
                 Call);
         }
       }
+      if (auto *CI = dyn_cast<ConstantInt>(ArgVal))
+        Check(Intrinsic::isImmArgValueInRangeSet(Call.getIntrinsicID(), i,
+                                                 CI->getValue()),
+              formatv("immarg value {} for arg {} out of range set",
+                      CI->getValue(), i),
+              Call);
     }
 
     if (Call.paramHasAttr(i, Attribute::Preallocated)) {
@@ -4071,6 +4176,9 @@ void Verifier::visitCallBase(CallBase &Call) {
        FoundAttachedCallBundle = false;
   for (unsigned i = 0, e = Call.getNumOperandBundles(); i < e; ++i) {
     OperandBundleUse BU = Call.getOperandBundleAt(i);
+    for (const Value *Input : BU.Inputs)
+      Check(!Input->getType()->isLabelTy(),
+            "Operand bundle operands cannot be labels", Call);
     uint32_t Tag = BU.getTagID();
     if (Tag == LLVMContext::OB_deopt) {
       Check(!FoundDeoptBundle, "Multiple deopt operand bundles", Call);
@@ -4657,6 +4765,19 @@ void Verifier::visitStoreInst(StoreInst &SI) {
     Check(SI.getOrdering() != AtomicOrdering::Acquire &&
               SI.getOrdering() != AtomicOrdering::AcquireRelease,
           "Store cannot have Acquire ordering", &SI);
+
+    if (SI.isElementwise()) {
+      Check(SI.getOrdering() != AtomicOrdering::SequentiallyConsistent,
+            "atomic elementwise store cannot be sequentially consistent.", &SI);
+
+      auto *VecTy = dyn_cast<FixedVectorType>(ElTy);
+      Check(VecTy,
+            "atomic elementwise store operand must have fixed vector type!",
+            &SI, ElTy);
+      if (VecTy)
+        checkAtomicMemAccessSize(VecTy->getElementType(), &SI);
+    }
+
     Check(ElTy->getScalarType()->isIntOrPtrTy() ||
               ElTy->getScalarType()->isByteTy() ||
               ElTy->getScalarType()->isFloatingPointTy(),
@@ -4665,6 +4786,7 @@ void Verifier::visitStoreInst(StoreInst &SI) {
           ElTy, &SI);
     checkAtomicMemAccessSize(ElTy, &SI);
   } else {
+    Check(!SI.isElementwise(), "non-atomic store cannot be elementwise", &SI);
     Check(SI.getSyncScopeID() == SyncScope::System,
           "Non-atomic store cannot have SynchronizationScope specified", &SI);
   }
@@ -5278,11 +5400,12 @@ void Verifier::visitDereferenceableMetadata(Instruction& I, MDNode* MD) {
         &I);
 }
 
-void Verifier::visitNofreeMetadata(Instruction &I, MDNode *MD) {
-  Check(I.getType()->isPointerTy(), "nofree applies only to pointer types", &I);
-  Check((isa<IntToPtrInst>(I)), "nofree applies only to inttoptr instruction",
+void Verifier::visitNoFreeObjMetadata(Instruction &I, MDNode *MD) {
+  Check(I.getType()->isPointerTy(), "nofreeobj applies only to pointer types",
         &I);
-  Check(MD->getNumOperands() == 0, "nofree metadata must be empty", &I);
+  Check((isa<IntToPtrInst>(I)),
+        "nofreeobj applies only to inttoptr instruction", &I);
+  Check(MD->getNumOperands() == 0, "nofreeobj metadata must be empty", &I);
 }
 
 void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
@@ -5889,8 +6012,8 @@ void Verifier::visitInstruction(Instruction &I) {
   if (MDNode *MD = I.getMetadata(LLVMContext::MD_dereferenceable_or_null))
     visitDereferenceableMetadata(I, MD);
 
-  if (MDNode *MD = I.getMetadata(LLVMContext::MD_nofree))
-    visitNofreeMetadata(I, MD);
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_nofreeobj))
+    visitNoFreeObjMetadata(I, MD);
 
   if (MDNode *TBAA = I.getMetadata(LLVMContext::MD_tbaa))
     TBAAVerifyHelper.visitTBAAMetadata(&I, TBAA);
@@ -5971,10 +6094,11 @@ void Verifier::visitInstruction(Instruction &I) {
 
     if (auto *DL = dyn_cast<DILocation>(N)) {
       if (DL->getAtomGroup()) {
-        CheckDI(DL->getScope()->getSubprogram()->getKeyInstructionsEnabled(),
+        DISubprogram *SP = getSubprogram(DL->getRawScope());
+        CheckDI(SP && SP->getKeyInstructionsEnabled(),
                 "DbgLoc uses atomGroup but DISubprogram doesn't have Key "
                 "Instructions enabled",
-                DL, DL->getScope()->getSubprogram());
+                DL, SP);
       }
     }
   }
@@ -6842,6 +6966,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "vector_insert index must be a constant multiple of "
           "the subvector's known minimum vector length.");
 
+    // The only allowed 'mixed' case is inserting a fixed vector into a
+    // scalable vector.
+    if (SubVecEC.isScalable()) {
+      Check(VecEC.isScalable(), "cannot vector_insert a scalable vector into "
+                                "a fixed vector.");
+    }
+
     // If this insertion is not the 'mixed' case where a fixed vector is
     // inserted into a scalable vector, ensure that the insertion of the
     // subvector does not overrun the parent vector.
@@ -6871,6 +7002,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(IdxN % ResultEC.getKnownMinValue() == 0,
           "vector_extract index must be a constant multiple of "
           "the result type's known minimum vector length.");
+
+    // The only allowed 'mixed' case is extracting a fixed vector from a
+    // scalable vector.
+    if (ResultEC.isScalable()) {
+      Check(VecEC.isScalable(), "cannot vector_extract a scalable vector from "
+                                "a fixed vector.");
+    }
 
     // If this extraction is not the 'mixed' case where a fixed vector is
     // extracted from a scalable vector, ensure that the extraction does not
@@ -6939,6 +7077,26 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue() < 2,
           "stream argument to llvm.aarch64.range.prefetch must be 0 or 1",
           Call);
+    break;
+  }
+  case Intrinsic::riscv_vsetvli:
+  case Intrinsic::riscv_vsetvlimax: {
+    // The result models VLMAX (or a VL bounded by it) and is only defined for
+    // XLen (i32/i64). Narrower types cannot represent the architectural VLMAX
+    // range of [1, 65536], which value analyses rely on.
+    Check(Call.getType()->isIntegerTy(32) || Call.getType()->isIntegerTy(64),
+          "llvm.riscv.vsetvli/vsetvlimax result must be i32 or i64", &Call);
+
+    // VSEW and VLMUL select the vtype and must encode a valid SEW/LMUL pair.
+    bool HasAVL = ID == Intrinsic::riscv_vsetvli;
+    unsigned Offset = HasAVL ? 1 : 0;
+    uint64_t VSEW =
+        cast<ConstantInt>(Call.getArgOperand(Offset))->getZExtValue();
+    uint64_t VLMUL =
+        cast<ConstantInt>(Call.getArgOperand(Offset + 1))->getZExtValue();
+    Check(VSEW <= 3, "llvm.riscv.vsetvli/vsetvlimax VSEW must be 0-3", &Call);
+    Check(VLMUL <= 7 && VLMUL != RISCVVType::LMUL_RESERVED,
+          "llvm.riscv.vsetvli/vsetvlimax VLMUL is reserved", &Call);
     break;
   }
   case Intrinsic::callbr_landingpad: {
@@ -7133,7 +7291,10 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 ///
 /// This carefully grabs the subprogram from a local scope, avoiding the
 /// built-in assertions that would typically fire.
-static DISubprogram *getSubprogram(Metadata *LocalScope) {
+DISubprogram *Verifier::getSubprogram(Metadata *LocalScope) {
+  if (hasDIScopeCycle(LocalScope))
+    return nullptr;
+
   if (!LocalScope)
     return nullptr;
 
@@ -7269,64 +7430,7 @@ void Verifier::visit(DbgVariableRecord &DVR) {
 }
 
 void Verifier::visitVPIntrinsic(VPIntrinsic &VPI) {
-  if (auto *VPCast = dyn_cast<VPCastIntrinsic>(&VPI)) {
-    auto *RetTy = cast<VectorType>(VPCast->getType());
-    auto *ValTy = cast<VectorType>(VPCast->getOperand(0)->getType());
-    Check(RetTy->getElementCount() == ValTy->getElementCount(),
-          "VP cast intrinsic first argument and result vector lengths must be "
-          "equal",
-          *VPCast);
-
-    switch (VPCast->getIntrinsicID()) {
-    case Intrinsic::vp_trunc:
-      Check(RetTy->getScalarSizeInBits() < ValTy->getScalarSizeInBits(),
-            "llvm.vp.trunc intrinsic the bit size of first argument must be "
-            "larger than the bit size of the return type",
-            *VPCast);
-      break;
-    case Intrinsic::vp_zext:
-    case Intrinsic::vp_sext:
-      Check(RetTy->getScalarSizeInBits() > ValTy->getScalarSizeInBits(),
-            "llvm.vp.zext or llvm.vp.sext intrinsic the bit size of first "
-            "argument must be smaller than the bit size of the return type",
-            *VPCast);
-      break;
-    case Intrinsic::vp_fptrunc:
-      Check(RetTy->getScalarSizeInBits() < ValTy->getScalarSizeInBits(),
-            "llvm.vp.fptrunc intrinsic the bit size of first argument must be "
-            "larger than the bit size of the return type",
-            *VPCast);
-      break;
-    case Intrinsic::vp_fpext:
-      Check(RetTy->getScalarSizeInBits() > ValTy->getScalarSizeInBits(),
-            "llvm.vp.fpext intrinsic the bit size of first argument must be "
-            "smaller than the bit size of the return type",
-            *VPCast);
-      break;
-    default:
-      break;
-    }
-  }
-
   switch (VPI.getIntrinsicID()) {
-  case Intrinsic::vp_fcmp: {
-    auto Pred = cast<VPCmpIntrinsic>(&VPI)->getPredicate();
-    Check(CmpInst::isFPPredicate(Pred),
-          "invalid predicate for VP FP comparison intrinsic", &VPI);
-    break;
-  }
-  case Intrinsic::vp_icmp: {
-    auto Pred = cast<VPCmpIntrinsic>(&VPI)->getPredicate();
-    Check(CmpInst::isIntPredicate(Pred),
-          "invalid predicate for VP integer comparison intrinsic", &VPI);
-    break;
-  }
-  case Intrinsic::vp_is_fpclass: {
-    auto TestMask = cast<ConstantInt>(VPI.getOperand(1));
-    Check((TestMask->getZExtValue() & ~static_cast<unsigned>(fcAllFlags)) == 0,
-          "unsupported bits for llvm.vp.is.fpclass test mask");
-    break;
-  }
   case Intrinsic::experimental_vp_splice: {
     VectorType *VecTy = cast<VectorType>(VPI.getType());
     int64_t Idx = cast<ConstantInt>(VPI.getArgOperand(2))->getSExtValue();

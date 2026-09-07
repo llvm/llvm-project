@@ -37,7 +37,7 @@
 // CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 3 : index
 // CHECK-DAG:       %[[VAL_8:.*]] = arith.constant 2 : index
 // CHECK-DAG:       %[[VAL_9:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:           %[[VAL_10:.*]] = memref.alloc() {alignment = 64 : i64} : memref<f32>
+// CHECK:           %[[VAL_10:.*]] = memref.alloc() alignment = 64 : memref<f32>
 // CHECK:           linalg.fill ins(%[[VAL_9]] : f32) outs(%[[VAL_10]] : memref<f32>)
 // CHECK:           %[[VAL_11:.*]] = sparse_tensor.storage_specifier.get %[[VAL_3]]
 // CHECK:           %[[VAL_12:.*]] = memref.subview %[[VAL_0]][0] {{\[}}%[[VAL_11]]] [1] : memref<?xindex> to memref<?xindex>
@@ -98,7 +98,7 @@ func.func @sum_squares(%a: tensor<2x3x8xf32, #Sparse>) -> tensor<f32> {
 // CHECK-DAG:       %[[VAL_7:.*]] = arith.constant 3 : index
 // CHECK-DAG:       %[[VAL_8:.*]] = arith.constant 2 : index
 // CHECK-DAG:       %[[VAL_9:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:           %[[VAL_10:.*]] = memref.alloc() {alignment = 64 : i64} : memref<f32>
+// CHECK:           %[[VAL_10:.*]] = memref.alloc() alignment = 64 : memref<f32>
 // CHECK:           linalg.fill ins(%[[VAL_9]] : f32) outs(%[[VAL_10]] : memref<f32>)
 // CHECK:           %[[VAL_11:.*]] = sparse_tensor.storage_specifier.get %[[VAL_3]]
 // CHECK:           %[[VAL_12:.*]] = memref.subview %[[VAL_0]][0] {{\[}}%[[VAL_11]]] [1] : memref<?xindex> to memref<?xindex>

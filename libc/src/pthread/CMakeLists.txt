@@ -967,3 +967,18 @@ add_entrypoint_object(
     libc.src.__support.macros.null_check
     libc.src.__support.threads.thread
 )
+
+add_entrypoint_object(
+  pthread_getstack_np
+  SRCS
+    pthread_getstack_np.cpp
+  HDRS
+    pthread_getstack_np.h
+  DEPENDS
+    libc.hdr.types.pthread_t
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.threads.thread
+)

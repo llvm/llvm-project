@@ -590,8 +590,10 @@ void llcas_cas_load_object_async(llcas_cas_t c_cas, llcas_objectid_t c_id,
     OS << "load_object_async downstream begin: " << PrintedDigest << '\n';
   });
   unwrap(c_cas)->Pool.async([=] {
+#if LLVM_ENABLE_THREADS
     // Wait a bit for the caller to proceed.
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
+#endif
     auto &Wrap = *unwrap(c_cas);
     if (CancelState->Cancelled) {
       Wrap.syncErrs([&](raw_ostream &OS) {
@@ -739,8 +741,10 @@ void llcas_actioncache_get_for_digest_async(
 
   unwrap(c_cas)->Pool.async([=] {
     if (IsCancellable) {
+#if LLVM_ENABLE_THREADS
       // Wait a bit for the caller to have a chance to cancel.
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
+#endif
     }
     auto &Wrap = *unwrap(c_cas);
     if (CancelState->Cancelled) {
@@ -797,8 +801,10 @@ void llcas_actioncache_put_for_digest_async(
 
   unwrap(c_cas)->Pool.async([=] {
     if (IsCancellable) {
+#if LLVM_ENABLE_THREADS
       // Wait a bit for the caller to have a chance to cancel.
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
+#endif
     }
     auto &Wrap = *unwrap(c_cas);
     if (CancelState->Cancelled) {

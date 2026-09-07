@@ -92,6 +92,19 @@ public:
     EXCLUSIVE = 0x100,
   };
 
+  // This is a convenience RAII class to lock and unlock file objects.
+  class FileLock {
+    File *file;
+
+  public:
+    explicit FileLock(File *f) : file(f) { file->lock(); }
+
+    ~FileLock() { file->unlock(); }
+
+    FileLock(const FileLock &) = delete;
+    FileLock(FileLock &&) = delete;
+  };
+
 private:
   enum class FileOp : uint8_t { NONE, READ, WRITE, SEEK };
 
@@ -140,19 +153,6 @@ private:
   Orientation orientation;
   internal::mbstate mbstate;
 
-  // This is a convenience RAII class to lock and unlock file objects.
-  class FileLock {
-    File *file;
-
-  public:
-    explicit FileLock(File *f) : file(f) { file->lock(); }
-
-    ~FileLock() { file->unlock(); }
-
-    FileLock(const FileLock &) = delete;
-    FileLock(FileLock &&) = delete;
-  };
-
 protected:
   constexpr bool write_allowed() const {
     return mode & (static_cast<ModeFlags>(OpenMode::WRITE) |
@@ -163,6 +163,18 @@ protected:
   constexpr bool read_allowed() const {
     return mode & (static_cast<ModeFlags>(OpenMode::READ) |
                    static_cast<ModeFlags>(OpenMode::PLUS));
+  }
+
+  void reset_stream_state_unlocked(ModeFlags new_mode) {
+    mode = new_mode;
+    pos = 0;
+    prev_op = FileOp::NONE;
+    read_limit = 0;
+    eof = false;
+    err = false;
+    orientation = Orientation::UNORIENTED;
+    mbstate = internal::mbstate();
+    adjust_buf();
   }
 
 public:
@@ -385,6 +397,15 @@ private:
 // The implementation of this function is provided by the platform_file
 // library.
 ErrorOr<File *> openfile(const char *path, const char *mode);
+// Reopens a file stream.
+// Note: On failure, `reopenfile` will place the file stream in an invalid state
+// (closing the underlying file descriptor) but will not deallocate the `File`
+// object itself, ensuring static streams like stdin/stdout/stderr are
+// preserved.
+int reopenfile(File *f, const char *path, const char *mode);
+// Expected to be implemented by the platform file, will be called after
+// locking.
+int reopenfile_unlocked(File *f, const char *path, const char *mode);
 
 // The platform_file library should implement it if it relevant for that
 // platform.

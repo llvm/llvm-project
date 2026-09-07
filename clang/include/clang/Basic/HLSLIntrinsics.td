@@ -221,6 +221,10 @@ class HLSLBuiltin<string name, string builtin = ""> {
   // Vector sizes to generate for Varying typed arguments (e.g., [2,3,4]).
   list<int> VaryingVecSizes = [];
 
+  // Whether to generate a dependent-size vector template overload for N > 4.
+  // Sizes 1 through 4 use scalar and concrete vector overloads.
+  bit VaryingLongVector = 0;
+
   // Matrix dimensions to generate for Varying typed arguments.
   list<MatDim> VaryingMatDims = [];
 
@@ -321,6 +325,7 @@ def hlsl_abs : HLSLOneArgBuiltin<"abs", "__builtin_elementwise_abs"> {
 \param Val The input value.
 }];
   let VaryingTypes = SignedTypes;
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -338,6 +343,7 @@ function returns its input unchanged.
   let Body = "return V;";
   let IsConstexpr = 1;
   let VaryingTypes = UnsignedIntTypes;
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -349,7 +355,7 @@ def hlsl_acos : HLSLOneArgBuiltin<"acos", "__builtin_elementwise_acos"> {
 \param Val The input value.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Implements unsigned 64-bit integer addition using pairs of unsigned 32-bit
@@ -432,7 +438,7 @@ def hlsl_asin : HLSLOneArgBuiltin<"asin", "__builtin_elementwise_asin"> {
 \param Val The input value.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Returns the arctangent of the input value, Val.
@@ -443,7 +449,7 @@ def hlsl_atan : HLSLOneArgBuiltin<"atan", "__builtin_elementwise_atan"> {
 \param Val The input value.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Returns the arctangent of y/x, using the signs of the arguments to determine
@@ -457,6 +463,7 @@ determine the correct quadrant.
 \param x The x-coordinate.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
 }
 
 // Returns the smallest integer value that is greater than or equal to the
@@ -469,7 +476,7 @@ the input value, \a Val.
 \param Val The input value.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Checks whether the value is fully mapped.
@@ -501,6 +508,7 @@ For values of -INF or INF, clamp will behave as expected.
 However for values of NaN, the results are undefined.
 }];
   let VaryingTypes = AllNumericTypes;
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -513,6 +521,7 @@ def hlsl_clip : HLSLOneArgBuiltin<"clip", "__builtin_hlsl_elementwise_clip"> {
 }];
   let ReturnType = VoidTy;
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -524,7 +533,7 @@ def hlsl_cos : HLSLOneArgBuiltin<"cos", "__builtin_elementwise_cos"> {
 \param Val The input value.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Returns the hyperbolic cosine of the input value, Val.
@@ -535,7 +544,7 @@ def hlsl_cosh : HLSLOneArgBuiltin<"cosh", "__builtin_elementwise_cosh"> {
 \param Val The input value.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Returns the number of bits (per component) set in the input integer.
@@ -552,6 +561,7 @@ def hlsl_countbits : HLSLBuiltin<"countbits"> {
   let VaryingTypes = AllIntTypes;
   let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
 }
 
 // Converts a floating-point, 4D vector set by a D3DCOLOR to a UBYTE4.
@@ -607,6 +617,7 @@ The return value is a floating point scalar or vector containing the low
 prevision partial derivative of the input value.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -624,6 +635,7 @@ The return value is a floating point scalar or vector containing the high
 prevision partial derivative of the input value.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -654,6 +666,7 @@ The return value is a floating point scalar or vector containing the low
 prevision partial derivative of the input value.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -671,19 +684,21 @@ The return value is a floating point scalar or vector containing the high
 prevision partial derivative of the input value.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
 // Converts the specified value from radians to degrees.
-def hlsl_degrees : HLSLOneArgDetail<"degrees", "degrees_impl"> {
+def hlsl_degrees : HLSLOneArgInlineBuiltin<"degrees"> {
   let Doc = [{
 \fn T degrees(T x)
 \brief Converts the specified value from radians to degrees.
 \param x The specified input value.
 }];
   let ParamNames = ["x"];
+  let Body = "return x * (__detail::elem_type_t<decltype(x)>)(180.L / __detail::Pi);";
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 // Returns the cross product of two floating-point, 3D vectors.
 def hlsl_cross : HLSLTwoArgDetail<"cross", "cross_impl"> {
@@ -736,6 +751,7 @@ def hlsl_dot : HLSLTwoArgBuiltin<"dot", "__builtin_hlsl_dot"> {
 }];
   let ReturnType = VaryingElemType;
   let VaryingTypes = NumericTypesNoDbl;
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -824,7 +840,7 @@ def hlsl_exp : HLSLOneArgBuiltin<"exp", "__builtin_elementwise_exp"> {
 The return value is the base-e exponential of the \a x parameter.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Returns the base 2 exponential, or 2**x, of the specified value.
@@ -837,7 +853,7 @@ def hlsl_exp2 : HLSLOneArgBuiltin<"exp2", "__builtin_elementwise_exp2"> {
 The base 2 exponential of the \a x parameter.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Returns the half value stored in the low 16 bits of the uint arg converted
@@ -855,6 +871,7 @@ parameter.
 }];
   let ReturnType = VaryingShape<FloatTy>;
   let VaryingTypes = [UIntTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -873,6 +890,7 @@ The return value is a uint containing the converted half value in the low
 }];
   let ReturnType = VaryingShape<UIntTy>;
   let VaryingTypes = [FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -905,6 +923,7 @@ def hlsl_fma : HLSLThreeArgBuiltin<"fma", "__builtin_elementwise_fma"> {
 \param c The third value in the fused multiply-addition.
 }];
   let VaryingTypes = [DoubleTy];
+  let VaryingLongVector = 1;
 }
 
 // Returns the location of the first set bit starting from the lowest order bit
@@ -919,6 +938,7 @@ order bit and working upward, per component.
 }];
   let ReturnType = VaryingShape<UIntTy>;
   let VaryingTypes = AllIntTypes;
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -932,7 +952,7 @@ value, \a Val.
 \param Val The input value.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Returns the floating-point remainder of x/y (scalar overloads).
@@ -976,7 +996,7 @@ def hlsl_frac : HLSLOneArgBuiltin<"frac", "__builtin_hlsl_elementwise_frac"> {
 If \a the return value is greater than or equal to 0 and less than 1.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Computes the sum of the absolute values of the partial derivatives.
@@ -1083,6 +1103,7 @@ to True if the x parameter is +INF or -INF. Otherwise, False.
 }];
   let ReturnType = VaryingShape<BoolTy>;
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
 }
 
 // Determines if the specified value x is Not a Number.
@@ -1097,6 +1118,7 @@ to True if the x parameter is NaN or QNaN. Otherwise, False.
 }];
   let ReturnType = VaryingShape<BoolTy>;
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
 }
 
 // Returns the result of multiplying the specified value by two raised
@@ -1158,6 +1180,7 @@ can equivalently be written as x + s(y-x).
 }];
   let ParamNames = ["x", "y", "s"];
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1199,7 +1222,7 @@ If \a Val is negative, this result is undefined. If \a Val is 0, this
 function returns negative infinity.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Returns the base-10 logarithm of the input value, Val.
@@ -1213,7 +1236,7 @@ If \a Val is negative, this result is undefined. If \a Val is 0, this
 function returns negative infinity.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Returns the base-2 logarithm of the input value, Val.
@@ -1227,7 +1250,7 @@ If \a Val is negative, this result is undefined. If \a Val is 0, this
 function returns negative infinity.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Returns the result of M * A + B (multiply-add).
@@ -1252,7 +1275,7 @@ def hlsl_max : HLSLTwoArgBuiltin<"max", "__builtin_elementwise_max"> {
 \param Y The Y input value.
 }];
   let VaryingTypes = AllNumericTypes;
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Returns the lesser of X and Y.
@@ -1264,7 +1287,7 @@ def hlsl_min : HLSLTwoArgBuiltin<"min", "__builtin_elementwise_min"> {
 \param Y The Y input value.
 }];
   let VaryingTypes = AllNumericTypes;
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Marks a resource index as non-uniform (varying across wave threads).
@@ -1284,7 +1307,7 @@ The return value is the \a I parameter.
 }
 
 // Returns the normalized unit vector of the specified floating-point vector.
-def hlsl_normalize : HLSLOneArgBuiltin<"normalize", "__builtin_hlsl_normalize"> {
+def hlsl_normalize : HLSLOneArgInlineBuiltin<"normalize"> {
   let Doc = [{
 \fn T normalize(T x)
 \brief Returns the normalized unit vector of the specified floating-point
@@ -1293,6 +1316,8 @@ vector.
 
 Normalize is based on the following formula: x / length(x).
 }];
+  let ParamNames = ["x"];
+  let Body = "return x / length(x);";
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingMatDims = [];
 }
@@ -1316,6 +1341,7 @@ def hlsl_pow : HLSLTwoArgBuiltin<"pow", "__builtin_elementwise_pow"> {
 \param Pow The specified power.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
 }
 
 // Reads the value from the lane across the X axis of the quad.
@@ -1356,14 +1382,15 @@ def hlsl_quad_read_across_diagonal : HLSLOneArgBuiltin<"QuadReadAcrossDiagonal",
 }
 
 // Converts the specified value from degrees to radians.
-def hlsl_radians : HLSLOneArgDetail<"radians", "radians_impl"> {
+def hlsl_radians : HLSLOneArgInlineBuiltin<"radians"> {
   let Doc = [{
 \fn T radians(T Val)
 \brief Converts the specified value from degrees to radians.
 }];
   let ParamNames = ["Val"];
+  let Body = "return Val * (__detail::elem_type_t<decltype(Val)>)(__detail::Pi / 180.L);";
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Calculates a fast, approximate, per-component reciprocal ie 1 / x.
@@ -1376,7 +1403,7 @@ def hlsl_rcp : HLSLOneArgBuiltin<"rcp", "__builtin_hlsl_elementwise_rcp"> {
 The return value is the reciprocal of the \a x parameter.
 }];
   let VaryingTypes = AllFloatTypes;
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Returns a reflection vector.
@@ -1450,6 +1477,7 @@ def hlsl_reversebits : HLSLOneArgBuiltin<"reversebits", "__builtin_elementwise_b
 \param Val The input value.
 }];
   let VaryingTypes = AllIntTypes;
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1465,7 +1493,7 @@ within a floating-point type. Halfway cases are
 rounded to the nearest even value.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Returns the reciprocal of the square root of the specified value,
@@ -1480,7 +1508,7 @@ ie 1 / sqrt( \a x).
 This function uses the following formula: 1 / sqrt(x).
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Returns input value, Val, clamped within the range of 0.0f to 1.0f.
@@ -1492,7 +1520,7 @@ to 1.0f.
 \param Val The input value.
 }];
   let VaryingTypes = AllFloatTypes;
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Returns -1 if Val is less than zero; 0 if Val equals zero; and 1 if Val is
@@ -1506,6 +1534,7 @@ def hlsl_sign : HLSLOneArgBuiltin<"sign", "__builtin_hlsl_elementwise_sign"> {
 }];
   let ReturnType = VaryingShape<IntTy>;
   let VaryingTypes = AllNumericTypes;
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1517,7 +1546,7 @@ def hlsl_sin : HLSLOneArgBuiltin<"sin", "__builtin_elementwise_sin"> {
 \param Val The input value.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Returns the hyperbolic sine of the input value, Val.
@@ -1528,7 +1557,7 @@ def hlsl_sinh : HLSLOneArgBuiltin<"sinh", "__builtin_elementwise_sinh"> {
 \param Val The input value.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Returns a smooth Hermite interpolation between 0 and 1.
@@ -1547,6 +1576,7 @@ between 0 and 1.
 }];
   let ParamNames = ["Min", "Max", "X"];
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1558,7 +1588,7 @@ def hlsl_sqrt : HLSLOneArgBuiltin<"sqrt", "__builtin_elementwise_sqrt"> {
 \param Val The input value.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Returns 1 if the x parameter is greater than or equal to the y parameter;
@@ -1575,6 +1605,7 @@ Step is based on the following formula: (x >= y) ? 1 : 0
 }];
   let ParamNames = ["y", "x"];
   let VaryingTypes = [HalfTy, FloatTy];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
 }
 
@@ -1586,7 +1617,7 @@ def hlsl_tan : HLSLOneArgBuiltin<"tan", "__builtin_elementwise_tan"> {
 \param Val The input value.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Returns the hyperbolic tangent of the input value, Val.
@@ -1597,7 +1628,7 @@ def hlsl_tanh : HLSLOneArgBuiltin<"tanh", "__builtin_elementwise_tanh"> {
 \param Val The input value.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Returns the truncated integer value of the input value, Val.
@@ -1608,7 +1639,7 @@ def hlsl_trunc : HLSLOneArgBuiltin<"trunc", "__builtin_elementwise_trunc"> {
 \param Val The input value.
 }];
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
+  let VaryingLongVector = 1;
 }
 
 // Evaluates a value for all active invocations in the group. The result is true

@@ -9,12 +9,13 @@
 #ifndef liblldb_IntelPTMultiCoreTrace_H_
 #define liblldb_IntelPTMultiCoreTrace_H_
 
-#include "IntelPTProcessTrace.h"
-#include "IntelPTSingleBufferTrace.h"
+#include "Plugins/Process/Linux/IntelPTProcessTrace.h"
+#include "Plugins/Process/Linux/IntelPTSingleBufferTrace.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/Error.h"
+
 #include <memory>
 #include <optional>
 

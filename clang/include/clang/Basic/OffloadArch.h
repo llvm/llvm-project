@@ -10,11 +10,11 @@
 #define LLVM_CLANG_BASIC_OFFLOADARCH_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 #include <tuple>
 
 namespace llvm {
-class Triple;
 template <typename T> class SmallVectorImpl;
 namespace NVPTX {
 enum GPUKind : uint8_t;
@@ -32,14 +32,14 @@ namespace clang {
 class OffloadArch {
 public:
   enum class TargetArch : uint8_t {
-    Unused,   // Default-constructed; no architecture bound.
-    Unknown,  // A name that matched no known architecture.
-    NVPTX,    // Kind is an llvm::NVPTX::GPUKind.
-    AMDGPU,   // Kind is an llvm::AMDGPU::GPUKind.
-    SPIRV,    // The 'amdgcnspirv' pseudo target.
-    IntelCPU, // Kind is an IntelArch.
-    IntelGPU, // Kind is an IntelArch.
-    Generic,  // The 'generic' processor model.
+    Unused,      // Default-constructed; no architecture bound.
+    Unknown,     // A name that matched no known architecture.
+    NVPTX,       // Kind is an llvm::NVPTX::GPUKind.
+    AMDGPU,      // Kind is an llvm::AMDGPU::GPUKind.
+    AMDGCNSPIRV, // The 'amdgcnspirv' pseudo target.
+    IntelCPU,    // Kind is an IntelArch.
+    IntelGPU,    // Kind is an IntelArch.
+    Generic,     // The 'generic' processor model.
   };
 
   // Intel architectures, which have no TargetParser list yet.
@@ -69,7 +69,9 @@ public:
   }
   static constexpr OffloadArch getUnused() { return {TargetArch::Unused, 0}; }
   static constexpr OffloadArch getUnknown() { return {TargetArch::Unknown, 0}; }
-  static constexpr OffloadArch getSPIRV() { return {TargetArch::SPIRV, 0}; }
+  static constexpr OffloadArch getAMDGCNSPIRV() {
+    return {TargetArch::AMDGCNSPIRV, 0};
+  }
   static constexpr OffloadArch getGeneric() { return {TargetArch::Generic, 0}; }
 
   /// Default architectures used when the user does not specify one.
@@ -80,7 +82,7 @@ public:
 
   bool isNVPTX() const { return V == TargetArch::NVPTX; }
   bool isAMDGPU() const { return V == TargetArch::AMDGPU; }
-  bool isSPIRV() const { return V == TargetArch::SPIRV; }
+  bool isAMDGCNSPIRV() const { return V == TargetArch::AMDGCNSPIRV; }
   bool isIntelCPU() const { return V == TargetArch::IntelCPU; }
   bool isIntelGPU() const { return V == TargetArch::IntelGPU; }
   bool isIntel() const { return isIntelCPU() || isIntelGPU(); }
@@ -115,6 +117,9 @@ OffloadArch StringToOffloadArch(llvm::StringRef S);
 
 /// Append the canonical names of all NVIDIA and AMDGPU GPUs.
 void fillValidOffloadArchList(llvm::SmallVectorImpl<llvm::StringRef> &Values);
+
+OffloadArch getSubArchOffloadArch(llvm::Triple::SubArchType SubArch);
+llvm::Triple::SubArchType getOffloadArchSubArch(OffloadArch ID);
 
 llvm::Triple OffloadArchToTriple(const llvm::Triple &DefaultToolchainTriple,
                                  OffloadArch ID);

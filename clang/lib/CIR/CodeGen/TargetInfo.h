@@ -37,6 +37,20 @@ bool isEmptyFieldForLayout(const ASTContext &context, const FieldDecl *fd);
 /// if the [[no_unique_address]] attribute would have made them empty.
 bool isEmptyRecordForLayout(const ASTContext &context, QualType t);
 
+/// isEmptyFieldForABI - Return true if the field is "empty", that is, it is a
+/// zero-width bit-field or an (array of) empty record(s).  An unnamed
+/// bit-field wider than zero bits is not empty: it is storage the classifier
+/// reads like a named bit-field's.  C++ record fields are never empty unless
+/// marked [[no_unique_address]], and that exception applies only to records,
+/// not arrays of records.
+bool isEmptyFieldForABI(const ASTContext &context, const FieldDecl *fd);
+
+/// isEmptyRecordForABI - Return true if a structure contains only empty base
+/// classes and fields.  Note that a structure with a flexible array member is
+/// not considered empty, and neither is a polymorphic class, whose vtable
+/// pointer is neither a base nor a field.
+bool isEmptyRecordForABI(const ASTContext &context, QualType t);
+
 class CIRGenFunction;
 
 class TargetCIRGenInfo {
@@ -67,6 +81,10 @@ public:
   }
 
   virtual mlir::Type getCUDADeviceBuiltinSurfaceDeviceType() const {
+    return nullptr;
+  }
+
+  virtual mlir::Type getCUDADeviceBuiltinTextureDeviceType() const {
     return nullptr;
   }
 
@@ -145,6 +163,12 @@ public:
                                         mlir::Type ty) const {
     return false;
   }
+
+  /// Returns the calling convention used for device kernels on this target.
+  virtual cir::CallingConv getDeviceKernelCallingConv() const;
+
+  virtual void
+  setCUDAKernelCallingConvention(const clang::FunctionType *&ft) const {}
 
   /// Corrects the MLIR type for a given constraint and "usual"
   /// type.

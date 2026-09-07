@@ -42,7 +42,7 @@ module attributes {
   }
 
   // CHECK: cir.func{{.*}} @takes_big(%{{.*}}: !cir.ptr<!rec_Big> {{{.*}}llvm.byval = !rec_Big{{.*}}})
-  // LLVM: define void @takes_big(ptr noalias noundef byval(%struct.Big) align 8 %{{.+}})
+  // LLVM: define void @takes_big(ptr noundef byval(%struct.Big) align 8 %{{.+}})
 
   // The sret return attribute is converted the same way.
   cir.func @ret_big() -> !rec_Big attributes { test_classify = #sret_ret } {
@@ -71,7 +71,7 @@ module attributes {
   }
 
   // LLVM: define void @caller(%struct.Big %{{.+}})
-  // LLVM:   call void @takes_big(ptr noalias noundef byval(%struct.Big) align 8 %{{.+}})
+  // LLVM:   call void @takes_big(ptr noundef byval(%struct.Big) align 8 %{{.+}})
 
   // A caller of an sret function carries the sret attribute on the call
   // operand; its type payload is converted as well.

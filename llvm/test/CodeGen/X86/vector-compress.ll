@@ -2778,7 +2778,7 @@ define <64 x i8> @test_compress_v64i8(<64 x i8> %vec, <64 x i1> %mask, <64 x i8>
 ; AVX512VL-ONLY-NEXT:    pushq %rbp
 ; AVX512VL-ONLY-NEXT:    movq %rsp, %rbp
 ; AVX512VL-ONLY-NEXT:    andq $-64, %rsp
-; AVX512VL-ONLY-NEXT:    subq $128, %rsp
+; AVX512VL-ONLY-NEXT:    addq $-128, %rsp
 ; AVX512VL-ONLY-NEXT:    vpsllw $7, %zmm1, %zmm1
 ; AVX512VL-ONLY-NEXT:    vpmovb2m %zmm1, %k6
 ; AVX512VL-ONLY-NEXT:    kshiftrq $63, %k6, %k0
@@ -3336,12 +3336,12 @@ define <32 x i16> @test_compress_v32i16(<32 x i16> %vec, <32 x i1> %mask, <32 x 
 ; AVX2-NEXT:    vmovaps %ymm4, {{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    vmovaps %ymm3, (%rsp)
 ; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} ymm4 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero,xmm3[4],zero,xmm3[5],zero,xmm3[6],zero,xmm3[7],zero,xmm3[8],zero,xmm3[9],zero,xmm3[10],zero,xmm3[11],zero,xmm3[12],zero,xmm3[13],zero,xmm3[14],zero,xmm3[15],zero
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm5 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; AVX2-NEXT:    vpand %ymm5, %ymm4, %ymm4
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} ymm6 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero,xmm2[8],zero,xmm2[9],zero,xmm2[10],zero,xmm2[11],zero,xmm2[12],zero,xmm2[13],zero,xmm2[14],zero,xmm2[15],zero
-; AVX2-NEXT:    vpand %ymm5, %ymm6, %ymm5
-; AVX2-NEXT:    vpaddw %ymm4, %ymm5, %ymm4
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm4 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX2-NEXT:    vpand %xmm4, %xmm3, %xmm5
+; AVX2-NEXT:    vpmovzxbw {{.*#+}} ymm5 = xmm5[0],zero,xmm5[1],zero,xmm5[2],zero,xmm5[3],zero,xmm5[4],zero,xmm5[5],zero,xmm5[6],zero,xmm5[7],zero,xmm5[8],zero,xmm5[9],zero,xmm5[10],zero,xmm5[11],zero,xmm5[12],zero,xmm5[13],zero,xmm5[14],zero,xmm5[15],zero
+; AVX2-NEXT:    vpand %xmm4, %xmm2, %xmm4
+; AVX2-NEXT:    vpmovzxbw {{.*#+}} ymm4 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero,xmm4[4],zero,xmm4[5],zero,xmm4[6],zero,xmm4[7],zero,xmm4[8],zero,xmm4[9],zero,xmm4[10],zero,xmm4[11],zero,xmm4[12],zero,xmm4[13],zero,xmm4[14],zero,xmm4[15],zero
+; AVX2-NEXT:    vpaddw %ymm5, %ymm4, %ymm4
 ; AVX2-NEXT:    vextracti128 $1, %ymm4, %xmm5
 ; AVX2-NEXT:    vpaddw %xmm5, %xmm4, %xmm4
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm5 = xmm4[2,3,2,3]
@@ -3575,7 +3575,7 @@ define <32 x i16> @test_compress_v32i16(<32 x i16> %vec, <32 x i1> %mask, <32 x 
 ; AVX512F-NEXT:    pushq %rbp
 ; AVX512F-NEXT:    movq %rsp, %rbp
 ; AVX512F-NEXT:    andq $-64, %rsp
-; AVX512F-NEXT:    subq $128, %rsp
+; AVX512F-NEXT:    addq $-128, %rsp
 ; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm4
 ; AVX512F-NEXT:    vpmovzxbw {{.*#+}} ymm3 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero,xmm4[4],zero,xmm4[5],zero,xmm4[6],zero,xmm4[7],zero,xmm4[8],zero,xmm4[9],zero,xmm4[10],zero,xmm4[11],zero,xmm4[12],zero,xmm4[13],zero,xmm4[14],zero,xmm4[15],zero
 ; AVX512F-NEXT:    vpmovsxbd %xmm4, %zmm4

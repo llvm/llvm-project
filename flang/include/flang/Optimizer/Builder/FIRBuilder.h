@@ -50,6 +50,13 @@ inline mlir::Type getIntPtrType(mlir::OpBuilder &builder) {
   return builder.getI64Type();
 }
 
+/// Get the block of \p region where alloca-like operations should be inserted:
+/// the block where the closest parent operation owning the stack allocations of
+/// \p region expects them (an OpenACC compute construct, an outlineable OpenMP
+/// operation, a privatization or reduction recipe, ...), or the entry block of
+/// the enclosing function.
+mlir::Block *getAllocaBlock(mlir::Region &region);
+
 //===----------------------------------------------------------------------===//
 // FirOpBuilder
 //===----------------------------------------------------------------------===//
@@ -333,7 +340,7 @@ public:
   /// Create a global value.
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
                              llvm::StringRef name,
-                             mlir::StringAttr linkage = {},
+                             fir::LinkageAttr linkage = {},
                              mlir::Attribute value = {}, bool isConst = false,
                              bool isTarget = false,
                              cuf::DataAttributeAttr dataAttr = {},
@@ -342,14 +349,14 @@ public:
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
                              llvm::StringRef name, bool isConst, bool isTarget,
                              std::function<void(FirOpBuilder &)> bodyBuilder,
-                             mlir::StringAttr linkage = {},
+                             fir::LinkageAttr linkage = {},
                              cuf::DataAttributeAttr dataAttr = {},
                              bool setDefaultAlignment = true);
 
   /// Create a global constant (read-only) value.
   fir::GlobalOp createGlobalConstant(mlir::Location loc, mlir::Type type,
                                      llvm::StringRef name,
-                                     mlir::StringAttr linkage = {},
+                                     fir::LinkageAttr linkage = {},
                                      mlir::Attribute value = {}) {
     return createGlobal(loc, type, name, linkage, value, /*isConst=*/true,
                         /*isTarget=*/false);
@@ -359,7 +366,7 @@ public:
   createGlobalConstant(mlir::Location loc, mlir::Type type,
                        llvm::StringRef name,
                        std::function<void(FirOpBuilder &)> bodyBuilder,
-                       mlir::StringAttr linkage = {}) {
+                       fir::LinkageAttr linkage = {}) {
     return createGlobal(loc, type, name, /*isConst=*/true, /*isTarget=*/false,
                         bodyBuilder, linkage);
   }
@@ -376,24 +383,32 @@ public:
   // Linkage helpers (inline). The default linkage is external.
   //===--------------------------------------------------------------------===//
 
-  static mlir::StringAttr createCommonLinkage(mlir::MLIRContext *context) {
-    return mlir::StringAttr::get(context, "common");
+  static fir::LinkageAttr createCommonLinkage(mlir::MLIRContext *context) {
+    return fir::LinkageAttr::get(context, fir::LinkageEnum::Common);
   }
-  mlir::StringAttr createCommonLinkage() {
+  fir::LinkageAttr createCommonLinkage() {
     return createCommonLinkage(getContext());
   }
 
-  mlir::StringAttr createExternalLinkage() { return getStringAttr("external"); }
-
-  mlir::StringAttr createInternalLinkage() { return getStringAttr("internal"); }
-
-  mlir::StringAttr createLinkOnceLinkage() { return getStringAttr("linkonce"); }
-
-  mlir::StringAttr createLinkOnceODRLinkage() {
-    return getStringAttr("linkonce_odr");
+  fir::LinkageAttr createExternalLinkage() {
+    return fir::LinkageAttr::get(getContext(), fir::LinkageEnum::External);
   }
 
-  mlir::StringAttr createWeakLinkage() { return getStringAttr("weak"); }
+  fir::LinkageAttr createInternalLinkage() {
+    return fir::LinkageAttr::get(getContext(), fir::LinkageEnum::Internal);
+  }
+
+  fir::LinkageAttr createLinkOnceLinkage() {
+    return fir::LinkageAttr::get(getContext(), fir::LinkageEnum::Linkonce);
+  }
+
+  fir::LinkageAttr createLinkOnceODRLinkage() {
+    return fir::LinkageAttr::get(getContext(), fir::LinkageEnum::LinkonceODR);
+  }
+
+  fir::LinkageAttr createWeakLinkage() {
+    return fir::LinkageAttr::get(getContext(), fir::LinkageEnum::Weak);
+  }
 
   /// Get a function by name. If the function exists in the current module, it
   /// is returned. Otherwise, a null FuncOp is returned.
@@ -616,6 +631,23 @@ public:
     std::replace(fmfString.begin(), fmfString.end(), ',', '_');
     return fmfString;
   }
+
+  /// RAII helper to set FastMathFlags for a scope and restore the previous
+  /// value on destruction.
+  class FastMathFlagGuard {
+  public:
+    FastMathFlagGuard(FirOpBuilder &builder, mlir::arith::FastMathFlags flags)
+        : builder{builder}, savedFlags{builder.getFastMathFlags()} {
+      builder.setFastMathFlags(flags);
+    }
+    FastMathFlagGuard(const FastMathFlagGuard &) = delete;
+    FastMathFlagGuard &operator=(const FastMathFlagGuard &) = delete;
+    ~FastMathFlagGuard() { builder.setFastMathFlags(savedFlags); }
+
+  private:
+    FirOpBuilder &builder;
+    mlir::arith::FastMathFlags savedFlags;
+  };
 
   /// Set default IntegerOverflowFlags value for all operations
   /// supporting mlir::arith::IntegerOverflowFlagsAttr that will be created

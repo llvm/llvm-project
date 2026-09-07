@@ -56,8 +56,7 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 20, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH1:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 20, [[TMP3]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 20, [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 20, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
@@ -73,7 +72,7 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> [[TMP8]], ptr align 2 [[ST_ADDR]], <vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = freeze <vscale x 8 x i1> [[TMP6]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.nxv8i1(<vscale x 8 x i1> [[TMP9]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP3]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP10]], [[TMP11]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -335,8 +334,7 @@ define void @loop_contains_store_to_pointer_with_no_deref_info(ptr align 2 deref
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 20, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH1:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 20, [[TMP3]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 20, [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 20, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
@@ -353,7 +351,7 @@ define void @loop_contains_store_to_pointer_with_no_deref_info(ptr align 2 deref
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> [[TMP8]], ptr align 2 [[TMP9]], <vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = freeze <vscale x 8 x i1> [[TMP6]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i1 @llvm.vector.reduce.or.nxv8i1(<vscale x 8 x i1> [[TMP10]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP3]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP11]], [[TMP12]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -505,8 +503,7 @@ define void @loop_contains_store_in_latch_block(ptr dereferenceable(40) noalias 
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 20, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH1:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 20, [[TMP3]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 20, [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 20, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
@@ -522,7 +519,7 @@ define void @loop_contains_store_in_latch_block(ptr dereferenceable(40) noalias 
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> [[TMP8]], ptr align 2 [[TMP7]], <vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = freeze <vscale x 8 x i1> [[TMP5]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.nxv8i1(<vscale x 8 x i1> [[TMP9]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP3]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP10]], [[TMP11]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
@@ -1178,8 +1175,7 @@ define i32 @uncountable_exit_with_separate_exit_block(ptr dereferenceable(40) no
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 20, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 20, [[TMP3]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 20, [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 20, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
@@ -1195,7 +1191,7 @@ define i32 @uncountable_exit_with_separate_exit_block(ptr dereferenceable(40) no
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv8i16.p0(<vscale x 8 x i16> [[TMP8]], ptr align 2 [[ST_ADDR]], <vscale x 8 x i1> [[UNCOUNTABLE_EXIT_MASK]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = freeze <vscale x 8 x i1> [[TMP6]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.nxv8i1(<vscale x 8 x i1> [[TMP9]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP3]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP10]], [[TMP11]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]

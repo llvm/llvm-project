@@ -50,7 +50,6 @@
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
-#include "llvm/Transforms/Utils/TriggerCrashPass.h"
 #include <cassert>
 #include <optional>
 #include <string>
@@ -101,6 +100,21 @@ static cl::opt<bool> DisableCGP("disable-cgp", cl::Hidden,
 static cl::opt<bool>
     TriggerCrash("codegen-pipeline-trigger-crash", cl::init(false), cl::Hidden,
                  cl::desc("Trigger crash in codegen pipeline"));
+
+namespace {
+class TriggerCrashFunctionLegacyPass : public FunctionPass {
+public:
+  static char ID;
+  TriggerCrashFunctionLegacyPass() : FunctionPass(ID) {}
+  bool runOnFunction(Function &F) override {
+    abort();
+    return false;
+  }
+  StringRef getPassName() const override { return "TriggerCrashFunctionPass"; }
+};
+} // namespace
+
+char TriggerCrashFunctionLegacyPass::ID = 0;
 
 static cl::opt<bool> DisableCopyProp("disable-copyprop", cl::Hidden,
     cl::desc("Disable Copy Propagation pass"));
@@ -539,7 +553,7 @@ void llvm::registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
                                    TargetMachine &TM) {
 
   // Register a callback for disabling passes.
-  PIC.registerShouldRunOptionalPassCallback([](StringRef P, const Any &) {
+  PIC.registerShouldRunOptionalPassCallback([](StringRef P, IRUnitRef) {
 
 #define DISABLE_PASS(Option, Name)                                             \
   if (Option && P.contains(#Name))                                             \
@@ -1090,7 +1104,7 @@ bool TargetPassConfig::addISelPasses() {
   addIRPasses();
 
   if (TriggerCrash)
-    addPass(createTriggerCrashFunctionPass());
+    addPass(new TriggerCrashFunctionLegacyPass());
 
   addCodeGenPrepare();
   addPassesToHandleExceptions();
@@ -1590,10 +1604,6 @@ bool TargetPassConfig::isGlobalISelAbortEnabled() const {
 
 bool TargetPassConfig::reportDiagnosticWhenGlobalISelFallback() const {
   return TM->Options.GlobalISelAbort == GlobalISelAbortMode::DisableWithDiag;
-}
-
-bool TargetPassConfig::isGISelCSEEnabled() const {
-  return true;
 }
 
 std::unique_ptr<CSEConfigBase> TargetPassConfig::getCSEConfig() const {

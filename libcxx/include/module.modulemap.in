@@ -267,6 +267,10 @@ module std_core {
       header "__type_traits/is_reference.h"
       export std_core.type_traits.integral_constant
     }
+    module is_relocatable {
+      header "__type_traits/is_relocatable.h"
+      export std_core.type_traits.integral_constant
+    }
     module is_same {
       header "__type_traits/is_same.h"
       export std_core.type_traits.integral_constant
@@ -313,10 +317,6 @@ module std_core {
     }
     module is_trivially_lexicographically_comparable {
       header "__type_traits/is_trivially_lexicographically_comparable.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_trivially_relocatable {
-      header "__type_traits/is_trivially_relocatable.h"
       export std_core.type_traits.integral_constant
     }
     module is_union {
@@ -413,7 +413,10 @@ module std {
     module find_if_not                            { header "__algorithm/find_if_not.h" }
     module find_if                                { header "__algorithm/find_if.h" }
     module find_segment_if                        { header "__algorithm/find_segment_if.h" }
-    module find                                   { header "__algorithm/find.h" }
+    module find                                   {
+      header "__algorithm/find.h"
+      export std.algorithm.simd_utils // TODO: Workaround for https://llvm.org/PR120108
+    }
     module for_each_n                             { header "__algorithm/for_each_n.h" }
     module for_each_n_segment                     { header "__algorithm/for_each_n_segment.h" }
     module for_each_segment                       { header "__algorithm/for_each_segment.h" }
@@ -1064,6 +1067,7 @@ module std {
     module strong_order                     { header "__compare/strong_order.h" }
     module synth_three_way                  { header "__compare/synth_three_way.h" }
     module three_way_comparable             { header "__compare/three_way_comparable.h" }
+    module type_order                       { header "__compare/type_order.h" }
     module weak_order                       { header "__compare/weak_order.h" }
 
     header "compare"
@@ -1352,11 +1356,11 @@ module std {
       header "__format/buffer.h"
       export std.iterator.back_insert_iterator
     }
-    module concepts                           { header "__format/concepts.h" }
     module container_adaptor                  { header "__format/container_adaptor.h" }
     module enable_insertable                  { header "__format/enable_insertable.h" }
     module escaped_output_table               { header "__format/escaped_output_table.h" }
     module extended_grapheme_cluster_table    { header "__format/extended_grapheme_cluster_table.h" }
+    module fmt_char_type                      { header "__format/fmt_char_type.h" }
     module fmt_pair_like                      { header "__format/fmt_pair_like.h" }
     module format_arg                         { header "__format/format_arg.h" }
     module format_arg_store                   { header "__format/format_arg_store.h" }
@@ -1375,6 +1379,7 @@ module std {
     module format_parse_context               { header "__format/format_parse_context.h" }
     module format_string                      { header "__format/format_string.h" }
     module format_to_n_result                 { header "__format/format_to_n_result.h" }
+    module formattable                        { header "__format/formattable.h" }
     module formatter                          { header "__format/formatter.h" }
     module formatter_bool                {
       header "__format/formatter_bool.h"
@@ -1395,7 +1400,11 @@ module std {
     module formatter_tuple                    { header "__format/formatter_tuple.h" }
     module fwd                                { header "__fwd/format.h" }
     module indic_conjunct_break_table         { header "__format/indic_conjunct_break_table.h" }
-    module parser_std_format_spec             { header "__format/parser_std_format_spec.h" }
+    module parser_std_format_spec             {
+      header "__format/parser_std_format_spec.h"
+      export std.format.parser_std_format_spec_data
+    }
+    module parser_std_format_spec_data        { header "__format/parser_std_format_spec_data.h" }
     module range_default_formatter            { header "__format/range_default_formatter.h" }
     module range_format                       { header "__format/range_format.h" }
     module range_formatter                    { header "__format/range_formatter.h" }
@@ -1701,7 +1710,7 @@ module std {
     module noexcept_move_assign_container     { header "__memory/noexcept_move_assign_container.h" }
     module out_ptr                            { header "__memory/out_ptr.h" }
     module pointer_traits                     { header "__memory/pointer_traits.h" }
-    module pstl                               { header "__memory/pstl.h" }    
+    module pstl                               { header "__memory/pstl.h" }
     module ranges_construct_at                { header "__memory/ranges_construct_at.h" }
     module ranges_destroy                     { header "__memory/ranges_destroy.h" }
     module ranges_uninitialized_algorithms {
@@ -2421,6 +2430,9 @@ module std {
         header "__pstl/cpu_algos/fill.h"
         export std_core.utility_core.empty
       }
+      module find_end {
+        header "__pstl/cpu_algos/find_end.h"
+      }
       module find_if {
         header "__pstl/cpu_algos/find_if.h"
       }
@@ -2428,8 +2440,14 @@ module std {
         header "__pstl/cpu_algos/for_each.h"
         export std_core.utility_core.empty
       }
+      module is_heap_until {
+        header "__pstl/cpu_algos/is_heap_until.h"
+      }
       module merge {
         header "__pstl/cpu_algos/merge.h"
+      }
+      module min_element {
+        header "__pstl/cpu_algos/min_element.h"
       }
       module mismatch {
         header "__pstl/cpu_algos/mismatch.h"

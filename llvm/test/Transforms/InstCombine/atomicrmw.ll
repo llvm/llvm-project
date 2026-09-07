@@ -366,7 +366,7 @@ define double @sat_fmax_inf(ptr %addr) {
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double +inf monotonic, align 8
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = atomicrmw fmax ptr %addr, double 0x7FF0000000000000 monotonic
+  %res = atomicrmw fmax ptr %addr, double +inf monotonic
   ret double %res
 }
 
@@ -384,7 +384,7 @@ define double @sat_fmin_inf(ptr %addr) {
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double -inf monotonic, align 8
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = atomicrmw fmin ptr %addr, double 0xFFF0000000000000 monotonic
+  %res = atomicrmw fmin ptr %addr, double -inf monotonic
   ret double %res
 }
 
@@ -402,7 +402,7 @@ define double @sat_fmaximum_inf(ptr %addr) {
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fmaximum ptr [[ADDR:%.*]], double +inf monotonic, align 8
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = atomicrmw fmaximum ptr %addr, double 0x7FF0000000000000 monotonic
+  %res = atomicrmw fmaximum ptr %addr, double +inf monotonic
   ret double %res
 }
 
@@ -420,7 +420,7 @@ define double @sat_fminimum_inf(ptr %addr) {
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fminimum ptr [[ADDR:%.*]], double -inf monotonic, align 8
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = atomicrmw fminimum ptr %addr, double 0xFFF0000000000000 monotonic
+  %res = atomicrmw fminimum ptr %addr, double -inf monotonic
   ret double %res
 }
 
@@ -793,7 +793,7 @@ define double @sat_fmax_inf_preserve_md(ptr %addr) {
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double +inf syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = atomicrmw fmax ptr %addr, double 0x7FF0000000000000 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  %res = atomicrmw fmax ptr %addr, double +inf syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
   ret double %res
 }
 
@@ -811,7 +811,7 @@ define double @sat_fmin_inf_preserve_md(ptr %addr) {
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw xchg ptr [[ADDR:%.*]], double -inf syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = atomicrmw fmin ptr %addr, double 0xFFF0000000000000 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  %res = atomicrmw fmin ptr %addr, double -inf syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
   ret double %res
 }
 
@@ -829,7 +829,7 @@ define double @sat_fmaximum_inf_preserve_md(ptr %addr) {
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fmaximum ptr [[ADDR:%.*]], double +inf syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = atomicrmw fmaximum ptr %addr, double 0x7FF0000000000000 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  %res = atomicrmw fmaximum ptr %addr, double +inf syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
   ret double %res
 }
 
@@ -847,7 +847,7 @@ define double @sat_fminimum_inf_preserve_md(ptr %addr) {
 ; CHECK-NEXT:    [[RES:%.*]] = atomicrmw fminimum ptr [[ADDR:%.*]], double -inf syncscope("agent") monotonic, align 8, !mmra [[META0]], !amdgpu.no.fine.grained.host.memory [[META1]], !amdgpu.no.remote.memory.access [[META1]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = atomicrmw fminimum ptr %addr, double 0xFFF0000000000000 syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
+  %res = atomicrmw fminimum ptr %addr, double -inf syncscope("agent") monotonic, !amdgpu.no.fine.grained.host.memory !0, !amdgpu.no.remote.memory.access !0, !mmra !1
   ret double %res
 }
 

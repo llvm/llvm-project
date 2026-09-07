@@ -274,7 +274,7 @@ public:
     CI->eraseFromParent();
 
     if (NameGlobal && NameGlobal->use_empty())
-      NameGlobal->removeFromParent();
+      NameGlobal->eraseFromParent();
   }
 
   bool hasNonUniformIndex(Value *IndexOp) {
@@ -357,7 +357,7 @@ public:
           (Binding.Size == 1) ? false : hasNonUniformIndex(IndexOp);
       std::array<Value *, 4> Args{
           ConstantInt::get(Int8Ty, llvm::to_underlying(RC)),
-          ConstantInt::get(Int32Ty, Binding.RecordID), IndexOp,
+          ConstantInt::get(Int32Ty, Binding.BindingID), IndexOp,
           ConstantInt::get(Int1Ty, HasNonUniformIndex)};
       Expected<CallInst *> OpCall =
           OpBuilder.tryCreateOp(OpCode::CreateHandle, Args, CI->getName());
@@ -431,6 +431,49 @@ public:
     if (MMDI.DXILVersion < VersionTuple(1, 6))
       return lowerToCreateHandle(F);
     return lowerToBindAndAnnotateHandle(F);
+  }
+
+  bool lowerHandleFromHeap(Function &F) {
+    IRBuilder<> &IRB = OpBuilder.getIRB();
+
+    return replaceFunction(F, [&](CallInst *CI) -> Error {
+      IRB.SetInsertPoint(CI);
+
+      auto *It = DRM.find(CI);
+      assert(It != DRM.end() && "Resource not in map?");
+      dxil::ResourceInfo &RI = *It;
+      dxil::ResourceTypeInfo &RTI = DRTM[RI.getHandleTy()];
+
+      Value *IndexOp = CI->getArgOperand(0);
+      Value *IsSamplerHeap =
+          ConstantInt::getBool(IRB.getContext(), RTI.isSampler());
+
+      std::pair<uint32_t, uint32_t> Props =
+          RI.getAnnotateProps(*F.getParent(), RTI);
+
+      bool NonUniformIndex = hasNonUniformIndex(IndexOp);
+      Value *NonUniformOp =
+          ConstantInt::getBool(IRB.getContext(), NonUniformIndex);
+
+      std::array<Value *, 3> Args{IndexOp, IsSamplerHeap, NonUniformOp};
+      Expected<CallInst *> OpCreateHandle = OpBuilder.tryCreateOp(
+          OpCode::CreateHandleFromHeap, Args, CI->getName());
+      if (Error E = OpCreateHandle.takeError())
+        return E;
+
+      std::array<Value *, 2> AnnotateArgs{
+          *OpCreateHandle, OpBuilder.getResProps(Props.first, Props.second)};
+      Expected<CallInst *> OpAnnotate = OpBuilder.tryCreateOp(
+          OpCode::AnnotateHandle, AnnotateArgs,
+          CI->hasName() ? CI->getName() + "_annot" : Twine());
+      if (Error E = OpAnnotate.takeError())
+        return E;
+
+      Value *Cast = createTmpHandleCast(*OpAnnotate, CI->getType());
+      CI->replaceAllUsesWith(Cast);
+      CI->eraseFromParent();
+      return Error::success();
+    });
   }
 
   /// Replace uses of \c Intrin with the values in the `dx.ResRet` of \c Op.
@@ -1280,6 +1323,9 @@ public:
 #include "DXILOperation.inc"
       case Intrinsic::dx_resource_handlefrombinding:
         HasErrors |= lowerHandleFromBinding(F);
+        break;
+      case Intrinsic::dx_resource_handlefromheap:
+        HasErrors |= lowerHandleFromHeap(F);
         break;
       case Intrinsic::dx_resource_getbasepointer:
       case Intrinsic::dx_resource_getpointer:

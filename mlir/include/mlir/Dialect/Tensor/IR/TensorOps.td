@@ -402,8 +402,8 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
     Note that there may be multiple ways to infer a resulting rank-reduced type.
       e.g. 1x6x1 could potentially rank-reduce to either 1x6 or 6x1 2-D shapes.
 
-    To disambiguate, the inference helpers `inferCanonicalRankReducedResultType`
-    only drop the first unit dimensions, in order:
+    To disambiguate, canonical rank-reduction inference drops only the first
+    unit dimensions, in order:
       e.g. 1x6x1 rank-reduced to 2-D will infer the 6x1 2-D shape, but not 1x6.
 
     Verification however has access to result type and does not need to infer.
@@ -501,23 +501,6 @@ def Tensor_ExtractSliceOp : Tensor_OpWithOffsetSizesAndStrides<"extract_slice", 
       ArrayRef<int64_t> staticSizes);
     static RankedTensorType inferResultType(
       RankedTensorType sourceTensorType,
-      ArrayRef<OpFoldResult> staticSizes);
-
-    /// If the rank is reduced (i.e. the desiredResultRank is smaller than the
-    /// number of sizes), drop as many size 1 as needed to produce an inferred type
-    /// with the desired rank.
-    ///
-    /// Note that there may be multiple ways to compute this rank-reduced type:
-    ///   e.g. 1x6x1 can rank-reduce to either 1x6 or 6x1 2-D tensors.
-    ///
-    /// To disambiguate, this function always drops the first 1 sizes occurrences.
-    static RankedTensorType inferCanonicalRankReducedResultType(
-      unsigned resultRank,
-      RankedTensorType sourceRankedTensorType,
-      ArrayRef<int64_t> staticSizes);
-    static RankedTensorType inferCanonicalRankReducedResultType(
-      unsigned resultRank,
-      RankedTensorType sourceRankedTensorType,
       ArrayRef<OpFoldResult> staticSizes);
 
     /// Return the expected rank of each of the`static_offsets`, `static_sizes`

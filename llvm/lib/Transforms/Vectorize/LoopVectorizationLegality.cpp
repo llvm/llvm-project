@@ -462,7 +462,7 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
   // the symbolic strides when runtime SCEV checks are permitted.
   const auto &Strides = LAI && AllowRuntimeSCEVChecks
                             ? LAI->getSymbolicStrides()
-                            : DenseMap<Value *, const SCEV *>();
+                            : SymbolicStrideMap();
   SmallVector<const SCEVPredicate *> Predicates;
   int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, *DT, Strides, false,
                             AllowRuntimeSCEVChecks ? &Predicates : nullptr)
@@ -936,11 +936,10 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
         (!VFDatabase::getMappings(*CI).empty() || isTLIScalarize(*TLI, *CI)))) {
     // If the call is a recognized math libary call, it is likely that
     // we can vectorize it given loosened floating-point constraints.
-    LibFunc Func;
     bool IsMathLibCall =
         TLI && CI->getCalledFunction() && CI->getType()->isFloatingPointTy() &&
-        TLI->getLibFunc(CI->getCalledFunction()->getName(), Func) &&
-        TLI->hasOptimizedCodeGen(Func);
+        TLI->hasOptimizedCodeGen(
+            TLI->getLibFunc(CI->getCalledFunction()->getName()));
 
     if (IsMathLibCall) {
       // TODO: Ideally, we should not use clang-specific language here,

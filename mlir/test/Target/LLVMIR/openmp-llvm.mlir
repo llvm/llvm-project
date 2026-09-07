@@ -86,8 +86,8 @@ llvm.func @test_omp_parallel_2() -> () {
   // CHECK: call void{{.*}}@__kmpc_fork_call{{.*}}@[[OMP_OUTLINED_FN_2:.*]])
   omp.parallel {
     ^bb0:
-      %0 = llvm.mlir.constant(1 : index) : i64
-      %1 = llvm.mlir.constant(42 : index) : i64
+      %0 = llvm.mlir.constant(1 : i64) : i64
+      %1 = llvm.mlir.constant(42 : i64) : i64
       llvm.call @body(%0) : (i64) -> ()
       llvm.call @body(%1) : (i64) -> ()
       llvm.br ^bb1
@@ -129,7 +129,7 @@ llvm.func @test_omp_parallel_num_threads_1(%arg0: i32) -> () {
 
 // CHECK: define void @test_omp_parallel_num_threads_2()
 llvm.func @test_omp_parallel_num_threads_2() -> () {
-  %0 = llvm.mlir.constant(4 : index) : i32
+  %0 = llvm.mlir.constant(4 : i32) : i32
   // CHECK: %[[GTN_NUM_THREADS_VAR_2:.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GTN_SI_VAR_2:.*]])
   // CHECK: call void @__kmpc_push_num_threads(ptr @[[GTN_SI_VAR_2]], i32 %[[GTN_NUM_THREADS_VAR_2]], i32 4)
   // CHECK: call void{{.*}}@__kmpc_fork_call{{.*}}@[[OMP_OUTLINED_FN_NUM_THREADS_2:.*]])
@@ -146,7 +146,7 @@ llvm.func @test_omp_parallel_num_threads_2() -> () {
 
 // CHECK: define void @test_omp_parallel_num_threads_3()
 llvm.func @test_omp_parallel_num_threads_3() -> () {
-  %0 = llvm.mlir.constant(4 : index) : i32
+  %0 = llvm.mlir.constant(4 : i32) : i32
   // CHECK: %[[GTN_NUM_THREADS_VAR_3_1:.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GTN_SI_VAR_3_1:.*]])
   // CHECK: call void @__kmpc_push_num_threads(ptr @[[GTN_SI_VAR_3_1]], i32 %[[GTN_NUM_THREADS_VAR_3_1]], i32 4)
   // CHECK: call void{{.*}}@__kmpc_fork_call{{.*}}@[[OMP_OUTLINED_FN_NUM_THREADS_3_1:.*]])
@@ -154,7 +154,7 @@ llvm.func @test_omp_parallel_num_threads_3() -> () {
     omp.barrier
     omp.terminator
   }
-  %1 = llvm.mlir.constant(8 : index) : i32
+  %1 = llvm.mlir.constant(8 : i32) : i32
   // CHECK: %[[GTN_NUM_THREADS_VAR_3_2:.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GTN_SI_VAR_3_2:.*]])
   // CHECK: call void @__kmpc_push_num_threads(ptr @[[GTN_SI_VAR_3_2]], i32 %[[GTN_NUM_THREADS_VAR_3_2]], i32 8)
   // CHECK: call void{{.*}}@__kmpc_fork_call{{.*}}@[[OMP_OUTLINED_FN_NUM_THREADS_3_2:.*]])
@@ -175,7 +175,7 @@ llvm.func @test_omp_parallel_num_threads_3() -> () {
 // CHECK: define void @test_omp_parallel_if_1(i32 %[[IF_EXPR_1:.*]])
 llvm.func @test_omp_parallel_if_1(%arg0: i32) -> () {
 
-  %0 = llvm.mlir.constant(0 : index) : i32
+  %0 = llvm.mlir.constant(0 : i32) : i32
   %1 = llvm.icmp "slt" %arg0, %0 : i32
 // CHECK: %[[IF_COND_VAR_1:.*]] = icmp slt i32 %[[IF_EXPR_1]], 0
 
@@ -387,11 +387,11 @@ llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 // CHECK: call void @__kmpc_barrier(ptr {{.*}}, i32 %[[THREAD_ID]])
 // CHECK: br label %omp_loop.after
 
-  omp.wsloop linear(%x : !llvm.ptr = %step : i32) {
+  omp.wsloop linear(%x : !llvm.ptr = %step : i32) linear_var_types([i32]) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  } {linear_var_types = [i32]}
+  }
   llvm.return
 }
 
@@ -403,9 +403,9 @@ llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 
 // CHECK-LABEL: @wsloop_simple
 llvm.func @wsloop_simple(%arg0: !llvm.ptr) {
-  %0 = llvm.mlir.constant(42 : index) : i64
-  %1 = llvm.mlir.constant(10 : index) : i64
-  %2 = llvm.mlir.constant(1 : index) : i64
+  %0 = llvm.mlir.constant(42 : i64) : i64
+  %1 = llvm.mlir.constant(10 : i64) : i64
+  %2 = llvm.mlir.constant(1 : i64) : i64
   omp.parallel {
     "omp.wsloop"() ({
       omp.loop_nest (%arg1) : i64 = (%1) to (%0) step (%2) {
@@ -429,9 +429,9 @@ llvm.func @wsloop_simple(%arg0: !llvm.ptr) {
 
 // CHECK-LABEL: @wsloop_inclusive_1
 llvm.func @wsloop_inclusive_1(%arg0: !llvm.ptr) {
-  %0 = llvm.mlir.constant(42 : index) : i64
-  %1 = llvm.mlir.constant(10 : index) : i64
-  %2 = llvm.mlir.constant(1 : index) : i64
+  %0 = llvm.mlir.constant(42 : i64) : i64
+  %1 = llvm.mlir.constant(10 : i64) : i64
+  %2 = llvm.mlir.constant(1 : i64) : i64
   // CHECK: store i64 31, ptr %{{.*}}upperbound
   "omp.wsloop"() ({
     omp.loop_nest (%arg1) : i64 = (%1) to (%0) step (%2) {
@@ -448,9 +448,9 @@ llvm.func @wsloop_inclusive_1(%arg0: !llvm.ptr) {
 
 // CHECK-LABEL: @wsloop_inclusive_2
 llvm.func @wsloop_inclusive_2(%arg0: !llvm.ptr) {
-  %0 = llvm.mlir.constant(42 : index) : i64
-  %1 = llvm.mlir.constant(10 : index) : i64
-  %2 = llvm.mlir.constant(1 : index) : i64
+  %0 = llvm.mlir.constant(42 : i64) : i64
+  %1 = llvm.mlir.constant(10 : i64) : i64
+  %2 = llvm.mlir.constant(1 : i64) : i64
   // CHECK: store i64 32, ptr %{{.*}}upperbound
   "omp.wsloop"() ({
     omp.loop_nest (%arg1) : i64 = (%1) to (%0) inclusive step (%2) {
@@ -790,13 +790,13 @@ llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 // CHECK-NEXT: store i32 %[[ADD]], ptr %[[LINEAR_RESULT]]
 // CHECK-NEXT: %[[LOAD:.*]] = load i32, ptr %[[LINEAR_RESULT]]
 // CHECK-NEXT: store i32 %[[LOAD]], ptr %[[X]], align 4
-  omp.simd linear(%x : !llvm.ptr = %step : i32) {
+  omp.simd linear(%x : !llvm.ptr = %step : i32) linear_var_types([i32]) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       llvm.store %iv, %x : i32, !llvm.ptr
       llvm.store %iv, %x : i32, !llvm.ptr
       omp.yield
     }
-  } {linear_var_types = [i32]}
+  }
   llvm.return
 }
 
@@ -824,11 +824,11 @@ llvm.func @simd_linear_i64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
 // CHECK: %[[MUL:.*]] = mul i64 %[[IV_I64]], {{.*}}
 // CHECK: %[[ADD:.*]] = add i64 %[[LOAD]], %[[MUL]]
 // CHECK: store i64 %[[ADD]], ptr %[[LINEAR_RESULT]], {{.*}}!llvm.access.group
-  omp.simd linear(%x : !llvm.ptr = %step : i32) {
+  omp.simd linear(%x : !llvm.ptr = %step : i32) linear_var_types([i64]) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  } {linear_var_types = [i64]}
+  }
   llvm.return
 }
 
@@ -856,11 +856,11 @@ llvm.func @simd_linear_f64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
 // CHECK-NEXT: %[[MUL_FP:.*]] = sitofp i32 %[[MUL_INT]] to double
 // CHECK-NEXT: %[[ADD:.*]] = fadd double %[[LOAD]], %[[MUL_FP]]
 // CHECK-NEXT: store double %[[ADD]], ptr %[[LINEAR_RESULT]], {{.*}}!llvm.access.group
-  omp.simd linear(%x : !llvm.ptr = %step : i32) {
+  omp.simd linear(%x : !llvm.ptr = %step : i32) linear_var_types([f64]) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
-  } {linear_var_types = [f64]}
+  }
   llvm.return
 }
 
@@ -884,12 +884,12 @@ llvm.func @wsloop_simd_linear(%x : !llvm.ptr) {
   %ub = llvm.mlir.constant(100 : i32) : i32
   %step = llvm.mlir.constant(25 : i32) : i32
   omp.wsloop {
-    omp.simd linear(%x : !llvm.ptr = %step : i32) {
+    omp.simd linear(%x : !llvm.ptr = %step : i32) linear_var_types([i32]) {
       omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
         llvm.store %iv, %x : i32, !llvm.ptr
         omp.yield
       }
-    } {linear_var_types = [i32], omp.composite}
+    } {omp.composite}
   } {omp.composite}
   llvm.return
 }
@@ -1490,14 +1490,14 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
       // CHECK: [[TMP2:%.*]] = getelementptr inbounds [1 x i64], ptr [[ADDR]], i64 0, i64 0
       // CHECK: [[OMP_THREAD2:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB3:[0-9]+]])
       // CHECK: call void @__kmpc_doacross_wait(ptr @[[GLOB3]], i32 [[OMP_THREAD2]], ptr [[TMP2]])
-      omp.ordered depend_type(dependsink) depend_vec(%arg3 : i64) {doacross_num_loops = 1 : i64}
+      omp.ordered depend_type(dependsink) depend_vec(%arg3 : i64) num_loops(1)
 
       // CHECK: [[TMP3:%.*]] = getelementptr inbounds [1 x i64], ptr [[ADDR3]], i64 0, i64 0
       // CHECK: store i64 [[ARG0]], ptr [[TMP3]], align 8
       // CHECK: [[TMP4:%.*]] = getelementptr inbounds [1 x i64], ptr [[ADDR3]], i64 0, i64 0
       // CHECK: [[OMP_THREAD4:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB5:[0-9]+]])
       // CHECK: call void @__kmpc_doacross_post(ptr @[[GLOB5]], i32 [[OMP_THREAD4]], ptr [[TMP4]])
-      omp.ordered depend_type(dependsource) depend_vec(%arg3 : i64) {doacross_num_loops = 1 : i64}
+      omp.ordered depend_type(dependsource) depend_vec(%arg3 : i64) num_loops(1)
 
       omp.yield
     }
@@ -1519,7 +1519,7 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
       // CHECK: [[TMP10:%.*]] = getelementptr inbounds [2 x i64], ptr [[ADDR7]], i64 0, i64 0
       // CHECK: [[OMP_THREAD8:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB7]])
       // CHECK: call void @__kmpc_doacross_wait(ptr @[[GLOB7]], i32 [[OMP_THREAD8]], ptr [[TMP10]])
-      omp.ordered depend_type(dependsink) depend_vec(%arg3, %arg4, %arg5, %arg6 : i64, i64, i64, i64) {doacross_num_loops = 2 : i64}
+      omp.ordered depend_type(dependsink) depend_vec(%arg3, %arg4, %arg5, %arg6 : i64, i64, i64, i64) num_loops(2)
 
       // CHECK: [[TMP11:%.*]] = getelementptr inbounds [2 x i64], ptr [[ADDR9]], i64 0, i64 0
       // CHECK: store i64 [[ARG0]], ptr [[TMP11]], align 8
@@ -1528,7 +1528,7 @@ llvm.func @omp_ordered(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i64,
       // CHECK: [[TMP13:%.*]] = getelementptr inbounds [2 x i64], ptr [[ADDR9]], i64 0, i64 0
       // CHECK: [[OMP_THREAD10:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB9:[0-9]+]])
       // CHECK: call void @__kmpc_doacross_post(ptr @[[GLOB9]], i32 [[OMP_THREAD10]], ptr [[TMP13]])
-      omp.ordered depend_type(dependsource) depend_vec(%arg3, %arg4 : i64, i64) {doacross_num_loops = 2 : i64}
+      omp.ordered depend_type(dependsource) depend_vec(%arg3, %arg4 : i64, i64) num_loops(2)
 
       omp.yield
     }
@@ -1581,8 +1581,8 @@ llvm.func @omp_atomic_read_implicit_cast () {
   %5 = llvm.alloca %4 x !llvm.array<2 x struct<(f32, f32)>> {bindc_name = "x"} : (i64) -> !llvm.ptr
   %6 = llvm.mlir.constant(1 : i64) : i64
   %7 = llvm.alloca %6 x i32 {bindc_name = "w"} : (i64) -> !llvm.ptr
-  %8 = llvm.mlir.constant(1 : index) : i64
-  %9 = llvm.mlir.constant(2 : index) : i64
+  %8 = llvm.mlir.constant(1 : i64) : i64
+  %9 = llvm.mlir.constant(2 : i64) : i64
   %10 = llvm.mlir.constant(1 : i64) : i64
   %11 = llvm.mlir.constant(0 : i64) : i64
   %12 = llvm.sub %8, %10 overflow<nsw> : i64
@@ -2683,14 +2683,19 @@ llvm.func @omp_atomic_compare(
     omp.yield(%sel1 : f32)
   }
 
-  // Complex equality  →  bitcasted integer cmpxchg with consistent alignment
-  // CHECK: %[[EALLOCA:.*]] = alloca { float, float }, align [[ALIGN:[0-9]+]]
-  // CHECK: %[[DALLOCA:.*]] = alloca { float, float }, align [[ALIGN]]
-  // CHECK: store { float, float } %[[EC]], ptr %[[EALLOCA]], align [[ALIGN]]
-  // CHECK: %[[EINT:.*]] = load i64, ptr %[[EALLOCA]], align [[ALIGN]]
+  // Complex equality  →  component-wise IEEE-754 fcmp, then a cmpxchg that
+  // swaps using x's loaded bit-pattern as the comparand (so -0.0/+0.0 and NaN
+  // follow the scalar float semantics rather than a raw bitwise compare).
+  // CHECK: %[[DALLOCA:.*]] = alloca { float, float }, align [[ALIGN:[0-9]+]]
   // CHECK: store { float, float } %[[DC]], ptr %[[DALLOCA]], align [[ALIGN]]
   // CHECK: %[[DINT:.*]] = load i64, ptr %[[DALLOCA]], align [[ALIGN]]
-  // CHECK: cmpxchg ptr %[[XC]], i64 %[[EINT]], i64 %[[DINT]] monotonic monotonic, align [[ALIGN]]
+  // CHECK: %[[XLOAD:.*]] = load atomic i64, ptr %[[XC]] monotonic, align [[ALIGN]]
+  // CHECK: %[[REEQ:.*]] = fcmp oeq float %[[REX:.*]], %[[REE:.*]]
+  // CHECK: %[[IMEQ:.*]] = fcmp oeq float %[[IMX:.*]], %[[IME:.*]]
+  // CHECK: %[[CEQ:.*]] = and i1 %[[REEQ]], %[[IMEQ]]
+  // CHECK: br i1 %[[CEQ]], label %[[CSWAP:[^,]+]], label %{{.*}}
+  // CHECK: [[CSWAP]]:
+  // CHECK: cmpxchg ptr %[[XC]], i64 %[[XLOAD]], i64 %[[DINT]] monotonic monotonic, align [[ALIGN]]
   omp.atomic.compare %xc : !llvm.ptr {
   ^bb0(%xval : !llvm.struct<(f32, f32)>):
     %re_x = llvm.extractvalue %xval[0] : !llvm.struct<(f32, f32)>
@@ -2794,7 +2799,7 @@ llvm.func @omp_atomic_compare_weak(%x : !llvm.ptr, %e : i32, %d : i32) {
     %cmp = llvm.icmp "eq" %xval, %e : i32
     %sel = llvm.select %cmp, %d, %xval : i1, i32
     omp.yield(%sel : i32)
-  } {weak}
+  } weak
 
   // Integer equality with weak + seq_cst  →  cmpxchg weak + flush
   // CHECK: cmpxchg weak ptr %[[X]], i32 %[[E]], i32 %[[D]] seq_cst seq_cst
@@ -2804,7 +2809,7 @@ llvm.func @omp_atomic_compare_weak(%x : !llvm.ptr, %e : i32, %d : i32) {
     %cmp = llvm.icmp "eq" %xval, %e : i32
     %sel = llvm.select %cmp, %d, %xval : i1, i32
     omp.yield(%sel : i32)
-  } {weak}
+  } weak
 
   llvm.return
 }
@@ -2822,7 +2827,7 @@ llvm.func @omp_atomic_compare_fail(%x : !llvm.ptr, %e : i32, %d : i32) {
     %cmp = llvm.icmp "eq" %xval, %e : i32
     %sel = llvm.select %cmp, %d, %xval : i1, i32
     omp.yield(%sel : i32)
-  } {fail_memory_order = #omp<memoryorderkind acquire>}
+  } fail_memory_order(acquire)
 
   // Seq_cst success + relaxed failure. The seq_cst success ordering still
   // requires the flush on the new fail_memory_order code path.
@@ -2833,7 +2838,7 @@ llvm.func @omp_atomic_compare_fail(%x : !llvm.ptr, %e : i32, %d : i32) {
     %cmp = llvm.icmp "eq" %xval, %e : i32
     %sel = llvm.select %cmp, %d, %xval : i1, i32
     omp.yield(%sel : i32)
-  } {fail_memory_order = #omp<memoryorderkind relaxed>}
+  } fail_memory_order(relaxed)
 
   llvm.return
 }
@@ -2860,7 +2865,7 @@ llvm.func @omp_atomic_compare_complex_fail(%x: !llvm.ptr, %e: !llvm.ptr, %d: !ll
     %dval = llvm.load %d : !llvm.ptr -> !llvm.struct<(f32, f32)>
     %sel = llvm.select %cmp, %dval, %xval : i1, !llvm.struct<(f32, f32)>
     omp.yield(%sel : !llvm.struct<(f32, f32)>)
-  } {fail_memory_order = #omp<memoryorderkind acquire>}
+  } fail_memory_order(acquire)
 
   // Seq_cst success + relaxed failure still emits the flush on the complex path.
   // CHECK: cmpxchg ptr %[[X]], i64 %{{.*}}, i64 %{{.*}} seq_cst monotonic
@@ -2877,7 +2882,7 @@ llvm.func @omp_atomic_compare_complex_fail(%x: !llvm.ptr, %e: !llvm.ptr, %d: !ll
     %dval = llvm.load %d : !llvm.ptr -> !llvm.struct<(f32, f32)>
     %sel = llvm.select %cmp, %dval, %xval : i1, !llvm.struct<(f32, f32)>
     omp.yield(%sel : !llvm.struct<(f32, f32)>)
-  } {fail_memory_order = #omp<memoryorderkind relaxed>}
+  } fail_memory_order(relaxed)
 
   llvm.return
 }
@@ -2930,6 +2935,141 @@ llvm.func @omp_atomic_compare_float_neg_zero(%xf : !llvm.ptr, %ef : f32, %df : f
   llvm.return
 }
 
+// -----
+
+// CHECK-LABEL: @omp_atomic_compare_capture_int_eq
+// CHECK-SAME: (ptr %[[X:.*]], ptr %[[V:.*]], i32 %[[E:.*]], i32 %[[D:.*]])
+llvm.func @omp_atomic_compare_capture_int_eq(%x : !llvm.ptr, %v : !llvm.ptr, %e : i32, %d : i32) {
+  // Integer equality prefix compare+capture → cmpxchg + store old value
+  // CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic monotonic
+  // CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+  // CHECK: store i32 %[[OLD]], ptr %[[V]]
+  omp.atomic.capture {
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval : i32):
+      %cmp = llvm.icmp "eq" %xval, %e : i32
+      %sel = llvm.select %cmp, %d, %xval : i1, i32
+      omp.yield(%sel : i32)
+    }
+  }
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @omp_atomic_compare_capture_weak_int_eq
+// CHECK-SAME: (ptr %[[X:.*]], ptr %[[V:.*]], i32 %[[E:.*]], i32 %[[D:.*]])
+llvm.func @omp_atomic_compare_capture_weak_int_eq(%x : !llvm.ptr, %v : !llvm.ptr, %e : i32, %d : i32) {
+  // Integer equality weak prefix compare+capture → cmpxchg + store old value
+  // CHECK: %[[RES:.*]] = cmpxchg weak ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic monotonic
+  // CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+  // CHECK: store i32 %[[OLD]], ptr %[[V]]
+  omp.atomic.capture {
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval : i32):
+      %cmp = llvm.icmp "eq" %xval, %e : i32
+      %sel = llvm.select %cmp, %d, %xval : i1, i32
+      omp.yield(%sel : i32)
+    } weak
+  }
+  llvm.return
+}
+// -----
+
+// CHECK-LABEL: @omp_atomic_compare_capture_postfix
+// CHECK-SAME: (ptr %[[X:.*]], ptr %[[V:.*]], i32 %[[E:.*]], i32 %[[D:.*]])
+llvm.func @omp_atomic_compare_capture_postfix(%x : !llvm.ptr, %v : !llvm.ptr, %e : i32, %d : i32) {
+  // Postfix compare+capture: v captures new value (d if swapped, old x if not)
+  // CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic monotonic
+  // CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+  // CHECK: %[[SUCCESS:.*]] = extractvalue { i32, i1 } %[[RES]], 1
+  // CHECK: %[[NEWVAL:.*]] = select i1 %[[SUCCESS]], i32 %[[D]], i32 %[[OLD]]
+  // CHECK: store i32 %[[NEWVAL]], ptr %[[V]]
+  omp.atomic.capture {
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval : i32):
+      %cmp = llvm.icmp "eq" %xval, %e : i32
+      %sel = llvm.select %cmp, %d, %xval : i1, i32
+      omp.yield(%sel : i32)
+    }
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
+  }
+  llvm.return
+}
+// -----
+
+// CHECK-LABEL: @omp_atomic_compare_capture_fail_only
+// CHECK-SAME: (ptr %[[X:.*]], ptr %[[V:.*]], i32 %[[E:.*]], i32 %[[D:.*]])
+llvm.func @omp_atomic_compare_capture_fail_only(%x : !llvm.ptr, %v : !llvm.ptr, %e : i32, %d : i32) {
+  // Fail-only compare+capture: v is only written when comparison fails
+  // CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[E]], i32 %[[D]] monotonic monotonic
+  // CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
+  // CHECK: %[[SUCCESS:.*]] = extractvalue { i32, i1 } %[[RES]], 1
+  // CHECK: br i1 %[[SUCCESS]], label %[[EXIT:.*]], label %[[CONT:.*]]
+  // CHECK: [[CONT]]:
+  // CHECK: store i32 %[[OLD]], ptr %[[V]]
+  // CHECK: br label %[[EXIT2:.*]]
+  omp.atomic.capture {
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval : i32):
+      %cmp = llvm.icmp "eq" %xval, %e : i32
+      %sel = llvm.select %cmp, %d, %xval : i1, i32
+      omp.yield(%sel : i32)
+    }
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, i32
+  } fail_only
+  llvm.return
+}
+// -----
+
+// CHECK-LABEL: @omp_atomic_compare_capture_real
+// CHECK-SAME: (ptr %[[X:.*]], ptr %[[V:.*]], float %[[E:.*]], float %[[D:.*]])
+llvm.func @omp_atomic_compare_capture_real(%x : !llvm.ptr, %v : !llvm.ptr, %e : f32, %d : f32) {
+  // Real compare+capture: uses HandleFPNegZero multi-block path
+  // CHECK: %[[EBITS:.*]] = bitcast float %[[E]] to i32
+  // CHECK: %[[DBITS:.*]] = bitcast float %[[D]] to i32
+  // CHECK: %[[XI:.*]] = load atomic i32, ptr %[[X]] monotonic{{.*}}
+  // CHECK: %[[XFP:.*]] = bitcast i32 %[[XI]] to float
+  // Part 1: NaN check
+  // CHECK: %[[E_NAN:.*]] = fcmp uno float %[[E]], %[[E]]
+  // CHECK: %[[X_NAN:.*]] = fcmp uno float %[[XFP]], %[[XFP]]
+  // CHECK: %[[EITHER_NAN:.*]] = or i1 %[[E_NAN]], %[[X_NAN]]
+  // CHECK: br i1 %[[EITHER_NAN]], label %[[NAN:.*]], label %[[NOTNAN:.*]]
+  // CHECK: [[NAN]]:
+  // CHECK: br label %[[EXIT:.*]]
+  // Part 2: Both-zero check
+  // CHECK: [[NOTNAN]]:
+  // CHECK: %[[XISZERO:.*]] = fcmp oeq float %[[XFP]], 0.000000e+00
+  // CHECK: %[[EISZERO:.*]] = fcmp oeq float %[[E]], 0.000000e+00
+  // CHECK: %[[BOTHZERO:.*]] = and i1 %[[XISZERO]], %[[EISZERO]]
+  // CHECK: br i1 %[[BOTHZERO]], label %[[ZERO:.*]], label %[[NORMAL:.*]]
+  // CHECK: [[ZERO]]:
+  // CHECK: cmpxchg ptr %[[X]], i32 %[[XI]], i32 %[[DBITS]] monotonic monotonic{{.*}}
+  // CHECK: br label %[[EXIT]]
+  // Part 3: Normal cmpxchg
+  // CHECK: [[NORMAL]]:
+  // CHECK: cmpxchg ptr %[[X]], i32 %[[EBITS]], i32 %[[DBITS]] monotonic monotonic{{.*}}
+  // CHECK: br label %[[EXIT]]
+  // Exit: select v = (success ? d : old_x)
+  // CHECK: [[EXIT]]:
+  // CHECK: %[[OLD:.*]] = phi i32 {{.*}}
+  // CHECK: %[[OK:.*]] = phi i1 {{.*}}
+  // CHECK: %[[OLDFP:.*]] = bitcast i32 %[[OLD]] to float
+  // CHECK: %[[VVAL:.*]] = select i1 %[[OK]], float %[[D]], float %[[OLDFP]]
+  // CHECK: store float %[[VVAL]], ptr %[[V]]{{.*}}
+  omp.atomic.capture {
+    omp.atomic.compare %x : !llvm.ptr {
+    ^bb0(%xval : f32):
+      %cmp = llvm.fcmp "oeq" %xval, %e : f32
+      %sel = llvm.select %cmp, %d, %xval : i1, f32
+      omp.yield(%sel : f32)
+    }
+    omp.atomic.read %v = %x : !llvm.ptr, !llvm.ptr, f32
+  }
+  llvm.return
+}
 // -----
 
 // CHECK-LABEL: @omp_sections_empty
@@ -3546,7 +3686,7 @@ llvm.func @bar(i32, i32, !llvm.ptr) -> ()
 
 llvm.func @omp_taskgroup_task(%x: i32, %y: i32, %zaddr: !llvm.ptr) {
   omp.taskgroup {
-    %c1 = llvm.mlir.constant(1) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
     %ptr1 = llvm.alloca %c1 x i8 : (i32) -> !llvm.ptr
     omp.task {
       llvm.call @foo() : () -> ()
@@ -3758,7 +3898,7 @@ module attributes {omp.is_target_device = false} {
   llvm.func @filter_nohost() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (nohost), capture_clause = (to)>
+          #omp.declaretarget<device_type = nohost, capture_clause = to>
       } {
     llvm.return
   }
@@ -3767,7 +3907,7 @@ module attributes {omp.is_target_device = false} {
   llvm.func @filter_host() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (host), capture_clause = (to)>
+          #omp.declaretarget<device_type = host, capture_clause = to>
       } {
     llvm.return
   }
@@ -3780,7 +3920,7 @@ module attributes {omp.is_target_device = false} {
   llvm.func @filter_nohost() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (nohost), capture_clause = (enter)>
+          #omp.declaretarget<device_type = nohost, capture_clause = enter>
       } {
     llvm.return
   }
@@ -3789,7 +3929,7 @@ module attributes {omp.is_target_device = false} {
   llvm.func @filter_host() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (host), capture_clause = (enter)>
+          #omp.declaretarget<device_type = host, capture_clause = enter>
       } {
     llvm.return
   }
@@ -3802,7 +3942,7 @@ module attributes {omp.is_target_device = true} {
   llvm.func @filter_nohost() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (nohost), capture_clause = (to)>
+          #omp.declaretarget<device_type = nohost, capture_clause = to>
       } {
     llvm.return
   }
@@ -3811,7 +3951,7 @@ module attributes {omp.is_target_device = true} {
   llvm.func @filter_host() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (host), capture_clause = (to)>
+          #omp.declaretarget<device_type = host, capture_clause = to>
       } {
     llvm.return
   }
@@ -3824,7 +3964,7 @@ module attributes {omp.is_target_device = true} {
   llvm.func @filter_nohost() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (nohost), capture_clause = (enter)>
+          #omp.declaretarget<device_type = nohost, capture_clause = enter>
       } {
     llvm.return
   }
@@ -3833,7 +3973,7 @@ module attributes {omp.is_target_device = true} {
   llvm.func @filter_host() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (host), capture_clause = (enter)>
+          #omp.declaretarget<device_type = host, capture_clause = enter>
       } {
     llvm.return
   }
@@ -3939,14 +4079,14 @@ llvm.func @omp_task_if(%boolexpr: i1) {
 
 // -----
 
-module attributes {omp.requires = #omp<clause_requires reverse_offload|unified_shared_memory>} {}
+module attributes {omp.requires = #omp.clause_requires<reverse_offload|unified_shared_memory>} {}
 
 // -----
 
 llvm.func @distribute() {
-  %0 = llvm.mlir.constant(42 : index) : i64
-  %1 = llvm.mlir.constant(10 : index) : i64
-  %2 = llvm.mlir.constant(1 : index) : i64
+  %0 = llvm.mlir.constant(42 : i64) : i64
+  %1 = llvm.mlir.constant(10 : i64) : i64
+  %2 = llvm.mlir.constant(1 : i64) : i64
   omp.distribute {
     omp.loop_nest (%arg1) : i64 = (%1) to (%0) step (%2) {
       omp.yield
@@ -4111,7 +4251,7 @@ llvm.mlir.global internal @any() : i32
 llvm.mlir.global internal @host() : i32
 llvm.mlir.global internal @nohost() : i32
 llvm.func @omp_groupprivate_device() attributes {
-    omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} {
+    omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>} {
   %0 = llvm.mlir.constant(1 : i32) : i32
   %2 = omp.groupprivate @any device_type(any) : !llvm.ptr
   llvm.store %0, %2 : i32, !llvm.ptr

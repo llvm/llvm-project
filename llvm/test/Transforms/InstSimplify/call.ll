@@ -1179,7 +1179,7 @@ define double @fmuladd_nan_op0_poison_op1(double %x) {
 ; CHECK-LABEL: @fmuladd_nan_op0_poison_op1(
 ; CHECK-NEXT:    ret double poison
 ;
-  %r = call double @llvm.fmuladd.f64(double 0x7ff8000000000000, double poison, double %x)
+  %r = call double @llvm.fmuladd.f64(double +qnan, double poison, double %x)
   ret double %r
 }
 
@@ -1187,7 +1187,7 @@ define double @fmuladd_nan_op1_poison_op2(double %x) {
 ; CHECK-LABEL: @fmuladd_nan_op1_poison_op2(
 ; CHECK-NEXT:    ret double poison
 ;
-  %r = call double @llvm.fmuladd.f64(double %x, double 0x7ff8000000000000, double poison)
+  %r = call double @llvm.fmuladd.f64(double %x, double +qnan, double poison)
   ret double %r
 }
 
@@ -1195,7 +1195,7 @@ define double @fma_nan_op0(double %x, double %y) {
 ; CHECK-LABEL: @fma_nan_op0(
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %r = call double @llvm.fma.f64(double 0x7ff8000000000000, double %x, double %y)
+  %r = call double @llvm.fma.f64(double +qnan, double %x, double %y)
   ret double %r
 }
 
@@ -1244,7 +1244,7 @@ define double @fma_nan_multiplicand_inf_zero(double %x) {
 ; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fma.f64(double +inf, double 0.000000e+00, double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = call double @llvm.fma.f64(double 0x7ff0000000000000, double 0.0, double %x)
+  %r = call double @llvm.fma.f64(double +inf, double 0.0, double %x)
   ret double %r
 }
 
@@ -1253,7 +1253,7 @@ define double @fma_nan_multiplicand_zero_inf(double %x) {
 ; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fma.f64(double 0.000000e+00, double +inf, double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = call double @llvm.fma.f64(double 0.0, double 0x7ff0000000000000, double %x)
+  %r = call double @llvm.fma.f64(double 0.0, double +inf, double %x)
   ret double %r
 }
 
@@ -1264,7 +1264,7 @@ define double @fma_nan_addend_inf_neginf(double %x, i32 %y) {
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %notnan = uitofp i32 %y to double
-  %r = call double @llvm.fma.f64(double 0x7ff0000000000000, double %notnan, double 0xfff0000000000000)
+  %r = call double @llvm.fma.f64(double +inf, double %notnan, double -inf)
   ret double %r
 }
 
@@ -1275,7 +1275,7 @@ define double @fma_nan_addend_neginf_inf(double %x, i1 %y) {
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %notnan = select i1 %y, double 42.0, double -0.1
-  %r = call double @llvm.fma.f64(double %notnan, double 0xfff0000000000000, double 0x7ff0000000000000)
+  %r = call double @llvm.fma.f64(double %notnan, double -inf, double +inf)
   ret double %r
 }
 
@@ -1284,7 +1284,7 @@ define double @fmuladd_nan_multiplicand_neginf_zero(double %x) {
 ; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fmuladd.f64(double -inf, double 0.000000e+00, double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = call double @llvm.fmuladd.f64(double 0xfff0000000000000, double 0.0, double %x)
+  %r = call double @llvm.fmuladd.f64(double -inf, double 0.0, double %x)
   ret double %r
 }
 
@@ -1293,7 +1293,7 @@ define double @fmuladd_nan_multiplicand_negzero_inf(double %x) {
 ; CHECK-NEXT:    [[R:%.*]] = call double @llvm.fmuladd.f64(double -0.000000e+00, double +inf, double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = call double @llvm.fmuladd.f64(double -0.0, double 0x7ff0000000000000, double %x)
+  %r = call double @llvm.fmuladd.f64(double -0.0, double +inf, double %x)
   ret double %r
 }
 
@@ -1304,7 +1304,7 @@ define double @fmuladd_nan_addend_inf_neginf(double %x, i32 %y) {
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %notnan = sitofp i32 %y to double
-  %r = call double @llvm.fmuladd.f64(double 0x7ff0000000000000, double %notnan, double 0xfff0000000000000)
+  %r = call double @llvm.fmuladd.f64(double +inf, double %notnan, double -inf)
   ret double %r
 }
 
@@ -1315,7 +1315,7 @@ define double @fmuladd_nan_addend_neginf_inf(double %x, i1 %y) {
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %notnan = select i1 %y, double 42.0, double -0.1
-  %r = call double @llvm.fmuladd.f64(double %notnan, double 0xfff0000000000000, double 0x7ff0000000000000)
+  %r = call double @llvm.fmuladd.f64(double %notnan, double -inf, double +inf)
   ret double %r
 }
 

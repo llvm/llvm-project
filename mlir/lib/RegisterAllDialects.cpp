@@ -99,6 +99,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Vector/Transforms/IndexedAccessOpInterfaceImpl.h"
+#include "mlir/Dialect/Vector/Transforms/MemorySlotOpInterfaceImpl.h"
 #include "mlir/Dialect/Vector/Transforms/SubsetOpInterfaceImpl.h"
 #include "mlir/Dialect/WasmSSA/IR/WasmSSA.h"
 #include "mlir/Dialect/X86/X86Dialect.h"
@@ -204,6 +205,7 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   tosa::registerShardingInterfaceExternalModels(registry);
   vector::registerBufferizableOpInterfaceExternalModels(registry);
   vector::registerIndexedAccessOpInterfaceExternalModels(registry);
+  vector::registerMemorySlotOpInterfaceExternalModels(registry);
   vector::registerSubsetOpInterfaceExternalModels(registry);
   vector::registerValueBoundsOpInterfaceExternalModels(registry);
   NVVM::registerNVVMTargetInterfaceExternalModels(registry);

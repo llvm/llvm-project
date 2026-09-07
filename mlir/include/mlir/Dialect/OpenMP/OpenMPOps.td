@@ -30,7 +30,9 @@ include "mlir/IR/SymbolInterfaces.td"
 // 2.19.4 Data-Sharing Attribute Clauses
 //===----------------------------------------------------------------------===//
 
-def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]> {
+def PrivateClauseOp
+    : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface, SymbolName,
+                            SymbolVisibility, Symbol]> {
   let summary = "Provides declaration of [first]private logic.";
   let description = [{
     This operation provides a declaration of how to implement the
@@ -104,6 +106,7 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttrOf<AnyType>:$type,
                        DataSharingClauseTypeAttr:$data_sharing_type);
 
@@ -112,11 +115,11 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
                         AnyRegion:$dealloc_region);
 
   let assemblyFormat = [{
-    $data_sharing_type $sym_name `:` $type
+    ` ` `{` `type` `=` enum($data_sharing_type) `}`
+      ($sym_visibility^)? $sym_name `:` $type
       (`init` $init_region^)?
       (`copy` $copy_region^)?
-      (`dealloc` $dealloc_region^)?
-      attr-dict
+      (`dealloc` $dealloc_region^)? attr-dict
   }];
 
   let builders = [
@@ -404,8 +407,7 @@ def NewCliOp : OpenMP_Op<"new_cli",
 
   let arguments = (ins );
   let results = (outs CanonicalLoopInfoType:$result);
-  let assemblyFormat = [{
-      attr-dict
+  let assemblyFormat = [{ attr-dict
   }];
 
   let builders = [
@@ -1385,7 +1387,7 @@ def MapBoundsOp : OpenMP_Op<"map.bounds",
       | `extent` `(` $extent `:` type($extent) `)`
       | `stride` `(` $stride `:` type($stride) `)`
       | `start_idx` `(` $start_idx `:` type($start_idx) `)`
-    ) attr-dict
+    ) (`stride_in_bytes` `(` $stride_in_bytes^ `)`)? attr-dict
   }];
 
   let hasVerifier = 1;
@@ -1477,6 +1479,8 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
       | `mapper` `(` $mapper_id `)`
       | `members` `(` $members `:` custom<MembersIndex>($members_index) `:` type($members) `)`
       | `bounds` `(` $bounds `)`
+      | `name` `(` $name `)`
+      | `partial_map` `(` $partial_map `)`
     ) `->` type($omp_ptr) attr-dict
   }];
 
@@ -1722,7 +1726,7 @@ def TargetOp : OpenMP_Op<"target", traits = [
     bool hasHostEvalTripCount();
   }] # clausesExtraClassDeclaration;
 
-  let assemblyFormat = "`kernel_type` `` $kernel_type " #
+  let assemblyFormat = "`kernel_type` `(` enum($kernel_type) `)` " #
     clausesReqAssemblyFormat # " " #
     "oilist(" # clausesOptAssemblyFormat #
     " | `map_iterated` `(` $map_iterated `:` type($map_iterated) `)`)" # [{
@@ -1790,6 +1794,8 @@ def CriticalOp : OpenMP_Op<"critical", [
   let assemblyFormat = [{
     (`(` $name^ `)`)? $region attr-dict
   }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1992,7 +1998,7 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update", traits = [
 
   // Override clause-based assemblyFormat.
   let assemblyFormat = clausesAssemblyFormat #
-    "$x `:` type($x) $region attr-dict";
+    "$x `:` type($x) $region (`atomic_control` $atomic_control^)? attr-dict";
 
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
@@ -2028,11 +2034,23 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture", traits = [
         omp.atomic.write ...
         omp.terminator
       }
+
+      omp.atomic.capture {
+        omp.atomic.read ...
+        omp.atomic.compare ...
+        omp.terminator
+      }
     ```
   }] # clausesDescription;
 
+  let arguments = !con(clausesArgs, (ins UnitAttr:$fail_only));
+
   // Override region definition.
   let regions = (region SizedRegion<1>:$region);
+
+  // Override clause-based assemblyFormat.
+  let assemblyFormat = clausesAssemblyFormat #
+    "$region (`fail_only` $fail_only^)? attr-dict";
 
   let extraClassDeclaration = [{
     /// Returns the `atomic.read` operation inside the region, if any.
@@ -2046,6 +2064,10 @@ def AtomicCaptureOp : OpenMP_Op<"atomic.capture", traits = [
     /// Returns the `atomic.update` operation inside the region, if any.
     /// Otherwise, it returns nullptr.
     AtomicUpdateOp getAtomicUpdateOp();
+
+    /// Returns the `atomic.compare` operation inside the region, if any.
+    /// Otherwise, it returns nullptr.
+    AtomicCompareOp getAtomicCompareOp();
   }] # clausesExtraClassDeclaration;
 
   let hasRegionVerifier = 1;
@@ -2098,7 +2120,9 @@ def AtomicCompareOp : OpenMP_Op<"atomic.compare", traits = [
 
   // Override clause-based assemblyFormat.
   let assemblyFormat = clausesAssemblyFormat #
-    "$x `:` type($x) $region attr-dict";
+    "$x `:` type($x) $region "
+    "oilist(`weak` $weak | "
+    "`fail_memory_order` `(` enum($fail_memory_order) `)`) attr-dict";
 
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
@@ -2201,7 +2225,7 @@ def DeclareMapperOp : OpenMP_Op<"declare_mapper", [
     IsolatedFromAbove,
     RecipeInterface,
     SingleBlock,
-    Symbol
+    SymbolName, SymbolVisibility, Symbol
   ]> {
   let summary = "declare mapper directive";
   let description = [{
@@ -2210,11 +2234,13 @@ def DeclareMapperOp : OpenMP_Op<"declare_mapper", [
   }] # clausesDescription;
 
   let arguments = (ins  SymbolNameAttr:$sym_name,
+                        OptionalAttr<StrAttr>:$sym_visibility,
                         TypeAttr:$type);
 
   let regions = (region AnyRegion:$body);
 
-  let assemblyFormat = "$sym_name `:` $type $body attr-dict";
+  let assemblyFormat =
+      "($sym_visibility^)? $sym_name `:` $type $body attr-dict";
 
   let extraClassDeclaration = [{
     /// Get DeclareMapperInfoOp.
@@ -2261,6 +2287,8 @@ def DeclareMapperInfoOp : OpenMP_Op<"declare_mapper.info",
 
 def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
                                                          RecipeInterface,
+                                                         SymbolName,
+                                                         SymbolVisibility,
                                                          Symbol]> {
   let summary = "declares a reduction kind";
   let description = [{
@@ -2311,6 +2339,7 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$type,
                        OptionalAttr<TypeAttr>:$byref_element_type
                        );
@@ -2322,7 +2351,9 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
                         AnyRegion:$cleanupRegion,
                         MaxSizedRegion<1>:$dataPtrPtrRegion);
 
-  let assemblyFormat = "$sym_name `:` $type attr-dict-with-keyword "
+  let assemblyFormat = "($sym_visibility^)? $sym_name "
+                       "( `byref_element_type` `(` $byref_element_type^ `)` )? "
+                       "`:` $type attr-dict-with-keyword "
                        "( `alloc` $allocRegion^ )? "
                        "`init` $initializerRegion "
                        "`combiner` $reductionRegion "
@@ -2689,7 +2720,7 @@ def IteratorOp : OpenMP_Op<"iterator", [AttrSizedOperandSegments, SingleBlock],
     `(` custom<IteratorHeader>($region,
                                 $loop_lower_bounds, $loop_upper_bounds, $loop_steps,
                                 type($loop_lower_bounds), type($loop_upper_bounds), type($loop_steps))
-    `->` qualified(type($iterated)) attr-dict
+    (`inclusive` $loop_inclusive^)? `->` qualified(type($iterated)) attr-dict
   }];
 
   let hasVerifier = 1;
@@ -2720,7 +2751,8 @@ def GroupprivateOp : OpenMP_Op<"groupprivate",
   );
   let results = (outs OpenMP_PointerLikeType:$gp_addr);
   let assemblyFormat = [{
-    $sym_name (`device_type` $device_type^)? `:` type($gp_addr) attr-dict
+    $sym_name (`device_type` ` ` `(` enum($device_type)^ `)`)?
+      `:` type($gp_addr) attr-dict
   }];
 }
 

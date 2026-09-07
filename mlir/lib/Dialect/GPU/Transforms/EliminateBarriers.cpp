@@ -45,7 +45,7 @@ using namespace mlir::gpu;
 /// Returns `true` if the op is defines the parallel region that is subject to
 /// barrier synchronization.
 static bool isParallelRegionBoundary(Operation *op) {
-  if (op->hasAttr("__parallel_region_boundary_for_test"))
+  if (op->hasDiscardableAttr("__parallel_region_boundary_for_test"))
     return true;
 
   return isa<GPUFuncOp, LaunchOp>(op);

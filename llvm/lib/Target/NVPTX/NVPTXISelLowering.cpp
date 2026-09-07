@@ -55,6 +55,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
@@ -63,7 +65,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <algorithm>
@@ -72,7 +73,6 @@
 #include <cstdint>
 #include <iterator>
 #include <optional>
-#include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -522,7 +522,7 @@ VectorizePTXValueVTs(const SmallVectorImpl<EVT> &ValueVTs,
 // NVPTXTargetLowering Constructor.
 NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                                          const NVPTXSubtarget &STI)
-    : TargetLowering(TM, STI), nvTM(&TM), STI(STI), GlobalUniqueCallSite(0) {
+    : TargetLowering(TM, STI), STI(STI), GlobalUniqueCallSite(0) {
   // always lower memset, memcpy, and memmove intrinsics to load/store
   // instructions, rather
   // then generating calls to memset, mempcy or memmove.
@@ -1276,6 +1276,15 @@ static SDValue correctParamType(SDValue V, EVT ExpectedVT,
   return V;
 }
 
+static SDValue getSymbolNode(SelectionDAG &DAG, MCSymbol *Sym, EVT T) {
+  return DAG.getNode(NVPTXISD::Symbol, SDLoc(), T, DAG.getMCSymbol(Sym, T));
+}
+
+static SDValue getSymbolNode(SelectionDAG &DAG, const Twine &Name, EVT T) {
+  MCContext &Ctx = DAG.getMachineFunction().getContext();
+  return getSymbolNode(DAG, Ctx.getOrCreateSymbol(Name), T);
+}
+
 SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                        SmallVectorImpl<SDValue> &InVals) const {
 
@@ -1352,8 +1361,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   const SDValue VADeclareParam =
       CLI.Args.size() > FirstVAArg
-          ? MakeDeclareArrayParam(getCallParamSymbol(DAG, FirstVAArg, MVT::i32),
-                                  Align(STI.getMaxRequiredAlignment()), 0)
+          ? MakeDeclareArrayParam(
+                getCallParamSymbolNode(DAG, FirstVAArg, MVT::i32),
+                Align(STI.getMaxRequiredAlignment()), 0)
           : SDValue();
 
   // Args.size() and Outs.size() need not match.
@@ -1384,7 +1394,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     const bool IsByVal = Arg.IsByVal;
 
     const SDValue ParamSymbol =
-        getCallParamSymbol(DAG, IsVAArg ? FirstVAArg : ArgI, MVT::i32);
+        getCallParamSymbolNode(DAG, IsVAArg ? FirstVAArg : ArgI, MVT::i32);
 
     assert((!IsByVal || Arg.IndirectType) &&
            "byval arg must have indirect type");
@@ -1538,7 +1548,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Handle Result
   if (!Ins.empty()) {
-    const SDValue RetSymbol = DAG.getExternalSymbol("retval0", MVT::i32);
+    const SDValue RetSymbol = getSymbolNode(DAG, "retval0", MVT::i32);
     const unsigned ResultSize = DL.getTypeAllocSize(RetTy);
     if (shouldPassAsArray(RetTy)) {
       const Align RetAlign =
@@ -1627,7 +1637,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     const Align RetAlign =
         getPTXParamAlign(CB, RetTy, AttributeList::ReturnIndex, DL);
-    const SDValue RetSymbol = DAG.getExternalSymbol("retval0", MVT::i32);
+    const SDValue RetSymbol = getSymbolNode(DAG, "retval0", MVT::i32);
 
     // PTX Interoperability Guide 3.3(A): [Integer] Values shorter than
     // 32-bits are sign extended or zero extended, depending on whether
@@ -2676,6 +2686,18 @@ static unsigned getTcgen05MMADisableOutputLane(unsigned IID) {
       nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2_ashift:
     return NVPTXISD::
         TCGEN05_MMA_SP_TENSOR_SCALE_D_DISABLE_OUTPUT_LANE_CG2_ASHIFT;
+  case Intrinsic::
+      nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg1_decompress_b:
+    return NVPTXISD::TCGEN05_MMA_SHARED_DISABLE_OUTPUT_LANE_CG1_DECOMPRESS_B;
+  case Intrinsic::
+      nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg2_decompress_b:
+    return NVPTXISD::TCGEN05_MMA_SHARED_DISABLE_OUTPUT_LANE_CG2_DECOMPRESS_B;
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg1_decompress_b:
+    return NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG1_DECOMPRESS_B;
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg2_decompress_b:
+    return NVPTXISD::TCGEN05_MMA_TENSOR_DISABLE_OUTPUT_LANE_CG2_DECOMPRESS_B;
   };
   llvm_unreachable("unhandled tcgen05.mma.disable_output_lane intrinsic");
 }
@@ -2888,6 +2910,14 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
       nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg1_ashift:
   case Intrinsic::
       nvvm_tcgen05_mma_sp_tensor_scale_d_disable_output_lane_cg2_ashift:
+  case Intrinsic::
+      nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg1_decompress_b:
+  case Intrinsic::
+      nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg2_decompress_b:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg1_decompress_b:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg2_decompress_b:
     return LowerTcgen05MMADisableOutputLane(Op, DAG);
   case Intrinsic::nvvm_tensormap_replace_elemtype:
     return lowerTensormapReplaceElemtype(Op, DAG);
@@ -3618,7 +3648,7 @@ SDValue NVPTXTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   EVT PtrVT = TLI->getPointerTy(DAG.getDataLayout());
 
   // Store the address of unsized array <function>_vararg[] in the ap object.
-  SDValue VAReg = getParamSymbol(DAG, /* vararg */ -1, PtrVT);
+  SDValue VAReg = getParamSymbolNode(DAG, /* vararg */ -1, PtrVT);
 
   const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
   return DAG.getStore(Op.getOperand(0), DL, VAReg, Op.getOperand(1),
@@ -4043,21 +4073,16 @@ bool NVPTXTargetLowering::splitValueIntoRegisterParts(
   return false;
 }
 
-// This creates target external symbol for a function parameter.
-// Name of the symbol is composed from its index and the function name.
-// Negative index corresponds to special parameter (unsized array) used for
-// passing variable arguments.
-SDValue NVPTXTargetLowering::getParamSymbol(SelectionDAG &DAG, int I,
-                                            EVT T) const {
-  StringRef SavedStr = nvTM->getStrPool().save(
-      getParamName(&DAG.getMachineFunction().getFunction(), I));
-  return DAG.getExternalSymbol(SavedStr.data(), T);
+SDValue NVPTXTargetLowering::getParamSymbolNode(SelectionDAG &DAG, int I,
+                                                EVT T) const {
+  const MachineFunction &MF = DAG.getMachineFunction();
+  return getSymbolNode(
+      DAG, getParamSymbol(MF.getContext(), &MF.getFunction(), I), T);
 }
 
-SDValue NVPTXTargetLowering::getCallParamSymbol(SelectionDAG &DAG, int I,
-                                                EVT T) const {
-  const StringRef SavedStr = nvTM->getStrPool().save("param" + Twine(I));
-  return DAG.getExternalSymbol(SavedStr.data(), T);
+SDValue NVPTXTargetLowering::getCallParamSymbolNode(SelectionDAG &DAG, int I,
+                                                    EVT T) const {
+  return getSymbolNode(DAG, "param" + Twine(I), T);
 }
 
 SDValue NVPTXTargetLowering::LowerFormalArguments(
@@ -4108,7 +4133,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       continue;
     }
 
-    SDValue ArgSymbol = getParamSymbol(DAG, ParamI, PtrVT);
+    SDValue ArgSymbol = getParamSymbolNode(DAG, ParamI, PtrVT);
 
     // In the following cases, assign a node order of "i+1"
     // to newly created nodes. The SDNodes for params have to
@@ -4205,7 +4230,7 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   const DataLayout &DL = DAG.getDataLayout();
   LLVMContext &Ctx = *DAG.getContext();
 
-  const SDValue RetSymbol = DAG.getExternalSymbol("func_retval0", MVT::i32);
+  const SDValue RetSymbol = getSymbolNode(DAG, "func_retval0", MVT::i32);
   const auto RetAlign =
       getPTXParamAlign(&F, RetTy, AttributeList::ReturnIndex, DL);
 
@@ -5497,6 +5522,10 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     Infos.push_back(Info);
     return;
   }
+  case Intrinsic::
+      nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg1_decompress_b:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg1_decompress_b:
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
   case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg1:
   case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg1:
@@ -5522,6 +5551,10 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     return;
   }
 
+  case Intrinsic::
+      nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg2_decompress_b:
+  case Intrinsic::
+      nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg2_decompress_b:
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg2:
   case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg2:
   case Intrinsic::nvvm_tcgen05_mma_sp_shared_disable_output_lane_cg2:
@@ -5546,24 +5579,28 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     Infos.push_back(Info);
     return;
   }
+  case Intrinsic::nvvm_tcgen05_alloc_cg1:
+  case Intrinsic::nvvm_tcgen05_alloc_cg2:
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOStore;
+    Info.align = Align(4);
+    Infos.push_back(Info);
+    return;
   }
 }
 
-// Helper for getting a function parameter name. Name is composed from
-// its index and the function name. Negative index corresponds to special
-// parameter (unsized array) used for passing variable arguments.
-std::string NVPTXTargetLowering::getParamName(const Function *F,
+// Helper for getting a function parameter symbol. Its name is composed from
+// the function name and the parameter index. Negative index corresponds to the
+// special parameter (unsized array) used for passing variable arguments.
+MCSymbol *NVPTXTargetLowering::getParamSymbol(MCContext &Ctx, const Function *F,
                                               int Idx) const {
-  std::string ParamName;
-  raw_string_ostream ParamStr(ParamName);
-
-  ParamStr << getTargetMachine().getSymbol(F)->getName();
+  const StringRef FuncName = getTargetMachine().getSymbol(F)->getName();
   if (Idx < 0)
-    ParamStr << "_vararg";
-  else
-    ParamStr << "_param_" << Idx;
-
-  return ParamName;
+    return Ctx.getOrCreateSymbol(FuncName + "_vararg");
+  return Ctx.getOrCreateSymbol(FuncName + "_param_" + Twine(Idx));
 }
 
 /// isLegalAddressingMode - Return true if the addressing mode represented
@@ -5675,10 +5712,6 @@ bool NVPTXTargetLowering::allowFMA(MachineFunction &MF,
   // Do not contract if we're not optimizing the code.
   if (OptLevel == CodeGenOptLevel::None)
     return false;
-
-  // Honor TargetOptions flags that explicitly say fusion is okay.
-  if (MF.getTarget().Options.AllowFPOpFusion == FPOpFusion::Fast)
-    return true;
 
   return false;
 }
@@ -6616,11 +6649,140 @@ static SDValue PerformMULCombine(SDNode *N,
   return PerformMULCombineWithOperands(N, N0, N1, DCI);
 }
 
+/// Commute SHL with a bitwise logic operation when doing so exposes a common
+/// shifted operand. For example:
+///
+/// Before:
+///   N          = shl (zext (LogicOp X, C)), ShiftAmount
+///   OtherShift = shl (zext (OtherLogicOp X, OtherC)), ShiftAmount
+///
+/// After:
+///   ShiftedX   = shl (zext X), ShiftAmount
+///   N          = LogicOp ShiftedX, ShiftedC
+///   OtherShift = OtherLogicOp ShiftedX, ShiftedOtherC
+///
+/// ShiftedC = (zext C) << ShiftAmount and ShiftedOtherC =
+/// (zext OtherC) << ShiftAmount are folded constants. This replaces two
+/// variable shifts with the single shared ShiftedX. Requiring another matching
+/// shift avoids disrupting isolated address calculations where a shift may be
+/// folded into the addressing mode.
+static SDValue combineShiftOfLogicOp(SDNode *N,
+                                     TargetLowering::DAGCombinerInfo &DCI) {
+  using namespace SDPatternMatch;
+
+  struct ShiftOfLogicOp {
+    SDNode *Shift;
+    SDValue LogicOp;
+    SDValue X;
+    SDValue Constant;
+    unsigned ExtendOpcode;
+  };
+
+  // Match a logic operation, with an optional extension, inside a SHL.
+  auto matchShiftOfLogicOp =
+      [&](SDNode *Shift) -> std::optional<ShiftOfLogicOp> {
+    if (Shift->getOpcode() != ISD::SHL || !Shift->getOperand(0).hasOneUse())
+      return std::nullopt;
+    ShiftOfLogicOp Match;
+    Match.Shift = Shift;
+    Match.LogicOp = Shift->getOperand(0);
+    Match.ExtendOpcode = 0;
+    if (ISD::isExtOpcode(Match.LogicOp.getOpcode())) {
+      Match.ExtendOpcode = Match.LogicOp.getOpcode();
+      Match.LogicOp = Match.LogicOp.getOperand(0);
+    }
+
+    if (!sd_match(Match.LogicOp, m_OneUse(m_BitwiseLogic(
+                                     m_Value(Match.X),
+                                     m_Value(Match.Constant, m_ConstInt())))))
+      return std::nullopt;
+
+    return Match;
+  };
+
+  // Match N as the root shift-of-logic; bail if it does not fit the pattern.
+  const std::optional<ShiftOfLogicOp> Root = matchShiftOfLogicOp(N);
+  if (!Root)
+    return SDValue();
+
+  // Only profitable for a constant shift amount: the per-op constant shift then
+  // folds away instead of becoming an extra variable shift.
+  if (!isConstOrConstSplat(N->getOperand(1)))
+    return SDValue();
+
+  // Collect candidate shifts that share X. Reached through another user of X,
+  // the logic result feeds the shift directly or through an optional extend.
+  SmallVector<SDNode *, 4> CandidateShifts;
+  for (const SDNode *CandidateLogicOp : Root->X->users()) {
+    if (CandidateLogicOp == Root->LogicOp.getNode())
+      continue;
+    for (SDNode *LogicUser : CandidateLogicOp->users()) {
+      if (ISD::isExtOpcode(LogicUser->getOpcode())) {
+        // shl (ext (logic X, C)): step through the extend to find the shift.
+        for (SDNode *ExtendUser : LogicUser->users())
+          if (ExtendUser->getOpcode() == ISD::SHL)
+            CandidateShifts.push_back(ExtendUser);
+      } else if (LogicUser->getOpcode() == ISD::SHL) {
+        // shl (logic X, C): the user is already the shift.
+        CandidateShifts.push_back(LogicUser);
+      }
+    }
+  }
+
+  // Verify each candidate against the root's pattern: the same X, extension,
+  // type, and shift amount.
+  const EVT VT = N->getValueType(0);
+  const SDValue ShiftAmount = N->getOperand(1);
+  SmallVector<ShiftOfLogicOp, 4> Matches;
+  for (SDNode *CandidateShift : CandidateShifts) {
+    const std::optional<ShiftOfLogicOp> Candidate =
+        matchShiftOfLogicOp(CandidateShift);
+    if (Candidate && Candidate->X == Root->X &&
+        Candidate->ExtendOpcode == Root->ExtendOpcode &&
+        CandidateShift->getValueType(0) == VT &&
+        CandidateShift->getOperand(1) == ShiftAmount)
+      Matches.push_back(*Candidate);
+  }
+  if (Matches.empty())
+    return SDValue();
+
+  // Build the shared shifted X once, then rewrite the root and every match
+  // into a logic op over it so the shift is CSE'd.
+  SelectionDAG &DAG = DCI.DAG;
+  const SDValue ShiftedX =
+      DAG.getNode(ISD::SHL, SDLoc(N), VT,
+                  Root->ExtendOpcode
+                      ? DAG.getNode(Root->ExtendOpcode, SDLoc(N), VT, Root->X)
+                      : Root->X,
+                  ShiftAmount);
+
+  // Rebuild the logic op from shared ShiftedX and a folded constant shift.
+  auto buildCommutedLogicOp = [&](const SDValue LogicOp, SDValue C,
+                                  const SDLoc &DL) {
+    if (Root->ExtendOpcode)
+      C = DAG.getNode(Root->ExtendOpcode, DL, VT, C);
+    const SDValue ShiftedC = DAG.getNode(ISD::SHL, DL, VT, C, ShiftAmount);
+    return DAG.getNode(LogicOp.getOpcode(), DL, VT, ShiftedX, ShiftedC,
+                       LogicOp->getFlags());
+  };
+
+  for (const ShiftOfLogicOp &Match : Matches)
+    DCI.CombineTo(Match.Shift,
+                  buildCommutedLogicOp(Match.LogicOp, Match.Constant,
+                                       SDLoc(Match.Shift)));
+  return buildCommutedLogicOp(Root->LogicOp, Root->Constant, SDLoc(N));
+}
+
 /// PerformSHLCombine - Runs PTX-specific DAG combine patterns on SHL nodes.
 static SDValue PerformSHLCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  CodeGenOptLevel OptLevel) {
   if (OptLevel > CodeGenOptLevel::None) {
+    // Expose a shared shifted operand for CSE before mul.wide folding, which
+    // would otherwise consume the shift.
+    if (SDValue Ret = combineShiftOfLogicOp(N, DCI))
+      return Ret;
+
     // Try mul.wide combining at OptLevel > 0
     if (SDValue Ret = TryMULWIDECombine(N, DCI))
       return Ret;
@@ -7482,12 +7644,12 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   // bf16 denormals when doing regular arithmetic, even when FTZ is enabled.
   if (AI->isFloatingPointOperation() &&
       AI->getOperation() == AtomicRMWInst::BinOp::FAdd) {
-    const bool FTZ =
-        AI->getFunction()->getDenormalMode(APFloat::IEEEsingle()).Output ==
-        DenormalMode::PreserveSign;
+    const Function *F = AI->getFunction();
 
     // AllowFTZAtomics forces atom.add regardless of the FTZ mismatch.
     if (Ty->isFloatTy()) {
+      const bool FTZ = F->getDenormalMode(APFloat::IEEEsingle()).Output ==
+                       DenormalMode::PreserveSign;
       bool UseNative = AllowFTZAtomics;
       switch (AI->getPointerAddressSpace()) {
       case llvm::ADDRESS_SPACE_GLOBAL:
@@ -7502,9 +7664,15 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
         return AtomicExpansionKind::None;
     }
 
-    if (Ty->isHalfTy() && (!FTZ || AllowFTZAtomics) &&
-        STI.hasFeature(NVPTX::SM70) && STI.hasFeature(NVPTX::PTX63))
-      return AtomicExpansionKind::None;
+    if (Ty->isHalfTy()) {
+      // atom.add.f16 never flushes denormals, so it only agrees with a
+      // function that is not in FTZ mode for f16.
+      const bool FTZ = F->getDenormalMode(APFloat::IEEEhalf()).Output ==
+                       DenormalMode::PreserveSign;
+      if ((!FTZ || AllowFTZAtomics) && STI.hasFeature(NVPTX::SM70) &&
+          STI.hasFeature(NVPTX::PTX63))
+        return AtomicExpansionKind::None;
+    }
 
     if (Ty->isBFloatTy() && STI.hasFeature(NVPTX::SM90))
       return AtomicExpansionKind::None;
@@ -7713,10 +7881,6 @@ unsigned NVPTXTargetLowering::getPreferredFPToIntOpcode(unsigned Op, EVT FromVT,
   case ISD::STRICT_FP_TO_UINT:
     if (isOperationLegal(ISD::STRICT_FP_TO_SINT, ToVT))
       return ISD::STRICT_FP_TO_SINT;
-    break;
-  case ISD::VP_FP_TO_UINT:
-    if (isOperationLegal(ISD::VP_FP_TO_SINT, ToVT))
-      return ISD::VP_FP_TO_SINT;
     break;
   default:
     break;

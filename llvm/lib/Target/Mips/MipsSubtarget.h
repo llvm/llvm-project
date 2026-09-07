@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <bitset>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "MipsGenSubtargetInfo.inc"
@@ -110,6 +111,9 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
 
   // IsGP64bit - General-purpose registers are 64 bits wide
   bool IsGP64bit;
+
+  // MIPS GPRs explicitly reserved through -ffixed-REG.
+  std::bitset<32> UserReservedGPR;
 
   // IsPTR64bit - Pointers are 64 bit wide
   bool IsPTR64bit;
@@ -251,6 +255,11 @@ public:
   bool isABI_O32() const;
   const MipsABIInfo &getABI() const;
   bool isABI_FPXX() const { return isABI_O32() && IsFPXX; }
+
+  bool isGPRReservedByUser(unsigned GPR) const {
+    assert(GPR < UserReservedGPR.size() && "GPR number out of range");
+    return UserReservedGPR[GPR];
+  }
 
   /// This constructor initializes the data members to match that
   /// of the specified triple.
