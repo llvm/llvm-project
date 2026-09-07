@@ -178,7 +178,7 @@ module attributes {
 // CHECK: llvm.call @use_i32(%[[FAST_ADDR]])
 // CHECK: ^[[FALLBACK]]:
 // CHECK: %[[FALLBACK_ONE:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK: llvm.sub %[[LOWER]], %[[FALLBACK_ONE]] overflow<nsw, nuw> : i64
+// CHECK: llvm.sub %[[LOWER]], %[[FALLBACK_ONE]]
 // CHECK: %[[FALLBACK_ADDR:.*]] = llvm.getelementptr {{.*}} : (!llvm.ptr, i64) -> !llvm.ptr, i8
 // CHECK: llvm.call @use_i32(%[[FALLBACK_ADDR]])
 
@@ -192,7 +192,7 @@ module attributes {
 // CHECK: llvm.call @use_i32(%[[FAST_ADDR]])
 // CHECK: ^[[FALLBACK]]:
 // CHECK: %[[FALLBACK_ONE:.*]] = llvm.mlir.constant(1 : i64) : i64
-// CHECK: llvm.sub %[[NEGATIVE]], %[[FALLBACK_ONE]] overflow<nsw, nuw> : i64
+// CHECK: llvm.sub %[[NEGATIVE]], %[[FALLBACK_ONE]]
 // CHECK: %[[FALLBACK_ADDR:.*]] = llvm.getelementptr {{.*}} : (!llvm.ptr, i64) -> !llvm.ptr, i8
 // CHECK: llvm.call @use_i32(%[[FALLBACK_ADDR]])
 
