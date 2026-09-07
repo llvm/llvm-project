@@ -6,10 +6,6 @@
         .type   f, @function
 f:
         .cfi_startproc
-        
-        ## TODO: Remove these lines when the initial frame directives set the callee saved registers
-        .cfi_undefined %rax
-        .cfi_undefined %flags
 
         .cfi_val_offset %rbp, -8 
 

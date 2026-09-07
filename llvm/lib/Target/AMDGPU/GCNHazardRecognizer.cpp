@@ -11,9 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "GCNHazardRecognizer.h"
+#include "AMDGPUTargetMachine.h"
 #include "AMDGPUWaitcntUtils.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -216,16 +216,23 @@ bool GCNHazardRecognizer::hasCoExecWindowModel() const {
   // gfx1251 and gfx12.5-generic report the same co-execution hazard features
   // but have different WMMA latencies, so they need their own slot patterns
   // before they can be modeled here.
-  return ST.hasWMMACoexecutionHazards() && ST.hasTransCoexecutionHazard() &&
-         AMDGPU::isGFX1250(ST);
+  if (ST.hasWMMACoexecutionHazards() && ST.hasTransCoexecutionHazard() &&
+      AMDGPU::isGFX1250(ST))
+    return true;
+
+  if (ST.hasGFX950Insts() &&
+      AMDGPU::getSchedStrategy(MF.getFunction()) == "coexec")
+    return true;
+
+  return false;
 }
 
 void GCNHazardRecognizer::updateWMMAWindowState(const MachineInstr &MI) {
   if (!hasCoExecWindowModel())
     return;
 
-  // Check if this is a WMMA instruction.
-  if (!SIInstrInfo::isWMMA(MI) && !SIInstrInfo::isSWMMAC(MI))
+  if (!SIInstrInfo::isWMMA(MI) && !SIInstrInfo::isSWMMAC(MI) &&
+      !SIInstrInfo::isMFMA(MI))
     return;
 
   // If a previous window was still active, dump it before starting a new one.
@@ -276,9 +283,9 @@ void GCNHazardRecognizer::updateMultiCycleVALUState(const MachineInstr &MI) {
   if (!SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true))
     return;
 
-  // Skip WMMA and TRANS - they have their own tracking.
+  // Skip WMMA, MFMA, and TRANS - they have their own tracking.
   if (SIInstrInfo::isWMMA(MI) || SIInstrInfo::isSWMMAC(MI) ||
-      SIInstrInfo::isTRANS(MI))
+      SIInstrInfo::isMFMA(MI) || SIInstrInfo::isTRANS(MI))
     return;
 
   unsigned RepeatRate = TII.getRepeatRate(MI);
@@ -1789,6 +1796,8 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
     fixScratchBaseForwardingHazard(MI);
   if (ST.setRegModeNeedsVNOPs())
     fixSetRegMode(MI);
+  if (ST.hasNeedsTDMDrain())
+    fixTDM(MI);
 }
 
 static bool isVCmpXWritesExec(const SIInstrInfo &TII, const SIRegisterInfo &TRI,
@@ -4304,5 +4313,30 @@ bool GCNHazardRecognizer::fixSetRegMode(MachineInstr *MI) {
 
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII.get(AMDGPU::V_NOP_e32));
   BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII.get(AMDGPU::V_NOP_e32));
+  return true;
+}
+
+bool GCNHazardRecognizer::fixTDM(MachineInstr *MI) {
+  auto IsTDM = [&](const MachineInstr &MI) -> bool {
+    return SIInstrInfo::usesTENSOR_CNT(MI) &&
+           MI.getOpcode() != AMDGPU::S_WAIT_TENSORCNT;
+  };
+
+  if (!IsTDM(*MI))
+    return false;
+
+  auto IsExpiredFn = [](const MachineInstr &MI, int) {
+    if (MI.getOpcode() != AMDGPU::S_WAIT_TENSORCNT)
+      return false;
+    return MI.getOperand(0).getImm() <= 10;
+  };
+
+  if (::getWaitStatesSince(IsTDM, MI, IsExpiredFn) ==
+      std::numeric_limits<int>::max())
+    return false;
+
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+          TII.get(AMDGPU::S_WAIT_TENSORCNT))
+      .addImm(10);
   return true;
 }

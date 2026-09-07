@@ -43,7 +43,6 @@
 #  endif
 
 #  if defined(_WIN32)
-#    define _LIBCPP_SHORT_WCHAR 1
 #    if defined(_MSC_VER) && !defined(__MINGW32__)
 #      define _LIBCPP_MSVCRT // Using Microsoft's C Runtime library
 #    endif
@@ -51,11 +50,6 @@
 #  else
 #    define _LIBCPP_HAS_OPEN_WITH_WCHAR 0
 #  endif // defined(_WIN32)
-
-#  if defined(_AIX) && !defined(__64BIT__)
-// The size of wchar is 2 byte on 32-bit mode on AIX.
-#    define _LIBCPP_SHORT_WCHAR 1
-#  endif
 
 // Libc++ supports various implementations of std::random_device.
 //
@@ -89,7 +83,7 @@
 //      When this option is used, the token passed to `std::random_device`'s
 //      constructor *must* be "/dev/urandom" -- anything else is an error.
 #  if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) ||                     \
-      defined(__DragonFly__)
+      defined(__DragonFly__) || defined(__BIONIC__)
 #    define _LIBCPP_USING_ARC4_RANDOM
 #  elif defined(__wasi__) || defined(__EMSCRIPTEN__)
 #    define _LIBCPP_USING_GETENTROPY
@@ -266,10 +260,8 @@ typedef __char32_t char32_t;
 // pthread_mutex_destroy can allow the kernel to release resources.
 // See https://llvm.org/D64298 for details.
 //
-// TODO(EricWF): Enable this optimization on Bionic after speaking to their
-//               respective stakeholders.
 // clang-format off
-#  if (_LIBCPP_HAS_THREAD_API_PTHREAD && defined(__GLIBC__)) ||                                                        \
+#  if (_LIBCPP_HAS_THREAD_API_PTHREAD && (defined(__GLIBC__) || defined(__BIONIC__))) ||                                \
       (_LIBCPP_HAS_THREAD_API_C11 && defined(__Fuchsia__)) ||                                                          \
        _LIBCPP_HAS_THREAD_API_WIN32
 // clang-format on

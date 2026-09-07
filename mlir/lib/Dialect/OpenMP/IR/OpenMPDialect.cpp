@@ -344,6 +344,48 @@ void OpenMPDialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
+// Dialect operation attribute verification
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyDeclareTargetAttr(Operation *op, Attribute attr) {
+  if (!isa<DeclareTargetInterface>(op))
+    return op->emitError() << "omp.declare_target can only be applied to "
+                              "DeclareTargetInterface ops";
+
+  auto declareTargetAttr = dyn_cast<DeclareTargetAttr>(attr);
+  if (!declareTargetAttr)
+    return op->emitError()
+           << "omp.declare_target must be an #omp.declaretarget attribute";
+
+  if (isa<mlir::FunctionOpInterface>(op)) {
+    if (declareTargetAttr.getAutomap())
+      return op->emitOpError()
+             << "omp.declare_target 'automap' is not valid on functions";
+
+    // TODO: Disallow the `local` clause (OpenMP 6.0).
+    if (declareTargetAttr.getCaptureClause().getValue() ==
+        mlir::omp::DeclareTargetCaptureClause::link)
+      return op->emitOpError()
+             << "omp.declare_target 'link' is not valid on functions";
+  } else {
+    // TODO: Disallow the `indirect` clause (OpenMP 5.1).
+    if (declareTargetAttr.getImplicit())
+      return op->emitOpError()
+             << "omp.declare_target 'implicit' is only valid on functions";
+  }
+  return success();
+}
+
+LogicalResult
+OpenMPDialect::verifyOperationAttribute(Operation *op,
+                                        NamedAttribute attribute) {
+  if (attribute.getName() == "omp.declare_target")
+    return verifyDeclareTargetAttr(op, attribute.getValue());
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Parser and printer for Allocate Clause
 //===----------------------------------------------------------------------===//
 
@@ -2298,6 +2340,9 @@ static ParseResult parseMapClause(OpAsmParser &parser,
     if (mapTypeMod == "is_device_ptr")
       mapTypeBits |= ClauseMapFlags::is_device_ptr;
 
+    if (mapTypeMod == "target_param")
+      mapTypeBits |= ClauseMapFlags::target_param;
+
     return success();
   };
 
@@ -2329,6 +2374,8 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
     mapTypeStrs.push_back("close");
   if (mapTypeToBool(mapFlags, ClauseMapFlags::present))
     mapTypeStrs.push_back("present");
+  if (mapTypeToBool(mapFlags, ClauseMapFlags::target_param))
+    mapTypeStrs.push_back("target_param");
 
   // special handling of to/from/tofrom/delete and release/alloc, release +
   // alloc are the abscense of one of the other flags, whereas tofrom requires
@@ -4364,7 +4411,7 @@ void CanonicalLoopOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/true);
 
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 mlir::ParseResult CanonicalLoopOp::parse(::mlir::OpAsmParser &parser,
@@ -4452,7 +4499,7 @@ void UnrollHeuristicOp::build(::mlir::OpBuilder &odsBuilder,
 void UnrollHeuristicOp::print(OpAsmPrinter &p) {
   p << '(' << getApplyee() << ')';
 
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 mlir::ParseResult UnrollHeuristicOp::parse(::mlir::OpAsmParser &parser,
@@ -4494,6 +4541,74 @@ UnrollHeuristicOp::getGenerateesODSOperandIndexAndLength() {
 }
 
 //===----------------------------------------------------------------------===//
+// UnrollFullOp
+//===----------------------------------------------------------------------===//
+
+void UnrollFullOp::build(::mlir::OpBuilder &odsBuilder,
+                         ::mlir::OperationState &odsState, ::mlir::Value cli) {
+  odsState.addOperands(cli);
+}
+
+void UnrollFullOp::print(OpAsmPrinter &p) {
+  p << '(' << getApplyee() << ')';
+
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
+}
+
+mlir::ParseResult UnrollFullOp::parse(::mlir::OpAsmParser &parser,
+                                      ::mlir::OperationState &result) {
+  auto cliType = CanonicalLoopInfoType::get(parser.getContext());
+
+  if (parser.parseLParen())
+    return failure();
+
+  OpAsmParser::UnresolvedOperand applyee;
+  if (parser.parseOperand(applyee) ||
+      parser.resolveOperand(applyee, cliType, result.operands))
+    return failure();
+
+  if (parser.parseRParen())
+    return failure();
+
+  // Optional output loop; full unrolling has none.
+  if (!parser.parseOptionalArrow()) {
+    if (parser.parseLParen() || parser.parseRParen())
+      return failure();
+  }
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return mlir::success();
+}
+
+std::pair<unsigned, unsigned>
+UnrollFullOp::getApplyeesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_applyee);
+}
+
+std::pair<unsigned, unsigned>
+UnrollFullOp::getGenerateesODSOperandIndexAndLength() {
+  return {0, 0};
+}
+
+LogicalResult UnrollFullOp::verify() {
+  auto [create, gen, cons] = decodeCli(getApplyee());
+  if (!gen)
+    return emitOpError() << "applyee CLI has no generator";
+
+  // Full unrolling leaves no loop, so the trip count must be constant. Only
+  // omp.canonical_loop states one.
+  if (auto loop = dyn_cast<CanonicalLoopOp>(gen->getOwner())) {
+    if (!matchPattern(loop.getTripCount(), m_Constant()))
+      return emitOpError() << "applyee loop must have a constant trip count";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // UnrollPartialOp
 //===----------------------------------------------------------------------===//
 
@@ -4508,7 +4623,10 @@ void UnrollPartialOp::build(::mlir::OpBuilder &odsBuilder,
 void UnrollPartialOp::print(OpAsmPrinter &p) {
   p << '(' << getApplyee() << ')';
 
-  p.printOptionalAttrDict((*this)->getAttrs());
+  SmallVector<NamedAttribute> attrs((*this)->getDiscardableAttrs());
+  attrs.emplace_back(getUnrollFactorAttrName(), getUnrollFactorAttr());
+  llvm::sort(attrs);
+  p.printOptionalAttrDict(attrs);
 }
 
 mlir::ParseResult UnrollPartialOp::parse(::mlir::OpAsmParser &parser,
@@ -4753,11 +4871,37 @@ std::pair<unsigned, unsigned> FuseOp::getGenerateesODSOperandIndexAndLength() {
 
 void CriticalDeclareOp::build(OpBuilder &builder, OperationState &state,
                               const CriticalDeclareOperands &clauses) {
-  CriticalDeclareOp::build(builder, state, clauses.symName, clauses.hint);
+  CriticalDeclareOp::build(builder, state, clauses.symName,
+                           clauses.symVisibility, clauses.hint);
 }
 
 LogicalResult CriticalDeclareOp::verify() {
   return verifySynchronizationHint(*this, getHint());
+}
+
+LogicalResult CriticalOp::verify() {
+  SymbolRefAttr currentName = getNameAttr();
+
+  CriticalOp parentCritical = (*this)->getParentOfType<CriticalOp>();
+
+  while (parentCritical) {
+    SymbolRefAttr parentName = parentCritical.getNameAttr();
+
+    if (currentName == parentName) {
+      if (currentName) {
+        return emitOpError() << "cannot be nested inside another omp.critical "
+                                "region with the same name ("
+                             << currentName << ")";
+      } else {
+        return emitOpError() << "cannot be nested inside another unnamed "
+                                "omp.critical region";
+      }
+    }
+
+    parentCritical = parentCritical->getParentOfType<CriticalOp>();
+  }
+
+  return success();
 }
 
 LogicalResult CriticalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
@@ -4876,7 +5020,7 @@ LogicalResult AtomicReadOp::verify() {
 
   int64_t version = 50;
   if (auto moduleOp = getOperation()->getParentOfType<ModuleOp>())
-    if (Attribute verAttr = moduleOp->getAttr("omp.version"))
+    if (Attribute verAttr = moduleOp->getDiscardableAttr("omp.version"))
       version = llvm::cast<VersionAttr>(verAttr).getVersion();
 
   if (auto mo = getMemoryOrder()) {
@@ -4902,7 +5046,7 @@ LogicalResult AtomicWriteOp::verify() {
 
   int64_t version = 50;
   if (auto moduleOp = getOperation()->getParentOfType<ModuleOp>())
-    if (Attribute verAttr = moduleOp->getAttr("omp.version"))
+    if (Attribute verAttr = moduleOp->getDiscardableAttr("omp.version"))
       version = llvm::cast<VersionAttr>(verAttr).getVersion();
 
   if (auto mo = getMemoryOrder()) {
@@ -4942,7 +5086,7 @@ LogicalResult AtomicUpdateOp::verify() {
 
   int64_t version = 50;
   if (auto moduleOp = getOperation()->getParentOfType<ModuleOp>())
-    if (Attribute verAttr = moduleOp->getAttr("omp.version"))
+    if (Attribute verAttr = moduleOp->getDiscardableAttr("omp.version"))
       version = llvm::cast<VersionAttr>(verAttr).getVersion();
 
   if (auto mo = getMemoryOrder()) {
@@ -4982,6 +5126,12 @@ AtomicUpdateOp AtomicCaptureOp::getAtomicUpdateOp() {
   return dyn_cast<AtomicUpdateOp>(getSecondOp());
 }
 
+AtomicCompareOp AtomicCaptureOp::getAtomicCompareOp() {
+  if (auto op = dyn_cast<AtomicCompareOp>(getFirstOp()))
+    return op;
+  return dyn_cast<AtomicCompareOp>(getSecondOp());
+}
+
 LogicalResult AtomicCaptureOp::verify() {
   return verifySynchronizationHint(*this, getHint());
 }
@@ -4990,12 +5140,13 @@ LogicalResult AtomicCaptureOp::verifyRegions() {
   if (verifyRegionsCommon().failed())
     return mlir::failure();
 
-  if (getFirstOp()->getAttr("hint") || getSecondOp()->getAttr("hint"))
+  if (getFirstOp()->getInherentAttr("hint").value_or(Attribute{}) ||
+      getSecondOp()->getInherentAttr("hint").value_or(Attribute{}))
     return emitOpError(
         "operations inside capture region must not have hint clause");
 
-  if (getFirstOp()->getAttr("memory_order") ||
-      getSecondOp()->getAttr("memory_order"))
+  if (getFirstOp()->getInherentAttr("memory_order").value_or(Attribute{}) ||
+      getSecondOp()->getInherentAttr("memory_order").value_or(Attribute{}))
     return emitOpError(
         "operations inside capture region must not have memory_order clause");
   return success();
@@ -5008,6 +5159,16 @@ LogicalResult AtomicCaptureOp::verifyRegions() {
 LogicalResult AtomicCompareOp::verify() {
   if (verifyCommon().failed())
     return mlir::failure();
+  // OpenMP 5.2 [15.8.3]: the fail clause argument must be one of seq_cst,
+  // acquire or relaxed ('release' and 'acq_rel' are not valid failure
+  // orderings and map to invalid cmpxchg failure orderings).
+  if (auto failOrder = getFailMemoryOrder()) {
+    if (*failOrder != ClauseMemoryOrderKind::Seq_cst &&
+        *failOrder != ClauseMemoryOrderKind::Acquire &&
+        *failOrder != ClauseMemoryOrderKind::Relaxed)
+      return emitOpError(
+          "fail_memory_order must be 'seq_cst', 'acquire' or 'relaxed'");
+  }
   return verifySynchronizationHint(*this, getHint());
 }
 
@@ -5157,7 +5318,7 @@ void PrivateClauseOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                             TypeRange /*result_types*/, StringAttr symName,
                             TypeAttr type) {
   PrivateClauseOp::build(
-      odsBuilder, odsState, symName, type,
+      odsBuilder, odsState, symName, /*sym_visibility=*/nullptr, type,
       DataSharingClauseTypeAttr::get(odsBuilder.getContext(),
                                      DataSharingClauseType::Private));
 }

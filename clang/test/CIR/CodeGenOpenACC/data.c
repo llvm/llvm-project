@@ -21,7 +21,7 @@ void acc_data(int cond) {
   // CHECK-NEXT: cir.inc
   // CHECK-NEXT: cir.store
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: } defaultAttr(none)
 
 #pragma acc data default(present)
   {
@@ -36,13 +36,13 @@ void acc_data(int cond) {
   // CHECK-NEXT: cir.inc
   // CHECK-NEXT: cir.store
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}
+  // CHECK-NEXT: } defaultAttr(present)
 
 #pragma acc data default(none) async
   {}
   // CHECK-NEXT: acc.data async {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: } defaultAttr(none)
 
 #pragma acc data default(none) async(cond)
   {}
@@ -50,13 +50,13 @@ void acc_data(int cond) {
   // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: acc.data async(%[[CONV_CAST]] : si32) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: } defaultAttr(none)
 
 #pragma acc data default(none) async device_type(nvidia, radeon) async
   {}
   // CHECK-NEXT: acc.data async([#acc.device_type<none>, #acc.device_type<nvidia>, #acc.device_type<radeon>]) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: } defaultAttr(none)
 
 #pragma acc data default(none) async(3) device_type(nvidia, radeon) async(cond)
   {}
@@ -66,7 +66,7 @@ void acc_data(int cond) {
   // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: acc.data async(%[[THREE_CAST]] : si32, %[[CONV_CAST]] : si32 [#acc.device_type<nvidia>], %[[CONV_CAST]] : si32 [#acc.device_type<radeon>]) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: } defaultAttr(none)
 
 #pragma acc data default(none) async device_type(nvidia, radeon) async(cond)
   {}
@@ -74,7 +74,7 @@ void acc_data(int cond) {
   // CHECK-NEXT: %[[CONV_CAST:.*]] = cir.builtin_int_cast %[[COND_LOAD]] : !s32i -> si32
   // CHECK-NEXT: acc.data async([#acc.device_type<none>], %[[CONV_CAST]] : si32 [#acc.device_type<nvidia>], %[[CONV_CAST]] : si32 [#acc.device_type<radeon>]) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: } defaultAttr(none)
 
 #pragma acc data default(none) async(3) device_type(nvidia, radeon) async
   {}
@@ -82,7 +82,7 @@ void acc_data(int cond) {
   // CHECK-NEXT: %[[THREE_CAST:.*]] = cir.builtin_int_cast %[[THREE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.data async([#acc.device_type<nvidia>, #acc.device_type<radeon>], %[[THREE_CAST]] : si32) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: } defaultAttr(none)
 
 #pragma acc data default(none) if(cond)
   {}
@@ -91,7 +91,7 @@ void acc_data(int cond) {
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: acc.data if(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: } defaultAttr(none)
 
 #pragma acc data default(none) if(1)
   {}
@@ -100,7 +100,7 @@ void acc_data(int cond) {
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[BOOL_CAST]] : !cir.bool to i1
   // CHECK-NEXT: acc.data if(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: } defaultAttr(none)
 
 #pragma acc data default(none) if(cond == 1)
   {}
@@ -110,19 +110,19 @@ void acc_data(int cond) {
   // CHECK-NEXT: %[[CONV_CAST:.*]] = builtin.unrealized_conversion_cast %[[EQ_RES]] : !cir.bool to i1
   // CHECK-NEXT: acc.data if(%[[CONV_CAST]]) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: } defaultAttr(none)
 
 #pragma acc data default(none) wait
   {}
   // CHECK-NEXT: acc.data wait {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: defaultAttr(none)
 
 #pragma acc data default(none) wait device_type(nvidia) wait
   {}
   // CHECK-NEXT: acc.data wait([#acc.device_type<none>, #acc.device_type<nvidia>]) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: defaultAttr(none)
 
 #pragma acc data default(none) wait(1) device_type(nvidia) wait
   {}
@@ -130,7 +130,7 @@ void acc_data(int cond) {
   // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.data wait([#acc.device_type<nvidia>], {%[[ONE_CAST]] : si32}) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: defaultAttr(none)
 
 #pragma acc data default(none) wait device_type(nvidia) wait(1)
   {}
@@ -138,7 +138,7 @@ void acc_data(int cond) {
   // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.data wait([#acc.device_type<none>], {%[[ONE_CAST]] : si32} [#acc.device_type<nvidia>]) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: defaultAttr(none)
 
 #pragma acc data default(none) wait(1) device_type(nvidia) wait(1)
   {}
@@ -148,7 +148,7 @@ void acc_data(int cond) {
   // CHECK-NEXT: %[[ONE_CAST2:.*]] = cir.builtin_int_cast %[[ONE_LITERAL2]] : !s32i -> si32
   // CHECK-NEXT: acc.data wait({%[[ONE_CAST]] : si32}, {%[[ONE_CAST2]] : si32} [#acc.device_type<nvidia>]) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: defaultAttr(none)
 
 #pragma acc data default(none) wait(devnum: cond : 1)
   {}
@@ -158,7 +158,7 @@ void acc_data(int cond) {
   // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.data wait({devnum: %[[CONV_CAST]] : si32, %[[ONE_CAST]] : si32}) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: defaultAttr(none)
 
 #pragma acc data default(none) wait(devnum: cond : 1) device_type(nvidia) wait(devnum: cond : 1)
   {}
@@ -172,7 +172,7 @@ void acc_data(int cond) {
   // CHECK-NEXT: %[[ONE_CAST2:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.data wait({devnum: %[[CONV_CAST]] : si32, %[[ONE_CAST]] : si32}, {devnum: %[[CONV_CAST2]] : si32, %[[ONE_CAST2]] : si32} [#acc.device_type<nvidia>]) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: defaultAttr(none)
 
 #pragma acc data default(none) wait(devnum: cond : 1, 2)
   {}
@@ -184,7 +184,7 @@ void acc_data(int cond) {
   // CHECK-NEXT: %[[TWO_CAST:.*]] = cir.builtin_int_cast %[[TWO_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.data wait({devnum: %[[CONV_CAST]] : si32, %[[ONE_CAST]] : si32, %[[TWO_CAST]] : si32}) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: defaultAttr(none)
 
 #pragma acc data default(none) wait(devnum: cond : 1, 2) device_type(nvidia, radeon) wait(devnum: cond : 1, 2)
   {}
@@ -202,7 +202,7 @@ void acc_data(int cond) {
   // CHECK-NEXT: %[[TWO_CAST2:.*]] = cir.builtin_int_cast %[[TWO_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.data wait({devnum: %[[CONV_CAST]] : si32, %[[ONE_CAST]] : si32, %[[TWO_CAST]] : si32}, {devnum: %[[CONV_CAST2]] : si32, %[[ONE_CAST2]] : si32, %[[TWO_CAST2]] : si32} [#acc.device_type<nvidia>], {devnum: %[[CONV_CAST2]] : si32, %[[ONE_CAST2]] : si32, %[[TWO_CAST2]] : si32} [#acc.device_type<radeon>]) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: defaultAttr(none)
 
 #pragma acc data default(none) wait(cond,  1)
   {}
@@ -212,7 +212,7 @@ void acc_data(int cond) {
   // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.data wait({%[[CONV_CAST]] : si32, %[[ONE_CAST]] : si32}) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: defaultAttr(none)
 
 #pragma acc data default(none) wait(queues: cond,  1) device_type(radeon)
   {}
@@ -222,52 +222,52 @@ void acc_data(int cond) {
   // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE_LITERAL]] : !s32i -> si32
   // CHECK-NEXT: acc.data wait({%[[CONV_CAST]] : si32, %[[ONE_CAST]] : si32}) {
   // CHECK-NEXT: acc.terminator
-  // CHECK-NEXT: attributes {defaultAttr = #acc<defaultvalue none>}
+  // CHECK-NEXT: defaultAttr(none)
 
 #pragma acc data deviceptr(ptr)
   {}
-  // CHECK-NEXT: %[[DEV_PTR:.*]] = acc.deviceptr varPtr(%[[PTR]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "ptr"}
+  // CHECK-NEXT: %[[DEV_PTR:.*]] = acc.deviceptr varPtr(%[[PTR]] : !cir.ptr<!cir.ptr<!s32i>>) name("ptr") -> !cir.ptr<!cir.ptr<!s32i>>
   // CHECK-NEXT: acc.data dataOperands(%[[DEV_PTR]] : !cir.ptr<!cir.ptr<!s32i>>) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
 #pragma acc data deviceptr(ptr) device_type(radeon) async
   {}
-  // CHECK-NEXT: %[[DEV_PTR:.*]] = acc.deviceptr varPtr(%[[PTR]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "ptr"}
+  // CHECK-NEXT: %[[DEV_PTR:.*]] = acc.deviceptr varPtr(%[[PTR]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) name("ptr") -> !cir.ptr<!cir.ptr<!s32i>>
   // CHECK-NEXT: acc.data async([#acc.device_type<radeon>]) dataOperands(%[[DEV_PTR]] : !cir.ptr<!cir.ptr<!s32i>>) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
 
 #pragma acc data present(cond)
   {}
-  // CHECK-NEXT: %[[PRESENT:.*]] = acc.present varPtr(%[[COND]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {name = "cond"}
+  // CHECK-NEXT: %[[PRESENT:.*]] = acc.present varPtr(%[[COND]] : !cir.ptr<!s32i>) name("cond") -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.data dataOperands(%[[PRESENT]] : !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.delete accPtr(%[[PRESENT]] : !cir.ptr<!s32i>) {dataClause = #acc<data_clause acc_present>, name = "cond"}
+  // CHECK-NEXT: acc.delete accPtr(%[[PRESENT]] : !cir.ptr<!s32i>) dataClause(acc_present) name("cond")
 
 #pragma acc data present(cond) device_type(radeon) async
   {}
-  // CHECK-NEXT: %[[PRESENT:.*]] = acc.present varPtr(%[[COND]] : !cir.ptr<!s32i>) async([#acc.device_type<radeon>]) -> !cir.ptr<!s32i> {name = "cond"}
+  // CHECK-NEXT: %[[PRESENT:.*]] = acc.present varPtr(%[[COND]] : !cir.ptr<!s32i>) async([#acc.device_type<radeon>]) name("cond") -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.data async([#acc.device_type<radeon>]) dataOperands(%[[PRESENT]] : !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.delete accPtr(%[[PRESENT]] : !cir.ptr<!s32i>) async([#acc.device_type<radeon>]) {dataClause = #acc<data_clause acc_present>, name = "cond"}
+  // CHECK-NEXT: acc.delete accPtr(%[[PRESENT]] : !cir.ptr<!s32i>) async([#acc.device_type<radeon>]) dataClause(acc_present) name("cond")
 
 #pragma acc data attach(ptr)
   {}
-  // CHECK-NEXT: %[[ATTACH:.*]] = acc.attach varPtr(%[[PTR]] : !cir.ptr<!cir.ptr<!s32i>>) -> !cir.ptr<!cir.ptr<!s32i>> {name = "ptr"}
+  // CHECK-NEXT: %[[ATTACH:.*]] = acc.attach varPtr(%[[PTR]] : !cir.ptr<!cir.ptr<!s32i>>) name("ptr") -> !cir.ptr<!cir.ptr<!s32i>>
   // CHECK-NEXT: acc.data dataOperands(%[[ATTACH]] : !cir.ptr<!cir.ptr<!s32i>>) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.detach accPtr(%[[ATTACH]] : !cir.ptr<!cir.ptr<!s32i>>) {dataClause = #acc<data_clause acc_attach>, name = "ptr"}
+  // CHECK-NEXT: acc.detach accPtr(%[[ATTACH]] : !cir.ptr<!cir.ptr<!s32i>>) dataClause(acc_attach) name("ptr")
 
 #pragma acc data attach(ptr) device_type(radeon) async
   {}
-  // CHECK-NEXT: %[[ATTACH:.*]] = acc.attach varPtr(%[[PTR]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) -> !cir.ptr<!cir.ptr<!s32i>> {name = "ptr"}
+  // CHECK-NEXT: %[[ATTACH:.*]] = acc.attach varPtr(%[[PTR]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) name("ptr") -> !cir.ptr<!cir.ptr<!s32i>>
   // CHECK-NEXT: acc.data async([#acc.device_type<radeon>]) dataOperands(%[[ATTACH]] : !cir.ptr<!cir.ptr<!s32i>>) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.detach accPtr(%[[ATTACH]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) {dataClause = #acc<data_clause acc_attach>, name = "ptr"}
+  // CHECK-NEXT: acc.detach accPtr(%[[ATTACH]] : !cir.ptr<!cir.ptr<!s32i>>) async([#acc.device_type<radeon>]) dataClause(acc_attach) name("ptr")
 
   // CHECK-NEXT: cir.return
 }

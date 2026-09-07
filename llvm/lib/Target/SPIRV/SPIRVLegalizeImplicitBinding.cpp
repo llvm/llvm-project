@@ -13,7 +13,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVLegalizeImplicitBinding.h"
 #include "SPIRV.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -24,7 +23,6 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
-#include <algorithm>
 #include <vector>
 
 using namespace llvm;
@@ -222,8 +220,8 @@ bool SPIRVLegalizeImplicitBindingImpl::runOnModule(Module &M) {
 }
 } // namespace
 
-PreservedAnalyses SPIRVLegalizeImplicitBinding::run(Module &M,
-                                                    ModuleAnalysisManager &AM) {
+PreservedAnalyses
+SPIRVLegalizeImplicitBindingPass::run(Module &M, ModuleAnalysisManager &AM) {
   return SPIRVLegalizeImplicitBindingImpl().runOnModule(M)
              ? PreservedAnalyses::none()
              : PreservedAnalyses::all();

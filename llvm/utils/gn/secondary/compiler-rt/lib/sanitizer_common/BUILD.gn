@@ -89,6 +89,7 @@ source_set("sources") {
     "sanitizer_mutex.cpp",
     "sanitizer_mutex.h",
     "sanitizer_netbsd.cpp",
+    "sanitizer_new_handler.h",
     "sanitizer_placement_new.h",
     "sanitizer_platform.h",
     "sanitizer_platform_interceptors.h",

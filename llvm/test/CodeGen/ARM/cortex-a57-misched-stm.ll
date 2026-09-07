@@ -2,9 +2,9 @@
 ; RUN: llc < %s -mtriple=armv8r-eabi -mcpu=cortex-a57 -mattr=use-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
 ; N=3 STMIB should have latency 2cyc
 
-; CHECK:       ********** MI Scheduling **********
+; CHECK:       Current Schedule Region
 ; We need second, post-ra scheduling to have STM instruction combined from single-stores
-; CHECK:       ********** MI Scheduling **********
+; CHECK:       Current Schedule Region
 ; CHECK:       schedule starting
 ; CHECK:       STMIB
 ; CHECK:       rdefs left

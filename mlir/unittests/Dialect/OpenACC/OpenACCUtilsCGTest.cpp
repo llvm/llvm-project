@@ -161,7 +161,7 @@ TEST_F(OpenACCUtilsCGTest, getDataLayoutWithSpec) {
   auto indexEntry = DataLayoutEntryAttr::get(IndexType::get(&context),
                                              b.getI32IntegerAttr(32));
   auto spec = DataLayoutSpecAttr::get(&context, {indexEntry});
-  (*module)->setAttr(DLTIDialect::kDataLayoutAttrName, spec);
+  (*module)->setDiscardableAttr(DLTIDialect::kDataLayoutAttrName, spec);
 
   // With explicit spec, should return DataLayout regardless of allowDefault
   auto dl1 = getDataLayout(module->getOperation(), /*allowDefault=*/false);
@@ -258,6 +258,24 @@ TEST_F(OpenACCUtilsCGTest, setParDimsAttrSetsInherentAttribute) {
   setParDimsAttr(privatize, blockAttr);
   EXPECT_EQ(getParDimsAttr(privatize), blockAttr);
   EXPECT_EQ(privatize.getParDimsAttr(), blockAttr);
+}
+
+TEST_F(OpenACCUtilsCGTest, activeParDimsOperationAttributes) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(b, loc);
+  Operation *op = module->getOperation();
+  ActiveParDimsAttr activeAttr = ActiveParDimsAttr::get(
+      &context, {GPUParallelDimAttr::blockXDim(&context),
+                 GPUParallelDimAttr::threadXDim(&context)});
+
+  EXPECT_FALSE(hasActiveParDimsAttr(op));
+  setActiveParDimsAttr(op, activeAttr);
+  EXPECT_TRUE(hasActiveParDimsAttr(op));
+  EXPECT_EQ(getActiveParDimsAttr(op), activeAttr);
+
+  ActiveParDimsAttr threadAttr = ActiveParDimsAttr::get(
+      &context, {GPUParallelDimAttr::threadXDim(&context)});
+  setActiveParDimsAttr(op, threadAttr);
+  EXPECT_EQ(getActiveParDimsAttr(op), threadAttr);
 }
 
 //===----------------------------------------------------------------------===//

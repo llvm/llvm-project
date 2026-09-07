@@ -27,6 +27,7 @@
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
+#include "llvm/TargetParser/AtomicScope.h"
 #include <cstdint>
 #include <utility>
 
@@ -34,7 +35,8 @@ namespace clang {
 
 SemaAMDGPU::SemaAMDGPU(Sema &S) : SemaBase(S) {}
 
-bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
+bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
+                                                unsigned BuiltinID,
                                                 CallExpr *TheCall) {
   const auto *FD = SemaRef.getCurFunctionDecl(/*AllowLambda=*/true);
   assert(FD && "AMDGPU builtins should not be used outside of a function");
@@ -151,6 +153,15 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     if (!ScopeExpr->EvaluateAsConstantExpr(ScopeResult, getASTContext()))
       return Diag(ScopeExpr->getExprLoc(), diag::err_expr_not_string_literal)
              << ScopeExpr->getType();
+
+    // Reject any string that is not a valid synchronization scope name.
+    std::optional<std::string> ScopeName =
+        ScopeExpr->tryEvaluateString(getASTContext());
+    const llvm::Triple &TT = TI.getTriple();
+    if (ScopeName && !llvm::parseAtomicScopeIRString(TT, *ScopeName)) {
+      return Diag(ScopeExpr->getExprLoc(), diag::err_invalid_sync_scope)
+             << *ScopeName << ScopeExpr->getSourceRange();
+    }
 
     return false;
   }
@@ -304,7 +315,8 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_image_sample_d_2darray_v4f16_f32:
   case AMDGPU::BI__builtin_amdgcn_image_sample_d_3d_v4f32_f32:
   case AMDGPU::BI__builtin_amdgcn_image_sample_d_3d_v4f16_f32:
-  case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32: {
+  case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32:
+  case AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f16_f32: {
     StringRef FeatureList(
         getASTContext().BuiltinInfo.getRequiredFeatures(BuiltinID));
     if (!Builtin::evaluateRequiredTargetFeatures(FeatureList,
@@ -344,7 +356,10 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     // For gather, only one bit can be set indicating which exact component to
     // return.
     bool ExtraGatherChecks =
-        BuiltinID == AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32 &&
+        (BuiltinID ==
+             AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f32_f32 ||
+         BuiltinID ==
+             AMDGPU::BI__builtin_amdgcn_image_gather4_lz_2d_v4f16_f32) &&
         SemaRef.BuiltinConstantArgPower2(TheCall, 0);
 
     return ExtraGatherChecks ||

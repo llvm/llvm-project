@@ -14,9 +14,7 @@
 #include "AMDGPUWaitSGPRHazards.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 
@@ -478,9 +476,6 @@ public:
       };
 
       for (MachineInstr &MI : MBB) {
-        if (MI.isMetaInstruction())
-          continue;
-
         if (MI.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
             (MI.getOperand(0).getImm() & ConstantMaskBits) ==
                 ConstantMaskBits) {
@@ -500,12 +495,20 @@ public:
           continue;
         }
 
-        // Do not optimize over branches
-        if (PrevWait && (MI.isCall() || MI.isReturn() || MI.isBranch())) {
+        // Do not optimize over branches or terminators
+        if (PrevWait && (MI.isCall() || MI.isReturn() || MI.isBranch() ||
+                         MI.isTerminator())) {
           PrevWait->moveBefore(&MI);
           PrevWait = nullptr;
           Changed = true;
         }
+        if (MI.isTerminator())
+          break;
+
+        // Note: test for meta instructions after terminators.
+        // Required to handle terminator meta instruction.
+        if (MI.isMetaInstruction())
+          continue;
 
         const bool IsVALU = SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false);
         const bool IsSALU = SIInstrInfo::isSALU(MI);

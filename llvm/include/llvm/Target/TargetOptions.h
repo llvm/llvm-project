@@ -119,18 +119,17 @@ enum CodeObjectVersionKind {
 class TargetOptions {
 public:
   TargetOptions()
-      : NoTrappingFPMath(true), EnableAIXExtendedAltivecABI(false),
+      : EnableAIXExtendedAltivecABI(false),
         HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
         GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
         EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
-        DisableIntegratedAS(false), FunctionSections(false),
-        DataSections(false), IgnoreXCOFFVisibility(false),
-        XCOFFTracebackTable(true), UniqueSectionNames(true),
-        UniqueBasicBlockSectionNames(false), SeparateNamedSections(false),
-        TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
-        EmulatedTLS(false), EnableTLSDESC(false), EnableIPRA(false),
-        EmitStackSizeSection(false), EnableMachineOutliner(false),
-        EnableMachineFunctionSplitter(false),
+        FunctionSections(false), DataSections(false),
+        IgnoreXCOFFVisibility(false), XCOFFTracebackTable(true),
+        UniqueSectionNames(true), UniqueBasicBlockSectionNames(false),
+        SeparateNamedSections(false), TrapUnreachable(false),
+        NoTrapAfterNoreturn(false), TLSSize(0), EmulatedTLS(false),
+        EnableTLSDESC(false), EnableIPRA(false), EmitStackSizeSection(false),
+        EnableMachineOutliner(false), EnableMachineFunctionSplitter(false),
         EnableStaticDataPartitioning(false), SupportsDefaultOutlining(false),
         EnableDefaultMachineVerifier(true), EmitAddrsig(false),
         BBAddrMap(false), EmitCallGraphSection(false), EmitCallSiteInfo(false),
@@ -140,24 +139,6 @@ public:
         PPCGenScalarMASSEntries(false), JMCInstrument(false),
         EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
         VerifyArgABICompliance(true) {}
-
-  /// DisableFramePointerElim - This returns true if frame pointer elimination
-  /// optimization should be disabled for the given machine function.
-  LLVM_ABI bool DisableFramePointerElim(const MachineFunction &MF) const;
-
-  /// FramePointerIsReserved - This returns true if the frame pointer must
-  /// always either point to a new frame record or be un-modified in the given
-  /// function.
-  LLVM_ABI bool FramePointerIsReserved(const MachineFunction &MF) const;
-
-  /// If greater than 0, override the default value of
-  /// MCAsmInfo::BinutilsVersion.
-  std::pair<int, int> BinutilsVersion{0, 0};
-
-  /// NoTrappingFPMath - This flag is enabled when the
-  /// -enable-no-trapping-fp-math is specified on the command line. This
-  /// specifies that there are no trap handlers to handle exceptions.
-  unsigned NoTrappingFPMath : 1;
 
   /// EnableAIXExtendedAltivecABI - This flag returns true when -vec-extabi is
   /// specified. The code generator is then able to use both volatile and
@@ -214,9 +195,6 @@ public:
   /// UseInitArray - Use .init_array instead of .ctors for static
   /// constructors.
   unsigned UseInitArray : 1;
-
-  /// Disable the integrated assembler.
-  unsigned DisableIntegratedAS : 1;
 
   /// Emit functions into separate sections.
   unsigned FunctionSections : 1;
@@ -357,14 +335,6 @@ public:
 
   /// If greater than 0, override TargetLoweringBase::PrefLoopAlignment.
   unsigned LoopAlignment = 0;
-
-  /// FloatABIType - This setting is set by -float-abi=xxx option is specfied
-  /// on the command line. This setting may either be Default, Soft, or Hard.
-  /// Default selects the target's default behavior. Soft selects the ABI for
-  /// software floating point, but does not indicate that FP hardware may not
-  /// be used. Such a combination is unfortunately popular (e.g.
-  /// arm-apple-darwin). Hard presumes that the normal FP ABI is used.
-  FloatABI::ABIType FloatABIType = FloatABI::Default;
 
   /// AllowFPOpFusion - This flag is set by the -fp-contract=xxx option.
   /// This controls the creation of fused FP ops that store intermediate

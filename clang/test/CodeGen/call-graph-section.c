@@ -8,13 +8,13 @@
 
 // CHECK-LABEL: define {{(dso_local)?}} void @foo(
 // CHECK-SAME: {{.*}} !callgraph [[F_TVOID:![0-9]+]]
-void foo() {
+void foo(void) {
 }
 
 // CHECK-LABEL: define {{(dso_local)?}} void @bar(
 // CHECK-SAME: {{.*}} !callgraph [[F_TVOID]]
-void bar() {
-  void (*fp)() = foo;
+void bar(void) {
+  void (*fp)(void) = foo;
   // ITANIUM: call {{.*}}, !callee_type [[F_TVOID_CT:![0-9]+]]
   // MS: call {{.*}}, !callee_type [[F_TVOID_CT:![0-9]+]]
   fp();
@@ -34,7 +34,7 @@ int *qux(char *a, float *b, double *c) {
 
 // CHECK-LABEL: define {{(dso_local)?}} void @corge(
 // CHECK-SAME: {{.*}} !callgraph [[F_TVOID]]
-void corge() {
+void corge(void) {
   int (*fp_baz)(char, float, double) = baz;  
   // CHECK: call i32 {{.*}}, !callee_type [[F_TPRIMITIVE_CT:![0-9]+]]
   fp_baz('a', .0f, .0);
@@ -58,7 +58,7 @@ void stparam(struct st2 a, struct st2 *b) {}
 
 // CHECK-LABEL: define {{(dso_local)?}} void @stf(
 // CHECK-SAME: {{.*}} !callgraph [[F_TVOID]]
-void stf() {
+void stf(void) {
   struct st1 St1;
   St1.fp = qux;  
   // CHECK: call ptr {{.*}}, !callee_type [[F_TPTR_CT:![0-9]+]]
@@ -74,7 +74,7 @@ void stf() {
   fp_stparam(St2, &St2);
 }
 
-// ITANIUM: [[F_TVOID]] = !{!"_ZTSFvE"}
+// ITANIUM: [[F_TVOID]] = !{!"_ZTSFvvE"}
 // ITANIUM: [[F_TVOID_CT]] = !{[[F_TVOID:![0-9]+]]}
 // ITANIUM: [[F_TPRIMITIVE]] = !{!"_ZTSFicfdE"}
 // ITANIUM: [[F_TPTR]] = !{!"_ZTSFPiPcPfPdE"}
@@ -83,7 +83,7 @@ void stf() {
 // ITANIUM: [[F_TSTRUCT]] = !{!"_ZTSFv3st2PS_E"}
 // ITANIUM: [[F_TSTRUCT_CT]] = !{[[F_TSTRUCT:![0-9]+]]}
 
-// MS: [[F_TVOID]] = !{!"?6AX@Z"}
+// MS: [[F_TVOID]] = !{!"?6AXXZ"}
 // MS: [[F_TVOID_CT]] = !{[[F_TVOID:![0-9]+]]}
 // MS: [[F_TPRIMITIVE]] = !{!"?6AHDMN@Z"}
 // MS: [[F_TPTR]] = !{!"?6APEAHPEADPEAMPEAN@Z"}

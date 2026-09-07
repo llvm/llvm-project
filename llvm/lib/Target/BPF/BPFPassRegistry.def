@@ -16,6 +16,8 @@
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
+MODULE_PASS("bpf-asm-printer-begin", BPFAsmPrinterBeginPass())
+MODULE_PASS("bpf-asm-printer-end", BPFAsmPrinterEndPass())
 MODULE_PASS("bpf-check-and-opt-ir", BPFCheckAndAdjustIRPass())
 #undef MODULE_PASS
 
@@ -40,6 +42,7 @@ FUNCTION_PASS_WITH_PARAMS(
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("bpf-asm-printer", BPFAsmPrinterPass())
 MACHINE_FUNCTION_PASS("bpf-mi-expand-stack-arg-pseudos", BPFMIExpandStackArgPseudosPass())
 MACHINE_FUNCTION_PASS("bpf-isel", BPFISelDAGToDAGPass(*this))
 MACHINE_FUNCTION_PASS("bpf-mi-checking", BPFMIPreEmitCheckingPass())

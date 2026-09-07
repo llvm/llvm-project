@@ -603,16 +603,24 @@ MultiDimReductionOp::getShapeForUnroll() {
 }
 
 LogicalResult MultiDimReductionOp::verify() {
+  // Verify the reduction dimensions.
+  int64_t sourceRank = getSourceVectorType().getRank();
+  SmallVector<bool> isReduced(sourceRank, false);
+  for (int64_t dim : getReductionDims()) {
+    if (dim < 0 || dim >= sourceRank)
+      return emitOpError("reduction dimension out of range: ") << dim;
+    if (isReduced[dim])
+      return emitOpError("duplicate reduction dimension: ") << dim;
+    isReduced[dim] = true;
+  }
+
   SmallVector<int64_t> targetShape;
   SmallVector<bool> scalableDims;
   Type inferredReturnType;
   auto sourceScalableDims = getSourceVectorType().getScalableDims();
   for (auto [dimIdx, dimSize] :
        llvm::enumerate(getSourceVectorType().getShape()))
-    if (!llvm::any_of(getReductionDims(),
-                      [dimIdx = dimIdx](int64_t reductionDimIdx) {
-                        return reductionDimIdx == static_cast<int64_t>(dimIdx);
-                      })) {
+    if (!isReduced[dimIdx]) {
       targetShape.push_back(dimSize);
       scalableDims.push_back(sourceScalableDims[dimIdx]);
     }
@@ -5377,6 +5385,10 @@ static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
   // op.getIndices()[indicesIdx] + vectorType < dim(op.getSource(), indicesIdx)
   if (op.getShapedType().isDynamicDim(indicesIdx))
     return false;
+  // Scalable dimensions are `vscale` times larger at runtime, so the static
+  // size is only a lower bound and cannot prove that the transfer fits.
+  if (op.getVectorType().getScalableDims()[resultIdx])
+    return false;
   Value index = op.getIndices()[indicesIdx];
   std::optional<int64_t> cstOp = getConstantIntValue(index);
   if (!cstOp.has_value())
@@ -6175,6 +6187,21 @@ TransferWriteOp::bubbleDownCasts(OpBuilder &builder) {
 //===----------------------------------------------------------------------===//
 // LoadOp
 //===----------------------------------------------------------------------===//
+
+static ParseResult parseBoolAttr(OpAsmParser &parser, BoolAttr &result) {
+  Attribute attr;
+  if (parser.parseAttribute(attr))
+    return failure();
+  result = dyn_cast<BoolAttr>(attr);
+  if (!result)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected boolean attribute");
+  return success();
+}
+
+static void printBoolAttr(OpAsmPrinter &printer, Operation *, BoolAttr attr) {
+  printer.printAttribute(attr);
+}
 
 static LogicalResult verifyLoadStoreMemRefLayout(Operation *op,
                                                  VectorType vecTy,
@@ -8511,6 +8538,15 @@ struct InterleaveDeinterleaveFolder : public OpRewritePattern<InterleaveOp> {
 void InterleaveOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                MLIRContext *context) {
   results.add<InterleaveDeinterleaveFolder>(context);
+}
+
+OpFoldResult InterleaveOp::fold(FoldAdaptor adaptor) {
+  // interleave(splat(x), splat(x)) -> widened splat(x)
+  auto splat = dyn_cast_if_present<SplatElementsAttr>(adaptor.getLhs());
+  if (!splat || adaptor.getLhs() != adaptor.getRhs())
+    return {};
+  return SplatElementsAttr::get(getResultVectorType(),
+                                splat.getSplatValue<Attribute>());
 }
 
 std::optional<SmallVector<int64_t, 4>> InterleaveOp::getShapeForUnroll() {

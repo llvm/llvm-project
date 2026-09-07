@@ -1177,7 +1177,7 @@ define <8 x i8> @tbx3_8b(<8 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, 
 ; CHECK-GI-NEXT:    // kill: def $q3 killed $q3 killed $q1_q2_q3 def $q1_q2_q3
 ; CHECK-GI-NEXT:    tbx.8b v0, { v1, v2, v3 }, v4
 ; CHECK-GI-NEXT:    ret
-  %tmp3 = call <8 x i8> @llvm.aarch64.neon.tbx3.v8i8(< 8 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <8 x i8> %E)
+  %tmp3 = call <8 x i8> @llvm.aarch64.neon.tbx3.v8i8(<8 x i8> %A, <16 x i8> %B, <16 x i8> %C, <16 x i8> %D, <8 x i8> %E)
   ret <8 x i8> %tmp3
 }
 
