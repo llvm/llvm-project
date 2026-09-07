@@ -225,6 +225,8 @@
 ; CHECK-NEXT:       Machine Copy Propagation Pass
 ; CHECK-NEXT:       Post-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       AArch64 pseudo instruction expansion pass
+; CHECK-NEXT:       MachineDominator Tree Construction
+; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       AArch64 load / store optimization pass
 ; CHECK-NEXT:       Insert KCFI indirect call checks
 ; CHECK-NEXT:       AArch64 speculation hardening pass
@@ -240,6 +242,8 @@
 ; CHECK-NEXT:       Insert fentry calls
 ; CHECK-NEXT:       Insert XRay ops
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
+; CHECK-NEXT:       MachineDominator Tree Construction
+; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       AArch64 load / store optimization pass
 ; CHECK-NEXT:       Machine Copy Propagation Pass
 ; CHECK-NEXT:       AArch64 Redundant Conditional Branch Elimination
