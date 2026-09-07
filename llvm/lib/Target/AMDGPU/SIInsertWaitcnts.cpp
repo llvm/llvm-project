@@ -133,11 +133,6 @@ static bool isNonWaitcntMetaInst(const MachineInstr &MI) {
   }
 }
 
-static bool updateVMCntOnly(const MachineInstr &Inst) {
-  return (SIInstrInfo::isVMEM(Inst) && !SIInstrInfo::isFLAT(Inst)) ||
-         SIInstrInfo::isFLATGlobal(Inst) || SIInstrInfo::isFLATScratch(Inst);
-}
-
 #ifndef NDEBUG
 static bool isNormalMode(AMDGPU::InstCounterType MaxCounter) {
   return MaxCounter == AMDGPU::NUM_NORMAL_INST_CNTS;
@@ -1034,7 +1029,7 @@ void WaitcntBrackets::updateByEvent(HWEvents E, MachineInstr &Inst) {
           T == AMDGPU::BVH_CNT) {
         if (!TRI.isVectorRegister(MRI, Op.getReg())) // TODO: add wrapper
           continue;
-        if (updateVMCntOnly(Inst)) {
+        if (AMDGPU::updateVMCntOnly(Inst)) {
           // updateVMCntOnly should only leave us with VGPRs
           // MUBUF, MTBUF, MIMG, FlatGlobal, and FlatScratch only have VGPR/AGPR
           // defs.
@@ -2526,7 +2521,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
           // guaranteed to write their results in order anyway.
           // Additionally check instructions where Point Sample Acceleration
           // might be applied.
-          if (Op.isUse() || !updateVMCntOnly(MI) ||
+          if (Op.isUse() || !AMDGPU::updateVMCntOnly(MI) ||
               ScoreBrackets.hasDifferentVGPRPendingEvents(
                   Reg, AMDGPU::getSimplifiedVMEMEventsFor(MI, TII)) ||
               ScoreBrackets.hasPointSamplePendingVmemTypes(MI, Reg) ||
