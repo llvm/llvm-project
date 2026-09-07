@@ -475,8 +475,11 @@ Error olPlatformRegisterRPCCallback_impl(ol_platform_handle_t Platform,
   auto PluginOrErr = Platform->getPlugin();
   if (!PluginOrErr)
     return PluginOrErr.takeError();
+  GenericPluginTy *Plugin = *PluginOrErr;
+  if (Plugin->getNumDevices() == 0)
+    return Error::success();
 
-  (*PluginOrErr)->getRPCServer().registerCallback(Callback);
+  Plugin->getRPCServer().registerCallback(Callback);
   return Error::success();
 }
 
