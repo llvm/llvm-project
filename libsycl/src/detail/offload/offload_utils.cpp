@@ -8,6 +8,9 @@
 
 #include <detail/offload/offload_utils.hpp>
 
+#include <cassert>
+#include <limits>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
 
@@ -102,6 +105,50 @@ ol_alloc_type_t getOlAllocType(usm::alloc USMKind) {
     throw exception(sycl::make_error_code(sycl::errc::runtime),
                     "USM kind is not supported");
   }
+}
+
+ol_kernel_launch_size_args_t convertToOlRange(const UnifiedRangeView &Range) {
+  assert(Range.MDims < 4 && "Invalid dimensions.");
+
+  uint32_t GlobalSize[3] = {1, 1, 1};
+  if (Range.MGlobalSize) {
+    for (size_t I = 0; I < Range.MDims; ++I) {
+      assert(Range.MGlobalSize[I] <= std::numeric_limits<uint32_t>::max());
+      GlobalSize[I] = static_cast<uint32_t>(Range.MGlobalSize[I]);
+    }
+  }
+
+  uint32_t GroupSize[3] = {1, 1, 1};
+  if (Range.MLocalSize) {
+    for (size_t I = 0; I < Range.MDims; ++I) {
+      assert(Range.MLocalSize[I] <= std::numeric_limits<uint32_t>::max() &&
+             Range.MLocalSize[I] != 0);
+      GroupSize[I] = static_cast<uint32_t>(Range.MLocalSize[I]);
+    }
+  }
+
+  // We have the following mapping between dimensions with SPIR-V builtins:
+  // 1D: id[0] -> x
+  // 2D: id[0] -> y, id[1] -> x
+  // 3D: id[0] -> z, id[1] -> y, id[2] -> x
+  // So in order to ensure the correctness we update all the kernel
+  // parameters accordingly.
+  if (Range.MDims > 1) {
+    // TODO: Offset is not yet supported in liboffload, so ignore it for now.
+    std::swap(GlobalSize[0], GlobalSize[Range.MDims - 1]);
+    std::swap(GroupSize[0], GroupSize[Range.MDims - 1]);
+  }
+
+  ol_kernel_launch_size_args_t olRange = {};
+  olRange.Dimensions = Range.MDims;
+  olRange.NumGroups.x = GlobalSize[0] / GroupSize[0];
+  olRange.NumGroups.y = GlobalSize[1] / GroupSize[1];
+  olRange.NumGroups.z = GlobalSize[2] / GroupSize[2];
+  olRange.GroupSize.x = GroupSize[0];
+  olRange.GroupSize.y = GroupSize[1];
+  olRange.GroupSize.z = GroupSize[2];
+  olRange.DynSharedMemory = 0;
+  return olRange;
 }
 
 } // namespace detail

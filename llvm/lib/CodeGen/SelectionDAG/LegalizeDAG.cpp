@@ -1272,6 +1272,11 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
     break;
+  case ISD::VECTOR_INTERLEAVE:
+  case ISD::VECTOR_DEINTERLEAVE:
+    Action = TLI.getVectorInterleaveAction(
+        Node->getOpcode(), Node->getNumOperands(), Node->getValueType(0));
+    break;
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     Action = TLI.getOperationAction(
         Node->getOpcode(),
@@ -3413,6 +3418,18 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     SDValue NewRHS =
         DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), RHS);
     SDValue Res = DAG.getAtomic(ISD::ATOMIC_LOAD_ADD, DL, AN->getMemoryVT(),
+                                Node->getOperand(0), Node->getOperand(1),
+                                NewRHS, AN->getMemOperand());
+    Results.push_back(Res);
+    Results.push_back(Res.getValue(1));
+    break;
+  }
+  case ISD::ATOMIC_LOAD_FSUB: {
+    SDLoc DL(Node);
+    EVT VT = Node->getValueType(0);
+    AtomicSDNode *AN = cast<AtomicSDNode>(Node);
+    SDValue NewRHS = DAG.getNode(ISD::FNEG, DL, VT, Node->getOperand(2));
+    SDValue Res = DAG.getAtomic(ISD::ATOMIC_LOAD_FADD, DL, AN->getMemoryVT(),
                                 Node->getOperand(0), Node->getOperand(1),
                                 NewRHS, AN->getMemOperand());
     Results.push_back(Res);

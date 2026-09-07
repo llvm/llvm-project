@@ -92,10 +92,13 @@ void Function::convertToNewDbgValues() {
   }
 }
 
-void Function::convertFromNewDbgValues() {
+bool Function::convertFromNewDbgValues() {
+  bool Modified = false;
   for (auto &BB : *this) {
-    BB.convertFromNewDbgValues();
+    if (BB.convertFromNewDbgValues())
+      Modified = true;
   }
+  return Modified;
 }
 
 //===----------------------------------------------------------------------===//

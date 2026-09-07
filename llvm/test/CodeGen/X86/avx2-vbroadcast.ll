@@ -1133,7 +1133,7 @@ define void @isel_crash_32b(ptr %cV_R.addr) {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-32, %esp
-; X86-NEXT:    subl $128, %esp
+; X86-NEXT:    addl $-128, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovaps %ymm0, (%esp)
@@ -1153,7 +1153,7 @@ define void @isel_crash_32b(ptr %cV_R.addr) {
 ; X64-NEXT:    movq %rsp, %rbp
 ; X64-NEXT:    .cfi_def_cfa_register %rbp
 ; X64-NEXT:    andq $-32, %rsp
-; X64-NEXT:    subq $128, %rsp
+; X64-NEXT:    addq $-128, %rsp
 ; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovaps %ymm0, (%rsp)
 ; X64-NEXT:    vpbroadcastb (%rdi), %ymm1
@@ -1224,7 +1224,7 @@ define void @isel_crash_16w(ptr %cV_R.addr) {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-32, %esp
-; X86-NEXT:    subl $128, %esp
+; X86-NEXT:    addl $-128, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovaps %ymm0, (%esp)
@@ -1244,7 +1244,7 @@ define void @isel_crash_16w(ptr %cV_R.addr) {
 ; X64-NEXT:    movq %rsp, %rbp
 ; X64-NEXT:    .cfi_def_cfa_register %rbp
 ; X64-NEXT:    andq $-32, %rsp
-; X64-NEXT:    subq $128, %rsp
+; X64-NEXT:    addq $-128, %rsp
 ; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovaps %ymm0, (%rsp)
 ; X64-NEXT:    vpbroadcastw (%rdi), %ymm1
@@ -1315,7 +1315,7 @@ define void @isel_crash_8d(ptr %cV_R.addr) {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-32, %esp
-; X86-NEXT:    subl $128, %esp
+; X86-NEXT:    addl $-128, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovaps %ymm0, (%esp)
@@ -1335,7 +1335,7 @@ define void @isel_crash_8d(ptr %cV_R.addr) {
 ; X64-NEXT:    movq %rsp, %rbp
 ; X64-NEXT:    .cfi_def_cfa_register %rbp
 ; X64-NEXT:    andq $-32, %rsp
-; X64-NEXT:    subq $128, %rsp
+; X64-NEXT:    addq $-128, %rsp
 ; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovaps %ymm0, (%rsp)
 ; X64-NEXT:    vbroadcastss (%rdi), %ymm1
@@ -1405,7 +1405,7 @@ define void @isel_crash_4q(ptr %cV_R.addr) {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
 ; X86-NEXT:    andl $-32, %esp
-; X86-NEXT:    subl $128, %esp
+; X86-NEXT:    addl $-128, %esp
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X86-NEXT:    vmovaps %ymm0, (%esp)
@@ -1425,7 +1425,7 @@ define void @isel_crash_4q(ptr %cV_R.addr) {
 ; X64-NEXT:    movq %rsp, %rbp
 ; X64-NEXT:    .cfi_def_cfa_register %rbp
 ; X64-NEXT:    andq $-32, %rsp
-; X64-NEXT:    subq $128, %rsp
+; X64-NEXT:    addq $-128, %rsp
 ; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; X64-NEXT:    vmovaps %ymm0, (%rsp)
 ; X64-NEXT:    vbroadcastsd (%rdi), %ymm1

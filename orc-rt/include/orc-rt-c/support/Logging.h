@@ -103,7 +103,7 @@ orc_rt_log_Level orc_rt_log_Level_parse(const char *Str) ORC_RT_C_NOTHROW;
  * to type-check a printf-style format string against its arguments without
  * evaluating them or emitting any code.
  */
-int orc_rt_log_formatCheck(const char *Fmt, ...) ORC_RT_C_FORMAT_PRINTF(1, 2);
+int orc_rt_log_formatCheck(const char *Fmt, ...) ORC_RT_FORMAT_PRINTF(1, 2);
 
 /*
  * A disabled log site. Validates the category token, format string, and
@@ -185,7 +185,7 @@ int orc_rt_log_formatCheck(const char *Fmt, ...) ORC_RT_C_FORMAT_PRINTF(1, 2);
  */
 void orc_rt_log_printf(orc_rt_log_Level Level, orc_rt_log_Category Category,
                        const char *Fmt, ...) ORC_RT_C_NOTHROW
-    ORC_RT_C_FORMAT_PRINTF(3, 4);
+    ORC_RT_FORMAT_PRINTF(3, 4);
 
 /*
  * Each level is compiled in only if it is at or above the ORC_RT_LOG_LEVEL
