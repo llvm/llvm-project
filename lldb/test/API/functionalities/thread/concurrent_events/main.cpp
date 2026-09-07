@@ -20,8 +20,16 @@ pseudo_barrier_t g_barrier;
 int g_breakpoint = 0;
 int g_sigusr1_count = 0;
 
-alignas(16) uint32_t g_watchme;
-uint32_t g_watchme_padding[4];
+// Hardware watchpoints round the watched address/size to an alignment
+// boundary, so a watchpoint on a plain global could end up covering a
+// neighboring global too. Group the watched data with trailing padding in a
+// single aligned struct so the compiler is guaranteed to lay them out
+// together and nothing else can share the watchpoint's range.
+#define WATCHPOINT_SIZE 16
+struct alignas(WATCHPOINT_SIZE) WatchMePadding {
+  uint32_t data;
+  char padding_after[WATCHPOINT_SIZE];
+} g_watchme;
 
 struct action_args {
   int delay;
@@ -66,7 +74,7 @@ watchpoint_func (void *input) {
     pseudo_barrier_wait(g_barrier);
     do_action_args(input);
 
-    g_watchme = 1;     // watchpoint triggers here
+    g_watchme.data = 1;     // watchpoint triggers here
     return 0;
 }
 
@@ -114,7 +122,7 @@ void start_threads(thread_vector& threads,
 
 int dotest()
 {
-    g_watchme = 0;
+    g_watchme.data = 0;
 
     // Actions are triggered immediately after the thread is spawned
     unsigned num_breakpoint_threads = 1;
