@@ -1,0 +1,110 @@
+# RUN: split-file %s %t
+# RUN: cat %t/header.mir %t/a.ir %t/b.ir %t/c.ir %t/functions.mir > %t/abc.mir
+# RUN: llc -mtriple=amdgpu9.08-amd-amdhsa \
+# RUN:   -start-before=amdgpu-resource-usage %t/abc.mir -o %t/abc.s
+# RUN: cat %t/abc.s %t/check.s | llvm-mc -triple=amdgpu9.08-amd-amdhsa \
+# RUN:   -filetype=obj | llvm-readobj --hex-dump=.resource_check - | \
+# RUN:   FileCheck %s
+# RUN: cat %t/header.mir %t/a.ir %t/c.ir %t/b.ir %t/functions.mir > %t/acb.mir
+# RUN: llc -mtriple=amdgpu9.08-amd-amdhsa \
+# RUN:   -start-before=amdgpu-resource-usage %t/acb.mir -o %t/acb.s
+# RUN: cat %t/acb.s %t/check.s | llvm-mc -triple=amdgpu9.08-amd-amdhsa \
+# RUN:   -filetype=obj | llvm-readobj --hex-dump=.resource_check - | \
+# RUN:   FileCheck %s
+# RUN: cat %t/header.mir %t/b.ir %t/a.ir %t/c.ir %t/functions.mir > %t/bac.mir
+# RUN: llc -mtriple=amdgpu9.08-amd-amdhsa \
+# RUN:   -start-before=amdgpu-resource-usage %t/bac.mir -o %t/bac.s
+# RUN: cat %t/bac.s %t/check.s | llvm-mc -triple=amdgpu9.08-amd-amdhsa \
+# RUN:   -filetype=obj | llvm-readobj --hex-dump=.resource_check - | \
+# RUN:   FileCheck %s
+# RUN: cat %t/header.mir %t/b.ir %t/c.ir %t/a.ir %t/functions.mir > %t/bca.mir
+# RUN: llc -mtriple=amdgpu9.08-amd-amdhsa \
+# RUN:   -start-before=amdgpu-resource-usage %t/bca.mir -o %t/bca.s
+# RUN: cat %t/bca.s %t/check.s | llvm-mc -triple=amdgpu9.08-amd-amdhsa \
+# RUN:   -filetype=obj | llvm-readobj --hex-dump=.resource_check - | \
+# RUN:   FileCheck %s
+# RUN: cat %t/header.mir %t/c.ir %t/a.ir %t/b.ir %t/functions.mir > %t/cab.mir
+# RUN: llc -mtriple=amdgpu9.08-amd-amdhsa \
+# RUN:   -start-before=amdgpu-resource-usage %t/cab.mir -o %t/cab.s
+# RUN: cat %t/cab.s %t/check.s | llvm-mc -triple=amdgpu9.08-amd-amdhsa \
+# RUN:   -filetype=obj | llvm-readobj --hex-dump=.resource_check - | \
+# RUN:   FileCheck %s
+# RUN: cat %t/header.mir %t/c.ir %t/b.ir %t/a.ir %t/functions.mir > %t/cba.mir
+# RUN: llc -mtriple=amdgpu9.08-amd-amdhsa \
+# RUN:   -start-before=amdgpu-resource-usage %t/cba.mir -o %t/cba.s
+# RUN: cat %t/cba.s %t/check.s | llvm-mc -triple=amdgpu9.08-amd-amdhsa \
+# RUN:   -filetype=obj | llvm-readobj --hex-dump=.resource_check - | \
+# RUN:   FileCheck %s
+
+# Direct calls a -> {b, c}, b -> a form a call cycle with an outgoing edge to c.
+# All six emission orders must retain c's VGPR, AGPR, SGPR, flat-scratch,
+# and dynamic-stack resources at both cycle roots. In particular, flattening
+# a cycle must keep symbols that are not yet defined, and OR expressions
+# need the same closure as register maxima.
+#
+# Assemble the resource symbols into a separate section to verify their final
+# values, independently of the order-dependent printed expression spelling.
+# Every row contains the resource value for a, b, c, and a padding word.
+# CHECK:      Hex dump of section '.resource_check':
+# CHECK-NEXT: 0x00000000 30000000 30000000 30000000 00000000
+# CHECK-NEXT: 0x00000010 3d000000 3d000000 3d000000 00000000
+# CHECK-NEXT: 0x00000020 47000000 47000000 47000000 00000000
+# CHECK-NEXT: 0x00000030 01000000 01000000 01000000 00000000
+# CHECK-NEXT: 0x00000040 01000000 01000000 01000000 00000000
+# CHECK-NEXT: 0x00000050 01000000 01000000 00000000 00000000
+
+#--- header.mir
+--- |
+  target triple = "amdgpu9.08-amd-amdhsa"
+#--- a.ir
+  define hidden void @a() norecurse { ret void }
+#--- b.ir
+  define hidden void @b() norecurse { ret void }
+#--- c.ir
+  define hidden void @c() norecurse { ret void }
+#--- functions.mir
+...
+---
+name: a
+tracksRegLiveness: true
+frameInfo:
+  hasCalls: true
+  maxCallFrameSize: 0
+body: |
+  bb.0:
+    dead $sgpr30_sgpr31 = SI_CALL undef $sgpr4_sgpr5, @b, csr_amdgpu
+    dead $sgpr30_sgpr31 = SI_CALL undef $sgpr4_sgpr5, @c, csr_amdgpu
+    S_ENDPGM 0
+...
+---
+name: b
+tracksRegLiveness: true
+frameInfo:
+  hasCalls: true
+  maxCallFrameSize: 0
+body: |
+  bb.0:
+    dead $sgpr30_sgpr31 = SI_CALL undef $sgpr4_sgpr5, @a, csr_amdgpu
+    S_ENDPGM 0
+...
+---
+name: c
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: variable-sized, alignment: 16 }
+body: |
+  bb.0:
+    dead $vgpr47 = V_MOV_B32_e32 0, implicit $exec
+    dead $agpr60 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec
+    dead $sgpr70 = S_MOV_B32 0
+    dead $sgpr0_sgpr1 = S_MOV_B64 $flat_scr
+    S_ENDPGM 0
+...
+#--- check.s
+.section .resource_check, "", @progbits
+.long .La.num_vgpr, .Lb.num_vgpr, .Lc.num_vgpr, 0
+.long .La.num_agpr, .Lb.num_agpr, .Lc.num_agpr, 0
+.long .La.numbered_sgpr, .Lb.numbered_sgpr, .Lc.numbered_sgpr, 0
+.long .La.uses_flat_scratch, .Lb.uses_flat_scratch, .Lc.uses_flat_scratch, 0
+.long .La.has_dyn_sized_stack, .Lb.has_dyn_sized_stack, .Lc.has_dyn_sized_stack, 0
+.long .La.has_recursion, .Lb.has_recursion, .Lc.has_recursion, 0

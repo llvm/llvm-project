@@ -8,6 +8,11 @@
 
 #include "AMDGPUMCExpr.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -247,33 +252,167 @@ bool AMDGPUMCExpr::evaluateInstPrefSize(MCValue &Res,
 
 bool AMDGPUMCExpr::isSymbolUsedInExpression(const MCSymbol *Sym,
                                             const MCExpr *E) {
-  switch (E->getKind()) {
-  case MCExpr::Constant:
-    return false;
-  case MCExpr::Unary:
-    return isSymbolUsedInExpression(
-        Sym, static_cast<const MCUnaryExpr *>(E)->getSubExpr());
-  case MCExpr::Binary: {
-    const MCBinaryExpr *BE = static_cast<const MCBinaryExpr *>(E);
-    return isSymbolUsedInExpression(Sym, BE->getLHS()) ||
-           isSymbolUsedInExpression(Sym, BE->getRHS());
-  }
-  case MCExpr::SymbolRef: {
-    const MCSymbol &S = static_cast<const MCSymbolRefExpr *>(E)->getSymbol();
-    if (S.isVariable())
-      return isSymbolUsedInExpression(Sym, S.getVariableValue());
-    return &S == Sym;
-  }
-  case MCExpr::Specifier:
-  case MCExpr::Target: {
-    auto *TE = static_cast<const AMDGPUMCExpr *>(E);
-    for (const MCExpr *E : TE->getArgs())
-      if (isSymbolUsedInExpression(Sym, E))
+  SmallVector<const MCExpr *, 16> WorkList{E};
+  SmallPtrSet<const MCExpr *, 16> Seen;
+  while (!WorkList.empty()) {
+    const MCExpr *Expr = WorkList.pop_back_val();
+    if (!Seen.insert(Expr).second)
+      continue;
+    switch (Expr->getKind()) {
+    case MCExpr::Constant:
+      break;
+    case MCExpr::Unary:
+      WorkList.push_back(cast<MCUnaryExpr>(Expr)->getSubExpr());
+      break;
+    case MCExpr::Binary: {
+      const auto *BE = cast<MCBinaryExpr>(Expr);
+      WorkList.push_back(BE->getRHS());
+      WorkList.push_back(BE->getLHS());
+      break;
+    }
+    case MCExpr::SymbolRef: {
+      const MCSymbol &S = cast<MCSymbolRefExpr>(Expr)->getSymbol();
+      if (&S == Sym)
         return true;
-    return false;
+      if (S.isVariable())
+        WorkList.push_back(S.getVariableValue());
+      break;
+    }
+    case MCExpr::Specifier:
+      WorkList.push_back(cast<MCSpecifierExpr>(Expr)->getSubExpr());
+      break;
+    case MCExpr::Target:
+      append_range(WorkList, reverse(cast<AMDGPUMCExpr>(Expr)->getArgs()));
+      break;
+    }
   }
+  return false;
+}
+
+// Resource expressions form a DAG of maxima, boolean unions, and frame-size
+// additions. Evaluate shared subexpressions once per query, including additions
+// between maxima, instead of recursively expanding every path through the DAG.
+static bool evaluateResourceExpr(const AMDGPUMCExpr *Root, MCValue &Res,
+                                 const MCAssembler *Asm) {
+  enum class Phase { Visit, Complete, CheckAbsolute };
+  struct WorkItem {
+    const MCExpr *Expr;
+    Phase Step = Phase::Visit;
+    MCSymbol *ResolvingSymbol = nullptr;
+  };
+  SmallVector<WorkItem, 16> WorkList{{Root}};
+  DenseMap<const MCExpr *, MCValue> Values;
+  SmallPtrSet<const MCExpr *, 16> Active;
+  SmallVector<MCSymbol *, 8> ResolvingSymbols;
+  // Match MCExpr's resolution guard, including on failure. Cache values only
+  // for this query: symbol definitions and assembler layout can change later.
+  auto ClearResolving = scope_exit([&] {
+    for (MCSymbol *Sym : ResolvingSymbols)
+      Sym->setIsResolving(false);
+  });
+  auto EvaluateLeaf = [&](const MCExpr *Expr) {
+    MCValue Value;
+    if (!Expr->evaluateAsRelocatable(Value, Asm))
+      return false;
+    Values.try_emplace(Expr, Value);
+    return true;
+  };
+
+  while (!WorkList.empty()) {
+    WorkItem Item = WorkList.pop_back_val();
+    const MCExpr *Expr = Item.Expr;
+    if (Item.Step == Phase::CheckAbsolute) {
+      // Match normal max/OR evaluation: stop before the next operand if this
+      // operand is not absolute.
+      if (!Values.lookup(Expr).isAbsolute())
+        return false;
+      continue;
+    }
+    if (Item.Step == Phase::Complete) {
+      Active.erase(Expr);
+      if (MCSymbol *Sym = Item.ResolvingSymbol) {
+        MCValue Value = Values.lookup(Sym->getVariableValue());
+        Sym->setIsResolving(false);
+        if (Value.isAbsolute())
+          Values.try_emplace(Expr, Value);
+        // The normal resolver preserves the identity of relocatable aliases.
+        // Clear our guard first so it does not diagnose a spurious cycle.
+        else if (!EvaluateLeaf(Expr))
+          return false;
+        continue;
+      }
+      if (const auto *Binary = dyn_cast<MCBinaryExpr>(Expr)) {
+        MCValue LHS = Values.lookup(Binary->getLHS());
+        MCValue RHS = Values.lookup(Binary->getRHS());
+        if (LHS.isAbsolute() && RHS.isAbsolute()) {
+          // Match the generic evaluator's wrapping addition.
+          uint64_t Sum =
+              uint64_t(LHS.getConstant()) + uint64_t(RHS.getConstant());
+          Values.try_emplace(Expr, MCValue::get(Sum));
+        } else if (!EvaluateLeaf(Expr)) {
+          // Let MC handle relocations and layout-dependent symbol arithmetic.
+          return false;
+        }
+        continue;
+      }
+      const auto *Target = cast<AMDGPUMCExpr>(Expr);
+      std::optional<int64_t> Total;
+      for (const MCExpr *Arg : Target->getArgs()) {
+        MCValue Value = Values.lookup(Arg);
+        assert(Value.isAbsolute() && "operand passed CheckAbsolute");
+        Total = Total ? op(Target->getKind(), *Total, Value.getConstant())
+                      : Value.getConstant();
+      }
+      Values.try_emplace(Expr, MCValue::get(*Total));
+      continue;
+    }
+    if (Values.contains(Expr))
+      continue;
+
+    if (const auto *Target = dyn_cast<AMDGPUMCExpr>(Expr);
+        Target && (Target->getKind() == AMDGPUMCExpr::AGVK_Max ||
+                   Target->getKind() == AMDGPUMCExpr::AGVK_Or)) {
+      if (!Active.insert(Expr).second)
+        return false;
+      WorkList.push_back({Expr, Phase::Complete});
+      for (const MCExpr *Arg : reverse(Target->getArgs())) {
+        WorkList.push_back({Arg, Phase::CheckAbsolute});
+        WorkList.push_back({Arg});
+      }
+      continue;
+    }
+    if (const auto *Binary = dyn_cast<MCBinaryExpr>(Expr);
+        Binary && Binary->getOpcode() == MCBinaryExpr::Add) {
+      if (!Active.insert(Expr).second)
+        return false;
+      WorkList.push_back({Expr, Phase::Complete});
+      WorkList.push_back({Binary->getRHS()});
+      WorkList.push_back({Binary->getLHS()});
+      continue;
+    }
+    if (const auto *Ref = dyn_cast<MCSymbolRefExpr>(Expr)) {
+      MCSymbol &Sym = const_cast<MCSymbol &>(Ref->getSymbol());
+      if (!Ref->getKind() && Sym.isVariable() && !Sym.isWeakExternal() &&
+          !Sym.isResolving()) {
+        const MCExpr *Value = Sym.getVariableValue();
+        Sym.setIsResolving(true);
+        ResolvingSymbols.push_back(&Sym);
+        // Aliased symbols can name the same active expression. Leave the
+        // cycle diagnostic to the normal MC symbol-resolution path below.
+        if (!Active.contains(Value)) {
+          Active.insert(Expr);
+          WorkList.push_back({Expr, Phase::Complete, &Sym});
+          WorkList.push_back({Value});
+          continue;
+        }
+      }
+    }
+    if (!EvaluateLeaf(Expr))
+      return false;
   }
-  llvm_unreachable("Unknown expr kind!");
+
+  Res = Values.lookup(Root);
+  return Res.isAbsolute();
 }
 
 bool AMDGPUMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
@@ -282,6 +421,9 @@ bool AMDGPUMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
   switch (Kind) {
   default:
     break;
+  case AGVK_Max:
+  case AGVK_Or:
+    return evaluateResourceExpr(this, Res, Asm);
   case AGVK_ExtraSGPRs:
     return evaluateExtraSGPRs(Res, Asm);
   case AGVK_AlignTo:

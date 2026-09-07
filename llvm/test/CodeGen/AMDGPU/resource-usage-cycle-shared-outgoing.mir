@@ -1,0 +1,52 @@
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -verify-machineinstrs \
+# RUN:   -start-before=amdgpu-resource-usage %s -o - | FileCheck %s
+
+# Both cycle members also call c. When a closes the cycle, c is still
+# undefined and is reached both directly and through b. Normalize the whole
+# assignment so c occurs once, including across different callee operands.
+# CHECK-LABEL: {{^}}a:
+# CHECK: .set .La.num_vgpr, max(0, .Lc.num_vgpr){{$}}
+# CHECK: .set .La.uses_flat_scratch, or(0, .Lc.uses_flat_scratch){{$}}
+# CHECK-LABEL: {{^}}c:
+# CHECK: .set .Lc.num_vgpr, 48{{$}}
+# CHECK: .set .Lc.uses_flat_scratch, 1{{$}}
+
+--- |
+  target triple = "amdgpu9.00-amd-amdhsa"
+  define hidden void @b() norecurse { ret void }
+  define hidden void @a() norecurse { ret void }
+  define hidden void @c() norecurse { ret void }
+...
+---
+name: b
+tracksRegLiveness: true
+frameInfo:
+  hasCalls: true
+  maxCallFrameSize: 0
+body: |
+  bb.0:
+    dead $sgpr30_sgpr31 = SI_CALL undef $sgpr4_sgpr5, @a, csr_amdgpu
+    dead $sgpr30_sgpr31 = SI_CALL undef $sgpr4_sgpr5, @c, csr_amdgpu
+    S_ENDPGM 0
+...
+---
+name: a
+tracksRegLiveness: true
+frameInfo:
+  hasCalls: true
+  maxCallFrameSize: 0
+body: |
+  bb.0:
+    dead $sgpr30_sgpr31 = SI_CALL undef $sgpr4_sgpr5, @b, csr_amdgpu
+    dead $sgpr30_sgpr31 = SI_CALL undef $sgpr4_sgpr5, @c, csr_amdgpu
+    S_ENDPGM 0
+...
+---
+name: c
+tracksRegLiveness: true
+body: |
+  bb.0:
+    dead $vgpr47 = V_MOV_B32_e32 0, implicit $exec
+    dead $sgpr0_sgpr1 = S_MOV_B64 $flat_scr
+    S_ENDPGM 0
+...
