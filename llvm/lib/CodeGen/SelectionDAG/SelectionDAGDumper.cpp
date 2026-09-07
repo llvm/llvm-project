@@ -613,6 +613,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
 
   case ISD::GET_ACTIVE_LANE_MASK:
     return "get_active_lane_mask";
+  case ISD::MASK_BEFOREFIRST:
+    return "mask_beforefirst";
 
   case ISD::VECTOR_MATCH:
     return "vector_match";
