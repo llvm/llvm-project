@@ -3996,16 +3996,20 @@ void VPlanTransforms::scaleMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
     return;
 
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      uint64_t Stride;
       VPValue *StoredValue = nullptr;
-      if (!match(&R, m_WidenLoad(m_VPValue())) &&
-          !match(&R, m_WidenStore(m_VPValue(), m_VPValue(StoredValue))))
+      auto m_ConstantStrideVecPtr =
+          m_VecPtr(m_VPValue(), m_ConstantInt(Stride));
+      if ((!match(&R, m_WidenLoad(m_ConstantStrideVecPtr)) &&
+           !match(&R, m_WidenStore(m_ConstantStrideVecPtr,
+                                   m_VPValue(StoredValue)))) ||
+          Stride != 1)
         continue;
 
       auto *MemOp = cast<VPWidenMemoryRecipe>(&R);
-      if (!MemOp->isConsecutive())
-        continue;
+      assert(MemOp->isConsecutive() && "Expected consecutive load/store");
 
       // TODO: Support masked loads/stores. This requires widening the header
       // mask to the same factor as the memory operation.
@@ -4024,11 +4028,11 @@ void VPlanTransforms::scaleMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
       if (auto *Cast = dyn_cast_if_present<VPWidenCastRecipe>(MaybeCast))
         CastHint = Cast->getOpcode();
 
-      unsigned ScaleFactor = TTI.getPreferredVFMultipleForMemoryOp(
+      unsigned VFMultiple = TTI.getPreferredVFMultipleForMemoryOp(
           Opcode, AccessType, VF, UF, /*IsMasked=*/false, CastHint);
-      assert((ScaleFactor != 0 && UF % ScaleFactor == 0) &&
-             "ScaleFactor must divide UF");
-      MemOp->setVFMultiple(ScaleFactor);
+      assert((VFMultiple != 0 && UF % VFMultiple == 0) &&
+             "VFMultiple must divide UF");
+      MemOp->setVFMultiple(VFMultiple);
     }
   }
 }
