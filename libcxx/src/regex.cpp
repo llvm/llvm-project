@@ -353,8 +353,16 @@ regex_traits<char>::char_class_type __get_classname(const char* s, bool __icase)
   return r;
 }
 
+template <class _CharT>
+class __match_any_but_newline : public __owns_one_state<_CharT> {
+public:
+  typedef std::__state<_CharT> __state;
+
+  void __exec(__state&) const override;
+};
+
 template <>
-void __match_any_but_newline<char>::__exec(__state& __s) const {
+_LIBCPP_EXPORTED_FROM_ABI void __match_any_but_newline<char>::__exec(__state& __s) const {
   if (__s.__current_ != __s.__last_) {
     switch (*__s.__current_) {
     case '\r':
@@ -374,8 +382,9 @@ void __match_any_but_newline<char>::__exec(__state& __s) const {
   }
 }
 
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
-void __match_any_but_newline<wchar_t>::__exec(__state& __s) const {
+_LIBCPP_EXPORTED_FROM_ABI void __match_any_but_newline<wchar_t>::__exec(__state& __s) const {
   if (__s.__current_ != __s.__last_) {
     switch (*__s.__current_) {
     case '\r':
@@ -396,6 +405,7 @@ void __match_any_but_newline<wchar_t>::__exec(__state& __s) const {
     __s.__node_ = nullptr;
   }
 }
+#endif
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
