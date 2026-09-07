@@ -25,9 +25,9 @@ endif()
 
 # Support is always an object library: it is embedded into the libraries that
 # ship, never shipped on its own.
-add_library(orc-rt-support OBJECT ${ORC_RT_SUPPORT_SOURCES})
+add_library(orc-rt-support-objects OBJECT ${ORC_RT_SUPPORT_SOURCES})
 
-target_link_libraries(orc-rt-support PUBLIC orc-rt-headers)
+target_link_libraries(orc-rt-support-objects PUBLIC orc-rt-headers)
 
 # Apply RTTI and exceptions compile flags
-target_compile_options(orc-rt-support PRIVATE ${ORC_RT_COMPILE_FLAGS})
+target_compile_options(orc-rt-support-objects PRIVATE ${ORC_RT_COMPILE_FLAGS})

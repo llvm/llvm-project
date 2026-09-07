@@ -2533,6 +2533,37 @@ Individual command line options can be specified after `--`.
 options. Note that the path to the compiler executable needs to be specified
 explicitly instead of using `clang++` directly.
 
+Module maps can also introduce module dependencies by translating includes to
+imports. For example:
+
+```c++
+// a.modulemap
+module a {
+  header "a.h"
+}
+
+// use.cpp
+#include "a.h"
+```
+
+```console
+$ clang-scan-deps -format=p1689 -- <path-to-compiler-executable>/clang++ \
+    -std=c++20 use.cpp -c -o use.o -fmodule-map-file=a.modulemap
+```
+
+The rule for `use.o` contains a requirement for `a`:
+
+```text
+{
+  "primary-output": "use.o",
+  "requires": [
+    {
+      "logical-name": "a"
+    }
+  ]
+}
+```
+
 Users may want the scanner to get the transitive dependency information for
 headers. Otherwise, the project has to be scanned twice, once for headers and
 once for modules. To address this, `clang-scan-deps` will recognize the
