@@ -457,6 +457,18 @@ void convertSideEffectForCall(mlir::Operation *callOp, bool isNothrow,
     noUnwind = true;
     willReturn = true;
     break;
+
+  case cir::SideEffect::ArgMem:
+    memoryEffect = mlir::LLVM::MemoryEffectsAttr::get(
+        callOp->getContext(), /*other=*/ModRefInfo::NoModRef,
+        /*argMem=*/ModRefInfo::ModRef,
+        /*inaccessibleMem=*/ModRefInfo::ModRef,
+        /*errnoMem=*/ModRefInfo::NoModRef,
+        /*targetMem0=*/ModRefInfo::NoModRef,
+        /*targetMem1=*/ModRefInfo::NoModRef);
+    noUnwind = true;
+    willReturn = false;
+    break;
   }
 
   noReturn = callOp->hasAttr(CIRDialect::getNoReturnAttrName());
@@ -2823,6 +2835,17 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
           /*targetMem1=*/mlir::LLVM::ModRefInfo::NoModRef));
       fn.setNoUnwind(true);
       fn.setWillReturn(true);
+      break;
+    case cir::SideEffect::ArgMem:
+      fn.setMemoryEffectsAttr(mlir::LLVM::MemoryEffectsAttr::get(
+          fn.getContext(),
+          /*other=*/mlir::LLVM::ModRefInfo::NoModRef,
+          /*argMem=*/mlir::LLVM::ModRefInfo::ModRef,
+          /*inaccessibleMem=*/mlir::LLVM::ModRefInfo::ModRef,
+          /*errnoMem=*/mlir::LLVM::ModRefInfo::NoModRef,
+          /*targetMem0=*/mlir::LLVM::ModRefInfo::NoModRef,
+          /*targetMem1=*/mlir::LLVM::ModRefInfo::NoModRef));
+      fn.setNoUnwind(true);
       break;
     }
   }

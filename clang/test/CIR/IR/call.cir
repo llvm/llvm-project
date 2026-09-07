@@ -10,6 +10,7 @@ cir.func @f2() {
   cir.call @f1() : () -> ()
   cir.call @f1() side_effect(pure) : () -> ()
   cir.call @f1() side_effect(const) : () -> ()
+  cir.call @f1() side_effect(argmem) : () -> ()
   cir.return
 }
 
@@ -17,6 +18,7 @@ cir.func @f2() {
 // CHECK-NEXT:   cir.call @f1() : () -> ()
 // CHECK-NEXT:   cir.call @f1() side_effect(pure) : () -> ()
 // CHECK-NEXT:   cir.call @f1() side_effect(const) : () -> ()
+// CHECK-NEXT:   cir.call @f1() side_effect(argmem) : () -> ()
 // CHECK-NEXT:   cir.return
 // CHECK-NEXT: }
 
