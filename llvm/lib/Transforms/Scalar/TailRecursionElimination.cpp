@@ -50,6 +50,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/TailRecursionElimination.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
@@ -452,6 +453,11 @@ static bool isUnaryAccumulatorRecurrence(Instruction *I) {
 // will be rewritten to return the accumulator, so all of them have to yield the
 // same base-case constant. Return that constant, or nullptr on failure.
 //
+// RetSelects are the selects already inserted for call sites eliminated via
+// the "found return value" mechanism instead of the accumulator one. Their
+// original `ret` is gone, so they'd otherwise be invisible to the scan above,
+// but they still have to agree on the same base-case constant.
+//
 // FIXME: There is a room for improvement here in the future, e.g., consider
 // non-constant values and multiple base cases -- e.g., we want to be able to
 // handle code like:
@@ -462,9 +468,17 @@ static bool isUnaryAccumulatorRecurrence(Instruction *I) {
 //  return f(x-1) << 1;
 // }
 // ```
-static Constant *findBaseCaseRetConstant(Function &F,
-                                         Instruction *AccRecInstr) {
+static Constant *findBaseCaseRetConstant(Function &F, Instruction *AccRecInstr,
+                                         ArrayRef<SelectInst *> RetSelects) {
   Constant *BaseCaseVal = nullptr;
+
+  // Records C as the base-case constant the first time it's seen, and
+  // otherwise checks that it agrees with the one already on record.
+  auto AgreesWithBaseCase = [&](Constant *C) {
+    if (!BaseCaseVal)
+      BaseCaseVal = C;
+    return BaseCaseVal == C;
+  };
 
   for (BasicBlock &BB : F) {
     auto *RI = dyn_cast<ReturnInst>(BB.getTerminator());
@@ -483,12 +497,13 @@ static Constant *findBaseCaseRetConstant(Function &F,
     // not eliminated) must be rejected: returning the accumulator in its place
     // would drop that computation.
     auto *C = dyn_cast<Constant>(RV);
-    if (!C)
+    if (!C || !AgreesWithBaseCase(C))
       return nullptr;
+  }
 
-    if (!BaseCaseVal)
-      BaseCaseVal = C;
-    else if (BaseCaseVal != C)
+  for (SelectInst *SI : RetSelects) {
+    auto *C = dyn_cast<Constant>(SI->getFalseValue());
+    if (!C || !AgreesWithBaseCase(C))
       return nullptr;
   }
 
@@ -498,8 +513,9 @@ static Constant *findBaseCaseRetConstant(Function &F,
 // This function checks whether the instruction I can be used
 // to perform accumulator recursion elimination for the
 // call instruction CI.
-static Constant *canTransformAccumulatorRecursion(Instruction *I,
-                                                  CallInst *CI) {
+static Constant *
+canTransformAccumulatorRecursion(Instruction *I, CallInst *CI,
+                                 ArrayRef<SelectInst *> RetSelects) {
   bool IsUnaryAccumulatorRecurrence = isUnaryAccumulatorRecurrence(I);
   if ((!I->isAssociative() || !I->isCommutative()) &&
       !IsUnaryAccumulatorRecurrence)
@@ -517,7 +533,8 @@ static Constant *canTransformAccumulatorRecursion(Instruction *I,
 
     // findTRECandidate guarantees CI is a recursive call to its own
     // function, so scan the enclosing function for the base-case return.
-    AccInitVal = findBaseCaseRetConstant(*CI->getFunction(), /*AccRecInstr=*/I);
+    AccInitVal = findBaseCaseRetConstant(*CI->getFunction(), /*AccRecInstr=*/I,
+                                         RetSelects);
     if (!AccInitVal)
       return nullptr;
   } else {
@@ -815,7 +832,8 @@ bool TailRecursionEliminator::eliminateCall(CallInst *CI) {
     // arithmetic operation that could be transformed using accumulator
     // recursion elimination. Check to see if this is the case, and if so,
     // remember which instruction accumulates for later.
-    Constant *AccInitVal = canTransformAccumulatorRecursion(&*BBI, CI);
+    Constant *AccInitVal =
+        canTransformAccumulatorRecursion(&*BBI, CI, RetSelects);
 
     if (AccPN || !AccInitVal)
       return false; // We cannot eliminate the tail recursion!

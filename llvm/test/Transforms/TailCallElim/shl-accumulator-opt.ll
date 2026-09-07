@@ -239,3 +239,39 @@ other:
   %res = sub i32 %call2, 3
   ret i32 %res
 }
+
+; Negative test: a sibling call site that discards its own recursive call and
+; unconditionally returns a fixed constant must still agree with the shift
+; accumulator's base case.
+; int f(int x) {
+;   if (x == 0) return 1;
+;   if (x == 3) { f(x - 1); return 2; }
+;   return f(x - 1) << 1;
+; }
+define i32 @test_neg_discarded_call_conflicting_base(i32 %x) {
+; CHECK-LABEL: define i32 @test_neg_discarded_call_conflicting_base(
+; CHECK-NOT: accumulator.tr
+; CHECK: select {{.*}}, i32 2
+;
+entry:
+  %isbase = icmp eq i32 %x, 0
+  br i1 %isbase, label %base, label %rec
+
+rec:
+  %issp = icmp eq i32 %x, 3
+  br i1 %issp, label %special, label %normal
+
+special:
+  %d = sub i32 %x, 1
+  %c1 = tail call i32 @test_neg_discarded_call_conflicting_base(i32 %d)
+  ret i32 2
+
+normal:
+  %dec = sub i32 %x, 1
+  %c = tail call i32 @test_neg_discarded_call_conflicting_base(i32 %dec)
+  %shl = shl i32 %c, 1
+  ret i32 %shl
+
+base:
+  ret i32 1
+}
