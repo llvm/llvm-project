@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "Program.h"
-#include "OffloadError.h"
+#include "OmpAccError.h"
 
 #include <cstdint>
 
 using namespace llvm;
+using namespace llvm::omp::target;
 
 // Temporary helper to help transition of libomptarget to liboffload: returns
 // the opaque plugin kernel handle backing a kernel symbol, for use with the
@@ -27,9 +28,8 @@ Expected<ProgramTy> ProgramTy::create(ol_context_handle_t Context,
                      reinterpret_cast<uintptr_t>(Img->ImageStart);
   if (auto Res =
           olCreateProgram(Context, Device, Img->ImageStart, ImageSize, &Handle))
-    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                     "failed to load binary %p: %s", Img,
-                                     Res->Details);
+    return createError(ErrorCode::InvalidBinary, "failed to load binary %p: %s",
+                       Img, Res->Details);
 
   return ProgramTy(Handle);
 }
@@ -39,17 +39,16 @@ Expected<void *> ProgramTy::getGlobalAddress(const char *Name,
   ol_symbol_handle_t Symbol;
   if (auto Res =
           olGetSymbol(Handle, Name, OL_SYMBOL_KIND_GLOBAL_VARIABLE, &Symbol))
-    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                     "failed to find global symbol %s: %s",
-                                     Name, Res->Details);
+    return createError(ErrorCode::InvalidBinary,
+                       "failed to find global symbol %s: %s", Name,
+                       Res->Details);
 
   void *Address = nullptr;
   if (auto Res = olGetSymbolInfo(Symbol, OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS,
                                  sizeof(Address), &Address))
-    return error::createOffloadError(
-        error::ErrorCode::INVALID_BINARY,
-        "failed to get device address of global symbol %s: %s", Name,
-        Res->Details);
+    return createError(ErrorCode::InvalidBinary,
+                       "failed to get device address of global symbol %s: %s",
+                       Name, Res->Details);
 
   if (Size && olGetSymbolInfo(Symbol, OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE,
                               sizeof(*Size), Size))
@@ -61,9 +60,9 @@ Expected<void *> ProgramTy::getGlobalAddress(const char *Name,
 Expected<void *> ProgramTy::getKernelAddress(const char *Name) const {
   ol_symbol_handle_t Symbol;
   if (auto Res = olGetSymbol(Handle, Name, OL_SYMBOL_KIND_KERNEL, &Symbol))
-    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                     "failed to find kernel symbol %s: %s",
-                                     Name, Res->Details);
+    return createError(ErrorCode::InvalidBinary,
+                       "failed to find kernel symbol %s: %s", Name,
+                       Res->Details);
 
   return __ol_tgt_GetKernelFromSymbol(Symbol);
 }
