@@ -171,3 +171,51 @@ module attributes {
       attributes { test_classify = #byref_arg }
 
 }
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#byref_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_byref(%arg0: !rec_Big)
+      attributes { test_classify = #byref_arg }
+
+  // A slot reached through casts that preserve the storage.  The slot states
+  // the alignment, so it is found underneath the chain, while the outermost
+  // cast is what gets forwarded.
+  cir.func @forwards_slot_through_cast(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %raw = cir.alloca "raw" align(8) : !cir.ptr<!cir.array<!s8i x 32>>
+    %mid = cir.cast bitcast %raw
+        : !cir.ptr<!cir.array<!s8i x 32>> -> !cir.ptr<!s8i>
+    %slot = cir.cast bitcast %mid : !cir.ptr<!s8i> -> !cir.ptr<!rec_Big>
+    cir.store %s, %slot : !rec_Big, !cir.ptr<!rec_Big>
+    %v = cir.load %slot : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_byref(%v) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @forwards_slot_through_cast
+  // CHECK:        %[[RAW:.*]] = cir.alloca "raw" {{.*}}: !cir.ptr<!cir.array<!s8i x 32>>
+  // CHECK:        %[[MID:.*]] = cir.cast bitcast %[[RAW]] : !cir.ptr<!cir.array<!s8i x 32>> -> !cir.ptr<!s8i>
+  // CHECK:        %[[SLOT:.*]] = cir.cast bitcast %[[MID]] : !cir.ptr<!s8i> -> !cir.ptr<!rec_Big>
+  // CHECK-NOT:    cir.load %[[SLOT]] : !cir.ptr<!rec_Big>
+  // CHECK:        cir.call @takes_big_byref(%[[SLOT]]) : (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byref = !rec_Big}) -> ()
+
+}

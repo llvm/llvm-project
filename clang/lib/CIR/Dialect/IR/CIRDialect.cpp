@@ -303,6 +303,16 @@ void cir::AllocaOp::build(mlir::OpBuilder &odsBuilder,
   odsState.addTypes(addr);
 }
 
+cir::AllocaOp cir::getUnderlyingAlloca(mlir::Value addr) {
+  mlir::Value ptr = addr;
+  while (cir::CastOp castOp = ptr.getDefiningOp<cir::CastOp>()) {
+    if (!castOp.isAllocaPreservingCast())
+      break;
+    ptr = castOp.getSrc();
+  }
+  return ptr.getDefiningOp<cir::AllocaOp>();
+}
+
 //===----------------------------------------------------------------------===//
 // ArrayCtor & ArrayDtor
 //===----------------------------------------------------------------------===//

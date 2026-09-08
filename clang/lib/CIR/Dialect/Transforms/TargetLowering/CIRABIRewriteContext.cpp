@@ -11,8 +11,9 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dominance.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
-#include <utility>
+#include <algorithm>
 
 using namespace cir;
 using namespace mlir;
@@ -423,42 +424,30 @@ void insertReturnCoercion(mlir::FunctionOpInterface funcOp,
   }
 }
 
-/// \p val's defining load, if it is non-volatile and non-atomic.  Null
-/// otherwise: such a load's access has to survive as written, and a call
-/// result or any other first-class value has no defining load at all.
-static cir::LoadOp plainLoad(mlir::Value val) {
+/// \p val's defining load, if it is simple, meaning neither volatile nor
+/// atomic.  Null otherwise: a non-simple load's access has to survive as
+/// written, and a call result or any other first-class value has no defining
+/// load at all.
+static cir::LoadOp maybeGetSimpleLoad(mlir::Value val) {
   cir::LoadOp load = val.getDefiningOp<cir::LoadOp>();
   if (!load || load.getIsVolatile() || load.getMemOrder())
     return {};
   return load;
 }
 
-/// The slot \p addr designates, or null if it designates something else, such
-/// as a member of a larger record or an incoming pointer.
-static cir::AllocaOp underlyingAlloca(mlir::Value addr) {
-  // TODO: look through cir.cast ops where isAllocaPreservingCast() is true,
-  // mirroring Address::getUnderlyingAllocaOp() (CIR/CodeGen/Address.h), so an
-  // address-space-cast alloca is still found here once offload targets need it.
-  return addr.getDefiningOp<cir::AllocaOp>();
-}
-
-/// If \p recordVal is a plain load of a slot, return that slot and the load.
-/// Return nulls otherwise.
-static std::pair<cir::AllocaOp, cir::LoadOp>
-getWholeRecordSource(mlir::Value recordVal) {
-  cir::LoadOp load = plainLoad(recordVal);
-  if (!load)
+/// \p recordVal's defining load, if it is simple and its address resolves to
+/// an alloca.  Null otherwise.
+static cir::LoadOp getWholeRecordLoad(mlir::Value recordVal) {
+  cir::LoadOp load = maybeGetSimpleLoad(recordVal);
+  if (!load || !cir::getUnderlyingAlloca(load.getAddr()))
     return {};
-  cir::AllocaOp alloca = underlyingAlloca(load.getAddr());
-  if (!alloca)
-    return {};
-  return {alloca, load};
+  return load;
 }
 
 /// Whether \p addr is the enclosing function's own byref parameter, stated to
-/// be at least \p minAlign aligned.  Such a parameter already names an object
-/// the caller destroys after the call, which is what byref promises, so it can
-/// be handed on unchanged.  The other pointer parameters also state an
+/// be at least \p minAlign aligned.  Passing that pointer on as byref tells
+/// the callee nothing the incoming byref did not already state, so it can be
+/// handed on unchanged.  The other pointer parameters also state an
 /// alignment, so it is llvm.byref that identifies this one.
 static bool isByrefParameter(mlir::Value addr, uint64_t minAlign) {
   auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(addr);
@@ -476,41 +465,45 @@ static bool isByrefParameter(mlir::Value addr, uint64_t minAlign) {
 }
 
 /// Whether a byref argument may name \p addr, given the callee is told the
-/// argument is \p minAlign aligned.  A slot allocated here qualifies, and so
-/// does the enclosing function's own byref parameter.  Both must already state
+/// argument is \p minAlign aligned.  A slot allocated here qualifies,
+/// including one reached through storage-preserving casts, and so does the
+/// enclosing function's own byref parameter.  Both must already state
 /// that alignment: a slot's own alignment can be raised in principle, but one
 /// standing in for a parameter is replaced by the incoming pointer later, which
 /// would discard the raise and leave the callee over-promised.
 static bool forwardableByrefStorage(mlir::Value addr, uint64_t minAlign) {
-  if (cir::AllocaOp slot = underlyingAlloca(addr))
+  if (cir::AllocaOp slot = cir::getUnderlyingAlloca(addr))
     return slot.getAlignment() >= minAlign;
   return isByrefParameter(addr, minAlign);
 }
 
 /// Decompose a struct value into one scalar call argument per field of \p
 /// recTy, appending the field values to \p newArgs.  When \p structVal is a
-/// plain (non-volatile, non-atomic) load straight from an alloca, read each
-/// field with cir.get_member + cir.load from that alloca, emitted at the
-/// original load's position so they observe the same memory state, and record
-/// the now-dead whole-struct load in \p deadRecordLoads for later erasure.
-/// Otherwise (a call result, compound literal, or qualified load) extract each
-/// field from the value with cir.extract_member.  Loading the members from the
-/// alloca rather than extracting from a whole-struct value keeps the result in
+/// simple load from an alloca, read each field with cir.get_member +
+/// cir.load from the address the load used, emitted at the original load's
+/// position so they observe the same memory state, and record the now-dead
+/// whole-struct load in \p deadRecordLoads for later erasure.  Otherwise (a
+/// call result, compound literal, or a volatile or atomic load) extract each
+/// field from the value with cir.extract_member.  Loading the members from
+/// memory rather than extracting from a whole-struct value keeps the result in
 /// a form SROA can promote (it does not reason about extractvalue).  Shared by
 /// the Expand and Direct+canFlatten argument paths.
 static void emitStructFieldArgs(mlir::OpBuilder &builder, mlir::Location loc,
                                 mlir::Value structVal, cir::RecordType recTy,
                                 SmallVectorImpl<mlir::Value> &newArgs,
                                 SmallVectorImpl<cir::LoadOp> &deadRecordLoads) {
-  auto [srcAlloca, srcLoad] = getWholeRecordSource(structVal);
+  cir::LoadOp srcLoad = getWholeRecordLoad(structVal);
 
-  if (srcAlloca) {
+  if (srcLoad) {
     mlir::OpBuilder::InsertionGuard guard(builder);
     builder.setInsertionPoint(srcLoad);
+    cir::PointerType baseTy = srcLoad.getAddr().getType();
     for (auto [f, fieldTy] : llvm::enumerate(recTy.getMembers())) {
-      mlir::Type fieldPtrTy = cir::PointerType::get(fieldTy);
+      mlir::Type fieldPtrTy =
+          cir::PointerType::get(fieldTy, baseTy.getAddrSpace());
       mlir::Value fieldPtr = cir::GetMemberOp::create(
-          builder, loc, fieldPtrTy, srcAlloca, /*name=*/"", /*index=*/f);
+          builder, loc, fieldPtrTy, srcLoad.getAddr(), /*name=*/"",
+          /*index=*/f);
       newArgs.push_back(cir::LoadOp::create(builder, loc, fieldPtr));
     }
     deadRecordLoads.push_back(srcLoad);
@@ -1296,9 +1289,16 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
       // was loaded from rather than the loaded value, so a store to that
       // storage after the load is visible to the callee.
       if (!ac.byVal) {
-        cir::LoadOp srcLoad = plainLoad(arg);
-        if (!srcLoad || !forwardableByrefStorage(srcLoad.getAddr(),
-                                                 ac.indirectAlign.value()))
+        // The rewritten parameter is a pointer to the argument type in the
+        // default address space, so an operand read through an address-space
+        // cast cannot be handed on as it stands.  cir.load already pins the
+        // pointee type, so only the address space can differ.
+        cir::LoadOp srcLoad = maybeGetSimpleLoad(arg);
+        if (!srcLoad ||
+            srcLoad.getAddr().getType() !=
+                cir::PointerType::get(arg.getType()) ||
+            !forwardableByrefStorage(srcLoad.getAddr(),
+                                     ac.indirectAlign.value()))
           return call->emitOpError()
                  << "byref argument that does not name the caller's storage "
                     "is not yet implemented in CallConvLowering";

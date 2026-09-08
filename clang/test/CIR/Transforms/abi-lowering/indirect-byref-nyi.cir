@@ -321,3 +321,132 @@ module attributes {
       attributes { test_classify = #byref_arg_align16 }
 
 }
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#byref_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_byref(%arg0: !rec_Big)
+      attributes { test_classify = #byref_arg }
+
+  // A decay names one element of an array, not the whole allocation, so
+  // getUnderlyingAlloca does not look through it.
+  cir.func @caller_byref_through_decay(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %arr = cir.alloca "arr" align(8) : !cir.ptr<!cir.array<!rec_Big x 2>>
+    %decayed = cir.cast array_to_ptrdecay %arr
+        : !cir.ptr<!cir.array<!rec_Big x 2>> -> !cir.ptr<!rec_Big>
+    cir.store %s, %decayed : !rec_Big, !cir.ptr<!rec_Big>
+    %decayload = cir.load %decayed : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_byref(%decayload) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op byref argument that does not name the
+  // CHECK-SAME: caller's storage is not yet implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_byref(%decayload)
+
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#byref_arg_align16 = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 16, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_byref16(%arg0: !rec_Big)
+      attributes { test_classify = #byref_arg_align16 }
+
+  // The alignment comes from the slot underneath the cast, not from the cast,
+  // so an under-aligned slot is still reported once a cast is in between.
+  cir.func @caller_byref_underaligned_through_cast(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %raw = cir.alloca "raw" align(8) : !cir.ptr<!cir.array<!s8i x 32>>
+    %slot = cir.cast bitcast %raw
+        : !cir.ptr<!cir.array<!s8i x 32>> -> !cir.ptr<!rec_Big>
+    cir.store %s, %slot : !rec_Big, !cir.ptr<!rec_Big>
+    %castunderaligned = cir.load %slot : !cir.ptr<!rec_Big>, !rec_Big
+    cir.call @takes_big_byref16(%castunderaligned) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op byref argument that does not name the
+  // CHECK-SAME: caller's storage is not yet implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_byref16(%castunderaligned)
+
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#byref_arg = {
+  return = { kind = "direct" },
+  args   = [ { kind = "indirect", indirect_align = 8, byval = false } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @takes_big_byref(%arg0: !rec_Big)
+      attributes { test_classify = #byref_arg }
+
+  // The slot underneath the cast is forwardable, but the rewritten parameter
+  // is a pointer in the default address space, so the operand cannot be
+  // handed on as it stands.
+  cir.func @caller_byref_through_addrspace(%s: !rec_Big)
+      attributes { test_classify = #passthrough } {
+    %raw = cir.alloca "raw" align(8) : !cir.ptr<!rec_Big>
+    %slot = cir.cast address_space %raw
+        : !cir.ptr<!rec_Big> -> !cir.ptr<!rec_Big, target_address_space(5)>
+    cir.store %s, %slot : !rec_Big, !cir.ptr<!rec_Big, target_address_space(5)>
+    %asload = cir.load %slot
+        : !cir.ptr<!rec_Big, target_address_space(5)>, !rec_Big
+    cir.call @takes_big_byref(%asload) : (!rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK: error: 'cir.call' op byref argument that does not name the
+  // CHECK-SAME: caller's storage is not yet implemented in CallConvLowering
+  // CHECK-NEXT: cir.call @takes_big_byref(%asload)
+
+}
