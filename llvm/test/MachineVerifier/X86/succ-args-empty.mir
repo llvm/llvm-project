@@ -1,0 +1,33 @@
+# RUN: split-file %s %t
+
+# A SUCC_ARGS must forward at least one value; the bare successor form and the
+# operand-less form are both malformed.
+
+;--- no-values.mir
+# RUN: not --crash llc %t/no-values.mir -mtriple=x86_64-- -run-pass=none -filetype=null 2>&1 | FileCheck %t/no-values.mir
+# CHECK: *** Bad machine code: SUCC_ARGS must forward at least one value ***
+---
+name: no_values
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1
+    SUCC_ARGS %bb.1
+    JMP_1 %bb.1
+
+  bb.1:
+    RET64
+...
+
+;--- no-successor.mir
+# RUN: not --crash llc %t/no-successor.mir -mtriple=x86_64-- -run-pass=none -filetype=null 2>&1 | FileCheck %t/no-successor.mir
+# CHECK: *** Bad machine code: SUCC_ARGS must have a successor block operand ***
+---
+name: no_successor
+tracksRegLiveness: true
+body: |
+  bb.0:
+    %0:gr32 = MOV32ri 7
+    SUCC_ARGS %0
+    RET64
+...
