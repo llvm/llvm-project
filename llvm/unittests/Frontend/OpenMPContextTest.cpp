@@ -314,7 +314,71 @@ TEST_F(OpenMPContextTest, ApplicabilityAllTraits) {
 }
 
 TEST_F(OpenMPContextTest, ScoringSimple) {
-  // TODO: Add scoring tests (via getBestVariantMatchForContext).
+  OMPContext Parallel(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  Parallel.addTrait(TraitProperty::construct_parallel_parallel);
+  OMPContext NoConstruct(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+
+  VariantMatchInfo MatchAny;
+  MatchAny.addTrait(TraitProperty::construct_target_target, "");
+  MatchAny.addTrait(TraitProperty::construct_parallel_parallel, "");
+  MatchAny.addTrait(TraitProperty::implementation_extension_match_any, "");
+  EXPECT_TRUE(isVariantApplicableInContext(MatchAny, Parallel));
+  EXPECT_FALSE(isVariantApplicableInContext(MatchAny, NoConstruct));
+
+  VariantMatchInfo VendorLLVM;
+  VendorLLVM.addTrait(TraitProperty::implementation_vendor_llvm, "");
+  // The matching construct must raise the score, not just win a tie by order.
+  SmallVector<VariantMatchInfo, 2> MatchAnyCandidates{VendorLLVM, MatchAny};
+  EXPECT_EQ(getBestVariantMatchForContext(MatchAnyCandidates, Parallel), 1);
+
+  VariantMatchInfo MatchNone;
+  MatchNone.addTrait(TraitProperty::construct_parallel_parallel, "");
+  MatchNone.addTrait(TraitProperty::implementation_extension_match_none, "");
+  EXPECT_TRUE(isVariantApplicableInContext(MatchNone, NoConstruct));
+  EXPECT_FALSE(isVariantApplicableInContext(MatchNone, Parallel));
+
+  VariantMatchInfo Empty;
+  SmallVector<VariantMatchInfo, 2> MatchNoneCandidates{MatchNone, Empty};
+  EXPECT_EQ(getBestVariantMatchForContext(MatchNoneCandidates, NoConstruct), 0);
+}
+
+TEST_F(OpenMPContextTest, ScoringMatchAnyConstructs) {
+  OMPContext TargetParallel(false, Triple("x86_64-unknown-linux"), Triple(),
+                            -1);
+  TargetParallel.addTrait(TraitProperty::construct_target_target);
+  TargetParallel.addTrait(TraitProperty::construct_parallel_parallel);
+
+  VariantMatchInfo Parallel;
+  Parallel.addTrait(TraitProperty::construct_parallel_parallel, "");
+
+  VariantMatchInfo MatchAny;
+  MatchAny.addTrait(TraitProperty::construct_target_target, "");
+  MatchAny.addTrait(TraitProperty::construct_parallel_parallel, "");
+  MatchAny.addTrait(TraitProperty::implementation_extension_match_any, "");
+
+  // Both construct matches contribute: 1 + 1 + 2 beats PARALLEL's 1 + 2.
+  // Stopping after the first match must not omit the later match's score.
+  SmallVector<VariantMatchInfo, 2> Candidates{Parallel, MatchAny};
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, TargetParallel), 1);
+}
+
+TEST_F(OpenMPContextTest, ScoringMatchAnyWithoutMatchingConstructs) {
+  OMPContext NoConstruct(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+
+  VariantMatchInfo MatchAny;
+  MatchAny.addTrait(TraitProperty::construct_parallel_parallel, "");
+  MatchAny.addTrait(TraitProperty::implementation_vendor_llvm, "");
+  MatchAny.addTrait(TraitProperty::implementation_extension_match_any, "");
+  EXPECT_TRUE(isVariantApplicableInContext(MatchAny, NoConstruct));
+
+  APInt Score(64, 1);
+  VariantMatchInfo Scored;
+  Scored.addTrait(TraitProperty::user_condition_true, "", &Score);
+
+  // The vendor match makes MATCH_ANY applicable, but the absent construct
+  // must not add to its score. The scored candidate wins by 2 to 1.
+  SmallVector<VariantMatchInfo, 2> Candidates{MatchAny, Scored};
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, NoConstruct), 1);
 }
 
 } // namespace

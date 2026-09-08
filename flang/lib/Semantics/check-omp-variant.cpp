@@ -790,9 +790,9 @@ OmpStructureChecker::GetUniqueEffectiveDirectivePaths(
   auto getSignature = [&](const EffectiveDirectivePath &path) {
     ConstructTraitSequence contextTraits{GetConstructTraitsForPath(path)};
 
-    // Matching depends on trait presence and on the positions at which each
-    // ordered construct-selector prefix is matched. This is also enough to
-    // update the match when an inner directive is appended later.
+    // Matching depends on trait presence and ordered match positions. Retain
+    // matches after a failure for match_any scoring, as well as successful
+    // prefixes for matching after inner directives are appended.
     std::vector<unsigned> signature;
     signature.reserve(
         1 + 2 * contextTraits.size() * metadirectiveConstructSelectors_.size());
@@ -805,12 +805,15 @@ OmpStructureChecker::GetUniqueEffectiveDirectivePaths(
 
       std::size_t contextIndex{0};
       for (llvm::omp::TraitProperty property : selector) {
+        std::size_t searchStart{contextIndex};
         while (contextIndex < contextTraits.size() &&
             contextTraits[contextIndex] != property) {
           ++contextIndex;
         }
         if (contextIndex == contextTraits.size()) {
           signature.push_back(0);
+          // Like match_any, skip absent traits without consuming the context.
+          contextIndex = searchStart;
         } else {
           // Reserve zero for an unmatched property.
           signature.push_back(++contextIndex);
@@ -1022,9 +1025,49 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
   if (parser::Unwrap<parser::CompilerDirective>(x)) {
     return;
   }
+
+  const parser::DoConstruct *rootLoop{parser::Unwrap<parser::DoConstruct>(x)};
+  bool isStrictlyStructuredBlock{
+      parser::Unwrap<parser::BlockConstruct>(x) != nullptr};
+
+  // A standalone metadirective's replacement applies to its following
+  // associated construct. Keep block-associated replacements active across a
+  // Fortran BLOCK, just as loop-associated replacements are active across
+  // their DO construct, so nested construct selectors see the selected path.
+  if (rootLoop || isStrictlyStructuredBlock) {
+    for (const PendingLoopDirectiveGroup &group : pendingLoopDirectiveGroups_) {
+      if (!group.activatesReplacementContext) {
+        continue;
+      }
+      llvm::SmallVector<EffectiveDirectivePath, 4> paths;
+      for (const MetadirectiveReplacementBranch &branch : group.branches) {
+        EffectiveDirectivePath path{branch.enclosingPath};
+        const parser::OmpDirectiveSpecification *spec{branch.spec};
+        if (spec) {
+          llvm::omp::Association association{
+              llvm::omp::getDirectiveAssociation(spec->DirId())};
+          bool appliesToAssociatedConstruct{
+              (rootLoop &&
+                  (association == llvm::omp::Association::LoopNest ||
+                      association == llvm::omp::Association::LoopSeq)) ||
+              (isStrictlyStructuredBlock &&
+                  association == llvm::omp::Association::Block)};
+          if (appliesToAssociatedConstruct) {
+            path.insert(path.begin(), spec->DirId());
+          }
+        }
+        paths.push_back(std::move(path));
+      }
+      paths = GetUniqueEffectiveDirectivePaths(std::move(paths));
+      activeMetadirectiveReplacements_.push_back(
+          {dirContext_.size(), std::move(paths)});
+      ++executionPartReplacementCounts_.back();
+    }
+  }
+
   // This is the first construct after the metadirective. It consumes the
   // pending variants, whether or not it is a loop nest.
-  if (!parser::Unwrap<parser::DoConstruct>(x)) {
+  if (!rootLoop) {
     // A non-loop construct follows, so a loop-associated variant has no loop
     // nest to associate with.
     CheckPendingLoopDirectivesWithoutLoop();
@@ -1035,33 +1078,9 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
   // their reachable directives against it.
   std::vector<PendingLoopDirectiveGroup> pending;
   pending.swap(pendingLoopDirectiveGroups_);
-  for (const PendingLoopDirectiveGroup &group : pending) {
-    if (!group.activatesReplacementContext) {
-      continue;
-    }
-    llvm::SmallVector<EffectiveDirectivePath, 4> paths;
-    for (const MetadirectiveReplacementBranch &branch : group.branches) {
-      EffectiveDirectivePath path{branch.enclosingPath};
-      const parser::OmpDirectiveSpecification *spec{branch.spec};
-      if (spec) {
-        llvm::omp::Association association{
-            llvm::omp::getDirectiveAssociation(spec->DirId())};
-        if (association == llvm::omp::Association::LoopNest ||
-            association == llvm::omp::Association::LoopSeq) {
-          path.insert(path.begin(), spec->DirId());
-        }
-      }
-      paths.push_back(std::move(path));
-    }
-    paths = GetUniqueEffectiveDirectivePaths(std::move(paths));
-    activeMetadirectiveReplacements_.push_back(
-        {dirContext_.size(), std::move(paths)});
-    ++executionPartReplacementCounts_.back();
-  }
 
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   LoopSequence sequence(x, version, /*allowAllLoops=*/true, &context_);
-  const parser::DoConstruct &rootLoop{*parser::Unwrap<parser::DoConstruct>(x)};
   const auto &[haveSemantic, havePerfect]{sequence.depth()};
 
   const auto MsgRequiresCanonical{
@@ -1071,13 +1090,14 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
 
   auto checkRootLoopCanonical =
       [&](const parser::OmpDirectiveSpecification &spec, bool isSequence) {
-        parser::CharBlock source{*parser::GetSource(rootLoop)};
+        parser::CharBlock source{*parser::GetSource(*rootLoop)};
         Reason reason;
-        if (rootLoop.IsDoWhile()) {
+        if (rootLoop->IsDoWhile()) {
           reason.Say(source, MsgNotValidAffectedLoop, "DO WHILE loop");
-        } else if (rootLoop.IsDoConcurrent() && !IsDoConcurrentLegal(version)) {
+        } else if (rootLoop->IsDoConcurrent() &&
+            !IsDoConcurrentLegal(version)) {
           reason.Say(source, MsgNotValidAffectedLoop, "DO CONCURRENT loop");
-        } else if (!rootLoop.GetLoopControl()) {
+        } else if (!rootLoop->GetLoopControl()) {
           reason.Say(
               source, MsgNotValidAffectedLoop, "DO loop without loop control");
         }
@@ -1112,7 +1132,7 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
         // the parse tree, so name resolution cannot apply DEFAULT(NONE) to it.
         if (group.checkDefaultNoneInAssociatedLoop) {
           CheckDefaultNoneInAssociatedLoop(
-              *spec, rootLoop, defaultNoneDiagnosed);
+              *spec, *rootLoop, defaultNoneDiagnosed);
         }
 
         auto [needDepth, needPerfect]{
