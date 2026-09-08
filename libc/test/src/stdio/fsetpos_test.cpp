@@ -244,7 +244,7 @@ TEST_F(LlvmLibcFsetposTest, WideStreamParseState) {
 
   fpos_t pos_start;
   ASSERT_THAT(LIBC_NAMESPACE::fgetpos(file, &pos_start), Succeeds(0));
-  ASSERT_NE(LIBC_NAMESPACE::mbsinit(&pos_start.__state), 0);
+  ASSERT_NE(LIBC_NAMESPACE::mbsinit(&pos_start.state), 0);
 
   // Write multi-byte wide character: L'¢' (0xC2, 0xA2 in UTF-8)
   ASSERT_EQ(LIBC_NAMESPACE::fputwc(L'¢', file), static_cast<wint_t>(L'¢'));
@@ -258,8 +258,8 @@ TEST_F(LlvmLibcFsetposTest, WideStreamParseState) {
   // Position and parse state are restored
   fpos_t current_pos;
   ASSERT_THAT(LIBC_NAMESPACE::fgetpos(file, &current_pos), Succeeds(0));
-  ASSERT_NE(LIBC_NAMESPACE::mbsinit(&current_pos.__state), 0);
-  ASSERT_EQ(current_pos.__pos, off_t(0));
+  ASSERT_NE(LIBC_NAMESPACE::mbsinit(&current_pos.state), 0);
+  ASSERT_EQ(current_pos.pos, off_t(0));
 
   // Read back wide character
   ASSERT_EQ(LIBC_NAMESPACE::fgetwc(file), static_cast<wint_t>(L'¢'));

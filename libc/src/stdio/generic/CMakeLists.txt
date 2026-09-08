@@ -136,6 +136,9 @@ add_generic_entrypoint_object(
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
+    libc.src.__support.wchar.mbstate
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.memory_utils.inline_memset
 )
 
 add_generic_entrypoint_object(
@@ -151,6 +154,8 @@ add_generic_entrypoint_object(
     libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
+    libc.src.__support.wchar.mbstate
+    libc.src.string.memory_utils.inline_memcpy
 )
 
 add_generic_entrypoint_object(

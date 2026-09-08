@@ -18,8 +18,8 @@
 #include "off_t.h"
 
 typedef struct {
-  off_t __pos;
-  mbstate_t __state;
+  off_t pos;
+  mbstate_t state;
 } fpos_t;
 
 #endif // LLVM_LIBC_TYPES_FPOS_T_H
