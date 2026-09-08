@@ -13436,11 +13436,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
     if (isKnownPositive(GuardedStride)) {
       StrideWithGuards = GuardedStride;
       PositiveStride = true;
-      // Encode the context-sensitive stride > 0 fact into the expression:
-      // exit-value expansion will only issue a context-free non-zero query on
-      // the raw stride, so clamp Stride here to keep the backedge-count divisor
-      // provably non-zero (it equals Stride on the guarded path where the loop
-      // runs).
+      // Encode the context-sensitive stride > 0 fact into the expression
       Stride = getUMaxExpr(Stride, getOne(Stride->getType()));
     }
   }
