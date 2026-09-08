@@ -23,6 +23,8 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/in-reduction-section.f90 2>&1 | FileCheck %s --check-prefix=IN-SECTION
 ! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/task-reduction-section.f90 2>&1 | FileCheck %s --check-prefix=TASK-SECTION
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/task-reduction-section.f90 2>&1 | FileCheck %s --check-prefix=TASK-SECTION
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/complex-part.f90 2>&1 | FileCheck %s --check-prefix=ELEMENT
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/complex-part.f90 2>&1 | FileCheck %s --check-prefix=ELEMENT
 ! RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/supported.f90 | FileCheck %s --check-prefix=SUPPORTED --implicit-check-not="not yet implemented"
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/supported.f90 | FileCheck %s --check-prefix=SUPPORTED --implicit-check-not="not yet implemented"
 
@@ -38,6 +40,7 @@
 ! SUPPORTED-LABEL: func.func @_QPwhole_section
 ! SUPPORTED-LABEL: func.func @_QPpredefined_element
 ! SUPPORTED-LABEL: func.func @_QPpredefined_section
+! SUPPORTED-LABEL: func.func @_QPpredefined_complex_part
 
 !--- parallel-section.f90
 subroutine parallel_section(a)
@@ -168,6 +171,16 @@ subroutine task_reduction_section(a)
   !$omp end taskgroup
 end subroutine
 
+!--- complex-part.f90
+subroutine complex_part(z)
+  complex :: z(4)
+  !$omp declare reduction(+ : real : omp_out = omp_out + omp_in) &
+  !$omp& initializer(omp_priv = 1.0)
+  !$omp parallel reduction(+ : z(2)%re)
+  z(2)%re = z(2)%re + 1.0
+  !$omp end parallel
+end subroutine
+
 !--- supported.f90
 subroutine whole_section(a)
   integer :: a(4)
@@ -189,5 +202,12 @@ subroutine predefined_section(a)
   integer :: a(4)
   !$omp parallel reduction(+ : a(2:3))
   a(2:3) = a(2:3) + 1
+  !$omp end parallel
+end subroutine
+
+subroutine predefined_complex_part(z)
+  complex :: z(4)
+  !$omp parallel reduction(+ : z(2)%re)
+  z(2)%re = z(2)%re + 1.0
   !$omp end parallel
 end subroutine

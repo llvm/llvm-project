@@ -1719,6 +1719,12 @@ static bool isUserDefinedReductionOperator(
   const semantics::Symbol *objectSymbol = object.sym();
   const semantics::DeclTypeSpec *objectType =
       objectSymbol ? objectSymbol->GetUltimate().GetType() : nullptr;
+  if (object.ref() && evaluate::ExtractComplexPart(*object.ref())) {
+    if (std::optional<evaluate::DynamicType> dynamicType =
+            object.ref()->GetType())
+      objectType = &semaCtx.MakeNumericType(dynamicType->category(),
+                                            dynamicType->kind());
+  }
   if (!objectType)
     return false;
 
@@ -1794,8 +1800,15 @@ getUserDefinedReductionSubobject(const ReductionClause &clause,
     if (object.ref()->Rank() == 0 &&
         evaluate::IsArrayElement(*object.ref(), /*intoSubstring=*/false))
       subobject = UserDefinedReductionSubobject::ArrayElement;
-    else if (evaluate::IsArraySection(*object.ref()) &&
-             !isWholeArraySection(object, semaCtx))
+    else if (std::optional<evaluate::ComplexPart> complexPart =
+                 evaluate::ExtractComplexPart(*object.ref())) {
+      std::optional<SomeExpr> complex =
+          evaluate::AsGenericExpr(common::Clone(complexPart->complex()));
+      if (complex && evaluate::IsArrayElement(*complex,
+                                              /*intoSubstring=*/false))
+        subobject = UserDefinedReductionSubobject::ArrayElement;
+    } else if (evaluate::IsArraySection(*object.ref()) &&
+               !isWholeArraySection(object, semaCtx))
       subobject = UserDefinedReductionSubobject::PartialArraySection;
     if (subobject != UserDefinedReductionSubobject::None &&
         isUserDefinedReductionOperator(reductionOperators.front(), object,
