@@ -2025,6 +2025,13 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
   uint64_t MaxVFWithoutSLForwardIssuesPowerOf2 = std::min<uint64_t>(
       VectorizerParams::MaxVectorWidth, MaxStoreLoadForwardSafeNumElements);
 
+  // If some other memory dependence already prevents store-to-load forwarding
+  // we just need to check if VF == 2 is safe for this one. If it is, even with
+  // some safe distance > 2, we should report that this dependence doesn't
+  // prevent store-to-load forwarding.
+  if (MaxVFWithoutSLForwardIssuesPowerOf2 < 2)
+    MaxVFWithoutSLForwardIssuesPowerOf2 = 2;
+
   // Compute the smallest VF at which the store and load would be misaligned
   // and recent enough to still be in the store buffer.
   for (uint64_t VF = 2; VF <= VectorizerParams::MaxVectorWidth; VF *= 2) {
