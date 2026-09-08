@@ -183,9 +183,14 @@ Error BinarySectionWriter::visit(const GroupSection &Sec) {
                            "cannot write '" + Sec.Name + "' out to binary");
 }
 
+void SectionWriter::writeSectionContents(ArrayRef<uint8_t> Data,
+                                         uint64_t Offset) {
+  llvm::copy(Data, Out.getBufferStart() + Offset);
+}
+
 Error SectionWriter::visit(const Section &Sec) {
   if (Sec.Type != SHT_NOBITS)
-    llvm::copy(Sec.Contents, Out.getBufferStart() + Sec.Offset);
+    writeSectionContents(Sec.Contents, Sec.Offset);
 
   return Error::success();
 }
@@ -453,7 +458,7 @@ void Section::restoreSymTabLink(SymbolTableSection &SymTab) {
 }
 
 Error SectionWriter::visit(const OwnedDataSection &Sec) {
-  llvm::copy(Sec.Data, Out.getBufferStart() + Sec.Offset);
+  writeSectionContents(Sec.Data, Sec.Offset);
   return Error::success();
 }
 
@@ -487,9 +492,7 @@ Error ELFSectionWriter<ELFT>::visit(const DecompressedSection &Sec) {
                              "failed to decompress section '" + Sec.Name +
                                  "': " + toString(std::move(E)));
 
-  uint8_t *Buf = reinterpret_cast<uint8_t *>(Out.getBufferStart()) + Sec.Offset;
-  llvm::copy(Decompressed, Buf);
-
+  writeSectionContents(Decompressed, Sec.Offset);
   return Error::success();
 }
 
@@ -532,11 +535,10 @@ Error BinarySectionWriter::visit(const CompressedSection &Sec) {
 
 template <class ELFT>
 Error ELFSectionWriter<ELFT>::visit(const CompressedSection &Sec) {
-  uint8_t *Buf = reinterpret_cast<uint8_t *>(Out.getBufferStart()) + Sec.Offset;
   Elf_Chdr_Impl<ELFT> Chdr = {};
   switch (Sec.CompressionType) {
   case DebugCompressionType::None:
-    llvm::copy(Sec.OriginalData, Buf);
+    writeSectionContents(Sec.OriginalData, Sec.Offset);
     return Error::success();
   case DebugCompressionType::Zlib:
     Chdr.ch_type = ELF::ELFCOMPRESS_ZLIB;
@@ -547,10 +549,10 @@ Error ELFSectionWriter<ELFT>::visit(const CompressedSection &Sec) {
   }
   Chdr.ch_size = Sec.DecompressedSize;
   Chdr.ch_addralign = Sec.DecompressedAlign;
-  memcpy(Buf, &Chdr, sizeof(Chdr));
-  Buf += sizeof(Chdr);
-
-  llvm::copy(Sec.CompressedData, Buf);
+  writeSectionContents(
+      ArrayRef(reinterpret_cast<const uint8_t *>(&Chdr), sizeof(Chdr)),
+      Sec.Offset);
+  writeSectionContents(Sec.CompressedData, Sec.Offset + sizeof(Chdr));
   return Error::success();
 }
 
@@ -613,8 +615,14 @@ Error StringTableSection::accept(MutableSectionVisitor &Visitor) {
 
 template <class ELFT>
 Error ELFSectionWriter<ELFT>::visit(const SectionIndexSection &Sec) {
-  uint8_t *Buf = reinterpret_cast<uint8_t *>(Out.getBufferStart()) + Sec.Offset;
-  llvm::copy(Sec.Indexes, reinterpret_cast<Elf_Word *>(Buf));
+  SmallVector<Elf_Word, 0> Indexes;
+  Indexes.reserve(Sec.Indexes.size());
+  for (uint32_t Index : Sec.Indexes)
+    Indexes.emplace_back(Index);
+  writeSectionContents(
+      ArrayRef(reinterpret_cast<const uint8_t *>(Indexes.data()),
+               Indexes.size() * sizeof(Elf_Word)),
+      Sec.Offset);
   return Error::success();
 }
 
@@ -1029,7 +1037,7 @@ void RelocationSection::replaceSectionReferences(
 }
 
 Error SectionWriter::visit(const DynamicRelocationSection &Sec) {
-  llvm::copy(Sec.Contents, Out.getBufferStart() + Sec.Offset);
+  writeSectionContents(Sec.Contents, Sec.Offset);
   return Error::success();
 }
 
@@ -1182,7 +1190,10 @@ Error ELFSectionWriter<ELFT>::visit(const GnuDebugLinkSection &Sec) {
   Elf_Word *CRC =
       reinterpret_cast<Elf_Word *>(Buf + Sec.Size - sizeof(Elf_Word));
   *CRC = Sec.CRC32;
-  llvm::copy(Sec.FileName, Buf);
+  writeSectionContents(
+      ArrayRef(reinterpret_cast<const uint8_t *>(Sec.FileName.data()),
+               Sec.FileName.size()),
+      Sec.Offset);
   return Error::success();
 }
 
