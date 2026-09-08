@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/OpenMP/OMPContext.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -321,9 +322,9 @@ bool llvm::omp::isVariantApplicableInContext(
       VMI, Ctx, /* ConstructMatches */ nullptr, DeviceOrImplementationSetOnly);
 }
 
-static APInt getVariantMatchScore(
-    const VariantMatchInfo &VMI, const OMPContext &Ctx,
-    SmallVectorImpl<std::optional<unsigned>> &ConstructMatches) {
+static APInt
+getVariantMatchScore(const VariantMatchInfo &VMI, const OMPContext &Ctx,
+                     ArrayRef<std::optional<unsigned>> ConstructMatches) {
   APInt Score(64, 1);
 
   unsigned NoConstructTraits = VMI.ConstructTraits.size();

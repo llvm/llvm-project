@@ -186,7 +186,8 @@ subroutine f15(n, a)
     do i = 1, n
       !ERROR: This construct requires a nest of depth 2, but the associated nest is a nest of depth 1
       !BECAUSE: COLLAPSE clause was specified with argument 2
-      !$omp metadirective when(construct={target, parallel}: simd collapse(2)) default(nothing)
+      !$omp metadirective when(construct={target, parallel}: simd collapse(2)) &
+      !$omp& default(nothing)
       do j = 1, n
         a(j, i) = i
       end do
@@ -212,7 +213,8 @@ subroutine f16(flag, n, a)
 
     !ERROR: This construct requires a nest of depth 2, but the associated nest is a nest of depth 1
     !BECAUSE: COLLAPSE clause was specified with argument 2
-    !$omp metadirective when(construct={target}: simd collapse(2)) default(nothing)
+    !$omp metadirective when(construct={target}: simd collapse(2)) &
+    !$omp& default(nothing)
     do i = 1, n
       a(i) = i
     end do
@@ -227,7 +229,8 @@ subroutine f17(flag, n, a)
   !$omp& when(user={condition(flag)}: target) default(parallel)
     !ERROR: This construct requires a nest of depth 2, but the associated nest is a nest of depth 1
     !BECAUSE: COLLAPSE clause was specified with argument 2
-    !$omp metadirective when(construct={parallel}: simd collapse(2)) default(nothing)
+    !$omp metadirective when(construct={parallel}: simd collapse(2)) &
+    !$omp& default(nothing)
     do i = 1, n
       a(i) = i
     end do
@@ -258,7 +261,8 @@ subroutine f19(n, a)
     a(1) = 1
   !$omp end metadirective
 
-  !$omp metadirective when(construct={parallel}: simd collapse(2)) default(nothing)
+  !$omp metadirective when(construct={parallel}: simd collapse(2)) &
+  !$omp& default(nothing)
   do i = 1, n
     a(i) = i
   end do

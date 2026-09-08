@@ -840,7 +840,6 @@ OmpStructureChecker::GetReachableMetadirectiveReplacements(
   llvm::SmallVector<MetadirectiveReplacementBranch, 4> result;
 
   for (const EffectiveDirectivePath &path : GetEnclosingDirectivePaths()) {
-    std::size_t firstBranch{result.size()};
     ConstructTraitSequence constructTraits{GetConstructTraitsForPath(path)};
     OmpVariantMatchContext matchContext{context_, constructTraits};
     if (auto candidateSet{
@@ -848,13 +847,7 @@ OmpStructureChecker::GetReachableMetadirectiveReplacements(
       for (const parser::OmpDirectiveSpecification *spec :
           GetReachableMetadirectiveVariants(
               *candidateSet, matchContext, context_)) {
-        if (spec && spec->DirId() == llvm::omp::Directive::OMPD_nothing) {
-          spec = nullptr;
-        }
         result.push_back({path, spec});
-      }
-      if (result.size() == firstBranch) {
-        result.push_back({path, nullptr});
       }
       continue;
     }
@@ -948,8 +941,7 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
 
   if (GetDirectiveNest(ApplyNest) && reachable &&
       dirId != llvm::omp::Directive::OMPD_metadirective) {
-    pendingLoopDirectiveGroups_.push_back(
-        {{{EffectiveDirectivePath{}, &x}}, false, false});
+    pendingLoopDirectiveGroups_.push_back({{{EffectiveDirectivePath{}, &x}}});
   }
 
   if (dirId != llvm::omp::Directive::OMPD_metadirective) {
@@ -982,7 +974,8 @@ void OmpStructureChecker::Leave(const parser::OmpDirectiveSpecification &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpMetadirectiveDirective &x) {
   auto branches{GetReachableMetadirectiveReplacements(x.v.Clauses())};
-  pendingLoopDirectiveGroups_.push_back({std::move(branches), true, true});
+  pendingLoopDirectiveGroups_.push_back(
+      {std::move(branches), /*isStandaloneMetadirective=*/true});
   EnterDirectiveNest(MetadirectiveNest);
 }
 
@@ -1004,7 +997,7 @@ void OmpStructureChecker::Enter(
   paths = GetUniqueEffectiveDirectivePaths(std::move(paths));
   activeMetadirectiveReplacements_.push_back(
       {dirContext_.size(), std::move(paths)});
-  pendingLoopDirectiveGroups_.push_back({std::move(branches), false, false});
+  pendingLoopDirectiveGroups_.push_back({std::move(branches)});
 }
 
 void OmpStructureChecker::Leave(
@@ -1018,7 +1011,8 @@ void OmpStructureChecker::Leave(
 // the next executable construct, either a following sibling or the first
 // execution-part construct for a declarative metadirective.
 void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
-  executionPartReplacementCounts_.push_back(0);
+  executionPartReplacementDepths_.push_back(
+      activeMetadirectiveReplacements_.size());
   if (pendingLoopDirectiveGroups_.empty()) {
     return;
   }
@@ -1036,7 +1030,7 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
   // their DO construct, so nested construct selectors see the selected path.
   if (rootLoop || isStrictlyStructuredBlock) {
     for (const PendingLoopDirectiveGroup &group : pendingLoopDirectiveGroups_) {
-      if (!group.activatesReplacementContext) {
+      if (!group.isStandaloneMetadirective) {
         continue;
       }
       llvm::SmallVector<EffectiveDirectivePath, 4> paths;
@@ -1061,7 +1055,6 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
       paths = GetUniqueEffectiveDirectivePaths(std::move(paths));
       activeMetadirectiveReplacements_.push_back(
           {dirContext_.size(), std::move(paths)});
-      ++executionPartReplacementCounts_.back();
     }
   }
 
@@ -1130,7 +1123,7 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
 
         // A standalone metadirective does not contain its associated loop in
         // the parse tree, so name resolution cannot apply DEFAULT(NONE) to it.
-        if (group.checkDefaultNoneInAssociatedLoop) {
+        if (group.isStandaloneMetadirective) {
           CheckDefaultNoneInAssociatedLoop(
               *spec, *rootLoop, defaultNoneDiagnosed);
         }
@@ -1162,12 +1155,11 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
 }
 
 void OmpStructureChecker::Leave(const parser::ExecutionPartConstruct &) {
-  CHECK(!executionPartReplacementCounts_.empty());
-  std::size_t count{executionPartReplacementCounts_.back()};
-  executionPartReplacementCounts_.pop_back();
-  CHECK(count <= activeMetadirectiveReplacements_.size());
-  activeMetadirectiveReplacements_.resize(
-      activeMetadirectiveReplacements_.size() - count);
+  CHECK(!executionPartReplacementDepths_.empty());
+  std::size_t depth{executionPartReplacementDepths_.back()};
+  executionPartReplacementDepths_.pop_back();
+  CHECK(depth <= activeMetadirectiveReplacements_.size());
+  activeMetadirectiveReplacements_.resize(depth);
 }
 
 // Diagnose reachable loop-associated directives that are not followed by a
