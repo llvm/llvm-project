@@ -1596,7 +1596,7 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
                               // stdout.
     Status e =
         RunShellCommand(expand_command, cwd, &status, nullptr, &output,
-                        &error_output, std::chrono::seconds(10), run_in_shell);
+                        &error_output, std::chrono::minutes(3), run_in_shell);
 
     if (e.Fail())
       return e;
