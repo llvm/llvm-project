@@ -146,7 +146,7 @@ compound=true
       "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
       "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\>, ir\<1\>\l" +
       "  EMIT ir\<%exitcond\> = icmp ne ir\<%indvars.iv.next\>, ir\<%N\>\l" +
-      "  EMIT vp\<%3\> = not ir\<%exitcond\>\l" +
+      "  EMIT vp\<%3\> = xor ir\<%exitcond\>, ir\<true\>\l" +
       "  EMIT vp\<%index.next\> = add nuw vp\<%2\>, vp\<%0\>\l" +
       "  EMIT branch-on-count vp\<%index.next\>, vp\<%1\>\l" +
       "No successors\l"
@@ -322,7 +322,7 @@ compound=true
       "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
       "  EMIT ir\<%iv.next\> = add ir\<%iv\>, ir\<1\>\l" +
       "  EMIT ir\<%exitcond\> = icmp ne ir\<%iv.next\>, ir\<%N\>\l" +
-      "  EMIT vp\<%3\> = not ir\<%exitcond\>\l" +
+      "  EMIT vp\<%3\> = xor ir\<%exitcond\>, ir\<true\>\l" +
       "  EMIT vp\<%index.next\> = add nuw vp\<%2\>, vp\<%0\>\l" +
       "  EMIT branch-on-count vp\<%index.next\>, vp\<%1\>\l" +
       "No successors\l"

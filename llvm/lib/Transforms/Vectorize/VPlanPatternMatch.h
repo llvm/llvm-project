@@ -862,8 +862,7 @@ inline auto m_SelectLike(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
 }
 
 template <typename Op0_t> inline auto m_Not(const Op0_t &Op0) {
-  return m_CombineOr(m_VPInstruction<VPInstruction::Not>(Op0),
-                     m_c_Binary<Instruction::Xor>(m_AllOnes(), Op0));
+  return m_c_Binary<Instruction::Xor>(m_AllOnes(), Op0);
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>

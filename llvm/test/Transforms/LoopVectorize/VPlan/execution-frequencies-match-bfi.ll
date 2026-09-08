@@ -95,7 +95,7 @@ define void @two_preds(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noali
 ; VPLAN-NEXT:    Successor(s): else
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    else:
-; VPLAN-NEXT:      EMIT vp<[[NOT_C0:%.+]]> = not ir<%c.0>
+; VPLAN-NEXT:      EMIT vp<[[NOT_C0:%.+]]> = xor ir<%c.0>, ir<true>
 ; VPLAN-NEXT:      EMIT ir<%gep.c> = getelementptr inbounds ir<%c>, ir<%iv>
 ; VPLAN-NEXT:      EMIT store ir<%i>, ir<%gep.c>, vp<[[NOT_C0]]> (!vplan.execution.frequency 6917529027641081856 (75%))
 ; VPLAN-NEXT:      EMIT ir<%c.1> = icmp slt ir<%i>, ir<-100>, vp<[[NOT_C0]]> (!vplan.execution.frequency 6917529027641081856 (75%))
@@ -319,7 +319,7 @@ define void @switch_common_dest(ptr noalias %a, ptr noalias %b, ptr noalias %c, 
 ; VPLAN-NEXT:      EMIT vp<[[C2:%.+]]> = icmp eq ir<%l>, ir<2>
 ; VPLAN-NEXT:      EMIT vp<[[C0_OR_C1:%.+]]> = or vp<[[C0]]>, vp<[[C1]]>
 ; VPLAN-NEXT:      EMIT vp<[[ANY:%.+]]> = or vp<[[C0_OR_C1]]>, vp<[[C2]]>
-; VPLAN-NEXT:      EMIT vp<[[DEFAULT:%.+]]> = not vp<[[ANY]]>
+; VPLAN-NEXT:      EMIT vp<[[DEFAULT:%.+]]> = xor vp<[[ANY]]>, ir<true>
 ; VPLAN-NEXT:      EMIT ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
 ; VPLAN-NEXT:      EMIT store ir<2>, ir<%gep.b>, vp<[[C2]]> (!vplan.execution.frequency 1152921504606846976 (12.5%))
 ; VPLAN-NEXT:    Successor(s): if.then
@@ -404,7 +404,7 @@ define void @switch_common_dest_weight_sum_not_a_power_of_two(ptr noalias %a, pt
 ; VPLAN-NEXT:      EMIT vp<[[C0:%.+]]> = icmp eq ir<%l>, ir<0>
 ; VPLAN-NEXT:      EMIT vp<[[C1:%.+]]> = icmp eq ir<%l>, ir<1>
 ; VPLAN-NEXT:      EMIT vp<[[C0_OR_C1:%.+]]> = or vp<[[C0]]>, vp<[[C1]]>
-; VPLAN-NEXT:      EMIT vp<[[DEFAULT:%.+]]> = not vp<[[C0_OR_C1]]>
+; VPLAN-NEXT:      EMIT vp<[[DEFAULT:%.+]]> = xor vp<[[C0_OR_C1]]>, ir<true>
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
 ; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[C0_OR_C1]]> (!vplan.execution.frequency 6148914689804861440 (66.67%))
 ; VPLAN-NEXT:    Successor(s): default
@@ -477,7 +477,7 @@ define void @switch_common_dest_almost_always_taken(ptr noalias %a, ptr noalias 
 ; VPLAN-NEXT:      EMIT vp<[[C0:%.+]]> = icmp eq ir<%l>, ir<0>
 ; VPLAN-NEXT:      EMIT vp<[[C1:%.+]]> = icmp eq ir<%l>, ir<1>
 ; VPLAN-NEXT:      EMIT vp<[[C0_OR_C1:%.+]]> = or vp<[[C0]]>, vp<[[C1]]>
-; VPLAN-NEXT:      EMIT vp<[[DEFAULT:%.+]]> = not vp<[[C0_OR_C1]]>
+; VPLAN-NEXT:      EMIT vp<[[DEFAULT:%.+]]> = xor vp<[[C0_OR_C1]]>, ir<true>
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
 ; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[C0_OR_C1]]> (!vplan.execution.frequency 9223372032559808512 (100%))
 ; VPLAN-NEXT:    Successor(s): default
@@ -563,7 +563,7 @@ define void @switch_common_dest_almost_never_taken(ptr noalias %a, ptr noalias %
 ; VPLAN-NEXT:      EMIT vp<[[OR_1:%.+]]> = or vp<[[OR_0]]>, vp<[[C3]]>
 ; VPLAN-NEXT:      EMIT vp<[[ANY:%.+]]> = or vp<[[OR_1]]>, vp<[[C4]]>
 ; VPLAN-NEXT:      EMIT vp<[[MASK:%.+]]> = logical-and ir<%c>, vp<[[ANY]]>
-; VPLAN-NEXT:      EMIT vp<[[NOT_MASK:%.+]]> = not vp<[[MASK]]>
+; VPLAN-NEXT:      EMIT vp<[[NOT_MASK:%.+]]> = xor vp<[[MASK]]>, ir<true>
 ; VPLAN-NEXT:      EMIT vp<[[DEFAULT:%.+]]> = logical-and ir<%c>, vp<[[NOT_MASK]]>
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
 ; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[MASK]]> (!vplan.execution.frequency 3435973836 (3.725e-08%))
@@ -640,7 +640,7 @@ define void @switch_common_dest_many_edges_almost_never_taken(ptr noalias %a, pt
 ; VPLAN-EMPTY:
 ; VPLAN-NEXT:    if.then:
 ; VPLAN:           EMIT vp<[[MASK:%.+]]> = logical-and ir<%c>, vp<%{{.+}}>
-; VPLAN-NEXT:      EMIT vp<[[NOT_MASK:%.+]]> = not vp<[[MASK]]>
+; VPLAN-NEXT:      EMIT vp<[[NOT_MASK:%.+]]> = xor vp<[[MASK]]>, ir<true>
 ; VPLAN-NEXT:      EMIT vp<[[DEFAULT:%.+]]> = logical-and ir<%c>, vp<[[NOT_MASK]]>
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
 ; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[MASK]]> (!vplan.execution.frequency 3817748708 (4.139e-08%))
@@ -722,7 +722,7 @@ define void @switch_common_dest_weight_sum_exceeds_32_bits(ptr noalias %a, ptr n
 ; VPLAN-NEXT:      EMIT vp<[[OR1:%.+]]> = or vp<[[OR0]]>, vp<[[C2]]>
 ; VPLAN-NEXT:      EMIT vp<[[OR2:%.+]]> = or vp<[[OR1]]>, vp<[[C3]]>
 ; VPLAN-NEXT:      EMIT vp<[[MASK:%.+]]> = or vp<[[OR2]]>, vp<[[C4]]>
-; VPLAN-NEXT:      EMIT vp<{{.+}}> = not vp<[[MASK]]>
+; VPLAN-NEXT:      EMIT vp<{{.+}}> = xor vp<[[MASK]]>, ir<true>
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
 ; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[MASK]]> (!vplan.execution.frequency 9223372023969873920 (100%))
 ; VPLAN-NEXT:    Successor(s): latch
@@ -855,7 +855,7 @@ define void @switch_weights_clamped_at_both_ends(ptr noalias %a, ptr noalias %b,
 ;
 ; VPLAN-LABEL: VPlan for loop in 'switch_weights_clamped_at_both_ends'
 ; VPLAN:         if.then:
-; VPLAN:           EMIT vp<[[DEFAULT:%.+]]> = not vp<[[MASK:%.+]]>
+; VPLAN:           EMIT vp<[[DEFAULT:%.+]]> = xor vp<[[MASK:%.+]]>, ir<true>
 ; VPLAN-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%iv>
 ; VPLAN-NEXT:      EMIT store ir<1>, ir<%gep.a>, vp<[[MASK]]> (!vplan.execution.frequency 9223372032559808512 (100%))
 ; VPLAN-NEXT:    Successor(s): default

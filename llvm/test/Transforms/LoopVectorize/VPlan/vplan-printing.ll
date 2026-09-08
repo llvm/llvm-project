@@ -390,7 +390,7 @@ define void @recipe_debug_loc_location(ptr nocapture %src) !dbg !5 {
 ; CHECK-NEXT:      WIDEN ir<%lsd> = load vp<[[VP5]]>, !dbg /tmp/s.c:6:3
 ; CHECK-NEXT:      WIDEN ir<%psd> = add nuw nsw ir<%lsd>, ir<23>, !dbg /tmp/s.c:7:3
 ; CHECK-NEXT:      WIDEN ir<%cmp1> = icmp slt ir<%lsd>, ir<100>, !dbg /tmp/s.c:8:3
-; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = not ir<%cmp1>, !dbg /tmp/s.c:9:3
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = xor ir<%cmp1>, ir<true>, !dbg /tmp/s.c:9:3
 ; CHECK-NEXT:      WIDEN ir<%cmp2> = icmp sge ir<%lsd>, ir<200>, !dbg /tmp/s.c:10:3
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = logical-and vp<[[VP6]]>, ir<%cmp2>, !dbg /tmp/s.c:11:3
 ; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = or vp<[[VP7]]>, ir<%cmp1>

@@ -434,16 +434,16 @@ TEST_F(VPVerifierTest, DerivedIVWithStartInLoopRegions) {
   VPBasicBlock *Entry = Plan.getEntry();
   VPBasicBlock *Latch = Plan.createVPBasicBlock("latch");
 
+  VPRegionBlock *LoopR = Plan.createLoopRegion(I32Ty, DebugLoc::getUnknown(),
+                                               "loop", Latch, Latch);
+  VPBlockUtils::connectBlocks(Entry, LoopR);
+  VPBlockUtils::connectBlocks(LoopR, Plan.getScalarHeader());
+
   VPBuilder Builder(Latch);
   VPValue *Start = Builder.createNot(Plan.getPoison(I32Ty));
   Builder.createDerivedIV(InductionDescriptor::IK_IntInduction, nullptr, Start,
                           Plan.getPoison(I32Ty), Plan.getPoison(I32Ty));
   Builder.createNaryOp(VPInstruction::BranchOnCond, Plan.getTrue());
-
-  VPRegionBlock *LoopR = Plan.createLoopRegion(I32Ty, DebugLoc::getUnknown(),
-                                               "loop", Latch, Latch);
-  VPBlockUtils::connectBlocks(Entry, LoopR);
-  VPBlockUtils::connectBlocks(LoopR, Plan.getScalarHeader());
 
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();

@@ -425,8 +425,7 @@ static bool canonicalHeaderAndLatch(VPBlockBase *HeaderVPB,
   assert(cast<VPInstruction>(Term)->getOpcode() ==
              VPInstruction::BranchOnCond &&
          "terminator must be a BranchOnCond");
-  auto *Not = new VPInstruction(VPInstruction::Not, {Term->getOperand(0)});
-  Not->insertBefore(Term);
+  VPValue *Not = VPBuilder(Term).createNot(Term->getOperand(0));
   Term->setOperand(0, Not);
   LatchVPBB->swapSuccessors();
 

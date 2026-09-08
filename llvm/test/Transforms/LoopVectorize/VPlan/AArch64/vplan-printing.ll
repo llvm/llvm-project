@@ -127,7 +127,7 @@ define i32 @print_partial_reduction_predication(ptr %a, ptr %b, i64 %N) "target-
 ; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT vp<%active.lane.mask.next> = wide active lane mask vp<%index.next>, ir<%N>, ir<1>
 ; CHECK-NEXT:      EMIT vp<%extract.next.alm.part> = extract-vector-for-part vp<%active.lane.mask.next>, ir<0>
-; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = not vp<%extract.next.alm.part>
+; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = xor vp<%extract.next.alm.part>, ir<true>
 ; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP11]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }

@@ -25,7 +25,7 @@ define void @cast_flags_mixed(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    EMIT store ir<0>, ir<%gep.trunc>
 ; CHECK-NEXT:    EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:    EMIT ir<%ec> = icmp slt ir<%iv.next>, ir<4>
-; CHECK-NEXT:    EMIT vp<[[VP1:%[0-9]+]]> = not ir<%ec>
+; CHECK-NEXT:    EMIT vp<[[VP1:%[0-9]+]]> = xor ir<%ec>, ir<true>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP1]]>
 ; CHECK-NEXT:  Successor(s): middle.block, loop
 ; CHECK-EMPTY:
@@ -74,7 +74,7 @@ define void @cast_flags_single(ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:    EMIT store ir<%zext.plain>, ir<%gep.b>
 ; CHECK-NEXT:    EMIT ir<%iv.next> = add nsw ir<%iv>, ir<1>
 ; CHECK-NEXT:    EMIT ir<%ec> = icmp slt ir<%iv.next>, ir<4>
-; CHECK-NEXT:    EMIT vp<[[VP1:%[0-9]+]]> = not ir<%ec>
+; CHECK-NEXT:    EMIT vp<[[VP1:%[0-9]+]]> = xor ir<%ec>, ir<true>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP1]]>
 ; CHECK-NEXT:  Successor(s): middle.block, loop
 ; CHECK-EMPTY:

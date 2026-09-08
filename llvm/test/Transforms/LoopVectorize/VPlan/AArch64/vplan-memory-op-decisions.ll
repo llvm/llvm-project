@@ -753,7 +753,7 @@ define void @blend_with_identical_incoming_values_address(ptr noalias %A, i1 %c)
 ; CHECK-NEXT:    Successor(s): else
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    else:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c>
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = xor ir<%c>, ir<true>
 ; CHECK-NEXT:      EMIT ir<%idx.else> = add nsw ir<%iv>, ir<-1>, vp<[[VP4]]>
 ; CHECK-NEXT:    Successor(s): then
 ; CHECK-EMPTY:
@@ -996,7 +996,7 @@ define void @blend_with_different_incoming_values_address(ptr noalias %A, ptr no
 ; CHECK-NEXT:    Successor(s): else
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    else:
-; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = not ir<%c>
+; CHECK-NEXT:      EMIT vp<[[VP4:%[0-9]+]]> = xor ir<%c>, ir<true>
 ; CHECK-NEXT:      EMIT ir<%idx.else> = add nsw ir<%iv>, ir<-2>, vp<[[VP4]]>
 ; CHECK-NEXT:    Successor(s): then
 ; CHECK-EMPTY:
