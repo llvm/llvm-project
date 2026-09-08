@@ -26,6 +26,9 @@ llvm::SmallVector<std::string, 8> getCandidateBinPaths(llvm::StringRef ExeDir);
 // Defined in AMDGPUArchByKFD.cpp (non-static, compiled into this test).
 int printGPUsByKFD(llvm::StringRef NodePath);
 
+// Defined in LevelZeroArch.cpp.
+llvm::StringRef getIntelGPUArchName(uint32_t IPVersion);
+
 using namespace llvm;
 
 cl::opt<bool> Verbose("offload-arch-test-verbose", cl::Hidden, cl::init(false));
@@ -206,4 +209,48 @@ TEST(KFDTopology, MultipleGPUsArePrintedInNodeOrder) {
   std::string Output;
   EXPECT_EQ(printGPUsByKFDCapturingStdout(Dir.path(), Output), 0);
   EXPECT_EQ(Output, "gfx1101\ngfx90a\n");
+}
+
+// --- getIntelGPUArchName ---
+
+namespace {
+// Build a GMDID the way the Level Zero driver reports it.
+constexpr uint32_t gmdid(uint32_t Architecture, uint32_t Release,
+                         uint32_t Revision) {
+  return (Architecture << 22) | (Release << 14) | Revision;
+}
+} // namespace
+
+TEST(IntelGPUArchName, KnownArchitecturesGetAFriendlyName) {
+  EXPECT_EQ(getIntelGPUArchName(gmdid(12, 60, 7)), "xe-pvc");
+  EXPECT_EQ(getIntelGPUArchName(gmdid(20, 1, 4)), "xe-bmg-g21");
+  EXPECT_EQ(getIntelGPUArchName(gmdid(35, 10, 0)), "xe-nvl-p");
+  EXPECT_EQ(getIntelGPUArchName(gmdid(12, 0, 0)), "xe-tgllp");
+}
+
+// When several devices share an architecture and a release, the first one
+// listed in IntelGPUTargetParser.def names the whole group.
+TEST(IntelGPUArchName, FirstNameOfAGroupWins) {
+  EXPECT_EQ(getIntelGPUArchName(gmdid(30, 5, 0)), "xe-nvl-u");
+  EXPECT_EQ(getIntelGPUArchName(gmdid(12, 55, 0)), "xe-acm-g10");
+}
+
+// The revision is not part of the lookup: every stepping of an architecture
+// shares one name.
+TEST(IntelGPUArchName, RevisionDoesNotAffectTheName) {
+  EXPECT_EQ(getIntelGPUArchName(gmdid(12, 60, 0)), "xe-pvc");
+  EXPECT_EQ(getIntelGPUArchName(gmdid(12, 60, 63)), "xe-pvc");
+}
+
+// An architecture that is not in the table has no name at all.  Naming it after
+// its GMDID would print something that --offload-arch cannot accept, so the
+// utility reports it as an error instead.
+TEST(IntelGPUArchName, UnknownArchitecturesHaveNoName) {
+  EXPECT_TRUE(getIntelGPUArchName(gmdid(40, 11, 0)).empty());
+  EXPECT_TRUE(getIntelGPUArchName(gmdid(12, 99, 3)).empty());
+}
+
+// Pre-Xe devices report a GMDID too, and none of them are in the table.
+TEST(IntelGPUArchName, LegacyArchitecture) {
+  EXPECT_TRUE(getIntelGPUArchName(gmdid(9, 0, 9)).empty());
 }
