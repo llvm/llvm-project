@@ -3330,11 +3330,11 @@ define void @wrappingindvars1(i8 %t, i32 %len, ptr %A) {
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[LEN]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[T]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i8 [[TMP2]], [[T]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i8 [[TMP2]], [[T]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ugt i32 [[LEN]], 255
 ; CHECK-NEXT:    [[TMP11:%.*]] = or i1 [[TMP3]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i8 [[T]], [[TMP1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i8 [[TMP6]], [[T]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i8 [[TMP6]], [[T]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i32 [[LEN]], 255
 ; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP7]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP11]], [[TMP12]]
@@ -3397,11 +3397,11 @@ define void @wrappingindvars1(i8 %t, i32 %len, ptr %A) {
 ; IND:       vector.scevcheck:
 ; IND-NEXT:    [[TMP1:%.*]] = trunc i32 [[LEN]] to i8
 ; IND-NEXT:    [[TMP2:%.*]] = add i8 [[T]], [[TMP1]]
-; IND-NEXT:    [[TMP3:%.*]] = icmp slt i8 [[TMP2]], [[T]]
+; IND-NEXT:    [[TMP3:%.*]] = icmp ult i8 [[TMP2]], [[T]]
 ; IND-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[LEN]], 255
 ; IND-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[TMP4]]
 ; IND-NEXT:    [[TMP6:%.*]] = add i8 [[T]], [[TMP1]]
-; IND-NEXT:    [[TMP7:%.*]] = icmp ult i8 [[TMP6]], [[T]]
+; IND-NEXT:    [[TMP7:%.*]] = icmp slt i8 [[TMP6]], [[T]]
 ; IND-NEXT:    [[TMP8:%.*]] = icmp ugt i32 [[LEN]], 255
 ; IND-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
 ; IND-NEXT:    [[TMP10:%.*]] = or i1 [[TMP5]], [[TMP9]]
@@ -3464,11 +3464,11 @@ define void @wrappingindvars1(i8 %t, i32 %len, ptr %A) {
 ; UNROLL:       vector.scevcheck:
 ; UNROLL-NEXT:    [[TMP1:%.*]] = trunc i32 [[LEN]] to i8
 ; UNROLL-NEXT:    [[TMP2:%.*]] = add i8 [[T]], [[TMP1]]
-; UNROLL-NEXT:    [[TMP3:%.*]] = icmp slt i8 [[TMP2]], [[T]]
+; UNROLL-NEXT:    [[TMP3:%.*]] = icmp ult i8 [[TMP2]], [[T]]
 ; UNROLL-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[LEN]], 255
 ; UNROLL-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[TMP4]]
 ; UNROLL-NEXT:    [[TMP6:%.*]] = add i8 [[T]], [[TMP1]]
-; UNROLL-NEXT:    [[TMP7:%.*]] = icmp ult i8 [[TMP6]], [[T]]
+; UNROLL-NEXT:    [[TMP7:%.*]] = icmp slt i8 [[TMP6]], [[T]]
 ; UNROLL-NEXT:    [[TMP8:%.*]] = icmp ugt i32 [[LEN]], 255
 ; UNROLL-NEXT:    [[TMP10:%.*]] = or i1 [[TMP7]], [[TMP8]]
 ; UNROLL-NEXT:    [[TMP9:%.*]] = or i1 [[TMP5]], [[TMP10]]
@@ -3534,11 +3534,11 @@ define void @wrappingindvars1(i8 %t, i32 %len, ptr %A) {
 ; UNROLL-NO-IC:       vector.scevcheck:
 ; UNROLL-NO-IC-NEXT:    [[TMP1:%.*]] = trunc i32 [[LEN]] to i8
 ; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = add i8 [[T]], [[TMP1]]
-; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = icmp slt i8 [[TMP2]], [[T]]
+; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = icmp ult i8 [[TMP2]], [[T]]
 ; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = icmp ugt i32 [[LEN]], 255
 ; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = or i1 [[TMP3]], [[TMP9]]
 ; UNROLL-NO-IC-NEXT:    [[TMP6:%.*]] = add i8 [[T]], [[TMP1]]
-; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = icmp ult i8 [[TMP6]], [[T]]
+; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = icmp slt i8 [[TMP6]], [[T]]
 ; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = icmp ugt i32 [[LEN]], 255
 ; UNROLL-NO-IC-NEXT:    [[TMP12:%.*]] = or i1 [[TMP7]], [[TMP8]]
 ; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = or i1 [[TMP11]], [[TMP12]]
@@ -3604,11 +3604,11 @@ define void @wrappingindvars1(i8 %t, i32 %len, ptr %A) {
 ; INTERLEAVE:       vector.scevcheck:
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = trunc i32 [[LEN]] to i8
 ; INTERLEAVE-NEXT:    [[TMP2:%.*]] = add i8 [[T]], [[TMP1]]
-; INTERLEAVE-NEXT:    [[TMP3:%.*]] = icmp slt i8 [[TMP2]], [[T]]
+; INTERLEAVE-NEXT:    [[TMP3:%.*]] = icmp ult i8 [[TMP2]], [[T]]
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[LEN]], 255
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[TMP4]]
 ; INTERLEAVE-NEXT:    [[TMP6:%.*]] = add i8 [[T]], [[TMP1]]
-; INTERLEAVE-NEXT:    [[TMP7:%.*]] = icmp ult i8 [[TMP6]], [[T]]
+; INTERLEAVE-NEXT:    [[TMP7:%.*]] = icmp slt i8 [[TMP6]], [[T]]
 ; INTERLEAVE-NEXT:    [[TMP8:%.*]] = icmp ugt i32 [[LEN]], 255
 ; INTERLEAVE-NEXT:    [[TMP10:%.*]] = or i1 [[TMP7]], [[TMP8]]
 ; INTERLEAVE-NEXT:    [[TMP9:%.*]] = or i1 [[TMP5]], [[TMP10]]
@@ -3706,11 +3706,11 @@ define void @wrappingindvars2(i8 %t, i32 %len, ptr %A) {
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[LEN]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i8 [[T]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i8 [[TMP2]], [[T]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i8 [[TMP2]], [[T]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp ugt i32 [[LEN]], 255
 ; CHECK-NEXT:    [[TMP11:%.*]] = or i1 [[TMP3]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i8 [[T]], [[TMP1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i8 [[TMP6]], [[T]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt i8 [[TMP6]], [[T]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ugt i32 [[LEN]], 255
 ; CHECK-NEXT:    [[TMP13:%.*]] = or i1 [[TMP7]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP11]], [[TMP13]]
@@ -3776,11 +3776,11 @@ define void @wrappingindvars2(i8 %t, i32 %len, ptr %A) {
 ; IND:       vector.scevcheck:
 ; IND-NEXT:    [[TMP1:%.*]] = trunc i32 [[LEN]] to i8
 ; IND-NEXT:    [[TMP2:%.*]] = add i8 [[T]], [[TMP1]]
-; IND-NEXT:    [[TMP3:%.*]] = icmp slt i8 [[TMP2]], [[T]]
+; IND-NEXT:    [[TMP3:%.*]] = icmp ult i8 [[TMP2]], [[T]]
 ; IND-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[LEN]], 255
 ; IND-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[TMP4]]
 ; IND-NEXT:    [[TMP6:%.*]] = add i8 [[T]], [[TMP1]]
-; IND-NEXT:    [[TMP7:%.*]] = icmp ult i8 [[TMP6]], [[T]]
+; IND-NEXT:    [[TMP7:%.*]] = icmp slt i8 [[TMP6]], [[T]]
 ; IND-NEXT:    [[TMP8:%.*]] = icmp ugt i32 [[LEN]], 255
 ; IND-NEXT:    [[TMP10:%.*]] = or i1 [[TMP7]], [[TMP8]]
 ; IND-NEXT:    [[TMP9:%.*]] = or i1 [[TMP5]], [[TMP10]]
@@ -3846,11 +3846,11 @@ define void @wrappingindvars2(i8 %t, i32 %len, ptr %A) {
 ; UNROLL:       vector.scevcheck:
 ; UNROLL-NEXT:    [[TMP1:%.*]] = trunc i32 [[LEN]] to i8
 ; UNROLL-NEXT:    [[TMP2:%.*]] = add i8 [[T]], [[TMP1]]
-; UNROLL-NEXT:    [[TMP3:%.*]] = icmp slt i8 [[TMP2]], [[T]]
+; UNROLL-NEXT:    [[TMP3:%.*]] = icmp ult i8 [[TMP2]], [[T]]
 ; UNROLL-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[LEN]], 255
 ; UNROLL-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[TMP4]]
 ; UNROLL-NEXT:    [[TMP6:%.*]] = add i8 [[T]], [[TMP1]]
-; UNROLL-NEXT:    [[TMP7:%.*]] = icmp ult i8 [[TMP6]], [[T]]
+; UNROLL-NEXT:    [[TMP7:%.*]] = icmp slt i8 [[TMP6]], [[T]]
 ; UNROLL-NEXT:    [[TMP8:%.*]] = icmp ugt i32 [[LEN]], 255
 ; UNROLL-NEXT:    [[TMP10:%.*]] = or i1 [[TMP7]], [[TMP8]]
 ; UNROLL-NEXT:    [[TMP9:%.*]] = or i1 [[TMP5]], [[TMP10]]
@@ -3919,11 +3919,11 @@ define void @wrappingindvars2(i8 %t, i32 %len, ptr %A) {
 ; UNROLL-NO-IC:       vector.scevcheck:
 ; UNROLL-NO-IC-NEXT:    [[TMP1:%.*]] = trunc i32 [[LEN]] to i8
 ; UNROLL-NO-IC-NEXT:    [[TMP2:%.*]] = add i8 [[T]], [[TMP1]]
-; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = icmp slt i8 [[TMP2]], [[T]]
+; UNROLL-NO-IC-NEXT:    [[TMP3:%.*]] = icmp ult i8 [[TMP2]], [[T]]
 ; UNROLL-NO-IC-NEXT:    [[TMP9:%.*]] = icmp ugt i32 [[LEN]], 255
 ; UNROLL-NO-IC-NEXT:    [[TMP11:%.*]] = or i1 [[TMP3]], [[TMP9]]
 ; UNROLL-NO-IC-NEXT:    [[TMP6:%.*]] = add i8 [[T]], [[TMP1]]
-; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = icmp ult i8 [[TMP6]], [[T]]
+; UNROLL-NO-IC-NEXT:    [[TMP7:%.*]] = icmp slt i8 [[TMP6]], [[T]]
 ; UNROLL-NO-IC-NEXT:    [[TMP8:%.*]] = icmp ugt i32 [[LEN]], 255
 ; UNROLL-NO-IC-NEXT:    [[TMP13:%.*]] = or i1 [[TMP7]], [[TMP8]]
 ; UNROLL-NO-IC-NEXT:    [[TMP10:%.*]] = or i1 [[TMP11]], [[TMP13]]
@@ -3992,11 +3992,11 @@ define void @wrappingindvars2(i8 %t, i32 %len, ptr %A) {
 ; INTERLEAVE:       vector.scevcheck:
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = trunc i32 [[LEN]] to i8
 ; INTERLEAVE-NEXT:    [[TMP2:%.*]] = add i8 [[T]], [[TMP1]]
-; INTERLEAVE-NEXT:    [[TMP3:%.*]] = icmp slt i8 [[TMP2]], [[T]]
+; INTERLEAVE-NEXT:    [[TMP3:%.*]] = icmp ult i8 [[TMP2]], [[T]]
 ; INTERLEAVE-NEXT:    [[TMP4:%.*]] = icmp ugt i32 [[LEN]], 255
 ; INTERLEAVE-NEXT:    [[TMP5:%.*]] = or i1 [[TMP3]], [[TMP4]]
 ; INTERLEAVE-NEXT:    [[TMP6:%.*]] = add i8 [[T]], [[TMP1]]
-; INTERLEAVE-NEXT:    [[TMP7:%.*]] = icmp ult i8 [[TMP6]], [[T]]
+; INTERLEAVE-NEXT:    [[TMP7:%.*]] = icmp slt i8 [[TMP6]], [[T]]
 ; INTERLEAVE-NEXT:    [[TMP8:%.*]] = icmp ugt i32 [[LEN]], 255
 ; INTERLEAVE-NEXT:    [[TMP10:%.*]] = or i1 [[TMP7]], [[TMP8]]
 ; INTERLEAVE-NEXT:    [[TMP9:%.*]] = or i1 [[TMP5]], [[TMP10]]
