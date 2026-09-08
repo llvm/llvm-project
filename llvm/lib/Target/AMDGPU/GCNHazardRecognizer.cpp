@@ -3264,7 +3264,9 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) const {
     const int GFX950_DMFMA16x16WritesVGPROverlappedMFMASrcABWaitStates = 19;
     const int DMFMA4x4WritesVGPRFullSrcCWaitStates = 4;
     const int GFX940_SMFMA4x4WritesVGPRFullSrcCWaitStates = 2;
-    const int MaxWaitStates = 19;
+    const int MaxWaitStates =
+        GFX940_XDL_N_PassWritesVGPROverlappedSrcABWaitStates(
+            16, ST.hasGFX950Insts());
 
     if (!Use.isReg())
       continue;
@@ -3409,6 +3411,8 @@ int GCNHazardRecognizer::checkMAIHazards90A(MachineInstr *MI) const {
         }
       }
     }
+    assert(NeedWaitStates <= MaxWaitStates &&
+           "hazard requirement exceeds the scan window");
     if (WaitStatesNeeded >= NeedWaitStates)
       continue;
 
@@ -3617,7 +3621,9 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) const {
     const int DotWriteSameDotReadSrcAB = 3;
     const int DotWriteDifferentVALURead = 3;
     const int DMFMABetweenVALUWriteVMEMRead = 2;
-    const int MaxWaitStates = 19;
+    const int MaxWaitStates =
+        GFX940_XDL_N_PassWriteVgprVALUMemExpReadWaitStates(16,
+                                                           ST.hasGFX950Insts());
 
     for (const MachineOperand &Use : MI->explicit_uses()) {
       if (!Use.isReg())
@@ -3707,6 +3713,8 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) const {
         }
       }
 
+      assert(NeedWaitStates <= MaxWaitStates &&
+             "hazard requirement exceeds the scan window");
       int WaitStatesNeededForUse = NeedWaitStates - WaitStatesSinceDef;
       WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForUse);
 
@@ -3740,7 +3748,8 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) const {
     const int DMFMA4x4WriteVgprVALUWriteWaitStates = 6;
     const int DMFMA16x16WriteVgprVALUWriteWaitStates = 11;
     const int DotWriteDifferentVALUWrite = 3;
-    const int MaxWaitStates = 19;
+    const int MaxWaitStates =
+        GFX940_XDL_N_PassWriteVgprVALUWawWaitStates(16, ST.hasGFX950Insts());
     const int MaxWarWaitStates = 15;
 
     Reg = Def.getReg();
@@ -3793,6 +3802,8 @@ int GCNHazardRecognizer::checkMAIVALUHazards(MachineInstr *MI) const {
         }
       }
 
+      assert(NeedWaitStates <= MaxWaitStates &&
+             "hazard requirement exceeds the scan window");
       int WaitStatesNeededForUse = NeedWaitStates - WaitStatesSinceDef;
       WaitStatesNeeded = std::max(WaitStatesNeeded, WaitStatesNeededForUse);
 
