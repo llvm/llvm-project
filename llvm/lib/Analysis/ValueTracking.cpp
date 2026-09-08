@@ -9973,12 +9973,18 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
   }
 
   // a - b == NonZero -> a != b
+  // a == b + NonZero -> a != b
   // ptrtoint(a) - ptrtoint(b) == NonZero -> a != b
-  const APInt *L1C;
-  Value *A, *B;
+  // ptrtoint(a) == ptrtoint(b) + NonZero -> a != b
+  const APInt *LC;
+  const Value *A, *B;
   if (LPred == ICmpInst::ICMP_EQ && ICmpInst::isEquality(RPred) &&
-      match(L1, m_APInt(L1C)) && !L1C->isZero() &&
-      match(L0, m_Sub(m_Value(A), m_Value(B))) &&
+      ((match(L1, m_APInt(LC)) && !LC->isZero() &&
+        match(L0, m_Sub(m_Value(A), m_Value(B)))) ||
+       ((match(L1, m_c_Add(m_Value(B), m_APInt(LC))) && !LC->isZero() &&
+         match(L0, m_Value(A))) ||
+        (match(L0, m_c_Add(m_Value(B), m_APInt(LC))) && !LC->isZero() &&
+         match(L1, m_Value(A))))) &&
       ((A == R0 && B == R1) || (A == R1 && B == R0) ||
        (match(A, m_PtrToIntOrAddr(m_Specific(R0))) &&
         match(B, m_PtrToIntOrAddr(m_Specific(R1)))) ||
