@@ -435,6 +435,20 @@ static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::roundf128(Float128(0.0)));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::truncf128(Float128(0.0)));
+static_assert(Float128(-1.0) == [] {
+  Float128 getpayload_x = Float128(0.0);
+  return LIBC_NAMESPACE::shared::getpayloadf128(&getpayload_x);
+}());
+static_assert(1 == [] {
+  const char arg{};
+  return LIBC_NAMESPACE::fputil::FPBits<Float128>(
+             LIBC_NAMESPACE::shared::nanf128(&arg))
+      .is_nan();
+}());
+static_assert(0 == [] {
+  Float128 setpayload_x = Float128(0.0);
+  return LIBC_NAMESPACE::shared::setpayloadf128(&setpayload_x, Float128(0.0));
+}());
 
 //===----------------------------------------------------------------------===//
 //                       Native Float128 Tests
@@ -461,10 +475,6 @@ static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::fromfpf128(float128(0.0), 0, 32));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::fromfpxf128(float128(0.0), 0, 32));
-static_assert(float128(-1.0) == [] {
-  float128 getpayload_x = float128(0.0);
-  return LIBC_NAMESPACE::shared::getpayloadf128(&getpayload_x);
-}());
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::ufromfpf128(float128(0.0), 0, 32));
 static_assert(float128(0.0) ==
@@ -495,10 +505,6 @@ static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::scalblnf128(float128(0.0), 0.0));
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::scalbnf128(float128(0.0), 0.0));
-static_assert(0 == [] {
-  float128 setpayload_x = float128(0.0);
-  return LIBC_NAMESPACE::shared::setpayloadf128(&setpayload_x, float128(0.0));
-}());
 static_assert(0.0f ==
               LIBC_NAMESPACE::shared::fmulf128(float128(0.0), float128(0.0)));
 static_assert(0.0f ==
@@ -506,12 +512,6 @@ static_assert(0.0f ==
 static_assert(float128(0.0) ==
               LIBC_NAMESPACE::shared::nextafterf128(float128(0.0),
                                                     float128(0.0)));
-static_assert(1 == [] {
-  const char arg{};
-  return LIBC_NAMESPACE::fputil::FPBits<float128>(
-             LIBC_NAMESPACE::shared::nanf128(&arg))
-      .is_nan();
-}());
 
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 

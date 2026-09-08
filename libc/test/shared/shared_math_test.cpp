@@ -581,6 +581,8 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
 
 // Emulated float128 tests
 TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
+  using FPBits = LIBC_NAMESPACE::fputil::FPBits<Float128>;
+
   EXPECT_FP_EQ(Float128(0.0),
                LIBC_NAMESPACE::shared::atan2f128(Float128(0.0), Float128(0.0)));
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::ceilf128(Float128(0.0)));
@@ -625,6 +627,20 @@ TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::roundf128(Float128(0.0)));
   EXPECT_FP_EQ(Float128(1.0), LIBC_NAMESPACE::shared::sqrtf128(Float128(1.0)));
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::truncf128(Float128(0.0)));
+  EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nanf128("")).is_nan());
+
+  Float128 getpayloadf128_x = Float128(0.0);
+  EXPECT_FP_EQ(Float128(-1.0),
+               LIBC_NAMESPACE::shared::getpayloadf128(&getpayloadf128_x));
+
+  Float128 setpayloadf128_res = Float128(0.0);
+  EXPECT_EQ(0, LIBC_NAMESPACE::shared::setpayloadf128(&setpayloadf128_res,
+                                                      Float128(0.0)));
+
+  Float128 setpayloadsigf128_res = Float128(0.0);
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::setpayloadsigf128(&setpayloadsigf128_res,
+                                                         Float128(0.0)));
+  EXPECT_FP_EQ(Float128(0.0), setpayloadsigf128_res);
 }
 
 #ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
@@ -681,20 +697,6 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                LIBC_NAMESPACE::shared::faddf128(float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(1.0f,
                LIBC_NAMESPACE::shared::fdivf128(float128(1.0), float128(1.0)));
-
-  float128 getpayloadf128_x = float128(0.0);
-  EXPECT_FP_EQ(float128(-1.0),
-               LIBC_NAMESPACE::shared::getpayloadf128(&getpayloadf128_x));
-
-  float128 setpayloadf128_res = float128(0.0);
-  EXPECT_EQ(0, LIBC_NAMESPACE::shared::setpayloadf128(&setpayloadf128_res,
-                                                      float128(0.0)));
-
-  float128 setpayloadsigf128_res = float128(0.0);
-  EXPECT_EQ(1, LIBC_NAMESPACE::shared::setpayloadsigf128(&setpayloadsigf128_res,
-                                                         float128(0.0)));
-  EXPECT_FP_EQ(float128(0.0), setpayloadsigf128_res);
-
   float128 neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();
   EXPECT_FP_EQ(neg_min_denormal,
                LIBC_NAMESPACE::shared::nextdownf128(float128(0.0)));
@@ -754,7 +756,6 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                LIBC_NAMESPACE::shared::fsubf128(float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(0x0p+0f,
                LIBC_NAMESPACE::shared::fmulf128(float128(0.0), float128(0.0)));
-  EXPECT_TRUE(FPBits(LIBC_NAMESPACE::shared::nanf128("")).is_nan());
 }
 
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
