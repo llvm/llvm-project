@@ -5174,9 +5174,6 @@ static bool usesFPSrcMods(const MachineInstr &MI) {
   // To re-audit, collect the direct parent of each "(VOP3PMods" in
   // AMDGPUGenGlobalISel.inc.
   switch (Opc) {
-  case TargetOpcode::G_STRICT_FADD:
-  case TargetOpcode::G_STRICT_FMUL:
-  case TargetOpcode::G_STRICT_FMA:
   case AMDGPU::G_AMDGPU_CLAMP:
   case AMDGPU::G_AMDGPU_FMIN3:
   case AMDGPU::G_AMDGPU_FMAX3:
@@ -5300,11 +5297,9 @@ static bool isValidToPack(SrcStatus HiStat, SrcStatus LoStat, Register NewReg,
          IsHalfState(HiStat);
 }
 
-std::pair<Register, unsigned>
-AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand &Root,
-                                               const MachineRegisterInfo &MRI,
-                                               bool IsDOT) const {
-  Register RootReg = Root.getReg();
+std::pair<Register, unsigned> AMDGPUInstructionSelector::selectVOP3PModsImpl(
+    Register RootReg, const MachineRegisterInfo &MRI, const MachineInstr &UseMI,
+    bool IsDOT) const {
   unsigned Mods = 0;
   // No modification if Root type is not form of <2 x Type>.
   if (isVectorOfTwoOrScalar(RootReg, MRI) != TypeClass::VECTOR_OF_TWO) {
@@ -5312,7 +5307,7 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand &Root,
     return {RootReg, Mods};
   }
 
-  SearchOptions SO(*Root.getParent());
+  SearchOptions SO(UseMI);
 
   std::pair<Register, SrcStatus> Stat = getLastSameOrNeg(RootReg, MRI, SO);
 
@@ -5415,7 +5410,8 @@ AMDGPUInstructionSelector::selectVOP3PRetHelper(MachineOperand &Root,
   MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
   Register Reg;
   unsigned Mods;
-  std::tie(Reg, Mods) = selectVOP3PModsImpl(Root, MRI, IsDOT);
+  std::tie(Reg, Mods) =
+      selectVOP3PModsImpl(Root.getReg(), MRI, *Root.getParent(), IsDOT);
 
   Reg = getLegalRegBank(Reg, Root.getReg(), *Root.getParent(), RBI, MRI, TRI,
                         TII);
@@ -5442,7 +5438,8 @@ AMDGPUInstructionSelector::selectVOP3PNoModsDOT(MachineOperand &Root) const {
   MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
   Register Src;
   unsigned Mods;
-  std::tie(Src, Mods) = selectVOP3PModsImpl(Root, MRI, true /*IsDOT*/);
+  std::tie(Src, Mods) = selectVOP3PModsImpl(Root.getReg(), MRI,
+                                            *Root.getParent(), true /*IsDOT*/);
   if (Mods != SISrcMods::OP_SEL_1)
     return {};
 
