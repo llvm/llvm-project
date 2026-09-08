@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/ROCDLTargetInfo.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/IR/Builders.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -198,6 +201,25 @@ std::optional<unsigned> TargetInfo::getWavefrontSize() const {
   if (has(AMDGPU::FEAT_WAVEFRONTSIZE32))
     return 32;
   return std::nullopt;
+}
+
+void TargetInfo::migrateArchFeaturesToModuleFlags(Operation *op) const {
+  assert(LLVM::satisfiesLLVMModule(op) &&
+         "xnack and sramecc describe a whole code object, so they can only be "
+         "recorded on a module");
+  ROCDLDialect *dialect =
+      op->getContext()->getOrLoadDialect<ROCDL::ROCDLDialect>();
+  Builder builder(op->getContext());
+  // The helpers differ in type, hence the generic lambda.
+  auto migrate = [&](AMDGPU::TargetIDSetting setting, auto helper) {
+    if (setting != AMDGPU::TargetIDSetting::On &&
+        setting != AMDGPU::TargetIDSetting::Off)
+      return;
+    helper.setAttr(op,
+                   builder.getBoolAttr(setting == AMDGPU::TargetIDSetting::On));
+  };
+  migrate(xnackSetting, dialect->getXnackAttrHelper());
+  migrate(sramEccSetting, dialect->getSrameccAttrHelper());
 }
 
 AMDGPU::IsaVersion TargetInfo::getIsaVersion() const {

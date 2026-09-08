@@ -81,6 +81,9 @@ void ROCDLAttachTarget::runOnOperation() {
   // no target to ask, so leaving it at 0 keeps the Wave64 that `#rocdl.target`
   // has always assumed.
   bool resolvedWave64 = waveSize != 32;
+  // Set when `arch` was given and used so its xnack/sramecc modifiers can
+  // become module flags.
+  std::optional<ROCDL::TargetInfo> targetInfo;
   if (!arch.empty()) {
     std::optional<llvm::AMDGPU::TargetID> id =
         ROCDL::TargetInfo::parseTargetID(arch);
@@ -98,33 +101,6 @@ void ROCDLAttachTarget::runOnOperation() {
              "target";
       return signalPassFailure();
     }
-
-    // xnack and sramecc are no longer subtarget features: since
-    // llvm/llvm-project@27eeb7370281 the backend takes them from the
-    // `amdgpu.xnack` / `amdgpu.sramecc` module flags, and AMDGPUAsmPrinter
-    // hard-errors if it finds them in the feature string. #rocdl.target has
-    // nowhere to put them yet, so refuse rather than emit a feature string
-    // that fails at serialization.
-    // TODO: carry these through once #rocdl.target can materialize the module
-    // flags, and then accept the full target ID here.
-    auto rejectModifier = [&](StringRef name, llvm::AMDGPU::TargetIDSetting s) {
-      if (s != llvm::AMDGPU::TargetIDSetting::On &&
-          s != llvm::AMDGPU::TargetIDSetting::Off)
-        return false;
-      emitError(UnknownLoc::get(&getContext()))
-          << "'" << arch << "': the '" << name
-          << "' target-ID modifier cannot be attached; the backend takes it "
-             "from the 'amdgpu."
-          << name
-          << "' module flag, not from the "
-             "target's features";
-      return true;
-    };
-    // Report both, so a target ID carrying each does not need two attempts.
-    bool badXnack = rejectModifier("xnack", id->getXnackSetting());
-    bool badSramEcc = rejectModifier("sramecc", id->getSramEccSetting());
-    if (badXnack || badSramEcc)
-      return signalPassFailure();
 
     llvm::Triple parsed(id->getTargetTripleString());
 
@@ -154,6 +130,7 @@ void ROCDLAttachTarget::runOnOperation() {
         });
     if (failed(info))
       return signalPassFailure();
+    targetInfo = *info;
     resolvedWave64 = info->getWavefrontSize() == 64;
 
     // Record the wavefrontsize option into the features set so that the device
@@ -193,5 +170,7 @@ void ROCDLAttachTarget::runOnOperation() {
         targets.erase(llvm::unique(targets), targets.end());
         // Update the target attribute array.
         module.setTargetsAttr(builder.getArrayAttr(targets));
+        if (targetInfo)
+          targetInfo->migrateArchFeaturesToModuleFlags(module);
       }
 }
