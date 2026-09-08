@@ -5810,6 +5810,14 @@ QualType ASTContext::getOverflowBehaviorType(
     QualType Underlying) const {
   assert(!Underlying->isOverflowBehaviorType() &&
          "Cannot have underlying types that are themselves OBTs");
+
+  // Qualifiers belong outside the OverflowBehaviorType node, which is where the
+  // canonical type already puts them.
+  SplitQualType Split = Underlying.getSplitUnqualifiedType();
+  if (Split.Quals.hasQualifiers())
+    return getQualifiedType(getOverflowBehaviorType(Kind, QualType(Split.Ty, 0)),
+                            Split.Quals);
+
   llvm::FoldingSetNodeID ID;
   OverflowBehaviorType::Profile(ID, Underlying, Kind);
   llvm::FoldingSetInsertToken Token;
@@ -5819,10 +5827,8 @@ QualType ASTContext::getOverflowBehaviorType(
   }
 
   QualType Canonical;
-  if (!Underlying.isCanonical() || Underlying.hasLocalQualifiers()) {
-    SplitQualType canonSplit = getCanonicalType(Underlying).split();
-    Canonical = getOverflowBehaviorType(Kind, QualType(canonSplit.Ty, 0));
-    Canonical = getQualifiedType(Canonical, canonSplit.Quals);
+  if (!Underlying.isCanonical()) {
+    Canonical = getOverflowBehaviorType(Kind, getCanonicalType(Underlying));
     assert(!OverflowBehaviorTypes.lookup(ID, Token) &&
            "Shouldn't be in the map");
   }
