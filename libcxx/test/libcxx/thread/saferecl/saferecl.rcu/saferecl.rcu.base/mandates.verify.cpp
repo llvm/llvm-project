@@ -9,10 +9,6 @@
 // UNSUPPORTED: no-threads
 // REQUIRES: std-at-least-c++26
 
-// template<class T, class D = default_delete<T>>
-//   class rcu_obj_base
-// T may be an incomplete type. It shall be complete before any member of the resulting specialization of rcu_obj_base is referenced.
-
 #include <rcu>
 #include <type_traits>
 
@@ -32,7 +28,7 @@ struct C : std::rcu_obj_base<C, NonDefault> {};
 struct NonMoveAssignable {
   NonMoveAssignable()                                = default;
   NonMoveAssignable(NonMoveAssignable&&)             = default;
-  NonMoveAssignable& operator==(NonMoveAssignable&&) = delete;
+  NonMoveAssignable& operator=(NonMoveAssignable&&) = delete;
 };
 struct D : std::rcu_obj_base<D, NonMoveAssignable> {};
 // expected-error-re@*:* {{static assertion failed {{.*}}std::is_move_assignable_v<NonMoveAssignable>}}
