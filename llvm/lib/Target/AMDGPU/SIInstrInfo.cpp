@@ -1193,15 +1193,6 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   ArrayRef<int16_t> SubIndices = RI.getRegSplitParts(RC, 4);
 
-  // Report rather than assert if a register is missing a required subreg.
-  for (int16_t SubIdx : SubIndices) {
-    if (!RI.getSubReg(DestReg, SubIdx) || !RI.getSubReg(SrcReg, SubIdx)) {
-      reportIllegalCopy(this, MBB, MI, DL, DestReg, SrcReg, KillSrc,
-                        "Cannot decompose copy into subregister moves!");
-      return;
-    }
-  }
-
   for (unsigned Idx{}; Idx < SubIndices.size();) {
     unsigned NumRegs = 1;
     unsigned ThisOpcode = Opcode;
@@ -5316,6 +5307,28 @@ bool SIInstrInfo::verifyCopy(const MachineInstr &MI,
     ErrInfo = "illegal copy from vector register to SGPR";
     return false;
   }
+
+  if (!DstReg.isPhysical() || !SrcReg.isPhysical())
+    return true;
+
+  const TargetRegisterClass *RC = RI.getPhysRegBaseClass(DstReg);
+  const TargetRegisterClass *SrcRC = RI.getPhysRegBaseClass(SrcReg);
+  if (!RC || !SrcRC || RI.isSGPRClass(RC) || RI.getRegSizeInBits(*RC) <= 32)
+    return true;
+
+  // Copies handled by a single 64-bit move are not decomposed.
+  if (RC == RI.getVGPR64Class() && (SrcRC == RC || RI.isSGPRClass(SrcRC)) &&
+      (ST.hasVMovB64Inst() || ST.hasPkMovB32()))
+    return true;
+
+  // Other wide vector copies split into per-subregister moves.
+  for (int16_t SubIdx : RI.getRegSplitParts(RC, 4)) {
+    if (!RI.getSubReg(DstReg, SubIdx) || !RI.getSubReg(SrcReg, SubIdx)) {
+      ErrInfo = "cannot decompose copy into subregister moves";
+      return false;
+    }
+  }
+
   return true;
 }
 
