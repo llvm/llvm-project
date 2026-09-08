@@ -1715,7 +1715,7 @@ bool RISCVInstructionSelector::isRegInFprb(Register Reg) const {
 // the full materialized constant, making the Hi materialization here redundant.
 bool RISCVInstructionSelector::isWorthFoldingAdd(Register AddResult) const {
   for (const MachineInstr &User : MRI->use_nodbg_instructions(AddResult)) {
-    auto *LdSt = dyn_cast<GLoadStore>(User);
+    auto *LdSt = dyn_cast<GLoadStore>(&User);
     if (!LdSt)
       return false;
     // Must be used as the pointer, not the stored value.
@@ -1724,7 +1724,7 @@ bool RISCVInstructionSelector::isWorthFoldingAdd(Register AddResult) const {
     if (isStrongerThanMonotonic(LdSt->getMMO().getSuccessOrdering()))
       return false;
     // Only scalar integer/f16/f32/f64 memory (exclude vectors, f128, ...).
-    LLT Ty = MRI->getType(User->getOperand(0).getReg());
+    LLT Ty = MRI->getType(User.getOperand(0).getReg());
     if (!Ty.isScalar() || Ty.getSizeInBits() > 64)
       return false;
   }
