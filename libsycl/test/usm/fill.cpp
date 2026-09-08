@@ -6,5 +6,6 @@
 
 int main() {
   sycl::queue Q;
-  runTests<int>(Q, [&](void *Ptr) { Q.fill(Ptr, Pattern, DataSize); });
+  runTests<int>(
+      Q, [&](void *Ptr, int Pattern) { Q.fill(Ptr, Pattern, DataSize); });
 }

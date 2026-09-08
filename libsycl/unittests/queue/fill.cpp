@@ -13,6 +13,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <cstdint>
+
 using namespace ::testing;
 
 TEST(Queue, Fill) {
