@@ -801,6 +801,12 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 ### Python Binding Changes
 
+- Fixed a crash (`SIGFPE`) when traversing an AST via the visitor callbacks
+  (e.g. `Cursor.get_children`) on s390x. The callbacks now return a full
+  register word so the return value is correctly extended, working around a
+  `ctypes` bug (https://github.com/python/cpython/issues/156933) that left the
+  high bytes of the return register uninitialized.
+
 ### OpenMP Support
 
 - Canonicalize intra-tiles in loop tiling. `#pragma omp tile` still emits a
