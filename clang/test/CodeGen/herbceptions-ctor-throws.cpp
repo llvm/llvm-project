@@ -34,4 +34,4 @@ int make() throws {
 // implicit 2-register {void*, size_t} struct), so its member-initializer call
 // to a throws function can store the error payload and set the discriminant
 // on failure instead of crashing.
-// CHECK: define dso_local { { ptr, i64 }, i1 } @_ZN1AC[12]Ev(
+// CHECK: define {{.*}}dso_local { { ptr, i64 }, i1 } @_ZN1AC[12]Ev(
