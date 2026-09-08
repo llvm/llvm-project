@@ -14,8 +14,8 @@ define amdgpu_vs void @test(i32 inreg %cmp, i32 %e0) {
 ; CHECK-NEXT:    s_mov_b32 s1, s0
 ; CHECK-NEXT:    s_mov_b32 s2, s0
 ; CHECK-NEXT:    s_mov_b32 s3, s0
-; CHECK-NEXT:    v_mov_b32_e32 v1, 0
-; CHECK-NEXT:    buffer_load_format_xy v[1:2], v1, s[0:3], 0 idxen
+; CHECK-NEXT:    v_mov_b32_e32 v3, 0
+; CHECK-NEXT:    buffer_load_format_xy v[1:2], v3, s[0:3], 0 idxen
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    exp mrt0, v0, v1, v2, v0
 ; CHECK-NEXT:    s_endpgm

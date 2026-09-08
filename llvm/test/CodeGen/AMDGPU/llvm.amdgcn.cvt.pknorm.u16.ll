@@ -96,12 +96,12 @@ define amdgpu_kernel void @v_cvt_pknorm_u16_f32(ptr addrspace(1) %out, ptr addrs
 ; SI:    s_load_dwordx2 s[8:9], s[4:5], 0xd
 ; SI:    s_mov_b32 s7, 0xf000
 ; SI:    s_mov_b32 s6, 0
-; SI:    v_lshlrev_b32_e32 v0, 2, v0
+; SI:    v_lshlrev_b32_e32 v4, 2, v0
 ; SI:    s_mov_b64 s[4:5], s[2:3]
-; SI:    v_mov_b32_e32 v1, 0
+; SI:    v_mov_b32_e32 v5, 0
 ; SI:    s_mov_b64 s[10:11], s[6:7]
-; SI:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64 glc
-; SI:    buffer_load_dword v3, v[0:1], s[8:11], 0 addr64 glc
+; SI:    buffer_load_dword v2, v[4:5], s[4:7], 0 addr64 glc
+; SI:    buffer_load_dword v3, v[4:5], s[8:11], 0 addr64 glc
 ; SI:    s_mov_b64 s[2:3], s[6:7]
 ; SI:    v_cvt_pknorm_u16_f32_e32 v2, v2, v3
 ; SI:    s_endpgm
@@ -115,10 +115,10 @@ define amdgpu_kernel void @v_cvt_pknorm_u16_f32(ptr addrspace(1) %out, ptr addrs
 ; VI:    v_add_u32_e32 v0, vcc, s2, v4
 ; VI:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI:    v_mov_b32_e32 v3, s5
-; VI:    v_add_u32_e32 v2, vcc, s4, v4
-; VI:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
+; VI:    v_add_u32_e32 v6, vcc, s4, v4
+; VI:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
 ; VI:    flat_load_dword v5, v[0:1] glc
-; VI:    flat_load_dword v2, v[2:3] glc
+; VI:    flat_load_dword v2, v[6:7] glc
 ; VI:    v_mov_b32_e32 v1, s1
 ; VI:    v_add_u32_e32 v0, vcc, s0, v4
 ; VI:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -129,9 +129,9 @@ define amdgpu_kernel void @v_cvt_pknorm_u16_f32(ptr addrspace(1) %out, ptr addrs
 ; GFX9:  ; %bb.0:
 ; GFX9:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX9:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9:    global_load_dword v1, v0, s[2:3] glc
-; GFX9:    global_load_dword v2, v0, s[6:7] glc
+; GFX9:    v_lshlrev_b32_e32 v3, 2, v0
+; GFX9:    global_load_dword v1, v3, s[2:3] glc
+; GFX9:    global_load_dword v2, v3, s[6:7] glc
 ; GFX9:    v_cvt_pknorm_u16_f32 v1, v1, v2
 ; GFX9:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -246,12 +246,12 @@ define amdgpu_kernel void @v_cvt_pknorm_u16_f32_fneg_lo(ptr addrspace(1) %out, p
 ; SI:    s_load_dwordx2 s[8:9], s[4:5], 0xd
 ; SI:    s_mov_b32 s7, 0xf000
 ; SI:    s_mov_b32 s6, 0
-; SI:    v_lshlrev_b32_e32 v0, 2, v0
+; SI:    v_lshlrev_b32_e32 v4, 2, v0
 ; SI:    s_mov_b64 s[4:5], s[2:3]
-; SI:    v_mov_b32_e32 v1, 0
+; SI:    v_mov_b32_e32 v5, 0
 ; SI:    s_mov_b64 s[10:11], s[6:7]
-; SI:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64 glc
-; SI:    buffer_load_dword v3, v[0:1], s[8:11], 0 addr64 glc
+; SI:    buffer_load_dword v2, v[4:5], s[4:7], 0 addr64 glc
+; SI:    buffer_load_dword v3, v[4:5], s[8:11], 0 addr64 glc
 ; SI:    s_mov_b64 s[2:3], s[6:7]
 ; SI:    v_cvt_pknorm_u16_f32_e64 v2, -v2, v3
 ; SI:    s_endpgm
@@ -265,10 +265,10 @@ define amdgpu_kernel void @v_cvt_pknorm_u16_f32_fneg_lo(ptr addrspace(1) %out, p
 ; VI:    v_add_u32_e32 v0, vcc, s2, v4
 ; VI:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI:    v_mov_b32_e32 v3, s5
-; VI:    v_add_u32_e32 v2, vcc, s4, v4
-; VI:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
+; VI:    v_add_u32_e32 v6, vcc, s4, v4
+; VI:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
 ; VI:    flat_load_dword v5, v[0:1] glc
-; VI:    flat_load_dword v2, v[2:3] glc
+; VI:    flat_load_dword v2, v[6:7] glc
 ; VI:    v_mov_b32_e32 v1, s1
 ; VI:    v_add_u32_e32 v0, vcc, s0, v4
 ; VI:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -279,9 +279,9 @@ define amdgpu_kernel void @v_cvt_pknorm_u16_f32_fneg_lo(ptr addrspace(1) %out, p
 ; GFX9-SDAG:  ; %bb.0:
 ; GFX9-SDAG:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-SDAG:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX9-SDAG:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-SDAG:    global_load_dword v1, v0, s[2:3] glc
-; GFX9-SDAG:    global_load_dword v2, v0, s[6:7] glc
+; GFX9-SDAG:    v_lshlrev_b32_e32 v3, 2, v0
+; GFX9-SDAG:    global_load_dword v1, v3, s[2:3] glc
+; GFX9-SDAG:    global_load_dword v2, v3, s[6:7] glc
 ; GFX9-SDAG:    v_cvt_pknorm_u16_f32 v1, -v1, v2
 ; GFX9-SDAG:    s_endpgm
 ;
@@ -289,9 +289,9 @@ define amdgpu_kernel void @v_cvt_pknorm_u16_f32_fneg_lo(ptr addrspace(1) %out, p
 ; GFX9-GISEL:  ; %bb.0:
 ; GFX9-GISEL:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX9-GISEL:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-GISEL:    global_load_dword v1, v0, s[2:3] glc
-; GFX9-GISEL:    global_load_dword v2, v0, s[6:7] glc
+; GFX9-GISEL:    v_lshlrev_b32_e32 v3, 2, v0
+; GFX9-GISEL:    global_load_dword v1, v3, s[2:3] glc
+; GFX9-GISEL:    global_load_dword v2, v3, s[6:7] glc
 ; GFX9-GISEL:    v_max_f32_e64 v1, -v1, -v1
 ; GFX9-GISEL:    v_cvt_pknorm_u16_f32 v1, v1, v2
 ; GFX9-GISEL:    s_endpgm
@@ -316,12 +316,12 @@ define amdgpu_kernel void @v_cvt_pknorm_u16_f32_fneg_hi(ptr addrspace(1) %out, p
 ; SI:    s_load_dwordx2 s[8:9], s[4:5], 0xd
 ; SI:    s_mov_b32 s7, 0xf000
 ; SI:    s_mov_b32 s6, 0
-; SI:    v_lshlrev_b32_e32 v0, 2, v0
+; SI:    v_lshlrev_b32_e32 v4, 2, v0
 ; SI:    s_mov_b64 s[4:5], s[2:3]
-; SI:    v_mov_b32_e32 v1, 0
+; SI:    v_mov_b32_e32 v5, 0
 ; SI:    s_mov_b64 s[10:11], s[6:7]
-; SI:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64 glc
-; SI:    buffer_load_dword v3, v[0:1], s[8:11], 0 addr64 glc
+; SI:    buffer_load_dword v2, v[4:5], s[4:7], 0 addr64 glc
+; SI:    buffer_load_dword v3, v[4:5], s[8:11], 0 addr64 glc
 ; SI:    s_mov_b64 s[2:3], s[6:7]
 ; SI:    v_cvt_pknorm_u16_f32_e64 v2, v2, -v3
 ; SI:    s_endpgm
@@ -335,10 +335,10 @@ define amdgpu_kernel void @v_cvt_pknorm_u16_f32_fneg_hi(ptr addrspace(1) %out, p
 ; VI:    v_add_u32_e32 v0, vcc, s2, v4
 ; VI:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI:    v_mov_b32_e32 v3, s5
-; VI:    v_add_u32_e32 v2, vcc, s4, v4
-; VI:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
+; VI:    v_add_u32_e32 v6, vcc, s4, v4
+; VI:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
 ; VI:    flat_load_dword v5, v[0:1] glc
-; VI:    flat_load_dword v2, v[2:3] glc
+; VI:    flat_load_dword v2, v[6:7] glc
 ; VI:    v_mov_b32_e32 v1, s1
 ; VI:    v_add_u32_e32 v0, vcc, s0, v4
 ; VI:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -349,9 +349,9 @@ define amdgpu_kernel void @v_cvt_pknorm_u16_f32_fneg_hi(ptr addrspace(1) %out, p
 ; GFX9-SDAG:  ; %bb.0:
 ; GFX9-SDAG:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-SDAG:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX9-SDAG:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-SDAG:    global_load_dword v1, v0, s[2:3] glc
-; GFX9-SDAG:    global_load_dword v2, v0, s[6:7] glc
+; GFX9-SDAG:    v_lshlrev_b32_e32 v3, 2, v0
+; GFX9-SDAG:    global_load_dword v1, v3, s[2:3] glc
+; GFX9-SDAG:    global_load_dword v2, v3, s[6:7] glc
 ; GFX9-SDAG:    v_cvt_pknorm_u16_f32 v1, v1, -v2
 ; GFX9-SDAG:    s_endpgm
 ;
@@ -359,9 +359,9 @@ define amdgpu_kernel void @v_cvt_pknorm_u16_f32_fneg_hi(ptr addrspace(1) %out, p
 ; GFX9-GISEL:  ; %bb.0:
 ; GFX9-GISEL:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX9-GISEL:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-GISEL:    global_load_dword v1, v0, s[2:3] glc
-; GFX9-GISEL:    global_load_dword v2, v0, s[6:7] glc
+; GFX9-GISEL:    v_lshlrev_b32_e32 v3, 2, v0
+; GFX9-GISEL:    global_load_dword v1, v3, s[2:3] glc
+; GFX9-GISEL:    global_load_dword v2, v3, s[6:7] glc
 ; GFX9-GISEL:    v_max_f32_e64 v2, -v2, -v2
 ; GFX9-GISEL:    v_cvt_pknorm_u16_f32 v1, v1, v2
 ; GFX9-GISEL:    s_endpgm
@@ -386,12 +386,12 @@ define amdgpu_kernel void @v_cvt_pknorm_u16_f32_fneg_lo_hi(ptr addrspace(1) %out
 ; SI:    s_load_dwordx2 s[8:9], s[4:5], 0xd
 ; SI:    s_mov_b32 s7, 0xf000
 ; SI:    s_mov_b32 s6, 0
-; SI:    v_lshlrev_b32_e32 v0, 2, v0
+; SI:    v_lshlrev_b32_e32 v4, 2, v0
 ; SI:    s_mov_b64 s[4:5], s[2:3]
-; SI:    v_mov_b32_e32 v1, 0
+; SI:    v_mov_b32_e32 v5, 0
 ; SI:    s_mov_b64 s[10:11], s[6:7]
-; SI:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64 glc
-; SI:    buffer_load_dword v3, v[0:1], s[8:11], 0 addr64 glc
+; SI:    buffer_load_dword v2, v[4:5], s[4:7], 0 addr64 glc
+; SI:    buffer_load_dword v3, v[4:5], s[8:11], 0 addr64 glc
 ; SI:    s_mov_b64 s[2:3], s[6:7]
 ; SI:    v_cvt_pknorm_u16_f32_e64 v2, -v2, -v3
 ; SI:    s_endpgm
@@ -405,10 +405,10 @@ define amdgpu_kernel void @v_cvt_pknorm_u16_f32_fneg_lo_hi(ptr addrspace(1) %out
 ; VI:    v_add_u32_e32 v0, vcc, s2, v4
 ; VI:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI:    v_mov_b32_e32 v3, s5
-; VI:    v_add_u32_e32 v2, vcc, s4, v4
-; VI:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
+; VI:    v_add_u32_e32 v6, vcc, s4, v4
+; VI:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
 ; VI:    flat_load_dword v5, v[0:1] glc
-; VI:    flat_load_dword v2, v[2:3] glc
+; VI:    flat_load_dword v2, v[6:7] glc
 ; VI:    v_mov_b32_e32 v1, s1
 ; VI:    v_add_u32_e32 v0, vcc, s0, v4
 ; VI:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -419,9 +419,9 @@ define amdgpu_kernel void @v_cvt_pknorm_u16_f32_fneg_lo_hi(ptr addrspace(1) %out
 ; GFX9-SDAG:  ; %bb.0:
 ; GFX9-SDAG:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-SDAG:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX9-SDAG:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-SDAG:    global_load_dword v1, v0, s[2:3] glc
-; GFX9-SDAG:    global_load_dword v2, v0, s[6:7] glc
+; GFX9-SDAG:    v_lshlrev_b32_e32 v3, 2, v0
+; GFX9-SDAG:    global_load_dword v1, v3, s[2:3] glc
+; GFX9-SDAG:    global_load_dword v2, v3, s[6:7] glc
 ; GFX9-SDAG:    v_cvt_pknorm_u16_f32 v1, -v1, -v2
 ; GFX9-SDAG:    s_endpgm
 ;
@@ -429,9 +429,9 @@ define amdgpu_kernel void @v_cvt_pknorm_u16_f32_fneg_lo_hi(ptr addrspace(1) %out
 ; GFX9-GISEL:  ; %bb.0:
 ; GFX9-GISEL:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX9-GISEL:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-GISEL:    global_load_dword v1, v0, s[2:3] glc
-; GFX9-GISEL:    global_load_dword v2, v0, s[6:7] glc
+; GFX9-GISEL:    v_lshlrev_b32_e32 v3, 2, v0
+; GFX9-GISEL:    global_load_dword v1, v3, s[2:3] glc
+; GFX9-GISEL:    global_load_dword v2, v3, s[6:7] glc
 ; GFX9-GISEL:    v_max_f32_e64 v1, -v1, -v1
 ; GFX9-GISEL:    v_max_f32_e64 v2, -v2, -v2
 ; GFX9-GISEL:    v_cvt_pknorm_u16_f32 v1, v1, v2
@@ -458,12 +458,12 @@ define amdgpu_kernel void @v_cvt_pknorm_u16_f32_fneg_fabs_lo_fneg_hi(ptr addrspa
 ; SI:    s_load_dwordx2 s[8:9], s[4:5], 0xd
 ; SI:    s_mov_b32 s7, 0xf000
 ; SI:    s_mov_b32 s6, 0
-; SI:    v_lshlrev_b32_e32 v0, 2, v0
+; SI:    v_lshlrev_b32_e32 v4, 2, v0
 ; SI:    s_mov_b64 s[4:5], s[2:3]
-; SI:    v_mov_b32_e32 v1, 0
+; SI:    v_mov_b32_e32 v5, 0
 ; SI:    s_mov_b64 s[10:11], s[6:7]
-; SI:    buffer_load_dword v2, v[0:1], s[4:7], 0 addr64 glc
-; SI:    buffer_load_dword v3, v[0:1], s[8:11], 0 addr64 glc
+; SI:    buffer_load_dword v2, v[4:5], s[4:7], 0 addr64 glc
+; SI:    buffer_load_dword v3, v[4:5], s[8:11], 0 addr64 glc
 ; SI:    s_mov_b64 s[2:3], s[6:7]
 ; SI:    v_cvt_pknorm_u16_f32_e64 v2, -|v2|, -v3
 ; SI:    s_endpgm
@@ -477,10 +477,10 @@ define amdgpu_kernel void @v_cvt_pknorm_u16_f32_fneg_fabs_lo_fneg_hi(ptr addrspa
 ; VI:    v_add_u32_e32 v0, vcc, s2, v4
 ; VI:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI:    v_mov_b32_e32 v3, s5
-; VI:    v_add_u32_e32 v2, vcc, s4, v4
-; VI:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
+; VI:    v_add_u32_e32 v6, vcc, s4, v4
+; VI:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
 ; VI:    flat_load_dword v5, v[0:1] glc
-; VI:    flat_load_dword v2, v[2:3] glc
+; VI:    flat_load_dword v2, v[6:7] glc
 ; VI:    v_mov_b32_e32 v1, s1
 ; VI:    v_add_u32_e32 v0, vcc, s0, v4
 ; VI:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
@@ -491,9 +491,9 @@ define amdgpu_kernel void @v_cvt_pknorm_u16_f32_fneg_fabs_lo_fneg_hi(ptr addrspa
 ; GFX9-SDAG:  ; %bb.0:
 ; GFX9-SDAG:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-SDAG:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX9-SDAG:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-SDAG:    global_load_dword v1, v0, s[2:3] glc
-; GFX9-SDAG:    global_load_dword v2, v0, s[6:7] glc
+; GFX9-SDAG:    v_lshlrev_b32_e32 v3, 2, v0
+; GFX9-SDAG:    global_load_dword v1, v3, s[2:3] glc
+; GFX9-SDAG:    global_load_dword v2, v3, s[6:7] glc
 ; GFX9-SDAG:    v_cvt_pknorm_u16_f32 v1, -|v1|, -v2
 ; GFX9-SDAG:    s_endpgm
 ;
@@ -501,9 +501,9 @@ define amdgpu_kernel void @v_cvt_pknorm_u16_f32_fneg_fabs_lo_fneg_hi(ptr addrspa
 ; GFX9-GISEL:  ; %bb.0:
 ; GFX9-GISEL:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-GISEL:    s_load_dwordx2 s[6:7], s[4:5], 0x34
-; GFX9-GISEL:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-GISEL:    global_load_dword v1, v0, s[2:3] glc
-; GFX9-GISEL:    global_load_dword v2, v0, s[6:7] glc
+; GFX9-GISEL:    v_lshlrev_b32_e32 v3, 2, v0
+; GFX9-GISEL:    global_load_dword v1, v3, s[2:3] glc
+; GFX9-GISEL:    global_load_dword v2, v3, s[6:7] glc
 ; GFX9-GISEL:    v_max_f32_e64 v1, -|v1|, -|v1|
 ; GFX9-GISEL:    v_max_f32_e64 v2, -v2, -v2
 ; GFX9-GISEL:    v_cvt_pknorm_u16_f32 v1, v1, v2

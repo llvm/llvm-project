@@ -16,10 +16,10 @@ define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; SI-NEXT:    s_load_dword s4, s[8:9], 0x32
 ; SI-NEXT:    s_mov_b32 s2, 0
 ; SI-NEXT:    s_mov_b32 s3, 0x100f000
-; SI-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; SI-NEXT:    v_mov_b32_e32 v3, 0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[0:1], s[0:3], 0 addr64 glc
+; SI-NEXT:    buffer_load_dwordx2 v[0:1], v[2:3], s[0:3], 0 addr64 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_mov_b32 s2, -1
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, s4, v1
@@ -36,10 +36,10 @@ define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; CI-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
-; CI-SDAG-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
+; CI-SDAG-NEXT:    v_add_i32_e32 v2, vcc, s0, v0
 ; CI-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; CI-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; CI-SDAG-NEXT:    flat_load_dwordx2 v[0:1], v[0:1] glc
+; CI-SDAG-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; CI-SDAG-NEXT:    flat_load_dwordx2 v[0:1], v[2:3] glc
 ; CI-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; CI-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, s2, v1
 ; CI-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -49,10 +49,10 @@ define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; GFX9-LABEL: is_private_vgpr:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x0
-; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX9-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx2 v[0:1], v0, s[2:3] glc
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v2, s[2:3] glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, s1, v1
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -66,9 +66,9 @@ define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0 nv
-; GFX1250-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1250-NEXT:    v_and_b32_e32 v2, 0x3ff, v0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_load_b64 v[0:1], v0, s[0:1] scale_offset scope:SCOPE_SYS
+; GFX1250-NEXT:    global_load_b64 v[0:1], v2, s[0:1] scale_offset scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_xor_b32_e32 v0, src_flat_scratch_base_hi, v1
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -87,10 +87,10 @@ define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; CI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; CI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; CI-GISEL-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
+; CI-GISEL-NEXT:    v_add_i32_e32 v2, vcc, v0, v2
 ; CI-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; CI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; CI-GISEL-NEXT:    flat_load_dwordx2 v[0:1], v[0:1] glc
+; CI-GISEL-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; CI-GISEL-NEXT:    flat_load_dwordx2 v[0:1], v[2:3] glc
 ; CI-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; CI-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, s2, v1
 ; CI-GISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
@@ -100,10 +100,10 @@ define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; GFX10-LABEL: is_private_vgpr:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x0
-; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; GFX10-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX10-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    global_load_dwordx2 v[0:1], v0, s[2:3] glc dlc
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v2, s[2:3] glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s1, v1
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
@@ -116,9 +116,9 @@ define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_b64 v[0:1], v0, s[2:3] glc dlc
+; GFX11-NEXT:    global_load_b64 v[0:1], v2, s[2:3] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s1, v1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo

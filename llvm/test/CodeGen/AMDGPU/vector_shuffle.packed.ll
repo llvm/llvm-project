@@ -2016,17 +2016,17 @@ define amdgpu_kernel void @fma_shuffle_v2f16(ptr addrspace(1) nocapture readonly
 ; GX900:       ; %bb.0: ; %entry
 ; GX900-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GX900-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x10
-; GX900-NEXT:    v_lshlrev_b32_e32 v6, 3, v0
+; GX900-NEXT:    v_lshlrev_b32_e32 v7, 3, v0
 ; GX900-NEXT:    s_waitcnt lgkmcnt(0)
-; GX900-NEXT:    global_load_dwordx2 v[0:1], v6, s[0:1]
-; GX900-NEXT:    global_load_dwordx2 v[2:3], v6, s[2:3]
-; GX900-NEXT:    global_load_dwordx2 v[4:5], v6, s[4:5]
+; GX900-NEXT:    global_load_dwordx2 v[0:1], v7, s[0:1]
+; GX900-NEXT:    global_load_dwordx2 v[2:3], v7, s[2:3]
+; GX900-NEXT:    global_load_dwordx2 v[4:5], v7, s[4:5]
 ; GX900-NEXT:    s_waitcnt vmcnt(0)
 ; GX900-NEXT:    v_pk_fma_f16 v4, v0, v2, v4 op_sel_hi:[0,1,1]
 ; GX900-NEXT:    v_pk_fma_f16 v2, v1, v2, v5 op_sel_hi:[0,1,1]
 ; GX900-NEXT:    v_pk_fma_f16 v0, v0, v3, v4 op_sel:[1,0,0]
 ; GX900-NEXT:    v_pk_fma_f16 v1, v1, v3, v2 op_sel:[1,0,0]
-; GX900-NEXT:    global_store_dwordx2 v6, v[0:1], s[4:5]
+; GX900-NEXT:    global_store_dwordx2 v7, v[0:1], s[4:5]
 ; GX900-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: fma_shuffle_v2f16:
@@ -2034,17 +2034,17 @@ define amdgpu_kernel void @fma_shuffle_v2f16(ptr addrspace(1) nocapture readonly
 ; GFX942-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX942-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x10
 ; GFX942-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX942-NEXT:    v_lshlrev_b32_e32 v6, 3, v0
+; GFX942-NEXT:    v_lshlrev_b32_e32 v7, 3, v0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    global_load_dwordx2 v[0:1], v6, s[0:1]
-; GFX942-NEXT:    global_load_dwordx2 v[2:3], v6, s[2:3]
-; GFX942-NEXT:    global_load_dwordx2 v[4:5], v6, s[6:7]
+; GFX942-NEXT:    global_load_dwordx2 v[0:1], v7, s[0:1]
+; GFX942-NEXT:    global_load_dwordx2 v[2:3], v7, s[2:3]
+; GFX942-NEXT:    global_load_dwordx2 v[4:5], v7, s[6:7]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_pk_fma_f16 v4, v0, v2, v4 op_sel_hi:[0,1,1]
 ; GFX942-NEXT:    v_pk_fma_f16 v2, v1, v2, v5 op_sel_hi:[0,1,1]
 ; GFX942-NEXT:    v_pk_fma_f16 v0, v0, v3, v4 op_sel:[1,0,0]
 ; GFX942-NEXT:    v_pk_fma_f16 v1, v1, v3, v2 op_sel:[1,0,0]
-; GFX942-NEXT:    global_store_dwordx2 v6, v[0:1], s[6:7]
+; GFX942-NEXT:    global_store_dwordx2 v7, v[0:1], s[6:7]
 ; GFX942-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: fma_shuffle_v2f16:
@@ -2052,18 +2052,18 @@ define amdgpu_kernel void @fma_shuffle_v2f16(ptr addrspace(1) nocapture readonly
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x10
-; GFX10-NEXT:    v_lshlrev_b32_e32 v6, 3, v0
+; GFX10-NEXT:    v_lshlrev_b32_e32 v7, 3, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_clause 0x2
-; GFX10-NEXT:    global_load_dwordx2 v[0:1], v6, s[0:1]
-; GFX10-NEXT:    global_load_dwordx2 v[2:3], v6, s[2:3]
-; GFX10-NEXT:    global_load_dwordx2 v[4:5], v6, s[4:5]
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v7, s[0:1]
+; GFX10-NEXT:    global_load_dwordx2 v[2:3], v7, s[2:3]
+; GFX10-NEXT:    global_load_dwordx2 v[4:5], v7, s[4:5]
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_pk_fma_f16 v4, v0, v2, v4 op_sel_hi:[0,1,1]
 ; GFX10-NEXT:    v_pk_fma_f16 v2, v1, v2, v5 op_sel_hi:[0,1,1]
 ; GFX10-NEXT:    v_pk_fma_f16 v0, v0, v3, v4 op_sel:[1,0,0]
 ; GFX10-NEXT:    v_pk_fma_f16 v1, v1, v3, v2 op_sel:[1,0,0]
-; GFX10-NEXT:    global_store_dwordx2 v6, v[0:1], s[4:5]
+; GFX10-NEXT:    global_store_dwordx2 v7, v[0:1], s[4:5]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: fma_shuffle_v2f16:
@@ -2073,19 +2073,19 @@ define amdgpu_kernel void @fma_shuffle_v2f16(ptr addrspace(1) nocapture readonly
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x10
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v6, 3, v0
+; GFX11-NEXT:    v_lshlrev_b32_e32 v7, 3, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x2
-; GFX11-NEXT:    global_load_b64 v[0:1], v6, s[0:1]
-; GFX11-NEXT:    global_load_b64 v[2:3], v6, s[2:3]
-; GFX11-NEXT:    global_load_b64 v[4:5], v6, s[4:5]
+; GFX11-NEXT:    global_load_b64 v[0:1], v7, s[0:1]
+; GFX11-NEXT:    global_load_b64 v[2:3], v7, s[2:3]
+; GFX11-NEXT:    global_load_b64 v[4:5], v7, s[4:5]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_pk_fma_f16 v4, v0, v2, v4 op_sel_hi:[0,1,1]
 ; GFX11-NEXT:    v_pk_fma_f16 v2, v1, v2, v5 op_sel_hi:[0,1,1]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_pk_fma_f16 v0, v0, v3, v4 op_sel:[1,0,0]
 ; GFX11-NEXT:    v_pk_fma_f16 v1, v1, v3, v2 op_sel:[1,0,0]
-; GFX11-NEXT:    global_store_b64 v6, v[0:1], s[4:5]
+; GFX11-NEXT:    global_store_b64 v7, v[0:1], s[4:5]
 ; GFX11-NEXT:    s_endpgm
 entry:
   %tmp1 = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -2800,11 +2800,11 @@ define void @shuffle_v16f16_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    global_load_b128 v[6:9], v[2:3], off
-; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off
+; GFX11-NEXT:    global_load_b128 v[10:13], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX11-NEXT:    global_store_b128 v[4:5], v[10:13], off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <8 x half>, ptr addrspace(1) %arg0
   %val1 = load <8 x half>, ptr addrspace(1) %arg1
@@ -2859,7 +2859,7 @@ define void @shuffle_v32f16_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg
 ; GFX11-NEXT:    global_load_b128 v[10:13], v[2:3], off offset:16
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_load_b128 v[14:17], v[0:1], off
-; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:16
+; GFX11-NEXT:    global_load_b128 v[18:21], v[0:1], off offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(3)
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:32
 ; GFX11-NEXT:    s_waitcnt vmcnt(2)
@@ -2867,7 +2867,7 @@ define void @shuffle_v32f16_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[14:17], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off offset:16
+; GFX11-NEXT:    global_store_b128 v[4:5], v[18:21], off offset:16
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <16 x half>, ptr addrspace(1) %arg0
   %val1 = load <16 x half>, ptr addrspace(1) %arg1
@@ -2939,11 +2939,11 @@ define void @shuffle_v16i16_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    global_load_b128 v[6:9], v[2:3], off
-; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off
+; GFX11-NEXT:    global_load_b128 v[10:13], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX11-NEXT:    global_store_b128 v[4:5], v[10:13], off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <8 x i16>, ptr addrspace(1) %arg0
   %val1 = load <8 x i16>, ptr addrspace(1) %arg1
@@ -2998,7 +2998,7 @@ define void @shuffle_v32i16_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg
 ; GFX11-NEXT:    global_load_b128 v[10:13], v[2:3], off offset:16
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_load_b128 v[14:17], v[0:1], off
-; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:16
+; GFX11-NEXT:    global_load_b128 v[18:21], v[0:1], off offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(3)
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:32
 ; GFX11-NEXT:    s_waitcnt vmcnt(2)
@@ -3006,7 +3006,7 @@ define void @shuffle_v32i16_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[14:17], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off offset:16
+; GFX11-NEXT:    global_store_b128 v[4:5], v[18:21], off offset:16
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <16 x i16>, ptr addrspace(1) %arg0
   %val1 = load <16 x i16>, ptr addrspace(1) %arg1
@@ -3095,10 +3095,10 @@ define void @shuffle_v8i8_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1,
 ; GFX11-LABEL: shuffle_v8i8_concat:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
-; GFX11-NEXT:    global_load_b32 v1, v[2:3], off
+; GFX11-NEXT:    global_load_b32 v6, v[0:1], off
+; GFX11-NEXT:    global_load_b32 v7, v[2:3], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_store_b64 v[4:5], v[0:1], off
+; GFX11-NEXT:    global_store_b64 v[4:5], v[6:7], off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x i8>, ptr addrspace(1) %arg0
   %val1 = load <4 x i8>, ptr addrspace(1) %arg1
@@ -3170,11 +3170,11 @@ define void @shuffle_v32i8_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    global_load_b128 v[6:9], v[2:3], off
-; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off
+; GFX11-NEXT:    global_load_b128 v[10:13], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX11-NEXT:    global_store_b128 v[4:5], v[10:13], off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <16 x i8>, ptr addrspace(1) %arg0
   %val1 = load <16 x i8>, ptr addrspace(1) %arg1
@@ -3246,11 +3246,11 @@ define void @shuffle_v8i32_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    global_load_b128 v[6:9], v[2:3], off
-; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off
+; GFX11-NEXT:    global_load_b128 v[10:13], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX11-NEXT:    global_store_b128 v[4:5], v[10:13], off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x i32>, ptr addrspace(1) %arg0
   %val1 = load <4 x i32>, ptr addrspace(1) %arg1
@@ -3305,7 +3305,7 @@ define void @shuffle_v16i32_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg
 ; GFX11-NEXT:    global_load_b128 v[10:13], v[2:3], off offset:16
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_load_b128 v[14:17], v[0:1], off
-; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:16
+; GFX11-NEXT:    global_load_b128 v[18:21], v[0:1], off offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(3)
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:32
 ; GFX11-NEXT:    s_waitcnt vmcnt(2)
@@ -3313,7 +3313,7 @@ define void @shuffle_v16i32_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %arg
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[14:17], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off offset:16
+; GFX11-NEXT:    global_store_b128 v[4:5], v[18:21], off offset:16
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <8 x i32>, ptr addrspace(1) %arg0
   %val1 = load <8 x i32>, ptr addrspace(1) %arg1
@@ -5237,13 +5237,13 @@ define amdgpu_kernel void @fma_shuffle_v2bf16(ptr addrspace(1) nocapture readonl
 ; GX900:       ; %bb.0: ; %entry
 ; GX900-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x10
 ; GX900-NEXT:    s_load_dwordx4 s[4:7], s[8:9], 0x0
-; GX900-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; GX900-NEXT:    v_lshlrev_b32_e32 v17, 3, v0
 ; GX900-NEXT:    s_movk_i32 s2, 0x7fff
 ; GX900-NEXT:    s_mov_b32 s3, 0x7060302
 ; GX900-NEXT:    s_waitcnt lgkmcnt(0)
-; GX900-NEXT:    global_load_dwordx2 v[1:2], v0, s[0:1]
-; GX900-NEXT:    global_load_dwordx2 v[3:4], v0, s[4:5]
-; GX900-NEXT:    global_load_dwordx2 v[5:6], v0, s[6:7]
+; GX900-NEXT:    global_load_dwordx2 v[1:2], v17, s[0:1]
+; GX900-NEXT:    global_load_dwordx2 v[3:4], v17, s[4:5]
+; GX900-NEXT:    global_load_dwordx2 v[5:6], v17, s[6:7]
 ; GX900-NEXT:    s_waitcnt vmcnt(2)
 ; GX900-NEXT:    v_and_b32_e32 v7, 0xffff0000, v1
 ; GX900-NEXT:    s_waitcnt vmcnt(1)
@@ -5313,7 +5313,7 @@ define amdgpu_kernel void @fma_shuffle_v2bf16(ptr addrspace(1) nocapture readonl
 ; GX900-NEXT:    v_cndmask_b32_e32 v4, v11, v12, vcc
 ; GX900-NEXT:    v_perm_b32 v2, v4, v2, s3
 ; GX900-NEXT:    v_perm_b32 v1, v3, v1, s3
-; GX900-NEXT:    global_store_dwordx2 v0, v[1:2], s[0:1]
+; GX900-NEXT:    global_store_dwordx2 v17, v[1:2], s[0:1]
 ; GX900-NEXT:    s_endpgm
 ;
 ; GFX942-LABEL: fma_shuffle_v2bf16:
@@ -5321,13 +5321,13 @@ define amdgpu_kernel void @fma_shuffle_v2bf16(ptr addrspace(1) nocapture readonl
 ; GFX942-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x0
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x10
 ; GFX942-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX942-NEXT:    v_lshlrev_b32_e32 v6, 3, v0
+; GFX942-NEXT:    v_lshlrev_b32_e32 v17, 3, v0
 ; GFX942-NEXT:    s_movk_i32 s2, 0x7fff
 ; GFX942-NEXT:    s_mov_b32 s3, 0x7060302
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    global_load_dwordx2 v[0:1], v6, s[8:9]
-; GFX942-NEXT:    global_load_dwordx2 v[2:3], v6, s[0:1]
-; GFX942-NEXT:    global_load_dwordx2 v[4:5], v6, s[10:11]
+; GFX942-NEXT:    global_load_dwordx2 v[0:1], v17, s[8:9]
+; GFX942-NEXT:    global_load_dwordx2 v[2:3], v17, s[0:1]
+; GFX942-NEXT:    global_load_dwordx2 v[4:5], v17, s[10:11]
 ; GFX942-NEXT:    s_waitcnt vmcnt(2)
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v7, 16, v0
 ; GFX942-NEXT:    s_waitcnt vmcnt(1)
@@ -5398,7 +5398,7 @@ define amdgpu_kernel void @fma_shuffle_v2bf16(ptr addrspace(1) nocapture readonl
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_cndmask_b32_e32 v3, v11, v12, vcc
 ; GFX942-NEXT:    v_perm_b32 v1, v3, v1, s3
-; GFX942-NEXT:    global_store_dwordx2 v6, v[0:1], s[0:1]
+; GFX942-NEXT:    global_store_dwordx2 v17, v[0:1], s[0:1]
 ; GFX942-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: fma_shuffle_v2bf16:
@@ -5406,12 +5406,12 @@ define amdgpu_kernel void @fma_shuffle_v2bf16(ptr addrspace(1) nocapture readonl
 ; GFX10-NEXT:    s_clause 0x1
 ; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x10
 ; GFX10-NEXT:    s_load_dwordx4 s[4:7], s[8:9], 0x0
-; GFX10-NEXT:    v_lshlrev_b32_e32 v6, 3, v0
+; GFX10-NEXT:    v_lshlrev_b32_e32 v17, 3, v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_clause 0x2
-; GFX10-NEXT:    global_load_dwordx2 v[0:1], v6, s[0:1]
-; GFX10-NEXT:    global_load_dwordx2 v[2:3], v6, s[4:5]
-; GFX10-NEXT:    global_load_dwordx2 v[4:5], v6, s[6:7]
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v17, s[0:1]
+; GFX10-NEXT:    global_load_dwordx2 v[2:3], v17, s[4:5]
+; GFX10-NEXT:    global_load_dwordx2 v[4:5], v17, s[6:7]
 ; GFX10-NEXT:    s_waitcnt vmcnt(2)
 ; GFX10-NEXT:    v_and_b32_e32 v7, 0xffff0000, v0
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
@@ -5481,7 +5481,7 @@ define amdgpu_kernel void @fma_shuffle_v2bf16(ptr addrspace(1) nocapture readonl
 ; GFX10-NEXT:    v_perm_b32 v1, v2, v1, 0x7060302
 ; GFX10-NEXT:    v_cndmask_b32_e32 v3, v5, v8, vcc_lo
 ; GFX10-NEXT:    v_perm_b32 v0, v3, v0, 0x7060302
-; GFX10-NEXT:    global_store_dwordx2 v6, v[0:1], s[0:1]
+; GFX10-NEXT:    global_store_dwordx2 v17, v[0:1], s[0:1]
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-TRUE16-LABEL: fma_shuffle_v2bf16:
@@ -5491,12 +5491,12 @@ define amdgpu_kernel void @fma_shuffle_v2bf16(ptr addrspace(1) nocapture readonl
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[4:7], s[4:5], 0x0
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v6, 3, v0
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v17, 3, v0
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_clause 0x2
-; GFX11-TRUE16-NEXT:    global_load_b64 v[0:1], v6, s[0:1]
-; GFX11-TRUE16-NEXT:    global_load_b64 v[2:3], v6, s[4:5]
-; GFX11-TRUE16-NEXT:    global_load_b64 v[4:5], v6, s[6:7]
+; GFX11-TRUE16-NEXT:    global_load_b64 v[0:1], v17, s[0:1]
+; GFX11-TRUE16-NEXT:    global_load_b64 v[2:3], v17, s[4:5]
+; GFX11-TRUE16-NEXT:    global_load_b64 v[4:5], v17, s[6:7]
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(2)
 ; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v11, 16, v1
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v1, 0xffff0000, v1
@@ -5581,7 +5581,7 @@ define amdgpu_kernel void @fma_shuffle_v2bf16(ptr addrspace(1) nocapture readonl
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v3
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v4.l
-; GFX11-TRUE16-NEXT:    global_store_b64 v6, v[0:1], s[0:1]
+; GFX11-TRUE16-NEXT:    global_store_b64 v17, v[0:1], s[0:1]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: fma_shuffle_v2bf16:
@@ -5591,12 +5591,12 @@ define amdgpu_kernel void @fma_shuffle_v2bf16(ptr addrspace(1) nocapture readonl
 ; GFX11-FAKE16-NEXT:    s_load_b128 s[4:7], s[4:5], 0x0
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v6, 3, v0
+; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v17, 3, v0
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_clause 0x2
-; GFX11-FAKE16-NEXT:    global_load_b64 v[0:1], v6, s[0:1]
-; GFX11-FAKE16-NEXT:    global_load_b64 v[2:3], v6, s[4:5]
-; GFX11-FAKE16-NEXT:    global_load_b64 v[4:5], v6, s[6:7]
+; GFX11-FAKE16-NEXT:    global_load_b64 v[0:1], v17, s[0:1]
+; GFX11-FAKE16-NEXT:    global_load_b64 v[2:3], v17, s[4:5]
+; GFX11-FAKE16-NEXT:    global_load_b64 v[4:5], v17, s[6:7]
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(2)
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v11, 0xffff0000, v1
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
@@ -5678,7 +5678,7 @@ define amdgpu_kernel void @fma_shuffle_v2bf16(ptr addrspace(1) nocapture readonl
 ; GFX11-FAKE16-NEXT:    v_perm_b32 v1, v2, v1, 0x7060302
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v3, v5, v8, vcc_lo
 ; GFX11-FAKE16-NEXT:    v_perm_b32 v0, v3, v0, 0x7060302
-; GFX11-FAKE16-NEXT:    global_store_b64 v6, v[0:1], s[0:1]
+; GFX11-FAKE16-NEXT:    global_store_b64 v17, v[0:1], s[0:1]
 ; GFX11-FAKE16-NEXT:    s_endpgm
 entry:
   %tmp1 = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -6085,11 +6085,11 @@ define void @shuffle_v16bf16_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %ar
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    global_load_b128 v[6:9], v[2:3], off
-; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off
+; GFX11-NEXT:    global_load_b128 v[10:13], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off
+; GFX11-NEXT:    global_store_b128 v[4:5], v[10:13], off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <8 x bfloat>, ptr addrspace(1) %arg0
   %val1 = load <8 x bfloat>, ptr addrspace(1) %arg1
@@ -6144,7 +6144,7 @@ define void @shuffle_v32bf16_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %ar
 ; GFX11-NEXT:    global_load_b128 v[10:13], v[2:3], off offset:16
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    global_load_b128 v[14:17], v[0:1], off
-; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:16
+; GFX11-NEXT:    global_load_b128 v[18:21], v[0:1], off offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(3)
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off offset:32
 ; GFX11-NEXT:    s_waitcnt vmcnt(2)
@@ -6152,7 +6152,7 @@ define void @shuffle_v32bf16_concat(ptr addrspace(1) %arg0, ptr addrspace(1) %ar
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[14:17], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    global_store_b128 v[4:5], v[0:3], off offset:16
+; GFX11-NEXT:    global_store_b128 v[4:5], v[18:21], off offset:16
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <16 x bfloat>, ptr addrspace(1) %arg0
   %val1 = load <16 x bfloat>, ptr addrspace(1) %arg1

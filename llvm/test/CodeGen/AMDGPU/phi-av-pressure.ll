@@ -52,16 +52,16 @@ define amdgpu_kernel void @main(i1 %arg, ptr %ptr, ptr addrspace(1) %ptr1, ptr a
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    v_mov_b32_e32 v13, v1
 ; GFX950-NEXT:    v_lshlrev_b64 v[22:23], 3, v[12:13]
-; GFX950-NEXT:    v_lshl_add_u64 v[22:23], s[38:39], 0, v[22:23]
-; GFX950-NEXT:    global_load_dwordx4 v[22:25], v[22:23], off
+; GFX950-NEXT:    v_lshl_add_u64 v[30:31], s[38:39], 0, v[22:23]
+; GFX950-NEXT:    global_load_dwordx4 v[22:25], v[30:31], off
 ; GFX950-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX950-NEXT:    v_lshl_add_u64 v[26:27], v[0:1], 3, s[38:39]
-; GFX950-NEXT:    s_waitcnt vmcnt(1)
+; GFX950-NEXT:    v_lshl_add_u64 v[32:33], v[0:1], 3, s[38:39]
+; GFX950-NEXT:    global_load_dwordx4 v[26:29], v[32:33], off
+; GFX950-NEXT:    s_waitcnt vmcnt(2)
 ; GFX950-NEXT:    v_or_b32_e32 v0, v40, v6
 ; GFX950-NEXT:    v_or_b32_e32 v13, v41, v7
 ; GFX950-NEXT:    v_or_b32_e32 v30, v42, v8
 ; GFX950-NEXT:    v_or_b32_e32 v31, v43, v9
-; GFX950-NEXT:    global_load_dwordx4 v[26:29], v[26:27], off
 ; GFX950-NEXT:    v_or_b32_e32 v18, v5, v18
 ; GFX950-NEXT:    v_or_b32_e32 v16, v4, v16
 ; GFX950-NEXT:    v_or_b32_e32 v15, v3, v15

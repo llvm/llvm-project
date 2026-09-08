@@ -47,13 +47,13 @@ define i16 @add1_i16(ptr addrspace(1) nocapture %arg, ptr addrspace(1) nocapture
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_and_b32_e32 v2, 0x3ff, v31
 ; GCN-NEXT:    v_lshlrev_b32_e32 v3, 2, v2
-; GCN-NEXT:    v_add_i32_e32 v0, vcc, v0, v3
+; GCN-NEXT:    v_add_i32_e32 v4, vcc, v0, v3
 ; GCN-NEXT:    s_mov_b32 s6, 0
-; GCN-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; GCN-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s4, s6
 ; GCN-NEXT:    s_mov_b32 s5, s6
-; GCN-NEXT:    buffer_load_dword v0, v[0:1], s[4:7], 0 addr64
+; GCN-NEXT:    buffer_load_dword v0, v[4:5], s[4:7], 0 addr64
 ; GCN-NEXT:    v_bfe_u32 v1, v31, 10, 10
 ; GCN-NEXT:    v_cmp_gt_u32_e32 vcc, v2, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -65,9 +65,9 @@ define i16 @add1_i16(ptr addrspace(1) nocapture %arg, ptr addrspace(1) nocapture
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_and_b32_e32 v2, 0x3ff, v31
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 2, v2
-; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, v0, v3
-; GFX9-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
-; GFX9-NEXT:    global_load_dword v0, v[0:1], off
+; GFX9-NEXT:    v_add_co_u32_e32 v4, vcc, v0, v3
+; GFX9-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
+; GFX9-NEXT:    global_load_dword v0, v[4:5], off
 ; GFX9-NEXT:    v_bfe_u32 v1, v31, 10, 10
 ; GFX9-NEXT:    v_cmp_gt_u32_e32 vcc, v2, v1
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)

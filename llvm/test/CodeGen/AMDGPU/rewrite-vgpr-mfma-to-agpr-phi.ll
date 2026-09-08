@@ -85,17 +85,17 @@ define amdgpu_kernel void @test_rewrite_mfma_copy_to_agpr_phi_loop(ptr addrspace
 ; CHECK-NEXT:    s_load_dwordx2 s[2:3], s[4:5], 0x0
 ; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x10
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; CHECK-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v33, 7, v0
 ; CHECK-NEXT:    s_mov_b32 s1, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[28:31], v32, s[2:3] offset:112
-; CHECK-NEXT:    global_load_dwordx4 v[24:27], v32, s[2:3] offset:96
-; CHECK-NEXT:    global_load_dwordx4 v[20:23], v32, s[2:3] offset:80
-; CHECK-NEXT:    global_load_dwordx4 v[16:19], v32, s[2:3] offset:64
-; CHECK-NEXT:    global_load_dwordx4 v[12:15], v32, s[2:3] offset:48
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v32, s[2:3] offset:32
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v32, s[2:3] offset:16
-; CHECK-NEXT:    global_load_dwordx4 v[0:3], v32, s[2:3]
+; CHECK-NEXT:    global_load_dwordx4 v[28:31], v33, s[2:3] offset:112
+; CHECK-NEXT:    global_load_dwordx4 v[24:27], v33, s[2:3] offset:96
+; CHECK-NEXT:    global_load_dwordx4 v[20:23], v33, s[2:3] offset:80
+; CHECK-NEXT:    global_load_dwordx4 v[16:19], v33, s[2:3] offset:64
+; CHECK-NEXT:    global_load_dwordx4 v[12:15], v33, s[2:3] offset:48
+; CHECK-NEXT:    global_load_dwordx4 v[8:11], v33, s[2:3] offset:32
+; CHECK-NEXT:    global_load_dwordx4 v[4:7], v33, s[2:3] offset:16
+; CHECK-NEXT:    global_load_dwordx4 v[0:3], v33, s[2:3]
 ; CHECK-NEXT:    v_mov_b32_e32 v64, 4.0
 ; CHECK-NEXT:    v_mov_b32_e32 v65, 2.0
 ; CHECK-NEXT:  .LBB1_1: ; %loop

@@ -282,9 +282,9 @@ define amdgpu_kernel void @test_readlane_vregs_i32(ptr addrspace(1) %out, ptr ad
 ; CHECK-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CHECK-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v1, s3
-; CHECK-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
-; CHECK-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; CHECK-SDAG-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
+; CHECK-SDAG-NEXT:    v_add_u32_e32 v2, vcc, s2, v0
+; CHECK-SDAG-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; CHECK-SDAG-NEXT:    flat_load_dwordx2 v[0:1], v[2:3]
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v2, s0
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -305,9 +305,9 @@ define amdgpu_kernel void @test_readlane_vregs_i32(ptr addrspace(1) %out, ptr ad
 ; CHECK-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; CHECK-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
-; CHECK-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; CHECK-GISEL-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
+; CHECK-GISEL-NEXT:    v_add_u32_e32 v2, vcc, v0, v2
+; CHECK-GISEL-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; CHECK-GISEL-NEXT:    flat_load_dwordx2 v[0:1], v[2:3]
 ; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s2, v1
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v1, s1
@@ -337,9 +337,9 @@ define amdgpu_kernel void @test_readlane_vregs_i64(ptr addrspace(1) %out, ptr ad
 ; CHECK-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CHECK-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v1, s3
-; CHECK-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
-; CHECK-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; CHECK-SDAG-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
+; CHECK-SDAG-NEXT:    v_add_u32_e32 v4, vcc, s2, v0
+; CHECK-SDAG-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; CHECK-SDAG-NEXT:    flat_load_dwordx4 v[0:3], v[4:5]
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v3, s0
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v4, s1
@@ -362,9 +362,9 @@ define amdgpu_kernel void @test_readlane_vregs_i64(ptr addrspace(1) %out, ptr ad
 ; CHECK-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; CHECK-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
-; CHECK-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; CHECK-GISEL-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
+; CHECK-GISEL-NEXT:    v_add_u32_e32 v4, vcc, v0, v2
+; CHECK-GISEL-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; CHECK-GISEL-NEXT:    flat_load_dwordx4 v[0:3], v[4:5]
 ; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s3, v2
@@ -397,9 +397,9 @@ define amdgpu_kernel void @test_readlane_vregs_f64(ptr addrspace(1) %out, ptr ad
 ; CHECK-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CHECK-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v1, s3
-; CHECK-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
-; CHECK-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; CHECK-SDAG-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
+; CHECK-SDAG-NEXT:    v_add_u32_e32 v4, vcc, s2, v0
+; CHECK-SDAG-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; CHECK-SDAG-NEXT:    flat_load_dwordx4 v[0:3], v[4:5]
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v3, s0
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v4, s1
@@ -422,9 +422,9 @@ define amdgpu_kernel void @test_readlane_vregs_f64(ptr addrspace(1) %out, ptr ad
 ; CHECK-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v1, s3
-; CHECK-GISEL-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
-; CHECK-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; CHECK-GISEL-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
+; CHECK-GISEL-NEXT:    v_add_u32_e32 v4, vcc, v0, v2
+; CHECK-GISEL-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; CHECK-GISEL-NEXT:    flat_load_dwordx4 v[0:3], v[4:5]
 ; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v3, s1
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s3, v2

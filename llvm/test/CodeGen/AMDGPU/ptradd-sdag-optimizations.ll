@@ -10,8 +10,8 @@ define i64 @global_load_ZTwoUses(ptr addrspace(1) %base, i64 %voffset) {
 ; GFX942-LABEL: global_load_ZTwoUses:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, v[2:3]
-; GFX942-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off offset:24
+; GFX942-NEXT:    v_lshl_add_u64 v[4:5], v[0:1], 0, v[2:3]
+; GFX942-NEXT:    global_load_dwordx2 v[0:1], v[4:5], off offset:24
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, v[2:3]
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
@@ -26,8 +26,8 @@ define i64 @global_load_gep_add_reassoc(ptr addrspace(1) %base, i64 %voffset) {
 ; GFX942-LABEL: global_load_gep_add_reassoc:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 0, v[2:3]
-; GFX942-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off offset:24
+; GFX942-NEXT:    v_lshl_add_u64 v[2:3], v[0:1], 0, v[2:3]
+; GFX942-NEXT:    global_load_dwordx2 v[0:1], v[2:3], off offset:24
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
   %add0 = add nuw nsw i64 %voffset, 24
@@ -94,16 +94,16 @@ define void @baseptr_null(i64 %offset, i8 %v) {
 define amdgpu_kernel void @llvm_amdgcn_queue_ptr(ptr addrspace(1) %ptr) {
 ; GFX942-LABEL: llvm_amdgcn_queue_ptr:
 ; GFX942:       ; %bb.0:
-; GFX942-NEXT:    v_mov_b32_e32 v0, 0
-; GFX942-NEXT:    global_load_ubyte v1, v0, s[2:3] sc0 sc1
-; GFX942-NEXT:    global_load_ubyte v1, v0, s[4:5] offset:8 sc0 sc1
-; GFX942-NEXT:    global_load_ubyte v1, v0, s[0:1] sc0 sc1
+; GFX942-NEXT:    v_mov_b32_e32 v4, 0
+; GFX942-NEXT:    global_load_ubyte v1, v4, s[2:3] sc0 sc1
+; GFX942-NEXT:    global_load_ubyte v1, v4, s[4:5] offset:8 sc0 sc1
+; GFX942-NEXT:    global_load_ubyte v1, v4, s[0:1] sc0 sc1
 ; GFX942-NEXT:    ; kill: killed $sgpr0_sgpr1
 ; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[6:7]
 ; GFX942-NEXT:    ; kill: killed $sgpr2_sgpr3
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1] sc0 sc1
+; GFX942-NEXT:    global_store_dwordx2 v4, v[2:3], s[0:1] sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_endpgm
   %queue.ptr = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()

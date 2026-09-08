@@ -42,7 +42,7 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; SDAG-NEXT:    s_cbranch_execnz .LBB0_1
 ; SDAG-NEXT:  ; %bb.2:
 ; SDAG-NEXT:    s_mov_b32 exec_lo, s12
-; SDAG-NEXT:    v_dual_mov_b32 v0, 0x7fc00000 :: v_dual_mov_b32 v1, 1.0
+; SDAG-NEXT:    v_dual_mov_b32 v3, 0x7fc00000 :: v_dual_mov_b32 v4, 1.0
 ; SDAG-NEXT:    s_mov_b32 s0, s8
 ; SDAG-NEXT:    s_mov_b32 s1, s8
 ; SDAG-NEXT:    s_mov_b32 s2, s8
@@ -52,9 +52,9 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; SDAG-NEXT:    s_mov_b32 s6, s8
 ; SDAG-NEXT:    s_mov_b32 s7, s8
 ; SDAG-NEXT:    s_clause 0x2
-; SDAG-NEXT:    image_sample_c_lz v0, [v8, v8, v0, v8], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; SDAG-NEXT:    image_sample_c_lz v0, [v8, v8, v3, v8], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; SDAG-NEXT:    image_sample_c_lz v2, [v8, v8, v8, v8], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
-; SDAG-NEXT:    image_sample_c_lz v1, [v8, v1, v8, v8], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; SDAG-NEXT:    image_sample_c_lz v1, [v8, v4, v8, v8], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; SDAG-NEXT:    s_waitcnt vmcnt(2)
 ; SDAG-NEXT:    v_dual_add_f32 v0, v9, v0 :: v_dual_mov_b32 v9, v8
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -114,11 +114,11 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; GISEL-NEXT:    s_cbranch_execnz .LBB0_1
 ; GISEL-NEXT:  ; %bb.2:
 ; GISEL-NEXT:    s_mov_b32 exec_lo, s3
-; GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, 0x7fc00000
-; GISEL-NEXT:    v_mov_b32_e32 v2, 1.0
+; GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v4, 0x7fc00000
+; GISEL-NEXT:    v_mov_b32_e32 v5, 1.0
 ; GISEL-NEXT:    s_clause 0x2
-; GISEL-NEXT:    image_sample_c_lz v0, [v1, v1, v0, v1], s[4:11], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
-; GISEL-NEXT:    image_sample_c_lz v2, [v1, v2, v1, v1], s[4:11], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; GISEL-NEXT:    image_sample_c_lz v0, [v1, v1, v4, v1], s[4:11], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; GISEL-NEXT:    image_sample_c_lz v2, [v1, v5, v1, v1], s[4:11], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; GISEL-NEXT:    image_sample_c_lz v3, [v1, v1, v1, v1], s[4:11], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; GISEL-NEXT:    s_waitcnt vmcnt(2)
 ; GISEL-NEXT:    v_add_f32_e32 v0, v9, v0

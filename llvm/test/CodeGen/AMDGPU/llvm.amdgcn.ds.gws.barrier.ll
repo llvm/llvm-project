@@ -557,7 +557,7 @@ define amdgpu_kernel void @gws_barrier_wait_after(i32 %val, ptr addrspace(1) %pt
 ; GFX9-SDAG-LABEL: gws_barrier_wait_after:
 ; GFX9-SDAG:  ; %bb.0:
 ; GFX9-SDAG:    s_mov_b32 m0, 0
-; GFX9-SDAG:    v_mov_b32_e32 v0, 0
+; GFX9-SDAG:    v_mov_b32_e32 v2, 0
 ; GFX9-SDAG:    s_waitcnt lgkmcnt(0)
 ; GFX9-SDAG:    v_mov_b32_e32 v1, s2
 ; GFX9-SDAG:    ds_gws_barrier v1 offset:7 gds
@@ -568,11 +568,11 @@ define amdgpu_kernel void @gws_barrier_wait_after(i32 %val, ptr addrspace(1) %pt
 ; GFX9-GISEL-LABEL: gws_barrier_wait_after:
 ; GFX9-GISEL:  ; %bb.0:
 ; GFX9-GISEL:    s_mov_b32 m0, 0
+; GFX9-GISEL:    v_mov_b32_e32 v1, 0
 ; GFX9-GISEL:    s_waitcnt lgkmcnt(0)
 ; GFX9-GISEL:    v_mov_b32_e32 v0, s2
 ; GFX9-GISEL:    ds_gws_barrier v0 offset:7 gds
 ; GFX9-GISEL:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL:    v_mov_b32_e32 v0, 0
 ; GFX9-GISEL:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL:    s_endpgm
 ;
@@ -713,7 +713,7 @@ define amdgpu_kernel void @gws_barrier_fence_after(i32 %val, ptr addrspace(1) %p
 ;
 ; GFX9-LABEL: gws_barrier_fence_after:
 ; GFX9:  ; %bb.0:
-; GFX9:    v_mov_b32_e32 v0, 0
+; GFX9:    v_mov_b32_e32 v2, 0
 ; GFX9:    s_mov_b32 m0, 0
 ; GFX9:    s_waitcnt lgkmcnt(0)
 ; GFX9:    v_mov_b32_e32 v1, s2

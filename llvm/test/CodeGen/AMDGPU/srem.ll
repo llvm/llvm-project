@@ -843,10 +843,10 @@ define amdgpu_kernel void @srem_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-LABEL: srem_v4i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v9, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dwordx4 v[1:4], v0, s[2:3] offset:16
-; GCN-NEXT:    global_load_dwordx4 v[5:8], v0, s[2:3]
+; GCN-NEXT:    global_load_dwordx4 v[1:4], v9, s[2:3] offset:16
+; GCN-NEXT:    global_load_dwordx4 v[5:8], v9, s[2:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    v_readfirstlane_b32 s2, v1
 ; GCN-NEXT:    s_abs_i32 s2, s2
@@ -953,7 +953,7 @@ define amdgpu_kernel void @srem_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-NEXT:    s_sub_i32 s2, s3, s2
 ; GCN-NEXT:    v_mov_b32_e32 v3, s4
 ; GCN-NEXT:    v_mov_b32_e32 v4, s2
-; GCN-NEXT:    global_store_dwordx4 v0, v[1:4], s[0:1]
+; GCN-NEXT:    global_store_dwordx4 v9, v[1:4], s[0:1]
 ; GCN-NEXT:    s_endpgm
 ;
 ; TAHITI-LABEL: srem_v4i32:
@@ -1492,9 +1492,9 @@ define amdgpu_kernel void @srem_i64(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; GCN-LABEL: srem_i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v4, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dwordx4 v[0:3], v0, s[2:3]
+; GCN-NEXT:    global_load_dwordx4 v[0:3], v4, s[2:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_readfirstlane_b32 s5, v1
 ; GCN-NEXT:    v_readfirstlane_b32 s4, v0
@@ -2706,10 +2706,10 @@ define amdgpu_kernel void @srem_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-LABEL: srem_v2i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GCN-NEXT:    v_mov_b32_e32 v8, 0
+; GCN-NEXT:    v_mov_b32_e32 v9, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dwordx4 v[0:3], v8, s[2:3] offset:16
-; GCN-NEXT:    global_load_dwordx4 v[4:7], v8, s[2:3]
+; GCN-NEXT:    global_load_dwordx4 v[0:3], v9, s[2:3] offset:16
+; GCN-NEXT:    global_load_dwordx4 v[4:7], v9, s[2:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    v_readfirstlane_b32 s9, v1
 ; GCN-NEXT:    v_readfirstlane_b32 s8, v0
@@ -4909,12 +4909,12 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GCN-LABEL: srem_v4i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GCN-NEXT:    v_mov_b32_e32 v16, 0
+; GCN-NEXT:    v_mov_b32_e32 v17, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dwordx4 v[0:3], v16, s[2:3] offset:48
-; GCN-NEXT:    global_load_dwordx4 v[4:7], v16, s[2:3] offset:32
-; GCN-NEXT:    global_load_dwordx4 v[8:11], v16, s[2:3] offset:16
-; GCN-NEXT:    global_load_dwordx4 v[12:15], v16, s[2:3]
+; GCN-NEXT:    global_load_dwordx4 v[0:3], v17, s[2:3] offset:48
+; GCN-NEXT:    global_load_dwordx4 v[4:7], v17, s[2:3] offset:32
+; GCN-NEXT:    global_load_dwordx4 v[8:11], v17, s[2:3] offset:16
+; GCN-NEXT:    global_load_dwordx4 v[12:15], v17, s[2:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(3)
 ; GCN-NEXT:    v_readfirstlane_b32 s3, v3
 ; GCN-NEXT:    s_waitcnt vmcnt(2)
@@ -9036,10 +9036,10 @@ define amdgpu_kernel void @srem_v4i64_4(ptr addrspace(1) %out, ptr addrspace(1) 
 ; GCN-LABEL: srem_v4i64_4:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; GCN-NEXT:    v_mov_b32_e32 v8, 0
+; GCN-NEXT:    v_mov_b32_e32 v17, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    global_load_dwordx4 v[0:3], v8, s[2:3]
-; GCN-NEXT:    global_load_dwordx4 v[4:7], v8, s[2:3] offset:16
+; GCN-NEXT:    global_load_dwordx4 v[0:3], v17, s[2:3]
+; GCN-NEXT:    global_load_dwordx4 v[4:7], v17, s[2:3] offset:16
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    v_ashrrev_i32_e32 v9, 31, v1
 ; GCN-NEXT:    v_lshrrev_b32_e32 v9, 30, v9
@@ -9070,8 +9070,8 @@ define amdgpu_kernel void @srem_v4i64_4(ptr addrspace(1) %out, ptr addrspace(1) 
 ; GCN-NEXT:    v_subb_co_u32_e32 v5, vcc, v5, v15, vcc
 ; GCN-NEXT:    v_sub_co_u32_e32 v6, vcc, v6, v12
 ; GCN-NEXT:    v_subb_co_u32_e32 v7, vcc, v7, v16, vcc
-; GCN-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:16
-; GCN-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
+; GCN-NEXT:    global_store_dwordx4 v17, v[4:7], s[0:1] offset:16
+; GCN-NEXT:    global_store_dwordx4 v17, v[0:3], s[0:1]
 ; GCN-NEXT:    s_endpgm
 ;
 ; TAHITI-LABEL: srem_v4i64_4:

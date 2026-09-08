@@ -55,28 +55,15 @@ entry:
 }
 
 define amdgpu_ps float @global_load_b32_idxprom_wrong_stride(ptr addrspace(1) align 4 inreg %p, i32 %idx) {
-; GFX1250-LABEL: global_load_b32_idxprom_wrong_stride:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-NEXT:    v_nop
-; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_lshl_add_u64 v[0:1], v[0:1], 3, s[0:1]
-; GFX1250-NEXT:    global_load_b32 v0, v[0:1], off
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    ; return to shader part epilog
-;
 ; GFX13-SDAG-LABEL: global_load_b32_idxprom_wrong_stride:
 ; GFX13-SDAG:       ; %bb.0: ; %entry
 ; GFX13-SDAG-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-SDAG-NEXT:    v_lshlrev_b64_e32 v[0:1], 3, v[0:1]
-; GFX13-SDAG-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v0
+; GFX13-SDAG-NEXT:    v_add_co_u32 v2, vcc_lo, s0, v0
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-SDAG-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
-; GFX13-SDAG-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX13-SDAG-NEXT:    v_add_co_ci_u32_e64 v3, null, s1, v1, vcc_lo
+; GFX13-SDAG-NEXT:    global_load_b32 v0, v[2:3], off
 ; GFX13-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-SDAG-NEXT:    ; return to shader part epilog
 ;
@@ -86,10 +73,10 @@ define amdgpu_ps float @global_load_b32_idxprom_wrong_stride(ptr addrspace(1) al
 ; GFX13-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX13-GISEL-NEXT:    v_lshlrev_b64_e32 v[0:1], 3, v[0:1]
-; GFX13-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
+; GFX13-GISEL-NEXT:    v_add_co_u32 v4, vcc_lo, v2, v0
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc_lo
-; GFX13-GISEL-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX13-GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, v3, v1, vcc_lo
+; GFX13-GISEL-NEXT:    global_load_b32 v0, v[4:5], off
 ; GFX13-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-GISEL-NEXT:    ; return to shader part epilog
 entry:
