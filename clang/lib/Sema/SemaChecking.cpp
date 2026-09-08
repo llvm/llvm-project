@@ -6685,9 +6685,15 @@ bool Sema::BuiltinPrefetch(CallExpr *TheCall) {
 
   // Argument 0 is checked for us and the remaining arguments must be
   // constant integers.
-  for (unsigned i = 1; i != NumArgs; ++i)
+  for (unsigned i = 1; i != NumArgs; ++i) {
+    Expr *Arg = TheCall->getArg(i);
+    if (convertArgumentToType(*this, Arg, Context.IntTy))
+      return true;
+    TheCall->setArg(i, Arg);
+
     if (BuiltinConstantArgRange(TheCall, i, 0, i == 1 ? 1 : 3))
       return true;
+  }
 
   return false;
 }
