@@ -271,6 +271,7 @@ define i32 @atomic_nand_i32_global(ptr addrspace(1) %ptr) nounwind {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_bfi_b32 v2, v3, -5, -1
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b32 v2, v[0:1], v[2:3], off th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0

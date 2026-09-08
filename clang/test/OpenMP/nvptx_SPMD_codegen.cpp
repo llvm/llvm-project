@@ -478,7 +478,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -585,7 +585,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined_omp_outlined1
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -808,7 +808,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l18_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1001,7 +1001,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l21_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1185,7 +1185,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l24_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1377,7 +1377,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l27_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1569,7 +1569,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1761,7 +1761,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l33_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1971,7 +1971,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l37_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2154,7 +2154,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l40_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2333,7 +2333,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l43_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2503,7 +2503,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l46_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2681,7 +2681,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l49_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2859,7 +2859,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l52_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3037,7 +3037,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l55_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3223,7 +3223,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l58_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3409,7 +3409,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l66_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3586,7 +3586,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3654,7 +3654,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined_wrapper
-// CHECK-64-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR7:[0-9]+]] {
+// CHECK-64-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR8:[0-9]+]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK-64-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -3790,7 +3790,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l81_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -3982,7 +3982,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l85_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -4174,7 +4174,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l89_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -4366,7 +4366,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l93_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -4551,7 +4551,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l97_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -4721,7 +4721,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l101_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -4900,7 +4900,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l105_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -5070,7 +5070,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l109_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -5248,7 +5248,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l113_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -5426,7 +5426,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l117_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -5604,7 +5604,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l121_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -5782,7 +5782,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l125_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -5952,7 +5952,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l130_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -6131,7 +6131,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l135_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -6301,7 +6301,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l140_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -6479,7 +6479,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l145_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -6657,7 +6657,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l150_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -6835,7 +6835,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l155_omp_outlined_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -6904,7 +6904,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l160
-// CHECK-64-SAME: (i64 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8:[0-9]+]] {
+// CHECK-64-SAME: (i64 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9:[0-9]+]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTCAPTURE_EXPR__ADDR:%.*]] = alloca i64, align 8
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
@@ -6927,7 +6927,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l160_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -7004,7 +7004,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l163
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7022,7 +7022,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l163_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -7082,7 +7082,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l166
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7100,7 +7100,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l166_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -7177,7 +7177,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l169
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7195,7 +7195,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l169_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -7252,7 +7252,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l172
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7270,7 +7270,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l172_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -7327,7 +7327,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l175
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7345,7 +7345,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l175_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -7402,7 +7402,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l178
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7420,7 +7420,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l178_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -7477,7 +7477,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l181
-// CHECK-64-SAME: (i64 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (i64 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTCAPTURE_EXPR__ADDR:%.*]] = alloca i64, align 8
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
@@ -7500,7 +7500,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l181_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -7585,7 +7585,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l185
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7603,7 +7603,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l185_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -7671,7 +7671,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l189
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7689,7 +7689,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l189_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -7774,7 +7774,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l193
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7792,7 +7792,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l193_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -7857,7 +7857,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l197
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7875,7 +7875,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l197_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -7940,7 +7940,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l201
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -7958,7 +7958,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l201_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -8023,7 +8023,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l205
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8041,7 +8041,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l205_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -8106,7 +8106,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10:[0-9]+]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11:[0-9]+]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8124,7 +8124,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -8190,7 +8190,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8208,7 +8208,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -8276,7 +8276,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8294,7 +8294,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -8379,7 +8379,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8397,7 +8397,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -8462,7 +8462,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8480,7 +8480,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -8545,7 +8545,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8563,7 +8563,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -8628,7 +8628,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8646,7 +8646,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -8711,7 +8711,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l244
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8729,7 +8729,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l244_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -8806,7 +8806,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l248
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8824,7 +8824,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l248_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -8884,7 +8884,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l252
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8902,7 +8902,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l252_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -8979,7 +8979,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l256
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -8997,7 +8997,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l256_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -9054,7 +9054,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l260
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -9072,7 +9072,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l260_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -9129,7 +9129,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l264
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -9147,7 +9147,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l264_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -9204,7 +9204,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l268
-// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
@@ -9222,7 +9222,7 @@ int a;
 //
 //
 // CHECK-64-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l268_omp_outlined
-// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-64-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-64-NEXT:  entry:
 // CHECK-64-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-64-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -9480,7 +9480,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -9583,7 +9583,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined_omp_outlined1
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -9800,7 +9800,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l18_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -9989,7 +9989,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l21_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -10168,7 +10168,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l24_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -10356,7 +10356,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l27_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -10544,7 +10544,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -10732,7 +10732,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l33_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -10938,7 +10938,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l37_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -11116,7 +11116,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l40_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -11291,7 +11291,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l43_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -11456,7 +11456,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l46_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -11630,7 +11630,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l49_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -11804,7 +11804,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l52_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -11978,7 +11978,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l55_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -12160,7 +12160,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l58_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -12341,7 +12341,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l66_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -12514,7 +12514,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -12579,7 +12579,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined_wrapper
-// CHECK-32-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR7:[0-9]+]] {
+// CHECK-32-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR8:[0-9]+]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK-32-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -12713,7 +12713,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l81_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -12901,7 +12901,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l85_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -13089,7 +13089,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l89_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -13277,7 +13277,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l93_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -13458,7 +13458,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l97_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -13623,7 +13623,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l101_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -13798,7 +13798,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l105_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -13963,7 +13963,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l109_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -14137,7 +14137,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l113_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -14311,7 +14311,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l117_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -14485,7 +14485,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l121_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -14659,7 +14659,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l125_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -14824,7 +14824,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l130_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -14999,7 +14999,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l135_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -15164,7 +15164,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l140_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -15338,7 +15338,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l145_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -15512,7 +15512,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l150_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -15686,7 +15686,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l155_omp_outlined_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -15753,7 +15753,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l160
-// CHECK-32-SAME: (i32 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8:[0-9]+]] {
+// CHECK-32-SAME: (i32 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9:[0-9]+]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTCAPTURE_EXPR__ADDR:%.*]] = alloca i32, align 4
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
@@ -15776,7 +15776,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l160_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -15853,7 +15853,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l163
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -15871,7 +15871,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l163_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -15931,7 +15931,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l166
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -15949,7 +15949,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l166_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -16026,7 +16026,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l169
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16044,7 +16044,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l169_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -16101,7 +16101,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l172
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16119,7 +16119,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l172_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -16176,7 +16176,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l175
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16194,7 +16194,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l175_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -16251,7 +16251,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l178
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16269,7 +16269,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l178_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -16326,7 +16326,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l181
-// CHECK-32-SAME: (i32 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (i32 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTCAPTURE_EXPR__ADDR:%.*]] = alloca i32, align 4
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
@@ -16349,7 +16349,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l181_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -16434,7 +16434,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l185
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16452,7 +16452,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l185_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -16520,7 +16520,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l189
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16538,7 +16538,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l189_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -16623,7 +16623,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l193
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16641,7 +16641,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l193_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -16706,7 +16706,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l197
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16724,7 +16724,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l197_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -16789,7 +16789,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l201
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16807,7 +16807,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l201_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -16872,7 +16872,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l205
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16890,7 +16890,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l205_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -16955,7 +16955,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10:[0-9]+]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11:[0-9]+]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -16973,7 +16973,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -17039,7 +17039,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17057,7 +17057,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -17125,7 +17125,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17143,7 +17143,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -17228,7 +17228,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17246,7 +17246,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -17311,7 +17311,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17329,7 +17329,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -17394,7 +17394,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17412,7 +17412,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -17477,7 +17477,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17495,7 +17495,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -17560,7 +17560,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l244
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17578,7 +17578,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l244_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -17655,7 +17655,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l248
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17673,7 +17673,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l248_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -17733,7 +17733,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l252
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17751,7 +17751,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l252_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -17828,7 +17828,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l256
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17846,7 +17846,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l256_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -17903,7 +17903,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l260
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17921,7 +17921,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l260_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -17978,7 +17978,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l264
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -17996,7 +17996,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l264_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -18053,7 +18053,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l268
-// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -18071,7 +18071,7 @@ int a;
 //
 //
 // CHECK-32-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l268_omp_outlined
-// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-NEXT:  entry:
 // CHECK-32-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -18329,7 +18329,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -18432,7 +18432,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l15_omp_outlined_omp_outlined1
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[DOTCAPTURE_EXPR_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -18649,7 +18649,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l18_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -18838,7 +18838,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l21_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -19017,7 +19017,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l24_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -19205,7 +19205,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l27_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -19393,7 +19393,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l30_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -19581,7 +19581,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l33_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -19787,7 +19787,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l37_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -19965,7 +19965,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l40_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -20140,7 +20140,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l43_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -20305,7 +20305,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l46_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -20479,7 +20479,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l49_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -20653,7 +20653,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l52_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -20827,7 +20827,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l55_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -21009,7 +21009,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l58_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -21190,7 +21190,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l66_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -21363,7 +21363,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -21428,7 +21428,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l73_omp_outlined_omp_outlined_wrapper
-// CHECK-32-EX-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR7:[0-9]+]] {
+// CHECK-32-EX-SAME: (i16 noundef zeroext [[TMP0:%.*]], i32 noundef [[TMP1:%.*]]) #[[ATTR8:[0-9]+]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTADDR:%.*]] = alloca i16, align 2
 // CHECK-32-EX-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
@@ -21562,7 +21562,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l81_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -21750,7 +21750,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l85_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -21938,7 +21938,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l89_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -22126,7 +22126,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l93_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -22307,7 +22307,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l97_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -22472,7 +22472,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l101_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -22647,7 +22647,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l105_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -22812,7 +22812,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l109_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -22986,7 +22986,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l113_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -23160,7 +23160,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l117_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -23334,7 +23334,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l121_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -23508,7 +23508,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l125_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -23673,7 +23673,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l130_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -23848,7 +23848,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l135_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -24013,7 +24013,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l140_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -24187,7 +24187,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l145_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -24361,7 +24361,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l150_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -24535,7 +24535,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l155_omp_outlined_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[DOTPREVIOUS_LB_:%.*]], i32 noundef [[DOTPREVIOUS_UB_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -24602,7 +24602,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l160
-// CHECK-32-EX-SAME: (i32 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8:[0-9]+]] {
+// CHECK-32-EX-SAME: (i32 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9:[0-9]+]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTCAPTURE_EXPR__ADDR:%.*]] = alloca i32, align 4
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
@@ -24625,7 +24625,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l160_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -24702,7 +24702,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l163
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -24720,7 +24720,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l163_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -24780,7 +24780,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l166
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -24798,7 +24798,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l166_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -24875,7 +24875,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l169
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -24893,7 +24893,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l169_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -24950,7 +24950,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l172
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -24968,7 +24968,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l172_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -25025,7 +25025,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l175
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25043,7 +25043,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l175_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -25100,7 +25100,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l178
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25118,7 +25118,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l178_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -25175,7 +25175,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l181
-// CHECK-32-EX-SAME: (i32 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (i32 noundef [[DOTCAPTURE_EXPR_:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTCAPTURE_EXPR__ADDR:%.*]] = alloca i32, align 4
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
@@ -25198,7 +25198,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l181_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -25283,7 +25283,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l185
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25301,7 +25301,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l185_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -25369,7 +25369,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l189
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25387,7 +25387,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l189_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -25472,7 +25472,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l193
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25490,7 +25490,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l193_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -25555,7 +25555,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l197
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25573,7 +25573,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l197_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -25638,7 +25638,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l201
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25656,7 +25656,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l201_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -25721,7 +25721,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l205
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25739,7 +25739,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l205_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -25804,7 +25804,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10:[0-9]+]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11:[0-9]+]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25822,7 +25822,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l209_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -25888,7 +25888,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25906,7 +25906,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l214_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -25974,7 +25974,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -25992,7 +25992,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l219_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -26077,7 +26077,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26095,7 +26095,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l224_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -26160,7 +26160,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26178,7 +26178,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l229_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -26243,7 +26243,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26261,7 +26261,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l234_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -26326,7 +26326,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR10]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR11]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26344,7 +26344,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l239_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -26409,7 +26409,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l244
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26427,7 +26427,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l244_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -26504,7 +26504,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l248
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26522,7 +26522,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l248_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -26582,7 +26582,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l252
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26600,7 +26600,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l252_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -26677,7 +26677,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l256
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26695,7 +26695,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l256_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -26752,7 +26752,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l260
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26770,7 +26770,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l260_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -26827,7 +26827,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l264
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26845,7 +26845,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l264_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -26902,7 +26902,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l268
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR8]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR9]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 4
@@ -26920,7 +26920,7 @@ int a;
 //
 //
 // CHECK-32-EX-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l268_omp_outlined
-// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR1]] {
+// CHECK-32-EX-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]]) #[[ATTR3]] {
 // CHECK-32-EX-NEXT:  entry:
 // CHECK-32-EX-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // CHECK-32-EX-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4

@@ -1004,7 +1004,21 @@ bool IsProcedurePointer(const Expr<SomeType> &expr) {
 }
 
 bool IsProcedure(const Expr<SomeType> &expr) {
-  return IsProcedureDesignator(expr) || IsProcedurePointer(expr);
+  if (IsProcedureDesignator(expr) || IsProcedurePointer(expr)) {
+    return true;
+  }
+  // Also look through a reference to a function whose result is a
+  // procedure, mirroring the function-reference handling in
+  // IsProcedurePointer() above. (Matters for expressions produced
+  // during error recovery.)
+  if (const auto *funcRef{UnwrapProcedureRef(expr)}) {
+    if (const Symbol *proc{funcRef->proc().GetSymbol()}) {
+      if (const Symbol *result{FindFunctionResult(*proc)}) {
+        return IsProcedure(*result);
+      }
+    }
+  }
+  return false;
 }
 
 bool IsProcedurePointerTarget(const Expr<SomeType> &expr) {

@@ -1339,6 +1339,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -2057,6 +2058,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 

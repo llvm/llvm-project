@@ -253,6 +253,27 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
   return GetOrCreateLLVMFunction(Name, Ty, D, /*ForVTable=*/false);
 }
 
+void appendDefaultIntrinsicArgs(SmallVectorImpl<llvm::Value *> &Args,
+                                llvm::Function *F) {
+  llvm::FunctionType *FTy = F->getFunctionType();
+  unsigned NumParams = FTy->getNumParams();
+  if (Args.size() >= NumParams)
+    return;
+
+  auto [FirstDefault, Defaults] =
+      Intrinsic::getAllDefaultArgValues(F->getIntrinsicID());
+  assert(Args.size() >= FirstDefault &&
+         "builtin passes fewer arguments than the intrinsic requires");
+
+  for (unsigned I = Args.size(); I != NumParams; ++I) {
+    llvm::Type *ParamTy = FTy->getParamType(I);
+    unsigned DefaultIdx = I - FirstDefault;
+    assert(ParamTy->isIntegerTy() &&
+           "intrinsic default arguments must be integer-typed");
+    Args.push_back(llvm::ConstantInt::get(ParamTy, Defaults[DefaultIdx]));
+  }
+}
+
 /// Emit the conversions required to turn the given value into an
 /// integer of the given size.
 Value *EmitToInt(CodeGenFunction &CGF, llvm::Value *V,
@@ -4383,11 +4404,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Result;
     if (Op0->getType()->isIntOrIntVectorTy()) {
       QualType Ty = E->getArg(0)->getType();
-      if (auto *VecTy = Ty->getAs<VectorType>())
-        Ty = VecTy->getElementType();
       Result = Builder.CreateBinaryIntrinsic(
-          Ty->isSignedIntegerType() ? Intrinsic::smax : Intrinsic::umax, Op0,
-          Op1, nullptr, "elt.max");
+          Ty->hasSignedIntegerRepresentation() ? Intrinsic::smax
+                                               : Intrinsic::umax,
+          Op0, Op1, nullptr, "elt.max");
     } else
       Result = Builder.CreateMaxNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.max");
     return RValue::get(Result);
@@ -4398,11 +4418,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Result;
     if (Op0->getType()->isIntOrIntVectorTy()) {
       QualType Ty = E->getArg(0)->getType();
-      if (auto *VecTy = Ty->getAs<VectorType>())
-        Ty = VecTy->getElementType();
       Result = Builder.CreateBinaryIntrinsic(
-          Ty->isSignedIntegerType() ? Intrinsic::smin : Intrinsic::umin, Op0,
-          Op1, nullptr, "elt.min");
+          Ty->hasSignedIntegerRepresentation() ? Intrinsic::smin
+                                               : Intrinsic::umin,
+          Op0, Op1, nullptr, "elt.min");
     } else
       Result = Builder.CreateMinNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.min");
     return RValue::get(Result);
@@ -6907,6 +6926,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
       Args.push_back(ArgValue);
     }
+
+    appendDefaultIntrinsicArgs(Args, F);
 
     Value *V = Builder.CreateCall(F, Args);
     QualType BuiltinRetType = E->getType();

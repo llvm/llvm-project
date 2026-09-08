@@ -71,9 +71,7 @@
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
-#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/KernelInfo.h"
-#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
@@ -86,7 +84,6 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/Localizer.h"
-#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineLICM.h"
@@ -95,7 +92,6 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/PatchableFunction.h"
 #include "llvm/CodeGen/PostRAHazardRecognizer.h"
-#include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/CodeGen/RegAllocGreedyPass.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/RenameIndependentSubregs.h"
@@ -627,11 +623,12 @@ StringRef llvm::AMDGPU::getSchedStrategy(const Function &F) {
 static void
 diagnoseUnsupportedCoExecSchedulerSelection(const Function &F,
                                             const GCNSubtarget &ST) {
-  if (ST.hasGFX1250Insts())
+  if (ST.hasGFX1250Insts() || ST.hasGFX950Insts())
     return;
 
   F.getContext().diagnose(DiagnosticInfoUnsupported(
-      F, "'amdgpu-sched-strategy'='coexec' is only supported for gfx1250",
+      F,
+      "'amdgpu-sched-strategy'='coexec' is only supported for gfx1250/gfx950",
       DiagnosticLocation(), DS_Warning));
 }
 
@@ -693,8 +690,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGCNDPPCombineLegacyPass(*PR);
   initializeSILowerI1CopiesLegacyPass(*PR);
   initializeAMDGPUGlobalISelDivergenceLoweringLegacyPass(*PR);
-  initializeAMDGPURegBankSelectPass(*PR);
-  initializeAMDGPURegBankLegalizePass(*PR);
+  initializeAMDGPURegBankSelectLegacyPass(*PR);
+  initializeAMDGPURegBankLegalizeLegacyPass(*PR);
   initializeSILowerWWMCopiesLegacyPass(*PR);
   initializeAMDGPUMarkLastScratchLoadLegacyPass(*PR);
   initializeSILowerSGPRSpillsLegacyPass(*PR);
@@ -719,8 +716,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULowerKernelAttributesPass(*PR);
   initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(*PR);
   initializeAMDGPUPostLegalizerCombinerPass(*PR);
-  initializeAMDGPUPreLegalizerCombinerPass(*PR);
-  initializeAMDGPURegBankCombinerPass(*PR);
+  initializeAMDGPUPreLegalizerCombinerLegacyPass(*PR);
+  initializeAMDGPURegBankCombinerLegacyPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
   initializeAMDGPULateCodeGenPrepareLegacyPass(*PR);
@@ -1792,8 +1789,8 @@ bool GCNPassConfig::addIRTranslator() {
 }
 
 void GCNPassConfig::addPreLegalizeMachineIR() {
-  bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
-  addPass(createAMDGPUPreLegalizeCombiner(IsOptNone));
+  bool IsOptLevelNone = getOptLevel() == CodeGenOptLevel::None;
+  addPass(createAMDGPUPreLegalizeCombinerLegacyPass(IsOptLevelNone));
   addPass(new LocalizerLegacy());
 }
 
@@ -1809,14 +1806,14 @@ void GCNPassConfig::addPreRegBankSelect() {
 }
 
 bool GCNPassConfig::addRegBankSelect() {
-  addPass(createAMDGPURegBankSelectPass());
-  addPass(createAMDGPURegBankLegalizePass());
+  addPass(createAMDGPURegBankSelectLegacyPass());
+  addPass(createAMDGPURegBankLegalizeLegacyPass());
   return false;
 }
 
 void GCNPassConfig::addPreGlobalInstructionSelect() {
-  bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
-  addPass(createAMDGPURegBankCombiner(IsOptNone));
+  bool IsOptLevelNone = getOptLevel() == CodeGenOptLevel::None;
+  addPass(createAMDGPURegBankCombinerLegacy(IsOptLevelNone));
 }
 
 bool GCNPassConfig::addGlobalInstructionSelect() {
@@ -2239,10 +2236,10 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
                              MFI->ArgInfo.FlatScratchInit, 2, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->PrivateSegmentSize,
                              AMDGPU::SGPR_32RegClass,
-                             MFI->ArgInfo.PrivateSegmentSize, 0, 0) ||
+                             MFI->ArgInfo.PrivateSegmentSize, 1, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->LDSKernelId,
-                             AMDGPU::SGPR_32RegClass,
-                             MFI->ArgInfo.LDSKernelId, 0, 1) ||
+                             AMDGPU::SGPR_32RegClass, MFI->ArgInfo.LDSKernelId,
+                             1, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->WorkGroupIDX,
                              AMDGPU::SGPR_32RegClass, MFI->ArgInfo.WorkGroupIDX,
                              0, 1) ||
@@ -2265,14 +2262,14 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
                              AMDGPU::SReg_64RegClass,
                              MFI->ArgInfo.ImplicitBufferPtr, 2, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->WorkItemIDX,
-                             AMDGPU::VGPR_32RegClass,
-                             MFI->ArgInfo.WorkItemIDX, 0, 0) ||
+                             AMDGPU::VGPR_32RegClass, MFI->ArgInfo.WorkItemIDX,
+                             0, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->WorkItemIDY,
-                             AMDGPU::VGPR_32RegClass,
-                             MFI->ArgInfo.WorkItemIDY, 0, 0) ||
+                             AMDGPU::VGPR_32RegClass, MFI->ArgInfo.WorkItemIDY,
+                             0, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->WorkItemIDZ,
-                             AMDGPU::VGPR_32RegClass,
-                             MFI->ArgInfo.WorkItemIDZ, 0, 0)))
+                             AMDGPU::VGPR_32RegClass, MFI->ArgInfo.WorkItemIDZ,
+                             0, 0)))
     return true;
 
   // Parse FirstKernArgPreloadReg separately, since it's a Register,

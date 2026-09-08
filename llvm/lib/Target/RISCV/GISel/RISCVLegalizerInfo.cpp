@@ -233,6 +233,10 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
   else
     BSWAPActions.maxScalar(0, sXLen).lower();
 
+  getActionDefinitionsBuilder(G_CLMUL)
+      .legalFor(ST.hasStdExtZbkc(), {sXLen})
+      .unsupported();
+
   auto &CountZerosActions = getActionDefinitionsBuilder({G_CTLZ, G_CTTZ});
   auto &CountZerosPoisonActions =
       getActionDefinitionsBuilder({G_CTLZ_ZERO_POISON, G_CTTZ_ZERO_POISON});

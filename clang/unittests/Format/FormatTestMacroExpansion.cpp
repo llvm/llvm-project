@@ -231,8 +231,7 @@ a))",
 TEST_F(FormatTestMacroExpansion, KeepParensWhenExpandingObjectLikeMacros) {
   FormatStyle Style = getLLVMStyle();
   Style.Macros.push_back("FN=class C { int f");
-  verifyFormat("void f() {\n"
-               "  FN(a *b);\n"
+  verifyFormat("void f() { FN(a *b);\n"
                "  };\n"
                "}",
                Style);
@@ -299,6 +298,21 @@ TEST_F(FormatTestMacroExpansion, IndentChildrenWithinMacroCall) {
                "        }));\n"
                "}",
                Style);
+}
+
+TEST_F(FormatTestMacroExpansion, ObjectLikeMacroCalledWithArgsDoesNotHang) {
+  FormatStyle Style = getLLVMStyle();
+  Style.Macros.push_back("CASE=case");
+  verifyNoCrash("const char *fct(int wki) {\n"
+                "  switch (wki) {\n"
+                "    CASE(1, \"1\");\n"
+                "    CASE(2, \"2\");\n"
+                "    default:\n"
+                "      return \"123\";\n"
+                "  }\n"
+                "}",
+                Style);
+  verifyNoCrash("CASE(1, \"1\");", Style);
 }
 
 } // namespace

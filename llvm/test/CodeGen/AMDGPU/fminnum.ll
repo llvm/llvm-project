@@ -1200,7 +1200,7 @@ define amdgpu_kernel void @constant_fold_fmin_f32_nan_nan(ptr addrspace(1) %out)
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    buffer_store_b32 v0, off, s[0:3], null
 ; GFX12-GISEL-NEXT:    s_endpgm
-  %val = call float @llvm.minnum.f32(float 0x7FF8000000000000, float 0x7FF8000000000000)
+  %val = call float @llvm.minnum.f32(float +qnan, float +qnan)
   store float %val, ptr addrspace(1) %out, align 4
   ret void
 }
@@ -1265,7 +1265,7 @@ define amdgpu_kernel void @constant_fold_fmin_f32_val_nan(ptr addrspace(1) %out)
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    buffer_store_b32 v0, off, s[0:3], null
 ; GFX12-GISEL-NEXT:    s_endpgm
-  %val = call float @llvm.minnum.f32(float 1.0, float 0x7FF8000000000000)
+  %val = call float @llvm.minnum.f32(float 1.0, float +qnan)
   store float %val, ptr addrspace(1) %out, align 4
   ret void
 }
@@ -1330,7 +1330,7 @@ define amdgpu_kernel void @constant_fold_fmin_f32_nan_val(ptr addrspace(1) %out)
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    buffer_store_b32 v0, off, s[0:3], null
 ; GFX12-GISEL-NEXT:    s_endpgm
-  %val = call float @llvm.minnum.f32(float 0x7FF8000000000000, float 1.0)
+  %val = call float @llvm.minnum.f32(float +qnan, float 1.0)
   store float %val, ptr addrspace(1) %out, align 4
   ret void
 }

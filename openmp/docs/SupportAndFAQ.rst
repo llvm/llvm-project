@@ -259,15 +259,13 @@ However, the global state will be distinct between the two images at runtime.
 This means any global variables will potentially have different values when
 queried from OpenMP or CUDA.
 
-Linking CUDA and HIP currently requires enabling a different compilation mode
-for CUDA / HIP with ``--offload-new-driver`` and to link using
-``--offload-link``. Additionally, ``-fgpu-rdc`` must be used to create a
-linkable device image.
+Linking CUDA and HIP currently requires linking using ``--offload-link``.
+Additionally, ``-fgpu-rdc`` must be used to create a linkable device image.
 
 .. code-block:: shell
 
    clang++ openmp.cpp -fopenmp --offload-arch=sm_80 -c
-   clang++ cuda.cu --offload-new-driver --offload-arch=sm_80 -fgpu-rdc -c
+   clang++ cuda.cu --offload-arch=sm_80 -fgpu-rdc -c
    clang++ openmp.o cuda.o --offload-link -o app
 
 Q: Are libomptarget and plugins backward compatible?

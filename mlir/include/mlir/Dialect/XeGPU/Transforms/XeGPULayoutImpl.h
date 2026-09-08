@@ -93,6 +93,10 @@ dropSgLayoutAndDataOnAttrs(ArrayRef<NamedAttribute> attrs);
 /// any DistributeLayoutAttr found.
 SmallVector<NamedAttribute> dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs);
 
+/// Drops inst-data information from DistributeLayoutAttrs stored as inherent
+/// attributes on the operation.
+void dropInstDataOnInherentAttrs(Operation *op);
+
 //===----------------------------------------------------------------------===//
 // Backward layout inference (result layout -> source layout)
 //===----------------------------------------------------------------------===//

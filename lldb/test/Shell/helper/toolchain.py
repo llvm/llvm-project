@@ -11,6 +11,8 @@ from lit.llvm import llvm_config
 from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
 
+import lldbflakes
+
 import posixpath
 
 def _get_lldb_init_path(config):
@@ -84,7 +86,9 @@ class ShTestLldb(ShTest):
                         cmd.replace(args_def, args_unique),
                     )
                 break
-        return super().execute(test, litConfig)
+        return lldbflakes.execute_with_reruns(
+            lambda: ShTest.execute(self, test, litConfig)
+        )
 
 
 def use_lldb_substitutions(config):

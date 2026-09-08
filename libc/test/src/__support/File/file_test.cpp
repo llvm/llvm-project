@@ -866,3 +866,18 @@ TEST(LlvmLibcFileTest, PartialWideCharWriteDetected) {
 
   ASSERT_EQ(f->close(), 0);
 }
+
+TEST(LlvmLibcFileTest, FileLockRAII) {
+  StringFile *f = new_string_file(nullptr, 0, _IONBF, false, "w+");
+  ASSERT_FALSE(f == nullptr);
+
+  {
+    File::FileLock lock(f);
+    ASSERT_EQ(f->write_unlocked("abc", 3).value, size_t(3));
+  }
+
+  // After FileLock is destroyed, operations under lock still acquire and
+  // release cleanly.
+  ASSERT_EQ(f->write("def", 3).value, size_t(3));
+  ASSERT_EQ(f->close(), 0);
+}

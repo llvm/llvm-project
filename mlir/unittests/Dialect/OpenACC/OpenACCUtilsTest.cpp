@@ -790,6 +790,27 @@ TEST_F(OpenACCUtilsTest, isValidSymbolUseFunctionWithRoutineInfo) {
   EXPECT_NE(definingOp, nullptr);
 }
 
+TEST_F(OpenACCUtilsTest, isValidSymbolUseGPUModuleFunction) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(module->getBody());
+
+  auto gpuModule = gpu::GPUModuleOp::create(b, loc, "device_module");
+  b.setInsertionPointToStart(gpuModule.getBody());
+  auto funcType = b.getFunctionType({}, {});
+  auto gpuFunc = gpu::GPUFuncOp::create(b, loc, "device_callee", funcType,
+                                        TypeRange{}, TypeRange{});
+
+  b.setInsertionPointAfter(gpuModule);
+  auto call =
+      func::CallOp::create(b, loc, "device_callee", TypeRange{}, ValueRange{});
+  Operation *definingOp = nullptr;
+  EXPECT_TRUE(isValidSymbolUse(call.getOperation(),
+                               SymbolRefAttr::get(&context, "device_callee"),
+                               &definingOp));
+  EXPECT_EQ(definingOp, gpuFunc.getOperation());
+}
+
 TEST_F(OpenACCUtilsTest, isValidSymbolUseLLVMIntrinsic) {
   // Create a module to hold the function
   OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
@@ -1720,4 +1741,29 @@ TEST_F(OpenACCUtilsTest, isValidValueUseRegularValue) {
   // Regular value (not device data, not from data op, not private) should be
   // invalid
   EXPECT_FALSE(isValidValueUse(regularVal, serialRegion));
+}
+
+TEST_F(OpenACCUtilsTest, isValidValueUseRoutineArgument) {
+  OwningOpRef<ModuleOp> module = ModuleOp::create(loc);
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPointToStart(module->getBody());
+
+  auto memrefTy = MemRefType::get({10}, b.getI32Type());
+  auto funcType = b.getFunctionType({memrefTy}, {});
+  auto funcOp = func::FuncOp::create(b, loc, "routine_func", funcType);
+  funcOp->setDiscardableAttr(
+      getRoutineInfoAttrName(),
+      RoutineInfoAttr::get(&context,
+                           {SymbolRefAttr::get(&context, "acc_routine")}));
+  Block *entryBlock = funcOp.addEntryBlock();
+  b.setInsertionPointToStart(entryBlock);
+
+  auto serialOp = SerialOp::create(b, loc, TypeRange{}, ValueRange{});
+  Block *serialBlock = b.createBlock(&serialOp.getRegion());
+  b.setInsertionPointToStart(serialBlock);
+  func::CallOp::create(b, loc, "use_arg", TypeRange{},
+                       ValueRange{entryBlock->getArgument(0)});
+
+  EXPECT_TRUE(
+      isValidValueUse(entryBlock->getArgument(0), serialOp.getRegion()));
 }

@@ -102,7 +102,7 @@ STATISTIC(NumIllegalInUnsignedVec,
           "Unoutlinable instructions mapped + number of sentinel values");
 STATISTIC(NumSentinels, "Sentinel values inserted during mapping");
 STATISTIC(NumInvisible,
-          "Invisible instructions skipped during mapping");
+          "Non-debug invisible instructions skipped during mapping");
 STATISTIC(UnsignedVecSize,
           "Total number of instructions mapped and saved to mapping vector");
 STATISTIC(StableHashAttempts,
@@ -343,6 +343,8 @@ struct InstructionMapper {
       unsigned NumSkippedInRange = 0;
 #endif
       for (; It != OutlinableRangeBegin; ++It) {
+        if (It->isDebugInstr())
+          continue;
 #ifndef NDEBUG
         ++NumSkippedInRange;
 #endif
@@ -357,6 +359,8 @@ struct InstructionMapper {
       // `It` is now positioned at the beginning of a range of instructions
       // which may be outlinable. Check if each instruction is known to be safe.
       for (; It != OutlinableRangeEnd; ++It) {
+        if (It->isDebugInstr())
+          continue;
         // Keep track of where this instruction is in the module.
         switch (TII.getOutliningType(MMI, It, Flags)) {
         case InstrType::Illegal:
@@ -1290,11 +1294,17 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M) {
       LLVM_DEBUG(dbgs() << "  MAPPING MBB: '" << MBB.getName() << "'\n");
       // If there isn't anything in MBB, then there's no point in outlining from
       // it.
-      // If there are fewer than 2 instructions in the MBB, then it can't ever
-      // contain something worth outlining.
+      // If there are fewer than 2 non-debug instructions in the MBB, then it
+      // can't ever contain something worth outlining. Count raw instructions,
+      // including bundle interiors, to preserve MBB.size() behavior. Pseudo
+      // probes also retain their historical treatment as ordinary
+      // instructions.
       // FIXME: This should be based off of the maximum size in B of an outlined
       // call versus the size in B of the MBB.
-      if (MBB.size() < MinMBBSize) {
+      if (!hasNItemsOrMore(instructionsWithoutDebug(MBB.instr_begin(),
+                                                    MBB.instr_end(),
+                                                    /* SkipPseudoOp */ false),
+                           MinMBBSize)) {
         LLVM_DEBUG(dbgs() << "    SKIP: MBB size less than minimum size of "
                           << MinMBBSize << "\n");
         continue;

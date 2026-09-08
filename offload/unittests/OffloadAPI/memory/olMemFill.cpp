@@ -154,7 +154,6 @@ TEST_P(olMemFillTest, SuccessLargeByteAligned) {
 }
 
 TEST_P(olMemFillTest, SuccessLargeByteAlignedEnqueue) {
-  SKIP_KNOWN_FAILURE(LevelZero{"unsupported feature"});
   constexpr size_t Size = 17 * 64;
   void *Alloc;
   ManuallyTriggeredTask Manual;

@@ -2295,21 +2295,6 @@ static void handleVecReturnAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(::new (S.Context) VecReturnAttr(S.Context, AL));
 }
 
-static void handleDependencyAttr(Sema &S, Scope *Scope, Decl *D,
-                                 const ParsedAttr &AL) {
-  if (isa<ParmVarDecl>(D)) {
-    // [[carries_dependency]] can only be applied to a parameter if it is a
-    // parameter of a function declaration or lambda.
-    if (!(Scope->getFlags() & clang::Scope::FunctionDeclarationScope)) {
-      S.Diag(AL.getLoc(),
-             diag::err_carries_dependency_param_not_function_decl);
-      return;
-    }
-  }
-
-  D->addAttr(::new (S.Context) CarriesDependencyAttr(S.Context, AL));
-}
-
 static void handleUnusedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   bool IsCXX17Attr = AL.isCXX11Attribute() && !AL.getScopeName();
 
@@ -5465,15 +5450,23 @@ static void handleGlobalAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (FD->isInlineSpecified() && !S.getLangOpts().CUDAIsDevice)
     S.Diag(FD->getBeginLoc(), diag::warn_kern_is_inline) << FD;
 
-  if (AL.getKind() == ParsedAttr::AT_DeviceKernel)
-    D->addAttr(::new (S.Context) DeviceKernelAttr(S.Context, AL));
-  else
-    D->addAttr(::new (S.Context) CUDAGlobalAttr(S.Context, AL));
+  switch (AL.getKind()) {
+  case ParsedAttr::AT_DeviceKernel:
+    if (!D->hasAttr<DeviceKernelAttr>())
+      D->addAttr(::new (S.Context) DeviceKernelAttr(S.Context, AL));
+    break;
+  case ParsedAttr::AT_CUDAGlobal:
+    if (!D->hasAttr<CUDAGlobalAttr>())
+      D->addAttr(::new (S.Context) CUDAGlobalAttr(S.Context, AL));
+    break;
+  default:
+    llvm_unreachable("Unexpected attribute kind");
+  }
   // In host compilation the kernel is emitted as a stub function, which is
   // a helper function for launching the kernel. The instructions in the helper
   // function has nothing to do with the source code of the kernel. Do not emit
   // debug info for the stub function to avoid confusing the debugger.
-  if (S.LangOpts.HIP && !S.LangOpts.CUDAIsDevice)
+  if (S.LangOpts.HIP && !S.LangOpts.CUDAIsDevice && !D->hasAttr<NoDebugAttr>())
     D->addAttr(NoDebugAttr::CreateImplicit(S.Context));
 }
 
@@ -7570,7 +7563,7 @@ static void handlePersonalityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 /// the attribute applies to decls.  If the attribute is a type attribute, just
 /// silently ignore it if a GNU attribute.
 static void
-ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
+ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
                      const Sema::ProcessDeclAttributeOptions &Options) {
   if (AL.isInvalid() || AL.getKind() == ParsedAttr::IgnoredAttribute)
     return;
@@ -7792,9 +7785,6 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_Availability:
     handleAvailabilityAttr(S, D, AL);
-    break;
-  case ParsedAttr::AT_CarriesDependency:
-    handleDependencyAttr(S, scope, D, AL);
     break;
   case ParsedAttr::AT_CPUDispatch:
   case ParsedAttr::AT_CPUSpecific:
@@ -8569,7 +8559,7 @@ void Sema::ProcessDeclAttributeList(
     return;
 
   for (const ParsedAttr &AL : AttrList)
-    ProcessDeclAttribute(*this, S, D, AL, Options);
+    ProcessDeclAttribute(*this, D, AL, Options);
 
   // FIXME: We should be able to handle these cases in TableGen.
   // GCC accepts
@@ -8690,8 +8680,7 @@ bool Sema::ProcessAccessDeclAttributeList(
     AccessSpecDecl *ASDecl, const ParsedAttributesView &AttrList) {
   for (const ParsedAttr &AL : AttrList) {
     if (AL.getKind() == ParsedAttr::AT_Annotate) {
-      ProcessDeclAttribute(*this, nullptr, ASDecl, AL,
-                           ProcessDeclAttributeOptions());
+      ProcessDeclAttribute(*this, ASDecl, AL, ProcessDeclAttributeOptions());
     } else {
       Diag(AL.getLoc(), diag::err_only_annotate_after_access_spec);
       return true;

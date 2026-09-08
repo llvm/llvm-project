@@ -242,9 +242,9 @@ def CC_SystemZ_XPLINK64 : CallingConv<[
   // If i128 is not legal, such values are already split into two i64 here,
   // so we have to use a custom handler.
   CCIfType<[i64], CCCustom<"CC_SystemZ_I128Indirect">>,
-  // The first 3 integer arguments are passed in registers R1D-R3D.
-  // The rest will be passed in the user area. The address offset of the user
-  // area can be found in register R4D.
+  // The first 3 integer arguments are passed in registers R1-R3.
+  // The rest will be passed in the user area.
+  CCIfType<[i32], CCAssignToRegAndStack<[R1L, R2L, R3L], 8, 8>>,
   CCIfType<[i64], CCAssignToRegAndStack<[R1D, R2D, R3D], 8, 8>>,
 
   // The first 8 named vector arguments are passed in V24-V31. Sub-128 vectors

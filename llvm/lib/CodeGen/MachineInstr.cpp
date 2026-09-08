@@ -380,6 +380,11 @@ void MachineInstr::setMemRefs(MachineFunction &MF,
 
 void MachineInstr::addMemOperand(MachineFunction &MF,
                                  MachineMemOperand *MO) {
+  if (memoperands_empty()) {
+    setMemRefs(MF, {MO});
+    return;
+  }
+
   SmallVector<MachineMemOperand *, 2> MMOs;
   MMOs.append(memoperands_begin(), memoperands_end());
   MMOs.push_back(MO);
@@ -615,6 +620,11 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
   if (const ICmpInst *ICmp = dyn_cast<ICmpInst>(&I))
     if (ICmp->hasSameSign())
       MIFlags |= MachineInstr::MIFlag::SameSign;
+
+  // Copy the nonnull flag.
+  if (const auto *ASC = dyn_cast<AddrSpaceCastInst>(&I))
+    if (ASC->hasNonNull())
+      MIFlags |= MachineInstr::MIFlag::NonNull;
 
   // Copy the exact flag.
   if (const PossiblyExactOperator *PE = dyn_cast<PossiblyExactOperator>(&I))
@@ -1894,6 +1904,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "inbounds ";
   if (getFlag(MachineInstr::LRSplit))
     OS << "lr-split ";
+  if (getFlag(MachineInstr::NonNull))
+    OS << "nonnull ";
 
   // Print the opcode name.
   if (TII)
@@ -2555,12 +2567,11 @@ void MachineInstr::changeDebugValuesDefReg(Register Reg) {
 
   Register DefReg = getOperand(0).getReg();
   auto *MRI = getRegInfo();
-  for (auto &MO : MRI->use_operands(DefReg)) {
-    auto *DI = MO.getParent();
-    if (!DI->isDebugValue())
+  for (MachineInstr &DI : MRI->use_instructions(DefReg)) {
+    if (!DI.isDebugValue())
       continue;
-    if (DI->hasDebugOperandForReg(DefReg)) {
-      DbgValues.push_back(DI);
+    if (DI.hasDebugOperandForReg(DefReg)) {
+      DbgValues.push_back(&DI);
     }
   }
 

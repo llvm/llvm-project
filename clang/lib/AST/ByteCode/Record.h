@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_RECORD_H
 #define LLVM_CLANG_AST_INTERP_RECORD_H
 
+#include "PrimType.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 
@@ -29,16 +30,23 @@ public:
     const FieldDecl *Decl;
     const Descriptor *Desc;
     unsigned Offset;
+    OptPrimType T;
+    bool IsBitField;
+    bool IsUnnamedBitField;
 
-    bool isBitField() const { return Decl->isBitField(); }
-    bool isUnnamedBitField() const { return Decl->isUnnamedBitField(); }
+    bool isBitField() const { return IsBitField; }
+    bool isUnnamedBitField() const { return IsUnnamedBitField; }
     unsigned bitWidth() const {
       assert(isBitField());
       return Decl->getBitWidthValue();
     }
 
-    Field(const FieldDecl *D, const Descriptor *Desc, unsigned Offset)
-        : Decl(D), Desc(Desc), Offset(Offset) {}
+    Field(const FieldDecl *D, const Descriptor *Desc, unsigned Offset,
+          OptPrimType T)
+        : Decl(D), Desc(Desc), Offset(Offset), T(T) {
+      IsBitField = Decl->isBitField();
+      IsUnnamedBitField = IsBitField && Decl->isUnnamedBitField();
+    }
   };
 
   /// Describes a base class.
@@ -126,7 +134,7 @@ public:
   unsigned getNumVirtualBases() const { return VirtualBases.size(); }
   const Base *getVirtualBase(unsigned I) const { return &VirtualBases[I]; }
   /// Returns a virtual base descriptor.
-  const Base *getVirtualBase(const RecordDecl *RD) const;
+  const Base *findVirtualBase(const RecordDecl *RD) const;
 
   void dump(llvm::raw_ostream &OS, unsigned Indentation = 0,
             unsigned Offset = 0) const;
@@ -152,8 +160,6 @@ private:
 
   /// Mapping from declarations to bases.
   llvm::DenseMap<const RecordDecl *, const Base *> BaseMap;
-  /// Mapping from declarations to virtual bases.
-  llvm::DenseMap<const RecordDecl *, Base *> VirtualBaseMap;
   /// Size of the structure.
   unsigned BaseSize;
   /// Size of all virtual bases.

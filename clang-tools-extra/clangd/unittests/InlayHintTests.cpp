@@ -1251,6 +1251,21 @@ TEST(ParameterHints, IncludeAtNonGlobalScope) {
       0u);
 }
 
+TEST(ParameterHints, Issue220359_NoCrash) {
+  assertParameterHints(R"cpp(
+    struct S { 
+      S(int, ...);
+    };
+    template <typename... Args>
+    void f(Args... args) {
+      S s(1, args...);
+    }
+    void c() {
+      f(2);
+    }
+  )cpp");
+}
+
 TEST(TypeHints, Smoke) {
   assertTypeHints(R"cpp(
     auto $waldo[[waldo]] = 42;

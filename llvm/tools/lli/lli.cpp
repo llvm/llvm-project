@@ -67,6 +67,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cerrno>
 #include <optional>
@@ -176,6 +177,10 @@ static cl::opt<char>
              cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
                       "(default = '-O2')"),
              cl::Prefix, cl::init('2'));
+
+static cl::opt<bool> HostJITTriple("host-jit-triple",
+                                   cl::desc("Print process triple and exit"),
+                                   cl::init(false));
 
 static cl::opt<std::string>
     TargetTriple("mtriple", cl::desc("Override target triple for module"));
@@ -429,6 +434,11 @@ int main(int argc, char **argv, char * const *envp) {
 
   cl::ParseCommandLineOptions(argc, argv,
                               "llvm interpreter & dynamic compiler\n");
+
+  if (HostJITTriple) {
+    outs() << sys::getProcessTriple() << "\n";
+    return 0;
+  }
 
   // If the user doesn't want core files, disable them.
   if (DisableCoreFiles)

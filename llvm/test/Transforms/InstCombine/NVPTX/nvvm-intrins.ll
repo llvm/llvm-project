@@ -299,20 +299,20 @@ define float @test_ull2f(i64 %a) #0 {
 
 ; CHECK-LABEL: @test_add_rn_d
 define double @test_add_rn_d(double %a, double %b) #0 {
-; CHECK: call double @llvm.nvvm.add.rn.d
-  %ret = call double @llvm.nvvm.add.rn.d(double %a, double %b)
+; CHECK: call double @llvm.nvvm.fadd.f64
+  %ret = call double @llvm.nvvm.fadd.f64(double %a, double %b, /* rnd=rn */ i32 1)
   ret double %ret
 }
 ; CHECK-LABEL: @test_add_rn_f
 define float @test_add_rn_f(float %a, float %b) #0 {
-; CHECK: call float @llvm.nvvm.add.rn.f
-  %ret = call float @llvm.nvvm.add.rn.f(float %a, float %b)
+; CHECK: call float @llvm.nvvm.fadd.f32
+  %ret = call float @llvm.nvvm.fadd.f32(float %a, float %b, /* rnd=rn */ i32 1)
   ret float %ret
 }
 ; CHECK-LABEL: @test_add_rn_f_ftz
 define float @test_add_rn_f_ftz(float %a, float %b) #0 {
-; CHECK: call float @llvm.nvvm.add.rn.ftz.f(float %a, float %b)
-  %ret = call float @llvm.nvvm.add.rn.ftz.f(float %a, float %b)
+; CHECK: call float @llvm.nvvm.fadd.ftz.f32(float %a, float %b, /* rnd=rn */ i32 1)
+  %ret = call float @llvm.nvvm.fadd.ftz.f32(float %a, float %b, /* rnd=rn */ i32 1)
   ret float %ret
 }
 
@@ -437,9 +437,9 @@ define i32 @test_fshr_clamp_3(i32 %a, i32 %b, i32 %c) {
   ret i32 %call
 }
 
-declare double @llvm.nvvm.add.rn.d(double, double)
-declare float @llvm.nvvm.add.rn.f(float, float)
-declare float @llvm.nvvm.add.rn.ftz.f(float, float)
+declare double @llvm.nvvm.fadd.f64(double, double, i32 immarg)
+declare float @llvm.nvvm.fadd.f32(float, float, i32 immarg)
+declare float @llvm.nvvm.fadd.ftz.f32(float, float, i32 immarg)
 declare double @llvm.nvvm.ceil.d(double)
 declare float @llvm.nvvm.ceil.f(float)
 declare float @llvm.nvvm.ceil.ftz.f(float)

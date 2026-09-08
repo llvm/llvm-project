@@ -18,7 +18,6 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
@@ -4022,12 +4021,15 @@ bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
 /// \p ExpectedCCVal indicates the condition code to attempt to match (e.g.
 /// ISD::SETNE).
 bool RISCVDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
-                                    SDValue &Val) {
+                                    SDValue &Val, bool OneUse) {
   assert(ISD::isIntEqualitySetCC(ExpectedCCVal) &&
          "Unexpected condition code!");
 
   // We're looking for a setcc.
   if (N->getOpcode() != ISD::SETCC)
+    return false;
+
+  if (OneUse && !N->hasOneUse())
     return false;
 
   // Must be an equality comparison.

@@ -35,11 +35,13 @@ public:
   /// Constructs ProgramWrapper by creating a liboffload program with the
   /// provided arguments.
   ///
+  /// \param Context is the context to use for program creation.
   /// \param Device is the device to use for program creation.
   /// \param DevImage is the device image to use for program creation.
   /// \throw sycl::exception with sycl::errc::runtime when failed to create the
   /// program.
-  ProgramWrapper(ol_device_handle_t Device, DeviceImageManager &DevImage);
+  ProgramWrapper(ol_context_handle_t Context, ol_device_handle_t Device,
+                 DeviceImageManager &DevImage);
 
   /// Releases the corresponding liboffload program handle by calling
   /// olDestroyProgram.
@@ -78,11 +80,14 @@ public:
   /// Returns a liboffload program which is compatible with the specified
   /// device. Searches among existing programs and creates a new one if no
   /// compatible image is found.
+  /// \param ContextHandle the liboffload handle of the context to create the
+  /// program in.
   /// \param DeviceHandle the liboffload handle of the device the program must
   /// be compatible with.
   /// \return the liboffload handle of the program compatible with the specified
   /// device.
-  ol_program_handle_t getOrCreateProgram(ol_device_handle_t DeviceHandle);
+  ol_program_handle_t getOrCreateProgram(ol_context_handle_t ContextHandle,
+                                         ol_device_handle_t DeviceHandle);
 
 protected:
   std::unordered_map<ol_device_handle_t, ProgramWrapper> MPrograms;

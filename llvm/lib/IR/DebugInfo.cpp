@@ -2137,7 +2137,7 @@ getAssignmentInfoImpl(const DataLayout &DL, const Value *StoreDest,
   if (OffsetInBytes == UINT64_MAX)
     return std::nullopt;
   if (const auto *Alloca = dyn_cast<AllocaInst>(Base))
-    if (!DL.getTypeSizeInBits(Alloca->getAllocatedType()).isScalable())
+    if (!Alloca->isScalable())
       return AssignmentInfo(DL, Alloca, OffsetInBytes * 8, SizeInBits);
   return std::nullopt;
 }

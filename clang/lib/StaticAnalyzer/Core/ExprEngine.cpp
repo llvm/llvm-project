@@ -2377,6 +2377,9 @@ bool ExprEngine::replayWithoutInlining(ExplodedNode *N,
   ExplodedNode *NewNode = G.getNode(NewNodeLoc, NewNodeState, false, &IsNew);
   // We cached out at this point. Caching out is common due to us backtracking
   // from the inlined function, which might spawn several paths.
+  // NOTE: We must return before the `addPredecessor()` call, otherwise the
+  // node vectors `NewNode->Preds` and `BeforeProcessingCall->Succs` would
+  // end up containing multiple copies of `BeforeProcessingCall` / `NewNode`.
   if (!IsNew)
     return true;
 

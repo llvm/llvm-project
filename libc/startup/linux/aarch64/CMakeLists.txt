@@ -9,6 +9,7 @@ add_startup_object(
     libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
     libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.threads.tcb
     libc.src.string.memory_utils.inline_memcpy
   COMPILE_OPTIONS
     -fno-omit-frame-pointer

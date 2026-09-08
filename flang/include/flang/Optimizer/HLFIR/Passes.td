@@ -97,11 +97,17 @@ def SeparateAllocatableAssign : Pass<"separate-allocatable-assign"> {
 def InlineHLFIRAssign : Pass<"inline-hlfir-assign"> {
   let summary = "Inline hlfir.assign operations";
   let options = [Option<
-      "onlyScalarRHS", "only-scalar-rhs", "bool", /*default=*/"false",
-      "Only inline assignments where RHS is a numeric or logical scalar "
-      "broadcast "
-      "to an array LHS. Used at O0 to avoid runtime calls in "
-      "device code without inlining all array assignments.">];
+                     "onlyScalarRHS", "only-scalar-rhs", "bool",
+                     /*default=*/"false",
+                     "Only inline assignments where RHS is a numeric or "
+                     "logical scalar broadcast "
+                     "to an array LHS. Used at O0 to avoid runtime calls in "
+                     "device code without inlining all array assignments.">,
+                 Option<"onlyCUDADeviceContext", "only-cuda-device-context",
+                        "bool", /*default=*/"false",
+                        "Only inline assignments in CUDA Fortran device "
+                        "code. Used at O0, where a module holds both host "
+                        "and device subprograms, to leave host code alone.">];
 }
 
 def InlineHLFIRCopy : Pass<"inline-hlfir-copy"> {

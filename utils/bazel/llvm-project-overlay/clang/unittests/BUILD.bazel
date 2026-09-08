@@ -376,6 +376,7 @@ cc_test(
         "//clang:parse",
         "//clang:sema",
         "//clang:tooling",
+        "//llvm:Support",
         "//llvm:TestingAnnotations",
         "//llvm:TestingSupport",
         "//third-party/unittest:gmock",

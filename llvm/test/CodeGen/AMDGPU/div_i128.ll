@@ -1998,8 +1998,9 @@ define i128 @v_sdiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-G-O0-NEXT:    v_lshrrev_b64 v[20:21], v4, v[20:21]
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v4, v20
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v5, v21
-; GFX9-G-O0-NEXT:    v_cndmask_b32_e64 v4, v4, v19, s[4:5]
-; GFX9-G-O0-NEXT:    v_cndmask_b32_e64 v5, v5, v18, s[4:5]
+; GFX9-G-O0-NEXT:    s_mov_b64 s[10:11], s[4:5]
+; GFX9-G-O0-NEXT:    v_cndmask_b32_e64 v4, v4, v19, s[10:11]
+; GFX9-G-O0-NEXT:    v_cndmask_b32_e64 v5, v5, v18, s[10:11]
 ; GFX9-G-O0-NEXT:    v_cndmask_b32_e64 v4, v4, v17, s[6:7]
 ; GFX9-G-O0-NEXT:    v_cndmask_b32_e64 v16, v5, v16, s[6:7]
 ; GFX9-G-O0-NEXT:    ; kill: def $vgpr4 killed $vgpr4 def $vgpr4_vgpr5 killed $exec
@@ -2136,8 +2137,9 @@ define i128 @v_sdiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v0, v14
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v1, v15
-; GFX9-G-O0-NEXT:    v_cndmask_b32_e64 v0, v0, v8, s[8:9]
-; GFX9-G-O0-NEXT:    v_cndmask_b32_e64 v2, v1, v2, s[8:9]
+; GFX9-G-O0-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX9-G-O0-NEXT:    v_cndmask_b32_e64 v0, v0, v8, s[10:11]
+; GFX9-G-O0-NEXT:    v_cndmask_b32_e64 v2, v1, v2, s[10:11]
 ; GFX9-G-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v8, v12
@@ -4036,8 +4038,9 @@ define i128 @v_udiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-G-O0-NEXT:    v_lshrrev_b64 v[20:21], v4, v[20:21]
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v4, v20
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v5, v21
-; GFX9-G-O0-NEXT:    v_cndmask_b32_e64 v4, v4, v13, s[4:5]
-; GFX9-G-O0-NEXT:    v_cndmask_b32_e64 v5, v5, v12, s[4:5]
+; GFX9-G-O0-NEXT:    s_mov_b64 s[10:11], s[4:5]
+; GFX9-G-O0-NEXT:    v_cndmask_b32_e64 v4, v4, v13, s[10:11]
+; GFX9-G-O0-NEXT:    v_cndmask_b32_e64 v5, v5, v12, s[10:11]
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v13, v14
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v12, v15
 ; GFX9-G-O0-NEXT:    v_cndmask_b32_e64 v4, v4, v13, s[6:7]
@@ -4178,8 +4181,9 @@ define i128 @v_udiv_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v2, v1
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v0, v14
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v1, v15
-; GFX9-G-O0-NEXT:    v_cndmask_b32_e64 v0, v0, v8, s[8:9]
-; GFX9-G-O0-NEXT:    v_cndmask_b32_e64 v2, v1, v2, s[8:9]
+; GFX9-G-O0-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX9-G-O0-NEXT:    v_cndmask_b32_e64 v0, v0, v8, s[10:11]
+; GFX9-G-O0-NEXT:    v_cndmask_b32_e64 v2, v1, v2, s[10:11]
 ; GFX9-G-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX9-G-O0-NEXT:    v_mov_b32_e32 v8, v12

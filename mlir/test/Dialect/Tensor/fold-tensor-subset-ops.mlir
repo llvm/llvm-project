@@ -1,4 +1,4 @@
-// RUN: mlir-opt -fold-tensor-subset-ops -split-input-file --allow-unregistered-dialect %s | FileCheck %s
+// RUN: mlir-opt -fold-tensor-subset-ops -split-input-file %s | FileCheck %s
 
 func.func @fold_vector_transfer_read_with_rank_reduced_extract_slice(
     %arg0 : tensor<?x?x?xf32>,
@@ -399,9 +399,9 @@ func.func @parallel_insert_slice_of_insert_slice_dynamic(
 
   // CHECK: scf.forall {{.*}} shared_outs(%[[out:.*]] = %[[t]]
   %0 = scf.forall (%arg0, %arg1) in (27, 8) shared_outs(%arg2 = %t) -> (tensor<12x34xf32>) {
-    // CHECK: %[[tt:.*]] = "make_me_a_tensor"() : () -> tensor<?x?xf32>
-    %tt = "make_me_a_tensor"() : () -> tensor<?x?xf32>
-    %tt2 = "make_me_another_tensor"() : () -> tensor<?x?xf32>
+    // CHECK: %[[tt:.*]] = "test.make_me_a_tensor"() : () -> tensor<?x?xf32>
+    %tt = "test.make_me_a_tensor"() : () -> tensor<?x?xf32>
+    %tt2 = "test.make_me_another_tensor"() : () -> tensor<?x?xf32>
     %inserted_slice = tensor.insert_slice %tt into %tt2[%o1, 0] [%sz0, %sz1] [1, 1] : tensor<?x?xf32> into tensor<?x?xf32>
 
     //      CHECK: %[[add:.*]] = affine.apply #[[$map]]()[%[[o1]], %[[o0]]]

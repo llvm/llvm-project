@@ -70,7 +70,6 @@
 
 #include "AMDGPURegisterBankInfo.h"
 
-#include "AMDGPU.h"
 #include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
@@ -2531,7 +2530,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     // Special case for s_mul_u64. There is not a vector equivalent of
     // s_mul_u64. Hence, we have to break down s_mul_u64 into 32-bit vector
     // multiplications.
-    if (!Subtarget.hasVMulU64Inst() && Opc == AMDGPU::G_MUL &&
+    if (!Subtarget.useVMulU64Inst() && Opc == AMDGPU::G_MUL &&
         DstTy.getSizeInBits() == 64) {
       applyMappingSMULU64(B, OpdMapper);
       return;
@@ -4029,7 +4028,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         OpdsMapping[0] = getValueMappingSGPR64Only(AMDGPU::SGPRRegBankID, Size);
         OpdsMapping[1] = OpdsMapping[2] = OpdsMapping[0];
       } else {
-        if (MI.getOpcode() == AMDGPU::G_MUL && Subtarget.hasVMulU64Inst())
+        if (MI.getOpcode() == AMDGPU::G_MUL && Subtarget.useVMulU64Inst())
           OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
         else
           OpdsMapping[0] =
@@ -4081,7 +4080,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (isSALUMapping(MI)) {
       // There are no scalar 64-bit min and max, use vector instruction instead.
       if (MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() == 64 &&
-          Subtarget.hasMinMaxI64Insts())
+          Subtarget.useMinMaxI64Insts())
         return getDefaultMappingVOP(MI);
       return getDefaultMappingSOP(MI);
     }
@@ -4969,16 +4968,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, DstSize);
       OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Src0Size);
       OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Src1Size);
-      break;
-    }
-    case Intrinsic::amdgcn_icmp:
-    case Intrinsic::amdgcn_fcmp: {
-      unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-      // This is not VCCRegBank because this is not used in boolean contexts.
-      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, DstSize);
-      unsigned OpSize = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
-      OpdsMapping[2] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, OpSize);
-      OpdsMapping[3] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, OpSize);
       break;
     }
     case Intrinsic::amdgcn_readlane: {

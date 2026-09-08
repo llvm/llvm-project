@@ -47,7 +47,7 @@ body: |
     ; GFX9-NEXT: [[FPEXT:%[0-9]+]]:_(f32) = nnan G_FPEXT [[FLOG2_]](f16)
     ; GFX9-NEXT: [[FPEXT1:%[0-9]+]]:_(f32) = nnan G_FPEXT [[FPTRUNC]](f16)
     ; GFX9-NEXT: [[INT:%[0-9]+]]:_(f32) = nnan G_INTRINSIC intrinsic(@llvm.amdgcn.fmul.legacy), [[FPEXT]](f32), [[FPEXT1]](f32)
-    ; GFX9-NEXT: [[FPTRUNC1:%[0-9]+]]:_(f16) = G_FPTRUNC [[INT]](f32)
+    ; GFX9-NEXT: [[FPTRUNC1:%[0-9]+]]:_(f16) = nnan G_FPTRUNC [[INT]](f32)
     ; GFX9-NEXT: [[FEXP2_:%[0-9]+]]:_(f16) = nnan G_FEXP2 [[FPTRUNC1]]
     ; GFX9-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[FEXP2_]](f16)
     ; GFX9-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)

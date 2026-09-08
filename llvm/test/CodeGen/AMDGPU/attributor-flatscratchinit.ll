@@ -825,18 +825,18 @@ define amdgpu_kernel void @call_use_intrinsic_workitem_id_x_cc_kernel() {
 
 define amdgpu_kernel void @calls_intrin_ascast_cc_kernel(ptr addrspace(3) %ptr) {
 ; GFX9-LABEL: define amdgpu_kernel void @calls_intrin_ascast_cc_kernel(
-; GFX9-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR1]] {
-; GFX9-NEXT:    [[TMP1:%.*]] = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p3(ptr addrspace(3) [[PTR]])
-; GFX9-NEXT:    store volatile i32 7, ptr [[TMP1]], align 4
+; GFX9-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR0]] {
+; GFX9-NEXT:    [[TMP1:%.*]] = addrspacecast nonnull ptr addrspace(3) [[PTR]] to ptr
+; GFX9-NEXT:    store volatile i32 7, ptr [[TMP1]], align 4, !noalias.addrspace [[META2]]
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @calls_intrin_ascast_cc_kernel(
-; GFX10-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR1]] {
-; GFX10-NEXT:    [[TMP1:%.*]] = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p3(ptr addrspace(3) [[PTR]])
-; GFX10-NEXT:    store volatile i32 7, ptr [[TMP1]], align 4
+; GFX10-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR0]] {
+; GFX10-NEXT:    [[TMP1:%.*]] = addrspacecast nonnull ptr addrspace(3) [[PTR]] to ptr
+; GFX10-NEXT:    store volatile i32 7, ptr [[TMP1]], align 4, !noalias.addrspace [[META2]]
 ; GFX10-NEXT:    ret void
 ;
-  %1 = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p3(ptr addrspace(3) %ptr)
+  %1 = addrspacecast nonnull ptr addrspace(3) %ptr to ptr
   store volatile i32 7, ptr %1, align 4
   ret void
 }

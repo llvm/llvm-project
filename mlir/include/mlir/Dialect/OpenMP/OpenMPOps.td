@@ -115,7 +115,8 @@ def PrivateClauseOp
                         AnyRegion:$dealloc_region);
 
   let assemblyFormat = [{
-    $data_sharing_type ($sym_visibility^)? $sym_name `:` $type
+    ` ` `{` `type` `=` enum($data_sharing_type) `}`
+      ($sym_visibility^)? $sym_name `:` $type
       (`init` $init_region^)?
       (`copy` $copy_region^)?
       (`dealloc` $dealloc_region^)? attr-dict
@@ -1725,7 +1726,7 @@ def TargetOp : OpenMP_Op<"target", traits = [
     bool hasHostEvalTripCount();
   }] # clausesExtraClassDeclaration;
 
-  let assemblyFormat = "`kernel_type` `` $kernel_type " #
+  let assemblyFormat = "`kernel_type` `(` enum($kernel_type) `)` " #
     clausesReqAssemblyFormat # " " #
     "oilist(" # clausesOptAssemblyFormat #
     " | `map_iterated` `(` $map_iterated `:` type($map_iterated) `)`)" # [{
@@ -2121,7 +2122,7 @@ def AtomicCompareOp : OpenMP_Op<"atomic.compare", traits = [
   let assemblyFormat = clausesAssemblyFormat #
     "$x `:` type($x) $region "
     "oilist(`weak` $weak | "
-    "`fail_memory_order` `(` $fail_memory_order `)`) attr-dict";
+    "`fail_memory_order` `(` enum($fail_memory_order) `)`) attr-dict";
 
   let hasVerifier = 1;
   let hasRegionVerifier = 1;
@@ -2750,7 +2751,8 @@ def GroupprivateOp : OpenMP_Op<"groupprivate",
   );
   let results = (outs OpenMP_PointerLikeType:$gp_addr);
   let assemblyFormat = [{
-    $sym_name (`device_type` $device_type^)? `:` type($gp_addr) attr-dict
+    $sym_name (`device_type` ` ` `(` enum($device_type)^ `)`)?
+      `:` type($gp_addr) attr-dict
   }];
 }
 

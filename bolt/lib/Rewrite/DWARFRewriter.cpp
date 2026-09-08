@@ -1027,6 +1027,11 @@ void DWARFRewriter::updateDebugInfo() {
       finalizeTypeSections(DIEBlder, *Streamer, GDBIndexSection);
   SmallVector<SmallVector<DWARFUnit *>> PartVec =
       partitionCUs(*BC.DwCtx, CUSize);
+  // Buckets below run in parallel, and with a .dwp package they all read the
+  // same split DWARF context. Create that context now to avoid a race
+  // (note this is a DWP-only issue, DWOs are safe since each thread operate
+  // on its own DWARF context).
+  BC.openSharedDWOContext();
   const unsigned int ThreadCount =
       std::min(opts::DebugThreadCount, opts::ThreadCount);
   llvm::ThreadPoolInterface &ThreadPool =

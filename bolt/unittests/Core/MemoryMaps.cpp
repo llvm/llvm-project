@@ -176,3 +176,7 @@ TEST_P(MemoryMapsTester, MultipleSegmentsMismatchedBaseAddress) {
       "Base address on multiple segment mappings should match");
   sys::fs::remove(Path);
 }
+
+#if !defined(X86_AVAILABLE) && !defined(AARCH64_AVAILABLE)
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(MemoryMapsTester);
+#endif // !defined(X86_AVAILABLE) && !defined(AARCH64_AVAILABLE)

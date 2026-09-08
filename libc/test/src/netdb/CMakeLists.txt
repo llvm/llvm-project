@@ -1,6 +1,17 @@
 add_custom_target(libc-netdb-tests)
 
 add_libc_test(
+  gai_strerror_test
+  SUITE
+    libc-netdb-tests
+  SRCS
+    gai_strerror_test.cpp
+  DEPENDS
+    libc.hdr.netdb_macros
+    libc.src.netdb.gai_strerror
+)
+
+add_libc_test(
   netdb_test
   SUITE
     libc-netdb-tests

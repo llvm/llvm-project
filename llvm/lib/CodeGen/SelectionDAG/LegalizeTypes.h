@@ -1106,6 +1106,7 @@ private:
   SDValue WidenVecRes_Unary(SDNode *N);
   SDValue WidenVecRes_InregOp(SDNode *N);
   SDValue WidenVecRes_UnaryOpWithTwoResults(SDNode *N, unsigned ResNo);
+  SDValue WidenVecRes_PARTIAL_REDUCE_MLA(SDNode *N);
   void ReplaceOtherWidenResults(SDNode *N, SDNode *WidenNode,
                                 unsigned WidenResNo);
 

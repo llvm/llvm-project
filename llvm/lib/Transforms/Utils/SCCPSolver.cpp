@@ -1094,7 +1094,7 @@ void SCCPInstVisitor::pushToWorkList(Instruction *I) {
   // same blocks that are after the current one, as they will be visited
   // anyway. We do have to push updates to earlier instructions (e.g. phi
   // nodes or loads of tracked globals).
-  if (CurI && I->getParent() == CurI->getParent() && !I->comesBefore(CurI))
+  if (CurI && I->getParent() == CurI->getParent() && CurI->comesBefore(I))
     return;
   // Only push instructions in already visited blocks. Otherwise we'll handle
   // it when we visit the block for the first time.
@@ -2010,9 +2010,13 @@ void SCCPInstVisitor::handleCallOverdefined(CallBase &CB) {
   if (CB.getType()->isStructTy())
     return (void)markOverdefined(&CB);
 
+  if (!F || !F->isDeclaration())
+    return (void)mergeInValue(ValueState[&CB], &CB, getValueFromMetadata(&CB));
+
   // Otherwise, if we have a single return value case, and if the function is
   // a declaration, maybe we can constant fold it.
-  if (F && F->isDeclaration() && canConstantFoldCallTo(&CB, F)) {
+  const TargetLibraryInfo *TLI = &GetTLI(*F);
+  if (canConstantFoldCallTo(&CB, F, TLI)) {
     SmallVector<Constant *, 8> Operands;
     for (const Use &A : CB.args()) {
       if (A.get()->getType()->isStructTy())
@@ -2034,7 +2038,7 @@ void SCCPInstVisitor::handleCallOverdefined(CallBase &CB) {
 
     // If we can constant fold this, mark the result of the call as a
     // constant.
-    if (Constant *C = ConstantFoldCall(&CB, F, Operands, &GetTLI(*F))) {
+    if (Constant *C = ConstantFoldCall(&CB, F, Operands, TLI)) {
       mergeInValue(ValueState[&CB], &CB, ValueLatticeElement::get(C));
       return;
     }

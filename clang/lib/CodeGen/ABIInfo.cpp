@@ -257,7 +257,8 @@ void ABIInfo::createCoercedStore(llvm::Value *Val, Address DstAddr,
                                  const ABIArgInfo &AI, bool DestIsVolatile,
                                  CodeGenFunction &CGF) const {}
 
-ABIArgInfo ABIInfo::classifyArgForArm64ECVarArg(QualType Ty) const {
+ABIArgInfo ABIInfo::classifyArgForArm64ECVarArg(QualType Ty,
+                                                bool IsNamedArg) const {
   llvm_unreachable("Only implemented for x86");
 }
 

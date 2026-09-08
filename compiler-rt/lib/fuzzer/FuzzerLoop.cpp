@@ -880,8 +880,7 @@ void Fuzzer::Loop(std::vector<SizedFile> &CorporaFiles) {
 
   while (true) {
     auto Now = system_clock::now();
-    if (!Options.StopFile.empty() &&
-        !FileToVector(Options.StopFile, 1, false).empty())
+    if (!Options.StopFile.empty() && IsFile(Options.StopFile))
       break;
     if (duration_cast<seconds>(Now - LastCorpusReload).count() >=
         Options.ReloadIntervalSec) {

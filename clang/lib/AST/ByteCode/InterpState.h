@@ -69,11 +69,6 @@ public:
 
   /// Delegates source mapping to the mapper.
   SourceInfo getSource(CodePtr PC) const { return M->getSource(PC); }
-  const Expr *getExpr(CodePtr PC) const { return getSource(PC).asExpr(); }
-  SourceLocation getLocation(CodePtr PC) const {
-    return getSource(PC).getLoc();
-  }
-  SourceRange getRange(CodePtr PC) const { return getSource(PC).getRange(); }
 
   Context &getContext() const { return Ctx; }
 
@@ -126,10 +121,40 @@ public:
     return reinterpret_cast<const CXXRecordDecl **>(
         this->allocate(Length * sizeof(CXXRecordDecl *)));
   }
+  PointerPathEntry *allocPointerPath(unsigned Length,
+                                     const PointerPathEntry *OldPP) {
+    assert(Length != 0);
+    auto *PP = reinterpret_cast<PointerPathEntry *>(
+        this->allocate(Length * sizeof(PointerPathEntry)));
+    if (OldPP)
+      std::memcpy(PP, OldPP, sizeof(PointerPathEntry) * Length);
+    return PP;
+  }
+  /// Allocate a new pointer path of Length \c NewLength.
+  /// NewLength - 1 elements are copied form \c OldPP.
+  PointerPathEntry *extendPointerPath(unsigned NewLength,
+                                      const PointerPathEntry *OldPP,
+                                      PointerPathEntry NewEntry) {
+    auto *PP = reinterpret_cast<PointerPathEntry *>(
+        this->allocate(NewLength * sizeof(PointerPathEntry)));
+    if (OldPP)
+      std::memcpy(PP, OldPP, sizeof(PointerPathEntry) * (NewLength - 1));
+    PP[NewLength - 1] = NewEntry;
+    return PP;
+  }
 
   /// Note that a step has been executed. If there are no more steps remaining,
   /// diagnoses and returns \c false.
-  bool noteStep(CodePtr OpPC);
+  bool noteStep(CodePtr OpPC) {
+    if (InfiniteSteps)
+      return true;
+
+    --StepsLeft;
+    if (LLVM_LIKELY(StepsLeft != 0))
+      return true;
+
+    return diagnoseStepLimitExceeded(OpPC);
+  }
 
   bool initializingBlock(const Block *B) const {
     for (PtrView V : InitializingPtrs)
@@ -176,6 +201,8 @@ private:
   std::unique_ptr<DynamicAllocator> Alloc;
   /// Allocator for everything else, e.g. floating-point values.
   mutable std::optional<llvm::BumpPtrAllocator> Allocator;
+  /// Diagnose that we've reached the constexpr step limit.
+  bool diagnoseStepLimitExceeded(CodePtr OpPC);
 
 public:
   CodePtr PC;

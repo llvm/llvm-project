@@ -219,6 +219,9 @@ static bool isPtrOfType(const clang::QualType T, Predicate Pred) {
     } else if (auto *DTS = type->getAs<DeducedTemplateSpecializationType>()) {
       auto *Decl = DTS->getTemplateName().getAsTemplateDecl();
       return Decl && Pred(Decl->getNameAsString());
+    } else if (auto *RD = type->getAs<RecordType>()) {
+      auto *Decl = RD->getDecl();
+      return Decl && Pred(Decl->getNameAsString());
     } else
       break;
   }
@@ -357,10 +360,13 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
   std::string className = safeGetName(calleeMethodsClass);
   std::string method = safeGetName(M);
 
-  if (isCheckedPtr(className) && (method == "get" || method == "ptr"))
+  auto OpType = M->getOverloadedOperator();
+  if (isCheckedPtr(className) &&
+      (method == "get" || method == "ptr" || OpType == OO_Star))
     return true;
 
-  if ((isRefType(className) && (method == "get" || method == "ptr")) ||
+  if ((isRefType(className) &&
+       (method == "get" || method == "ptr" || OpType == OO_Star)) ||
       ((className == "String" || className == "AtomString" ||
         className == "AtomStringImpl" || className == "UniqueString" ||
         className == "UniqueStringImpl" || className == "Identifier") &&

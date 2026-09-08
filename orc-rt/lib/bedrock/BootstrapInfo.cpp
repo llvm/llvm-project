@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Contains the implementation of APIs in the orc-rt/BootstrapInfo.h header.
+// Contains the implementation of APIs in the orc-rt/bedrock/BootstrapInfo.h
+// header.
 //
 //===----------------------------------------------------------------------===//
 

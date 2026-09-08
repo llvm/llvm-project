@@ -298,6 +298,7 @@ def fir_FreeMemOp : fir_Op<"freemem", []> {
 
 def fir_LoadOp : fir_OneResultOp<"load", [
   FirAliasTagOpInterface,
+  fir_FortranObjectLoadOpInterface,
   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
   DeclareOpInterfaceMethods<PromotableMemOpInterface>
 ]> {
@@ -332,6 +333,9 @@ def fir_LoadOp : fir_OneResultOp<"load", [
 
   let extraClassDeclaration = [{
     static mlir::ParseResult getElementOf(mlir::Type &ele, mlir::Type ref);
+
+    // FortranObjectLoadOpInterface methods:
+    mlir::Value getLoadSource(mlir::OpResult) { return getMemref(); }
   }];
 }
 
@@ -2920,7 +2924,7 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, SymbolName,
     OptionalAttr<AnyAttr>:$initVal,
     OptionalAttr<UnitAttr>:$constant,
     OptionalAttr<UnitAttr>:$target,
-    OptionalAttr<StrAttr>:$linkName,
+    OptionalAttr<fir_Linkage>:$linkage,
     OptionalAttr<cuf_DataAttributeAttr>:$data_attr,
     OptionalAttr<I64Attr>:$alignment,
     OptionalAttr<StrAttr>:$sym_visibility
@@ -2938,18 +2942,18 @@ def fir_GlobalOp : fir_Op<"global", [IsolatedFromAbove, SymbolName,
       "bool":$isTarget, "mlir::Type":$type,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
     OpBuilder<(ins "llvm::StringRef":$name, "mlir::Type":$type,
-      CArg<"mlir::StringAttr", "{}">:$linkage,
+      CArg<"fir::LinkageAttr", "{}">:$linkage,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
     OpBuilder<(ins "llvm::StringRef":$name, "bool":$isConstant,
       "bool":$isTarget,
-      "mlir::Type":$type, CArg<"mlir::StringAttr", "{}">:$linkage,
+      "mlir::Type":$type, CArg<"fir::LinkageAttr", "{}">:$linkage,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
     OpBuilder<(ins "llvm::StringRef":$name, "mlir::Type":$type,
-      "mlir::Attribute":$initVal, CArg<"mlir::StringAttr", "{}">:$linkage,
+      "mlir::Attribute":$initVal, CArg<"fir::LinkageAttr", "{}">:$linkage,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
     OpBuilder<(ins "llvm::StringRef":$name, "bool":$isConstant,
       "bool":$isTarget, "mlir::Type":$type, "mlir::Attribute":$initVal,
-      CArg<"mlir::StringAttr", "{}">:$linkage,
+      CArg<"fir::LinkageAttr", "{}">:$linkage,
       CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attrs)>,
   ];
 
@@ -3769,7 +3773,8 @@ def fir_LocalitySpecifierOp : fir_Op<"local", [IsolatedFromAbove,
                         AnyRegion:$dealloc_region);
 
   let assemblyFormat = [{
-    $locality_specifier_type ($sym_visibility^)? $sym_name `:` $type
+    ` ` `{` `type` `=` enum($locality_specifier_type) `}`
+      ($sym_visibility^)? $sym_name `:` $type
       (`init` $init_region^)?
       (`copy` $copy_region^)?
       (`dealloc` $dealloc_region^)?

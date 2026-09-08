@@ -17,6 +17,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/DataLayout.h"
+#include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Runtime/CUDA/registration.h"
 #include "flang/Runtime/entry-names.h"
@@ -63,7 +64,7 @@ static fir::GlobalOp createManagedPointerGlobal(fir::FirOpBuilder &builder,
   auto ptrGlobal = fir::GlobalOp::create(
       builder, globalOp.getLoc(), ptrGlobalName, /*isConstant=*/false,
       /*isTarget=*/false, ptrTy, initAttr,
-      /*linkName=*/builder.createInternalLinkage(), attrs);
+      /*linkage=*/builder.createInternalLinkage(), attrs);
 
   mlir::Region &region = ptrGlobal.getRegion();
   mlir::Block *block = builder.createBlock(&region);
@@ -103,9 +104,11 @@ static bool definesGlobal(fir::GlobalOp globalOp) {
 /// CUFDeviceGlobal pass under -gpu=mem:unified.
 static bool isCudaUnifiedExternalGlobal(fir::GlobalOp hostGlobal,
                                         mlir::SymbolTable &gpuSymTable) {
+  bool isCompilerGenerated =
+      fir::NameUniquer::isCompilerGenerated(hostGlobal.getSymName());
   if (hostGlobal.getDataAttrAttr())
     return false;
-  if (hostGlobal.getConstant())
+  if (hostGlobal.getConstant() && !isCompilerGenerated)
     return false;
   return isDeviceExternReference(hostGlobal, gpuSymTable);
 }

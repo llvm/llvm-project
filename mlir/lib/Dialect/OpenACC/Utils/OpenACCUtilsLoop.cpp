@@ -20,16 +20,15 @@
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 
-namespace {
-
 /// Calculate trip count for a loop: (ub - lb + step) / step
 /// If inclusiveUpperbound is false, subtracts 1 from ub first.
-static Value calculateTripCount(OpBuilder &b, Location loc, Value lb, Value ub,
-                                Value step, bool inclusiveUpperbound) {
+Value acc::calculateTripCount(OpBuilder &b, Location loc, Value lb, Value ub,
+                              Value step, bool inclusiveUpperbound) {
   Type type = b.getIndexType();
 
   // Convert original loop arguments to index type
@@ -66,8 +65,8 @@ static void mapACCLoopIVsToSCFIVs(acc::LoopOp accLoop, ValueRange newIVs,
 /// Normalize IV uses after converting to normalized loop form.
 /// For normalized loops (lb=0, step=1), we need to denormalize the IV:
 /// original_iv = new_iv * orig_step + orig_lb
-static void normalizeIVUses(OpBuilder &b, Location loc, Value iv, Value origLB,
-                            Value origStep) {
+void acc::normalizeIVUses(OpBuilder &b, Location loc, Value iv, Value origLB,
+                          Value origStep) {
   Type indexType = b.getIndexType();
   Value lb = getValueOrCreateCastToIndexLike(b, loc, indexType, origLB);
   Value step = getValueOrCreateCastToIndexLike(b, loc, indexType, origStep);
@@ -106,8 +105,6 @@ static void copyLoopAnnotationAttr(Operation *from, Operation *to) {
     to->setDiscardableAttr(LLVM::LoopAnnotationAttr::name, ann);
 }
 
-} // namespace
-
 namespace mlir {
 namespace acc {
 
@@ -130,8 +127,9 @@ cloneACCRegionInto(Region *src, Block *dest, Block::iterator inlinePoint,
     for (auto [replacement, orig] :
          llvm::zip(yieldOp.getOperands(), resultsToReplace)) {
       replaceAllUsesInRegionWith(orig, replacement, *dest->getParent());
-      replacements.push_back(replacement);
     }
+    replacements.append(yieldOp.getOperands().begin(),
+                        yieldOp.getOperands().end());
     ip = std::prev(yieldOp->getIterator());
     yieldOp.erase();
   } else {

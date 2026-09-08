@@ -905,6 +905,47 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// Preserve the signedness of casts in a generic convolution payload.
+func.func @generic_conv_1d_nwc_wcf_unsigned_input_memref(%input: memref<1x2x3xi8>, %filter: memref<1x3x2xi8>, %output: memref<1x2x2xi32>) {
+  linalg.generic {
+    indexing_maps = [affine_map<(n, ow, f, kw, c) -> (n, ow + kw, c)>,
+                     affine_map<(n, ow, f, kw, c) -> (kw, c, f)>,
+                     affine_map<(n, ow, f, kw, c) -> (n, ow, f)>],
+    iterator_types = ["parallel", "parallel", "parallel", "reduction", "reduction"]}
+    ins(%input, %filter : memref<1x2x3xi8>, memref<1x3x2xi8>)
+    outs(%output : memref<1x2x2xi32>) {
+  ^bb0(%in: i8, %flt: i8, %out: i32):
+    %lhs = arith.extui %in : i8 to i32
+    %rhs = arith.extsi %flt : i8 to i32
+    %mul = arith.muli %lhs, %rhs : i32
+    %add = arith.addi %out, %mul : i32
+    linalg.yield %add : i32
+  }
+  return
+}
+
+// CHECK-LABEL: func @generic_conv_1d_nwc_wcf_unsigned_input_memref
+// CHECK-SAME:   (%[[INPUT:[0-9a-z]+]]: memref<1x2x3xi8>, %[[FILTER:[0-9a-z]+]]: memref<1x3x2xi8>, %[[OUTPUT:[0-9a-z]+]]: memref<1x2x2xi32>)
+// CHECK: %[[READ0:.+]] = vector.transfer_read %[[INPUT]]
+// CHECK: %[[READ1:.+]] = vector.transfer_read %[[FILTER]]
+// CHECK: %[[READ2:.+]] = vector.transfer_read %[[OUTPUT]]
+// CHECK: %[[EXT:.+]] = vector.extract %[[READ1]][0] : vector<3x2xi8> from vector<1x3x2xi8>
+// CHECK: %[[CAST0:.+]] = arith.extui %[[READ0]] : vector<1x2x3xi8> to vector<1x2x3xi32>
+// CHECK: %[[CAST1:.+]] = arith.extsi %[[EXT]] : vector<3x2xi8> to vector<3x2xi32>
+// CHECK: %[[CONTRACT:.+]] = vector.contract {{.*}} %[[CAST0]], %[[CAST1]], %[[READ2]]
+// CHECK: vector.transfer_write %[[CONTRACT]], %[[OUTPUT]]
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 func.func @pooling_nwc_sum_memref_1_2_1_3(%input: memref<4x4x3xf32>, %filter: memref<1xf32>, %output: memref<4x2x3xf32>) {
   linalg.pooling_nwc_sum
     {dilations = dense<1> : tensor<1xi64>, strides = dense<3> : tensor<1xi64>}

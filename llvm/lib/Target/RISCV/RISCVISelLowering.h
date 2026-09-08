@@ -541,8 +541,6 @@ private:
   SDValue lowerLoadFF(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMaskedStore(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVectorCompress(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerFixedLengthVectorFCOPYSIGNToRVV(SDValue Op,
-                                               SelectionDAG &DAG) const;
   SDValue lowerMaskedGather(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerMaskedScatter(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFixedLengthVectorLoadToRVV(SDValue Op, SelectionDAG &DAG) const;

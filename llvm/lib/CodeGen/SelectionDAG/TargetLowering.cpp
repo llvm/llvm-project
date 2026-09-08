@@ -8962,16 +8962,29 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
       }
     }
 
-    // Special case: clmul(X, ~0) is equivalent to a "parallel prefix XOR" or
-    // "bitwise parity" operation.
-    if (isAllOnesOrAllOnesSplat(Y)) {
-      SDValue R = X;
-      for (unsigned I = 1; I < BW; I <<= 1) {
-        SDValue ShAmt = DAG.getShiftAmountConstant(I, VT, DL);
-        SDValue Shifted = DAG.getNode(ISD::SHL, DL, VT, R, ShAmt);
-        R = DAG.getNode(ISD::XOR, DL, VT, R, Shifted);
+    // Special case: clmul(X, Y) where Y is a known constant (splat) that forms
+    // a contiguous block of trailing ones whose length N is a power of two
+    // (e.g. i8 0xFF, i8 0x0F, ...) or equal to the operand width. In this
+    // special case, clmul(X, Y) is equivalent to a "parallel prefix XOR" or
+    // "bitwise parity" operation on X.
+    //
+    // Note: This special currently dose NOT apply when the mask is neither a
+    // power of two nor equal to the operand width because the loop inside
+    // behaves as if the mask was bit-ceiled, and "undoing" the XOR with parts
+    // of that CLMUL is a recursive problem (e.g. CLMUL with a 20-bit mask
+    // requires correction XOR with CLMUL with 12-bit mask).
+    if (auto *C = isConstOrConstSplat(Y, /*AllowUndefs=*/true)) {
+      const APInt &YVal = C->getAPIntValue();
+      unsigned N = YVal.countr_one();
+      if (YVal.isAllOnes() || (YVal.isMask() && isPowerOf2_32(N))) {
+        SDValue R = X;
+        for (unsigned I = 1; I < N; I <<= 1) {
+          SDValue ShAmt = DAG.getShiftAmountConstant(I, VT, DL);
+          SDValue Shifted = DAG.getNode(ISD::SHL, DL, VT, R, ShAmt);
+          R = DAG.getNode(ISD::XOR, DL, VT, R, Shifted);
+        }
+        return R;
       }
-      return R;
     }
 
     // NOTE: If you change this expansion, please update the cost model
@@ -9750,10 +9763,24 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
 
   // Work in an integer type matching the destination float width.
   EVT IntScalarVT = EVT::getIntegerVT(*DAG.getContext(), DstBits);
-  EVT IntVT = DstVT.isVector()
-                  ? EVT::getVectorVT(*DAG.getContext(), IntScalarVT,
-                                     DstVT.getVectorElementCount())
-                  : IntScalarVT;
+  EVT IntVT = IntScalarVT;
+  if (DstVT.isVector()) {
+    IntVT = EVT::getVectorVT(*DAG.getContext(), IntScalarVT,
+                             DstVT.getVectorElementCount());
+  } else if (!isTypeLegal(IntScalarVT)) {
+    // Avoid generating illegal type as there is no other places that'll
+    // legalize it. Vector types don't have this problem because they
+    // are subject to LegalizeVectorOps and another type legalization phase
+    // will follow.
+    if (getTypeAction(*DAG.getContext(), IntScalarVT) != TypePromoteInteger) {
+      // We only know how to handle situations where the legal type is wider.
+      DAG.getContext()->emitError(
+          "CONVERT_FROM_ARBITRARY_FP: the requested integer value type for its "
+          "legalization is not supported");
+      return SDValue();
+    }
+    IntVT = getTypeToTransformTo(*DAG.getContext(), IntScalarVT);
+  }
 
   SDValue Src = DAG.getZExtOrTrunc(IntVal, dl, IntVT);
 
@@ -9821,9 +9848,10 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
 
   // Normal value conversion.
   const int BiasAdjust = DstBias - SrcBias;
-  SDValue NormDstExp =
-      DAG.getNode(ISD::ADD, dl, IntVT, ExpField,
-                  DAG.getConstant(APInt(DstBits, BiasAdjust, true), dl, IntVT));
+  SDValue NormDstExp = DAG.getNode(
+      ISD::ADD, dl, IntVT, ExpField,
+      DAG.getConstant(APInt(IntVT.getScalarSizeInBits(), BiasAdjust, true), dl,
+                      IntVT));
 
   SDValue NormDstMant;
   if (DstMant > SrcMant) {
@@ -9845,7 +9873,7 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
   // Denormal value conversion.
   SDValue DenormResult;
   {
-    const unsigned IntVTBits = DstBits;
+    const unsigned IntVTBits = IntVT.getScalarSizeInBits();
     SDValue LeadingZeros =
         DAG.getNode(ISD::CTLZ_ZERO_POISON, dl, IntVT, MantField);
 
@@ -9853,7 +9881,7 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
         (int)IntVTBits + DstBias - SrcBias - (int)SrcMant;
     SDValue DenormDstExp = DAG.getNode(
         ISD::SUB, dl, IntVT,
-        DAG.getConstant(APInt(DstBits, DenormExpConst, true), dl, IntVT),
+        DAG.getConstant(APInt(IntVTBits, DenormExpConst, true), dl, IntVT),
         LeadingZeros);
 
     SDValue MantMSB =
@@ -9894,6 +9922,24 @@ TargetLowering::expandCONVERT_FROM_ARBITRARY_FP(SDNode *Node,
   Result = DAG.getSelect(dl, IntVT, IsZero, ZeroResult, Result);
   Result = DAG.getSelect(dl, IntVT, IsInf, InfResult, Result);
   Result = DAG.getSelect(dl, IntVT, IsNaN, NaNResult, Result);
+
+  if (!DstVT.bitsEq(IntVT)) {
+    // Store to stack before loading it back.
+    assert(!IntVT.isVector() && IntVT.bitsGT(DstVT));
+    // IntScalarVT is the original type that has the same width as DstVT.
+    Align Alignment = DAG.getReducedAlign(IntScalarVT, /*UseABI=*/false);
+    SDValue StackPtr =
+        DAG.CreateStackTemporary(IntScalarVT.getStoreSize(), Alignment);
+    auto FrameIndex = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
+    MachineFunction &MF = DAG.getMachineFunction();
+    MachinePointerInfo PtrInfo =
+        MachinePointerInfo::getFixedStack(MF, FrameIndex);
+    SDValue Store = DAG.getTruncStore(DAG.getEntryNode(), dl, Result, StackPtr,
+                                      PtrInfo, IntScalarVT, Alignment);
+
+    SDValue Load = DAG.getLoad(DstVT, dl, Store, StackPtr, PtrInfo, Alignment);
+    return DAG.getMergeValues({Load, Load.getValue(1)}, dl);
+  }
 
   return DAG.getNode(ISD::BITCAST, dl, DstVT, Result);
 }
@@ -10991,19 +11037,33 @@ SDValue TargetLowering::expandCTTZ(SDNode *Node, SelectionDAG &DAG) const {
     if (SDValue V = CTTZTableLookup(Node, DAG, dl, VT, Op, NumBitsPerElt))
       return V;
 
-  // for now, we use: { return popcount(~x & (x - 1)); }
-  // unless the target has ctlz but not ctpop, in which case we use:
+  bool UseCTLZ =
+      isOperationLegal(ISD::CTLZ, VT) && !isOperationLegal(ISD::CTPOP, VT);
+
+  // When only ctlz is available and the operand is nonzero we can use:
+  // { return nlz(x & -x) ^ 31; }
+  // which is more efficient than:
+  // { return 32 - nlz(~x & (x - 1)); }.
+  if (UseCTLZ && Node->getOpcode() == ISD::CTTZ_ZERO_POISON) {
+    SDValue LowestBit =
+        DAG.getNode(ISD::AND, dl, VT, Op, DAG.getNegative(Op, dl, VT));
+    return DAG.getNode(ISD::XOR, dl, VT,
+                       DAG.getNode(ISD::CTLZ_ZERO_POISON, dl, VT, LowestBit),
+                       DAG.getConstant(NumBitsPerElt - 1, dl, VT));
+  }
+
+  // If ctpop is available, we use:
+  // { return popcount(~x & (x-1)); }
+  // If the target has ctlz but not ctpop, we use:
   // { return 32 - nlz(~x & (x-1)); }
   // Ref: "Hacker's Delight" by Henry Warren
   SDValue Tmp = DAG.getNode(
       ISD::AND, dl, VT, DAG.getNOT(dl, Op, VT),
       DAG.getNode(ISD::SUB, dl, VT, Op, DAG.getConstant(1, dl, VT)));
 
-  // If ISD::CTLZ is legal and CTPOP isn't, then do that instead.
-  if (isOperationLegal(ISD::CTLZ, VT) && !isOperationLegal(ISD::CTPOP, VT)) {
+  if (UseCTLZ)
     return DAG.getNode(ISD::SUB, dl, VT, DAG.getConstant(NumBitsPerElt, dl, VT),
                        DAG.getNode(ISD::CTLZ, dl, VT, Tmp));
-  }
 
   return DAG.getNode(ISD::CTPOP, dl, VT, Tmp);
 }
@@ -13670,6 +13730,50 @@ SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
   case ISD::PARTIAL_REDUCE_FMLA:
     ExtOpcLHS = ExtOpcRHS = ISD::FP_EXTEND;
     break;
+  }
+
+  // A wide partial reduction is built from a ladder of narrower ones, a rung
+  // at a time, each halving the element count and doubling the width.
+  unsigned Opc = N->getOpcode();
+  ElementCount MulEC = MulOpVT.getVectorElementCount();
+  ElementCount AccEC = AccVT.getVectorElementCount();
+  unsigned CountRatio =
+      MulEC.hasKnownScalarFactor(AccEC) ? MulEC.getKnownScalarFactor(AccEC) : 0;
+  unsigned WidthRatio =
+      AccVT.getScalarSizeInBits() / MulOpVT.getScalarSizeInBits();
+  if (Opc != ISD::PARTIAL_REDUCE_FMLA && CountRatio > 2 && WidthRatio >= 2) {
+    LLVMContext &Ctx = *DAG.getContext();
+    EVT ProdVT = MulOpVT.widenIntegerVectorElementType(Ctx);
+
+    // A pure reduction peels one rung and re-enters.
+    if (llvm::isOneOrOneSplat(MulRHS)) {
+      EVT RungVT = ProdVT.getHalfNumVectorElementsVT(Ctx);
+      return DAG.getNode(Opc, DL, AccVT, Acc,
+                         DAG.getNode(Opc, DL, RungVT,
+                                     DAG.getConstant(0, DL, RungVT), MulLHS,
+                                     MulRHS),
+                         DAG.getConstant(1, DL, RungVT));
+    }
+
+    // A multiply widens the products by one rung, which legalizes back into a
+    // widening multiply per half, and the ladder re-enters as a plain sum.
+    SDValue Prod = DAG.getNode(ISD::MUL, DL, ProdVT,
+                               DAG.getNode(ExtOpcLHS, DL, ProdVT, MulLHS),
+                               DAG.getNode(ExtOpcRHS, DL, ProdVT, MulRHS));
+    auto [Lo, Hi] = DAG.SplitVector(Prod, DL);
+    SDValue One = DAG.getConstant(1, DL, Lo.getValueType());
+
+    // The halves meet at the narrowest rung, so the accumulator is added once.
+    EVT MidVT = Lo.getValueType()
+                    .widenIntegerVectorElementType(Ctx)
+                    .getHalfNumVectorElementsVT(Ctx);
+    if (ElementCount::isKnownLE(MidVT.getVectorElementCount(), AccEC))
+      return DAG.getNode(Opc, DL, AccVT,
+                         DAG.getNode(Opc, DL, AccVT, Acc, Lo, One), Hi, One);
+    SDValue Mid =
+        DAG.getNode(Opc, DL, MidVT, DAG.getConstant(0, DL, MidVT), Lo, One);
+    Mid = DAG.getNode(Opc, DL, MidVT, Mid, Hi, One);
+    return DAG.getNode(Opc, DL, AccVT, Acc, Mid, DAG.getConstant(1, DL, MidVT));
   }
 
   if (ExtMulOpVT != MulOpVT) {

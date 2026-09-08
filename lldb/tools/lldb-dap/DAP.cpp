@@ -1323,11 +1323,22 @@ llvm::Error DAP::InitializeDebugger() {
   llvm::Expected<int> out_fd = out.GetWriteFileDescriptor();
   if (!out_fd)
     return out_fd.takeError();
-  debugger.SetOutputFile(lldb::SBFile(*out_fd, "w", false));
-
   llvm::Expected<int> err_fd = err.GetWriteFileDescriptor();
   if (!err_fd)
     return err_fd.takeError();
+
+#if defined(_WIN32) && !defined(_DLL)
+  // When LLVM is built with a different CRT allocator, it's built against the
+  // static C runtime. Since the C runtime is the one managing the file
+  // descriptors, its state is now local to each module. Here, lldb-dap and
+  // liblldb have two different CRT states and thus different sets of file
+  // descriptors. This translates an lldb-dap fd into a liblldb fd by creating a
+  // mapping of fd -> HANDLE inside liblldb.
+  *out_fd = lldb::SBFile::OpenFdFromHandle(_get_osfhandle(*out_fd), 0);
+  *err_fd = lldb::SBFile::OpenFdFromHandle(_get_osfhandle(*err_fd), 0);
+#endif
+
+  debugger.SetOutputFile(lldb::SBFile(*out_fd, "w", false));
   debugger.SetErrorFile(lldb::SBFile(*err_fd, "w", false));
 
   // The sourceInitFile option is not part of the DAP specification. It is an

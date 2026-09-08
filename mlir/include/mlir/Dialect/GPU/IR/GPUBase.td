@@ -95,9 +95,7 @@ class GPU_I32Enum<string name, string description, list<I32EnumAttrCase> cases>
   let cppNamespace = "::mlir::gpu";
 }
 class GPU_I32EnumAttr<string mnemonic, GPU_I32Enum enumInfo> :
-    EnumAttr<GPU_Dialect, enumInfo, mnemonic> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<GPU_Dialect, enumInfo, mnemonic>;
 
 def GPU_AddressSpaceGlobal : I32EnumAttrCase<"Global", 1, "global">;
 def GPU_AddressSpaceWorkgroup : I32EnumAttrCase<"Workgroup", 2, "workgroup">;
@@ -130,9 +128,7 @@ def GPU_BarrierScopeEnum : I32Enum<
 }
 
 def GPU_BarrierScopeAttr :
-    EnumAttr<GPU_Dialect, GPU_BarrierScopeEnum, "barrier_scope"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<GPU_Dialect, GPU_BarrierScopeEnum, "barrier_scope">;
 
 def GPU_Dimension : GPU_I32Enum<"Dimension",
     "a dimension, either 'x', 'y', or 'z'",

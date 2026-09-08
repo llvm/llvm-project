@@ -82,16 +82,16 @@ void SchedulingPoint::dump() const {
 
 void Scheduler::scheduleAndUpdateReadyList(SchedBundle &Bndl) {
   // Find where we should schedule the instructions.
-  assert(ScheduleTopItOpt && "Should have been set by now!");
+  assert(ScheduleFrontierOpt && "Should have been set by now!");
   auto Where = Dir == SchedDirection::BottomUp
-                   ? ScheduleTopItOpt->getIterator()
-                   : ScheduleTopItOpt->getNext().getIterator();
+                   ? ScheduleFrontierOpt->getIterator()
+                   : ScheduleFrontierOpt->getNext().getIterator();
   // Move all instructions in `Bndl` to `Where`.
   Bndl.cluster(Where);
   // Update the last scheduled bundle.
-  ScheduleTopItOpt = Dir == SchedDirection::BottomUp
-                         ? Bndl.getTop()->getInstruction()->getIterator()
-                         : Bndl.getBot()->getInstruction()->getIterator();
+  ScheduleFrontierOpt = Dir == SchedDirection::BottomUp
+                            ? Bndl.getTop()->getInstruction()->getIterator()
+                            : Bndl.getBot()->getInstruction()->getIterator();
   // Set nodes as "scheduled" and decrement the UnscheduledSuccs/Preds counter
   // of all dependency predecessors/successors.
   for (DGNode *N : Bndl) {
@@ -126,12 +126,13 @@ void Scheduler::notifyCreateInstr(Instruction *I) {
     return;
   // If the instruction is inserted below the top-of-schedule then we mark it as
   // "scheduled".
-  bool IsScheduled = ScheduleTopItOpt &&
-                     ScheduleTopItOpt->getIterator() != I->getParent()->end() &&
-                     ((Dir == SchedDirection::BottomUp &&
-                       (*ScheduleTopItOpt.value()).comesBefore(I)) ||
-                      (Dir == SchedDirection::TopDown &&
-                       I->comesBefore(&*ScheduleTopItOpt.value())));
+  bool IsScheduled =
+      ScheduleFrontierOpt &&
+      ScheduleFrontierOpt->getIterator() != I->getParent()->end() &&
+      ((Dir == SchedDirection::BottomUp &&
+        (*ScheduleFrontierOpt.value()).comesBefore(I)) ||
+       (Dir == SchedDirection::TopDown &&
+        I->comesBefore(&*ScheduleFrontierOpt.value())));
   if (IsScheduled)
     N->setScheduled();
   // If the new instruction is above the top of schedule we need to remove its
@@ -295,11 +296,11 @@ void Scheduler::trimSchedule(ArrayRef<Instruction *> Instrs) {
   // Note: this figure assumes bottom-up scheduling. In top-down we have the
   // top-down mirror image.
   Instruction *TopI = Dir == SchedDirection::BottomUp
-                          ? &*ScheduleTopItOpt.value()
+                          ? &*ScheduleFrontierOpt.value()
                           : VecUtils::getHighest(Instrs);
   Instruction *LowestI = Dir == SchedDirection::BottomUp
                              ? VecUtils::getLowest(Instrs)
-                             : &*ScheduleTopItOpt.value();
+                             : &*ScheduleFrontierOpt.value();
   Interval<Instruction> ResetIntvl(TopI, LowestI);
   // The DAG Nodes contain state like the number of UnscheduledSuccs and the
   // Scheduled flag. We need to reset their state. We need to do this for all
@@ -346,6 +347,28 @@ void Scheduler::trimSchedule(ArrayRef<Instruction *> Instrs) {
       ReadyList.insert(N);
   }
 }
+
+#ifndef NDEBUG
+void Scheduler::assertSameDirection(ArrayRef<Instruction *> Instrs) const {
+  // Check that we are not switching scheduling direction.
+  switch (Dir) {
+  case SchedDirection::BottomUp:
+    assert(none_of(Instrs,
+                   [this](Instruction *I) {
+                     return ScheduleFrontierOpt->comesBefore(*I);
+                   }) &&
+           "Wrong scheduling direction!");
+    break;
+  case SchedDirection::TopDown:
+    assert(all_of(Instrs,
+                  [this](Instruction *I) {
+                    return ScheduleFrontierOpt->comesBefore(*I);
+                  }) &&
+           "Wrong scheduling direction!");
+    break;
+  }
+}
+#endif // NDEBUG
 
 bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
   assert(all_of(drop_begin(Instrs),
@@ -394,13 +417,18 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
     // re-schedule.
     DAG.extend(Instrs);
     trimSchedule(Instrs);
-    ScheduleTopItOpt = GetSchedPoint(Dir, Instrs);
+    ScheduleFrontierOpt = GetSchedPoint(Dir, Instrs);
     return tryScheduleUntil(Instrs);
   case BndlSchedState::NoneScheduled: {
     // TODO: Set the window of the DAG that we are interested in.
-    if (!ScheduleTopItOpt)
+    if (!ScheduleFrontierOpt) {
       // We start scheduling at the bottom instr of Instrs (top in TopDown).
-      ScheduleTopItOpt = GetSchedPoint(Dir, Instrs);
+      ScheduleFrontierOpt = GetSchedPoint(Dir, Instrs);
+    } else {
+#ifndef NDEBUG
+      assertSameDirection(Instrs);
+#endif
+    }
     // Extend the DAG to include Instrs.
     Interval<Instruction> Extension = DAG.extend(Instrs);
     // Add nodes from the new interval to ready list if they are ready.
@@ -428,8 +456,8 @@ void Scheduler::dump(raw_ostream &OS) const {
   OS << "Dir=" << schedDirectionToStr(Dir) << " "
      << (Dir == SchedDirection::BottomUp ? "Top" : "Bottom")
      << " of schedule: ";
-  if (ScheduleTopItOpt)
-    OS << **ScheduleTopItOpt;
+  if (ScheduleFrontierOpt)
+    OS << **ScheduleFrontierOpt;
   else
     OS << "Empty";
   OS << "\n";

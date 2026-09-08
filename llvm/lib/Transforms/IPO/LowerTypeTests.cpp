@@ -20,7 +20,6 @@
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -31,6 +30,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -73,6 +73,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -115,10 +116,11 @@ static cl::opt<PassSummaryAction> ClSummaryAction(
                           "Export typeid resolutions to summary and globals")),
     cl::Hidden);
 
-static cl::opt<std::string> ClReadSummary(
-    "lowertypetests-read-summary",
-    cl::desc("Read summary from given YAML file before running pass"),
-    cl::Hidden);
+static cl::opt<std::string>
+    ClReadSummary("lowertypetests-read-summary",
+                  cl::desc("Read summary from given textual assembly or YAML "
+                           "file before running pass"),
+                  cl::Hidden);
 
 static cl::opt<std::string> ClWriteSummary(
     "lowertypetests-write-summary",
@@ -197,32 +199,65 @@ BitSetInfo BitSetBuilder::build() {
 }
 
 void GlobalLayoutBuilder::addFragment(const std::set<uint64_t> &F) {
+  assert(Fragments.front().empty() && "Cannot add fragments after build()");
+
   // Create a new fragment to hold the layout for F.
   Fragments.emplace_back();
   std::vector<uint64_t> &Fragment = Fragments.back();
   uint64_t FragmentIndex = Fragments.size() - 1;
 
+  std::vector<std::vector<uint64_t>> SubFragments;
   for (auto ObjIndex : F) {
     uint64_t OldFragmentIndex = FragmentMap[ObjIndex];
     if (OldFragmentIndex == 0) {
       // We haven't seen this object index before, so just add it to the current
       // fragment.
-      Fragment.push_back(ObjIndex);
-    } else {
+      SubFragments.push_back({ObjIndex});
+    } else if (!Fragments[OldFragmentIndex].empty()) {
       // This index belongs to an existing fragment. Copy the elements of the
       // old fragment into this one and clear the old fragment. We don't update
       // the fragment map just yet, this ensures that any further references to
       // indices from the old fragment in this fragment do not insert any more
       // indices.
-      std::vector<uint64_t> &OldFragment = Fragments[OldFragmentIndex];
-      llvm::append_range(Fragment, OldFragment);
-      OldFragment.clear();
+      SubFragments.push_back(std::move(Fragments[OldFragmentIndex]));
     }
   }
+
+  if (Less) {
+    llvm::stable_sort(SubFragments, [&](const std::vector<uint64_t> &A,
+                                        const std::vector<uint64_t> &B) {
+      return Less(A.back(), B.back());
+    });
+  }
+
+  for (auto &SF : SubFragments)
+    llvm::append_range(Fragment, std::move(SF));
 
   // Update the fragment map to point our object indices to this fragment.
   for (uint64_t ObjIndex : Fragment)
     FragmentMap[ObjIndex] = FragmentIndex;
+}
+
+const std::vector<uint64_t> &GlobalLayoutBuilder::build() {
+  if (Less) {
+    // If multiple root fragments remain (e.g. disjoint signatures with no
+    // generalized type), order them so the one containing the hottest function
+    // is placed last.
+    llvm::erase_if(Fragments,
+                   [](const std::vector<uint64_t> &F) { return F.empty(); });
+    llvm::stable_sort(Fragments, [&](const std::vector<uint64_t> &FA,
+                                     const std::vector<uint64_t> &FB) {
+      return Less(FA.back(), FB.back());
+    });
+  }
+
+  std::vector<uint64_t> Layout;
+  Layout.reserve(FragmentMap.size());
+  for (auto &&F : Fragments)
+    llvm::append_range(Layout, F);
+  Fragments.clear();
+  Fragments.push_back(std::move(Layout));
+  return Fragments.front();
 }
 
 void ByteArrayBuilder::allocate(const std::set<uint64_t> &Bits,
@@ -541,11 +576,10 @@ class LowerTypeTestsModule {
   void createJumpTable(Function *F, ArrayRef<GlobalTypeMember *> Functions,
                        Triple::ArchType JumpTableArch);
 
-  /// replaceCfiUses - Go through the uses list for this definition
-  /// and make each use point to "V" instead of "this" when the use is outside
-  /// the block. 'This's use list is expected to have at least one element.
-  /// Unlike replaceAllUsesWith this function skips blockaddr and direct call
-  /// uses.
+  /// replaceCfiUses - Go through the uses list for this definition and make
+  /// each use point to "New" instead of "Old" when the use is outside the
+  /// block. 'Old's use list is expected to have at least one element.  Unlike
+  /// replaceAllUsesWith this function skips blockaddr and direct call uses.
   void replaceCfiUses(Function *Old, Value *New, bool IsJumpTableCanonical);
 
   /// replaceDirectCalls - Go through the uses list for this definition and
@@ -1091,15 +1125,26 @@ void LowerTypeTestsModule::importFunction(Function *F,
   if (F->isDeclarationForLinker() && isJumpTableCanonical) {
     // Non-dso_local functions may be overriden at run time,
     // don't short curcuit them
-    if (F->isDSOLocal()) {
+    if (!F->isDSOLocal())
+      return;
+    if (F->isDeclaration()) {
+      // Direct calls do not need the type check, so let them skip the jump
+      // table and call the real function directly.
       Function *RealF = Function::Create(F->getFunctionType(),
                                          GlobalValue::ExternalLinkage,
                                          F->getAddressSpace(),
                                          Name + ".cfi", &M);
       RealF->setVisibility(GlobalVariable::HiddenVisibility);
       replaceDirectCalls(F, RealF);
+      return;
     }
-    return;
+    // Otherwise F is an available_externally definition imported from
+    // another module. Handle it like a local definition below: the body is
+    // renamed to Name.cfi and stays the target of direct calls, so it remains
+    // inlinable, while address-taken uses are redirected to the jump table
+    // entry. If the body is not inlined and is dropped later, the reference
+    // to Name.cfi resolves to the real function at link time, exactly as for
+    // a declaration.
   }
 
   Function *FDecl;
@@ -1931,13 +1976,11 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
       Globals.empty() || isa<GlobalVariable>(Globals[0]->getGlobal());
   std::vector<GlobalTypeMember *> OrderedGTMs(Globals.size());
   auto OGTMI = OrderedGTMs.begin();
-  for (auto &&F : GLB.Fragments) {
-    for (auto &&Offset : F) {
-      if (IsGlobalSet != isa<GlobalVariable>(Globals[Offset]->getGlobal()))
-        report_fatal_error("Type identifier may not contain both global "
-                           "variables and functions");
-      *OGTMI++ = Globals[Offset];
-    }
+  for (uint64_t Offset : GLB.build()) {
+    if (IsGlobalSet != isa<GlobalVariable>(Globals[Offset]->getGlobal()))
+      report_fatal_error("Type identifier may not contain both global "
+                         "variables and functions");
+    *OGTMI++ = Globals[Offset];
   }
 
   // Build the bitsets from this disjoint set.
@@ -1985,7 +2028,7 @@ LowerTypeTestsModule::LowerTypeTestsModule(
 }
 
 bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
-  ModuleSummaryIndex Summary(/*HaveGVs=*/false);
+  std::unique_ptr<ModuleSummaryIndex> Summary;
 
   // Handle the command-line summary arguments. This code is for testing
   // purposes only, so we handle errors directly.
@@ -1994,17 +2037,33 @@ bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
                           ": ");
     auto ReadSummaryFile = ExitOnErr(errorOrToExpected(
         MemoryBuffer::getFile(ClReadSummary, /*IsText=*/true)));
-
-    yaml::Input In(ReadSummaryFile->getBuffer());
-    In >> Summary;
-    ExitOnErr(errorCodeToError(In.error()));
+    // TODO: Convert the rest of tests (some YAML features are missing from
+    // textual summary assembly) and remove YAML from this file.
+    if (ReadSummaryFile->getBuffer().starts_with("---")) {
+      Summary = std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
+      yaml::Input In(ReadSummaryFile->getBuffer());
+      In >> *Summary;
+      ExitOnErr(errorCodeToError(In.error()));
+    } else {
+      SMDiagnostic Err;
+      Summary =
+          parseSummaryIndexAssembly(ReadSummaryFile->getMemBufferRef(), Err);
+      if (!Summary) {
+        Err.print(ClReadSummary.c_str(), errs());
+        report_fatal_error("Failed to parse summary index assembly");
+      }
+    }
+  } else {
+    Summary = std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
   }
 
   bool Changed =
       LowerTypeTestsModule(
           M, AM,
-          ClSummaryAction == PassSummaryAction::Export ? &Summary : nullptr,
-          ClSummaryAction == PassSummaryAction::Import ? &Summary : nullptr)
+          ClSummaryAction == PassSummaryAction::Export ? Summary.get()
+                                                       : nullptr,
+          ClSummaryAction == PassSummaryAction::Import ? Summary.get()
+                                                       : nullptr)
           .lower();
 
   if (!ClWriteSummary.empty()) {
@@ -2015,7 +2074,7 @@ bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
     ExitOnErr(errorCodeToError(EC));
 
     yaml::Output Out(OS);
-    Out << Summary;
+    Out << *Summary;
   }
 
   return Changed;
@@ -2035,7 +2094,7 @@ void LowerTypeTestsModule::replaceCfiUses(Function *Old, Value *New,
     if (isa<NoCFIValue>(U.getUser()))
       continue;
 
-    // Skip direct calls to externally defined or non-dso_local functions.
+    // Skip direct calls to externally defined or dso_local functions.
     if (isDirectCall(U) && (Old->isDSOLocal() || !IsJumpTableCanonical))
       continue;
 
@@ -2141,38 +2200,6 @@ bool LowerTypeTestsModule::lower() {
       report_fatal_error(
           "unexpected call to llvm.icall.branch.funnel during import phase");
 
-    // For internal linkage cfiFunction defs/decls, we only needed the alias
-    // through the linker. We can replace those aliases with the aliased
-    // function here.
-    SmallVector<std::pair<Function *, std::string>> PromotedFuncs;
-    for (auto &A : llvm::make_early_inc_range(M.aliases())) {
-      if (A.hasLocalLinkage())
-        continue;
-      if (ImportSummary->cfiFunctionDefs().contains(A.getName()) ||
-          ImportSummary->cfiFunctionDecls().contains(A.getName())) {
-        if (auto *F = dyn_cast_or_null<Function>(A.getAliaseeObject())) {
-          if (F->hasExternalLinkage()) {
-            // The original internal linkage function was independently promoted
-            // by thinlink. While, pre-link, all static references to it
-            // (implicitly, module-internal) were replaced with references to
-            // the alias, thinlink might decide to promote it because (for
-            // example) it turns out to be a hot indirect call target in a
-            // different module.
-            // In that case, we need to remember its thinlink-promoted name
-            // because it's potentially referenced elsewhere, and make sure
-            // there's an alias to it.
-            PromotedFuncs.emplace_back(F, F->getName());
-          } else {
-            F->setLinkage(GlobalValue::ExternalLinkage);
-            F->setVisibility(GlobalValue::HiddenVisibility);
-          }
-          A.replaceAllUsesWith(F);
-          F->takeName(&A);
-          A.eraseFromParent();
-        }
-      }
-    }
-
     SmallVector<Function *, 8> Defs;
     SmallVector<Function *, 8> Decls;
     for (auto &F : M) {
@@ -2193,9 +2220,6 @@ bool LowerTypeTestsModule::lower() {
       for (auto *F : Decls)
         importFunction(F, /*isJumpTableCanonical*/ false);
     }
-    // Add an alias with the thinlink promotion name.
-    for (auto &[F, Name] : PromotedFuncs)
-      GlobalAlias::create(GlobalValue::LinkageTypes::ExternalLinkage, Name, F);
 
     return true;
   }

@@ -221,8 +221,15 @@ if(compiler_rt_path)
   foreach(target ${builtin_targets})
     check_apple_target(${target} builtin)
 
+    # builtins-spirv64* targets will invoke llvm-link to combine all
+    # bitcode from static archive library into libclang_rt.builtins.bc.
+    # Need to add dependency on llvm-link for it.
+    set(builtin_deps clang-resource-headers)
+    if(target MATCHES "^spirv64" AND TARGET llvm-link)
+      list(APPEND builtin_deps llvm-link)
+    endif()
     builtin_register_target(${compiler_rt_path} ${target}
-      DEPENDS clang-resource-headers
+      DEPENDS ${builtin_deps}
       CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${target}
       EXTRA_ARGS TARGET_TRIPLE ${target})
 
@@ -302,7 +309,6 @@ function(runtime_default_target)
     # OpenMP tests. install-libomp-mod is a separate distribution component
     # so that install-openmp does not require building flang.
     list(APPEND extra_targets "libomp-mod")
-    list(APPEND extra_targets "libomp-mod-barrier")
     list(APPEND extra_targets "install-libomp-mod")
     list(APPEND extra_targets "install-libomp-mod-stripped")
 
@@ -873,7 +879,6 @@ ${_flag_values}\
     endif ()
     if (TARGET libomp-mod)
       add_dependencies(flang-rt-test-deps libomp-mod)
-      add_dependencies(flang-rt-test-deps libomp-mod-barrier)
     endif ()
   endif ()
 endif()

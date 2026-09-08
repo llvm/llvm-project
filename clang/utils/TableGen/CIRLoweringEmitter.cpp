@@ -62,6 +62,19 @@ std::string GetOpCppClassName(const Record *OpRecord) {
   return CppClassName.str();
 }
 
+// Returns the namespace-qualified C++ class name of an attribute. Unlike
+// operations, attributes carry the authoritative name in cppClassName, so the
+// def name is free to differ from it.
+std::string GetAttrCppClassRef(const Record *AttrRecord) {
+  StringRef Ns =
+      AttrRecord->getValueAsDef("dialect")->getValueAsString("cppNamespace");
+  Ns.consume_front("::");
+  std::string CppClassRef = Ns.str();
+  CppClassRef += "::";
+  CppClassRef += AttrRecord->getValueAsString("cppClassName");
+  return CppClassRef;
+}
+
 std::string GetOpABILoweringPatternName(llvm::StringRef OpName) {
   std::string Name = "CIR";
   Name += OpName;
@@ -286,19 +299,13 @@ void Generate(const Record *OpRecord) {
 }
 
 void GenerateCIREnumAttrs(const Record *Record) {
-  std::string OpName = GetOpCppClassName(Record);
   // EnumAttr is in a separate hierarchy, so we have to set these separately, as
   // they never have an 'illegal' CXXABI type in them.
-  CXXABILoweringAttrAlwaysLegal.push_back("cir::" + OpName);
+  CXXABILoweringAttrAlwaysLegal.push_back(GetAttrCppClassRef(Record));
 }
 
 void GenerateAttrToValueVisitor(const Record *Rec) {
-  const Record *DialectRec = Rec->getValueAsDef("dialect");
-  llvm::StringRef Ns = DialectRec->getValueAsString("cppNamespace");
-  Ns.consume_front("::");
-  std::string CppClassRef = Ns.str();
-  CppClassRef += "::";
-  CppClassRef += Rec->getValueAsString("cppClassName");
+  std::string CppClassRef = GetAttrCppClassRef(Rec);
 
   std::string CodeBuffer;
   llvm::raw_string_ostream Code(CodeBuffer);
@@ -327,9 +334,8 @@ void GenerateAttrToValueVisitFunc() {
 }
 
 void GenerateCIRAttrs(const Record *Record) {
-  std::string OpName = GetOpCppClassName(Record);
   if (!Record->getValueAsBit("canHaveIllegalCXXABIType"))
-    CXXABILoweringAttrAlwaysLegal.push_back("cir::" + OpName);
+    CXXABILoweringAttrAlwaysLegal.push_back(GetAttrCppClassRef(Record));
   if (Record->getValueAsBit("hasAttrToValueLowering"))
     GenerateAttrToValueVisitor(Record);
 }

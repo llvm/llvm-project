@@ -16,6 +16,8 @@
 
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 
+#include "IR/ROCDLOps.h"
+
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
@@ -51,10 +53,7 @@ struct ROCDLInlinerInterface final : DialectInlinerInterface {
 
 // TODO: This should be the llvm.rocdl dialect once this is supported.
 void ROCDLDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/LLVMIR/ROCDLOps.cpp.inc"
-      >();
+  registerROCDLDialectOperations(this);
 
   addAttributes<
 #define GET_ATTRDEF_LIST
@@ -125,7 +124,7 @@ static ParseResult parseCachePolicyEnum(OpAsmParser &parser,
   return success();
 }
 
-static ParseResult parseCachePolicy(OpAsmParser &parser,
+ParseResult ROCDL::parseCachePolicy(OpAsmParser &parser,
                                     Attribute &cachePolicy) {
   uint32_t rawValue;
   OptionalParseResult rawValueParseResult =
@@ -166,7 +165,7 @@ static void printCachePolicyEnum(OpAsmPrinter &printer, EnumAttrT cachePolicy,
   printer << family << "<" << cachePolicy.getValue() << ">";
 }
 
-static void printCachePolicy(OpAsmPrinter &printer, Operation *,
+void ROCDL::printCachePolicy(OpAsmPrinter &printer, Operation *,
                              Attribute cachePolicy) {
   llvm::TypeSwitch<Attribute>(cachePolicy)
       .Case<IntegerAttr>([&](IntegerAttr rawPolicy) {
@@ -219,9 +218,6 @@ ROCDLTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   }
   return success();
 }
-
-#define GET_OP_CLASSES
-#include "mlir/Dialect/LLVMIR/ROCDLOps.cpp.inc"
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/ROCDLOpsAttributes.cpp.inc"

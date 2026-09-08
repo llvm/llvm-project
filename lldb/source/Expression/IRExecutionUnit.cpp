@@ -670,7 +670,8 @@ public:
 
       // First try the symbol.
       if (candidate_sc.symbol) {
-        load_address = candidate_sc.symbol->ResolveCallableAddress(m_target);
+        load_address = candidate_sc.symbol->ResolveCallableAddress(
+            m_target, candidate_sc.module_sp);
         if (load_address == LLDB_INVALID_ADDRESS) {
           Address addr = candidate_sc.symbol->GetAddress();
           load_address = m_target.GetProcessSP()

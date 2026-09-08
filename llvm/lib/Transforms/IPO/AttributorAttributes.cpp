@@ -9247,19 +9247,6 @@ struct AAValueConstantRangeImpl : AAValueConstantRange {
     return true;
   }
 
-  /// See AAValueConstantRange::getKnownConstantRange(..).
-  ConstantRange
-  getKnownConstantRange(Attributor &A,
-                        const Instruction *CtxI = nullptr) const override {
-    if (!isValidCtxInstructionForOutsideAnalysis(A, CtxI,
-                                                 /* AllowAACtxI */ false))
-      return getKnown();
-
-    ConstantRange LVIR = getConstantRangeFromLVI(A, CtxI);
-    ConstantRange SCEVR = getConstantRangeFromSCEV(A, CtxI);
-    return getKnown().intersectWith(SCEVR).intersectWith(LVIR);
-  }
-
   /// See AAValueConstantRange::getAssumedConstantRange(..).
   ConstantRange
   getAssumedConstantRange(Attributor &A,

@@ -15,7 +15,6 @@ add_clang_library(MLIRCIRInterfaces
   MLIRCIROpInterfacesIncGen
 
   LINK_LIBS
-  ${dialect_libs}
   MLIRIR
   MLIRSupport
  )

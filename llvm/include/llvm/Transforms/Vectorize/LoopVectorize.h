@@ -153,7 +153,8 @@ public:
   OptimizationRemarkEmitter *ORE;
   ProfileSummaryInfo *PSI;
   AAResults *AA;
-  FunctionAnalysisManager *FAM = nullptr;
+
+  bool CFGChanged = false;
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   LLVM_ABI void

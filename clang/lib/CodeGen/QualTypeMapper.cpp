@@ -397,19 +397,15 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
   }
 
   for (const auto &Base : RD->bases()) {
+    if (Base.isVirtual())
+      continue;
+
     const RecordType *BaseRT = Base.getType()->castAs<RecordType>();
-    const CXXRecordDecl *BaseDecl = BaseRT->getAsCXXRecordDecl();
     const llvm::abi::Type *BaseType = convertType(Base.getType());
-    // Virtual and non-virtual base offsets live in separate maps in the AST
-    // record layout.
     uint64_t BaseOffset =
-        (Base.isVirtual() ? Layout.getVBaseClassOffset(BaseDecl)
-                          : Layout.getBaseClassOffset(BaseDecl))
-            .getQuantity() *
+        Layout.getBaseClassOffset(BaseRT->getAsCXXRecordDecl()).getQuantity() *
         8;
-    BaseClasses.emplace_back(BaseType, BaseOffset, /*IsBitField=*/false,
-                             /*BitFieldWidth=*/0, /*IsUnnamedBitField=*/false,
-                             /*IsVirtualBase=*/Base.isVirtual());
+    BaseClasses.emplace_back(BaseType, BaseOffset);
   }
 
   for (const auto &VBase : RD->vbases()) {
@@ -419,12 +415,7 @@ QualTypeMapper::convertCXXRecordType(const CXXRecordDecl *RD) {
         Layout.getVBaseClassOffset(VBaseRT->getAsCXXRecordDecl())
             .getQuantity() *
         8;
-
-    VirtualBaseClasses.emplace_back(VBaseType, VBaseOffset,
-                                    /*IsBitField=*/false,
-                                    /*BitFieldWidth=*/0,
-                                    /*IsUnnamedBitField=*/false,
-                                    /*IsVirtualBase=*/true);
+    VirtualBaseClasses.emplace_back(VBaseType, VBaseOffset);
   }
 
   computeFieldInfo(RD, Fields, Layout);
@@ -575,8 +566,9 @@ void QualTypeMapper::computeFieldInfo(
       IsUnnamedBitField = FD->isUnnamedBitField();
     }
 
+    bool HasNoUniqueAddress = FD->hasAttr<NoUniqueAddressAttr>();
     Fields.emplace_back(FieldType, OffsetInBits, IsBitField, BitFieldWidth,
-                        IsUnnamedBitField);
+                        IsUnnamedBitField, HasNoUniqueAddress);
     ++FieldIndex;
   }
 }

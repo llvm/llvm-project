@@ -5330,12 +5330,12 @@ unsigned RISCV::getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW) {
   return Scaled;
 }
 
-static std::optional<int64_t> getEffectiveImm(const MachineOperand &MO) {
+static std::optional<int64_t> getEffectiveImm(const MachineRegisterInfo &MRI,
+                                              const MachineOperand &MO) {
   assert(MO.isImm() || MO.getReg().isVirtual());
   if (MO.isImm())
     return MO.getImm();
-  const MachineInstr *Def =
-      MO.getParent()->getMF()->getRegInfo().getVRegDef(MO.getReg());
+  const MachineInstr *Def = MRI.getVRegDef(MO.getReg());
   int64_t Imm;
   if (isLoadImm(Def, Imm))
     return Imm;
@@ -5343,9 +5343,9 @@ static std::optional<int64_t> getEffectiveImm(const MachineOperand &MO) {
 }
 
 /// Given two VL operands, do we know that LHS <= RHS? Must be used in SSA form.
-bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
-  assert((LHS.isImm() || LHS.getParent()->getMF()->getRegInfo().isSSA()) &&
-         (RHS.isImm() || RHS.getParent()->getMF()->getRegInfo().isSSA()));
+bool RISCV::isVLKnownLE(const MachineRegisterInfo &MRI,
+                        const MachineOperand &LHS, const MachineOperand &RHS) {
+  assert((LHS.isImm() || MRI.isSSA()) && (RHS.isImm() || MRI.isSSA()));
   if (LHS.isReg() && RHS.isReg() && LHS.getReg().isVirtual() &&
       LHS.getReg() == RHS.getReg())
     return true;
@@ -5355,8 +5355,8 @@ bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
     return true;
   if (LHS.isImm() && LHS.getImm() == RISCV::VLMaxSentinel)
     return false;
-  std::optional<int64_t> LHSImm = getEffectiveImm(LHS),
-                         RHSImm = getEffectiveImm(RHS);
+  std::optional<int64_t> LHSImm = getEffectiveImm(MRI, LHS),
+                         RHSImm = getEffectiveImm(MRI, RHS);
   if (!LHSImm || !RHSImm)
     return false;
   return LHSImm <= RHSImm;

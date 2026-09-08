@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/Session.h"
-#include "orc-rt-c/Logging.h"
-#include "orc-rt-c/Session.h"
+#include "orc-rt-c/bedrock/Session.h"
+#include "orc-rt-c/support/Logging.h"
 
 namespace orc_rt {
 

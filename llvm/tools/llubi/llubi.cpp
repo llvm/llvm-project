@@ -56,9 +56,9 @@ cl::OptionCategory InterpreterCategory("Interpreter Options");
 static cl::opt<unsigned> MaxMem(
     "max-mem",
     cl::desc("Max amount of memory (in bytes) that can be allocated by the"
-             " program, including stack, heap, and global variables."
-             " Set to 0 to disable the limit."),
-    cl::value_desc("N"), cl::init(0), cl::cat(InterpreterCategory));
+             " program, including stack, heap, and global variables."),
+    cl::value_desc("N"), cl::init(std::numeric_limits<unsigned>::max()),
+    cl::cat(InterpreterCategory));
 
 static cl::opt<unsigned>
     MaxSteps("max-steps",

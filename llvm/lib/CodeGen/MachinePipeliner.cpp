@@ -1288,6 +1288,9 @@ void SwingSchedulerDAG::updatePhiDependences() {
       if (!MO.isReg())
         continue;
       Register Reg = MO.getReg();
+      if (!Reg.isVirtual())
+        continue;
+
       if (MO.isDef()) {
         // If the register is used by a Phi, then create an anti dependence.
         for (MachineRegisterInfo::use_instr_iterator
@@ -2932,13 +2935,14 @@ static Register findUniqueOperandDefinedInLoop(const MachineInstr &MI) {
 
 /// When Op is a value that is incremented recursively in a loop and there is a
 /// unique instruction that increments it, returns true and sets Value.
-static bool findLoopIncrementValue(const MachineOperand &Op, int &Value) {
+static bool findLoopIncrementValue(const MachineInstr &MI,
+                                   const MachineOperand &Op, int &Value) {
   if (!Op.isReg() || !Op.getReg().isVirtual())
     return false;
 
   Register OrgReg = Op.getReg();
   Register CurReg = OrgReg;
-  const MachineBasicBlock *LoopBB = Op.getParent()->getParent();
+  const MachineBasicBlock *LoopBB = MI.getParent();
   const MachineRegisterInfo &MRI = LoopBB->getParent()->getRegInfo();
 
   const TargetInstrInfo *TII =
@@ -3026,7 +3030,7 @@ bool SwingSchedulerDAG::computeDelta(const MachineInstr &MI, int &Delta) const {
   if (!BaseOp->isReg())
     return false;
 
-  return findLoopIncrementValue(*BaseOp, Delta);
+  return findLoopIncrementValue(MI, *BaseOp, Delta);
 }
 
 /// Check if we can change the instruction to use an offset value from the

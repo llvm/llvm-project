@@ -810,6 +810,26 @@ let Class = PropertyTypeCase<TemplateName, "DeducedTemplate"> in {
     return ctx.getDeducedTemplateName(underlying, {startPos, defaultArgs});
   }]>;
 }
+let Class = PropertyTypeCase<TemplateName, "PackIndexingTemplate"> in {
+  def : ReadHelper<[{
+    auto PI = node.getAsPackIndexingTemplate();
+  }]>;
+  def : Property<"pattern", TemplateName> {
+    let Read = [{ PI->getPattern() }];
+  }
+  def : Property<"indexExpression", ExprRef> {
+    let Read = [{ PI->getIndexExpr() }];
+  }
+  def : Property<"isFullySubstituted", Bool> {
+    let Read = [{ PI->isFullySubstituted() }];
+  }
+  def : Property<"expansions", Array<TemplateName>> {
+    let Read = [{ PI->getExpansions() }];
+  }
+  def : Creator<[{
+    return ctx.getPackIndexingTemplateName(pattern, indexExpression, isFullySubstituted, expansions);
+  }]>;
+}
 
 // Type cases for TemplateArgument.
 def : PropertyTypeKind<TemplateArgument, TemplateArgumentKind,

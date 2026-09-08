@@ -2273,6 +2273,15 @@ define void @f() "no-sse" { ... }
     around the cases where the training input does not have good coverage
     on all the hot functions.
 
+`hybrid_patchable`
+:   This attribute applies to code compiled for ARM64EC (target triple
+    'arm64ec-*') targets and indicates that the function may be patched at
+    runtime. In addition to the function's actual implementation, an x86-64
+    function thunk is generated. Code referencing the function will use this
+    thunk as its address, and calls to the function perform an additional
+    runtime check to execute the call through the emulator if the thunk has
+    been patched.
+
 `inlinehint`
 :   This attribute indicates that the source code contained a hint that
     inlining this function is desirable (such as the "inline" keyword in
@@ -13273,7 +13282,8 @@ If `value` is of the {ref}`byte type <t_byte>`:
 ##### Syntax:
 
 ```
-<result> = addrspacecast <pty> <ptrval> to <pty2>       ; yields pty2
+<result> = addrspacecast <pty> <ptrval> to <pty2>          ; yields pty2
+<result> = addrspacecast nonnull <pty> <ptrval> to <pty2>  ; yields pty2
 ```
 
 ##### Overview:
@@ -13309,6 +13319,10 @@ should yield the original bit pattern).
 
 Which address space casts are supported depends on the target. Unsupported
 address space casts return {ref}`poison <poisonvalues>`.
+
+The optional `nonnull` flag asserts that `ptrval` is not the null value of
+its source address space; if it is, the result is
+{ref}`poison <poisonvalues>`.
 
 ##### Example:
 

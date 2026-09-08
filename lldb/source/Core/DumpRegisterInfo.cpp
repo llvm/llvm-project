@@ -8,6 +8,7 @@
 
 #include "lldb/Core/DumpRegisterInfo.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Utility/RegisterType.h"
 #include "lldb/Utility/RegisterTypeFlags.h"
 #include "lldb/Utility/Stream.h"
 
@@ -120,5 +121,8 @@ void lldb_private::DoDumpRegisterInfo(
     std::string enumerators = flags_type->DumpEnums(terminal_width);
     if (enumerators.size())
       strm << "\n\n" << enumerators;
+  } else if (auto *vector_type =
+                 llvm::dyn_cast_if_present<RegisterTypeVector>(register_type)) {
+    strm.Printf("\n\n  Vector elements: %u", vector_type->GetCount());
   }
 }

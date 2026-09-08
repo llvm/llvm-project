@@ -836,6 +836,25 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     }
   }
 
+  // An INTENT(IN) dummy argument must not be defined during the invocation
+  // and execution of its procedure (F'2023 8.5.10 p2), but a dummy argument
+  // with no INTENT attribute may be defined by its procedure.  Passing the
+  // former to the latter is thus a latent violation of INTENT(IN), and the
+  // optimizer is entitled to assume that it doesn't happen.
+  if (dummy.intent == common::Intent::Default && !dummyIsValue && !intrinsic &&
+      !procedure.IsPure() && actualFirstSymbol) {
+    const Symbol &actualRoot{GetAssociationRoot(*actualFirstSymbol)};
+    if (IsIntentIn(actualRoot) && !IsValue(actualRoot)) {
+      if (auto *msg{foldingContext.Warn(
+              common::UsageWarning::IntentInActualForDefaultIntent,
+              "INTENT(IN) dummy argument '%s' is associated with %s, which has no INTENT attribute and could be defined"_warn_en_US,
+              actualRoot.name(), dummyName)}) {
+        msg->Attach(
+            actualRoot.name(), "Declaration of '%s'"_en_US, actualRoot.name());
+      }
+    }
+  }
+
   bool dummyIsContiguous{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Contiguous)};
   bool actualIsContiguous{IsSimplyContiguous(actual, foldingContext)};

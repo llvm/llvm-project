@@ -585,7 +585,8 @@ private:
       {".plt"}, {".plt.got"}, {".iplt"}, {nullptr}};
 
   /// RISCV PLT sections.
-  const PLTSectionInfo RISCV_PLTSections[2] = {{".plt"}, {nullptr}};
+  const PLTSectionInfo RISCV_PLTSections[3] = {
+      {".plt", 16}, {".iplt", 16}, {nullptr}};
 
   /// Return PLT information for a section with \p SectionName or nullptr
   /// if the section is not PLT.

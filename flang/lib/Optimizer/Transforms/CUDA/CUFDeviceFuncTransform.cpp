@@ -162,6 +162,11 @@ class CUFDeviceFuncTransform
   static void createHostStub(mlir::func::FuncOp funcOp,
                              mlir::SymbolTable &symTab, mlir::ModuleOp mod) {
     mlir::Location loc = funcOp.getLoc();
+    // Host stub's line table needs to span the procedure body.
+    mlir::Location endLoc = loc;
+    if (!funcOp.getBody().empty())
+      if (mlir::Operation *terminator = funcOp.getBody().back().getTerminator())
+        endLoc = terminator->getLoc();
     mlir::OpBuilder modBuilder(mod.getBodyRegion());
     modBuilder.setInsertionPointToEnd(mod.getBody());
     auto emptyStub = func::FuncOp::create(modBuilder, loc, funcOp.getName(),
@@ -170,7 +175,9 @@ class CUFDeviceFuncTransform
     emptyStub->setAttrs(funcOp->getAttrs());
     auto entryBlock = emptyStub.addEntryBlock();
     modBuilder.setInsertionPointToEnd(entryBlock);
-    func::ReturnOp::create(modBuilder, loc);
+    // Add a return operation at the end of the stub with the location of the
+    // original procedure's terminator.
+    func::ReturnOp::create(modBuilder, endLoc);
 
     symTab.erase(funcOp);
     symTab.insert(emptyStub);

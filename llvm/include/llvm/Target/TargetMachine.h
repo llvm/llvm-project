@@ -475,8 +475,6 @@ public:
   static constexpr unsigned DefaultSjLjDataSize = 32;
   virtual unsigned getSjLjDataSize() const { return DefaultSjLjDataSize; }
 
-  static std::pair<int, int> parseBinutilsVersion(StringRef Version);
-
   /// getAddressSpaceForPseudoSourceKind - Given the kind of memory
   /// (e.g. stack) the target returns the corresponding address space.
   virtual unsigned getAddressSpaceForPseudoSourceKind(unsigned Kind) const {

@@ -1486,10 +1486,13 @@ void StmtProfiler::VisitIntegerLiteral(const IntegerLiteral *S) {
   if (Canonical)
     T = T.getCanonicalType();
   ID.AddInteger(T->getTypeClass());
-  if (auto BitIntT = T->getAs<BitIntType>())
-    BitIntT->Profile(ID);
-  else
+  if (auto BitIntT = T->getAs<BitIntType>()) {
+    auto [IsUnsigned, NumBits] = BitIntT->getKey();
+    ID.AddInteger(IsUnsigned);
+    ID.AddInteger(NumBits);
+  } else {
     ID.AddInteger(T->castAs<BuiltinType>()->getKind());
+  }
 }
 
 void StmtProfiler::VisitFixedPointLiteral(const FixedPointLiteral *S) {
@@ -2243,7 +2246,11 @@ StmtProfiler::VisitLambdaExpr(const LambdaExpr *S) {
     else if (auto *FD = dyn_cast<FunctionDecl>(SubDecl))
       Call = FD;
 
-    if (!Call)
+    // Ignore implicit conversion functions and __invoke. They are not
+    // part of the lambda signature.
+    // Semantically, it is better to use `getLambdaCallOperator` but that may
+    // not be properly deserialized yet.
+    if (!Call || Call->getOverloadedOperator() != OO_Call)
       continue;
 
     Hasher.AddFunctionDecl(Call, /*SkipBody=*/true);

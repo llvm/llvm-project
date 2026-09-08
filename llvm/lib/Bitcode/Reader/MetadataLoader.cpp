@@ -15,7 +15,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -53,7 +52,6 @@
 #include <deque>
 #include <iterator>
 #include <limits>
-#include <map>
 #include <optional>
 #include <string>
 #include <tuple>
@@ -243,8 +241,8 @@ void BitcodeReaderMetadataList::tryToResolveCycles() {
     return;
 
   // Give up on finding a full definition for any forward decls that remain.
-  for (const auto &Ref : OldTypeRefs.FwdDecls)
-    OldTypeRefs.Final.insert(Ref);
+  for (const auto &[UUID, CT] : OldTypeRefs.FwdDecls)
+    OldTypeRefs.Final.try_emplace(UUID, CT);
   OldTypeRefs.FwdDecls.clear();
 
   // Upgrade from old type ref arrays.  In strange cases, this could add to

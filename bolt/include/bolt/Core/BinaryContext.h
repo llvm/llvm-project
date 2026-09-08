@@ -343,8 +343,15 @@ public:
   /// unit. Callers must, however, keep a given DWOId to a single thread at a
   /// time -- during parallel rewriting each DWOId belongs to exactly one
   /// bucket -- because opening and releasing both mutate the skeleton unit's
-  /// DWO pointer.
+  /// DWO pointer. With a package, where all split CUs share one context, use
+  /// openSharedDWOContext() before handing those CUs to worker threads.
   std::optional<DWARFUnit *> getDWOCU(uint64_t DWOId);
+
+  /// Open every split CU of a .dwp package up front, from a single thread.
+  ///
+  /// With a package all split CUs share one DWARFContext, and the caches it
+  /// fills in on demand are not all thread-safe. No-op for non-dwp inputs.
+  void openSharedDWOContext();
 
   /// Release the DWO context previously opened for \p DWOId (if any), freeing
   /// its DWARFContext and parsed unit vector. Same threading contract as

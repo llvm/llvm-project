@@ -252,7 +252,7 @@ DeviceContext::loadBinary(llvm::StringRef Directory,
 
   ol_program_handle_t ProgramHandle = nullptr;
   const ol_result_t OlResult =
-      olCreateProgram(DeviceHandle, BinaryData->getBufferStart(),
+      olCreateProgram(Context, DeviceHandle, BinaryData->getBufferStart(),
                       BinaryData->getBufferSize(), &ProgramHandle);
 
   if (OlResult != OL_SUCCESS) {

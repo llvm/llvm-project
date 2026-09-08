@@ -172,6 +172,8 @@ RegisterTypeBuilderClang::GetRegisterType(const RegisterInfo &reg_info) {
     return BuildEnumType(
         llvm::dyn_cast<RegisterTypeEnum>(reg_info.register_type),
         reg_info.byte_size, type_system);
+  case RegisterType::eRegisterTypeKindVector:
+    return {};
   }
 }
 

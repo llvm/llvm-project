@@ -50,7 +50,7 @@ enum class CoExecMask : uint16_t {
   DS = 1 << 4,    // LDS read/write
   VMEM = 1 << 5,  // Global memory
   SMEM = 1 << 6,  // Scalar memory
-  WMMA = 1 << 7,  // Next WMMA (V stages only)
+  WMMA = 1 << 7,  // Next WMMA (V stages only), or MFMA
   All = 0xFFFF,
 
   MEM = DS | VMEM | SMEM,
@@ -346,11 +346,17 @@ inline CoExecInfo CoExecInfo::build(unsigned TotalWindow, const char *Pattern) {
   return Info;
 }
 
+/// Get co-execution info for a gfx950 MFMA instruction.
+CoExecInfo getMFMACoExecInfo(unsigned Opcode);
+
 /// Get co-execution info for a WMMA instruction, selecting the per-cycle slot
 /// pattern from the opcode (and operand formats for the F8F6F4 variants).
 inline CoExecInfo getCoExecInfo(const MachineInstr &MI,
                                 const SIInstrInfo &TII) {
   unsigned Opc = MI.getOpcode();
+
+  if (TII.isMFMA(Opc))
+    return getMFMACoExecInfo(Opc);
 
   // Scaled variants (LD_SCALE rule) absorb the next WMMA in the last I slot.
   bool HasScaling = AMDGPU::getHasMatrixScale(Opc);

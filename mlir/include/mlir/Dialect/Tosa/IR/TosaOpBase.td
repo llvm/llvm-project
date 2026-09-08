@@ -233,9 +233,7 @@ class Tosa_I32Enum<string name, string description, list<I32EnumAttrCase> cases>
 
 class Tosa_I32EnumAttr<string name, string description, string mnemonic,
                          list<I32EnumAttrCase> cases>
-    : EnumAttr<Tosa_Dialect, Tosa_I32Enum<name, description, cases>, mnemonic> {
-   let assemblyFormat = "`<` $value `>`";
-}
+    : EnumAttr<Tosa_Dialect, Tosa_I32Enum<name, description, cases>, mnemonic>;
 
 //===----------------------------------------------------------------------===//
 // TOSA Profiles and extensions

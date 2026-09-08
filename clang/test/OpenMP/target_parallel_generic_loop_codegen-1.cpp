@@ -276,10 +276,10 @@ int bar(int a){
 
 #endif
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init
-// CHECK-SAME: () #[[ATTR3:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR4:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @_ZN2SAC1Ev(ptr noundef nonnull align 4 dereferenceable(16) @_ZL2a1)
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SAD1Ev, ptr @_ZL2a1, ptr @__dso_handle) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SAD1Ev, ptr @_ZL2a1, ptr @__dso_handle) #[[ATTR3:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
 //
@@ -288,18 +288,18 @@ int bar(int a){
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.1
-// CHECK-SAME: () #[[ATTR3]] {
+// CHECK-SAME: () #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @_ZN2SAC1Ev(ptr noundef nonnull align 4 dereferenceable(16) @a2)
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SAD1Ev, ptr @a2, ptr @__dso_handle) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SAD1Ev, ptr @a2, ptr @__dso_handle) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.2
-// CHECK-SAME: () #[[ATTR3]] {
+// CHECK-SAME: () #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @_ZN2SBC1Ev(ptr noundef nonnull align 4 dereferenceable(32) @b1)
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SBD1Ev, ptr @b1, ptr @__dso_handle) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SBD1Ev, ptr @b1, ptr @__dso_handle) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 //
@@ -308,18 +308,18 @@ int bar(int a){
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.3
-// CHECK-SAME: () #[[ATTR3]] {
+// CHECK-SAME: () #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @_ZN2SBC1Ev(ptr noundef nonnull align 4 dereferenceable(32) @b2)
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SBD1Ev, ptr @b2, ptr @__dso_handle) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SBD1Ev, ptr @b2, ptr @__dso_handle) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.4
-// CHECK-SAME: () #[[ATTR3]] {
+// CHECK-SAME: () #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @_ZN2SCC1Ev(ptr noundef nonnull align 4 dereferenceable(64) @_ZL2c1)
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SCD1Ev, ptr @_ZL2c1, ptr @__dso_handle) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SCD1Ev, ptr @_ZL2c1, ptr @__dso_handle) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 //
@@ -330,10 +330,10 @@ int bar(int a){
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.7
-// CHECK-SAME: () #[[ATTR3]] {
+// CHECK-SAME: () #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @_ZN2SDC1Ev(ptr noundef nonnull align 4 dereferenceable(128) @d1)
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SDD1Ev, ptr @d1, ptr @__dso_handle) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SDD1Ev, ptr @d1, ptr @__dso_handle) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 //
@@ -344,10 +344,10 @@ int bar(int a){
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.10
-// CHECK-SAME: () #[[ATTR3]] {
+// CHECK-SAME: () #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @_ZN2SEC1Ev(ptr noundef nonnull align 4 dereferenceable(256) @e1)
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SED1Ev, ptr @e1, ptr @__dso_handle) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SED1Ev, ptr @e1, ptr @__dso_handle) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 //
@@ -360,10 +360,10 @@ int bar(int a){
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.15
-// CHECK-SAME: () #[[ATTR3]] {
+// CHECK-SAME: () #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @_ZN2STILi100EEC1Ev(ptr noundef nonnull align 4 dereferenceable(912) @t1)
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2STILi100EED1Ev, ptr @t1, ptr @__dso_handle) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2STILi100EED1Ev, ptr @t1, ptr @__dso_handle) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 //
@@ -376,10 +376,10 @@ int bar(int a){
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.20
-// CHECK-SAME: () #[[ATTR3]] {
+// CHECK-SAME: () #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @_ZN2STILi1000EEC1Ev(ptr noundef nonnull align 4 dereferenceable(4512) @t2)
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2STILi1000EED1Ev, ptr @t2, ptr @__dso_handle) #[[ATTR2]]
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2STILi1000EED1Ev, ptr @t2, ptr @__dso_handle) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 //
@@ -400,7 +400,7 @@ int bar(int a){
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_GLOBAL__I_000500
-// CHECK-SAME: () #[[ATTR3]] {
+// CHECK-SAME: () #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @__cxx_global_var_init()
 // CHECK-NEXT:    call void @__cxx_global_var_init.2()
@@ -408,14 +408,14 @@ int bar(int a){
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_GLOBAL__I_000501
-// CHECK-SAME: () #[[ATTR3]] {
+// CHECK-SAME: () #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @__cxx_global_var_init.3()
 // CHECK-NEXT:    ret void
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_GLOBAL__sub_I_target_parallel_generic_loop_codegen_1.cpp
-// CHECK-SAME: () #[[ATTR3]] {
+// CHECK-SAME: () #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    call void @__cxx_global_var_init.1()
 // CHECK-NEXT:    call void @__cxx_global_var_init.4()
@@ -1215,7 +1215,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP1:%.*]] = load i32, ptr [[R]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP1]], ptr [[R_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i64, ptr [[R_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3bari_l267(i64 [[TMP2]], ptr null) #[[ATTR2:[0-9]+]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3bari_l267(i64 [[TMP2]], ptr null) #[[ATTR3:[0-9]+]]
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i32, ptr [[R]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
@@ -1256,7 +1256,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SB3fooEv_l122(i64 [[TMP3]], ptr null) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SB3fooEv_l122(i64 [[TMP3]], ptr null) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -1315,7 +1315,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SE3fooEv_l185(i64 [[TMP3]], ptr null) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SE3fooEv_l185(i64 [[TMP3]], ptr null) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -1336,7 +1336,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EE3fooEv_l211(i64 [[TMP3]], ptr null) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EE3fooEv_l211(i64 [[TMP3]], ptr null) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -1357,7 +1357,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EE3fooEv_l211(i64 [[TMP3]], ptr null) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EE3fooEv_l211(i64 [[TMP3]], ptr null) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -1380,7 +1380,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3bari_l267.omp_outlined
-// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[R:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[R:%.*]]) #[[ATTR2:[0-9]+]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1445,10 +1445,10 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@__cxx_global_var_init
-// CHECK-NTARGET-SAME: () #[[ATTR3:[0-9]+]] {
+// CHECK-NTARGET-SAME: () #[[ATTR4:[0-9]+]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    call void @_ZN2SAC1Ev(ptr noundef nonnull align 4 dereferenceable(16) @_ZL2a1)
-// CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SAD1Ev, ptr @_ZL2a1, ptr @__dso_handle) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SAD1Ev, ptr @_ZL2a1, ptr @__dso_handle) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -1468,7 +1468,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-NEXT:    call void @_ZN2SAD2Ev(ptr noundef nonnull align 4 dead_on_return(16) dereferenceable(16) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @_ZN2SAD2Ev(ptr noundef nonnull align 4 dead_on_return(16) dereferenceable(16) [[THIS1]]) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -1511,18 +1511,18 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@__cxx_global_var_init.1
-// CHECK-NTARGET-SAME: () #[[ATTR3]] {
+// CHECK-NTARGET-SAME: () #[[ATTR4]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    call void @_ZN2SAC1Ev(ptr noundef nonnull align 4 dereferenceable(16) @a2)
-// CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SAD1Ev, ptr @a2, ptr @__dso_handle) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SAD1Ev, ptr @a2, ptr @__dso_handle) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@__cxx_global_var_init.2
-// CHECK-NTARGET-SAME: () #[[ATTR3]] {
+// CHECK-NTARGET-SAME: () #[[ATTR4]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    call void @_ZN2SBC1Ev(ptr noundef nonnull align 4 dereferenceable(32) @b1)
-// CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SBD1Ev, ptr @b1, ptr @__dso_handle) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SBD1Ev, ptr @b1, ptr @__dso_handle) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -1542,7 +1542,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-NEXT:    call void @_ZN2SBD2Ev(ptr noundef nonnull align 4 dead_on_return(32) dereferenceable(32) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @_ZN2SBD2Ev(ptr noundef nonnull align 4 dead_on_return(32) dereferenceable(32) [[THIS1]]) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -1585,18 +1585,18 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@__cxx_global_var_init.3
-// CHECK-NTARGET-SAME: () #[[ATTR3]] {
+// CHECK-NTARGET-SAME: () #[[ATTR4]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    call void @_ZN2SBC1Ev(ptr noundef nonnull align 4 dereferenceable(32) @b2)
-// CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SBD1Ev, ptr @b2, ptr @__dso_handle) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SBD1Ev, ptr @b2, ptr @__dso_handle) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@__cxx_global_var_init.4
-// CHECK-NTARGET-SAME: () #[[ATTR3]] {
+// CHECK-NTARGET-SAME: () #[[ATTR4]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    call void @_ZN2SCC1Ev(ptr noundef nonnull align 4 dereferenceable(64) @_ZL2c1)
-// CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SCD1Ev, ptr @_ZL2c1, ptr @__dso_handle) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SCD1Ev, ptr @_ZL2c1, ptr @__dso_handle) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -1616,7 +1616,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-NEXT:    call void @_ZN2SCD2Ev(ptr noundef nonnull align 4 dead_on_return(64) dereferenceable(64) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @_ZN2SCD2Ev(ptr noundef nonnull align 4 dead_on_return(64) dereferenceable(64) [[THIS1]]) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -1634,7 +1634,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SCC1Ev_l148(i64 [[TMP3]], ptr null) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SCC1Ev_l148(i64 [[TMP3]], ptr null) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -1657,7 +1657,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SCC1Ev_l148.omp_outlined
-// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR2]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1741,10 +1741,10 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@__cxx_global_var_init.5
-// CHECK-NTARGET-SAME: () #[[ATTR3]] {
+// CHECK-NTARGET-SAME: () #[[ATTR4]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    call void @_ZN2SDC1Ev(ptr noundef nonnull align 4 dereferenceable(128) @d1)
-// CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SDD1Ev, ptr @d1, ptr @__dso_handle) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SDD1Ev, ptr @d1, ptr @__dso_handle) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -1764,7 +1764,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-NEXT:    call void @_ZN2SDD2Ev(ptr noundef nonnull align 4 dead_on_return(128) dereferenceable(128) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @_ZN2SDD2Ev(ptr noundef nonnull align 4 dead_on_return(128) dereferenceable(128) [[THIS1]]) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -1801,7 +1801,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SDD1Ev_l174(i64 [[TMP3]], ptr null) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SDD1Ev_l174(i64 [[TMP3]], ptr null) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -1824,7 +1824,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SDD1Ev_l174.omp_outlined
-// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR2]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -1889,10 +1889,10 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@__cxx_global_var_init.6
-// CHECK-NTARGET-SAME: () #[[ATTR3]] {
+// CHECK-NTARGET-SAME: () #[[ATTR4]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    call void @_ZN2SEC1Ev(ptr noundef nonnull align 4 dereferenceable(256) @e1)
-// CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SED1Ev, ptr @e1, ptr @__dso_handle) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2SED1Ev, ptr @e1, ptr @__dso_handle) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -1912,7 +1912,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-NEXT:    call void @_ZN2SED2Ev(ptr noundef nonnull align 4 dead_on_return(256) dereferenceable(256) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @_ZN2SED2Ev(ptr noundef nonnull align 4 dead_on_return(256) dereferenceable(256) [[THIS1]]) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -1930,7 +1930,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SEC1Ev_l192(i64 [[TMP3]], ptr null) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SEC1Ev_l192(i64 [[TMP3]], ptr null) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -1953,7 +1953,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SEC1Ev_l192.omp_outlined
-// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR2]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2031,7 +2031,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SED1Ev_l199(i64 [[TMP3]], ptr null) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SED1Ev_l199(i64 [[TMP3]], ptr null) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -2054,7 +2054,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SED1Ev_l199.omp_outlined
-// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR2]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2119,10 +2119,10 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@__cxx_global_var_init.7
-// CHECK-NTARGET-SAME: () #[[ATTR3]] {
+// CHECK-NTARGET-SAME: () #[[ATTR4]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    call void @_ZN2STILi100EEC1Ev(ptr noundef nonnull align 4 dereferenceable(912) @t1)
-// CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2STILi100EED1Ev, ptr @t1, ptr @__dso_handle) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2STILi100EED1Ev, ptr @t1, ptr @__dso_handle) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -2142,7 +2142,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-NEXT:    call void @_ZN2STILi100EED2Ev(ptr noundef nonnull align 4 dead_on_return(912) dereferenceable(912) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @_ZN2STILi100EED2Ev(ptr noundef nonnull align 4 dead_on_return(912) dereferenceable(912) [[THIS1]]) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -2160,7 +2160,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EEC1Ev_l218(i64 [[TMP3]], ptr null) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EEC1Ev_l218(i64 [[TMP3]], ptr null) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -2183,7 +2183,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EEC1Ev_l218.omp_outlined
-// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR2]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2261,7 +2261,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EED1Ev_l225(i64 [[TMP3]], ptr null) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EED1Ev_l225(i64 [[TMP3]], ptr null) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -2284,7 +2284,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EED1Ev_l225.omp_outlined
-// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR2]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2349,10 +2349,10 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@__cxx_global_var_init.8
-// CHECK-NTARGET-SAME: () #[[ATTR3]] {
+// CHECK-NTARGET-SAME: () #[[ATTR4]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    call void @_ZN2STILi1000EEC1Ev(ptr noundef nonnull align 4 dereferenceable(4512) @t2)
-// CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2STILi1000EED1Ev, ptr @t2, ptr @__dso_handle) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    [[TMP0:%.*]] = call i32 @__cxa_atexit(ptr @_ZN2STILi1000EED1Ev, ptr @t2, ptr @__dso_handle) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -2372,7 +2372,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
 // CHECK-NTARGET-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
-// CHECK-NTARGET-NEXT:    call void @_ZN2STILi1000EED2Ev(ptr noundef nonnull align 4 dead_on_return(4512) dereferenceable(4512) [[THIS1]]) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @_ZN2STILi1000EED2Ev(ptr noundef nonnull align 4 dead_on_return(4512) dereferenceable(4512) [[THIS1]]) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
@@ -2390,7 +2390,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EEC1Ev_l218(i64 [[TMP3]], ptr null) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EEC1Ev_l218(i64 [[TMP3]], ptr null) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -2413,7 +2413,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EEC1Ev_l218.omp_outlined
-// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR2]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2491,7 +2491,7 @@ int bar(int a){
 // CHECK-NTARGET-NEXT:    [[TMP2:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    store i32 [[TMP2]], ptr [[A_CASTED]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP3:%.*]] = load i64, ptr [[A_CASTED]], align 8
-// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EED1Ev_l225(i64 [[TMP3]], ptr null) #[[ATTR2]]
+// CHECK-NTARGET-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EED1Ev_l225(i64 [[TMP3]], ptr null) #[[ATTR3]]
 // CHECK-NTARGET-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 // CHECK-NTARGET-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
 // CHECK-NTARGET-NEXT:    store i32 [[TMP4]], ptr [[TMP5]], align 4
@@ -2514,7 +2514,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EED1Ev_l225.omp_outlined
-// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR2]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2594,7 +2594,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SB3fooEv_l122.omp_outlined
-// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR2]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2674,7 +2674,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SE3fooEv_l185.omp_outlined
-// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR2]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2754,7 +2754,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EE3fooEv_l211.omp_outlined
-// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR2]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2834,7 +2834,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EE3fooEv_l211.omp_outlined
-// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR1]] {
+// CHECK-NTARGET-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR2]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -2899,7 +2899,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@_GLOBAL__I_000500
-// CHECK-NTARGET-SAME: () #[[ATTR3]] {
+// CHECK-NTARGET-SAME: () #[[ATTR4]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    call void @__cxx_global_var_init()
 // CHECK-NTARGET-NEXT:    call void @__cxx_global_var_init.2()
@@ -2907,14 +2907,14 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@_GLOBAL__I_000501
-// CHECK-NTARGET-SAME: () #[[ATTR3]] {
+// CHECK-NTARGET-SAME: () #[[ATTR4]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    call void @__cxx_global_var_init.3()
 // CHECK-NTARGET-NEXT:    ret void
 //
 //
 // CHECK-NTARGET-LABEL: define {{[^@]+}}@_GLOBAL__sub_I_target_parallel_generic_loop_codegen_1.cpp
-// CHECK-NTARGET-SAME: () #[[ATTR3]] {
+// CHECK-NTARGET-SAME: () #[[ATTR4]] {
 // CHECK-NTARGET-NEXT:  entry:
 // CHECK-NTARGET-NEXT:    call void @__cxx_global_var_init.1()
 // CHECK-NTARGET-NEXT:    call void @__cxx_global_var_init.4()
@@ -4271,7 +4271,7 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SCC1Ev_l148.omp_outlined
-// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR4:[0-9]+]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -4488,7 +4488,7 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SDD1Ev_l174.omp_outlined
-// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR4]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -4667,7 +4667,7 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SEC1Ev_l192.omp_outlined
-// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR4]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -4818,7 +4818,7 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SED1Ev_l199.omp_outlined
-// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR4]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -4997,7 +4997,7 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EEC1Ev_l218.omp_outlined
-// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR4]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -5148,7 +5148,7 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EED1Ev_l225.omp_outlined
-// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR4]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -5327,7 +5327,7 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EEC1Ev_l218.omp_outlined
-// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR4]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -5478,7 +5478,7 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EED1Ev_l225.omp_outlined
-// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR4]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -5928,7 +5928,7 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3bari_l267.omp_outlined
-// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[R:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[R:%.*]]) #[[ATTR4]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -6008,7 +6008,7 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SB3fooEv_l122.omp_outlined
-// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR4]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -6088,7 +6088,7 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SE3fooEv_l185.omp_outlined
-// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR4]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -6168,7 +6168,7 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EE3fooEv_l211.omp_outlined
-// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR4]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -6248,7 +6248,7 @@ int bar(int a){
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EE3fooEv_l211.omp_outlined
-// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i32 noundef [[A:%.*]]) #[[ATTR4]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 4
 // OMP-DEfAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 4
@@ -6998,7 +6998,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SCC1Ev_l148.omp_outlined
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -7165,7 +7165,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SDD1Ev_l174.omp_outlined
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR4]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -7294,7 +7294,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SEC1Ev_l192.omp_outlined
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR4]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -7395,7 +7395,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SED1Ev_l199.omp_outlined
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR4]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -7524,7 +7524,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EEC1Ev_l218.omp_outlined
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR4]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -7625,7 +7625,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EED1Ev_l225.omp_outlined
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR4]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -7754,7 +7754,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EEC1Ev_l218.omp_outlined
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR4]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -7855,7 +7855,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EED1Ev_l225.omp_outlined
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR4]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -8105,7 +8105,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3bari_l267.omp_outlined
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[R:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[R:%.*]]) #[[ATTR4]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -8185,7 +8185,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SB3fooEv_l122.omp_outlined
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR4]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -8265,7 +8265,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SE3fooEv_l185.omp_outlined
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR4]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -8345,7 +8345,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EE3fooEv_l211.omp_outlined
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR4]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -8425,7 +8425,7 @@ int bar(int a){
 //
 //
 // CHECK-NTARGET-OMP-DEFAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EE3fooEv_l211.omp_outlined
-// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR3]] {
+// CHECK-NTARGET-OMP-DEFAULT-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[A:%.*]]) #[[ATTR4]] {
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:  entry:
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NTARGET-OMP-DEFAULT-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8

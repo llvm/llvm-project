@@ -69,6 +69,12 @@ void call_stpncpy(void) {
   __builtin_stpncpy(s1, s2, 20); // expected-warning {{'stpncpy' size argument is too large; destination buffer has size 10, but size argument is 20}}
 }
 
+void call_strlcat(void) {
+  char s1[10], s2[20];
+  __builtin_strlcat(s2, s1, 20);
+  __builtin_strlcat(s1, s2, 20); // expected-warning {{'strlcat' size argument is too large; destination buffer has size 10, but size argument is 20}}
+}
+
 void call_strcpy(void) {
   const char *const src = "abcd";
   char dst[4];

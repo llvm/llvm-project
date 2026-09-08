@@ -97,7 +97,7 @@ func.func @x(%lb : index, %ub : index, %step : index, %addr : !fir.ref<index>) {
   "omp.target"(%addr, %allocator, %lb_map, %ub_map, %step_map, %addr_map, %addr) <{
       allocate_private_indices = array<i64: 0>,
       allocate_alignments = array<i64: 64>,
-      kernel_type = #omp<kernel_type(generic)>,
+      kernel_type = #omp.kernel_type<generic>,
       operandSegmentSizes = array<i32: 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 1, 0>,
       private_syms = [@addr_private]
   }> ({

@@ -103,6 +103,7 @@
 #include "mlir/Dialect/OpenACC/OpenACCUtilsCG.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsGPU.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsReduction.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtilsType.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
@@ -360,24 +361,6 @@ static Value unwrapMemRefConversion(Value v) {
     break;
   }
   return v;
-}
-
-/// Casts between pointer-like private types when lowering requires it.
-static Value castPointerLikeTypeIfNeeded(OpBuilder &builder, Location loc,
-                                         Value value, Type resultType) {
-  if (value.getType() == resultType)
-    return value;
-  if (PointerLikeType ptrLike = dyn_cast<PointerLikeType>(value.getType())) {
-    if (Value casted = ptrLike.genCast(builder, loc, value, resultType))
-      return casted;
-  }
-  if (PointerLikeType ptrLike = dyn_cast<PointerLikeType>(resultType)) {
-    if (Value casted = ptrLike.genCast(builder, loc, value, resultType))
-      return casted;
-  }
-  emitError(loc) << "unsupported pointer-like type cast from "
-                 << value.getType() << " to " << resultType;
-  return value;
 }
 
 /// Walks back from a memref use to its defining `acc.private_local`, if any,

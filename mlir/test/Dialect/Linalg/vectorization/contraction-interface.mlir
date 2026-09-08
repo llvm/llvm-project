@@ -348,6 +348,186 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+func.func @matmul_mixed_precision_unsigned(
+    %A: tensor<4x16xi8>, %B: tensor<16x4xi8>,
+    %C: tensor<4x4xi32>) -> tensor<4x4xi32> {
+  %0 = linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+    ins(%A, %B : tensor<4x16xi8>, tensor<16x4xi8>)
+    outs(%C : tensor<4x4xi32>) -> tensor<4x4xi32>
+  return %0 : tensor<4x4xi32>
+}
+
+// CHECK: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
+// CHECK: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+// CHECK-LABEL: func.func @matmul_mixed_precision_unsigned(
+//      CHECK: %[[LOAD_A:.*]] = vector.transfer_read %{{.*}} : tensor<4x16xi8>, vector<4x16xi8>
+//      CHECK: %[[LOAD_B:.*]] = vector.transfer_read %{{.*}} : tensor<16x4xi8>, vector<16x4xi8>
+//      CHECK: %[[LOAD_C:.*]] = vector.transfer_read %{{.*}} : tensor<4x4xi32>, vector<4x4xi32>
+//      CHECK: %[[EXT_A:.*]] = arith.extui %[[LOAD_A]] : vector<4x16xi8> to vector<4x16xi32>
+//      CHECK: %[[EXT_B:.*]] = arith.extui %[[LOAD_B]] : vector<16x4xi8> to vector<16x4xi32>
+//      CHECK: %[[CONTRACT:.*]] = vector.contract
+// CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
+// CHECK-SAME:   %[[EXT_A]], %[[EXT_B]], %[[LOAD_C]]
+// CHECK-SAME:   : vector<4x16xi32>, vector<16x4xi32> into vector<4x4xi32>
+//      CHECK: vector.transfer_write %[[CONTRACT]], %{{.*}} : vector<4x4xi32>, tensor<4x4xi32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 {create_named_contraction} : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @matmul_float_to_unsigned_integer(
+    %A: tensor<4x16xf16>, %B: tensor<16x4xf32>,
+    %C: tensor<4x4xi32>) -> tensor<4x4xi32> {
+  %0 = linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+    ins(%A, %B : tensor<4x16xf16>, tensor<16x4xf32>)
+    outs(%C : tensor<4x4xi32>) -> tensor<4x4xi32>
+  return %0 : tensor<4x4xi32>
+}
+
+// CHECK-LABEL: func.func @matmul_float_to_unsigned_integer(
+//      CHECK: %[[LOAD_A:.*]] = vector.transfer_read %{{.*}} : tensor<4x16xf16>, vector<4x16xf16>
+//      CHECK: %[[LOAD_B:.*]] = vector.transfer_read %{{.*}} : tensor<16x4xf32>, vector<16x4xf32>
+//      CHECK: %[[LOAD_C:.*]] = vector.transfer_read %{{.*}} : tensor<4x4xi32>, vector<4x4xi32>
+//      CHECK: %[[CAST_A:.*]] = arith.fptoui %[[LOAD_A]] : vector<4x16xf16> to vector<4x16xi32>
+//      CHECK: %[[CAST_B:.*]] = arith.fptoui %[[LOAD_B]] : vector<16x4xf32> to vector<16x4xi32>
+//      CHECK: %[[CONTRACT:.*]] = vector.contract
+// CHECK-SAME:   %[[CAST_A]], %[[CAST_B]], %[[LOAD_C]]
+// CHECK-SAME:   : vector<4x16xi32>, vector<16x4xi32> into vector<4x4xi32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 {create_named_contraction} : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @matmul_float_to_signed_integer(
+    %A: tensor<4x16xf16>, %B: tensor<16x4xf32>,
+    %C: tensor<4x4xi32>) -> tensor<4x4xi32> {
+  %0 = linalg.matmul
+    ins(%A, %B : tensor<4x16xf16>, tensor<16x4xf32>)
+    outs(%C : tensor<4x4xi32>) -> tensor<4x4xi32>
+  return %0 : tensor<4x4xi32>
+}
+
+// CHECK-LABEL: func.func @matmul_float_to_signed_integer(
+//      CHECK: %[[LOAD_A:.*]] = vector.transfer_read %{{.*}} : tensor<4x16xf16>, vector<4x16xf16>
+//      CHECK: %[[LOAD_B:.*]] = vector.transfer_read %{{.*}} : tensor<16x4xf32>, vector<16x4xf32>
+//      CHECK: %[[LOAD_C:.*]] = vector.transfer_read %{{.*}} : tensor<4x4xi32>, vector<4x4xi32>
+//      CHECK: %[[CAST_A:.*]] = arith.fptosi %[[LOAD_A]] : vector<4x16xf16> to vector<4x16xi32>
+//      CHECK: %[[CAST_B:.*]] = arith.fptosi %[[LOAD_B]] : vector<16x4xf32> to vector<16x4xi32>
+//      CHECK: %[[CONTRACT:.*]] = vector.contract
+// CHECK-SAME:   %[[CAST_A]], %[[CAST_B]], %[[LOAD_C]]
+// CHECK-SAME:   : vector<4x16xi32>, vector<16x4xi32> into vector<4x4xi32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 {create_named_contraction} : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @matmul_mixed_precision_signed(
+    %A: tensor<4x16xi8>, %B: tensor<16x4xi8>,
+    %C: tensor<4x4xi32>) -> tensor<4x4xi32> {
+  %0 = linalg.matmul
+    ins(%A, %B : tensor<4x16xi8>, tensor<16x4xi8>)
+    outs(%C : tensor<4x4xi32>) -> tensor<4x4xi32>
+  return %0 : tensor<4x4xi32>
+}
+
+// vector.contract sign-extends mixed-width integer operands by default, so no
+// explicit extension is needed for cast_signed.
+// CHECK-LABEL: func.func @matmul_mixed_precision_signed(
+//      CHECK: %[[SIGNED_A:.*]] = vector.transfer_read %{{.*}} : tensor<4x16xi8>, vector<4x16xi8>
+//      CHECK: %[[SIGNED_B:.*]] = vector.transfer_read %{{.*}} : tensor<16x4xi8>, vector<16x4xi8>
+//      CHECK: %[[SIGNED_C:.*]] = vector.transfer_read %{{.*}} : tensor<4x4xi32>, vector<4x4xi32>
+//  CHECK-NOT: arith.ext
+//      CHECK: vector.contract
+// CHECK-SAME:   %[[SIGNED_A]], %[[SIGNED_B]], %[[SIGNED_C]]
+// CHECK-SAME:   : vector<4x16xi8>, vector<16x4xi8> into vector<4x4xi32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 {create_named_contraction} : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @matmul_same_precision_unsigned(
+    %A: tensor<4x16xi32>, %B: tensor<16x4xi32>,
+    %C: tensor<4x4xi32>) -> tensor<4x4xi32> {
+  %0 = linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+    ins(%A, %B : tensor<4x16xi32>, tensor<16x4xi32>)
+    outs(%C : tensor<4x4xi32>) -> tensor<4x4xi32>
+  return %0 : tensor<4x4xi32>
+}
+
+// CHECK-LABEL: func.func @matmul_same_precision_unsigned(
+//      CHECK: %[[SAME_A:.*]] = vector.transfer_read %{{.*}} : tensor<4x16xi32>, vector<4x16xi32>
+//      CHECK: %[[SAME_B:.*]] = vector.transfer_read %{{.*}} : tensor<16x4xi32>, vector<16x4xi32>
+//      CHECK: %[[SAME_C:.*]] = vector.transfer_read %{{.*}} : tensor<4x4xi32>, vector<4x4xi32>
+//  CHECK-NOT: arith.extui
+//      CHECK: vector.contract
+// CHECK-SAME:   %[[SAME_A]], %[[SAME_B]], %[[SAME_C]]
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 {create_named_contraction} : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @matmul_mixed_precision_unsigned_dynamic(
+    %A: tensor<?x?xi8>, %B: tensor<?x?xi8>,
+    %C: tensor<?x?xi32>) -> tensor<?x?xi32> {
+  %0 = linalg.matmul {cast = #linalg.type_fn<cast_unsigned>}
+    ins(%A, %B : tensor<?x?xi8>, tensor<?x?xi8>)
+    outs(%C : tensor<?x?xi32>) -> tensor<?x?xi32>
+  return %0 : tensor<?x?xi32>
+}
+
+// CHECK-LABEL: func.func @matmul_mixed_precision_unsigned_dynamic(
+//      CHECK: %[[MASKED_A:.*]] = vector.mask {{.*}} -> vector<4x16xi8>
+//      CHECK: %[[MASKED_B:.*]] = vector.mask {{.*}} -> vector<16x4xi8>
+//      CHECK: %[[MASKED_C:.*]] = vector.mask {{.*}} -> vector<4x4xi32>
+//      CHECK: %[[MASKED_EXT_A:.*]] = arith.extui %[[MASKED_A]] : vector<4x16xi8> to vector<4x16xi32>
+//      CHECK: %[[MASKED_EXT_B:.*]] = arith.extui %[[MASKED_B]] : vector<16x4xi8> to vector<16x4xi32>
+//      CHECK: vector.mask
+// CHECK-SAME:   vector.contract
+// CHECK-SAME:   %[[MASKED_EXT_A]], %[[MASKED_EXT_B]], %[[MASKED_C]]
+// CHECK-SAME:   : vector<4x4x16xi1> -> vector<4x4xi32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [4, 4, 16]
+      {create_named_contraction} : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 func.func @batch_matmul(%A: tensor<3x8x4xf32>, %B: tensor<3x4x16xf32>,
     %C: tensor<3x8x16xf32>) -> tensor<3x8x16xf32> {
   %0 = linalg.batch_matmul
@@ -439,6 +619,44 @@ func.func @contract(%A: tensor<4x8x2xf32>, %B: tensor<8x16x2xf32>,
 // CHECK-SAME:   kind = #vector.kind<add>
 // CHECK-SAME:   %[[LOAD_A]], %[[LOAD_B]], %[[LOAD_C]]
 //      CHECK: vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<4x16xf32>, tensor<4x16xf32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.contract"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 {create_named_contraction} : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @contract_mixed_precision_unsigned(
+    %A: tensor<4x8x2xi8>, %B: tensor<8x16x2xi8>,
+    %C: tensor<4x16xi32>) -> tensor<4x16xi32> {
+  %0 = linalg.contract
+    indexing_maps = [affine_map<(m, n, k, kk) -> (m, k, kk)>,
+                     affine_map<(m, n, k, kk) -> (k, n, kk)>,
+                     affine_map<(m, n, k, kk) -> (m, n)>]
+    {cast = #linalg.type_fn<cast_unsigned>}
+    ins(%A, %B : tensor<4x8x2xi8>, tensor<8x16x2xi8>)
+    outs(%C : tensor<4x16xi32>) -> tensor<4x16xi32>
+  return %0 : tensor<4x16xi32>
+}
+
+// CHECK: #[[$MAP_A:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
+// CHECK: #[[$MAP_B:.+]] = affine_map<(d0, d1, d2, d3) -> (d2, d1, d3)>
+// CHECK: #[[$MAP_C:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1)>
+// CHECK-LABEL: func.func @contract_mixed_precision_unsigned(
+//      CHECK: %[[LOAD_A:.*]] = vector.transfer_read %{{.*}} : tensor<4x8x2xi8>, vector<4x8x2xi8>
+//      CHECK: %[[LOAD_B:.*]] = vector.transfer_read %{{.*}} : tensor<8x16x2xi8>, vector<8x16x2xi8>
+//      CHECK: %[[LOAD_C:.*]] = vector.transfer_read %{{.*}} : tensor<4x16xi32>, vector<4x16xi32>
+//      CHECK: %[[EXT_A:.*]] = arith.extui %[[LOAD_A]] : vector<4x8x2xi8> to vector<4x8x2xi32>
+//      CHECK: %[[EXT_B:.*]] = arith.extui %[[LOAD_B]] : vector<8x16x2xi8> to vector<8x16x2xi32>
+//      CHECK: %[[CONTRACT:.*]] = vector.contract
+// CHECK-SAME:   indexing_maps = [#[[$MAP_A]], #[[$MAP_B]], #[[$MAP_C]]]
+// CHECK-SAME:   %[[EXT_A]], %[[EXT_B]], %[[LOAD_C]]
+// CHECK-SAME:   : vector<4x8x2xi32>, vector<8x16x2xi32> into vector<4x16xi32>
+//      CHECK: vector.transfer_write %[[CONTRACT]], %{{.*}} : vector<4x16xi32>, tensor<4x16xi32>
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {

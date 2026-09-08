@@ -71,7 +71,6 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
   AMDGPUTTIImpl CommonTTI;
   bool IsGraphics;
   bool HasFP32Denormals;
-  bool HasFP64FP16Denormals;
   static constexpr bool InlinerVectorBonusPercent = 0;
 
   static const FeatureBitset InlineFeatureIgnoreList;
@@ -267,6 +266,11 @@ public:
   int getInlinerVectorBonusPercent() const override {
     return InlinerVectorBonusPercent;
   }
+
+  InstructionCost
+  getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
+                   TTI::CastContextHint CCH, TTI::TargetCostKind CostKind,
+                   const Instruction *I = nullptr) const override;
 
   InstructionCost
   getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,

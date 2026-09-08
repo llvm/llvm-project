@@ -377,8 +377,8 @@ public:
   }
 
   const TargetRegisterClass *
-  getConstrainedRegClassForOperand(const MachineOperand &MO,
-                                 const MachineRegisterInfo &MRI) const override;
+  getConstrainedRegClassForReg(Register Reg,
+                               const MachineRegisterInfo &MRI) const override;
 
   const TargetRegisterClass *getBoolRC() const {
     return isWave32 ? &AMDGPU::SReg_32RegClass

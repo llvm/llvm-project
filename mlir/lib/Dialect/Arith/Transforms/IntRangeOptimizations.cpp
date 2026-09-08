@@ -395,6 +395,11 @@ struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
       castKind = mergeCastKinds(castKind, castKindForOp);
       if (castKind == CastKind::None)
         continue;
+      // A shift by an amount >= the bitwidth is poison, so only narrow shifts
+      // when the shift amount (second operand) stays below the target width.
+      if (isa<arith::ShLIOp, arith::ShRSIOp, arith::ShRUIOp>(op) &&
+          !ranges[1].umax().ult(targetBitwidth))
+        continue;
       Type targetType = getTargetType(srcType, targetBitwidth);
       if (targetType == srcType)
         continue;

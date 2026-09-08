@@ -3,7 +3,8 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: @a.[[HASH:[0-9a-f]+]] = hidden alias
+; CHECK: module asm
+; CHECK-NEXT: ".lto_set_conditional a,a.[[HASH:[0-9a-f]+]]"
 
 define void @b() {
   %f = alloca ptr, align 8
@@ -14,7 +15,7 @@ define void @b() {
   ret void
 }
 
-; CHECK: define internal void @a() {{.*}}!type
+; CHECK: define{{.*}} @a.[[HASH]](){{.*}} !type
 define internal void @a() !type !0 {
   ret void
 }

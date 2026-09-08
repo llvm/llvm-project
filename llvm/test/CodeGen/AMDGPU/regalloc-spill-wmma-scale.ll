@@ -52,7 +52,7 @@ bb:
   %i51 = fadd <2 x float> %i47, %i50
   %i52 = insertelement <8 x float> zeroinitializer, float %i27, i64 0
   %i53 = tail call <2 x i32> @llvm.amdgcn.cvt.scalef32.pk8.fp8.f32(<8 x float> %i52, float 0.000000e+00)
-  %i54 = tail call <2 x i32> @llvm.amdgcn.cvt.scalef32.pk8.fp8.f32(<8 x float> splat (float 0x7FF8000000000000), float 0.000000e+00)
+  %i54 = tail call <2 x i32> @llvm.amdgcn.cvt.scalef32.pk8.fp8.f32(<8 x float> splat (float +qnan), float 0.000000e+00)
   %i55 = tail call <2 x i32> @llvm.amdgcn.cvt.scalef32.pk8.fp8.f32(<8 x float> splat (float 1.000000e+00), float 0.000000e+00)
   %.extract1415 = extractelement <2 x i32> %i53, i64 0
   %.extract1416 = extractelement <2 x i32> %i54, i64 0

@@ -22,10 +22,8 @@
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h" // For IDs of passes that are preserved.
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/GlobalValue.h"

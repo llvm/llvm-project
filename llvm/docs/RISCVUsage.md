@@ -124,6 +124,7 @@ on support follow.
 | `Smepmp` | Supported |
 | `Smmpm` | Supported |
 | `Smnpm` | Supported |
+| `Smpmpdeleg` | Supported |
 | `Smrnmi` | Supported |
 | `Smstateen` | Assembly Support |
 | `Ssaia` | Supported |
@@ -136,6 +137,8 @@ on support follow.
 | `Ssdbltrp` | Supported |
 | `Ssnpm` | Supported |
 | `Sspm` | Supported |
+| `Sspmp` | Supported |
+| `Sspmpen` | Supported |
 | `Ssqosid` | Assembly Support |
 | `Ssstateen` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
 | `Ssstrict` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |

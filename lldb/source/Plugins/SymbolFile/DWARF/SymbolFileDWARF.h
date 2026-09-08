@@ -380,6 +380,8 @@ public:
   /// Returns the DWARFIndex for this symbol, if it exists.
   DWARFIndex *getIndex() { return m_index.get(); }
 
+  lldb::TypeSP GetTypeEnclosingVariableUID(lldb::user_id_t uid) override;
+
 private:
   /// Find the definition DIE for the specified \c label in this
   /// SymbolFile.

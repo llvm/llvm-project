@@ -97,17 +97,17 @@ define amdgpu_kernel void @private_constant_expression_use(ptr addrspace(1) noca
 define amdgpu_kernel void @calls_intrin_ascast_cc_kernel(ptr addrspace(3) %ptr) #0 {
 ; GFX9-LABEL: define amdgpu_kernel void @calls_intrin_ascast_cc_kernel(
 ; GFX9-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR0]] {
-; GFX9-NEXT:    [[TMP1:%.*]] = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p3(ptr addrspace(3) [[PTR]])
-; GFX9-NEXT:    store volatile i32 7, ptr [[TMP1]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = addrspacecast nonnull ptr addrspace(3) [[PTR]] to ptr
+; GFX9-NEXT:    store volatile i32 7, ptr [[TMP1]], align 4, !noalias.addrspace [[META1:![0-9]+]]
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define amdgpu_kernel void @calls_intrin_ascast_cc_kernel(
 ; GFX10-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR0]] {
-; GFX10-NEXT:    [[TMP1:%.*]] = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p3(ptr addrspace(3) [[PTR]])
-; GFX10-NEXT:    store volatile i32 7, ptr [[TMP1]], align 4
+; GFX10-NEXT:    [[TMP1:%.*]] = addrspacecast nonnull ptr addrspace(3) [[PTR]] to ptr
+; GFX10-NEXT:    store volatile i32 7, ptr [[TMP1]], align 4, !noalias.addrspace [[META1:![0-9]+]]
 ; GFX10-NEXT:    ret void
 ;
-  %1 = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p3(ptr addrspace(3) %ptr)
+  %1 = addrspacecast nonnull ptr addrspace(3) %ptr to ptr
   store volatile i32 7, ptr %1, align 4
   ret void
 }
@@ -115,17 +115,17 @@ define amdgpu_kernel void @calls_intrin_ascast_cc_kernel(ptr addrspace(3) %ptr) 
 define void @calls_intrin_ascast(ptr addrspace(3) %ptr) #0 {
 ; GFX9-LABEL: define void @calls_intrin_ascast(
 ; GFX9-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR0]] {
-; GFX9-NEXT:    [[TMP1:%.*]] = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p3(ptr addrspace(3) [[PTR]])
-; GFX9-NEXT:    store volatile i32 7, ptr [[TMP1]], align 4
+; GFX9-NEXT:    [[TMP1:%.*]] = addrspacecast nonnull ptr addrspace(3) [[PTR]] to ptr
+; GFX9-NEXT:    store volatile i32 7, ptr [[TMP1]], align 4, !noalias.addrspace [[META1]]
 ; GFX9-NEXT:    ret void
 ;
 ; GFX10-LABEL: define void @calls_intrin_ascast(
 ; GFX10-SAME: ptr addrspace(3) [[PTR:%.*]]) #[[ATTR0]] {
-; GFX10-NEXT:    [[TMP1:%.*]] = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p3(ptr addrspace(3) [[PTR]])
-; GFX10-NEXT:    store volatile i32 7, ptr [[TMP1]], align 4
+; GFX10-NEXT:    [[TMP1:%.*]] = addrspacecast nonnull ptr addrspace(3) [[PTR]] to ptr
+; GFX10-NEXT:    store volatile i32 7, ptr [[TMP1]], align 4, !noalias.addrspace [[META1]]
 ; GFX10-NEXT:    ret void
 ;
-  %1 = call ptr @llvm.amdgcn.addrspacecast.nonnull.p0.p3(ptr addrspace(3) %ptr)
+  %1 = addrspacecast nonnull ptr addrspace(3) %ptr to ptr
   store volatile i32 7, ptr %1, align 4
   ret void
 }
@@ -148,12 +148,12 @@ define amdgpu_kernel void @call_calls_intrin_ascast_cc_kernel(ptr addrspace(3) %
 attributes #0 = { "amdgpu-no-flat-scratch-init" }
 ;.
 ; GFX9: attributes #[[ATTR0]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" }
-; GFX9: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; GFX10: attributes #[[ATTR0]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" }
-; GFX10: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; GFX9: [[META0]] = !{i32 1, i32 5, i32 6, i32 10}
+; GFX9: [[META1]] = !{i32 1, i32 3, i32 4, i32 10}
 ;.
 ; GFX10: [[META0]] = !{i32 1, i32 5, i32 6, i32 10}
+; GFX10: [[META1]] = !{i32 1, i32 3, i32 4, i32 10}
 ;.

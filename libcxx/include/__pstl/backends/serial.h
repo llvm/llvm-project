@@ -10,9 +10,12 @@
 #ifndef _LIBCPP___PSTL_BACKENDS_SERIAL_H
 #define _LIBCPP___PSTL_BACKENDS_SERIAL_H
 
+#include <__algorithm/find_end.h>
 #include <__algorithm/find_if.h>
 #include <__algorithm/for_each.h>
+#include <__algorithm/is_heap_until.h>
 #include <__algorithm/merge.h>
+#include <__algorithm/min_element.h>
 #include <__algorithm/mismatch.h>
 #include <__algorithm/reverse.h>
 #include <__algorithm/search.h>
@@ -49,6 +52,21 @@ namespace __pstl {
 //       often be more efficient than the "default backend"'s implementation
 //       if we end up running serially anyways.
 //
+
+template <class _ExecutionPolicy>
+struct __find_end<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator1>
+  operator()(_Policy&&,
+             _ForwardIterator1 __first1,
+             _ForwardIterator1 __last1,
+             _ForwardIterator2 __first2,
+             _ForwardIterator2 __last2,
+             _BinaryPredicate __pred) const noexcept {
+    return std::find_end(
+        std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), std::move(__pred));
+  }
+};
 
 template <class _ExecutionPolicy>
 struct __find_if<__serial_backend_tag, _ExecutionPolicy> {
@@ -88,6 +106,15 @@ struct __for_each<__serial_backend_tag, _ExecutionPolicy> {
   }
 };
 
+template <class _Backend, class _RawExecutionPolicy>
+struct __is_heap_until {
+  template <class _Policy, class _RandomAccessIterator, class _Comp>
+  _LIBCPP_HIDE_FROM_ABI optional<_RandomAccessIterator>
+  operator()(_Policy&&, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp) const noexcept {
+    return std::is_heap_until(std::move(__first), std::move(__last), std::move(__comp));
+  }
+};
+
 template <class _ExecutionPolicy>
 struct __merge<__serial_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardOutIterator, class _Comp>
@@ -106,6 +133,15 @@ struct __merge<__serial_backend_tag, _ExecutionPolicy> {
         std::move(__last2),
         std::move(__outit),
         std::forward<_Comp>(__comp));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __min_element<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Compare>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp) const noexcept {
+    return std::min_element(std::move(__first), std::move(__last), std::move(__comp));
   }
 };
 

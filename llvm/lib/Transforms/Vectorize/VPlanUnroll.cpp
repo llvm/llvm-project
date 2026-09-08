@@ -25,6 +25,8 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/MDBuilder.h"
+#include <numeric>
 
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
@@ -570,11 +572,10 @@ static void addLaneToStartIndex(VPScalarIVStepsRecipe *Steps, unsigned Lane,
   // TODO: Retrieve the flags from Steps unconditionally.
   VPIRFlags Flags;
   if (BaseIVTy->isFloatingPointTy()) {
-    int SignedLane = static_cast<int>(Lane);
-    if (!OldStartIndex && Steps->getInductionOpcode() == Instruction::FSub)
-      SignedLane = -SignedLane;
-    LaneOffset = Plan.getOrAddLiveIn(ConstantFP::get(BaseIVTy, SignedLane));
-    AddOpcode = Steps->getInductionOpcode();
+    // The start index counts upwards, so accumulate with FAdd regardless of the
+    // induction opcode; see VPScalarIVStepsRecipe.
+    LaneOffset = Plan.getOrAddLiveIn(ConstantFP::get(BaseIVTy, Lane));
+    AddOpcode = Instruction::FAdd;
     Flags = VPIRFlags(FastMathFlags());
   } else {
     unsigned BaseIVBits = BaseIVTy->getScalarSizeInBits();
@@ -674,6 +675,23 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
   return New;
 }
 
+/// Converts the frequency \p Freq with which a block is entered to branch
+/// weights for the branch guarding it, or nullptr if \p Freq is unknown.
+static MDNode *
+convertFrequencyToBranchWeights(std::optional<BlockFrequency> Freq,
+                                LLVMContext &Ctx) {
+  if (!Freq)
+    return nullptr;
+  BranchProbability P = vputils::getExecutionProbability(*Freq);
+
+  // Use the numerators of P and its complement as weights and reduce them via
+  // gcd to keep them small. Neither is zero, as P is neither zero nor one.
+  uint32_t Taken = P.getNumerator();
+  uint32_t NotTaken = P.getCompl().getNumerator();
+  uint32_t GCD = std::gcd(Taken, NotTaken);
+  return MDBuilder(Ctx).createBranchWeights(Taken / GCD, NotTaken / GCD);
+}
+
 /// Convert recipes in region blocks to operate on a single lane 0.
 /// VPReplicateRecipes are converted to single-scalar ones, branch-on-mask is
 /// converted into BranchOnCond, PredInstPhi recipes are replaced by scalar phi
@@ -723,8 +741,12 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
         RepR->replaceAllUsesWith(NewR);
         RepR->eraseFromParent();
       } else if (auto *BranchOnMask = dyn_cast<VPBranchOnMaskRecipe>(&OldR)) {
-        Builder.createNaryOp(VPInstruction::BranchOnCond,
-                             {BranchOnMask->getOperand(0)}, OldDL);
+        // Turn the frequency of the predicated block into branch weights.
+        auto *BOC = Builder.createNaryOp(VPInstruction::BranchOnCond,
+                                         {BranchOnMask->getOperand(0)}, OldDL);
+        if (MDNode *Weights = convertFrequencyToBranchWeights(
+                BranchOnMask->getExecutionFrequency(), Plan.getContext()))
+          BOC->setMetadata(LLVMContext::MD_prof, Weights);
         BranchOnMask->eraseFromParent();
       } else if (auto *PredPhi = dyn_cast<VPPredInstPHIRecipe>(&OldR)) {
         VPValue *PredOp = PredPhi->getOperand(0);

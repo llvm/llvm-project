@@ -8,6 +8,7 @@
 
 #include "lldb/Utility/Policy.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/Support/Process.h"
 #include "gtest/gtest.h"
 
 #include <thread>
@@ -202,6 +203,11 @@ TEST(PolicyStackDeathTest, GuardDestroyedOnDifferentThread) {
   // where the violation is detected.
   EXPECT_DEATH(
       {
+        // The abort below is expected, so keep it away from the system crash
+        // reporter, which would otherwise record it as a real crash. This must
+        // stay inside the death-test statement so only the forked child is
+        // affected.
+        llvm::sys::Process::PreventCoreFiles();
         std::thread t([guard = std::move(outer)]() mutable { (void)guard; });
         t.join();
       },

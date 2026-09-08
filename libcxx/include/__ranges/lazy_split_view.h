@@ -112,7 +112,7 @@ public:
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
-    requires forward_range<_View> && forward_range<const _View>
+    requires forward_range<_View> && forward_range<const _View> && forward_range<const _Pattern>
   {
     return __outer_iterator<true>{*this, ranges::begin(__base_)};
   }
@@ -124,7 +124,8 @@ public:
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const {
-    if constexpr (forward_range<_View> && forward_range<const _View> && common_range<const _View>) {
+    if constexpr (forward_range<_View> && forward_range<const _View> && common_range<const _View> &&
+                  forward_range<const _Pattern>) {
       return __outer_iterator<true>{*this, ranges::end(__base_)};
     } else {
       return default_sentinel;

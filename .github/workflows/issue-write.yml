@@ -28,7 +28,8 @@ jobs:
       (
         github.event.workflow_run.conclusion == 'success' ||
         github.event.workflow_run.conclusion == 'failure'
-      )
+      ) &&
+      github.repository == 'llvm/llvm-project'
     steps:
       - name: Fetch Sources
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3

@@ -75,12 +75,6 @@ Align GISelValueTracking::computeKnownAlignment(Register R, unsigned Depth) {
   }
 }
 
-KnownBits GISelValueTracking::getKnownBits(MachineInstr &MI) {
-  assert(MI.getNumExplicitDefs() == 1 &&
-         "expected single return generic instruction");
-  return getKnownBits(MI.getOperand(0).getReg());
-}
-
 KnownBits GISelValueTracking::getKnownBits(Register R) {
   const LLT Ty = MRI.getType(R);
   // Since the number of lanes in a scalable vector is unknown at compile time,
@@ -1205,7 +1199,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     case GFConstant::GFConstantKind::Scalar: {
       auto APF = Cst->getScalarValue();
       Known.KnownFPClasses = APF.classify();
-      Known.SignBit = APF.isNegative();
+      Known.setSignBit(APF.isNegative());
       break;
     }
     case GFConstant::GFConstantKind::FixedVector: {
@@ -1222,7 +1216,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       }
 
       if (SignBitAllOne != SignBitAllZero)
-        Known.SignBit = SignBitAllOne;
+        Known.setSignBit(SignBitAllOne);
 
       break;
     }
@@ -1579,7 +1573,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
         computeKnownFPClass(Val, MI.getFlags(), InterestedClasses, Depth + 1);
     // Can only propagate sign if output is never NaN.
     if (!Known.isKnownNeverNaN())
-      Known.SignBit.reset();
+      Known.setSignBit(std::nullopt);
     break;
   }
   case TargetOpcode::G_FFLOOR:
@@ -2298,6 +2292,13 @@ bool GISelValueTracking::isKnownNeverNaN(Register Val, bool SNaN) {
   return FPClass.isKnownNeverNaN();
 }
 
+bool GISelValueTracking::isKnownNeverLogicalZero(Register Val, unsigned Depth) {
+  KnownFPClass Known = computeKnownFPClass(Val, fcZero | fcSubnormal, Depth);
+  LLT Ty = MRI.getType(Val).getScalarType();
+  return Known.isKnownNeverLogicalZero(
+      MF.getDenormalMode(getFltSemanticForLLT(Ty)));
+}
+
 /// Compute number of sign bits for the intersection of \p Src0 and \p Src1
 unsigned GISelValueTracking::computeNumSignBitsMin(Register Src0, Register Src1,
                                                    const APInt &DemandedElts,
@@ -2376,7 +2377,7 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
   case TargetOpcode::G_SEXT: {
     Register Src = MI.getOperand(1).getReg();
     LLT SrcTy = MRI.getType(Src);
-    unsigned Tmp = DstTy.getScalarSizeInBits() - SrcTy.getScalarSizeInBits();
+    unsigned Tmp = TyBits - SrcTy.getScalarSizeInBits();
     return computeNumSignBits(Src, DemandedElts, Depth + 1) + Tmp;
   }
   case TargetOpcode::G_ASSERT_SEXT:
@@ -2515,11 +2516,10 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     LLT SrcTy = MRI.getType(Src);
 
     // Check if the sign bits of source go down as far as the truncated value.
-    unsigned DstTyBits = DstTy.getScalarSizeInBits();
     unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
     unsigned NumSrcSignBits = computeNumSignBits(Src, DemandedElts, Depth + 1);
-    if (NumSrcSignBits > (NumSrcBits - DstTyBits))
-      return NumSrcSignBits - (NumSrcBits - DstTyBits);
+    if (NumSrcSignBits > (NumSrcBits - TyBits))
+      return NumSrcSignBits - (NumSrcBits - TyBits);
     break;
   }
   case TargetOpcode::G_SELECT: {
@@ -2713,6 +2713,21 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
         break;
     }
     break;
+  }
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
+    GExtractVectorElement &Extract = cast<GExtractVectorElement>(MI);
+    Register InVec = Extract.getVectorReg();
+    Register EltNo = Extract.getIndexReg();
+    LLT VecVT = MRI.getType(InVec);
+    if (VecVT.isScalableVector())
+      return computeNumSignBits(InVec, APInt(1, 1), Depth + 1);
+    unsigned NumSrcElts = VecVT.getNumElements();
+    std::optional<APInt> ConstEltNo = getIConstantVRegVal(EltNo, MRI);
+    APInt DemandedSrcElts =
+        ConstEltNo && ConstEltNo->ult(NumSrcElts)
+            ? APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue())
+            : APInt::getAllOnes(NumSrcElts);
+    return computeNumSignBits(InVec, DemandedSrcElts, Depth + 1);
   }
   case TargetOpcode::G_EXTRACT_SUBVECTOR: {
     // Offset the demanded elts by the subvector index.

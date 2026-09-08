@@ -27,48 +27,6 @@ class TruncTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
   typedef T (*TruncFunc)(T);
 
-  void testSpecialNumbers(TruncFunc func) {
-    EXPECT_FP_EQ(zero, func(zero));
-    EXPECT_FP_EQ(neg_zero, func(neg_zero));
-
-    EXPECT_FP_EQ(inf, func(inf));
-    EXPECT_FP_EQ(neg_inf, func(neg_inf));
-
-    EXPECT_FP_EQ(aNaN, func(aNaN));
-  }
-
-  void testRoundedNumbers(TruncFunc func) {
-    EXPECT_FP_EQ(T(1.0), func(T(1.0)));
-    EXPECT_FP_EQ(T(-1.0), func(T(-1.0)));
-    EXPECT_FP_EQ(T(10.0), func(T(10.0)));
-    EXPECT_FP_EQ(T(-10.0), func(T(-10.0)));
-    EXPECT_FP_EQ(T(1234.0), func(T(1234.0)));
-    EXPECT_FP_EQ(T(-1234.0), func(T(-1234.0)));
-  }
-
-  void testFractions(TruncFunc func) {
-    EXPECT_FP_EQ(T(0.0), func(T(0.5)));
-    EXPECT_FP_EQ(T(-0.0), func(T(-0.5)));
-    EXPECT_FP_EQ(T(0.0), func(T(0.115)));
-    EXPECT_FP_EQ(T(-0.0), func(T(-0.115)));
-    EXPECT_FP_EQ(T(0.0), func(T(0.715)));
-    EXPECT_FP_EQ(T(-0.0), func(T(-0.715)));
-    EXPECT_FP_EQ(T(1.0), func(T(1.3)));
-    EXPECT_FP_EQ(T(-1.0), func(T(-1.3)));
-    EXPECT_FP_EQ(T(1.0), func(T(1.5)));
-    EXPECT_FP_EQ(T(-1.0), func(T(-1.5)));
-    EXPECT_FP_EQ(T(1.0), func(T(1.75)));
-    EXPECT_FP_EQ(T(-1.0), func(T(-1.75)));
-    EXPECT_FP_EQ(T(10.0), func(T(10.32)));
-    EXPECT_FP_EQ(T(-10.0), func(T(-10.32)));
-    EXPECT_FP_EQ(T(10.0), func(T(10.65)));
-    EXPECT_FP_EQ(T(-10.0), func(T(-10.65)));
-    EXPECT_FP_EQ(T(123.0), func(T(123.38)));
-    EXPECT_FP_EQ(T(-123.0), func(T(-123.38)));
-    EXPECT_FP_EQ(T(123.0), func(T(123.96)));
-    EXPECT_FP_EQ(T(-123.0), func(T(-123.96)));
-  }
-
   void testRange(TruncFunc func) {
     constexpr int COUNT = 1'231;
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
@@ -87,9 +45,6 @@ public:
 
 #define LIST_TRUNC_TESTS(T, func)                                              \
   using LlvmLibcTruncTest = TruncTest<T>;                                      \
-  TEST_F(LlvmLibcTruncTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
-  TEST_F(LlvmLibcTruncTest, RoundedNubmers) { testRoundedNumbers(&func); }     \
-  TEST_F(LlvmLibcTruncTest, Fractions) { testFractions(&func); }               \
   TEST_F(LlvmLibcTruncTest, Range) { testRange(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_TRUNCTEST_H

@@ -14,14 +14,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_STANDALONEMACHOUNWINDINFOREGISTRAR_H
-#define ORC_RT_STANDALONEMACHOUNWINDINFOREGISTRAR_H
+#ifndef ORC_RT_BEDROCK_STANDALONEMACHOUNWINDINFOREGISTRAR_H
+#define ORC_RT_BEDROCK_STANDALONEMACHOUNWINDINFOREGISTRAR_H
 
-#include "orc-rt/bedrock/Error.h"
-#include "orc-rt/bedrock/ExecutorAddress.h"
 #include "orc-rt/bedrock/SimpleSymbolTable.h"
-#include "orc-rt/bedrock/move_only_function.h"
-#include "orc-rt/bedrock/sps-ci/StandaloneMachOUnwindInfoRegistrarSPSCI.h"
+#include "orc-rt/bedrock/sps/StandaloneMachOUnwindInfoRegistrarSPSCI.h"
+#include "orc-rt/support/Error.h"
+#include "orc-rt/support/ExecutorAddress.h"
+#include "orc-rt/support/move_only_function.h"
 
 #include <cstdint>
 #include <map>
@@ -129,4 +129,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_STANDALONEMACHOUNWINDINFOREGISTRAR_H
+#endif // ORC_RT_BEDROCK_STANDALONEMACHOUNWINDINFOREGISTRAR_H

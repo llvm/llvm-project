@@ -1,4 +1,4 @@
-// RUN: mlir-opt --allow-unregistered-dialect --xevm-attach-target='module=xevm_* chip=pvc' \
+// RUN: mlir-opt --xevm-attach-target='module=xevm_* chip=pvc' \
 // RUN: --xegpu-sg-to-lane-distribute --split-input-file %s --canonicalize --cse | FileCheck %s
 
 // CHECK-LABEL: gpu.func @gemm

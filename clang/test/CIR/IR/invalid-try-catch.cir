@@ -181,6 +181,135 @@ cir.func dso_local @catch_all_handler_missing_begin_catch() {
 
 // -----
 
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+module {
+
+cir.func private @some_call()
+
+// The lifetime-end cleanup scope may hold cir.begin_catch, but it doesn't let
+// arbitrary operations be hoisted above it.
+cir.func dso_local @catch_handler_call_before_begin_catch() {
+  cir.scope {
+    %0 = cir.alloca "i" align(4) : !cir.ptr<!s32i>
+    // expected-error @below {{catch handler region must start with 'cir.begin_catch'}}
+    cir.try {
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      cir.lifetime.start %0 : !cir.ptr<!s32i>
+      cir.cleanup.scope {
+        cir.call @some_call() : () -> ()
+        %catch_token, %exception = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      } cleanup all {
+        cir.lifetime.end %0 : !cir.ptr<!s32i>
+        cir.yield
+      }
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+module {
+
+// The catch parameter's lifetime marker is always followed by the
+// cir.cleanup.scope that runs its lifetime-end marker.
+cir.func dso_local @catch_handler_lifetime_start_without_cleanup_scope() {
+  cir.scope {
+    %0 = cir.alloca "i" align(4) : !cir.ptr<!s32i>
+    // expected-error @below {{'cir.lifetime.start' in a catch handler region must be followed by the 'cir.cleanup.scope' of its lifetime-end cleanup}}
+    cir.try {
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      cir.lifetime.start %0 : !cir.ptr<!s32i>
+      %catch_token, %exception = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.lifetime.end %0 : !cir.ptr<!s32i>
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+module {
+
+// A cleanup.scope following a lifetime start marker must not be empty.
+cir.func dso_local @catch_handler_lifetime_start_empty_cleanup_body() {
+  cir.scope {
+    %0 = cir.alloca "i" align(4) : !cir.ptr<!s32i>
+    // expected-error @below {{'cir.lifetime.start' in a catch handler region must be followed by the 'cir.cleanup.scope' of its lifetime-end cleanup}}
+    cir.try {
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      cir.lifetime.start %0 : !cir.ptr<!s32i>
+      cir.cleanup.scope {
+      } cleanup all {
+        cir.lifetime.end %0 : !cir.ptr<!s32i>
+        cir.yield
+      }
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+module {
+
+// The catch parameter is the only variable whose lifetime starts before the
+// catch is entered, so a handler carries at most one lifetime marker.
+cir.func dso_local @catch_handler_two_lifetime_starts() {
+  cir.scope {
+    %0 = cir.alloca "i" align(4) : !cir.ptr<!s32i>
+    %1 = cir.alloca "j" align(4) : !cir.ptr<!s32i>
+    // expected-error @below {{'cir.lifetime.start' in a catch handler region must be followed by the 'cir.cleanup.scope' of its lifetime-end cleanup}}
+    cir.try {
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      cir.lifetime.start %0 : !cir.ptr<!s32i>
+      cir.lifetime.start %1 : !cir.ptr<!s32i>
+      cir.cleanup.scope {
+        %catch_token, %exception = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      } cleanup all {
+        cir.lifetime.end %1 : !cir.ptr<!s32i>
+        cir.lifetime.end %0 : !cir.ptr<!s32i>
+        cir.yield
+      }
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+}
+
+// -----
+
 module {
 
 cir.func dso_local @invalid_unwind_with_catch_all() {

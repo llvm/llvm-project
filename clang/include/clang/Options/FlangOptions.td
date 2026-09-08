@@ -189,6 +189,9 @@ defm ppc_native_vec_elem_order: BoolOptionWithoutMarshalling<"f", "ppc-native-ve
   PosFlag<SetTrue, [], [ClangOption], "Specifies PowerPC native vector element order (default)">,
   NegFlag<SetFalse, [], [ClangOption], "Specifies PowerPC non-native vector element order">>;
 defm unsigned : OptInFC1FFlag<"unsigned", "Enables UNSIGNED type">;
+defm out_of_bounds_subscripts : OptOutFC1FFlag<"out-of-bounds-subscripts",
+  "Accept a constant subscript that is out of bounds, with a warning (default)",
+  "Reject a constant subscript that is out of bounds with an error">;
 defm enumeration_type : OptInFC1FFlag<"enumeration-type", "Enables F2023 ENUMERATION TYPE (experimental; FIR lowering is incomplete)">;
 defm openacc_default_none_scalars_strict : OptOutFC1FFlag<"openacc-default-none-scalars-strict",
   "Require explicit data clauses for all variables (including scalars) under OpenACC DEFAULT(NONE)",
@@ -318,7 +321,7 @@ defm fp_sum_reassociation
           PosFlag<SetTrue, [], [],
                   "Enable Fortran-standard compliant reassociation within "
                   "individual REAL and COMPLEX sum expressions. This may "
-                  "change exact floating-point results">,
+                  "change exact floating-point results. Enabled by default">,
           NegFlag<SetFalse, [], [],
                   "Disable reassociation within individual REAL and COMPLEX "
                   "sum expressions">>,
@@ -326,7 +329,8 @@ defm fp_sum_reassociation
         Enable Fortran-standard compliant reassociation within individual
         ``REAL`` and ``COMPLEX`` sum expressions. This can improve optimization
         opportunities and may change exact floating-point results while
-        preserving standard-conforming Fortran semantics.
+        preserving standard-conforming Fortran semantics. It is enabled by
+        default at all optimization levels.
       }]>;
 
 def freal_sum_reassociation : Flag<["-"], "freal-sum-reassociation">,

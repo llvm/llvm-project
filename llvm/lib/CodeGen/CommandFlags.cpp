@@ -76,11 +76,9 @@ CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
 CGOPT_EXP(CodeGenFileType, FileType)
 CGOPT(FramePointerKind, FramePointerUsage)
-CGOPT(bool, EnableNoTrappingFPMath)
 CGOPT(bool, EnableAIXExtendedAltivecABI)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFPMath)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFP32Math)
-CGOPT(bool, EnableHonorSignDependentRoundingFPMath)
 CGOPT(FloatABI::ABIType, FloatABIForCalls)
 CGOPT(FPOpFusion::FPOpFusionMode, FuseFPOps)
 CGOPT(SwiftAsyncFramePointerMode, SwiftAsyncFramePointer)
@@ -91,7 +89,6 @@ CGOPT(bool, StackSymbolOrdering)
 CGOPT(bool, StackRealign)
 CGOPT(std::string, TrapFuncName)
 CGOPT(bool, UseCtors)
-CGOPT(bool, DisableIntegratedAS)
 CGOPT_EXP(bool, DataSections)
 CGOPT_EXP(bool, FunctionSections)
 CGOPT(bool, IgnoreXCOFFVisibility)
@@ -232,13 +229,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                      "Enable frame pointer elimination")));
   CGBINDOPT(FramePointerUsage);
 
-  static cl::opt<bool> EnableNoTrappingFPMath(
-      "enable-no-trapping-fp-math",
-      cl::desc("Enable setting the FP exceptions build "
-               "attribute not to use exceptions"),
-      cl::init(false));
-  CGBINDOPT(EnableNoTrappingFPMath);
-
   static const auto DenormFlagEnumOptions = cl::values(
       clEnumValN(DenormalMode::IEEE, "ieee", "IEEE 754 denormal numbers"),
       clEnumValN(DenormalMode::PreserveSign, "preserve-sign",
@@ -263,12 +253,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
     cl::init(DenormalMode::Invalid),
     DenormFlagEnumOptions);
   CGBINDOPT(DenormalFP32Math);
-
-  static cl::opt<bool> EnableHonorSignDependentRoundingFPMath(
-      "enable-sign-dependent-rounding-fp-math", cl::Hidden,
-      cl::desc("Force codegen to assume rounding mode can change dynamically"),
-      cl::init(false));
-  CGBINDOPT(EnableHonorSignDependentRoundingFPMath);
 
   static cl::opt<FloatABI::ABIType> FloatABIForCalls(
       "float-abi", cl::desc("Choose float ABI type"),
@@ -527,11 +511,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(XCOFFReadOnlyPointers);
 
-  static cl::opt<bool> DisableIntegratedAS(
-      "no-integrated-as", cl::desc("Disable integrated assembler"),
-      cl::init(false));
-  CGBINDOPT(DisableIntegratedAS);
-
   mc::RegisterMCTargetOptionsFlags();
 }
 
@@ -585,16 +564,12 @@ TargetOptions
 codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   TargetOptions Options;
   Options.AllowFPOpFusion = getFuseFPOps();
-  Options.NoTrappingFPMath = getEnableNoTrappingFPMath();
 
-  Options.HonorSignDependentRoundingFPMathOption =
-      getEnableHonorSignDependentRoundingFPMath();
   Options.EnableAIXExtendedAltivecABI = getEnableAIXExtendedAltivecABI();
   Options.NoZerosInBSS = getDontPlaceZerosInBSS();
   Options.GuaranteedTailCallOpt = getEnableGuaranteedTailCallOpt();
   Options.StackSymbolOrdering = getStackSymbolOrdering();
   Options.UseInitArray = !getUseCtors();
-  Options.DisableIntegratedAS = getDisableIntegratedAS();
   Options.DataSections =
       getExplicitDataSections().value_or(TheTriple.hasDefaultDataSections());
   Options.FunctionSections = getFunctionSections();

@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-CIR --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefixes=LLVM,LLVM-OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 typedef struct { int x; } __attribute__((aligned(8))) HalfPad;
 typedef struct { int x; } __attribute__((aligned(16))) OvInt;
@@ -93,12 +93,9 @@ TwoFloat ret_twof(float v) { TwoFloat t = {v, v}; return t; }
 int take_big(BigPad b) { return b.b; }
 BigPad ret_big(int v) { BigPad b = {0, v}; return b; }
 
-// CIR: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_BigPad> {llvm.align = 16 : i64, llvm.byval = !rec_BigPad, llvm.noalias, llvm.noundef} loc{{.*}}) -> !s32i
+// CIR: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_BigPad> {llvm.align = 16 : i64, llvm.byval = !rec_BigPad, llvm.noundef} loc{{.*}}) -> !s32i
 // CIR: cir.func{{.*}} @ret_big(%arg0: !cir.ptr<!rec_BigPad> {llvm.align = 16 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_BigPad, llvm.writable} loc{{.*}}, %arg1: !s32i {llvm.noundef} loc{{.*}})
-// CIR emits noalias on a byval argument where classic does not, here and
-// wherever else this file splits a byval line by backend.
-// LLVM-CIR: define dso_local i32 @take_big(ptr noalias noundef byval(%struct.BigPad) align 16 %{{.+}})
-// LLVM-OGCG: define dso_local i32 @take_big(ptr noundef byval(%struct.BigPad) align 16 %{{.+}})
+// LLVM: define dso_local i32 @take_big(ptr noundef byval(%struct.BigPad) align 16 %{{.+}})
 // LLVM: define dso_local void @ret_big(ptr dead_on_unwind noalias writable sret(%struct.BigPad) align 16 %{{.+}}, i32 noundef %{{.+}})
 
 // A padded member keeps its register coercion, while two of them outgrow two
@@ -107,10 +104,9 @@ int take_nest(NestOv n) { return n.o.x; }
 int take_arr(ArrOv a) { return a.a[1].x; }
 
 // CIR: cir.func{{.*}} @take_nest(%arg0: !s32i loc{{.*}}) -> !s32i
-// CIR: cir.func{{.*}} @take_arr(%arg0: !cir.ptr<!rec_ArrOv> {llvm.align = 16 : i64, llvm.byval = !rec_ArrOv, llvm.noalias, llvm.noundef} loc{{.*}}) -> !s32i
+// CIR: cir.func{{.*}} @take_arr(%arg0: !cir.ptr<!rec_ArrOv> {llvm.align = 16 : i64, llvm.byval = !rec_ArrOv, llvm.noundef} loc{{.*}}) -> !s32i
 // LLVM: define dso_local i32 @take_nest(i32 %{{.+}})
-// LLVM-CIR: define dso_local i32 @take_arr(ptr noalias noundef byval(%struct.ArrOv) align 16 %{{.+}})
-// LLVM-OGCG: define dso_local i32 @take_arr(ptr noundef byval(%struct.ArrOv) align 16 %{{.+}})
+// LLVM: define dso_local i32 @take_arr(ptr noundef byval(%struct.ArrOv) align 16 %{{.+}})
 
 // The empty member contributes no field and does not shift the int.
 int take_pwe(PadWithEmpty p) { return p.i; }

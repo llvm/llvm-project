@@ -24,7 +24,7 @@ using namespace mlir::vector;
 
 // Trims leading one dimensions from `oldType` and returns the result type.
 // Returns `vector<1xT>` if `oldType` only has one element.
-static VectorType trimLeadingOneDims(VectorType oldType) {
+static VectorType trimLeadingUnitDims(VectorType oldType) {
   ArrayRef<int64_t> oldShape = oldType.getShape();
   ArrayRef<int64_t> newShape = oldShape;
 
@@ -63,7 +63,7 @@ struct CastAwayExtractStridedSliceLeadingOneDim
     // the same rank. Here we drop leading one dimensions from the input vector
     // type to make sure we don't cause mismatch.
     VectorType oldSrcType = extractOp.getSourceVectorType();
-    VectorType newSrcType = trimLeadingOneDims(oldSrcType);
+    VectorType newSrcType = trimLeadingUnitDims(oldSrcType);
 
     if (newSrcType.getRank() == oldSrcType.getRank())
       return failure();
@@ -110,9 +110,9 @@ struct CastAwayInsertStridedSliceLeadingOneDim
   LogicalResult matchAndRewrite(vector::InsertStridedSliceOp insertOp,
                                 PatternRewriter &rewriter) const override {
     VectorType oldSrcType = insertOp.getSourceVectorType();
-    VectorType newSrcType = trimLeadingOneDims(oldSrcType);
+    VectorType newSrcType = trimLeadingUnitDims(oldSrcType);
     VectorType oldDstType = insertOp.getDestVectorType();
-    VectorType newDstType = trimLeadingOneDims(oldDstType);
+    VectorType newDstType = trimLeadingUnitDims(oldDstType);
 
     int64_t srcDropCount = oldSrcType.getRank() - newSrcType.getRank();
     int64_t dstDropCount = oldDstType.getRank() - newDstType.getRank();
@@ -144,7 +144,7 @@ struct CastAwayInsertStridedSliceLeadingOneDim
 };
 
 // Casts away leading one dimensions in vector.insert's vector inputs by
-// inserting vector.broadcast.
+// inserting vector.shape_cast.
 struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
   using Base::Base;
 
@@ -154,13 +154,13 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
     Type newSrcType = oldSrcType;
     int64_t oldSrcRank = 0, newSrcRank = 0;
     if (auto type = dyn_cast<VectorType>(oldSrcType)) {
-      newSrcType = trimLeadingOneDims(type);
+      newSrcType = trimLeadingUnitDims(type);
       oldSrcRank = type.getRank();
       newSrcRank = cast<VectorType>(newSrcType).getRank();
     }
 
     VectorType oldDstType = insertOp.getDestVectorType();
-    VectorType newDstType = trimLeadingOneDims(oldDstType);
+    VectorType newDstType = trimLeadingUnitDims(oldDstType);
 
     int64_t srcDropCount = oldSrcRank - newSrcRank;
     int64_t dstDropCount = oldDstType.getRank() - newDstType.getRank();
@@ -172,11 +172,11 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
 
     Value newSrcVector = insertOp.getValueToStore();
     if (oldSrcRank != 0) {
-      newSrcVector = vector::ExtractOp::create(
-          rewriter, loc, insertOp.getValueToStore(), splatZero(srcDropCount));
+      newSrcVector = rewriter.createOrFold<vector::ShapeCastOp>(
+          loc, cast<VectorType>(newSrcType), insertOp.getValueToStore());
     }
-    Value newDstVector = vector::ExtractOp::create(
-        rewriter, loc, insertOp.getDest(), splatZero(dstDropCount));
+    Value newDstVector = rewriter.createOrFold<vector::ShapeCastOp>(
+        loc, newDstType, insertOp.getDest());
 
     // New position rank needs to be computed in two steps: (1) if destination
     // type has leading unit dims, we also trim the position array accordingly,
@@ -193,7 +193,7 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
     auto newInsertOp = vector::InsertOp::create(rewriter, loc, newSrcVector,
                                                 newDstVector, newPosition);
 
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(insertOp, oldDstType,
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(insertOp, oldDstType,
                                                      newInsertOp);
 
     return success();
@@ -201,19 +201,9 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
 };
 
 static Value dropUnitDimsFromMask(OpBuilder &b, Location loc, Value mask,
-                                  VectorType newType, AffineMap newMap,
-                                  VectorType oldMaskType) {
-  // Infer the type of the new mask from the new map.
+                                  VectorType newType, AffineMap newMap) {
   VectorType newMaskType = inferTransferOpMaskType(newType, newMap);
 
-  // If the new mask is broadcastable to the old result type, we can safely
-  // use a `vector.extract` to get the new mask. Otherwise the best we can
-  // do is shape cast.
-  if (vector::isBroadcastableTo(newMaskType, oldMaskType) ==
-      BroadcastableToResult::Success) {
-    int64_t dropDim = oldMaskType.getRank() - newMaskType.getRank();
-    return vector::ExtractOp::create(b, loc, mask, splatZero(dropDim));
-  }
   return vector::ShapeCastOp::create(b, loc, newMaskType, mask);
 }
 
@@ -229,16 +219,17 @@ struct CastAwayTransferReadLeadingOneDim
     // TODO(#78787): Not supported masked op yet.
     if (cast<MaskableOpInterface>(read.getOperation()).isMasked())
       return failure();
-    // TODO: support 0-d corner case.
+
     if (read.getTransferRank() == 0)
-      return failure();
+      return rewriter.notifyMatchFailure(
+          read, "Nothing to trim - the transfer itself has rank zero");
 
     auto shapedType = cast<ShapedType>(read.getBase().getType());
     if (shapedType.getElementType() != read.getVectorType().getElementType())
       return failure();
 
     VectorType oldType = read.getVectorType();
-    VectorType newType = trimLeadingOneDims(oldType);
+    VectorType newType = trimLeadingUnitDims(oldType);
 
     if (newType == oldType)
       return failure();
@@ -256,11 +247,9 @@ struct CastAwayTransferReadLeadingOneDim
           read.getInBoundsAttr().getValue().take_back(newType.getRank()));
 
     Value mask = Value();
-    if (read.getMask()) {
-      VectorType maskType = read.getMaskType();
+    if (read.getMask())
       mask = dropUnitDimsFromMask(rewriter, read.getLoc(), read.getMask(),
-                                  newType, newMap, maskType);
-    }
+                                  newType, newMap);
 
     auto newRead = vector::TransferReadOp::create(
         rewriter, read.getLoc(), newType, read.getBase(), read.getIndices(),
@@ -283,19 +272,19 @@ struct CastAwayTransferWriteLeadingOneDim
     // TODO(#78787): Not supported masked op yet.
     if (cast<MaskableOpInterface>(write.getOperation()).isMasked())
       return failure();
-    // TODO: support 0-d corner case.
+
     if (write.getTransferRank() == 0)
-      return failure();
+      return rewriter.notifyMatchFailure(
+          write, "Nothing to trim - the transfer itself has rank zero");
 
     auto shapedType = dyn_cast<ShapedType>(write.getBase().getType());
     if (shapedType.getElementType() != write.getVectorType().getElementType())
       return failure();
 
     VectorType oldType = write.getVectorType();
-    VectorType newType = trimLeadingOneDims(oldType);
+    VectorType newType = trimLeadingUnitDims(oldType);
     if (newType == oldType)
       return failure();
-    int64_t dropDim = oldType.getRank() - newType.getRank();
 
     AffineMap oldMap = write.getPermutationMap();
     ArrayRef<AffineExpr> newResults =
@@ -309,13 +298,12 @@ struct CastAwayTransferWriteLeadingOneDim
       inBoundsAttr = rewriter.getArrayAttr(
           write.getInBoundsAttr().getValue().take_back(newType.getRank()));
 
-    auto newVector = vector::ExtractOp::create(
-        rewriter, write.getLoc(), write.getVector(), splatZero(dropDim));
+    auto newVector = rewriter.createOrFold<vector::ShapeCastOp>(
+        write.getLoc(), newType, write.getVector());
 
     if (write.getMask()) {
-      VectorType maskType = write.getMaskType();
-      Value newMask = dropUnitDimsFromMask(
-          rewriter, write.getLoc(), write.getMask(), newType, newMap, maskType);
+      Value newMask = dropUnitDimsFromMask(rewriter, write.getLoc(),
+                                           write.getMask(), newType, newMap);
       rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
           write, newVector, write.getBase(), write.getIndices(),
           AffineMapAttr::get(newMap), newMask, inBoundsAttr);
@@ -516,7 +504,7 @@ public:
     auto vecType = dyn_cast<VectorType>(op->getResultTypes()[0]);
     if (!vecType)
       return failure();
-    VectorType newVecType = trimLeadingOneDims(vecType);
+    VectorType newVecType = trimLeadingUnitDims(vecType);
     if (newVecType == vecType)
       return failure();
     int64_t dropDim = vecType.getRank() - newVecType.getRank();
@@ -572,7 +560,7 @@ struct CastAwayLoadLikeLeadingOneDim : public OpRewritePattern<OpTy> {
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
     VectorType oldResultType = op.getVectorType();
-    VectorType newResultType = trimLeadingOneDims(oldResultType);
+    VectorType newResultType = trimLeadingUnitDims(oldResultType);
     if (newResultType == oldResultType)
       return failure();
     int64_t nDropped = oldResultType.getRank() - newResultType.getRank();
@@ -608,7 +596,7 @@ struct CastAwayStoreLikeLeadingOneDim : public OpRewritePattern<OpTy> {
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
     VectorType oldVecType = op.getVectorType();
-    VectorType newVecType = trimLeadingOneDims(oldVecType);
+    VectorType newVecType = trimLeadingUnitDims(oldVecType);
     if (newVecType == oldVecType)
       return failure();
     int64_t nDropped = oldVecType.getRank() - newVecType.getRank();
@@ -642,7 +630,7 @@ struct CastAwayConstantMaskLeadingOneDim
   LogicalResult matchAndRewrite(vector::ConstantMaskOp mask,
                                 PatternRewriter &rewriter) const override {
     VectorType oldType = mask.getType();
-    VectorType newType = trimLeadingOneDims(oldType);
+    VectorType newType = trimLeadingUnitDims(oldType);
 
     if (newType == oldType)
       return failure();

@@ -394,6 +394,24 @@ llvm.func @fshr_test(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: vector<8xi32>, %
   llvm.return
 }
 
+// CHECK-LABEL: @pdep_test
+llvm.func @pdep_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
+  // CHECK: call i32 @llvm.pdep.i32
+  "llvm.intr.pdep"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.pdep.v8i32
+  "llvm.intr.pdep"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @pext_test
+llvm.func @pext_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
+  // CHECK: call i32 @llvm.pext.i32
+  "llvm.intr.pext"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.pext.v8i32
+  "llvm.intr.pext"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
 // CHECK-LABEL: @maximum_test
 llvm.func @maximum_test(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: vector<8xf32>) {
   // CHECK: call float @llvm.maximum.f32

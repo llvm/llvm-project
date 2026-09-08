@@ -33,6 +33,8 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/FormatAdapters.h"
 #include <optional>
 
 using namespace lldb;
@@ -914,17 +916,17 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
   }
   
   // Read the dlopen token from the return area:
-  lldb::addr_t token = process->ReadPointerFromMemory(return_addr, 
-                                                      utility_error);
-  if (utility_error.Fail()) {
-    error = Status::FromErrorStringWithFormat(
-        "dlopen error: could not read the return struct: %s",
-        utility_error.AsCString());
+  llvm::Expected<lldb::addr_t> token =
+      process->ReadPointerFromMemory(return_addr);
+  if (!token) {
+    error = Status::FromErrorStringWithFormatv(
+        "dlopen error: could not read the return struct: {0}",
+        llvm::fmt_consume(token.takeError()));
     return LLDB_INVALID_IMAGE_TOKEN;
   }
-  
+
   // The dlopen succeeded!
-  if (token != 0x0) {
+  if (*token != 0x0) {
     if (loaded_image && buffer_addr != 0x0)
     {
       // Capture the image which was loaded.  We leave it in the buffer on
@@ -934,23 +936,22 @@ uint32_t PlatformPOSIX::DoLoadImage(lldb_private::Process *process,
       if (utility_error.Success())
         loaded_image->SetFile(name_string, llvm::sys::path::Style::posix);
     }
-    return process->AddImageToken(token);
+    return process->AddImageToken(*token);
   }
-    
+
   // We got an error, lets read in the error string:
   std::string dlopen_error_str;
-  lldb::addr_t error_addr 
-    = process->ReadPointerFromMemory(return_addr + addr_size, utility_error);
-  if (utility_error.Fail()) {
-    error = Status::FromErrorStringWithFormat(
-        "dlopen error: could not read error string: %s",
-        utility_error.AsCString());
+  llvm::Expected<lldb::addr_t> error_addr =
+      process->ReadPointerFromMemory(return_addr + addr_size);
+  if (!error_addr) {
+    error = Status::FromErrorStringWithFormatv(
+        "dlopen error: could not read error string: {0}",
+        llvm::fmt_consume(error_addr.takeError()));
     return LLDB_INVALID_IMAGE_TOKEN;
   }
-  
-  size_t num_chars = process->ReadCStringFromMemory(error_addr + addr_size, 
-                                                    dlopen_error_str, 
-                                                    utility_error);
+
+  size_t num_chars = process->ReadCStringFromMemory(
+      *error_addr + addr_size, dlopen_error_str, utility_error);
   if (utility_error.Success() && num_chars > 0)
     error = Status::FromErrorStringWithFormat("dlopen error: %s",
                                               dlopen_error_str.c_str());

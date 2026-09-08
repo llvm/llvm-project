@@ -88,7 +88,7 @@ define i1 @fm_overflow_recovery(i64 %n, i64 %i, i64 %lim) {
 ; CHECK-NEXT:    [[N4M4:%.*]] = add i64 [[N4]], -4
 ; CHECK-NEXT:    [[F2:%.*]] = icmp ult i64 [[N4M4]], [[LIM]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[F2]])
-; CHECK-NEXT:    [[I4:%.*]] = shl nuw i64 [[I]], 2
+; CHECK-NEXT:    [[I4:%.*]] = shl nuw nsw i64 [[I]], 2
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:

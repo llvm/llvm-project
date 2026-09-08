@@ -5,6 +5,7 @@ add_lldb_unittest(LLDBPlatformTests
   PlatformMacOSXTest.cpp
   PlatformSiginfoTest.cpp
   PlatformTest.cpp
+  PlatformWasmTest.cpp
 
   LINK_COMPONENTS
     Support
@@ -13,6 +14,7 @@ add_lldb_unittest(LLDBPlatformTests
     lldbPluginPlatformLinux
     lldbPluginPlatformMacOSX
     lldbPluginPlatformNetBSD
+    lldbPluginPlatformWasm
     lldbUtilityHelpers
     LLVMTestingSupport
   )

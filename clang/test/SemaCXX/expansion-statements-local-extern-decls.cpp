@@ -71,3 +71,29 @@ void foo6() {
     // expected-note@#duplicate_global_function_decl {{previous declaration is here}}
   }
 }
+void foo7() {
+  template for (constexpr auto x : {true, false}) { // #foo7_instantiation
+    if constexpr (x) {
+      extern int qualified_decl; // #first_qualified_decl
+    } else {
+      extern thread_local int qualified_decl; // #mismatched_qualified_decl
+      // expected-error@#mismatched_qualified_decl {{thread-local declaration of 'qualified_decl' follows non-thread-local declaration}}
+      // expected-note@#foo7_instantiation {{in instantiation of expansion statement requested here}}
+      // expected-note@#first_qualified_decl {{previous declaration is here}}
+    }
+  }
+}
+
+int foo8_decl; // #foo8_decl
+void foo8() {
+  template for (constexpr auto x : {true, false}) { // #foo8_instantiation
+    if constexpr (x) {
+      extern int foo8_decl;
+    } else {
+      extern thread_local int foo8_decl; // #mismatched_foo8_decl
+      // expected-error@#mismatched_foo8_decl {{thread-local declaration of 'foo8_decl' follows non-thread-local declaration}}
+      // expected-note@#foo8_instantiation {{in instantiation of expansion statement requested here}}
+      // expected-note@#foo8_decl {{previous definition is here}}
+    }
+  }
+}

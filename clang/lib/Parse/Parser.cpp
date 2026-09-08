@@ -1301,17 +1301,13 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     assert(getLangOpts().CPlusPlus && "Only C++ function definitions have '='");
 
     if (TryConsumeToken(tok::kw_delete, KWLoc)) {
-      Diag(KWLoc, getLangOpts().CPlusPlus11
-                      ? diag::warn_cxx98_compat_defaulted_deleted_function
-                      : diag::ext_defaulted_deleted_function)
+      DiagCompat(KWLoc, diag_compat::defaulted_deleted_function)
           << 1 /* deleted */;
       BodyKind = Sema::FnBodyKind::Delete;
       DeletedMessage = ParseCXXDeletedFunctionMessage();
       D.SetRangeEnd(PrevTokLocation);
     } else if (TryConsumeToken(tok::kw_default, KWLoc)) {
-      Diag(KWLoc, getLangOpts().CPlusPlus11
-                      ? diag::warn_cxx98_compat_defaulted_deleted_function
-                      : diag::ext_defaulted_deleted_function)
+      DiagCompat(KWLoc, diag_compat::defaulted_deleted_function)
           << 0 /* defaulted */;
       BodyKind = Sema::FnBodyKind::Default;
       D.SetRangeEnd(PrevTokLocation);
@@ -1396,24 +1392,30 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     return Actions.ActOnFinishFunctionBody(Res, nullptr, false);
   }
 
+  return ParseFunctionBody(Res, BodyScope);
+}
+
+Decl *Parser::ParseFunctionBody(Decl *D, ParseScope &BodyScope) {
   if (Tok.is(tok::kw_try))
-    return ParseFunctionTryBlock(Res, BodyScope);
+    return ParseFunctionTryBlock(D, BodyScope);
 
   // If we have a colon, then we're probably parsing a C++
   // ctor-initializer.
   if (Tok.is(tok::colon)) {
-    ParseConstructorInitializer(Res);
+    ParseConstructorInitializer(D);
 
     // Recover from error.
     if (!Tok.is(tok::l_brace)) {
       BodyScope.Exit();
-      Actions.ActOnFinishFunctionBody(Res, nullptr);
-      return Res;
+      if (D)
+        D->getAsFunction()->setInvalidDecl();
+      Actions.ActOnFinishFunctionBody(D, nullptr);
+      return D;
     }
   } else
-    Actions.ActOnDefaultCtorInitializers(Res);
+    Actions.ActOnDefaultCtorInitializers(D);
 
-  return ParseFunctionStatementBody(Res, BodyScope);
+  return ParseFunctionStatementBody(D, BodyScope);
 }
 
 void Parser::SkipFunctionBody() {
@@ -1849,11 +1851,20 @@ SourceLocation Parser::getEndOfPreviousToken() const {
 
 bool Parser::TryKeywordIdentFallback(bool DisableKeyword) {
   assert(Tok.isNot(tok::identifier));
+  IdentifierInfo *II = Tok.getIdentifierInfo();
+
+  // A token lexed and cached before an earlier fallback reverted this keyword
+  // still carries the stale keyword kind; it is already an identifier.
+  if (II->getTokenID() == tok::identifier) {
+    Tok.setKind(tok::identifier);
+    return true;
+  }
+
   Diag(Tok, diag::ext_keyword_as_ident)
     << PP.getSpelling(Tok)
     << DisableKeyword;
   if (DisableKeyword)
-    Tok.getIdentifierInfo()->revertTokenIDToIdentifier();
+    II->revertTokenIDToIdentifier();
   Tok.setKind(tok::identifier);
   return true;
 }

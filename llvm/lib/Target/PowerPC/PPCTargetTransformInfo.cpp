@@ -1160,3 +1160,46 @@ PPCTTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
     Cost += 1; // need shift for length
   return Cost;
 }
+
+InstructionCost PPCTTIImpl::getPartialReductionCost(
+    unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+    ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+    TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+    TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
+  InstructionCost Invalid = InstructionCost::getInvalid();
+
+  if (!getST()->hasAltivec())
+    return Invalid;
+  if (Opcode != Instruction::Add)
+    return Invalid;
+  if (BinOp && BinOp.value() != Instruction::Mul)
+    return Invalid;
+
+  EVT AccVT = TLI->getValueType(DL, AccumType, true);
+  if (AccVT != MVT::i32)
+    return Invalid;
+  if (InputTypeA != InputTypeB)
+    return Invalid;
+
+  Type *ATy = VectorType::get(InputTypeA, VF);
+  EVT AVT = TLI->getValueType(DL, ATy, true);
+
+  if (OpAExtend != TTI::PR_SignExtend && OpAExtend != TTI::PR_ZeroExtend)
+    return Invalid;
+  if (OpBExtend != TTI::PR_SignExtend && OpBExtend != TTI::PR_ZeroExtend)
+    return Invalid;
+
+  if (AVT == MVT::v16i8) {
+    // For v16i8 PPC supports vmsumubm (zext/zext) and vmsummbm (sext/zext)
+    if (OpBExtend != TTI::PR_ZeroExtend)
+      return Invalid;
+  } else if (AVT == MVT::v8i16) {
+    // For v8i16 PPC supports vmsumuhm (zext/zext) and vmsumshm (sext/sext)
+    if (OpAExtend != OpBExtend)
+      return Invalid;
+  } else {
+    return Invalid;
+  }
+
+  return vectorCostAdjustmentFactor(Instruction::Add, ATy, nullptr);
+}

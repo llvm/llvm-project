@@ -49,8 +49,6 @@ Getting Started with libc++
    Status/Cxx23
    Status/Cxx26
    Status/Cxx29
-   Status/Format
-   Status/Parallelism
 
 
 .. toctree::

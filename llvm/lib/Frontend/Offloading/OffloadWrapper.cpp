@@ -23,12 +23,9 @@
 #include "llvm/Object/OffloadBinary.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LineIterator.h"
-#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
-#include <memory>
 #include <utility>
 
 using namespace llvm;

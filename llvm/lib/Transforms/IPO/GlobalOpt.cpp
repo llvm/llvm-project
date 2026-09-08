@@ -769,10 +769,11 @@ static void allUsesOfLoadAndStores(GlobalVariable *GV,
   }
 }
 
-static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
+static bool OptimizeAwayTrappingUsesOfValue(Instruction *V, Constant *NewV) {
   bool Changed = false;
-  for (auto UI = V->user_begin(), E = V->user_end(); UI != E; ) {
-    Instruction *I = cast<Instruction>(*UI++);
+  SmallVector<User *, 8> Users(V->user_begin(), V->user_end());
+  for (User *U : Users) {
+    Instruction *I = cast<Instruction>(U);
     // Uses are non-trapping if null pointer is considered valid.
     // Non address-space 0 globals are already pruned by the caller.
     if (NullPointerIsDefined(I->getFunction()))
@@ -792,17 +793,9 @@ static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
         // that the pointer is not also being passed as an argument.
         CB->setCalledOperand(NewV);
         Changed = true;
-        bool PassedAsArg = false;
         for (unsigned i = 0, e = CB->arg_size(); i != e; ++i)
-          if (CB->getArgOperand(i) == V) {
-            PassedAsArg = true;
+          if (CB->getArgOperand(i) == V)
             CB->setArgOperand(i, NewV);
-          }
-
-        if (PassedAsArg) {
-          // Being passed as an argument also.  Be careful to not invalidate UI!
-          UI = V->user_begin();
-        }
       }
     } else if (AddrSpaceCastInst *CI = dyn_cast<AddrSpaceCastInst>(I)) {
       Changed |= OptimizeAwayTrappingUsesOfValue(
