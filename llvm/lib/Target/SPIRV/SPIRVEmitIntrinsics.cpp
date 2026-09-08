@@ -991,7 +991,8 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeHelper(
     } else {
       Value *Op = Ref->getNumOperands() > 0 ? Ref->getOperand(0) : nullptr;
       // Code lives in the program address space, not in the address space of
-      // the global. Program address space 0 means the data layout omits it.
+      // the global. For known SPIR-V targets, program address space 0 maps
+      // to Function/Private, which cannot hold code, so treat it as unset.
       std::optional<unsigned> ProgramAS;
       if (isa_and_nonnull<Function>(Op)) {
         if (unsigned AS = CurrF->getDataLayout().getProgramAddressSpace())
