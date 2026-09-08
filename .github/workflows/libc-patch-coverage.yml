@@ -201,7 +201,7 @@ jobs:
           if [[ "$FILE" =~ ^libc/src/([^/]+)/(.*/)?([^/]+)\.cpp$ ]]; then
             DIR="${BASH_REMATCH[1]}"
             FUNC="${BASH_REMATCH[3]}"
-            ALL_MATCHES=$(grep -oE "^libc\.test\.src\.${DIR}\.([a-zA-Z0-9_]+\.)*${FUNC}_test\.__unit__" all_targets.txt || true)
+            ALL_MATCHES=$(grep -E "^libc\.test\.src\.${DIR}\.([a-zA-Z0-9_]+\.)*${FUNC}_test(:|\s|\.__unit__|$)" all_targets.txt | sed -E 's/(:|\s).*//' || true)
             FOUND_TARGET=$(echo "$ALL_MATCHES" | head -n 1 | tr -d '\r\n ' || true)
             if [ -n "$FOUND_TARGET" ]; then
               echo "[LOG] -> Matched $FILE -> $FOUND_TARGET"
