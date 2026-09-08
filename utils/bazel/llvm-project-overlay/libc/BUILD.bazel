@@ -2180,7 +2180,7 @@ libc_support_library(
 libc_support_library(
     name = "__support_printf_core_printf_writer",
     hdrs = ["src/__support/printf_core/writer.h"],
-    textual_hdrs = ["src/__support/printf_core/write_modes.def"],
+    textual_hdrs = ["src/__support/printf_core/overflow_modes.def"],
     deps = [
         ":__support_cpp_string_view",
         ":__support_macros_config",

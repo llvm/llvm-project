@@ -991,14 +991,26 @@ getStartAndBackedgeValue(const PHINode &PN, const BasicBlock *LoopPred) {
   return {PN.getIncomingValue(StartIdx), PN.getIncomingValue(1 - StartIdx)};
 }
 
+/// Matches an increment of \p PhiM by a constant offset, captured in \p Off.
+/// The increment must be a plain IR add or [u|s]add.with.overflow.
+template <typename PhiMatchTy>
+static auto m_IncrementOf(const PhiMatchTy &PhiM, const APInt *&Off) {
+  return m_CombineOr(
+      m_c_Add(PhiM, m_APInt(Off)),
+      m_ExtractValue<0>(m_CombineOr(
+          m_c_Intrinsic<Intrinsic::uadd_with_overflow>(PhiM, m_APInt(Off)),
+          m_c_Intrinsic<Intrinsic::sadd_with_overflow>(PhiM, m_APInt(Off)))));
+}
+
 MonotonicInfo State::getMonotonicityInfo(PHINode &PN, Value *Step) {
   MonotonicInfo Info;
   const APInt *StepOffset = nullptr;
-  if (match(Step, m_c_Add(m_Specific(&PN), m_APInt(StepOffset)))) {
+  if (match(Step, m_IncrementOf(m_Specific(&PN), StepOffset))) {
     Info.Decreasing = StepOffset->isNegative();
-    const auto *Add = cast<OverflowingBinaryOperator>(Step);
-    Info.Unsigned = !Info.Decreasing && Add->hasNoUnsignedWrap();
-    Info.Signed = Add->hasNoSignedWrap();
+    if (const auto *Add = dyn_cast<OverflowingBinaryOperator>(Step)) {
+      Info.Unsigned = !Info.Decreasing && Add->hasNoUnsignedWrap();
+      Info.Signed = Add->hasNoSignedWrap();
+    }
   } else if (const auto *GEP = dyn_cast<GEPOperator>(Step)) {
     // TODO: Handle the non-increasing direction, which needs a nusw GEP with a
     // negative constant offset.
@@ -1084,7 +1096,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
   const APInt *IncStep = nullptr;
   CmpPredicate Pred;
   auto IndValue =
-      m_Value(A, m_CombineOr(m_Phi(PN), m_c_Add(m_Phi(PN), m_APInt(IncStep))));
+      m_Value(A, m_CombineOr(m_Phi(PN), m_IncrementOf(m_Phi(PN), IncStep)));
 
   auto *Br = dyn_cast<CondBrInst>(BB.getTerminator());
   if (!Br)
