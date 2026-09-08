@@ -726,9 +726,20 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     // We're storing the full vector, we can handle this without knowing CurVal.
     Type *AccessTy = Val->getType();
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
-    if (Constant *CI = dyn_cast<Constant>(Index))
-      if (CI->isNullValue() && AccessSize == VecStoreSize)
-        return Builder.CreateBitPreservingCastChain(DL, Val, AA.Vector.Ty);
+    if (Constant *CI = dyn_cast<Constant>(Index)) {
+      if (CI->isNullValue() && AccessSize == VecStoreSize) {
+        Value *Result =
+            Builder.CreateBitPreservingCastChain(DL, Val, AA.Vector.Ty);
+        // If Result is a load from this alloca, it will later be RAUW'd and
+        // deleted. The SSAUpdater holds a raw Value* that RAUW doesn't update,
+        // leaving a dangling pointer. Wrap in a freeze to create a fresh value
+        // the SSAUpdater can safely hold; the freeze's operand is a proper IR
+        // use that RAUW does update.
+        if (isa<LoadInst>(Result))
+          Result = Builder.CreateFreeze(Result);
+        return Result;
+      }
+    }
 
     // Storing a subvector, or a scalar that spans several elements.
     TypeSize EltSize = DL.getTypeStoreSize(VecEltTy);
@@ -901,27 +912,6 @@ static BasicBlock::iterator skipToNonAllocaInsertPt(BasicBlock &BB,
   return I;
 }
 
-/// Peel nested aggregates down to a single uniform element type, multiplying
-/// NumElems by the element count of each layer peeled.
-static Type *peelAggregateToElementType(Type *Ty, uint64_t &NumElems) {
-  while (true) {
-    if (auto *ArrayTy = dyn_cast<ArrayType>(Ty)) {
-      NumElems *= ArrayTy->getNumElements();
-      Ty = ArrayTy->getElementType();
-      continue;
-    }
-
-    auto *StructTy = dyn_cast<StructType>(Ty);
-    if (!StructTy || !StructTy->containsHomogeneousTypes())
-      break;
-
-    NumElems *= StructTy->getNumElements();
-    Ty = StructTy->getElementType(0);
-  }
-
-  return Ty;
-}
-
 FixedVectorType *
 AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
   if (DisablePromoteAllocaToVector) {
@@ -930,9 +920,13 @@ AMDGPUPromoteAllocaImpl::getVectorTypeForAlloca(Type *AllocaTy) const {
   }
 
   auto *VectorTy = dyn_cast<FixedVectorType>(AllocaTy);
-  if (AllocaTy->isAggregateType()) {
+  if (auto *ArrayTy = dyn_cast<ArrayType>(AllocaTy)) {
     uint64_t NumElems = 1;
-    Type *ElemTy = peelAggregateToElementType(AllocaTy, NumElems);
+    Type *ElemTy;
+    do {
+      NumElems *= ArrayTy->getNumElements();
+      ElemTy = ArrayTy->getElementType();
+    } while ((ArrayTy = dyn_cast<ArrayType>(ElemTy)));
 
     // Check for array of vectors
     auto *InnerVectorTy = dyn_cast<FixedVectorType>(ElemTy);
