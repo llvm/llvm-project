@@ -35,7 +35,7 @@ for.end:
 }
 
 
-attributes #0 = { "fp-contract-model"="standard" "frame-pointer"="non-leaf" "relocation-model"="pic" "ssp-buffers-size"="8" }
+attributes #0 = { "frame-pointer"="non-leaf" "relocation-model"="pic" "ssp-buffers-size"="8" }
 
 !llvm.dbg.cu = !{!11}
 !llvm.module.flags = !{!14}

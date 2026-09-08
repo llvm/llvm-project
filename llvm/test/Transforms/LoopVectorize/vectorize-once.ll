@@ -67,7 +67,7 @@ _ZSt10accumulateIPiiET0_T_S2_S1_.exit:
   ret i32 %__init.addr.0.lcssa.i
 }
 
-attributes #0 = { nounwind readonly ssp uwtable "fp-contract-model"="standard" "frame-pointer"="non-leaf" "realign-stack" "relocation-model"="pic" "ssp-buffers-size"="8" }
+attributes #0 = { nounwind readonly ssp uwtable "frame-pointer"="non-leaf" "realign-stack" "relocation-model"="pic" "ssp-buffers-size"="8" }
 
 ; CHECK:      [[VEC_LOOP1]] = distinct !{[[VEC_LOOP1]], [[MD_IS_VEC:![0-9]+]], [[MD_RT_UNROLL_DIS:![0-9]+]]}
 ; CHECK-NEXT: [[MD_IS_VEC:![0-9]+]] = !{!"llvm.loop.isvectorized", i32 1}

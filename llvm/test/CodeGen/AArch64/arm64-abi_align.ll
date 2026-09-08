@@ -507,10 +507,10 @@ entry:
   ret i32 %call
 }
 
-attributes #0 = { noinline nounwind readnone "fp-contract-model"="standard" "relocation-model"="pic" "ssp-buffers-size"="8" }
-attributes #1 = { nounwind readonly "fp-contract-model"="standard" "relocation-model"="pic" "ssp-buffers-size"="8" }
-attributes #2 = { noinline nounwind readonly "fp-contract-model"="standard" "relocation-model"="pic" "ssp-buffers-size"="8" }
-attributes #3 = { nounwind "fp-contract-model"="standard" "relocation-model"="pic" "ssp-buffers-size"="8" }
+attributes #0 = { noinline nounwind readnone "relocation-model"="pic" "ssp-buffers-size"="8" }
+attributes #1 = { nounwind readonly "relocation-model"="pic" "ssp-buffers-size"="8" }
+attributes #2 = { noinline nounwind readonly "relocation-model"="pic" "ssp-buffers-size"="8" }
+attributes #3 = { nounwind "relocation-model"="pic" "ssp-buffers-size"="8" }
 attributes #4 = { nounwind }
 attributes #5 = { nobuiltin }
 
