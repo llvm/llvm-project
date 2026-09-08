@@ -5865,9 +5865,9 @@ libc_support_library(
     name = "__support_math_setpayloadf128",
     hdrs = ["src/__support/math/setpayloadf128.h"],
     deps = [
+        ":__support_fputil_float128",
         ":__support_fputil_basic_operations",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -5923,8 +5923,8 @@ libc_support_library(
     hdrs = ["src/__support/math/setpayloadsigf128.h"],
     deps = [
         ":__support_fputil_basic_operations",
+        ":__support_fputil_float128",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -8015,10 +8015,10 @@ libc_support_library(
     name = "__support_math_nanf128",
     hdrs = ["src/__support/math/nanf128.h"],
     deps = [
+        ":__support_fputil_float128",
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_str_to_float",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -9749,9 +9749,9 @@ libc_support_library(
     name = "__support_math_getpayloadf128",
     hdrs = ["src/__support/math/getpayloadf128.h"],
     deps = [
+        ":__support_fputil_float128",
         ":__support_fputil_basic_operations",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -14080,6 +14080,8 @@ libc_math_function(
 libc_math_function(
     name = "getpayloadf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_getpayloadf128",
     ],
 )
@@ -14616,6 +14618,7 @@ libc_math_function(
 libc_math_function(
     name = "nanf128",
     additional_deps = [
+        ":__support_fputil_float128",
         ":__support_math_nanf128",
     ],
 )
@@ -15191,6 +15194,8 @@ libc_math_function(
 libc_math_function(
     name = "setpayloadf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_setpayloadf128",
     ],
 )
@@ -15233,6 +15238,8 @@ libc_math_function(
 libc_math_function(
     name = "setpayloadsigf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_setpayloadsigf128",
     ],
 )

@@ -4419,6 +4419,7 @@ add_entrypoint_object(
   HDRS
     ../getpayloadf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.getpayloadf128
 )
 
@@ -4479,6 +4480,7 @@ add_entrypoint_object(
   HDRS
     ../setpayloadf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.setpayloadf128
 )
 
@@ -4539,6 +4541,7 @@ add_entrypoint_object(
   HDRS
     ../setpayloadsigf128.h
   DEPENDS
+    libc.src.__support.CPP.bit
     libc.src.__support.math.setpayloadsigf128
 )
 

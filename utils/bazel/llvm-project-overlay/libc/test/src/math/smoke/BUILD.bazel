@@ -1268,6 +1268,9 @@ math_test(
 math_test(
     name = "getpayloadf128",
     hdrs = ["GetPayloadTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -2093,6 +2096,9 @@ math_test(
 math_test(
     name = "setpayloadf128",
     hdrs = ["SetPayloadTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -2126,6 +2132,9 @@ math_test(
 math_test(
     name = "setpayloadsigf128",
     hdrs = ["SetPayloadSigTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ]
 )
 
 math_test(
