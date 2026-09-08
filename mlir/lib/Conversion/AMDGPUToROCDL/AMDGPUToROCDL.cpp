@@ -666,6 +666,7 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
           /*resultTypes=*/TypeRange(), /*operands=*/ValueRange(),
           /*asm_string=*/asmStr, constraints, /*has_side_effects=*/true,
           /*is_align_stack=*/false, LLVM::TailCallKind::None,
+          /*convergent=*/false,
           /*asm_dialect=*/asmDialectAttr,
           /*operand_attrs=*/ArrayAttr());
     } else if (chipset.majorVersion < 12) {
@@ -4315,7 +4316,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
 
     SmallVector<Value> indicesI32Vector;
     if (elementType == i32) {
-      indicesI32Vector = indicesVector;
+      indicesI32Vector = std::move(indicesVector);
     } else {
       for (unsigned i = 0; i < targetSize; ++i) {
         Value index = indicesVector[i];
@@ -4329,7 +4330,7 @@ struct AMDGPULowerDescriptor : public ConvertOpToLLVMPattern<DescriptorOp> {
 
     SmallVector<Value> indicesToInsert;
     if (elementType == i32) {
-      indicesToInsert = indicesI32Vector;
+      indicesToInsert = std::move(indicesI32Vector);
     } else {
       unsigned size = indicesI32Vector.size() / 2;
       for (unsigned i = 0; i < size; ++i) {
