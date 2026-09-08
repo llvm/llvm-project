@@ -95,3 +95,19 @@
 # CHECK: error: unexpected operand type
 # CHECK: .insn sil,0xe56000000000,160(%r15),-32769
         .insn sil,0xe56000000000,160(%r15),-32769  # sil expects unsigned 16-bit, value too negative
+
+# Test X-imm (union signed/unsigned) lower bound validation
+
+# CHECK: error: unexpected operand type
+# CHECK: .insn si,0x91000000,160(%r15),-129
+        .insn si,0x91000000,160(%r15),-129         # X8Imm lower bound (min -128)
+
+# CHECK: error: unexpected operand type
+# CHECK: .insn ril_a,0xc20500000000,%r1,-2147483649
+        .insn ril_a,0xc20500000000,%r1,-2147483649 # X32Imm lower bound (min -2147483648)
+
+# Test BD-length address range validation
+
+# CHECK: error: unexpected operand type
+# CHECK: .insn rsl_a,0xeb00000000c0,4096(2,%r2)
+        .insn rsl_a,0xeb00000000c0,4096(2,%r2)     # 12-bit displacement in BDL address, value too large (max 4095)
