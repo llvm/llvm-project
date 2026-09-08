@@ -928,3 +928,100 @@ define i32 @umax_poison_elt() {
   %x = call i32 @llvm.vector.reduce.umax.v8i32(<8 x i32> <i32 1, i32 1, i32 poison, i32 1, i32 1, i32 poison, i32 1, i32 1>)
   ret i32 %x
 }
+
+define <4 x i32> @partial_reduce_add_constants() {
+; CHECK-LABEL: @partial_reduce_add_constants(
+; CHECK-NEXT:    [[X:%.*]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> <i32 100, i32 200, i32 300, i32 400>, <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>)
+; CHECK-NEXT:    ret <4 x i32> [[X]]
+;
+  %x = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(
+  <4 x i32> <i32 100, i32 200, i32 300, i32 400>,
+  <16 x i32> <i32 1, i32 2, i32 3, i32 4,
+  i32 5, i32 6, i32 7, i32 8,
+  i32 9, i32 10, i32 11, i32 12,
+  i32 13, i32 14, i32 15, i32 16>)
+  ret <4 x i32> %x
+}
+
+define <4 x i32> @partial_reduce_add_nonconstant_acc(<4 x i32> %acc) {
+; CHECK-LABEL: @partial_reduce_add_nonconstant_acc(
+; CHECK-NEXT:    [[X:%.*]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[ACC:%.*]], <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>)
+; CHECK-NEXT:    ret <4 x i32> [[X]]
+;
+  %x = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(
+  <4 x i32> %acc,
+  <16 x i32> <i32 1, i32 2, i32 3, i32 4,
+  i32 5, i32 6, i32 7, i32 8,
+  i32 9, i32 10, i32 11, i32 12,
+  i32 13, i32 14, i32 15, i32 16>)
+  ret <4 x i32> %x
+}
+
+define <4 x i32> @partial_reduce_add_nonconstant_input(<16 x i32> %input) {
+; CHECK-LABEL: @partial_reduce_add_nonconstant_input(
+; CHECK-NEXT:    [[X:%.*]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> <i32 100, i32 200, i32 300, i32 400>, <16 x i32> [[INPUT:%.*]])
+; CHECK-NEXT:    ret <4 x i32> [[X]]
+;
+  %x = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(
+  <4 x i32> <i32 100, i32 200, i32 300, i32 400>,
+  <16 x i32> %input)
+  ret <4 x i32> %x
+}
+
+define <4 x i32> @partial_reduce_add_poison_element() {
+; CHECK-LABEL: @partial_reduce_add_poison_element(
+; CHECK-NEXT:    [[X:%.*]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> <i32 100, i32 200, i32 300, i32 400>, <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 poison, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>)
+; CHECK-NEXT:    ret <4 x i32> [[X]]
+;
+  %x = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(
+  <4 x i32> <i32 100, i32 200, i32 300, i32 400>,
+  <16 x i32> <i32 1, i32 2, i32 3, i32 4,
+  i32 5, i32 poison, i32 7, i32 8,
+  i32 9, i32 10, i32 11, i32 12,
+  i32 13, i32 14, i32 15, i32 16>)
+  ret <4 x i32> %x
+}
+
+define <4 x i32> @partial_reduce_add_ratio_one() {
+; CHECK-LABEL: @partial_reduce_add_ratio_one(
+; CHECK-NEXT:    [[X:%.*]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> <i32 100, i32 200, i32 300, i32 400>, <4 x i32> <i32 1, i32 2, i32 3, i32 4>)
+; CHECK-NEXT:    ret <4 x i32> [[X]]
+;
+  %x = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(
+  <4 x i32> <i32 100, i32 200, i32 300, i32 400>,
+  <4 x i32> <i32 1, i32 2, i32 3, i32 4>)
+  ret <4 x i32> %x
+}
+
+define <2 x i32> @partial_reduce_add_ratio_two() {
+; CHECK-LABEL: @partial_reduce_add_ratio_two(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x i32> @llvm.vector.partial.reduce.add.v2i32.v4i32(<2 x i32> <i32 100, i32 200>, <4 x i32> <i32 1, i32 2, i32 3, i32 4>)
+; CHECK-NEXT:    ret <2 x i32> [[X]]
+;
+  %x = call <2 x i32> @llvm.vector.partial.reduce.add.v2i32.v4i32(
+  <2 x i32> <i32 100, i32 200>,
+  <4 x i32> <i32 1, i32 2, i32 3, i32 4>)
+  ret <2 x i32> %x
+}
+
+define <2 x i32> @partial_reduce_add_negative() {
+; CHECK-LABEL: @partial_reduce_add_negative(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x i32> @llvm.vector.partial.reduce.add.v2i32.v4i32(<2 x i32> <i32 -100, i32 -200>, <4 x i32> <i32 1, i32 2, i32 3, i32 4>)
+; CHECK-NEXT:    ret <2 x i32> [[X]]
+;
+  %x = call <2 x i32> @llvm.vector.partial.reduce.add.v2i32.v4i32(
+  <2 x i32> <i32 -100, i32 -200>,
+  <4 x i32> <i32 1, i32 2, i32 3, i32 4>)
+  ret <2 x i32> %x
+}
+
+define <2 x i8> @partial_reduce_add_wrap() {
+; CHECK-LABEL: @partial_reduce_add_wrap(
+; CHECK-NEXT:    [[X:%.*]] = call <2 x i8> @llvm.vector.partial.reduce.add.v2i8.v4i8(<2 x i8> <i8 127, i8 126>, <4 x i8> <i8 1, i8 1, i8 2, i8 4>)
+; CHECK-NEXT:    ret <2 x i8> [[X]]
+;
+  %x = call <2 x i8> @llvm.vector.partial.reduce.add.v2i8.v4i8(
+  <2 x i8> <i8 127, i8 126>,
+  <4 x i8> <i8 1, i8 1, i8 2, i8 4>)
+  ret <2 x i8> %x
+}
