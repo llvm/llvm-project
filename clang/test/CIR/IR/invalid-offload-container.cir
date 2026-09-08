@@ -1,16 +1,16 @@
 // RUN: cir-opt %s -verify-diagnostics -split-input-file
 
 module attributes {cir.offload.container} {
-  module @device_0 attributes {cir.offload.kind = #cir.offload_kind<device>} { // expected-error {{expects 'cir.offload.kind' value 'host'}}
+  module @device_0 attributes {cir.offload.kind = #cir.offload<device>} { // expected-error {{expects 'cir.offload.kind' value 'host'}}
   }
 }
 
 // -----
 
 module attributes {cir.offload.container} {
-  module @host_0 attributes {cir.offload.kind = #cir.offload_kind<host>} {
+  module @host_0 attributes {cir.offload.kind = #cir.offload<host>} {
   }
-  module @host_1 attributes {cir.offload.kind = #cir.offload_kind<host>} { // expected-error {{expects 'cir.offload.kind' value 'device'}}
+  module @host_1 attributes {cir.offload.kind = #cir.offload<host>} { // expected-error {{expects 'cir.offload.kind' value 'device'}}
   }
 }
 
@@ -25,7 +25,7 @@ module attributes {cir.offload.container} {
 
 // expected-error@+1 {{expects only nested builtin.module ops}}
 module attributes {cir.offload.container} {
-  module @host attributes {cir.offload.kind = #cir.offload_kind<host>} {
+  module @host attributes {cir.offload.kind = #cir.offload<host>} {
   }
   cir.func @f() {
     cir.return
@@ -36,7 +36,7 @@ module attributes {cir.offload.container} {
 
 // expected-error@+1 {{expects at least one device module}}
 module attributes {cir.offload.container} {
-  module @host attributes {cir.offload.kind = #cir.offload_kind<host>} {
+  module @host attributes {cir.offload.kind = #cir.offload<host>} {
   }
 }
 
@@ -65,7 +65,7 @@ module {
 
 module {
   cir.func @f() {
-    cir.return {cir.offload.kind = #cir.offload_kind<host>} // expected-error {{expects 'cir.offload.kind' attribute to be attached to 'builtin.module'}}
+    cir.return {cir.offload.kind = #cir.offload<host>} // expected-error {{expects 'cir.offload.kind' attribute to be attached to 'builtin.module'}}
   }
 }
 
@@ -73,8 +73,8 @@ module {
 
 // expected-error@+1 {{expects 'cir.offload.container' to be a unit attribute}}
 module attributes {cir.offload.container = 0 : i32} {
-  module @host attributes {cir.offload.kind = #cir.offload_kind<host>} {
+  module @host attributes {cir.offload.kind = #cir.offload<host>} {
   }
-  module @device_0 attributes {cir.offload.kind = #cir.offload_kind<device>} {
+  module @device_0 attributes {cir.offload.kind = #cir.offload<device>} {
   }
 }

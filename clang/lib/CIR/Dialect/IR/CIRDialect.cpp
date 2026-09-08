@@ -137,10 +137,10 @@ static LogicalResult verifyOffloadKind(mlir::ModuleOp module,
 static LogicalResult verifyOffloadContainer(mlir::Operation *op) {
   auto container = mlir::dyn_cast<mlir::ModuleOp>(op);
   if (!container)
-    return op->emitError() << "expects '"
-                           << cir::CIRDialect::getOffloadContainerAttrName()
-                           << "' attribute to be attached to '"
-                           << mlir::ModuleOp::getOperationName() << "'";
+    return op->emitOpError()
+           << "expects '" << cir::CIRDialect::getOffloadContainerAttrName()
+           << "' attribute to be attached to '"
+           << mlir::ModuleOp::getOperationName() << "'";
 
   mlir::Block &body = *container.getBody();
   if (body.empty())
@@ -154,13 +154,12 @@ static LogicalResult verifyOffloadContainer(mlir::Operation *op) {
   if (failed(verifyOffloadKind(host, cir::OffloadKind::Host)))
     return failure();
 
-  auto it = body.begin();
-  ++it;
-  if (it == body.end())
+  // At least one device module is required after the host module.
+  if (std::next(body.begin()) == body.end())
     return container.emitOpError() << "expects at least one device module";
 
-  for (; it != body.end(); ++it) {
-    auto module = mlir::dyn_cast<mlir::ModuleOp>(*it);
+  for (auto op : llvm::drop_begin(body)) {
+    auto module = mlir::dyn_cast<mlir::ModuleOp>(op);
     if (!module)
       return container.emitOpError()
              << "expects only nested builtin.module ops";
@@ -175,8 +174,8 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
                                           mlir::NamedAttribute attr) {
   if (attr.getName() == getOffloadContainerAttrName()) {
     if (!mlir::isa<mlir::UnitAttr>(attr.getValue()))
-      return op->emitError() << "expects '" << getOffloadContainerAttrName()
-                             << "' to be a unit attribute";
+      return op->emitOpError() << "expects '" << getOffloadContainerAttrName()
+                               << "' to be a unit attribute";
     return verifyOffloadContainer(op);
   }
 
@@ -185,9 +184,9 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
   // never lands on something that is not a module.
   if (attr.getName() == getOffloadKindAttrName() &&
       !mlir::isa<mlir::ModuleOp>(op))
-    return op->emitError() << "expects '" << getOffloadKindAttrName()
-                           << "' attribute to be attached to '"
-                           << mlir::ModuleOp::getOperationName() << "'";
+    return op->emitOpError() << "expects '" << getOffloadKindAttrName()
+                             << "' attribute to be attached to '"
+                             << mlir::ModuleOp::getOperationName() << "'";
 
   return success();
 }

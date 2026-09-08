@@ -120,17 +120,17 @@ def CIR_SourceLanguageAttr : CIR_EnumAttr<CIR_SourceLanguage, "lang"> {
 //===----------------------------------------------------------------------===//
 
 def CIR_OffloadKind : CIR_I32Enum<"OffloadKind", "offload kind", [
-  I32EnumAttrCase<"Host", 0, "host">,
-  I32EnumAttrCase<"Device", 1, "device">
+  I32EnumCase<"Host", 0, "host">,
+  I32EnumCase<"Device", 1, "device">
 ]>;
 
-def CIR_OffloadKindAttr : CIR_EnumAttr<CIR_OffloadKind, "offload_kind"> {
+def CIR_OffloadKindAttr : CIR_EnumAttr<CIR_OffloadKind, "offload"> {
   let summary = "Offload kind of a module in an offload container";
   let description = [{
     Marks a module nested inside an offload container - identified by the
     `cir.offload.container` unit attribute - as either the host module (carrying
-    `cir.offload.kind = #cir.offload_kind<host>`) or one of the device modules
-    (carrying `cir.offload.kind = #cir.offload_kind<device>`) of the offload
+    `cir.offload.kind = #cir.offload<host>`) or one of the device modules
+    (carrying `cir.offload.kind = #cir.offload<device>`) of the offload
     container. This creates a tiered module layout, where a singular offload
     container contains a single host module and one or more device modules,
     granting the offload merge/split pipeline passes the cross-boundary view.
@@ -138,9 +138,9 @@ def CIR_OffloadKindAttr : CIR_EnumAttr<CIR_OffloadKind, "offload_kind"> {
     Example:
     ```mlir
     module attributes {cir.offload.container} {
-      module @host attributes {cir.offload.kind = #cir.offload_kind<host>} {}
-      module @device1 attributes {cir.offload.kind = #cir.offload_kind<device>} {}
-      module @device2 attributes {cir.offload.kind = #cir.offload_kind<device>} {}
+      module @host attributes {cir.offload.kind = #cir.offload<host>} {}
+      module @device1 attributes {cir.offload.kind = #cir.offload<device>} {}
+      module @device2 attributes {cir.offload.kind = #cir.offload<device>} {}
     }
     ```
 
