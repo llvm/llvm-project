@@ -46,7 +46,7 @@ define void @throw(ptr %p) {
 ; CHECK:   local.set  2
 ; CHECK:   local.get  0
 ; CHECK:   global.set  __stack_pointer
-; CHECK:   i32.store  __wasm_lpad_context
+; CHECK:   call  _Unwind_GetWasmLPadContext
 ; CHECK:   call  __gxx_wasm_personality_v0
 ; CHECK:   block
 ; CHECK:     br_if     0
