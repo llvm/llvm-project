@@ -81,7 +81,7 @@ CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
                          UnaryExprOrTypeTrait ExprKind);
 CharUnits GetAlignOfType(const ASTContext &Ctx, QualType T,
                          UnaryExprOrTypeTrait ExprKind);
-CharUnits GetBaseAlignment(const ASTContext &Ctx,
+CharUnits getBaseAlignment(const ASTContext &Ctx,
                            const APValue::LValueBase &Base);
 
 /// Convert a builtin ID to the canonical x86 builtin ID the constant evaluators

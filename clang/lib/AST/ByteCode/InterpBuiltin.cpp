@@ -1397,6 +1397,16 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
   return false;
 }
 
+static APValue::LValueBase getLValueBase(const Pointer &Ptr) {
+  if (Ptr.isBlockPointer()) {
+    if (const auto *VD = Ptr.getDeclDesc()->asValueDecl())
+      return VD;
+  }
+  if (const auto *E = Ptr.getRootExpr())
+    return E;
+  return APValue::LValueBase();
+}
+
 /// __builtin_assume_aligned(Ptr, Alignment[, ExtraOffset])
 static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
                                            const InterpFrame *Frame,
@@ -1421,11 +1431,7 @@ static bool interp__builtin_assume_aligned(InterpState &S, CodePtr OpPC,
 
   // If there is a base object, then it must have the correct alignment.
   if (Ptr.isBlockPointer()) {
-    CharUnits BaseAlignment;
-    if (const auto *VD = Ptr.getDeclDesc()->asValueDecl())
-      BaseAlignment = ASTCtx.getDeclAlign(VD);
-    else if (const auto *E = Ptr.getRootExpr())
-      BaseAlignment = GetAlignOfExpr(ASTCtx, E, UETT_AlignOf);
+    CharUnits BaseAlignment = getBaseAlignment(ASTCtx, getLValueBase(Ptr));
 
     if (BaseAlignment < Align) {
       S.CCEDiag(Call->getArg(0),
@@ -2123,10 +2129,10 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
   if (IsAligned) {
     CharUnits RequiredAlign =
         S.getASTContext().getTypeAlignInChars(Call->getType());
-    APValue AV = Ptr.toAPValue(S.getASTContext());
     CharUnits BaseAlignment =
-        GetBaseAlignment(S.getASTContext(), AV.getLValueBase());
-    CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(AV.getLValueOffset());
+        getBaseAlignment(S.getASTContext(), getLValueBase(Ptr));
+    CharUnits PtrOffset = Ptr.toAPValue(S.getASTContext()).getLValueOffset();
+    CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(PtrOffset);
     if (PtrAlign < RequiredAlign) {
       S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_load8_unaligned)
           << S.getASTContext().BuiltinInfo.getQuotedName(
@@ -2138,16 +2144,8 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
 
   // A string pointer has no Descriptor; treat it as an array of its
   // character type.
-  bool IsArray;
-  QualType ElemTy;
-  if (Ptr.isStringPointer()) {
-    IsArray = true;
-    ElemTy = getElemType(Ptr);
-  } else {
-    const Descriptor *Desc = Ptr.getFieldDesc();
-    IsArray = Desc->isArray();
-    ElemTy = IsArray ? Desc->getElemQualType() : Desc->getType();
-  }
+  bool IsArray = Ptr.isStringPointer() || Ptr.getFieldDesc()->isArray();
+  QualType ElemTy = getElemType(Ptr);
 
   if (IsArray)
     Ptr = Ptr.expand();
@@ -2159,12 +2157,8 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
   unsigned ByteWidth = S.getASTContext().getTypeSize(Call->getType()) / 8;
   if (ByteWidth > RemainingElems) {
     uint64_t LastIndex = llvm::SaturatingAdd(BaseIdx, uint64_t(ByteWidth - 1));
-    if (IsArray)
-      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
-          << LastIndex << /*array*/ 0 << ArraySize;
-    else
-      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
-          << LastIndex << /*non-array*/ 1;
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
+        << LastIndex << /*array*/ !IsArray << ArraySize;
     return false;
   }
 
@@ -2174,8 +2168,10 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
 
   // C2y §7.18.21: result = sum(b_index * 2^(8*index)) for index in [0, N/8)
   // where b_index = ptr[index] (LE) or ptr[N/8 - index - 1] (BE).
-  for (unsigned I = 0; I < ByteWidth; ++I) {
+  for (unsigned I = 0; I != ByteWidth; ++I) {
     size_t SrcIdx = IsBigEndian ? (ByteWidth - I - 1) : I;
+    // When Ptr is not an array, the RemainingElems check above already
+    // guarantees ByteWidth == 1, so this loop runs once and BytePtr == Ptr.
     Pointer BytePtr = IsArray ? Ptr.atIndex(BaseIdx + SrcIdx) : Ptr;
     if (!CheckLoad(S, OpPC, BytePtr, AK_Read))
       return false;
