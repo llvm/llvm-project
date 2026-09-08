@@ -151,8 +151,9 @@ public:
   addByteAddressBufferInterlockedMethod(StringRef MethodName, QualType ValueTy,
                                         StringRef BuiltinName,
                                         bool RequiresOriginalValue = false);
-  BuiltinTypeDeclBuilder &addByteAddressBufferInterlockedCompareStoreMethod(
-      StringRef MethodName, QualType ValueTy, StringRef BuiltinName);
+  BuiltinTypeDeclBuilder &addByteAddressBufferInterlockedCompareMethod(
+      StringRef MethodName, QualType ValueTy, StringRef BuiltinName,
+      bool WithOriginalValue = false);
   BuiltinTypeDeclBuilder &addAppendMethod();
   BuiltinTypeDeclBuilder &addConsumeMethod();
 
