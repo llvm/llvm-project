@@ -42,7 +42,7 @@ Disassemble only the specified symbols. Takes demangled symbol names when
 Implies {option}`--disassemble`.
 
 Each argument is split on commas. To select a symbol whose name contains commas,
-use `--disassemble=<symbol>` instead.
+use {option}`--disassemble` with a symbol argument instead.
 :::
 
 :::{option} --disassemble=<symbol>
@@ -50,13 +50,8 @@ Disassemble only the specified symbol. Takes a demangled symbol name when
 {option}`--demangle` is specified, otherwise takes a mangled symbol name.
 Implies {option}`--disassemble`.
 
-The argument is a single symbol name, including any commas. Repeat the option to
-select multiple symbols, for example:
-
-```sh
-llvm-objdump --demangle --disassemble='foo(int, int)' \
-  --disassemble='bar(int, int)' input.o
-```
+The argument is a single symbol name. To select multiple symbols, specify this
+option multiple times or use {option}`--disassemble-symbols`.
 :::
 
 :::{option} --dwarf=<value>

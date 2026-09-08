@@ -19,14 +19,22 @@
 # RUN: llvm-objdump -C --disassemble-symbols='std::allocator<wchar_t>::allocator()' %t.o 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=DEMANGLED-MULTI
 
-## --disassemble=<symbol> preserves commas and implies disassembly. It can be
-## repeated or combined with --disassemble-symbols to select multiple symbols.
+## --disassemble=<symbol> without --demangle.
+# RUN: llvm-objdump --disassemble=_Z3fooii %t.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=MANGLED-COMMA --implicit-check-not=warning: --implicit-check-not='>:'
+# RUN: llvm-objdump --disassemble='foo(int, int)' %t.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=MANGLED-COMMA-MISS --implicit-check-not=Disassembly
+# RUN: llvm-objdump --disassemble=i %t.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=PLAIN --implicit-check-not=warning: --implicit-check-not='>:'
+
+## --disassemble=<symbol> with --demangle. Test using a symbol name containing
+## commas, to show that commas are treated as part of the symbol name in this case.
 # RUN: llvm-objdump -C --disassemble='foo(int, int)' %t.o 2>&1 \
-# RUN:   | FileCheck %s --check-prefix=COMMA --implicit-check-not=warning: --implicit-check-not='>:'
-# RUN: llvm-objdump -C --disassemble='foo(int, int)' --disassemble='bar(int, int)' %t.o 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=COMMA,SECOND --implicit-check-not=warning: --implicit-check-not='>:'
-# RUN: llvm-objdump -C --disassemble-symbols='foo()' --disassemble='foo(int, int)' %t.o 2>&1 \
-# RUN:   | FileCheck %s --check-prefixes=DEMANGLED,COMMA --implicit-check-not=warning: --implicit-check-not='>:'
+# RUN:   | FileCheck %s --check-prefix=DEMANGLED-COMMA --implicit-check-not=warning: --implicit-check-not='>:'
+# RUN: llvm-objdump -C --disassemble=_Z3fooii %t.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=DEMANGLED-COMMA-MISS --implicit-check-not=Disassembly
+# RUN: llvm-objdump -C --disassemble=i %t.o 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=PLAIN --implicit-check-not=warning: --implicit-check-not='>:'
 
 # MANGLED: <_Z3foov>:
 # MANGLED-MISS: warning: '{{.*}}': failed to disassemble missing symbol foo
@@ -40,8 +48,11 @@
 # DEMANGLED-MULTI: <std::allocator<wchar_t>::allocator()>:
 # DEMANGLED-MULTI: <std::allocator<wchar_t>::allocator()>:
 
-# COMMA:  <foo(int, int)>:
-# SECOND: <bar(int, int)>:
+# MANGLED-COMMA: <_Z3fooii>:
+# MANGLED-COMMA-MISS: warning: '{{.*}}': failed to disassemble missing symbol foo(int, int){{$}}
+# DEMANGLED-COMMA: <foo(int, int)>:
+# DEMANGLED-COMMA-MISS: warning: '{{.*}}': failed to disassemble missing symbol _Z3fooii{{$}}
+# PLAIN: <i>:
 
 --- !ELF
 FileHeader:
@@ -54,7 +65,7 @@ Sections:
     Type:  SHT_PROGBITS
     Flags: [SHF_ALLOC, SHF_EXECINSTR]
     Address: 0x1000
-    Content: 90909090909090
+    Content: 909090909090
 Symbols:
   - Name:    _Z3foov
     Value:   0x1000
@@ -73,7 +84,4 @@ Symbols:
     Section: .text
   - Name:    _Z3fooii
     Value:   0x1005
-    Section: .text
-  - Name:    _Z3barii
-    Value:   0x1006
     Section: .text

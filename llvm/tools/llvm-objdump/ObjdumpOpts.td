@@ -73,13 +73,12 @@ def traceback_table : Flag<["--"], "traceback-table">,
 
 def disassemble_symbols_EQ : Joined<["--"], "disassemble-symbols=">,
   HelpText<"Comma-separated list of symbols to disassemble. "
-           "Use --disassemble=<symbol> for names containing commas. "
            "Accept demangled names when --demangle is "
            "specified, otherwise accept mangled names">;
 
 def disassemble_EQ : Joined<["--"], "disassemble=">,
-  HelpText<"Disassemble a single symbol, including names containing commas. "
-           "May be repeated. "
+  HelpText<"Disassemble a single symbol. "
+           "May be specified multiple times. "
            "Accept demangled names when --demangle is "
            "specified, otherwise accept mangled names">;
 
