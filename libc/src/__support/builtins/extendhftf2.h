@@ -18,7 +18,7 @@
 #include "include/llvm-libc-types/float128.h"
 #include "src/__support/macros/properties/types.h"
 
-#if defined(LIBC_TYPES_HAS_FLOAT128)
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -36,6 +36,6 @@ LIBC_INLINE float128 extendhftf2(uint16_t bits) {
 } // namespace builtins
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #endif // LLVM_LIBC_SRC___SUPPORT_BUILTINS_EXTENDHFTF2_H
