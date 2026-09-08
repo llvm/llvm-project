@@ -20,11 +20,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
-    ; CHECK-NEXT: [[ANDWrr:%[0-9]+]]:gpr32common = ANDWrr [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: dead [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[ANDWrr]], 0, 0, implicit-def $nzcv
+    ; CHECK-NEXT: [[ANDSWrr:%[0-9]+]]:gpr32common = ANDSWrr [[COPY]], [[COPY1]], implicit-def $nzcv
     ; CHECK-NEXT: CCMPWi [[COPY2]], 7, 4, 1, implicit-def $nzcv, implicit $nzcv
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
-    ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[CSINCWr]], [[ANDWrr]]
+    ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[CSINCWr]], [[ANDSWrr]]
     ; CHECK-NEXT: $w0 = COPY [[ADDWrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr32 = COPY $w0
@@ -50,11 +49,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
-    ; CHECK-NEXT: [[ANDWri:%[0-9]+]]:gpr32common = ANDWri [[COPY]], 7
-    ; CHECK-NEXT: dead [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[ANDWri]], 0, 0, implicit-def $nzcv
+    ; CHECK-NEXT: [[ANDSWri:%[0-9]+]]:gpr32common = ANDSWri [[COPY]], 7, implicit-def $nzcv
     ; CHECK-NEXT: CCMPWr [[COPY1]], [[COPY2]], 0, 0, implicit-def $nzcv, implicit $nzcv
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
-    ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[CSINCWr]], [[ANDWri]]
+    ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[CSINCWr]], [[ANDSWri]]
     ; CHECK-NEXT: $w0 = COPY [[ADDWrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr32 = COPY $w0
@@ -80,11 +78,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY $x2
-    ; CHECK-NEXT: [[BICXrr:%[0-9]+]]:gpr64common = BICXrr [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: dead [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[BICXrr]], 0, 0, implicit-def $nzcv
+    ; CHECK-NEXT: [[BICSXrr:%[0-9]+]]:gpr64common = BICSXrr [[COPY]], [[COPY1]], implicit-def $nzcv
     ; CHECK-NEXT: CCMNXi [[COPY2]], 5, 8, 0, implicit-def $nzcv, implicit $nzcv
     ; CHECK-NEXT: [[CSINCXr:%[0-9]+]]:gpr64 = CSINCXr $xzr, $xzr, 1, implicit $nzcv
-    ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[CSINCXr]], [[BICXrr]]
+    ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[CSINCXr]], [[BICSXrr]]
     ; CHECK-NEXT: $x0 = COPY [[ADDXrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr64 = COPY $x0
@@ -110,12 +107,11 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64 = COPY $x1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr64 = COPY $x2
-    ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64common = ADDXrr [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: dead [[SUBSXri:%[0-9]+]]:gpr64 = SUBSXri [[ADDXrr]], 0, 0, implicit-def $nzcv
+    ; CHECK-NEXT: [[ADDSXrr:%[0-9]+]]:gpr64common = ADDSXrr [[COPY]], [[COPY1]], implicit-def $nzcv
     ; CHECK-NEXT: CCMPXr [[COPY2]], [[COPY]], 4, 1, implicit-def $nzcv, implicit $nzcv
     ; CHECK-NEXT: [[CSINCXr:%[0-9]+]]:gpr64 = CSINCXr $xzr, $xzr, 1, implicit $nzcv
-    ; CHECK-NEXT: [[ADDXrr1:%[0-9]+]]:gpr64 = ADDXrr [[CSINCXr]], [[ADDXrr]]
-    ; CHECK-NEXT: $x0 = COPY [[ADDXrr1]]
+    ; CHECK-NEXT: [[ADDXrr:%[0-9]+]]:gpr64 = ADDXrr [[CSINCXr]], [[ADDSXrr]]
+    ; CHECK-NEXT: $x0 = COPY [[ADDXrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:gpr64 = COPY $x0
     %1:gpr64 = COPY $x1
@@ -140,11 +136,10 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32common = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY $s1
-    ; CHECK-NEXT: [[SUBWri:%[0-9]+]]:gpr32common = SUBWri [[COPY]], 1, 0
-    ; CHECK-NEXT: dead [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[SUBWri]], 0, 0, implicit-def $nzcv
+    ; CHECK-NEXT: [[SUBSWri:%[0-9]+]]:gpr32common = SUBSWri [[COPY]], 1, 0, implicit-def $nzcv
     ; CHECK-NEXT: FCCMPSrr [[COPY1]], [[COPY2]], 0, 1, implicit-def $nzcv, implicit $nzcv
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
-    ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[CSINCWr]], [[SUBWri]]
+    ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[CSINCWr]], [[SUBSWri]]
     ; CHECK-NEXT: $w0 = COPY [[ADDWrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr32common = COPY $w0
@@ -171,12 +166,11 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
-    ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32common = nsw ADDWrr [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: dead [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[ADDWrr]], 0, 0, implicit-def $nzcv
+    ; CHECK-NEXT: [[ADDSWrr:%[0-9]+]]:gpr32common = nsw ADDSWrr [[COPY]], [[COPY1]], implicit-def $nzcv
     ; CHECK-NEXT: CCMPWi [[COPY2]], 7, 8, 10, implicit-def $nzcv, implicit $nzcv
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
-    ; CHECK-NEXT: [[ADDWrr1:%[0-9]+]]:gpr32 = ADDWrr [[CSINCWr]], [[ADDWrr]]
-    ; CHECK-NEXT: $w0 = COPY [[ADDWrr1]]
+    ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[CSINCWr]], [[ADDSWrr]]
+    ; CHECK-NEXT: $w0 = COPY [[ADDWrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr32 = COPY $w0
     %1:gpr32 = COPY $w1
@@ -266,8 +260,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
     ; CHECK-NEXT: dead [[SUBSWri:%[0-9]+]]:gpr32 = SUBSWri [[COPY]], 3, 0, implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32common = CSINCWr $wzr, $wzr, 1, implicit $nzcv
-    ; CHECK-NEXT: dead [[SUBSWri1:%[0-9]+]]:gpr32 = SUBSWri [[CSINCWr]], 0, 0, implicit-def $nzcv
-    ; CHECK-NEXT: CCMPWi [[COPY1]], 7, 4, 0, implicit-def $nzcv, implicit $nzcv
+    ; CHECK-NEXT: CCMPWi [[COPY1]], 7, 4, 1, implicit-def $nzcv, implicit $nzcv
     ; CHECK-NEXT: [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[CSINCWr1]], [[CSINCWr]]
     ; CHECK-NEXT: $w0 = COPY [[ADDWrr]]

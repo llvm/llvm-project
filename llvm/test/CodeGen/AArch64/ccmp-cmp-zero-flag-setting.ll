@@ -17,8 +17,7 @@ define void @and_live(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    and w0, w0, w1
-; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ands w0, w0, w1
 ; CHECK-NEXT:    ccmp w2, #7, #4, ne
 ; CHECK-NEXT:    b.ne .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %then
@@ -53,8 +52,7 @@ define void @and_dead(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    and w8, w0, w1
-; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    tst w0, w1
 ; CHECK-NEXT:    ccmp w2, #7, #4, eq
 ; CHECK-NEXT:    b.ne .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %then
@@ -90,8 +88,7 @@ define void @and_imm(i32 %x, i32 %z) {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    and w0, w0, #0xff
-; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    ands w0, w0, #0xff
 ; CHECK-NEXT:    ccmp w1, #7, #4, ne
 ; CHECK-NEXT:    b.ne .LBB2_2
 ; CHECK-NEXT:  // %bb.1: // %then
@@ -126,8 +123,7 @@ define void @bic(i32 %x, i32 %y, i32 %z) {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bic w0, w0, w1
-; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    bics w0, w0, w1
 ; CHECK-NEXT:    ccmp w2, #7, #4, ne
 ; CHECK-NEXT:    b.ne .LBB3_2
 ; CHECK-NEXT:  // %bb.1: // %then
@@ -163,8 +159,7 @@ define void @add(i64 %x, i64 %y, i64 %z) {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    add x0, x0, x1
-; CHECK-NEXT:    cmp x0, #0
+; CHECK-NEXT:    adds x0, x0, x1
 ; CHECK-NEXT:    ccmp x2, #7, #4, ne
 ; CHECK-NEXT:    b.ne .LBB4_2
 ; CHECK-NEXT:  // %bb.1: // %then
@@ -199,8 +194,7 @@ define void @sub_imm(i64 %x, i64 %z) {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    sub x0, x0, #1
-; CHECK-NEXT:    cmp x0, #0
+; CHECK-NEXT:    subs x0, x0, #1
 ; CHECK-NEXT:    ccmp x1, #7, #4, eq
 ; CHECK-NEXT:    b.ne .LBB5_2
 ; CHECK-NEXT:  // %bb.1: // %then
@@ -271,8 +265,7 @@ else:
 define i64 @add_or_leaf(i64 %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: add_or_leaf:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, x1
-; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    adds x8, x0, x1
 ; CHECK-NEXT:    ccmp x2, #7, #4, ne
 ; CHECK-NEXT:    csel x0, x8, x2, eq
 ; CHECK-NEXT:    ret
@@ -287,8 +280,7 @@ define i64 @add_or_leaf(i64 %x, i64 %y, i64 %z) {
 define i64 @sub_and_leaf(i64 %x, i64 %y, i64 %z) {
 ; CHECK-LABEL: sub_and_leaf:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub x8, x0, x1
-; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    subs x8, x0, x1
 ; CHECK-NEXT:    ccmp x2, #7, #2, ne
 ; CHECK-NEXT:    csel x0, x8, x2, lo
 ; CHECK-NEXT:    ret
