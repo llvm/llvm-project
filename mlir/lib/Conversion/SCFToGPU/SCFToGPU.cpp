@@ -760,8 +760,8 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
 
   // Now that we succeeded creating the launch operation, also update the
   // bounds.
-  for (const auto &bound : launchBounds)
-    launchOp.setOperand(getLaunchOpArgumentNum(bound.first), bound.second);
+  for (const auto &[processor, bound] : launchBounds)
+    launchOp.setOperand(getLaunchOpArgumentNum(processor), bound);
 
   rewriter.eraseOp(parallelOp);
   return success();

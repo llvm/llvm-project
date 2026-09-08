@@ -732,8 +732,8 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
     return true; // No users, this is a dead argument.
 
   // Sort parts by offset.
-  for (const auto &Part : ArgParts)
-    ArgPartsVec.emplace_back(Part.first, Part.second);
+  for (const auto &[Offset, Part] : ArgParts)
+    ArgPartsVec.emplace_back(Offset, Part);
   sort(ArgPartsVec, llvm::less_first());
 
   // Make sure the parts are non-overlapping.
