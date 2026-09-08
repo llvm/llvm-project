@@ -2106,7 +2106,9 @@ This file documents the feature test macros currently supported by libc++.
 {status_tables}
 :::
 
-""".format(status_tables=create_table(get_status_table()))
+""".format(
+        status_tables=create_table(get_status_table())
+    )
 
     table_doc_path = os.path.join(docs_path, "FeatureTestMacroTable.md")
     with open(table_doc_path, "w", newline="\n") as f:
