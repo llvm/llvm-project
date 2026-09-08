@@ -47,6 +47,8 @@ add_header_macro(
   dirent.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.__scandir_filter_t
+    .llvm-libc-types.__scandir_compare_t
     .llvm-libc-types.ino_t
     .llvm-libc-types.DIR
     .llvm-libc-types.struct_dirent
