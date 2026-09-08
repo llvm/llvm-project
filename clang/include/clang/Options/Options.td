@@ -6279,9 +6279,9 @@ defm incremental_linker_compatible : BoolMOption<"incremental-linker-compatible"
   CodeGenOpts<"IncrementalLinkerCompatible">,
   Default<"T.isDefaultIncrementalLinkerCompatibleByDefault()">,
   PosFlag<SetTrue, [], [],
-          "Emit an object file which can be used with an incremental linker">,
+          "(integrated-as) Emit an object file which can be used with an incremental linker">,
   NegFlag<SetFalse, [], [],
-          "Emit an object file which cannot be used with an incremental linker">,
+          "(integrated-as) Emit an object file which cannot be used with an incremental linker">,
   BothFlags<[], [ClangOption, CC1Option, CC1AsOption]>>;
 def mrtd : Flag<["-"], "mrtd">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
