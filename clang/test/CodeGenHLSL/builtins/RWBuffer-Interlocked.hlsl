@@ -39,6 +39,8 @@ RWBuffer<uint> UOut : register(u1);
 // DXCHECK:  atomicrmw umax ptr %[[PTR8]], i32 1 syncscope("device") monotonic
 // DXCHECK:  %[[PTR9:.*]] = call {{.*}} @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_1_0_1t.i32(target("dx.TypedBuffer", i32, 1, 0, 1) %{{.*}}, i32 %{{.*}})
 // DXCHECK:  atomicrmw xchg ptr %[[PTR9]], i32 1 syncscope("device") monotonic
+// DXCHECK:  %[[PTR10:.*]] = call {{.*}} @llvm.dx.resource.getpointer.p0.tdx.TypedBuffer_i32_1_0_1t.i32(target("dx.TypedBuffer", i32, 1, 0, 1) %{{.*}}, i32 %{{.*}})
+// DXCHECK:  cmpxchg ptr %[[PTR10]], i32 1, i32 2 syncscope("device") monotonic monotonic
 // SPVCHECK: %[[PTR1:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.SignedImage", i32, {{.*}}) %{{.*}}, i32 %{{.*}})
 // SPVCHECK: atomicrmw add ptr addrspace(11) %[[PTR1]], i32 1 syncscope("device") monotonic
 // SPVCHECK: %[[PTR2:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.SignedImage", i32, {{.*}}) %{{.*}}, i32 %{{.*}})
@@ -57,6 +59,8 @@ RWBuffer<uint> UOut : register(u1);
 // SPVCHECK: atomicrmw umax ptr addrspace(11) %[[PTR8]], i32 1 syncscope("device") monotonic
 // SPVCHECK: %[[PTR9:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.SignedImage", i32, {{.*}}) %{{.*}}, i32 %{{.*}})
 // SPVCHECK: atomicrmw xchg ptr addrspace(11) %[[PTR9]], i32 1 syncscope("device") monotonic
+// SPVCHECK: %[[PTR10:.*]] = call {{.*}} @llvm.spv.resource.getpointer.{{.*}}(target("spirv.SignedImage", i32, {{.*}}) %{{.*}}, i32 %{{.*}})
+// SPVCHECK: cmpxchg ptr addrspace(11) %[[PTR10]], i32 1, i32 2 syncscope("device") monotonic monotonic
 [shader("compute")]
 [numthreads(1,1,1)]
 void main(uint3 id : SV_DispatchThreadID) {
@@ -70,4 +74,5 @@ void main(uint3 id : SV_DispatchThreadID) {
   InterlockedMax(UOut[id.x], 1u);
   int orig;
   InterlockedExchange(Out[id.x], 1, orig);
+  InterlockedCompareStore(Out[id.x], 1, 2);
 }
