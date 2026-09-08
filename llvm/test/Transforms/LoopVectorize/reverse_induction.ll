@@ -116,26 +116,52 @@ define i32 @reverse_induction_i16(i16 %startval, ptr %ptr) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[STARTVAL]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i16 [[TMP0]], 1023
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i16 [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP14:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP15:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_SCEVCHECK]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_SCEVCHECK]] ], [ [[TMP14:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_SCEVCHECK]] ], [ [[TMP15:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i16 [[STARTVAL]], [[DOTCAST]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i16 [[OFFSET_IDX]], -1
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i16 [[TMP7]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i64 -3
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i64 -7
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP11]], align 4
-; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP13]], align 4
-; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[REVERSE4:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD3]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP3:%.*]] = add i16 [[OFFSET_IDX]], -2
+; CHECK-NEXT:    [[TMP4:%.*]] = add i16 [[OFFSET_IDX]], -3
+; CHECK-NEXT:    [[TMP5:%.*]] = add i16 [[OFFSET_IDX]], -4
+; CHECK-NEXT:    [[TMP6:%.*]] = add i16 [[OFFSET_IDX]], -5
+; CHECK-NEXT:    [[TMP32:%.*]] = add i16 [[OFFSET_IDX]], -6
+; CHECK-NEXT:    [[TMP8:%.*]] = add i16 [[OFFSET_IDX]], -7
+; CHECK-NEXT:    [[TMP9:%.*]] = add i16 [[OFFSET_IDX]], -1
+; CHECK-NEXT:    [[TMP10:%.*]] = add i16 [[TMP7]], -1
+; CHECK-NEXT:    [[TMP11:%.*]] = add i16 [[TMP3]], -1
+; CHECK-NEXT:    [[TMP12:%.*]] = add i16 [[TMP4]], -1
+; CHECK-NEXT:    [[TMP13:%.*]] = add i16 [[TMP5]], -1
+; CHECK-NEXT:    [[TMP40:%.*]] = add i16 [[TMP6]], -1
+; CHECK-NEXT:    [[TMP41:%.*]] = add i16 [[TMP32]], -1
+; CHECK-NEXT:    [[TMP42:%.*]] = add i16 [[TMP8]], -1
+; CHECK-NEXT:    [[TMP43:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i16 [[TMP9]]
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i16 [[TMP10]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i16 [[TMP11]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i16 [[TMP12]]
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i16 [[TMP13]]
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i16 [[TMP40]]
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i16 [[TMP41]]
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i16 [[TMP42]]
+; CHECK-NEXT:    [[TMP25:%.*]] = load i32, ptr [[TMP43]], align 4
+; CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[TMP18]], align 4
+; CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[TMP19]], align 4
+; CHECK-NEXT:    [[TMP28:%.*]] = load i32, ptr [[TMP20]], align 4
+; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <4 x i32> poison, i32 [[TMP25]], i64 0
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i32> [[TMP29]], i32 [[TMP26]], i64 1
+; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x i32> [[TMP30]], i32 [[TMP27]], i64 2
+; CHECK-NEXT:    [[REVERSE:%.*]] = insertelement <4 x i32> [[TMP31]], i32 [[TMP28]], i64 3
+; CHECK-NEXT:    [[TMP33:%.*]] = load i32, ptr [[TMP21]], align 4
+; CHECK-NEXT:    [[TMP34:%.*]] = load i32, ptr [[TMP22]], align 4
+; CHECK-NEXT:    [[TMP35:%.*]] = load i32, ptr [[TMP23]], align 4
+; CHECK-NEXT:    [[TMP36:%.*]] = load i32, ptr [[TMP24]], align 4
+; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <4 x i32> poison, i32 [[TMP33]], i64 0
+; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <4 x i32> [[TMP37]], i32 [[TMP34]], i64 1
+; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <4 x i32> [[TMP38]], i32 [[TMP35]], i64 2
+; CHECK-NEXT:    [[REVERSE4:%.*]] = insertelement <4 x i32> [[TMP39]], i32 [[TMP36]], i64 3
 ; CHECK-NEXT:    [[TMP14]] = add <4 x i32> [[REVERSE]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP15]] = add <4 x i32> [[REVERSE4]], [[VEC_PHI2]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
@@ -144,23 +170,9 @@ define i32 @reverse_induction_i16(i16 %startval, ptr %ptr) {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP15]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[BIN_RDX]])
-; CHECK-NEXT:    br label %[[LOOPEND:.*]]
-; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[ADD_I7:%.*]] = phi i16 [ [[STARTVAL]], %[[SCALAR_PH]] ], [ [[ADD_I:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[INC4:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[REDUX5:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[INC_REDUX:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ADD_I]] = add i16 [[ADD_I7]], -1
-; CHECK-NEXT:    [[KIND__I:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i16 [[ADD_I]]
-; CHECK-NEXT:    [[TMP_I1:%.*]] = load i32, ptr [[KIND__I]], align 4
-; CHECK-NEXT:    [[INC_REDUX]] = add i32 [[TMP_I1]], [[REDUX5]]
-; CHECK-NEXT:    [[INC4]] = add i32 [[I_06]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i32 [[INC4]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_BODY]], label %[[LOOPEND]], !llvm.loop [[LOOP5:![0-9]+]]
-; CHECK:       [[LOOPEND]]:
-; CHECK-NEXT:    [[INC_REDUX_LCSSA:%.*]] = phi i32 [ [[INC_REDUX]], %[[FOR_BODY]] ], [ [[TMP17]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret i32 [[INC_REDUX_LCSSA]]
+; CHECK-NEXT:    ret i32 [[TMP17]]
 ;
 entry:
   br label %for.body
@@ -224,7 +236,7 @@ define void @reverse_forward_induction_i64_i8() {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[STEP_ADD]], splat (i8 4)
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[WHILE_END:.*]]
 ; CHECK:       [[WHILE_END]]:
@@ -275,7 +287,7 @@ define void @reverse_forward_induction_i64_i8_signed() {
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[STEP_ADD]], splat (i8 4)
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[WHILE_END:.*]]
 ; CHECK:       [[WHILE_END]]:
@@ -305,7 +317,6 @@ while.end:
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]]}
 ;.

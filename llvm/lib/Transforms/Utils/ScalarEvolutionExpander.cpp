@@ -2301,7 +2301,8 @@ Value *SCEVExpander::expandComparePredicate(const SCEVComparePredicate *Pred,
 }
 
 Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
-                                           Instruction *Loc, bool Signed) {
+                                           Instruction *Loc,
+                                           bool IsStartSigned) {
   assert(AR->isAffine() && "Cannot generate RT check for "
                            "non-affine expression");
 
@@ -2319,7 +2320,7 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   unsigned SrcBits = SE.getTypeSizeInBits(ExitCount->getType());
   unsigned DstBits = SE.getTypeSizeInBits(ARTy);
 
-  // The expression {Start,+,Step} has nusw/nssw if
+  // The expression {Start,+,Step} has nusw/nusw if
   //   Step < 0, Start - |Step| * Backedge <= Start
   //   Step >= 0, Start + |Step| * Backedge > Start
   // and |Step| * Backedge doesn't unsigned overflow.
@@ -2391,12 +2392,15 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
     Value *EndCompareLT = nullptr;
     Value *EndCompareGT = nullptr;
     Value *EndCheck = nullptr;
+    bool IsStepSigned = !IsStartSigned;
     if (NeedPosCheck)
       EndCheck = EndCompareLT = Builder.CreateICmp(
-          Signed ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT, Add, StartValue);
+          IsStartSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT, Add,
+          StartValue);
     if (NeedNegCheck)
       EndCheck = EndCompareGT = Builder.CreateICmp(
-          Signed ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT, Sub, StartValue);
+          IsStepSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT, Sub,
+          StartValue);
     if (NeedPosCheck && NeedNegCheck) {
       // Select the answer based on the sign of Step.
       EndCheck = Builder.CreateSelect(StepCompare, EndCompareGT, EndCompareLT);
@@ -2425,24 +2429,24 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
 Value *SCEVExpander::expandWrapPredicate(const SCEVWrapPredicate *Pred,
                                          Instruction *IP) {
   const auto *A = cast<SCEVAddRecExpr>(Pred->getExpr());
-  Value *NSSWCheck = nullptr, *NUSWCheck = nullptr;
+  Value *NSUWCheck = nullptr, *NUSWCheck = nullptr;
 
   // Add a check for NUSW
   if (Pred->getFlags() & SCEVWrapPredicate::IncrementNUSW)
-    NUSWCheck = generateOverflowCheck(A, IP, false);
+    NUSWCheck = generateOverflowCheck(A, IP, /*IsStartSigned=*/false);
 
-  // Add a check for NSSW
-  if (Pred->getFlags() & SCEVWrapPredicate::IncrementNSSW)
-    NSSWCheck = generateOverflowCheck(A, IP, true);
+  // Add a check for NSUW
+  if (Pred->getFlags() & SCEVWrapPredicate::IncrementNSUW)
+    NSUWCheck = generateOverflowCheck(A, IP, /*IsStartSigned=*/true);
 
-  if (NUSWCheck && NSSWCheck)
-    return Builder.CreateOr(NUSWCheck, NSSWCheck);
+  if (NUSWCheck && NSUWCheck)
+    return Builder.CreateOr(NUSWCheck, NSUWCheck);
 
   if (NUSWCheck)
     return NUSWCheck;
 
-  if (NSSWCheck)
-    return NSSWCheck;
+  if (NSUWCheck)
+    return NSUWCheck;
 
   return ConstantInt::getFalse(IP->getContext());
 }
