@@ -1405,19 +1405,23 @@ def Select32    : SHSelectPseudo<(outs GPR:$dst),
 //===--------------------------------------------------------------------------===//
 
 // LOAD FROM FRAME
+let mayLoad = 1, Defs = [R0, R1], Uses = [R0, R1] in {
 def MOVBLFR : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
                           "! MOVBLFR $src, $Rn",
-                          [(set i32:$Rn, (sextloadi8 addr:$src))]>;
+                          []>;
 
 def MOVWLFR : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
                           "! MOVWLFR $src, $Rn",
-                          [(set i32:$Rn, (sextloadi16 addr:$src))]>;
+                          []>;
 
 def MOVLLFR : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
                           "! MOVLLFR $src, $Rn",
-                          [(set i32:$Rn, (load addr:$src))]>;
+                          []>;
+}
 
 // STORE TO FRAME
+let mayStore = 1, Defs = [R0, R1], Uses = [R0, R1] in {
+
 def MOVBSFR : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
                            "! MOVBSFR $src, $dst",
                            [(truncstorei8 i32:$src, addr:$dst)]>;
@@ -1429,6 +1433,7 @@ def MOVWSFR : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
 def MOVLSFR : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
                            "! MOVLSFR $src, $dst",
                            [(store i32:$src, addr:$dst)]>;
+}
 
 //===--------------------------------------------------------------------------===//
 // Stack Frame
@@ -1470,7 +1475,10 @@ def ADJCALLSTACKUP : SHPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 // Zero-Extend Load
 //===--------------------------------------------------------------------------===//
 
-def : Pat<(i32 (sextloadi1  addr:$src)), (MOVBLFR addr:$src)>;
+def : Pat<(i32 (sextloadi1  addr:$src)), (EXTSB (EXTUB (MOVBLFR addr:$src)))>;
+def : Pat<(i32 (sextloadi8  addr:$src)), (EXTSB (EXTUB (MOVBLFR addr:$src)))>;
+def : Pat<(i32 (sextloadi16 addr:$src)), (EXTSW (MOVWLFR addr:$src))>;
+def : Pat<(i32 (load        addr:$src)),        (MOVLLFR addr:$src)>;
 def : Pat<(i32 (zextloadi1  addr:$src)), (EXTUB (MOVBLFR addr:$src))>;
 def : Pat<(i32 (zextloadi8  addr:$src)), (EXTUB (MOVBLFR addr:$src))>;
 def : Pat<(i32 (zextloadi16 addr:$src)), (EXTUW (MOVWLFR addr:$src))>;
