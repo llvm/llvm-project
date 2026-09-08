@@ -523,8 +523,8 @@ static void addParameterValuesToBindings(const StackFrame *CalleeSF,
     // Bind to exactly that region.
     const MemRegion *ParamRegion =
         Call.getOriginExpr()
-            ? static_cast<const MemRegion *>(MRMgr.getParamVarRegion(
-                  Call.getOriginExpr(), Idx, CalleeSF))
+            ? static_cast<const MemRegion *>(
+                  MRMgr.getParamVarRegion(Call.getOriginExpr(), Idx, CalleeSF))
             : MRMgr.getVarRegion(*I, CalleeSF);
     Loc ParamLoc = SVB.makeLoc(ParamRegion);
     Bindings.push_back(

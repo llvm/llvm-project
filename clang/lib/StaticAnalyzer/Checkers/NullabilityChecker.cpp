@@ -800,8 +800,8 @@ void NullabilityChecker::checkPreCall(const CallEvent &Call,
     // corresponding expression; there is no type-level nullability to read.
     Nullability ArgExprTypeLevelNullability = Nullability::Unspecified;
     if (ArgExpr)
-      ArgExprTypeLevelNullability =
-          getNullabilityAnnotation(lookThroughImplicitCasts(ArgExpr)->getType());
+      ArgExprTypeLevelNullability = getNullabilityAnnotation(
+          lookThroughImplicitCasts(ArgExpr)->getType());
 
     unsigned ParamIdx = Param->getFunctionScopeIndex() + 1;
 
