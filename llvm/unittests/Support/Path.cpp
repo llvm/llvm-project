@@ -488,7 +488,6 @@ TEST(Support, HomeDirectory) {
     expected = path;
 #endif
   // Do not try to test it if we don't know what to expect.
-  // On Windows we use something better than env vars.
   if (expected.empty())
     GTEST_SKIP();
   SmallString<128> HomeDir;
@@ -585,6 +584,50 @@ TEST(Support, CacheDirectory) {
   SmallString<128> CacheDir;
   EXPECT_TRUE(path::cache_directory(CacheDir));
   EXPECT_EQ(Expected, CacheDir);
+}
+
+// RAII helper to temporarily override a wide-character environment variable.
+class WithEnvW {
+  const wchar_t *Var;
+  std::optional<std::wstring> OriginalValue;
+
+public:
+  WithEnvW(const wchar_t *Var, const wchar_t *Value) : Var(Var) {
+    if (const wchar_t *V = ::_wgetenv(Var))
+      OriginalValue.emplace(V);
+    ::_wputenv_s(Var, Value ? Value : L"");
+  }
+  ~WithEnvW() {
+    ::_wputenv_s(Var, OriginalValue ? OriginalValue->c_str() : L"");
+  }
+};
+
+// home_directory() reads USERPROFILE, so overriding it must change the result.
+TEST(Support, HomeDirectoryFromEnv) {
+  WithEnvW Env(L"USERPROFILE", L"C:\\synthetic\\home");
+  std::string Expected = getEnvWin(L"USERPROFILE"); // normalizes separators
+  SmallString<128> HomeDir;
+  EXPECT_TRUE(path::home_directory(HomeDir));
+  EXPECT_EQ(Expected, HomeDir);
+}
+
+TEST(Support, ConfigAndCacheDirectoryFromEnv) {
+  WithEnvW Env(L"LOCALAPPDATA", L"C:\\synthetic\\appdata");
+  std::string Expected = getEnvWin(L"LOCALAPPDATA"); // normalizes separators
+
+  SmallString<128> ConfigDir;
+  EXPECT_TRUE(path::user_config_directory(ConfigDir));
+  EXPECT_EQ(Expected, ConfigDir);
+
+  SmallString<128> CacheDir;
+  EXPECT_TRUE(path::cache_directory(CacheDir));
+  EXPECT_EQ(Expected, CacheDir);
+}
+
+TEST(Support, HomeDirectoryMissingEnv) {
+  WithEnvW Env(L"USERPROFILE", nullptr);
+  SmallString<128> HomeDir;
+  EXPECT_FALSE(path::home_directory(HomeDir));
 }
 #endif
 
