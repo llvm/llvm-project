@@ -17,13 +17,6 @@
 // calls yet, so LLVM check lines use {{.*}} to tolerate the difference
 // between CIR (no flags) and classic codegen ('contract').
 
-// A scalar __fp16 cannot be a parameter or return type, so _Float16 is
-// used instead; both are `half`, so the calls below are unaffected. The
-// functions are extern "C" so the check labels are exact.
-//
-// nvvm.fma.rn.oob and nvvm.fma.rn.oob.relu are overloaded on the operand
-// type, so they cover both half and bfloat and take the unsuffixed name.
-
 #define __device__ __attribute__((device))
 
 typedef __fp16 f16x2 __attribute__((ext_vector_type(2)));
