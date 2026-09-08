@@ -103,6 +103,16 @@ LogicalResult ROCDLDialect::verifyOperationAttribute(Operation *op,
                              << "' attribute attached to unexpected op";
     }
   }
+  // xnack/sramecc describe the whole code object.
+  if (attr.getName() == xnackAttrName.getName() ||
+      attr.getName() == srameccAttrName.getName()) {
+    if (!LLVM::satisfiesLLVMModule(op))
+      return op->emitError() << "'" << attr.getName().getValue()
+                             << "' is only supported on modules";
+    if (!isa<BoolAttr>(attr.getValue()))
+      return op->emitError()
+             << "'" << attr.getName().getValue() << "' must be a boolean";
+  }
   return success();
 }
 

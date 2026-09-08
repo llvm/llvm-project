@@ -1856,6 +1856,44 @@ module {
 
 // -----
 
+// CHECK-LABEL: module @module_target_id_settings
+// CHECK-SAME: attributes {rocdl.sramecc = false, rocdl.xnack = true}
+module @module_target_id_settings attributes {
+    rocdl.xnack = true, rocdl.sramecc = false} {
+}
+
+// -----
+
+// CHECK-LABEL: gpu.module @gpu_module_target_id_settings
+// CHECK-SAME: attributes {rocdl.sramecc = true, rocdl.xnack = false}
+gpu.module @gpu_module_target_id_settings attributes {
+    rocdl.xnack = false, rocdl.sramecc = true} {
+}
+
+// -----
+
+// expected-error@below {{'rocdl.xnack' is only supported on modules}}
+llvm.func private @xnack_on_func() attributes {rocdl.xnack = true}
+
+// -----
+
+// expected-error@below {{'rocdl.sramecc' is only supported on modules}}
+llvm.func private @sramecc_on_func() attributes {rocdl.sramecc = true}
+
+// -----
+
+// expected-error@below {{'rocdl.xnack' must be a boolean}}
+module attributes {rocdl.xnack = "on"} {
+}
+
+// -----
+
+// expected-error@below {{'rocdl.sramecc' must be a boolean}}
+module attributes {rocdl.sramecc = 1 : i32} {
+}
+
+// -----
+
 // Just check these don't emit errors.
 gpu.module @module_1 [#rocdl.target<O = 1, chip = "gfx900", abi = "500", link = ["my_device_lib.bc"], flags = {fast, daz, unsafe_math}>] {
 }
