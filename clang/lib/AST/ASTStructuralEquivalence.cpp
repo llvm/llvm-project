@@ -1155,7 +1155,7 @@ bool ASTStructuralEquivalence::isEquivalent(
     const CooperativeMatrixType *Mat1 = cast<CooperativeMatrixType>(T1);
     const CooperativeMatrixType *Mat2 = cast<CooperativeMatrixType>(T2);
     // The element types must be structurally equivalent and the number of rows
-    // and columns must match.
+    // and columns and scope and use must match.
     if (!IsStructurallyEquivalent(Context, Mat1->getElementType(),
                                   Mat2->getElementType()) ||
         Mat1->getScope() != Mat2->getScope() ||

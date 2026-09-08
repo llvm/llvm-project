@@ -4608,13 +4608,8 @@ protected:
   CooperativeMatrixType(QualType ElementType, unsigned Scope, unsigned NumRows,
                         unsigned NumColumns, unsigned Use,
                         QualType CanonicalType)
-      : CooperativeMatrixType(Type::CooperativeMatrix, ElementType, Scope,
-                              NumRows, NumColumns, Use, CanonicalType) {}
-
-  CooperativeMatrixType(TypeClass TypeClass, QualType ElementType,
-                        unsigned Scope, unsigned NumRows, unsigned NumColumns,
-                        unsigned Use, QualType CanonicalType)
-      : Type(TypeClass, CanonicalType, ElementType->getDependence()),
+      : Type(Type::CooperativeMatrix, CanonicalType,
+             ElementType->getDependence()),
         ElementType(ElementType), NumRows(NumRows), NumColumns(NumColumns),
         Scope(Scope), Use(Use) {}
 
@@ -4633,12 +4628,6 @@ public:
 
   /// Returns the cooperative matrix use.
   unsigned getUse() const { return Use; }
-
-  /// Returns the number of elements required to embed the matrix into
-  /// a vector representation.
-  unsigned getNumElementsFlattened() const {
-    return getNumRows() * getNumColumns();
-  }
 
   /// Returns true if \p NumElements is a valid cooperative matrix dimension.
   static constexpr bool isDimensionValid(size_t NumElements) {
@@ -4663,12 +4652,12 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getElementType(), getNumRows(), getNumColumns(), getScope(),
+    Profile(ID, getElementType(), getScope(), getNumRows(), getNumColumns(),
             getUse(), getTypeClass());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType ElementType,
-                      unsigned NumRows, unsigned NumColumns, unsigned Scope,
+                      unsigned Scope, unsigned NumRows, unsigned NumColumns,
                       unsigned Use, TypeClass TypeClass) {
     ID.AddPointer(ElementType.getAsOpaquePtr());
     ID.AddInteger(NumRows);

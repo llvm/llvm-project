@@ -264,15 +264,15 @@ let Class = CooperativeMatrixType in {
   def : Property<"elementType", QualType> {
     let Read = [{ node->getElementType() }];
   }
-  def : Property<"Scope", UInt32> { let Read = [{ node->getScope() }]; }
+  def : Property<"scope", UInt32> { let Read = [{ node->getScope() }]; }
   def : Property<"numRows", UInt32> { let Read = [{ node->getNumRows() }]; }
   def : Property<"numColumns", UInt32> {
     let Read = [{ node->getNumColumns() }];
   }
-  def : Property<"Use", UInt32> { let Read = [{ node->getUse() }]; }
+  def : Property<"use", UInt32> { let Read = [{ node->getUse() }]; }
 
   def : Creator<[{
-    return ctx.getCooperativeMatrixType(elementType, Scope, numRows, numColumns, Use);
+    return ctx.getCooperativeMatrixType(elementType, scope, numRows, numColumns, use);
   }]>;
 }
 
