@@ -9,6 +9,8 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 
+#include <algorithm>
+
 #include "Plugins/Process/Utility/RegisterContextDarwin_arm.h"
 #include "Plugins/Process/Utility/RegisterContextDarwin_arm64.h"
 #include "Plugins/Process/Utility/RegisterContextDarwin_riscv32.h"
@@ -3468,11 +3470,16 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
 
   if (nlist_data.GetByteSize() > 0) {
 
+    const uint64_t max_nsyms = nlist_data.GetByteSize() / nlist_byte_size;
+    const uint64_t max_nindirectsyms =
+        indirect_symbol_index_data.GetByteSize() / sizeof(uint32_t);
+
     // If the sym array was not created while parsing the DSC unmapped
     // symbols, create it now.
     if (sym == nullptr) {
-      sym =
-          symtab.Resize(symtab_load_command.nsyms + m_dysymtab.nindirectsyms);
+      sym = symtab.Resize(
+          std::min<uint64_t>(symtab_load_command.nsyms, max_nsyms) +
+          std::min<uint64_t>(m_dysymtab.nindirectsyms, max_nindirectsyms));
       num_syms = symtab.GetNumSymbols();
     }
 
@@ -4179,7 +4186,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     // First parse all the nlists but don't process them yet. See the next
     // comment for an explanation why.
     std::vector<struct nlist_64> nlists;
-    nlists.reserve(symtab_load_command.nsyms);
+    nlists.reserve(std::min<uint64_t>(symtab_load_command.nsyms, max_nsyms));
     for (; nlist_idx < symtab_load_command.nsyms; ++nlist_idx) {
       if (auto nlist =
               ParseNList(nlist_data, nlist_data_offset, nlist_byte_size))
