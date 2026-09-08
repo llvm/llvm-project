@@ -1674,6 +1674,76 @@ struct CUDAPluginContextTy final : public PluginContextTy {
     CUstream Stream;
     return CUDADevice.getStream(AsyncInfoWrapper, Stream);
   }
+
+  Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override {
+    if (Devices.empty())
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "pointer is not a known allocation in this context");
+
+    // Any device in the context can service the query; use the first.
+    auto &Ctx0 = static_cast<CUDADeviceTy &>(*Devices.front());
+    if (auto Err = Ctx0.setContext())
+      return std::move(Err);
+
+    CUdeviceptr CUPtr = reinterpret_cast<CUdeviceptr>(Ptr);
+
+    unsigned MemType = 0;
+    if (CUresult Res = cuPointerGetAttribute(
+            &MemType, CU_POINTER_ATTRIBUTE_MEMORY_TYPE, CUPtr))
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "cuPointerGetAttribute(MEMORY_TYPE) failed: %d",
+                           Res);
+
+    int IsManaged = 0;
+    if (CUresult Res = cuPointerGetAttribute(
+            &IsManaged, CU_POINTER_ATTRIBUTE_IS_MANAGED, CUPtr))
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "cuPointerGetAttribute(IS_MANAGED) failed: %d", Res);
+
+    TargetAllocTy Kind = TARGET_ALLOC_DEVICE;
+    if (IsManaged)
+      Kind = TARGET_ALLOC_SHARED;
+    else if (MemType == CU_MEMORYTYPE_HOST)
+      Kind = TARGET_ALLOC_HOST;
+
+    int Ordinal = -1;
+    if (CUresult Res = cuPointerGetAttribute(
+            &Ordinal, CU_POINTER_ATTRIBUTE_DEVICE_ORDINAL, CUPtr))
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "cuPointerGetAttribute(DEVICE_ORDINAL) failed: %d",
+                           Res);
+
+    CUdeviceptr RangeStart = 0;
+    if (CUresult Res = cuPointerGetAttribute(
+            &RangeStart, CU_POINTER_ATTRIBUTE_RANGE_START_ADDR, CUPtr))
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "cuPointerGetAttribute(RANGE_START_ADDR) failed: %d",
+                           Res);
+
+    size_t RangeSize = 0;
+    if (CUresult Res = cuPointerGetAttribute(
+            &RangeSize, CU_POINTER_ATTRIBUTE_RANGE_SIZE, CUPtr))
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "cuPointerGetAttribute(RANGE_SIZE) failed: %d", Res);
+
+    // Ordinal is the CUDA driver ordinal (matches CUdevice); compare against
+    // that rather than the offload-side device index, which can differ under
+    // CUDA_VISIBLE_DEVICES or plugin-side device filtering.
+    GenericDeviceTy *OwnerDevice = nullptr;
+    for (auto *D : Devices) {
+      auto &CD = static_cast<CUDADeviceTy &>(*D);
+      if (static_cast<int>(CD.getCUDADevice()) == Ordinal) {
+        OwnerDevice = D;
+        break;
+      }
+    }
+    if (!OwnerDevice)
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "allocation owner is not a device of this context");
+
+    return PluginAllocInfoTy{OwnerDevice, Kind,
+                             reinterpret_cast<void *>(RangeStart), RangeSize};
+  }
 };
 
 /// Class implementing the CUDA-specific functionalities of the plugin.
