@@ -470,7 +470,7 @@ static_assert(HasOperatorSpaceship<ThreeWayComparable>);
 struct ImplicitBool {
   bool val;
   constexpr operator bool() const { return val; };
-  constexpr explicit operator bool() = delete;
+  explicit operator bool() = delete;
 
   struct E1 {
     int x;
