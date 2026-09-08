@@ -103,6 +103,40 @@ fpconvert_from_bits(typename fputil::FPRep<FromFPType>::StorageType bits) {
   return internal::fpconvert<To, FromFPType>(bits);
 }
 
+// Same, for a destination delivered as raw bits.  Keeps _Float16 out of the
+// signature, which would otherwise lower to a circular __trunc*hf2.
+template <fputil::FPType ToFPType, typename From>
+LIBC_INLINE constexpr typename fputil::FPRep<ToFPType>::StorageType
+fpconvert_to_bits(From x) {
+  using ToRep = fputil::FPRep<ToFPType>;
+  using ToStorageType = typename ToRep::StorageType;
+  using FromBits = fputil::FPBits<From>;
+
+  FromBits x_bits(x);
+
+  if (x_bits.is_nan()) {
+    typename FromBits::StorageType x_frac = x_bits.get_mantissa();
+    if constexpr (ToRep::FRACTION_LEN >= FromBits::FRACTION_LEN) {
+      ToStorageType to_frac = static_cast<ToStorageType>(x_frac)
+                              << (ToRep::FRACTION_LEN - FromBits::FRACTION_LEN);
+      return ToRep::signaling_nan(x_bits.sign(), to_frac).uintval();
+    } else {
+      ToStorageType to_frac = static_cast<ToStorageType>(
+          x_frac >> (FromBits::FRACTION_LEN - ToRep::FRACTION_LEN));
+      return ToRep::quiet_nan(x_bits.sign(), to_frac).uintval();
+    }
+  }
+
+  if (x_bits.is_inf())
+    return ToRep::inf(x_bits.sign()).uintval();
+
+  constexpr size_t MAX_FRACTION_LEN =
+      cpp::max(ToRep::FRACTION_LEN, FromBits::FRACTION_LEN);
+  fputil::DyadicFloat<cpp::bit_ceil(MAX_FRACTION_LEN)> xd(x);
+  return xd.template generic_as_bits<ToFPType,
+                                     /*ShouldSignalExceptions=*/true>();
+}
+
 } // namespace builtins
 } // namespace LIBC_NAMESPACE_DECL
 
