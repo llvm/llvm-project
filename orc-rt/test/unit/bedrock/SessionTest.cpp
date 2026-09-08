@@ -19,6 +19,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
 
 #include <chrono>
@@ -107,7 +108,7 @@ private:
       if (MCA) {
         bool Notify;
         {
-          std::scoped_lock Lock(MCA->M);
+          std::scoped_lock<std::mutex> Lock(MCA->M);
           --MCA->Outstanding;
           Notify = MCA->Shutdown && MCA->Outstanding == 0;
         }

@@ -47,12 +47,15 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
     set(external_clang_dir "-DLLVM_EXTERNAL_CLANG_SOURCE_DIR=${LLVM_EXTERNAL_CLANG_SOURCE_DIR}")
   endif()
 
-  add_custom_command(OUTPUT ${${project_name}_${target_name}_BUILD}
+  set(${project_name}_${target_name}_CREATE_STAMP
+    "${${project_name}_${target_name}_BUILD}/created.stamp")
+  add_custom_command(OUTPUT ${${project_name}_${target_name}_CREATE_STAMP}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${${project_name}_${target_name}_BUILD}
+    COMMAND ${CMAKE_COMMAND} -E touch ${${project_name}_${target_name}_CREATE_STAMP}
     COMMENT "Creating ${${project_name}_${target_name}_BUILD}...")
 
   add_custom_target(CREATE_${project_name}_${target_name}
-    DEPENDS ${${project_name}_${target_name}_BUILD})
+    DEPENDS ${${project_name}_${target_name}_CREATE_STAMP})
   get_subproject_title(subproject_title)
   set_target_properties(CREATE_${project_name}_${target_name} PROPERTIES FOLDER "${subproject_title}/Native")
 

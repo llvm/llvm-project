@@ -8431,64 +8431,6 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerRotate(MachineInstr &MI) {
   return Legalized;
 }
 
-// Expand s32 = G_UITOFP s64 using bit operations to an IEEE float
-// representation.
-LegalizerHelper::LegalizeResult
-LegalizerHelper::lowerU64ToF32BitOps(MachineInstr &MI) {
-  auto [Dst, Src] = MI.getFirst2Regs();
-  const LLT S64 = LLT::scalar(64);
-  const LLT S32 = LLT::scalar(32);
-  const LLT S1 = LLT::scalar(1);
-
-  assert(MRI.getType(Src) == S64 && MRI.getType(Dst) == S32);
-
-  // unsigned cul2f(ulong u) {
-  //   uint lz = clz(u);
-  //   uint e = (u != 0) ? 127U + 63U - lz : 0;
-  //   u = (u << lz) & 0x7fffffffffffffffUL;
-  //   ulong t = u & 0xffffffffffUL;
-  //   uint v = (e << 23) | (uint)(u >> 40);
-  //   uint r = t > 0x8000000000UL ? 1U : (t == 0x8000000000UL ? v & 1U : 0U);
-  //   return as_float(v + r);
-  // }
-
-  auto Zero32 = MIRBuilder.buildConstant(S32, 0);
-  auto Zero64 = MIRBuilder.buildConstant(S64, 0);
-
-  auto LZ = MIRBuilder.buildCTLZ_ZERO_POISON(S32, Src);
-
-  auto K = MIRBuilder.buildConstant(S32, 127U + 63U);
-  auto Sub = MIRBuilder.buildSub(S32, K, LZ);
-
-  auto NotZero = MIRBuilder.buildICmp(CmpInst::ICMP_NE, S1, Src, Zero64);
-  auto E = MIRBuilder.buildSelect(S32, NotZero, Sub, Zero32);
-
-  auto Mask0 = MIRBuilder.buildConstant(S64, (-1ULL) >> 1);
-  auto ShlLZ = MIRBuilder.buildShl(S64, Src, LZ);
-
-  auto U = MIRBuilder.buildAnd(S64, ShlLZ, Mask0);
-
-  auto Mask1 = MIRBuilder.buildConstant(S64, 0xffffffffffULL);
-  auto T = MIRBuilder.buildAnd(S64, U, Mask1);
-
-  auto UShl = MIRBuilder.buildLShr(S64, U, MIRBuilder.buildConstant(S64, 40));
-  auto ShlE = MIRBuilder.buildShl(S32, E, MIRBuilder.buildConstant(S32, 23));
-  auto V = MIRBuilder.buildOr(S32, ShlE, MIRBuilder.buildTrunc(S32, UShl));
-
-  auto C = MIRBuilder.buildConstant(S64, 0x8000000000ULL);
-  auto RCmp = MIRBuilder.buildICmp(CmpInst::ICMP_UGT, S1, T, C);
-  auto TCmp = MIRBuilder.buildICmp(CmpInst::ICMP_EQ, S1, T, C);
-  auto One = MIRBuilder.buildConstant(S32, 1);
-
-  auto VTrunc1 = MIRBuilder.buildAnd(S32, V, One);
-  auto Select0 = MIRBuilder.buildSelect(S32, TCmp, VTrunc1, Zero32);
-  auto R = MIRBuilder.buildSelect(S32, RCmp, One, Select0);
-  MIRBuilder.buildAdd(Dst, V, R);
-
-  MI.eraseFromParent();
-  return Legalized;
-}
-
 // Expand s32 = G_UITOFP s64 to an IEEE float representation using bit
 // operations and G_SITOFP
 LegalizerHelper::LegalizeResult
