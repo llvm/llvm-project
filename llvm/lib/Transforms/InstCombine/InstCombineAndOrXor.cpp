@@ -4325,14 +4325,20 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
       // A = trunc (lshr X, S) B = lshr (trunc X), S
       const APInt *ShiftAmt;
       if (match(A, m_Trunc(m_LShr(m_Value(X), m_APInt(ShiftAmt)))) &&
-          match(B, m_LShr(m_Trunc(m_Specific(X)), m_SpecificInt(*ShiftAmt)))) {
+          match(B, m_LShr(m_Trunc(m_Specific(X)), m_SpecificInt(*ShiftAmt))) &&
+          ShiftAmt->ult(A->getType()->getIntegerBitWidth()) &&
+          !C1->intersects(APInt::getHighBitsSet(
+              A->getType()->getIntegerBitWidth(), ShiftAmt->getZExtValue()))) {
         return BinaryOperator::CreateAnd(
             A, ConstantInt::get(I.getType(), *C0 | *C1));
       }
       // A = lshr (trunc X), S
       // B = trunc (lshr X, S)
       if (match(B, m_Trunc(m_LShr(m_Value(X), m_APInt(ShiftAmt)))) &&
-          match(A, m_LShr(m_Trunc(m_Specific(X)), m_SpecificInt(*ShiftAmt)))) {
+          match(A, m_LShr(m_Trunc(m_Specific(X)), m_SpecificInt(*ShiftAmt))) &&
+          ShiftAmt->ult(A->getType()->getIntegerBitWidth()) &&
+          !C0->intersects(APInt::getHighBitsSet(
+              A->getType()->getIntegerBitWidth(), ShiftAmt->getZExtValue()))) {
         return BinaryOperator::CreateAnd(
             B, ConstantInt::get(I.getType(), *C0 | *C1));
       }
