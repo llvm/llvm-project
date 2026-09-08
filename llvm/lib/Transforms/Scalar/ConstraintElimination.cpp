@@ -75,8 +75,7 @@ static Instruction *getContextInstForUse(Use &U) {
   return UserI;
 }
 
-/// Returns the closest program point dominating all uses of \p I, or nullptr if
-/// \p I has no uses.
+/// Returns the closest program point dominating all uses of \p I.
 static Instruction *findCommonDominatorOfUses(Instruction &I,
                                               DominatorTree &DT) {
   Instruction *CommonDom = nullptr;
@@ -1575,10 +1574,11 @@ void State::addInfoFor(BasicBlock &BB) {
 
     // Queue instructions whose flags may be strengthened, checked at the
     // closest point dominating all uses.
-    if (canStrengthenFlags(&I))
-      if (Instruction *CommonDom = findCommonDominatorOfUses(I, DT))
-        WorkList.push_back(FactOrCheck::getCheck(
-            DT.getNode(CommonDom->getParent()), &I, CommonDom));
+    if (canStrengthenFlags(&I)) {
+      Instruction *CommonDom = findCommonDominatorOfUses(I, DT);
+      WorkList.push_back(FactOrCheck::getCheck(
+          DT.getNode(CommonDom->getParent()), &I, CommonDom));
+    }
 
     GuaranteedToExecute &= isGuaranteedToTransferExecutionToSuccessor(&I);
   }
