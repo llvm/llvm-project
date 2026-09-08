@@ -145,17 +145,10 @@ T select(bool, T, T);
 /// \param FalseVals The vector values are chosen from when conditions are
 /// false.
 
-template <typename T>
+template <typename T, int N>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-vector<T, 2> select(vector<bool, 2>, vector<T, 2>, vector<T, 2>);
-
-template <typename T>
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-vector<T, 3> select(vector<bool, 3>, vector<T, 3>, vector<T, 3>);
-
-template <typename T>
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-vector<T, 4> select(vector<bool, 4>, vector<T, 4>, vector<T, 4>);
+vector<T, N> select(__detail::type_identity_t<vector<bool, N>>, vector<T, N>,
+                    vector<T, N>);
 
 /// \fn vector<T,Sz> select(vector<bool,Sz> Conds, T TrueVal,
 ///                         vector<T,Sz> FalseVals)
@@ -165,17 +158,10 @@ vector<T, 4> select(vector<bool, 4>, vector<T, 4>, vector<T, 4>);
 /// \param FalseVals The vector values are chosen from when conditions are
 /// false.
 
-template <typename T>
+template <typename T, int N>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-vector<T, 2> select(vector<bool, 2>, T, vector<T, 2>);
-
-template <typename T>
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-vector<T, 3> select(vector<bool, 3>, T, vector<T, 3>);
-
-template <typename T>
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-vector<T, 4> select(vector<bool, 4>, T, vector<T, 4>);
+vector<T, N> select(__detail::type_identity_t<vector<bool, N>>, T,
+                    vector<T, N>);
 
 /// \fn vector<T,Sz> select(vector<bool,Sz> Conds, vector<T,Sz> TrueVals,
 ///                         T FalseVal)
@@ -184,39 +170,24 @@ vector<T, 4> select(vector<bool, 4>, T, vector<T, 4>);
 /// \param TrueVals The vector values are chosen from when conditions are true.
 /// \param FalseVal The scalar value to splat from when conditions are false.
 
-template <typename T>
+template <typename T, int N>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-vector<T, 2> select(vector<bool, 2>, vector<T, 2>, T);
+vector<T, N> select(__detail::type_identity_t<vector<bool, N>>, vector<T, N>,
+                    T);
 
-template <typename T>
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-vector<T, 3> select(vector<bool, 3>, vector<T, 3>, T);
-
-template <typename T>
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-vector<T, 4> select(vector<bool, 4>, vector<T, 4>, T);
-
-/// \fn vector<T,Sz> select(vector<bool,Sz> Conds, vector<T,Sz> TrueVals,
+/// \fn vector<T,Sz> select(vector<bool,Sz> Conds, T TrueVals,
 ///                         T FalseVal)
 /// \brief ternary operator for vectors. All vectors must be the same size.
 /// \param Conds The Condition input values.
 /// \param TrueVal The scalar value to splat from when conditions are true.
 /// \param FalseVal The scalar value to splat from when conditions are false.
 
-template <typename T>
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-__detail::enable_if_t<__detail::is_arithmetic<T>::Value, vector<T, 2>> select(
-    vector<bool, 2>, T, T);
-
-template <typename T>
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-__detail::enable_if_t<__detail::is_arithmetic<T>::Value, vector<T, 3>> select(
-    vector<bool, 3>, T, T);
-
-template <typename T>
-_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
-__detail::enable_if_t<__detail::is_arithmetic<T>::Value, vector<T, 4>> select(
-    vector<bool, 4>, T, T);
+template <typename T, typename U, int N>
+__detail::enable_if_t<(N > 1 && __detail::is_arithmetic<T>::Value),
+                      vector<T, N>>
+select(vector<U, N> Conds, T TrueVal, T FalseVal) {
+  return __builtin_hlsl_select((vector<bool, N>)Conds, TrueVal, FalseVal);
+}
 
 } // namespace hlsl
 #endif //_HLSL_HLSL_ALIAS_INTRINSICS_H_

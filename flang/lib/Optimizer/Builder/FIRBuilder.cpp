@@ -457,7 +457,7 @@ void fir::FirOpBuilder::genStackRestore(mlir::Location loc,
 /// must have a unique name to identify and reference it.
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
-    mlir::StringAttr linkage, mlir::Attribute value, bool isConst,
+    fir::LinkageAttr linkage, mlir::Attribute value, bool isConst,
     bool isTarget, cuf::DataAttributeAttr dataAttr, bool setDefaultAlignment) {
   if (auto global = getNamedGlobal(name))
     return global;
@@ -485,7 +485,7 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name, bool isConst,
     bool isTarget, std::function<void(FirOpBuilder &)> bodyBuilder,
-    mlir::StringAttr linkage, cuf::DataAttributeAttr dataAttr,
+    fir::LinkageAttr linkage, cuf::DataAttributeAttr dataAttr,
     bool setDefaultAlignment) {
   if (auto global = getNamedGlobal(name))
     return global;

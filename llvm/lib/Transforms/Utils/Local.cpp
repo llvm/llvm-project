@@ -14,7 +14,6 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
@@ -2853,7 +2852,7 @@ static bool markAliveBlocks(Function &F, SmallVectorImpl<bool> &Reachable,
         }
         if (DTU) {
           std::vector<DominatorTree::UpdateType> Updates;
-          for (const std::pair<BasicBlock *, int> &I : NumPerSuccessorCases)
+          for (const auto &I : NumPerSuccessorCases)
             if (I.second == 0)
               Updates.push_back({DominatorTree::Delete, BB, I.first});
           DTU->applyUpdates(Updates);
