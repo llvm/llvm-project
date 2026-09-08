@@ -12,6 +12,7 @@
 
 #include "PluginManager.h"
 #include "OffloadPolicy.h"
+#include "OmpAccError.h"
 #include "OpenMP/OMPT/Interface.h"
 #include "Shared/Debug.h"
 #include "Shared/Profile.h"
@@ -27,6 +28,7 @@ using namespace llvm::omp::target::ompt;
 
 using namespace llvm;
 using namespace llvm::sys;
+using namespace llvm::omp::target;
 using namespace llvm::omp::target::debug;
 
 PluginManager *PM = nullptr;
@@ -619,8 +621,8 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
   {
     auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
     if (DeviceNo >= ExclusiveDevicesAccessor->size())
-      return error::createOffloadError(
-          error::ErrorCode::INVALID_VALUE,
+      return createError(
+          ErrorCode::InvalidValue,
           "device number '%i' out of range, only %i devices available",
           DeviceNo, ExclusiveDevicesAccessor->size());
 
@@ -630,8 +632,7 @@ Expected<DeviceTy &> PluginManager::getDevice(uint32_t DeviceNo) {
   // Check whether global data has been mapped for this device
   if (DevicePtr->hasPendingImages())
     if (loadImagesOntoDevice(*DevicePtr) != OFFLOAD_SUCCESS)
-      return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
-                                       "failed to load images on device '%i'",
-                                       DeviceNo);
+      return createError(ErrorCode::BackendFailure,
+                         "failed to load images on device '%i'", DeviceNo);
   return *DevicePtr;
 }
