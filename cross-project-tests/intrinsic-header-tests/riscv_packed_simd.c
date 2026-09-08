@@ -4172,3 +4172,79 @@ int64_t test_mulsu_w00_i64(int32x2_t a, uint32x2_t b) {
 int64_t test_mulsu_w11_i64(int32x2_t a, uint32x2_t b) {
   return __riscv_mulsu_w11_i64(a, b);
 }
+
+// CHECK-LABEL: test_pget_i8x4_i8:
+// CHECK:       srai
+int8_t test_pget_i8x4_i8(int8x4_t v) { return __riscv_pget_i8x4_i8(v, 3); }
+
+// CHECK-LABEL: test_pget_i8x4_i8_idx0:
+// CHECK:       sext.b
+int8_t test_pget_i8x4_i8_idx0(int8x4_t v) { return __riscv_pget_i8x4_i8(v, 0); }
+
+// CHECK-LABEL: test_pget_u8x4_u8:
+// CHECK:       srli
+uint8_t test_pget_u8x4_u8(uint8x4_t v) { return __riscv_pget_u8x4_u8(v, 3); }
+
+// CHECK-LABEL: test_pget_u8x4_u8_idx0:
+// CHECK:       zext.b
+uint8_t test_pget_u8x4_u8_idx0(uint8x4_t v) {
+  return __riscv_pget_u8x4_u8(v, 0);
+}
+
+// CHECK-LABEL: test_pget_i16x2_i16:
+// CHECK:       srai
+int16_t test_pget_i16x2_i16(int16x2_t v) {
+  return __riscv_pget_i16x2_i16(v, 1);
+}
+
+// CHECK-LABEL: test_pget_i16x2_i16_idx0:
+// CHECK:       sext.h
+int16_t test_pget_i16x2_i16_idx0(int16x2_t v) {
+  return __riscv_pget_i16x2_i16(v, 0);
+}
+
+// CHECK-LABEL: test_pget_u16x2_u16:
+// CHECK:       srli
+uint16_t test_pget_u16x2_u16(uint16x2_t v) {
+  return __riscv_pget_u16x2_u16(v, 1);
+}
+
+// CHECK-LABEL: test_pget_u16x2_u16_idx0:
+// CHECK:       zext.h
+uint16_t test_pget_u16x2_u16_idx0(uint16x2_t v) {
+  return __riscv_pget_u16x2_u16(v, 0);
+}
+
+// CHECK-LABEL: test_pget_i8x8_i8:
+// CHECK:       srai
+int8_t test_pget_i8x8_i8(int8x8_t v) { return __riscv_pget_i8x8_i8(v, 7); }
+
+// CHECK-LABEL: test_pget_u8x8_u8:
+// CHECK:       srli
+uint8_t test_pget_u8x8_u8(uint8x8_t v) { return __riscv_pget_u8x8_u8(v, 7); }
+
+// CHECK-LABEL: test_pget_i16x4_i16:
+// CHECK:       srai
+int16_t test_pget_i16x4_i16(int16x4_t v) {
+  return __riscv_pget_i16x4_i16(v, 3);
+}
+
+// CHECK-LABEL: test_pget_u16x4_u16:
+// CHECK:       srli
+uint16_t test_pget_u16x4_u16(uint16x4_t v) {
+  return __riscv_pget_u16x4_u16(v, 3);
+}
+
+// CHECK-LABEL: test_pget_i32x2_i32:
+// RV32:        mv
+// RV64:        srai
+int32_t test_pget_i32x2_i32(int32x2_t v) {
+  return __riscv_pget_i32x2_i32(v, 1);
+}
+
+// CHECK-LABEL: test_pget_u32x2_u32:
+// RV32:        mv
+// RV64:        srai
+uint32_t test_pget_u32x2_u32(uint32x2_t v) {
+  return __riscv_pget_u32x2_u32(v, 1);
+}

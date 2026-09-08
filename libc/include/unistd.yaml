@@ -103,6 +103,12 @@ functions:
       - type: const char *
       - type: uid_t
       - type: gid_t
+  - name: chroot
+    standards:
+      - gnu
+    return_type: int
+    arguments:
+      - type: const char *
   - name: confstr
     standards:
       - posix
@@ -138,6 +144,14 @@ functions:
       - type: int
       - type: int
       - type: int
+  - name: execl
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: const char *
+      - type: '...'
   - name: execle
     standards:
       - posix
@@ -337,6 +351,12 @@ functions:
     arguments:
       - type: int
       - type: off_t
+      - type: int
+  - name: nice
+    standards:
+      - posix
+    return_type: int
+    arguments:
       - type: int
   - name: pathconf
     standards:

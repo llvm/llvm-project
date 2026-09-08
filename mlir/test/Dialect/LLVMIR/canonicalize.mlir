@@ -33,6 +33,77 @@ llvm.func @fold_icmp_alloca() -> i1 {
 
 // -----
 
+// CHECK-LABEL: @canonicalize_constant_array_alloca
+llvm.func @canonicalize_constant_array_alloca() -> !llvm.ptr {
+  // CHECK-NEXT: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NEXT: %[[ALLOCA:.*]] = llvm.alloca inalloca %[[ONE]] x !llvm.array<4 x i32> {tag = "preserved", alignment = 16 : i64} : (i32) -> !llvm.ptr
+  %c4 = arith.constant 4 : i64
+  %alloca = llvm.alloca inalloca %c4 x i32 {alignment = 16 : i64, tag = "preserved"} : (i64) -> !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ALLOCA]] : !llvm.ptr
+  llvm.return %alloca : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: @canonicalize_nested_array_alloca
+llvm.func @canonicalize_nested_array_alloca() -> !llvm.ptr {
+  // CHECK-NEXT: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NEXT: %[[ALLOCA:.*]] = llvm.alloca %[[ONE]] x !llvm.array<4 x array<2 x i32>> : (i32) -> !llvm.ptr
+  %c4 = arith.constant 4 : i64
+  %alloca = llvm.alloca %c4 x !llvm.array<2 x i32> : (i64) -> !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ALLOCA]] : !llvm.ptr
+  llvm.return %alloca : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: @canonicalize_zero_array_alloca
+llvm.func @canonicalize_zero_array_alloca() -> !llvm.ptr {
+  // CHECK-NEXT: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NEXT: %[[ALLOCA:.*]] = llvm.alloca %[[ONE]] x !llvm.array<0 x i8> : (i32) -> !llvm.ptr
+  %c0 = llvm.mlir.constant(0 : i32) : i32
+  %alloca = llvm.alloca %c0 x i8 : (i32) -> !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ALLOCA]] : !llvm.ptr
+  llvm.return %alloca : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: @do_not_canonicalize_scalar_alloca
+llvm.func @do_not_canonicalize_scalar_alloca() -> !llvm.ptr {
+  // CHECK-NEXT: %[[ONE:.*]] = arith.constant 1 : i64
+  // CHECK-NEXT: %[[ALLOCA:.*]] = llvm.alloca %[[ONE]] x i32 : (i64) -> !llvm.ptr
+  %c1 = arith.constant 1 : i64
+  %alloca = llvm.alloca %c1 x i32 : (i64) -> !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ALLOCA]] : !llvm.ptr
+  llvm.return %alloca : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: @do_not_canonicalize_dynamic_array_alloca
+// CHECK-SAME: (%[[SIZE:.*]]: i64)
+llvm.func @do_not_canonicalize_dynamic_array_alloca(%size : i64) -> !llvm.ptr {
+  // CHECK-NEXT: %[[ALLOCA:.*]] = llvm.alloca %[[SIZE]] x i32 : (i64) -> !llvm.ptr
+  %alloca = llvm.alloca %size x i32 : (i64) -> !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ALLOCA]] : !llvm.ptr
+  llvm.return %alloca : !llvm.ptr
+}
+
+// -----
+
+// CHECK-LABEL: @do_not_canonicalize_large_array_size
+llvm.func @do_not_canonicalize_large_array_size() -> !llvm.ptr {
+  // CHECK-NEXT: %[[SIZE:.*]] = llvm.mlir.constant(18446744073709551616 : i128) : i128
+  // CHECK-NEXT: %[[ALLOCA:.*]] = llvm.alloca %[[SIZE]] x i8 : (i128) -> !llvm.ptr
+  %size = llvm.mlir.constant(18446744073709551616 : i128) : i128
+  %alloca = llvm.alloca %size x i8 : (i128) -> !llvm.ptr
+  // CHECK-NEXT: llvm.return %[[ALLOCA]] : !llvm.ptr
+  llvm.return %alloca : !llvm.ptr
+}
+
+// -----
+
 // CHECK-LABEL: fold_extractvalue
 llvm.func @fold_extractvalue() -> i32 {
   //  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : i32
