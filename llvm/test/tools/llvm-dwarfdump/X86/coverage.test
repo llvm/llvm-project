@@ -5,8 +5,13 @@ RUN: llvm-dwarfdump --show-variable-coverage %t.o | FileCheck %s
 
 CHECK:      Variable coverage statistics:
 CHECK-NEXT: Function InlChain Variable Decl LinesCovered
-CHECK-NEXT: f k test.c:20 5
-CHECK-NEXT: f l test.c:20 5
+CHECK-NEXT: f k test.c:35 6
+CHECK-NEXT: f l test.c:35 6
+CHECK-NEXT: fn0 a test.c:21 12
+CHECK-NEXT: fn0 u test.c:20 12
+CHECK-NEXT: fn0 v test.c:27 2
+CHECK-NEXT: fn0 x test.c:19 12
+CHECK-NEXT: fn0 y test.c:19 12
 CHECK-NEXT: fn1 a test.c:11 14
 CHECK-NEXT: fn1 u test.c:4 14
 CHECK-NEXT: fn1 v test.c:13 14
@@ -17,8 +22,12 @@ RUN: llvm-dwarfdump --show-variable-coverage --combine-inline-variable-instances
 
 COMBINE:      Variable coverage statistics:
 COMBINE-NEXT: Function InstanceCount Variable Decl LinesCovered
-COMBINE-NEXT: f 1 k test.c:20 5
-COMBINE-NEXT: f 1 l test.c:20 5
+COMBINE-NEXT: f 1 k test.c:35 6
+COMBINE-NEXT: f 1 l test.c:35 6
+COMBINE-NEXT: fn0 1 a test.c:21 1
+COMBINE-NEXT: fn0 1 u test.c:20 5
+COMBINE-NEXT: fn0 1 x test.c:19 7
+COMBINE-NEXT: fn0 1 y test.c:19 7
 COMBINE-NEXT: fn1 1 a test.c:11 5
 COMBINE-NEXT: fn1 1 u test.c:4 1
 COMBINE-NEXT: fn1 1 v test.c:13 0
@@ -29,8 +38,13 @@ RUN: llvm-dwarfdump --show-variable-coverage --coverage-baseline=%t.o %t-opt.o |
 
 BASELINE:      Variable coverage statistics:
 BASELINE-NEXT: Function InlChain Variable Decl LinesCovered Baseline CoveredRatio LinesPresent LinesPresentRatio
-BASELINE-NEXT: f k test.c:20 5 5 1 5 1
-BASELINE-NEXT: f l test.c:20 5 5 1 5 1
+BASELINE-NEXT: f k test.c:35 6 6 1 6 1
+BASELINE-NEXT: f l test.c:35 6 6 1 6 1
+BASELINE-NEXT: fn0 a test.c:21 1 12 0.0833 7 0.583
+BASELINE-NEXT: fn0 u test.c:20 5 12 0.417 7 0.583
+BASELINE-NEXT: fn0 v test.c:27 0 2 0 0 0
+BASELINE-NEXT: fn0 x test.c:19 7 12 0.583 7 0.583
+BASELINE-NEXT: fn0 y test.c:19 7 12 0.583 7 0.583
 BASELINE-NEXT: fn1 a test.c:11 5 14 0.357 7 0.5
 BASELINE-NEXT: fn1 u test.c:4 1 14 0.0714 7 0.5
 BASELINE-NEXT: fn1 v test.c:13 0 14 0 7 0.5
@@ -41,8 +55,13 @@ RUN: llvm-dwarfdump --show-variable-coverage --variable-coverage-bitcode-file=%S
 
 BITCODE:      Variable coverage statistics:
 BITCODE-NEXT: Function InlChain Variable Decl LinesCovered
-BITCODE-NEXT: f k test.c:20 2
-BITCODE-NEXT: f l test.c:20 3
+BITCODE-NEXT: f k test.c:35 3
+BITCODE-NEXT: f l test.c:35 4
+BITCODE-NEXT: fn0 a test.c:21 2
+BITCODE-NEXT: fn0 u test.c:20 10
+BITCODE-NEXT: fn0 v test.c:27 1
+BITCODE-NEXT: fn0 x test.c:19 11
+BITCODE-NEXT: fn0 y test.c:19 11
 BITCODE-NEXT: fn1 a test.c:11 6
 BITCODE-NEXT: fn1 u test.c:4 12
 BITCODE-NEXT: fn1 v test.c:13 4
@@ -53,10 +72,49 @@ RUN: llvm-dwarfdump --show-variable-coverage --variable-coverage-bitcode-file=%S
 
 BASELINE-BITCODE:      Variable coverage statistics:
 BASELINE-BITCODE-NEXT: Function InlChain Variable Decl LinesCovered Baseline CoveredRatio LinesPresent LinesPresentRatio
-BASELINE-BITCODE-NEXT: f k test.c:20 2 2 1 2 1
-BASELINE-BITCODE-NEXT: f l test.c:20 3 3 1 3 1
+BASELINE-BITCODE-NEXT: f k test.c:35 3 3 1 3 1
+BASELINE-BITCODE-NEXT: f l test.c:35 4 4 1 4 1
+BASELINE-BITCODE-NEXT: fn0 a test.c:21 1 2 0.5 1 0.5
+BASELINE-BITCODE-NEXT: fn0 u test.c:20 5 10 0.5 5 0.5
+BASELINE-BITCODE-NEXT: fn0 v test.c:27 0 1 0 0 0
+BASELINE-BITCODE-NEXT: fn0 x test.c:19 6 11 0.545 6 0.545
+BASELINE-BITCODE-NEXT: fn0 y test.c:19 6 11 0.545 6 0.545
 BASELINE-BITCODE-NEXT: fn1 a test.c:11 3 6 0.5 3 0.5
 BASELINE-BITCODE-NEXT: fn1 u test.c:4 1 12 0.0833 5 0.417
 BASELINE-BITCODE-NEXT: fn1 v test.c:13 0 4 0 2 0.5
 BASELINE-BITCODE-NEXT: fn1 x test.c:3 6 13 0.462 6 0.462
 BASELINE-BITCODE-NEXT: fn1 y test.c:3 6 13 0.462 6 0.462
+
+RUN: llvm-dwarfdump --show-variable-coverage --variable-coverage-maybe-undefined --variable-coverage-bitcode-file=%S/Inputs/coverage.ll %t.o | FileCheck %s --check-prefix=MAYBE-UNDEFINED
+
+MAYBE-UNDEFINED:      Variable coverage statistics:
+MAYBE-UNDEFINED-NEXT: Function InlChain Variable Decl LinesCovered
+MAYBE-UNDEFINED-NEXT: f k test.c:35 3
+MAYBE-UNDEFINED-NEXT: f l test.c:35 4
+MAYBE-UNDEFINED-NEXT: fn0 a test.c:21 5
+MAYBE-UNDEFINED-NEXT: fn0 u test.c:20 10
+MAYBE-UNDEFINED-NEXT: fn0 v test.c:27 1
+MAYBE-UNDEFINED-NEXT: fn0 x test.c:19 11
+MAYBE-UNDEFINED-NEXT: fn0 y test.c:19 11
+MAYBE-UNDEFINED-NEXT: fn1 a test.c:11 6
+MAYBE-UNDEFINED-NEXT: fn1 u test.c:4 12
+MAYBE-UNDEFINED-NEXT: fn1 v test.c:13 4
+MAYBE-UNDEFINED-NEXT: fn1 x test.c:3 13
+MAYBE-UNDEFINED-NEXT: fn1 y test.c:3 13
+
+RUN: llvm-dwarfdump --show-variable-coverage --variable-coverage-maybe-undefined --variable-coverage-bitcode-file=%S/Inputs/coverage.ll --coverage-baseline %t.o %t-opt.o | FileCheck %s --check-prefix=MAYBE-UNDEFINED-BASELINE
+
+MAYBE-UNDEFINED-BASELINE:      Variable coverage statistics:
+MAYBE-UNDEFINED-BASELINE-NEXT: Function InlChain Variable Decl LinesCovered
+MAYBE-UNDEFINED-BASELINE-NEXT: f k test.c:35 3 3 1 3 1
+MAYBE-UNDEFINED-BASELINE-NEXT: f l test.c:35 4 4 1 4 1
+MAYBE-UNDEFINED-BASELINE-NEXT: fn0 a test.c:21 1 5 0.2 3 0.6
+MAYBE-UNDEFINED-BASELINE-NEXT: fn0 u test.c:20 5 10 0.5 5 0.5
+MAYBE-UNDEFINED-BASELINE-NEXT: fn0 v test.c:27 0 1 0 0 0
+MAYBE-UNDEFINED-BASELINE-NEXT: fn0 x test.c:19 6 11 0.545 6 0.545
+MAYBE-UNDEFINED-BASELINE-NEXT: fn0 y test.c:19 6 11 0.545 6 0.545
+MAYBE-UNDEFINED-BASELINE-NEXT: fn1 a test.c:11 3 6 0.5 3 0.5
+MAYBE-UNDEFINED-BASELINE-NEXT: fn1 u test.c:4 1 12 0.0833 5 0.417
+MAYBE-UNDEFINED-BASELINE-NEXT: fn1 v test.c:13 0 4 0 2 0.5
+MAYBE-UNDEFINED-BASELINE-NEXT: fn1 x test.c:3 6 13 0.462 6 0.462
+MAYBE-UNDEFINED-BASELINE-NEXT: fn1 y test.c:3 6 13 0.462 6 0.462

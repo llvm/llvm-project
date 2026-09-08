@@ -159,14 +159,17 @@ computeVariableCoverage(DWARFDie VariableDIE,
           // LineTable::getFileNameByIndex can return absolute paths even when
           // relative paths are requested, so search for keys that end with this
           // path as well.
+          SmallVector<std::pair<StringRef, std::optional<uint16_t>>> NewEntries;
           for (const auto &NameEntry : FileNameMap) {
             auto Name = NameEntry.first();
             if (Name.find(L.first, Name.size() - L.first.size()) !=
                 std::string_view::npos) {
-              FileNameMap.insert({L.first, NameEntry.second});
+              NewEntries.push_back({L.first, NameEntry.second});
               IndexLines.insert({*NameEntry.second, L.second});
             }
           }
+          for (const auto &E : NewEntries)
+            FileNameMap.insert(E);
           if (FileNameMap.find(L.first) == FileNameMap.end()) {
             assert(0 && "Files found in bitcode but not in DWARF");
             FileNameMap.insert({L.first, std::nullopt});
@@ -293,7 +296,7 @@ static void addModuleLines(Instruction *I, VarState &Var,
 }
 
 /// Computes the defined lines of all variables in an IR module.
-static BitcodeLineMap processModule(Module *Mod) {
+static BitcodeLineMap processModule(Module *Mod, bool MaybeUndefined) {
   BitcodeLineMap Result;
   std::vector<VarState> Vars;
   for (auto &F : Mod->functions()) {
@@ -301,10 +304,8 @@ static BitcodeLineMap processModule(Module *Mod) {
     for (auto &BB : F) {
       for (auto &I : BB) {
         for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
-          if (DVR.isKillLocation()) {
-            assert(0 && "Variable in bitcode has been optimized out");
+          if (DVR.isKillLocation())
             continue;
-          }
           if (DVR.isDbgDeclare()) {
             // For #dbg_declare, don't treat the variable as live until we find
             // a store to it.
@@ -346,32 +347,55 @@ static BitcodeLineMap processModule(Module *Mod) {
       SmallPtrSet<BasicBlock *, 8> Visited;
       DenseSet<std::pair<StringRef, uint32_t>> Lines;
 
-      // Visit all basic blocks that are reachable from the entry block without
-      // going through a block that stores to the variable.
-      SmallVector<BasicBlock *> BlocksToVisit{&F.getEntryBlock()};
+      SmallVector<BasicBlock *> BlocksToVisit;
+      if (MaybeUndefined) {
+        // Visit all basic blocks that are reachable from a definition.
+        auto B = Var.Definitions.keys();
+        BlocksToVisit.append(B.begin(), B.end());
+      } else {
+        // Visit all basic blocks that are reachable from the entry block
+        // without going through a block that stores to the variable.
+        BlocksToVisit.push_back(&F.getEntryBlock());
+      }
+
       while (!BlocksToVisit.empty()) {
         BasicBlock *BB = BlocksToVisit.pop_back_val();
         if (!Visited.insert(BB).second)
           continue;
 
-        auto I = Var.Definitions.find(BB);
-        if (I != Var.Definitions.end()) {
-          // Block contains a definition: add all lines after it to the set
-          if (I->second != nullptr)
-            addModuleLines(I->second, Var, Lines);
-        } else {
-          // Block does not contain a definition: visit its successors
-          auto S = successors(BB);
-          BlocksToVisit.append(S.begin(), S.end());
+        if (!MaybeUndefined) {
+          auto I = Var.Definitions.find(BB);
+          if (I != Var.Definitions.end()) {
+            // Block contains a definition: add all lines after it to the set
+            // and don't visit the block's successors.
+            if (I->second != nullptr)
+              addModuleLines(I->second, Var, Lines);
+            continue;
+          }
+        }
+
+        auto S = successors(BB);
+        BlocksToVisit.append(S.begin(), S.end());
+        if (MaybeUndefined) {
+          // Treat all successor blocks as live throughout.
+          for (auto *BB : S)
+            Var.Definitions.insert_or_assign(BB, &BB->front());
         }
       }
 
-      // All unvisited basic blocks must only be reachable by going through a
-      // block that stores to the variable, so add lines to the set for all of
-      // their instructions.
-      for (auto &BB : F)
-        if (!Visited.count(&BB))
-          addModuleLines(&*BB.begin(), Var, Lines);
+      if (MaybeUndefined) {
+        // Add lines to the set for all blocks in the definition map.
+        for (auto I : Var.Definitions)
+          if (I.second != nullptr)
+            addModuleLines(I.second, Var, Lines);
+      } else {
+        // All unvisited basic blocks must only be reachable by going through a
+        // block that stores to the variable, so add lines to the set for all of
+        // their instructions.
+        for (auto &BB : F)
+          if (!Visited.count(&BB))
+            addModuleLines(&BB.front(), Var, Lines);
+      }
 
       BitcodeVarKey Key(F.getName(), Var.DVR.getVariable()->getName());
       Result.emplace(Key, Lines);
@@ -480,7 +504,7 @@ static void displayVariableCoverage(const VarKey &Key, const VarCoverage &Var,
 bool dwarfdump::showVariableCoverage(ObjectFile &Obj, DWARFContext &DICtx,
                                      ObjectFile *BaselineObj,
                                      DWARFContext *BaselineCtx,
-                                     StringRef BitcodeFile,
+                                     StringRef BitcodeFile, bool MaybeUndefined,
                                      bool CombineInstances, raw_ostream &OS) {
   BitcodeLineMap LM;
   LLVMContext Context;
@@ -490,7 +514,7 @@ bool dwarfdump::showVariableCoverage(ObjectFile &Obj, DWARFContext &DICtx,
     if (!Err.getMessage().empty())
       Err.print("llvm-dwarfdump", OS);
     else
-      LM = processModule(Mod.get());
+      LM = processModule(Mod.get(), MaybeUndefined);
   }
 
   BaselineVarMap BaselineVars;
@@ -578,6 +602,10 @@ bool dwarfdump::showVariableCoverage(ObjectFile &Obj, DWARFContext &DICtx,
       Vars.insert({*Key, VarCov});
     }
   }
+
+  for (auto V : BaselineVars)
+    if (!Vars.count(V.first))
+      Vars.insert({V.first, {{}, 0, V.second.size(), 0, 0, 1, false}});
 
   std::pair<VarMap::iterator, VarMap::iterator> Range;
 
