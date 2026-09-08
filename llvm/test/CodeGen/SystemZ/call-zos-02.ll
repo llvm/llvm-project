@@ -8,7 +8,7 @@ entry:
 
 define hidden signext i32 @caller2() {
 entry:
-; CHECK-LABEL:   caller2 DS 0H
+; CHECK-LABEL:   caller2 DS 0B
 ; CHECK:      * encoding: [0xc0,0x75,A,A,A,A]
 ; CHECK-NEXT: * fixup A - offset: 2, value: caller+2, kind: FK_390_PC32DBL
 ; CHECK-NEXT:     brasl 7,caller

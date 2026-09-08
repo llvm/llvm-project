@@ -3,12 +3,12 @@
 ; RUN: llc < %s -mtriple=s390x-ibm-zos -mcpu=z10 | FileCheck %s
 
 define i64 @caller() {
-; CHECK-LABEL: caller DS 0H
+; CHECK-LABEL: caller DS 0B
 ; CHECK:         stmg 6,8,1872(4)
-; CHECK-NEXT:    L#stack_update{{[0-9]+}} DS 0H
+; CHECK-NEXT:    L#stack_update{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    aghi 4,-192
 ; CHECK-NEXT:    *FENCE
-; CHECK-NEXT:    L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK-NEXT:    L#end_of_prologue{{[0-9]+}} DS 0B
 ; CHECK-NEXT:    lgr 8,5
 ; CHECK-NEXT:    brasl 7,callee_internal
 ; CHECK-NEXT:    bcr 0,3
@@ -28,7 +28,7 @@ define i64 @caller() {
 }
 
 define internal i64 @callee_internal() {
-; CHECK-LABEL: callee_internal DS 0H
+; CHECK-LABEL: callee_internal DS 0B
 ; CHECK:         lghi 3,10
 ; CHECK-NEXT:    b 2(7)
   ret i64 10

@@ -7,7 +7,7 @@
 ; RUN: FileCheck %t.ebcdic.ll
 
 ; CHECK: C_CODE64 CATTR
-; CHECK: L#PPA2 DS 0H
+; CHECK: L#PPA2 DS 0B
 ; CHECK:  DC XL1'03'
 ; CHECK:  DC XL1'E7'
 ; CHECK:  DC XL1'22'
@@ -19,7 +19,7 @@
 ; CHECK:  DC XL1'BYTE'
 ; CHECK:  DC XL1'00'
 ; CHECK:  DC XL2'0000'
-; CHECK: L#DVS DS 0H
+; CHECK: L#DVS DS 0B
 ; CHECK:  DC XL14'F1F9F7F0F0F1F0F1F0F0F0F0F0F0'
 ; CHECK:  DC XL6'{{((F[[:digit:]]){6})}}'
 ; CHECK:  DC XL2'0000'
@@ -31,7 +31,7 @@
 ; CHECK: * A(PPA2-CELQSTRT)
 ; CHECK:  DC AD(L#PPA2-CELQSTRT)
 
-; CHECK: L#EPM_void_test_0 DS 0H
+; CHECK: L#EPM_void_test_0 DS 0Q
 ; CHECK: * Offset to PPA1
 ; CHECK:  DC AD(L#PPA1_void_test_0-L#EPM_void_test_0)
  

@@ -5,14 +5,14 @@
 ; Test prolog/epilog for non-XPLEAF.
 
 ; Small stack frame.
-; CHECK-LABEL: func0 DS 0H
+; CHECK-LABEL: func0 DS 0B
 ; CHECK64: stmg  6,7,1872(4)
 ; stmg instruction's displacement field must be 2064-dsa_size
 ; as per ABI
-; CHECK64: L#stack_update{{[0-9]+}} DS 0H
+; CHECK64: L#stack_update{{[0-9]+}} DS 0B
 ; CHECK64-NEXT: aghi  4,-192
 ; CHECK64-NEXT: *FENCE
-; CHECK64-NEXT: L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK64-NEXT: L#end_of_prologue{{[0-9]+}} DS 0B
 
 ; CHECK64: lg  7,2072(4)
 ; CHECK64: aghi  4,192
@@ -24,12 +24,12 @@ define void @func0() {
 }
 
 ; Spill all GPR CSRs
-; CHECK-LABEL: func1 DS 0H
+; CHECK-LABEL: func1 DS 0B
 ; CHECK64: stmg 6,15,1904(4)
-; CHECK64: L#stack_update{{[0-9]+}} DS 0H
+; CHECK64: L#stack_update{{[0-9]+}} DS 0B
 ; CHECK64-NEXT: aghi  4,-160
 ; CHECK64-NEXT: *FENCE
-; CHECK64-NEXT: L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK64-NEXT: L#end_of_prologue{{[0-9]+}} DS 0B
 
 ; CHECK64: lmg 7,15,2072(4)
 ; CHECK64: aghi  4,160
@@ -86,12 +86,12 @@ define void @func1(ptr %ptr) {
 
 
 ; Spill all FPRs and VRs
-; CHECK-LABEL: func2 DS 0H
+; CHECK-LABEL: func2 DS 0B
 ; CHECK64: stmg	6,7,1744(4)
-; CHECK64: L#stack_update{{[0-9]+}} DS 0H
+; CHECK64: L#stack_update{{[0-9]+}} DS 0B
 ; CHECK64-NEXT: aghi  4,-320
 ; CHECK64-NEXT: *FENCE
-; CHECK64-NEXT: L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK64-NEXT: L#end_of_prologue{{[0-9]+}} DS 0B
 ; CHECK64: vst  16,{{[0-9]+}}(4),4
 ; CHECK64: vst  17,{{[0-9]+}}(4),4
 ; CHECK64: vst  18,{{[0-9]+}}(4),4
@@ -281,11 +281,11 @@ define void @func2(ptr %ptr, ptr %vec_ptr) {
 ; Big stack frame, force the use of agfi before stmg
 ; despite not requiring stack extension routine.
 ; CHECK-LABEL: func3
-; CHECK64: L#stack_update{{[0-9]+}} DS 0H
+; CHECK64: L#stack_update{{[0-9]+}} DS 0B
 ; CHECK64-NEXT: agfi  4,-1040768
 ; CHECK64-NEXT: stmg  6,7,2064(4)
 ; CHECK64-NEXT: *FENCE
-; CHECK64-NEXT: L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK64-NEXT: L#end_of_prologue{{[0-9]+}} DS 0B
 ; CHECK64: agfi  4,1040768
 define void @func3() {
   %arr = alloca [130070 x i64], align 8
@@ -297,11 +297,11 @@ define void @func3() {
 ; object in stack frame. (Eg: VLA) Sets up frame pointer in r8
 ; CHECK-LABEL: func4
 ; CHECK64: stmg  4,10,1856(4)
-; CHECK64: L#stack_update{{[0-9]+}} DS 0H
+; CHECK64: L#stack_update{{[0-9]+}} DS 0B
 ; CHECK64-NEXT: aghi  4,-192
 ; CHECK64-NEXT: lgr     8,4
 ; CHECK64-NEXT: *FENCE
-; CHECK64-NEXT: L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK64-NEXT: L#end_of_prologue{{[0-9]+}} DS 0B
 ; CHECK64: lmg  4,10,2048(4)
 ; CHECK64-NEXT: b 2(7)
 define i64 @func4(i64 %n) {
@@ -314,13 +314,13 @@ define i64 @func4(i64 %n) {
 ; to force use of agfi before stmg.
 ; CHECK-LABEL: func5
 ; CHECK64: lgr	0,4
-; CHECK64: L#stack_update{{[0-9]+}} DS 0H
+; CHECK64: L#stack_update{{[0-9]+}} DS 0B
 ; CHECK64-NEXT: agfi	4,-1040224
 ; CHECK64-NEXT: stmg  4,10,2048(4)
 ; CHECK64-NEXT: stg 0,2048(4)
 ; CHECK64-NEXT: lgr     8,4
 ; CHECK64-NEXT: *FENCE
-; CHECK64-NEXT: L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK64-NEXT: L#end_of_prologue{{[0-9]+}} DS 0B
 ; CHECK64: lmg 4,10,2048(4)
 define i64 @func5(i64 %n) {
   %vla = alloca i64, i64 %n, align 8
@@ -331,10 +331,10 @@ define i64 @func5(i64 %n) {
 
 ; Require saving of r5, which is not restored.
 ; CHECK64: stmg 5,9,1864(4)
-; CHECK64: L#stack_update{{[0-9]+}} DS 0H
+; CHECK64: L#stack_update{{[0-9]+}} DS 0B
 ; CHECK64-NEXT: aghi 4,-192
 ; CHECK64-NEXT: *FENCE
-; CHECK64-NEXT: L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK64-NEXT: L#end_of_prologue{{[0-9]+}} DS 0B
 ; CHECK64: lmg 7,9,2072(4)
 ; CHECK64-NEXT: aghi 4,192
 declare i32 @personality(...)
@@ -354,7 +354,7 @@ bb3:
 }
 
 ; CHECK-LABEL: large_stack
-; CHECK64:      L#stack_update{{[0-9]+}} DS 0H
+; CHECK64:      L#stack_update{{[0-9]+}} DS 0B
 ; CHECK64-NEXT: agfi  4,-1048800
 ; CHECK64-NEXT: llgt  3,1208
 ; CHECK64-NEXT: cg  4,64(3)
@@ -362,18 +362,18 @@ bb3:
 ; CHECK64: lg  3,72(3)
 ; CHECK64-NEXT: basr  3,3
 ; CHECK64-NEXT: bcr 0,7
-; CHECK64-NEXT: L#BB7_2 DS 0H
+; CHECK64-NEXT: L#BB7_2 DS 0B
 ; CHECK64-NEXT: stmg  6,7,2064(4)
 ; CHECK64-NEXT: *FENCE
-; CHECK64-NEXT: L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK64-NEXT: L#end_of_prologue{{[0-9]+}} DS 0B
 define void @large_stack0() {
   %arr = alloca [131072 x i64], align 8
   call i64 (ptr) @fun1(ptr %arr)
   ret void
 }
 
-; CHECK-LABEL: large_stack1 DS 0H
-; CHECK64: L#stack_update{{[0-9]+}} DS 0H
+; CHECK-LABEL: large_stack1 DS 0B
+; CHECK64: L#stack_update{{[0-9]+}} DS 0B
 ; CHECK64-NEXT: agfi  4,-1048800
 ; CHECK64-NEXT: lgr 0,3
 ; CHECK64-NEXT: llgt  3,1208
@@ -382,11 +382,11 @@ define void @large_stack0() {
 ; CHECK64: lg  3,72(3)
 ; CHECK64-NEXT: basr  3,3
 ; CHECK64-NEXT: bcr 0,7
-; CHECK64-NEXT: L#BB8_2 DS 0H
+; CHECK64-NEXT: L#BB8_2 DS 0B
 ; CHECK64-NEXT: stmg  6,7,2064(4)
 ; CHECK64-NEXT: lgr 3,0
 ; CHECK64-NEXT: *FENCE
-; CHECK64-NEXT: L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK64-NEXT: L#end_of_prologue{{[0-9]+}} DS 0B
 
 define void @large_stack1(i64 %n1, i64 %n2, i64 %n3) {
   %arr = alloca [131072 x i64], align 8
@@ -399,7 +399,7 @@ define void @large_stack1(i64 %n1, i64 %n2, i64 %n3) {
 ; CHECK-LABEL: large_stack2
 ; CHECK64: lgr 0,4
 ; CHECK64: stg 3,2192(4)
-; CHECK64: L#stack_update{{[0-9]+}} DS 0H
+; CHECK64: L#stack_update{{[0-9]+}} DS 0B
 ; CHECK64-NEXT: agfi  4,-1048800
 ; CHECK64-NEXT: llgt  3,1208
 ; CHECK64-NEXT: cg  4,64(3)
@@ -407,14 +407,14 @@ define void @large_stack1(i64 %n1, i64 %n2, i64 %n3) {
 ; CHECK64: lg  3,72(3)
 ; CHECK64-NEXT: basr  3,3
 ; CHECK64-NEXT: bcr 0,7
-; CHECK64-NEXT: L#BB9_2 DS 0H
+; CHECK64-NEXT: L#BB9_2 DS 0B
 ; CHECK64-NEXT: lgr 3,0
 ; CHECK64-NEXT: lg  3,2192(3)
 ; CHECK64-NEXT: stmg  4,12,2048(4)
 ; CHECK64-NEXT: stg 0,2048(4)
 ; CHECK64-NEXT: lgr 8,4
 ; CHECK64-NEXT: *FENCE
-; CHECK64-NEXT: L#end_of_prologue{{[0-9]+}} DS 0H
+; CHECK64-NEXT: L#end_of_prologue{{[0-9]+}} DS 0B
 define void @large_stack2(i64 %n1, i64 %n2, i64 %n3) {
   %arr0 = alloca [131072 x i64], align 8
   %arr1 = alloca i64, i64 %n1, align 8
@@ -435,13 +435,13 @@ define void @large_stack3() {
   ret void
 }
 
-; CHECK-LABEL: L#EPM_leaf_func0_0 DS 0H
+; CHECK-LABEL: L#EPM_leaf_func0_0 DS 0Q
 ; CHECK: * DSA Size 0x0
 ; CHECK: * Entry Flags
 ; CHECK: *   Bit 1: 1 = Leaf function
 ; CHECK: *   Bit 2: 0 = Does not use alloca
 ; CHECK:  DC XL4'00000008'
-; CHECK-LABEL: leaf_func0 DS 0H
+; CHECK-LABEL: leaf_func0 DS 0B
 ; CHECK-NOT: aghi  4,
 ; CHECK-NOT: stmg
 ; CHECK: agr	1,2
@@ -449,7 +449,7 @@ define void @large_stack3() {
 ; CHECK: aghik	3,1,-4
 ; CHECK-NOT: aghi  4,
 ; CHECK-NOT: lmg
-; CHECK-LABEL: L#leaf_func0_end_0 DS 0H
+; CHECK-LABEL: L#leaf_func0_end_0 DS 0B
 define i64 @leaf_func0(i64 %a, i64 %b, i64 %c) {
   %n = add i64 %a, %b
   %m = mul i64 %n, %c
@@ -478,23 +478,23 @@ declare i64 @fun4(ptr %ptr0, ptr %ptr1, i64 %n1, i64 %n2, i64 %n3)
 ;     Tests for PPA1 Fields
 ; =============================
 
-; CHECK64: L#PPA1_func0_0 DS 0H
+; CHECK64: L#PPA1_func0_0 DS 0B
 ; CHECK64: * Length/4 of Parms
 ; CHECK64:  DC XL2'0000'
 
-; CHECK64: L#PPA1_func1_0 DS 0H
+; CHECK64: L#PPA1_func1_0 DS 0B
 ; CHECK64: * Length/4 of Parms
 ; CHECK64:  DC XL2'0002'
 
-; CHECK64: L#PPA1_large_stack1_0 DS 0H
+; CHECK64: L#PPA1_large_stack1_0 DS 0B
 ; CHECK64: * Length/4 of Parms
 ; CHECK64:  DC XL2'0006'
 
-; CHECK-LABEL: L#PPA1_named_func_0 DS 0H
+; CHECK-LABEL: L#PPA1_named_func_0 DS 0B
 ; CHECK:      * PPA1 Flags 4
 ; CHECK-NEXT: *   Bit 7: 1 = Name Length and Name
 ; CHECK-NEXT:  DC XL1'81'
 
-; CHECK-LABEL: L#PPA1_0 DS 0H
+; CHECK-LABEL: L#PPA1_0 DS 0B
 ; CHECK:      * PPA1 Flags 4
 ; CHECK-NEXT:  DC XL1'80'

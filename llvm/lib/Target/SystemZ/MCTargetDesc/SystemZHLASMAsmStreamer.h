@@ -43,6 +43,11 @@ class SystemZHLASMAsmStreamer final : public MCAsmBaseStreamer {
   const MCAsmInfo *MAI;
   std::unique_ptr<MCInstPrinter> InstPrinter;
   bool IsVerboseAsm = false;
+  // Deferred simple alignment suffix (e.g. 'H' for DS 0H). Set by
+  // emitValueToAlignment() and consumed by the next emitLabel() call.
+  // Flushed as a standalone DS statement by flushPendingAlignment() if any
+  // other emission follows first.
+  std::optional<char> PendingAlignSuffix;
 
 public:
   SystemZHLASMAsmStreamer(MCContext &Context,
@@ -65,6 +70,7 @@ public:
 
   void EmitEOL();
   void EmitComment();
+  void flushPendingAlignment();
 
   /// Add a comment that can be emitted to the generated .s file to make the
   /// output of the compiler more readable. This only affects the MCAsmStreamer
