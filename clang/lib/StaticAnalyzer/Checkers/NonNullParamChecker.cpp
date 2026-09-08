@@ -46,10 +46,27 @@ public:
                                   const Expr *ArgE) const;
 };
 
+/// The bit vectors below are indexed by \p Call's own argument numbering
+/// and not by the declared parameter index. The two differ for an
+/// explicit object parameter. The explicit object parameter is declared
+/// as #0, but \p Call does not count the object as one of its arguments.
+///
+/// \returns how many leading declared parameters \p Call has no argument
+/// for.
+template <class CallType>
+unsigned getDeclParameterOffset(const CallType &Call) {
+  if (const auto *FD = llvm::dyn_cast_or_null<FunctionDecl>(Call.getDecl())) {
+    assert(FD->getNumParams() >= Call.parameters().size());
+    return FD->getNumParams() - Call.parameters().size();
+  }
+  return 0;
+}
+
 template <class CallType>
 void setBitsAccordingToFunctionAttributes(const CallType &Call,
                                           llvm::SmallBitVector &AttrNonNull) {
   const Decl *FD = Call.getDecl();
+  const unsigned Offset = getDeclParameterOffset(Call);
 
   for (const auto *NonNull : FD->specific_attrs<NonNullAttr>()) {
     if (!NonNull->args_size()) {
@@ -63,9 +80,12 @@ void setBitsAccordingToFunctionAttributes(const CallType &Call,
       // 'nonnull' attribute's parameters are 1-based and should be adjusted to
       // match actual AST parameter/argument indices.
       unsigned IdxAST = Idx.getASTIndex();
-      if (IdxAST >= AttrNonNull.size())
+      if (IdxAST < Offset)
         continue;
-      AttrNonNull.set(IdxAST);
+      const unsigned IdxArg = IdxAST - Offset;
+      if (IdxArg >= AttrNonNull.size())
+        continue;
+      AttrNonNull.set(IdxArg);
     }
   }
 }
@@ -73,13 +93,14 @@ void setBitsAccordingToFunctionAttributes(const CallType &Call,
 template <class CallType>
 void setBitsAccordingToParameterAttributes(const CallType &Call,
                                            llvm::SmallBitVector &AttrNonNull) {
+  unsigned ArgIdx = 0;
   for (const ParmVarDecl *Parameter : Call.parameters()) {
-    unsigned ParameterIndex = Parameter->getFunctionScopeIndex();
-    if (ParameterIndex == AttrNonNull.size())
+    if (ArgIdx == AttrNonNull.size())
       break;
 
     if (Parameter->hasAttr<NonNullAttr>())
-      AttrNonNull.set(ParameterIndex);
+      AttrNonNull.set(ArgIdx);
+    ++ArgIdx;
   }
 }
 
