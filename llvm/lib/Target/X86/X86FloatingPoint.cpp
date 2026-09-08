@@ -1664,41 +1664,31 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
       }
     }
 
-    if (STUses && !isMask_32(STUses))
+    bool Malformed = false;
+    if (STUses && !isMask_32(STUses)) {
       MI.emitGenericError("fixed input regs must be last on the x87 stack");
-    unsigned NumSTUses = llvm::countr_one(STUses);
+      Malformed = true;
+    }
 
     // Defs must be contiguous from the stack top. ST0-STn.
     if (STDefs && !isMask_32(STDefs)) {
       MI.emitGenericError("output regs must be last on the x87 stack");
-      STDefs = NextPowerOf2(STDefs) - 1;
+      Malformed = true;
     }
-    unsigned NumSTDefs = llvm::countr_one(STDefs);
 
     // So must the clobbered stack slots. ST0-STm, m >= n.
-    if (STClobbers && !isMask_32(STDefs | STClobbers))
+    if (STClobbers && !isMask_32(STDefs | STClobbers)) {
       MI.emitGenericError("clobbers must be last on the x87 stack");
+      Malformed = true;
+    }
 
     // Popped inputs are the ones that are also clobbered or defined.
     unsigned STPopped = STUses & (STDefs | STClobbers);
-    if (STPopped && !isMask_32(STPopped))
+    if (STPopped && !isMask_32(STPopped)) {
       MI.emitGenericError(
           "implicitly popped regs must be last on the x87 stack");
-    unsigned NumSTPopped = llvm::countr_one(STPopped);
-
-    LLVM_DEBUG(dbgs() << "Asm uses " << NumSTUses << " fixed regs, pops "
-                      << NumSTPopped << ", and defines " << NumSTDefs
-                      << " regs.\n");
-
-#ifndef NDEBUG
-    // If any input operand uses constraint "f", all output register
-    // constraints must be early-clobber defs.
-    for (unsigned I = 0, E = MI.getNumOperands(); I < E; ++I)
-      if (FRegIdx.count(I)) {
-        assert((1 << getFPReg(MI.getOperand(I)) & STDefs) == 0 &&
-               "Operands with constraint \"f\" cannot overlap with defs");
-      }
-#endif
+      Malformed = true;
+    }
 
     // Collect all FP registers (register operands with constraints "t", "u",
     // and "f") to kill afer the instruction.
@@ -1714,6 +1704,62 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
       if (Op.isUse() && Op.isKill())
         FPKills |= 1U << FPReg;
     }
+
+    auto RewriteFPRegs = [&]() {
+      for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+        MachineOperand &Op = MI.getOperand(i);
+        if (!Op.isReg() || Op.getReg() < X86::FP0 || Op.getReg() > X86::FP6)
+          continue;
+
+        unsigned FPReg = getFPReg(Op);
+
+        if (FRegIdx.count(i))
+          // Operand with constraint "f".
+          Op.setReg(getSTReg(FPReg));
+        else
+          // Operand with a single register class constraint ("t" or "u").
+          Op.setReg(X86::ST0 + FPReg);
+      }
+    };
+
+    if (Malformed) {
+      // Don't simulate a malformed asm. Just keep the stack model consistent:
+      // pop the killed inputs and push the outputs.
+      RewriteFPRegs();
+      while (FPKills) {
+        unsigned FPReg = llvm::countr_zero(FPKills);
+        if (isLive(FPReg))
+          freeStackSlotBefore(Inst, FPReg);
+        FPKills &= ~(1U << FPReg);
+      }
+      while (STDefs) {
+        unsigned FPReg = llvm::countr_zero(STDefs);
+        if (!isLive(FPReg)) {
+          BuildMI(*MBB, Inst, MI.getDebugLoc(), TII->get(X86::LD_F0));
+          pushReg(FPReg);
+        }
+        STDefs &= ~(1U << FPReg);
+      }
+      return;
+    }
+
+    unsigned NumSTUses = llvm::countr_one(STUses);
+    unsigned NumSTDefs = llvm::countr_one(STDefs);
+    unsigned NumSTPopped = llvm::countr_one(STPopped);
+
+    LLVM_DEBUG(dbgs() << "Asm uses " << NumSTUses << " fixed regs, pops "
+                      << NumSTPopped << ", and defines " << NumSTDefs
+                      << " regs.\n");
+
+#ifndef NDEBUG
+    // If any input operand uses constraint "f", all output register
+    // constraints must be early-clobber defs.
+    for (unsigned I = 0, E = MI.getNumOperands(); I < E; ++I)
+      if (FRegIdx.count(I)) {
+        assert((1 << getFPReg(MI.getOperand(I)) & STDefs) == 0 &&
+               "Operands with constraint \"f\" cannot overlap with defs");
+      }
+#endif
 
     // Do not include registers that are implicitly popped by defs/clobbers.
     FPKills &= ~(STDefs | STClobbers);
@@ -1731,20 +1777,7 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
     });
 
     // With the stack layout fixed, rewrite the FP registers.
-    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-      MachineOperand &Op = MI.getOperand(i);
-      if (!Op.isReg() || Op.getReg() < X86::FP0 || Op.getReg() > X86::FP6)
-        continue;
-
-      unsigned FPReg = getFPReg(Op);
-
-      if (FRegIdx.count(i))
-        // Operand with constraint "f".
-        Op.setReg(getSTReg(FPReg));
-      else
-        // Operand with a single register class constraint ("t" or "u").
-        Op.setReg(X86::ST0 + FPReg);
-    }
+    RewriteFPRegs();
 
     // Simulate the inline asm popping its inputs and pushing its outputs.
     StackTop -= NumSTPopped;
