@@ -42,6 +42,90 @@
 using namespace lldb;
 using namespace lldb_private;
 
+namespace {
+
+/// Presents a value object as one of a frame's variables.
+///
+/// A value object describes how it was produced, not which of a frame's
+/// variables it stands for; only the variable records that. A frame that
+/// builds its own values pairs the two here, taking the value type from the
+/// variable and everything else from the value object.
+///
+/// ValueObjectVariable does the same for a variable read from debug info, but
+/// requires the value to be recoverable from a DWARF location expression.
+class ValueObjectProvidedVariable : public ValueObject {
+public:
+  static lldb::ValueObjectSP Create(ValueObject &parent,
+                                    const lldb::VariableSP &variable_sp) {
+    return (new ValueObjectProvidedVariable(parent, variable_sp))->GetSP();
+  }
+
+  ~ValueObjectProvidedVariable() override = default;
+
+  lldb::ValueType GetValueType() const override {
+    return m_variable_sp->GetScope();
+  }
+
+  llvm::Expected<uint64_t> GetByteSize() override {
+    return m_parent->GetByteSize();
+  }
+
+  llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override {
+    return m_parent->GetNumChildren(max);
+  }
+
+  bool IsInScope() override { return m_parent->IsInScope(); }
+
+  // This wrapper is transparent: consumers that walk parents, such as
+  // expression path construction, must not see an extra level.
+  ValueObject *GetParent() override {
+    return m_parent ? m_parent->GetParent() : nullptr;
+  }
+
+  const ValueObject *GetParent() const override {
+    return m_parent ? m_parent->GetParent() : nullptr;
+  }
+
+protected:
+  ValueObjectProvidedVariable(ValueObject &parent,
+                              const lldb::VariableSP &variable_sp)
+      : ValueObject(parent), m_variable_sp(variable_sp) {
+    SetName(parent.GetName());
+  }
+
+  bool UpdateValue() override {
+    SetValueIsValid(false);
+    m_error.Clear();
+
+    if (!m_parent->UpdateValueIfNeeded(false)) {
+      if (m_error.Success() && m_parent->GetError().Fail())
+        m_error = m_parent->GetError().Clone();
+      return false;
+    }
+
+    m_update_point.SetUpdated();
+    m_value = m_parent->GetValue();
+    SetAddressTypeOfChildren(m_parent->GetAddressTypeOfChildren());
+    ExecutionContext exe_ctx(GetExecutionContextRef());
+    m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
+    SetValueDidChange(m_parent->GetValueDidChange());
+    return true;
+  }
+
+  CompilerType GetCompilerTypeImpl() override {
+    return m_parent->GetCompilerType();
+  }
+
+  lldb::VariableSP m_variable_sp;
+
+private:
+  ValueObjectProvidedVariable(const ValueObjectProvidedVariable &) = delete;
+  const ValueObjectProvidedVariable &
+  operator=(const ValueObjectProvidedVariable &) = delete;
+};
+
+} // namespace
+
 char ScriptedFrame::ID;
 
 void ScriptedFrame::CheckInterpreterAndScriptObject() const {
@@ -305,8 +389,12 @@ lldb::ValueObjectSP ScriptedFrame::GetValueObjectForFrameVariable(
   if (!values)
     return {};
 
-  return values->FindValueObjectByValueName(
+  lldb::ValueObjectSP valobj_sp = values->FindValueObjectByValueName(
       variable_sp->GetName().AsCString(nullptr));
+  if (!valobj_sp)
+    return {};
+
+  return ValueObjectProvidedVariable::Create(*valobj_sp, variable_sp);
 }
 
 lldb::ValueObjectSP ScriptedFrame::FindVariable(ConstString name) {
@@ -315,7 +403,20 @@ lldb::ValueObjectSP ScriptedFrame::FindVariable(ConstString name) {
   if (!values)
     return {};
 
-  return values->FindValueObjectByValueName(name.AsCString(nullptr));
+  lldb::ValueObjectSP valobj_sp =
+      values->FindValueObjectByValueName(name.AsCString(nullptr));
+  if (!valobj_sp)
+    return {};
+
+  // Classify the value the same way the frame's variable list would, so a value
+  // reached by name is not reported differently from the same value reached by
+  // enumeration.
+  if (m_variable_list_sp) {
+    if (VariableSP variable_sp = m_variable_list_sp->FindVariable(name))
+      return ValueObjectProvidedVariable::Create(*valobj_sp, variable_sp);
+  }
+
+  return valobj_sp;
 }
 
 lldb::ValueObjectSP ScriptedFrame::GetValueForVariableExpressionPath(
