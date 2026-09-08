@@ -874,21 +874,39 @@ void test_trylock_negation_compared_impossible(void) {
 // boolean, an int in C spelled exactly like a success code: `(c && r) == 1`
 // asks whether `c && r` is true, not whether the call returned 1. Reading
 // it as the code would call a result of 2 a match. Its case labels name
-// the same boolean, so a switch over it pins nothing either. A comparison
-// is also a value join the short-circuit edge reaches, so the descent into
-// the operator is refused outright here (TrylockDecode::CrossedBlocks) and
-// the branch identifies no call at all -- either way nothing is resolved.
+// the same boolean, so a switch over it pins nothing either; both fall
+// back to the truthiness of the operand, which for a code-keyed call
+// resolves nothing at all.
 int mutex_trylock_codes(struct Mutex *mu, struct Mutex *mu2)
     EXCLUSIVE_TRYLOCK_FUNCTION(1, mu) EXCLUSIVE_TRYLOCK_FUNCTION(2, mu2);
 
 void test_trylock_logical_compared(int c) {
-  int r = mutex_trylock_codes(&mu1, &mu2); // expected-note 2 {{mutex acquired here}}
+  int r = mutex_trylock_codes(&mu1, &mu2); // expected-note {{mutex acquired here}}
   if ((c && r) == 1) {
     work_data = 1;      // expected-warning {{writing variable 'work_data' requires holding mutex 'mu1' exclusively}}
     mutex_unlock_mu1(); // expected-warning {{releasing mutex 'mu1' that may not be held}}
   }
-} // expected-warning {{unchecked result of try-acquire; mutex 'mu1' may still be held at the end of function}} \
-  // expected-warning {{unchecked result of try-acquire; mutex 'mu2' may still be held at the end of function}}
+} // expected-warning {{unchecked result of try-acquire; mutex 'mu2' may still be held at the end of function}}
+
+// A `&&` or `||` whose value is materialized is a merge of the right-hand
+// side's result with the left-hand side's constant: the edge the constant
+// can account for proves nothing, the other one carries the result. In C
+// the operator's own boolean is an int, so a case label on it pins no code
+// either.
+void test_trylock_logical_merge(int c) {
+  if (!(c || mutex_trylock_true(&mu1)))
+    return;
+  work_data = 1;      // expected-warning {{writing variable 'work_data' requires holding mutex 'mu1' exclusively}}
+  mutex_unlock_mu1(); // expected-warning {{releasing mutex 'mu1' that may not be held}}
+}
+
+// In situ the same operator resolves exactly.
+void test_trylock_logical_insitu(int c) {
+  if (c || !mutex_trylock_true(&mu1))
+    return;
+  work_data = 1;
+  mutex_unlock_mu1();
+}
 
 // We had a problem where we'd skip all attributes that follow a late-parsed
 // attribute in a single __attribute__.

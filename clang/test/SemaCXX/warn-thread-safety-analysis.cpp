@@ -2333,15 +2333,17 @@ struct TestTryLock {
     }
   }
 
-  // The `&&`/`||` short-circuit shortcut must not fire from the arms'
-  // join: a truthy `(c || mu.TryLock()) ? cond : false` may come from `c`
-  // alone with the try-lock never called, so the body is not proven held.
+  // An operator whose value the `?:` merges is not in situ: a truthy
+  // `(c || mu.TryLock()) ? cond : false` may come from `c` alone with the
+  // try-lock never called, so the body is not proven held. The operator's
+  // truthy edge is ambiguous, so the try fact stays conditional through
+  // the body and is reported unchecked at the end.
   void foo27() {
-    if ((cond2 || mu.TryLock()) ? cond : false) { // expected-warning{{mutex 'mu' is not held on every path through here}} expected-note{{mutex acquired here}}
+    if ((cond2 || mu.TryLock()) ? cond : false) { // expected-note{{mutex acquired here}}
       a = 3;       // expected-warning{{writing variable 'a' requires holding mutex 'mu' exclusively}}
-      mu.Unlock(); // expected-warning{{releasing mutex 'mu' that was not held}}
+      mu.Unlock(); // expected-warning{{releasing mutex 'mu' that may not be held}}
     }
-  }
+  } // expected-warning{{unchecked result of try-acquire; mutex 'mu' may still be held at the end of function}}
 
   // A phi merge (the stored-over-constant initializer) composes with a
   // `?:` merge in the same condition: a truthy value proves both that the
@@ -4815,9 +4817,11 @@ struct TestTryLock {
   // A loop condition whose `||` is materialized for an enclosing `!` puts
   // both the short-circuit path and the path that tested the result
   // through the same terminator, so its edges cannot tell them apart: the
-  // exit edge proves nothing, and the hold it would otherwise manufacture
-  // stays lost. (The `&&` spelling, whose block is reached only when the
-  // left-hand side held, is unaffected.)
+  // exit edge may carry the left-hand side's own value with the call never
+  // reached (and the phi over the false initializer makes the other edge
+  // ambiguous in turn, so nothing resolves at all), and the hold it would
+  // otherwise manufacture stays lost. (The `&&` spelling, whose block is
+  // reached only when the left-hand side held, is unaffected.)
   void tryheld_loop_shortcircuit_escape_exit(int n) {
     int i = 0;
     bool ok = false;
@@ -10022,6 +10026,171 @@ public:
       mu.Unlock();
     }
   }
+
+  // A logical operator under a negation is not the block's own terminator:
+  // its value is materialized at a join the short-circuit edge also
+  // reaches, where it is the LHS's constant and the try-acquire never
+  // ran. `!(c || TryLock())` continues past the `if` whenever the value is
+  // true -- with `c` true the lock was never attempted -- so that edge
+  // proves nothing and the release is unmatched; only the return edge
+  // proves the call ran (and failed).
+  void test11() {
+    if (!(c || mu.TryLock()))
+      return;
+    a = 0;       // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
+    mu.Unlock(); // expected-warning {{releasing mutex 'mu' that may not be held}}
+  }
+
+  // For `&&` the short-circuit constant is false: the continuing edge
+  // proves both operands true, so the lock is held there.
+  void test12() {
+    if (!(c && mu.TryLock()))
+      return;
+    a = 0;
+    mu.Unlock();
+  }
+
+  // A stored logical operator resolves the same way: the truthy edge of
+  // `c || TryLock()` is ambiguous, the truthy edge of `c && TryLock()` is
+  // the call's success.
+  void test13() {
+    bool b = c || mu.TryLock();
+    if (b) {
+      a = 0;       // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
+      mu.Unlock(); // expected-warning {{releasing mutex 'mu' that may not be held}}
+    }
+  }
+
+  void test14() {
+    bool b = c && mu.TryLock();
+    if (b) {
+      a = 0;
+      mu.Unlock();
+    }
+  }
+
+  // A folded comparison leaves the branch reading the comparison's own
+  // boolean, whose magnitude is 0 or 1 whatever the result was, so no case
+  // label may pin a code against it -- with or without an operator above.
+  // Reading the label as the result called the release below a definite
+  // was-not-held for a result of 2.
+  Mutex muA, muB;
+  int dataB GUARDED_BY(muB);
+  int TryCodes() EXCLUSIVE_TRYLOCK_FUNCTION(1, muA)
+      EXCLUSIVE_TRYLOCK_FUNCTION(2, muB);
+  void test21() {
+    int v = c && (TryCodes() != 0); // expected-note 2 {{mutex acquired here}}
+    switch (v) {
+    case 1:
+      dataB = 1;     // expected-warning {{writing variable 'dataB' requires holding mutex 'muB' exclusively}}
+      muB.Unlock();  // expected-warning {{releasing mutex 'muB' that may not be held}}
+      break;
+    }
+  } // expected-warning {{unchecked result of try-acquire; mutex 'muA' may still be held at the end of function}} \
+    // expected-warning {{unchecked result of try-acquire; mutex 'muB' may still be held at the end of function}}
+  void test22() {
+    int v = (TryCodes() != 0); // expected-note 2 {{mutex acquired here}}
+    switch (v) {
+    case 1:
+      dataB = 1;     // expected-warning {{writing variable 'dataB' requires holding mutex 'muB' exclusively}}
+      muB.Unlock();  // expected-warning {{releasing mutex 'muB' that may not be held}}
+      break;
+    }
+  } // expected-warning {{unchecked result of try-acquire; mutex 'muA' may still be held at the end of function}} \
+    // expected-warning {{unchecked result of try-acquire; mutex 'muB' may still be held at the end of function}}
+
+  // The shapes the merge newly resolves, which the parent could only
+  // refuse: a stored operator, one behind __builtin_expect (the kernel's
+  // likely()), one compared against a constant, and one inside a
+  // statement expression.
+  void test23() {
+    bool b = c && mu.TryLock();
+    if (b) {
+      a = 0;
+      mu.Unlock();
+    }
+  }
+  void test24() {
+    if (__builtin_expect(c && mu.TryLock(), 1)) {
+      a = 0;
+      mu.Unlock();
+    }
+  }
+  void test25() {
+    if ((c && mu.TryLock()) == 1) {
+      a = 0;
+      mu.Unlock();
+    }
+  }
+  void test26() {
+    if (({ c && mu.TryLock(); })) {
+      a = 0;
+      mu.Unlock();
+    }
+  }
+
+  // A left-hand side the constant evaluator decides is not a merge at
+  // all: the short-circuit edge is unreachable, so the value is the
+  // right-hand side's own wherever the operator sits -- or the operator is
+  // decided and the right-hand side never runs, where nothing resolves.
+  // Reading the first as a merge made the branch ambiguous on an edge the
+  // CFG does not have: test19 is the shape that fixes, and test20 the
+  // decided-operator direction beside it, whose diagnostics this commit
+  // leaves alone.
+  static const bool kFolded = false;
+  void test19() {
+    if (!(kFolded || mu.TryLock()))
+      return;
+    a = 0;
+    mu.Unlock();
+  }
+  void test20() {
+    if (!(!kFolded || mu.TryLock()))
+      return;
+    a = 0;       // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
+    mu.Unlock(); // expected-warning {{releasing mutex 'mu' that was not held}}
+  }
+
+  // Two merges that make the SAME direction ambiguous compose: what the
+  // other direction proves is the conjunction of what each merge proves
+  // there. A phi under a `&&`, a `?:` arm under one, and a right-nested
+  // chain of the same operator are all that shape, and refusing the second
+  // merge outright reported the hold below as lost on every one of them.
+  void test16(bool d) {
+    bool ok = false;
+    if (d)
+      ok = mu.TryLock();
+    if (!(c && ok))
+      return;
+    a = 0;
+    mu.Unlock();
+  }
+  void test17(bool d) {
+    bool ok = d ? mu.TryLock() : false;
+    if (!(c && ok))
+      return;
+    a = 0;
+    mu.Unlock();
+  }
+  void test18(bool d) {
+    if (!(c && (d && mu.TryLock())))
+      return;
+    a = 0;
+    mu.Unlock();
+  }
+
+  // Two short-circuits of opposite constants under one negation make both
+  // edges ambiguous: nothing resolves on either, conservatively. The
+  // branch still names the call, so the try fact survives the join and is
+  // diagnosed as the possible hold it is -- the same verdict test11 and
+  // test13 give a single merge, not the definite one the whole decode's
+  // loss would have produced.
+  void test15() {
+    if (!(c && (newc() || mu.TryLock()))) // expected-note {{mutex acquired here}}
+      return;
+    a = 0;       // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
+    mu.Unlock(); // expected-warning {{releasing mutex 'mu' that may not be held}}
+  } // expected-warning {{unchecked result of try-acquire; mutex 'mu' may still be held at the end of function}}
 };
 
 }  // end namespace LogicalConditionalTryLock

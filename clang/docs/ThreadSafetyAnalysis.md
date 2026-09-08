@@ -579,12 +579,29 @@ edge determines nothing, since the value there may be the constant with the
 arm never evaluated. The GNU form `r ?: x` keeps `r` itself, magnitude
 included, when `x` is a falsy constant.
 
-A branch on the result must test it where the operator that produced it was
-evaluated. `if (a || mu.TryLock())` is a branch on the try-acquire, since the
-right-hand side is evaluated only on the edge the branch tests; `bool b = a ||
-mu.TryLock(); if (b)` is not, because `b` is true whenever `a` is, with the
-call never made. The same applies to a comparison, an assignment,
-`__builtin_expect`, a statement expression, or a `?:` arm around the operator.
+A `&&` or `||` is read as a branch on its right-hand side where the branch
+tests it in place -- `if (a || mu.TryLock())`, whose right-hand side is
+evaluated only on the edge the branch tests. Anywhere else, its value has been
+materialized at a join the short-circuit edge also reaches (`bool b = a ||
+mu.TryLock(); if (b)`, `if (!(a || mu.TryLock()))`, the same under a
+comparison, an assignment, `__builtin_expect`, a statement expression, or a
+`?:` arm), and it is read as a merge with the left-hand side's own value --
+`true` for `||`, `false` for `&&` -- like any other merge above: `b` may be
+true because `a` was, with the call never made, so that edge determines
+nothing, while the other one carries the call's result. A left-hand side the
+compiler folds to a constant leaves no such join at all: either the operator
+is decided and the right-hand side never runs, or the value is the right-hand
+side's own.
+
+Two merges in one condition compose where they leave the same edge
+undetermined, and leave nothing determined at all where they do not; the
+branch still names the call either way, so the capability stays conditionally
+held rather than being lost.
+
+What a merge carries is the result's truthiness, not its magnitude, so an
+exact value an edge pins -- a `switch` case label -- resolves nothing through
+one: `switch (c && try_lock_codes())` selects its labels by the operator's own
+boolean, and `int v = (r != 0); switch (v)` by the comparison's.
 
 ```c++
 Mutex mu;

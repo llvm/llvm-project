@@ -274,12 +274,32 @@ void gnu_cond_without_beta() {
   }
 }
 
-// A stored `||` is not a branch on the call: the value is true whenever
-// the left operand is, with the call never made.
+// A stored `||` is a merge of the call's result with the left operand's
+// constant, so a true value may be that constant with the call never made:
+// the capability is possibly held there, not held.
 void stored_logical_without_beta(bool other) {
   bool b = other || mu.TryLock();
   if (b) {
     a = 3;       // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
-    mu.Unlock(); // expected-warning {{releasing mutex 'mu' that was not held}}
+    mu.Unlock(); // expected-warning {{releasing mutex 'mu' that may not be held}}
   }
+}
+
+// A `&&` or `||` whose value is materialized -- under a negation, into a
+// variable -- is a merge of the right-hand side's result with the
+// left-hand side's constant, and reads the same in both modes.
+void logical_merge_without_beta(bool other) {
+  if (!(other || mu.TryLock()))
+    return;
+  a = 3;       // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
+  mu.Unlock(); // expected-warning {{releasing mutex 'mu' that may not be held}}
+}
+
+// In situ it still resolves exactly: the block evaluating the right-hand
+// side is reached only on the non-short-circuiting edge.
+void logical_insitu_without_beta(bool other) {
+  if (other || !mu.TryLock())
+    return;
+  a = 3;
+  mu.Unlock();
 }
