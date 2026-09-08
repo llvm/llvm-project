@@ -1402,7 +1402,7 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   bool CanCreateNewRecipe =
       !isa<VPInstruction>(Def) || !Def->getUnderlyingValue();
 
-  VPValue *A, *X, *Y, *Z;
+  VPValue *X, *Y, *Z;
 
   // x && (y && x) -> x && y
   if (CanCreateNewRecipe &&
@@ -1460,34 +1460,34 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
     return Builder.createSelect(Builder.createLogicalAnd(Mask0, Mask1), X, Y,
                                 Def->getDebugLoc());
 
-  if (match(Def, m_Trunc(m_VPValue(Z, m_ZExtOrSExt(m_VPValue(A)))))) {
+  if (match(Def, m_Trunc(m_VPValue(Y, m_ZExtOrSExt(m_VPValue(X)))))) {
     // Don't replace a non-widened cast recipe with a widened cast.
     if (!isa<VPWidenCastRecipe>(Def))
       return nullptr;
     Type *TruncTy = Def->getScalarType();
-    Type *ATy = A->getScalarType();
-    if (ATy->getScalarSizeInBits() < TruncTy->getScalarSizeInBits()) {
+    Type *XTy = X->getScalarType();
+    if (XTy->getScalarSizeInBits() < TruncTy->getScalarSizeInBits()) {
 
       unsigned ExtOpcode =
-          match(Z, m_SExt(m_VPValue())) ? Instruction::SExt : Instruction::ZExt;
+          match(Y, m_SExt(m_VPValue())) ? Instruction::SExt : Instruction::ZExt;
       auto *Ext =
-          Builder.createWidenCast(Instruction::CastOps(ExtOpcode), A, TruncTy);
-      if (auto *UnderlyingExt = Z->getUnderlyingValue()) {
+          Builder.createWidenCast(Instruction::CastOps(ExtOpcode), X, TruncTy);
+      if (auto *UnderlyingExt = Y->getUnderlyingValue()) {
         // UnderlyingExt has distinct return type, used to retain legacy cost.
         Ext->setUnderlyingValue(UnderlyingExt);
       }
       return Ext;
-    } else if (ATy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits()) {
-      auto *Trunc = Builder.createWidenCast(Instruction::Trunc, A, TruncTy);
+    } else if (XTy->getScalarSizeInBits() > TruncTy->getScalarSizeInBits()) {
+      auto *Trunc = Builder.createWidenCast(Instruction::Trunc, X, TruncTy);
       return Trunc;
     }
   }
 
-  if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(A), m_AllOnes()))) {
+  if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(X), m_AllOnes()))) {
     // Preserve nsw from the Mul on the new Sub.
     VPIRFlags::WrapFlagsTy NW = {
         false, cast<VPRecipeWithIRFlags>(Def)->hasNoSignedWrap()};
-    return Builder.createSub(Plan.getZero(A->getScalarType()), A,
+    return Builder.createSub(Plan.getZero(X->getScalarType()), X,
                              Def->getDebugLoc(), "", NW);
   }
 
@@ -1508,7 +1508,7 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
     return Builder.createAnd(X, Plan.getConstantInt(*APC - 1),
                              Def->getDebugLoc());
 
-  if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(A), m_APInt(APC))) &&
+  if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(X), m_APInt(APC))) &&
       APC->isPowerOf2()) {
     auto *MulR = cast<VPRecipeWithIRFlags>(Def);
     unsigned ShiftAmt = APC->exactLogBase2();
@@ -1517,22 +1517,22 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
                                   ShiftAmt != APC->getBitWidth() - 1);
     return Builder.createNaryOp(
         Instruction::Shl,
-        {A, Plan.getConstantInt(APC->getBitWidth(), ShiftAmt)}, NW,
+        {X, Plan.getConstantInt(APC->getBitWidth(), ShiftAmt)}, NW,
         Def->getDebugLoc());
   }
 
-  if (CanCreateNewRecipe && match(Def, m_UDiv(m_VPValue(A), m_APInt(APC))) &&
+  if (CanCreateNewRecipe && match(Def, m_UDiv(m_VPValue(X), m_APInt(APC))) &&
       APC->isPowerOf2())
     return Builder.createNaryOp(
         Instruction::LShr,
-        {A, Plan.getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
+        {X, Plan.getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
         *cast<VPRecipeWithIRFlags>(Def), Def->getDebugLoc());
 
-  if (match(Def, m_Not(m_VPValue(A)))) {
+  if (match(Def, m_Not(m_VPValue(X)))) {
     // Try to fold Not into compares by adjusting the predicate in-place.
     CmpPredicate Pred;
-    if (match(A, m_Cmp(Pred, m_VPValue(), m_VPValue()))) {
-      auto *Cmp = cast<VPRecipeWithIRFlags>(A);
+    if (match(X, m_Cmp(Pred, m_VPValue(), m_VPValue()))) {
+      auto *Cmp = cast<VPRecipeWithIRFlags>(X);
       // Only fold if every user is a Not of the cmp, or a select using the cmp
       // solely as its condition.
       if (all_of(Cmp->users(), [Cmp](VPUser *U) {
@@ -1607,9 +1607,9 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
 
   // For i1 vp.merges produced by AnyOf reductions:
   // vp.merge true, (or x, y), x, evl -> vp.merge y, true, x, evl
-  if (match(Def, m_Intrinsic<Intrinsic::vp_merge>(m_True(), m_VPValue(A),
+  if (match(Def, m_Intrinsic<Intrinsic::vp_merge>(m_True(), m_VPValue(X),
                                                   m_VPValue(X), m_VPValue())) &&
-      match(A, m_c_BinaryOr(m_Specific(X), m_VPValue(Y))) &&
+      match(X, m_c_BinaryOr(m_Specific(X), m_VPValue(Y))) &&
       Def->getScalarType()->isIntegerTy(1)) {
     Def->setOperand(1, Plan.getTrue());
     Def->setOperand(0, Y);
@@ -1651,8 +1651,8 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
 
   // Simplify extract-lane with single source to extract-element.
   VPValue *LaneToExtract;
-  if (match(Def, m_ExtractLane(m_VPValue(LaneToExtract), m_VPValue(A))))
-    return Builder.createNaryOp(Instruction::ExtractElement, {A, LaneToExtract},
+  if (match(Def, m_ExtractLane(m_VPValue(LaneToExtract), m_VPValue(X))))
+    return Builder.createNaryOp(Instruction::ExtractElement, {X, LaneToExtract},
                                 Def->getDebugLoc());
 
   // Look for cycles where Def is of the form:
