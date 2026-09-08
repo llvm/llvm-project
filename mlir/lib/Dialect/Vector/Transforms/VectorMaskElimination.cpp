@@ -43,11 +43,13 @@ resolveAllTrueCreateMaskOp(IRRewriter &rewriter,
     if (auto intSize = getConstantIntValue(dimSize)) {
       // Mask not all-true for this dim.
       if (maskTypeDimScalableFlags[i] || intSize < maskTypeDimSizes[i])
-        return failure();
+        return rewriter.notifyMatchFailure(
+            createMaskOp, "constant mask dimension is not all-true");
     } else if (auto vscaleMultiplier = getConstantVscaleMultiplier(dimSize)) {
       // Mask not all-true for this dim.
       if (vscaleMultiplier < maskTypeDimSizes[i])
-        return failure();
+        return rewriter.notifyMatchFailure(createMaskOp,
+                                           "`vscale` multiple is not all-true");
     } else {
       // Unknown (without further analysis).
       unknownDims.push_back(UnknownMaskDim{i, dimSize});
@@ -61,15 +63,18 @@ resolveAllTrueCreateMaskOp(IRRewriter &rewriter,
       // A constant bound cannot prove a scalable dim, whose runtime size is
       // `vscale` times the size in the type. Checked first to skip the query.
       if (maskTypeDimScalableFlags[i])
-        return failure();
-      FailureOr<int64_t> dimLowerBound =
+        return rewriter.notifyMatchFailure(
+            createMaskOp, "scalable dimension requires a `vscale` range");
+      FailureOr<int64_t> constantLowerBound =
           ValueBoundsConstraintSet::computeConstantBound(
               presburger::BoundType::LB, dimSize);
-      if (failed(dimLowerBound))
-        return failure();
+      if (failed(constantLowerBound))
+        return rewriter.notifyMatchFailure(
+            createMaskOp, "no constant lower bound for mask dimension");
       // If LB < the mask dim size then this dim is not all-true.
-      if (*dimLowerBound < maskTypeDimSizes[i])
-        return failure();
+      if (*constantLowerBound < maskTypeDimSizes[i])
+        return rewriter.notifyMatchFailure(
+            createMaskOp, "lower bound is less than the mask dimension size");
       continue;
     }
 
@@ -78,23 +83,30 @@ resolveAllTrueCreateMaskOp(IRRewriter &rewriter,
             dimSize, {}, vscaleRange->vscaleMin, vscaleRange->vscaleMax,
             presburger::BoundType::LB);
     if (failed(dimLowerBound))
-      return failure();
+      return rewriter.notifyMatchFailure(
+          createMaskOp, "no scalable lower bound for mask dimension");
     auto dimLowerBoundSize = dimLowerBound->getSize();
     if (failed(dimLowerBoundSize))
-      return failure();
+      return rewriter.notifyMatchFailure(
+          createMaskOp, "scalable lower bound has no known size");
     if (dimLowerBoundSize->scalable) {
       // 1. The lower bound, LB, is scalable. If LB is < the mask dim size then
       // this dim is not all-true.
       if (dimLowerBoundSize->baseSize < maskTypeDimSizes[i])
-        return failure();
+        return rewriter.notifyMatchFailure(
+            createMaskOp, "scalable lower bound is less than the mask "
+                          "dimension size");
     } else {
       // 2. The lower bound, LB, is a constant.
       // - If the mask dim size is scalable then this dim is not all-true.
       if (maskTypeDimScalableFlags[i])
-        return failure();
+        return rewriter.notifyMatchFailure(
+            createMaskOp, "constant lower bound cannot prove a scalable "
+                          "mask dimension");
       // - If LB < the _fixed-size_ mask dim size then this dim is not all-true.
       if (dimLowerBoundSize->baseSize < maskTypeDimSizes[i])
-        return failure();
+        return rewriter.notifyMatchFailure(
+            createMaskOp, "lower bound is less than the mask dimension size");
     }
   }
 

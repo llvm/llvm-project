@@ -124,10 +124,11 @@ struct VscaleRange {
 
 /// Attempts to eliminate redundant vector masks by replacing them with all-true
 /// constants at the top of the function (which results in the masks folding
-/// away). Note: Currently, this only runs for vector.create_mask ops.
-///
+/// away).
 /// `vscaleRange` is only needed to prove that a scalable mask dimension is
 /// all-true; without it, only fixed-size dimensions are considered.
+///
+/// Note: Currently, this only runs for vector.create_mask ops.
 void eliminateVectorMasks(IRRewriter &rewriter, FunctionOpInterface function,
                           std::optional<VscaleRange> vscaleRange = {});
 
