@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMemoryUtils.h"
-#include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/Analysis/AliasAnalysis.h"

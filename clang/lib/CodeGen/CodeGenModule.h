@@ -2181,9 +2181,9 @@ private:
 
   /// Embed the finalized SYCL device binary named by -foffload-include-binary
   /// into the host module.
-  /// \return the functions that register and unregister the binary with the
-  /// runtime, both null if the binary could not be read.
-  std::pair<llvm::Function *, llvm::Function *> embedSYCLDeviceBinary();
+  /// \return the function that registers the binary with the runtime, or null
+  /// if the binary could not be read.
+  llvm::Function *embedSYCLDeviceBinary();
 
   /// Determine whether the definition must be emitted; if this returns \c
   /// false, the definition can be emitted lazily if it's used.

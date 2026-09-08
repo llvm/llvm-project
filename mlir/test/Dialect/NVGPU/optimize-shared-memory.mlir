@@ -278,7 +278,7 @@ func.func @test_vector_element_type() {
 // CHECK-LABEL: func @test_int_conversion
 module {
   func.func @test_int_conversion() {
-    %alloc = memref.alloc() {alignment = 64 : i64} : memref<10xf32, 1 : ui64>
+    %alloc = memref.alloc() alignment = 64 : memref<10xf32, 1 : ui64>
     return
   }
 }

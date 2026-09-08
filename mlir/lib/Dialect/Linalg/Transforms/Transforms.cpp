@@ -1172,6 +1172,19 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
         packOp, "not all outer dimensions of the result are 1s");
   }
 
+  // When a padding value is set, getPackOpSourceOrPaddedSource only supports
+  // the case where every outer dim (including un-tiled ones) is 1. Bail out
+  // instead of hitting an assertion on a non-unit un-tiled outer dim.
+  // FIXME: Handle this case by decomposing the padded pack instead of bailing
+  // out; a non-unit un-tiled outer dim should be supported here.
+  if (packOp.getPaddingValue() &&
+      llvm::any_of(packOp.getAllOuterDims(),
+                   [](int64_t dim) { return dim != 1; })) {
+    return rewriter.notifyMatchFailure(
+        packOp, "cannot decompose padded pack with a non-unit un-tiled outer "
+                "dimension");
+  }
+
   ArrayRef<int64_t> innerDimsPos = packOp.getInnerDimsPos();
   auto outerDimsPerm = packOp.getOuterDimsPerm();
 

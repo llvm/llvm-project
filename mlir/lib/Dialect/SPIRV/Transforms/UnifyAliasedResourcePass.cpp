@@ -47,7 +47,7 @@ using AliasedResourceMap =
 static AliasedResourceMap collectAliasedResources(spirv::ModuleOp moduleOp) {
   AliasedResourceMap aliasedResources;
   moduleOp->walk([&aliasedResources](spirv::GlobalVariableOp varOp) {
-    if (varOp->getAttrOfType<UnitAttr>("aliased")) {
+    if (varOp->getDiscardableAttrOfType<UnitAttr>("aliased")) {
       std::optional<uint32_t> set = varOp.getDescriptorSet();
       std::optional<uint32_t> binding = varOp.getBinding();
       if (set && binding)
@@ -559,8 +559,10 @@ struct ConvertStore : public ConvertAliasResource<spirv::StoreOp> {
     Value value = adaptor.getValue();
     if (srcElemType != dstElemType)
       value = spirv::BitcastOp::create(rewriter, loc, dstElemType, value);
-    rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, adaptor.getPtr(),
-                                                value, storeOp->getAttrs());
+    auto newStore = rewriter.replaceOpWithNewOp<spirv::StoreOp>(
+        storeOp, adaptor.getPtr(), value, storeOp.getMemoryAccessAttr(),
+        storeOp.getAlignmentAttr());
+    newStore->setDiscardableAttrs(storeOp->getDiscardableAttrDictionary());
     return success();
   }
 };
@@ -626,7 +628,7 @@ void UnifyAliasedResourcePass::runOnOperation() {
   for (const auto &dr : resourceMap) {
     const auto &resources = dr.second;
     if (resources.size() == 1)
-      resources.front()->removeAttr("aliased");
+      resources.front()->removeDiscardableAttr("aliased");
   }
 }
 } // namespace

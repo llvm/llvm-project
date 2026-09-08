@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -722,7 +721,9 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
                          TM.getTargetTriple().getDefaultFloatABI(),
                          TM.Options.EABIVersion,
                          TM.Options.MCOptions.getABIName(), TM.Options.VecLib),
-      Libcalls(RuntimeLibcallInfo, STI) {
+      Libcalls(RuntimeLibcallInfo, [&STI](LibcallLoweringInfo &Info) {
+        STI.initLibcallLoweringInfo(Info);
+      }) {
   initActions();
 
   // Perform these initializations only once.
@@ -942,6 +943,7 @@ void TargetLoweringBase::initActions() {
          ISD::VECREDUCE_XOR, ISD::VECREDUCE_SMAX, ISD::VECREDUCE_SMIN,
          ISD::VECREDUCE_UMAX, ISD::VECREDUCE_UMIN, ISD::VECREDUCE_FMAX,
          ISD::VECREDUCE_FMIN, ISD::VECREDUCE_FMAXIMUM, ISD::VECREDUCE_FMINIMUM,
+         ISD::VECREDUCE_FMAXIMUMNUM, ISD::VECREDUCE_FMINIMUMNUM,
          ISD::VECREDUCE_SEQ_FADD, ISD::VECREDUCE_SEQ_FMUL},
         VT, Expand);
 

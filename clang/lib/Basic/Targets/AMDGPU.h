@@ -282,7 +282,7 @@ public:
   bool setCPU(StringRef Name) override {
     if (getTriple().isAMDGCN()) {
       GPUKind = llvm::AMDGPU::parseArchAMDGCN(Name);
-      GPUFeatures = llvm::AMDGPU::getArchAttrAMDGCN(GPUKind);
+      GPUFeatures = llvm::AMDGPU::FEATURE_NONE;
       return llvm::AMDGPU::isCPUValidForSubArch(getTriple().getSubArch(),
                                                 GPUKind) &&
              !llvm::AMDGPU::isPseudoTarget(GPUKind);

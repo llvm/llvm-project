@@ -1175,10 +1175,10 @@ void DwarfDebug::finishUnitAttributes(const DICompileUnit *DIUnit,
     addGnuPubAttributes(NewCU, Die);
   }
 
-  if (useAppleExtensionAttributes()) {
-    if (DIUnit->isOptimized())
-      NewCU.addFlag(Die, dwarf::DW_AT_APPLE_optimized);
+  if (DIUnit->isOptimized())
+    NewCU.addFlag(Die, dwarf::DW_AT_APPLE_optimized);
 
+  if (useAppleExtensionAttributes()) {
     StringRef Flags = DIUnit->getFlags();
     if (!Flags.empty())
       NewCU.addString(Die, dwarf::DW_AT_APPLE_flags, Flags);
@@ -1371,6 +1371,7 @@ void DwarfDebug::finalizeModuleInfo() {
     // Emit DW_AT_containing_type attribute to connect types with their
     // vtable holding type.
     TheCU.constructContainingTypeDIEs();
+    TheCU.constructPropertyForwardDIEs();
 
     // Add CU specific attributes if we need to add any.
     // If we're splitting the dwarf out now that we've got the entire

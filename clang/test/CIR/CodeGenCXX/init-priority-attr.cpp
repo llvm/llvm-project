@@ -62,12 +62,12 @@ A C::a = A();
 // CIR-NEXT:    cir.return
 
 // CIR-LABEL: cir.func internal private @__cxx_global_var_init.2() {
-// CIR-NEXT:    cir.get_global @a1 : !cir.ptr<!rec_A1> loc(#loc40)
+// CIR-NEXT:    cir.get_global @a1 : !cir.ptr<!rec_A1> loc(#loc36)
 // CIR-NEXT:    cir.call @_ZN2A1C1Ev(
 // CIR-NEXT:    cir.return
 
 // CIR-LABEL: cir.func internal private @__cxx_global_var_init.4() {
-// CIR-NEXT:    cir.get_global @b : !cir.ptr<!rec_B> loc(#loc43)
+// CIR-NEXT:    cir.get_global @b : !cir.ptr<!rec_B> loc(#loc38)
 // CIR-NEXT:    cir.call @_ZN1BC1Ev(
 // CIR-NEXT:    cir.return
 

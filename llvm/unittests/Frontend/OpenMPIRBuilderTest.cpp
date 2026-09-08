@@ -370,15 +370,15 @@ TEST_F(OpenMPIRBuilderTest, CreateBarrier) {
 
   IRBuilder<> Builder(BB);
 
-  ASSERT_THAT_EXPECTED(
-      OMPBuilder.createBarrier({IRBuilder<>::InsertPoint()}, OMPD_for),
-      Succeeded());
+  ASSERT_THAT_EXPECTED(OMPBuilder.createBarrier(
+                           {IRBuilder<>::InsertPoint(), DebugLoc()}, OMPD_for),
+                       Succeeded());
   EXPECT_TRUE(M->global_empty());
   EXPECT_EQ(M->size(), 1U);
   EXPECT_EQ(F->size(), 1U);
   EXPECT_EQ(BB->size(), 0U);
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP()});
+  OpenMPIRBuilder::LocationDescription Loc(Builder);
   ASSERT_THAT_EXPECTED(OMPBuilder.createBarrier(Loc, OMPD_for), Succeeded());
   EXPECT_FALSE(M->global_empty());
   EXPECT_EQ(M->size(), 3U);
@@ -421,7 +421,7 @@ TEST_F(OpenMPIRBuilderTest, CreateCancel) {
 
   IRBuilder<> Builder(BB);
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP()});
+  OpenMPIRBuilder::LocationDescription Loc(Builder);
   ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, NewIP,
                        OMPBuilder.createCancel(Loc, nullptr, OMPD_parallel));
   Builder.restoreIP(NewIP);
@@ -482,7 +482,7 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelIfCond) {
 
   IRBuilder<> Builder(BB);
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP()});
+  OpenMPIRBuilder::LocationDescription Loc(Builder);
   ASSERT_EXPECTED_INIT(
       OpenMPIRBuilder::InsertPointTy, NewIP,
       OMPBuilder.createCancel(Loc, Builder.getTrue(), OMPD_parallel));
@@ -548,7 +548,7 @@ TEST_F(OpenMPIRBuilderTest, CreateCancelBarrier) {
 
   IRBuilder<> Builder(BB);
 
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP()});
+  OpenMPIRBuilder::LocationDescription Loc(Builder);
   ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, NewIP,
                        OMPBuilder.createBarrier(Loc, OMPD_for));
   Builder.restoreIP(NewIP);
@@ -921,11 +921,11 @@ TEST_F(OpenMPIRBuilderTest, ParallelNested) {
     BasicBlock *NewBB = SplitBlock(CGBB, &*CodeGenIP.getPoint());
     CGBB->getTerminator()->eraseFromParent();
 
-    ASSERT_EXPECTED_INIT(
-        OpenMPIRBuilder::InsertPointTy, AfterIP,
-        OMPBuilder.createParallel(InsertPointTy(CGBB, CGBB->end()), AllocaIP,
-                                  {}, InnerBodyGenCB, PrivCB, FiniCB, nullptr,
-                                  nullptr, OMP_PROC_BIND_default, false));
+    ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, AfterIP,
+                         OMPBuilder.createParallel(
+                             {InsertPointTy(CGBB, CGBB->end()), DebugLoc()},
+                             AllocaIP, {}, InnerBodyGenCB, PrivCB, FiniCB,
+                             nullptr, nullptr, OMP_PROC_BIND_default, false));
 
     Builder.restoreIP(AfterIP);
     Builder.CreateBr(NewBB);
@@ -1028,20 +1028,20 @@ TEST_F(OpenMPIRBuilderTest, ParallelNested2Inner) {
     NewBB1->getTerminator()->eraseFromParent();
     ;
 
-    ASSERT_EXPECTED_INIT(
-        OpenMPIRBuilder::InsertPointTy, AfterIP1,
-        OMPBuilder.createParallel(InsertPointTy(CGBB, CGBB->end()), AllocaIP,
-                                  {}, InnerBodyGenCB, PrivCB, FiniCB, nullptr,
-                                  nullptr, OMP_PROC_BIND_default, false));
+    ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, AfterIP1,
+                         OMPBuilder.createParallel(
+                             {InsertPointTy(CGBB, CGBB->end()), DebugLoc()},
+                             AllocaIP, {}, InnerBodyGenCB, PrivCB, FiniCB,
+                             nullptr, nullptr, OMP_PROC_BIND_default, false));
 
     Builder.restoreIP(AfterIP1);
     Builder.CreateBr(NewBB1);
 
     ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, AfterIP2,
                          OMPBuilder.createParallel(
-                             InsertPointTy(NewBB1, NewBB1->end()), AllocaIP, {},
-                             InnerBodyGenCB, PrivCB, FiniCB, nullptr, nullptr,
-                             OMP_PROC_BIND_default, false));
+                             {InsertPointTy(NewBB1, NewBB1->end()), DebugLoc()},
+                             AllocaIP, {}, InnerBodyGenCB, PrivCB, FiniCB,
+                             nullptr, nullptr, OMP_PROC_BIND_default, false));
 
     Builder.restoreIP(AfterIP2);
     Builder.CreateBr(NewBB2);
@@ -1232,9 +1232,8 @@ TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {
     // Create three barriers, two cancel barriers but only one checked.
     Function *CBFn, *BFn;
 
-    ASSERT_EXPECTED_INIT(
-        OpenMPIRBuilder::InsertPointTy, BarrierIP1,
-        OMPBuilder.createBarrier(Builder.saveIP(), OMPD_parallel));
+    ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, BarrierIP1,
+                         OMPBuilder.createBarrier(Builder, OMPD_parallel));
     Builder.restoreIP(BarrierIP1);
 
     CBFn = M->getFunction("__kmpc_cancel_barrier");
@@ -1248,7 +1247,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {
 
     ASSERT_EXPECTED_INIT(
         OpenMPIRBuilder::InsertPointTy, BarrierIP2,
-        OMPBuilder.createBarrier(Builder.saveIP(), OMPD_parallel, true));
+        OMPBuilder.createBarrier(Builder, OMPD_parallel, true));
     Builder.restoreIP(BarrierIP2);
     CBFn = M->getFunction("__kmpc_cancel_barrier");
     BFn = M->getFunction("__kmpc_barrier");
@@ -1259,9 +1258,9 @@ TEST_F(OpenMPIRBuilderTest, ParallelCancelBarrier) {
     ASSERT_TRUE(isa<CallInst>(BFn->user_back()));
     ASSERT_TRUE(BFn->user_back()->use_empty());
 
-    ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, BarrierIP3,
-                         OMPBuilder.createBarrier(Builder.saveIP(),
-                                                  OMPD_parallel, false, false));
+    ASSERT_EXPECTED_INIT(
+        OpenMPIRBuilder::InsertPointTy, BarrierIP3,
+        OMPBuilder.createBarrier(Builder, OMPD_parallel, false, false));
     Builder.restoreIP(BarrierIP3);
     ASSERT_TRUE(CBFn->hasNUses(2));
     ASSERT_TRUE(BFn->hasOneUse());
@@ -1567,7 +1566,7 @@ TEST_F(OpenMPIRBuilderTest, CollapseNestedLoops) {
     };
     ASSERT_EXPECTED_INIT(
         CanonicalLoopInfo *, InnerLoopResult,
-        OMPBuilder.createCanonicalLoop(Builder.saveIP(), InnerLoopBodyGenCB,
+        OMPBuilder.createCanonicalLoop(Builder, InnerLoopBodyGenCB,
                                        InnerTripCount, "inner"));
     InnerLoop = InnerLoopResult;
 
@@ -1693,10 +1692,10 @@ TEST_F(OpenMPIRBuilderTest, TileNestedLoops) {
       createPrintfCall(Builder, "i=%d j=%d\\n", {OuterLC, InnerLC});
       return Error::success();
     };
-    ASSERT_EXPECTED_INIT(CanonicalLoopInfo *, InnerLoopResult,
-                         OMPBuilder.createCanonicalLoop(OuterCodeGenIP,
-                                                        InnerLoopBodyGenCB,
-                                                        TripCount, "inner"));
+    ASSERT_EXPECTED_INIT(
+        CanonicalLoopInfo *, InnerLoopResult,
+        OMPBuilder.createCanonicalLoop({OuterCodeGenIP, DebugLoc()},
+                                       InnerLoopBodyGenCB, TripCount, "inner"));
     InnerLoop = InnerLoopResult;
   };
   ASSERT_EXPECTED_INIT(
@@ -1800,11 +1799,11 @@ TEST_F(OpenMPIRBuilderTest, TileNestedLoopsWithBounds) {
       Call = createPrintfCall(Builder, "i=%d j=%d\\n", {OuterLC, InnerLC});
       return Error::success();
     };
-    ASSERT_EXPECTED_INIT(
-        CanonicalLoopInfo *, InnerLoopResult,
-        OMPBuilder.createCanonicalLoop(OuterCodeGenIP, InnerLoopBodyGenCB,
-                                       InnerStartVal, InnerStopVal, InnerStep,
-                                       false, false, ComputeIP, "inner"));
+    ASSERT_EXPECTED_INIT(CanonicalLoopInfo *, InnerLoopResult,
+                         OMPBuilder.createCanonicalLoop(
+                             {OuterCodeGenIP, DebugLoc()}, InnerLoopBodyGenCB,
+                             InnerStartVal, InnerStopVal, InnerStep, false,
+                             false, ComputeIP, "inner"));
     InnerLoop = InnerLoopResult;
   };
   ASSERT_EXPECTED_INIT(CanonicalLoopInfo *, OuterLoop,
@@ -5321,8 +5320,8 @@ TEST_F(OpenMPIRBuilderTest, CreateReductions) {
   OMPBuilder.Config.setIsGPU(false);
 
   bool ReduceVariableByRef[] = {false, false};
-  ASSERT_THAT_EXPECTED(OMPBuilder.createReductions(BodyIP, BodyAllocaIP,
-                                                   ReductionInfos,
+  ASSERT_THAT_EXPECTED(OMPBuilder.createReductions({BodyIP, DebugLoc()},
+                                                   BodyAllocaIP, ReductionInfos,
                                                    ReduceVariableByRef),
                        Succeeded());
 
@@ -5566,6 +5565,7 @@ TEST_F(OpenMPIRBuilderTest, ScanReduction) {
   unsigned NumFrees = 0;
   unsigned NumMasked = 0;
   unsigned NumEndMasked = 0;
+  unsigned NumBarriers = 0;
   unsigned NumLog = 0;
   unsigned NumCeil = 0;
   for (Instruction &I : instructions(F)) {
@@ -5579,8 +5579,13 @@ TEST_F(OpenMPIRBuilderTest, ScanReduction) {
       NumFrees += 1;
     } else if (Name.equals_insensitive("__kmpc_masked")) {
       NumMasked += 1;
+      EXPECT_TRUE(Call->getDebugLoc()) << "no !dbg on " << Name;
     } else if (Name.equals_insensitive("__kmpc_end_masked")) {
       NumEndMasked += 1;
+      EXPECT_TRUE(Call->getDebugLoc()) << "no !dbg on " << Name;
+    } else if (Name.equals_insensitive("__kmpc_barrier")) {
+      NumBarriers += 1;
+      EXPECT_TRUE(Call->getDebugLoc()) << "no !dbg on " << Name;
     } else if (Name.equals_insensitive("llvm.log2.f64")) {
       NumLog += 1;
     } else if (Name.equals_insensitive("llvm.ceil.f64")) {
@@ -5590,6 +5595,7 @@ TEST_F(OpenMPIRBuilderTest, ScanReduction) {
   EXPECT_EQ(NumBodiesGenerated, 2U);
   EXPECT_EQ(NumMasked, 3U);
   EXPECT_EQ(NumEndMasked, 3U);
+  EXPECT_EQ(NumBarriers, 3U);
   EXPECT_EQ(NumMallocs, 1U);
   EXPECT_EQ(NumFrees, 1U);
   EXPECT_EQ(NumLog, 1U);
@@ -5723,7 +5729,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
 
   ASSERT_THAT_EXPECTED(
       OMPBuilder.createReductions(
-          FirstBodyIP, FirstBodyAllocaIP,
+          {FirstBodyIP, DebugLoc()}, FirstBodyAllocaIP,
           {{SumType, SumReduced, SumPrivatized,
             /*EvaluationKind=*/OpenMPIRBuilder::EvalKind::Scalar, sumReduction,
             /*ReductionGenClang=*/nullptr, sumAtomicReduction,
@@ -5732,7 +5738,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {
       Succeeded());
   ASSERT_THAT_EXPECTED(
       OMPBuilder.createReductions(
-          SecondBodyIP, SecondBodyAllocaIP,
+          {SecondBodyIP, DebugLoc()}, SecondBodyAllocaIP,
           {{XorType, XorReduced, XorPrivatized,
             /*EvaluationKind=*/OpenMPIRBuilder::EvalKind::Scalar, xorReduction,
             /*ReductionGenClang=*/nullptr, xorAtomicReduction,
@@ -6130,9 +6136,8 @@ TEST_F(OpenMPIRBuilderTest, EmitMapperCall) {
       ArrayType::get(PointerType::getUnqual(Ctx), TotalNbOperand), Mapnames,
       /*Idx0=*/0, /*Idx1=*/0);
 
-  OMPBuilder.emitMapperCall(Builder.saveIP(), BeginMapperFunc, SrcLocInfo,
-                            MaptypesArg, MapnamesArg, MapperAllocas, -1,
-                            TotalNbOperand);
+  OMPBuilder.emitMapperCall(Builder, BeginMapperFunc, SrcLocInfo, MaptypesArg,
+                            MapnamesArg, MapperAllocas, -1, TotalNbOperand);
 
   CallInst *MapperCall = dyn_cast<CallInst>(&BB->back());
   EXPECT_NE(MapperCall, nullptr);
@@ -6491,10 +6496,11 @@ TEST_F(OpenMPIRBuilderTest, TargetRegion) {
   OpenMPIRBuilder::TargetKernelRuntimeAttrs RuntimeAttrs;
   OpenMPIRBuilder::TargetKernelDefaultAttrs DefaultAttrs = {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC,
-      /*MaxTeams=*/{10}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
+      /*MaxTeams=*/{10}, /*MinTeams=*/{0}, /*MaxThreads=*/{0},
+      /*MinThreads=*/{0}};
   RuntimeAttrs.TargetThreadLimit[0] = Builder.getInt32(20);
   RuntimeAttrs.TeamsThreadLimit[0] = Builder.getInt32(30);
-  RuntimeAttrs.MaxThreads = Builder.getInt32(40);
+  RuntimeAttrs.MaxThreads[0] = Builder.getInt32(40);
   RuntimeAttrs.DeviceID = Builder.getInt64(llvm::omp::OMP_DEVICEID_UNDEF);
 
   ASSERT_EXPECTED_INIT(
@@ -6668,7 +6674,8 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   OpenMPIRBuilder::TargetKernelRuntimeAttrs RuntimeAttrs;
   OpenMPIRBuilder::TargetKernelDefaultAttrs DefaultAttrs = {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC,
-      /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
+      /*MaxTeams=*/{-1}, /*MinTeams=*/{0}, /*MaxThreads=*/{0},
+      /*MinThreads=*/{0}};
   llvm::OpenMPIRBuilder::TargetDataInfo Info(
       /*RequiresDevicePointerInfo=*/false,
       /*SeparateBeginEndCalls=*/true);
@@ -6796,6 +6803,83 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
             cast<ConstantInt>(ExecModeValue)->getZExtValue());
 }
 
+// When the enclosing kernel has debug info (-g offload), the inlinable
+// __kmpc_target_init/__kmpc_target_deinit calls must carry a !dbg location or
+// the verifier rejects the module during the device link.
+// createOutlinedFunction installs the outlined function's location as the
+// builder's current debug location before emitting these calls, so both must
+// inherit it.
+TEST_F(OpenMPIRBuilderTest, TargetInitDeinitDebugLoc) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.setConfig(OpenMPIRBuilderConfig(
+      /*IsTargetDevice=*/true, false, false, false, false, false, false));
+  OMPBuilder.initialize();
+
+  FunctionType *KernelFTy =
+      FunctionType::get(Type::getVoidTy(Ctx), {PointerType::get(Ctx, 0)},
+                        /*isVarArg=*/false);
+  Function *Kernel = Function::Create(KernelFTy, Function::WeakODRLinkage,
+                                      "__omp_offloading_test_kernel", M.get());
+  BasicBlock *KernelBB = BasicBlock::Create(Ctx, "entry", Kernel);
+
+  // Attach a subprogram to the kernel, as the outlining does.
+  DIBuilder DIB(*M);
+  DIFile *File = DIB.createFile("kernel.f90", "/");
+  DICompileUnit *CU = DIB.createCompileUnit(
+      DISourceLanguageName(dwarf::DW_LANG_C), File, "flang", true, "", 0);
+  DISubroutineType *SPTy =
+      DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
+  DISubprogram *SP = DIB.createFunction(
+      CU, "test_kernel", "", File, 10, SPTy, 10, DINode::FlagZero,
+      DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
+  Kernel->setSubprogram(SP);
+  DIB.finalize();
+
+  IRBuilder<> Builder(KernelBB);
+  // The kernel-scoped location createOutlinedFunction installs from
+  // OutlinedFnLoc before emitting the runtime calls.
+  DebugLoc DL = DILocation::get(Ctx, 10, /*Column=*/0, SP);
+  Builder.SetCurrentDebugLocation(DL);
+
+  OpenMPIRBuilder::TargetKernelDefaultAttrs DefaultAttrs = {
+      /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC,
+      /*MaxTeams=*/{-1}, /*MinTeams=*/{0}, /*MaxThreads=*/{0},
+      /*MinThreads=*/{0}};
+
+  // createTargetInit/createTargetDeinit capture the builder's current debug
+  // location, mirroring how createOutlinedFunction emits them.
+  OpenMPIRBuilder::InsertPointTy AfterIP =
+      OMPBuilder.createTargetInit(Builder, DefaultAttrs);
+  Builder.restoreIP(AfterIP);
+  Builder.SetCurrentDebugLocation(DL);
+  OMPBuilder.createTargetDeinit(Builder);
+  Builder.CreateRetVoid();
+
+  CallInst *InitCall = nullptr;
+  for (Instruction &I : Kernel->getEntryBlock())
+    if (auto *CI = dyn_cast<CallInst>(&I))
+      if (CI->getCalledFunction()->getName() == "__kmpc_target_init")
+        InitCall = CI;
+  ASSERT_NE(InitCall, nullptr);
+
+  CallInst *DeinitCall = nullptr;
+  for (BasicBlock &FnBB : *Kernel)
+    for (Instruction &I : FnBB)
+      if (auto *CI = dyn_cast<CallInst>(&I))
+        if (CI->getCalledFunction()->getName() == "__kmpc_target_deinit")
+          DeinitCall = CI;
+  ASSERT_NE(DeinitCall, nullptr);
+
+  // Both runtime calls carry a !dbg location scoped to the kernel's subprogram,
+  // so the kernel verifies.
+  ASSERT_TRUE(InitCall->getDebugLoc());
+  EXPECT_EQ(InitCall->getDebugLoc()->getScope()->getSubprogram(), SP);
+  ASSERT_TRUE(DeinitCall->getDebugLoc());
+  EXPECT_EQ(DeinitCall->getDebugLoc()->getScope()->getSubprogram(), SP);
+
+  EXPECT_FALSE(verifyFunction(*Kernel, &errs()));
+}
+
 TEST_F(OpenMPIRBuilderTest, TargetRegionSPMD) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
@@ -6837,7 +6921,8 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionSPMD) {
   OpenMPIRBuilder::TargetKernelRuntimeAttrs RuntimeAttrs;
   OpenMPIRBuilder::TargetKernelDefaultAttrs DefaultAttrs = {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD,
-      /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
+      /*MaxTeams=*/{-1}, /*MinTeams=*/{0}, /*MaxThreads=*/{0},
+      /*MinThreads=*/{0}};
   RuntimeAttrs.LoopTripCount = Builder.getInt64(1000);
   RuntimeAttrs.DeviceID = Builder.getInt64(llvm::omp::OMP_DEVICEID_UNDEF);
   llvm::OpenMPIRBuilder::TargetDataInfo Info(
@@ -6949,7 +7034,8 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDeviceSPMD) {
   OpenMPIRBuilder::TargetKernelRuntimeAttrs RuntimeAttrs;
   OpenMPIRBuilder::TargetKernelDefaultAttrs DefaultAttrs = {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD,
-      /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
+      /*MaxTeams=*/{-1}, /*MinTeams=*/{0}, /*MaxThreads=*/{0},
+      /*MinThreads=*/{0}};
   llvm::OpenMPIRBuilder::TargetDataInfo Info(
       /*RequiresDevicePointerInfo=*/false,
       /*SeparateBeginEndCalls=*/true);
@@ -7075,7 +7161,8 @@ TEST_F(OpenMPIRBuilderTest, ConstantAllocaRaise) {
   OpenMPIRBuilder::TargetKernelRuntimeAttrs RuntimeAttrs;
   OpenMPIRBuilder::TargetKernelDefaultAttrs DefaultAttrs = {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC,
-      /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
+      /*MaxTeams=*/{-1}, /*MinTeams=*/{0}, /*MaxThreads=*/{0},
+      /*MinThreads=*/{0}};
   llvm::OpenMPIRBuilder::TargetDataInfo Info(
       /*RequiresDevicePointerInfo=*/false,
       /*SeparateBeginEndCalls=*/true);
@@ -7293,7 +7380,8 @@ TEST_F(OpenMPIRBuilderTest, DebugRecordLoc) {
   OpenMPIRBuilder::TargetKernelRuntimeAttrs RuntimeAttrs;
   OpenMPIRBuilder::TargetKernelDefaultAttrs DefaultAttrs = {
       /*ExecFlags=*/omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC,
-      /*MaxTeams=*/{-1}, /*MinTeams=*/0, /*MaxThreads=*/{0}, /*MinThreads=*/0};
+      /*MaxTeams=*/{-1}, /*MinTeams=*/{0}, /*MaxThreads=*/{0},
+      /*MinThreads=*/{0}};
   llvm::OpenMPIRBuilder::TargetDataInfo Info(
       /*RequiresDevicePointerInfo=*/false,
       /*SeparateBeginEndCalls=*/true);

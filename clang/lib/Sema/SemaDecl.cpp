@@ -1658,6 +1658,17 @@ bool Sema::isDeclInScope(NamedDecl *D, DeclContext *Ctx, Scope *S,
   return IdResolver.isDeclInScope(D, Ctx, S, AllowInlineNamespace);
 }
 
+bool Sema::isTagRedeclarationInScope(NamedDecl *D, DeclContext *Ctx, Scope *S,
+                                     bool AllowInlineNamespace) const {
+  if (isDeclInScope(D, Ctx, S, AllowInlineNamespace))
+    return true;
+
+  if (auto *Shadow = dyn_cast<UsingShadowDecl>(D))
+    return isDeclInScope(Shadow->getTargetDecl(), Ctx, S, AllowInlineNamespace);
+
+  return false;
+}
+
 Scope *Sema::getScopeForDeclContext(Scope *S, DeclContext *DC) {
   DeclContext *TargetDC = DC->getPrimaryContext();
   do {
@@ -2667,6 +2678,27 @@ void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
       else
         New->setTypeSourceInfo(OldTD->getTypeSourceInfo());
 
+      // An anonymous enum is recognized as a redeclaration only when its
+      // typedef name gets merged, at which point the new enum and its
+      // enumerators already have a distinct canonical type. Link the enum
+      // declarations, but also retype the new enumerators because
+      // setPreviousDecl() does not update QualTypes built before the merge;
+      // otherwise the merged typedef and its enumerators disagree on the type
+      // (GH213299).
+      //
+      // FIXME: The global module restriction only limits the impact of this
+      // change; relax it if the issue shows up in other contexts.
+      if (Module *M = OldTag->getOwningModule(); M && M->isGlobalModule()) {
+        if (auto *NewEnum = dyn_cast<EnumDecl>(NewTag)) {
+          if (auto *OldEnum = dyn_cast<EnumDecl>(OldTag)) {
+            NewEnum->setPreviousDecl(OldEnum);
+            QualType EnumType = Context.getCanonicalTagType(OldEnum);
+            for (auto *ECD : NewEnum->enumerators())
+              ECD->setType(EnumType);
+          }
+        }
+      }
+
       // Make the old tag definition visible.
       makeMergedDefinitionVisible(Hidden);
 
@@ -2969,6 +3001,8 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.mergeMinSizeAttr(D, *MA);
   else if (const auto *SNA = dyn_cast<SwiftNameAttr>(Attr))
     NewAttr = S.Swift().mergeNameAttr(D, *SNA, SNA->getName());
+  else if (const auto *SAA = dyn_cast<SwiftAttrAttr>(Attr))
+    NewAttr = S.Swift().mergeAttrAttr(D, *SAA);
   else if (const auto *OA = dyn_cast<OptimizeNoneAttr>(Attr))
     NewAttr = S.mergeOptimizeNoneAttr(D, *OA);
   else if (const auto *InternalLinkageA = dyn_cast<InternalLinkageAttr>(Attr))
@@ -2988,6 +3022,8 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.Wasm().mergeImportModuleAttr(D, *IMA);
   else if (const auto *INA = dyn_cast<WebAssemblyImportNameAttr>(Attr))
     NewAttr = S.Wasm().mergeImportNameAttr(D, *INA);
+  else if (const auto *ENA = dyn_cast<WebAssemblyExportNameAttr>(Attr))
+    NewAttr = S.Wasm().mergeExportNameAttr(D, *ENA);
   else if (const auto *TCBA = dyn_cast<EnforceTCBAttr>(Attr))
     NewAttr = S.mergeEnforceTCBAttr(D, *TCBA);
   else if (const auto *TCBLA = dyn_cast<EnforceTCBLeafAttr>(Attr))
@@ -3453,26 +3489,7 @@ static void propagateAttributes(ParmVarDecl *To, const ParmVarDecl *From,
 /// mergeParamDeclAttributes - Copy attributes from the old parameter
 /// to the new one.
 static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
-                                     const ParmVarDecl *oldDecl,
-                                     Sema &S) {
-  // C++11 [dcl.attr.depend]p2:
-  //   The first declaration of a function shall specify the
-  //   carries_dependency attribute for its declarator-id if any declaration
-  //   of the function specifies the carries_dependency attribute.
-  const CarriesDependencyAttr *CDA = newDecl->getAttr<CarriesDependencyAttr>();
-  if (CDA && !oldDecl->hasAttr<CarriesDependencyAttr>()) {
-    S.Diag(CDA->getLocation(),
-           diag::err_carries_dependency_missing_on_first_decl) << 1/*Param*/;
-    // Find the first declaration of the parameter.
-    // FIXME: Should we build redeclaration chains for function parameters?
-    const FunctionDecl *FirstFD =
-      cast<FunctionDecl>(oldDecl->getDeclContext())->getFirstDecl();
-    const ParmVarDecl *FirstVD =
-      FirstFD->getParamDecl(oldDecl->getFunctionScopeIndex());
-    S.Diag(FirstVD->getLocation(),
-           diag::note_carries_dependency_missing_first_decl) << 1/*Param*/;
-  }
-
+                                     const ParmVarDecl *oldDecl, Sema &S) {
   propagateAttributes(
       newDecl, oldDecl, [&S](ParmVarDecl *To, const ParmVarDecl *From) {
         unsigned found = 0;
@@ -4228,18 +4245,6 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
             << NRA;
         Diag(Old->getLocation(), diag::note_previous_declaration);
       }
-
-    // C++11 [dcl.attr.depend]p2:
-    //   The first declaration of a function shall specify the
-    //   carries_dependency attribute for its declarator-id if any declaration
-    //   of the function specifies the carries_dependency attribute.
-    const CarriesDependencyAttr *CDA = New->getAttr<CarriesDependencyAttr>();
-    if (CDA && !Old->hasAttr<CarriesDependencyAttr>()) {
-      Diag(CDA->getLocation(),
-           diag::err_carries_dependency_missing_on_first_decl) << 0/*Function*/;
-      Diag(Old->getFirstDecl()->getLocation(),
-           diag::note_carries_dependency_missing_first_decl) << 0/*Function*/;
-    }
 
     // SYCL 2020 section 5.10.1, "SYCL functions and member functions linkage":
     //   When a function is declared with SYCL_EXTERNAL, that macro must be
@@ -5049,7 +5054,8 @@ void Sema::notePreviousDefinition(const NamedDecl *Old, SourceLocation New) {
 }
 
 bool Sema::checkVarDeclRedefinition(VarDecl *Old, VarDecl *New) {
-  if (!hasVisibleDefinition(Old) &&
+  if ((!hasVisibleDefinition(Old) ||
+       isFromSameSingleIncludeHeader(Old, New->getLocation())) &&
       (New->getFormalLinkage() == Linkage::Internal || New->isInline() ||
        isa<VarTemplateSpecializationDecl>(New) ||
        New->getDescribedVarTemplate() ||
@@ -6583,6 +6589,8 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
           return nullptr;
 
         D.setInvalidType();
+      } else if (CurContext->isRecord() && !CurContext->Equals(DC)) {
+        D.setInvalidType();
       }
     }
 
@@ -7752,6 +7760,8 @@ void Sema::CheckAsmLabel(Scope *S, Expr *E, StorageClass SC,
   StringLiteral *SE = cast<StringLiteral>(E);
   StringRef Label = SE->getString();
   QualType R = TInfo->getType();
+  if (R->isIncompleteType())
+    return;
   if (S->getFnParent() != nullptr) {
     switch (SC) {
     case SC_None:
@@ -10140,6 +10150,54 @@ static bool isStdBuiltin(ASTContext &Ctx, FunctionDecl *FD,
   }
 }
 
+void Sema::addImplicitCallingConvAbiTag(FunctionDecl *FD) {
+  const auto *FT = FD->getType()->getAs<FunctionType>();
+  if (!FT)
+    return;
+
+  StringRef Tag;
+  switch (FT->getCallConv()) {
+#define CC_VLS_CASE(ABI_VLEN)                                                  \
+  case CC_RISCVVLSCall_##ABI_VLEN:                                             \
+    Tag = "riscv_vls_cc_" #ABI_VLEN;                                           \
+    break;
+    CC_VLS_CASE(32)
+    CC_VLS_CASE(64)
+    CC_VLS_CASE(128)
+    CC_VLS_CASE(256)
+    CC_VLS_CASE(512)
+    CC_VLS_CASE(1024)
+    CC_VLS_CASE(2048)
+    CC_VLS_CASE(4096)
+    CC_VLS_CASE(8192)
+    CC_VLS_CASE(16384)
+    CC_VLS_CASE(32768)
+    CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
+  default:
+    return;
+  }
+
+  SmallVector<AbiTagAttr *, 2> Existing(FD->specific_attrs<AbiTagAttr>());
+  AbiTagAttr *Old = Existing.empty() ? nullptr : Existing.front();
+
+  SmallVector<StringRef, 4> Tags;
+  if (Old)
+    llvm::append_range(Tags, Old->tags());
+  if (llvm::is_contained(Tags, Tag))
+    return;
+  Tags.push_back(Tag);
+
+  AbiTagAttr *Merged =
+      Old ? AbiTagAttr::Create(Context, Tags.data(), Tags.size(), *Old)
+          : AbiTagAttr::CreateImplicit(Context, Tags.data(), Tags.size(),
+                                       FD->getLocation());
+  FD->dropAttr<AbiTagAttr>();
+  FD->addAttr(Merged);
+  for (size_t I = 1, E = Existing.size(); I < E; ++I)
+    FD->addAttr(Existing[I]);
+}
+
 NamedDecl*
 Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                               TypeSourceInfo *TInfo, LookupResult &Previous,
@@ -10771,6 +10829,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   // Handle attributes.
   ProcessDeclAttributes(S, NewFD, D);
+  addImplicitCallingConvAbiTag(NewFD);
   const auto *NewTVA = NewFD->getAttr<TargetVersionAttr>();
   if (Context.getTargetInfo().getTriple().isAArch64() && NewTVA &&
       !NewTVA->isDefaultVersion() &&
@@ -15327,12 +15386,17 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       FinalizeVarWithDestructor(var, RD);
 
   // If this variable must be emitted, add it as an initializer for the current
-  // module.
-  if (Context.DeclMustBeEmitted(var) && !ModuleScopes.empty() &&
-      (ModuleScopes.back().Module->isHeaderLikeModule() ||
-       // For named modules, we may only emit non discardable variables.
-       !isDiscardableGVALinkage(Context.GetGVALinkageForVariable(var))))
-    Context.addModuleInitializer(ModuleScopes.back().Module, var);
+  // module. For named modules, discardable inline variables may be deferred
+  // until they are odr-used. Non-inline variables that must be emitted,
+  // including those with side-effecting initialization, must still be emitted
+  // even if they have internal linkage.
+  if (Context.DeclMustBeEmitted(var) && !ModuleScopes.empty()) {
+    GVALinkage Linkage = Context.GetGVALinkageForVariable(var);
+    if (ModuleScopes.back().Module->isHeaderLikeModule() ||
+        !isDiscardableGVALinkage(Linkage) ||
+        (Linkage == GVA_Internal && !var->isInline()))
+      Context.addModuleInitializer(ModuleScopes.back().Module, var);
+  }
 
   // Build the bindings if this is a structured binding declaration.
   if (auto *DD = dyn_cast<DecompositionDecl>(var))
@@ -15496,14 +15560,16 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
   }
 
   if (UsedAttr *Attr = VD->getAttr<UsedAttr>()) {
-    if (!Attr->isInherited() && !VD->isThisDeclarationADefinition()) {
+    if (!Attr->isInherited() && !Attr->isImplicit() &&
+        !VD->isThisDeclarationADefinition()) {
       Diag(Attr->getLocation(), diag::warn_attribute_ignored_on_non_definition)
           << Attr;
       VD->dropAttr<UsedAttr>();
     }
   }
   if (RetainAttr *Attr = VD->getAttr<RetainAttr>()) {
-    if (!Attr->isInherited() && !VD->isThisDeclarationADefinition()) {
+    if (!Attr->isInherited() && !Attr->isImplicit() &&
+        !VD->isThisDeclarationADefinition()) {
       Diag(Attr->getLocation(), diag::warn_attribute_ignored_on_non_definition)
           << Attr;
       VD->dropAttr<RetainAttr>();
@@ -16278,7 +16344,9 @@ Sema::CheckForFunctionRedefinition(FunctionDecl *FD,
     return;
 
   bool DefinitionVisible = false;
-  if (SkipBody && isRedefinitionAllowedFor(Definition, DefinitionVisible) &&
+  if (SkipBody &&
+      isRedefinitionAllowedFor(Definition, FD->getLocation(),
+                               DefinitionVisible) &&
       (Definition->getFormalLinkage() == Linkage::Internal ||
        Definition->isInlined() || Definition->getDescribedFunctionTemplate() ||
        !Definition->getTemplateParameterLists().empty())) {
@@ -18450,7 +18518,7 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
   }
 
   if (getLangOpts().CPlusPlus && Name && DC && StdNamespace &&
-      DC->Equals(getStdNamespace())) {
+      DC->getRedeclContext()->Equals(getStdNamespace())) {
     if (Name->isStr("bad_alloc")) {
       // This is a declaration of or a reference to "std::bad_alloc".
       isStdBadAlloc = true;
@@ -18596,8 +18664,9 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
       // in the same scope (so that the definition/declaration completes or
       // rementions the tag), reuse the decl.
       if (TUK == TagUseKind::Reference || TUK == TagUseKind::Friend ||
-          isDeclInScope(DirectPrevDecl, SearchDC, S,
-                        SS.isNotEmpty() || isMemberSpecialization)) {
+          isTagRedeclarationInScope(DirectPrevDecl, SearchDC, S,
+                                    SS.isNotEmpty() ||
+                                        isMemberSpecialization)) {
 
         if (auto *RD = dyn_cast<CXXRecordDecl>(PrevDecl);
             RD && RD->isInjectedClassName()) {
@@ -18755,9 +18824,9 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
                 // check in C11 6.2.7/1 (or 6.1.2.6/1 in C89).
                 NamedDecl *Hidden = nullptr;
                 bool HiddenDefVisible = false;
-                if (SkipBody &&
-                    (isRedefinitionAllowedFor(Def, &Hidden, HiddenDefVisible) ||
-                     getLangOpts().C23)) {
+                if (SkipBody && (isRedefinitionAllowedFor(Def, NameLoc, &Hidden,
+                                                          HiddenDefVisible) ||
+                                 getLangOpts().C23)) {
                   // There is a definition of this tag, but it is not visible.
                   // We explicitly make use of C++'s one definition rule here,
                   // and assume that this definition is identical to the hidden
@@ -21456,8 +21525,9 @@ bool Sema::shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee) {
          CUDA().IdentifyTarget(Callee) == CUDAFunctionTarget::Global;
 }
 
-bool Sema::isRedefinitionAllowedFor(NamedDecl *D, NamedDecl **Suggested,
-                                    bool &Visible) {
+bool Sema::isRedefinitionAllowedFor(NamedDecl *D,
+                                    SourceLocation NewDefinitionLoc,
+                                    NamedDecl **Suggested, bool &Visible) {
   Visible = hasVisibleDefinition(D, Suggested);
   // Accoding to [basic.def.odr]p16, it is not allowed to have duplicated definition
   // for declaratins which is attached to named modules.
@@ -21467,6 +21537,8 @@ bool Sema::isRedefinitionAllowedFor(NamedDecl *D, NamedDecl **Suggested,
       D->isInNamedModule())
     return false;
   // The redefinition of D in the **current** TU is allowed if D is invisible or
-  // D is defined in the global module of other module units.
-  return D->isInAnotherModuleUnit() || !Visible;
+  // D is defined in the global module of other module units or D is defined in
+  // the same header in a different module.
+  return D->isInAnotherModuleUnit() || !Visible ||
+         isFromSameSingleIncludeHeader(D, NewDefinitionLoc);
 }

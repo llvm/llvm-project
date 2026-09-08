@@ -441,8 +441,8 @@ public:
             auto *Ctor = CE->getConstructor();
             if (!Ctor)
               return false;
-            auto clsName = safeGetName(Ctor->getParent());
-            if (Checker->isPtrType(clsName) && CE->getNumArgs()) {
+            auto ArgClsTy = dyn_cast_or_null<CXXRecordDecl>(Ctor->getParent());
+            if (Checker->Model->isSafePtr(ArgClsTy) && CE->getNumArgs()) {
               Arg = CE->getArg(0)->IgnoreParenCasts();
               continue;
             }

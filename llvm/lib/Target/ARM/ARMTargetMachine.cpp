@@ -52,7 +52,6 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/CFGuard.h"
 #include "llvm/Transforms/IPO.h"
@@ -221,8 +220,10 @@ MachineFunctionInfo *ARMBaseTargetMachine::createMachineFunctionInfo(
           const Function *Callee = CB->getCalledFunction();
           F.getContext().diagnose(DiagnosticInfoUnsupported(
               F,
-              (Callee ? Twine("call to '") + Callee->getName() + "'"
-                      : Twine("indirect call")) +
+              (Callee ? Twine("'") + F.getName() + "' calls '" +
+                            Callee->getName() + "', which"
+                      : Twine("'") + F.getName() +
+                            "' makes an indirect call that") +
                   " expects a hard-float calling convention" +
                   FPRegsUnavailableMsg,
               CB->getDebugLoc()));
@@ -245,6 +246,13 @@ FloatABI::ABIType ARMBaseTargetMachine::getFloatABI(const Module &M) const {
     return FloatABI::Hard;
   // Otherwise fall back to the ABI implied by the target triple.
   return M.getTargetTriple().getDefaultFloatABI();
+}
+
+ARM::ARMABI ARMBaseTargetMachine::getEffectiveABI(const Module &M) const {
+  // Consistency of "target-abi" and -target-abi is validated elsewhere.
+  if (const auto *MD = cast_or_null<MDString>(M.getModuleFlag("target-abi")))
+    return ARM::computeTargetABI(TargetTriple, MD->getString());
+  return TargetABI;
 }
 
 const ARMSubtarget *
@@ -283,10 +291,13 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
   // registers, but no floating-point hardware (mve+nofp)
   Key += FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";
 
+  ARM::ARMABI ABI = getEffectiveABI(*F.getParent());
+  Key += "+abi=" + std::to_string((int)ABI);
+
   auto &I = SubtargetMap[Key];
   if (!I) {
     I = std::make_unique<ARMSubtarget>(TargetTriple, CPU, FS, *this, isLittle,
-                                       FloatABI, F.hasMinSize(), DM);
+                                       FloatABI, ABI, F.hasMinSize(), DM);
 
     if (!I->isThumb() && !I->hasARMOps())
       F.getContext().emitError("Function '" + F.getName() + "' uses ARM "
@@ -499,12 +510,12 @@ bool ARMPassConfig::addLegalizeMachineIR() {
 }
 
 bool ARMPassConfig::addRegBankSelect() {
-  addPass(new RegBankSelect());
+  addPass(new RegBankSelectLegacy());
   return false;
 }
 
 bool ARMPassConfig::addGlobalInstructionSelect() {
-  addPass(new InstructionSelect(getOptLevel()));
+  addPass(new InstructionSelectLegacy(getOptLevel()));
   return false;
 }
 
@@ -608,7 +619,7 @@ void ARMPassConfig::addPreEmitPass2() {
     // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
-    addPass(createEHContGuardTargetsPass());
+    addPass(createEHContGuardTargetsLegacy());
   }
 }
 

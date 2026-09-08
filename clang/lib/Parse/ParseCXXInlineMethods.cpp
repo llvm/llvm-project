@@ -32,9 +32,7 @@ StringLiteral *Parser::ParseCXXDeletedFunctionMessage() {
     ExprResult Res = ParseUnevaluatedStringLiteralExpression();
     if (Res.isUsable()) {
       Message = Res.getAs<StringLiteral>();
-      Diag(Message->getBeginLoc(), getLangOpts().CPlusPlus26
-                                       ? diag::warn_cxx23_delete_with_message
-                                       : diag::ext_delete_with_message)
+      DiagCompat(Message->getBeginLoc(), diag_compat::delete_with_message)
           << Message->getSourceRange();
     }
   } else {
@@ -102,10 +100,8 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
     bool Delete = false;
     SourceLocation KWLoc;
     if (TryConsumeToken(tok::kw_delete, KWLoc)) {
-      Diag(KWLoc, getLangOpts().CPlusPlus11
-                      ? diag::warn_cxx98_compat_defaulted_deleted_function
-                      : diag::ext_defaulted_deleted_function)
-        << 1 /* deleted */;
+      DiagCompat(KWLoc, diag_compat::defaulted_deleted_function)
+          << 1 /* deleted */;
       StringLiteral *Message = ParseCXXDeletedFunctionMessage();
       Actions.SetDeclDeleted(FnD, KWLoc, Message);
       Delete = true;
@@ -113,10 +109,8 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
         DeclAsFunction->setRangeEnd(PrevTokLocation);
       }
     } else if (TryConsumeToken(tok::kw_default, KWLoc)) {
-      Diag(KWLoc, getLangOpts().CPlusPlus11
-                      ? diag::warn_cxx98_compat_defaulted_deleted_function
-                      : diag::ext_defaulted_deleted_function)
-        << 0 /* defaulted */;
+      DiagCompat(KWLoc, diag_compat::defaulted_deleted_function)
+          << 0 /* defaulted */;
       Actions.SetDeclDefaulted(FnD, KWLoc);
       if (auto *DeclAsFunction = dyn_cast<FunctionDecl>(FnD)) {
         DeclAsFunction->setRangeEnd(PrevTokLocation);
@@ -434,7 +428,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
 
       ExprResult DefArgResult;
       if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
-        Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
+        Diag(Tok, diag::compat_cxx11_generalized_initializer_lists);
         DefArgResult = ParseBraceInitializer();
       } else
         DefArgResult = ParseAssignmentExpression();
@@ -623,22 +617,6 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
         Actions.ActOnFinishInlineFunctionDef(FD);
   });
 
-  if (Tok.is(tok::kw_try)) {
-    ParseFunctionTryBlock(LM.D, FnScope);
-    return;
-  }
-  if (Tok.is(tok::colon)) {
-    ParseConstructorInitializer(LM.D);
-
-    // Error recovery.
-    if (!Tok.is(tok::l_brace)) {
-      FnScope.Exit();
-      Actions.ActOnFinishFunctionBody(LM.D, nullptr);
-      return;
-    }
-  } else
-    Actions.ActOnDefaultCtorInitializers(LM.D);
-
   assert((Actions.getDiagnostics().hasErrorOccurred() ||
           !isa<FunctionTemplateDecl>(LM.D) ||
           cast<FunctionTemplateDecl>(LM.D)->getTemplateParameters()->getDepth()
@@ -646,7 +624,7 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
          "TemplateParameterDepth should be greater than the depth of "
          "current template being instantiated!");
 
-  ParseFunctionStatementBody(LM.D, FnScope);
+  ParseFunctionBody(LM.D, FnScope);
 }
 
 void Parser::ParseLexedMemberInitializers(ParsingClass &Class) {

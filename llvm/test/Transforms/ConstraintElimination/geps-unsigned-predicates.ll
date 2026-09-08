@@ -490,15 +490,14 @@ define void @test.ult.gep.shl(ptr readonly %src, ptr readnone %max, i8 %idx) {
 ; CHECK-NEXT:    [[IDX_SHL_1:%.*]] = shl nuw nsw i8 [[IDX]], 1
 ; CHECK-NEXT:    [[ADD_PTR_SHL_1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i8 [[IDX_SHL_1]]
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[IDX_SHL_2:%.*]] = shl nuw i8 [[IDX]], 2
+; CHECK-NEXT:    [[IDX_SHL_2:%.*]] = shl nuw nsw i8 [[IDX]], 2
 ; CHECK-NEXT:    [[ADD_PTR_SHL_2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i8 [[IDX_SHL_2]]
 ; CHECK-NEXT:    [[C_MAX_1:%.*]] = icmp ult ptr [[ADD_PTR_SHL_2]], [[MAX]]
 ; CHECK-NEXT:    call void @use(i1 [[C_MAX_1]])
-; CHECK-NEXT:    [[IDX_SHL_NOT_NUW:%.*]] = shl i8 [[IDX]], 1
+; CHECK-NEXT:    [[IDX_SHL_NOT_NUW:%.*]] = shl nuw nsw i8 [[IDX]], 1
 ; CHECK-NEXT:    [[ADD_PTR_SHL_NOT_NUW:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i8 [[IDX_SHL_NOT_NUW]]
-; CHECK-NEXT:    [[C_MAX_2:%.*]] = icmp ult ptr [[ADD_PTR_SHL_NOT_NUW]], [[MAX]]
-; CHECK-NEXT:    call void @use(i1 [[C_MAX_2]])
-; CHECK-NEXT:    [[IDX_SHL_3:%.*]] = shl nuw i8 [[IDX]], 3
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[IDX_SHL_3:%.*]] = shl nuw nsw i8 [[IDX]], 3
 ; CHECK-NEXT:    [[ADD_PTR_SHL_3:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i8 [[IDX_SHL_3]]
 ; CHECK-NEXT:    [[C_MAX_3:%.*]] = icmp ult ptr [[ADD_PTR_SHL_3]], [[MAX]]
 ; CHECK-NEXT:    call void @use(i1 [[C_MAX_3]])
@@ -549,16 +548,15 @@ define void @test.ult.gep.shl.zext(ptr readonly %src, ptr readnone %max, i32 %id
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IDX:%.*]], 5
 ; CHECK-NEXT:    br i1 [[CMP]], label [[CHECK_MAX:%.*]], label [[TRAP]]
 ; CHECK:       check.max:
-; CHECK-NEXT:    [[IDX_SHL:%.*]] = shl nuw i32 [[IDX]], 1
+; CHECK-NEXT:    [[IDX_SHL:%.*]] = shl nuw nsw i32 [[IDX]], 1
 ; CHECK-NEXT:    [[EXT_1:%.*]] = zext i32 [[IDX_SHL]] to i64
 ; CHECK-NEXT:    [[ADD_PTR_SHL:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[EXT_1]]
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[IDX_SHL_NOT_NUW:%.*]] = shl i32 [[IDX]], 1
+; CHECK-NEXT:    [[IDX_SHL_NOT_NUW:%.*]] = shl nuw nsw i32 [[IDX]], 1
 ; CHECK-NEXT:    [[EXT_2:%.*]] = zext i32 [[IDX_SHL_NOT_NUW]] to i64
 ; CHECK-NEXT:    [[ADD_PTR_SHL_NOT_NUW:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[EXT_2]]
-; CHECK-NEXT:    [[C_MAX_1:%.*]] = icmp ult ptr [[ADD_PTR_SHL_NOT_NUW]], [[MAX]]
-; CHECK-NEXT:    call void @use(i1 [[C_MAX_1]])
-; CHECK-NEXT:    [[IDX_SHL_3:%.*]] = shl nuw i32 [[IDX]], 2
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[IDX_SHL_3:%.*]] = shl nuw nsw i32 [[IDX]], 2
 ; CHECK-NEXT:    [[EXT_3:%.*]] = zext i32 [[IDX_SHL_3]] to i64
 ; CHECK-NEXT:    [[ADD_PTR_SHL_3:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[EXT_3]]
 ; CHECK-NEXT:    [[C_MAX_2:%.*]] = icmp ult ptr [[ADD_PTR_SHL_3]], [[MAX]]

@@ -296,7 +296,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalFor({i64, v16i8, v8i16, v4i32})
       .lower();
 
-  getActionDefinitionsBuilder({G_SMULFIX, G_UMULFIX}).lower();
+  getActionDefinitionsBuilder(
+      {G_SMULFIX, G_UMULFIX, G_SMULFIXSAT, G_UMULFIXSAT})
+      .lower();
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
       .legalFor({v8i8, v16i8, v4i16, v8i16, v2i32, v4i32})
@@ -858,7 +860,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_TRUNC_SSAT_S, G_TRUNC_SSAT_U, G_TRUNC_USAT_U})
       .legalFor({{v8i8, v8i16}, {v4i16, v4i32}, {v2i32, v2i64}})
-      .clampNumElements(0, v2s32, v2s32);
+      .clampNumElements(0, v8s8, v8s8)
+      .clampNumElements(0, v4s16, v4s16)
+      .clampNumElements(0, v2s32, v2s32)
+      .lower();
 
   getActionDefinitionsBuilder(G_SEXT_INREG)
       .legalFor({i32, i64, v8i8, v16i8, v4i16, v8i16, v2i32, v4i32, v2i64})
@@ -1826,7 +1831,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
     MachineFunction &MF = *MI.getMF();
     auto Val = MF.getRegInfo().createGenericVirtualRegister(
-        LLT::scalar(VaListSize * 8));
+        LLT::integer(VaListSize * 8));
     MIB.buildLoad(Val, MI.getOperand(2),
                   *MF.getMachineMemOperand(MachinePointerInfo(),
                                            MachineMemOperand::MOLoad,
@@ -2521,7 +2526,7 @@ bool AArch64LegalizerInfo::legalizeAtomicCmpxchg128(
       break;
     }
 
-    LLT s128 = LLT::scalar(128);
+    LLT s128 = LLT::integer(128);
     auto CASDst = MRI.createGenericVirtualRegister(s128);
     auto CASDesired = MRI.createGenericVirtualRegister(s128);
     auto CASNew = MRI.createGenericVirtualRegister(s128);

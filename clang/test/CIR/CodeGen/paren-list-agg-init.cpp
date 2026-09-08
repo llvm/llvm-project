@@ -1,6 +1,4 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports padded, packed, and over-aligned record shapes.
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM,LLVMCIR
@@ -44,7 +42,7 @@ struct C : public B, public A {
 };
 
 // LLVM-DAG: [[STRUCT_D:%.*]] = type { [[STRUCT_A]], [[STRUCT_A]], i8, [[STRUCT_A]] }
-// CIR-DAG: ![[STRUCT_D:.*]] = !cir.struct<"D" {data ![[STRUCT_A]], data ![[STRUCT_A]], empty !u8i, data ![[STRUCT_A]]}>
+// CIR-DAG: ![[STRUCT_D:.*]] = !cir.struct<"D" {data ![[STRUCT_A]], data ![[STRUCT_A]], empty !cir.bitfield<!u8i, [#cir.bitfield_decl<!u32i, 2, unnamed>]>, data ![[STRUCT_A]]}>
 struct D {
   A a;
   A b = A{2, 2.0};
@@ -77,7 +75,7 @@ struct G {
 
 // LLVM-DAG: [[UNION_U:%.*]] = type { [[STRUCT_A]] }
 // LLVM-DAG: [[STR:@.*]] = private {{.*}}constant [6 x i8] {{.*}}foo18{{.*}}, align 1
-// CIR-DAG: ![[UNION_U:.*]] = !cir.union<"U" {empty !u8i, data ![[STRUCT_A]], data !s8i}>
+// CIR-DAG: ![[UNION_U:.*]] = !cir.union<"U" {empty !cir.bitfield<!u8i, [#cir.bitfield_decl<!u32i, 1, unnamed>]>, data ![[STRUCT_A]], data !s8i}>
 union U {
   unsigned : 1;
   A a;
@@ -174,20 +172,18 @@ A foo1() {
 
 // LLVM: define dso_local {{.*}}@{{.*foo2.*}}
 // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 8 {{.*}}, ptr align 8 [[B1]], i64 24, i1 false)
-// CIR: cir.func {{.*}}@_Z4foo2v()
-// CIR: %[[B_ALLOCA:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<![[STRUCT_B]]>
+// CIR: cir.func {{.*}}@_Z4foo2v(%[[B_RETVAL:.*]]: !cir.ptr<![[STRUCT_B]]> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = ![[STRUCT_B]], llvm.writable}{{.*}})
 // CIR: %[[GET_GLOB:.*]] = cir.get_global @_ZL2b1 : !cir.ptr<![[STRUCT_B]]>
-// CIR: cir.copy %[[GET_GLOB]] align(8) to %[[B_ALLOCA]] align(8) : !cir.ptr<![[STRUCT_B]]>
+// CIR: cir.copy %[[GET_GLOB]] align(8) to %[[B_RETVAL]] align(8) : !cir.ptr<![[STRUCT_B]]>
 B foo2() {
   return b1;
 }
 
 // LLVM: define dso_local {{.*}}@{{.*foo3.*}}
 // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 8 {{.*}}, ptr align 8 [[C1]], i64 48, i1 false)
-// CIR: cir.func {{.*}}@_Z4foo3v()
-// CIR: %[[C_ALLOCA:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<![[STRUCT_C]]>
+// CIR: cir.func {{.*}}@_Z4foo3v(%[[C_RETVAL:.*]]: !cir.ptr<![[STRUCT_C]]> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = ![[STRUCT_C]], llvm.writable}{{.*}})
 // CIR: %[[GET_GLOB:.*]] = cir.get_global @_ZL2c1 : !cir.ptr<![[STRUCT_C]]>
-// CIR: cir.copy %[[GET_GLOB]] align(8) to %[[C_ALLOCA]] align(8) : !cir.ptr<![[STRUCT_C]]>
+// CIR: cir.copy %[[GET_GLOB]] align(8) to %[[C_RETVAL]] align(8) : !cir.ptr<![[STRUCT_C]]>
 C foo3() {
   return c1;
 }
@@ -320,10 +316,10 @@ void foo7() {
 
 // LLVM: dso_local {{.*}}@{{.*foo8.*}}(
 // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 8 {{.*}}, ptr align 8 [[D1]], i64 56, i1 false)
-// CIR-LABEL: cir.func no_inline dso_local @_Z4foo8v() 
-// CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<![[STRUCT_D]]>
+// CIR-LABEL: cir.func no_inline dso_local @_Z4foo8v(
+// CIR: %[[D_RETVAL:.*]]: !cir.ptr<![[STRUCT_D]]> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = ![[STRUCT_D]], llvm.writable}{{.*}})
 // CIR: %[[GET_GLOB:.*]] = cir.get_global @_ZL2d1 : !cir.ptr<![[STRUCT_D]]>
-// CIR: cir.copy %[[GET_GLOB]] align(8) to %[[RET_ALLOCA]] align(8) : !cir.ptr<![[STRUCT_D]]>
+// CIR: cir.copy %[[GET_GLOB]] align(8) to %[[D_RETVAL]] align(8) : !cir.ptr<![[STRUCT_D]]>
 D foo8() {
   return d1;
 }
@@ -359,8 +355,11 @@ D foo8() {
 // CIR: %[[FP_2:.*]] = cir.const #cir.fp<2
 // CIR: cir.store align(8) %[[FP_2]], %[[GET_J]] : !cir.double, !cir.ptr<!cir.double>
 // CIR: %[[GET_C:.*]] = cir.get_member %[[D_ALLOCA]][3] {name = "c"} : !cir.ptr<![[STRUCT_D]]> -> !cir.ptr<![[STRUCT_A]]>
-// CIR: %[[ZERO:.*]] = cir.const #cir.zero : ![[STRUCT_A]]
-// CIR: cir.store align(8) %[[ZERO]], %[[GET_C]] : ![[STRUCT_A]], !cir.ptr<![[STRUCT_A]]>
+// CIR: %[[GET_C_PTR_I8:.*]] = cir.cast bitcast %12 : !cir.ptr<![[STRUCT_A]]> -> !cir.ptr<!u8i>
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !u8i
+// CIR: %[[CONST_16:.*]] = cir.const #cir.int<16> : !u64i
+// CIR: %[[GET_C_VOID_PTR:.*]] = cir.cast bitcast %[[GET_C_PTR_I8]] : !cir.ptr<!u8i> -> !cir.ptr<!void> 
+// CIR: cir.libc.memset %[[CONST_16]] bytes at %[[GET_C_VOID_PTR]] {{.*}} to %[[CONST_0]] : !cir.ptr<!void>, !u8i, !u64i
 void foo9() {
   D d(A(1, 1));
 }
@@ -902,9 +901,6 @@ struct Derived : Base {
 void base_cleanup() {
   Derived x{{1}, 2};
 }
-// CIR-LABEL: cir.func {{.*}}@_ZN12base_cleanup7DerivedD2Ev(
-// CIR: cir.call @_ZN12base_cleanup4BaseD2Ev(
-
 // CIR-LABEL: cir.func {{.*}}@_ZN12base_cleanup12base_cleanupEv()
 // CIR: cir.cleanup.scope {
 // CIR:   cir.yield
@@ -913,18 +909,20 @@ void base_cleanup() {
 // CIR:   cir.yield
 // CIR: }
 
-// These are emitted in the reverse order between OGCG/LLVM, else they are identical.
+// CIR-LABEL: cir.func {{.*}}@_ZN12base_cleanup7DerivedD2Ev(
+// CIR: cir.call @_ZN12base_cleanup4BaseD2Ev(
+
 // OGCG-LABEL: define {{.*}}@_ZN12base_cleanup12base_cleanupEv()
 // OGCG-NOT: define
 // OGCG:   call void @_ZN12base_cleanup7DerivedD1Ev(
 // OGCG: }
 
-// LLVM-LABEL: define {{.*}}@_ZN12base_cleanup7DerivedD2Ev(
-// LLVM: call void @_ZN12base_cleanup4BaseD2Ev(
-
 // LLVMCIR-LABEL: define {{.*}}@_ZN12base_cleanup12base_cleanupEv()
 // LLVMCIR-NOT: define
 // LLVMCIR:   call void @_ZN12base_cleanup7DerivedD1Ev(
 // LLVMCIR: }
+
+// LLVM-LABEL: define {{.*}}@_ZN12base_cleanup7DerivedD2Ev(
+// LLVM: call void @_ZN12base_cleanup4BaseD2Ev(
 
 }
