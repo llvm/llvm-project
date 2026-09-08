@@ -7671,9 +7671,9 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
   bool HasMMO = !MI.memoperands_empty();
 
   // S_BUFFER_LOAD only produces values that fill whole SGPRs, apart from the
-  // subword loads below.
-  bool IsSubwordLoad =
-      !Ty.isVector() && (Size == 8 || Size == 16) && ST.hasScalarSubwordLoads();
+  // subword loads below. Those truncate from an s32 result, so they need a
+  // scalar destination.
+  bool IsSubwordLoad = Ty.isScalar() && Size < 32 && ST.hasScalarSubwordLoads();
   if (Size % 32 != 0 && !IsSubwordLoad) {
     const Function &Fn = MF.getFunction();
     Fn.getContext().diagnose(DiagnosticInfoUnsupported(
@@ -7684,7 +7684,7 @@ bool AMDGPULegalizerInfo::legalizeSBufferLoad(LegalizerHelper &Helper,
   }
 
   unsigned Opc = 0;
-  if (Size < 32 && ST.hasScalarSubwordLoads()) {
+  if (IsSubwordLoad) {
     assert(Size == 8 || Size == 16);
     Opc = Size == 8 ? AMDGPU::G_AMDGPU_S_BUFFER_LOAD_UBYTE
                     : AMDGPU::G_AMDGPU_S_BUFFER_LOAD_USHORT;

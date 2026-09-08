@@ -19,6 +19,20 @@ define amdgpu_kernel void @ptr_s_buffer_load_i4(ptr addrspace(1) %out, ptr addrs
   ret void
 }
 
+; CHECK: error: {{.*}} in function ptr_s_buffer_load_i2 {{.*}}: unsupported s_buffer_load result type
+define amdgpu_kernel void @ptr_s_buffer_load_i2(ptr addrspace(1) %out, ptr addrspace(8) inreg %rsrc, i32 inreg %offset) {
+  %load = call i2 @llvm.amdgcn.ptr.s.buffer.load.i2(ptr addrspace(8) %rsrc, i32 %offset, i32 0)
+  store i2 %load, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK: error: {{.*}} in function ptr_s_buffer_load_v3i8 {{.*}}: unsupported s_buffer_load result type
+define amdgpu_kernel void @ptr_s_buffer_load_v3i8(ptr addrspace(1) %out, ptr addrspace(8) inreg %rsrc, i32 inreg %offset) {
+  %load = call <3 x i8> @llvm.amdgcn.ptr.s.buffer.load.v3i8(ptr addrspace(8) %rsrc, i32 %offset, i32 0)
+  store <3 x i8> %load, ptr addrspace(1) %out
+  ret void
+}
+
 ; CHECK: error: {{.*}} in function ptr_s_buffer_load_v2i1 {{.*}}: unsupported s_buffer_load result type
 define amdgpu_kernel void @ptr_s_buffer_load_v2i1(ptr addrspace(1) %out, ptr addrspace(8) inreg %rsrc, i32 inreg %offset) {
   %load = call <2 x i1> @llvm.amdgcn.ptr.s.buffer.load.v2i1(ptr addrspace(8) %rsrc, i32 %offset, i32 0)

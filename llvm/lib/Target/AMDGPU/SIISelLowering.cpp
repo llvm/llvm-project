@@ -93,12 +93,6 @@ static unsigned findFirstFreeSGPR(CCState &CCInfo) {
   llvm_unreachable("Cannot allocate sgpr");
 }
 
-// Marked Custom for s_buffer_load alone. The action applies to the whole
-// opcode, so ReplaceNodeResults must not divert other intrinsics returning one
-// of these types.
-static constexpr MVT SBufferLoadOnlyChainTypes[] = {MVT::i1, MVT::i4, MVT::v2i1,
-                                                    MVT::v6i8};
-
 SITargetLowering::SITargetLowering(const TargetMachine &TM,
                                    const GCNSubtarget &STI)
     : AMDGPUTargetLowering(TM, STI, STI), Subtarget(&STI) {
@@ -1023,8 +1017,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::INTRINSIC_WO_CHAIN,
                      {MVT::Other, MVT::f32, MVT::v4f32, MVT::i16, MVT::f16,
                       MVT::bf16, MVT::v2i16, MVT::v2f16, MVT::v2bf16, MVT::i128,
-                      MVT::i8, MVT::i1, MVT::i4, MVT::v2i1, MVT::v3i16,
-                      MVT::v3f16, MVT::v6i8},
+                      MVT::i8},
                      Custom);
 
   setOperationAction(ISD::INTRINSIC_W_CHAIN,
@@ -1033,7 +1026,22 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                       MVT::v8i16, MVT::v8f16, MVT::v8bf16, MVT::Other, MVT::f16,
                       MVT::i16, MVT::bf16, MVT::i8, MVT::i128},
                      Custom);
-  setOperationAction(ISD::INTRINSIC_W_CHAIN, SBufferLoadOnlyChainTypes, Custom);
+
+  // The s_buffer_load intrinsics accept any result type in IR, but only a few
+  // of them can be selected. Mark the remaining illegal result types Custom so
+  // ReplaceNodeResults gets a chance to diagnose them instead of letting the
+  // type legalizer abort. Its INTRINSIC_WO_CHAIN case dispatches on the
+  // intrinsic ID, but INTRINSIC_W_CHAIN does not, so remember the types added
+  // here to keep other chained intrinsics on generic legalization.
+  for (MVT VT : MVT::all_valuetypes()) {
+    if (VT.isScalableVector() || isTypeLegal(VT))
+      continue;
+    setOperationAction(ISD::INTRINSIC_WO_CHAIN, VT, Custom);
+    if (getOperationAction(ISD::INTRINSIC_W_CHAIN, VT) != Custom) {
+      setOperationAction(ISD::INTRINSIC_W_CHAIN, VT, Custom);
+      SBufferLoadDiagnosticVTs.set(VT.SimpleTy);
+    }
+  }
 
   setOperationAction(ISD::INTRINSIC_VOID,
                      {MVT::Other, MVT::v2i16, MVT::v2f16, MVT::v2bf16,
@@ -8424,7 +8432,7 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::INTRINSIC_W_CHAIN: {
     if (N->getConstantOperandVal(1) != Intrinsic::amdgcn_ptr_s_buffer_load &&
         N->getValueType(0).isSimple() &&
-        is_contained(SBufferLoadOnlyChainTypes, N->getSimpleValueType(0)))
+        SBufferLoadDiagnosticVTs[N->getSimpleValueType(0).SimpleTy])
       break;
     if (SDValue Res = LowerINTRINSIC_W_CHAIN(SDValue(N, 0), DAG)) {
       if (Res.getOpcode() == ISD::MERGE_VALUES) {

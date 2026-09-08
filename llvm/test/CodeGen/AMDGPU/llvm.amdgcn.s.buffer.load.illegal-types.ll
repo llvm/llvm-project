@@ -19,6 +19,20 @@ define amdgpu_ps void @s_buffer_load_i4(<4 x i32> inreg %desc, ptr addrspace(1) 
   ret void
 }
 
+; CHECK: error: {{.*}} in function s_buffer_load_i2 {{.*}}: unsupported s_buffer_load result type
+define amdgpu_ps void @s_buffer_load_i2(<4 x i32> inreg %desc, ptr addrspace(1) %out) {
+  %load = call i2 @llvm.amdgcn.s.buffer.load.i2(<4 x i32> %desc, i32 0, i32 0)
+  store i2 %load, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK: error: {{.*}} in function s_buffer_load_v3i8 {{.*}}: unsupported s_buffer_load result type
+define amdgpu_ps void @s_buffer_load_v3i8(<4 x i32> inreg %desc, ptr addrspace(1) %out) {
+  %load = call <3 x i8> @llvm.amdgcn.s.buffer.load.v3i8(<4 x i32> %desc, i32 0, i32 0)
+  store <3 x i8> %load, ptr addrspace(1) %out
+  ret void
+}
+
 ; CHECK: error: {{.*}} in function s_buffer_load_v2i1 {{.*}}: unsupported s_buffer_load result type
 define amdgpu_ps void @s_buffer_load_v2i1(<4 x i32> inreg %desc, ptr addrspace(1) %out) {
   %load = call <2 x i1> @llvm.amdgcn.s.buffer.load.v2i1(<4 x i32> %desc, i32 0, i32 0)
