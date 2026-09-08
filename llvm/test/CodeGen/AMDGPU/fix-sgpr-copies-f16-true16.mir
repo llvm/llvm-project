@@ -273,8 +273,11 @@ body:             |
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[DEF2:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[DEF]].lo16, %subreg.lo16, [[DEF2]], %subreg.hi16
+  ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
-  ; GCN-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.0, [[DEF]].lo16, %bb.1
+  ; GCN-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.0, [[REG_SEQUENCE]], %bb.1
   ; GCN-NEXT:   S_ENDPGM 0, implicit [[PHI]]
   bb.0:
     liveins: $scc
@@ -307,8 +310,11 @@ body:             |
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT:   [[DEF2:%[0-9]+]]:vgpr_16 = IMPLICIT_DEF
+  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[DEF]].hi16, %subreg.lo16, [[DEF2]], %subreg.hi16
+  ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
-  ; GCN-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.0, [[DEF]].hi16, %bb.1
+  ; GCN-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY]], %bb.0, [[REG_SEQUENCE]], %bb.1
   ; GCN-NEXT:   S_ENDPGM 0, implicit [[PHI]]
   bb.0:
     liveins: $scc
