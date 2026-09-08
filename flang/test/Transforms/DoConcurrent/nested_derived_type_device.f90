@@ -45,8 +45,9 @@ end subroutine
 
 ! CHECK-LABEL: func.func @{{.*}}nested_derived()
 ! CHECK:   %[[ARR_A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "{{.*}}a"}
+! CHECK:   omp.map.info var_ptr(%[[ARR_A]]#1 : {{.*}}) map_clauses(implicit, tofrom) capture(ByRef)
 ! CHECK-NOT: mapper(
-! CHECK:   omp.map.info var_ptr(%[[ARR_A]]#1 : {{.*}}) map_clauses(implicit, tofrom) capture(ByRef) {{.*}} name("{{.*}}a")
+! CHECK-SAME: name("{{.*}}a")
 ! CHECK:   omp.target
 ! CHECK:   omp.teams
 ! CHECK:   omp.parallel
