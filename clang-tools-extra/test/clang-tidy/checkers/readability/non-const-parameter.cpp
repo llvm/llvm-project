@@ -524,3 +524,46 @@ struct QualifiedMemberOverload {
   }
   void withConstQualifier(const int *qualifiedMemberPtr) {}
 };
+
+// The 'expected' operand of a compare-exchange receives the old value when the
+// exchange fails.
+bool atomicCompareExchangeN(int *obj, int *expected, int desired) {
+  return __atomic_compare_exchange_n(obj, expected, desired, false,
+                                     __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
+
+bool atomicCompareExchange(int *obj, int *expected, int *desired) {
+  return __atomic_compare_exchange(obj, expected, desired, false,
+                                   __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
+
+// Operands are followed through pointer arithmetic.
+bool atomicCompareExchangeOffset(int *obj, int *expected, int desired) {
+  return __atomic_compare_exchange_n(obj, expected + 1, desired, false,
+                                     __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
+
+// The non-'_n' load and exchange forms write their result through an operand.
+void atomicLoadOut(int *obj, int *dest) {
+  __atomic_load(obj, dest, __ATOMIC_SEQ_CST);
+}
+
+void atomicExchangeOut(int *obj, int *val, int *old) {
+  __atomic_exchange(obj, val, old, __ATOMIC_SEQ_CST);
+}
+
+// Only the operands of the atomic builtin are affected. Other parameters are
+// still reported.
+// CHECK-MESSAGES: :[[@LINE+1]]:66: warning: pointer parameter 'unrelated' can be pointer to const
+int atomicCompareExchangeUnrelated(int *obj, int *expected, int *unrelated) {
+  // CHECK-FIXES: int atomicCompareExchangeUnrelated(int *obj, int *expected, const int *unrelated) {
+  return __atomic_compare_exchange_n(obj, expected, 0, false,
+                                     __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST) +
+         *unrelated;
+}
+
+// Conservatively, operands of other atomic builtins are not suggested as const
+// either, matching the existing treatment of ordinary function calls.
+int atomicLoad(int *p) {
+  return __atomic_load_n(p, __ATOMIC_SEQ_CST);
+}
