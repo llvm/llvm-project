@@ -7,10 +7,9 @@ add_mlir_dialect_library(MLIRVectorDialect
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Vector/IR
 
   DEPENDS
-  MLIRMaskableOpInterfaceIncGen
-  MLIRMaskingOpInterfaceIncGen
   MLIRVectorOpsIncGen
   MLIRVectorAttributesIncGen
+  MLIRVectorIncGen
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect

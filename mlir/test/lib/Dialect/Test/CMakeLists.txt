@@ -68,7 +68,10 @@ add_mlir_library(MLIRTestDialect
   MLIRTestOpsIncGen
   MLIRTestOpsSyntaxIncGen
   MLIRTestOpsShardGen
-  MLIRConvertToEmitCPatternInterfaceIncGen
+
+  # TestDialectInterfaces.cpp includes the generated ToEmitCInterface.
+  HEADER_LIBS
+  MLIRConvertToEmitC
   )
 mlir_target_link_libraries(MLIRTestDialect PUBLIC
   MLIRControlFlowInterfaces

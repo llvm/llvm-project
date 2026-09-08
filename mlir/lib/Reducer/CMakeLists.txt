@@ -4,15 +4,16 @@ add_mlir_library(MLIRReduce
    ReductionTreePass.cpp
    Tester.cpp
 
+   DEPENDS
+   MLIRReducerIncGen
+   MLIRDialectReductionPatternInterfaceIncGen
+
    LINK_LIBS PUBLIC
    MLIRIR
    MLIRPass
    MLIRRewrite
    MLIRTransformUtils
 
-   DEPENDS
-   MLIRReducerIncGen
-   MLIRDialectReductionPatternInterfaceIncGen
 )
 
 mlir_check_all_link_libraries(MLIRReduce)

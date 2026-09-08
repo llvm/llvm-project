@@ -42,6 +42,11 @@ add_mlir_dialect_library(MLIRSparseTensorDialect
   MLIRSparseTensorAttrDefsIncGen
   MLIRSparseTensorOpsIncGen
   MLIRSparseTensorTypesIncGen
+  MLIRSparseTensorInterfacesIncGen
+
+  # SparseTensorDialect.cpp includes the generated BufferizableOpInterface.
+  HEADER_LIBS
+  MLIRBufferizationDialect
 
   LINK_LIBS PUBLIC
   MLIRArithDialect

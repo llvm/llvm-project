@@ -554,6 +554,48 @@ function(set_windows_version_resource_properties name resource_file)
                "RC_PRODUCT_VERSION=\"${ARG_VERSION_STRING}\"")
 endfunction(set_windows_version_resource_properties)
 
+# Collect the targets named by a LINK_LIBS item. Generator expressions cannot
+# be evaluated at configure time, so every token that names a target is
+# returned; ordering on all arms of a conditional expression is harmless.
+function(_llvm_link_item_targets output item)
+  if(item MATCHES "\\$<")
+    string(REGEX MATCHALL "[A-Za-z_][A-Za-z0-9_.+-]*(::[A-Za-z0-9_.+-]+)*"
+      candidates "${item}")
+  else()
+    set(candidates "${item}")
+  endif()
+  set(result)
+  foreach(candidate ${candidates})
+    if(TARGET "${candidate}")
+      get_target_property(aliased "${candidate}" ALIASED_TARGET)
+      if(aliased)
+        set(candidate "${aliased}")
+      endif()
+      list(APPEND result "${candidate}")
+    endif()
+  endforeach()
+  set(${output} ${result} PARENT_SCOPE)
+endfunction()
+
+# Order every object library after the targets in its LINK_LIBS, so that the
+# generated headers of a dependency exist before the objects compile. Ninja
+# follows target-level dependencies transitively without waiting for the
+# archives to be linked. This runs once the whole target graph exists, so
+# LINK_LIBS may name targets declared later, generator expressions, or plain
+# libraries such as -lpthread that are not targets at all.
+function(_llvm_add_object_link_dependencies)
+  get_property(object_libraries GLOBAL PROPERTY LLVM_OBJECT_LIBRARIES_WITH_LINK_LIBS)
+  foreach(object_library ${object_libraries})
+    get_target_property(items ${object_library} LLVM_OBJECT_LINK_LIBS)
+    foreach(item ${items})
+      _llvm_link_item_targets(targets "${item}")
+      if(targets)
+        add_dependencies(${object_library} ${targets})
+      endif()
+    endforeach()
+  endforeach()
+endfunction()
+
 # llvm_add_library(name sources...
 #   SHARED;STATIC
 #     STATIC by default w/o BUILD_SHARED_LIBS.
@@ -674,25 +716,24 @@ function(llvm_add_library name)
     if(ARG_DEPENDS)
       add_dependencies(${obj_name} ${ARG_DEPENDS})
     endif()
-    # Treat link libraries like PUBLIC dependencies.  LINK_LIBS might
-    # result in generating header files.  Add a dependendency so that
-    # the generated header is created before this object library.
+    # Order compilation after the LINK_LIBS targets; see
+    # _llvm_add_object_link_dependencies.
     if(ARG_LINK_LIBS)
-      cmake_parse_arguments(LINK_LIBS_ARG
-        ""
-        ""
-        "PUBLIC;PRIVATE"
+      cmake_parse_arguments(LINK_LIBS_ARG "" "" "PUBLIC;PRIVATE;INTERFACE"
         ${ARG_LINK_LIBS})
-      foreach(link_lib ${LINK_LIBS_ARG_PUBLIC})
-        if(LLVM_PTHREAD_LIB)
-          # Can't specify a dependence on -lpthread
-          if(NOT ${link_lib} STREQUAL ${LLVM_PTHREAD_LIB})
-            add_dependencies(${obj_name} ${link_lib})
-          endif()
-        else()
-          add_dependencies(${obj_name} ${link_lib})
-        endif()
-      endforeach()
+      set_property(TARGET ${obj_name} PROPERTY LLVM_OBJECT_LINK_LIBS
+        ${LINK_LIBS_ARG_PUBLIC} ${LINK_LIBS_ARG_PRIVATE}
+        ${LINK_LIBS_ARG_UNPARSED_ARGUMENTS})
+      set_property(GLOBAL APPEND PROPERTY LLVM_OBJECT_LIBRARIES_WITH_LINK_LIBS
+        ${obj_name})
+      get_property(scheduled GLOBAL PROPERTY
+        LLVM_OBJECT_LINK_DEPENDENCIES_SCHEDULED)
+      if(NOT scheduled)
+        cmake_language(DEFER DIRECTORY "${CMAKE_SOURCE_DIR}"
+          CALL _llvm_add_object_link_dependencies)
+        set_property(GLOBAL PROPERTY LLVM_OBJECT_LINK_DEPENDENCIES_SCHEDULED
+          TRUE)
+      endif()
     endif()
 
     if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)

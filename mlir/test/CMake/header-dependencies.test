@@ -1,0 +1,97 @@
+# RUN: rm -rf %t
+# RUN: split-file %s %t
+# RUN: "%cmake_exe" -S %t/valid -B %t/valid-build -G "%cmake_generator" \
+# RUN:   -DMLIR_DIR=%mlir_cmake_dir -DCMAKE_CXX_COMPILER=%host_cxx 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=VALID
+# RUN: not "%cmake_exe" -S %t/invalid -B %t/invalid-build \
+# RUN:   -G "%cmake_generator" -DMLIR_DIR=%mlir_cmake_dir \
+# RUN:   -DCMAKE_CXX_COMPILER=%host_cxx 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=INVALID
+
+# VALID: -- Generated header dependency checks passed
+# INVALID-DAG: BadConsumer: HEADER_LIBS entry 'MisspelledProvider' is not a target
+# INVALID-DAG: BadConsumer: HEADER_LIBS entry 'ProviderIncGen' is not a library
+
+#--- common.cmake
+find_package(MLIR REQUIRED CONFIG)
+list(APPEND CMAKE_MODULE_PATH "${MLIR_CMAKE_DIR}" "${LLVM_CMAKE_DIR}")
+include(TableGen)
+include(AddLLVM)
+include(AddMLIR)
+include(HandleLLVMOptions)
+set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/bin)
+set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_BINARY_DIR}/lib)
+
+set(LLVM_TARGET_DEFINITIONS Provider.td)
+mlir_tablegen(Provider.h.inc -gen-op-decls)
+add_public_tablegen_target(ProviderIncGen)
+mlir_tablegen(Base.h.inc -gen-op-decls)
+add_public_tablegen_target(BaseIncGen)
+# Keep the libraries below from depending on every TableGen target declared in
+# this directory, so the checks only see edges added by the helpers under test.
+set(LLVM_COMMON_DEPENDS)
+
+#--- valid/CMakeLists.txt
+cmake_minimum_required(VERSION 3.20)
+project(HeaderDependencies LANGUAGES C CXX)
+include(../common.cmake)
+
+# Consumers are declared before the provider: resolution is deferred.
+add_mlir_library(LinkConsumer empty.cpp DISABLE_INSTALL
+  LINK_LIBS PRIVATE Provider PUBLIC "$<$<BOOL:1>:ProviderAlias>")
+add_mlir_library(HeaderConsumer empty.cpp DISABLE_INSTALL
+  HEADER_LIBS ProviderAlias)
+add_mlir_library(Provider empty.cpp DISABLE_INSTALL
+  DEPENDS ProviderIncGen
+  LINK_LIBS PUBLIC Base
+  HEADER_LIBS HeaderConsumer)
+add_library(ProviderAlias ALIAS Provider)
+add_mlir_library(Base empty.cpp DISABLE_INSTALL
+  DEPENDS BaseIncGen)
+
+function(expect_dependencies target expected)
+  get_target_property(actual ${target} MANUALLY_ADDED_DEPENDENCIES)
+  # Older CMake versions make a library depend on its own object library.
+  list(FILTER actual EXCLUDE REGEX "^obj\\.")
+  list(SORT actual)
+  list(SORT expected)
+  if(NOT "${actual}" STREQUAL "${expected}")
+    message(FATAL_ERROR
+      "${target}: expected dependencies '${expected}', got '${actual}'")
+  endif()
+endfunction()
+
+function(check_dependencies)
+  # PRIVATE and generator-expression LINK_LIBS both order the object library.
+  expect_dependencies(obj.LinkConsumer "Provider;mlir-generic-headers")
+  # HEADER_LIBS resolves to the TableGen targets of the provider and of what it
+  # links, not to the libraries, for both the object library and the library.
+  expect_dependencies(obj.HeaderConsumer
+    "ProviderIncGen;BaseIncGen;mlir-generic-headers")
+  expect_dependencies(HeaderConsumer
+    "ProviderIncGen;BaseIncGen;mlir-generic-headers")
+  # A provider with a header-only dependency on its own consumer gets no cycle.
+  expect_dependencies(obj.Provider
+    "ProviderIncGen;Base;BaseIncGen;mlir-generic-headers")
+  message(STATUS "Generated header dependency checks passed")
+endfunction()
+cmake_language(DEFER CALL check_dependencies)
+
+#--- valid/empty.cpp
+void empty() {}
+
+#--- valid/Provider.td
+// Only configuration is under test.
+
+#--- invalid/CMakeLists.txt
+cmake_minimum_required(VERSION 3.20)
+project(HeaderDependenciesInvalid LANGUAGES C CXX)
+include(../common.cmake)
+add_mlir_library(BadConsumer empty.cpp DISABLE_INSTALL
+  HEADER_LIBS MisspelledProvider ProviderIncGen)
+
+#--- invalid/empty.cpp
+void empty() {}
+
+#--- invalid/Provider.td
+// Only configuration is under test.

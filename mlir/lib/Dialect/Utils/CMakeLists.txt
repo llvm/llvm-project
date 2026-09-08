@@ -7,6 +7,9 @@ add_mlir_library(MLIRDialectUtils
 
   DEPENDS
   MLIRDialectUtilsIncGen
+
+  # ReshapeOpsUtils.h includes the generated Arith operation declarations.
+  HEADER_LIBS
   MLIRArithDialect
 
   LINK_LIBS PUBLIC

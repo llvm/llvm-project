@@ -7,6 +7,10 @@ add_mlir_dialect_library(MLIRIndexDialect
   DEPENDS
   MLIRIndexOpsIncGen
 
+  # IndexDialect.cpp includes mlir/Transforms/InliningUtils.h.
+  HEADER_LIBS
+  MLIRTransformUtils
+
   LINK_LIBS PUBLIC
   MLIRDialect
   MLIRIR

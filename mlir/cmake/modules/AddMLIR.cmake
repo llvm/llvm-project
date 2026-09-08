@@ -273,6 +273,91 @@ function(_check_llvm_components_usage name)
   endforeach()
 endfunction()
 
+# Record HEADER_LIBS for resolution once every target exists, so providers may
+# be declared later and typos are diagnosed.
+function(_mlir_add_header_libs target)
+  if(NOT ARGN)
+    return()
+  endif()
+  set_property(TARGET ${target} APPEND PROPERTY MLIR_HEADER_LIBS ${ARGN})
+  set_property(GLOBAL APPEND PROPERTY MLIR_HEADER_LIBS_CONSUMERS ${target})
+  get_property(scheduled GLOBAL PROPERTY MLIR_HEADER_LIBS_SCHEDULED)
+  if(NOT scheduled)
+    cmake_language(DEFER DIRECTORY "${CMAKE_SOURCE_DIR}"
+      CALL _mlir_resolve_header_libs)
+    set_property(GLOBAL PROPERTY MLIR_HEADER_LIBS_SCHEDULED TRUE)
+  endif()
+endfunction()
+
+# Order each consumer after the TableGen targets of its HEADER_LIBS and of
+# everything they link or list in HEADER_LIBS, mirroring how a link dependency
+# propagates. Depending on those TableGen targets rather than on the libraries
+# keeps a header-only relationship from forming a dependency cycle when the
+# provider links the consumer.
+function(_mlir_resolve_header_libs)
+  get_property(consumers GLOBAL PROPERTY MLIR_HEADER_LIBS_CONSUMERS)
+  foreach(consumer ${consumers})
+    set(consumer_targets ${consumer})
+    if(TARGET obj.${consumer})
+      list(APPEND consumer_targets obj.${consumer})
+    endif()
+    get_target_property(providers ${consumer} MLIR_HEADER_LIBS)
+    set(queue)
+    foreach(provider ${providers})
+      if(NOT TARGET "${provider}")
+        message(SEND_ERROR
+          "${consumer}: HEADER_LIBS entry '${provider}' is not a target")
+        continue()
+      endif()
+      get_target_property(type ${provider} TYPE)
+      if(type STREQUAL "UTILITY")
+        message(SEND_ERROR
+          "${consumer}: HEADER_LIBS entry '${provider}' is not a library; "
+          "list TableGen targets in DEPENDS instead")
+        continue()
+      endif()
+      _llvm_link_item_targets(targets "${provider}")
+      list(APPEND queue ${targets})
+    endforeach()
+
+    set(visited)
+    set(tablegen_targets)
+    while(queue)
+      list(POP_FRONT queue provider)
+      if(provider IN_LIST visited)
+        continue()
+      endif()
+      list(APPEND visited ${provider})
+      get_target_property(imported ${provider} IMPORTED)
+      if(imported)
+        # Installed headers already exist.
+        continue()
+      endif()
+      get_target_property(dependencies ${provider} MANUALLY_ADDED_DEPENDENCIES)
+      foreach(dependency ${dependencies})
+        if(TARGET "${dependency}")
+          get_target_property(type ${dependency} TYPE)
+          if(type STREQUAL "UTILITY")
+            list(APPEND tablegen_targets ${dependency})
+          endif()
+        endif()
+      endforeach()
+      get_target_property(links ${provider} INTERFACE_LINK_LIBRARIES)
+      get_target_property(header_libs ${provider} MLIR_HEADER_LIBS)
+      foreach(item ${links} ${header_libs})
+        _llvm_link_item_targets(targets "${item}")
+        list(APPEND queue ${targets})
+      endforeach()
+    endwhile()
+    list(REMOVE_DUPLICATES tablegen_targets)
+    if(tablegen_targets)
+      foreach(consumer_target ${consumer_targets})
+        add_dependencies(${consumer_target} ${tablegen_targets})
+      endforeach()
+    endif()
+  endforeach()
+endfunction()
+
 function(add_mlir_example_library name)
   cmake_parse_arguments(ARG
     "SHARED;DISABLE_INSTALL"
@@ -325,11 +410,16 @@ endfunction()
 #   are compatible with building an object library.
 # STANDALONE
 #   Don't link against LLVMSupport.
+# HEADER_LIBS
+#   MLIR libraries whose generated headers this library includes without
+#   linking them; compilation is ordered after the TableGen targets of those
+#   libraries and of the libraries they link. Libraries in LINK_LIBS need no
+#   entry here, and a library's own TableGen targets belong in DEPENDS.
 function(add_mlir_library name)
   cmake_parse_arguments(ARG
     "SHARED;INSTALL_WITH_TOOLCHAIN;EXCLUDE_FROM_LIBMLIR;DISABLE_INSTALL;ENABLE_AGGREGATION;OBJECT;STANDALONE"
     ""
-    "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS"
+    "ADDITIONAL_HEADERS;DEPENDS;HEADER_LIBS;LINK_COMPONENTS;LINK_LIBS"
     ${ARGN})
   _set_mlir_additional_headers_as_srcs(${ARG_ADDITIONAL_HEADERS})
 
@@ -388,6 +478,7 @@ function(add_mlir_library name)
 
   list(APPEND ARG_DEPENDS mlir-generic-headers)
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs} DEPENDS ${ARG_DEPENDS} LINK_COMPONENTS ${ARG_LINK_COMPONENTS} LINK_LIBS ${ARG_LINK_LIBS})
+  _mlir_add_header_libs(${name} ${ARG_HEADER_LIBS})
 
   if(TARGET ${name})
     target_link_libraries(${name} INTERFACE ${LLVM_COMMON_LIBS})
@@ -677,25 +768,25 @@ endfunction()
 # Declare the library associated with a dialect.
 function(add_mlir_dialect_library name)
   set_property(GLOBAL APPEND PROPERTY MLIR_DIALECT_LIBS ${name})
-  add_mlir_library(${ARGV} DEPENDS mlir-headers)
+  add_mlir_library(${ARGV})
 endfunction(add_mlir_dialect_library)
 
 # Declare the library associated with a conversion.
 function(add_mlir_conversion_library name)
   set_property(GLOBAL APPEND PROPERTY MLIR_CONVERSION_LIBS ${name})
-  add_mlir_library(${ARGV} DEPENDS mlir-headers)
+  add_mlir_library(${ARGV})
 endfunction(add_mlir_conversion_library)
 
 # Declare the library associated with an extension.
 function(add_mlir_extension_library name)
   set_property(GLOBAL APPEND PROPERTY MLIR_EXTENSION_LIBS ${name})
-  add_mlir_library(${ARGV} DEPENDS mlir-headers)
+  add_mlir_library(${ARGV})
 endfunction(add_mlir_extension_library)
 
 # Declare the library associated with a translation.
 function(add_mlir_translation_library name)
   set_property(GLOBAL APPEND PROPERTY MLIR_TRANSLATION_LIBS ${name})
-  add_mlir_library(${ARGV} DEPENDS mlir-headers)
+  add_mlir_library(${ARGV})
 endfunction(add_mlir_translation_library)
 
 # Verification tools to aid debugging.

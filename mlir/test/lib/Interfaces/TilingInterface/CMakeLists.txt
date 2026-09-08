@@ -6,10 +6,10 @@ add_public_tablegen_target(MLIRTestTilingInterfaceTransformOpsIncGen)
 add_mlir_library(MLIRTilingInterfaceTestPasses
   TestTilingInterfaceTransformOps.cpp
 
+  EXCLUDE_FROM_LIBMLIR
+
   DEPENDS
   MLIRTestTilingInterfaceTransformOpsIncGen
-
-  EXCLUDE_FROM_LIBMLIR
   )
 mlir_target_link_libraries(MLIRTilingInterfaceTestPasses PUBLIC
   MLIRAffineDialect

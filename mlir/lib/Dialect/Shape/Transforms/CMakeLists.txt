@@ -9,10 +9,15 @@ add_mlir_dialect_library(MLIRShapeOpsTransforms
 
   DEPENDS
   MLIRShapeTransformsIncGen
-  )
 
-target_link_libraries(MLIRShapeOpsTransforms
-  PUBLIC
+  # The implementations include FuncOps.h and Tensor.h; Tensor.h includes
+  # Dialect/Utils/ReshapeOpsUtils.h.
+  HEADER_LIBS
+  MLIRDialectUtils
+  MLIRFuncDialect
+  MLIRTensorDialect
+
+  LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIRBufferizationDialect
   MLIRBufferizationTransforms

@@ -21,9 +21,6 @@ mlir_target_link_libraries(MLIRPythonTestDialect PUBLIC
 add_mlir_public_c_api_library(MLIRCAPIPythonTestDialect
   PythonTestCAPI.cpp
 
-  DEPENDS
-  MLIRPythonTestIncGen
-
   LINK_LIBS PUBLIC
   MLIRCAPIInterfaces
   MLIRCAPIIR

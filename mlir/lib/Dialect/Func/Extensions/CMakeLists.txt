@@ -10,6 +10,10 @@ add_mlir_extension_library(MLIRFuncInlinerExtension
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Func/Extensions
 
+  # InlinerExtension.cpp includes mlir/Transforms/InliningUtils.h.
+  HEADER_LIBS
+  MLIRTransformUtils
+
   LINK_LIBS PUBLIC
   MLIRControlFlowDialect
   MLIRInferTypeOpInterface

@@ -4,6 +4,10 @@ add_mlir_library(MLIRShardTest
   TestReshardingPartition.cpp
 
   EXCLUDE_FROM_LIBMLIR
+
+  # TestReshardingPartition.cpp includes SPIRVOps.h.
+  HEADER_LIBS
+  MLIRSPIRVDialect
   )
 mlir_target_link_libraries(MLIRShardTest PUBLIC
   MLIRShardDialect

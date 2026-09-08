@@ -3,9 +3,6 @@ add_mlir_conversion_library(MLIRGPUToSPIRV
   GPUToSPIRVPass.cpp
   WmmaOpsToSPIRV.cpp
 
-  DEPENDS
-  MLIRConversionPassIncGen
-
   LINK_LIBS PUBLIC
   MLIRArithToSPIRV
   MLIRGPUDialect

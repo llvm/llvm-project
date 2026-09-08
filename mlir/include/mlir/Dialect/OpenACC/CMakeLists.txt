@@ -3,6 +3,8 @@ add_subdirectory(Transforms)
 set(LLVM_TARGET_DEFINITIONS ${LLVM_MAIN_INCLUDE_DIR}/llvm/Frontend/OpenACC/ACC.td)
 mlir_tablegen(AccCommon.td --gen-directive-decl --directives-dialect=OpenACC)
 add_mlir_dialect_tablegen_target(acc_common_td)
+# Subsequent TableGen inputs include the generated AccCommon.td file.
+list(APPEND LLVM_TARGET_DEPENDS acc_common_td)
 
 add_mlir_dialect(OpenACCOps acc)
 
@@ -25,3 +27,4 @@ set(LLVM_TARGET_DEFINITIONS OpenACCTypeInterfaces.td)
 mlir_tablegen(OpenACCTypeInterfaces.h.inc -gen-type-interface-decls)
 mlir_tablegen(OpenACCTypeInterfaces.cpp.inc -gen-type-interface-defs)
 add_mlir_dialect_tablegen_target(MLIROpenACCTypeInterfacesIncGen)
+list(REMOVE_ITEM LLVM_TARGET_DEPENDS acc_common_td)

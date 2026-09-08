@@ -7,9 +7,6 @@ add_mlir_conversion_library(MLIROpenACCToLLVM
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/OpenACCToLLVM
 
-  DEPENDS
-  MLIRConversionPassIncGen
-
   LINK_LIBS PUBLIC
   MLIRArithToLLVM
   MLIRComplexDialect

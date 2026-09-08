@@ -60,14 +60,10 @@ add_mlir_library(MLIRIR
   MLIRBuiltinTypesIncGen
   MLIRBuiltinTypeConstraintsIncGen
   MLIRBuiltinTypeInterfacesIncGen
-  MLIRCallInterfacesIncGen
-  MLIRCastInterfacesIncGen
-  MLIRDataLayoutInterfacesIncGen
   MLIRDialectFoldInterfaceIncGen
   MLIROpAsmInterfaceIncGen
   MLIRQuantStorageTypeInterfaceIncGen
   MLIRRegionKindInterfaceIncGen
-  MLIRSideEffectInterfacesIncGen
   MLIRSymbolInterfacesIncGen
   MLIRTensorEncodingIncGen
   MLIROpAsmDialectInterfaceIncGen

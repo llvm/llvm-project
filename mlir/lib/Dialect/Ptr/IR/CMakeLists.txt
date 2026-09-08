@@ -10,8 +10,8 @@ add_mlir_dialect_library(
   MemorySpaceInterfaces.cpp
 
   DEPENDS
-  MLIRPtrOpsEnumsGen
   MLIRPtrMemorySpaceInterfacesIncGen
+
   LINK_LIBS
   PUBLIC
   MLIRIR
@@ -27,7 +27,11 @@ add_mlir_dialect_library(
   MLIRPtrOpsAttributesIncGen
   MLIRPtrOpsIncGen
   MLIRPtrOpsEnumsGen
-  MLIRPtrMemorySpaceInterfacesIncGen
+
+  # PtrDialect.cpp includes mlir/Transforms/InliningUtils.h.
+  HEADER_LIBS
+  MLIRTransformUtils
+
   LINK_LIBS
   PUBLIC
   MLIRIR

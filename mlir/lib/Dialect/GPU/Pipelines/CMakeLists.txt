@@ -6,6 +6,13 @@ add_mlir_dialect_library(MLIRGPUPipelines
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU
 
+  # GPUToXeVMPipeline.cpp includes the aggregate Conversion/Passes.h header,
+  # whose declarations include these generated dialect and pass headers.
+  HEADER_LIBS
+  MLIRArmSMETransforms
+  MLIROpenACCDialect
+  MLIRTosaTransforms
+
   LINK_LIBS PUBLIC
   MLIRMemRefTransforms
   MLIRFuncDialect

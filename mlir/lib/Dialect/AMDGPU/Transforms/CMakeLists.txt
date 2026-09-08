@@ -10,6 +10,10 @@ add_mlir_dialect_library(MLIRAMDGPUTransforms
   DEPENDS
   MLIRAMDGPUTransformsIncGen
 
+  # MaskedloadToLoad.cpp includes VectorTransforms.h.
+  HEADER_LIBS
+  MLIRVectorTransforms
+
   LINK_LIBS PUBLIC
   MLIRAMDGPUDialect
   MLIRAMDGPUUtils

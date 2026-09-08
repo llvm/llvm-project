@@ -17,6 +17,10 @@ add_mlir_dialect_library(MLIRTensorDialect
   DEPENDS
   MLIRTensorOpsIncGen
 
+  # TensorDialect.cpp includes TransformInterfaces.h.
+  HEADER_LIBS
+  MLIRTransformDialectInterfaces
+
   LINK_LIBS PUBLIC
   MLIRAffineDialect
   MLIRArithDialect
