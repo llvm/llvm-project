@@ -1096,6 +1096,23 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
         continue;
       }
 
+      // Some conditional reductions use a select instead of a branch, e.g.
+      // `select(cond, phi + x, phi)`. Fold it away like a blend, since the
+      // reduction recipe created below already applies the condition as a
+      // mask. But a select isn't a phi, so we also erase it here - otherwise
+      // it would be left in the block pointing at the reduction recipe,
+      // which only gets created afterwards.
+      if (!RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind) &&
+          match(CurrentLink, m_Select(m_VPValue(), m_VPValue(), m_VPValue()))) {
+        VPValue *TrueVal = CurrentLink->getOperand(1);
+        VPValue *FalseVal = CurrentLink->getOperand(2);
+        if (TrueVal == PhiR || FalseVal == PhiR) {
+          CurrentLink->replaceAllUsesWith(TrueVal == PhiR ? FalseVal : TrueVal);
+          ToDelete.push_back(CurrentLink);
+          continue;
+        }
+      }
+
       if (IsFPRecurrence) {
         FastMathFlags CurFMF =
             cast<VPRecipeWithIRFlags>(CurrentLink)->getFastMathFlagsOrNone();
@@ -1166,6 +1183,32 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
       assert(PhiR->getVFScaleFactor() == 1 &&
              "inloop reductions must be unscaled");
       VPValue *CondOp = cast<VPInstruction>(CurrentLink)->getMask();
+      if (!RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
+        // A select wrapping this fadd/fsub (e.g. `select(cond, phi + x,
+        // phi)`) carries the reduction's real condition. Any mask already
+        // on the fadd/fsub just means it runs unconditionally, so we AND
+        // the select's condition onto the loop's header mask instead --
+        // that's the shape a later EVL-lowering pass expects to see.
+        for (VPUser *U : CurrentLink->users()) {
+          auto *Sel = dyn_cast<VPInstruction>(U);
+          if (!Sel ||
+              !match(Sel, m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
+            continue;
+          VPValue *TrueVal = Sel->getOperand(1);
+          VPValue *FalseVal = Sel->getOperand(2);
+          if ((TrueVal == CurrentLink && FalseVal == PreviousLink) ||
+              (FalseVal == CurrentLink && TrueVal == PreviousLink)) {
+            VPValue *SelCond = Sel->getOperand(0);
+            if (VPValue *HeaderMask =
+                    Plan.getVectorLoopRegion()->getHeaderMask()) {
+              VPBuilder CondBuilder(LinkVPBB, CurrentLink->getIterator());
+              SelCond = CondBuilder.createLogicalAnd(HeaderMask, SelCond);
+            }
+            CondOp = SelCond;
+            break;
+          }
+        }
+      }
       auto *RedRecipe = new VPReductionRecipe(
           Kind, FMFs, CurrentLinkI, PreviousLink, VecOp, CondOp,
           getReductionStyle(/*IsInLoop=*/true, PhiR->isOrdered(), 1),
