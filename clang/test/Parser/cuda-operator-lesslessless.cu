@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -x hip %s
 // RUN: not %clang_cc1 -fsyntax-only %s -DSLOC_CHECK 2>&1 | FileCheck %s
 
-// Make sure operator followed by <<< is parsed as << and < since int CUDA/HIP
+// Make sure operator followed by <<< is parsed as << and < since in CUDA/HIP
 // it can never be a kernel launch expression.
 
 template <typename T, typename T1> void operator<<(T, T1); // expected-error {{overloaded 'operator<<' must have at least one parameter of class or enumeration type}} \
