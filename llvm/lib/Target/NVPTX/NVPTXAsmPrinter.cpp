@@ -597,8 +597,7 @@ void NVPTXAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
     OutMI.addOperand(lowerOperand(*MI, I));
 }
 
-static bool isCallPrototypeOperand(const MachineInstr &MI,
-                                       unsigned OpNum) {
+static bool isCallPrototypeOperand(const MachineInstr &MI, unsigned OpNum) {
   return OpNum == 3 &&
          (MI.getOpcode() == NVPTX::CALL || MI.getOpcode() == NVPTX::CALL_conv);
 }
@@ -969,8 +968,8 @@ void NVPTXAsmPrinter::emitFunctionBodyStart() {
   CallPrototypeSymbols.clear();
   const auto *MFI = MF->getInfo<NVPTXMachineFunctionInfo>();
   for (const auto &[Id, CB] : MFI->getCallPrototypes()) {
-    MCSymbol *Symbol = OutContext.createTempSymbol(
-        "prototype_" + Twine(Id), /*AlwaysAddSuffix=*/false);
+    MCSymbol *Symbol = OutContext.createTempSymbol("prototype_" + Twine(Id),
+                                                   /*AlwaysAddSuffix=*/false);
     CallPrototypeSymbols.try_emplace(Id, Symbol);
     emitCallPrototype(*CB, Symbol, O);
   }
