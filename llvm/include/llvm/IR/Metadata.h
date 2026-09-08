@@ -395,19 +395,15 @@ public:
   using OwnerTy = MetadataTracking::OwnerTy;
 
 private:
-  LLVMContext &Context;
   uint64_t NextIndex = 0;
   SmallDenseMap<void *, std::pair<OwnerTy, uint64_t>, 4> UseMap;
 
-public:
-  ReplaceableMetadataImpl(LLVMContext &Context) : Context(Context) {}
-
+protected:
   ~ReplaceableMetadataImpl() {
     assert(UseMap.empty() && "Cannot destroy in-use replaceable metadata");
   }
 
-  LLVMContext &getContext() const { return Context; }
-
+public:
   /// Replace all uses of this with MD.
   ///
   /// Replace all uses of this with \c MD, which is allowed to be null.
@@ -448,6 +444,17 @@ private:
   static bool isReplaceable(const Metadata &MD);
 };
 
+/// Replaceable metadata that remembers its \a LLVMContext, for owners with no
+/// other route to it. \a ValueAsMetadata goes through the wrapped \a Value.
+class ReplaceableMetadataImplWithContext : public ReplaceableMetadataImpl {
+  LLVMContext &Context;
+
+public:
+  ReplaceableMetadataImplWithContext(LLVMContext &Context) : Context(Context) {}
+
+  LLVMContext &getContext() const { return Context; }
+};
+
 /// Value wrapper in the Metadata hierarchy.
 ///
 /// This is a custom value handle that allows other metadata to refer to
@@ -468,8 +475,7 @@ class ValueAsMetadata : public Metadata, ReplaceableMetadataImpl {
   }
 
 protected:
-  ValueAsMetadata(unsigned ID, Value *V)
-      : Metadata(ID, Uniqued), ReplaceableMetadataImpl(V->getContext()), V(V) {
+  ValueAsMetadata(unsigned ID, Value *V) : Metadata(ID, Uniqued), V(V) {
     assert(V && "Expected valid value");
   }
 
@@ -964,14 +970,14 @@ template <> struct simplify_type<const MDOperand> {
 /// Pointer to the context, with optional RAUW support.
 ///
 /// Either a raw (non-null) pointer to the \a LLVMContext, or an owned pointer
-/// to \a ReplaceableMetadataImpl (which has a reference to \a LLVMContext).
+/// to \a ReplaceableMetadataImplWithContext.
 class ContextAndReplaceableUses {
-  PointerUnion<LLVMContext *, ReplaceableMetadataImpl *> Ptr;
+  PointerUnion<LLVMContext *, ReplaceableMetadataImplWithContext *> Ptr;
 
 public:
   ContextAndReplaceableUses(LLVMContext &Context) : Ptr(&Context) {}
   ContextAndReplaceableUses(
-      std::unique_ptr<ReplaceableMetadataImpl> ReplaceableUses)
+      std::unique_ptr<ReplaceableMetadataImplWithContext> ReplaceableUses)
       : Ptr(ReplaceableUses.release()) {
     assert(getReplaceableUses() && "Expected non-null replaceable uses");
   }
@@ -987,7 +993,7 @@ public:
 
   /// Whether this contains RAUW support.
   bool hasReplaceableUses() const {
-    return isa<ReplaceableMetadataImpl *>(Ptr);
+    return isa<ReplaceableMetadataImplWithContext *>(Ptr);
   }
 
   LLVMContext &getContext() const {
@@ -996,16 +1002,17 @@ public:
     return *cast<LLVMContext *>(Ptr);
   }
 
-  ReplaceableMetadataImpl *getReplaceableUses() const {
+  ReplaceableMetadataImplWithContext *getReplaceableUses() const {
     if (hasReplaceableUses())
-      return cast<ReplaceableMetadataImpl *>(Ptr);
+      return cast<ReplaceableMetadataImplWithContext *>(Ptr);
     return nullptr;
   }
 
   /// Ensure that this has RAUW support, and then return it.
-  ReplaceableMetadataImpl *getOrCreateReplaceableUses() {
+  ReplaceableMetadataImplWithContext *getOrCreateReplaceableUses() {
     if (!hasReplaceableUses())
-      makeReplaceable(std::make_unique<ReplaceableMetadataImpl>(getContext()));
+      makeReplaceable(
+          std::make_unique<ReplaceableMetadataImplWithContext>(getContext()));
     return getReplaceableUses();
   }
 
@@ -1013,8 +1020,8 @@ public:
   ///
   /// Make this replaceable, taking ownership of \c ReplaceableUses (which must
   /// not be null).
-  void
-  makeReplaceable(std::unique_ptr<ReplaceableMetadataImpl> ReplaceableUses) {
+  void makeReplaceable(
+      std::unique_ptr<ReplaceableMetadataImplWithContext> ReplaceableUses) {
     assert(ReplaceableUses && "Expected non-null replaceable uses");
     assert(&ReplaceableUses->getContext() == &getContext() &&
            "Expected same context");
@@ -1025,9 +1032,9 @@ public:
   /// Drop RAUW support.
   ///
   /// Cede ownership of RAUW support, returning it.
-  std::unique_ptr<ReplaceableMetadataImpl> takeReplaceableUses() {
+  std::unique_ptr<ReplaceableMetadataImplWithContext> takeReplaceableUses() {
     assert(hasReplaceableUses() && "Expected to own replaceable uses");
-    std::unique_ptr<ReplaceableMetadataImpl> ReplaceableUses(
+    std::unique_ptr<ReplaceableMetadataImplWithContext> ReplaceableUses(
         getReplaceableUses());
     Ptr = &ReplaceableUses->getContext();
     return ReplaceableUses;
