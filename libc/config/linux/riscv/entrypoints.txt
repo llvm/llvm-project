@@ -1323,6 +1323,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_detach
     libc.src.pthread.pthread_equal
     libc.src.pthread.pthread_exit
+    libc.src.pthread.pthread_getattr_np
     libc.src.pthread.pthread_getname_np
     libc.src.pthread.pthread_getschedparam
     libc.src.pthread.pthread_getspecific
