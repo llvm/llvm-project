@@ -27,6 +27,7 @@ add_llvm_library(LLVMBOLTRewrite
   RSeqRewriter.cpp
   SDTRewriter.cpp
   GNUPropertyRewriter.cpp
+  StrippedBinary.cpp
 
   NO_EXPORT
   DISABLE_LLVM_LINK_LLVM_DYLIB

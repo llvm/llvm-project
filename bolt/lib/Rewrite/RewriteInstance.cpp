@@ -85,6 +85,7 @@ extern cl::opt<uint32_t> InstrumentationSleepTime;
 extern cl::opt<bool> KeepNops;
 extern cl::opt<bool> LargeCodeModel;
 extern cl::opt<bool> Lite;
+extern cl::opt<bolt::JumpTableSupportLevel> JumpTables;
 extern cl::list<std::string> PrintOnly;
 extern cl::opt<std::string> PrintOnlyFile;
 extern cl::list<std::string> ReorderData;
@@ -101,6 +102,14 @@ static cl::opt<bool>
     AllowStripped("allow-stripped",
                   cl::desc("allow processing of stripped binaries"), cl::Hidden,
                   cl::cat(BoltCategory));
+
+extern cl::opt<bool> AggressiveRelocationRecovery;
+
+static cl::opt<bool> RecoverRelocations(
+    "recover-relocations",
+    cl::desc("reconstruct references for AArch64 and x86-64 ELF "
+             "inputs without static text relocations"),
+    cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool> ForceToDataRelocations(
     "force-data-relocations",
@@ -824,7 +833,8 @@ Error RewriteInstance::run() {
   if (Error E = readSpecialSections())
     return E;
   adjustCommandLineOptions();
-  discoverFileObjects();
+  if (Error E = discoverFileObjects())
+    return E;
 
   if (opts::Instrument && !BC->IsStaticExecutable) {
     if (Error E = discoverRtInitAddress())
@@ -892,7 +902,7 @@ Error RewriteInstance::run() {
   return Error::success();
 }
 
-void RewriteInstance::discoverFileObjects() {
+Error RewriteInstance::discoverFileObjects() {
   NamedRegionTimer T("discoverFileObjects", "discover file objects",
                      TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
 
@@ -1400,7 +1410,7 @@ void RewriteInstance::discoverFileObjects() {
       continue;
     }
 
-    if (opts::Verbosity >= 1)
+    if (opts::Verbosity >= 1 && !BC->IsStripped)
       BC->errs() << "BOLT-WARNING: FDE [0x" << Twine::utohexstr(Address)
                  << ", 0x" << Twine::utohexstr(Address + FDE->getAddressRange())
                  << ") has no corresponding symbol table entry\n";
@@ -1414,6 +1424,12 @@ void RewriteInstance::discoverFileObjects() {
   }
 
   BC->setHasSymbolsWithFileName(FileSymbols.size());
+
+  // Register stripped entry code and linker-generated helpers before boundary
+  // adjustment and unmarked-tail discovery process the same address ranges.
+  if (BC->RecoverRelocations && BC->IsStripped)
+    if (Error E = discoverStrippedFunctions())
+      return E;
 
   // Now that all the functions were created - adjust their boundaries.
   adjustFunctionBoundaries(MarkerSymbols);
@@ -1489,6 +1505,8 @@ void RewriteInstance::discoverFileObjects() {
   // The name resolver is only needed while discovering and disambiguating file
   // objects. Release its memory now that all names have been uniquified.
   NR.clear();
+
+  return Error::success();
 }
 
 void RewriteInstance::discoverBOLTReserved() {
@@ -2381,7 +2399,11 @@ void RewriteInstance::adjustFunctionBoundaries(
       Function.setMaxSize(Function.getSize());
       continue;
     }
-    Function.setMaxSize(MaxSize);
+    // In recovery mode, matching Size and MaxSize records an exact extent from
+    // FDE or pattern-based discovery. Preserve it instead of extending the
+    // function across unmarked code before the next discovered function.
+    if (!BC->RecoverRelocations || Function.getMaxSize() != Function.getSize())
+      Function.setMaxSize(MaxSize);
     if (!Function.getSize() && Function.isSimple()) {
       // Some assembly functions have their size set to 0, use the max
       // size as their real size.
@@ -2527,8 +2549,39 @@ Error RewriteInstance::readSpecialSections() {
     exit(1);
   }
 
-  BC->HasRelocations = HasTextRelocations &&
-                       (opts::RelocationMode != cl::boolOrDefault::BOU_FALSE);
+  if (opts::AggressiveRelocationRecovery && !opts::RecoverRelocations)
+    return createStringError(errc::invalid_argument,
+                             "--aggressive-relocation-recovery "
+                             "requires --recover-relocations");
+  BC->RecoverRelocations = opts::RecoverRelocations;
+  if (BC->RecoverRelocations) {
+    if (!BC->isAArch64() && !BC->isX86())
+      return createStringError(
+          errc::not_supported,
+          "relocation recovery requires AArch64 or x86-64");
+    if (HasTextRelocations ||
+        opts::RelocationMode != cl::boolOrDefault::BOU_UNSET)
+      return createStringError(
+          errc::invalid_argument,
+          "relocation recovery requires missing static text "
+          "relocations and cannot be combined with --relocs");
+    if (BC->IsLinuxKernel || opts::StrictMode || opts::AggregateOnly ||
+        opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive)
+      return createStringError(
+          errc::not_supported,
+          "relocation recovery is unavailable in this mode");
+    BC->outs()
+        << "BOLT-INFO: recovering relocations for discovered functions and "
+           "supported address references\n";
+  }
+
+  // Set HasRelocations so the relocation-mode emitter applies recovered
+  // references when functions move. RecoverRelocations separately tells code
+  // reading the input file that these references were reconstructed rather
+  // than obtained from its static relocation records.
+  BC->HasRelocations = BC->RecoverRelocations ||
+                       (HasTextRelocations &&
+                        opts::RelocationMode != cl::boolOrDefault::BOU_FALSE);
 
   if (BC->IsLinuxKernel && BC->HasRelocations) {
     BC->outs() << "BOLT-INFO: disabling relocation mode for Linux kernel\n";
@@ -2576,6 +2629,13 @@ Error RewriteInstance::readSpecialSections() {
 }
 
 void RewriteInstance::adjustCommandLineOptions() {
+  if (BC->RecoverRelocations) {
+    if (opts::JumpTables != JTS_MOVE)
+      BC->outs() << "BOLT-INFO: forcing --jump-tables=move for relocation "
+                    "recovery\n";
+    opts::JumpTables = JTS_MOVE;
+  }
+
   if (BC->isAArch64() && !BC->HasRelocations)
     BC->errs() << "BOLT-WARNING: non-relocation mode for AArch64 is not fully "
                   "supported\n";
@@ -6129,7 +6189,10 @@ void RewriteInstance::patchELFSymTabs(ELFObjectFile<ELFT> *File) {
     }
   }
   if (!SymTabSection) {
-    BC->errs() << "BOLT-WARNING: no symbol table found\n";
+    if (BC->RecoverRelocations)
+      BC->outs() << "BOLT-INFO: input has no symbol table\n";
+    else
+      BC->errs() << "BOLT-WARNING: no symbol table found\n";
     return;
   }
 

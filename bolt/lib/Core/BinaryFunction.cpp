@@ -2329,6 +2329,9 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
     const uint32_t Offset = I->first;
     MCInst &Instr = I->second;
 
+    if (BC.RecoverRelocations && BC.isAArch64() && BC.MIB->isADRP(Instr))
+      MIB->setOffset(Instr, Offset);
+
     auto LI = Labels.find(Offset);
     if (LI != Labels.end()) {
       // Always create new BB at branch destination.
@@ -2570,7 +2573,8 @@ void BinaryFunction::postProcessCFG() {
   if (!requiresPreciseAddressMap() && !opts::Instrument) {
     for (BinaryBasicBlock &BB : blocks())
       for (MCInst &Inst : BB)
-        BC.MIB->clearOffset(Inst);
+        if (!(BC.RecoverRelocations && BC.isAArch64() && BC.MIB->isADRP(Inst)))
+          BC.MIB->clearOffset(Inst);
   }
 
   assert((!isSimple() || validateCFG()) &&
