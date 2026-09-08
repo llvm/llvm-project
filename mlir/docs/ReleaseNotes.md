@@ -23,7 +23,7 @@ specifically, it is a snapshot of the MLIR development at the time of the releas
   modifiers (`gfx942`, `gfx942:xnack+`, `gfx9-4-generic`), a triple
   (`amdgpu9.42-amd-amdhsa`), or a full target ID
   (`amdgpu9.42-amd-amdhsa--gfx90a:sramecc+:xnack-`, which is what `rocminfo` prints
-  for a device's ISA).
+  for a device's ISA). `chipset` or `chip` remain as compatibility names.
   The default arch is `invalid`, so a target must be passed
   explicitly, removing the old "fallback" `gfx000` GPU.
 - Wavefront size is not a target-ID feature, so `convert-gpu-to-rocdl` takes it

@@ -246,8 +246,9 @@ void mlir::amdgpu::populateAmdgpuEmulateAtomicsPatterns(
 
 void AmdgpuEmulateAtomicsPass::runOnOperation() {
   Operation *op = getOperation();
-  FailureOr<ROCDL::TargetInfo> targetInfo = ROCDL::TargetInfo::get(
-      arch, /*waveSize=*/0, [&] { return op->emitError(); });
+  FailureOr<ROCDL::TargetInfo> targetInfo =
+      ROCDL::TargetInfo::get(ROCDL::resolveArchOption(arch, chipset),
+                             /*waveSize=*/0, [&] { return op->emitError(); });
   if (failed(targetInfo))
     return signalPassFailure();
 

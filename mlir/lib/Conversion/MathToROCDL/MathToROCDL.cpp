@@ -187,9 +187,10 @@ void ConvertMathToROCDLPass::runOnOperation() {
   // An empty architecture means "no target", in which case the
   // target-dependent patterns are simply not added.
   std::optional<ROCDL::TargetInfo> resolved;
-  if (!arch.empty()) {
+  StringRef resolvedArch = ROCDL::resolveArchOption(arch, chipset);
+  if (!resolvedArch.empty()) {
     FailureOr<ROCDL::TargetInfo> targetInfo =
-        ROCDL::TargetInfo::get(arch, /*waveSize=*/0, [&] {
+        ROCDL::TargetInfo::get(resolvedArch, /*waveSize=*/0, [&] {
           return emitError(UnknownLoc::get(&getContext()));
         });
     if (failed(targetInfo))

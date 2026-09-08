@@ -1,4 +1,6 @@
 // RUN: mlir-opt %s -convert-gpu-to-rocdl='arch=amdgpu9.42-amd-amdhsa runtime=HIP' -split-input-file | FileCheck %s
+// Ensure old-style options work
+// RUN: mlir-opt %s -convert-gpu-to-rocdl='chipset=gfx942 runtime=HIP' -split-input-file | FileCheck %s
 
 // CHECK-LABEL: gpu.module @test_module
 gpu.module @test_module {

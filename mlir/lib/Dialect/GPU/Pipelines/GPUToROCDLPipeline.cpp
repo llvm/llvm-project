@@ -28,6 +28,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Pipelines/Passes.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
+#include "mlir/Dialect/LLVMIR/ROCDLTargetInfo.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassOptions.h"
@@ -42,12 +43,13 @@ namespace {
 //===----------------------------------------------------------------------===//
 void buildCommonPassPipeline(
     OpPassManager &pm, const mlir::gpu::GPUToROCDLPipelineOptions &options) {
+  std::string arch = ROCDL::resolveArchOption(options.arch, options.chip).str();
   // Lower AMDGPU dialect ops (e.g. amdgpu.lds_barrier, amdgpu.dpp,
   // amdgpu.mfma, amdgpu.dot, ...) to ROCDL intrinsics first, while they may
   // still live in unout-lined `gpu.launch` bodies. Mirrors the way NVVM's
   // pipeline runs `convert-nvgpu-to-nvvm` before kernel outlining.
   ConvertAMDGPUToROCDLPassOptions amdgpuToROCDLOpt;
-  amdgpuToROCDLOpt.arch = options.arch;
+  amdgpuToROCDLOpt.arch = arch;
   pm.addPass(createConvertAMDGPUToROCDLPass(amdgpuToROCDLOpt));
 
   pm.addPass(createGpuKernelOutliningPass());
@@ -57,7 +59,7 @@ void buildCommonPassPipeline(
   pm.addPass(memref::createExpandStridedMetadataPass());
 
   GpuROCDLAttachTargetOptions rocdlTargetOptions;
-  rocdlTargetOptions.arch = options.arch;
+  rocdlTargetOptions.arch = arch;
   rocdlTargetOptions.abiVersion = options.abiVersion;
   rocdlTargetOptions.optLevel = options.optLevel;
   rocdlTargetOptions.waveSize = options.waveSize;
@@ -77,8 +79,9 @@ void buildCommonPassPipeline(
 //===----------------------------------------------------------------------===//
 void buildGpuPassPipeline(OpPassManager &pm,
                           const mlir::gpu::GPUToROCDLPipelineOptions &options) {
+  std::string arch = ROCDL::resolveArchOption(options.arch, options.chip).str();
   ConvertGpuOpsToROCDLOpsOptions opt;
-  opt.arch = options.arch;
+  opt.arch = arch;
   opt.waveSize = options.waveSize;
   opt.useBarePtrCallConv = options.kernelUseBarePtrCallConv;
   opt.indexBitwidth = options.indexBitWidth;
