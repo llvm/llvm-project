@@ -31,8 +31,15 @@ specifically, it is a snapshot of the MLIR development at the time of the releas
   default). The `wave64` flag on `gpu-lower-to-rocdl-pipeline` and on
   `rocdl-attach-target` is likewise replaced by the same `wavesize` option,
   which has the same allowed values.
+- In keeping with broader LLVM changes, `xnack` and `sramecc` are no longer
+  architecture features but module flags. In keeping with Clang, the target
+  specifier still includes these xnack/sramecc flags where they're configurable,
+  but lowering passes now convert these to module flags. Downstream users should
+  call `migrateArchFeaturesToModuleFlags` to lower these attributes in custom
+  pipelines.
 - `rocdl-attach-target` gains `arch` alongside its existing `triple`, `chip` and
-  `features`. When `arch` is given, it overrides `triple` and `chip`.
+  `features`. When `arch` is given, it overrides `triple` and `chip`, and handles
+  xnack/sramecc modifier migration.
 
 ## LLVM 21
 

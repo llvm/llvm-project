@@ -55,22 +55,29 @@
 // RUN: | FileCheck %s --check-prefix=NOGPU
 // NOGPU: 'amdgcn-amd-amdhsa' names no GPU
 
-// xnack/sramecc are module flags in the backend, not subtarget features, and
-// #rocdl.target has nowhere to carry them: refuse rather than emit a feature
-// string that AMDGPUAsmPrinter rejects at serialization.
-// RUN: not mlir-opt %s --rocdl-attach-target='arch=gfx90a:xnack+' 2>&1 \
+// xnack/sramecc are module flags in the backend, not subtarget features, so
+// #rocdl.target has nowhere to carry them and the target ID's modifiers land on
+// the module instead. A modifier the target ID omits stays omitted, since an
+// absent flag means "either" and false would be a different request.
+// RUN: mlir-opt %s --rocdl-attach-target='arch=gfx90a:xnack+' \
 // RUN: | FileCheck %s --check-prefix=XNACK
-// XNACK: the 'xnack' target-ID modifier cannot be attached
-// XNACK-SAME: 'amdgpu.xnack' module flag
-
-// RUN: not mlir-opt %s --rocdl-attach-target='arch=gfx90a:sramecc-' 2>&1 \
-// RUN: | FileCheck %s --check-prefix=SRAMECC
-// SRAMECC: the 'sramecc' target-ID modifier cannot be attached
+// RUN: mlir-opt %s --rocdl-attach-target='arch=gfx90a:sramecc-:xnack-' \
+// RUN: | FileCheck %s --check-prefix=BOTH
 
 module attributes {gpu.container_module} {
 
 // CHECK-LABEL: @rocdl_module
 // CHECK-SAME: [#rocdl.target<triple = "amdgpu9.0a-amd-amdhsa", chip = "gfx90a">]
+// CHECK-NOT: rocdl.xnack
+// CHECK-NOT: rocdl.sramecc
+
+// XNACK-LABEL: @rocdl_module
+// XNACK-SAME: [#rocdl.target<triple = "amdgpu9.0a-amd-amdhsa", chip = "gfx90a">]
+// XNACK-SAME: attributes {rocdl.xnack = true}
+
+// BOTH-LABEL: @rocdl_module
+// BOTH-SAME: [#rocdl.target<triple = "amdgpu9.0a-amd-amdhsa", chip = "gfx90a">]
+// BOTH-SAME: attributes {rocdl.sramecc = false, rocdl.xnack = false}
 
 // LEGACY-LABEL: @rocdl_module
 // LEGACY-SAME: [#rocdl.target<chip = "gfx90a">]

@@ -134,6 +134,19 @@ public:
     return sramEccSetting;
   }
 
+  /// Records the xnack and sramecc settings this target's ID pinned onto the
+  /// module \p op, as the `rocdl.xnack` and `rocdl.sramecc` attributes that
+  /// translate to the `amdgpu.xnack` and `amdgpu.sramecc` module flags.
+  ///
+  /// These flags are given as `:{xnack,sramecc}` target-ID "modifiers",
+  /// since they used to be subtarget features, but now frontends (like us and
+  /// Clang) need to migrate them into module flags. This representation keeps
+  /// us compatible with Clang and the output of tools like `rocminfo`.
+  ///
+  /// If a particular modifier is not given, no attribute is set for it, putting
+  /// that value into its "any" state if it is controllable.
+  void migrateArchFeaturesToModuleFlags(Operation *op) const;
+
   /// Returns the ISA version. For a generic target this is the floor of the
   /// family it covers (gfx9-4-generic reports 9.4.0), so it must not be used to
   /// decide whether an instruction is available.

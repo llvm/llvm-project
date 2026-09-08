@@ -7,8 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/ROCDLTargetInfo.h"
+#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OwningOpRef.h"
 #include "gtest/gtest.h"
 
 namespace mlir::ROCDL {
@@ -302,6 +305,58 @@ TEST(TargetInfoTest, Generation) {
 
   // An unknown target is in no generation.
   EXPECT_FALSE(getTarget("amdgcn-amd-amdhsa").isGeneration(9));
+}
+
+/// The two module attributes `migrateArchFeaturesToModuleFlags` writes, as read
+/// back off the module; a null attribute means it wrote nothing.
+struct MigratedSettings {
+  BoolAttr xnack;
+  BoolAttr sramecc;
+};
+
+/// Migrates `arch`'s target-ID modifiers onto a fresh module, after seeding it
+/// with whatever `preset` puts there, and reads the result back.
+MigratedSettings
+migrate(StringRef arch,
+        function_ref<void(ROCDLDialect *, Operation *)> preset = nullptr) {
+  MLIRContext ctx;
+  auto *dialect = ctx.getOrLoadDialect<ROCDLDialect>();
+  OwningOpRef<ModuleOp> module = ModuleOp::create(UnknownLoc::get(&ctx));
+  if (preset)
+    preset(dialect, *module);
+  getTarget(arch).migrateArchFeaturesToModuleFlags(*module);
+  return {dialect->getXnackAttrHelper().getAttr(*module),
+          dialect->getSrameccAttrHelper().getAttr(*module)};
+}
+
+TEST(TargetInfoTest, MigrateArchFeaturesToModuleFlags) {
+  // A pinned modifier becomes the matching attribute, either way round.
+  EXPECT_TRUE(migrate("gfx90a:xnack+").xnack.getValue());
+  EXPECT_FALSE(migrate("gfx90a:xnack-").xnack.getValue());
+  EXPECT_FALSE(migrate("gfx90a:sramecc-").sramecc.getValue());
+
+  MigratedSettings both = migrate("gfx90a:sramecc+:xnack-");
+  EXPECT_TRUE(both.sramecc.getValue());
+  EXPECT_FALSE(both.xnack.getValue());
+
+  // Only the pinned one is written: the other is still "either".
+  EXPECT_EQ(migrate("gfx90a:xnack+").sramecc, nullptr);
+
+  // A target ID that pins neither, and a GPU that has neither to pin, write
+  // nothing at all rather than writing false.
+  MigratedSettings any = migrate("gfx90a");
+  EXPECT_EQ(any.xnack, nullptr);
+  EXPECT_EQ(any.sramecc, nullptr);
+  EXPECT_EQ(migrate("gfx600").xnack, nullptr);
+
+  // An `arch` that says nothing leaves an explicit setting alone, while one
+  // that does pin the setting is the more specific request and overrides it.
+  auto presetXnackTrue = [](ROCDLDialect *dialect, Operation *op) {
+    dialect->getXnackAttrHelper().setAttr(
+        op, BoolAttr::get(op->getContext(), true));
+  };
+  EXPECT_TRUE(migrate("gfx90a", presetXnackTrue).xnack.getValue());
+  EXPECT_FALSE(migrate("gfx90a:xnack-", presetXnackTrue).xnack.getValue());
 }
 
 TEST(TargetInfoTest, DefaultIsUnknown) {

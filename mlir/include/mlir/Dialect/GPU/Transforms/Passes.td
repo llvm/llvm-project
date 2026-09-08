@@ -197,7 +197,8 @@ def GpuROCDLAttachTarget: Pass<"rocdl-attach-target", ""> {
            "(e.g. gfx942, gfx90a:xnack+, amdgpu9.4-amd-amdhsa, "
            "amdgcn-amd-amdhsa--gfx90a:xnack-). "
            "When non-empty this supersedes 'triple' and 'chip', and its "
-           "target-ID modifiers are appended to 'features'.">,
+           "target-ID modifiers become the module's 'rocdl.xnack' and "
+           "'rocdl.sramecc' attributes rather than target features.">,
     Option<"triple", "triple", "std::string",
            /*default=*/ "\"amdgcn-amd-amdhsa\"",
            "Target triple. Ignored when 'arch' is given.">,
