@@ -23,8 +23,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
@@ -34,11 +32,6 @@ STATISTIC(NumPromotedInRegArgs,
           "Number of uniform arguments promoted to inreg");
 STATISTIC(NumPromotedInRegFuncs,
           "Number of functions with a promoted uniform argument");
-
-static cl::opt<bool> EnablePromoteUniformArgs(
-    "amdgpu-enable-promote-uniform-args", cl::Hidden, cl::init(true),
-    cl::desc("Promote provably uniform internal scalar and pointer arguments "
-             "to inreg"));
 
 namespace {
 
@@ -53,7 +46,8 @@ static bool canPromoteArgToInReg(const Argument &A) {
   return !A.hasAttribute("amdgpu-hidden-argument");
 }
 
-static bool isEligibleInRegUniformCallee(const Function &F) {
+static bool collectDirectCallSites(Function &F,
+                                   SmallVectorImpl<CallBase *> &Calls) {
   if (F.isDeclaration() || F.isVarArg() || !F.canChangeSignature())
     return false;
   if (!F.hasLocalLinkage())
@@ -66,26 +60,15 @@ static bool isEligibleInRegUniformCallee(const Function &F) {
     return false;
   }
 
-  // A musttail call requires the enclosing function's parameter ABI attributes
-  // to match the callee's positionally, so adding inreg to any parameter of F
-  // breaks the contract, not just to one forwarded to the tail call.
-  for (const BasicBlock &BB : F)
-    for (const Instruction &I : BB)
-      if (const auto *CB = dyn_cast<CallBase>(&I))
-        if (CB->isMustTailCall())
-          return false;
-
-  // Every use must be a direct call to F. This subsumes hasAddressTaken(),
-  // which by default ignores some uses we care about (e.g. assume-like calls),
-  // and it is what lets the transform treat each user as a call site to update.
-  for (const User *U : F.users()) {
-    const auto *CB = dyn_cast<CallBase>(U);
-    if (!CB || CB->getCalledFunction() != &F)
+  // Every use must be the callee of a direct call to F. isCallee distinguishes
+  // that from F appearing as a call operand. Reject musttail/invoke *to* F.
+  for (Use &U : F.uses()) {
+    auto *CB = dyn_cast<CallBase>(U.getUser());
+    if (!CB || !CB->isCallee(&U) || CB->isMustTailCall() || isa<InvokeInst>(CB))
       return false;
-    if (CB->isMustTailCall() || isa<InvokeInst>(CB))
-      return false;
+    Calls.push_back(CB);
   }
-  return !F.user_empty();
+  return !Calls.empty();
 }
 
 static bool isTriviallyUniform(const Use &U) {
@@ -108,14 +91,9 @@ static bool promoteUniformArgsToInReg(Module &M) {
   bool Changed = false;
 
   for (Function &F : M) {
-    if (!isEligibleInRegUniformCallee(F))
-      continue;
-
     SmallVector<CallBase *, 8> Calls;
-    for (User *U : F.users()) {
-      auto *CB = cast<CallBase>(U);
-      Calls.push_back(CB);
-    }
+    if (!collectDirectCallSites(F, Calls))
+      continue;
 
     bool FuncChanged = false;
     for (Argument &A : F.args()) {
@@ -150,7 +128,7 @@ static bool promoteUniformArgsToInReg(Module &M) {
 
 PreservedAnalyses AMDGPUPromoteUniformArgsPass::run(Module &M,
                                                     ModuleAnalysisManager &AM) {
-  if (!EnablePromoteUniformArgs || !Triple(M.getTargetTriple()).isAMDGCN())
+  if (!M.getTargetTriple().isAMDGCN())
     return PreservedAnalyses::all();
   if (!promoteUniformArgsToInReg(M))
     return PreservedAnalyses::all();
