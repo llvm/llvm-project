@@ -272,8 +272,8 @@ struct __block_literal_4 {
     struct __block_literal_3 *const existingBlock;
 };
 
-void __block_invoke_4(struct __block_literal_2 *_block) {
-   __block->existingBlock->invoke(__block->existingBlock);
+void __block_invoke_4(struct __block_literal_4 *_block) {
+   _block->existingBlock->invoke(_block->existingBlock);
 }
 
 void __block_copy_4(struct __block_literal_4 *dst, struct __block_literal_4 *src) {
@@ -306,7 +306,7 @@ struct __block_literal_4 _block_literal = {
       &_NSConcreteStackBlock,
       (1<<25)|(1<<29), <uninitialized>
       __block_invoke_4,
-      & __block_descriptor_4
+      & __block_descriptor_4,
       existingBlock,
 };
 ```
