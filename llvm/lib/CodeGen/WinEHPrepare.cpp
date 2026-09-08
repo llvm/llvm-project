@@ -23,7 +23,9 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/EHPersonalities.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
@@ -53,6 +55,60 @@ static cl::opt<bool> DisableCleanups(
     cl::desc("Do not remove implausible terminators or other similar cleanups"),
     cl::init(false));
 
+static bool isMalformedCatchpad(const CatchPadInst *CPI,
+                                EHPersonality Personality) {
+  switch (Personality) {
+  case EHPersonality::MSVC_CXX: {
+    if (CPI->arg_size() != 3)
+      return true;
+
+    Constant *TypeInfo = dyn_cast<Constant>(CPI->getArgOperand(0));
+    if (!TypeInfo)
+      return true;
+    if (!TypeInfo->isNullValue() &&
+        !isa<GlobalVariable>(TypeInfo->stripPointerCasts()))
+      return true;
+
+    if (!isa<ConstantInt>(CPI->getArgOperand(1)))
+      return true;
+
+    return false;
+  }
+  case EHPersonality::MSVC_X86SEH:
+  case EHPersonality::MSVC_TableSEH: {
+    if (CPI->arg_size() == 0)
+      return true;
+
+    Constant *FilterOrNull = dyn_cast<Constant>(CPI->getArgOperand(0));
+    if (!FilterOrNull)
+      return true;
+
+    Constant *Filter = FilterOrNull->stripPointerCasts();
+    if (!Filter->isNullValue() && !isa<Function>(Filter))
+      return true;
+
+    return false;
+  }
+  case EHPersonality::CoreCLR: {
+    if (CPI->arg_size() == 0)
+      return true;
+
+    if (!isa<ConstantInt>(CPI->getArgOperand(0)))
+      return true;
+
+    return false;
+  }
+  case EHPersonality::Wasm_CXX: {
+    if (CPI->arg_size() == 1 && !isa<Constant>(CPI->getArgOperand(0)))
+      return true;
+
+    return false;
+  }
+  default:
+    llvm_unreachable("Unsupported Personality for WinEH");
+  }
+}
+
 namespace {
 
 class WinEHPrepareImpl {
@@ -72,6 +128,7 @@ private:
 
   bool demotePHIsOnFunclets(Function &F, bool DemoteCatchSwitchPHIOnly);
   bool cloneCommonBlocks(Function &F);
+  bool removeMalformedCatchswitch(Value *FuncletToken);
   bool removeImplausibleInstructions(Function &F);
   bool cleanupPreparedFunclets(Function &F);
   void verifyPreparedFunclets(Function &F);
@@ -155,6 +212,8 @@ static void addTryBlockMapEntry(WinEHFuncInfo &FuncInfo, int TryLow,
   assert(TBME.TryLow <= TBME.TryHigh);
   for (const CatchPadInst *CPI : Handlers) {
     WinEHHandlerType HT;
+    assert(!isMalformedCatchpad(CPI, EHPersonality::MSVC_CXX) &&
+           "Malformed CatchPadInst not caught by win-eh-prepare");
     Constant *TypeInfo = cast<Constant>(CPI->getArgOperand(0));
     if (TypeInfo->isNullValue())
       HT.TypeDescriptor = nullptr;
@@ -317,6 +376,9 @@ void llvm::calculateSEHStateForAsynchEH(const BasicBlock *BB, int State,
     EHInfo.BlockToStateMap[BB] = State; // Record state
 
     if (isa<CatchPadInst>(It) && isa<CatchReturnInst>(TI)) {
+      assert(!isMalformedCatchpad(cast<CatchPadInst>(It),
+                                  EHPersonality::MSVC_X86SEH) &&
+             "Malformed CatchPadInst not caught by win-eh-prepare");
       const Constant *FilterOrNull = cast<Constant>(
           cast<CatchPadInst>(It)->getArgOperand(0)->stripPointerCasts());
       const Function *Filter = dyn_cast<Function>(FilterOrNull);
@@ -507,6 +569,8 @@ static void calculateSEHStateNumbers(WinEHFuncInfo &FuncInfo,
     const auto *CatchPad =
         cast<CatchPadInst>((*CatchSwitch->handler_begin())->getFirstNonPHIIt());
     const BasicBlock *CatchPadBB = CatchPad->getParent();
+    assert(!isMalformedCatchpad(CatchPad, EHPersonality::MSVC_X86SEH) &&
+           "Malformed CatchPadInst not caught by win-eh-prepare");
     const Constant *FilterOrNull =
         cast<Constant>(CatchPad->getArgOperand(0)->stripPointerCasts());
     const Function *Filter = dyn_cast<Function>(FilterOrNull);
@@ -723,6 +787,8 @@ void llvm::calculateClrEHStateNumbers(const Function *Fn,
         // Create the entry for this catch with the appropriate handler
         // properties.
         const auto *Catch = cast<CatchPadInst>(CatchBlock->getFirstNonPHIIt());
+        assert(!isMalformedCatchpad(Catch, EHPersonality::CoreCLR) &&
+               "Malformed CatchPadInst not caught by win-eh-prepare");
         uint32_t TypeToken = static_cast<uint32_t>(
             cast<ConstantInt>(Catch->getArgOperand(0))->getZExtValue());
         CatchState =
@@ -906,6 +972,57 @@ bool WinEHPrepareImpl::demotePHIsOnFunclets(Function &F,
   return Changed;
 }
 
+bool WinEHPrepareImpl::removeMalformedCatchswitch(Value *FuncletToken) {
+  // If a catchpad is malformed, the whole catchswitch is invalidated
+  // therefore, make all of its catchpads unreachable
+  CatchPadInst *CatchPad = dyn_cast<CatchPadInst>(FuncletToken);
+
+  if (!CatchPad)
+    return false;
+
+  if (!isMalformedCatchpad(CatchPad, Personality))
+    return false;
+
+  CatchPad->getContext().diagnose(DiagnosticInfoGenericWithLoc(
+      "catchpad with unexpected arguments", *CatchPad->getParent()->getParent(),
+      CatchPad->getDebugLoc()));
+
+  CatchSwitchInst *CatchSwitch = CatchPad->getCatchSwitch();
+  for (BasicBlock *Handler : CatchSwitch->handlers()) {
+    if (CatchPadInst *CPI =
+            dyn_cast<CatchPadInst>(Handler->getFirstNonPHIIt())) {
+      LLVMContext &CTX = CPI->getContext();
+      IRBuilder<> Builder(CPI);
+
+      // default values for the CatchPad's args
+      SmallVector<Value *, 3> args;
+      Value *nullPtr = ConstantPointerNull::get(PointerType::getUnqual(CTX));
+      Value *constantZero = ConstantInt::get(Type::getInt32Ty(CTX), 0);
+      switch (Personality) {
+      case EHPersonality::MSVC_CXX:
+        args = {nullPtr, constantZero, nullPtr};
+        break;
+      case EHPersonality::MSVC_X86SEH:
+      case EHPersonality::MSVC_TableSEH:
+      case EHPersonality::Wasm_CXX:
+        args = {nullPtr};
+        break;
+      case EHPersonality::CoreCLR:
+        args = {constantZero};
+        break;
+      default:
+        llvm_unreachable("Unsupported Personality for WinEH");
+      };
+      Value *NewCatchPad =
+          Builder.CreateCatchPad(CPI->getParentPad(), args, CPI->getName());
+      CPI->replaceAllUsesWith(NewCatchPad);
+      changeToUnreachable(CPI);
+    }
+  }
+
+  return true;
+}
+
 bool WinEHPrepareImpl::cloneCommonBlocks(Function &F) {
   bool Changed = false;
 
@@ -918,8 +1035,10 @@ bool WinEHPrepareImpl::cloneCommonBlocks(Function &F) {
     Value *FuncletToken;
     if (FuncletPadBB == &F.getEntryBlock())
       FuncletToken = ConstantTokenNone::get(F.getContext());
-    else
+    else {
       FuncletToken = &*FuncletPadBB->getFirstNonPHIIt();
+      Changed |= removeMalformedCatchswitch(FuncletToken);
+    }
 
     std::vector<std::pair<BasicBlock *, BasicBlock *>> Orig2Clone;
     ValueToValueMapTy VMap;
