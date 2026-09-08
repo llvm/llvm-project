@@ -488,22 +488,17 @@ void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
                    convertType(paramVar->getType()), paramLoc, alignment,
                    /*insertIntoFnEntryBlock=*/true);
 
-    mlir::ptr::MemorySpaceAttrInterface srcAddrSpace =
-        getCIRAllocaAddressSpace();
     mlir::ptr::MemorySpaceAttrInterface destAddrSpace =
         cir::toCIRAddressSpaceAttr(getMLIRContext(),
                                    paramVar->getType().getAddressSpace());
-    if (srcAddrSpace != destAddrSpace) {
-      mlir::Type destPtrTy = builder.getPointerTo(
-          (cast<cir::PointerType>(addrVal.getType())).getPointee(),
-          destAddrSpace);
-      addrVal = performAddrSpaceCast(addrVal, destPtrTy);
-    }
+    Address addr = Address(addrVal, alignment);
+    addr = maybeCastStackAddressSpace(addr, destAddrSpace);
 
-    declare(addrVal, paramVar, paramVar->getType(), paramLoc, alignment,
+    declare(addr.getPointer(), paramVar, paramVar->getType(), paramLoc,
+            alignment,
             /*isParam=*/true);
 
-    setAddrOfLocalVar(paramVar, Address(addrVal, alignment));
+    setAddrOfLocalVar(paramVar, addr);
 
     bool isPromoted = isa<ParmVarDecl>(paramVar) &&
                       cast<ParmVarDecl>(paramVar)->isKNRPromoted();
