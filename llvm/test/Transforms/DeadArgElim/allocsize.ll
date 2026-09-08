@@ -53,6 +53,22 @@ define ptr @calls_unused_size(i64 %n) {
   ret ptr %p
 }
 
+; A call site's allocsize names an argument of a callee that has no allocsize of
+; its own and never uses it. Keeping the attribute means keeping the argument.
+
+; CHECK-LABEL: define internal ptr @callsite_names_size(i64 %sz)
+define internal ptr @callsite_names_size(i64 %DEADARG4, i64 %sz) {
+  %p = call ptr @allocate(i64 0, i64 0)
+  ret ptr %p
+}
+
+define ptr @calls_callsite_names_size(i64 %sz) {
+; CHECK-LABEL: define ptr @calls_callsite_names_size(
+; CHECK: call ptr @callsite_names_size(i64 %sz) #[[ONE]]
+  %p = call ptr @callsite_names_size(i64 0, i64 %sz) allocsize(1)
+  ret ptr %p
+}
+
 declare ptr @allocate(i64, i64)
 
 ; CHECK-DAG: attributes #[[ONE]] = { allocsize(0) }

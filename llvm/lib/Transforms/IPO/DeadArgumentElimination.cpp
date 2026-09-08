@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/DeadArgumentElimination.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -518,6 +519,17 @@ void DeadArgumentEliminationPass::surveyFunction(const Function &F) {
   // of them turn out to be live.
   unsigned NumLiveRetVals = 0;
 
+  // Parameters named by an allocsize, on the function or on any call site.
+  SmallSet<unsigned, 4> AllocSizeArgIdxs;
+  auto NoteAllocSizeArgs = [&](AttributeSet FnAttrs) {
+    if (auto Args = FnAttrs.getAllocSizeArgs()) {
+      AllocSizeArgIdxs.insert(Args->first);
+      if (Args->second)
+        AllocSizeArgIdxs.insert(*Args->second);
+    }
+  };
+  NoteAllocSizeArgs(F.getAttributes().getFnAttrs());
+
   // Loop all uses of the function.
   for (const Use &U : F.uses()) {
     // If the function is PASSED IN as an argument, its address has been
@@ -537,6 +549,8 @@ void DeadArgumentEliminationPass::surveyFunction(const Function &F) {
     }
 
     // If we end up here, we are looking at a direct call to our function.
+
+    NoteAllocSizeArgs(CB->getAttributes().getFnAttrs());
 
     // Now, check how our return value(s) is/are used in this caller. Don't
     // bother checking return values if all of them are live already.
@@ -580,14 +594,6 @@ void DeadArgumentEliminationPass::surveyFunction(const Function &F) {
   LLVM_DEBUG(dbgs() << "DeadArgumentEliminationPass - Inspecting args for fn: "
                     << F.getName() << "\n");
 
-  std::optional<std::pair<unsigned, std::optional<unsigned>>> AllocSizeArgs =
-      F.getAttributes().getFnAttrs().getAllocSizeArgs();
-  auto IsAllocSizeArg = [&](unsigned ArgI) {
-    return AllocSizeArgs &&
-           (ArgI == AllocSizeArgs->first ||
-            (AllocSizeArgs->second && ArgI == *AllocSizeArgs->second));
-  };
-
   // Now, check all of our arguments.
   unsigned ArgI = 0;
   UseVector MaybeLiveArgUses;
@@ -601,12 +607,10 @@ void DeadArgumentEliminationPass::surveyFunction(const Function &F) {
       // register and stack HFAs very differently, and this is reflected in the
       // IR which has already been generated.
       Result = Live;
-    } else if (IsAllocSizeArg(ArgI)) {
-      // Removing an argument allocsize points at would force the attribute off
-      // the function, since the verifier rejects an out-of-range allocsize
-      // index. What that leaves is a function that still allocates but can no
-      // longer say how much, which costs its callers more than a dead
-      // argument does.
+    } else if (AllocSizeArgIdxs.contains(ArgI)) {
+      // Dropping this argument would take allocsize with it, since the
+      // verifier rejects an out-of-range index, and the attribute is worth
+      // more.
       Result = Live;
     } else {
       // See what the effect of this use is (recording any uses that cause
@@ -855,37 +859,32 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
   AttributeSet RetAttrs = AttributeSet::get(F->getContext(), RAttrs);
 
   // allocsize names parameters by index, so deleting an argument ahead of one
-  // renumbers it. surveyFunction() keeps the arguments the function's own
-  // allocsize names alive, so those always renumber. A call site's allocsize is
-  // independent of the callee's and gets no such treatment, so it can still
-  // name an argument that is gone, and is dropped.
+  // shifts it. surveyFunction() keeps those arguments alive, so the attribute
+  // can be renumbered rather than dropped.
   auto UpdateAllocSize = [&](AttributeSet FnAttrs) {
     std::optional<std::pair<unsigned, std::optional<unsigned>>> Args =
         FnAttrs.getAllocSizeArgs();
     if (!Args)
       return FnAttrs;
 
-    auto NewIdx = [&](unsigned Old) -> std::optional<unsigned> {
-      if (Old >= ArgAlive.size() || !ArgAlive[Old])
-        return std::nullopt;
+    auto NewIdx = [&](unsigned Old) {
+      // An index past the parameters names a variadic argument; a vararg
+      // function keeps all of its parameters, so nothing ahead of it moved.
+      if (Old >= ArgAlive.size())
+        return Old;
+      assert(ArgAlive[Old] && "allocsize parameter was not kept alive");
       return static_cast<unsigned>(
           std::count(ArgAlive.begin(), ArgAlive.begin() + Old, true));
     };
 
-    std::optional<unsigned> ElemSizeArg = NewIdx(Args->first);
+    unsigned ElemSizeArg = NewIdx(Args->first);
     std::optional<unsigned> NumElemsArg;
-    if (ElemSizeArg && Args->second) {
+    if (Args->second)
       NumElemsArg = NewIdx(*Args->second);
-      if (!NumElemsArg)
-        ElemSizeArg = std::nullopt;
-    }
 
     FnAttrs = FnAttrs.removeAttribute(F->getContext(), Attribute::AllocSize);
-    if (!ElemSizeArg)
-      return FnAttrs;
-
     AttrBuilder B(F->getContext());
-    B.addAllocSizeAttr(*ElemSizeArg, NumElemsArg);
+    B.addAllocSizeAttr(ElemSizeArg, NumElemsArg);
     return FnAttrs.addAttributes(F->getContext(), B);
   };
 
