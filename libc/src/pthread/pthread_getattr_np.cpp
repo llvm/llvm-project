@@ -38,13 +38,10 @@ LLVM_LIBC_FUNCTION(int, pthread_getattr_np,
     attr->__detachstate = PTHREAD_CREATE_DETACHED;
     break;
   case DetachState::JOINABLE:
+  case DetachState::EXITING:
+    // Only JOINABLE threads transit to the exiting state (see thread_exit()).
     attr->__detachstate = PTHREAD_CREATE_JOINABLE;
     break;
-  case DetachState::EXITING:
-    // We don't know what was the detach state of the thread before it started
-    // exiting, but even if we did, we could not read it reliably as the memory
-    // backing thread->attrib can go away any moment.
-    __builtin_unreachable();
   }
   attr->__stack = thread->attrib->stack;
   attr->__stacksize = thread->attrib->stacksize;
