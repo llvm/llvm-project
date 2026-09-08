@@ -17,6 +17,7 @@
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/MathExtras.h"
 #include <algorithm>
 
@@ -1070,7 +1071,16 @@ LongJmpPass::buildClusterLayout(BinaryContext &BC,
   };
 
   FragmentClusterLayout Layout;
-  SmallVector<OutputFragment> OrderedFragments;
+  SmallVector<SmallVector<OutputFragment>, 4> FragmentsBySection;
+  StringMap<size_t> SectionToBucket;
+  auto addOrderedFragment = [&](OutputFragment &&Fragment) {
+    auto [It, Inserted] = SectionToBucket.try_emplace(
+        Fragment.SectionName, FragmentsBySection.size());
+    if (Inserted)
+      FragmentsBySection.emplace_back();
+    FragmentsBySection[It->second].push_back(std::move(Fragment));
+  };
+
   for (size_t I = 0; I < OutputFunctions.size(); ++I) {
     BinaryFunction *BF = OutputFunctions[I];
     if (!BC.shouldEmit(*BF) || BF->isPatch())
@@ -1080,18 +1090,26 @@ LongJmpPass::buildClusterLayout(BinaryContext &BC,
       if (FF.empty() && !BF->hasConstantIsland())
         continue;
 
-      OrderedFragments.push_back({&FF, I,
-                                  BF->getCodeSectionName(FF.getFragmentNum()),
-                                  estimateFragmentSize(*BF, FF)});
+      addOrderedFragment({&FF, I, BF->getCodeSectionName(FF.getFragmentNum()),
+                          estimateFragmentSize(*BF, FF)});
     }
   }
 
   // Model final output layout by grouping function fragments in output section
   // order. Within each section, fragments remain in OutputFunctions order.
-  llvm::stable_sort(
-      OrderedFragments, [&](const OutputFragment &A, const OutputFragment &B) {
-        return BC.compareSectionNames(A.SectionName, B.SectionName);
-      });
+  SmallVector<size_t, 4> SectionOrder;
+  for (size_t I = 0; I < FragmentsBySection.size(); ++I)
+    SectionOrder.push_back(I);
+
+  llvm::sort(SectionOrder, [&](size_t A, size_t B) {
+    return BC.compareSectionNames(FragmentsBySection[A].front().SectionName,
+                                  FragmentsBySection[B].front().SectionName);
+  });
+
+  SmallVector<const OutputFragment *> OrderedFragments;
+  for (size_t SectionIndex : SectionOrder)
+    for (const OutputFragment &Fragment : FragmentsBySection[SectionIndex])
+      OrderedFragments.push_back(&Fragment);
 
   auto buildClusterRanges = [&]() {
     SmallVector<FragmentRange> ClusterRanges;
@@ -1100,29 +1118,29 @@ LongJmpPass::buildClusterLayout(BinaryContext &BC,
 
     if (!opts::HotFunctionsAtEnd) {
       size_t Begin = 0;
-      uint64_t Size = OrderedFragments[0].Size;
+      uint64_t Size = OrderedFragments[0]->Size;
       for (size_t I = 1; I < OrderedFragments.size(); ++I) {
-        if (Size + OrderedFragments[I].Size > opts::MaxClusterSize) {
+        if (Size + OrderedFragments[I]->Size > opts::MaxClusterSize) {
           ClusterRanges.push_back({Begin, I});
           Begin = I;
           Size = 0;
         }
-        Size += OrderedFragments[I].Size;
+        Size += OrderedFragments[I]->Size;
       }
       ClusterRanges.push_back({Begin, OrderedFragments.size()});
       return ClusterRanges;
     }
 
     size_t End = OrderedFragments.size();
-    uint64_t Size = OrderedFragments.back().Size;
+    uint64_t Size = OrderedFragments.back()->Size;
     for (size_t I = End - 1; I > 0;) {
       --I;
-      if (Size + OrderedFragments[I].Size > opts::MaxClusterSize) {
+      if (Size + OrderedFragments[I]->Size > opts::MaxClusterSize) {
         ClusterRanges.push_back({I + 1, End});
         End = I + 1;
         Size = 0;
       }
-      Size += OrderedFragments[I].Size;
+      Size += OrderedFragments[I]->Size;
     }
     ClusterRanges.push_back({0, End});
     std::reverse(ClusterRanges.begin(), ClusterRanges.end());
@@ -1172,7 +1190,7 @@ LongJmpPass::buildClusterLayout(BinaryContext &BC,
   for (const FragmentRange &Range : buildClusterRanges()) {
     Layout.Clusters.emplace_back();
     for (size_t I = Range.Begin; I < Range.End; ++I)
-      addFragmentToCluster(OrderedFragments[I]);
+      addFragmentToCluster(*OrderedFragments[I]);
   }
 
   if (Layout.Clusters.empty())
