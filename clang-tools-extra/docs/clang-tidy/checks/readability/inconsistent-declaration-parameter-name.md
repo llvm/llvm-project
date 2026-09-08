@@ -54,10 +54,14 @@ the definition or the first declaration seen in a translation unit.
 
 ## Options
 
+(readability-inconsistent-declaration-parameter-name-ignore-macros)=
+
 ```{option} IgnoreMacros
 When `true`, the check will not warn about names declared inside macros.
 Default is `true`.
 ```
+
+(readability-inconsistent-declaration-parameter-name-strict)=
 
 ```{option} Strict
 When `true`, names must match exactly (or be absent). Default is `false`.

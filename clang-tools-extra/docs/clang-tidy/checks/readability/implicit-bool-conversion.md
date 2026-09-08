@@ -122,15 +122,21 @@ are deliberately ignored, as it is not clear how to deal with such cases.
 
 ## Options
 
+(readability-implicit-bool-conversion-allow-integer-conditions)=
+
 ```{option} AllowIntegerConditions
 When `true`, the check will allow conditional integer conversions.
 Default is `false`.
 ```
 
+(readability-implicit-bool-conversion-allow-pointer-conditions)=
+
 ```{option} AllowPointerConditions
 When `true`, the check will allow conditional pointer conversions.
 Default is `false`.
 ```
+
+(readability-implicit-bool-conversion-allow-logical-operator-conversion)=
 
 ```{option} AllowLogicalOperatorConversion
 When `true`, the check will suppress warnings for implicit conversions of
@@ -138,6 +144,8 @@ logical operator results (`&&`, `||`, `!`) to `bool`. These
 operators always produce values equal to `0` or `1`, so the conversion
 is safe. Default is `false`.
 ```
+
+(readability-implicit-bool-conversion-use-upper-case-literal-suffix)=
 
 ````{option} UseUpperCaseLiteralSuffix
 When `true`, the replacements will use an uppercase literal suffix in the

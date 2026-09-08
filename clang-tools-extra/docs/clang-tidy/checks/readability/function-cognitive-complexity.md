@@ -10,10 +10,14 @@ version 1.2 (19 April 2017).
 
 ## Options
 
+(readability-function-cognitive-complexity-threshold)=
+
 ```{option} Threshold
 Flag functions with Cognitive Complexity exceeding this number.
 Default is `25`.
 ```
+
+(readability-function-cognitive-complexity-describe-basic-increments)=
 
 ```{option} DescribeBasicIncrements
 When `true`, for each function exceeding the complexity threshold
@@ -21,6 +25,8 @@ the check will issue additional diagnostics on every piece of code (loop,
 `if` statement, etc.) which contributes to that complexity. See also the
 examples below. Default is `true`.
 ```
+
+(readability-function-cognitive-complexity-ignore-macros)=
 
 ```{option} IgnoreMacros
 When `true`, the check will ignore code inside macros. Note that
@@ -152,8 +158,8 @@ int function3(bool var1, bool var2) {
 ```
 
 In the last example, the check will flag `function3` if the
-{option}`Threshold` is set to `2` or smaller. If the
-{option}`DescribeBasicIncrements` is set to `true`,
+[`Threshold`](#readability-function-cognitive-complexity-threshold) is set to `2` or smaller. If the
+[`DescribeBasicIncrements`](#readability-function-cognitive-complexity-describe-basic-increments) is set to `true`,
 it will additionally flag the two `if` statements with the amounts by which they
 increase to the complexity of the function and the current nesting level.
 
