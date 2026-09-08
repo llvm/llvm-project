@@ -99,9 +99,6 @@ ol_device_handle_t PluginManager::getHostDevice() {
                             &Backend);
 
           if (Backend == OL_PLATFORM_BACKEND_HOST) {
-            GenericPluginTy *HostPlugin =
-                __ol_tgt_GetPluginFromPlatform(Platform);
-            HostPlugin->set_device_identifier(omp_initial_device, 0);
             *(static_cast<ol_device_handle_t *>(Data)) = D;
             return false;
           }
