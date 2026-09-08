@@ -205,8 +205,10 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
 /// instruction may be.  This returns the maximum number of bytes.
 unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   const MCInstrDesc &Desc = MI.getDesc();
-  if (!Desc.isPseudo() && !Subtarget.isLFI())
+  if (!Desc.isPseudo() && !Subtarget.isLFI()) {
+    assert(Desc.getSize() == 4 && "Unexpected instruction size");
     return 4;
+  }
 
   const MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction *MF = MBB.getParent();
