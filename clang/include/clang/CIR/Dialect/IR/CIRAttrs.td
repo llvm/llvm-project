@@ -1917,7 +1917,8 @@ def CIR_SideEffect : CIR_I32Enum<
     "SideEffect", "allowed side effects of a function", [
       I32EnumAttrCase<"All", 0, "all">,
       I32EnumAttrCase<"Pure", 1, "pure">,
-      I32EnumAttrCase<"Const", 2, "const">
+      I32EnumAttrCase<"Const", 2, "const">,
+      I32EnumAttrCase<"ArgMem", 4, "argmem">
 ]> {
   let description = [{
     The side effect attribute specifies the possible side effects of a function
@@ -1931,6 +1932,10 @@ def CIR_SideEffect : CIR_I32Enum<
       `__attribute__((pure))`.
     - const: The function or callee may not read or write data from memory. This
       has the same effect as the GNU C/C++ attribute `__attribute__((const))`.
+    - argmem: The function or callee may only access argument memory and
+      inaccessible memory. This matches LLVM
+      `memory(argmem: readwrite, inaccessiblemem: readwrite)` used for
+      `__declspec(noalias)`.
 
     Examples:
 
@@ -1938,6 +1943,7 @@ def CIR_SideEffect : CIR_I32Enum<
     %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i
     %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(pure)
     %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(const)
+    %2 = cir.call @f(%0) : (!cir.ptr<!s32i>) -> () side_effect(argmem)
     ```
   }];
 }

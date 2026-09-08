@@ -398,6 +398,10 @@ void CIRGenModule::constructAttributeList(
     } else if (targetDecl->hasAttr<PureAttr>()) {
       // gcc specifies that 'pure' functions cannot have infinite loops.
       sideEffect = cir::SideEffect::Pure;
+    } else if (targetDecl->hasAttr<NoAliasAttr>()) {
+      // __declspec(noalias): inaccessible-or-arg memory only, and nounwind.
+      sideEffect = cir::SideEffect::ArgMem;
+      addUnitAttr(cir::CIRDialect::getNoThrowAttrName());
     }
 
     attrs.set(cir::CIRDialect::getSideEffectAttrName(),
