@@ -48,8 +48,7 @@ public:
   // For constant zero providers Src is set to nullopt. For actual providers
   // Src represents the node which originally produced the relevant bits.
   std::optional<ISelOp> Src = std::nullopt;
-  // DestOffset and SrcOffset are producer defined, see DAGCombiner.cpp and
-  // SIISelLowering.cpp.
+  // DestOffset and SrcOffset are producer defined, see DAGCombiner.cpp.
   int64_t DestOffset = 0;
   int64_t SrcOffset = 0;
 
