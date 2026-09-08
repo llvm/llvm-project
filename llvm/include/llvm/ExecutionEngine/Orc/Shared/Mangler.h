@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_SHARED_MANGLER_H
 #define LLVM_EXECUTIONENGINE_ORC_SHARED_MANGLER_H
 
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SymbolNameSpec.h"
 #include "llvm/Support/Compiler.h"
@@ -65,8 +66,11 @@ public:
     if (Name.getName()[0] == '?' && doNotMangleLeadingQuestionMark())
       return H(Name.getName());
 
-    if (Mode == ManglingMode::MachO || Mode == ManglingMode::WinCOFFX86)
-      return H(StringRef(("_" + Name.getName()).str()));
+    if (Mode == ManglingMode::MachO || Mode == ManglingMode::WinCOFFX86) {
+      SmallString<1024> MangledName;
+      MangledName.append({StringRef("_"), Name.getName()});
+      return H(StringRef(MangledName));
+    }
 
     return H(Name.getName());
   }
