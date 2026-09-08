@@ -2835,7 +2835,13 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   // Collect function IR attributes from the CC lowering.
   // We'll collect the paramete and result attributes later.
   CallingConv = FI.getEffectiveCallingConvention();
-  if (FI.isNoReturn())
+  // Herbception `throws` functions return through the normal path with an
+  // error value, so they must not be marked noreturn in the IR even if the
+  // C++ declaration carries [[noreturn]]. The frontend still uses the
+  // [[noreturn]] attribute for diagnostics (ensuring every code path either
+  // throws or loops), but the IR must see a normal return so the error
+  // value can propagate.
+  if (FI.isNoReturn() && !FI.hasThrowsReturn())
     FuncAttrs.addAttribute(llvm::Attribute::NoReturn);
   if (FI.isCmseNSCall())
     FuncAttrs.addAttribute("cmse_nonsecure_call");
@@ -2920,7 +2926,10 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       // Don't use [[noreturn]], _Noreturn or [[no_builtin]] for a call to a
       // virtual function. These attributes are not inherited by overloads.
       if (!(AttrOnCallSite && IsVirtualCall)) {
-        if (Fn->isNoReturn())
+        // Herbception `throws` functions return through the normal path with an
+        // error value, so they must not be marked noreturn at call sites even
+        // if the C++ declaration carries [[noreturn]].
+        if (Fn->isNoReturn() && !FI.hasThrowsReturn())
           FuncAttrs.addAttribute(llvm::Attribute::NoReturn);
         NBA = Fn->getAttr<NoBuiltinAttr>();
       }

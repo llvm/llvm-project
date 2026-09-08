@@ -757,7 +757,7 @@ void CodeGenFunction::EmitHerbceptionCatchTry(const CXXTryStmt &S) {
               ? ConvertType(CT->getExceptionDecl()->getType())
               : ConvertType(getContext().VoidPtrTy);
       Address ErrorSlot = CreateDefaultAlignTempAlloca(ErrorTy, "herb.error");
-      JumpDest HandlerDest(HandlerBB, TryDepth, 0);
+      JumpDest HandlerDest(HandlerBB, TryDepth, NextCleanupDestIndex++);
       HerbceptionCatchScopes.push_back({HandlerDest, ErrorSlot, ErrorTy});
       Handlers.push_back({CT, HandlerBB, ErrorSlot, ErrorTy, HandlerDest});
       if (CT->getLegacyExceptionErrorValue() && !LegacyHandlerStmt) {
