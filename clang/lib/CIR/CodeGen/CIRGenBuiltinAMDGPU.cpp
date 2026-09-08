@@ -458,87 +458,66 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   }
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_i32:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_v2i32:
+  case AMDGPU::BI__builtin_amdgcn_global_load_tr8_b64_v2i32:
+    return emitBuiltinWithOneOverloadedType<1>(
+               expr, "amdgcn.global.load.tr.b64", convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4i16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4f16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4bf16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8i16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8f16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8bf16:
-  case AMDGPU::BI__builtin_amdgcn_global_load_tr4_b64_v2i32:
-  case AMDGPU::BI__builtin_amdgcn_global_load_tr8_b64_v2i32:
-  case AMDGPU::BI__builtin_amdgcn_global_load_tr6_b96_v3i32:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr16_b128_v8i16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr16_b128_v8f16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr16_b128_v8bf16:
+    return emitBuiltinWithOneOverloadedType<1>(
+               expr, "amdgcn.global.load.tr.b128", convertType(expr->getType()))
+        .getValue();
+  case AMDGPU::BI__builtin_amdgcn_global_load_tr4_b64_v2i32:
+    return emitBuiltinWithOneOverloadedType<1>(
+               expr, "amdgcn.global.load.tr4.b64", convertType(expr->getType()))
+        .getValue();
+  case AMDGPU::BI__builtin_amdgcn_global_load_tr6_b96_v3i32:
+    return emitBuiltinWithOneOverloadedType<1>(
+               expr, "amdgcn.global.load.tr6.b96", convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr4_b64_v2i32:
-  case AMDGPU::BI__builtin_amdgcn_ds_load_tr8_b64_v2i32:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.ds.load.tr4.b64",
+                                               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr6_b96_v3i32:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.ds.load.tr6.b96",
+                                               convertType(expr->getType()))
+        .getValue();
+  case AMDGPU::BI__builtin_amdgcn_ds_load_tr8_b64_v2i32:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.ds.load.tr8.b64",
+                                               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8i16:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8f16:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8bf16:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.ds.load.tr16.b128",
+                                               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr4_b64_v2i32:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.ds.read.tr4.b64",
+                                               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr8_b64_v2i32:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.ds.read.tr8.b64",
+                                               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr6_b96_v3i32:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.ds.read.tr6.b96",
+                                               convertType(expr->getType()))
+        .getValue();
+  case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4i16:
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4f16:
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4bf16:
-  case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4i16: {
-    llvm::StringRef intrinsicName;
-    switch (builtinId) {
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_i32:
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_v2i32:
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr8_b64_v2i32:
-      intrinsicName = "amdgcn.global.load.tr.b64";
-      break;
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4i16:
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4f16:
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4bf16:
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8i16:
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8f16:
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8bf16:
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr16_b128_v8i16:
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr16_b128_v8f16:
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr16_b128_v8bf16:
-      intrinsicName = "amdgcn.global.load.tr.b128";
-      break;
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr4_b64_v2i32:
-      intrinsicName = "amdgcn.global.load.tr4.b64";
-      break;
-    case AMDGPU::BI__builtin_amdgcn_global_load_tr6_b96_v3i32:
-      intrinsicName = "amdgcn.global.load.tr6.b96";
-      break;
-    case AMDGPU::BI__builtin_amdgcn_ds_load_tr4_b64_v2i32:
-      intrinsicName = "amdgcn.ds.load.tr4.b64";
-      break;
-    case AMDGPU::BI__builtin_amdgcn_ds_load_tr6_b96_v3i32:
-      intrinsicName = "amdgcn.ds.load.tr6.b96";
-      break;
-    case AMDGPU::BI__builtin_amdgcn_ds_load_tr8_b64_v2i32:
-      intrinsicName = "amdgcn.ds.load.tr8.b64";
-      break;
-    case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8i16:
-    case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8f16:
-    case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8bf16:
-      intrinsicName = "amdgcn.ds.load.tr16.b128";
-      break;
-    case AMDGPU::BI__builtin_amdgcn_ds_read_tr4_b64_v2i32:
-      intrinsicName = "amdgcn.ds.read.tr4.b64";
-      break;
-    case AMDGPU::BI__builtin_amdgcn_ds_read_tr8_b64_v2i32:
-      intrinsicName = "amdgcn.ds.read.tr8.b64";
-      break;
-    case AMDGPU::BI__builtin_amdgcn_ds_read_tr6_b96_v3i32:
-      intrinsicName = "amdgcn.ds.read.tr6.b96";
-      break;
-    case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4i16:
-    case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4f16:
-    case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4bf16:
-      intrinsicName = "amdgcn.ds.read.tr16.b64";
-      break;
-    }
-    mlir::Type loadTy = convertType(expr->getType());
-    return emitBuiltinWithOneOverloadedType<1>(expr, intrinsicName, loadTy)
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.ds.read.tr16.b64",
+                                               convertType(expr->getType()))
         .getValue();
-  }
   case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b32:
   case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b64:
   case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b128:
