@@ -8,37 +8,42 @@ import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbgdbproxy import GDBProxyTestBase
 
-
-class WriteOverSoftwareBreakpoint(TestBase):
+class TestCases(object):
     NO_DEBUG_INFO_TESTCASE = True
 
-    # Could not find a way to make place_break_here visible to lldb on Windows.
-    @skipIfWindows
-    @skipIfOutOfTreeDebugserver
-    def test_write_over_breakpoint(self):
-        TestBase.setUp(self)
-        self.line = line_number("main.c", "// break here")
+    def run_to_start(self):
+        is_proxy = isinstance(self, GDBProxyTestBase)
+
         self.build()
         exe = self.getBuildArtifact("a.out")
-        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        if is_proxy:
+            self.connect(target)
 
+        self.line = line_number("main.c", "// break here")
         lldbutil.run_break_set_by_file_and_line(
             self, "main.c", self.line, num_expected_locations=1, loc_exact=True
         )
-        self.runCmd("run", RUN_SUCCEEDED)
+
+        self.runCmd("continue" if is_proxy else "run")
         self.expect(
             "thread list",
             STOPPED_DUE_TO_BREAKPOINT,
             substrs=["stopped", "stop reason = breakpoint"],
         )
 
-        target = self.dbg.GetSelectedTarget()
-        process = target.GetProcess()
-
         loop_start_breakpoint_addr = (
             target.breakpoints[0].GetLocationAtIndex(0).GetLoadAddress()
         )
+        return target, target.GetProcess(), loop_start_breakpoint_addr
+
+    # Could not find a way to make place_break_here visible to lldb on Windows.
+    @skipIfWindows
+    @skipIfOutOfTreeDebugserver
+    def test_write_over_breakpoint(self):
+        target, process, loop_start_breakpoint_addr = self.run_to_start()
 
         # Memory operations and breakpoint actions must be sent to the server
         # right away instead of waiting for the next continue event.
@@ -158,30 +163,8 @@ class WriteOverSoftwareBreakpoint(TestBase):
             self.assertEqual(loop_start_breakpoint_addr, thread.selected_frame.GetPC())
 
     def test_write_over_uncommitted_breakpoint(self):
-        TestBase.setUp(self)
-        self.line = line_number("main.c", "// break here")
-        self.build()
-        exe = self.getBuildArtifact("a.out")
-        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
-
         self.runCmd("settings set target.process.use-delayed-breakpoints true")
-
-        lldbutil.run_break_set_by_file_and_line(
-            self, "main.c", self.line, num_expected_locations=1, loc_exact=True
-        )
-        self.runCmd("run", RUN_SUCCEEDED)
-        self.expect(
-            "thread list",
-            STOPPED_DUE_TO_BREAKPOINT,
-            substrs=["stopped", "stop reason = breakpoint"],
-        )
-
-        target = self.dbg.GetSelectedTarget()
-        process = target.GetProcess()
-
-        loop_start_breakpoint_addr = (
-            target.breakpoints[0].GetLocationAtIndex(0).GetLoadAddress()
-        )
+        target, process, loop_start_breakpoint_addr = self.run_to_start()
 
         bkpt = target.BreakpointCreateByName("foo")
         self.assertTrue(bkpt.IsValid())
@@ -244,3 +227,20 @@ class WriteOverSoftwareBreakpoint(TestBase):
         # should be managing the breakpoint, but this checks that the handover
         # was done correctly.
         check_memory()
+
+
+@skipIfRemote
+class WriteOverLLDBManagedSoftwareBreakpoint(GDBProxyTestBase, TestCases):
+    def respond(self, packet):
+        # Pretend that the server cannot handle breakpoints, which means lldb
+        # must manage them.
+        if packet.startswith("jMultiBreakpoint"):
+            return ""
+        elif packet.startswith("Z"):
+            return ""
+
+        return super().respond(packet)
+
+
+class WriteOverExternalSoftwareBreakpoint(TestBase, TestCases):
+    pass
