@@ -1,4 +1,4 @@
-//===-- Implementation of totalordermagf128 function ----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implementation of totalordermagf128 function.
+/// This file contains the implementation of totalordermagf128 function.
 ///
 //===----------------------------------------------------------------------===//
 
