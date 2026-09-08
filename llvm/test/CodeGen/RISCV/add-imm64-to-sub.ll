@@ -186,4 +186,33 @@ define i64 @add_pos_and_neg_const_no_anchor(i64 %a, i64 %b) {
   ret i64 %o
 }
 
+; Both C and -C are materialized anyway (each anchors a multiply), and C is
+; also added on a third value. Rewriting that add to (sub X, -C) removes no
+; constant, so it should be left as an ADD, which is also more compressible.
+define i64 @add_both_const_anchored(i64 %x, i64 %y, i64 %a) {
+; CHECK-LABEL: add_both_const_anchored:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a3, 4112
+; CHECK-NEXT:    lui a4, 1044464
+; CHECK-NEXT:    addi a3, a3, 257
+; CHECK-NEXT:    addi a4, a4, -257
+; CHECK-NEXT:    slli a5, a3, 32
+; CHECK-NEXT:    slli a6, a4, 32
+; CHECK-NEXT:    add a3, a3, a5
+; CHECK-NEXT:    add a4, a4, a6
+; CHECK-NEXT:    mul a0, a0, a3
+; CHECK-NEXT:    mul a1, a1, a4
+; CHECK-NEXT:    sub a2, a2, a4
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    xor a0, a0, a2
+; CHECK-NEXT:    ret
+  %m1 = mul i64 %x, 72340172838076673
+  %m2 = mul i64 %y, -72340172838076673
+  %pa = add i64 %a, 72340172838076673
+  %o1 = xor i64 %m1, %m2
+  %o2 = xor i64 %o1, %pa
+  ret i64 %o2
+}
+
+
 
