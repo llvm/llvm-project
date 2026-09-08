@@ -84,16 +84,12 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "aarch64-predicate-as-counter-loop-rewrites"
+#define DEBUG_TYPE "aarch64-pn-loop-rewrites"
 namespace {
 
 STATISTIC(LoopsRewritten, "Number of loops rewritten");
 
 struct MaskRewriteCandidate {
-  /// The preheader block for the loop.
-  BasicBlock *Preheader = nullptr;
-  /// The latch block for the loop.
-  BasicBlock *Latch = nullptr;
   /// The mask phi node (used by masked operations within the loop).
   PHINode *MaskPhi = nullptr;
   /// The initial value for the mask (incoming value from the preheader).
@@ -108,7 +104,7 @@ struct MaskRewriteCandidate {
 
 static void logLoopBailout(const Loop &L, const Twine &Reason) {
   LLVM_DEBUG({
-    dbgs() << "PAC loop rewrite: skipping loop with header ";
+    dbgs() << "PN loop rewrite: skipping loop with header ";
     L.getHeader()->printAsOperand(dbgs(), /*PrintType=*/false);
     dbgs() << ": " << Reason << "\n";
   });
@@ -116,7 +112,7 @@ static void logLoopBailout(const Loop &L, const Twine &Reason) {
 
 static void logMatchFailure(const PHINode &Phi, const Twine &Reason) {
   LLVM_DEBUG({
-    dbgs() << "PAC loop rewrite: failed to match mask phi ";
+    dbgs() << "PN loop rewrite: failed to match mask phi ";
     Phi.printAsOperand(dbgs(), /*PrintType=*/false);
     dbgs() << ": " << Reason << "\n";
   });
@@ -133,15 +129,13 @@ static ElementCount getSVEElementCount(unsigned ElementSizeInBits) {
                                    ElementSizeInBits);
 }
 
-/// Returns the most common scalar access size of masked loads/stores in loop
-/// \p L where \p MaskPhi is used as the mask. Ties are broken in favor of
-/// larger access sizes.
+/// Returns the largest scalar access size of masked loads/stores in loop \p L
+/// where \p MaskPhi is used as the mask. TODO: This heuristic may need
+/// refinement based on the frequency of different access sizes.
 static std::optional<unsigned>
-getMostCommonMaskedMemAccessSizeInBits(const Loop &L, PHINode &MaskPhi) {
+getLargestMaskedMemAccessSizeInBits(const Loop &L, PHINode &MaskPhi) {
   const DataLayout &DL = MaskPhi.getModule()->getDataLayout();
-  DenseMap<unsigned, unsigned> AccessSizeCounts;
-  std::optional<unsigned> BestAccessSizeInBits;
-  unsigned BestAccessSizeCount = 0;
+  std::optional<unsigned> LargestAccessSizeInBits;
 
   for (User *U : MaskPhi.users()) {
     auto *II = dyn_cast<IntrinsicInst>(U);
@@ -157,17 +151,11 @@ getMostCommonMaskedMemAccessSizeInBits(const Loop &L, PHINode &MaskPhi) {
       continue;
 
     unsigned AccessSizeInBits = getScalarSizeInBits(DL, II->getAccessType());
-    unsigned AccessSizeCount = ++AccessSizeCounts[AccessSizeInBits];
-
-    if (!BestAccessSizeInBits || AccessSizeCount > BestAccessSizeCount ||
-        (AccessSizeCount == BestAccessSizeCount &&
-         AccessSizeInBits > *BestAccessSizeInBits)) {
-      BestAccessSizeInBits = AccessSizeInBits;
-      BestAccessSizeCount = AccessSizeCount;
-    }
+    if (!LargestAccessSizeInBits || AccessSizeInBits > LargestAccessSizeInBits)
+      LargestAccessSizeInBits = AccessSizeInBits;
   }
 
-  return BestAccessSizeInBits;
+  return LargestAccessSizeInBits;
 }
 
 /// Returns the predicate-as-counter whilelo intrinsic ID for
@@ -201,13 +189,13 @@ static Value *buildWideMask(IRBuilder<> &Builder, const MaskRewriteCandidate &C,
   Value *WideMask = PoisonValue::get(C.MaskPhi->getType());
   for (unsigned PairOffset = 0; PairOffset != C.VectorScale / 2; ++PairOffset) {
     auto *Pair = Builder.CreateCall(
-        PExtX2, {Count, Builder.getInt32(PairOffset)}, "pac.pext.pair");
+        PExtX2, {Count, Builder.getInt32(PairOffset)}, "pn.pext.pair");
     for (unsigned SliceInPair = 0; SliceInPair != 2; ++SliceInPair) {
-      Value *Part = Builder.CreateExtractValue(Pair, SliceInPair, "pac.pext");
+      Value *Part = Builder.CreateExtractValue(Pair, SliceInPair, "pn.pext");
       unsigned Slice = PairOffset * 2 + SliceInPair;
       WideMask = Builder.CreateInsertVector(
           C.MaskPhi->getType(), WideMask, Part,
-          Slice * LegalEC.getKnownMinValue(), "pac.mask");
+          Slice * LegalEC.getKnownMinValue(), "pn.mask");
     }
   }
 
@@ -226,7 +214,7 @@ static Value *createWhileLO(IRBuilder<> &Builder, unsigned ElementSizeInBits,
   auto ID = getWhileLOIntrinsic(ElementSizeInBits);
   FunctionCallee WhileLO = Intrinsic::getOrInsertDeclaration(M, ID);
   return Builder.CreateCall(
-      WhileLO, {Start, End, Builder.getInt32(VectorScale)}, "pac.mask");
+      WhileLO, {Start, End, Builder.getInt32(VectorScale)}, "pn.mask");
 }
 
 class AArch64PredicateAsCounterLoopRewrites : public LoopPass {
@@ -286,11 +274,19 @@ bool AArch64PredicateAsCounterLoopRewrites::runOnLoop(Loop *L,
     return false;
   }
 
+  if (!L->getLoopPreheader()) {
+    logLoopBailout(*L, "loop has no preheader");
+    return false;
+  }
+  if (!L->getLoopLatch()) {
+    logLoopBailout(*L, "loop has no latch");
+    return false;
+  }
+
   bool Changed = false;
   BasicBlock *Header = L->getHeader();
   for (PHINode &Phi : make_early_inc_range(Header->phis())) {
-    auto Candidate = matchMaskPhi(*L, Phi);
-    if (Candidate)
+    if (std::optional<MaskRewriteCandidate> Candidate = matchMaskPhi(*L, Phi))
       Changed |= rewriteCandidate(*Candidate, *L);
   }
 
@@ -310,17 +306,6 @@ static IntrinsicInst *getGetActiveLaneMask(Value *V) {
 std::optional<MaskRewriteCandidate>
 AArch64PredicateAsCounterLoopRewrites::matchMaskPhi(Loop &L,
                                                     PHINode &Phi) const {
-  BasicBlock *Preheader = L.getLoopPreheader();
-  BasicBlock *Latch = L.getLoopLatch();
-  if (!Preheader) {
-    logMatchFailure(Phi, "loop has no preheader");
-    return std::nullopt;
-  }
-  if (!Latch) {
-    logMatchFailure(Phi, "loop has no latch");
-    return std::nullopt;
-  }
-
   auto *PhiTy = dyn_cast<ScalableVectorType>(Phi.getType());
   if (!PhiTy || !PhiTy->getElementType()->isIntegerTy(1)) {
     logMatchFailure(Phi, "phi type is not a scalable i1 vector mask");
@@ -333,9 +318,10 @@ AArch64PredicateAsCounterLoopRewrites::matchMaskPhi(Loop &L,
     return std::nullopt;
   }
 
-  auto *StartMask =
-      getGetActiveLaneMask(Phi.getIncomingValueForBlock(Preheader));
-  auto *NextMask = getGetActiveLaneMask(Phi.getIncomingValueForBlock(Latch));
+  Value *StartValue = Phi.getIncomingValueForBlock(L.getLoopPreheader());
+  Value *NextValue = Phi.getIncomingValueForBlock(L.getLoopLatch());
+  IntrinsicInst *StartMask = getGetActiveLaneMask(StartValue);
+  IntrinsicInst *NextMask = getGetActiveLaneMask(NextValue);
   if (!StartMask) {
     logMatchFailure(Phi,
                     "preheader incoming value is not get_active_lane_mask");
@@ -363,7 +349,7 @@ AArch64PredicateAsCounterLoopRewrites::matchMaskPhi(Loop &L,
   }
 
   std::optional<unsigned> PreferredMaskElementSizeInBits =
-      getMostCommonMaskedMemAccessSizeInBits(L, Phi);
+      getLargestMaskedMemAccessSizeInBits(L, Phi);
   if (!PreferredMaskElementSizeInBits) {
     logMatchFailure(Phi, "mask phi has no masked load/store users in the loop");
     return std::nullopt;
@@ -376,7 +362,7 @@ AArch64PredicateAsCounterLoopRewrites::matchMaskPhi(Loop &L,
   }
 
   unsigned SVEMaskElements =
-      getSVEElementCount(*PreferredMaskElementSizeInBits).getKnownMinValue();
+      AArch64::SVEBitsPerBlock / *PreferredMaskElementSizeInBits;
   if (WideMaskElements <= SVEMaskElements) {
     logMatchFailure(Phi, Twine("wide mask element count ")
                              .concat(Twine(WideMaskElements))
@@ -392,12 +378,7 @@ AArch64PredicateAsCounterLoopRewrites::matchMaskPhi(Loop &L,
     return std::nullopt;
   }
 
-  return MaskRewriteCandidate{Preheader,
-                              Latch,
-                              &Phi,
-                              StartMask,
-                              NextMask,
-                              VectorScale,
+  return MaskRewriteCandidate{&Phi, StartMask, NextMask, VectorScale,
                               *PreferredMaskElementSizeInBits};
 }
 
@@ -415,11 +396,11 @@ bool AArch64PredicateAsCounterLoopRewrites::rewriteCandidate(
   Builder.SetInsertPoint(C.MaskPhi);
   auto *NewPhi =
       Builder.CreatePHI(NewStart->getType(), 2, C.MaskPhi->getName() + ".pn");
-  NewPhi->addIncoming(NewStart, C.Preheader);
-  NewPhi->addIncoming(NewNext, C.Latch);
+  NewPhi->addIncoming(NewStart, L.getLoopPreheader());
+  NewPhi->addIncoming(NewNext, L.getLoopLatch());
 
   auto RewriteUses = [&](Instruction *OldMask, Value *Count,
-                         function_ref<bool(Use &U)> Predicate = nullptr) {
+                         function_ref<bool(Use & U)> Predicate = nullptr) {
     SmallVector<Use *, 8> UsesToRewrite;
     for (Use &U : OldMask->uses()) {
       if (!Predicate || Predicate(U))

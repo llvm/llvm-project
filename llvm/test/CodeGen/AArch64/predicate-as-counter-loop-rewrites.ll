@@ -397,27 +397,29 @@ define void @prefer_more_common_masked_access_size(ptr %x16, ptr %y32, i64 %n) #
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    whilelo pn8.h, xzr, x2, vlx2
+; CHECK-NEXT:    whilelo pn8.s, xzr, x2, vlx4
 ; CHECK-NEXT:  .LBB6_1: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    pext { p0.h, p1.h }, pn8[0]
+; CHECK-NEXT:    pext { p0.s, p1.s }, pn8[0]
+; CHECK-NEXT:    pext { p2.s, p3.s }, pn8[1]
 ; CHECK-NEXT:    add x9, x0, x8, lsl #1
-; CHECK-NEXT:    punpklo p2.h, p0.b
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0, x8, lsl #1]
-; CHECK-NEXT:    st1h { z0.h }, p1, [x9, #1, mul vl]
+; CHECK-NEXT:    uzp1 p4.h, p0.h, p1.h
+; CHECK-NEXT:    uzp1 p5.h, p2.h, p3.h
+; CHECK-NEXT:    st1h { z0.h }, p4, [x0, x8, lsl #1]
+; CHECK-NEXT:    st1h { z0.h }, p5, [x9, #1, mul vl]
 ; CHECK-NEXT:    add x9, x1, x8, lsl #2
-; CHECK-NEXT:    punpkhi p0.h, p0.b
-; CHECK-NEXT:    ld1w { z1.s }, p2/z, [x1, x8, lsl #2]
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1, x8, lsl #2]
 ; CHECK-NEXT:    incb x8
-; CHECK-NEXT:    punpkhi p2.h, p1.b
-; CHECK-NEXT:    punpklo p1.h, p1.b
-; CHECK-NEXT:    ld1w { z5.s }, p0/z, [x9, #1, mul vl]
-; CHECK-NEXT:    ld1w { z3.s }, p2/z, [x9, #3, mul vl]
-; CHECK-NEXT:    whilelo pn8.h, x8, x2, vlx2
-; CHECK-NEXT:    ld1w { z4.s }, p1/z, [x9, #2, mul vl]
-; CHECK-NEXT:    pext { p3.h, p4.h }, pn8[0]
-; CHECK-NEXT:    uzp1 p3.b, p3.b, p4.b
-; CHECK-NEXT:    mov z2.b, p3/z, #1 // =0x1
+; CHECK-NEXT:    ld1w { z3.s }, p3/z, [x9, #3, mul vl]
+; CHECK-NEXT:    ld1w { z4.s }, p2/z, [x9, #2, mul vl]
+; CHECK-NEXT:    ld1w { z5.s }, p1/z, [x9, #1, mul vl]
+; CHECK-NEXT:    whilelo pn8.s, x8, x2, vlx4
+; CHECK-NEXT:    pext { p4.s, p5.s }, pn8[0]
+; CHECK-NEXT:    uzp1 p0.h, p4.h, p5.h
+; CHECK-NEXT:    pext { p4.s, p5.s }, pn8[1]
+; CHECK-NEXT:    uzp1 p4.h, p4.h, p5.h
+; CHECK-NEXT:    uzp1 p0.b, p0.b, p4.b
+; CHECK-NEXT:    mov z2.b, p0/z, #1 // =0x1
 ; CHECK-NEXT:    fmov w9, s2
 ; CHECK-NEXT:    // fake_use: $z1
 ; CHECK-NEXT:    // fake_use: $z5
