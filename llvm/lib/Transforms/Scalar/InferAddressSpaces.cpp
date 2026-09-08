@@ -1664,8 +1664,8 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
   // Deleting one instruction may recursively delete another queued
   // instruction. Create handles before the first deletion so overlapping
   // entries are nulled instead of leaving dangling pointers.
-  SmallVector<WeakTrackingVH> DeadInstructionHandles(DeadInstructions.begin(),
-                                                     DeadInstructions.end());
+  auto DeadInstructionHandles =
+      to_vector_of<WeakTrackingVH, 16>(DeadInstructions);
   RecursivelyDeleteTriviallyDeadInstructions(DeadInstructionHandles);
 
   return true;
