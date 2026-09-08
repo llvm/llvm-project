@@ -23,7 +23,7 @@ static std::string toString(AffineExpr expr) {
 }
 
 // Test creating AffineExprs using the overloaded binary operators.
-TEST(AffineExprTest, constructFromBinaryOperators) {
+TEST(AffineExprTest, constructFromBinaryOperatorsWithDimRHS) {
   MLIRContext ctx;
   OpBuilder b(&ctx);
 
@@ -34,11 +34,39 @@ TEST(AffineExprTest, constructFromBinaryOperators) {
   auto difference = d0 - d1;
   auto product = d0 * d1;
   auto remainder = d0 % d1;
+  auto floorDiv = d0.floorDiv(d1);
+  auto ceilDiv = d0.ceilDiv(d1);
+
+  ASSERT_EQ(sum.getKind(), AffineExprKind::Add);
+  ASSERT_EQ(difference.getKind(), AffineExprKind::Add);
+  ASSERT_EQ(remainder.getKind(), AffineExprKind::Mod);
+  ASSERT_EQ(floorDiv.getKind(), AffineExprKind::FloorDiv);
+  ASSERT_EQ(ceilDiv.getKind(), AffineExprKind::CeilDiv);
+
+  // Invalid (semi-)affine expressions.
+  ASSERT_EQ(product, nullptr);
+}
+
+TEST(AffineExprTest, constructFromBinaryOperatorsWithConstRHS) {
+  MLIRContext ctx;
+  OpBuilder b(&ctx);
+
+  auto d0 = b.getAffineDimExpr(0);
+  auto d1 = b.getAffineConstantExpr(123);
+
+  auto sum = d0 + d1;
+  auto difference = d0 - d1;
+  auto product = d0 * d1;
+  auto remainder = d0 % d1;
+  auto floorDiv = d0.floorDiv(d1);
+  auto ceilDiv = d0.ceilDiv(d1);
 
   ASSERT_EQ(sum.getKind(), AffineExprKind::Add);
   ASSERT_EQ(difference.getKind(), AffineExprKind::Add);
   ASSERT_EQ(product.getKind(), AffineExprKind::Mul);
   ASSERT_EQ(remainder.getKind(), AffineExprKind::Mod);
+  ASSERT_EQ(floorDiv.getKind(), AffineExprKind::FloorDiv);
+  ASSERT_EQ(ceilDiv.getKind(), AffineExprKind::CeilDiv);
 }
 
 TEST(AffineExprTest, constantFolding) {
