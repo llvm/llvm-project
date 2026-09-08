@@ -68,9 +68,9 @@
 ; CHECK-NEXT:     process-imp-defs
 ; CHECK-NEXT:     unreachable-mbb-elimination
 ; CHECK-NEXT:     require<live-vars>
+; CHECK-NEXT:     require<live-intervals>
 ; CHECK-NEXT:     require<machine-loops>
 ; CHECK-NEXT:     phi-node-elimination
-; CHECK-NEXT:     require<live-intervals>
 ; CHECK-NEXT:     two-address-instruction
 ; CHECK-NEXT:     register-coalescer
 ; CHECK-NEXT:     rename-independent-subregs

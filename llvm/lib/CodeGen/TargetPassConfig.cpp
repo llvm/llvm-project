@@ -1504,15 +1504,14 @@ void TargetPassConfig::addOptimizedRegAlloc() {
   addPass(&UnreachableMachineBlockElimID);
   addPass(&LiveVariablesID);
 
-  // Edge splitting is smarter with machine loop info.
-  addPass(&MachineLoopInfoID);
-  addPass(&PHIEliminationID);
-
   // LiveIntervals is computed unconditionally before TwoAddressInstruction so
   // that pass can rely on it instead of LiveVariables. This is a step toward
   // removing LiveVariables entirely.
-  // FIXME: Eventually, we want to run LiveIntervals before PHI elimination.
   addPass(&LiveIntervalsID);
+
+  // Edge splitting is smarter with machine loop info.
+  addPass(&MachineLoopInfoID);
+  addPass(&PHIEliminationID);
 
   addPass(&TwoAddressInstructionPassID);
   addPass(&RegisterCoalescerID);
