@@ -265,6 +265,7 @@ if result:
 
 config.substitutions.append(("%openmp_flags", "-fopenmp"))
 
+
 def flang_supports_f128():
     flang_exe = lit.util.which("flang", config.clang_tools_dir)
 
@@ -284,6 +285,7 @@ def flang_supports_f128():
 
     if flang_cmd.returncode == 0:
         return True
+
 
 # Add features and substitutions to test F128 math support.
 # %f128-lib substitution may be used to generate check prefixes
