@@ -144,11 +144,12 @@ void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
       createEvent(std::move(MCurrentSubmitInfo.DepEvents));
 }
 
-static ol_device_handle_t getAllocDevice(const void *ptr) {
+static ol_device_handle_t getAllocDevice(ol_context_handle_t Context,
+                                         const void *ptr) {
   // TODO: consider caching this information to avoid querying it every time.
   ol_device_handle_t Device{};
   [[maybe_unused]] ol_result_t Result =
-      callNoCheck(olGetMemInfo, ptr, OL_MEM_INFO_DEVICE,
+      callNoCheck(olGetMemInfo, Context, ptr, OL_MEM_INFO_DEVICE,
                   sizeof(ol_device_handle_t), &Device);
   if (detail::isFailed(Result)) {
     // If liboffload could not find the allocation, assume it is a host one.
@@ -175,8 +176,10 @@ QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
                           "Nullptr argument in memcpy operation");
   }
 
-  ol_device_handle_t DestOLDevice = getAllocDevice(Dest);
-  ol_device_handle_t SrcOLDevice = getAllocDevice(Src);
+  ol_device_handle_t DestOLDevice =
+      getAllocDevice(MContext.getOLHandleRef(), Dest);
+  ol_device_handle_t SrcOLDevice =
+      getAllocDevice(MContext.getOLHandleRef(), Src);
 
   handleEventDependencies(DepEvents);
   callAndThrow(olMemcpy, MOffloadQueue, Dest, DestOLDevice, Src, SrcOLDevice,

@@ -172,6 +172,8 @@ typedef struct hsa_amd_pointer_info_s {
   void* agentBaseAddress;
   void* hostBaseAddress;
   size_t sizeInBytes;
+  void *userData;
+  hsa_agent_t agentOwner;
 } hsa_amd_pointer_info_t;
 
 typedef enum {

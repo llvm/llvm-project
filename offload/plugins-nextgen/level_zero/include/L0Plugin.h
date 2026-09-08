@@ -42,6 +42,8 @@ public:
   Error initAsyncInfoImpl(GenericDeviceTy &Device,
                           AsyncInfoWrapperTy &AsyncInfoWrapper) override;
 
+  Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override;
+
   /// Pop an idle queue for \p Device from the cache, or create a new one.
   Expected<L0QueueTy *> takeCachedQueue(L0DeviceTy *Device) {
     return QueueCache.getQueue(*Device);

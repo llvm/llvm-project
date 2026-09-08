@@ -125,25 +125,29 @@ ol_result_t olMemPrefetch(ol_queue_handle_t Queue, size_t Count,
                                                  Flags);
 }
 
-ol_result_t olGetMemInfo(const void *Ptr, ol_mem_info_t PropName,
-                         size_t PropSize, void *PropValue) {
-  return mock::getMockLiboffload().olGetMemInfo(Ptr, PropName, PropSize,
-                                                PropValue);
+ol_result_t olGetMemInfo(ol_context_handle_t Context, const void *Ptr,
+                         ol_mem_info_t PropName, size_t PropSize,
+                         void *PropValue) {
+  return mock::getMockLiboffload().olGetMemInfo(Context, Ptr, PropName,
+                                                PropSize, PropValue);
 }
 
-ol_result_t olMemAlloc(ol_device_handle_t Device, ol_alloc_type_t Type,
-                       size_t Size, void **AllocationOut) {
-  return mock::getMockLiboffload().olMemAlloc(Device, Type, Size,
+ol_result_t olMemAlloc(ol_context_handle_t Context, ol_device_handle_t Device,
+                       ol_alloc_type_t Type, size_t Size,
+                       void **AllocationOut) {
+  return mock::getMockLiboffload().olMemAlloc(Context, Device, Type, Size,
                                               AllocationOut);
 }
 
-ol_result_t olMemAllocHost(ol_device_handle_t Device, size_t Size,
+ol_result_t olMemAllocHost(ol_context_handle_t Context,
+                           ol_device_handle_t Device, size_t Size,
                            void **AllocationOut) {
-  return mock::getMockLiboffload().olMemAllocHost(Device, Size, AllocationOut);
+  return mock::getMockLiboffload().olMemAllocHost(Context, Device, Size,
+                                                  AllocationOut);
 }
 
-ol_result_t olMemFree(void *Address) {
-  return mock::getMockLiboffload().olMemFree(Address);
+ol_result_t olMemFree(ol_context_handle_t Context, void *Address) {
+  return mock::getMockLiboffload().olMemFree(Context, Address);
 }
 
 ol_result_t olCreateEvent(ol_queue_handle_t Queue, ol_event_flags_t Flags,
