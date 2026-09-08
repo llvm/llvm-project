@@ -177,7 +177,7 @@ def LLVM_AShrOp : LLVM_IntArithmeticOpWithExactFlag<"ashr", "AShr", [Pure]>;
 class LLVM_ArithmeticCmpOp<string mnemonic, list<Trait> traits = []> :
     LLVM_Op<mnemonic, traits # [SameTypeOperands, TypesMatchWith<
     "result type has i1 element type and same shape as operands",
-    "lhs", "res", "::getI1SameShape($_self)">]> {
+    "lhs", "res", "::mlir::LLVM::getI1SameShape($_self)">]> {
   let results = (outs LLVM_ScalarOrVectorOf<I1>:$res);
 }
 

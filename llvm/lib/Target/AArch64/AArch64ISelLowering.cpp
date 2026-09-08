@@ -8200,6 +8200,14 @@ SDValue AArch64TargetLowering::LowerLOAD(SDValue Op,
   LoadSDNode *LoadNode = cast<LoadSDNode>(Op);
   assert(LoadNode && "Expected custom lowering of a load node");
 
+  // Extending loads of v2i8 -> v2i32/v2i64 are better lowered using SVE's
+  // extending load instructions as they otherwise require 2 or 3 instructions
+  // to promote.
+  bool OverrideNeon = !Subtarget->isNeonAvailable() ||
+                      cast<LoadSDNode>(Op)->getMemoryVT() == MVT::v2i8;
+  if (useSVEForFixedLengthVectorVT(Op.getValueType(), OverrideNeon))
+    return LowerFixedLengthVectorLoadToSVE(Op, DAG);
+
   if (SDValue Result = tryLowerSmallVectorExtLoad(LoadNode, DAG))
     return Result;
 
@@ -9007,9 +9015,6 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::MLOAD:
     return LowerMLOAD(Op, DAG);
   case ISD::LOAD:
-    if (useSVEForFixedLengthVectorVT(Op.getValueType(),
-                                     !Subtarget->isNeonAvailable()))
-      return LowerFixedLengthVectorLoadToSVE(Op, DAG);
     return LowerLOAD(Op, DAG);
   case ISD::ADD:
   case ISD::AND:
@@ -18974,15 +18979,13 @@ bool AArch64TargetLowering::isProfitableToHoist(Instruction *I) const {
         User->getOpcode() == Instruction::FAdd))
     return true;
 
-  const TargetOptions &Options = getTargetMachine().Options;
   const Function *F = I->getFunction();
   const DataLayout &DL = F->getDataLayout();
   Type *Ty = User->getOperand(0)->getType();
 
   return !(isFMAFasterThanFMulAndFAdd(*F, Ty) &&
            isOperationLegalOrCustom(ISD::FMA, getValueType(DL, Ty)) &&
-           (Options.AllowFPOpFusion == FPOpFusion::Fast ||
-            I->getFastMathFlags().allowContract()));
+           I->getFastMathFlags().allowContract());
 }
 
 // All 32-bit GPR operations implicitly zero the high-half of the corresponding

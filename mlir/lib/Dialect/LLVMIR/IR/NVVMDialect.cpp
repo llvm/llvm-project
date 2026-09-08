@@ -37,10 +37,12 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/raw_ostream.h"
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <optional>
 #include <string>
+#include <utility>
 
 using namespace mlir;
 using namespace NVVM;
@@ -1399,7 +1401,9 @@ LogicalResult MmaOp::verify() {
   // Verify the operand types for segments of A, B, and C operands.
   std::array<StringRef, 3> operandNames{"A", "B", "C"};
   for (const auto &iter : llvm::enumerate(
-           SmallVector<AllowedTypes, 3>{expectedA, expectedB, expectedC})) {
+           std::array<AllowedTypes, 3>{std::move(expectedA),
+                                       std::move(expectedB),
+                                       std::move(expectedC)})) {
     auto spec = this->getODSOperandIndexAndLength(iter.index());
     SmallVector<Type, 4> operandTySeg(operand_type_begin() + spec.first,
                                       operand_type_begin() + spec.first +
@@ -1918,7 +1922,9 @@ LogicalResult MmaSpOp::verify() {
   // Verify the operand types for segments of A, B, and C operands.
   std::array<StringRef, 3> operandNames{"A", "B", "C"};
   for (const auto &iter : llvm::enumerate(
-           SmallVector<AllowedTypes, 3>{expectedA, expectedB, expectedC})) {
+           std::array<AllowedTypes, 3>{std::move(expectedA),
+                                       std::move(expectedB),
+                                       std::move(expectedC)})) {
     auto spec = this->getODSOperandIndexAndLength(iter.index());
     SmallVector<Type, 4> operandTySeg(operand_type_begin() + spec.first,
                                       operand_type_begin() + spec.first +
@@ -3018,8 +3024,7 @@ static LogicalResult isAllowedWGMMADataType(NVVM::WGMMATypes typeD,
       return success();
     break;
   case NVVM::WGMMATypes::bf16:
-    if ((typeD == NVVM::WGMMATypes::f32 || typeD == NVVM::WGMMATypes::f16) &&
-        typeB == NVVM::WGMMATypes::bf16)
+    if (typeD == NVVM::WGMMATypes::f32 && typeB == NVVM::WGMMATypes::bf16)
       return success();
     break;
   case NVVM::WGMMATypes::e4m3:
@@ -3608,14 +3613,6 @@ static LogicalResult verifyAddSubFOp(OpType op) {
       return op.emitOpError("FTZ and saturation are not supported for bf16 and "
                             "vector<2xbf16> additions/subtractions");
   }
-
-  // FIXME: This is a temporary check disallowing lowering to add.rn.ftz.f16(x2)
-  // PTX instructions since the corresponding LLVM intrinsic is missing. This
-  // should be removed once the intrinsics for f16 addition (with FTZ only) are
-  // available.
-  if (opBaseType.isF16() && isFTZ && satMode == NVVM::SaturationMode::NONE)
-    return op.emitOpError("FTZ with no saturation is not supported for f16 and "
-                          "vector<2xf16> additions/subtractions");
 
   return success();
 }
@@ -7151,9 +7148,14 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
                      "NVVM target attribute must be attached to a GPU module");
   }
 
-  const unsigned targetFullSmVersion =
+  std::optional<unsigned> targetFullSmVersion =
       NVVMCheckSMVersion::getTargetFullSmVersionFromStr(getChip());
-  if (!NVVMCheckSMVersion::isMinimumSMVersion(targetFullSmVersion)) {
+  if (!targetFullSmVersion)
+    return emitError(gpuModule->getLoc())
+           << "invalid NVVM target chip \"" << getChip()
+           << "\", expected sm_<version>[a|f]";
+
+  if (!NVVMCheckSMVersion::isMinimumSMVersion(*targetFullSmVersion)) {
     return emitError(gpuModule->getLoc(),
                      "Minimum NVVM target SM version is sm_20");
   }
@@ -7163,7 +7165,7 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
             if (auto reqOp = llvm::dyn_cast<NVVM::RequiresSMInterface>(op)) {
               const NVVMCheckSMVersion requirement =
                   reqOp.getRequiredMinSMVersion();
-              if (!requirement.isCompatibleWith(targetFullSmVersion)) {
+              if (!requirement.isCompatibleWith(*targetFullSmVersion)) {
                 op->emitOpError() << "is not supported on " << getChip();
                 return WalkResult::interrupt();
               }

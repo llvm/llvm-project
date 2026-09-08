@@ -101,12 +101,13 @@ features cannot lower the translation-unit ABI level;
 - On MIPS N32/N64, an `__int128` now correctly start in an even-numbered register
   or 16-byte aligned stack slot, matching GCC.
 
-- On x86-64 System V, a non-zero-width unnamed bit-field now classifies the
-  eightbytes it occupies as INTEGER, like a named bit-field, matching GCC.
-  Aggregates where this changes the classification may be passed or returned
-  differently -- a struct holding a run of `__int128` bit-fields, for example,
-  now travels in the two integer registers the ABI assigns it. This also fixes
-  a crash when such a struct was passed or returned. (#GH202205)
+- Except on PlayStation, on x86-64 System V a non-zero-width unnamed bit-field
+  now classifies the eightbytes it occupies as INTEGER, like a named bit-field,
+  matching GCC. Aggregates where this changes the classification may be passed
+  or returned differently -- a struct holding a run of `__int128` bit-fields,
+  for example, now travels in the two integer registers the ABI assigns it.
+  This also fixes a crash when such a struct was passed or returned.
+  `-fclang-abi-compat=23` restores the previous behavior. (#GH202205)
 
 ### AST Dumping Potentially Breaking Changes
 
@@ -169,6 +170,9 @@ features cannot lower the translation-unit ABI level;
 #### C++23 Feature Support
 
 #### C++20 Feature Support
+
+- Now clang-scan-deps in P1689 format can find the dependencies described in
+  module map file. See the documents of standard C++ modules for details.
 
 #### C++17 Feature Support
 
@@ -507,6 +511,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
 - Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
+- Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
 
 #### Bug Fixes to Compiler Builtins
 
