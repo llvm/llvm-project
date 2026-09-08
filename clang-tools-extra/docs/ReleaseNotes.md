@@ -96,7 +96,7 @@ infrastructure are described first, followed by tool-specific sections.
 
 ### Improvements to clang-tidy
 
-- Improved clang-tidy by fixing its use as a Clang plugin, allowing checks to
+- Improved {program}`clang-tidy` by fixing its use as a Clang plugin, allowing checks to
   run during normal compilation when Clang and LLVM are built as shared libraries.
 
 - Improved {program}`check_clang_tidy.py` by adding support of
