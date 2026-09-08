@@ -2466,8 +2466,7 @@ Value *LibCallSimplifier::replacePowWithCbrt(CallInst *Pow, IRBuilderBase &B) {
   Module *Mod = Pow->getModule();
   Type *Ty = Pow->getType();
 
-  // cbrt() has no vector version; only handle scalar float/double.
-  if (Ty->isVectorTy())
+  if (!(Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isFP128Ty()))
     return nullptr;
 
   // pow(-0.0, 2/3) = +0.0; cbrt(-0.0) * cbrt(-0.0) = +0.0.
@@ -2483,24 +2482,27 @@ Value *LibCallSimplifier::replacePowWithCbrt(CallInst *Pow, IRBuilderBase &B) {
   if (!match(Expo, m_APFloat(ExpoF)))
     return nullptr;
 
-  bool ExpoIsTwoThirds =
-      (Ty->isFloatTy() && ExpoF->isExactlyValue(2.0f / 3.0f)) ||
-      (Ty->isDoubleTy() && ExpoF->isExactlyValue(2.0 / 3.0));
-  if (!ExpoIsTwoThirds)
+  // Compare against 2/3 evaluated in the exponent's own semantics so long
+  // double fp128 matches 2.0L/3.0L
+  APFloat TwoThirds(ExpoF->getSemantics(), 2);
+  APFloat Three(ExpoF->getSemantics(), 3);
+  TwoThirds.divide(Three, APFloat::rmNearestTiesToEven);
+  if (!ExpoF->bitwiseIsEqual(TwoThirds))
     return nullptr;
 
   // Do not create a cbrt() libcall if the target does not have it.
   if (!hasFloatFn(Mod, TLI, Ty, LibFunc_cbrt, LibFunc_cbrtf, LibFunc_cbrtl))
     return nullptr;
 
-  AttributeList NoAttrs; // Attributes are only meaningful on the original call.
   Value *Cbrt = emitUnaryFloatFnCall(Base, TLI, LibFunc_cbrt, LibFunc_cbrtf,
-                                     LibFunc_cbrtl, B, NoAttrs);
-  if (!Cbrt)
-    return nullptr;
+                                     LibFunc_cbrtl, B, AttributeList());
+  MDNode *FPMath = Pow->getMetadata(LLVMContext::MD_fpmath);
+  cast<Instruction>(Cbrt)->setMetadata(LLVMContext::MD_fpmath, FPMath);
 
   // pow(X, 2/3) --> cbrt(X) * cbrt(X)
-  return copyFlags(*Pow, B.CreateFMul(Cbrt, Cbrt));
+  Value *Mul = B.CreateFMul(Cbrt, Cbrt);
+  cast<Instruction>(Mul)->setMetadata(LLVMContext::MD_fpmath, FPMath);
+  return copyFlags(*Pow, Mul);
 }
 
 static Value *createPowWithIntegerExponent(Value *Base, Value *Expo, Module *M,
