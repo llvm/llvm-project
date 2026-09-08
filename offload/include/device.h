@@ -102,9 +102,6 @@ struct DeviceTy {
                        HostDataToTargetTy *Entry = nullptr,
                        MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
 
-  // Return true if data can be copied to DstDevice directly
-  bool isDataExchangable(const DeviceTy &DstDevice);
-
   // Copy data from current device to destination device directly
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                        int64_t Size, AsyncInfoTy &AsyncInfo);
