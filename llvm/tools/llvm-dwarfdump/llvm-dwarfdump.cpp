@@ -760,7 +760,7 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
 
   // Address space names are target-dependent.
   Triple TT = Obj.makeTriple();
-  auto GetASName = [TT](uint64_t AS) -> StringRef {
+  auto GetASName = [&TT](uint64_t AS) -> StringRef {
     return dwarf::AddressSpaceString(AS, TT);
   };
 

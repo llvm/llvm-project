@@ -88,13 +88,14 @@ static void dumpLocationList(raw_ostream &OS, const DWARFFormValue &FormValue,
 
 static void dumpDWARFAddressSpace(raw_ostream &OS,
                                   const DWARFFormValue &FormValue,
-                                  DIDumpOptions DumpOpts) {
+                                  const DIDumpOptions &DumpOpts) {
   FormValue.dump(OS, DumpOpts);
 
-  auto AddressSpaceAsUInt = FormValue.getAsUnsignedConstant();
-  auto GetNameForDWARFAddressSpace = DumpOpts.GetNameForDWARFAddressSpace;
-  if (GetNameForDWARFAddressSpace && AddressSpaceAsUInt) {
-    StringRef ASName = GetNameForDWARFAddressSpace(*AddressSpaceAsUInt);
+  std::optional<uint64_t> AddressSpaceAsUInt =
+      FormValue.getAsUnsignedConstant();
+  if (DumpOpts.GetNameForDWARFAddressSpace && AddressSpaceAsUInt) {
+    StringRef ASName =
+        DumpOpts.GetNameForDWARFAddressSpace(*AddressSpaceAsUInt);
     if (!ASName.empty())
       OS << " \"" << ASName << "\"";
   }
