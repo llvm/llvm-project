@@ -1180,40 +1180,40 @@ static VPValue *simplifyLogicalRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
                          m_LogicalAnd(m_Deferred(X), m_Not(m_Deferred(Y))))))
     return X;
 
-  // x | AllOnes -> AllOnes
+  // X | AllOnes -> AllOnes
   if (match(Def, m_c_BinaryOr(m_VPValue(X), m_AllOnes())))
     return Plan.getAllOnesValue(Def->getScalarType());
 
-  // x | 0 -> x
+  // X | 0 -> X
   if (match(Def, m_c_BinaryOr(m_VPValue(X), m_ZeroInt())))
     return X;
 
-  // x | !x -> AllOnes
+  // X | !X -> AllOnes
   if (match(Def, m_c_BinaryOr(m_VPValue(X), m_Not(m_Deferred(X)))))
     return Plan.getAllOnesValue(Def->getScalarType());
 
-  // x & 0 -> 0
+  // X & 0 -> 0
   if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt())))
     return Plan.getZero(Def->getScalarType());
 
-  // x & AllOnes -> x
+  // X & AllOnes -> X
   if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_AllOnes())))
     return X;
 
-  // x && false -> false
+  // X && false -> false
   if (match(Def, m_c_LogicalAnd(m_VPValue(X), m_False())))
     return Plan.getFalse();
 
-  // x && true -> x
+  // X && true -> X
   if (match(Def, m_c_LogicalAnd(m_VPValue(X), m_True())))
     return X;
 
-  // x && (x && y) -> x && y
+  // X && (X && Y) -> X && Y
   if (match(Def, m_LogicalAnd(m_VPValue(X),
                               m_LogicalAnd(m_Deferred(X), m_VPValue()))))
     return Def->getOperand(1);
 
-  // x && !x -> 0
+  // X && !X -> 0
   if (match(Def, m_LogicalAnd(m_VPValue(X), m_Not(m_Deferred(X)))))
     return Plan.getFalse();
 
@@ -1404,13 +1404,13 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
 
   VPValue *X, *Y, *Z;
 
-  // x && (y && x) -> x && y
+  // X && (Y && X) -> X && Y
   if (CanCreateNewRecipe &&
       match(Def, m_LogicalAnd(m_VPValue(X),
                               m_LogicalAnd(m_VPValue(Y), m_Deferred(X)))))
     return Builder.createLogicalAnd(X, Y);
 
-  // (x && y) | (x && z) -> x && (y | z)
+  // (X && Y) | (X && Z) -> X && (Y | Z)
   if (CanCreateNewRecipe &&
       match(Def, m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
                               m_LogicalAnd(m_Deferred(X), m_VPValue(Z)))) &&
@@ -1420,20 +1420,20 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
        !Def->getOperand(1)->hasMoreThanOneUniqueUser()))
     return Builder.createLogicalAnd(X, Builder.createOr(Y, Z));
 
-  // (x && y) | !x -> !x || y
+  // (X && Y) | !X -> !X || Y
   if (CanCreateNewRecipe &&
       match(Def,
             m_c_BinaryOr(m_OneUse(m_LogicalAnd(m_VPValue(X), m_VPValue(Y))),
                          m_VPValue(Z, m_Not(m_Deferred(X))))))
     return Builder.createLogicalOr(Z, Y);
 
-  // select c, false, true -> not c
+  // select C, false, true -> not C
   VPValue *C;
   if (CanCreateNewRecipe &&
       match(Def, m_Select(m_VPValue(C), m_False(), m_True())))
     return Builder.createNot(C);
 
-  // select !c, x, y -> select c, y, x
+  // select !C, X, Y -> select C, Y, X
   if (match(Def, m_Select(m_Not(m_VPValue(C)), m_VPValue(X), m_VPValue(Y)))) {
     Def->setOperand(0, C);
     Def->setOperand(1, Y);
@@ -1441,7 +1441,7 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
     return Def;
   }
 
-  // select x, (i1 y | z), y -> y | (x && z)
+  // select X, (i1 Y | Z), Y -> Y | (X && Z)
   if (CanCreateNewRecipe &&
       match(Def, m_Select(m_VPValue(X),
                           m_OneUse(m_c_BinaryOr(m_VPValue(Y), m_VPValue(Z))),
@@ -1449,7 +1449,7 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
       Y->getScalarType()->isIntegerTy(1))
     return Builder.createOr(Y, Builder.createLogicalAnd(X, Z));
 
-  // select %M0, (select %M1, %X, %Y), %Y -> select (%M0 && %M1), %X, %Y
+  // select M0, (select M1, X, Y), Y -> select (M0 && M1), X, Y
   VPValue *Mask0, *Mask1;
   if (CanCreateNewRecipe &&
       match(Def,
@@ -1545,7 +1545,7 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
         for (VPUser *U : to_vector(Cmp->users())) {
           auto *R = cast<VPSingleDefRecipe>(U);
           if (match(R, m_Select(m_Specific(Cmp), m_VPValue(X), m_VPValue(Y)))) {
-            // select (cmp pred), x, y -> select (cmp inv_pred), y, x
+            // select (cmp pred), X, Y -> select (cmp inv_pred), Y, X
             R->setOperand(1, Y);
             R->setOperand(2, X);
           } else {
@@ -1563,8 +1563,8 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
     }
   }
 
-  // Fold any-of (fcmp uno %A, %A), (fcmp uno %B, %B), ... ->
-  //      any-of (fcmp uno %A, %B), ...
+  // Fold any-of (fcmp uno A, A), (fcmp uno B, B), ... ->
+  //      any-of (fcmp uno A, B), ...
   if (match(Def, m_AnyOf())) {
     SmallVector<VPValue *, 4> NewOps;
     VPRecipeBase *UnpairedCmp = nullptr;
@@ -1590,7 +1590,7 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
       return Builder.createNaryOp(VPInstruction::AnyOf, NewOps);
   }
 
-  // Fold (fcmp uno %X, %X) or (fcmp uno %Y, %Y) -> fcmp uno %X, %Y
+  // Fold (fcmp uno X, X) | (fcmp uno Y, Y) -> fcmp uno X, Y
   // This is useful for fmax/fmin without fast-math flags, where we need to
   // check if any operand is NaN.
   if (CanCreateNewRecipe &&
@@ -1606,7 +1606,7 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
     return Builder.createWidenCast(Instruction::Trunc, X, Def->getScalarType());
 
   // For i1 vp.merges produced by AnyOf reductions:
-  // vp.merge true, (or x, y), x, evl -> vp.merge y, true, x, evl
+  // vp.merge true, (or X, Y), X, evl -> vp.merge Y, true, X, evl
   if (match(Def, m_Intrinsic<Intrinsic::vp_merge>(m_True(), m_VPValue(X),
                                                   m_VPValue(X), m_VPValue())) &&
       match(X, m_c_BinaryOr(m_Specific(X), m_VPValue(Y))) &&
