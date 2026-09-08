@@ -108,17 +108,17 @@
 # IN: There are no section groups in this file.
 
 ## Compress debug sections of the simulated dynamic debugging objects with zstd compression.
-# RUN: llvm-objcopy --compress-debug-sections=zstd main.o main-zstd.o
-# RUN: llvm-objcopy --compress-debug-sections=zstd foo.o foo-zstd.o
-# RUN: llvm-readelf -S main-zstd.o | FileCheck --check-prefix=ZSTD %s
-# RUN: llvm-readelf -S foo-zstd.o | FileCheck --check-prefix=ZSTD %s
+# RUN: %if zstd %{ llvm-objcopy --compress-debug-sections=zstd main.o main-zstd.o %}
+# RUN: %if zstd %{ llvm-objcopy --compress-debug-sections=zstd foo.o foo-zstd.o %}
+# RUN: %if zstd %{ llvm-readelf -S main-zstd.o | FileCheck --check-prefix=ZSTD %s %}
+# RUN: %if zstd %{ llvm-readelf -S foo-zstd.o | FileCheck --check-prefix=ZSTD %s %}
 
 # ZSTD: .debug_llvm_dyndbg LLVM_DYNDBG_ELF 0000000000000000 {{.*}} {{.*}} 00   C  0   0  8
 
 ## Link simulated dynamic debugging objects with zstd compressed debug sections and
 ## check the output.
-# RUN: ld.lld -e main -o out.zstd main-zstd.o foo-zstd.o shared.so
-# RUN: llvm-readelf -Srsn out.zstd | FileCheck --check-prefixes=DD,NO-GC %s
+# RUN: %if zstd %{ ld.lld -e main -o out.zstd main-zstd.o foo-zstd.o shared.so %}
+# RUN: %if zstd %{ llvm-readelf -Srsn out.zstd | FileCheck --check-prefixes=DD,NO-GC %s %}
 
 ## Check disabling of incompatible ICF options.
 # RUN: ld.lld -e main --icf=all -o out.icf main.o foo.o shared.so 2>&1 | \
