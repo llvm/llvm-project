@@ -270,6 +270,8 @@ void preprocess(StringRef Src, StringRef Dst, const RcOptions &Opts,
   if (Opts.Params.ShowIncludes) {
     Args.push_back("-Xclang");
     Args.push_back("--show-includes");
+    Args.push_back("-Xclang");
+    Args.push_back("-sys-header-deps");
   }
   Args.push_back(Src);
   Args.push_back("-o");

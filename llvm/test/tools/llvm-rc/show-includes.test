@@ -1,10 +1,12 @@
-; Verify /showIncludes forwards --show-includes through to clang cc1 so that
-; preprocessor-phase includes are reported in MSVC-compatible form.
+; Verify /showIncludes forwards --show-includes and -sys-header-deps through to
+; clang cc1 so that all preprocessor-phase includes, including system headers,
+; are reported in MSVC-compatible form.
 ; RUN: llvm-rc -### /showIncludes -- %p/Inputs/empty.rc | FileCheck --check-prefix=CMD %s
 ; RUN: llvm-rc -### -- %p/Inputs/empty.rc | FileCheck --check-prefix=NOCMD %s
 
-; CMD: "-Xclang" "--show-includes"
+; CMD: "-Xclang" "--show-includes" "-Xclang" "-sys-header-deps"
 ; NOCMD-NOT: --show-includes
+; NOCMD-NOT: -sys-header-deps
 
 ; Verify /showIncludes emits a "Note: including file:" line for resource files
 ; (icons, bitmaps, etc.) loaded after parsing.
