@@ -300,6 +300,11 @@ namespace clang {
       P.ParsingGenericAssociationType = Value;
     }
 
+    GenericAssociationTypeRAIIObject(const GenericAssociationTypeRAIIObject &) =
+        delete;
+    GenericAssociationTypeRAIIObject &
+    operator=(const GenericAssociationTypeRAIIObject &) = delete;
+
     void restore() { P.ParsingGenericAssociationType = OldVal; }
 
     ~GenericAssociationTypeRAIIObject() { restore(); }
