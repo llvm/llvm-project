@@ -65,6 +65,7 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <limits>
 using namespace llvm;
 
@@ -347,7 +348,7 @@ static void makeFallthroughExplicitIfNeeded(MachineBasicBlock *MBB,
 ///
 /// This preserves the machine verifier invariant that exceptional successors
 /// remain direct-to-EHPad while turning the loop body into a single-entry loop.
-static bool cloneEHPadEntriesForBackedges(const BlockSet &Entries,
+static void cloneEHPadEntriesForBackedges(const BlockSet &Entries,
                                           BlockSet &Blocks, MachineFunction &MF,
                                           const ReachabilityGraph &Graph) {
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
@@ -355,8 +356,6 @@ static bool cloneEHPadEntriesForBackedges(const BlockSet &Entries,
   // (1) This EH-specific path is selected only for irreducible SCC entries
   // that include an EH pad.
   assert(hasEHPadEntry(Entries) && "Expected an EH pad entry");
-
-  bool Changed = false;
 
   for (MachineBasicBlock *EHPadEntry : getSortedEntries(Entries)) {
     if (!EHPadEntry->isEHPad())
@@ -373,16 +372,16 @@ static bool cloneEHPadEntriesForBackedges(const BlockSet &Entries,
       if (Graph.getSCCId(Pred) != SCCId)
         continue;
 
-      // Keep this first implementation conservative. The target pattern is:
-      //
-      //   normal throwing block -> EHPad entry
-      //
-      // Do not try to clone paths from an EHPad predecessor yet.
       if (Pred->isEHPad())
-        continue;
+        reportFatalUsageError(
+            "irreducible control flow with an EH pad predecessor is not "
+            "supported");
 
       InLoopPreds.push_back(Pred);
     }
+
+    assert(!InLoopPreds.empty() &&
+           "EH pad loop entry must have an in-loop predecessor");
 
     for (MachineBasicBlock *Pred : InLoopPreds) {
       LLVM_DEBUG({
@@ -439,12 +438,8 @@ static bool cloneEHPadEntriesForBackedges(const BlockSet &Entries,
         Clone->printName(dbgs());
         dbgs() << "\n";
       });
-
-      Changed = true;
     }
   }
-
-  return Changed;
 }
 // Given a set of entries to a single loop, create a single entry for that
 // loop by creating a dispatch block for them, routing control flow using
@@ -648,11 +643,7 @@ bool processRegion(MachineBasicBlock *Entry, BlockSet &Blocks,
         if (hasEHPadEntry(MutualLoopEntries)) {
           // EH pad entries cannot be routed through the normal dispatch block
           // strategy, so split the in-loop EH backedges instead.
-          if (!cloneEHPadEntriesForBackedges(MutualLoopEntries, Blocks, MF,
-                                             Graph))
-            // Cannot safely fix this SCC; preserve changes made to earlier
-            // SCCs.
-            return Changed;
+          cloneEHPadEntriesForBackedges(MutualLoopEntries, Blocks, MF, Graph);
         } else {
           makeSingleEntryLoop(MutualLoopEntries, Blocks, MF, Graph);
         }
