@@ -1,4 +1,3 @@
-// REQUIRES: riscv-registered-target
 // RUN: %clang_cc1 -triple riscv32 -target-feature +experimental-p \
 // RUN:   -fsyntax-only -verify -verify-ignore-unexpected=note %s
 // RUN: %clang_cc1 -triple riscv64 -target-feature +experimental-p \
