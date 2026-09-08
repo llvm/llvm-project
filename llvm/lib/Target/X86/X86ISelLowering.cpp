@@ -25384,11 +25384,11 @@ getX86XALUOOp(X86::CondCode &Cond, SDValue Op, SelectionDAG &DAG) {
     break;
   case ISD::SMULO:
     BaseOp = X86ISD::SMUL;
-    Cond = X86::COND_O;
+    Cond = X86::COND_B;
     break;
   case ISD::UMULO:
     BaseOp = X86ISD::UMUL;
-    Cond = X86::COND_O;
+    Cond = X86::COND_B;
     break;
   }
 

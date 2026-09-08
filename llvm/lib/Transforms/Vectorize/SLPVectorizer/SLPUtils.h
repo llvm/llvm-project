@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -32,6 +33,7 @@ class AssumptionCache;
 class Constant;
 class DataLayout;
 class Instruction;
+class IRBuilderBase;
 class TargetLibraryInfo;
 class Type;
 class Value;
@@ -269,6 +271,16 @@ SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL);
 std::optional<TargetTransformInfo::ShuffleKind>
 isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
                      AssumptionCache *AC);
+
+/// Creates subvector insert. Generates shuffle using \p Generator or
+/// using default shuffle.
+Value *createInsertVector(
+    IRBuilderBase &Builder, Value *Vec, Value *V, unsigned Index,
+    function_ref<Value *(Value *, Value *, ArrayRef<int>)> Generator = {});
+
+/// Generates subvector extract using \p Generator or using default shuffle.
+Value *createExtractVector(IRBuilderBase &Builder, Value *Vec,
+                           unsigned SubVecVF, unsigned Index);
 
 /// Specifies the way the mask should be analyzed for undefs/poisonous elements
 /// in the shuffle mask.
