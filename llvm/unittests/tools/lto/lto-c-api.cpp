@@ -50,4 +50,20 @@ TEST(invalid_triple, lto_runtime_lib_symbols_list_for_triple) {
   ASSERT_EQ(size, (size_t)0);
 }
 
+TEST(normalised_triple, lto_runtime_lib_symbols_list_for_triple) {
+  size_t sizeA = 0;
+  size_t sizeB = 0;
+  const char *const *symbolsA =
+      ::lto_runtime_lib_symbols_list_for_triple("aarch64-apple-macho", &sizeA);
+  const char *const *symbolsB =
+      ::lto_runtime_lib_symbols_list_for_triple("aarch64-apple-unknown-macho", &sizeB);
+  // Normalized triple have the same list, stored in the same place in
+  // memory.
+  ASSERT_NE(sizeA, (size_t)0);
+  ASSERT_NE(sizeB, (size_t)0);
+  ASSERT_EQ(sizeA, sizeB);
+  ASSERT_EQ(symbolsA, symbolsB);
+}
+
+  
 } // namespace
