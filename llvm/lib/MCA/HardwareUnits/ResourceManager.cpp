@@ -473,7 +473,7 @@ void ResourceManager::fastIssueInstruction(
 }
 
 void ResourceManager::cycleEvent(SmallVectorImpl<ResourceRef> &ResourcesFreed) {
-  for (std::pair<ResourceRef, unsigned> &BR : BusyResources) {
+  for (auto &BR : BusyResources) {
     if (BR.second)
       BR.second--;
     if (!BR.second) {

@@ -4480,9 +4480,7 @@ private:
         } while (It != P.first->Scalars.end());
       }
       return all_of(PotentiallyReorderedEntriesCount,
-                    [&](const std::pair<const TreeEntry *, unsigned> &P) {
-                      return P.second == NumOps - 1;
-                    });
+                    [&](const auto &P) { return P.second == NumOps - 1; });
     }
 
     SmallVector<ScheduleCopyableData *>
@@ -5837,45 +5835,6 @@ static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
       SortedIndices[Idx] = Pair.second;
   }
   return Stride;
-}
-
-/// Creates subvector insert. Generates shuffle using \p Generator or
-/// using default shuffle.
-static Value *createInsertVector(
-    IRBuilderBase &Builder, Value *Vec, Value *V, unsigned Index,
-    function_ref<Value *(Value *, Value *, ArrayRef<int>)> Generator = {}) {
-  if (isa<PoisonValue>(Vec) && isa<PoisonValue>(V))
-    return Vec;
-  const unsigned SubVecVF = getNumElements(V->getType());
-  // Create shuffle, insertvector requires that index is multiple of
-  // the subvector length.
-  const unsigned VecVF = getNumElements(Vec->getType());
-  SmallVector<int> Mask(VecVF, PoisonMaskElem);
-  if (isa<PoisonValue>(Vec)) {
-    auto *Begin = std::next(Mask.begin(), Index);
-    std::iota(Begin, std::next(Begin, SubVecVF), 0);
-    Vec = Builder.CreateShuffleVector(V, Mask);
-    return Vec;
-  }
-  std::iota(Mask.begin(), Mask.end(), 0);
-  std::iota(std::next(Mask.begin(), Index),
-            std::next(Mask.begin(), Index + SubVecVF), VecVF);
-  if (Generator)
-    return Generator(Vec, V, Mask);
-  // 1. Resize V to the size of Vec.
-  SmallVector<int> ResizeMask(VecVF, PoisonMaskElem);
-  std::iota(ResizeMask.begin(), std::next(ResizeMask.begin(), SubVecVF), 0);
-  V = Builder.CreateShuffleVector(V, ResizeMask);
-  // 2. Insert V into Vec.
-  return Builder.CreateShuffleVector(Vec, V, Mask);
-}
-
-/// Generates subvector extract using \p Generator or using default shuffle.
-static Value *createExtractVector(IRBuilderBase &Builder, Value *Vec,
-                                  unsigned SubVecVF, unsigned Index) {
-  SmallVector<int> Mask(SubVecVF, PoisonMaskElem);
-  std::iota(Mask.begin(), Mask.end(), Index);
-  return Builder.CreateShuffleVector(Vec, Mask);
 }
 
 /// Builds compress-like mask for shuffles for the given \p PointerOps, ordered
@@ -11634,9 +11593,7 @@ public:
           ++Counters[V];
         }
         if (Counters.size() == 2 &&
-            any_of(Counters, [&](const std::pair<const Value *, unsigned> &C) {
-              return C.second == 1;
-            }))
+            any_of(Counters, [&](const auto &C) { return C.second == 1; }))
           return true;
       }
       // First operand not a constant or splat? Last attempt - check for
