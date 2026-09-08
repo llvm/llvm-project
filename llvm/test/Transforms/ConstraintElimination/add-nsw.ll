@@ -1172,7 +1172,7 @@ define i64 @add_i64_gains_nuw_with_large_bound(i64 %x) {
 ; CHECK-LABEL: @add_i64_gains_nuw_with_large_bound(
 ; CHECK-NEXT:    [[C:%.*]] = icmp ule i64 [[X:%.*]], 100
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[X]], 3
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[X]], 3
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
   %c = icmp ule i64 %x, 100
