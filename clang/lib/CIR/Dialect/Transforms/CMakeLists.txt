@@ -18,6 +18,10 @@ add_clang_library(MLIRCIRTransforms
   DEPENDS
   MLIRCIRPassIncGen
 
+  DISABLE_PCH_REUSE # PCH contains private headers
+  PRECOMPILE_HEADERS
+  [["pch.h"]]
+
   LINK_LIBS PUBLIC
   clangAST
   clangBasic

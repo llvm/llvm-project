@@ -64,6 +64,10 @@ add_clang_library(clangCIR
   MLIRCIR
   MLIRCIROpInterfacesIncGen
 
+  DISABLE_PCH_REUSE # PCH contains private headers
+  PRECOMPILE_HEADERS
+  [["pch.h"]]
+
   LINK_LIBS
   clangAST
   clangBasic
