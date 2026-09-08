@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - main
+      - libc-coverage-bots
     paths:
       - 'libc/src/**'
       - 'libc/include/**'
@@ -22,6 +23,7 @@ on:
   pull_request:
     branches:
       - main
+      - libc-coverage-bots
     paths:
       - 'libc/src/**'
       - 'libc/include/**'
