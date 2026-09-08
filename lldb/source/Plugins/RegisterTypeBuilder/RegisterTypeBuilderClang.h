@@ -49,15 +49,27 @@ private:
                                uint32_t expected_byte_size,
                                lldb::TypeSystemClangSP type_system);
 
+  CompilerType BuildUnionType(const RegisterTypeUnion *union_type,
+                              uint32_t expected_byte_size,
+                              lldb::TypeSystemClangSP type_system);
+
+  CompilerType BuildType(const RegisterType *register_type,
+                         uint32_t expected_byte_size,
+                         lldb::TypeSystemClangSP type_system);
+
+  std::optional<uint32_t>
+  GetTargetByteSize(const RegisterType *register_type,
+                    lldb::TypeSystemClangSP type_system);
+
   Target &m_target;
 
   // A cache of previously created types. We do not cache by element ID because
   // IDs are not unique across xml <feature> elements and this class does not
   // know anything about features.
   //
-  // The key contains the process-wide UID of the type and the size of the
-  // register we made it for. Some types (enums for example) use the register
-  // size in their type and must be rebuilt for a different size.
+  // The key contains the process-wide UID of the type and the byte size used
+  // to build it. Some types (enums for example) use the register size, while a
+  // union can use its natural size inside a larger register or nested type.
   //
   // 8 is chosen because types are only made when needed, and most lldb commands
   // do not need them.
