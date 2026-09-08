@@ -274,12 +274,12 @@ bb:
 define amdgpu_ps void @cluster_image_load(<8 x i32> inreg %src, <8 x i32> inreg %dst, i32 %x, i32 %y) {
 ; GFX9-LABEL: cluster_image_load:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    v_add_u32_e32 v2, 1, v0
-; GFX9-NEXT:    v_add_u32_e32 v3, 1, v1
-; GFX9-NEXT:    v_add_u32_e32 v6, 2, v0
-; GFX9-NEXT:    v_add_u32_e32 v7, 2, v1
-; GFX9-NEXT:    image_load v[2:5], v[2:3], s[0:7] dmask:0xf unorm
-; GFX9-NEXT:    image_load v[6:9], v[6:7], s[0:7] dmask:0xf unorm
+; GFX9-NEXT:    v_add_u32_e32 v10, 1, v0
+; GFX9-NEXT:    v_add_u32_e32 v11, 1, v1
+; GFX9-NEXT:    v_add_u32_e32 v12, 2, v0
+; GFX9-NEXT:    v_add_u32_e32 v13, 2, v1
+; GFX9-NEXT:    image_load v[2:5], v[10:11], s[0:7] dmask:0xf unorm
+; GFX9-NEXT:    image_load v[6:9], v[12:13], s[0:7] dmask:0xf unorm
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_add_f32_e32 v5, v5, v9
 ; GFX9-NEXT:    v_add_f32_e32 v4, v4, v8
@@ -307,13 +307,13 @@ define amdgpu_ps void @cluster_image_load(<8 x i32> inreg %src, <8 x i32> inreg 
 ;
 ; GFX11-LABEL: cluster_image_load:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    v_add_nc_u32_e32 v2, 1, v0
-; GFX11-NEXT:    v_add_nc_u32_e32 v3, 1, v1
-; GFX11-NEXT:    v_add_nc_u32_e32 v6, 2, v0
-; GFX11-NEXT:    v_add_nc_u32_e32 v7, 2, v1
+; GFX11-NEXT:    v_add_nc_u32_e32 v10, 1, v0
+; GFX11-NEXT:    v_add_nc_u32_e32 v11, 1, v1
+; GFX11-NEXT:    v_add_nc_u32_e32 v12, 2, v0
+; GFX11-NEXT:    v_add_nc_u32_e32 v13, 2, v1
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    image_load v[2:5], v[2:3], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
-; GFX11-NEXT:    image_load v[6:9], v[6:7], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    image_load v[2:5], v[10:11], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    image_load v[6:9], v[12:13], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_dual_add_f32 v5, v5, v9 :: v_dual_add_f32 v4, v4, v8
 ; GFX11-NEXT:    v_dual_add_f32 v3, v3, v7 :: v_dual_add_f32 v2, v2, v6
@@ -365,9 +365,9 @@ define amdgpu_ps void @no_cluster_image_load(<8 x i32> inreg %src1, <8 x i32> in
 ;
 ; GFX11-LABEL: no_cluster_image_load:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    v_mov_b32_e32 v6, 0
-; GFX11-NEXT:    image_load_mip v[2:5], [v0, v1, v6], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
-; GFX11-NEXT:    image_load_mip v[6:9], [v0, v1, v6], s[8:15] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    v_mov_b32_e32 v10, 0
+; GFX11-NEXT:    image_load_mip v[2:5], [v0, v1, v10], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    image_load_mip v[6:9], [v0, v1, v10], s[8:15] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_dual_add_f32 v5, v5, v9 :: v_dual_add_f32 v4, v4, v8
 ; GFX11-NEXT:    v_dual_add_f32 v3, v3, v7 :: v_dual_add_f32 v2, v2, v6

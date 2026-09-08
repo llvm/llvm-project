@@ -19,10 +19,10 @@ define amdgpu_kernel void @private_load_maybe_divergent(ptr addrspace(4) %k, ptr
 ; GCN-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GCN-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
 ; GCN-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
-; GCN-NEXT:    v_addc_u32_e32 v1, vcc, v2, v1, vcc
-; GCN-NEXT:    flat_load_dword v0, v[0:1]
+; GCN-NEXT:    v_addc_u32_e32 v3, vcc, v2, v1, vcc
+; GCN-NEXT:    flat_load_dword v2, v[2:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    flat_store_dword v[0:1], v0
+; GCN-NEXT:    flat_store_dword v[2:3], v2
 ; GCN-NEXT:    s_endpgm
   %load = load volatile i32, ptr addrspace(5) poison, align 4
   %gep = getelementptr inbounds i32, ptr addrspace(4) %k, i32 %load
@@ -47,10 +47,10 @@ define amdgpu_kernel void @flat_load_maybe_divergent(ptr addrspace(4) %k, ptr %f
 ; GCN-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GCN-NEXT:    v_lshlrev_b64 v[0:1], 2, v[0:1]
 ; GCN-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
-; GCN-NEXT:    v_addc_u32_e32 v1, vcc, v2, v1, vcc
-; GCN-NEXT:    flat_load_dword v0, v[0:1]
+; GCN-NEXT:    v_addc_u32_e32 v3, vcc, v2, v1, vcc
+; GCN-NEXT:    flat_load_dword v2, v[2:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    flat_store_dword v[0:1], v0
+; GCN-NEXT:    flat_store_dword v[2:3], v2
 ; GCN-NEXT:    s_endpgm
   %load = load i32, ptr %flat, align 4
   %gep = getelementptr inbounds i32, ptr addrspace(4) %k, i32 %load

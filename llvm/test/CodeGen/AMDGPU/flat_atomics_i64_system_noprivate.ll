@@ -100,9 +100,9 @@ define i64 @flat_atomic_xchg_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX7-LABEL: flat_atomic_xchg_i64_ret_offset:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 32, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_atomic_swap_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
+; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_atomic_swap_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -110,9 +110,9 @@ define i64 @flat_atomic_xchg_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX8-LABEL: flat_atomic_xchg_i64_ret_offset:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_atomic_swap_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_atomic_swap_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -336,9 +336,9 @@ define i64 @flat_atomic_xchg_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GFX7-LABEL: flat_atomic_xchg_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 32, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_atomic_swap_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
+; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_atomic_swap_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -346,9 +346,9 @@ define i64 @flat_atomic_xchg_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GFX8-LABEL: flat_atomic_xchg_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_atomic_swap_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_atomic_swap_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -462,9 +462,9 @@ define double @flat_atomic_xchg_f64_ret_offset(ptr %out, double %in) {
 ; GFX7-LABEL: flat_atomic_xchg_f64_ret_offset:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 32, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_atomic_swap_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
+; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_atomic_swap_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -472,9 +472,9 @@ define double @flat_atomic_xchg_f64_ret_offset(ptr %out, double %in) {
 ; GFX8-LABEL: flat_atomic_xchg_f64_ret_offset:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_atomic_swap_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_atomic_swap_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -698,9 +698,9 @@ define double @flat_atomic_xchg_f64_ret_offset__amdgpu_no_remote_memory(ptr %out
 ; GFX7-LABEL: flat_atomic_xchg_f64_ret_offset__amdgpu_no_remote_memory:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 32, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_atomic_swap_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
+; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_atomic_swap_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -708,9 +708,9 @@ define double @flat_atomic_xchg_f64_ret_offset__amdgpu_no_remote_memory(ptr %out
 ; GFX8-LABEL: flat_atomic_xchg_f64_ret_offset__amdgpu_no_remote_memory:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_atomic_swap_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_atomic_swap_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -824,9 +824,9 @@ define i64 @flat_atomic_add_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX7-LABEL: flat_atomic_add_i64_ret_offset:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 32, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_atomic_add_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
+; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_atomic_add_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -834,9 +834,9 @@ define i64 @flat_atomic_add_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX8-LABEL: flat_atomic_add_i64_ret_offset:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_atomic_add_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_atomic_add_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -1060,9 +1060,9 @@ define i64 @flat_atomic_add_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GFX7-LABEL: flat_atomic_add_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 32, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_atomic_add_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
+; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_atomic_add_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -1070,9 +1070,9 @@ define i64 @flat_atomic_add_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GFX8-LABEL: flat_atomic_add_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_atomic_add_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_atomic_add_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -1260,10 +1260,10 @@ define i64 @flat_atomic_sub_i64_ret(ptr %ptr, i64 %in) {
 ; GFX7-LABEL: flat_atomic_sub_i64_ret:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v5, vcc, 4, v0
-; GFX7-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX7-NEXT:    v_add_i32_e32 v7, vcc, 4, v0
+; GFX7-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX7-NEXT:    flat_load_dword v4, v[0:1]
-; GFX7-NEXT:    flat_load_dword v5, v[5:6]
+; GFX7-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB32_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -1288,10 +1288,10 @@ define i64 @flat_atomic_sub_i64_ret(ptr %ptr, i64 %in) {
 ; GFX8-LABEL: flat_atomic_sub_i64_ret:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v5, vcc, 4, v0
-; GFX8-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v7, vcc, 4, v0
+; GFX8-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dword v4, v[0:1]
-; GFX8-NEXT:    flat_load_dword v5, v[5:6]
+; GFX8-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB32_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -1347,9 +1347,9 @@ define i64 @flat_atomic_sub_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 36, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_load_dword v1, v[0:1]
+; GFX7-NEXT:    v_add_i32_e32 v6, vcc, 36, v0
+; GFX7-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX7-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB33_1: ; %atomicrmw.start
@@ -1375,9 +1375,9 @@ define i64 @flat_atomic_sub_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 36, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dword v1, v[0:1]
+; GFX8-NEXT:    v_add_u32_e32 v6, vcc, 36, v0
+; GFX8-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX8-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB33_1: ; %atomicrmw.start
@@ -1858,9 +1858,9 @@ define i64 @flat_atomic_sub_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GFX7-LABEL: flat_atomic_sub_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 32, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_atomic_sub_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
+; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_atomic_sub_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -1868,9 +1868,9 @@ define i64 @flat_atomic_sub_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GFX8-LABEL: flat_atomic_sub_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_atomic_sub_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_atomic_sub_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -2058,10 +2058,10 @@ define i64 @flat_atomic_and_i64_ret(ptr %ptr, i64 %in) {
 ; GFX7-LABEL: flat_atomic_and_i64_ret:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v5, vcc, 4, v0
-; GFX7-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX7-NEXT:    v_add_i32_e32 v7, vcc, 4, v0
+; GFX7-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX7-NEXT:    flat_load_dword v4, v[0:1]
-; GFX7-NEXT:    flat_load_dword v5, v[5:6]
+; GFX7-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB42_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2086,10 +2086,10 @@ define i64 @flat_atomic_and_i64_ret(ptr %ptr, i64 %in) {
 ; GFX8-LABEL: flat_atomic_and_i64_ret:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v5, vcc, 4, v0
-; GFX8-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v7, vcc, 4, v0
+; GFX8-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dword v4, v[0:1]
-; GFX8-NEXT:    flat_load_dword v5, v[5:6]
+; GFX8-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB42_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2145,9 +2145,9 @@ define i64 @flat_atomic_and_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 36, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_load_dword v1, v[0:1]
+; GFX7-NEXT:    v_add_i32_e32 v6, vcc, 36, v0
+; GFX7-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX7-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB43_1: ; %atomicrmw.start
@@ -2173,9 +2173,9 @@ define i64 @flat_atomic_and_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 36, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dword v1, v[0:1]
+; GFX8-NEXT:    v_add_u32_e32 v6, vcc, 36, v0
+; GFX8-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX8-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB43_1: ; %atomicrmw.start
@@ -2644,9 +2644,9 @@ define i64 @flat_atomic_and_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GFX7-LABEL: flat_atomic_and_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 32, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_atomic_and_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
+; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_atomic_and_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -2654,9 +2654,9 @@ define i64 @flat_atomic_and_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GFX8-LABEL: flat_atomic_and_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_atomic_and_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_atomic_and_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -2856,10 +2856,10 @@ define i64 @flat_atomic_nand_i64_ret(ptr %ptr, i64 %in) {
 ; GFX7-LABEL: flat_atomic_nand_i64_ret:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v5, vcc, 4, v0
-; GFX7-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX7-NEXT:    v_add_i32_e32 v7, vcc, 4, v0
+; GFX7-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX7-NEXT:    flat_load_dword v4, v[0:1]
-; GFX7-NEXT:    flat_load_dword v5, v[5:6]
+; GFX7-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB52_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2886,10 +2886,10 @@ define i64 @flat_atomic_nand_i64_ret(ptr %ptr, i64 %in) {
 ; GFX8-LABEL: flat_atomic_nand_i64_ret:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v5, vcc, 4, v0
-; GFX8-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v7, vcc, 4, v0
+; GFX8-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dword v4, v[0:1]
-; GFX8-NEXT:    flat_load_dword v5, v[5:6]
+; GFX8-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB52_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -2949,9 +2949,9 @@ define i64 @flat_atomic_nand_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 36, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_load_dword v1, v[0:1]
+; GFX7-NEXT:    v_add_i32_e32 v6, vcc, 36, v0
+; GFX7-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX7-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB53_1: ; %atomicrmw.start
@@ -2979,9 +2979,9 @@ define i64 @flat_atomic_nand_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 36, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dword v1, v[0:1]
+; GFX8-NEXT:    v_add_u32_e32 v6, vcc, 36, v0
+; GFX8-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX8-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB53_1: ; %atomicrmw.start
@@ -3537,9 +3537,9 @@ define i64 @flat_atomic_nand_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 36, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_load_dword v1, v[0:1]
+; GFX7-NEXT:    v_add_i32_e32 v6, vcc, 36, v0
+; GFX7-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX7-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB59_1: ; %atomicrmw.start
@@ -3567,9 +3567,9 @@ define i64 @flat_atomic_nand_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 36, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dword v1, v[0:1]
+; GFX8-NEXT:    v_add_u32_e32 v6, vcc, 36, v0
+; GFX8-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX8-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB59_1: ; %atomicrmw.start
@@ -3794,10 +3794,10 @@ define i64 @flat_atomic_or_i64_ret(ptr %ptr, i64 %in) {
 ; GFX7-LABEL: flat_atomic_or_i64_ret:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v5, vcc, 4, v0
-; GFX7-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX7-NEXT:    v_add_i32_e32 v7, vcc, 4, v0
+; GFX7-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX7-NEXT:    flat_load_dword v4, v[0:1]
-; GFX7-NEXT:    flat_load_dword v5, v[5:6]
+; GFX7-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB62_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -3822,10 +3822,10 @@ define i64 @flat_atomic_or_i64_ret(ptr %ptr, i64 %in) {
 ; GFX8-LABEL: flat_atomic_or_i64_ret:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v5, vcc, 4, v0
-; GFX8-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v7, vcc, 4, v0
+; GFX8-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dword v4, v[0:1]
-; GFX8-NEXT:    flat_load_dword v5, v[5:6]
+; GFX8-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB62_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -3881,9 +3881,9 @@ define i64 @flat_atomic_or_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 36, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_load_dword v1, v[0:1]
+; GFX7-NEXT:    v_add_i32_e32 v6, vcc, 36, v0
+; GFX7-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX7-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB63_1: ; %atomicrmw.start
@@ -3909,9 +3909,9 @@ define i64 @flat_atomic_or_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 36, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dword v1, v[0:1]
+; GFX8-NEXT:    v_add_u32_e32 v6, vcc, 36, v0
+; GFX8-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX8-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB63_1: ; %atomicrmw.start
@@ -4380,9 +4380,9 @@ define i64 @flat_atomic_or_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i64
 ; GFX7-LABEL: flat_atomic_or_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 32, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_atomic_or_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
+; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_atomic_or_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -4390,9 +4390,9 @@ define i64 @flat_atomic_or_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i64
 ; GFX8-LABEL: flat_atomic_or_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_atomic_or_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_atomic_or_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -4580,10 +4580,10 @@ define i64 @flat_atomic_xor_i64_ret(ptr %ptr, i64 %in) {
 ; GFX7-LABEL: flat_atomic_xor_i64_ret:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v5, vcc, 4, v0
-; GFX7-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX7-NEXT:    v_add_i32_e32 v7, vcc, 4, v0
+; GFX7-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX7-NEXT:    flat_load_dword v4, v[0:1]
-; GFX7-NEXT:    flat_load_dword v5, v[5:6]
+; GFX7-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB72_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -4608,10 +4608,10 @@ define i64 @flat_atomic_xor_i64_ret(ptr %ptr, i64 %in) {
 ; GFX8-LABEL: flat_atomic_xor_i64_ret:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v5, vcc, 4, v0
-; GFX8-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v7, vcc, 4, v0
+; GFX8-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dword v4, v[0:1]
-; GFX8-NEXT:    flat_load_dword v5, v[5:6]
+; GFX8-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB72_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -4667,9 +4667,9 @@ define i64 @flat_atomic_xor_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 36, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_load_dword v1, v[0:1]
+; GFX7-NEXT:    v_add_i32_e32 v6, vcc, 36, v0
+; GFX7-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX7-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB73_1: ; %atomicrmw.start
@@ -4695,9 +4695,9 @@ define i64 @flat_atomic_xor_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 36, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dword v1, v[0:1]
+; GFX8-NEXT:    v_add_u32_e32 v6, vcc, 36, v0
+; GFX8-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX8-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB73_1: ; %atomicrmw.start
@@ -5166,9 +5166,9 @@ define i64 @flat_atomic_xor_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GFX7-LABEL: flat_atomic_xor_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 32, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_atomic_xor_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
+; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_atomic_xor_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -5176,9 +5176,9 @@ define i64 @flat_atomic_xor_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GFX8-LABEL: flat_atomic_xor_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_atomic_xor_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_atomic_xor_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -5372,10 +5372,10 @@ define i64 @flat_atomic_max_i64_ret(ptr %ptr, i64 %in) {
 ; GFX7-LABEL: flat_atomic_max_i64_ret:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v5, vcc, 4, v0
-; GFX7-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX7-NEXT:    v_add_i32_e32 v7, vcc, 4, v0
+; GFX7-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX7-NEXT:    flat_load_dword v4, v[0:1]
-; GFX7-NEXT:    flat_load_dword v5, v[5:6]
+; GFX7-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB82_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -5401,10 +5401,10 @@ define i64 @flat_atomic_max_i64_ret(ptr %ptr, i64 %in) {
 ; GFX8-LABEL: flat_atomic_max_i64_ret:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v5, vcc, 4, v0
-; GFX8-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v7, vcc, 4, v0
+; GFX8-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dword v4, v[0:1]
-; GFX8-NEXT:    flat_load_dword v5, v[5:6]
+; GFX8-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB82_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -5462,9 +5462,9 @@ define i64 @flat_atomic_max_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 36, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_load_dword v1, v[0:1]
+; GFX7-NEXT:    v_add_i32_e32 v6, vcc, 36, v0
+; GFX7-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX7-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB83_1: ; %atomicrmw.start
@@ -5491,9 +5491,9 @@ define i64 @flat_atomic_max_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 36, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dword v1, v[0:1]
+; GFX8-NEXT:    v_add_u32_e32 v6, vcc, 36, v0
+; GFX8-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX8-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB83_1: ; %atomicrmw.start
@@ -6438,9 +6438,9 @@ define i64 @flat_atomic_max_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GFX7-LABEL: flat_atomic_max_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 32, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_atomic_smax_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
+; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_atomic_smax_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -6448,9 +6448,9 @@ define i64 @flat_atomic_max_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GFX8-LABEL: flat_atomic_max_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_atomic_smax_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_atomic_smax_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -6644,10 +6644,10 @@ define i64 @flat_atomic_umax_i64_ret(ptr %ptr, i64 %in) {
 ; GFX7-LABEL: flat_atomic_umax_i64_ret:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v5, vcc, 4, v0
-; GFX7-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX7-NEXT:    v_add_i32_e32 v7, vcc, 4, v0
+; GFX7-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX7-NEXT:    flat_load_dword v4, v[0:1]
-; GFX7-NEXT:    flat_load_dword v5, v[5:6]
+; GFX7-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB96_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -6673,10 +6673,10 @@ define i64 @flat_atomic_umax_i64_ret(ptr %ptr, i64 %in) {
 ; GFX8-LABEL: flat_atomic_umax_i64_ret:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v5, vcc, 4, v0
-; GFX8-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v7, vcc, 4, v0
+; GFX8-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dword v4, v[0:1]
-; GFX8-NEXT:    flat_load_dword v5, v[5:6]
+; GFX8-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB96_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -6734,9 +6734,9 @@ define i64 @flat_atomic_umax_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 36, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_load_dword v1, v[0:1]
+; GFX7-NEXT:    v_add_i32_e32 v6, vcc, 36, v0
+; GFX7-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX7-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB97_1: ; %atomicrmw.start
@@ -6763,9 +6763,9 @@ define i64 @flat_atomic_umax_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 36, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dword v1, v[0:1]
+; GFX8-NEXT:    v_add_u32_e32 v6, vcc, 36, v0
+; GFX8-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX8-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB97_1: ; %atomicrmw.start
@@ -7608,9 +7608,9 @@ define i64 @flat_atomic_umax_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GFX7-LABEL: flat_atomic_umax_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 32, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_atomic_umax_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
+; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_atomic_umax_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -7618,9 +7618,9 @@ define i64 @flat_atomic_umax_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GFX8-LABEL: flat_atomic_umax_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_atomic_umax_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_atomic_umax_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -7814,10 +7814,10 @@ define i64 @flat_atomic_umin_i64_ret(ptr %ptr, i64 %in) {
 ; GFX7-LABEL: flat_atomic_umin_i64_ret:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v5, vcc, 4, v0
-; GFX7-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX7-NEXT:    v_add_i32_e32 v7, vcc, 4, v0
+; GFX7-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX7-NEXT:    flat_load_dword v4, v[0:1]
-; GFX7-NEXT:    flat_load_dword v5, v[5:6]
+; GFX7-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB109_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -7843,10 +7843,10 @@ define i64 @flat_atomic_umin_i64_ret(ptr %ptr, i64 %in) {
 ; GFX8-LABEL: flat_atomic_umin_i64_ret:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v5, vcc, 4, v0
-; GFX8-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v7, vcc, 4, v0
+; GFX8-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dword v4, v[0:1]
-; GFX8-NEXT:    flat_load_dword v5, v[5:6]
+; GFX8-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB109_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -7904,9 +7904,9 @@ define i64 @flat_atomic_umin_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 36, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_load_dword v1, v[0:1]
+; GFX7-NEXT:    v_add_i32_e32 v6, vcc, 36, v0
+; GFX7-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX7-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB110_1: ; %atomicrmw.start
@@ -7933,9 +7933,9 @@ define i64 @flat_atomic_umin_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 36, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dword v1, v[0:1]
+; GFX8-NEXT:    v_add_u32_e32 v6, vcc, 36, v0
+; GFX8-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX8-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB110_1: ; %atomicrmw.start
@@ -8442,9 +8442,9 @@ define i64 @flat_atomic_umin_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GFX7-LABEL: flat_atomic_umin_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 32, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_atomic_umin_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
+; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_atomic_umin_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -8452,9 +8452,9 @@ define i64 @flat_atomic_umin_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i
 ; GFX8-LABEL: flat_atomic_umin_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_atomic_umin_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_atomic_umin_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -8648,10 +8648,10 @@ define i64 @flat_atomic_min_i64_ret(ptr %ptr, i64 %in) {
 ; GFX7-LABEL: flat_atomic_min_i64_ret:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v5, vcc, 4, v0
-; GFX7-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX7-NEXT:    v_add_i32_e32 v7, vcc, 4, v0
+; GFX7-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX7-NEXT:    flat_load_dword v4, v[0:1]
-; GFX7-NEXT:    flat_load_dword v5, v[5:6]
+; GFX7-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB119_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -8677,10 +8677,10 @@ define i64 @flat_atomic_min_i64_ret(ptr %ptr, i64 %in) {
 ; GFX8-LABEL: flat_atomic_min_i64_ret:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v5, vcc, 4, v0
-; GFX8-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v7, vcc, 4, v0
+; GFX8-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dword v4, v[0:1]
-; GFX8-NEXT:    flat_load_dword v5, v[5:6]
+; GFX8-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB119_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -8738,9 +8738,9 @@ define i64 @flat_atomic_min_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 36, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_load_dword v1, v[0:1]
+; GFX7-NEXT:    v_add_i32_e32 v6, vcc, 36, v0
+; GFX7-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX7-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB120_1: ; %atomicrmw.start
@@ -8767,9 +8767,9 @@ define i64 @flat_atomic_min_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 36, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dword v1, v[0:1]
+; GFX8-NEXT:    v_add_u32_e32 v6, vcc, 36, v0
+; GFX8-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX8-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB120_1: ; %atomicrmw.start
@@ -9707,9 +9707,9 @@ define i64 @flat_atomic_min_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GFX7-LABEL: flat_atomic_min_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 32, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_atomic_smin_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
+; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_atomic_smin_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -9717,9 +9717,9 @@ define i64 @flat_atomic_min_i64_ret_offset__amdgpu_no_remote_memory(ptr %out, i6
 ; GFX8-LABEL: flat_atomic_min_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_atomic_smin_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_atomic_smin_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -9925,10 +9925,10 @@ define i64 @flat_atomic_uinc_wrap_i64_ret(ptr %ptr, i64 %in) {
 ; GFX7-LABEL: flat_atomic_uinc_wrap_i64_ret:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v5, vcc, 4, v0
-; GFX7-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX7-NEXT:    v_add_i32_e32 v7, vcc, 4, v0
+; GFX7-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX7-NEXT:    flat_load_dword v4, v[0:1]
-; GFX7-NEXT:    flat_load_dword v5, v[5:6]
+; GFX7-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB133_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -9956,10 +9956,10 @@ define i64 @flat_atomic_uinc_wrap_i64_ret(ptr %ptr, i64 %in) {
 ; GFX8-LABEL: flat_atomic_uinc_wrap_i64_ret:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v5, vcc, 4, v0
-; GFX8-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v7, vcc, 4, v0
+; GFX8-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dword v4, v[0:1]
-; GFX8-NEXT:    flat_load_dword v5, v[5:6]
+; GFX8-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB133_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -10021,9 +10021,9 @@ define i64 @flat_atomic_uinc_wrap_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 36, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_load_dword v1, v[0:1]
+; GFX7-NEXT:    v_add_i32_e32 v6, vcc, 36, v0
+; GFX7-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX7-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX7-NEXT:  .LBB134_1: ; %atomicrmw.start
@@ -10052,9 +10052,9 @@ define i64 @flat_atomic_uinc_wrap_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 36, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dword v1, v[0:1]
+; GFX8-NEXT:    v_add_u32_e32 v6, vcc, 36, v0
+; GFX8-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX8-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX8-NEXT:  .LBB134_1: ; %atomicrmw.start
@@ -10565,9 +10565,9 @@ define i64 @flat_atomic_uinc_wrap_i64_ret_offset__amdgpu_no_remote_memory(ptr %o
 ; GFX7-LABEL: flat_atomic_uinc_wrap_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 32, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_atomic_inc_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
+; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_atomic_inc_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -10575,9 +10575,9 @@ define i64 @flat_atomic_uinc_wrap_i64_ret_offset__amdgpu_no_remote_memory(ptr %o
 ; GFX8-LABEL: flat_atomic_uinc_wrap_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_atomic_inc_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_atomic_inc_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
@@ -10789,10 +10789,10 @@ define i64 @flat_atomic_udec_wrap_i64_ret(ptr %ptr, i64 %in) {
 ; GFX7-LABEL: flat_atomic_udec_wrap_i64_ret:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v5, vcc, 4, v0
-; GFX7-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX7-NEXT:    v_add_i32_e32 v7, vcc, 4, v0
+; GFX7-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX7-NEXT:    flat_load_dword v4, v[0:1]
-; GFX7-NEXT:    flat_load_dword v5, v[5:6]
+; GFX7-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX7-NEXT:    s_mov_b64 s[6:7], 0
 ; GFX7-NEXT:  .LBB143_1: ; %atomicrmw.start
 ; GFX7-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -10821,10 +10821,10 @@ define i64 @flat_atomic_udec_wrap_i64_ret(ptr %ptr, i64 %in) {
 ; GFX8-LABEL: flat_atomic_udec_wrap_i64_ret:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v5, vcc, 4, v0
-; GFX8-NEXT:    v_addc_u32_e32 v6, vcc, 0, v1, vcc
+; GFX8-NEXT:    v_add_u32_e32 v7, vcc, 4, v0
+; GFX8-NEXT:    v_addc_u32_e32 v8, vcc, 0, v1, vcc
 ; GFX8-NEXT:    flat_load_dword v4, v[0:1]
-; GFX8-NEXT:    flat_load_dword v5, v[5:6]
+; GFX8-NEXT:    flat_load_dword v5, v[7:8]
 ; GFX8-NEXT:    s_mov_b64 s[6:7], 0
 ; GFX8-NEXT:  .LBB143_1: ; %atomicrmw.start
 ; GFX8-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -10888,9 +10888,9 @@ define i64 @flat_atomic_udec_wrap_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
 ; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 36, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_load_dword v1, v[0:1]
+; GFX7-NEXT:    v_add_i32_e32 v6, vcc, 36, v0
+; GFX7-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX7-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX7-NEXT:    s_mov_b64 s[6:7], 0
 ; GFX7-NEXT:  .LBB144_1: ; %atomicrmw.start
@@ -10920,9 +10920,9 @@ define i64 @flat_atomic_udec_wrap_i64_ret_offset(ptr %out, i64 %in) {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
 ; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 36, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dword v1, v[0:1]
+; GFX8-NEXT:    v_add_u32_e32 v6, vcc, 36, v0
+; GFX8-NEXT:    v_addc_u32_e32 v7, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_load_dword v1, v[6:7]
 ; GFX8-NEXT:    flat_load_dword v0, v[4:5]
 ; GFX8-NEXT:    s_mov_b64 s[6:7], 0
 ; GFX8-NEXT:  .LBB144_1: ; %atomicrmw.start
@@ -11471,9 +11471,9 @@ define i64 @flat_atomic_udec_wrap_i64_ret_offset__amdgpu_no_remote_memory(ptr %o
 ; GFX7-LABEL: flat_atomic_udec_wrap_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 32, v0
-; GFX7-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX7-NEXT:    flat_atomic_dec_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX7-NEXT:    v_add_i32_e32 v4, vcc, 32, v0
+; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX7-NEXT:    flat_atomic_dec_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    buffer_wbinvl1_vol
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
@@ -11481,9 +11481,9 @@ define i64 @flat_atomic_udec_wrap_i64_ret_offset__amdgpu_no_remote_memory(ptr %o
 ; GFX8-LABEL: flat_atomic_udec_wrap_i64_ret_offset__amdgpu_no_remote_memory:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, 32, v0
-; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_atomic_dec_x2 v[0:1], v[0:1], v[2:3] glc
+; GFX8-NEXT:    v_add_u32_e32 v4, vcc, 32, v0
+; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
+; GFX8-NEXT:    flat_atomic_dec_x2 v[0:1], v[4:5], v[2:3] glc
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    buffer_wbinvl1_vol
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]

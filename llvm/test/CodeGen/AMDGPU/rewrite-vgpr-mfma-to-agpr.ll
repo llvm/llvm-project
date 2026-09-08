@@ -49,20 +49,19 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_rewrite_vgpr_mfma(ptr addrsp
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
-; CHECK-NEXT:    v_mov_b32_e32 v32, 1.0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v33, 2.0
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[28:31], v0, s[0:1] offset:112
-; CHECK-NEXT:    global_load_dwordx4 v[24:27], v0, s[0:1] offset:96
-; CHECK-NEXT:    global_load_dwordx4 v[20:23], v0, s[0:1] offset:80
-; CHECK-NEXT:    global_load_dwordx4 v[16:19], v0, s[0:1] offset:64
-; CHECK-NEXT:    global_load_dwordx4 v[12:15], v0, s[0:1] offset:48
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v0, s[0:1] offset:32
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v0, s[0:1] offset:16
-; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
 ; CHECK-NEXT:    v_accvgpr_write_b32 a0, 1.0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
+; CHECK-NEXT:    global_load_dwordx4 v[24:27], v32, s[0:1] offset:96
+; CHECK-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
+; CHECK-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:64
+; CHECK-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
+; CHECK-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:32
+; CHECK-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
+; CHECK-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
+; CHECK-NEXT:    v_mov_b32_e32 v32, 1.0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a1, 2.0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v32, v33, v[0:31]
@@ -130,20 +129,20 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_rewrite_vgpr_mfma_noshuffle(
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
-; CHECK-NEXT:    v_mov_b32_e32 v32, 1.0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v33, 2.0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_load_dwordx4 v[28:31], v0, s[0:1] offset:112
-; CHECK-NEXT:    global_load_dwordx4 v[24:27], v0, s[0:1] offset:96
-; CHECK-NEXT:    global_load_dwordx4 v[20:23], v0, s[0:1] offset:80
-; CHECK-NEXT:    global_load_dwordx4 v[16:19], v0, s[0:1] offset:64
-; CHECK-NEXT:    global_load_dwordx4 v[12:15], v0, s[0:1] offset:48
-; CHECK-NEXT:    global_load_dwordx4 v[8:11], v0, s[0:1] offset:32
-; CHECK-NEXT:    global_load_dwordx4 v[4:7], v0, s[0:1] offset:16
-; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    global_load_dwordx4 v[0:3], v0, s[0:1]
+; CHECK-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
+; CHECK-NEXT:    global_load_dwordx4 v[24:27], v32, s[0:1] offset:96
+; CHECK-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
+; CHECK-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:64
+; CHECK-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
+; CHECK-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:32
+; CHECK-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
+; CHECK-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
+; CHECK-NEXT:    v_mov_b32_e32 v32, 1.0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v32, v33, v[0:31]
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v32, v33, v[0:31]
 ; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[0:31], v32, v33, v[0:31]
