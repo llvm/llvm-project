@@ -418,7 +418,7 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       rhs = rhs.extend(width);                                                 \
       if (CHECK_ZERO && rhs.isZero())                                          \
         return error(#OP " by zero");                                          \
-      data.Push(WrapAPSIntResult(lhs OP rhs, width, lhs.isUnsigned()));       \
+      data.Push(WrapAPSIntResult(lhs OP rhs, width, lhs.isUnsigned()));        \
     } else                                                                     \
       return error("unsupported data types");                                  \
   }
@@ -445,7 +445,7 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       unsigned width = std::max(lhs.getBitWidth(), rhs.getBitWidth());         \
       lhs = lhs.extend(width);                                                 \
       rhs = rhs.extend(width);                                                 \
-      data.Push(WrapAPSIntResult(lhs OP rhs, width, lhs.isUnsigned()));       \
+      data.Push(WrapAPSIntResult(lhs OP rhs, width, lhs.isUnsigned()));        \
     } else                                                                     \
       return error("unsupported data types");                                  \
   }
@@ -469,8 +469,10 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig) {
       llvm::APSInt rhs = std::get<llvm::APSInt>(y);                            \
       llvm::APSInt lhs = data.Pop<llvm::APSInt>();                             \
       unsigned width = std::max(lhs.getBitWidth(), rhs.getBitWidth());         \
-      llvm::APInt lhs_bits = static_cast<const llvm::APInt &>(lhs).zext(width);\
-      llvm::APInt rhs_bits = static_cast<const llvm::APInt &>(rhs).zext(width);\
+      llvm::APInt lhs_bits =                                                   \
+          static_cast<const llvm::APInt &>(lhs).zext(width);                   \
+      llvm::APInt rhs_bits =                                                   \
+          static_cast<const llvm::APInt &>(rhs).zext(width);                   \
       llvm::APInt bits = lhs_bits OP rhs_bits;                                 \
       data.Push(llvm::APSInt(std::move(bits), /*isUnsigned=*/false));          \
     } else                                                                     \
