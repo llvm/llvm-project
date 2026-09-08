@@ -307,7 +307,8 @@ public:
 
   void createTailCall(MCInst &Inst, const MCSymbol *Target,
                       MCContext *Ctx) override {
-    return createCall(RISCV::PseudoTAIL, Inst, Target, Ctx);
+    createCall(RISCV::PseudoTAIL, Inst, Target, Ctx);
+    setTailCall(Inst);
   }
 
   InstructionListType createIndirectPLTCall(MCInst &&DirectCall,

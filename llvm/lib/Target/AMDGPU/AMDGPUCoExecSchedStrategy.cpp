@@ -893,14 +893,17 @@ void AMDGPUCoExecSchedStrategy::pickNodeFromQueue(
   ArrayRef<unsigned> Pressure = RPTracker.getRegSetPressureAtPos();
   unsigned SGPRPressure = 0;
   unsigned VGPRPressure = 0;
+  unsigned AGPRPressure = 0;
   PickedPending = false;
   if (DAG->isTrackingPressure()) {
     if (!useGCNTrackers()) {
       SGPRPressure = Pressure[AMDGPU::RegisterPressureSets::SReg_32];
       VGPRPressure = Pressure[AMDGPU::RegisterPressureSets::VGPR_32];
+      AGPRPressure = Pressure[AMDGPU::RegisterPressureSets::AGPR_32];
     } else {
       SGPRPressure = DownwardTracker.getPressure().getSGPRNum();
       VGPRPressure = DownwardTracker.getPressure().getArchVGPRNum();
+      AGPRPressure = DownwardTracker.getPressure().getAGPRNum();
     }
   }
 
@@ -908,7 +911,7 @@ void AMDGPUCoExecSchedStrategy::pickNodeFromQueue(
     for (SUnit *SU : Q) {
       SchedCandidate TryCand(ZonePolicy);
       initCandidate(TryCand, SU, Zone.isTop(), RPTracker, SRI, SGPRPressure,
-                    VGPRPressure, IsBottomUp);
+                    VGPRPressure, AGPRPressure, IsBottomUp);
       SchedBoundary *ZoneArg = Cand.AtTop == TryCand.AtTop ? &Zone : nullptr;
       tryCandidateCoexec(Cand, TryCand, ZoneArg);
       if (TryCand.Reason != NoCand) {

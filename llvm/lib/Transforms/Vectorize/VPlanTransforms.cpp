@@ -231,8 +231,7 @@ class SinkStoreInfo {
     ElementCount MaxVF = *max_element(VFs, ElementCount::isKnownLT);
     if (MaxVF.isScalable())
       return false;
-    return Distance->abs().uge(
-        MaxVF.multiplyCoefficientBy(MaxStoreSize).getFixedValue());
+    return Distance->abs().uge(MaxVF.getFixedValue() * MaxStoreSize);
   }
 
 public:
@@ -494,12 +493,18 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
 
     // The merged region is entered whenever either of the original regions was,
     // so use the higher, i.e. more conservative, of their entry frequencies.
+    // If only one of the two is known, the higher one is unknown, so the
+    // result must be unknown too.
     VPBranchOnMaskRecipe *Guard2 = Region2->getEntryBranchOnMask();
     std::optional<BlockFrequency> Freq1 =
         Region1->getEntryBranchOnMask()->getExecutionFrequency();
     std::optional<BlockFrequency> Freq2 = Guard2->getExecutionFrequency();
-    if (Freq1 && Freq2 && *Freq2 < *Freq1)
-      Guard2->setExecutionFrequency(Freq1, Plan.getContext());
+    if (Freq1 && Freq2) {
+      if (*Freq2 < *Freq1)
+        Guard2->setExecutionFrequency(Freq1, Plan.getContext());
+    } else if (Freq2) {
+      Guard2->clearExecutionFrequency();
+    }
 
     // Note: No fusion-preventing memory dependencies are expected in either
     // region. Such dependencies should be rejected during earlier dependence
@@ -1164,11 +1169,9 @@ static void removeRedundantExpandSCEVRecipes(VPlan &Plan) {
 }
 
 /// Try to simplify logical and bitwise recipes in \p Def.
-static VPValue *simplifyLogicalRecipe(VPSingleDefRecipe *Def,
+static VPValue *simplifyLogicalRecipe(VPlan &Plan, VPSingleDefRecipe *Def,
                                       VPBuilder &Builder,
                                       bool CanCreateNewRecipe) {
-  VPlan *Plan = Def->getParent()->getPlan();
-
   // Simplify (X && Y) | (X && !Y) -> X.
   // TODO: Split up into simpler, modular combines: (X && Y) | (X && Z) into X
   // && (Y | Z) and (X | !X) into true. This requires queuing newly created
@@ -1181,7 +1184,7 @@ static VPValue *simplifyLogicalRecipe(VPSingleDefRecipe *Def,
 
   // x | AllOnes -> AllOnes
   if (match(Def, m_c_BinaryOr(m_VPValue(X), m_AllOnes())))
-    return Plan->getAllOnesValue(Def->getScalarType());
+    return Plan.getAllOnesValue(Def->getScalarType());
 
   // x | 0 -> x
   if (match(Def, m_c_BinaryOr(m_VPValue(X), m_ZeroInt())))
@@ -1189,11 +1192,11 @@ static VPValue *simplifyLogicalRecipe(VPSingleDefRecipe *Def,
 
   // x | !x -> AllOnes
   if (match(Def, m_c_BinaryOr(m_VPValue(X), m_Not(m_Deferred(X)))))
-    return Plan->getAllOnesValue(Def->getScalarType());
+    return Plan.getAllOnesValue(Def->getScalarType());
 
   // x & 0 -> 0
   if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt())))
-    return Plan->getZero(Def->getScalarType());
+    return Plan.getZero(Def->getScalarType());
 
   // x & AllOnes -> x
   if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_AllOnes())))
@@ -1201,7 +1204,7 @@ static VPValue *simplifyLogicalRecipe(VPSingleDefRecipe *Def,
 
   // x && false -> false
   if (match(Def, m_c_LogicalAnd(m_VPValue(X), m_False())))
-    return Plan->getFalse();
+    return Plan.getFalse();
 
   // x && true -> x
   if (match(Def, m_c_LogicalAnd(m_VPValue(X), m_True())))
@@ -1229,7 +1232,7 @@ static VPValue *simplifyLogicalRecipe(VPSingleDefRecipe *Def,
 
   // x && !x -> 0
   if (match(Def, m_LogicalAnd(m_VPValue(X), m_Not(m_Deferred(X)))))
-    return Plan->getFalse();
+    return Plan.getFalse();
 
   if (match(Def, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
     return X;
@@ -1280,12 +1283,10 @@ static VPValue *simplifyLogicalRecipe(VPSingleDefRecipe *Def,
 /// Try to simplify VPSingleDefRecipe \p Def. Returns a new recipe if it should
 /// be replaced, or the existing recipe if it was modified. Returns nullptr if
 /// nothing was simplified.
-static VPValue *simplifyRecipe(VPSingleDefRecipe *Def) {
-  VPlan *Plan = Def->getParent()->getPlan();
-
+static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   // Simplification of live-in IR values for SingleDef recipes using
   // InstSimplifyFolder.
-  const DataLayout &DL = Plan->getDataLayout();
+  const DataLayout &DL = Plan.getDataLayout();
   if (VPValue *V = vputils::tryToFoldLiveIns(*Def, Def->operands(), DL))
     return V;
 
@@ -1359,7 +1360,8 @@ static VPValue *simplifyRecipe(VPSingleDefRecipe *Def) {
     }
   }
 
-  if (VPValue *V = simplifyLogicalRecipe(Def, Builder, CanCreateNewRecipe))
+  if (VPValue *V =
+          simplifyLogicalRecipe(Plan, Def, Builder, CanCreateNewRecipe))
     return V;
 
   VPValue *X, *Y;
@@ -1370,13 +1372,13 @@ static VPValue *simplifyRecipe(VPSingleDefRecipe *Def) {
     return A;
 
   if (match(Def, m_c_Mul(m_VPValue(A), m_ZeroInt())))
-    return Plan->getZero(Def->getScalarType());
+    return Plan.getZero(Def->getScalarType());
 
   if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(A), m_AllOnes()))) {
     // Preserve nsw from the Mul on the new Sub.
     VPIRFlags::WrapFlagsTy NW = {
         false, cast<VPRecipeWithIRFlags>(Def)->hasNoSignedWrap()};
-    return Builder.createSub(Plan->getZero(A->getScalarType()), A,
+    return Builder.createSub(Plan.getZero(A->getScalarType()), A,
                              Def->getDebugLoc(), "", NW);
   }
 
@@ -1394,7 +1396,7 @@ static VPValue *simplifyRecipe(VPSingleDefRecipe *Def) {
   const APInt *APC;
   if (CanCreateNewRecipe && match(Def, m_URem(m_VPValue(X), m_APInt(APC))) &&
       APC->isPowerOf2())
-    return Builder.createAnd(X, Plan->getConstantInt(*APC - 1),
+    return Builder.createAnd(X, Plan.getConstantInt(*APC - 1),
                              Def->getDebugLoc());
 
   if (CanCreateNewRecipe && match(Def, m_c_Mul(m_VPValue(A), m_APInt(APC))) &&
@@ -1406,7 +1408,7 @@ static VPValue *simplifyRecipe(VPSingleDefRecipe *Def) {
                                   ShiftAmt != APC->getBitWidth() - 1);
     return Builder.createNaryOp(
         Instruction::Shl,
-        {A, Plan->getConstantInt(APC->getBitWidth(), ShiftAmt)}, NW,
+        {A, Plan.getConstantInt(APC->getBitWidth(), ShiftAmt)}, NW,
         Def->getDebugLoc());
   }
 
@@ -1414,7 +1416,7 @@ static VPValue *simplifyRecipe(VPSingleDefRecipe *Def) {
       APC->isPowerOf2())
     return Builder.createNaryOp(
         Instruction::LShr,
-        {A, Plan->getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
+        {A, Plan.getConstantInt(APC->getBitWidth(), APC->exactLogBase2())},
         *cast<VPRecipeWithIRFlags>(Def), Def->getDebugLoc());
 
   if (match(Def, m_Not(m_VPValue(A)))) {
@@ -1515,7 +1517,7 @@ static VPValue *simplifyRecipe(VPSingleDefRecipe *Def) {
                                                   m_VPValue(X), m_VPValue())) &&
       match(A, m_c_BinaryOr(m_Specific(X), m_VPValue(Y))) &&
       Def->getScalarType()->isIntegerTy(1)) {
-    Def->setOperand(1, Plan->getTrue());
+    Def->setOperand(1, Plan.getTrue());
     Def->setOperand(0, Y);
     return Def;
   }
@@ -1538,7 +1540,7 @@ static VPValue *simplifyRecipe(VPSingleDefRecipe *Def) {
     if (isa<VPInstruction, VPReplicateRecipe>(A) && vputils::isSingleScalar(A))
       return A;
 
-    if (Plan->hasScalarVFOnly())
+    if (Plan.hasScalarVFOnly())
       return A;
   }
 
@@ -1600,7 +1602,7 @@ static VPValue *simplifyRecipe(VPSingleDefRecipe *Def) {
 
   // Some simplifications can only be applied after unrolling. Perform them
   // below.
-  if (!Plan->isUnrolled())
+  if (!Plan.isUnrolled())
     return nullptr;
 
   // After unrolling, extract-lane may be used to extract values from multiple
@@ -1672,7 +1674,7 @@ static VPValue *simplifyRecipe(VPSingleDefRecipe *Def) {
     return Def;
   }
 
-  if (Plan->getConcreteUF() == 1 && match(Def, m_ExtractLastPart(m_VPValue(A))))
+  if (Plan.getConcreteUF() == 1 && match(Def, m_ExtractLastPart(m_VPValue(A))))
     return A;
 
   return nullptr;
@@ -1684,7 +1686,7 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB))
       if (auto *Def = dyn_cast<VPSingleDefRecipe>(&R))
-        if (VPValue *New = simplifyRecipe(Def)) {
+        if (VPValue *New = simplifyRecipe(Plan, Def)) {
           if (New != Def) {
             // Replace the recipe with a new one.
             Def->replaceAllUsesWith(New);
@@ -2055,7 +2057,7 @@ static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
   assert(!isa<SCEVCouldNotCompute>(VectorTripCount) &&
          "Trip count SCEV must be computable");
   ScalarEvolution &SE = *PSE.getSE();
-  ElementCount NumElements = BestVF.multiplyCoefficientBy(BestUF);
+  ElementCount NumElements = BestVF * BestUF;
   const SCEV *C = SE.getElementCount(VectorTripCount->getType(), NumElements);
   return SE.isKnownPredicate(CmpInst::ICMP_EQ, VectorTripCount, C);
 }
@@ -2136,7 +2138,7 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
     assert(!isa<SCEVCouldNotCompute>(VectorTripCount) &&
            "Trip count SCEV must be computable");
     ScalarEvolution &SE = *PSE.getSE();
-    ElementCount NumElements = BestVF.multiplyCoefficientBy(BestUF);
+    ElementCount NumElements = BestVF * BestUF;
     const SCEV *C = SE.getElementCount(VectorTripCount->getType(), NumElements);
     if (!SE.isKnownPredicate(CmpInst::ICMP_ULE, VectorTripCount, C))
       return false;

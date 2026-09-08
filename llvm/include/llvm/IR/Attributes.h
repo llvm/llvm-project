@@ -132,6 +132,7 @@ public:
     TombstoneKey,          ///< Use as Tombstone key for DenseMap of AttrKind
   };
 
+  static const unsigned NumEnumAttrKinds = LastEnumAttr - FirstEnumAttr + 1;
   static const unsigned NumIntAttrKinds = LastIntAttr - FirstIntAttr + 1;
   static const unsigned NumTypeAttrKinds = LastTypeAttr - FirstTypeAttr + 1;
 
