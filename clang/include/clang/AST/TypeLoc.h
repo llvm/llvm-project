@@ -2142,10 +2142,8 @@ public:
 struct MatrixTypeLocInfo {
   SourceLocation AttrLoc;
   SourceRange OperandParens;
-  Expr *ScopeOperand;
   Expr *RowOperand;
   Expr *ColumnOperand;
-  Expr *UseOperand;
 };
 
 class MatrixTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc, MatrixTypeLoc,
@@ -2153,24 +2151,12 @@ class MatrixTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc, MatrixTypeLoc,
 public:
   /// The location of the attribute name, i.e.
   ///    float __attribute__((matrix_type(4, 2)))
-  ///                         ^
-  /// For cooperative matrix, it is
-  ///    float __attribute__((coop_mat(0, 4, 2, 1)))
-  ///                         ^
+  ///                         ^~~~~~~~~~~~~~~~~
   SourceLocation getAttrNameLoc() const { return getLocalData()->AttrLoc; }
   void setAttrNameLoc(SourceLocation loc) { getLocalData()->AttrLoc = loc; }
 
-  /// The attribute's scope operand (only for cooperative matrix).
-  ///    float __attribute__((coop_mat(0, 4, 2, 1)))
-  ///                                  ^
-  Expr *getAttrScopeOperand() const { return getLocalData()->ScopeOperand; }
-  void setAttrScopeOperand(Expr *e) { getLocalData()->ScopeOperand = e; }
-
   /// The attribute's row operand, if it has one.
   ///    float __attribute__((matrix_type(4, 2)))
-  ///                                     ^
-  /// For cooperative matrix, it is
-  ///    float __attribute__((coop_mat(0, 4, 2, 1)))
   ///                                     ^
   Expr *getAttrRowOperand() const { return getLocalData()->RowOperand; }
   void setAttrRowOperand(Expr *e) { getLocalData()->RowOperand = e; }
@@ -2178,25 +2164,91 @@ public:
   /// The attribute's column operand, if it has one.
   ///    float __attribute__((matrix_type(4, 2)))
   ///                                        ^
-  /// For cooperative matrix, it is
-  ///    float __attribute__((coop_mat(0, 4, 2, 1)))
-  ///                                        ^
   Expr *getAttrColumnOperand() const { return getLocalData()->ColumnOperand; }
   void setAttrColumnOperand(Expr *e) { getLocalData()->ColumnOperand = e; }
-
-  /// The attribute's scope operand (only for cooperative matrix).
-  ///    float __attribute__((coop_mat(0, 4, 2, 1)))
-  ///                                           ^
-  Expr *getAttrUseOperand() const { return getLocalData()->UseOperand; }
-  void setAttrUseOperand(Expr *e) { getLocalData()->UseOperand = e; }
 
   /// The location of the parentheses around the operand, if there is
   /// an operand.
   ///    float __attribute__((matrix_type(4, 2)))
   ///                                    ^    ^
-  /// For cooperative matrix, it is
+  SourceRange getAttrOperandParensRange() const {
+    return getLocalData()->OperandParens;
+  }
+  void setAttrOperandParensRange(SourceRange range) {
+    getLocalData()->OperandParens = range;
+  }
+
+  SourceRange getLocalSourceRange() const {
+    SourceRange range(getAttrNameLoc());
+    range.setEnd(getAttrOperandParensRange().getEnd());
+    return range;
+  }
+
+  void initializeLocal(ASTContext &Context, SourceLocation loc) {
+    setAttrNameLoc(loc);
+    setAttrOperandParensRange(loc);
+    setAttrRowOperand(nullptr);
+    setAttrColumnOperand(nullptr);
+  }
+};
+
+class ConstantMatrixTypeLoc
+    : public InheritingConcreteTypeLoc<MatrixTypeLoc, ConstantMatrixTypeLoc,
+                                       ConstantMatrixType> {};
+
+class DependentSizedMatrixTypeLoc
+    : public InheritingConcreteTypeLoc<MatrixTypeLoc,
+                                       DependentSizedMatrixTypeLoc,
+                                       DependentSizedMatrixType> {};
+
+struct CooperativeMatrixTypeLocInfo {
+  SourceLocation AttrLoc;
+  SourceRange OperandParens;
+  Expr *ScopeOperand;
+  Expr *RowOperand;
+  Expr *ColumnOperand;
+  Expr *UseOperand;
+};
+
+class CooperativeMatrixTypeLoc
+    : public ConcreteTypeLoc<UnqualTypeLoc, CooperativeMatrixTypeLoc,
+                             CooperativeMatrixType,
+                             CooperativeMatrixTypeLocInfo> {
+public:
+  /// The location of the attribute name, i.e.
+  ///   float __attribute__((coop_mat(0, 4, 2, 1)))
+  ///                        ^^~~~~~~~~~~~~~~~~~~
+  SourceLocation getAttrNameLoc() const { return getLocalData()->AttrLoc; }
+  void setAttrNameLoc(SourceLocation loc) { getLocalData()->AttrLoc = loc; }
+
+  /// The attribute's scope operand.
+  ///   float __attribute__((coop_mat(0, 4, 2, 1)))
+  ///                                 ^
+  Expr *getAttrScopeOperand() const { return getLocalData()->ScopeOperand; }
+  void setAttrScopeOperand(Expr *e) { getLocalData()->ScopeOperand = e; }
+
+  /// The attribute's row operand, if it has one.
   ///    float __attribute__((coop_mat(0, 4, 2, 1)))
-  ///                                 ^          ^          ^
+  ///                                     ^
+  Expr *getAttrRowOperand() const { return getLocalData()->RowOperand; }
+  void setAttrRowOperand(Expr *e) { getLocalData()->RowOperand = e; }
+
+  /// The attribute's column operand, if it has one.
+  ///    float __attribute__((coop_mat(0, 4, 2, 1)))
+  ///                                        ^
+  Expr *getAttrColumnOperand() const { return getLocalData()->ColumnOperand; }
+  void setAttrColumnOperand(Expr *e) { getLocalData()->ColumnOperand = e; }
+
+  /// The attribute's use operand.
+  ///   float __attribute__((coop_mat(0, 4, 2, 1)))
+  ///                                          ^
+  Expr *getAttrUseOperand() const { return getLocalData()->UseOperand; }
+  void setAttrUseOperand(Expr *e) { getLocalData()->UseOperand = e; }
+
+  /// The location of the parentheses around the operand, if there is
+  /// an operand.
+  ///    float __attribute__((coop_mat(0, 4, 2, 1)))
+  ///                                 ^          ^
   SourceRange getAttrOperandParensRange() const {
     return getLocalData()->OperandParens;
   }
@@ -2219,19 +2271,6 @@ public:
     setAttrUseOperand(nullptr);
   }
 };
-
-class ConstantMatrixTypeLoc
-    : public InheritingConcreteTypeLoc<MatrixTypeLoc, ConstantMatrixTypeLoc,
-                                       ConstantMatrixType> {};
-
-class CooperativeMatrixTypeLoc
-    : public InheritingConcreteTypeLoc<MatrixTypeLoc, CooperativeMatrixTypeLoc,
-                                       CooperativeMatrixType> {};
-
-class DependentSizedMatrixTypeLoc
-    : public InheritingConcreteTypeLoc<MatrixTypeLoc,
-                                       DependentSizedMatrixTypeLoc,
-                                       DependentSizedMatrixType> {};
 
 // FIXME: location of the '_Complex' keyword.
 class ComplexTypeLoc : public InheritingConcreteTypeLoc<TypeSpecTypeLoc,
