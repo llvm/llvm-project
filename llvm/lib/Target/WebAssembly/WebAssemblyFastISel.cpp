@@ -32,10 +32,10 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/Support/WasmAddressSpaces.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/WasmAddressSpaces.h"
 
 using namespace llvm;
 

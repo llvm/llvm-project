@@ -59,8 +59,7 @@ public:
   LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                   const VarDecl *D) const override {
     if (D && D->hasAttr<WebAssemblyGlobalAttr>())
-      return getLangASFromTargetAS(
-          llvm::WebAssembly::WASM_ADDRESS_SPACE_VAR);
+      return getLangASFromTargetAS(llvm::WebAssembly::WASM_ADDRESS_SPACE_VAR);
     return TargetCodeGenInfo::getGlobalVarAddressSpace(CGM, D);
   }
 

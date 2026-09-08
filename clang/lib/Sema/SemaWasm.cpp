@@ -462,8 +462,8 @@ void SemaWasm::handleWebAssemblyGlobalAttr(Decl *D, const ParsedAttr &AL) {
   ASTContext &Context = getASTContext();
   auto *VD = cast<VarDecl>(D);
   VD->setType(Context.getAddrSpaceQualType(
-      VD->getType(), getLangASFromTargetAS(
-                         llvm::WebAssembly::WASM_ADDRESS_SPACE_VAR)));
+      VD->getType(),
+      getLangASFromTargetAS(llvm::WebAssembly::WASM_ADDRESS_SPACE_VAR)));
   D->addAttr(::new (Context) WebAssemblyGlobalAttr(Context, AL));
 }
 
