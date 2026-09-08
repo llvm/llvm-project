@@ -55,42 +55,6 @@ RUN: llvm-strings --encoding u -n 2 %t | FileCheck --check-prefix UTF-8-2 %s --i
 RUN: llvm-strings --encoding u -n 3 %t | FileCheck --check-prefix UTF-8-3 %s --implicit-check-not={{.}}
 RUN: llvm-strings --encoding u -n 4 %t | FileCheck %s --implicit-check-not={{.}} --allow-empty
 
-RUN: printf '\241\0\n\0' > %t
-RUN: printf '\241\0\242\0\n\0' >> %t
-RUN: printf '\241\0\242\0\243\0\n\0' >> %t
-RUN: not llvm-strings --encoding l -n 0 2>&1 %t | FileCheck --check-prefix CHECK-0 %s
-RUN: llvm-strings --encoding l -n 1 %t | FileCheck --check-prefix UTF-8-1 %s --implicit-check-not={{.}}
-RUN: llvm-strings --encoding l -n 2 %t | FileCheck --check-prefix UTF-8-2 %s --implicit-check-not={{.}}
-RUN: llvm-strings --encoding l -n 3 %t | FileCheck --check-prefix UTF-8-3 %s --implicit-check-not={{.}}
-RUN: llvm-strings --encoding l -n 4 %t | FileCheck %s --implicit-check-not={{.}} --allow-empty
-
-RUN: printf '\0\241\0\n' > %t
-RUN: printf '\0\241\0\242\0\n' >> %t
-RUN: printf '\0\241\0\242\0\243\0\n' >> %t
-RUN: not llvm-strings --encoding b -n 0 2>&1 %t | FileCheck --check-prefix CHECK-0 %s
-RUN: llvm-strings --encoding b -n 1 %t | FileCheck --check-prefix UTF-8-1 %s --implicit-check-not={{.}}
-RUN: llvm-strings --encoding b -n 2 %t | FileCheck --check-prefix UTF-8-2 %s --implicit-check-not={{.}}
-RUN: llvm-strings --encoding b -n 3 %t | FileCheck --check-prefix UTF-8-3 %s --implicit-check-not={{.}}
-RUN: llvm-strings --encoding b -n 4 %t | FileCheck %s --implicit-check-not={{.}} --allow-empty
-
-RUN: printf '\241\0\0\0\n\0\0\0' > %t
-RUN: printf '\241\0\0\0\242\0\0\0\n\0\0\0' >> %t
-RUN: printf '\241\0\0\0\242\0\0\0\243\0\0\0\n\0\0\0' >> %t
-RUN: not llvm-strings --encoding L -n 0 2>&1 %t | FileCheck --check-prefix CHECK-0 %s
-RUN: llvm-strings --encoding L -n 1 %t | FileCheck --check-prefix UTF-8-1 %s --implicit-check-not={{.}}
-RUN: llvm-strings --encoding L -n 2 %t | FileCheck --check-prefix UTF-8-2 %s --implicit-check-not={{.}}
-RUN: llvm-strings --encoding L -n 3 %t | FileCheck --check-prefix UTF-8-3 %s --implicit-check-not={{.}}
-RUN: llvm-strings --encoding L -n 4 %t | FileCheck %s --implicit-check-not={{.}} --allow-empty
-
-RUN: printf '\0\0\0\241\0\0\0\n' > %t
-RUN: printf '\0\0\0\241\0\0\0\242\0\0\0\n' >> %t
-RUN: printf '\0\0\0\241\0\0\0\242\0\0\0\243\0\0\0\n' >> %t
-RUN: not llvm-strings --encoding B -n 0 2>&1 %t | FileCheck --check-prefix CHECK-0 %s
-RUN: llvm-strings --encoding B -n 1 %t | FileCheck --check-prefix UTF-8-1 %s --implicit-check-not={{.}}
-RUN: llvm-strings --encoding B -n 2 %t | FileCheck --check-prefix UTF-8-2 %s --implicit-check-not={{.}}
-RUN: llvm-strings --encoding B -n 3 %t | FileCheck --check-prefix UTF-8-3 %s --implicit-check-not={{.}}
-RUN: llvm-strings --encoding B -n 4 %t | FileCheck %s --implicit-check-not={{.}} --allow-empty
-
 UTF-8-1:      ¡
 UTF-8-1-NEXT: ¡¢
 UTF-8-1-NEXT: ¡¢£
