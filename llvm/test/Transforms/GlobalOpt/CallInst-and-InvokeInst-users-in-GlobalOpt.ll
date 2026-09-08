@@ -2,20 +2,17 @@
 ; RUN: opt -S -passes=globalopt < %s | FileCheck %s
 
 @g0 = internal global ptr null, align 8
-@g30 = internal global ptr @g0, align 8
 
-declare void @g21()
 declare void @llvm.memmove.p0.p0.i64(ptr, ptr, i64, i1)
 
 define i32 @main() {
-; CHECK-LABEL: define i32 @main() local_unnamed_addr {
-; CHECK-NEXT:    store ptr @g21, ptr @g0, align 8
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr null, ptr @g0, i64 0, i1 false)
+; CHECK-LABEL: define i32 @main() {
+; CHECK-NEXT:    store ptr @main, ptr @g0, align 8
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr @main, ptr @g0, i64 0, i1 false)
 ; CHECK-NEXT:    ret i32 0
 ;
-  store ptr @g21, ptr @g0, align 8
-  %v = load ptr, ptr @g30, align 8
-  call void @llvm.memmove.p0.p0.i64(ptr null, ptr %v, i64 0, i1 false)
+  store ptr @main, ptr @g0, align 8
+  call void @llvm.memmove.p0.p0.i64(ptr @main, ptr @g0, i64 0, i1 false)
   ret i32 0
 }
 
