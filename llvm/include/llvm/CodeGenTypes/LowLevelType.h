@@ -484,8 +484,7 @@ public:
   /// \p Factor elements.
   LLT multiplyElements(int Factor) const {
     if (isVector()) {
-      return scalarOrVector(getElementCount().multiplyCoefficientBy(Factor),
-                            getElementType());
+      return scalarOrVector(getElementCount() * Factor, getElementType());
     }
 
     return fixed_vector(Factor, *this);

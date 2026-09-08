@@ -9419,6 +9419,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
     SrcAS = ASC->getSrcAddressSpace();
     Src = ASC->getOperand(0);
     DestAS = ASC->getDestAddressSpace();
+    IsNonNull = ASC->getFlags().hasNonNull();
   } else {
     assert(Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
            Op.getConstantOperandVal(0) ==

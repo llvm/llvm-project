@@ -243,7 +243,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<ExtQuals> ExtQualNodes;
   mutable llvm::UniquingSet<ComplexType> ComplexTypes;
   mutable llvm::UniquingSet<PointerType> PointerTypes{GeneralTypesLog2InitSize};
-  mutable llvm::FoldingSet<AdjustedType> AdjustedTypes;
+  mutable llvm::UniquingSet<AdjustedType> AdjustedTypes;
   mutable llvm::UniquingSet<BlockPointerType> BlockPointerTypes;
   mutable llvm::UniquingSet<LValueReferenceType, QualTypeBoolInfo>
       LValueReferenceTypes;
@@ -277,10 +277,10 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<PackIndexingType, ASTContext &>
       DependentPackIndexingTypes;
 
-  mutable llvm::FoldingSet<TemplateTypeParmType> TemplateTypeParmTypes;
-  mutable llvm::FoldingSet<ObjCTypeParamType> ObjCTypeParamTypes;
-  mutable llvm::FoldingSet<SubstTemplateTypeParmType>
-    SubstTemplateTypeParmTypes;
+  mutable llvm::UniquingSet<TemplateTypeParmType> TemplateTypeParmTypes;
+  mutable llvm::UniquingSet<ObjCTypeParamType> ObjCTypeParamTypes;
+  mutable llvm::UniquingSet<SubstTemplateTypeParmType>
+      SubstTemplateTypeParmTypes;
   mutable llvm::FoldingSet<SubstTemplateTypeParmPackType>
     SubstTemplateTypeParmPackTypes;
   mutable llvm::FoldingSet<SubstBuiltinTemplatePackType>
@@ -294,10 +294,10 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<UsingType> UsingTypes;
   mutable llvm::FoldingSet<FoldingSetPlaceholder<TypedefType>> TypedefTypes;
   mutable llvm::FoldingSet<DependentNameType> DependentNameTypes;
-  mutable llvm::FoldingSet<PackExpansionType> PackExpansionTypes;
+  mutable llvm::UniquingSet<PackExpansionType> PackExpansionTypes;
   mutable llvm::FoldingSet<ObjCObjectTypeImpl> ObjCObjectTypes;
-  mutable llvm::FoldingSet<ObjCObjectPointerType> ObjCObjectPointerTypes;
-  mutable llvm::FoldingSet<UnaryTransformType> UnaryTransformTypes;
+  mutable llvm::UniquingSet<ObjCObjectPointerType> ObjCObjectPointerTypes;
+  mutable llvm::UniquingSet<UnaryTransformType> UnaryTransformTypes;
   // An AutoType can have a dependency on another AutoType via its template
   // arguments. Since both dependent and dependency are on the same set,
   // we can end up in an infinite recursion when looking for a node if we used
@@ -311,7 +311,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<AttributedType, ASTContext &>
       AttributedTypes;
   mutable llvm::UniquingSet<PipeType, QualTypeBoolInfo> PipeTypes;
-  mutable llvm::FoldingSet<BitIntType> BitIntTypes;
+  mutable llvm::UniquingSet<BitIntType> BitIntTypes;
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
       DependentBitIntTypes;
   mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
