@@ -84,7 +84,8 @@ class rcu_domain_impl {
     auto new_phase = old_phase ^ reader_states::grace_period_phase_mask;
     // std::printf("rcu_domain::update_phase_and_wait() new phase: 0x%04x\n", new_phase);
 
-    barrier();
+    std::atomic_signal_fence(std::memory_order_seq_cst);
+
     // Wait for all threads to quiesce in the old phase
     while (any_reader_in_ongoing_grace_period(new_phase)) {
       grace_period_waiting_flag_.store(true, std::memory_order_relaxed);
@@ -116,8 +117,6 @@ class rcu_domain_impl {
            reader_states::get_grace_period_phase(thread_state) != global_phase;
   }
 
-  void barrier() noexcept { asm volatile("" : : : "memory"); }
-
 public:
   void lock() noexcept {
     auto current_thread_state_ref = per_thread_states::get_current_thread_instance();
@@ -126,7 +125,7 @@ public:
       // Entering a read-side critical section from a quiescent state.
       current_thread_state_ref.store(
           reader_states::make_state(global_reader_phase_.load(std::memory_order_relaxed), 1), memory_order_relaxed);
-      __cxx_atomic_thread_fence(memory_order_seq_cst);
+      std::atomic_thread_fence(memory_order_seq_cst);
     } else {
       // Already in read-side critical section, just increment the nest level.
       current_thread_state_ref.fetch_add(1, memory_order_relaxed);
@@ -135,7 +134,7 @@ public:
 
   void unlock() noexcept {
     auto current_thread_state_ref = per_thread_states::get_current_thread_instance();
-    __cxx_atomic_thread_fence(memory_order_seq_cst);
+    std::atomic_thread_fence(memory_order_seq_cst);
     // Decrement the nest level.
     auto old_state = current_thread_state_ref.fetch_sub(1, memory_order_relaxed);
 
@@ -149,7 +148,7 @@ public:
   void retire(__rcu_node* node) noexcept { retired_queue_stage0_.push_front(node); }
 
   void synchronize(bool invoke_callback) noexcept {
-    __cxx_atomic_thread_fence(memory_order_seq_cst);
+    std::atomic_thread_fence(memory_order_seq_cst);
     std::unique_lock lk(grace_period_mutex_);
 
     update_phase_and_wait();
@@ -164,7 +163,7 @@ public:
       lk.lock();
     }
 
-    barrier();
+    std::atomic_signal_fence(memory_order_seq_cst);
     update_phase_and_wait();
 
     lk.unlock();
@@ -176,7 +175,7 @@ public:
       // Invoke the ready callbacks outside of the grace period mutex
       ready_callbacks.for_each([](auto* node) { node->__callback_(); });
     }
-    __cxx_atomic_thread_fence(memory_order_seq_cst);
+    std::atomic_thread_fence(memory_order_seq_cst);
   }
 
   void debugPrintAllReaderStatesInHex() {
