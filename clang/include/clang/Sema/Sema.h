@@ -6989,6 +6989,15 @@ public:
            ExpressionEvaluationContextRecord::ExpressionKind::EK_AttrArgument;
   }
 
+  bool isInsideAttrContext() const {
+    for (const auto &Record : ExprEvalContexts) {
+      if (Record.ExprContext ==
+          ExpressionEvaluationContextRecord::ExpressionKind::EK_AttrArgument)
+        return true;
+    }
+    return false;
+  }
+
   /// Increment when we find a reference; decrement when we find an ignored
   /// assignment.  Ultimately the value is 0 if every reference is an ignored
   /// assignment.
