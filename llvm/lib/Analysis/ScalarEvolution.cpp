@@ -999,8 +999,7 @@ SCEVUse SCEVAddRecExpr::evaluateAtIteration(ArrayRef<SCEVUse> Operands,
       return Coeff;
 
     const SCEV *Mul = SE.getMulExpr(Operands[i].getPointer(), Coeff);
-    Result =
-        SE.getAddExpr(Result, Mul, SCEV::FlagAnyWrap, /*Depth=*/0, UseFlags);
+    Result = SE.getAddExpr(Result, Mul, {SCEV::FlagAnyWrap, UseFlags});
   }
   return Result;
 }
@@ -2515,8 +2514,9 @@ bool ScalarEvolution::isAvailableAtLoopEntry(const SCEV *S, const Loop *L) {
 
 /// Get a canonical add expression, or something simpler if possible.
 SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
-                                    SCEV::NoWrapFlags OrigFlags, unsigned Depth,
-                                    SCEV::NoWrapFlags UseFlags) {
+                                    SCEVFlags Flags, unsigned Depth) {
+  SCEV::NoWrapFlags OrigFlags = Flags.ExprFlags;
+  SCEV::NoWrapFlags UseFlags = Flags.UseFlags;
   assert(!(OrigFlags & ~(SCEV::FlagNUW | SCEV::FlagNSW)) &&
          "only nuw or nsw allowed");
   assert(!(UseFlags & ~(SCEV::FlagNUW | SCEV::FlagNSW)) &&
@@ -2532,10 +2532,6 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
       Ops, [](const SCEV *Op) { return Op->getType()->isPointerTy(); });
   assert(NumPtrs <= 1 && "add has at most one pointer operand");
 #endif
-  // Keep track of original ops, if use-specific flags have been provided.
-  SmallVector<SCEVUse, 8> OrigOps;
-  if (UseFlags != SCEV::FlagAnyWrap)
-    OrigOps.assign(Ops.begin(), Ops.end());
 
   const SCEV *Folded = constantFoldAndGroupOps(
       *this, LI, DT, Ops,
@@ -2545,14 +2541,11 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
   if (Folded)
     return Folded;
 
-  // Conservatively drop use-specific flags if operands changed after constant
-  // folding, i.e. we are building a different expression than the initial one,
-  // for which the use-specific flags hold.
-  // TODO: In some cases, this is overly conservative.
-  if (UseFlags != SCEV::FlagAnyWrap &&
-      !std::is_permutation(OrigOps.begin(), OrigOps.end(), Ops.begin(),
-                           Ops.end()))
-    UseFlags = SCEV::FlagAnyWrap;
+#ifndef NDEBUG
+  // Keep track of operands after constant folding, for verification when adding
+  // use-specific flags.
+  const SmallVector<SCEVUse, 8> OrigOps(Ops.begin(), Ops.end());
+#endif
 
   unsigned Idx = isa<SCEVConstant>(Ops[0]) ? 1 : 0;
 

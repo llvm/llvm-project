@@ -458,11 +458,11 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
       ScStart = Start;
       // The highest address for the type saturates; adding EltSize to it would
       // wrap to the start of the address space.
-      ScEnd =
-          LastAddr
-              ? SE->getAddExpr(LastAddr, EltSizeSCEV)
-              : SE->getSCEV(ConstantExpr::getIntToPtr(
-                    Constant::getAllOnesValue(DL.getIndexType(PtrTy)), PtrTy));
+      if (LastAddr)
+        ScEnd = SE->getAddExpr(LastAddr, EltSizeSCEV);
+      else
+        ScEnd = SE->getSCEV(ConstantExpr::getIntToPtr(
+            Constant::getAllOnesValue(DL.getIndexType(PtrTy)), PtrTy));
     } else {
       if (!LastAddr)
         return {SE->getCouldNotCompute(), SE->getCouldNotCompute()};
