@@ -30,6 +30,7 @@ add_llvm_target_unittest(AMDGPUTests
   ExecMayBeModifiedBeforeAnyUse.cpp
   GCNRegPressureTest.cpp
   InstSizes.cpp
+  IsIgnorableExecUseTest.cpp
   LiveRegUnits.cpp
   PALMetadata.cpp
   RCIUpdateReservedRegsTest.cpp

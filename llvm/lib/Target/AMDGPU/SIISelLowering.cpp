@@ -5866,7 +5866,7 @@ getDPPOpcForWaveReduction(unsigned Opc, const GCNSubtarget &ST) {
     llvm_unreachable("unhandled lane op");
   }
   unsigned ClampOpc = Opc;
-  if (!ST.getInstrInfo()->isVALU(Opc, /*AllowLDSDMA=*/true)) {
+  if (!ST.getInstrInfo()->isVALU(Opc, /*AllowLDSDMA=*/false)) {
     if (Opc == AMDGPU::S_SUB_I32)
       ClampOpc = AMDGPU::S_ADD_I32;
     if (Opc == AMDGPU::S_ADD_U64_PSEUDO || Opc == AMDGPU::S_SUB_U64_PSEUDO)
@@ -6254,7 +6254,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
                 LaneValueReg)
             .addReg(SrcReg)
             .addReg(FF1Reg);
-        if (ST.getInstrInfo()->isVALU(Opc, /*AllowLDSDMA=*/true)) {
+        if (ST.getInstrInfo()->isVALU(Opc, /*AllowLDSDMA=*/false)) {
           // Get the Lane Value in VGPR to avoid the Constant Bus Restriction
           Register LaneValVgpr = MRI.createVirtualRegister(SrcRegClass);
           Register VgprResultReg = MRI.createVirtualRegister(SrcRegClass);
@@ -6276,7 +6276,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
           OpInstr.addImm(0); // opsel
         if (hasOMod)
           OpInstr.addImm(0); // omod
-        if (ST.getInstrInfo()->isVALU(Opc, /*AllowLDSDMA=*/true)) {
+        if (ST.getInstrInfo()->isVALU(Opc, /*AllowLDSDMA=*/false)) {
           BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
                   DstReg)
               .addReg(OpDstReg);
