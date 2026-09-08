@@ -2460,9 +2460,11 @@ static TemplateDeductionResult DeduceTemplateArgumentsByTypeMatch(
       if (!MA)
         return TemplateDeductionResult::NonDeducedMismatch;
 
-      // Check that the dimensions are the same
-      if (MP->getNumRows() != MA->getNumRows() ||
-          MP->getNumColumns() != MA->getNumColumns()) {
+      // Check that the dimensions, scope and use are the same
+      if (MP->getScope() != MA->getScope() ||
+          MP->getNumRows() != MA->getNumRows() ||
+          MP->getNumColumns() != MA->getNumColumns() ||
+          MP->getUse() != MA->getUse()) {
         return TemplateDeductionResult::NonDeducedMismatch;
       }
       // Perform deduction on element types.

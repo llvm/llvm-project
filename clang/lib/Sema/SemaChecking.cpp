@@ -17333,7 +17333,7 @@ bool Sema::CheckCoopMatrixLoadStorePtr(CallExpr *TheCall, unsigned PtrArgIdx) {
     ArgError = true;
   } else {
     ElementTy = PtrTy->getPointeeType().getUnqualifiedType();
-    if (!MatrixType::isValidElementType(ElementTy, getLangOpts())) {
+    if (!CooperativeMatrixType::isValidElementType(ElementTy)) {
       ArgError = true;
     }
   }
@@ -17453,7 +17453,7 @@ void Sema::CheckCoopMatrixMatMulOutput(CallExpr *TheCall) {
       M2Ty->getElementType().getUnqualifiedType())
     Diag(Loc, diag::err_coop_matrix_element_type);
 
-  if (!areMatrixTypesOfTheSameDimension(TheCall->getType(), MC->getType()))
+  if (!areCoopMatrixTypesOfTheSameDimension(TheCall->getType(), MC->getType()))
     Diag(Loc, diag::err_coop_matrix_row_or_col_mismatch);
 }
 
@@ -17468,7 +17468,7 @@ bool Sema::CheckCoopMatrixTypes(QualType ATy, SourceLocation ALoc, QualType BTy,
   if (!M0Ty || !M1Ty)
     return true;
 
-  if (!areMatrixTypesOfTheSameDimension(ATy, BTy)) {
+  if (!areCoopMatrixTypesOfTheSameDimension(ATy, BTy)) {
     Diag(ALoc, diag::err_coop_matrix_row_or_col_mismatch);
     return true;
   }
@@ -17590,9 +17590,8 @@ ExprResult Sema::BuiltinMatrixTranspose(CallExpr *TheCall,
     return MatrixArg;
   Expr *Matrix = MatrixArg.get();
 
-  auto *ConstMType = Matrix->getType()->getAs<ConstantMatrixType>();
-  auto *CoopMType = Matrix->getType()->getAs<CooperativeMatrixType>();
-  if (!ConstMType && !CoopMType) {
+  auto *MType = Matrix->getType()->getAs<ConstantMatrixType>();
+  if (!MType) {
     Diag(Matrix->getBeginLoc(), diag::err_builtin_invalid_arg_type)
         << 1 << /* matrix */ 3 << /* no int */ 0 << /* no fp */ 0
         << Matrix->getType();
@@ -17601,23 +17600,12 @@ ExprResult Sema::BuiltinMatrixTranspose(CallExpr *TheCall,
 
   // Create returned matrix type by swapping rows and columns of the argument
   // matrix type.
-  if (ConstMType) {
-    QualType ResultType = Context.getConstantMatrixType(
-        ConstMType->getElementType(), ConstMType->getNumColumns(),
-        ConstMType->getNumRows());
+  QualType ResultType = Context.getConstantMatrixType(
+      ConstMType->getElementType(), ConstMType->getNumColumns(),
+      ConstMType->getNumRows());
 
-    // Change the return type to the type of the returned matrix.
-    TheCall->setType(ResultType);
-  }
-  if (CoopMType) {
-    QualType ResultType = Context.getCooperativeMatrixType(
-        CoopMType->getElementType(), CoopMType->getScope(),
-        CoopMType->getNumColumns(), CoopMType->getNumRows(),
-        CoopMType->getUse());
-
-    // Change the return type to the type of the returned matrix.
-    TheCall->setType(ResultType);
-  }
+  // Change the return type to the type of the returned matrix.
+  TheCall->setType(ResultType);
 
   // Update call argument to use the possibly converted matrix argument.
   TheCall->setArg(0, Matrix);

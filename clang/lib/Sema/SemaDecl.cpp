@@ -14589,7 +14589,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   // Set return type of builtin call using type of LHS variable.
   // This is done for builtin calls that return cooperative matrix.
   if (getLangOpts().OpenCL && IsCoopMatrixBuiltin(Init)) {
-    if (!VDecl->getType()->isMatrixType()) {
+    if (!VDecl->getType()->isCooperativeMatrixType()) {
       Diag(VDecl->getLocation(), diag::err_coop_matrix_assignment);
       return;
     }

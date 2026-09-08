@@ -3030,7 +3030,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     CGF.EmitIgnoredExpr(E);
     return nullptr;
   }
-  case CK_MatrixCast: {
+  case CK_MatrixCast:
+  case CK_CoopMatrixCast: {
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc());
   }
@@ -3696,15 +3697,10 @@ Value *ScalarExprEmitter::VisitPlus(const UnaryOperator *E,
 
 Value *ScalarExprEmitter::VisitUnaryMinus(const UnaryOperator *E,
                                           QualType PromotionType) {
-  if (E->getSubExpr()->getType()->isCooperativeMatrixType()) {
-    llvm::Value *Val = CGF.EmitScalarExpr(E->getSubExpr());
-    QualType CompTy =
-        E->getType()->getAs<CooperativeMatrixType>()->getElementType();
-    if (CompTy->isFloatingType())
-      return Builder.CreateFNeg(Val, "coopmat.fneg");
-    else
-      return Builder.CreateNeg(Val, "coopmat.ineg");
-  }
+  if (E->getSubExpr()->getType()->isCooperativeMatrixType())
+    return CGF.EmitCoopMatNeg(CGF.EmitScalarExpr(E->getSubExpr()),
+                              E->getType());
+
   QualType promotionTy = PromotionType.isNull()
                              ? getPromotionType(E->getSubExpr()->getType())
                              : PromotionType;

@@ -195,34 +195,35 @@ def CIR_CastKind : CIR_I32EnumAttr<"CastKind", "cast kind", [
   I32EnumAttrCase<"ptr_to_bool", 23>,
   // CK_ToVoid
   // CK_MatrixCast
+  // CK_CoopMatrixCast
   // CK_VectorSplat
-  I32EnumAttrCase<"integral", 27>,
-  I32EnumAttrCase<"int_to_bool", 28>,
-  I32EnumAttrCase<"int_to_float", 29>,
+  I32EnumAttrCase<"integral", 28>,
+  I32EnumAttrCase<"int_to_bool", 29>,
+  I32EnumAttrCase<"int_to_float", 30>,
   // CK_FloatingToFixedPoint
   // CK_FixedPointToFloating
   // CK_FixedPointCast
   // CK_FixedPointToIntegral
   // CK_IntegralToFixedPoint
   // CK_FixedPointToBoolean
-  I32EnumAttrCase<"float_to_int", 36>,
-  I32EnumAttrCase<"float_to_bool", 37>,
-  I32EnumAttrCase<"bool_to_int", 38>,
-  I32EnumAttrCase<"floating", 39>,
+  I32EnumAttrCase<"float_to_int", 37>,
+  I32EnumAttrCase<"float_to_bool", 38>,
+  I32EnumAttrCase<"bool_to_int", 39>,
+  I32EnumAttrCase<"floating", 40>,
   // CK_CPointerToObjCPointerCast
   // CK_BlockPointerToObjCPointerCast
   // CK_AnyPointerToBlockPointerCast
   // CK_ObjCObjectLValueCast
-  I32EnumAttrCase<"float_to_complex", 44>,
-  I32EnumAttrCase<"float_complex_to_real", 45>,
-  I32EnumAttrCase<"float_complex_to_bool", 46>,
-  I32EnumAttrCase<"float_complex", 47>,
-  I32EnumAttrCase<"float_complex_to_int_complex", 48>,
-  I32EnumAttrCase<"int_to_complex", 49>,
-  I32EnumAttrCase<"int_complex_to_real", 50>,
-  I32EnumAttrCase<"int_complex_to_bool", 51>,
-  I32EnumAttrCase<"int_complex", 52>,
-  I32EnumAttrCase<"int_complex_to_float_complex", 53>,
+  I32EnumAttrCase<"float_to_complex", 45>,
+  I32EnumAttrCase<"float_complex_to_real", 46>,
+  I32EnumAttrCase<"float_complex_to_bool", 47>,
+  I32EnumAttrCase<"float_complex", 48>,
+  I32EnumAttrCase<"float_complex_to_int_complex", 49>,
+  I32EnumAttrCase<"int_to_complex", 50>,
+  I32EnumAttrCase<"int_complex_to_real", 51>,
+  I32EnumAttrCase<"int_complex_to_bool", 52>,
+  I32EnumAttrCase<"int_complex", 53>,
+  I32EnumAttrCase<"int_complex_to_float_complex", 54>,
   // CK_ARCProduceObject
   // CK_ARCConsumeObject
   // CK_ARCReclaimReturnedObject
@@ -232,7 +233,7 @@ def CIR_CastKind : CIR_I32EnumAttr<"CastKind", "cast kind", [
   // CK_CopyAndAutoreleaseBlockObject
   // CK_BuiltinFnToFnPtr
   // CK_ZeroToOCLOpaqueType
-  I32EnumAttrCase<"address_space", 63>,
+  I32EnumAttrCase<"address_space", 64>,
   // CK_IntToOCLSampler
   // CK_HLSLVectorTruncation
   // CK_HLSLArrayRValue

@@ -1079,6 +1079,7 @@ static bool rewriteToNumericBoxedExpression(const ObjCMessageExpr *Msg,
     case CK_ZeroToOCLOpaqueType:
     case CK_IntToOCLSampler:
     case CK_MatrixCast:
+    case CK_CoopMatrixCast:
       return false;
 
     case CK_BooleanToSignedIntegral:

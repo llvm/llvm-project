@@ -2205,9 +2205,9 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
   case Type::CooperativeMatrix: {
     const auto *MT = cast<CooperativeMatrixType>(T);
     TypeInfo ElementInfo = getTypeInfo(MT->getElementType());
-    // The internal layout of a matrix value is implementation defined.
-    // Initially be ABI compatible with arrays with respect to alignment and
-    // size.
+    // The internal layout of a cooperative matrix value is implementation
+    // defined. Initially be ABI compatible with arrays with respect to
+    // alignment and size.
     Width = ElementInfo.Width * MT->getNumRows() * MT->getNumColumns();
     Align = ElementInfo.Align;
     break;
@@ -10778,10 +10778,10 @@ static bool areCompatMatrixTypes(const ConstantMatrixType *LHS,
          LHS->getNumColumns() == RHS->getNumColumns();
 }
 
-/// areCompatMatrixTypes - Return true if the two specified matrix types are
-/// compatible.
-static bool areCompatMatrixTypes(const CooperativeMatrixType *LHS,
-                                 const CooperativeMatrixType *RHS) {
+/// areCompatCoopMatrixTypes - Return true if the two specified cooperative
+/// matrix types are compatible.
+static bool areCompatCoopMatrixTypes(const CooperativeMatrixType *LHS,
+                                     const CooperativeMatrixType *RHS) {
   assert(LHS->isCanonicalUnqualified() && RHS->isCanonicalUnqualified());
   return LHS->getElementType() == RHS->getElementType() &&
          LHS->getScope() == RHS->getScope() &&
@@ -12305,8 +12305,8 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
       return LHS;
     return {};
   case Type::CooperativeMatrix:
-    if (areCompatMatrixTypes(LHSCan->castAs<CooperativeMatrixType>(),
-                             RHSCan->castAs<CooperativeMatrixType>()))
+    if (areCompatCoopMatrixTypes(LHSCan->castAs<CooperativeMatrixType>(),
+                                 RHSCan->castAs<CooperativeMatrixType>()))
       return LHS;
     return {};
   case Type::ObjCObject: {

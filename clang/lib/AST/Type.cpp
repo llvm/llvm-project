@@ -423,20 +423,6 @@ ConstantMatrixType::ConstantMatrixType(TypeClass tc, QualType matrixType,
     : MatrixType(tc, matrixType, canonType), NumRows(nRows),
       NumColumns(nColumns) {}
 
-CooperativeMatrixType::CooperativeMatrixType(QualType matrixType,
-                                             unsigned scope, unsigned nRows,
-                                             unsigned nColumns, unsigned use,
-                                             QualType canonType)
-    : CooperativeMatrixType(CooperativeMatrix, matrixType, scope, nRows,
-                            nColumns, use, canonType) {}
-
-CooperativeMatrixType::CooperativeMatrixType(TypeClass tc, QualType matrixType,
-                                             unsigned scope, unsigned nRows,
-                                             unsigned nColumns, unsigned use,
-                                             QualType canonType)
-    : MatrixType(tc, matrixType, canonType), NumRows(nRows),
-      NumColumns(nColumns), Scope(scope), Use(use) {}
-
 DependentSizedMatrixType::DependentSizedMatrixType(QualType ElementType,
                                                    QualType CanonicalType,
                                                    Expr *RowExpr,
@@ -3207,8 +3193,6 @@ bool Type::isLiteralType(const ASTContext &Ctx) const {
   // Matrices with constant numbers of rows and columns are also literal types
   // in HLSL.
   if (Ctx.getLangOpts().HLSL && BaseTy->isConstantMatrixType())
-    return true;
-  if (Ctx.getLangOpts().HLSL && BaseTy->isCooperativeMatrixType())
     return true;
   //    -- a reference type; or
   if (BaseTy->isReferenceType())

@@ -7945,6 +7945,14 @@ public:
   QualType CheckMatrixMultiplyOperands(ExprResult &LHS, ExprResult &RHS,
                                        SourceLocation Loc, bool IsCompAssign);
 
+  /// Type checking for cooperative matrix binary operators.
+  QualType CheckCoopMatrixElementwiseOperands(ExprResult &LHS, ExprResult &RHS,
+                                              SourceLocation Loc,
+                                              bool IsCompAssign);
+  QualType CheckCoopMatrixMultiplyOperands(ExprResult &LHS, ExprResult &RHS,
+                                           SourceLocation Loc,
+                                           bool IsCompAssign);
+
   /// Are the two types SVE-bitcast-compatible types? I.e. is bitcasting from
   /// the first SVE type (e.g. an SVE VLAT) to the second type (e.g. an SVE
   /// VLST) allowed?
@@ -7956,6 +7964,11 @@ public:
   /// Are the two types matrix types and do they have the same dimensions i.e.
   /// do they have the same number of rows and the same number of columns?
   bool areMatrixTypesOfTheSameDimension(QualType srcTy, QualType destTy);
+
+  /// Are the two types cooperative matrix types and do they have the same
+  /// dimensions i.e. do they have the same number of rows and the same number
+  /// of columns? Also do they have the same scope and use?
+  bool areCoopMatrixTypesOfTheSameDimension(QualType srcTy, QualType destTy);
 
   bool areVectorTypesSameSize(QualType srcType, QualType destType);
 
@@ -7998,6 +8011,13 @@ public:
   // invalid.
   bool CheckMatrixCast(SourceRange R, QualType DestTy, QualType SrcTy,
                        CastKind &Kind);
+
+  // CheckCoopMatrixCast - Check type constraints for cooperative matrix casts.
+  // We allow casting between cooperative matrixes of the same scope, use, and
+  // same dimensions i.e. when they have the same number of rows and columns.
+  // Returns true if the cast is invalid.
+  bool CheckCoopMatrixCast(SourceRange R, QualType DestTy, QualType SrcTy,
+                           CastKind &Kind);
 
   // CheckVectorCast - check type constraints for vectors.
   // Since vectors are an extension, there are no C standard reference for this.
@@ -15315,8 +15335,11 @@ public:
                               SourceLocation AttrLoc);
 
   QualType BuildMatrixType(QualType T, Expr *NumRows, Expr *NumColumns,
-                           SourceLocation AttrLoc, Expr *Scope = nullptr,
-                           Expr *Use = nullptr, bool IsCoopMat = false);
+                           SourceLocation AttrLoc);
+
+  QualType BuildCoopMatrixType(QualType T, Expr *Scope, Expr *Use,
+                               Expr *NumRows, Expr *NumColumns,
+                               SourceLocation AttrLoc);
 
   QualType BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
                                                   Expr *CountExpr,

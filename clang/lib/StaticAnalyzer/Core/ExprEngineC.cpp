@@ -510,6 +510,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       // Various C++ casts that are not handled yet.
       case CK_ToUnion:
       case CK_MatrixCast:
+      case CK_CoopMatrixCast:
       case CK_VectorSplat:
       case CK_HLSLElementwiseCast:
       case CK_HLSLAggregateSplatCast:

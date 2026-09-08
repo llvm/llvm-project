@@ -4494,7 +4494,6 @@ public:
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == ConstantMatrix ||
-           T->getTypeClass() == CooperativeMatrix ||
            T->getTypeClass() == DependentSizedMatrix;
   }
 };
@@ -4584,65 +4583,81 @@ public:
   }
 };
 
-/// Represents a cooperative matrix type.
-class CooperativeMatrixType final : public MatrixType {
+/// Represents an opaque OpenCL cooperative matrix type.
+///
+/// Unlike MatrixType, a cooperative matrix is not an ordinary matrix value.
+/// It is an opaque, distributed object whose shape and role are part of its
+/// type identity.
+class CooperativeMatrixType final : public Type, public llvm::FoldingSetNode {
 protected:
   friend class ASTContext;
+
+  /// Element type of the cooperative matrix.
+  QualType ElementType;
 
   /// Number of rows and columns.
   unsigned NumRows;
   unsigned NumColumns;
 
-  /// Scope and use
+  /// Cooperative matrix scope and use.
   unsigned Scope;
   unsigned Use;
 
   static constexpr unsigned MaxElementsPerDimension = (1 << 20) - 1;
 
-  CooperativeMatrixType(QualType MatrixElementType, unsigned Scope,
-                        unsigned NRows, unsigned NColumns, unsigned Use,
-                        QualType CanonElementType);
+  CooperativeMatrixType(QualType ElementType, unsigned Scope, unsigned NumRows,
+                        unsigned NumColumns, unsigned Use,
+                        QualType CanonicalType)
+      : CooperativeMatrixType(Type::CooperativeMatrix, ElementType, Scope,
+                              NumRows, NumColumns, Use, CanonicalType) {}
 
-  CooperativeMatrixType(TypeClass typeClass, QualType MatrixType,
-                        unsigned Scope, unsigned NRows, unsigned NColumns,
-                        unsigned Use, QualType CanonElementType);
+  CooperativeMatrixType(TypeClass TypeClass, QualType ElementType,
+                        unsigned Scope, unsigned NumRows, unsigned NumColumns,
+                        unsigned Use, QualType CanonicalType)
+      : Type(TypeClass, CanonicalType, ElementType->getDependence()),
+        ElementType(ElementType), NumRows(NumRows), NumColumns(NumColumns),
+        Scope(Scope), Use(Use) {}
 
 public:
-  /// Returns the number of rows in the matrix.
+  /// Returns the element type.
+  QualType getElementType() const { return ElementType; }
+
+  /// Returns the number of rows.
   unsigned getNumRows() const { return NumRows; }
 
-  /// Returns the number of columns in the matrix.
+  /// Returns the number of columns.
   unsigned getNumColumns() const { return NumColumns; }
 
-  /// Returns the scope of the matrix.
+  /// Returns the cooperative matrix scope.
   unsigned getScope() const { return Scope; }
 
-  /// Returns the use of the matrix.
+  /// Returns the cooperative matrix use.
   unsigned getUse() const { return Use; }
 
-  /// Returns the number of elements required to embed the matrix into a vector.
+  /// Returns the number of elements required to embed the matrix into
+  /// a vector representation.
   unsigned getNumElementsFlattened() const {
     return getNumRows() * getNumColumns();
   }
 
-  /// Returns true if \p NumElements is a valid matrix dimension.
+  /// Returns true if \p NumElements is a valid cooperative matrix dimension.
   static constexpr bool isDimensionValid(size_t NumElements) {
     return NumElements > 0 && NumElements <= MaxElementsPerDimension;
   }
 
-  /// Return true if \p Scope is valid
+  /// Returns true if \p Scope is a valid cooperative matrix scope.
   static constexpr bool isScopeValid(size_t Scope) {
-    return Scope == 3 /* CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP */;
+    return Scope == 3; // CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP
   }
 
-  /// Return true if \p Use is valid
+  /// Returns true if \p Use is a valid cooperative matrix use.
   static constexpr bool isUseValid(size_t Use) {
-    return Use == 0 /* CLK_COOPERATIVE_MATRIX_A */ ||
-           Use == 1 /* CLK_COOPERATIVE_MATRIX_B */ ||
-           Use == 2 /* CLK_COOPERATIVE_MATRIX_ACCUMULATOR */;
+    return Use == 0 || // CLK_COOPERATIVE_MATRIX_A
+           Use == 1 || // CLK_COOPERATIVE_MATRIX_B
+           Use == 2;   // CLK_COOPERATIVE_MATRIX_ACCUMULATOR
   }
 
-  /// Returns the maximum number of elements per dimension.
+  /// Returns the maximum valid number of elements per dimension.
   static constexpr unsigned getMaxElementsPerDimension() {
     return MaxElementsPerDimension;
   }
@@ -4662,6 +4677,23 @@ public:
     ID.AddInteger(Use);
     ID.AddInteger(TypeClass);
   }
+
+  static bool isValidElementType(QualType ElemTy) {
+    return ElemTy->isSpecificBuiltinType(BuiltinType::Char_S) ||
+           ElemTy->isSpecificBuiltinType(BuiltinType::UChar) ||
+           ElemTy->isSpecificBuiltinType(BuiltinType::Short) ||
+           ElemTy->isSpecificBuiltinType(BuiltinType::UShort) ||
+           ElemTy->isSpecificBuiltinType(BuiltinType::Int) ||
+           ElemTy->isSpecificBuiltinType(BuiltinType::UInt) ||
+           ElemTy->isSpecificBuiltinType(BuiltinType::Long) ||
+           ElemTy->isSpecificBuiltinType(BuiltinType::ULong) ||
+           ElemTy->isSpecificBuiltinType(BuiltinType::Half) ||
+           ElemTy->isSpecificBuiltinType(BuiltinType::Float) ||
+           ElemTy->isSpecificBuiltinType(BuiltinType::Double);
+  }
+
+  bool isSugared() const { return false; }
+  QualType desugar() const { return QualType(this, 0); }
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == CooperativeMatrix;

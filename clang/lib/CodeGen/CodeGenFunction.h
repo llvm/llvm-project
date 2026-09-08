@@ -5133,15 +5133,6 @@ public:
   /// scalar type, returning the result.
   llvm::Value *EmitScalarExpr(const Expr *E, bool IgnoreResultAssign = false);
 
-  /// Helper function for EmitCoopMatBinaryOp
-  llvm::Value *EmitCoopMatFromScalar(llvm::Value *ScalarVal,
-                                     QualType CoopMatQTy);
-
-  /// EmitCoopMatBinaryOp - Emit the computation of the specified binary op,
-  /// returning the result.
-  llvm::Value *EmitCoopMatBinaryOp(BinaryOperatorKind Opcode, llvm::Value *LHS,
-                                   llvm::Value *RHS, QualType ResultTy);
-
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are LLVM scalar types.
   llvm::Value *EmitScalarConversion(llvm::Value *Src, QualType SrcTy,
@@ -5480,6 +5471,20 @@ public:
   /// a r-value suitable for passing the given parameter.
   void EmitDelegateCallArg(CallArgList &args, const VarDecl *param,
                            SourceLocation loc);
+
+  /// Helper function to emit coop matrix builtin call.
+  llvm::Value *EmitCoopMatBuiltinCall(llvm::StringRef BuiltinName,
+                                      llvm::ArrayRef<llvm::Value *> Args,
+                                      QualType ResultTy);
+
+  /// EmitCoopMatBinaryOp - Emit the computation of the specified binary op,
+  /// returning the result.
+  llvm::Value *EmitCoopMatBinaryOp(BinaryOperatorKind Opcode, llvm::Value *LHS,
+                                   llvm::Value *RHS, QualType ResultTy);
+
+  /// EmitCoopMatNeg - Emit the computation of the negate op,
+  /// returning the result.
+  llvm::Value *EmitCoopMatNeg(llvm::Value *Operand, QualType ResultTy);
 
   /// SetFPAccuracy - Set the minimum required accuracy of the given floating
   /// point operation, expressed as the maximum relative error in ulp.
