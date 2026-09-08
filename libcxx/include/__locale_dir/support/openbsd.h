@@ -79,11 +79,26 @@ inline __lconv_t* __localeconv(__locale_t& __loc) {
 //
 // Strtonum functions
 //
-inline float __strtof(const char* __nptr, char** __endptr, __locale_t) { return ::strtof(__nptr, __endptr); }
+template <class _FloatT>
+_LIBCPP_HIDE_FROM_ABI _FloatT __str_to_float_c_locale(const char* __nptr, char** __endptr, __locale_t);
 
-inline double __strtod(const char* __nptr, char** __endptr, __locale_t) { return ::strtod(__nptr, __endptr); }
+template <>
+inline _LIBCPP_HIDE_FROM_ABI float
+__str_to_float_c_locale<float>(const char* __nptr, char** __endptr, __locale_t) {
+  return ::strtof(__nptr, __endptr);
+}
 
-inline long double __strtold(const char* __nptr, char** __endptr, __locale_t) { return ::strtold(__nptr, __endptr); }
+template <>
+inline _LIBCPP_HIDE_FROM_ABI double
+__str_to_float_c_locale<double>(const char* __nptr, char** __endptr, __locale_t) {
+  return ::strtod(__nptr, __endptr);
+}
+
+template <>
+inline _LIBCPP_HIDE_FROM_ABI long double
+__str_to_float_c_locale<long double>(const char* __nptr, char** __endptr, __locale_t) {
+  return ::strtold(__nptr, __endptr);
+}
 
 //
 // Character manipulation functions

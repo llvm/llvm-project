@@ -22,15 +22,21 @@ namespace __locale {
 //
 // Strtonum functions
 //
-inline _LIBCPP_HIDE_FROM_ABI float __strtof(const char* __nptr, char** __endptr, __locale_t) {
+template <class _FloatT>
+_LIBCPP_HIDE_FROM_ABI _FloatT __str_to_float_c_locale(const char* __nptr, char** __endptr, __locale_t);
+
+template <>
+inline _LIBCPP_HIDE_FROM_ABI float __str_to_float_c_locale<float>(const char* __nptr, char** __endptr, __locale_t) {
   return std::strtof(__nptr, __endptr);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI double __strtod(const char* __nptr, char** __endptr, __locale_t) {
+template <>
+inline _LIBCPP_HIDE_FROM_ABI double __str_to_float_c_locale<double>(const char* __nptr, char** __endptr, __locale_t) {
   return std::strtod(__nptr, __endptr);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double __strtold(const char* __nptr, char** __endptr, __locale_t) {
+template <>
+inline _LIBCPP_HIDE_FROM_ABI long double __str_to_float_c_locale<long double>(const char* __nptr, char** __endptr, __locale_t) {
   return std::strtold(__nptr, __endptr);
 }
 
