@@ -157,8 +157,7 @@ void MipsAsmPrinter::emitDirectiveRelocJalr(const MachineInstr &MI,
     if (MO.isMCSymbol() && (MO.getTargetFlags() & MipsII::MO_JALR)) {
       MCSymbol *Callee = MO.getMCSymbol();
       if (Callee && !Callee->getName().empty()) {
-        MCSymbol *Sym = nullptr;
-        Sym = GetExternalSymbolSymbol(Callee->getName());
+        MCSymbol *Sym = GetExternalSymbolSymbol(Callee->getName());
         MCSymbol *OffsetLabel = OutContext.createTempSymbol();
         const MCExpr *OffsetExpr =
             MCSymbolRefExpr::create(OffsetLabel, OutContext);
