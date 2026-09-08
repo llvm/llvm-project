@@ -104,7 +104,7 @@ if (LLVM_ENABLE_SPHINX)
     # directory before we run sphinx.
     set(clang_generated_docs
       AttributeReference.md
-  DiagnosticsReference.md
+      DiagnosticsReference.md
       AMDGPUBuiltinReference.rst
       ClangCommandLineReference.md
       analyzer/user-docs/Options.rst)
