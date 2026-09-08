@@ -14641,6 +14641,51 @@ SDValue RISCVTargetLowering::lowerVECTOR_INTERLEAVE(SDValue Op,
 
   SDValue Interleaved;
 
+  if (Subtarget.hasStdExtZvzip() && (Factor == 4 || Factor == 8)) {
+    // Interleave by a tree of vzip.vv instructions.
+    SmallVector<SDValue, 8> Operands(Op->op_values());
+    // First, reorder the operands.
+    // For Factor=4, given the original operand order `ABCD`, we need
+    // to reorder it into `ACBD`.
+    // For Factor=8, given the original operand order `ABCDEFGH`, the new
+    // order should be `AECGBFDH`.
+    // So the rule here is that for every operands with an odd index `I`, swap
+    // it with the operand of index `I + (Factor / 2 - 1)`.
+    for (unsigned I = 1U, HalfFactor = Factor / 2; I < HalfFactor; I += 2)
+      std::swap(Operands[I], Operands[I + (HalfFactor - 1)]);
+
+    for (unsigned CurrFactor = Factor; CurrFactor > 1; CurrFactor /= 2) {
+      // Generate a vzip.vv for every two operands.
+      for (unsigned I = 0U; I < CurrFactor; I += 2) {
+        assert(Operands[I].getValueType().isSimple() &&
+               isLegalVTForZvzipOperand(Operands[I].getSimpleValueType(),
+                                        Subtarget));
+        SDValue V1 = DAG.getFreeze(Operands[I]);
+        SDValue V2 = DAG.getFreeze(Operands[I + 1]);
+        // Do not generate VECTOR_INTERLEAVE2 + CONCAT_VECTORS here. Because
+        // when those two nodes are subsequently lowered, there will
+        // be a bunch of insert_subvector and extract_subvector generated.
+        // Though most of them can be combined, since we're not
+        // running DAGCombiner in between different operations' lowering,
+        // some of the insert/extract subvectors will be turned into
+        // VSLIDEUP/DOWN_VL right away and stay thru the rest of the codegen.
+        // We could write additional combining rules for those VSLIDEUP/DOWN_VL
+        // but I thought it'll be a lot easier to just not generate
+        // VECTOR_INTERLEAVE2 + CONCAT_VECTORS in the first place here.
+        Operands[I / 2] = lowerZvzipVZIP(V1, V2, DL, DAG, Subtarget);
+      }
+    }
+
+    // Operands[0] is the resulting concat vector, but we need to split into
+    // Factor parts.
+    Interleaved = Operands[0];
+    for (unsigned I = 0U; I < Factor; ++I) {
+      Operands[I] = DAG.getExtractSubvector(
+          DL, VecVT, Interleaved, I * VecVT.getVectorMinNumElements());
+    }
+    return DAG.getMergeValues(Operands, DL);
+  }
+
   // Spill to the stack using a segment store for simplicity.
   if (Factor != 2) {
     EVT MemVT =
