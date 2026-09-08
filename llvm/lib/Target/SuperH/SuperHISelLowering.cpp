@@ -68,16 +68,20 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
 
   setSchedulingPreference(Sched::RegPressure);
   setSupportsUnalignedAtomics(false);
-  // setStackPointerRegisterToSaveRestore(RegInfo->getStackRegister());
+  setStackPointerRegisterToSaveRestore(RegInfo->getStackRegister());
 
   // Loads and stores are legal
   for (MVT VT : MVT::integer_valuetypes()) {
     for (auto N : {ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}) {
       setLoadExtAction(N, VT, MVT::i1, Promote);
+      // setLoadExtAction(N, VT, MVT::i8, Expand);
+      // setLoadExtAction(N, VT, MVT::i16, Expand);
       setLoadExtAction(N, VT, MVT::i64, Expand);
     }
 
     setTruncStoreAction(VT, MVT::i1, Promote);
+    // setTruncStoreAction(VT, MVT::i8, Expand);
+    // setTruncStoreAction(VT, MVT::i16, Expand);
   }
 
   // Division and remainders are multi-instruction sequences

@@ -61,14 +61,6 @@ static unsigned getShiftAmt(uint32_t Val) {
   return R;
 }
 
-/// adjustFrameOffsetDown - Helper that adjusts frame offset
-/// down. 
-static void adjustFrameOffsetDown(int64_t &FrameOffset) {
-  FrameOffset -= 4;
-  if (FrameOffset < 0)
-    FrameOffset = 0;
-}
-
 // Helper to emit stack pointer adjustment.
 void SuperHFrameLowering::emitFrameAdjust(Register Base, MachineFunction &MF, MachineBasicBlock &MBB, 
                                           MachineBasicBlock::iterator MBBI, int32_t AdjValue) const {
@@ -144,7 +136,8 @@ SuperHFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
 
   // NOTE:  All the frame indices are relative to the stack/frame pointer
   //        post-offset. as such an extra adjustment is needed here.
-  int64_t FrameOffset = MFI.getObjectOffset(FI);
+  int64_t FrameOffset = MFI.getObjectOffset(FI)+1;
+
 
   // R14 base
   if (HasFP) {
@@ -181,8 +174,12 @@ void SuperHFrameLowering::emitPrologue(MachineFunction &MF, MachineBasicBlock &M
   DebugLoc DL = (MBBI != MBB.end()) ? MBBI->getDebugLoc() : DebugLoc();
   bool HasFP = hasFP(MF);
 
-  // Get stack frame size.
+  // Get stack frame size, align up to 32-bits if needed.
   int64_t StackSize = MFI.getStackSize();
+  if (StackSize < 4)
+    StackSize = 4;
+
+  MFI.setStackSize(StackSize);
 
   // Store previous frame pointer.
   if (HasFP) {

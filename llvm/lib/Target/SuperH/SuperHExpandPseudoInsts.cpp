@@ -27,6 +27,12 @@ using namespace llvm;
 #define DEBUG_TYPE "sh-expand-pseudo"
 #define SH_EXPAND_PSEUDO_NAME "SH pseudo instruction expansion pass"
 
+#ifndef NDEBUG
+static cl::opt<bool>
+CNoExpand("sh-no-expand", cl::Hidden, cl::init(false),
+          cl::desc("Force the backend to not expand instructions."));
+#endif
+
 namespace {
 class SuperHExpandPseudo : public MachineFunctionPass {
 public:
@@ -83,11 +89,15 @@ bool SuperHExpandPseudo::expand<SH::MOVBSFR>(Block &MBB, BlockIt MBBI) {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   auto SrcReg = MI.getOperand(0).getReg();
+  bool SrcIsKill = MI.getOperand(0).isKill();
   auto FrameReg = MI.getOperand(1).getReg();
   auto Offset = MI.getOperand(2).getImm();
   int64_t SpOffset = getOffsetForStackOffset(MFI, Offset, 4, 1);
 
-  LLVM_DEBUG(dbgs() << "Expanding MOVBSFR to MOVBS4...\n");
+  LLVM_DEBUG(dbgs() << "Expanding MOVBSFR to MOVBS4 @"
+                    << " spoffset=" << SpOffset 
+                    << " offset=" << SpOffset-Offset 
+                    <<  "...\n");
 
   // Expand sequence to
   // mov      <base reg>,r1
@@ -100,9 +110,9 @@ bool SuperHExpandPseudo::expand<SH::MOVBSFR>(Block &MBB, BlockIt MBBI) {
     .addReg(SH::R1)
     .addImm(-SpOffset);
   BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R0)
-    .addReg(SrcReg);
+    .addReg(SrcReg, getKillRegState(SrcIsKill));
   BuildMI(MBB, MBBI, DL, TII->get(SH::MOVBS4))
-    .addReg(SH::R1)
+    .addReg(SH::R1, RegState::Kill)
     .addImm(SpOffset-Offset);
   MI.eraseFromParent();
   return true;
@@ -116,11 +126,15 @@ bool SuperHExpandPseudo::expand<SH::MOVWSFR>(Block &MBB, BlockIt MBBI) {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   auto SrcReg = MI.getOperand(0).getReg();
+  bool SrcIsKill = MI.getOperand(0).isKill();
   auto FrameReg = MI.getOperand(1).getReg();
   auto Offset = MI.getOperand(2).getImm();
   int64_t SpOffset = getOffsetForStackOffset(MFI, Offset, 4, 2);
 
-  LLVM_DEBUG(dbgs() << "Expanding MOVWSFR to MOVWS4...\n");
+  LLVM_DEBUG(dbgs() << "Expanding MOVWSFR to MOVWS4 @"
+                    << " spoffset=" << SpOffset 
+                    << " offset=" << SpOffset-Offset 
+                    <<  "...\n");
 
   // Expand sequence to
   // mov      <base reg>,r1
@@ -133,9 +147,9 @@ bool SuperHExpandPseudo::expand<SH::MOVWSFR>(Block &MBB, BlockIt MBBI) {
     .addReg(SH::R1)
     .addImm(-SpOffset);
   BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), SH::R0)
-    .addReg(SrcReg);
+    .addReg(SrcReg, getKillRegState(SrcIsKill));
   BuildMI(MBB, MBBI, DL, TII->get(SH::MOVWS4))
-    .addReg(SH::R1)
+    .addReg(SH::R1, RegState::Kill)
     .addImm(SpOffset-Offset);
   MI.eraseFromParent();
   return true;
@@ -149,11 +163,15 @@ bool SuperHExpandPseudo::expand<SH::MOVLSFR>(Block &MBB, BlockIt MBBI) {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   auto SrcReg = MI.getOperand(0).getReg();
+  bool SrcIsKill = MI.getOperand(0).isKill();
   auto FrameReg = MI.getOperand(1).getReg();
   auto Offset = MI.getOperand(2).getImm();
   int64_t SpOffset = getOffsetForStackOffset(MFI, Offset, 4, 4);
 
-  LLVM_DEBUG(dbgs() << "Expanding MOVLSFR to MOVLS4...\n");
+  LLVM_DEBUG(dbgs() << "Expanding MOVLSFR to MOVLS4 @"
+                    << " spoffset=" << SpOffset 
+                    << " offset=" << SpOffset-Offset 
+                    <<  "...\n");
     
   // Expand sequence to
   // mov      <base reg>,r1
@@ -165,8 +183,8 @@ bool SuperHExpandPseudo::expand<SH::MOVLSFR>(Block &MBB, BlockIt MBBI) {
     .addReg(SH::R1)
     .addImm(-SpOffset);
   BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLS4))
-    .addReg(SrcReg)
-    .addReg(SH::R1)
+    .addReg(SrcReg, getKillRegState(SrcIsKill))
+    .addReg(SH::R1, RegState::Kill)
     .addImm(SpOffset-Offset);
   MI.eraseFromParent();
   return true;
@@ -186,16 +204,16 @@ bool SuperHExpandPseudo::expand<SH::MOVBLFR>(Block &MBB, BlockIt MBBI) {
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  LLVM_DEBUG(dbgs() << "Expanding MOVBLFR to MOVBL4...\n");
-
   auto DstReg = MI.getOperand(0).getReg();
+  bool DstIsKill = MI.getOperand(0).isKill();
   auto FrameReg = MI.getOperand(1).getReg();
   auto Offset = MI.getOperand(2).getImm();
   int64_t SpOffset = getOffsetForStackOffset(MFI, Offset, 4, 1);
 
-  // HACK:  Need to find a better way of handling this, it's likely to break.
-  MBBI = std::next(MBBI);
-  MBBI = std::next(MBBI);
+  LLVM_DEBUG(dbgs() << "Expanding MOVBLFR to MOVBL4 @"
+                    << " spoffset=" << SpOffset 
+                    << " offset=" << SpOffset-Offset 
+                    <<  "...\n");
     
   // Expand sequence to
   // mov      <base reg>,r1
@@ -209,9 +227,11 @@ bool SuperHExpandPseudo::expand<SH::MOVBLFR>(Block &MBB, BlockIt MBBI) {
     .addImm(-SpOffset);
   BuildMI(MBB, MBBI, DL, TII->get(SH::MOVBL4))
     .addReg(SH::R1)
-    .addImm(SpOffset-Offset);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), DstReg)
-    .addReg(SH::R0);
+    .addImm(SpOffset-Offset)
+    .addReg(SH::R0, RegState::Define);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::MOV))
+    .addReg(DstReg, getKillRegState(DstIsKill))
+    .addReg(SH::R0, RegState::Kill);
   MI.eraseFromParent();
   return true;
 }
@@ -223,16 +243,16 @@ bool SuperHExpandPseudo::expand<SH::MOVWLFR>(Block &MBB, BlockIt MBBI) {
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  LLVM_DEBUG(dbgs() << "Expanding MOVWLFR to MOVWL4...\n");
-
   auto DstReg = MI.getOperand(0).getReg();
+  bool DstIsKill = MI.getOperand(0).isKill();
   auto FrameReg = MI.getOperand(1).getReg();
   auto Offset = MI.getOperand(2).getImm();
   int64_t SpOffset = getOffsetForStackOffset(MFI, Offset, 4, 2);
 
-  // HACK:  Need to find a better way of handling this, it's likely to break.
-  MBBI = std::next(MBBI);
-  MBBI = std::next(MBBI);
+  LLVM_DEBUG(dbgs() << "Expanding MOVWLFR to MOVWL4 @"
+                    << " spoffset=" << SpOffset 
+                    << " offset=" << SpOffset-Offset 
+                    <<  "...\n");
     
   // Expand sequence to
   // mov      <base reg>,r1
@@ -247,8 +267,9 @@ bool SuperHExpandPseudo::expand<SH::MOVWLFR>(Block &MBB, BlockIt MBBI) {
   BuildMI(MBB, MBBI, DL, TII->get(SH::MOVWL4))
     .addReg(SH::R1)
     .addImm(SpOffset-Offset);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::MOV), DstReg)
-    .addReg(SH::R0);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::MOV))
+    .addReg(DstReg, getKillRegState(DstIsKill))
+    .addReg(SH::R0, RegState::Define);
   MI.eraseFromParent();
   return true;
 }
@@ -261,11 +282,15 @@ bool SuperHExpandPseudo::expand<SH::MOVLLFR>(Block &MBB, BlockIt MBBI) {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   auto DstReg = MI.getOperand(0).getReg();
+  bool DstIsKill = MI.getOperand(0).isKill();
   auto FrameReg = MI.getOperand(1).getReg();
   auto Offset = MI.getOperand(2).getImm();
   int64_t SpOffset = getOffsetForStackOffset(MFI, Offset, 4, 4);
 
-  LLVM_DEBUG(dbgs() << "Expanding MOVLLFR to MOVLL4...\n");
+  LLVM_DEBUG(dbgs() << "Expanding MOVLLFR to MOVLL4 @"
+                    << " spoffset=" << SpOffset 
+                    << " offset=" << SpOffset-Offset 
+                    <<  "...\n");
     
   // Expand sequence to
   // mov      <base reg>,r1
@@ -276,7 +301,8 @@ bool SuperHExpandPseudo::expand<SH::MOVLLFR>(Block &MBB, BlockIt MBBI) {
   BuildMI(MBB, MBBI, DL, TII->get(SH::ADDI), SH::R1)
     .addReg(SH::R1)
     .addImm(-SpOffset);
-  BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLL4), DstReg)
+  BuildMI(MBB, MBBI, DL, TII->get(SH::MOVLL4))
+    .addReg(DstReg, getKillRegState(DstIsKill))
     .addReg(SH::R1)
     .addImm(SpOffset-Offset);
   MI.eraseFromParent();
@@ -304,6 +330,11 @@ bool SuperHExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
 
 bool SuperHExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   bool Modified = false;
+
+  #ifndef NDEBUG
+  if (CNoExpand)
+    return false;
+  #endif
 
   const SuperHSubtarget &STI = MF.getSubtarget<SuperHSubtarget>();
   TRI = STI.getRegisterInfo();
