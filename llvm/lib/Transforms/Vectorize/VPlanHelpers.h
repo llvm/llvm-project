@@ -358,7 +358,7 @@ struct VPCostContext {
 
   /// \returns how much the cost of the block predicated by replicate region
   /// \p Region should be divided by.
-  uint64_t getPredBlockCostDivisor(const VPRegionBlock *Region) const;
+  uint64_t getReplicateRegionCostDivisor(const VPRegionBlock *Region) const;
 
   /// Returns true if \p I is known to be scalarized at \p VF.
   bool willBeScalarized(Instruction *I, ElementCount VF) const;

@@ -503,7 +503,7 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
       if (Freq2->Freq < Freq1->Freq) {
         // Freq1's frequency is taken, but it is only as trustworthy as the
         // less trustworthy of the two.
-        Freq1->IsEstimated |= Freq2->IsEstimated;
+        Freq1.emplace(Freq1->Freq, Freq1->IsEstimated || Freq2->IsEstimated);
         Guard2->setExecutionFrequency(Freq1, Plan.getContext());
       }
     } else if (Freq2) {

@@ -1181,8 +1181,11 @@ struct VPRecipeWithIRFlags : public VPSingleDefRecipe, public VPIRFlags {
 /// loop region. IsEstimated is set if any branch weight it was composed from
 /// was estimated from static heuristics.
 struct VPExecutionFrequency {
-  BlockFrequency Freq;
-  bool IsEstimated;
+  const BlockFrequency Freq;
+  const bool IsEstimated;
+
+  VPExecutionFrequency(BlockFrequency Freq, bool IsEstimated)
+      : Freq(Freq), IsEstimated(IsEstimated) {}
 };
 
 /// Helper to manage IR metadata for recipes. It filters out metadata that

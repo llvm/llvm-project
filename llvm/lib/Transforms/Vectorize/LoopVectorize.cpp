@@ -5348,21 +5348,6 @@ void VPCostContext::invalidateWideningDecision(Instruction *I,
                          LoopVectorizationCostModel::CM_InvalidatedDecision, 0);
 }
 
-uint64_t
-VPCostContext::getPredBlockCostDivisor(const VPRegionBlock *Region) const {
-  if (CostKind == TTI::TCK_CodeSize)
-    return 1;
-  std::optional<VPExecutionFrequency> Freq =
-      Region->getEntryBranchOnMask()->getExecutionFrequency();
-  if (!Freq)
-    return 1;
-  // A recorded frequency is neither zero nor always-executing, so the
-  // probability is non-zero and the division below is safe.
-  return divideNearest(
-      BranchProbability::getDenominator(),
-      vputils::getExecutionProbability(Freq->Freq).getNumerator());
-}
-
 bool VPCostContext::willBeScalarized(Instruction *I, ElementCount VF) const {
   return CM.isScalarWithPredication(I, VF) ||
          CM.isUniformAfterVectorization(I, VF) || CM.isForcedScalar(I, VF) ||

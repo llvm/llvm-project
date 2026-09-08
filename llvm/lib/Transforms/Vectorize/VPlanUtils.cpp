@@ -1232,9 +1232,10 @@ vputils::computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks) {
       Frequencies;
   Frequencies.reserve(Blocks.size());
   // The header (first block) always executes, the others start out unreachable.
-  Frequencies[Blocks.front()] = {BlockFrequency(AlwaysExecutesFreq), false};
+  Frequencies[Blocks.front()].emplace(BlockFrequency(AlwaysExecutesFreq),
+                                      false);
   for (VPBasicBlock *VPBB : Blocks.drop_front())
-    Frequencies[VPBB] = {BlockFrequency(), false};
+    Frequencies[VPBB].emplace(BlockFrequency(), false);
 
   for (VPBasicBlock *VPBB : Blocks) {
     std::optional<VPExecutionFrequency> Src = Frequencies.at(VPBB);
@@ -1248,10 +1249,12 @@ vputils::computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks) {
         continue;
       }
       // The sum can only exceed AlwaysExecutesFreq by rounding.
-      SuccFreq->Freq =
+      BlockFrequency NewFreq =
           std::min(BlockFrequency(AlwaysExecutesFreq),
                    SuccFreq->Freq + scaleKeepingNonZero(Src->Freq, EdgeProb));
-      SuccFreq->IsEstimated |= Src->IsEstimated || TermIsEstimated;
+      bool NewIsEstimated =
+          SuccFreq->IsEstimated || Src->IsEstimated || TermIsEstimated;
+      SuccFreq.emplace(NewFreq, NewIsEstimated);
     }
   }
   return Frequencies;

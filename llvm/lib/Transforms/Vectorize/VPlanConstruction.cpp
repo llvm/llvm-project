@@ -196,7 +196,7 @@ VPValue *PlainCFGBuilder::getOrCreateVPOperand(Value *IRVal) {
 // Returns the metadata to preserve for terminator \p Term.
 VPIRMetadata PlainCFGBuilder::getTerminatorMetadata(Instruction &Term) {
   VPIRMetadata MD(Term);
-  if (!GetBPI || MD.getMetadata(LLVMContext::MD_prof))
+  if (MD.getMetadata(LLVMContext::MD_prof))
     return MD;
   // Estimates are only read for edges inside the loop region.
   if (!TheLoop->isInnermost() || Term.getParent() == TheLoop->getLoopLatch())
