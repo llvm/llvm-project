@@ -35,14 +35,6 @@
 
 namespace Fortran::semantics {
 
-template <typename T> Scope *GetScope(SemanticsContext &context, const T &x) {
-  if (auto source{GetLastSource(x)}) {
-    return &context.FindScope(*source);
-  } else {
-    return nullptr;
-  }
-}
-
 template <typename T> class DirectiveAttributeVisitor {
 public:
   explicit DirectiveAttributeVisitor(SemanticsContext &context)
