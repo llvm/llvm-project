@@ -1912,6 +1912,13 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
 
       // Iterate over all of the values in all the PHI nodes.
       for (unsigned i = 0; i != NumPreds; ++i) {
+        // An incoming block may be listed more than once, e.g. when a switch
+        // has several cases branching to the same successor. All entries for
+        // such a block must hold the same value, so only collect the first
+        // one; the rewrite below updates every entry for that block.
+        if (PN->getBasicBlockIndex(PN->getIncomingBlock(i)) != (int)i)
+          continue;
+
         // If the value being merged in is not integer or is not defined
         // in the loop, skip it.
         Value *InVal = PN->getIncomingValue(i);
@@ -2059,7 +2066,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
 
     NumReplaced++;
     Instruction *Inst = cast<Instruction>(PN->getIncomingValue(Phi.Ith));
-    PN->setIncomingValue(Phi.Ith, ExitVal);
+    PN->setIncomingValueForBlock(PN->getIncomingBlock(Phi.Ith), ExitVal);
     // It's necessary to tell ScalarEvolution about this explicitly so that
     // it can walk the def-use list and forget all SCEVs, as it may not be
     // watching the PHI itself. Once the new exit value is in place, there
