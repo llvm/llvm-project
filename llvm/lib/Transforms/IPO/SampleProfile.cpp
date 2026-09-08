@@ -2205,8 +2205,7 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager &AM,
 
   // Account for cold calls not inlined....
   if (!FunctionSamples::ProfileIsCS)
-    for (const std::pair<Function *, NotInlinedProfileInfo> &pair :
-         notInlinedCallInfo)
+    for (const auto &pair : notInlinedCallInfo)
       updateProfileCallee(pair.first, pair.second.entryCount);
 
   if (RemoveProbeAfterProfileAnnotation &&

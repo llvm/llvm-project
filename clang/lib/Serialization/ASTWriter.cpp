@@ -3352,7 +3352,7 @@ void ASTWriter::WritePragmaDiagnosticMappings(const DiagnosticsEngine &Diag,
         if (!I.second.isPragma() &&
             I.second == Diag.getDiagnosticIDs()->getDefaultMapping(I.first))
           continue;
-        Mappings.push_back(I);
+        Mappings.emplace_back(I.first, I.second);
       }
 
       // Sort by diag::kind for deterministic output.

@@ -63,8 +63,13 @@ template <typename KeyT, typename ValueT> struct DenseMapPair {
   DenseMapPair(std::pair<KeyT, ValueT> &&P)
       : first(std::move(P.first)), second(std::move(P.second)) {}
 
-  operator std::pair<KeyT, ValueT>() const { return {first, second}; }
-  operator std::pair<const KeyT, ValueT>() const { return {first, second}; }
+  template <typename K, typename V,
+            std::enable_if_t<std::is_constructible_v<K, const KeyT &> &&
+                                 std::is_constructible_v<V, const ValueT &>,
+                             int> = 0>
+  explicit operator std::pair<K, V>() const {
+    return {first, second};
+  }
 
   friend bool operator==(const DenseMapPair &LHS, const DenseMapPair &RHS) {
     return LHS.first == RHS.first && LHS.second == RHS.second;
@@ -351,8 +356,13 @@ public:
 
   /// Range insertion of pairs.
   template <typename InputIt> void insert(InputIt I, InputIt E) {
-    for (; I != E; ++I)
-      try_emplace(I->first, I->second);
+    for (; I != E; ++I) {
+      // Take the members rather than converting: a move iterator's operator*
+      // yields an rvalue, which forwarding carries through to each member.
+      auto &&KV = *I;
+      try_emplace(std::forward<decltype(KV)>(KV).first,
+                  std::forward<decltype(KV)>(KV).second);
+    }
   }
 
   /// Inserts range of 'std::pair<KeyT, ValueT>' values into the map.

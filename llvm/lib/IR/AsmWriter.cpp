@@ -5145,7 +5145,7 @@ void AssemblyWriter::writeAllAttributeGroups() {
   asVec.resize(Machine.as_size());
 
   for (auto &I : llvm::make_range(Machine.as_begin(), Machine.as_end()))
-    asVec[I.second] = I;
+    asVec[I.second] = {I.first, I.second};
 
   for (const auto &I : asVec)
     Out << "attributes #" << I.second << " = { "

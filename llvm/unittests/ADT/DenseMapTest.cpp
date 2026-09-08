@@ -16,10 +16,12 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <utility>
 #include <variant>
+#include <vector>
 
 using namespace llvm;
 
@@ -474,6 +476,14 @@ TEST(DenseMapCustomTest, EqualityComparison) {
   EXPECT_NE(M1, M3);
 }
 
+// Converting a bucket to a std::pair copies both members, so it must not happen
+// implicitly: `const std::pair<int, int> &P = *M.begin();` would bind to a
+// temporary rather than the bucket.
+static_assert(!std::is_convertible_v<detail::DenseMapPair<int, int>,
+                                     std::pair<int, int>>);
+static_assert(std::is_constructible_v<std::pair<int, int>,
+                                      detail::DenseMapPair<int, int>>);
+
 TEST(DenseMapCustomTest, InsertRange) {
   DenseMap<int, int> M;
 
@@ -483,6 +493,18 @@ TEST(DenseMapCustomTest, InsertRange) {
   EXPECT_EQ(M.size(), 2u);
   EXPECT_THAT(M, testing::UnorderedElementsAre(testing::Pair(0, 0),
                                                testing::Pair(1, 2)));
+
+  // A move iterator yields an rvalue from operator*, which the range insert
+  // must forward to the members for a move-only value to survive.
+  std::vector<std::pair<int, std::unique_ptr<int>>> MoveOnly;
+  MoveOnly.emplace_back(3, std::make_unique<int>(42));
+  DenseMap<int, std::unique_ptr<int>> MoveMap;
+  MoveMap.insert(std::make_move_iterator(MoveOnly.begin()),
+                 std::make_move_iterator(MoveOnly.end()));
+  auto It = MoveMap.find(3);
+  ASSERT_NE(It, MoveMap.end());
+  EXPECT_EQ(*It->second, 42);
+  EXPECT_EQ(MoveOnly[0].second, nullptr);
 }
 
 TEST(SmallDenseMapCustomTest, InsertRange) {
