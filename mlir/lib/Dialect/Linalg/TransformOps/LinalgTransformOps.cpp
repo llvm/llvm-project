@@ -532,8 +532,8 @@ DiagnosedSilenceableFailure transform::DecomposeInterfaceOp::applyToOne(
     transform::TransformState &state) {
   auto decomposableOp = dyn_cast<AggregatedOpInterface>(target);
   if (!decomposableOp) {
-    failed(rewriter.notifyMatchFailure(target,
-                                       "payload is not a decomposable op"));
+    (void)rewriter.notifyMatchFailure(target,
+                                      "payload is not a decomposable op");
     return emitDefaultSilenceableFailure(target);
   }
 
