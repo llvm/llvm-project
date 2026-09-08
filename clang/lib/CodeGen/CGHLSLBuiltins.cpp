@@ -310,6 +310,16 @@ static Value *handleElementwiseF32ToF16(CodeGenFunction &CGF,
   llvm_unreachable("Intrinsic F32ToF16 not supported by target architecture");
 }
 
+// Scopeless atomics will default to CrossDevice, which is illegal in Vulkan.
+// Set the memory scope: Workgroup for groupshared, otherwise Device.
+static llvm::SyncScope::ID getHLSLAtomicScope(CodeGenFunction &CGF,
+                                              const LValue &DestLV) {
+  StringRef ScopeName = DestLV.getAddressSpace() == LangAS::hlsl_groupshared
+                            ? "workgroup"
+                            : "device";
+  return CGF.getLLVMContext().getOrInsertSyncScopeID(ScopeName);
+}
+
 static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
                                   llvm::AtomicRMWInst::BinOp Op) {
   // Emit `atomicrmw <op>` directly — no intermediate intrinsic needed on
@@ -325,13 +335,7 @@ static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
     assert(ValTy->isIntegerType() &&
            "Intrinsic InterlockedOp value operand must be an integer");
 
-  // Scopeless atomics will default to CrossDevice, which is illegal in Vulkan.
-  // Set the memory scope: Workgroup for groupshared, otherwise Device.
-  StringRef ScopeName = DestLV.getAddressSpace() == LangAS::hlsl_groupshared
-                            ? "workgroup"
-                            : "device";
-  llvm::SyncScope::ID SSID =
-      CGF.getLLVMContext().getOrInsertSyncScopeID(ScopeName);
+  llvm::SyncScope::ID SSID = getHLSLAtomicScope(CGF, DestLV);
 
   llvm::AtomicRMWInst *Call = CGF.Builder.CreateAtomicRMW(
       Op, DestAddr, Val, llvm::AtomicOrdering::Monotonic, SSID);
@@ -343,6 +347,21 @@ static Value *handleInterlockedOp(CodeGenFunction &CGF, const CallExpr *E,
     CGF.EmitStoreThroughLValue(RValue::get(Call), OrigLV);
   }
   return Call;
+}
+
+// InterlockedCompareStore(dest, compare_value, value) stores `value` only when
+// `dest` holds `compare_value`. It reports nothing, so the `cmpxchg` result is
+// unused. DXILResourceAccess and the SPIR-V selector both match `cmpxchg`.
+static Value *handleInterlockedCompareStore(CodeGenFunction &CGF,
+                                            const CallExpr *E) {
+  LValue DestLV = CGF.EmitLValue(E->getArg(0));
+  Address DestAddr = DestLV.getAddress();
+  Value *Compare = CGF.EmitScalarExpr(E->getArg(1));
+  Value *Val = CGF.EmitScalarExpr(E->getArg(2));
+
+  return CGF.Builder.CreateAtomicCmpXchg(
+      DestAddr, Compare, Val, llvm::AtomicOrdering::Monotonic,
+      llvm::AtomicOrdering::Monotonic, getHLSLAtomicScope(CGF, DestLV));
 }
 
 static Value *emitBufferStride(CodeGenFunction *CGF, const Expr *HandleExpr,
@@ -1485,6 +1504,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   }
   case Builtin::BI__builtin_hlsl_interlocked_and: {
     return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::And);
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_compare_store: {
+    return handleInterlockedCompareStore(*this, E);
   }
   case Builtin::BI__builtin_hlsl_interlocked_exchange: {
     return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::Xchg);
