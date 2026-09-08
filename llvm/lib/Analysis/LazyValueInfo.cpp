@@ -1168,29 +1168,9 @@ LazyValueInfoImpl::solveBlockValueBinaryOp(BinaryOperator *BO, BasicBlock *BB) {
   assert(BO->getOperand(0)->getType()->isSized() &&
          "all operands to binary operators are sized");
 
-  if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(BO)) {
-    unsigned NoWrapKind = OBO->getNoWrapKind();
-    return solveBlockValueBinaryOpImpl(
-        BO, BB,
-        [BO, NoWrapKind](const ConstantRange &CR1, const ConstantRange &CR2) {
-          return CR1.overflowingBinaryOp(BO->getOpcode(), CR2, NoWrapKind);
-        });
-  }
-
-  if (match(BO, m_DisjointOr(m_Value(), m_Value()))) {
-    // Treat 'or disjoint' as both 'add nuw nsw' and binary or, picking the best
-    // from both.
-    return solveBlockValueBinaryOpImpl(
-        BO, BB, [](const ConstantRange &CR1, const ConstantRange &CR2) {
-          using OBO = OverflowingBinaryOperator;
-          return CR1.addWithNoWrap(CR2, OBO::NoUnsignedWrap | OBO::NoSignedWrap)
-              .intersectWith(CR1.binaryOr(CR2));
-        });
-  }
-
   return solveBlockValueBinaryOpImpl(
       BO, BB, [BO](const ConstantRange &CR1, const ConstantRange &CR2) {
-        return CR1.binaryOp(BO->getOpcode(), CR2);
+        return CR1.binaryOp(*BO, CR2);
       });
 }
 

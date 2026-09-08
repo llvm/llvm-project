@@ -9,11 +9,9 @@ define void @or_disjoint(i8 %p) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[P]], 13
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
 ; CHECK-NEXT:    [[O:%.*]] = or disjoint i8 [[P]], 32
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i8 [[O]], 45
-; CHECK-NEXT:    call void @use(i1 [[TMP1]])
-; CHECK-NEXT:    [[F:%.*]] = icmp ugt i8 [[O]], 45
-; CHECK-NEXT:    call void @use(i1 [[F]])
-; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[O]], 44
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i8 [[P]], 12
 ; CHECK-NEXT:    call void @use(i1 [[C1]])
 ; CHECK-NEXT:    ret void
 ;
@@ -83,7 +81,8 @@ define void @or_disjoint_never_disjoint(i8 %p) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i8 [[P]], -128
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
 ; CHECK-NEXT:    [[O:%.*]] = or disjoint i8 [[P]], -128
-; CHECK-NEXT:    call void @use(i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[P]], -83
+; CHECK-NEXT:    call void @use(i1 [[TMP1]])
 ; CHECK-NEXT:    ret void
 ;
   %pre = icmp uge i8 %p, 128

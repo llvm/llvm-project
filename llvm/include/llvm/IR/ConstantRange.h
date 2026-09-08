@@ -407,6 +407,13 @@ public:
   LLVM_ABI ConstantRange binaryOp(Instruction::BinaryOps BinOp,
                                   const ConstantRange &Other) const;
 
+  /// Return a new range representing the possible values resulting from an
+  /// application of the specified binary operation \p BO (including
+  /// poison-generating flags) to a left hand side of this range and a right
+  /// hand side of \p Other.
+  LLVM_ABI ConstantRange binaryOp(const BinaryOperator &BO,
+                                  const ConstantRange &Other) const;
+
   /// Return a new range representing the possible values resulting
   /// from an application of the specified overflowing binary operator to a
   /// left hand side of this range and a right hand side of \p Other given

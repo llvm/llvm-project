@@ -1044,6 +1044,23 @@ ConstantRange ConstantRange::overflowingBinaryOp(Instruction::BinaryOps BinOp,
   }
 }
 
+ConstantRange ConstantRange::binaryOp(const BinaryOperator &BO,
+                                      const ConstantRange &Other) const {
+  if (const auto *OBO = dyn_cast<OverflowingBinaryOperator>(&BO))
+    return overflowingBinaryOp(BO.getOpcode(), Other, OBO->getNoWrapKind());
+
+  // Treat 'or disjoint' as both 'add nuw nsw' and binary or, picking the best
+  // from both.
+  const auto *PDI = dyn_cast<PossiblyDisjointInst>(&BO);
+  if (PDI && PDI->isDisjoint()) {
+    using OBO = OverflowingBinaryOperator;
+    return addWithNoWrap(Other, OBO::NoUnsignedWrap | OBO::NoSignedWrap)
+        .intersectWith(binaryOr(Other));
+  }
+
+  return binaryOp(BO.getOpcode(), Other);
+}
+
 bool ConstantRange::isIntrinsicSupported(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
   case Intrinsic::uadd_sat:

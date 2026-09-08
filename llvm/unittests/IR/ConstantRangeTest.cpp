@@ -2969,6 +2969,33 @@ TEST_F(ConstantRangeTest, binaryOr) {
       CheckSingleElementsOnly);
 }
 
+TEST_F(ConstantRangeTest, binaryOpDisjointOr) {
+  // TestBinaryOpExhaustive enumerates 1- and 4-bit ranges, create or disjoint
+  // binary ops up front for the bitwidths.
+  LLVMContext Ctx;
+  std::unique_ptr<BinaryOperator> DisjointOr[2];
+  for (auto [Idx, Bits] : enumerate(ArrayRef<unsigned>({1, 4}))) {
+    Value *Poison = PoisonValue::get(Type::getIntNTy(Ctx, Bits));
+    DisjointOr[Idx].reset(
+        BinaryOperator::CreateDisjoint(Instruction::Or, Poison, Poison));
+  }
+
+  TestBinaryOpExhaustive(
+      [&](const ConstantRange &CR1, const ConstantRange &CR2) {
+        const BinaryOperator &BO = *DisjointOr[CR1.getBitWidth() == 1 ? 0 : 1];
+        return CR1.binaryOp(BO, CR2);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        if (N1.intersects(N2))
+          return std::nullopt;
+        return N1 | N2;
+      },
+      PreferSmallest,
+      [](const ConstantRange &, const ConstantRange &) {
+        return false; // Check correctness only.
+      });
+}
+
 TEST_F(ConstantRangeTest, binaryXor) {
   // Single element ranges.
   ConstantRange R16(APInt(8, 16));
