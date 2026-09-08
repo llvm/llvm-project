@@ -4977,7 +4977,7 @@ public:
 
 /// List of ValueAsMetadata, to be used as an argument to a dbg.value
 /// intrinsic.
-class DIArgList : public Metadata, ReplaceableMetadataImplWithContext {
+class DIArgList : public Metadata, ReplaceableUsesWithContext {
   friend class ReplaceableMetadataImpl;
   friend class LLVMContextImpl;
   using iterator = SmallVectorImpl<ValueAsMetadata *>::iterator;
@@ -4985,8 +4985,8 @@ class DIArgList : public Metadata, ReplaceableMetadataImplWithContext {
   SmallVector<ValueAsMetadata *, 4> Args;
 
   DIArgList(LLVMContext &Context, ArrayRef<ValueAsMetadata *> Args)
-      : Metadata(DIArgListKind, Uniqued),
-        ReplaceableMetadataImplWithContext(Context), Args(Args) {
+      : Metadata(DIArgListKind, Uniqued), ReplaceableUsesWithContext(Context),
+        Args(Args) {
     track();
   }
   ~DIArgList() { untrack(); }
