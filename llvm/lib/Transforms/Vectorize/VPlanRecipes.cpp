@@ -56,6 +56,10 @@ static cl::opt<bool> VPlanPrintMetadata(
     cl::desc("Controls the printing of recipe metadata when debugging."));
 #endif
 
+namespace llvm {
+extern cl::opt<unsigned> ForceTargetInstructionCost;
+} // namespace llvm
+
 bool VPRecipeBase::mayWriteToMemory() const {
   switch (getVPRecipeID()) {
   case VPExpressionSC:
