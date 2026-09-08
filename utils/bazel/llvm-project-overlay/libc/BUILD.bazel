@@ -7118,10 +7118,10 @@ libc_support_library(
     name = "__support_math_scalblnf128",
     hdrs = ["src/__support/math/scalblnf128.h"],
     deps = [
+        ":__support_fputil_float128",
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
         ":hdr_float_macros",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -7181,10 +7181,10 @@ libc_support_library(
     name = "__support_math_scalbnf128",
     hdrs = ["src/__support/math/scalbnf128.h"],
     deps = [
+        ":__support_fputil_float128",
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
         ":hdr_float_macros",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -12551,6 +12551,8 @@ libc_math_function(
 libc_math_function(
     name = "ldexpf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_ldexpf128",
     ],
 )
@@ -13480,6 +13482,8 @@ libc_math_function(
 libc_math_function(
     name = "scalblnf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_scalblnf128",
     ],
 )
@@ -13522,6 +13526,8 @@ libc_math_function(
 libc_math_function(
     name = "scalbnf128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_scalbnf128",
     ],
 )

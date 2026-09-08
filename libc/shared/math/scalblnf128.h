@@ -1,9 +1,14 @@
-//===-- Shared scalblnf128 function -----------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Shared declaration of the scalblnf128 function.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SHARED_MATH_SCALBLNF128_H
