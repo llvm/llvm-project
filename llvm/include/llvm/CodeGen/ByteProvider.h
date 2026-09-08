@@ -16,6 +16,7 @@
 #define LLVM_CODEGEN_BYTEPROVIDER_H
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/Support/DataTypes.h"
 #include <optional>
 #include <type_traits>
@@ -76,15 +77,18 @@ public:
   }
 };
 
+using SDByteProviderRecurseFn =
+    function_ref<std::optional<ByteProvider<SDValue>>(SDValue, unsigned)>;
+
 /// Visits both operands even once one answers, because \p Recurse may have
 /// side effects (DAGCombiner accumulates an and mask there).
-template <typename ISelOp, typename RecurseT>
-std::optional<ByteProvider<ISelOp>>
-calculateByteProviderForOr(ISelOp Op, unsigned Index, RecurseT Recurse) {
-  std::optional<ByteProvider<ISelOp>> LHS = Recurse(Op.getOperand(0), Index);
+inline std::optional<ByteProvider<SDValue>>
+calculateByteProviderForOr(SDValue Op, unsigned Index,
+                           SDByteProviderRecurseFn Recurse) {
+  std::optional<ByteProvider<SDValue>> LHS = Recurse(Op.getOperand(0), Index);
   if (!LHS)
     return std::nullopt;
-  std::optional<ByteProvider<ISelOp>> RHS = Recurse(Op.getOperand(1), Index);
+  std::optional<ByteProvider<SDValue>> RHS = Recurse(Op.getOperand(1), Index);
   if (!RHS)
     return std::nullopt;
 
@@ -99,18 +103,17 @@ calculateByteProviderForOr(ISelOp Op, unsigned Index, RecurseT Recurse) {
 
 /// \p NarrowBitWidth is a parameter because it is not always the operand
 /// width, for instance sign_extend_inreg takes it from the VTSDNode.
-template <typename ISelOp, typename RecurseT>
-std::optional<ByteProvider<ISelOp>>
-calculateByteProviderForExtend(ISelOp Op, unsigned Index,
+inline std::optional<ByteProvider<SDValue>>
+calculateByteProviderForExtend(SDValue Op, unsigned Index,
                                unsigned NarrowBitWidth, bool ZeroFills,
-                               RecurseT Recurse) {
+                               SDByteProviderRecurseFn Recurse) {
   if (NarrowBitWidth % 8 != 0)
     return std::nullopt;
 
   if (Index >= NarrowBitWidth / 8) {
     if (!ZeroFills)
       return std::nullopt;
-    return ByteProvider<ISelOp>::getConstantZero();
+    return ByteProvider<SDValue>::getConstantZero();
   }
   return Recurse(Op.getOperand(0), Index);
 }
