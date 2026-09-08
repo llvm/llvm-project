@@ -708,6 +708,72 @@ TEST(DexTest, ProximityPathsBoosting) {
   EXPECT_THAT(match(I, Req), ElementsAre("root::abc"));
 }
 
+TEST(DexTest, ProximityTokenIdentity) {
+  auto Proximity = [](llvm::StringRef URI) {
+    return Token(Token::Kind::ProximityURI, URI);
+  };
+  auto Upper = Proximity("file:///C:/proj/File.h");
+  auto Lower = Proximity("file:///c:/proj/File.h");
+  auto Escaped = Proximity("file:///c:/proj/%46ile.h");
+  EXPECT_EQ(Upper, Lower);
+  EXPECT_EQ(Upper, Escaped);
+  EXPECT_EQ(hash_value(Upper), hash_value(Lower));
+  EXPECT_EQ(hash_value(Upper), hash_value(Escaped));
+  llvm::DenseMap<Token, int> Tokens;
+  Tokens.try_emplace(Upper, 42);
+  auto Borrowed =
+      Token::Ref{Token::Kind::ProximityURI, "file:///c:/proj/File.h"};
+  auto I = Tokens.find_as(Borrowed);
+  ASSERT_NE(I, Tokens.end());
+  EXPECT_EQ(I->second, 42);
+  EXPECT_FALSE(Upper == Proximity("file:///c:/proj/file.h"));
+  EXPECT_FALSE(Proximity("unittest:///C:/proj/File.h") ==
+               Proximity("unittest:///c:/proj/File.h"));
+  EXPECT_THAT(generateProximityURIs("file:///C:/file.h"),
+              ElementsAre("file:///C:/file.h", "file:///C:/", "file:///"));
+  EXPECT_EQ(Proximity("file:///C:/"), Proximity("file:///c:/"));
+}
+
+#ifdef _WIN32
+TEST(DexTest, ProximityPathsDriveLetter) {
+  auto Root = symbol("root::abc");
+  Root.CanonicalDeclaration.FileURI = "file:///C:/file.h";
+  Root.References = 2;
+  auto Close = symbol("close::abc");
+  Close.CanonicalDeclaration.FileURI = "file:///C:/a/b/c/d/e/f/file.h";
+  Close.References = 1;
+  std::vector<Symbol> Symbols{Close, Root};
+  Dex I(Symbols, RefSlab(), RelationSlab(), true);
+  FuzzyFindRequest Req;
+  Req.AnyScope = true;
+  Req.Query = "abc";
+  Req.Limit = 1;
+  for (const char *Path : {"C:/a/b/c/d/e/f/file.h", "c:/a/b/c/d/e/f/file.h",
+                           "c:\\a\\b\\c\\d\\e\\f\\file.h"}) {
+    SCOPED_TRACE(Path);
+    Req.ProximityPaths = {Path};
+    EXPECT_THAT(match(I, Req), ElementsAre("close::abc"));
+  }
+}
+
+TEST(DexTest, ProximityPathsPreserveFilenameCase) {
+  auto Upper = symbol("upper::abc");
+  Upper.CanonicalDeclaration.FileURI = "file:///C:/proj/File.h";
+  auto Lower = symbol("lower::abc");
+  Lower.CanonicalDeclaration.FileURI = "file:///C:/proj/file.h";
+  std::vector<Symbol> Symbols{Upper, Lower};
+  Dex I(Symbols, RefSlab(), RelationSlab(), true);
+  FuzzyFindRequest Req;
+  Req.AnyScope = true;
+  Req.Query = "abc";
+  Req.Limit = 1;
+  Req.ProximityPaths = {"c:/proj/File.h"};
+  EXPECT_THAT(match(I, Req), ElementsAre("upper::abc"));
+  Req.ProximityPaths = {"c:/proj/file.h"};
+  EXPECT_THAT(match(I, Req), ElementsAre("lower::abc"));
+}
+#endif
+
 TEST(DexTests, Refs) {
   llvm::DenseMap<SymbolID, std::vector<Ref>> Refs;
   auto AddRef = [&](const Symbol &Sym, const char *Filename, RefKind Kind) {

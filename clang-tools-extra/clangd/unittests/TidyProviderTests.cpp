@@ -63,6 +63,47 @@ TEST(TidyProvider, IsFastTidyCheck) {
   EXPECT_EQ(isFastTidyCheck("replay-preamble-check"), std::nullopt);
 }
 
+TEST(TidyProvider, AncestorCacheGrowth) {
+  MockFS FS;
+  std::string Directory = testPath("cache");
+  FS.Files[Directory + "/.clang-tidy"] = "Checks: 'llvm-*'";
+  for (unsigned I = 0; I != 64; ++I)
+    Directory += "/sub";
+  FS.Files[Directory + "/.clang-tidy"] =
+      "Checks: 'misc-*'\nInheritParentConfig: true";
+  auto Provider = provideClangTidyFiles(FS);
+  auto Options = getTidyOptionsForFile(Provider, Directory + "/test.cc");
+  ASSERT_TRUE(Options.Checks.has_value());
+  EXPECT_EQ(*Options.Checks, "llvm-*,misc-*");
+}
+
+#ifdef _WIN32
+TEST(TidyProvider, AncestorCachePathAliases) {
+  class CountingFS : public MockFS {
+  public:
+    mutable unsigned Views = 0;
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> viewImpl() const override {
+      ++Views;
+      return MockFS::viewImpl();
+    }
+  } FS;
+  FS.Files["C:/proj/.clang-tidy"] = "Checks: 'llvm-*'";
+  FS.Files["c:/proj/.clang-tidy"] = "Checks: 'llvm-*'";
+  auto Provider = provideClangTidyFiles(FS);
+  auto Options = getTidyOptionsForFile(Provider, "C:/proj/test.cc");
+  ASSERT_TRUE(Options.Checks.has_value());
+  ASSERT_EQ(*Options.Checks, "llvm-*");
+  FS.Views = 0;
+
+  for (llvm::StringRef Alias : {"c:/proj/test.cc", "C:\\proj\\test.cc"}) {
+    auto AliasOptions = getTidyOptionsForFile(Provider, Alias);
+    ASSERT_TRUE(AliasOptions.Checks.has_value());
+    EXPECT_EQ(*AliasOptions.Checks, "llvm-*");
+    EXPECT_EQ(FS.Views, 0u) << "Alias must reuse the fresh cached config";
+  }
+}
+#endif
+
 #if CLANGD_TIDY_CHECKS
 TEST(TidyProvider, IsValidCheck) {
   EXPECT_TRUE(isRegisteredTidyCheck("bugprone-argument-comment"));

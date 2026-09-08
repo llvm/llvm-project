@@ -11,6 +11,7 @@
 #include "Diagnostics.h"
 #include "SourceCode.h"
 #include "index/Index.h"
+#include "index/PathIdentity.h"
 #include "index/Symbol.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
@@ -287,9 +288,12 @@ std::vector<Fix> IncludeFixer::fixIncompleteType(const Type &T) const {
   std::vector<Fix> Fixes;
   if (!Syms.empty()) {
     auto &Matched = *Syms.begin();
-    if (!Matched.IncludeHeaders.empty() && Matched.Definition &&
-        Matched.CanonicalDeclaration.FileURI == Matched.Definition.FileURI)
-      Fixes = fixesForSymbols(Syms);
+    if (!Matched.IncludeHeaders.empty() && Matched.Definition) {
+      auto Declaration = indexFileIdentity(Matched.CanonicalDeclaration.FileURI);
+      auto Definition = indexFileIdentity(Matched.Definition.FileURI);
+      if (Declaration && Definition && *Declaration == *Definition)
+        Fixes = fixesForSymbols(Syms);
+    }
   }
   return Fixes;
 }

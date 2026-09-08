@@ -561,7 +561,8 @@ public:
     std::optional<Path> CCFile;
     auto Anchor = getDefinitionOfAdjacentDecl(Sel);
     if (Anchor) {
-      CCFile = Path(Anchor->Loc.uri.file().str());
+      CCFile = SameFile ? Sel.AST->tuPath().owned()
+                        : Path(Anchor->Loc.uri.file().str());
     } else {
       CCFile = SameFile ? std::optional<Path>(Sel.AST->tuPath().owned())
                         : getSourceFile(Sel.AST->tuPath().raw(), Sel);
@@ -676,7 +677,6 @@ public:
     if (!Sel.Index)
       return {};
     std::optional<Location> Anchor;
-    std::string TuURI = URI::createFile(Sel.AST->tuPath().raw()).toString();
     auto CheckCandidate = [&](Decl *Candidate) {
       assert(Candidate != Source);
       if (auto Func = llvm::dyn_cast_or_null<FunctionDecl>(Candidate);
@@ -704,7 +704,8 @@ public:
       // Exception: If the existing definition is a template, then the
       // location is likely due to technical necessity rather than preference,
       // so ignore that definition.
-      bool CandidateSameFile = TuURI == CandidateLoc->uri.uri();
+      bool CandidateSameFile =
+          Sel.AST->tuPath() == PathRef(CandidateLoc->uri.file());
       if (SameFile && !CandidateSameFile)
         return;
       if (!SameFile && CandidateSameFile) {

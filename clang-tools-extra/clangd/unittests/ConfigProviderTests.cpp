@@ -209,6 +209,48 @@ CompileFlags:
   EXPECT_THAT(getAddedArgs(Cfg), IsEmpty());
   Diags.clear();
 }
+
+TEST(ProviderTest, AncestorCacheGrowth) {
+  MockFS FS;
+  std::string Directory = testPath("cache", llvm::sys::path::Style::posix);
+  FS.Files[Directory + "/foo.yaml"] = AddBarBaz;
+  // Cache pointers collected for the leaf must survive inserting its ancestors.
+  for (unsigned I = 0; I != 64; ++I)
+    Directory += "/sub";
+  FS.Files[Directory + "/foo.yaml"] = AddFooWithErr;
+  std::string File = Directory + "/test.cc";
+  Params Param;
+  Param.Path = File;
+  CapturedDiags Diags;
+  auto P = Provider::fromAncestorRelativeYAMLFiles("foo.yaml", FS);
+  auto Cfg = P->getConfig(Param, Diags.callback());
+  EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("bar", "baz", "foo"));
+  EXPECT_THAT(Diags.Diagnostics,
+              ElementsAre(diagMessage("Unknown CompileFlags key 'Unknown'")));
+}
+
+#ifdef _WIN32
+TEST(ProviderTest, AncestorCacheDriveAliases) {
+  MockFS FS;
+  FS.Files["C:/proj/foo.yaml"] = AddFooWithErr;
+  FS.Files["c:/proj/foo.yaml"] = AddFooWithErr;
+  CapturedDiags Diags;
+  auto P = Provider::fromAncestorRelativeYAMLFiles("foo.yaml", FS);
+  Params Param;
+  Param.Path = "C:/proj/test.cc";
+  auto Cfg = P->getConfig(Param, Diags.callback());
+  ASSERT_THAT(getAddedArgs(Cfg), ElementsAre("foo"));
+  ASSERT_THAT(Diags.Diagnostics,
+              ElementsAre(diagMessage("Unknown CompileFlags key 'Unknown'")));
+  Diags.clear();
+
+  Param.Path = "c:/proj/test.cc";
+  Cfg = P->getConfig(Param, Diags.callback());
+  EXPECT_THAT(getAddedArgs(Cfg), ElementsAre("foo"));
+  EXPECT_THAT(Diags.Diagnostics, IsEmpty());
+  EXPECT_THAT(Diags.Files, IsEmpty()) << "Alias must reuse the parsed config";
+}
+#endif
 } // namespace
 } // namespace config
 } // namespace clangd

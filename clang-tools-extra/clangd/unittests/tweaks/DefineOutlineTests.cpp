@@ -6,8 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Compiler.h"
 #include "TestFS.h"
+#include "TestTU.h"
 #include "TweakTesting.h"
+#include "URI.h"
+#include "index/MemIndex.h"
+#include "refactor/Tweak.h"
+#include "clang/Basic/Diagnostic.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -18,6 +25,72 @@ namespace {
 using ::testing::UnorderedElementsAre;
 
 TWEAK_TEST(DefineOutline);
+
+TEST_F(DefineOutlineTest, AdjacentDefinitionUsesDriveAlias) {
+  if (!hasWindowsDrive(testRoot()))
+    GTEST_SKIP() << "Requires Windows paths";
+  FileName = "Test.hpp";
+  llvm::StringRef Original = R"cpp(
+struct A {
+  void neighbor();
+  void f^oo(){}
+};
+inline void A::neighbor(){}
+)cpp";
+  llvm::Annotations Code(Original);
+  TestTU TU = TestTU::withHeaderCode(Code.code());
+  TU.HeaderFilename = FileName.str();
+  auto Symbols = TU.headerSymbols();
+  Symbol Neighbor = findSymbol(Symbols, "A::neighbor");
+  // Stay outside testRoot: the unittest URI scheme canonicalizes its drive.
+  std::string File = "C:/drive-alias/Test.hpp";
+  std::string Alias = File;
+  Alias[0] = 'c';
+  std::string AliasURI = URI::createFile(Alias).toString();
+  Neighbor.Definition.FileURI = AliasURI.c_str();
+  SymbolSlab::Builder Builder;
+  Builder.insert(Neighbor);
+  Index = MemIndex::build(std::move(Builder).build(), {}, {});
+
+  TestTU MainTU = TestTU::withCode(Code.code());
+  MockFS FS;
+  auto Inputs = MainTU.inputs(FS);
+  for (auto &Arg : Inputs.CompileCommand.CommandLine)
+    if (Arg == Inputs.CompileCommand.Filename)
+      Arg = File;
+  Inputs.CompileCommand.Filename = File;
+  FS.Files[File] = Code.code().str();
+  FS.Files[Alias] = Code.code().str();
+  IgnoreDiagnostics Diags;
+  auto CI = buildCompilerInvocation(Inputs, Diags);
+  ASSERT_TRUE(CI);
+  auto AST = ParsedAST::build(File, Inputs, std::move(CI), {}, nullptr);
+  ASSERT_TRUE(AST);
+  EXPECT_THAT(AST->getDiagnostics(), ::testing::IsEmpty());
+  auto VFS = FS.view(std::nullopt);
+  std::optional<llvm::Expected<Tweak::Effect>> Effect;
+  SelectionTree::createEach(
+      AST->getASTContext(), AST->getTokens(), Code.point(), Code.point(),
+      [&](SelectionTree ST) {
+        Tweak::Selection Selection(Index.get(), *AST, Code.point(),
+                                   Code.point(), std::move(ST), VFS.get());
+        auto T = prepareTweak("DefineOutline", Selection, nullptr);
+        if (!T) {
+          llvm::consumeError(T.takeError());
+          return false;
+        }
+        Effect = (*T)->apply(Selection);
+        return true;
+      });
+  ASSERT_TRUE(Effect);
+  ASSERT_THAT_EXPECTED(*Effect, llvm::Succeeded());
+  ASSERT_EQ((**Effect).ApplyEdits.size(), 1u);
+  auto Result = (**Effect).ApplyEdits.begin()->second.apply();
+  ASSERT_THAT_EXPECTED(Result, llvm::Succeeded());
+  EXPECT_THAT(*Result, ::testing::HasSubstr("void foo();"));
+  EXPECT_THAT(*Result, ::testing::HasSubstr("inline void A::foo(){}"));
+  EXPECT_THAT(*Result, ::testing::Not(::testing::HasSubstr("void foo(){}")));
+}
 
 TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
   FileName = "Test.cpp";

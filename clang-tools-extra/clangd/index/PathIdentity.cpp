@@ -44,8 +44,9 @@ indexFileIdentity(llvm::StringRef URIOrPath,
     return IndexFileKeyRef{URIOrPath, IndexFileKeyRef::OpaqueURI};
 
   // Mirror the file scheme's authority/body handling without constructing a
-  // URI or an owned path on every index coverage query. Escapes use the parser.
-  if (!URIOrPath.contains('%')) {
+  // URI or an owned path on every index coverage query. Escapes and backslashes
+  // use the resolver, which normalizes backslashes even on POSIX hosts.
+  if (!URIOrPath.contains('%') && !URIOrPath.contains('\\')) {
     llvm::StringRef Body = URIOrPath.drop_front(5);
     bool HasAuthority = false;
     if (Body.starts_with("//")) {

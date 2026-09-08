@@ -22,7 +22,9 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_TOKEN_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_TOKEN_H
 
+#include "index/PathIdentity.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
 #include <vector>
@@ -68,11 +70,43 @@ public:
     Sentinel,
   };
 
+  // Borrowed keys avoid copying URI strings for each symbol's proximity lookup.
+  struct Ref {
+    Kind TokenKind;
+    llvm::StringRef Data;
+
+    friend bool operator==(Ref LHS, Ref RHS) {
+      if (LHS.TokenKind != RHS.TokenKind)
+        return false;
+      if (LHS.TokenKind != Kind::ProximityURI)
+        return LHS.Data == RHS.Data;
+      llvm::SmallString<256> LStorage, RStorage;
+      auto L = indexFileIdentity(LHS.Data, LStorage);
+      auto R = indexFileIdentity(RHS.Data, RStorage);
+      return L && R ? *L == *R : LHS.Data == RHS.Data;
+    }
+
+    friend llvm::hash_code hash_value(Ref Token) {
+      if (Token.TokenKind == Kind::ProximityURI) {
+        llvm::SmallString<256> Storage;
+        if (auto Identity = indexFileIdentity(Token.Data, Storage))
+          return llvm::hash_combine(static_cast<int>(Token.TokenKind),
+                                    IndexFileKeyInfo::getHashValue(*Identity));
+      }
+      return llvm::hash_combine(static_cast<int>(Token.TokenKind), Token.Data);
+    }
+  };
+
   Token(Kind TokenKind, llvm::StringRef Data)
       : Data(Data), TokenKind(TokenKind) {}
 
-  bool operator==(const Token &Other) const {
-    return TokenKind == Other.TokenKind && Data == Other.Data;
+  operator Ref() const { return {TokenKind, Data}; }
+
+  bool operator==(const Token &Other) const { return Ref(*this) == Ref(Other); }
+
+  llvm::StringRef proximityURI() const {
+    assert(TokenKind == Kind::ProximityURI);
+    return Data;
   }
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Token &T) {
@@ -102,7 +136,7 @@ private:
   Kind TokenKind;
 
   friend llvm::hash_code hash_value(const Token &Token) {
-    return llvm::hash_combine(static_cast<int>(Token.TokenKind), Token.Data);
+    return hash_value(Ref(Token));
   }
 };
 
@@ -114,12 +148,12 @@ namespace llvm {
 
 // Support Tokens as DenseMap keys.
 template <> struct DenseMapInfo<clang::clangd::dex::Token> {
-  static unsigned getHashValue(const clang::clangd::dex::Token &Tag) {
+  static unsigned getHashValue(clang::clangd::dex::Token::Ref Tag) {
     return hash_value(Tag);
   }
 
-  static bool isEqual(const clang::clangd::dex::Token &LHS,
-                      const clang::clangd::dex::Token &RHS) {
+  static bool isEqual(clang::clangd::dex::Token::Ref LHS,
+                      clang::clangd::dex::Token::Ref RHS) {
     return LHS == RHS;
   }
 };

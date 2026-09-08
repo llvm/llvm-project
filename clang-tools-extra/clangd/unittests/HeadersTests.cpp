@@ -400,6 +400,25 @@ TEST_F(HeadersTest, PreferInserted) {
   EXPECT_EQ(Edit->newText, "#import \"header.h\"\n");
 }
 
+TEST(Headers, ResolvedIncludePathAliases) {
+  IncludeInserter Inserter("C:/proj/main.cpp", "", format::getLLVMStyle(), "",
+                           nullptr, {}, {});
+  Inclusion Inc;
+  Inc.Written = "\"a.h\"";
+  Inc.Resolved = "C:/proj/a.h";
+  Inserter.addExisting(Inc);
+  HeaderFile Preferred{"<public-a>", /*Verbatim=*/true};
+  EXPECT_FALSE(Inserter.shouldInsertInclude("C:/proj/a.h", Preferred));
+  EXPECT_FALSE(Inserter.shouldInsertInclude("c:/proj/a.h", Preferred));
+  EXPECT_FALSE(Inserter.shouldInsertInclude("C:\\proj\\a.h", Preferred));
+  EXPECT_TRUE(Inserter.shouldInsertInclude("C:/proj/A.h", Preferred));
+
+  EXPECT_FALSE(Inserter.shouldInsertInclude(
+      "C:/proj/other.h", HeaderFile{"\"a.h\"", /*Verbatim=*/true}));
+  EXPECT_TRUE(Inserter.shouldInsertInclude(
+      "C:/proj/other.h", HeaderFile{"\"A.h\"", /*Verbatim=*/true}));
+}
+
 TEST(Headers, NoHeaderSearchInfo) {
   std::string MainFile = testPath("main.cpp");
   IncludeInserter Inserter(MainFile, /*Code=*/"", format::getLLVMStyle(),

@@ -12,6 +12,7 @@
 #include "SourceCode.h"
 #include "XRefs.h"
 #include "refactor/Tweak.h"
+#include "support/Path.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/LLVM.h"
@@ -19,7 +20,6 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -72,7 +72,7 @@ class ScopifyEnum : public Tweak {
   const Selection *S = nullptr;
   SourceManager *SM = nullptr;
   llvm::SmallVector<std::unique_ptr<llvm::MemoryBuffer>> ExtraBuffers;
-  llvm::StringMap<StringRef> ContentPerFile;
+  PathMap<StringRef> ContentPerFile;
   Effect E;
 };
 
@@ -92,8 +92,8 @@ Expected<Tweak::Effect> ScopifyEnum::apply(const Selection &Inputs) {
   S = &Inputs;
   SM = &S->AST->getSourceManager();
   E.FormatEdits = false;
-  ContentPerFile.insert(std::make_pair(SM->getFilename(D->getLocation()),
-                                       SM->getBufferData(SM->getMainFileID())));
+  ContentPerFile.try_emplace(SM->getFilename(D->getLocation()),
+                             SM->getBufferData(SM->getMainFileID()));
 
   if (auto Err = addClassKeywordToDeclarations())
     return std::move(Err);
@@ -210,7 +210,7 @@ llvm::Expected<StringRef> ScopifyEnum::getContentForFile(StringRef FilePath) {
     return llvm::errorCodeToError(Buffer.getError());
   StringRef Content = Buffer->get()->getBuffer();
   ExtraBuffers.push_back(std::move(*Buffer));
-  ContentPerFile.insert(std::make_pair(FilePath, Content));
+  ContentPerFile.try_emplace(FilePath, Content);
   return Content;
 }
 
@@ -235,9 +235,13 @@ ScopifyEnum::addReplacementForReference(const ReferencesResult::Reference &Ref,
 llvm::Error
 ScopifyEnum::addReplacement(StringRef FilePath, StringRef Content,
                             const tooling::Replacement &Replacement) {
-  Edit &TheEdit = E.ApplyEdits[FilePath];
+  auto It = E.ApplyEdits.try_emplace(FilePath).first;
+  Edit &TheEdit = It->second;
   TheEdit.InitialCode = Content;
-  if (auto Err = TheEdit.Replacements.add(Replacement))
+  // tooling::Replacements requires one exact filename spelling per edit set.
+  if (auto Err = TheEdit.Replacements.add(tooling::Replacement(
+          It->first.raw(), Replacement.getOffset(), Replacement.getLength(),
+          Replacement.getReplacementText())))
     return Err;
   return llvm::Error::success();
 }

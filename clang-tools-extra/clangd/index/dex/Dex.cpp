@@ -19,8 +19,8 @@
 #include "support/Logger.h"
 #include "support/Trace.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
@@ -60,7 +60,7 @@ class IndexBuilder {
   std::vector<DocID> RestrictedCCDocs;
   llvm::StringMap<std::vector<DocID>> TypeDocs;
   llvm::StringMap<std::vector<DocID>> ScopeDocs;
-  llvm::StringMap<std::vector<DocID>> ProximityDocs;
+  llvm::DenseMap<Token, std::vector<DocID>> ProximityDocs;
   std::vector<Trigram> TrigramScratch;
 
 public:
@@ -75,8 +75,15 @@ public:
     ScopeDocs[Sym.Scope].push_back(D);
     if (!llvm::StringRef(Sym.CanonicalDeclaration.FileURI).empty())
       for (const auto &ProximityURI :
-           generateProximityURIs(Sym.CanonicalDeclaration.FileURI))
-        ProximityDocs[ProximityURI].push_back(D);
+           generateProximityURIs(Sym.CanonicalDeclaration.FileURI)) {
+        auto I = ProximityDocs.find_as(
+            Token::Ref{Token::Kind::ProximityURI, ProximityURI});
+        if (I == ProximityDocs.end())
+          I = ProximityDocs
+                  .try_emplace(Token(Token::Kind::ProximityURI, ProximityURI))
+                  .first;
+        I->second.push_back(D);
+      }
     if (Sym.Flags & Symbol::IndexedForCodeCompletion)
       RestrictedCCDocs.push_back(D);
     if (!Sym.Type.empty())
@@ -104,7 +111,9 @@ public:
         };
     CreatePostingList(Token::Kind::Type, TypeDocs);
     CreatePostingList(Token::Kind::Scope, ScopeDocs);
-    CreatePostingList(Token::Kind::ProximityURI, ProximityDocs);
+    for (auto &E : ProximityDocs)
+      Result.try_emplace(E.first, E.second);
+    ProximityDocs = decltype(ProximityDocs)();
 
     // TrigramDocs are stored in a DenseMap and RestrictedCCDocs is not even a
     // map, treat them specially.
@@ -176,13 +185,14 @@ std::unique_ptr<Iterator> Dex::createFileProximityIterator(
     llvm::ArrayRef<std::string> ProximityPaths) const {
   std::vector<std::unique_ptr<Iterator>> BoostingIterators;
   // Deduplicate parent URIs extracted from the ProximityPaths.
-  llvm::StringSet<> ParentURIs;
+  llvm::DenseSet<Token> ParentURIs;
   llvm::StringMap<SourceParams> Sources;
   for (const auto &Path : ProximityPaths) {
     Sources[Path] = SourceParams();
     auto PathURI = URI::create(Path).toString();
     const auto PathProximityURIs = generateProximityURIs(PathURI.c_str());
-    ParentURIs.insert_range(PathProximityURIs);
+    for (auto URI : PathProximityURIs)
+      ParentURIs.insert(Token(Token::Kind::ProximityURI, URI));
   }
   // Use SymbolRelevanceSignals for symbol relevance evaluation: use defaults
   // for all parameters except for Proximity Path distance signal.
@@ -194,11 +204,11 @@ std::unique_ptr<Iterator> Dex::createFileProximityIterator(
   // Try to build BOOST iterator for each Proximity Path provided by
   // ProximityPaths. Boosting factor should depend on the distance to the
   // Proximity Path: the closer processed path is, the higher boosting factor.
-  for (const auto &ParentURI : ParentURIs.keys()) {
+  for (const auto &ParentURI : ParentURIs) {
     // FIXME(kbobyrev): Append LIMIT on top of every BOOST iterator.
-    auto It = iterator(Token(Token::Kind::ProximityURI, ParentURI));
+    auto It = iterator(ParentURI);
     if (It->kind() != Iterator::Kind::False) {
-      PathProximitySignals.SymbolURI = ParentURI;
+      PathProximitySignals.SymbolURI = ParentURI.proximityURI();
       BoostingIterators.push_back(Corpus.boost(
           std::move(It), PathProximitySignals.evaluateHeuristics()));
     }
@@ -456,6 +466,9 @@ generateProximityURIs(llvm::StringRef URI) {
     return {}; // Bad URI.
   assert(Path.begin() >= URI.begin() && Path.begin() < URI.end() &&
          Path.end() == URI.end());
+  auto Prefix = URI.take_front(Path.begin() - URI.begin());
+  bool HasDrive = (Prefix == "file://" || Prefix == "file:") &&
+                  Path.starts_with("/") && hasWindowsDrive(Path.drop_front());
 
   // The original is a proximity URI.
   llvm::SmallVector<llvm::StringRef, ProximityURILimit> Result = {URI};
@@ -463,7 +476,9 @@ generateProximityURIs(llvm::StringRef URI) {
   for (auto Slash = Path.rfind('/'); Slash > 0 && Slash != StringRef::npos;
        Slash = Path.rfind('/')) {
     Path = Path.substr(0, Slash);
-    Result.push_back(URI.substr(0, Path.end() - URI.data()));
+    // Preserve the slash in a drive root: C: alone denotes a relative path.
+    Result.push_back(URI.substr(0, Path.end() - URI.data() +
+                                       (HasDrive && Path.size() == 3)));
     if (Result.size() == ProximityURILimit)
       return Result;
   }

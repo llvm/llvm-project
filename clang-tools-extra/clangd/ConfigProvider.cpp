@@ -14,10 +14,10 @@
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
 #include <chrono>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -91,9 +91,9 @@ Provider::fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath,
 
     mutable std::mutex Mu;
     // Keys are the (posix-style) ancestor directory, not the config within it.
-    // We only insert into this map, so pointers to values are stable forever.
+    // Pointees remain stable across map growth and are never removed.
     // Mutex guards the map itself, not the values (which are threadsafe).
-    mutable llvm::StringMap<FileConfigCache> Cache;
+    mutable PathMap<std::unique_ptr<FileConfigCache>> Cache;
 
     std::vector<CompiledFragment>
     getFragments(const Params &P, DiagnosticCallback DC) const override {
@@ -120,9 +120,12 @@ Provider::fromAncestorRelativeYAMLFiles(llvm::StringRef RelPath,
             path::append(ConfigPath, RelPath);
             // Use native slashes for reading the file, affects diagnostics.
             llvm::sys::path::native(ConfigPath);
-            It = Cache.try_emplace(Ancestor, ConfigPath.str(), Ancestor).first;
+            It = Cache
+                     .try_emplace(Ancestor, std::make_unique<FileConfigCache>(
+                                                ConfigPath.str(), Ancestor))
+                     .first;
           }
-          Caches.push_back(&It->second);
+          Caches.push_back(It->second.get());
         }
       }
       // Finally query each individual file.

@@ -192,10 +192,10 @@ TEST(URITest, IndexFileIdentityOpaqueURI) {
 }
 
 TEST(URITest, IndexFileIdentityBorrowedLookup) {
-  for (const char *U :
-       {"file:/a/b", "file:///a/b", "file://server/share/a",
-        "file:////server/share/a", "file:///C:/proj/a.cpp",
-        "file:///c%3A/proj/a%20b.cpp", "file:///", "file:/C:"}) {
+  for (const char *U : {"file:/a/b", "file:///a/b", "file://server/share/a",
+                        "file:////server/share/a", "file:///C:/proj/a.cpp",
+                        "file:///c%3A/proj/a%20b.cpp", "file:///",
+                        "file:/C:", "file:///tmp/a\\b", "file:///tmp/%61\\b"}) {
     SCOPED_TRACE(U);
     auto Resolved = resolveOrDie(parseOrDie(U));
     auto Owned = indexFileIdentityFrom(Path(Resolved));
@@ -209,7 +209,8 @@ TEST(URITest, IndexFileIdentityBorrowedLookup) {
     IndexFileSet Files;
     Files.insert(*Owned);
     EXPECT_NE(Files.find_as(*Borrowed), Files.end());
-    if (!llvm::StringRef(U).contains('%')) {
+    if (!llvm::StringRef(U).contains('%') &&
+        !llvm::StringRef(U).contains('\\')) {
       EXPECT_TRUE(Storage.empty());
       EXPECT_GE(Borrowed->Value.data(), U);
       EXPECT_LE(Borrowed->Value.end(), U + strlen(U));

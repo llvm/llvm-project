@@ -9,6 +9,7 @@
 #include "Transport.h"
 #include "URI.h"
 #include "support/Logger.h"
+#include "support/Path.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Path.h"
 #include <algorithm>
@@ -36,8 +37,30 @@ std::optional<std::string> doPathMapping(llvm::StringRef S,
                                 ? Mapping.ServerPath
                                 : Mapping.ClientPath;
     llvm::StringRef Body = Uri->body();
-    if (Body.consume_front(From) && (Body.empty() || Body.front() == '/')) {
-      std::string MappedBody = (To + Body).str();
+    llvm::StringRef Prefix = From;
+    // File URI bodies have an extra slash before a Windows drive. Compare
+    // those paths using drive/separator identity, not URI string identity.
+    bool WindowsDrive =
+        Body.starts_with("/") && hasWindowsDrive(Body.drop_front()) &&
+        PathRef(Body.drop_front()).isAbsolute(llvm::sys::path::Style::windows);
+    if (WindowsDrive) {
+      Body = Body.drop_front();
+      if (!Prefix.consume_front("/"))
+        continue;
+    }
+    if (Body.size() < Prefix.size() ||
+        (WindowsDrive
+             ? PathRef(Body.take_front(Prefix.size())) != PathRef(Prefix)
+             : !Body.starts_with(Prefix)))
+      continue;
+    Body = Body.drop_front(Prefix.size());
+    if (Body.empty() || Body.front() == '/' ||
+        (WindowsDrive && Body.front() == '\\')) {
+      std::string Suffix = WindowsDrive
+                               ? llvm::sys::path::convert_to_slash(
+                                     Body, llvm::sys::path::Style::windows)
+                               : Body.str();
+      std::string MappedBody = To + Suffix;
       return URI(Uri->scheme(), Uri->authority(), MappedBody)
           .toString();
     }

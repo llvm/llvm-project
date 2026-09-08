@@ -261,9 +261,9 @@ IncludeStructure::mainFileIncludesWithSpelling(llvm::StringRef Spelling) const {
 }
 
 void IncludeInserter::addExisting(const Inclusion &Inc) {
-  IncludedHeaders.insert(Inc.Written);
+  WrittenHeaders.insert(Inc.Written);
   if (!Inc.Resolved.empty())
-    IncludedHeaders.insert(Inc.Resolved.raw());
+    ResolvedHeaders.insert(Inc.Resolved);
 }
 
 /// FIXME(ioeric): we might not want to insert an absolute include path if the
@@ -277,7 +277,8 @@ bool IncludeInserter::shouldInsertInclude(
       PathRef(FileName) == PathRef(InsertedHeader.File))
     return false;
   auto Included = [&](llvm::StringRef Header) {
-    return IncludedHeaders.contains(Header);
+    return WrittenHeaders.contains(Header) ||
+           ResolvedHeaders.find_as(PathRef(Header)) != ResolvedHeaders.end();
   };
   return !Included(DeclaringHeader.raw()) && !Included(InsertedHeader.File);
 }

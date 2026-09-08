@@ -260,8 +260,9 @@ private:
   StringRef Code;
   StringRef BuildDir;
   HeaderSearch *HeaderSearchInfo = nullptr;
-  llvm::StringSet<> IncludedHeaders; // Both written and resolved.
-  tooling::HeaderIncludes Inserter;  // Computers insertion replacement.
+  llvm::StringSet<> WrittenHeaders;
+  PathSet ResolvedHeaders;
+  tooling::HeaderIncludes Inserter; // Computes insertion replacement.
   HeaderFilter QuotedHeaders;
   HeaderFilter AngledHeaders;
 };

@@ -89,9 +89,9 @@ class DotClangTidyTree {
 
   mutable std::mutex Mu;
   // Keys are the ancestor directory, not the actual config path within it.
-  // We only insert into this map, so pointers to values are stable forever.
+  // Pointees remain stable across map growth and are never removed.
   // Mutex guards the map itself, not the values (which are threadsafe).
-  mutable llvm::StringMap<DotClangTidyCache> Cache;
+  mutable PathMap<std::unique_ptr<DotClangTidyCache>> Cache;
 
 public:
   DotClangTidyTree(const ThreadsafeFS &FS)
@@ -108,14 +108,17 @@ public:
       std::lock_guard<std::mutex> Lock(Mu);
       for (auto Ancestor = AbsPath.absoluteParent(); !Ancestor.empty();
            Ancestor = Ancestor.absoluteParent()) {
-        auto It = Cache.find(Ancestor.raw());
+        auto It = Cache.find(Ancestor);
         // Assemble the actual config file path only if needed.
         if (It == Cache.end()) {
           llvm::SmallString<256> ConfigPath(Ancestor.raw());
           path::append(ConfigPath, RelPath);
-          It = Cache.try_emplace(Ancestor.raw(), ConfigPath.str()).first;
+          It = Cache
+                   .try_emplace(Ancestor, std::make_unique<DotClangTidyCache>(
+                                              ConfigPath.str()))
+                   .first;
         }
-        Caches.push_back(&It->second);
+        Caches.push_back(It->second.get());
       }
     }
     // Finally query each individual file.

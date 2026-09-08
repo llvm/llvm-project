@@ -145,6 +145,22 @@ TEST(DoPathMappingTests, MapsWindowsUnixInterop) {
       R"(C:\home=/workarea)", PathMapping::Direction::ClientToServer));
 }
 
+TEST(DoPathMappingTests, WindowsDriveIdentity) {
+  const auto Incoming = PathMapping::Direction::ClientToServer;
+  for (llvm::StringRef URI :
+       {"file:///c:/repo/a.cc", "file:///c:%5Crepo%5Ca.cc"})
+    EXPECT_TRUE(mapsProperly(URI, "file:///srv/repo/a.cc", "C:/repo=/srv/repo",
+                             Incoming));
+  EXPECT_TRUE(mapsProperly("file:///C:/Repo/a.cc", "file:///C:/Repo/a.cc",
+                           "C:/repo=/srv/repo", Incoming));
+  EXPECT_TRUE(mapsProperly("file:///c:/repository/a.cc",
+                           "file:///c:/repository/a.cc", "C:/repo=/srv/repo",
+                           Incoming));
+  EXPECT_TRUE(mapsProperly("file:///c:/repo/a.cc", "file:///srv/repo/a.cc",
+                           "/srv/repo=C:/repo",
+                           PathMapping::Direction::ServerToClient));
+}
+
 TEST(ApplyPathMappingTests, PreservesOriginalParams) {
   auto Params = llvm::json::parse(R"({
     "textDocument": {"uri": "file:///home/foo.cpp"},

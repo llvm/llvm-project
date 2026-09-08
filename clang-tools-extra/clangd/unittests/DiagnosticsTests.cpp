@@ -1379,6 +1379,34 @@ TEST(IncludeFixerTest, IncompleteType) {
   }
 }
 
+TEST(IncludeFixerTest, IncompleteTypeFileIdentity) {
+  for (const char *Definition :
+       {"file:///c:/proj/x.h", "file:///C:%5Cproj%5Cx.h",
+        "file:///C:/proj/X.h"}) {
+    SCOPED_TRACE(Definition);
+    Symbol Sym = cls("ns::X");
+    Sym.Flags |= Symbol::IndexedForCodeCompletion;
+    Sym.CanonicalDeclaration.FileURI = "file:///C:/proj/x.h";
+    Sym.Definition.FileURI = Definition;
+    Sym.IncludeHeaders.emplace_back("\"x.h\"", 1, Symbol::Include);
+    SymbolSlab::Builder Slab;
+    Slab.insert(Sym);
+    auto Index =
+        MemIndex::build(std::move(Slab).build(), RefSlab(), RelationSlab());
+    auto TU =
+        TestTU::withCode("namespace ns { class X; } ns::X var; // error-ok");
+    TU.ExternalIndex = Index.get();
+    auto AST = TU.build();
+    ASSERT_EQ(AST.getDiagnostics().size(), 1u);
+    if (llvm::StringRef(Definition).ends_with("/X.h"))
+      EXPECT_THAT(AST.getDiagnostics().front().Fixes, IsEmpty());
+    else
+      EXPECT_THAT(AST.getDiagnostics().front(),
+                  withFix(Fix(Range{}, "#include \"x.h\"\n",
+                              "Include \"x.h\" for symbol ns::X")));
+  }
+}
+
 TEST(IncludeFixerTest, IncompleteEnum) {
   Symbol Sym = enm("X");
   Sym.Flags |= Symbol::IndexedForCodeCompletion;
