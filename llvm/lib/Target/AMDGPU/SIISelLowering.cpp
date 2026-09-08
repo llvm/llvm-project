@@ -20448,8 +20448,10 @@ Align SITargetLowering::getPrefLoopAlignment(
   // getMaxPermittedBytesForAlignment().
   if (ML && !DisableLoopAlignment &&
       getSubtarget()->hasLoopHeadInstSplitSensitivity()) {
-    assert(BlockToAlign &&
-           "gfx950 fetch-window alignment requires the block being aligned");
+    // Loop rotation can make the backedge destination a block other than the
+    // LoopInfo header, so prefer the block the caller is actually aligning.
+    if (!BlockToAlign)
+      BlockToAlign = ML->getHeader();
     // Respect user-specified or previously set alignment.
     if (BlockToAlign->getAlignment() != PrefAlign)
       return BlockToAlign->getAlignment();
