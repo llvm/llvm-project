@@ -128,9 +128,8 @@ private:
             IsInstance ? getCaptureByAttrFromFunctionType(FD) : nullptr)
       ProcessAttr(MethodAttr);
     for (const auto *Param : FD->parameters()) {
-      if (auto *Attr = Param->getAttr<LifetimeCaptureByAttr>()) {
+      if (auto *Attr = Param->getAttr<LifetimeCaptureByAttr>())
         ProcessAttr(Attr);
-      }
     }
   }
 };
