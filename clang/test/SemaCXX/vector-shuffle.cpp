@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -Wno-null-conversion -fsyntax-only -verify
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -fsyntax-only -verify
 
 typedef bool v8b __attribute__((ext_vector_type(8)));
 typedef float v8f __attribute__((ext_vector_type(8)));
