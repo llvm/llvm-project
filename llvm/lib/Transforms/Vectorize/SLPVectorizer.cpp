@@ -18356,15 +18356,13 @@ InstructionCost BoUpSLP::getSpillCost() {
   };
   auto IsCoveredByMatchingVectorEntry = [&](const TreeEntry *Gather,
                                             const Loop *SpillLoop) -> bool {
-    assert(Gather->isGather());
+    assert(Gather->isGather() && "Expected a Gather Entry!");
 
     Value *LookupValue = nullptr;
     if (Gather->hasState()) {
       LookupValue = Gather->getMainOp();
     } else {
-      auto *It = find_if(Gather->Scalars, [](Value *V) {
-        return !isa<PoisonValue, UndefValue>(V);
-      });
+      auto *It = find_if_not(Gather->Scalars, IsaPred<UndefValue>);
       if (It == Gather->Scalars.end())
         return false;
       LookupValue = *It;
@@ -18390,13 +18388,14 @@ InstructionCost BoUpSLP::getSpillCost() {
       return false;
 
     // The spill walk does not descend through gather entries; if any ancestor
-    // of the matching entry's user is a gather, the matching edge is never
-    // charged and de-duplicating would lose the spill cost entirely.
+    // of the matching entry's user is a gather or a combined scalar/pseudo
+    // entry, the matching edge is never charged and de-duplicating would lose
+    // the spill cost entirely.
     for (const TreeEntry *E = UserTE; E != Root;) {
       if (!E->UserTreeIndex)
         return false;
       E = E->UserTreeIndex.UserTE;
-      if (E->isGather())
+      if (E->isGather() || ScalarOrPseudoEntries.contains(SameTE))
         return false;
     }
 
