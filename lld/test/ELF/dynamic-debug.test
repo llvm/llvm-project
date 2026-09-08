@@ -69,8 +69,8 @@
 # NO-GC-DAG: {{.*}} 0 NOTYPE  GLOBAL DEFAULT   UND undef_used_by_non_alloc
 ## The following symbols are only present when linking the relocatable link
 ## output of the simulated dynamic debugging objects.
-# REL-DAG: {{.*}} 0 FILE    LOCAL  DEFAULT   ABS main.o
-# REL-DAG: {{.*}} 0 FILE    LOCAL  DEFAULT   ABS foo.o
+# DD-REL-DAG: {{.*}} 0 FILE    LOCAL  DEFAULT   ABS main.o
+# DD-REL-DAG: {{.*}} 0 FILE    LOCAL  DEFAULT   ABS foo.o
 
 # DD:      LLVM  0x00000004  Unknown note type: (0x00000004)
 # DD-NEXT: description data: 00 00 00 00
@@ -119,15 +119,24 @@
 
 ## Check relocatable link of simulated dynamic debugging objects.
 # RUN: ld.lld -r -o rel.o main.o foo.o
+# RUN: llvm-readelf -Sg rel.o | FileCheck --check-prefix=REL %s
+
+# REL-NOT: .note.llvm.dyndbg
+# REL: COMDAT group section [{{.*}}] `.group' [comdat_func] contains 1 sections:
+# REL-NEXT: Name
+# REL-NEXT: .text.comdat_func
+
+## Extract "inner" ELF from the above relocatable link and compare to a
+## relocatable link of the "inner" unoptimized objects.
 # RUN: llvm-objcopy --dump-section=.debug_llvm_dyndbg=rel-in.o rel.o /dev/null
 # RUN: ld.lld -r -o rel-unopt.o main-unopt.o foo-unopt.o
 # RUN: cmp rel-in.o rel-unopt.o
 
 ## Link the above relocatable link output with and without `--gc-sections`.
 # RUN: ld.lld -e main -o out.rel rel.o shared.so
-# RUN: llvm-readelf -Srsn out.rel | FileCheck --check-prefixes=DD,NO-GC,REL %s
+# RUN: llvm-readelf -Srsn out.rel | FileCheck --check-prefixes=DD,NO-GC,DD-REL %s
 # RUN: ld.lld -e main --gc-sections -o out.rel-gc rel.o shared.so
-# RUN: llvm-readelf -Srsn out.rel-gc | FileCheck --check-prefixes=DD,GC,REL %s
+# RUN: llvm-readelf -Srsn out.rel-gc | FileCheck --check-prefixes=DD,GC,DD-REL %s
 
 ## Extract and check "inner" ELF for the above links.
 # RUN: llvm-objcopy --dump-section=.debug_llvm_dyndbg=in.rel.o out.rel /dev/null

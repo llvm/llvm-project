@@ -4677,8 +4677,10 @@ template <class ELFT> void elf::createSyntheticSections(Ctx &ctx) {
   if (ctx.dynDbgOutput) {
     ctx.in.dynDbg = std::make_unique<DynamicDebugSection>(ctx);
     add(*ctx.in.dynDbg);
-    ctx.in.dynDbgNote = std::make_unique<DynamicDebugNote>(ctx);
-    add(*ctx.in.dynDbgNote);
+    if (!ctx.arg.relocatable) {
+      ctx.in.dynDbgNote = std::make_unique<DynamicDebugNote>(ctx);
+      add(*ctx.in.dynDbgNote);
+    }
   }
 }
 
