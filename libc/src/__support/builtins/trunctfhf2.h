@@ -18,11 +18,11 @@
 #include "include/llvm-libc-types/float128.h"
 #include "src/__support/macros/properties/types.h"
 
-#if defined(LIBC_TYPES_HAS_FLOAT128) && defined(LIBC_TYPES_HAS_FLOAT16)
+#ifdef LIBC_TYPES_HAS_FLOAT128
 
 #include "hdr/stdint_proxy.h"
-#include "src/__support/CPP/bit.h"
-#include "src/__support/FPUtil/cast.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/builtins/fpconvert_helper.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -30,12 +30,12 @@ namespace builtins {
 
 // Truncate float128 to float16; mirrors compiler-rt's __trunctfhf2.
 LIBC_INLINE uint16_t trunctfhf2(float128 x) {
-  return cpp::bit_cast<uint16_t>(fputil::cast<float16>(x));
+  return fpconvert_to_bits<fputil::FPType::IEEE754_Binary16>(x);
 }
 
 } // namespace builtins
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_TYPES_HAS_FLOAT128 && LIBC_TYPES_HAS_FLOAT16
+#endif // LIBC_TYPES_HAS_FLOAT128
 
 #endif // LLVM_LIBC_SRC___SUPPORT_BUILTINS_TRUNCTFHF2_H
