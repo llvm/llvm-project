@@ -23552,6 +23552,54 @@ static SDValue performNegCSelCombine(SDNode *N, SelectionDAG &DAG) {
                      CSel.getOperand(3));
 }
 
+// Reassociate adds/subs of extended values when one of the operations can
+// become an add/sub long, matching [SU](ADD|SUB)L:
+//
+//   (ext(A) - X) + ext(B) -> (ext(A) + ext(B)) - X
+//   (ext(A) - X) - ext(B) -> (ext(A) - ext(B)) - X
+//   ext(B) - (X + ext(A)) -> (ext(B) - ext(A)) - X
+//
+// We don't need to reassociate expressions that can use widening add/sub
+// instead, such as (ext(A) + X) + ext(B) or (X - ext(A)) - ext(B).
+static SDValue reassociateAddSubLong(SDNode *N, SelectionDAG &DAG) {
+  using namespace llvm::SDPatternMatch;
+
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::v8i16 && VT != MVT::v4i32 && VT != MVT::v2i64)
+    return SDValue();
+  EVT HalfEltVT = MVT::getIntegerVT(VT.getScalarSizeInBits() / 2);
+
+  for (unsigned ExtOpc : {ISD::ZERO_EXTEND, ISD::SIGN_EXTEND}) {
+    SDValue A, B, X;
+    auto ExtOp = m_Node(ExtOpc, m_SpecificVectorElementVT(HalfEltVT));
+    auto MatchA = m_Value(A, ExtOp), MatchB = m_Value(B, ExtOp);
+    auto MatchX = m_Value(X, m_Unless(ExtOp));
+
+    auto TryReassociate = [&](unsigned Opc, SDValue L, SDValue R) {
+      // Long instructions read operands from lower/upper halves.
+      if (isEssentiallyExtractHighSubvector(L.getOperand(0)) !=
+          isEssentiallyExtractHighSubvector(R.getOperand(0)))
+        return SDValue();
+      SDLoc DL(N);
+      return DAG.getNode(ISD::SUB, DL, VT, DAG.getNode(Opc, DL, VT, L, R), X);
+    };
+
+    // (ext(A) - X) + ext(B) -> (ext(A) + ext(B)) - X
+    if (sd_match(N, m_Add(m_OneUse(m_Sub(MatchA, MatchX)), MatchB)))
+      return TryReassociate(ISD::ADD, A, B);
+
+    // (ext(A) - X) - ext(B) -> (ext(A) - ext(B)) - X
+    if (sd_match(N, m_Sub(m_OneUse(m_Sub(MatchA, MatchX)), MatchB)))
+      return TryReassociate(ISD::SUB, A, B);
+
+    // ext(B) - (X + ext(A)) -> (ext(B) - ext(A)) - X
+    if (sd_match(N, m_Sub(MatchB, m_OneUse(m_Add(MatchX, MatchA)))))
+      return TryReassociate(ISD::SUB, B, A);
+  }
+
+  return SDValue();
+}
+
 // The basic add/sub long vector instructions have variants with "2" on the end
 // which act on the high-half of their inputs. They are normally matched by
 // patterns like:
@@ -23575,6 +23623,9 @@ static SDValue performAddSubLongCombine(SDNode *N,
       return performSetccAddFolding(N, DAG);
     return SDValue();
   }
+
+  if (SDValue R = reassociateAddSubLong(N, DAG))
+    return R;
 
   // Make sure both branches are extended in the same way.
   SDValue LHS = N->getOperand(0);

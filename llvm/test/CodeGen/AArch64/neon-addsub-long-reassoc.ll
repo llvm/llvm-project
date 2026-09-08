@@ -5,9 +5,8 @@
 define <8 x i16> @add_sub_u(<8 x i16> %x, <8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: add_sub_u:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    uaddl v1.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    sub v0.8h, v1.8h, v0.8h
-; CHECK-NEXT:    uaddw v0.8h, v0.8h, v2.8b
 ; CHECK-NEXT:    ret
   %a.ext = zext <8 x i8> %a to <8 x i16>
   %b.ext = zext <8 x i8> %b to <8 x i16>
@@ -20,9 +19,8 @@ define <8 x i16> @add_sub_u(<8 x i16> %x, <8 x i8> %a, <8 x i8> %b) {
 define <8 x i16> @add_sub_s(<8 x i16> %x, <8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: add_sub_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll v1.8h, v1.8b, #0
+; CHECK-NEXT:    saddl v1.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    sub v0.8h, v1.8h, v0.8h
-; CHECK-NEXT:    saddw v0.8h, v0.8h, v2.8b
 ; CHECK-NEXT:    ret
   %a.ext = sext <8 x i8> %a to <8 x i16>
   %b.ext = sext <8 x i8> %b to <8 x i16>
@@ -35,9 +33,8 @@ define <8 x i16> @add_sub_s(<8 x i16> %x, <8 x i8> %a, <8 x i8> %b) {
 define <8 x i16> @sub_sub_u(<8 x i16> %x, <8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: sub_sub_u:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    usubl v1.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    sub v0.8h, v1.8h, v0.8h
-; CHECK-NEXT:    usubw v0.8h, v0.8h, v2.8b
 ; CHECK-NEXT:    ret
   %a.ext = zext <8 x i8> %a to <8 x i16>
   %b.ext = zext <8 x i8> %b to <8 x i16>
@@ -50,9 +47,8 @@ define <8 x i16> @sub_sub_u(<8 x i16> %x, <8 x i8> %a, <8 x i8> %b) {
 define <8 x i16> @sub_add_u(<8 x i16> %x, <8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: sub_add_u:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll v2.8h, v2.8b, #0
-; CHECK-NEXT:    uaddw v0.8h, v0.8h, v1.8b
-; CHECK-NEXT:    sub v0.8h, v2.8h, v0.8h
+; CHECK-NEXT:    usubl v1.8h, v2.8b, v1.8b
+; CHECK-NEXT:    sub v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %a.ext = zext <8 x i8> %a to <8 x i16>
   %b.ext = zext <8 x i8> %b to <8 x i16>
@@ -64,9 +60,8 @@ define <8 x i16> @sub_add_u(<8 x i16> %x, <8 x i8> %a, <8 x i8> %b) {
 define <4 x i32> @sub_sub_u_s(<4 x i32> %x, <4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: sub_sub_u_s:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-NEXT:    usubl v1.4s, v1.4h, v2.4h
 ; CHECK-NEXT:    sub v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    usubw v0.4s, v0.4s, v2.4h
 ; CHECK-NEXT:    ret
   %a.ext = zext <4 x i16> %a to <4 x i32>
   %b.ext = zext <4 x i16> %b to <4 x i32>
@@ -78,9 +73,8 @@ define <4 x i32> @sub_sub_u_s(<4 x i32> %x, <4 x i16> %a, <4 x i16> %b) {
 define <2 x i64> @sub_sub_s_d(<2 x i64> %x, <2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: sub_sub_s_d:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sshll v1.2d, v1.2s, #0
+; CHECK-NEXT:    ssubl v1.2d, v1.2s, v2.2s
 ; CHECK-NEXT:    sub v0.2d, v1.2d, v0.2d
-; CHECK-NEXT:    ssubw v0.2d, v0.2d, v2.2s
 ; CHECK-NEXT:    ret
   %a.ext = sext <2 x i32> %a to <2 x i64>
   %b.ext = sext <2 x i32> %b to <2 x i64>
@@ -93,9 +87,8 @@ define <2 x i64> @sub_sub_s_d(<2 x i64> %x, <2 x i32> %a, <2 x i32> %b) {
 define <8 x i16> @add_sub_non_canon(<8 x i16> %x, <8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: add_sub_non_canon:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    uaddl v1.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    sub v0.8h, v1.8h, v0.8h
-; CHECK-NEXT:    uaddw v0.8h, v0.8h, v2.8b
 ; CHECK-NEXT:    ret
   %a.ext = zext <8 x i8> %a to <8 x i16>
   %b.ext = zext <8 x i8> %b to <8 x i16>
@@ -107,9 +100,8 @@ define <8 x i16> @add_sub_non_canon(<8 x i16> %x, <8 x i8> %a, <8 x i8> %b) {
 define <4 x i32> @upper_halves(<4 x i32> %x, <8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: upper_halves:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll2 v1.4s, v1.8h, #0
+; CHECK-NEXT:    usubl2 v1.4s, v1.8h, v2.8h
 ; CHECK-NEXT:    sub v0.4s, v1.4s, v0.4s
-; CHECK-NEXT:    usubw2 v0.4s, v0.4s, v2.8h
 ; CHECK-NEXT:    ret
   %a.upper = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %b.upper = shufflevector <8 x i16> %b, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -167,9 +159,9 @@ define <8 x i16> @all_extends(<8 x i8> %x, <8 x i8> %a, <8 x i8> %b) {
 define <8 x i16> @ext_a_multi_use(<8 x i16> %x, <8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: ext_a_multi_use:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    usubl v2.8h, v1.8b, v2.8b
 ; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-NEXT:    sub v0.8h, v1.8h, v0.8h
-; CHECK-NEXT:    usubw v0.8h, v0.8h, v2.8b
+; CHECK-NEXT:    sub v0.8h, v2.8h, v0.8h
 ; CHECK-NEXT:    // fake_use: $q1
 ; CHECK-NEXT:    ret
   %a.ext = zext <8 x i8> %a to <8 x i16>
@@ -183,11 +175,10 @@ define <8 x i16> @ext_a_multi_use(<8 x i16> %x, <8 x i8> %a, <8 x i8> %b) {
 define <8 x i16> @ext_b_multi_use(<8 x i16> %x, <8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: ext_b_multi_use:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    usubl v1.8h, v1.8b, v2.8b
+; CHECK-NEXT:    ushll v2.8h, v2.8b, #0
 ; CHECK-NEXT:    sub v0.8h, v1.8h, v0.8h
-; CHECK-NEXT:    ushll v1.8h, v2.8b, #0
-; CHECK-NEXT:    usubw v0.8h, v0.8h, v2.8b
-; CHECK-NEXT:    // fake_use: $q1
+; CHECK-NEXT:    // fake_use: $q2
 ; CHECK-NEXT:    ret
   %a.ext = zext <8 x i8> %a to <8 x i16>
   %b.ext = zext <8 x i8> %b to <8 x i16>
