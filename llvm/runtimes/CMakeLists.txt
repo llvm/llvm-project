@@ -344,6 +344,7 @@ function(runtime_default_target)
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
                                       -DLLVM_BUILD_TOOLS=${LLVM_BUILD_TOOLS}
                                       -DLLVM_ENABLE_DOXYGEN=${LLVM_ENABLE_DOXYGEN}
+                                      -DLLVM_USE_SANITIZER=${LLVM_USE_SANITIZER}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_CXX_COMPILER_WORKS=ON
                                       -DCMAKE_Fortran_COMPILER_WORKS=ON

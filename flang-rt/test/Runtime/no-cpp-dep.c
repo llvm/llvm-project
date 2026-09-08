@@ -5,6 +5,8 @@ a C compiler.
 
 UNSUPPORTED: system-windows
 UNSUPPORTED: offload-cuda
+When the runtime is built with ASAN, it cannot help but depend on the C++ runtime.
+UNSUPPORTED: asan
 
 RUN: %if system-aix %{ export OBJECT_MODE=64 %}
 RUN: %cc -std=c99 %s %isysroot -I%include -L"%libdir" -lflang_rt.runtime -lm \

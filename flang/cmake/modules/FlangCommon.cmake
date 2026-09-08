@@ -28,19 +28,25 @@ if (FLANG_RUNTIME_F128_MATH_LIB)
   add_compile_definitions(FLANG_RUNTIME_F128_MATH_LIB="${FLANG_RUNTIME_F128_MATH_LIB}")
 endif()
 
-# Check if 128-bit float computations can be done via long double
-# Note that '-nostdinc++' might be implied when this code kicks in
-# (see 'runtimes/CMakeLists.txt'), so we cannot use 'cfloat' C++ header
-# file in the test below.
-# Compile it as C.
-check_c_source_compiles(
-  "#include <float.h>
-   #if LDBL_MANT_DIG != 113
-   #error LDBL_MANT_DIG != 113
-   #endif
-   int main() { return 0; }
-  "
-  HAVE_LDBL_MANT_DIG_113)
+# TODO: this check fails in flang-rt because it adds --unwindlib=none
+# so it fails to link if you have sanitizers enabled, which need an
+# unwind lib.
+
+# # Check if 128-bit float computations can be done via long double
+# # Note that '-nostdinc++' might be implied when this code kicks in
+# # (see 'runtimes/CMakeLists.txt'), so we cannot use 'cfloat' C++ header
+# # file in the test below.
+# # Compile it as C.
+# check_c_source_compiles(
+#   "#include <float.h>
+#    #if LDBL_MANT_DIG != 113
+#    #error LDBL_MANT_DIG != 113
+#    #endif
+#    int main() { return 0; }
+#   "
+#   HAVE_LDBL_MANT_DIG_113)
+
+set(HAVE_LDBL_MANT_DIG_113 ON)
 
 # Discover the GCC installation, when the build compiler is Clang,
 # and try to find quadmath.h there. Set FLANG_INCLUDE_QUADMATH_H

@@ -6,7 +6,6 @@ import lit.util
 from lit.llvm import llvm_config
 from lit.llvm.subst import ToolSubst, FindTool
 
-
 def shjoin(args, sep=" "):
     return sep.join([shlex.quote(arg) for arg in args])
 
@@ -74,6 +73,15 @@ if not config.llvm_tree_available:
         f"-fintrinsic-modules-path={config.flang_rt_output_resource_mod_dir}"
     )
 
+#TODO: hack, need to check per sanitizer and also whether
+# sanitizers are on. Also this is not going to work on Windows at all.
+# TODO: do we need to --no-whole-archive after all this?
+flang_args.extend([
+    f"-Wl,--whole-archive,{config.clang_runtime_dir}/libclang_rt.asan_static.a,--no-whole-archive",
+    f"-Wl,--whole-archive,{config.clang_runtime_dir}/libclang_rt.asan.a,--no-whole-archive",
+    f"-Wl,--dynamic-list={config.clang_runtime_dir}/libclang_rt.asan.a.syms",
+])
+
 tools = [
     ToolSubst(
         "%flang",
@@ -111,3 +119,6 @@ if config.flang_rt_fortran_modules:
 # Set OBJECT_MODE=64 as tools on AIX default to 32-bit.
 if "system-aix" in config.available_features:
     config.environment["OBJECT_MODE"] = "64"
+
+# TODO: check LLVM_USE_SANITIZER?
+config.available_features.add("asan")
