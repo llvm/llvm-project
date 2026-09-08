@@ -42,13 +42,6 @@ using namespace Fortran::runtime::cuda;
 
 namespace {
 
-template <typename OpTy>
-[[maybe_unused]] bool isPinned(OpTy op) {
-  if (op.getDataAttr() && *op.getDataAttr() == cuf::DataAttribute::Pinned)
-    return true;
-  return false;
-}
-
 static inline unsigned getMemType(cuf::DataAttribute attr) {
   if (attr == cuf::DataAttribute::Device)
     return kMemTypeDevice;

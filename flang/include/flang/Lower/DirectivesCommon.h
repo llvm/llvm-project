@@ -83,7 +83,7 @@ T AsRvalueRef(T &t) {
   return t;
 }
 template <typename T> //
-static T AsRvalueRef(const T &t) {
+T AsRvalueRef(const T &t) {
   return t;
 }
 
