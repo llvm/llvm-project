@@ -865,7 +865,8 @@ static bool OptimizeAwayTrappingUsesOfLoads(
               isa<ConstantExpr>(GlobalUser) || isa<CmpInst>(GlobalUser) ||
               isa<BitCastInst>(GlobalUser) ||
               isa<GetElementPtrInst>(GlobalUser) ||
-              isa<AddrSpaceCastInst>(GlobalUser)) &&
+              isa<AddrSpaceCastInst>(GlobalUser) || isa<CallInst>(GlobalUser) ||
+              isa<InvokeInst>(GlobalUser)) &&
              "Only expect load and stores!");
     }
   }
