@@ -64,7 +64,7 @@ body: |
     ; CHECK-LABEL: name: av_mov_b64_imm_pseudo_agpr_0
     ; CHECK: $agpr0 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec
     ; CHECK-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec
-    $agpr0_agpr1 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
+    $agpr0_64 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
 ...
 
 ---
@@ -75,7 +75,7 @@ body: |
     ; CHECK-LABEL: name: av_mov_b64_imm_pseudo_agpr_neg1
     ; CHECK: $agpr0 = V_ACCVGPR_WRITE_B32_e64 -1, implicit $exec
     ; CHECK-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 -1, implicit $exec
-    $agpr0_agpr1 = AV_MOV_B64_IMM_PSEUDO -1, implicit $exec
+    $agpr0_64 = AV_MOV_B64_IMM_PSEUDO -1, implicit $exec
 ...
 
 ---
@@ -86,7 +86,7 @@ body: |
     ; CHECK-LABEL: name: av_mov_b64_imm_pseudo_agpr_64
     ; CHECK: $agpr0 = V_ACCVGPR_WRITE_B32_e64 64, implicit $exec
     ; CHECK-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec
-    $agpr0_agpr1 = AV_MOV_B64_IMM_PSEUDO 64, implicit $exec
+    $agpr0_64 = AV_MOV_B64_IMM_PSEUDO 64, implicit $exec
 ...
 
 ---
@@ -132,7 +132,7 @@ body: |
     ; CHECK-LABEL: name: av_mov_b64_imm_pseudo_agpr_64_hi_0_lo
     ; CHECK: $agpr0 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec
     ; CHECK-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 64, implicit $exec
-    $agpr0_agpr1 = AV_MOV_B64_IMM_PSEUDO 274877906944, implicit $exec
+    $agpr0_64 = AV_MOV_B64_IMM_PSEUDO 274877906944, implicit $exec
 ...
 
 ---
@@ -143,7 +143,7 @@ body: |
     ; CHECK-LABEL: name: av_mov_b64_imm_pseudo_agpr_64_hi_2_lo
     ; CHECK: $agpr0 = V_ACCVGPR_WRITE_B32_e64 2, implicit $exec
     ; CHECK-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 64, implicit $exec
-    $agpr0_agpr1 = AV_MOV_B64_IMM_PSEUDO 274877906946, implicit $exec
+    $agpr0_64 = AV_MOV_B64_IMM_PSEUDO 274877906946, implicit $exec
 ...
 
 ---
@@ -154,7 +154,7 @@ body: |
     ; CHECK-LABEL: name: av_mov_b64_imm_pseudo_agpr_neg16_hi_9_lo
     ; CHECK: $agpr0 = V_ACCVGPR_WRITE_B32_e64 9, implicit $exec
     ; CHECK-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 -16, implicit $exec
-    $agpr0_agpr1 = AV_MOV_B64_IMM_PSEUDO 18446744004990074889, implicit $exec
+    $agpr0_64 = AV_MOV_B64_IMM_PSEUDO 18446744004990074889, implicit $exec
 ...
 
 ---
@@ -195,7 +195,7 @@ body: |
     ; CHECK-LABEL: name: av_mov_b64_imm_pseudo_unaligned_agpr
     ; CHECK: $agpr1 = V_ACCVGPR_WRITE_B32_e64 9, implicit $exec
     ; CHECK-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 -16, implicit $exec
-    $agpr1_agpr2 = AV_MOV_B64_IMM_PSEUDO 18446744004990074889, implicit $exec
+    $agpr1_64 = AV_MOV_B64_IMM_PSEUDO 18446744004990074889, implicit $exec
 ...
 
 ---
@@ -226,5 +226,5 @@ body: |
     ; CHECK-LABEL: name: av_mov_b64_misalign_agpr
     ; CHECK: $agpr5 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec
     ; CHECK-NEXT: $agpr6 = V_ACCVGPR_WRITE_B32_e64 0, implicit $exec
-    $agpr5_agpr6 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
+    $agpr5_64 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
 ...

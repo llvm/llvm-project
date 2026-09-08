@@ -787,11 +787,11 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: av_mov_b64_imm_pseudo_copy_av_64_to_physreg_agpr
     ; GCN: [[AV_MOV_:%[0-9]+]]:av_64 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
-    ; GCN-NEXT: $agpr0_agpr1 = COPY [[AV_MOV_]]
-    ; GCN-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1
+    ; GCN-NEXT: $agpr0_64 = COPY [[AV_MOV_]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit $agpr0_64
     %0:av_64 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
-    $agpr0_agpr1 = COPY %0
-    S_ENDPGM 0, implicit $agpr0_agpr1
+    $agpr0_64 = COPY %0
+    S_ENDPGM 0, implicit $agpr0_64
 
 ...
 

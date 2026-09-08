@@ -52,8 +52,8 @@ body:             |
   
     ; copy from tuple of physical AGPRs to tuple of physical SGPRs 
     ; CHECK: *** Bad machine code: illegal copy from vector register to SGPR ***
-    ; CHECK: - instruction: $sgpr6_64 = COPY $agpr0_agpr1
-    $sgpr6_64 = COPY $agpr0_agpr1  
+    ; CHECK: - instruction: $sgpr6_64 = COPY $agpr0_64
+    $sgpr6_64 = COPY $agpr0_64  
   
     S_ENDPGM 0  
 ...  

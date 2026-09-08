@@ -25,9 +25,9 @@ body: |
     ; GFX908-PEI-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; GFX908-PEI-NEXT: renamable $agpr0 = COPY renamable $vgpr0, implicit $exec
     ; GFX908-PEI-NEXT: renamable $agpr2 = COPY renamable $vgpr1, implicit $exec
-    ; GFX908-PEI-NEXT: $vgpr33 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2, implicit $agpr0_agpr1_agpr2
+    ; GFX908-PEI-NEXT: $vgpr33 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $agpr0_96, implicit $agpr0_96
     ; GFX908-PEI-NEXT: $vgpr32 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec
-    ; GFX908-PEI-NEXT: $vgpr31 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2
+    ; GFX908-PEI-NEXT: $vgpr31 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $agpr0_96
     ; GFX908-PEI-NEXT: S_ENDPGM 0
     ;
     ; GFX908-PEI-MACHINECP-LABEL: name: agpr-spill-to-vgpr-machine-cp
@@ -37,13 +37,13 @@ body: |
     ; GFX908-PEI-MACHINECP-NEXT: frame-setup CFI_INSTRUCTION undefined $pc_reg
     ; GFX908-PEI-MACHINECP-NEXT: renamable $agpr0 = COPY renamable $vgpr0, implicit $exec
     ; GFX908-PEI-MACHINECP-NEXT: renamable $agpr2 = COPY renamable $vgpr1, implicit $exec
-    ; GFX908-PEI-MACHINECP-NEXT: $vgpr33 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2, implicit $agpr0_agpr1_agpr2
+    ; GFX908-PEI-MACHINECP-NEXT: $vgpr33 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $agpr0_96, implicit $agpr0_96
     ; GFX908-PEI-MACHINECP-NEXT: $vgpr32 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec
-    ; GFX908-PEI-MACHINECP-NEXT: $vgpr31 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2
+    ; GFX908-PEI-MACHINECP-NEXT: $vgpr31 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $agpr0_96
     ; GFX908-PEI-MACHINECP-NEXT: S_ENDPGM 0
     renamable $agpr0 = COPY renamable $vgpr0, implicit $exec
     renamable $agpr2 = COPY renamable $vgpr1, implicit $exec
-    SI_SPILL_AV96_SAVE $agpr0_agpr1_agpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s96) into %stack.0, align 4, addrspace 5)
+    SI_SPILL_AV96_SAVE $agpr0_96, %stack.0, $sgpr32, 0, implicit $exec :: (store (s96) into %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 ...
 
@@ -75,11 +75,11 @@ body: |
     ; GFX908-PEI-NEXT: renamable $agpr2 = COPY renamable $vgpr1, implicit $exec
     ; GFX908-PEI-NEXT: $vgpr2_256 = IMPLICIT_DEF
     ; GFX908-PEI-NEXT: $vgpr10_256 = IMPLICIT_DEF
-    ; GFX908-PEI-NEXT: $vgpr40 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2, implicit $agpr0_agpr1_agpr2
-    ; GFX908-PEI-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr40, $sgpr0_128, 0, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX908-PEI-NEXT: $vgpr40 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $agpr0_96, implicit $agpr0_96
+    ; GFX908-PEI-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr40, $sgpr0_128, 0, 0, 0, 0, implicit $exec, implicit $agpr0_96 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; GFX908-PEI-NEXT: $vgpr40 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec
     ; GFX908-PEI-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr40, $sgpr0_128, 0, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; GFX908-PEI-NEXT: $vgpr55 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2
+    ; GFX908-PEI-NEXT: $vgpr55 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $agpr0_96
     ; GFX908-PEI-NEXT: S_ENDPGM 0
     ;
     ; GFX908-PEI-MACHINECP-LABEL: name: agpr-spill-to-vgpr-to-stack-machine-cp
@@ -93,16 +93,16 @@ body: |
     ; GFX908-PEI-MACHINECP-NEXT: renamable $agpr2 = COPY renamable $vgpr1, implicit $exec
     ; GFX908-PEI-MACHINECP-NEXT: $vgpr2_256 = IMPLICIT_DEF
     ; GFX908-PEI-MACHINECP-NEXT: $vgpr10_256 = IMPLICIT_DEF
-    ; GFX908-PEI-MACHINECP-NEXT: $vgpr40 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2, implicit $agpr0_agpr1_agpr2
-    ; GFX908-PEI-MACHINECP-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr40, $sgpr0_128, 0, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GFX908-PEI-MACHINECP-NEXT: $vgpr40 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $agpr0_96, implicit $agpr0_96
+    ; GFX908-PEI-MACHINECP-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr40, $sgpr0_128, 0, 0, 0, 0, implicit $exec, implicit $agpr0_96 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; GFX908-PEI-MACHINECP-NEXT: $vgpr40 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec
     ; GFX908-PEI-MACHINECP-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr40, $sgpr0_128, 0, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; GFX908-PEI-MACHINECP-NEXT: $vgpr55 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2
+    ; GFX908-PEI-MACHINECP-NEXT: $vgpr55 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $agpr0_96
     ; GFX908-PEI-MACHINECP-NEXT: S_ENDPGM 0
     renamable $agpr0 = COPY renamable $vgpr0, implicit $exec
     renamable $agpr2 = COPY renamable $vgpr1, implicit $exec
     $vgpr2_256 = IMPLICIT_DEF
     $vgpr10_256 = IMPLICIT_DEF
-    SI_SPILL_AV96_SAVE $agpr0_agpr1_agpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s96) into %stack.0, align 4, addrspace 5)
+    SI_SPILL_AV96_SAVE $agpr0_96, %stack.0, $sgpr32, 0, implicit $exec :: (store (s96) into %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 ...

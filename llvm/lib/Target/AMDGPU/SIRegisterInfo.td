@@ -373,6 +373,9 @@ foreach Index = 0...255 in {
                    [!add(Index, 3072), !add(Index, 2048)]>;
 }
 
+defvar AGPRMembers = !foreach(i, !range(0, 256), !cast<Register>("AGPR"#i));
+def : RegisterSequence<AGPRMembers>;
+
 //===----------------------------------------------------------------------===//
 //  Groupings using register classes and tuples
 //===----------------------------------------------------------------------===//

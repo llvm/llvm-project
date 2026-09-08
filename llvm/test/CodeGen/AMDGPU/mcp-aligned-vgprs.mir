@@ -14,15 +14,15 @@ body:             |
 ...
 
 # GCN-LABEL: name: mcp_aligned_agprs
-# GCN: $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2_SADDR $sgpr0_64, $vgpr10
-# GCN: $agpr3_agpr4 = COPY killed renamable $agpr0_agpr1
+# GCN: $agpr0_64 = GLOBAL_LOAD_DWORDX2_SADDR $sgpr0_64, $vgpr10
+# GCN: $agpr3_64 = COPY killed renamable $agpr0_64
 ---
 name:            mcp_aligned_agprs
 body:             |
   bb.0.entry:
 
-    renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2_SADDR $sgpr0_64, $vgpr10, 0, 0, implicit $exec
-    renamable $agpr3_agpr4 = COPY killed renamable $agpr0_agpr1
-    S_ENDPGM 0, implicit $agpr3_agpr4
+    renamable $agpr0_64 = GLOBAL_LOAD_DWORDX2_SADDR $sgpr0_64, $vgpr10, 0, 0, implicit $exec
+    renamable $agpr3_64 = COPY killed renamable $agpr0_64
+    S_ENDPGM 0, implicit $agpr3_64
 
 ...

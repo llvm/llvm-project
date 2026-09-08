@@ -500,7 +500,7 @@ define void @flat_atomic_cmpxchg_i64_ret_av_av__a(ptr %ptr) #0 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ; implicit-def: $agpr0_agpr1
+; CHECK-NEXT:    ; implicit-def: $agpr0_64
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; CHECK-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB14_2
@@ -566,7 +566,7 @@ define void @flat_atomic_cmpxchg_i64_ret_a_a__a(ptr %ptr) #0 {
 ; CHECK-NEXT:    v_accvgpr_read_b32 v2, a4
 ; CHECK-NEXT:    v_accvgpr_read_b32 v3, a5
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
-; CHECK-NEXT:    ; implicit-def: $agpr0_agpr1
+; CHECK-NEXT:    ; implicit-def: $agpr0_64
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; CHECK-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB15_2
@@ -823,7 +823,7 @@ define void @flat_atomic_cmpxchg_i64_ret_v_v__a(ptr %ptr) #0 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ; implicit-def: $agpr0_agpr1
+; CHECK-NEXT:    ; implicit-def: $agpr0_64
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; CHECK-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB19_2

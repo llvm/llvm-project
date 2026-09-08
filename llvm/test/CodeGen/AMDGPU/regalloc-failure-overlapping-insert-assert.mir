@@ -46,7 +46,7 @@ body:             |
     INLINEASM &"; def $0", sideeffect attdialect, regdef:AGPR_32, implicit-def $agpr0
     %14:vgpr_32 = COPY killed $agpr0
     INLINEASM &"; def $0 $1 $2 $3 $4", sideeffect attdialect, regdef:VReg_512, def %7, regdef:VReg_256, def %8, regdef:VReg_128, def %9, regdef:VReg_96, def %10, regdef:VReg_96, def %11
-    INLINEASM &"; clobber", sideeffect attdialect, clobber, implicit-def dead early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, clobber, implicit-def dead early-clobber $vgpr0_1024
+    INLINEASM &"; clobber", sideeffect attdialect, clobber, implicit-def dead early-clobber $agpr0_1024, clobber, implicit-def dead early-clobber $vgpr0_1024
     INLINEASM &"; use $0", sideeffect attdialect, reguse:VReg_512, %7
     INLINEASM &"; use $0", sideeffect attdialect, reguse:VReg_256, %8
     INLINEASM &"; use $0", sideeffect attdialect, reguse:VReg_128, %9

@@ -28,7 +28,7 @@ body:             |
     ; GFX950-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX950-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX950-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr16 = nofpexcept V_MUL_F32_e64 0, killed $sgpr30, 0, killed $vgpr4, 0, 0, implicit $mode, implicit $exec
@@ -50,7 +50,7 @@ body:             |
     ; GFX942-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX942-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX942-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX942-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr16 = nofpexcept V_MUL_F32_e64 0, killed $sgpr30, 0, killed $vgpr4, 0, 0, implicit $mode, implicit $exec
@@ -72,7 +72,7 @@ body:             |
     ; GFX90A-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX90A-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX90A-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX90A-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX90A-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX90A-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX90A-NEXT: renamable $vgpr16_64 = nofpexcept V_PK_MUL_F32 8, killed $sgpr30_64, 8, killed $vgpr4_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -89,7 +89,7 @@ body:             |
     $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     renamable $vgpr16_64 = nofpexcept V_PK_MUL_F32 8, killed $sgpr30_64, 8, killed $vgpr4_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -121,7 +121,7 @@ body:             |
     ; GFX950-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX950-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX950-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr16 = nofpexcept V_MUL_F32_e64 0, killed $sgpr30, 0, $vgpr5, 0, 0, implicit $mode, implicit $exec
@@ -143,7 +143,7 @@ body:             |
     ; GFX942-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX942-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX942-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX942-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr16 = nofpexcept V_MUL_F32_e64 0, killed $sgpr30, 0, $vgpr5, 0, 0, implicit $mode, implicit $exec
@@ -165,7 +165,7 @@ body:             |
     ; GFX90A-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX90A-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX90A-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX90A-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX90A-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX90A-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX90A-NEXT: renamable $vgpr16_64 = nofpexcept V_PK_MUL_F32 8, killed $sgpr30_64, 12, killed $vgpr4_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -182,7 +182,7 @@ body:             |
     $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     renamable $vgpr16_64 = nofpexcept V_PK_MUL_F32 8, killed $sgpr30_64, 12, killed $vgpr4_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -214,7 +214,7 @@ body:             |
     ; GFX950-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX950-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX950-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr16 = nofpexcept V_MUL_F32_e64 0, $sgpr30, 0, killed $vgpr4, 0, 0, implicit $mode, implicit $exec
@@ -236,7 +236,7 @@ body:             |
     ; GFX942-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX942-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX942-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX942-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr16 = nofpexcept V_MUL_F32_e64 0, $sgpr30, 0, killed $vgpr4, 0, 0, implicit $mode, implicit $exec
@@ -258,7 +258,7 @@ body:             |
     ; GFX90A-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX90A-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX90A-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX90A-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX90A-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX90A-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX90A-NEXT: renamable $vgpr16_64 = nofpexcept V_PK_MUL_F32 0, killed $sgpr30_64, 8, killed $vgpr4_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -275,7 +275,7 @@ body:             |
     $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     renamable $vgpr16_64 = nofpexcept V_PK_MUL_F32 0, killed $sgpr30_64, 8, killed $vgpr4_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -303,7 +303,7 @@ body:             |
     ; GFX950-NEXT: renamable $sgpr0_512 = S_LOAD_DWORDX16_IMM killed renamable $sgpr40_64, 0, 0
     ; GFX950-NEXT: early-clobber renamable $sgpr16_512 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_64, 0, 0
     ; GFX950-NEXT: renamable $vgpr16 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX950-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 $sgpr15, implicit $exec, implicit-def $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, implicit $sgpr0_512
+    ; GFX950-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 $sgpr15, implicit $exec, implicit-def $agpr16_512, implicit $sgpr0_512
     ; GFX950-NEXT: $agpr30 = V_ACCVGPR_WRITE_B32_e64 $sgpr14, implicit $exec, implicit $sgpr0_512
     ; GFX950-NEXT: $agpr29 = V_ACCVGPR_WRITE_B32_e64 $sgpr13, implicit $exec, implicit $sgpr0_512
     ; GFX950-NEXT: $agpr28 = V_ACCVGPR_WRITE_B32_e64 $sgpr12, implicit $exec, implicit $sgpr0_512
@@ -321,7 +321,7 @@ body:             |
     ; GFX950-NEXT: $agpr16 = V_ACCVGPR_WRITE_B32_e64 $sgpr0, implicit $exec, implicit $sgpr0_512, implicit $exec
     ; GFX950-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr18, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr19, implicit $exec, implicit $exec
-    ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_BF8_BF8_e64 killed $vgpr4_64, killed $vgpr2_64, killed $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 1, 2, 3, implicit $mode, implicit $exec, implicit $mode, implicit $exec
+    ; GFX950-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_BF8_BF8_e64 killed $vgpr4_64, killed $vgpr2_64, killed $agpr16_512, 1, 2, 3, implicit $mode, implicit $exec, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr2 = nofpexcept V_ADD_F32_e64 0, killed $sgpr2, 0, $vgpr0, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr3 = nofpexcept V_ADD_F32_e64 0, killed $sgpr3, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr6 = nofpexcept V_ADD_F32_e64 0, killed $sgpr6, 0, $vgpr0, 0, 0, implicit $mode, implicit $exec
@@ -342,7 +342,7 @@ body:             |
     ; GFX942-NEXT: renamable $sgpr0_512 = S_LOAD_DWORDX16_IMM killed renamable $sgpr40_64, 0, 0
     ; GFX942-NEXT: early-clobber renamable $sgpr16_512 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_64, 0, 0
     ; GFX942-NEXT: renamable $vgpr16 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX942-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 $sgpr15, implicit $exec, implicit-def $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, implicit $sgpr0_512
+    ; GFX942-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 $sgpr15, implicit $exec, implicit-def $agpr16_512, implicit $sgpr0_512
     ; GFX942-NEXT: $agpr30 = V_ACCVGPR_WRITE_B32_e64 $sgpr14, implicit $exec, implicit $sgpr0_512
     ; GFX942-NEXT: $agpr29 = V_ACCVGPR_WRITE_B32_e64 $sgpr13, implicit $exec, implicit $sgpr0_512
     ; GFX942-NEXT: $agpr28 = V_ACCVGPR_WRITE_B32_e64 $sgpr12, implicit $exec, implicit $sgpr0_512
@@ -360,7 +360,7 @@ body:             |
     ; GFX942-NEXT: $agpr16 = V_ACCVGPR_WRITE_B32_e64 $sgpr0, implicit $exec, implicit $sgpr0_512, implicit $exec
     ; GFX942-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr18, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr19, implicit $exec, implicit $exec
-    ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_BF8_BF8_e64 killed $vgpr4_64, killed $vgpr2_64, killed $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 1, 2, 3, implicit $mode, implicit $exec, implicit $mode, implicit $exec
+    ; GFX942-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_BF8_BF8_e64 killed $vgpr4_64, killed $vgpr2_64, killed $agpr16_512, 1, 2, 3, implicit $mode, implicit $exec, implicit $mode, implicit $exec
     ; GFX942-NEXT: $vgpr2 = nofpexcept V_ADD_F32_e64 0, killed $sgpr2, 0, $vgpr0, 0, 0, implicit $mode, implicit $exec
     ; GFX942-NEXT: $vgpr3 = nofpexcept V_ADD_F32_e64 0, killed $sgpr3, 0, $vgpr1, 0, 0, implicit $mode, implicit $exec
     ; GFX942-NEXT: $vgpr6 = nofpexcept V_ADD_F32_e64 0, killed $sgpr6, 0, $vgpr0, 0, 0, implicit $mode, implicit $exec
@@ -381,7 +381,7 @@ body:             |
     ; GFX90A-NEXT: renamable $sgpr0_512 = S_LOAD_DWORDX16_IMM killed renamable $sgpr40_64, 0, 0
     ; GFX90A-NEXT: early-clobber renamable $sgpr16_512 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_64, 0, 0
     ; GFX90A-NEXT: renamable $vgpr16 = V_MOV_B32_e32 0, implicit $exec
-    ; GFX90A-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 $sgpr15, implicit $exec, implicit-def $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, implicit $sgpr0_512
+    ; GFX90A-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 $sgpr15, implicit $exec, implicit-def $agpr16_512, implicit $sgpr0_512
     ; GFX90A-NEXT: $agpr30 = V_ACCVGPR_WRITE_B32_e64 $sgpr14, implicit $exec, implicit $sgpr0_512
     ; GFX90A-NEXT: $agpr29 = V_ACCVGPR_WRITE_B32_e64 $sgpr13, implicit $exec, implicit $sgpr0_512
     ; GFX90A-NEXT: $agpr28 = V_ACCVGPR_WRITE_B32_e64 $sgpr12, implicit $exec, implicit $sgpr0_512
@@ -399,7 +399,7 @@ body:             |
     ; GFX90A-NEXT: $agpr16 = V_ACCVGPR_WRITE_B32_e64 $sgpr0, implicit $exec, implicit $sgpr0_512, implicit $exec
     ; GFX90A-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr18, implicit $exec, implicit $exec
     ; GFX90A-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr19, implicit $exec, implicit $exec
-    ; GFX90A-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_BF8_BF8_e64 killed $vgpr4_64, killed $vgpr2_64, killed $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 1, 2, 3, implicit $mode, implicit $exec, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_BF8_BF8_e64 killed $vgpr4_64, killed $vgpr2_64, killed $agpr16_512, 1, 2, 3, implicit $mode, implicit $exec, implicit $mode, implicit $exec
     ; GFX90A-NEXT: renamable $vgpr2_64 = nofpexcept V_PK_ADD_F32 8, killed $sgpr2_64, 8, $vgpr0_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX90A-NEXT: renamable $vgpr6_64 = nofpexcept V_PK_ADD_F32 8, killed $sgpr6_64, 8, $vgpr0_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX90A-NEXT: renamable $vgpr4_64 = nofpexcept V_PK_ADD_F32 8, killed $sgpr4_64, 8, $vgpr0_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -413,7 +413,7 @@ body:             |
     renamable $sgpr0_512 = S_LOAD_DWORDX16_IMM killed renamable $sgpr40_64, 0, 0
     early-clobber renamable $sgpr16_512 = S_LOAD_DWORDX16_IMM_ec killed renamable $sgpr42_64, 0, 0
     renamable $vgpr16 = V_MOV_B32_e32 0, implicit $exec
-    $agpr31 = V_ACCVGPR_WRITE_B32_e64 $sgpr15, implicit $exec, implicit-def $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, implicit $sgpr0_512
+    $agpr31 = V_ACCVGPR_WRITE_B32_e64 $sgpr15, implicit $exec, implicit-def $agpr16_512, implicit $sgpr0_512
     $agpr30 = V_ACCVGPR_WRITE_B32_e64 $sgpr14, implicit $exec, implicit $sgpr0_512
     $agpr29 = V_ACCVGPR_WRITE_B32_e64 $sgpr13, implicit $exec, implicit $sgpr0_512
     $agpr28 = V_ACCVGPR_WRITE_B32_e64 $sgpr12, implicit $exec, implicit $sgpr0_512
@@ -431,7 +431,7 @@ body:             |
     $agpr16 = V_ACCVGPR_WRITE_B32_e64 $sgpr0, implicit $exec, implicit $sgpr0_512, implicit $exec
     $vgpr0 = V_MOV_B32_e32 killed $sgpr18, implicit $exec, implicit $exec
     $vgpr1 = V_MOV_B32_e32 killed $sgpr19, implicit $exec, implicit $exec
-    early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_BF8_BF8_e64 killed $vgpr4_64, killed $vgpr2_64, killed $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 1, 2, 3, implicit $mode, implicit $exec, implicit $mode, implicit $exec
+    early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_BF8_BF8_e64 killed $vgpr4_64, killed $vgpr2_64, killed $agpr16_512, 1, 2, 3, implicit $mode, implicit $exec, implicit $mode, implicit $exec
     renamable $vgpr2_64 = nofpexcept V_PK_ADD_F32 8, killed $sgpr2_64, 8, $vgpr0_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     renamable $vgpr6_64 = nofpexcept V_PK_ADD_F32 8, killed $sgpr6_64, 8, $vgpr0_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     renamable $vgpr4_64 = nofpexcept V_PK_ADD_F32 8, killed $sgpr4_64, 8, $vgpr0_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -462,7 +462,7 @@ body:             |
     ; GFX950-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX950-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX950-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr16 = nofpexcept V_FMA_F32_e64 0, $sgpr30, 0, killed $vgpr4, 0, $vgpr4, 0, 0, implicit $mode, implicit $exec
@@ -482,7 +482,7 @@ body:             |
     ; GFX942-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX942-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX942-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX942-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr16 = nofpexcept V_FMA_F32_e64 0, $sgpr30, 0, killed $vgpr4, 0, $vgpr4, 0, 0, implicit $mode, implicit $exec
@@ -502,7 +502,7 @@ body:             |
     ; GFX90A-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX90A-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX90A-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX90A-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX90A-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX90A-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX90A-NEXT: renamable $vgpr16_64 = nofpexcept V_PK_FMA_F32 0, killed $sgpr30_64, 8, killed $vgpr4_64, 8, $vgpr4_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -517,7 +517,7 @@ body:             |
     $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     renamable $vgpr16_64 = nofpexcept V_PK_FMA_F32 0, killed $sgpr30_64, 8, killed $vgpr4_64, 8, $vgpr4_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -547,7 +547,7 @@ body:             |
     ; GFX950-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX950-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX950-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr4 = nofpexcept V_MUL_F32_e64 0, $sgpr30, 0, $vgpr5, 0, 0, implicit $mode, implicit $exec
@@ -568,7 +568,7 @@ body:             |
     ; GFX942-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX942-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX942-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX942-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr4 = nofpexcept V_MUL_F32_e64 0, $sgpr30, 0, $vgpr5, 0, 0, implicit $mode, implicit $exec
@@ -589,7 +589,7 @@ body:             |
     ; GFX90A-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX90A-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX90A-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX90A-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX90A-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX90A-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX90A-NEXT: renamable $vgpr4_64 = nofpexcept V_PK_MUL_F32 8, $sgpr30_64, 12, $vgpr4_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -605,7 +605,7 @@ body:             |
     $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     renamable $vgpr4_64 = nofpexcept V_PK_MUL_F32 8, $sgpr30_64, 12, $vgpr4_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -636,7 +636,7 @@ body:             |
     ; GFX950-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX950-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX950-NEXT: $vgpr6_64 = V_MOV_B64_e32 $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr4 = V_MOV_B32_dpp $vgpr4, $vgpr4, 228, 15, 15, -1, implicit $exec
@@ -659,7 +659,7 @@ body:             |
     ; GFX942-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX942-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX942-NEXT: $vgpr6_64 = V_MOV_B64_e32 $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX942-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr4 = V_MOV_B32_dpp $vgpr4, $vgpr4, 228, 15, 15, -1, implicit $exec
@@ -682,7 +682,7 @@ body:             |
     ; GFX90A-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX90A-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX90A-NEXT: $vgpr6_64 = V_MOV_B64_e32 $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX90A-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX90A-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX90A-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX90A-NEXT: $vgpr4 = V_MOV_B32_dpp $vgpr4, $vgpr4, 228, 15, 15, -1, implicit $exec
@@ -701,7 +701,7 @@ body:             |
     $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     $vgpr6_64 = V_MOV_B64_e32 $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     $vgpr4 = V_MOV_B32_dpp $vgpr4, $vgpr4, 228, 15, 15, -1, implicit $exec
@@ -735,7 +735,7 @@ body:             |
     ; GFX950-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX950-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX950-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr4 = V_MOV_B32_e32 $sgpr14, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr5 = V_MOV_B32_e32 $sgpr15, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr6 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
@@ -757,7 +757,7 @@ body:             |
     ; GFX942-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX942-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX942-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX942-NEXT: $vgpr4 = V_MOV_B32_e32 $sgpr14, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr5 = V_MOV_B32_e32 $sgpr15, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr6 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
@@ -779,7 +779,7 @@ body:             |
     ; GFX90A-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX90A-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX90A-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX90A-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX90A-NEXT: $vgpr4 = V_MOV_B32_e32 $sgpr14, implicit $exec, implicit $exec
     ; GFX90A-NEXT: $vgpr5 = V_MOV_B32_e32 $sgpr15, implicit $exec, implicit $exec
     ; GFX90A-NEXT: $vgpr6 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
@@ -796,7 +796,7 @@ body:             |
     $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr4 = V_MOV_B32_e32 $sgpr14, implicit $exec, implicit $exec
     $vgpr5 = V_MOV_B32_e32 $sgpr15, implicit $exec, implicit $exec
     $vgpr6 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
@@ -828,7 +828,7 @@ body:             |
     ; GFX950-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX950-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX950-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec
     ; GFX950-NEXT: $vgpr5 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec
     ; GFX950-NEXT: $vgpr6 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec
@@ -849,7 +849,7 @@ body:             |
     ; GFX942-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX942-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX942-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX942-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec
     ; GFX942-NEXT: $vgpr5 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec
     ; GFX942-NEXT: $vgpr6 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec
@@ -870,7 +870,7 @@ body:             |
     ; GFX90A-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX90A-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX90A-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX90A-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX90A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec
     ; GFX90A-NEXT: $vgpr5 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec
     ; GFX90A-NEXT: $vgpr6 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec
@@ -887,7 +887,7 @@ body:             |
     $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr4 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec
     $vgpr5 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec
     $vgpr6 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec
@@ -919,7 +919,7 @@ body:             |
     ; GFX950-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX950-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX950-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr4 = V_MOV_B32_e32 $sgpr14, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr5 = V_MOV_B32_e32 $sgpr15, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr6 = V_ACCVGPR_READ_B32_e64 $agpr3, implicit $exec
@@ -939,7 +939,7 @@ body:             |
     ; GFX942-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX942-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX942-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX942-NEXT: $vgpr4 = V_MOV_B32_e32 $sgpr14, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr5 = V_MOV_B32_e32 $sgpr15, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr6 = V_ACCVGPR_READ_B32_e64 $agpr3, implicit $exec
@@ -959,7 +959,7 @@ body:             |
     ; GFX90A-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX90A-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX90A-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX90A-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX90A-NEXT: $vgpr4 = V_MOV_B32_e32 $sgpr14, implicit $exec, implicit $exec
     ; GFX90A-NEXT: $vgpr5 = V_MOV_B32_e32 $sgpr15, implicit $exec, implicit $exec
     ; GFX90A-NEXT: $vgpr6 = V_ACCVGPR_READ_B32_e64 $agpr3, implicit $exec
@@ -975,7 +975,7 @@ body:             |
     $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr4 = V_MOV_B32_e32 $sgpr14, implicit $exec, implicit $exec
     $vgpr5 = V_MOV_B32_e32 $sgpr15, implicit $exec, implicit $exec
     $vgpr6 = V_ACCVGPR_READ_B32_e64 $agpr3, implicit $exec
@@ -1008,7 +1008,7 @@ body:             |
     ; GFX950-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX950-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX950-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr16 = nofpexcept V_MUL_F32_e64 0, 1065353216, 0, killed $vgpr4, 0, 0, implicit $mode, implicit $exec
@@ -1030,7 +1030,7 @@ body:             |
     ; GFX942-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX942-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX942-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX942-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr16 = nofpexcept V_MUL_F32_e64 0, 1065353216, 0, killed $vgpr4, 0, 0, implicit $mode, implicit $exec
@@ -1052,7 +1052,7 @@ body:             |
     ; GFX90A-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX90A-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX90A-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX90A-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX90A-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX90A-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX90A-NEXT: renamable $vgpr16_64 = nofpexcept V_PK_MUL_F32 8, 1065353216, 8, killed $vgpr4_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -1069,7 +1069,7 @@ body:             |
     $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     renamable $vgpr16_64 = nofpexcept V_PK_MUL_F32 8, 1065353216, 8, killed $vgpr4_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -1101,7 +1101,7 @@ body:             |
     ; GFX950-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX950-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX950-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX950-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX950-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX950-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX950-NEXT: $vgpr16 = nofpexcept V_MUL_F32_e64 0, killed $sgpr30, 1, killed $vgpr4, 0, 0, implicit $mode, implicit $exec
@@ -1123,7 +1123,7 @@ body:             |
     ; GFX942-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX942-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX942-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX942-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX942-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX942-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX942-NEXT: $vgpr16 = nofpexcept V_MUL_F32_e64 0, killed $sgpr30, 1, killed $vgpr4, 0, 0, implicit $mode, implicit $exec
@@ -1145,7 +1145,7 @@ body:             |
     ; GFX90A-NEXT: $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     ; GFX90A-NEXT: $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     ; GFX90A-NEXT: $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    ; GFX90A-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX90A-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX90A-NEXT: $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     ; GFX90A-NEXT: $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     ; GFX90A-NEXT: renamable $vgpr16_64 = nofpexcept V_PK_MUL_F32 8, killed $sgpr30_64, 11, killed $vgpr4_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -1162,7 +1162,7 @@ body:             |
     $vgpr2_64 = V_MOV_B64_e32 killed $sgpr46_64, implicit $exec, implicit $sgpr44_128, implicit $exec
     $vgpr4_64 = V_MOV_B64_e32 $sgpr48_64, implicit $exec, implicit-def $vgpr4_128, implicit $sgpr48_128
     $vgpr6_64 = V_MOV_B64_e32 killed $sgpr50_64, implicit $exec, implicit $sgpr48_128, implicit $exec
-    renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
+    renamable $agpr0_512 = V_MFMA_F32_32X32X16_F16_e64 killed $vgpr0_128, killed $vgpr4_128, 0, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr4 = V_MOV_B32_e32 killed $sgpr14, implicit $exec, implicit $exec
     $vgpr5 = V_MOV_B32_e32 killed $sgpr15, implicit $exec, implicit $exec
     renamable $vgpr16_64 = nofpexcept V_PK_MUL_F32 8, killed $sgpr30_64, 11, killed $vgpr4_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec

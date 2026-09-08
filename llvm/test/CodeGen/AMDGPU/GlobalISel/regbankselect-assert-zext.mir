@@ -154,17 +154,17 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $agpr0_agpr1
+    liveins: $agpr0_64
 
     ; CHECK-LABEL: name: assert_zext_agpr_64
-    ; CHECK: liveins: $agpr0_agpr1
+    ; CHECK: liveins: $agpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:areg_64(s64) = COPY $agpr0_agpr1
+    ; CHECK-NEXT: %copy:areg_64(s64) = COPY $agpr0_64
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY %copy(s64)
     ; CHECK-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:vgpr(s64) = G_ASSERT_ZEXT [[COPY]], 4
     ; CHECK-NEXT: %assert_zext:areg_64(s64) = COPY [[ASSERT_ZEXT]](s64)
     ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_zext(s64)
-    %copy:areg_64(s64) = COPY $agpr0_agpr1
+    %copy:areg_64(s64) = COPY $agpr0_64
     %assert_zext:areg_64(s64) = G_ASSERT_ZEXT %copy, 4
     S_ENDPGM 0, implicit %assert_zext
 ...

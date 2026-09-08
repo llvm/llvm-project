@@ -12,7 +12,7 @@ body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
     $vgpr1 = V_MOV_B32_e32 1, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: valu_write_agpr_sgemm_mfma_read
 # GCN:      V_ACCVGPR_WRITE_B32_e64
@@ -23,7 +23,7 @@ body:             |
   bb.0:
     $vgpr0 = IMPLICIT_DEF
     $agpr4 = V_ACCVGPR_WRITE_B32_e64 1, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $agpr4, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_4X4X1F32_e64 $agpr4, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: valu_write_vgpr_dgemm_mfma_read
 # GCN:      V_MOV_B32
@@ -45,7 +45,7 @@ name:            valu_write_vgpr_smfmac_read
 body:             |
   bb.0:
     $vgpr32 = V_MOV_B32_e32 1, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_agpr1_agpr2_agpr3, implicit $mode, implicit $exec
+    $agpr0_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_128, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: accmov_write_agpr_sgemm_mfma_read
 # GCN:      V_ACCVGPR_MOV_B32
@@ -56,7 +56,7 @@ body:             |
   bb.0:
     $vgpr0 = IMPLICIT_DEF
     $agpr4 = V_ACCVGPR_MOV_B32 $agpr5, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $agpr4, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_4X4X1F32_e64 $agpr4, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: nonxdl_sgemm4x4_mfma_write_agpr_mfma_read_same_agpr_as_srcc
 # GCN:      V_MFMA
@@ -65,8 +65,8 @@ body:             |
 name:            nonxdl_sgemm4x4_mfma_write_agpr_mfma_read_same_agpr_as_srcc
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: nonxdl_sgemm4x4_mfma_write_vgpr_mfma_read_same_vgpr_as_srcc
 # GCN:      V_MFMA
@@ -94,8 +94,8 @@ body:             |
 name:            nonxdl_sgemm4x4_mfma_write_agpr_smfmac_read_same_agpr_as_srcc
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr4, $vgpr5, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_agpr1_agpr2_agpr3, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_4X4X1F32_e64 $vgpr4, $vgpr5, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_128, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_vgpr_mfma_read_same_vgpr_as_srcc
 # GCN:      V_MFMA
@@ -132,8 +132,8 @@ body:             |
 name:            xdl_sgemm16x16_mfma_write_vgpr_mfma_read_same_vgpr_as_srcc
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_16X16X32I8_e64 $vgpr0_64, $vgpr2_64, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_16X16X32I8_e64 $vgpr0_64, $vgpr2_64, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_I32_16X16X32I8_e64 $vgpr0_64, $vgpr2_64, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_I32_16X16X32I8_e64 $vgpr0_64, $vgpr2_64, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: smfmac16x16_mfma_write_vgpr_mfma_read_same_vgpr_as_srcc
 # GCN:      V_SMFMAC
@@ -141,8 +141,8 @@ body:             |
 name:            smfmac16x16_mfma_write_vgpr_mfma_read_same_vgpr_as_srcc
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_agpr1_agpr2_agpr3, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_agpr1_agpr2_agpr3, implicit $mode, implicit $exec
+    $agpr0_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_128, implicit $mode, implicit $exec
+    $agpr0_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_128, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: sgemm4x4_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_MFMA
@@ -152,8 +152,8 @@ body:             |
 name:            sgemm4x4_mfma_write_agpr_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5 = V_MFMA_I32_4X4X4I8_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_4X4X4I8_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_128 = V_MFMA_I32_4X4X4I8_e64 $vgpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_I32_4X4X4I8_e64 $vgpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: sgemm4x4_mfma_write_vgpr_mfma_read_overlap
 # GCN:      V_MFMA
@@ -173,8 +173,8 @@ body:             |
 name:            sgemm4x4_mfma_write_agpr_smfmac_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5 = V_MFMA_I32_4X4X4I8_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_agpr1_agpr2_agpr3, implicit $mode, implicit $exec
+    $agpr2_128 = V_MFMA_I32_4X4X4I8_e64 $vgpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_128, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm16x16_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_MFMA
@@ -184,8 +184,8 @@ body:             |
 name:            xdl_sgemm16x16_mfma_write_agpr_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17 = V_MFMA_I32_16X16X4I8_e64 $vgpr26, $vgpr27, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr26, $vgpr27, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_512 = V_MFMA_I32_16X16X4I8_e64 $vgpr26, $vgpr27, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_512 = V_MFMA_F32_16X16X1F32_e64 $vgpr26, $vgpr27, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm16x16_mfma_write_vgpr_mfma_read_overlap
 # GCN:      V_MFMA
@@ -204,8 +204,8 @@ body:             |
 name:            nonxdl_sgemm16x16_mfma_write_agpr_xdl_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17 = V_MFMA_F32_16X16X1F32_e64 $vgpr26, $vgpr27, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_I32_16X16X4I8_e64 $vgpr26, $vgpr27, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_512 = V_MFMA_F32_16X16X1F32_e64 $vgpr26, $vgpr27, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_512 = V_MFMA_I32_16X16X4I8_e64 $vgpr26, $vgpr27, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: nonxdl_sgemm16x16_mfma_write_agpr_nonxdl_mfma_read_overlap
 # GCN:      V_MFMA
@@ -214,8 +214,8 @@ body:             |
 name:            nonxdl_sgemm16x16_mfma_write_agpr_nonxdl_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17 = V_MFMA_F32_16X16X1F32_e64 $vgpr26, $vgpr27, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr26, $vgpr27, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_512 = V_MFMA_F32_16X16X1F32_e64 $vgpr26, $vgpr27, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_512 = V_MFMA_F32_16X16X1F32_e64 $vgpr26, $vgpr27, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm16x16_mfma_write_agpr_smfmac_read_overlap
 # GCN:      V_MFMA
@@ -225,8 +225,8 @@ body:             |
 name:            xdl_sgemm16x16_mfma_write_agpr_smfmac_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17 = V_MFMA_I32_16X16X4I8_e64 $vgpr26, $vgpr27, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_agpr1_agpr2_agpr3, implicit $mode, implicit $exec
+    $agpr2_512 = V_MFMA_I32_16X16X4I8_e64 $vgpr26, $vgpr27, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_128, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm32x32_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_MFMA
@@ -237,8 +237,8 @@ body:             |
 name:            xdl_sgemm32x32_mfma_write_agpr_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31_agpr32_agpr33 = V_MFMA_F32_32X32X4F16_e64 $vgpr26_64, $vgpr28_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr26, $vgpr27, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_1024 = V_MFMA_F32_32X32X4F16_e64 $vgpr26_64, $vgpr28_64, $agpr0_1024, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_512 = V_MFMA_F32_32X32X2F32_e64 $vgpr26, $vgpr27, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm32x32_mfma_write_vgpr_mfma_read_overlap
 # GCN:      V_MFMA
@@ -258,8 +258,8 @@ body:             |
 name:            nonxdl_sgemm32x32_mfma_write_agpr_xdl_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31_agpr32_agpr33 = V_MFMA_F32_32X32X1F32_e64 $vgpr26, $vgpr28, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_4X4X4I8_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_1024 = V_MFMA_F32_32X32X1F32_e64 $vgpr26, $vgpr28, $agpr0_1024, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_I32_4X4X4I8_e64 $vgpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: nonxdl_sgemm32x32_mfma_write_agpr_nonxdl_mfma_read_overlap
 # GCN:      V_MFMA
@@ -268,8 +268,8 @@ body:             |
 name:            nonxdl_sgemm32x32_mfma_write_agpr_nonxdl_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31_agpr32_agpr33 = V_MFMA_F32_32X32X1F32_e64 $vgpr26, $vgpr28, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr26, $vgpr27, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_1024 = V_MFMA_F32_32X32X1F32_e64 $vgpr26, $vgpr28, $agpr0_1024, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_512 = V_MFMA_F32_32X32X2F32_e64 $vgpr26, $vgpr27, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm32x32_mfma_write_agpr_smfmac_read_overlap
 # GCN:      V_MFMA
@@ -280,8 +280,8 @@ body:             |
 name:            xdl_sgemm32x32_mfma_write_agpr_smfmac_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31_agpr32_agpr33 = V_MFMA_F32_32X32X4F16_e64 $vgpr26_64, $vgpr28_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_agpr1_agpr2_agpr3, implicit $mode, implicit $exec
+    $agpr2_1024 = V_MFMA_F32_32X32X4F16_e64 $vgpr26_64, $vgpr28_64, $agpr0_1024, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_128, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_vgpr_mfma_read_overlap
 # GCN:      V_MFMA
@@ -368,8 +368,8 @@ body:             |
 name:            xdl_sgemm16x16_mfma_write_agpr_mfma_read_partial
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_I32_16X16X4I8_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_512 = V_MFMA_I32_16X16X4I8_e64 $vgpr1, $vgpr0, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm16x16_mfma_write_vgpr_mfma_read_partial
 # GCN:      V_MFMA
@@ -389,8 +389,8 @@ body:             |
 name:            xdl_sgemm4x4_mfma_write_agpr_mfma_srca_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_4X4X4I8_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $agpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_I32_4X4X4I8_e64 $vgpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_4X4X1F32_e64 $agpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm16x16_mfma_write_agpr_mfma_srca_read_overlap
 # GCN:      V_MFMA
@@ -400,8 +400,8 @@ body:             |
 name:            xdl_sgemm16x16_mfma_write_agpr_mfma_srca_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_I32_16X16X4I8_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr20_agpr21_agpr22_agpr23 = V_MFMA_F32_4X4X1F32_e64 $agpr1, $vgpr0, $agpr20_agpr21_agpr22_agpr23, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_512 = V_MFMA_I32_16X16X4I8_e64 $vgpr1, $vgpr0, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr20_128 = V_MFMA_F32_4X4X1F32_e64 $agpr1, $vgpr0, $agpr20_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: nonxdl_sgemm16x16_mfma_write_agpr_mfma_srca_read_overlap
 # GCN:      V_MFMA
@@ -410,8 +410,8 @@ body:             |
 name:            nonxdl_sgemm16x16_mfma_write_agpr_mfma_srca_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr26, $vgpr27, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr20_agpr21_agpr22_agpr23 = V_MFMA_F32_4X4X1F32_e64 $agpr1, $vgpr0, $agpr20_agpr21_agpr22_agpr23, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_512 = V_MFMA_F32_16X16X1F32_e64 $vgpr26, $vgpr27, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr20_128 = V_MFMA_F32_4X4X1F32_e64 $agpr1, $vgpr0, $agpr20_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: smfmac32x32_write_agpr_mfma_srca_read_overlap
 # GCN:      V_SMFMAC
@@ -421,8 +421,8 @@ body:             |
 name:            smfmac32x32_write_agpr_mfma_srca_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_SMFMAC_I32_32X32X32_I8_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $mode, implicit $exec
-    $agpr20_agpr21_agpr22_agpr23 = V_MFMA_F32_4X4X1F32_e64 $agpr1, $vgpr0, $agpr20_agpr21_agpr22_agpr23, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_512 = V_SMFMAC_I32_32X32X32_I8_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_512, implicit $mode, implicit $exec
+    $agpr20_128 = V_MFMA_F32_4X4X1F32_e64 $agpr1, $vgpr0, $agpr20_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: smfmac32x32_write_agpr_smfmac_srcc_read_overlap
 # GCN:      V_SMFMAC
@@ -432,8 +432,8 @@ body:             |
 name:            smfmac32x32_write_agpr_smfmac_srcc_read_overlap
 body:             |
   bb.0:
-    $vgpr0_512 = V_SMFMAC_I32_32X32X32_I8_e64 $agpr0_agpr1, $agpr2_agpr3_agpr4_agpr5, $vgpr2, 0, 0, $vgpr0_512, implicit $mode, implicit $exec
-    $vgpr0_512 = V_SMFMAC_I32_32X32X32_I8_e64 $agpr0_agpr1, $agpr2_agpr3_agpr4_agpr5, $vgpr2, 0, 0, $vgpr0_512, implicit $mode, implicit $exec
+    $vgpr0_512 = V_SMFMAC_I32_32X32X32_I8_e64 $agpr0_64, $agpr2_128, $vgpr2, 0, 0, $vgpr0_512, implicit $mode, implicit $exec
+    $vgpr0_512 = V_SMFMAC_I32_32X32X32_I8_e64 $agpr0_64, $agpr2_128, $vgpr2, 0, 0, $vgpr0_512, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm32x32_mfma_write_agpr_mfma_srca_read_overlap
 # GCN:      V_MFMA
@@ -444,8 +444,8 @@ body:             |
 name:            xdl_sgemm32x32_mfma_write_agpr_mfma_srca_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = V_MFMA_F32_32X32X4F16_e64 $vgpr26_64, $vgpr28_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr20_agpr21_agpr22_agpr23 = V_MFMA_F32_4X4X1F32_e64 $agpr1, $vgpr0, $agpr20_agpr21_agpr22_agpr23, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_1024 = V_MFMA_F32_32X32X4F16_e64 $vgpr26_64, $vgpr28_64, $agpr0_1024, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr20_128 = V_MFMA_F32_4X4X1F32_e64 $agpr1, $vgpr0, $agpr20_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: nonxdl_sgemm32x32_mfma_write_agpr_mfma_srca_read_overlap
 # GCN:      V_MFMA
@@ -455,8 +455,8 @@ body:             |
 name:            nonxdl_sgemm32x32_mfma_write_agpr_mfma_srca_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = V_MFMA_F32_32X32X1F32_e64 $vgpr26, $vgpr28, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr120_agpr121_agpr122_agpr123 = V_MFMA_F32_4X4X1F32_e64 $agpr1, $vgpr0, $agpr120_agpr121_agpr122_agpr123, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_1024 = V_MFMA_F32_32X32X1F32_e64 $vgpr26, $vgpr28, $agpr0_1024, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr120_128 = V_MFMA_F32_4X4X1F32_e64 $agpr1, $vgpr0, $agpr120_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm4x4_mfma_write_vgpr_mfma_srca_read_overlap
 # GCN:      V_MFMA
@@ -466,7 +466,7 @@ name:            xdl_sgemm4x4_mfma_write_vgpr_mfma_srca_read_overlap
 body:             |
   bb.0:
     $vgpr0_128 = V_MFMA_I32_4X4X4I8_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_128, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_4X4X4I8_e64 $vgpr0, $agpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_I32_4X4X4I8_e64 $vgpr0, $agpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm4x4_mfma_write_vgpr_dmfma4x4_srca_read_overlap
 # GCN:      V_MFMA
@@ -496,7 +496,7 @@ name:            xdl_sgemm4x4_mfma_write_vgpr_smfmac_srca_read_overlap
 body:             |
   bb.0:
     $vgpr0_128 = V_MFMA_I32_4X4X4I8_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_128, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr12_128, $vgpr32, 0, 0, $agpr0_agpr1_agpr2_agpr3, implicit $mode, implicit $exec
+    $agpr0_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr12_128, $vgpr32, 0, 0, $agpr0_128, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm4x4_mfma_write_vgpr_mfma_srca_read_overlap
 # GCN:      V_MFMA
@@ -559,8 +559,8 @@ body:             |
 name:            xdl_sgemm4x4_mfma_write_agpr_mfma_srcb_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_4X4X4I8_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $agpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_I32_4X4X4I8_e64 $vgpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $agpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm4x4_mfma_write_vgpr_mfma_srcb_read_overlap
 # GCN:      V_MFMA
@@ -570,7 +570,7 @@ name:            xdl_sgemm4x4_mfma_write_vgpr_mfma_srcb_read_overlap
 body:             |
   bb.0:
     $vgpr0_128 = V_MFMA_I32_4X4X4I8_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_128, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $agpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_4X4X1F32_e64 $agpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm4x4_mfma_write_vgpr_mfma_srcb_read_overlap
 # GCN:      V_MFMA
@@ -590,7 +590,7 @@ name:            dgemm4x4_mfma_write_vgpr_smfmac_srcb_read_overlap
 body:             |
   bb.0:
     $vgpr2_64 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $vgpr0_64, $vgpr0_64, $vgpr0_64, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr10_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_agpr1_agpr2_agpr3, implicit $mode, implicit $exec
+    $agpr0_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr10_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_128, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm4x4_mfma_write_vgpr_smfmac_srcc_read_overlap
 # GCN:      V_MFMA
@@ -600,7 +600,7 @@ name:            dgemm4x4_mfma_write_vgpr_smfmac_srcc_read_overlap
 body:             |
   bb.0:
     $vgpr2_64 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $vgpr0_64, $vgpr0_64, $vgpr0_64, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr10_64, $vgpr12_128, $vgpr2, 0, 0, $agpr0_agpr1_agpr2_agpr3, implicit $mode, implicit $exec
+    $agpr0_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr10_64, $vgpr12_128, $vgpr2, 0, 0, $agpr0_128, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_vgpr_mfma_srcb_read_overlap
 # GCN:      V_MFMA
@@ -624,7 +624,7 @@ name:            dgemm16x16_mfma_write_vgpr_smfmac_srcb_read_overlap
 body:             |
   bb.0:
     $vgpr0_256 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $vgpr10_64, $vgpr10_64, $vgpr10_256, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr10_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_agpr1_agpr2_agpr3, implicit $mode, implicit $exec
+    $agpr0_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr10_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_128, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_vgpr_smfmac_srcc_read_overlap
 # GCN:      V_MFMA
@@ -637,7 +637,7 @@ name:            dgemm16x16_mfma_write_vgpr_smfmac_srcc_read_overlap
 body:             |
   bb.0:
     $vgpr0_256 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $vgpr10_64, $vgpr10_64, $vgpr10_256, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr10_64, $vgpr12_128, $vgpr2, 0, 0, $agpr0_agpr1_agpr2_agpr3, implicit $mode, implicit $exec
+    $agpr0_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr10_64, $vgpr12_128, $vgpr2, 0, 0, $agpr0_128, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm4x4_mfma_write_vgpr_smfmac_srcc_read_overlap
 # GCN:      V_MFMA
@@ -647,7 +647,7 @@ name:            xdl_sgemm4x4_mfma_write_vgpr_smfmac_srcc_read_overlap
 body:             |
   bb.0:
     $vgpr0_128 = V_MFMA_I32_4X4X4I8_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_128, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr10_64, $vgpr12_128, $vgpr1, 0, 0, $agpr0_agpr1_agpr2_agpr3, implicit $mode, implicit $exec
+    $agpr0_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr10_64, $vgpr12_128, $vgpr1, 0, 0, $agpr0_128, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_smfma4x4_write_vgpr_vm_read
 # GCN:      V_MFMA
@@ -719,7 +719,7 @@ body:             |
 name:            smfmac32x32_write_vgpr_flat_read
 body:             |
   bb.0:
-    $vgpr0_512 = V_SMFMAC_I32_32X32X32_I8_e64 $agpr0_agpr1, $agpr2_agpr3_agpr4_agpr5, $vgpr2, 0, 0, $vgpr0_512, implicit $mode, implicit $exec
+    $vgpr0_512 = V_SMFMAC_I32_32X32X32_I8_e64 $agpr0_64, $agpr2_128, $vgpr2, 0, 0, $vgpr0_512, implicit $mode, implicit $exec
     FLAT_STORE_DWORD $vgpr16_64, $vgpr1, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
 ...
 # GCN-LABEL: name: xdl_smfma32x32_write_vgpr_flat_read
@@ -731,7 +731,7 @@ body:             |
 name:            xdl_smfma32x32_write_vgpr_flat_read
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = V_MFMA_F32_32X32X4F16_e64 $vgpr26_64, $vgpr28_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_1024 = V_MFMA_F32_32X32X4F16_e64 $vgpr26_64, $vgpr28_64, $agpr0_1024, 0, 0, 0, implicit $mode, implicit $exec
     FLAT_STORE_DWORD $vgpr16_64, $agpr1, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
 ...
 # GCN-LABEL: name: dmfma4x4_write_vgpr_flat_read_overlap
@@ -1130,7 +1130,7 @@ body:             |
 name:            smfma16x16_read_srcc_vgpr_accv_write
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17 = V_MFMA_F32_16X16X1F32_e64 $agpr18, $agpr19, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_512 = V_MFMA_F32_16X16X1F32_e64 $agpr18, $agpr19, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
     $agpr1 = V_ACCVGPR_WRITE_B32_e64 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: sgemm_to_fma64
@@ -1139,7 +1139,7 @@ body:             |
 name:            sgemm_to_fma64
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr4_64 = V_FMA_F64_e64 0, $vgpr4_64, 0, $vgpr4_64, 0, $vgpr4_64, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm_to_fma64
@@ -1169,7 +1169,7 @@ body:             |
 name: flat_store_data_agpr_overwritten
 body: |
   bb.0:
-    FLAT_STORE_DWORDX4 $vgpr4_64, $agpr0_agpr1_agpr2_agpr3, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORDX4 $vgpr4_64, $agpr0_128, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
     $agpr0 = V_ACCVGPR_WRITE_B32_e64 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dot_write_vgpr_accv_read
@@ -1277,7 +1277,7 @@ name:            vcmpx_write_exec_mfma
 body:             |
   bb.0:
     implicit $exec, implicit $vcc = V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit $exec
-    $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_4X4X1F32_e64 killed $agpr8, killed $vgpr1, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr4_128 = V_MFMA_F32_4X4X1F32_e64 killed $agpr8, killed $vgpr1, killed $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: valu_write_agpr_dgemm_mfma_read
 # GCN:      V_ACCVGPR_WRITE_B32_e64
@@ -1289,7 +1289,7 @@ body:             |
   bb.0:
     $agpr0 = V_ACCVGPR_WRITE_B32_e64 1, implicit $exec
     $agpr1 = V_ACCVGPR_WRITE_B32_e64 1, implicit $exec
-    $agpr2_agpr3 = V_MFMA_F64_4X4X4F64_e64 $agpr0_agpr1, $agpr0_agpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_64 = V_MFMA_F64_4X4X4F64_e64 $agpr0_64, $agpr0_64, $agpr0_64, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_agpr_mfma_read_same_agpr_as_srcc
 # GCN:      V_MFMA
@@ -1297,8 +1297,8 @@ body:             |
 name:            dgemm16x16_mfma_write_agpr_mfma_read_same_agpr_as_srcc
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = V_MFMA_F64_16X16X4F64_e64 $agpr10_agpr11, $agpr10_agpr11, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = V_MFMA_F64_16X16X4F64_e64 $agpr10_agpr11, $agpr10_agpr11, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_256 = V_MFMA_F64_16X16X4F64_e64 $agpr10_64, $agpr10_64, $agpr0_256, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_256 = V_MFMA_F64_16X16X4F64_e64 $agpr10_64, $agpr10_64, $agpr0_256, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm4x4_mfma_write_agpr_mfma_read_same_agpr_as_srcc
 # GCN:      V_MFMA
@@ -1307,8 +1307,8 @@ body:             |
 name:            dgemm4x4_mfma_write_agpr_mfma_read_same_agpr_as_srcc
 body:             |
   bb.0:
-    $agpr2_agpr3 = V_MFMA_F64_4X4X4F64_e64 $agpr0_agpr1, $vgpr0_64, $agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr2_agpr3 = V_MFMA_F64_4X4X4F64_e64 $agpr0_agpr1, $vgpr0_64, $agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_64 = V_MFMA_F64_4X4X4F64_e64 $agpr0_64, $vgpr0_64, $agpr2_64, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_64 = V_MFMA_F64_4X4X4F64_e64 $agpr0_64, $vgpr0_64, $agpr2_64, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_MFMA
@@ -1319,8 +1319,8 @@ body:             |
 name:            dgemm16x16_mfma_write_agpr_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_256 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr0_256, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_256 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr0_256, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm4x4_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_MFMA
@@ -1329,8 +1329,8 @@ body:             |
 name:            dgemm4x4_mfma_write_agpr_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_64, $vgpr0_64, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_64 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_64, $vgpr0_64, $agpr0_64, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_256 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr0_256, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_agpr_sgemm_mfma_read_overlap
 # GCN:      V_MFMA
@@ -1342,8 +1342,8 @@ body:             |
 name:            dgemm16x16_mfma_write_agpr_sgemm_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr10, $vgpr11, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_256 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr0_256, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_4X4X1F32_e64 $vgpr10, $vgpr11, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: sgemm4x4_mfma_write_agpr_dgemm_mfma_read_overlap
 # GCN:      V_MFMA
@@ -1352,8 +1352,8 @@ body:             |
 name:            sgemm4x4_mfma_write_agpr_dgemm_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_4X4X4I8_e64 $vgpr10, $vgpr11, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_I32_4X4X4I8_e64 $vgpr10, $vgpr11, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_256 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr0_256, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm16x16_mfma_write_sgpr_dgemm_mfma_read_overlap
 # GCN:      V_MFMA
@@ -1363,8 +1363,8 @@ body:             |
 name:            xdl_sgemm16x16_mfma_write_sgpr_dgemm_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_I32_16X16X4I8_e64 $vgpr26, $vgpr27, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = V_MFMA_F64_16X16X4F64_e64 $vgpr20_64, $vgpr20_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_512 = V_MFMA_I32_16X16X4I8_e64 $vgpr26, $vgpr27, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_256 = V_MFMA_F64_16X16X4F64_e64 $vgpr20_64, $vgpr20_64, $agpr0_256, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm32x32_mfma_write_agpr_dgemm_mfma_read_overlap
 # GCN:      V_MFMA
@@ -1375,8 +1375,8 @@ body:             |
 name:            xdl_sgemm32x32_mfma_write_agpr_dgemm_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = V_MFMA_F32_32X32X4F16_e64 $vgpr26_64, $vgpr28_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = V_MFMA_F64_16X16X4F64_e64 $vgpr120_64, $vgpr120_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_1024 = V_MFMA_F32_32X32X4F16_e64 $vgpr26_64, $vgpr28_64, $agpr0_1024, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_256 = V_MFMA_F64_16X16X4F64_e64 $vgpr120_64, $vgpr120_64, $agpr0_256, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm4x4_mfma_write_agpr_dmfma4x4_srca_read_overlap
 # GCN:      V_MFMA
@@ -1385,8 +1385,8 @@ body:             |
 name:            xdl_sgemm4x4_mfma_write_agpr_dmfma4x4_srca_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_4X4X4I8_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $vgpr2_64 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $agpr0_agpr1, $vgpr4_64, $vgpr4_64, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_I32_4X4X4I8_e64 $vgpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr2_64 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $agpr0_64, $vgpr4_64, $vgpr4_64, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm4x4_mfma_write_agpr_dmfma16x16_srca_read_overlap
 # GCN:      V_MFMA
@@ -1395,8 +1395,8 @@ body:             |
 name:            xdl_sgemm4x4_mfma_write_agpr_dmfma16x16_srca_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_4X4X4I8_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $vgpr2_64 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $agpr0_agpr1, $vgpr4_64, $vgpr4_64, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_I32_4X4X4I8_e64 $vgpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr2_64 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $agpr0_64, $vgpr4_64, $vgpr4_64, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm4x4_mfma_write_agpr_mfma_srca_read_overlap
 # GCN:      V_MFMA
@@ -1405,8 +1405,8 @@ body:             |
 name:            dgemm4x4_mfma_write_agpr_mfma_srca_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_64, $vgpr0_64, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
-    $vgpr10_256 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $agpr2_agpr3, $vgpr10_64, $vgpr10_256, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_64 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_64, $vgpr0_64, $agpr0_64, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr10_256 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $agpr2_64, $vgpr10_64, $vgpr10_256, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_agpr_mfma_srca_read_overlap
 # GCN:      V_MFMA
@@ -1417,8 +1417,8 @@ body:             |
 name:            dgemm16x16_mfma_write_agpr_mfma_srca_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17, 0, 0, 0, implicit $mode, implicit $exec
-    $vgpr0_256 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $agpr0_agpr1, $vgpr10_64, $vgpr10_256, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_256 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr10_256, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_256 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $agpr0_64, $vgpr10_64, $vgpr10_256, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm4x4_mfma_write_agpr_sgemm_mfma_srca_read_overlap
 # GCN:      V_MFMA
@@ -1427,7 +1427,7 @@ body:             |
 name:            dgemm4x4_mfma_write_agpr_sgemm_mfma_srca_read_overlap
 body:             |
   bb.0:
-    $agpr4_agpr5 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_64, $vgpr0_64, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr4_64 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_64, $vgpr0_64, $agpr0_64, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr0_128 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $agpr4, $vgpr0, $vgpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_agpr_sgemm_mfma_srca_read_overlap
@@ -1440,7 +1440,7 @@ body:             |
 name:            dgemm16x16_mfma_write_agpr_sgemm_mfma_srca_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_256 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr10_256, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr0_128 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $agpr4, $vgpr0, $vgpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm4x4_mfma_write_agpr_dgemm_mfma_srca_read_overlap
@@ -1450,8 +1450,8 @@ body:             |
 name:            xdl_sgemm4x4_mfma_write_agpr_dgemm_mfma_srca_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_4X4X4I8_e64 $vgpr4, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $vgpr4_64 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $agpr0_agpr1, $vgpr4_64, $vgpr4_64, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_I32_4X4X4I8_e64 $vgpr4, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr4_64 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $agpr0_64, $vgpr4_64, $vgpr4_64, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm4x4_mfma_write_agpr_mfma_srcb_read_overlap
 # GCN:      V_MFMA
@@ -1460,8 +1460,8 @@ body:             |
 name:            dgemm4x4_mfma_write_agpr_mfma_srcb_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_64, $vgpr0_64, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
-    $vgpr2_64 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $vgpr0_64, $agpr2_agpr3, $vgpr0_64, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_64 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_64, $vgpr0_64, $agpr0_64, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr2_64 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $vgpr0_64, $agpr2_64, $vgpr0_64, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_agpr_mfma_srcb_read_overlap
 # GCN:      V_MFMA
@@ -1472,8 +1472,8 @@ body:             |
 name:            dgemm16x16_mfma_write_agpr_mfma_srcb_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17, 0, 0, 0, implicit $mode, implicit $exec
-    $vgpr0_256 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $vgpr10_64, $agpr0_agpr1, $vgpr10_256, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_256 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr10_256, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr0_256 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $vgpr10_64, $agpr0_64, $vgpr10_256, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dmfma4x4_write_agpr_flat_read_overlap
 # GCN:      V_MFMA
@@ -1482,7 +1482,7 @@ body:             |
 name:            dmfma4x4_write_agpr_flat_read_overlap
 body:             |
   bb.0:
-    $agpr4_agpr5 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_64, $vgpr0_64, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr4_64 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_64, $vgpr0_64, $agpr0_64, 0, 0, 0, implicit $mode, implicit $exec
     FLAT_STORE_DWORD $vgpr0_64, $agpr5, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
 ...
 # GCN-LABEL: name: dmfma4x4_write_agpr_flat_read_full
@@ -1492,8 +1492,8 @@ body:             |
 name:            dmfma4x4_write_agpr_flat_read_full
 body:             |
   bb.0:
-    $agpr4_agpr5 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_64, $vgpr0_64, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
-    FLAT_STORE_DWORDX2 $vgpr0_64, $agpr4_agpr5, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
+    $agpr4_64 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_64, $vgpr0_64, $agpr0_64, 0, 0, 0, implicit $mode, implicit $exec
+    FLAT_STORE_DWORDX2 $vgpr0_64, $agpr4_64, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
 ...
 # GCN-LABEL: name: dmfma16x16_write_agpr_flat_read
 # GCN:      V_MFMA
@@ -1503,7 +1503,7 @@ body:             |
 name:            dmfma16x16_write_agpr_flat_read
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_256 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr0_256, 0, 0, 0, implicit $mode, implicit $exec
     FLAT_STORE_DWORD $vgpr0_64, $agpr4, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
 ...
 # GCN-LABEL: name: dmfma4x4_write_agpr_valu_read
@@ -1513,7 +1513,7 @@ body:             |
 name:            dmfma4x4_write_agpr_valu_read
 body:             |
   bb.0:
-    $agpr4_agpr5 = V_MFMA_F64_4X4X4F64_e64 $agpr0_agpr1, $vgpr0_64, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr4_64 = V_MFMA_F64_4X4X4F64_e64 $agpr0_64, $vgpr0_64, $agpr0_64, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr5 = V_ACCVGPR_READ_B32_e64 $agpr5, implicit $exec
 ...
 # GCN-LABEL: name: dmfma16x16_write_agpr_valu_read
@@ -1525,7 +1525,7 @@ body:             |
 name:            dmfma16x16_write_agpr_valu_read
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_256 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr0_256, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr12 = V_ACCVGPR_READ_B32_e64 $agpr4, implicit $exec
 ...
 # GCN-LABEL: name: dmfma4x4_write_agpr_valu_write
@@ -1535,7 +1535,7 @@ body:             |
 name:            dmfma4x4_write_agpr_valu_write
 body:             |
   bb.0:
-    $agpr4_agpr5 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_64, $vgpr0_64, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr4_64 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_64, $vgpr0_64, $agpr0_64, 0, 0, 0, implicit $mode, implicit $exec
     $agpr4 = V_ACCVGPR_WRITE_B32_e64 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dmfma16x16_write_agpr_valu_write
@@ -1545,7 +1545,7 @@ body:             |
 name:            dmfma16x16_write_agpr_valu_write
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_256 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr0_256, 0, 0, 0, implicit $mode, implicit $exec
     $agpr3 = V_ACCVGPR_WRITE_B32_e64 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dmfma4x4_read_srcc_agpr_valu_write
@@ -1554,7 +1554,7 @@ body:             |
 name:            dmfma4x4_read_srcc_agpr_valu_write
 body:             |
   bb.0:
-    $agpr4_agpr5 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_64, $vgpr0_64, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr4_64 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_64, $vgpr0_64, $agpr0_64, 0, 0, 0, implicit $mode, implicit $exec
     $agpr1 = V_ACCVGPR_WRITE_B32_e64 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dmfma16x16_read_srcc_agpr_valu_write
@@ -1563,7 +1563,7 @@ body:             |
 name:            dmfma16x16_read_srcc_agpr_valu_write
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_256 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_64, $vgpr10_64, $agpr0_256, 0, 0, 0, implicit $mode, implicit $exec
     $agpr1 = V_ACCVGPR_WRITE_B32_e64 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm_accvgr_to_fma64
@@ -1573,7 +1573,7 @@ body:             |
 name:            dgemm_accvgr_to_fma64
 body:             |
   bb.0:
-    $agpr0_agpr1 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_64, $vgpr0_64, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_64 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_64, $vgpr0_64, $agpr0_64, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr4_64 = V_FMA_F64_e64 0, $vgpr4_64, 0, $vgpr4_64, 0, $vgpr4_64, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dgemm_accvgr_to_fmac64
@@ -1583,7 +1583,7 @@ body:             |
 name:            dgemm_accvgr_to_fmac64
 body:             |
   bb.0:
-    $agpr0_agpr1 = V_MFMA_F64_4X4X4F64_e64 $agpr0_agpr1, $agpr0_agpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_64 = V_MFMA_F64_4X4X4F64_e64 $agpr0_64, $agpr0_64, $agpr0_64, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr4_64 = V_FMAC_F64_e32 $vgpr4_64, $vgpr4_64, $vgpr4_64, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: sgemm16X16X16_mfma_write_agpr_mfma_read_overlap
@@ -1594,8 +1594,8 @@ body:             |
 name:            sgemm16X16X16_mfma_write_agpr_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5 = V_MFMA_F32_16X16X16F16_e64 $vgpr0_64, $vgpr2_64, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_16X16X16F16_e64 $vgpr0_64, $vgpr2_64, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_128 = V_MFMA_F32_16X16X16F16_e64 $vgpr0_64, $vgpr2_64, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_16X16X16F16_e64 $vgpr0_64, $vgpr2_64, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: sgemm16X16X32_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_MFMA
@@ -1605,8 +1605,8 @@ body:             |
 name:            sgemm16X16X32_mfma_write_agpr_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5 = V_MFMA_I32_16X16X32I8_e64 $vgpr0_64, $vgpr2_64, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_16X16X32I8_e64 $vgpr0_64, $vgpr2_64, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_128 = V_MFMA_I32_16X16X32I8_e64 $vgpr0_64, $vgpr2_64, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_I32_16X16X32I8_e64 $vgpr0_64, $vgpr2_64, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: sgemm16X16X16_mfma_write_agpr_dgemm_read_overlap
 # GCN:      V_MFMA
@@ -1627,8 +1627,8 @@ body:             |
 name:            sgemm16X16X16_mfma_write_agpr_smfmac_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5 = V_MFMA_F32_16X16X16F16_e64 $vgpr0_64, $vgpr2_64, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_agpr1_agpr2_agpr3, implicit $mode, implicit $exec
+    $agpr2_128 = V_MFMA_F32_16X16X16F16_e64 $vgpr0_64, $vgpr2_64, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_128, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: smfmac16x16_write_agpr_smfmac_read_overlap
 # GCN:      V_SMFMAC
@@ -1638,8 +1638,8 @@ body:             |
 name:            smfmac16x16_write_agpr_smfmac_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr2_agpr3_agpr4_agpr5, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_agpr1_agpr2_agpr3, implicit $mode, implicit $exec
+    $agpr2_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr2_128, implicit $mode, implicit $exec
+    $agpr0_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_128, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm16X16X16_mfma_write_agpr_mfma_srca_read_overlap
 # GCN:      V_MFMA
@@ -1649,8 +1649,8 @@ body:             |
 name:            xdl_sgemm16X16X16_mfma_write_agpr_mfma_srca_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_16X16X32I8_e64 $vgpr0_64, $vgpr2_64, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $agpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_I32_16X16X32I8_e64 $vgpr0_64, $vgpr2_64, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_4X4X1F32_e64 $agpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm16X16X32_mfma_write_agpr_mfma_srcb_read_overlap
 # GCN:      V_MFMA
@@ -1660,8 +1660,8 @@ body:             |
 name:            xdl_sgemm16X16X32_mfma_write_agpr_mfma_srcb_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_16X16X32I8_e64 $vgpr0_64, $vgpr2_64, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr0, $agpr1, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_I32_16X16X32I8_e64 $vgpr0_64, $vgpr2_64, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_4X4X1F32_e64 $vgpr0, $agpr1, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm16X16X16_mfma_write_vgpr_dmfma16x16_srca_read_overlap
 # GCN:      V_MFMA
@@ -1724,8 +1724,8 @@ body:             |
 name:            smfmac16x16x32_write_agpr_mfma_read_same_agpr_as_srcc
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_agpr1_agpr2_agpr3, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_agpr1_agpr2_agpr3, implicit $mode, implicit $exec
+    $agpr0_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_128, implicit $mode, implicit $exec
+    $agpr0_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_128, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: smfmac32x32x32_write_agpr_mfma_read_same_agpr_as_srcc
 # GCN:      V_SMFMAC
@@ -1733,8 +1733,8 @@ body:             |
 name:            smfmac32x32x32_write_agpr_mfma_read_same_agpr_as_srcc
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_SMFMAC_I32_32X32X32_I8_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_SMFMAC_I32_32X32X32_I8_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $mode, implicit $exec
+    $agpr0_512 = V_SMFMAC_I32_32X32X32_I8_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_512, implicit $mode, implicit $exec
+    $agpr0_512 = V_SMFMAC_I32_32X32X32_I8_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_512, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: smfmac16x16x32_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_SMFMAC
@@ -1744,8 +1744,8 @@ body:             |
 name:            smfmac16x16x32_mfma_write_agpr_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_agpr1_agpr2_agpr3, implicit $mode, implicit $exec
-    $agpr2_agpr3_agpr4_agpr5 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr2_agpr3_agpr4_agpr5, implicit $mode, implicit $exec
+    $agpr0_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_128, implicit $mode, implicit $exec
+    $agpr2_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr2_128, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: smfmac32x32x32_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_SMFMAC
@@ -1755,8 +1755,8 @@ body:             |
 name:            smfmac32x32x32_mfma_write_agpr_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_SMFMAC_F32_32X32X16_BF16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $mode, implicit $exec
-    $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17 = V_SMFMAC_F32_32X32X16_BF16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17, implicit $mode, implicit $exec
+    $agpr0_512 = V_SMFMAC_F32_32X32X16_BF16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr0_512, implicit $mode, implicit $exec
+    $agpr2_512 = V_SMFMAC_F32_32X32X16_BF16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr2_512, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: smfmac16x16x32_mfma_write_vgpr_smfmac_read_idx
 # GCN:      V_SMFMAC
@@ -1803,8 +1803,8 @@ body:             |
 name:            nonxdl_sgemm4x4_mfma_write_agpr_nonxdl_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_128 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: nonxdl_sgemm4x4_mfma_write_agpr_xdl_mfma_read_overlap
 # GCN:      V_MFMA
@@ -1812,8 +1812,8 @@ body:             |
 name:            nonxdl_sgemm4x4_mfma_write_agpr_xdl_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_4X4X4I8_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_128 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_I32_4X4X4I8_e64 $vgpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm4x4_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_MFMA
@@ -1822,8 +1822,8 @@ body:             |
 name:            xdl_sgemm4x4_mfma_write_agpr_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5 = V_MFMA_I32_4X4X4I8_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_128 = V_MFMA_I32_4X4X4I8_e64 $vgpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: nonxdl_sgemm4x4_mfma_write_agpr_mfma_srca_read_overlap
 # GCN:      V_MFMA
@@ -1832,8 +1832,8 @@ body:             |
 name:            nonxdl_sgemm4x4_mfma_write_agpr_mfma_srca_read_overlap
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $agpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_4X4X1F32_e64 $agpr1, $vgpr0, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: nonxdl_smfma4x4_write_vgpr_vm_read
 # GCN:      V_MFMA
@@ -1936,8 +1936,8 @@ body:             |
 name:            xdl_sgemm16x16_4pass_mfma_write_agpr_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5 = V_MFMA_I32_16X16X32I8_e64 $vgpr0_64, $vgpr2_64, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_16X16X8XF32_e64 $vgpr10_64, $vgpr12_64, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_128 = V_MFMA_I32_16X16X32I8_e64 $vgpr0_64, $vgpr2_64, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_16X16X8XF32_e64 $vgpr10_64, $vgpr12_64, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: smfmac16x16_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_SMFMAC
@@ -1947,8 +1947,8 @@ body:             |
 name:            smfmac16x16_mfma_write_agpr_mfma_read_overlap
 body:             |
   bb.0:
-    $agpr2_agpr3_agpr4_agpr5 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr2_agpr3_agpr4_agpr5, implicit $mode, implicit $exec
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_16X16X8XF32_e64 $vgpr10_64, $vgpr12_64, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr2_128, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_16X16X8XF32_e64 $vgpr10_64, $vgpr12_64, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm4x4_mfma_read_vgpr_srcc_valu_write
 # GCN:      V_MFMA
@@ -2017,7 +2017,7 @@ body:             |
 name:            smfmac32x32_read_vgpr_srcc_valu_write
 body:             |
   bb.0:
-    $vgpr0_512 = V_SMFMAC_I32_32X32X32_I8_e64 $agpr0_agpr1, $agpr2_agpr3_agpr4_agpr5, $vgpr2, 0, 0, $vgpr0_512, implicit $mode, implicit $exec
+    $vgpr0_512 = V_SMFMAC_I32_32X32X32_I8_e64 $agpr0_64, $agpr2_128, $vgpr2, 0, 0, $vgpr0_512, implicit $mode, implicit $exec
     $vgpr1 = V_MOV_B32_e32 0, implicit $exec
 ...
 # GCN-LABEL: name: xdl_sgemm32x32_mfma_read_vgpr_srcc_valu_write
@@ -2027,7 +2027,7 @@ body:             |
 name:            xdl_sgemm32x32_mfma_read_vgpr_srcc_valu_write
 body:             |
   bb.0:
-    $vgpr40_1024 = V_MFMA_F32_32X32X4F16_vgprcd_e64 $agpr126_agpr127, $agpr128_agpr129, $vgpr0_1024, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr40_1024 = V_MFMA_F32_32X32X4F16_vgprcd_e64 $agpr126_64, $agpr128_64, $vgpr0_1024, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr1 = V_MOV_B32_e32 0, implicit $exec
 ...
 # GCN-LABEL: name: nonxdl_sgemm32x32_mfma_read_vgpr_srcc_valu_write
@@ -2048,7 +2048,7 @@ name:            dgemm_between_valu_write_buffer_store_no_snop
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    $agpr0_agpr1 = V_MFMA_F64_4X4X4F64_e64 $agpr0_agpr1, $agpr0_agpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr0_64 = V_MFMA_F64_4X4X4F64_e64 $agpr0_64, $agpr0_64, $agpr0_64, 0, 0, 0, implicit $mode, implicit $exec
     BUFFER_STORE_DWORDX2_OFFEN_exact $vgpr2_64, $vgpr0, $sgpr0_128, 0, 0, 0, 0, implicit $exec
 ...
 
@@ -2467,8 +2467,8 @@ name:            xdl_mfma_2pass_write_agpr_smfmac_read_overlap_srcc
 body:             |
   bb.0:
 
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X4F16_e64 $vgpr4_64, $vgpr6_64, $agpr0_agpr1_agpr2_agpr3, 1, 2, 3, implicit $mode, implicit $exec
-    $agpr2_agpr3_agpr4_agpr5 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr2_agpr3_agpr4_agpr5, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_F32_4X4X4F16_e64 $vgpr4_64, $vgpr6_64, $agpr0_128, 1, 2, 3, implicit $mode, implicit $exec
+    $agpr2_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr2_128, implicit $mode, implicit $exec
 
 ...
 
@@ -2481,8 +2481,8 @@ body:             |
 name:            xdl_4pass_mfma_write_agpr_smfmac_read_overlap_srcc
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3 = V_MFMA_I32_16X16X32I8_e64 $vgpr0_64, $vgpr2_64, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr2_agpr3_agpr4_agpr5 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr2_agpr3_agpr4_agpr5, implicit $mode, implicit $exec
+    $agpr0_128 = V_MFMA_I32_16X16X32I8_e64 $vgpr0_64, $vgpr2_64, $agpr0_128, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr2_128, implicit $mode, implicit $exec
 
 ...
 
@@ -2495,8 +2495,8 @@ body:             |
 name:            xdl_8pass_mfma_write_agpr_smfmac_read_overlap_srcc
 body:             |
   bb.0:
-    renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 killed $vgpr0_64, killed $vgpr2_64, 1065353216, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr2_agpr3_agpr4_agpr5 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr2_agpr3_agpr4_agpr5, implicit $mode, implicit $exec
+    renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_e64 killed $vgpr0_64, killed $vgpr2_64, 1065353216, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr2_128, implicit $mode, implicit $exec
 ...
 
 ...
@@ -2509,6 +2509,6 @@ body:             |
 name:            xdl_16pass_mfma_write_agpr_smfmac_read_overlap_srcc
 body:             |
   bb.0:
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = V_MFMA_F32_32X32X4F16_e64 $vgpr126_64, $vgpr128_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
-    $agpr2_agpr3_agpr4_agpr5 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr2_agpr3_agpr4_agpr5, implicit $mode, implicit $exec
+    $agpr0_1024 = V_MFMA_F32_32X32X4F16_e64 $vgpr126_64, $vgpr128_64, $agpr0_1024, 0, 0, 0, implicit $mode, implicit $exec
+    $agpr2_128 = V_SMFMAC_F32_16X16X32_F16_e64 $vgpr0_64, $vgpr2_128, $vgpr32, 0, 0, $agpr2_128, implicit $mode, implicit $exec
 ...

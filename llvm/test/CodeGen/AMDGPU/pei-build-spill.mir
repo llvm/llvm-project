@@ -2722,13 +2722,13 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
-    ; MUBUF-NEXT: $agpr0_agpr1 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1, implicit $agpr0_agpr1
-    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_agpr1
-    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec, implicit killed $agpr0_agpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; MUBUF-NEXT: $agpr0_64 = IMPLICIT_DEF
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_64, implicit $agpr0_64
+    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_64 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_64
+    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec, implicit killed $agpr0_64 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
-    ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1
+    ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_64
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: S_ENDPGM 0
@@ -2742,11 +2742,11 @@ body:             |
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
-    ; MUBUF-V2A-NEXT: $agpr0_agpr1 = IMPLICIT_DEF
-    ; MUBUF-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1, implicit $agpr0_agpr1
-    ; MUBUF-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit killed $agpr0_agpr1
-    ; MUBUF-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit-def $agpr0_agpr1
-    ; MUBUF-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1
+    ; MUBUF-V2A-NEXT: $agpr0_64 = IMPLICIT_DEF
+    ; MUBUF-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_64, implicit $agpr0_64
+    ; MUBUF-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit killed $agpr0_64
+    ; MUBUF-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit-def $agpr0_64
+    ; MUBUF-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_64
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_a2
@@ -2754,13 +2754,13 @@ body:             |
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
-    ; FLATSCR-NEXT: $agpr0_agpr1 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1, implicit $agpr0_agpr1
-    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_agpr1
-    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; FLATSCR-NEXT: $agpr0_64 = IMPLICIT_DEF
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_64, implicit $agpr0_64
+    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_64 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_64
+    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_64 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
-    ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1
+    ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_64
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; FLATSCR-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: S_ENDPGM 0
@@ -2774,11 +2774,11 @@ body:             |
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
-    ; FLATSCR-V2A-NEXT: $agpr0_agpr1 = IMPLICIT_DEF
-    ; FLATSCR-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1, implicit $agpr0_agpr1
-    ; FLATSCR-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit killed $agpr0_agpr1
-    ; FLATSCR-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit-def $agpr0_agpr1
-    ; FLATSCR-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1
+    ; FLATSCR-V2A-NEXT: $agpr0_64 = IMPLICIT_DEF
+    ; FLATSCR-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_64, implicit $agpr0_64
+    ; FLATSCR-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit killed $agpr0_64
+    ; FLATSCR-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit-def $agpr0_64
+    ; FLATSCR-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_64
     ; FLATSCR-V2A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-LABEL: name: test_spill_a2
@@ -2786,10 +2786,10 @@ body:             |
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
-    ; MUBUF-GFX90A-NEXT: $agpr0_agpr1 = IMPLICIT_DEF
-    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1, implicit $agpr0_agpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec, implicit killed $agpr0_agpr1 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1 :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr0_64 = IMPLICIT_DEF
+    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_64, implicit $agpr0_64 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec, implicit killed $agpr0_64 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_64 :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
     ;
@@ -2802,11 +2802,11 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr0_agpr1 = IMPLICIT_DEF
-    ; MUBUF-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1, implicit $agpr0_agpr1
-    ; MUBUF-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit killed $agpr0_agpr1
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit-def $agpr0_agpr1
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr0_64 = IMPLICIT_DEF
+    ; MUBUF-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_64, implicit $agpr0_64
+    ; MUBUF-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit killed $agpr0_64
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit-def $agpr0_64
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_64
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_a2
@@ -2814,9 +2814,9 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
-    ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1 = IMPLICIT_DEF
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $agpr0_agpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s64) into %stack.0, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s64) from %stack.0, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr0_64 = IMPLICIT_DEF
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $agpr0_64, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s64) into %stack.0, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr0_64 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s64) from %stack.0, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_a2
@@ -2828,15 +2828,15 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0_agpr1 = IMPLICIT_DEF
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit-def $agpr0_agpr1, implicit $agpr0_agpr1
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit killed $agpr0_agpr1
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit-def $agpr0_agpr1
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit $agpr0_agpr1
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0_64 = IMPLICIT_DEF
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit-def $agpr0_64, implicit $agpr0_64
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit killed $agpr0_64
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit-def $agpr0_64
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit $agpr0_64
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
-    $agpr0_agpr1 = IMPLICIT_DEF
-    SI_SPILL_A64_SAVE killed $agpr0_agpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1 = SI_SPILL_A64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
+    $agpr0_64 = IMPLICIT_DEF
+    SI_SPILL_A64_SAVE killed $agpr0_64, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
+    $agpr0_64 = SI_SPILL_A64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -2858,15 +2858,15 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
-    ; MUBUF-NEXT: $agpr0_agpr1_agpr2 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2, implicit $agpr0_agpr1_agpr2
-    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; MUBUF-NEXT: $agpr0_96 = IMPLICIT_DEF
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_96, implicit $agpr0_96
+    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_96 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2
-    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_96
+    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec, implicit killed $agpr0_96 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
-    ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2
+    ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_96
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
@@ -2884,13 +2884,13 @@ body:             |
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
-    ; MUBUF-V2A-NEXT: $agpr0_agpr1_agpr2 = IMPLICIT_DEF
-    ; MUBUF-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2, implicit $agpr0_agpr1_agpr2
+    ; MUBUF-V2A-NEXT: $agpr0_96 = IMPLICIT_DEF
+    ; MUBUF-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_96, implicit $agpr0_96
     ; MUBUF-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
-    ; MUBUF-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit killed $agpr0_agpr1_agpr2
-    ; MUBUF-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit-def $agpr0_agpr1_agpr2
+    ; MUBUF-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit killed $agpr0_96
+    ; MUBUF-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit-def $agpr0_96
     ; MUBUF-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; MUBUF-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2
+    ; MUBUF-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_96
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_a3
@@ -2899,15 +2899,15 @@ body:             |
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
-    ; FLATSCR-NEXT: $agpr0_agpr1_agpr2 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2, implicit $agpr0_agpr1_agpr2
-    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; FLATSCR-NEXT: $agpr0_96 = IMPLICIT_DEF
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_96, implicit $agpr0_96
+    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_96 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2
-    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_96
+    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_96 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
-    ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2
+    ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_96
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; FLATSCR-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
@@ -2925,13 +2925,13 @@ body:             |
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
-    ; FLATSCR-V2A-NEXT: $agpr0_agpr1_agpr2 = IMPLICIT_DEF
-    ; FLATSCR-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2, implicit $agpr0_agpr1_agpr2
+    ; FLATSCR-V2A-NEXT: $agpr0_96 = IMPLICIT_DEF
+    ; FLATSCR-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_96, implicit $agpr0_96
     ; FLATSCR-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
-    ; FLATSCR-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit killed $agpr0_agpr1_agpr2
-    ; FLATSCR-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit-def $agpr0_agpr1_agpr2
+    ; FLATSCR-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit killed $agpr0_96
+    ; FLATSCR-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit-def $agpr0_96
     ; FLATSCR-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; FLATSCR-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2
+    ; FLATSCR-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_96
     ; FLATSCR-V2A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-LABEL: name: test_spill_a3
@@ -2940,11 +2940,11 @@ body:             |
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
-    ; MUBUF-GFX90A-NEXT: $agpr0_agpr1_agpr2 = IMPLICIT_DEF
-    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2, implicit $agpr0_agpr1_agpr2 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr0_96 = IMPLICIT_DEF
+    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_96, implicit $agpr0_96 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr2, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2 :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr2, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec, implicit killed $agpr0_96 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_96 :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
     ; MUBUF-GFX90A-NEXT: S_ENDPGM 0
@@ -2960,13 +2960,13 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr0_agpr1_agpr2 = IMPLICIT_DEF
-    ; MUBUF-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2, implicit $agpr0_agpr1_agpr2
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr0_96 = IMPLICIT_DEF
+    ; MUBUF-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_96, implicit $agpr0_96
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
-    ; MUBUF-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit killed $agpr0_agpr1_agpr2
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit-def $agpr0_agpr1_agpr2
+    ; MUBUF-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit killed $agpr0_96
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit-def $agpr0_96
     ; MUBUF-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_96
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_a3
@@ -2975,9 +2975,9 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
-    ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2 = IMPLICIT_DEF
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX3_SADDR killed $agpr0_agpr1_agpr2, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s96) into %stack.0, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2 = SCRATCH_LOAD_DWORDX3_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s96) from %stack.0, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr0_96 = IMPLICIT_DEF
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX3_SADDR killed $agpr0_96, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s96) into %stack.0, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr0_96 = SCRATCH_LOAD_DWORDX3_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s96) from %stack.0, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_a3
@@ -2991,17 +2991,17 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0_agpr1_agpr2 = IMPLICIT_DEF
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit-def $agpr0_agpr1_agpr2, implicit $agpr0_agpr1_agpr2
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit killed $agpr0_agpr1_agpr2
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit $agpr0_agpr1_agpr2
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit $agpr0_agpr1_agpr2
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0_96 = IMPLICIT_DEF
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit-def $agpr0_96, implicit $agpr0_96
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_96
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit killed $agpr0_96
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit-def $agpr0_96
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit $agpr0_96
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit $agpr0_96
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
-    $agpr0_agpr1_agpr2 = IMPLICIT_DEF
-    SI_SPILL_A96_SAVE killed $agpr0_agpr1_agpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s96) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1_agpr2 = SI_SPILL_A96_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s96) from %stack.0, align 4, addrspace 5)
+    $agpr0_96 = IMPLICIT_DEF
+    SI_SPILL_A96_SAVE killed $agpr0_96, %stack.0, $sgpr32, 0, implicit $exec :: (store (s96) into %stack.0, align 4, addrspace 5)
+    $agpr0_96 = SI_SPILL_A96_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s96) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -3024,17 +3024,17 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
-    ; MUBUF-NEXT: $agpr0_agpr1_agpr2_agpr3 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3, implicit $agpr0_agpr1_agpr2_agpr3
-    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; MUBUF-NEXT: $agpr0_128 = IMPLICIT_DEF
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_128, implicit $agpr0_128
+    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_128 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit $agpr0_128
+    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec, implicit killed $agpr0_128 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
-    ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
+    ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_128
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
@@ -3056,15 +3056,15 @@ body:             |
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
-    ; MUBUF-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3 = IMPLICIT_DEF
-    ; MUBUF-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3, implicit $agpr0_agpr1_agpr2_agpr3
+    ; MUBUF-V2A-NEXT: $agpr0_128 = IMPLICIT_DEF
+    ; MUBUF-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_128, implicit $agpr0_128
     ; MUBUF-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
-    ; MUBUF-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3
-    ; MUBUF-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
+    ; MUBUF-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit killed $agpr0_128
+    ; MUBUF-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit-def $agpr0_128
     ; MUBUF-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec
     ; MUBUF-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; MUBUF-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
+    ; MUBUF-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_128
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_a4
@@ -3074,17 +3074,17 @@ body:             |
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
-    ; FLATSCR-NEXT: $agpr0_agpr1_agpr2_agpr3 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3, implicit $agpr0_agpr1_agpr2_agpr3
-    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2_agpr3 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; FLATSCR-NEXT: $agpr0_128 = IMPLICIT_DEF
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_128, implicit $agpr0_128
+    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_128 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 12, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit $agpr0_128
+    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 12, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_128 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
-    ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
+    ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_128
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; FLATSCR-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
@@ -3106,15 +3106,15 @@ body:             |
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
-    ; FLATSCR-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3 = IMPLICIT_DEF
-    ; FLATSCR-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3, implicit $agpr0_agpr1_agpr2_agpr3
+    ; FLATSCR-V2A-NEXT: $agpr0_128 = IMPLICIT_DEF
+    ; FLATSCR-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_128, implicit $agpr0_128
     ; FLATSCR-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
-    ; FLATSCR-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3
-    ; FLATSCR-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
+    ; FLATSCR-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit killed $agpr0_128
+    ; FLATSCR-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit-def $agpr0_128
     ; FLATSCR-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec
     ; FLATSCR-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; FLATSCR-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
+    ; FLATSCR-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_128
     ; FLATSCR-V2A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-LABEL: name: test_spill_a4
@@ -3124,12 +3124,12 @@ body:             |
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
-    ; MUBUF-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3 = IMPLICIT_DEF
-    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3, implicit $agpr0_agpr1_agpr2_agpr3 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr0_128 = IMPLICIT_DEF
+    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_128, implicit $agpr0_128 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr2, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr3, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3 :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr3, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec, implicit killed $agpr0_128 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_128 :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 12, addrspace 5)
@@ -3148,15 +3148,15 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3 = IMPLICIT_DEF
-    ; MUBUF-GFX90A-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3, implicit $agpr0_agpr1_agpr2_agpr3
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr0_128 = IMPLICIT_DEF
+    ; MUBUF-GFX90A-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_128, implicit $agpr0_128
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
-    ; MUBUF-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
+    ; MUBUF-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit killed $agpr0_128
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit-def $agpr0_128
     ; MUBUF-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_128
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_a4
@@ -3166,9 +3166,9 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
-    ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3 = IMPLICIT_DEF
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr0_agpr1_agpr2_agpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr0_128 = IMPLICIT_DEF
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr0_128, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr0_128 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_a4
@@ -3184,19 +3184,19 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3 = IMPLICIT_DEF
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3, implicit $agpr0_agpr1_agpr2_agpr3
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0_128 = IMPLICIT_DEF
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_128, implicit $agpr0_128
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_128
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_128
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit killed $agpr0_128
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit-def $agpr0_128
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit $agpr0_128
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit $agpr0_128
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit $agpr0_128
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
-    $agpr0_agpr1_agpr2_agpr3 = IMPLICIT_DEF
-    SI_SPILL_A128_SAVE killed $agpr0_agpr1_agpr2_agpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+    $agpr0_128 = IMPLICIT_DEF
+    SI_SPILL_A128_SAVE killed $agpr0_128, %stack.0, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.0, align 4, addrspace 5)
+    $agpr0_128 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -3220,19 +3220,19 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4
-    ; MUBUF-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
-    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; MUBUF-NEXT: $agpr0_160 = IMPLICIT_DEF
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_160, implicit $agpr0_160
+    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_160 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
-    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 16, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec, implicit $agpr0_160
+    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 16, 0, 0, implicit $exec, implicit killed $agpr0_160 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
-    ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4
+    ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_160
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
@@ -3258,17 +3258,17 @@ body:             |
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4
-    ; MUBUF-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4 = IMPLICIT_DEF
-    ; MUBUF-V2A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
+    ; MUBUF-V2A-NEXT: $agpr0_160 = IMPLICIT_DEF
+    ; MUBUF-V2A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_160, implicit $agpr0_160
     ; MUBUF-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; MUBUF-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
-    ; MUBUF-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4
-    ; MUBUF-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr4, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4
+    ; MUBUF-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec, implicit killed $agpr0_160
+    ; MUBUF-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr4, implicit $exec, implicit-def $agpr0_160
     ; MUBUF-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec
     ; MUBUF-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec
     ; MUBUF-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; MUBUF-V2A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
+    ; MUBUF-V2A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_160
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_a5
@@ -3279,19 +3279,19 @@ body:             |
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4
-    ; FLATSCR-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
-    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2_agpr3_agpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; FLATSCR-NEXT: $agpr0_160 = IMPLICIT_DEF
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_160, implicit $agpr0_160
+    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_160 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 12, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
-    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec, implicit $agpr0_160
+    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_160 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
-    ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4
+    ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_160
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; FLATSCR-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
@@ -3317,17 +3317,17 @@ body:             |
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4
-    ; FLATSCR-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4 = IMPLICIT_DEF
-    ; FLATSCR-V2A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
+    ; FLATSCR-V2A-NEXT: $agpr0_160 = IMPLICIT_DEF
+    ; FLATSCR-V2A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_160, implicit $agpr0_160
     ; FLATSCR-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; FLATSCR-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
-    ; FLATSCR-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4
-    ; FLATSCR-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr4, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4
+    ; FLATSCR-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec, implicit killed $agpr0_160
+    ; FLATSCR-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr4, implicit $exec, implicit-def $agpr0_160
     ; FLATSCR-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec
     ; FLATSCR-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec
     ; FLATSCR-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; FLATSCR-V2A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
+    ; FLATSCR-V2A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_160
     ; FLATSCR-V2A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-LABEL: name: test_spill_a5
@@ -3338,13 +3338,13 @@ body:             |
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4
-    ; MUBUF-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4 = IMPLICIT_DEF
-    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4, implicit $agpr0_agpr1_agpr2_agpr3_agpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr0_160 = IMPLICIT_DEF
+    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_160, implicit $agpr0_160 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr2, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr3, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr4, $sgpr0_128, $sgpr32, 16, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4 :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr4, $sgpr0_128, $sgpr32, 16, 0, 0, implicit $exec, implicit killed $agpr0_160 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_160 :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 12, addrspace 5)
@@ -3366,17 +3366,17 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4 = IMPLICIT_DEF
-    ; MUBUF-GFX90A-V2A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr0_160 = IMPLICIT_DEF
+    ; MUBUF-GFX90A-V2A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_160, implicit $agpr0_160
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
-    ; MUBUF-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr4, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4
+    ; MUBUF-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec, implicit killed $agpr0_160
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr4, implicit $exec, implicit-def $agpr0_160
     ; MUBUF-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_160
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_a5
@@ -3387,10 +3387,10 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4
-    ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4 = IMPLICIT_DEF
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr0_agpr1_agpr2_agpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4, implicit $agpr0_agpr1_agpr2_agpr3_agpr4 :: ("amdgpu-thread-private" store (s128) into %stack.0, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORD_SADDR killed $agpr4, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4 :: ("amdgpu-thread-private" load (s128) from %stack.0, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr0_160 = IMPLICIT_DEF
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr0_128, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_160, implicit $agpr0_160 :: ("amdgpu-thread-private" store (s128) into %stack.0, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORD_SADDR killed $agpr4, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_160 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr0_128 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_160 :: ("amdgpu-thread-private" load (s128) from %stack.0, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: $agpr4 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0 + 16, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
@@ -3409,21 +3409,21 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4 = IMPLICIT_DEF
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr4, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0_160 = IMPLICIT_DEF
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_160, implicit $agpr0_160
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_160
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_160
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit $agpr0_160
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec, implicit killed $agpr0_160
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit-def $agpr0_160
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit $agpr0_160
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit $agpr0_160
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr4, implicit $exec, implicit $agpr0_160
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_160
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
-    $agpr0_agpr1_agpr2_agpr3_agpr4 = IMPLICIT_DEF
-    SI_SPILL_A160_SAVE killed $agpr0_agpr1_agpr2_agpr3_agpr4, %stack.0, $sgpr32, 0, implicit $exec :: (store (s160) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3_agpr4 = SI_SPILL_A160_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s160) from %stack.0, align 4, addrspace 5)
+    $agpr0_160 = IMPLICIT_DEF
+    SI_SPILL_A160_SAVE killed $agpr0_160, %stack.0, $sgpr32, 0, implicit $exec :: (store (s160) into %stack.0, align 4, addrspace 5)
+    $agpr0_160 = SI_SPILL_A160_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s160) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -3448,9 +3448,9 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr5
-    ; MUBUF-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
-    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; MUBUF-NEXT: $agpr0_192 = IMPLICIT_DEF
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_192, implicit $agpr0_192
+    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_192 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
@@ -3459,10 +3459,10 @@ body:             |
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 16, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
-    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 20, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 20, addrspace 5)
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec, implicit $agpr0_192
+    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 20, 0, 0, implicit $exec, implicit killed $agpr0_192 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 20, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
-    ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
+    ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_192
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
@@ -3492,19 +3492,19 @@ body:             |
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr5
-    ; MUBUF-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = IMPLICIT_DEF
-    ; MUBUF-V2A-NEXT: $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
+    ; MUBUF-V2A-NEXT: $agpr0_192 = IMPLICIT_DEF
+    ; MUBUF-V2A-NEXT: $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_192, implicit $agpr0_192
     ; MUBUF-V2A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; MUBUF-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
     ; MUBUF-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec
-    ; MUBUF-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
-    ; MUBUF-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr5, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
+    ; MUBUF-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec, implicit killed $agpr0_192
+    ; MUBUF-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr5, implicit $exec, implicit-def $agpr0_192
     ; MUBUF-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr4, implicit $exec
     ; MUBUF-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec
     ; MUBUF-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec
     ; MUBUF-V2A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; MUBUF-V2A-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
+    ; MUBUF-V2A-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_192
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_a6
@@ -3516,9 +3516,9 @@ body:             |
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr5
-    ; FLATSCR-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
-    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; FLATSCR-NEXT: $agpr0_192 = IMPLICIT_DEF
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_192, implicit $agpr0_192
+    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_192 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
@@ -3527,10 +3527,10 @@ body:             |
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 12, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
-    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 20, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 20, addrspace 5)
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec, implicit $agpr0_192
+    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 20, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_192 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 20, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
-    ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
+    ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_192
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; FLATSCR-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
@@ -3560,19 +3560,19 @@ body:             |
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr5
-    ; FLATSCR-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = IMPLICIT_DEF
-    ; FLATSCR-V2A-NEXT: $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
+    ; FLATSCR-V2A-NEXT: $agpr0_192 = IMPLICIT_DEF
+    ; FLATSCR-V2A-NEXT: $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_192, implicit $agpr0_192
     ; FLATSCR-V2A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; FLATSCR-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
     ; FLATSCR-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec
-    ; FLATSCR-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
-    ; FLATSCR-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr5, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
+    ; FLATSCR-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec, implicit killed $agpr0_192
+    ; FLATSCR-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr5, implicit $exec, implicit-def $agpr0_192
     ; FLATSCR-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr4, implicit $exec
     ; FLATSCR-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec
     ; FLATSCR-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec
     ; FLATSCR-V2A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; FLATSCR-V2A-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
+    ; FLATSCR-V2A-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_192
     ; FLATSCR-V2A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-LABEL: name: test_spill_a6
@@ -3584,14 +3584,14 @@ body:             |
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr5
-    ; MUBUF-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = IMPLICIT_DEF
-    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr0_192 = IMPLICIT_DEF
+    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_192, implicit $agpr0_192 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr2, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr3, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr4, $sgpr0_128, $sgpr32, 16, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr5, $sgpr0_128, $sgpr32, 20, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 20, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr5, $sgpr0_128, $sgpr32, 20, 0, 0, implicit $exec, implicit killed $agpr0_192 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 20, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_192 :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 12, addrspace 5)
@@ -3616,19 +3616,19 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr5
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = IMPLICIT_DEF
-    ; MUBUF-GFX90A-V2A-NEXT: $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr0_192 = IMPLICIT_DEF
+    ; MUBUF-GFX90A-V2A-NEXT: $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_192, implicit $agpr0_192
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec
-    ; MUBUF-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr5, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
+    ; MUBUF-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec, implicit killed $agpr0_192
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr5, implicit $exec, implicit-def $agpr0_192
     ; MUBUF-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr4, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_192
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_a6
@@ -3640,11 +3640,11 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr5
-    ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = IMPLICIT_DEF
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr0_agpr1_agpr2_agpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 :: ("amdgpu-thread-private" store (s128) into %stack.0, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $agpr4_agpr5, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 :: ("amdgpu-thread-private" store (s64) into %stack.0 + 16, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 :: ("amdgpu-thread-private" load (s128) from %stack.0, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr4_agpr5 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s64) from %stack.0 + 16, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr0_192 = IMPLICIT_DEF
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr0_128, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_192, implicit $agpr0_192 :: ("amdgpu-thread-private" store (s128) into %stack.0, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $agpr4_64, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_192 :: ("amdgpu-thread-private" store (s64) into %stack.0 + 16, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr0_128 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_192 :: ("amdgpu-thread-private" load (s128) from %stack.0, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr4_64 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s64) from %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_a6
@@ -3664,23 +3664,23 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr4
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr5
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = IMPLICIT_DEF
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr4, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr5, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0_192 = IMPLICIT_DEF
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_192, implicit $agpr0_192
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_192
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_192
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit $agpr0_192
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec, implicit $agpr0_192
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec, implicit killed $agpr0_192
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit-def $agpr0_192
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit $agpr0_192
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr4, implicit $exec, implicit $agpr0_192
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr5, implicit $exec, implicit $agpr0_192
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_192
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit $agpr0_192
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = IMPLICIT_DEF
-    SI_SPILL_A192_SAVE killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5, %stack.0, $sgpr32, 0, implicit $exec :: (store (s192) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5 = SI_SPILL_A192_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s192) from %stack.0, align 4, addrspace 5)
+    $agpr0_192 = IMPLICIT_DEF
+    SI_SPILL_A192_SAVE killed $agpr0_192, %stack.0, $sgpr32, 0, implicit $exec :: (store (s192) into %stack.0, align 4, addrspace 5)
+    $agpr0_192 = SI_SPILL_A192_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s192) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -3707,9 +3707,9 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr5
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr6
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr7
-    ; MUBUF-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; MUBUF-NEXT: $agpr0_256 = IMPLICIT_DEF
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_256, implicit $agpr0_256
+    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_256 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
@@ -3722,10 +3722,10 @@ body:             |
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 20, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 20, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr6, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 24, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 24, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr7, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 28, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 28, addrspace 5)
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr7, implicit $exec, implicit $agpr0_256
+    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 28, 0, 0, implicit $exec, implicit killed $agpr0_256 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 28, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
-    ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_256
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
@@ -3763,23 +3763,23 @@ body:             |
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr5
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr6
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr7
-    ; MUBUF-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = IMPLICIT_DEF
-    ; MUBUF-V2A-NEXT: $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; MUBUF-V2A-NEXT: $agpr0_256 = IMPLICIT_DEF
+    ; MUBUF-V2A-NEXT: $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_256, implicit $agpr0_256
     ; MUBUF-V2A-NEXT: $vgpr6 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-V2A-NEXT: $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; MUBUF-V2A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
     ; MUBUF-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec
     ; MUBUF-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec
     ; MUBUF-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr6, implicit $exec
-    ; MUBUF-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr7, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; MUBUF-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr7, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; MUBUF-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr7, implicit $exec, implicit killed $agpr0_256
+    ; MUBUF-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr7, implicit $exec, implicit-def $agpr0_256
     ; MUBUF-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr6, implicit $exec
     ; MUBUF-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr5, implicit $exec
     ; MUBUF-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr4, implicit $exec
     ; MUBUF-V2A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec
     ; MUBUF-V2A-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec
     ; MUBUF-V2A-NEXT: $agpr6 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; MUBUF-V2A-NEXT: $agpr7 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; MUBUF-V2A-NEXT: $agpr7 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_256
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_a8
@@ -3793,9 +3793,9 @@ body:             |
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr5
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr6
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr7
-    ; FLATSCR-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; FLATSCR-NEXT: $agpr0_256 = IMPLICIT_DEF
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_256, implicit $agpr0_256
+    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_256 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
@@ -3808,10 +3808,10 @@ body:             |
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 20, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 20, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr6, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 24, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 24, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr7, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 28, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 28, addrspace 5)
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr7, implicit $exec, implicit $agpr0_256
+    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 28, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_256 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 28, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
-    ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_256
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; FLATSCR-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
@@ -3849,23 +3849,23 @@ body:             |
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr5
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr6
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr7
-    ; FLATSCR-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = IMPLICIT_DEF
-    ; FLATSCR-V2A-NEXT: $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; FLATSCR-V2A-NEXT: $agpr0_256 = IMPLICIT_DEF
+    ; FLATSCR-V2A-NEXT: $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_256, implicit $agpr0_256
     ; FLATSCR-V2A-NEXT: $vgpr6 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-V2A-NEXT: $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; FLATSCR-V2A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
     ; FLATSCR-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec
     ; FLATSCR-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec
     ; FLATSCR-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr6, implicit $exec
-    ; FLATSCR-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr7, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; FLATSCR-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr7, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; FLATSCR-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr7, implicit $exec, implicit killed $agpr0_256
+    ; FLATSCR-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr7, implicit $exec, implicit-def $agpr0_256
     ; FLATSCR-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr6, implicit $exec
     ; FLATSCR-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr5, implicit $exec
     ; FLATSCR-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr4, implicit $exec
     ; FLATSCR-V2A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec
     ; FLATSCR-V2A-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec
     ; FLATSCR-V2A-NEXT: $agpr6 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; FLATSCR-V2A-NEXT: $agpr7 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; FLATSCR-V2A-NEXT: $agpr7 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_256
     ; FLATSCR-V2A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-LABEL: name: test_spill_a8
@@ -3879,16 +3879,16 @@ body:             |
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr5
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr6
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr7
-    ; MUBUF-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = IMPLICIT_DEF
-    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr0_256 = IMPLICIT_DEF
+    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_256, implicit $agpr0_256 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr2, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr3, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr4, $sgpr0_128, $sgpr32, 16, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr5, $sgpr0_128, $sgpr32, 20, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 20, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr6, $sgpr0_128, $sgpr32, 24, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 24, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr7, $sgpr0_128, $sgpr32, 28, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 28, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr7, $sgpr0_128, $sgpr32, 28, 0, 0, implicit $exec, implicit killed $agpr0_256 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 28, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_256 :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 12, addrspace 5)
@@ -3919,23 +3919,23 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr5
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr6
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr7
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = IMPLICIT_DEF
-    ; MUBUF-GFX90A-V2A-NEXT: $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr0_256 = IMPLICIT_DEF
+    ; MUBUF-GFX90A-V2A-NEXT: $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_256, implicit $agpr0_256
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr6 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr6, implicit $exec
-    ; MUBUF-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr7, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr7, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; MUBUF-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr7, implicit $exec, implicit killed $agpr0_256
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr7, implicit $exec, implicit-def $agpr0_256
     ; MUBUF-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr6, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr5, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr4, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $agpr6 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr7 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr7 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_256
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_a8
@@ -3949,11 +3949,11 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr5
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr6
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr7
-    ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = IMPLICIT_DEF
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr0_agpr1_agpr2_agpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 :: ("amdgpu-thread-private" store (s128) into %stack.0, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr4_agpr5_agpr6_agpr7, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 :: ("amdgpu-thread-private" store (s128) into %stack.0 + 16, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 :: ("amdgpu-thread-private" load (s128) from %stack.0, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr4_agpr5_agpr6_agpr7 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 16, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr0_256 = IMPLICIT_DEF
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr0_128, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_256, implicit $agpr0_256 :: ("amdgpu-thread-private" store (s128) into %stack.0, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr4_128, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_256 :: ("amdgpu-thread-private" store (s128) into %stack.0 + 16, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr0_128 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_256 :: ("amdgpu-thread-private" load (s128) from %stack.0, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr4_128 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 16, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_a8
@@ -3977,27 +3977,27 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr5
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr6
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr7
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = IMPLICIT_DEF
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr6 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr7, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr6, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr4, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr5, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr6, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr7, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr7 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr6 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0_256 = IMPLICIT_DEF
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr4 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_256, implicit $agpr0_256
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_256
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr6 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_256
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit $agpr0_256
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr7, implicit $exec, implicit $agpr0_256
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr6, implicit $exec, implicit $agpr0_256
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec, implicit $agpr0_256
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr4, implicit $exec, implicit killed $agpr0_256
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr4, implicit $exec, implicit-def $agpr0_256
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr5, implicit $exec, implicit $agpr0_256
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr6, implicit $exec, implicit $agpr0_256
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr7, implicit $exec, implicit $agpr0_256
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr7 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_256
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr6 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit $agpr0_256
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit $agpr0_256
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr4 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit $agpr0_256
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = IMPLICIT_DEF
-    SI_SPILL_A256_SAVE killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, %stack.0, $sgpr32, 0, implicit $exec :: (store (s256) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = SI_SPILL_A256_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s256) from %stack.0, align 4, addrspace 5)
+    $agpr0_256 = IMPLICIT_DEF
+    SI_SPILL_A256_SAVE killed $agpr0_256, %stack.0, $sgpr32, 0, implicit $exec :: (store (s256) into %stack.0, align 4, addrspace 5)
+    $agpr0_256 = SI_SPILL_A256_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s256) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -4032,9 +4032,9 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr13
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr14
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr15
-    ; MUBUF-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; MUBUF-NEXT: $agpr0_512 = IMPLICIT_DEF
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_512, implicit $agpr0_512
+    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_512 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
@@ -4063,10 +4063,10 @@ body:             |
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 52, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 52, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr14, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 56, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 56, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr15, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 60, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 60, addrspace 5)
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr15, implicit $exec, implicit $agpr0_512
+    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 60, 0, 0, implicit $exec, implicit killed $agpr0_512 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 60, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
-    ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_512
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
@@ -4136,8 +4136,8 @@ body:             |
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr13
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr14
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr15
-    ; MUBUF-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = IMPLICIT_DEF
-    ; MUBUF-V2A-NEXT: $vgpr15 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; MUBUF-V2A-NEXT: $agpr0_512 = IMPLICIT_DEF
+    ; MUBUF-V2A-NEXT: $vgpr15 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_512, implicit $agpr0_512
     ; MUBUF-V2A-NEXT: $vgpr14 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-V2A-NEXT: $vgpr13 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; MUBUF-V2A-NEXT: $vgpr12 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
@@ -4152,8 +4152,8 @@ body:             |
     ; MUBUF-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr12, implicit $exec
     ; MUBUF-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr13, implicit $exec
     ; MUBUF-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr14, implicit $exec
-    ; MUBUF-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr15, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; MUBUF-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr15, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; MUBUF-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr15, implicit $exec, implicit killed $agpr0_512
+    ; MUBUF-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr15, implicit $exec, implicit-def $agpr0_512
     ; MUBUF-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr14, implicit $exec
     ; MUBUF-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr13, implicit $exec
     ; MUBUF-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr12, implicit $exec
@@ -4168,7 +4168,7 @@ body:             |
     ; MUBUF-V2A-NEXT: $agpr12 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec
     ; MUBUF-V2A-NEXT: $agpr13 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec
     ; MUBUF-V2A-NEXT: $agpr14 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; MUBUF-V2A-NEXT: $agpr15 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; MUBUF-V2A-NEXT: $agpr15 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_512
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_a16
@@ -4190,9 +4190,9 @@ body:             |
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr13
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr14
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr15
-    ; FLATSCR-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; FLATSCR-NEXT: $agpr0_512 = IMPLICIT_DEF
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_512, implicit $agpr0_512
+    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_512 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
@@ -4221,10 +4221,10 @@ body:             |
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 52, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 52, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr14, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 56, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 56, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr15, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 60, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 60, addrspace 5)
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr15, implicit $exec, implicit $agpr0_512
+    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 60, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_512 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 60, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
-    ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_512
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; FLATSCR-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
@@ -4294,8 +4294,8 @@ body:             |
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr13
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr14
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr15
-    ; FLATSCR-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = IMPLICIT_DEF
-    ; FLATSCR-V2A-NEXT: $vgpr15 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; FLATSCR-V2A-NEXT: $agpr0_512 = IMPLICIT_DEF
+    ; FLATSCR-V2A-NEXT: $vgpr15 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_512, implicit $agpr0_512
     ; FLATSCR-V2A-NEXT: $vgpr14 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-V2A-NEXT: $vgpr13 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; FLATSCR-V2A-NEXT: $vgpr12 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
@@ -4310,8 +4310,8 @@ body:             |
     ; FLATSCR-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr12, implicit $exec
     ; FLATSCR-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr13, implicit $exec
     ; FLATSCR-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr14, implicit $exec
-    ; FLATSCR-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr15, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; FLATSCR-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr15, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; FLATSCR-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr15, implicit $exec, implicit killed $agpr0_512
+    ; FLATSCR-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr15, implicit $exec, implicit-def $agpr0_512
     ; FLATSCR-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr14, implicit $exec
     ; FLATSCR-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr13, implicit $exec
     ; FLATSCR-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr12, implicit $exec
@@ -4326,7 +4326,7 @@ body:             |
     ; FLATSCR-V2A-NEXT: $agpr12 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec
     ; FLATSCR-V2A-NEXT: $agpr13 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec
     ; FLATSCR-V2A-NEXT: $agpr14 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; FLATSCR-V2A-NEXT: $agpr15 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; FLATSCR-V2A-NEXT: $agpr15 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_512
     ; FLATSCR-V2A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-LABEL: name: test_spill_a16
@@ -4348,8 +4348,8 @@ body:             |
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr13
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr14
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr15
-    ; MUBUF-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = IMPLICIT_DEF
-    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr0_512 = IMPLICIT_DEF
+    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_512, implicit $agpr0_512 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr2, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr3, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
@@ -4364,8 +4364,8 @@ body:             |
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr12, $sgpr0_128, $sgpr32, 48, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 48, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr13, $sgpr0_128, $sgpr32, 52, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 52, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr14, $sgpr0_128, $sgpr32, 56, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 56, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr15, $sgpr0_128, $sgpr32, 60, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 60, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr15, $sgpr0_128, $sgpr32, 60, 0, 0, implicit $exec, implicit killed $agpr0_512 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 60, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_512 :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 12, addrspace 5)
@@ -4420,8 +4420,8 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr13
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr14
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr15
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = IMPLICIT_DEF
-    ; MUBUF-GFX90A-V2A-NEXT: $vgpr15 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr0_512 = IMPLICIT_DEF
+    ; MUBUF-GFX90A-V2A-NEXT: $vgpr15 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_512, implicit $agpr0_512
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr14 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr13 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr12 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
@@ -4436,8 +4436,8 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr12, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr13, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr14, implicit $exec
-    ; MUBUF-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr15, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr15, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; MUBUF-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr15, implicit $exec, implicit killed $agpr0_512
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr15, implicit $exec, implicit-def $agpr0_512
     ; MUBUF-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr14, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr13, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr12, implicit $exec
@@ -4452,7 +4452,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: $agpr12 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $agpr13 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $agpr14 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr15 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr15 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_512
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_a16
@@ -4474,15 +4474,15 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr13
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr14
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr15
-    ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = IMPLICIT_DEF
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr0_agpr1_agpr2_agpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 :: ("amdgpu-thread-private" store (s128) into %stack.0, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr4_agpr5_agpr6_agpr7, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0 + 16, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr8_agpr9_agpr10_agpr11, $sgpr32, 32, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0 + 32, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr12_agpr13_agpr14_agpr15, $sgpr32, 48, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 :: ("amdgpu-thread-private" store (s128) into %stack.0 + 48, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 :: ("amdgpu-thread-private" load (s128) from %stack.0, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr4_agpr5_agpr6_agpr7 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 16, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr8_agpr9_agpr10_agpr11 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 32, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr12_agpr13_agpr14_agpr15 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 48, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 48, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr0_512 = IMPLICIT_DEF
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr0_128, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_512, implicit $agpr0_512 :: ("amdgpu-thread-private" store (s128) into %stack.0, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr4_128, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0 + 16, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr8_128, $sgpr32, 32, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0 + 32, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr12_128, $sgpr32, 48, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_512 :: ("amdgpu-thread-private" store (s128) into %stack.0 + 48, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr0_128 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_512 :: ("amdgpu-thread-private" load (s128) from %stack.0, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr4_128 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 16, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr8_128 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 32, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr12_128 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 48, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 48, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_a16
@@ -4522,11 +4522,11 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr13
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr14
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr15
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = IMPLICIT_DEF
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr12 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr13 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr14 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr15 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0_512 = IMPLICIT_DEF
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr12 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_512, implicit $agpr0_512
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr13 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_512
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr14 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_512
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr15 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit $agpr0_512
     ; FLATSCR-GFX90A-V2A-NEXT: $vgpr8 = V_ACCVGPR_READ_B32_e64 killed $agpr7, implicit $exec
     ; FLATSCR-GFX90A-V2A-NEXT: $vgpr9 = V_ACCVGPR_READ_B32_e64 killed $agpr6, implicit $exec
     ; FLATSCR-GFX90A-V2A-NEXT: $vgpr10 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec
@@ -4535,14 +4535,14 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr10, implicit $exec
     ; FLATSCR-GFX90A-V2A-NEXT: $vgpr6 = V_ACCVGPR_READ_B32_e64 killed $agpr9, implicit $exec
     ; FLATSCR-GFX90A-V2A-NEXT: $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr8, implicit $exec
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr15, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr14, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr13, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr12, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr12, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr13, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr14, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr15, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr15, implicit $exec, implicit $agpr0_512
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr14, implicit $exec, implicit $agpr0_512
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr13, implicit $exec, implicit $agpr0_512
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr12, implicit $exec, implicit killed $agpr0_512
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr12, implicit $exec, implicit-def $agpr0_512
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr13, implicit $exec, implicit $agpr0_512
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr14, implicit $exec, implicit $agpr0_512
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr15, implicit $exec, implicit $agpr0_512
     ; FLATSCR-GFX90A-V2A-NEXT: $agpr7 = V_ACCVGPR_WRITE_B32_e64 $vgpr8, implicit $exec
     ; FLATSCR-GFX90A-V2A-NEXT: $agpr6 = V_ACCVGPR_WRITE_B32_e64 $vgpr9, implicit $exec
     ; FLATSCR-GFX90A-V2A-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 $vgpr10, implicit $exec
@@ -4551,14 +4551,14 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: $agpr10 = V_ACCVGPR_WRITE_B32_e64 $vgpr5, implicit $exec
     ; FLATSCR-GFX90A-V2A-NEXT: $agpr9 = V_ACCVGPR_WRITE_B32_e64 $vgpr6, implicit $exec
     ; FLATSCR-GFX90A-V2A-NEXT: $agpr8 = V_ACCVGPR_WRITE_B32_e64 $vgpr7, implicit $exec
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr15 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr14 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr13 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr12 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr15 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_512
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr14 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit $agpr0_512
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr13 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit $agpr0_512
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr12 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit $agpr0_512
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = IMPLICIT_DEF
-    SI_SPILL_A512_SAVE killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, %stack.0, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = SI_SPILL_A512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
+    $agpr0_512 = IMPLICIT_DEF
+    SI_SPILL_A512_SAVE killed $agpr0_512, %stack.0, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.0, align 4, addrspace 5)
+    $agpr0_512 = SI_SPILL_A512_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...
@@ -4609,9 +4609,9 @@ body:             |
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr29
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr30
     ; MUBUF-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr31
-    ; MUBUF-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = IMPLICIT_DEF
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; MUBUF-NEXT: $agpr0_1024 = IMPLICIT_DEF
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_1024, implicit $agpr0_1024
+    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_1024 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
@@ -4672,10 +4672,10 @@ body:             |
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 116, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 116, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr30, implicit $exec
     ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 120, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 120, addrspace 5)
-    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr31, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 124, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 124, addrspace 5)
+    ; MUBUF-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr31, implicit $exec, implicit $agpr0_1024
+    ; MUBUF-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 124, 0, 0, implicit $exec, implicit killed $agpr0_1024 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 124, addrspace 5)
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
-    ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; MUBUF-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_1024
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; MUBUF-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
@@ -4809,8 +4809,8 @@ body:             |
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr29
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr30
     ; MUBUF-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr31
-    ; MUBUF-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = IMPLICIT_DEF
-    ; MUBUF-V2A-NEXT: $vgpr31 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; MUBUF-V2A-NEXT: $agpr0_1024 = IMPLICIT_DEF
+    ; MUBUF-V2A-NEXT: $vgpr31 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_1024, implicit $agpr0_1024
     ; MUBUF-V2A-NEXT: $vgpr30 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-V2A-NEXT: $vgpr29 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; MUBUF-V2A-NEXT: $vgpr28 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
@@ -4841,8 +4841,8 @@ body:             |
     ; MUBUF-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr28, implicit $exec
     ; MUBUF-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr29, implicit $exec
     ; MUBUF-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr30, implicit $exec
-    ; MUBUF-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr31, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; MUBUF-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr31, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; MUBUF-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr31, implicit $exec, implicit killed $agpr0_1024
+    ; MUBUF-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr31, implicit $exec, implicit-def $agpr0_1024
     ; MUBUF-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr30, implicit $exec
     ; MUBUF-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr29, implicit $exec
     ; MUBUF-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr28, implicit $exec
@@ -4873,7 +4873,7 @@ body:             |
     ; MUBUF-V2A-NEXT: $agpr28 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec
     ; MUBUF-V2A-NEXT: $agpr29 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec
     ; MUBUF-V2A-NEXT: $agpr30 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; MUBUF-V2A-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; MUBUF-V2A-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_1024
     ; MUBUF-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-LABEL: name: test_spill_a32
@@ -4911,9 +4911,9 @@ body:             |
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr29
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr30
     ; FLATSCR-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr31
-    ; FLATSCR-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = IMPLICIT_DEF
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; FLATSCR-NEXT: $agpr0_1024 = IMPLICIT_DEF
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_1024, implicit $agpr0_1024
+    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_1024 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
@@ -4974,10 +4974,10 @@ body:             |
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 116, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 116, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr30, implicit $exec
     ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 120, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0 + 120, addrspace 5)
-    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr31, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 124, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 124, addrspace 5)
+    ; FLATSCR-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr31, implicit $exec, implicit $agpr0_1024
+    ; FLATSCR-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 124, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_1024 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 124, addrspace 5)
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
-    ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; FLATSCR-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_1024
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; FLATSCR-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
     ; FLATSCR-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 8, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
@@ -5111,8 +5111,8 @@ body:             |
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr29
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr30
     ; FLATSCR-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr31
-    ; FLATSCR-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = IMPLICIT_DEF
-    ; FLATSCR-V2A-NEXT: $vgpr31 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; FLATSCR-V2A-NEXT: $agpr0_1024 = IMPLICIT_DEF
+    ; FLATSCR-V2A-NEXT: $vgpr31 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_1024, implicit $agpr0_1024
     ; FLATSCR-V2A-NEXT: $vgpr30 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; FLATSCR-V2A-NEXT: $vgpr29 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; FLATSCR-V2A-NEXT: $vgpr28 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
@@ -5143,8 +5143,8 @@ body:             |
     ; FLATSCR-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr28, implicit $exec
     ; FLATSCR-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr29, implicit $exec
     ; FLATSCR-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr30, implicit $exec
-    ; FLATSCR-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr31, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; FLATSCR-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr31, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; FLATSCR-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr31, implicit $exec, implicit killed $agpr0_1024
+    ; FLATSCR-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr31, implicit $exec, implicit-def $agpr0_1024
     ; FLATSCR-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr30, implicit $exec
     ; FLATSCR-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr29, implicit $exec
     ; FLATSCR-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr28, implicit $exec
@@ -5175,7 +5175,7 @@ body:             |
     ; FLATSCR-V2A-NEXT: $agpr28 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec
     ; FLATSCR-V2A-NEXT: $agpr29 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec
     ; FLATSCR-V2A-NEXT: $agpr30 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; FLATSCR-V2A-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; FLATSCR-V2A-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_1024
     ; FLATSCR-V2A-NEXT: S_ENDPGM 0
     ;
     ; MUBUF-GFX90A-LABEL: name: test_spill_a32
@@ -5213,8 +5213,8 @@ body:             |
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr29
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr30
     ; MUBUF-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr31
-    ; MUBUF-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = IMPLICIT_DEF
-    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr0_1024 = IMPLICIT_DEF
+    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr0, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_1024, implicit $agpr0_1024 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr2, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr3, $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
@@ -5245,8 +5245,8 @@ body:             |
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr28, $sgpr0_128, $sgpr32, 112, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 112, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr29, $sgpr0_128, $sgpr32, 116, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 116, addrspace 5)
     ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr30, $sgpr0_128, $sgpr32, 120, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 120, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr31, $sgpr0_128, $sgpr32, 124, 0, 0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 124, addrspace 5)
-    ; MUBUF-GFX90A-NEXT: $agpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $agpr31, $sgpr0_128, $sgpr32, 124, 0, 0, implicit $exec, implicit killed $agpr0_1024 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 124, addrspace 5)
+    ; MUBUF-GFX90A-NEXT: $agpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_1024 :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 4, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 8, addrspace 5)
     ; MUBUF-GFX90A-NEXT: $agpr3 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 12, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0 + 12, addrspace 5)
@@ -5349,8 +5349,8 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr29
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr30
     ; MUBUF-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr31
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = IMPLICIT_DEF
-    ; MUBUF-GFX90A-V2A-NEXT: $vgpr31 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr0_1024 = IMPLICIT_DEF
+    ; MUBUF-GFX90A-V2A-NEXT: $vgpr31 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit-def $agpr0_1024, implicit $agpr0_1024
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr30 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr29 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr28 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec
@@ -5381,8 +5381,8 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr28, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr29, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr30, implicit $exec
-    ; MUBUF-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr31, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr31, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; MUBUF-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr31, implicit $exec, implicit killed $agpr0_1024
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr31, implicit $exec, implicit-def $agpr0_1024
     ; MUBUF-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr30, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr29, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr28, implicit $exec
@@ -5413,7 +5413,7 @@ body:             |
     ; MUBUF-GFX90A-V2A-NEXT: $agpr28 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $agpr29 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec
     ; MUBUF-GFX90A-V2A-NEXT: $agpr30 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec
-    ; MUBUF-GFX90A-V2A-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; MUBUF-GFX90A-V2A-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_1024
     ; MUBUF-GFX90A-V2A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-LABEL: name: test_spill_a32
@@ -5451,23 +5451,23 @@ body:             |
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr29
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr30
     ; FLATSCR-GFX90A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr31
-    ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = IMPLICIT_DEF
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr0_agpr1_agpr2_agpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 :: ("amdgpu-thread-private" store (s128) into %stack.0, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr4_agpr5_agpr6_agpr7, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0 + 16, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr8_agpr9_agpr10_agpr11, $sgpr32, 32, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0 + 32, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr12_agpr13_agpr14_agpr15, $sgpr32, 48, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0 + 48, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr16_agpr17_agpr18_agpr19, $sgpr32, 64, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0 + 64, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr20_agpr21_agpr22_agpr23, $sgpr32, 80, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0 + 80, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr24_agpr25_agpr26_agpr27, $sgpr32, 96, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0 + 96, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr28_agpr29_agpr30_agpr31, $sgpr32, 112, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 :: ("amdgpu-thread-private" store (s128) into %stack.0 + 112, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr0_agpr1_agpr2_agpr3 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 :: ("amdgpu-thread-private" load (s128) from %stack.0, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr4_agpr5_agpr6_agpr7 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 16, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr8_agpr9_agpr10_agpr11 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 32, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr12_agpr13_agpr14_agpr15 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 48, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 48, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr16_agpr17_agpr18_agpr19 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 64, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 64, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr20_agpr21_agpr22_agpr23 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 80, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 80, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr24_agpr25_agpr26_agpr27 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 96, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 96, align 4, addrspace 5)
-    ; FLATSCR-GFX90A-NEXT: $agpr28_agpr29_agpr30_agpr31 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 112, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 112, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr0_1024 = IMPLICIT_DEF
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr0_128, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_1024, implicit $agpr0_1024 :: ("amdgpu-thread-private" store (s128) into %stack.0, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr4_128, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0 + 16, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr8_128, $sgpr32, 32, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0 + 32, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr12_128, $sgpr32, 48, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0 + 48, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr16_128, $sgpr32, 64, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0 + 64, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr20_128, $sgpr32, 80, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0 + 80, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr24_128, $sgpr32, 96, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0 + 96, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $agpr28_128, $sgpr32, 112, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_1024 :: ("amdgpu-thread-private" store (s128) into %stack.0 + 112, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr0_128 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_1024 :: ("amdgpu-thread-private" load (s128) from %stack.0, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr4_128 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 16, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr8_128 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 32, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 32, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr12_128 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 48, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 48, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr16_128 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 64, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 64, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr20_128 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 80, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 80, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr24_128 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 96, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 96, align 4, addrspace 5)
+    ; FLATSCR-GFX90A-NEXT: $agpr28_128 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 112, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.0 + 112, align 4, addrspace 5)
     ; FLATSCR-GFX90A-NEXT: S_ENDPGM 0
     ;
     ; FLATSCR-GFX90A-V2A-LABEL: name: test_spill_a32
@@ -5539,11 +5539,11 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr29
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr30
     ; FLATSCR-GFX90A-V2A-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr31
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = IMPLICIT_DEF
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr28 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr29 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr30 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr31 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0_1024 = IMPLICIT_DEF
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr28 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_1024, implicit $agpr0_1024
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr29 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_1024
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr30 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_1024
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr31 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit $agpr0_1024
     ; FLATSCR-GFX90A-V2A-NEXT: $vgpr24 = V_ACCVGPR_READ_B32_e64 killed $agpr7, implicit $exec
     ; FLATSCR-GFX90A-V2A-NEXT: $vgpr25 = V_ACCVGPR_READ_B32_e64 killed $agpr6, implicit $exec
     ; FLATSCR-GFX90A-V2A-NEXT: $vgpr26 = V_ACCVGPR_READ_B32_e64 killed $agpr5, implicit $exec
@@ -5568,14 +5568,14 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: $vgpr5 = V_ACCVGPR_READ_B32_e64 killed $agpr26, implicit $exec
     ; FLATSCR-GFX90A-V2A-NEXT: $vgpr6 = V_ACCVGPR_READ_B32_e64 killed $agpr25, implicit $exec
     ; FLATSCR-GFX90A-V2A-NEXT: $vgpr7 = V_ACCVGPR_READ_B32_e64 killed $agpr24, implicit $exec
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr31, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr30, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr29, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr28, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr28, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr29, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr30, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr31, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr31, implicit $exec, implicit $agpr0_1024
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr30, implicit $exec, implicit $agpr0_1024
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr29, implicit $exec, implicit $agpr0_1024
+    ; FLATSCR-GFX90A-V2A-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr28, implicit $exec, implicit killed $agpr0_1024
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr28, implicit $exec, implicit-def $agpr0_1024
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr29, implicit $exec, implicit $agpr0_1024
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr30, implicit $exec, implicit $agpr0_1024
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr31, implicit $exec, implicit $agpr0_1024
     ; FLATSCR-GFX90A-V2A-NEXT: $agpr7 = V_ACCVGPR_WRITE_B32_e64 $vgpr24, implicit $exec
     ; FLATSCR-GFX90A-V2A-NEXT: $agpr6 = V_ACCVGPR_WRITE_B32_e64 $vgpr25, implicit $exec
     ; FLATSCR-GFX90A-V2A-NEXT: $agpr5 = V_ACCVGPR_WRITE_B32_e64 $vgpr26, implicit $exec
@@ -5600,14 +5600,14 @@ body:             |
     ; FLATSCR-GFX90A-V2A-NEXT: $agpr26 = V_ACCVGPR_WRITE_B32_e64 $vgpr5, implicit $exec
     ; FLATSCR-GFX90A-V2A-NEXT: $agpr25 = V_ACCVGPR_WRITE_B32_e64 $vgpr6, implicit $exec
     ; FLATSCR-GFX90A-V2A-NEXT: $agpr24 = V_ACCVGPR_WRITE_B32_e64 $vgpr7, implicit $exec
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr30 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr29 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
-    ; FLATSCR-GFX90A-V2A-NEXT: $agpr28 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr31 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit $agpr0_1024
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr30 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit $agpr0_1024
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr29 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit $agpr0_1024
+    ; FLATSCR-GFX90A-V2A-NEXT: $agpr28 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit $agpr0_1024
     ; FLATSCR-GFX90A-V2A-NEXT: S_ENDPGM 0
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = IMPLICIT_DEF
-    SI_SPILL_A1024_SAVE killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, %stack.0, $sgpr32, 0, implicit $exec :: (store (s1024) into %stack.0, align 4, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = SI_SPILL_A1024_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s1024) from %stack.0, align 4, addrspace 5)
+    $agpr0_1024 = IMPLICIT_DEF
+    SI_SPILL_A1024_SAVE killed $agpr0_1024, %stack.0, $sgpr32, 0, implicit $exec :: (store (s1024) into %stack.0, align 4, addrspace 5)
+    $agpr0_1024 = SI_SPILL_A1024_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s1024) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 
 ...

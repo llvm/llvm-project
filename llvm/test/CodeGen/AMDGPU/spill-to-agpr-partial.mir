@@ -11,10 +11,10 @@ machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   bb.0:
-    liveins: $vgpr0_128, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, $agpr24_agpr25_agpr26_agpr27, $agpr28_agpr29, $agpr30
+    liveins: $vgpr0_128, $agpr0_512, $agpr16_256, $agpr24_128, $agpr28_64, $agpr30
 
     ; GCN-LABEL: name: partial_spill_v128_1_of_4
-    ; GCN: liveins: $agpr30, $agpr31, $agpr28_agpr29, $agpr24_agpr25_agpr26_agpr27, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, $vgpr0_128
+    ; GCN: liveins: $agpr30, $agpr31, $agpr28_64, $agpr24_128, $agpr16_256, $agpr0_512, $vgpr0_128
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -26,10 +26,10 @@ body:             |
     ; GCN-NEXT: SCRATCH_STORE_DWORDX3_SADDR killed $vgpr0_96, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr0_128 :: ("amdgpu-thread-private" store (s96) into %stack.0, align 4, addrspace 5)
     ; GCN-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 $agpr31, implicit $exec, implicit-def $vgpr0_128
     ; GCN-NEXT: $vgpr0_96 = SCRATCH_LOAD_DWORDX3_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_128, implicit $vgpr0_128 :: ("amdgpu-thread-private" load (s96) from %stack.0, align 4, addrspace 5)
-    ; GCN-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, implicit $agpr24_agpr25_agpr26_agpr27, implicit $agpr28_agpr29, implicit $agpr30
+    ; GCN-NEXT: S_ENDPGM 0, implicit $agpr0_512, implicit $agpr16_256, implicit $agpr24_128, implicit $agpr28_64, implicit $agpr30
     SI_SPILL_V128_SAVE killed $vgpr0_128, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
     $vgpr0_128 = SI_SPILL_V128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
-    S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, implicit $agpr24_agpr25_agpr26_agpr27, implicit $agpr28_agpr29, implicit $agpr30
+    S_ENDPGM 0, implicit $agpr0_512, implicit $agpr16_256, implicit $agpr24_128, implicit $agpr28_64, implicit $agpr30
 ...
 
 ---
@@ -42,10 +42,10 @@ machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   bb.0:
-    liveins: $vgpr0_128, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, $agpr24_agpr25_agpr26_agpr27, $agpr28_agpr29
+    liveins: $vgpr0_128, $agpr0_512, $agpr16_256, $agpr24_128, $agpr28_64
 
     ; GCN-LABEL: name: partial_spill_v128_2_of_4
-    ; GCN: liveins: $agpr30, $agpr31, $agpr28_agpr29, $agpr24_agpr25_agpr26_agpr27, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, $vgpr0_128
+    ; GCN: liveins: $agpr30, $agpr31, $agpr28_64, $agpr24_128, $agpr16_256, $agpr0_512, $vgpr0_128
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -59,10 +59,10 @@ body:             |
     ; GCN-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 $agpr30, implicit $exec, implicit-def $vgpr0_128
     ; GCN-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 $agpr31, implicit $exec, implicit $vgpr0_128
     ; GCN-NEXT: $vgpr0_64 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_128, implicit $vgpr0_128 :: ("amdgpu-thread-private" load (s64) from %stack.0, align 4, addrspace 5)
-    ; GCN-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, implicit $agpr24_agpr25_agpr26_agpr27, implicit $agpr28_agpr29
+    ; GCN-NEXT: S_ENDPGM 0, implicit $agpr0_512, implicit $agpr16_256, implicit $agpr24_128, implicit $agpr28_64
     SI_SPILL_V128_SAVE killed $vgpr0_128, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
     $vgpr0_128 = SI_SPILL_V128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
-    S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, implicit $agpr24_agpr25_agpr26_agpr27, implicit $agpr28_agpr29
+    S_ENDPGM 0, implicit $agpr0_512, implicit $agpr16_256, implicit $agpr24_128, implicit $agpr28_64
 ...
 
 ---
@@ -75,10 +75,10 @@ machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   bb.0:
-    liveins: $vgpr0_128, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, $agpr24_agpr25_agpr26_agpr27, $agpr28
+    liveins: $vgpr0_128, $agpr0_512, $agpr16_256, $agpr24_128, $agpr28
 
     ; GCN-LABEL: name: partial_spill_v128_3_of_4
-    ; GCN: liveins: $agpr28, $agpr29, $agpr30, $agpr31, $agpr24_agpr25_agpr26_agpr27, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, $vgpr0_128
+    ; GCN: liveins: $agpr28, $agpr29, $agpr30, $agpr31, $agpr24_128, $agpr16_256, $agpr0_512, $vgpr0_128
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -94,10 +94,10 @@ body:             |
     ; GCN-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 $agpr30, implicit $exec, implicit $vgpr0_128
     ; GCN-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 $agpr31, implicit $exec, implicit $vgpr0_128
     ; GCN-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_128, implicit $vgpr0_128 :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
-    ; GCN-NEXT: S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, implicit $agpr24_agpr25_agpr26_agpr27, implicit $agpr28
+    ; GCN-NEXT: S_ENDPGM 0, implicit $agpr0_512, implicit $agpr16_256, implicit $agpr24_128, implicit $agpr28
     SI_SPILL_V128_SAVE killed $vgpr0_128, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
     $vgpr0_128 = SI_SPILL_V128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
-    S_ENDPGM 0, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23, implicit $agpr24_agpr25_agpr26_agpr27, implicit $agpr28
+    S_ENDPGM 0, implicit $agpr0_512, implicit $agpr16_256, implicit $agpr24_128, implicit $agpr28
 ...
 
 ---
@@ -149,10 +149,10 @@ machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   bb.0:
-    liveins: $agpr0_agpr1_agpr2_agpr3, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_128, $vgpr52_64, $vgpr54
+    liveins: $agpr0_128, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_128, $vgpr52_64, $vgpr54
 
     ; GCN-LABEL: name: partial_spill_a128_1_of_4
-    ; GCN: liveins: $vgpr54, $vgpr55, $agpr0_agpr1_agpr2_agpr3, $vgpr52_64, $vgpr48_128, $vgpr0_512, $vgpr16_512, $vgpr32_512
+    ; GCN: liveins: $vgpr54, $vgpr55, $agpr0_128, $vgpr52_64, $vgpr48_128, $vgpr0_512, $vgpr16_512, $vgpr32_512
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -160,13 +160,13 @@ body:             |
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
-    ; GCN-NEXT: $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: SCRATCH_STORE_DWORDX3_SADDR killed $agpr0_agpr1_agpr2, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3 :: ("amdgpu-thread-private" store (s96) into %stack.0, align 4, addrspace 5)
-    ; GCN-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr55, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $agpr0_agpr1_agpr2 = SCRATCH_LOAD_DWORDX3_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3, implicit $agpr0_agpr1_agpr2_agpr3 :: ("amdgpu-thread-private" load (s96) from %stack.0, align 4, addrspace 5)
+    ; GCN-NEXT: $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_128, implicit $agpr0_128
+    ; GCN-NEXT: SCRATCH_STORE_DWORDX3_SADDR killed $agpr0_96, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_128 :: ("amdgpu-thread-private" store (s96) into %stack.0, align 4, addrspace 5)
+    ; GCN-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr55, implicit $exec, implicit-def $agpr0_128
+    ; GCN-NEXT: $agpr0_96 = SCRATCH_LOAD_DWORDX3_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_128, implicit $agpr0_128 :: ("amdgpu-thread-private" load (s96) from %stack.0, align 4, addrspace 5)
     ; GCN-NEXT: S_ENDPGM 0, implicit $vgpr0_512, implicit $vgpr16_512, implicit $vgpr32_512, implicit $vgpr48_128, implicit $vgpr52_64, implicit $vgpr54
-    SI_SPILL_A128_SAVE killed $agpr0_agpr1_agpr2_agpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+    SI_SPILL_A128_SAVE killed $agpr0_128, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
+    $agpr0_128 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0, implicit $vgpr0_512, implicit $vgpr16_512, implicit $vgpr32_512, implicit $vgpr48_128, implicit $vgpr52_64, implicit $vgpr54
 ...
 
@@ -180,10 +180,10 @@ machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   bb.0:
-    liveins: $agpr0_agpr1_agpr2_agpr3, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_128, $vgpr52_64
+    liveins: $agpr0_128, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_128, $vgpr52_64
 
     ; GCN-LABEL: name: partial_spill_a128_2_of_4
-    ; GCN: liveins: $vgpr54, $vgpr55, $agpr0_agpr1_agpr2_agpr3, $vgpr52_64, $vgpr48_128, $vgpr0_512, $vgpr16_512, $vgpr32_512
+    ; GCN: liveins: $vgpr54, $vgpr55, $agpr0_128, $vgpr52_64, $vgpr48_128, $vgpr0_512, $vgpr16_512, $vgpr32_512
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -191,15 +191,15 @@ body:             |
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
-    ; GCN-NEXT: $vgpr54 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $agpr0_agpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3 :: ("amdgpu-thread-private" store (s64) into %stack.0, align 4, addrspace 5)
-    ; GCN-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr54, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr55, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $agpr0_agpr1 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3, implicit $agpr0_agpr1_agpr2_agpr3 :: ("amdgpu-thread-private" load (s64) from %stack.0, align 4, addrspace 5)
+    ; GCN-NEXT: $vgpr54 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_128, implicit $agpr0_128
+    ; GCN-NEXT: $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_128
+    ; GCN-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $agpr0_64, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_128 :: ("amdgpu-thread-private" store (s64) into %stack.0, align 4, addrspace 5)
+    ; GCN-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr54, implicit $exec, implicit-def $agpr0_128
+    ; GCN-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr55, implicit $exec, implicit $agpr0_128
+    ; GCN-NEXT: $agpr0_64 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_128, implicit $agpr0_128 :: ("amdgpu-thread-private" load (s64) from %stack.0, align 4, addrspace 5)
     ; GCN-NEXT: S_ENDPGM 0, implicit $vgpr0_512, implicit $vgpr16_512, implicit $vgpr32_512, implicit $vgpr48_128, implicit $vgpr52_64
-    SI_SPILL_A128_SAVE killed $agpr0_agpr1_agpr2_agpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+    SI_SPILL_A128_SAVE killed $agpr0_128, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
+    $agpr0_128 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0, implicit $vgpr0_512, implicit $vgpr16_512, implicit $vgpr32_512, implicit $vgpr48_128, implicit $vgpr52_64
 ...
 
@@ -213,10 +213,10 @@ machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   bb.0:
-    liveins: $agpr0_agpr1_agpr2_agpr3, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_128, $vgpr52
+    liveins: $agpr0_128, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_128, $vgpr52
 
     ; GCN-LABEL: name: partial_spill_a128_3_of_4
-    ; GCN: liveins: $vgpr52, $vgpr53, $vgpr54, $vgpr55, $agpr0_agpr1_agpr2_agpr3, $vgpr48_128, $vgpr0_512, $vgpr16_512, $vgpr32_512
+    ; GCN: liveins: $vgpr52, $vgpr53, $vgpr54, $vgpr55, $agpr0_128, $vgpr48_128, $vgpr0_512, $vgpr16_512, $vgpr32_512
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -224,17 +224,17 @@ body:             |
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
-    ; GCN-NEXT: $vgpr53 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $vgpr54 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: SCRATCH_STORE_DWORD_SADDR killed $agpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_agpr1_agpr2_agpr3 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
-    ; GCN-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr53, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr54, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr55, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $agpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_agpr1_agpr2_agpr3, implicit $agpr0_agpr1_agpr2_agpr3 :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
+    ; GCN-NEXT: $vgpr53 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_128, implicit $agpr0_128
+    ; GCN-NEXT: $vgpr54 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_128
+    ; GCN-NEXT: $vgpr55 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_128
+    ; GCN-NEXT: SCRATCH_STORE_DWORD_SADDR killed $agpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $agpr0_128 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GCN-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr53, implicit $exec, implicit-def $agpr0_128
+    ; GCN-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr54, implicit $exec, implicit $agpr0_128
+    ; GCN-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr55, implicit $exec, implicit $agpr0_128
+    ; GCN-NEXT: $agpr0 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr0_128, implicit $agpr0_128 :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
     ; GCN-NEXT: S_ENDPGM 0, implicit $vgpr0_512, implicit $vgpr16_512, implicit $vgpr32_512, implicit $vgpr48_128, implicit $vgpr52
-    SI_SPILL_A128_SAVE killed $agpr0_agpr1_agpr2_agpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+    SI_SPILL_A128_SAVE killed $agpr0_128, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
+    $agpr0_128 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0, implicit $vgpr0_512, implicit $vgpr16_512, implicit $vgpr32_512, implicit $vgpr48_128, implicit $vgpr52
 ...
 
@@ -248,10 +248,10 @@ machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   bb.0:
-    liveins: $agpr0_agpr1_agpr2_agpr3
+    liveins: $agpr0_128
 
     ; GCN-LABEL: name: full_spill_a128
-    ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $agpr0_agpr1_agpr2_agpr3
+    ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $agpr0_128
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -263,16 +263,16 @@ body:             |
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr3
-    ; GCN-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
-    ; GCN-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
+    ; GCN-NEXT: $vgpr0 = V_ACCVGPR_READ_B32_e64 killed $agpr3, implicit $exec, implicit-def $agpr0_128, implicit $agpr0_128
+    ; GCN-NEXT: $vgpr1 = V_ACCVGPR_READ_B32_e64 killed $agpr2, implicit $exec, implicit $agpr0_128
+    ; GCN-NEXT: $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr1, implicit $exec, implicit $agpr0_128
+    ; GCN-NEXT: $vgpr3 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec, implicit killed $agpr0_128
+    ; GCN-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec, implicit-def $agpr0_128
+    ; GCN-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 $vgpr1, implicit $exec, implicit $agpr0_128
+    ; GCN-NEXT: $agpr1 = V_ACCVGPR_WRITE_B32_e64 $vgpr2, implicit $exec, implicit $agpr0_128
+    ; GCN-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 $vgpr3, implicit $exec, implicit $agpr0_128
     ; GCN-NEXT: S_ENDPGM 0
-    SI_SPILL_A128_SAVE killed $agpr0_agpr1_agpr2_agpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
-    $agpr0_agpr1_agpr2_agpr3 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+    SI_SPILL_A128_SAVE killed $agpr0_128, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
+    $agpr0_128 = SI_SPILL_A128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 ...

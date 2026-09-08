@@ -40,7 +40,7 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    s_and_b64 s[4:5], exec, s[16:17]
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b64_e32 v[20:21], 0
-; CHECK-NEXT:    ; implicit-def: $agpr0_agpr1
+; CHECK-NEXT:    ; implicit-def: $agpr0_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr22_64
 ; CHECK-NEXT:    s_branch .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: ; %Flow9
@@ -100,7 +100,7 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    s_mov_b64 s[24:25], -1
 ; CHECK-NEXT:    s_mov_b64 s[6:7], -1
 ; CHECK-NEXT:    s_mov_b64 vcc, s[2:3]
-; CHECK-NEXT:    ; implicit-def: $agpr2_agpr3
+; CHECK-NEXT:    ; implicit-def: $agpr2_64
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_5
 ; CHECK-NEXT:  ; %bb.7: ; %.lr.ph2070.i.i.i3291
 ; CHECK-NEXT:    ; in Loop: Header=BB0_6 Depth=2

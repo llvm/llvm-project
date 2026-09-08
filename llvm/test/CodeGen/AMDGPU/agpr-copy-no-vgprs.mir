@@ -29,23 +29,23 @@ name: no_free_vgprs_for_copy_a64_to_a64
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_512, $agpr0_agpr1
+    liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_512, $agpr0_64
 
     ; GFX908-LABEL: name: no_free_vgprs_for_copy_a64_to_a64
-    ; GFX908: liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_512, $agpr0_agpr1
+    ; GFX908: liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_512, $agpr0_64
     ; GFX908-NEXT: {{  $}}
-    ; GFX908-NEXT: $vgpr63 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $agpr0_agpr1
+    ; GFX908-NEXT: $vgpr63 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $agpr0_64
     ; GFX908-NEXT: $agpr3 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr63, implicit $exec
-    ; GFX908-NEXT: $vgpr63 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit $agpr0_agpr1
+    ; GFX908-NEXT: $vgpr63 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit $agpr0_64
     ; GFX908-NEXT: $agpr2 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr63, implicit $exec
-    ; GFX908-NEXT: S_ENDPGM 0, implicit $vgpr0_512, implicit $vgpr16_512, implicit $vgpr32_512, implicit $vgpr48_512, implicit $vgpr64_512, implicit $vgpr80_512, implicit $vgpr96_512, implicit $vgpr112_512, implicit $vgpr128_512, implicit $vgpr144_512, implicit $vgpr160_512, implicit $vgpr176_512, implicit $vgpr192_512, implicit $vgpr208_512, implicit $vgpr224_512, implicit $vgpr240_512, implicit $agpr2_agpr3
+    ; GFX908-NEXT: S_ENDPGM 0, implicit $vgpr0_512, implicit $vgpr16_512, implicit $vgpr32_512, implicit $vgpr48_512, implicit $vgpr64_512, implicit $vgpr80_512, implicit $vgpr96_512, implicit $vgpr112_512, implicit $vgpr128_512, implicit $vgpr144_512, implicit $vgpr160_512, implicit $vgpr176_512, implicit $vgpr192_512, implicit $vgpr208_512, implicit $vgpr224_512, implicit $vgpr240_512, implicit $agpr2_64
     ;
     ; GFX90A-LABEL: name: no_free_vgprs_for_copy_a64_to_a64
-    ; GFX90A: liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_512, $agpr0_agpr1
+    ; GFX90A: liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_512, $agpr0_64
     ; GFX90A-NEXT: {{  $}}
-    ; GFX90A-NEXT: $agpr3 = V_ACCVGPR_MOV_B32 $agpr1, implicit $exec, implicit $agpr0_agpr1
-    ; GFX90A-NEXT: $agpr2 = V_ACCVGPR_MOV_B32 $agpr0, implicit $exec, implicit $agpr0_agpr1
-    ; GFX90A-NEXT: S_ENDPGM 0, implicit $vgpr0_512, implicit $vgpr16_512, implicit $vgpr32_512, implicit $vgpr48_512, implicit $vgpr64_512, implicit $vgpr80_512, implicit $vgpr96_512, implicit $vgpr112_512, implicit $vgpr128_512, implicit $vgpr144_512, implicit $vgpr160_512, implicit $vgpr176_512, implicit $vgpr192_512, implicit $vgpr208_512, implicit $vgpr224_512, implicit $vgpr240_512, implicit $agpr2_agpr3
-    $agpr2_agpr3 = COPY $agpr0_agpr1
-    S_ENDPGM 0, implicit $vgpr0_512, implicit $vgpr16_512, implicit $vgpr32_512, implicit $vgpr48_512, implicit $vgpr64_512, implicit $vgpr80_512, implicit $vgpr96_512, implicit $vgpr112_512, implicit $vgpr128_512, implicit $vgpr144_512, implicit $vgpr160_512, implicit $vgpr176_512, implicit $vgpr192_512, implicit $vgpr208_512, implicit $vgpr224_512, implicit $vgpr240_512, implicit $agpr2_agpr3
+    ; GFX90A-NEXT: $agpr3 = V_ACCVGPR_MOV_B32 $agpr1, implicit $exec, implicit $agpr0_64
+    ; GFX90A-NEXT: $agpr2 = V_ACCVGPR_MOV_B32 $agpr0, implicit $exec, implicit $agpr0_64
+    ; GFX90A-NEXT: S_ENDPGM 0, implicit $vgpr0_512, implicit $vgpr16_512, implicit $vgpr32_512, implicit $vgpr48_512, implicit $vgpr64_512, implicit $vgpr80_512, implicit $vgpr96_512, implicit $vgpr112_512, implicit $vgpr128_512, implicit $vgpr144_512, implicit $vgpr160_512, implicit $vgpr176_512, implicit $vgpr192_512, implicit $vgpr208_512, implicit $vgpr224_512, implicit $vgpr240_512, implicit $agpr2_64
+    $agpr2_64 = COPY $agpr0_64
+    S_ENDPGM 0, implicit $vgpr0_512, implicit $vgpr16_512, implicit $vgpr32_512, implicit $vgpr48_512, implicit $vgpr64_512, implicit $vgpr80_512, implicit $vgpr96_512, implicit $vgpr112_512, implicit $vgpr128_512, implicit $vgpr144_512, implicit $vgpr160_512, implicit $vgpr176_512, implicit $vgpr192_512, implicit $vgpr208_512, implicit $vgpr224_512, implicit $vgpr240_512, implicit $agpr2_64
 ...

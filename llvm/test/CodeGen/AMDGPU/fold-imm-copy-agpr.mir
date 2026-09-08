@@ -8,11 +8,11 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: v_mov_b64_pseudo_imm_0_copy_to_areg_64
     ; GCN: [[AV_MOV_:%[0-9]+]]:areg_64_align2 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
-    ; GCN-NEXT: $agpr0_agpr1 = COPY [[AV_MOV_]]
+    ; GCN-NEXT: $agpr0_64 = COPY [[AV_MOV_]]
     ; GCN-NEXT: S_ENDPGM 0
     %0:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
     %1:areg_64_align2 = COPY %0
-    $agpr0_agpr1 = COPY %1
+    $agpr0_64 = COPY %1
     S_ENDPGM 0
 
 ...
@@ -24,11 +24,11 @@ body:             |
   bb.0:
     ; GCN-LABEL: name: v_mov_b64_pseudo_imm_neg1_copy_to_areg_64
     ; GCN: [[AV_MOV_:%[0-9]+]]:areg_64_align2 = AV_MOV_B64_IMM_PSEUDO -1, implicit $exec
-    ; GCN-NEXT: $agpr0_agpr1 = COPY [[AV_MOV_]]
+    ; GCN-NEXT: $agpr0_64 = COPY [[AV_MOV_]]
     ; GCN-NEXT: S_ENDPGM 0
     %0:vreg_64_align2 = V_MOV_B64_PSEUDO -1, implicit $exec
     %1:areg_64_align2 = COPY %0
-    $agpr0_agpr1 = COPY %1
+    $agpr0_64 = COPY %1
     S_ENDPGM 0
 
 ...
@@ -41,11 +41,11 @@ body:             |
     ; GCN-LABEL: name: v_mov_b64_pseudo_literal_copy_to_areg_64
     ; GCN: [[V_MOV_B:%[0-9]+]]:vreg_64_align2 = V_MOV_B64_PSEUDO 999, implicit $exec
     ; GCN-NEXT: [[COPY:%[0-9]+]]:areg_64_align2 = COPY [[V_MOV_B]]
-    ; GCN-NEXT: $agpr0_agpr1 = COPY [[COPY]]
+    ; GCN-NEXT: $agpr0_64 = COPY [[COPY]]
     ; GCN-NEXT: S_ENDPGM 0
     %0:vreg_64_align2 = V_MOV_B64_PSEUDO 999, implicit $exec
     %1:areg_64_align2 = COPY %0
-    $agpr0_agpr1 = COPY %1
+    $agpr0_64 = COPY %1
     S_ENDPGM 0
 
 ...

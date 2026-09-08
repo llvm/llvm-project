@@ -151,7 +151,7 @@ body:             |
 
 ---
 # GCN-LABEL: name: alloc_agpr_64
-# GFX90A: $agpr1_agpr2 = IMPLICIT_DEF
+# GFX90A: $agpr1_64 = IMPLICIT_DEF
 name:            alloc_agpr_64
 tracksRegLiveness: true
 liveins:
@@ -171,7 +171,7 @@ body:             |
 
 ---
 # GCN-LABEL: name: alloc_agpr_128
-# GFX90A: $agpr1_agpr2_agpr3_agpr4 = IMPLICIT_DEF
+# GFX90A: $agpr1_128 = IMPLICIT_DEF
 name:            alloc_agpr_128
 tracksRegLiveness: true
 liveins:
@@ -191,7 +191,7 @@ body:             |
 
 ---
 # GCN-LABEL: name: alloc_agpr_512
-# GFX90A: $agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16 = IMPLICIT_DEF
+# GFX90A: $agpr1_512 = IMPLICIT_DEF
 name:            alloc_agpr_512
 tracksRegLiveness: true
 liveins:
@@ -214,7 +214,7 @@ body:             |
 
 ---
 # GCN-LABEL: name: alloc_agpr_1024
-# GFX90A: $agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31_agpr32 = IMPLICIT_DEF
+# GFX90A: $agpr1_1024 = IMPLICIT_DEF
 name:            alloc_agpr_1024
 tracksRegLiveness: true
 liveins:

@@ -2744,7 +2744,7 @@ body:             |
   ; GFX908-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.2, addrspace 5)
   ; GFX908-NEXT:   $vgpr1 = V_MOV_B32_e32 8200, implicit $exec
   ; GFX908-NEXT:   $vgpr0 = BUFFER_LOAD_DWORD_OFFEN $vgpr1, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.1, addrspace 5)
-  ; GFX908-NEXT:   $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1
+  ; GFX908-NEXT:   $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_64
   ; GFX908-NEXT:   $vgpr0 = BUFFER_LOAD_DWORD_OFFEN $vgpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.1 + 4, addrspace 5)
   ; GFX908-NEXT:   $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
   ; GFX908-NEXT:   $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.2, addrspace 5)
@@ -3360,7 +3360,7 @@ body:             |
   ; GFX90A-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr40, $sgpr0_128, $sgpr32, 704, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.226, addrspace 5)
   ; GFX90A-NEXT:   $vgpr40 = V_MOV_B32_e32 8904, implicit $exec
-  ; GFX90A-NEXT:   $agpr0 = BUFFER_LOAD_DWORD_OFFEN $vgpr40, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1 :: ("amdgpu-thread-private" load (s32) from %stack.1, addrspace 5)
+  ; GFX90A-NEXT:   $agpr0 = BUFFER_LOAD_DWORD_OFFEN $vgpr40, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_64 :: ("amdgpu-thread-private" load (s32) from %stack.1, addrspace 5)
   ; GFX90A-NEXT:   $agpr1 = BUFFER_LOAD_DWORD_OFFEN killed $vgpr40, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.1 + 4, addrspace 5)
   ; GFX90A-NEXT:   $vgpr40 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 704, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.226, addrspace 5)
   ; GFX90A-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
@@ -3930,7 +3930,7 @@ body:             |
   ; GFX908-FLATSCR-NEXT:   $vgpr1 = V_MOV_B32_e32 $sgpr32, implicit $exec
   ; GFX908-FLATSCR-NEXT:   $vgpr1 = V_ADD_U32_e32 8200, $vgpr1, implicit $exec
   ; GFX908-FLATSCR-NEXT:   $vgpr0 = SCRATCH_LOAD_DWORD $vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.1, addrspace 5)
-  ; GFX908-FLATSCR-NEXT:   $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1
+  ; GFX908-FLATSCR-NEXT:   $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_64
   ; GFX908-FLATSCR-NEXT:   $vgpr0 = SCRATCH_LOAD_DWORD $vgpr1, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.1 + 4, addrspace 5)
   ; GFX908-FLATSCR-NEXT:   $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
   ; GFX908-FLATSCR-NEXT:   $vgpr1 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.2, addrspace 5)
@@ -4547,7 +4547,7 @@ body:             |
   ; GFX90A-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr40, $sgpr32, 704, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.226, addrspace 5)
   ; GFX90A-FLATSCR-NEXT:   $vgpr40 = V_MOV_B32_e32 $sgpr32, implicit $exec
   ; GFX90A-FLATSCR-NEXT:   $vgpr40 = V_ADD_U32_e32 8904, $vgpr40, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   $agpr0_agpr1 = SCRATCH_LOAD_DWORDX2 killed $vgpr40, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s64) from %stack.1, align 4, addrspace 5)
+  ; GFX90A-FLATSCR-NEXT:   $agpr0_64 = SCRATCH_LOAD_DWORDX2 killed $vgpr40, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s64) from %stack.1, align 4, addrspace 5)
   ; GFX90A-FLATSCR-NEXT:   $vgpr40 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 704, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.226, addrspace 5)
   ; GFX90A-FLATSCR-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
   ; GFX90A-FLATSCR-NEXT: {{  $}}
@@ -4789,7 +4789,7 @@ body:             |
     liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128
 
     S_CMP_EQ_U32 0, 0, implicit-def $scc
-    $agpr0_agpr1 = SI_SPILL_A64_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.1, align 4, addrspace 5)
+    $agpr0_64 = SI_SPILL_A64_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.1, align 4, addrspace 5)
     S_CBRANCH_SCC1 %bb.2, implicit $scc
 
   bb.1:
@@ -5143,7 +5143,7 @@ body:             |
   ; GFX908-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.2, addrspace 5)
   ; GFX908-NEXT:   $vgpr1 = V_MOV_B32_e32 8200, implicit $exec
   ; GFX908-NEXT:   $vgpr0 = BUFFER_LOAD_DWORD_OFFEN $vgpr1, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.1, addrspace 5)
-  ; GFX908-NEXT:   $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2
+  ; GFX908-NEXT:   $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_96
   ; GFX908-NEXT:   $vgpr0 = BUFFER_LOAD_DWORD_OFFEN $vgpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.1 + 4, addrspace 5)
   ; GFX908-NEXT:   $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
   ; GFX908-NEXT:   $vgpr0 = BUFFER_LOAD_DWORD_OFFEN $vgpr1, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.1 + 8, addrspace 5)
@@ -5761,7 +5761,7 @@ body:             |
   ; GFX90A-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr40, $sgpr0_128, $sgpr32, 704, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.226, addrspace 5)
   ; GFX90A-NEXT:   $vgpr40 = V_MOV_B32_e32 8904, implicit $exec
-  ; GFX90A-NEXT:   $agpr0 = BUFFER_LOAD_DWORD_OFFEN $vgpr40, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2 :: ("amdgpu-thread-private" load (s32) from %stack.1, addrspace 5)
+  ; GFX90A-NEXT:   $agpr0 = BUFFER_LOAD_DWORD_OFFEN $vgpr40, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_96 :: ("amdgpu-thread-private" load (s32) from %stack.1, addrspace 5)
   ; GFX90A-NEXT:   $agpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr40, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.1 + 4, addrspace 5)
   ; GFX90A-NEXT:   $agpr2 = BUFFER_LOAD_DWORD_OFFEN killed $vgpr40, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.1 + 8, addrspace 5)
   ; GFX90A-NEXT:   $vgpr40 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 704, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.226, addrspace 5)
@@ -6332,7 +6332,7 @@ body:             |
   ; GFX908-FLATSCR-NEXT:   $vgpr1 = V_MOV_B32_e32 $sgpr32, implicit $exec
   ; GFX908-FLATSCR-NEXT:   $vgpr1 = V_ADD_U32_e32 8200, $vgpr1, implicit $exec
   ; GFX908-FLATSCR-NEXT:   $vgpr0 = SCRATCH_LOAD_DWORD $vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.1, addrspace 5)
-  ; GFX908-FLATSCR-NEXT:   $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2
+  ; GFX908-FLATSCR-NEXT:   $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec, implicit-def $agpr0_96
   ; GFX908-FLATSCR-NEXT:   $vgpr0 = SCRATCH_LOAD_DWORD $vgpr1, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.1 + 4, addrspace 5)
   ; GFX908-FLATSCR-NEXT:   $agpr1 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
   ; GFX908-FLATSCR-NEXT:   $vgpr0 = SCRATCH_LOAD_DWORD $vgpr1, 8, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.1 + 8, addrspace 5)
@@ -6951,7 +6951,7 @@ body:             |
   ; GFX90A-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr40, $sgpr32, 704, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.226, addrspace 5)
   ; GFX90A-FLATSCR-NEXT:   $vgpr40 = V_MOV_B32_e32 $sgpr32, implicit $exec
   ; GFX90A-FLATSCR-NEXT:   $vgpr40 = V_ADD_U32_e32 8904, $vgpr40, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   $agpr0_agpr1_agpr2 = SCRATCH_LOAD_DWORDX3 killed $vgpr40, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s96) from %stack.1, align 4, addrspace 5)
+  ; GFX90A-FLATSCR-NEXT:   $agpr0_96 = SCRATCH_LOAD_DWORDX3 killed $vgpr40, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s96) from %stack.1, align 4, addrspace 5)
   ; GFX90A-FLATSCR-NEXT:   $vgpr40 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 704, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.226, addrspace 5)
   ; GFX90A-FLATSCR-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
   ; GFX90A-FLATSCR-NEXT: {{  $}}
@@ -7193,7 +7193,7 @@ body:             |
     liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128
 
     S_CMP_EQ_U32 0, 0, implicit-def $scc
-    $agpr0_agpr1_agpr2 = SI_SPILL_A96_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.1, align 4, addrspace 5)
+    $agpr0_96 = SI_SPILL_A96_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.1, align 4, addrspace 5)
     S_CBRANCH_SCC1 %bb.2, implicit $scc
 
   bb.1:
@@ -9614,7 +9614,7 @@ body:             |
   ; GFX908-LABEL: name: agpr64_save_clobber_scc
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; GFX908-NEXT:   liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_agpr1
+  ; GFX908-NEXT:   liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_64
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
   ; GFX908-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -9939,10 +9939,10 @@ body:             |
   ; GFX908-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX908-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.2, addrspace 5)
   ; GFX908-NEXT:   $vgpr1 = V_MOV_B32_e32 8200, implicit $exec
-  ; GFX908-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $agpr0_agpr1, implicit $agpr0_agpr1
-  ; GFX908-NEXT:   BUFFER_STORE_DWORD_OFFEN $vgpr0, $vgpr1, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1 :: ("amdgpu-thread-private" store (s32) into %stack.1, addrspace 5)
-  ; GFX908-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $agpr0_agpr1
-  ; GFX908-NEXT:   BUFFER_STORE_DWORD_OFFEN $vgpr0, $vgpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec, implicit $agpr0_agpr1 :: ("amdgpu-thread-private" store (s32) into %stack.1 + 4, addrspace 5)
+  ; GFX908-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $agpr0_64, implicit $agpr0_64
+  ; GFX908-NEXT:   BUFFER_STORE_DWORD_OFFEN $vgpr0, $vgpr1, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_64 :: ("amdgpu-thread-private" store (s32) into %stack.1, addrspace 5)
+  ; GFX908-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $agpr0_64
+  ; GFX908-NEXT:   BUFFER_STORE_DWORD_OFFEN $vgpr0, $vgpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec, implicit $agpr0_64 :: ("amdgpu-thread-private" store (s32) into %stack.1 + 4, addrspace 5)
   ; GFX908-NEXT:   $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.2, addrspace 5)
   ; GFX908-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
   ; GFX908-NEXT: {{  $}}
@@ -9952,14 +9952,14 @@ body:             |
   ; GFX908-NEXT:   S_NOP 0
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
-  ; GFX908-NEXT:   liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_agpr1
+  ; GFX908-NEXT:   liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_64
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
   ;
   ; GFX90A-LABEL: name: agpr64_save_clobber_scc
   ; GFX90A: bb.0:
   ; GFX90A-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; GFX90A-NEXT:   liveins: $agpr32, $agpr33, $agpr34, $agpr35, $agpr36, $agpr37, $agpr38, $agpr39, $agpr40, $agpr41, $agpr42, $agpr43, $agpr44, $agpr45, $agpr46, $agpr47, $agpr48, $agpr49, $agpr50, $agpr51, $agpr52, $agpr53, $agpr54, $agpr55, $agpr56, $agpr57, $agpr58, $agpr59, $agpr60, $agpr61, $agpr62, $agpr63, $agpr64, $agpr65, $agpr66, $agpr67, $agpr68, $agpr69, $agpr70, $agpr71, $agpr72, $agpr73, $agpr74, $agpr75, $agpr76, $agpr77, $agpr78, $agpr79, $agpr80, $agpr81, $agpr82, $agpr83, $agpr84, $agpr85, $agpr86, $agpr87, $agpr88, $agpr89, $agpr90, $agpr91, $agpr92, $agpr93, $agpr94, $agpr95, $agpr96, $agpr97, $agpr98, $agpr99, $agpr100, $agpr101, $agpr102, $agpr103, $agpr104, $agpr105, $agpr106, $agpr107, $agpr108, $agpr109, $agpr110, $agpr111, $agpr112, $agpr113, $agpr114, $agpr115, $agpr116, $agpr117, $agpr118, $agpr119, $agpr120, $agpr121, $agpr122, $agpr123, $agpr124, $agpr125, $agpr126, $agpr127, $agpr128, $agpr129, $agpr130, $agpr131, $agpr132, $agpr133, $agpr134, $agpr135, $agpr136, $agpr137, $agpr138, $agpr139, $agpr140, $agpr141, $agpr142, $agpr143, $agpr144, $agpr145, $agpr146, $agpr147, $agpr148, $agpr149, $agpr150, $agpr151, $agpr152, $agpr153, $agpr154, $agpr155, $agpr156, $agpr157, $agpr158, $agpr159, $agpr160, $agpr161, $agpr162, $agpr163, $agpr164, $agpr165, $agpr166, $agpr167, $agpr168, $agpr169, $agpr170, $agpr171, $agpr172, $agpr173, $agpr174, $agpr175, $agpr176, $agpr177, $agpr178, $agpr179, $agpr180, $agpr181, $agpr182, $agpr183, $agpr184, $agpr185, $agpr186, $agpr187, $agpr188, $agpr189, $agpr190, $agpr191, $agpr192, $agpr193, $agpr194, $agpr195, $agpr196, $agpr197, $agpr198, $agpr199, $agpr200, $agpr201, $agpr202, $agpr203, $agpr204, $agpr205, $agpr206, $agpr207, $agpr208, $agpr209, $agpr210, $agpr211, $agpr212, $agpr213, $agpr214, $agpr215, $agpr216, $agpr217, $agpr218, $agpr219, $agpr220, $agpr221, $agpr222, $agpr223, $agpr224, $agpr225, $agpr226, $agpr227, $agpr228, $agpr229, $agpr230, $agpr231, $agpr232, $agpr233, $agpr234, $agpr235, $agpr236, $agpr237, $agpr238, $agpr239, $agpr240, $agpr241, $agpr242, $agpr243, $agpr244, $agpr245, $agpr246, $agpr247, $agpr248, $agpr249, $agpr250, $agpr251, $agpr252, $agpr253, $agpr254, $agpr255, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $agpr0_agpr1, $vgpr248_128, $vgpr252_128, $vgpr240_256, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512
+  ; GFX90A-NEXT:   liveins: $agpr32, $agpr33, $agpr34, $agpr35, $agpr36, $agpr37, $agpr38, $agpr39, $agpr40, $agpr41, $agpr42, $agpr43, $agpr44, $agpr45, $agpr46, $agpr47, $agpr48, $agpr49, $agpr50, $agpr51, $agpr52, $agpr53, $agpr54, $agpr55, $agpr56, $agpr57, $agpr58, $agpr59, $agpr60, $agpr61, $agpr62, $agpr63, $agpr64, $agpr65, $agpr66, $agpr67, $agpr68, $agpr69, $agpr70, $agpr71, $agpr72, $agpr73, $agpr74, $agpr75, $agpr76, $agpr77, $agpr78, $agpr79, $agpr80, $agpr81, $agpr82, $agpr83, $agpr84, $agpr85, $agpr86, $agpr87, $agpr88, $agpr89, $agpr90, $agpr91, $agpr92, $agpr93, $agpr94, $agpr95, $agpr96, $agpr97, $agpr98, $agpr99, $agpr100, $agpr101, $agpr102, $agpr103, $agpr104, $agpr105, $agpr106, $agpr107, $agpr108, $agpr109, $agpr110, $agpr111, $agpr112, $agpr113, $agpr114, $agpr115, $agpr116, $agpr117, $agpr118, $agpr119, $agpr120, $agpr121, $agpr122, $agpr123, $agpr124, $agpr125, $agpr126, $agpr127, $agpr128, $agpr129, $agpr130, $agpr131, $agpr132, $agpr133, $agpr134, $agpr135, $agpr136, $agpr137, $agpr138, $agpr139, $agpr140, $agpr141, $agpr142, $agpr143, $agpr144, $agpr145, $agpr146, $agpr147, $agpr148, $agpr149, $agpr150, $agpr151, $agpr152, $agpr153, $agpr154, $agpr155, $agpr156, $agpr157, $agpr158, $agpr159, $agpr160, $agpr161, $agpr162, $agpr163, $agpr164, $agpr165, $agpr166, $agpr167, $agpr168, $agpr169, $agpr170, $agpr171, $agpr172, $agpr173, $agpr174, $agpr175, $agpr176, $agpr177, $agpr178, $agpr179, $agpr180, $agpr181, $agpr182, $agpr183, $agpr184, $agpr185, $agpr186, $agpr187, $agpr188, $agpr189, $agpr190, $agpr191, $agpr192, $agpr193, $agpr194, $agpr195, $agpr196, $agpr197, $agpr198, $agpr199, $agpr200, $agpr201, $agpr202, $agpr203, $agpr204, $agpr205, $agpr206, $agpr207, $agpr208, $agpr209, $agpr210, $agpr211, $agpr212, $agpr213, $agpr214, $agpr215, $agpr216, $agpr217, $agpr218, $agpr219, $agpr220, $agpr221, $agpr222, $agpr223, $agpr224, $agpr225, $agpr226, $agpr227, $agpr228, $agpr229, $agpr230, $agpr231, $agpr232, $agpr233, $agpr234, $agpr235, $agpr236, $agpr237, $agpr238, $agpr239, $agpr240, $agpr241, $agpr242, $agpr243, $agpr244, $agpr245, $agpr246, $agpr247, $agpr248, $agpr249, $agpr250, $agpr251, $agpr252, $agpr253, $agpr254, $agpr255, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $agpr0_64, $vgpr248_128, $vgpr252_128, $vgpr240_256, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -10556,8 +10556,8 @@ body:             |
   ; GFX90A-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr40, $sgpr0_128, $sgpr32, 704, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.226, addrspace 5)
   ; GFX90A-NEXT:   $vgpr40 = V_MOV_B32_e32 8904, implicit $exec
-  ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFEN $agpr0, $vgpr40, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1, implicit $agpr0_agpr1 :: ("amdgpu-thread-private" store (s32) into %stack.1, addrspace 5)
-  ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFEN $agpr1, killed $vgpr40, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec, implicit $agpr0_agpr1 :: ("amdgpu-thread-private" store (s32) into %stack.1 + 4, addrspace 5)
+  ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFEN $agpr0, $vgpr40, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_64, implicit $agpr0_64 :: ("amdgpu-thread-private" store (s32) into %stack.1, addrspace 5)
+  ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFEN $agpr1, killed $vgpr40, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec, implicit $agpr0_64 :: ("amdgpu-thread-private" store (s32) into %stack.1 + 4, addrspace 5)
   ; GFX90A-NEXT:   $vgpr40 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 704, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.226, addrspace 5)
   ; GFX90A-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
   ; GFX90A-NEXT: {{  $}}
@@ -10568,7 +10568,7 @@ body:             |
   ; GFX90A-NEXT:   S_NOP 0
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.2:
-  ; GFX90A-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $agpr0_agpr1, $vgpr248_128, $vgpr252_128, $vgpr240_256, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512
+  ; GFX90A-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $agpr0_64, $vgpr248_128, $vgpr252_128, $vgpr240_256, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   $agpr255 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.225, addrspace 5)
   ; GFX90A-NEXT:   $agpr254 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.224, addrspace 5)
@@ -10799,7 +10799,7 @@ body:             |
   ; GFX908-FLATSCR-LABEL: name: agpr64_save_clobber_scc
   ; GFX908-FLATSCR: bb.0:
   ; GFX908-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; GFX908-FLATSCR-NEXT:   liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_agpr1
+  ; GFX908-FLATSCR-NEXT:   liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_64
   ; GFX908-FLATSCR-NEXT: {{  $}}
   ; GFX908-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
   ; GFX908-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -11125,10 +11125,10 @@ body:             |
   ; GFX908-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.2, addrspace 5)
   ; GFX908-FLATSCR-NEXT:   $vgpr1 = V_MOV_B32_e32 $sgpr32, implicit $exec
   ; GFX908-FLATSCR-NEXT:   $vgpr1 = V_ADD_U32_e32 8200, $vgpr1, implicit $exec
-  ; GFX908-FLATSCR-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $agpr0_agpr1, implicit $agpr0_agpr1
-  ; GFX908-FLATSCR-NEXT:   SCRATCH_STORE_DWORD $vgpr0, $vgpr1, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1 :: ("amdgpu-thread-private" store (s32) into %stack.1, addrspace 5)
-  ; GFX908-FLATSCR-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $agpr0_agpr1
-  ; GFX908-FLATSCR-NEXT:   SCRATCH_STORE_DWORD $vgpr0, $vgpr1, 4, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1 :: ("amdgpu-thread-private" store (s32) into %stack.1 + 4, addrspace 5)
+  ; GFX908-FLATSCR-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $agpr0_64, implicit $agpr0_64
+  ; GFX908-FLATSCR-NEXT:   SCRATCH_STORE_DWORD $vgpr0, $vgpr1, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_64 :: ("amdgpu-thread-private" store (s32) into %stack.1, addrspace 5)
+  ; GFX908-FLATSCR-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec, implicit $agpr0_64
+  ; GFX908-FLATSCR-NEXT:   SCRATCH_STORE_DWORD $vgpr0, $vgpr1, 4, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_64 :: ("amdgpu-thread-private" store (s32) into %stack.1 + 4, addrspace 5)
   ; GFX908-FLATSCR-NEXT:   $vgpr1 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.2, addrspace 5)
   ; GFX908-FLATSCR-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
   ; GFX908-FLATSCR-NEXT: {{  $}}
@@ -11138,14 +11138,14 @@ body:             |
   ; GFX908-FLATSCR-NEXT:   S_NOP 0
   ; GFX908-FLATSCR-NEXT: {{  $}}
   ; GFX908-FLATSCR-NEXT: bb.2:
-  ; GFX908-FLATSCR-NEXT:   liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_agpr1
+  ; GFX908-FLATSCR-NEXT:   liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_64
   ; GFX908-FLATSCR-NEXT: {{  $}}
   ; GFX908-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
   ;
   ; GFX90A-FLATSCR-LABEL: name: agpr64_save_clobber_scc
   ; GFX90A-FLATSCR: bb.0:
   ; GFX90A-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; GFX90A-FLATSCR-NEXT:   liveins: $agpr32, $agpr33, $agpr34, $agpr35, $agpr36, $agpr37, $agpr38, $agpr39, $agpr40, $agpr41, $agpr42, $agpr43, $agpr44, $agpr45, $agpr46, $agpr47, $agpr48, $agpr49, $agpr50, $agpr51, $agpr52, $agpr53, $agpr54, $agpr55, $agpr56, $agpr57, $agpr58, $agpr59, $agpr60, $agpr61, $agpr62, $agpr63, $agpr64, $agpr65, $agpr66, $agpr67, $agpr68, $agpr69, $agpr70, $agpr71, $agpr72, $agpr73, $agpr74, $agpr75, $agpr76, $agpr77, $agpr78, $agpr79, $agpr80, $agpr81, $agpr82, $agpr83, $agpr84, $agpr85, $agpr86, $agpr87, $agpr88, $agpr89, $agpr90, $agpr91, $agpr92, $agpr93, $agpr94, $agpr95, $agpr96, $agpr97, $agpr98, $agpr99, $agpr100, $agpr101, $agpr102, $agpr103, $agpr104, $agpr105, $agpr106, $agpr107, $agpr108, $agpr109, $agpr110, $agpr111, $agpr112, $agpr113, $agpr114, $agpr115, $agpr116, $agpr117, $agpr118, $agpr119, $agpr120, $agpr121, $agpr122, $agpr123, $agpr124, $agpr125, $agpr126, $agpr127, $agpr128, $agpr129, $agpr130, $agpr131, $agpr132, $agpr133, $agpr134, $agpr135, $agpr136, $agpr137, $agpr138, $agpr139, $agpr140, $agpr141, $agpr142, $agpr143, $agpr144, $agpr145, $agpr146, $agpr147, $agpr148, $agpr149, $agpr150, $agpr151, $agpr152, $agpr153, $agpr154, $agpr155, $agpr156, $agpr157, $agpr158, $agpr159, $agpr160, $agpr161, $agpr162, $agpr163, $agpr164, $agpr165, $agpr166, $agpr167, $agpr168, $agpr169, $agpr170, $agpr171, $agpr172, $agpr173, $agpr174, $agpr175, $agpr176, $agpr177, $agpr178, $agpr179, $agpr180, $agpr181, $agpr182, $agpr183, $agpr184, $agpr185, $agpr186, $agpr187, $agpr188, $agpr189, $agpr190, $agpr191, $agpr192, $agpr193, $agpr194, $agpr195, $agpr196, $agpr197, $agpr198, $agpr199, $agpr200, $agpr201, $agpr202, $agpr203, $agpr204, $agpr205, $agpr206, $agpr207, $agpr208, $agpr209, $agpr210, $agpr211, $agpr212, $agpr213, $agpr214, $agpr215, $agpr216, $agpr217, $agpr218, $agpr219, $agpr220, $agpr221, $agpr222, $agpr223, $agpr224, $agpr225, $agpr226, $agpr227, $agpr228, $agpr229, $agpr230, $agpr231, $agpr232, $agpr233, $agpr234, $agpr235, $agpr236, $agpr237, $agpr238, $agpr239, $agpr240, $agpr241, $agpr242, $agpr243, $agpr244, $agpr245, $agpr246, $agpr247, $agpr248, $agpr249, $agpr250, $agpr251, $agpr252, $agpr253, $agpr254, $agpr255, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $agpr0_agpr1, $vgpr248_128, $vgpr252_128, $vgpr240_256, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512
+  ; GFX90A-FLATSCR-NEXT:   liveins: $agpr32, $agpr33, $agpr34, $agpr35, $agpr36, $agpr37, $agpr38, $agpr39, $agpr40, $agpr41, $agpr42, $agpr43, $agpr44, $agpr45, $agpr46, $agpr47, $agpr48, $agpr49, $agpr50, $agpr51, $agpr52, $agpr53, $agpr54, $agpr55, $agpr56, $agpr57, $agpr58, $agpr59, $agpr60, $agpr61, $agpr62, $agpr63, $agpr64, $agpr65, $agpr66, $agpr67, $agpr68, $agpr69, $agpr70, $agpr71, $agpr72, $agpr73, $agpr74, $agpr75, $agpr76, $agpr77, $agpr78, $agpr79, $agpr80, $agpr81, $agpr82, $agpr83, $agpr84, $agpr85, $agpr86, $agpr87, $agpr88, $agpr89, $agpr90, $agpr91, $agpr92, $agpr93, $agpr94, $agpr95, $agpr96, $agpr97, $agpr98, $agpr99, $agpr100, $agpr101, $agpr102, $agpr103, $agpr104, $agpr105, $agpr106, $agpr107, $agpr108, $agpr109, $agpr110, $agpr111, $agpr112, $agpr113, $agpr114, $agpr115, $agpr116, $agpr117, $agpr118, $agpr119, $agpr120, $agpr121, $agpr122, $agpr123, $agpr124, $agpr125, $agpr126, $agpr127, $agpr128, $agpr129, $agpr130, $agpr131, $agpr132, $agpr133, $agpr134, $agpr135, $agpr136, $agpr137, $agpr138, $agpr139, $agpr140, $agpr141, $agpr142, $agpr143, $agpr144, $agpr145, $agpr146, $agpr147, $agpr148, $agpr149, $agpr150, $agpr151, $agpr152, $agpr153, $agpr154, $agpr155, $agpr156, $agpr157, $agpr158, $agpr159, $agpr160, $agpr161, $agpr162, $agpr163, $agpr164, $agpr165, $agpr166, $agpr167, $agpr168, $agpr169, $agpr170, $agpr171, $agpr172, $agpr173, $agpr174, $agpr175, $agpr176, $agpr177, $agpr178, $agpr179, $agpr180, $agpr181, $agpr182, $agpr183, $agpr184, $agpr185, $agpr186, $agpr187, $agpr188, $agpr189, $agpr190, $agpr191, $agpr192, $agpr193, $agpr194, $agpr195, $agpr196, $agpr197, $agpr198, $agpr199, $agpr200, $agpr201, $agpr202, $agpr203, $agpr204, $agpr205, $agpr206, $agpr207, $agpr208, $agpr209, $agpr210, $agpr211, $agpr212, $agpr213, $agpr214, $agpr215, $agpr216, $agpr217, $agpr218, $agpr219, $agpr220, $agpr221, $agpr222, $agpr223, $agpr224, $agpr225, $agpr226, $agpr227, $agpr228, $agpr229, $agpr230, $agpr231, $agpr232, $agpr233, $agpr234, $agpr235, $agpr236, $agpr237, $agpr238, $agpr239, $agpr240, $agpr241, $agpr242, $agpr243, $agpr244, $agpr245, $agpr246, $agpr247, $agpr248, $agpr249, $agpr250, $agpr251, $agpr252, $agpr253, $agpr254, $agpr255, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $agpr0_64, $vgpr248_128, $vgpr252_128, $vgpr240_256, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512
   ; GFX90A-FLATSCR-NEXT: {{  $}}
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -11743,7 +11743,7 @@ body:             |
   ; GFX90A-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr40, $sgpr32, 704, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.226, addrspace 5)
   ; GFX90A-FLATSCR-NEXT:   $vgpr40 = V_MOV_B32_e32 $sgpr32, implicit $exec
   ; GFX90A-FLATSCR-NEXT:   $vgpr40 = V_ADD_U32_e32 8904, $vgpr40, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   SCRATCH_STORE_DWORDX2 $agpr0_agpr1, killed $vgpr40, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s64) into %stack.1, align 4, addrspace 5)
+  ; GFX90A-FLATSCR-NEXT:   SCRATCH_STORE_DWORDX2 $agpr0_64, killed $vgpr40, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s64) into %stack.1, align 4, addrspace 5)
   ; GFX90A-FLATSCR-NEXT:   $vgpr40 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 704, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.226, addrspace 5)
   ; GFX90A-FLATSCR-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
   ; GFX90A-FLATSCR-NEXT: {{  $}}
@@ -11754,7 +11754,7 @@ body:             |
   ; GFX90A-FLATSCR-NEXT:   S_NOP 0
   ; GFX90A-FLATSCR-NEXT: {{  $}}
   ; GFX90A-FLATSCR-NEXT: bb.2:
-  ; GFX90A-FLATSCR-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $agpr0_agpr1, $vgpr248_128, $vgpr252_128, $vgpr240_256, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512
+  ; GFX90A-FLATSCR-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $agpr0_64, $vgpr248_128, $vgpr252_128, $vgpr240_256, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512
   ; GFX90A-FLATSCR-NEXT: {{  $}}
   ; GFX90A-FLATSCR-NEXT:   $agpr255 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.225, addrspace 5)
   ; GFX90A-FLATSCR-NEXT:   $agpr254 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.224, addrspace 5)
@@ -11982,17 +11982,17 @@ body:             |
   ; GFX90A-FLATSCR-NEXT:   $agpr32 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec
   ; GFX90A-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
   bb.0:
-    liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_agpr1
+    liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_64
 
     S_CMP_EQ_U32 0, 0, implicit-def $scc
-    SI_SPILL_A64_SAVE $agpr0_agpr1, %stack.1, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.1, align 4, addrspace 5)
+    SI_SPILL_A64_SAVE $agpr0_64, %stack.1, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.1, align 4, addrspace 5)
     S_CBRANCH_SCC1 %bb.2, implicit $scc
 
   bb.1:
     S_NOP 0
 
   bb.2:
-    liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_agpr1
+    liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_64
     S_ENDPGM 0, amdgpu_allvgprs
 ...
 ---
@@ -12011,7 +12011,7 @@ body:             |
   ; GFX908-LABEL: name: agpr96_save_clobber_scc
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; GFX908-NEXT:   liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_agpr1
+  ; GFX908-NEXT:   liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_64
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
   ; GFX908-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -12336,12 +12336,12 @@ body:             |
   ; GFX908-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX908-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.2, addrspace 5)
   ; GFX908-NEXT:   $vgpr1 = V_MOV_B32_e32 8200, implicit $exec
-  ; GFX908-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2, implicit $agpr0_agpr1_agpr2
-  ; GFX908-NEXT:   BUFFER_STORE_DWORD_OFFEN $vgpr0, $vgpr1, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2 :: ("amdgpu-thread-private" store (s32) into %stack.1, addrspace 5)
+  ; GFX908-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $agpr0_96, implicit $agpr0_96
+  ; GFX908-NEXT:   BUFFER_STORE_DWORD_OFFEN $vgpr0, $vgpr1, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $agpr0_96 :: ("amdgpu-thread-private" store (s32) into %stack.1, addrspace 5)
   ; GFX908-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec
   ; GFX908-NEXT:   BUFFER_STORE_DWORD_OFFEN $vgpr0, $vgpr1, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.1 + 4, addrspace 5)
-  ; GFX908-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2
-  ; GFX908-NEXT:   BUFFER_STORE_DWORD_OFFEN $vgpr0, $vgpr1, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2 :: ("amdgpu-thread-private" store (s32) into %stack.1 + 8, addrspace 5)
+  ; GFX908-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $agpr0_96
+  ; GFX908-NEXT:   BUFFER_STORE_DWORD_OFFEN $vgpr0, $vgpr1, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec, implicit $agpr0_96 :: ("amdgpu-thread-private" store (s32) into %stack.1 + 8, addrspace 5)
   ; GFX908-NEXT:   $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.2, addrspace 5)
   ; GFX908-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
   ; GFX908-NEXT: {{  $}}
@@ -12351,14 +12351,14 @@ body:             |
   ; GFX908-NEXT:   S_NOP 0
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.2:
-  ; GFX908-NEXT:   liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_agpr1
+  ; GFX908-NEXT:   liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_64
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
   ;
   ; GFX90A-LABEL: name: agpr96_save_clobber_scc
   ; GFX90A: bb.0:
   ; GFX90A-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; GFX90A-NEXT:   liveins: $agpr32, $agpr33, $agpr34, $agpr35, $agpr36, $agpr37, $agpr38, $agpr39, $agpr40, $agpr41, $agpr42, $agpr43, $agpr44, $agpr45, $agpr46, $agpr47, $agpr48, $agpr49, $agpr50, $agpr51, $agpr52, $agpr53, $agpr54, $agpr55, $agpr56, $agpr57, $agpr58, $agpr59, $agpr60, $agpr61, $agpr62, $agpr63, $agpr64, $agpr65, $agpr66, $agpr67, $agpr68, $agpr69, $agpr70, $agpr71, $agpr72, $agpr73, $agpr74, $agpr75, $agpr76, $agpr77, $agpr78, $agpr79, $agpr80, $agpr81, $agpr82, $agpr83, $agpr84, $agpr85, $agpr86, $agpr87, $agpr88, $agpr89, $agpr90, $agpr91, $agpr92, $agpr93, $agpr94, $agpr95, $agpr96, $agpr97, $agpr98, $agpr99, $agpr100, $agpr101, $agpr102, $agpr103, $agpr104, $agpr105, $agpr106, $agpr107, $agpr108, $agpr109, $agpr110, $agpr111, $agpr112, $agpr113, $agpr114, $agpr115, $agpr116, $agpr117, $agpr118, $agpr119, $agpr120, $agpr121, $agpr122, $agpr123, $agpr124, $agpr125, $agpr126, $agpr127, $agpr128, $agpr129, $agpr130, $agpr131, $agpr132, $agpr133, $agpr134, $agpr135, $agpr136, $agpr137, $agpr138, $agpr139, $agpr140, $agpr141, $agpr142, $agpr143, $agpr144, $agpr145, $agpr146, $agpr147, $agpr148, $agpr149, $agpr150, $agpr151, $agpr152, $agpr153, $agpr154, $agpr155, $agpr156, $agpr157, $agpr158, $agpr159, $agpr160, $agpr161, $agpr162, $agpr163, $agpr164, $agpr165, $agpr166, $agpr167, $agpr168, $agpr169, $agpr170, $agpr171, $agpr172, $agpr173, $agpr174, $agpr175, $agpr176, $agpr177, $agpr178, $agpr179, $agpr180, $agpr181, $agpr182, $agpr183, $agpr184, $agpr185, $agpr186, $agpr187, $agpr188, $agpr189, $agpr190, $agpr191, $agpr192, $agpr193, $agpr194, $agpr195, $agpr196, $agpr197, $agpr198, $agpr199, $agpr200, $agpr201, $agpr202, $agpr203, $agpr204, $agpr205, $agpr206, $agpr207, $agpr208, $agpr209, $agpr210, $agpr211, $agpr212, $agpr213, $agpr214, $agpr215, $agpr216, $agpr217, $agpr218, $agpr219, $agpr220, $agpr221, $agpr222, $agpr223, $agpr224, $agpr225, $agpr226, $agpr227, $agpr228, $agpr229, $agpr230, $agpr231, $agpr232, $agpr233, $agpr234, $agpr235, $agpr236, $agpr237, $agpr238, $agpr239, $agpr240, $agpr241, $agpr242, $agpr243, $agpr244, $agpr245, $agpr246, $agpr247, $agpr248, $agpr249, $agpr250, $agpr251, $agpr252, $agpr253, $agpr254, $agpr255, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $agpr0_agpr1, $vgpr248_128, $vgpr252_128, $vgpr240_256, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512
+  ; GFX90A-NEXT:   liveins: $agpr32, $agpr33, $agpr34, $agpr35, $agpr36, $agpr37, $agpr38, $agpr39, $agpr40, $agpr41, $agpr42, $agpr43, $agpr44, $agpr45, $agpr46, $agpr47, $agpr48, $agpr49, $agpr50, $agpr51, $agpr52, $agpr53, $agpr54, $agpr55, $agpr56, $agpr57, $agpr58, $agpr59, $agpr60, $agpr61, $agpr62, $agpr63, $agpr64, $agpr65, $agpr66, $agpr67, $agpr68, $agpr69, $agpr70, $agpr71, $agpr72, $agpr73, $agpr74, $agpr75, $agpr76, $agpr77, $agpr78, $agpr79, $agpr80, $agpr81, $agpr82, $agpr83, $agpr84, $agpr85, $agpr86, $agpr87, $agpr88, $agpr89, $agpr90, $agpr91, $agpr92, $agpr93, $agpr94, $agpr95, $agpr96, $agpr97, $agpr98, $agpr99, $agpr100, $agpr101, $agpr102, $agpr103, $agpr104, $agpr105, $agpr106, $agpr107, $agpr108, $agpr109, $agpr110, $agpr111, $agpr112, $agpr113, $agpr114, $agpr115, $agpr116, $agpr117, $agpr118, $agpr119, $agpr120, $agpr121, $agpr122, $agpr123, $agpr124, $agpr125, $agpr126, $agpr127, $agpr128, $agpr129, $agpr130, $agpr131, $agpr132, $agpr133, $agpr134, $agpr135, $agpr136, $agpr137, $agpr138, $agpr139, $agpr140, $agpr141, $agpr142, $agpr143, $agpr144, $agpr145, $agpr146, $agpr147, $agpr148, $agpr149, $agpr150, $agpr151, $agpr152, $agpr153, $agpr154, $agpr155, $agpr156, $agpr157, $agpr158, $agpr159, $agpr160, $agpr161, $agpr162, $agpr163, $agpr164, $agpr165, $agpr166, $agpr167, $agpr168, $agpr169, $agpr170, $agpr171, $agpr172, $agpr173, $agpr174, $agpr175, $agpr176, $agpr177, $agpr178, $agpr179, $agpr180, $agpr181, $agpr182, $agpr183, $agpr184, $agpr185, $agpr186, $agpr187, $agpr188, $agpr189, $agpr190, $agpr191, $agpr192, $agpr193, $agpr194, $agpr195, $agpr196, $agpr197, $agpr198, $agpr199, $agpr200, $agpr201, $agpr202, $agpr203, $agpr204, $agpr205, $agpr206, $agpr207, $agpr208, $agpr209, $agpr210, $agpr211, $agpr212, $agpr213, $agpr214, $agpr215, $agpr216, $agpr217, $agpr218, $agpr219, $agpr220, $agpr221, $agpr222, $agpr223, $agpr224, $agpr225, $agpr226, $agpr227, $agpr228, $agpr229, $agpr230, $agpr231, $agpr232, $agpr233, $agpr234, $agpr235, $agpr236, $agpr237, $agpr238, $agpr239, $agpr240, $agpr241, $agpr242, $agpr243, $agpr244, $agpr245, $agpr246, $agpr247, $agpr248, $agpr249, $agpr250, $agpr251, $agpr252, $agpr253, $agpr254, $agpr255, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $agpr0_64, $vgpr248_128, $vgpr252_128, $vgpr240_256, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
   ; GFX90A-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -12955,9 +12955,9 @@ body:             |
   ; GFX90A-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr40, $sgpr0_128, $sgpr32, 704, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.226, addrspace 5)
   ; GFX90A-NEXT:   $vgpr40 = V_MOV_B32_e32 8904, implicit $exec
-  ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFEN $agpr0, $vgpr40, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_agpr1_agpr2, implicit $agpr0_agpr1_agpr2 :: ("amdgpu-thread-private" store (s32) into %stack.1, addrspace 5)
+  ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFEN $agpr0, $vgpr40, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $agpr0_96, implicit $agpr0_96 :: ("amdgpu-thread-private" store (s32) into %stack.1, addrspace 5)
   ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFEN $agpr1, $vgpr40, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.1 + 4, addrspace 5)
-  ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFEN $agpr2, killed $vgpr40, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec, implicit $agpr0_agpr1_agpr2 :: ("amdgpu-thread-private" store (s32) into %stack.1 + 8, addrspace 5)
+  ; GFX90A-NEXT:   BUFFER_STORE_DWORD_OFFEN $agpr2, killed $vgpr40, $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec, implicit $agpr0_96 :: ("amdgpu-thread-private" store (s32) into %stack.1 + 8, addrspace 5)
   ; GFX90A-NEXT:   $vgpr40 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 704, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.226, addrspace 5)
   ; GFX90A-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
   ; GFX90A-NEXT: {{  $}}
@@ -12968,7 +12968,7 @@ body:             |
   ; GFX90A-NEXT:   S_NOP 0
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.2:
-  ; GFX90A-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $agpr0_agpr1, $vgpr248_128, $vgpr252_128, $vgpr240_256, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512
+  ; GFX90A-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $agpr0_64, $vgpr248_128, $vgpr252_128, $vgpr240_256, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   $agpr255 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.225, addrspace 5)
   ; GFX90A-NEXT:   $agpr254 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.224, addrspace 5)
@@ -13199,7 +13199,7 @@ body:             |
   ; GFX908-FLATSCR-LABEL: name: agpr96_save_clobber_scc
   ; GFX908-FLATSCR: bb.0:
   ; GFX908-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; GFX908-FLATSCR-NEXT:   liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_agpr1
+  ; GFX908-FLATSCR-NEXT:   liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_64
   ; GFX908-FLATSCR-NEXT: {{  $}}
   ; GFX908-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
   ; GFX908-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -13525,12 +13525,12 @@ body:             |
   ; GFX908-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.2, addrspace 5)
   ; GFX908-FLATSCR-NEXT:   $vgpr1 = V_MOV_B32_e32 $sgpr32, implicit $exec
   ; GFX908-FLATSCR-NEXT:   $vgpr1 = V_ADD_U32_e32 8200, $vgpr1, implicit $exec
-  ; GFX908-FLATSCR-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2, implicit $agpr0_agpr1_agpr2
-  ; GFX908-FLATSCR-NEXT:   SCRATCH_STORE_DWORD $vgpr0, $vgpr1, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2 :: ("amdgpu-thread-private" store (s32) into %stack.1, addrspace 5)
+  ; GFX908-FLATSCR-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec, implicit-def $agpr0_96, implicit $agpr0_96
+  ; GFX908-FLATSCR-NEXT:   SCRATCH_STORE_DWORD $vgpr0, $vgpr1, 0, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_96 :: ("amdgpu-thread-private" store (s32) into %stack.1, addrspace 5)
   ; GFX908-FLATSCR-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec
   ; GFX908-FLATSCR-NEXT:   SCRATCH_STORE_DWORD $vgpr0, $vgpr1, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.1 + 4, addrspace 5)
-  ; GFX908-FLATSCR-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2
-  ; GFX908-FLATSCR-NEXT:   SCRATCH_STORE_DWORD $vgpr0, $vgpr1, 8, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_agpr1_agpr2 :: ("amdgpu-thread-private" store (s32) into %stack.1 + 8, addrspace 5)
+  ; GFX908-FLATSCR-NEXT:   $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr2, implicit $exec, implicit $agpr0_96
+  ; GFX908-FLATSCR-NEXT:   SCRATCH_STORE_DWORD $vgpr0, $vgpr1, 8, 0, implicit $exec, implicit $flat_scr, implicit $agpr0_96 :: ("amdgpu-thread-private" store (s32) into %stack.1 + 8, addrspace 5)
   ; GFX908-FLATSCR-NEXT:   $vgpr1 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.2, addrspace 5)
   ; GFX908-FLATSCR-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
   ; GFX908-FLATSCR-NEXT: {{  $}}
@@ -13540,14 +13540,14 @@ body:             |
   ; GFX908-FLATSCR-NEXT:   S_NOP 0
   ; GFX908-FLATSCR-NEXT: {{  $}}
   ; GFX908-FLATSCR-NEXT: bb.2:
-  ; GFX908-FLATSCR-NEXT:   liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_agpr1
+  ; GFX908-FLATSCR-NEXT:   liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_64
   ; GFX908-FLATSCR-NEXT: {{  $}}
   ; GFX908-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
   ;
   ; GFX90A-FLATSCR-LABEL: name: agpr96_save_clobber_scc
   ; GFX90A-FLATSCR: bb.0:
   ; GFX90A-FLATSCR-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; GFX90A-FLATSCR-NEXT:   liveins: $agpr32, $agpr33, $agpr34, $agpr35, $agpr36, $agpr37, $agpr38, $agpr39, $agpr40, $agpr41, $agpr42, $agpr43, $agpr44, $agpr45, $agpr46, $agpr47, $agpr48, $agpr49, $agpr50, $agpr51, $agpr52, $agpr53, $agpr54, $agpr55, $agpr56, $agpr57, $agpr58, $agpr59, $agpr60, $agpr61, $agpr62, $agpr63, $agpr64, $agpr65, $agpr66, $agpr67, $agpr68, $agpr69, $agpr70, $agpr71, $agpr72, $agpr73, $agpr74, $agpr75, $agpr76, $agpr77, $agpr78, $agpr79, $agpr80, $agpr81, $agpr82, $agpr83, $agpr84, $agpr85, $agpr86, $agpr87, $agpr88, $agpr89, $agpr90, $agpr91, $agpr92, $agpr93, $agpr94, $agpr95, $agpr96, $agpr97, $agpr98, $agpr99, $agpr100, $agpr101, $agpr102, $agpr103, $agpr104, $agpr105, $agpr106, $agpr107, $agpr108, $agpr109, $agpr110, $agpr111, $agpr112, $agpr113, $agpr114, $agpr115, $agpr116, $agpr117, $agpr118, $agpr119, $agpr120, $agpr121, $agpr122, $agpr123, $agpr124, $agpr125, $agpr126, $agpr127, $agpr128, $agpr129, $agpr130, $agpr131, $agpr132, $agpr133, $agpr134, $agpr135, $agpr136, $agpr137, $agpr138, $agpr139, $agpr140, $agpr141, $agpr142, $agpr143, $agpr144, $agpr145, $agpr146, $agpr147, $agpr148, $agpr149, $agpr150, $agpr151, $agpr152, $agpr153, $agpr154, $agpr155, $agpr156, $agpr157, $agpr158, $agpr159, $agpr160, $agpr161, $agpr162, $agpr163, $agpr164, $agpr165, $agpr166, $agpr167, $agpr168, $agpr169, $agpr170, $agpr171, $agpr172, $agpr173, $agpr174, $agpr175, $agpr176, $agpr177, $agpr178, $agpr179, $agpr180, $agpr181, $agpr182, $agpr183, $agpr184, $agpr185, $agpr186, $agpr187, $agpr188, $agpr189, $agpr190, $agpr191, $agpr192, $agpr193, $agpr194, $agpr195, $agpr196, $agpr197, $agpr198, $agpr199, $agpr200, $agpr201, $agpr202, $agpr203, $agpr204, $agpr205, $agpr206, $agpr207, $agpr208, $agpr209, $agpr210, $agpr211, $agpr212, $agpr213, $agpr214, $agpr215, $agpr216, $agpr217, $agpr218, $agpr219, $agpr220, $agpr221, $agpr222, $agpr223, $agpr224, $agpr225, $agpr226, $agpr227, $agpr228, $agpr229, $agpr230, $agpr231, $agpr232, $agpr233, $agpr234, $agpr235, $agpr236, $agpr237, $agpr238, $agpr239, $agpr240, $agpr241, $agpr242, $agpr243, $agpr244, $agpr245, $agpr246, $agpr247, $agpr248, $agpr249, $agpr250, $agpr251, $agpr252, $agpr253, $agpr254, $agpr255, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $agpr0_agpr1, $vgpr248_128, $vgpr252_128, $vgpr240_256, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512
+  ; GFX90A-FLATSCR-NEXT:   liveins: $agpr32, $agpr33, $agpr34, $agpr35, $agpr36, $agpr37, $agpr38, $agpr39, $agpr40, $agpr41, $agpr42, $agpr43, $agpr44, $agpr45, $agpr46, $agpr47, $agpr48, $agpr49, $agpr50, $agpr51, $agpr52, $agpr53, $agpr54, $agpr55, $agpr56, $agpr57, $agpr58, $agpr59, $agpr60, $agpr61, $agpr62, $agpr63, $agpr64, $agpr65, $agpr66, $agpr67, $agpr68, $agpr69, $agpr70, $agpr71, $agpr72, $agpr73, $agpr74, $agpr75, $agpr76, $agpr77, $agpr78, $agpr79, $agpr80, $agpr81, $agpr82, $agpr83, $agpr84, $agpr85, $agpr86, $agpr87, $agpr88, $agpr89, $agpr90, $agpr91, $agpr92, $agpr93, $agpr94, $agpr95, $agpr96, $agpr97, $agpr98, $agpr99, $agpr100, $agpr101, $agpr102, $agpr103, $agpr104, $agpr105, $agpr106, $agpr107, $agpr108, $agpr109, $agpr110, $agpr111, $agpr112, $agpr113, $agpr114, $agpr115, $agpr116, $agpr117, $agpr118, $agpr119, $agpr120, $agpr121, $agpr122, $agpr123, $agpr124, $agpr125, $agpr126, $agpr127, $agpr128, $agpr129, $agpr130, $agpr131, $agpr132, $agpr133, $agpr134, $agpr135, $agpr136, $agpr137, $agpr138, $agpr139, $agpr140, $agpr141, $agpr142, $agpr143, $agpr144, $agpr145, $agpr146, $agpr147, $agpr148, $agpr149, $agpr150, $agpr151, $agpr152, $agpr153, $agpr154, $agpr155, $agpr156, $agpr157, $agpr158, $agpr159, $agpr160, $agpr161, $agpr162, $agpr163, $agpr164, $agpr165, $agpr166, $agpr167, $agpr168, $agpr169, $agpr170, $agpr171, $agpr172, $agpr173, $agpr174, $agpr175, $agpr176, $agpr177, $agpr178, $agpr179, $agpr180, $agpr181, $agpr182, $agpr183, $agpr184, $agpr185, $agpr186, $agpr187, $agpr188, $agpr189, $agpr190, $agpr191, $agpr192, $agpr193, $agpr194, $agpr195, $agpr196, $agpr197, $agpr198, $agpr199, $agpr200, $agpr201, $agpr202, $agpr203, $agpr204, $agpr205, $agpr206, $agpr207, $agpr208, $agpr209, $agpr210, $agpr211, $agpr212, $agpr213, $agpr214, $agpr215, $agpr216, $agpr217, $agpr218, $agpr219, $agpr220, $agpr221, $agpr222, $agpr223, $agpr224, $agpr225, $agpr226, $agpr227, $agpr228, $agpr229, $agpr230, $agpr231, $agpr232, $agpr233, $agpr234, $agpr235, $agpr236, $agpr237, $agpr238, $agpr239, $agpr240, $agpr241, $agpr242, $agpr243, $agpr244, $agpr245, $agpr246, $agpr247, $agpr248, $agpr249, $agpr250, $agpr251, $agpr252, $agpr253, $agpr254, $agpr255, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $agpr0_64, $vgpr248_128, $vgpr252_128, $vgpr240_256, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512
   ; GFX90A-FLATSCR-NEXT: {{  $}}
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
   ; GFX90A-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -14145,7 +14145,7 @@ body:             |
   ; GFX90A-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr40, $sgpr32, 704, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.226, addrspace 5)
   ; GFX90A-FLATSCR-NEXT:   $vgpr40 = V_MOV_B32_e32 $sgpr32, implicit $exec
   ; GFX90A-FLATSCR-NEXT:   $vgpr40 = V_ADD_U32_e32 8904, $vgpr40, implicit $exec
-  ; GFX90A-FLATSCR-NEXT:   SCRATCH_STORE_DWORDX3 $agpr0_agpr1_agpr2, killed $vgpr40, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s96) into %stack.1, align 4, addrspace 5)
+  ; GFX90A-FLATSCR-NEXT:   SCRATCH_STORE_DWORDX3 $agpr0_96, killed $vgpr40, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s96) into %stack.1, align 4, addrspace 5)
   ; GFX90A-FLATSCR-NEXT:   $vgpr40 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 704, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.226, addrspace 5)
   ; GFX90A-FLATSCR-NEXT:   S_CBRANCH_SCC1 %bb.2, implicit $scc
   ; GFX90A-FLATSCR-NEXT: {{  $}}
@@ -14156,7 +14156,7 @@ body:             |
   ; GFX90A-FLATSCR-NEXT:   S_NOP 0
   ; GFX90A-FLATSCR-NEXT: {{  $}}
   ; GFX90A-FLATSCR-NEXT: bb.2:
-  ; GFX90A-FLATSCR-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $agpr0_agpr1, $vgpr248_128, $vgpr252_128, $vgpr240_256, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512
+  ; GFX90A-FLATSCR-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $agpr0_64, $vgpr248_128, $vgpr252_128, $vgpr240_256, $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512
   ; GFX90A-FLATSCR-NEXT: {{  $}}
   ; GFX90A-FLATSCR-NEXT:   $agpr255 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.225, addrspace 5)
   ; GFX90A-FLATSCR-NEXT:   $agpr254 = SCRATCH_LOAD_DWORD_SADDR $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.224, addrspace 5)
@@ -14384,16 +14384,16 @@ body:             |
   ; GFX90A-FLATSCR-NEXT:   $agpr32 = V_ACCVGPR_WRITE_B32_e64 $vgpr0, implicit $exec
   ; GFX90A-FLATSCR-NEXT:   S_ENDPGM 0, amdgpu_allvgprs
   bb.0:
-    liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_agpr1
+    liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_64
 
     S_CMP_EQ_U32 0, 0, implicit-def $scc
-    SI_SPILL_A96_SAVE $agpr0_agpr1_agpr2, %stack.1, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.1, align 4, addrspace 5)
+    SI_SPILL_A96_SAVE $agpr0_96, %stack.1, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.1, align 4, addrspace 5)
     S_CBRANCH_SCC1 %bb.2, implicit $scc
 
   bb.1:
     S_NOP 0
 
   bb.2:
-    liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_agpr1
+    liveins: $vgpr0_512, $vgpr16_512, $vgpr32_512, $vgpr48_512, $vgpr64_512, $vgpr80_512, $vgpr96_512, $vgpr112_512, $vgpr128_512, $vgpr144_512, $vgpr160_512, $vgpr176_512, $vgpr192_512, $vgpr208_512, $vgpr224_512, $vgpr240_256, $vgpr248_128, $vgpr252_128, $agpr0_64
     S_ENDPGM 0, amdgpu_allvgprs
 ...

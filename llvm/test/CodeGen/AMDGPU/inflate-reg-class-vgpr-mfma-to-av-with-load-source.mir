@@ -30,13 +30,13 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vcc, $vgpr0_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr0_64, $vgpr0_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr0_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr0_64, $vgpr0_64, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $agpr0_512:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_256
@@ -47,10 +47,10 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_256
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_128, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_NOP 0, implicit-def $agpr0
@@ -116,17 +116,17 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vcc, $vgpr0_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   renamable $agpr2_agpr3 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 8, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   renamable $agpr4_agpr5_agpr6 = GLOBAL_LOAD_DWORDX3 undef renamable $vgpr0_64, 16, 0, implicit $exec :: (load (s96), align 16, addrspace 1)
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr0_64, $vgpr0_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 28, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   S_NOP 0, implicit renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR undef renamable $vgpr0, renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   renamable $agpr0_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   renamable $agpr2_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 8, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   renamable $agpr4_96 = GLOBAL_LOAD_DWORDX3 undef renamable $vgpr0_64, 16, 0, implicit $exec :: (load (s96), align 16, addrspace 1)
+  ; CHECK-NEXT:   renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr0_64, $vgpr0_64, $agpr0_512, 28, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   S_NOP 0, implicit renamable $agpr0_512
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR undef renamable $vgpr0, renamable $agpr4_128, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $agpr0_512:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_256
@@ -137,10 +137,10 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_256
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_128, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_NOP 0, implicit-def $agpr0
@@ -209,13 +209,13 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vcc, $vgpr2_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $agpr16_agpr17 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 $vgpr2_64, $vgpr2_64, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr16_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_e64 $vgpr2_64, $vgpr2_64, $agpr16_512, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $agpr0_512:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_256
@@ -226,10 +226,10 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_256
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_128, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_NOP 0, implicit-def $agpr0
@@ -295,14 +295,14 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vcc, $vgpr0_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr0_64, $vgpr0_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr0_64, $vgpr0_64, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr0_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr0_64, $vgpr0_64, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr0_64, $vgpr0_64, killed $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $agpr0_512:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_256
@@ -313,10 +313,10 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_256
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_128, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_NOP 0, implicit-def $agpr0
@@ -382,14 +382,14 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vcc, $vgpr0_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr0_64, $vgpr0_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_mac_e64 killed $agpr2_agpr3, $agpr0_agpr1, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr0_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr0_64, $vgpr0_64, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_mac_e64 killed $agpr2_64, $agpr0_64, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $agpr0_512:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_256
@@ -400,10 +400,10 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_256
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_128, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_NOP 0, implicit-def $agpr0
@@ -468,14 +468,14 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vcc, $vgpr0_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr0_64, $vgpr0_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr0_64, $vgpr0_64, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr0_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr0_64, $vgpr0_64, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr0_64, $vgpr0_64, killed $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $agpr0_512:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_256
@@ -485,7 +485,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr40_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_256
-  ; CHECK-NEXT:   renamable $vgpr0_512 = lr-split COPY killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+  ; CHECK-NEXT:   renamable $vgpr0_512 = lr-split COPY killed renamable $agpr0_512
   ; CHECK-NEXT:   INLINEASM &"; use $0 ", sideeffect attdialect, reguse:VReg_512_Align2, killed renamable $vgpr0_512
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
@@ -548,14 +548,14 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vcc, $vgpr16_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $agpr16_agpr17 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   renamable $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr16_64, $vgpr16_64, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 $vgpr16_64, $vgpr16_64, killed $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr16_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   renamable $agpr16_512 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr16_64, $vgpr16_64, $agpr16_512, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_e64 $vgpr16_64, $vgpr16_64, killed $agpr16_512, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $agpr0_512:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_256
@@ -566,10 +566,10 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_256
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_128, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_NOP 0, implicit-def $agpr0
@@ -634,14 +634,14 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vcc, $vgpr18_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   early-clobber renamable $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = V_MFMA_F32_32X32X8F16_e64 $vgpr18_64, $vgpr18_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 $vgpr18_64, $vgpr18_64, killed $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr0_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   early-clobber renamable $agpr16_512 = V_MFMA_F32_32X32X8F16_e64 $vgpr18_64, $vgpr18_64, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_e64 $vgpr18_64, $vgpr18_64, killed $agpr16_512, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $agpr0_512:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_256
@@ -652,10 +652,10 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_256
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_128, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_NOP 0, implicit-def $agpr0
@@ -721,12 +721,12 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   renamable $vgpr16_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
   ; CHECK-NEXT:   early-clobber renamable $vgpr0_512 = V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr18_64, $vgpr18_64, $vgpr16_512, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 killed $vgpr4_64, $vgpr8_64, undef $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_e64 killed $vgpr4_64, $vgpr8_64, undef $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $agpr0_512:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_256
@@ -737,10 +737,10 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_256
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_128, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_NOP 0, implicit-def $agpr0
@@ -806,14 +806,14 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vcc, $vgpr18_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $agpr16_agpr17 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 $vgpr18_64, $vgpr18_64, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_16X16X16F16_e64 $vgpr18_64, $vgpr18_64, killed $agpr2_agpr3_agpr4_agpr5, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr16_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_e64 $vgpr18_64, $vgpr18_64, $agpr16_512, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr0_128 = V_MFMA_F32_16X16X16F16_e64 $vgpr18_64, $vgpr18_64, killed $agpr2_128, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3
+  ; CHECK-NEXT:   liveins: $agpr0_128
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_256
@@ -824,7 +824,7 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_256
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr0_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_NOP 0, implicit-def $agpr0
@@ -878,8 +878,8 @@ body:             |
     ; CHECK-NEXT: renamable $vgpr0_64 = COPY killed renamable $sgpr0_64
     ; CHECK-NEXT: renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
     ; CHECK-NEXT: dead renamable $vgpr9 = COPY renamable $vgpr8
-    ; CHECK-NEXT: renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-    ; CHECK-NEXT: renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_mac_e64 killed $vgpr0_64, $vgpr0_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: renamable $agpr0_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    ; CHECK-NEXT: renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_mac_e64 killed $vgpr0_64, $vgpr0_64, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr8_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr16_256
@@ -889,7 +889,7 @@ body:             |
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr48_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr56_256
     ; CHECK-NEXT: renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK-NEXT: renamable $vgpr2_512 = lr-split COPY killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; CHECK-NEXT: renamable $vgpr2_512 = lr-split COPY killed renamable $agpr0_512
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr10_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr14_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr2_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
@@ -942,7 +942,7 @@ body:             |
     ; CHECK-NEXT: SI_SPILL_AV64_SAVE killed $vgpr0_64, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
     ; CHECK-NEXT: renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
     ; CHECK-NEXT: dead renamable $vgpr9 = COPY renamable $vgpr8
-    ; CHECK-NEXT: renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    ; CHECK-NEXT: renamable $agpr0_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr8_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr16_256
@@ -952,7 +952,7 @@ body:             |
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr48_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr56_256
     ; CHECK-NEXT: renamable $vgpr2_64 = SI_SPILL_AV64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
-    ; CHECK-NEXT: renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_mac_e64 killed $vgpr2_64, $vgpr2_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_mac_e64 killed $vgpr2_64, $vgpr2_64, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr8_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr16_256
@@ -962,7 +962,7 @@ body:             |
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr48_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr56_256
     ; CHECK-NEXT: renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK-NEXT: renamable $vgpr2_512 = lr-split COPY killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; CHECK-NEXT: renamable $vgpr2_512 = lr-split COPY killed renamable $agpr0_512
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr10_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr14_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr2_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
@@ -1023,7 +1023,7 @@ body:             |
     ; CHECK-NEXT: SI_SPILL_AV64_SAVE killed $vgpr0_64, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
     ; CHECK-NEXT: renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
     ; CHECK-NEXT: dead renamable $vgpr9 = COPY renamable $vgpr8
-    ; CHECK-NEXT: renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    ; CHECK-NEXT: renamable $agpr0_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr8_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr16_256
@@ -1033,8 +1033,8 @@ body:             |
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr48_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr56_256
     ; CHECK-NEXT: renamable $vgpr0_64 = SI_SPILL_AV64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
-    ; CHECK-NEXT: renamable $agpr16_agpr17 = lr-split COPY killed renamable $agpr0_agpr1
-    ; CHECK-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 killed $vgpr0_64, $vgpr0_64, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: renamable $agpr16_64 = lr-split COPY killed renamable $agpr0_64
+    ; CHECK-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_e64 killed $vgpr0_64, $vgpr0_64, $agpr16_512, 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr8_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr16_256
@@ -1044,7 +1044,7 @@ body:             |
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr48_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr56_256
     ; CHECK-NEXT: renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK-NEXT: renamable $vgpr2_512 = lr-split COPY killed renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+    ; CHECK-NEXT: renamable $vgpr2_512 = lr-split COPY killed renamable $agpr0_512
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr10_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr14_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr2_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
@@ -1107,7 +1107,7 @@ body:             |
     ; CHECK-NEXT: SI_SPILL_AV64_SAVE killed $vgpr0_64, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
     ; CHECK-NEXT: renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
     ; CHECK-NEXT: dead renamable $vgpr9 = COPY renamable $vgpr8
-    ; CHECK-NEXT: renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    ; CHECK-NEXT: renamable $agpr0_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr8_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr16_256
@@ -1117,7 +1117,7 @@ body:             |
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr48_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr56_256
     ; CHECK-NEXT: renamable $vgpr2_64 = SI_SPILL_AV64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
-    ; CHECK-NEXT: renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_mac_e64 killed $vgpr2_64, $vgpr2_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_mac_e64 killed $vgpr2_64, $vgpr2_64, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr8_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr16_256
@@ -1127,8 +1127,8 @@ body:             |
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr48_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr56_256
     ; CHECK-NEXT: renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK-NEXT: renamable $vgpr10_256 = lr-split COPY killed renamable $agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; CHECK-NEXT: renamable $vgpr2_128 = lr-split COPY renamable $agpr0_agpr1_agpr2_agpr3
+    ; CHECK-NEXT: renamable $vgpr10_256 = lr-split COPY killed renamable $agpr8_256
+    ; CHECK-NEXT: renamable $vgpr2_128 = lr-split COPY renamable $agpr0_128
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr10_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr14_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $vgpr2_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
@@ -1189,7 +1189,7 @@ body:             |
     ; CHECK-NEXT: SI_SPILL_AV64_SAVE killed $vgpr0_64, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, align 4, addrspace 5)
     ; CHECK-NEXT: renamable $vcc = S_AND_B64 $exec, -1, implicit-def dead $scc
     ; CHECK-NEXT: dead renamable $vgpr9 = COPY renamable $vgpr8
-    ; CHECK-NEXT: renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+    ; CHECK-NEXT: renamable $agpr0_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr8_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr16_256
@@ -1199,8 +1199,8 @@ body:             |
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr48_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr56_256
     ; CHECK-NEXT: renamable $vgpr0_64 = SI_SPILL_AV64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
-    ; CHECK-NEXT: renamable $agpr16_agpr17 = lr-split COPY killed renamable $agpr0_agpr1
-    ; CHECK-NEXT: early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 killed $vgpr0_64, $vgpr0_64, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: renamable $agpr16_64 = lr-split COPY killed renamable $agpr0_64
+    ; CHECK-NEXT: early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_e64 killed $vgpr0_64, $vgpr0_64, $agpr16_512, 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr0_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr8_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr16_256
@@ -1210,8 +1210,8 @@ body:             |
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr48_256
     ; CHECK-NEXT: S_NOP 0, implicit-def $vgpr56_256
     ; CHECK-NEXT: renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    ; CHECK-NEXT: renamable $vgpr10_256 = lr-split COPY killed renamable $agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
-    ; CHECK-NEXT: renamable $vgpr2_128 = lr-split COPY renamable $agpr0_agpr1_agpr2_agpr3
+    ; CHECK-NEXT: renamable $vgpr10_256 = lr-split COPY killed renamable $agpr8_256
+    ; CHECK-NEXT: renamable $vgpr2_128 = lr-split COPY renamable $agpr0_128
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr10_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $vgpr14_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $vgpr2_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
@@ -1286,7 +1286,7 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   liveins: $vgpr2_1024:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = lr-split COPY killed renamable $vgpr2_512
+  ; CHECK-NEXT:   renamable $agpr0_512 = lr-split COPY killed renamable $vgpr2_512
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_256
@@ -1296,10 +1296,10 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_256
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_128, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_NOP 0, implicit-def $agpr0
@@ -1377,7 +1377,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_256
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = lr-split COPY killed renamable $vgpr18_512
+  ; CHECK-NEXT:   renamable $agpr0_512 = lr-split COPY killed renamable $vgpr18_512
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr24_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr32_256
@@ -1385,10 +1385,10 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_256
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_128, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1(0x80000000)
@@ -1469,7 +1469,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_256
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = lr-split COPY killed renamable $vgpr18_512
+  ; CHECK-NEXT:   renamable $agpr0_512 = lr-split COPY killed renamable $vgpr18_512
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr24_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr32_256
@@ -1477,10 +1477,10 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_256
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_128, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1(0x80000000)
@@ -1548,15 +1548,15 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vcc, $vgpr18_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   early-clobber renamable $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = V_MFMA_F32_32X32X8F16_e64 $vgpr18_64, $vgpr18_64, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 $vgpr18_64, $vgpr18_64, killed $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X4F16_e64 $agpr0_agpr1, $vgpr18_64, 0, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr0_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   early-clobber renamable $agpr16_512 = V_MFMA_F32_32X32X8F16_e64 $vgpr18_64, $vgpr18_64, $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_e64 $vgpr18_64, $vgpr18_64, killed $agpr16_512, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr0_128 = V_MFMA_F32_4X4X4F16_e64 $agpr0_64, $vgpr18_64, 0, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $agpr0_512:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_256
@@ -1567,10 +1567,10 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_256
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_128, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1(0x80000000)
@@ -1638,14 +1638,14 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vcc, $vgpr16_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $agpr16_agpr17 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   renamable $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr16_64, $vgpr16_64, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 $vgpr16_64, $vgpr16_64, killed $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr16_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   renamable $agpr16_512 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr16_64, $vgpr16_64, $agpr16_512, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_e64 $vgpr16_64, $vgpr16_64, killed $agpr16_512, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $agpr0_512:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_256
@@ -1656,10 +1656,10 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_256
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_128, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_NOP 0, implicit-def $agpr0
@@ -1735,7 +1735,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_256
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = lr-split COPY killed renamable $vgpr18_512
+  ; CHECK-NEXT:   renamable $agpr0_512 = lr-split COPY killed renamable $vgpr18_512
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr16_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr24_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr32_256
@@ -1743,10 +1743,10 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_256
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_128, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_NOP 0, implicit-def $agpr0
@@ -1811,14 +1811,14 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vcc, $vgpr2_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $agpr16_agpr17 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 $vgpr2_64, $vgpr2_64, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
-  ; CHECK-NEXT:   renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr2_64, $vgpr2_64, killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr16_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_e64 $vgpr2_64, $vgpr2_64, $agpr16_512, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_mac_e64 $vgpr2_64, $vgpr2_64, killed $agpr0_512, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $agpr0_512:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_256
@@ -1829,10 +1829,10 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_256
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_128, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_NOP 0, implicit-def $agpr0
@@ -1897,12 +1897,12 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vcc, $vgpr0_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 $vgpr0_64, $vgpr0_64, 0, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_e64 $vgpr0_64, $vgpr0_64, 0, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $agpr0_512:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_256
@@ -1913,10 +1913,10 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_256
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_128, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_NOP 0, implicit-def $agpr0
@@ -1979,14 +1979,14 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; CHECK-NEXT:   liveins: $vcc, $vgpr0_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $agpr0_agpr1 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   renamable $agpr16_agpr17 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
-  ; CHECK-NEXT:   early-clobber renamable $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X8F16_e64 $vgpr0_64, $vgpr0_64, $agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31, 0, 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   renamable $agpr0_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   renamable $agpr16_64 = GLOBAL_LOAD_DWORDX2 undef renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s64), addrspace 1)
+  ; CHECK-NEXT:   early-clobber renamable $agpr0_512 = V_MFMA_F32_32X32X8F16_e64 $vgpr0_64, $vgpr0_64, $agpr16_512, 0, 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
-  ; CHECK-NEXT:   liveins: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31:0x00000000FFFFFFFF
+  ; CHECK-NEXT:   liveins: $agpr0_1024:0x00000000FFFFFFFF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr0_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr8_256
@@ -1997,10 +1997,10 @@ body:             |
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr48_256
   ; CHECK-NEXT:   S_NOP 0, implicit-def $vgpr56_256
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_agpr9_agpr10_agpr11, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_agpr13_agpr14_agpr15, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_agpr1_agpr2_agpr3, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
-  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_agpr5_agpr6_agpr7, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr8_128, undef $sgpr0_64, 32, 0, implicit $exec :: (store (s128), align 32, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr12_128, undef $sgpr0_64, 48, 0, implicit $exec :: (store (s128), addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR renamable $vgpr0, renamable $agpr0_128, undef $sgpr0_64, 0, 0, implicit $exec :: (store (s128), align 128, addrspace 1)
+  ; CHECK-NEXT:   GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr0, killed renamable $agpr4_128, killed undef $sgpr0_64, 16, 0, implicit $exec :: (store (s128), addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
     S_NOP 0, implicit-def $agpr0

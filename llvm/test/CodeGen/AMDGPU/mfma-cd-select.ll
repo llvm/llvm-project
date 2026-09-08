@@ -371,7 +371,7 @@ define amdgpu_kernel void @test_mfma_f32_32x32x1f32_inline_asm_phys_agpr(ptr add
 ; GFX908:       ; %bb.0: ; %bb
 ; GFX908-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX908-NEXT:    v_mov_b32_e32 v32, 0
-; GFX908-NEXT:    ; implicit-def: $agpr100_agpr101_agpr102_agpr103_agpr104_agpr105_agpr106_agpr107_agpr108_agpr109_agpr110_agpr111_agpr112_agpr113_agpr114_agpr115_agpr116_agpr117_agpr118_agpr119_agpr120_agpr121_agpr122_agpr123_agpr124_agpr125_agpr126_agpr127_agpr128_agpr129_agpr130_agpr131
+; GFX908-NEXT:    ; implicit-def: $agpr100_1024
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; use a[100:131]
 ; GFX908-NEXT:    ;;#ASMEND

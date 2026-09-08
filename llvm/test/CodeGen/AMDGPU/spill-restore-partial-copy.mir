@@ -90,7 +90,7 @@ body:             |
     ; GFX950-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr27
     ; GFX950-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr28
     ; GFX950-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr29
-    ; GFX950-NEXT: renamable $agpr0_agpr1 = IMPLICIT_DEF
+    ; GFX950-NEXT: renamable $agpr0_64 = IMPLICIT_DEF
     ; GFX950-NEXT: renamable $vgpr0_512 = IMPLICIT_DEF
     ; GFX950-NEXT: renamable $vgpr16_384 = IMPLICIT_DEF
     ; GFX950-NEXT: $agpr6 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr3, implicit $exec, implicit-def $vgpr0_128, implicit $vgpr0_128
@@ -118,38 +118,38 @@ body:             |
     ; GFX950-NEXT: $agpr28 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr21, implicit $exec, implicit $vgpr20_128
     ; GFX950-NEXT: $agpr29 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr20, implicit $exec, implicit killed $vgpr20_128
     ; GFX950-NEXT: $vgpr0 = IMPLICIT_DEF
-    ; GFX950-NEXT: $agpr5 = COPY $agpr6, implicit-def $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr4 = COPY $agpr7, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr3 = COPY $agpr8, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr2 = COPY $agpr9, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 0, 0, implicit $exec
-    ; GFX950-NEXT: $agpr5 = COPY $agpr10, implicit-def $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr4 = COPY $agpr11, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr3 = COPY $agpr12, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr2 = COPY $agpr13, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 1024, 0, implicit $exec
-    ; GFX950-NEXT: $agpr5 = COPY $agpr14, implicit-def $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr4 = COPY $agpr15, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr3 = COPY $agpr16, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr2 = COPY $agpr17, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 2048, 0, implicit $exec
-    ; GFX950-NEXT: $agpr5 = COPY $agpr18, implicit-def $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr4 = COPY $agpr19, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr3 = COPY $agpr20, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr2 = COPY $agpr21, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 3072, 0, implicit $exec
-    ; GFX950-NEXT: $agpr5 = COPY $agpr22, implicit-def $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr4 = COPY $agpr23, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr3 = COPY $agpr24, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr2 = COPY $agpr25, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 4096, 0, implicit $exec
-    ; GFX950-NEXT: $agpr5 = COPY $agpr26, implicit-def $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr4 = COPY $agpr27, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr3 = COPY $agpr28, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr2 = COPY $agpr29, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 5120, 0, implicit $exec
+    ; GFX950-NEXT: $agpr5 = COPY $agpr6, implicit-def $agpr2_128
+    ; GFX950-NEXT: $agpr4 = COPY $agpr7, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr3 = COPY $agpr8, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr2 = COPY $agpr9, implicit $agpr2_128
+    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 0, 0, implicit $exec
+    ; GFX950-NEXT: $agpr5 = COPY $agpr10, implicit-def $agpr2_128
+    ; GFX950-NEXT: $agpr4 = COPY $agpr11, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr3 = COPY $agpr12, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr2 = COPY $agpr13, implicit $agpr2_128
+    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 1024, 0, implicit $exec
+    ; GFX950-NEXT: $agpr5 = COPY $agpr14, implicit-def $agpr2_128
+    ; GFX950-NEXT: $agpr4 = COPY $agpr15, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr3 = COPY $agpr16, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr2 = COPY $agpr17, implicit $agpr2_128
+    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 2048, 0, implicit $exec
+    ; GFX950-NEXT: $agpr5 = COPY $agpr18, implicit-def $agpr2_128
+    ; GFX950-NEXT: $agpr4 = COPY $agpr19, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr3 = COPY $agpr20, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr2 = COPY $agpr21, implicit $agpr2_128
+    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 3072, 0, implicit $exec
+    ; GFX950-NEXT: $agpr5 = COPY $agpr22, implicit-def $agpr2_128
+    ; GFX950-NEXT: $agpr4 = COPY $agpr23, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr3 = COPY $agpr24, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr2 = COPY $agpr25, implicit $agpr2_128
+    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 4096, 0, implicit $exec
+    ; GFX950-NEXT: $agpr5 = COPY $agpr26, implicit-def $agpr2_128
+    ; GFX950-NEXT: $agpr4 = COPY $agpr27, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr3 = COPY $agpr28, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr2 = COPY $agpr29, implicit $agpr2_128
+    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 5120, 0, implicit $exec
     ; GFX950-NEXT: S_ENDPGM 0
-    renamable $agpr0_agpr1 = IMPLICIT_DEF
+    renamable $agpr0_64 = IMPLICIT_DEF
     renamable $vgpr0_512 = IMPLICIT_DEF
     renamable $vgpr16_384 = IMPLICIT_DEF
     SI_SPILL_AV128_SAVE killed $vgpr0_128, %stack.0, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.0, align 4, addrspace 5)
@@ -159,18 +159,18 @@ body:             |
     SI_SPILL_AV128_SAVE killed $vgpr16_128, %stack.4, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.4, align 4, addrspace 5)
     SI_SPILL_AV128_SAVE killed $vgpr20_128, %stack.5, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.5, align 4, addrspace 5)
     $vgpr0 = IMPLICIT_DEF
-    renamable $agpr2_agpr3_agpr4_agpr5 = SI_SPILL_AV128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
-    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 0, 0, implicit $exec
-    renamable $agpr2_agpr3_agpr4_agpr5 = SI_SPILL_AV128_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.1, align 4, addrspace 5)
-    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 1024, 0, implicit $exec
-    renamable $agpr2_agpr3_agpr4_agpr5 = SI_SPILL_AV128_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.2, align 4, addrspace 5)
-    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 2048, 0, implicit $exec
-    renamable $agpr2_agpr3_agpr4_agpr5 = SI_SPILL_AV128_RESTORE %stack.3, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.3, align 4, addrspace 5)
-    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 3072, 0, implicit $exec
-    renamable $agpr2_agpr3_agpr4_agpr5 = SI_SPILL_AV128_RESTORE %stack.4, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.4, align 4, addrspace 5)
-    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 4096, 0, implicit $exec
-    renamable $agpr2_agpr3_agpr4_agpr5 = SI_SPILL_AV128_RESTORE %stack.5, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.5, align 4, addrspace 5)
-    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 5120, 0, implicit $exec
+    renamable $agpr2_128 = SI_SPILL_AV128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 0, 0, implicit $exec
+    renamable $agpr2_128 = SI_SPILL_AV128_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.1, align 4, addrspace 5)
+    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 1024, 0, implicit $exec
+    renamable $agpr2_128 = SI_SPILL_AV128_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.2, align 4, addrspace 5)
+    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 2048, 0, implicit $exec
+    renamable $agpr2_128 = SI_SPILL_AV128_RESTORE %stack.3, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.3, align 4, addrspace 5)
+    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 3072, 0, implicit $exec
+    renamable $agpr2_128 = SI_SPILL_AV128_RESTORE %stack.4, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.4, align 4, addrspace 5)
+    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 4096, 0, implicit $exec
+    renamable $agpr2_128 = SI_SPILL_AV128_RESTORE %stack.5, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.5, align 4, addrspace 5)
+    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 5120, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -256,8 +256,8 @@ body:             |
     ; GFX950-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr29
     ; GFX950-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr30
     ; GFX950-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr31
-    ; GFX950-NEXT: renamable $agpr0_agpr1 = IMPLICIT_DEF
-    ; GFX950-NEXT: renamable $agpr28_agpr29_agpr30_agpr31 = IMPLICIT_DEF
+    ; GFX950-NEXT: renamable $agpr0_64 = IMPLICIT_DEF
+    ; GFX950-NEXT: renamable $agpr28_128 = IMPLICIT_DEF
     ; GFX950-NEXT: renamable $vgpr0_512 = IMPLICIT_DEF
     ; GFX950-NEXT: renamable $vgpr16_384 = IMPLICIT_DEF
     ; GFX950-NEXT: $agpr6 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr3, implicit $exec, implicit-def $vgpr0_128, implicit $vgpr0_128
@@ -284,38 +284,38 @@ body:             |
     ; GFX950-NEXT: $agpr27 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr22, implicit $exec, implicit $vgpr20_128
     ; GFX950-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $vgpr20_64, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr20_128 :: ("amdgpu-thread-private" store (s64) into %stack.5, align 4, addrspace 5)
     ; GFX950-NEXT: $vgpr0 = IMPLICIT_DEF
-    ; GFX950-NEXT: $agpr5 = COPY $agpr6, implicit-def $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr4 = COPY $agpr7, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr3 = COPY $agpr8, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr2 = COPY $agpr9, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 0, 0, implicit $exec
-    ; GFX950-NEXT: $agpr5 = COPY $agpr10, implicit-def $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr4 = COPY $agpr11, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr3 = COPY $agpr12, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr2 = COPY $agpr13, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 1024, 0, implicit $exec
-    ; GFX950-NEXT: $agpr5 = COPY $agpr14, implicit-def $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr4 = COPY $agpr15, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr3 = COPY $agpr16, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr2 = COPY $agpr17, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 2048, 0, implicit $exec
-    ; GFX950-NEXT: $agpr5 = COPY $agpr18, implicit-def $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr4 = COPY $agpr19, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr3 = COPY $agpr20, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr2 = COPY $agpr21, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 3072, 0, implicit $exec
-    ; GFX950-NEXT: $agpr5 = COPY $agpr22, implicit-def $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr4 = COPY $agpr23, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr3 = COPY $agpr24, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr2 = COPY $agpr25, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 4096, 0, implicit $exec
-    ; GFX950-NEXT: $agpr5 = COPY $agpr26, implicit-def $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr4 = COPY $agpr27, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr2_agpr3 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr2_agpr3_agpr4_agpr5, implicit $agpr2_agpr3_agpr4_agpr5 :: ("amdgpu-thread-private" load (s64) from %stack.5, align 4, addrspace 5)
-    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 5120, 0, implicit $exec
+    ; GFX950-NEXT: $agpr5 = COPY $agpr6, implicit-def $agpr2_128
+    ; GFX950-NEXT: $agpr4 = COPY $agpr7, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr3 = COPY $agpr8, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr2 = COPY $agpr9, implicit $agpr2_128
+    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 0, 0, implicit $exec
+    ; GFX950-NEXT: $agpr5 = COPY $agpr10, implicit-def $agpr2_128
+    ; GFX950-NEXT: $agpr4 = COPY $agpr11, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr3 = COPY $agpr12, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr2 = COPY $agpr13, implicit $agpr2_128
+    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 1024, 0, implicit $exec
+    ; GFX950-NEXT: $agpr5 = COPY $agpr14, implicit-def $agpr2_128
+    ; GFX950-NEXT: $agpr4 = COPY $agpr15, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr3 = COPY $agpr16, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr2 = COPY $agpr17, implicit $agpr2_128
+    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 2048, 0, implicit $exec
+    ; GFX950-NEXT: $agpr5 = COPY $agpr18, implicit-def $agpr2_128
+    ; GFX950-NEXT: $agpr4 = COPY $agpr19, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr3 = COPY $agpr20, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr2 = COPY $agpr21, implicit $agpr2_128
+    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 3072, 0, implicit $exec
+    ; GFX950-NEXT: $agpr5 = COPY $agpr22, implicit-def $agpr2_128
+    ; GFX950-NEXT: $agpr4 = COPY $agpr23, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr3 = COPY $agpr24, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr2 = COPY $agpr25, implicit $agpr2_128
+    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 4096, 0, implicit $exec
+    ; GFX950-NEXT: $agpr5 = COPY $agpr26, implicit-def $agpr2_128
+    ; GFX950-NEXT: $agpr4 = COPY $agpr27, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr2_64 = SCRATCH_LOAD_DWORDX2_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $agpr2_128, implicit $agpr2_128 :: ("amdgpu-thread-private" load (s64) from %stack.5, align 4, addrspace 5)
+    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 5120, 0, implicit $exec
     ; GFX950-NEXT: S_ENDPGM 0
-    renamable $agpr0_agpr1 = IMPLICIT_DEF
-    renamable $agpr28_agpr29_agpr30_agpr31 = IMPLICIT_DEF
+    renamable $agpr0_64 = IMPLICIT_DEF
+    renamable $agpr28_128 = IMPLICIT_DEF
     renamable $vgpr0_512 = IMPLICIT_DEF
     renamable $vgpr16_384 = IMPLICIT_DEF
     SI_SPILL_AV128_SAVE killed $vgpr0_128, %stack.0, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.0, align 4, addrspace 5)
@@ -325,18 +325,18 @@ body:             |
     SI_SPILL_AV128_SAVE killed $vgpr16_128, %stack.4, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.4, align 4, addrspace 5)
     SI_SPILL_AV128_SAVE killed $vgpr20_128, %stack.5, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.5, align 4, addrspace 5)
     $vgpr0 = IMPLICIT_DEF
-    renamable $agpr2_agpr3_agpr4_agpr5 = SI_SPILL_AV128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
-    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 0, 0, implicit $exec
-    renamable $agpr2_agpr3_agpr4_agpr5 = SI_SPILL_AV128_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.1, align 4, addrspace 5)
-    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 1024, 0, implicit $exec
-    renamable $agpr2_agpr3_agpr4_agpr5 = SI_SPILL_AV128_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.2, align 4, addrspace 5)
-    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 2048, 0, implicit $exec
-    renamable $agpr2_agpr3_agpr4_agpr5 = SI_SPILL_AV128_RESTORE %stack.3, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.3, align 4, addrspace 5)
-    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 3072, 0, implicit $exec
-    renamable $agpr2_agpr3_agpr4_agpr5 = SI_SPILL_AV128_RESTORE %stack.4, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.4, align 4, addrspace 5)
-    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 4096, 0, implicit $exec
-    renamable $agpr2_agpr3_agpr4_agpr5 = SI_SPILL_AV128_RESTORE %stack.5, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.5, align 4, addrspace 5)
-    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 5120, 0, implicit $exec
+    renamable $agpr2_128 = SI_SPILL_AV128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 0, 0, implicit $exec
+    renamable $agpr2_128 = SI_SPILL_AV128_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.1, align 4, addrspace 5)
+    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 1024, 0, implicit $exec
+    renamable $agpr2_128 = SI_SPILL_AV128_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.2, align 4, addrspace 5)
+    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 2048, 0, implicit $exec
+    renamable $agpr2_128 = SI_SPILL_AV128_RESTORE %stack.3, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.3, align 4, addrspace 5)
+    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 3072, 0, implicit $exec
+    renamable $agpr2_128 = SI_SPILL_AV128_RESTORE %stack.4, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.4, align 4, addrspace 5)
+    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 4096, 0, implicit $exec
+    renamable $agpr2_128 = SI_SPILL_AV128_RESTORE %stack.5, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.5, align 4, addrspace 5)
+    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 5120, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -423,9 +423,9 @@ body:             |
     ; GFX950-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr29
     ; GFX950-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr30
     ; GFX950-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr31
-    ; GFX950-NEXT: renamable $agpr0_agpr1 = IMPLICIT_DEF
-    ; GFX950-NEXT: renamable $agpr26_agpr27 = IMPLICIT_DEF
-    ; GFX950-NEXT: renamable $agpr28_agpr29_agpr30_agpr31 = IMPLICIT_DEF
+    ; GFX950-NEXT: renamable $agpr0_64 = IMPLICIT_DEF
+    ; GFX950-NEXT: renamable $agpr26_64 = IMPLICIT_DEF
+    ; GFX950-NEXT: renamable $agpr28_128 = IMPLICIT_DEF
     ; GFX950-NEXT: renamable $vgpr0_512 = IMPLICIT_DEF
     ; GFX950-NEXT: renamable $vgpr16_384 = IMPLICIT_DEF
     ; GFX950-NEXT: $agpr6 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr3, implicit $exec, implicit-def $vgpr0_128, implicit $vgpr0_128
@@ -450,37 +450,37 @@ body:             |
     ; GFX950-NEXT: $agpr25 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr16, implicit $exec, implicit killed $vgpr16_128
     ; GFX950-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $vgpr20_128, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.5, align 4, addrspace 5)
     ; GFX950-NEXT: $vgpr0 = IMPLICIT_DEF
-    ; GFX950-NEXT: $agpr5 = COPY $agpr6, implicit-def $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr4 = COPY $agpr7, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr3 = COPY $agpr8, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr2 = COPY $agpr9, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 0, 0, implicit $exec
-    ; GFX950-NEXT: $agpr5 = COPY $agpr10, implicit-def $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr4 = COPY $agpr11, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr3 = COPY $agpr12, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr2 = COPY $agpr13, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 1024, 0, implicit $exec
-    ; GFX950-NEXT: $agpr5 = COPY $agpr14, implicit-def $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr4 = COPY $agpr15, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr3 = COPY $agpr16, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr2 = COPY $agpr17, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 2048, 0, implicit $exec
-    ; GFX950-NEXT: $agpr5 = COPY $agpr18, implicit-def $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr4 = COPY $agpr19, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr3 = COPY $agpr20, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr2 = COPY $agpr21, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 3072, 0, implicit $exec
-    ; GFX950-NEXT: $agpr5 = COPY $agpr22, implicit-def $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr4 = COPY $agpr23, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr3 = COPY $agpr24, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: $agpr2 = COPY $agpr25, implicit $agpr2_agpr3_agpr4_agpr5
-    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 4096, 0, implicit $exec
-    ; GFX950-NEXT: $agpr2_agpr3_agpr4_agpr5 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.5, align 4, addrspace 5)
-    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 5120, 0, implicit $exec
+    ; GFX950-NEXT: $agpr5 = COPY $agpr6, implicit-def $agpr2_128
+    ; GFX950-NEXT: $agpr4 = COPY $agpr7, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr3 = COPY $agpr8, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr2 = COPY $agpr9, implicit $agpr2_128
+    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 0, 0, implicit $exec
+    ; GFX950-NEXT: $agpr5 = COPY $agpr10, implicit-def $agpr2_128
+    ; GFX950-NEXT: $agpr4 = COPY $agpr11, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr3 = COPY $agpr12, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr2 = COPY $agpr13, implicit $agpr2_128
+    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 1024, 0, implicit $exec
+    ; GFX950-NEXT: $agpr5 = COPY $agpr14, implicit-def $agpr2_128
+    ; GFX950-NEXT: $agpr4 = COPY $agpr15, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr3 = COPY $agpr16, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr2 = COPY $agpr17, implicit $agpr2_128
+    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 2048, 0, implicit $exec
+    ; GFX950-NEXT: $agpr5 = COPY $agpr18, implicit-def $agpr2_128
+    ; GFX950-NEXT: $agpr4 = COPY $agpr19, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr3 = COPY $agpr20, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr2 = COPY $agpr21, implicit $agpr2_128
+    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 3072, 0, implicit $exec
+    ; GFX950-NEXT: $agpr5 = COPY $agpr22, implicit-def $agpr2_128
+    ; GFX950-NEXT: $agpr4 = COPY $agpr23, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr3 = COPY $agpr24, implicit $agpr2_128
+    ; GFX950-NEXT: $agpr2 = COPY $agpr25, implicit $agpr2_128
+    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 4096, 0, implicit $exec
+    ; GFX950-NEXT: $agpr2_128 = SCRATCH_LOAD_DWORDX4_SADDR $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s128) from %stack.5, align 4, addrspace 5)
+    ; GFX950-NEXT: DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 5120, 0, implicit $exec
     ; GFX950-NEXT: S_ENDPGM 0
-    renamable $agpr0_agpr1 = IMPLICIT_DEF
-    renamable $agpr26_agpr27 = IMPLICIT_DEF
-    renamable $agpr28_agpr29_agpr30_agpr31 = IMPLICIT_DEF
+    renamable $agpr0_64 = IMPLICIT_DEF
+    renamable $agpr26_64 = IMPLICIT_DEF
+    renamable $agpr28_128 = IMPLICIT_DEF
     renamable $vgpr0_512 = IMPLICIT_DEF
     renamable $vgpr16_384 = IMPLICIT_DEF
     SI_SPILL_AV128_SAVE killed $vgpr0_128, %stack.0, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.0, align 4, addrspace 5)
@@ -490,17 +490,17 @@ body:             |
     SI_SPILL_AV128_SAVE killed $vgpr16_128, %stack.4, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.4, align 4, addrspace 5)
     SI_SPILL_AV128_SAVE killed $vgpr20_128, %stack.5, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.5, align 4, addrspace 5)
     $vgpr0 = IMPLICIT_DEF
-    renamable $agpr2_agpr3_agpr4_agpr5 = SI_SPILL_AV128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
-    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 0, 0, implicit $exec
-    renamable $agpr2_agpr3_agpr4_agpr5 = SI_SPILL_AV128_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.1, align 4, addrspace 5)
-    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 1024, 0, implicit $exec
-    renamable $agpr2_agpr3_agpr4_agpr5 = SI_SPILL_AV128_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.2, align 4, addrspace 5)
-    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 2048, 0, implicit $exec
-    renamable $agpr2_agpr3_agpr4_agpr5 = SI_SPILL_AV128_RESTORE %stack.3, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.3, align 4, addrspace 5)
-    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 3072, 0, implicit $exec
-    renamable $agpr2_agpr3_agpr4_agpr5 = SI_SPILL_AV128_RESTORE %stack.4, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.4, align 4, addrspace 5)
-    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 4096, 0, implicit $exec
-    renamable $agpr2_agpr3_agpr4_agpr5 = SI_SPILL_AV128_RESTORE %stack.5, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.5, align 4, addrspace 5)
-    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_agpr3_agpr4_agpr5, 5120, 0, implicit $exec
+    renamable $agpr2_128 = SI_SPILL_AV128_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.0, align 4, addrspace 5)
+    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 0, 0, implicit $exec
+    renamable $agpr2_128 = SI_SPILL_AV128_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.1, align 4, addrspace 5)
+    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 1024, 0, implicit $exec
+    renamable $agpr2_128 = SI_SPILL_AV128_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.2, align 4, addrspace 5)
+    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 2048, 0, implicit $exec
+    renamable $agpr2_128 = SI_SPILL_AV128_RESTORE %stack.3, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.3, align 4, addrspace 5)
+    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 3072, 0, implicit $exec
+    renamable $agpr2_128 = SI_SPILL_AV128_RESTORE %stack.4, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.4, align 4, addrspace 5)
+    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 4096, 0, implicit $exec
+    renamable $agpr2_128 = SI_SPILL_AV128_RESTORE %stack.5, $sgpr32, 0, implicit $exec :: (load (s128) from %stack.5, align 4, addrspace 5)
+    DS_WRITE_B128_gfx9 renamable $vgpr0, killed renamable $agpr2_128, 5120, 0, implicit $exec
     S_ENDPGM 0
 ...

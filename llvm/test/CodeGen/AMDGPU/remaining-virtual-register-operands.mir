@@ -35,7 +35,7 @@ registers:
   - { id: 1, class: areg_512, preferred-register: '%2', flags: [  ] }
   - { id: 2, class: vreg_512, preferred-register: '%1', flags: [  ] }
   - { id: 3, class: areg_512, preferred-register: '%4', flags: [  ] }
-  - { id: 4, class: av_512, preferred-register: '$agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15',
+  - { id: 4, class: av_512, preferred-register: '$agpr0_512',
       flags: [  ] }
   - { id: 5, class: areg_512, preferred-register: '%2', flags: [  ] }
   - { id: 6, class: vgpr_32, preferred-register: '', flags: [  ] }
