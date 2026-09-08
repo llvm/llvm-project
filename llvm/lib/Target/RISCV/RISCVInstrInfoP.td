@@ -3186,10 +3186,10 @@ let append Predicates = [IsRV64] in {
   def : Pat<(v2i32 (riscv_pm2sub_h (v4i16 GPR:$rs1), (v4i16 GPR:$rs2))),
             (PM2SUB_H GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_pm2adda_h (v2i32 GPR:$rd), (v4i16 GPR:$rs1),
-                                      (v4i16 GPR:$rs2))),
+                                    (v4i16 GPR:$rs2))),
             (PM2ADDA_H GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(v2i32 (riscv_pm2addau_h (v2i32 GPR:$rd), (v4i16 GPR:$rs1),
-                                       (v4i16 GPR:$rs2))),
+                                     (v4i16 GPR:$rs2))),
             (PM2ADDAU_H GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // 32-bit logical shift left/right patterns

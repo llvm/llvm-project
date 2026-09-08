@@ -18441,6 +18441,8 @@ static SDValue combinePExtWideningAddSub(SDNode *N, SelectionDAG &DAG,
 
 static SDValue combinePExtWideningAddAcc(SDNode *N, SelectionDAG &DAG,
                                          const RISCVSubtarget &Subtarget) {
+  using namespace SDPatternMatch;
+
   if (!Subtarget.hasStdExtP() || !Subtarget.is64Bit())
     return SDValue();
 
@@ -18452,26 +18454,22 @@ static SDValue combinePExtWideningAddAcc(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   auto MatchExtend = [](SDValue V, unsigned ExtendOpcode, MVT SrcVT,
-                        SDValue &Src) -> bool {
-    if (V.getOpcode() != ExtendOpcode || !V.hasOneUse() ||
-        V.getOperand(0).getSimpleValueType() != SrcVT)
-      return false;
-    Src = V.getOperand(0);
-    return true;
+                        SDValue &Src) {
+    return sd_match(V, m_OneUse(m_Node(ExtendOpcode,
+                                       m_Value(Src, m_SpecificVT(SrcVT)))));
   };
 
-  auto Match = [&](SDValue V, SDValue &Acc, SDValue &A, SDValue &B,
-                   bool &IsSExt) -> bool {
-    unsigned ExtendOpcode = V.getOpcode();
+  auto Match = [&](SDValue Ext, SDValue Add, SDValue &Acc, SDValue &A,
+                   SDValue &B, bool &IsSExt) {
+    MVT SrcVT = VT == MVT::v4i16 ? MVT::v4i8 : MVT::v2i16;
+    unsigned ExtendOpcode = Ext.getOpcode();
     if (ExtendOpcode != ISD::SIGN_EXTEND && ExtendOpcode != ISD::ZERO_EXTEND)
       return false;
 
-    MVT SrcVT = VT == MVT::v4i16 ? MVT::v4i8 : MVT::v2i16;
-    if (!MatchExtend(V, ExtendOpcode, SrcVT, B))
+    if (!MatchExtend(Ext, ExtendOpcode, SrcVT, B))
       return false;
 
-    SDValue Add = V == N->getOperand(0) ? N->getOperand(1) : N->getOperand(0);
-    if (Add.getOpcode() != ISD::ADD || !Add.hasOneUse())
+    if (!sd_match(Add, m_OneUse(m_Add(m_Value(), m_Value()))))
       return false;
 
     if (MatchExtend(Add.getOperand(0), ExtendOpcode, SrcVT, A))
@@ -18490,8 +18488,8 @@ static SDValue combinePExtWideningAddAcc(SDNode *N, SelectionDAG &DAG,
 
   SDValue Acc, A, B;
   bool IsSExt;
-  if (!Match(N->getOperand(0), Acc, A, B, IsSExt) &&
-      !Match(N->getOperand(1), Acc, A, B, IsSExt))
+  if (!Match(N->getOperand(0), N->getOperand(1), Acc, A, B, IsSExt) &&
+      !Match(N->getOperand(1), N->getOperand(0), Acc, A, B, IsSExt))
     return SDValue();
 
   if (VT == MVT::v4i16 && !IsSExt)
