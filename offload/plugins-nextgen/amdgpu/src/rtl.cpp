@@ -1435,10 +1435,11 @@ private:
     uint64_t Duration = static_cast<uint64_t>(
         static_cast<double>(TimeRec.end - TimeRec.start) * Args->TicksToTime);
 
-    INFO_MESSAGE(
-        Args->DeviceId,
-        "LaunchID: %2u TeamsXthrds:(%4uX%4u) Duration(ns): %" PRIu64 " n:%s\n",
-        Args->LaunchId, Args->NumTeams, Args->NumThreads, Duration, Args->Name);
+    INFO_MESSAGE(Args->DeviceId,
+                 "LaunchID: %2" PRIu32 " TeamsXthrds:(%4" PRIu32 "X%4" PRIu32
+                 ") Duration(ns): %" PRIu64 " n:%s\n",
+                 Args->LaunchId, Args->NumTeams, Args->NumThreads, Duration,
+                 Args->Name);
 
     return Plugin::success();
   }

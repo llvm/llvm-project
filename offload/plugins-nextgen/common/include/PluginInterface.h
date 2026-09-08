@@ -1267,7 +1267,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Get a unique, monotonically increasing identifier for the next kernel
   /// launch on this device.
-  uint32_t getAndIncrementLaunchId() { return LaunchId.fetch_add(1); }
+  uint32_t getAndIncrementLaunchId() {
+    return LaunchId.fetch_add(1, std::memory_order_relaxed);
+  }
 
   /// Get the total amount of hardware parallelism supported by the target
   /// device. This is the total amount of warps or wavefronts that can be
