@@ -72,6 +72,9 @@ public:
 
   bool X86Sse2Avx = false;
 
+  // Disable the integrated assembler.
+  bool DisableIntegratedAS = false;
+
   // For ELF relocations, controls section symbol conversion.
   RelocSectionSymType RelocSectionSym = RelocSectionSymType::All;
 

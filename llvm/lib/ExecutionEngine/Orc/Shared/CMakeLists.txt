@@ -1,6 +1,7 @@
 add_llvm_component_library(LLVMOrcShared
   AllocationActions.cpp
   MachOObjectFormat.cpp
+  Mangler.cpp
   ObjectFormats.cpp
   OrcError.cpp
   OrcRTBridge.cpp
