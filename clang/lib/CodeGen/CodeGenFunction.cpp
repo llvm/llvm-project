@@ -103,16 +103,18 @@ CodeGenFunction::~CodeGenFunction() {
   assert(DeferredDeactivationCleanupStack.empty() &&
          "missed to deactivate a cleanup");
 
-  if (getLangOpts().OpenMP && CurFn)
+  if (getLangOpts().OpenMP && CurFn) {
     CGM.getOpenMPRuntime().functionFinished(*this);
 
-  // If we have an OpenMPIRBuilder we want to finalize functions (incl.
-  // outlining etc) at some point. Doing it once the function codegen is done
-  // seems to be a reasonable spot. We do it here, as opposed to the deletion
-  // time of the CodeGenModule, because we have to ensure the IR has not yet
-  // been "emitted" to the outside, thus, modifications are still sensible.
-  if (CGM.getLangOpts().OpenMPIRBuilder && CurFn)
-    CGM.getOpenMPRuntime().getOMPBuilder().finalize(CurFn);
+    // Finalizing (incl. outlining etc) once the function codegen is done, as
+    // opposed to the deletion time of the CodeGenModule, ensures the IR has
+    // not yet been "emitted" to the outside, thus, modifications are still
+    // sensible.
+    llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
+    if (CGM.getLangOpts().OpenMPIRBuilder ||
+        OMPBuilder.hasPendingOutlines(CurFn))
+      OMPBuilder.finalize(CurFn);
+  }
 }
 
 // Map the LangOption for exception behavior into

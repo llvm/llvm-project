@@ -92,7 +92,7 @@ hasLoopLastprivateVariable(const OMPLoopDirective &S,
 static bool canEmitGPUNoLoopKernel(CodeGenModule &CGM,
                                    const OMPLoopDirective &S) {
   const auto *D = dyn_cast<OMPTargetTeamsDistributeParallelForDirective>(&S);
-  return CGM.getLangOpts().OpenMPIRBuilder && S.getLoopsNumber() == 1 &&
+  return S.getLoopsNumber() == 1 &&
          CGM.getOpenMPRuntime().canPromoteToNoLoop(S) &&
          !S.getSingleClause<OMPScheduleClause>() &&
          !S.getSingleClause<OMPDistScheduleClause>() && !(D && D->hasCancel());
@@ -2405,6 +2405,24 @@ emitCapturedStmtCall(CodeGenFunction &ParentCGF, EmittedClosureTy Cap,
   return ParentCGF.Builder.CreateCall(Cap.first, EffectiveArgs);
 }
 
+static llvm::CanonicalLoopInfo *
+createCanonicalLoop(CodeGenFunction &CGF, llvm::Value *TripCount,
+                    llvm::function_ref<void(llvm::Value *)> BodyGen) {
+  auto BodyGenCB = [&](llvm::OpenMPIRBuilder::InsertPointTy CodeGenIP,
+                       llvm::Value *IndVar) {
+    CGF.Builder.restoreIP(CodeGenIP);
+    BodyGen(IndVar);
+    return llvm::Error::success();
+  };
+
+  llvm::OpenMPIRBuilder &OMPBuilder =
+      CGF.CGM.getOpenMPRuntime().getOMPBuilder();
+  llvm::CanonicalLoopInfo *CL = cantFail(
+      OMPBuilder.createCanonicalLoop(CGF.Builder, BodyGenCB, TripCount));
+  CGF.Builder.restoreIP(CL->getAfterIP());
+  return CL;
+}
+
 llvm::CanonicalLoopInfo *
 CodeGenFunction::EmitOMPCollapsedCanonicalLoopNest(const Stmt *S, int Depth) {
   assert(Depth == 1 && "Nested loops with OpenMPIRBuilder not yet implemented");
@@ -2479,18 +2497,8 @@ void CodeGenFunction::EmitOMPCanonicalLoop(const OMPCanonicalLoop *S) {
   emitCapturedStmtCall(*this, DistanceClosure, {CountAddr.getPointer()});
   llvm::Value *DistVal = Builder.CreateLoad(CountAddr, ".count");
 
-  // Privatize pending lastprivate variables after trip count is computed.
-  if (auto Privatize = OMPCanonicalLoopPendingPrivatization) {
-    OMPCanonicalLoopPendingPrivatization = nullptr;
-    Privatize();
-  }
-
   // Emit the loop structure.
-  llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
-  auto BodyGen = [&, this](llvm::OpenMPIRBuilder::InsertPointTy CodeGenIP,
-                           llvm::Value *IndVar) {
-    Builder.restoreIP(CodeGenIP);
-
+  auto BodyGen = [&, this](llvm::Value *IndVar) {
     // Emit the loop body: Convert the logical iteration number to the loop
     // variable and emit the body.
     const DeclRefExpr *LoopVarRef = S->getLoopVarRef();
@@ -2501,14 +2509,11 @@ void CodeGenFunction::EmitOMPCanonicalLoop(const OMPCanonicalLoop *S) {
 
     RunCleanupsScope BodyScope(*this);
     EmitStmt(BodyStmt);
-    return llvm::Error::success();
   };
 
-  llvm::CanonicalLoopInfo *CL =
-      cantFail(OMPBuilder.createCanonicalLoop(Builder, BodyGen, DistVal));
+  llvm::CanonicalLoopInfo *CL = createCanonicalLoop(*this, DistVal, BodyGen);
 
   // Finish up the loop.
-  Builder.restoreIP(CL->getAfterIP());
   ForScope.ForceCleanup();
 
   // Remember the CanonicalLoopInfo for parent AST nodes consuming it.
@@ -3745,6 +3750,22 @@ static void emitDistributeParallelForDistributeInnerBoundParams(
   CapturedVars.push_back(UBCast);
 }
 
+static void emitLoopIterationspaceVars(CodeGenFunction &CGF,
+                                       const OMPLoopDirective &S) {
+  // Emit the loop iteration variable.
+  const auto *IVExpr = cast<DeclRefExpr>(S.getIterationVariable());
+  CGF.EmitVarDecl(*cast<VarDecl>(IVExpr->getDecl()));
+
+  // Emit the iterations count variable.
+  // If it is not a variable, Sema decided to calculate iterations count on each
+  // iteration (e.g., it is foldable into a constant).
+  if (const auto *LIExpr = dyn_cast<DeclRefExpr>(S.getLastIteration())) {
+    CGF.EmitVarDecl(*cast<VarDecl>(LIExpr->getDecl()));
+    // Emit calculation of the iterations count.
+    CGF.EmitIgnoredExpr(S.getCalcLastIteration());
+  }
+}
+
 static void
 emitInnerParallelForWhenCombined(CodeGenFunction &CGF,
                                  const OMPLoopDirective &S,
@@ -3767,27 +3788,37 @@ emitInnerParallelForWhenCombined(CodeGenFunction &CGF,
 
     CodeGenModule &CGM = CGF.CGM;
     if (canEmitGPUNoLoopKernel(CGM, S)) {
-      // Privatize pending variables, deferring lastprivate privatization until
-      // after the trip count is computed from the originals.
+      // Prepare the loop variables and their privatization.
+      emitLoopIterationspaceVars(CGF, S);
+      OMPLoopScope PreInitScope(CGF, S);
+
       CodeGenFunction::OMPPrivateScope PrivateScope(CGF);
       CGF.EmitOMPPrivateClause(S, PrivateScope);
-      CGF.EmitOMPPrivateLoopCounters(S, PrivateScope, /*OnlyUnresolved=*/true);
+      CGF.EmitOMPPrivateLoopCounters(S, PrivateScope);
       (void)PrivateScope.Privatize();
 
       CodeGenFunction::OMPPrivateScope LastprivateScope(CGF);
       (void)CGF.EmitOMPLastprivateClauseInit(S, LastprivateScope);
-      auto PendingPrivatizations = [&] {
-        (void)LastprivateScope.Privatize();
-        if (isOpenMPTargetExecutionDirective(EKind))
-          CGM.getOpenMPRuntime().adjustTargetSpecificDataForLambdas(CGF, S);
-      };
-      CGF.OMPCanonicalLoopPendingPrivatization = PendingPrivatizations;
+      (void)LastprivateScope.Privatize();
 
-      const Stmt *Inner = S.getRawStmt();
+      if (isOpenMPTargetExecutionDirective(EKind))
+        CGM.getOpenMPRuntime().adjustTargetSpecificDataForLambdas(CGF, S);
+
+      // Rebuild what the OMPCanonicalLoop node supplies under the IRBuilder
+      // flag: iteration count, loop, index-to-variable mapping, body.
+      const Expr *NumIterations = S.getNumIterations();
+      llvm::Value *TripCount = CGF.EmitScalarConversion(
+          CGF.EmitScalarExpr(NumIterations), NumIterations->getType(),
+          S.getIterationVariable()->getType(), S.getBeginLoc());
       llvm::CanonicalLoopInfo *CLI =
-          CGF.EmitOMPCollapsedCanonicalLoopNest(Inner, 1);
-      assert(!CGF.OMPCanonicalLoopPendingPrivatization &&
-             "canonical loop did not apply pending privatization");
+          createCanonicalLoop(CGF, TripCount, [&CGF, &S](llvm::Value *IndVar) {
+            llvm::BasicBlock *BodyExit = llvm::splitBBWithSuffix(
+                CGF.Builder, /*CreateBranch=*/false, ".cont");
+            CGF.EmitStoreOfScalar(IndVar,
+                                  CGF.EmitLValue(S.getIterationVariable()));
+            emitOMPLoopBodyWithStopPoint(CGF, S, CodeGenFunction::JumpDest());
+            CGF.Builder.CreateBr(BodyExit);
+          });
 
       llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
           CGF.AllocaInsertPt->getParent(), CGF.AllocaInsertPt->getIterator());
@@ -3901,19 +3932,7 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
     const OMPLoopDirective &S, Expr *EUB,
     const CodeGenLoopBoundsTy &CodeGenLoopBounds,
     const CodeGenDispatchBoundsTy &CGDispatchBounds) {
-  // Emit the loop iteration variable.
-  const auto *IVExpr = cast<DeclRefExpr>(S.getIterationVariable());
-  const auto *IVDecl = cast<VarDecl>(IVExpr->getDecl());
-  EmitVarDecl(*IVDecl);
-
-  // Emit the iterations count variable.
-  // If it is not a variable, Sema decided to calculate iterations count on each
-  // iteration (e.g., it is foldable into a constant).
-  if (const auto *LIExpr = dyn_cast<DeclRefExpr>(S.getLastIteration())) {
-    EmitVarDecl(*cast<VarDecl>(LIExpr->getDecl()));
-    // Emit calculation of the iterations count.
-    EmitIgnoredExpr(S.getCalcLastIteration());
-  }
+  emitLoopIterationspaceVars(*this, S);
 
   CGOpenMPRuntime &RT = CGM.getOpenMPRuntime();
 
@@ -4008,6 +4027,7 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
           HasChunkSizeOne = (EvaluatedChunk.getLimitedValue() == 1);
         }
       }
+      const auto *IVExpr = cast<DeclRefExpr>(S.getIterationVariable());
       const unsigned IVSize = getContext().getTypeSize(IVExpr->getType());
       const bool IVSigned = IVExpr->getType()->hasSignedIntegerRepresentation();
       // OpenMP 4.5, 2.7.1 Loop Construct, Description.
@@ -6329,19 +6349,7 @@ void CodeGenFunction::EmitOMPScanDirective(const OMPScanDirective &S) {
 void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
                                             const CodeGenLoopTy &CodeGenLoop,
                                             Expr *IncExpr) {
-  // Emit the loop iteration variable.
-  const auto *IVExpr = cast<DeclRefExpr>(S.getIterationVariable());
-  const auto *IVDecl = cast<VarDecl>(IVExpr->getDecl());
-  EmitVarDecl(*IVDecl);
-
-  // Emit the iterations count variable.
-  // If it is not a variable, Sema decided to calculate iterations count on each
-  // iteration (e.g., it is foldable into a constant).
-  if (const auto *LIExpr = dyn_cast<DeclRefExpr>(S.getLastIteration())) {
-    EmitVarDecl(*cast<VarDecl>(LIExpr->getDecl()));
-    // Emit calculation of the iterations count.
-    EmitIgnoredExpr(S.getCalcLastIteration());
-  }
+  emitLoopIterationspaceVars(*this, S);
 
   CGOpenMPRuntime &RT = CGM.getOpenMPRuntime();
 
@@ -6427,6 +6435,7 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
         CGM.getOpenMPRuntime().getDefaultDistScheduleAndChunk(
             *this, S, ScheduleKind, Chunk);
       }
+      const auto *IVExpr = cast<DeclRefExpr>(S.getIterationVariable());
       const unsigned IVSize = getContext().getTypeSize(IVExpr->getType());
       const bool IVSigned = IVExpr->getType()->hasSignedIntegerRepresentation();
 

@@ -316,10 +316,6 @@ public:
   /// nest would extend.
   SmallVector<llvm::CanonicalLoopInfo *, 4> OMPLoopNestStack;
 
-  /// Privatization to be applied for canonical loops once the trip count has
-  /// been computed.
-  llvm::function_ref<void()> OMPCanonicalLoopPendingPrivatization = nullptr;
-
   /// Stack to track the controlled convergence tokens.
   SmallVector<llvm::ConvergenceControlInst *, 4> ConvergenceTokenStack;
 

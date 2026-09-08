@@ -1,7 +1,7 @@
 // clang-format off
 // C counterpart of fortran/target-no-loop.f90.
 
-// RUN: %libomptarget-compile-generic -O3 -fopenmp-assume-threads-oversubscription -fopenmp-assume-teams-oversubscription -fopenmp-enable-irbuilder
+// RUN: %libomptarget-compile-generic -O3 -fopenmp-assume-threads-oversubscription -fopenmp-assume-teams-oversubscription
 // RUN: env LIBOMPTARGET_INFO=16 OMP_NUM_TEAMS=16 OMP_TEAMS_THREAD_LIMIT=16 %libomptarget-run-generic 2>&1 | %fcheck-generic
 // REQUIRES: gpu
 // XFAIL: intelgpu

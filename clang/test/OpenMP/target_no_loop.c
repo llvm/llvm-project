@@ -8,35 +8,27 @@
 // RUN:   -fopenmp-host-ir-file-path %t-host.bc \
 // RUN:   -fopenmp-assume-teams-oversubscription \
 // RUN:   -fopenmp-assume-threads-oversubscription \
-// RUN:   -fopenmp-enable-irbuilder -emit-llvm %s -o - | FileCheck %s \
+// RUN:   -emit-llvm %s -o - | FileCheck %s \
 // RUN:   --check-prefixes=NOLOOP
 
 // RUN: %clang_cc1 -verify -fopenmp -x c -triple amdgcn-amd-amdhsa \
 // RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -fopenmp-is-target-device \
 // RUN:   -fopenmp-host-ir-file-path %t-host.bc \
+// RUN:   -emit-llvm %s -o - | FileCheck %s \
+// RUN:   --check-prefix=SPMD --implicit-check-not=__kmpc_distribute_for_static_loop_4u
+
+// RUN: %clang_cc1 -verify -fopenmp -x c -triple amdgcn-amd-amdhsa \
+// RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -fopenmp-is-target-device \
+// RUN:   -fopenmp-host-ir-file-path %t-host.bc \
 // RUN:   -fopenmp-assume-teams-oversubscription \
+// RUN:   -emit-llvm %s -o - | FileCheck %s \
+// RUN:   --check-prefix=SPMD --implicit-check-not=__kmpc_distribute_for_static_loop_4u
+
+// RUN: %clang_cc1 -verify -fopenmp -x c -triple amdgcn-amd-amdhsa \
+// RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -fopenmp-is-target-device \
+// RUN:   -fopenmp-host-ir-file-path %t-host.bc \
 // RUN:   -fopenmp-assume-threads-oversubscription \
 // RUN:   -emit-llvm %s -o - | FileCheck %s \
-// RUN:   --check-prefixes=LAUNCH --implicit-check-not=__kmpc_distribute_for_static_loop_4u
-
-// RUN: %clang_cc1 -verify -fopenmp -x c -triple amdgcn-amd-amdhsa \
-// RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -fopenmp-is-target-device \
-// RUN:   -fopenmp-host-ir-file-path %t-host.bc \
-// RUN:   -fopenmp-enable-irbuilder -emit-llvm %s -o - | FileCheck %s \
-// RUN:   --check-prefix=SPMD --implicit-check-not=__kmpc_distribute_for_static_loop_4u
-
-// RUN: %clang_cc1 -verify -fopenmp -x c -triple amdgcn-amd-amdhsa \
-// RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -fopenmp-is-target-device \
-// RUN:   -fopenmp-host-ir-file-path %t-host.bc \
-// RUN:   -fopenmp-assume-teams-oversubscription \
-// RUN:   -fopenmp-enable-irbuilder -emit-llvm %s -o - | FileCheck %s \
-// RUN:   --check-prefix=SPMD --implicit-check-not=__kmpc_distribute_for_static_loop_4u
-
-// RUN: %clang_cc1 -verify -fopenmp -x c -triple amdgcn-amd-amdhsa \
-// RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -fopenmp-is-target-device \
-// RUN:   -fopenmp-host-ir-file-path %t-host.bc \
-// RUN:   -fopenmp-assume-threads-oversubscription \
-// RUN:   -fopenmp-enable-irbuilder -emit-llvm %s -o - | FileCheck %s \
 // RUN:   --check-prefix=SPMD --implicit-check-not=__kmpc_distribute_for_static_loop_4u
 
 // expected-no-diagnostics
@@ -140,7 +132,5 @@ void no_loop_lastprivate_scalar_nowait(int *array) {
 // NOLOOP: @__kmpc_barrier
 // NOLOOP: store {{.*}}, ptr %last.
 // NOLOOP-NEXT: %.omp.lastprivate.done
-
-// LAUNCH-COUNT-6: _kernel_environment {{.*}} i8 0, i8 1, i8 6
 
 // SPMD-COUNT-6: _kernel_environment {{.*}} i8 0, i8 1, i8 2
