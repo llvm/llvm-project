@@ -53,8 +53,22 @@
 ! TASK-COMPLEX: not yet implemented: TASK_REDUCTION of a complex part
 
 ! SUPPORTED-LABEL: func.func @_QPwhole_section
+! SUPPORTED: omp.parallel reduction(byref @_QQFwhole_sectionmyred_byref_box_4xi32 {{.*}} -> %[[WHOLE:arg[0-9]+]]
+! SUPPORTED: %[[WHOLE_DECL:.*]]:2 = hlfir.declare %[[WHOLE]]
+! SUPPORTED: %[[WHOLE_BOX:.*]] = fir.load %[[WHOLE_DECL]]#0
+! SUPPORTED: hlfir.designate %[[WHOLE_BOX]]
+
 ! SUPPORTED-LABEL: func.func @_QPpredefined_element
+! SUPPORTED: omp.parallel reduction(byref @add_reduction_byref_box_4xi32 {{.*}} -> %[[ELEM_ARG:arg[0-9]+]]
+! SUPPORTED: %[[ELEMENT_DECL:.*]]:2 = hlfir.declare %[[ELEM_ARG]]
+! SUPPORTED: %[[ELEMENT_BOX:.*]] = fir.load %[[ELEMENT_DECL]]#0
+! SUPPORTED: hlfir.designate %[[ELEMENT_BOX]]
+
 ! SUPPORTED-LABEL: func.func @_QPpredefined_section
+! SUPPORTED: omp.parallel reduction(byref @add_reduction_byref_box_4xi32 {{.*}} -> %[[SECT_ARG:arg[0-9]+]]
+! SUPPORTED: %[[SECTION_DECL:.*]]:2 = hlfir.declare %[[SECT_ARG]]
+! SUPPORTED: %[[SECTION_BOX:.*]] = fir.load %[[SECTION_DECL]]#0
+! SUPPORTED: hlfir.designate %[[SECTION_BOX]]
 
 !--- parallel-section.f90
 subroutine parallel_section(a)
