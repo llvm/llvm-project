@@ -1302,9 +1302,9 @@ define void @spill_sgpr_no_free_vgpr(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; GCN-NEXT:    v_writelane_b32 v5, s37, 3
 ; GCN-NEXT:    v_mov_b32_e32 v4, v3
 ; GCN-NEXT:    v_mov_b32_e32 v3, v1
-; GCN-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; GCN-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_64 killed $exec
 ; GCN-NEXT:    v_mov_b32_e32 v1, v3
-; GCN-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GCN-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_64 killed $exec
 ; GCN-NEXT:    v_mov_b32_e32 v3, v4
 ; GCN-NEXT:    flat_load_dwordx4 v[6:9], v[2:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)

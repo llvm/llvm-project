@@ -29,7 +29,7 @@ define <4 x float> @waterfall_loop(<8 x i32> %vgpr_srd) {
 ; CHECK-NEXT:    buffer_store_dword v9, off, s[0:3], s32 offset:48 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_mov_b32_e32 v8, v7
 ; CHECK-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:44 ; 4-byte Folded Spill
-; CHECK-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_256 killed $exec
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v14
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v13
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v12

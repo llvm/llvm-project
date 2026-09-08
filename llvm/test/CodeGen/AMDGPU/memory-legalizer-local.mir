@@ -14,18 +14,18 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("singlethread-one-as") unordered (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     $sgpr0_64 = S_LOAD_DWORDX2_IMM killed $sgpr0_64, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("singlethread-one-as") unordered (s32) from `ptr addrspace(3) poison`)
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...
@@ -42,18 +42,18 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("singlethread-one-as") monotonic (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     $sgpr0_64 = S_LOAD_DWORDX2_IMM killed $sgpr0_64, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("singlethread-one-as") monotonic (s32) from `ptr addrspace(3) poison`)
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...
@@ -70,18 +70,18 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("singlethread-one-as") acquire (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     $sgpr0_64 = S_LOAD_DWORDX2_IMM killed $sgpr0_64, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("singlethread-one-as") acquire (s32) from `ptr addrspace(3) poison`)
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...
@@ -98,18 +98,18 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("singlethread-one-as") seq_cst (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     $sgpr0_64 = S_LOAD_DWORDX2_IMM killed $sgpr0_64, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("singlethread-one-as") seq_cst (s32) from `ptr addrspace(3) poison`)
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...
@@ -126,18 +126,18 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("wavefront-one-as") unordered (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     $sgpr0_64 = S_LOAD_DWORDX2_IMM killed $sgpr0_64, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("wavefront-one-as") unordered (s32) from `ptr addrspace(3) poison`)
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...
@@ -154,18 +154,18 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("wavefront-one-as") monotonic (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     $sgpr0_64 = S_LOAD_DWORDX2_IMM killed $sgpr0_64, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("wavefront-one-as") monotonic (s32) from `ptr addrspace(3) poison`)
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...
@@ -182,18 +182,18 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("wavefront-one-as") acquire (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     $sgpr0_64 = S_LOAD_DWORDX2_IMM killed $sgpr0_64, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("wavefront-one-as") acquire (s32) from `ptr addrspace(3) poison`)
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...
@@ -210,18 +210,18 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("wavefront-one-as") seq_cst (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     $sgpr0_64 = S_LOAD_DWORDX2_IMM killed $sgpr0_64, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("wavefront-one-as") seq_cst (s32) from `ptr addrspace(3) poison`)
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...
@@ -238,18 +238,18 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("workgroup-one-as") unordered (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     $sgpr0_64 = S_LOAD_DWORDX2_IMM killed $sgpr0_64, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("workgroup-one-as") unordered (s32) from `ptr addrspace(3) poison`)
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...
@@ -266,18 +266,18 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("workgroup-one-as") monotonic (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     $sgpr0_64 = S_LOAD_DWORDX2_IMM killed $sgpr0_64, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("workgroup-one-as") monotonic (s32) from `ptr addrspace(3) poison`)
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...
@@ -294,18 +294,18 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("workgroup-one-as") acquire (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     $sgpr0_64 = S_LOAD_DWORDX2_IMM killed $sgpr0_64, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("workgroup-one-as") acquire (s32) from `ptr addrspace(3) poison`)
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...
@@ -322,18 +322,18 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("workgroup-one-as") seq_cst (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     $sgpr0_64 = S_LOAD_DWORDX2_IMM killed $sgpr0_64, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("workgroup-one-as") seq_cst (s32) from `ptr addrspace(3) poison`)
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...
@@ -350,18 +350,18 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("agent-one-as") unordered (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     $sgpr0_64 = S_LOAD_DWORDX2_IMM killed $sgpr0_64, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("agent-one-as") unordered (s32) from `ptr addrspace(3) poison`)
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...
@@ -378,18 +378,18 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("agent-one-as") monotonic (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     $sgpr0_64 = S_LOAD_DWORDX2_IMM killed $sgpr0_64, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("agent-one-as") monotonic (s32) from `ptr addrspace(3) poison`)
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...
@@ -406,18 +406,18 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("agent-one-as") acquire (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     $sgpr0_64 = S_LOAD_DWORDX2_IMM killed $sgpr0_64, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("agent-one-as") acquire (s32) from `ptr addrspace(3) poison`)
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...
@@ -434,18 +434,18 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("agent-one-as") seq_cst (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     $sgpr0_64 = S_LOAD_DWORDX2_IMM killed $sgpr0_64, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("agent-one-as") seq_cst (s32) from `ptr addrspace(3) poison`)
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...
@@ -462,18 +462,18 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("one-as") unordered (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     $sgpr0_64 = S_LOAD_DWORDX2_IMM killed $sgpr0_64, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("one-as") unordered (s32) from `ptr addrspace(3) poison`)
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...
@@ -490,18 +490,18 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("one-as") monotonic (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     $sgpr0_64 = S_LOAD_DWORDX2_IMM killed $sgpr0_64, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("one-as") monotonic (s32) from `ptr addrspace(3) poison`)
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...
@@ -518,18 +518,18 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("one-as") acquire (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     $sgpr0_64 = S_LOAD_DWORDX2_IMM killed $sgpr0_64, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("one-as") acquire (s32) from `ptr addrspace(3) poison`)
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...
@@ -546,18 +546,18 @@ body:             |
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("one-as") seq_cst (s32) from `ptr addrspace(3) poison`, addrspace 3)
-    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    ; GCN-NEXT: FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     ; GCN-NEXT: S_ENDPGM 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 36, 0 :: (dereferenceable invariant load (s32) from `ptr addrspace(4) poison`, addrspace 4)
     $sgpr0_64 = S_LOAD_DWORDX2_IMM killed $sgpr0_64, 44, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, align 4, addrspace 4)
     $m0 = S_MOV_B32 -1
     $vgpr0 = V_MOV_B32_e32 killed $sgpr2, implicit $exec, implicit $exec
     renamable $vgpr2 = DS_READ_B32 killed renamable $vgpr0, 0, 0, implicit $m0, implicit $exec :: (volatile load syncscope("one-as") seq_cst (s32) from `ptr addrspace(3) poison`)
-    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_64
+    $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_64, implicit $sgpr0_64
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_64, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...

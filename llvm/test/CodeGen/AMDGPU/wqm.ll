@@ -1958,7 +1958,7 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind {
 ; GFX9-W64-NEXT:    s_cbranch_vccz .LBB35_1
 ; GFX9-W64-NEXT:  ; %bb.4: ; in Loop: Header=BB35_3 Depth=1
 ; GFX9-W64-NEXT:    s_mov_b64 s[2:3], -1
-; GFX9-W64-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
+; GFX9-W64-NEXT:    ; implicit-def: $vgpr4_128
 ; GFX9-W64-NEXT:    ; implicit-def: $vgpr8
 ; GFX9-W64-NEXT:    s_branch .LBB35_2
 ; GFX9-W64-NEXT:  .LBB35_5: ; %break
@@ -1998,7 +1998,7 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind {
 ; GFX10-W32-NEXT:    s_cbranch_vccz .LBB35_1
 ; GFX10-W32-NEXT:  ; %bb.4: ; in Loop: Header=BB35_3 Depth=1
 ; GFX10-W32-NEXT:    s_mov_b32 s1, -1
-; GFX10-W32-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX10-W32-NEXT:    ; implicit-def: $vgpr0_128
 ; GFX10-W32-NEXT:    ; implicit-def: $vgpr8
 ; GFX10-W32-NEXT:    s_branch .LBB35_2
 ; GFX10-W32-NEXT:  .LBB35_5: ; %break
@@ -2202,7 +2202,7 @@ define amdgpu_ps <4 x float> @test_scc(i32 inreg %sel, i32 %idx) #1 {
 ; GFX9-W64-NEXT:    s_branch .LBB39_3
 ; GFX9-W64-NEXT:  .LBB39_2:
 ; GFX9-W64-NEXT:    s_mov_b64 s[0:1], -1
-; GFX9-W64-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX9-W64-NEXT:    ; implicit-def: $vgpr0_128
 ; GFX9-W64-NEXT:  .LBB39_3: ; %Flow
 ; GFX9-W64-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GFX9-W64-NEXT:    s_cselect_b32 s0, 1, 0
@@ -2234,7 +2234,7 @@ define amdgpu_ps <4 x float> @test_scc(i32 inreg %sel, i32 %idx) #1 {
 ; GFX10-W32-NEXT:    s_branch .LBB39_3
 ; GFX10-W32-NEXT:  .LBB39_2:
 ; GFX10-W32-NEXT:    s_mov_b32 s0, -1
-; GFX10-W32-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX10-W32-NEXT:    ; implicit-def: $vgpr0_128
 ; GFX10-W32-NEXT:  .LBB39_3: ; %Flow
 ; GFX10-W32-NEXT:    s_and_b32 s0, s0, exec_lo
 ; GFX10-W32-NEXT:    s_cselect_b32 s0, 1, 0

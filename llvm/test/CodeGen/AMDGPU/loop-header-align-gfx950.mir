@@ -19,16 +19,16 @@ body:             |
   ; CHECK-NEXT:    v_lshrrev_b64 v[0:1], 1, v[0:1]
   bb.0:
     successors: %bb.1(0x80000000)
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     renamable $sgpr0_64 = S_MOV_B64 0
 
   bb.1:
     successors: %bb.2(0x04000000), %bb.1(0x7c000000)
-    liveins: $sgpr0_64, $vgpr0_vgpr1
+    liveins: $sgpr0_64, $vgpr0_64
 
-    renamable $vgpr0_vgpr1 = V_LSHRREV_B64_e64 1, killed renamable $vgpr0_vgpr1, implicit $exec
-    V_CMP_EQ_U64_e32 0, $vgpr0_vgpr1, implicit-def $vcc, implicit $exec
+    renamable $vgpr0_64 = V_LSHRREV_B64_e64 1, killed renamable $vgpr0_64, implicit $exec
+    V_CMP_EQ_U64_e32 0, $vgpr0_64, implicit-def $vcc, implicit $exec
     renamable $sgpr0_64 = S_OR_B64 killed renamable $vcc, killed renamable $sgpr0_64, implicit-def $scc
     $exec = S_ANDN2_B64 $exec, renamable $sgpr0_64, implicit-def $scc
     S_CBRANCH_EXECNZ %bb.1, implicit $exec

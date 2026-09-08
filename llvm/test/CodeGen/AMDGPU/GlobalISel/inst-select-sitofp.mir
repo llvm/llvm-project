@@ -12,36 +12,36 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0, $vgpr0, $vgpr3_vgpr4
+    liveins: $sgpr0, $vgpr0, $vgpr3_64
 
     ; WAVE64-LABEL: name: sitofp
-    ; WAVE64: liveins: $sgpr0, $vgpr0, $vgpr3_vgpr4
+    ; WAVE64: liveins: $sgpr0, $vgpr0, $vgpr3_64
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; WAVE64-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
+    ; WAVE64-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_64
     ; WAVE64-NEXT: [[V_CVT_F32_I32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; WAVE64-NEXT: [[V_CVT_F32_I32_e64_1:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e64 [[COPY1]], 0, 0, implicit $mode, implicit $exec
     ; WAVE64-NEXT: FLAT_STORE_DWORD [[COPY2]], [[V_CVT_F32_I32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
     ; WAVE64-NEXT: FLAT_STORE_DWORD [[COPY2]], [[V_CVT_F32_I32_e64_1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
     ;
     ; WAVE32-LABEL: name: sitofp
-    ; WAVE32: liveins: $sgpr0, $vgpr0, $vgpr3_vgpr4
+    ; WAVE32: liveins: $sgpr0, $vgpr0, $vgpr3_64
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
+    ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_64
     ; WAVE32-NEXT: [[V_CVT_F32_I32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; WAVE32-NEXT: [[V_CVT_F32_I32_e64_1:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e64 [[COPY1]], 0, 0, implicit $mode, implicit $exec
     ; WAVE32-NEXT: GLOBAL_STORE_DWORD [[COPY2]], [[V_CVT_F32_I32_e64_]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
     ; WAVE32-NEXT: GLOBAL_STORE_DWORD [[COPY2]], [[V_CVT_F32_I32_e64_1]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
     ;
     ; GFX11-LABEL: name: sitofp
-    ; GFX11: liveins: $sgpr0, $vgpr0, $vgpr3_vgpr4
+    ; GFX11: liveins: $sgpr0, $vgpr0, $vgpr3_64
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX11-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
+    ; GFX11-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_64
     ; GFX11-NEXT: [[V_CVT_F32_I32_e64_:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e64 [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX11-NEXT: [[V_CVT_F32_I32_e64_1:%[0-9]+]]:vgpr_32 = V_CVT_F32_I32_e64 [[COPY1]], 0, 0, implicit $mode, implicit $exec
     ; GFX11-NEXT: GLOBAL_STORE_DWORD [[COPY2]], [[V_CVT_F32_I32_e64_]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
@@ -50,7 +50,7 @@ body: |
 
     %1:vgpr(i32) = COPY $vgpr0
 
-    %2:vgpr(p1) = COPY $vgpr3_vgpr4
+    %2:vgpr(p1) = COPY $vgpr3_64
 
     %3:vgpr(f32) = G_SITOFP %0
 

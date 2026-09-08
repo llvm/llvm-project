@@ -12,9 +12,9 @@ body: |
     ; GFX9: liveins: $sgpr0_128, $sgpr4, $sgpr5
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = BUFFER_LOAD_DWORDX4_OFFSET $sgpr0_128, $sgpr4, 0, 0, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr0_128 = BUFFER_LOAD_DWORDX4_OFFSET $sgpr0_128, $sgpr4, 0, 0, 0, implicit $exec
     ; GFX9-NEXT: $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr5, 0, 0, 0, implicit $exec
-    $vgpr0_vgpr1_vgpr2_vgpr3 = BUFFER_LOAD_DWORDX4_OFFSET $sgpr0_128, $sgpr4, 0, 0, 0, implicit $exec
+    $vgpr0_128 = BUFFER_LOAD_DWORDX4_OFFSET $sgpr0_128, $sgpr4, 0, 0, 0, implicit $exec
     $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr5, 0, 0, 0, implicit $exec
 ...
 
@@ -29,9 +29,9 @@ body: |
     ; GFX9: liveins: $sgpr0_128, $sgpr4, $sgpr5
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET $sgpr0_128, 0, 4, 125, 0, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr0_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET $sgpr0_128, 0, 4, 125, 0, 0, implicit $exec
     ; GFX9-NEXT: $vgpr0 = TBUFFER_LOAD_FORMAT_X_OFFSET $sgpr0_128, 0, 16, 116, 0, 0, implicit $exec
-    $vgpr0_vgpr1_vgpr2 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET $sgpr0_128, 0, 4, 125, 0, 0, implicit $exec
+    $vgpr0_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET $sgpr0_128, 0, 4, 125, 0, 0, implicit $exec
     $vgpr0 = TBUFFER_LOAD_FORMAT_X_OFFSET $sgpr0_128, 0, 16, 116, 0, 0, implicit $exec
 ...
 
@@ -42,15 +42,15 @@ name: gather_gather
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $sgpr0_256, $sgpr8_128, $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
+    liveins: $sgpr0_256, $sgpr8_128, $vgpr0_96, $vgpr3_96
     ; GFX9-LABEL: name: gather_gather
-    ; GFX9: liveins: $sgpr0_256, $sgpr8_128, $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
+    ; GFX9: liveins: $sgpr0_256, $sgpr8_128, $vgpr0_96, $vgpr3_96
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GFX9-NEXT: $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr0_vgpr1_vgpr2, $sgpr0_256, $sgpr8_128, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
-    ; GFX9-NEXT: $vgpr13_vgpr14_vgpr15_vgpr16 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr3_vgpr4_vgpr5, $sgpr0_256, $sgpr8_128, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
-    $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr0_vgpr1_vgpr2, $sgpr0_256, $sgpr8_128, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
-    $vgpr13_vgpr14_vgpr15_vgpr16 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr3_vgpr4_vgpr5, $sgpr0_256, $sgpr8_128, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    ; GFX9-NEXT: $vgpr10_128 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr0_96, $sgpr0_256, $sgpr8_128, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    ; GFX9-NEXT: $vgpr13_128 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr3_96, $sgpr0_256, $sgpr8_128, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    $vgpr10_128 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr0_96, $sgpr0_256, $sgpr8_128, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    $vgpr13_128 = IMAGE_GATHER4_LZ_O_V4_V3 $vgpr3_96, $sgpr0_256, $sgpr8_128, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
 ...
 
 # Image load vs image sample. Waitcnt required because they are not guaranteed
@@ -61,16 +61,16 @@ name: nosampler_sampler
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $sgpr0_256, $sgpr8_128, $vgpr0_vgpr1_vgpr2_vgpr3
+    liveins: $sgpr0_256, $sgpr8_128, $vgpr0_128
     ; GFX9-LABEL: name: nosampler_sampler
-    ; GFX9: liveins: $sgpr0_256, $sgpr8_128, $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GFX9: liveins: $sgpr0_256, $sgpr8_128, $vgpr0_128
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GFX9-NEXT: $vgpr4 = IMAGE_LOAD_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_256, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    ; GFX9-NEXT: $vgpr4 = IMAGE_LOAD_V1_V4 $vgpr0_128, $sgpr0_256, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
     ; GFX9-NEXT: S_WAITCNT .Vmcnt_0
-    ; GFX9-NEXT: $vgpr4 = IMAGE_SAMPLE_L_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_256, $sgpr8_128, 8, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (load (s128))
-    $vgpr4 = IMAGE_LOAD_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_256, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
-    $vgpr4 = IMAGE_SAMPLE_L_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_256, $sgpr8_128, 8, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (load (s128))
+    ; GFX9-NEXT: $vgpr4 = IMAGE_SAMPLE_L_V1_V4 $vgpr0_128, $sgpr0_256, $sgpr8_128, 8, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (load (s128))
+    $vgpr4 = IMAGE_LOAD_V1_V4 $vgpr0_128, $sgpr0_256, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    $vgpr4 = IMAGE_SAMPLE_L_V1_V4 $vgpr0_128, $sgpr0_256, $sgpr8_128, 8, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (load (s128))
 ...
 # (global_load + scratch_load + buffer_load)
 ---
@@ -78,15 +78,15 @@ name: global_scratch_buffer
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $sgpr0_128, $sgpr4, $vgpr0_vgpr1
+    liveins: $sgpr0_128, $sgpr4, $vgpr0_64
     ; GFX9-LABEL: name: global_scratch_buffer
-    ; GFX9: liveins: $sgpr0_128, $sgpr4, $vgpr0_vgpr1
+    ; GFX9: liveins: $sgpr0_128, $sgpr4, $vgpr0_64
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GFX9-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
     ; GFX9-NEXT: $vgpr2 = SCRATCH_LOAD_DWORD $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
     ; GFX9-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr4, 0, 0, 0, implicit $exec
-    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr2 = SCRATCH_LOAD_DWORD $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr4, 0, 0, 0, implicit $exec
 ...
@@ -97,15 +97,15 @@ name: flat_buffer
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $sgpr0_128, $sgpr4, $vgpr0_vgpr1
+    liveins: $sgpr0_128, $sgpr4, $vgpr0_64
     ; GFX9-LABEL: name: flat_buffer
-    ; GFX9: liveins: $sgpr0_128, $sgpr4, $vgpr0_vgpr1
+    ; GFX9: liveins: $sgpr0_128, $sgpr4, $vgpr0_64
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GFX9-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
     ; GFX9-NEXT: S_WAITCNT .Lgkmcnt_0
     ; GFX9-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr4, 0, 0, 0, implicit $exec
-    $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr2 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr4, 0, 0, 0, implicit $exec
 ...
 # buffer + flat
@@ -114,14 +114,14 @@ name: buffer_flat
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $sgpr0_128, $sgpr4, $vgpr0_vgpr1
+    liveins: $sgpr0_128, $sgpr4, $vgpr0_64
     ; GFX9-LABEL: name: buffer_flat
-    ; GFX9: liveins: $sgpr0_128, $sgpr4, $vgpr0_vgpr1
+    ; GFX9: liveins: $sgpr0_128, $sgpr4, $vgpr0_64
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
     ; GFX9-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr4, 0, 0, 0, implicit $exec
     ; GFX9-NEXT: S_WAITCNT .Vmcnt_0
-    ; GFX9-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr4, 0, 0, 0, implicit $exec
-    $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr2 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
 ...

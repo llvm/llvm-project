@@ -201,12 +201,12 @@ define amdgpu_cs void @mixed_vmem_types_bvh_reads(i32 inreg %descTable0, i32 inr
 ; GFX11-NEXT:    v_cmpx_eq_u64_e32 s[18:19], v[14:15]
 ; GFX11-NEXT:    image_bvh64_intersect_ray v[15:18], v[0:11], s[16:19]
 ; GFX11-NEXT:    s_and_not1_wrexec_b32 s21, s21
-; GFX11-NEXT:    ; implicit-def: $vgpr12_vgpr13_vgpr14_vgpr15
-; GFX11-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX11-NEXT:    ; implicit-def: $vgpr12_128
+; GFX11-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX11-NEXT:    ; implicit-def: $vgpr2
-; GFX11-NEXT:    ; implicit-def: $vgpr3_vgpr4_vgpr5
-; GFX11-NEXT:    ; implicit-def: $vgpr6_vgpr7_vgpr8
-; GFX11-NEXT:    ; implicit-def: $vgpr9_vgpr10_vgpr11
+; GFX11-NEXT:    ; implicit-def: $vgpr3_96
+; GFX11-NEXT:    ; implicit-def: $vgpr6_96
+; GFX11-NEXT:    ; implicit-def: $vgpr9_96
 ; GFX11-NEXT:    s_cbranch_execnz .LBB1_1
 ; GFX11-NEXT:  ; %bb.2:
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s20
@@ -258,12 +258,12 @@ define amdgpu_cs void @mixed_vmem_types_bvh_reads(i32 inreg %descTable0, i32 inr
 ; GFX12-NEXT:    v_cmpx_eq_u64_e32 s[18:19], v[14:15]
 ; GFX12-NEXT:    image_bvh64_intersect_ray v[15:18], [v[0:1], v2, v[3:5], v[6:8], v[9:11]], s[16:19]
 ; GFX12-NEXT:    s_and_not1_wrexec_b32 s21, s21
-; GFX12-NEXT:    ; implicit-def: $vgpr12_vgpr13_vgpr14_vgpr15
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr12_128
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:    ; implicit-def: $vgpr2
-; GFX12-NEXT:    ; implicit-def: $vgpr3_vgpr4_vgpr5
-; GFX12-NEXT:    ; implicit-def: $vgpr6_vgpr7_vgpr8
-; GFX12-NEXT:    ; implicit-def: $vgpr9_vgpr10_vgpr11
+; GFX12-NEXT:    ; implicit-def: $vgpr3_96
+; GFX12-NEXT:    ; implicit-def: $vgpr6_96
+; GFX12-NEXT:    ; implicit-def: $vgpr9_96
 ; GFX12-NEXT:    s_cbranch_execnz .LBB1_1
 ; GFX12-NEXT:  ; %bb.2:
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s20
@@ -317,12 +317,12 @@ define amdgpu_cs void @mixed_vmem_types_bvh_reads(i32 inreg %descTable0, i32 inr
 ; GFX12-GISEL-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX12-GISEL-NEXT:    image_bvh64_intersect_ray v[12:15], [v[0:1], v2, v[3:5], v[6:8], v[9:11]], s[20:23]
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr12
-; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr2
-; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr3_vgpr4_vgpr5
-; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7_vgpr8
-; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr9_vgpr10_vgpr11
-; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr14_vgpr15
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr3_96
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr6_96
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr9_96
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr14_64
 ; GFX12-GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB1_1
 ; GFX12-GISEL-NEXT:  ; %bb.2:

@@ -93,12 +93,12 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:sgpr(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(<2 x s32>) = COPY [[BUILD_VECTOR]](<2 x s32>)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[COPY2]](<2 x s32>)
-    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[COPY2]](<2 x s32>)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0_64
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:sgpr(<2 x s32>) = G_BUILD_VECTOR %0(s32), %1(s32)
     %3:vgpr(<2 x s32>) = COPY %2(<2 x s32>)
-    $vgpr0_vgpr1 = COPY %3(<2 x s32>)
-    SI_RETURN_TO_EPILOG implicit $vgpr0_vgpr1
+    $vgpr0_64 = COPY %3(<2 x s32>)
+    SI_RETURN_TO_EPILOG implicit $vgpr0_64
 ...

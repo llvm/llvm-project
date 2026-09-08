@@ -45,10 +45,10 @@ body:             |
   ; CHECK-LABEL: name: dbg_value_ends_sched_region
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+  ; CHECK-NEXT:   liveins: $vgpr0_64, $vgpr2_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_64
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
@@ -98,10 +98,10 @@ body:             |
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.3, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.1
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
-    %1:vreg_64 = COPY $vgpr2_vgpr3
+    %0:vreg_64 = COPY $vgpr0_64
+    %1:vreg_64 = COPY $vgpr2_64
     %2:vreg_64 = IMPLICIT_DEF
     %3:vreg_64 = IMPLICIT_DEF
     %4:vgpr_32 = IMPLICIT_DEF

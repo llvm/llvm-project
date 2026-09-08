@@ -58,7 +58,7 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX900-NEXT:    v_mov_b32_e32 v60, v2
 ; GFX900-NEXT:    v_mov_b32_e32 v61, v1
 ; GFX900-NEXT:    buffer_load_dword v1, off, s[0:3], s32
-; GFX900-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 killed $exec
+; GFX900-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_1024 killed $exec
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    v_mov_b32_e32 v1, v61
 ; GFX900-NEXT:    v_mov_b32_e32 v2, v60
@@ -155,7 +155,7 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX906-NEXT:    v_mov_b32_e32 v60, v2
 ; GFX906-NEXT:    v_mov_b32_e32 v61, v1
 ; GFX906-NEXT:    buffer_load_dword v1, off, s[0:3], s32
-; GFX906-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 killed $exec
+; GFX906-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_1024 killed $exec
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    v_mov_b32_e32 v1, v61
 ; GFX906-NEXT:    v_mov_b32_e32 v2, v60
@@ -252,7 +252,7 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX908-NEXT:    v_mov_b32_e32 v60, v2
 ; GFX908-NEXT:    v_mov_b32_e32 v61, v1
 ; GFX908-NEXT:    buffer_load_dword v1, off, s[0:3], s32
-; GFX908-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 killed $exec
+; GFX908-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_1024 killed $exec
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_mov_b32_e32 v1, v61
 ; GFX908-NEXT:    v_mov_b32_e32 v2, v60
@@ -348,7 +348,7 @@ define i32 @test_tuple(<16 x i64> %0) {
 ; GFX90a-NEXT:    v_mov_b32_e32 v60, v2
 ; GFX90a-NEXT:    v_mov_b32_e32 v61, v1
 ; GFX90a-NEXT:    buffer_load_dword v1, off, s[0:3], s32
-; GFX90a-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 killed $exec
+; GFX90a-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_1024 killed $exec
 ; GFX90a-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90a-NEXT:    v_mov_b32_e32 v1, v61
 ; GFX90a-NEXT:    v_mov_b32_e32 v2, v60

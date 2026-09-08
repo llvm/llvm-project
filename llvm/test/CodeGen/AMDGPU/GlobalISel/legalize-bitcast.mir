@@ -57,83 +57,83 @@ body: |
 name: test_bitcast_v2s32_to_s64
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_bitcast_v2s32_to_s64
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_64
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[COPY]](<2 x s32>)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](s64)
-    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[BITCAST]](s64)
+    %0:_(<2 x s32>) = COPY $vgpr0_64
     %1:_(s64) = G_BITCAST %0
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...
 
 ---
 name: test_bitcast_s64_to_v2s32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_bitcast_s64_to_v2s32
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_64
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[COPY]](s64)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](<2 x s32>)
-    %0:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[BITCAST]](<2 x s32>)
+    %0:_(s64) = COPY $vgpr0_64
     %1:_(<2 x s32>) = G_BITCAST %0
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...
 
 ---
 name: test_bitcast_v2s64_to_v4s32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    liveins: $vgpr0_128
 
     ; CHECK-LABEL: name: test_bitcast_v2s64_to_v4s32
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_128
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY]](<2 x s64>)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST]](<4 x s32>)
-    %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: $vgpr0_128 = COPY [[BITCAST]](<4 x s32>)
+    %0:_(<2 x s64>) = COPY $vgpr0_128
     %1:_(<4 x s32>) = G_BITCAST %0
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
+    $vgpr0_128 = COPY %1
 ...
 
 ---
 name: test_bitcast_v4s32_to_v2s64
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    liveins: $vgpr0_128
 
     ; CHECK-LABEL: name: test_bitcast_v4s32_to_v2s64
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_128
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x s64>) = G_BITCAST [[COPY]](<4 x s32>)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST]](<2 x s64>)
-    %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: $vgpr0_128 = COPY [[BITCAST]](<2 x s64>)
+    %0:_(<4 x s32>) = COPY $vgpr0_128
     %1:_(<2 x s64>) = G_BITCAST %0
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
+    $vgpr0_128 = COPY %1
 ...
 
 ---
 name: test_bitcast_s128_to_v4s32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    liveins: $vgpr0_128
 
     ; CHECK-LABEL: name: test_bitcast_s128_to_v4s32
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_128
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY]](s128)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST]](<4 x s32>)
-    %0:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %0:_(s128) = COPY $vgpr0_128
     %1:_(<4 x s32>) = G_BITCAST %0
     S_ENDPGM 0, implicit %1
 ...
@@ -142,15 +142,15 @@ body: |
 name: test_bitcast_v4s32_to_s128
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    liveins: $vgpr0_128
 
     ; CHECK-LABEL: name: test_bitcast_v4s32_to_s128
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_128
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s128) = G_BITCAST [[COPY]](<4 x s32>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST]](s128)
-    %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %0:_(<4 x s32>) = COPY $vgpr0_128
     %1:_(s128) = G_BITCAST %0
     S_ENDPGM 0, implicit %1
 ...
@@ -159,136 +159,136 @@ body: |
 name: test_bitcast_v4s16_to_s64
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_bitcast_v4s16_to_s64
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_64
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[COPY]](<4 x s16>)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](s64)
-    %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[BITCAST]](s64)
+    %0:_(<4 x s16>) = COPY $vgpr0_64
     %1:_(s64) = G_BITCAST %0
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...
 
 ---
 name: test_bitcast_s64_to_v4s16
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_bitcast_s64_to_v4s16
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_64
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<4 x s16>) = G_BITCAST [[COPY]](s64)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](<4 x s16>)
-    %0:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[BITCAST]](<4 x s16>)
+    %0:_(s64) = COPY $vgpr0_64
     %1:_(<4 x s16>) = G_BITCAST %0
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...
 
 ---
 name: test_bitcast_v2s64_to_v8s16
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    liveins: $vgpr0_128
 
     ; CHECK-LABEL: name: test_bitcast_v2s64_to_v8s16
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_128
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s16>) = G_BITCAST [[COPY]](<2 x s64>)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST]](<8 x s16>)
-    %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: $vgpr0_128 = COPY [[BITCAST]](<8 x s16>)
+    %0:_(<2 x s64>) = COPY $vgpr0_128
     %1:_(<8 x s16>) = G_BITCAST %0
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
+    $vgpr0_128 = COPY %1
 ...
 
 ---
 name: test_bitcast_v8s16_to_v2s64
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    liveins: $vgpr0_128
 
     ; CHECK-LABEL: name: test_bitcast_v8s16_to_v2s64
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $vgpr0_128
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x s64>) = G_BITCAST [[COPY]](<8 x s16>)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST]](<2 x s64>)
-    %0:_(<8 x s16>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: $vgpr0_128 = COPY [[BITCAST]](<2 x s64>)
+    %0:_(<8 x s16>) = COPY $vgpr0_128
     %1:_(<2 x s64>) = G_BITCAST %0
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
+    $vgpr0_128 = COPY %1
 ...
 
 ---
 name: test_bitcast_p0_to_p1
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_bitcast_p0_to_p1
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_64
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(p1) = G_BITCAST [[COPY]](p0)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](p1)
-    %0:_(p0) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[BITCAST]](p1)
+    %0:_(p0) = COPY $vgpr0_64
     %1:_(p1) = G_BITCAST %0
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...
 
 ---
 name: test_bitcast_p1_to_p0
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_bitcast_p1_to_p0
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[COPY]](p1)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](p0)
-    %0:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[BITCAST]](p0)
+    %0:_(p1) = COPY $vgpr0_64
     %1:_(p0) = G_BITCAST %0
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...
 
 ---
 name: test_bitcast_p999_to_p0
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_bitcast_p999_to_p0
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p999) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p999) = COPY $vgpr0_64
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(p0) = G_BITCAST [[COPY]](p999)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](p0)
-    %0:_(p999) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[BITCAST]](p0)
+    %0:_(p999) = COPY $vgpr0_64
     %1:_(p0) = G_BITCAST %0
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...
 
 ---
 name: test_bitcast_p123_to_p999
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_bitcast_p123_to_p999
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p123) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p123) = COPY $vgpr0_64
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(p999) = G_BITCAST [[COPY]](p123)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST]](p999)
-    %0:_(p123) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[BITCAST]](p999)
+    %0:_(p123) = COPY $vgpr0_64
     %1:_(p999) = G_BITCAST %0
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...
 
 ---
@@ -297,17 +297,17 @@ tracksRegLiveness: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    liveins: $vgpr0_256
 
     ; CHECK-LABEL: name: test_bitcast_v4s64_to_v8s32
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: liveins: $vgpr0_256
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s64>) = COPY $vgpr0_256
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s32>) = G_BITCAST [[COPY]](<4 x s64>)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BITCAST]](<8 x s32>)
-    %0:_(<4 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: $vgpr0_256 = COPY [[BITCAST]](<8 x s32>)
+    %0:_(<4 x s64>) = COPY $vgpr0_256
     %1:_(<8 x s32>) = G_BITCAST %0
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %1
+    $vgpr0_256 = COPY %1
 ...
 
 ---
@@ -316,17 +316,17 @@ tracksRegLiveness: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    liveins: $vgpr0_256
 
     ; CHECK-LABEL: name: test_bitcast_v8s32_to_v4s64
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: liveins: $vgpr0_256
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s32>) = COPY $vgpr0_256
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<4 x s64>) = G_BITCAST [[COPY]](<8 x s32>)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BITCAST]](<4 x s64>)
-    %0:_(<8 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: $vgpr0_256 = COPY [[BITCAST]](<4 x s64>)
+    %0:_(<8 x s32>) = COPY $vgpr0_256
     %1:_(<4 x s64>) = G_BITCAST %0
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %1
+    $vgpr0_256 = COPY %1
 ...
 
 ---
@@ -335,17 +335,17 @@ tracksRegLiveness: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    liveins: $vgpr0_512
 
     ; CHECK-LABEL: name: test_bitcast_v8s64_to_v16s32
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK: liveins: $vgpr0_512
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s64>) = COPY $vgpr0_512
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x s32>) = G_BITCAST [[COPY]](<8 x s64>)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[BITCAST]](<16 x s32>)
-    %0:_(<8 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: $vgpr0_512 = COPY [[BITCAST]](<16 x s32>)
+    %0:_(<8 x s64>) = COPY $vgpr0_512
     %1:_(<16 x s32>) = G_BITCAST %0
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY %1
+    $vgpr0_512 = COPY %1
 ...
 
 ---
@@ -354,32 +354,32 @@ tracksRegLiveness: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    liveins: $vgpr0_512
 
     ; CHECK-LABEL: name: test_bitcast_v16s32_to_v8s64
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK: liveins: $vgpr0_512
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s32>) = COPY $vgpr0_512
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x s64>) = G_BITCAST [[COPY]](<16 x s32>)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[BITCAST]](<8 x s64>)
-    %0:_(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: $vgpr0_512 = COPY [[BITCAST]](<8 x s64>)
+    %0:_(<16 x s32>) = COPY $vgpr0_512
     %1:_(<8 x s64>) = G_BITCAST %0
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY %1
+    $vgpr0_512 = COPY %1
 ...
 
 ---
 name: test_bitcast_v32s32_to_v16s64
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    liveins: $vgpr0_1024
 
     ; CHECK-LABEL: name: test_bitcast_v32s32_to_v16s64
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    ; CHECK: liveins: $vgpr0_1024
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<32 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<32 x s32>) = COPY $vgpr0_1024
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<16 x s64>) = G_BITCAST [[COPY]](<32 x s32>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST]](<16 x s64>)
-    %0:_(<32 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    %0:_(<32 x s32>) = COPY $vgpr0_1024
     %1:_(<16 x s64>) = G_BITCAST %0
     S_ENDPGM 0, implicit %1
 ...
@@ -388,15 +388,15 @@ body: |
 name: test_bitcast_v16s64_to_v32s32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    liveins: $vgpr0_1024
 
     ; CHECK-LABEL: name: test_bitcast_v16s64_to_v32s32
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    ; CHECK: liveins: $vgpr0_1024
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s64>) = COPY $vgpr0_1024
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<32 x s32>) = G_BITCAST [[COPY]](<16 x s64>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST]](<32 x s32>)
-    %0:_(<16 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    %0:_(<16 x s64>) = COPY $vgpr0_1024
     %1:_(<32 x s32>) = G_BITCAST %0
     S_ENDPGM 0, implicit %1
 ...
@@ -416,46 +416,46 @@ body: |
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C1]](s32)
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[LSHR]](s32), [[LSHR1]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
+    ; CHECK-NEXT: $vgpr0_96 = COPY [[BUILD_VECTOR]](<3 x s32>)
     %0:_(s32) = COPY $vgpr0
     %1:_(s24) = G_TRUNC %0
     %2:_(<3 x s8>) = G_BITCAST %1
     %3:_(<3 x s32>) = G_ANYEXT %2
-    $vgpr0_vgpr1_vgpr2 = COPY %3
+    $vgpr0_96 = COPY %3
 ...
 
 ---
 name: test_bitcast_s48_to_v3s16
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_bitcast_s48_to_v3s16
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_64
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[UV]], [[C]](s32)
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[LSHR]](s32), [[UV1]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
-    %0:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_96 = COPY [[BUILD_VECTOR]](<3 x s32>)
+    %0:_(s64) = COPY $vgpr0_64
     %1:_(s48) = G_TRUNC %0
     %2:_(<3 x s16>) = G_BITCAST %1
     %3:_(<3 x s32>) = G_ANYEXT %2
-    $vgpr0_vgpr1_vgpr2 = COPY %3
+    $vgpr0_96 = COPY %3
 ...
 
 ---
 name: test_bitcast_v3s8_to_s24
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2
+    liveins: $vgpr0_96
 
     ; CHECK-LABEL: name: test_bitcast_v3s8_to_s24
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2
+    ; CHECK: liveins: $vgpr0_96
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_96
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV]](s32)
@@ -478,7 +478,7 @@ body: |
     ; CHECK-NEXT: [[SHL2:%[0-9]+]]:_(i32) = G_SHL [[ZEXT1]], [[C2]](i32)
     ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL2]]
     ; CHECK-NEXT: $vgpr0 = COPY [[OR2]](s32)
-    %0:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
+    %0:_(<3 x s32>) = COPY $vgpr0_96
     %1:_(<3 x s8>) = G_TRUNC %0
     %2:_(s24) = G_BITCAST %1
     %3:_(s32) = G_ANYEXT %2
@@ -489,12 +489,12 @@ body: |
 name: test_bitcast_v3s16_to_s48
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2
+    liveins: $vgpr0_96
 
     ; CHECK-LABEL: name: test_bitcast_v3s16_to_s48
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2
+    ; CHECK: liveins: $vgpr0_96
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_96
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 65535
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[UV]], [[C]]
@@ -507,12 +507,12 @@ body: |
     ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[C2]], [[C1]](i32)
     ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[SHL1]]
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[OR]](s32), [[OR1]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
-    %0:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[MV]](s64)
+    %0:_(<3 x s32>) = COPY $vgpr0_96
     %1:_(<3 x s16>) = G_TRUNC %0
     %2:_(s48) = G_BITCAST %1
     %3:_(s64) = G_ANYEXT %2
-    $vgpr0_vgpr1 = COPY %3
+    $vgpr0_64 = COPY %3
 ...
 
 ---
@@ -528,24 +528,24 @@ body: |
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[LSHR]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[BUILD_VECTOR]](<2 x s32>)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
     %2:_(<2 x s8>) = G_BITCAST %1
     %3:_(<2 x s32>) = G_ANYEXT %2
-    $vgpr0_vgpr1 = COPY %3
+    $vgpr0_64 = COPY %3
 ...
 
 ---
 name: test_bitcast_v2s8_to_s16
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_bitcast_v2s8_to_s16
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_64
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV]](s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
@@ -557,7 +557,7 @@ body: |
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[AND]], [[SHL]]
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
     ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
-    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %0:_(<2 x s32>) = COPY $vgpr0_64
     %1:_(<2 x s8>) = G_TRUNC %0
     %2:_(s16) = G_BITCAST %1
     %3:_(s32) = G_ANYEXT %2
@@ -599,24 +599,24 @@ body: |
     ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[ADD2]](s16)
     ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[ADD3]](s16)
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32), [[ANYEXT3]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<4 x s32>)
+    ; CHECK-NEXT: $vgpr0_128 = COPY [[BUILD_VECTOR]](<4 x s32>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<4 x s8>) = G_BITCAST %0
     %2:_(<4 x s8>) = G_ADD %1, %1
     %3:_(<4 x s32>) = G_ANYEXT %2
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %3
+    $vgpr0_128 = COPY %3
 ...
 
 ---
 name: test_bitcast_v4s8_to_v2s16
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    liveins: $vgpr0_128
 
     ; CHECK-LABEL: name: test_bitcast_v4s8_to_v2s16
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_128
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV]](s32)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s16) = COPY [[TRUNC]](s16)
@@ -647,7 +647,7 @@ body: |
     ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL2]]
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR2]](i32)
     ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST]](<2 x s16>)
-    %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %0:_(<4 x s32>) = COPY $vgpr0_128
     %1:_(<4 x s8>) = G_TRUNC %0
     %2:_(<4 x s8>) = G_ADD %1, %1
     %3:_(<2 x s16>) = G_BITCAST %2
@@ -712,24 +712,24 @@ body: |
     ; CHECK-NEXT: [[ANYEXT6:%[0-9]+]]:_(s32) = G_ANYEXT [[ADD6]](s16)
     ; CHECK-NEXT: [[ANYEXT7:%[0-9]+]]:_(s32) = G_ANYEXT [[ADD7]](s16)
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32), [[ANYEXT3]](s32), [[ANYEXT4]](s32), [[ANYEXT5]](s32), [[ANYEXT6]](s32), [[ANYEXT7]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BUILD_VECTOR]](<8 x s32>)
+    ; CHECK-NEXT: $vgpr0_256 = COPY [[BUILD_VECTOR]](<8 x s32>)
     %0:_(<2 x s16>) = COPY $vgpr0
     %1:_(<8 x s4>) = G_BITCAST %0
     %2:_(<8 x s4>) = G_ADD %1, %1
     %3:_(<8 x s32>) = G_ANYEXT %2
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %3
+    $vgpr0_256 = COPY %3
 ...
 
 ---
 name: test_bitcast_v8s4_to_v2s16
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    liveins: $vgpr0_128
 
     ; CHECK-LABEL: name: test_bitcast_v8s4_to_v2s16
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s32>) = COPY $vgpr0_256
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<8 x s32>)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV]](s32)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s16) = COPY [[TRUNC]](s16)
@@ -786,7 +786,7 @@ body: |
     ; CHECK-NEXT: [[OR6:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL6]]
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR6]](i32)
     ; CHECK-NEXT: $vgpr0 = COPY [[BITCAST]](<2 x s16>)
-    %0:_(<8 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    %0:_(<8 x s32>) = COPY $vgpr0_256
     %1:_(<8 x s4>) = G_TRUNC %0
     %2:_(<8 x s4>) = G_ADD %1, %1
     %3:_(<2 x s16>) = G_BITCAST %2
@@ -797,15 +797,15 @@ body: |
 name: test_bitcast_v4s16_to_v2s32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_bitcast_v4s16_to_v2s32
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_64
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x s32>) = G_BITCAST [[COPY]](<4 x s16>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST]](<2 x s32>)
-    %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    %0:_(<4 x s16>) = COPY $vgpr0_64
     %1:_(<2 x s32>) = G_BITCAST %0
     S_ENDPGM 0, implicit %1
 ...
@@ -814,12 +814,12 @@ body: |
 name: test_bitcast_v2s32_to_v4s16
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_bitcast_v2s32_to_v4s16
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_64
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<4 x s16>) = G_BITCAST [[COPY]](<2 x s32>)
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[BITCAST]](<4 x s16>)
     ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[UV]](<2 x s16>)
@@ -855,7 +855,7 @@ body: |
     ; CHECK-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](i32)
     ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST5]](<2 x s16>), [[BITCAST6]](<2 x s16>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[CONCAT_VECTORS]](<4 x s16>)
-    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %0:_(<2 x s32>) = COPY $vgpr0_64
     %1:_(<4 x s16>) = G_BITCAST %0
     %2:_(<4 x s16>) = G_ADD %1, %1
     S_ENDPGM 0, implicit %2
@@ -866,12 +866,12 @@ body: |
 name: test_bitcast_v2s32_to_v8s8
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_bitcast_v2s32_to_v8s8
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_64
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[UV]], [[C]](s32)
@@ -917,7 +917,7 @@ body: |
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32), [[ANYEXT3]](s32), [[ANYEXT4]](s32), [[ANYEXT5]](s32), [[ANYEXT6]](s32), [[ANYEXT7]](s32)
     ; CHECK-NEXT: [[TRUNC8:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[BUILD_VECTOR]](<8 x s32>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[TRUNC8]](<8 x s8>)
-    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %0:_(<2 x s32>) = COPY $vgpr0_64
     %1:_(<8 x s8>) = G_BITCAST %0
     %2:_(<8 x s8>) = G_ADD %1, %1
     S_ENDPGM 0, implicit %2
@@ -928,12 +928,12 @@ body: |
 name: test_bitcast_v8s8_to_v2s32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    liveins: $vgpr0_256
 
     ; CHECK-LABEL: name: test_bitcast_v8s8_to_v2s32
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: liveins: $vgpr0_256
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s32>) = COPY $vgpr0_256
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<8 x s32>)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[UV]](s32)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[UV1]](s32)
@@ -969,7 +969,7 @@ body: |
     ; CHECK-NEXT: [[OR5:%[0-9]+]]:_(s32) = G_OR [[OR4]], [[SHL5]]
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[OR2]](s32), [[OR5]](s32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<2 x s32>)
-    %0:_(<8 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    %0:_(<8 x s32>) = COPY $vgpr0_256
     %1:_(<8 x s8>) = G_TRUNC %0
     %2:_(<2 x s32>) = G_BITCAST %1
     S_ENDPGM 0, implicit %2
@@ -979,12 +979,12 @@ body: |
 name: test_bitcast_v8s8_to_s64
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    liveins: $vgpr0_256
 
     ; CHECK-LABEL: name: test_bitcast_v8s8_to_s64
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: liveins: $vgpr0_256
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s32>) = COPY $vgpr0_256
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<8 x s32>)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV]](s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 255
@@ -1023,7 +1023,7 @@ body: |
     ; CHECK-NEXT: [[OR5:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL5]]
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[OR4]](s32), [[OR5]](s32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[MV]](s64)
-    %0:_(<8 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    %0:_(<8 x s32>) = COPY $vgpr0_256
     %1:_(<8 x s8>) = G_TRUNC %0
     %2:_(s64) = G_BITCAST %1
     S_ENDPGM 0, implicit %2
@@ -1033,12 +1033,12 @@ body: |
 name: test_bitcast_v2s32_to_v16s4
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_bitcast_v2s32_to_v16s4
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_64
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[UV]], [[C]](s32)
@@ -1152,7 +1152,7 @@ body: |
     ; CHECK-NEXT: [[BITCAST7:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR7]](i32)
     ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BITCAST1]](<2 x s16>), [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>), [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>), [[BITCAST6]](<2 x s16>), [[BITCAST7]](<2 x s16>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[CONCAT_VECTORS]](<16 x s16>)
-    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %0:_(<2 x s32>) = COPY $vgpr0_64
     %1:_(<16 x s4>) = G_BITCAST %0
     %2:_(<16 x s4>) = G_ADD %1, %1
     %3:_(<16 x s16>) = G_ANYEXT %2
@@ -1164,12 +1164,12 @@ body: |
 name: test_bitcast_v16s4_to_v2s32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    liveins: $vgpr0_256
 
     ; CHECK-LABEL: name: test_bitcast_v16s4_to_v2s32
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: liveins: $vgpr0_256
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s16>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s16>) = COPY $vgpr0_256
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>), [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<16 x s16>)
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[UV]](<2 x s16>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
@@ -1257,7 +1257,7 @@ body: |
     ; CHECK-NEXT: [[OR13:%[0-9]+]]:_(s32) = G_OR [[OR12]], [[SHL13]]
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[OR6]](s32), [[OR13]](s32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<2 x s32>)
-    %0:_(<16 x s16>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    %0:_(<16 x s16>) = COPY $vgpr0_256
     %1:_(<16 x s4>) = G_TRUNC %0
     %2:_(<2 x s32>) = G_BITCAST %1
     S_ENDPGM 0, implicit %2
@@ -1267,12 +1267,12 @@ body: |
 name: test_bitcast_s64_to_v8s8
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_bitcast_s64_to_v8s8
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_64
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV]](s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
@@ -1305,7 +1305,7 @@ body: |
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32), [[ANYEXT3]](s32), [[ANYEXT4]](s32), [[ANYEXT5]](s32), [[ANYEXT6]](s32), [[ANYEXT7]](s32)
     ; CHECK-NEXT: [[TRUNC4:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[BUILD_VECTOR]](<8 x s32>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[TRUNC4]](<8 x s8>)
-    %0:_(s64) = COPY $vgpr0_vgpr1
+    %0:_(s64) = COPY $vgpr0_64
     %1:_(<8 x s8>) = G_BITCAST %0
     %2:_(<8 x s8>) = G_ADD %1, %1
     S_ENDPGM 0, implicit %2
@@ -1316,12 +1316,12 @@ body: |
 name: test_bitcast_v3s32_to_v12s8
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2
+    liveins: $vgpr0_96
 
     ; CHECK-LABEL: name: test_bitcast_v3s32_to_v12s8
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2
+    ; CHECK: liveins: $vgpr0_96
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_96
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[UV]], [[C]](s32)
@@ -1386,7 +1386,7 @@ body: |
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<12 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32), [[ANYEXT3]](s32), [[ANYEXT4]](s32), [[ANYEXT5]](s32), [[ANYEXT6]](s32), [[ANYEXT7]](s32), [[ANYEXT8]](s32), [[ANYEXT9]](s32), [[ANYEXT10]](s32), [[ANYEXT11]](s32)
     ; CHECK-NEXT: [[TRUNC12:%[0-9]+]]:_(<12 x s8>) = G_TRUNC [[BUILD_VECTOR]](<12 x s32>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[TRUNC12]](<12 x s8>)
-    %0:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
+    %0:_(<3 x s32>) = COPY $vgpr0_96
     %1:_(<12 x s8>) = G_BITCAST %0
     %2:_(<12 x s8>) = G_ADD %1, %1
     S_ENDPGM 0, implicit %2
@@ -1397,14 +1397,14 @@ body: |
 name: test_bitcast_v12s8_to_v3s32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11
+    liveins: $vgpr0_128, $vgpr4_128, $vgpr8_128
 
     ; CHECK-LABEL: name: test_bitcast_v12s8_to_v3s32
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK: liveins: $vgpr0_128, $vgpr4_128, $vgpr8_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_128
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr4_128
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr8_128
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 255
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[UV]], [[C]]
@@ -1444,9 +1444,9 @@ body: |
     ; CHECK-NEXT: [[OR8:%[0-9]+]]:_(s32) = G_OR [[OR7]], [[SHL8]]
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[OR2]](s32), [[OR5]](s32), [[OR8]](s32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<3 x s32>)
-    %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    %1:_(<4 x s32>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    %2:_(<4 x s32>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    %0:_(<4 x s32>) = COPY $vgpr0_128
+    %1:_(<4 x s32>) = COPY $vgpr4_128
+    %2:_(<4 x s32>) = COPY $vgpr8_128
     %3:_(<12 x s32>) = G_CONCAT_VECTORS %0, %1, %2
     %4:_(<12 x s8>) = G_TRUNC %3
     %5:_(<3 x s32>) = G_BITCAST %4
@@ -1457,12 +1457,12 @@ body: |
 name: test_bitcast_v6s8_to_v3s16
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    liveins: $vgpr0_192
 
     ; CHECK-LABEL: name: test_bitcast_v6s8_to_v3s16
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    ; CHECK: liveins: $vgpr0_192
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<6 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<6 x s32>) = COPY $vgpr0_192
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<6 x s32>)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV]](s32)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s16) = COPY [[TRUNC]](s16)
@@ -1511,7 +1511,7 @@ body: |
     ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR5]](i32)
     ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BITCAST1]](<2 x s16>), [[BITCAST2]](<2 x s16>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[CONCAT_VECTORS]](<6 x s16>)
-    %0:_(<6 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    %0:_(<6 x s32>) = COPY $vgpr0_192
     %1:_(<6 x s8>) = G_TRUNC %0
     %2:_(<6 x s8>) = G_ADD %1, %1
     %3:_(<3 x s16>) = G_BITCAST %2
@@ -1523,12 +1523,12 @@ body: |
 name: test_bitcast_v3s16_to_v6s8
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2
+    liveins: $vgpr0_96
 
     ; CHECK-LABEL: name: test_bitcast_v3s16_to_v6s8
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2
+    ; CHECK: liveins: $vgpr0_96
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_96
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV]](s32)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s16) = COPY [[TRUNC]](s16)
@@ -1561,7 +1561,7 @@ body: |
     ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR2]](i32)
     ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BITCAST1]](<2 x s16>), [[BITCAST2]](<2 x s16>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[CONCAT_VECTORS]](<6 x s16>)
-    %0:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
+    %0:_(<3 x s32>) = COPY $vgpr0_96
     %1:_(<3 x s16>) = G_TRUNC %0
     %2:_(<3 x s16>) = G_ADD %1, %1
     %3:_(<6 x s8>) = G_BITCAST %2
@@ -1573,12 +1573,12 @@ body: |
 name: test_bitcast_v2s64_to_v16s8
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    liveins: $vgpr0_128
 
     ; CHECK-LABEL: name: test_bitcast_v2s64_to_v16s8
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_128
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV]](s64)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV2]](s32)
@@ -1638,7 +1638,7 @@ body: |
     ; CHECK-NEXT: [[ANYEXT15:%[0-9]+]]:_(s32) = G_ANYEXT [[ADD15]](s16)
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32), [[ANYEXT3]](s32), [[ANYEXT4]](s32), [[ANYEXT5]](s32), [[ANYEXT6]](s32), [[ANYEXT7]](s32), [[ANYEXT8]](s32), [[ANYEXT9]](s32), [[ANYEXT10]](s32), [[ANYEXT11]](s32), [[ANYEXT12]](s32), [[ANYEXT13]](s32), [[ANYEXT14]](s32), [[ANYEXT15]](s32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<16 x s32>)
-    %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %0:_(<2 x s64>) = COPY $vgpr0_128
     %1:_(<16 x s8>) = G_BITCAST %0
     %2:_(<16 x s8>) = G_ADD %1, %1
     %3:_(<16 x s32>) = G_ANYEXT %2
@@ -1649,12 +1649,12 @@ body: |
 name: test_bitcast_v16s8_to_v2s64
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    liveins: $vgpr0_512
 
     ; CHECK-LABEL: name: test_bitcast_v16s8_to_v2s64
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK: liveins: $vgpr0_512
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s32>) = COPY $vgpr0_512
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<16 x s32>)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[UV]](s32)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[UV1]](s32)
@@ -1743,7 +1743,7 @@ body: |
     ; CHECK-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[OR10]](s32), [[OR11]](s32)
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<2 x s64>)
-    %0:_(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    %0:_(<16 x s32>) = COPY $vgpr0_512
     %1:_(<16 x s8>) = G_TRUNC %0
     %2:_(<2 x s64>) = G_BITCAST %1
     S_ENDPGM 0, implicit %2
@@ -1753,11 +1753,11 @@ body: |
 name: test_bitcast_v4s32_to_v16s8
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    liveins: $vgpr0_128
     ; CHECK-LABEL: name: test_bitcast_v4s32_to_v16s8
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_128
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[UV]], [[C]](s32)
@@ -1840,7 +1840,7 @@ body: |
     ; CHECK-NEXT: [[ANYEXT15:%[0-9]+]]:_(s32) = G_ANYEXT [[ADD15]](s16)
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32), [[ANYEXT3]](s32), [[ANYEXT4]](s32), [[ANYEXT5]](s32), [[ANYEXT6]](s32), [[ANYEXT7]](s32), [[ANYEXT8]](s32), [[ANYEXT9]](s32), [[ANYEXT10]](s32), [[ANYEXT11]](s32), [[ANYEXT12]](s32), [[ANYEXT13]](s32), [[ANYEXT14]](s32), [[ANYEXT15]](s32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<16 x s32>)
-    %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %0:_(<4 x s32>) = COPY $vgpr0_128
     %1:_(<16 x s8>) = G_BITCAST %0
     %2:_(<16 x s8>) = G_ADD %1, %1
     %3:_(<16 x s32>) = G_ANYEXT %2
@@ -1851,12 +1851,12 @@ body: |
 name: test_bitcast_v16s8_to_v4s32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    liveins: $vgpr0_512
 
     ; CHECK-LABEL: name: test_bitcast_v16s8_to_v4s32
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK: liveins: $vgpr0_512
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s32>) = COPY $vgpr0_512
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<16 x s32>)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[UV]](s32)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[UV1]](s32)
@@ -1940,7 +1940,7 @@ body: |
     ; CHECK-NEXT: [[OR11:%[0-9]+]]:_(s32) = G_OR [[OR10]], [[SHL11]]
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[OR2]](s32), [[OR5]](s32), [[OR8]](s32), [[OR11]](s32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<4 x s32>)
-    %0:_(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    %0:_(<16 x s32>) = COPY $vgpr0_512
     %1:_(<16 x s8>) = G_TRUNC %0
     %2:_(<4 x s32>) = G_BITCAST %1
     S_ENDPGM 0, implicit %2
@@ -1950,12 +1950,12 @@ body: |
 name: test_bitcast_v8s16_to_v16s8
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    liveins: $vgpr0_128
 
     ; CHECK-LABEL: name: test_bitcast_v8s16_to_v16s8
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $vgpr0_128
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<8 x s16>)
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[UV]](<2 x s16>)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](i32)
@@ -2017,7 +2017,7 @@ body: |
     ; CHECK-NEXT: [[ANYEXT15:%[0-9]+]]:_(s32) = G_ANYEXT [[ADD15]](s16)
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32), [[ANYEXT3]](s32), [[ANYEXT4]](s32), [[ANYEXT5]](s32), [[ANYEXT6]](s32), [[ANYEXT7]](s32), [[ANYEXT8]](s32), [[ANYEXT9]](s32), [[ANYEXT10]](s32), [[ANYEXT11]](s32), [[ANYEXT12]](s32), [[ANYEXT13]](s32), [[ANYEXT14]](s32), [[ANYEXT15]](s32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<16 x s32>)
-    %0:_(<8 x s16>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %0:_(<8 x s16>) = COPY $vgpr0_128
     %1:_(<16 x s8>) = G_BITCAST %0
     %2:_(<16 x s8>) = G_ADD %1, %1
     %3:_(<16 x s32>) = G_ANYEXT %2
@@ -2028,12 +2028,12 @@ body: |
 name: test_bitcast_v16s8_to_v8s16
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    liveins: $vgpr0_512
 
     ; CHECK-LABEL: name: test_bitcast_v16s8_to_v8s16
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK: liveins: $vgpr0_512
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s32>) = COPY $vgpr0_512
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<16 x s32>)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[UV]](s32)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s8) = G_TRUNC [[UV1]](s32)
@@ -2178,7 +2178,7 @@ body: |
     ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR11]](i32)
     ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BITCAST1]](<2 x s16>), [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[CONCAT_VECTORS]](<8 x s16>)
-    %0:_(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    %0:_(<16 x s32>) = COPY $vgpr0_512
     %1:_(<16 x s8>) = G_TRUNC %0
     %2:_(<8 x s16>) = G_BITCAST %1
     S_ENDPGM 0, implicit %2
@@ -2188,15 +2188,15 @@ body: |
 name: test_bitcast_v3s64_to_v6s32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    liveins: $vgpr0_192
 
     ; CHECK-LABEL: name: test_bitcast_v3s64_to_v6s32
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    ; CHECK: liveins: $vgpr0_192
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x s64>) = COPY $vgpr0_192
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<6 x s32>) = G_BITCAST [[COPY]](<3 x s64>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST]](<6 x s32>)
-    %0:_(<3 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    %0:_(<3 x s64>) = COPY $vgpr0_192
     %1:_(<6 x s32>) = G_BITCAST %0
     S_ENDPGM 0, implicit %1
 ...
@@ -2205,15 +2205,15 @@ body: |
 name: test_bitcast_v6s32_to_v3s64
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    liveins: $vgpr0_192
 
     ; CHECK-LABEL: name: test_bitcast_v6s32_to_v3s64
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    ; CHECK: liveins: $vgpr0_192
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<6 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<6 x s32>) = COPY $vgpr0_192
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<3 x s64>) = G_BITCAST [[COPY]](<6 x s32>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST]](<3 x s64>)
-    %0:_(<6 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    %0:_(<6 x s32>) = COPY $vgpr0_192
     %1:_(<3 x s64>) = G_BITCAST %0
     S_ENDPGM 0, implicit %1
 ...
@@ -2222,15 +2222,15 @@ body: |
 name: test_bitcast_v3s64_to_v12s16
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    liveins: $vgpr0_192
 
     ; CHECK-LABEL: name: test_bitcast_v3s64_to_v12s16
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    ; CHECK: liveins: $vgpr0_192
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x s64>) = COPY $vgpr0_192
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<12 x s16>) = G_BITCAST [[COPY]](<3 x s64>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST]](<12 x s16>)
-    %0:_(<3 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    %0:_(<3 x s64>) = COPY $vgpr0_192
     %1:_(<12 x s16>) = G_BITCAST %0
     S_ENDPGM 0, implicit %1
 ...
@@ -2239,15 +2239,15 @@ body: |
 name: test_bitcast_v12s16_to_v3s64
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    liveins: $vgpr0_192
 
     ; CHECK-LABEL: name: test_bitcast_v12s16_to_v3s64
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    ; CHECK: liveins: $vgpr0_192
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<12 x s16>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<12 x s16>) = COPY $vgpr0_192
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<3 x s64>) = G_BITCAST [[COPY]](<12 x s16>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BITCAST]](<3 x s64>)
-    %0:_(<12 x s16>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    %0:_(<12 x s16>) = COPY $vgpr0_192
     %1:_(<3 x s64>) = G_BITCAST %0
     S_ENDPGM 0, implicit %1
 ...
@@ -2256,12 +2256,12 @@ body: |
 name: test_bitcast_v3s64_to_v24s8
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    liveins: $vgpr0_192
 
     ; CHECK-LABEL: name: test_bitcast_v3s64_to_v24s8
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    ; CHECK: liveins: $vgpr0_192
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x s64>) = COPY $vgpr0_192
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64), [[UV2:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<3 x s64>)
     ; CHECK-NEXT: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[UV]](s64)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV3]](s32)
@@ -2356,7 +2356,7 @@ body: |
     ; CHECK-NEXT: [[BITCAST11:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR11]](i32)
     ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<24 x s16>) = G_CONCAT_VECTORS [[BITCAST]](<2 x s16>), [[BITCAST1]](<2 x s16>), [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>), [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>), [[BITCAST6]](<2 x s16>), [[BITCAST7]](<2 x s16>), [[BITCAST8]](<2 x s16>), [[BITCAST9]](<2 x s16>), [[BITCAST10]](<2 x s16>), [[BITCAST11]](<2 x s16>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[CONCAT_VECTORS]](<24 x s16>)
-    %0:_(<3 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
+    %0:_(<3 x s64>) = COPY $vgpr0_192
     %1:_(<24 x s8>) = G_BITCAST %0
     %2:_(<24 x s16>) = G_ANYEXT %1
     S_ENDPGM 0, implicit %2
@@ -2366,13 +2366,13 @@ body: |
 name: test_bitcast_v24s8_to_v3s64
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5, $vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+    liveins: $vgpr0_192, $vgpr6_192
 
     ; CHECK-LABEL: name: test_bitcast_v24s8_to_v3s64
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5, $vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK: liveins: $vgpr0_192, $vgpr6_192
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<12 x s16>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<12 x s16>) = COPY $vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<12 x s16>) = COPY $vgpr0_192
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<12 x s16>) = COPY $vgpr6_192
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<12 x s16>)
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[UV]](<2 x s16>)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](i32)
@@ -2503,8 +2503,8 @@ body: |
     ; CHECK-NEXT: [[MV2:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[OR16]](s32), [[OR17]](s32)
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s64>) = G_BUILD_VECTOR [[MV]](s64), [[MV1]](s64), [[MV2]](s64)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<3 x s64>)
-    %0:_(<12 x s16>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
-    %1:_(<12 x s16>) = COPY $vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+    %0:_(<12 x s16>) = COPY $vgpr0_192
+    %1:_(<12 x s16>) = COPY $vgpr6_192
     %2:_(<24 x s16>) = G_CONCAT_VECTORS %0, %1
     %3:_(<24 x s8>) = G_TRUNC %2
     %4:_(<3 x s64>) = G_BITCAST %3
@@ -2515,12 +2515,12 @@ body: |
 name: test_bitcast_v4s16_to_v8s8
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_bitcast_v4s16_to_v8s8
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_64
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[UV]](<2 x s16>)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](i32)
@@ -2566,7 +2566,7 @@ body: |
     ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR3]](i32)
     ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[BITCAST2]](<2 x s16>), [[BITCAST3]](<2 x s16>), [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[CONCAT_VECTORS]](<8 x s16>)
-    %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    %0:_(<4 x s16>) = COPY $vgpr0_64
     %1:_(<8 x s8>) = G_BITCAST %0
     %2:_(<8 x s8>) = G_ADD %1, %1
     %3:_(<8 x s16>) = G_ANYEXT %2
@@ -2577,12 +2577,12 @@ body: |
 name: test_bitcast_v8s8_to_v4s16
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    liveins: $vgpr0_128
 
     ; CHECK-LABEL: name: test_bitcast_v8s8_to_v4s16
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $vgpr0_128
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<8 x s16>)
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[UV]](<2 x s16>)
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](i32)
@@ -2653,7 +2653,7 @@ body: |
     ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR5]](i32)
     ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[BITCAST4]](<2 x s16>), [[BITCAST5]](<2 x s16>)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[CONCAT_VECTORS]](<4 x s16>)
-    %0:_(<8 x s16>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %0:_(<8 x s16>) = COPY $vgpr0_128
     %1:_(<8 x s8>) = G_TRUNC %0
     %2:_(<4 x s16>) = G_BITCAST %1
     %3:_(<4 x s16>) = G_ADD %2, %2
@@ -2664,12 +2664,12 @@ body: |
 name: test_bitcast_v64s32_to_v32s64
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    liveins: $vgpr0_1024
 
     ; CHECK-LABEL: name: test_bitcast_v64s32_to_v32s64
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    ; CHECK: liveins: $vgpr0_1024
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<32 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<32 x s32>) = COPY $vgpr0_1024
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>), [[UV2:%[0-9]+]]:_(<2 x s32>), [[UV3:%[0-9]+]]:_(<2 x s32>), [[UV4:%[0-9]+]]:_(<2 x s32>), [[UV5:%[0-9]+]]:_(<2 x s32>), [[UV6:%[0-9]+]]:_(<2 x s32>), [[UV7:%[0-9]+]]:_(<2 x s32>), [[UV8:%[0-9]+]]:_(<2 x s32>), [[UV9:%[0-9]+]]:_(<2 x s32>), [[UV10:%[0-9]+]]:_(<2 x s32>), [[UV11:%[0-9]+]]:_(<2 x s32>), [[UV12:%[0-9]+]]:_(<2 x s32>), [[UV13:%[0-9]+]]:_(<2 x s32>), [[UV14:%[0-9]+]]:_(<2 x s32>), [[UV15:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[COPY]](<32 x s32>)
     ; CHECK-NEXT: [[UV16:%[0-9]+]]:_(<2 x s32>), [[UV17:%[0-9]+]]:_(<2 x s32>), [[UV18:%[0-9]+]]:_(<2 x s32>), [[UV19:%[0-9]+]]:_(<2 x s32>), [[UV20:%[0-9]+]]:_(<2 x s32>), [[UV21:%[0-9]+]]:_(<2 x s32>), [[UV22:%[0-9]+]]:_(<2 x s32>), [[UV23:%[0-9]+]]:_(<2 x s32>), [[UV24:%[0-9]+]]:_(<2 x s32>), [[UV25:%[0-9]+]]:_(<2 x s32>), [[UV26:%[0-9]+]]:_(<2 x s32>), [[UV27:%[0-9]+]]:_(<2 x s32>), [[UV28:%[0-9]+]]:_(<2 x s32>), [[UV29:%[0-9]+]]:_(<2 x s32>), [[UV30:%[0-9]+]]:_(<2 x s32>), [[UV31:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[COPY]](<32 x s32>)
     ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s64) = G_BITCAST [[UV]](<2 x s32>)
@@ -2707,7 +2707,7 @@ body: |
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s64>) = G_BUILD_VECTOR [[BITCAST]](s64), [[BITCAST1]](s64), [[BITCAST2]](s64), [[BITCAST3]](s64), [[BITCAST4]](s64), [[BITCAST5]](s64), [[BITCAST6]](s64), [[BITCAST7]](s64), [[BITCAST8]](s64), [[BITCAST9]](s64), [[BITCAST10]](s64), [[BITCAST11]](s64), [[BITCAST12]](s64), [[BITCAST13]](s64), [[BITCAST14]](s64), [[BITCAST15]](s64)
     ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<16 x s64>) = G_BUILD_VECTOR [[BITCAST16]](s64), [[BITCAST17]](s64), [[BITCAST18]](s64), [[BITCAST19]](s64), [[BITCAST20]](s64), [[BITCAST21]](s64), [[BITCAST22]](s64), [[BITCAST23]](s64), [[BITCAST24]](s64), [[BITCAST25]](s64), [[BITCAST26]](s64), [[BITCAST27]](s64), [[BITCAST28]](s64), [[BITCAST29]](s64), [[BITCAST30]](s64), [[BITCAST31]](s64)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[BUILD_VECTOR]](<16 x s64>), implicit [[BUILD_VECTOR1]](<16 x s64>)
-    %0:_(<32 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
+    %0:_(<32 x s32>) = COPY $vgpr0_1024
     %1:_(<64 x s32>) = G_CONCAT_VECTORS %0, %0
     %2:_(<32 x s64>) = G_BITCAST %1
     %3:_(<16 x s64>), %4:_(<16 x s64>) = G_UNMERGE_VALUES %2

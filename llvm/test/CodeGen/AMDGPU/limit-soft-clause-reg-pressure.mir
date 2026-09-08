@@ -25,7 +25,7 @@ body:             |
   ; CHECK-NEXT:   [[S_LOAD_DWORDX16_IMM4:%[0-9]+]]:sgpr_512 = S_LOAD_DWORDX16_IMM %3, 64, 0 :: (load (s512), align 4, addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORDX16_IMM5:%[0-9]+]]:sgpr_512 = S_LOAD_DWORDX16_IMM %3, 4160, 0 :: (load (s512), align 4, addrspace 4)
   ; CHECK-NEXT:   [[S_LOAD_DWORDX16_IMM6:%[0-9]+]]:sgpr_512 = S_LOAD_DWORDX16_IMM %3, 8256, 0 :: (load (s512), align 4, addrspace 4)
-  ; CHECK-NEXT:   dead $sgpr30_64 = SI_CALL undef $sgpr4_64, 0, csr_amdgpu, implicit-def $vgpr0, implicit-def $vgpr1, implicit-def $sgpr0_1024, implicit-def $sgpr32_1024, implicit-def $sgpr70, implicit-def $sgpr80, implicit-def $sgpr90, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+  ; CHECK-NEXT:   dead $sgpr30_64 = SI_CALL undef $sgpr4_64, 0, csr_amdgpu, implicit-def $vgpr0, implicit-def $vgpr1, implicit-def $sgpr0_1024, implicit-def $sgpr32_1024, implicit-def $sgpr70, implicit-def $sgpr80, implicit-def $sgpr90, implicit-def $vgpr0_1024, implicit-def $vgpr32_1024
   bb.0:
     liveins: $vgpr0, $sgpr4_64, $sgpr6
 
@@ -43,7 +43,7 @@ body:             |
     %8:sgpr_512 = S_LOAD_DWORDX16_IMM %3, 64, 0 :: (load (s512), align 4, addrspace 4)
     %9:sgpr_512 = S_LOAD_DWORDX16_IMM %3, 4160, 0 :: (load (s512), align 4, addrspace 4)
     %10:sgpr_512 = S_LOAD_DWORDX16_IMM %3, 8256, 0 :: (load (s512), align 4, addrspace 4)
-    dead $sgpr30_64 = SI_CALL undef $sgpr4_64, 0, csr_amdgpu, implicit-def $vgpr0, implicit-def $vgpr1, implicit-def $sgpr0_1024, implicit-def $sgpr32_1024, implicit-def $sgpr70, implicit-def $sgpr80, implicit-def $sgpr90, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    dead $sgpr30_64 = SI_CALL undef $sgpr4_64, 0, csr_amdgpu, implicit-def $vgpr0, implicit-def $vgpr1, implicit-def $sgpr0_1024, implicit-def $sgpr32_1024, implicit-def $sgpr70, implicit-def $sgpr80, implicit-def $sgpr90, implicit-def $vgpr0_1024, implicit-def $vgpr32_1024
     dead %11:vgpr_32 = nofpexcept V_ADD_F32_e64 0, 0, 0, %4.sub1, 0, 0, implicit $mode, implicit $exec
     dead %12:vgpr_32 = nofpexcept V_ADD_F32_e64 0, 0, 0, %4.sub2, 0, 0, implicit $mode, implicit $exec
     dead %13:vgpr_32 = nofpexcept V_ADD_F32_e64 0, 0, 0, %4.sub3, 0, 0, implicit $mode, implicit $exec

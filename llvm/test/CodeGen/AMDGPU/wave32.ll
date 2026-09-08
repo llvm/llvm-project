@@ -362,7 +362,7 @@ define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX1032-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1032-NEXT:    s_mov_b32 s2, 0
-; GFX1032-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX1032-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX1032-NEXT:    s_branch .LBB10_2
 ; GFX1032-NEXT:  .LBB10_1: ; %bb13
 ; GFX1032-NEXT:    ; in Loop: Header=BB10_2 Depth=1
@@ -424,7 +424,7 @@ define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) #0 {
 ; GFX1064-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX1064-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1064-NEXT:    s_mov_b64 s[2:3], 0
-; GFX1064-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX1064-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX1064-NEXT:    s_branch .LBB10_2
 ; GFX1064-NEXT:  .LBB10_1: ; %bb13
 ; GFX1064-NEXT:    ; in Loop: Header=BB10_2 Depth=1
@@ -1828,7 +1828,7 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) #0 {
 ; GFX1032-NEXT:    s_cbranch_vccz .LBB33_1
 ; GFX1032-NEXT:  ; %bb.4: ; in Loop: Header=BB33_3 Depth=1
 ; GFX1032-NEXT:    s_mov_b32 s1, -1
-; GFX1032-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
+; GFX1032-NEXT:    ; implicit-def: $vgpr4_128
 ; GFX1032-NEXT:    ; implicit-def: $vgpr8
 ; GFX1032-NEXT:    s_branch .LBB33_2
 ; GFX1032-NEXT:  .LBB33_5: ; %break
@@ -1868,7 +1868,7 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) #0 {
 ; GFX1064-NEXT:    s_cbranch_vccz .LBB33_1
 ; GFX1064-NEXT:  ; %bb.4: ; in Loop: Header=BB33_3 Depth=1
 ; GFX1064-NEXT:    s_mov_b64 s[2:3], -1
-; GFX1064-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
+; GFX1064-NEXT:    ; implicit-def: $vgpr4_128
 ; GFX1064-NEXT:    ; implicit-def: $vgpr8
 ; GFX1064-NEXT:    s_branch .LBB33_2
 ; GFX1064-NEXT:  .LBB33_5: ; %break

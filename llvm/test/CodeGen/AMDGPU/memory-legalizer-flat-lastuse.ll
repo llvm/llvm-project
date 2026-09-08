@@ -76,7 +76,7 @@ define amdgpu_kernel void @flat_last_use_load_1(ptr %in, ptr %out) {
 ; GFX12-NEXT:    s_mov_b32 s2, 0x3ff
 ; GFX12-NEXT:    v_and_b32_e64 v0, v0, s2
 ; GFX12-NEXT:    v_ashrrev_i32_e64 v2, 31, v0
-; GFX12-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; GFX12-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_64 killed $exec
 ; GFX12-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX12-NEXT:    s_mov_b32 s2, 2
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -89,7 +89,7 @@ define amdgpu_kernel void @flat_last_use_load_1(ptr %in, ptr %out) {
 ; GFX12-NEXT:    v_add_co_u32 v0, s3, s3, v0
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v2, s2, s2, v1, s3
-; GFX12-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; GFX12-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_64 killed $exec
 ; GFX12-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX12-NEXT:    flat_load_b32 v2, v[0:1] th:TH_LOAD_LU
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s0

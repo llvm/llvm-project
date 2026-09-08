@@ -22,7 +22,7 @@ body:             |
     $sgpr0_128 = COPY %3
     $sgpr4 = COPY %4
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    %6:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %6:vreg_64_align2 = COPY $vgpr0_64
     %7:vgpr_32 = V_AND_B32_e32 255, %6.sub0, implicit $exec
     %8:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %9:vreg_64_align2 = REG_SEQUENCE killed %7, %subreg.sub0, %8, %subreg.sub1
@@ -75,7 +75,7 @@ body:             |
     $sgpr0_128 = COPY %3
     $sgpr4 = COPY %4
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    %6:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %6:vreg_64_align2 = COPY $vgpr0_64
     %7:vgpr_32 = V_AND_B32_e32 255, %6.sub0, implicit $exec
     %8:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %9:vreg_64_align2 = REG_SEQUENCE killed %7, %subreg.sub0, %8, %subreg.sub1
@@ -128,7 +128,7 @@ body:             |
     $sgpr0_128 = COPY %3
     $sgpr4 = COPY %4
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    %6:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %6:vreg_64_align2 = COPY $vgpr0_64
     %7:vgpr_32 = V_AND_B32_e32 255, %6.sub0, implicit $exec
     %8:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %9:vreg_64_align2 = REG_SEQUENCE killed %7, %subreg.sub0, %8, %subreg.sub1
@@ -173,7 +173,7 @@ body:             |
     $sgpr0_128 = COPY %3
     $sgpr4 = COPY %4
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    %6:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %6:vreg_64_align2 = COPY $vgpr0_64
     %7:vgpr_32 = V_AND_B32_e32 255, %6.sub0, implicit $exec
     %8:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %9:vreg_64_align2 = REG_SEQUENCE killed %7, %subreg.sub0, %8, %subreg.sub1
@@ -205,7 +205,7 @@ name: diffoporder_add_store
 body:             |
   bb.0.entry:
 
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
 
     %1:sgpr_32 = S_MOV_B32 4000
     %2:vgpr_32, %3:sreg_64_xexec = V_ADD_CO_U32_e64 %0.sub0, %1, 0, implicit $exec

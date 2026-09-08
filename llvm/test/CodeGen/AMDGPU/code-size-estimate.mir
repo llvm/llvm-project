@@ -13,10 +13,10 @@ name:            indirect_mov
 tracksRegLiveness: true
 body:             |
   bb.0:
-  liveins: $vgpr1, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+  liveins: $vgpr1, $vgpr0_512
 
-  $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-  V_MOV_B32_indirect_write undef $vgpr0, undef $vgpr3, implicit $exec, implicit $m0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3(tied-def 4)
+  $vgpr16 = V_MOV_B32_indirect_read undef $vgpr1, implicit $exec, implicit $m0, implicit $vgpr0_512
+  V_MOV_B32_indirect_write undef $vgpr0, undef $vgpr3, implicit $exec, implicit $m0, implicit-def $vgpr0_128, implicit killed $vgpr0_128(tied-def 4)
 ...
 
 # CHECK: meta:                                   ; @meta

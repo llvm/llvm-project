@@ -114,7 +114,7 @@ define amdgpu_kernel void @simple_nested_if(ptr addrspace(1) nocapture %arg) {
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-O0-NEXT:    v_add_i32_e64 v1, s[2:3], v1, v0
 ; GCN-O0-NEXT:    v_ashrrev_i32_e64 v3, 31, v1
-; GCN-O0-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_64 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, v3
 ; GCN-O0-NEXT:    s_mov_b32 s2, 2
 ; GCN-O0-NEXT:    v_lshl_b64 v[1:2], v[1:2], s2
@@ -285,7 +285,7 @@ define amdgpu_kernel void @uncollapsable_nested_if(ptr addrspace(1) nocapture %a
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-O0-NEXT:    v_add_i32_e64 v1, s[2:3], v1, v0
 ; GCN-O0-NEXT:    v_ashrrev_i32_e64 v3, 31, v1
-; GCN-O0-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_64 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, v3
 ; GCN-O0-NEXT:    s_mov_b32 s2, 2
 ; GCN-O0-NEXT:    v_lshl_b64 v[1:2], v[1:2], s2
@@ -323,7 +323,7 @@ define amdgpu_kernel void @uncollapsable_nested_if(ptr addrspace(1) nocapture %a
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-O0-NEXT:    v_add_i32_e64 v1, s[2:3], v1, v0
 ; GCN-O0-NEXT:    v_ashrrev_i32_e64 v3, 31, v1
-; GCN-O0-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_64 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, v3
 ; GCN-O0-NEXT:    v_lshl_b64 v[1:2], v[1:2], v0
 ; GCN-O0-NEXT:    s_mov_b32 s2, 0xf000
@@ -394,7 +394,7 @@ define amdgpu_kernel void @nested_if_if_else(ptr addrspace(1) nocapture %arg) {
 ; GCN-NEXT:    s_mov_b32 s5, s6
 ; GCN-NEXT:    v_mov_b32_e32 v0, 2
 ; GCN-NEXT:    buffer_store_dword v0, v[3:4], s[4:7], 0 addr64 offset:8
-; GCN-NEXT:    ; implicit-def: $vgpr3_vgpr4
+; GCN-NEXT:    ; implicit-def: $vgpr3_64
 ; GCN-NEXT:  .LBB2_3: ; %Flow
 ; GCN-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; GCN-NEXT:    s_cbranch_execz .LBB2_5
@@ -505,7 +505,7 @@ define amdgpu_kernel void @nested_if_if_else(ptr addrspace(1) nocapture %arg) {
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-O0-NEXT:    v_add_i32_e64 v1, s[2:3], v1, v0
 ; GCN-O0-NEXT:    v_ashrrev_i32_e64 v3, 31, v1
-; GCN-O0-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_64 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, v3
 ; GCN-O0-NEXT:    s_mov_b32 s2, 2
 ; GCN-O0-NEXT:    v_lshl_b64 v[1:2], v[1:2], s2
@@ -530,7 +530,7 @@ define amdgpu_kernel void @nested_if_if_else(ptr addrspace(1) nocapture %arg) {
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-O0-NEXT:    v_add_i32_e64 v1, s[2:3], v1, v0
 ; GCN-O0-NEXT:    v_ashrrev_i32_e64 v3, 31, v1
-; GCN-O0-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_64 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, v3
 ; GCN-O0-NEXT:    v_lshl_b64 v[1:2], v[1:2], v0
 ; GCN-O0-NEXT:    s_mov_b32 s2, 0xf000
@@ -626,7 +626,7 @@ define amdgpu_kernel void @nested_if_else_if(ptr addrspace(1) nocapture %arg) {
 ; GCN-NEXT:    buffer_store_dword v0, v[1:2], s[8:11], 0 addr64 offset:16
 ; GCN-NEXT:  .LBB3_3: ; %Flow
 ; GCN-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GCN-NEXT:    ; implicit-def: $vgpr1_vgpr2
+; GCN-NEXT:    ; implicit-def: $vgpr1_64
 ; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:  .LBB3_4: ; %Flow2
 ; GCN-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
@@ -681,7 +681,7 @@ define amdgpu_kernel void @nested_if_else_if(ptr addrspace(1) nocapture %arg) {
 ; GCN-O0-NEXT:    v_add_i32_e64 v4, s[2:3], s2, v1
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s4
 ; GCN-O0-NEXT:    v_addc_u32_e64 v1, s[2:3], v1, v5, s[2:3]
-; GCN-O0-NEXT:    ; kill: def $vgpr4 killed $vgpr4 def $vgpr4_vgpr5 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr4 killed $vgpr4 def $vgpr4_64 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v5, v1
 ; GCN-O0-NEXT:    buffer_store_dword v4, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    buffer_store_dword v5, off, s[12:15], 0 offset:8 ; 4-byte Folded Spill
@@ -946,7 +946,7 @@ define amdgpu_kernel void @s_endpgm_unsafe_barrier(ptr addrspace(1) nocapture %a
 ; GCN-O0-NEXT:    s_mov_b64 s[2:3], s[4:5]
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-O0-NEXT:    v_ashrrev_i32_e64 v2, 31, v0
-; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_64 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, v2
 ; GCN-O0-NEXT:    s_mov_b32 s4, 2
 ; GCN-O0-NEXT:    v_lshl_b64 v[1:2], v[0:1], s4
@@ -1122,7 +1122,7 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-O0-NEXT:    v_mov_b32_e32 v6, s4
 ; GCN-O0-NEXT:    v_mov_b32_e32 v5, s4
 ; GCN-O0-NEXT:    v_mov_b32_e32 v4, s4
-; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_128 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, v6
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, v5
 ; GCN-O0-NEXT:    v_mov_b32_e32 v3, v4
@@ -1155,7 +1155,7 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-O0-NEXT:    v_mov_b32_e32 v6, s4
 ; GCN-O0-NEXT:    v_mov_b32_e32 v5, s4
 ; GCN-O0-NEXT:    v_mov_b32_e32 v4, s4
-; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_128 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, v6
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, v5
 ; GCN-O0-NEXT:    v_mov_b32_e32 v3, v4
@@ -1346,7 +1346,7 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-O0-NEXT:    v_mov_b32_e32 v5, s4
 ; GCN-O0-NEXT:    buffer_store_dword v4, v5, s[0:3], 0 offen
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
-; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $vgpr0_vgpr1_vgpr2_vgpr3 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $vgpr0_128 killed $exec
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr4
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s4
 ; GCN-O0-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen

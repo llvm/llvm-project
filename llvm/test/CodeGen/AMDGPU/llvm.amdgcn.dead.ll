@@ -108,10 +108,10 @@ define %trivial_types @dead_struct(i1 %cond, %trivial_types %x, ptr addrspace(1)
 ; ASM-SDAG-NEXT:  ; %bb.1: ; %if.then
 ; ASM-SDAG-NEXT:    v_dual_mov_b32 v11, 0 :: v_dual_add_nc_u32 v0, 15, v19
 ; ASM-SDAG-NEXT:    v_mov_b32_e32 v2, 0x3fc00000
-; ASM-SDAG-NEXT:    ; implicit-def: $vgpr3_vgpr4_vgpr5
-; ASM-SDAG-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; ASM-SDAG-NEXT:    ; implicit-def: $vgpr3_96
+; ASM-SDAG-NEXT:    ; implicit-def: $vgpr6_64
 ; ASM-SDAG-NEXT:    ; implicit-def: $vgpr8
-; ASM-SDAG-NEXT:    ; implicit-def: $vgpr9_vgpr10
+; ASM-SDAG-NEXT:    ; implicit-def: $vgpr9_64
 ; ASM-SDAG-NEXT:    ; implicit-def: $vgpr15
 ; ASM-SDAG-NEXT:    ; implicit-def: $vgpr16
 ; ASM-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -159,10 +159,10 @@ define %trivial_types @dead_struct(i1 %cond, %trivial_types %x, ptr addrspace(1)
 ; ASM-GISEL-TRUE16-NEXT:    v_dual_mov_b32 v12, s5 :: v_dual_mov_b32 v11, s4
 ; ASM-GISEL-TRUE16-NEXT:    global_store_b32 v[17:18], v0, off
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0
-; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr3_vgpr4_vgpr5
-; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr3_96
+; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr6_64
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr8
-; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr9_vgpr10
+; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr9_64
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr15
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr16
 ; ASM-GISEL-TRUE16-NEXT:  .LBB1_2: ; %if.end
@@ -204,10 +204,10 @@ define %trivial_types @dead_struct(i1 %cond, %trivial_types %x, ptr addrspace(1)
 ; ASM-GISEL-FAKE16-NEXT:    v_dual_mov_b32 v12, s5 :: v_dual_mov_b32 v11, s4
 ; ASM-GISEL-FAKE16-NEXT:    global_store_b32 v[17:18], v0, off
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr0
-; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr3_vgpr4_vgpr5
-; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr3_96
+; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr6_64
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr8
-; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr9_vgpr10
+; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr9_64
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr15
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr16
 ; ASM-GISEL-FAKE16-NEXT:  .LBB1_2: ; %if.end
@@ -246,10 +246,10 @@ define %trivial_types @dead_struct(i1 %cond, %trivial_types %x, ptr addrspace(1)
 ; ASM-GISEL-NEXT:    v_dual_mov_b32 v14, s7 :: v_dual_mov_b32 v13, s6
 ; ASM-GISEL-NEXT:    v_dual_mov_b32 v1, s1 :: v_dual_add_nc_u32 v0, 15, v19
 ; ASM-GISEL-NEXT:    v_dual_mov_b32 v12, s5 :: v_dual_mov_b32 v11, s4
-; ASM-GISEL-NEXT:    ; implicit-def: $vgpr3_vgpr4_vgpr5
-; ASM-GISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr3_96
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr6_64
 ; ASM-GISEL-NEXT:    ; implicit-def: $vgpr8
-; ASM-GISEL-NEXT:    ; implicit-def: $vgpr9_vgpr10
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr9_64
 ; ASM-GISEL-NEXT:    ; implicit-def: $vgpr15
 ; ASM-GISEL-NEXT:    ; implicit-def: $vgpr16
 ; ASM-GISEL-NEXT:    global_store_b32 v[17:18], v0, off
@@ -660,8 +660,8 @@ define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr5_lo16
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr6
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr7
-; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr9_vgpr10_vgpr11_vgpr12_vgpr13
-; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr14_vgpr15_vgpr16_vgpr17
+; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr9_160
+; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr14_128
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr18
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr19
 ; ASM-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr20
@@ -810,8 +810,8 @@ define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr5
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr6
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr7
-; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr9_vgpr10_vgpr11_vgpr12_vgpr13
-; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr14_vgpr15_vgpr16_vgpr17
+; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr9_160
+; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr14_128
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr18
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr19
 ; ASM-GISEL-FAKE16-NEXT:    ; implicit-def: $vgpr20
@@ -959,8 +959,8 @@ define %non_trivial_types @dead_non_trivial(i1 %cond, %non_trivial_types %x, ptr
 ; ASM-GISEL-NEXT:    ; implicit-def: $vgpr5
 ; ASM-GISEL-NEXT:    ; implicit-def: $vgpr6
 ; ASM-GISEL-NEXT:    ; implicit-def: $vgpr7
-; ASM-GISEL-NEXT:    ; implicit-def: $vgpr9_vgpr10_vgpr11_vgpr12_vgpr13
-; ASM-GISEL-NEXT:    ; implicit-def: $vgpr14_vgpr15_vgpr16_vgpr17
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr9_160
+; ASM-GISEL-NEXT:    ; implicit-def: $vgpr14_128
 ; ASM-GISEL-NEXT:    ; implicit-def: $vgpr18
 ; ASM-GISEL-NEXT:    ; implicit-def: $vgpr19
 ; ASM-GISEL-NEXT:    ; implicit-def: $vgpr20

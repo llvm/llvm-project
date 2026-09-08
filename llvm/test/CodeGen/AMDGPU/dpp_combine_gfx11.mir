@@ -583,8 +583,8 @@ body: |
 ...
 
 # GCN-LABEL: name: dpp_reg_sequence_both_combined
-# GCN: %0:vreg_64 = COPY $vgpr0_vgpr1
-# GCN: %1:vreg_64 = COPY $vgpr2_vgpr3
+# GCN: %0:vreg_64 = COPY $vgpr0_64
+# GCN: %1:vreg_64 = COPY $vgpr2_64
 # GCN: %2:vgpr_32 = V_MOV_B32_e32 5, implicit $exec
 # GCN: %9:vgpr_32 = IMPLICIT_DEF
 # GCN: %8:vgpr_32 = IMPLICIT_DEF
@@ -594,10 +594,10 @@ name: dpp_reg_sequence_both_combined
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vcc_lo
+    liveins: $vgpr0_64, $vgpr2_64, $vcc_lo
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
-    %1:vreg_64 = COPY $vgpr2_vgpr3
+    %0:vreg_64 = COPY $vgpr0_64
+    %1:vreg_64 = COPY $vgpr2_64
     %5:vgpr_32 = V_MOV_B32_e32 5, implicit $exec
     %2:vgpr_32 = V_MOV_B32_dpp %0.sub0, %1.sub0, 1, 15, 15, 1, implicit $exec
     %3:vgpr_32 = V_MOV_B32_dpp %0.sub1, %1.sub1, 1, 15, 15, 1, implicit $exec
@@ -607,8 +607,8 @@ body: |
 ...
 
 # GCN-LABEL: name: dpp_reg_sequence_first_combined
-# GCN: %0:vreg_64 = COPY $vgpr0_vgpr1
-# GCN: %1:vreg_64 = COPY $vgpr2_vgpr3
+# GCN: %0:vreg_64 = COPY $vgpr0_64
+# GCN: %1:vreg_64 = COPY $vgpr2_64
 # GCN: %2:vgpr_32 = V_MOV_B32_e32 5, implicit $exec
 # GCN: %8:vgpr_32 = IMPLICIT_DEF
 # GCN: %4:vgpr_32 = V_MOV_B32_dpp %0.sub1, %1.sub1, 1, 1, 1, 1, implicit $exec
@@ -619,10 +619,10 @@ name: dpp_reg_sequence_first_combined
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vcc_lo
+    liveins: $vgpr0_64, $vgpr2_64, $vcc_lo
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
-    %1:vreg_64 = COPY $vgpr2_vgpr3
+    %0:vreg_64 = COPY $vgpr0_64
+    %1:vreg_64 = COPY $vgpr2_64
     %5:vgpr_32 = V_MOV_B32_e32 5, implicit $exec
     %2:vgpr_32 = V_MOV_B32_dpp %0.sub0, %1.sub0, 1, 15, 15, 1, implicit $exec
     %3:vgpr_32 = V_MOV_B32_dpp %0.sub1, %1.sub1, 1, 1, 1, 1, implicit $exec
@@ -632,8 +632,8 @@ body: |
 ...
 
 # GCN-LABEL: name: dpp_reg_sequence_second_combined
-# GCN: %0:vreg_64 = COPY $vgpr0_vgpr1
-# GCN: %1:vreg_64 = COPY $vgpr2_vgpr3
+# GCN: %0:vreg_64 = COPY $vgpr0_64
+# GCN: %1:vreg_64 = COPY $vgpr2_64
 # GCN: %2:vgpr_32 = V_MOV_B32_e32 5, implicit $exec
 # GCN: %3:vgpr_32 = V_MOV_B32_dpp %0.sub0, %1.sub0, 1, 1, 1, 1, implicit $exec
 # GCN: %8:vgpr_32 = IMPLICIT_DEF
@@ -644,10 +644,10 @@ name: dpp_reg_sequence_second_combined
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vcc_lo
+    liveins: $vgpr0_64, $vgpr2_64, $vcc_lo
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
-    %1:vreg_64 = COPY $vgpr2_vgpr3
+    %0:vreg_64 = COPY $vgpr0_64
+    %1:vreg_64 = COPY $vgpr2_64
     %5:vgpr_32 = V_MOV_B32_e32 5, implicit $exec
     %2:vgpr_32 = V_MOV_B32_dpp %0.sub0, %1.sub0, 1, 1, 1, 1, implicit $exec
     %3:vgpr_32 = V_MOV_B32_dpp %0.sub1, %1.sub1, 1, 15, 15, 1, implicit $exec
@@ -657,8 +657,8 @@ body: |
 ...
 
 # GCN-LABEL: name: dpp_reg_sequence_none_combined
-# GCN: %0:vreg_64 = COPY $vgpr0_vgpr1
-# GCN: %1:vreg_64 = COPY $vgpr2_vgpr3
+# GCN: %0:vreg_64 = COPY $vgpr0_64
+# GCN: %1:vreg_64 = COPY $vgpr2_64
 # GCN: %2:vgpr_32 = V_MOV_B32_e32 5, implicit $exec
 # GCN: %3:vgpr_32 = V_MOV_B32_dpp %0.sub0, %1.sub0, 1, 1, 1, 1, implicit $exec
 # GCN: %4:vgpr_32 = V_MOV_B32_dpp %0.sub1, %1.sub1, 1, 1, 1, 1, implicit $exec
@@ -669,10 +669,10 @@ name: dpp_reg_sequence_none_combined
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vcc_lo
+    liveins: $vgpr0_64, $vgpr2_64, $vcc_lo
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
-    %1:vreg_64 = COPY $vgpr2_vgpr3
+    %0:vreg_64 = COPY $vgpr0_64
+    %1:vreg_64 = COPY $vgpr2_64
     %5:vgpr_32 = V_MOV_B32_e32 5, implicit $exec
     %2:vgpr_32 = V_MOV_B32_dpp %0.sub0, %1.sub0, 1, 1, 1, 1, implicit $exec
     %3:vgpr_32 = V_MOV_B32_dpp %0.sub1, %1.sub1, 1, 1, 1, 1, implicit $exec
@@ -682,8 +682,8 @@ body: |
 ...
 
 # GCN-LABEL: name: dpp_reg_sequence_exec_changed
-# GCN:   %0:vreg_64 = COPY $vgpr0_vgpr1
-# GCN:   %1:vreg_64 = COPY $vgpr2_vgpr3
+# GCN:   %0:vreg_64 = COPY $vgpr0_64
+# GCN:   %1:vreg_64 = COPY $vgpr2_64
 # GCN:   %2:vgpr_32 = V_MOV_B32_e32 5, implicit $exec
 # GCN:   %3:vgpr_32 = V_MOV_B32_dpp %0.sub0, %1.sub0, 1, 15, 15, 1, implicit $exec
 # GCN:   %4:vgpr_32 = V_MOV_B32_dpp %0.sub1, %1.sub1, 1, 15, 15, 1, implicit $exec
@@ -696,10 +696,10 @@ name: dpp_reg_sequence_exec_changed
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vcc_lo
+    liveins: $vgpr0_64, $vgpr2_64, $vcc_lo
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
-    %1:vreg_64 = COPY $vgpr2_vgpr3
+    %0:vreg_64 = COPY $vgpr0_64
+    %1:vreg_64 = COPY $vgpr2_64
     %5:vgpr_32 = V_MOV_B32_e32 5, implicit $exec
     %2:vgpr_32 = V_MOV_B32_dpp %0.sub0, %1.sub0, 1, 15, 15, 1, implicit $exec
     %3:vgpr_32 = V_MOV_B32_dpp %0.sub1, %1.sub1, 1, 15, 15, 1, implicit $exec
@@ -713,8 +713,8 @@ body: |
 ...
 
 # GCN-LABEL: name: dpp_reg_sequence_subreg
-# GCN: %0:vreg_64 = COPY $vgpr0_vgpr1
-# GCN: %1:vreg_64 = COPY $vgpr2_vgpr3
+# GCN: %0:vreg_64 = COPY $vgpr0_64
+# GCN: %1:vreg_64 = COPY $vgpr2_64
 # GCN: %2:vgpr_32 = V_MOV_B32_e32 5, implicit $exec
 # GCN: %3:vgpr_32 = V_MOV_B32_dpp %0.sub0, %1.sub0, 1, 15, 15, 1, implicit $exec
 # GCN: %4:vgpr_32 = V_MOV_B32_dpp %0.sub1, %1.sub1, 1, 15, 15, 1, implicit $exec
@@ -726,10 +726,10 @@ name: dpp_reg_sequence_subreg
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vcc_lo
+    liveins: $vgpr0_64, $vgpr2_64, $vcc_lo
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
-    %1:vreg_64 = COPY $vgpr2_vgpr3
+    %0:vreg_64 = COPY $vgpr0_64
+    %1:vreg_64 = COPY $vgpr2_64
     %8:vgpr_32 = V_MOV_B32_e32 5, implicit $exec
     %2:vgpr_32 = V_MOV_B32_dpp %0.sub0, %1.sub0, 1, 15, 15, 1, implicit $exec
     %3:vgpr_32 = V_MOV_B32_dpp %0.sub1, %1.sub1, 1, 15, 15, 1, implicit $exec
@@ -750,10 +750,10 @@ name: dpp_reg_sequence_src2_reject
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
-    %1:vreg_64 = COPY $vgpr2_vgpr3
+    %0:vreg_64 = COPY $vgpr0_64
+    %1:vreg_64 = COPY $vgpr2_64
     %2:vgpr_32 = V_MOV_B32_dpp %0.sub0, %1.sub0, 1, 15, 15, 1, implicit $exec
     %3:vgpr_32 = V_MOV_B32_dpp %0.sub1, %1.sub1, 1, 15, 15, 1, implicit $exec
     %4:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %3, %subreg.sub1
@@ -773,10 +773,10 @@ name: dpp_reg_sequence_src2
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
-    %1:vreg_64 = COPY $vgpr2_vgpr3
+    %0:vreg_64 = COPY $vgpr0_64
+    %1:vreg_64 = COPY $vgpr2_64
     %2:vgpr_32 = V_MOV_B32_dpp %0.sub0, %1.sub0, 1, 15, 15, 1, implicit $exec
     %3:vgpr_32 = V_MOV_B32_dpp %0.sub1, %1.sub1, 1, 15, 15, 1, implicit $exec
     %4:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %3, %subreg.sub1
@@ -876,9 +876,9 @@ name: dont_combine_more_than_one_operand_dpp_reg_sequence
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vcc_lo
-    %0:vreg_64 = COPY $vgpr0_vgpr1
-    %1:vreg_64 = COPY $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64, $vcc_lo
+    %0:vreg_64 = COPY $vgpr0_64
+    %1:vreg_64 = COPY $vgpr2_64
     %2:vgpr_32 = V_MOV_B32_dpp %0.sub0, %1.sub0, 1, 15, 15, 1, implicit $exec
     %3:vgpr_32 = V_MOV_B32_dpp %0.sub1, %1.sub1, 1, 15, 15, 1, implicit $exec
     %4:vreg_64 = REG_SEQUENCE %2, %subreg.sub0, %3, %subreg.sub1

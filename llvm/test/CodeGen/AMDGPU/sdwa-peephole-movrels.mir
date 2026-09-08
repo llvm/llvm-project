@@ -11,17 +11,17 @@ name: movrels_dst_no_sdwa
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $sgpr0
+    liveins: $vgpr0_256, $sgpr0
 
     ; CHECK-LABEL: name: movrels_dst_no_sdwa
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $sgpr0
+    ; CHECK: liveins: $vgpr0_256, $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_256 = COPY $vgpr0_256
     ; CHECK-NEXT: $m0 = COPY $sgpr0
     ; CHECK-NEXT: [[V_MOVRELS_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOVRELS_B32_e32 [[COPY]].sub0, implicit $m0, implicit $exec, implicit [[COPY]]
     ; CHECK-NEXT: [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHLREV_B32_e64 16, [[V_MOVRELS_B32_e32_]], implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_LSHLREV_B32_e64_]]
-    %0:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    %0:vreg_256 = COPY $vgpr0_256
     $m0 = COPY $sgpr0
     %1:vgpr_32 = V_MOVRELS_B32_e32 %0.sub0, implicit $m0, implicit $exec, implicit %0
     %2:vgpr_32 = V_LSHLREV_B32_e64 16, %1, implicit $exec

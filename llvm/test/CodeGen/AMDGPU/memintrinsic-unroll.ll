@@ -6883,8 +6883,8 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; UNROLL3-NEXT:    flat_load_dwordx4 v[2:5], v[2:3] offset:2032
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; UNROLL3-NEXT:    flat_store_dwordx4 v[0:1], v[2:5] offset:2032
-; UNROLL3-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; UNROLL3-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; UNROLL3-NEXT:    ; implicit-def: $vgpr2_64
+; UNROLL3-NEXT:    ; implicit-def: $vgpr0_64
 ; UNROLL3-NEXT:  .LBB5_4: ; %Flow13
 ; UNROLL3-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; UNROLL3-NEXT:    s_cbranch_execz .LBB5_7
@@ -8399,8 +8399,8 @@ define void @memmove_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1
 ; UNROLL3-NEXT:    global_load_dwordx4 v[2:5], v[2:3], off offset:2032
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0)
 ; UNROLL3-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off offset:2032
-; UNROLL3-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; UNROLL3-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; UNROLL3-NEXT:    ; implicit-def: $vgpr2_64
+; UNROLL3-NEXT:    ; implicit-def: $vgpr0_64
 ; UNROLL3-NEXT:  .LBB6_4: ; %Flow15
 ; UNROLL3-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; UNROLL3-NEXT:    s_cbranch_execz .LBB6_7
@@ -9638,12 +9638,12 @@ define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4
 ; UNROLL3-NEXT:    s_clause 0x1
 ; UNROLL3-NEXT:    global_load_dwordx4 v[4:7], v[2:3], off offset:2016
 ; UNROLL3-NEXT:    global_load_dwordx4 v[8:11], v[2:3], off offset:2032
-; UNROLL3-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; UNROLL3-NEXT:    ; implicit-def: $vgpr2_64
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(1)
 ; UNROLL3-NEXT:    flat_store_dwordx4 v[0:1], v[4:7] offset:2016
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0)
 ; UNROLL3-NEXT:    flat_store_dwordx4 v[0:1], v[8:11] offset:2032
-; UNROLL3-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; UNROLL3-NEXT:    ; implicit-def: $vgpr0_64
 ; UNROLL3-NEXT:  .LBB7_4: ; %Flow14
 ; UNROLL3-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; UNROLL3-NEXT:    s_cbranch_execz .LBB7_7
@@ -15904,7 +15904,7 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; UNROLL3-NEXT:    ; implicit-def: $vgpr2
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0)
 ; UNROLL3-NEXT:    flat_store_dwordx4 v[0:1], v[3:6] offset:2032
-; UNROLL3-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; UNROLL3-NEXT:    ; implicit-def: $vgpr0_64
 ; UNROLL3-NEXT:  .LBB9_4: ; %Flow14
 ; UNROLL3-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; UNROLL3-NEXT:    s_cbranch_execz .LBB9_7

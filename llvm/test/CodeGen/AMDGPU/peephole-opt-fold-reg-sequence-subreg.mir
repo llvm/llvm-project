@@ -7,17 +7,17 @@ name:            reg_sequence_extract_subreg_sub0_from_regsequence_sub0_sub1
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: reg_sequence_extract_subreg_sub0_from_regsequence_sub0_sub1
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %2:vreg_64_align2 = REG_SEQUENCE %0.sub0, %subreg.sub0, %1, %subreg.sub1
     %3:vgpr_32 = COPY %2.sub0
@@ -31,17 +31,17 @@ name:            reg_sequence_extract_subreg_sub1_from_regsequence_sub0_sub1
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: reg_sequence_extract_subreg_sub1_from_regsequence_sub0_sub1
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_MOV_B32_e32_]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %2:vreg_64_align2 = REG_SEQUENCE %0.sub0, %subreg.sub0, %1, %subreg.sub1
     %3:vgpr_32 = COPY %2.sub1
@@ -55,17 +55,17 @@ name:            reg_sequence_extract_subreg_sub0_from_regsequence_sub1_sub0
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: reg_sequence_extract_subreg_sub0_from_regsequence_sub1_sub0
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub1, [[COPY]].sub0, %subreg.sub0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %2:vreg_64_align2 = REG_SEQUENCE %1, %subreg.sub1, %0.sub0, %subreg.sub0
     %3:vgpr_32 = COPY %2.sub0
@@ -79,17 +79,17 @@ name:            reg_sequence_extract_subreg_sub1_from_regsequence_sub1_sub0
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: reg_sequence_extract_subreg_sub1_from_regsequence_sub1_sub0
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub1, [[COPY]].sub0, %subreg.sub0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_MOV_B32_e32_]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %2:vreg_64_align2 = REG_SEQUENCE %1, %subreg.sub1, %0.sub0, %subreg.sub0
     %3:vgpr_32 = COPY %2.sub1
@@ -103,17 +103,17 @@ name:            reg_sequence_extract_subreg_sub0_from_vreg96
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr1_vgpr2
+    liveins: $vgpr1_64
 
     ; CHECK-LABEL: name: reg_sequence_extract_subreg_sub0_from_vreg96
-    ; CHECK: liveins: $vgpr1_vgpr2
+    ; CHECK: liveins: $vgpr1_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr1_64
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_96 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1, [[COPY]].sub1, %subreg.sub2
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:vreg_64 = COPY $vgpr1_vgpr2
+    %0:vreg_64 = COPY $vgpr1_64
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %2:vreg_96 = REG_SEQUENCE %0.sub0, %subreg.sub0, %1, %subreg.sub1, %0.sub1, %subreg.sub2
     %3:vgpr_32 = COPY %2.sub0
@@ -127,17 +127,17 @@ name:            reg_sequence_extract_subreg_sub1_from_vreg96
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr1_vgpr2
+    liveins: $vgpr1_64
 
     ; CHECK-LABEL: name: reg_sequence_extract_subreg_sub1_from_vreg96
-    ; CHECK: liveins: $vgpr1_vgpr2
+    ; CHECK: liveins: $vgpr1_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr1_64
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_96 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[V_MOV_B32_e32_]], %subreg.sub1, [[COPY]].sub1, %subreg.sub2
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:vreg_64 = COPY $vgpr1_vgpr2
+    %0:vreg_64 = COPY $vgpr1_64
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %2:vreg_96 = REG_SEQUENCE %0.sub0, %subreg.sub0, %1, %subreg.sub1, %0.sub1, %subreg.sub2
     %3:vgpr_32 = COPY %2.sub0
@@ -181,18 +181,18 @@ name:            reg_sequence_v128_compose_reg_sequence128_subreg64_extract32_su
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
+    liveins: $vgpr0_128, $vgpr4_128
 
     ; CHECK-LABEL: name: reg_sequence_v128_compose_reg_sequence128_subreg64_extract32_sub2
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: liveins: $vgpr0_128, $vgpr4_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr0_128
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr4_128
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]].sub0_sub1, %subreg.sub0, [[COPY1]], %subreg.sub2_sub3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]].sub0
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY2]]
-    %0:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    %1:vreg_128 = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    %0:vreg_128 = COPY $vgpr0_128
+    %1:vreg_128 = COPY $vgpr4_128
     %2:vreg_128 = REG_SEQUENCE %0.sub0_sub1, %subreg.sub0, %1, %subreg.sub2_sub3
     %3:vgpr_32 = COPY %2.sub2
     S_ENDPGM 0, implicit %3
@@ -204,18 +204,18 @@ name:            reg_sequence_v128_align2_compose_reg_sequence128_subreg64_extra
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
+    liveins: $vgpr0_128, $vgpr4_128
 
     ; CHECK-LABEL: name: reg_sequence_v128_align2_compose_reg_sequence128_subreg64_extract32_sub2
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: liveins: $vgpr0_128, $vgpr4_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr0_128
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr4_128
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[COPY]].sub0_sub1, %subreg.sub0, [[COPY1]], %subreg.sub2_sub3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]].sub0
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY2]]
-    %0:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    %1:vreg_128 = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    %0:vreg_128 = COPY $vgpr0_128
+    %1:vreg_128 = COPY $vgpr4_128
     %2:vreg_128_align2 = REG_SEQUENCE %0.sub0_sub1, %subreg.sub0, %1, %subreg.sub2_sub3
     %3:vgpr_32 = COPY %2.sub2
     S_ENDPGM 0, implicit %3
@@ -228,18 +228,18 @@ name:            reg_sequence_v128_align2_compose_reg_sequence128_subreg64_align
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
+    liveins: $vgpr0_128, $vgpr4_128
 
     ; CHECK-LABEL: name: reg_sequence_v128_align2_compose_reg_sequence128_subreg64_align2_extract64_sub1_sub2
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: liveins: $vgpr0_128, $vgpr4_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr0_128
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr4_128
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[COPY]].sub0_sub1, %subreg.sub0, [[COPY1]], %subreg.sub2_sub3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]].sub1_sub2
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY2]]
-    %0:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    %1:vreg_128 = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    %0:vreg_128 = COPY $vgpr0_128
+    %1:vreg_128 = COPY $vgpr4_128
     %2:vreg_128_align2 = REG_SEQUENCE %0.sub0_sub1, %subreg.sub0, %1, %subreg.sub2_sub3
     %3:vreg_64_align2 = COPY %2.sub1_sub2
     S_ENDPGM 0, implicit %3
@@ -252,18 +252,18 @@ name:            reg_sequence_v128_align2_compose_reg_sequence128_subreg64_align
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
+    liveins: $vgpr0_128, $vgpr4_128
 
     ; CHECK-LABEL: name: reg_sequence_v128_align2_compose_reg_sequence128_subreg64_align2_extract64_sub2_sub3
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: liveins: $vgpr0_128, $vgpr4_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr0_128
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr4_128
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128_align2 = REG_SEQUENCE [[COPY]].sub0_sub1, %subreg.sub0, [[COPY1]], %subreg.sub2_sub3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]].sub1_sub2
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY2]]
-    %0:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    %1:vreg_128 = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    %0:vreg_128 = COPY $vgpr0_128
+    %1:vreg_128 = COPY $vgpr4_128
     %2:vreg_128_align2 = REG_SEQUENCE %0.sub0_sub1, %subreg.sub0, %1, %subreg.sub2_sub3
     %3:vreg_64_align2 = COPY %2.sub1_sub2
     S_ENDPGM 0, implicit %3
@@ -277,17 +277,17 @@ name:            reg_sequence_compose_0
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr1_vgpr2
+    liveins: $vgpr1_64
 
     ; CHECK-LABEL: name: reg_sequence_compose_0
-    ; CHECK: liveins: $vgpr1_vgpr2
+    ; CHECK: liveins: $vgpr1_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr1_64
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_96 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1, [[V_MOV_B32_e32_]], %subreg.sub2
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:vreg_64 = COPY $vgpr1_vgpr2
+    %0:vreg_64 = COPY $vgpr1_64
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %2:vreg_96 = REG_SEQUENCE %0, %subreg.sub0_sub1, %1, %subreg.sub2
     %3:vgpr_32 = COPY %2.sub1
@@ -303,19 +303,19 @@ name:            reg_sequence_compose_1
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr1_vgpr2_vgpr3_vgpr4
+    liveins: $vgpr1_128
 
     ; CHECK-LABEL: name: reg_sequence_compose_1
-    ; CHECK: liveins: $vgpr1_vgpr2_vgpr3_vgpr4
+    ; CHECK: liveins: $vgpr1_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_128
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_96 = REG_SEQUENCE [[COPY]].sub2_sub3, %subreg.sub0_sub1, [[COPY]].sub0, %subreg.sub2
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub3
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]], implicit [[COPY2]], implicit [[COPY3]]
-    %0:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
+    %0:vreg_128 = COPY $vgpr1_128
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %2:vreg_96 = REG_SEQUENCE %0.sub2_sub3, %subreg.sub0_sub1, %0.sub0, %subreg.sub2
     %3:vgpr_32 = COPY %2.sub0
@@ -331,18 +331,18 @@ name:            reg_sequence_compose_2
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr1_vgpr2_vgpr3_vgpr4
+    liveins: $vgpr1_128
 
     ; CHECK-LABEL: name: reg_sequence_compose_2
-    ; CHECK: liveins: $vgpr1_vgpr2_vgpr3_vgpr4
+    ; CHECK: liveins: $vgpr1_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_128
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]].sub2_sub3, %subreg.sub0_sub1, [[COPY]].sub0, %subreg.sub2, [[V_MOV_B32_e32_1]], %subreg.sub3
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub2
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
+    %0:vreg_128 = COPY $vgpr1_128
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %2:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     %3:vreg_128 = REG_SEQUENCE %0.sub2_sub3, %subreg.sub0_sub1, %0.sub0, %subreg.sub2, %2, %subreg.sub3
@@ -358,19 +358,19 @@ name:            reg_sequence_compose_3
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr1_vgpr2_vgpr3_vgpr4
+    liveins: $vgpr1_128
 
     ; CHECK-LABEL: name: reg_sequence_compose_3
-    ; CHECK: liveins: $vgpr1_vgpr2_vgpr3_vgpr4
+    ; CHECK: liveins: $vgpr1_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_128
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]].sub2_sub3, %subreg.sub0_sub1, [[COPY]].sub0, %subreg.sub2, [[V_MOV_B32_e32_1]], %subreg.sub3
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub2
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]], implicit [[COPY2]]
-    %0:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
+    %0:vreg_128 = COPY $vgpr1_128
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %2:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     %3:vreg_128 = REG_SEQUENCE %0.sub2_sub3, %subreg.sub0_sub1, %0.sub0, %subreg.sub2, %2, %subreg.sub3
@@ -386,18 +386,18 @@ name:            reg_sequence_compose_4
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr1_vgpr2_vgpr3_vgpr4
+    liveins: $vgpr1_128
 
     ; CHECK-LABEL: name: reg_sequence_compose_4
-    ; CHECK: liveins: $vgpr1_vgpr2_vgpr3_vgpr4
+    ; CHECK: liveins: $vgpr1_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_128
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]].sub2_sub3, %subreg.sub0_sub1, [[COPY]].sub0, %subreg.sub2, [[V_MOV_B32_e32_1]], %subreg.sub3
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
+    %0:vreg_128 = COPY $vgpr1_128
     %1:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %2:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
     %3:vreg_128 = REG_SEQUENCE %0.sub2_sub3, %subreg.sub0_sub1, %0.sub0, %subreg.sub2, %2, %subreg.sub3
@@ -412,18 +412,18 @@ name:            reg_sequence_compose_5
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
+    liveins: $vgpr1_128, $vgpr5_128
 
     ; CHECK-LABEL: name: reg_sequence_compose_5
-    ; CHECK: liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
+    ; CHECK: liveins: $vgpr1_128, $vgpr5_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_128
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr5_128
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]].sub2_sub3, %subreg.sub0_sub1, [[COPY1]].sub0_sub1, %subreg.sub2_sub3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]].sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY2]]
-    %0:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    %1:vreg_128 = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    %0:vreg_128 = COPY $vgpr1_128
+    %1:vreg_128 = COPY $vgpr5_128
     %2:vreg_128 = REG_SEQUENCE %0.sub2_sub3, %subreg.sub0_sub1, %1.sub0_sub1, %subreg.sub2_sub3
     %3:vgpr_32 = COPY %2.sub3
     S_ENDPGM 0, implicit %3
@@ -436,18 +436,18 @@ name:            reg_sequence_compose_6
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
+    liveins: $vgpr1_128, $vgpr5_128
 
     ; CHECK-LABEL: name: reg_sequence_compose_6
-    ; CHECK: liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
+    ; CHECK: liveins: $vgpr1_128, $vgpr5_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_128
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr5_128
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]].sub2_sub3, %subreg.sub0_sub1, [[COPY1]].sub0_sub1, %subreg.sub2_sub3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub2
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY2]]
-    %0:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    %1:vreg_128 = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    %0:vreg_128 = COPY $vgpr1_128
+    %1:vreg_128 = COPY $vgpr5_128
     %2:vreg_128 = REG_SEQUENCE %0.sub2_sub3, %subreg.sub0_sub1, %1.sub0_sub1, %subreg.sub2_sub3
     %3:vgpr_32 = COPY %2.sub0
     S_ENDPGM 0, implicit %3
@@ -460,18 +460,18 @@ name:            reg_sequence_compose_7
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
+    liveins: $vgpr1_128, $vgpr5_128
 
     ; CHECK-LABEL: name: reg_sequence_compose_7
-    ; CHECK: liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
+    ; CHECK: liveins: $vgpr1_128, $vgpr5_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_128
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr5_128
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]].sub2_sub3, %subreg.sub0_sub1, [[COPY1]].sub0_sub1, %subreg.sub2_sub3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub3
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY2]]
-    %0:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    %1:vreg_128 = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    %0:vreg_128 = COPY $vgpr1_128
+    %1:vreg_128 = COPY $vgpr5_128
     %2:vreg_128 = REG_SEQUENCE %0.sub2_sub3, %subreg.sub0_sub1, %1.sub0_sub1, %subreg.sub2_sub3
     %3:vgpr_32 = COPY %2.sub1
     S_ENDPGM 0, implicit %3
@@ -484,18 +484,18 @@ name:            reg_sequence_compose_8
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
+    liveins: $vgpr1_128, $vgpr5_128
 
     ; CHECK-LABEL: name: reg_sequence_compose_8
-    ; CHECK: liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
+    ; CHECK: liveins: $vgpr1_128, $vgpr5_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_128
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr5_128
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]].sub2_sub3, %subreg.sub0_sub1, [[COPY1]].sub0_sub1, %subreg.sub2_sub3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]].sub0
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY2]]
-    %0:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    %1:vreg_128 = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    %0:vreg_128 = COPY $vgpr1_128
+    %1:vreg_128 = COPY $vgpr5_128
     %2:vreg_128 = REG_SEQUENCE %0.sub2_sub3, %subreg.sub0_sub1, %1.sub0_sub1, %subreg.sub2_sub3
     %3:vgpr_32 = COPY %2.sub2
     S_ENDPGM 0, implicit %3
@@ -508,18 +508,18 @@ name:            reg_sequence_compose_9
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
+    liveins: $vgpr1_128, $vgpr5_128
 
     ; CHECK-LABEL: name: reg_sequence_compose_9
-    ; CHECK: liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
+    ; CHECK: liveins: $vgpr1_128, $vgpr5_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_128
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr5_128
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]].sub2_sub3, %subreg.sub0_sub1, [[COPY1]].sub0_sub1, %subreg.sub2_sub3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]].sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY2]]
-    %0:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    %1:vreg_128 = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    %0:vreg_128 = COPY $vgpr1_128
+    %1:vreg_128 = COPY $vgpr5_128
     %2:vreg_128 = REG_SEQUENCE %0.sub2_sub3, %subreg.sub0_sub1, %1.sub0_sub1, %subreg.sub2_sub3
     %3:vgpr_32 = COPY %2.sub3
     S_ENDPGM 0, implicit %3
@@ -532,18 +532,18 @@ name:            reg_sequence_compose_10
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
+    liveins: $vgpr1_128, $vgpr5_128
 
     ; CHECK-LABEL: name: reg_sequence_compose_10
-    ; CHECK: liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
+    ; CHECK: liveins: $vgpr1_128, $vgpr5_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_128
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr5_128
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY1]].sub0_sub1, %subreg.sub2_sub3, [[COPY]].sub2_sub3, %subreg.sub0_sub1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY1]].sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY2]]
-    %0:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    %1:vreg_128 = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    %0:vreg_128 = COPY $vgpr1_128
+    %1:vreg_128 = COPY $vgpr5_128
     %2:vreg_128 = REG_SEQUENCE %1.sub0_sub1, %subreg.sub2_sub3, %0.sub2_sub3, %subreg.sub0_sub1
     %3:vgpr_32 = COPY %2.sub3
     S_ENDPGM 0, implicit %3
@@ -556,18 +556,18 @@ name:            reg_sequence_compose_11
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
+    liveins: $vgpr1_128, $vgpr5_128
 
     ; CHECK-LABEL: name: reg_sequence_compose_11
-    ; CHECK: liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
+    ; CHECK: liveins: $vgpr1_128, $vgpr5_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_128
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr5_128
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY1]].sub0_sub1, %subreg.sub2_sub3, [[COPY]].sub2_sub3, %subreg.sub0_sub1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub3
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY2]]
-    %0:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    %1:vreg_128 = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    %0:vreg_128 = COPY $vgpr1_128
+    %1:vreg_128 = COPY $vgpr5_128
     %2:vreg_128 = REG_SEQUENCE %1.sub0_sub1, %subreg.sub2_sub3, %0.sub2_sub3, %subreg.sub0_sub1
     %3:vgpr_32 = COPY %2.sub1
     S_ENDPGM 0, implicit %3
@@ -580,18 +580,18 @@ name:            reg_sequence_compose_12
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6
+    liveins: $vgpr1_128, $vgpr5_64
 
     ; CHECK-LABEL: name: reg_sequence_compose_12
-    ; CHECK: liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6
+    ; CHECK: liveins: $vgpr1_128, $vgpr5_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr5_vgpr6
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_128
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr5_64
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]].sub1_sub2_sub3, %subreg.sub0_sub1_sub2, [[COPY1]].sub1, %subreg.sub3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY2]]
-    %0:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    %1:vreg_64 = COPY $vgpr5_vgpr6
+    %0:vreg_128 = COPY $vgpr1_128
+    %1:vreg_64 = COPY $vgpr5_64
     %2:vreg_128 = REG_SEQUENCE %0.sub1_sub2_sub3, %subreg.sub0_sub1_sub2, %1.sub1, %subreg.sub3
     %3:vgpr_32 = COPY %2.sub0
     S_ENDPGM 0, implicit %3
@@ -607,21 +607,21 @@ name:            reg_sequence_compose_13
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6
+    liveins: $vgpr1_128, $vgpr5_64
 
     ; CHECK-LABEL: name: reg_sequence_compose_13
-    ; CHECK: liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6
+    ; CHECK: liveins: $vgpr1_128, $vgpr5_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr5_vgpr6
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_128
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr5_64
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]].sub1_sub2_sub3, %subreg.sub0_sub1_sub2, [[COPY1]].sub1, %subreg.sub3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub2
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub3
     ; CHECK-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[COPY1]].sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY2]], implicit [[COPY3]], implicit [[COPY4]], implicit [[COPY5]]
-    %0:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    %1:vreg_64 = COPY $vgpr5_vgpr6
+    %0:vreg_128 = COPY $vgpr1_128
+    %1:vreg_64 = COPY $vgpr5_64
     %2:vreg_128 = REG_SEQUENCE %0.sub1_sub2_sub3, %subreg.sub0_sub1_sub2, %1.sub1, %subreg.sub3
     %3:vgpr_32 = COPY %2.sub0
     %4:vgpr_32 = COPY %2.sub1
@@ -642,13 +642,13 @@ name:            reg_sequence_compose_14
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6
+    liveins: $vgpr1_128, $vgpr5_64
 
     ; CHECK-LABEL: name: reg_sequence_compose_14
-    ; CHECK: liveins: $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6
+    ; CHECK: liveins: $vgpr1_128, $vgpr5_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr5_vgpr6
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr1_128
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr5_64
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_192 = REG_SEQUENCE [[COPY]].sub2_sub3, %subreg.sub4_sub5, [[COPY]].sub1_sub2, %subreg.sub0_sub1, [[COPY1]], %subreg.sub2_sub3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub2
@@ -657,8 +657,8 @@ body:             |
     ; CHECK-NEXT: [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub2
     ; CHECK-NEXT: [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub3
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY2]], implicit [[COPY3]], implicit [[COPY4]], implicit [[COPY5]], implicit [[COPY6]], implicit [[COPY7]]
-    %0:vreg_128 = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    %1:vreg_64 = COPY $vgpr5_vgpr6
+    %0:vreg_128 = COPY $vgpr1_128
+    %1:vreg_64 = COPY $vgpr5_64
     %2:vreg_192 = REG_SEQUENCE %0.sub2_sub3, %subreg.sub4_sub5, %0.sub1_sub2, %subreg.sub0_sub1, %1, %subreg.sub2_sub3
     %3:vgpr_32 = COPY %2.sub0
     %4:vgpr_32 = COPY %2.sub1

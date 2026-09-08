@@ -29,10 +29,10 @@ name:            recolor_impossible_hint
 alignment:       1
 tracksRegLiveness: true
 registers:
-  - { id: 0, class: vreg_256, preferred-register: '$vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7' }
-  - { id: 1, class: vreg_256, preferred-register: '$vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8' }
-  - { id: 2, class: vreg_256, preferred-register: '$vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9' }
-  - { id: 3, class: vreg_256, preferred-register: '$vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10' }
+  - { id: 0, class: vreg_256, preferred-register: '$vgpr0_256' }
+  - { id: 1, class: vreg_256, preferred-register: '$vgpr1_256' }
+  - { id: 2, class: vreg_256, preferred-register: '$vgpr2_256' }
+  - { id: 3, class: vreg_256, preferred-register: '$vgpr3_256' }
 machineFunctionInfo:
   scratchRSrcReg:  '$sgpr0_128'
   stackPtrOffsetReg: '$sgpr32'

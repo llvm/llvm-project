@@ -231,8 +231,8 @@ define amdgpu_kernel void @undef_v3f64(ptr addrspace(3) %ptr, i1 %cond) {
 ; GCN-LABEL: undef_v3f64:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; GCN-NEXT:    ; implicit-def: $vgpr0_64
+; GCN-NEXT:    ; implicit-def: $vgpr4_64
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_bitcmp1_b32 s1, 0
 ; GCN-NEXT:    s_cselect_b64 s[2:3], -1, 0
@@ -274,8 +274,8 @@ define amdgpu_kernel void @undef_v3i64(ptr addrspace(3) %ptr, i1 %cond) {
 ; GCN-LABEL: undef_v3i64:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GCN-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; GCN-NEXT:    ; implicit-def: $vgpr0_64
+; GCN-NEXT:    ; implicit-def: $vgpr4_64
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_bitcmp1_b32 s1, 0
 ; GCN-NEXT:    s_cselect_b64 s[2:3], -1, 0

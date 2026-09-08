@@ -18,7 +18,7 @@ define i128 @i128_add_uniform_carry_to_divergent(i128 %x) #0 {
 ; GFX9-NEXT:    v_writelane_b32 v42, s34, 0
 ; GFX9-NEXT:    v_writelane_b32 v42, s30, 1
 ; GFX9-NEXT:    v_writelane_b32 v42, s31, 2
-; GFX9-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX9-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX9-NEXT:    s_mov_b32 s34, 32
 ; GFX9-NEXT:    v_lshlrev_b64 v[40:41], s34, v[0:1]
 ; GFX9-NEXT:    s_getpc_b64 s[16:17]
@@ -77,7 +77,7 @@ define i128 @i128_add_uniform_carry_to_divergent(i128 %x) #0 {
 ; GFX12-NEXT:    v_writelane_b32 v42, s34, 0
 ; GFX12-NEXT:    v_writelane_b32 v42, s30, 1
 ; GFX12-NEXT:    v_writelane_b32 v42, s31, 2
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX12-NEXT:    s_mov_b32 s34, 32
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_lshlrev_b64_e64 v[40:41], s34, v[0:1]

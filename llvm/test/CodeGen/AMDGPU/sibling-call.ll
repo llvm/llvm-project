@@ -649,7 +649,7 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; FIJI-NEXT:    v_mov_b32_e32 v1, v3
 ; FIJI-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; FIJI-NEXT:    v_mov_b32_e32 v4, v0
-; FIJI-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; FIJI-NEXT:    ; implicit-def: $vgpr0_64
 ; FIJI-NEXT:    ; implicit-def: $vgpr31
 ; FIJI-NEXT:    ; implicit-def: $vgpr2
 ; FIJI-NEXT:    ; implicit-def: $vgpr3
@@ -740,7 +740,7 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; HAWAII-NEXT:    v_mov_b32_e32 v1, v3
 ; HAWAII-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; HAWAII-NEXT:    v_mov_b32_e32 v4, v0
-; HAWAII-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; HAWAII-NEXT:    ; implicit-def: $vgpr0_64
 ; HAWAII-NEXT:    ; implicit-def: $vgpr31
 ; HAWAII-NEXT:    ; implicit-def: $vgpr2
 ; HAWAII-NEXT:    ; implicit-def: $vgpr3
@@ -831,7 +831,7 @@ define hidden fastcc i32 @indirect_divergent_sibling_call_i32_fastcc_i32_i32(ptr
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v3
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX9-NEXT:    v_mov_b32_e32 v4, v0
-; GFX9-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX9-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX9-NEXT:    ; implicit-def: $vgpr31
 ; GFX9-NEXT:    ; implicit-def: $vgpr2
 ; GFX9-NEXT:    ; implicit-def: $vgpr3

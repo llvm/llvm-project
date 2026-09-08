@@ -31,7 +31,7 @@ define amdgpu_ps float @test_return_to_epilog_into_end_block(i32 inreg %a, float
   ; GCN-NEXT:   successors:
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; GCN-NEXT:   GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+  ; GCN-NEXT:   GLOBAL_STORE_DWORD undef renamable $vgpr0_64, killed renamable $vgpr0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GCN-NEXT:   S_WAITCNT .Vmcnt_0
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
@@ -78,7 +78,7 @@ define amdgpu_ps float @test_unify_return_to_epilog_into_end_block(i32 inreg %a,
   ; GCN-NEXT:   successors:
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; GCN-NEXT:   GLOBAL_STORE_DWORD undef renamable $vgpr0_vgpr1, killed renamable $vgpr0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) poison`, addrspace 1)
+  ; GCN-NEXT:   GLOBAL_STORE_DWORD undef renamable $vgpr0_64, killed renamable $vgpr0, 0, 0, implicit $exec :: (volatile store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; GCN-NEXT:   S_WAITCNT .Vmcnt_0
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.5:

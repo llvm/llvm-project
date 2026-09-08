@@ -26,24 +26,24 @@ body:             |
     ; GFX9: liveins: $vgpr99
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GFX9-NEXT: $vgpr0_vgpr1 = DS_READ2_B32_gfx9 renamable $vgpr99, 0, 1, 0, implicit $exec
-    ; GFX9-NEXT: $vgpr2_vgpr3 = DS_READ2_B32_gfx9 renamable $vgpr99, 2, 3, 0, implicit $exec
-    ; GFX9-NEXT: $vgpr4_vgpr5 = DS_READ2_B32_gfx9 renamable $vgpr99, 4, 5, 0, implicit $exec
-    ; GFX9-NEXT: $vgpr6_vgpr7 = DS_READ2_B32_gfx9 renamable $vgpr99, 6, 7, 0, implicit $exec
-    ; GFX9-NEXT: $vgpr8_vgpr9 = DS_READ2_B32_gfx9 renamable $vgpr99, 8, 9, 0, implicit $exec
-    ; GFX9-NEXT: $vgpr10_vgpr11 = DS_READ2_B32_gfx9 renamable $vgpr99, 10, 11, 0, implicit $exec
-    ; GFX9-NEXT: $vgpr12_vgpr13 = DS_READ2_B32_gfx9 renamable $vgpr99, 12, 13, 0, implicit $exec
-    ; GFX9-NEXT: $vgpr14_vgpr15 = DS_READ2_B32_gfx9 renamable $vgpr99, 14, 15, 0, implicit $exec
-    ; GFX9-NEXT: $vgpr16_vgpr17 = DS_READ2_B32_gfx9 renamable $vgpr99, 16, 17, 0, implicit $exec
-    ; GFX9-NEXT: $vgpr18_vgpr19 = DS_READ2_B32_gfx9 renamable $vgpr99, 18, 19, 0, implicit $exec
-    ; GFX9-NEXT: $vgpr20_vgpr21 = DS_READ2_B32_gfx9 renamable $vgpr99, 20, 21, 0, implicit $exec
-    ; GFX9-NEXT: $vgpr22_vgpr23 = DS_READ2_B32_gfx9 renamable $vgpr99, 22, 23, 0, implicit $exec
-    ; GFX9-NEXT: $vgpr24_vgpr25 = DS_READ2_B32_gfx9 renamable $vgpr99, 24, 25, 0, implicit $exec
-    ; GFX9-NEXT: $vgpr26_vgpr27 = DS_READ2_B32_gfx9 renamable $vgpr99, 26, 27, 0, implicit $exec
-    ; GFX9-NEXT: $vgpr28_vgpr29 = DS_READ2_B32_gfx9 renamable $vgpr99, 28, 29, 0, implicit $exec
-    ; GFX9-NEXT: $vgpr30_vgpr31 = DS_READ2_B32_gfx9 renamable $vgpr99, 30, 31, 0, implicit $exec
-    ; GFX9-NEXT: $vgpr32_vgpr33 = DS_READ2_B32_gfx9 renamable $vgpr99, 32, 33, 0, implicit $exec
-    ; GFX9-NEXT: $vgpr34_vgpr35 = DS_READ2_B32_gfx9 renamable $vgpr99, 34, 35, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr0_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 0, 1, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr2_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 2, 3, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr4_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 4, 5, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr6_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 6, 7, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr8_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 8, 9, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr10_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 10, 11, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr12_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 12, 13, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr14_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 14, 15, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr16_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 16, 17, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr18_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 18, 19, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr20_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 20, 21, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr22_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 22, 23, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr24_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 24, 25, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr26_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 26, 27, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr28_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 28, 29, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr30_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 30, 31, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr32_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 32, 33, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr34_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 34, 35, 0, implicit $exec
     ; GFX9-NEXT: S_WAITCNT .Lgkmcnt_14
     ; GFX9-NEXT: $vgpr0 = V_MAC_F32_e32 0, $vgpr1, $vgpr0, implicit $mode, implicit $exec
     ; GFX9-NEXT: $vgpr2 = V_MAC_F32_e32 0, $vgpr3, $vgpr2, implicit $mode, implicit $exec
@@ -55,24 +55,24 @@ body:             |
     ; GFX10: liveins: $vgpr99
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GFX10-NEXT: $vgpr0_vgpr1 = DS_READ2_B32_gfx9 renamable $vgpr99, 0, 1, 0, implicit $exec
-    ; GFX10-NEXT: $vgpr2_vgpr3 = DS_READ2_B32_gfx9 renamable $vgpr99, 2, 3, 0, implicit $exec
-    ; GFX10-NEXT: $vgpr4_vgpr5 = DS_READ2_B32_gfx9 renamable $vgpr99, 4, 5, 0, implicit $exec
-    ; GFX10-NEXT: $vgpr6_vgpr7 = DS_READ2_B32_gfx9 renamable $vgpr99, 6, 7, 0, implicit $exec
-    ; GFX10-NEXT: $vgpr8_vgpr9 = DS_READ2_B32_gfx9 renamable $vgpr99, 8, 9, 0, implicit $exec
-    ; GFX10-NEXT: $vgpr10_vgpr11 = DS_READ2_B32_gfx9 renamable $vgpr99, 10, 11, 0, implicit $exec
-    ; GFX10-NEXT: $vgpr12_vgpr13 = DS_READ2_B32_gfx9 renamable $vgpr99, 12, 13, 0, implicit $exec
-    ; GFX10-NEXT: $vgpr14_vgpr15 = DS_READ2_B32_gfx9 renamable $vgpr99, 14, 15, 0, implicit $exec
-    ; GFX10-NEXT: $vgpr16_vgpr17 = DS_READ2_B32_gfx9 renamable $vgpr99, 16, 17, 0, implicit $exec
-    ; GFX10-NEXT: $vgpr18_vgpr19 = DS_READ2_B32_gfx9 renamable $vgpr99, 18, 19, 0, implicit $exec
-    ; GFX10-NEXT: $vgpr20_vgpr21 = DS_READ2_B32_gfx9 renamable $vgpr99, 20, 21, 0, implicit $exec
-    ; GFX10-NEXT: $vgpr22_vgpr23 = DS_READ2_B32_gfx9 renamable $vgpr99, 22, 23, 0, implicit $exec
-    ; GFX10-NEXT: $vgpr24_vgpr25 = DS_READ2_B32_gfx9 renamable $vgpr99, 24, 25, 0, implicit $exec
-    ; GFX10-NEXT: $vgpr26_vgpr27 = DS_READ2_B32_gfx9 renamable $vgpr99, 26, 27, 0, implicit $exec
-    ; GFX10-NEXT: $vgpr28_vgpr29 = DS_READ2_B32_gfx9 renamable $vgpr99, 28, 29, 0, implicit $exec
-    ; GFX10-NEXT: $vgpr30_vgpr31 = DS_READ2_B32_gfx9 renamable $vgpr99, 30, 31, 0, implicit $exec
-    ; GFX10-NEXT: $vgpr32_vgpr33 = DS_READ2_B32_gfx9 renamable $vgpr99, 32, 33, 0, implicit $exec
-    ; GFX10-NEXT: $vgpr34_vgpr35 = DS_READ2_B32_gfx9 renamable $vgpr99, 34, 35, 0, implicit $exec
+    ; GFX10-NEXT: $vgpr0_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 0, 1, 0, implicit $exec
+    ; GFX10-NEXT: $vgpr2_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 2, 3, 0, implicit $exec
+    ; GFX10-NEXT: $vgpr4_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 4, 5, 0, implicit $exec
+    ; GFX10-NEXT: $vgpr6_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 6, 7, 0, implicit $exec
+    ; GFX10-NEXT: $vgpr8_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 8, 9, 0, implicit $exec
+    ; GFX10-NEXT: $vgpr10_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 10, 11, 0, implicit $exec
+    ; GFX10-NEXT: $vgpr12_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 12, 13, 0, implicit $exec
+    ; GFX10-NEXT: $vgpr14_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 14, 15, 0, implicit $exec
+    ; GFX10-NEXT: $vgpr16_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 16, 17, 0, implicit $exec
+    ; GFX10-NEXT: $vgpr18_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 18, 19, 0, implicit $exec
+    ; GFX10-NEXT: $vgpr20_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 20, 21, 0, implicit $exec
+    ; GFX10-NEXT: $vgpr22_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 22, 23, 0, implicit $exec
+    ; GFX10-NEXT: $vgpr24_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 24, 25, 0, implicit $exec
+    ; GFX10-NEXT: $vgpr26_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 26, 27, 0, implicit $exec
+    ; GFX10-NEXT: $vgpr28_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 28, 29, 0, implicit $exec
+    ; GFX10-NEXT: $vgpr30_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 30, 31, 0, implicit $exec
+    ; GFX10-NEXT: $vgpr32_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 32, 33, 0, implicit $exec
+    ; GFX10-NEXT: $vgpr34_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 34, 35, 0, implicit $exec
     ; GFX10-NEXT: S_WAITCNT .Lgkmcnt_17
     ; GFX10-NEXT: $vgpr0 = V_MAC_F32_e32 0, $vgpr1, $vgpr0, implicit $mode, implicit $exec
     ; GFX10-NEXT: S_WAITCNT .Lgkmcnt_16
@@ -87,24 +87,24 @@ body:             |
     ; GFX11: liveins: $vgpr99
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GFX11-NEXT: $vgpr0_vgpr1 = DS_READ2_B32_gfx9 renamable $vgpr99, 0, 1, 0, implicit $exec
-    ; GFX11-NEXT: $vgpr2_vgpr3 = DS_READ2_B32_gfx9 renamable $vgpr99, 2, 3, 0, implicit $exec
-    ; GFX11-NEXT: $vgpr4_vgpr5 = DS_READ2_B32_gfx9 renamable $vgpr99, 4, 5, 0, implicit $exec
-    ; GFX11-NEXT: $vgpr6_vgpr7 = DS_READ2_B32_gfx9 renamable $vgpr99, 6, 7, 0, implicit $exec
-    ; GFX11-NEXT: $vgpr8_vgpr9 = DS_READ2_B32_gfx9 renamable $vgpr99, 8, 9, 0, implicit $exec
-    ; GFX11-NEXT: $vgpr10_vgpr11 = DS_READ2_B32_gfx9 renamable $vgpr99, 10, 11, 0, implicit $exec
-    ; GFX11-NEXT: $vgpr12_vgpr13 = DS_READ2_B32_gfx9 renamable $vgpr99, 12, 13, 0, implicit $exec
-    ; GFX11-NEXT: $vgpr14_vgpr15 = DS_READ2_B32_gfx9 renamable $vgpr99, 14, 15, 0, implicit $exec
-    ; GFX11-NEXT: $vgpr16_vgpr17 = DS_READ2_B32_gfx9 renamable $vgpr99, 16, 17, 0, implicit $exec
-    ; GFX11-NEXT: $vgpr18_vgpr19 = DS_READ2_B32_gfx9 renamable $vgpr99, 18, 19, 0, implicit $exec
-    ; GFX11-NEXT: $vgpr20_vgpr21 = DS_READ2_B32_gfx9 renamable $vgpr99, 20, 21, 0, implicit $exec
-    ; GFX11-NEXT: $vgpr22_vgpr23 = DS_READ2_B32_gfx9 renamable $vgpr99, 22, 23, 0, implicit $exec
-    ; GFX11-NEXT: $vgpr24_vgpr25 = DS_READ2_B32_gfx9 renamable $vgpr99, 24, 25, 0, implicit $exec
-    ; GFX11-NEXT: $vgpr26_vgpr27 = DS_READ2_B32_gfx9 renamable $vgpr99, 26, 27, 0, implicit $exec
-    ; GFX11-NEXT: $vgpr28_vgpr29 = DS_READ2_B32_gfx9 renamable $vgpr99, 28, 29, 0, implicit $exec
-    ; GFX11-NEXT: $vgpr30_vgpr31 = DS_READ2_B32_gfx9 renamable $vgpr99, 30, 31, 0, implicit $exec
-    ; GFX11-NEXT: $vgpr32_vgpr33 = DS_READ2_B32_gfx9 renamable $vgpr99, 32, 33, 0, implicit $exec
-    ; GFX11-NEXT: $vgpr34_vgpr35 = DS_READ2_B32_gfx9 renamable $vgpr99, 34, 35, 0, implicit $exec
+    ; GFX11-NEXT: $vgpr0_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 0, 1, 0, implicit $exec
+    ; GFX11-NEXT: $vgpr2_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 2, 3, 0, implicit $exec
+    ; GFX11-NEXT: $vgpr4_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 4, 5, 0, implicit $exec
+    ; GFX11-NEXT: $vgpr6_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 6, 7, 0, implicit $exec
+    ; GFX11-NEXT: $vgpr8_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 8, 9, 0, implicit $exec
+    ; GFX11-NEXT: $vgpr10_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 10, 11, 0, implicit $exec
+    ; GFX11-NEXT: $vgpr12_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 12, 13, 0, implicit $exec
+    ; GFX11-NEXT: $vgpr14_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 14, 15, 0, implicit $exec
+    ; GFX11-NEXT: $vgpr16_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 16, 17, 0, implicit $exec
+    ; GFX11-NEXT: $vgpr18_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 18, 19, 0, implicit $exec
+    ; GFX11-NEXT: $vgpr20_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 20, 21, 0, implicit $exec
+    ; GFX11-NEXT: $vgpr22_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 22, 23, 0, implicit $exec
+    ; GFX11-NEXT: $vgpr24_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 24, 25, 0, implicit $exec
+    ; GFX11-NEXT: $vgpr26_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 26, 27, 0, implicit $exec
+    ; GFX11-NEXT: $vgpr28_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 28, 29, 0, implicit $exec
+    ; GFX11-NEXT: $vgpr30_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 30, 31, 0, implicit $exec
+    ; GFX11-NEXT: $vgpr32_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 32, 33, 0, implicit $exec
+    ; GFX11-NEXT: $vgpr34_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 34, 35, 0, implicit $exec
     ; GFX11-NEXT: S_WAITCNT .Lgkmcnt_17
     ; GFX11-NEXT: $vgpr0 = V_MAC_F32_e32 0, $vgpr1, $vgpr0, implicit $mode, implicit $exec
     ; GFX11-NEXT: S_WAITCNT .Lgkmcnt_16
@@ -122,24 +122,24 @@ body:             |
     ; GFX12-NEXT: S_WAIT_SAMPLECNT 0
     ; GFX12-NEXT: S_WAIT_BVHCNT 0
     ; GFX12-NEXT: S_WAIT_KMCNT 0
-    ; GFX12-NEXT: $vgpr0_vgpr1 = DS_READ2_B32_gfx9 renamable $vgpr99, 0, 1, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr2_vgpr3 = DS_READ2_B32_gfx9 renamable $vgpr99, 2, 3, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr4_vgpr5 = DS_READ2_B32_gfx9 renamable $vgpr99, 4, 5, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr6_vgpr7 = DS_READ2_B32_gfx9 renamable $vgpr99, 6, 7, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr8_vgpr9 = DS_READ2_B32_gfx9 renamable $vgpr99, 8, 9, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr10_vgpr11 = DS_READ2_B32_gfx9 renamable $vgpr99, 10, 11, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr12_vgpr13 = DS_READ2_B32_gfx9 renamable $vgpr99, 12, 13, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr14_vgpr15 = DS_READ2_B32_gfx9 renamable $vgpr99, 14, 15, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr16_vgpr17 = DS_READ2_B32_gfx9 renamable $vgpr99, 16, 17, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr18_vgpr19 = DS_READ2_B32_gfx9 renamable $vgpr99, 18, 19, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr20_vgpr21 = DS_READ2_B32_gfx9 renamable $vgpr99, 20, 21, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr22_vgpr23 = DS_READ2_B32_gfx9 renamable $vgpr99, 22, 23, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr24_vgpr25 = DS_READ2_B32_gfx9 renamable $vgpr99, 24, 25, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr26_vgpr27 = DS_READ2_B32_gfx9 renamable $vgpr99, 26, 27, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr28_vgpr29 = DS_READ2_B32_gfx9 renamable $vgpr99, 28, 29, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr30_vgpr31 = DS_READ2_B32_gfx9 renamable $vgpr99, 30, 31, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr32_vgpr33 = DS_READ2_B32_gfx9 renamable $vgpr99, 32, 33, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr34_vgpr35 = DS_READ2_B32_gfx9 renamable $vgpr99, 34, 35, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr0_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 0, 1, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr2_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 2, 3, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr4_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 4, 5, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr6_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 6, 7, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr8_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 8, 9, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr10_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 10, 11, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr12_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 12, 13, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr14_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 14, 15, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr16_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 16, 17, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr18_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 18, 19, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr20_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 20, 21, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr22_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 22, 23, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr24_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 24, 25, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr26_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 26, 27, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr28_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 28, 29, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr30_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 30, 31, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr32_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 32, 33, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr34_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 34, 35, 0, implicit $exec
     ; GFX12-NEXT: S_WAIT_DSCNT 17
     ; GFX12-NEXT: $vgpr0 = V_MAC_F32_e32 0, $vgpr1, $vgpr0, implicit $mode, implicit $exec
     ; GFX12-NEXT: S_WAIT_DSCNT 16
@@ -149,24 +149,24 @@ body:             |
     ; GFX12-NEXT: S_WAIT_DSCNT 14
     ; GFX12-NEXT: $vgpr6 = V_MAC_F32_e32 0, $vgpr7, $vgpr6, implicit $mode, implicit $exec
     ; GFX12-NEXT: S_ENDPGM 0
-    $vgpr0_vgpr1 = DS_READ2_B32_gfx9 renamable $vgpr99, 0, 1, 0, implicit $exec
-    $vgpr2_vgpr3 = DS_READ2_B32_gfx9 renamable $vgpr99, 2, 3, 0, implicit $exec
-    $vgpr4_vgpr5 = DS_READ2_B32_gfx9 renamable $vgpr99, 4, 5, 0, implicit $exec
-    $vgpr6_vgpr7 = DS_READ2_B32_gfx9 renamable $vgpr99, 6, 7, 0, implicit $exec
-    $vgpr8_vgpr9 = DS_READ2_B32_gfx9 renamable $vgpr99, 8, 9, 0, implicit $exec
-    $vgpr10_vgpr11 = DS_READ2_B32_gfx9 renamable $vgpr99, 10, 11, 0, implicit $exec
-    $vgpr12_vgpr13 = DS_READ2_B32_gfx9 renamable $vgpr99, 12, 13, 0, implicit $exec
-    $vgpr14_vgpr15 = DS_READ2_B32_gfx9 renamable $vgpr99, 14, 15, 0, implicit $exec
-    $vgpr16_vgpr17 = DS_READ2_B32_gfx9 renamable $vgpr99, 16, 17, 0, implicit $exec
-    $vgpr18_vgpr19 = DS_READ2_B32_gfx9 renamable $vgpr99, 18, 19, 0, implicit $exec
-    $vgpr20_vgpr21 = DS_READ2_B32_gfx9 renamable $vgpr99, 20, 21, 0, implicit $exec
-    $vgpr22_vgpr23 = DS_READ2_B32_gfx9 renamable $vgpr99, 22, 23, 0, implicit $exec
-    $vgpr24_vgpr25 = DS_READ2_B32_gfx9 renamable $vgpr99, 24, 25, 0, implicit $exec
-    $vgpr26_vgpr27 = DS_READ2_B32_gfx9 renamable $vgpr99, 26, 27, 0, implicit $exec
-    $vgpr28_vgpr29 = DS_READ2_B32_gfx9 renamable $vgpr99, 28, 29, 0, implicit $exec
-    $vgpr30_vgpr31 = DS_READ2_B32_gfx9 renamable $vgpr99, 30, 31, 0, implicit $exec
-    $vgpr32_vgpr33 = DS_READ2_B32_gfx9 renamable $vgpr99, 32, 33, 0, implicit $exec
-    $vgpr34_vgpr35 = DS_READ2_B32_gfx9 renamable $vgpr99, 34, 35, 0, implicit $exec
+    $vgpr0_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 0, 1, 0, implicit $exec
+    $vgpr2_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 2, 3, 0, implicit $exec
+    $vgpr4_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 4, 5, 0, implicit $exec
+    $vgpr6_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 6, 7, 0, implicit $exec
+    $vgpr8_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 8, 9, 0, implicit $exec
+    $vgpr10_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 10, 11, 0, implicit $exec
+    $vgpr12_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 12, 13, 0, implicit $exec
+    $vgpr14_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 14, 15, 0, implicit $exec
+    $vgpr16_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 16, 17, 0, implicit $exec
+    $vgpr18_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 18, 19, 0, implicit $exec
+    $vgpr20_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 20, 21, 0, implicit $exec
+    $vgpr22_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 22, 23, 0, implicit $exec
+    $vgpr24_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 24, 25, 0, implicit $exec
+    $vgpr26_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 26, 27, 0, implicit $exec
+    $vgpr28_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 28, 29, 0, implicit $exec
+    $vgpr30_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 30, 31, 0, implicit $exec
+    $vgpr32_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 32, 33, 0, implicit $exec
+    $vgpr34_64 = DS_READ2_B32_gfx9 renamable $vgpr99, 34, 35, 0, implicit $exec
     $vgpr0 = V_MAC_F32_e32 0, $vgpr1, $vgpr0, implicit $mode, implicit $exec
     $vgpr2 = V_MAC_F32_e32 0, $vgpr3, $vgpr2, implicit $mode, implicit $exec
     $vgpr4 = V_MAC_F32_e32 0, $vgpr5, $vgpr4, implicit $mode, implicit $exec

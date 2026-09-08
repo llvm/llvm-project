@@ -119,7 +119,7 @@ define amdgpu_kernel void @inlineasm_and_waterfall_same_value(ptr addrspace(1) %
 ; CHECK-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
 ; CHECK-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; CHECK-NEXT:    buffer_load_dword v5, v4, s[4:7], 0 offen
-; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; CHECK-NEXT:    ; implicit-def: $vgpr0_128
 ; CHECK-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; CHECK-NEXT:    s_cbranch_execnz .LBB3_1
 ; CHECK-NEXT:  ; %bb.2:

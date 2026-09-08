@@ -9,11 +9,11 @@ body: |
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[C]](s32), [[C1]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[MV]](s64)
     %0:_(s32) = G_CONSTANT i32 0
     %1:_(s32) = G_CONSTANT i32 1
     %2:_(s64) = G_MERGE_VALUES %0:_(s32), %1:_(s32)
-    $vgpr0_vgpr1 = COPY %2(s64)
+    $vgpr0_64 = COPY %2(s64)
 ...
 
 ---
@@ -24,11 +24,11 @@ body: |
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C1]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[BUILD_VECTOR]](<2 x s32>)
     %0:_(s32) = G_CONSTANT i32 0
     %1:_(s32) = G_CONSTANT i32 1
     %2:_(<2 x s32>) = G_BUILD_VECTOR %0:_(s32), %1:_(s32)
-    $vgpr0_vgpr1 = COPY %2(<2 x s32>)
+    $vgpr0_64 = COPY %2(<2 x s32>)
 ...
 
 ---
@@ -40,12 +40,12 @@ body: |
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C1]](s32), [[C2]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
+    ; CHECK-NEXT: $vgpr0_96 = COPY [[BUILD_VECTOR]](<3 x s32>)
     %0:_(s32) = G_CONSTANT i32 0
     %1:_(s32) = G_CONSTANT i32 1
     %2:_(s32) = G_CONSTANT i32 2
     %3:_(<3 x s32>) = G_BUILD_VECTOR %0:_(s32), %1:_(s32), %2:_(s32)
-    $vgpr0_vgpr1_vgpr2 = COPY %3(<3 x s32>)
+    $vgpr0_96 = COPY %3(<3 x s32>)
 ...
 
 ---
@@ -56,11 +56,11 @@ body: |
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C1]](s64)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
+    ; CHECK-NEXT: $vgpr0_128 = COPY [[BUILD_VECTOR]](<2 x s64>)
     %0:_(s64) = G_CONSTANT i64 0
     %1:_(s64) = G_CONSTANT i64 1
     %2:_(<2 x s64>) = G_BUILD_VECTOR %0(s64), %1(s64)
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %2(<2 x s64>)
+    $vgpr0_128 = COPY %2(<2 x s64>)
 ...
 
 ---
@@ -73,13 +73,13 @@ body: |
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
     ; CHECK-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C1]](s64), [[C2]](s64), [[C3]](s64)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BUILD_VECTOR]](<4 x s64>)
+    ; CHECK-NEXT: $vgpr0_256 = COPY [[BUILD_VECTOR]](<4 x s64>)
     %0:_(s64) = G_CONSTANT i64 0
     %1:_(s64) = G_CONSTANT i64 1
     %2:_(s64) = G_CONSTANT i64 2
     %3:_(s64) = G_CONSTANT i64 3
     %4:_(<4 x s64>) = G_BUILD_VECTOR %0(s64), %1(s64), %2(s64), %3(s64)
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %4(<4 x s64>)
+    $vgpr0_256 = COPY %4(<4 x s64>)
 ...
 
 # FIXME: Should be split up

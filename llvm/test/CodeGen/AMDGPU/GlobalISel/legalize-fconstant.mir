@@ -20,9 +20,9 @@ body: |
 
     ; GCN-LABEL: name: test_fconstant_f64
     ; GCN: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double 1.000000e+00
-    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[C]](f64)
+    ; GCN-NEXT: $vgpr0_64 = COPY [[C]](f64)
     %0:_(f64) = G_FCONSTANT double 1.0
-    $vgpr0_vgpr1 = COPY %0
+    $vgpr0_64 = COPY %0
 ...
 
 ---

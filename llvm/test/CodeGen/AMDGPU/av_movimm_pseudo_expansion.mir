@@ -99,11 +99,11 @@ body: |
     ; GFX908-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
     ;
     ; GFX90A-LABEL: name: av_mov_b64_imm_pseudo_vgpr_0
-    ; GFX90A: $vgpr0_vgpr1 = V_PK_MOV_B32 8, 0, 8, 0, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX90A: $vgpr0_64 = V_PK_MOV_B32 8, 0, 8, 0, 0, 0, 0, 0, 0, implicit $exec
     ;
     ; GFX942-LABEL: name: av_mov_b64_imm_pseudo_vgpr_0
-    ; GFX942: $vgpr0_vgpr1 = V_MOV_B64_e32 0, implicit $exec
-    $vgpr0_vgpr1 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
+    ; GFX942: $vgpr0_64 = V_MOV_B64_e32 0, implicit $exec
+    $vgpr0_64 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
 ...
 
 ---
@@ -120,8 +120,8 @@ body: |
     ; GFX90A-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
     ;
     ; GFX942-LABEL: name: av_mov_b64_imm_pseudo_vgpr_64
-    ; GFX942: $vgpr0_vgpr1 = V_MOV_B64_e32 64, implicit $exec
-    $vgpr0_vgpr1 = AV_MOV_B64_IMM_PSEUDO 64, implicit $exec
+    ; GFX942: $vgpr0_64 = V_MOV_B64_e32 64, implicit $exec
+    $vgpr0_64 = AV_MOV_B64_IMM_PSEUDO 64, implicit $exec
 ...
 
 ---
@@ -175,16 +175,16 @@ body: |
     ; GFX90A-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
     ; GFX90A-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
     ; GFX90A-NEXT: $vgpr3 = V_MOV_B32_e32 1042479491, implicit $exec
-    ; GFX90A-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 8, 1042479491, 8, 1042479491, 0, 0, 0, 0, 0, implicit $exec
+    ; GFX90A-NEXT: $vgpr4_64 = V_PK_MOV_B32 8, 1042479491, 8, 1042479491, 0, 0, 0, 0, 0, implicit $exec
     ;
     ; GFX942-LABEL: name: av_mov_b64_imm_pseudo_vgpr_inv2pi
-    ; GFX942: $vgpr0_vgpr1 = V_MOV_B64_e32 1042479491, implicit $exec
+    ; GFX942: $vgpr0_64 = V_MOV_B64_e32 1042479491, implicit $exec
     ; GFX942-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
     ; GFX942-NEXT: $vgpr3 = V_MOV_B32_e32 1042479491, implicit $exec
-    ; GFX942-NEXT: $vgpr4_vgpr5 = V_PK_MOV_B32 8, 1042479491, 8, 1042479491, 0, 0, 0, 0, 0, implicit $exec
-    $vgpr0_vgpr1 = AV_MOV_B64_IMM_PSEUDO 1042479491, implicit $exec
-    $vgpr2_vgpr3 = AV_MOV_B64_IMM_PSEUDO 4477415320595726336, implicit $exec
-    $vgpr4_vgpr5 = AV_MOV_B64_IMM_PSEUDO 4477415321638205827, implicit $exec
+    ; GFX942-NEXT: $vgpr4_64 = V_PK_MOV_B32 8, 1042479491, 8, 1042479491, 0, 0, 0, 0, 0, implicit $exec
+    $vgpr0_64 = AV_MOV_B64_IMM_PSEUDO 1042479491, implicit $exec
+    $vgpr2_64 = AV_MOV_B64_IMM_PSEUDO 4477415320595726336, implicit $exec
+    $vgpr4_64 = AV_MOV_B64_IMM_PSEUDO 4477415321638205827, implicit $exec
 ...
 
 ---
@@ -206,7 +206,7 @@ body: |
     ; CHECK-LABEL: name: av_mov_b64_imm_pseudo_unaligned_vgpr
     ; CHECK: $vgpr1 = V_MOV_B32_e32 9, implicit $exec
     ; CHECK-NEXT: $vgpr2 = V_MOV_B32_e32 -16, implicit $exec
-    $vgpr1_vgpr2 = AV_MOV_B64_IMM_PSEUDO 18446744004990074889, implicit $exec
+    $vgpr1_64 = AV_MOV_B64_IMM_PSEUDO 18446744004990074889, implicit $exec
 ...
 
 ---
@@ -216,7 +216,7 @@ body: |
     ; CHECK-LABEL: name: av_mov_b64_misalign_vgpr
     ; CHECK: $vgpr5 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: $vgpr6 = V_MOV_B32_e32 0, implicit $exec
-    $vgpr5_vgpr6 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
+    $vgpr5_64 = AV_MOV_B64_IMM_PSEUDO 0, implicit $exec
 ...
 
 ---

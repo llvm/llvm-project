@@ -18,16 +18,16 @@
 name: test_overlap
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: test_overlap
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: BUNDLE implicit-def $vgpr2_vgpr3, implicit-def $vgpr3_vgpr4, implicit $vgpr0_vgpr1, implicit $exec, implicit $vgpr1_vgpr2 {
-    ; CHECK-NEXT:   $vgpr2_vgpr3 = V_LSHLREV_B64_pseudo_e32 1, $vgpr0_vgpr1, implicit $exec
-    ; CHECK-NEXT:   $vgpr3_vgpr4 = V_LSHLREV_B64_pseudo_e32 1, $vgpr1_vgpr2, implicit $exec
+    ; CHECK-NEXT: BUNDLE implicit-def $vgpr2_64, implicit-def $vgpr3_64, implicit $vgpr0_64, implicit $exec, implicit $vgpr1_64 {
+    ; CHECK-NEXT:   $vgpr2_64 = V_LSHLREV_B64_pseudo_e32 1, $vgpr0_64, implicit $exec
+    ; CHECK-NEXT:   $vgpr3_64 = V_LSHLREV_B64_pseudo_e32 1, $vgpr1_64, implicit $exec
     ; CHECK-NEXT: }
-    $vgpr2_vgpr3 = V_LSHLREV_B64_pseudo_e32 1, $vgpr0_vgpr1, implicit $exec
-    $vgpr3_vgpr4 = V_LSHLREV_B64_pseudo_e32 1, $vgpr1_vgpr2, implicit $exec
+    $vgpr2_64 = V_LSHLREV_B64_pseudo_e32 1, $vgpr0_64, implicit $exec
+    $vgpr3_64 = V_LSHLREV_B64_pseudo_e32 1, $vgpr1_64, implicit $exec
 ...
 
 ---

@@ -58,10 +58,10 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
     ; CHECK-NEXT: [[FCEIL:%[0-9]+]]:vreg_64(s64) = G_FCEIL [[COPY]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[FCEIL]](s64)
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[FCEIL]](s64)
     %0:sgpr(s64) = COPY $sgpr0_64
     %1:vgpr(s64) = G_FCEIL %0
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...
 
 ---
@@ -72,15 +72,15 @@ tracksRegLiveness: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: fceil_s64_vv
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_64
     ; CHECK-NEXT: [[FCEIL:%[0-9]+]]:vreg_64(s64) = G_FCEIL [[COPY]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[FCEIL]](s64)
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[FCEIL]](s64)
+    %0:vgpr(s64) = COPY $vgpr0_64
     %1:vgpr(s64) = G_FCEIL %0
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...

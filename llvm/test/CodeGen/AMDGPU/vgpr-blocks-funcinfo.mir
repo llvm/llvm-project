@@ -29,9 +29,8 @@ stack:
 # CHECK-NEXT:       local-offset: 0, debug-info-variable: '', debug-info-expression: '',
 # CHECK-NEXT:       debug-info-location: '' }
 # CHECK-NEXT:   - { id: 2, name: '', type: spill-slot, offset: 0, size: 16, alignment: 4,
-# CHECK-NEXT:       stack-id: default, callee-saved-register: '$vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63_vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71',
-# CHECK-NEXT:       callee-saved-restored: true, debug-info-variable: '', debug-info-expression: '',
-# CHECK-NEXT:       debug-info-location: '' }
+# CHECK-NEXT:       stack-id: default, callee-saved-register: '$vgpr40_1024', callee-saved-restored: true,
+# CHECK-NEXT:       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 # CHECK-NEXT:   - { id: 3, name: '', type: default, offset: 48, size: 4, alignment: 4,
 # CHECK-NEXT:       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
 # CHECK-NEXT:       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }

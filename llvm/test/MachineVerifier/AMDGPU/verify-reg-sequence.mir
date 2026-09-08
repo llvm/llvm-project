@@ -30,7 +30,7 @@ body:             |
 
     ; Physreg destination
     ; CHECK: *** Bad machine code: REG_SEQUENCE does not support physical register results ***
-    $vgpr0_vgpr1 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
+    $vgpr0_64 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
 
     ; Subreg in destination
     ; CHECK: *** Bad machine code: Invalid subreg result for REG_SEQUENCE ***

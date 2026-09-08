@@ -28,7 +28,7 @@ body:             |
 name:            trans64_write_non_trans_read
 body:             |
   bb.0:
-    $vgpr0_vgpr1 = V_RCP_F64_e32 $vgpr2_vgpr3, implicit $mode, implicit $exec
+    $vgpr0_64 = V_RCP_F64_e32 $vgpr2_64, implicit $mode, implicit $exec
     $vgpr4 = V_OR_B32_e32 $vgpr1, $vgpr5, implicit $mode, implicit $exec
 ...
 
@@ -40,7 +40,7 @@ name:            trans32_write_non_trans64_read
 body:             |
   bb.0:
     $vgpr1 = V_EXP_F32_e32 $vgpr0, implicit $mode, implicit $exec
-    $vgpr2_vgpr3 = V_MUL_F64_e64 0, $vgpr0_vgpr1, 0, $vgpr2_vgpr3, 0, 0, implicit $mode, implicit $exec
+    $vgpr2_64 = V_MUL_F64_e64 0, $vgpr0_64, 0, $vgpr2_64, 0, 0, implicit $mode, implicit $exec
 ...
 
 # GCN-LABEL: name: opsel_hi16_write_valu_read
@@ -51,7 +51,7 @@ name:            opsel_hi16_write_valu_read
 body:             |
   bb.0:
     $vgpr0 = V_ADD_I16_e64 8, $vgpr1, 0, $vgpr2, 0, 0, implicit $exec
-    $vgpr4_vgpr5 = V_MUL_F64_e64 0, $vgpr0_vgpr1, 0, $vgpr2_vgpr3, 0, 0, implicit $mode, implicit $exec
+    $vgpr4_64 = V_MUL_F64_e64 0, $vgpr0_64, 0, $vgpr2_64, 0, 0, implicit $mode, implicit $exec
 ...
 
 # GCN-LABEL: name: opsel_lo16_write_valu_read
@@ -61,7 +61,7 @@ name:            opsel_lo16_write_valu_read
 body:             |
   bb.0:
     $vgpr0 = V_ADD_I16_e64 0, $vgpr1, 0, $vgpr2, 0, 0, implicit $exec
-    $vgpr4_vgpr5 = V_MUL_F64_e64 0, $vgpr0_vgpr1, 0, $vgpr2_vgpr3, 0, 0, implicit $mode, implicit $exec
+    $vgpr4_64 = V_MUL_F64_e64 0, $vgpr0_64, 0, $vgpr2_64, 0, 0, implicit $mode, implicit $exec
 ...
 
 # GCN-LABEL: name: sdwa_hi16_write_valu_read
@@ -224,8 +224,8 @@ name: global_store_dwordx4_data_hazard
 
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5
-    GLOBAL_STORE_DWORDX4 $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5, 0, 0, implicit $exec
+    liveins: $vgpr0_64, $vgpr2_128
+    GLOBAL_STORE_DWORDX4 $vgpr0_64, $vgpr2_128, 0, 0, implicit $exec
     $vgpr2 = V_MOV_B32_e32 0, implicit $exec
 ...
 
@@ -237,7 +237,7 @@ name: global_store_dwordx3_data_hazard
 
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4
-    GLOBAL_STORE_DWORDX3 $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4, 0, 0, implicit $exec
+    liveins: $vgpr0_64, $vgpr2_96
+    GLOBAL_STORE_DWORDX3 $vgpr0_64, $vgpr2_96, 0, 0, implicit $exec
     $vgpr2 = V_MOV_B32_e32 0, implicit $exec
 ...

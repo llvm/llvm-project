@@ -133,8 +133,8 @@ define bfloat @sitofp_i128_to_bf16(i128 %x) {
 ; SDAG-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v2
 ; SDAG-NEXT:    v_cndmask_b32_e32 v8, 0, v0, vcc
 ; SDAG-NEXT:    ; implicit-def: $vgpr2
-; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; SDAG-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; SDAG-NEXT:    ; implicit-def: $vgpr0_64
+; SDAG-NEXT:    ; implicit-def: $vgpr4_64
 ; SDAG-NEXT:    s_branch .LBB0_2
 ; SDAG-NEXT:  .LBB0_14: ; %itofp-if-then20
 ; SDAG-NEXT:    v_alignbit_b32 v8, v1, v0, 3
@@ -409,7 +409,7 @@ define bfloat @uitofp_i128_to_bf16(i128 %x) {
 ; SDAG-NEXT:    v_lshlrev_b64 v[0:1], v2, v[0:1]
 ; SDAG-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v2
 ; SDAG-NEXT:    v_cndmask_b32_e32 v7, 0, v0, vcc
-; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; SDAG-NEXT:    ; implicit-def: $vgpr0_64
 ; SDAG-NEXT:    ; implicit-def: $vgpr4
 ; SDAG-NEXT:    ; implicit-def: $vgpr2
 ; SDAG-NEXT:    s_branch .LBB1_2
@@ -545,7 +545,7 @@ define bfloat @uitofp_i128_to_bf16(i128 %x) {
 ; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v2
 ; GISEL-NEXT:    v_cndmask_b32_e32 v4, 0, v0, vcc
 ; GISEL-NEXT:    ; implicit-def: $vgpr6
-; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GISEL-NEXT:    ; implicit-def: $vgpr0_128
 ; GISEL-NEXT:    s_branch .LBB1_2
 ; GISEL-NEXT:  .LBB1_14: ; %itofp-if-then20
 ; GISEL-NEXT:    v_lshrrev_b64 v[4:5], 3, v[0:1]

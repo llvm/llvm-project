@@ -48,10 +48,10 @@ body:             |
     ; CHECK-NEXT: renamable $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr0, $vgpr1, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: renamable $vgpr8 = COPY renamable $agpr1
     ; CHECK-NEXT: renamable $vgpr7 = COPY killed renamable $agpr0
-    ; CHECK-NEXT: renamable $agpr0_agpr1_agpr2_agpr3 = COPY killed renamable $vgpr5_vgpr6_vgpr7_vgpr8
+    ; CHECK-NEXT: renamable $agpr0_agpr1_agpr2_agpr3 = COPY killed renamable $vgpr5_128
     ; CHECK-NEXT: renamable $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 killed $vgpr0, killed $vgpr1, killed $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: renamable $vgpr0_vgpr1_vgpr2_vgpr3 = COPY killed renamable $agpr0_agpr1_agpr2_agpr3
-    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr4, killed renamable $vgpr0_vgpr1_vgpr2_vgpr3, killed renamable $sgpr6_64, 0, 0, implicit $exec :: (store (s128), addrspace 1)
+    ; CHECK-NEXT: renamable $vgpr0_128 = COPY killed renamable $agpr0_agpr1_agpr2_agpr3
+    ; CHECK-NEXT: GLOBAL_STORE_DWORDX4_SADDR killed renamable $vgpr4, killed renamable $vgpr0_128, killed renamable $sgpr6_64, 0, 0, implicit $exec :: (store (s128), addrspace 1)
     ; CHECK-NEXT: S_ENDPGM 0
     early-clobber renamable $sgpr6_64 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_64, 36, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     renamable $sgpr0_128 = S_LOAD_DWORDX4_IMM renamable $sgpr6_64, 0, 0 :: ("amdgpu-noclobber" load (s128), addrspace 1)

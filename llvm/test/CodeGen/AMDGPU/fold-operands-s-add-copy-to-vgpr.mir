@@ -549,9 +549,9 @@ body:             |
   ; CHECK-LABEL: name: fold_fi_into_s_or_b32_user_is_physreg_copy
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1
+  ; CHECK-NEXT:   liveins: $vgpr0_64
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
   ; CHECK-NEXT:   [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 %stack.0, 4, implicit-def dead $scc
   ; CHECK-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; CHECK-NEXT: {{  $}}
@@ -574,9 +574,9 @@ body:             |
   ; CHECK-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
   ; CHECK-NEXT:   SI_RETURN
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
+    %0:vreg_64 = COPY $vgpr0_64
     %1:sreg_32 = S_MOV_B32 %stack.0
     %2:sreg_32 = S_ADD_I32 killed %1, 4, implicit-def dead $scc
     %3:sreg_64_xexec = S_MOV_B64 $exec

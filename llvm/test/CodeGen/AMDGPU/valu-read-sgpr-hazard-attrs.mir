@@ -231,7 +231,7 @@ body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_cull_bvh
     ; GCN: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
-    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_BVH_INTERSECT_RAY_sa_gfx11 $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14, renamable $sgpr0_128, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
+    ; GCN-NEXT: $vgpr0_128 = IMAGE_BVH_INTERSECT_RAY_sa_gfx11 $vgpr4_352, renamable $sgpr0_128, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
     ; GCN-NEXT: DS_NOP implicit $m0, implicit $exec
     ; GCN-NEXT: DS_NOP implicit $m0, implicit $exec
     ; GCN-NEXT: DS_NOP implicit $m0, implicit $exec
@@ -241,7 +241,7 @@ body:            |
     ; GCN-NEXT: $sgpr3 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
-    $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_BVH_INTERSECT_RAY_sa_gfx11 $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14, renamable $sgpr0_128, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
+    $vgpr0_128 = IMAGE_BVH_INTERSECT_RAY_sa_gfx11 $vgpr4_352, renamable $sgpr0_128, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
     S_WAIT_BVHCNT 0
     $sgpr0_64 = S_GETPC_B64
     $sgpr3 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
@@ -274,7 +274,7 @@ body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_cull_global
     ; GCN: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
-    ; GCN-NEXT: $vgpr0 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr0 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: DS_NOP implicit $m0, implicit $exec
     ; GCN-NEXT: DS_NOP implicit $m0, implicit $exec
     ; GCN-NEXT: DS_NOP implicit $m0, implicit $exec
@@ -284,7 +284,7 @@ body:            |
     ; GCN-NEXT: $sgpr3 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
-    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
     S_WAIT_LOADCNT 0
     $sgpr0_64 = S_GETPC_B64
     $sgpr3 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
@@ -297,14 +297,14 @@ body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_nocull_flat
     ; GCN: $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
-    ; GCN-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_WAIT_LOADCNT 0
     ; GCN-NEXT: $sgpr0_64 = S_GETPC_B64
     ; GCN-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; GCN-NEXT: $sgpr3 = S_ADD_U32 $sgpr0, 0, implicit-def $scc
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr1, $sgpr0 = V_ADDC_U32_e64 0, $vgpr1, $sgpr0, 0, implicit $exec
-    $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
     S_WAIT_LOADCNT 0
     $sgpr0_64 = S_GETPC_B64
     $sgpr3 = S_ADD_U32 $sgpr0, 0, implicit-def $scc

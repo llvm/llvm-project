@@ -55,18 +55,18 @@ name: add_nullptr_vec_all_zero
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3
+    liveins: $vgpr0_64, $vgpr2, $vgpr3
 
     ; CHECK-LABEL: name: add_nullptr_vec_all_zero
-    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3
+    ; CHECK: liveins: $vgpr0_64, $vgpr2, $vgpr3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_64
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr3
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY1]](s32), [[COPY2]](s32)
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(<2 x s32>) = G_SHL [[COPY]], [[BUILD_VECTOR]](<2 x s32>)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SHL]](<2 x s32>)
-    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[SHL]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $vgpr0_64
     %1:_(s32) = COPY $vgpr2
     %2:_(s32) = COPY $vgpr3
     %3:_(<2 x s32>) = G_BUILD_VECTOR %1:_(s32), %2:_(s32)
@@ -75,6 +75,6 @@ body:             |
     %6:_(<2 x p3>) = G_BUILD_VECTOR %5:_(p3), %5:_(p3)
     %7:_(<2 x p3>) = G_PTR_ADD %6, %4(<2 x s32>)
     %8:_(<2 x s32>) = G_PTRTOINT %7(<2 x p3>)
-    $vgpr0_vgpr1 = COPY %8(<2 x s32>)
+    $vgpr0_64 = COPY %8(<2 x s32>)
 
 ...

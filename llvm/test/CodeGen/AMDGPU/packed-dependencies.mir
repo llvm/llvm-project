@@ -65,7 +65,7 @@ body:             |
  bb.0:
   ; GCN-LABEL: SU(0):   $vgpr0 = IMPLICIT_DEF
   ; GCN-LABEL: SU(1):   $vgpr1 = IMPLICIT_DEF
-  ; GCN-LABEL: SU(2):   $vgpr0_vgpr1 = nofpexcept V_PK_MUL_F32 0, $vgpr0_vgpr1, 0, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+  ; GCN-LABEL: SU(2):   $vgpr0_64 = nofpexcept V_PK_MUL_F32 0, $vgpr0_64, 0, $vgpr0_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:    # preds left       : 4
   ; GCN-NEXT:    # succs left       : 0
   ; GCN-NEXT:    # rdefs left       : 0
@@ -81,7 +81,7 @@ body:             |
   ;
   $vgpr0 = IMPLICIT_DEF
   $vgpr1 = IMPLICIT_DEF
-  $vgpr0_vgpr1 = nofpexcept V_PK_MUL_F32 0, $vgpr0_vgpr1, 0, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+  $vgpr0_64 = nofpexcept V_PK_MUL_F32 0, $vgpr0_64, 0, $vgpr0_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
   S_ENDPGM 0
 ...
 
@@ -178,7 +178,7 @@ body:             |
  bb.0:
   ; GCN-LABEL: SU(0):   $vgpr0 = IMPLICIT_DEF
   ; GCN-LABEL: SU(1):   $vgpr1 = IMPLICIT_DEF
-  ; GCN-LABEL: SU(2):   $vgpr0_vgpr1 = nofpexcept V_PK_MUL_F32 0, $vgpr0_vgpr1, 4, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+  ; GCN-LABEL: SU(2):   $vgpr0_64 = nofpexcept V_PK_MUL_F32 0, $vgpr0_64, 4, $vgpr0_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:    # preds left       : 5
   ; GCN-NEXT:    # succs left       : 0
   ; GCN-NEXT:    # rdefs left       : 0
@@ -195,7 +195,7 @@ body:             |
   ;
   $vgpr0 = IMPLICIT_DEF
   $vgpr1 = IMPLICIT_DEF
-  $vgpr0_vgpr1 = nofpexcept V_PK_MUL_F32 0, $vgpr0_vgpr1, 4, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+  $vgpr0_64 = nofpexcept V_PK_MUL_F32 0, $vgpr0_64, 4, $vgpr0_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
   S_ENDPGM 0
 ...
 
@@ -294,7 +294,7 @@ body:             |
  bb.0:
   ; GCN-LABEL: SU(0):   $vgpr0 = IMPLICIT_DEF
   ; GCN-LABEL: SU(1):   $vgpr1 = IMPLICIT_DEF
-  ; GCN-LABEL: SU(2):   $vgpr0_vgpr1 = nofpexcept V_PK_MUL_F32 8, $vgpr0_vgpr1, 0, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+  ; GCN-LABEL: SU(2):   $vgpr0_64 = nofpexcept V_PK_MUL_F32 8, $vgpr0_64, 0, $vgpr0_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:    # preds left       : 5
   ; GCN-NEXT:    # succs left       : 0
   ; GCN-NEXT:    # rdefs left       : 0
@@ -311,7 +311,7 @@ body:             |
   ;
   $vgpr0 = IMPLICIT_DEF
   $vgpr1 = IMPLICIT_DEF
-  $vgpr0_vgpr1 = nofpexcept V_PK_MUL_F32 8, $vgpr0_vgpr1, 0, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+  $vgpr0_64 = nofpexcept V_PK_MUL_F32 8, $vgpr0_64, 0, $vgpr0_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
   S_ENDPGM 0
 ...
 
@@ -411,7 +411,7 @@ body:             |
  bb.0:
   ; GCN-LABEL: SU(0):   $vgpr0 = IMPLICIT_DEF
   ; GCN-LABEL: SU(1):   $vgpr1 = IMPLICIT_DEF
-  ; GCN-LABEL: SU(2):   $vgpr0_vgpr1 = nofpexcept V_PK_MUL_F32 12, $vgpr0_vgpr1, 0, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+  ; GCN-LABEL: SU(2):   $vgpr0_64 = nofpexcept V_PK_MUL_F32 12, $vgpr0_64, 0, $vgpr0_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:    # preds left       : 6
   ; GCN-NEXT:    # succs left       : 0
   ; GCN-NEXT:    # rdefs left       : 0
@@ -429,7 +429,7 @@ body:             |
   ;
   $vgpr0 = IMPLICIT_DEF
   $vgpr1 = IMPLICIT_DEF
-  $vgpr0_vgpr1 = nofpexcept V_PK_MUL_F32 12, $vgpr0_vgpr1, 0, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+  $vgpr0_64 = nofpexcept V_PK_MUL_F32 12, $vgpr0_64, 0, $vgpr0_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
   S_ENDPGM 0
 ...
 
@@ -525,7 +525,7 @@ body:             |
  bb.0:
   ; GCN-LABEL: SU(0):   $vgpr0 = IMPLICIT_DEF
   ; GCN-LABEL: SU(1):   $vgpr1 = IMPLICIT_DEF
-  ; GCN-LABEL: SU(2):   $vgpr0_vgpr1 = nofpexcept V_PK_MUL_F32 12, $vgpr0_vgpr1, 12, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+  ; GCN-LABEL: SU(2):   $vgpr0_64 = nofpexcept V_PK_MUL_F32 12, $vgpr0_64, 12, $vgpr0_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:    # preds left       : 4
   ; GCN-NEXT:    # succs left       : 0
   ; GCN-NEXT:    # rdefs left       : 0
@@ -541,7 +541,7 @@ body:             |
   ;
   $vgpr0 = IMPLICIT_DEF
   $vgpr1 = IMPLICIT_DEF
-  $vgpr0_vgpr1 = nofpexcept V_PK_MUL_F32 12, $vgpr0_vgpr1, 12, $vgpr0_vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+  $vgpr0_64 = nofpexcept V_PK_MUL_F32 12, $vgpr0_64, 12, $vgpr0_64, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
   S_ENDPGM 0
 ...
 
@@ -579,7 +579,7 @@ machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
  bb.0:
-  ; GCN-LABEL: SU(0):   $vgpr0_vgpr1 = IMPLICIT_DEF
+  ; GCN-LABEL: SU(0):   $vgpr0_64 = IMPLICIT_DEF
   ; GCN-LABEL: SU(1):   $vgpr0_hi16 = IMPLICIT_DEF
   ; GCN-LABEL: SU(2):   $vgpr0 = nofpexcept V_PK_MUL_F16 0, $vgpr0, 0, $vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:    # preds left       : 5
@@ -596,7 +596,7 @@ body:             |
   ; GCN-NEXT:      SU(0): Data Latency=0 Reg=$vgpr1_lo16
   ; GCN-NEXT:    Pressure Diff
   ;
-  $vgpr0_vgpr1 = IMPLICIT_DEF
+  $vgpr0_64 = IMPLICIT_DEF
   $vgpr0_hi16 = IMPLICIT_DEF
   $vgpr0 = nofpexcept V_PK_MUL_F16 0, $vgpr0, 0, $vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
   S_ENDPGM 0
@@ -636,7 +636,7 @@ machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
  bb.0:
-  ; GCN-LABEL: SU(0):   $vgpr0_vgpr1 = IMPLICIT_DEF
+  ; GCN-LABEL: SU(0):   $vgpr0_64 = IMPLICIT_DEF
   ; GCN-LABEL: SU(1):   $vgpr0_hi16 = IMPLICIT_DEF
   ; GCN-LABEL: SU(2):   $vgpr0 = nofpexcept V_PK_MUL_F16 12, $vgpr0, 12, $vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:    # preds left       : 5
@@ -653,7 +653,7 @@ body:             |
   ; GCN-NEXT:      SU(0): Data Latency=0 Reg=$vgpr1_hi16
   ; GCN-NEXT:    Pressure Diff
   ;
-  $vgpr0_vgpr1 = IMPLICIT_DEF
+  $vgpr0_64 = IMPLICIT_DEF
   $vgpr0_hi16 = IMPLICIT_DEF
   $vgpr0 = nofpexcept V_PK_MUL_F16 12, $vgpr0, 12, $vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
   S_ENDPGM 0
@@ -666,7 +666,7 @@ machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
  bb.0:
-  ; GCN-LABEL: SU(0):   $vgpr0_vgpr1 = IMPLICIT_DEF
+  ; GCN-LABEL: SU(0):   $vgpr0_64 = IMPLICIT_DEF
   ; GCN-LABEL: SU(1):   $vgpr1_lo16 = IMPLICIT_DEF
   ; GCN-LABEL: SU(2):   $vgpr0 = nofpexcept V_PK_MUL_F16 12, $vgpr0, 12, $vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:    # preds left       : 4
@@ -682,7 +682,7 @@ body:             |
   ; GCN-NEXT:      SU(0): Data Latency=0 Reg=$vgpr1_hi16
   ; GCN-NEXT:    Pressure Diff
   ;
-  $vgpr0_vgpr1 = IMPLICIT_DEF
+  $vgpr0_64 = IMPLICIT_DEF
   $vgpr1_lo16 = IMPLICIT_DEF
   $vgpr0 = nofpexcept V_PK_MUL_F16 12, $vgpr0, 12, $vgpr1, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
   S_ENDPGM 0

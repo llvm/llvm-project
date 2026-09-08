@@ -12,11 +12,11 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr3_vgpr4
+    liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr3_64
 
 
     ; GFX6-LABEL: name: add_s32
-    ; GFX6: liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr3_vgpr4
+    ; GFX6: liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr3_64
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX6-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
@@ -28,7 +28,7 @@ body: |
     ; GFX6-NEXT: S_ENDPGM 0, implicit [[S_ADD_U32_]], implicit [[V_ADD_CO_U32_e64_]], implicit [[V_ADD_CO_U32_e64_2]], implicit [[V_ADD_CO_U32_e64_4]]
     ;
     ; GFX9-LABEL: name: add_s32
-    ; GFX9: liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr3_vgpr4
+    ; GFX9: liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr3_64
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
@@ -41,7 +41,7 @@ body: |
     %0:sgpr(s32) = COPY $sgpr0
     %1:sgpr(s32) = COPY $sgpr1
     %2:vgpr(s32) = COPY $vgpr0
-    %3:vgpr(p1) = COPY $vgpr3_vgpr4
+    %3:vgpr(p1) = COPY $vgpr3_64
     %4:sgpr(s32) = G_CONSTANT i32 1
     %5:sgpr(s32) = G_CONSTANT i32 4096
 

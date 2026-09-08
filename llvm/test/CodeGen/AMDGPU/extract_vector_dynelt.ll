@@ -38,7 +38,7 @@ define amdgpu_kernel void @float4_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    v_mov_b32_e32 v6, s5
 ; GCN-O0-NEXT:    v_mov_b32_e32 v5, s4
 ; GCN-O0-NEXT:    v_mov_b32_e32 v4, s3
-; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_128 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, v6
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, v5
 ; GCN-O0-NEXT:    v_mov_b32_e32 v3, v4
@@ -89,7 +89,7 @@ define amdgpu_kernel void @int4_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    v_mov_b32_e32 v6, s5
 ; GCN-O0-NEXT:    v_mov_b32_e32 v5, s4
 ; GCN-O0-NEXT:    v_mov_b32_e32 v4, s3
-; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_128 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, v6
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, v5
 ; GCN-O0-NEXT:    v_mov_b32_e32 v3, v4
@@ -195,7 +195,7 @@ define amdgpu_kernel void @double4_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    v_mov_b32_e32 v10, s11
 ; GCN-O0-NEXT:    s_mov_b32 m0, s2
 ; GCN-O0-NEXT:    v_movrels_b32_e32 v0, v3
-; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_64 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s1
@@ -345,7 +345,7 @@ define amdgpu_kernel void @double5_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    v_mov_b32_e32 v18, s19
 ; GCN-O0-NEXT:    s_mov_b32 m0, s2
 ; GCN-O0-NEXT:    v_movrels_b32_e32 v0, v3
-; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_64 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s1
@@ -426,7 +426,7 @@ define amdgpu_kernel void @float2_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    s_mov_b32 s4, 0
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, s3
-; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_64 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, v2
 ; GCN-O0-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-O0-NEXT:    s_mov_b32 m0, s2
@@ -500,7 +500,7 @@ define amdgpu_kernel void @double2_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    v_mov_b32_e32 v6, s7
 ; GCN-O0-NEXT:    s_mov_b32 m0, s2
 ; GCN-O0-NEXT:    v_movrels_b32_e32 v0, v3
-; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_64 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s1
@@ -728,7 +728,7 @@ define amdgpu_kernel void @float8_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    v_mov_b32_e32 v10, s5
 ; GCN-O0-NEXT:    v_mov_b32_e32 v9, s4
 ; GCN-O0-NEXT:    v_mov_b32_e32 v8, s3
-; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_256 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, v14
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, v13
 ; GCN-O0-NEXT:    v_mov_b32_e32 v3, v12
@@ -889,7 +889,7 @@ define amdgpu_kernel void @double8_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    v_mov_b32_e32 v18, s19
 ; GCN-O0-NEXT:    s_mov_b32 m0, s2
 ; GCN-O0-NEXT:    v_movrels_b32_e32 v0, v3
-; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_64 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s1
@@ -1039,7 +1039,7 @@ define amdgpu_kernel void @double7_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    v_mov_b32_e32 v18, s19
 ; GCN-O0-NEXT:    s_mov_b32 m0, s2
 ; GCN-O0-NEXT:    v_movrels_b32_e32 v0, v3
-; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_64 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s1
@@ -1120,7 +1120,7 @@ define amdgpu_kernel void @float16_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    v_mov_b32_e32 v18, s5
 ; GCN-O0-NEXT:    v_mov_b32_e32 v17, s4
 ; GCN-O0-NEXT:    v_mov_b32_e32 v16, s3
-; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_512 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, v30
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, v29
 ; GCN-O0-NEXT:    v_mov_b32_e32 v3, v28
@@ -1399,7 +1399,7 @@ define amdgpu_kernel void @double15_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    v_mov_b32_e32 v34, s67
 ; GCN-O0-NEXT:    s_mov_b32 m0, s2
 ; GCN-O0-NEXT:    v_movrels_b32_e32 v0, v3
-; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_64 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s1
@@ -1663,7 +1663,7 @@ define amdgpu_kernel void @double16_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    v_mov_b32_e32 v34, s67
 ; GCN-O0-NEXT:    s_mov_b32 m0, s2
 ; GCN-O0-NEXT:    v_movrels_b32_e32 v0, v3
-; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_64 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v3, v0
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s1
@@ -1792,7 +1792,7 @@ define amdgpu_kernel void @float32_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-O0-NEXT:    v_mov_b32_e32 v34, s5
 ; GCN-O0-NEXT:    v_mov_b32_e32 v33, s4
 ; GCN-O0-NEXT:    v_mov_b32_e32 v32, s3
-; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_1024 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, v62
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, v61
 ; GCN-O0-NEXT:    v_mov_b32_e32 v3, v60
@@ -2889,7 +2889,7 @@ define float @float32_extelt_vec(i32 %sel) {
 ; GCN-O0-NEXT:    v_mov_b32_e32 v34, s6
 ; GCN-O0-NEXT:    v_mov_b32_e32 v33, s5
 ; GCN-O0-NEXT:    v_mov_b32_e32 v32, s4
-; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_1024 killed $exec
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, v62
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, v61
 ; GCN-O0-NEXT:    v_mov_b32_e32 v3, v60
@@ -3612,14 +3612,14 @@ define double @double16_extelt_vec(i32 %sel) {
 ; GCN-O0-NEXT:  ; %bb.6:
 ; GCN-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:272 ; 4-byte Folded Reload
-; GCN-O0-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_64 killed $exec
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, v0
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-O0-NEXT:    s_mov_b32 s4, 32
 ; GCN-O0-NEXT:    v_lshrrev_b64 v[1:2], s4, v[1:2]
-; GCN-O0-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $vgpr1_vgpr2 killed $exec
+; GCN-O0-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $vgpr1_64 killed $exec
 ; GCN-O0-NEXT:    v_readlane_b32 s67, v33, 15
 ; GCN-O0-NEXT:    v_readlane_b32 s66, v33, 14
 ; GCN-O0-NEXT:    v_readlane_b32 s65, v33, 13

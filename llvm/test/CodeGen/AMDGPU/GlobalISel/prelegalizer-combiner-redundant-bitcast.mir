@@ -23,16 +23,16 @@ name: s64_bitcast
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: s64_bitcast
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %src:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %src(<2 x s32>)
-    %src:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: %src:_(<2 x s32>) = COPY $vgpr0_64
+    ; CHECK-NEXT: $vgpr0_64 = COPY %src(<2 x s32>)
+    %src:_(<2 x s32>) = COPY $vgpr0_64
     %b1:_(s64) = G_BITCAST %src
     %b2:_(<2 x s32>) = G_BITCAST %b1
-    $vgpr0_vgpr1 = COPY %b2
+    $vgpr0_64 = COPY %b2
 ...
 
 ---
@@ -40,15 +40,15 @@ name: s64_bitcast_differentypes_to_single_bitcast
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: s64_bitcast_differentypes_to_single_bitcast
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %src:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: %src:_(<2 x s32>) = COPY $vgpr0_64
     ; CHECK-NEXT: %b2:_(<4 x s16>) = G_BITCAST %src(<2 x s32>)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %b2(<4 x s16>)
-    %src:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY %b2(<4 x s16>)
+    %src:_(<2 x s32>) = COPY $vgpr0_64
     %b1:_(s64) = G_BITCAST %src
     %b2:_(<4 x s16>) = G_BITCAST %b1
-    $vgpr0_vgpr1 = COPY %b2
+    $vgpr0_64 = COPY %b2
 ...

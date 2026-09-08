@@ -18,7 +18,7 @@ body:             |
 
     renamable $sgpr88_256 = COPY killed renamable $sgpr60_256
     renamable $sgpr56_256 = COPY killed renamable $sgpr88_256
-    renamable $vgpr12_vgpr13_vgpr14 = IMAGE_SAMPLE_V3_V2_gfx10 renamable $vgpr70_vgpr71, renamable $sgpr56_256, renamable $sgpr96_128, 7, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16)
+    renamable $vgpr12_96 = IMAGE_SAMPLE_V3_V2_gfx10 renamable $vgpr70_64, renamable $sgpr56_256, renamable $sgpr96_128, 7, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16)
     S_ENDPGM 0
 
 ...

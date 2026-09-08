@@ -19,15 +19,15 @@ machineFunctionInfo:
   occupancy:       10
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    liveins: $vgpr0_256
 
     ; CHECK-LABEL: name: no_introduce_vreg_1024
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK: liveins: $vgpr0_256
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_256 = COPY $vgpr0_256
     ; CHECK-NEXT: undef [[COPY1:%[0-9]+]].sub9:vreg_512 = COPY [[COPY]].sub0
     ; CHECK-NEXT: SI_RETURN implicit [[COPY1]]
-    %0:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    %0:vreg_256 = COPY $vgpr0_256
     undef %1.sub9:vreg_512 = COPY %0.sub0
     SI_RETURN implicit %1
 

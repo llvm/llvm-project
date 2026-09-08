@@ -25,10 +25,10 @@ body:             |
 
     renamable $sgpr0_128 = IMPLICIT_DEF
     renamable $vgpr1 = V_MOV_B32_e32 0, implicit $exec
-    renamable $vgpr1_vgpr2 = BUFFER_LOAD_FORMAT_XY_IDXEN killed renamable $vgpr1, killed renamable $sgpr0_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), addrspace 8)
+    renamable $vgpr1_64 = BUFFER_LOAD_FORMAT_XY_IDXEN killed renamable $vgpr1, killed renamable $sgpr0_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), addrspace 8)
 
   bb.3:
-    liveins: $vgpr0, $vgpr1_vgpr2
+    liveins: $vgpr0, $vgpr1_64
 
     EXP 0, killed renamable $vgpr0, killed renamable $vgpr1, renamable $vgpr2, renamable $vgpr0, 0, 0, 0, implicit $exec
     S_ENDPGM 0

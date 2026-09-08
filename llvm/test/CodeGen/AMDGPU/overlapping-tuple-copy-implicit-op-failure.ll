@@ -13,7 +13,7 @@ define amdgpu_kernel void @test_long_add4(<4 x i64> %arg) #0 {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
 ; CHECK-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
-; CHECK-NEXT:    ; kill: def $vgpr10_vgpr11_vgpr12_vgpr13 killed $vgpr10_vgpr11_vgpr12_vgpr13 def $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr10_128 killed $vgpr10_128 def $vgpr10_256 killed $exec
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v17, v3
 ; CHECK-NEXT:    v_mov_b32_e32 v16, v2
@@ -49,7 +49,7 @@ define amdgpu_kernel void @test_long_add4(<4 x i64> %arg) #0 {
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
 ; CHECK-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
-; CHECK-NEXT:    ; kill: def $vgpr10_vgpr11_vgpr12_vgpr13 killed $vgpr10_vgpr11_vgpr12_vgpr13 def $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr10_128 killed $vgpr10_128 def $vgpr10_256 killed $exec
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v17, v3
 ; CHECK-NEXT:    v_mov_b32_e32 v16, v2

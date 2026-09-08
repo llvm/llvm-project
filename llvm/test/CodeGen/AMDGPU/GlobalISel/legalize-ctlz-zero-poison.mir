@@ -23,14 +23,14 @@ name: ctlz_zero_poison_s32_s64
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: ctlz_zero_poison_s32_s64
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_64
     ; CHECK-NEXT: [[CTLZ_ZERO_POISON:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_POISON [[COPY]](s64)
     ; CHECK-NEXT: $vgpr0 = COPY [[CTLZ_ZERO_POISON]](s32)
-    %0:_(s64) = COPY $vgpr0_vgpr1
+    %0:_(s64) = COPY $vgpr0_64
     %1:_(s32) = G_CTLZ_ZERO_POISON %0
     $vgpr0 = COPY %1
 ...
@@ -40,17 +40,17 @@ name: ctlz_zero_poison_s64_s64
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: ctlz_zero_poison_s64_s64
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_64
     ; CHECK-NEXT: [[CTLZ_ZERO_POISON:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_POISON [[COPY]](s64)
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[CTLZ_ZERO_POISON]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
-    %0:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[ZEXT]](s64)
+    %0:_(s64) = COPY $vgpr0_64
     %1:_(s64) = G_CTLZ_ZERO_POISON %0
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...
 
 ---
@@ -99,19 +99,19 @@ name: ctlz_zero_poison_v2s32_v2s32
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: ctlz_zero_poison_v2s32_v2s32
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_64
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; CHECK-NEXT: [[CTLZ_ZERO_POISON:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_POISON [[UV]](s32)
     ; CHECK-NEXT: [[CTLZ_ZERO_POISON1:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_POISON [[UV1]](s32)
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[CTLZ_ZERO_POISON]](s32), [[CTLZ_ZERO_POISON1]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
-    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $vgpr0_64
     %1:_(<2 x s32>) = G_CTLZ_ZERO_POISON %0
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...
 
 ---
@@ -119,19 +119,19 @@ name: ctlz_zero_poison_v2s32_v2s64
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    liveins: $vgpr0_128
     ; CHECK-LABEL: name: ctlz_zero_poison_v2s32_v2s64
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_128
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_128
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
     ; CHECK-NEXT: [[CTLZ_ZERO_POISON:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_POISON [[UV]](s64)
     ; CHECK-NEXT: [[CTLZ_ZERO_POISON1:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_POISON [[UV1]](s64)
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[CTLZ_ZERO_POISON]](s32), [[CTLZ_ZERO_POISON1]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
-    %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    %0:_(<2 x s64>) = COPY $vgpr0_128
     %1:_(<2 x s32>) = G_CTLZ_ZERO_POISON %0
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...
 
 ---
@@ -192,20 +192,20 @@ name: ctlz_zero_poison_s33_s33
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: ctlz_zero_poison_s33_s33
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_64
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[C]](s32)
     ; CHECK-NEXT: [[CTLZ_ZERO_POISON:%[0-9]+]]:_(s32) = G_CTLZ_ZERO_POISON [[SHL]](s64)
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[CTLZ_ZERO_POISON]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[ZEXT]](s64)
-    %0:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[ZEXT]](s64)
+    %0:_(s64) = COPY $vgpr0_64
     %1:_(s33) = G_TRUNC %0
     %2:_(s33) = G_CTLZ_ZERO_POISON %1
     %3:_(s64) = G_ANYEXT %2
-    $vgpr0_vgpr1 = COPY %3
+    $vgpr0_64 = COPY %3
 ...

@@ -30,7 +30,7 @@ define void @issue63986(i64 %0, i64 %idxprom, ptr inreg %ptr) {
 ; CHECK-NEXT:    s_branch .LBB0_4
 ; CHECK-NEXT:  ; %bb.3:
 ; CHECK-NEXT:    s_mov_b64 s[4:5], -1
-; CHECK-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; CHECK-NEXT:    ; implicit-def: $vgpr6_64
 ; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; CHECK-NEXT:    s_cselect_b32 s4, 1, 0
 ; CHECK-NEXT:    s_cmp_lg_u32 s4, 1
@@ -171,7 +171,7 @@ define void @issue63986_reduced_expanded(i64 %idxprom) {
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB1_4
 ; CHECK-NEXT:  ; %bb.3:
 ; CHECK-NEXT:    s_mov_b64 s[6:7], -1
-; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; CHECK-NEXT:    ; implicit-def: $vgpr0_64
 ; CHECK-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; CHECK-NEXT:    s_cselect_b32 s6, 1, 0
 ; CHECK-NEXT:    s_cmp_lg_u32 s6, 1

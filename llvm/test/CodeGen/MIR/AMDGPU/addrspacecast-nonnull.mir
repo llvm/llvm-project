@@ -15,9 +15,9 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p3) = G_INTTOPTR [[COPY]](s32)
     ; CHECK-NEXT: [[ADDRSPACE_CAST:%[0-9]+]]:_(p0) = nonnull G_ADDRSPACE_CAST [[INTTOPTR]](p3)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[ADDRSPACE_CAST]](p0)
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[ADDRSPACE_CAST]](p0)
     %0:_(s32) = COPY $vgpr0
     %1:_(p3) = G_INTTOPTR %0
     %2:_(p0) = nonnull G_ADDRSPACE_CAST %1
-    $vgpr0_vgpr1 = COPY %2
+    $vgpr0_64 = COPY %2
 ...

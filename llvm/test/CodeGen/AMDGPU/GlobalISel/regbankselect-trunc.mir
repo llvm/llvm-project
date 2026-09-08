@@ -24,13 +24,13 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GFX-LABEL: name: trunc_i64_to_i32_v
-    ; GFX: liveins: $vgpr0_vgpr1
+    ; GFX: liveins: $vgpr0_64
     ; GFX-NEXT: {{  $}}
-    ; GFX-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; GFX-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_64
     ; GFX-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s32) = G_TRUNC [[COPY]](s64)
-    %0:_(s64) = COPY $vgpr0_vgpr1
+    %0:_(s64) = COPY $vgpr0_64
     %1:_(s32) = G_TRUNC %0
 ...
 
@@ -57,11 +57,11 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GFX-LABEL: name: trunc_i64_to_i1_v
-    ; GFX: liveins: $vgpr0_vgpr1
+    ; GFX: liveins: $vgpr0_64
     ; GFX-NEXT: {{  $}}
-    ; GFX-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; GFX-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_64
     ; GFX-NEXT: [[UV:%[0-9]+]]:vgpr(i32), [[UV1:%[0-9]+]]:vgpr(i32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; GFX-NEXT: [[C:%[0-9]+]]:vgpr(i32) = G_CONSTANT i32 1
     ; GFX-NEXT: [[AND:%[0-9]+]]:vgpr(i32) = G_AND [[UV]], [[C]]
@@ -70,7 +70,7 @@ body: |
     ; GFX-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[AND]](i32), [[AND1]](i32)
     ; GFX-NEXT: [[C2:%[0-9]+]]:vgpr(s64) = G_CONSTANT i64 0
     ; GFX-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(ne), [[MV]](s64), [[C2]]
-    %0:_(s64) = COPY $vgpr0_vgpr1
+    %0:_(s64) = COPY $vgpr0_64
     %1:_(s1) = G_TRUNC %0
 ...
 

@@ -562,7 +562,7 @@ define amdgpu_kernel void @xor_cf(ptr addrspace(1) %out, ptr addrspace(1) %in, i
 ; SI-NEXT:    s_branch .LBB14_3
 ; SI-NEXT:  .LBB14_2:
 ; SI-NEXT:    s_mov_b64 s[8:9], -1
-; SI-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; SI-NEXT:    ; implicit-def: $vgpr0_64
 ; SI-NEXT:  .LBB14_3: ; %Flow
 ; SI-NEXT:    s_and_b64 s[2:3], s[8:9], exec
 ; SI-NEXT:    s_cselect_b32 s2, 1, 0
@@ -594,7 +594,7 @@ define amdgpu_kernel void @xor_cf(ptr addrspace(1) %out, ptr addrspace(1) %in, i
 ; VI-NEXT:    s_branch .LBB14_3
 ; VI-NEXT:  .LBB14_2:
 ; VI-NEXT:    s_mov_b64 s[8:9], -1
-; VI-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; VI-NEXT:    ; implicit-def: $vgpr0_64
 ; VI-NEXT:  .LBB14_3: ; %Flow
 ; VI-NEXT:    s_and_b64 s[2:3], s[8:9], exec
 ; VI-NEXT:    s_cselect_b32 s2, 1, 0

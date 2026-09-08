@@ -42,8 +42,8 @@ define amdgpu_cs void @memmove_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src
 ; LOOP-NEXT:    buffer_store_byte v4, v[0:1], s[4:7], 0 addr64 offset:1
 ; LOOP-NEXT:    buffer_store_byte v3, v[0:1], s[4:7], 0 addr64 offset:2
 ; LOOP-NEXT:    buffer_store_byte v2, v[0:1], s[4:7], 0 addr64 offset:3
-; LOOP-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; LOOP-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; LOOP-NEXT:    ; implicit-def: $vgpr2_64
+; LOOP-NEXT:    ; implicit-def: $vgpr0_64
 ; LOOP-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; LOOP-NEXT:    s_cbranch_execz .LBB0_2
 ; LOOP-NEXT:  .LBB0_4: ; %memmove_bwd_residual

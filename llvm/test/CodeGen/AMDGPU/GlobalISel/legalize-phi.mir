@@ -121,9 +121,9 @@ body: |
   ; CHECK-LABEL: name: test_phi_v3s16
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1, $vgpr2
+  ; CHECK-NEXT:   liveins: $vgpr0_64, $vgpr2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_64
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
@@ -172,13 +172,13 @@ body: |
   ; CHECK-NEXT:   [[OR3:%[0-9]+]]:_(i32) = G_OR [[C7]], [[SHL3]]
   ; CHECK-NEXT:   [[BITCAST5:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR3]](i32)
   ; CHECK-NEXT:   [[CONCAT_VECTORS2:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[UV2]](<2 x s16>), [[UV3]](<2 x s16>), [[BITCAST5]](<2 x s16>)
-  ; CHECK-NEXT:   $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS2]](<6 x s16>)
+  ; CHECK-NEXT:   $vgpr0_96 = COPY [[CONCAT_VECTORS2]](<6 x s16>)
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
 
-    %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    %0:_(<4 x s16>) = COPY $vgpr0_64
     %1:_(s32) = COPY $vgpr2
     %2:_(s32) = G_CONSTANT i32 0
     %3:_(s1) = G_ICMP intpred(eq), %1, %2
@@ -196,7 +196,7 @@ body: |
     %6:_(<3 x s16>) = G_PHI %4, %bb.0, %5, %bb.1
     %7:_(<3 x s16>) = G_IMPLICIT_DEF
     %8:_(<6 x s16>) = G_CONCAT_VECTORS %6, %7
-    $vgpr0_vgpr1_vgpr2 = COPY %8
+    $vgpr0_96 = COPY %8
     S_SETPC_B64 undef $sgpr30_64
 ...
 
@@ -209,9 +209,9 @@ body: |
   ; CHECK-LABEL: name: test_phi_v4s16
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1, $vgpr2
+  ; CHECK-NEXT:   liveins: $vgpr0_64, $vgpr2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_64
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
@@ -251,13 +251,13 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(<4 x s16>) = G_PHI [[COPY]](<4 x s16>), %bb.0, [[CONCAT_VECTORS]](<4 x s16>), %bb.1
-  ; CHECK-NEXT:   $vgpr0_vgpr1 = COPY [[PHI]](<4 x s16>)
+  ; CHECK-NEXT:   $vgpr0_64 = COPY [[PHI]](<4 x s16>)
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
 
-    %0:_(<4 x s16>) = COPY $vgpr0_vgpr1
+    %0:_(<4 x s16>) = COPY $vgpr0_64
     %1:_(s32) = COPY $vgpr2
     %2:_(s32) = G_CONSTANT i32 0
     %3:_(s1) = G_ICMP intpred(eq), %1, %2
@@ -272,7 +272,7 @@ body: |
 
   bb.2:
     %5:_(<4 x s16>) = G_PHI %0, %bb.0, %4, %bb.1
-    $vgpr0_vgpr1 = COPY %5
+    $vgpr0_64 = COPY %5
     S_SETPC_B64 undef $sgpr30_64
 
 ...
@@ -284,9 +284,9 @@ body: |
   ; CHECK-LABEL: name: test_phi_v2s32
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1, $vgpr2
+  ; CHECK-NEXT:   liveins: $vgpr0_64, $vgpr2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_64
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
@@ -305,13 +305,13 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(<2 x s32>) = G_PHI [[COPY]](<2 x s32>), %bb.0, [[BUILD_VECTOR]](<2 x s32>), %bb.1
-  ; CHECK-NEXT:   $vgpr0_vgpr1 = COPY [[PHI]](<2 x s32>)
+  ; CHECK-NEXT:   $vgpr0_64 = COPY [[PHI]](<2 x s32>)
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
 
-    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %0:_(<2 x s32>) = COPY $vgpr0_64
     %1:_(s32) = COPY $vgpr2
     %2:_(s32) = G_CONSTANT i32 0
     %3:_(s1) = G_ICMP intpred(eq), %1, %2
@@ -326,7 +326,7 @@ body: |
 
   bb.2:
     %5:_(<2 x s32>) = G_PHI %0, %bb.0, %4, %bb.1
-    $vgpr0_vgpr1 = COPY %5
+    $vgpr0_64 = COPY %5
     S_SETPC_B64 undef $sgpr30_64
 
 ...
@@ -338,9 +338,9 @@ body: |
   ; CHECK-LABEL: name: test_phi_v3s32
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1_vgpr2, $vgpr3
+  ; CHECK-NEXT:   liveins: $vgpr0_96, $vgpr3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_96
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr3
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
@@ -360,13 +360,13 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(<3 x s32>) = G_PHI [[COPY]](<3 x s32>), %bb.0, [[BUILD_VECTOR]](<3 x s32>), %bb.1
-  ; CHECK-NEXT:   $vgpr0_vgpr1_vgpr2 = COPY [[PHI]](<3 x s32>)
+  ; CHECK-NEXT:   $vgpr0_96 = COPY [[PHI]](<3 x s32>)
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1_vgpr2, $vgpr3
+    liveins: $vgpr0_96, $vgpr3
 
-    %0:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
+    %0:_(<3 x s32>) = COPY $vgpr0_96
     %1:_(s32) = COPY $vgpr3
     %2:_(s32) = G_CONSTANT i32 0
     %3:_(s1) = G_ICMP intpred(eq), %1, %2
@@ -381,7 +381,7 @@ body: |
 
   bb.2:
     %5:_(<3 x s32>) = G_PHI %0, %bb.0, %4, %bb.1
-    $vgpr0_vgpr1_vgpr2 = COPY %5
+    $vgpr0_96 = COPY %5
     S_SETPC_B64 undef $sgpr30_64
 
 ...
@@ -393,9 +393,9 @@ body: |
   ; CHECK-LABEL: name: test_phi_v4s32
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+  ; CHECK-NEXT:   liveins: $vgpr0_128, $vgpr4
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_128
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr4
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
@@ -416,13 +416,13 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(<4 x s32>) = G_PHI [[COPY]](<4 x s32>), %bb.0, [[BUILD_VECTOR]](<4 x s32>), %bb.1
-  ; CHECK-NEXT:   $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[PHI]](<4 x s32>)
+  ; CHECK-NEXT:   $vgpr0_128 = COPY [[PHI]](<4 x s32>)
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    liveins: $vgpr0_128, $vgpr4
 
-    %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %0:_(<4 x s32>) = COPY $vgpr0_128
     %1:_(s32) = COPY $vgpr4
     %2:_(s32) = G_CONSTANT i32 0
     %3:_(s1) = G_ICMP intpred(eq), %1, %2
@@ -437,7 +437,7 @@ body: |
 
   bb.2:
     %5:_(<4 x s32>) = G_PHI %0, %bb.0, %4, %bb.1
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %5
+    $vgpr0_128 = COPY %5
     S_SETPC_B64 undef $sgpr30_64
 
 ...
@@ -449,9 +449,9 @@ body: |
   ; CHECK-LABEL: name: test_phi_v8s32
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8
+  ; CHECK-NEXT:   liveins: $vgpr0_256, $vgpr8
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<8 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<8 x s32>) = COPY $vgpr0_256
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr8
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
@@ -476,13 +476,13 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(<8 x s32>) = G_PHI [[COPY]](<8 x s32>), %bb.0, [[BUILD_VECTOR]](<8 x s32>), %bb.1
-  ; CHECK-NEXT:   $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[PHI]](<8 x s32>)
+  ; CHECK-NEXT:   $vgpr0_256 = COPY [[PHI]](<8 x s32>)
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8
+    liveins: $vgpr0_256, $vgpr8
 
-    %0:_(<8 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    %0:_(<8 x s32>) = COPY $vgpr0_256
     %1:_(s32) = COPY $vgpr8
     %2:_(s32) = G_CONSTANT i32 0
     %3:_(s1) = G_ICMP intpred(eq), %1, %2
@@ -497,7 +497,7 @@ body: |
 
   bb.2:
     %5:_(<8 x s32>) = G_PHI %0, %bb.0, %4, %bb.1
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %5
+    $vgpr0_256 = COPY %5
     S_SETPC_B64 undef $sgpr30_64
 
 ...
@@ -509,7 +509,7 @@ body: |
   ; CHECK-LABEL: name: test_phi_v16s32
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+  ; CHECK-NEXT:   liveins: $vgpr0_128, $vgpr4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
@@ -546,7 +546,7 @@ body: |
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_64, implicit [[PHI]](<16 x s32>)
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    liveins: $vgpr0_128, $vgpr4
 
     %0:_(<16 x s32>) = G_IMPLICIT_DEF
     %1:_(s32) = COPY $vgpr4
@@ -575,7 +575,7 @@ body: |
   ; CHECK-LABEL: name: test_phi_v32s32
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+  ; CHECK-NEXT:   liveins: $vgpr0_128, $vgpr4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(<32 x s32>) = G_IMPLICIT_DEF
@@ -628,7 +628,7 @@ body: |
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_64, implicit [[PHI]](<32 x s32>)
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    liveins: $vgpr0_128, $vgpr4
 
     %0:_(<32 x s32>) = G_IMPLICIT_DEF
     %1:_(s32) = COPY $vgpr4
@@ -657,7 +657,7 @@ body: |
   ; CHECK-LABEL: name: test_phi_v64s32
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+  ; CHECK-NEXT:   liveins: $vgpr0_128, $vgpr4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(<16 x s32>) = G_IMPLICIT_DEF
@@ -749,7 +749,7 @@ body: |
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_64, implicit [[CONCAT_VECTORS]](<64 x s32>)
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    liveins: $vgpr0_128, $vgpr4
 
     %0:_(<64 x s32>) = G_IMPLICIT_DEF
     %1:_(s32) = COPY $vgpr4
@@ -778,9 +778,9 @@ body: |
   ; CHECK-LABEL: name: test_phi_s64
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1, $vgpr2
+  ; CHECK-NEXT:   liveins: $vgpr0_64, $vgpr2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_64
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
@@ -799,13 +799,13 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[COPY]](s64), %bb.0, [[MV]](s64), %bb.1
-  ; CHECK-NEXT:   $vgpr0_vgpr1 = COPY [[PHI]](s64)
+  ; CHECK-NEXT:   $vgpr0_64 = COPY [[PHI]](s64)
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
 
-    %0:_(s64) = COPY $vgpr0_vgpr1
+    %0:_(s64) = COPY $vgpr0_64
     %1:_(s32) = COPY $vgpr2
     %2:_(s32) = G_CONSTANT i32 0
     %3:_(s1) = G_ICMP intpred(eq), %1, %2
@@ -820,7 +820,7 @@ body: |
 
   bb.2:
     %5:_(s64) = G_PHI %0, %bb.0, %4, %bb.1
-    $vgpr0_vgpr1 = COPY %5
+    $vgpr0_64 = COPY %5
     S_SETPC_B64 undef $sgpr30_64
 
 ...
@@ -832,9 +832,9 @@ body: |
   ; CHECK-LABEL: name: test_phi_v2s64
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+  ; CHECK-NEXT:   liveins: $vgpr0_128, $vgpr4
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_128
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr4
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
@@ -861,13 +861,13 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(<2 x s64>) = G_PHI [[COPY]](<2 x s64>), %bb.0, [[BUILD_VECTOR]](<2 x s64>), %bb.1
-  ; CHECK-NEXT:   $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[PHI]](<2 x s64>)
+  ; CHECK-NEXT:   $vgpr0_128 = COPY [[PHI]](<2 x s64>)
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    liveins: $vgpr0_128, $vgpr4
 
-    %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %0:_(<2 x s64>) = COPY $vgpr0_128
     %1:_(s32) = COPY $vgpr4
     %2:_(s32) = G_CONSTANT i32 0
     %3:_(s1) = G_ICMP intpred(eq), %1, %2
@@ -882,7 +882,7 @@ body: |
 
   bb.2:
     %5:_(<2 x s64>) = G_PHI %0, %bb.0, %4, %bb.1
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %5
+    $vgpr0_128 = COPY %5
     S_SETPC_B64 undef $sgpr30_64
 
 ...
@@ -894,9 +894,9 @@ body: |
   ; CHECK-LABEL: name: test_phi_v3s64
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8
+  ; CHECK-NEXT:   liveins: $vgpr0_256, $vgpr8
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s64>) = COPY $vgpr0_256
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr8
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
@@ -931,13 +931,13 @@ body: |
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[UV16:%[0-9]+]]:_(s64), [[UV17:%[0-9]+]]:_(s64), [[UV18:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[PHI]](<3 x s64>)
   ; CHECK-NEXT:   [[BUILD_VECTOR2:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[UV16]](s64), [[UV17]](s64), [[UV18]](s64), [[DEF]](s64)
-  ; CHECK-NEXT:   $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BUILD_VECTOR2]](<4 x s64>)
+  ; CHECK-NEXT:   $vgpr0_256 = COPY [[BUILD_VECTOR2]](<4 x s64>)
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8
+    liveins: $vgpr0_256, $vgpr8
 
-    %0:_(<4 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    %0:_(<4 x s64>) = COPY $vgpr0_256
     %1:_(s32) = COPY $vgpr8
     %2:_(s32) = G_CONSTANT i32 0
     %3:_(s1) = G_ICMP intpred(eq), %1, %2
@@ -955,7 +955,7 @@ body: |
     %6:_(<3 x s64>) = G_PHI %4, %bb.0, %5, %bb.1
     %7:_(<4 x s64>) = G_IMPLICIT_DEF
     %8:_(<4 x s64>) = G_INSERT %7, %6, 0
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %8
+    $vgpr0_256 = COPY %8
     S_SETPC_B64 undef $sgpr30_64
 
 ...
@@ -1071,9 +1071,9 @@ body: |
   ; CHECK-LABEL: name: test_phi_p0
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1, $vgpr2
+  ; CHECK-NEXT:   liveins: $vgpr0_64, $vgpr2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_64
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
@@ -1089,13 +1089,13 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(p0) = G_PHI [[COPY]](p0), %bb.0, [[PTR_ADD]](p0), %bb.1
-  ; CHECK-NEXT:   $vgpr0_vgpr1 = COPY [[PHI]](p0)
+  ; CHECK-NEXT:   $vgpr0_64 = COPY [[PHI]](p0)
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
 
-    %0:_(p0) = COPY $vgpr0_vgpr1
+    %0:_(p0) = COPY $vgpr0_64
     %1:_(s32) = COPY $vgpr2
     %2:_(s32) = G_CONSTANT i32 0
     %3:_(s1) = G_ICMP intpred(eq), %1, %2
@@ -1111,7 +1111,7 @@ body: |
 
   bb.2:
     %6:_(p0) = G_PHI %0, %bb.0, %5, %bb.1
-    $vgpr0_vgpr1 = COPY %6
+    $vgpr0_64 = COPY %6
     S_SETPC_B64 undef $sgpr30_64
 
 ...
@@ -1123,9 +1123,9 @@ body: |
   ; CHECK-LABEL: name: test_phi_p1
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1, $vgpr2
+  ; CHECK-NEXT:   liveins: $vgpr0_64, $vgpr2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_64
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
@@ -1141,13 +1141,13 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(p1) = G_PHI [[COPY]](p1), %bb.0, [[PTR_ADD]](p1), %bb.1
-  ; CHECK-NEXT:   $vgpr0_vgpr1 = COPY [[PHI]](p1)
+  ; CHECK-NEXT:   $vgpr0_64 = COPY [[PHI]](p1)
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
 
-    %0:_(p1) = COPY $vgpr0_vgpr1
+    %0:_(p1) = COPY $vgpr0_64
     %1:_(s32) = COPY $vgpr2
     %2:_(s32) = G_CONSTANT i32 0
     %3:_(s1) = G_ICMP intpred(eq), %1, %2
@@ -1163,7 +1163,7 @@ body: |
 
   bb.2:
     %6:_(p1) = G_PHI %0, %bb.0, %5, %bb.1
-    $vgpr0_vgpr1 = COPY %6
+    $vgpr0_64 = COPY %6
     S_SETPC_B64 undef $sgpr30_64
 
 ...
@@ -1175,9 +1175,9 @@ body: |
   ; CHECK-LABEL: name: test_phi_p4
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1, $vgpr2
+  ; CHECK-NEXT:   liveins: $vgpr0_64, $vgpr2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_64
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
@@ -1193,13 +1193,13 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(p4) = G_PHI [[COPY]](p4), %bb.0, [[PTR_ADD]](p4), %bb.1
-  ; CHECK-NEXT:   $vgpr0_vgpr1 = COPY [[PHI]](p4)
+  ; CHECK-NEXT:   $vgpr0_64 = COPY [[PHI]](p4)
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
 
-    %0:_(p4) = COPY $vgpr0_vgpr1
+    %0:_(p4) = COPY $vgpr0_64
     %1:_(s32) = COPY $vgpr2
     %2:_(s32) = G_CONSTANT i32 0
     %3:_(s1) = G_ICMP intpred(eq), %1, %2
@@ -1215,7 +1215,7 @@ body: |
 
   bb.2:
     %6:_(p4) = G_PHI %0, %bb.0, %5, %bb.1
-    $vgpr0_vgpr1 = COPY %6
+    $vgpr0_64 = COPY %6
     S_SETPC_B64 undef $sgpr30_64
 
 ...
@@ -1227,9 +1227,9 @@ body: |
   ; CHECK-LABEL: name: test_phi_p9999
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1, $vgpr2
+  ; CHECK-NEXT:   liveins: $vgpr0_64, $vgpr2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p9999) = COPY $vgpr0_vgpr1
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p9999) = COPY $vgpr0_64
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr2
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
@@ -1244,13 +1244,13 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(p9999) = G_PHI [[COPY]](p9999), %bb.0, [[DEF]](p9999), %bb.1
-  ; CHECK-NEXT:   $vgpr0_vgpr1 = COPY [[PHI]](p9999)
+  ; CHECK-NEXT:   $vgpr0_64 = COPY [[PHI]](p9999)
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
 
-    %0:_(p9999) = COPY $vgpr0_vgpr1
+    %0:_(p9999) = COPY $vgpr0_64
     %1:_(s32) = COPY $vgpr2
     %2:_(s32) = G_CONSTANT i32 0
     %3:_(s1) = G_ICMP intpred(eq), %1, %2
@@ -1265,7 +1265,7 @@ body: |
 
   bb.2:
     %5:_(p9999) = G_PHI %0, %bb.0, %4, %bb.1
-    $vgpr0_vgpr1 = COPY %5
+    $vgpr0_64 = COPY %5
     S_SETPC_B64 undef $sgpr30_64
 
 ...
@@ -1499,9 +1499,9 @@ body: |
   ; CHECK-LABEL: name: test_phi_s128
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+  ; CHECK-NEXT:   liveins: $vgpr0_128, $vgpr4
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_128
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr4
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
@@ -1522,13 +1522,13 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s128) = G_PHI [[COPY]](s128), %bb.0, [[MV]](s128), %bb.1
-  ; CHECK-NEXT:   $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[PHI]](s128)
+  ; CHECK-NEXT:   $vgpr0_128 = COPY [[PHI]](s128)
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
+    liveins: $vgpr0_128, $vgpr4
 
-    %0:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %0:_(s128) = COPY $vgpr0_128
     %1:_(s32) = COPY $vgpr4
     %2:_(s32) = G_CONSTANT i32 0
     %3:_(s1) = G_ICMP intpred(eq), %1, %2
@@ -1543,7 +1543,7 @@ body: |
 
   bb.2:
     %5:_(s128) = G_PHI %0, %bb.0, %4, %bb.1
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %5
+    $vgpr0_128 = COPY %5
     S_SETPC_B64 undef $sgpr30_64
 
 ...
@@ -1555,9 +1555,9 @@ body: |
   ; CHECK-LABEL: name: test_phi_s256
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK-NEXT:   liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8
+  ; CHECK-NEXT:   liveins: $vgpr0_256, $vgpr8
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s256) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s256) = COPY $vgpr0_256
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr8
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[C]]
@@ -1582,13 +1582,13 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   [[PHI:%[0-9]+]]:_(s256) = G_PHI [[COPY]](s256), %bb.0, [[MV]](s256), %bb.1
-  ; CHECK-NEXT:   $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[PHI]](s256)
+  ; CHECK-NEXT:   $vgpr0_256 = COPY [[PHI]](s256)
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8
+    liveins: $vgpr0_256, $vgpr8
 
-    %0:_(s256) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    %0:_(s256) = COPY $vgpr0_256
     %1:_(s32) = COPY $vgpr8
     %2:_(s32) = G_CONSTANT i32 0
     %3:_(s1) = G_ICMP intpred(eq), %1, %2
@@ -1603,7 +1603,7 @@ body: |
 
   bb.2:
     %5:_(s256) = G_PHI %0, %bb.0, %4, %bb.1
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %5
+    $vgpr0_256 = COPY %5
     S_SETPC_B64 undef $sgpr30_64
 
 ...
@@ -1660,7 +1660,7 @@ body: |
   ; CHECK-NEXT:   [[AND4:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C5]]
   ; CHECK-NEXT:   [[AND5:%[0-9]+]]:_(s32) = G_AND [[ANYEXT1]], [[C5]]
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[AND4]](s32), [[AND5]](s32)
-  ; CHECK-NEXT:   $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
+  ; CHECK-NEXT:   $vgpr0_64 = COPY [[BUILD_VECTOR]](<2 x s32>)
   ; CHECK-NEXT:   S_SETPC_B64 undef $sgpr30_64
   bb.0:
     successors: %bb.1, %bb.2
@@ -1685,6 +1685,6 @@ body: |
   bb.2:
     %8:_(<2 x s1>) = G_PHI %5, %bb.0, %7, %bb.1
     %9:_(<2 x s32>) = G_ZEXT %8
-    $vgpr0_vgpr1 = COPY %9
+    $vgpr0_64 = COPY %9
     S_SETPC_B64 undef $sgpr30_64
 ...

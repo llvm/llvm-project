@@ -7,17 +7,17 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
 
     ; CHECK-LABEL: name: nusw_ptr_add
-    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %ptr:_(p0) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %off:_(s64) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: %ptr:_(p0) = COPY $vgpr0_64
+    ; CHECK-NEXT: %off:_(s64) = COPY $vgpr2_64
     ; CHECK-NEXT: %ret:_(p0) = nuw nusw G_PTR_ADD %ptr, %off(s64)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %ret(p0)
-    %ptr:_(p0) = COPY $vgpr0_vgpr1
-    %off:_(s64) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: $vgpr0_64 = COPY %ret(p0)
+    %ptr:_(p0) = COPY $vgpr0_64
+    %off:_(s64) = COPY $vgpr2_64
     %ret:_(p0) = nuw nusw G_PTR_ADD %ptr, %off
-    $vgpr0_vgpr1 = COPY %ret
+    $vgpr0_64 = COPY %ret
 ...

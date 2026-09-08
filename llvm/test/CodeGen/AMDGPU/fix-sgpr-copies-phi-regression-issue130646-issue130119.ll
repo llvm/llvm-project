@@ -38,7 +38,7 @@ define double @issue130646(i64 %arg) {
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_1
 ; CHECK-NEXT:  ; %bb.4: ; in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    s_mov_b64 s[6:7], -1
-; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; CHECK-NEXT:    ; implicit-def: $vgpr2_64
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[8:9]
 ; CHECK-NEXT:    s_branch .LBB0_2
 ; CHECK-NEXT:  .LBB0_5: ; %for.cond.cleanup

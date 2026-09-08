@@ -153,8 +153,8 @@ define float @test_vector_output() nounwind {
   ; CHECK-LABEL: name: test_vector_output
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   INLINEASM &"v_add_f64 $0, 0, 0", sideeffect attdialect, regdef, implicit-def $vgpr14_vgpr15
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr14_vgpr15
+  ; CHECK-NEXT:   INLINEASM &"v_add_f64 $0, 0, 0", sideeffect attdialect, regdef, implicit-def $vgpr14_64
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr14_64
   ; CHECK-NEXT:   [[EVEC:%[0-9]+]]:_(f32) = G_EXTRACT_VECTOR_ELT [[COPY]](<2 x f32>), [[C]](i32)
   ; CHECK-NEXT:   $vgpr0 = COPY [[EVEC]](f32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0

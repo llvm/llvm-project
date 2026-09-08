@@ -23,14 +23,14 @@ registers:
   - { id: 13, class: vgpr_32 }
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr30_64
+    liveins: $vgpr0_64, $vgpr2_64, $sgpr30_64
 
     ; SDWA-LABEL: name: add_f16_u32_preserve
-    ; SDWA: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr30_64
+    ; SDWA: liveins: $vgpr0_64, $vgpr2_64, $sgpr30_64
     ; SDWA-NEXT: {{  $}}
     ; SDWA-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
-    ; SDWA-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; SDWA-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; SDWA-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_64
+    ; SDWA-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
     ; SDWA-NEXT: [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
     ; SDWA-NEXT: [[FLAT_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
     ; SDWA-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 65535, [[FLAT_LOAD_DWORD]], implicit $exec
@@ -43,8 +43,8 @@ body:             |
     ; SDWA-NEXT: $sgpr30_64 = COPY [[COPY]]
     ; SDWA-NEXT: S_SETPC_B64_return $sgpr30_64
     %2 = COPY $sgpr30_64
-    %1 = COPY $vgpr2_vgpr3
-    %0 = COPY $vgpr0_vgpr1
+    %1 = COPY $vgpr2_64
+    %0 = COPY $vgpr0_64
     %3 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
     %4 = FLAT_LOAD_DWORD %1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
 
@@ -83,14 +83,14 @@ registers:
   - { id: 17, class: vgpr_32 }
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr30_64
+    liveins: $vgpr0_64, $vgpr2_64, $sgpr30_64
 
     ; SDWA-LABEL: name: sdwa_preserve_keep
-    ; SDWA: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr30_64
+    ; SDWA: liveins: $vgpr0_64, $vgpr2_64, $sgpr30_64
     ; SDWA-NEXT: {{  $}}
     ; SDWA-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
-    ; SDWA-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; SDWA-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; SDWA-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_64
+    ; SDWA-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
     ; SDWA-NEXT: [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
     ; SDWA-NEXT: [[FLAT_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
     ; SDWA-NEXT: [[V_LSHRREV_B16_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B16_e64 8, [[FLAT_LOAD_DWORD]], implicit $exec
@@ -100,8 +100,8 @@ body:             |
     ; SDWA-NEXT: FLAT_STORE_DWORD [[COPY2]], [[V_MOV_B32_sdwa]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
     ; SDWA-NEXT: S_ENDPGM 0
     %2 = COPY $sgpr30_64
-    %1 = COPY $vgpr2_vgpr3
-    %0 = COPY $vgpr0_vgpr1
+    %1 = COPY $vgpr2_64
+    %0 = COPY $vgpr0_64
     %3 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
     %4 = FLAT_LOAD_DWORD %1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
 
@@ -132,14 +132,14 @@ registers:
   - { id: 17, class: vgpr_32 }
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr30_64
+    liveins: $vgpr0_64, $vgpr2_64, $sgpr30_64
 
     ; SDWA-LABEL: name: sdwa_preserve_remove
-    ; SDWA: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr30_64
+    ; SDWA: liveins: $vgpr0_64, $vgpr2_64, $sgpr30_64
     ; SDWA-NEXT: {{  $}}
     ; SDWA-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
-    ; SDWA-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; SDWA-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; SDWA-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_64
+    ; SDWA-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
     ; SDWA-NEXT: [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
     ; SDWA-NEXT: [[FLAT_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
     ; SDWA-NEXT: [[V_LSHRREV_B16_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B16_e64 8, [[FLAT_LOAD_DWORD]], implicit $exec
@@ -149,8 +149,8 @@ body:             |
     ; SDWA-NEXT: FLAT_STORE_DWORD [[COPY2]], [[V_MOV_B32_sdwa]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32))
     ; SDWA-NEXT: S_ENDPGM 0
     %2 = COPY $sgpr30_64
-    %1 = COPY $vgpr2_vgpr3
-    %0 = COPY $vgpr0_vgpr1
+    %1 = COPY $vgpr2_64
+    %0 = COPY $vgpr0_64
     %3 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
     %4 = FLAT_LOAD_DWORD %1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
 
@@ -169,11 +169,11 @@ body:             |
   ; SDWA-LABEL: name: add_f16_u32_preserve_different_bb
   ; SDWA: bb.0:
   ; SDWA-NEXT:   successors: %bb.1(0x80000000)
-  ; SDWA-NEXT:   liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr30_64
+  ; SDWA-NEXT:   liveins: $vgpr0_64, $vgpr2_64, $sgpr30_64
   ; SDWA-NEXT: {{  $}}
   ; SDWA-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_64
-  ; SDWA-NEXT:   [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-  ; SDWA-NEXT:   [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; SDWA-NEXT:   [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_64
+  ; SDWA-NEXT:   [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
   ; SDWA-NEXT:   [[FLAT_LOAD_DWORD:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
   ; SDWA-NEXT:   [[FLAT_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[COPY1]], 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
   ; SDWA-NEXT:   [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 65535, [[FLAT_LOAD_DWORD]], implicit $exec
@@ -192,11 +192,11 @@ body:             |
   ; SDWA-NEXT:   $sgpr30_64 = COPY [[COPY]]
   ; SDWA-NEXT:   S_SETPC_B64_return $sgpr30_64
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr30_64
+    liveins: $vgpr0_64, $vgpr2_64, $sgpr30_64
 
     %2:sreg_64 = COPY $sgpr30_64
-    %1:vreg_64 = COPY $vgpr2_vgpr3
-    %0:vreg_64 = COPY $vgpr0_vgpr1
+    %1:vreg_64 = COPY $vgpr2_64
+    %0:vreg_64 = COPY $vgpr0_64
     %3:vgpr_32 = FLAT_LOAD_DWORD %0, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
     %4:vgpr_32 = FLAT_LOAD_DWORD %1, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32))
 

@@ -18,10 +18,10 @@ body: |
     ; CI-NEXT: [[INTTOPTR:%[0-9]+]]:_(p4) = G_INTTOPTR [[ZEXT]](i64)
     ; CI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[INTTOPTR]](p4) :: (load (s32), addrspace 6)
     ; CI-NEXT: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[LOAD]](s32)
-    ; CI-NEXT: $vgpr0_vgpr1 = COPY [[ZEXT1]](s64)
+    ; CI-NEXT: $vgpr0_64 = COPY [[ZEXT1]](s64)
     %0:_(p6) = COPY $sgpr0
     %1:_(s64) = G_ZEXTLOAD %0 :: (load (s32), align 4, addrspace 6)
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...
 
 ---
@@ -39,10 +39,10 @@ body: |
     ; CI-NEXT: [[INTTOPTR:%[0-9]+]]:_(p4) = G_INTTOPTR [[ZEXT]](i64)
     ; CI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[INTTOPTR]](p4) :: (load (s32), align 2, addrspace 6)
     ; CI-NEXT: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[LOAD]](s32)
-    ; CI-NEXT: $vgpr0_vgpr1 = COPY [[ZEXT1]](s64)
+    ; CI-NEXT: $vgpr0_64 = COPY [[ZEXT1]](s64)
     %0:_(p6) = COPY $sgpr0
     %1:_(s64) = G_ZEXTLOAD %0 :: (load (s32), align 2, addrspace 6)
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...
 
 ---
@@ -60,10 +60,10 @@ body: |
     ; CI-NEXT: [[INTTOPTR:%[0-9]+]]:_(p4) = G_INTTOPTR [[ZEXT]](i64)
     ; CI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[INTTOPTR]](p4) :: (load (s32), align 1, addrspace 6)
     ; CI-NEXT: [[ZEXT1:%[0-9]+]]:_(s64) = G_ZEXT [[LOAD]](s32)
-    ; CI-NEXT: $vgpr0_vgpr1 = COPY [[ZEXT1]](s64)
+    ; CI-NEXT: $vgpr0_64 = COPY [[ZEXT1]](s64)
     %0:_(p6) = COPY $sgpr0
     %1:_(s64) = G_ZEXTLOAD %0 :: (load (s32), align 1, addrspace 6)
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...
 
 ---

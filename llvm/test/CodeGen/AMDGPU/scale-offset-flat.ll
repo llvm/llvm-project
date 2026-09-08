@@ -429,7 +429,7 @@ define amdgpu_ps <2 x float> @flat_atomicrmw_b64_rtn_idxprom(ptr align 8 inreg %
 ; SDAG-NEXT:    v_xor_b32_e32 v0, src_flat_scratch_base_hi, v3
 ; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; SDAG-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 0x3ffffff, v0
-; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; SDAG-NEXT:    ; implicit-def: $vgpr0_64
 ; SDAG-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; SDAG-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; SDAG-NEXT:    s_cbranch_execnz .LBB21_3
@@ -443,7 +443,7 @@ define amdgpu_ps <2 x float> @flat_atomicrmw_b64_rtn_idxprom(ptr align 8 inreg %
 ; SDAG-NEXT:  .LBB21_3: ; %atomicrmw.global
 ; SDAG-NEXT:    v_mov_b64_e32 v[0:1], 1
 ; SDAG-NEXT:    flat_atomic_add_u64 v[0:1], v[2:3], v[0:1] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
-; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; SDAG-NEXT:    ; implicit-def: $vgpr2_64
 ; SDAG-NEXT:    s_wait_xcnt 0x0
 ; SDAG-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; SDAG-NEXT:    s_cbranch_execz .LBB21_2
@@ -475,7 +475,7 @@ define amdgpu_ps <2 x float> @flat_atomicrmw_b64_rtn_idxprom(ptr align 8 inreg %
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-NEXT:    v_xor_b32_e32 v0, src_flat_scratch_base_hi, v5
 ; GISEL-NEXT:    v_cmp_le_u32_e32 vcc_lo, 0x4000000, v0
-; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GISEL-NEXT:    ; implicit-def: $vgpr0_64
 ; GISEL-NEXT:    s_and_saveexec_b32 s2, vcc_lo
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_xor_b32 s2, exec_lo, s2
@@ -489,7 +489,7 @@ define amdgpu_ps <2 x float> @flat_atomicrmw_b64_rtn_idxprom(ptr align 8 inreg %
 ; GISEL-NEXT:    s_branch .LBB21_5
 ; GISEL-NEXT:  .LBB21_3: ; %atomicrmw.global
 ; GISEL-NEXT:    v_mov_b64_e32 v[0:1], 1
-; GISEL-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; GISEL-NEXT:    ; implicit-def: $vgpr4_64
 ; GISEL-NEXT:    flat_atomic_add_u64 v[0:1], v2, v[0:1], s[0:1] scale_offset th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GISEL-NEXT:    s_wait_xcnt 0x0
 ; GISEL-NEXT:    s_and_not1_saveexec_b32 s0, s2

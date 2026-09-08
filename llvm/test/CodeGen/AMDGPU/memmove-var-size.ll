@@ -82,10 +82,10 @@ define void @memmove_p0_p0(ptr addrspace(0) align 1 %dst, ptr addrspace(0) align
 ; CHECK-NEXT:    s_cbranch_execnz .LBB0_8
 ; CHECK-NEXT:  .LBB0_9: ; %Flow28
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s8
-; CHECK-NEXT:    ; implicit-def: $vgpr9_vgpr10
+; CHECK-NEXT:    ; implicit-def: $vgpr9_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
-; CHECK-NEXT:    ; implicit-def: $vgpr7_vgpr8
+; CHECK-NEXT:    ; implicit-def: $vgpr7_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr6
 ; CHECK-NEXT:    ; implicit-def: $vgpr5
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s6, s7
@@ -231,10 +231,10 @@ define void @memmove_p0_p1(ptr addrspace(0) align 1 %dst, ptr addrspace(1) align
 ; CHECK-NEXT:    s_cbranch_execnz .LBB1_8
 ; CHECK-NEXT:  .LBB1_9: ; %Flow30
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s8
-; CHECK-NEXT:    ; implicit-def: $vgpr9_vgpr10
+; CHECK-NEXT:    ; implicit-def: $vgpr9_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    ; implicit-def: $vgpr7_vgpr8
+; CHECK-NEXT:    ; implicit-def: $vgpr7_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr6
 ; CHECK-NEXT:    ; implicit-def: $vgpr5
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s6, s7
@@ -378,11 +378,11 @@ define void @memmove_p0_p3(ptr addrspace(0) align 1 %dst, ptr addrspace(3) align
 ; CHECK-NEXT:    s_cbranch_execnz .LBB2_8
 ; CHECK-NEXT:  .LBB2_9: ; %Flow32
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s8
-; CHECK-NEXT:    ; implicit-def: $vgpr8_vgpr9
+; CHECK-NEXT:    ; implicit-def: $vgpr8_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr3
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; CHECK-NEXT:    ; implicit-def: $vgpr6_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr5
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s6, s7
 ; CHECK-NEXT:    s_cbranch_execz .LBB2_2
@@ -523,10 +523,10 @@ define void @memmove_p0_p4(ptr addrspace(0) align 1 %dst, ptr addrspace(4) align
 ; CHECK-NEXT:    s_cbranch_execnz .LBB3_8
 ; CHECK-NEXT:  .LBB3_9: ; %Flow29
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s8
-; CHECK-NEXT:    ; implicit-def: $vgpr9_vgpr10
+; CHECK-NEXT:    ; implicit-def: $vgpr9_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    ; implicit-def: $vgpr7_vgpr8
+; CHECK-NEXT:    ; implicit-def: $vgpr7_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr6
 ; CHECK-NEXT:    ; implicit-def: $vgpr5
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s6, s7
@@ -674,11 +674,11 @@ define void @memmove_p0_p5(ptr addrspace(0) align 1 %dst, ptr addrspace(5) align
 ; CHECK-NEXT:    s_cbranch_execnz .LBB4_8
 ; CHECK-NEXT:  .LBB4_9: ; %Flow32
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s8
-; CHECK-NEXT:    ; implicit-def: $vgpr8_vgpr9
+; CHECK-NEXT:    ; implicit-def: $vgpr8_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr3
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; CHECK-NEXT:    ; implicit-def: $vgpr6_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr5
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s6, s7
 ; CHECK-NEXT:    s_cbranch_execz .LBB4_2
@@ -823,10 +823,10 @@ define void @memmove_p1_p0(ptr addrspace(1) align 1 %dst, ptr addrspace(0) align
 ; CHECK-NEXT:    s_cbranch_execnz .LBB5_8
 ; CHECK-NEXT:  .LBB5_9: ; %Flow30
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s8
-; CHECK-NEXT:    ; implicit-def: $vgpr9_vgpr10
+; CHECK-NEXT:    ; implicit-def: $vgpr9_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
-; CHECK-NEXT:    ; implicit-def: $vgpr7_vgpr8
+; CHECK-NEXT:    ; implicit-def: $vgpr7_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr6
 ; CHECK-NEXT:    ; implicit-def: $vgpr5
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s6, s7
@@ -970,10 +970,10 @@ define void @memmove_p1_p1(ptr addrspace(1) align 1 %dst, ptr addrspace(1) align
 ; CHECK-NEXT:    s_cbranch_execnz .LBB6_8
 ; CHECK-NEXT:  .LBB6_9: ; %Flow32
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s8
-; CHECK-NEXT:    ; implicit-def: $vgpr9_vgpr10
+; CHECK-NEXT:    ; implicit-def: $vgpr9_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
-; CHECK-NEXT:    ; implicit-def: $vgpr7_vgpr8
+; CHECK-NEXT:    ; implicit-def: $vgpr7_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr6
 ; CHECK-NEXT:    ; implicit-def: $vgpr5
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s6, s7
@@ -1179,10 +1179,10 @@ define void @memmove_p1_p4(ptr addrspace(1) align 1 %dst, ptr addrspace(4) align
 ; CHECK-NEXT:    s_cbranch_execnz .LBB8_8
 ; CHECK-NEXT:  .LBB8_9: ; %Flow31
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s8
-; CHECK-NEXT:    ; implicit-def: $vgpr9_vgpr10
+; CHECK-NEXT:    ; implicit-def: $vgpr9_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
-; CHECK-NEXT:    ; implicit-def: $vgpr7_vgpr8
+; CHECK-NEXT:    ; implicit-def: $vgpr7_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr6
 ; CHECK-NEXT:    ; implicit-def: $vgpr5
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s6, s7
@@ -1395,11 +1395,11 @@ define void @memmove_p3_p0(ptr addrspace(3) align 1 %dst, ptr addrspace(0) align
 ; CHECK-NEXT:    s_cbranch_execnz .LBB10_8
 ; CHECK-NEXT:  .LBB10_9: ; %Flow32
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s8
-; CHECK-NEXT:    ; implicit-def: $vgpr8_vgpr9
+; CHECK-NEXT:    ; implicit-def: $vgpr8_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr3
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; CHECK-NEXT:    ; implicit-def: $vgpr6_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr5
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s6, s7
 ; CHECK-NEXT:    s_cbranch_execz .LBB10_2
@@ -1594,7 +1594,7 @@ define void @memmove_p3_p3(ptr addrspace(3) align 1 %dst, ptr addrspace(3) align
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    ; implicit-def: $vgpr5_vgpr6
+; CHECK-NEXT:    ; implicit-def: $vgpr5_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr4
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s5, s6
 ; CHECK-NEXT:    s_cbranch_execz .LBB12_2
@@ -1861,11 +1861,11 @@ define void @memmove_p5_p0(ptr addrspace(5) align 1 %dst, ptr addrspace(0) align
 ; CHECK-NEXT:    s_cbranch_execnz .LBB15_8
 ; CHECK-NEXT:  .LBB15_9: ; %Flow32
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s8
-; CHECK-NEXT:    ; implicit-def: $vgpr8_vgpr9
+; CHECK-NEXT:    ; implicit-def: $vgpr8_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr3
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; CHECK-NEXT:    ; implicit-def: $vgpr6_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr5
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s6, s7
 ; CHECK-NEXT:    s_cbranch_execz .LBB15_2
@@ -2205,7 +2205,7 @@ define void @memmove_p5_p5(ptr addrspace(5) align 1 %dst, ptr addrspace(5) align
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
-; CHECK-NEXT:    ; implicit-def: $vgpr5_vgpr6
+; CHECK-NEXT:    ; implicit-def: $vgpr5_64
 ; CHECK-NEXT:    ; implicit-def: $vgpr4
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s5, s6
 ; CHECK-NEXT:    s_cbranch_execz .LBB19_2

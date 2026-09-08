@@ -107,7 +107,7 @@ define amdgpu_ps float @wf_test1(i32 %val, <4 x i32> %rsrc, i32 %voffset, i32 in
 ; CHECK-NEXT:    buffer_atomic_smin v0, v5, s[4:7], s0 offen glc
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:    ; implicit-def: $vgpr5
-; CHECK-NEXT:    ; implicit-def: $vgpr3_vgpr4
+; CHECK-NEXT:    ; implicit-def: $vgpr3_64
 ; CHECK-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; CHECK-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
 ; CHECK-NEXT:    s_cbranch_execnz .LBB8_1
@@ -137,7 +137,7 @@ define amdgpu_ps <2 x float> @wf_test2(i64 %val, <4 x i32> %rsrc, i32 %voffset, 
 ; CHECK-NEXT:    buffer_atomic_smax_x2 v[0:1], v6, s[4:7], s0 offen glc
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
 ; CHECK-NEXT:    ; implicit-def: $vgpr6
-; CHECK-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; CHECK-NEXT:    ; implicit-def: $vgpr4_64
 ; CHECK-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; CHECK-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
 ; CHECK-NEXT:    s_cbranch_execnz .LBB9_1
@@ -221,7 +221,7 @@ define amdgpu_ps float @wf_test6(i32 %val, <4 x i32> %rsrc, i32 %voffset, i32 %s
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:    ; implicit-def: $vgpr6
 ; CHECK-NEXT:    ; implicit-def: $vgpr5
-; CHECK-NEXT:    ; implicit-def: $vgpr3_vgpr4
+; CHECK-NEXT:    ; implicit-def: $vgpr3_64
 ; CHECK-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; CHECK-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; CHECK-NEXT:    s_cbranch_execnz .LBB12_1
@@ -255,7 +255,7 @@ define amdgpu_ps <2 x float> @wf_test7(i64 %val, <4 x i32> %rsrc, i32 %voffset, 
 ; CHECK-NEXT:    ; implicit-def: $vgpr2
 ; CHECK-NEXT:    ; implicit-def: $vgpr7
 ; CHECK-NEXT:    ; implicit-def: $vgpr6
-; CHECK-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; CHECK-NEXT:    ; implicit-def: $vgpr4_64
 ; CHECK-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; CHECK-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; CHECK-NEXT:    s_cbranch_execnz .LBB13_1

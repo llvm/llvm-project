@@ -1050,7 +1050,7 @@ define <11 x i32> @bitcast_v22i16_to_v11i32(<22 x i16> %a, i32 %b) #0 {
 ; SI-NEXT:    v_lshlrev_b32_e32 v24, 16, v2
 ; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v1
 ; SI-NEXT:    v_lshlrev_b32_e32 v11, 16, v0
-; SI-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10
+; SI-NEXT:    ; implicit-def: $vgpr0_352
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_cbranch_execnz .LBB6_3
@@ -2034,7 +2034,7 @@ define <11 x i32> @bitcast_v22f16_to_v11i32(<22 x half> %a, i32 %b) #0 {
 ; SI-NEXT:    v_lshrrev_b32_e32 v32, 16, v20
 ; SI-NEXT:    v_lshrrev_b32_e32 v33, 16, v21
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v11
-; SI-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10
+; SI-NEXT:    ; implicit-def: $vgpr0_352
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_cbranch_execnz .LBB10_3
@@ -3146,7 +3146,7 @@ define <11 x float> @bitcast_v22i16_to_v11f32(<22 x i16> %a, i32 %b) #0 {
 ; SI-NEXT:    v_lshlrev_b32_e32 v24, 16, v2
 ; SI-NEXT:    v_lshlrev_b32_e32 v23, 16, v1
 ; SI-NEXT:    v_lshlrev_b32_e32 v11, 16, v0
-; SI-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10
+; SI-NEXT:    ; implicit-def: $vgpr0_352
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_cbranch_execnz .LBB14_3
@@ -4155,7 +4155,7 @@ define <11 x float> @bitcast_v22f16_to_v11f32(<22 x half> %a, i32 %b) #0 {
 ; SI-NEXT:    v_lshrrev_b32_e32 v32, 16, v20
 ; SI-NEXT:    v_lshrrev_b32_e32 v33, 16, v21
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v11
-; SI-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10
+; SI-NEXT:    ; implicit-def: $vgpr0_352
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SI-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; SI-NEXT:    s_cbranch_execnz .LBB18_3

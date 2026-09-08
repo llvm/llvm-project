@@ -29,7 +29,7 @@ define void @fshl_scalar_const_shift0(ptr addrspace(1) %out, i32 %x) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v1
-; CHECK-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_64 killed $exec
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v3
 ; CHECK-NEXT:    v_readfirstlane_b32 s4, v2
 ; CHECK-NEXT:    s_mov_b32 s3, 1
@@ -63,7 +63,7 @@ define void @fshl_scalar_const_shift1(ptr addrspace(1) %out, i32 %x) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v1
-; CHECK-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_64 killed $exec
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v3
 ; CHECK-NEXT:    v_readfirstlane_b32 s2, v2
 ; CHECK-NEXT:    s_mov_b32 s0, 0xf2f2f2f2
@@ -90,7 +90,7 @@ define void @fshl_scalar_const_shift16(ptr addrspace(1) %out, i32 %x) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v1
-; CHECK-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_64 killed $exec
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v3
 ; CHECK-NEXT:    v_readfirstlane_b32 s2, v2
 ; CHECK-NEXT:    s_mov_b32 s0, 0xf2f2f2f2
@@ -117,7 +117,7 @@ define void @fshl_scalar_scalar_shift8(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v4, v1
-; CHECK-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
+; CHECK-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_64 killed $exec
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v4
 ; CHECK-NEXT:    v_readfirstlane_b32 s2, v2
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v3

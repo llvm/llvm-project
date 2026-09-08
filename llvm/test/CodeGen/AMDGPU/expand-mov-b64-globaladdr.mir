@@ -47,7 +47,7 @@ body: |
     ; CHECK: $vgpr0 = V_MOV_B32_e32 target-flags(amdgpu-rel32-lo) @gv, implicit $exec
     ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 target-flags(amdgpu-rel32-hi) @gv, implicit $exec
 
-    $vgpr0_vgpr1 = V_MOV_B64_PSEUDO target-flags(amdgpu-rel32-lo) @gv, implicit $exec
+    $vgpr0_64 = V_MOV_B64_PSEUDO target-flags(amdgpu-rel32-lo) @gv, implicit $exec
 ...
 
 ---
@@ -59,7 +59,7 @@ body: |
     ; CHECK: $vgpr0 = V_MOV_B32_e32 target-flags(amdgpu-rel32-lo) @gv, implicit $exec
     ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 target-flags(amdgpu-rel32-hi) @gv, implicit $exec
 
-    $vgpr0_vgpr1 = V_MOV_B64_PSEUDO target-flags(amdgpu-rel32-hi) @gv, implicit $exec
+    $vgpr0_64 = V_MOV_B64_PSEUDO target-flags(amdgpu-rel32-hi) @gv, implicit $exec
 ...
 
 ---
@@ -71,7 +71,7 @@ body: |
     ; CHECK: $vgpr0 = V_MOV_B32_e32 target-flags(amdgpu-rel32-lo) @gv, implicit $exec
     ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 target-flags(amdgpu-rel32-hi) @gv, implicit $exec
 
-    $vgpr0_vgpr1 = V_MOV_B64_PSEUDO target-flags(amdgpu-rel64) @gv, implicit $exec
+    $vgpr0_64 = V_MOV_B64_PSEUDO target-flags(amdgpu-rel64) @gv, implicit $exec
 ...
 
 ---
@@ -83,7 +83,7 @@ body: |
     ; CHECK: $vgpr0 = V_MOV_B32_e32 target-flags(amdgpu-abs32-lo) @gv, implicit $exec
     ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 target-flags(amdgpu-abs32-hi) @gv, implicit $exec
 
-    $vgpr0_vgpr1 = V_MOV_B64_PSEUDO target-flags(amdgpu-abs32-lo) @gv, implicit $exec
+    $vgpr0_64 = V_MOV_B64_PSEUDO target-flags(amdgpu-abs32-lo) @gv, implicit $exec
 ...
 
 ---
@@ -95,7 +95,7 @@ body: |
     ; CHECK: $vgpr0 = V_MOV_B32_e32 target-flags(amdgpu-abs32-lo) @gv, implicit $exec
     ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 target-flags(amdgpu-abs32-hi) @gv, implicit $exec
 
-    $vgpr0_vgpr1 = V_MOV_B64_PSEUDO target-flags(amdgpu-abs32-hi) @gv, implicit $exec
+    $vgpr0_64 = V_MOV_B64_PSEUDO target-flags(amdgpu-abs32-hi) @gv, implicit $exec
 ...
 
 ---
@@ -107,7 +107,7 @@ body: |
     ; CHECK: $vgpr0 = V_MOV_B32_e32 target-flags(amdgpu-abs32-lo) @gv, implicit $exec
     ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 target-flags(amdgpu-abs32-hi) @gv, implicit $exec
 
-    $vgpr0_vgpr1 = V_MOV_B64_PSEUDO target-flags(amdgpu-abs64) @gv, implicit $exec
+    $vgpr0_64 = V_MOV_B64_PSEUDO target-flags(amdgpu-abs64) @gv, implicit $exec
 ...
 
 ---
@@ -119,7 +119,7 @@ body: |
     ; CHECK: $vgpr0 = V_MOV_B32_e32 target-flags(amdgpu-gotprel64) @gv, implicit $exec
     ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 target-flags(amdgpu-gotprel64) @gv, implicit $exec
 
-    $vgpr0_vgpr1 = V_MOV_B64_PSEUDO target-flags(amdgpu-gotprel) @gv, implicit $exec
+    $vgpr0_64 = V_MOV_B64_PSEUDO target-flags(amdgpu-gotprel) @gv, implicit $exec
 ...
 
 ---
@@ -131,7 +131,7 @@ body: |
     ; CHECK: $vgpr0 = V_MOV_B32_e32 target-flags(amdgpu-gotprel32-lo) @gv, implicit $exec
     ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 target-flags(amdgpu-gotprel32-hi) @gv, implicit $exec
 
-    $vgpr0_vgpr1 = V_MOV_B64_PSEUDO target-flags(amdgpu-gotprel32-lo) @gv, implicit $exec
+    $vgpr0_64 = V_MOV_B64_PSEUDO target-flags(amdgpu-gotprel32-lo) @gv, implicit $exec
 ...
 
 ---
@@ -143,7 +143,7 @@ body: |
     ; CHECK: $vgpr0 = V_MOV_B32_e32 target-flags(amdgpu-gotprel32-lo) @gv, implicit $exec
     ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 target-flags(amdgpu-gotprel32-hi) @gv, implicit $exec
 
-    $vgpr0_vgpr1 = V_MOV_B64_PSEUDO target-flags(amdgpu-gotprel32-hi) @gv, implicit $exec
+    $vgpr0_64 = V_MOV_B64_PSEUDO target-flags(amdgpu-gotprel32-hi) @gv, implicit $exec
 ...
 
 ---
@@ -155,5 +155,5 @@ body: |
     ; CHECK: $vgpr0 = V_MOV_B32_e32 target-flags(amdgpu-gotprel64) @gv, implicit $exec
     ; CHECK-NEXT: $vgpr1 = V_MOV_B32_e32 target-flags(amdgpu-gotprel64) @gv, implicit $exec
 
-    $vgpr0_vgpr1 = V_MOV_B64_PSEUDO target-flags(amdgpu-gotprel64) @gv, implicit $exec
+    $vgpr0_64 = V_MOV_B64_PSEUDO target-flags(amdgpu-gotprel64) @gv, implicit $exec
 ...

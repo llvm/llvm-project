@@ -3497,7 +3497,7 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX8DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8DAGISEL-NEXT:    v_and_b32_e32 v6, 0x3ff, v31
 ; GFX8DAGISEL-NEXT:    v_cmp_lt_u32_e32 vcc, 15, v6
-; GFX8DAGISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; GFX8DAGISEL-NEXT:    ; implicit-def: $vgpr6_64
 ; GFX8DAGISEL-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX8DAGISEL-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX8DAGISEL-NEXT:    s_cbranch_execz .LBB9_4
@@ -3555,7 +3555,7 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX8GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8GISEL-NEXT:    v_and_b32_e32 v6, 0x3ff, v31
 ; GFX8GISEL-NEXT:    v_cmp_le_u32_e32 vcc, 16, v6
-; GFX8GISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; GFX8GISEL-NEXT:    ; implicit-def: $vgpr6_64
 ; GFX8GISEL-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX8GISEL-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX8GISEL-NEXT:    s_cbranch_execz .LBB9_4
@@ -3613,7 +3613,7 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX9DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9DAGISEL-NEXT:    v_and_b32_e32 v6, 0x3ff, v31
 ; GFX9DAGISEL-NEXT:    v_cmp_lt_u32_e32 vcc, 15, v6
-; GFX9DAGISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; GFX9DAGISEL-NEXT:    ; implicit-def: $vgpr6_64
 ; GFX9DAGISEL-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9DAGISEL-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9DAGISEL-NEXT:    s_cbranch_execz .LBB9_4
@@ -3671,7 +3671,7 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX9GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9GISEL-NEXT:    v_and_b32_e32 v6, 0x3ff, v31
 ; GFX9GISEL-NEXT:    v_cmp_le_u32_e32 vcc, 16, v6
-; GFX9GISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; GFX9GISEL-NEXT:    ; implicit-def: $vgpr6_64
 ; GFX9GISEL-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX9GISEL-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX9GISEL-NEXT:    s_cbranch_execz .LBB9_4
@@ -3729,7 +3729,7 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX1064DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1064DAGISEL-NEXT:    v_and_b32_e32 v6, 0x3ff, v31
 ; GFX1064DAGISEL-NEXT:    v_cmp_lt_u32_e32 vcc, 15, v6
-; GFX1064DAGISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; GFX1064DAGISEL-NEXT:    ; implicit-def: $vgpr6_64
 ; GFX1064DAGISEL-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX1064DAGISEL-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX1064DAGISEL-NEXT:    s_cbranch_execz .LBB9_4
@@ -3782,7 +3782,7 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX1064GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1064GISEL-NEXT:    v_and_b32_e32 v6, 0x3ff, v31
 ; GFX1064GISEL-NEXT:    v_cmp_le_u32_e32 vcc, 16, v6
-; GFX1064GISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; GFX1064GISEL-NEXT:    ; implicit-def: $vgpr6_64
 ; GFX1064GISEL-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX1064GISEL-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX1064GISEL-NEXT:    s_cbranch_execz .LBB9_4
@@ -3835,7 +3835,7 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX1032DAGISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1032DAGISEL-NEXT:    v_and_b32_e32 v6, 0x3ff, v31
 ; GFX1032DAGISEL-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 15, v6
-; GFX1032DAGISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; GFX1032DAGISEL-NEXT:    ; implicit-def: $vgpr6_64
 ; GFX1032DAGISEL-NEXT:    s_and_saveexec_b32 s4, vcc_lo
 ; GFX1032DAGISEL-NEXT:    s_xor_b32 s6, exec_lo, s4
 ; GFX1032DAGISEL-NEXT:    s_cbranch_execz .LBB9_4
@@ -3888,7 +3888,7 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX1032GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1032GISEL-NEXT:    v_and_b32_e32 v6, 0x3ff, v31
 ; GFX1032GISEL-NEXT:    v_cmp_le_u32_e32 vcc_lo, 16, v6
-; GFX1032GISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; GFX1032GISEL-NEXT:    ; implicit-def: $vgpr6_64
 ; GFX1032GISEL-NEXT:    s_and_saveexec_b32 s4, vcc_lo
 ; GFX1032GISEL-NEXT:    s_xor_b32 s6, exec_lo, s4
 ; GFX1032GISEL-NEXT:    s_cbranch_execz .LBB9_4
@@ -3942,7 +3942,7 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX1164DAGISEL-NEXT:    v_and_b32_e32 v6, 0x3ff, v31
 ; GFX1164DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1164DAGISEL-NEXT:    v_cmp_lt_u32_e32 vcc, 15, v6
-; GFX1164DAGISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; GFX1164DAGISEL-NEXT:    ; implicit-def: $vgpr6_64
 ; GFX1164DAGISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX1164DAGISEL-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
 ; GFX1164DAGISEL-NEXT:    s_cbranch_execz .LBB9_4
@@ -4002,7 +4002,7 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX1164GISEL-NEXT:    v_and_b32_e32 v6, 0x3ff, v31
 ; GFX1164GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1164GISEL-NEXT:    v_cmp_le_u32_e32 vcc, 16, v6
-; GFX1164GISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; GFX1164GISEL-NEXT:    ; implicit-def: $vgpr6_64
 ; GFX1164GISEL-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX1164GISEL-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
 ; GFX1164GISEL-NEXT:    s_cbranch_execz .LBB9_4
@@ -4062,7 +4062,7 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX1132DAGISEL-NEXT:    v_and_b32_e32 v6, 0x3ff, v31
 ; GFX1132DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1132DAGISEL-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 15, v6
-; GFX1132DAGISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; GFX1132DAGISEL-NEXT:    ; implicit-def: $vgpr6_64
 ; GFX1132DAGISEL-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX1132DAGISEL-NEXT:    s_xor_b32 s2, exec_lo, s0
 ; GFX1132DAGISEL-NEXT:    s_cbranch_execz .LBB9_4
@@ -4120,7 +4120,7 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX1132GISEL-NEXT:    v_and_b32_e32 v6, 0x3ff, v31
 ; GFX1132GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1132GISEL-NEXT:    v_cmp_le_u32_e32 vcc_lo, 16, v6
-; GFX1132GISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; GFX1132GISEL-NEXT:    ; implicit-def: $vgpr6_64
 ; GFX1132GISEL-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX1132GISEL-NEXT:    s_xor_b32 s2, exec_lo, s0
 ; GFX1132GISEL-NEXT:    s_cbranch_execz .LBB9_4
@@ -4182,7 +4182,7 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX12DAGISEL-NEXT:    v_and_b32_e32 v6, 0x3ff, v31
 ; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12DAGISEL-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 15, v6
-; GFX12DAGISEL-NEXT:    ; implicit-def: $vgpr6_vgpr7
+; GFX12DAGISEL-NEXT:    ; implicit-def: $vgpr6_64
 ; GFX12DAGISEL-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX12DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12DAGISEL-NEXT:    s_xor_b32 s2, exec_lo, s0

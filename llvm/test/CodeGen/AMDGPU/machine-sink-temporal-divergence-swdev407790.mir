@@ -10,12 +10,12 @@ body: |
   ; CHECK-LABEL: name: machine-sink-temporal-divergence
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1_vgpr2
+  ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_64
   ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -37,12 +37,12 @@ body: |
   ; CHECK-NEXT:   SI_RETURN
   bb.0:
     successors: %bb.1(0x80000000)
-    liveins: $vgpr0, $vgpr1_vgpr2
+    liveins: $vgpr0, $vgpr1_64
 
     %0:vgpr_32 = COPY $vgpr0
     %1:sreg_32 = S_MOV_B32 -1
     %2:sreg_32 = S_MOV_B32 0
-    %3:vreg_64 = COPY $vgpr1_vgpr2
+    %3:vreg_64 = COPY $vgpr1_64
     %4:sreg_32 = S_MOV_B32 1
 
   bb.1:
@@ -71,12 +71,12 @@ body: |
   ; CHECK-LABEL: name: machine-sink-temporal-divergence-multiple-instructions
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1_vgpr2
+  ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_64
   ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -100,12 +100,12 @@ body: |
   ; CHECK-NEXT:   SI_RETURN
   bb.0:
     successors: %bb.1(0x80000000)
-    liveins: $vgpr0, $vgpr1_vgpr2
+    liveins: $vgpr0, $vgpr1_64
 
     %0:vgpr_32 = COPY $vgpr0
     %1:sreg_32 = S_MOV_B32 -1
     %2:sreg_32 = S_MOV_B32 0
-    %3:vreg_64 = COPY $vgpr1_vgpr2
+    %3:vreg_64 = COPY $vgpr1_64
     %4:sreg_32 = S_MOV_B32 1
 
   bb.1:
@@ -136,12 +136,12 @@ body: |
   ; CHECK-LABEL: name: machine-sink-undef-sgpr-operand
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1_vgpr2
+  ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_64
   ; CHECK-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -163,12 +163,12 @@ body: |
   ; CHECK-NEXT:   SI_RETURN
   bb.0:
     successors: %bb.1(0x80000000)
-    liveins: $vgpr0, $vgpr1_vgpr2
+    liveins: $vgpr0, $vgpr1_64
 
     %0:vgpr_32 = COPY $vgpr0
     %1:sreg_32 = S_MOV_B32 -1
     %2:sreg_32 = S_MOV_B32 0
-    %3:vreg_64 = COPY $vgpr1_vgpr2
+    %3:vreg_64 = COPY $vgpr1_64
     %4:sreg_32 = S_MOV_B32 1
 
   bb.1:
@@ -197,10 +197,10 @@ body: |
   ; CHECK-LABEL: name: machine-sink-temporal-divergence-waterfall-loop
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1_vgpr2
+  ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_64
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -219,10 +219,10 @@ body: |
   ; CHECK-NEXT:   SI_RETURN
   bb.0:
     successors: %bb.1(0x80000000)
-    liveins: $vgpr0, $vgpr1_vgpr2
+    liveins: $vgpr0, $vgpr1_64
 
     %0:vgpr_32 = COPY $vgpr0
-    %1:vreg_64 = COPY $vgpr1_vgpr2
+    %1:vreg_64 = COPY $vgpr1_64
     %2:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
 
   bb.1:

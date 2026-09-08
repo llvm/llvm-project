@@ -70,9 +70,9 @@ body: |
     ; CHECK-NEXT: %src:_(<2 x s16>) = COPY $vgpr0
     ; CHECK-NEXT: %fpext:_(<2 x s64>) = G_FPEXT %src(<2 x s16>)
     ; CHECK-NEXT: %fptrunc:_(<2 x s32>) = G_FPTRUNC %fpext(<2 x s64>)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %fptrunc(<2 x s32>)
+    ; CHECK-NEXT: $vgpr0_64 = COPY %fptrunc(<2 x s32>)
     %src:_(<2 x s16>) = COPY $vgpr0
     %fpext:_(<2 x s64>) = G_FPEXT %src
     %fptrunc:_(<2 x s32>) = G_FPTRUNC %fpext
-    $vgpr0_vgpr1 = COPY %fptrunc
+    $vgpr0_64 = COPY %fptrunc
 ...

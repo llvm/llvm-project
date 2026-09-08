@@ -26,18 +26,18 @@ body:             |
 name:            ds_write_b32__av32_x2_subregs_different_reg
 body:             |
   bb.0:
-  liveins: $vgpr0, $vgpr2_vgpr3, $vgpr4_vgpr5
+  liveins: $vgpr0, $vgpr2_64, $vgpr4_64
 
     ; CHECK-LABEL: name: ds_write_b32__av32_x2_subregs_different_reg
-    ; CHECK: liveins: $vgpr0, $vgpr2_vgpr3, $vgpr4_vgpr5
+    ; CHECK: liveins: $vgpr0, $vgpr2_64, $vgpr4_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY $vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY $vgpr2_64
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY $vgpr4_64
     ; CHECK-NEXT: DS_WRITE2_B32_gfx9 [[COPY]], [[COPY1]].sub0, [[COPY2]].sub1, 10, 24, 0, implicit $exec :: (store (s32), addrspace 3)
   %0:vgpr_32 = COPY $vgpr0
-  %1:av_64_align2 = COPY $vgpr2_vgpr3
-  %2:av_64_align2 = COPY $vgpr4_vgpr5
+  %1:av_64_align2 = COPY $vgpr2_64
+  %2:av_64_align2 = COPY $vgpr4_64
   DS_WRITE_B32_gfx9 %0, %1.sub0, 40, 0, implicit $exec :: (store (s32), addrspace 3)
   DS_WRITE_B32_gfx9 %0, %2.sub1, 96, 0, implicit $exec :: (store (s32), addrspace 3)
 
@@ -47,18 +47,18 @@ body:             |
 name:            ds_write_b32__unaligned_av64_subregs
 body:             |
   bb.0:
-  liveins: $vgpr0, $vgpr1_vgpr2, $vgpr3_vgpr4
+  liveins: $vgpr0, $vgpr1_64, $vgpr3_64
 
     ; CHECK-LABEL: name: ds_write_b32__unaligned_av64_subregs
-    ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2, $vgpr3_vgpr4
+    ; CHECK: liveins: $vgpr0, $vgpr1_64, $vgpr3_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_64
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr3_64
     ; CHECK-NEXT: DS_WRITE2_B32_gfx9 [[COPY]], [[COPY1]].sub0, [[COPY2]].sub1, 10, 24, 0, implicit $exec :: (store (s32), addrspace 3)
   %0:vgpr_32 = COPY $vgpr0
-  %1:av_64 = COPY $vgpr1_vgpr2
-  %2:av_64 = COPY $vgpr3_vgpr4
+  %1:av_64 = COPY $vgpr1_64
+  %2:av_64 = COPY $vgpr3_64
   DS_WRITE_B32_gfx9 %0, %1.sub0, 40, 0, implicit $exec :: (store (s32), addrspace 3)
   DS_WRITE_B32_gfx9 %0, %2.sub1, 96, 0, implicit $exec :: (store (s32), addrspace 3)
 
@@ -68,16 +68,16 @@ body:             |
 name:            ds_write_b32__av32_x2_subregs_same_reg
 body:             |
   bb.0:
-  liveins: $vgpr0, $vgpr2_vgpr3, $vgpr4_vgpr5
+  liveins: $vgpr0, $vgpr2_64, $vgpr4_64
 
     ; CHECK-LABEL: name: ds_write_b32__av32_x2_subregs_same_reg
-    ; CHECK: liveins: $vgpr0, $vgpr2_vgpr3, $vgpr4_vgpr5
+    ; CHECK: liveins: $vgpr0, $vgpr2_64, $vgpr4_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY $vgpr2_64
     ; CHECK-NEXT: DS_WRITE2_B32_gfx9 [[COPY]], [[COPY1]].sub0, [[COPY1]].sub1, 10, 24, 0, implicit $exec :: (store (s32), addrspace 3)
   %0:vgpr_32 = COPY $vgpr0
-  %1:av_64_align2 = COPY $vgpr2_vgpr3
+  %1:av_64_align2 = COPY $vgpr2_64
   DS_WRITE_B32_gfx9 %0, %1.sub0, 40, 0, implicit $exec :: (store (s32), addrspace 3)
   DS_WRITE_B32_gfx9 %0, %1.sub1, 96, 0, implicit $exec :: (store (s32), addrspace 3)
 
@@ -129,18 +129,18 @@ body:             |
 name:            ds_write_b64__av64_x2
 body:             |
   bb.0:
-  liveins: $vgpr0, $vgpr2_vgpr3, $vgpr4_vgpr5
+  liveins: $vgpr0, $vgpr2_64, $vgpr4_64
 
     ; CHECK-LABEL: name: ds_write_b64__av64_x2
-    ; CHECK: liveins: $vgpr0, $vgpr2_vgpr3, $vgpr4_vgpr5
+    ; CHECK: liveins: $vgpr0, $vgpr2_64, $vgpr4_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY $vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY $vgpr2_64
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY $vgpr4_64
     ; CHECK-NEXT: DS_WRITE2_B64_gfx9 [[COPY]], [[COPY1]], [[COPY2]], 5, 12, 0, implicit $exec :: (store (s64), addrspace 3)
   %0:vgpr_32 = COPY $vgpr0
-  %1:av_64_align2 = COPY $vgpr2_vgpr3
-  %2:av_64_align2 = COPY $vgpr4_vgpr5
+  %1:av_64_align2 = COPY $vgpr2_64
+  %2:av_64_align2 = COPY $vgpr4_64
   DS_WRITE_B64_gfx9 %0, %1, 40, 0, implicit $exec :: (store (s64), addrspace 3)
   DS_WRITE_B64_gfx9 %0, %2, 96, 0, implicit $exec :: (store (s64), addrspace 3)
 
@@ -150,18 +150,18 @@ body:             |
 name:            ds_write_b64__av64_x2_subregs
 body:             |
   bb.0:
-  liveins: $vgpr0, $vgpr2_vgpr3_vgpr4_vgpr5, $vgpr6_vgpr7_vgpr8_vgpr9
+  liveins: $vgpr0, $vgpr2_128, $vgpr6_128
 
     ; CHECK-LABEL: name: ds_write_b64__av64_x2_subregs
-    ; CHECK: liveins: $vgpr0, $vgpr2_vgpr3_vgpr4_vgpr5, $vgpr6_vgpr7_vgpr8_vgpr9
+    ; CHECK: liveins: $vgpr0, $vgpr2_128, $vgpr6_128
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128_align2 = COPY $vgpr2_vgpr3_vgpr4_vgpr5
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_128_align2 = COPY $vgpr6_vgpr7_vgpr8_vgpr9
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128_align2 = COPY $vgpr2_128
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_128_align2 = COPY $vgpr6_128
     ; CHECK-NEXT: DS_WRITE2_B64_gfx9 [[COPY]], [[COPY1]].sub2_sub3, [[COPY2]].sub2_sub3, 5, 12, 0, implicit $exec :: (store (s64), addrspace 3)
   %0:vgpr_32 = COPY $vgpr0
-  %1:av_128_align2 = COPY $vgpr2_vgpr3_vgpr4_vgpr5
-  %2:av_128_align2 = COPY $vgpr6_vgpr7_vgpr8_vgpr9
+  %1:av_128_align2 = COPY $vgpr2_128
+  %2:av_128_align2 = COPY $vgpr6_128
   DS_WRITE_B64_gfx9 %0, %1.sub2_sub3, 40, 0, implicit $exec :: (store (s64), addrspace 3)
   DS_WRITE_B64_gfx9 %0, %2.sub2_sub3, 96, 0, implicit $exec :: (store (s64), addrspace 3)
 
@@ -192,18 +192,18 @@ body:             |
 name:            ds_writest64_b64__av64_x2
 body:             |
   bb.0:
-  liveins: $vgpr0, $vgpr2_vgpr3, $vgpr4_vgpr5
+  liveins: $vgpr0, $vgpr2_64, $vgpr4_64
 
     ; CHECK-LABEL: name: ds_writest64_b64__av64_x2
-    ; CHECK: liveins: $vgpr0, $vgpr2_vgpr3, $vgpr4_vgpr5
+    ; CHECK: liveins: $vgpr0, $vgpr2_64, $vgpr4_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY $vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY $vgpr2_64
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY $vgpr4_64
     ; CHECK-NEXT: DS_WRITE2ST64_B64_gfx9 [[COPY]], [[COPY1]], [[COPY2]], 1, 3, 0, implicit $exec :: (store (s64), addrspace 3)
   %0:vgpr_32 = COPY $vgpr0
-  %1:av_64_align2 = COPY $vgpr2_vgpr3
-  %2:av_64_align2 = COPY $vgpr4_vgpr5
+  %1:av_64_align2 = COPY $vgpr2_64
+  %2:av_64_align2 = COPY $vgpr4_64
   DS_WRITE_B64_gfx9 %0, %1, 512, 0, implicit $exec :: (store (s64), addrspace 3)
   DS_WRITE_B64_gfx9 %0, %2, 1536, 0, implicit $exec :: (store (s64), addrspace 3)
 

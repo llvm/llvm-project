@@ -2780,7 +2780,7 @@ define amdgpu_kernel void @sudiv64(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; CISI-NEXT:    s_branch .LBB16_3
 ; CISI-NEXT:  .LBB16_2:
 ; CISI-NEXT:    s_mov_b64 s[4:5], -1
-; CISI-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; CISI-NEXT:    ; implicit-def: $vgpr0_64
 ; CISI-NEXT:  .LBB16_3: ; %Flow
 ; CISI-NEXT:    s_and_b64 s[0:1], s[4:5], exec
 ; CISI-NEXT:    s_cselect_b32 s0, 1, 0

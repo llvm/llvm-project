@@ -11,14 +11,14 @@
   ; GCN-NEXT:    v_readfirstlane_b32 s20, v2
   ; GCN-NEXT:    ; implicit-def: $sgpr4
   ; GCN-NEXT:    ; implicit-def: $vgpr3
-  ; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
+  ; GCN-NEXT:    ; implicit-def: $vgpr0_64
   ; GCN-NEXT:    ; implicit-def: $sgpr0_128
   ; GCN-NEXT:    ; implicit-def: $vgpr50
   ; GCN-NEXT:    ; implicit-def: $sgpr16_128
   ; GCN-NEXT:    ; implicit-def: $vgpr49
-  ; GCN-NEXT:    ; implicit-def: $vgpr40_vgpr41_vgpr42_vgpr43
+  ; GCN-NEXT:    ; implicit-def: $vgpr40_128
   ; GCN-NEXT:    ; implicit-def: $vgpr51
-  ; GCN-NEXT:    ; implicit-def: $vgpr62_vgpr63_vgpr64_vgpr65
+  ; GCN-NEXT:    ; implicit-def: $vgpr62_128
   ; GCN-NEXT:    ; implicit-def: $vgpr76
   ; GCN-NEXT:    ; implicit-def: $vgpr77
   ; GCN-NEXT:    ; implicit-def: $vgpr78
@@ -87,7 +87,7 @@
   ; GCN-NEXT:    ds_read_b128 v[44:47], v51 offset:512
   ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
   ; GCN-NEXT:    buffer_inv sc0 sc1
-  ; GCN-NEXT:    ; implicit-def: $vgpr40_vgpr41_vgpr42_vgpr43
+  ; GCN-NEXT:    ; implicit-def: $vgpr40_128
   ; GCN-NEXT:    ;;#ASMSTART
   ; GCN-NEXT:    s_waitcnt vmcnt(8)
   ; GCN-NEXT:    ;;#ASMEND
@@ -104,7 +104,7 @@
   ; GCN-NEXT:    buffer_inv sc0 sc1
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[0:15], v[44:45], v[40:41], v[0:15]
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[16:31], v[38:39], v[42:43], v[16:31]
-  ; GCN-NEXT:    ; implicit-def: $vgpr36_vgpr37_vgpr38_vgpr39
+  ; GCN-NEXT:    ; implicit-def: $vgpr36_128
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[0:15], v[46:47], v[42:43], v[0:15]
   ; GCN-NEXT:    ds_read_b128 v[40:43], v49 offset:512
   ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -129,12 +129,12 @@
   ; GCN-NEXT:    s_waitcnt vmcnt(8)
   ; GCN-NEXT:    ;;#ASMEND
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[0:15], v[42:43], v[38:39], v[0:15]
-  ; GCN-NEXT:    ; implicit-def: $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
+  ; GCN-NEXT:    ; implicit-def: $vgpr32_512
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[0:15], v[66:67], v[62:63], v[0:15]
   ; GCN-NEXT:    ; implicit-def: $vgpr66
   ; GCN-NEXT:    ; implicit-def: $vgpr67
   ; GCN-NEXT:    v_max_f32_e32 v81, v67, v67
-  ; GCN-NEXT:    ; implicit-def: $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+  ; GCN-NEXT:    ; implicit-def: $vgpr48_512
   ; GCN-NEXT:    v_mfma_f32_32x32x8_f16 v[16:31], v[70:71], v[64:65], v[16:31]
   ; GCN-NEXT:    v_perm_b32 v70, v74, v72, s2
   ; GCN-NEXT:    v_perm_b32 v71, v74, v72, s3

@@ -56,10 +56,10 @@ body:             |
     ; CHECK-NEXT: renamable $vgpr21 = IMPLICIT_DEF
     ; CHECK-NEXT: renamable $vgpr22 = IMPLICIT_DEF
     ; CHECK-NEXT: KILL killed renamable $vgpr2, killed renamable $vgpr3, killed renamable $vgpr4, killed renamable $vgpr5, killed renamable $vgpr6, killed renamable $vgpr7, killed renamable $vgpr8, killed renamable $vgpr9, killed renamable $vgpr10, killed renamable $vgpr11, killed renamable $vgpr12, killed renamable $vgpr13, killed renamable $vgpr14, killed renamable $vgpr15, killed renamable $vgpr16
-    ; CHECK-NEXT: S_NOP 0, implicit-def renamable $vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38
-    ; CHECK-NEXT: S_NOP 0, implicit-def renamable $vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54
+    ; CHECK-NEXT: S_NOP 0, implicit-def renamable $vgpr23_512
+    ; CHECK-NEXT: S_NOP 0, implicit-def renamable $vgpr39_512
     ; CHECK-NEXT: KILL killed renamable $vgpr0, killed renamable $vgpr1, killed renamable $vgpr17, killed renamable $vgpr18, killed renamable $vgpr19, killed renamable $vgpr20, killed renamable $vgpr21, killed renamable $vgpr22
-    ; CHECK-NEXT: S_NOP 0, implicit killed renamable $vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38, implicit killed renamable $vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47_vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54
+    ; CHECK-NEXT: S_NOP 0, implicit killed renamable $vgpr23_512, implicit killed renamable $vgpr39_512
     ; CHECK-NEXT: S_ENDPGM 0
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF

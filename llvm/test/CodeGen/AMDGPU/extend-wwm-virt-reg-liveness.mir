@@ -21,22 +21,22 @@ machineFunctionInfo:
   hasSpilledSGPRs: true
 body:             |
   bb.0:
-    liveins: $sgpr4, $vgpr2_vgpr3
+    liveins: $sgpr4, $vgpr2_64
     ; GCN-LABEL: name: test_single_block
-    ; GCN: liveins: $sgpr4, $vgpr2_vgpr3
+    ; GCN: liveins: $sgpr4, $vgpr2_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: renamable $vgpr63 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr63 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, killed $vgpr63
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: $sgpr4 = SI_RESTORE_S32_FROM_VGPR killed $vgpr63, 0
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 20, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr2_vgpr3, [[V_MOV_B32_e32_]], 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr2_64, [[V_MOV_B32_e32_]], 0, 0, implicit $exec
     ; GCN-NEXT: SI_RETURN
     SI_SPILL_S32_SAVE killed $sgpr4, %stack.0, implicit $exec, implicit $sgpr0_128, implicit $sgpr32
     S_NOP 0
     renamable $sgpr4 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr0_128, implicit $sgpr32
     %0:vgpr_32 = V_MOV_B32_e32 20, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr2_vgpr3, %0:vgpr_32, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr2_64, %0:vgpr_32, 0, 0, implicit $exec
     SI_RETURN
 ...
 
@@ -233,41 +233,41 @@ body:             |
   ; GCN-LABEL: name: test_multiple_return_blocks
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr4, $vgpr2_vgpr3
+  ; GCN-NEXT:   liveins: $sgpr4, $vgpr2_64
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
-  ; GCN-NEXT:   liveins: $sgpr4, $vgpr2_vgpr3
+  ; GCN-NEXT:   liveins: $sgpr4, $vgpr2_64
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   renamable $vgpr63 = IMPLICIT_DEF
   ; GCN-NEXT:   $vgpr63 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, killed $vgpr63
   ; GCN-NEXT:   S_NOP 0
   ; GCN-NEXT:   $sgpr4 = SI_RESTORE_S32_FROM_VGPR killed $vgpr63, 0
   ; GCN-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 10, implicit $exec
-  ; GCN-NEXT:   GLOBAL_STORE_DWORD $vgpr2_vgpr3, [[V_MOV_B32_e32_]], 0, 0, implicit $exec
+  ; GCN-NEXT:   GLOBAL_STORE_DWORD $vgpr2_64, [[V_MOV_B32_e32_]], 0, 0, implicit $exec
   ; GCN-NEXT:   SI_RETURN
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
-  ; GCN-NEXT:   liveins: $vgpr2_vgpr3
+  ; GCN-NEXT:   liveins: $vgpr2_64
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 20, implicit $exec
-  ; GCN-NEXT:   GLOBAL_STORE_DWORD $vgpr2_vgpr3, [[V_MOV_B32_e32_1]], 0, 0, implicit $exec
+  ; GCN-NEXT:   GLOBAL_STORE_DWORD $vgpr2_64, [[V_MOV_B32_e32_1]], 0, 0, implicit $exec
   ; GCN-NEXT:   SI_RETURN
   bb.0:
-    liveins: $sgpr4, $vgpr2_vgpr3
+    liveins: $sgpr4, $vgpr2_64
     S_CBRANCH_EXECZ %bb.2, implicit $exec
   bb.1:
-    liveins: $sgpr4, $vgpr2_vgpr3
+    liveins: $sgpr4, $vgpr2_64
     SI_SPILL_S32_SAVE killed $sgpr4, %stack.0, implicit $exec, implicit $sgpr0_128, implicit $sgpr32
     S_NOP 0
     renamable $sgpr4 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr0_128, implicit $sgpr32
     %0:vgpr_32 = V_MOV_B32_e32 10, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr2_vgpr3, %0:vgpr_32, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr2_64, %0:vgpr_32, 0, 0, implicit $exec
     SI_RETURN
   bb.2:
-    liveins: $vgpr2_vgpr3
+    liveins: $vgpr2_64
     %1:vgpr_32 = V_MOV_B32_e32 20, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr2_vgpr3, %1:vgpr_32, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr2_64, %1:vgpr_32, 0, 0, implicit $exec
     SI_RETURN
 ...

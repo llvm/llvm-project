@@ -50,7 +50,7 @@ body:             |
     ; GCN-NEXT: S_WAIT_KMCNT 0
     ; GCN-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
-    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; GCN-NEXT: $vgpr0_128 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     ; GCN-NEXT: S_WAIT_LOADCNT 0
     ; GCN-NEXT: $vgpr3 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr3, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr2 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr2, implicit $mode, implicit $exec
@@ -58,17 +58,17 @@ body:             |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
     ; GCN-NEXT: $vgpr0 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
-    ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_128, $vgpr4, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
     $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
-    $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    $vgpr0_128 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     $vgpr3 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr3, implicit $mode, implicit $exec
     $vgpr2 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr2, implicit $mode, implicit $exec
     $vgpr1 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr1, implicit $mode, implicit $exec
     $vgpr0 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr0, implicit $mode, implicit $exec
-    IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    IMAGE_STORE_V4_V1_gfx12 $vgpr0_128, $vgpr4, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
     SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
 
 ...
@@ -88,9 +88,9 @@ body:             |
     ; GCN-NEXT: S_WAIT_SAMPLECNT 0
     ; GCN-NEXT: S_WAIT_BVHCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: $vgpr5_vgpr6_vgpr7_vgpr8 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; GCN-NEXT: $vgpr5_128 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
-    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    ; GCN-NEXT: $vgpr0_128 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     ; GCN-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GCN-NEXT: $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr5, $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
@@ -100,8 +100,8 @@ body:             |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    $vgpr5_vgpr6_vgpr7_vgpr8 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
-    $vgpr0_vgpr1_vgpr2_vgpr3 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    $vgpr5_128 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    $vgpr0_128 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr5, $vgpr0, implicit $mode, implicit $exec
     $vgpr1 = nofpexcept V_ADD_F32_e32 $vgpr6, $vgpr1, implicit $mode, implicit $exec
     $vgpr2 = nofpexcept V_ADD_F32_e32 $vgpr7, $vgpr2, implicit $mode, implicit $exec
@@ -128,20 +128,20 @@ body:             |
     ; GCN-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
     ; GCN-NEXT: $vgpr5 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
-    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    ; GCN-NEXT: $vgpr0_128 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     ; GCN-NEXT: S_WAIT_DSCNT 0
-    ; GCN-NEXT: DS_WRITE_B128_gfx9 $vgpr5, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, implicit $exec :: (store (s128), addrspace 3)
+    ; GCN-NEXT: DS_WRITE_B128_gfx9 $vgpr5, $vgpr0_128, 0, 0, implicit $exec :: (store (s128), addrspace 3)
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
-    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_LOAD_V4_V1_gfx12 $vgpr4, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; GCN-NEXT: $vgpr0_128 = IMAGE_LOAD_V4_V1_gfx12 $vgpr4, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     ; GCN-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
     $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
     $vgpr5 = V_MOV_B32_e32 $vgpr2, implicit $exec, implicit $exec
-    $vgpr0_vgpr1_vgpr2_vgpr3 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
-    DS_WRITE_B128_gfx9 $vgpr5, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, implicit $exec :: (store (s128), addrspace 3)
-    $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_LOAD_V4_V1_gfx12 $vgpr4, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    $vgpr0_128 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    DS_WRITE_B128_gfx9 $vgpr5, $vgpr0_128, 0, 0, implicit $exec :: (store (s128), addrspace 3)
+    $vgpr0_128 = IMAGE_LOAD_V4_V1_gfx12 $vgpr4, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
 
 ...
@@ -161,24 +161,24 @@ body:             |
     ; GCN-NEXT: S_WAIT_SAMPLECNT 0
     ; GCN-NEXT: S_WAIT_BVHCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: $vgpr5_vgpr6_vgpr7_vgpr8 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; GCN-NEXT: $vgpr5_128 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     ; GCN-NEXT: S_WAIT_LOADCNT 0
     ; GCN-NEXT: $vgpr4 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr5, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr1 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr6, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr2 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr7, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr3 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr8, implicit $mode, implicit $exec
-    ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr5_vgpr6_vgpr7_vgpr8, $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr5_128, $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 $vgpr4, implicit $exec, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    $vgpr5_vgpr6_vgpr7_vgpr8 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    $vgpr5_128 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     $vgpr4 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr5, implicit $mode, implicit $exec
     $vgpr1 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr6, implicit $mode, implicit $exec
     $vgpr2 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr7, implicit $mode, implicit $exec
     $vgpr3 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr8, implicit $mode, implicit $exec
-    IMAGE_STORE_V4_V1_gfx12 $vgpr5_vgpr6_vgpr7_vgpr8, $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    IMAGE_STORE_V4_V1_gfx12 $vgpr5_128, $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
     $vgpr0 = V_MOV_B32_e32 $vgpr4, implicit $exec, implicit $exec
     SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
 
@@ -201,24 +201,24 @@ body:             |
     ; GCN-NEXT: S_WAIT_KMCNT 0
     ; GCN-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
-    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_LOAD_V4_V1_gfx12 $vgpr4, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; GCN-NEXT: $vgpr0_128 = IMAGE_LOAD_V4_V1_gfx12 $vgpr4, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     ; GCN-NEXT: S_WAIT_LOADCNT 0
     ; GCN-NEXT: $vgpr3 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr3, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr2 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr2, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr1 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr1, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr0 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
-    ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_128, $vgpr4, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
     $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
-    $vgpr0_vgpr1_vgpr2_vgpr3 = IMAGE_LOAD_V4_V1_gfx12 $vgpr4, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    $vgpr0_128 = IMAGE_LOAD_V4_V1_gfx12 $vgpr4, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     $vgpr3 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr3, implicit $mode, implicit $exec
     $vgpr2 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr2, implicit $mode, implicit $exec
     $vgpr1 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr1, implicit $mode, implicit $exec
     $vgpr0 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr0, implicit $mode, implicit $exec
-    IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    IMAGE_STORE_V4_V1_gfx12 $vgpr0_128, $vgpr4, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
     SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
 
 ...
@@ -240,7 +240,7 @@ body:             |
     ; GCN-NEXT: S_WAIT_KMCNT 0
     ; GCN-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
-    ; GCN-NEXT: $vgpr4_vgpr5_vgpr6_vgpr7 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; GCN-NEXT: $vgpr4_128 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     ; GCN-NEXT: S_WAIT_LOADCNT 0
     ; GCN-NEXT: $vgpr3 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr7, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr2 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr6, implicit $mode, implicit $exec
@@ -251,7 +251,7 @@ body:             |
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1, $vgpr2, $vgpr3
     $vgpr4 = V_MOV_B32_e32 $vgpr0, implicit $exec, implicit $exec
-    $vgpr4_vgpr5_vgpr6_vgpr7 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    $vgpr4_128 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     $vgpr3 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr7, implicit $mode, implicit $exec
     $vgpr2 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr6, implicit $mode, implicit $exec
     $vgpr1 = nofpexcept V_ADD_F32_e32 1065353216, $vgpr5, implicit $mode, implicit $exec
@@ -316,13 +316,13 @@ body: |
     ; GCN-NEXT: S_WAIT_SAMPLECNT 0
     ; GCN-NEXT: S_WAIT_BVHCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_vgpr11_vgpr12_vgpr13, 8, killed $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
+    ; GCN-NEXT: early-clobber $vgpr0_256 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_128, 8, killed $vgpr14_128, 8, killed $vgpr0_256, 0, 0, implicit $exec
     ; GCN-NEXT: $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
-    ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_vgpr11_vgpr12_vgpr13, 8, killed $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
+    ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_128, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    $vgpr0_256 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_128, 8, killed $vgpr14_128, 8, killed $vgpr0_256, 0, 0, implicit $exec
     $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
-    IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    IMAGE_STORE_V4_V1_gfx12 $vgpr0_128, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
 ...
 
 ---
@@ -340,13 +340,13 @@ body: |
     ; GCN-NEXT: S_WAIT_SAMPLECNT 0
     ; GCN-NEXT: S_WAIT_BVHCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: $vgpr0_vgpr1 = V_FRACT_F64_e32 $vgpr0_vgpr1, implicit $exec, implicit $mode
+    ; GCN-NEXT: $vgpr0_64 = V_FRACT_F64_e32 $vgpr0_64, implicit $exec, implicit $mode
     ; GCN-NEXT: $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
-    ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
-    $vgpr0_vgpr1 = V_FRACT_F64_e32 $vgpr0_vgpr1, implicit $exec, implicit $mode
+    ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_128, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    $vgpr0_64 = V_FRACT_F64_e32 $vgpr0_64, implicit $exec, implicit $mode
     $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
-    IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    IMAGE_STORE_V4_V1_gfx12 $vgpr0_128, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
 ...
 
 ---
@@ -367,10 +367,10 @@ body: |
     ; GCN-NEXT: $vgpr0 = V_SQRT_F32_e32 $vgpr0, implicit $exec, implicit $mode
     ; GCN-NEXT: $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
-    ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_128, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
     $vgpr0 = V_SQRT_F32_e32 $vgpr0, implicit $exec, implicit $mode
     $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
-    IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    IMAGE_STORE_V4_V1_gfx12 $vgpr0_128, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
 ...
 
 ---
@@ -391,10 +391,10 @@ body: |
     ; GCN-NEXT: $vgpr0 = V_ADD_F32_e32 244, $vgpr0, implicit $exec, implicit $mode
     ; GCN-NEXT: $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_1
-    ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_128, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
     $vgpr0 = V_ADD_F32_e32 244, $vgpr0, implicit $exec, implicit $mode
     $vgpr8 = V_ADD_F32_e32 244, $vgpr11, implicit $exec, implicit $mode
-    IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    IMAGE_STORE_V4_V1_gfx12 $vgpr0_128, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
 ...
 
 ---
@@ -412,13 +412,13 @@ body: |
     ; GCN-NEXT: S_WAIT_SAMPLECNT 0
     ; GCN-NEXT: S_WAIT_BVHCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: $vgpr0_vgpr1 = V_FRACT_F64_e32 $vgpr0_vgpr1, implicit $exec, implicit $mode
-    ; GCN-NEXT: $vgpr4_vgpr5 = V_TRUNC_F64_e32 $vgpr2_vgpr3, implicit $exec, implicit $mode
+    ; GCN-NEXT: $vgpr0_64 = V_FRACT_F64_e32 $vgpr0_64, implicit $exec, implicit $mode
+    ; GCN-NEXT: $vgpr4_64 = V_TRUNC_F64_e32 $vgpr2_64, implicit $exec, implicit $mode
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_1
-    ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
-    $vgpr0_vgpr1 = V_FRACT_F64_e32 $vgpr0_vgpr1, implicit $exec, implicit $mode
-    $vgpr4_vgpr5 = V_TRUNC_F64_e32 $vgpr2_vgpr3, implicit $exec, implicit $mode
-    IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_128, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    $vgpr0_64 = V_FRACT_F64_e32 $vgpr0_64, implicit $exec, implicit $mode
+    $vgpr4_64 = V_TRUNC_F64_e32 $vgpr2_64, implicit $exec, implicit $mode
+    IMAGE_STORE_V4_V1_gfx12 $vgpr0_128, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
 ...
 
 ---
@@ -439,10 +439,10 @@ body: |
     ; GCN-NEXT: $vgpr0 = V_SQRT_F32_e32 $vgpr0, implicit $exec, implicit $mode
     ; GCN-NEXT: $vgpr8 = V_LOG_F32_e32 $vgpr11, implicit $exec, implicit $mode
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_1
-    ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_128, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
     $vgpr0 = V_SQRT_F32_e32 $vgpr0, implicit $exec, implicit $mode
     $vgpr8 = V_LOG_F32_e32 $vgpr11, implicit $exec, implicit $mode
-    IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    IMAGE_STORE_V4_V1_gfx12 $vgpr0_128, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
 ...
 
 ---
@@ -460,13 +460,13 @@ body: |
     ; GCN-NEXT: S_WAIT_SAMPLECNT 0
     ; GCN-NEXT: S_WAIT_BVHCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, $vgpr10_vgpr11_vgpr12_vgpr13, 8, $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
-    ; GCN-NEXT: early-clobber $vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_vgpr11_vgpr12_vgpr13, 8, killed $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26, 0, 0, implicit $exec
+    ; GCN-NEXT: early-clobber $vgpr0_256 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, $vgpr10_128, 8, $vgpr14_128, 8, killed $vgpr0_256, 0, 0, implicit $exec
+    ; GCN-NEXT: early-clobber $vgpr19_256 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_128, 8, killed $vgpr14_128, 8, killed $vgpr19_256, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_1
-    ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, $vgpr10_vgpr11_vgpr12_vgpr13, 8, $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
-    $vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_vgpr11_vgpr12_vgpr13, 8, killed $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26, 0, 0, implicit $exec
-    IMAGE_STORE_V4_V1_gfx12 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    ; GCN-NEXT: IMAGE_STORE_V4_V1_gfx12 $vgpr0_128, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
+    $vgpr0_256 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, $vgpr10_128, 8, $vgpr14_128, 8, killed $vgpr0_256, 0, 0, implicit $exec
+    $vgpr19_256 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, killed $vgpr10_128, 8, killed $vgpr14_128, 8, killed $vgpr19_256, 0, 0, implicit $exec
+    IMAGE_STORE_V4_V1_gfx12 $vgpr0_128, $vgpr18, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128), addrspace 8)
 ...
 
 ---
@@ -484,8 +484,8 @@ body: |
     ; GCN-NEXT: S_WAIT_SAMPLECNT 0
     ; GCN-NEXT: S_WAIT_BVHCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: $vgpr8_vgpr9_vgpr10_vgpr11 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
-    ; GCN-NEXT: $vgpr4_vgpr5_vgpr6_vgpr7 = IMAGE_LOAD_V4_V1_gfx12 $vgpr1, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; GCN-NEXT: $vgpr8_128 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; GCN-NEXT: $vgpr4_128 = IMAGE_LOAD_V4_V1_gfx12 $vgpr1, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_1
     ; GCN-NEXT: $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
@@ -494,8 +494,8 @@ body: |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
-    $vgpr8_vgpr9_vgpr10_vgpr11 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
-    $vgpr4_vgpr5_vgpr6_vgpr7 = IMAGE_LOAD_V4_V1_gfx12 $vgpr1, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    $vgpr8_128 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    $vgpr4_128 = IMAGE_LOAD_V4_V1_gfx12 $vgpr1, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $mode, implicit $exec
     $vgpr1 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
@@ -517,8 +517,8 @@ body: |
     ; GCN-NEXT: S_WAIT_SAMPLECNT 0
     ; GCN-NEXT: S_WAIT_BVHCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: $vgpr4 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GCN-NEXT: $vgpr5 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN-NEXT: $vgpr4 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN-NEXT: $vgpr5 = FLAT_LOAD_DWORD $vgpr2_64, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_1
     ; GCN-NEXT: $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr0, $vgpr1, implicit $mode, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
@@ -527,8 +527,8 @@ body: |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr6, $vgpr7
-    $vgpr4 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    $vgpr5 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr4 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr5 = FLAT_LOAD_DWORD $vgpr2_64, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr0, $vgpr1, implicit $mode, implicit $exec
     $vgpr2 = nofpexcept V_ADD_F32_e32 $vgpr2, $vgpr3, implicit $mode, implicit $exec
     SI_RETURN_TO_EPILOG $vgpr6, $vgpr7
@@ -550,8 +550,8 @@ body: |
     ; GCN-NEXT: S_WAIT_SAMPLECNT 0
     ; GCN-NEXT: S_WAIT_BVHCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: $vgpr8_vgpr9_vgpr10_vgpr11 = DS_READ_B128_gfx9 $vgpr0, 0, 0, implicit $exec :: (load (s128), addrspace 3)
-    ; GCN-NEXT: $vgpr4_vgpr5_vgpr6_vgpr7 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    ; GCN-NEXT: $vgpr8_128 = DS_READ_B128_gfx9 $vgpr0, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    ; GCN-NEXT: $vgpr4_128 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_1
     ; GCN-NEXT: $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
@@ -560,8 +560,8 @@ body: |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
-    $vgpr8_vgpr9_vgpr10_vgpr11 = DS_READ_B128_gfx9 $vgpr0, 0, 0, implicit $exec :: (load (s128), addrspace 3)
-    $vgpr4_vgpr5_vgpr6_vgpr7 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    $vgpr8_128 = DS_READ_B128_gfx9 $vgpr0, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    $vgpr4_128 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $mode, implicit $exec
     $vgpr1 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
@@ -583,8 +583,8 @@ body: |
     ; GCN-NEXT: S_WAIT_SAMPLECNT 0
     ; GCN-NEXT: S_WAIT_BVHCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: $vgpr8_vgpr9_vgpr10_vgpr11 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
-    ; GCN-NEXT: $vgpr4_vgpr5_vgpr6_vgpr7 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    ; GCN-NEXT: $vgpr8_128 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; GCN-NEXT: $vgpr4_128 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
     ; GCN-NEXT: $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr1 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
@@ -592,8 +592,8 @@ body: |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
-    $vgpr8_vgpr9_vgpr10_vgpr11 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
-    $vgpr4_vgpr5_vgpr6_vgpr7 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    $vgpr8_128 = IMAGE_LOAD_V4_V1_gfx12 $vgpr0, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    $vgpr4_128 = DS_READ_B128_gfx9 $vgpr1, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr0, $vgpr0, implicit $mode, implicit $exec
     $vgpr1 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     SI_RETURN_TO_EPILOG $vgpr0, $vgpr1
@@ -615,8 +615,8 @@ body: |
     ; GCN-NEXT: S_WAIT_SAMPLECNT 0
     ; GCN-NEXT: S_WAIT_BVHCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: $vgpr8 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GCN-NEXT: $vgpr4_vgpr5_vgpr6_vgpr7 = DS_READ_B128_gfx9 $vgpr2, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    ; GCN-NEXT: $vgpr8 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN-NEXT: $vgpr4_128 = DS_READ_B128_gfx9 $vgpr2, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
     ; GCN-NEXT: $vgpr1 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr2 = nofpexcept V_ADD_F32_e32 $vgpr2, $vgpr2, implicit $mode, implicit $exec
@@ -624,8 +624,8 @@ body: |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr1, $vgpr2
-    $vgpr8 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    $vgpr4_vgpr5_vgpr6_vgpr7 = DS_READ_B128_gfx9 $vgpr2, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    $vgpr8 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr4_128 = DS_READ_B128_gfx9 $vgpr2, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     $vgpr1 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     $vgpr2 = nofpexcept V_ADD_F32_e32 $vgpr2, $vgpr2, implicit $mode, implicit $exec
     SI_RETURN_TO_EPILOG $vgpr1, $vgpr2
@@ -647,8 +647,8 @@ body: |
     ; GCN-NEXT: S_WAIT_SAMPLECNT 0
     ; GCN-NEXT: S_WAIT_BVHCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: $vgpr8 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GCN-NEXT: $vgpr4_vgpr5_vgpr6_vgpr7 = IMAGE_LOAD_V4_V1_gfx12 $vgpr2, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; GCN-NEXT: $vgpr8 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN-NEXT: $vgpr4_128 = IMAGE_LOAD_V4_V1_gfx12 $vgpr2, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
     ; GCN-NEXT: $vgpr1 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr2 = nofpexcept V_ADD_F32_e32 $vgpr2, $vgpr2, implicit $mode, implicit $exec
@@ -656,8 +656,8 @@ body: |
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
     ; GCN-NEXT: S_SETREG_IMM32_B32 0, 2074, implicit-def $mode, implicit $mode
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr1, $vgpr2
-    $vgpr8 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    $vgpr4_vgpr5_vgpr6_vgpr7 = IMAGE_LOAD_V4_V1_gfx12 $vgpr2, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    $vgpr8 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr4_128 = IMAGE_LOAD_V4_V1_gfx12 $vgpr2, $sgpr0_256, 15, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     $vgpr1 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     $vgpr2 = nofpexcept V_ADD_F32_e32 $vgpr2, $vgpr2, implicit $mode, implicit $exec
     SI_RETURN_TO_EPILOG $vgpr1, $vgpr2
@@ -677,12 +677,12 @@ body: |
     ; GCN-NEXT: S_WAIT_SAMPLECNT 0
     ; GCN-NEXT: S_WAIT_BVHCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 100, 0, implicit $exec
+    ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 100, 0, implicit $exec
     ; GCN-NEXT: S_WAIT_LOADCNT 0
     ; GCN-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr2, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 100, 0, implicit $exec
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 100, 0, implicit $exec
     $vgpr2 = V_MOV_B32_e32 $vgpr2, implicit $exec
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
 ...
@@ -706,11 +706,11 @@ body: |
     ; GCN-NEXT: S_WAIT_SAMPLECNT 0
     ; GCN-NEXT: S_WAIT_BVHCNT 0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, $vgpr10_vgpr11_vgpr12_vgpr13, 8, $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
+    ; GCN-NEXT: early-clobber $vgpr0_256 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, $vgpr10_128, 8, $vgpr14_128, 8, killed $vgpr0_256, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
-    ; GCN-NEXT: $vgpr14_vgpr15_vgpr16_vgpr17 = DS_READ_B128_gfx9 $vgpr20, 0, 0, implicit $exec :: (load (s128), addrspace 3)
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, $vgpr10_vgpr11_vgpr12_vgpr13, 8, $vgpr14_vgpr15_vgpr16_vgpr17, 8, killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, implicit $exec
-    $vgpr14_vgpr15_vgpr16_vgpr17 = DS_READ_B128_gfx9 $vgpr20, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    ; GCN-NEXT: $vgpr14_128 = DS_READ_B128_gfx9 $vgpr20, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    $vgpr0_256 = V_WMMA_F32_16X16X16_F16_w32_twoaddr 8, $vgpr10_128, 8, $vgpr14_128, 8, killed $vgpr0_256, 0, 0, implicit $exec
+    $vgpr14_128 = DS_READ_B128_gfx9 $vgpr20, 0, 0, implicit $exec :: (load (s128), addrspace 3)
 ...
 
 ---
@@ -733,8 +733,8 @@ body: |
     ; GCN-NEXT: $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr5 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
-    ; GCN-NEXT: $vgpr1_vgpr2_vgpr3_vgpr4 = DS_READ_B128_gfx9 $vgpr10, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    ; GCN-NEXT: $vgpr1_128 = DS_READ_B128_gfx9 $vgpr10, 0, 0, implicit $exec :: (load (s128), addrspace 3)
     $vgpr0 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
     $vgpr5 = nofpexcept V_ADD_F32_e32 $vgpr1, $vgpr0, implicit $mode, implicit $exec
-    $vgpr1_vgpr2_vgpr3_vgpr4 = DS_READ_B128_gfx9 $vgpr10, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    $vgpr1_128 = DS_READ_B128_gfx9 $vgpr10, 0, 0, implicit $exec :: (load (s128), addrspace 3)
 ...

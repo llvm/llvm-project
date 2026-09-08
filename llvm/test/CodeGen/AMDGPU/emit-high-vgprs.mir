@@ -20,16 +20,16 @@ body:             |
     $vgpr3 = V_FMA_F32_e64 0, undef $vgpr4, 0, undef $vgpr5, 0, undef $vgpr6, 0, 0, implicit $exec, implicit $mode
 
     ; GCN: v_mqsad_u32_u8 v[254:257], v[0:1] /*v[256:257]*/, v0 /*v256*/, v[244:247] /*v[500:503]*/   ; encoding: [0xfe,0x00,0x3d,0xd6,0x00,0x01,0xd2,0x07]
-    $vgpr254_vgpr255_vgpr256_vgpr257 = V_MQSAD_U32_U8_e64 $vgpr256_vgpr257, $vgpr256, undef $vgpr500_vgpr501_vgpr502_vgpr503, 0, implicit $exec
+    $vgpr254_128 = V_MQSAD_U32_U8_e64 $vgpr256_64, $vgpr256, undef $vgpr500_128, 0, implicit $exec
 
     ; GCN: v_mqsad_u32_u8 v[254:257], v[0:1], v0, v[244:247]   ; encoding: [0xfe,0x00,0x3d,0xd6,0x00,0x01,0xd2,0x07]
-    $vgpr254_vgpr255_vgpr256_vgpr257 = V_MQSAD_U32_U8_e64 $vgpr0_vgpr1, $vgpr0, undef $vgpr244_vgpr245_vgpr246_vgpr247, 0, implicit $exec
+    $vgpr254_128 = V_MQSAD_U32_U8_e64 $vgpr0_64, $vgpr0, undef $vgpr244_128, 0, implicit $exec
 
     ; GCN: v_mqsad_u32_u8 v[0:3] /*v[256:259]*/, v[0:1] /*v[256:257]*/, v0 /*v256*/, v[244:247] /*v[500:503]*/   ; encoding: [0x00,0x00,0x3d,0xd6,0x00,0x01,0xd2,0x07]
-    $vgpr256_vgpr257_vgpr258_vgpr259 = V_MQSAD_U32_U8_e64 $vgpr256_vgpr257, $vgpr256, undef $vgpr500_vgpr501_vgpr502_vgpr503, 0, implicit $exec
+    $vgpr256_128 = V_MQSAD_U32_U8_e64 $vgpr256_64, $vgpr256, undef $vgpr500_128, 0, implicit $exec
 
     ; GCN: v_mqsad_u32_u8 v[0:3], v[0:1], v0, v[244:247]   ; encoding: [0x00,0x00,0x3d,0xd6,0x00,0x01,0xd2,0x07]
-    $vgpr0_vgpr1_vgpr2_vgpr3 = V_MQSAD_U32_U8_e64 $vgpr0_vgpr1, $vgpr0, undef $vgpr244_vgpr245_vgpr246_vgpr247, 0, implicit $exec
+    $vgpr0_128 = V_MQSAD_U32_U8_e64 $vgpr0_64, $vgpr0, undef $vgpr244_128, 0, implicit $exec
 
     ; GCN: v_mul_f32_e64 v0 /*v256*/, -v1 /*v257*/, |v2 /*v258*/| ; encoding: [0x00,0x02,0x08,0xd5,0x01,0x05,0x02,0x22]
     $vgpr256 = V_MUL_F32_e64 1, $vgpr257, 2, $vgpr258, 0, 0, implicit $exec, implicit $mode

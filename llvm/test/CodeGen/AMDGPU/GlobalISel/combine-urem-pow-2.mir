@@ -90,25 +90,25 @@ name: urem_s64_var_shl1
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
 
     ; GCN-LABEL: name: urem_s64_var_shl1
-    ; GCN: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GCN: liveins: $vgpr0_64, $vgpr2
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: %var:_(s64) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: %var:_(s64) = COPY $vgpr0_64
     ; GCN-NEXT: %shiftamt:_(s32) = COPY $vgpr2
     ; GCN-NEXT: %one:_(s64) = G_CONSTANT i64 1
     ; GCN-NEXT: %one_bit:_(s64) = G_SHL %one, %shiftamt(s32)
     ; GCN-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
     ; GCN-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD %one_bit, [[C]]
     ; GCN-NEXT: %rem:_(s64) = G_AND %var, [[ADD]]
-    ; GCN-NEXT: $vgpr0_vgpr1 = COPY %rem(s64)
-    %var:_(s64) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: $vgpr0_64 = COPY %rem(s64)
+    %var:_(s64) = COPY $vgpr0_64
     %shiftamt:_(s32) = COPY $vgpr2
     %one:_(s64) = G_CONSTANT i64 1
     %one_bit:_(s64) = G_SHL %one, %shiftamt
     %rem:_(s64) = G_UREM %var, %one_bit
-    $vgpr0_vgpr1 = COPY %rem
+    $vgpr0_64 = COPY %rem
 ...
 
 ---
@@ -116,25 +116,25 @@ name: urem_v2s32_var_shl1
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
 
     ; GCN-LABEL: name: urem_v2s32_var_shl1
-    ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; GCN: liveins: $vgpr0_64, $vgpr2_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; GCN-NEXT: %shift_amt:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; GCN-NEXT: %var:_(<2 x s32>) = COPY $vgpr0_64
+    ; GCN-NEXT: %shift_amt:_(<2 x s32>) = COPY $vgpr2_64
     ; GCN-NEXT: %one:_(s32) = G_CONSTANT i32 1
     ; GCN-NEXT: %one_vec:_(<2 x s32>) = G_BUILD_VECTOR %one(s32), %one(s32)
     ; GCN-NEXT: %one_bit:_(<2 x s32>) = G_SHL %one_vec, %shift_amt(<2 x s32>)
     ; GCN-NEXT: %rem:_(<2 x s32>) = G_UREM %var, %one_bit
-    ; GCN-NEXT: $vgpr0_vgpr1 = COPY %rem(<2 x s32>)
-    %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    %shift_amt:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; GCN-NEXT: $vgpr0_64 = COPY %rem(<2 x s32>)
+    %var:_(<2 x s32>) = COPY $vgpr0_64
+    %shift_amt:_(<2 x s32>) = COPY $vgpr2_64
     %one:_(s32) = G_CONSTANT i32 1
     %one_vec:_(<2 x s32>) = G_BUILD_VECTOR %one, %one
     %one_bit:_(<2 x s32>) = G_SHL %one_vec, %shift_amt
     %rem:_(<2 x s32>) = G_UREM %var, %one_bit
-    $vgpr0_vgpr1 = COPY %rem
+    $vgpr0_64 = COPY %rem
 ...
 
 ---
@@ -198,21 +198,21 @@ name: v_urem_v2i32_pow2k_denom
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; GCN-LABEL: name: v_urem_v2i32_pow2k_denom
-    ; GCN: liveins: $vgpr0_vgpr1
+    ; GCN: liveins: $vgpr0_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: %var:_(<2 x s32>) = COPY $vgpr0_64
     ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4095
     ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
     ; GCN-NEXT: %rem:_(<2 x s32>) = G_AND %var, [[BUILD_VECTOR]]
-    ; GCN-NEXT: $vgpr0_vgpr1 = COPY %rem(<2 x s32>)
-    %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: $vgpr0_64 = COPY %rem(<2 x s32>)
+    %var:_(<2 x s32>) = COPY $vgpr0_64
     %pow2:_(s32) = G_CONSTANT i32 4096
     %pow2_vec:_(<2 x s32>) = G_BUILD_VECTOR %pow2(s32), %pow2(s32)
     %rem:_(<2 x s32>) = G_UREM %var, %pow2_vec
-    $vgpr0_vgpr1 = COPY %rem
+    $vgpr0_64 = COPY %rem
 ...
 
 ---
@@ -220,23 +220,23 @@ name: v_urem_v2i32_pow2k_not_splat_denom
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; GCN-LABEL: name: v_urem_v2i32_pow2k_not_splat_denom
-    ; GCN: liveins: $vgpr0_vgpr1
+    ; GCN: liveins: $vgpr0_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: %var:_(<2 x s32>) = COPY $vgpr0_64
     ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 4095
     ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 2047
     ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C1]](s32)
     ; GCN-NEXT: %rem:_(<2 x s32>) = G_AND %var, [[BUILD_VECTOR]]
-    ; GCN-NEXT: $vgpr0_vgpr1 = COPY %rem(<2 x s32>)
-    %var:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: $vgpr0_64 = COPY %rem(<2 x s32>)
+    %var:_(<2 x s32>) = COPY $vgpr0_64
     %pow2_1:_(s32) = G_CONSTANT i32 4096
     %pow2_2:_(s32) = G_CONSTANT i32 2048
     %pow2_vec:_(<2 x s32>) = G_BUILD_VECTOR %pow2_1(s32), %pow2_2(s32)
     %rem:_(<2 x s32>) = G_UREM %var, %pow2_vec
-    $vgpr0_vgpr1 = COPY %rem
+    $vgpr0_64 = COPY %rem
 ...
 
 ---
@@ -244,19 +244,19 @@ name: v_urem_v2i64_pow2k_denom
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    liveins: $vgpr0_128
 
     ; GCN-LABEL: name: v_urem_v2i64_pow2k_denom
-    ; GCN: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN: liveins: $vgpr0_128
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: %var:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN-NEXT: %var:_(<2 x s64>) = COPY $vgpr0_128
     ; GCN-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4095
     ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
     ; GCN-NEXT: %rem:_(<2 x s64>) = G_AND %var, [[BUILD_VECTOR]]
-    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %rem(<2 x s64>)
-    %var:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN-NEXT: $vgpr0_128 = COPY %rem(<2 x s64>)
+    %var:_(<2 x s64>) = COPY $vgpr0_128
     %pow2:_(s64) = G_CONSTANT i64 4096
     %pow2_vec:_(<2 x s64>) = G_BUILD_VECTOR %pow2(s64), %pow2(s64)
     %rem:_(<2 x s64>) = G_UREM %var, %pow2_vec
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %rem
+    $vgpr0_128 = COPY %rem
 ...

@@ -42,12 +42,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3, $scc
+    liveins: $vgpr0_64, $vgpr2, $vgpr3, $scc
 
     ; WAVE64-LABEL: name: copy_vcc_bank_sgpr_bank
-    ; WAVE64: liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3, $scc
+    ; WAVE64: liveins: $vgpr0_64, $vgpr2, $vgpr3, $scc
     ; WAVE64-NEXT: {{  $}}
-    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; WAVE64-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; WAVE64-NEXT: [[COPY3:%[0-9]+]]:sreg_32 = COPY $scc
@@ -57,9 +57,9 @@ body: |
     ; WAVE64-NEXT: FLAT_STORE_DWORD [[COPY]], [[V_CNDMASK_B32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
     ;
     ; WAVE32-LABEL: name: copy_vcc_bank_sgpr_bank
-    ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3, $scc
+    ; WAVE32: liveins: $vgpr0_64, $vgpr2, $vgpr3, $scc
     ; WAVE32-NEXT: {{  $}}
-    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; WAVE32-NEXT: [[COPY3:%[0-9]+]]:sreg_32 = COPY $scc
@@ -67,7 +67,7 @@ body: |
     ; WAVE32-NEXT: [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_NE_U32_e64 0, [[S_AND_B32_]], implicit $exec
     ; WAVE32-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY2]], 0, [[COPY1]], [[V_CMP_NE_U32_e64_]], implicit $exec
     ; WAVE32-NEXT: GLOBAL_STORE_DWORD [[COPY]], [[V_CNDMASK_B32_e64_]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
-    %0:vgpr(p1) = COPY $vgpr0_vgpr1
+    %0:vgpr(p1) = COPY $vgpr0_64
     %1:vgpr(s32) = COPY $vgpr2
     %2:vgpr(s32) = COPY $vgpr3
     %3:sgpr(s1) = COPY $scc
@@ -83,12 +83,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3, $scc
+    liveins: $vgpr0_64, $vgpr2, $vgpr3, $scc
 
     ; WAVE64-LABEL: name: copy_vcc_bank_sgpr_bank_2_uses
-    ; WAVE64: liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3, $scc
+    ; WAVE64: liveins: $vgpr0_64, $vgpr2, $vgpr3, $scc
     ; WAVE64-NEXT: {{  $}}
-    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; WAVE64-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; WAVE64-NEXT: [[COPY3:%[0-9]+]]:sreg_32 = COPY $scc
@@ -101,9 +101,9 @@ body: |
     ; WAVE64-NEXT: FLAT_STORE_DWORD [[COPY]], [[V_CNDMASK_B32_e64_1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
     ;
     ; WAVE32-LABEL: name: copy_vcc_bank_sgpr_bank_2_uses
-    ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3, $scc
+    ; WAVE32: liveins: $vgpr0_64, $vgpr2, $vgpr3, $scc
     ; WAVE32-NEXT: {{  $}}
-    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; WAVE32-NEXT: [[COPY3:%[0-9]+]]:sreg_32 = COPY $scc
@@ -113,7 +113,7 @@ body: |
     ; WAVE32-NEXT: [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_NE_U32_e64 0, [[S_AND_B32_]], implicit $exec
     ; WAVE32-NEXT: [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[V_CNDMASK_B32_e64_]], 0, [[COPY1]], [[V_CMP_NE_U32_e64_]], implicit $exec
     ; WAVE32-NEXT: GLOBAL_STORE_DWORD [[COPY]], [[V_CNDMASK_B32_e64_1]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
-    %0:vgpr(p1) = COPY $vgpr0_vgpr1
+    %0:vgpr(p1) = COPY $vgpr0_64
     %1:vgpr(s32) = COPY $vgpr2
     %2:vgpr(s32) = COPY $vgpr3
     %3:sgpr(s1) = COPY $scc
@@ -132,12 +132,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3, $scc
+    liveins: $vgpr0_64, $vgpr2, $vgpr3, $scc
 
     ; WAVE64-LABEL: name: copy_vcc_bank_scc_physreg
-    ; WAVE64: liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3, $scc
+    ; WAVE64: liveins: $vgpr0_64, $vgpr2, $vgpr3, $scc
     ; WAVE64-NEXT: {{  $}}
-    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; WAVE64-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; WAVE64-NEXT: [[COPY3:%[0-9]+]]:sreg_64_xexec = COPY $scc
@@ -145,15 +145,15 @@ body: |
     ; WAVE64-NEXT: FLAT_STORE_DWORD [[COPY]], [[V_CNDMASK_B32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
     ;
     ; WAVE32-LABEL: name: copy_vcc_bank_scc_physreg
-    ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3, $scc
+    ; WAVE32: liveins: $vgpr0_64, $vgpr2, $vgpr3, $scc
     ; WAVE32-NEXT: {{  $}}
-    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; WAVE32-NEXT: [[COPY3:%[0-9]+]]:sreg_32_xm0_xexec = COPY $scc
     ; WAVE32-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY2]], 0, [[COPY1]], [[COPY3]], implicit $exec
     ; WAVE32-NEXT: GLOBAL_STORE_DWORD [[COPY]], [[V_CNDMASK_B32_e64_]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
-    %0:vgpr(p1) = COPY $vgpr0_vgpr1
+    %0:vgpr(p1) = COPY $vgpr0_64
     %1:vgpr(s32) = COPY $vgpr2
     %2:vgpr(s32) = COPY $vgpr3
     %3:vcc(s1) = COPY $scc

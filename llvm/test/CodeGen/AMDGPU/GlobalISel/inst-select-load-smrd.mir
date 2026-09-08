@@ -161,7 +161,7 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_64, $vgpr2_vgpr3
+    liveins: $sgpr0_64, $vgpr2_64
     %0:sgpr(p4) = COPY $sgpr0_64
     %1:sgpr(p1) = COPY $sgpr2_64
 
@@ -200,7 +200,7 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $sgpr0_64, $vgpr2_vgpr3
+    liveins: $sgpr0_64, $vgpr2_64
     %0:sgpr(p4) = G_CONSTANT i64 44
     %1:sgpr(s64) = G_CONSTANT i64 64
     %2:sgpr(p4) = G_PTR_ADD %0, %1

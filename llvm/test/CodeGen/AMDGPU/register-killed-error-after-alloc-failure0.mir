@@ -13,26 +13,26 @@
 
 # ERR: error: <unknown>:0:0: ran out of registers during register allocation
 
-# GREEDY: SI_SPILL_V256_SAVE undef $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-# GREEDY-NEXT: SI_SPILL_V512_SAVE killed $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, %stack.1, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.1, align 4, addrspace 5)
-# GREEDY-NEXT: SI_SPILL_V128_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3
+# GREEDY: SI_SPILL_V256_SAVE undef $vgpr0_256
+# GREEDY-NEXT: SI_SPILL_V512_SAVE killed $vgpr4_512, %stack.1, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.1, align 4, addrspace 5)
+# GREEDY-NEXT: SI_SPILL_V128_SAVE killed $vgpr0_128
 
-# GREEDY: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19 = SI_SPILL_V512_RESTORE
-# GREEDY: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = SI_SPILL_V256_RESTORE
-# GREEDY:  S_NOP 0, implicit killed renamable $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, implicit undef $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, implicit killed renamable $vgpr0_vgpr1_vgpr2_vgpr3
-# GREEDY: S_NOP 0, implicit killed renamable $vgpr20_vgpr21
+# GREEDY: $vgpr4_512 = SI_SPILL_V512_RESTORE
+# GREEDY: $vgpr0_256 = SI_SPILL_V256_RESTORE
+# GREEDY:  S_NOP 0, implicit killed renamable $vgpr4_512, implicit undef $vgpr0_256, implicit killed renamable $vgpr0_128
+# GREEDY: S_NOP 0, implicit killed renamable $vgpr20_64
 
 
-# BASIC: SI_SPILL_V512_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-# BASIC: SI_SPILL_V256_SAVE killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-# BASIC: SI_SPILL_V128_SAVE undef $vgpr0_vgpr1_vgpr2_vgpr3
-# BASIC: SI_SPILL_V64_SAVE killed $vgpr0_vgpr1
-# BASIC: renamable $vgpr0_vgpr1_vgpr2_vgpr3 = SI_SPILL_V128_RESTORE
-# BASIC: renamable $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = SI_SPILL_V256_RESTORE
-# BASIC: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = SI_SPILL_V512_RESTORE
-# BASIC: S_NOP 0, implicit undef $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit killed renamable $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, implicit killed renamable $vgpr0_vgpr1_vgpr2_vgpr3
-# BASIC: renamable $vgpr0_vgpr1 = SI_SPILL_V64_RESTORE
-# BASIC: S_NOP 0, implicit killed renamable $vgpr0_vgpr1
+# BASIC: SI_SPILL_V512_SAVE killed $vgpr0_512
+# BASIC: SI_SPILL_V256_SAVE killed $vgpr16_256
+# BASIC: SI_SPILL_V128_SAVE undef $vgpr0_128
+# BASIC: SI_SPILL_V64_SAVE killed $vgpr0_64
+# BASIC: renamable $vgpr0_128 = SI_SPILL_V128_RESTORE
+# BASIC: renamable $vgpr16_256 = SI_SPILL_V256_RESTORE
+# BASIC: $vgpr0_512 = SI_SPILL_V512_RESTORE
+# BASIC: S_NOP 0, implicit undef $vgpr0_512, implicit killed renamable $vgpr16_256, implicit killed renamable $vgpr0_128
+# BASIC: renamable $vgpr0_64 = SI_SPILL_V64_RESTORE
+# BASIC: S_NOP 0, implicit killed renamable $vgpr0_64
 
 --- |
   define void @killed_reg_after_regalloc_failure() #0 {

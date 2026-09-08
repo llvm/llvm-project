@@ -1317,9 +1317,9 @@ define amdgpu_kernel void @v_sad_u32_i16_pat2(ptr addrspace(1) %out) {
 ; GFX12-5-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX12-5-SDAG-NEXT:    global_load_u16 v1, v[0:1], off scope:SCOPE_SYS
 ; GFX12-5-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX12-5-SDAG-NEXT:    ; kill: killed $vgpr0_vgpr1
-; GFX12-5-SDAG-NEXT:    ; kill: killed $vgpr0_vgpr1
-; GFX12-5-SDAG-NEXT:    ; kill: killed $vgpr0_vgpr1
+; GFX12-5-SDAG-NEXT:    ; kill: killed $vgpr0_64
+; GFX12-5-SDAG-NEXT:    ; kill: killed $vgpr0_64
+; GFX12-5-SDAG-NEXT:    ; kill: killed $vgpr0_64
 ; GFX12-5-SDAG-NEXT:    global_load_u16 v2, v[0:1], off scope:SCOPE_SYS
 ; GFX12-5-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-5-SDAG-NEXT:    v_and_b32_e32 v0, 0xffff, v0
@@ -1347,7 +1347,7 @@ define amdgpu_kernel void @v_sad_u32_i16_pat2(ptr addrspace(1) %out) {
 ; GFX12-5-GISEL-NEXT:    global_load_u16 v1, v[0:1], off scope:SCOPE_SYS
 ; GFX12-5-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-5-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX12-5-GISEL-NEXT:    ; kill: killed $vgpr0_vgpr1
+; GFX12-5-GISEL-NEXT:    ; kill: killed $vgpr0_64
 ; GFX12-5-GISEL-NEXT:    s_and_b32 s4, 0xffff, s2
 ; GFX12-5-GISEL-NEXT:    global_load_u16 v2, v[0:1], off scope:SCOPE_SYS
 ; GFX12-5-GISEL-NEXT:    s_wait_loadcnt 0x0
@@ -1529,9 +1529,9 @@ define amdgpu_kernel void @v_sad_u32_i8_pat2(ptr addrspace(1) %out) {
 ; GFX12-5-SDAG-NEXT:    s_wait_xcnt 0x0
 ; GFX12-5-SDAG-NEXT:    global_load_u8 v1, v[0:1], off scope:SCOPE_SYS
 ; GFX12-5-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX12-5-SDAG-NEXT:    ; kill: killed $vgpr0_vgpr1
-; GFX12-5-SDAG-NEXT:    ; kill: killed $vgpr0_vgpr1
-; GFX12-5-SDAG-NEXT:    ; kill: killed $vgpr0_vgpr1
+; GFX12-5-SDAG-NEXT:    ; kill: killed $vgpr0_64
+; GFX12-5-SDAG-NEXT:    ; kill: killed $vgpr0_64
+; GFX12-5-SDAG-NEXT:    ; kill: killed $vgpr0_64
 ; GFX12-5-SDAG-NEXT:    global_load_u8 v2, v[0:1], off scope:SCOPE_SYS
 ; GFX12-5-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-5-SDAG-NEXT:    v_min_u32_e32 v3, v0, v1
@@ -1556,7 +1556,7 @@ define amdgpu_kernel void @v_sad_u32_i8_pat2(ptr addrspace(1) %out) {
 ; GFX12-5-GISEL-NEXT:    global_load_u8 v1, v[0:1], off scope:SCOPE_SYS
 ; GFX12-5-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-5-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX12-5-GISEL-NEXT:    ; kill: killed $vgpr0_vgpr1
+; GFX12-5-GISEL-NEXT:    ; kill: killed $vgpr0_64
 ; GFX12-5-GISEL-NEXT:    global_load_u8 v2, v[0:1], off scope:SCOPE_SYS
 ; GFX12-5-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-5-GISEL-NEXT:    v_readfirstlane_b32 s3, v1

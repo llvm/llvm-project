@@ -127,12 +127,12 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: sext_inreg_v_s64_1
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_64
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(i32), [[UV1:%[0-9]+]]:vgpr(i32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:vgpr(i32) = G_FREEZE [[UV]]
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:vgpr(i32) = G_SEXT_INREG [[FREEZE]], 1
@@ -140,7 +140,7 @@ body: |
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:vgpr(i32) = G_ASHR [[SEXT_INREG]], [[C]](i32)
     ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[SEXT_INREG]](i32), [[ASHR]](i32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[MV]](s64)
-    %0:_(s64) = COPY $vgpr0_vgpr1
+    %0:_(s64) = COPY $vgpr0_64
     %1:_(s64) = G_SEXT_INREG %0, 1
     S_ENDPGM 0, implicit %1
 
@@ -152,12 +152,12 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: sext_inreg_v_s64_31
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_64
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(i32), [[UV1:%[0-9]+]]:vgpr(i32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:vgpr(i32) = G_FREEZE [[UV]]
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:vgpr(i32) = G_SEXT_INREG [[FREEZE]], 31
@@ -165,7 +165,7 @@ body: |
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:vgpr(i32) = G_ASHR [[SEXT_INREG]], [[C]](i32)
     ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[SEXT_INREG]](i32), [[ASHR]](i32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[MV]](s64)
-    %0:_(s64) = COPY $vgpr0_vgpr1
+    %0:_(s64) = COPY $vgpr0_64
     %1:_(s64) = G_SEXT_INREG %0, 31
     S_ENDPGM 0, implicit %1
 
@@ -177,19 +177,19 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: sext_inreg_v_s64_32
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_64
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(i32), [[UV1:%[0-9]+]]:vgpr(i32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; CHECK-NEXT: [[FREEZE:%[0-9]+]]:vgpr(i32) = G_FREEZE [[UV]]
     ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(i32) = G_CONSTANT i32 31
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:vgpr(i32) = G_ASHR [[FREEZE]], [[C]](i32)
     ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[FREEZE]](i32), [[ASHR]](i32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[MV]](s64)
-    %0:_(s64) = COPY $vgpr0_vgpr1
+    %0:_(s64) = COPY $vgpr0_64
     %1:_(s64) = G_SEXT_INREG %0, 32
     S_ENDPGM 0, implicit %1
 
@@ -201,17 +201,17 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: sext_inreg_v_s64_33
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_64
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(i32), [[UV1:%[0-9]+]]:vgpr(i32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:vgpr(i32) = G_SEXT_INREG [[UV1]], 1
     ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[UV]](i32), [[SEXT_INREG]](i32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[MV]](s64)
-    %0:_(s64) = COPY $vgpr0_vgpr1
+    %0:_(s64) = COPY $vgpr0_64
     %1:_(s64) = G_SEXT_INREG %0, 33
     S_ENDPGM 0, implicit %1
 
@@ -223,17 +223,17 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: sext_inreg_v_s64_35
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_64
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(i32), [[UV1:%[0-9]+]]:vgpr(i32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:vgpr(i32) = G_SEXT_INREG [[UV1]], 3
     ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[UV]](i32), [[SEXT_INREG]](i32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[MV]](s64)
-    %0:_(s64) = COPY $vgpr0_vgpr1
+    %0:_(s64) = COPY $vgpr0_64
     %1:_(s64) = G_SEXT_INREG %0, 35
     S_ENDPGM 0, implicit %1
 
@@ -245,17 +245,17 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: sext_inreg_v_s64_63
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_64
     ; CHECK-NEXT: [[UV:%[0-9]+]]:vgpr(i32), [[UV1:%[0-9]+]]:vgpr(i32) = G_UNMERGE_VALUES [[COPY]](s64)
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:vgpr(i32) = G_SEXT_INREG [[UV1]], 31
     ; CHECK-NEXT: [[MV:%[0-9]+]]:vgpr(s64) = G_MERGE_VALUES [[UV]](i32), [[SEXT_INREG]](i32)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[MV]](s64)
-    %0:_(s64) = COPY $vgpr0_vgpr1
+    %0:_(s64) = COPY $vgpr0_64
     %1:_(s64) = G_SEXT_INREG %0, 63
     S_ENDPGM 0, implicit %1
 

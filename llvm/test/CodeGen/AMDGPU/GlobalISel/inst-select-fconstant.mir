@@ -65,15 +65,15 @@ body: |
     ; GCN-NEXT: [[V_MOV_B1:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO 4620693217682128896, implicit $exec
     ; GCN-NEXT: [[V_MOV_B2:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO -4611686018427387904, implicit $exec
     ; GCN-NEXT: [[V_MOV_B3:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO 4621819117588971520, implicit $exec
-    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[V_MOV_B]]
-    ; GCN-NEXT: $vgpr2_vgpr3 = COPY [[V_MOV_B1]]
+    ; GCN-NEXT: $vgpr0_64 = COPY [[V_MOV_B]]
+    ; GCN-NEXT: $vgpr2_64 = COPY [[V_MOV_B1]]
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MOV_B2]], implicit [[V_MOV_B3]]
     %0:vgpr(s64) = G_FCONSTANT double 1.0
     %1:vgpr(s64) = G_FCONSTANT double 8.0
     %2:vgpr(s64) = G_FCONSTANT double -2.0
     %3:vgpr(s64) = G_FCONSTANT double 10.0
-    $vgpr0_vgpr1 = COPY %0
-    $vgpr2_vgpr3 = COPY %1
+    $vgpr0_64 = COPY %0
+    $vgpr2_64 = COPY %1
     S_ENDPGM 0, implicit %2 , implicit %3
 
 ...

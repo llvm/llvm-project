@@ -35,8 +35,8 @@ machineFunctionInfo:
   dynamicVGPRBlockSize: 16
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
-    %addr:vreg_64 = COPY $vgpr0_vgpr1
+    liveins: $vgpr0_64
+    %addr:vreg_64 = COPY $vgpr0_64
     %acc0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %l0:vgpr_32 = GLOBAL_LOAD_DWORD %addr, 0, 0, implicit $exec
     %acc1:vgpr_32 = V_ADD_U32_e32 %acc0, %l0, implicit $exec

@@ -705,7 +705,7 @@ body: |
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $vgpr1 = V_MOV_B32_e32 0, implicit $exec
     $vgpr2 = V_MOV_B32_e32 0, implicit $exec
-    $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr0 = V_ADD_U32_e32 $vgpr2, $vgpr2, implicit $exec
 ...
 
@@ -776,6 +776,6 @@ body: |
 name: trans64
 body: |
   bb.0:
-    $vgpr0_vgpr1 = V_RCP_F64_e32 $vgpr0_vgpr1, implicit $exec, implicit $mode
-    $vgpr0_vgpr1 = V_ADD_F64_e64 0, $vgpr0_vgpr1, 0, $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $mode
+    $vgpr0_64 = V_RCP_F64_e32 $vgpr0_64, implicit $exec, implicit $mode
+    $vgpr0_64 = V_ADD_F64_e64 0, $vgpr0_64, 0, $vgpr0_64, 0, 0, implicit $exec, implicit $mode
 ...

@@ -47,8 +47,8 @@ body:             |
   
     ; copy from tuple of physical VGPRs to tuple of physical SGPRs  
     ; CHECK: *** Bad machine code: illegal copy from vector register to SGPR ***
-    ; CHECK: - instruction: $sgpr4_64 = COPY $vgpr0_vgpr1 
-    $sgpr4_64 = COPY $vgpr0_vgpr1
+    ; CHECK: - instruction: $sgpr4_64 = COPY $vgpr0_64 
+    $sgpr4_64 = COPY $vgpr0_64
   
     ; copy from tuple of physical AGPRs to tuple of physical SGPRs 
     ; CHECK: *** Bad machine code: illegal copy from vector register to SGPR ***

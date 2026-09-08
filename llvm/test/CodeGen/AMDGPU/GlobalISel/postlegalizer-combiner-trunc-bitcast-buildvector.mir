@@ -160,7 +160,7 @@ body: |
     ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<2 x s32>), [[COPY1]](s32)
     ; CHECK-NEXT: $vgpr0 = COPY [[COPY]](s32)
     ; CHECK-NEXT: $vgpr1 = COPY [[EVEC]](s32)
-    ; CHECK-NEXT: $vgpr2_vgpr3 = COPY [[BITCAST]](s64)
+    ; CHECK-NEXT: $vgpr2_64 = COPY [[BITCAST]](s64)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = COPY $vgpr1
     %2:_(<2 x s32>) = G_BUILD_VECTOR %0, %1
@@ -169,5 +169,5 @@ body: |
     %5:_(s32) = G_EXTRACT_VECTOR_ELT %2, %1
     $vgpr0 = COPY %4
     $vgpr1 = COPY %5
-    $vgpr2_vgpr3 = COPY %3
+    $vgpr2_64 = COPY %3
 ...

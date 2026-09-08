@@ -104,7 +104,7 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; GFX9-NEXT:    s_branch .LBB0_3
 ; GFX9-NEXT:  .LBB0_2:
 ; GFX9-NEXT:    s_mov_b64 s[4:5], -1
-; GFX9-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX9-NEXT:    ; implicit-def: $vgpr2_128
 ; GFX9-NEXT:  .LBB0_3: ; %Flow
 ; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; GFX9-NEXT:    s_cselect_b32 s4, 1, 0
@@ -138,7 +138,7 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; GFX11-TRUE16-NEXT:    s_branch .LBB0_3
 ; GFX11-TRUE16-NEXT:  .LBB0_2:
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, -1
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_128
 ; GFX11-TRUE16-NEXT:  .LBB0_3: ; %Flow
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, exec_lo
@@ -175,7 +175,7 @@ define <4 x i16> @vec_8xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1)
 ; GFX11-FAKE16-NEXT:    s_branch .LBB0_3
 ; GFX11-FAKE16-NEXT:  .LBB0_2:
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, -1
-; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_128
 ; GFX11-FAKE16-NEXT:  .LBB0_3: ; %Flow
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, exec_lo
@@ -320,7 +320,7 @@ define <4 x i16> @vec_8xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX9-NEXT:    s_branch .LBB1_3
 ; GFX9-NEXT:  .LBB1_2:
 ; GFX9-NEXT:    s_mov_b64 s[4:5], -1
-; GFX9-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX9-NEXT:    ; implicit-def: $vgpr2_128
 ; GFX9-NEXT:  .LBB1_3: ; %Flow
 ; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; GFX9-NEXT:    s_cselect_b32 s4, 1, 0
@@ -354,7 +354,7 @@ define <4 x i16> @vec_8xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-TRUE16-NEXT:    s_branch .LBB1_3
 ; GFX11-TRUE16-NEXT:  .LBB1_2:
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, -1
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_128
 ; GFX11-TRUE16-NEXT:  .LBB1_3: ; %Flow
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, exec_lo
@@ -389,7 +389,7 @@ define <4 x i16> @vec_8xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-FAKE16-NEXT:    s_branch .LBB1_3
 ; GFX11-FAKE16-NEXT:  .LBB1_2:
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, -1
-; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_128
 ; GFX11-FAKE16-NEXT:  .LBB1_3: ; %Flow
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, exec_lo
@@ -531,7 +531,7 @@ define <4 x half> @vec_8xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX9-NEXT:    s_branch .LBB2_3
 ; GFX9-NEXT:  .LBB2_2:
 ; GFX9-NEXT:    s_mov_b64 s[4:5], -1
-; GFX9-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX9-NEXT:    ; implicit-def: $vgpr2_128
 ; GFX9-NEXT:  .LBB2_3: ; %Flow
 ; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; GFX9-NEXT:    s_cselect_b32 s4, 1, 0
@@ -568,7 +568,7 @@ define <4 x half> @vec_8xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-TRUE16-NEXT:    s_branch .LBB2_3
 ; GFX11-TRUE16-NEXT:  .LBB2_2:
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, -1
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_128
 ; GFX11-TRUE16-NEXT:  .LBB2_3: ; %Flow
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, exec_lo
@@ -605,7 +605,7 @@ define <4 x half> @vec_8xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-FAKE16-NEXT:    s_branch .LBB2_3
 ; GFX11-FAKE16-NEXT:  .LBB2_2:
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, -1
-; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_128
 ; GFX11-FAKE16-NEXT:  .LBB2_3: ; %Flow
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, exec_lo
@@ -786,7 +786,7 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX9-NEXT:    s_branch .LBB3_3
 ; GFX9-NEXT:  .LBB3_2:
 ; GFX9-NEXT:    s_mov_b64 s[4:5], -1
-; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+; GFX9-NEXT:    ; implicit-def: $vgpr4_256
 ; GFX9-NEXT:  .LBB3_3: ; %Flow
 ; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; GFX9-NEXT:    s_cselect_b32 s4, 1, 0
@@ -825,7 +825,7 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-TRUE16-NEXT:    s_branch .LBB3_3
 ; GFX11-TRUE16-NEXT:  .LBB3_2:
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, -1
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_256
 ; GFX11-TRUE16-NEXT:  .LBB3_3: ; %Flow
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, exec_lo
@@ -866,7 +866,7 @@ define <4 x i16> @vec_16xi16_extract_4xi16(ptr addrspace(1) %p0, ptr addrspace(1
 ; GFX11-FAKE16-NEXT:    s_branch .LBB3_3
 ; GFX11-FAKE16-NEXT:  .LBB3_2:
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, -1
-; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_256
 ; GFX11-FAKE16-NEXT:  .LBB3_3: ; %Flow
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, exec_lo
@@ -1049,7 +1049,7 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX9-NEXT:    s_branch .LBB4_3
 ; GFX9-NEXT:  .LBB4_2:
 ; GFX9-NEXT:    s_mov_b64 s[4:5], -1
-; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+; GFX9-NEXT:    ; implicit-def: $vgpr4_256
 ; GFX9-NEXT:  .LBB4_3: ; %Flow
 ; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; GFX9-NEXT:    s_cselect_b32 s4, 1, 0
@@ -1088,7 +1088,7 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX11-TRUE16-NEXT:    s_branch .LBB4_3
 ; GFX11-TRUE16-NEXT:  .LBB4_2:
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, -1
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_256
 ; GFX11-TRUE16-NEXT:  .LBB4_3: ; %Flow
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, exec_lo
@@ -1127,7 +1127,7 @@ define <4 x i16> @vec_16xi16_extract_4xi16_2(ptr addrspace(1) %p0, ptr addrspace
 ; GFX11-FAKE16-NEXT:    s_branch .LBB4_3
 ; GFX11-FAKE16-NEXT:  .LBB4_2:
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, -1
-; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_256
 ; GFX11-FAKE16-NEXT:  .LBB4_3: ; %Flow
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, exec_lo
@@ -1307,7 +1307,7 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX9-NEXT:    s_branch .LBB5_3
 ; GFX9-NEXT:  .LBB5_2:
 ; GFX9-NEXT:    s_mov_b64 s[4:5], -1
-; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+; GFX9-NEXT:    ; implicit-def: $vgpr4_256
 ; GFX9-NEXT:  .LBB5_3: ; %Flow
 ; GFX9-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; GFX9-NEXT:    s_cselect_b32 s4, 1, 0
@@ -1349,7 +1349,7 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-TRUE16-NEXT:    s_branch .LBB5_3
 ; GFX11-TRUE16-NEXT:  .LBB5_2:
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, -1
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr2_256
 ; GFX11-TRUE16-NEXT:  .LBB5_3: ; %Flow
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, exec_lo
@@ -1390,7 +1390,7 @@ define <4 x half> @vec_16xf16_extract_4xf16(ptr addrspace(1) %p0, ptr addrspace(
 ; GFX11-FAKE16-NEXT:    s_branch .LBB5_3
 ; GFX11-FAKE16-NEXT:  .LBB5_2:
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, -1
-; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_256
 ; GFX11-FAKE16-NEXT:  .LBB5_3: ; %Flow
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, exec_lo
@@ -1686,7 +1686,7 @@ define amdgpu_gfx <8 x i16> @vec_16xi16_extract_8xi16_0(i1 inreg %cond, ptr addr
 ; GFX9-NEXT:    s_branch .LBB7_3
 ; GFX9-NEXT:  .LBB7_2:
 ; GFX9-NEXT:    s_mov_b64 s[34:35], -1
-; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+; GFX9-NEXT:    ; implicit-def: $vgpr4_256
 ; GFX9-NEXT:  .LBB7_3: ; %Flow
 ; GFX9-NEXT:    s_and_b64 s[34:35], s[34:35], exec
 ; GFX9-NEXT:    s_cselect_b32 s34, 1, 0
@@ -1745,7 +1745,7 @@ define amdgpu_gfx <8 x i16> @vec_16xi16_extract_8xi16_0(i1 inreg %cond, ptr addr
 ; GFX11-TRUE16-NEXT:    s_branch .LBB7_3
 ; GFX11-TRUE16-NEXT:  .LBB7_2:
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, -1
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr4_256
 ; GFX11-TRUE16-NEXT:  .LBB7_3: ; %Flow
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, exec_lo
@@ -1800,7 +1800,7 @@ define amdgpu_gfx <8 x i16> @vec_16xi16_extract_8xi16_0(i1 inreg %cond, ptr addr
 ; GFX11-FAKE16-NEXT:    s_branch .LBB7_3
 ; GFX11-FAKE16-NEXT:  .LBB7_2:
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, -1
-; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_256
 ; GFX11-FAKE16-NEXT:  .LBB7_3: ; %Flow
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, exec_lo
@@ -2030,7 +2030,7 @@ define amdgpu_gfx <8 x half> @vec_16xf16_extract_8xf16_0(i1 inreg %cond, ptr add
 ; GFX9-NEXT:    s_branch .LBB8_3
 ; GFX9-NEXT:  .LBB8_2:
 ; GFX9-NEXT:    s_mov_b64 s[34:35], -1
-; GFX9-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+; GFX9-NEXT:    ; implicit-def: $vgpr4_256
 ; GFX9-NEXT:  .LBB8_3: ; %Flow
 ; GFX9-NEXT:    s_and_b64 s[34:35], s[34:35], exec
 ; GFX9-NEXT:    s_cselect_b32 s34, 1, 0
@@ -2087,7 +2087,7 @@ define amdgpu_gfx <8 x half> @vec_16xf16_extract_8xf16_0(i1 inreg %cond, ptr add
 ; GFX11-TRUE16-NEXT:    s_branch .LBB8_3
 ; GFX11-TRUE16-NEXT:  .LBB8_2:
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s0, -1
-; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11
+; GFX11-TRUE16-NEXT:    ; implicit-def: $vgpr4_256
 ; GFX11-TRUE16-NEXT:  .LBB8_3: ; %Flow
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, exec_lo
@@ -2142,7 +2142,7 @@ define amdgpu_gfx <8 x half> @vec_16xf16_extract_8xf16_0(i1 inreg %cond, ptr add
 ; GFX11-FAKE16-NEXT:    s_branch .LBB8_3
 ; GFX11-FAKE16-NEXT:  .LBB8_2:
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s0, -1
-; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
+; GFX11-FAKE16-NEXT:    ; implicit-def: $vgpr2_256
 ; GFX11-FAKE16-NEXT:  .LBB8_3: ; %Flow
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, exec_lo

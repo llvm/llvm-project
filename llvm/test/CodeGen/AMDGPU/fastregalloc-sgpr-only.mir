@@ -10,10 +10,10 @@ body:             |
     ; GCN-LABEL: name: copy_vgpr_allocation
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr4, $vgpr5
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY killed $vgpr0_vgpr1
-    ; GCN-NEXT: FLAT_STORE_DWORDX2 killed $vgpr4_vgpr5, [[COPY]], 0, 0, implicit $exec, implicit $flat_scr
-    %14:vreg_64 = COPY $vgpr0_vgpr1
-    FLAT_STORE_DWORDX2 $vgpr4_vgpr5, %14:vreg_64, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY killed $vgpr0_64
+    ; GCN-NEXT: FLAT_STORE_DWORDX2 killed $vgpr4_64, [[COPY]], 0, 0, implicit $exec, implicit $flat_scr
+    %14:vreg_64 = COPY $vgpr0_64
+    FLAT_STORE_DWORDX2 $vgpr4_64, %14:vreg_64, 0, 0, implicit $exec, implicit $flat_scr
 ...
 
 

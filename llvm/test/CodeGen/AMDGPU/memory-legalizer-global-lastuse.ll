@@ -75,7 +75,7 @@ define amdgpu_kernel void @global_last_use_load_1(ptr addrspace(1) %in, ptr addr
 ; GFX12-NEXT:    s_mov_b32 s2, 0x3ff
 ; GFX12-NEXT:    v_and_b32_e64 v1, v1, s2
 ; GFX12-NEXT:    v_ashrrev_i32_e64 v3, 31, v1
-; GFX12-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
+; GFX12-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_64 killed $exec
 ; GFX12-NEXT:    v_mov_b32_e32 v2, v3
 ; GFX12-NEXT:    s_mov_b32 s2, 2
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -88,7 +88,7 @@ define amdgpu_kernel void @global_last_use_load_1(ptr addrspace(1) %in, ptr addr
 ; GFX12-NEXT:    v_add_co_u32 v1, s3, s3, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, s2, s2, v2, s3
-; GFX12-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
+; GFX12-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_64 killed $exec
 ; GFX12-NEXT:    v_mov_b32_e32 v2, v3
 ; GFX12-NEXT:    global_load_b32 v1, v[1:2], off th:TH_LOAD_LU
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
@@ -219,7 +219,7 @@ define amdgpu_kernel void @global_last_use_and_nontemporal_load(ptr addrspace(1)
 ; GFX12-NEXT:    s_mov_b32 s2, 0x3ff
 ; GFX12-NEXT:    v_and_b32_e64 v1, v1, s2
 ; GFX12-NEXT:    v_ashrrev_i32_e64 v3, 31, v1
-; GFX12-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
+; GFX12-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_64 killed $exec
 ; GFX12-NEXT:    v_mov_b32_e32 v2, v3
 ; GFX12-NEXT:    s_mov_b32 s2, 2
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
@@ -232,7 +232,7 @@ define amdgpu_kernel void @global_last_use_and_nontemporal_load(ptr addrspace(1)
 ; GFX12-NEXT:    v_add_co_u32 v1, s3, s3, v1
 ; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, s2, s2, v2, s3
-; GFX12-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
+; GFX12-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_64 killed $exec
 ; GFX12-NEXT:    v_mov_b32_e32 v2, v3
 ; GFX12-NEXT:    global_load_b32 v1, v[1:2], off th:TH_LOAD_LU
 ; GFX12-NEXT:    s_wait_loadcnt 0x0

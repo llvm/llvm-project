@@ -5260,11 +5260,11 @@ name:            test_remat_v_pk_fma_f32
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GCN-LABEL: name: test_remat_v_pk_fma_f32
-    ; GCN: liveins: $vgpr0_vgpr1
+    ; GCN: liveins: $vgpr0_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GCN-NEXT: [[V_PK_FMA_F32_:%[0-9]+]]:vreg_64_align2 = nofpexcept V_PK_FMA_F32 8, [[COPY]], 8, [[COPY]], 11, [[COPY]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: [[V_PK_FMA_F32_1:%[0-9]+]]:vreg_64_align2 = nofpexcept V_PK_FMA_F32 8, [[COPY]], 8, [[COPY]], 11, [[COPY]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: [[V_PK_FMA_F32_2:%[0-9]+]]:vreg_64_align2 = nofpexcept V_PK_FMA_F32 8, [[COPY]], 8, [[COPY]], 11, [[COPY]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -5272,7 +5272,7 @@ body:             |
     ; GCN-NEXT: S_NOP 0, implicit [[V_PK_FMA_F32_1]]
     ; GCN-NEXT: S_NOP 0, implicit [[V_PK_FMA_F32_2]]
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vreg_64_align2 = nofpexcept V_PK_FMA_F32 8, %0, 8, %0, 11, %0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     %2:vreg_64_align2 = nofpexcept V_PK_FMA_F32 8, %0, 8, %0, 11, %0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     %3:vreg_64_align2 = nofpexcept V_PK_FMA_F32 8, %0, 8, %0, 11, %0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -5289,11 +5289,11 @@ machineFunctionInfo:
   stackPtrOffsetReg:  $sgpr32
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GCN-LABEL: name: test_no_remat_v_pk_fma_f32
-    ; GCN: liveins: $vgpr0_vgpr1
+    ; GCN: liveins: $vgpr0_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GCN-NEXT: [[V_PK_FMA_F32_:%[0-9]+]]:vreg_64_align2 = V_PK_FMA_F32 8, [[COPY]], 8, [[COPY]], 11, [[COPY]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: [[V_PK_FMA_F32_1:%[0-9]+]]:vreg_64_align2 = V_PK_FMA_F32 8, [[COPY]], 8, [[COPY]], 11, [[COPY]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: [[V_PK_FMA_F32_2:%[0-9]+]]:vreg_64_align2 = V_PK_FMA_F32 8, [[COPY]], 8, [[COPY]], 11, [[COPY]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -5301,7 +5301,7 @@ body:             |
     ; GCN-NEXT: S_NOP 0, implicit [[V_PK_FMA_F32_1]]
     ; GCN-NEXT: S_NOP 0, implicit [[V_PK_FMA_F32_2]]
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vreg_64_align2 = V_PK_FMA_F32 8, %0, 8, %0, 11, %0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     %2:vreg_64_align2 = V_PK_FMA_F32 8, %0, 8, %0, 11, %0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     %3:vreg_64_align2 = V_PK_FMA_F32 8, %0, 8, %0, 11, %0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -5316,11 +5316,11 @@ name:            test_remat_v_pk_mul_f32
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GCN-LABEL: name: test_remat_v_pk_mul_f32
-    ; GCN: liveins: $vgpr0_vgpr1
+    ; GCN: liveins: $vgpr0_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GCN-NEXT: [[V_PK_MUL_F32_:%[0-9]+]]:vreg_64_align2 = nofpexcept V_PK_MUL_F32 8, [[COPY]], 8, [[COPY]], 11, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: [[V_PK_MUL_F32_1:%[0-9]+]]:vreg_64_align2 = nofpexcept V_PK_MUL_F32 8, [[COPY]], 8, [[COPY]], 11, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: [[V_PK_MUL_F32_2:%[0-9]+]]:vreg_64_align2 = nofpexcept V_PK_MUL_F32 8, [[COPY]], 8, [[COPY]], 11, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -5328,7 +5328,7 @@ body:             |
     ; GCN-NEXT: S_NOP 0, implicit [[V_PK_MUL_F32_1]]
     ; GCN-NEXT: S_NOP 0, implicit [[V_PK_MUL_F32_2]]
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vreg_64_align2 = nofpexcept V_PK_MUL_F32 8, %0, 8, %0, 11, 0, 0, 0, 0, implicit $mode, implicit $exec
     %2:vreg_64_align2 = nofpexcept V_PK_MUL_F32 8, %0, 8, %0, 11, 0, 0, 0, 0, implicit $mode, implicit $exec
     %3:vreg_64_align2 = nofpexcept V_PK_MUL_F32 8, %0, 8, %0, 11, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -5343,11 +5343,11 @@ name:            test_remat_v_pk_add_f32
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GCN-LABEL: name: test_remat_v_pk_add_f32
-    ; GCN: liveins: $vgpr0_vgpr1
+    ; GCN: liveins: $vgpr0_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GCN-NEXT: [[V_PK_ADD_F32_:%[0-9]+]]:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, [[COPY]], 8, [[COPY]], 11, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: [[V_PK_ADD_F32_1:%[0-9]+]]:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, [[COPY]], 8, [[COPY]], 11, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: [[V_PK_ADD_F32_2:%[0-9]+]]:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, [[COPY]], 8, [[COPY]], 11, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -5355,7 +5355,7 @@ body:             |
     ; GCN-NEXT: S_NOP 0, implicit [[V_PK_ADD_F32_1]]
     ; GCN-NEXT: S_NOP 0, implicit [[V_PK_ADD_F32_2]]
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, %0, 8, %0, 11, 0, 0, 0, 0, implicit $mode, implicit $exec
     %2:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, %0, 8, %0, 11, 0, 0, 0, 0, implicit $mode, implicit $exec
     %3:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, %0, 8, %0, 11, 0, 0, 0, 0, implicit $mode, implicit $exec
@@ -5370,11 +5370,11 @@ name:            test_remat_v_pk_mov_b32
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GCN-LABEL: name: test_remat_v_pk_mov_b32
-    ; GCN: liveins: $vgpr0_vgpr1
+    ; GCN: liveins: $vgpr0_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GCN-NEXT: [[V_PK_MOV_B32_:%[0-9]+]]:vreg_64_align2 = V_PK_MOV_B32 8, [[COPY]], 8, [[COPY]], 11, 0, 0, 0, 0, implicit $exec
     ; GCN-NEXT: [[V_PK_MOV_B32_1:%[0-9]+]]:vreg_64_align2 = V_PK_MOV_B32 9, [[COPY]], 9, [[COPY]], 12, 0, 0, 0, 0, implicit $exec
     ; GCN-NEXT: [[V_PK_MOV_B32_2:%[0-9]+]]:vreg_64_align2 = V_PK_MOV_B32 10, [[COPY]], 10, [[COPY]], 13, 0, 0, 0, 0, implicit $exec
@@ -5382,7 +5382,7 @@ body:             |
     ; GCN-NEXT: S_NOP 0, implicit [[V_PK_MOV_B32_1]]
     ; GCN-NEXT: S_NOP 0, implicit [[V_PK_MOV_B32_2]]
     ; GCN-NEXT: S_ENDPGM 0, implicit [[COPY]]
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vreg_64_align2 = V_PK_MOV_B32 8, %0, 8, %0, 11, 0, 0, 0, 0, implicit $exec
     %2:vreg_64_align2 = V_PK_MOV_B32 9, %0, 9, %0, 12, 0, 0, 0, 0, implicit $exec
     %3:vreg_64_align2 = V_PK_MOV_B32 10, %0, 10, %0, 13, 0, 0, 0, 0, implicit $exec

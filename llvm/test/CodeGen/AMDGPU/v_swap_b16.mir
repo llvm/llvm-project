@@ -85,15 +85,15 @@ name:            swap_phys_overlap_x
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr3_vgpr4
+    liveins: $vgpr0_64, $vgpr3_64
     ; GCN-LABEL: name: swap_phys_overlap_x
-    ; GCN: liveins: $vgpr0_vgpr1, $vgpr3_vgpr4
+    ; GCN: liveins: $vgpr0_64, $vgpr3_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr2_lo16 = V_MOV_B16_t16_e32 $vgpr0_lo16, implicit $exec
-    ; GCN-NEXT: $vgpr3_vgpr4 = V_ADD_F64_e64 0, $vgpr0_vgpr1, 0, $vgpr3_vgpr4, 0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: $vgpr3_64 = V_ADD_F64_e64 0, $vgpr0_64, 0, $vgpr3_64, 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr0_lo16, $vgpr1_hi16 = V_SWAP_B16 $vgpr1_hi16, $vgpr0_lo16, implicit $exec
     $vgpr2_lo16 = V_MOV_B16_t16_e32 $vgpr0_lo16, implicit $exec
-    $vgpr3_vgpr4 = V_ADD_F64_e64 0, $vgpr0_vgpr1, 0, $vgpr3_vgpr4, 0, 0, implicit $mode, implicit $exec
+    $vgpr3_64 = V_ADD_F64_e64 0, $vgpr0_64, 0, $vgpr3_64, 0, 0, implicit $mode, implicit $exec
     $vgpr0_lo16 = V_MOV_B16_t16_e32 killed $vgpr1_hi16, implicit $exec
     $vgpr1_hi16 = V_MOV_B16_t16_e32 killed $vgpr2_lo16, implicit $exec
 ...
@@ -243,20 +243,20 @@ name: swap_liveness_error_mov
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr5_hi16, $vgpr1_vgpr2
+    liveins: $vgpr5_hi16, $vgpr1_64
     ; GCN-LABEL: name: swap_liveness_error_mov
-    ; GCN: liveins: $vgpr5_hi16, $vgpr1_vgpr2
+    ; GCN: liveins: $vgpr5_hi16, $vgpr1_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr6_lo16 = V_MOV_B16_t16_e32 $vgpr1_hi16, implicit $exec
     ; GCN-NEXT: $vgpr1_hi16, $vgpr5_hi16 = V_SWAP_B16 $vgpr5_hi16, $vgpr1_hi16, implicit $exec
-    ; GCN-NEXT: $vgpr5_vgpr6 = IMPLICIT_DEF
-    ; GCN-NEXT: $vgpr6_lo16 = V_MOV_B16_t16_e32 $vgpr7_hi16, implicit $exec, implicit $vgpr6_vgpr7
+    ; GCN-NEXT: $vgpr5_64 = IMPLICIT_DEF
+    ; GCN-NEXT: $vgpr6_lo16 = V_MOV_B16_t16_e32 $vgpr7_hi16, implicit $exec, implicit $vgpr6_64
     ; GCN-NEXT: $vgpr5_hi16 = V_MOV_B16_t16_e32 $vgpr6_lo16, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
-    $vgpr6_lo16 = V_MOV_B16_t16_e32 $vgpr1_hi16, implicit $exec, implicit killed $vgpr1_vgpr2
+    $vgpr6_lo16 = V_MOV_B16_t16_e32 $vgpr1_hi16, implicit $exec, implicit killed $vgpr1_64
     $vgpr1_hi16 = V_MOV_B16_t16_e32 killed $vgpr5_hi16, implicit $exec
-    $vgpr5_hi16 = V_MOV_B16_t16_e32 $vgpr6_lo16, implicit $exec, implicit-def $vgpr5_vgpr6, implicit $vgpr6_vgpr7
-    $vgpr6_lo16 = V_MOV_B16_t16_e32 $vgpr7_hi16, implicit $exec, implicit $vgpr6_vgpr7
+    $vgpr5_hi16 = V_MOV_B16_t16_e32 $vgpr6_lo16, implicit $exec, implicit-def $vgpr5_64, implicit $vgpr6_64
+    $vgpr6_lo16 = V_MOV_B16_t16_e32 $vgpr7_hi16, implicit $exec, implicit $vgpr6_64
     $vgpr5_hi16 = V_MOV_B16_t16_e32 $vgpr6_lo16, implicit $exec
     S_ENDPGM 0
 ...
@@ -266,20 +266,20 @@ name: swap_liveness_error_copy
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr5_hi16, $vgpr1_vgpr2
+    liveins: $vgpr5_hi16, $vgpr1_64
     ; GCN-LABEL: name: swap_liveness_error_copy
-    ; GCN: liveins: $vgpr5_hi16, $vgpr1_vgpr2
+    ; GCN: liveins: $vgpr5_hi16, $vgpr1_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr6_lo16 = COPY $vgpr1_hi16
     ; GCN-NEXT: $vgpr1_hi16, $vgpr5_hi16 = V_SWAP_B16 $vgpr5_hi16, $vgpr1_hi16, implicit $exec
-    ; GCN-NEXT: $vgpr5_vgpr6 = IMPLICIT_DEF
-    ; GCN-NEXT: $vgpr6_lo16 = COPY $vgpr7, implicit $vgpr6_vgpr7
+    ; GCN-NEXT: $vgpr5_64 = IMPLICIT_DEF
+    ; GCN-NEXT: $vgpr6_lo16 = COPY $vgpr7, implicit $vgpr6_64
     ; GCN-NEXT: $vgpr5_hi16 = COPY $vgpr6_lo16
     ; GCN-NEXT: S_ENDPGM 0
-    $vgpr6_lo16 = COPY $vgpr1_hi16, implicit killed $vgpr1_vgpr2
+    $vgpr6_lo16 = COPY $vgpr1_hi16, implicit killed $vgpr1_64
     $vgpr1_hi16 = COPY killed $vgpr5_hi16
-    $vgpr5_hi16 = COPY $vgpr6_lo16, implicit-def $vgpr5_vgpr6, implicit $vgpr6_vgpr7
-    $vgpr6_lo16 = COPY $vgpr7, implicit $vgpr6_vgpr7
+    $vgpr5_hi16 = COPY $vgpr6_lo16, implicit-def $vgpr5_64, implicit $vgpr6_64
+    $vgpr6_lo16 = COPY $vgpr7, implicit $vgpr6_64
     $vgpr5_hi16 = COPY $vgpr6_lo16
     S_ENDPGM 0
 ...
@@ -362,10 +362,10 @@ body:             |
     ; GCN: liveins: $vgpr0_lo16, $vgpr1_hi16, $sgpr30_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr3_hi16 = V_MOV_B16_t16_e32 $vgpr0_lo16, implicit $exec
-    ; GCN-NEXT: $vgpr0_lo16, $vgpr1_hi16 = V_SWAP_B16 $vgpr1_hi16, $vgpr0_lo16, implicit $exec, implicit $vgpr2_lo16, implicit killed $vgpr1_vgpr2
+    ; GCN-NEXT: $vgpr0_lo16, $vgpr1_hi16 = V_SWAP_B16 $vgpr1_hi16, $vgpr0_lo16, implicit $exec, implicit $vgpr2_lo16, implicit killed $vgpr1_64
     ; GCN-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0_lo16, implicit $vgpr1_hi16
     $vgpr3_hi16 = V_MOV_B16_t16_e32 killed $vgpr0_lo16, implicit $exec
-    $vgpr0_lo16 = V_MOV_B16_t16_e32 $vgpr1_hi16, implicit $exec, implicit $vgpr2_lo16, implicit killed $vgpr1_vgpr2
+    $vgpr0_lo16 = V_MOV_B16_t16_e32 $vgpr1_hi16, implicit $exec, implicit $vgpr2_lo16, implicit killed $vgpr1_64
     $vgpr1_hi16 = V_MOV_B16_t16_e32 killed $vgpr3_hi16, implicit $exec
     S_SETPC_B64_return $sgpr30_64, implicit $vgpr0_lo16, implicit $vgpr1_hi16
 ...
@@ -380,10 +380,10 @@ body:             |
     ; GCN-LABEL: name: implicit_ops_mov_t_swap_b16
     ; GCN: liveins: $vgpr0_lo16, $vgpr1_hi16, $sgpr30_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: $vgpr3_hi16 = V_MOV_B16_t16_e32 $vgpr0_lo16, implicit $exec, implicit $vgpr2_lo16, implicit killed $vgpr1_vgpr2, implicit-def $vgpr1_hi16
+    ; GCN-NEXT: $vgpr3_hi16 = V_MOV_B16_t16_e32 $vgpr0_lo16, implicit $exec, implicit $vgpr2_lo16, implicit killed $vgpr1_64, implicit-def $vgpr1_hi16
     ; GCN-NEXT: $vgpr0_lo16, $vgpr1_hi16 = V_SWAP_B16 $vgpr1_hi16, $vgpr0_lo16, implicit $exec
     ; GCN-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0_lo16, implicit $vgpr1_hi16
-    $vgpr3_hi16 = V_MOV_B16_t16_e32 killed $vgpr0_lo16, implicit $exec, implicit $vgpr2_lo16, implicit killed $vgpr1_vgpr2, implicit-def $vgpr1_hi16
+    $vgpr3_hi16 = V_MOV_B16_t16_e32 killed $vgpr0_lo16, implicit $exec, implicit $vgpr2_lo16, implicit killed $vgpr1_64, implicit-def $vgpr1_hi16
     $vgpr0_lo16 = V_MOV_B16_t16_e32 $vgpr1_hi16, implicit $exec
     $vgpr1_hi16 = V_MOV_B16_t16_e32 killed $vgpr3_hi16, implicit $exec
     S_SETPC_B64_return $sgpr30_64, implicit $vgpr0_lo16, implicit $vgpr1_hi16
@@ -400,10 +400,10 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr3_hi16 = V_MOV_B16_t16_e32 $vgpr0_lo16, implicit $exec
     ; GCN-NEXT: $vgpr0_lo16, $vgpr1_hi16 = V_SWAP_B16 $vgpr1_hi16, $vgpr0_lo16, implicit $exec
-    ; GCN-NEXT: $vgpr0_vgpr1 = IMPLICIT_DEF
+    ; GCN-NEXT: $vgpr0_64 = IMPLICIT_DEF
     ; GCN-NEXT: S_SETPC_B64_return $sgpr30_64, implicit $vgpr0_lo16, implicit $vgpr1_hi16
     $vgpr3_hi16 = V_MOV_B16_t16_e32 killed $vgpr0_lo16, implicit $exec
     $vgpr0_lo16 = V_MOV_B16_t16_e32 $vgpr1_hi16, implicit $exec
-    $vgpr1_hi16 = V_MOV_B16_t16_e32 killed $vgpr3_hi16, implicit $exec, implicit $vgpr2_lo16, implicit-def $vgpr0_vgpr1, implicit killed $vgpr3_hi16
+    $vgpr1_hi16 = V_MOV_B16_t16_e32 killed $vgpr3_hi16, implicit $exec, implicit $vgpr2_lo16, implicit-def $vgpr0_64, implicit killed $vgpr3_hi16
     S_SETPC_B64_return $sgpr30_64, implicit $vgpr0_lo16, implicit $vgpr1_hi16
 ...

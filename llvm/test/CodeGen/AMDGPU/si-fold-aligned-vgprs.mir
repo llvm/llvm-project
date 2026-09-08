@@ -9,21 +9,21 @@ name:            aligned_vgpr_64
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GFX908-LABEL: name: aligned_vgpr_64
-    ; GFX908: liveins: $vgpr0_vgpr1
+    ; GFX908: liveins: $vgpr0_64
     ; GFX908-NEXT: {{  $}}
-    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX908-NEXT: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GFX908-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[DEF]], 0, 0, implicit $exec
     ;
     ; GFX90A-LABEL: name: aligned_vgpr_64
-    ; GFX90A: liveins: $vgpr0_vgpr1
+    ; GFX90A: liveins: $vgpr0_64
     ; GFX90A-NEXT: {{  $}}
-    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX90A-NEXT: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GFX90A-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[DEF]], 0, 0, implicit $exec
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vreg_64_align2 = IMPLICIT_DEF
     %2:vreg_64_align2 = COPY killed %1
     GLOBAL_STORE_DWORDX2 %0, %2, 0, 0, implicit $exec
@@ -34,21 +34,21 @@ name:            unaligned_vgpr_64
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GFX908-LABEL: name: unaligned_vgpr_64
-    ; GFX908: liveins: $vgpr0_vgpr1
+    ; GFX908: liveins: $vgpr0_64
     ; GFX908-NEXT: {{  $}}
-    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX908-NEXT: [[DEF:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
     ; GFX908-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[DEF]], 0, 0, implicit $exec
     ;
     ; GFX90A-LABEL: name: unaligned_vgpr_64
-    ; GFX90A: liveins: $vgpr0_vgpr1
+    ; GFX90A: liveins: $vgpr0_64
     ; GFX90A-NEXT: {{  $}}
-    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX90A-NEXT: [[DEF:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
     ; GFX90A-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[DEF]], 0, 0, implicit $exec
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vreg_64 = IMPLICIT_DEF
     %2:vreg_64_align2 = COPY killed %1
     GLOBAL_STORE_DWORDX2 %0, %2, 0, 0, implicit $exec
@@ -59,21 +59,21 @@ name:            aligned_vgpr_96_sub0_subg1
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GFX908-LABEL: name: aligned_vgpr_96_sub0_subg1
-    ; GFX908: liveins: $vgpr0_vgpr1
+    ; GFX908: liveins: $vgpr0_64
     ; GFX908-NEXT: {{  $}}
-    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX908-NEXT: [[DEF:%[0-9]+]]:vreg_96_align2 = IMPLICIT_DEF
     ; GFX908-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[DEF]].sub0_sub1, 0, 0, implicit $exec
     ;
     ; GFX90A-LABEL: name: aligned_vgpr_96_sub0_subg1
-    ; GFX90A: liveins: $vgpr0_vgpr1
+    ; GFX90A: liveins: $vgpr0_64
     ; GFX90A-NEXT: {{  $}}
-    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX90A-NEXT: [[DEF:%[0-9]+]]:vreg_96_align2 = IMPLICIT_DEF
     ; GFX90A-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[DEF]].sub0_sub1, 0, 0, implicit $exec
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vreg_96_align2 = IMPLICIT_DEF
     %2:vreg_64_align2 = COPY killed %1.sub0_sub1:vreg_96_align2
     GLOBAL_STORE_DWORDX2 %0, %2, 0, 0, implicit $exec
@@ -84,22 +84,22 @@ name:            unaligned_vgpr_96_sub1_sub2
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GFX908-LABEL: name: unaligned_vgpr_96_sub1_sub2
-    ; GFX908: liveins: $vgpr0_vgpr1
+    ; GFX908: liveins: $vgpr0_64
     ; GFX908-NEXT: {{  $}}
-    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX908-NEXT: [[DEF:%[0-9]+]]:vreg_96_align2 = IMPLICIT_DEF
     ; GFX908-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[DEF]].sub1_sub2, 0, 0, implicit $exec
     ;
     ; GFX90A-LABEL: name: unaligned_vgpr_96_sub1_sub2
-    ; GFX90A: liveins: $vgpr0_vgpr1
+    ; GFX90A: liveins: $vgpr0_64
     ; GFX90A-NEXT: {{  $}}
-    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX90A-NEXT: [[DEF:%[0-9]+]]:vreg_96_align2 = IMPLICIT_DEF
     ; GFX90A-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY killed [[DEF]].sub1_sub2
     ; GFX90A-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[COPY1]], 0, 0, implicit $exec
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vreg_96_align2 = IMPLICIT_DEF
     %2:vreg_64_align2 = COPY killed %1.sub1_sub2:vreg_96_align2
     GLOBAL_STORE_DWORDX2 %0, %2, 0, 0, implicit $exec
@@ -110,21 +110,21 @@ name:            aligned_vgpr_96
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GFX908-LABEL: name: aligned_vgpr_96
-    ; GFX908: liveins: $vgpr0_vgpr1
+    ; GFX908: liveins: $vgpr0_64
     ; GFX908-NEXT: {{  $}}
-    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX908-NEXT: [[DEF:%[0-9]+]]:vreg_96_align2 = IMPLICIT_DEF
     ; GFX908-NEXT: GLOBAL_STORE_DWORDX3 [[COPY]], [[DEF]], 0, 0, implicit $exec
     ;
     ; GFX90A-LABEL: name: aligned_vgpr_96
-    ; GFX90A: liveins: $vgpr0_vgpr1
+    ; GFX90A: liveins: $vgpr0_64
     ; GFX90A-NEXT: {{  $}}
-    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX90A-NEXT: [[DEF:%[0-9]+]]:vreg_96_align2 = IMPLICIT_DEF
     ; GFX90A-NEXT: GLOBAL_STORE_DWORDX3 [[COPY]], [[DEF]], 0, 0, implicit $exec
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vreg_96_align2 = IMPLICIT_DEF
     %2:vreg_96_align2 = COPY killed %1
     GLOBAL_STORE_DWORDX3 %0, %2, 0, 0, implicit $exec
@@ -135,21 +135,21 @@ name:            unaligned_vgpr_96
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GFX908-LABEL: name: unaligned_vgpr_96
-    ; GFX908: liveins: $vgpr0_vgpr1
+    ; GFX908: liveins: $vgpr0_64
     ; GFX908-NEXT: {{  $}}
-    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX908-NEXT: [[DEF:%[0-9]+]]:vreg_96 = IMPLICIT_DEF
     ; GFX908-NEXT: GLOBAL_STORE_DWORDX3 [[COPY]], [[DEF]], 0, 0, implicit $exec
     ;
     ; GFX90A-LABEL: name: unaligned_vgpr_96
-    ; GFX90A: liveins: $vgpr0_vgpr1
+    ; GFX90A: liveins: $vgpr0_64
     ; GFX90A-NEXT: {{  $}}
-    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX90A-NEXT: [[DEF:%[0-9]+]]:vreg_96_align2 = IMPLICIT_DEF
     ; GFX90A-NEXT: GLOBAL_STORE_DWORDX3 [[COPY]], [[DEF]], 0, 0, implicit $exec
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vreg_96 = IMPLICIT_DEF
     %2:vreg_96_align2 = COPY killed %1
     GLOBAL_STORE_DWORDX3 %0, %2, 0, 0, implicit $exec
@@ -160,21 +160,21 @@ name:            aligned_vgpr_128_sub0_sub1
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GFX908-LABEL: name: aligned_vgpr_128_sub0_sub1
-    ; GFX908: liveins: $vgpr0_vgpr1
+    ; GFX908: liveins: $vgpr0_64
     ; GFX908-NEXT: {{  $}}
-    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX908-NEXT: [[DEF:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
     ; GFX908-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[DEF]].sub0_sub1, 0, 0, implicit $exec
     ;
     ; GFX90A-LABEL: name: aligned_vgpr_128_sub0_sub1
-    ; GFX90A: liveins: $vgpr0_vgpr1
+    ; GFX90A: liveins: $vgpr0_64
     ; GFX90A-NEXT: {{  $}}
-    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX90A-NEXT: [[DEF:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
     ; GFX90A-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[DEF]].sub0_sub1, 0, 0, implicit $exec
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vreg_128_align2 = IMPLICIT_DEF
     %2:vreg_64_align2 = COPY killed %1.sub0_sub1:vreg_128_align2
     GLOBAL_STORE_DWORDX2 %0, %2, 0, 0, implicit $exec
@@ -185,21 +185,21 @@ name:            aligned_vgpr_128_sub2_sub3
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GFX908-LABEL: name: aligned_vgpr_128_sub2_sub3
-    ; GFX908: liveins: $vgpr0_vgpr1
+    ; GFX908: liveins: $vgpr0_64
     ; GFX908-NEXT: {{  $}}
-    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX908-NEXT: [[DEF:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
     ; GFX908-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[DEF]].sub2_sub3, 0, 0, implicit $exec
     ;
     ; GFX90A-LABEL: name: aligned_vgpr_128_sub2_sub3
-    ; GFX90A: liveins: $vgpr0_vgpr1
+    ; GFX90A: liveins: $vgpr0_64
     ; GFX90A-NEXT: {{  $}}
-    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX90A-NEXT: [[DEF:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
     ; GFX90A-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[DEF]].sub2_sub3, 0, 0, implicit $exec
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vreg_128_align2 = IMPLICIT_DEF
     %2:vreg_64_align2 = COPY killed %1.sub2_sub3:vreg_128_align2
     GLOBAL_STORE_DWORDX2 %0, %2, 0, 0, implicit $exec
@@ -210,22 +210,22 @@ name:            unaligned_vgpr_128_sub1_sub2
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GFX908-LABEL: name: unaligned_vgpr_128_sub1_sub2
-    ; GFX908: liveins: $vgpr0_vgpr1
+    ; GFX908: liveins: $vgpr0_64
     ; GFX908-NEXT: {{  $}}
-    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX908-NEXT: [[DEF:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
     ; GFX908-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[DEF]].sub1_sub2, 0, 0, implicit $exec
     ;
     ; GFX90A-LABEL: name: unaligned_vgpr_128_sub1_sub2
-    ; GFX90A: liveins: $vgpr0_vgpr1
+    ; GFX90A: liveins: $vgpr0_64
     ; GFX90A-NEXT: {{  $}}
-    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX90A-NEXT: [[DEF:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
     ; GFX90A-NEXT: [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY killed [[DEF]].sub1_sub2
     ; GFX90A-NEXT: GLOBAL_STORE_DWORDX2 [[COPY]], [[COPY1]], 0, 0, implicit $exec
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vreg_128_align2 = IMPLICIT_DEF
     %2:vreg_64_align2 = COPY killed %1.sub1_sub2:vreg_128_align2
     GLOBAL_STORE_DWORDX2 %0, %2, 0, 0, implicit $exec
@@ -236,21 +236,21 @@ name:            aligned_vgpr_128_sub0_sub1_sub2
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GFX908-LABEL: name: aligned_vgpr_128_sub0_sub1_sub2
-    ; GFX908: liveins: $vgpr0_vgpr1
+    ; GFX908: liveins: $vgpr0_64
     ; GFX908-NEXT: {{  $}}
-    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX908-NEXT: [[DEF:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
     ; GFX908-NEXT: GLOBAL_STORE_DWORDX3 [[COPY]], [[DEF]].sub0_sub1_sub2, 0, 0, implicit $exec
     ;
     ; GFX90A-LABEL: name: aligned_vgpr_128_sub0_sub1_sub2
-    ; GFX90A: liveins: $vgpr0_vgpr1
+    ; GFX90A: liveins: $vgpr0_64
     ; GFX90A-NEXT: {{  $}}
-    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX90A-NEXT: [[DEF:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
     ; GFX90A-NEXT: GLOBAL_STORE_DWORDX3 [[COPY]], [[DEF]].sub0_sub1_sub2, 0, 0, implicit $exec
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vreg_128_align2 = IMPLICIT_DEF
     %2:vreg_96_align2 = COPY killed %1.sub0_sub1_sub2:vreg_128_align2
     GLOBAL_STORE_DWORDX3 %0, %2, 0, 0, implicit $exec
@@ -261,22 +261,22 @@ name:            unaligned_vgpr_128_sub1_sub2_sub3
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GFX908-LABEL: name: unaligned_vgpr_128_sub1_sub2_sub3
-    ; GFX908: liveins: $vgpr0_vgpr1
+    ; GFX908: liveins: $vgpr0_64
     ; GFX908-NEXT: {{  $}}
-    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX908-NEXT: [[DEF:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
     ; GFX908-NEXT: GLOBAL_STORE_DWORDX3 [[COPY]], [[DEF]].sub1_sub2_sub3, 0, 0, implicit $exec
     ;
     ; GFX90A-LABEL: name: unaligned_vgpr_128_sub1_sub2_sub3
-    ; GFX90A: liveins: $vgpr0_vgpr1
+    ; GFX90A: liveins: $vgpr0_64
     ; GFX90A-NEXT: {{  $}}
-    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX90A-NEXT: [[DEF:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
     ; GFX90A-NEXT: [[COPY1:%[0-9]+]]:vreg_96_align2 = COPY killed [[DEF]].sub1_sub2_sub3
     ; GFX90A-NEXT: GLOBAL_STORE_DWORDX3 [[COPY]], [[COPY1]], 0, 0, implicit $exec
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vreg_128_align2 = IMPLICIT_DEF
     %2:vreg_96_align2 = COPY killed %1.sub1_sub2_sub3:vreg_128_align2
     GLOBAL_STORE_DWORDX3 %0, %2, 0, 0, implicit $exec
@@ -287,21 +287,21 @@ name:            aligned_vgpr_128
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GFX908-LABEL: name: aligned_vgpr_128
-    ; GFX908: liveins: $vgpr0_vgpr1
+    ; GFX908: liveins: $vgpr0_64
     ; GFX908-NEXT: {{  $}}
-    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX908-NEXT: [[DEF:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
     ; GFX908-NEXT: GLOBAL_STORE_DWORDX4 [[COPY]], [[DEF]], 0, 0, implicit $exec
     ;
     ; GFX90A-LABEL: name: aligned_vgpr_128
-    ; GFX90A: liveins: $vgpr0_vgpr1
+    ; GFX90A: liveins: $vgpr0_64
     ; GFX90A-NEXT: {{  $}}
-    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX90A-NEXT: [[DEF:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
     ; GFX90A-NEXT: GLOBAL_STORE_DWORDX4 [[COPY]], [[DEF]], 0, 0, implicit $exec
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vreg_128_align2 = IMPLICIT_DEF
     %2:vreg_128_align2 = COPY killed %1
     GLOBAL_STORE_DWORDX4 %0, %2, 0, 0, implicit $exec
@@ -312,21 +312,21 @@ name:            unaligned_vgpr_128
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GFX908-LABEL: name: unaligned_vgpr_128
-    ; GFX908: liveins: $vgpr0_vgpr1
+    ; GFX908: liveins: $vgpr0_64
     ; GFX908-NEXT: {{  $}}
-    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX908-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX908-NEXT: [[DEF:%[0-9]+]]:vreg_128 = IMPLICIT_DEF
     ; GFX908-NEXT: GLOBAL_STORE_DWORDX4 [[COPY]], [[DEF]], 0, 0, implicit $exec
     ;
     ; GFX90A-LABEL: name: unaligned_vgpr_128
-    ; GFX90A: liveins: $vgpr0_vgpr1
+    ; GFX90A: liveins: $vgpr0_64
     ; GFX90A-NEXT: {{  $}}
-    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
+    ; GFX90A-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_64
     ; GFX90A-NEXT: [[DEF:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
     ; GFX90A-NEXT: GLOBAL_STORE_DWORDX4 [[COPY]], [[DEF]], 0, 0, implicit $exec
-    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_64
     %1:vreg_128 = IMPLICIT_DEF
     %2:vreg_128_align2 = COPY killed %1
     GLOBAL_STORE_DWORDX4 %0, %2, 0, 0, implicit $exec

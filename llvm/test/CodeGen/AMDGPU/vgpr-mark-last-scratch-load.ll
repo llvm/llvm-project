@@ -150,7 +150,7 @@ define amdgpu_cs void @max_11_vgprs_branch(ptr addrspace(1) %p, i32 %tmp) "amdgp
 ; CHECK-NEXT:    ; kill: killed $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr0
 ; CHECK-NEXT:    ; kill: killed $vgpr0
-; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; CHECK-NEXT:    ; implicit-def: $vgpr0_64
 ; CHECK-NEXT:  .LBB1_2: ; %Flow
 ; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_4

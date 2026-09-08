@@ -8,18 +8,18 @@ tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: sextload_from_inreg
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p1) :: (load (s64), addrspace 1)
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[LOAD]], 8
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SEXT_INREG]](s64)
-    %0:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[SEXT_INREG]](s64)
+    %0:_(p1) = COPY $vgpr0_64
     %1:_(s64) = G_LOAD %0 :: (load (s64), align 8, addrspace 1)
     %2:_(s64) = G_SEXT_INREG %1, 8
-    $vgpr0_vgpr1 = COPY %2
+    $vgpr0_64 = COPY %2
 ...
 
 # Legal to fold into sextload
@@ -29,14 +29,14 @@ tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: sext_inreg_8_sextload_s32
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), align 4, addrspace 1)
     ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
-    %0:_(p1) = COPY $vgpr0_vgpr1
+    %0:_(p1) = COPY $vgpr0_64
     %1:_(s32) = G_LOAD %0 :: (load (s32), align 4, addrspace 1)
     %2:_(s32) = G_SEXT_INREG %1, 8
     $vgpr0 = COPY %2
@@ -48,15 +48,15 @@ tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: sext_inreg_7_sextload_s32
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 7
     ; CHECK-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
-    %0:_(p1) = COPY $vgpr0_vgpr1
+    %0:_(p1) = COPY $vgpr0_64
     %1:_(s32) = G_LOAD %0 :: (load (s32), align 4, addrspace 1)
     %2:_(s32) = G_SEXT_INREG %1, 7
     $vgpr0 = COPY %2
@@ -68,15 +68,15 @@ tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: sext_inreg_9_sextload_s32
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
     ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 9
     ; CHECK-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
-    %0:_(p1) = COPY $vgpr0_vgpr1
+    %0:_(p1) = COPY $vgpr0_64
     %1:_(s32) = G_LOAD %0 :: (load (s32), align 4, addrspace 1)
     %2:_(s32) = G_SEXT_INREG %1, 9
     $vgpr0 = COPY %2
@@ -89,14 +89,14 @@ tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: sext_inreg_16_sextload_s32
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s16), align 4, addrspace 1)
     ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
-    %0:_(p1) = COPY $vgpr0_vgpr1
+    %0:_(p1) = COPY $vgpr0_64
     %1:_(s32) = G_LOAD %0 :: (load (s32), align 4, addrspace 1)
     %2:_(s32) = G_SEXT_INREG %1, 16
     $vgpr0 = COPY %2
@@ -108,14 +108,14 @@ tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: sext_inreg_8_sextload_s8
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
     ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
-    %0:_(p1) = COPY $vgpr0_vgpr1
+    %0:_(p1) = COPY $vgpr0_64
     %1:_(s32) = G_LOAD %0 :: (load (s8), align 1, addrspace 1)
     %2:_(s32) = G_SEXT_INREG %1, 8
     $vgpr0 = COPY %2
@@ -127,14 +127,14 @@ tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: sext_inreg_8_sextload_s8_volatile
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (volatile load (s8), addrspace 1)
     ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
-    %0:_(p1) = COPY $vgpr0_vgpr1
+    %0:_(p1) = COPY $vgpr0_64
     %1:_(s32) = G_LOAD %0 :: (volatile load (s8), align 1, addrspace 1)
     %2:_(s32) = G_SEXT_INREG %1, 8
     $vgpr0 = COPY %2
@@ -146,14 +146,14 @@ tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: sext_inreg_16_sextload_s16
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s16), addrspace 1)
     ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
-    %0:_(p1) = COPY $vgpr0_vgpr1
+    %0:_(p1) = COPY $vgpr0_64
     %1:_(s32) = G_LOAD %0 :: (load (s16), align 2, addrspace 1)
     %2:_(s32) = G_SEXT_INREG %1, 16
     $vgpr0 = COPY %2
@@ -165,14 +165,14 @@ tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: sext_inreg_16_sextload_s16_volatile
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (volatile load (s16), addrspace 1)
     ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
-    %0:_(p1) = COPY $vgpr0_vgpr1
+    %0:_(p1) = COPY $vgpr0_64
     %1:_(s32) = G_LOAD %0 :: (volatile load (s16), align 2, addrspace 1)
     %2:_(s32) = G_SEXT_INREG %1, 16
     $vgpr0 = COPY %2

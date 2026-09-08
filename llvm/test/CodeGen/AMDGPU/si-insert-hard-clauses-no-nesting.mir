@@ -61,22 +61,22 @@ name: no_nested_clause_existing_flat_clause
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: no_nested_clause_existing_flat_clause
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: BUNDLE implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit $vgpr0_vgpr1, implicit $exec, implicit $flat_scr {
+    ; CHECK-NEXT: BUNDLE implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit $vgpr0_64, implicit $exec, implicit $flat_scr {
     ; CHECK-NEXT:   S_CLAUSE 2
-    ; CHECK-NEXT:   $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; CHECK-NEXT:   $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec, implicit $flat_scr
-    ; CHECK-NEXT:   $vgpr4 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 8, 0, implicit $exec, implicit $flat_scr
+    ; CHECK-NEXT:   $vgpr2 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    ; CHECK-NEXT:   $vgpr3 = FLAT_LOAD_DWORD $vgpr0_64, 4, 0, implicit $exec, implicit $flat_scr
+    ; CHECK-NEXT:   $vgpr4 = FLAT_LOAD_DWORD $vgpr0_64, 8, 0, implicit $exec, implicit $flat_scr
     ; CHECK-NEXT: }
     ; CHECK-NEXT: S_ENDPGM 0
-    BUNDLE implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit $vgpr0_vgpr1, implicit $exec, implicit $flat_scr {
+    BUNDLE implicit-def $vgpr2, implicit-def $vgpr3, implicit-def $vgpr4, implicit $vgpr0_64, implicit $exec, implicit $flat_scr {
       S_CLAUSE 2
-      $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-      $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec, implicit $flat_scr
-      $vgpr4 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 8, 0, implicit $exec, implicit $flat_scr
+      $vgpr2 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+      $vgpr3 = FLAT_LOAD_DWORD $vgpr0_64, 4, 0, implicit $exec, implicit $flat_scr
+      $vgpr4 = FLAT_LOAD_DWORD $vgpr0_64, 8, 0, implicit $exec, implicit $flat_scr
     }
     S_ENDPGM 0
 ...

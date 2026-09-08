@@ -47,7 +47,7 @@ define amdgpu_ps void @global_load_lds_dword_saddr(ptr addrspace(1) inreg nocapt
 ; GFX90A-NEXT:    s_mul_i32 s5, s5, s6
 ; GFX90A-NEXT:    v_mov_b32_e32 v2, s5
 ; GFX90A-NEXT:    v_mov_b32_e32 v4, s4
-; GFX90A-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX90A-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_64 killed $exec
 ; GFX90A-NEXT:    v_mov_b32_e32 v3, v4
 ; GFX90A-NEXT:    v_readfirstlane_b32 s4, v1
 ; GFX90A-NEXT:    s_mov_b32 m0, s4

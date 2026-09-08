@@ -7,16 +7,16 @@ name: test_implicit_def_s32_vgpr_use
 legalized:       true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_implicit_def_s32_vgpr_use
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:sgpr(s32) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY [[DEF]](s32)
     ; CHECK-NEXT: G_STORE [[COPY1]](i32), [[COPY]](p1) :: (store (s32), addrspace 1)
-    %0:_(p1) = COPY $vgpr0_vgpr1
+    %0:_(p1) = COPY $vgpr0_64
     %1:_(s32) = G_IMPLICIT_DEF
     G_STORE %1, %0 :: (store (s32), addrspace 1)
 
@@ -40,16 +40,16 @@ name: test_implicit_def_s64_vgpr_use
 legalized:       true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_implicit_def_s64_vgpr_use
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:sgpr(s64) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY [[DEF]](s64)
     ; CHECK-NEXT: G_STORE [[COPY1]](i64), [[COPY]](p1) :: (store (s64), addrspace 1)
-    %0:_(p1) = COPY $vgpr0_vgpr1
+    %0:_(p1) = COPY $vgpr0_64
     %1:_(s64) = G_IMPLICIT_DEF
     G_STORE %1, %0 :: (store (s64), addrspace 1)
 
@@ -60,16 +60,16 @@ name: test_implicit_def_v3s32_vgpr_use
 legalized:       true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_implicit_def_v3s32_vgpr_use
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:sgpr(<3 x s32>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(<3 x s32>) = COPY [[DEF]](<3 x s32>)
     ; CHECK-NEXT: G_STORE [[COPY1]](<3 x s32>), [[COPY]](p1) :: (store (<3 x s32>), align 4, addrspace 1)
-    %0:_(p1) = COPY $vgpr0_vgpr1
+    %0:_(p1) = COPY $vgpr0_64
     %1:_(<3 x s32>) = G_IMPLICIT_DEF
     G_STORE %1, %0 :: (store (<3 x s32>), addrspace 1, align 4)
 
@@ -80,16 +80,16 @@ name: test_implicit_def_v4s32_vgpr_use
 legalized:       true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_implicit_def_v4s32_vgpr_use
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:sgpr(<4 x s32>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(<4 x s32>) = COPY [[DEF]](<4 x s32>)
     ; CHECK-NEXT: G_STORE [[COPY1]](<4 x s32>), [[COPY]](p1) :: (store (<4 x s32>), align 4, addrspace 1)
-    %0:_(p1) = COPY $vgpr0_vgpr1
+    %0:_(p1) = COPY $vgpr0_64
     %1:_(<4 x s32>) = G_IMPLICIT_DEF
     G_STORE %1, %0 :: (store (<4 x s32>), addrspace 1, align 4)
 

@@ -45,16 +45,16 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: ptrmask_p1_v_k
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY [[C]](s64)
     ; CHECK-NEXT: [[PTRMASK:%[0-9]+]]:vgpr(p1) = G_PTRMASK [[COPY]], [[COPY1]](s64)
-    %0:_(p1) = COPY $vgpr0_vgpr1
+    %0:_(p1) = COPY $vgpr0_64
     %1:_(s64) = G_CONSTANT i64 1
     %2:_(p1) = G_PTRMASK %0, %1
 ...
@@ -65,16 +65,16 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $sgpr0_64
+    liveins: $vgpr0_64, $sgpr0_64
 
     ; CHECK-LABEL: name: ptrmask_p1_v_s
-    ; CHECK: liveins: $vgpr0_vgpr1, $sgpr0_64
+    ; CHECK: liveins: $vgpr0_64, $sgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_64
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY1]](s64)
     ; CHECK-NEXT: [[PTRMASK:%[0-9]+]]:vgpr(p1) = G_PTRMASK [[COPY]], [[COPY2]](s64)
-    %0:_(p1) = COPY $vgpr0_vgpr1
+    %0:_(p1) = COPY $vgpr0_64
     %1:_(s64) = COPY $sgpr0_64
     %2:_(p1) = G_PTRMASK %0, %1
 ...
@@ -85,15 +85,15 @@ legalized: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
 
     ; CHECK-LABEL: name: ptrmask_p1_v_v
-    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(p1) = COPY $vgpr0_64
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_64
     ; CHECK-NEXT: [[PTRMASK:%[0-9]+]]:vgpr(p1) = G_PTRMASK [[COPY]], [[COPY1]](s64)
-    %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s64) = COPY $vgpr2_vgpr3
+    %0:_(p1) = COPY $vgpr0_64
+    %1:_(s64) = COPY $vgpr2_64
     %2:_(p1) = G_PTRMASK %0, %1
 ...

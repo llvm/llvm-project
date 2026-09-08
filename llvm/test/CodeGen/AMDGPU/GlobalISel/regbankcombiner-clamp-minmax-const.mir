@@ -47,18 +47,18 @@ machineFunctionInfo:
     dx10-clamp: true
 body: |
   bb.1 :
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_min_max_K0Val_K1_f64
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_64
     ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_FCONSTANT double 2.000000e+00
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY [[C]](s64)
     ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s64) = G_FMUL [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s64) = nnan G_AMDGPU_CLAMP [[FMUL]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[AMDGPU_CLAMP]](s64)
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[AMDGPU_CLAMP]](s64)
+    %0:vgpr(s64) = COPY $vgpr0_64
     %4:sgpr(s64) = G_FCONSTANT double 2.000000e+00
     %13:vgpr(s64) = COPY %4(s64)
     %5:vgpr(s64) = G_FMUL %0, %13
@@ -68,7 +68,7 @@ body: |
     %8:sgpr(s64) = G_FCONSTANT double 1.000000e+00
     %15:vgpr(s64) = COPY %8(s64)
     %9:vgpr(s64) = nnan G_FMINNUM %7, %15
-    $vgpr0_vgpr1 = COPY %9(s64)
+    $vgpr0_64 = COPY %9(s64)
 ...
 
 ---
@@ -244,18 +244,18 @@ machineFunctionInfo:
     dx10-clamp: true
 body: |
   bb.1 :
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_max_min_K1Val_K0_f64
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_64
     ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_FCONSTANT double 2.000000e+00
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY [[C]](s64)
     ; CHECK-NEXT: [[FMUL:%[0-9]+]]:vgpr(s64) = G_FMUL [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[AMDGPU_CLAMP:%[0-9]+]]:vgpr(s64) = nnan G_AMDGPU_CLAMP [[FMUL]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[AMDGPU_CLAMP]](s64)
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[AMDGPU_CLAMP]](s64)
+    %0:vgpr(s64) = COPY $vgpr0_64
     %4:sgpr(s64) = G_FCONSTANT double 2.000000e+00
     %13:vgpr(s64) = COPY %4(s64)
     %5:vgpr(s64) = G_FMUL %0, %13
@@ -265,7 +265,7 @@ body: |
     %8:sgpr(s64) = G_FCONSTANT double 0.000000e+00
     %15:vgpr(s64) = COPY %8(s64)
     %9:vgpr(s64) = nnan G_FMAXNUM %7, %15
-    $vgpr0_vgpr1 = COPY %9(s64)
+    $vgpr0_64 = COPY %9(s64)
 ...
 
 ---

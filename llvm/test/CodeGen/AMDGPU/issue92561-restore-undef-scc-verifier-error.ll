@@ -38,7 +38,7 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; SDAG-NEXT:    v_cmpx_eq_u64_e32 s[6:7], v[6:7]
 ; SDAG-NEXT:    image_sample_c_lz v9, [v8, v8, v8, v8], s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; SDAG-NEXT:    s_and_not1_wrexec_b32 s13, s13
-; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+; SDAG-NEXT:    ; implicit-def: $vgpr0_256
 ; SDAG-NEXT:    s_cbranch_execnz .LBB0_1
 ; SDAG-NEXT:  ; %bb.2:
 ; SDAG-NEXT:    s_mov_b32 exec_lo, s12
@@ -107,8 +107,8 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; GISEL-NEXT:    s_and_b32 s0, s0, s2
 ; GISEL-NEXT:    s_and_saveexec_b32 s0, s0
 ; GISEL-NEXT:    image_sample_c_lz v9, [v8, v8, v8, v8], s[12:19], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
-; GISEL-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
-; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GISEL-NEXT:    ; implicit-def: $vgpr4_128
+; GISEL-NEXT:    ; implicit-def: $vgpr0_128
 ; GISEL-NEXT:    ; implicit-def: $vgpr8
 ; GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GISEL-NEXT:    s_cbranch_execnz .LBB0_1

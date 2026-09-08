@@ -23,8 +23,8 @@ body:             |
     ; GFX1250-NEXT: renamable $vgpr2, renamable $vcc_lo = V_ADD_CO_U32_e64 256, $vgpr0, 0, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr3, $sgpr_null = V_ADDC_U32_e64 0, killed $vgpr0, killed $vcc_lo, 0, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr0 = V_ADD_U32_e32 -256, $vgpr1, implicit $exec
-    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr1, $vgpr2_vgpr3, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
-    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr0, killed $vgpr2_vgpr3, 256, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr1, $vgpr2_64, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr0, killed $vgpr2_64, 256, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = V_LSHLREV_B32_e64 8, %0, implicit $exec
     %2:vgpr_32 = disjoint V_OR_B32_e64 %1, 0, implicit $exec
@@ -63,9 +63,9 @@ body:             |
     ; GFX1250-NEXT: renamable $vgpr3, $sgpr_null = V_ADDC_U32_e64 0, killed $vgpr0, killed $vcc_lo, 0, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr0 = V_ADD_U32_e32 -256, $vgpr1, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr4 = V_ADD_U32_e32 -260, $vgpr1, implicit $exec
-    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr1, $vgpr2_vgpr3, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
-    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr0, $vgpr2_vgpr3, 256, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
-    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr4, killed $vgpr2_vgpr3, 260, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr1, $vgpr2_64, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr0, $vgpr2_64, 256, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr4, killed $vgpr2_64, 260, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = V_LSHLREV_B32_e64 8, %0, implicit $exec
     %2:vgpr_32 = disjoint V_OR_B32_e64 %1, 0, implicit $exec
@@ -109,11 +109,11 @@ body:             |
     ; GFX1250-NEXT: renamable $vgpr1 = V_MOV_B32_e32 0, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr0 = V_AND_B32_e32 1023, killed $vgpr0, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr4 = V_ADD_U32_e64 -256, 0, 0, implicit $exec
-    ; GFX1250-NEXT: renamable $vgpr2_vgpr3 = V_ADD_U64_e32 $sgpr0_64, $vgpr0_vgpr1, implicit $exec
-    ; GFX1250-NEXT: renamable $vgpr2_vgpr3 = V_ADD_U64_e32 256, killed $vgpr2_vgpr3, implicit $exec
+    ; GFX1250-NEXT: renamable $vgpr2_64 = V_ADD_U64_e32 $sgpr0_64, $vgpr0_64, implicit $exec
+    ; GFX1250-NEXT: renamable $vgpr2_64 = V_ADD_U64_e32 256, killed $vgpr2_64, implicit $exec
     ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128_SADDR $vgpr1, killed $sgpr0_64, killed $vgpr0, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
-    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr1, $vgpr2_vgpr3, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
-    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr4, killed $vgpr2_vgpr3, 256, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr1, $vgpr2_64, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr4, killed $vgpr2_64, 256, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
     ; GFX1250-NEXT: S_ENDPGM 0
     %3:sgpr_64 = COPY $sgpr4_64
     %0:vgpr_32 = COPY $vgpr0
@@ -157,9 +157,9 @@ body:             |
     ; GFX1250-NEXT: renamable $vgpr3, $sgpr_null = V_ADDC_U32_e64 0, killed $vgpr0, killed $vcc_lo, 0, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr0 = V_ADD_U32_e32 -256, $vgpr1, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr4 = V_ADD_U32_e32 -512, $vgpr1, implicit $exec
-    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr1, $vgpr2_vgpr3, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
-    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr0, $vgpr2_vgpr3, 256, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
-    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr4, killed $vgpr2_vgpr3, 512, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr1, $vgpr2_64, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr0, $vgpr2_64, 256, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed $vgpr4, killed $vgpr2_64, 512, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = V_LSHLREV_B32_e64 8, %0, implicit $exec
     %2:vgpr_32 = disjoint V_OR_B32_e64 %1, 0, implicit $exec
@@ -204,8 +204,8 @@ body:             |
     ; GFX1250-NEXT: renamable $vgpr2, renamable $vcc_lo = V_ADD_CO_U32_e64 256, $vgpr0, 0, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr3, $sgpr_null = V_ADDC_U32_e64 0, killed $vgpr0, killed $vcc_lo, 0, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr0 = V_ADD_U32_e32 -256, $vgpr1, implicit $exec
-    ; GFX1250-NEXT: GLOBAL_STORE_ASYNC_FROM_LDS_B128 $vgpr2_vgpr3, killed $vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
-    ; GFX1250-NEXT: GLOBAL_STORE_ASYNC_FROM_LDS_B128 killed $vgpr2_vgpr3, killed $vgpr0, 256, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    ; GFX1250-NEXT: GLOBAL_STORE_ASYNC_FROM_LDS_B128 $vgpr2_64, killed $vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    ; GFX1250-NEXT: GLOBAL_STORE_ASYNC_FROM_LDS_B128 killed $vgpr2_64, killed $vgpr0, 256, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
     %0:vgpr_32 = COPY $vgpr0
     %1:vgpr_32 = V_LSHLREV_B32_e64 8, %0, implicit $exec
     %2:vgpr_32 = disjoint V_OR_B32_e64 %1, 0, implicit $exec

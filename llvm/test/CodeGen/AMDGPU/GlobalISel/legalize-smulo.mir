@@ -47,13 +47,13 @@ body: |
 name: test_smulo_v2s32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
 
     ; GFX8-LABEL: name: test_smulo_v2s32
-    ; GFX8: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; GFX8: liveins: $vgpr0_64, $vgpr2_64
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_64
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_64
     ; GFX8-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; GFX8-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
     ; GFX8-NEXT: [[SMULH:%[0-9]+]]:_(s32) = G_SMULH [[UV]], [[UV2]]
@@ -71,14 +71,14 @@ body: |
     ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ANYEXT]], 1
     ; GFX8-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ANYEXT1]], 1
     ; GFX8-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SEXT_INREG]](s32), [[SEXT_INREG1]](s32)
-    ; GFX8-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
-    ; GFX8-NEXT: $vgpr2_vgpr3 = COPY [[BUILD_VECTOR1]](<2 x s32>)
+    ; GFX8-NEXT: $vgpr0_64 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ; GFX8-NEXT: $vgpr2_64 = COPY [[BUILD_VECTOR1]](<2 x s32>)
     ;
     ; GFX9-LABEL: name: test_smulo_v2s32
-    ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; GFX9: liveins: $vgpr0_64, $vgpr2_64
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_64
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_64
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; GFX9-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
     ; GFX9-NEXT: [[SMULH:%[0-9]+]]:_(s32) = G_SMULH [[UV]], [[UV2]]
@@ -96,14 +96,14 @@ body: |
     ; GFX9-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP1]](s1)
     ; GFX9-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[ANYEXT1]], 1
     ; GFX9-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SEXT_INREG]](s32), [[SEXT_INREG1]](s32)
-    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
-    ; GFX9-NEXT: $vgpr2_vgpr3 = COPY [[BUILD_VECTOR1]](<2 x s32>)
-    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; GFX9-NEXT: $vgpr0_64 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ; GFX9-NEXT: $vgpr2_64 = COPY [[BUILD_VECTOR1]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $vgpr0_64
+    %1:_(<2 x s32>) = COPY $vgpr2_64
     %2:_(<2 x s32>), %3:_(<2 x s1>) = G_SMULO %0, %1
     %4:_(<2 x s32>) = G_SEXT %3
-    $vgpr0_vgpr1 = COPY %2
-    $vgpr2_vgpr3 = COPY %4
+    $vgpr0_64 = COPY %2
+    $vgpr2_64 = COPY %4
 ...
 
 ---
@@ -202,12 +202,12 @@ body: |
 name: test_smulo_v2s16
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
     ; GFX8-LABEL: name: test_smulo_v2s16
-    ; GFX8: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; GFX8: liveins: $vgpr0_64, $vgpr2_64
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_64
+    ; GFX8-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_64
     ; GFX8-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; GFX8-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
     ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[UV]], 16
@@ -237,14 +237,14 @@ body: |
     ; GFX8-NEXT: [[SEXT_INREG8:%[0-9]+]]:_(s32) = G_SEXT_INREG [[BITCAST1]], 16
     ; GFX8-NEXT: [[SEXT_INREG9:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LSHR]], 16
     ; GFX8-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SEXT_INREG8]](s32), [[SEXT_INREG9]](s32)
-    ; GFX8-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR1]](<2 x s32>)
-    ; GFX8-NEXT: $vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    ; GFX8-NEXT: $vgpr0_64 = COPY [[BUILD_VECTOR1]](<2 x s32>)
+    ; GFX8-NEXT: $vgpr2_64 = COPY [[BUILD_VECTOR]](<2 x s32>)
     ;
     ; GFX9-LABEL: name: test_smulo_v2s16
-    ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; GFX9: liveins: $vgpr0_64, $vgpr2_64
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_64
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_64
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; GFX9-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
     ; GFX9-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[UV]], 16
@@ -265,17 +265,17 @@ body: |
     ; GFX9-NEXT: [[SEXT_INREG8:%[0-9]+]]:_(s32) = G_SEXT_INREG [[MUL]], 16
     ; GFX9-NEXT: [[SEXT_INREG9:%[0-9]+]]:_(s32) = G_SEXT_INREG [[MUL1]], 16
     ; GFX9-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SEXT_INREG8]](s32), [[SEXT_INREG9]](s32)
-    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR1]](<2 x s32>)
-    ; GFX9-NEXT: $vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s32>)
-    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; GFX9-NEXT: $vgpr0_64 = COPY [[BUILD_VECTOR1]](<2 x s32>)
+    ; GFX9-NEXT: $vgpr2_64 = COPY [[BUILD_VECTOR]](<2 x s32>)
+    %0:_(<2 x s32>) = COPY $vgpr0_64
+    %1:_(<2 x s32>) = COPY $vgpr2_64
     %2:_(<2 x s16>) = G_TRUNC %0
     %3:_(<2 x s16>) = G_TRUNC %1
     %4:_(<2 x s16>), %6:_(<2 x s1>) = G_SMULO %2, %3
     %7:_(<2 x s32>) = G_SEXT %6
     %5:_(<2 x s32>) = G_SEXT %4
-    $vgpr0_vgpr1 = COPY %5
-    $vgpr2_vgpr3 = COPY %7
+    $vgpr0_64 = COPY %5
+    $vgpr2_64 = COPY %7
 ...
 
 

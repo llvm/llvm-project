@@ -8,33 +8,33 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; GCN-LABEL: name: bundle_memops
-    ; GCN: $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 0, 0, implicit $exec
+    ; GCN: $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_64, 0, 0, implicit $exec
     ; GCN-NEXT: S_NOP 0
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit undef $vgpr3_vgpr4, implicit $exec {
-    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 4, 0, implicit $exec
+    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit undef $vgpr3_64, implicit $exec {
+    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_64, 0, 0, implicit $exec
+    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD undef $vgpr3_64, 4, 0, implicit $exec
     ; GCN-NEXT: }
     ; GCN-NEXT: S_NOP 0
-    ; GCN-NEXT: $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr1, implicit-def $vgpr2, implicit-def $vgpr5, implicit undef $vgpr0_vgpr1, implicit $exec, implicit undef $vgpr3_vgpr4 {
-    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD undef $vgpr0_vgpr1, 4, 0, implicit $exec
-    ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 4, 0, implicit $exec
-    ; GCN-NEXT:   $vgpr5 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_64, 0, 0, implicit $exec
+    ; GCN-NEXT: BUNDLE implicit-def $vgpr1, implicit-def $vgpr2, implicit-def $vgpr5, implicit undef $vgpr0_64, implicit $exec, implicit undef $vgpr3_64 {
+    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD undef $vgpr0_64, 4, 0, implicit $exec
+    ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD undef $vgpr3_64, 4, 0, implicit $exec
+    ; GCN-NEXT:   $vgpr5 = GLOBAL_LOAD_DWORD undef $vgpr3_64, 0, 0, implicit $exec
     ; GCN-NEXT: }
-    ; GCN-NEXT: BUNDLE implicit undef $vgpr3_vgpr4, implicit $vgpr1, implicit $exec, implicit $vgpr0 {
-    ; GCN-NEXT:   GLOBAL_STORE_DWORD undef $vgpr3_vgpr4, $vgpr1, 0, 0, implicit $exec
-    ; GCN-NEXT:   GLOBAL_STORE_DWORD undef $vgpr3_vgpr4, $vgpr0, 4, 0, implicit $exec
-    ; GCN-NEXT: }
-    ; GCN-NEXT: S_NOP 0
-    ; GCN-NEXT: BUNDLE implicit undef $vgpr3_vgpr4, implicit $vgpr1, implicit $exec, implicit $vgpr0 {
-    ; GCN-NEXT:   GLOBAL_STORE_DWORD undef $vgpr3_vgpr4, $vgpr1, 0, 0, implicit $exec
-    ; GCN-NEXT:   GLOBAL_STORE_DWORD undef $vgpr3_vgpr4, $vgpr0, 4, 0, implicit $exec
-    ; GCN-NEXT:   GLOBAL_STORE_DWORD undef $vgpr3_vgpr4, $vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: BUNDLE implicit undef $vgpr3_64, implicit $vgpr1, implicit $exec, implicit $vgpr0 {
+    ; GCN-NEXT:   GLOBAL_STORE_DWORD undef $vgpr3_64, $vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT:   GLOBAL_STORE_DWORD undef $vgpr3_64, $vgpr0, 4, 0, implicit $exec
     ; GCN-NEXT: }
     ; GCN-NEXT: S_NOP 0
-    ; GCN-NEXT: $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT: BUNDLE implicit undef $vgpr3_64, implicit $vgpr1, implicit $exec, implicit $vgpr0 {
+    ; GCN-NEXT:   GLOBAL_STORE_DWORD undef $vgpr3_64, $vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT:   GLOBAL_STORE_DWORD undef $vgpr3_64, $vgpr0, 4, 0, implicit $exec
+    ; GCN-NEXT:   GLOBAL_STORE_DWORD undef $vgpr3_64, $vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: }
     ; GCN-NEXT: S_NOP 0
-    ; GCN-NEXT: GLOBAL_STORE_DWORD undef $vgpr3_vgpr4, $vgpr0, 4, 0, implicit $exec
+    ; GCN-NEXT: $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_64, 0, 0, implicit $exec
+    ; GCN-NEXT: S_NOP 0
+    ; GCN-NEXT: GLOBAL_STORE_DWORD undef $vgpr3_64, $vgpr0, 4, 0, implicit $exec
     ; GCN-NEXT: BUNDLE implicit-def $vgpr2, implicit-def $vgpr3, implicit $vgpr0, implicit $exec, implicit $vgpr1 {
     ; GCN-NEXT:   $vgpr2 = DS_READ_B32_gfx9 $vgpr0, 0, 0, implicit $exec
     ; GCN-NEXT:   $vgpr3 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $exec
@@ -52,17 +52,17 @@ body:             |
     ; GCN-NEXT:   $vgpr2 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, undef $sgpr0_128, $sgpr2, 0, 0, 0, implicit $exec
     ; GCN-NEXT:   $vgpr3 = BUFFER_LOAD_DWORD_OFFEN $vgpr1, undef $sgpr0_128, $sgpr2, 0, 0, 0, implicit $exec
     ; GCN-NEXT: }
-    ; GCN-NEXT: BUNDLE implicit $vgpr0, implicit $vgpr2_vgpr3, implicit undef $sgpr0_128, implicit $exec {
-    ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 $vgpr0, $vgpr2_vgpr3, undef $sgpr0_128, 0, 0, 0, 0, implicit $exec
-    ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 $vgpr0, $vgpr2_vgpr3, undef $sgpr0_128, 0, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: BUNDLE implicit $vgpr0, implicit $vgpr2_64, implicit undef $sgpr0_128, implicit $exec {
+    ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 $vgpr0, $vgpr2_64, undef $sgpr0_128, 0, 0, 0, 0, implicit $exec
+    ; GCN-NEXT:   BUFFER_STORE_DWORD_ADDR64 $vgpr0, $vgpr2_64, undef $sgpr0_128, 0, 0, 0, 0, implicit $exec
     ; GCN-NEXT: }
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr2, implicit-def $vgpr3, implicit undef $vgpr4_vgpr5_vgpr6_vgpr7, implicit undef $sgpr0_256, implicit $exec :: (load (s32)) {
-    ; GCN-NEXT:   $vgpr2 = IMAGE_LOAD_V1_V4 undef $vgpr4_vgpr5_vgpr6_vgpr7, undef $sgpr0_256, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s32))
-    ; GCN-NEXT:   $vgpr3 = IMAGE_LOAD_V1_V4 undef $vgpr4_vgpr5_vgpr6_vgpr7, undef $sgpr0_256, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s32))
+    ; GCN-NEXT: BUNDLE implicit-def $vgpr2, implicit-def $vgpr3, implicit undef $vgpr4_128, implicit undef $sgpr0_256, implicit $exec :: (load (s32)) {
+    ; GCN-NEXT:   $vgpr2 = IMAGE_LOAD_V1_V4 undef $vgpr4_128, undef $sgpr0_256, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s32))
+    ; GCN-NEXT:   $vgpr3 = IMAGE_LOAD_V1_V4 undef $vgpr4_128, undef $sgpr0_256, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s32))
     ; GCN-NEXT: }
-    ; GCN-NEXT: BUNDLE implicit undef $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr0_vgpr1, implicit undef $sgpr0_256, implicit $exec :: (store (s128)) {
-    ; GCN-NEXT:   IMAGE_STORE_V4_V2 undef $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr0_vgpr1, undef $sgpr0_256, 15, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
-    ; GCN-NEXT:   IMAGE_STORE_V4_V2 undef $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr0_vgpr1, undef $sgpr0_256, 15, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
+    ; GCN-NEXT: BUNDLE implicit undef $vgpr0_128, implicit $vgpr0_64, implicit undef $sgpr0_256, implicit $exec :: (store (s128)) {
+    ; GCN-NEXT:   IMAGE_STORE_V4_V2 undef $vgpr0_128, $vgpr0_64, undef $sgpr0_256, 15, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
+    ; GCN-NEXT:   IMAGE_STORE_V4_V2 undef $vgpr0_128, $vgpr0_64, undef $sgpr0_256, 15, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
     ; GCN-NEXT: }
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: $sgpr64_256 = S_LOAD_DWORDX8_IMM undef $sgpr10_64, 464, 0
@@ -72,25 +72,25 @@ body:             |
     ; GCN-NEXT:   $vgpr2 = DS_READ_B32_gfx9 $vgpr0, 0, 0, implicit $exec
     ; GCN-NEXT:   $vgpr3 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $exec
     ; GCN-NEXT: }
-    $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 0, 0, implicit $exec
+    $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_64, 0, 0, implicit $exec
     S_NOP 0
-    $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 0, 0, implicit $exec
-    $vgpr1 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 4, 0, implicit $exec
+    $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_64, 0, 0, implicit $exec
+    $vgpr1 = GLOBAL_LOAD_DWORD undef $vgpr3_64, 4, 0, implicit $exec
     S_NOP 0
-    $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 0, 0, implicit $exec
-    $vgpr1 = GLOBAL_LOAD_DWORD undef $vgpr0_vgpr1, 4, 0, implicit $exec
-    $vgpr2 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 4, 0, implicit $exec
-    $vgpr5 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD undef $vgpr3_vgpr4, $vgpr1, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD undef $vgpr3_vgpr4, $vgpr0, 4, 0, implicit $exec
+    $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_64, 0, 0, implicit $exec
+    $vgpr1 = GLOBAL_LOAD_DWORD undef $vgpr0_64, 4, 0, implicit $exec
+    $vgpr2 = GLOBAL_LOAD_DWORD undef $vgpr3_64, 4, 0, implicit $exec
+    $vgpr5 = GLOBAL_LOAD_DWORD undef $vgpr3_64, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD undef $vgpr3_64, $vgpr1, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD undef $vgpr3_64, $vgpr0, 4, 0, implicit $exec
     S_NOP 0
-    GLOBAL_STORE_DWORD undef $vgpr3_vgpr4, $vgpr1, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD undef $vgpr3_vgpr4, $vgpr0, 4, 0, implicit $exec
-    GLOBAL_STORE_DWORD undef $vgpr3_vgpr4, $vgpr1, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD undef $vgpr3_64, $vgpr1, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD undef $vgpr3_64, $vgpr0, 4, 0, implicit $exec
+    GLOBAL_STORE_DWORD undef $vgpr3_64, $vgpr1, 0, 0, implicit $exec
     S_NOP 0
-    $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 0, 0, implicit $exec
+    $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_64, 0, 0, implicit $exec
     S_NOP 0
-    GLOBAL_STORE_DWORD undef $vgpr3_vgpr4, $vgpr0, 4, 0, implicit $exec
+    GLOBAL_STORE_DWORD undef $vgpr3_64, $vgpr0, 4, 0, implicit $exec
     $vgpr2 = DS_READ_B32_gfx9 $vgpr0, 0, 0, implicit $exec
     $vgpr3 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $exec
     DS_WRITE_B32_gfx9 $vgpr0, $vgpr2, 0, 0, implicit killed $m0, implicit $exec
@@ -100,12 +100,12 @@ body:             |
     $sgpr3 = S_LOAD_DWORD_SGPR undef $sgpr0_64, undef $sgpr10, 0
     $vgpr2 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, undef $sgpr0_128, $sgpr2, 0, 0, 0, implicit $exec
     $vgpr3 = BUFFER_LOAD_DWORD_OFFEN $vgpr1, undef $sgpr0_128, $sgpr2, 0, 0, 0, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 $vgpr0, $vgpr2_vgpr3,  undef $sgpr0_128, 0, 0, 0, 0, implicit $exec
-    BUFFER_STORE_DWORD_ADDR64 $vgpr0, $vgpr2_vgpr3,  undef $sgpr0_128, 0, 0, 0, 0, implicit $exec
-    $vgpr2 = IMAGE_LOAD_V1_V4 undef $vgpr4_vgpr5_vgpr6_vgpr7, undef $sgpr0_256, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s32))
-    $vgpr3 = IMAGE_LOAD_V1_V4 undef $vgpr4_vgpr5_vgpr6_vgpr7, undef $sgpr0_256, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s32))
-    IMAGE_STORE_V4_V2 undef $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr0_vgpr1, undef $sgpr0_256, 15, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
-    IMAGE_STORE_V4_V2 undef $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr0_vgpr1, undef $sgpr0_256, 15, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
+    BUFFER_STORE_DWORD_ADDR64 $vgpr0, $vgpr2_64,  undef $sgpr0_128, 0, 0, 0, 0, implicit $exec
+    BUFFER_STORE_DWORD_ADDR64 $vgpr0, $vgpr2_64,  undef $sgpr0_128, 0, 0, 0, 0, implicit $exec
+    $vgpr2 = IMAGE_LOAD_V1_V4 undef $vgpr4_128, undef $sgpr0_256, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s32))
+    $vgpr3 = IMAGE_LOAD_V1_V4 undef $vgpr4_128, undef $sgpr0_256, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s32))
+    IMAGE_STORE_V4_V2 undef $vgpr0_128, $vgpr0_64, undef $sgpr0_256, 15, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
+    IMAGE_STORE_V4_V2 undef $vgpr0_128, $vgpr0_64, undef $sgpr0_256, 15, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (store (s128))
     S_NOP 0
     $sgpr64_256 = S_LOAD_DWORDX8_IMM undef $sgpr10_64, 464, 0
     $sgpr68_256 = S_LOAD_DWORDX8_IMM undef $sgpr10_64, 128, 0
@@ -120,18 +120,18 @@ name: bundle_dbg_value_0
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    liveins: $vgpr3_64, $vgpr5_64
     ; GCN-LABEL: name: bundle_dbg_value_0
-    ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    ; GCN: liveins: $vgpr3_64, $vgpr5_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
-    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit $vgpr3_64, implicit $exec, implicit $vgpr5_64 {
+    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
     ; GCN-NEXT:   DBG_VALUE $vgpr0, 0, 0
-    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
     ; GCN-NEXT: }
-    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
+    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
     DBG_VALUE $vgpr0, 0, 0
-    $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
 
 ...
 
@@ -141,21 +141,21 @@ name: bundle_dbg_value_1
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr3_vgpr4, $vgpr5_vgpr6, $vgpr1
+    liveins: $vgpr3_64, $vgpr5_64, $vgpr1
     ; GCN-LABEL: name: bundle_dbg_value_1
-    ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6, $vgpr1
+    ; GCN: liveins: $vgpr3_64, $vgpr5_64, $vgpr1
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr2, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
-    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr2, implicit $vgpr3_64, implicit $exec, implicit $vgpr5_64 {
+    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
     ; GCN-NEXT:   DBG_VALUE $vgpr0, 0, 0
     ; GCN-NEXT:   DBG_VALUE $vgpr1, 0, 0
-    ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
     ; GCN-NEXT: }
     ; GCN-NEXT: DBG_VALUE $vgpr2, 0, 0
-    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
+    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
     DBG_VALUE $vgpr0, 0, 0
     DBG_VALUE $vgpr1, 0, 0
-    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
     DBG_VALUE $vgpr2, 0, 0
 ...
 
@@ -165,21 +165,21 @@ name: bundle_dbg_value_2
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr3_vgpr4, $vgpr5_vgpr6, $vgpr1
+    liveins: $vgpr3_64, $vgpr5_64, $vgpr1
     ; GCN-LABEL: name: bundle_dbg_value_2
-    ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6, $vgpr1
+    ; GCN: liveins: $vgpr3_64, $vgpr5_64, $vgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: DBG_VALUE $vgpr1, 0, 0
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr2, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
-    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr2, implicit $vgpr3_64, implicit $exec, implicit $vgpr5_64 {
+    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
     ; GCN-NEXT:   DBG_VALUE $vgpr0, 0, 0
-    ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
     ; GCN-NEXT: }
     ; GCN-NEXT: DBG_VALUE $vgpr2, 0, 0
     DBG_VALUE $vgpr1, 0, 0
-    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
+    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
     DBG_VALUE $vgpr0, 0, 0
-    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
     DBG_VALUE $vgpr2, 0, 0
 ...
 
@@ -188,20 +188,20 @@ name: bundle_kill
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    liveins: $vgpr3_64, $vgpr5_64
     ; GCN-LABEL: name: bundle_kill
-    ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    ; GCN: liveins: $vgpr3_64, $vgpr5_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr2, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr1, implicit $vgpr5_vgpr6 {
-    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr2, implicit $vgpr3_64, implicit $exec, implicit $vgpr1, implicit $vgpr5_64 {
+    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
     ; GCN-NEXT:   KILL $vgpr1
-    ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
     ; GCN-NEXT: }
     $vgpr1 = V_MOV_B32_e32 0, implicit $exec
-    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
+    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
     KILL $vgpr1
-    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
 
 ...
 
@@ -210,20 +210,20 @@ name: bundle_kill_def_in_bundle
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    liveins: $vgpr3_64, $vgpr5_64
     ; GCN-LABEL: name: bundle_kill_def_in_bundle
-    ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    ; GCN: liveins: $vgpr3_64, $vgpr5_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr2, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
-    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr2, implicit $vgpr3_64, implicit $exec, implicit $vgpr5_64 {
+    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
     ; GCN-NEXT:   KILL internal $vgpr0
-    ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
     ; GCN-NEXT: }
     $vgpr1 = V_MOV_B32_e32 0, implicit $exec
-    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
+    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
     KILL $vgpr0
-    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
 
 ...
 
@@ -234,18 +234,18 @@ body:             |
 name: post_bundle_kill
 body:             |
   bb.0:
-    liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    liveins: $vgpr3_64, $vgpr5_64
 
     ; GCN-LABEL: name: post_bundle_kill
-    ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    ; GCN: liveins: $vgpr3_64, $vgpr5_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
-    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit $vgpr3_64, implicit $exec, implicit $vgpr5_64 {
+    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
+    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
     ; GCN-NEXT: }
-    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
-    $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
-    KILL killed $vgpr3_vgpr4, killed $vgpr5_vgpr6
+    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
+    $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
+    KILL killed $vgpr3_64, killed $vgpr5_64
 ...
 
 # Kill some other register not used in the bundle, should not be touched.
@@ -253,19 +253,19 @@ body:             |
 name: post_bundle_kill_other
 body:             |
   bb.0:
-    liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    liveins: $vgpr3_64, $vgpr5_64
     ; GCN-LABEL: name: post_bundle_kill_other
-    ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    ; GCN: liveins: $vgpr3_64, $vgpr5_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr7 = V_MOV_B32_e32 0, implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
-    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit $vgpr3_64, implicit $exec, implicit $vgpr5_64 {
+    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
+    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
     ; GCN-NEXT: }
     ; GCN-NEXT: KILL killed $vgpr7
     $vgpr7 = V_MOV_B32_e32 0, implicit $exec
-    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
-    $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
+    $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
     KILL killed $vgpr7
 ...
 
@@ -275,19 +275,19 @@ body:             |
 name: post_bundle_kill_plus_other
 body:             |
   bb.0:
-    liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    liveins: $vgpr3_64, $vgpr5_64
     ; GCN-LABEL: name: post_bundle_kill_plus_other
-    ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    ; GCN: liveins: $vgpr3_64, $vgpr5_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr7 = V_MOV_B32_e32 0, implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
-    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit $vgpr3_64, implicit $exec, implicit $vgpr5_64 {
+    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
+    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
     ; GCN-NEXT: }
     ; GCN-NEXT: KILL killed $vgpr7, killed $vgpr3
     $vgpr7 = V_MOV_B32_e32 0, implicit $exec
-    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
-    $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
+    $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
     KILL killed $vgpr7, killed $vgpr3
 ...
 
@@ -295,19 +295,19 @@ body:             |
 name: post_bundle_multi_kill_0
 body:             |
   bb.0:
-    liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    liveins: $vgpr3_64, $vgpr5_64
 
     ; GCN-LABEL: name: post_bundle_multi_kill_0
-    ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    ; GCN: liveins: $vgpr3_64, $vgpr5_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
-    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit $vgpr3_64, implicit $exec, implicit $vgpr5_64 {
+    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
+    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
     ; GCN-NEXT: }
-    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
-    $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
-    KILL killed $vgpr3_vgpr4
-    KILL killed $vgpr5_vgpr6
+    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
+    $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
+    KILL killed $vgpr3_64
+    KILL killed $vgpr5_64
 ...
 
 
@@ -315,17 +315,17 @@ body:             |
 name: post_bundle_multi_kill_1
 body:             |
   bb.0:
-    liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    liveins: $vgpr3_64, $vgpr5_64
 
     ; GCN-LABEL: name: post_bundle_multi_kill_1
-    ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    ; GCN: liveins: $vgpr3_64, $vgpr5_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
-    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit $vgpr3_64, implicit $exec, implicit $vgpr5_64 {
+    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
+    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
     ; GCN-NEXT: }
-    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
-    $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
+    $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
     KILL killed $vgpr3
     KILL $vgpr4
     KILL killed $vgpr5
@@ -336,20 +336,20 @@ body:             |
 name: post_bundle_kill_and_null_reg_dbginfo
 body:             |
   bb.0:
-    liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    liveins: $vgpr3_64, $vgpr5_64
 
     ; GCN-LABEL: name: post_bundle_kill_and_null_reg_dbginfo
-    ; GCN: liveins: $vgpr3_vgpr4, $vgpr5_vgpr6
+    ; GCN: liveins: $vgpr3_64, $vgpr5_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit $vgpr3_vgpr4, implicit $exec, implicit $vgpr5_vgpr6 {
-    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT: BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit $vgpr3_64, implicit $exec, implicit $vgpr5_64 {
+    ; GCN-NEXT:   $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
     ; GCN-NEXT:   DBG_VALUE $noreg, $noreg
-    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
+    ; GCN-NEXT:   $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
     ; GCN-NEXT: }
-    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_vgpr4, 0, 0, implicit $exec
+    $vgpr0 = GLOBAL_LOAD_DWORD $vgpr3_64, 0, 0, implicit $exec
     DBG_VALUE $noreg, $noreg
-    $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_vgpr6, 0, 0, implicit $exec
-    KILL killed $vgpr3_vgpr4, killed $vgpr5_vgpr6
+    $vgpr1 = GLOBAL_LOAD_DWORD $vgpr5_64, 0, 0, implicit $exec
+    KILL killed $vgpr3_64, killed $vgpr5_64
 ...
 
 # Avoid bundling if a MBB has SCHED_BARRIER

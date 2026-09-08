@@ -178,7 +178,7 @@ define amdgpu_kernel void @atomic_add_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GCN1-NEXT:    s_branch .LBB1_3
 ; GCN1-NEXT:  .LBB1_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB1_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -236,7 +236,7 @@ define amdgpu_kernel void @atomic_add_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GCN2-NEXT:    s_branch .LBB1_3
 ; GCN2-NEXT:  .LBB1_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB1_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -286,7 +286,7 @@ define amdgpu_kernel void @atomic_add_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_branch .LBB1_3
 ; GFX12-NEXT:  .LBB1_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB1_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -505,7 +505,7 @@ define amdgpu_kernel void @atomic_add_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GCN1-NEXT:    s_branch .LBB3_3
 ; GCN1-NEXT:  .LBB3_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB3_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -565,7 +565,7 @@ define amdgpu_kernel void @atomic_add_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GCN2-NEXT:    s_branch .LBB3_3
 ; GCN2-NEXT:  .LBB3_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB3_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -616,7 +616,7 @@ define amdgpu_kernel void @atomic_add_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_branch .LBB3_3
 ; GFX12-NEXT:  .LBB3_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB3_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -811,7 +811,7 @@ define amdgpu_kernel void @atomic_add_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN1-NEXT:    s_branch .LBB5_3
 ; GCN1-NEXT:  .LBB5_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB5_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -867,7 +867,7 @@ define amdgpu_kernel void @atomic_add_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN2-NEXT:    s_branch .LBB5_3
 ; GCN2-NEXT:  .LBB5_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB5_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -916,7 +916,7 @@ define amdgpu_kernel void @atomic_add_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_branch .LBB5_3
 ; GFX12-NEXT:  .LBB5_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB5_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -1125,7 +1125,7 @@ define amdgpu_kernel void @atomic_add_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GCN1-NEXT:    s_branch .LBB7_3
 ; GCN1-NEXT:  .LBB7_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB7_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -1183,7 +1183,7 @@ define amdgpu_kernel void @atomic_add_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GCN2-NEXT:    s_branch .LBB7_3
 ; GCN2-NEXT:  .LBB7_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB7_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -1233,7 +1233,7 @@ define amdgpu_kernel void @atomic_add_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_branch .LBB7_3
 ; GFX12-NEXT:  .LBB7_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB7_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -1432,7 +1432,7 @@ define amdgpu_kernel void @atomic_and_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GCN1-NEXT:    s_branch .LBB9_3
 ; GCN1-NEXT:  .LBB9_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB9_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -1489,7 +1489,7 @@ define amdgpu_kernel void @atomic_and_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GCN2-NEXT:    s_branch .LBB9_3
 ; GCN2-NEXT:  .LBB9_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB9_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -1538,7 +1538,7 @@ define amdgpu_kernel void @atomic_and_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_branch .LBB9_3
 ; GFX12-NEXT:  .LBB9_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB9_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -1753,7 +1753,7 @@ define amdgpu_kernel void @atomic_and_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GCN1-NEXT:    s_branch .LBB11_3
 ; GCN1-NEXT:  .LBB11_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB11_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -1812,7 +1812,7 @@ define amdgpu_kernel void @atomic_and_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GCN2-NEXT:    s_branch .LBB11_3
 ; GCN2-NEXT:  .LBB11_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB11_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -1862,7 +1862,7 @@ define amdgpu_kernel void @atomic_and_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_branch .LBB11_3
 ; GFX12-NEXT:  .LBB11_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB11_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -2053,7 +2053,7 @@ define amdgpu_kernel void @atomic_and_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN1-NEXT:    s_branch .LBB13_3
 ; GCN1-NEXT:  .LBB13_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB13_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -2108,7 +2108,7 @@ define amdgpu_kernel void @atomic_and_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN2-NEXT:    s_branch .LBB13_3
 ; GCN2-NEXT:  .LBB13_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB13_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -2156,7 +2156,7 @@ define amdgpu_kernel void @atomic_and_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_branch .LBB13_3
 ; GFX12-NEXT:  .LBB13_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB13_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -2361,7 +2361,7 @@ define amdgpu_kernel void @atomic_and_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GCN1-NEXT:    s_branch .LBB15_3
 ; GCN1-NEXT:  .LBB15_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB15_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -2418,7 +2418,7 @@ define amdgpu_kernel void @atomic_and_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GCN2-NEXT:    s_branch .LBB15_3
 ; GCN2-NEXT:  .LBB15_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB15_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -2467,7 +2467,7 @@ define amdgpu_kernel void @atomic_and_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_branch .LBB15_3
 ; GFX12-NEXT:  .LBB15_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB15_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -2668,7 +2668,7 @@ define amdgpu_kernel void @atomic_sub_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GCN1-NEXT:    s_branch .LBB17_3
 ; GCN1-NEXT:  .LBB17_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB17_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -2726,7 +2726,7 @@ define amdgpu_kernel void @atomic_sub_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GCN2-NEXT:    s_branch .LBB17_3
 ; GCN2-NEXT:  .LBB17_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB17_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -2776,7 +2776,7 @@ define amdgpu_kernel void @atomic_sub_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_branch .LBB17_3
 ; GFX12-NEXT:  .LBB17_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB17_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -2995,7 +2995,7 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GCN1-NEXT:    s_branch .LBB19_3
 ; GCN1-NEXT:  .LBB19_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB19_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -3055,7 +3055,7 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GCN2-NEXT:    s_branch .LBB19_3
 ; GCN2-NEXT:  .LBB19_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB19_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -3106,7 +3106,7 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_branch .LBB19_3
 ; GFX12-NEXT:  .LBB19_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB19_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -3301,7 +3301,7 @@ define amdgpu_kernel void @atomic_sub_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN1-NEXT:    s_branch .LBB21_3
 ; GCN1-NEXT:  .LBB21_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB21_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -3357,7 +3357,7 @@ define amdgpu_kernel void @atomic_sub_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN2-NEXT:    s_branch .LBB21_3
 ; GCN2-NEXT:  .LBB21_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB21_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -3406,7 +3406,7 @@ define amdgpu_kernel void @atomic_sub_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_branch .LBB21_3
 ; GFX12-NEXT:  .LBB21_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB21_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -3615,7 +3615,7 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GCN1-NEXT:    s_branch .LBB23_3
 ; GCN1-NEXT:  .LBB23_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB23_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -3673,7 +3673,7 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GCN2-NEXT:    s_branch .LBB23_3
 ; GCN2-NEXT:  .LBB23_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB23_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -3723,7 +3723,7 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_branch .LBB23_3
 ; GFX12-NEXT:  .LBB23_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB23_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -3924,7 +3924,7 @@ define amdgpu_kernel void @atomic_max_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GCN1-NEXT:    s_branch .LBB25_3
 ; GCN1-NEXT:  .LBB25_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB25_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -3983,7 +3983,7 @@ define amdgpu_kernel void @atomic_max_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GCN2-NEXT:    s_branch .LBB25_3
 ; GCN2-NEXT:  .LBB25_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB25_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -4035,7 +4035,7 @@ define amdgpu_kernel void @atomic_max_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_branch .LBB25_3
 ; GFX12-NEXT:  .LBB25_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB25_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -4253,7 +4253,7 @@ define amdgpu_kernel void @atomic_max_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GCN1-NEXT:    s_branch .LBB27_3
 ; GCN1-NEXT:  .LBB27_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB27_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -4314,7 +4314,7 @@ define amdgpu_kernel void @atomic_max_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GCN2-NEXT:    s_branch .LBB27_3
 ; GCN2-NEXT:  .LBB27_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB27_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -4367,7 +4367,7 @@ define amdgpu_kernel void @atomic_max_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_branch .LBB27_3
 ; GFX12-NEXT:  .LBB27_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB27_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -4561,7 +4561,7 @@ define amdgpu_kernel void @atomic_max_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN1-NEXT:    s_branch .LBB29_3
 ; GCN1-NEXT:  .LBB29_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB29_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -4618,7 +4618,7 @@ define amdgpu_kernel void @atomic_max_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN2-NEXT:    s_branch .LBB29_3
 ; GCN2-NEXT:  .LBB29_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB29_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -4669,7 +4669,7 @@ define amdgpu_kernel void @atomic_max_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_branch .LBB29_3
 ; GFX12-NEXT:  .LBB29_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB29_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -4877,7 +4877,7 @@ define amdgpu_kernel void @atomic_max_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GCN1-NEXT:    s_branch .LBB31_3
 ; GCN1-NEXT:  .LBB31_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB31_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -4936,7 +4936,7 @@ define amdgpu_kernel void @atomic_max_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GCN2-NEXT:    s_branch .LBB31_3
 ; GCN2-NEXT:  .LBB31_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB31_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -4988,7 +4988,7 @@ define amdgpu_kernel void @atomic_max_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_branch .LBB31_3
 ; GFX12-NEXT:  .LBB31_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB31_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -5189,7 +5189,7 @@ define amdgpu_kernel void @atomic_umax_i64_ret_offset(ptr %out, ptr %out2, i64 %
 ; GCN1-NEXT:    s_branch .LBB33_3
 ; GCN1-NEXT:  .LBB33_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB33_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -5248,7 +5248,7 @@ define amdgpu_kernel void @atomic_umax_i64_ret_offset(ptr %out, ptr %out2, i64 %
 ; GCN2-NEXT:    s_branch .LBB33_3
 ; GCN2-NEXT:  .LBB33_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB33_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -5300,7 +5300,7 @@ define amdgpu_kernel void @atomic_umax_i64_ret_offset(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    s_branch .LBB33_3
 ; GFX12-NEXT:  .LBB33_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB33_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -5518,7 +5518,7 @@ define amdgpu_kernel void @atomic_umax_i64_ret_addr64_offset(ptr %out, ptr %out2
 ; GCN1-NEXT:    s_branch .LBB35_3
 ; GCN1-NEXT:  .LBB35_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB35_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -5579,7 +5579,7 @@ define amdgpu_kernel void @atomic_umax_i64_ret_addr64_offset(ptr %out, ptr %out2
 ; GCN2-NEXT:    s_branch .LBB35_3
 ; GCN2-NEXT:  .LBB35_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB35_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -5632,7 +5632,7 @@ define amdgpu_kernel void @atomic_umax_i64_ret_addr64_offset(ptr %out, ptr %out2
 ; GFX12-NEXT:    s_branch .LBB35_3
 ; GFX12-NEXT:  .LBB35_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB35_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -5826,7 +5826,7 @@ define amdgpu_kernel void @atomic_umax_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN1-NEXT:    s_branch .LBB37_3
 ; GCN1-NEXT:  .LBB37_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB37_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -5883,7 +5883,7 @@ define amdgpu_kernel void @atomic_umax_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN2-NEXT:    s_branch .LBB37_3
 ; GCN2-NEXT:  .LBB37_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB37_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -5934,7 +5934,7 @@ define amdgpu_kernel void @atomic_umax_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_branch .LBB37_3
 ; GFX12-NEXT:  .LBB37_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB37_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -6142,7 +6142,7 @@ define amdgpu_kernel void @atomic_umax_i64_ret_addr64(ptr %out, ptr %out2, i64 %
 ; GCN1-NEXT:    s_branch .LBB39_3
 ; GCN1-NEXT:  .LBB39_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB39_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -6201,7 +6201,7 @@ define amdgpu_kernel void @atomic_umax_i64_ret_addr64(ptr %out, ptr %out2, i64 %
 ; GCN2-NEXT:    s_branch .LBB39_3
 ; GCN2-NEXT:  .LBB39_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB39_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -6253,7 +6253,7 @@ define amdgpu_kernel void @atomic_umax_i64_ret_addr64(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    s_branch .LBB39_3
 ; GFX12-NEXT:  .LBB39_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB39_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -6454,7 +6454,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GCN1-NEXT:    s_branch .LBB41_3
 ; GCN1-NEXT:  .LBB41_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB41_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -6513,7 +6513,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GCN2-NEXT:    s_branch .LBB41_3
 ; GCN2-NEXT:  .LBB41_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB41_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -6565,7 +6565,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_branch .LBB41_3
 ; GFX12-NEXT:  .LBB41_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB41_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -6783,7 +6783,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GCN1-NEXT:    s_branch .LBB43_3
 ; GCN1-NEXT:  .LBB43_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB43_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -6844,7 +6844,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GCN2-NEXT:    s_branch .LBB43_3
 ; GCN2-NEXT:  .LBB43_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB43_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -6897,7 +6897,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_branch .LBB43_3
 ; GFX12-NEXT:  .LBB43_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB43_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -7091,7 +7091,7 @@ define amdgpu_kernel void @atomic_min_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN1-NEXT:    s_branch .LBB45_3
 ; GCN1-NEXT:  .LBB45_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB45_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -7148,7 +7148,7 @@ define amdgpu_kernel void @atomic_min_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN2-NEXT:    s_branch .LBB45_3
 ; GCN2-NEXT:  .LBB45_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB45_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -7199,7 +7199,7 @@ define amdgpu_kernel void @atomic_min_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_branch .LBB45_3
 ; GFX12-NEXT:  .LBB45_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB45_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -7407,7 +7407,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GCN1-NEXT:    s_branch .LBB47_3
 ; GCN1-NEXT:  .LBB47_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB47_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -7466,7 +7466,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GCN2-NEXT:    s_branch .LBB47_3
 ; GCN2-NEXT:  .LBB47_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB47_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -7518,7 +7518,7 @@ define amdgpu_kernel void @atomic_min_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_branch .LBB47_3
 ; GFX12-NEXT:  .LBB47_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB47_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -7719,7 +7719,7 @@ define amdgpu_kernel void @atomic_umin_i64_ret_offset(ptr %out, ptr %out2, i64 %
 ; GCN1-NEXT:    s_branch .LBB49_3
 ; GCN1-NEXT:  .LBB49_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB49_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -7778,7 +7778,7 @@ define amdgpu_kernel void @atomic_umin_i64_ret_offset(ptr %out, ptr %out2, i64 %
 ; GCN2-NEXT:    s_branch .LBB49_3
 ; GCN2-NEXT:  .LBB49_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB49_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -7830,7 +7830,7 @@ define amdgpu_kernel void @atomic_umin_i64_ret_offset(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    s_branch .LBB49_3
 ; GFX12-NEXT:  .LBB49_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB49_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -8048,7 +8048,7 @@ define amdgpu_kernel void @atomic_umin_i64_ret_addr64_offset(ptr %out, ptr %out2
 ; GCN1-NEXT:    s_branch .LBB51_3
 ; GCN1-NEXT:  .LBB51_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB51_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -8109,7 +8109,7 @@ define amdgpu_kernel void @atomic_umin_i64_ret_addr64_offset(ptr %out, ptr %out2
 ; GCN2-NEXT:    s_branch .LBB51_3
 ; GCN2-NEXT:  .LBB51_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB51_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -8162,7 +8162,7 @@ define amdgpu_kernel void @atomic_umin_i64_ret_addr64_offset(ptr %out, ptr %out2
 ; GFX12-NEXT:    s_branch .LBB51_3
 ; GFX12-NEXT:  .LBB51_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB51_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -8356,7 +8356,7 @@ define amdgpu_kernel void @atomic_umin_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN1-NEXT:    s_branch .LBB53_3
 ; GCN1-NEXT:  .LBB53_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB53_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -8413,7 +8413,7 @@ define amdgpu_kernel void @atomic_umin_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN2-NEXT:    s_branch .LBB53_3
 ; GCN2-NEXT:  .LBB53_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB53_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -8464,7 +8464,7 @@ define amdgpu_kernel void @atomic_umin_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_branch .LBB53_3
 ; GFX12-NEXT:  .LBB53_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB53_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -8672,7 +8672,7 @@ define amdgpu_kernel void @atomic_umin_i64_ret_addr64(ptr %out, ptr %out2, i64 %
 ; GCN1-NEXT:    s_branch .LBB55_3
 ; GCN1-NEXT:  .LBB55_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB55_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -8731,7 +8731,7 @@ define amdgpu_kernel void @atomic_umin_i64_ret_addr64(ptr %out, ptr %out2, i64 %
 ; GCN2-NEXT:    s_branch .LBB55_3
 ; GCN2-NEXT:  .LBB55_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB55_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -8783,7 +8783,7 @@ define amdgpu_kernel void @atomic_umin_i64_ret_addr64(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    s_branch .LBB55_3
 ; GFX12-NEXT:  .LBB55_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB55_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -8982,7 +8982,7 @@ define amdgpu_kernel void @atomic_or_i64_ret_offset(ptr %out, ptr %out2, i64 %in
 ; GCN1-NEXT:    s_branch .LBB57_3
 ; GCN1-NEXT:  .LBB57_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB57_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -9039,7 +9039,7 @@ define amdgpu_kernel void @atomic_or_i64_ret_offset(ptr %out, ptr %out2, i64 %in
 ; GCN2-NEXT:    s_branch .LBB57_3
 ; GCN2-NEXT:  .LBB57_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB57_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -9088,7 +9088,7 @@ define amdgpu_kernel void @atomic_or_i64_ret_offset(ptr %out, ptr %out2, i64 %in
 ; GFX12-NEXT:    s_branch .LBB57_3
 ; GFX12-NEXT:  .LBB57_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB57_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -9303,7 +9303,7 @@ define amdgpu_kernel void @atomic_or_i64_ret_addr64_offset(ptr %out, ptr %out2, 
 ; GCN1-NEXT:    s_branch .LBB59_3
 ; GCN1-NEXT:  .LBB59_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB59_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -9362,7 +9362,7 @@ define amdgpu_kernel void @atomic_or_i64_ret_addr64_offset(ptr %out, ptr %out2, 
 ; GCN2-NEXT:    s_branch .LBB59_3
 ; GCN2-NEXT:  .LBB59_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB59_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -9412,7 +9412,7 @@ define amdgpu_kernel void @atomic_or_i64_ret_addr64_offset(ptr %out, ptr %out2, 
 ; GFX12-NEXT:    s_branch .LBB59_3
 ; GFX12-NEXT:  .LBB59_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB59_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -9603,7 +9603,7 @@ define amdgpu_kernel void @atomic_or_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN1-NEXT:    s_branch .LBB61_3
 ; GCN1-NEXT:  .LBB61_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB61_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -9658,7 +9658,7 @@ define amdgpu_kernel void @atomic_or_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN2-NEXT:    s_branch .LBB61_3
 ; GCN2-NEXT:  .LBB61_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB61_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -9706,7 +9706,7 @@ define amdgpu_kernel void @atomic_or_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_branch .LBB61_3
 ; GFX12-NEXT:  .LBB61_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB61_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -9911,7 +9911,7 @@ define amdgpu_kernel void @atomic_or_i64_ret_addr64(ptr %out, ptr %out2, i64 %in
 ; GCN1-NEXT:    s_branch .LBB63_3
 ; GCN1-NEXT:  .LBB63_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB63_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -9968,7 +9968,7 @@ define amdgpu_kernel void @atomic_or_i64_ret_addr64(ptr %out, ptr %out2, i64 %in
 ; GCN2-NEXT:    s_branch .LBB63_3
 ; GCN2-NEXT:  .LBB63_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB63_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -10017,7 +10017,7 @@ define amdgpu_kernel void @atomic_or_i64_ret_addr64(ptr %out, ptr %out2, i64 %in
 ; GFX12-NEXT:    s_branch .LBB63_3
 ; GFX12-NEXT:  .LBB63_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB63_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -10464,7 +10464,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_offset(ptr %out, ptr %out2, i64 %
 ; GCN1-NEXT:    s_branch .LBB67_3
 ; GCN1-NEXT:  .LBB67_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB67_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -10520,7 +10520,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_offset(ptr %out, ptr %out2, i64 %
 ; GCN2-NEXT:    s_branch .LBB67_3
 ; GCN2-NEXT:  .LBB67_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB67_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -10568,7 +10568,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_offset(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    s_branch .LBB67_3
 ; GFX12-NEXT:  .LBB67_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB67_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -10771,7 +10771,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_addr64_offset(ptr %out, ptr %out2
 ; GCN1-NEXT:    s_branch .LBB69_3
 ; GCN1-NEXT:  .LBB69_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB69_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -10829,7 +10829,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_addr64_offset(ptr %out, ptr %out2
 ; GCN2-NEXT:    s_branch .LBB69_3
 ; GCN2-NEXT:  .LBB69_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB69_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -10878,7 +10878,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_addr64_offset(ptr %out, ptr %out2
 ; GFX12-NEXT:    s_branch .LBB69_3
 ; GFX12-NEXT:  .LBB69_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB69_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -11057,7 +11057,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN1-NEXT:    s_branch .LBB71_3
 ; GCN1-NEXT:  .LBB71_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB71_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -11111,7 +11111,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN2-NEXT:    s_branch .LBB71_3
 ; GCN2-NEXT:  .LBB71_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB71_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -11158,7 +11158,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_branch .LBB71_3
 ; GFX12-NEXT:  .LBB71_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB71_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -11351,7 +11351,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_addr64(ptr %out, ptr %out2, i64 %
 ; GCN1-NEXT:    s_branch .LBB73_3
 ; GCN1-NEXT:  .LBB73_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB73_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -11407,7 +11407,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_addr64(ptr %out, ptr %out2, i64 %
 ; GCN2-NEXT:    s_branch .LBB73_3
 ; GCN2-NEXT:  .LBB73_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB73_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -11455,7 +11455,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_addr64(ptr %out, ptr %out2, i64 %
 ; GFX12-NEXT:    s_branch .LBB73_3
 ; GFX12-NEXT:  .LBB73_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB73_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -11652,7 +11652,7 @@ define amdgpu_kernel void @atomic_xor_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GCN1-NEXT:    s_branch .LBB75_3
 ; GCN1-NEXT:  .LBB75_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB75_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -11709,7 +11709,7 @@ define amdgpu_kernel void @atomic_xor_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GCN2-NEXT:    s_branch .LBB75_3
 ; GCN2-NEXT:  .LBB75_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB75_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -11758,7 +11758,7 @@ define amdgpu_kernel void @atomic_xor_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_branch .LBB75_3
 ; GFX12-NEXT:  .LBB75_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB75_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -11973,7 +11973,7 @@ define amdgpu_kernel void @atomic_xor_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GCN1-NEXT:    s_branch .LBB77_3
 ; GCN1-NEXT:  .LBB77_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB77_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -12032,7 +12032,7 @@ define amdgpu_kernel void @atomic_xor_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GCN2-NEXT:    s_branch .LBB77_3
 ; GCN2-NEXT:  .LBB77_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB77_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -12082,7 +12082,7 @@ define amdgpu_kernel void @atomic_xor_i64_ret_addr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_branch .LBB77_3
 ; GFX12-NEXT:  .LBB77_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB77_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -12273,7 +12273,7 @@ define amdgpu_kernel void @atomic_xor_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN1-NEXT:    s_branch .LBB79_3
 ; GCN1-NEXT:  .LBB79_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB79_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -12328,7 +12328,7 @@ define amdgpu_kernel void @atomic_xor_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN2-NEXT:    s_branch .LBB79_3
 ; GCN2-NEXT:  .LBB79_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB79_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -12376,7 +12376,7 @@ define amdgpu_kernel void @atomic_xor_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_branch .LBB79_3
 ; GFX12-NEXT:  .LBB79_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB79_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -12581,7 +12581,7 @@ define amdgpu_kernel void @atomic_xor_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GCN1-NEXT:    s_branch .LBB81_3
 ; GCN1-NEXT:  .LBB81_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB81_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -12638,7 +12638,7 @@ define amdgpu_kernel void @atomic_xor_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GCN2-NEXT:    s_branch .LBB81_3
 ; GCN2-NEXT:  .LBB81_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB81_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -12687,7 +12687,7 @@ define amdgpu_kernel void @atomic_xor_i64_ret_addr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_branch .LBB81_3
 ; GFX12-NEXT:  .LBB81_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB81_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -13467,7 +13467,7 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_offset(ptr %out, ptr %out2, i6
 ; GCN1-NEXT:    s_branch .LBB92_3
 ; GCN1-NEXT:  .LBB92_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB92_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -13527,7 +13527,7 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_offset(ptr %out, ptr %out2, i6
 ; GCN2-NEXT:    s_branch .LBB92_3
 ; GCN2-NEXT:  .LBB92_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB92_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -13577,7 +13577,7 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_offset(ptr %out, ptr %out2, i6
 ; GFX12-NEXT:    s_branch .LBB92_3
 ; GFX12-NEXT:  .LBB92_2:
 ; GFX12-NEXT:    s_mov_b32 s8, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB92_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s8, s8, exec_lo
@@ -13802,7 +13802,7 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64_offset(ptr %out, ptr %o
 ; GCN1-NEXT:    s_branch .LBB94_3
 ; GCN1-NEXT:  .LBB94_2:
 ; GCN1-NEXT:    s_mov_b64 s[4:5], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB94_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; GCN1-NEXT:    s_cselect_b32 s4, 1, 0
@@ -13866,7 +13866,7 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64_offset(ptr %out, ptr %o
 ; GCN2-NEXT:    s_branch .LBB94_3
 ; GCN2-NEXT:  .LBB94_2:
 ; GCN2-NEXT:    s_mov_b64 s[4:5], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB94_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; GCN2-NEXT:    s_cselect_b32 s4, 1, 0
@@ -13921,7 +13921,7 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64_offset(ptr %out, ptr %o
 ; GFX12-NEXT:    s_branch .LBB94_3
 ; GFX12-NEXT:  .LBB94_2:
 ; GFX12-NEXT:    s_mov_b32 s4, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB94_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
@@ -14129,7 +14129,7 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret(ptr %out, ptr %out2, i64 %in, 
 ; GCN1-NEXT:    s_branch .LBB96_3
 ; GCN1-NEXT:  .LBB96_2:
 ; GCN1-NEXT:    s_mov_b64 s[0:1], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB96_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GCN1-NEXT:    s_cselect_b32 s0, 1, 0
@@ -14187,7 +14187,7 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret(ptr %out, ptr %out2, i64 %in, 
 ; GCN2-NEXT:    s_branch .LBB96_3
 ; GCN2-NEXT:  .LBB96_2:
 ; GCN2-NEXT:    s_mov_b64 s[0:1], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB96_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[0:1], s[0:1], exec
 ; GCN2-NEXT:    s_cselect_b32 s0, 1, 0
@@ -14236,7 +14236,7 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret(ptr %out, ptr %out2, i64 %in, 
 ; GFX12-NEXT:    s_branch .LBB96_3
 ; GFX12-NEXT:  .LBB96_2:
 ; GFX12-NEXT:    s_mov_b32 s8, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB96_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s8, s8, exec_lo
@@ -14452,7 +14452,7 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64(ptr %out, ptr %out2, i6
 ; GCN1-NEXT:    s_branch .LBB98_3
 ; GCN1-NEXT:  .LBB98_2:
 ; GCN1-NEXT:    s_mov_b64 s[4:5], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB98_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; GCN1-NEXT:    s_cselect_b32 s4, 1, 0
@@ -14514,7 +14514,7 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64(ptr %out, ptr %out2, i6
 ; GCN2-NEXT:    s_branch .LBB98_3
 ; GCN2-NEXT:  .LBB98_2:
 ; GCN2-NEXT:    s_mov_b64 s[4:5], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB98_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[4:5], s[4:5], exec
 ; GCN2-NEXT:    s_cselect_b32 s4, 1, 0
@@ -14568,7 +14568,7 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64(ptr %out, ptr %out2, i6
 ; GFX12-NEXT:    s_branch .LBB98_3
 ; GFX12-NEXT:  .LBB98_2:
 ; GFX12-NEXT:    s_mov_b32 s4, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB98_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s4, s4, exec_lo
@@ -15190,7 +15190,7 @@ define amdgpu_kernel void @atomic_inc_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GCN1-NEXT:    s_branch .LBB108_3
 ; GCN1-NEXT:  .LBB108_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB108_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -15250,7 +15250,7 @@ define amdgpu_kernel void @atomic_inc_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GCN2-NEXT:    s_branch .LBB108_3
 ; GCN2-NEXT:  .LBB108_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB108_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -15302,7 +15302,7 @@ define amdgpu_kernel void @atomic_inc_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_branch .LBB108_3
 ; GFX12-NEXT:  .LBB108_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB108_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -15531,7 +15531,7 @@ define amdgpu_kernel void @atomic_inc_i64_ret_incr64_offset(ptr %out, ptr %out2,
 ; GCN1-NEXT:    s_branch .LBB110_3
 ; GCN1-NEXT:  .LBB110_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB110_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -15593,7 +15593,7 @@ define amdgpu_kernel void @atomic_inc_i64_ret_incr64_offset(ptr %out, ptr %out2,
 ; GCN2-NEXT:    s_branch .LBB110_3
 ; GCN2-NEXT:  .LBB110_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB110_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -15646,7 +15646,7 @@ define amdgpu_kernel void @atomic_inc_i64_ret_incr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_branch .LBB110_3
 ; GFX12-NEXT:  .LBB110_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB110_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -15851,7 +15851,7 @@ define amdgpu_kernel void @atomic_inc_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN1-NEXT:    s_branch .LBB112_3
 ; GCN1-NEXT:  .LBB112_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB112_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -15909,7 +15909,7 @@ define amdgpu_kernel void @atomic_inc_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN2-NEXT:    s_branch .LBB112_3
 ; GCN2-NEXT:  .LBB112_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB112_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -15960,7 +15960,7 @@ define amdgpu_kernel void @atomic_inc_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_branch .LBB112_3
 ; GFX12-NEXT:  .LBB112_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB112_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -16179,7 +16179,7 @@ define amdgpu_kernel void @atomic_inc_i64_ret_incr64(ptr %out, ptr %out2, i64 %i
 ; GCN1-NEXT:    s_branch .LBB114_3
 ; GCN1-NEXT:  .LBB114_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB114_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -16239,7 +16239,7 @@ define amdgpu_kernel void @atomic_inc_i64_ret_incr64(ptr %out, ptr %out2, i64 %i
 ; GCN2-NEXT:    s_branch .LBB114_3
 ; GCN2-NEXT:  .LBB114_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB114_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -16291,7 +16291,7 @@ define amdgpu_kernel void @atomic_inc_i64_ret_incr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_branch .LBB114_3
 ; GFX12-NEXT:  .LBB114_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB114_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -16509,7 +16509,7 @@ define amdgpu_kernel void @atomic_dec_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GCN1-NEXT:    s_branch .LBB116_3
 ; GCN1-NEXT:  .LBB116_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB116_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -16572,7 +16572,7 @@ define amdgpu_kernel void @atomic_dec_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GCN2-NEXT:    s_branch .LBB116_3
 ; GCN2-NEXT:  .LBB116_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB116_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -16627,7 +16627,7 @@ define amdgpu_kernel void @atomic_dec_i64_ret_offset(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_branch .LBB116_3
 ; GFX12-NEXT:  .LBB116_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB116_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -16864,7 +16864,7 @@ define amdgpu_kernel void @atomic_dec_i64_ret_decr64_offset(ptr %out, ptr %out2,
 ; GCN1-NEXT:    s_branch .LBB118_3
 ; GCN1-NEXT:  .LBB118_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB118_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -16929,7 +16929,7 @@ define amdgpu_kernel void @atomic_dec_i64_ret_decr64_offset(ptr %out, ptr %out2,
 ; GCN2-NEXT:    s_branch .LBB118_3
 ; GCN2-NEXT:  .LBB118_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB118_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -16985,7 +16985,7 @@ define amdgpu_kernel void @atomic_dec_i64_ret_decr64_offset(ptr %out, ptr %out2,
 ; GFX12-NEXT:    s_branch .LBB118_3
 ; GFX12-NEXT:  .LBB118_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB118_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -17198,7 +17198,7 @@ define amdgpu_kernel void @atomic_dec_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN1-NEXT:    s_branch .LBB120_3
 ; GCN1-NEXT:  .LBB120_2:
 ; GCN1-NEXT:    s_mov_b64 s[6:7], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB120_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN1-NEXT:    s_cselect_b32 s6, 1, 0
@@ -17259,7 +17259,7 @@ define amdgpu_kernel void @atomic_dec_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GCN2-NEXT:    s_branch .LBB120_3
 ; GCN2-NEXT:  .LBB120_2:
 ; GCN2-NEXT:    s_mov_b64 s[6:7], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB120_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[6:7], s[6:7], exec
 ; GCN2-NEXT:    s_cselect_b32 s6, 1, 0
@@ -17313,7 +17313,7 @@ define amdgpu_kernel void @atomic_dec_i64_ret(ptr %out, ptr %out2, i64 %in) {
 ; GFX12-NEXT:    s_branch .LBB120_3
 ; GFX12-NEXT:  .LBB120_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB120_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo
@@ -17540,7 +17540,7 @@ define amdgpu_kernel void @atomic_dec_i64_ret_decr64(ptr %out, ptr %out2, i64 %i
 ; GCN1-NEXT:    s_branch .LBB122_3
 ; GCN1-NEXT:  .LBB122_2:
 ; GCN1-NEXT:    s_mov_b64 s[2:3], -1
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN1-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN1-NEXT:  .LBB122_3: ; %Flow
 ; GCN1-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN1-NEXT:    s_cselect_b32 s2, 1, 0
@@ -17603,7 +17603,7 @@ define amdgpu_kernel void @atomic_dec_i64_ret_decr64(ptr %out, ptr %out2, i64 %i
 ; GCN2-NEXT:    s_branch .LBB122_3
 ; GCN2-NEXT:  .LBB122_2:
 ; GCN2-NEXT:    s_mov_b64 s[2:3], -1
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN2-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN2-NEXT:  .LBB122_3: ; %Flow
 ; GCN2-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN2-NEXT:    s_cselect_b32 s2, 1, 0
@@ -17658,7 +17658,7 @@ define amdgpu_kernel void @atomic_dec_i64_ret_decr64(ptr %out, ptr %out2, i64 %i
 ; GFX12-NEXT:    s_branch .LBB122_3
 ; GFX12-NEXT:  .LBB122_2:
 ; GFX12-NEXT:    s_mov_b32 s6, -1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:  .LBB122_3: ; %Flow
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_and_b32 s6, s6, exec_lo

@@ -44,11 +44,11 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: constant_fold_shl_s64_s32
     ; CHECK: %shift:_(s64) = G_CONSTANT i64 31604937984
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %shift(s64)
+    ; CHECK-NEXT: $vgpr0_64 = COPY %shift(s64)
     %val:_(s64) = G_CONSTANT i64 123456789
     %shift_amt:_(s32) = G_CONSTANT i32 8
     %shift:_(s64) = G_SHL %val, %shift_amt
-    $vgpr0_vgpr1 = COPY %shift
+    $vgpr0_64 = COPY %shift
 
 ...
 

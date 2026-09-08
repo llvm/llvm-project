@@ -2086,8 +2086,8 @@ TEST_F(AMDGPUGISelMITest, TestNumSignBitsSBFX) {
 
 TEST_F(AMDGPUGISelMITest, TestKnownBitsAssertAlign) {
   StringRef MIRString = R"MIR(
-   %val:_(s64) = COPY $vgpr0_vgpr1
-   %ptrval:_(p1) = COPY $vgpr0_vgpr1
+   %val:_(s64) = COPY $vgpr0_64
+   %ptrval:_(p1) = COPY $vgpr0_64
 
    %assert_align1:_(s64) = G_ASSERT_ALIGN %val, 1
    %copy_assert_align1:_(s64) = COPY %assert_align1

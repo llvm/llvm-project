@@ -410,32 +410,32 @@ name: flat_load_atomic
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
     ; GFX1200-LABEL: name: flat_load_atomic
-    ; GFX1200: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX1200: liveins: $vgpr0_64, $vgpr2
     ; GFX1200-NEXT: {{  $}}
-    ; GFX1200-NEXT: $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX1200-NEXT: $vgpr4 = FLAT_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
+    ; GFX1200-NEXT: $vgpr3 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX1200-NEXT: $vgpr4 = FLAT_ATOMIC_ADD_RTN $vgpr0_64, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
     ;
     ; GFX1250-LABEL: name: flat_load_atomic
-    ; GFX1250: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX1250: liveins: $vgpr0_64, $vgpr2
     ; GFX1250-NEXT: {{  $}}
-    ; GFX1250-NEXT: BUNDLE implicit-def $vgpr3, implicit-def $vgpr4, implicit $vgpr0_vgpr1, implicit $exec, implicit $flat_scr, implicit $vgpr2 {
+    ; GFX1250-NEXT: BUNDLE implicit-def $vgpr3, implicit-def $vgpr4, implicit $vgpr0_64, implicit $exec, implicit $flat_scr, implicit $vgpr2 {
     ; GFX1250-NEXT:   S_CLAUSE 1
-    ; GFX1250-NEXT:   $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX1250-NEXT:   $vgpr4 = FLAT_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
+    ; GFX1250-NEXT:   $vgpr3 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX1250-NEXT:   $vgpr4 = FLAT_ATOMIC_ADD_RTN $vgpr0_64, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
     ; GFX1250-NEXT: }
     ;
     ; GFX1250_STRICT-LABEL: name: flat_load_atomic
-    ; GFX1250_STRICT: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX1250_STRICT: liveins: $vgpr0_64, $vgpr2
     ; GFX1250_STRICT-NEXT: {{  $}}
-    ; GFX1250_STRICT-NEXT: BUNDLE implicit-def $vgpr3, implicit-def $vgpr4, implicit $vgpr0_vgpr1, implicit $exec, implicit $flat_scr, implicit $vgpr2 {
+    ; GFX1250_STRICT-NEXT: BUNDLE implicit-def $vgpr3, implicit-def $vgpr4, implicit $vgpr0_64, implicit $exec, implicit $flat_scr, implicit $vgpr2 {
     ; GFX1250_STRICT-NEXT:   S_CLAUSE 1
-    ; GFX1250_STRICT-NEXT:   $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX1250_STRICT-NEXT:   $vgpr4 = FLAT_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
+    ; GFX1250_STRICT-NEXT:   $vgpr3 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX1250_STRICT-NEXT:   $vgpr4 = FLAT_ATOMIC_ADD_RTN $vgpr0_64, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
     ; GFX1250_STRICT-NEXT: }
-    $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    $vgpr4 = FLAT_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
+    $vgpr3 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr4 = FLAT_ATOMIC_ADD_RTN $vgpr0_64, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
 ...
 
 ---
@@ -443,32 +443,32 @@ name: global_load_atomic
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
     ; GFX1200-LABEL: name: global_load_atomic
-    ; GFX1200: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX1200: liveins: $vgpr0_64, $vgpr2
     ; GFX1200-NEXT: {{  $}}
-    ; GFX1200-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-    ; GFX1200-NEXT: $vgpr4 = GLOBAL_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec
+    ; GFX1200-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
+    ; GFX1200-NEXT: $vgpr4 = GLOBAL_ATOMIC_ADD_RTN $vgpr0_64, $vgpr2, 4, 0, implicit $exec
     ;
     ; GFX1250-LABEL: name: global_load_atomic
-    ; GFX1250: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX1250: liveins: $vgpr0_64, $vgpr2
     ; GFX1250-NEXT: {{  $}}
-    ; GFX1250-NEXT: BUNDLE implicit-def $vgpr3, implicit-def $vgpr4, implicit $vgpr0_vgpr1, implicit $exec, implicit $vgpr2 {
+    ; GFX1250-NEXT: BUNDLE implicit-def $vgpr3, implicit-def $vgpr4, implicit $vgpr0_64, implicit $exec, implicit $vgpr2 {
     ; GFX1250-NEXT:   S_CLAUSE 1
-    ; GFX1250-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-    ; GFX1250-NEXT:   $vgpr4 = GLOBAL_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec
+    ; GFX1250-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
+    ; GFX1250-NEXT:   $vgpr4 = GLOBAL_ATOMIC_ADD_RTN $vgpr0_64, $vgpr2, 4, 0, implicit $exec
     ; GFX1250-NEXT: }
     ;
     ; GFX1250_STRICT-LABEL: name: global_load_atomic
-    ; GFX1250_STRICT: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX1250_STRICT: liveins: $vgpr0_64, $vgpr2
     ; GFX1250_STRICT-NEXT: {{  $}}
-    ; GFX1250_STRICT-NEXT: BUNDLE implicit-def $vgpr3, implicit-def $vgpr4, implicit $vgpr0_vgpr1, implicit $exec, implicit $vgpr2 {
+    ; GFX1250_STRICT-NEXT: BUNDLE implicit-def $vgpr3, implicit-def $vgpr4, implicit $vgpr0_64, implicit $exec, implicit $vgpr2 {
     ; GFX1250_STRICT-NEXT:   S_CLAUSE 1
-    ; GFX1250_STRICT-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-    ; GFX1250_STRICT-NEXT:   $vgpr4 = GLOBAL_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec
+    ; GFX1250_STRICT-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
+    ; GFX1250_STRICT-NEXT:   $vgpr4 = GLOBAL_ATOMIC_ADD_RTN $vgpr0_64, $vgpr2, 4, 0, implicit $exec
     ; GFX1250_STRICT-NEXT: }
-    $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-    $vgpr4 = GLOBAL_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec
+    $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
+    $vgpr4 = GLOBAL_ATOMIC_ADD_RTN $vgpr0_64, $vgpr2, 4, 0, implicit $exec
 ...
 
 ---
@@ -476,14 +476,14 @@ name: flat_global_load
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GFX12-LABEL: name: flat_global_load
-    ; GFX12: liveins: $vgpr0_vgpr1
+    ; GFX12: liveins: $vgpr0_64
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX12-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec, implicit $flat_scr
-    $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec, implicit $flat_scr
+    ; GFX12-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX12-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_64, 4, 0, implicit $exec, implicit $flat_scr
+    $vgpr2 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_64, 4, 0, implicit $exec, implicit $flat_scr
 ...
 
 ---
@@ -524,32 +524,32 @@ name: flat_load_store
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
     ; GFX1200-LABEL: name: flat_load_store
-    ; GFX1200: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX1200: liveins: $vgpr0_64, $vgpr2
     ; GFX1200-NEXT: {{  $}}
-    ; GFX1200-NEXT: $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX1200-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
+    ; GFX1200-NEXT: $vgpr3 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX1200-NEXT: FLAT_STORE_DWORD $vgpr0_64, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
     ;
     ; GFX1250-LABEL: name: flat_load_store
-    ; GFX1250: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX1250: liveins: $vgpr0_64, $vgpr2
     ; GFX1250-NEXT: {{  $}}
-    ; GFX1250-NEXT: BUNDLE implicit-def $vgpr3, implicit $vgpr0_vgpr1, implicit $exec, implicit $flat_scr, implicit $vgpr2 {
+    ; GFX1250-NEXT: BUNDLE implicit-def $vgpr3, implicit $vgpr0_64, implicit $exec, implicit $flat_scr, implicit $vgpr2 {
     ; GFX1250-NEXT:   S_CLAUSE 1
-    ; GFX1250-NEXT:   $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX1250-NEXT:   FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
+    ; GFX1250-NEXT:   $vgpr3 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX1250-NEXT:   FLAT_STORE_DWORD $vgpr0_64, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
     ; GFX1250-NEXT: }
     ;
     ; GFX1250_STRICT-LABEL: name: flat_load_store
-    ; GFX1250_STRICT: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX1250_STRICT: liveins: $vgpr0_64, $vgpr2
     ; GFX1250_STRICT-NEXT: {{  $}}
-    ; GFX1250_STRICT-NEXT: BUNDLE implicit-def $vgpr3, implicit $vgpr0_vgpr1, implicit $exec, implicit $flat_scr, implicit $vgpr2 {
+    ; GFX1250_STRICT-NEXT: BUNDLE implicit-def $vgpr3, implicit $vgpr0_64, implicit $exec, implicit $flat_scr, implicit $vgpr2 {
     ; GFX1250_STRICT-NEXT:   S_CLAUSE 1
-    ; GFX1250_STRICT-NEXT:   $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX1250_STRICT-NEXT:   FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
+    ; GFX1250_STRICT-NEXT:   $vgpr3 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX1250_STRICT-NEXT:   FLAT_STORE_DWORD $vgpr0_64, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
     ; GFX1250_STRICT-NEXT: }
-    $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
+    $vgpr3 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr0_64, $vgpr2, 4, 0, implicit $exec, implicit $flat_scr
 ...
 
 ---
@@ -557,32 +557,32 @@ name: global_load_store
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
     ; GFX1200-LABEL: name: global_load_store
-    ; GFX1200: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX1200: liveins: $vgpr0_64, $vgpr2
     ; GFX1200-NEXT: {{  $}}
-    ; GFX1200-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-    ; GFX1200-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec
+    ; GFX1200-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
+    ; GFX1200-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr2, 4, 0, implicit $exec
     ;
     ; GFX1250-LABEL: name: global_load_store
-    ; GFX1250: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX1250: liveins: $vgpr0_64, $vgpr2
     ; GFX1250-NEXT: {{  $}}
-    ; GFX1250-NEXT: BUNDLE implicit-def $vgpr3, implicit $vgpr0_vgpr1, implicit $exec, implicit $vgpr2 {
+    ; GFX1250-NEXT: BUNDLE implicit-def $vgpr3, implicit $vgpr0_64, implicit $exec, implicit $vgpr2 {
     ; GFX1250-NEXT:   S_CLAUSE 1
-    ; GFX1250-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-    ; GFX1250-NEXT:   GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec
+    ; GFX1250-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
+    ; GFX1250-NEXT:   GLOBAL_STORE_DWORD $vgpr0_64, $vgpr2, 4, 0, implicit $exec
     ; GFX1250-NEXT: }
     ;
     ; GFX1250_STRICT-LABEL: name: global_load_store
-    ; GFX1250_STRICT: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX1250_STRICT: liveins: $vgpr0_64, $vgpr2
     ; GFX1250_STRICT-NEXT: {{  $}}
-    ; GFX1250_STRICT-NEXT: BUNDLE implicit-def $vgpr3, implicit $vgpr0_vgpr1, implicit $exec, implicit $vgpr2 {
+    ; GFX1250_STRICT-NEXT: BUNDLE implicit-def $vgpr3, implicit $vgpr0_64, implicit $exec, implicit $vgpr2 {
     ; GFX1250_STRICT-NEXT:   S_CLAUSE 1
-    ; GFX1250_STRICT-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-    ; GFX1250_STRICT-NEXT:   GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec
+    ; GFX1250_STRICT-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
+    ; GFX1250_STRICT-NEXT:   GLOBAL_STORE_DWORD $vgpr0_64, $vgpr2, 4, 0, implicit $exec
     ; GFX1250_STRICT-NEXT: }
-    $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 4, 0, implicit $exec
+    $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr2, 4, 0, implicit $exec
 ...
 
 ---
@@ -623,14 +623,14 @@ name: flat_load_global_load
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
     ; GFX12-LABEL: name: flat_load_global_load
-    ; GFX12: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX12: liveins: $vgpr0_64, $vgpr2
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX12-NEXT: $vgpr4 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-    $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    $vgpr4 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr3 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX12-NEXT: $vgpr4 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
+    $vgpr3 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr4 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
 ...
 
 ---
@@ -638,13 +638,13 @@ name: global_load_buffer_store
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2, $sgpr0_128, $sgpr4
+    liveins: $vgpr0_64, $vgpr2, $sgpr0_128, $sgpr4
     ; GFX12-LABEL: name: global_load_buffer_store
-    ; GFX12: liveins: $vgpr0_vgpr1, $vgpr2, $sgpr0_128, $sgpr4
+    ; GFX12: liveins: $vgpr0_64, $vgpr2, $sgpr0_128, $sgpr4
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: $vgpr4 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr4 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
     ; GFX12-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr2, $sgpr0_128, $sgpr4, 4, 0, 0, implicit $exec
-    $vgpr4 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    $vgpr4 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
     BUFFER_STORE_DWORD_OFFSET $vgpr2, $sgpr0_128, $sgpr4, 4, 0, 0, implicit $exec
 ...
 
@@ -653,14 +653,14 @@ name: flat_prefetch_flat_load
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GFX12-LABEL: name: flat_prefetch_flat_load
-    ; GFX12: liveins: $vgpr0_vgpr1
+    ; GFX12: liveins: $vgpr0_64
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: FLAT_PREFETCH_B8 $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX12-NEXT: $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    FLAT_PREFETCH_B8 $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX12-NEXT: FLAT_PREFETCH_B8 $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX12-NEXT: $vgpr3 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_PREFETCH_B8 $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr3 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
 ...
 
 ---
@@ -668,14 +668,14 @@ name: global_prefetch_flat_load
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GFX12-LABEL: name: global_prefetch_flat_load
-    ; GFX12: liveins: $vgpr0_vgpr1
+    ; GFX12: liveins: $vgpr0_64
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: GLOBAL_PREFETCH_B8 $vgpr0_vgpr1, 0, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    GLOBAL_PREFETCH_B8 $vgpr0_vgpr1, 0, 0, implicit $exec
-    $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX12-NEXT: GLOBAL_PREFETCH_B8 $vgpr0_64, 0, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr3 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    GLOBAL_PREFETCH_B8 $vgpr0_64, 0, 0, implicit $exec
+    $vgpr3 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
 ...
 
 ---
@@ -687,13 +687,13 @@ body: |
     ; GFX12-LABEL: name: async_load_async_store
     ; GFX12: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: BUNDLE implicit-def $asynccnt, implicit $vgpr2, implicit $vgpr0_vgpr1, implicit $exec, implicit $asynccnt {
+    ; GFX12-NEXT: BUNDLE implicit-def $asynccnt, implicit $vgpr2, implicit $vgpr0_64, implicit $exec, implicit $asynccnt {
     ; GFX12-NEXT:   S_CLAUSE 1
-    ; GFX12-NEXT:   GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt
-    ; GFX12-NEXT:   GLOBAL_STORE_ASYNC_FROM_LDS_B32 $vgpr0_vgpr1, $vgpr2, 32, 0, implicit-def $asynccnt, implicit $exec, implicit internal $asynccnt
+    ; GFX12-NEXT:   GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_64, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt
+    ; GFX12-NEXT:   GLOBAL_STORE_ASYNC_FROM_LDS_B32 $vgpr0_64, $vgpr2, 32, 0, implicit-def $asynccnt, implicit $exec, implicit internal $asynccnt
     ; GFX12-NEXT: }
-    GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt
-    GLOBAL_STORE_ASYNC_FROM_LDS_B32 $vgpr0_vgpr1, $vgpr2, 32, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt
+    GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_64, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt
+    GLOBAL_STORE_ASYNC_FROM_LDS_B32 $vgpr0_64, $vgpr2, 32, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt
 ...
 
 ---
@@ -705,10 +705,10 @@ body: |
     ; GFX12-LABEL: name: async_load_ds_load_tr
     ; GFX12: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt
-    ; GFX12-NEXT: $vgpr0_vgpr1 = DS_LOAD_TR8_B64 $vgpr2, 8, 0, implicit $exec
-    GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt
-    $vgpr0_vgpr1 = DS_LOAD_TR8_B64 $vgpr2, 8, 0, implicit $exec
+    ; GFX12-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_64, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt
+    ; GFX12-NEXT: $vgpr0_64 = DS_LOAD_TR8_B64 $vgpr2, 8, 0, implicit $exec
+    GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_64, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt
+    $vgpr0_64 = DS_LOAD_TR8_B64 $vgpr2, 8, 0, implicit $exec
 ...
 
 ---
@@ -720,12 +720,12 @@ body: |
     ; GFX12-LABEL: name: ds_load_trs_ds_load
     ; GFX12: liveins: $vgpr0
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: $vgpr4_vgpr5 = DS_LOAD_TR8_B64 $vgpr0, 0, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr0_vgpr1 = DS_LOAD_TR8_B64 $vgpr0, 8, 0, implicit $exec
-    ; GFX12-NEXT: $vgpr2_vgpr3 = DS_READ_B64_gfx9 $vgpr0, 16, 0, implicit $exec
-    $vgpr4_vgpr5 = DS_LOAD_TR8_B64 $vgpr0, 0, 0, implicit $exec
-    $vgpr0_vgpr1 = DS_LOAD_TR8_B64 $vgpr0, 8, 0, implicit $exec
-    $vgpr2_vgpr3 = DS_READ_B64_gfx9 $vgpr0, 16, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr4_64 = DS_LOAD_TR8_B64 $vgpr0, 0, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr0_64 = DS_LOAD_TR8_B64 $vgpr0, 8, 0, implicit $exec
+    ; GFX12-NEXT: $vgpr2_64 = DS_READ_B64_gfx9 $vgpr0, 16, 0, implicit $exec
+    $vgpr4_64 = DS_LOAD_TR8_B64 $vgpr0, 0, 0, implicit $exec
+    $vgpr0_64 = DS_LOAD_TR8_B64 $vgpr0, 8, 0, implicit $exec
+    $vgpr2_64 = DS_READ_B64_gfx9 $vgpr0, 16, 0, implicit $exec
 ...
 
 # Make sure we do not clause DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 with anything
@@ -755,12 +755,12 @@ body: |
     ; GFX12-LABEL: name: ds_atomic_async_barrier_arrive_b64_flat_load
     ; GFX12: liveins: $vgpr0, $vgpr1
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX12-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
     ; GFX12-NEXT: DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 $vgpr1, 0, 0, implicit-def $asynccnt, implicit $asynccnt, implicit $exec
-    ; GFX12-NEXT: $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 16, 0, implicit $exec, implicit $flat_scr
-    $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX12-NEXT: $vgpr3 = FLAT_LOAD_DWORD $vgpr0_64, 16, 0, implicit $exec, implicit $flat_scr
+    $vgpr2 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
     DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 $vgpr1, 0, 0, implicit-def $asynccnt, implicit $asynccnt, implicit $exec
-    $vgpr3 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 16, 0, implicit $exec, implicit $flat_scr
+    $vgpr3 = FLAT_LOAD_DWORD $vgpr0_64, 16, 0, implicit $exec, implicit $flat_scr
 ...
 
 ---
@@ -768,30 +768,30 @@ name: global_load_switching_scope
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; GFX1200-LABEL: name: global_load_switching_scope
-    ; GFX1200: liveins: $vgpr0_vgpr1
+    ; GFX1200: liveins: $vgpr0_64
     ; GFX1200-NEXT: {{  $}}
-    ; GFX1200-NEXT: BUNDLE implicit-def $vgpr2, implicit-def $vgpr3, implicit $vgpr0_vgpr1, implicit $exec, implicit $flat_scr {
+    ; GFX1200-NEXT: BUNDLE implicit-def $vgpr2, implicit-def $vgpr3, implicit $vgpr0_64, implicit $exec, implicit $flat_scr {
     ; GFX1200-NEXT:   S_CLAUSE 1
-    ; GFX1200-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX1200-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 24, implicit $exec, implicit $flat_scr
+    ; GFX1200-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX1200-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_64, 4, 24, implicit $exec, implicit $flat_scr
     ; GFX1200-NEXT: }
     ;
     ; GFX1250-LABEL: name: global_load_switching_scope
-    ; GFX1250: liveins: $vgpr0_vgpr1
+    ; GFX1250: liveins: $vgpr0_64
     ; GFX1250-NEXT: {{  $}}
-    ; GFX1250-NEXT: BUNDLE implicit-def $vgpr2, implicit-def $vgpr3, implicit $vgpr0_vgpr1, implicit $exec, implicit $flat_scr {
+    ; GFX1250-NEXT: BUNDLE implicit-def $vgpr2, implicit-def $vgpr3, implicit $vgpr0_64, implicit $exec, implicit $flat_scr {
     ; GFX1250-NEXT:   S_CLAUSE 1
-    ; GFX1250-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX1250-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 24, implicit $exec, implicit $flat_scr
+    ; GFX1250-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX1250-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_64, 4, 24, implicit $exec, implicit $flat_scr
     ; GFX1250-NEXT: }
     ;
     ; GFX1250_STRICT-LABEL: name: global_load_switching_scope
-    ; GFX1250_STRICT: liveins: $vgpr0_vgpr1
+    ; GFX1250_STRICT: liveins: $vgpr0_64
     ; GFX1250_STRICT-NEXT: {{  $}}
-    ; GFX1250_STRICT-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX1250_STRICT-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 24, implicit $exec, implicit $flat_scr
-    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 24, implicit $exec, implicit $flat_scr
+    ; GFX1250_STRICT-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX1250_STRICT-NEXT: $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_64, 4, 24, implicit $exec, implicit $flat_scr
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_64, 4, 24, implicit $exec, implicit $flat_scr
 ...

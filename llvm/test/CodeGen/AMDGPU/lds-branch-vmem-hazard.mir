@@ -248,7 +248,7 @@ body:            |
     S_BRANCH %bb.1
 
   bb.1:
-    $vgpr1 = GLOBAL_LOAD_DWORD undef $vgpr0_vgpr1, 0, 0, implicit $exec
+    $vgpr1 = GLOBAL_LOAD_DWORD undef $vgpr0_64, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -282,6 +282,6 @@ body:            |
     S_BRANCH %bb.1
 
   bb.1:
-    $vgpr1 = FLAT_LOAD_DWORD undef $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr1 = FLAT_LOAD_DWORD undef $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 ...

@@ -33,7 +33,7 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT:   liveins: $exec, $sgpr30, $sgpr31, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr40, $sgpr30_64, $vgpr10_vgpr11:0x000000000000000F, $vgpr14_vgpr15:0x000000000000000F, $vgpr43_vgpr44:0x000000000000000F
+  ; GCN-NEXT:   liveins: $exec, $sgpr30, $sgpr31, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr40, $sgpr30_64, $vgpr10_64:0x000000000000000F, $vgpr14_64:0x000000000000000F, $vgpr43_64:0x000000000000000F
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   renamable $vgpr57 = COPY $vgpr9, implicit $exec
   ; GCN-NEXT:   renamable $vgpr56 = COPY $vgpr8, implicit $exec
@@ -49,22 +49,22 @@ body:             |
   ; GCN-NEXT:   renamable $sgpr16_64 = IMPLICIT_DEF
   ; GCN-NEXT:   $vgpr40 = SI_SPILL_S32_TO_VGPR $sgpr30, 0, $vgpr40, implicit-def $sgpr30_64, implicit $sgpr30_64
   ; GCN-NEXT:   $vgpr40 = SI_SPILL_S32_TO_VGPR $sgpr31, 1, $vgpr40, implicit $sgpr30_64
-  ; GCN-NEXT:   SI_SPILL_AV64_SAVE killed $vgpr14_vgpr15, %stack.1, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.1, align 4, addrspace 5)
-  ; GCN-NEXT:   SI_SPILL_AV64_SAVE killed $vgpr10_vgpr11, %stack.2, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.2, align 4, addrspace 5)
+  ; GCN-NEXT:   SI_SPILL_AV64_SAVE killed $vgpr14_64, %stack.1, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.1, align 4, addrspace 5)
+  ; GCN-NEXT:   SI_SPILL_AV64_SAVE killed $vgpr10_64, %stack.2, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.2, align 4, addrspace 5)
   ; GCN-NEXT:   dead $sgpr30_64 = SI_CALL killed renamable $sgpr16_64, 0, csr_amdgpu, implicit-def dead $vgpr0
-  ; GCN-NEXT:   renamable $vgpr14_vgpr15 = SI_SPILL_AV64_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.1, align 4, addrspace 5)
-  ; GCN-NEXT:   renamable $vgpr0_vgpr1 = nofpexcept V_FMA_F64_e64 0, killed $vgpr45_vgpr46, 0, killed $vgpr41_vgpr42, 0, killed $vgpr60_vgpr61, 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   renamable $vgpr14_64 = SI_SPILL_AV64_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.1, align 4, addrspace 5)
+  ; GCN-NEXT:   renamable $vgpr0_64 = nofpexcept V_FMA_F64_e64 0, killed $vgpr45_64, 0, killed $vgpr41_64, 0, killed $vgpr60_64, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
-  ; GCN-NEXT:   FLAT_STORE_DWORDX2 killed renamable $vgpr58_vgpr59, killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
-  ; GCN-NEXT:   renamable $vgpr0_vgpr1 = SI_SPILL_AV64_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.2, align 4, addrspace 5)
-  ; GCN-NEXT:   FLAT_STORE_DWORDX2 killed renamable $vgpr0_vgpr1, killed renamable $vgpr56_vgpr57, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
+  ; GCN-NEXT:   FLAT_STORE_DWORDX2 killed renamable $vgpr58_64, killed renamable $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
+  ; GCN-NEXT:   renamable $vgpr0_64 = SI_SPILL_AV64_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.2, align 4, addrspace 5)
+  ; GCN-NEXT:   FLAT_STORE_DWORDX2 killed renamable $vgpr0_64, killed renamable $vgpr56_64, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
-  ; GCN-NEXT:   liveins: $vgpr40, $vgpr14_vgpr15:0x000000000000000F, $vgpr43_vgpr44:0x000000000000000F
+  ; GCN-NEXT:   liveins: $vgpr40, $vgpr14_64:0x000000000000000F, $vgpr43_64:0x000000000000000F
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   renamable $vgpr0_vgpr1 = V_MOV_B64_PSEUDO 0, implicit $exec
-  ; GCN-NEXT:   FLAT_STORE_DWORDX2 undef renamable $vgpr0_vgpr1, killed renamable $vgpr43_vgpr44, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
-  ; GCN-NEXT:   FLAT_STORE_DWORDX2 killed renamable $vgpr0_vgpr1, killed renamable $vgpr14_vgpr15, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
+  ; GCN-NEXT:   renamable $vgpr0_64 = V_MOV_B64_PSEUDO 0, implicit $exec
+  ; GCN-NEXT:   FLAT_STORE_DWORDX2 undef renamable $vgpr0_64, killed renamable $vgpr43_64, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
+  ; GCN-NEXT:   FLAT_STORE_DWORDX2 killed renamable $vgpr0_64, killed renamable $vgpr14_64, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
   ; GCN-NEXT:   S_SETPC_B64_return undef $sgpr30_64
   bb.0:
     successors: %bb.2(0x40000000), %bb.1(0x40000000)
@@ -87,27 +87,27 @@ body:             |
 
   bb.1:
     successors: %bb.2(0x80000000)
-    liveins: $sgpr30, $sgpr31, $vgpr40, $sgpr30_64, $vgpr10_vgpr11:0x000000000000000F, $vgpr14_vgpr15:0x000000000000000F, $vgpr41_vgpr42:0x000000000000000F, $vgpr43_vgpr44:0x000000000000000F, $vgpr45_vgpr46:0x000000000000000F, $vgpr56_vgpr57:0x000000000000000F, $vgpr58_vgpr59:0x000000000000000F, $vgpr60_vgpr61:0x000000000000000F
+    liveins: $sgpr30, $sgpr31, $vgpr40, $sgpr30_64, $vgpr10_64:0x000000000000000F, $vgpr14_64:0x000000000000000F, $vgpr41_64:0x000000000000000F, $vgpr43_64:0x000000000000000F, $vgpr45_64:0x000000000000000F, $vgpr56_64:0x000000000000000F, $vgpr58_64:0x000000000000000F, $vgpr60_64:0x000000000000000F
 
     ADJCALLSTACKUP 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
     renamable $sgpr16_64 = IMPLICIT_DEF
     $vgpr40 = SI_SPILL_S32_TO_VGPR $sgpr30, 0, $vgpr40, implicit-def $sgpr30_64, implicit $sgpr30_64
     $vgpr40 = SI_SPILL_S32_TO_VGPR $sgpr31, 1, $vgpr40, implicit $sgpr30_64
-    SI_SPILL_AV64_SAVE killed $vgpr14_vgpr15, %stack.1, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.1, align 4, addrspace 5)
-    SI_SPILL_AV64_SAVE killed $vgpr10_vgpr11, %stack.2, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.2, align 4, addrspace 5)
+    SI_SPILL_AV64_SAVE killed $vgpr14_64, %stack.1, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.1, align 4, addrspace 5)
+    SI_SPILL_AV64_SAVE killed $vgpr10_64, %stack.2, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.2, align 4, addrspace 5)
     dead $sgpr30_64 = SI_CALL killed renamable $sgpr16_64, 0, csr_amdgpu, implicit-def dead $vgpr0
-    renamable $vgpr14_vgpr15 = SI_SPILL_AV64_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.1, align 4, addrspace 5)
-    renamable $vgpr0_vgpr1 = nofpexcept V_FMA_F64_e64 0, killed $vgpr45_vgpr46, 0, killed $vgpr41_vgpr42, 0, killed $vgpr60_vgpr61, 0, 0, implicit $mode, implicit $exec
+    renamable $vgpr14_64 = SI_SPILL_AV64_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.1, align 4, addrspace 5)
+    renamable $vgpr0_64 = nofpexcept V_FMA_F64_e64 0, killed $vgpr45_64, 0, killed $vgpr41_64, 0, killed $vgpr60_64, 0, 0, implicit $mode, implicit $exec
     ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
-    FLAT_STORE_DWORDX2 killed renamable $vgpr58_vgpr59, killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
-    renamable $vgpr0_vgpr1 = SI_SPILL_AV64_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.2, align 4, addrspace 5)
-    FLAT_STORE_DWORDX2 killed renamable $vgpr0_vgpr1, killed renamable $vgpr56_vgpr57, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
+    FLAT_STORE_DWORDX2 killed renamable $vgpr58_64, killed renamable $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
+    renamable $vgpr0_64 = SI_SPILL_AV64_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.2, align 4, addrspace 5)
+    FLAT_STORE_DWORDX2 killed renamable $vgpr0_64, killed renamable $vgpr56_64, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
 
   bb.2:
-    liveins: $vgpr40, $vgpr14_vgpr15:0x000000000000000F, $vgpr43_vgpr44:0x000000000000000F
+    liveins: $vgpr40, $vgpr14_64:0x000000000000000F, $vgpr43_64:0x000000000000000F
 
-    renamable $vgpr0_vgpr1 = V_MOV_B64_PSEUDO 0, implicit $exec
-    FLAT_STORE_DWORDX2 undef renamable $vgpr0_vgpr1, killed renamable $vgpr43_vgpr44, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
-    FLAT_STORE_DWORDX2 killed renamable $vgpr0_vgpr1, killed renamable $vgpr14_vgpr15, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
+    renamable $vgpr0_64 = V_MOV_B64_PSEUDO 0, implicit $exec
+    FLAT_STORE_DWORDX2 undef renamable $vgpr0_64, killed renamable $vgpr43_64, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
+    FLAT_STORE_DWORDX2 killed renamable $vgpr0_64, killed renamable $vgpr14_64, 0, 0, implicit $exec, implicit $flat_scr :: (store (s64))
     S_SETPC_B64_return undef $sgpr30_64
 ...

@@ -167,7 +167,7 @@ define amdgpu_ps void @test_buffer_load_u8_waterfall_rsrc(<4 x i32> %rsrc, i32 %
 ; GFX12-NEXT:    buffer_load_u8 v1, v4, s[4:7], s0 offen
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s1
 ; GFX12-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX12-NEXT:  ; %bb.2:
@@ -233,7 +233,7 @@ define amdgpu_ps void @test_buffer_load_u16_waterfall_both(<4 x i32> %rsrc, i32 
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    ; implicit-def: $vgpr5
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s2
 ; GFX12-NEXT:    s_cbranch_execnz .LBB10_1
 ; GFX12-NEXT:  ; %bb.2:

@@ -386,9 +386,9 @@ name:            ptr_use_after_clause
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
-    %0:vreg_64 = COPY $vgpr0_vgpr1
-    %1:vreg_64 = COPY $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
+    %0:vreg_64 = COPY $vgpr0_64
+    %1:vreg_64 = COPY $vgpr2_64
     %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
     %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %1, 16, 0, implicit $exec
     %4:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 32, 0, implicit $exec
@@ -409,8 +409,8 @@ name:            ptr_use_after_clause_subreg
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
-    %0:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    liveins: $vgpr0_128
+    %0:vreg_128 = COPY $vgpr0_128
     %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0.sub0_sub1, 0, 0, implicit $exec
     %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0.sub2_sub3, 16, 0, implicit $exec
     %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0.sub0_sub1, 32, 0, implicit $exec
@@ -433,8 +433,8 @@ name:            ptr_use_after_clause_subreg_multi
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    %0:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    liveins: $vgpr0_256
+    %0:vreg_256 = COPY $vgpr0_256
     %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0.sub0_sub1, 0, 0, implicit $exec
     %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0.sub2_sub3, 16, 0, implicit $exec
     %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0.sub3_sub4, 32, 0, implicit $exec
@@ -455,8 +455,8 @@ name:            no_killed_subranges
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
-    %0:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    liveins: $vgpr0_128
+    %0:vreg_128 = COPY $vgpr0_128
     %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0.sub0_sub1, 0, 0, implicit $exec
     %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0.sub2_sub3, 16, 0, implicit $exec
     %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0.sub0_sub1, 32, 0, implicit $exec
@@ -479,8 +479,8 @@ name:            no_killed_undef_subrange_use
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
-    undef %0.sub0_sub1:vreg_128 = COPY $vgpr0_vgpr1
+    liveins: $vgpr0_64
+    undef %0.sub0_sub1:vreg_128 = COPY $vgpr0_64
     %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0.sub0_sub1, 0, 0, implicit $exec
     %3:vreg_128 = GLOBAL_LOAD_DWORDX4 %0.sub0_sub1, 32, 0, implicit $exec
     %0.sub2:vreg_128 = V_MOV_B32_e32 0, implicit $exec
@@ -503,8 +503,8 @@ name:            implicit_def_no_break
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
-    %0:vreg_64 = COPY $vgpr0_vgpr1
+    liveins: $vgpr0_64
+    %0:vreg_64 = COPY $vgpr0_64
     %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
     %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 16, 0, implicit $exec
     %3:vreg_64 = IMPLICIT_DEF
@@ -523,8 +523,8 @@ name:            kill_part_subreg
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
-    %0:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    liveins: $vgpr0_128
+    %0:vreg_128 = COPY $vgpr0_128
     undef %1.sub0:vreg_128 = GLOBAL_LOAD_DWORD %0.sub0_sub1, 0, 0, implicit $exec
     %1.sub1:vreg_128 = GLOBAL_LOAD_DWORD %0.sub1_sub2, 16, 0, implicit $exec
     %1.sub3:vreg_128 = GLOBAL_LOAD_DWORD %0.sub2_sub3, 32, 0, implicit $exec

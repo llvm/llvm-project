@@ -14,7 +14,7 @@ body: |
     ; CHECK-NEXT: $vgpr1 = COPY [[DEF]](s32)
     ; CHECK-NEXT: $vgpr2 = COPY [[DEF]](s32)
     ; CHECK-NEXT: $vgpr3 = COPY [[DEF]](s32)
-    ; CHECK-NEXT: $vgpr4_vgpr5 = COPY [[DEF1]](s64)
+    ; CHECK-NEXT: $vgpr4_64 = COPY [[DEF1]](s64)
     ; CHECK-NEXT: $vgpr6 = COPY [[DEF2]](<2 x s16>)
     ; CHECK-NEXT: SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
     %0:_(s32), %1:_(<3 x s32>), %2:_(s64), %3:_(<2 x s16>) = G_INTRINSIC intrinsic(@llvm.amdgcn.dead)
@@ -24,7 +24,7 @@ body: |
     $vgpr1 = COPY %4(s32)
     $vgpr2 = COPY %5(s32)
     $vgpr3 = COPY %6(s32)
-    $vgpr4_vgpr5 = COPY %2(s64)
+    $vgpr4_64 = COPY %2(s64)
     $vgpr6 = COPY %3(<2 x s16>)
     SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7
 ...

@@ -25,10 +25,10 @@ body:             |
     ; GFX12-LABEL: name: post_bundle_vsample
     ; GFX12: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $sgpr0_256, $sgpr8_128
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: BUNDLE implicit-def $vgpr6_vgpr7_vgpr8_vgpr9, implicit-def $vgpr10_vgpr11_vgpr12_vgpr13, implicit killed $vgpr0, implicit killed $vgpr1, implicit $sgpr0_256, implicit $sgpr8_128, implicit $exec, implicit killed $vgpr2, implicit killed $vgpr3 :: (dereferenceable load (s128), addrspace 8) {
-    ; GFX12-NEXT:   $vgpr6_vgpr7_vgpr8_vgpr9 = IMAGE_SAMPLE_V4_V2_gfx12 killed $vgpr0, killed $vgpr1, $sgpr0_256, $sgpr8_128, 15, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
-    ; GFX12-NEXT:   $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_SAMPLE_V4_V2_gfx12 killed $vgpr2, killed $vgpr3, $sgpr0_256, $sgpr8_128, 15, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; GFX12-NEXT: BUNDLE implicit-def $vgpr6_128, implicit-def $vgpr10_128, implicit killed $vgpr0, implicit killed $vgpr1, implicit $sgpr0_256, implicit $sgpr8_128, implicit $exec, implicit killed $vgpr2, implicit killed $vgpr3 :: (dereferenceable load (s128), addrspace 8) {
+    ; GFX12-NEXT:   $vgpr6_128 = IMAGE_SAMPLE_V4_V2_gfx12 killed $vgpr0, killed $vgpr1, $sgpr0_256, $sgpr8_128, 15, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    ; GFX12-NEXT:   $vgpr10_128 = IMAGE_SAMPLE_V4_V2_gfx12 killed $vgpr2, killed $vgpr3, $sgpr0_256, $sgpr8_128, 15, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     ; GFX12-NEXT: }
-  $vgpr6_vgpr7_vgpr8_vgpr9 = IMAGE_SAMPLE_V4_V2_gfx12 killed $vgpr0, killed $vgpr1, $sgpr0_256, $sgpr8_128, 15, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
-  $vgpr10_vgpr11_vgpr12_vgpr13 = IMAGE_SAMPLE_V4_V2_gfx12 killed $vgpr2, killed $vgpr3, $sgpr0_256, $sgpr8_128, 15, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+  $vgpr6_128 = IMAGE_SAMPLE_V4_V2_gfx12 killed $vgpr0, killed $vgpr1, $sgpr0_256, $sgpr8_128, 15, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+  $vgpr10_128 = IMAGE_SAMPLE_V4_V2_gfx12 killed $vgpr2, killed $vgpr3, $sgpr0_256, $sgpr8_128, 15, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
 ...

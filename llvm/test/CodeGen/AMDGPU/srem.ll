@@ -1798,7 +1798,7 @@ define amdgpu_kernel void @srem_i64(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ; TAHITI-NEXT:    s_branch .LBB8_3
 ; TAHITI-NEXT:  .LBB8_2:
 ; TAHITI-NEXT:    s_mov_b64 s[6:7], -1
-; TAHITI-NEXT:    ; implicit-def: $vgpr3_vgpr4
+; TAHITI-NEXT:    ; implicit-def: $vgpr3_64
 ; TAHITI-NEXT:  .LBB8_3: ; %Flow
 ; TAHITI-NEXT:    s_and_b64 s[0:1], s[6:7], exec
 ; TAHITI-NEXT:    s_cselect_b32 s0, 1, 0
@@ -3179,7 +3179,7 @@ define amdgpu_kernel void @srem_v2i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TAHITI-NEXT:    s_branch .LBB10_3
 ; TAHITI-NEXT:  .LBB10_2:
 ; TAHITI-NEXT:    s_mov_b64 s[6:7], -1
-; TAHITI-NEXT:    ; implicit-def: $vgpr8_vgpr9
+; TAHITI-NEXT:    ; implicit-def: $vgpr8_64
 ; TAHITI-NEXT:  .LBB10_3: ; %Flow5
 ; TAHITI-NEXT:    s_and_b64 s[0:1], s[6:7], exec
 ; TAHITI-NEXT:    s_cselect_b32 s0, 1, 0
@@ -5716,7 +5716,7 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TAHITI-NEXT:    s_branch .LBB12_3
 ; TAHITI-NEXT:  .LBB12_2:
 ; TAHITI-NEXT:    s_mov_b64 s[6:7], -1
-; TAHITI-NEXT:    ; implicit-def: $vgpr8_vgpr9
+; TAHITI-NEXT:    ; implicit-def: $vgpr8_64
 ; TAHITI-NEXT:  .LBB12_3: ; %Flow7
 ; TAHITI-NEXT:    s_and_b64 s[0:1], s[6:7], exec
 ; TAHITI-NEXT:    s_cselect_b32 s0, 1, 0
@@ -6018,7 +6018,7 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TAHITI-NEXT:    s_branch .LBB12_13
 ; TAHITI-NEXT:  .LBB12_12:
 ; TAHITI-NEXT:    s_mov_b64 s[6:7], -1
-; TAHITI-NEXT:    ; implicit-def: $vgpr12_vgpr13
+; TAHITI-NEXT:    ; implicit-def: $vgpr12_64
 ; TAHITI-NEXT:  .LBB12_13: ; %Flow5
 ; TAHITI-NEXT:    s_and_b64 s[0:1], s[6:7], exec
 ; TAHITI-NEXT:    s_cselect_b32 s0, 1, 0
@@ -6636,7 +6636,7 @@ define amdgpu_kernel void @srem_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; TONGA-NEXT:    s_branch .LBB12_14
 ; TONGA-NEXT:  .LBB12_13:
 ; TONGA-NEXT:    s_mov_b64 s[6:7], -1
-; TONGA-NEXT:    ; implicit-def: $vgpr12_vgpr13
+; TONGA-NEXT:    ; implicit-def: $vgpr12_64
 ; TONGA-NEXT:  .LBB12_14: ; %Flow5
 ; TONGA-NEXT:    s_and_b64 s[0:1], s[6:7], exec
 ; TONGA-NEXT:    s_cselect_b32 s0, 1, 0

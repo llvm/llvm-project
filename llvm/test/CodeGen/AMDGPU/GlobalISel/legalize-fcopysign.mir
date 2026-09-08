@@ -163,13 +163,13 @@ body: |
 name: test_copysign_f64_f64
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
 
     ; SI-LABEL: name: test_copysign_f64_f64
-    ; SI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; SI: liveins: $vgpr0_64, $vgpr2_64
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
-    ; SI-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr2_vgpr3
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
+    ; SI-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr2_64
     ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[COPY]](f64)
     ; SI-NEXT: [[BITCAST1:%[0-9]+]]:_(i64) = G_BITCAST [[COPY1]](f64)
     ; SI-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -9223372036854775808
@@ -178,13 +178,13 @@ body: |
     ; SI-NEXT: [[AND1:%[0-9]+]]:_(i64) = G_AND [[BITCAST1]], [[C]]
     ; SI-NEXT: [[OR:%[0-9]+]]:_(i64) = disjoint G_OR [[AND]], [[AND1]]
     ; SI-NEXT: [[BITCAST2:%[0-9]+]]:_(f64) = G_BITCAST [[OR]](i64)
-    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST2]](f64)
+    ; SI-NEXT: $vgpr0_64 = COPY [[BITCAST2]](f64)
     ;
     ; VI-LABEL: name: test_copysign_f64_f64
-    ; VI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; VI: liveins: $vgpr0_64, $vgpr2_64
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
-    ; VI-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr2_vgpr3
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
+    ; VI-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr2_64
     ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[COPY]](f64)
     ; VI-NEXT: [[BITCAST1:%[0-9]+]]:_(i64) = G_BITCAST [[COPY1]](f64)
     ; VI-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -9223372036854775808
@@ -193,13 +193,13 @@ body: |
     ; VI-NEXT: [[AND1:%[0-9]+]]:_(i64) = G_AND [[BITCAST1]], [[C]]
     ; VI-NEXT: [[OR:%[0-9]+]]:_(i64) = disjoint G_OR [[AND]], [[AND1]]
     ; VI-NEXT: [[BITCAST2:%[0-9]+]]:_(f64) = G_BITCAST [[OR]](i64)
-    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST2]](f64)
+    ; VI-NEXT: $vgpr0_64 = COPY [[BITCAST2]](f64)
     ;
     ; GCN-LABEL: name: test_copysign_f64_f64
-    ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; GCN: liveins: $vgpr0_64, $vgpr2_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr2_vgpr3
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr2_64
     ; GCN-NEXT: [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[COPY]](f64)
     ; GCN-NEXT: [[BITCAST1:%[0-9]+]]:_(i64) = G_BITCAST [[COPY1]](f64)
     ; GCN-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -9223372036854775808
@@ -208,23 +208,23 @@ body: |
     ; GCN-NEXT: [[AND1:%[0-9]+]]:_(i64) = G_AND [[BITCAST1]], [[C]]
     ; GCN-NEXT: [[OR:%[0-9]+]]:_(i64) = disjoint G_OR [[AND]], [[AND1]]
     ; GCN-NEXT: [[BITCAST2:%[0-9]+]]:_(f64) = G_BITCAST [[OR]](i64)
-    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST2]](f64)
-    %0:_(f64) = COPY $vgpr0_vgpr1
-    %1:_(f64) = COPY $vgpr2_vgpr3
+    ; GCN-NEXT: $vgpr0_64 = COPY [[BITCAST2]](f64)
+    %0:_(f64) = COPY $vgpr0_64
+    %1:_(f64) = COPY $vgpr2_64
     %2:_(f64) = G_FCOPYSIGN %0, %1
-    $vgpr0_vgpr1 = COPY %2
+    $vgpr0_64 = COPY %2
 ...
 
 ---
 name: test_copysign_f64_f32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
 
     ; SI-LABEL: name: test_copysign_f64_f32
-    ; SI: liveins: $vgpr0_vgpr1, $vgpr2
+    ; SI: liveins: $vgpr0_64, $vgpr2
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(f32) = COPY $vgpr2
     ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[COPY]](f64)
     ; SI-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[COPY1]](f32)
@@ -237,12 +237,12 @@ body: |
     ; SI-NEXT: [[AND1:%[0-9]+]]:_(i64) = G_AND [[SHL]], [[C]]
     ; SI-NEXT: [[OR:%[0-9]+]]:_(i64) = disjoint G_OR [[AND]], [[AND1]]
     ; SI-NEXT: [[BITCAST2:%[0-9]+]]:_(f64) = G_BITCAST [[OR]](i64)
-    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST2]](f64)
+    ; SI-NEXT: $vgpr0_64 = COPY [[BITCAST2]](f64)
     ;
     ; VI-LABEL: name: test_copysign_f64_f32
-    ; VI: liveins: $vgpr0_vgpr1, $vgpr2
+    ; VI: liveins: $vgpr0_64, $vgpr2
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(f32) = COPY $vgpr2
     ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[COPY]](f64)
     ; VI-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[COPY1]](f32)
@@ -255,12 +255,12 @@ body: |
     ; VI-NEXT: [[AND1:%[0-9]+]]:_(i64) = G_AND [[SHL]], [[C]]
     ; VI-NEXT: [[OR:%[0-9]+]]:_(i64) = disjoint G_OR [[AND]], [[AND1]]
     ; VI-NEXT: [[BITCAST2:%[0-9]+]]:_(f64) = G_BITCAST [[OR]](i64)
-    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST2]](f64)
+    ; VI-NEXT: $vgpr0_64 = COPY [[BITCAST2]](f64)
     ;
     ; GCN-LABEL: name: test_copysign_f64_f32
-    ; GCN: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GCN: liveins: $vgpr0_64, $vgpr2
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(f32) = COPY $vgpr2
     ; GCN-NEXT: [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[COPY]](f64)
     ; GCN-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[COPY1]](f32)
@@ -273,24 +273,24 @@ body: |
     ; GCN-NEXT: [[AND1:%[0-9]+]]:_(i64) = G_AND [[SHL]], [[C]]
     ; GCN-NEXT: [[OR:%[0-9]+]]:_(i64) = disjoint G_OR [[AND]], [[AND1]]
     ; GCN-NEXT: [[BITCAST2:%[0-9]+]]:_(f64) = G_BITCAST [[OR]](i64)
-    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST2]](f64)
-    %0:_(f64) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: $vgpr0_64 = COPY [[BITCAST2]](f64)
+    %0:_(f64) = COPY $vgpr0_64
     %1:_(f32) = COPY $vgpr2
     %2:_(f64) = G_FCOPYSIGN %0, %1
-    $vgpr0_vgpr1 = COPY %2
+    $vgpr0_64 = COPY %2
 ...
 
 ---
 name: test_copysign_f32_f64
 body: |
   bb.0:
-    liveins: $vgpr0, $vgpr1_vgpr2
+    liveins: $vgpr0, $vgpr1_64
 
     ; SI-LABEL: name: test_copysign_f32_f64
-    ; SI: liveins: $vgpr0, $vgpr1_vgpr2
+    ; SI: liveins: $vgpr0, $vgpr1_64
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(f32) = COPY $vgpr0
-    ; SI-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr1_vgpr2
+    ; SI-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr1_64
     ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[COPY]](f32)
     ; SI-NEXT: [[BITCAST1:%[0-9]+]]:_(i64) = G_BITCAST [[COPY1]](f64)
     ; SI-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -2147483648
@@ -305,10 +305,10 @@ body: |
     ; SI-NEXT: $vgpr0 = COPY [[BITCAST2]](f32)
     ;
     ; VI-LABEL: name: test_copysign_f32_f64
-    ; VI: liveins: $vgpr0, $vgpr1_vgpr2
+    ; VI: liveins: $vgpr0, $vgpr1_64
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(f32) = COPY $vgpr0
-    ; VI-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr1_vgpr2
+    ; VI-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr1_64
     ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[COPY]](f32)
     ; VI-NEXT: [[BITCAST1:%[0-9]+]]:_(i64) = G_BITCAST [[COPY1]](f64)
     ; VI-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -2147483648
@@ -323,10 +323,10 @@ body: |
     ; VI-NEXT: $vgpr0 = COPY [[BITCAST2]](f32)
     ;
     ; GCN-LABEL: name: test_copysign_f32_f64
-    ; GCN: liveins: $vgpr0, $vgpr1_vgpr2
+    ; GCN: liveins: $vgpr0, $vgpr1_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:_(f32) = COPY $vgpr0
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr1_vgpr2
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr1_64
     ; GCN-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[COPY]](f32)
     ; GCN-NEXT: [[BITCAST1:%[0-9]+]]:_(i64) = G_BITCAST [[COPY1]](f64)
     ; GCN-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -2147483648
@@ -340,7 +340,7 @@ body: |
     ; GCN-NEXT: [[BITCAST2:%[0-9]+]]:_(f32) = G_BITCAST [[OR]](i32)
     ; GCN-NEXT: $vgpr0 = COPY [[BITCAST2]](f32)
     %0:_(f32) = COPY $vgpr0
-    %1:_(f64) = COPY $vgpr1_vgpr2
+    %1:_(f64) = COPY $vgpr1_64
     %2:_(f32) = G_FCOPYSIGN %0, %1
     $vgpr0 = COPY %2
 ...
@@ -563,12 +563,12 @@ body: |
 name: test_copysign_f64_f16
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
 
     ; SI-LABEL: name: test_copysign_f64_f16
-    ; SI: liveins: $vgpr0_vgpr1, $vgpr2
+    ; SI: liveins: $vgpr0_64, $vgpr2
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
     ; SI-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr2
     ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[COPY]](f64)
     ; SI-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -9223372036854775808
@@ -582,12 +582,12 @@ body: |
     ; SI-NEXT: [[AND2:%[0-9]+]]:_(i64) = G_AND [[SHL]], [[C]]
     ; SI-NEXT: [[OR:%[0-9]+]]:_(i64) = disjoint G_OR [[AND]], [[AND2]]
     ; SI-NEXT: [[BITCAST1:%[0-9]+]]:_(f64) = G_BITCAST [[OR]](i64)
-    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST1]](f64)
+    ; SI-NEXT: $vgpr0_64 = COPY [[BITCAST1]](f64)
     ;
     ; VI-LABEL: name: test_copysign_f64_f16
-    ; VI: liveins: $vgpr0_vgpr1, $vgpr2
+    ; VI: liveins: $vgpr0_64, $vgpr2
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
     ; VI-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr2
     ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[COPY]](f64)
     ; VI-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -9223372036854775808
@@ -601,12 +601,12 @@ body: |
     ; VI-NEXT: [[AND2:%[0-9]+]]:_(i64) = G_AND [[SHL]], [[C]]
     ; VI-NEXT: [[OR:%[0-9]+]]:_(i64) = disjoint G_OR [[AND]], [[AND2]]
     ; VI-NEXT: [[BITCAST1:%[0-9]+]]:_(f64) = G_BITCAST [[OR]](i64)
-    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST1]](f64)
+    ; VI-NEXT: $vgpr0_64 = COPY [[BITCAST1]](f64)
     ;
     ; GFX9-LABEL: name: test_copysign_f64_f16
-    ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX9: liveins: $vgpr0_64, $vgpr2
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr2
     ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[COPY]](f64)
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -9223372036854775808
@@ -620,12 +620,12 @@ body: |
     ; GFX9-NEXT: [[AND2:%[0-9]+]]:_(i64) = G_AND [[SHL]], [[C]]
     ; GFX9-NEXT: [[OR:%[0-9]+]]:_(i64) = disjoint G_OR [[AND]], [[AND2]]
     ; GFX9-NEXT: [[BITCAST1:%[0-9]+]]:_(f64) = G_BITCAST [[OR]](i64)
-    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST1]](f64)
+    ; GFX9-NEXT: $vgpr0_64 = COPY [[BITCAST1]](f64)
     ;
     ; GFX10-LABEL: name: test_copysign_f64_f16
-    ; GFX10: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX10: liveins: $vgpr0_64, $vgpr2
     ; GFX10-NEXT: {{  $}}
-    ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
+    ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr2
     ; GFX10-NEXT: [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[COPY]](f64)
     ; GFX10-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -9223372036854775808
@@ -639,12 +639,12 @@ body: |
     ; GFX10-NEXT: [[AND2:%[0-9]+]]:_(i64) = G_AND [[SHL]], [[C]]
     ; GFX10-NEXT: [[OR:%[0-9]+]]:_(i64) = disjoint G_OR [[AND]], [[AND2]]
     ; GFX10-NEXT: [[BITCAST1:%[0-9]+]]:_(f64) = G_BITCAST [[OR]](i64)
-    ; GFX10-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST1]](f64)
+    ; GFX10-NEXT: $vgpr0_64 = COPY [[BITCAST1]](f64)
     ;
     ; GFX11-LABEL: name: test_copysign_f64_f16
-    ; GFX11: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX11: liveins: $vgpr0_64, $vgpr2
     ; GFX11-NEXT: {{  $}}
-    ; GFX11-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr2
     ; GFX11-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY1]](i32)
     ; GFX11-NEXT: [[BITCAST:%[0-9]+]]:_(f16) = G_BITCAST [[TRUNC]](i16)
@@ -659,26 +659,26 @@ body: |
     ; GFX11-NEXT: [[AND1:%[0-9]+]]:_(i64) = G_AND [[SHL]], [[C]]
     ; GFX11-NEXT: [[OR:%[0-9]+]]:_(i64) = disjoint G_OR [[AND]], [[AND1]]
     ; GFX11-NEXT: [[BITCAST3:%[0-9]+]]:_(f64) = G_BITCAST [[OR]](i64)
-    ; GFX11-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST3]](f64)
-    %0:_(f64) = COPY $vgpr0_vgpr1
+    ; GFX11-NEXT: $vgpr0_64 = COPY [[BITCAST3]](f64)
+    %0:_(f64) = COPY $vgpr0_64
     %1:_(i32) = COPY $vgpr2
     %2:_(i16) = G_TRUNC %1
     %3:_(f16) = G_BITCAST %2
     %4:_(f64) = G_FCOPYSIGN %0, %3
-    $vgpr0_vgpr1 = COPY %4
+    $vgpr0_64 = COPY %4
 ...
 
 ---
 name: test_copysign_f16_f64
 body: |
   bb.0:
-    liveins: $vgpr0, $vgpr1_vgpr2
+    liveins: $vgpr0, $vgpr1_64
 
     ; SI-LABEL: name: test_copysign_f16_f64
-    ; SI: liveins: $vgpr0, $vgpr1_vgpr2
+    ; SI: liveins: $vgpr0, $vgpr1_64
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
-    ; SI-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr1_vgpr2
+    ; SI-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr1_64
     ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
     ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[COPY1]](f64)
     ; SI-NEXT: [[C:%[0-9]+]]:_(i16) = G_CONSTANT i16 -32768
@@ -693,10 +693,10 @@ body: |
     ; SI-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
     ;
     ; VI-LABEL: name: test_copysign_f16_f64
-    ; VI: liveins: $vgpr0, $vgpr1_vgpr2
+    ; VI: liveins: $vgpr0, $vgpr1_64
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
-    ; VI-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr1_vgpr2
+    ; VI-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr1_64
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
     ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[COPY1]](f64)
     ; VI-NEXT: [[C:%[0-9]+]]:_(i16) = G_CONSTANT i16 -32768
@@ -711,10 +711,10 @@ body: |
     ; VI-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
     ;
     ; GFX9-LABEL: name: test_copysign_f16_f64
-    ; GFX9: liveins: $vgpr0, $vgpr1_vgpr2
+    ; GFX9: liveins: $vgpr0, $vgpr1_64
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
-    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr1_vgpr2
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr1_64
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
     ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[COPY1]](f64)
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(i16) = G_CONSTANT i16 -32768
@@ -729,10 +729,10 @@ body: |
     ; GFX9-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
     ;
     ; GFX10-LABEL: name: test_copysign_f16_f64
-    ; GFX10: liveins: $vgpr0, $vgpr1_vgpr2
+    ; GFX10: liveins: $vgpr0, $vgpr1_64
     ; GFX10-NEXT: {{  $}}
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
-    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr1_vgpr2
+    ; GFX10-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr1_64
     ; GFX10-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
     ; GFX10-NEXT: [[BITCAST:%[0-9]+]]:_(i64) = G_BITCAST [[COPY1]](f64)
     ; GFX10-NEXT: [[C:%[0-9]+]]:_(i16) = G_CONSTANT i16 -32768
@@ -747,10 +747,10 @@ body: |
     ; GFX10-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
     ;
     ; GFX11-LABEL: name: test_copysign_f16_f64
-    ; GFX11: liveins: $vgpr0, $vgpr1_vgpr2
+    ; GFX11: liveins: $vgpr0, $vgpr1_64
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
-    ; GFX11-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr1_vgpr2
+    ; GFX11-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr1_64
     ; GFX11-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
     ; GFX11-NEXT: [[BITCAST:%[0-9]+]]:_(f16) = G_BITCAST [[TRUNC]](i16)
     ; GFX11-NEXT: [[BITCAST1:%[0-9]+]]:_(i16) = G_BITCAST [[BITCAST]](f16)
@@ -768,7 +768,7 @@ body: |
     ; GFX11-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST4]](i16)
     ; GFX11-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
     %0:_(i32) = COPY $vgpr0
-    %1:_(f64) = COPY $vgpr1_vgpr2
+    %1:_(f64) = COPY $vgpr1_64
     %2:_(i16) = G_TRUNC %0
     %3:_(f16) = G_BITCAST %2
     %4:_(f16) = G_FCOPYSIGN %3, %1
@@ -853,13 +853,13 @@ body: |
 name: test_copysign_v2f32_v2f32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
 
     ; SI-LABEL: name: test_copysign_v2f32_v2f32
-    ; SI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; SI: liveins: $vgpr0_64, $vgpr2_64
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_vgpr1
-    ; SI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr2_vgpr3
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_64
+    ; SI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr2_64
     ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[COPY]](<2 x f32>)
     ; SI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[COPY1]](<2 x f32>)
     ; SI-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -2147483648
@@ -870,13 +870,13 @@ body: |
     ; SI-NEXT: [[AND1:%[0-9]+]]:_(<2 x i32>) = G_AND [[BITCAST1]], [[BUILD_VECTOR]]
     ; SI-NEXT: [[OR:%[0-9]+]]:_(<2 x i32>) = disjoint G_OR [[AND]], [[AND1]]
     ; SI-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x f32>) = G_BITCAST [[OR]](<2 x i32>)
-    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST2]](<2 x f32>)
+    ; SI-NEXT: $vgpr0_64 = COPY [[BITCAST2]](<2 x f32>)
     ;
     ; VI-LABEL: name: test_copysign_v2f32_v2f32
-    ; VI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; VI: liveins: $vgpr0_64, $vgpr2_64
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_vgpr1
-    ; VI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr2_vgpr3
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_64
+    ; VI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr2_64
     ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[COPY]](<2 x f32>)
     ; VI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[COPY1]](<2 x f32>)
     ; VI-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -2147483648
@@ -887,13 +887,13 @@ body: |
     ; VI-NEXT: [[AND1:%[0-9]+]]:_(<2 x i32>) = G_AND [[BITCAST1]], [[BUILD_VECTOR]]
     ; VI-NEXT: [[OR:%[0-9]+]]:_(<2 x i32>) = disjoint G_OR [[AND]], [[AND1]]
     ; VI-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x f32>) = G_BITCAST [[OR]](<2 x i32>)
-    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST2]](<2 x f32>)
+    ; VI-NEXT: $vgpr0_64 = COPY [[BITCAST2]](<2 x f32>)
     ;
     ; GCN-LABEL: name: test_copysign_v2f32_v2f32
-    ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; GCN: liveins: $vgpr0_64, $vgpr2_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_vgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr2_vgpr3
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_64
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr2_64
     ; GCN-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[COPY]](<2 x f32>)
     ; GCN-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[COPY1]](<2 x f32>)
     ; GCN-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -2147483648
@@ -904,24 +904,24 @@ body: |
     ; GCN-NEXT: [[AND1:%[0-9]+]]:_(<2 x i32>) = G_AND [[BITCAST1]], [[BUILD_VECTOR]]
     ; GCN-NEXT: [[OR:%[0-9]+]]:_(<2 x i32>) = disjoint G_OR [[AND]], [[AND1]]
     ; GCN-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x f32>) = G_BITCAST [[OR]](<2 x i32>)
-    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST2]](<2 x f32>)
-    %0:_(<2 x f32>) = COPY $vgpr0_vgpr1
-    %1:_(<2 x f32>) = COPY $vgpr2_vgpr3
+    ; GCN-NEXT: $vgpr0_64 = COPY [[BITCAST2]](<2 x f32>)
+    %0:_(<2 x f32>) = COPY $vgpr0_64
+    %1:_(<2 x f32>) = COPY $vgpr2_64
     %2:_(<2 x f32>) = G_FCOPYSIGN %0, %1
-    $vgpr0_vgpr1 = COPY %2
+    $vgpr0_64 = COPY %2
 ...
 
 ---
 name: test_copysign_v2f64_v2f64
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
+    liveins: $vgpr0_128, $vgpr4_128
 
     ; SI-LABEL: name: test_copysign_v2f64_v2f64
-    ; SI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
+    ; SI: liveins: $vgpr0_128, $vgpr4_128
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; SI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr0_128
+    ; SI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr4_128
     ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[COPY]](<2 x f64>)
     ; SI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[COPY1]](<2 x f64>)
     ; SI-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -9223372036854775808
@@ -936,13 +936,13 @@ body: |
     ; SI-NEXT: [[OR1:%[0-9]+]]:_(i64) = disjoint G_OR [[AND1]], [[AND3]]
     ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i64>) = G_BUILD_VECTOR [[OR]](i64), [[OR1]](i64)
     ; SI-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[BUILD_VECTOR]](<2 x i64>)
-    ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST2]](<2 x f64>)
+    ; SI-NEXT: $vgpr0_128 = COPY [[BITCAST2]](<2 x f64>)
     ;
     ; VI-LABEL: name: test_copysign_v2f64_v2f64
-    ; VI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
+    ; VI: liveins: $vgpr0_128, $vgpr4_128
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; VI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr0_128
+    ; VI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr4_128
     ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[COPY]](<2 x f64>)
     ; VI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[COPY1]](<2 x f64>)
     ; VI-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -9223372036854775808
@@ -957,13 +957,13 @@ body: |
     ; VI-NEXT: [[OR1:%[0-9]+]]:_(i64) = disjoint G_OR [[AND1]], [[AND3]]
     ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i64>) = G_BUILD_VECTOR [[OR]](i64), [[OR1]](i64)
     ; VI-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[BUILD_VECTOR]](<2 x i64>)
-    ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST2]](<2 x f64>)
+    ; VI-NEXT: $vgpr0_128 = COPY [[BITCAST2]](<2 x f64>)
     ;
     ; GCN-LABEL: name: test_copysign_v2f64_v2f64
-    ; GCN: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7
+    ; GCN: liveins: $vgpr0_128, $vgpr4_128
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr0_128
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr4_128
     ; GCN-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[COPY]](<2 x f64>)
     ; GCN-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[COPY1]](<2 x f64>)
     ; GCN-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -9223372036854775808
@@ -978,24 +978,24 @@ body: |
     ; GCN-NEXT: [[OR1:%[0-9]+]]:_(i64) = disjoint G_OR [[AND1]], [[AND3]]
     ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i64>) = G_BUILD_VECTOR [[OR]](i64), [[OR1]](i64)
     ; GCN-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[BUILD_VECTOR]](<2 x i64>)
-    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST2]](<2 x f64>)
-    %0:_(<2 x f64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    %1:_(<2 x f64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; GCN-NEXT: $vgpr0_128 = COPY [[BITCAST2]](<2 x f64>)
+    %0:_(<2 x f64>) = COPY $vgpr0_128
+    %1:_(<2 x f64>) = COPY $vgpr4_128
     %2:_(<2 x f64>) = G_FCOPYSIGN %0, %1
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %2
+    $vgpr0_128 = COPY %2
 ...
 
 ---
 name: test_copysign_v2f64_v2f32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5
+    liveins: $vgpr0_128, $vgpr4_64
 
     ; SI-LABEL: name: test_copysign_v2f64_v2f32
-    ; SI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5
+    ; SI: liveins: $vgpr0_128, $vgpr4_64
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; SI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr4_vgpr5
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr0_128
+    ; SI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr4_64
     ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[COPY]](<2 x f64>)
     ; SI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[COPY1]](<2 x f32>)
     ; SI-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -9223372036854775808
@@ -1016,13 +1016,13 @@ body: |
     ; SI-NEXT: [[OR1:%[0-9]+]]:_(i64) = disjoint G_OR [[AND1]], [[AND3]]
     ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i64>) = G_BUILD_VECTOR [[OR]](i64), [[OR1]](i64)
     ; SI-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[BUILD_VECTOR]](<2 x i64>)
-    ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST2]](<2 x f64>)
+    ; SI-NEXT: $vgpr0_128 = COPY [[BITCAST2]](<2 x f64>)
     ;
     ; VI-LABEL: name: test_copysign_v2f64_v2f32
-    ; VI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5
+    ; VI: liveins: $vgpr0_128, $vgpr4_64
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; VI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr4_vgpr5
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr0_128
+    ; VI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr4_64
     ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[COPY]](<2 x f64>)
     ; VI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[COPY1]](<2 x f32>)
     ; VI-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -9223372036854775808
@@ -1043,13 +1043,13 @@ body: |
     ; VI-NEXT: [[OR1:%[0-9]+]]:_(i64) = disjoint G_OR [[AND1]], [[AND3]]
     ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i64>) = G_BUILD_VECTOR [[OR]](i64), [[OR1]](i64)
     ; VI-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[BUILD_VECTOR]](<2 x i64>)
-    ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST2]](<2 x f64>)
+    ; VI-NEXT: $vgpr0_128 = COPY [[BITCAST2]](<2 x f64>)
     ;
     ; GCN-LABEL: name: test_copysign_v2f64_v2f32
-    ; GCN: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5
+    ; GCN: liveins: $vgpr0_128, $vgpr4_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr4_vgpr5
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr0_128
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr4_64
     ; GCN-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[COPY]](<2 x f64>)
     ; GCN-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[COPY1]](<2 x f32>)
     ; GCN-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -9223372036854775808
@@ -1070,11 +1070,11 @@ body: |
     ; GCN-NEXT: [[OR1:%[0-9]+]]:_(i64) = disjoint G_OR [[AND1]], [[AND3]]
     ; GCN-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i64>) = G_BUILD_VECTOR [[OR]](i64), [[OR1]](i64)
     ; GCN-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[BUILD_VECTOR]](<2 x i64>)
-    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST2]](<2 x f64>)
-    %0:_(<2 x f64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    %1:_(<2 x f32>) = COPY $vgpr4_vgpr5
+    ; GCN-NEXT: $vgpr0_128 = COPY [[BITCAST2]](<2 x f64>)
+    %0:_(<2 x f64>) = COPY $vgpr0_128
+    %1:_(<2 x f32>) = COPY $vgpr4_64
     %2:_(<2 x f64>) = G_FCOPYSIGN %0, %1
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %2
+    $vgpr0_128 = COPY %2
 ...
 
 
@@ -1082,13 +1082,13 @@ body: |
 name: test_copysign_v2f32_v2f64
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5
+    liveins: $vgpr0_64, $vgpr2_128
 
     ; SI-LABEL: name: test_copysign_v2f32_v2f64
-    ; SI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5
+    ; SI: liveins: $vgpr0_64, $vgpr2_128
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_vgpr1
-    ; SI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr2_vgpr3_vgpr4_vgpr5
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_64
+    ; SI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr2_128
     ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[COPY]](<2 x f32>)
     ; SI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[COPY1]](<2 x f64>)
     ; SI-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -2147483648
@@ -1107,13 +1107,13 @@ body: |
     ; SI-NEXT: [[AND1:%[0-9]+]]:_(<2 x i32>) = G_AND [[BUILD_VECTOR2]], [[BUILD_VECTOR]]
     ; SI-NEXT: [[OR:%[0-9]+]]:_(<2 x i32>) = disjoint G_OR [[AND]], [[AND1]]
     ; SI-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x f32>) = G_BITCAST [[OR]](<2 x i32>)
-    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST2]](<2 x f32>)
+    ; SI-NEXT: $vgpr0_64 = COPY [[BITCAST2]](<2 x f32>)
     ;
     ; VI-LABEL: name: test_copysign_v2f32_v2f64
-    ; VI: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5
+    ; VI: liveins: $vgpr0_64, $vgpr2_128
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_vgpr1
-    ; VI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr2_vgpr3_vgpr4_vgpr5
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_64
+    ; VI-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr2_128
     ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[COPY]](<2 x f32>)
     ; VI-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[COPY1]](<2 x f64>)
     ; VI-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -2147483648
@@ -1132,13 +1132,13 @@ body: |
     ; VI-NEXT: [[AND1:%[0-9]+]]:_(<2 x i32>) = G_AND [[BUILD_VECTOR2]], [[BUILD_VECTOR]]
     ; VI-NEXT: [[OR:%[0-9]+]]:_(<2 x i32>) = disjoint G_OR [[AND]], [[AND1]]
     ; VI-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x f32>) = G_BITCAST [[OR]](<2 x i32>)
-    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST2]](<2 x f32>)
+    ; VI-NEXT: $vgpr0_64 = COPY [[BITCAST2]](<2 x f32>)
     ;
     ; GCN-LABEL: name: test_copysign_v2f32_v2f64
-    ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5
+    ; GCN: liveins: $vgpr0_64, $vgpr2_128
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_vgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr2_vgpr3_vgpr4_vgpr5
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_64
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr2_128
     ; GCN-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x i32>) = G_BITCAST [[COPY]](<2 x f32>)
     ; GCN-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[COPY1]](<2 x f64>)
     ; GCN-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -2147483648
@@ -1157,11 +1157,11 @@ body: |
     ; GCN-NEXT: [[AND1:%[0-9]+]]:_(<2 x i32>) = G_AND [[BUILD_VECTOR2]], [[BUILD_VECTOR]]
     ; GCN-NEXT: [[OR:%[0-9]+]]:_(<2 x i32>) = disjoint G_OR [[AND]], [[AND1]]
     ; GCN-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x f32>) = G_BITCAST [[OR]](<2 x i32>)
-    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST2]](<2 x f32>)
-    %0:_(<2 x f32>) = COPY $vgpr0_vgpr1
-    %1:_(<2 x f64>) = COPY $vgpr2_vgpr3_vgpr4_vgpr5
+    ; GCN-NEXT: $vgpr0_64 = COPY [[BITCAST2]](<2 x f32>)
+    %0:_(<2 x f32>) = COPY $vgpr0_64
+    %1:_(<2 x f64>) = COPY $vgpr2_128
     %2:_(<2 x f32>) = G_FCOPYSIGN %0, %1
-    $vgpr0_vgpr1 = COPY %2
+    $vgpr0_64 = COPY %2
 ...
 
 ---

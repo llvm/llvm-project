@@ -28,21 +28,21 @@ body: |
 name:            test_ubfx_s64
 body: |
   bb.0.entry:
-    liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3
+    liveins: $vgpr0_64, $vgpr2, $vgpr3
 
     ; GCN-LABEL: name: test_ubfx_s64
-    ; GCN: liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3
+    ; GCN: liveins: $vgpr0_64, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: %copy:_(s64) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: %copy:_(s64) = COPY $vgpr0_64
     ; GCN-NEXT: %offset:_(s32) = COPY $vgpr2
     ; GCN-NEXT: %width:_(s32) = COPY $vgpr3
     ; GCN-NEXT: %ubfx:_(s64) = G_UBFX %copy, %offset(s32), %width
-    ; GCN-NEXT: $vgpr0_vgpr1 = COPY %ubfx(s64)
-    %copy:_(s64) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: $vgpr0_64 = COPY %ubfx(s64)
+    %copy:_(s64) = COPY $vgpr0_64
     %offset:_(s32) = COPY $vgpr2
     %width:_(s32) = COPY $vgpr3
     %ubfx:_(s64) = G_UBFX %copy, %offset(s32), %width
-    $vgpr0_vgpr1 = COPY %ubfx(s64)
+    $vgpr0_64 = COPY %ubfx(s64)
 ...
 
 ---

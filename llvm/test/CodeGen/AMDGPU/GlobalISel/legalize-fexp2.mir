@@ -88,12 +88,12 @@ body: |
 name: test_fexp2_v2f32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; GFX6-LABEL: name: test_fexp2_v2f32
-    ; GFX6: liveins: $vgpr0_vgpr1
+    ; GFX6: liveins: $vgpr0_64
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_vgpr1
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_64
     ; GFX6-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[COPY]](<2 x f32>)
     ; GFX6-NEXT: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float -1.260000e+02
     ; GFX6-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(olt), [[UV]](f32), [[C]]
@@ -113,12 +113,12 @@ body: |
     ; GFX6-NEXT: [[SELECT3:%[0-9]+]]:_(f32) = G_SELECT [[FCMP1]](s1), [[C3]], [[C4]]
     ; GFX6-NEXT: [[FMUL1:%[0-9]+]]:_(f32) = G_FMUL [[INT1]], [[SELECT3]]
     ; GFX6-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f32>) = G_BUILD_VECTOR [[FMUL]](f32), [[FMUL1]](f32)
-    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x f32>)
+    ; GFX6-NEXT: $vgpr0_64 = COPY [[BUILD_VECTOR]](<2 x f32>)
     ;
     ; GFX8-LABEL: name: test_fexp2_v2f32
-    ; GFX8: liveins: $vgpr0_vgpr1
+    ; GFX8: liveins: $vgpr0_64
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_vgpr1
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_64
     ; GFX8-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[COPY]](<2 x f32>)
     ; GFX8-NEXT: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float -1.260000e+02
     ; GFX8-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(olt), [[UV]](f32), [[C]]
@@ -138,12 +138,12 @@ body: |
     ; GFX8-NEXT: [[SELECT3:%[0-9]+]]:_(f32) = G_SELECT [[FCMP1]](s1), [[C3]], [[C4]]
     ; GFX8-NEXT: [[FMUL1:%[0-9]+]]:_(f32) = G_FMUL [[INT1]], [[SELECT3]]
     ; GFX8-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f32>) = G_BUILD_VECTOR [[FMUL]](f32), [[FMUL1]](f32)
-    ; GFX8-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x f32>)
+    ; GFX8-NEXT: $vgpr0_64 = COPY [[BUILD_VECTOR]](<2 x f32>)
     ;
     ; GFX9-LABEL: name: test_fexp2_v2f32
-    ; GFX9: liveins: $vgpr0_vgpr1
+    ; GFX9: liveins: $vgpr0_64
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_64
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[COPY]](<2 x f32>)
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float -1.260000e+02
     ; GFX9-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(olt), [[UV]](f32), [[C]]
@@ -163,12 +163,12 @@ body: |
     ; GFX9-NEXT: [[SELECT3:%[0-9]+]]:_(f32) = G_SELECT [[FCMP1]](s1), [[C3]], [[C4]]
     ; GFX9-NEXT: [[FMUL1:%[0-9]+]]:_(f32) = G_FMUL [[INT1]], [[SELECT3]]
     ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f32>) = G_BUILD_VECTOR [[FMUL]](f32), [[FMUL1]](f32)
-    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x f32>)
+    ; GFX9-NEXT: $vgpr0_64 = COPY [[BUILD_VECTOR]](<2 x f32>)
     ;
     ; GFX1250-LABEL: name: test_fexp2_v2f32
-    ; GFX1250: liveins: $vgpr0_vgpr1
+    ; GFX1250: liveins: $vgpr0_64
     ; GFX1250-NEXT: {{  $}}
-    ; GFX1250-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_vgpr1
+    ; GFX1250-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_64
     ; GFX1250-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[COPY]](<2 x f32>)
     ; GFX1250-NEXT: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float -1.260000e+02
     ; GFX1250-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(olt), [[UV]](f32), [[C]]
@@ -188,22 +188,22 @@ body: |
     ; GFX1250-NEXT: [[SELECT3:%[0-9]+]]:_(f32) = G_SELECT [[FCMP1]](s1), [[C3]], [[C4]]
     ; GFX1250-NEXT: [[FMUL1:%[0-9]+]]:_(f32) = G_FMUL [[INT1]], [[SELECT3]]
     ; GFX1250-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f32>) = G_BUILD_VECTOR [[FMUL]](f32), [[FMUL1]](f32)
-    ; GFX1250-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x f32>)
-    %0:_(<2 x f32>) = COPY $vgpr0_vgpr1
+    ; GFX1250-NEXT: $vgpr0_64 = COPY [[BUILD_VECTOR]](<2 x f32>)
+    %0:_(<2 x f32>) = COPY $vgpr0_64
     %1:_(<2 x f32>) = G_FEXP2 %0
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...
 
 ---
 name: test_fexp2_v3f32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2
+    liveins: $vgpr0_96
 
     ; GFX6-LABEL: name: test_fexp2_v3f32
-    ; GFX6: liveins: $vgpr0_vgpr1_vgpr2
+    ; GFX6: liveins: $vgpr0_96
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: [[COPY:%[0-9]+]]:_(<3 x f32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; GFX6-NEXT: [[COPY:%[0-9]+]]:_(<3 x f32>) = COPY $vgpr0_96
     ; GFX6-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32), [[UV2:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[COPY]](<3 x f32>)
     ; GFX6-NEXT: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float -1.260000e+02
     ; GFX6-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(olt), [[UV]](f32), [[C]]
@@ -229,12 +229,12 @@ body: |
     ; GFX6-NEXT: [[SELECT5:%[0-9]+]]:_(f32) = G_SELECT [[FCMP2]](s1), [[C3]], [[C4]]
     ; GFX6-NEXT: [[FMUL2:%[0-9]+]]:_(f32) = G_FMUL [[INT2]], [[SELECT5]]
     ; GFX6-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x f32>) = G_BUILD_VECTOR [[FMUL]](f32), [[FMUL1]](f32), [[FMUL2]](f32)
-    ; GFX6-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x f32>)
+    ; GFX6-NEXT: $vgpr0_96 = COPY [[BUILD_VECTOR]](<3 x f32>)
     ;
     ; GFX8-LABEL: name: test_fexp2_v3f32
-    ; GFX8: liveins: $vgpr0_vgpr1_vgpr2
+    ; GFX8: liveins: $vgpr0_96
     ; GFX8-NEXT: {{  $}}
-    ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(<3 x f32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(<3 x f32>) = COPY $vgpr0_96
     ; GFX8-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32), [[UV2:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[COPY]](<3 x f32>)
     ; GFX8-NEXT: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float -1.260000e+02
     ; GFX8-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(olt), [[UV]](f32), [[C]]
@@ -260,12 +260,12 @@ body: |
     ; GFX8-NEXT: [[SELECT5:%[0-9]+]]:_(f32) = G_SELECT [[FCMP2]](s1), [[C3]], [[C4]]
     ; GFX8-NEXT: [[FMUL2:%[0-9]+]]:_(f32) = G_FMUL [[INT2]], [[SELECT5]]
     ; GFX8-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x f32>) = G_BUILD_VECTOR [[FMUL]](f32), [[FMUL1]](f32), [[FMUL2]](f32)
-    ; GFX8-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x f32>)
+    ; GFX8-NEXT: $vgpr0_96 = COPY [[BUILD_VECTOR]](<3 x f32>)
     ;
     ; GFX9-LABEL: name: test_fexp2_v3f32
-    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2
+    ; GFX9: liveins: $vgpr0_96
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<3 x f32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<3 x f32>) = COPY $vgpr0_96
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32), [[UV2:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[COPY]](<3 x f32>)
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float -1.260000e+02
     ; GFX9-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(olt), [[UV]](f32), [[C]]
@@ -291,12 +291,12 @@ body: |
     ; GFX9-NEXT: [[SELECT5:%[0-9]+]]:_(f32) = G_SELECT [[FCMP2]](s1), [[C3]], [[C4]]
     ; GFX9-NEXT: [[FMUL2:%[0-9]+]]:_(f32) = G_FMUL [[INT2]], [[SELECT5]]
     ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x f32>) = G_BUILD_VECTOR [[FMUL]](f32), [[FMUL1]](f32), [[FMUL2]](f32)
-    ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x f32>)
+    ; GFX9-NEXT: $vgpr0_96 = COPY [[BUILD_VECTOR]](<3 x f32>)
     ;
     ; GFX1250-LABEL: name: test_fexp2_v3f32
-    ; GFX1250: liveins: $vgpr0_vgpr1_vgpr2
+    ; GFX1250: liveins: $vgpr0_96
     ; GFX1250-NEXT: {{  $}}
-    ; GFX1250-NEXT: [[COPY:%[0-9]+]]:_(<3 x f32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; GFX1250-NEXT: [[COPY:%[0-9]+]]:_(<3 x f32>) = COPY $vgpr0_96
     ; GFX1250-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32), [[UV2:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[COPY]](<3 x f32>)
     ; GFX1250-NEXT: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float -1.260000e+02
     ; GFX1250-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(olt), [[UV]](f32), [[C]]
@@ -322,10 +322,10 @@ body: |
     ; GFX1250-NEXT: [[SELECT5:%[0-9]+]]:_(f32) = G_SELECT [[FCMP2]](s1), [[C3]], [[C4]]
     ; GFX1250-NEXT: [[FMUL2:%[0-9]+]]:_(f32) = G_FMUL [[INT2]], [[SELECT5]]
     ; GFX1250-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x f32>) = G_BUILD_VECTOR [[FMUL]](f32), [[FMUL1]](f32), [[FMUL2]](f32)
-    ; GFX1250-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x f32>)
-    %0:_(<3 x f32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; GFX1250-NEXT: $vgpr0_96 = COPY [[BUILD_VECTOR]](<3 x f32>)
+    %0:_(<3 x f32>) = COPY $vgpr0_96
     %1:_(<3 x f32>) = G_FEXP2 %0
-    $vgpr0_vgpr1_vgpr2 = COPY %1
+    $vgpr0_96 = COPY %1
 ...
 
 ---

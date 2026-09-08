@@ -98,6 +98,6 @@ body: |
     successors: %bb.6
 
   bb.6:
-    FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr2, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr3_64, $vgpr2, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
 ...

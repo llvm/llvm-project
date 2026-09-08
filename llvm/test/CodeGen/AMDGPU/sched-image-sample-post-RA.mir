@@ -42,9 +42,9 @@ body: |
   ; TOPDOWN-NEXT:   renamable $vgpr14 = V_MOV_B32_e32 0, implicit $exec
   ; TOPDOWN-NEXT:   renamable $vgpr9 = V_INTERP_P2_F32_inreg 0, killed $vgpr2, 0, $vgpr1, 0, killed $vgpr5, 0, 7, implicit $m0, implicit $exec, implicit $mode
   ; TOPDOWN-NEXT:   renamable $vgpr10 = V_INTERP_P2_F32_inreg 0, killed $vgpr3, 0, killed $vgpr1, 0, killed $vgpr6, 0, 7, implicit $m0, implicit $exec, implicit $mode
-  ; TOPDOWN-NEXT:   BUNDLE implicit-def $vgpr11, implicit killed $vgpr9_vgpr10, implicit killed $sgpr24_256, implicit killed $sgpr0_128, implicit $exec, implicit killed $sgpr16_256, implicit killed $sgpr36_128 {
-  ; TOPDOWN-NEXT:     renamable $vgpr11 = IMAGE_SAMPLE_V1_V2_gfx11 $vgpr9_vgpr10, killed renamable $sgpr24_256, killed renamable $sgpr0_128, 1, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
-  ; TOPDOWN-NEXT:     renamable $vgpr5_vgpr6_vgpr7_vgpr8 = IMAGE_SAMPLE_V4_V2_gfx11 killed $vgpr9_vgpr10, killed renamable $sgpr16_256, killed renamable $sgpr36_128, 15, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+  ; TOPDOWN-NEXT:   BUNDLE implicit-def $vgpr11, implicit killed $vgpr9_64, implicit killed $sgpr24_256, implicit killed $sgpr0_128, implicit $exec, implicit killed $sgpr16_256, implicit killed $sgpr36_128 {
+  ; TOPDOWN-NEXT:     renamable $vgpr11 = IMAGE_SAMPLE_V1_V2_gfx11 $vgpr9_64, killed renamable $sgpr24_256, killed renamable $sgpr0_128, 1, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
+  ; TOPDOWN-NEXT:     renamable $vgpr5_128 = IMAGE_SAMPLE_V4_V2_gfx11 killed $vgpr9_64, killed renamable $sgpr16_256, killed renamable $sgpr36_128, 15, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
   ; TOPDOWN-NEXT:   }
   ; TOPDOWN-NEXT:   nofpexcept V_CMP_GT_F32_e32 1065353216, killed $vgpr11, implicit-def $vcc_lo, implicit $mode, implicit $exec
   ; TOPDOWN-NEXT:   renamable $sgpr0_64 = COPY $vcc
@@ -90,9 +90,9 @@ body: |
   ; BOTTOMUP-NEXT:   renamable $vgpr5 = V_INTERP_P10_F32_inreg 0, $vgpr2, 0, killed $vgpr0, 0, $vgpr2, 0, 7, implicit $m0, implicit $exec, implicit $mode
   ; BOTTOMUP-NEXT:   renamable $vgpr10 = V_INTERP_P2_F32_inreg 0, killed $vgpr3, 0, $vgpr1, 0, killed $vgpr6, 0, 7, implicit $m0, implicit $exec, implicit $mode
   ; BOTTOMUP-NEXT:   renamable $vgpr9 = V_INTERP_P2_F32_inreg 0, killed $vgpr2, 0, killed $vgpr1, 0, killed $vgpr5, 0, 7, implicit $m0, implicit $exec, implicit $mode
-  ; BOTTOMUP-NEXT:   BUNDLE implicit-def $vgpr11, implicit killed $vgpr9_vgpr10, implicit killed $sgpr24_256, implicit killed $sgpr0_128, implicit $exec, implicit killed $sgpr16_256, implicit killed $sgpr36_128 {
-  ; BOTTOMUP-NEXT:     renamable $vgpr11 = IMAGE_SAMPLE_V1_V2_gfx11 $vgpr9_vgpr10, killed renamable $sgpr24_256, killed renamable $sgpr0_128, 1, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
-  ; BOTTOMUP-NEXT:     renamable $vgpr5_vgpr6_vgpr7_vgpr8 = IMAGE_SAMPLE_V4_V2_gfx11 killed $vgpr9_vgpr10, killed renamable $sgpr16_256, killed renamable $sgpr36_128, 15, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+  ; BOTTOMUP-NEXT:   BUNDLE implicit-def $vgpr11, implicit killed $vgpr9_64, implicit killed $sgpr24_256, implicit killed $sgpr0_128, implicit $exec, implicit killed $sgpr16_256, implicit killed $sgpr36_128 {
+  ; BOTTOMUP-NEXT:     renamable $vgpr11 = IMAGE_SAMPLE_V1_V2_gfx11 $vgpr9_64, killed renamable $sgpr24_256, killed renamable $sgpr0_128, 1, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
+  ; BOTTOMUP-NEXT:     renamable $vgpr5_128 = IMAGE_SAMPLE_V4_V2_gfx11 killed $vgpr9_64, killed renamable $sgpr16_256, killed renamable $sgpr36_128, 15, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
   ; BOTTOMUP-NEXT:   }
   ; BOTTOMUP-NEXT:   nofpexcept V_CMP_GT_F32_e32 1065353216, killed $vgpr11, implicit-def $vcc_lo, implicit $mode, implicit $exec
   ; BOTTOMUP-NEXT:   renamable $sgpr0_64 = COPY $vcc
@@ -138,9 +138,9 @@ body: |
     renamable $vgpr6  = V_INTERP_P10_F32_inreg 0, $vgpr3, 0, $vgpr0, 0, $vgpr3, 0, 7, implicit $m0, implicit $exec, implicit $mode
     renamable $vgpr9  = V_INTERP_P2_F32_inreg 0, $vgpr2, 0, $vgpr1, 0, killed $vgpr5, 0, 7, implicit $m0, implicit $exec, implicit $mode
     renamable $vgpr10 = V_INTERP_P2_F32_inreg 0, $vgpr3, 0, $vgpr1, 0, killed $vgpr6, 0, 7, implicit $m0, implicit $exec, implicit $mode
-    BUNDLE implicit-def $vgpr11, implicit $vgpr9_vgpr10, implicit killed $sgpr24_256, implicit killed $sgpr0_128, implicit $exec, implicit killed $sgpr16_256, implicit killed $sgpr36_128 {
-      renamable $vgpr11 = IMAGE_SAMPLE_V1_V2_gfx11 $vgpr9_vgpr10, killed renamable $sgpr24_256, killed renamable $sgpr0_128, 1, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
-      renamable $vgpr5_vgpr6_vgpr7_vgpr8 = IMAGE_SAMPLE_V4_V2_gfx11 $vgpr9_vgpr10, killed renamable $sgpr16_256, killed renamable $sgpr36_128, 15, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
+    BUNDLE implicit-def $vgpr11, implicit $vgpr9_64, implicit killed $sgpr24_256, implicit killed $sgpr0_128, implicit $exec, implicit killed $sgpr16_256, implicit killed $sgpr36_128 {
+      renamable $vgpr11 = IMAGE_SAMPLE_V1_V2_gfx11 $vgpr9_64, killed renamable $sgpr24_256, killed renamable $sgpr0_128, 1, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 8)
+      renamable $vgpr5_128 = IMAGE_SAMPLE_V4_V2_gfx11 $vgpr9_64, killed renamable $sgpr16_256, killed renamable $sgpr36_128, 15, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 8)
     }
     nofpexcept V_CMP_GT_F32_e32 1065353216, $vgpr11, implicit-def $vcc, implicit $mode, implicit $exec
     renamable $sgpr0_64 = COPY $vcc

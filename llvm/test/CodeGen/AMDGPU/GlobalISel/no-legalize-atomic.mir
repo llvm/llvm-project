@@ -9,19 +9,19 @@
 name: test_atomic_load_global_v8s32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
-    %0:_(p1) = COPY $vgpr0_vgpr1
+    liveins: $vgpr0_64
+    %0:_(p1) = COPY $vgpr0_64
     %1:_(<8 x s32>) = G_LOAD %0 :: (load monotonic (<8 x s32>), addrspace 1, align 32)
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %1
+    $vgpr0_256 = COPY %1
 ...
 
 ---
 name: test_atomic_store_global_v8s32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
-    %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(<8 x s32>) = COPY $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
+    liveins: $vgpr0_64, $vgpr2_256
+    %0:_(p1) = COPY $vgpr0_64
+    %1:_(<8 x s32>) = COPY $vgpr2_256
     G_STORE %1, %0 :: (store monotonic (<8 x s32>), addrspace 1, align 32)
 ...
 
@@ -29,18 +29,18 @@ body: |
 name: test_atomic_load_global_s256
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
-    %0:_(p1) = COPY $vgpr0_vgpr1
+    liveins: $vgpr0_64
+    %0:_(p1) = COPY $vgpr0_64
     %1:_(s256) = G_LOAD %0 :: (load monotonic (s256), addrspace 1, align 32)
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %1
+    $vgpr0_256 = COPY %1
 ...
 
 ---
 name: test_atomic_store_global_s256
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
-    %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s256) = COPY $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
+    liveins: $vgpr0_64, $vgpr2_256
+    %0:_(p1) = COPY $vgpr0_64
+    %1:_(s256) = COPY $vgpr2_256
     G_STORE %1, %0 :: (store monotonic (s256), addrspace 1, align 32)
 ...

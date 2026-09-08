@@ -31,13 +31,13 @@ name:            f
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0, $vgpr1, $vgpr2_64
     %v0:vgpr(s32) = COPY $vgpr0
     %v1:vgpr(<2 x s16>) = COPY $vgpr1
     %unused_load_ptr:sgpr(p1) = G_IMPLICIT_DEF
     %unused_load:_(s64) = G_LOAD %unused_load_ptr :: (load (s64), addrspace 1)
     G_STORE %unused_load, %unused_load_ptr :: (store (s64), addrspace 1)
-    %2:vreg_64(s64) = COPY $vgpr2_vgpr3
+    %2:vreg_64(s64) = COPY $vgpr2_64
     %arst:_(<2 x s32>) = G_IMPLICIT_DEF
     %aoeu:_(s64) = G_BITCAST %arst
     S_NOP 0, implicit %unused_load_ptr

@@ -3238,7 +3238,7 @@ define double @flat_agent_atomic_fsub_ret_f64(ptr %ptr, double %val) #0 {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX12-NEXT:    s_mov_b32 s0, exec_lo
-; GFX12-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; GFX12-NEXT:    ; implicit-def: $vgpr4_64
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_cmpx_ne_u32_e32 s1, v1
 ; GFX12-NEXT:    s_xor_b32 s0, exec_lo, s0
@@ -3264,8 +3264,8 @@ define double @flat_agent_atomic_fsub_ret_f64(ptr %ptr, double %val) #0 {
 ; GFX12-NEXT:    s_cbranch_execnz .LBB16_2
 ; GFX12-NEXT:  ; %bb.3: ; %Flow
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
+; GFX12-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX12-NEXT:  .LBB16_4: ; %Flow3
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_and_not1_saveexec_b32 s0, s0
@@ -3289,7 +3289,7 @@ define double @flat_agent_atomic_fsub_ret_f64(ptr %ptr, double %val) #0 {
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v1
-; GFX942-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; GFX942-NEXT:    ; implicit-def: $vgpr4_64
 ; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX942-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
 ; GFX942-NEXT:    s_cbranch_execz .LBB16_4
@@ -3312,8 +3312,8 @@ define double @flat_agent_atomic_fsub_ret_f64(ptr %ptr, double %val) #0 {
 ; GFX942-NEXT:    s_cbranch_execnz .LBB16_2
 ; GFX942-NEXT:  ; %bb.3: ; %Flow
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX942-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX942-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX942-NEXT:    ; implicit-def: $vgpr0_64
+; GFX942-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX942-NEXT:  .LBB16_4: ; %Flow3
 ; GFX942-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; GFX942-NEXT:    s_cbranch_execz .LBB16_6
@@ -3336,7 +3336,7 @@ define double @flat_agent_atomic_fsub_ret_f64(ptr %ptr, double %val) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
-; GFX11-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; GFX11-NEXT:    ; implicit-def: $vgpr4_64
 ; GFX11-NEXT:    v_cmpx_ne_u32_e32 s1, v1
 ; GFX11-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX11-NEXT:    s_cbranch_execz .LBB16_4
@@ -3361,8 +3361,8 @@ define double @flat_agent_atomic_fsub_ret_f64(ptr %ptr, double %val) #0 {
 ; GFX11-NEXT:    s_cbranch_execnz .LBB16_2
 ; GFX11-NEXT:  ; %bb.3: ; %Flow
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX11-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX11-NEXT:    ; implicit-def: $vgpr0_64
+; GFX11-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX11-NEXT:  .LBB16_4: ; %Flow3
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-NEXT:    s_cbranch_execz .LBB16_6
@@ -3382,7 +3382,7 @@ define double @flat_agent_atomic_fsub_ret_f64(ptr %ptr, double %val) #0 {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_mov_b64 s[4:5], src_private_base
-; GFX10-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; GFX10-NEXT:    ; implicit-def: $vgpr4_64
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, s5, v1
 ; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
 ; GFX10-NEXT:    s_xor_b32 s4, exec_lo, s4
@@ -3407,8 +3407,8 @@ define double @flat_agent_atomic_fsub_ret_f64(ptr %ptr, double %val) #0 {
 ; GFX10-NEXT:    s_cbranch_execnz .LBB16_2
 ; GFX10-NEXT:  ; %bb.3: ; %Flow
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s5
-; GFX10-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX10-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX10-NEXT:    ; implicit-def: $vgpr0_64
+; GFX10-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX10-NEXT:  .LBB16_4: ; %Flow3
 ; GFX10-NEXT:    s_andn2_saveexec_b32 s4, s4
 ; GFX10-NEXT:    s_cbranch_execz .LBB16_6
@@ -3434,7 +3434,7 @@ define double @flat_agent_atomic_fsub_ret_f64(ptr %ptr, double %val) #0 {
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v1
-; GFX90A-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; GFX90A-NEXT:    ; implicit-def: $vgpr4_64
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX90A-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execz .LBB16_4
@@ -3455,8 +3455,8 @@ define double @flat_agent_atomic_fsub_ret_f64(ptr %ptr, double %val) #0 {
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB16_2
 ; GFX90A-NEXT:  ; %bb.3: ; %Flow
 ; GFX90A-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX90A-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX90A-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX90A-NEXT:    ; implicit-def: $vgpr0_64
+; GFX90A-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX90A-NEXT:  .LBB16_4: ; %Flow3
 ; GFX90A-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execz .LBB16_6
@@ -3483,7 +3483,7 @@ define double @flat_agent_atomic_fsub_ret_f64(ptr %ptr, double %val) #0 {
 ; GFX908-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; GFX908-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX908-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
-; GFX908-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX908-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX908-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX908-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX908-NEXT:    s_cbranch_execnz .LBB16_3
@@ -3511,8 +3511,8 @@ define double @flat_agent_atomic_fsub_ret_f64(ptr %ptr, double %val) #0 {
 ; GFX908-NEXT:    s_cbranch_execnz .LBB16_4
 ; GFX908-NEXT:  ; %bb.5: ; %Flow
 ; GFX908-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX908-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX908-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX908-NEXT:    ; implicit-def: $vgpr4_64
+; GFX908-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX908-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX908-NEXT:    s_cbranch_execz .LBB16_2
 ; GFX908-NEXT:  .LBB16_6: ; %atomicrmw.private
@@ -3533,7 +3533,7 @@ define double @flat_agent_atomic_fsub_ret_f64(ptr %ptr, double %val) #0 {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    s_mov_b64 s[4:5], 0xc0
 ; GFX8-NEXT:    s_load_dword s4, s[4:5], 0x0
-; GFX8-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; GFX8-NEXT:    ; implicit-def: $vgpr4_64
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, s4, v1
 ; GFX8-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -3560,8 +3560,8 @@ define double @flat_agent_atomic_fsub_ret_f64(ptr %ptr, double %val) #0 {
 ; GFX8-NEXT:    s_cbranch_execnz .LBB16_2
 ; GFX8-NEXT:  ; %bb.3: ; %Flow
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX8-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX8-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX8-NEXT:    ; implicit-def: $vgpr0_64
+; GFX8-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX8-NEXT:  .LBB16_4: ; %Flow3
 ; GFX8-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX8-NEXT:    s_cbranch_execz .LBB16_6
@@ -3587,7 +3587,7 @@ define double @flat_agent_atomic_fsub_ret_f64(ptr %ptr, double %val) #0 {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    s_mov_b64 s[4:5], 0xc0
 ; GFX7-NEXT:    s_load_dword s4, s[4:5], 0x0
-; GFX7-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; GFX7-NEXT:    ; implicit-def: $vgpr4_64
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, s4, v1
 ; GFX7-NEXT:    s_and_saveexec_b64 s[4:5], vcc
@@ -3614,8 +3614,8 @@ define double @flat_agent_atomic_fsub_ret_f64(ptr %ptr, double %val) #0 {
 ; GFX7-NEXT:    s_cbranch_execnz .LBB16_2
 ; GFX7-NEXT:  ; %bb.3: ; %Flow
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX7-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX7-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX7-NEXT:    ; implicit-def: $vgpr0_64
+; GFX7-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX7-NEXT:  .LBB16_4: ; %Flow3
 ; GFX7-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX7-NEXT:    s_cbranch_execz .LBB16_6
@@ -3652,7 +3652,7 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v1, vcc_lo
 ; GFX12-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX12-NEXT:    s_mov_b32 s0, exec_lo
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_cmpx_ne_u32_e32 s1, v5
 ; GFX12-NEXT:    s_xor_b32 s0, exec_lo, s0
@@ -3686,8 +3686,8 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX12-NEXT:    s_cbranch_execnz .LBB17_4
 ; GFX12-NEXT:  ; %bb.5: ; %Flow
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX12-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr4_64
+; GFX12-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX12-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX12-NEXT:    s_cbranch_execz .LBB17_2
 ; GFX12-NEXT:  .LBB17_6: ; %atomicrmw.private
@@ -3709,7 +3709,7 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX942-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX942-NEXT:    v_lshl_add_u64 v[8:9], v[0:1], 0, s[2:3]
 ; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v9
-; GFX942-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX942-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX942-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
 ; GFX942-NEXT:    s_cbranch_execnz .LBB17_3
@@ -3738,8 +3738,8 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX942-NEXT:    s_cbranch_execnz .LBB17_4
 ; GFX942-NEXT:  ; %bb.5: ; %Flow
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX942-NEXT:    ; implicit-def: $vgpr8_vgpr9
-; GFX942-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX942-NEXT:    ; implicit-def: $vgpr8_64
+; GFX942-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX942-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; GFX942-NEXT:    s_cbranch_execz .LBB17_2
 ; GFX942-NEXT:  .LBB17_6: ; %atomicrmw.private
@@ -3762,7 +3762,7 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v1, vcc_lo
 ; GFX11-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
-; GFX11-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX11-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX11-NEXT:    v_cmpx_ne_u32_e32 s1, v5
 ; GFX11-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX11-NEXT:    s_cbranch_execnz .LBB17_3
@@ -3793,8 +3793,8 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX11-NEXT:    s_cbranch_execnz .LBB17_4
 ; GFX11-NEXT:  ; %bb.5: ; %Flow
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX11-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX11-NEXT:    ; implicit-def: $vgpr4_64
+; GFX11-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-NEXT:    s_cbranch_execz .LBB17_2
 ; GFX11-NEXT:  .LBB17_6: ; %atomicrmw.private
@@ -3813,7 +3813,7 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX10-NEXT:    v_add_co_u32 v4, vcc_lo, 0x7f8, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, 0, v1, vcc_lo
 ; GFX10-NEXT:    s_mov_b64 s[4:5], src_private_base
-; GFX10-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX10-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, s5, v5
 ; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
 ; GFX10-NEXT:    s_xor_b32 s4, exec_lo, s4
@@ -3844,8 +3844,8 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX10-NEXT:    s_cbranch_execnz .LBB17_4
 ; GFX10-NEXT:  ; %bb.5: ; %Flow
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s5
-; GFX10-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX10-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX10-NEXT:    ; implicit-def: $vgpr4_64
+; GFX10-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX10-NEXT:    s_andn2_saveexec_b32 s4, s4
 ; GFX10-NEXT:    s_cbranch_execz .LBB17_2
 ; GFX10-NEXT:  .LBB17_6: ; %atomicrmw.private
@@ -3869,7 +3869,7 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v9, vcc, 0, v1, vcc
 ; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v9
-; GFX90A-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX90A-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX90A-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB17_3
@@ -3896,8 +3896,8 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB17_4
 ; GFX90A-NEXT:  ; %bb.5: ; %Flow
 ; GFX90A-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX90A-NEXT:    ; implicit-def: $vgpr8_vgpr9
-; GFX90A-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX90A-NEXT:    ; implicit-def: $vgpr8_64
+; GFX90A-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX90A-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execz .LBB17_2
 ; GFX90A-NEXT:  .LBB17_6: ; %atomicrmw.private
@@ -3920,7 +3920,7 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX908-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; GFX908-NEXT:    v_addc_co_u32_e32 v5, vcc, 0, v1, vcc
 ; GFX908-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
-; GFX908-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX908-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX908-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX908-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX908-NEXT:    s_cbranch_execnz .LBB17_3
@@ -3948,8 +3948,8 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX908-NEXT:    s_cbranch_execnz .LBB17_4
 ; GFX908-NEXT:  ; %bb.5: ; %Flow
 ; GFX908-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX908-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX908-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX908-NEXT:    ; implicit-def: $vgpr4_64
+; GFX908-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX908-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX908-NEXT:    s_cbranch_execz .LBB17_2
 ; GFX908-NEXT:  .LBB17_6: ; %atomicrmw.private
@@ -3974,7 +3974,7 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, s4, v5
-; GFX8-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX8-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX8-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX8-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX8-NEXT:    s_cbranch_execnz .LBB17_3
@@ -4005,8 +4005,8 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX8-NEXT:    s_cbranch_execnz .LBB17_4
 ; GFX8-NEXT:  ; %bb.5: ; %Flow
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX8-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX8-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX8-NEXT:    ; implicit-def: $vgpr4_64
+; GFX8-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX8-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX8-NEXT:    s_cbranch_execz .LBB17_2
 ; GFX8-NEXT:  .LBB17_6: ; %atomicrmw.private
@@ -4032,7 +4032,7 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, 0, v1, vcc
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, s4, v5
-; GFX7-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX7-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX7-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX7-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX7-NEXT:    s_cbranch_execnz .LBB17_3
@@ -4063,8 +4063,8 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX7-NEXT:    s_cbranch_execnz .LBB17_4
 ; GFX7-NEXT:  ; %bb.5: ; %Flow
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX7-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX7-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX7-NEXT:    ; implicit-def: $vgpr4_64
+; GFX7-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX7-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX7-NEXT:    s_cbranch_execz .LBB17_2
 ; GFX7-NEXT:  .LBB17_6: ; %atomicrmw.private
@@ -4098,7 +4098,7 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v5, null, -1, v1, vcc_lo
 ; GFX12-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX12-NEXT:    s_mov_b32 s0, exec_lo
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_cmpx_ne_u32_e32 s1, v5
 ; GFX12-NEXT:    s_xor_b32 s0, exec_lo, s0
@@ -4132,8 +4132,8 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX12-NEXT:    s_cbranch_execnz .LBB18_4
 ; GFX12-NEXT:  ; %bb.5: ; %Flow
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX12-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr4_64
+; GFX12-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX12-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX12-NEXT:    s_cbranch_execz .LBB18_2
 ; GFX12-NEXT:  .LBB18_6: ; %atomicrmw.private
@@ -4156,7 +4156,7 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX942-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX942-NEXT:    v_lshl_add_u64 v[8:9], v[0:1], 0, s[2:3]
 ; GFX942-NEXT:    v_cmp_ne_u32_e32 vcc, s1, v9
-; GFX942-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX942-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], vcc
 ; GFX942-NEXT:    s_xor_b64 s[0:1], exec, s[0:1]
 ; GFX942-NEXT:    s_cbranch_execnz .LBB18_3
@@ -4185,8 +4185,8 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX942-NEXT:    s_cbranch_execnz .LBB18_4
 ; GFX942-NEXT:  ; %bb.5: ; %Flow
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX942-NEXT:    ; implicit-def: $vgpr8_vgpr9
-; GFX942-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX942-NEXT:    ; implicit-def: $vgpr8_64
+; GFX942-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX942-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; GFX942-NEXT:    s_cbranch_execz .LBB18_2
 ; GFX942-NEXT:  .LBB18_6: ; %atomicrmw.private
@@ -4209,7 +4209,7 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v5, null, -1, v1, vcc_lo
 ; GFX11-NEXT:    s_mov_b64 s[0:1], src_private_base
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
-; GFX11-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX11-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX11-NEXT:    v_cmpx_ne_u32_e32 s1, v5
 ; GFX11-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GFX11-NEXT:    s_cbranch_execnz .LBB18_3
@@ -4240,8 +4240,8 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX11-NEXT:    s_cbranch_execnz .LBB18_4
 ; GFX11-NEXT:  ; %bb.5: ; %Flow
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX11-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX11-NEXT:    ; implicit-def: $vgpr4_64
+; GFX11-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-NEXT:    s_cbranch_execz .LBB18_2
 ; GFX11-NEXT:  .LBB18_6: ; %atomicrmw.private
@@ -4260,7 +4260,7 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX10-NEXT:    v_add_co_u32 v4, vcc_lo, 0xfffff800, v0
 ; GFX10-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, -1, v1, vcc_lo
 ; GFX10-NEXT:    s_mov_b64 s[4:5], src_private_base
-; GFX10-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX10-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, s5, v5
 ; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
 ; GFX10-NEXT:    s_xor_b32 s4, exec_lo, s4
@@ -4291,8 +4291,8 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX10-NEXT:    s_cbranch_execnz .LBB18_4
 ; GFX10-NEXT:  ; %bb.5: ; %Flow
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s5
-; GFX10-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX10-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX10-NEXT:    ; implicit-def: $vgpr4_64
+; GFX10-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX10-NEXT:    s_andn2_saveexec_b32 s4, s4
 ; GFX10-NEXT:    s_cbranch_execz .LBB18_2
 ; GFX10-NEXT:  .LBB18_6: ; %atomicrmw.private
@@ -4316,7 +4316,7 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; GFX90A-NEXT:    v_addc_co_u32_e32 v9, vcc, -1, v1, vcc
 ; GFX90A-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v9
-; GFX90A-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX90A-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX90A-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB18_3
@@ -4343,8 +4343,8 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB18_4
 ; GFX90A-NEXT:  ; %bb.5: ; %Flow
 ; GFX90A-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX90A-NEXT:    ; implicit-def: $vgpr8_vgpr9
-; GFX90A-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX90A-NEXT:    ; implicit-def: $vgpr8_64
+; GFX90A-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX90A-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execz .LBB18_2
 ; GFX90A-NEXT:  .LBB18_6: ; %atomicrmw.private
@@ -4367,7 +4367,7 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX908-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; GFX908-NEXT:    v_addc_co_u32_e32 v5, vcc, -1, v1, vcc
 ; GFX908-NEXT:    v_cmp_ne_u32_e32 vcc, s5, v5
-; GFX908-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX908-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX908-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX908-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX908-NEXT:    s_cbranch_execnz .LBB18_3
@@ -4395,8 +4395,8 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX908-NEXT:    s_cbranch_execnz .LBB18_4
 ; GFX908-NEXT:  ; %bb.5: ; %Flow
 ; GFX908-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX908-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX908-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX908-NEXT:    ; implicit-def: $vgpr4_64
+; GFX908-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX908-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX908-NEXT:    s_cbranch_execz .LBB18_2
 ; GFX908-NEXT:  .LBB18_6: ; %atomicrmw.private
@@ -4421,7 +4421,7 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX8-NEXT:    v_addc_u32_e32 v5, vcc, -1, v1, vcc
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, s4, v5
-; GFX8-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX8-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX8-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX8-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX8-NEXT:    s_cbranch_execnz .LBB18_3
@@ -4452,8 +4452,8 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX8-NEXT:    s_cbranch_execnz .LBB18_4
 ; GFX8-NEXT:  ; %bb.5: ; %Flow
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX8-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX8-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX8-NEXT:    ; implicit-def: $vgpr4_64
+; GFX8-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX8-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX8-NEXT:    s_cbranch_execz .LBB18_2
 ; GFX8-NEXT:  .LBB18_6: ; %atomicrmw.private
@@ -4479,7 +4479,7 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX7-NEXT:    v_addc_u32_e32 v5, vcc, -1, v1, vcc
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, s4, v5
-; GFX7-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GFX7-NEXT:    ; implicit-def: $vgpr0_64
 ; GFX7-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX7-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GFX7-NEXT:    s_cbranch_execnz .LBB18_3
@@ -4510,8 +4510,8 @@ define double @flat_agent_atomic_fsub_ret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX7-NEXT:    s_cbranch_execnz .LBB18_4
 ; GFX7-NEXT:  ; %bb.5: ; %Flow
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX7-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; GFX7-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX7-NEXT:    ; implicit-def: $vgpr4_64
+; GFX7-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX7-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX7-NEXT:    s_cbranch_execz .LBB18_2
 ; GFX7-NEXT:  .LBB18_6: ; %atomicrmw.private
@@ -4574,8 +4574,8 @@ define void @flat_agent_atomic_fsub_noret_f64(ptr %ptr, double %val) #0 {
 ; GFX12-NEXT:    s_cbranch_execnz .LBB19_4
 ; GFX12-NEXT:  ; %bb.5: ; %Flow
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
+; GFX12-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX12-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX12-NEXT:    s_cbranch_execz .LBB19_2
 ; GFX12-NEXT:  .LBB19_6: ; %atomicrmw.private
@@ -4623,8 +4623,8 @@ define void @flat_agent_atomic_fsub_noret_f64(ptr %ptr, double %val) #0 {
 ; GFX942-NEXT:    s_cbranch_execnz .LBB19_4
 ; GFX942-NEXT:  ; %bb.5: ; %Flow
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX942-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX942-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX942-NEXT:    ; implicit-def: $vgpr0_64
+; GFX942-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX942-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; GFX942-NEXT:    s_cbranch_execz .LBB19_2
 ; GFX942-NEXT:  .LBB19_6: ; %atomicrmw.private
@@ -4673,8 +4673,8 @@ define void @flat_agent_atomic_fsub_noret_f64(ptr %ptr, double %val) #0 {
 ; GFX11-NEXT:    s_cbranch_execnz .LBB19_4
 ; GFX11-NEXT:  ; %bb.5: ; %Flow
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX11-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX11-NEXT:    ; implicit-def: $vgpr0_64
+; GFX11-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-NEXT:    s_cbranch_execz .LBB19_2
 ; GFX11-NEXT:  .LBB19_6: ; %atomicrmw.private
@@ -4721,8 +4721,8 @@ define void @flat_agent_atomic_fsub_noret_f64(ptr %ptr, double %val) #0 {
 ; GFX10-NEXT:    s_cbranch_execnz .LBB19_4
 ; GFX10-NEXT:  ; %bb.5: ; %Flow
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s5
-; GFX10-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX10-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX10-NEXT:    ; implicit-def: $vgpr0_64
+; GFX10-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX10-NEXT:    s_andn2_saveexec_b32 s4, s4
 ; GFX10-NEXT:    s_cbranch_execz .LBB19_2
 ; GFX10-NEXT:  .LBB19_6: ; %atomicrmw.private
@@ -4770,8 +4770,8 @@ define void @flat_agent_atomic_fsub_noret_f64(ptr %ptr, double %val) #0 {
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB19_4
 ; GFX90A-NEXT:  ; %bb.5: ; %Flow
 ; GFX90A-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX90A-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX90A-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX90A-NEXT:    ; implicit-def: $vgpr0_64
+; GFX90A-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX90A-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execz .LBB19_2
 ; GFX90A-NEXT:  .LBB19_6: ; %atomicrmw.private
@@ -4819,8 +4819,8 @@ define void @flat_agent_atomic_fsub_noret_f64(ptr %ptr, double %val) #0 {
 ; GFX908-NEXT:    s_cbranch_execnz .LBB19_4
 ; GFX908-NEXT:  ; %bb.5: ; %Flow
 ; GFX908-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX908-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX908-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX908-NEXT:    ; implicit-def: $vgpr0_64
+; GFX908-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX908-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX908-NEXT:    s_cbranch_execz .LBB19_2
 ; GFX908-NEXT:  .LBB19_6: ; %atomicrmw.private
@@ -4873,8 +4873,8 @@ define void @flat_agent_atomic_fsub_noret_f64(ptr %ptr, double %val) #0 {
 ; GFX8-NEXT:    s_cbranch_execnz .LBB19_4
 ; GFX8-NEXT:  ; %bb.5: ; %Flow
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX8-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX8-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX8-NEXT:    ; implicit-def: $vgpr0_64
+; GFX8-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX8-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX8-NEXT:    s_cbranch_execz .LBB19_2
 ; GFX8-NEXT:  .LBB19_6: ; %atomicrmw.private
@@ -4928,8 +4928,8 @@ define void @flat_agent_atomic_fsub_noret_f64(ptr %ptr, double %val) #0 {
 ; GFX7-NEXT:    s_cbranch_execnz .LBB19_4
 ; GFX7-NEXT:  ; %bb.5: ; %Flow
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX7-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX7-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX7-NEXT:    ; implicit-def: $vgpr0_64
+; GFX7-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX7-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX7-NEXT:    s_cbranch_execz .LBB19_2
 ; GFX7-NEXT:  .LBB19_6: ; %atomicrmw.private
@@ -4994,8 +4994,8 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX12-NEXT:    s_cbranch_execnz .LBB20_4
 ; GFX12-NEXT:  ; %bb.5: ; %Flow
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
+; GFX12-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX12-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX12-NEXT:    s_cbranch_execz .LBB20_2
 ; GFX12-NEXT:  .LBB20_6: ; %atomicrmw.private
@@ -5045,8 +5045,8 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX942-NEXT:    s_cbranch_execnz .LBB20_4
 ; GFX942-NEXT:  ; %bb.5: ; %Flow
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX942-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX942-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX942-NEXT:    ; implicit-def: $vgpr0_64
+; GFX942-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX942-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; GFX942-NEXT:    s_cbranch_execz .LBB20_2
 ; GFX942-NEXT:  .LBB20_6: ; %atomicrmw.private
@@ -5098,8 +5098,8 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX11-NEXT:    s_cbranch_execnz .LBB20_4
 ; GFX11-NEXT:  ; %bb.5: ; %Flow
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX11-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX11-NEXT:    ; implicit-def: $vgpr0_64
+; GFX11-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-NEXT:    s_cbranch_execz .LBB20_2
 ; GFX11-NEXT:  .LBB20_6: ; %atomicrmw.private
@@ -5148,8 +5148,8 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX10-NEXT:    s_cbranch_execnz .LBB20_4
 ; GFX10-NEXT:  ; %bb.5: ; %Flow
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s5
-; GFX10-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX10-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX10-NEXT:    ; implicit-def: $vgpr0_64
+; GFX10-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX10-NEXT:    s_andn2_saveexec_b32 s4, s4
 ; GFX10-NEXT:    s_cbranch_execz .LBB20_2
 ; GFX10-NEXT:  .LBB20_6: ; %atomicrmw.private
@@ -5199,8 +5199,8 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB20_4
 ; GFX90A-NEXT:  ; %bb.5: ; %Flow
 ; GFX90A-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX90A-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX90A-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX90A-NEXT:    ; implicit-def: $vgpr0_64
+; GFX90A-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX90A-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execz .LBB20_2
 ; GFX90A-NEXT:  .LBB20_6: ; %atomicrmw.private
@@ -5250,8 +5250,8 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX908-NEXT:    s_cbranch_execnz .LBB20_4
 ; GFX908-NEXT:  ; %bb.5: ; %Flow
 ; GFX908-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX908-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX908-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX908-NEXT:    ; implicit-def: $vgpr0_64
+; GFX908-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX908-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX908-NEXT:    s_cbranch_execz .LBB20_2
 ; GFX908-NEXT:  .LBB20_6: ; %atomicrmw.private
@@ -5306,8 +5306,8 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX8-NEXT:    s_cbranch_execnz .LBB20_4
 ; GFX8-NEXT:  ; %bb.5: ; %Flow
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX8-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX8-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX8-NEXT:    ; implicit-def: $vgpr0_64
+; GFX8-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX8-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX8-NEXT:    s_cbranch_execz .LBB20_2
 ; GFX8-NEXT:  .LBB20_6: ; %atomicrmw.private
@@ -5363,8 +5363,8 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_pos(ptr %ptr, double %v
 ; GFX7-NEXT:    s_cbranch_execnz .LBB20_4
 ; GFX7-NEXT:  ; %bb.5: ; %Flow
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX7-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX7-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX7-NEXT:    ; implicit-def: $vgpr0_64
+; GFX7-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX7-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX7-NEXT:    s_cbranch_execz .LBB20_2
 ; GFX7-NEXT:  .LBB20_6: ; %atomicrmw.private
@@ -5430,8 +5430,8 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX12-NEXT:    s_cbranch_execnz .LBB21_4
 ; GFX12-NEXT:  ; %bb.5: ; %Flow
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr0_64
+; GFX12-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX12-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX12-NEXT:    s_cbranch_execz .LBB21_2
 ; GFX12-NEXT:  .LBB21_6: ; %atomicrmw.private
@@ -5482,8 +5482,8 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX942-NEXT:    s_cbranch_execnz .LBB21_4
 ; GFX942-NEXT:  ; %bb.5: ; %Flow
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]
-; GFX942-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX942-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX942-NEXT:    ; implicit-def: $vgpr0_64
+; GFX942-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX942-NEXT:    s_andn2_saveexec_b64 s[0:1], s[0:1]
 ; GFX942-NEXT:    s_cbranch_execz .LBB21_2
 ; GFX942-NEXT:  .LBB21_6: ; %atomicrmw.private
@@ -5535,8 +5535,8 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX11-NEXT:    s_cbranch_execnz .LBB21_4
 ; GFX11-NEXT:  ; %bb.5: ; %Flow
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX11-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX11-NEXT:    ; implicit-def: $vgpr0_64
+; GFX11-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GFX11-NEXT:    s_cbranch_execz .LBB21_2
 ; GFX11-NEXT:  .LBB21_6: ; %atomicrmw.private
@@ -5585,8 +5585,8 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX10-NEXT:    s_cbranch_execnz .LBB21_4
 ; GFX10-NEXT:  ; %bb.5: ; %Flow
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s5
-; GFX10-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX10-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX10-NEXT:    ; implicit-def: $vgpr0_64
+; GFX10-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX10-NEXT:    s_andn2_saveexec_b32 s4, s4
 ; GFX10-NEXT:    s_cbranch_execz .LBB21_2
 ; GFX10-NEXT:  .LBB21_6: ; %atomicrmw.private
@@ -5636,8 +5636,8 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB21_4
 ; GFX90A-NEXT:  ; %bb.5: ; %Flow
 ; GFX90A-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX90A-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX90A-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX90A-NEXT:    ; implicit-def: $vgpr0_64
+; GFX90A-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX90A-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execz .LBB21_2
 ; GFX90A-NEXT:  .LBB21_6: ; %atomicrmw.private
@@ -5687,8 +5687,8 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX908-NEXT:    s_cbranch_execnz .LBB21_4
 ; GFX908-NEXT:  ; %bb.5: ; %Flow
 ; GFX908-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX908-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX908-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX908-NEXT:    ; implicit-def: $vgpr0_64
+; GFX908-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX908-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX908-NEXT:    s_cbranch_execz .LBB21_2
 ; GFX908-NEXT:  .LBB21_6: ; %atomicrmw.private
@@ -5743,8 +5743,8 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX8-NEXT:    s_cbranch_execnz .LBB21_4
 ; GFX8-NEXT:  ; %bb.5: ; %Flow
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX8-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX8-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX8-NEXT:    ; implicit-def: $vgpr0_64
+; GFX8-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX8-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX8-NEXT:    s_cbranch_execz .LBB21_2
 ; GFX8-NEXT:  .LBB21_6: ; %atomicrmw.private
@@ -5800,8 +5800,8 @@ define void @flat_agent_atomic_fsub_noret_f64__offset12b_neg(ptr %ptr, double %v
 ; GFX7-NEXT:    s_cbranch_execnz .LBB21_4
 ; GFX7-NEXT:  ; %bb.5: ; %Flow
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[6:7]
-; GFX7-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; GFX7-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX7-NEXT:    ; implicit-def: $vgpr0_64
+; GFX7-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX7-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GFX7-NEXT:    s_cbranch_execz .LBB21_2
 ; GFX7-NEXT:  .LBB21_6: ; %atomicrmw.private

@@ -58,7 +58,7 @@ body:             |
     ; CHECK-LABEL: name: rematerialize_physreg_sub_def_no_live_sub_def_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: dead $vgpr0_vgpr1 = V_MOV_B64_PSEUDO 1, implicit $exec, implicit-def $vgpr1
+    ; CHECK-NEXT: dead $vgpr0_64 = V_MOV_B64_PSEUDO 1, implicit $exec, implicit-def $vgpr1
     ; CHECK-NEXT: SI_RETURN implicit killed $vgpr1
     %0:vreg_64 = V_MOV_B64_PSEUDO 1, implicit $exec
     %1:vgpr_32 = COPY %0.sub1
@@ -76,7 +76,7 @@ body:             |
     ; CHECK-LABEL: name: rematerialize_physreg_sub_def_no_live_sub_def_1
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: dead $vgpr1_vgpr2 = V_MOV_B64_PSEUDO 1, implicit $exec, implicit-def $vgpr1
+    ; CHECK-NEXT: dead $vgpr1_64 = V_MOV_B64_PSEUDO 1, implicit $exec, implicit-def $vgpr1
     ; CHECK-NEXT: SI_RETURN implicit killed $vgpr1
     %0:vreg_64 = V_MOV_B64_PSEUDO 1, implicit $exec
     %1:vgpr_32 = COPY %0.sub0

@@ -14,7 +14,7 @@ body: |
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   FLAT_STORE_DWORD undef $vgpr1_vgpr2, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+  ; CHECK-NEXT:   FLAT_STORE_DWORD undef $vgpr1_64, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   S_ENDPGM 0
@@ -25,7 +25,7 @@ body: |
   bb.1:
     successors: %bb.2
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    FLAT_STORE_DWORD undef $vgpr1_vgpr2, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD undef $vgpr1_64, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
 
   bb.2:
     S_ENDPGM 0

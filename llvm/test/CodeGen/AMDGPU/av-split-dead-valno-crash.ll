@@ -41,7 +41,7 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b64_e32 v[20:21], 0
 ; CHECK-NEXT:    ; implicit-def: $agpr0_agpr1
-; CHECK-NEXT:    ; implicit-def: $vgpr22_vgpr23
+; CHECK-NEXT:    ; implicit-def: $vgpr22_64
 ; CHECK-NEXT:    s_branch .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: ; %Flow9
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1

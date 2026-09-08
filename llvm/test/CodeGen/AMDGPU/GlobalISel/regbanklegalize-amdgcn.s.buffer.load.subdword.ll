@@ -158,7 +158,7 @@ define amdgpu_ps void @s_buffer_load_u8_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, i
 ; GFX12-NEXT:    buffer_load_u8 v1, v4, s[4:7], null offen
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX12-NEXT:  ; %bb.2:
@@ -196,7 +196,7 @@ define amdgpu_ps void @s_buffer_load_i8_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, i
 ; GFX12-NEXT:    buffer_load_u8 v1, v4, s[4:7], null offen
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX12-NEXT:  ; %bb.2:
@@ -234,7 +234,7 @@ define amdgpu_ps void @s_buffer_load_u16_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, 
 ; GFX12-NEXT:    buffer_load_u16 v1, v4, s[4:7], null offen
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB10_1
 ; GFX12-NEXT:  ; %bb.2:
@@ -272,7 +272,7 @@ define amdgpu_ps void @s_buffer_load_i16_vgpr_rsrc_sgpr_offset(<4 x i32> %rsrc, 
 ; GFX12-NEXT:    buffer_load_u16 v1, v4, s[4:7], null offen
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX12-NEXT:    s_cbranch_execnz .LBB11_1
 ; GFX12-NEXT:  ; %bb.2:
@@ -311,7 +311,7 @@ define amdgpu_ps void @s_buffer_load_u8_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, i
 ; GFX12-NEXT:    buffer_load_u8 v1, v4, s[4:7], null offen
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s2
 ; GFX12-NEXT:    s_cbranch_execnz .LBB12_1
 ; GFX12-NEXT:  ; %bb.2:
@@ -346,7 +346,7 @@ define amdgpu_ps void @s_buffer_load_i8_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, i
 ; GFX12-NEXT:    buffer_load_u8 v1, v4, s[4:7], null offen
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s2
 ; GFX12-NEXT:    s_cbranch_execnz .LBB13_1
 ; GFX12-NEXT:  ; %bb.2:
@@ -381,7 +381,7 @@ define amdgpu_ps void @s_buffer_load_u16_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, 
 ; GFX12-NEXT:    buffer_load_u16 v1, v4, s[4:7], null offen
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s2
 ; GFX12-NEXT:    s_cbranch_execnz .LBB14_1
 ; GFX12-NEXT:  ; %bb.2:
@@ -416,7 +416,7 @@ define amdgpu_ps void @s_buffer_load_i16_vgpr_rsrc_vgpr_offset(<4 x i32> %rsrc, 
 ; GFX12-NEXT:    buffer_load_u16 v1, v4, s[4:7], null offen
 ; GFX12-NEXT:    ; implicit-def: $vgpr0
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
-; GFX12-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr2_64
 ; GFX12-NEXT:    s_xor_b32 exec_lo, exec_lo, s2
 ; GFX12-NEXT:    s_cbranch_execnz .LBB15_1
 ; GFX12-NEXT:  ; %bb.2:

@@ -2,17 +2,17 @@
 
 ---
 # GCN-LABEL: name: alloc_vgpr_64
-# GFX908: $vgpr3_vgpr4 = GLOBAL_LOAD
+# GFX908: $vgpr3_64 = GLOBAL_LOAD
 name:            alloc_vgpr_64
 tracksRegLiveness: true
 liveins:
-  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$vgpr0_64' }
   - { reg: '$vgpr2' }
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
+    %0:vreg_64 = COPY $vgpr0_64
     %1:vgpr_32 = COPY $vgpr2
     %2:vreg_64 = GLOBAL_LOAD_DWORDX2 %0, 0, 0, implicit $exec
     GLOBAL_STORE_DWORDX2 %0, %2, 0, 0, implicit $exec
@@ -21,17 +21,17 @@ body:             |
 
 ---
 # GCN-LABEL: name: alloc_vgpr_96
-# GFX908: $vgpr3_vgpr4_vgpr5 = GLOBAL_LOAD
+# GFX908: $vgpr3_96 = GLOBAL_LOAD
 name:            alloc_vgpr_96
 tracksRegLiveness: true
 liveins:
-  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$vgpr0_64' }
   - { reg: '$vgpr2' }
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
+    %0:vreg_64 = COPY $vgpr0_64
     %1:vgpr_32 = COPY $vgpr2
     %2:vreg_96 = GLOBAL_LOAD_DWORDX3 %0, 0, 0, implicit $exec
     GLOBAL_STORE_DWORDX3 %0, %2, 0, 0, implicit $exec
@@ -40,17 +40,17 @@ body:             |
 
 ---
 # GCN-LABEL: name: alloc_vgpr_128
-# GFX908: $vgpr3_vgpr4_vgpr5_vgpr6 = GLOBAL_LOAD
+# GFX908: $vgpr3_128 = GLOBAL_LOAD
 name:            alloc_vgpr_128
 tracksRegLiveness: true
 liveins:
-  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$vgpr0_64' }
   - { reg: '$vgpr2' }
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
+    %0:vreg_64 = COPY $vgpr0_64
     %1:vgpr_32 = COPY $vgpr2
     %2:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
     GLOBAL_STORE_DWORDX4 %0, %2, 0, 0, implicit $exec
@@ -59,17 +59,17 @@ body:             |
 
 ---
 # GCN-LABEL: name: alloc_vgpr_160
-# GFX908: $vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = IMAGE_LOAD
+# GFX908: $vgpr3_160 = IMAGE_LOAD
 name:            alloc_vgpr_160
 tracksRegLiveness: true
 liveins:
-  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$vgpr0_64' }
   - { reg: '$vgpr2' }
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
+    %0:vreg_64 = COPY $vgpr0_64
     %1:vgpr_32 = COPY $vgpr2
     %2:vreg_160 = IMAGE_LOAD_V5_V1 %1, undef %3:sgpr_256, 0, 0, 0, 0, 0, 1, 0, 0, implicit $exec :: (dereferenceable load (s32), addrspace 4)
     GLOBAL_STORE_DWORDX4 %0, %2.sub0_sub1_sub2_sub3, 0, 0, implicit $exec
@@ -78,17 +78,17 @@ body:             |
 
 ---
 # GCN-LABEL: name: alloc_vgpr_256
-# GFX908: $vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10 = COPY
+# GFX908: $vgpr3_256 = COPY
 name:            alloc_vgpr_256
 tracksRegLiveness: true
 liveins:
-  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$vgpr0_64' }
   - { reg: '$vgpr2' }
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
+    %0:vreg_64 = COPY $vgpr0_64
     %1:vgpr_32 = COPY $vgpr2
     %3:sgpr_256 = IMPLICIT_DEF
     %2:vreg_256 = COPY %3:sgpr_256
@@ -99,17 +99,17 @@ body:             |
 
 ---
 # GCN-LABEL: name: alloc_vgpr_512
-# GFX908: $vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18 = IMPLICIT_DEF
+# GFX908: $vgpr3_512 = IMPLICIT_DEF
 name:            alloc_vgpr_512
 tracksRegLiveness: true
 liveins:
-  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$vgpr0_64' }
   - { reg: '$vgpr2' }
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
+    %0:vreg_64 = COPY $vgpr0_64
     %1:vgpr_32 = COPY $vgpr2
     %2:vreg_512 = IMPLICIT_DEF
     GLOBAL_STORE_DWORDX4 %0, %2.sub0_sub1_sub2_sub3, 0, 0, implicit $exec
@@ -121,17 +121,17 @@ body:             |
 
 ---
 # GCN-LABEL: name: alloc_vgpr_1024
-# GFX908: $vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31_vgpr32_vgpr33_vgpr34 = IMPLICIT_DEF
+# GFX908: $vgpr3_1024 = IMPLICIT_DEF
 name:            alloc_vgpr_1024
 tracksRegLiveness: true
 liveins:
-  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$vgpr0_64' }
   - { reg: '$vgpr2' }
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2
+    liveins: $vgpr0_64, $vgpr2
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
+    %0:vreg_64 = COPY $vgpr0_64
     %1:vgpr_32 = COPY $vgpr2
     %2:vreg_1024 = IMPLICIT_DEF
     GLOBAL_STORE_DWORDX4 %0, %2.sub0_sub1_sub2_sub3, 0, 0, implicit $exec
@@ -151,13 +151,13 @@ body:             |
 name:            alloc_agpr_64
 tracksRegLiveness: true
 liveins:
-  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$vgpr0_64' }
   - { reg: '$agpr0' }
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $agpr0
+    liveins: $vgpr0_64, $agpr0
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
+    %0:vreg_64 = COPY $vgpr0_64
     %3:areg_64 = IMPLICIT_DEF
     %2:vreg_64 = COPY %3:areg_64
     GLOBAL_STORE_DWORDX2 %0, %2, 0, 0, implicit $exec
@@ -171,13 +171,13 @@ body:             |
 name:            alloc_agpr_128
 tracksRegLiveness: true
 liveins:
-  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$vgpr0_64' }
   - { reg: '$agpr0' }
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $agpr0
+    liveins: $vgpr0_64, $agpr0
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
+    %0:vreg_64 = COPY $vgpr0_64
     %3:areg_128 = IMPLICIT_DEF
     %2:vreg_128 = COPY %3:areg_128
     GLOBAL_STORE_DWORDX4 %0, %2, 0, 0, implicit $exec
@@ -191,13 +191,13 @@ body:             |
 name:            alloc_agpr_512
 tracksRegLiveness: true
 liveins:
-  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$vgpr0_64' }
   - { reg: '$agpr0' }
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $agpr0
+    liveins: $vgpr0_64, $agpr0
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
+    %0:vreg_64 = COPY $vgpr0_64
     %3:areg_512 = IMPLICIT_DEF
     %2:vreg_512 = COPY %3:areg_512
     GLOBAL_STORE_DWORDX4 %0, %2.sub0_sub1_sub2_sub3, 0, 0, implicit $exec
@@ -214,13 +214,13 @@ body:             |
 name:            alloc_agpr_1024
 tracksRegLiveness: true
 liveins:
-  - { reg: '$vgpr0_vgpr1' }
+  - { reg: '$vgpr0_64' }
   - { reg: '$agpr0' }
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $agpr0
+    liveins: $vgpr0_64, $agpr0
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
+    %0:vreg_64 = COPY $vgpr0_64
     %3:areg_1024 = IMPLICIT_DEF
     %2:vreg_1024 = COPY %3:areg_1024
     GLOBAL_STORE_DWORDX4 %0, %2.sub0_sub1_sub2_sub3, 0, 0, implicit $exec

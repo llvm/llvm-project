@@ -7,13 +7,13 @@
 # CHECK-INTERESTINGNESS-SAME: $agpr8,
 # CHECK-INTERESTINGNESS-SAME: $sgpr99,
 # CHECK-INTERESTINGNESS-SAME: $vgpr23,
-# CHECK-INTERESTINGNESS-SAME: $vgpr48_vgpr49_vgpr50,
+# CHECK-INTERESTINGNESS-SAME: $vgpr48_96,
 
 # CHECK-INTERESTINGNESS: CustomRegMask
 # CHECK-INTERESTINGNESS-SAME: $sgpr35,$sgpr39,$sgpr40,$sgpr60_64,$sgpr62_64,$sgpr64_64,$sgpr80_64
 
 
-# RESULT: $sgpr30_64 = SI_CALL %0, 0, CustomRegMask($vcc_lo,$agpr8,$sgpr99,$vgpr23,$vgpr48_vgpr49_vgpr50,$vgpr49_vgpr50_vgpr51)
+# RESULT: $sgpr30_64 = SI_CALL %0, 0, CustomRegMask($vcc_lo,$agpr8,$sgpr99,$vgpr23,$vgpr48_96,$vgpr49_96)
 # RESULT: $sgpr30_64 = SI_CALL %0, 0, CustomRegMask($sgpr35,$sgpr39,$sgpr40,$sgpr60_64,$sgpr62_64,$sgpr64_64,$sgpr80_64)
 
 ---
@@ -24,7 +24,7 @@ body:             |
     liveins: $vgpr0, $vgpr1, $sgpr8_64
     %0:sreg_64_xexec = COPY $sgpr8_64
 
-    $sgpr30_64 = SI_CALL %0:sreg_64_xexec, 0, CustomRegMask($vgpr8_vgpr9, $vgpr9_vgpr10_vgpr11,$vcc_lo,$agpr8,$sgpr99,$vgpr23,$vgpr48_vgpr49_vgpr50,$vgpr49_vgpr50_vgpr51, $vgpr52_vgpr53_vgpr54,$vcc_hi,$sgpr0_128,$sgpr4_128)
+    $sgpr30_64 = SI_CALL %0:sreg_64_xexec, 0, CustomRegMask($vgpr8_64, $vgpr9_96,$vcc_lo,$agpr8,$sgpr99,$vgpr23,$vgpr48_96,$vgpr49_96, $vgpr52_96,$vcc_hi,$sgpr0_128,$sgpr4_128)
      $sgpr30_64 = SI_CALL %0:sreg_64_xexec, 0, CustomRegMask($sgpr35,$sgpr39,$sgpr40,$sgpr60_64,$sgpr62_64,$sgpr64_64,$sgpr80_64)
 
     S_ENDPGM 0

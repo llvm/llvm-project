@@ -387,27 +387,27 @@ machineFunctionInfo:
     ieee: true
 body: |
   bb.1:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_min_max_f64
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_64
     ; CHECK-NEXT: [[C:%[0-9]+]]:sgpr(s64) = G_FCONSTANT double 2.000000e+00
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY [[C]](s64)
     ; CHECK-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:vgpr(s64) = nnan G_FMAXNUM_IEEE [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s64) = G_FCONSTANT double 4.000000e+00
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[C1]](s64)
     ; CHECK-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:vgpr(s64) = nnan G_FMINNUM_IEEE [[FMAXNUM_IEEE]], [[COPY2]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[FMINNUM_IEEE]](s64)
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[FMINNUM_IEEE]](s64)
+    %0:vgpr(s64) = COPY $vgpr0_64
     %4:sgpr(s64) = G_FCONSTANT double 2.000000e+00
     %11:vgpr(s64) = COPY %4(s64)
     %5:vgpr(s64) = nnan G_FMAXNUM_IEEE %0, %11
     %6:sgpr(s64) = G_FCONSTANT double 4.000000e+00
     %12:vgpr(s64) = COPY %6(s64)
     %7:vgpr(s64) = nnan G_FMINNUM_IEEE %5, %12
-    $vgpr0_vgpr1 = COPY %7(s64)
+    $vgpr0_64 = COPY %7(s64)
 ...
 
 ---

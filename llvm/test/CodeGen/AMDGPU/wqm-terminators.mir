@@ -26,12 +26,12 @@ body: |
   ; CHECK-LABEL: name: exit_to_exact
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK-NEXT:   liveins: $sgpr0, $vgpr0_vgpr1
+  ; CHECK-NEXT:   liveins: $sgpr0, $vgpr0_64
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $exec_lo
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
   ; CHECK-NEXT:   $exec_lo = S_WQM_B32 $exec_lo, implicit-def $scc
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
   ; CHECK-NEXT:   S_CMP_EQ_U32 [[COPY1]], 0, implicit-def $scc
@@ -53,10 +53,10 @@ body: |
   ; CHECK-NEXT:   EXP 0, [[V_SUB_F32_e64_]], [[IMAGE_SAMPLE_V3_V2_gfx10_]].sub0, [[IMAGE_SAMPLE_V3_V2_gfx10_]].sub1, [[IMAGE_SAMPLE_V3_V2_gfx10_]].sub2, 0, 0, 0, implicit $exec
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $sgpr0, $vgpr0_vgpr1
+    liveins: $sgpr0, $vgpr0_64
 
     %0 = COPY $sgpr0
-    %1 = COPY $vgpr0_vgpr1
+    %1 = COPY $vgpr0_64
     %2 = IMPLICIT_DEF
     %3 = IMPLICIT_DEF
 

@@ -68,12 +68,12 @@ body: |
     ; GCN-NEXT: $sgpr64_64 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_64, undef $vgpr0, 0, 8, implicit $exec
-    ; GCN-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_ADDR64 $vgpr0_vgpr1, $sgpr0_128, 0, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_ADDR64 $vgpr0_64, $sgpr0_128, 0, 0, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAIT_LOADCNT 0
     ; GCN-NEXT: $vgpr3 = V_LSHLREV_B32_e64 16, $vgpr2, implicit $exec
     ; GCN-NEXT: $vgpr4 = V_MOV_B32_e32 1, implicit $exec
     ; GCN-NEXT: $vgpr1 = nofpexcept V_ADD_F32_e32 killed $vgpr3, killed $vgpr4, implicit $mode, implicit $exec
-    $vgpr2 = BUFFER_LOAD_DWORD_ADDR64 $vgpr0_vgpr1, $sgpr0_128, 0, 0, 0, 0, implicit $exec
+    $vgpr2 = BUFFER_LOAD_DWORD_ADDR64 $vgpr0_64, $sgpr0_128, 0, 0, 0, 0, implicit $exec
     $vgpr3 = V_LSHLREV_B32_e64 16, $vgpr2, implicit $exec
     $vgpr4 = V_MOV_B32_e32 1, implicit $exec
     $vgpr1 = nofpexcept V_ADD_F32_e32 killed $vgpr3, killed $vgpr4, implicit $mode, implicit $exec
@@ -94,12 +94,12 @@ body: |
     ; GCN-NEXT: $sgpr64_64 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_64, undef $vgpr0, 0, 8, implicit $exec
-    ; GCN-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
+    ; GCN-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
     ; GCN-NEXT: S_WAIT_LOADCNT 0
     ; GCN-NEXT: $vgpr3 = V_LSHLREV_B32_e64 16, $vgpr2, implicit $exec
     ; GCN-NEXT: $vgpr4 = V_MOV_B32_e32 1, implicit $exec
     ; GCN-NEXT: $vgpr0 = nofpexcept V_ADD_F32_e32 killed $vgpr3, killed $vgpr4, implicit $mode, implicit $exec
-    $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
+    $vgpr2 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
     $vgpr3 = V_LSHLREV_B32_e64 16, $vgpr2, implicit $exec
     $vgpr4 = V_MOV_B32_e32 1, implicit $exec
     $vgpr0 = nofpexcept V_ADD_F32_e32 killed $vgpr3, killed $vgpr4, implicit $mode, implicit $exec
@@ -120,12 +120,12 @@ body: |
     ; GCN-NEXT: $sgpr64_64 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_64, undef $vgpr0, 0, 8, implicit $exec
-    ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) undef`, addrspace 1)
+    ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec :: (load (s32) from `ptr addrspace(1) undef`, addrspace 1)
     ; GCN-NEXT: S_WAIT_LOADCNT 0
     ; GCN-NEXT: $vgpr3 = V_LSHLREV_B32_e64 16, $vgpr2, implicit $exec
     ; GCN-NEXT: $vgpr4 = V_MOV_B32_e32 1, implicit $exec
     ; GCN-NEXT: $vgpr0 = nofpexcept V_ADD_F32_e32 killed $vgpr3, killed $vgpr4, implicit $mode, implicit $exec
-    $vgpr2 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec:: (load (s32) from `ptr addrspace(1) undef`, align 4, addrspace 1)
+    $vgpr2 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec:: (load (s32) from `ptr addrspace(1) undef`, align 4, addrspace 1)
     $vgpr3 = V_LSHLREV_B32_e64 16, $vgpr2, implicit $exec
     $vgpr4 = V_MOV_B32_e32 1, implicit $exec
     $vgpr0 = nofpexcept V_ADD_F32_e32 killed $vgpr3, killed $vgpr4, implicit $mode, implicit $exec
@@ -146,10 +146,10 @@ body: |
     ; GCN-NEXT: $sgpr64_64 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_64, undef $vgpr0, 0, 8, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_64, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
-    GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD killed $vgpr0_64, $vgpr2, 0, 0, implicit $exec
     $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr3, implicit $exec
 ...
 
@@ -187,10 +187,10 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GCN-NEXT: S_WAIT_KMCNT 0
-    ; GCN-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $vgpr0_vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr
+    ; GCN-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $vgpr0_64, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr1 = V_LSHLREV_B32_e64 16, $vgpr2, implicit $exec
-    SCRATCH_STORE_DWORDX2_SADDR killed $vgpr0_vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr
+    SCRATCH_STORE_DWORDX2_SADDR killed $vgpr0_64, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr1 = V_LSHLREV_B32_e64 16, $vgpr2, implicit $exec
 ...
 
@@ -258,18 +258,18 @@ body: |
     ; GCN-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 1, implicit $exec
     ; GCN-NEXT: S_WAIT_LOADCNT 0
-    ; GCN-NEXT: $vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
-    ; GCN-NEXT: $vgpr4_vgpr5 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 8, 0, implicit $exec
-    ; GCN-NEXT: $vgpr6_vgpr7 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 16, 0, implicit $exec
-    ; GCN-NEXT: $vgpr8_vgpr9 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 24, 0, implicit $exec
+    ; GCN-NEXT: $vgpr2_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr4_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 8, 0, implicit $exec
+    ; GCN-NEXT: $vgpr6_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 16, 0, implicit $exec
+    ; GCN-NEXT: $vgpr8_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 24, 0, implicit $exec
     ; GCN-NEXT: S_WAIT_LOADCNT 2
     ; GCN-NEXT: $vgpr10 = V_LSHLREV_B32_e64 16, $vgpr4, implicit $exec
     $vgpr0 = SCRATCH_LOAD_DWORD $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr1 = V_MOV_B32_e32 1, implicit $exec
-    $vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
-    $vgpr4_vgpr5 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 8, 0, implicit $exec
-    $vgpr6_vgpr7 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 16, 0, implicit $exec
-    $vgpr8_vgpr9 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 24, 0, implicit $exec
+    $vgpr2_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 0, 0, implicit $exec
+    $vgpr4_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 8, 0, implicit $exec
+    $vgpr6_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 16, 0, implicit $exec
+    $vgpr8_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 24, 0, implicit $exec
     $vgpr10 = V_LSHLREV_B32_e64 16, $vgpr4, implicit $exec
 ...
 
@@ -293,25 +293,25 @@ body: |
     ; GCN-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 1, implicit $exec
     ; GCN-NEXT: S_WAIT_LOADCNT 0
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr5, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr6, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr7, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr8, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr9, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr2, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr5, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr6, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr7, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr8, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_64, $vgpr9, 0, 0, implicit $exec
     ; GCN-NEXT: $vgpr10 = V_LSHLREV_B32_e64 16, $vgpr6, implicit $exec
     $vgpr0 = SCRATCH_LOAD_DWORD $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr1 = V_MOV_B32_e32 1, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr4, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr5, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr6, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr7, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr8, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr9, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr2, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr4, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr5, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr6, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr7, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr8, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD killed $vgpr0_64, $vgpr9, 0, 0, implicit $exec
     $vgpr10 = V_LSHLREV_B32_e64 16, $vgpr6, implicit $exec
 ...
 
@@ -393,20 +393,20 @@ body: |
     ; GCN-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 1, implicit $exec
     ; GCN-NEXT: S_WAIT_LOADCNT 0
-    ; GCN-NEXT: $vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
-    ; GCN-NEXT: $vgpr4_vgpr5 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 8, 0, implicit $exec
+    ; GCN-NEXT: $vgpr2_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr4_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 8, 0, implicit $exec
     ; GCN-NEXT: S_NOP 0
-    ; GCN-NEXT: $vgpr6_vgpr7 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 16, 0, implicit $exec
-    ; GCN-NEXT: $vgpr8_vgpr9 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 24, 0, implicit $exec
+    ; GCN-NEXT: $vgpr6_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 16, 0, implicit $exec
+    ; GCN-NEXT: $vgpr8_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 24, 0, implicit $exec
     ; GCN-NEXT: S_WAIT_LOADCNT 2
     ; GCN-NEXT: $vgpr10 = V_LSHLREV_B32_e64 16, $vgpr4, implicit $exec
     $vgpr0 = SCRATCH_LOAD_DWORD $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr1 = V_MOV_B32_e32 1, implicit $exec
-    $vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
-    $vgpr4_vgpr5 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 8, 0, implicit $exec
+    $vgpr2_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 0, 0, implicit $exec
+    $vgpr4_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 8, 0, implicit $exec
     S_NOP 0
-    $vgpr6_vgpr7 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 16, 0, implicit $exec
-    $vgpr8_vgpr9 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 24, 0, implicit $exec
+    $vgpr6_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 16, 0, implicit $exec
+    $vgpr8_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 24, 0, implicit $exec
     $vgpr10 = V_LSHLREV_B32_e64 16, $vgpr4, implicit $exec
 ...
 
@@ -428,21 +428,21 @@ body: |
     ; GCN-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 1, implicit $exec
     ; GCN-NEXT: S_WAIT_LOADCNT 0
-    ; GCN-NEXT: $vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
-    ; GCN-NEXT: $vgpr4_vgpr5 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 8, 0, implicit $exec
+    ; GCN-NEXT: $vgpr2_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr4_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 8, 0, implicit $exec
     ; GCN-NEXT: S_WAIT_LOADCNT 1
-    ; GCN-NEXT: GLOBAL_STORE_DWORDX2 $vgpr0_vgpr1, $vgpr2_vgpr3, 32, 0, implicit $exec
-    ; GCN-NEXT: $vgpr6_vgpr7 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 16, 0, implicit $exec
-    ; GCN-NEXT: $vgpr8_vgpr9 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 24, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORDX2 $vgpr0_64, $vgpr2_64, 32, 0, implicit $exec
+    ; GCN-NEXT: $vgpr6_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 16, 0, implicit $exec
+    ; GCN-NEXT: $vgpr8_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 24, 0, implicit $exec
     ; GCN-NEXT: S_WAIT_LOADCNT 2
     ; GCN-NEXT: $vgpr10 = V_LSHLREV_B32_e64 16, $vgpr4, implicit $exec
     $vgpr0 = SCRATCH_LOAD_DWORD $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr1 = V_MOV_B32_e32 1, implicit $exec
-    $vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
-    $vgpr4_vgpr5 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 8, 0, implicit $exec
-    GLOBAL_STORE_DWORDX2 $vgpr0_vgpr1, $vgpr2_vgpr3, 32, 0, implicit $exec
-    $vgpr6_vgpr7 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 16, 0, implicit $exec
-    $vgpr8_vgpr9 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 24, 0, implicit $exec
+    $vgpr2_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 0, 0, implicit $exec
+    $vgpr4_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 8, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 $vgpr0_64, $vgpr2_64, 32, 0, implicit $exec
+    $vgpr6_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 16, 0, implicit $exec
+    $vgpr8_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 24, 0, implicit $exec
     $vgpr10 = V_LSHLREV_B32_e64 16, $vgpr4, implicit $exec
 ...
 
@@ -464,27 +464,27 @@ body: |
     ; GCN-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 1, implicit $exec
     ; GCN-NEXT: S_WAIT_LOADCNT 0
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr5, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr2, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr5, 0, 0, implicit $exec
     ; GCN-NEXT: S_NOP 0
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr6, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr7, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr8, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr9, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr6, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr7, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr8, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_64, $vgpr9, 0, 0, implicit $exec
     ; GCN-NEXT: $vgpr10 = V_LSHLREV_B32_e64 16, $vgpr6, implicit $exec
     $vgpr0 = SCRATCH_LOAD_DWORD $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr1 = V_MOV_B32_e32 1, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr4, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr5, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr2, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr4, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr5, 0, 0, implicit $exec
     S_NOP 0
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr6, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr7, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr8, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr9, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr6, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr7, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr8, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD killed $vgpr0_64, $vgpr9, 0, 0, implicit $exec
     $vgpr10 = V_LSHLREV_B32_e64 16, $vgpr6, implicit $exec
 ...
 
@@ -508,27 +508,27 @@ body: |
     ; GCN-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 1, implicit $exec
     ; GCN-NEXT: S_WAIT_LOADCNT 0
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr5, 0, 0, implicit $exec
-    ; GCN-NEXT: $vgpr11 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr6, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr7, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr8, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr9, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr2, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr5, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr11 = GLOBAL_LOAD_DWORD $vgpr0_64, 4, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr6, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr7, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr8, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_64, $vgpr9, 0, 0, implicit $exec
     ; GCN-NEXT: $vgpr10 = V_LSHLREV_B32_e64 16, $vgpr6, implicit $exec
     $vgpr0 = SCRATCH_LOAD_DWORD $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr1 = V_MOV_B32_e32 1, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr4, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr5, 0, 0, implicit $exec
-    $vgpr11 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr6, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr7, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr8, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr9, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr2, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr4, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr5, 0, 0, implicit $exec
+    $vgpr11 = GLOBAL_LOAD_DWORD $vgpr0_64, 4, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr6, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr7, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr8, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD killed $vgpr0_64, $vgpr9, 0, 0, implicit $exec
     $vgpr10 = V_LSHLREV_B32_e64 16, $vgpr6, implicit $exec
 ...
 
@@ -551,15 +551,15 @@ body: |
     ; GCN-NEXT: $sgpr64_64 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_64, undef $vgpr0, 0, 8, implicit $exec
-    ; GCN-NEXT: $vgpr2 = BUFFER_ATOMIC_ADD_ADDR64_RTN $vgpr2, $vgpr0_vgpr1, killed renamable $sgpr0_128, 0, 0, 1, implicit $exec :: (load store (s32), addrspace 1)
-    ; GCN-NEXT: GLOBAL_ATOMIC_ADD_F32 $vgpr4_vgpr5, killed renamable $vgpr3, 0, 0, implicit $exec :: (load store syncscope("agent-one-as") monotonic monotonic (s32), addrspace 1)
+    ; GCN-NEXT: $vgpr2 = BUFFER_ATOMIC_ADD_ADDR64_RTN $vgpr2, $vgpr0_64, killed renamable $sgpr0_128, 0, 0, 1, implicit $exec :: (load store (s32), addrspace 1)
+    ; GCN-NEXT: GLOBAL_ATOMIC_ADD_F32 $vgpr4_64, killed renamable $vgpr3, 0, 0, implicit $exec :: (load store syncscope("agent-one-as") monotonic monotonic (s32), addrspace 1)
     ; GCN-NEXT: $vgpr6 = SCRATCH_LOAD_DWORD $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: S_WAIT_XCNT 2
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 0, implicit $exec
     ; GCN-NEXT: S_WAIT_XCNT 1
     ; GCN-NEXT: $vgpr3 = V_MOV_B32_e32 1, implicit $exec
-    $vgpr2 = BUFFER_ATOMIC_ADD_ADDR64_RTN $vgpr2, $vgpr0_vgpr1, killed renamable $sgpr0_128, 0, 0, 1, implicit $exec :: (load store (s32), addrspace 1)
-    GLOBAL_ATOMIC_ADD_F32 $vgpr4_vgpr5, killed renamable $vgpr3, 0, 0, implicit $exec :: (load store syncscope("agent-one-as") monotonic monotonic (s32), addrspace 1)
+    $vgpr2 = BUFFER_ATOMIC_ADD_ADDR64_RTN $vgpr2, $vgpr0_64, killed renamable $sgpr0_128, 0, 0, 1, implicit $exec :: (load store (s32), addrspace 1)
+    GLOBAL_ATOMIC_ADD_F32 $vgpr4_64, killed renamable $vgpr3, 0, 0, implicit $exec :: (load store syncscope("agent-one-as") monotonic monotonic (s32), addrspace 1)
     $vgpr6 = SCRATCH_LOAD_DWORD $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr1 = V_MOV_B32_e32 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 1, implicit $exec
@@ -586,10 +586,10 @@ body: |
     ; GCN-NEXT: $sgpr2_64 = S_LOAD_DWORDX2_IMM $sgpr0_64, 0, 0 :: (load (s64), addrspace 4)
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 1, implicit $exec
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 2, implicit $exec
-    ; GCN-NEXT: $vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr2_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: $vgpr4 = V_MOV_B32_e32 1, implicit $exec
     ; GCN-NEXT: $vgpr5 = V_MOV_B32_e32 4, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORDX2 $vgpr0_vgpr1, $vgpr4_vgpr5, 16, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORDX2 $vgpr0_64, $vgpr4_64, 16, 0, implicit $exec
     ; GCN-NEXT: S_WAIT_KMCNT 0
     ; GCN-NEXT: $sgpr2 = S_ADD_I32 $sgpr0, 100, implicit-def $scc
     ; GCN-NEXT: S_WAIT_XCNT 0
@@ -597,10 +597,10 @@ body: |
     $sgpr2_64 = S_LOAD_DWORDX2_IMM $sgpr0_64, 0, 0 :: (load (s64), addrspace 4)
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
     $vgpr1 = V_MOV_B32_e32 2, implicit $exec
-    $vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
+    $vgpr2_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 0, 0, implicit $exec
     $vgpr4 = V_MOV_B32_e32 1, implicit $exec
     $vgpr5 = V_MOV_B32_e32 4, implicit $exec
-    GLOBAL_STORE_DWORDX2 $vgpr0_vgpr1, $vgpr4_vgpr5, 16, 0, implicit $exec
+    GLOBAL_STORE_DWORDX2 $vgpr0_64, $vgpr4_64, 16, 0, implicit $exec
     $sgpr2 = S_ADD_I32 $sgpr0, 100, implicit-def $scc
     $vgpr0 = V_MOV_B32_e32 20, implicit $exec
 ...
@@ -626,15 +626,15 @@ body: |
     ; GCN-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD $vgpr4, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 1, implicit $exec
     ; GCN-NEXT: S_WAIT_LOADCNT 0
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr5, 0, 0, implicit $exec
-    ; GCN-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
-    ; GCN-NEXT: $vgpr4 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr5, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr2 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
+    ; GCN-NEXT: $vgpr4 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
     ; GCN-NEXT: $vgpr3 = V_MOV_B32_e32 1, implicit $exec
     $vgpr0 = SCRATCH_LOAD_DWORD $vgpr4, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr1 = V_MOV_B32_e32 1, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr5, 0, 0, implicit $exec
-    $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
-    $vgpr4 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr5, 0, 0, implicit $exec
+    $vgpr2 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
+    $vgpr4 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
     $vgpr3 = V_MOV_B32_e32 1, implicit $exec
 ...
 
@@ -658,21 +658,21 @@ body: |
     ; GCN-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD $vgpr4, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 1, implicit $exec
     ; GCN-NEXT: S_WAIT_LOADCNT 0
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr5, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr5, 0, 0, implicit $exec
     ; GCN-NEXT: $vgpr2 = SCRATCH_LOAD_DWORD $vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr6 = V_MOV_B32_e32 1, implicit $exec
-    ; GCN-NEXT: $vgpr7 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
-    ; GCN-NEXT: $vgpr4 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
-    ; GCN-NEXT: $vgpr5 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
+    ; GCN-NEXT: $vgpr7 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
+    ; GCN-NEXT: $vgpr4 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
+    ; GCN-NEXT: $vgpr5 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
     ; GCN-NEXT: $vgpr8 = V_MOV_B32_e32 1, implicit $exec
     $vgpr0 = SCRATCH_LOAD_DWORD $vgpr4, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr1 = V_MOV_B32_e32 1, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr5, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr5, 0, 0, implicit $exec
     $vgpr2 = SCRATCH_LOAD_DWORD $vgpr3, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr6 = V_MOV_B32_e32 1, implicit $exec
-    $vgpr7 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
-    $vgpr4 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
-    $vgpr5 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
+    $vgpr7 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
+    $vgpr4 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
+    $vgpr5 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr :: (load seq_cst (s32), addrspace 1)
     $vgpr8 = V_MOV_B32_e32 1, implicit $exec
 ...
 
@@ -694,12 +694,12 @@ body: |
     ; GCN-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 1, implicit $exec
     ; GCN-NEXT: S_WAIT_LOADCNT 0
-    ; GCN-NEXT: $vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
-    ; GCN-NEXT: $vgpr4_vgpr5 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 8, 0, implicit $exec
-    ; GCN-NEXT: $vgpr6_vgpr7 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 16, 0, implicit $exec
-    ; GCN-NEXT: $vgpr8_vgpr9 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 24, 0, implicit $exec
+    ; GCN-NEXT: $vgpr2_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr4_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 8, 0, implicit $exec
+    ; GCN-NEXT: $vgpr6_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 16, 0, implicit $exec
+    ; GCN-NEXT: $vgpr8_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 24, 0, implicit $exec
     ; GCN-NEXT: S_WAIT_LOADCNT 3
-    ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_64, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: $vgpr11 = SCRATCH_LOAD_DWORD $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr3 = V_MOV_B32_e32 0, implicit $exec
     ; GCN-NEXT: S_WAIT_LOADCNT 2
@@ -708,11 +708,11 @@ body: |
     ; GCN-NEXT: $vgpr2 = V_LSHLREV_B32_e64 16, $vgpr4, implicit $exec
     $vgpr0 = SCRATCH_LOAD_DWORD $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr1 = V_MOV_B32_e32 1, implicit $exec
-    $vgpr2_vgpr3 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
-    $vgpr4_vgpr5 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 8, 0, implicit $exec
-    $vgpr6_vgpr7 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 16, 0, implicit $exec
-    $vgpr8_vgpr9 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 24, 0, implicit $exec
-    GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
+    $vgpr2_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 0, 0, implicit $exec
+    $vgpr4_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 8, 0, implicit $exec
+    $vgpr6_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 16, 0, implicit $exec
+    $vgpr8_64 = GLOBAL_LOAD_DWORDX2 $vgpr0_64, 24, 0, implicit $exec
+    GLOBAL_STORE_DWORD killed $vgpr0_64, $vgpr2, 0, 0, implicit $exec
     $vgpr11 = SCRATCH_LOAD_DWORD $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
     $vgpr6 = V_MOV_B32_e32 1, implicit $exec
@@ -740,16 +740,16 @@ body: |
     ; GCN-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr1 = V_MOV_B32_e32 1, implicit $exec
     ; GCN-NEXT: S_WAIT_LOADCNT 0
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr5, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr6, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr7, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr8, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr9, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr2, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr5, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr6, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr7, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr8, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr9, 0, 0, implicit $exec
     ; GCN-NEXT: $vgpr11 = SCRATCH_LOAD_DWORD $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
-    ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr0_64, $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAIT_XCNT 8
     ; GCN-NEXT: $vgpr3 = V_MOV_B32_e32 0, implicit $exec
     ; GCN-NEXT: S_WAIT_XCNT 6
@@ -760,16 +760,16 @@ body: |
     ; GCN-NEXT: $vgpr11 = V_LSHLREV_B32_e64 16, $vgpr10, implicit $exec
     $vgpr0 = SCRATCH_LOAD_DWORD $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr1 = V_MOV_B32_e32 1, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr4, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr5, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr6, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr7, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr8, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr9, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr2, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr4, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr5, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr6, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr7, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr8, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr9, 0, 0, implicit $exec
     $vgpr11 = SCRATCH_LOAD_DWORD $vgpr10, 0, 0, implicit $exec, implicit $flat_scr
-    GLOBAL_STORE_DWORD killed $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD killed $vgpr0_64, $vgpr2, 0, 0, implicit $exec
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
     $vgpr5 = V_MOV_B32_e32 1, implicit $exec
     $vgpr7 = V_MOV_B32_e32 2, implicit $exec
@@ -798,10 +798,10 @@ body: |
     ; GCN-NEXT: $vgpr0 = SCRATCH_LOAD_DWORD $vgpr5, 0, 0, implicit $exec, implicit $flat_scr
     ; GCN-NEXT: $vgpr1 = V_LSHLREV_B32_e64 16, $vgpr1, implicit $exec
     ; GCN-NEXT: S_WAIT_LOADCNT 0
-    ; GCN-NEXT: $vgpr7 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr2_vgpr3, $vgpr4, 0, 0, implicit $exec
-    ; GCN-NEXT: $vgpr8 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr2_vgpr3, $vgpr5, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr7 = GLOBAL_LOAD_DWORD $vgpr0_64, 4, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr2_64, $vgpr4, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr8 = GLOBAL_LOAD_DWORD $vgpr0_64, 4, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD killed $vgpr2_64, $vgpr5, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAIT_LOADCNT 1
     ; GCN-NEXT: $vgpr7 = V_MOV_B32_e32 0, implicit $exec
     ; GCN-NEXT: S_WAIT_XCNT 2
@@ -812,10 +812,10 @@ body: |
     ; GCN-NEXT: $vgpr5 = V_MOV_B32_e32 3, implicit $exec
     $vgpr0 = SCRATCH_LOAD_DWORD $vgpr5, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr1 = V_LSHLREV_B32_e64 16, $vgpr1, implicit $exec
-    $vgpr7 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr2_vgpr3, $vgpr4, 0, 0, implicit $exec
-    $vgpr8 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 4, 0, implicit $exec
-    GLOBAL_STORE_DWORD killed $vgpr2_vgpr3, $vgpr5, 0, 0, implicit $exec
+    $vgpr7 = GLOBAL_LOAD_DWORD $vgpr0_64, 4, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr2_64, $vgpr4, 0, 0, implicit $exec
+    $vgpr8 = GLOBAL_LOAD_DWORD $vgpr0_64, 4, 0, implicit $exec
+    GLOBAL_STORE_DWORD killed $vgpr2_64, $vgpr5, 0, 0, implicit $exec
     $vgpr7 = V_MOV_B32_e32 0, implicit $exec
     $vgpr4 = V_MOV_B32_e32 1, implicit $exec
     $vgpr8 = V_MOV_B32_e32 2, implicit $exec
@@ -883,146 +883,146 @@ machineFunctionInfo:
   isEntryFunction: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3
+    liveins: $vgpr0_64, $vgpr2, $vgpr3
     ; GCN-LABEL: name: xcnt_max
-    ; GCN: liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3
+    ; GCN: liveins: $vgpr0_64, $vgpr2, $vgpr3
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_64 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_64, undef $vgpr0, 0, 8, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr2, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAIT_XCNT 62
     ; GCN-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
-    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr2, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD $vgpr0_64, $vgpr3, 0, 0, implicit $exec
     $vgpr2 = V_MOV_B32_e32 1, implicit $exec
 ...
 
@@ -1033,22 +1033,22 @@ machineFunctionInfo:
   isEntryFunction: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $sgpr0_64
+    liveins: $vgpr0_64, $sgpr0_64
     ; GCN-LABEL: name: wait_kmcnt_with_outstanding_vmem
-    ; GCN: liveins: $vgpr0_vgpr1, $sgpr0_64
+    ; GCN: liveins: $vgpr0_64, $sgpr0_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_64 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_64, undef $vgpr0, 0, 8, implicit $exec
     ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 0, 0
-    ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAIT_KMCNT 0
     ; GCN-NEXT: $sgpr2 = S_MOV_B32 $sgpr2
     ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 0, 0
-    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
     $sgpr2 = S_MOV_B32 $sgpr2
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
 ...
@@ -1062,7 +1062,7 @@ body: |
   ; GCN-LABEL: name: wait_kmcnt_with_outstanding_vmem_2
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1, $sgpr0_64, $scc
+  ; GCN-NEXT:   liveins: $vgpr0_64, $sgpr0_64, $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
   ; GCN-NEXT:   $sgpr64_64 = S_MOV_B64 0
@@ -1073,9 +1073,9 @@ body: |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1, $sgpr2
+  ; GCN-NEXT:   liveins: $vgpr0_64, $sgpr2
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+  ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   liveins: $sgpr2
@@ -1085,12 +1085,12 @@ body: |
   ; GCN-NEXT:   S_WAIT_XCNT 0
   ; GCN-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   bb.0:
-    liveins: $vgpr0_vgpr1, $sgpr0_64, $scc
+    liveins: $vgpr0_64, $sgpr0_64, $scc
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 0, 0
     S_CBRANCH_SCC1 %bb.2, implicit $scc
   bb.1:
-    liveins: $vgpr0_vgpr1, $sgpr2
-    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    liveins: $vgpr0_64, $sgpr2
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
   bb.2:
     liveins: $sgpr2
     $sgpr2 = S_MOV_B32 $sgpr2
@@ -1106,7 +1106,7 @@ body: |
   ; GCN-LABEL: name: wait_kmcnt_and_wait_loadcnt
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1, $sgpr0_64, $scc
+  ; GCN-NEXT:   liveins: $vgpr0_64, $sgpr0_64, $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
   ; GCN-NEXT:   $sgpr64_64 = S_MOV_B64 0
@@ -1117,9 +1117,9 @@ body: |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1, $sgpr2
+  ; GCN-NEXT:   liveins: $vgpr0_64, $sgpr2
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+  ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   liveins: $sgpr2
@@ -1129,12 +1129,12 @@ body: |
   ; GCN-NEXT:   S_WAIT_LOADCNT 0
   ; GCN-NEXT:   $vgpr2 = V_MOV_B32_e32 0, implicit $exec
   bb.0:
-    liveins: $vgpr0_vgpr1, $sgpr0_64, $scc
+    liveins: $vgpr0_64, $sgpr0_64, $scc
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 0, 0
     S_CBRANCH_SCC1 %bb.2, implicit $scc
   bb.1:
-    liveins: $vgpr0_vgpr1, $sgpr2
-    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    liveins: $vgpr0_64, $sgpr2
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
   bb.2:
     liveins: $sgpr2
     $sgpr2 = S_MOV_B32 $sgpr2
@@ -1150,7 +1150,7 @@ body: |
   ; GCN-LABEL: name: implicit_handling_of_pending_vmem_group
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1, $sgpr0_64, $scc
+  ; GCN-NEXT:   liveins: $vgpr0_64, $sgpr0_64, $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
   ; GCN-NEXT:   $sgpr64_64 = S_MOV_B64 0
@@ -1161,9 +1161,9 @@ body: |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1, $sgpr2
+  ; GCN-NEXT:   liveins: $vgpr0_64, $sgpr2
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+  ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   liveins: $sgpr0_64, $sgpr2
@@ -1175,12 +1175,12 @@ body: |
   ; GCN-NEXT:   S_WAIT_XCNT 0
   ; GCN-NEXT:   $sgpr0 = S_MOV_B32 $sgpr0
   bb.0:
-    liveins: $vgpr0_vgpr1, $sgpr0_64, $scc
+    liveins: $vgpr0_64, $sgpr0_64, $scc
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 0, 0
     S_CBRANCH_SCC1 %bb.2, implicit $scc
   bb.1:
-    liveins: $vgpr0_vgpr1, $sgpr2
-    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    liveins: $vgpr0_64, $sgpr2
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
   bb.2:
     liveins: $sgpr0_64, $sgpr2
     $sgpr2 = S_MOV_B32 $sgpr2
@@ -1198,7 +1198,7 @@ body: |
   ; GCN-LABEL: name: mixed_pending_events
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1, $sgpr0_64, $scc
+  ; GCN-NEXT:   liveins: $vgpr0_64, $sgpr0_64, $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
   ; GCN-NEXT:   $sgpr64_64 = S_MOV_B64 0
@@ -1209,10 +1209,10 @@ body: |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1, $sgpr2
+  ; GCN-NEXT:   liveins: $vgpr0_64, $sgpr2
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 100, 0, implicit $exec
-  ; GCN-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 200, 0, implicit $exec
+  ; GCN-NEXT:   $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 100, 0, implicit $exec
+  ; GCN-NEXT:   $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_64, 200, 0, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   liveins: $sgpr2, $vgpr2
@@ -1224,13 +1224,13 @@ body: |
   ; GCN-NEXT:   S_WAIT_XCNT 0
   ; GCN-NEXT:   $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   bb.0:
-    liveins: $vgpr0_vgpr1, $sgpr0_64, $scc
+    liveins: $vgpr0_64, $sgpr0_64, $scc
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 0, 0
     S_CBRANCH_SCC1 %bb.2, implicit $scc
   bb.1:
-    liveins: $vgpr0_vgpr1, $sgpr2
-    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 100, 0, implicit $exec
-    $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 200, 0, implicit $exec
+    liveins: $vgpr0_64, $sgpr2
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 100, 0, implicit $exec
+    $vgpr3 = GLOBAL_LOAD_DWORD $vgpr0_64, 200, 0, implicit $exec
   bb.2:
     liveins: $sgpr2, $vgpr2
     $vgpr2 = V_MOV_B32_e32 $vgpr2, implicit $exec
@@ -1247,7 +1247,7 @@ body: |
   ; GCN-LABEL: name: pending_vmem_event_between_block
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1, $sgpr0_64, $scc
+  ; GCN-NEXT:   liveins: $vgpr0_64, $sgpr0_64, $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
   ; GCN-NEXT:   $sgpr64_64 = S_MOV_B64 0
@@ -1258,10 +1258,10 @@ body: |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr2
+  ; GCN-NEXT:   liveins: $vgpr0_64, $vgpr2_64, $sgpr2
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $vgpr4 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-  ; GCN-NEXT:   $vgpr5 = GLOBAL_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec
+  ; GCN-NEXT:   $vgpr4 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
+  ; GCN-NEXT:   $vgpr5 = GLOBAL_LOAD_DWORD $vgpr2_64, 0, 0, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   liveins: $sgpr0_64, $sgpr2, $vgpr2
@@ -1274,13 +1274,13 @@ body: |
   ; GCN-NEXT:   $vgpr2 = V_MOV_B32_e32 0, implicit $exec
   ; GCN-NEXT:   $sgpr0 = S_MOV_B32 $sgpr0
   bb.0:
-    liveins: $vgpr0_vgpr1, $sgpr0_64, $scc
+    liveins: $vgpr0_64, $sgpr0_64, $scc
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 0, 0
     S_CBRANCH_SCC1 %bb.2, implicit $scc
   bb.1:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr2
-    $vgpr4 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-    $vgpr5 = GLOBAL_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec
+    liveins: $vgpr0_64, $vgpr2_64, $sgpr2
+    $vgpr4 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
+    $vgpr5 = GLOBAL_LOAD_DWORD $vgpr2_64, 0, 0, implicit $exec
   bb.2:
     liveins: $sgpr0_64, $sgpr2, $vgpr2
     $sgpr2 = S_MOV_B32 $sgpr2
@@ -1298,7 +1298,7 @@ body: |
   ; GCN-LABEL: name: flushing_vmem_cnt_on_block_entry
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1, $sgpr0_64, $scc
+  ; GCN-NEXT:   liveins: $vgpr0_64, $sgpr0_64, $scc
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
   ; GCN-NEXT:   $sgpr64_64 = S_MOV_B64 0
@@ -1309,10 +1309,10 @@ body: |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr2
+  ; GCN-NEXT:   liveins: $vgpr0_64, $vgpr2_64, $sgpr2
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   $vgpr4 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-  ; GCN-NEXT:   $vgpr5 = GLOBAL_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec
+  ; GCN-NEXT:   $vgpr4 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
+  ; GCN-NEXT:   $vgpr5 = GLOBAL_LOAD_DWORD $vgpr2_64, 0, 0, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   liveins: $sgpr0_64, $sgpr2, $vgpr2
@@ -1323,13 +1323,13 @@ body: |
   ; GCN-NEXT:   $vgpr2 = V_MOV_B32_e32 0, implicit $exec
   ; GCN-NEXT:   $sgpr0 = S_MOV_B32 $sgpr0
   bb.0:
-    liveins: $vgpr0_vgpr1, $sgpr0_64, $scc
+    liveins: $vgpr0_64, $sgpr0_64, $scc
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 0, 0
     S_CBRANCH_SCC1 %bb.2, implicit $scc
   bb.1:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $sgpr2
-    $vgpr4 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
-    $vgpr5 = GLOBAL_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec
+    liveins: $vgpr0_64, $vgpr2_64, $sgpr2
+    $vgpr4 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
+    $vgpr5 = GLOBAL_LOAD_DWORD $vgpr2_64, 0, 0, implicit $exec
   bb.2:
     liveins: $sgpr0_64, $sgpr2, $vgpr2
     $vgpr1 = V_MOV_B32_e32 0, implicit $exec
@@ -1344,21 +1344,21 @@ machineFunctionInfo:
   isEntryFunction: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $sgpr0_64
+    liveins: $vgpr0_64, $sgpr0_64
     ; GCN-LABEL: name: wait_loadcnt_with_outstanding_smem
-    ; GCN: liveins: $vgpr0_vgpr1, $sgpr0_64
+    ; GCN: liveins: $vgpr0_64, $sgpr0_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_64 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_64, undef $vgpr0, 0, 8, implicit $exec
-    ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 0, 0
     ; GCN-NEXT: S_WAIT_LOADCNT 0
     ; GCN-NEXT: $vgpr2 = V_MOV_B32_e32 $vgpr2, implicit $exec
     ; GCN-NEXT: S_WAIT_XCNT 0
     ; GCN-NEXT: $sgpr0 = S_MOV_B32 0
-    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 0, 0
     $vgpr2 = V_MOV_B32_e32 $vgpr2, implicit $exec
     $sgpr0 = S_MOV_B32 0
@@ -1371,18 +1371,18 @@ machineFunctionInfo:
   isEntryFunction: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $sgpr0_64
+    liveins: $vgpr0_64, $sgpr0_64
     ; GCN-LABEL: name: overwrite_vgpr_after_smem
-    ; GCN: liveins: $vgpr0_vgpr1, $sgpr0_64
+    ; GCN: liveins: $vgpr0_64, $sgpr0_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_64 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_64, undef $vgpr0, 0, 8, implicit $exec
-    ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 0, 0
     ; GCN-NEXT: $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 0, 0
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
 ...
@@ -1394,18 +1394,18 @@ machineFunctionInfo:
   isEntryFunction: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $sgpr0_64
+    liveins: $vgpr0_64, $sgpr0_64
     ; GCN-LABEL: name: overwrite_sgpr_after_vmem
-    ; GCN: liveins: $vgpr0_vgpr1, $sgpr0_64
+    ; GCN: liveins: $vgpr0_64, $sgpr0_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_SETREG_IMM32_B32 1, 1601, implicit-def $mode, implicit $mode
     ; GCN-NEXT: $sgpr64_64 = S_MOV_B64 0
     ; GCN-NEXT: V_NOP_e32 implicit $exec
     ; GCN-NEXT: GLOBAL_PREFETCH_B8_SADDR $sgpr64_64, undef $vgpr0, 0, 8, implicit $exec
     ; GCN-NEXT: $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 0, 0
-    ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: $sgpr0 = S_MOV_B32 0
     $sgpr2 = S_LOAD_DWORD_IMM $sgpr0_64, 0, 0
-    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
     $sgpr0 = S_MOV_B32 0
 ...

@@ -142,9 +142,9 @@ name:            test_remat_s_load_dword_immx16_subreg
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr8_64, $vgpr0_vgpr1
+    liveins: $sgpr8_64, $vgpr0_64
     ; GCN-LABEL: name: test_remat_s_load_dword_immx16_subreg
-    ; GCN: liveins: $sgpr8_64, $vgpr0_vgpr1
+    ; GCN: liveins: $sgpr8_64, $vgpr0_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: renamable $sgpr0_64 = COPY $sgpr8_64
     ; GCN-NEXT: renamable $sgpr4_512 = S_LOAD_DWORDX16_IMM renamable $sgpr0_64, 128, 0 :: (dereferenceable invariant load (s512), align 4, addrspace 4)
@@ -172,9 +172,9 @@ name:            test_remat_s_load_dword_immx16_subreg_no_shrinking_double_use
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr8_64, $vgpr0_vgpr1
+    liveins: $sgpr8_64, $vgpr0_64
     ; GCN-LABEL: name: test_remat_s_load_dword_immx16_subreg_no_shrinking_double_use
-    ; GCN: liveins: $sgpr8_64, $vgpr0_vgpr1
+    ; GCN: liveins: $sgpr8_64, $vgpr0_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: renamable $sgpr0_64 = COPY $sgpr8_64
     ; GCN-NEXT: renamable $sgpr4_512 = S_LOAD_DWORDX16_IMM renamable $sgpr0_64, 128, 0 :: (dereferenceable invariant load (s512), align 4, addrspace 4)
@@ -202,9 +202,9 @@ name:            test_remat_s_load_dword_immx16_subreg_no_shrinking_bundle
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr8_64, $vgpr0_vgpr1
+    liveins: $sgpr8_64, $vgpr0_64
     ; GCN-LABEL: name: test_remat_s_load_dword_immx16_subreg_no_shrinking_bundle
-    ; GCN: liveins: $sgpr8_64, $vgpr0_vgpr1
+    ; GCN: liveins: $sgpr8_64, $vgpr0_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: renamable $sgpr0_64 = COPY $sgpr8_64
     ; GCN-NEXT: renamable $sgpr4_512 = S_LOAD_DWORDX16_IMM renamable $sgpr0_64, 128, 0 :: (dereferenceable invariant load (s512), align 4, addrspace 4)
@@ -227,9 +227,9 @@ name:            test_remat_s_load_dword_immx8_subreg
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $sgpr8_64, $vgpr0_vgpr1
+    liveins: $sgpr8_64, $vgpr0_64
     ; GCN-LABEL: name: test_remat_s_load_dword_immx8_subreg
-    ; GCN: liveins: $sgpr8_64, $vgpr0_vgpr1
+    ; GCN: liveins: $sgpr8_64, $vgpr0_64
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: renamable $sgpr0_64 = COPY $sgpr8_64
     ; GCN-NEXT: renamable $sgpr4_256 = S_LOAD_DWORDX8_IMM renamable $sgpr0_64, 128, 0 :: (dereferenceable invariant load (s256), align 4, addrspace 4)

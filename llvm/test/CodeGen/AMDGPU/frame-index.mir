@@ -452,10 +452,10 @@ machineFunctionInfo:
 
 body:             |
   bb.0:
-    liveins: $sgpr4, $sgpr5, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    liveins: $sgpr4, $sgpr5, $vgpr32_256
 
     ; GFX8-LABEL: name: materialize_fi_s_mov_b32_offset_0_live_scc__no_free_vgprs
-    ; GFX8: liveins: $sgpr4, $sgpr5, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr56, $vgpr57, $vgpr58, $vgpr59, $vgpr60, $vgpr61, $vgpr62, $vgpr63, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    ; GFX8: liveins: $sgpr4, $sgpr5, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr56, $vgpr57, $vgpr58, $vgpr59, $vgpr60, $vgpr61, $vgpr62, $vgpr63, $vgpr32_256
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX8-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -532,14 +532,14 @@ body:             |
     ; GFX8-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr62, 32, $exec, 64, 256
     ; GFX8-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr63, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.16, addrspace 5)
     ; GFX8-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr63, 32, $exec, 64, 0
-    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-    ; GFX8-NEXT: S_NOP 0, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
-    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
-    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
-    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr0_256
+    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr8_256
+    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr16_256
+    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr24_256
+    ; GFX8-NEXT: S_NOP 0, implicit $vgpr32_256
+    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr40_256
+    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr48_256
+    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr56_256
     ; GFX8-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
     ; GFX8-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 68, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.17, addrspace 5)
     ; GFX8-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
@@ -547,14 +547,14 @@ body:             |
     ; GFX8-NEXT: $vgpr0, dead $vcc = V_ADD_CO_U32_e64 killed $vcc_lo, killed $vgpr0, 0, implicit $exec
     ; GFX8-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
     ; GFX8-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 68, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.17, addrspace 5)
-    ; GFX8-NEXT: S_NOP 0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    ; GFX8-NEXT: S_NOP 0, implicit $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    ; GFX8-NEXT: S_NOP 0, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-    ; GFX8-NEXT: S_NOP 0, implicit $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-    ; GFX8-NEXT: S_NOP 0, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
-    ; GFX8-NEXT: S_NOP 0, implicit $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
-    ; GFX8-NEXT: S_NOP 0, implicit $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
-    ; GFX8-NEXT: S_NOP 0, implicit $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; GFX8-NEXT: S_NOP 0, implicit $vgpr0_256
+    ; GFX8-NEXT: S_NOP 0, implicit $vgpr8_256
+    ; GFX8-NEXT: S_NOP 0, implicit $vgpr16_256
+    ; GFX8-NEXT: S_NOP 0, implicit $vgpr24_256
+    ; GFX8-NEXT: S_NOP 0, implicit $vgpr32_256
+    ; GFX8-NEXT: S_NOP 0, implicit $vgpr40_256
+    ; GFX8-NEXT: S_NOP 0, implicit $vgpr48_256
+    ; GFX8-NEXT: S_NOP 0, implicit $vgpr56_256
     ; GFX8-NEXT: $vgpr63 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.16, addrspace 5)
     ; GFX8-NEXT: $vgpr62 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.15, addrspace 5)
     ; GFX8-NEXT: $vgpr61 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.14, addrspace 5)
@@ -574,7 +574,7 @@ body:             |
     ; GFX8-NEXT: S_ENDPGM 0, implicit $sgpr4, implicit $scc
     ;
     ; GFX900-LABEL: name: materialize_fi_s_mov_b32_offset_0_live_scc__no_free_vgprs
-    ; GFX900: liveins: $sgpr4, $sgpr5, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr56, $vgpr57, $vgpr58, $vgpr59, $vgpr60, $vgpr61, $vgpr62, $vgpr63, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    ; GFX900: liveins: $sgpr4, $sgpr5, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr56, $vgpr57, $vgpr58, $vgpr59, $vgpr60, $vgpr61, $vgpr62, $vgpr63, $vgpr32_256
     ; GFX900-NEXT: {{  $}}
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -651,28 +651,28 @@ body:             |
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr62, 32, $exec, 64, 256
     ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr63, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.16, addrspace 5)
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr63, 32, $exec, 64, 0
-    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-    ; GFX900-NEXT: S_NOP 0, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
-    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
-    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
-    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr0_256
+    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr8_256
+    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr16_256
+    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr24_256
+    ; GFX900-NEXT: S_NOP 0, implicit $vgpr32_256
+    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr40_256
+    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr48_256
+    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr56_256
     ; GFX900-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
     ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 68, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.17, addrspace 5)
     ; GFX900-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; GFX900-NEXT: $vgpr0 = V_ADD_U32_e32 64, killed $vgpr0, implicit $exec
     ; GFX900-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
     ; GFX900-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 68, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.17, addrspace 5)
-    ; GFX900-NEXT: S_NOP 0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    ; GFX900-NEXT: S_NOP 0, implicit $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    ; GFX900-NEXT: S_NOP 0, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-    ; GFX900-NEXT: S_NOP 0, implicit $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-    ; GFX900-NEXT: S_NOP 0, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
-    ; GFX900-NEXT: S_NOP 0, implicit $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
-    ; GFX900-NEXT: S_NOP 0, implicit $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
-    ; GFX900-NEXT: S_NOP 0, implicit $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; GFX900-NEXT: S_NOP 0, implicit $vgpr0_256
+    ; GFX900-NEXT: S_NOP 0, implicit $vgpr8_256
+    ; GFX900-NEXT: S_NOP 0, implicit $vgpr16_256
+    ; GFX900-NEXT: S_NOP 0, implicit $vgpr24_256
+    ; GFX900-NEXT: S_NOP 0, implicit $vgpr32_256
+    ; GFX900-NEXT: S_NOP 0, implicit $vgpr40_256
+    ; GFX900-NEXT: S_NOP 0, implicit $vgpr48_256
+    ; GFX900-NEXT: S_NOP 0, implicit $vgpr56_256
     ; GFX900-NEXT: $vgpr63 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.16, addrspace 5)
     ; GFX900-NEXT: $vgpr62 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.15, addrspace 5)
     ; GFX900-NEXT: $vgpr61 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.14, addrspace 5)
@@ -692,7 +692,7 @@ body:             |
     ; GFX900-NEXT: S_ENDPGM 0, implicit $sgpr4, implicit $scc
     ;
     ; GFX90A-LABEL: name: materialize_fi_s_mov_b32_offset_0_live_scc__no_free_vgprs
-    ; GFX90A: liveins: $agpr0, $agpr1, $agpr2, $agpr3, $agpr4, $agpr5, $agpr6, $agpr7, $agpr8, $agpr9, $agpr10, $agpr11, $agpr12, $agpr13, $agpr14, $agpr15, $sgpr4, $sgpr5, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr56, $vgpr57, $vgpr58, $vgpr59, $vgpr60, $vgpr61, $vgpr62, $vgpr63, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
+    ; GFX90A: liveins: $agpr0, $agpr1, $agpr2, $agpr3, $agpr4, $agpr5, $agpr6, $agpr7, $agpr8, $agpr9, $agpr10, $agpr11, $agpr12, $agpr13, $agpr14, $agpr15, $sgpr4, $sgpr5, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr56, $vgpr57, $vgpr58, $vgpr59, $vgpr60, $vgpr61, $vgpr62, $vgpr63, $vgpr32_256
     ; GFX90A-NEXT: {{  $}}
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa $sgpr32, 0, 6
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
@@ -785,27 +785,27 @@ body:             |
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_register_mask $vgpr62, $agpr14, 32, $exec, 64
     ; GFX90A-NEXT: $agpr15 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr63, implicit $exec
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_register_mask $vgpr63, $agpr15, 32, $exec, 64
-    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
-    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
-    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
-    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr0_256
+    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr8_256
+    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr16_256
+    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr24_256
+    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr32_256
+    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr40_256
+    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr48_256
+    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr56_256
     ; GFX90A-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
     ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.17, addrspace 5)
     ; GFX90A-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; GFX90A-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
     ; GFX90A-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.17, addrspace 5)
-    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
-    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
-    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
-    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr0_256
+    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr8_256
+    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr16_256
+    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr24_256
+    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr32_256
+    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr40_256
+    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr48_256
+    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr56_256
     ; GFX90A-NEXT: $vgpr63 = V_ACCVGPR_READ_B32_e64 $agpr15, implicit $exec
     ; GFX90A-NEXT: $vgpr62 = V_ACCVGPR_READ_B32_e64 $agpr14, implicit $exec
     ; GFX90A-NEXT: $vgpr61 = V_ACCVGPR_READ_B32_e64 $agpr13, implicit $exec
@@ -823,26 +823,26 @@ body:             |
     ; GFX90A-NEXT: $vgpr41 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec
     ; GFX90A-NEXT: $vgpr40 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec
     ; GFX90A-NEXT: S_ENDPGM 0, implicit $sgpr4, implicit $scc
-    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-    S_NOP 0, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
-    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
-    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
-    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    S_NOP 0, implicit-def $vgpr0_256
+    S_NOP 0, implicit-def $vgpr8_256
+    S_NOP 0, implicit-def $vgpr16_256
+    S_NOP 0, implicit-def $vgpr24_256
+    S_NOP 0, implicit $vgpr32_256
+    S_NOP 0, implicit-def $vgpr40_256
+    S_NOP 0, implicit-def $vgpr48_256
+    S_NOP 0, implicit-def $vgpr56_256
     S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
 
     renamable $sgpr4 = S_MOV_B32 %stack.0
 
-    S_NOP 0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    S_NOP 0, implicit $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    S_NOP 0, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-    S_NOP 0, implicit $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-    S_NOP 0, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
-    S_NOP 0, implicit $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
-    S_NOP 0, implicit $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
-    S_NOP 0, implicit $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    S_NOP 0, implicit $vgpr0_256
+    S_NOP 0, implicit $vgpr8_256
+    S_NOP 0, implicit $vgpr16_256
+    S_NOP 0, implicit $vgpr24_256
+    S_NOP 0, implicit $vgpr32_256
+    S_NOP 0, implicit $vgpr40_256
+    S_NOP 0, implicit $vgpr48_256
+    S_NOP 0, implicit $vgpr56_256
     S_ENDPGM 0, implicit $sgpr4, implicit $scc
 
 ...
@@ -947,14 +947,14 @@ body:             |
     ; GFX8-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr62, 32, $exec, 64, 256
     ; GFX8-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr63, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.17, addrspace 5)
     ; GFX8-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr63, 32, $exec, 64, 0
-    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
-    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
-    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
-    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr0_256
+    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr8_256
+    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr16_256
+    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr24_256
+    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr32_256
+    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr40_256
+    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr48_256
+    ; GFX8-NEXT: S_NOP 0, implicit-def $vgpr56_256
     ; GFX8-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
     ; GFX8-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 132, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.18, addrspace 5)
     ; GFX8-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
@@ -962,14 +962,14 @@ body:             |
     ; GFX8-NEXT: $vgpr0, dead $vcc = V_ADD_CO_U32_e64 killed $vcc_lo, killed $vgpr0, 0, implicit $exec
     ; GFX8-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
     ; GFX8-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 132, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.18, addrspace 5)
-    ; GFX8-NEXT: S_NOP 0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    ; GFX8-NEXT: S_NOP 0, implicit $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    ; GFX8-NEXT: S_NOP 0, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-    ; GFX8-NEXT: S_NOP 0, implicit $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-    ; GFX8-NEXT: S_NOP 0, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
-    ; GFX8-NEXT: S_NOP 0, implicit $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
-    ; GFX8-NEXT: S_NOP 0, implicit $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
-    ; GFX8-NEXT: S_NOP 0, implicit $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; GFX8-NEXT: S_NOP 0, implicit $vgpr0_256
+    ; GFX8-NEXT: S_NOP 0, implicit $vgpr8_256
+    ; GFX8-NEXT: S_NOP 0, implicit $vgpr16_256
+    ; GFX8-NEXT: S_NOP 0, implicit $vgpr24_256
+    ; GFX8-NEXT: S_NOP 0, implicit $vgpr32_256
+    ; GFX8-NEXT: S_NOP 0, implicit $vgpr40_256
+    ; GFX8-NEXT: S_NOP 0, implicit $vgpr48_256
+    ; GFX8-NEXT: S_NOP 0, implicit $vgpr56_256
     ; GFX8-NEXT: $vgpr63 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.17, addrspace 5)
     ; GFX8-NEXT: $vgpr62 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.16, addrspace 5)
     ; GFX8-NEXT: $vgpr61 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.15, addrspace 5)
@@ -1074,28 +1074,28 @@ body:             |
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr62, 32, $exec, 64, 256
     ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr63, $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.17, addrspace 5)
     ; GFX900-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_offset $vgpr63, 32, $exec, 64, 0
-    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
-    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
-    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
-    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr0_256
+    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr8_256
+    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr16_256
+    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr24_256
+    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr32_256
+    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr40_256
+    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr48_256
+    ; GFX900-NEXT: S_NOP 0, implicit-def $vgpr56_256
     ; GFX900-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
     ; GFX900-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 132, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.18, addrspace 5)
     ; GFX900-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; GFX900-NEXT: $vgpr0 = V_ADD_U32_e32 128, killed $vgpr0, implicit $exec
     ; GFX900-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
     ; GFX900-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 132, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.18, addrspace 5)
-    ; GFX900-NEXT: S_NOP 0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    ; GFX900-NEXT: S_NOP 0, implicit $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    ; GFX900-NEXT: S_NOP 0, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-    ; GFX900-NEXT: S_NOP 0, implicit $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-    ; GFX900-NEXT: S_NOP 0, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
-    ; GFX900-NEXT: S_NOP 0, implicit $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
-    ; GFX900-NEXT: S_NOP 0, implicit $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
-    ; GFX900-NEXT: S_NOP 0, implicit $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; GFX900-NEXT: S_NOP 0, implicit $vgpr0_256
+    ; GFX900-NEXT: S_NOP 0, implicit $vgpr8_256
+    ; GFX900-NEXT: S_NOP 0, implicit $vgpr16_256
+    ; GFX900-NEXT: S_NOP 0, implicit $vgpr24_256
+    ; GFX900-NEXT: S_NOP 0, implicit $vgpr32_256
+    ; GFX900-NEXT: S_NOP 0, implicit $vgpr40_256
+    ; GFX900-NEXT: S_NOP 0, implicit $vgpr48_256
+    ; GFX900-NEXT: S_NOP 0, implicit $vgpr56_256
     ; GFX900-NEXT: $vgpr63 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.17, addrspace 5)
     ; GFX900-NEXT: $vgpr62 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.16, addrspace 5)
     ; GFX900-NEXT: $vgpr61 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.15, addrspace 5)
@@ -1216,28 +1216,28 @@ body:             |
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_register_mask $vgpr62, $agpr14, 32, $exec, 64
     ; GFX90A-NEXT: $agpr15 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr63, implicit $exec
     ; GFX90A-NEXT: frame-setup CFI_INSTRUCTION llvm_vector_register_mask $vgpr63, $agpr15, 32, $exec, 64
-    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
-    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
-    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
-    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr0_256
+    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr8_256
+    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr16_256
+    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr24_256
+    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr32_256
+    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr40_256
+    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr48_256
+    ; GFX90A-NEXT: S_NOP 0, implicit-def $vgpr56_256
     ; GFX90A-NEXT: S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
     ; GFX90A-NEXT: BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_128, $sgpr32, 68, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.18, addrspace 5)
     ; GFX90A-NEXT: $vgpr0 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; GFX90A-NEXT: $vgpr0 = V_ADD_U32_e32 64, killed $vgpr0, implicit $exec
     ; GFX90A-NEXT: $sgpr4 = V_READFIRSTLANE_B32 $vgpr0, implicit $exec
     ; GFX90A-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 68, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.18, addrspace 5)
-    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
-    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
-    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
-    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr0_256
+    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr8_256
+    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr16_256
+    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr24_256
+    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr32_256
+    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr40_256
+    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr48_256
+    ; GFX90A-NEXT: S_NOP 0, implicit $vgpr56_256
     ; GFX90A-NEXT: $vgpr63 = V_ACCVGPR_READ_B32_e64 $agpr15, implicit $exec
     ; GFX90A-NEXT: $vgpr62 = V_ACCVGPR_READ_B32_e64 $agpr14, implicit $exec
     ; GFX90A-NEXT: $vgpr61 = V_ACCVGPR_READ_B32_e64 $agpr13, implicit $exec
@@ -1255,26 +1255,26 @@ body:             |
     ; GFX90A-NEXT: $vgpr41 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec
     ; GFX90A-NEXT: $vgpr40 = V_ACCVGPR_READ_B32_e64 $agpr0, implicit $exec
     ; GFX90A-NEXT: S_ENDPGM 0, implicit $sgpr4, implicit $scc
-    S_NOP 0, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    S_NOP 0, implicit-def $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    S_NOP 0, implicit-def $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-    S_NOP 0, implicit-def $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-    S_NOP 0, implicit-def $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
-    S_NOP 0, implicit-def $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
-    S_NOP 0, implicit-def $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
-    S_NOP 0, implicit-def $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    S_NOP 0, implicit-def $vgpr0_256
+    S_NOP 0, implicit-def $vgpr8_256
+    S_NOP 0, implicit-def $vgpr16_256
+    S_NOP 0, implicit-def $vgpr24_256
+    S_NOP 0, implicit-def $vgpr32_256
+    S_NOP 0, implicit-def $vgpr40_256
+    S_NOP 0, implicit-def $vgpr48_256
+    S_NOP 0, implicit-def $vgpr56_256
     S_CMP_EQ_I32 $sgpr4, $sgpr5, implicit-def $scc
 
     renamable $sgpr4 = S_MOV_B32 %stack.1
 
-    S_NOP 0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    S_NOP 0, implicit $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    S_NOP 0, implicit $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23
-    S_NOP 0, implicit $vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31
-    S_NOP 0, implicit $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39
-    S_NOP 0, implicit $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47
-    S_NOP 0, implicit $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55
-    S_NOP 0, implicit $vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63
+    S_NOP 0, implicit $vgpr0_256
+    S_NOP 0, implicit $vgpr8_256
+    S_NOP 0, implicit $vgpr16_256
+    S_NOP 0, implicit $vgpr24_256
+    S_NOP 0, implicit $vgpr32_256
+    S_NOP 0, implicit $vgpr40_256
+    S_NOP 0, implicit $vgpr48_256
+    S_NOP 0, implicit $vgpr56_256
     S_ENDPGM 0, implicit $sgpr4, implicit $scc
 
 ...

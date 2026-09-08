@@ -11,10 +11,10 @@ body: |
   ; REG_ALLOC-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; REG_ALLOC-NEXT:   liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr10, $sgpr2_64, $sgpr4_64, $sgpr8_128
   ; REG_ALLOC-NEXT: {{  $}}
-  ; REG_ALLOC-NEXT:   renamable $vgpr11_vgpr12_vgpr13_vgpr14 = BUFFER_LOAD_DWORDX4_OFFEN renamable $vgpr3, renamable $sgpr8_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 8)
-  ; REG_ALLOC-NEXT:   renamable $vgpr12_vgpr13_vgpr14_vgpr15 = BUFFER_LOAD_DWORDX4_OFFEN renamable $vgpr2, renamable $sgpr8_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 8)
-  ; REG_ALLOC-NEXT:   renamable $vgpr5_vgpr6_vgpr7_vgpr8 = BUFFER_LOAD_DWORDX4_OFFEN renamable $vgpr0, renamable $sgpr8_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 8)
-  ; REG_ALLOC-NEXT:   renamable $vgpr6_vgpr7_vgpr8_vgpr9 = BUFFER_LOAD_DWORDX4_OFFEN renamable $vgpr4, renamable $sgpr8_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 8)
+  ; REG_ALLOC-NEXT:   renamable $vgpr11_128 = BUFFER_LOAD_DWORDX4_OFFEN renamable $vgpr3, renamable $sgpr8_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 8)
+  ; REG_ALLOC-NEXT:   renamable $vgpr12_128 = BUFFER_LOAD_DWORDX4_OFFEN renamable $vgpr2, renamable $sgpr8_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 8)
+  ; REG_ALLOC-NEXT:   renamable $vgpr5_128 = BUFFER_LOAD_DWORDX4_OFFEN renamable $vgpr0, renamable $sgpr8_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 8)
+  ; REG_ALLOC-NEXT:   renamable $vgpr6_128 = BUFFER_LOAD_DWORDX4_OFFEN renamable $vgpr4, renamable $sgpr8_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 8)
   ; REG_ALLOC-NEXT:   KILL killed renamable $vgpr4
   ; REG_ALLOC-NEXT:   KILL killed renamable $vgpr2
   ; REG_ALLOC-NEXT:   KILL killed renamable $vgpr0
@@ -32,7 +32,7 @@ body: |
   ; REG_ALLOC-NEXT: {{  $}}
   ; REG_ALLOC-NEXT: bb.1:
   ; REG_ALLOC-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
-  ; REG_ALLOC-NEXT:   liveins: $sgpr0, $vgpr0, $vgpr10, $sgpr4_64, $sgpr6_64, $vgpr5_vgpr6_vgpr7_vgpr8:0x0000000000000003, $vgpr6_vgpr7_vgpr8_vgpr9:0x0000000000000003
+  ; REG_ALLOC-NEXT:   liveins: $sgpr0, $vgpr0, $vgpr10, $sgpr4_64, $sgpr6_64, $vgpr5_128:0x0000000000000003, $vgpr6_128:0x0000000000000003
   ; REG_ALLOC-NEXT: {{  $}}
   ; REG_ALLOC-NEXT:   renamable $sgpr2_64 = S_OR_SAVEEXEC_B64 killed renamable $sgpr6_64, implicit-def $exec, implicit-def $scc, implicit $exec
   ; REG_ALLOC-NEXT:   $exec = S_XOR_B64_term $exec, renamable $sgpr2_64, implicit-def $scc
@@ -45,13 +45,13 @@ body: |
   ; REG_ALLOC-NEXT: {{  $}}
   ; REG_ALLOC-NEXT:   renamable $sgpr1 = S_OR_B32 killed renamable $sgpr1, 2, implicit-def dead $scc
   ; REG_ALLOC-NEXT:   renamable $vgpr0 = COPY killed renamable $sgpr1
-  ; REG_ALLOC-NEXT:   renamable $vgpr5_vgpr6 = IMPLICIT_DEF
-  ; REG_ALLOC-NEXT:   renamable $vgpr6_vgpr7_vgpr8_vgpr9 = IMPLICIT_DEF
+  ; REG_ALLOC-NEXT:   renamable $vgpr5_64 = IMPLICIT_DEF
+  ; REG_ALLOC-NEXT:   renamable $vgpr6_128 = IMPLICIT_DEF
   ; REG_ALLOC-NEXT:   S_BRANCH %bb.1
   ; REG_ALLOC-NEXT: {{  $}}
   ; REG_ALLOC-NEXT: bb.3:
   ; REG_ALLOC-NEXT:   successors: %bb.5(0x80000000)
-  ; REG_ALLOC-NEXT:   liveins: $sgpr0, $vgpr10, $sgpr2_64, $sgpr4_64, $vgpr5_vgpr6_vgpr7_vgpr8:0x0000000000000003, $vgpr6_vgpr7_vgpr8_vgpr9:0x0000000000000003
+  ; REG_ALLOC-NEXT:   liveins: $sgpr0, $vgpr10, $sgpr2_64, $sgpr4_64, $vgpr5_128:0x0000000000000003, $vgpr6_128:0x0000000000000003
   ; REG_ALLOC-NEXT: {{  $}}
   ; REG_ALLOC-NEXT:   renamable $sgpr1 = V_READFIRSTLANE_B32 killed $vgpr5, implicit $exec
   ; REG_ALLOC-NEXT:   renamable $sgpr6 = V_READFIRSTLANE_B32 killed $vgpr6, implicit $exec
@@ -80,10 +80,10 @@ body: |
   ; DEAD_INST_DEL-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
   ; DEAD_INST_DEL-NEXT:   liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr10, $sgpr2_64, $sgpr4_64, $sgpr8_128
   ; DEAD_INST_DEL-NEXT: {{  $}}
-  ; DEAD_INST_DEL-NEXT:   renamable $vgpr11_vgpr12_vgpr13_vgpr14 = BUFFER_LOAD_DWORDX4_OFFEN renamable $vgpr3, renamable $sgpr8_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 8)
-  ; DEAD_INST_DEL-NEXT:   renamable $vgpr12_vgpr13_vgpr14_vgpr15 = BUFFER_LOAD_DWORDX4_OFFEN renamable $vgpr2, renamable $sgpr8_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 8)
-  ; DEAD_INST_DEL-NEXT:   renamable $vgpr5_vgpr6_vgpr7_vgpr8 = BUFFER_LOAD_DWORDX4_OFFEN renamable $vgpr0, renamable $sgpr8_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 8)
-  ; DEAD_INST_DEL-NEXT:   renamable $vgpr6_vgpr7_vgpr8_vgpr9 = BUFFER_LOAD_DWORDX4_OFFEN renamable $vgpr4, renamable $sgpr8_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 8)
+  ; DEAD_INST_DEL-NEXT:   renamable $vgpr11_128 = BUFFER_LOAD_DWORDX4_OFFEN renamable $vgpr3, renamable $sgpr8_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 8)
+  ; DEAD_INST_DEL-NEXT:   renamable $vgpr12_128 = BUFFER_LOAD_DWORDX4_OFFEN renamable $vgpr2, renamable $sgpr8_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 8)
+  ; DEAD_INST_DEL-NEXT:   renamable $vgpr5_128 = BUFFER_LOAD_DWORDX4_OFFEN renamable $vgpr0, renamable $sgpr8_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 8)
+  ; DEAD_INST_DEL-NEXT:   renamable $vgpr6_128 = BUFFER_LOAD_DWORDX4_OFFEN renamable $vgpr4, renamable $sgpr8_128, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (<4 x s32>), align 1, addrspace 8)
   ; DEAD_INST_DEL-NEXT:   KILL killed renamable $vgpr4
   ; DEAD_INST_DEL-NEXT:   KILL killed renamable $vgpr2
   ; DEAD_INST_DEL-NEXT:   KILL killed renamable $vgpr0
@@ -101,7 +101,7 @@ body: |
   ; DEAD_INST_DEL-NEXT: {{  $}}
   ; DEAD_INST_DEL-NEXT: bb.1:
   ; DEAD_INST_DEL-NEXT:   successors: %bb.3(0x40000000), %bb.5(0x40000000)
-  ; DEAD_INST_DEL-NEXT:   liveins: $sgpr0, $vgpr0, $vgpr10, $sgpr4_64, $sgpr6_64, $vgpr5_vgpr6_vgpr7_vgpr8:0x0000000000000003, $vgpr6_vgpr7_vgpr8_vgpr9:0x0000000000000003
+  ; DEAD_INST_DEL-NEXT:   liveins: $sgpr0, $vgpr0, $vgpr10, $sgpr4_64, $sgpr6_64, $vgpr5_128:0x0000000000000003, $vgpr6_128:0x0000000000000003
   ; DEAD_INST_DEL-NEXT: {{  $}}
   ; DEAD_INST_DEL-NEXT:   renamable $sgpr2_64 = S_OR_SAVEEXEC_B64 killed renamable $sgpr6_64, implicit-def $exec, implicit-def $scc, implicit $exec
   ; DEAD_INST_DEL-NEXT:   $exec = S_XOR_B64_term $exec, renamable $sgpr2_64, implicit-def $scc
@@ -114,13 +114,13 @@ body: |
   ; DEAD_INST_DEL-NEXT: {{  $}}
   ; DEAD_INST_DEL-NEXT:   renamable $sgpr1 = S_OR_B32 killed renamable $sgpr1, 2, implicit-def dead $scc
   ; DEAD_INST_DEL-NEXT:   renamable $vgpr0 = COPY killed renamable $sgpr1
-  ; DEAD_INST_DEL-NEXT:   renamable $vgpr5_vgpr6 = IMPLICIT_DEF
-  ; DEAD_INST_DEL-NEXT:   renamable $vgpr6_vgpr7_vgpr8_vgpr9 = IMPLICIT_DEF
+  ; DEAD_INST_DEL-NEXT:   renamable $vgpr5_64 = IMPLICIT_DEF
+  ; DEAD_INST_DEL-NEXT:   renamable $vgpr6_128 = IMPLICIT_DEF
   ; DEAD_INST_DEL-NEXT:   S_BRANCH %bb.1
   ; DEAD_INST_DEL-NEXT: {{  $}}
   ; DEAD_INST_DEL-NEXT: bb.3:
   ; DEAD_INST_DEL-NEXT:   successors: %bb.5(0x80000000)
-  ; DEAD_INST_DEL-NEXT:   liveins: $sgpr0, $vgpr10, $sgpr2_64, $sgpr4_64, $vgpr5_vgpr6_vgpr7_vgpr8:0x0000000000000003, $vgpr6_vgpr7_vgpr8_vgpr9:0x0000000000000003
+  ; DEAD_INST_DEL-NEXT:   liveins: $sgpr0, $vgpr10, $sgpr2_64, $sgpr4_64, $vgpr5_128:0x0000000000000003, $vgpr6_128:0x0000000000000003
   ; DEAD_INST_DEL-NEXT: {{  $}}
   ; DEAD_INST_DEL-NEXT:   renamable $sgpr1 = V_READFIRSTLANE_B32 killed $vgpr5, implicit $exec
   ; DEAD_INST_DEL-NEXT:   renamable $sgpr6 = V_READFIRSTLANE_B32 killed $vgpr6, implicit $exec

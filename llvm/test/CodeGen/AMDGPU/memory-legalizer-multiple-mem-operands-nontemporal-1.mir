@@ -146,10 +146,10 @@ body:             |
     $sgpr0 = S_LSHL_B32 killed $sgpr0, 2, implicit-def dead $scc
     $vgpr0 = V_ADD_CO_U32_e32 killed $sgpr0, killed $vgpr0, implicit-def dead $vcc, implicit $exec
     $vgpr0 = BUFFER_LOAD_DWORD_OFFEN killed $vgpr0, killed $sgpr8_128, $sgpr3, 0, 0, 0, implicit $exec :: (non-temporal load (s32) from %ir.else_ptr), (non-temporal load (s32) from %ir.if_ptr)
-    $vgpr1 = V_MOV_B32_e32 $sgpr4, implicit $exec, implicit-def $vgpr1_vgpr2, implicit $sgpr4_64
+    $vgpr1 = V_MOV_B32_e32 $sgpr4, implicit $exec, implicit-def $vgpr1_64, implicit $sgpr4_64
     $vgpr2 = V_MOV_B32_e32 killed $sgpr5, implicit $exec, implicit $sgpr4_64, implicit $exec
     S_WAITCNT 3952
-    FLAT_STORE_DWORD killed $vgpr1_vgpr2, killed $vgpr0, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out)
+    FLAT_STORE_DWORD killed $vgpr1_64, killed $vgpr0, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %ir.out)
     S_ENDPGM 0
 
 ...

@@ -9,10 +9,10 @@ name: revisit_concat_vectors_unmerge_user
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; GFX9-LABEL: name: revisit_concat_vectors_unmerge_user
-    ; GFX9: liveins: $vgpr0_vgpr1
+    ; GFX9: liveins: $vgpr0_64
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
@@ -33,12 +33,12 @@ body:             |
     ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(<2 x s16>) = G_SHL [[BUILD_VECTOR2]], [[BUILD_VECTOR]](<2 x s16>)
     ; GFX9-NEXT: [[SHL1:%[0-9]+]]:_(<2 x s16>) = G_SHL [[BUILD_VECTOR3]], [[BUILD_VECTOR1]](<2 x s16>)
     ; GFX9-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[SHL]](<2 x s16>), [[SHL1]](<2 x s16>)
-    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x s16>)
+    ; GFX9-NEXT: $vgpr0_64 = COPY [[CONCAT_VECTORS]](<4 x s16>)
     %0:_(s32) = COPY $vgpr0
     %1:_(<4 x s8>) = G_BITCAST %0
     %2:_(s16) = G_CONSTANT i16 2
     %3:_(<4 x s16>) = G_BUILD_VECTOR %2, %2, %2, %2
     %4:_(<4 x s16>) = G_ANYEXT %1
     %5:_(<4 x s16>) = G_SHL %4, %3
-    $vgpr0_vgpr1 = COPY %5
+    $vgpr0_64 = COPY %5
 ...

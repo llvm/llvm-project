@@ -8,9 +8,9 @@ body:             |
   ; GCN-LABEL: name: global_load_saddr_to_valu
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1
+  ; GCN-NEXT:   liveins: $vgpr0_64
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -30,8 +30,8 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0_vgpr1
-      %0:sreg_64 = COPY $vgpr0_vgpr1
+    liveins: $vgpr0_64
+      %0:sreg_64 = COPY $vgpr0_64
 
   bb.1:
       %1:sreg_64_xexec_xnull = PHI %0, %bb.0, %2, %bb.1
@@ -52,9 +52,9 @@ body:             |
   ; GCN-LABEL: name: global_load_saddr_to_valu_non_zero_vaddr
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1
+  ; GCN-NEXT:   liveins: $vgpr0_64
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -78,8 +78,8 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0_vgpr1
-      %0:sreg_64 = COPY $vgpr0_vgpr1
+    liveins: $vgpr0_64
+      %0:sreg_64 = COPY $vgpr0_64
 
   bb.1:
       %1:sreg_64_xexec_xnull = PHI %0, %bb.0, %2, %bb.1
@@ -101,9 +101,9 @@ body:             |
   ; GCN-LABEL: name: global_load_saddr_to_valu_undef_vaddr
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1
+  ; GCN-NEXT:   liveins: $vgpr0_64
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -126,8 +126,8 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0_vgpr1
-      %0:sreg_64 = COPY $vgpr0_vgpr1
+    liveins: $vgpr0_64
+      %0:sreg_64 = COPY $vgpr0_64
 
   bb.1:
       %1:sreg_64_xexec_xnull = PHI %0, %bb.0, %2, %bb.1
@@ -147,9 +147,9 @@ body:             |
   ; GCN-LABEL: name: global_store_saddr_to_valu
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1
+  ; GCN-NEXT:   liveins: $vgpr0_64
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -170,8 +170,8 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0_vgpr1
-      %0:sreg_64 = COPY $vgpr0_vgpr1
+    liveins: $vgpr0_64
+      %0:sreg_64 = COPY $vgpr0_64
 
   bb.1:
       %1:sreg_64_xexec_xnull = PHI %0, %bb.0, %2, %bb.1
@@ -193,9 +193,9 @@ body:             |
   ; GCN-LABEL: name: global_addtid_load_saddr_to_valu
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1
+  ; GCN-NEXT:   liveins: $vgpr0_64
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -218,8 +218,8 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0_vgpr1
-      %0:sreg_64 = COPY $vgpr0_vgpr1
+    liveins: $vgpr0_64
+      %0:sreg_64 = COPY $vgpr0_64
 
   bb.1:
       %1:sreg_64 = PHI %0, %bb.0, %2, %bb.1
@@ -239,9 +239,9 @@ body:             |
   ; GCN-LABEL: name: global_store_addtid_saddr_to_valu
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1
+  ; GCN-NEXT:   liveins: $vgpr0_64
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -265,8 +265,8 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0_vgpr1
-      %0:sreg_64 = COPY $vgpr0_vgpr1
+    liveins: $vgpr0_64
+      %0:sreg_64 = COPY $vgpr0_64
 
   bb.1:
       %1:sreg_64 = PHI %0, %bb.0, %2, %bb.1
@@ -287,9 +287,9 @@ body:             |
   ; GCN-LABEL: name: global_atomic_noret_saddr_to_valu
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1
+  ; GCN-NEXT:   liveins: $vgpr0_64
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -310,8 +310,8 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0_vgpr1
-      %0:sreg_64 = COPY $vgpr0_vgpr1
+    liveins: $vgpr0_64
+      %0:sreg_64 = COPY $vgpr0_64
 
   bb.1:
       %1:sreg_64_xexec_xnull = PHI %0, %bb.0, %2, %bb.1
@@ -332,9 +332,9 @@ body:             |
   ; GCN-LABEL: name: global_atomic_rtn_saddr_to_valu
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1
+  ; GCN-NEXT:   liveins: $vgpr0_64
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -355,8 +355,8 @@ body:             |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    liveins: $vgpr0_vgpr1
-      %0:sreg_64 = COPY $vgpr0_vgpr1
+    liveins: $vgpr0_64
+      %0:sreg_64 = COPY $vgpr0_64
 
   bb.1:
       %1:sreg_64_xexec_xnull = PHI %0, %bb.0, %2, %bb.1

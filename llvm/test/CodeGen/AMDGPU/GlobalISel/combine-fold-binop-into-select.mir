@@ -178,12 +178,12 @@ name: fold_add_into_select_v2s32_splat
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-LABEL: name: fold_add_into_select_v2s32_splat
-    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg0:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %reg1:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: %reg0:_(<2 x s32>) = COPY $vgpr0_64
+    ; CHECK-NEXT: %reg1:_(<2 x s32>) = COPY $vgpr2_64
     ; CHECK-NEXT: %cond:_(<2 x s1>) = G_ICMP intpred(eq), %reg0(<2 x s32>), %reg1
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 40
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
@@ -191,8 +191,8 @@ body: |
     ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C1]](s32), [[C1]](s32)
     ; CHECK-NEXT: %add:_(<2 x s32>) = G_SELECT %cond(<2 x s1>), [[BUILD_VECTOR]], [[BUILD_VECTOR1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit %add(<2 x s32>)
-    %reg0:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    %reg1:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    %reg0:_(<2 x s32>) = COPY $vgpr0_64
+    %reg1:_(<2 x s32>) = COPY $vgpr2_64
     %cond:_(<2 x s1>) = G_ICMP intpred(eq), %reg0, %reg1
     %ten:_(s32) = G_CONSTANT i32 10
     %twenty:_(s32) = G_CONSTANT i32 20
@@ -210,12 +210,12 @@ name: fold_add_into_select_v2s32_nonsplat
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-LABEL: name: fold_add_into_select_v2s32_nonsplat
-    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg0:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %reg1:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: %reg0:_(<2 x s32>) = COPY $vgpr0_64
+    ; CHECK-NEXT: %reg1:_(<2 x s32>) = COPY $vgpr2_64
     ; CHECK-NEXT: %cond:_(<2 x s1>) = G_ICMP intpred(eq), %reg0(<2 x s32>), %reg1
     ; CHECK-NEXT: %twenty:_(s32) = G_CONSTANT i32 20
     ; CHECK-NEXT: %thirty:_(s32) = G_CONSTANT i32 30
@@ -225,8 +225,8 @@ body: |
     ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C1]](s32), %twenty(s32)
     ; CHECK-NEXT: %add:_(<2 x s32>) = G_SELECT %cond(<2 x s1>), [[BUILD_VECTOR]], [[BUILD_VECTOR1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit %add(<2 x s32>)
-    %reg0:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    %reg1:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    %reg0:_(<2 x s32>) = COPY $vgpr0_64
+    %reg1:_(<2 x s32>) = COPY $vgpr2_64
     %cond:_(<2 x s1>) = G_ICMP intpred(eq), %reg0, %reg1
     %ten:_(s32) = G_CONSTANT i32 10
     %twenty:_(s32) = G_CONSTANT i32 20
@@ -244,12 +244,12 @@ name: fold_add_into_select_v2s32_nonsplat_undef
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-LABEL: name: fold_add_into_select_v2s32_nonsplat_undef
-    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %reg0:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %reg1:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: %reg0:_(<2 x s32>) = COPY $vgpr0_64
+    ; CHECK-NEXT: %reg1:_(<2 x s32>) = COPY $vgpr2_64
     ; CHECK-NEXT: %cond:_(<2 x s1>) = G_ICMP intpred(eq), %reg0(<2 x s32>), %reg1
     ; CHECK-NEXT: %twenty:_(s32) = G_CONSTANT i32 20
     ; CHECK-NEXT: %undef:_(s32) = G_IMPLICIT_DEF
@@ -261,8 +261,8 @@ body: |
     ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(<2 x s32>) = G_ADD %const_vec1, %const_vec3
     ; CHECK-NEXT: %add:_(<2 x s32>) = G_SELECT %cond(<2 x s1>), [[ADD]], [[ADD1]]
     ; CHECK-NEXT: S_ENDPGM 0, implicit %add(<2 x s32>)
-    %reg0:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    %reg1:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    %reg0:_(<2 x s32>) = COPY $vgpr0_64
+    %reg1:_(<2 x s32>) = COPY $vgpr2_64
     %cond:_(<2 x s1>) = G_ICMP intpred(eq), %reg0, %reg1
     %ten:_(s32) = G_CONSTANT i32 10
     %twenty:_(s32) = G_CONSTANT i32 20

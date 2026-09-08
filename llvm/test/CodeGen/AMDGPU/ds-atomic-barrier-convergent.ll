@@ -71,7 +71,7 @@ define void @taildup_ds_atomic_async_barrier_arrive(ptr addrspace(1) %a, ptr add
 ; GCN-NEXT:  ; %bb.1: ; %bb2
 ; GCN-NEXT:    v_mov_b32_e32 v3, 1
 ; GCN-NEXT:    global_store_b32 v[0:1], v3, off
-; GCN-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; GCN-NEXT:    ; implicit-def: $vgpr0_64
 ; GCN-NEXT:  .LBB1_2: ; %Flow
 ; GCN-NEXT:    s_wait_xcnt 0x0
 ; GCN-NEXT:    s_and_not1_saveexec_b32 s0, s0

@@ -29,7 +29,7 @@ body: |
 ---
 # CHECK-LABEL: name: t3
 # CHECK:  liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $sgpr0_128
-# CHECK:  $vgpr2 = BUFFER_ATOMIC_ADD_ADDR64_RTN $vgpr2, $vgpr0_vgpr1, killed renamable $sgpr0_128, 0, 0, 1, implicit $exec :: (load store (s32), addrspace 1)
+# CHECK:  $vgpr2 = BUFFER_ATOMIC_ADD_ADDR64_RTN $vgpr2, $vgpr0_64, killed renamable $sgpr0_128, 0, 0, 1, implicit $exec :: (load store (s32), addrspace 1)
 name: t3
 tracksRegLiveness: true
 machineFunctionInfo:
@@ -37,5 +37,5 @@ machineFunctionInfo:
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $sgpr0_128
-    $vgpr2 = BUFFER_ATOMIC_ADD_ADDR64_RTN $vgpr2, $vgpr0_vgpr1, killed renamable $sgpr0_128, 0, 0, 1, implicit $exec :: (load store (s32), addrspace 1)
+    $vgpr2 = BUFFER_ATOMIC_ADD_ADDR64_RTN $vgpr2, $vgpr0_64, killed renamable $sgpr0_128, 0, 0, 1, implicit $exec :: (load store (s32), addrspace 1)
 ...

@@ -362,6 +362,9 @@ foreach Index = 0...1023 in {
                  !if(!le(Index, 511), !add(Index, 1536), !add(Index, !sub(3584, 512)))]>;
 }
 
+defvar VGPRMembers = !foreach(i, !range(0, 1024), !cast<Register>("VGPR"#i));
+def : RegisterSequence<VGPRMembers>;
+
 // AccVGPR registers
 foreach Index = 0...255 in {
   defm AGPR#Index :

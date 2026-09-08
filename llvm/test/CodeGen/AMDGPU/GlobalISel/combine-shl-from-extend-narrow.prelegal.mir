@@ -59,7 +59,7 @@ body:             |
     ; GFX6-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 2
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL %masked, [[C]](s16)
     ; GFX6-NEXT: %shl:_(s64) = G_ZEXT [[SHL]](s16)
-    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY %shl(s64)
+    ; GFX6-NEXT: $vgpr0_64 = COPY %shl(s64)
     ;
     ; GFX9-LABEL: name: narrow_shl_s64_by_2_from_zext_s16
     ; GFX9: liveins: $vgpr0
@@ -71,7 +71,7 @@ body:             |
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 2
     ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL %masked, [[C]](s16)
     ; GFX9-NEXT: %shl:_(s64) = G_ZEXT [[SHL]](s16)
-    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY %shl(s64)
+    ; GFX9-NEXT: $vgpr0_64 = COPY %shl(s64)
     %argument:_(s32) = COPY $vgpr0
     %narrow:_(s16) = G_TRUNC %argument
     %masklow14:_(s16) = G_CONSTANT i16 16383
@@ -79,7 +79,7 @@ body:             |
     %extend:_(s64) = G_ZEXT %masked
     %shiftamt:_(s32) = G_CONSTANT i32 2
     %shl:_(s64) = G_SHL %extend, %shiftamt
-    $vgpr0_vgpr1 = COPY %shl
+    $vgpr0_64 = COPY %shl
 ...
 
 ---
@@ -141,7 +141,7 @@ body:             |
     ; GFX6-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16)
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(<2 x s16>) = G_SHL %masked, [[BUILD_VECTOR]](<2 x s16>)
     ; GFX6-NEXT: %shl:_(<2 x s32>) = G_ZEXT [[SHL]](<2 x s16>)
-    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY %shl(<2 x s32>)
+    ; GFX6-NEXT: $vgpr0_64 = COPY %shl(<2 x s32>)
     ;
     ; GFX9-LABEL: name: narrow_shl_v2s32_by_2_from_zext_v2s16
     ; GFX9: liveins: $vgpr0
@@ -154,7 +154,7 @@ body:             |
     ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR [[C]](s16), [[C]](s16)
     ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(<2 x s16>) = G_SHL %masked, [[BUILD_VECTOR]](<2 x s16>)
     ; GFX9-NEXT: %shl:_(<2 x s32>) = G_ZEXT [[SHL]](<2 x s16>)
-    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY %shl(<2 x s32>)
+    ; GFX9-NEXT: $vgpr0_64 = COPY %shl(<2 x s32>)
     %narrow:_(<2 x s16>) = COPY $vgpr0
     %masklow14:_(s16) = G_CONSTANT i16 16383
     %masklow14vec:_(<2 x s16>) = G_BUILD_VECTOR %masklow14, %masklow14
@@ -163,7 +163,7 @@ body:             |
     %shiftamt:_(s32) = G_CONSTANT i32 2
     %shiftamtvec:_(<2 x s32>) = G_BUILD_VECTOR %shiftamt, %shiftamt
     %shl:_(<2 x s32>) = G_SHL %extend, %shiftamtvec
-    $vgpr0_vgpr1 = COPY %shl
+    $vgpr0_64 = COPY %shl
 ...
 
 ---
@@ -171,12 +171,12 @@ name: narrow_shl_v2s64_by_2_from_anyext_v2s32
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; GFX6-LABEL: name: narrow_shl_v2s64_by_2_from_anyext_v2s32
-    ; GFX6: liveins: $vgpr0_vgpr1
+    ; GFX6: liveins: $vgpr0_64
     ; GFX6-NEXT: {{  $}}
-    ; GFX6-NEXT: %narrow:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; GFX6-NEXT: %narrow:_(<2 x s32>) = COPY $vgpr0_64
     ; GFX6-NEXT: %masklow30:_(s32) = G_CONSTANT i32 1073741823
     ; GFX6-NEXT: %masklow30vec:_(<2 x s32>) = G_BUILD_VECTOR %masklow30(s32), %masklow30(s32)
     ; GFX6-NEXT: %masked:_(<2 x s32>) = G_AND %narrow, %masklow30vec
@@ -184,12 +184,12 @@ body:             |
     ; GFX6-NEXT: %shiftamtvec:_(<2 x s32>) = G_BUILD_VECTOR %shiftamt(s32), %shiftamt(s32)
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(<2 x s32>) = G_SHL %masked, %shiftamtvec(<2 x s32>)
     ; GFX6-NEXT: %shl:_(<2 x s64>) = G_ZEXT [[SHL]](<2 x s32>)
-    ; GFX6-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %shl(<2 x s64>)
+    ; GFX6-NEXT: $vgpr0_128 = COPY %shl(<2 x s64>)
     ;
     ; GFX9-LABEL: name: narrow_shl_v2s64_by_2_from_anyext_v2s32
-    ; GFX9: liveins: $vgpr0_vgpr1
+    ; GFX9: liveins: $vgpr0_64
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: %narrow:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: %narrow:_(<2 x s32>) = COPY $vgpr0_64
     ; GFX9-NEXT: %masklow30:_(s32) = G_CONSTANT i32 1073741823
     ; GFX9-NEXT: %masklow30vec:_(<2 x s32>) = G_BUILD_VECTOR %masklow30(s32), %masklow30(s32)
     ; GFX9-NEXT: %masked:_(<2 x s32>) = G_AND %narrow, %masklow30vec
@@ -197,8 +197,8 @@ body:             |
     ; GFX9-NEXT: %shiftamtvec:_(<2 x s32>) = G_BUILD_VECTOR %shiftamt(s32), %shiftamt(s32)
     ; GFX9-NEXT: [[SHL:%[0-9]+]]:_(<2 x s32>) = G_SHL %masked, %shiftamtvec(<2 x s32>)
     ; GFX9-NEXT: %shl:_(<2 x s64>) = G_ZEXT [[SHL]](<2 x s32>)
-    ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %shl(<2 x s64>)
-    %narrow:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: $vgpr0_128 = COPY %shl(<2 x s64>)
+    %narrow:_(<2 x s32>) = COPY $vgpr0_64
     %masklow30:_(s32) = G_CONSTANT i32 1073741823
     %masklow30vec:_(<2 x s32>) = G_BUILD_VECTOR %masklow30, %masklow30
     %masked:_(<2 x s32>) = G_AND %narrow, %masklow30vec
@@ -206,7 +206,7 @@ body:             |
     %shiftamt:_(s32) = G_CONSTANT i32 2
     %shiftamtvec:_(<2 x s32>) = G_BUILD_VECTOR %shiftamt, %shiftamt
     %shl:_(<2 x s64>) = G_SHL %extend, %shiftamtvec
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %shl
+    $vgpr0_128 = COPY %shl
 ...
 
 ---
@@ -248,21 +248,21 @@ body:             |
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: %6:_(s32) = G_CONSTANT i32 0
     ; GFX6-NEXT: %shl:_(<2 x s32>) = G_BUILD_VECTOR %6(s32), %6(s32)
-    ; GFX6-NEXT: $vgpr0_vgpr1 = COPY %shl(<2 x s32>)
+    ; GFX6-NEXT: $vgpr0_64 = COPY %shl(<2 x s32>)
     ;
     ; GFX9-LABEL: name: do_not_shl_v2s32_zero_by_16_from_zext_v2s16
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: %6:_(s32) = G_CONSTANT i32 0
     ; GFX9-NEXT: %shl:_(<2 x s32>) = G_BUILD_VECTOR %6(s32), %6(s32)
-    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY %shl(<2 x s32>)
+    ; GFX9-NEXT: $vgpr0_64 = COPY %shl(<2 x s32>)
     %zero:_(s16) = G_CONSTANT i16 0
     %zerovector:_(<2 x s16>) = G_BUILD_VECTOR %zero, %zero:_(s16)
     %shiftamt:_(s16) = G_CONSTANT i16 16
     %shiftamtvector:_(<2 x s16>) = G_BUILD_VECTOR %shiftamt, %shiftamt:_(s16)
     %extend:_(<2 x s32>) = G_ZEXT %zerovector:_(<2 x s16>)
     %shl:_(<2 x s32>) = G_SHL %extend, %shiftamtvector
-    $vgpr0_vgpr1 = COPY %shl
+    $vgpr0_64 = COPY %shl
 ...
 
 ---

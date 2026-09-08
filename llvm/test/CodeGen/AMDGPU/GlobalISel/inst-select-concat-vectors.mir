@@ -17,11 +17,11 @@ body: |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
-    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[REG_SEQUENCE]]
+    ; GCN-NEXT: $vgpr0_64 = COPY [[REG_SEQUENCE]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<4 x s16>) = G_CONCAT_VECTORS %0, %1
-    $vgpr0_vgpr1 = COPY %2
+    $vgpr0_64 = COPY %2
 ...
 
 ---
@@ -39,11 +39,11 @@ body: |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
-    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[REG_SEQUENCE]]
+    ; GCN-NEXT: $vgpr0_64 = COPY [[REG_SEQUENCE]]
     %0:sgpr(<2 x s16>) = COPY $sgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<4 x s16>) = G_CONCAT_VECTORS %0, %1
-    $vgpr0_vgpr1 = COPY %2
+    $vgpr0_64 = COPY %2
 ...
 
 ---
@@ -61,11 +61,11 @@ body: |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
-    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[REG_SEQUENCE]]
+    ; GCN-NEXT: $vgpr0_64 = COPY [[REG_SEQUENCE]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:sgpr(<2 x s16>) = COPY $sgpr0
     %2:vgpr(<4 x s16>) = G_CONCAT_VECTORS %0, %1
-    $vgpr0_vgpr1 = COPY %2
+    $vgpr0_64 = COPY %2
 ...
 
 ---
@@ -130,12 +130,12 @@ body: |
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_96 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2
-    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[REG_SEQUENCE]]
+    ; GCN-NEXT: $vgpr0_96 = COPY [[REG_SEQUENCE]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<2 x s16>) = COPY $vgpr2
     %3:vgpr(<6 x s16>) = G_CONCAT_VECTORS %0, %1, %2
-    $vgpr0_vgpr1_vgpr2 = COPY %3
+    $vgpr0_96 = COPY %3
 ...
 
 ---
@@ -181,13 +181,13 @@ body: |
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[REG_SEQUENCE]]
+    ; GCN-NEXT: $vgpr0_128 = COPY [[REG_SEQUENCE]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<2 x s16>) = COPY $vgpr2
     %3:vgpr(<2 x s16>) = COPY $vgpr3
     %4:vgpr(<8 x s16>) = G_CONCAT_VECTORS %0, %1, %2, %3
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %4
+    $vgpr0_128 = COPY %4
 ...
 
 ---
@@ -219,19 +219,19 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
 
     ; GCN-LABEL: name: test_concat_vectors_v_v8s16_v_v4s16_v_v4s16
-    ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; GCN: liveins: $vgpr0_64, $vgpr2_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_64
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1, [[COPY1]], %subreg.sub2_sub3
-    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[REG_SEQUENCE]]
-    %0:vgpr(<4 x s16>) = COPY $vgpr0_vgpr1
-    %1:vgpr(<4 x s16>) = COPY $vgpr2_vgpr3
+    ; GCN-NEXT: $vgpr0_128 = COPY [[REG_SEQUENCE]]
+    %0:vgpr(<4 x s16>) = COPY $vgpr0_64
+    %1:vgpr(<4 x s16>) = COPY $vgpr2_64
     %2:vgpr(<8 x s16>) = G_CONCAT_VECTORS %0, %1
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %2
+    $vgpr0_128 = COPY %2
 ...
 
 ---
@@ -280,14 +280,14 @@ body: |
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; GCN-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr4
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_160 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3, [[COPY4]], %subreg.sub4
-    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 = COPY [[REG_SEQUENCE]]
+    ; GCN-NEXT: $vgpr0_160 = COPY [[REG_SEQUENCE]]
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = COPY $vgpr1
     %2:vgpr(<2 x s16>) = COPY $vgpr2
     %3:vgpr(<2 x s16>) = COPY $vgpr3
     %4:vgpr(<2 x s16>) = COPY $vgpr4
     %5:vgpr(<10 x s16>) = G_CONCAT_VECTORS %0, %1, %2, %3, %4
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4 = COPY %5
+    $vgpr0_160 = COPY %5
 ...
 
 ---
@@ -321,19 +321,19 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
+    liveins: $vgpr0_64, $vgpr2_64, $vgpr4_64
 
     ; GCN-LABEL: name: test_concat_vectors_v_v12s16_v_v4s16_v_v4s16_v_v4s16
-    ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
+    ; GCN: liveins: $vgpr0_64, $vgpr2_64, $vgpr4_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; GCN-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr4_vgpr5
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_64
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr4_64
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_192 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1, [[COPY1]], %subreg.sub2_sub3, [[COPY2]], %subreg.sub4_sub5
     ; GCN-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
-    %0:vgpr(<4 x s16>) = COPY $vgpr0_vgpr1
-    %1:vgpr(<4 x s16>) = COPY $vgpr2_vgpr3
-    %2:vgpr(<4 x s16>) = COPY $vgpr4_vgpr5
+    %0:vgpr(<4 x s16>) = COPY $vgpr0_64
+    %1:vgpr(<4 x s16>) = COPY $vgpr2_64
+    %2:vgpr(<4 x s16>) = COPY $vgpr4_64
     %3:vgpr(<12 x s16>) = G_CONCAT_VECTORS %0, %1, %2
     S_ENDPGM 0, implicit %3
 ...
@@ -449,31 +449,31 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8_vgpr9, $vgpr10_vgpr11, $vgpr12_vgpr13, $vgpr14_vgpr15
+    liveins: $vgpr0_64, $vgpr2_64, $vgpr4_64, $vgpr6_64, $vgpr8_64, $vgpr10_64, $vgpr12_64, $vgpr14_64
 
     ; GCN-LABEL: name: test_concat_vectors_v_v512_v_v64_v_v64_v_v64_v_v64_v_v64_v_v64_v_v64_v_v64
-    ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8_vgpr9, $vgpr10_vgpr11, $vgpr12_vgpr13, $vgpr14_vgpr15
+    ; GCN: liveins: $vgpr0_64, $vgpr2_64, $vgpr4_64, $vgpr6_64, $vgpr8_64, $vgpr10_64, $vgpr12_64, $vgpr14_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; GCN-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr4_vgpr5
-    ; GCN-NEXT: [[COPY3:%[0-9]+]]:vreg_64 = COPY $vgpr6_vgpr7
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr8_vgpr9
-    ; GCN-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY $vgpr10_vgpr11
-    ; GCN-NEXT: [[COPY6:%[0-9]+]]:vreg_64 = COPY $vgpr12_vgpr13
-    ; GCN-NEXT: [[COPY7:%[0-9]+]]:vreg_64 = COPY $vgpr14_vgpr15
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_64
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr4_64
+    ; GCN-NEXT: [[COPY3:%[0-9]+]]:vreg_64 = COPY $vgpr6_64
+    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr8_64
+    ; GCN-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY $vgpr10_64
+    ; GCN-NEXT: [[COPY6:%[0-9]+]]:vreg_64 = COPY $vgpr12_64
+    ; GCN-NEXT: [[COPY7:%[0-9]+]]:vreg_64 = COPY $vgpr14_64
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_512 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1, [[COPY1]], %subreg.sub2_sub3, [[COPY2]], %subreg.sub4_sub5, [[COPY3]], %subreg.sub6_sub7, [[COPY4]], %subreg.sub8_sub9, [[COPY5]], %subreg.sub10_sub11, [[COPY6]], %subreg.sub12_sub13, [[COPY7]], %subreg.sub14_sub15
-    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[REG_SEQUENCE]]
-    %0:vgpr(<4 x s16>) = COPY $vgpr0_vgpr1
-    %1:vgpr(<4 x s16>) = COPY $vgpr2_vgpr3
-    %2:vgpr(<4 x s16>) = COPY $vgpr4_vgpr5
-    %3:vgpr(<4 x s16>) = COPY $vgpr6_vgpr7
-    %4:vgpr(<4 x s16>) = COPY $vgpr8_vgpr9
-    %5:vgpr(<4 x s16>) = COPY $vgpr10_vgpr11
-    %6:vgpr(<4 x s16>) = COPY $vgpr12_vgpr13
-    %7:vgpr(<4 x s16>) = COPY $vgpr14_vgpr15
+    ; GCN-NEXT: $vgpr0_512 = COPY [[REG_SEQUENCE]]
+    %0:vgpr(<4 x s16>) = COPY $vgpr0_64
+    %1:vgpr(<4 x s16>) = COPY $vgpr2_64
+    %2:vgpr(<4 x s16>) = COPY $vgpr4_64
+    %3:vgpr(<4 x s16>) = COPY $vgpr6_64
+    %4:vgpr(<4 x s16>) = COPY $vgpr8_64
+    %5:vgpr(<4 x s16>) = COPY $vgpr10_64
+    %6:vgpr(<4 x s16>) = COPY $vgpr12_64
+    %7:vgpr(<4 x s16>) = COPY $vgpr14_64
     %8:vgpr(<32 x s16>) = G_CONCAT_VECTORS %0, %1, %2, %3, %4, %5, %6, %7
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY %8
+    $vgpr0_512 = COPY %8
 ...
 
 
@@ -510,19 +510,19 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
 
     ; GCN-LABEL: name: test_concat_vectors_v_v4s32_v_v2s32_v_v2s32
-    ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; GCN: liveins: $vgpr0_64, $vgpr2_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_64
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1, [[COPY1]], %subreg.sub2_sub3
-    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[REG_SEQUENCE]]
-    %0:vgpr(<2 x s32>) = COPY $vgpr0_vgpr1
-    %1:vgpr(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; GCN-NEXT: $vgpr0_128 = COPY [[REG_SEQUENCE]]
+    %0:vgpr(<2 x s32>) = COPY $vgpr0_64
+    %1:vgpr(<2 x s32>) = COPY $vgpr2_64
     %2:vgpr(<4 x s32>) = G_CONCAT_VECTORS %0, %1
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %2
+    $vgpr0_128 = COPY %2
 ...
 
 ---
@@ -603,31 +603,31 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8_vgpr9, $vgpr10_vgpr11, $vgpr12_vgpr13, $vgpr14_vgpr15
+    liveins: $vgpr0_64, $vgpr2_64, $vgpr4_64, $vgpr6_64, $vgpr8_64, $vgpr10_64, $vgpr12_64, $vgpr14_64
 
     ; GCN-LABEL: name: test_concat_vectors_v_v16s32_v_v2s32_v_v2s32_v_v2s32_v_v2s32_v_v2s32_v_v2s32_v_v2s32_v_v2s32
-    ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8_vgpr9, $vgpr10_vgpr11, $vgpr12_vgpr13, $vgpr14_vgpr15
+    ; GCN: liveins: $vgpr0_64, $vgpr2_64, $vgpr4_64, $vgpr6_64, $vgpr8_64, $vgpr10_64, $vgpr12_64, $vgpr14_64
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; GCN-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr4_vgpr5
-    ; GCN-NEXT: [[COPY3:%[0-9]+]]:vreg_64 = COPY $vgpr6_vgpr7
-    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr8_vgpr9
-    ; GCN-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY $vgpr10_vgpr11
-    ; GCN-NEXT: [[COPY6:%[0-9]+]]:vreg_64 = COPY $vgpr12_vgpr13
-    ; GCN-NEXT: [[COPY7:%[0-9]+]]:vreg_64 = COPY $vgpr14_vgpr15
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_64
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr4_64
+    ; GCN-NEXT: [[COPY3:%[0-9]+]]:vreg_64 = COPY $vgpr6_64
+    ; GCN-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr8_64
+    ; GCN-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY $vgpr10_64
+    ; GCN-NEXT: [[COPY6:%[0-9]+]]:vreg_64 = COPY $vgpr12_64
+    ; GCN-NEXT: [[COPY7:%[0-9]+]]:vreg_64 = COPY $vgpr14_64
     ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_512 = REG_SEQUENCE [[COPY]], %subreg.sub0_sub1, [[COPY1]], %subreg.sub2_sub3, [[COPY2]], %subreg.sub4_sub5, [[COPY3]], %subreg.sub6_sub7, [[COPY4]], %subreg.sub8_sub9, [[COPY5]], %subreg.sub10_sub11, [[COPY6]], %subreg.sub12_sub13, [[COPY7]], %subreg.sub14_sub15
-    ; GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY [[REG_SEQUENCE]]
-    %0:vgpr(<2 x s32>) = COPY $vgpr0_vgpr1
-    %1:vgpr(<2 x s32>) = COPY $vgpr2_vgpr3
-    %2:vgpr(<2 x s32>) = COPY $vgpr4_vgpr5
-    %3:vgpr(<2 x s32>) = COPY $vgpr6_vgpr7
-    %4:vgpr(<2 x s32>) = COPY $vgpr8_vgpr9
-    %5:vgpr(<2 x s32>) = COPY $vgpr10_vgpr11
-    %6:vgpr(<2 x s32>) = COPY $vgpr12_vgpr13
-    %7:vgpr(<2 x s32>) = COPY $vgpr14_vgpr15
+    ; GCN-NEXT: $vgpr0_512 = COPY [[REG_SEQUENCE]]
+    %0:vgpr(<2 x s32>) = COPY $vgpr0_64
+    %1:vgpr(<2 x s32>) = COPY $vgpr2_64
+    %2:vgpr(<2 x s32>) = COPY $vgpr4_64
+    %3:vgpr(<2 x s32>) = COPY $vgpr6_64
+    %4:vgpr(<2 x s32>) = COPY $vgpr8_64
+    %5:vgpr(<2 x s32>) = COPY $vgpr10_64
+    %6:vgpr(<2 x s32>) = COPY $vgpr12_64
+    %7:vgpr(<2 x s32>) = COPY $vgpr14_64
     %8:vgpr(<16 x s32>) = G_CONCAT_VECTORS %0, %1, %2, %3, %4, %5, %6, %7
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY %8
+    $vgpr0_512 = COPY %8
 ...
 
 ---

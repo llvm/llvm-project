@@ -1614,11 +1614,11 @@ void SIRegisterInfo::buildSpillLoadStore(
   // On targets with register tuple alignment requirements,
   // for unaligned tuples, spill the first sub-reg as a 32-bit spill,
   // and spill the rest as a regular aligned tuple.
-  // eg: SPILL_V224 $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+  // eg: SPILL_V224 $vgpr1_224
   // will be spilt as:
   // SPILL_SCRATCH_DWORD $vgpr1
-  // SPILL_SCRATCH_DWORDx4 $vgpr2_vgpr3_vgpr4_vgpr5
-  // SPILL_SCRATCH_DWORDx2 $vgpr6_vgpr7
+  // SPILL_SCRATCH_DWORDx4 $vgpr2_128
+  // SPILL_SCRATCH_DWORDx2 $vgpr6_64
   bool IsRegMisaligned = false;
   if (!IsBlock && !IsAGPR && RegWidth > 4 && IsFlat) {
     unsigned SpillOpcode =

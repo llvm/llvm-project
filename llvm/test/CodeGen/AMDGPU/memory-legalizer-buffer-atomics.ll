@@ -111,7 +111,7 @@ define float @struct_buffer_atomic_add_v2f16_ret(<2 x half> %val, <4 x i32> inre
 ; GFX1250-NEXT:    s_mov_b32 s1, s6
 ; GFX1250-NEXT:    s_mov_b32 s2, s5
 ; GFX1250-NEXT:    s_mov_b32 s3, s4
-; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_64 killed $exec
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
@@ -139,7 +139,7 @@ define void @struct_buffer_atomic_add_v2f16_noret(<2 x half> %val, <4 x i32> inr
 ; GFX1250-NEXT:    s_mov_b32 s1, s6
 ; GFX1250-NEXT:    s_mov_b32 s2, s5
 ; GFX1250-NEXT:    s_mov_b32 s3, s4
-; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
+; GFX1250-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_64 killed $exec
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX1250-NEXT:    s_wait_xcnt 0x0

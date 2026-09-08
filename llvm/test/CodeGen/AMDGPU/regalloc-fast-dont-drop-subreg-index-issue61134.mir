@@ -14,13 +14,13 @@ machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
   bb.0:
-    liveins: $vgpr0, $vgpr1_vgpr2
+    liveins: $vgpr0, $vgpr1_64
 
     ; CHECK-LABEL: name: func
-    ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2
+    ; CHECK: liveins: $vgpr0, $vgpr1_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: undef [[COPY:%[0-9]+]].sub0:vreg_64 = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr1_64
     ; CHECK-NEXT: undef [[V_MOV_B32_e32_:%[0-9]+]].sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: undef [[COPY]].sub0:vreg_64, renamable $sgpr0_64 = V_ADD_CO_U32_e64 1, [[COPY]].sub0, 0, implicit $exec
     ; CHECK-NEXT: undef [[V_MOV_B32_e32_]].sub1:vreg_64, dead renamable $sgpr0_64 = V_ADDC_U32_e64 0, [[V_MOV_B32_e32_]].sub1, killed $sgpr0_64, 0, implicit $exec
@@ -28,7 +28,7 @@ body:             |
     ; CHECK-NEXT: $vgpr0 = V_MOV_B32_e32 [[GLOBAL_LOAD_DWORDX2_]].sub0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY]], implicit [[V_MOV_B32_e32_]], implicit $vgpr0
     undef %0.sub0:vreg_64 = COPY $vgpr0
-    %2:vreg_64 = COPY $vgpr1_vgpr2
+    %2:vreg_64 = COPY $vgpr1_64
     undef %1.sub1:vreg_64 = V_MOV_B32_e32 0, implicit $exec
     undef %0.sub0:vreg_64, %3:sreg_64_xexec = V_ADD_CO_U32_e64 1, %0.sub0, 0, implicit $exec
     undef %1.sub1:vreg_64, dead %4:sreg_64_xexec = V_ADDC_U32_e64 0, %1.sub1, %3, 0, implicit $exec

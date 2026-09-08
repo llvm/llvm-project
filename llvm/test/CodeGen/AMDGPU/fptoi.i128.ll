@@ -25,8 +25,8 @@ define i128 @fptosi_f64_to_i128(double %x) {
 ; SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[4:5], v[6:7]
 ; SDAG-NEXT:    v_or_b32_e32 v9, 1, v8
 ; SDAG-NEXT:    v_or_b32_e32 v5, 0x100000, v0
-; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; SDAG-NEXT:    ; implicit-def: $vgpr0_64
+; SDAG-NEXT:    ; implicit-def: $vgpr2_64
 ; SDAG-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SDAG-NEXT:    s_xor_b64 s[8:9], exec, s[4:5]
 ; SDAG-NEXT:    s_cbranch_execz .LBB0_3
@@ -66,7 +66,7 @@ define i128 @fptosi_f64_to_i128(double %x) {
 ; SDAG-NEXT:    ; implicit-def: $vgpr8
 ; SDAG-NEXT:    v_add_co_u32_e32 v2, vcc, v2, v5
 ; SDAG-NEXT:    v_addc_co_u32_e32 v3, vcc, v3, v4, vcc
-; SDAG-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; SDAG-NEXT:    ; implicit-def: $vgpr4_64
 ; SDAG-NEXT:  .LBB0_3: ; %Flow
 ; SDAG-NEXT:    s_andn2_saveexec_b64 s[4:5], s[8:9]
 ; SDAG-NEXT:    s_cbranch_execz .LBB0_5
@@ -172,7 +172,7 @@ define i128 @fptosi_f64_to_i128(double %x) {
 ; GISEL-NEXT:    v_mov_b32_e32 v3, 0x100000
 ; GISEL-NEXT:    v_cmp_ge_u64_e32 vcc, v[6:7], v[0:1]
 ; GISEL-NEXT:    v_and_or_b32 v5, v5, v2, v3
-; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GISEL-NEXT:    ; implicit-def: $vgpr0_128
 ; GISEL-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GISEL-NEXT:    s_xor_b64 s[12:13], exec, s[4:5]
 ; GISEL-NEXT:    s_cbranch_execz .LBB0_3
@@ -205,7 +205,7 @@ define i128 @fptosi_f64_to_i128(double %x) {
 ; GISEL-NEXT:    ; implicit-def: $vgpr6
 ; GISEL-NEXT:    ; implicit-def: $vgpr9
 ; GISEL-NEXT:    v_mad_u64_u32 v[3:4], s[4:5], v5, v8, v[10:11]
-; GISEL-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; GISEL-NEXT:    ; implicit-def: $vgpr4_64
 ; GISEL-NEXT:    ; implicit-def: $vgpr8
 ; GISEL-NEXT:    ; implicit-def: $vgpr10
 ; GISEL-NEXT:  .LBB0_3: ; %Flow
@@ -251,8 +251,8 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; SDAG-NEXT:    v_and_b32_e32 v1, 0xfffff, v1
 ; SDAG-NEXT:    v_cmp_lt_u64_e32 vcc, s[4:5], v[6:7]
 ; SDAG-NEXT:    v_or_b32_e32 v1, 0x100000, v1
-; SDAG-NEXT:    ; implicit-def: $vgpr4_vgpr5
-; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; SDAG-NEXT:    ; implicit-def: $vgpr4_64
+; SDAG-NEXT:    ; implicit-def: $vgpr2_64
 ; SDAG-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SDAG-NEXT:    s_xor_b64 s[8:9], exec, s[4:5]
 ; SDAG-NEXT:    s_cbranch_execz .LBB1_3
@@ -272,7 +272,7 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; SDAG-NEXT:    v_cndmask_b32_e32 v5, 0, v1, vcc
 ; SDAG-NEXT:    v_cndmask_b32_e32 v4, 0, v0, vcc
 ; SDAG-NEXT:    ; implicit-def: $vgpr6
-; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
+; SDAG-NEXT:    ; implicit-def: $vgpr0_64
 ; SDAG-NEXT:  .LBB1_3: ; %Flow
 ; SDAG-NEXT:    s_andn2_saveexec_b64 s[4:5], s[8:9]
 ; SDAG-NEXT:  ; %bb.4: ; %fp-to-i-if-exp.small
@@ -314,7 +314,7 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; GISEL-NEXT:    v_mov_b32_e32 v3, 0x100000
 ; GISEL-NEXT:    v_cmp_ge_u64_e32 vcc, v[6:7], v[0:1]
 ; GISEL-NEXT:    v_and_or_b32 v5, v5, v2, v3
-; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GISEL-NEXT:    ; implicit-def: $vgpr0_128
 ; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GISEL-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
 ; GISEL-NEXT:    s_cbranch_execz .LBB1_3
@@ -334,7 +334,7 @@ define i128 @fptoui_f64_to_i128(double %x) {
 ; GISEL-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
 ; GISEL-NEXT:    v_cndmask_b32_e64 v3, v3, 0, vcc
 ; GISEL-NEXT:    ; implicit-def: $vgpr6
-; GISEL-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; GISEL-NEXT:    ; implicit-def: $vgpr4_64
 ; GISEL-NEXT:  .LBB1_3: ; %Flow
 ; GISEL-NEXT:    s_andn2_saveexec_b64 s[6:7], s[6:7]
 ; GISEL-NEXT:  ; %bb.4: ; %fp-to-i-if-exp.small
@@ -373,7 +373,7 @@ define i128 @fptosi_f32_to_i128(float %x) {
 ; SDAG-NEXT:    v_or_b32_e32 v7, 1, v5
 ; SDAG-NEXT:    v_or_b32_e32 v1, 0x800000, v0
 ; SDAG-NEXT:    v_cmp_lt_u32_e32 vcc, s4, v8
-; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; SDAG-NEXT:    ; implicit-def: $vgpr2_64
 ; SDAG-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SDAG-NEXT:    s_xor_b64 s[8:9], exec, s[4:5]
 ; SDAG-NEXT:    s_cbranch_execz .LBB2_3
@@ -509,7 +509,7 @@ define i128 @fptosi_f32_to_i128(float %x) {
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x96
 ; GISEL-NEXT:    v_mov_b32_e32 v5, 0
 ; GISEL-NEXT:    v_cmp_ge_u32_e32 vcc, v6, v0
-; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GISEL-NEXT:    ; implicit-def: $vgpr0_128
 ; GISEL-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GISEL-NEXT:    s_xor_b64 s[12:13], exec, s[4:5]
 ; GISEL-NEXT:    s_cbranch_execz .LBB2_3
@@ -586,8 +586,8 @@ define i128 @fptoui_f32_to_i128(float %x) {
 ; SDAG-NEXT:    s_movk_i32 s4, 0x95
 ; SDAG-NEXT:    v_or_b32_e32 v4, 0x800000, v0
 ; SDAG-NEXT:    v_cmp_lt_u32_e32 vcc, s4, v6
-; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; SDAG-NEXT:    ; implicit-def: $vgpr0_64
+; SDAG-NEXT:    ; implicit-def: $vgpr2_64
 ; SDAG-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SDAG-NEXT:    s_xor_b64 s[8:9], exec, s[4:5]
 ; SDAG-NEXT:    s_cbranch_execz .LBB3_3
@@ -644,7 +644,7 @@ define i128 @fptoui_f32_to_i128(float %x) {
 ; GISEL-NEXT:    v_and_or_b32 v4, v4, v0, v1
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x96
 ; GISEL-NEXT:    v_cmp_ge_u32_e32 vcc, v6, v0
-; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GISEL-NEXT:    ; implicit-def: $vgpr0_128
 ; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], vcc
 ; GISEL-NEXT:    s_xor_b64 s[6:7], exec, s[6:7]
 ; GISEL-NEXT:    s_cbranch_execz .LBB3_3
@@ -735,8 +735,8 @@ define i128 @fptosi_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    v_or_b32_e32 v5, 1, v7
 ; SDAG-NEXT:    v_or_b32_e32 v4, 0x80, v0
 ; SDAG-NEXT:    v_cmp_lt_u16_e32 vcc, s5, v8
-; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; SDAG-NEXT:    ; implicit-def: $vgpr0_64
+; SDAG-NEXT:    ; implicit-def: $vgpr2_64
 ; SDAG-NEXT:    s_and_saveexec_b64 s[8:9], vcc
 ; SDAG-NEXT:    s_xor_b64 s[8:9], exec, s[8:9]
 ; SDAG-NEXT:    s_cbranch_execz .LBB6_3
@@ -868,7 +868,7 @@ define i128 @fptosi_bf16_to_i128(bfloat %x) {
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x86
 ; GISEL-NEXT:    v_mov_b32_e32 v5, 0
 ; GISEL-NEXT:    v_cmp_ge_u16_sdwa s[4:5], v6, v0 src0_sel:BYTE_0 src1_sel:DWORD
-; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GISEL-NEXT:    ; implicit-def: $vgpr0_128
 ; GISEL-NEXT:    s_and_saveexec_b64 s[6:7], s[4:5]
 ; GISEL-NEXT:    s_xor_b64 s[12:13], exec, s[6:7]
 ; GISEL-NEXT:    s_cbranch_execz .LBB6_3
@@ -943,8 +943,8 @@ define i128 @fptoui_bf16_to_i128(bfloat %x) {
 ; SDAG-NEXT:    s_movk_i32 s4, 0x85
 ; SDAG-NEXT:    v_or_b32_e32 v4, 0x80, v0
 ; SDAG-NEXT:    v_cmp_lt_u16_e32 vcc, s4, v5
-; SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; SDAG-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; SDAG-NEXT:    ; implicit-def: $vgpr0_64
+; SDAG-NEXT:    ; implicit-def: $vgpr2_64
 ; SDAG-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; SDAG-NEXT:    s_xor_b64 s[8:9], exec, s[4:5]
 ; SDAG-NEXT:    s_cbranch_execz .LBB7_3
@@ -1002,7 +1002,7 @@ define i128 @fptoui_bf16_to_i128(bfloat %x) {
 ; GISEL-NEXT:    v_or_b32_e32 v4, 0x80, v0
 ; GISEL-NEXT:    v_mov_b32_e32 v0, 0x86
 ; GISEL-NEXT:    v_cmp_ge_u16_sdwa s[6:7], v5, v0 src0_sel:BYTE_0 src1_sel:DWORD
-; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GISEL-NEXT:    ; implicit-def: $vgpr0_128
 ; GISEL-NEXT:    s_and_saveexec_b64 s[8:9], s[6:7]
 ; GISEL-NEXT:    s_xor_b64 s[6:7], exec, s[8:9]
 ; GISEL-NEXT:    s_cbranch_execz .LBB7_3

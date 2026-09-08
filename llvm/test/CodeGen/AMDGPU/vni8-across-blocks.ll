@@ -453,7 +453,7 @@ define amdgpu_kernel void @v8i8_phi_zeroinit(ptr addrspace(1) %src1, ptr addrspa
 ; GFX942-NEXT:    v_cmp_gt_u32_e32 vcc, 15, v0
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-NEXT:    global_load_dwordx2 v[2:3], v1, s[8:9]
-; GFX942-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; GFX942-NEXT:    ; implicit-def: $vgpr4_64
 ; GFX942-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; GFX942-NEXT:    s_cbranch_execz .LBB9_2
 ; GFX942-NEXT:  ; %bb.1: ; %bb.1

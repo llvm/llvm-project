@@ -1,16 +1,16 @@
 # RUN: llc -mtriple=amdgpu9.0a -run-pass=machine-cp -verify-machineinstrs -o - %s | FileCheck --check-prefix=GCN %s
 
 # GCN-LABEL: name: mcp_aligned_vgprs
-# GCN: $vgpr0_vgpr1 = V_PK_MUL_F32 0, $sgpr0_64
-# GCN: $vgpr3_vgpr4 = COPY killed renamable $vgpr0_vgpr1
+# GCN: $vgpr0_64 = V_PK_MUL_F32 0, $sgpr0_64
+# GCN: $vgpr3_64 = COPY killed renamable $vgpr0_64
 ---
 name:            mcp_aligned_vgprs
 body:             |
   bb.0.entry:
 
-    renamable $vgpr0_vgpr1 = V_PK_MUL_F32 0, $sgpr0_64, 0, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-    renamable $vgpr3_vgpr4 = COPY killed renamable $vgpr0_vgpr1
-    S_ENDPGM 0, implicit $vgpr3_vgpr4
+    renamable $vgpr0_64 = V_PK_MUL_F32 0, $sgpr0_64, 0, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    renamable $vgpr3_64 = COPY killed renamable $vgpr0_64
+    S_ENDPGM 0, implicit $vgpr3_64
 ...
 
 # GCN-LABEL: name: mcp_aligned_agprs

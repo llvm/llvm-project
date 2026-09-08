@@ -32,26 +32,26 @@ name: fshl_v2i32
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
+    liveins: $vgpr0_64, $vgpr2_64, $vgpr4_64, $vgpr6_64
 
     ; CHECK-LABEL: name: fshl_v2i32
-    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
+    ; CHECK: liveins: $vgpr0_64, $vgpr2_64, $vgpr4_64, $vgpr6_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %a:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %b:_(<2 x s32>) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: %amt:_(<2 x s32>) = COPY $vgpr4_vgpr5
+    ; CHECK-NEXT: %a:_(<2 x s32>) = COPY $vgpr0_64
+    ; CHECK-NEXT: %b:_(<2 x s32>) = COPY $vgpr2_64
+    ; CHECK-NEXT: %amt:_(<2 x s32>) = COPY $vgpr4_64
     ; CHECK-NEXT: %or:_(<2 x s32>) = G_FSHL %a, %b, %amt(<2 x s32>)
-    ; CHECK-NEXT: $vgpr6_vgpr7 = COPY %or(<2 x s32>)
-    %a:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    %b:_(<2 x s32>) = COPY $vgpr2_vgpr3
-    %amt:_(<2 x s32>) = COPY $vgpr4_vgpr5
+    ; CHECK-NEXT: $vgpr6_64 = COPY %or(<2 x s32>)
+    %a:_(<2 x s32>) = COPY $vgpr0_64
+    %b:_(<2 x s32>) = COPY $vgpr2_64
+    %amt:_(<2 x s32>) = COPY $vgpr4_64
     %scalar_bw:_(s32) = G_CONSTANT i32 32
     %bw:_(<2 x s32>) = G_BUILD_VECTOR %scalar_bw, %scalar_bw
     %shl:_(<2 x s32>) = G_SHL %a, %amt
     %sub:_(<2 x s32>) = G_SUB %bw, %amt
     %lshr:_(<2 x s32>) = G_LSHR %b, %sub
     %or:_(<2 x s32>) = G_OR %shl, %lshr
-    $vgpr6_vgpr7 = COPY %or
+    $vgpr6_64 = COPY %or
 ...
 
 ---
@@ -136,19 +136,19 @@ name: fsh_v2i32_const
 tracksRegLiveness: true
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
+    liveins: $vgpr0_64, $vgpr2_64, $vgpr4_64
 
     ; CHECK-LABEL: name: fsh_v2i32_const
-    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
+    ; CHECK: liveins: $vgpr0_64, $vgpr2_64, $vgpr4_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %a:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %b:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: %a:_(<2 x s32>) = COPY $vgpr0_64
+    ; CHECK-NEXT: %b:_(<2 x s32>) = COPY $vgpr2_64
     ; CHECK-NEXT: %scalar_amt1:_(s32) = G_CONSTANT i32 12
     ; CHECK-NEXT: %amt1:_(<2 x s32>) = G_BUILD_VECTOR %scalar_amt1(s32), %scalar_amt1(s32)
     ; CHECK-NEXT: %or:_(<2 x s32>) = G_FSHR %a, %b, %amt1(<2 x s32>)
-    ; CHECK-NEXT: $vgpr4_vgpr5 = COPY %or(<2 x s32>)
-    %a:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    %b:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: $vgpr4_64 = COPY %or(<2 x s32>)
+    %a:_(<2 x s32>) = COPY $vgpr0_64
+    %b:_(<2 x s32>) = COPY $vgpr2_64
     %scalar_amt0:_(s32) = G_CONSTANT i32 20
     %amt0:_(<2 x s32>) = G_BUILD_VECTOR %scalar_amt0, %scalar_amt0
     %scalar_amt1:_(s32) = G_CONSTANT i32 12
@@ -156,7 +156,7 @@ body: |
     %shl:_(<2 x s32>) = G_SHL %a, %amt0
     %lshr:_(<2 x s32>) = G_LSHR %b, %amt1
     %or:_(<2 x s32>) = G_OR %shl, %lshr
-    $vgpr4_vgpr5 = COPY %or
+    $vgpr4_64 = COPY %or
 ...
 
 ---

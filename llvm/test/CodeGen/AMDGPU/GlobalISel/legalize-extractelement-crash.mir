@@ -7,7 +7,7 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: f
     ; CHECK: SI_RETURN
-    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    %0:_(<2 x s32>) = COPY $vgpr0_64
 
     %2:_(s32) = G_CONSTANT i32 -1
     %3:_(s32) = G_EXTRACT_VECTOR_ELT %0(<2 x s32>), %2(s32)

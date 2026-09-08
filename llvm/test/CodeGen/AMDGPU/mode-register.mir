@@ -89,8 +89,8 @@ name: rtn_default
 
 body: |
   bb.0:
-    liveins: $vgpr1_vgpr2
-    $vgpr1_vgpr2 = V_FRACT_F64_e32 killed $vgpr1_vgpr2, implicit $mode, implicit $exec
+    liveins: $vgpr1_64
+    $vgpr1_64 = V_FRACT_F64_e32 killed $vgpr1_64, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -106,9 +106,9 @@ name: rtn_from_rtz
 
 body: |
   bb.0:
-    liveins: $vgpr1_vgpr2
+    liveins: $vgpr1_64
     S_SETREG_IMM32_B32 3, 2177, implicit-def $mode, implicit $mode
-    $vgpr1_vgpr2 = V_FRACT_F64_e32 killed $vgpr1_vgpr2, implicit $mode, implicit $exec
+    $vgpr1_64 = V_FRACT_F64_e32 killed $vgpr1_64, implicit $mode, implicit $exec
     S_ENDPGM 0
 ...
 ---
@@ -122,8 +122,8 @@ name: rtz_from_rtn
 body: |
   bb.0:
     successors: %bb.1
-    liveins: $vgpr1_vgpr2
-    $vgpr1_vgpr2 = V_FRACT_F64_e32 killed $vgpr1_vgpr2, implicit $mode, implicit $exec
+    liveins: $vgpr1_64
+    $vgpr1_64 = V_FRACT_F64_e32 killed $vgpr1_64, implicit $mode, implicit $exec
     S_BRANCH %bb.1
 
   bb.1:
@@ -155,7 +155,7 @@ body: |
     $vgpr2 = V_MOV_B32_e32 $sgpr1, implicit $exec, implicit $exec
     $vgpr0 = V_INTERP_P1LL_F16 0, killed $vgpr0, 2, 1, -1, 0, 0, implicit $mode, implicit $m0, implicit $exec
     $vgpr1 = V_INTERP_P2_F16 0, $vgpr2, 2, 1, 0, killed $vgpr1, 0, 0, implicit $mode, implicit $m0, implicit $exec
-    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $mode, implicit $exec
+    $vgpr3_64 = V_FRACT_F64_e32 killed $vgpr3_64, implicit $mode, implicit $exec
     $vgpr0 = V_INTERP_P2_F16 0, killed $vgpr2, 2, 1, 0, killed $vgpr0, -1, 0, implicit $mode, implicit $m0, implicit $exec
     $vgpr0 = V_ADD_F16_e32 killed $sgpr0, killed $vgpr0, implicit $mode, implicit $exec
     S_ENDPGM 0
@@ -185,7 +185,7 @@ body: |
     $vgpr2 = V_MOV_B32_e32 $sgpr1, implicit $exec
     $vgpr0 = V_INTERP_P1LL_F16 0, killed $vgpr0, 2, 1, -1, 0, 0, implicit $mode, implicit $m0, implicit $exec
     $vgpr1 = V_INTERP_P2_F16 0, $vgpr2, 2, 1, 0, killed $vgpr1, 0, 0, implicit $mode, implicit $m0, implicit $exec
-    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $mode, implicit $exec
+    $vgpr3_64 = V_FRACT_F64_e32 killed $vgpr3_64, implicit $mode, implicit $exec
     $vgpr0 = V_INTERP_P2_F16 0, killed $vgpr2, 2, 1, 0, killed $vgpr0, -1, 0, implicit $mode, implicit $m0, implicit $exec
     $vgpr0 = V_ADD_F16_e32 killed $sgpr0, killed $vgpr0, implicit $mode, implicit $exec
     S_ENDPGM 0
@@ -213,7 +213,7 @@ body: |
 
   bb.1:
     successors: %bb.2
-    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $mode, implicit $exec
+    $vgpr3_64 = V_FRACT_F64_e32 killed $vgpr3_64, implicit $mode, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:
@@ -252,7 +252,7 @@ body: |
 
   bb.2:
     successors: %bb.1, %bb.3
-    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $mode, implicit $exec
+    $vgpr3_64 = V_FRACT_F64_e32 killed $vgpr3_64, implicit $mode, implicit $exec
     S_CBRANCH_VCCZ %bb.1, implicit $vcc
     S_BRANCH %bb.3
 
@@ -343,7 +343,7 @@ body: |
 
   bb.3:
     successors: %bb.4
-    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $mode, implicit $exec
+    $vgpr3_64 = V_FRACT_F64_e32 killed $vgpr3_64, implicit $mode, implicit $exec
     S_BRANCH %bb.4
 
   bb.4:
@@ -384,7 +384,7 @@ body: |
 
   bb.4:
     successors: %bb.5
-    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $mode, implicit $exec
+    $vgpr3_64 = V_FRACT_F64_e32 killed $vgpr3_64, implicit $mode, implicit $exec
     S_BRANCH %bb.5
 
   bb.5:
@@ -402,8 +402,8 @@ name: pass_through_blocks
 body: |
   bb.0:
     successors: %bb.1
-    liveins: $vgpr1_vgpr2
-    $vgpr1_vgpr2 = V_FRACT_F64_e32 killed $vgpr1_vgpr2, implicit $mode, implicit $exec
+    liveins: $vgpr1_64
+    $vgpr1_64 = V_FRACT_F64_e32 killed $vgpr1_64, implicit $mode, implicit $exec
     $vgpr1 = V_INTERP_P1LL_F16 0, $vgpr0, 2, 1, 0, 0, 0, implicit $mode, implicit $m0, implicit $exec
     S_BRANCH %bb.1
 
@@ -452,7 +452,7 @@ body: |
 
   bb.3:
     successors: %bb.4
-    $vgpr3_vgpr4 = V_FRACT_F64_e32 killed $vgpr3_vgpr4, implicit $mode, implicit $exec
+    $vgpr3_64 = V_FRACT_F64_e32 killed $vgpr3_64, implicit $mode, implicit $exec
     S_BRANCH %bb.4
 
   bb.4:
@@ -479,8 +479,8 @@ body: |
 
   bb.2:
     successors: %bb.3
-    liveins: $vgpr1_vgpr2
-    $vgpr1_vgpr2 = V_FRACT_F64_e32 killed $vgpr1_vgpr2, implicit $mode, implicit $exec
+    liveins: $vgpr1_64
+    $vgpr1_64 = V_FRACT_F64_e32 killed $vgpr1_64, implicit $mode, implicit $exec
     S_BRANCH %bb.3
 
   bb.3:
@@ -503,8 +503,8 @@ body: |
 
   bb.1:
     successors: %bb.2
-    liveins: $vgpr1_vgpr2
-    $vgpr1_vgpr2 = V_FRACT_F64_e32 killed $vgpr1_vgpr2, implicit $mode, implicit $exec
+    liveins: $vgpr1_64
+    $vgpr1_64 = V_FRACT_F64_e32 killed $vgpr1_64, implicit $mode, implicit $exec
     S_BRANCH %bb.2
 
   bb.2:

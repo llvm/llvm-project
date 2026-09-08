@@ -26,10 +26,10 @@ body:             |
     ; CHECK-NEXT: S_WAIT_BVHCNT 0
     ; CHECK-NEXT: S_WAIT_KMCNT 0
     ; CHECK-NEXT: $vgpr1 = nofpexcept V_EXP_F32_e32 $vgpr0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = DS_READ_B128_gfx9 renamable $vgpr36, 8224, 0, implicit $exec
+    ; CHECK-NEXT: $vgpr0_128 = DS_READ_B128_gfx9 renamable $vgpr36, 8224, 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     $vgpr1 = nofpexcept V_EXP_F32_e32 $vgpr0, implicit $mode, implicit $exec
-    $vgpr0_vgpr1_vgpr2_vgpr3 = DS_READ_B128_gfx9 renamable $vgpr36, 8224, 0, implicit $exec
+    $vgpr0_128 = DS_READ_B128_gfx9 renamable $vgpr36, 8224, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -46,9 +46,9 @@ body:             |
     ; CHECK-NEXT: S_WAIT_KMCNT 0
     ; CHECK-NEXT: $vgpr1 = nofpexcept V_EXP_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = DS_READ_B128_gfx9 renamable $vgpr36, 8224, 0, implicit $exec
+    ; CHECK-NEXT: $vgpr0_128 = DS_READ_B128_gfx9 renamable $vgpr36, 8224, 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
     $vgpr1 = nofpexcept V_EXP_F32_e32 $vgpr0, implicit $mode, implicit $exec
-    $vgpr0_vgpr1_vgpr2_vgpr3 = DS_READ_B128_gfx9 renamable $vgpr36, 8224, 0, implicit $exec
+    $vgpr0_128 = DS_READ_B128_gfx9 renamable $vgpr36, 8224, 0, implicit $exec
     S_ENDPGM 0
 ...

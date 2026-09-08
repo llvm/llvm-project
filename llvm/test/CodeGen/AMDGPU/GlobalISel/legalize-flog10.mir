@@ -81,12 +81,12 @@ body: |
 name: test_flog10_v2f32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_flog10_v2f32
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_64
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[COPY]](<2 x f32>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float f0x00800000
     ; CHECK-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(olt), [[UV]](f32), [[C]]
@@ -125,22 +125,22 @@ body: |
     ; CHECK-NEXT: [[SELECT5:%[0-9]+]]:_(f32) = G_SELECT [[FCMP2]](s1), [[C7]], [[C6]]
     ; CHECK-NEXT: [[FSUB1:%[0-9]+]]:_(f32) = G_FSUB [[SELECT4]], [[SELECT5]]
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f32>) = G_BUILD_VECTOR [[FSUB]](f32), [[FSUB1]](f32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x f32>)
-    %0:_(<2 x f32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[BUILD_VECTOR]](<2 x f32>)
+    %0:_(<2 x f32>) = COPY $vgpr0_64
     %1:_(<2 x f32>) = G_FLOG10 %0
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...
 
 ---
 name: test_flog10_v3f32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2
+    liveins: $vgpr0_96
 
     ; CHECK-LABEL: name: test_flog10_v3f32
-    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2
+    ; CHECK: liveins: $vgpr0_96
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x f32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x f32>) = COPY $vgpr0_96
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32), [[UV2:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[COPY]](<3 x f32>)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float f0x00800000
     ; CHECK-NEXT: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(olt), [[UV]](f32), [[C]]
@@ -193,10 +193,10 @@ body: |
     ; CHECK-NEXT: [[SELECT8:%[0-9]+]]:_(f32) = G_SELECT [[FCMP4]](s1), [[C7]], [[C6]]
     ; CHECK-NEXT: [[FSUB2:%[0-9]+]]:_(f32) = G_FSUB [[SELECT7]], [[SELECT8]]
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x f32>) = G_BUILD_VECTOR [[FSUB]](f32), [[FSUB1]](f32), [[FSUB2]](f32)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x f32>)
-    %0:_(<3 x f32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: $vgpr0_96 = COPY [[BUILD_VECTOR]](<3 x f32>)
+    %0:_(<3 x f32>) = COPY $vgpr0_96
     %1:_(<3 x f32>) = G_FLOG10 %0
-    $vgpr0_vgpr1_vgpr2 = COPY %1
+    $vgpr0_96 = COPY %1
 ...
 
 ---

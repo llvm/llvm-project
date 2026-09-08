@@ -11,13 +11,13 @@ body: |
     ; CHECK-LABEL: name: mimg_nsa
     ; CHECK: liveins: $sgpr0_256, $sgpr8_128, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: BUNDLE implicit-def $vgpr10_vgpr11_vgpr12, implicit-def $vgpr20_vgpr21_vgpr22, implicit $vgpr3, implicit $vgpr8, implicit $sgpr0_256, implicit $sgpr8_128, implicit $exec :: (load (s128)) {
+    ; CHECK-NEXT: BUNDLE implicit-def $vgpr10_96, implicit-def $vgpr20_96, implicit $vgpr3, implicit $vgpr8, implicit $sgpr0_256, implicit $sgpr8_128, implicit $exec :: (load (s128)) {
     ; CHECK-NEXT:   S_CLAUSE 1
-    ; CHECK-NEXT:   $vgpr10_vgpr11_vgpr12 = IMAGE_SAMPLE_LZ_V3_V2_nsa_gfx11 $vgpr3, $vgpr8, $sgpr0_256, $sgpr8_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
-    ; CHECK-NEXT:   $vgpr20_vgpr21_vgpr22 = IMAGE_SAMPLE_LZ_V3_V2_nsa_gfx11 $vgpr3, $vgpr8, $sgpr0_256, $sgpr8_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    ; CHECK-NEXT:   $vgpr10_96 = IMAGE_SAMPLE_LZ_V3_V2_nsa_gfx11 $vgpr3, $vgpr8, $sgpr0_256, $sgpr8_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    ; CHECK-NEXT:   $vgpr20_96 = IMAGE_SAMPLE_LZ_V3_V2_nsa_gfx11 $vgpr3, $vgpr8, $sgpr0_256, $sgpr8_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
     ; CHECK-NEXT: }
-    $vgpr10_vgpr11_vgpr12 = IMAGE_SAMPLE_LZ_V3_V2_nsa_gfx11 $vgpr3, $vgpr8, $sgpr0_256, $sgpr8_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load (s128))
-    $vgpr20_vgpr21_vgpr22 = IMAGE_SAMPLE_LZ_V3_V2_nsa_gfx11 $vgpr3, $vgpr8, $sgpr0_256, $sgpr8_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load (s128))
+    $vgpr10_96 = IMAGE_SAMPLE_LZ_V3_V2_nsa_gfx11 $vgpr3, $vgpr8, $sgpr0_256, $sgpr8_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load (s128))
+    $vgpr20_96 = IMAGE_SAMPLE_LZ_V3_V2_nsa_gfx11 $vgpr3, $vgpr8, $sgpr0_256, $sgpr8_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load (s128))
 ...
 
 ---
@@ -29,13 +29,13 @@ body: |
     ; CHECK-LABEL: name: mimg_nsa_mixed
     ; CHECK: liveins: $sgpr0_256, $sgpr8_128, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: BUNDLE implicit-def $vgpr10, implicit-def $vgpr14, implicit-def $vgpr20_vgpr21_vgpr22, implicit $vgpr3, implicit $vgpr8, implicit $sgpr0_256, implicit $sgpr8_128, implicit $exec, implicit $vgpr5_vgpr6 :: (load (s128)), (dereferenceable load (s128), addrspace 7) {
+    ; CHECK-NEXT: BUNDLE implicit-def $vgpr10, implicit-def $vgpr14, implicit-def $vgpr20_96, implicit $vgpr3, implicit $vgpr8, implicit $sgpr0_256, implicit $sgpr8_128, implicit $exec, implicit $vgpr5_64 :: (load (s128)), (dereferenceable load (s128), addrspace 7) {
     ; CHECK-NEXT:   S_CLAUSE 2
     ; CHECK-NEXT:   $vgpr10 = IMAGE_SAMPLE_LZ_V1_V2_nsa_gfx11 $vgpr3, $vgpr8, $sgpr0_256, $sgpr8_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
-    ; CHECK-NEXT:   $vgpr14 = IMAGE_SAMPLE_LZ_V1_V2_gfx11 $vgpr5_vgpr6, $sgpr0_256, $sgpr8_128, 1, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
-    ; CHECK-NEXT:   $vgpr20_vgpr21_vgpr22 = IMAGE_SAMPLE_LZ_V3_V2_nsa_gfx11 $vgpr3, $vgpr8, $sgpr0_256, $sgpr8_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
+    ; CHECK-NEXT:   $vgpr14 = IMAGE_SAMPLE_LZ_V1_V2_gfx11 $vgpr5_64, $sgpr0_256, $sgpr8_128, 1, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
+    ; CHECK-NEXT:   $vgpr20_96 = IMAGE_SAMPLE_LZ_V3_V2_nsa_gfx11 $vgpr3, $vgpr8, $sgpr0_256, $sgpr8_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s128))
     ; CHECK-NEXT: }
     $vgpr10 = IMAGE_SAMPLE_LZ_V1_V2_nsa_gfx11 $vgpr3, $vgpr8, $sgpr0_256, $sgpr8_128, 1, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load (s128))
-    $vgpr14 = IMAGE_SAMPLE_LZ_V1_V2_gfx11 $vgpr5_vgpr6, $sgpr0_256, $sgpr8_128, 1, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
-    $vgpr20_vgpr21_vgpr22 = IMAGE_SAMPLE_LZ_V3_V2_nsa_gfx11 $vgpr3, $vgpr8, $sgpr0_256, $sgpr8_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load (s128))
+    $vgpr14 = IMAGE_SAMPLE_LZ_V1_V2_gfx11 $vgpr5_64, $sgpr0_256, $sgpr8_128, 1, 1, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
+    $vgpr20_96 = IMAGE_SAMPLE_LZ_V3_V2_nsa_gfx11 $vgpr3, $vgpr8, $sgpr0_256, $sgpr8_128, 14, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec  :: (load (s128))
 ...

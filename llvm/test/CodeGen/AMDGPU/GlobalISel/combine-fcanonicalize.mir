@@ -50,10 +50,10 @@ body: |
 
     ; CHECK-LABEL: name: test_denormal_fconstant
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double 1.618950e-319
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[C]](s64)
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[C]](s64)
     %0:_(s64) = G_FCONSTANT double 0x0000000000008000
     %1:_(s64) = G_FCANONICALIZE %0
-    $vgpr0_vgpr1 = COPY %1(s64)
+    $vgpr0_64 = COPY %1(s64)
 ...
 
 ---

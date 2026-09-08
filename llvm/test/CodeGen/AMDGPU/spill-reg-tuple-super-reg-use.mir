@@ -117,14 +117,14 @@ body:             |
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr8
     ; GCN-NEXT: renamable $vgpr1 = COPY $vgpr2, implicit $exec
-    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr100_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr100_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_128, implicit $vgpr0_128 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr100_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr2, $sgpr100_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr100_128, $sgpr32, 12, 0, 0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
+    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr100_128, $sgpr32, 12, 0, 0, implicit $exec, implicit $vgpr0_128 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
     ; GCN-NEXT: renamable $vgpr8 = COPY $vgpr2, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0, implicit $vgpr8
     renamable $vgpr1 = COPY $vgpr2
-    SI_SPILL_V128_SAVE renamable $vgpr0_vgpr1_vgpr2_vgpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.0, align 4, addrspace 5)
+    SI_SPILL_V128_SAVE renamable $vgpr0_128, %stack.0, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.0, align 4, addrspace 5)
     renamable $vgpr8 = COPY killed renamable $vgpr1
     S_ENDPGM 0, implicit $vgpr8
 ...
@@ -150,12 +150,12 @@ body:             |
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GCN-NEXT: frame-setup CFI_INSTRUCTION undefined $vgpr1
     ; GCN-NEXT: renamable $vgpr1 = COPY $vgpr2, implicit $exec
-    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr100_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
+    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr0, $sgpr100_128, $sgpr32, 0, 0, 0, implicit $exec, implicit-def $vgpr0_128, implicit $vgpr0_128 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr1, $sgpr100_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 4, addrspace 5)
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr2, $sgpr100_128, $sgpr32, 8, 0, 0, implicit $exec :: ("amdgpu-thread-private" store (s32) into %stack.0 + 8, addrspace 5)
-    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr100_128, $sgpr32, 12, 0, 0, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
+    ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr3, $sgpr100_128, $sgpr32, 12, 0, 0, implicit $exec, implicit $vgpr0_128 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 12, addrspace 5)
     ; GCN-NEXT: S_ENDPGM 0
     renamable $vgpr1 = COPY $vgpr2
-    SI_SPILL_V128_SAVE renamable killed $vgpr0_vgpr1_vgpr2_vgpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.0, align 4, addrspace 5)
+    SI_SPILL_V128_SAVE renamable killed $vgpr0_128, %stack.0, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 ...

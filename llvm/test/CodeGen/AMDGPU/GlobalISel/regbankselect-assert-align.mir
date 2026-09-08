@@ -110,17 +110,17 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: assert_align_vgpr_s64
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:vreg_64(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: %copy:vreg_64(s64) = COPY $vgpr0_64
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY %copy(s64)
     ; CHECK-NEXT: [[ASSERT_ALIGN:%[0-9]+]]:vgpr(s64) = G_ASSERT_ALIGN [[COPY]], 4
     ; CHECK-NEXT: %assert_align:vreg_64(s64) = COPY [[ASSERT_ALIGN]](s64)
     ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_align(s64)
-    %copy:vreg_64(s64) = COPY $vgpr0_vgpr1
+    %copy:vreg_64(s64) = COPY $vgpr0_64
     %assert_align:vreg_64(s64) = G_ASSERT_ALIGN %copy, 4
     S_ENDPGM 0, implicit %assert_align
 ...
@@ -176,15 +176,15 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: assert_align_vgpr_p1
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:vgpr(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: %copy:vgpr(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: %assert_align:vgpr(p1) = G_ASSERT_ALIGN %copy, 4
     ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_align(p1)
-    %copy:_(p1) = COPY $vgpr0_vgpr1
+    %copy:_(p1) = COPY $vgpr0_64
     %assert_align:_(p1) = G_ASSERT_ALIGN %copy, 4
     S_ENDPGM 0, implicit %assert_align
 ...
@@ -236,15 +236,15 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: assert_align_vgpr_p0
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:vgpr(p0) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: %copy:vgpr(p0) = COPY $vgpr0_64
     ; CHECK-NEXT: %assert_align:vgpr(p0) = G_ASSERT_ALIGN %copy, 8
     ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_align(p0)
-    %copy:_(p0) = COPY $vgpr0_vgpr1
+    %copy:_(p0) = COPY $vgpr0_64
     %assert_align:_(p0) = G_ASSERT_ALIGN %copy, 8
     S_ENDPGM 0, implicit %assert_align
 ...

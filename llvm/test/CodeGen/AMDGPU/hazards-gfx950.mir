@@ -302,15 +302,15 @@ body:             |
     ; GCN-LABEL: name: test_cvt_scalef32_sr_fp8_bf16_hazard
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: renamable $vgpr5 = GLOBAL_LOAD_DWORD renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr5 = GLOBAL_LOAD_DWORD renamable $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0
     ; GCN-NEXT: renamable $vgpr5 = V_CVT_SCALEF32_SR_FP8_BF16_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr5, 0, implicit $mode, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr5, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr5, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
-    renamable $vgpr5 = GLOBAL_LOAD_DWORD renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    renamable $vgpr5 = GLOBAL_LOAD_DWORD renamable $vgpr0_64, 0, 0, implicit $exec
     S_WAITCNT 3952
     renamable $vgpr5 = V_CVT_SCALEF32_SR_FP8_BF16_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr5, 0, implicit $mode, implicit $exec
-    GLOBAL_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr5, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr5, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -322,15 +322,15 @@ body:             |
     ; GCN-LABEL: name: test_cvt_scalef32_sr_fp8_f16_hazard
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: renamable $vgpr5 = GLOBAL_LOAD_DWORD renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr5 = GLOBAL_LOAD_DWORD renamable $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0
     ; GCN-NEXT: renamable $vgpr5 = V_CVT_SCALEF32_SR_FP8_F16_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr5, 0, implicit $mode, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr5, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr5, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
-    renamable $vgpr5 = GLOBAL_LOAD_DWORD renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    renamable $vgpr5 = GLOBAL_LOAD_DWORD renamable $vgpr0_64, 0, 0, implicit $exec
     S_WAITCNT 3952
     renamable $vgpr5 = V_CVT_SCALEF32_SR_FP8_F16_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr5, 0, implicit $mode, implicit $exec
-    GLOBAL_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr5, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr5, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -342,18 +342,18 @@ body:             |
     ; GCN-LABEL: name: test_cvt_scalef32_sr_fp8_f32_hazard
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: renamable $vgpr5 = GLOBAL_LOAD_DWORD renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr5 = GLOBAL_LOAD_DWORD renamable $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0
     ; GCN-NEXT: renamable $vgpr5 = V_CVT_SCALEF32_SR_FP8_F32_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr5, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: renamable $vgpr2 = V_ADD_U32_e32 4, killed $vgpr5, implicit $exec
-    ; GCN-NEXT: GLOBAL_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec
+    ; GCN-NEXT: GLOBAL_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
-    renamable $vgpr5 = GLOBAL_LOAD_DWORD renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    renamable $vgpr5 = GLOBAL_LOAD_DWORD renamable $vgpr0_64, 0, 0, implicit $exec
     S_WAITCNT 3952
     renamable $vgpr5 = V_CVT_SCALEF32_SR_FP8_F32_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr5, 0, implicit $mode, implicit $exec
     renamable $vgpr2 = V_ADD_U32_e32 4, killed $vgpr5, implicit $exec
-    GLOBAL_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORD killed renamable $vgpr0_64, killed renamable $vgpr2, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -408,14 +408,14 @@ body:             |
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0
     ; GCN-NEXT: renamable $vgpr0 = V_CVT_SCALEF32_SR_BF8_BF16_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr0, $vgpr0, implicit $exec
     ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
     S_WAITCNT 0
-    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     S_WAITCNT 3952
     renamable $vgpr0 = V_CVT_SCALEF32_SR_BF8_BF16_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr0, 0, implicit $mode, implicit $exec
     renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr0, $vgpr0, implicit $exec
@@ -431,14 +431,14 @@ body:             |
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0
     ; GCN-NEXT: renamable $vgpr0 = V_CVT_SCALEF32_SR_BF8_F16_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr0, $vgpr0, implicit $exec
     ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
     S_WAITCNT 0
-    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     S_WAITCNT 3952
     renamable $vgpr0 = V_CVT_SCALEF32_SR_BF8_F16_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr0, 0, implicit $mode, implicit $exec
     renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr0, $vgpr0, implicit $exec
@@ -454,14 +454,14 @@ body:             |
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0
     ; GCN-NEXT: renamable $vgpr0 = V_CVT_SCALEF32_SR_BF8_F32_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr0, $vgpr0, implicit $exec
     ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
     S_WAITCNT 0
-    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     S_WAITCNT 3952
     renamable $vgpr0 = V_CVT_SCALEF32_SR_BF8_F32_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr0, 0, implicit $mode, implicit $exec
     renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr0, $vgpr0, implicit $exec
@@ -627,14 +627,14 @@ body:             |
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0
     ; GCN-NEXT: early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_F16_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr1, $vgpr1, implicit $exec
     ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
     S_WAITCNT 0
-    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     S_WAITCNT 3952
     early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_F16_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr0, 0, implicit $mode, implicit $exec
     renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr1, $vgpr1, implicit $exec
@@ -650,14 +650,14 @@ body:             |
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0
     ; GCN-NEXT: early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_BF16_e64 0, killed $vgpr2, 0, killed $vgpr3, 0, killed $vgpr4, killed $vgpr0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr1, $vgpr1, implicit $exec
     ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
     S_WAITCNT 0
-    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     S_WAITCNT 3952
     early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_BF16_e64 0, killed $vgpr2, 0, killed $vgpr3, 0, killed $vgpr4, killed $vgpr0, 0, implicit $mode, implicit $exec
     renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr1, $vgpr1, implicit $exec
@@ -673,14 +673,14 @@ body:             |
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0
     ; GCN-NEXT: early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_BF16_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr1, $vgpr1, implicit $exec
     ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
     S_WAITCNT 0
-    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     S_WAITCNT 3952
     early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_BF16_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr0, 0, implicit $mode, implicit $exec
     renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr1, $vgpr1, implicit $exec
@@ -696,13 +696,13 @@ body:             |
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0
     ; GCN-NEXT: early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_BF16_e64 0, killed $vgpr2, 0, killed $vgpr3, 0, killed $vgpr4, killed $vgpr0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr0, $vgpr0, implicit $exec
     ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
     S_WAITCNT 0
-    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     S_WAITCNT 3952
     early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_BF16_e64 0, killed $vgpr2, 0, killed $vgpr3, 0, killed $vgpr4, killed $vgpr0, 0, implicit $mode, implicit $exec
     renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr0, $vgpr0, implicit $exec
@@ -718,13 +718,13 @@ body:             |
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0
     ; GCN-NEXT: early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_BF16_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr0, $vgpr0, implicit $exec
     ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
     S_WAITCNT 0
-    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     S_WAITCNT 3952
     early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_BF16_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr0, 0, implicit $mode, implicit $exec
     renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr0, $vgpr0, implicit $exec
@@ -740,16 +740,16 @@ body:             |
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0
-    ; GCN-NEXT: early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_F32_e64 0, killed $vgpr2_vgpr3, 0, killed $vgpr4, 0, killed $vgpr5, killed $vgpr0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_F32_e64 0, killed $vgpr2_64, 0, killed $vgpr4, 0, killed $vgpr5, killed $vgpr0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr1, $vgpr1, implicit $exec
     ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
     S_WAITCNT 0
-    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     S_WAITCNT 3952
-    early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_F32_e64 0, killed $vgpr2_vgpr3, 0, killed $vgpr4, 0, killed $vgpr5, killed $vgpr0, 0, implicit $mode, implicit $exec
+    early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_F32_e64 0, killed $vgpr2_64, 0, killed $vgpr4, 0, killed $vgpr5, killed $vgpr0, 0, implicit $mode, implicit $exec
     renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr1, $vgpr1, implicit $exec
     S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
 ...
@@ -763,16 +763,16 @@ body:             |
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0
-    ; GCN-NEXT: early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_F32_e64 8, killed $vgpr2_vgpr3, 0, killed $vgpr4, 4, killed $vgpr5, killed $vgpr0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_F32_e64 8, killed $vgpr2_64, 0, killed $vgpr4, 4, killed $vgpr5, killed $vgpr0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr1, $vgpr1, implicit $exec
     ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
     S_WAITCNT 0
-    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     S_WAITCNT 3952
-    early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_F32_e64 8, killed $vgpr2_vgpr3, 0, killed $vgpr4, 4, killed $vgpr5, killed $vgpr0, 0, implicit $mode, implicit $exec
+    early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_F32_e64 8, killed $vgpr2_64, 0, killed $vgpr4, 4, killed $vgpr5, killed $vgpr0, 0, implicit $mode, implicit $exec
     renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr1, $vgpr1, implicit $exec
     S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
 ...
@@ -786,15 +786,15 @@ body:             |
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0
-    ; GCN-NEXT: early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_F32_e64 0, killed $vgpr2_vgpr3, 0, killed $vgpr4, 0, killed $vgpr5, killed $vgpr0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_F32_e64 0, killed $vgpr2_64, 0, killed $vgpr4, 0, killed $vgpr5, killed $vgpr0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr0, $vgpr0, implicit $exec
     ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
     S_WAITCNT 0
-    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     S_WAITCNT 3952
-    early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_F32_e64 0, killed $vgpr2_vgpr3, 0, killed $vgpr4, 0, killed $vgpr5, killed $vgpr0, 0, implicit $mode, implicit $exec
+    early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_F32_e64 0, killed $vgpr2_64, 0, killed $vgpr4, 0, killed $vgpr5, killed $vgpr0, 0, implicit $mode, implicit $exec
     renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr0, $vgpr0, implicit $exec
     S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
 ...
@@ -808,15 +808,15 @@ body:             |
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0
-    ; GCN-NEXT: early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_F32_e64 8, killed $vgpr2_vgpr3, 0, killed $vgpr4, 4, killed $vgpr5, killed $vgpr0, 0, implicit $mode, implicit $exec
+    ; GCN-NEXT: early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_F32_e64 8, killed $vgpr2_64, 0, killed $vgpr4, 4, killed $vgpr5, killed $vgpr0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr0, $vgpr0, implicit $exec
     ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
     S_WAITCNT 0
-    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     S_WAITCNT 3952
-    early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_F32_e64 8, killed $vgpr2_vgpr3, 0, killed $vgpr4, 4, killed $vgpr5, killed $vgpr0, 0, implicit $mode, implicit $exec
+    early-clobber renamable $vgpr1 = V_CVT_SCALEF32_SR_PK_FP4_F32_e64 8, killed $vgpr2_64, 0, killed $vgpr4, 4, killed $vgpr5, killed $vgpr0, 0, implicit $mode, implicit $exec
     renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr0, $vgpr0, implicit $exec
     S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
 ...
@@ -976,7 +976,7 @@ body:             |
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0
     ; GCN-NEXT: renamable $vgpr0 = V_CVT_SCALEF32_SR_BF8_F16_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr4 = KILL
@@ -984,7 +984,7 @@ body:             |
     ; GCN-NEXT: renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr0, $vgpr0, implicit $exec
     ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
     S_WAITCNT 0
-    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     S_WAITCNT 3952
     renamable $vgpr0 = V_CVT_SCALEF32_SR_BF8_F16_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr0, 0, implicit $mode, implicit $exec
     $vgpr4 = KILL
@@ -1057,7 +1057,7 @@ body:             |
     ; GCN: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
-    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     ; GCN-NEXT: S_WAITCNT .Vmcnt_0
     ; GCN-NEXT: renamable $vgpr0 = V_CVT_SCALEF32_SR_BF8_F16_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: WAVE_BARRIER
@@ -1065,7 +1065,7 @@ body:             |
     ; GCN-NEXT: renamable $vgpr0 = V_ADD_U32_e32 killed $vgpr0, $vgpr0, implicit $exec
     ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed $vgpr0
     S_WAITCNT 0
-    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec
+    renamable $vgpr0 = GLOBAL_LOAD_DWORD killed renamable $vgpr0_64, 0, 0, implicit $exec
     S_WAITCNT 3952
     renamable $vgpr0 = V_CVT_SCALEF32_SR_BF8_F16_e64 8, killed $vgpr2, 0, killed $vgpr3, 4, killed $vgpr4, killed $vgpr0, 0, implicit $mode, implicit $exec
     WAVE_BARRIER

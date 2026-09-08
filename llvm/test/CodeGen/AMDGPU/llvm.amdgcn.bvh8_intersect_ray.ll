@@ -181,9 +181,9 @@ define amdgpu_ps <10 x float> @image_bvh8_intersect_ray_vvvvvv(i64 %node_ptr, fl
 ; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-SDAG-NEXT:    image_bvh8_intersect_ray v[0:9], [v[24:25], v[26:27], v[21:23], v[18:20], v28], s[0:3]
 ; GFX12-SDAG-NEXT:    s_and_not1_wrexec_b32 s5, s5
-; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr10_vgpr11_vgpr12_vgpr13
-; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr24_vgpr25
-; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr26_vgpr27
+; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr10_128
+; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr24_64
+; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr26_64
 ; GFX12-SDAG-NEXT:    ; implicit-def: $vgpr28
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB3_1
 ; GFX12-SDAG-NEXT:  ; %bb.2:
@@ -217,10 +217,10 @@ define amdgpu_ps <10 x float> @image_bvh8_intersect_ray_vvvvvv(i64 %node_ptr, fl
 ; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-NEXT:    image_bvh8_intersect_ray v[0:9], [v[24:25], v[26:27], v[18:20], v[21:23], v28], s[4:7]
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr10
-; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr24_vgpr25
-; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr26_vgpr27
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr24_64
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr26_64
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr28
-; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr12_vgpr13
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr12_64
 ; GFX12-GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB3_1
 ; GFX12-GISEL-NEXT:  ; %bb.2:

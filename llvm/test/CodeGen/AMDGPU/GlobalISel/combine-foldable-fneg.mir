@@ -419,15 +419,15 @@ body:             |
 name:            test_fptrunc
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: test_fptrunc
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_64
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[COPY]]
     ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(s32) = G_FPTRUNC [[FNEG]](s64)
     ; CHECK-NEXT: $vgpr0 = COPY [[FPTRUNC]](s32)
-    %0:_(s64) = COPY $vgpr0_vgpr1
+    %0:_(s64) = COPY $vgpr0_64
     %1:_(s32) = G_FPTRUNC %0:_(s64)
     %2:_(s32) = G_FNEG %1:_
     $vgpr0 = COPY %2:_(s32)
@@ -745,20 +745,20 @@ body:             |
 name:            test_fminnum_inv2pi_double
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: test_fminnum_inv2pi_double
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_64
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_FCONSTANT double f0x3FC45F306DC9C882
     ; CHECK-NEXT: [[FMINNUM:%[0-9]+]]:_(s64) = G_FMINNUM [[COPY]], [[C]]
     ; CHECK-NEXT: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[FMINNUM]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[FNEG]](s64)
-    %0:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[FNEG]](s64)
+    %0:_(s64) = COPY $vgpr0_64
     %1:_(s64) = G_FCONSTANT double 0x3FC45F306DC9C882
     %2:_(s64) = G_FMINNUM %0:_, %1:_
     %3:_(s64) = G_FNEG %2:_
-    $vgpr0_vgpr1 = COPY %3:_(s64)
+    $vgpr0_64 = COPY %3:_(s64)
 
 ...
 

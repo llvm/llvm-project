@@ -3,7 +3,7 @@
 ---
 name: wrong_reg_class_scratch_rsrc_reg
 machineFunctionInfo:
-  scratchRSrcReg:  '$vgpr0_vgpr1_vgpr2_vgpr3'
+  scratchRSrcReg:  '$vgpr0_128'
 # CHECK: :[[@LINE-1]]:{{[0-9]+}}: incorrect register class for field
 body:             |
   bb.0:

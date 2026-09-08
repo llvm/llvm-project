@@ -10,15 +10,15 @@ body:             |
     ; GCN-LABEL: name: v_divscale_cycles
     ; GCN: renamable $vgpr4 = IMPLICIT_DEF
     ; GCN-NEXT: renamable $vgpr5 = IMPLICIT_DEF
-    ; GCN-NEXT: renamable $vgpr0_vgpr1 = IMPLICIT_DEF
+    ; GCN-NEXT: renamable $vgpr0_64 = IMPLICIT_DEF
     ; GCN-NEXT: renamable $vgpr6 = IMPLICIT_DEF
     ; GCN-NEXT: renamable $vgpr7 = IMPLICIT_DEF
     ; GCN-NEXT: renamable $vgpr8 = IMPLICIT_DEF
     ; GCN-NEXT: renamable $vgpr9 = IMPLICIT_DEF
-    ; GCN-NEXT: renamable $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 = IMPLICIT_DEF
-    ; GCN-NEXT: renamable $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47 = IMPLICIT_DEF
+    ; GCN-NEXT: renamable $vgpr32_256 = IMPLICIT_DEF
+    ; GCN-NEXT: renamable $vgpr40_256 = IMPLICIT_DEF
     ; GCN-NEXT: SCHED_BARRIER 0
-    ; GCN-NEXT: early-clobber $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, 8, killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39, 0, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: early-clobber $vgpr32_256 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr40_256, $vgpr40_256, 8, killed $vgpr32_256, 0, 0, 0, 0, implicit $exec
     ; GCN-NEXT: SCHED_BARRIER 256
     ; GCN-NEXT: renamable $vgpr2, $sgpr_null = V_DIV_SCALE_F32_e64 0, killed $vgpr4, 0, $vgpr4, 0, $vgpr4, 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: SCHED_BARRIER 256
@@ -31,18 +31,18 @@ body:             |
     ; GCN-NEXT: renamable $vgpr25 = V_ADD_U32_e32 $vgpr8, $vgpr9, implicit $exec
     ; GCN-NEXT: renamable $vgpr26 = V_ADD_U32_e32 $vgpr8, killed $vgpr9, implicit $exec
     ; GCN-NEXT: renamable $vgpr27 = V_ADD_U32_e32 killed $vgpr8, killed $vgpr40, implicit $exec
-    ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed renamable $vgpr0_vgpr1, implicit killed $vgpr2, implicit killed renamable $vgpr20, implicit killed renamable $vgpr21, implicit killed renamable $vgpr22, implicit killed renamable $vgpr23, implicit killed renamable $vgpr24, implicit killed renamable $vgpr25, implicit killed renamable $vgpr26, implicit killed renamable $vgpr27
+    ; GCN-NEXT: S_SETPC_B64_return undef $sgpr30_64, implicit killed renamable $vgpr0_64, implicit killed $vgpr2, implicit killed renamable $vgpr20, implicit killed renamable $vgpr21, implicit killed renamable $vgpr22, implicit killed renamable $vgpr23, implicit killed renamable $vgpr24, implicit killed renamable $vgpr25, implicit killed renamable $vgpr26, implicit killed renamable $vgpr27
     renamable $vgpr4 = IMPLICIT_DEF
     renamable $vgpr5 = IMPLICIT_DEF
-    renamable $vgpr0_vgpr1 = IMPLICIT_DEF
+    renamable $vgpr0_64 = IMPLICIT_DEF
     renamable $vgpr6 = IMPLICIT_DEF
     renamable $vgpr7 = IMPLICIT_DEF
     renamable $vgpr8 = IMPLICIT_DEF
     renamable $vgpr9 = IMPLICIT_DEF
-    renamable $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 = IMPLICIT_DEF
-    renamable $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47 = IMPLICIT_DEF
+    renamable $vgpr32_256 = IMPLICIT_DEF
+    renamable $vgpr40_256 = IMPLICIT_DEF
     SCHED_BARRIER 0
-    $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, killed $vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, 8, killed $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39, 0, 0, 0, 0, implicit $exec
+    $vgpr32_256 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr $vgpr40_256, killed $vgpr40_256, 8, killed $vgpr32_256, 0, 0, 0, 0, implicit $exec
     SCHED_BARRIER 256
     renamable $vgpr2, $sgpr_null = V_DIV_SCALE_F32_e64 0, $vgpr4, 0, $vgpr4, 0, $vgpr4, 0, 0, implicit $mode, implicit $exec
     SCHED_BARRIER 256
@@ -55,5 +55,5 @@ body:             |
     renamable $vgpr25 = V_ADD_U32_e32 $vgpr8, $vgpr9, implicit $exec
     renamable $vgpr26 = V_ADD_U32_e32 $vgpr8, $vgpr9, implicit $exec
     renamable $vgpr27 = V_ADD_U32_e32 killed $vgpr8, killed $vgpr40, implicit $exec
-    S_SETPC_B64_return undef $sgpr30_64, implicit killed renamable $vgpr0_vgpr1, implicit killed $vgpr2, implicit killed renamable $vgpr20, implicit killed renamable $vgpr21, implicit killed renamable $vgpr22, implicit killed renamable $vgpr23, implicit killed renamable $vgpr24, implicit killed renamable $vgpr25, implicit killed renamable $vgpr26, implicit killed renamable $vgpr27
+    S_SETPC_B64_return undef $sgpr30_64, implicit killed renamable $vgpr0_64, implicit killed $vgpr2, implicit killed renamable $vgpr20, implicit killed renamable $vgpr21, implicit killed renamable $vgpr22, implicit killed renamable $vgpr23, implicit killed renamable $vgpr24, implicit killed renamable $vgpr25, implicit killed renamable $vgpr26, implicit killed renamable $vgpr27
 ...

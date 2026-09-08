@@ -11,9 +11,9 @@ body:             |
   ; GCN-LABEL: name: subrange_coalesce_liveout
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1
+  ; GCN-NEXT:   liveins: $vgpr0_64
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
   ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 [[COPY]], 0, 0, implicit $exec
   ; GCN-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.1
@@ -29,9 +29,9 @@ body:             |
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
+    %0:vreg_64 = COPY $vgpr0_64
     %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
     %2:vgpr_32 = COPY %1.sub0
     S_CBRANCH_EXECZ %bb.2, implicit $exec
@@ -56,9 +56,9 @@ body:             |
   ; GCN-LABEL: name: subrange_coalesce_early_clobber
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1
+  ; GCN-NEXT:   liveins: $vgpr0_64
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
   ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 [[COPY]], 0, 0, implicit $exec
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX4_]].sub0
   ; GCN-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
@@ -75,9 +75,9 @@ body:             |
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
+    %0:vreg_64 = COPY $vgpr0_64
     %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
     %2:vgpr_32 = COPY %1.sub0
     S_CBRANCH_EXECZ %bb.2, implicit $exec
@@ -102,9 +102,9 @@ body:             |
   ; GCN-LABEL: name: subrange_coalesce_unrelated_sub_redefined
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1
+  ; GCN-NEXT:   liveins: $vgpr0_64
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
   ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 [[COPY]], 0, 0, implicit $exec
   ; GCN-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.1
@@ -121,9 +121,9 @@ body:             |
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
+    %0:vreg_64 = COPY $vgpr0_64
     %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
     %2:vgpr_32 = COPY %1.sub0
     S_CBRANCH_EXECZ %bb.2, implicit $exec
@@ -150,9 +150,9 @@ body:             |
   ; GCN-LABEL: name: subrange_coalesce_complex_pattern
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; GCN-NEXT:   liveins: $vgpr0_vgpr1
+  ; GCN-NEXT:   liveins: $vgpr0_64
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
   ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 [[COPY]], 0, 0, implicit $exec
   ; GCN-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.1
@@ -170,9 +170,9 @@ body:             |
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1, %bb.2
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
-    %0:vreg_64 = COPY $vgpr0_vgpr1
+    %0:vreg_64 = COPY $vgpr0_64
     %1:vreg_128 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec
     %2:vgpr_32 = COPY %1.sub0
     S_CBRANCH_EXECZ %bb.2, implicit $exec

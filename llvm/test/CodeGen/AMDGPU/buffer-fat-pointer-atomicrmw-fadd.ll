@@ -388,7 +388,7 @@ define float @buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset__waterfall__amdgp
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    buffer_atomic_add_f32 v5, v4, s[0:3], null offen offset:1024 th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_and_not1_wrexec_b32 s5, s5
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr0_128
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
 ; GFX12-NEXT:    s_cbranch_execnz .LBB2_1
 ; GFX12-NEXT:  ; %bb.2:
@@ -417,7 +417,7 @@ define float @buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset__waterfall__amdgp
 ; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_atomic_add_f32 v5, v4, s[4:7], 0 offen offset:1024 sc0
-; GFX942-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX942-NEXT:    ; implicit-def: $vgpr0_128
 ; GFX942-NEXT:    ; implicit-def: $vgpr4
 ; GFX942-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; GFX942-NEXT:    s_cbranch_execnz .LBB2_1
@@ -445,7 +445,7 @@ define float @buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset__waterfall__amdgp
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_atomic_add_f32 v5, v4, s[0:3], 0 offen offset:1024 glc
 ; GFX11-NEXT:    s_and_not1_wrexec_b32 s5, s5
-; GFX11-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX11-NEXT:    ; implicit-def: $vgpr0_128
 ; GFX11-NEXT:    ; implicit-def: $vgpr4
 ; GFX11-NEXT:    s_cbranch_execnz .LBB2_1
 ; GFX11-NEXT:  ; %bb.2:
@@ -531,7 +531,7 @@ define float @buffer_fat_ptr_agent_atomic_fadd_ret_f32__offset__waterfall__amdgp
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_atomic_add_f32 v5, v4, s[8:11], 0 offen offset:1024 glc
-; GFX90A-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX90A-NEXT:    ; implicit-def: $vgpr0_128
 ; GFX90A-NEXT:    ; implicit-def: $vgpr4
 ; GFX90A-NEXT:    s_xor_b64 exec, exec, s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB2_1
@@ -2388,7 +2388,7 @@ define double @buffer_fat_ptr_agent_atomic_fadd_ret_f64__offset__waterfall__amdg
 ; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_atomic_add_f64 v[6:7], v4, s[4:7], 0 offen offset:2048 sc0
-; GFX942-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX942-NEXT:    ; implicit-def: $vgpr0_128
 ; GFX942-NEXT:    ; implicit-def: $vgpr4
 ; GFX942-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; GFX942-NEXT:    s_cbranch_execnz .LBB10_1
@@ -2545,7 +2545,7 @@ define double @buffer_fat_ptr_agent_atomic_fadd_ret_f64__offset__waterfall__amdg
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_atomic_add_f64 v[6:7], v4, s[8:11], 0 offen offset:2048 glc
-; GFX90A-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX90A-NEXT:    ; implicit-def: $vgpr0_128
 ; GFX90A-NEXT:    ; implicit-def: $vgpr4
 ; GFX90A-NEXT:    s_xor_b64 exec, exec, s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB10_1
@@ -7037,7 +7037,7 @@ define <2 x half> @buffer_fat_ptr_agent_atomic_fadd_ret_v2f16__offset__waterfall
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    buffer_atomic_pk_add_f16 v5, v4, s[0:3], null offen offset:1024 th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_and_not1_wrexec_b32 s5, s5
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr0_128
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
 ; GFX12-NEXT:    s_cbranch_execnz .LBB21_1
 ; GFX12-NEXT:  ; %bb.2:
@@ -7066,7 +7066,7 @@ define <2 x half> @buffer_fat_ptr_agent_atomic_fadd_ret_v2f16__offset__waterfall
 ; GFX942-NEXT:    s_and_saveexec_b64 s[0:1], s[0:1]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_atomic_pk_add_f16 v5, v4, s[4:7], 0 offen offset:1024 sc0
-; GFX942-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX942-NEXT:    ; implicit-def: $vgpr0_128
 ; GFX942-NEXT:    ; implicit-def: $vgpr4
 ; GFX942-NEXT:    s_xor_b64 exec, exec, s[0:1]
 ; GFX942-NEXT:    s_cbranch_execnz .LBB21_1
@@ -7321,7 +7321,7 @@ define <2 x half> @buffer_fat_ptr_agent_atomic_fadd_ret_v2f16__offset__waterfall
 ; GFX90A-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_atomic_pk_add_f16 v5, v4, s[8:11], 0 offen offset:1024 glc
-; GFX90A-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX90A-NEXT:    ; implicit-def: $vgpr0_128
 ; GFX90A-NEXT:    ; implicit-def: $vgpr4
 ; GFX90A-NEXT:    s_xor_b64 exec, exec, s[4:5]
 ; GFX90A-NEXT:    s_cbranch_execnz .LBB21_1
@@ -9858,7 +9858,7 @@ define <2 x bfloat> @buffer_fat_ptr_agent_atomic_fadd_ret_v2bf16__offset__waterf
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    buffer_atomic_pk_add_bf16 v5, v4, s[0:3], null offen offset:1024 th:TH_ATOMIC_RETURN
 ; GFX12-NEXT:    s_and_not1_wrexec_b32 s5, s5
-; GFX12-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX12-NEXT:    ; implicit-def: $vgpr0_128
 ; GFX12-NEXT:    ; implicit-def: $vgpr4
 ; GFX12-NEXT:    s_cbranch_execnz .LBB28_1
 ; GFX12-NEXT:  ; %bb.2:

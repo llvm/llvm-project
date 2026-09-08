@@ -9,7 +9,7 @@
 # tracksRegLiveness is false
 
 # RESULT: bb.0:
-# RESULT-NEXT: liveins: $vgpr0, $vgpr1_vgpr2
+# RESULT-NEXT: liveins: $vgpr0, $vgpr1_64
 # RESULT: %0:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
 # RESULT-NEXT: S_NOP 0
 # RESULT-NEXT: S_ENDPGM 0, implicit %0, implicit %0
@@ -19,7 +19,7 @@ name: func
 tracksRegLiveness: false
 body:             |
   bb.0:
-    liveins: $vgpr0, $vgpr1_vgpr2
+    liveins: $vgpr0, $vgpr1_64
     S_WAITCNT 0
     %0:vgpr_32 = V_MOV_B32_e32 $vgpr0, implicit $exec
     %1:vgpr_32 = V_MOV_B32_e32 $vgpr1, implicit $exec

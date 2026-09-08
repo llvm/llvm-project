@@ -316,7 +316,7 @@ body:             |
   bb.0:
     $vgpr0 = IMPLICIT_DEF
     $vgpr1 = IMPLICIT_DEF
-    $vgpr2 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    $vgpr2 = FLAT_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec, implicit $flat_scr
     $exec_lo = S_MOV_B32 -1
 ...
 # GCN-LABEL: name: vmem_global_exec
@@ -329,7 +329,7 @@ body:             |
   bb.0:
     $vgpr0 = IMPLICIT_DEF
     $vgpr1 = IMPLICIT_DEF
-    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec
+    $vgpr2 = GLOBAL_LOAD_DWORD $vgpr0_64, 0, 0, implicit $exec
     $exec_lo = S_MOV_B32 -1
 ...
 # GCN-LABEL: name: vmem_global_atomic_exec
@@ -343,6 +343,6 @@ body:             |
     $vgpr0 = IMPLICIT_DEF
     $vgpr1 = IMPLICIT_DEF
     $vgpr2 = IMPLICIT_DEF
-    $vgpr3 = GLOBAL_ATOMIC_ADD_RTN $vgpr0_vgpr1, $vgpr2, 0, 1, implicit $exec :: (load store syncscope("agent") seq_cst (s32), addrspace 1)
+    $vgpr3 = GLOBAL_ATOMIC_ADD_RTN $vgpr0_64, $vgpr2, 0, 1, implicit $exec :: (load store syncscope("agent") seq_cst (s32), addrspace 1)
     $exec_lo = S_MOV_B32 -1
 ...

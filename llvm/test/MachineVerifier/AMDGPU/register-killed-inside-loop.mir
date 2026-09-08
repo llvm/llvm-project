@@ -10,7 +10,7 @@
 name:            kill_flag_in_loop
 body:             |
   bb.0:
-    liveins: $sgpr0, $vgpr0_vgpr1
+    liveins: $sgpr0, $vgpr0_64
     successors: %bb.1(0x80000000)
 
     %0:sreg_32 = COPY $sgpr0

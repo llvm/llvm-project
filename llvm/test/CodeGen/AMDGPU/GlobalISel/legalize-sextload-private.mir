@@ -64,10 +64,10 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
     ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p5) :: (load (s8), addrspace 5)
     ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[SEXTLOAD]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[SEXT]](s64)
     %0:_(p5) = COPY $vgpr0
     %1:_(s64) = G_SEXTLOAD %0 :: (load (s8), addrspace 5)
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...
 ---
 name: test_sextload_private_i64_i16
@@ -81,25 +81,25 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
     ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p5) :: (load (s16), addrspace 5)
     ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[SEXTLOAD]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[SEXT]](s64)
     %0:_(p5) = COPY $vgpr0
     %1:_(s64) = G_SEXTLOAD %0 :: (load (s16), addrspace 5)
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...
 ---
 name: test_sextload_private_i64_i32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: test_sextload_private_i64_i32
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p5) :: (load (s32), addrspace 5)
     ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[LOAD]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
+    ; CHECK-NEXT: $vgpr0_64 = COPY [[SEXT]](s64)
     %0:_(p5) = COPY $vgpr0
     %1:_(s64) = G_SEXTLOAD %0 :: (load (s32), addrspace 5)
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...

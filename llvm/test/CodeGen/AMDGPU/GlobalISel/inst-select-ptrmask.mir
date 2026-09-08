@@ -700,13 +700,13 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
 
     ; CHECK-LABEL: name: ptrmask_p0_s64_vgpr_vgpr_vgpr
-    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_64
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY1]].sub0
@@ -715,8 +715,8 @@ body: |
     ; CHECK-NEXT: [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY3]], [[COPY5]], implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
-    %0:vgpr(p0) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
+    %0:vgpr(p0) = COPY $vgpr0_64
+    %1:vgpr(s64) = COPY $vgpr2_64
     %2:vgpr(p0) = G_PTRMASK %0, %1
     S_ENDPGM 0, implicit %2
 
@@ -729,12 +729,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: ptrmask_p0_s64_vgpr_vgpr_vgpr_0xf0f0f0f0f0f0f0f0
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
     ; CHECK-NEXT: [[V_MOV_B:%[0-9]+]]:vreg_64 = V_MOV_B64_PSEUDO -1085102592571150096, implicit $exec
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
@@ -744,7 +744,7 @@ body: |
     ; CHECK-NEXT: [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY2]], [[COPY4]], implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[V_AND_B32_e64_1]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
-    %0:vgpr(p0) = COPY $vgpr0_vgpr1
+    %0:vgpr(p0) = COPY $vgpr0_64
     %1:vgpr(s64) = G_CONSTANT i64 -1085102592571150096
     %2:vgpr(p0) = G_PTRMASK %0, %1
     S_ENDPGM 0, implicit %2
@@ -758,12 +758,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: ptrmask_p0_s64_vgpr_vgpr_clearlo1
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
     ; CHECK-NEXT: %const:vreg_64 = V_MOV_B64_PSEUDO -2, implicit $exec
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
@@ -771,7 +771,7 @@ body: |
     ; CHECK-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], [[COPY3]], implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
-    %0:vgpr(p0) = COPY $vgpr0_vgpr1
+    %0:vgpr(p0) = COPY $vgpr0_64
     %const:vgpr(s64) = G_CONSTANT i64 -2
     %1:vgpr(p0) = G_PTRMASK %0, %const
     S_ENDPGM 0, implicit %1
@@ -785,12 +785,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: ptrmask_p0_s64_vgpr_vgpr_clearlo2
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
     ; CHECK-NEXT: %const:vreg_64 = V_MOV_B64_PSEUDO -4, implicit $exec
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
@@ -798,7 +798,7 @@ body: |
     ; CHECK-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], [[COPY3]], implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
-    %0:vgpr(p0) = COPY $vgpr0_vgpr1
+    %0:vgpr(p0) = COPY $vgpr0_64
     %const:vgpr(s64) = G_CONSTANT i64 -4
     %1:vgpr(p0) = G_PTRMASK %0, %const
     S_ENDPGM 0, implicit %1
@@ -812,12 +812,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: ptrmask_p0_s64_vgpr_vgpr_clearlo3
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
     ; CHECK-NEXT: %const:vreg_64 = V_MOV_B64_PSEUDO -4, implicit $exec
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
@@ -825,7 +825,7 @@ body: |
     ; CHECK-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], [[COPY3]], implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
-    %0:vgpr(p0) = COPY $vgpr0_vgpr1
+    %0:vgpr(p0) = COPY $vgpr0_64
     %const:vgpr(s64) = G_CONSTANT i64 -4
     %1:vgpr(p0) = G_PTRMASK %0, %const
     S_ENDPGM 0, implicit %1
@@ -839,12 +839,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: ptrmask_p0_s64_vgpr_vgpr_clearlo4
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
     ; CHECK-NEXT: %const:vreg_64 = V_MOV_B64_PSEUDO -16, implicit $exec
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
@@ -852,7 +852,7 @@ body: |
     ; CHECK-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], [[COPY3]], implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
-    %0:vgpr(p0) = COPY $vgpr0_vgpr1
+    %0:vgpr(p0) = COPY $vgpr0_64
     %const:vgpr(s64) = G_CONSTANT i64 -16
     %1:vgpr(p0) = G_PTRMASK %0, %const
     S_ENDPGM 0, implicit %1
@@ -866,12 +866,12 @@ regBankSelected: true
 
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; CHECK-LABEL: name: ptrmask_p0_s64_vgpr_vgpr_clearlo29
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_64
     ; CHECK-NEXT: %const:vreg_64 = V_MOV_B64_PSEUDO -536870912, implicit $exec
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub1
@@ -879,7 +879,7 @@ body: |
     ; CHECK-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]], [[COPY3]], implicit $exec
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_AND_B32_e64_]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE]]
-    %0:vgpr(p0) = COPY $vgpr0_vgpr1
+    %0:vgpr(p0) = COPY $vgpr0_64
     %const:vgpr(s64) = G_CONSTANT i64 -536870912
     %1:vgpr(p0) = G_PTRMASK %0, %const
     S_ENDPGM 0, implicit %1

@@ -7,11 +7,11 @@ body:             |
   ; CHECK-LABEL: name: issue130646
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1_vgpr2, $sgpr8_64, $sgpr10
+  ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1_64, $sgpr8_64, $sgpr10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr8_64
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vreg_64 = COPY $vgpr1_64
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr10
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
@@ -52,11 +52,11 @@ body:             |
   ; CHECK-NEXT:   [[S_LSHR_B64_2:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[PHI1]], killed [[S_OR_B32_]], implicit-def dead $scc
   ; CHECK-NEXT:   S_BRANCH %bb.1
   bb.0:
-    liveins: $vgpr0, $vgpr1_vgpr2, $sgpr8_64, $sgpr10
+    liveins: $vgpr0, $vgpr1_64, $sgpr8_64, $sgpr10
 
     %0:vgpr_32 = COPY $vgpr0
     %1:sreg_64 = COPY $sgpr8_64
-    %2:vreg_64 = COPY $vgpr1_vgpr2
+    %2:vreg_64 = COPY $vgpr1_64
     %3:sreg_32 = COPY $sgpr10
     S_BRANCH %bb.3
 

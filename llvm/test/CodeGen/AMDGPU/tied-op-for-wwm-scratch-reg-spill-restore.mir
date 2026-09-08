@@ -75,13 +75,13 @@ body:             |
     ; GCN-NEXT: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec, implicit $vgpr0(tied-def 0) :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
     ; GCN-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 4, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.1, addrspace 5)
     ; GCN-NEXT: $exec = S_MOV_B64 killed $sgpr4_64
-    ; GCN-NEXT: SI_RETURN implicit $vgpr0_vgpr1
+    ; GCN-NEXT: SI_RETURN implicit $vgpr0_64
     $vgpr0 = IMPLICIT_DEF
     $vgpr2 = IMPLICIT_DEF
     $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr20, 0, $vgpr0
     $vgpr2 = SI_SPILL_S32_TO_VGPR killed $sgpr21, 0, $vgpr2
     $vgpr0 = COPY $vgpr1, implicit $exec
-    SI_RETURN implicit $vgpr0_vgpr1
+    SI_RETURN implicit $vgpr0_64
 ...
 
 # Tied op not required in the spill reload of vgpr2.
@@ -115,11 +115,11 @@ body:             |
     ; GCN-NEXT: $sgpr4_64 = S_XOR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; GCN-NEXT: $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_128, $sgpr32, 0, 0, 0, implicit $exec :: ("amdgpu-thread-private" load (s32) from %stack.0, addrspace 5)
     ; GCN-NEXT: $exec = S_MOV_B64 killed $sgpr4_64
-    ; GCN-NEXT: SI_RETURN implicit $vgpr0_vgpr1
+    ; GCN-NEXT: SI_RETURN implicit $vgpr0_64
     $vgpr2 = IMPLICIT_DEF
     $vgpr2 = SI_SPILL_S32_TO_VGPR killed $sgpr20, 0, $vgpr2
     $vgpr0 = COPY $vgpr1, implicit $exec
-    SI_RETURN implicit $vgpr0_vgpr1
+    SI_RETURN implicit $vgpr0_64
 ...
 
 # Tied op not required in the spill reload of vgpr40 which is in the CSR range.

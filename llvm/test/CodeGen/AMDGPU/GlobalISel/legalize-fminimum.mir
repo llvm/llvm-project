@@ -81,34 +81,34 @@ body: |
 name: test_fminimum_f64
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
 
     ; GFX9-LABEL: name: test_fminimum_f64
-    ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; GFX9: liveins: $vgpr0_64, $vgpr2_64
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
-    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr2_vgpr3
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr2_64
     ; GFX9-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(f64) = G_FMINNUM_IEEE [[COPY]], [[COPY1]]
     ; GFX9-NEXT: [[FCMP:%[0-9]+]]:_(i1) = G_FCMP floatpred(ord), [[COPY]](f64), [[COPY1]]
     ; GFX9-NEXT: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double +qnan
     ; GFX9-NEXT: [[SELECT:%[0-9]+]]:_(f64) = G_SELECT [[FCMP]](i1), [[FMINNUM_IEEE]], [[C]]
     ; GFX9-NEXT: [[COPY2:%[0-9]+]]:_(f64) = COPY [[SELECT]](f64)
-    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[COPY2]](f64)
-    ; GFX9-NEXT: SI_RETURN implicit $vgpr0_vgpr1
+    ; GFX9-NEXT: $vgpr0_64 = COPY [[COPY2]](f64)
+    ; GFX9-NEXT: SI_RETURN implicit $vgpr0_64
     ;
     ; GFX12-LABEL: name: test_fminimum_f64
-    ; GFX12: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; GFX12: liveins: $vgpr0_64, $vgpr2_64
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr2_vgpr3
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
+    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:_(f64) = COPY $vgpr2_64
     ; GFX12-NEXT: [[FMINIMUM:%[0-9]+]]:_(f64) = G_FMINIMUM [[COPY]], [[COPY1]]
-    ; GFX12-NEXT: $vgpr0_vgpr1 = COPY [[FMINIMUM]](f64)
-    ; GFX12-NEXT: SI_RETURN implicit $vgpr0_vgpr1
-    %0:_(f64) = COPY $vgpr0_vgpr1
-    %1:_(f64) = COPY $vgpr2_vgpr3
+    ; GFX12-NEXT: $vgpr0_64 = COPY [[FMINIMUM]](f64)
+    ; GFX12-NEXT: SI_RETURN implicit $vgpr0_64
+    %0:_(f64) = COPY $vgpr0_64
+    %1:_(f64) = COPY $vgpr2_64
     %2:_(f64) = G_FMINIMUM %0, %1
-    $vgpr0_vgpr1 = COPY %2(f64)
-    SI_RETURN implicit $vgpr0_vgpr1
+    $vgpr0_64 = COPY %2(f64)
+    SI_RETURN implicit $vgpr0_64
 ...
 ---
 name: test_fminimum_v2f16

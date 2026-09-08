@@ -45,7 +45,7 @@ body: |
     ; SI-LABEL: name: test_ffloor_f64
     ; SI: liveins: $vgpr0
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
     ; SI-NEXT: [[INT:%[0-9]+]]:_(f64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[COPY]](f64)
     ; SI-NEXT: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double f0x3FEFFFFFFFFFFFFF
     ; SI-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(f64) = G_FMINNUM_IEEE [[INT]], [[C]]
@@ -53,24 +53,24 @@ body: |
     ; SI-NEXT: [[SELECT:%[0-9]+]]:_(f64) = G_SELECT [[FCMP]](s1), [[COPY]], [[FMINNUM_IEEE]]
     ; SI-NEXT: [[FNEG:%[0-9]+]]:_(f64) = G_FNEG [[SELECT]]
     ; SI-NEXT: [[FADD:%[0-9]+]]:_(f64) = G_FADD [[COPY]], [[FNEG]]
-    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[FADD]](f64)
+    ; SI-NEXT: $vgpr0_64 = COPY [[FADD]](f64)
     ;
     ; VI-LABEL: name: test_ffloor_f64
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
     ; VI-NEXT: [[FFLOOR:%[0-9]+]]:_(f64) = G_FFLOOR [[COPY]]
-    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[FFLOOR]](f64)
+    ; VI-NEXT: $vgpr0_64 = COPY [[FFLOOR]](f64)
     ;
     ; GFX9-LABEL: name: test_ffloor_f64
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
     ; GFX9-NEXT: [[FFLOOR:%[0-9]+]]:_(f64) = G_FFLOOR [[COPY]]
-    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[FFLOOR]](f64)
-    %0:_(f64) = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: $vgpr0_64 = COPY [[FFLOOR]](f64)
+    %0:_(f64) = COPY $vgpr0_64
     %1:_(f64) = G_FFLOOR %0
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 
 ...
 
@@ -83,30 +83,30 @@ body: |
     ; SI-LABEL: name: test_ffloor_f64_nnan
     ; SI: liveins: $vgpr0
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
     ; SI-NEXT: [[INT:%[0-9]+]]:_(f64) = nnan G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[COPY]](f64)
     ; SI-NEXT: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double f0x3FEFFFFFFFFFFFFF
     ; SI-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(f64) = nnan G_FMINNUM_IEEE [[INT]], [[C]]
     ; SI-NEXT: [[FNEG:%[0-9]+]]:_(f64) = nnan G_FNEG [[FMINNUM_IEEE]]
     ; SI-NEXT: [[FADD:%[0-9]+]]:_(f64) = nnan G_FADD [[COPY]], [[FNEG]]
-    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[FADD]](f64)
+    ; SI-NEXT: $vgpr0_64 = COPY [[FADD]](f64)
     ;
     ; VI-LABEL: name: test_ffloor_f64_nnan
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
     ; VI-NEXT: [[FFLOOR:%[0-9]+]]:_(f64) = nnan G_FFLOOR [[COPY]]
-    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[FFLOOR]](f64)
+    ; VI-NEXT: $vgpr0_64 = COPY [[FFLOOR]](f64)
     ;
     ; GFX9-LABEL: name: test_ffloor_f64_nnan
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
     ; GFX9-NEXT: [[FFLOOR:%[0-9]+]]:_(f64) = nnan G_FFLOOR [[COPY]]
-    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[FFLOOR]](f64)
-    %0:_(f64) = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: $vgpr0_64 = COPY [[FFLOOR]](f64)
+    %0:_(f64) = COPY $vgpr0_64
     %1:_(f64) = nnan G_FFLOOR %0
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 
 ...
 
@@ -119,7 +119,7 @@ body: |
     ; SI-LABEL: name: test_ffloor_f64_nssaz
     ; SI: liveins: $vgpr0
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
     ; SI-NEXT: [[INT:%[0-9]+]]:_(f64) = nsz G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[COPY]](f64)
     ; SI-NEXT: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double f0x3FEFFFFFFFFFFFFF
     ; SI-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(f64) = nsz G_FMINNUM_IEEE [[INT]], [[C]]
@@ -127,24 +127,24 @@ body: |
     ; SI-NEXT: [[SELECT:%[0-9]+]]:_(f64) = nsz G_SELECT [[FCMP]](s1), [[COPY]], [[FMINNUM_IEEE]]
     ; SI-NEXT: [[FNEG:%[0-9]+]]:_(f64) = nsz G_FNEG [[SELECT]]
     ; SI-NEXT: [[FADD:%[0-9]+]]:_(f64) = nsz G_FADD [[COPY]], [[FNEG]]
-    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[FADD]](f64)
+    ; SI-NEXT: $vgpr0_64 = COPY [[FADD]](f64)
     ;
     ; VI-LABEL: name: test_ffloor_f64_nssaz
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
     ; VI-NEXT: [[FFLOOR:%[0-9]+]]:_(f64) = nsz G_FFLOOR [[COPY]]
-    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[FFLOOR]](f64)
+    ; VI-NEXT: $vgpr0_64 = COPY [[FFLOOR]](f64)
     ;
     ; GFX9-LABEL: name: test_ffloor_f64_nssaz
     ; GFX9: liveins: $vgpr0
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(f64) = COPY $vgpr0_64
     ; GFX9-NEXT: [[FFLOOR:%[0-9]+]]:_(f64) = nsz G_FFLOOR [[COPY]]
-    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[FFLOOR]](f64)
-    %0:_(f64) = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: $vgpr0_64 = COPY [[FFLOOR]](f64)
+    %0:_(f64) = COPY $vgpr0_64
     %1:_(f64) = nsz G_FFLOOR %0
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 
 ...
 
@@ -195,95 +195,95 @@ body: |
 name: test_ffloor_v2f32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; SI-LABEL: name: test_ffloor_v2f32
-    ; SI: liveins: $vgpr0_vgpr1
+    ; SI: liveins: $vgpr0_64
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_vgpr1
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_64
     ; SI-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[COPY]](<2 x f32>)
     ; SI-NEXT: [[FFLOOR:%[0-9]+]]:_(f32) = G_FFLOOR [[UV]]
     ; SI-NEXT: [[FFLOOR1:%[0-9]+]]:_(f32) = G_FFLOOR [[UV1]]
     ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f32>) = G_BUILD_VECTOR [[FFLOOR]](f32), [[FFLOOR1]](f32)
-    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x f32>)
+    ; SI-NEXT: $vgpr0_64 = COPY [[BUILD_VECTOR]](<2 x f32>)
     ;
     ; VI-LABEL: name: test_ffloor_v2f32
-    ; VI: liveins: $vgpr0_vgpr1
+    ; VI: liveins: $vgpr0_64
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_vgpr1
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_64
     ; VI-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[COPY]](<2 x f32>)
     ; VI-NEXT: [[FFLOOR:%[0-9]+]]:_(f32) = G_FFLOOR [[UV]]
     ; VI-NEXT: [[FFLOOR1:%[0-9]+]]:_(f32) = G_FFLOOR [[UV1]]
     ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f32>) = G_BUILD_VECTOR [[FFLOOR]](f32), [[FFLOOR1]](f32)
-    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x f32>)
+    ; VI-NEXT: $vgpr0_64 = COPY [[BUILD_VECTOR]](<2 x f32>)
     ;
     ; GFX9-LABEL: name: test_ffloor_v2f32
-    ; GFX9: liveins: $vgpr0_vgpr1
+    ; GFX9: liveins: $vgpr0_64
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x f32>) = COPY $vgpr0_64
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[COPY]](<2 x f32>)
     ; GFX9-NEXT: [[FFLOOR:%[0-9]+]]:_(f32) = G_FFLOOR [[UV]]
     ; GFX9-NEXT: [[FFLOOR1:%[0-9]+]]:_(f32) = G_FFLOOR [[UV1]]
     ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f32>) = G_BUILD_VECTOR [[FFLOOR]](f32), [[FFLOOR1]](f32)
-    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x f32>)
-    %0:_(<2 x f32>) = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: $vgpr0_64 = COPY [[BUILD_VECTOR]](<2 x f32>)
+    %0:_(<2 x f32>) = COPY $vgpr0_64
     %1:_(<2 x f32>) = G_FFLOOR %0
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...
 
 ---
 name: test_ffloor_v3f32
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2
+    liveins: $vgpr0_96
 
     ; SI-LABEL: name: test_ffloor_v3f32
-    ; SI: liveins: $vgpr0_vgpr1_vgpr2
+    ; SI: liveins: $vgpr0_96
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<3 x f32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<3 x f32>) = COPY $vgpr0_96
     ; SI-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32), [[UV2:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[COPY]](<3 x f32>)
     ; SI-NEXT: [[FFLOOR:%[0-9]+]]:_(f32) = G_FFLOOR [[UV]]
     ; SI-NEXT: [[FFLOOR1:%[0-9]+]]:_(f32) = G_FFLOOR [[UV1]]
     ; SI-NEXT: [[FFLOOR2:%[0-9]+]]:_(f32) = G_FFLOOR [[UV2]]
     ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x f32>) = G_BUILD_VECTOR [[FFLOOR]](f32), [[FFLOOR1]](f32), [[FFLOOR2]](f32)
-    ; SI-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x f32>)
+    ; SI-NEXT: $vgpr0_96 = COPY [[BUILD_VECTOR]](<3 x f32>)
     ;
     ; VI-LABEL: name: test_ffloor_v3f32
-    ; VI: liveins: $vgpr0_vgpr1_vgpr2
+    ; VI: liveins: $vgpr0_96
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<3 x f32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<3 x f32>) = COPY $vgpr0_96
     ; VI-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32), [[UV2:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[COPY]](<3 x f32>)
     ; VI-NEXT: [[FFLOOR:%[0-9]+]]:_(f32) = G_FFLOOR [[UV]]
     ; VI-NEXT: [[FFLOOR1:%[0-9]+]]:_(f32) = G_FFLOOR [[UV1]]
     ; VI-NEXT: [[FFLOOR2:%[0-9]+]]:_(f32) = G_FFLOOR [[UV2]]
     ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x f32>) = G_BUILD_VECTOR [[FFLOOR]](f32), [[FFLOOR1]](f32), [[FFLOOR2]](f32)
-    ; VI-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x f32>)
+    ; VI-NEXT: $vgpr0_96 = COPY [[BUILD_VECTOR]](<3 x f32>)
     ;
     ; GFX9-LABEL: name: test_ffloor_v3f32
-    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2
+    ; GFX9: liveins: $vgpr0_96
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<3 x f32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<3 x f32>) = COPY $vgpr0_96
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(f32), [[UV1:%[0-9]+]]:_(f32), [[UV2:%[0-9]+]]:_(f32) = G_UNMERGE_VALUES [[COPY]](<3 x f32>)
     ; GFX9-NEXT: [[FFLOOR:%[0-9]+]]:_(f32) = G_FFLOOR [[UV]]
     ; GFX9-NEXT: [[FFLOOR1:%[0-9]+]]:_(f32) = G_FFLOOR [[UV1]]
     ; GFX9-NEXT: [[FFLOOR2:%[0-9]+]]:_(f32) = G_FFLOOR [[UV2]]
     ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x f32>) = G_BUILD_VECTOR [[FFLOOR]](f32), [[FFLOOR1]](f32), [[FFLOOR2]](f32)
-    ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x f32>)
-    %0:_(<3 x f32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; GFX9-NEXT: $vgpr0_96 = COPY [[BUILD_VECTOR]](<3 x f32>)
+    %0:_(<3 x f32>) = COPY $vgpr0_96
     %1:_(<3 x f32>) = G_FFLOOR %0
-    $vgpr0_vgpr1_vgpr2 = COPY %1
+    $vgpr0_96 = COPY %1
 ...
 
 ---
 name: test_ffloor_v2f64
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    liveins: $vgpr0_128
 
     ; SI-LABEL: name: test_ffloor_v2f64
-    ; SI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; SI: liveins: $vgpr0_128
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr0_128
     ; SI-NEXT: [[UV:%[0-9]+]]:_(f64), [[UV1:%[0-9]+]]:_(f64) = G_UNMERGE_VALUES [[COPY]](<2 x f64>)
     ; SI-NEXT: [[INT:%[0-9]+]]:_(f64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fract), [[UV]](f64)
     ; SI-NEXT: [[C:%[0-9]+]]:_(f64) = G_FCONSTANT double f0x3FEFFFFFFFFFFFFF
@@ -299,30 +299,30 @@ body: |
     ; SI-NEXT: [[FNEG1:%[0-9]+]]:_(f64) = G_FNEG [[SELECT1]]
     ; SI-NEXT: [[FADD1:%[0-9]+]]:_(f64) = G_FADD [[UV1]], [[FNEG1]]
     ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f64>) = G_BUILD_VECTOR [[FADD]](f64), [[FADD1]](f64)
-    ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x f64>)
+    ; SI-NEXT: $vgpr0_128 = COPY [[BUILD_VECTOR]](<2 x f64>)
     ;
     ; VI-LABEL: name: test_ffloor_v2f64
-    ; VI: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; VI: liveins: $vgpr0_128
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr0_128
     ; VI-NEXT: [[UV:%[0-9]+]]:_(f64), [[UV1:%[0-9]+]]:_(f64) = G_UNMERGE_VALUES [[COPY]](<2 x f64>)
     ; VI-NEXT: [[FFLOOR:%[0-9]+]]:_(f64) = G_FFLOOR [[UV]]
     ; VI-NEXT: [[FFLOOR1:%[0-9]+]]:_(f64) = G_FFLOOR [[UV1]]
     ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f64>) = G_BUILD_VECTOR [[FFLOOR]](f64), [[FFLOOR1]](f64)
-    ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x f64>)
+    ; VI-NEXT: $vgpr0_128 = COPY [[BUILD_VECTOR]](<2 x f64>)
     ;
     ; GFX9-LABEL: name: test_ffloor_v2f64
-    ; GFX9: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GFX9: liveins: $vgpr0_128
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<2 x f64>) = COPY $vgpr0_128
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(f64), [[UV1:%[0-9]+]]:_(f64) = G_UNMERGE_VALUES [[COPY]](<2 x f64>)
     ; GFX9-NEXT: [[FFLOOR:%[0-9]+]]:_(f64) = G_FFLOOR [[UV]]
     ; GFX9-NEXT: [[FFLOOR1:%[0-9]+]]:_(f64) = G_FFLOOR [[UV1]]
     ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f64>) = G_BUILD_VECTOR [[FFLOOR]](f64), [[FFLOOR1]](f64)
-    ; GFX9-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x f64>)
-    %0:_(<2 x f64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GFX9-NEXT: $vgpr0_128 = COPY [[BUILD_VECTOR]](<2 x f64>)
+    %0:_(<2 x f64>) = COPY $vgpr0_128
     %1:_(<2 x f64>) = G_FFLOOR %0
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %1
+    $vgpr0_128 = COPY %1
 ...
 
 ---
@@ -442,12 +442,12 @@ body: |
 name: test_ffloor_v4f16
 body: |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
 
     ; SI-LABEL: name: test_ffloor_v4f16
-    ; SI: liveins: $vgpr0_vgpr1
+    ; SI: liveins: $vgpr0_64
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<4 x f16>) = COPY $vgpr0_vgpr1
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(<4 x f16>) = COPY $vgpr0_64
     ; SI-NEXT: [[UV:%[0-9]+]]:_(<2 x f16>), [[UV1:%[0-9]+]]:_(<2 x f16>) = G_UNMERGE_VALUES [[COPY]](<4 x f16>)
     ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[UV]](<2 x f16>)
     ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(f16) = G_TRUNC [[BITCAST]](i32)
@@ -481,12 +481,12 @@ body: |
     ; SI-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[ZEXT2]], [[SHL1]]
     ; SI-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x f16>) = G_BITCAST [[OR1]](i32)
     ; SI-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x f16>) = G_CONCAT_VECTORS [[BITCAST2]](<2 x f16>), [[BITCAST3]](<2 x f16>)
-    ; SI-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x f16>)
+    ; SI-NEXT: $vgpr0_64 = COPY [[CONCAT_VECTORS]](<4 x f16>)
     ;
     ; VI-LABEL: name: test_ffloor_v4f16
-    ; VI: liveins: $vgpr0_vgpr1
+    ; VI: liveins: $vgpr0_64
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<4 x f16>) = COPY $vgpr0_vgpr1
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(<4 x f16>) = COPY $vgpr0_64
     ; VI-NEXT: [[UV:%[0-9]+]]:_(<2 x f16>), [[UV1:%[0-9]+]]:_(<2 x f16>) = G_UNMERGE_VALUES [[COPY]](<4 x f16>)
     ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[UV]](<2 x f16>)
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(f16) = G_TRUNC [[BITCAST]](i32)
@@ -512,12 +512,12 @@ body: |
     ; VI-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[ZEXT2]], [[SHL1]]
     ; VI-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x f16>) = G_BITCAST [[OR1]](i32)
     ; VI-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x f16>) = G_CONCAT_VECTORS [[BITCAST2]](<2 x f16>), [[BITCAST3]](<2 x f16>)
-    ; VI-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x f16>)
+    ; VI-NEXT: $vgpr0_64 = COPY [[CONCAT_VECTORS]](<4 x f16>)
     ;
     ; GFX9-LABEL: name: test_ffloor_v4f16
-    ; GFX9: liveins: $vgpr0_vgpr1
+    ; GFX9: liveins: $vgpr0_64
     ; GFX9-NEXT: {{  $}}
-    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<4 x f16>) = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: [[COPY:%[0-9]+]]:_(<4 x f16>) = COPY $vgpr0_64
     ; GFX9-NEXT: [[UV:%[0-9]+]]:_(<2 x f16>), [[UV1:%[0-9]+]]:_(<2 x f16>) = G_UNMERGE_VALUES [[COPY]](<4 x f16>)
     ; GFX9-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[UV]](<2 x f16>)
     ; GFX9-NEXT: [[TRUNC:%[0-9]+]]:_(f16) = G_TRUNC [[BITCAST]](i32)
@@ -535,8 +535,8 @@ body: |
     ; GFX9-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f16>) = G_BUILD_VECTOR [[FFLOOR]](f16), [[FFLOOR1]](f16)
     ; GFX9-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x f16>) = G_BUILD_VECTOR [[FFLOOR2]](f16), [[FFLOOR3]](f16)
     ; GFX9-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x f16>) = G_CONCAT_VECTORS [[BUILD_VECTOR]](<2 x f16>), [[BUILD_VECTOR1]](<2 x f16>)
-    ; GFX9-NEXT: $vgpr0_vgpr1 = COPY [[CONCAT_VECTORS]](<4 x f16>)
-    %0:_(<4 x f16>) = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: $vgpr0_64 = COPY [[CONCAT_VECTORS]](<4 x f16>)
+    %0:_(<4 x f16>) = COPY $vgpr0_64
     %1:_(<4 x f16>) = G_FFLOOR %0
-    $vgpr0_vgpr1 = COPY %1
+    $vgpr0_64 = COPY %1
 ...

@@ -9,14 +9,14 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: remove_and_255_zextload
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: %and:_(s32) = G_ZEXTLOAD %ptr(p1) :: (load (s8), addrspace 1)
     ; CHECK-NEXT: $vgpr0 = COPY %and(s32)
-    %ptr:_(p1) = COPY $vgpr0_vgpr1
+    %ptr:_(p1) = COPY $vgpr0_64
     %load:_(s32) = G_ZEXTLOAD %ptr :: (load (s8), addrspace 1, align 1)
     %mask:_(s32) = G_CONSTANT i32 255
     %and:_(s32) = G_AND %load, %mask
@@ -30,18 +30,18 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-LABEL: name: remove_and_255_smin_zextload
-    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_64
+    ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_64
     ; CHECK-NEXT: %load0:_(s32) = G_ZEXTLOAD %ptr0(p1) :: (load (s8), addrspace 1)
     ; CHECK-NEXT: %load1:_(s32) = G_ZEXTLOAD %ptr1(p1) :: (load (s8), addrspace 1)
     ; CHECK-NEXT: %smin:_(s32) = G_SMIN %load0, %load1
     ; CHECK-NEXT: $vgpr0 = COPY %smin(s32)
-    %ptr0:_(p1) = COPY $vgpr0_vgpr1
-    %ptr1:_(p1) = COPY $vgpr2_vgpr3
+    %ptr0:_(p1) = COPY $vgpr0_64
+    %ptr1:_(p1) = COPY $vgpr2_64
     %load0:_(s32) = G_ZEXTLOAD %ptr0 :: (load (s8), addrspace 1, align 1)
     %load1:_(s32) = G_ZEXTLOAD %ptr1 :: (load (s8), addrspace 1, align 1)
     %smin:_(s32) = G_SMIN %load0, %load1
@@ -57,18 +57,18 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-LABEL: name: remove_and_255_smax_zextload
-    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_64
+    ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_64
     ; CHECK-NEXT: %load0:_(s32) = G_ZEXTLOAD %ptr0(p1) :: (load (s8), addrspace 1)
     ; CHECK-NEXT: %load1:_(s32) = G_ZEXTLOAD %ptr1(p1) :: (load (s8), addrspace 1)
     ; CHECK-NEXT: %smax:_(s32) = G_SMAX %load0, %load1
     ; CHECK-NEXT: $vgpr0 = COPY %smax(s32)
-    %ptr0:_(p1) = COPY $vgpr0_vgpr1
-    %ptr1:_(p1) = COPY $vgpr2_vgpr3
+    %ptr0:_(p1) = COPY $vgpr0_64
+    %ptr1:_(p1) = COPY $vgpr2_64
     %load0:_(s32) = G_ZEXTLOAD %ptr0 :: (load (s8), addrspace 1, align 1)
     %load1:_(s32) = G_ZEXTLOAD %ptr1 :: (load (s8), addrspace 1, align 1)
     %smax:_(s32) = G_SMAX %load0, %load1
@@ -84,18 +84,18 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-LABEL: name: remove_and_255_umin_zextload
-    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_64
+    ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_64
     ; CHECK-NEXT: %load0:_(s32) = G_ZEXTLOAD %ptr0(p1) :: (load (s8), addrspace 1)
     ; CHECK-NEXT: %load1:_(s32) = G_ZEXTLOAD %ptr1(p1) :: (load (s8), addrspace 1)
     ; CHECK-NEXT: %umin:_(s32) = G_UMIN %load0, %load1
     ; CHECK-NEXT: $vgpr0 = COPY %umin(s32)
-    %ptr0:_(p1) = COPY $vgpr0_vgpr1
-    %ptr1:_(p1) = COPY $vgpr2_vgpr3
+    %ptr0:_(p1) = COPY $vgpr0_64
+    %ptr1:_(p1) = COPY $vgpr2_64
     %load0:_(s32) = G_ZEXTLOAD %ptr0 :: (load (s8), addrspace 1, align 1)
     %load1:_(s32) = G_ZEXTLOAD %ptr1 :: (load (s8), addrspace 1, align 1)
     %umin:_(s32) = G_UMIN %load0, %load1
@@ -111,18 +111,18 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-LABEL: name: remove_and_255_umax_zextload
-    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_64
+    ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_64
     ; CHECK-NEXT: %load0:_(s32) = G_ZEXTLOAD %ptr0(p1) :: (load (s8), addrspace 1)
     ; CHECK-NEXT: %load1:_(s32) = G_ZEXTLOAD %ptr1(p1) :: (load (s8), addrspace 1)
     ; CHECK-NEXT: %umax:_(s32) = G_UMAX %load0, %load1
     ; CHECK-NEXT: $vgpr0 = COPY %umax(s32)
-    %ptr0:_(p1) = COPY $vgpr0_vgpr1
-    %ptr1:_(p1) = COPY $vgpr2_vgpr3
+    %ptr0:_(p1) = COPY $vgpr0_64
+    %ptr1:_(p1) = COPY $vgpr2_64
     %load0:_(s32) = G_ZEXTLOAD %ptr0 :: (load (s8), addrspace 1, align 1)
     %load1:_(s32) = G_ZEXTLOAD %ptr1 :: (load (s8), addrspace 1, align 1)
     %umax:_(s32) = G_UMAX %load0, %load1
@@ -139,20 +139,20 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-LABEL: name: remove_and_255_smin_fail_lhs
-    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_64
+    ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_64
     ; CHECK-NEXT: %load0:_(s32) = G_LOAD %ptr0(p1) :: (load (s32), addrspace 1)
     ; CHECK-NEXT: %load1:_(s32) = G_ZEXTLOAD %ptr1(p1) :: (load (s8), addrspace 1)
     ; CHECK-NEXT: %smin:_(s32) = G_SMIN %load0, %load1
     ; CHECK-NEXT: %mask:_(s32) = G_CONSTANT i32 255
     ; CHECK-NEXT: %and:_(s32) = G_AND %smin, %mask
     ; CHECK-NEXT: $vgpr0 = COPY %and(s32)
-    %ptr0:_(p1) = COPY $vgpr0_vgpr1
-    %ptr1:_(p1) = COPY $vgpr2_vgpr3
+    %ptr0:_(p1) = COPY $vgpr0_64
+    %ptr1:_(p1) = COPY $vgpr2_64
     %load0:_(s32) = G_LOAD %ptr0 :: (load (s32), addrspace 1, align 4)
     %load1:_(s32) = G_ZEXTLOAD %ptr1 :: (load (s8), addrspace 1, align 1)
     %smin:_(s32) = G_SMIN %load0, %load1
@@ -169,20 +169,20 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-LABEL: name: remove_and_255_smin_fail_rhs
-    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    ; CHECK: liveins: $vgpr0_64, $vgpr2_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_64
+    ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_64
     ; CHECK-NEXT: %load0:_(s32) = G_ZEXTLOAD %ptr0(p1) :: (load (s8), addrspace 1)
     ; CHECK-NEXT: %load1:_(s32) = G_LOAD %ptr1(p1) :: (load (s32), addrspace 1)
     ; CHECK-NEXT: %smin:_(s32) = G_SMIN %load0, %load1
     ; CHECK-NEXT: %mask:_(s32) = G_CONSTANT i32 255
     ; CHECK-NEXT: %and:_(s32) = G_AND %smin, %mask
     ; CHECK-NEXT: $vgpr0 = COPY %and(s32)
-    %ptr0:_(p1) = COPY $vgpr0_vgpr1
-    %ptr1:_(p1) = COPY $vgpr2_vgpr3
+    %ptr0:_(p1) = COPY $vgpr0_64
+    %ptr1:_(p1) = COPY $vgpr2_64
     %load0:_(s32) = G_ZEXTLOAD %ptr0 :: (load (s8), addrspace 1, align 1)
     %load1:_(s32) = G_LOAD %ptr1 :: (load (s32), addrspace 1, align 4)
     %smin:_(s32) = G_SMIN %load0, %load1
@@ -199,16 +199,16 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: remove_and_65535_groupstaticsize
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: %lds_size:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
     ; CHECK-NEXT: %mask:_(s32) = G_CONSTANT i32 65535
     ; CHECK-NEXT: %and:_(s32) = G_AND %lds_size, %mask
     ; CHECK-NEXT: $vgpr0 = COPY %and(s32)
-    %ptr:_(p1) = COPY $vgpr0_vgpr1
+    %ptr:_(p1) = COPY $vgpr0_64
     %lds_size:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
     %mask:_(s32) = G_CONSTANT i32 65535
     %and:_(s32) = G_AND %lds_size, %mask
@@ -222,14 +222,14 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: remove_and_131071_groupstaticsize
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: %lds_size:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
     ; CHECK-NEXT: $vgpr0 = COPY %lds_size(s32)
-    %ptr:_(p1) = COPY $vgpr0_vgpr1
+    %ptr:_(p1) = COPY $vgpr0_64
     %lds_size:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
     %mask:_(s32) = G_CONSTANT i32 131071
     %and:_(s32) = G_AND %lds_size, %mask
@@ -243,16 +243,16 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: no_remove_and_65536_groupstaticsize
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: %lds_size:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
     ; CHECK-NEXT: %mask:_(s32) = G_CONSTANT i32 65536
     ; CHECK-NEXT: %and:_(s32) = G_AND %lds_size, %mask
     ; CHECK-NEXT: $vgpr0 = COPY %and(s32)
-    %ptr:_(p1) = COPY $vgpr0_vgpr1
+    %ptr:_(p1) = COPY $vgpr0_64
     %lds_size:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
     %mask:_(s32) = G_CONSTANT i32 65536
     %and:_(s32) = G_AND %lds_size, %mask
@@ -266,16 +266,16 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1
+    liveins: $vgpr0_64
     ; CHECK-LABEL: name: no_remove_and_32767_groupstaticsize
-    ; CHECK: liveins: $vgpr0_vgpr1
+    ; CHECK: liveins: $vgpr0_64
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_64
     ; CHECK-NEXT: %lds_size:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
     ; CHECK-NEXT: %mask:_(s32) = G_CONSTANT i32 32767
     ; CHECK-NEXT: %and:_(s32) = G_AND %lds_size, %mask
     ; CHECK-NEXT: $vgpr0 = COPY %and(s32)
-    %ptr:_(p1) = COPY $vgpr0_vgpr1
+    %ptr:_(p1) = COPY $vgpr0_64
     %lds_size:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.groupstaticsize)
     %mask:_(s32) = G_CONSTANT i32 32767
     %and:_(s32) = G_AND %lds_size, %mask
@@ -290,19 +290,19 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4
+    liveins: $vgpr0_64, $vgpr2_64, $vgpr4
 
     ; CHECK-LABEL: name: remove_and_umin_lhs_only
-    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4
+    ; CHECK: liveins: $vgpr0_64, $vgpr2_64, $vgpr4
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_64
+    ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_64
     ; CHECK-NEXT: %val:_(s32) = COPY $vgpr4
     ; CHECK-NEXT: %k255:_(s32) = G_CONSTANT i32 255
     ; CHECK-NEXT: %umin0:_(s32) = G_UMIN %val, %k255
     ; CHECK-NEXT: $vgpr0 = COPY %umin0(s32)
-    %ptr0:_(p1) = COPY $vgpr0_vgpr1
-    %ptr1:_(p1) = COPY $vgpr2_vgpr3
+    %ptr0:_(p1) = COPY $vgpr0_64
+    %ptr1:_(p1) = COPY $vgpr2_64
     %val:_(s32) = COPY $vgpr4
     %k255:_(s32) = G_CONSTANT i32 255
     %umin0:_(s32) = G_UMIN %val, %k255
@@ -317,19 +317,19 @@ legalized:       true
 tracksRegLiveness: true
 body:             |
   bb.0:
-    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4
+    liveins: $vgpr0_64, $vgpr2_64, $vgpr4
 
     ; CHECK-LABEL: name: remove_and_umin_rhs_only
-    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4
+    ; CHECK: liveins: $vgpr0_64, $vgpr2_64, $vgpr4
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: %ptr0:_(p1) = COPY $vgpr0_64
+    ; CHECK-NEXT: %ptr1:_(p1) = COPY $vgpr2_64
     ; CHECK-NEXT: %val:_(s32) = COPY $vgpr4
     ; CHECK-NEXT: %k255:_(s32) = G_CONSTANT i32 255
     ; CHECK-NEXT: %umin0:_(s32) = G_UMIN %val, %k255
     ; CHECK-NEXT: $vgpr0 = COPY %umin0(s32)
-    %ptr0:_(p1) = COPY $vgpr0_vgpr1
-    %ptr1:_(p1) = COPY $vgpr2_vgpr3
+    %ptr0:_(p1) = COPY $vgpr0_64
+    %ptr1:_(p1) = COPY $vgpr2_64
     %val:_(s32) = COPY $vgpr4
     %k255:_(s32) = G_CONSTANT i32 255
     %umin0:_(s32) = G_UMIN %k255, %val
