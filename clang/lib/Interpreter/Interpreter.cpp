@@ -412,6 +412,8 @@ Interpreter::~Interpreter() {
   Act->FinalizeAction();
   if (DeviceParser)
     DeviceParser.reset();
+  if (HIPDeviceParser)
+    HIPDeviceParser.reset();
   if (DeviceAct)
     DeviceAct->FinalizeAction();
   if (IncrExecutor) {
@@ -516,8 +518,14 @@ Interpreter::createWithDevice(OffloadType Type,
   Interp->DeviceCI = std::move(DCI);
 
   if (Type == OffloadType::HIP) {
-    // FIXME: HIP device parsing is not supported yet; it should use an
-    // IncrementalHIPDeviceParser once one exists.
+    auto HIPDeviceParser = std::make_unique<IncrementalHIPDeviceParser>(
+        *Interp->DeviceCI, *Interp->getCompilerInstance(),
+        Interp->DeviceAct.get(), IMVFS, Err, Interp->PTUs);
+
+    if (Err)
+      return std::move(Err);
+
+    Interp->HIPDeviceParser = std::move(HIPDeviceParser);
   } else {
     auto DeviceParser = std::make_unique<IncrementalCUDADeviceParser>(
         *Interp->DeviceCI, *Interp->getCompilerInstance(),
@@ -581,6 +589,26 @@ Interpreter::Parse(llvm::StringRef Code) {
 
     llvm::Error Err = DeviceParser->GenerateFatbinary();
     if (Err)
+      return std::move(Err);
+  }
+
+  // If we have a HIP device parser, parse and lower the device code first so
+  // that the generated offload bundle is available to the host compilation.
+  if (HIPDeviceParser) {
+    llvm::Expected<TranslationUnitDecl *> DeviceTU = HIPDeviceParser->Parse(Code);
+    if (auto E = DeviceTU.takeError())
+      return std::move(E);
+
+    HIPDeviceParser->RegisterPTU(*DeviceTU);
+
+    if (llvm::Error Err = HIPDeviceParser->optimize())
+      return std::move(Err);
+
+    llvm::Expected<llvm::StringRef> HSACO = HIPDeviceParser->GenerateHSACO();
+    if (!HSACO)
+      return HSACO.takeError();
+
+    if (llvm::Error Err = HIPDeviceParser->GenerateOffloadBundle())
       return std::move(Err);
   }
 

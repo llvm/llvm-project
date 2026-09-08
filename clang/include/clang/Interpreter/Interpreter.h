@@ -45,6 +45,7 @@ class CXXRecordDecl;
 class Decl;
 class IncrementalParser;
 class IncrementalCUDADeviceParser;
+class IncrementalHIPDeviceParser;
 
 enum class OffloadType { CUDA, HIP };
 
@@ -133,7 +134,10 @@ class Interpreter {
   // An optional parser for CUDA offloading
   std::unique_ptr<IncrementalCUDADeviceParser> DeviceParser;
 
-  // An optional action for CUDA offloading
+  // An optional parser for HIP offloading
+  std::unique_ptr<IncrementalHIPDeviceParser> HIPDeviceParser;
+
+  // An optional action for device offloading
   std::unique_ptr<IncrementalAction> DeviceAct;
 
   /// List containing information about each incrementally parsed piece of code.
