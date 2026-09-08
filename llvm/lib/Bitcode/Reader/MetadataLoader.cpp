@@ -241,8 +241,8 @@ void BitcodeReaderMetadataList::tryToResolveCycles() {
     return;
 
   // Give up on finding a full definition for any forward decls that remain.
-  for (const auto &Ref : OldTypeRefs.FwdDecls)
-    OldTypeRefs.Final.insert(Ref);
+  for (const auto &[UUID, CT] : OldTypeRefs.FwdDecls)
+    OldTypeRefs.Final.try_emplace(UUID, CT);
   OldTypeRefs.FwdDecls.clear();
 
   // Upgrade from old type ref arrays.  In strange cases, this could add to

@@ -1259,6 +1259,7 @@ libc_support_library(
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":types_size_t",
     ],
 )
 
@@ -3773,6 +3774,7 @@ cc_library(
     deps = [
         ":__support_big_int",
         ":__support_common",
+        ":__support_cpp_algorithm",
         ":__support_cpp_array",
         ":__support_cpp_bit",
         ":__support_cpp_limits",
@@ -9170,6 +9172,7 @@ libc_support_library(
     ],
     deps = [
         ":__support_common",
+        ":__support_cpp_algorithm",
         ":__support_cpp_bit",
         ":__support_fputil_double_double",
         ":__support_fputil_fenv_impl",
@@ -14276,6 +14279,7 @@ libc_support_library(
         ":__support_common",
         ":__support_cpp_bit",
         ":__support_cpp_cstddef",
+        ":__support_cpp_utility",
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":hdr_stdint_proxy",
@@ -16005,6 +16009,7 @@ libc_support_library(
     hdrs = ["src/stdio/scanf_core/parser.h"],
     deps = [
         ":__support_arg_list",
+        ":__support_cpp_algorithm",
         ":__support_cpp_bitset",
         ":__support_ctype_utils",
         ":__support_macros_config",
