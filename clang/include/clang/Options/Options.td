@@ -1525,8 +1525,6 @@ def hip_device_lib_EQ : Joined<["--"], "hip-device-lib=">, Group<hip_Group>,
   HelpText<"HIP device library">;
 def hip_version_EQ : Joined<["--"], "hip-version=">, Group<hip_Group>,
   HelpText<"HIP version in the format of major.minor.patch">;
-def fhip_dump_offload_linker_script : Flag<["-"], "fhip-dump-offload-linker-script">,
-  Group<hip_Group>, Flags<[NoArgumentUnused, HelpHidden]>;
 defm hip_new_launch_api : BoolFOption<"hip-new-launch-api",
   LangOpts<"HIPUseNewLaunchAPI">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use">,
@@ -3823,6 +3821,13 @@ def fno_modules_driver :
   Group<f_Group>,
   Visibility<[ClangOption]>,
   HelpText<"Disable support for driver managed module builds (experimental)">;
+def fdepscan_log_path : Joined<["-"], "fdepscan-log-path=">,
+  Group<f_Group>,
+  Visibility<[ClangOption]>,
+  Flags<[NoArgumentUnused]>,
+  MetaVarName<"<file>">,
+  HelpText<"Log the timing of dependency scanning actions to <file>. Only "
+           "takes effect while running the dependency scanner.">;
 
 def fincremental_extensions :
   Flag<["-"], "fincremental-extensions">,

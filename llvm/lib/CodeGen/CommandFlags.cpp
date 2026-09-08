@@ -76,7 +76,6 @@ CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
 CGOPT_EXP(CodeGenFileType, FileType)
 CGOPT(FramePointerKind, FramePointerUsage)
-CGOPT(bool, EnableNoTrappingFPMath)
 CGOPT(bool, EnableAIXExtendedAltivecABI)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFPMath)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFP32Math)
@@ -91,7 +90,6 @@ CGOPT(bool, StackSymbolOrdering)
 CGOPT(bool, StackRealign)
 CGOPT(std::string, TrapFuncName)
 CGOPT(bool, UseCtors)
-CGOPT(bool, DisableIntegratedAS)
 CGOPT_EXP(bool, DataSections)
 CGOPT_EXP(bool, FunctionSections)
 CGOPT(bool, IgnoreXCOFFVisibility)
@@ -231,13 +229,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
           clEnumValN(FramePointerKind::None, "none",
                      "Enable frame pointer elimination")));
   CGBINDOPT(FramePointerUsage);
-
-  static cl::opt<bool> EnableNoTrappingFPMath(
-      "enable-no-trapping-fp-math",
-      cl::desc("Enable setting the FP exceptions build "
-               "attribute not to use exceptions"),
-      cl::init(false));
-  CGBINDOPT(EnableNoTrappingFPMath);
 
   static const auto DenormFlagEnumOptions = cl::values(
       clEnumValN(DenormalMode::IEEE, "ieee", "IEEE 754 denormal numbers"),
@@ -527,11 +518,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(XCOFFReadOnlyPointers);
 
-  static cl::opt<bool> DisableIntegratedAS(
-      "no-integrated-as", cl::desc("Disable integrated assembler"),
-      cl::init(false));
-  CGBINDOPT(DisableIntegratedAS);
-
   mc::RegisterMCTargetOptionsFlags();
 }
 
@@ -585,7 +571,6 @@ TargetOptions
 codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   TargetOptions Options;
   Options.AllowFPOpFusion = getFuseFPOps();
-  Options.NoTrappingFPMath = getEnableNoTrappingFPMath();
 
   Options.HonorSignDependentRoundingFPMathOption =
       getEnableHonorSignDependentRoundingFPMath();
@@ -594,7 +579,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.GuaranteedTailCallOpt = getEnableGuaranteedTailCallOpt();
   Options.StackSymbolOrdering = getStackSymbolOrdering();
   Options.UseInitArray = !getUseCtors();
-  Options.DisableIntegratedAS = getDisableIntegratedAS();
   Options.DataSections =
       getExplicitDataSections().value_or(TheTriple.hasDefaultDataSections());
   Options.FunctionSections = getFunctionSections();

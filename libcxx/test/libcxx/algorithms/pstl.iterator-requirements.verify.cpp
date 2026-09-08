@@ -187,6 +187,13 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::max_element(pol, non_fwd, non_fwd);       // expected-error@*:* {{static assertion failed: max_element}}
+    (void)std::max_element(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: max_element}}
+    (void)std::min_element(pol, non_fwd, non_fwd);       // expected-error@*:* {{static assertion failed: min_element}}
+    (void)std::min_element(pol, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: min_element}}
+  }
+
+  {
     (void)std::mismatch(pol, non_fwd, non_fwd, it); // expected-error@*:* {{static assertion failed: mismatch}}
     (void)std::mismatch(pol, it, it, non_fwd);      // expected-error@*:* {{static assertion failed: mismatch}}
 

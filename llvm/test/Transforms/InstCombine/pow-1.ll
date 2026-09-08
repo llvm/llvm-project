@@ -748,7 +748,7 @@ define float @powf_libcall_half_assume_ninf_noerrno(float %x) {
 ; NOLIB-NEXT:    ret float [[RETVAL]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
-  %not.inf = fcmp one float %fabs, 0x7FF0000000000000
+  %not.inf = fcmp one float %fabs, +inf
   call void @llvm.assume(i1 %not.inf)
   %retval = call float @powf(float %x, float 0.5) #0
   ret float %retval
@@ -887,7 +887,7 @@ define double @pow_libcall_half_fromdomcondition(double %x) {
 ; NOLIB-NEXT:    ret double [[RETVAL]]
 ;
   %a = call double @llvm.fabs.f64(double %x)
-  %c = fcmp oeq double %a, 0x7FF0000000000000
+  %c = fcmp oeq double %a, +inf
   br i1 %c, label %then, label %else
 
 then:
@@ -932,7 +932,7 @@ define double @test_simplify10(double %x) {
 ; CHECK-SAME: double [[X:%.*]]) {
 ; CHECK-NEXT:    ret double +inf
 ;
-  %retval = call double @llvm.pow.f64(double 0xFFF0000000000000, double 0.5)
+  %retval = call double @llvm.pow.f64(double -inf, double 0.5)
   ret double %retval
 }
 

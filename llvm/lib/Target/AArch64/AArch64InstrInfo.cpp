@@ -204,6 +204,12 @@ static std::optional<unsigned> getLFIInstSizeInBytes(const MachineInstr &MI) {
 /// GetInstSize - Return the number of bytes of code the specified
 /// instruction may be.  This returns the maximum number of bytes.
 unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
+  const MCInstrDesc &Desc = MI.getDesc();
+  if (!Desc.isPseudo() && !Subtarget.isLFI()) {
+    assert(Desc.getSize() == 4 && "Unexpected instruction size");
+    return 4;
+  }
+
   const MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction *MF = MBB.getParent();
   const Function &F = MF->getFunction();
@@ -222,7 +228,6 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   // FIXME: We currently only handle pseudoinstructions that don't get expanded
   //        before the assembly printer.
   unsigned NumBytes = 0;
-  const MCInstrDesc &Desc = MI.getDesc();
 
   // LFI rewriter expansions that supersede normal sizing.
   const auto &STI = MF->getSubtarget<AArch64Subtarget>();
@@ -7569,11 +7574,9 @@ static bool isCombineInstrCandidateFP(const MachineInstr &Inst) {
   case AArch64::FSUBv2f32:
   case AArch64::FSUBv2f64:
   case AArch64::FSUBv4f32:
-    TargetOptions Options = Inst.getParent()->getParent()->getTarget().Options;
-    // We can fuse FADD/FSUB with FMUL, if fusion is either allowed globally by
-    // the target options or if FADD/FSUB has the contract fast-math flag.
-    return Options.AllowFPOpFusion == FPOpFusion::Fast ||
-           Inst.getFlag(MachineInstr::FmContract);
+    // We can fuse FADD/FSUB with FMUL, if FADD/FSUB has the contract fast-math
+    // flag.
+    return Inst.getFlag(MachineInstr::FmContract);
   }
   return false;
 }
@@ -11039,8 +11042,12 @@ AArch64InstrInfo::getOutlinableRanges(MachineBasicBlock &MBB,
       continue;
     }
     LRAvailableEverywhere &= LRU.available(AArch64::LR);
+    // RangeBegin may point at a debug instruction because the mapper ignores
+    // debug instructions wherever they appear. Only count non-debug
+    // instructions so debug info cannot make a short range outlinable.
     RangeBegin = MI.getIterator();
-    ++RangeLen;
+    if (!MI.isDebugInstr())
+      ++RangeLen;
   }
   // Above loop misses the last (or only) range. If we are still safe, then
   // let's save the range.

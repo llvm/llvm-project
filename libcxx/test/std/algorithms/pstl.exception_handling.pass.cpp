@@ -285,6 +285,26 @@ int main(int, char**) {
       {
         auto compare = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
 
+        // max_element(first, last)
+        assert_non_throwing([=, &policy] { (void)std::max_element(policy, std::move(first1), std::move(last1)); });
+
+        // max_element(first, last, comp)
+        assert_non_throwing([=, &policy] {
+          (void)std::max_element(policy, std::move(first1), std::move(last1), compare);
+        });
+
+        // min_element(first, last)
+        assert_non_throwing([=, &policy] { (void)std::min_element(policy, std::move(first1), std::move(last1)); });
+
+        // min_element(first, last, comp)
+        assert_non_throwing([=, &policy] {
+          (void)std::min_element(policy, std::move(first1), std::move(last1), compare);
+        });
+      }
+
+      {
+        auto compare = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
+
         // merge(first1, last1, first2, last2, dest)
         assert_non_throwing([=, &policy] {
           (void)std::merge(

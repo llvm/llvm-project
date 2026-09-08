@@ -458,6 +458,23 @@ add_header_library(
 )
 
 add_header_library(
+  posix_fadvise
+  HDRS
+    posix_fadvise.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.off_t
+    libc.include.sys_syscall
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.limits
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   ptrace
   HDRS
     ptrace.h

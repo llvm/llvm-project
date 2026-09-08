@@ -651,7 +651,6 @@ public:
 
   virtual unsigned getMinVectorRegisterBitWidth() const { return 128; }
 
-  virtual std::optional<unsigned> getMaxVScale() const { return std::nullopt; }
   virtual std::optional<unsigned> getVScaleForTuning() const {
     return std::nullopt;
   }

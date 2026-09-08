@@ -591,6 +591,8 @@ public:
   bool Pre(const parser::OpenMPInvalidDirective &x) { return false; }
 
   bool Pre(const parser::DoConstruct &);
+  bool Pre(const parser::InputImpliedDo &);
+  bool Pre(const parser::OutputImpliedDo &);
 
   bool Pre(const parser::OpenMPSectionsConstruct &);
   void Post(const parser::OpenMPSectionsConstruct &) { PopContext(); }
@@ -2216,6 +2218,28 @@ bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
   return true;
 }
 
+static const parser::Name &GetIoImpliedDoIndex(
+    const parser::IoImpliedDoControl &control) {
+  return parser::UnwrapRef<parser::Name>(control.Name());
+}
+
+// [OMP-5.2] 5.1.1 - Implied-DO indices are predetermined private.
+bool OmpAttributeVisitor::Pre(const parser::InputImpliedDo &x) {
+  if (WithinConstruct()) {
+    ResolveSeqLoopIndexInParallelOrTaskConstruct(
+        GetIoImpliedDoIndex(std::get<parser::IoImpliedDoControl>(x.t)));
+  }
+  return true;
+}
+
+bool OmpAttributeVisitor::Pre(const parser::OutputImpliedDo &x) {
+  if (WithinConstruct()) {
+    ResolveSeqLoopIndexInParallelOrTaskConstruct(
+        GetIoImpliedDoIndex(std::get<parser::IoImpliedDoControl>(x.t)));
+  }
+  return true;
+}
+
 // 2.15.1.1 Data-sharing Attribute Rules - Predetermined
 //   - The loop iteration variable(s) in the associated do-loop(s) of a do,
 //     parallel do, taskloop, or distribute construct is (are) private.
@@ -2731,6 +2755,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
         dirContext.defaultDSA == Symbol::Flag::OmpNone) {
       checkDefaultNone = true;
     }
+    bool hasDefaultNoneError{false};
     if (checkDefaultNone) {
       auto defaultNoneError = [&](parser::CharBlock loc, const Symbol *sym) {
         if (crayPtr) {
@@ -2742,13 +2767,30 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
               "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-sharing attribute clause"_err_en_US,
               sym->name());
         }
+        hasDefaultNoneError = true;
       };
+      Symbol *curSymbol{nullptr};
+      if (auto it{scope.find(symbol->name())}; it != scope.end()) {
+        curSymbol = &*it->second;
+      }
+      // Setting the DSA of a symbol with OmpNone DSA in the enclosing construct
+      // is allowed when:
+      // - The DSA is private (no read or write to the original variable).
+      // - The DSA is predetermined (should only private be allowed?).
+      // - The DSA is implicit. The standard seems to allow this only for
+      //   variables that are not referenced in the construct
+      //   (OpenMP 6.0 - 7.5.1 default Clause), but current implementation
+      //   allows the DSA to be implicitly set by a non-leaf directive.
       if (dsa.test(Symbol::Flag::OmpPrivate) ||
           crayPtrDSA.test(Symbol::Flag::OmpPrivate)) {
         checkDefaultNone = false;
-      } else if (dsa.any() || crayPtrDSA.any()) {
+      } else if ((dsa.any() && curSymbol &&
+                     curSymbol->test(Symbol::Flag::OmpExplicit)) ||
+          (crayPtrDSA.any() && crayPtr &&
+              crayPtr->test(Symbol::Flag::OmpExplicit))) {
         defaultNoneError(dirContext.directiveSource, symbol);
-      } else if (dirDepth == (int)dirContext_.size() - 1) {
+      } else if (dsa.none() && crayPtrDSA.none() &&
+          dirDepth == (int)dirContext_.size() - 1) {
         defaultNoneError(name.source, symbol);
       }
     }
@@ -2785,14 +2827,18 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
 
     if (dirContext.defaultDSA == Symbol::Flag::OmpPrivate ||
         dirContext.defaultDSA == Symbol::Flag::OmpFirstPrivate ||
-        dirContext.defaultDSA == Symbol::Flag::OmpShared) {
+        dirContext.defaultDSA == Symbol::Flag::OmpShared ||
+        (dirContext.defaultDSA == Symbol::Flag::OmpNone &&
+            !hasDefaultNoneError)) {
       // 1) default
       // Allowed only with parallel, teams and task generating constructs.
       if (!parallelDir && !taskGenDir && !teamsDir) {
         return;
       }
       dsa = {dirContext.defaultDSA};
-      makeSymbol(dsa);
+      if (dirContext.defaultDSA != Symbol::Flag::OmpNone) {
+        makeSymbol(dsa);
+      }
       PRINT_IMPLICIT_RULE("1) default");
     } else if (parallelDir) {
       // 2) parallel -> shared
@@ -2833,6 +2879,12 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
         makeSymbol(dsa)->set(Symbol::Flag::OmpImplicit);
         PRINT_IMPLICIT_RULE("7) taskgen: firstprivate");
       }
+    }
+    if (hasDefaultNoneError &&
+        (dsa.none() || dsa == Symbol::Flags{Symbol::Flag::OmpNone})) {
+      // Set DSA to avoid reporting the same error multiple times.
+      dsa = {Symbol::Flag::OmpShared};
+      makeSymbol(dsa);
     }
     prevDSA = dsa;
   }

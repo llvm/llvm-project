@@ -1356,11 +1356,11 @@ module std {
       header "__format/buffer.h"
       export std.iterator.back_insert_iterator
     }
-    module concepts                           { header "__format/concepts.h" }
     module container_adaptor                  { header "__format/container_adaptor.h" }
     module enable_insertable                  { header "__format/enable_insertable.h" }
     module escaped_output_table               { header "__format/escaped_output_table.h" }
     module extended_grapheme_cluster_table    { header "__format/extended_grapheme_cluster_table.h" }
+    module fmt_char_type                      { header "__format/fmt_char_type.h" }
     module fmt_pair_like                      { header "__format/fmt_pair_like.h" }
     module format_arg                         { header "__format/format_arg.h" }
     module format_arg_store                   { header "__format/format_arg_store.h" }
@@ -1379,6 +1379,7 @@ module std {
     module format_parse_context               { header "__format/format_parse_context.h" }
     module format_string                      { header "__format/format_string.h" }
     module format_to_n_result                 { header "__format/format_to_n_result.h" }
+    module formattable                        { header "__format/formattable.h" }
     module formatter                          { header "__format/formatter.h" }
     module formatter_bool                {
       header "__format/formatter_bool.h"
@@ -2444,6 +2445,9 @@ module std {
       }
       module merge {
         header "__pstl/cpu_algos/merge.h"
+      }
+      module min_element {
+        header "__pstl/cpu_algos/min_element.h"
       }
       module mismatch {
         header "__pstl/cpu_algos/mismatch.h"
