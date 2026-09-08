@@ -2182,9 +2182,9 @@ add_header_library(
     nanf128.h
   DEPENDS
     libc.src.__support.FPUtil.float128
+    libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.src.__support.str_to_float
-    libc.src.__support.libc_errno
 )
 
 add_header_library(
@@ -3852,8 +3852,8 @@ add_header_library(
   HDRS
     getpayloadf128.h
   DEPENDS
-    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float128
     libc.src.__support.macros.config
 )
 
@@ -4771,8 +4771,8 @@ add_header_library(
   HDRS
     setpayloadf128.h
   DEPENDS
-    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float128
     libc.src.__support.macros.config
 )
 
@@ -4828,8 +4828,8 @@ add_header_library(
   HDRS
     setpayloadsigf128.h
   DEPENDS
-    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float128
     libc.src.__support.macros.config
 )
 
