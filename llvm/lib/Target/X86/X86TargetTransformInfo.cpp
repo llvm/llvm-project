@@ -786,6 +786,72 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   bool VarDivToFP =
       !Op2Info.isConstant() && (!IsStrictFP || ST->useAVX512Regs());
 
+  // i64 needs the qq converts, which are AVX512DQ only. Two tables because the
+  // lowering picks by operand value and not by type.
+  static const CostKindTblEntry AVX512DQExactVarDivCostTable[] = {
+    { ISD::UDIV, MVT::v2i64,  {   5 } }, // cvt+divpd sequence
+    { ISD::SDIV, MVT::v2i64,  {   5 } },
+    { ISD::UREM, MVT::v2i64,  {   5 } },
+    { ISD::SREM, MVT::v2i64,  {   5 } },
+    { ISD::UDIV, MVT::v4i64,  {   8 } },
+    { ISD::SDIV, MVT::v4i64,  {   8 } },
+    { ISD::UREM, MVT::v4i64,  {   8 } },
+    { ISD::SREM, MVT::v4i64,  {   8 } },
+    { ISD::UDIV, MVT::v8i64,  {  16 } },
+    { ISD::SDIV, MVT::v8i64,  {  16 } },
+    { ISD::UREM, MVT::v8i64,  {  16 } },
+    { ISD::SREM, MVT::v8i64,  {  16 } },
+  };
+
+  static const CostKindTblEntry AVX512DQVarDivCostTable[] = {
+    { ISD::UDIV, MVT::v2i64,  {  16 } },
+    { ISD::SDIV, MVT::v2i64,  {  16 } },
+    { ISD::UREM, MVT::v2i64,  {  16 } },
+    { ISD::SREM, MVT::v2i64,  {  16 } },
+    { ISD::UDIV, MVT::v4i64,  {  16 } },
+    { ISD::SDIV, MVT::v4i64,  {  16 } },
+    { ISD::UREM, MVT::v4i64,  {  16 } },
+    { ISD::SREM, MVT::v4i64,  {  16 } },
+    { ISD::UDIV, MVT::v8i64,  {  16 } },
+    { ISD::SDIV, MVT::v8i64,  {  18 } },
+    { ISD::UREM, MVT::v8i64,  {  16 } },
+    { ISD::SREM, MVT::v8i64,  {  18 } },
+  };
+
+  if (VarDivToFP && ST->hasDQI() && ST->useAVX512Regs() &&
+      LT.second.getScalarType() == MVT::i64) {
+    // The DAG combine picks between the two sequences with these same two
+    // queries, so the cost cannot disagree with what codegen emits.
+    unsigned Mantissa = APFloat::semanticsPrecision(APFloat::IEEEdouble());
+    unsigned EltBits = LT.second.getScalarSizeInBits();
+    bool IsSignedDiv = ISD == ISD::SDIV || ISD == ISD::SREM;
+
+    auto FitsMantissa = [&](const Value *V) {
+      const DataLayout &DL = CxtI->getDataLayout();
+      if (IsSignedDiv)
+        return ComputeNumSignBits(V, DL, /*AC=*/nullptr, CxtI) + Mantissa >
+               EltBits;
+      return computeKnownBits(V, DL, /*AC=*/nullptr, CxtI)
+                 .countMaxActiveBits() <= Mantissa;
+    };
+
+    bool HaveOperands = Args.size() == 2 && CxtI;
+    bool ExactFPDiv =
+        HaveOperands && FitsMantissa(Args[0]) && FitsMantissa(Args[1]);
+
+    // Only the reciprocal chain multiplies, so only it is vpmullq gated.
+    bool SlowMultiply =
+        !ExactFPDiv && LT.second == MVT::v2i64 && ST->isPMULLQSlow();
+
+    if (!SlowMultiply) {
+      ArrayRef<CostKindTblEntry> Tbl =
+          ExactFPDiv ? AVX512DQExactVarDivCostTable : AVX512DQVarDivCostTable;
+      if (const auto *Entry = CostTableLookup(Tbl, ISD, LT.second))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return LT.first * *KindCost;
+    }
+  }
+
   static const CostKindTblEntry AVX512BWVarDivCostTable[] = {
     { ISD::UDIV, MVT::v16i8,  {  10 } }, // unpack+cvt+divps sequence
     { ISD::SDIV, MVT::v16i8,  {  10 } },

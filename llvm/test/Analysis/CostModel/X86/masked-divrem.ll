@@ -6,7 +6,7 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mattr=+avx2 | FileCheck %s --check-prefix=AVX2
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mattr=+avx512f | FileCheck %s --check-prefix=AVX512F
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mattr=+avx512f,+avx512bw | FileCheck %s --check-prefix=AVX512BW
-; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mattr=+avx512f,+avx512dq | FileCheck %s --check-prefix=AVX512F
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mattr=+avx512f,+avx512dq | FileCheck %s --check-prefix=AVX512DQ
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mcpu=slm | FileCheck %s --check-prefix=SLM
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mcpu=goldmont | FileCheck %s --check-prefix=SSE42
 ; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" 2>&1 -disable-output -cost-kind=all -mcpu=btver2 | FileCheck %s --check-prefix=AVX1
@@ -101,6 +101,21 @@ define void @udiv() {
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:5 Lat:5 SizeLat:5 for: %V32i8 = call <32 x i8> @llvm.masked.udiv.v32i8(<32 x i8> poison, <32 x i8> poison, <32 x i1> poison)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:41 CodeSize:5 Lat:5 SizeLat:5 for: %V64i8 = call <64 x i8> @llvm.masked.udiv.v64i8(<64 x i8> poison, <64 x i8> poison, <64 x i1> poison)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; AVX512DQ-LABEL: 'udiv'
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:5 Lat:5 SizeLat:5 for: %V2i64 = call <2 x i64> @llvm.masked.udiv.v2i64(<2 x i64> poison, <2 x i64> poison, <2 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:5 Lat:5 SizeLat:5 for: %V4i64 = call <4 x i64> @llvm.masked.udiv.v4i64(<4 x i64> poison, <4 x i64> poison, <4 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:5 Lat:5 SizeLat:5 for: %V8i64 = call <8 x i64> @llvm.masked.udiv.v8i64(<8 x i64> poison, <8 x i64> poison, <8 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:5 Lat:5 SizeLat:5 for: %V4i32 = call <4 x i32> @llvm.masked.udiv.v4i32(<4 x i32> poison, <4 x i32> poison, <4 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:5 Lat:5 SizeLat:5 for: %V8i32 = call <8 x i32> @llvm.masked.udiv.v8i32(<8 x i32> poison, <8 x i32> poison, <8 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:57 CodeSize:5 Lat:5 SizeLat:5 for: %V16i32 = call <16 x i32> @llvm.masked.udiv.v16i32(<16 x i32> poison, <16 x i32> poison, <16 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:5 Lat:5 SizeLat:5 for: %V8i16 = call <8 x i16> @llvm.masked.udiv.v8i16(<8 x i16> poison, <8 x i16> poison, <8 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:5 Lat:5 SizeLat:5 for: %V16i16 = call <16 x i16> @llvm.masked.udiv.v16i16(<16 x i16> poison, <16 x i16> poison, <16 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:8 Lat:6 SizeLat:8 for: %V32i16 = call <32 x i16> @llvm.masked.udiv.v32i16(<32 x i16> poison, <32 x i16> poison, <32 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:5 Lat:5 SizeLat:5 for: %V16i8 = call <16 x i8> @llvm.masked.udiv.v16i8(<16 x i8> poison, <16 x i8> poison, <16 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:5 Lat:5 SizeLat:5 for: %V32i8 = call <32 x i8> @llvm.masked.udiv.v32i8(<32 x i8> poison, <32 x i8> poison, <32 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:58 CodeSize:8 Lat:6 SizeLat:8 for: %V64i8 = call <64 x i8> @llvm.masked.udiv.v64i8(<64 x i8> poison, <64 x i8> poison, <64 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SLM-LABEL: 'udiv'
 ; SLM-NEXT:  Cost Model: Found costs of RThru:1644 CodeSize:5 Lat:8 SizeLat:7 for: %V2i64 = call <2 x i64> @llvm.masked.udiv.v2i64(<2 x i64> poison, <2 x i64> poison, <2 x i1> poison)
@@ -226,6 +241,21 @@ define void @sdiv() {
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:41 CodeSize:5 Lat:5 SizeLat:5 for: %V64i8 = call <64 x i8> @llvm.masked.sdiv.v64i8(<64 x i8> poison, <64 x i8> poison, <64 x i1> poison)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
+; AVX512DQ-LABEL: 'sdiv'
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:5 Lat:5 SizeLat:5 for: %V2i64 = call <2 x i64> @llvm.masked.sdiv.v2i64(<2 x i64> poison, <2 x i64> poison, <2 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:5 Lat:5 SizeLat:5 for: %V4i64 = call <4 x i64> @llvm.masked.sdiv.v4i64(<4 x i64> poison, <4 x i64> poison, <4 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:5 Lat:5 SizeLat:5 for: %V8i64 = call <8 x i64> @llvm.masked.sdiv.v8i64(<8 x i64> poison, <8 x i64> poison, <8 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:5 Lat:5 SizeLat:5 for: %V4i32 = call <4 x i32> @llvm.masked.sdiv.v4i32(<4 x i32> poison, <4 x i32> poison, <4 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:5 Lat:5 SizeLat:5 for: %V8i32 = call <8 x i32> @llvm.masked.sdiv.v8i32(<8 x i32> poison, <8 x i32> poison, <8 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:57 CodeSize:5 Lat:5 SizeLat:5 for: %V16i32 = call <16 x i32> @llvm.masked.sdiv.v16i32(<16 x i32> poison, <16 x i32> poison, <16 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:5 Lat:5 SizeLat:5 for: %V8i16 = call <8 x i16> @llvm.masked.sdiv.v8i16(<8 x i16> poison, <8 x i16> poison, <8 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:5 Lat:5 SizeLat:5 for: %V16i16 = call <16 x i16> @llvm.masked.sdiv.v16i16(<16 x i16> poison, <16 x i16> poison, <16 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:8 Lat:6 SizeLat:8 for: %V32i16 = call <32 x i16> @llvm.masked.sdiv.v32i16(<32 x i16> poison, <32 x i16> poison, <32 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:5 Lat:5 SizeLat:5 for: %V16i8 = call <16 x i8> @llvm.masked.sdiv.v16i8(<16 x i8> poison, <16 x i8> poison, <16 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:5 Lat:5 SizeLat:5 for: %V32i8 = call <32 x i8> @llvm.masked.sdiv.v32i8(<32 x i8> poison, <32 x i8> poison, <32 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:58 CodeSize:8 Lat:6 SizeLat:8 for: %V64i8 = call <64 x i8> @llvm.masked.sdiv.v64i8(<64 x i8> poison, <64 x i8> poison, <64 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
 ; SLM-LABEL: 'sdiv'
 ; SLM-NEXT:  Cost Model: Found costs of RThru:1644 CodeSize:5 Lat:8 SizeLat:7 for: %V2i64 = call <2 x i64> @llvm.masked.sdiv.v2i64(<2 x i64> poison, <2 x i64> poison, <2 x i1> poison)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:3288 CodeSize:6 Lat:12 SizeLat:10 for: %V4i64 = call <4 x i64> @llvm.masked.sdiv.v4i64(<4 x i64> poison, <4 x i64> poison, <4 x i1> poison)
@@ -350,6 +380,21 @@ define void @urem() {
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:41 CodeSize:5 Lat:5 SizeLat:5 for: %V64i8 = call <64 x i8> @llvm.masked.urem.v64i8(<64 x i8> poison, <64 x i8> poison, <64 x i1> poison)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
+; AVX512DQ-LABEL: 'urem'
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:5 Lat:5 SizeLat:5 for: %V2i64 = call <2 x i64> @llvm.masked.urem.v2i64(<2 x i64> poison, <2 x i64> poison, <2 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:5 Lat:5 SizeLat:5 for: %V4i64 = call <4 x i64> @llvm.masked.urem.v4i64(<4 x i64> poison, <4 x i64> poison, <4 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:5 Lat:5 SizeLat:5 for: %V8i64 = call <8 x i64> @llvm.masked.urem.v8i64(<8 x i64> poison, <8 x i64> poison, <8 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:5 Lat:5 SizeLat:5 for: %V4i32 = call <4 x i32> @llvm.masked.urem.v4i32(<4 x i32> poison, <4 x i32> poison, <4 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:5 Lat:5 SizeLat:5 for: %V8i32 = call <8 x i32> @llvm.masked.urem.v8i32(<8 x i32> poison, <8 x i32> poison, <8 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:57 CodeSize:5 Lat:5 SizeLat:5 for: %V16i32 = call <16 x i32> @llvm.masked.urem.v16i32(<16 x i32> poison, <16 x i32> poison, <16 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:5 Lat:5 SizeLat:5 for: %V8i16 = call <8 x i16> @llvm.masked.urem.v8i16(<8 x i16> poison, <8 x i16> poison, <8 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:5 Lat:5 SizeLat:5 for: %V16i16 = call <16 x i16> @llvm.masked.urem.v16i16(<16 x i16> poison, <16 x i16> poison, <16 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:8 Lat:6 SizeLat:8 for: %V32i16 = call <32 x i16> @llvm.masked.urem.v32i16(<32 x i16> poison, <32 x i16> poison, <32 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:5 Lat:5 SizeLat:5 for: %V16i8 = call <16 x i8> @llvm.masked.urem.v16i8(<16 x i8> poison, <16 x i8> poison, <16 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:5 Lat:5 SizeLat:5 for: %V32i8 = call <32 x i8> @llvm.masked.urem.v32i8(<32 x i8> poison, <32 x i8> poison, <32 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:58 CodeSize:8 Lat:6 SizeLat:8 for: %V64i8 = call <64 x i8> @llvm.masked.urem.v64i8(<64 x i8> poison, <64 x i8> poison, <64 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
 ; SLM-LABEL: 'urem'
 ; SLM-NEXT:  Cost Model: Found costs of RThru:1644 CodeSize:5 Lat:8 SizeLat:7 for: %V2i64 = call <2 x i64> @llvm.masked.urem.v2i64(<2 x i64> poison, <2 x i64> poison, <2 x i1> poison)
 ; SLM-NEXT:  Cost Model: Found costs of RThru:3288 CodeSize:6 Lat:12 SizeLat:10 for: %V4i64 = call <4 x i64> @llvm.masked.urem.v4i64(<4 x i64> poison, <4 x i64> poison, <4 x i1> poison)
@@ -473,6 +518,21 @@ define void @srem() {
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:5 Lat:5 SizeLat:5 for: %V32i8 = call <32 x i8> @llvm.masked.srem.v32i8(<32 x i8> poison, <32 x i8> poison, <32 x i1> poison)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:41 CodeSize:5 Lat:5 SizeLat:5 for: %V64i8 = call <64 x i8> @llvm.masked.srem.v64i8(<64 x i8> poison, <64 x i8> poison, <64 x i1> poison)
 ; AVX512BW-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+; AVX512DQ-LABEL: 'srem'
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:5 Lat:5 SizeLat:5 for: %V2i64 = call <2 x i64> @llvm.masked.srem.v2i64(<2 x i64> poison, <2 x i64> poison, <2 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:5 Lat:5 SizeLat:5 for: %V4i64 = call <4 x i64> @llvm.masked.srem.v4i64(<4 x i64> poison, <4 x i64> poison, <4 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:5 Lat:5 SizeLat:5 for: %V8i64 = call <8 x i64> @llvm.masked.srem.v8i64(<8 x i64> poison, <8 x i64> poison, <8 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:5 Lat:5 SizeLat:5 for: %V4i32 = call <4 x i32> @llvm.masked.srem.v4i32(<4 x i32> poison, <4 x i32> poison, <4 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:5 Lat:5 SizeLat:5 for: %V8i32 = call <8 x i32> @llvm.masked.srem.v8i32(<8 x i32> poison, <8 x i32> poison, <8 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:57 CodeSize:5 Lat:5 SizeLat:5 for: %V16i32 = call <16 x i32> @llvm.masked.srem.v16i32(<16 x i32> poison, <16 x i32> poison, <16 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:5 Lat:5 SizeLat:5 for: %V8i16 = call <8 x i16> @llvm.masked.srem.v8i16(<8 x i16> poison, <8 x i16> poison, <8 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:5 Lat:5 SizeLat:5 for: %V16i16 = call <16 x i16> @llvm.masked.srem.v16i16(<16 x i16> poison, <16 x i16> poison, <16 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:30 CodeSize:8 Lat:6 SizeLat:8 for: %V32i16 = call <32 x i16> @llvm.masked.srem.v32i16(<32 x i16> poison, <32 x i16> poison, <32 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:5 Lat:5 SizeLat:5 for: %V16i8 = call <16 x i8> @llvm.masked.srem.v16i8(<16 x i8> poison, <16 x i8> poison, <16 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:29 CodeSize:5 Lat:5 SizeLat:5 for: %V32i8 = call <32 x i8> @llvm.masked.srem.v32i8(<32 x i8> poison, <32 x i8> poison, <32 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:58 CodeSize:8 Lat:6 SizeLat:8 for: %V64i8 = call <64 x i8> @llvm.masked.srem.v64i8(<64 x i8> poison, <64 x i8> poison, <64 x i1> poison)
+; AVX512DQ-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SLM-LABEL: 'srem'
 ; SLM-NEXT:  Cost Model: Found costs of RThru:1644 CodeSize:5 Lat:8 SizeLat:7 for: %V2i64 = call <2 x i64> @llvm.masked.srem.v2i64(<2 x i64> poison, <2 x i64> poison, <2 x i1> poison)
