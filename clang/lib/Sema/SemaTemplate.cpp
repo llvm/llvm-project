@@ -10331,6 +10331,7 @@ DeclResult Sema::ActOnExplicitInstantiation(
     // Check for dllimport class template instantiation definitions.
     bool DLLImport =
         ClassTemplate->getTemplatedDecl()->getAttr<DLLImportAttr>();
+    // dllexport trumps dllimport.
     if ((DLLImport || AttachedImportAttr) && !AttachedExportAttr) {
       TSK = TSK_ExplicitInstantiationDeclaration;
       DLLImportExplicitInstantiationDef = true;
