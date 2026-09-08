@@ -12,9 +12,13 @@ exports_files(["libc_math_test_rules.bzl"])
 
 licenses(["notice"])
 
+math_mpfr_test(name = "acosbf16")
+
 math_mpfr_test(name = "acosf")
 
 math_mpfr_test(name = "acoshf")
+
+math_mpfr_test(name = "asinbf16")
 
 math_mpfr_test(name = "asinf")
 
@@ -31,11 +35,15 @@ math_mpfr_test(
 
 math_mpfr_test(name = "atan")
 
+math_mpfr_test(name = "atanbf16")
+
 math_mpfr_test(name = "atanf")
 
 math_mpfr_test(name = "atanhf")
 
 math_mpfr_test(name = "cbrt")
+
+math_mpfr_test(name = "cbrtbf16")
 
 math_mpfr_test(name = "cbrtf")
 
@@ -259,6 +267,8 @@ math_mpfr_test(
 # math_mpfr_test(name = "f16fmaf")
 # math_mpfr_test(name = "f16fmal")
 
+math_mpfr_test(name = "fmabf16")
+
 math_mpfr_test(
     name = "frexp",
     hdrs = ["FrexpTest.h"],
@@ -326,6 +336,11 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "hypotbf16",
+    hdrs = ["HypotTest.h"],
+)
+
+math_mpfr_test(
     name = "hypotf",
     hdrs = [
         "HypotTest.h",
@@ -346,6 +361,11 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "llrintbf16",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_mpfr_test(
     name = "llrintf",
     hdrs = ["RoundToIntegerTest.h"],
 )
@@ -362,6 +382,11 @@ math_mpfr_test(
 
 math_mpfr_test(
     name = "llround",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_mpfr_test(
+    name = "llroundbf16",
     hdrs = ["RoundToIntegerTest.h"],
 )
 
@@ -387,6 +412,8 @@ math_mpfr_test(
 
 math_mpfr_test(name = "log")
 
+math_mpfr_test(name = "log_bf16")
+
 math_mpfr_test(name = "logf")
 
 math_mpfr_test(name = "log10")
@@ -403,6 +430,11 @@ math_mpfr_test(name = "log2f")
 
 math_mpfr_test(
     name = "lrint",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_mpfr_test(
+    name = "lrintbf16",
     hdrs = ["RoundToIntegerTest.h"],
 )
 
@@ -427,6 +459,11 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "lroundbf16",
+    hdrs = ["RoundToIntegerTest.h"],
+)
+
+math_mpfr_test(
     name = "lroundf",
     hdrs = ["RoundToIntegerTest.h"],
 )
@@ -440,6 +477,14 @@ math_mpfr_test(
 
 math_mpfr_test(
     name = "nearbyint",
+    hdrs = ["NearbyIntTest.h"],
+    deps = [
+        "//libc:__support_cpp_array",
+    ],
+)
+
+math_mpfr_test(
+    name = "nearbyintbf16",
     hdrs = ["NearbyIntTest.h"],
     deps = [
         "//libc:__support_cpp_array",
@@ -502,6 +547,11 @@ math_mpfr_test(
 
 math_mpfr_test(
     name = "rint",
+    hdrs = ["RIntTest.h"],
+)
+
+math_mpfr_test(
+    name = "rintbf16",
     hdrs = ["RIntTest.h"],
 )
 
@@ -627,6 +677,11 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "sqrtbf16",
+    hdrs = ["SqrtTest.h"],
+)
+
+math_mpfr_test(
     name = "sqrtf",
     hdrs = ["SqrtTest.h"],
 )
@@ -661,6 +716,14 @@ math_mpfr_test(
 )
 
 math_mpfr_test(name = "tan")
+
+math_mpfr_test(
+    name = "tanbf16",
+    hdrs = ["sdcomp26094.h"],
+    deps = [
+        "//libc:__support_cpp_array",
+    ],
+)
 
 math_mpfr_test(
     name = "tanf",
