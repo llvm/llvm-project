@@ -5457,8 +5457,8 @@ libc_support_library(
     name = "__support_math_setpayloadf128",
     hdrs = ["src/__support/math/setpayloadf128.h"],
     deps = [
-        ":__support_fputil_float128",
         ":__support_fputil_basic_operations",
+        ":__support_fputil_float128",
         ":__support_macros_config",
     ],
 )
@@ -9275,8 +9275,8 @@ libc_support_library(
     name = "__support_math_getpayloadf128",
     hdrs = ["src/__support/math/getpayloadf128.h"],
     deps = [
-        ":__support_fputil_float128",
         ":__support_fputil_basic_operations",
+        ":__support_fputil_float128",
         ":__support_macros_config",
     ],
 )
