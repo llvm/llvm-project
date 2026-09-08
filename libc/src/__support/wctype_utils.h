@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_WCTYPE_UTILS_H
 
 #include "hdr/types/wchar_t.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 
@@ -794,6 +795,15 @@ LIBC_INLINE static constexpr wchar_t int_to_b36_wchar(int num) {
 LIBC_INLINE static constexpr bool
 is_char_or_wchar(wchar_t ch, [[maybe_unused]] char, wchar_t wc_value) {
   return (ch == wc_value);
+}
+
+// Returns a three-way comparison between two wide character code points.
+LIBC_INLINE int threeway_cmp_single(wchar_t left, wchar_t right) {
+  // Valid UTF-32 code points are in [0, 0x10FFFF]. If invalid code points were
+  // treated as UB, the comparison below could instead be done in 32 bits.
+  uint64_t diff = static_cast<uint64_t>(left) - static_cast<uint64_t>(right);
+  return cpp::bit_cast<int32_t>(static_cast<uint32_t>(diff >> 32) |
+                                static_cast<uint32_t>(diff & 0xFFFF));
 }
 
 } // namespace internal
