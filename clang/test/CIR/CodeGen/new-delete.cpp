@@ -16,7 +16,7 @@ A *a() {
 // CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:   %[[NEW_RESULT:.*]] = cir.alloca "__new_result" {{.*}} : !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:   %[[ALLOC_SIZE:.*]] = cir.const #cir.int<8> : !u64i
-// CIR:   %[[PTR:.*]] = cir.call @_Znwm(%[[ALLOC_SIZE]]) {{{.*}}builtin}
+// CIR:   %[[PTR:.*]] = cir.call @_Znwm(%[[ALLOC_SIZE]]) side_effect(inaccessible_or_errno) {{{.*}}builtin}
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[PTR_A:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!void> -> !cir.ptr<!rec_A>
 // CIR:     cir.store{{.*}} %[[PTR_A]], %[[NEW_RESULT]] : !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>
@@ -31,7 +31,7 @@ A *a() {
 // LLVM: define {{.*}} ptr @_Z1av() {{.*}} personality ptr @__gxx_personality_v0 {
 // LLVM:   %[[RETVAL:.*]] = alloca ptr
 // LLVM:   %[[NEW_RESULT:.*]] = alloca ptr
-// LLVM:   %[[PTR:.*]] = call nonnull ptr @_Znwm(i64 8) #[[ATTR_BUILTIN_NEW:.*]]
+// LLVM:   %[[PTR:.*]] = call noalias nonnull ptr @_Znwm(i64 8) #[[ATTR_BUILTIN_NEW:.*]]
 // LLVM:   br label %[[EH_SCOPE:.*]]
 // LLVM: [[EH_SCOPE]]:
 // LLVM:   store ptr %[[PTR]], ptr %[[NEW_RESULT]]
@@ -91,7 +91,7 @@ A *b() {
 // CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:   %[[NEW_RESULT:.*]] = cir.alloca "__new_result" {{.*}} : !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:   %[[ALLOC_SIZE:.*]] = cir.const #cir.int<8> : !u64i
-// CIR:   %[[PTR:.*]] = cir.call @_Znwm(%[[ALLOC_SIZE]]) {{{.*}}builtin}
+// CIR:   %[[PTR:.*]] = cir.call @_Znwm(%[[ALLOC_SIZE]]) side_effect(inaccessible_or_errno) {{{.*}}builtin}
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[PTR_A:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!void> -> !cir.ptr<!rec_A>
 // CIR:     cir.store{{.*}} %[[PTR_A]], %[[NEW_RESULT]] : !cir.ptr<!rec_A>, !cir.ptr<!cir.ptr<!rec_A>>
@@ -106,7 +106,7 @@ A *b() {
 // LLVM: define {{.*}} ptr @_Z1bv() {{.*}} personality ptr @__gxx_personality_v0 {
 // LLVM:   %[[RETVAL:.*]] = alloca ptr
 // LLVM:   %[[NEW_RESULT:.*]] = alloca ptr
-// LLVM:   %[[PTR:.*]] = call nonnull ptr @_Znwm(i64 8) #[[ATTR_BUILTIN_NEW]]
+// LLVM:   %[[PTR:.*]] = call noalias nonnull ptr @_Znwm(i64 8) #[[ATTR_BUILTIN_NEW]]
 // LLVM:   br label %[[EH_SCOPE:.*]]
 // LLVM: [[EH_SCOPE]]:
 // LLVM:   store ptr %[[PTR]], ptr %[[NEW_RESULT]]
@@ -294,7 +294,7 @@ C *test_new_delete_conditional(bool cond) {
 // LLVM:   store i8 0, ptr %[[CLEANUP_FLAG:.*]], align 1
 // LLVM:   br i1 {{.*}}, label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
 // LLVM: [[TRUE_BB]]:
-// LLVM:   %[[NEWP:.*]] = call nonnull ptr @_Znwm(i64 1) #[[ATTR_BUILTIN_NEW]]
+// LLVM:   %[[NEWP:.*]] = call noalias nonnull ptr @_Znwm(i64 1) #[[ATTR_BUILTIN_NEW]]
 // LLVM:   store ptr %[[NEWP]], ptr %[[SAVE_PTR:.*]], align 8
 // LLVM:   store i8 1, ptr %[[CLEANUP_FLAG]], align 1
 // LLVM:   invoke void @_ZN1CC1Ev(ptr {{.*}}%[[NEWP]])
@@ -459,7 +459,7 @@ D *test_new_delete_conditional_with_size(bool cond) {
 // LLVM:   store i8 0, ptr %[[SD_FLAG:.*]], align 1
 // LLVM:   br i1 {{.*}}, label %[[SD_TRUE:.*]], label %[[SD_FALSE:.*]]
 // LLVM: [[SD_TRUE]]:
-// LLVM:   %[[SD_NEWP:.*]] = call nonnull ptr @_Znwm(i64 1)
+// LLVM:   %[[SD_NEWP:.*]] = call noalias nonnull ptr @_Znwm(i64 1)
 // LLVM:   store ptr %[[SD_NEWP]], ptr %[[SD_SAVE_PTR:.*]], align 8
 // LLVM:   store i64 1, ptr %[[SD_SAVE_SIZE:.*]], align 8
 // LLVM:   store i8 1, ptr %[[SD_FLAG]], align 1
@@ -538,7 +538,7 @@ D *test_new_delete_conditional_array(bool cond, int n) {
 // LLVM:   br i1 {{.*}}, label %[[ARR_TRUE:.*]], label %[[ARR_FALSE:.*]]
 // LLVM: [[ARR_TRUE]]:
 // LLVM:   %[[ARR_ALLOC_SIZE:.*]] = select i1 %{{.*}}, i64 -1, i64 %{{.*}}
-// LLVM:   %[[ARR_NEWP:.*]] = call nonnull ptr @_Znam(i64 %[[ARR_ALLOC_SIZE]])
+// LLVM:   %[[ARR_NEWP:.*]] = call noalias nonnull ptr @_Znam(i64 %[[ARR_ALLOC_SIZE]])
 // LLVM:   store ptr %[[ARR_NEWP]], ptr %[[ARR_SAVE_PTR:.*]], align 8
 // LLVM:   store i64 %[[ARR_ALLOC_SIZE]], ptr %[[ARR_SAVE_SIZE:.*]], align 8
 // LLVM:   store i8 1, ptr %[[ARR_FLAG]], align 1
@@ -573,7 +573,7 @@ D *test_new_delete_conditional_array(bool cond, int n) {
 // OGCG:   %[[OGA_LOAD_SIZE:.*]] = load i64, ptr %[[OGA_SAVE_SIZE]], align 8
 // OGCG:   invoke void @_ZN1DdaEPvm(ptr %[[OGA_LOAD_PTR]], i64 %[[OGA_LOAD_SIZE]])
 
-// LLVM-DAG: attributes #[[ATTR_BUILTIN_NEW]] = {{{.*}}builtin{{.*}}}
+// LLVM-DAG: attributes #[[ATTR_BUILTIN_NEW]] = {{{.*}}builtin{{.*}}memory(inaccessiblemem: readwrite, errnomem: write){{.*}}}
 // LLVM-DAG: attributes #[[ATTR_BUILTIN_DEL]] = {{{.*}}builtin{{.*}}}
 // OGCG-DAG: attributes #[[OGCG_ATTR_BUILTIN_NEW]] = {{{.*}}builtin{{.*}}}
 // OGCG-DAG: attributes #[[OGCG_ATTR_BUILTIN_DEL]] = {{{.*}}builtin{{.*}}}

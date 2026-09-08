@@ -54,7 +54,7 @@ VoidTask silly_task() {
 // CIR-NEXT: cir.store{{.*}} %[[NullPtr]], %[[SavedFrameAddr]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR-NEXT: cir.if %[[ShouldAlloc]] {
 // CIR-NEXT:   %[[CoroSize:.*]] = cir.coro.intrinsic.size() : () -> !u64i
-// CIR-NEXT:   %[[AllocAddr:.*]] = cir.call @_Znwm(%[[CoroSize]]) {allocsize = array<i32: 0>} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
+// CIR-NEXT:   %[[AllocAddr:.*]] = cir.call @_Znwm(%[[CoroSize]]) side_effect(inaccessible_or_errno) {allocsize = array<i32: 0>} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noalias, llvm.nonnull, llvm.noundef})
 // CIR-NEXT:   cir.store{{.*}} %[[AllocAddr]], %[[SavedFrameAddr]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR-NEXT: }
 // CIR-NEXT: %[[Load0:.*]] = cir.load{{.*}} %[[SavedFrameAddr]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>

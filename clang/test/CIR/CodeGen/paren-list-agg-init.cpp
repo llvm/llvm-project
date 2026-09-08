@@ -781,7 +781,7 @@ namespace gh68198 {
   // CIR-LABEL: cir.{{.*}}@_ZN7gh681985foo25Ev()
   // CIR: %[[ARR_ALLOCA:.*]] = cir.alloca "arr8" align(8) init : !cir.ptr<!cir.ptr<!s32i>>
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<8> : !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) side_effect(inaccessible_or_errno) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noalias, llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_TO_ARR:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!s32i>
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CIR: cir.store{{.*}} %[[ONE]], %[[ALLOC_TO_ARR]] : !s32i, !cir.ptr<!s32i>
@@ -811,7 +811,7 @@ namespace gh68198 {
   // CIR-LABEL: cir.{{.*}}@_ZN7gh681985foo26Ev()
   // CIR: %[[ARR_ALLOCA:.*]] = cir.alloca "arr9" align(8) init : !cir.ptr<!cir.ptr<!void>>
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<16> : !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) side_effect(inaccessible_or_errno) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noalias, llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_TO_ARR:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!cir.array<!s32i x 2>>
   // CIR: %[[ELT0_0:.*]] = cir.cast array_to_ptrdecay %[[ALLOC_TO_ARR]] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
   // CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
@@ -854,7 +854,7 @@ namespace gh68198 {
   // CIR-LABEL: cir.{{.*}}@_ZN7gh681985foo27Ev()
   // CIR: %[[ARR_ALLOCA:.*]] = cir.alloca "arr10" align(8) init : !cir.ptr<!cir.ptr<!void>>
   // CIR: %[[SIZE:.*]] = cir.const #cir.int<32> : !u64i
-  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.nonnull, llvm.noundef})
+  // CIR: %[[ALLOC:.*]] = cir.call @_Znam(%[[SIZE]]) side_effect(inaccessible_or_errno) {allocsize = array<i32: 0>, builtin} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noalias, llvm.nonnull, llvm.noundef})
   // CIR: %[[ALLOC_TO_ARR:.*]] = cir.cast bitcast %[[ALLOC]] : !cir.ptr<!void> -> !cir.ptr<!cir.array<!s32i x 2>>
   // CIR: %[[ELT0_0:.*]] = cir.cast array_to_ptrdecay %[[ALLOC_TO_ARR]] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
   // CIR: %[[FIVE:.*]] = cir.const #cir.int<5> : !s32i
