@@ -22,7 +22,7 @@ _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 inline bool isSeparator(path::value_type C) {
   if (C == '/')
     return true;
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
   if (C == '\\')
     return true;
 #endif
@@ -324,7 +324,7 @@ private:
   }
 
   PosPtr consumeRootName(PosPtr P, PosPtr End) const noexcept {
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
     if (PosPtr Ret = consumeDriveLetter(P, End))
       return Ret;
     if (PosPtr Ret = consumeNetworkRoot(P, End))

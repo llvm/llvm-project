@@ -25,9 +25,22 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     SRCS
       setenv_test.cpp
     DEPENDS
+      libc.src.errno.errno
       libc.src.stdlib.getenv
       libc.src.stdlib.setenv
-      libc.src.string.strcmp
+  )
+
+  add_integration_test(
+    putenv_test
+    SUITE
+      stdlib-integration-tests
+    SRCS
+      putenv_test.cpp
+    DEPENDS
+      libc.src.errno.errno
+      libc.src.stdlib.getenv
+      libc.src.stdlib.putenv
+      libc.src.unistd.environ
   )
 
   add_integration_test(
@@ -38,11 +51,11 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       unsetenv_test.cpp
     DEPENDS
       libc.src.__support.alloc_checker
+      libc.src.errno.errno
       libc.src.stdlib.getenv
       libc.src.stdlib.setenv
       libc.src.stdlib.unsetenv
       libc.src.string.memory_utils.inline_memcpy
-      libc.src.string.strcmp
       libc.src.unistd.environ
   )
 

@@ -212,6 +212,9 @@ public:
   /// Return the parent operation this region is attached to.
   Operation *getParentOp() { return container; }
 
+  /// Return true if this region is attached to an operation.
+  bool isAttached() { return container != nullptr; }
+
   /// Find the first parent operation of the given type, or nullptr if there is
   /// no ancestor operation.
   template <typename ParentT>

@@ -41,7 +41,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include <cassert>
 #include <optional>

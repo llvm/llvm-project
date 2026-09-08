@@ -81,6 +81,10 @@ func.func @float_attrs_pass() {
     float_attr = 2. : f8E8M0FNU
   } : () -> ()
   "test.float_attrs"() {
+    // CHECK: float_attr = 2.000000e+00 : f8E5M3FNU
+    float_attr = 2. : f8E5M3FNU
+  } : () -> ()
+  "test.float_attrs"() {
     // CHECK: float_attr = 2.000000e+00 : f16
     float_attr = 2. : f16
   } : () -> ()
@@ -539,7 +543,7 @@ func.func @allowed_cases_pass() {
 // -----
 
 func.func @disallowed_case_sticky_fail() {
-  // expected-error@+2 {{expected one of [read, write, execute] for a test bit enum, got: sticky}}
+  // expected-error@+2 {{expected one of [none, read, write, execute] for a test bit enum, got: sticky}}
   // expected-error@+1 {{failed to parse TestBitEnumAttr}}
   "test.op_with_bit_enum"() {value = #test.bit_enum<sticky>} : () -> ()
 }

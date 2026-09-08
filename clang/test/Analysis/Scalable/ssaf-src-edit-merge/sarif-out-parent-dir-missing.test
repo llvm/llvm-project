@@ -1,0 +1,21 @@
+# --sarif-conflicts-out=<path> where <path>'s parent directory does not
+# exist → tool exits non-zero with a one-line stderr diagnostic naming
+# the SARIF path. Mirrors parent-dir-missing.test for -o.
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir
+# RUN: printf '%%80s' '' > %t.dir/foo.cpp
+# RUN: cp %S/Inputs/single-replacement.tpl.yaml %t.dir/a.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" %t.dir/a.yaml
+
+# Note: %t.dir/nonexistent-subdir does NOT exist.
+# RUN: not clang-ssaf-src-edit-merge \
+# RUN:     -o %t.dir/merged.yaml \
+# RUN:     --sarif-conflicts-out=%t.dir/nonexistent-subdir/conflicts.sarif \
+# RUN:     %t.dir/a.yaml 2> %t.dir/stderr.txt
+
+# RUN: FileCheck --input-file=%t.dir/stderr.txt %s
+# CHECK: clang-ssaf-src-edit-merge:
+# CHECK-SAME: cannot write
+# CHECK-SAME: nonexistent-subdir
+# CHECK-SAME: conflicts.sarif

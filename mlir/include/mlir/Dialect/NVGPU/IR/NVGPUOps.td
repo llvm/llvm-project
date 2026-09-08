@@ -48,7 +48,7 @@ def NVGPU_LdMatrixOp : NVGPU_Op<"ldmatrix", [
 
     Example:
     ```mlir
-    %0 = nvgpu.ldmatrix %sm[%c0, %c0] {numTiles = 4 : i32, transpose = false} :
+    %0 = nvgpu.ldmatrix %sm[%c0, %c0] numTiles = 4 transpose = false :
       memref<?x?xf16, 3> -> vector<4x2xf16>
     ```
   }];
@@ -58,7 +58,9 @@ def NVGPU_LdMatrixOp : NVGPU_Op<"ldmatrix", [
                            I32Attr:$numTiles);
   let results = (outs AnyVectorOfNonZeroRank:$res);
   let assemblyFormat = [{
-    $srcMemref`[` $indices `]` attr-dict `:` type($srcMemref) `->` type($res)
+    $srcMemref`[` $indices `]` `numTiles` `=` $numTiles `transpose` `=`
+    $transpose attr-dict `:`
+    type($srcMemref) `->` type($res)
   }];
 
   let hasVerifier = 1;
@@ -98,7 +100,7 @@ def NVGPU_MmaSyncOp : NVGPU_MmaSyncOp<"mma.sync"> {
     Example:
 
     ```mlir
-    %res = nvgpu.mma.sync (%matrixA, %matrixB, %matrixC) {mmaShape = [16, 8, 16]} :
+    %res = nvgpu.mma.sync (%matrixA, %matrixB, %matrixC) mmaShape = [16, 8, 16] :
         (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf32>) -> vector<2x2xf32>
     ```
   }];
@@ -123,7 +125,8 @@ def NVGPU_MmaSyncOp : NVGPU_MmaSyncOp<"mma.sync"> {
   ];
 
   let assemblyFormat = [{
-    `(` $matrixA`,` $matrixB`,` $matrixC `)` attr-dict
+    `(` $matrixA`,` $matrixB`,` $matrixC `)` `mmaShape` `=` $mmaShape
+    (`tf32Enabled` $tf32Enabled^)? attr-dict
     `:` `(` type($matrixA) `,` type($matrixB) `,` type($matrixC) `)` `->` type($res)
   }];
 
@@ -153,7 +156,7 @@ def NVGPU_MmaSparseSyncOp : NVGPU_MmaSyncOp<"mma.sp.sync"> {
   Example (targetingthe f16 16x8x32 `mma.sp` PTX instruction):
 
   ```mlir
-  nvgpu.mma.sp.sync (%a, %b, %c) metadata (%meta) {mmaShape = [16, 8, 32]} :
+  nvgpu.mma.sp.sync (%a, %b, %c) metadata (%meta) mmaShape = [16, 8, 32] :
     (vector<4x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
   ```
   }];
@@ -178,7 +181,9 @@ def NVGPU_MmaSparseSyncOp : NVGPU_MmaSyncOp<"mma.sp.sync"> {
   ];
 
   let assemblyFormat = [{
-    `(` $matrixA`,` $matrixB`,` $matrixC `)` `metadata` `(` $sparseMetadata `)` attr-dict
+    `(` $matrixA`,` $matrixB`,` $matrixC `)` `metadata` `(` $sparseMetadata `)`
+    `mmaShape` `=` $mmaShape (`sparsitySelector` `=` $sparsitySelector^)?
+    (`tf32Enabled` $tf32Enabled^)? attr-dict
     `:` `(` type($matrixA) `,` type($matrixB) `,` type($matrixC) `)` `->` type($res)
   }];
 
@@ -246,8 +251,9 @@ def NVGPU_DeviceAsyncCopyOp : NVGPU_Op<"device_async_copy", [
                        Optional<Index>:$srcElements,
                        OptionalAttr<UnitAttr>:$bypassL1);
   let assemblyFormat = [{
-    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` `,` $dstElements (`,` $srcElements^)?
-      attr-dict `:` type($src) `to` type($dst)
+    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` `,`
+    $dstElements (`,` $srcElements^)? (`bypassL1` $bypassL1^)?
+    attr-dict `:` type($src) `to` type($dst)
   }];
   let hasVerifier = 1;
 }
@@ -300,7 +306,7 @@ def NVGPU_DeviceAsyncWaitOp : NVGPU_Op<"device_async_wait", []> {
   let arguments = (ins NVGPU_DeviceAsyncToken:$asyncDependencies,
                        OptionalAttr<I32Attr>:$numGroups);
   let assemblyFormat = [{
-    $asyncDependencies attr-dict
+    $asyncDependencies (`numGroups` `=` $numGroups^)? attr-dict
   }];
 }
 
@@ -340,7 +346,8 @@ def NVGPU_MBarrierGetOp : NVGPU_Op<"mbarrier.get", []> {
   let arguments = (ins NVGPU_MBarrierGroup:$barriers, Index:$mbarId);
   let results = (outs AnyTypeOf<[I32, I64]>:$mbarrierPointer);
   let assemblyFormat = [{
-    $barriers `[` $mbarId `]` attr-dict `:` type($barriers) `->` type($mbarrierPointer)
+    $barriers `[` $mbarId `]` attr-dict `:`
+    type($barriers) `->` type($mbarrierPointer)
   }];
 }
 
@@ -452,7 +459,7 @@ def NVGPU_MBarrierTryWaitParityOp : NVGPU_Op<"mbarrier.try_wait.parity", []> {
     ```
   }];
   let arguments = (ins NVGPU_MBarrierGroup:$barriers, I1:$phaseParity, Index:$ticks, Index:$mbarId);
-  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $phaseParity `,` $ticks attr-dict `:` type($barriers)";  
+  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $phaseParity `,` $ticks attr-dict `:` type($barriers)";
 }
 
 def NVGPU_TmaFenceOp : NVGPU_Op<"tma.fence.descriptor", []> {
@@ -504,7 +511,7 @@ def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", [AttrSizedOperandSegments]
       `to` $dst
       (`multicast_mask` `=` $multicastMask^ )?
       (`,` `predicate` `=` $predicate^)?
-      attr-dict `:` type($tensorMapDescriptor) `,` type($barriers) 
+      attr-dict `:` type($tensorMapDescriptor) `,` type($barriers)
       `->` type($dst)
   }];
   let hasVerifier = 1;
@@ -552,7 +559,8 @@ def NVGPU_TmaCreateDescriptorOp : NVGPU_Op<"tma.create.descriptor", []> {
                        Variadic<Index>:$boxDimensions);
   let results = (outs NVGPU_TensorMapDescriptor:$tensorMap);
   let assemblyFormat = [{
-         $tensor `box` `[` $boxDimensions `]` attr-dict `:` type($tensor) `->` type($tensorMap)
+         $tensor `box` `[` $boxDimensions `]` attr-dict `:`
+         type($tensor) `->` type($tensorMap)
   }];
   let hasVerifier = 1;
 }
@@ -612,7 +620,9 @@ def NVGPU_WarpgroupMmaOp : NVGPU_Op<"warpgroup.mma"> {
                        NVGPU_WarpgroupAccumulator:$matrixC);
   let results = (outs NVGPU_WarpgroupAccumulator:$matrixD);
   let assemblyFormat = [{    
-    $descriptorA`,` $descriptorB`,` $matrixC attr-dict
+    $descriptorA`,` $descriptorB`,` $matrixC
+    (`waitGroup` `=` $waitGroup^)? (`transposeA` $transposeA^)?
+    (`transposeB` $transposeB^)? attr-dict
     `:` type($descriptorA) `,` type($descriptorB) `,` type($matrixC) `->` type($matrixD)
   }];
   let hasVerifier = 1;
@@ -633,7 +643,8 @@ def NVGPU_WarpgroupMmaStoreOp : NVGPU_Op<"warpgroup.mma.store"> {
                        Arg<AnyMemRef, "", [MemWrite]>:$dstMemref);
   
   let assemblyFormat = [{
-    $matrixD `,` $dstMemref attr-dict `:` type($matrixD) `to` type($dstMemref)
+    $matrixD `,` $dstMemref attr-dict `:`
+    type($matrixD) `to` type($dstMemref)
   }];
   let hasVerifier = 1;
 }
@@ -666,7 +677,7 @@ def NVGPU_RcpOp : NVGPU_Op<"rcp", [Pure,
                        DefaultValuedAttr<BoolAttr, "false">:$ftz);
   let results = (outs VectorOfNonZeroRankOf<[F32]>:$out);
   let assemblyFormat = [{
-    $in attr-dict `:` type($out)
+    $in prop-dict attr-dict `:` type($out)
   }];
   let hasVerifier = 1;
 }
@@ -713,7 +724,10 @@ def NVGPU_TruncfOp : NVGPU_Op<"truncf", [Pure]> {
                        Optional<I32>:$random_bits
                        );
   let results = (outs AnyTypeOf<[AnyFloat, VectorOfNonZeroRankOf<[AnyFloat]>]>:$out);
-  let assemblyFormat = "$in (`,` $random_bits^)? attr-dict `:` type($in) `to` type($out)";
+  let assemblyFormat = [{
+    $in (`,` $random_bits^)? prop-dict attr-dict
+    `:` type($in) `to` type($out)
+  }];
   let hasVerifier = 1;
 }
 
@@ -742,7 +756,9 @@ def NVGPU_ExtfOp : NVGPU_Op<"extf", [Pure]> {
                        DefaultValuedAttr<FPRoundingModeAttr, "NVVM::FPRoundingMode::RN">:$rnd,
                        DefaultValuedAttr<BoolAttr, "false">:$relu);
   let results = (outs AnyTypeOf<[AnyFloat, VectorOfNonZeroRankOf<[AnyFloat]>]>:$out);
-  let assemblyFormat = "$in attr-dict `:` type($in) `to` type($out)";
+  let assemblyFormat = [{
+    $in prop-dict attr-dict `:` type($in) `to` type($out)
+  }];
   let hasVerifier = 1;
 }
 

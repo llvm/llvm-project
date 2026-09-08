@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple amdgcn-amd-amdhsa -fsyntax-only -verify
+// RUN: %clang_cc1 %s -triple amdgpu-amd-amdhsa -fsyntax-only -verify
 // RUN: %clang_cc1 %s -triple spirv64-amd-amdhsa -fsyntax-only -verify
 
 // expected-no-diagnostics

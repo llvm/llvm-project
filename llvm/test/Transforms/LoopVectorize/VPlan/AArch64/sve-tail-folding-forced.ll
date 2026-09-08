@@ -18,22 +18,22 @@ target triple = "aarch64-unknown-linux-gnu"
 ; VPLANS-NEXT: Successor(s): scalar.ph, vector.ph
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: vector.ph:
-; VPLANS-NEXT:   EMIT vp<[[VF_PER_PART:%.+]]> = VF * Part + ir<0>
-; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY:%.+]]> = active lane mask vp<[[VF_PER_PART]]>, vp<[[TC]]>
+; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY:%.+]]> = wide active lane mask ir<0>, vp<[[TC]]>, ir<1>
+; VPLANS-NEXT:   EMIT vp<[[LANEMASK_ENTRY_EXTRACT:%.+]]> = extract-vector-for-part vp<[[LANEMASK_ENTRY]]>, ir<0>
 ; VPLANS-NEXT: Successor(s): vector loop
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT: <x1> vector loop: {
 ; VPLANS-NEXT:   vp<[[INDV:%[0-9]+]]> = CANONICAL-IV
 ; VPLANS-EMPTY:
 ; VPLANS-NEXT:   vector.body:
-; VPLANS-NEXT:     ACTIVE-LANE-MASK-PHI vp<[[LANEMASK_PHI:%[0-9]+]]> = phi vp<[[LANEMASK_ENTRY]]>, vp<[[LANEMASK_LOOP:%.+]]>
+; VPLANS-NEXT:     ACTIVE-LANE-MASK-PHI vp<[[LANEMASK_PHI:%[0-9]+]]> = phi vp<[[LANEMASK_ENTRY_EXTRACT]]>, vp<[[LANEMASK_LOOP:%.+]]>
 ; VPLANS-NEXT:     vp<[[STEP:%[0-9]+]]>    = SCALAR-STEPS vp<[[INDV]]>, ir<1>, vp<[[VF]]>
 ; VPLANS-NEXT:     CLONE ir<%gep> = getelementptr ir<%ptr>, vp<[[STEP]]>
-; VPLANS-NEXT:     vp<[[VEC_PTR:%[0-9]+]]> = vector-pointer ir<%gep>
+; VPLANS-NEXT:     vp<[[VEC_PTR:%[0-9]+]]> = vector-pointer i32, ir<%gep>
 ; VPLANS-NEXT:     WIDEN store vp<[[VEC_PTR]]>, ir<%val>, vp<[[LANEMASK_PHI]]>
 ; VPLANS-NEXT:     EMIT vp<[[INDV_UPDATE:%.+]]> = add vp<[[INDV]]>, vp<[[VFxUF]]>
-; VPLANS-NEXT:     EMIT vp<[[INC:%[0-9]+]]> = VF * Part + vp<[[INDV_UPDATE]]>, vp<[[VF]]>
-; VPLANS-NEXT:     EMIT vp<[[LANEMASK_LOOP]]> = active lane mask vp<[[INC]]>, vp<[[TC]]>
+; VPLANS-NEXT:     EMIT vp<[[LANEMASK_LOOP_MASK:%.+]]> = wide active lane mask vp<[[INDV_UPDATE]]>, vp<[[TC]]>, ir<1>
+; VPLANS-NEXT:     EMIT vp<[[LANEMASK_LOOP]]> = extract-vector-for-part vp<[[LANEMASK_LOOP_MASK]]>, ir<0>
 ; VPLANS-NEXT:     EMIT vp<[[NOT:%[0-9]+]]> = not vp<[[LANEMASK_LOOP]]>
 ; VPLANS-NEXT:     EMIT branch-on-cond vp<[[NOT]]>
 ; VPLANS-NEXT:   No successors
@@ -85,4 +85,4 @@ while.end.loopexit:
 attributes #0 = { "target-features"="+sve" }
 
 !0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}
+!1 = !{!"llvm.loop.vectorize.predicate.enable"}

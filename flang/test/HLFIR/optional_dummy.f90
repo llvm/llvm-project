@@ -1,4 +1,4 @@
-! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc --wrap-unstructured-constructs-in-execute-region -emit-hlfir %s -o - | FileCheck %s
 
 ! Check that the lowering does not generate fir.box_addr for
 ! the optional box. It will cause segfault during execution.

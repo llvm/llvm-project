@@ -330,8 +330,7 @@ void DbgValueRangeTable::addVariable(Function *F, DebugVariableAggregate DVA) {
     BasicBlock::iterator LastIt = BB.begin();
     for (auto *DVR : BlockDbgRecordValues[&BB]) {
       // Create a range that ends as of DVR.
-      BasicBlock::iterator DVRStartIt =
-          const_cast<Instruction *>(DVR->getInstruction())->getIterator();
+      BasicBlock::iterator DVRStartIt = DVR->getInstruction()->getIterator();
       if (HasValidValue(LiveValue))
         BlockDbgRanges.push_back({LastIt, DVRStartIt, LiveValue});
       LiveValue = DbgValueDef(DVR);

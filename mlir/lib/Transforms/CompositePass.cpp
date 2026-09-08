@@ -29,9 +29,10 @@ struct CompositeFixedPointPass final
 
   CompositeFixedPointPass(
       std::string name_, llvm::function_ref<void(OpPassManager &)> populateFunc,
-      int maxIterations) {
+      int maxIterations, ConvergenceFailureAction convergenceFailureActionArg) {
     name = std::move(name_);
     maxIter = maxIterations;
+    convergenceFailureAction = convergenceFailureActionArg;
     populateFunc(dynamicPM);
 
     llvm::raw_string_ostream os(pipelineStr);
@@ -76,9 +77,20 @@ struct CompositeFixedPointPass final
         return signalPassFailure();
 
       if (currentIter++ >= maxIterVal) {
-        op->emitWarning("Composite pass \"" + llvm::Twine(name) +
-                        "\"+ didn't converge in " + llvm::Twine(maxIterVal) +
-                        " iterations");
+        std::string message = ("Composite pass \"" + llvm::Twine(name) +
+                               "\"+ didn't converge in " +
+                               llvm::Twine(maxIterVal) + " iterations")
+                                  .str();
+        switch (convergenceFailureAction) {
+        case ConvergenceFailureAction::Warn:
+          op->emitWarning(message);
+          break;
+        case ConvergenceFailureAction::Error:
+          op->emitError(message);
+          return signalPassFailure();
+        case ConvergenceFailureAction::Silent:
+          break;
+        }
         break;
       }
 
@@ -100,8 +112,8 @@ private:
 
 std::unique_ptr<Pass> mlir::createCompositeFixedPointPass(
     std::string name, llvm::function_ref<void(OpPassManager &)> populateFunc,
-    int maxIterations) {
+    int maxIterations, ConvergenceFailureAction convergenceFailureAction) {
 
-  return std::make_unique<CompositeFixedPointPass>(std::move(name),
-                                                   populateFunc, maxIterations);
+  return std::make_unique<CompositeFixedPointPass>(
+      std::move(name), populateFunc, maxIterations, convergenceFailureAction);
 }

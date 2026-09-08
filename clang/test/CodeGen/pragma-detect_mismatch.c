@@ -2,7 +2,7 @@
 // RUN:   | FileCheck %s
 // RUN: %clang_cc1 %s -triple thumbv7-windows -fms-extensions -emit-llvm -o - \
 // RUN:   | FileCheck %s
-// RUN: %clang_cc1 %s -triple amdgcn-amd-amdhsa -fms-extensions -emit-llvm -o \
+// RUN: %clang_cc1 %s -triple amdgpu-amd-amdhsa -fms-extensions -emit-llvm -o \
 // RUN:   - | FileCheck -check-prefix=AMD %s
 
 #pragma detect_mismatch("test", "1")

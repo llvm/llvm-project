@@ -294,7 +294,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     NewCS->setAttributes(AttributeList::get(F->getContext(),
                                             CallPAL.getFnAttrs(),
                                             CallPAL.getRetAttrs(), ArgAttrVec));
-    NewCS->copyMetadata(CB, {LLVMContext::MD_prof, LLVMContext::MD_dbg});
+    NewCS->copyProfileAndDebugMetadata(CB);
     Args.clear();
     ArgAttrVec.clear();
 
@@ -807,10 +807,10 @@ static bool areTypesABICompatible(ArrayRef<Type *> Types, const Function &F,
 /// calls the DoPromotion method.
 static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
                                   unsigned MaxElements, bool IsRecursive) {
-  // Don't perform argument promotion for naked functions; otherwise we can end
-  // up removing parameters that are seemingly 'not used' as they are referred
-  // to in the assembly.
-  if (F->hasFnAttribute(Attribute::Naked))
+  // Don't rewrite the signature of functions whose ABI must be preserved. For
+  // naked functions we can end up removing parameters that are seemingly 'not
+  // used' as they are referred to in the assembly.
+  if (!F->canChangeSignature())
     return nullptr;
 
   // Make sure that it is local to this module.

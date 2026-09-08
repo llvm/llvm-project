@@ -17,6 +17,13 @@ PythonObject SWIGBridge::ToSWIGWrapper(lldb::ValueObjectSP value_sp) {
   return ToSWIGWrapper(std::unique_ptr<lldb::SBValue>(new lldb::SBValue(value_sp)));
 }
 
+PythonObject SWIGBridge::ToSWIGWrapper(lldb::ValueObjectSP value_sp,
+                                       bool use_synthetic) {
+  auto sb_value = std::unique_ptr<lldb::SBValue>(new lldb::SBValue(value_sp));
+  sb_value->SetPreferSyntheticValue(use_synthetic);
+  return ToSWIGWrapper(std::move(sb_value));
+}
+
 PythonObject SWIGBridge::ToSWIGWrapper(lldb::TargetSP target_sp) {
   return ToSWIGHelper(new lldb::SBTarget(std::move(target_sp)),
                       SWIGTYPE_p_lldb__SBTarget);

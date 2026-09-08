@@ -13,13 +13,14 @@
 #include "GenerateInput.h"
 #include "benchmark/benchmark.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 
 namespace fs = std::filesystem;
 
 static const size_t TestNumInputs = 1024;
 
 template <class GenInputs>
-void BM_PathConstructString(benchmark::State& st, GenInputs gen) {
+TEST_ALIGN_BENCHMARK void BM_PathConstructString(benchmark::State& st, GenInputs gen) {
   using fs::path;
   const auto in = gen(st.range(0));
   path PP;
@@ -36,7 +37,7 @@ BENCHMARK_CAPTURE(BM_PathConstructString, large_string, getRandomStringInputs)
     ->Range(8, TestNumInputs);
 
 template <class GenInputs>
-void BM_PathConstructCStr(benchmark::State& st, GenInputs gen) {
+TEST_ALIGN_BENCHMARK void BM_PathConstructCStr(benchmark::State& st, GenInputs gen) {
   using fs::path;
   const auto in = gen(st.range(0));
   path PP;
@@ -53,7 +54,7 @@ BENCHMARK_CAPTURE(BM_PathConstructCStr, large_string, getRandomStringInputs)
     ->Arg(TestNumInputs);
 
 template <template <class...> class ItType, class GenInputs>
-void BM_PathConstructIter(benchmark::State& st, GenInputs gen) {
+TEST_ALIGN_BENCHMARK void BM_PathConstructIter(benchmark::State& st, GenInputs gen) {
   using fs::path;
   using Iter    = ItType<std::string::const_iterator>;
   const auto in = gen(st.range(0));
@@ -78,7 +79,7 @@ BENCHMARK_CAPTURE(BM_PathConstructIter<forward_iterator>, large_string, getRando
     ->Range(8, TestNumInputs);
 
 template <class GenInputs>
-void BM_PathIterateMultipleTimes(benchmark::State& st, GenInputs gen) {
+TEST_ALIGN_BENCHMARK void BM_PathIterateMultipleTimes(benchmark::State& st, GenInputs gen) {
   using fs::path;
   const auto in = gen(st.range(0));
   path PP;
@@ -97,7 +98,7 @@ BENCHMARK_CAPTURE(BM_PathIterateMultipleTimes, iterate_elements, getRandomString
     ->Range(8, TestNumInputs);
 
 template <class GenInputs>
-void BM_PathIterateOnce(benchmark::State& st, GenInputs gen) {
+TEST_ALIGN_BENCHMARK void BM_PathIterateOnce(benchmark::State& st, GenInputs gen) {
   using fs::path;
   const auto in = gen(st.range(0));
   path PP;
@@ -117,7 +118,7 @@ BENCHMARK_CAPTURE(BM_PathIterateOnce, iterate_elements, getRandomStringInputs)
     ->Range(8, TestNumInputs);
 
 template <class GenInputs>
-void BM_PathIterateOnceBackwards(benchmark::State& st, GenInputs gen) {
+TEST_ALIGN_BENCHMARK void BM_PathIterateOnceBackwards(benchmark::State& st, GenInputs gen) {
   using fs::path;
   const auto in = gen(st.range(0));
   path PP;
@@ -149,7 +150,7 @@ static fs::path getRandomPaths(int NumParts, int PathLen) {
 }
 
 template <class GenInput>
-void BM_LexicallyNormal(benchmark::State& st, GenInput gen, size_t PathLen) {
+TEST_ALIGN_BENCHMARK void BM_LexicallyNormal(benchmark::State& st, GenInput gen, size_t PathLen) {
   using fs::path;
   auto In = gen(st.range(0), PathLen);
   benchmark::DoNotOptimize(&In);
@@ -167,7 +168,7 @@ BENCHMARK_CAPTURE(BM_LexicallyNormal, large_path, getRandomPaths, /*PathLen*/ 32
     ->Range(2, 256);
 
 template <class GenInput>
-void BM_LexicallyRelative(benchmark::State& st, GenInput gen, size_t PathLen) {
+TEST_ALIGN_BENCHMARK void BM_LexicallyRelative(benchmark::State& st, GenInput gen, size_t PathLen) {
   auto BasePath   = gen(st.range(0), PathLen);
   auto TargetPath = gen(st.range(0), PathLen);
   benchmark::DoNotOptimize(&BasePath);

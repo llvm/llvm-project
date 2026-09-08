@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: c++03, no-threads
-// REQUIRES: libcpp-hardening-mode={{extensive|debug}}
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
+// REQUIRES: can-test-hardening-assertions-extensive
+// UNSUPPORTED: no-threads
 
 // <future>
 

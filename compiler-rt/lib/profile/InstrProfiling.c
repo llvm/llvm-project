@@ -10,7 +10,11 @@
 // with freestanding compilation. See `darwin_add_builtin_libraries`.
 
 #include <limits.h>
+#if defined(__FreeBSD__) && defined(_KERNEL)
+#include <sys/systm.h>
+#else
 #include <string.h>
+#endif
 
 #include "InstrProfiling.h"
 #include "InstrProfilingInternal.h"

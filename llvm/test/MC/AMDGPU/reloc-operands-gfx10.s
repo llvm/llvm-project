@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1010 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
+// RUN: llvm-mc -triple=amdgpu10.10 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
 
 ; test vop3 operands
 

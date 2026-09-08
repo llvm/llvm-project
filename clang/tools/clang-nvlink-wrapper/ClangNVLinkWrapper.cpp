@@ -332,6 +332,8 @@ Expected<StringRef> runPTXAs(StringRef File, const ArgList &Args) {
         Args.MakeArgString("-O" + Args.getLastArgValue(OPT_O, "3")));
   }
   AssemblerArgs.append({"-arch", Args.getLastArgValue(OPT_arch)});
+  for (const Arg *A : Args.filtered(OPT_Xptxas))
+    AssemblerArgs.push_back(A->getValue());
   AssemblerArgs.append({"-o", *TempFileOrErr});
 
   if (Args.hasArg(OPT_dry_run) || Args.hasArg(OPT_verbose))

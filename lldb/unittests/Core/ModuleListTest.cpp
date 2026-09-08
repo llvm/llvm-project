@@ -11,7 +11,9 @@
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
+#include "lldb/Symbol/SymbolLocator.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/UUID.h"
 
@@ -172,4 +174,75 @@ Sections:
       }
     }
   }
+}
+
+// A symbol locator that records whether it was asked to find anything. It never
+// finds a binary, so it does not otherwise change what GetSharedModule does.
+static bool g_locate_executable_object_file_called = false;
+
+static std::optional<ModuleSpec>
+LocateExecutableObjectFile(const ModuleSpec &) {
+  g_locate_executable_object_file_called = true;
+  return {};
+}
+
+static SymbolLocator *CreateSymbolLocator() { return nullptr; }
+
+class SymbolLocatorGate : public testing::Test {
+public:
+  void SetUp() override {
+    g_locate_executable_object_file_called = false;
+    ASSERT_TRUE(PluginManager::RegisterPlugin("test", "test symbol locator",
+                                              CreateSymbolLocator,
+                                              LocateExecutableObjectFile));
+  }
+
+  void TearDown() override {
+    PluginManager::UnregisterPlugin(CreateSymbolLocator);
+  }
+
+  // A spec that names no file on disk, so GetSharedModule has to fall through
+  // to the symbol locators to have any chance of finding a binary.
+  static ModuleSpec MissingModuleSpec() {
+    ModuleSpec spec;
+    spec.GetFileSpec() = FileSpec("/nonexistent/libtest.so");
+    spec.GetArchitecture() = ArchSpec("x86_64-pc-linux");
+    spec.GetUUID() = UUID("0123456789ABCDEF", 16);
+    return spec;
+  }
+};
+
+TEST_F(SymbolLocatorGate, GetSharedModuleInvokesSymbolLocatorsByDefault) {
+  SubsystemRAII<FileSystem, ObjectFileELF> subsystems;
+
+  ModuleSP module_sp;
+  ModuleList::GetSharedModule(MissingModuleSpec(), module_sp, nullptr, nullptr);
+
+  EXPECT_TRUE(g_locate_executable_object_file_called);
+}
+
+TEST_F(SymbolLocatorGate, GetSharedModuleCanSkipSymbolLocators) {
+  SubsystemRAII<FileSystem, ObjectFileELF> subsystems;
+
+  ModuleSP module_sp;
+  Status error = ModuleList::GetSharedModule(
+      MissingModuleSpec(), module_sp, nullptr, nullptr,
+      /*invoke_locate_callback=*/true, /*invoke_symbol_locators=*/false);
+
+  EXPECT_FALSE(g_locate_executable_object_file_called);
+  // The caller still learns that nothing was found.
+  EXPECT_FALSE(module_sp);
+  EXPECT_TRUE(error.Fail());
+}
+
+// A Module whose object file could not be parsed is still appended, and does
+// not prevent later modules from being appended after it.
+TEST(ModuleListTest, AppendModuleWithoutObjectFile) {
+  SubsystemRAII<FileSystem> subsystems;
+
+  ModuleList list;
+  list.Append(std::make_shared<Module>(ModuleSpec()));
+  list.Append(std::make_shared<Module>(ModuleSpec()));
+
+  EXPECT_EQ(list.GetSize(), 2U);
 }

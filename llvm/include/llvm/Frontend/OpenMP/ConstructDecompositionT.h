@@ -97,7 +97,7 @@ struct ConstructDecompositionT {
 
   using ClauseSet = std::unordered_set<const ClauseTy *>;
 
-  ConstructDecompositionT(uint32_t ver, HelperType &helper,
+  ConstructDecompositionT(llvm::omp::Version ver, HelperType &helper,
                           llvm::omp::Directive dir,
                           llvm::ArrayRef<ClauseTy> clauses)
       : version(ver), helper(helper), inputDirective(dir) {
@@ -263,7 +263,7 @@ private:
   applyClause(const tomp::clause::ThreadLimitT<TypeTy, IdTy, ExprTy> &clause,
               const ClauseTy *);
 
-  uint32_t version;
+  llvm::omp::Version version;
   HelperType &helper;
   llvm::omp::Directive inputDirective;
   tomp::ListT<const ClauseTy *> inputClauses;
@@ -277,7 +277,7 @@ private:
 
 // Deduction guide
 template <typename ClauseType, typename HelperType>
-ConstructDecompositionT(uint32_t, HelperType &, llvm::omp::Directive,
+ConstructDecompositionT(llvm::omp::Version, HelperType &, llvm::omp::Directive,
                         llvm::ArrayRef<ClauseType>)
     -> ConstructDecompositionT<ClauseType, HelperType>;
 
@@ -398,7 +398,7 @@ ConstructDecompositionT<C, H>::addClauseSymsToMap(U &&item,
 // anything and return false, otherwise return true.
 template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyToUnique(const ClauseTy *input) {
-  auto unique = detail::find_unique(leafs, [=](const auto &leaf) {
+  auto unique = ::detail::find_unique(leafs, [=](const auto &leaf) {
     return llvm::omp::isAllowedClauseForDirective(leaf.id, input->id, version);
   });
 
@@ -612,17 +612,20 @@ bool ConstructDecompositionT<C, H>::applyClause(
   }
 
   // [5.2:340:8]
-  auto findWorksharing = [&]() {
+  // Match only a worksharing construct that accepts firstprivate; "workshare"
+  // does not, so it falls through to "parallel" per [5.2:340:10].
+  auto findWorksharingAcceptingFirstprivate = [&]() {
     auto worksharing = getWorksharing();
     for (auto &leaf : leafs) {
       auto found = llvm::find(worksharing, leaf.id);
-      if (found != std::end(worksharing))
+      if (found != std::end(worksharing) &&
+          llvm::omp::isAllowedClauseForDirective(leaf.id, input->id, version))
         return &leaf;
     }
     return static_cast<typename decltype(leafs)::value_type *>(nullptr);
   };
 
-  auto dirWorksharing = findWorksharing();
+  auto dirWorksharing = findWorksharingAcceptingFirstprivate();
   if (dirWorksharing != nullptr) {
     dirWorksharing->clauses.push_back(input);
     applied = true;

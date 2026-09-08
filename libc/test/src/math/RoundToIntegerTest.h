@@ -9,19 +9,16 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
 
-#include "test/UnitTest/RoundingModeUtils.h"
-#undef LIBC_MATH_USE_SYSTEM_FENV
-
+#include "hdr/math_macros.h"
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-
-#include "hdr/math_macros.h"
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 using LIBC_NAMESPACE::Sign;

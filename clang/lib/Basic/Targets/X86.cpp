@@ -1882,5 +1882,24 @@ MicrosoftX86_64TargetInfo::getMinGlobalAlign(uint64_t TypeSize,
   unsigned Align =
       WindowsX86_64TargetInfo::getMinGlobalAlign(TypeSize, HasNonWeakDef);
 
+  // Skip the MSVC size-based global-alignment increase under
+  // -fclang-abi-compat<=22.
+  if (!UseMSVCCompatGlobalAlign)
+    return Align;
+
   return std::max(Align, Microsoft64BitMinGlobalAlign(TypeSize));
+}
+
+void MicrosoftX86_64TargetInfo::adjust(DiagnosticsEngine &Diags,
+                                       LangOptions &Opts,
+                                       const TargetInfo *Aux) {
+  WindowsX86_64TargetInfo::adjust(Diags, Opts, Aux);
+  // Under -fclang-abi-compat<=22, restore the prior x86_64-windows-msvc
+  // behavior: apply the Sys V "large array" alignment increase and skip the
+  // MSVC size-based global-alignment increase.
+  if (Opts.isCompatibleWith(LangOptions::ClangABI::Ver22)) {
+    UseMSVCCompatGlobalAlign = false;
+    LargeArrayMinWidth = 128;
+    LargeArrayAlign = 128;
+  }
 }

@@ -3,13 +3,17 @@
 ; RUN:   | FileCheck %s --check-prefix=RV32
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s --check-prefix=RV64
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-zicfiss < %s \
+; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
+; RUN:   -mattr=+zcmp,+zimop,+zcmop | FileCheck %s --check-prefix=RV64-ZCMP
+; RUN: llc -mtriple=riscv32 -verify-machineinstrs < %s \
+; RUN:   -mattr=+zcmp,+zimop | FileCheck %s --check-prefix=RV32-ZCMP-NOZCMOP
+; RUN: llc -mtriple=riscv32 -mattr=+zimop < %s \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=RV32-ZICFISS,RV32-NOZCMOP
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-zicfiss < %s \
+; RUN: llc -mtriple=riscv64 -mattr=+zimop < %s \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=RV64-ZICFISS,RV64-NOZCMOP
-; RUN: llc -mtriple=riscv32 -mattr=+experimental-zicfiss,+zcmop < %s -M no-aliases \
+; RUN: llc -mtriple=riscv32 -mattr=+zimop,+zcmop < %s -M no-aliases \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=RV32-ZICFISS,RV32-ZCMOP
-; RUN: llc -mtriple=riscv64 -mattr=+experimental-zicfiss,+zcmop < %s -M no-aliases \
+; RUN: llc -mtriple=riscv64 -mattr=+zimop,+zcmop < %s -M no-aliases \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=RV64-ZICFISS,RV64-ZCMOP
 
 define void @f1() shadowcallstack {
@@ -20,6 +24,14 @@ define void @f1() shadowcallstack {
 ; RV64-LABEL: f1:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    ret
+;
+; RV64-ZCMP-LABEL: f1:
+; RV64-ZCMP:       # %bb.0:
+; RV64-ZCMP-NEXT:    ret
+;
+; RV32-ZCMP-NOZCMOP-LABEL: f1:
+; RV32-ZCMP-NOZCMOP:       # %bb.0:
+; RV32-ZCMP-NOZCMOP-NEXT:    ret
 ;
 ; RV32-NOZCMOP-LABEL: f1:
 ; RV32-NOZCMOP:       # %bb.0:
@@ -49,6 +61,14 @@ define void @f2() shadowcallstack {
 ; RV64-LABEL: f2:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    tail foo
+;
+; RV64-ZCMP-LABEL: f2:
+; RV64-ZCMP:       # %bb.0:
+; RV64-ZCMP-NEXT:    tail foo
+;
+; RV32-ZCMP-NOZCMOP-LABEL: f2:
+; RV32-ZCMP-NOZCMOP:       # %bb.0:
+; RV32-ZCMP-NOZCMOP-NEXT:    tail foo
 ;
 ; RV32-ZICFISS-LABEL: f2:
 ; RV32-ZICFISS:       # %bb.0:
@@ -101,6 +121,36 @@ define i32 @f3() shadowcallstack {
 ; RV64-NEXT:    addi gp, gp, -8
 ; RV64-NEXT:    .cfi_restore gp
 ; RV64-NEXT:    ret
+;
+; RV64-ZCMP-LABEL: f3:
+; RV64-ZCMP:       # %bb.0:
+; RV64-ZCMP-NEXT:    addi gp, gp, 8
+; RV64-ZCMP-NEXT:    sd ra, -8(gp)
+; RV64-ZCMP-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
+; RV64-ZCMP-NEXT:    cm.push {ra}, -16
+; RV64-ZCMP-NEXT:    .cfi_def_cfa_offset 16
+; RV64-ZCMP-NEXT:    .cfi_offset ra, -8
+; RV64-ZCMP-NEXT:    call bar
+; RV64-ZCMP-NEXT:    cm.pop {ra}, 16
+; RV64-ZCMP-NEXT:    ld ra, -8(gp)
+; RV64-ZCMP-NEXT:    addi gp, gp, -8
+; RV64-ZCMP-NEXT:    .cfi_restore gp
+; RV64-ZCMP-NEXT:    ret
+;
+; RV32-ZCMP-NOZCMOP-LABEL: f3:
+; RV32-ZCMP-NOZCMOP:       # %bb.0:
+; RV32-ZCMP-NOZCMOP-NEXT:    addi gp, gp, 4
+; RV32-ZCMP-NOZCMOP-NEXT:    sw ra, -4(gp)
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
+; RV32-ZCMP-NOZCMOP-NEXT:    cm.push {ra}, -16
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_offset ra, -4
+; RV32-ZCMP-NOZCMOP-NEXT:    call bar
+; RV32-ZCMP-NOZCMOP-NEXT:    cm.pop {ra}, 16
+; RV32-ZCMP-NOZCMOP-NEXT:    lw ra, -4(gp)
+; RV32-ZCMP-NOZCMOP-NEXT:    addi gp, gp, -4
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_restore gp
+; RV32-ZCMP-NOZCMOP-NEXT:    ret
 ;
 ; RV32-NOZCMOP-LABEL: f3:
 ; RV32-NOZCMOP:       # %bb.0:
@@ -262,6 +312,60 @@ define i32 @f4() shadowcallstack {
 ; RV64-NEXT:    addi gp, gp, -8
 ; RV64-NEXT:    .cfi_restore gp
 ; RV64-NEXT:    ret
+;
+; RV64-ZCMP-LABEL: f4:
+; RV64-ZCMP:       # %bb.0:
+; RV64-ZCMP-NEXT:    addi gp, gp, 8
+; RV64-ZCMP-NEXT:    sd ra, -8(gp)
+; RV64-ZCMP-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
+; RV64-ZCMP-NEXT:    cm.push {ra, s0-s2}, -32
+; RV64-ZCMP-NEXT:    .cfi_def_cfa_offset 32
+; RV64-ZCMP-NEXT:    .cfi_offset ra, -32
+; RV64-ZCMP-NEXT:    .cfi_offset s0, -24
+; RV64-ZCMP-NEXT:    .cfi_offset s1, -16
+; RV64-ZCMP-NEXT:    .cfi_offset s2, -8
+; RV64-ZCMP-NEXT:    call bar
+; RV64-ZCMP-NEXT:    mv s0, a0
+; RV64-ZCMP-NEXT:    call bar
+; RV64-ZCMP-NEXT:    mv s1, a0
+; RV64-ZCMP-NEXT:    call bar
+; RV64-ZCMP-NEXT:    mv s2, a0
+; RV64-ZCMP-NEXT:    call bar
+; RV64-ZCMP-NEXT:    add s0, s0, s1
+; RV64-ZCMP-NEXT:    add a0, a0, s2
+; RV64-ZCMP-NEXT:    addw a0, a0, s0
+; RV64-ZCMP-NEXT:    cm.pop {ra, s0-s2}, 32
+; RV64-ZCMP-NEXT:    ld ra, -8(gp)
+; RV64-ZCMP-NEXT:    addi gp, gp, -8
+; RV64-ZCMP-NEXT:    .cfi_restore gp
+; RV64-ZCMP-NEXT:    ret
+;
+; RV32-ZCMP-NOZCMOP-LABEL: f4:
+; RV32-ZCMP-NOZCMOP:       # %bb.0:
+; RV32-ZCMP-NOZCMOP-NEXT:    addi gp, gp, 4
+; RV32-ZCMP-NOZCMOP-NEXT:    sw ra, -4(gp)
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
+; RV32-ZCMP-NOZCMOP-NEXT:    cm.push {ra, s0-s2}, -16
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_offset ra, -16
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_offset s0, -12
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_offset s1, -8
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_offset s2, -4
+; RV32-ZCMP-NOZCMOP-NEXT:    call bar
+; RV32-ZCMP-NOZCMOP-NEXT:    mv s0, a0
+; RV32-ZCMP-NOZCMOP-NEXT:    call bar
+; RV32-ZCMP-NOZCMOP-NEXT:    mv s1, a0
+; RV32-ZCMP-NOZCMOP-NEXT:    call bar
+; RV32-ZCMP-NOZCMOP-NEXT:    mv s2, a0
+; RV32-ZCMP-NOZCMOP-NEXT:    call bar
+; RV32-ZCMP-NOZCMOP-NEXT:    add s0, s0, s1
+; RV32-ZCMP-NOZCMOP-NEXT:    add a0, a0, s2
+; RV32-ZCMP-NOZCMOP-NEXT:    add a0, a0, s0
+; RV32-ZCMP-NOZCMOP-NEXT:    cm.pop {ra, s0-s2}, 16
+; RV32-ZCMP-NOZCMOP-NEXT:    lw ra, -4(gp)
+; RV32-ZCMP-NOZCMOP-NEXT:    addi gp, gp, -4
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_restore gp
+; RV32-ZCMP-NOZCMOP-NEXT:    ret
 ;
 ; RV32-NOZCMOP-LABEL: f4:
 ; RV32-NOZCMOP:       # %bb.0:
@@ -459,6 +563,28 @@ define i32 @f5() shadowcallstack nounwind {
 ; RV64-NEXT:    addi gp, gp, -8
 ; RV64-NEXT:    ret
 ;
+; RV64-ZCMP-LABEL: f5:
+; RV64-ZCMP:       # %bb.0:
+; RV64-ZCMP-NEXT:    addi gp, gp, 8
+; RV64-ZCMP-NEXT:    sd ra, -8(gp)
+; RV64-ZCMP-NEXT:    cm.push {ra}, -16
+; RV64-ZCMP-NEXT:    call bar
+; RV64-ZCMP-NEXT:    cm.pop {ra}, 16
+; RV64-ZCMP-NEXT:    ld ra, -8(gp)
+; RV64-ZCMP-NEXT:    addi gp, gp, -8
+; RV64-ZCMP-NEXT:    ret
+;
+; RV32-ZCMP-NOZCMOP-LABEL: f5:
+; RV32-ZCMP-NOZCMOP:       # %bb.0:
+; RV32-ZCMP-NOZCMOP-NEXT:    addi gp, gp, 4
+; RV32-ZCMP-NOZCMOP-NEXT:    sw ra, -4(gp)
+; RV32-ZCMP-NOZCMOP-NEXT:    cm.push {ra}, -16
+; RV32-ZCMP-NOZCMOP-NEXT:    call bar
+; RV32-ZCMP-NOZCMOP-NEXT:    cm.pop {ra}, 16
+; RV32-ZCMP-NOZCMOP-NEXT:    lw ra, -4(gp)
+; RV32-ZCMP-NOZCMOP-NEXT:    addi gp, gp, -4
+; RV32-ZCMP-NOZCMOP-NEXT:    ret
+;
 ; RV32-NOZCMOP-LABEL: f5:
 ; RV32-NOZCMOP:       # %bb.0:
 ; RV32-NOZCMOP-NEXT:    addi gp, gp, 4
@@ -524,6 +650,14 @@ define void @f1_hw() "hw-shadow-stack" {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    ret
 ;
+; RV64-ZCMP-LABEL: f1_hw:
+; RV64-ZCMP:       # %bb.0:
+; RV64-ZCMP-NEXT:    ret
+;
+; RV32-ZCMP-NOZCMOP-LABEL: f1_hw:
+; RV32-ZCMP-NOZCMOP:       # %bb.0:
+; RV32-ZCMP-NOZCMOP-NEXT:    ret
+;
 ; RV32-NOZCMOP-LABEL: f1_hw:
 ; RV32-NOZCMOP:       # %bb.0:
 ; RV32-NOZCMOP-NEXT:    ret
@@ -550,6 +684,14 @@ define void @f2_hw() "hw-shadow-stack" {
 ; RV64-LABEL: f2_hw:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    tail foo
+;
+; RV64-ZCMP-LABEL: f2_hw:
+; RV64-ZCMP:       # %bb.0:
+; RV64-ZCMP-NEXT:    tail foo
+;
+; RV32-ZCMP-NOZCMOP-LABEL: f2_hw:
+; RV32-ZCMP-NOZCMOP:       # %bb.0:
+; RV32-ZCMP-NOZCMOP-NEXT:    tail foo
 ;
 ; RV32-ZICFISS-LABEL: f2_hw:
 ; RV32-ZICFISS:       # %bb.0:
@@ -588,6 +730,28 @@ define i32 @f3_hw() "hw-shadow-stack" {
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
+;
+; RV64-ZCMP-LABEL: f3_hw:
+; RV64-ZCMP:       # %bb.0:
+; RV64-ZCMP-NEXT:    sspush ra
+; RV64-ZCMP-NEXT:    cm.push {ra}, -16
+; RV64-ZCMP-NEXT:    .cfi_def_cfa_offset 16
+; RV64-ZCMP-NEXT:    .cfi_offset ra, -8
+; RV64-ZCMP-NEXT:    call bar
+; RV64-ZCMP-NEXT:    cm.pop {ra}, 16
+; RV64-ZCMP-NEXT:    sspopchk ra
+; RV64-ZCMP-NEXT:    ret
+;
+; RV32-ZCMP-NOZCMOP-LABEL: f3_hw:
+; RV32-ZCMP-NOZCMOP:       # %bb.0:
+; RV32-ZCMP-NOZCMOP-NEXT:    sspush ra
+; RV32-ZCMP-NOZCMOP-NEXT:    cm.push {ra}, -16
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_offset ra, -4
+; RV32-ZCMP-NOZCMOP-NEXT:    call bar
+; RV32-ZCMP-NOZCMOP-NEXT:    cm.pop {ra}, 16
+; RV32-ZCMP-NOZCMOP-NEXT:    sspopchk ra
+; RV32-ZCMP-NOZCMOP-NEXT:    ret
 ;
 ; RV32-NOZCMOP-LABEL: f3_hw:
 ; RV32-NOZCMOP:       # %bb.0:
@@ -721,6 +885,52 @@ define i32 @f4_hw() "hw-shadow-stack" {
 ; RV64-NEXT:    addi sp, sp, 32
 ; RV64-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-NEXT:    ret
+;
+; RV64-ZCMP-LABEL: f4_hw:
+; RV64-ZCMP:       # %bb.0:
+; RV64-ZCMP-NEXT:    sspush ra
+; RV64-ZCMP-NEXT:    cm.push {ra, s0-s2}, -32
+; RV64-ZCMP-NEXT:    .cfi_def_cfa_offset 32
+; RV64-ZCMP-NEXT:    .cfi_offset ra, -32
+; RV64-ZCMP-NEXT:    .cfi_offset s0, -24
+; RV64-ZCMP-NEXT:    .cfi_offset s1, -16
+; RV64-ZCMP-NEXT:    .cfi_offset s2, -8
+; RV64-ZCMP-NEXT:    call bar
+; RV64-ZCMP-NEXT:    mv s0, a0
+; RV64-ZCMP-NEXT:    call bar
+; RV64-ZCMP-NEXT:    mv s1, a0
+; RV64-ZCMP-NEXT:    call bar
+; RV64-ZCMP-NEXT:    mv s2, a0
+; RV64-ZCMP-NEXT:    call bar
+; RV64-ZCMP-NEXT:    add s0, s0, s1
+; RV64-ZCMP-NEXT:    add a0, a0, s2
+; RV64-ZCMP-NEXT:    addw a0, a0, s0
+; RV64-ZCMP-NEXT:    cm.pop {ra, s0-s2}, 32
+; RV64-ZCMP-NEXT:    sspopchk ra
+; RV64-ZCMP-NEXT:    ret
+;
+; RV32-ZCMP-NOZCMOP-LABEL: f4_hw:
+; RV32-ZCMP-NOZCMOP:       # %bb.0:
+; RV32-ZCMP-NOZCMOP-NEXT:    sspush ra
+; RV32-ZCMP-NOZCMOP-NEXT:    cm.push {ra, s0-s2}, -16
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_offset ra, -16
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_offset s0, -12
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_offset s1, -8
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_offset s2, -4
+; RV32-ZCMP-NOZCMOP-NEXT:    call bar
+; RV32-ZCMP-NOZCMOP-NEXT:    mv s0, a0
+; RV32-ZCMP-NOZCMOP-NEXT:    call bar
+; RV32-ZCMP-NOZCMOP-NEXT:    mv s1, a0
+; RV32-ZCMP-NOZCMOP-NEXT:    call bar
+; RV32-ZCMP-NOZCMOP-NEXT:    mv s2, a0
+; RV32-ZCMP-NOZCMOP-NEXT:    call bar
+; RV32-ZCMP-NOZCMOP-NEXT:    add s0, s0, s1
+; RV32-ZCMP-NOZCMOP-NEXT:    add a0, a0, s2
+; RV32-ZCMP-NOZCMOP-NEXT:    add a0, a0, s0
+; RV32-ZCMP-NOZCMOP-NEXT:    cm.pop {ra, s0-s2}, 16
+; RV32-ZCMP-NOZCMOP-NEXT:    sspopchk ra
+; RV32-ZCMP-NOZCMOP-NEXT:    ret
 ;
 ; RV32-NOZCMOP-LABEL: f4_hw:
 ; RV32-NOZCMOP:       # %bb.0:
@@ -894,6 +1104,24 @@ define i32 @f5_hw() "hw-shadow-stack" nounwind {
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
 ;
+; RV64-ZCMP-LABEL: f5_hw:
+; RV64-ZCMP:       # %bb.0:
+; RV64-ZCMP-NEXT:    sspush ra
+; RV64-ZCMP-NEXT:    cm.push {ra}, -16
+; RV64-ZCMP-NEXT:    call bar
+; RV64-ZCMP-NEXT:    cm.pop {ra}, 16
+; RV64-ZCMP-NEXT:    sspopchk ra
+; RV64-ZCMP-NEXT:    ret
+;
+; RV32-ZCMP-NOZCMOP-LABEL: f5_hw:
+; RV32-ZCMP-NOZCMOP:       # %bb.0:
+; RV32-ZCMP-NOZCMOP-NEXT:    sspush ra
+; RV32-ZCMP-NOZCMOP-NEXT:    cm.push {ra}, -16
+; RV32-ZCMP-NOZCMOP-NEXT:    call bar
+; RV32-ZCMP-NOZCMOP-NEXT:    cm.pop {ra}, 16
+; RV32-ZCMP-NOZCMOP-NEXT:    sspopchk ra
+; RV32-ZCMP-NOZCMOP-NEXT:    ret
+;
 ; RV32-NOZCMOP-LABEL: f5_hw:
 ; RV32-NOZCMOP:       # %bb.0:
 ; RV32-NOZCMOP-NEXT:    sspush ra
@@ -951,6 +1179,14 @@ define void @f1_both() "hw-shadow-stack" shadowcallstack {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    ret
 ;
+; RV64-ZCMP-LABEL: f1_both:
+; RV64-ZCMP:       # %bb.0:
+; RV64-ZCMP-NEXT:    ret
+;
+; RV32-ZCMP-NOZCMOP-LABEL: f1_both:
+; RV32-ZCMP-NOZCMOP:       # %bb.0:
+; RV32-ZCMP-NOZCMOP-NEXT:    ret
+;
 ; RV32-NOZCMOP-LABEL: f1_both:
 ; RV32-NOZCMOP:       # %bb.0:
 ; RV32-NOZCMOP-NEXT:    ret
@@ -977,6 +1213,14 @@ define void @f2_both() "hw-shadow-stack" shadowcallstack {
 ; RV64-LABEL: f2_both:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    tail foo
+;
+; RV64-ZCMP-LABEL: f2_both:
+; RV64-ZCMP:       # %bb.0:
+; RV64-ZCMP-NEXT:    tail foo
+;
+; RV32-ZCMP-NOZCMOP-LABEL: f2_both:
+; RV32-ZCMP-NOZCMOP:       # %bb.0:
+; RV32-ZCMP-NOZCMOP-NEXT:    tail foo
 ;
 ; RV32-ZICFISS-LABEL: f2_both:
 ; RV32-ZICFISS:       # %bb.0:
@@ -1027,6 +1271,28 @@ define i32 @f3_both() "hw-shadow-stack" shadowcallstack {
 ; RV64-NEXT:    addi gp, gp, -8
 ; RV64-NEXT:    .cfi_restore gp
 ; RV64-NEXT:    ret
+;
+; RV64-ZCMP-LABEL: f3_both:
+; RV64-ZCMP:       # %bb.0:
+; RV64-ZCMP-NEXT:    sspush ra
+; RV64-ZCMP-NEXT:    cm.push {ra}, -16
+; RV64-ZCMP-NEXT:    .cfi_def_cfa_offset 16
+; RV64-ZCMP-NEXT:    .cfi_offset ra, -8
+; RV64-ZCMP-NEXT:    call bar
+; RV64-ZCMP-NEXT:    cm.pop {ra}, 16
+; RV64-ZCMP-NEXT:    sspopchk ra
+; RV64-ZCMP-NEXT:    ret
+;
+; RV32-ZCMP-NOZCMOP-LABEL: f3_both:
+; RV32-ZCMP-NOZCMOP:       # %bb.0:
+; RV32-ZCMP-NOZCMOP-NEXT:    sspush ra
+; RV32-ZCMP-NOZCMOP-NEXT:    cm.push {ra}, -16
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_offset ra, -4
+; RV32-ZCMP-NOZCMOP-NEXT:    call bar
+; RV32-ZCMP-NOZCMOP-NEXT:    cm.pop {ra}, 16
+; RV32-ZCMP-NOZCMOP-NEXT:    sspopchk ra
+; RV32-ZCMP-NOZCMOP-NEXT:    ret
 ;
 ; RV32-NOZCMOP-LABEL: f3_both:
 ; RV32-NOZCMOP:       # %bb.0:
@@ -1172,6 +1438,52 @@ define i32 @f4_both() "hw-shadow-stack" shadowcallstack {
 ; RV64-NEXT:    addi gp, gp, -8
 ; RV64-NEXT:    .cfi_restore gp
 ; RV64-NEXT:    ret
+;
+; RV64-ZCMP-LABEL: f4_both:
+; RV64-ZCMP:       # %bb.0:
+; RV64-ZCMP-NEXT:    sspush ra
+; RV64-ZCMP-NEXT:    cm.push {ra, s0-s2}, -32
+; RV64-ZCMP-NEXT:    .cfi_def_cfa_offset 32
+; RV64-ZCMP-NEXT:    .cfi_offset ra, -32
+; RV64-ZCMP-NEXT:    .cfi_offset s0, -24
+; RV64-ZCMP-NEXT:    .cfi_offset s1, -16
+; RV64-ZCMP-NEXT:    .cfi_offset s2, -8
+; RV64-ZCMP-NEXT:    call bar
+; RV64-ZCMP-NEXT:    mv s0, a0
+; RV64-ZCMP-NEXT:    call bar
+; RV64-ZCMP-NEXT:    mv s1, a0
+; RV64-ZCMP-NEXT:    call bar
+; RV64-ZCMP-NEXT:    mv s2, a0
+; RV64-ZCMP-NEXT:    call bar
+; RV64-ZCMP-NEXT:    add s0, s0, s1
+; RV64-ZCMP-NEXT:    add a0, a0, s2
+; RV64-ZCMP-NEXT:    addw a0, a0, s0
+; RV64-ZCMP-NEXT:    cm.pop {ra, s0-s2}, 32
+; RV64-ZCMP-NEXT:    sspopchk ra
+; RV64-ZCMP-NEXT:    ret
+;
+; RV32-ZCMP-NOZCMOP-LABEL: f4_both:
+; RV32-ZCMP-NOZCMOP:       # %bb.0:
+; RV32-ZCMP-NOZCMOP-NEXT:    sspush ra
+; RV32-ZCMP-NOZCMOP-NEXT:    cm.push {ra, s0-s2}, -16
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_def_cfa_offset 16
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_offset ra, -16
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_offset s0, -12
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_offset s1, -8
+; RV32-ZCMP-NOZCMOP-NEXT:    .cfi_offset s2, -4
+; RV32-ZCMP-NOZCMOP-NEXT:    call bar
+; RV32-ZCMP-NOZCMOP-NEXT:    mv s0, a0
+; RV32-ZCMP-NOZCMOP-NEXT:    call bar
+; RV32-ZCMP-NOZCMOP-NEXT:    mv s1, a0
+; RV32-ZCMP-NOZCMOP-NEXT:    call bar
+; RV32-ZCMP-NOZCMOP-NEXT:    mv s2, a0
+; RV32-ZCMP-NOZCMOP-NEXT:    call bar
+; RV32-ZCMP-NOZCMOP-NEXT:    add s0, s0, s1
+; RV32-ZCMP-NOZCMOP-NEXT:    add a0, a0, s2
+; RV32-ZCMP-NOZCMOP-NEXT:    add a0, a0, s0
+; RV32-ZCMP-NOZCMOP-NEXT:    cm.pop {ra, s0-s2}, 16
+; RV32-ZCMP-NOZCMOP-NEXT:    sspopchk ra
+; RV32-ZCMP-NOZCMOP-NEXT:    ret
 ;
 ; RV32-NOZCMOP-LABEL: f4_both:
 ; RV32-NOZCMOP:       # %bb.0:
@@ -1352,6 +1664,24 @@ define i32 @f5_both() "hw-shadow-stack" shadowcallstack nounwind {
 ; RV64-NEXT:    ld ra, -8(gp)
 ; RV64-NEXT:    addi gp, gp, -8
 ; RV64-NEXT:    ret
+;
+; RV64-ZCMP-LABEL: f5_both:
+; RV64-ZCMP:       # %bb.0:
+; RV64-ZCMP-NEXT:    sspush ra
+; RV64-ZCMP-NEXT:    cm.push {ra}, -16
+; RV64-ZCMP-NEXT:    call bar
+; RV64-ZCMP-NEXT:    cm.pop {ra}, 16
+; RV64-ZCMP-NEXT:    sspopchk ra
+; RV64-ZCMP-NEXT:    ret
+;
+; RV32-ZCMP-NOZCMOP-LABEL: f5_both:
+; RV32-ZCMP-NOZCMOP:       # %bb.0:
+; RV32-ZCMP-NOZCMOP-NEXT:    sspush ra
+; RV32-ZCMP-NOZCMOP-NEXT:    cm.push {ra}, -16
+; RV32-ZCMP-NOZCMOP-NEXT:    call bar
+; RV32-ZCMP-NOZCMOP-NEXT:    cm.pop {ra}, 16
+; RV32-ZCMP-NOZCMOP-NEXT:    sspopchk ra
+; RV32-ZCMP-NOZCMOP-NEXT:    ret
 ;
 ; RV32-NOZCMOP-LABEL: f5_both:
 ; RV32-NOZCMOP:       # %bb.0:

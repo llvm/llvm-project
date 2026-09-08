@@ -204,7 +204,8 @@ createDecl(PatternRewriter &builder, SymbolTable &symbolTable,
   OpBuilder::InsertionGuard guard(builder);
   Type type = reduce.getOperands()[reductionIndex].getType();
   auto decl = omp::DeclareReductionOp::create(builder, reduce.getLoc(),
-                                              "__scf_reduction", type,
+                                              "__scf_reduction",
+                                              /*sym_visibility=*/nullptr, type,
                                               /*byref_element_type=*/{});
   symbolTable.insert(decl);
 
@@ -503,6 +504,8 @@ struct ParallelOpLowering : public OpRewritePattern<scf::ParallelOp> {
         rewriter, loc,
         /* allocate_vars = */ llvm::SmallVector<Value>{},
         /* allocator_vars = */ llvm::SmallVector<Value>{},
+        /* allocate_alignments = */ nullptr,
+        /* allocate_private_indices = */ nullptr,
         /* if_expr = */ Value{},
         /* num_threads_vars = */ numThreadsVars,
         /* private_vars = */ ValueRange(),

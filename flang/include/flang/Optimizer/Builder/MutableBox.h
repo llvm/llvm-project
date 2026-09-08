@@ -108,8 +108,7 @@ struct MutableBoxReallocation {
 /// is an ExtendedValue for the storage pointer.
 /// For example, when genReallocIfNeeded() is used for a LHS allocatable
 /// array in an assignment, the callback performs the actual assignment
-/// via the given storage pointer, so we end up generating array_updates and
-/// array_merge_stores in each branch.
+/// via the given storage pointer, in each branch.
 using ReallocStorageHandlerFunc = std::function<void(fir::ExtendedValue)>;
 
 MutableBoxReallocation

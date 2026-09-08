@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "IntelPTThreadTraceCollection.h"
+
+#include <cstdint>
 #include <optional>
+#include <vector>
 
 using namespace lldb;
 using namespace lldb_private;

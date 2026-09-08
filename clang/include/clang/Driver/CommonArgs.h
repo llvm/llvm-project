@@ -50,6 +50,10 @@ void addLinkerCompressDebugSectionsOption(const ToolChain &TC,
                                           const llvm::opt::ArgList &Args,
                                           llvm::opt::ArgStringList &CmdArgs);
 
+void renderDebugInfoCompressionArgs(const llvm::opt::ArgList &Args,
+                                    llvm::opt::ArgStringList &CmdArgs,
+                                    const Driver &D, const ToolChain &TC);
+
 void claimNoWarnArgs(const llvm::opt::ArgList &Args);
 
 bool addSanitizerRuntimes(const ToolChain &TC, const llvm::opt::ArgList &Args,
@@ -68,19 +72,6 @@ void linkXRayRuntimeDeps(const ToolChain &TC, const llvm::opt::ArgList &Args,
 void AddRunTimeLibs(const ToolChain &TC, const Driver &D,
                     llvm::opt::ArgStringList &CmdArgs,
                     const llvm::opt::ArgList &Args);
-
-void AddStaticDeviceLibsLinking(Compilation &C, const Tool &T,
-                                const JobAction &JA,
-                                const InputInfoList &Inputs,
-                                const llvm::opt::ArgList &DriverArgs,
-                                llvm::opt::ArgStringList &CmdArgs,
-                                StringRef Arch, StringRef Target,
-                                bool isBitCodeSDL);
-void AddStaticDeviceLibs(Compilation *C, const Tool *T, const JobAction *JA,
-                         const InputInfoList *Inputs, const Driver &D,
-                         const llvm::opt::ArgList &DriverArgs,
-                         llvm::opt::ArgStringList &CmdArgs, StringRef Arch,
-                         StringRef Target, bool isBitCodeSDL);
 
 const char *SplitDebugName(const JobAction &JA, const llvm::opt::ArgList &Args,
                            const InputInfo &Input, const InputInfo &Output);
@@ -144,6 +135,12 @@ void addArchSpecificRPath(const ToolChain &TC, const llvm::opt::ArgList &Args,
 void addOpenMPRuntimeLibraryPath(const ToolChain &TC,
                                  const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs);
+
+bool addLLVMOffloadingRuntime(const Compilation &C,
+                              llvm::opt::ArgStringList &CmdArgs,
+                              const ToolChain &TC,
+                              const llvm::opt::ArgList &Args);
+
 /// Returns true, if an OpenMP runtime has been added.
 bool addOpenMPRuntime(const Compilation &C, llvm::opt::ArgStringList &CmdArgs,
                       const ToolChain &TC, const llvm::opt::ArgList &Args,
@@ -246,6 +243,11 @@ void addMachineOutlinerArgs(const Driver &D, const llvm::opt::ArgList &Args,
                             llvm::opt::ArgStringList &CmdArgs,
                             const llvm::Triple &Triple, bool IsLTO,
                             const StringRef PluginOptPrefix = "");
+
+void addSplitMachineFunctionsArgs(const Driver &D,
+                                  const llvm::opt::ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs,
+                                  const llvm::Triple &Triple);
 
 void addOpenMPDeviceRTL(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,

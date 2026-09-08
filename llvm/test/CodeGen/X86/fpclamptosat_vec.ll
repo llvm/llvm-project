@@ -1104,14 +1104,14 @@ define <2 x i16> @utest_f64i16(<2 x double> %x) nounwind {
 ; AVX2-NEXT:    vorpd %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [65535,65535,65535,65535]
 ; AVX2-NEXT:    vpminud %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; AVX2-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: utest_f64i16:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm0
 ; AVX512-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vpmovdw %xmm0, %xmm0
+; AVX512-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %conv = fptoui <2 x double> %x to <2 x i32>
@@ -3711,14 +3711,14 @@ define <2 x i16> @utest_f64i16_mm(<2 x double> %x) nounwind {
 ; AVX2-NEXT:    vorpd %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [65535,65535,65535,65535]
 ; AVX2-NEXT:    vpminud %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
+; AVX2-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: utest_f64i16_mm:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vcvttpd2udq %xmm0, %xmm0
 ; AVX512-NEXT:    vpminud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vpmovdw %xmm0, %xmm0
+; AVX512-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %conv = fptoui <2 x double> %x to <2 x i32>

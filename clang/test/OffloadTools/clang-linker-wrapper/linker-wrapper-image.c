@@ -19,14 +19,14 @@
 // OPENMP-ELF-NEXT: @__stop_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
 // OPENMP-ELF-NEXT: @__dummy.llvm_offload_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries"
 
-//      OPENMP-COFF: @__start_llvm_offload_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OA"
-// OPENMP-COFF-NEXT: @__stop_llvm_offload_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OZ"
+//      OPENMP-COFF: @__start_llvm_offload_entries = weak_odr hidden constant [1 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OA"
+// OPENMP-COFF-NEXT: @__stop_llvm_offload_entries = weak_odr hidden constant [1 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OZ"
 
 // OPENMP-REL: @.omp_offloading.device_image = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"\10\FF\10\AD{{.*}}", section ".llvm.offloading.relocatable", align 8
 
 //      OPENMP: @.omp_offloading.device_image = internal unnamed_addr constant [[[SIZE:[0-9]+]] x i8] c"\10\FF\10\AD{{.*}}", section ".llvm.offloading", align 8
-// OPENMP-NEXT: @.omp_offloading.device_images = internal unnamed_addr constant [1 x %__tgt_device_image] [%__tgt_device_image { ptr getelementptr ([[[IMG_OFF:[0-9]+]] x i8], ptr @.omp_offloading.device_image, i64 0, i64 [[IMG_OFF]]), ptr getelementptr ([[[IMG_OFF]] x i8], ptr @.omp_offloading.device_image, i64 0, i64 [[IMG_OFF]]), ptr @__start_llvm_offload_entries, ptr @__stop_llvm_offload_entries }]
-// OPENMP-NEXT: @.omp_offloading.descriptor = internal constant %__tgt_bin_desc { i32 1, ptr @.omp_offloading.device_images, ptr @__start_llvm_offload_entries, ptr @__stop_llvm_offload_entries }
+// OPENMP-NEXT: @.omp_offloading.device_images = internal unnamed_addr constant [1 x %__tgt_device_image] [%__tgt_device_image { ptr getelementptr ([[[IMG_OFF:[0-9]+]] x i8], ptr @.omp_offloading.device_image, i64 0, i64 [[IMG_OFF]]), ptr getelementptr ([[[IMG_OFF]] x i8], ptr @.omp_offloading.device_image, i64 0, i64 [[IMG_OFF]]), ptr {{(@__start_llvm_offload_entries|getelementptr inbounds \(\[1 x %struct.__tgt_offload_entry\], ptr @__start_llvm_offload_entries, i32 0, i32 1\))}}, ptr @__stop_llvm_offload_entries }]
+// OPENMP-NEXT: @.omp_offloading.descriptor = internal constant %__tgt_bin_desc { i32 1, ptr @.omp_offloading.device_images, ptr {{(@__start_llvm_offload_entries|getelementptr inbounds \(\[1 x %struct.__tgt_offload_entry\], ptr @__start_llvm_offload_entries, i32 0, i32 1\))}}, ptr @__stop_llvm_offload_entries }
 // OPENMP-NEXT: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 101, ptr @.omp_offloading.descriptor_reg, ptr null }]
 
 //      OPENMP: define internal void @.omp_offloading.descriptor_reg() section ".text.startup" {
@@ -56,8 +56,8 @@
 // CUDA-ELF-NEXT: @__stop_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
 // CUDA-ELF-NEXT: @__dummy.llvm_offload_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries"
 
-//      CUDA-COFF: @__start_llvm_offload_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OA"
-// CUDA-COFF-NEXT: @__stop_llvm_offload_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OZ"
+//      CUDA-COFF: @__start_llvm_offload_entries = weak_odr hidden constant [1 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OA"
+// CUDA-COFF-NEXT: @__stop_llvm_offload_entries = weak_odr hidden constant [1 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OZ"
 
 //      CUDA: @.fatbin_image = internal constant
 // CUDA-SAME: section ".nv_fatbin"
@@ -90,11 +90,11 @@
 //
 //      CUDA: define internal void @.cuda.globals_reg(ptr %0) section ".text.startup" {
 // CUDA-NEXT: entry:
-// CUDA-NEXT:   %1 = icmp ne ptr @__start_llvm_offload_entries, @__stop_llvm_offload_entries
+// CUDA-NEXT:   %1 = icmp ne ptr {{(@__start_llvm_offload_entries|getelementptr inbounds \(\[1 x %struct.__tgt_offload_entry\], ptr @__start_llvm_offload_entries, i32 0, i32 1\))}}, @__stop_llvm_offload_entries
 // CUDA-NEXT:   br i1 %1, label %while.entry, label %while.end
 //
 //      CUDA: while.entry:
-// CUDA-NEXT:   %entry1 = phi ptr [ @__start_llvm_offload_entries, %entry ], [ %16, %if.end ]
+// CUDA-NEXT:   %entry1 = phi ptr [ {{(@__start_llvm_offload_entries|getelementptr inbounds \(\[1 x %struct.__tgt_offload_entry\], ptr @__start_llvm_offload_entries, i32 0, i32 1\))}}, %entry ], [ %16, %if.end ]
 // CUDA-NEXT:   %2 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 4
 // CUDA-NEXT:   %addr = load ptr, ptr %2, align 8
 // CUDA-NEXT:   %3 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 8
@@ -159,7 +159,7 @@
 // CUDA-NEXT:   ret void
 // CUDA-NEXT: }
 
-// RUN: llvm-offload-binary -o %t.out --image=file=%t.elf.o,kind=hip,triple=amdgcn-amd-amdhsa,arch=gfx908
+// RUN: llvm-offload-binary -o %t.out --image=file=%t.elf.o,kind=hip,triple=amdgpu-amd-amdhsa,arch=gfx908
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
 // RUN:   -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-linux-gnu \
@@ -175,8 +175,8 @@
 // HIP-ELF-NEXT: @__stop_llvm_offload_entries = external hidden constant [0 x %struct.__tgt_offload_entry]
 // HIP-ELF-NEXT: @__dummy.llvm_offload_entries = internal constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries"
 
-//      HIP-COFF: @__start_llvm_offload_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OA"
-// HIP-COFF-NEXT: @__stop_llvm_offload_entries = weak_odr hidden constant [0 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OZ"
+//      HIP-COFF: @__start_llvm_offload_entries = weak_odr hidden constant [1 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OA"
+// HIP-COFF-NEXT: @__stop_llvm_offload_entries = weak_odr hidden constant [1 x %struct.__tgt_offload_entry] zeroinitializer, section "llvm_offload_entries$OZ"
 
 //      HIP-MACHO: @"\01section$start$__LLVM$offload_entries" = external hidden constant [0 x %struct.__tgt_offload_entry]
 // HIP-MACHO-NEXT: @"\01section$end$__LLVM$offload_entries" = external hidden constant [0 x %struct.__tgt_offload_entry]
@@ -232,11 +232,11 @@
 //
 //      HIP: define internal void @.hip.globals_reg(ptr %0) section "{{\.text\.startup|__TEXT,__StaticInit}}" {
 // HIP-NEXT: entry:
-// HIP-NEXT:   %1 = icmp ne ptr @{{.*offload_entries.*}}, @{{.*offload_entries.*}}
+// HIP-NEXT:   %1 = icmp ne ptr {{(@.*offload_entries.*|getelementptr inbounds \(\[1 x %struct.__tgt_offload_entry\], ptr @__start_llvm_offload_entries, i32 0, i32 1\))}}, @{{.*offload_entries.*}}
 // HIP-NEXT:   br i1 %1, label %while.entry, label %while.end
 //
 //      HIP: while.entry:
-// HIP-NEXT:   %entry1 = phi ptr [ @{{.*offload_entries.*}}, %entry ], [ %16, %if.end ]
+// HIP-NEXT:   %entry1 = phi ptr [ {{(@.*offload_entries.*|getelementptr inbounds \(\[1 x %struct.__tgt_offload_entry\], ptr @__start_llvm_offload_entries, i32 0, i32 1\))}}, %entry ], [ %16, %if.end ]
 // HIP-NEXT:   %2 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 4
 // HIP-NEXT:   %addr = load ptr, ptr %2, align 8
 // HIP-NEXT:   %3 = getelementptr inbounds %struct.__tgt_offload_entry, ptr %entry1, i32 0, i32 8
@@ -316,6 +316,7 @@
 //      SYCL: define internal void @sycl.descriptor_reg() section ".text.startup" {
 // SYCL-NEXT: entry:
 // SYCL-NEXT:   call void @__sycl_register_lib(ptr @.sycl_offloading.binary, i64 0)
+// SYCL-NEXT:   %0 = call i32 @atexit(ptr @sycl.descriptor_unreg)
 // SYCL-NEXT:   ret void
 // SYCL-NEXT: }
 

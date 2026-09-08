@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify=com %s
 // RUN: %clang_cc1 -std=c++17 -fsyntax-only -fcuda-is-device -verify=com,dev,warn %s
 // RUN: %clang_cc1 -std=c++17 -fsyntax-only -fcuda-is-device -verify=com,dev,warn \
-// RUN:   -triple amdgcn-amd-amdhsa -target-cpu gfx906 -x hip %s
+// RUN:   -triple amdgpu9.06-amd-amdhsa -x hip %s
 // RUN: %clang_cc1 -std=c++17 -fsyntax-only -fcuda-is-device -verify=com,dev \
 // RUN:   -Wno-gpu-maybe-wrong-side %s
 

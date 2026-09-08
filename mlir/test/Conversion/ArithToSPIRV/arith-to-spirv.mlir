@@ -198,18 +198,18 @@ func.func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
 
 // Check int vector types.
 // CHECK-LABEL: @int_vector234
-func.func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<4xi64>) {
+func.func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<2xi8>, %arg2: vector<4xi64>, %arg3: vector<4xi64>) {
   // CHECK: spirv.SDiv %{{.*}}, %{{.*}}: vector<2xi8>
-  %0 = arith.divsi %arg0, %arg0: vector<2xi8>
+  %0 = arith.divsi %arg0, %arg1: vector<2xi8>
   // CHECK: spirv.UDiv %{{.*}}, %{{.*}}: vector<4xi64>
-  %1 = arith.divui %arg1, %arg1: vector<4xi64>
+  %1 = arith.divui %arg2, %arg3: vector<4xi64>
   return
 }
 
 // CHECK-LABEL: @index_vector
-func.func @index_vector(%arg0: vector<4xindex>) {
+func.func @index_vector(%arg0: vector<4xindex>, %arg1: vector<4xindex>) {
   // CHECK: spirv.UMod %{{.*}}, %{{.*}}: vector<4xi32>
-  %0 = arith.remui %arg0, %arg0: vector<4xindex>
+  %0 = arith.remui %arg0, %arg1: vector<4xindex>
   return
 }
 
@@ -1522,11 +1522,11 @@ func.func @float32_maxnumf_scalar(%arg0 : vector<2xf32>, %arg1 : vector<2xf32>) 
 
 // Check int vector types.
 // CHECK-LABEL: @int_vector234
-func.func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<4xi64>) {
+func.func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<2xi8>, %arg2: vector<4xi64>, %arg3: vector<4xi64>) {
   // CHECK: spirv.SDiv %{{.*}}, %{{.*}}: vector<2xi8>
-  %0 = arith.divsi %arg0, %arg0: vector<2xi8>
+  %0 = arith.divsi %arg0, %arg1: vector<2xi8>
   // CHECK: spirv.UDiv %{{.*}}, %{{.*}}: vector<4xi64>
-  %1 = arith.divui %arg1, %arg1: vector<4xi64>
+  %1 = arith.divui %arg2, %arg3: vector<4xi64>
   return
 }
 
@@ -1570,11 +1570,11 @@ module attributes {
 } {
 
 // CHECK-LABEL: @int_vector23
-func.func @int_vector23(%arg0: vector<2xi8>, %arg1: vector<3xi16>) {
+func.func @int_vector23(%arg0: vector<2xi8>, %arg1: vector<2xi8>, %arg2: vector<3xi16>, %arg3: vector<3xi16>) {
   // CHECK: spirv.SDiv %{{.*}}, %{{.*}}: vector<2xi32>
-  %0 = arith.divsi %arg0, %arg0: vector<2xi8>
+  %0 = arith.divsi %arg0, %arg1: vector<2xi8>
   // CHECK: spirv.SDiv %{{.*}}, %{{.*}}: vector<3xi32>
-  %1 = arith.divsi %arg1, %arg1: vector<3xi16>
+  %1 = arith.divsi %arg2, %arg3: vector<3xi16>
   return
 }
 

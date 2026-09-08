@@ -96,3 +96,11 @@ subroutine f23(x)
   x = x + 1
   !$omp end target
 end
+
+subroutine f24(x)
+  integer :: x(10)
+!ERROR: 'ompx-hold-modifier' modifier cannot occur multiple times
+  !$omp target map(ompx_hold, ompx_hold: x)
+  x = x + 1
+  !$omp end target
+end

@@ -3373,15 +3373,15 @@ uint64_t ConstantDataSequential::getElementAsInteger(uint64_t Elt) const {
 
   // The data is stored in host byte order, make sure to cast back to the right
   // type to load with the right endianness.
-  switch (getElementType()->getScalarSizeInBits()) {
+  switch (getElementByteSize()) {
   default: llvm_unreachable("Invalid bitwidth for CDS");
-  case 8:
+  case 1:
     return *reinterpret_cast<const uint8_t *>(EltPtr);
-  case 16:
+  case 2:
     return *reinterpret_cast<const uint16_t *>(EltPtr);
-  case 32:
+  case 4:
     return *reinterpret_cast<const uint32_t *>(EltPtr);
-  case 64:
+  case 8:
     return *reinterpret_cast<const uint64_t *>(EltPtr);
   }
 }
@@ -3394,21 +3394,21 @@ APInt ConstantDataSequential::getElementAsAPInt(uint64_t Elt) const {
 
   // The data is stored in host byte order, make sure to cast back to the right
   // type to load with the right endianness.
-  switch (getElementType()->getScalarSizeInBits()) {
+  switch (getElementByteSize()) {
   default: llvm_unreachable("Invalid bitwidth for CDS");
-  case 8: {
+  case 1: {
     auto EltVal = *reinterpret_cast<const uint8_t *>(EltPtr);
     return APInt(8, EltVal);
   }
-  case 16: {
+  case 2: {
     auto EltVal = *reinterpret_cast<const uint16_t *>(EltPtr);
     return APInt(16, EltVal);
   }
-  case 32: {
+  case 4: {
     auto EltVal = *reinterpret_cast<const uint32_t *>(EltPtr);
     return APInt(32, EltVal);
   }
-  case 64: {
+  case 8: {
     auto EltVal = *reinterpret_cast<const uint64_t *>(EltPtr);
     return APInt(64, EltVal);
   }

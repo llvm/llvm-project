@@ -1,0 +1,56 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef _LIBCPP___OPTIONAL_NULLOPT_T_H
+#define _LIBCPP___OPTIONAL_NULLOPT_T_H
+
+#include <__compare/ordering.h>
+#include <__config>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
+#if _LIBCPP_STD_VER >= 17
+
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+struct nullopt_t {
+  struct __secret_tag {
+    explicit __secret_tag() = default;
+  };
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit nullopt_t(__secret_tag, __secret_tag) noexcept {}
+
+#  if _LIBCPP_STD_VER >= 20
+
+  _LIBCPP_HIDE_FROM_ABI constexpr friend strong_ordering operator<=>(nullopt_t, nullopt_t) = default;
+
+#  else
+
+  _LIBCPP_HIDE_FROM_ABI constexpr friend bool operator==(nullopt_t, nullopt_t) noexcept { return true; }
+  _LIBCPP_HIDE_FROM_ABI constexpr friend bool operator!=(nullopt_t, nullopt_t) noexcept { return false; }
+  _LIBCPP_HIDE_FROM_ABI constexpr friend bool operator>(nullopt_t, nullopt_t) noexcept { return false; }
+  _LIBCPP_HIDE_FROM_ABI constexpr friend bool operator<(nullopt_t, nullopt_t) noexcept { return false; }
+  _LIBCPP_HIDE_FROM_ABI constexpr friend bool operator>=(nullopt_t, nullopt_t) noexcept { return true; }
+  _LIBCPP_HIDE_FROM_ABI constexpr friend bool operator<=(nullopt_t, nullopt_t) noexcept { return true; }
+
+#  endif // _LIBCPP_STD_VER >= 20
+};
+
+inline constexpr nullopt_t nullopt{nullopt_t::__secret_tag{}, nullopt_t::__secret_tag{}};
+
+_LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
+
+_LIBCPP_POP_MACROS
+#endif // _LIBCPP___OPTIONAL_NULLOPT_T_H

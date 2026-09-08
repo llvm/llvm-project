@@ -1423,6 +1423,11 @@ struct BlockPackMatmulOptions {
   /// the parallel dimensions and kb is the reduction dimension.
   SmallVector<int64_t, 3> blockFactors;
 
+  /// Scalable flags for block factors. When true, the corresponding block
+  /// factor is considered scalable. Must be empty (all static) or have the same
+  /// size as blockFactors.
+  SmallVector<bool, 3> scalableBlockFactors;
+
   /// If true, allows packing of dimensions that only partially fit into the
   /// block factors.
   bool allowPadding = true;
@@ -1986,9 +1991,6 @@ void populateConvolutionVectorizationPatterns(RewritePatternSet &patterns,
 /// parallel loops.
 void populateElementwiseToLinalgConversionPatterns(RewritePatternSet &patterns);
 
-/// Populate patterns that are only useful in the context of sparse tensors.
-void populateSparseTensorRewriting(RewritePatternSet &patterns);
-
 /// Function type which is used to control when to stop fusion. It is expected
 /// that OpOperand is not modified in the callback. The OpOperand is not marked
 /// as const to allow callers to use non-const methods.
@@ -2001,6 +2003,15 @@ using ControlFusionFn = std::function<bool(OpOperand *fusedOperand)>;
 void populateElementwiseOpsFusionPatterns(
     RewritePatternSet &patterns,
     const ControlFusionFn &controlElementwiseOpFusion);
+
+/// Patterns that split elementwise `linalg.generic` operations at the
+/// boundaries of compatible `tensor.concat` inputs, exposing more producer
+/// operations to elementwise fusion. Tensor elementwise operations are
+/// represented as `linalg.generic` after `-convert-elementwise-to-linalg`, so
+/// the patterns implement the elementwise/concat interchange in the Linalg
+/// fusion pipeline.
+void populateSplitElementwiseOpsWithConcatInputsPatterns(
+    RewritePatternSet &patterns);
 
 /// Function type which is used to control propagation of linalg.pack/unpack
 /// ops.

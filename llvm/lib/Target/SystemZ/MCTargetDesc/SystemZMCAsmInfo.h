@@ -27,7 +27,6 @@ class SystemZMCAsmInfoGOFF : public MCAsmInfoGOFF {
 public:
   explicit SystemZMCAsmInfoGOFF(const Triple &TT,
                                 const MCTargetOptions &Options);
-  bool isAcceptableChar(char C) const override;
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,

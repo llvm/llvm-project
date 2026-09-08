@@ -104,32 +104,32 @@ body:             |
     ; FP16-LABEL: name: s128_libcall
     ; FP16: liveins: $q0, $q1
     ; FP16-NEXT: {{  $}}
-    ; FP16-NEXT: %a:_(s128) = COPY $q0
-    ; FP16-NEXT: %b:_(s128) = COPY $q1
+    ; FP16-NEXT: %a:_(f128) = COPY $q0
+    ; FP16-NEXT: %b:_(f128) = COPY $q1
     ; FP16-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    ; FP16-NEXT: $q0 = COPY %a(s128)
-    ; FP16-NEXT: $q1 = COPY %b(s128)
+    ; FP16-NEXT: $q0 = COPY %a(f128)
+    ; FP16-NEXT: $q1 = COPY %b(f128)
     ; FP16-NEXT: BL &fmaxl, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $q0, implicit $q1, implicit-def $q0
     ; FP16-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    ; FP16-NEXT: %maxnum:_(s128) = COPY $q0
-    ; FP16-NEXT: $q0 = COPY %maxnum(s128)
+    ; FP16-NEXT: %maxnum:_(f128) = COPY $q0
+    ; FP16-NEXT: $q0 = COPY %maxnum(f128)
     ; FP16-NEXT: RET_ReallyLR implicit $q0
     ;
     ; NO-FP16-LABEL: name: s128_libcall
     ; NO-FP16: liveins: $q0, $q1
     ; NO-FP16-NEXT: {{  $}}
-    ; NO-FP16-NEXT: %a:_(s128) = COPY $q0
-    ; NO-FP16-NEXT: %b:_(s128) = COPY $q1
+    ; NO-FP16-NEXT: %a:_(f128) = COPY $q0
+    ; NO-FP16-NEXT: %b:_(f128) = COPY $q1
     ; NO-FP16-NEXT: ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
-    ; NO-FP16-NEXT: $q0 = COPY %a(s128)
-    ; NO-FP16-NEXT: $q1 = COPY %b(s128)
+    ; NO-FP16-NEXT: $q0 = COPY %a(f128)
+    ; NO-FP16-NEXT: $q1 = COPY %b(f128)
     ; NO-FP16-NEXT: BL &fmaxl, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $q0, implicit $q1, implicit-def $q0
     ; NO-FP16-NEXT: ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
-    ; NO-FP16-NEXT: %maxnum:_(s128) = COPY $q0
-    ; NO-FP16-NEXT: $q0 = COPY %maxnum(s128)
+    ; NO-FP16-NEXT: %maxnum:_(f128) = COPY $q0
+    ; NO-FP16-NEXT: $q0 = COPY %maxnum(f128)
     ; NO-FP16-NEXT: RET_ReallyLR implicit $q0
-    %a:_(s128) = COPY $q0
-    %b:_(s128) = COPY $q1
-    %maxnum:_(s128) = G_FMAXNUM %a, %b
-    $q0 = COPY %maxnum(s128)
+    %a:_(f128) = COPY $q0
+    %b:_(f128) = COPY $q1
+    %maxnum:_(f128) = G_FMAXNUM %a, %b
+    $q0 = COPY %maxnum(f128)
     RET_ReallyLR implicit $q0

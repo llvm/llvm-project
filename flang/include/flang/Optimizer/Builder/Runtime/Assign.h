@@ -63,5 +63,17 @@ void genCopyInAssign(fir::FirOpBuilder &builder, mlir::Location loc,
 void genCopyOutAssign(fir::FirOpBuilder &builder, mlir::Location loc,
                       mlir::Value varBoxAddr, mlir::Value tempBoxAddr);
 
+/// Generate runtime call to AssignSimple (fast path for intrinsic types).
+/// \p destBox must be a fir.ref<fir.box<T>> and \p sourceBox a fir.box<T>.
+/// Preconditions enforced at call site:
+///   - Intrinsic element type (integer, real, complex, logical)
+///   - Matching ranks (no scalar-to-array broadcasting)
+///   - Same element byte size
+///   - Non-volatile
+/// Runtime handles: contiguous and non-contiguous layouts, aliasing detection,
+/// allocatable reallocation.
+void genAssignSimple(fir::FirOpBuilder &builder, mlir::Location loc,
+                     mlir::Value destBox, mlir::Value sourceBox);
+
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_ASSIGN_H

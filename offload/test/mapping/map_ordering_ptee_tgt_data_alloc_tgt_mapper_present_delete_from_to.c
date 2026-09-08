@@ -33,7 +33,7 @@ int main() {
 
 #pragma omp target data map(alloc : x) // (1)
   {
-// DEBUG-NOT: omptarget --> Moving {{.*}} bytes (hst:0x{{.*}}) -> (tgt:0x{{.*}})
+// DEBUG-NOT: --> Moving {{.*}} bytes (hst:0x{{.*}}) -> (tgt:0x{{.*}})
 #pragma omp target map(mapper(my_mapper), tofrom : s1) // (2)
     {
       // NOTE: It's ok for this to be 111 under "unified_shared_memory"
@@ -43,7 +43,7 @@ int main() {
     printf("After tgt: %d\n", s1.p[1]); // CHECK: After tgt: 222
   }
   // clang-format off
-  // DEBUG: omptarget --> Found skipped FROM entry: HstPtr=0x[[#%x,HOST_ADDR:]] size=[[#%u,SIZE:]] within region being released
-  // DEBUG: omptarget --> Moving [[#SIZE]] bytes (tgt:0x{{.*}}) -> (hst:0x{{0*}}[[#HOST_ADDR]])
+  // DEBUG: --> Found skipped FROM entry: HstPtr=0x[[#%x,HOST_ADDR:]] size=[[#%u,SIZE:]] within region being released
+  // DEBUG: --> Moving [[#SIZE]] bytes (tgt:0x{{.*}}) -> (hst:0x{{0*}}[[#HOST_ADDR]])
   // clang-format on
 }

@@ -17,6 +17,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include <cassert>
@@ -63,6 +64,9 @@ private:
   // Cumulative upstream size change during `relaxOnce`. Used to compensate
   // forward-reference displacements in `evaluateFixup`.
   int64_t Stretch = 0;
+
+  /// Non-empty when aligned instruction bundling is enabled.
+  MaybeAlign BundleAlign;
 
   SectionListType Sections;
 
@@ -197,6 +201,13 @@ public:
   bool getRelaxAll() const { return RelaxAll; }
   void setRelaxAll(bool Value) { RelaxAll = Value; }
   int64_t getStretch() const { return Stretch; }
+
+  bool isBundlingEnabled() const { return bool(BundleAlign); }
+  Align getBundleAlign() const {
+    assert(BundleAlign && "bundling is not enabled");
+    return *BundleAlign;
+  }
+  void setBundleAlign(Align Value) { BundleAlign = Value; }
 
   const_iterator begin() const { return Sections.begin(); }
   const_iterator end() const { return Sections.end(); }

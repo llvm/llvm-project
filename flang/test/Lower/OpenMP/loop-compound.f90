@@ -1,8 +1,8 @@
 ! This test checks lowering of OpenMP compound (combined and composite) loop
 ! constructs.
 
-! RUN: bbc -fopenmp -emit-hlfir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! RUN: bbc --wrap-unstructured-constructs-in-execute-region -fopenmp -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -mmlir --wrap-unstructured-constructs-in-execute-region -fopenmp -emit-hlfir %s -o - | FileCheck %s
 
 program main
   integer :: i,j

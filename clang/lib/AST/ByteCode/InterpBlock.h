@@ -29,17 +29,16 @@ enum PrimType : uint8_t;
 /// The storage described by the block is immediately followed by
 /// optional metadata, which is followed by the actual data.
 ///
-/// Block*        rawData()                  data()
-/// │               │                         │
-/// │               │                         │
-/// ▼               ▼                         ▼
-/// ┌───────────────┬─────────────────────────┬─────────────────┐
-/// │ Block         │ Metadata                │ Data            │
-/// │ sizeof(Block) │ Desc->getMetadataSize() │ Desc->getSize() │
-/// └───────────────┴─────────────────────────┴─────────────────┘
+/// Block*        rawData()           data()
+/// │               │                  │
+/// │               │                  │
+/// ▼               ▼                  ▼
+/// ┌───────────────┬──────────────────┬─────────────────┐
+/// │ Block         │ Metadata         │ Data            │
+/// │ sizeof(Block) │ MDSize           │ Desc->getSize() │
+/// └───────────────┴──────────────────┴─────────────────┘
 ///
-/// Desc->getAllocSize() describes the size after the Block, i.e.
-/// the data size and the metadata size.
+/// getSize() returns MDSize + Desc->getAllocSize().
 ///
 class Block final {
 private:
@@ -49,20 +48,25 @@ private:
   static constexpr uint8_t DummyFlag = 1 << 3;
 
 public:
+  static constexpr uint8_t InlineDescMD = sizeof(InlineDescriptor);
+  static constexpr uint8_t GlobalMD = sizeof(GlobalInlineDescriptor);
+
   /// Creates a new block.
   Block(unsigned EvalID, UnsignedOrNone DeclID, const Descriptor *Desc,
-        bool IsStatic = false, bool IsExtern = false, bool IsWeak = false,
-        bool IsDummy = false)
-      : Desc(Desc), DeclID(DeclID), EvalID(EvalID), IsStatic(IsStatic) {
+        unsigned MDSize = 0, bool IsStatic = false, bool IsExtern = false,
+        bool IsWeak = false, bool IsDummy = false)
+      : Desc(Desc), DeclID(DeclID), EvalID(EvalID), MDSize(MDSize),
+        IsStatic(IsStatic) {
     assert(Desc);
     AccessFlags |= (ExternFlag * IsExtern);
     AccessFlags |= (WeakFlag * IsWeak);
     AccessFlags |= (DummyFlag * IsDummy);
   }
 
-  Block(unsigned EvalID, const Descriptor *Desc, bool IsStatic = false,
-        bool IsExtern = false, bool IsWeak = false, bool IsDummy = false)
-      : Desc(Desc), EvalID(EvalID), IsStatic(IsStatic) {
+  Block(unsigned EvalID, const Descriptor *Desc, unsigned MDSize = 0,
+        bool IsStatic = false, bool IsExtern = false, bool IsWeak = false,
+        bool IsDummy = false)
+      : Desc(Desc), EvalID(EvalID), MDSize(MDSize), IsStatic(IsStatic) {
     assert(Desc);
     AccessFlags |= (ExternFlag * IsExtern);
     AccessFlags |= (WeakFlag * IsWeak);
@@ -83,8 +87,10 @@ public:
   bool isDynamic() const { return (DynAllocId != std::nullopt); }
   bool isDummy() const { return AccessFlags & DummyFlag; }
   bool isDead() const { return AccessFlags & DeadFlag; }
-  /// Returns the size of the block.
-  unsigned getSize() const { return Desc->getAllocSize(); }
+  /// Returns the size of the block, including metadata.
+  unsigned getSize() const { return Desc->getAllocSize() + MDSize; }
+  /// Returns the size of the metadata.
+  unsigned getMetadataSize() const { return MDSize; }
   /// Returns the declaration ID.
   UnsignedOrNone getDeclID() const { return DeclID; }
   /// Returns whether the data of this block has been initialized via
@@ -99,16 +105,8 @@ public:
 
   /// Returns a pointer to the stored data.
   /// You are allowed to read Desc->getSize() bytes from this address.
-  std::byte *data() {
-    // rawData might contain metadata as well.
-    size_t DataOffset = Desc->getMetadataSize();
-    return rawData() + DataOffset;
-  }
-  const std::byte *data() const {
-    // rawData might contain metadata as well.
-    size_t DataOffset = Desc->getMetadataSize();
-    return rawData() + DataOffset;
-  }
+  std::byte *data() { return rawData() + MDSize; }
+  const std::byte *data() const { return rawData() + MDSize; }
 
   /// Returns a pointer to the raw data, including metadata.
   /// You are allowed to read Desc->getAllocSize() bytes from this address.
@@ -125,7 +123,7 @@ public:
   template <typename T> T &deref() { return *reinterpret_cast<T *>(data()); }
 
   template <typename T> T &getBlockDesc() {
-    assert(sizeof(T) == getDescriptor()->getMetadataSize());
+    assert(sizeof(T) == MDSize);
     return *reinterpret_cast<T *>(rawData());
   }
   template <typename T> const T &getBlockDesc() const {
@@ -135,7 +133,7 @@ public:
   /// Invokes the constructor.
   void invokeCtor() {
     assert(!IsInitialized);
-    std::memset(rawData(), 0, Desc->getAllocSize());
+    std::memset(rawData(), 0, getSize());
     invokeCtorNoMemset();
   }
   /// The same, but won't memset() the memory first to zero.
@@ -169,9 +167,9 @@ private:
   friend class DynamicAllocator;
   friend class Program;
 
-  Block(unsigned EvalID, const Descriptor *Desc, bool IsExtern, bool IsStatic,
-        bool IsWeak, bool IsDummy, bool IsDead)
-      : Desc(Desc), EvalID(EvalID), IsStatic(IsStatic) {
+  Block(unsigned EvalID, const Descriptor *Desc, unsigned MDSize, bool IsExtern,
+        bool IsStatic, bool IsWeak, bool IsDummy, bool IsDead)
+      : Desc(Desc), EvalID(EvalID), MDSize(MDSize), IsStatic(IsStatic) {
     assert(Desc);
     AccessFlags |= (ExternFlag * IsExtern);
     AccessFlags |= (DeadFlag * IsDead);
@@ -200,15 +198,17 @@ private:
   /// Unique identifier of the declaration.
   UnsignedOrNone DeclID = std::nullopt;
   const unsigned EvalID = ~0u;
+  /// Allocation ID for this dynamic allocation, if it is one.
+  UnsignedOrNone DynAllocId = std::nullopt;
+  /// AccessFlags containing IsExtern, IsDead, IsWeak, and IsDummy bits.
+  uint8_t AccessFlags = 0;
+  /// Size of the metadata.
+  const uint8_t MDSize = 0;
   /// Flag indicating if the block has static storage duration.
   bool IsStatic = false;
   /// Flag indicating if the block contents have been initialized
   /// via invokeCtor.
   bool IsInitialized = false;
-  /// Allocation ID for this dynamic allocation, if it is one.
-  UnsignedOrNone DynAllocId = std::nullopt;
-  /// AccessFlags containing IsExtern, IsDead, IsWeak, and IsDummy bits.
-  uint8_t AccessFlags = 0;
 };
 
 /// Descriptor for a dead block.

@@ -63,6 +63,14 @@ class SMSchedule;
 extern LLVM_ABI cl::opt<bool> SwpEnableCopyToPhi;
 extern LLVM_ABI cl::opt<int> SwpForceIssueWidth;
 
+/// Software pipelining policy for a loop, which a target can customize by
+/// implementing TargetSubtargetInfo::overridePipelinerPolicy.
+struct MachinePipelinerPolicy {
+  /// Limit the register pressure of the scheduled loop, retrying at a higher
+  /// II when a schedule needs too many registers.
+  bool ShouldLimitRegPressure = false;
+};
+
 /// The main class in the implementation of the target independent
 /// software pipeliner pass.
 class LLVM_ABI MachinePipeliner : public MachineFunctionPass {
@@ -70,10 +78,9 @@ public:
   MachineFunction *MF = nullptr;
   MachineOptimizationRemarkEmitter *ORE = nullptr;
   const MachineLoopInfo *MLI = nullptr;
-  const MachineDominatorTree *MDT = nullptr;
   const InstrItineraryData *InstrItins = nullptr;
   const TargetInstrInfo *TII = nullptr;
-  RegisterClassInfo RegClassInfo;
+  const RegisterClassInfo *RegClassInfo = nullptr;
   bool disabledByPragma = false;
   unsigned II_setByPragma = 0;
 
@@ -296,6 +303,9 @@ class LLVM_ABI SwingSchedulerDAG : public ScheduleDAGInstrs {
   unsigned II_setByPragma = 0;
   TargetInstrInfo::PipelinerLoopInfo *LoopPipelinerInfo = nullptr;
 
+  /// Policy for this loop, after target and command line overrides.
+  MachinePipelinerPolicy Policy;
+
   /// A topological ordering of the SUnits, which is needed for changing
   /// dependences and iterating over the SUnits.
   ScheduleDAGTopologicalSort Topo;
@@ -387,6 +397,7 @@ public:
       : ScheduleDAGInstrs(*P.MF, P.MLI, false), Pass(P), Loop(L), LIS(lis),
         RegClassInfo(rci), II_setByPragma(II), LoopPipelinerInfo(PLI),
         Topo(SUnits, &ExitSU), AA(AA), BAA(*AA) {
+    initPolicy();
     P.MF->getSubtarget().getSMSMutations(Mutations);
     if (SwpEnableCopyToPhi)
       Mutations.push_back(std::make_unique<CopyToPhiMutation>());
@@ -453,6 +464,8 @@ public:
                              const MachineInstr *OtherMI) const;
 
 private:
+  /// Set the policy for this loop, allowing the target to override it.
+  void initPolicy();
   LoopCarriedEdges addLoopCarriedDependences();
   void updatePhiDependences();
   void changeDependences();

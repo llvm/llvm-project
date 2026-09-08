@@ -225,7 +225,8 @@ storage-class-specifier const error_category& iostream_category() noexcept;
 
 #    include <__fwd/ios.h>
 #    include <__ios/fpos.h>
-#    include <__locale>
+#    include <__locale_dir/ctype.h>
+#    include <__locale_dir/locale.h>
 #    include <__memory/addressof.h>
 #    include <__system_error/error_category.h>
 #    include <__system_error/error_code.h>
@@ -875,27 +876,6 @@ _LIBCPP_POP_MACROS
 
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 23
-#    include <ctime>
-#    include <ratio>
-#  endif
-
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <atomic>
-#    include <concepts>
-#    include <cstddef>
-#    include <cstdlib>
-#    include <cstring>
-#    include <initializer_list>
-#    include <limits>
-#    include <mutex>
-#    include <new>
-#    include <optional>
-#    include <stdexcept>
-#    include <system_error>
-#    include <type_traits>
-#    include <typeinfo>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_IOS

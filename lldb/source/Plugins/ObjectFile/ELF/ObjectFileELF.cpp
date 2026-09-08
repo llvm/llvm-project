@@ -1052,6 +1052,22 @@ Address ObjectFileELF::GetBaseAddress() {
   return Address();
 }
 
+FileSpecList ObjectFileELF::GetReExportedLibraries() {
+  FileSpecList filtees;
+  if (!ParseDynamicSymbols())
+    return filtees;
+  // Multiple DT_FILTER / DT_AUXILIARY entries are permitted; the dynamic
+  // linker searches the filtees in the order the entries appear in the
+  // dynamic section, so preserve that order here.
+  for (const auto &entry : m_dynamic_symbols) {
+    if (entry.symbol.d_tag != DT_FILTER && entry.symbol.d_tag != DT_AUXILIARY)
+      continue;
+    if (!entry.name.empty())
+      filtees.EmplaceBack(entry.name);
+  }
+  return filtees;
+}
+
 size_t ObjectFileELF::ParseDependentModules() {
   if (m_filespec_up)
     return m_filespec_up->GetSize();
@@ -3826,6 +3842,14 @@ std::string static getDynamicTagAsString(uint16_t Arch, uint64_t Type) {
 #undef SPARC_DYNAMIC_TAG
     }
     break;
+
+  case llvm::ELF::EM_X86_64:
+    switch (Type) {
+#define X86_64_DYNAMIC_TAG(name, value) DYNAMIC_STRINGIFY_ENUM(name, value)
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef X86_64_DYNAMIC_TAG
+    }
+    break;
   }
 #undef DYNAMIC_TAG
   switch (Type) {
@@ -3837,6 +3861,7 @@ std::string static getDynamicTagAsString(uint16_t Arch, uint64_t Type) {
 #define PPC64_DYNAMIC_TAG(name, value)
 #define RISCV_DYNAMIC_TAG(name, value)
 #define SPARC_DYNAMIC_TAG(name, value)
+#define X86_64_DYNAMIC_TAG(name, value)
 // Also ignore marker tags such as DT_HIOS (maps to DT_VERNEEDNUM), etc.
 #define DYNAMIC_TAG_MARKER(name, value)
 #define DYNAMIC_TAG(name, value)                                               \
@@ -3851,6 +3876,7 @@ std::string static getDynamicTagAsString(uint16_t Arch, uint64_t Type) {
 #undef PPC64_DYNAMIC_TAG
 #undef RISCV_DYNAMIC_TAG
 #undef SPARC_DYNAMIC_TAG
+#undef X86_64_DYNAMIC_TAG
 #undef DYNAMIC_TAG_MARKER
 #undef DYNAMIC_STRINGIFY_ENUM
   default:

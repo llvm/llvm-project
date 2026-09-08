@@ -1,12 +1,14 @@
 import logging
 import os
+import uuid
 from pathlib import Path
 from typing import Any, Final, Optional, TypeVar, Union, cast
 
 from lldbsuite.test.lldbtest import Base, LLDBTestCaseFactory, is_exe
+import lldbgdbserverutils
 
-from .types import AnyResponse, ErrorResponse, Response
 from .session_helpers import DAPTestSession
+from .types import AnyResponse, ErrorResponse, Response
 from .utils import DebugAdapter, DebugAdapterOptions
 
 
@@ -116,6 +118,11 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
         self.addTearDownHook(cleanup_session)
         return session
 
+    def build_for_attach(self) -> str:
+        unique_name = str(uuid.uuid4())
+        self.build(dictionary={"EXE": unique_name})
+        return self.getBuildArtifact(unique_name)
+
     def build_and_create_session(
         self,
         adapter: Optional[DebugAdapter] = None,
@@ -152,6 +159,7 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
 
         def cleanup_adapter():
             if adapter.is_alive:
+                self.logger.info("Manually killing debug adapter.")
                 adapter.kill()
             # The debug adapter may have a reason the test failed.
             if stderr := adapter.process.stderr:
@@ -193,6 +201,24 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
         adapter = self.create_debug_adapter(adapter_options)
         self.assertTrue(adapter.is_server, "adapter should run as a server.")
         return adapter
+
+    def get_debug_server_path(self) -> Optional[Path]:
+        # Tries to find simulation/lldb-server/gdbserver tool path.
+        platform = self.getPlatform()
+        if platform == "windows":
+            # TODO: Update this for windows as it now supports lldb-server.
+            return None
+
+        if self.platformIsDarwin():
+            if platform != "macosx":
+                return None
+            server_exe = lldbgdbserverutils.get_debugserver_exe()
+        else:
+            server_exe = lldbgdbserverutils.get_lldb_server_exe()
+
+        server_path = Path(server_exe)
+        self.assertTrue(server_path.exists(), f"{server_path.stem!r} not found")
+        return server_path
 
     def expect_not_none(self, value: Optional[T], msg: Any = None) -> T:
         """Convenience function to narrow fields that are optional, as most DAP types are."""

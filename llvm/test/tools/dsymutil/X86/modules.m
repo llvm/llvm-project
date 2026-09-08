@@ -42,6 +42,34 @@ EOF
 // RUN: llvm-dwarfdump -v --debug-info %t.parallel.dSYM \
 // RUN:     | FileCheck --check-prefix=ACCEL %s
 
+// Foo imports Bar, so Foo.pcm carries a skeleton of Bar next to the module it
+// describes. That import has to resolve to the unit built from Bar.pcm, which
+// is the only one describing Bar in full. Both units offer the parallel linker
+// an anchor for Bar, so the winner must not depend on which is cloned first.
+
+// RUN: dsymutil --linker parallel -f -oso-prepend-path=%p/../Inputs/modules \
+// RUN:   -y %p/dummy-debug-map.map -o %t.threaded
+// RUN: dsymutil --linker parallel -f --num-threads 1 \
+// RUN:   -oso-prepend-path=%p/../Inputs/modules \
+// RUN:   -y %p/dummy-debug-map.map -o %t.serial
+// RUN: cmp %t.threaded %t.serial
+// RUN: llvm-dwarfdump --debug-info %t.threaded \
+// RUN:     | FileCheck --check-prefix=MODIMPORT %s
+
+// MODIMPORT:      0x0[[BAR:[0-9a-f]+]]: DW_TAG_module
+// MODIMPORT-NEXT:   DW_AT_name {{.*}}"Bar"
+// MODIMPORT:          DW_TAG_structure_type
+// MODIMPORT-NEXT:       DW_AT_name {{.*}}"Bar"
+// MODIMPORT:              DW_AT_name {{.*}}"value"
+// MODIMPORT:          DW_TAG_structure_type
+// MODIMPORT-NEXT:       DW_AT_name {{.*}}"PruneMeNot"
+
+// MODIMPORT:      DW_TAG_module
+// MODIMPORT-NEXT:   DW_AT_name {{.*}}"Foo"
+// MODIMPORT:      DW_TAG_imported_declaration
+// MODIMPORT-NOT:    DW_TAG
+// MODIMPORT:        DW_AT_import {{.*}}(0x{{0*}}[[BAR]] "Bar")
+
 // ACCEL: DW_TAG_compile_unit
 
 // WARN-NOT: warning: hash mismatch

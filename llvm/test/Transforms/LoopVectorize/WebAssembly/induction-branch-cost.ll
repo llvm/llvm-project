@@ -8,15 +8,15 @@ define void @induction_phi_and_branch_cost(ptr %end, ptr %start.1, ptr %start.2)
 ; CHECK-LABEL: define void @induction_phi_and_branch_cost(
 ; CHECK-SAME: ptr [[END:%.*]], ptr [[START_1:%.*]], ptr [[START_2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[START_11:%.*]] = ptrtoint ptr [[START_1]] to i32
-; CHECK-NEXT:    [[END2:%.*]] = ptrtoint ptr [[END]] to i32
+; CHECK-NEXT:    [[START_11:%.*]] = ptrtoaddr ptr [[START_1]] to i32
+; CHECK-NEXT:    [[END2:%.*]] = ptrtoaddr ptr [[END]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[START_11]], [[END2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i32 [[TMP1]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP2]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP2]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[N_VEC]], -4
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[START_1]], i32 [[TMP3]]
@@ -36,11 +36,11 @@ define void @induction_phi_and_branch_cost(ptr %end, ptr %start.1, ptr %start.2)
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[START_1]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi ptr [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[START_2]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi ptr [ [[TMP5]], %[[MIDDLE_BLOCK]] ], [ [[START_2]], %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[PTR_IV_2:%.*]] = phi ptr [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ], [ [[PTR_IV_2_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[PTR_IV_2:%.*]] = phi ptr [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[PTR_IV_2_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr nusw i8, ptr [[PTR_IV]], i32 -4
 ; CHECK-NEXT:    [[PTR_IV_2_NEXT]] = getelementptr i8, ptr [[PTR_IV_2]], i32 -4
 ; CHECK-NEXT:    store i32 0, ptr [[PTR_IV_2]], align 4
