@@ -1,11 +1,12 @@
 ; REQUIRES: x86
-;; Test --lto-obj-path= for regular LTO.
+;; Test --lto-obj-path.
 
 ; RUN: rm -rf %t && split-file %s %t && cd %t
 ; RUN: mkdir d
 ; RUN: opt 1.ll -o 1.bc
 ; RUN: opt 2.ll -o d/2.bc
 
+;; Test --lto-obj-path= for regular LTO.
 ; RUN: rm -f objpath.o
 ; RUN: ld.lld --lto-obj-path=objpath.o -shared 1.bc d/2.bc -o 3
 ; RUN: llvm-nm 3 | FileCheck %s --check-prefix=NM
@@ -51,6 +52,21 @@
 ; CHECK2-NEXT:  <g>:
 ; CHECK2-NEXT:    retq
 ; CHECK2-NOT:   {{.}}
+
+;; Test --lto-obj-path= with the ThinLTO cache, both when filling the cache and
+;; when reusing the cached native objects.
+; RUN: opt -module-hash -module-summary 1.ll -o cache1.bc
+; RUN: opt -module-hash -module-summary 2.ll -o d/cache2.bc
+; RUN: rm -rf cache objpath.o objpath.o1 objpath.o2
+; RUN: ld.lld --lto-obj-path=objpath.o --thinlto-cache-dir=cache -shared cache1.bc d/cache2.bc -o 3
+; RUN: ls cache/llvmcache-* | count 2
+; RUN: llvm-objdump -d objpath.o1 | FileCheck %s --check-prefix=CHECK1
+; RUN: llvm-objdump -d objpath.o2 | FileCheck %s --check-prefix=CHECK2
+; RUN: rm -f objpath.o objpath.o1 objpath.o2
+; RUN: ld.lld --lto-obj-path=objpath.o --thinlto-cache-dir=cache -shared cache1.bc d/cache2.bc -o 3
+; RUN: ls cache/llvmcache-* | count 2
+; RUN: llvm-objdump -d objpath.o1 | FileCheck %s --check-prefix=CHECK1
+; RUN: llvm-objdump -d objpath.o2 | FileCheck %s --check-prefix=CHECK2
 
 ;; With --thinlto-index-only, --lto-obj-path= creates just one file.
 ; RUN: rm -f objpath.o objpath.o1 objpath.o2

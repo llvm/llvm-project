@@ -83,7 +83,6 @@ class ConstraintManager;
 class ExplodedNodeSet;
 class ExplodedNode;
 class MemRegion;
-class NodeBuilderContext;
 class ProgramState;
 class ProgramStateManager;
 class RegionAndSymbolInvalidationTraits;
@@ -156,29 +155,8 @@ private:
   SValBuilder &svalBuilder;
 
   unsigned int currStmtIdx = 0;
-
-  /// Pointer to a (so-called, somewhat misnamed) NodeBuilderContext object
-  /// which has three independent roles:
-  /// - It holds a pointer to the CFGBlock that is currently under analysis.
-  ///   (This is the primary way to get the current block.)
-  /// - It holds a pointer to the current StackFrame. (This is rarely
-  ///   used, the stack frame is usually queried from a recent
-  ///   ExplodedNode. Unfortunately it seems that these two sources of truth
-  ///   are not always consistent.)
-  /// - It can be used for constructing `NodeBuilder`s. Practically all
-  ///   `NodeBuilder` objects are useless complications in the code, so I
-  ///   intend to replace them with direct use of `CoreEngine::makeNode`.
-  /// TODO: Eventually `currBldrCtx` should be replaced by two separate fields:
-  /// `const CFGBlock *CurrBlock` & `const StackFrame *CurrStackFrame`
-  /// that are kept up-to-date and are almost always non-null during the
-  /// analysis. I will switch to this more natural representation when
-  /// `NodeBuilder`s are eliminated from the code.
-  const NodeBuilderContext *currBldrCtx = nullptr;
-  /// Historically `currBldrCtx` pointed to a local variable in some stack
-  /// frame. This field is introduced as a temporary measure to allow a gradual
-  /// transition. Only use this in {re,}setCurrStackFrameAndBlock!
-  /// TODO: Remove this temporary hack.
-  std::optional<NodeBuilderContext> OwnedCurrBldrCtx;
+  const StackFrame *CurrStackFrame = nullptr;
+  const CFGBlock *CurrBlock = nullptr;
 
   /// Helper object to determine if an Objective-C message expression
   /// implicitly never returns.
@@ -235,12 +213,6 @@ public:
     return &CTU;
   }
 
-  // FIXME: Ideally the body of this method should look like
-  //   CurrStackFrame = SF;
-  //   CurrBlock = B;
-  // where CurrStackFrame and CurrBlock are new member variables that
-  // fulfill the roles of `currBldrCtx` in a more natural way.
-  // This implementation is a temporary measure to allow a gradual transition.
   void setCurrStackFrameAndBlock(const StackFrame *SF, const CFGBlock *B) {
     // The current StackFrame and Block is reset at the beginning of
     // dispatchWorkItem. Ideally, this method should be called only once per
@@ -249,20 +221,16 @@ public:
     // StackFrame and Block needs to change in the middle of a single step
     // (which currently happens only once, in processCallExit), use an explicit
     // call to resetCurrStackFrameAndBlock.
-    assert(!currBldrCtx && !OwnedCurrBldrCtx &&
+    assert(!CurrBlock && !CurrStackFrame &&
            "The current StackFrame and Block is already set");
-    OwnedCurrBldrCtx.emplace(Engine, B, SF);
-    currBldrCtx = &*OwnedCurrBldrCtx;
+    assert(SF && B && "The StackFrame and Block must be non-null");
+    CurrStackFrame = SF;
+    CurrBlock = B;
   }
 
   void resetCurrStackFrameAndBlock() {
-    currBldrCtx = nullptr;
-    OwnedCurrBldrCtx = std::nullopt;
-  }
-
-  const NodeBuilderContext &getBuilderContext() const {
-    assert(currBldrCtx);
-    return *currBldrCtx;
+    CurrStackFrame = nullptr;
+    CurrBlock = nullptr;
   }
 
   const StackFrame *getRootStackFrame() const {
@@ -277,15 +245,11 @@ public:
   /// (e.g. a recent `ExplodedNode`). Traditionally this stack frame is
   /// only used for block count calculations (`getNumVisited`); it is probably
   /// wise to follow this tradition until the discrepancies are resolved.
-  const StackFrame *getCurrStackFrame() const {
-    return currBldrCtx ? currBldrCtx->getStackFrame() : nullptr;
-  }
+  const StackFrame *getCurrStackFrame() const { return CurrStackFrame; }
 
   /// Get the 'current' CFGBlock corresponding to the current work item
   /// (elementary analysis step handled by `dispatchWorkItem`).
-  const CFGBlock *getCurrBlock() const {
-    return currBldrCtx ? currBldrCtx->getBlock() : nullptr;
-  }
+  const CFGBlock *getCurrBlock() const { return CurrBlock; }
 
   ConstCFGElementRef getCFGElementRef() const {
     return {getCurrBlock(), currStmtIdx};
@@ -503,7 +467,7 @@ public:
   // Functions for external checking of whether we have unfinished work.
   bool wasBlocksExhausted() const { return Engine.wasBlocksExhausted(); }
   bool hasEmptyWorkList() const { return !Engine.getWorkList()->hasWork(); }
-  bool hasWorkRemaining() const { return Engine.hasWorkRemaining(); }
+  bool hasExploredAllPaths() const { return Engine.hasExploredAllPaths(); }
 
   const CoreEngine &getCoreEngine() const { return Engine; }
 
@@ -815,12 +779,11 @@ public:
   /// and updateObjectsUnderConstruction.
   std::pair<ProgramStateRef, SVal>
   handleConstructionContext(const Expr *E, ProgramStateRef State,
-                            const NodeBuilderContext *BldrCtx,
                             const StackFrame *SF, const ConstructionContext *CC,
                             EvalCallOptions &CallOpts, unsigned Idx = 0) {
 
-    SVal V = computeObjectUnderConstruction(E, State, BldrCtx->blockCount(), SF,
-                                            CC, CallOpts, Idx);
+    SVal V = computeObjectUnderConstruction(E, State, getNumVisitedCurrent(),
+                                            SF, CC, CallOpts, Idx);
     State = updateObjectsUnderConstruction(V, E, State, SF, CC, CallOpts);
 
     return std::make_pair(State, V);

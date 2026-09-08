@@ -2,7 +2,7 @@
 ; RUN: opt -p loop-vectorize -mtriple riscv64 -mattr=+v -S %s | FileCheck -check-prefix=CHECK %s
 ; RUN: opt -p loop-vectorize -mtriple riscv64 -mattr=+v -S %s -tail-folding-policy=dont-fold-tail | FileCheck -check-prefix=EPILOGUE %s
 
-define void @load_store_interleave_group(ptr noalias %data) {
+define void @load_store_interleave_group(ptr noalias %data) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @load_store_interleave_group(
 ; CHECK-SAME: ptr noalias [[DATA:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -37,8 +37,7 @@ define void @load_store_interleave_group(ptr noalias %data) {
 ; EPILOGUE-SAME: ptr noalias [[DATA:%.*]]) #[[ATTR0:[0-9]+]] {
 ; EPILOGUE-NEXT:  [[ENTRY:.*]]:
 ; EPILOGUE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; EPILOGUE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 1
-; EPILOGUE-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 4)
+; EPILOGUE-NEXT:    [[UMAX:%.*]] = shl nuw nsw i64 [[TMP0]], 1
 ; EPILOGUE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[UMAX]]
 ; EPILOGUE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; EPILOGUE:       [[VECTOR_PH]]:
@@ -97,13 +96,13 @@ exit:
   ret void
 }
 
-define void @interleave_group_with_countable_early_exit(i64 %n, ptr %dst) {
+define void @interleave_group_with_countable_early_exit(i64 %n, ptr %dst) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @interleave_group_with_countable_early_exit(
 ; CHECK-SAME: i64 [[N:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2]], i64 26)
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP0]], [[UMAX]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
@@ -160,7 +159,7 @@ define void @interleave_group_with_countable_early_exit(i64 %n, ptr %dst) {
 ; EPILOGUE-NEXT:  [[ENTRY:.*]]:
 ; EPILOGUE-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; EPILOGUE-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; EPILOGUE-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 1
+; EPILOGUE-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 1
 ; EPILOGUE-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP2]], i64 28)
 ; EPILOGUE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP0]], [[UMAX]]
 ; EPILOGUE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
@@ -236,7 +235,7 @@ exit2:
   ret void
 }
 
-define void @load_store_interleave_group_i32(ptr noalias %data) {
+define void @load_store_interleave_group_i32(ptr noalias %data) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @load_store_interleave_group_i32(
 ; CHECK-SAME: ptr noalias [[DATA:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -273,8 +272,7 @@ define void @load_store_interleave_group_i32(ptr noalias %data) {
 ; EPILOGUE-SAME: ptr noalias [[DATA:%.*]]) #[[ATTR0]] {
 ; EPILOGUE-NEXT:  [[ENTRY:.*]]:
 ; EPILOGUE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; EPILOGUE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
-; EPILOGUE-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 8)
+; EPILOGUE-NEXT:    [[UMAX:%.*]] = shl nuw nsw i64 [[TMP0]], 2
 ; EPILOGUE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[UMAX]]
 ; EPILOGUE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; EPILOGUE:       [[VECTOR_PH]]:

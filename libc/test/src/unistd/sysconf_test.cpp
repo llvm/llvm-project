@@ -53,3 +53,8 @@ TEST(LlvmLibcSysconfTest, PhysPagesTest) {
   long phys_pages = LIBC_NAMESPACE::sysconf(_SC_PHYS_PAGES);
   ASSERT_GT(phys_pages, 0L);
 }
+
+TEST(LlvmLibcSysconfTest, ClkTckTest) {
+  long clk_tck = LIBC_NAMESPACE::sysconf(_SC_CLK_TCK);
+  ASSERT_EQ(clk_tck, 100L);
+}

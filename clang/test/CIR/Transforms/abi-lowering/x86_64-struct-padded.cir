@@ -1,0 +1,163 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+
+!s8i = !cir.int<s, 8>
+!s16i = !cir.int<s, 16>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!u8i = !cir.int<u, 8>
+!u32i = !cir.int<u, 32>
+!u64i = !cir.int<u, 64>
+!rec_Ov = !cir.struct<"Ov" {data !s32i, pad !cir.array<!u8i x 12>}>
+!rec_Mid = !cir.struct<"Mid" {data !s8i, pad !cir.array<!u8i x 7>, data !s32i, pad !cir.array<!u8i x 4>}>
+!rec_Big = !cir.struct<"Big" {data !s32i, pad !cir.array<!u8i x 12>, data !s32i, pad !cir.array<!u8i x 12>}>
+!rec_NoRegs = !cir.struct<"NoRegs" {data !s32i, pad !cir.array<!u8i x 12>}>
+!rec_S1 = !cir.struct<"S1" {data !s16i, data !s16i, data !s16i}>
+!rec_anon_pad = !cir.struct<{data !rec_S1, pad !cir.array<!s8i x 2>}>
+!rec_UnnamedUnit =
+    !cir.struct<"UnnamedUnit" {data !s32i,
+                               empty !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 32, unnamed>]>,
+                               pad !cir.array<!u8i x 8>}>
+!rec_Zw = !cir.struct<"Zw" {data !s32i, empty !cir.bitfield<[#cir.bitfield_decl<!u32i, 0, unnamed>]>, pad !cir.array<!u8i x 12>}>
+!rec_ZwWide = !cir.struct<"ZwWide" {data !s8i, pad !cir.array<!u8i x 7>, empty !cir.bitfield<[#cir.bitfield_decl<!s64i, 0, unnamed>]>, data !s8i}>
+!rec_UnitSSE =
+    !cir.struct<"UnitSSE" {data !cir.double,
+                           empty !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 32, unnamed>]>,
+                           pad !cir.array<!u8i x 4>}>
+!rec_PadByte = !cir.struct<"PadByte" {data !u8i, pad !cir.array<!u8i x 3>}>
+!rec_PadByte2 = !cir.struct<"PadByte2" {data !u8i, pad !u8i}>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 16>,
+    Mid = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>,
+    NoRegs = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                                has_trivial_dtor = false, record_align = 16>,
+    Ov = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                            has_trivial_dtor = true, record_align = 16>,
+    UnnamedUnit = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                                     has_trivial_dtor = true,
+                                     record_align = 16>,
+    PadByte = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                                 has_trivial_dtor = true, record_align = 4>,
+    PadByte2 = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                                  has_trivial_dtor = true, record_align = 2>,
+    UnitSSE = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                                 has_trivial_dtor = true, record_align = 16>,
+    Zw = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                            has_trivial_dtor = true, record_align = 16>,
+    ZwWide = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+                                has_trivial_dtor = true, record_align = 1>
+  },
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i16, dense<16>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The coerce slot is allocated as the whole 16-byte record and bitcast down to
+  // the 4-byte coerce type, not the other way round, or the reload would read
+  // past the slot.
+  cir.func @take_ov(%arg0: !rec_Ov) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_ov(%arg0: !s32i)
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce"{{.*}}: !cir.ptr<!rec_Ov>
+  // CHECK:   %[[VIEW:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_Ov> -> !cir.ptr<!s32i>
+  // CHECK:   cir.store %arg0, %[[VIEW]] : !s32i, !cir.ptr<!s32i>
+  // CHECK:   %{{.+}} = cir.load %[[SLOT]] : !cir.ptr<!rec_Ov>, !rec_Ov
+
+  // Past two eightbytes, so byval, and the alignment comes from the record's
+  // declared alignment in cir.record_layouts rather than from its members,
+  // whose widest is the four-byte int.
+  cir.func @take_big(%arg0: !rec_Big) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_Big> {llvm.align = 16 : i64, llvm.byval = !rec_Big, llvm.noundef})
+
+  // A record the caller must destroy is passed by reference rather than copied,
+  // so it takes byref instead of byval even though the size rule is the same.
+  cir.func @take_no_regs(%arg0: !rec_NoRegs) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_no_regs(%arg0: !cir.ptr<!rec_NoRegs> {llvm.align = 16 : i64, llvm.byref = !rec_NoRegs})
+
+  // An anonymous record has no entry in cir.record_layouts, so both the
+  // register-passing decision and the alignment come from the fallbacks.
+  cir.func @take_anon_pad(%arg0: !rec_anon_pad) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_anon_pad(%arg0: !u64i)
+
+  // The caller side coerces in the other direction, storing the record and
+  // reloading the register from a view of the same slot.
+  cir.func @call_ov(%arg0: !rec_Ov) {
+    cir.call @take_ov(%arg0) : (!rec_Ov) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @call_ov(%arg0: !s32i)
+  // CHECK:   %[[IN:.*]] = cir.load %{{.+}} : !cir.ptr<!rec_Ov>, !rec_Ov
+  // CHECK:   %[[OUT:.*]] = cir.alloca "coerce"{{.*}}: !cir.ptr<!rec_Ov>
+  // CHECK:   cir.store %[[IN]], %[[OUT]] : !rec_Ov, !cir.ptr<!rec_Ov>
+  // CHECK:   %[[OUTVIEW:.*]] = cir.cast bitcast %[[OUT]] : !cir.ptr<!rec_Ov> -> !cir.ptr<!s32i>
+  // CHECK:   %[[REG:.*]] = cir.load %[[OUTVIEW]] : !cir.ptr<!s32i>, !s32i
+  // CHECK:   cir.call @take_ov(%[[REG]]) : (!s32i) -> ()
+
+  // `Ov` differs from this record only in spelling the same bytes `pad`, so
+  // the mark alone is what keeps the eightbyte from narrowing to !s32i.
+  cir.func @take_unnamed_unit(%arg0: !rec_UnnamedUnit) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_unnamed_unit(%arg0: !u64i)
+
+  // `Zw` holds the same storage as `Ov`, so only the zero-width bit-field keeps
+  // the eightbyte from narrowing to !s32i.
+  cir.func @take_zw(%arg0: !rec_Zw) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_zw(%arg0: !u64i)
+
+  // The declared type is wider than the byte the record ends on, so the first
+  // eightbyte stays i64 while the second narrows to the trailing char.
+  cir.func @take_zw_wide(%arg0: !rec_ZwWide) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_zw_wide(%arg0: !u64i, %arg1: !s8i)
+
+  // The unit of unnamed bit-fields occupies the four bytes at offset 8, and it
+  // holds data, so the second eightbyte is passed as well as the first.
+  cir.func @take_unit_sse(%arg0: !rec_UnitSSE) {
+    cir.return
+  }
+
+  // FIXME: classic codegen passes the second eightbyte as an i32.  The width
+  // comes out wrong here because llvm/lib/ABI skips a field marked as an
+  // unnamed bit-field when it looks for the type at an offset, so the eightbyte
+  // has nothing to narrow to.
+  // CHECK: cir.func{{.*}} @take_unit_sse(%arg0: !cir.double, %arg1: !u64i)
+
+  // A record that is padding throughout apart from one byte still coerces to
+  // that byte, at either alignment.
+  cir.func @take_padded_byte(%arg0: !rec_PadByte) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_padded_byte(%arg0: !u8i)
+
+  cir.func @take_padded_byte2(%arg0: !rec_PadByte2) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_padded_byte2(%arg0: !u8i)
+}

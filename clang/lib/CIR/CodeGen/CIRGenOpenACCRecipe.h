@@ -195,10 +195,12 @@ public:
     RecipeTy recipe;
 
     if constexpr (std::is_same_v<RecipeTy, mlir::acc::ReductionRecipeOp>) {
-      recipe = RecipeTy::create(modBuilder, loc, recipeName, mainOp.getType(),
+      recipe = RecipeTy::create(modBuilder, loc, recipeName,
+                                /*sym_visibility=*/nullptr, mainOp.getType(),
                                 convertReductionOp(reductionOp));
     } else {
-      recipe = RecipeTy::create(modBuilder, loc, recipeName, mainOp.getType());
+      recipe = RecipeTy::create(modBuilder, loc, recipeName,
+                                /*sym_visibility=*/nullptr, mainOp.getType());
     }
     insertLocation = modBuilder.saveInsertionPoint();
 

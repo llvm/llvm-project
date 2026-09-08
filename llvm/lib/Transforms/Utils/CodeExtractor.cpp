@@ -163,6 +163,12 @@ static bool isBlockValidForExtraction(const BasicBlock &BB,
       continue;
     }
 
+    // llvm.experimental.deoptimize must return the enclosing function's return
+    // type. Extraction changes the outlined function signature, which can make
+    // the deoptimize call invalid.
+    if (BB.getTerminatingDeoptimizeCall())
+      return false;
+
     if (const CallInst *CI = dyn_cast<CallInst>(I)) {
       // musttail calls have several restrictions, generally enforcing matching
       // calling conventions between the caller parent and musttail callee.
@@ -2148,7 +2154,7 @@ bool CodeExtractor::verifyAssumptionCache(const Function &OldFunc,
     // There shouldn't be any stale affected values in the assumption cache
     // that were previously in the old function, but that have now been moved
     // to the new function.
-    for (auto AffectedValVH : AC->allAssumptionsFor(I->getOperand(0))) {
+    for (auto AffectedValVH : AC->assumptionsFor(I->getOperand(0))) {
       auto *AffectedCI = dyn_cast_or_null<CallInst>(AffectedValVH);
       if (!AffectedCI)
         continue;

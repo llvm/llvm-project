@@ -654,6 +654,42 @@ func.func @succeededOilistCustom(%arg0: i32, %arg1: i32, %arg2: i32) {
 
 // -----
 
+// CHECK-LABEL: @succeededOilistWithSeparator
+func.func @succeededOilistWithSeparator() {
+  // CHECK: test.oilist_with_separator
+  test.oilist_with_separator
+  // CHECK: test.oilist_with_separator keyword
+  test.oilist_with_separator keyword
+  // CHECK: test.oilist_with_separator keyword, otherKeyword
+  test.oilist_with_separator otherKeyword, keyword
+  // CHECK: test.oilist_with_separator keyword, otherKeyword, thirdKeyword
+  test.oilist_with_separator thirdKeyword, keyword, otherKeyword
+  return
+}
+
+// -----
+
+func.func @failedOilistWithDuplicateSeparatedClause() {
+  // expected-error@+1 {{`keyword` clause can appear at most once in the expansion of the oilist directive}}
+  test.oilist_with_separator keyword, keyword
+}
+
+// -----
+
+func.func @failedOilistWithMissingSeparator() {
+  // expected-error@+1 {{expected ',' between oilist clauses}}
+  test.oilist_with_separator keyword otherKeyword
+}
+
+// -----
+
+func.func @failedOilistWithTrailingSeparator() {
+  // expected-error@+1 {{expected oilist clause after separator}}
+  test.oilist_with_separator keyword,
+}
+
+// -----
+
 func.func @failedHasDominanceScopeOutsideDominanceFreeScope() -> () {
   "test.ssacfg_region"() ({
     test.graph_region {

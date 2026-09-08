@@ -1431,18 +1431,6 @@ def : GCNPat <
   (SI_DEMOTE_I1 SCSrc_i1:$src, -1)
 >;
 
-  // TODO: we could add more variants for other types of conditionals
-
-def : GCNPat <
-  (i64 (int_amdgcn_icmp i1:$src, (i1 0), (i32 33))),
-  (COPY $src) // Return the SGPRs representing i1 src
->;
-
-def : GCNPat <
-  (i32 (int_amdgcn_icmp i1:$src, (i1 0), (i32 33))),
-  (COPY $src) // Return the SGPRs representing i1 src
->;
-
 //===----------------------------------------------------------------------===//
 // VOP1 Patterns
 //===----------------------------------------------------------------------===//
@@ -4111,17 +4099,16 @@ def : GCNPat <
   (V_LSHL_OR_B32_e64 VGPR_32:$src_hi, (i32 16), VSrc_b32:$src2)
 >;
 
-// Real-true16: high source is a VGPR_16, so OR it into the high half of src2
-// with v_or_b16 and assemble the 32-bit result with a REG_SEQUENCE.
+// Real-true16: high source is a VGPR_16. Widen it to a 32-bit register and
+// fold into v_lshl_or_b32.
 let True16Predicate = UseRealTrue16Insts in
 def : GCNPat <
   (i32 (DivergentBinFrag<or>
     (i32 (bitconvert (v2i16 (build_vector (i16 0), (i16 VGPR_16:$src_hi))))),
     i32:$src2)),
-  (REG_SEQUENCE VGPR_32,
-    (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $src2, VGPR_32)), lo16)), lo16,
-    (V_OR_B16_t16_e64 (i32 0), VGPR_16:$src_hi,
-                      (i32 0), (i16 (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $src2, VGPR_32)), hi16))), hi16)
+  (V_LSHL_OR_B32_e64
+    (i32 (REG_SEQUENCE VGPR_32, VGPR_16:$src_hi, lo16, (i16 (IMPLICIT_DEF)), hi16)),
+    (i32 16), VSrc_b32:$src2)
 >;
 
 // With multiple uses of the shift, this will duplicate the shift and
@@ -4392,18 +4379,18 @@ def : GCNPat<
 
 multiclass BFMPatterns <ValueType vt, PatFrag SHL, PatFrag ADD, InstSI BFM> {
   def : GCNPat <
-    (vt (SHL (vt (add (vt (shl 1, vt:$a)), -1)), vt:$b)),
+    (vt (SHL (vt (add (vt (shl 1, i32:$a)), -1)), i32:$b)),
     (BFM $a, $b)
   >;
 
   def : GCNPat <
-    (vt (ADD (vt (shl 1, vt:$a)), -1)),
+    (vt (ADD (vt (shl 1, i32:$a)), -1)),
     (BFM $a, (i32 0))
   >;
 }
 
 defm : BFMPatterns <i32, UniformBinFrag<shl>, UniformBinFrag<add>, S_BFM_B32>;
-// FIXME: defm : BFMPatterns <i64, UniformBinFrag<shl>, UniformBinFrag<add>, S_BFM_B64>;
+defm : BFMPatterns <i64, UniformBinFrag<shl>, UniformBinFrag<add>, S_BFM_B64>;
 defm : BFMPatterns <i32, DivergentBinFrag<shl>, DivergentBinFrag<add>, V_BFM_B32_e64>;
 
 // Bitfield extract patterns
