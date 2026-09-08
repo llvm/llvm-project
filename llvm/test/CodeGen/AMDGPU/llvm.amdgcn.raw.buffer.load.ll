@@ -250,24 +250,31 @@ main_body:
 }
 
 define amdgpu_ps <4 x float> @buffer_load_voffset_large_13bit(<4 x i32> inreg) {
-; PREGFX10-LABEL: buffer_load_voffset_large_13bit:
-; PREGFX10:       ; %bb.0: ; %main_body
-; PREGFX10-NEXT:    v_mov_b32_e32 v0, 0x1000
-; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
-; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
-; PREGFX10-NEXT:    ; return to shader part epilog
+; GFX6-LABEL: buffer_load_voffset_large_13bit:
+; GFX6:       ; %bb.0: ; %main_body
+; GFX6-NEXT:    v_mov_b32_e32 v0, 0x1000
+; GFX6-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: buffer_load_voffset_large_13bit:
+; GFX8:       ; %bb.0: ; %main_body
+; GFX8-NEXT:    s_movk_i32 s4, 0x1000
+; GFX8-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], s4 offset:4092
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: buffer_load_voffset_large_13bit:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0x1000
-; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX10-NEXT:    s_movk_i32 s4, 0x1000
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], s4 offset:4092
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: buffer_load_voffset_large_13bit:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0x1000
-; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX11-NEXT:    s_movk_i32 s4, 0x1000
+; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], s4 offset:4092
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
@@ -282,24 +289,31 @@ main_body:
 }
 
 define amdgpu_ps <4 x float> @buffer_load_voffset_large_16bit(<4 x i32> inreg) {
-; PREGFX10-LABEL: buffer_load_voffset_large_16bit:
-; PREGFX10:       ; %bb.0: ; %main_body
-; PREGFX10-NEXT:    v_mov_b32_e32 v0, 0xf000
-; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
-; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
-; PREGFX10-NEXT:    ; return to shader part epilog
+; GFX6-LABEL: buffer_load_voffset_large_16bit:
+; GFX6:       ; %bb.0: ; %main_body
+; GFX6-NEXT:    v_mov_b32_e32 v0, 0xf000
+; GFX6-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: buffer_load_voffset_large_16bit:
+; GFX8:       ; %bb.0: ; %main_body
+; GFX8-NEXT:    s_mov_b32 s4, 0xf000
+; GFX8-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], s4 offset:4092
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: buffer_load_voffset_large_16bit:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0xf000
-; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX10-NEXT:    s_mov_b32 s4, 0xf000
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], s4 offset:4092
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: buffer_load_voffset_large_16bit:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0xf000
-; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX11-NEXT:    s_mov_b32 s4, 0xf000
+; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], s4 offset:4092
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
@@ -314,24 +328,31 @@ main_body:
 }
 
 define amdgpu_ps <4 x float> @buffer_load_voffset_large_23bit(<4 x i32> inreg) {
-; PREGFX10-LABEL: buffer_load_voffset_large_23bit:
-; PREGFX10:       ; %bb.0: ; %main_body
-; PREGFX10-NEXT:    v_mov_b32_e32 v0, 0x7ff000
-; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
-; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
-; PREGFX10-NEXT:    ; return to shader part epilog
+; GFX6-LABEL: buffer_load_voffset_large_23bit:
+; GFX6:       ; %bb.0: ; %main_body
+; GFX6-NEXT:    v_mov_b32_e32 v0, 0x7ff000
+; GFX6-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: buffer_load_voffset_large_23bit:
+; GFX8:       ; %bb.0: ; %main_body
+; GFX8-NEXT:    s_mov_b32 s4, 0x7ff000
+; GFX8-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], s4 offset:4092
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: buffer_load_voffset_large_23bit:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0x7ff000
-; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX10-NEXT:    s_mov_b32 s4, 0x7ff000
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], s4 offset:4092
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: buffer_load_voffset_large_23bit:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0x7ff000
-; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX11-NEXT:    s_mov_b32 s4, 0x7ff000
+; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], s4 offset:4092
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
@@ -346,31 +367,38 @@ main_body:
 }
 
 define amdgpu_ps <4 x float> @buffer_load_voffset_large_24bit(<4 x i32> inreg) {
-; PREGFX10-LABEL: buffer_load_voffset_large_24bit:
-; PREGFX10:       ; %bb.0: ; %main_body
-; PREGFX10-NEXT:    v_mov_b32_e32 v0, 0xfff000
-; PREGFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
-; PREGFX10-NEXT:    s_waitcnt vmcnt(0)
-; PREGFX10-NEXT:    ; return to shader part epilog
+; GFX6-LABEL: buffer_load_voffset_large_24bit:
+; GFX6:       ; %bb.0: ; %main_body
+; GFX6-NEXT:    v_mov_b32_e32 v0, 0xfff000
+; GFX6-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX6-NEXT:    s_waitcnt vmcnt(0)
+; GFX6-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: buffer_load_voffset_large_24bit:
+; GFX8:       ; %bb.0: ; %main_body
+; GFX8-NEXT:    s_mov_b32 s4, 0xfff000
+; GFX8-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], s4 offset:4092
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-LABEL: buffer_load_voffset_large_24bit:
 ; GFX10:       ; %bb.0: ; %main_body
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0xfff000
-; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX10-NEXT:    s_mov_b32 s4, 0xfff000
+; GFX10-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], s4 offset:4092
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: buffer_load_voffset_large_24bit:
 ; GFX11:       ; %bb.0: ; %main_body
-; GFX11-NEXT:    v_mov_b32_e32 v0, 0xfff000
-; GFX11-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], 0 offen offset:4092
+; GFX11-NEXT:    s_mov_b32 s4, 0xfff000
+; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], s4 offset:4092
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-LABEL: buffer_load_voffset_large_24bit:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_mov_b32_e32 v0, 0x800000
-; GFX12-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen offset:8388604
+; GFX12-NEXT:    s_mov_b32 s4, 0x800000
+; GFX12-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], s4 offset:8388604
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
@@ -637,73 +665,17 @@ define amdgpu_ps void @buffer_load_x1_offen_merged_or(<4 x i32> inreg %rsrc, i32
 ; GFX11-NEXT:    exp mrt0, v4, v5, v0, v0 done
 ; GFX11-NEXT:    s_endpgm
 ;
-; GFX12-SDAG-TRUE16-LABEL: buffer_load_x1_offen_merged_or:
-; GFX12-SDAG-TRUE16:       ; %bb.0: ; %main_body
-; GFX12-SDAG-TRUE16-NEXT:    v_lshlrev_b32_e32 v4, 6, v0
-; GFX12-SDAG-TRUE16-NEXT:    s_clause 0x1
-; GFX12-SDAG-TRUE16-NEXT:    buffer_load_b128 v[0:3], v4, s[0:3], null offen offset:4
-; GFX12-SDAG-TRUE16-NEXT:    buffer_load_b64 v[4:5], v4, s[0:3], null offen offset:28
-; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x1
-; GFX12-SDAG-TRUE16-NEXT:    export mrt0, v0, v1, v2, v3 done
-; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-TRUE16-NEXT:    export mrt0, v4, v5, v0, v0 done
-; GFX12-SDAG-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-SDAG-FAKE16-LABEL: buffer_load_x1_offen_merged_or:
-; GFX12-SDAG-FAKE16:       ; %bb.0: ; %main_body
-; GFX12-SDAG-FAKE16-NEXT:    v_lshlrev_b32_e32 v4, 6, v0
-; GFX12-SDAG-FAKE16-NEXT:    s_clause 0x1
-; GFX12-SDAG-FAKE16-NEXT:    buffer_load_b128 v[0:3], v4, s[0:3], null offen offset:4
-; GFX12-SDAG-FAKE16-NEXT:    buffer_load_b64 v[4:5], v4, s[0:3], null offen offset:28
-; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x1
-; GFX12-SDAG-FAKE16-NEXT:    export mrt0, v0, v1, v2, v3 done
-; GFX12-SDAG-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-FAKE16-NEXT:    export mrt0, v4, v5, v0, v0 done
-; GFX12-SDAG-FAKE16-NEXT:    s_endpgm
-;
-; GFX12-GISEL-TRUE16-LABEL: buffer_load_x1_offen_merged_or:
-; GFX12-GISEL-TRUE16:       ; %bb.0: ; %main_body
-; GFX12-GISEL-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 6, v0
-; GFX12-GISEL-TRUE16-NEXT:    v_or_b32_e32 v1, 4, v0
-; GFX12-GISEL-TRUE16-NEXT:    v_or_b32_e32 v2, 8, v0
-; GFX12-GISEL-TRUE16-NEXT:    v_or_b32_e32 v3, 12, v0
-; GFX12-GISEL-TRUE16-NEXT:    v_or_b32_e32 v4, 16, v0
-; GFX12-GISEL-TRUE16-NEXT:    v_or_b32_e32 v5, 28, v0
-; GFX12-GISEL-TRUE16-NEXT:    v_or_b32_e32 v0, 32, v0
-; GFX12-GISEL-TRUE16-NEXT:    s_clause 0x5
-; GFX12-GISEL-TRUE16-NEXT:    buffer_load_b32 v1, v1, s[0:3], null offen
-; GFX12-GISEL-TRUE16-NEXT:    buffer_load_b32 v2, v2, s[0:3], null offen
-; GFX12-GISEL-TRUE16-NEXT:    buffer_load_b32 v3, v3, s[0:3], null offen
-; GFX12-GISEL-TRUE16-NEXT:    buffer_load_b32 v4, v4, s[0:3], null offen
-; GFX12-GISEL-TRUE16-NEXT:    buffer_load_b32 v5, v5, s[0:3], null offen
-; GFX12-GISEL-TRUE16-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
-; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x2
-; GFX12-GISEL-TRUE16-NEXT:    export mrt0, v1, v2, v3, v4 done
-; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-TRUE16-NEXT:    export mrt0, v5, v0, v0, v0 done
-; GFX12-GISEL-TRUE16-NEXT:    s_endpgm
-;
-; GFX12-GISEL-FAKE16-LABEL: buffer_load_x1_offen_merged_or:
-; GFX12-GISEL-FAKE16:       ; %bb.0: ; %main_body
-; GFX12-GISEL-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 6, v0
-; GFX12-GISEL-FAKE16-NEXT:    v_or_b32_e32 v1, 4, v0
-; GFX12-GISEL-FAKE16-NEXT:    v_or_b32_e32 v2, 8, v0
-; GFX12-GISEL-FAKE16-NEXT:    v_or_b32_e32 v3, 12, v0
-; GFX12-GISEL-FAKE16-NEXT:    v_or_b32_e32 v4, 16, v0
-; GFX12-GISEL-FAKE16-NEXT:    v_or_b32_e32 v5, 28, v0
-; GFX12-GISEL-FAKE16-NEXT:    v_or_b32_e32 v0, 32, v0
-; GFX12-GISEL-FAKE16-NEXT:    s_clause 0x5
-; GFX12-GISEL-FAKE16-NEXT:    buffer_load_b32 v1, v1, s[0:3], null offen
-; GFX12-GISEL-FAKE16-NEXT:    buffer_load_b32 v2, v2, s[0:3], null offen
-; GFX12-GISEL-FAKE16-NEXT:    buffer_load_b32 v3, v3, s[0:3], null offen
-; GFX12-GISEL-FAKE16-NEXT:    buffer_load_b32 v4, v4, s[0:3], null offen
-; GFX12-GISEL-FAKE16-NEXT:    buffer_load_b32 v5, v5, s[0:3], null offen
-; GFX12-GISEL-FAKE16-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen
-; GFX12-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x2
-; GFX12-GISEL-FAKE16-NEXT:    export mrt0, v1, v2, v3, v4 done
-; GFX12-GISEL-FAKE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-FAKE16-NEXT:    export mrt0, v5, v0, v0, v0 done
-; GFX12-GISEL-FAKE16-NEXT:    s_endpgm
+; GFX12-LABEL: buffer_load_x1_offen_merged_or:
+; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    v_lshlrev_b32_e32 v4, 6, v0
+; GFX12-NEXT:    s_clause 0x1
+; GFX12-NEXT:    buffer_load_b128 v[0:3], v4, s[0:3], null offen offset:4
+; GFX12-NEXT:    buffer_load_b64 v[4:5], v4, s[0:3], null offen offset:28
+; GFX12-NEXT:    s_wait_loadcnt 0x1
+; GFX12-NEXT:    export mrt0, v0, v1, v2, v3 done
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    export mrt0, v4, v5, v0, v0 done
+; GFX12-NEXT:    s_endpgm
 main_body:
   %a = shl i32 %inp, 6
   %a1 = or i32 %a, 4

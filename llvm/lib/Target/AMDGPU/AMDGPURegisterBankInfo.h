@@ -90,9 +90,6 @@ public:
   Register handleD16VData(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                           Register Reg) const;
 
-  std::pair<Register, unsigned>
-  splitBufferOffsets(MachineIRBuilder &B, Register Offset) const;
-
   /// See RegisterBankInfo::applyMapping.
   void applyMappingImpl(MachineIRBuilder &Builder,
                         const OperandsMapper &OpdMapper) const override;
