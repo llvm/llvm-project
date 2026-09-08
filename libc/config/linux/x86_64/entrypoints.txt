@@ -616,7 +616,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.fenv.fesetexceptflag
     libc.src.fenv.fesetround
     libc.src.fenv.fetestexcept
-    libc.src.fenv.fetestexceptflag
+    libc.src.fenv.fegestexceptflag
     libc.src.fenv.feupdateenv
 
     # math.h entrypoints
