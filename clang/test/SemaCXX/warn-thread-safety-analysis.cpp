@@ -3354,6 +3354,10 @@ struct TestTryLock {
   // branch.
   bool TryLockSplit() EXCLUSIVE_TRYLOCK_FUNCTION(true, mu)
       EXCLUSIVE_TRYLOCK_FUNCTION(false, mu2);
+  // A call keyed to a success code: branching on the truthiness of its
+  // result names the call but resolves nothing, since "nonzero" is one
+  // code or another and the edge does not say which.
+  int TryCode2() EXCLUSIVE_TRYLOCK_FUNCTION(2, mu);
   void tryheld_mixed_success_values() {
     if (TryLockSplit()) {
       a = 1;
@@ -3731,6 +3735,89 @@ struct TestTryLock {
     if (b)
       mu.Unlock(); // expected-warning {{releasing mutex 'mu' that was not held}}
   }
+
+  // A goto into a loop body from a block outside the loop. The check made
+  // before the jump (`if (ok)`, which resolves nothing for a code-keyed
+  // capability) is not a check around the loop: the loop's blocks are the
+  // ones its head dominates, and the block that made the check is not one
+  // of them. An unbounded backward walk from the latch escapes through the
+  // goto and counts it, which is what used to silence the report.
+  void tryheld_loop_goto_checked_outside(bool e) {
+    bool ok2 = mu.TryLock(); // expected-note {{mutex acquired here}}
+    if (e) {
+      int ok = TryCode2(); // expected-note {{mutex acquired here}}
+      if (ok)
+        goto inner;
+      return;
+    }
+    while (cond) { // expected-warning {{unchecked result of try-acquire; mutex 'mu' may still be held past this point}}
+    inner:;
+    }
+    if (ok2)
+      mu.Unlock();
+  } // expected-warning {{unchecked result of try-acquire; mutex 'mu' may still be held at the end of function}}
+
+  // The same shape inside another cycle. Forward reachability from the
+  // head is no bound here -- the head reaches the pre-loop blocks round
+  // the outer back edge -- so only dominance keeps the inner loop's blocks
+  // to the two that are really in it.
+  void tryheld_loop_goto_checked_outside_nested(bool e) {
+    while (cond2) {
+      bool ok2 = mu.TryLock(); // expected-note {{mutex acquired here}}
+      if (e) {
+        int ok = TryCode2(); // expected-note {{mutex acquired here}}
+        if (ok)
+          goto inner;
+        return;
+      }
+      while (cond) { // expected-warning {{unchecked result of try-acquire; mutex 'mu' may still be held past this point}}
+      inner:;
+      }
+      if (ok2)
+        mu.Unlock();
+    }
+  } // expected-warning {{unchecked result of try-acquire; mutex 'mu' may still be held at the end of function}}
+
+  // Two latches for one head: the natural loop is collected once per back
+  // edge, and the jumped-into block belongs to both.
+  void tryheld_loop_goto_multi_latch(bool e) {
+    bool ok2 = mu.TryLock(); // expected-note {{mutex acquired here}}
+    if (e) {
+      int ok = TryCode2(); // expected-note {{mutex acquired here}}
+      if (ok)
+        goto inner;
+      return;
+    }
+    while (cond) { // expected-warning {{unchecked result of try-acquire; mutex 'mu' may still be held past this point}}
+    inner:;
+      if (cond2)
+        continue;
+    }
+    if (ok2)
+      mu.Unlock();
+  } // expected-warning {{unchecked result of try-acquire; mutex 'mu' may still be held at the end of function}}
+
+  // An irreducible cycle -- A and B are a loop with two entries -- is the
+  // other way the unbounded walk escaped: no block dominates both entries,
+  // so the cycle's natural loop for the back edge it does find is small,
+  // and the check made on the way in is again outside it.
+  void tryheld_loop_irreducible_checked_outside(bool e) {
+    bool ok2 = mu.TryLock(); // expected-note {{mutex acquired here}}
+    if (e) {
+      int ok = TryCode2(); // expected-note {{mutex acquired here}}
+      if (ok)
+        goto B;
+      return;
+    }
+  A:
+    // expected-warning@+1 {{unchecked result of try-acquire; mutex 'mu' may still be held past this point}}
+    cond2 = false;
+  B:
+    if (cond)
+      goto A;
+    if (ok2)
+      mu.Unlock();
+  } // expected-warning {{unchecked result of try-acquire; mutex 'mu' may still be held at the end of function}}
 
   // A do-while spin: the call precedes the check here, so this resolved
   // before order-independent recording too; pins the rotated-loop shape.

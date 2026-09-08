@@ -26,6 +26,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/Analysis/Analyses/Dominators.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/Analyses/ThreadSafetyCommon.h"
 #include "clang/Analysis/Analyses/ThreadSafetyTIL.h"
@@ -3156,6 +3157,11 @@ class ThreadSafetyAnalyzer {
   /// the entry set before the per-block setup (runAnalysis()). Empty until
   /// then, and for a function the analysis skips.
   std::optional<FactSet> ExpectedFunctionExitSet;
+  /// The function's dominator tree, built on demand by collectNaturalLoop()
+  /// and shared by every back edge: a loop's blocks are the ones its head
+  /// dominates, and recomputing the reach of each head instead costs the
+  /// whole function per back edge.
+  std::optional<CFGDomTree> LoopDomTree;
 
   BeforeSet *GlobalBeforeSet;
 
@@ -3410,8 +3416,9 @@ private:
                            FactSet &ExpectedExitSet);
   void joinPredecessors(const CFGBlock *CurrBlock, CFGBlockInfo &CurrBlockInfo);
   void visitBlock(const CFGBlock *CurrBlock, BuildLockset &LocksetBuilder);
-  void collectLoopCheckedResults(const CFGBlock *Head, const CFGBlock *Latch,
-                                 llvm::SmallPtrSetImpl<const Expr *> &Checked);
+  void collectLoopCheckedResults(
+      const llvm::SmallPtrSetImpl<const CFGBlock *> &LoopBlocks,
+      llvm::SmallPtrSetImpl<const Expr *> &Checked);
   void checkBackEdges(const CFGBlock *CurrBlock);
   /// \}
 };
@@ -8041,33 +8048,42 @@ void ThreadSafetyAnalyzer::recordTryAcquireCalls() {
 }
 
 /// The natural loop of the back edge \p Latch -> \p Head, into
-/// \p LoopBlocks: the blocks reaching the latch backwards without passing
-/// the head, bounded by what the head reaches forwards. Without that bound
-/// a second entry into the body (a goto into the loop, or an irreducible
-/// loop) would let the backward walk escape the loop and absorb arbitrary
-/// blocks up to the function's entry.
+/// \p LoopBlocks, which must be empty (the walk uses it as its visited
+/// set): the head, plus every block that reaches the latch backwards
+/// without passing the head and that the head dominates.
+///
+/// Dominance is what makes the set a loop. A second entry into the body --
+/// a goto into it, or an irreducible cycle -- reaches the latch backwards
+/// too, so without the bound the walk would absorb arbitrary blocks up to
+/// the function's entry; and a block the head does not dominate is by
+/// definition reachable without the head, so the loop does not contain it.
+///
+/// Two edges are not the textbook back edges dominance is defined for, and
+/// both are deliberate. The latch is inserted whether or not the head
+/// dominates it, so an irreducible cross edge the traversal reports as a
+/// back edge gives {Head, Latch} rather than a bare head. And a self-loop
+/// (Latch == Head) is {Head} alone: expanding the latch would walk into
+/// the head's other predecessors, which for a loop nested in another cycle
+/// means absorbing the enclosing loop.
 void ThreadSafetyAnalyzer::collectNaturalLoop(
     const CFGBlock *Head, const CFGBlock *Latch,
     llvm::SmallPtrSetImpl<const CFGBlock *> &LoopBlocks) {
-  llvm::SmallPtrSet<const CFGBlock *, 16> FromHead;
-  SmallVector<const CFGBlock *, 16> Work{Head};
-  FromHead.insert(Head);
-  while (!Work.empty()) {
-    const CFGBlock *B = Work.pop_back_val();
-    for (CFGBlock::const_succ_iterator SI = B->succ_begin(), SE = B->succ_end();
-         SI != SE; ++SI)
-      if (*SI && FromHead.insert(*SI).second)
-        Work.push_back(*SI);
-  }
+  assert(LoopBlocks.empty() && "the walk uses it as its visited set");
+  if (!LoopDomTree)
+    LoopDomTree.emplace(Head->getParent());
+  const auto &DT = LoopDomTree->getBase();
+  SmallVector<const CFGBlock *, 16> Work;
   LoopBlocks.insert(Head);
-  LoopBlocks.insert(Latch);
-  Work.assign({Latch});
+  if (LoopBlocks.insert(Latch).second)
+    Work.push_back(Latch);
   while (!Work.empty()) {
     const CFGBlock *B = Work.pop_back_val();
-    for (CFGBlock::const_pred_iterator PI = B->pred_begin(), PE = B->pred_end();
-         PI != PE; ++PI)
-      if (*PI && FromHead.contains(*PI) && LoopBlocks.insert(*PI).second)
-        Work.push_back(*PI);
+    for (const CFGBlock *P : llvm::inverse_children<const CFGBlock *>(B))
+      // A block unreachable from the entry has no dominator-tree node, and
+      // the tree answers that everything dominates it; it is in no loop.
+      if (DT.isReachableFromEntry(P) && DT.dominates(Head, P) &&
+          LoopBlocks.insert(P).second)
+        Work.push_back(P);
   }
 }
 
@@ -8093,6 +8109,12 @@ void ThreadSafetyAnalyzer::collectInjectableTryFacts(
 /// have released the capability, and the blocks were analyzed before this
 /// back edge was seen, so the exit edges would otherwise resolve or
 /// re-materialize a hold the loop may have released (getEdgeLockset()).
+///
+/// A member the traversal has not analyzed is patched too and the patch is
+/// then discarded, since that block's own visit overwrites its exit set.
+/// Such a member exists only where the loop was entered from outside its
+/// head -- the sealed comparison this runs beside has the same blind spot
+/// -- and the loss is toward suppression.
 void ThreadSafetyAnalyzer::patchLoopExitSets(
     const llvm::SmallPtrSetImpl<const CFGBlock *> &LoopBlocks,
     ArrayRef<FactID> Injectable) {
@@ -8478,34 +8500,20 @@ void ThreadSafetyAnalyzer::visitBlock(const CFGBlock *CurrBlock,
 }
 
 /// Collect into \p Checked the try-acquire calls whose results are branched
-/// on inside the natural loop of the back edge \p Latch -> \p Head: for
-/// the unchecked-result warning, they are (or will be, on the next
-/// iteration) checked around the loop. Results checked only outside the
-/// loop are not: the loop re-executes the call (or discards the result)
-/// unchecked.
+/// on inside \p LoopBlocks, a back edge's natural loop as
+/// collectNaturalLoop() computes it: for the unchecked-result warning,
+/// they are (or will be, on the next iteration) checked around the loop.
+/// Results checked only outside the loop are not: the loop re-executes the
+/// call (or discards the result) unchecked.
 ///
-/// The loop is the head plus every block reaching the latch backwards
-/// without passing through it. All these blocks precede the latch in the
-/// traversal, so their exit contexts are available for the decode below;
-/// on an irreducible CFG the walk may escape the loop, erring toward
-/// suppression. (collectNaturalLoop() bounds the same walk by the head's
-/// forward reach, which this one does not: the two answers differ only
-/// where a block outside the loop reaches the latch.)
+/// \p LoopBlocks is not promised to precede the latch in the traversal --
+/// an irreducible cycle inside the loop leaves the order to break it --
+/// and the decode below does not need it to: LocalVariableMap::traverseCFG()
+/// fills every reachable block's exit context before the lockset walk
+/// begins, and an unreachable block is in no loop.
 void ThreadSafetyAnalyzer::collectLoopCheckedResults(
-    const CFGBlock *Head, const CFGBlock *Latch,
+    const llvm::SmallPtrSetImpl<const CFGBlock *> &LoopBlocks,
     llvm::SmallPtrSetImpl<const Expr *> &Checked) {
-  llvm::SmallPtrSet<const CFGBlock *, 8> LoopBlocks;
-  SmallVector<const CFGBlock *, 8> Worklist;
-  LoopBlocks.insert(Head);
-  if (LoopBlocks.insert(Latch).second)
-    Worklist.push_back(Latch);
-  while (!Worklist.empty()) {
-    const CFGBlock *B = Worklist.pop_back_val();
-    for (CFGBlock::const_pred_iterator PI = B->pred_begin(), PE = B->pred_end();
-         PI != PE; ++PI)
-      if (*PI && LoopBlocks.insert(*PI).second)
-        Worklist.push_back(*PI);
-  }
   // Decode each loop block's terminator now, rather than consulting
   // what happened to be decoded already: a goto-rotated loop's latch
   // terminator has not had its forward edges processed yet, and its
@@ -8566,25 +8574,35 @@ void ThreadSafetyAnalyzer::checkBackEdges(const CFGBlock *CurrBlock) {
     Ctx.setRebranch(
         getConditionTrylockCallExpr(FirstLoopBlock, /*CheckAllPaths=*/true));
     Ctx.SealedEntry = true;
+    // Release evidence reaching the loop head on its back edge -- a
+    // Released try fact, or a conditional one marked MayBeReleased -- says
+    // an iteration may have released the capability. Read from the latch's
+    // exit set before the comparison below, which does not touch it, so
+    // that the natural loop the patch needs is walked together with the
+    // one the checked-result scan needs; patched after it, so that the
+    // head's own entry set is compared unpatched.
+    SmallVector<FactID, 2> Injectable;
+    collectInjectableTryFacts(CurrBlock, Injectable);
+    const bool WantChecked =
+        Handler.issueBetaWarnings() && hasTryLockFact(LoopEnd->ExitSet);
+    // The back edge's natural loop, walked once for both phases below and
+    // only if one of them asks. The scan is beta-only, the patch is not,
+    // so neither gate implies the other and the walk answers to both.
+    llvm::SmallPtrSet<const CFGBlock *, 8> LoopBlocks;
+    if (WantChecked || !Injectable.empty())
+      collectNaturalLoop(FirstLoopBlock, CurrBlock, LoopBlocks);
     llvm::SmallPtrSet<const Expr *, 4> CheckedInLoop;
-    if (Handler.issueBetaWarnings() && hasTryLockFact(LoopEnd->ExitSet)) {
-      collectLoopCheckedResults(FirstLoopBlock, CurrBlock, CheckedInLoop);
+    if (WantChecked) {
+      collectLoopCheckedResults(LoopBlocks, CheckedInLoop);
       Ctx.CheckedAroundLoop = &CheckedInLoop;
     }
     intersectAndWarn(PreLoop->EntrySet, LoopEnd->ExitSet, Ctx);
-    // A released try fact or negative fact reaching the loop head on its back
-    // edge is evidence that an iteration may have released the capability
-    // (or failed to re-acquire it): patch it into the sealed exit sets the
-    // loop's exit edges are computed from. Read from the latch's exit set
-    // after the comparison above, which does not touch it, and patched
-    // after it, so that the head's own entry set is compared unpatched.
-    SmallVector<FactID, 2> Injectable;
-    collectInjectableTryFacts(CurrBlock, Injectable);
-    if (!Injectable.empty()) {
-      llvm::SmallPtrSet<const CFGBlock *, 8> LoopBlocks;
-      collectNaturalLoop(FirstLoopBlock, CurrBlock, LoopBlocks);
+    // Patch the evidence into the sealed exit sets the loop's exit edges
+    // are computed from: the blocks were analyzed before this back edge
+    // was seen, so those edges would otherwise resolve or re-materialize a
+    // hold the loop may have released (getEdgeLockset()).
+    if (!Injectable.empty())
       patchLoopExitSets(LoopBlocks, Injectable);
-    }
   }
 }
 

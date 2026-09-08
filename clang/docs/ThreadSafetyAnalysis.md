@@ -534,8 +534,9 @@ may then be leaked. That covers a result never used to determine success, and
 also one the analysis cannot follow to a branch: stored in a member or a
 parameter, or simply returned to the caller. One acquisition is reported once,
 at the first merge that loses it. A loop merge is exempt only while the result
-is branched on somewhere around the loop; a result never checked anywhere warns
-at the loop merge too.
+is branched on somewhere inside the loop -- in a block the loop's head
+dominates, so a check made before a `goto` into the body does not count; a
+result never checked anywhere warns at the loop merge too.
 
 (trysuccesscodes)=
 A success value that is a specific integer constant other than `1`
