@@ -2598,7 +2598,8 @@ def VectorizeChildrenAndApplyPatternsOp :
 }
 
 def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
-    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+    [AttrSizedOperandSegments,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      TransformOpInterface, ReportTrackingListenerFailuresOpTrait]> {
   let description = [{
     Vectorize the target ops, which must be Linalg ops.
@@ -2623,6 +2624,16 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
     Note: The input vector sizes must be bigger than or equal to their
     counterpart iteration space sizes.
 
+    Optionally, `mask_bounds` forces masking of specific iteration space
+    dimensions even when those dimensions are statically sized.
+    `mask_bound_dims` lists the dimension each bound applies to:
+
+    ```mlir
+    // Mask iteration space dim 1 with %bound, despite a static shape.
+    transform.structured.vectorize %target vector_sizes [128, 64]
+        mask_bounds [1] (%bound : !transform.any_value) : !transform.any_op
+    ```
+
     Typically this operator should be applied to linalg operations that have
     already been tiled to the appropriate sizes.
 
@@ -2640,7 +2651,9 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
       OptionalAttr<UnitAttr>:$vectorize_nd_extract,
       OptionalAttr<UnitAttr>:$assume_dynamic_dims_match_vec_sizes,
       OptionalAttr<UnitAttr>:$create_named_contraction,
-      DefaultValuedOptionalAttr<DenseBoolArrayAttr, "{}">:$scalable_sizes);
+      DefaultValuedOptionalAttr<DenseBoolArrayAttr, "{}">:$scalable_sizes,
+      Variadic<TransformValueHandleTypeInterface>:$mask_bounds,
+      DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$mask_bound_dims);
 
   let results = (outs);
 
@@ -2652,6 +2665,7 @@ def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
         $vector_sizes,
         $static_vector_sizes,
         $scalable_sizes))
+    (`mask_bounds` $mask_bound_dims `(` $mask_bounds^ `:` type($mask_bounds) `)`)?
     attr-dict
     `:` type($target)(`,`type($vector_sizes)^)? 
   }];
