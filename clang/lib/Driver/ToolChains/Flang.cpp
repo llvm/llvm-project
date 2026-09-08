@@ -812,7 +812,8 @@ void Flang::addTargetOptions(const ArgList &Args, ArgStringList &CmdArgs,
                    options::OPT_fno_atomic_fine_grained_memory,
                    options::OPT_fatomic_remote_memory,
                    options::OPT_fno_atomic_remote_memory,
-                   options::OPT_munsafe_fp_atomics});
+                   options::OPT_munsafe_fp_atomics,
+                   options::OPT_fdisable_real_16});
 }
 
 void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
