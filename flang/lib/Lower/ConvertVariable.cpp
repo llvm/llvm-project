@@ -782,7 +782,8 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
   const Fortran::semantics::Symbol &ultimateSymbol =
       var.getSymbol().GetUltimate();
   llvm::StringRef symNm = toStringRef(ultimateSymbol.name());
-  bool isTarg = var.isTarget();
+  bool isTarg = var.isTarget() ||
+                ultimateSymbol.attrs().test(Fortran::semantics::Attr::TARGET);
 
   // Do not allocate storage for cray pointee. The address inside the cray
   // pointer will be used instead when using the pointee. Allocating space
