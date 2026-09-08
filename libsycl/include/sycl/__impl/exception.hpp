@@ -54,10 +54,10 @@ enum class errc : int {
 
 /// Constructs an error code using sycl::errc and sycl_category().
 ///
-/// \param E SYCL 2020 error code.
+/// \param e SYCL 2020 error code.
 ///
 /// \returns constructed error code.
-_LIBSYCL_EXPORT std::error_code make_error_code(sycl::errc E) noexcept;
+_LIBSYCL_EXPORT std::error_code make_error_code(sycl::errc e) noexcept;
 
 /// Obtains a reference to the static error category object for SYCL errors.
 ///
@@ -79,29 +79,30 @@ class _LIBSYCL_EXPORT exception : public virtual std::exception {
 public:
   /// Constructs a SYCL exception without an associated context.
   ///
-  /// \param EC Error code identifying the SYCL error.
-  /// \param Msg Message describing the error condition.
-  exception(std::error_code EC, const char *Msg)
-      : exception(EC, nullptr, Msg) {}
+  /// \param ec Error code identifying the SYCL error.
+  /// \param what_arg Message describing the error condition.
+  exception(std::error_code ec, const char *what_arg)
+      : exception(ec, nullptr, what_arg) {}
 
   /// \overload
-  exception(std::error_code EC, const std::string &Msg)
-      : exception(EC, Msg.c_str()) {}
+  exception(std::error_code ec, const std::string &what_arg)
+      : exception(ec, what_arg.c_str()) {}
 
   /// \overload
-  exception(std::error_code EC) : exception(EC, "") {}
+  exception(std::error_code ec) : exception(ec, "") {}
 
   /// \overload
-  exception(int EV, const std::error_category &ECat, const std::string &WhatArg)
-      : exception(EV, ECat, WhatArg.c_str()) {}
+  exception(int ev, const std::error_category &ecat,
+            const std::string &what_arg)
+      : exception(ev, ecat, what_arg.c_str()) {}
 
   /// \overload
-  exception(int EV, const std::error_category &ECat, const char *WhatArg)
-      : exception({EV, ECat}, WhatArg) {}
+  exception(int ev, const std::error_category &ecat, const char *what_arg)
+      : exception({ev, ecat}, what_arg) {}
 
   /// \overload
-  exception(int EV, const std::error_category &ECat)
-      : exception({EV, ECat}, "") {}
+  exception(int ev, const std::error_category &ecat)
+      : exception({ev, ecat}, "") {}
 
   // To avoid cross-dependency issues between sycl::context and sycl::exception,
   // definition of ctors that require a context parameter are moved to
@@ -162,7 +163,7 @@ public:
   context get_context() const;
 
 private:
-  exception(std::error_code Ec, std::shared_ptr<context> SharedPtrCtx,
+  exception(std::error_code EC, std::shared_ptr<context> SharedPtrCtx,
             const char *WhatArg);
   // Exceptions must be noexcept copy constructible, so cannot use std::string
   // or context directly.
