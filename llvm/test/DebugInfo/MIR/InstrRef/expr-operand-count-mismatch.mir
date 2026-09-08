@@ -1,8 +1,10 @@
 # RUN: llc %s -o - -experimental-debug-variable-locations=true \
 # RUN:     -run-pass=livedebugvalues | FileCheck %s
 #
-## Two debug values for the same variable can carry identical expressions
+## Two debug values for the same variable can carry identical DIExpressions
 ## while having different numbers of location operands.
+## Here both values use the same empty !DIExpression(), but %entry describes
+## the variable with two location operands and %then with one.
 ##
 ## LiveDebugValues joins values by pairing their location operands up by index,
 ## and used to decide two values were joinable by comparing expressions alone.
@@ -13,7 +15,7 @@
 # CHECK: ![[VAR:[0-9]+]] = !DILocalVariable(name: "x"
 #
 # CHECK-LABEL: bb.0.entry:
-# CHECK:       DBG_VALUE_LIST ![[VAR]], !DIExpression(), $noreg, $noreg, debug-location
+# CHECK:       DBG_VALUE_LIST ![[VAR]], !DIExpression(), $edi, $edi, debug-location
 #
 # CHECK-LABEL: bb.1.then:
 # CHECK:       DBG_VALUE_LIST ![[VAR]], !DIExpression(), $edi, $edi, debug-location
@@ -29,11 +31,9 @@
   define i32 @f(i32 %a, i1 %c) !dbg !4 {
   entry:
     %v = add i32 %a, 1, !dbg !7
-      #dbg_value(!DIArgList(i32 %v, i32 %v), !8, !DIExpression(), !7)
     br i1 %c, label %exit, label %then
 
   then:                                             ; preds = %entry
-      #dbg_value(i32 %v, !8, !DIExpression(), !7)
     %t = mul i32 %v, 3, !dbg !7
     br label %exit
 
@@ -71,7 +71,7 @@ body:             |
     liveins: $edi, $esi
 
     renamable $edi = KILL $edi, implicit-def $rdi
-    DBG_INSTR_REF !8, !DIExpression(), dbg-instr-ref(1, 0), dbg-instr-ref(1, 0), debug-location !7
+    DBG_VALUE_LIST !8, !DIExpression(), $edi, $edi, debug-location !7
     renamable $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags
     TEST8ri renamable $sil, 1, implicit-def $eflags, implicit killed $esi
     JCC_1 %bb.2, 5, implicit $eflags
@@ -80,8 +80,8 @@ body:             |
     successors: %bb.2(0x80000000)
     liveins: $rdi
 
-    renamable $edi = INC32r renamable $edi, implicit-def dead $eflags, implicit killed $rdi, implicit-def $rdi, debug-instr-number 1, debug-location !7
-    DBG_INSTR_REF !8, !DIExpression(), dbg-instr-ref(1, 0), debug-location !7
+    renamable $edi = INC32r renamable $edi, implicit-def dead $eflags, implicit killed $rdi, implicit-def $rdi, debug-location !7
+    DBG_VALUE_LIST !8, !DIExpression(), $edi, debug-location !7
     renamable $eax = LEA64_32r killed renamable $rdi, 2, renamable $rdi, 0, $noreg, debug-location !7
 
   bb.2.exit:
