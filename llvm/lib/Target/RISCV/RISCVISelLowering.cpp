@@ -18455,8 +18455,8 @@ static SDValue combinePExtWideningAddAcc(SDNode *N, SelectionDAG &DAG,
 
   auto MatchExtend = [](SDValue V, unsigned ExtendOpcode, MVT SrcVT,
                         SDValue &Src) {
-    return sd_match(V, m_OneUse(m_Node(ExtendOpcode,
-                                       m_Value(Src, m_SpecificVT(SrcVT)))));
+    return sd_match(
+        V, m_OneUse(m_Node(ExtendOpcode, m_Value(Src, m_SpecificVT(SrcVT)))));
   };
 
   auto Match = [&](SDValue Ext, SDValue Add, SDValue &Acc, SDValue &A,
