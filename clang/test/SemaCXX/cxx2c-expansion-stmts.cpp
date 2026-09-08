@@ -1607,3 +1607,98 @@ T tf() {
 
 template long tf<long>();
 }
+
+// Check that we ignore return statements in the body of an expansion statement
+// with expansion size 0 for the purposes of return-type deduction.
+namespace gh212086 {
+auto ignored() {
+  template for (auto x : {}) {
+    return 3;
+  }
+  return 1.3;
+}
+
+static_assert(__is_same(decltype(ignored()), double));
+
+auto ignored_swapped() {
+  template for (auto x : {}) {
+    return 1.3;
+  }
+  return 3;
+}
+
+static_assert(__is_same(decltype(ignored_swapped()), int));
+
+auto ignored2() {
+  template for (auto x : {}) {
+    return x;
+  }
+}
+
+static_assert(__is_same(decltype(ignored2()), void));
+
+auto ignored3() {
+  template for (auto x : Empty()) {
+    return 3;
+  }
+  return 1.3;
+}
+
+static_assert(__is_same(decltype(ignored3()), double));
+
+auto ignored4() {
+  template for (auto x : Empty()) {
+    return x;
+  }
+}
+
+static_assert(__is_same(decltype(ignored4()), void));
+
+template <typename>
+auto ignored_template() {
+  template for (auto x : {}) {
+    return 3;
+  }
+  return 1.3;
+}
+
+template auto ignored_template<int>();
+static_assert(__is_same(decltype(ignored_template<int>()), double));
+
+template <typename>
+auto ignored_template2() {
+  template for (auto x : {}) {
+    return x;
+  }
+}
+
+template auto ignored_template2<int>();
+static_assert(__is_same(decltype(ignored_template2<int>()), void));
+
+template <typename T>
+auto ignored_template3() {
+  template for (T x : {}) {
+    return x;
+  }
+}
+
+template auto ignored_template3<int>();
+static_assert(__is_same(decltype(ignored_template3<int>()), void));
+
+auto not_ignored() {
+  int a[1]{};
+  template for (auto x : a) {
+    return 3;
+  }
+  return 1.3; // expected-error {{'auto' in return type deduced as 'double' here but deduced as 'int' in earlier return statement}}
+}
+
+auto not_ignored2() {
+  int a[1]{};
+  template for (auto x : a) {
+    return x;
+  }
+}
+
+static_assert(__is_same(decltype(not_ignored2()), int));
+}

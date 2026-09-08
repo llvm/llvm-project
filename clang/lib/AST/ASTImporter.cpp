@@ -7435,7 +7435,7 @@ ASTNodeImporter::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S) {
   case CXXExpansionStmtPattern::ExpansionStmtKind::Enumerating:
     return CXXExpansionStmtPattern::CreateEnumerating(
         Importer.getToContext(), ToESD, ToInit, ToExpansionVar, ToLParenLoc,
-        ToColonLoc, ToRParenLoc);
+        ToColonLoc, ToRParenLoc, S->getExpansionSize());
 
   case CXXExpansionStmtPattern::ExpansionStmtKind::Iterating: {
     auto ToRange = importChecked(Err, S->getRangeVarStmt());
@@ -7446,7 +7446,8 @@ ASTNodeImporter::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S) {
 
     return CXXExpansionStmtPattern::CreateIterating(
         Importer.getToContext(), ToESD, ToInit, ToExpansionVar, ToRange,
-        ToBegin, ToIter, ToLParenLoc, ToColonLoc, ToRParenLoc);
+        ToBegin, ToIter, ToLParenLoc, ToColonLoc, ToRParenLoc,
+        S->getExpansionSize());
   }
 
   case CXXExpansionStmtPattern::ExpansionStmtKind::Destructuring: {
@@ -7457,7 +7458,8 @@ ASTNodeImporter::VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S) {
 
     return CXXExpansionStmtPattern::CreateDestructuring(
         Importer.getToContext(), ToESD, ToInit, ToExpansionVar,
-        ToDecompositionDeclStmt, ToLParenLoc, ToColonLoc, ToRParenLoc);
+        ToDecompositionDeclStmt, ToLParenLoc, ToColonLoc, ToRParenLoc,
+        S->getExpansionSize());
   }
 
   case CXXExpansionStmtPattern::ExpansionStmtKind::Dependent: {

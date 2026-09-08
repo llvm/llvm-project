@@ -327,6 +327,19 @@ protected:
     SourceLocation DeferLoc;
   };
 
+  class CXXExpansionStmtPatternBitfields {
+    friend class CXXExpansionStmtPattern;
+    friend class ASTStmtReader;
+
+    LLVM_PREFERRED_TYPE(StmtBitfields)
+    unsigned : NumStmtBits;
+
+    /// Whether the expansion size has already been computed for this, in which
+    /// case it is cached in the CXXExpansionStmtPattern.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasExpansionSize : 1;
+  };
+
   //===--- Expression bitfields classes ---===//
 
   class ExprBitfields {
@@ -1350,6 +1363,7 @@ protected:
     ReturnStmtBitfields ReturnStmtBits;
     SwitchCaseBitfields SwitchCaseBits;
     DeferStmtBitfields DeferStmtBits;
+    CXXExpansionStmtPatternBitfields CXXExpansionStmtPatternBits;
 
     // Expressions
     ExprBitfields ExprBits;
