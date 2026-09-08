@@ -18356,7 +18356,7 @@ InstructionCost BoUpSLP::getSpillCost() {
   };
   auto IsCoveredByMatchingVectorEntry = [&](const TreeEntry *Gather,
                                             const Loop *SpillLoop) -> bool {
-    assert(Gather->isGather() && "Expected a Gather Entry!");
+    assert(Gather->isGather() && "Expected a gather/buildvector entry.");
 
     Value *LookupValue = nullptr;
     if (Gather->hasState()) {
@@ -18384,7 +18384,7 @@ InstructionCost BoUpSLP::getSpillCost() {
       return false;
 
     // Different demotion state would make the two edge costs unequal.
-    if (MinBWs.contains(SameTE) != MinBWs.contains(Gather))
+    if (MinBWs.lookup(SameTE) != MinBWs.lookup(Gather))
       return false;
 
     // The spill walk does not descend through gather entries; if any ancestor
@@ -18395,14 +18395,12 @@ InstructionCost BoUpSLP::getSpillCost() {
       if (!E->UserTreeIndex)
         return false;
       E = E->UserTreeIndex.UserTE;
-      if (E->isGather() || ScalarOrPseudoEntries.contains(SameTE))
+      if (E->isGather() || ScalarOrPseudoEntries.contains(E))
         return false;
     }
 
-    Instruction *Def = EntriesToLastInstruction.lookup(SameTE);
-    Instruction *Use = EntriesToLastInstruction.lookup(UserTE);
-    if (!Def || !Use)
-      return false;
+    Instruction *Def = EntriesToLastInstruction.at(SameTE);
+    Instruction *Use = EntriesToLastInstruction.at(UserTE);
 
     // Require the matching entry to be defined outside the loop and its use to
     // execute directly in the same loop as the gather user.
@@ -18454,7 +18452,7 @@ InstructionCost BoUpSLP::getSpillCost() {
           (Op->isGather() && allConstant(Op->Scalars)))
         continue;
 
-      // Reset the scan budget for analsysis of each edge.
+      // Reset the scan budget for analysis of each edge.
       Budget = 0;
 
       // A gather with all loop-invariant lanes is hoisted to the loop
