@@ -6280,7 +6280,7 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
 
   if (Instruction::isCast(VPI->getOpcode())) {
     auto *CI = cast<CastInst>(Instr);
-    auto *CastR = cast<VPInstructionWithType>(VPI);
+    auto *CastR = cast<VPInstruction>(VPI);
     return new VPWidenCastRecipe(CI->getOpcode(), VPI->getOperand(0),
                                  CastR->getResultType(), CI, *VPI, *VPI,
                                  VPI->getDebugLoc());
@@ -6620,8 +6620,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
               VPReplicateRecipe, VPWidenLoadRecipe, VPWidenStoreRecipe,
               VPWidenCallRecipe, VPWidenIntrinsicRecipe, VPVectorPointerRecipe,
               VPVectorEndPointerRecipe, VPHistogramRecipe>(&R) ||
-          (isa<VPInstructionWithType>(R) &&
-           Instruction::isCast(cast<VPInstructionWithType>(R).getOpcode()) &&
+          (isa<VPInstruction>(R) &&
+           Instruction::isCast(cast<VPInstruction>(R).getOpcode()) &&
            vputils::onlyFirstLaneUsed(R.getVPSingleValue())))
         continue;
       auto *VPI = cast<VPInstruction>(&R);

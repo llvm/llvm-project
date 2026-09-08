@@ -220,8 +220,8 @@ public:
                               Type *ResultTy, const VPIRFlags &Flags = {},
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
-    return tryInsertInstruction(new VPInstructionWithType(
-        Opcode, Operands, ResultTy, Flags, {}, DL, Name));
+    return tryInsertInstruction(
+        new VPInstruction(Opcode, Operands, ResultTy, Flags, {}, DL, Name));
   }
 
   VPInstruction *createFirstActiveLane(ArrayRef<VPValue *> Masks,
@@ -418,18 +418,17 @@ public:
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Flags));
   }
 
-  VPInstructionWithType *createScalarLoad(Type *ResultTy, VPValue *Addr,
-                                          DebugLoc DL,
-                                          const VPIRMetadata &Metadata = {}) {
-    return tryInsertInstruction(new VPInstructionWithType(
-        Instruction::Load, Addr, ResultTy, {}, Metadata, DL));
+  VPInstruction *createScalarLoad(Type *ResultTy, VPValue *Addr, DebugLoc DL,
+                                  const VPIRMetadata &Metadata = {}) {
+    return tryInsertInstruction(
+        new VPInstruction(Instruction::Load, Addr, ResultTy, {}, Metadata, DL));
   }
 
   VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
                                   Type *ResultTy, DebugLoc DL,
                                   std::optional<VPIRFlags> Flags = std::nullopt,
                                   const VPIRMetadata &Metadata = {}) {
-    return tryInsertInstruction(new VPInstructionWithType(
+    return tryInsertInstruction(new VPInstruction(
         Opcode, Op, ResultTy,
         Flags.value_or(VPIRFlags::getDefaultFlags(Opcode)), Metadata, DL));
   }
@@ -442,8 +441,8 @@ public:
     VPlan &Plan = getPlan();
     SmallVector<VPValue *, 2> Ops(Operands);
     Ops.push_back(Plan.getConstantInt(8 * sizeof(IntrinsicID), IntrinsicID));
-    return tryInsertInstruction(new VPInstructionWithType(
-        VPInstruction::Intrinsic, Ops, ResultTy, {}, {}, DL));
+    return tryInsertInstruction(
+        new VPInstruction(VPInstruction::Intrinsic, Ops, ResultTy, {}, {}, DL));
   }
 
   /// Create a scalar llvm.vscale call.
@@ -495,8 +494,8 @@ public:
                                                  DebugLoc DL, Instruction *UV) {
     if (Instruction::isCast(Opcode)) {
       assert(!Mask && "Cast cannot be predicated");
-      return new VPInstructionWithType(Opcode, Operands, UV->getType(), Flags,
-                                       Metadata, DL, UV->getName(), UV);
+      return new VPInstruction(Opcode, Operands, UV->getType(), Flags, Metadata,
+                               DL, UV->getName(), UV);
     }
     return new VPReplicateRecipe(UV, Operands, /*IsSingleScalar=*/true, Mask,
                                  Flags, Metadata, DL);

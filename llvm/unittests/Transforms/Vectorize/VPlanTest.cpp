@@ -75,12 +75,9 @@ loop:
 
 TEST_F(VPInstructionTest, insertBefore) {
   IntegerType *Int32 = IntegerType::get(C, 32);
-  VPInstruction *I1 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
-  VPInstruction *I2 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
-  VPInstruction *I3 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
+  VPInstruction *I1 = new VPInstruction(VPInstruction::StepVector, {}, Int32);
+  VPInstruction *I2 = new VPInstruction(VPInstruction::StepVector, {}, Int32);
+  VPInstruction *I3 = new VPInstruction(VPInstruction::StepVector, {}, Int32);
 
   VPBasicBlock &VPBB1 = *getPlan().createVPBasicBlock("");
   VPBB1.appendRecipe(I1);
@@ -94,12 +91,9 @@ TEST_F(VPInstructionTest, insertBefore) {
 
 TEST_F(VPInstructionTest, eraseFromParent) {
   IntegerType *Int32 = IntegerType::get(C, 32);
-  VPInstruction *I1 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
-  VPInstruction *I2 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
-  VPInstruction *I3 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
+  VPInstruction *I1 = new VPInstruction(VPInstruction::StepVector, {}, Int32);
+  VPInstruction *I2 = new VPInstruction(VPInstruction::StepVector, {}, Int32);
+  VPInstruction *I3 = new VPInstruction(VPInstruction::StepVector, {}, Int32);
 
   VPBasicBlock &VPBB1 = *getPlan().createVPBasicBlock("");
   VPBB1.appendRecipe(I1);
@@ -118,12 +112,9 @@ TEST_F(VPInstructionTest, eraseFromParent) {
 
 TEST_F(VPInstructionTest, moveAfter) {
   IntegerType *Int32 = IntegerType::get(C, 32);
-  VPInstruction *I1 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
-  VPInstruction *I2 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
-  VPInstruction *I3 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
+  VPInstruction *I1 = new VPInstruction(VPInstruction::StepVector, {}, Int32);
+  VPInstruction *I2 = new VPInstruction(VPInstruction::StepVector, {}, Int32);
+  VPInstruction *I3 = new VPInstruction(VPInstruction::StepVector, {}, Int32);
 
   VPBasicBlock &VPBB1 = *getPlan().createVPBasicBlock("");
   VPBB1.appendRecipe(I1);
@@ -134,10 +125,8 @@ TEST_F(VPInstructionTest, moveAfter) {
 
   CHECK_ITERATOR(VPBB1, I2, I1, I3);
 
-  VPInstruction *I4 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
-  VPInstruction *I5 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
+  VPInstruction *I4 = new VPInstruction(VPInstruction::StepVector, {}, Int32);
+  VPInstruction *I5 = new VPInstruction(VPInstruction::StepVector, {}, Int32);
   VPBasicBlock &VPBB2 = *getPlan().createVPBasicBlock("");
   VPBB2.appendRecipe(I4);
   VPBB2.appendRecipe(I5);
@@ -151,12 +140,9 @@ TEST_F(VPInstructionTest, moveAfter) {
 
 TEST_F(VPInstructionTest, moveBefore) {
   IntegerType *Int32 = IntegerType::get(C, 32);
-  VPInstruction *I1 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
-  VPInstruction *I2 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
-  VPInstruction *I3 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
+  VPInstruction *I1 = new VPInstruction(VPInstruction::StepVector, {}, Int32);
+  VPInstruction *I2 = new VPInstruction(VPInstruction::StepVector, {}, Int32);
+  VPInstruction *I3 = new VPInstruction(VPInstruction::StepVector, {}, Int32);
 
   VPBasicBlock &VPBB1 = *getPlan().createVPBasicBlock("");
   VPBB1.appendRecipe(I1);
@@ -167,10 +153,8 @@ TEST_F(VPInstructionTest, moveBefore) {
 
   CHECK_ITERATOR(VPBB1, I2, I1, I3);
 
-  VPInstruction *I4 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
-  VPInstruction *I5 =
-      new VPInstructionWithType(VPInstruction::StepVector, {}, Int32);
+  VPInstruction *I4 = new VPInstruction(VPInstruction::StepVector, {}, Int32);
+  VPInstruction *I5 = new VPInstruction(VPInstruction::StepVector, {}, Int32);
   VPBasicBlock &VPBB2 = *getPlan().createVPBasicBlock("");
   VPBB2.appendRecipe(I4);
   VPBB2.appendRecipe(I5);
@@ -815,8 +799,8 @@ TEST_F(VPBasicBlockTest, reassociateBlocks) {
 
 TEST_F(VPBasicBlockTest, splitAtEnd) {
   VPlan &Plan = getPlan();
-  VPInstruction *VPI = new VPInstructionWithType(VPInstruction::StepVector, {},
-                                                 IntegerType::get(C, 32));
+  VPInstruction *VPI =
+      new VPInstruction(VPInstruction::StepVector, {}, IntegerType::get(C, 32));
   VPBasicBlock *VPBB = Plan.createVPBasicBlock("VPBB1", VPI);
   VPBlockUtils::connectBlocks(Plan.getEntry(), VPBB);
   VPBlockUtils::connectBlocks(VPBB, Plan.getScalarHeader());
@@ -1787,8 +1771,8 @@ TEST(VPDoubleValueDefTest, traverseUseLists) {
   // Create a new VPRecipeBase which defines 2 values and has 2 operands.
   LLVMContext C;
   IntegerType *Int32 = IntegerType::get(C, 32);
-  VPInstructionWithType Op0(VPInstruction::StepVector, {}, Int32);
-  VPInstructionWithType Op1(VPInstruction::StepVector, {}, Int32);
+  VPInstruction Op0(VPInstruction::StepVector, {}, Int32);
+  VPInstruction Op1(VPInstruction::StepVector, {}, Int32);
   VPDoubleValueDef DoubleValueDef({&Op0, &Op1}, IntegerType::get(C, 32));
 
   // Create a new users of the defined values.
