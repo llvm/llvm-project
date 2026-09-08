@@ -119,6 +119,10 @@ void test_wrong_types(void) {
   (void)stdc_load8_leu16(char_arr); // expected-warning{{converts between pointers to integer types}} expected-note@Inputs/stdbit.h:*{{passing argument to parameter here}}
 }
 
+struct NonChar { int x; };
+constexpr struct NonChar non_char_arr[2] = {{0x12345678}, {0}};
+constexpr __UINT_LEAST32_TYPE__ struct_arr_fail = stdc_load8_leu32((const unsigned char *)non_char_arr); // expected-error{{must be initialized by a constant expression}} expected-note{{this conversion is not allowed in a constant expression}}
+
 // Negative: out-of-bounds, scalar, and null.
 constexpr unsigned char small[] = {0x01, 0x02};
 constexpr __UINT_LEAST32_TYPE__ oob_load = stdc_load8_leu32(small); // expected-error{{must be initialized by a constant expression}} expected-note{{cannot refer to element 3 of array of 2 elements in a constant expression}}
