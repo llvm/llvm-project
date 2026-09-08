@@ -11,7 +11,6 @@
 
 #include "hdr/stdint_proxy.h"
 #include "hdr/stdio_macros.h"
-#include "hdr/types/fpos_t.h"
 #include "hdr/types/off_t.h"
 #include "hdr/types/wchar_t.h"
 #include "hdr/types/wint_t.h"
@@ -227,16 +226,22 @@ public:
     return tell_unlocked();
   }
 
-  ErrorOr<int> get_pos_unlocked(fpos_t *fpos);
+  // An internal representation of the stream's position and parse state.
+  struct Position {
+    off_t offset;
+    internal::mbstate state;
+  };
 
-  ErrorOr<int> get_pos(fpos_t *fpos) {
+  ErrorOr<Position> get_pos_unlocked();
+
+  ErrorOr<Position> get_pos() {
     FileLock lock(this);
-    return get_pos_unlocked(fpos);
+    return get_pos_unlocked();
   }
 
-  ErrorOr<int> set_pos_unlocked(const fpos_t *fpos);
+  ErrorOr<int> set_pos_unlocked(const Position &fpos);
 
-  ErrorOr<int> set_pos(const fpos_t *fpos) {
+  ErrorOr<int> set_pos(const Position &fpos) {
     FileLock lock(this);
     return set_pos_unlocked(fpos);
   }

@@ -21,7 +21,6 @@
 #include "src/__support/wchar/character_converter.h"
 #include "src/__support/wchar/wcrtomb.h"
 #include "src/string/memory_utils/inline_memcpy.h"
-#include "src/string/memory_utils/inline_memset.h"
 
 namespace LIBC_NAMESPACE_DECL {
 File *File::list_all = nullptr;
@@ -442,25 +441,22 @@ ErrorOr<off_t> File::tell_unlocked() {
   return platform_offset;
 }
 
-static_assert(sizeof(mbstate_t) >= sizeof(internal::mbstate),
-              "mbstate_t is too small for internal::mbstate");
-static_assert(alignof(mbstate_t) >= alignof(internal::mbstate),
-              "mbstate_t has insufficient alignment for internal::mbstate");
-
-ErrorOr<int> File::get_pos_unlocked(fpos_t *fpos) {
+ErrorOr<File::Position> File::get_pos_unlocked() {
   auto pos_result = tell_unlocked();
   if (!pos_result.has_value())
     return Error(pos_result.error());
 
-  fpos->__pos = pos_result.value();
-  inline_memset(&fpos->__state, 0, sizeof(mbstate_t));
+  Position fpos;
+  fpos.offset = pos_result.value();
   if (orientation == Orientation::WIDE)
-    inline_memcpy(&fpos->__state, &mbstate, sizeof(internal::mbstate));
+    fpos.state = mbstate;
+  else
+    fpos.state = internal::mbstate();
 
-  return 0;
+  return fpos;
 }
 
-ErrorOr<int> File::set_pos_unlocked(const fpos_t *fpos) {
+ErrorOr<int> File::set_pos_unlocked(const Position &fpos) {
   if (prev_op == FileOp::WRITE && pos > 0) {
     FileIOResult buf_result = platform_write(this, buf, pos);
     if (buf_result.has_error() || buf_result.value < pos) {
@@ -470,14 +466,14 @@ ErrorOr<int> File::set_pos_unlocked(const fpos_t *fpos) {
     pos = 0;
   }
 
-  auto result = platform_seek(this, fpos->__pos, SEEK_SET);
+  auto result = platform_seek(this, fpos.offset, SEEK_SET);
   if (!result.has_value())
     return Error(result.error());
 
   pos = read_limit = 0;
   prev_op = FileOp::SEEK;
   eof = false;
-  inline_memcpy(&mbstate, &fpos->__state, sizeof(internal::mbstate));
+  mbstate = fpos.state;
 
   return 0;
 }
