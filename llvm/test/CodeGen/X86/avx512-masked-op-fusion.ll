@@ -57,11 +57,10 @@ exit:
 ; exists (CSE). Both icmp eq and icmp ne are present so getSetCCInverse must
 ; not create an infinite loop or corrupt operands.
 
-define <8 x i32> @commute_select_existing_inverse_cmp(<8 x i32> %src) {
+define <8 x i32> @commute_select_existing_inverse_cmp(<8 x i32> %src) nounwind {
 ; CHECK-LABEL: commute_select_existing_inverse_cmp:
-; CHECK:       # %bb.0: # %entry
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,1,2,3,4,5,6,7]
 ; CHECK-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; CHECK-NEXT:    vpcmpneqd %ymm1, %ymm0, %k1
@@ -78,9 +77,7 @@ define <8 x i32> @commute_select_existing_inverse_cmp(<8 x i32> %src) {
 ; CHECK-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 # 2-byte Reload
 ; CHECK-NEXT:    vpsubd {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 {%k1} {z} # 32-byte Folded Reload
 ; CHECK-NEXT:    addq $56, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-entry:
   %eq = icmp eq <8 x i32> %src, <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %ne = icmp ne <8 x i32> %src, <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %ne_ext = sext <8 x i1> %ne to <8 x i32>
@@ -99,7 +96,7 @@ entry:
 
 define <16 x i32> @commute_select_cond_used_as_value(<16 x i32> %a, <16 x i32> %b, <16 x i32> %c, <16 x i32> %d, <16 x i1> %mask1, <16 x i1> %mask2, ptr %out) {
 ; CHECK-LABEL: commute_select_cond_used_as_value:
-; CHECK:       # %bb.0: # %entry
+; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmpnltd %zmm1, %zmm0, %k1
 ; CHECK-NEXT:    vpcmpgtd %zmm0, %zmm1, %k0
 ; CHECK-NEXT:    vpxor %xmm5, %xmm4, %xmm1
@@ -109,7 +106,6 @@ define <16 x i32> @commute_select_cond_used_as_value(<16 x i32> %a, <16 x i32> %
 ; CHECK-NEXT:    vpaddd %zmm3, %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    kmovw %k0, (%rdi)
 ; CHECK-NEXT:    retq
-entry:
   %cmp = icmp slt <16 x i32> %a, %b
   %mask_or = xor <16 x i1> %mask1, %mask2
   %sel_mask = select <16 x i1> %cmp, <16 x i1> %cmp, <16 x i1> %mask_or
