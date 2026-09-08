@@ -46,7 +46,7 @@ def main():
         content = f.read()
 
     groups = content.split("---")
-    var_re = re.compile("x\d+")
+    var_re = re.compile(r"x\d+")
 
     print("from z3 import *")
     for group in groups:
