@@ -90,6 +90,10 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Miscellaneous
 
+- Fixed `clangd-indexer --format=yaml` emitting invalid YAML when indexing
+  C++20 concepts.
+  ([#206875](https://github.com/llvm/llvm-project/issues/206875))
+
 ### Improvements to clang-doc
 
 ### Improvements to clang-query

@@ -9,6 +9,7 @@
 #include "FindSymbols.h"
 #include "Headers.h"
 #include "RIFF.h"
+#include "TestIndex.h"
 #include "index/Serialization.h"
 #include "support/Logger.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -258,6 +259,33 @@ TEST(SerializationTest, BinaryConversions) {
               UnorderedElementsAreArray(yamlFromRefs(*In->Refs)));
   EXPECT_THAT(yamlFromRelations(*In2->Relations),
               UnorderedElementsAreArray(yamlFromRelations(*In->Relations)));
+}
+
+// Every SymbolKind must have a YAML spelling, otherwise writing the index
+// produces invalid YAML (or aborts with assertions enabled).
+TEST(SerializationTest, YAMLSymbolKindRoundTrip) {
+  SymbolSlab::Builder Builder;
+  for (unsigned K = 0; K <= static_cast<unsigned>(index::SymbolKind::Concept);
+       ++K) {
+    std::string Name = "Sym" + std::to_string(K);
+    Symbol Sym = symbol(Name);
+    Sym.SymInfo.Kind = static_cast<index::SymbolKind>(K);
+    Builder.insert(Sym);
+  }
+  SymbolSlab Symbols = std::move(Builder).build();
+
+  IndexFileOut Out;
+  Out.Symbols = &Symbols;
+  Out.Format = IndexFileFormat::YAML;
+
+  auto In = readIndexFile(llvm::to_string(Out));
+  ASSERT_TRUE(bool(In)) << In.takeError();
+  ASSERT_TRUE(In->Symbols);
+  for (const Symbol &Sym : Symbols) {
+    auto It = In->Symbols->find(Sym.ID);
+    ASSERT_NE(It, In->Symbols->end()) << Sym.Name;
+    EXPECT_EQ(It->SymInfo.Kind, Sym.SymInfo.Kind) << Sym.Name;
+  }
 }
 
 TEST(SerializationTest, SrcsTest) {
