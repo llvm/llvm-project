@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
@@ -58,6 +59,65 @@ static cl::opt<bool> DemoteCatchSwitchPHIOnlyOpt(
     "demote-catchswitch-only", cl::Hidden,
     cl::desc("Demote catchswitch BBs only (for wasm EH)"), cl::init(false));
 
+// assumes Personality is one relevant to WinEHPrepare
+static bool isMalformedCatchpad(const CatchPadInst *CPI,
+                                EHPersonality Personality) {
+  switch (Personality) {
+  case EHPersonality::MSVC_CXX: {
+    if (CPI->arg_size() != 3)
+      return true;
+
+    Constant *TypeInfo;
+    GlobalVariable *TypeDescriptor;
+    ConstantInt *Adjectives;
+
+    if (!(TypeInfo = dyn_cast<Constant>(CPI->getArgOperand(0))))
+      return true;
+    if (TypeInfo->isNullValue())
+      return false;
+
+    if (!(TypeDescriptor =
+              dyn_cast<GlobalVariable>(TypeInfo->stripPointerCasts())))
+      return true;
+
+    if (!(Adjectives = dyn_cast<ConstantInt>(CPI->getArgOperand(1))))
+      return true;
+
+    return false;
+  }
+  case EHPersonality::MSVC_X86SEH:
+  case EHPersonality::MSVC_TableSEH: {
+    // Argument 0 is the filter function, or null for a catch-all; only it
+    // is ever consulted, so extra trailing arguments are tolerated.
+    if (CPI->arg_size() == 0)
+      return true;
+
+    Constant *FilterOrNull;
+    if (!(FilterOrNull = dyn_cast<Constant>(CPI->getArgOperand(0))))
+      return true;
+
+    Constant *Filter = FilterOrNull->stripPointerCasts();
+    if (!isa<Function>(Filter) && !Filter->isNullValue())
+      return true;
+
+    return false;
+  }
+  case EHPersonality::CoreCLR: {
+    // Argument 0 is the integer type token; only it is ever consulted, so
+    // extra trailing arguments are tolerated.
+    if (CPI->arg_size() == 0)
+      return true;
+
+    if (!dyn_cast<ConstantInt>(CPI->getArgOperand(0)))
+      return true;
+
+    return false;
+  }
+  default:
+    return false;
+  }
+}
+
 namespace {
 
 class WinEHPrepareImpl {
@@ -80,6 +140,7 @@ private:
 
   bool demotePHIsOnFunclets(Function &F, bool DemoteCatchSwitchPHIOnly);
   bool cloneCommonBlocks(Function &F);
+  bool removeMalformedCatchswitch(Function &F);
   bool removeImplausibleInstructions(Function &F);
   bool cleanupPreparedFunclets(Function &F);
   void verifyPreparedFunclets(Function &F);
@@ -162,18 +223,19 @@ static void addTryBlockMapEntry(WinEHFuncInfo &FuncInfo, int TryLow,
   assert(TBME.TryLow <= TBME.TryHigh);
   for (const CatchPadInst *CPI : Handlers) {
     WinEHHandlerType HT;
-    Constant *TypeInfo = cast<Constant>(CPI->getArgOperand(0));
-    if (TypeInfo->isNullValue())
-      HT.TypeDescriptor = nullptr;
-    else
-      HT.TypeDescriptor = cast<GlobalVariable>(TypeInfo->stripPointerCasts());
-    HT.Adjectives = cast<ConstantInt>(CPI->getArgOperand(1))->getZExtValue();
-    HT.Handler = CPI->getParent();
-    if (auto *AI =
-            dyn_cast<AllocaInst>(CPI->getArgOperand(2)->stripPointerCasts()))
-      HT.CatchObj.Alloca = AI;
-    else
-      HT.CatchObj.Alloca = nullptr;
+    HT.TypeDescriptor = nullptr;
+    HT.Adjectives = 0;
+    HT.CatchObj.Alloca = nullptr;
+    if (!isMalformedCatchpad(CPI, EHPersonality::MSVC_CXX)) {
+      Constant *TypeInfo = cast<Constant>(CPI->getArgOperand(0));
+      if (!TypeInfo->isNullValue())
+        HT.TypeDescriptor = cast<GlobalVariable>(TypeInfo->stripPointerCasts());
+      HT.Adjectives = cast<ConstantInt>(CPI->getArgOperand(1))->getZExtValue();
+      HT.Handler = CPI->getParent();
+      if (auto *AI =
+              dyn_cast<AllocaInst>(CPI->getArgOperand(2)->stripPointerCasts()))
+        HT.CatchObj.Alloca = AI;
+    }
     TBME.HandlerArray.push_back(HT);
   }
   FuncInfo.TryBlockMap.push_back(TBME);
@@ -324,9 +386,13 @@ void llvm::calculateSEHStateForAsynchEH(const BasicBlock *BB, int State,
     EHInfo.BlockToStateMap[BB] = State; // Record state
 
     if (isa<CatchPadInst>(It) && isa<CatchReturnInst>(TI)) {
-      const Constant *FilterOrNull = cast<Constant>(
-          cast<CatchPadInst>(It)->getArgOperand(0)->stripPointerCasts());
-      const Function *Filter = dyn_cast<Function>(FilterOrNull);
+      const auto *CPI = cast<CatchPadInst>(It);
+      const Function *Filter = nullptr;
+      if (!isMalformedCatchpad(CPI, EHPersonality::MSVC_X86SEH)) {
+        const Constant *FilterOrNull =
+            cast<Constant>(CPI->getArgOperand(0)->stripPointerCasts());
+        Filter = dyn_cast<Function>(FilterOrNull);
+      }
       if (!Filter || !Filter->getName().starts_with("__IsLocalUnwind"))
         State = EHInfo.SEHUnwindMap[State].ToState; // Retrive next State
     } else if ((isa<CleanupReturnInst>(TI) || isa<CatchReturnInst>(TI)) &&
@@ -514,11 +580,14 @@ static void calculateSEHStateNumbers(WinEHFuncInfo &FuncInfo,
     const auto *CatchPad =
         cast<CatchPadInst>((*CatchSwitch->handler_begin())->getFirstNonPHIIt());
     const BasicBlock *CatchPadBB = CatchPad->getParent();
-    const Constant *FilterOrNull =
-        cast<Constant>(CatchPad->getArgOperand(0)->stripPointerCasts());
-    const Function *Filter = dyn_cast<Function>(FilterOrNull);
-    assert((Filter || FilterOrNull->isNullValue()) &&
-           "unexpected filter value");
+    const Function *Filter = nullptr;
+    if (!isMalformedCatchpad(CatchPad, EHPersonality::MSVC_X86SEH)) {
+      const Constant *FilterOrNull =
+          cast<Constant>(CatchPad->getArgOperand(0)->stripPointerCasts());
+      Filter = dyn_cast<Function>(FilterOrNull);
+      assert((Filter || FilterOrNull->isNullValue()) &&
+             "unexpected filter value");
+    }
     int TryState = addSEHExcept(FuncInfo, ParentState, Filter, CatchPadBB);
 
     // Everything in the __try block uses TryState as its parent state.
@@ -730,8 +799,10 @@ void llvm::calculateClrEHStateNumbers(const Function *Fn,
         // Create the entry for this catch with the appropriate handler
         // properties.
         const auto *Catch = cast<CatchPadInst>(CatchBlock->getFirstNonPHIIt());
-        uint32_t TypeToken = static_cast<uint32_t>(
-            cast<ConstantInt>(Catch->getArgOperand(0))->getZExtValue());
+        uint32_t TypeToken = 0;
+        if (!isMalformedCatchpad(Catch, EHPersonality::CoreCLR))
+          TypeToken = static_cast<uint32_t>(
+              cast<ConstantInt>(Catch->getArgOperand(0))->getZExtValue());
         CatchState =
             addClrEHHandler(FuncInfo, HandlerParentState, FollowerState,
                             ClrHandlerType::Catch, TypeToken, CatchBlock);
@@ -1118,6 +1189,37 @@ bool WinEHPrepareImpl::cloneCommonBlocks(Function &F) {
   return Changed;
 }
 
+bool WinEHPrepareImpl::removeMalformedCatchswitch(Function &F) {
+  bool Changed = false;
+
+  // If a catchpad is malformed, the whole catchswitch is invalidated
+  // therefore, make all child catchpads unreachable
+  SmallPtrSet<CatchSwitchInst *, 4> Invalidated;
+  for (auto &Funclet : FuncletBlocks) {
+    BasicBlock *FuncletPadBB = Funclet.first;
+    Instruction *FirstNonPHI = &*FuncletPadBB->getFirstNonPHIIt();
+    auto *FuncletPad = dyn_cast<FuncletPadInst>(FirstNonPHI);
+    auto *CatchPad = dyn_cast_or_null<CatchPadInst>(FuncletPad);
+
+    if (!CatchPad)
+      continue;
+
+    if (!isMalformedCatchpad(CatchPad, Personality))
+      continue;
+
+    CatchSwitchInst *CatchSwitch = CatchPad->getCatchSwitch();
+    if (!Invalidated.insert(CatchSwitch).second)
+      continue;
+
+    for (BasicBlock *Handler : CatchSwitch->handlers())
+      changeToUnreachable(Handler->getFirstNonPHIIt()->getNextNode());
+
+    Changed = true;
+  }
+
+  return Changed;
+}
+
 bool WinEHPrepareImpl::removeImplausibleInstructions(Function &F) {
   bool Changed = false;
 
@@ -1249,6 +1351,9 @@ bool WinEHPrepareImpl::prepareExplicitEH(Function &F) {
                                            DemoteCatchSwitchPHIOnlyOpt);
 
   if (!DisableCleanups) {
+    assert(!verifyFunction(F, &dbgs()));
+    Changed |= removeMalformedCatchswitch(F);
+
     assert(!verifyFunction(F, &dbgs()));
     Changed |= removeImplausibleInstructions(F);
 
