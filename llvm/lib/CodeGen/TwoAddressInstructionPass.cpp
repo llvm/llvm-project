@@ -2119,8 +2119,7 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
     for (int j = MI.getNumOperands() - 1, ee = 0; j > ee; --j)
       MI.removeOperand(j);
     // The dead def of DstReg is left in place, so its live range is still
-    // correct. Drop it from the repaired set; repairIntervalsInRange would
-    // otherwise re-add an overlapping segment for the unchanged def.
+    // correct. Drop it from the repaired set.
     if (LIS)
       llvm::erase(OrigRegs, DstReg);
   } else {
