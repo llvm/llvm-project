@@ -278,7 +278,7 @@ int main() {
   fprintf(stderr, "ready> ");
   getNextToken();
 
-  TheJIT = std::make_unique<KaleidoscopeJIT>();
+  TheJIT = ExitOnErr(KaleidoscopeJIT::Create()); 
 
   // Run the main "interpreter loop" now.
   MainLoop();
