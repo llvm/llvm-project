@@ -2110,8 +2110,10 @@ void BinaryContext::preprocessDebugInfo() {
       std::optional<MD5::MD5Result> Checksum;
       if (DwarfVersion >= 5 && LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[I].Checksum;
-      cantFail(getDwarfFile(Dir, FileName, 0, Checksum, std::nullopt, CUID,
-                            DwarfVersion));
+      const unsigned InputFileIndex = I + Offset;
+      const unsigned OutputFileIndex = cantFail(getDwarfFile(
+          Dir, FileName, 0, Checksum, std::nullopt, CUID, DwarfVersion));
+      BinaryLineTable.mapFileIndex(InputFileIndex, OutputFileIndex);
     }
   }
 

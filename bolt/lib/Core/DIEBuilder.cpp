@@ -802,6 +802,18 @@ bool DIEBuilder::cloneExpression(const DataExtractor &Data,
   return DoesContainReference;
 }
 
+bool DIEBuilder::rewriteExpressionReferences(ArrayRef<uint8_t> Input,
+                                             DWARFUnit &U,
+                                             SmallVectorImpl<uint8_t> &Output,
+                                             bool Patch) {
+  DataExtractor Data(Input, U.isLittleEndian());
+  DWARFExpression Expression(Data, U.getAddressByteSize(),
+                             U.getFormParams().Format);
+  return cloneExpression(Data, Expression, U, Output,
+                         Patch ? CloneExpressionStage::PATCH
+                               : CloneExpressionStage::INIT);
+}
+
 void DIEBuilder::cloneBlockAttribute(
     DIE &Die, DWARFUnit &U,
     const DWARFAbbreviationDeclaration::AttributeSpec AttrSpec,
@@ -890,6 +902,11 @@ void DIEBuilder::cloneScalarAttribute(
                  "attribute.\n";
     return;
   }
+
+  if (AttrSpec.Attr == dwarf::DW_AT_decl_file ||
+      AttrSpec.Attr == dwarf::DW_AT_call_file)
+    Value =
+        BC.getOutputDwarfFileIndex(InputDIE.getDwarfUnit()->getOffset(), Value);
 
   Die.addValue(getState().DIEAlloc, AttrSpec.Attr, AttrSpec.Form,
                DIEInteger(Value));

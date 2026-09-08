@@ -5,9 +5,12 @@
 # RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
 # RUN: llvm-dwarfdump --show-children --name=main --debug-info %t.bolt \
 # RUN:   | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t.bolt
 
 # CHECK: 		DW_TAG_inlined_subroutine
 # CHECK:      DW_AT_low_pc
+# CHECK-SAME: 0x0000000000000000
+# CHECK:      DW_AT_high_pc
 # CHECK-SAME: 0x0000000000000000
 
 # CHECK:    DW_TAG_call_site
