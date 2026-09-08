@@ -2645,7 +2645,7 @@ define float @clamp_false_nan(float noundef %arg) {
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
-  %fcmp = fcmp false float %arg, 0x7FF8000000000000
+  %fcmp = fcmp false float %arg, +qnan
   %select = select i1 %fcmp, float 0.0, float %arg
   ret float %select
 }
@@ -2788,7 +2788,7 @@ define float @clamp_true_nan(float noundef %arg) {
 ; CHECK-SAME: float noundef returned [[ARG:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    ret float [[ARG]]
 ;
-  %fcmp = fcmp true float %arg, 0x7FF8000000000000
+  %fcmp = fcmp true float %arg, +qnan
   %select = select i1 %fcmp, float %arg, float 0.0
   ret float %select
 }

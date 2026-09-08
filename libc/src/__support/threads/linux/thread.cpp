@@ -223,6 +223,10 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
     else
       stack = alloc.value();
     owned_stack = true;
+  } else {
+    // The user is responsible for setting up the stack guard (or not) for the
+    // provided stack.
+    guardsize = 0;
   }
 
   // Validate that stack/stacksize are validly aligned.

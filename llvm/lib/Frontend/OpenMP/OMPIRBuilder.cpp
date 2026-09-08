@@ -5268,6 +5268,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createReductions(
   Value *RedArray = Builder.CreateAlloca(RedArrayTy, nullptr, "red.array");
 
   Builder.SetInsertPoint(InsertBlock, InsertBlock->end());
+  // Emitting the alloca moved the insertion point into the alloca block and
+  // can clear the debug loc. Restore back to Loc.DL.
+  Builder.SetCurrentDebugLocation(Loc.DL);
 
   for (auto En : enumerate(ReductionInfos)) {
     unsigned Index = En.index();
