@@ -539,12 +539,16 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   if (BC.isAArch64()) {
     Manager.registerPass(
         std::make_unique<AArch64RelaxationPass>(PrintAArch64Relaxation));
+  }
 
+  if (BC.isAArch64() || BC.isRISCV()) {
     // Tighten branches according to offset differences between branch and
     // targets. No extra instructions after this pass, otherwise we may have
     // relocations out of range and crash during linking.
     Manager.registerPass(std::make_unique<LongJmpPass>(PrintLongJmp));
+  }
 
+  if (BC.isAArch64()) {
     Manager.registerPass(
         std::make_unique<PointerAuthCFIFixup>(PrintPAuthCFIFixup));
   }
