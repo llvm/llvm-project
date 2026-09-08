@@ -349,3 +349,71 @@ subroutine f25(n, a)
     !$omp end metadirective
   !$omp end parallel
 end subroutine
+
+! MATCH_ANY with construct traits records only the construct traits that match
+! before ranking the reachable variants.
+subroutine f26(n, a)
+  integer :: n, a(n), i
+  !$omp parallel
+    !$omp metadirective &
+    !$omp& when(implementation={vendor(llvm)}: nothing) &
+    !$omp& when(construct={target, parallel}, &
+    !ERROR: This construct requires a nest of depth 2, but the associated nest is a nest of depth 1
+    !BECAUSE: COLLAPSE clause was specified with argument 2
+    !$omp& implementation={extension(match_any)}: simd collapse(2)) &
+    !$omp& default(nothing)
+    do i = 1, n
+      a(i) = i
+    end do
+  !$omp end parallel
+end subroutine
+
+! MATCH_NONE remains applicable when its construct trait is absent, and the
+! first equally ranked candidate is selected.
+subroutine f27(n, a)
+  integer :: n, a(n), i
+  !$omp metadirective &
+  !$omp& when(construct={parallel}, &
+  !ERROR: This construct requires a nest of depth 2, but the associated nest is a nest of depth 1
+  !BECAUSE: COLLAPSE clause was specified with argument 2
+  !$omp& implementation={extension(match_none)}: simd collapse(2)) &
+  !$omp& when(implementation={vendor(llvm)}: nothing) &
+  !$omp& default(nothing)
+  do i = 1, n
+    a(i) = i
+  end do
+end subroutine
+
+! A block-associated directive selected by a standalone metadirective remains
+! active throughout its following strictly structured BLOCK.
+subroutine f28(n, a)
+  integer :: n, a(n), i
+  !$omp metadirective &
+  !$omp& when(implementation={vendor(llvm)}: parallel) default(nothing)
+  block
+    !$omp metadirective &
+    !ERROR: This construct requires a nest of depth 2, but the associated nest is a nest of depth 1
+    !BECAUSE: COLLAPSE clause was specified with argument 2
+    !$omp& when(construct={parallel}: simd collapse(2)) default(nothing)
+    do i = 1, n
+      a(i) = i
+    end do
+  end block
+end subroutine
+
+! Precise ranking is required for MATCH_ANY with construct traits. A
+! conservative fallback would retain the lower-ranked invalid SIMD variant and
+! diagnose it even though the higher-scored NOTHING is always selected.
+subroutine f29(n, a)
+  integer :: n, a(n), i
+  !$omp parallel
+    !$omp metadirective &
+    !$omp& when(user={condition(score(100): .true.)}: nothing) &
+    !$omp& when(construct={target, parallel}, &
+    !$omp& implementation={extension(match_any)}: simd collapse(2)) &
+    !$omp& default(nothing)
+    do i = 1, n
+      a(i) = i
+    end do
+  !$omp end parallel
+end subroutine
