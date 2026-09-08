@@ -122,6 +122,13 @@ protected:
   ConstantAsMetadata *getConstantAsMetadata() {
     return ConstantAsMetadata::get(getConstant());
   }
+  /// Uses of \a ConstantData are not tracked, so tests that replace or delete
+  /// a constant need one with a use list.
+  ConstantAsMetadata *getGlobalAsMetadata() {
+    return ConstantAsMetadata::get(new GlobalVariable(
+        M, Type::getInt8Ty(Context), false, GlobalValue::ExternalLinkage,
+        nullptr, "g" + Twine(Counter++)));
+  }
   DIType *getCompositeType() {
     return DICompositeType::getDistinct(Context, dwarf::DW_TAG_structure_type,
                                         "", nullptr, 0, nullptr, nullptr, 32,
@@ -5258,8 +5265,7 @@ TEST_F(ValueAsMetadataTest, TempTempReplacement) {
 
 TEST_F(ValueAsMetadataTest, CollidingDoubleUpdates) {
   // Create a constant.
-  ConstantAsMetadata *CI =
-      ConstantAsMetadata::get(ConstantInt::get(Context, APInt(8, 0)));
+  ConstantAsMetadata *CI = getGlobalAsMetadata();
 
   // Create a temporary to prevent nodes from resolving.
   auto Temp = MDTuple::getTemporary(Context, {});
@@ -5620,7 +5626,7 @@ typedef MetadataTest MDTupleAllocationTest;
 TEST_F(MDTupleAllocationTest, Tracking) {
   // Make sure that the move constructor and move assignment op
   // for MDOperand correctly adjust tracking information.
-  auto *Value1 = getConstantAsMetadata();
+  auto *Value1 = getGlobalAsMetadata();
   MDTuple *A = MDTuple::getDistinct(Context, {Value1, Value1});
   EXPECT_EQ(A->getOperand(0), Value1);
   EXPECT_EQ(A->getOperand(1), Value1);
@@ -5636,7 +5642,7 @@ TEST_F(MDTupleAllocationTest, Tracking) {
   EXPECT_EQ(NewOps1.get(), static_cast<Metadata *>(Value1));
   EXPECT_EQ(NewOps2.get(), static_cast<Metadata *>(Value1));
 
-  auto *Value2 = getConstantAsMetadata();
+  auto *Value2 = getGlobalAsMetadata();
   Value *V1 = Value1->getValue();
   Value *V2 = Value2->getValue();
   ValueAsMetadata::handleRAUW(V1, V2);
@@ -5729,7 +5735,7 @@ TEST_F(MDTupleAllocationTest, Resize) {
 
 TEST_F(MDTupleAllocationTest, Tracking2) {
   // Resize a tuple and check that we can still RAUW one of its operands.
-  auto *Value1 = getConstantAsMetadata();
+  auto *Value1 = getGlobalAsMetadata();
   MDTuple *A = getTuple();
   A->push_back(Value1);
   A->push_back(Value1);
@@ -5738,7 +5744,7 @@ TEST_F(MDTupleAllocationTest, Tracking2) {
   EXPECT_EQ(A->getOperand(1), Value1);
   EXPECT_EQ(A->getOperand(2), Value1);
 
-  auto *Value2 = getConstantAsMetadata();
+  auto *Value2 = getGlobalAsMetadata();
   Value *V1 = Value1->getValue();
   Value *V2 = Value2->getValue();
   ValueAsMetadata::handleRAUW(V1, V2);

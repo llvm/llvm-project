@@ -454,6 +454,13 @@ void ReplaceableUses::resolveAllUses(bool ResolveUsers) {
   }
 }
 
+// A ConstantData outlives every use of it and Value::doRAUW rejects it, so
+// a use recorded for one could never fire.
+static bool isTrackedValue(const Metadata &MD) {
+  auto *VAM = dyn_cast<ValueAsMetadata>(&MD);
+  return VAM && !isa<ConstantData>(VAM->getValue());
+}
+
 // Special handing of DIArgList is required in the RemoveDIs project, see
 // commentry in DIArgList::handleChangedOperand for details. Hidden behind
 // conditional compilation to avoid a compile time regression.
@@ -465,7 +472,7 @@ ReplaceableUses *ReplaceableUses::getOrCreate(Metadata &MD) {
   }
   if (auto ArgList = dyn_cast<DIArgList>(&MD))
     return ArgList;
-  return dyn_cast<ValueAsMetadata>(&MD);
+  return isTrackedValue(MD) ? cast<ValueAsMetadata>(&MD) : nullptr;
 }
 
 ReplaceableUses *ReplaceableUses::getIfExists(Metadata &MD) {
@@ -476,13 +483,13 @@ ReplaceableUses *ReplaceableUses::getIfExists(Metadata &MD) {
   }
   if (auto ArgList = dyn_cast<DIArgList>(&MD))
     return ArgList;
-  return dyn_cast<ValueAsMetadata>(&MD);
+  return isTrackedValue(MD) ? cast<ValueAsMetadata>(&MD) : nullptr;
 }
 
 bool ReplaceableUses::isReplaceable(const Metadata &MD) {
   if (auto *N = dyn_cast<MDNode>(&MD))
     return !N->isResolved() || N->isAlwaysReplaceable();
-  return isa<ValueAsMetadata>(&MD) || isa<DIArgList>(&MD);
+  return isTrackedValue(MD) || isa<DIArgList>(&MD);
 }
 
 static DISubprogram *getLocalFunctionMetadata(Value *V) {
@@ -564,6 +571,17 @@ void ValueAsMetadata::handleRAUW(Value *From, Value *To) {
   assert(MD && "Expected valid metadata");
   assert(MD->getValue() == From && "Expected valid mapping");
   Store.erase(I);
+
+  // The uses of a ConstantData node are not tracked, so the node can only be
+  // retyped in place.
+  if (isa<ConstantData>(From)) {
+    assert(isa<ConstantData>(To) && !Store.contains(To) &&
+           "Cannot merge or drop a ConstantData node");
+    To->IsUsedByMD = true;
+    MD->V = To;
+    Store[To] = MD;
+    return;
+  }
 
   // Move the uses to To's node. Uses of a function-local value are dropped if
   // it becomes a local of another function or replaces a constant.
