@@ -2078,13 +2078,15 @@ Verifier::visitModuleFlag(const MDNode *Op,
           "module flag identifiers must be unique (or of 'require' type)", ID);
   }
 
-  if (ID->getString() == "wchar_size") {
+  StringRef Name = ID->getString();
+  if (Name == "wchar_size") {
     ConstantInt *Value
       = mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
     Check(Value, "wchar_size metadata requires constant integer argument");
+    return;
   }
 
-  if (ID->getString() == "long-double-type") {
+  if (Name == "long-double-type") {
     Check(MFB == Module::Error,
           "long-double-type module flag must use 'error' merge behavior", Op);
     const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
@@ -2092,9 +2094,10 @@ Verifier::visitModuleFlag(const MDNode *Op,
     if (Value)
       Check(parseLongDoubleFormat(Value->getString()).has_value(),
             "invalid long-double-type metadata value", Op);
+    return;
   }
 
-  if (ID->getString() == "float-abi") {
+  if (Name == "float-abi") {
     Check(MFB == Module::Error,
           "float-abi module flag must use 'error' merge behavior", Op);
     const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
@@ -2102,32 +2105,37 @@ Verifier::visitModuleFlag(const MDNode *Op,
     if (Value)
       Check(FloatABI::parseABIType(Value->getString()).has_value(),
             "invalid float-abi metadata value", Op);
+    return;
   }
 
-  if (ID->getString() == "target-abi") {
+  if (Name == "target-abi") {
     const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
     Check(Value && !Value->getString().empty(),
           "target-abi metadata requires a non-empty string argument", Op);
+    return;
   }
 
-  if (ID->getString() == "Linker Options") {
+  if (Name == "Linker Options") {
     // If the llvm.linker.options named metadata exists, we assume that the
     // bitcode reader has upgraded the module flag. Otherwise the flag might
     // have been created by a client directly.
     Check(M.getNamedMetadata("llvm.linker.options"),
           "'Linker Options' named metadata no longer supported");
+    return;
   }
 
-  if (ID->getString() == "SemanticInterposition") {
+  if (Name == "SemanticInterposition") {
     ConstantInt *Value =
         mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(2));
     Check(Value,
           "SemanticInterposition metadata requires constant integer argument");
+    return;
   }
 
-  if (ID->getString() == "CG Profile") {
+  if (Name == "CG Profile") {
     for (const MDOperand &MDO : cast<MDNode>(Op->getOperand(2))->operands())
       visitModuleFlagCGProfileEntry(MDO);
+    return;
   }
 
   // Target-specific module flag checks.

@@ -175,6 +175,8 @@ static SPIRVTypeInst deduceTypeFromUses(Register Reg, MachineFunction &MF,
     case TargetOpcode::G_FMA:
     case TargetOpcode::G_FATAN2:
     case TargetOpcode::G_FPOW:
+    case TargetOpcode::G_FMINNUM:
+    case TargetOpcode::G_FMAXNUM:
     case TargetOpcode::COPY:
     case TargetOpcode::G_STRICT_FMA:
       ResType = deduceTypeFromResultRegister(&Use, Reg, GR, MIB);
