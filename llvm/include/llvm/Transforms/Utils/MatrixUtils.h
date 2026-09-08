@@ -18,17 +18,20 @@
 namespace llvm {
 class DomTreeUpdater;
 class BasicBlock;
-class ConstantInt;
 class Value;
 class Loop;
 class LoopInfo;
 class IRBuilderBase;
+class Type;
+class LLVMContext;
+class DataLayout;
+class Constant;
 
 /// A helper struct to create IR loop nests for tiling in IR of the following
 /// form:
-///   for ColumnLoop.Index = 0..NumColumns
-///     for RowLoop.Index = 0..NumRows
-///       for KLoop.Index = 0..NumInner
+///   for CurrentColumn = 0..NumColumns
+///     for CurrentRow = 0..NumRows
+///       for CurrentInner = 0..NumInner
 struct TileInfo {
   /// Number of rows of the matrix.
   unsigned NumRows;
@@ -40,8 +43,14 @@ struct TileInfo {
   /// number of rows of the second matrix of a multiply.
   unsigned NumInner;
 
-  /// Number of rows/columns in a tile.
-  unsigned TileSize = -1;
+  /// Number of rows in a tile.
+  unsigned TileNumRows = -1;
+  /// Inner dimension of the tile.
+  unsigned TileNumInner = -1;
+  /// Number of columns in a tile.
+  unsigned TileNumColumns = -1;
+
+  Type *EltType;
 
   /// Properties of a single loop used when generating the tiled loop nest.
   struct MatrixLoop {
@@ -52,6 +61,10 @@ struct TileInfo {
     BasicBlock *Latch = nullptr;
   };
 
+  /// See the comment before LowerMatrixIntrinsics::createTiledLoops for a view
+  /// of all the loops and their operations.
+  ///
+  /// Main tiling loop nest.
   /// The loop iterating on the rows.
   MatrixLoop RowLoop;
   /// The loop iterating on the columns.
@@ -59,32 +72,88 @@ struct TileInfo {
   /// The loop iterating on k (inner dimension).
   MatrixLoop KLoop;
 
+  /// Remainder columns loop nest: computes the remainder columns of the
+  /// current row.
+  /// This loop nest is optional, and only created if there are remainder
+  /// columns that don't fit in the main loop nest.
+  ///
+  /// The loop iterating on k (inner dimension) for the remainder columns.
+  MatrixLoop RemainderColumnsKLoop;
+
+  /// Remainder rows loop nest: computes the remainder rows of the matrix.
+  /// This loop nest is optional, and only created if there are remainder
+  /// rows that don't fit in the main loop nest.
+  ///
+  /// The loop iterating on the columns for the remainder rows.
+  MatrixLoop RemainderRowsColumnLoop;
+  /// The loop iterating on k (inner dimension) for the remainder rows.
+  MatrixLoop RemainderRowsKLoop;
+
+  /// Remainder columns of the remainder rows loop nest: computes the remainder
+  /// columns of the remainder rows.
+  /// This loop nest is optional, and only created if there are remainder
+  /// columns and remainder rows that don't fit in the main loop nest.
+  ///
+  /// The loop iterating on k (inner dimension) for the remainder columns of the
+  /// remainder rows.
+  MatrixLoop RemainderRowsRemainderColumnsKLoop;
+
   TileInfo(unsigned NumRows, unsigned NumColumns, unsigned NumInner,
-           unsigned TileSize)
+           unsigned TileSize, Type *EltTy)
       : NumRows(NumRows), NumColumns(NumColumns), NumInner(NumInner),
-        TileSize(TileSize) {}
+        TileNumRows(TileSize), TileNumInner(TileSize), TileNumColumns(TileSize),
+        EltType(EltTy) {}
+
+  TileInfo(unsigned NumRows, unsigned NumColumns, unsigned NumInner,
+           unsigned TileNumRows, unsigned TileNumInner, unsigned TileNumColumns,
+           Type *EltTy)
+      : NumRows(NumRows), NumColumns(NumColumns), NumInner(NumInner),
+        TileNumRows(std::min(TileNumRows, NumRows)),
+        TileNumInner(std::min(TileNumInner, NumInner)),
+        TileNumColumns(std::min(TileNumColumns, NumColumns)), EltType(EltTy) {}
 
   /// Creates an IR loop nests for tiling of the form below. Returns the block
-  /// for the inner loop body and sets {Column,Row,Inner}LoopHeader/Latch
-  /// fields.
+  /// for the inner loop body and sets {Column,Row,K}LoopHeader/Latch fields.
   ///
-  /// for ColumnLoop.Index = 0..NumColumns
-  ///   for RowLoop.Index = 0..NumRows
-  ///     for InnerLoop.Index = 0..NumInner
+  /// for Column = 0..NumColumns; += TileNumColumns
+  ///   for Row = 0..NumRows; += TileNumRows
+  ///     for K = 0..NumInner; += TileNumInner
   LLVM_ABI BasicBlock *CreateTiledLoops(BasicBlock *Start, BasicBlock *End,
                                         IRBuilderBase &B, DomTreeUpdater &DTU,
                                         LoopInfo &LI);
 
+  /// Creates an IR loop nest for tiling with remainder handling.
+  /// Sets {Remainder}{Column,Row,K}LoopHeader/Latch fields with all the
+  /// resulting basic blocks.
+  ///
+  /// See comment in LowerMatrixIntrinsics::createTiledLoops for the structure
+  /// of the loop nest.
+  void CreateTiledLoopsWithRemainder(BasicBlock *Start, BasicBlock *End,
+                                     IRBuilderBase &B, DomTreeUpdater &DTU,
+                                     LoopInfo &LI);
+
 private:
   /// Creates a new loop with header, body and latch blocks that iterates from
-  /// [0, Bound). Updates \p Preheader to branch to the new header and uses \p
-  /// Exit as exit block.  Adds the new loop blocks to \L and applies dominator
-  /// tree updates to \p DTU.
+  /// [Start, Bound). Updates \p Preheader to branch to the new header and uses
+  /// \p Exit as exit block.  Adds the new loop blocks to \L and applies
+  /// dominator tree updates to \p DTU.
   static BasicBlock *CreateLoop(BasicBlock *Preheader, BasicBlock *Exit,
-                                ConstantInt *Bound, ConstantInt *Step,
+                                Value *Start, Value *Bound, Value *Step,
                                 StringRef Name, IRBuilderBase &B,
-                                DomTreeUpdater &DTU, Loop *L, LoopInfo &LI);
+                                DomTreeUpdater &DTU, Loop *L, LoopInfo &LI,
+                                unsigned Successor = 0);
+
+  /// Same as above, with Start == 0.
+  static BasicBlock *CreateLoop(BasicBlock *Preheader, BasicBlock *Exit,
+                                Value *Bound, Value *Step, StringRef Name,
+                                IRBuilderBase &B, DomTreeUpdater &DTU, Loop *L,
+                                LoopInfo &LI, unsigned Successor = 0);
 };
+
+Type *indexType(LLVMContext &Ctx, const DataLayout &DL);
+
+Constant *asIndex(IRBuilderBase &Builder, unsigned Val);
+
 } // namespace llvm
 
 #endif
