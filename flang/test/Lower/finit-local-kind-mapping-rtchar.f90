@@ -16,13 +16,21 @@
 ! RUN:     FileCheck --check-prefix=RT-1BIT  %s
 
 ! RT-24BIT-NOT: not yet implemented
-! RT-24BIT: fir.do_loop
+! RT-24BIT: %[[FACTOR24:.*]] = arith.constant 4 : index
+! RT-24BIT: %[[NBYTES24:.*]] = arith.muli %{{.*}}, %[[FACTOR24]] : index
+! RT-24BIT: %[[LAST24:.*]] = arith.subi %[[NBYTES24]], %{{.*}} : index
+! RT-24BIT: fir.do_loop %{{.*}} = %{{.*}} to %[[LAST24]] step %{{.*}}
 
 ! RT-12BIT-NOT: not yet implemented
-! RT-12BIT: fir.do_loop
+! RT-12BIT: %[[FACTOR12:.*]] = arith.constant 2 : index
+! RT-12BIT: %[[NBYTES12:.*]] = arith.muli %{{.*}}, %[[FACTOR12]] : index
+! RT-12BIT: %[[LAST12:.*]] = arith.subi %[[NBYTES12]], %{{.*}} : index
+! RT-12BIT: fir.do_loop %{{.*}} = %{{.*}} to %[[LAST12]] step %{{.*}}
 
 ! RT-1BIT-NOT: not yet implemented
-! RT-1BIT: fir.do_loop
+! RT-1BIT-NOT: arith.muli
+! RT-1BIT: %[[LAST1:.*]] = arith.subi %{{.*}}, %{{.*}} : index
+! RT-1BIT: fir.do_loop %{{.*}} = %{{.*}} to %[[LAST1]] step %{{.*}}
 
 subroutine test_rt_char(n, res)
   integer, intent(in) :: n
