@@ -52,10 +52,14 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned IncludeFixIts : 1;
 
+  /// Show HLSL vector/matrix swizzle member completions
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IncludeHLSLSwizzleCompletions : 1;
+
   CodeCompleteOptions()
       : IncludeMacros(0), IncludeCodePatterns(0), IncludeGlobals(1),
-        IncludeNamespaceLevelDecls(1), IncludeBriefComments(0),
-        LoadExternal(1), IncludeFixIts(0) {}
+        IncludeNamespaceLevelDecls(1), IncludeBriefComments(0), LoadExternal(1),
+        IncludeFixIts(0), IncludeHLSLSwizzleCompletions(0) {}
 };
 
 } // namespace clang
