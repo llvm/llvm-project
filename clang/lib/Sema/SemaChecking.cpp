@@ -17601,8 +17601,7 @@ ExprResult Sema::BuiltinMatrixTranspose(CallExpr *TheCall,
   // Create returned matrix type by swapping rows and columns of the argument
   // matrix type.
   QualType ResultType = Context.getConstantMatrixType(
-      ConstMType->getElementType(), ConstMType->getNumColumns(),
-      ConstMType->getNumRows());
+      MType->getElementType(), MType->getNumColumns(), MType->getNumRows());
 
   // Change the return type to the type of the returned matrix.
   TheCall->setType(ResultType);

@@ -2217,7 +2217,7 @@ class CooperativeMatrixTypeLoc
 public:
   /// The location of the attribute name, i.e.
   ///   float __attribute__((coop_mat(0, 4, 2, 1)))
-  ///                        ^^~~~~~~~~~~~~~~~~~~
+  ///                        ^~~~~~~~~~~~~~~~~~~~
   SourceLocation getAttrNameLoc() const { return getLocalData()->AttrLoc; }
   void setAttrNameLoc(SourceLocation loc) { getLocalData()->AttrLoc = loc; }
 
