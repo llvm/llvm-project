@@ -84,13 +84,13 @@ static cl::opt<bool>
 namespace sampleprof {
 
 // Internal suffixes which are not reflected in the source code.
-static constexpr StringRef CanonicalSuffixes[] =
-    { // Internal suffixes from CoroSplit pass
-        ".cleanup", ".destroy", ".resume",
-        // Internal suffixes from Bolt
-        ".cold", ".warm",
-        // Compiler/LTO internal
-        ".llvm.", ".part.", ".isra.", ".constprop.", ".lto_priv."};
+static constexpr StringRef CanonicalSuffixes[] = {
+    // Internal suffixes from CoroSplit pass
+    ".cleanup", ".destroy", ".resume",
+    // Internal suffixes from Bolt
+    ".cold", ".warm",
+    // Compiler/LTO internal
+    ".llvm.", ".part.", ".isra.", ".constprop.", ".lto_priv."};
 static const StringRef CoroSuffixes[] = {".cleanup", ".destroy", ".resume"};
 
 static const Target *getTarget(const ObjectFile *Obj) {
