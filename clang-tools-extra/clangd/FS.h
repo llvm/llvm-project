@@ -64,16 +64,9 @@ public:
   getConsumingFS(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) const;
 
 private:
-  std::string MainFilePath;
-  llvm::StringMap<llvm::vfs::Status> StatCache;
+  Path MainFilePath;
+  PathMap<llvm::vfs::Status> StatCache;
 };
-
-/// Returns a version of \p File that doesn't contain dots and dot dots.
-/// e.g /a/b/../c -> /a/c
-///     /a/b/./c -> /a/b/c
-/// FIXME: We should avoid encountering such paths in clangd internals by
-/// filtering everything we get over LSP, CDB, etc.
-Path removeDots(PathRef File);
 
 } // namespace clangd
 } // namespace clang

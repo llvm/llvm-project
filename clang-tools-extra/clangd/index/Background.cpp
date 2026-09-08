@@ -78,7 +78,7 @@ llvm::SmallString<128> getAbsolutePath(const tooling::CompileCommand &Cmd) {
 }
 
 bool shardIsStale(const LoadedShard &LS, llvm::vfs::FileSystem *FS) {
-  auto Buf = FS->getBufferForFile(LS.AbsolutePath);
+  auto Buf = FS->getBufferForFile(LS.AbsolutePath.raw());
   if (!Buf) {
     vlog("Background-index: Couldn't read {0} to validate stored index: {1}",
          LS.AbsolutePath, Buf.getError().message());
@@ -157,7 +157,7 @@ static llvm::StringRef filenameWithoutExtension(llvm::StringRef Path) {
 
 BackgroundQueue::Task BackgroundIndex::indexFileTask(std::string Path) {
   std::string Tag = filenameWithoutExtension(Path).str();
-  uint64_t Key = llvm::xxh3_64bits(Path);
+  uint64_t Key = llvm::xxh3_64bits(PathRef(Path).identityNormalized().raw());
   BackgroundQueue::Task T([this, Path(std::move(Path))] {
     std::optional<WithContext> WithProvidedContext;
     if (ContextProvider)
@@ -183,12 +183,14 @@ void BackgroundIndex::boostRelated(llvm::StringRef Path) {
 /// Given index results from a TU, only update symbols coming from files that
 /// are different or missing from than \p ShardVersionsSnapshot. Also stores new
 /// index information on IndexStorage.
-void BackgroundIndex::update(
-    llvm::StringRef MainFile, IndexFileIn Index,
-    const llvm::StringMap<ShardVersion> &ShardVersionsSnapshot,
-    bool HadErrors) {
-  // Keys are URIs.
-  llvm::StringMap<std::pair<Path, FileDigest>> FilesToUpdate;
+void BackgroundIndex::update(llvm::StringRef MainFile, IndexFileIn Index,
+                             const PathMap<ShardVersion> &ShardVersionsSnapshot,
+                             bool HadErrors) {
+  struct FileToUpdate {
+    std::string URI;
+    FileDigest Digest;
+  };
+  PathMap<FileToUpdate> FilesToUpdate;
   // Note that sources do not contain any information regarding missing headers,
   // since we don't even know what absolute path they should fall in.
   for (const auto &IndexIt : *Index.Sources) {
@@ -198,12 +200,14 @@ void BackgroundIndex::update(
       elog("Failed to resolve URI: {0}", AbsPath.takeError());
       continue;
     }
-    const auto DigestIt = ShardVersionsSnapshot.find(*AbsPath);
+    Path Identity(std::move(*AbsPath));
+    const auto DigestIt = ShardVersionsSnapshot.find(Identity);
     // File has different contents, or indexing was successful this time.
     if (DigestIt == ShardVersionsSnapshot.end() ||
-        DigestIt->getValue().Digest != IGN.Digest ||
-        (DigestIt->getValue().HadErrors && !HadErrors))
-      FilesToUpdate[IGN.URI] = {std::move(*AbsPath), IGN.Digest};
+        DigestIt->second.Digest != IGN.Digest ||
+        (DigestIt->second.HadErrors && !HadErrors))
+      FilesToUpdate.try_emplace(std::move(Identity),
+                                FileToUpdate{IGN.URI.str(), IGN.Digest});
   }
 
   // Shard slabs into files.
@@ -211,27 +215,27 @@ void BackgroundIndex::update(
 
   // Build and store new slabs for each updated file.
   for (const auto &FileIt : FilesToUpdate) {
-    auto Uri = FileIt.first();
+    llvm::StringRef Uri = FileIt.second.URI;
     auto IF = ShardedIndex.getShard(Uri);
     assert(IF && "no shard for file in Index.Sources?");
-    PathRef Path = FileIt.getValue().first;
+    PathRef Path = FileIt.first;
 
     // Only store command line hash for main files of the TU, since our
     // current model keeps only one version of a header file.
-    if (Path != MainFile)
+    if (Path != PathRef(MainFile))
       IF->Cmd.reset();
 
     // We need to store shards before updating the index, since the latter
     // consumes slabs.
     // FIXME: Also skip serializing the shard if it is already up-to-date.
-    if (auto Error = IndexStorageFactory(Path)->storeShard(Path, *IF))
+    if (auto Error = IndexStorageFactory(Path)->storeShard(Path.raw(), *IF))
       elog("Failed to write background-index shard for file {0}: {1}", Path,
            std::move(Error));
 
     {
       std::lock_guard<std::mutex> Lock(ShardVersionsMu);
-      const auto &Hash = FileIt.getValue().second;
-      auto DigestIt = ShardVersions.try_emplace(Path);
+      const auto &Hash = FileIt.second.Digest;
+      auto DigestIt = ShardVersions.try_emplace(Path.raw());
       ShardVersion &SV = DigestIt.first->second;
       // Skip if file is already up to date, unless previous index was broken
       // and this one is not.
@@ -247,7 +251,7 @@ void BackgroundIndex::update(
           Uri, std::make_unique<SymbolSlab>(std::move(*IF->Symbols)),
           std::make_unique<RefSlab>(std::move(*IF->Refs)),
           std::make_unique<RelationSlab>(std::move(*IF->Relations)),
-          Path == MainFile);
+          Path == PathRef(MainFile));
     }
   }
 }
@@ -264,7 +268,7 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
   auto Hash = digest(Buf->get()->getBuffer());
 
   // Take a snapshot of the versions to avoid locking for each file in the TU.
-  llvm::StringMap<ShardVersion> ShardVersionsSnapshot;
+  PathMap<ShardVersion> ShardVersionsSnapshot;
   {
     std::lock_guard<std::mutex> Lock(ShardVersionsMu);
     ShardVersionsSnapshot = ShardVersions;
@@ -383,12 +387,12 @@ BackgroundIndex::loadProject(std::vector<std::string> MainFiles) {
           LS.Shard->Relations
               ? std::make_unique<RelationSlab>(std::move(*LS.Shard->Relations))
               : nullptr;
-      ShardVersion &SV = ShardVersions[LS.AbsolutePath];
+      ShardVersion &SV = ShardVersions[LS.AbsolutePath.raw()];
       SV.Digest = LS.Digest;
       SV.HadErrors = LS.HadErrors;
       ++LoadedShards;
 
-      IndexedSymbols.update(URI::create(LS.AbsolutePath).toString(),
+      IndexedSymbols.update(URI::create(LS.AbsolutePath.raw()).toString(),
                             std::move(SS), std::move(RS), std::move(RelS),
                             LS.CountReferences);
     }
@@ -414,7 +418,11 @@ BackgroundIndex::loadProject(std::vector<std::string> MainFiles) {
     TUsToIndex.insert(TUForFile);
   }
 
-  return {TUsToIndex.begin(), TUsToIndex.end()};
+  std::vector<std::string> TUs;
+  TUs.reserve(TUsToIndex.size());
+  for (PathRef P : TUsToIndex)
+    TUs.push_back(P.raw().str());
+  return TUs;
 }
 
 void BackgroundIndex::profile(MemoryTree &MT) const {

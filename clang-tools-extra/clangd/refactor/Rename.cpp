@@ -783,7 +783,8 @@ renameObjCMethodWithinFile(ParsedAST &AST, const ObjCMethodDecl *MD,
   auto FilePath = AST.tuPath();
   auto RenameRanges = collectRenameIdentifierRanges(
       RenameSymbolName(MD->getDeclName()), Code, LangOpts);
-  auto RenameEdit = buildRenameEdit(FilePath, Code, RenameRanges, NewNames);
+  auto RenameEdit =
+      buildRenameEdit(FilePath.raw(), Code, RenameRanges, NewNames);
   if (!RenameEdit)
     return error("failed to rename in file {0}: {1}", FilePath,
                  RenameEdit.takeError());
@@ -870,7 +871,7 @@ void insertTransitiveOverrides(SymbolID Base, llvm::DenseSet<SymbolID> &IDs,
 
 // Return all rename occurrences (using the index) outside of the main file,
 // grouped by the absolute file path.
-llvm::Expected<llvm::StringMap<std::vector<Range>>>
+llvm::Expected<PathMap<std::vector<Range>>>
 findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
                            llvm::StringRef MainFile, const SymbolIndex &Index,
                            size_t MaxLimitFiles) {
@@ -883,14 +884,14 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
       insertTransitiveOverrides(*RQuest.IDs.begin(), RQuest.IDs, Index);
 
   // Absolute file path => rename occurrences in that file.
-  llvm::StringMap<std::vector<Range>> AffectedFiles;
+  PathMap<std::vector<Range>> AffectedFiles;
   bool HasMore = Index.refs(RQuest, [&](const Ref &R) {
     if (AffectedFiles.size() >= MaxLimitFiles)
       return;
     if ((R.Kind & RefKind::Spelled) == RefKind::Unknown)
       return;
     if (auto RefFilePath = filePath(R.Location, /*HintFilePath=*/MainFile)) {
-      if (!pathEqual(*RefFilePath, MainFile))
+      if (PathRef(*RefFilePath) != PathRef(MainFile))
         AffectedFiles[*RefFilePath].push_back(toRange(R.Location));
     }
   });
@@ -903,11 +904,11 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
                  RenameDecl.getQualifiedNameAsString());
   // Sort and deduplicate the results, in case that index returns duplications.
   for (auto &FileAndOccurrences : AffectedFiles) {
-    auto &Ranges = FileAndOccurrences.getValue();
+    auto &Ranges = FileAndOccurrences.second;
     llvm::sort(Ranges);
     Ranges.erase(llvm::unique(Ranges), Ranges.end());
 
-    SPAN_ATTACH(Tracer, FileAndOccurrences.first(),
+    SPAN_ATTACH(Tracer, FileAndOccurrences.first.raw(),
                 static_cast<int64_t>(Ranges.size()));
   }
   return AffectedFiles;
@@ -936,7 +937,7 @@ renameOutsideFile(const NamedDecl &RenameDecl, llvm::StringRef MainFilePath,
     return AffectedFiles.takeError();
   FileEdits Results;
   for (auto &FileAndOccurrences : *AffectedFiles) {
-    llvm::StringRef FilePath = FileAndOccurrences.first();
+    llvm::StringRef FilePath = FileAndOccurrences.first.raw();
 
     auto ExpBuffer = FS.getBufferForFile(FilePath);
     if (!ExpBuffer) {
@@ -966,7 +967,7 @@ renameOutsideFile(const NamedDecl &RenameDecl, llvm::StringRef MainFilePath,
       return error("failed to rename in file {0}: {1}", FilePath,
                    RenameEdit.takeError());
     if (!RenameEdit->Replacements.empty())
-      Results.insert({FilePath, std::move(*RenameEdit)});
+      Results.try_emplace(FilePath, std::move(*RenameEdit));
   }
   return Results;
 }
@@ -1173,8 +1174,8 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
   // return the main file edit if this is a within-file rename or the symbol
   // being renamed is function local.
   if (RenameDecl.getParentFunctionOrMethod()) {
-    Result.GlobalChanges = FileEdits(
-        {std::make_pair(RInputs.MainFilePath, std::move(MainFileEdits))});
+    Result.GlobalChanges.try_emplace(RInputs.MainFilePath,
+                                     std::move(MainFileEdits));
     return Result;
   }
 

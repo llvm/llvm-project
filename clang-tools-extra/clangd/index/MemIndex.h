@@ -10,8 +10,10 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_MEMINDEX_H
 
 #include "index/Index.h"
+#include "index/PathIdentity.h"
 #include "index/Relation.h"
-#include "llvm/ADT/StringSet.h"
+#include "support/Path.h"
+#include "llvm/ADT/DenseSet.h"
 #include <mutex>
 
 namespace clang {
@@ -61,7 +63,9 @@ public:
                  std::forward<RefRange>(Refs),
                  std::forward<RelationRange>(Relations),
                  std::forward<Payload>(BackingData), BackingDataSize) {
-    this->Files = std::forward<FileRange>(Files);
+    for (const auto &F : Files)
+      if (auto Identity = indexFileIdentityFrom(F))
+        this->Files.insert(std::move(*Identity));
     this->IdxContents = IdxContents;
   }
 
@@ -110,7 +114,8 @@ private:
   llvm::DenseMap<std::pair<SymbolID, uint8_t>, std::vector<SymbolID>>
       ReverseRelations;
   // Set of files which were used during this index build.
-  llvm::StringSet<> Files;
+  // Keys are Path identity (drive letter / slashes), from URI or path.
+  IndexFileSet Files;
   // Contents of the index (symbols, references, etc.)
   IndexContents IdxContents = IndexContents::None;
   std::shared_ptr<void> KeepAlive; // poor man's move-only std::any

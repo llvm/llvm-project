@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "Matchers.h"
+#include "Protocol.h"
 #include "TestFS.h"
 #include "URI.h"
+#include "index/PathIdentity.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -147,6 +149,98 @@ TEST(URITest, Resolve) {
 #endif
   EXPECT_EQ(resolveOrDie(parseOrDie("unittest:///a"), testPath("x")),
             testPath("a"));
+}
+
+TEST(URITest, IndexFileIdentityDriveLetter) {
+  EXPECT_EQ(indexFileIdentity("file:///C:/proj/a.cpp"),
+            indexFileIdentity("file:///c:/proj/a.cpp"));
+  EXPECT_EQ(indexFileIdentity("file:///C:/proj/a.cpp"),
+            indexFileIdentity("C:/proj/a.cpp"));
+  EXPECT_EQ(indexFileIdentity("file:///C:/proj/a.cpp"),
+            indexFileIdentity("c:\\proj\\a.cpp"));
+  EXPECT_NE(indexFileIdentity("file:///C:/proj/a.cpp"),
+            indexFileIdentity("file:///D:/proj/a.cpp"));
+}
+
+TEST(URITest, IndexFileIdentityPreservesCase) {
+  EXPECT_NE(indexFileIdentity("file:///C:/proj/Foo.h"),
+            indexFileIdentity("file:///C:/proj/foo.h"));
+  EXPECT_NE(indexFileIdentity("file:///proj/Foo.h"),
+            indexFileIdentity("file:///proj/foo.h"));
+  EXPECT_EQ(indexFileIdentity("file:///C:/proj/%46oo.h"),
+            indexFileIdentity("c:\\proj\\Foo.h"));
+}
+
+TEST(URITest, IndexFileIdentityRejectsInvalidURI) {
+  EXPECT_FALSE(indexFileIdentity("file:relative/a.cpp"));
+  EXPECT_FALSE(indexFileIdentity("file://server"));
+
+  // Strings without URI syntax remain valid path keys.
+  EXPECT_EQ(indexFileIdentity("relative/a.cpp"),
+            indexFileIdentityFrom(Path("relative/a.cpp")));
+#ifndef CLANGD_PATH_CASE_INSENSITIVE
+  EXPECT_NE(indexFileIdentity("C:notes"), indexFileIdentity("c:notes"));
+#endif
+}
+
+TEST(URITest, IndexFileIdentityOpaqueURI) {
+  auto Key = indexFileIdentity("unknown-scheme:///proj/a.cpp");
+  ASSERT_TRUE(Key);
+  EXPECT_EQ(Key->raw(), "unknown-scheme:///proj/a.cpp");
+  EXPECT_NE(Key, indexFileIdentity("unknown-scheme:///proj/A.cpp"));
+  EXPECT_NE(Key, indexFileIdentityFrom(Path(Key->raw().str())));
+}
+
+TEST(URITest, IndexFileIdentityBorrowedLookup) {
+  for (const char *U :
+       {"file:/a/b", "file:///a/b", "file://server/share/a",
+        "file:////server/share/a", "file:///C:/proj/a.cpp",
+        "file:///c%3A/proj/a%20b.cpp", "file:///", "file:/C:"}) {
+    SCOPED_TRACE(U);
+    auto Resolved = resolveOrDie(parseOrDie(U));
+    auto Owned = indexFileIdentityFrom(Path(Resolved));
+    llvm::SmallString<256> Storage;
+    auto Borrowed = indexFileIdentity(U, Storage);
+    ASSERT_TRUE(Borrowed);
+    ASSERT_TRUE(Owned);
+    EXPECT_TRUE(IndexFileKeyInfo::isEqual(*Borrowed, *Owned));
+    EXPECT_EQ(IndexFileKeyInfo::getHashValue(*Borrowed),
+              IndexFileKeyInfo::getHashValue(*Owned));
+    IndexFileSet Files;
+    Files.insert(*Owned);
+    EXPECT_NE(Files.find_as(*Borrowed), Files.end());
+    if (!llvm::StringRef(U).contains('%')) {
+      EXPECT_TRUE(Storage.empty());
+      EXPECT_GE(Borrowed->Value.data(), U);
+      EXPECT_LE(Borrowed->Value.end(), U + strlen(U));
+    }
+  }
+}
+
+TEST(URITest, URIForFileDriveLetter) {
+  auto Upper = URIForFile::fromURI(parseOrDie("file:///C:/proj/a.cpp"), "");
+  auto Lower = URIForFile::fromURI(parseOrDie("file:///c:/proj/a.cpp"), "");
+  ASSERT_TRUE(bool(Upper)) << Upper.takeError();
+  ASSERT_TRUE(bool(Lower)) << Lower.takeError();
+  EXPECT_EQ(*Upper, *Lower);
+  EXPECT_FALSE(*Lower < *Upper);
+  EXPECT_FALSE(*Upper < *Lower);
+}
+
+TEST(URITest, URIForFilePreservesCase) {
+  auto Upper = URIForFile::fromURI(parseOrDie("file:///C:/proj/Foo.h"), "");
+  auto Lower = URIForFile::fromURI(parseOrDie("file:///C:/proj/foo.h"), "");
+  auto Alias = URIForFile::fromURI(parseOrDie("file:///c:/proj/Foo.h"), "");
+  ASSERT_TRUE(bool(Upper)) << Upper.takeError();
+  ASSERT_TRUE(bool(Lower)) << Lower.takeError();
+  ASSERT_TRUE(bool(Alias)) << Alias.takeError();
+  EXPECT_NE(*Upper, *Lower);
+  EXPECT_EQ(*Upper, *Alias);
+  EXPECT_TRUE(*Upper < *Lower);
+  EXPECT_TRUE(*Alias < *Lower);
+  EXPECT_FALSE(*Lower < *Upper);
+  EXPECT_FALSE(*Upper < *Alias);
+  EXPECT_FALSE(*Alias < *Upper);
 }
 
 TEST(URITest, ResolveUNC) {

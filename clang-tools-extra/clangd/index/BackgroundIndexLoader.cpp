@@ -11,8 +11,8 @@
 #include "index/Background.h"
 #include "support/Logger.h"
 #include "support/Path.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Path.h"
+#include <queue>
 #include <string>
 #include <utility>
 #include <vector>
@@ -41,7 +41,7 @@ private:
   loadShard(PathRef StartSourceFile, PathRef DependentTU);
 
   /// Cache for Storage lookups.
-  llvm::StringMap<LoadedShard> LoadedShards;
+  PathMap<LoadedShard> LoadedShards;
 
   BackgroundIndexStorage::Factory &IndexStorageFactory;
 };
@@ -49,16 +49,16 @@ private:
 std::pair<const LoadedShard &, std::vector<Path>>
 BackgroundIndexLoader::loadShard(PathRef StartSourceFile, PathRef DependentTU) {
   auto It = LoadedShards.try_emplace(StartSourceFile);
-  LoadedShard &LS = It.first->getValue();
+  LoadedShard &LS = It.first->second;
   std::vector<Path> Edges = {};
   // Return the cached shard.
   if (!It.second)
     return {LS, Edges};
 
-  LS.AbsolutePath = StartSourceFile.str();
-  LS.DependentTU = std::string(DependentTU);
-  BackgroundIndexStorage *Storage = IndexStorageFactory(LS.AbsolutePath);
-  auto Shard = Storage->loadShard(StartSourceFile);
+  LS.AbsolutePath = StartSourceFile.owned();
+  LS.DependentTU = DependentTU.owned();
+  BackgroundIndexStorage *Storage = IndexStorageFactory(LS.AbsolutePath.raw());
+  auto Shard = Storage->loadShard(StartSourceFile.raw());
   if (!Shard || !Shard->Sources) {
     vlog("Failed to load shard: {0}", StartSourceFile);
     return {LS, Edges};
@@ -66,7 +66,7 @@ BackgroundIndexLoader::loadShard(PathRef StartSourceFile, PathRef DependentTU) {
 
   LS.Shard = std::move(Shard);
   for (const auto &It : *LS.Shard->Sources) {
-    auto AbsPath = URI::resolve(It.getKey(), StartSourceFile);
+    auto AbsPath = URI::resolve(It.getKey(), StartSourceFile.raw());
     if (!AbsPath) {
       elog("Failed to resolve URI: {0}", AbsPath.takeError());
       continue;
@@ -88,21 +88,22 @@ BackgroundIndexLoader::loadShard(PathRef StartSourceFile, PathRef DependentTU) {
 }
 
 void BackgroundIndexLoader::load(PathRef MainFile) {
-  llvm::StringSet<> InQueue;
-  // Following containers points to strings inside InQueue.
-  std::queue<PathRef> ToVisit;
-  InQueue.insert(MainFile);
-  ToVisit.push(MainFile);
+  PathSet InQueue;
+  // DenseSet keys move when the table grows, so queue owned paths rather than
+  // references into the set.
+  std::queue<Path> ToVisit;
+  InQueue.insert(Path(MainFile));
+  ToVisit.push(Path(MainFile));
 
   while (!ToVisit.empty()) {
-    PathRef SourceFile = ToVisit.front();
+    Path SourceFile = std::move(ToVisit.front());
     ToVisit.pop();
 
     auto ShardAndEdges = loadShard(SourceFile, MainFile);
-    for (PathRef Edge : ShardAndEdges.second) {
+    for (Path &Edge : ShardAndEdges.second) {
       auto It = InQueue.insert(Edge);
       if (It.second)
-        ToVisit.push(It.first->getKey());
+        ToVisit.push(std::move(Edge));
     }
   }
 }
@@ -111,13 +112,13 @@ std::vector<LoadedShard> BackgroundIndexLoader::takeResult() && {
   std::vector<LoadedShard> Result;
   Result.reserve(LoadedShards.size());
   for (auto &It : LoadedShards)
-    Result.push_back(std::move(It.getValue()));
+    Result.push_back(std::move(It.second));
   return Result;
 }
 } // namespace
 
 std::vector<LoadedShard>
-loadIndexShards(llvm::ArrayRef<Path> MainFiles,
+loadIndexShards(llvm::ArrayRef<std::string> MainFiles,
                 BackgroundIndexStorage::Factory &IndexStorageFactory,
                 const GlobalCompilationDatabase &CDB) {
   BackgroundIndexLoader Loader(IndexStorageFactory);

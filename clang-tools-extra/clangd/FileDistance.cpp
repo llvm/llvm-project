@@ -51,6 +51,10 @@ static llvm::SmallString<128> canonicalize(llvm::StringRef Path) {
   native(Result, llvm::sys::path::Style::posix);
   if (Result.empty() || Result.front() != '/')
     Result.insert(Result.begin(), '/');
+  // C:\foo\bar --> /c:/foo/bar (drive letter is never case-sensitive).
+  if (Result.size() >= 3 && Result[0] == '/' && Result[2] == ':' &&
+      llvm::isAlpha(Result[1]))
+    Result[1] = llvm::toLower(Result[1]);
   return Result;
 }
 

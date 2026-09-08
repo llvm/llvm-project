@@ -20,12 +20,14 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_DEX_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_DEX_DEX_H
 
-#include "index/dex/Iterator.h"
 #include "index/Index.h"
+#include "index/PathIdentity.h"
 #include "index/Relation.h"
+#include "index/dex/Iterator.h"
 #include "index/dex/PostingList.h"
 #include "index/dex/Token.h"
-#include "llvm/ADT/StringSet.h"
+#include "support/Path.h"
+#include "llvm/ADT/DenseSet.h"
 
 namespace clang {
 namespace clangd {
@@ -76,7 +78,9 @@ public:
             std::forward<RelationsRange>(Relations),
             std::forward<Payload>(BackingData), BackingDataSize,
             SupportContainedRefs) {
-    this->Files = std::forward<FileRange>(Files);
+    for (const auto &F : Files)
+      if (auto Identity = indexFileIdentityFrom(F))
+        this->Files.insert(std::move(*Identity));
     this->IdxContents = IdxContents;
   }
 
@@ -158,7 +162,8 @@ private:
       ReverseRelations;
   std::shared_ptr<void> KeepAlive; // poor man's move-only std::any
   // Set of files which were used during this index build.
-  llvm::StringSet<> Files;
+  // Keys are Path identity (drive letter / slashes), from URI or path.
+  IndexFileSet Files;
   // Contents of the index (symbols, references, etc.)
   // This is only populated if `Files` is, which applies to some but not all
   // consumers of this class.

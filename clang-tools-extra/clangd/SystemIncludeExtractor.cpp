@@ -491,7 +491,8 @@ llvm::Regex convertGlobsToRegex(llvm::ArrayRef<std::string> Globs) {
   for (llvm::StringRef Glob : Globs)
     RegTexts.push_back(convertGlobToRegex(Glob));
 
-  // Tempting to pass IgnoreCase, but we don't know the FS sensitivity.
+  // This authorizes execution, so host-wide case assumptions are not enough:
+  // macOS and Windows can both have case-sensitive directories or volumes.
   llvm::Regex Reg(llvm::join(RegTexts, "|"));
   assert(Reg.isValid(RegTexts.front()) &&
          "Created an invalid regex from globs");

@@ -9,10 +9,12 @@
 #include "FileIndex.h"
 #include "CollectMacros.h"
 #include "ParsedAST.h"
+#include "URI.h"
 #include "clang-include-cleaner/Record.h"
 #include "index/Index.h"
 #include "index/MemIndex.h"
 #include "index/Merge.h"
+#include "index/PathIdentity.h"
 #include "index/Ref.h"
 #include "index/Relation.h"
 #include "index/Serialization.h"
@@ -29,6 +31,7 @@
 #include "clang/Index/IndexingOptions.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -128,18 +131,32 @@ FileShardedIndex::FileShardedIndex(IndexFileIn Input)
     : Index(std::move(Input)) {
   // Used to build RelationSlabs.
   llvm::DenseMap<SymbolID, FileShard *> SymbolIDToFile;
+  auto ShardFor = [&](llvm::StringRef URI) -> FileShard * {
+    auto Identity = indexFileIdentity(URI);
+    if (!Identity)
+      return nullptr;
+    auto It = Shards.find(*Identity);
+    if (It == Shards.end()) {
+      auto Shard = std::make_unique<FileShard>();
+      Shard->URI = URI.str();
+      It = Shards.try_emplace(std::move(*Identity), std::move(Shard)).first;
+    }
+    return It->second.get();
+  };
 
   // Attribute each Symbol to both their declaration and definition locations.
   if (Index.Symbols) {
     for (const auto &S : *Index.Symbols) {
-      auto It = Shards.try_emplace(S.CanonicalDeclaration.FileURI);
-      It.first->getValue().Symbols.insert(&S);
-      SymbolIDToFile[S.ID] = &It.first->getValue();
+      FileShard *Declaration = ShardFor(S.CanonicalDeclaration.FileURI);
+      if (!Declaration)
+        continue;
+      Declaration->Symbols.insert(&S);
+      SymbolIDToFile[S.ID] = Declaration;
       // Only bother if definition file is different than declaration file.
-      if (S.Definition &&
-          S.Definition.FileURI != S.CanonicalDeclaration.FileURI) {
-        auto It = Shards.try_emplace(S.Definition.FileURI);
-        It.first->getValue().Symbols.insert(&S);
+      if (S.Definition) {
+        FileShard *Definition = ShardFor(S.Definition.FileURI);
+        if (Definition && Definition != Declaration)
+          Definition->Symbols.insert(&S);
       }
     }
   }
@@ -147,9 +164,10 @@ FileShardedIndex::FileShardedIndex(IndexFileIn Input)
   if (Index.Refs) {
     for (const auto &SymRefs : *Index.Refs) {
       for (const auto &R : SymRefs.second) {
-        const auto It = Shards.try_emplace(R.Location.FileURI);
-        It.first->getValue().Refs.insert(&R);
-        RefToSymID[&R] = SymRefs.first;
+        if (FileShard *Shard = ShardFor(R.Location.FileURI)) {
+          Shard->Refs.insert(&R);
+          RefToSymID[&R] = SymRefs.first;
+        }
       }
     }
   }
@@ -174,45 +192,47 @@ FileShardedIndex::FileShardedIndex(IndexFileIn Input)
   if (Index.Sources) {
     const auto &FullGraph = *Index.Sources;
     for (const auto &It : FullGraph) {
-      auto ShardIt = Shards.try_emplace(It.first());
-      ShardIt.first->getValue().IG = getSubGraph(It.first(), FullGraph);
+      if (FileShard *Shard = ShardFor(It.first()))
+        Shard->IG = getSubGraph(It.first(), FullGraph);
     }
   }
 }
 std::vector<llvm::StringRef> FileShardedIndex::getAllSources() const {
-  // It should be enough to construct a vector with {Shards.keys().begin(),
-  // Shards.keys().end()} but MSVC fails to compile that.
-  std::vector<PathRef> Result;
+  std::vector<llvm::StringRef> Result;
   Result.reserve(Shards.size());
-  for (auto Key : Shards.keys())
-    Result.push_back(Key);
+  for (const auto &Entry : Shards)
+    Result.push_back(Entry.second->URI);
   return Result;
 }
 
 std::optional<IndexFileIn>
 FileShardedIndex::getShard(llvm::StringRef Uri) const {
-  auto It = Shards.find(Uri);
+  auto Identity = indexFileIdentity(Uri);
+  if (!Identity)
+    return std::nullopt;
+  auto It = Shards.find(*Identity);
   if (It == Shards.end())
     return std::nullopt;
+  const FileShard &Shard = *It->second;
 
   IndexFileIn IF;
-  IF.Sources = It->getValue().IG;
+  IF.Sources = Shard.IG;
   IF.Cmd = Index.Cmd;
 
   SymbolSlab::Builder SymB;
-  for (const auto *S : It->getValue().Symbols)
+  for (const auto *S : Shard.Symbols)
     SymB.insert(*S);
   IF.Symbols = std::move(SymB).build();
 
   RefSlab::Builder RefB;
-  for (const auto *Ref : It->getValue().Refs) {
+  for (const auto *Ref : Shard.Refs) {
     auto SID = RefToSymID.lookup(Ref);
     RefB.insert(SID, *Ref);
   }
   IF.Refs = std::move(RefB).build();
 
   RelationSlab::Builder RelB;
-  for (const auto *Rel : It->getValue().Relations) {
+  for (const auto *Rel : Shard.Relations) {
     RelB.insert(*Rel);
   }
   IF.Relations = std::move(RelB).build();
@@ -249,24 +269,27 @@ void FileSymbols::update(llvm::StringRef Key,
                          std::unique_ptr<RefSlab> Refs,
                          std::unique_ptr<RelationSlab> Relations,
                          bool CountReferences) {
+  auto Id = indexFileIdentity(Key);
+  if (!Id)
+    return;
   std::lock_guard<std::mutex> Lock(Mutex);
   ++Version;
   if (!Symbols)
-    SymbolsSnapshot.erase(Key);
+    SymbolsSnapshot.erase(*Id);
   else
-    SymbolsSnapshot[Key] = std::move(Symbols);
+    SymbolsSnapshot[*Id] = std::move(Symbols);
   if (!Refs) {
-    RefsSnapshot.erase(Key);
+    RefsSnapshot.erase(*Id);
   } else {
     RefSlabAndCountReferences Item;
     Item.CountReferences = CountReferences;
     Item.Slab = std::move(Refs);
-    RefsSnapshot[Key] = std::move(Item);
+    RefsSnapshot[*Id] = std::move(Item);
   }
   if (!Relations)
-    RelationsSnapshot.erase(Key);
+    RelationsSnapshot.erase(*Id);
   else
-    RelationsSnapshot[Key] = std::move(Relations);
+    RelationsSnapshot[*Id] = std::move(Relations);
 }
 
 std::unique_ptr<SymbolIndex>
@@ -275,22 +298,22 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle,
   std::vector<std::shared_ptr<SymbolSlab>> SymbolSlabs;
   std::vector<std::shared_ptr<RefSlab>> RefSlabs;
   std::vector<std::shared_ptr<RelationSlab>> RelationSlabs;
-  llvm::StringSet<> Files;
+  IndexFileSet Files;
   std::vector<RefSlab *> MainFileRefs;
   {
     std::lock_guard<std::mutex> Lock(Mutex);
     for (const auto &FileAndSymbols : SymbolsSnapshot) {
       SymbolSlabs.push_back(FileAndSymbols.second);
-      Files.insert(FileAndSymbols.first());
+      Files.insert(FileAndSymbols.first);
     }
     for (const auto &FileAndRefs : RefsSnapshot) {
       RefSlabs.push_back(FileAndRefs.second.Slab);
-      Files.insert(FileAndRefs.first());
+      Files.insert(FileAndRefs.first);
       if (FileAndRefs.second.CountReferences)
         MainFileRefs.push_back(RefSlabs.back().get());
     }
     for (const auto &FileAndRelations : RelationsSnapshot) {
-      Files.insert(FileAndRelations.first());
+      Files.insert(FileAndRelations.first);
       RelationSlabs.push_back(FileAndRelations.second);
     }
 
@@ -404,17 +427,17 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle,
 void FileSymbols::profile(MemoryTree &MT) const {
   std::lock_guard<std::mutex> Lock(Mutex);
   for (const auto &SymSlab : SymbolsSnapshot) {
-    MT.detail(SymSlab.first())
+    MT.detail(SymSlab.first.raw())
         .child("symbols")
         .addUsage(SymSlab.second->bytes());
   }
   for (const auto &RefSlab : RefsSnapshot) {
-    MT.detail(RefSlab.first())
+    MT.detail(RefSlab.first.raw())
         .child("references")
         .addUsage(RefSlab.second.Slab->bytes());
   }
   for (const auto &RelSlab : RelationsSnapshot) {
-    MT.detail(RelSlab.first())
+    MT.detail(RelSlab.first.raw())
         .child("relations")
         .addUsage(RelSlab.second->bytes());
   }
@@ -471,7 +494,7 @@ void FileIndex::updatePreamble(PathRef Path, llvm::StringRef Version,
 void FileIndex::updateMain(PathRef Path, ParsedAST &AST) {
   auto Contents = indexMainDecls(AST);
   MainFileSymbols.update(
-      URI::create(Path).toString(),
+      URI::create(Path.raw()).toString(),
       std::make_unique<SymbolSlab>(std::move(std::get<0>(Contents))),
       std::make_unique<RefSlab>(std::move(std::get<1>(Contents))),
       std::make_unique<RelationSlab>(std::move(std::get<2>(Contents))),

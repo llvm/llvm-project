@@ -113,14 +113,14 @@ std::string TweakTest::apply(llvm::StringRef MarkedCode,
     if (!NewText)
       return "bad edits: " + llvm::toString(NewText.takeError());
     llvm::StringRef Unwrapped = unwrap(Context, *NewText);
-    if (It.first() == testPath(TU.Filename))
+    if (It.first == testPath(TU.Filename))
       EditedMainFile = std::string(Unwrapped);
     else {
       if (!EditedFiles)
         ADD_FAILURE() << "There were changes to additional files, but client "
                          "provided a nullptr for EditedFiles.";
       else
-        EditedFiles->insert_or_assign(It.first(), Unwrapped.str());
+        EditedFiles->insert_or_assign(It.first.raw(), Unwrapped.str());
     }
   }
   return EditedMainFile;
@@ -190,7 +190,7 @@ TweakWorkspaceTest::apply(StringRef InvocationFile,
     auto NewText = It.second.apply();
     if (!NewText)
       return TweakResult{"bad edits: " + llvm::toString(NewText.takeError())};
-    Retval.EditedFiles.insert_or_assign(It.first(), *NewText);
+    Retval.EditedFiles.insert_or_assign(It.first.raw(), *NewText);
   }
   return Retval;
 }

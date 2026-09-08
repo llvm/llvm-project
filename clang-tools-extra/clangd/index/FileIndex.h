@@ -19,6 +19,7 @@
 #include "clang-include-cleaner/Record.h"
 #include "index/Index.h"
 #include "index/Merge.h"
+#include "index/PathIdentity.h"
 #include "index/Ref.h"
 #include "index/Relation.h"
 #include "index/Serialization.h"
@@ -100,9 +101,9 @@ private:
   mutable std::mutex Mutex;
 
   size_t Version = 0;
-  llvm::StringMap<std::shared_ptr<SymbolSlab>> SymbolsSnapshot;
-  llvm::StringMap<RefSlabAndCountReferences> RefsSnapshot;
-  llvm::StringMap<std::shared_ptr<RelationSlab>> RelationsSnapshot;
+  IndexFileMap<std::shared_ptr<SymbolSlab>> SymbolsSnapshot;
+  IndexFileMap<RefSlabAndCountReferences> RefsSnapshot;
+  IndexFileMap<std::shared_ptr<RelationSlab>> RelationsSnapshot;
 };
 
 /// This manages symbols from files and an in-memory index on all symbols.
@@ -170,11 +171,11 @@ SlabTuple indexHeaderSymbols(llvm::StringRef Version, ASTContext &AST,
 /// Takes slabs coming from a TU (multiple files) and shards them per
 /// declaration location.
 struct FileShardedIndex {
-  /// \p HintPath is used to convert file URIs stored in symbols into absolute
-  /// paths.
+  /// File URIs use conservative filesystem-path identity. Other URI schemes
+  /// remain opaque, case-sensitive keys.
   explicit FileShardedIndex(IndexFileIn Input);
 
-  /// Returns uris for all files that has a shard.
+  /// Returns the first-observed URI spelling for each file with a shard.
   std::vector<llvm::StringRef> getAllSources() const;
 
   /// Generates index shard for the \p Uri. Note that this function results in
@@ -186,6 +187,8 @@ struct FileShardedIndex {
 private:
   // Contains all the information that belongs to a single file.
   struct FileShard {
+    // First URI spelling observed for this index key.
+    std::string URI;
     // Either declared or defined in the file.
     llvm::DenseSet<const Symbol *> Symbols;
     // Reference occurs in the file.
@@ -198,8 +201,10 @@ private:
 
   // Keeps all the information alive.
   const IndexFileIn Index;
-  // Mapping from URIs to slab information.
-  llvm::StringMap<FileShard> Shards;
+  // Mapping from path or opaque URI identity to slab information. FileShard is
+  // separately allocated because SymbolIDToFile retains pointers while this
+  // DenseMap grows.
+  IndexFileMap<std::unique_ptr<FileShard>> Shards;
   // Used to build RefSlabs.
   llvm::DenseMap<const Ref *, SymbolID> RefToSymID;
 };

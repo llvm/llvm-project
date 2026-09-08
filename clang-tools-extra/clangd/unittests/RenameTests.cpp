@@ -82,9 +82,9 @@ applyEdits(FileEdits FE) {
   std::vector<std::pair<std::string, std::string>> Results;
   for (auto &It : FE)
     Results.emplace_back(
-        It.first().str(),
+        It.first.raw(),
         llvm::cantFail(tooling::applyAllReplacements(
-            It.getValue().InitialCode, It.getValue().Replacements)));
+            It.second.InitialCode, It.second.Replacements)));
   return Results;
 }
 
@@ -1459,6 +1459,21 @@ TEST(RenameTest, IndexMergeMainFile) {
   EXPECT_THAT(Results.GlobalChanges[Main].asTextEdits(),
               ElementsAre(newText("xPrime")));
 #endif
+
+  // Drive-letter case must not produce two edits for one file.
+  // https://github.com/clangd/clangd/issues/108
+#ifdef _WIN32
+  std::string DriveMain = testPath("main.cc");
+  ASSERT_GE(DriveMain.size(), 2u);
+  ASSERT_EQ(DriveMain[1], ':');
+  DriveMain[0] = llvm::isLower(DriveMain[0]) ? llvm::toUpper(DriveMain[0])
+                                             : llvm::toLower(DriveMain[0]);
+  TU.Filename = "main.cc";
+  // Keep TestTU's filenames relative; vary the LSP-side absolute spelling.
+  Main = DriveMain;
+  Results = Rename(TU.index().get());
+  EXPECT_EQ(Results.GlobalChanges.size(), 1u);
+#endif
 }
 
 TEST(RenameTest, MainFileReferencesOnly) {
@@ -2199,7 +2214,9 @@ TEST(CrossFileRenameTests, BuildRenameEdits) {
   Edit =
       buildRenameEdit(FilePath, T.code(), symbolRanges(T.ranges()), NewNames);
   ASSERT_TRUE(bool(Edit)) << Edit.takeError();
-  EXPECT_EQ(applyEdits(FileEdits{{T.code(), std::move(*Edit)}}).front().second,
+  FileEdits Edits;
+  Edits.try_emplace(Path(T.code().str()), std::move(*Edit));
+  EXPECT_EQ(applyEdits(std::move(Edits)).front().second,
             expectedResult(T, NewNames[0]));
 }
 

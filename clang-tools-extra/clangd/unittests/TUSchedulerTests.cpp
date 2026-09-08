@@ -21,6 +21,7 @@
 #include "clang-include-cleaner/Record.h"
 #include "support/Cancellation.h"
 #include "support/Context.h"
+#include "support/MemoryTree.h"
 #include "support/Path.h"
 #include "support/TestTracer.h"
 #include "support/Threading.h"
@@ -79,7 +80,7 @@ MATCHER_P2(TUState, PreambleActivity, ASTActivity, "") {
 // Simple ContextProvider to verify the provider is invoked & contexts are used.
 static Key<std::string> BoundPath;
 Context bindPath(PathRef F) {
-  return Context::current().derive(BoundPath, F.str());
+  return Context::current().derive(BoundPath, F.owned().raw());
 }
 llvm::StringRef boundPath() {
   const std::string *V = Context::current().get(BoundPath);
@@ -155,7 +156,7 @@ protected:
   void updateWithDiags(TUScheduler &S, PathRef File, ParseInputs Inputs,
                        WantDiagnostics WD,
                        llvm::unique_function<void(std::vector<Diag>)> CB) {
-    Path OrigFile = File.str();
+    Path OrigFile = File.owned();
     WithContextValue Ctx(DiagsCallbackKey,
                          [OrigFile, CB = std::move(CB)](
                              PathRef File, std::vector<Diag> Diags) mutable {
@@ -445,9 +446,8 @@ TEST_F(TUSchedulerTests, InvalidationUnchanged) {
   std::atomic<int> Actions(0);
 
   Notification Start;
-  updateWithDiags(S, Path, "a", WantDiagnostics::Yes, [&](std::vector<Diag>) {
-    Start.wait();
-  });
+  updateWithDiags(S, Path, "a", WantDiagnostics::Yes,
+                  [&](std::vector<Diag>) { Start.wait(); });
   S.runWithAST(
       "invalidatable", Path,
       [&](llvm::Expected<InputsAndAST> AST) {
@@ -1319,6 +1319,45 @@ TEST_F(TUSchedulerTests, PublishWithStalePreamble) {
   EXPECT_THAT(Collector.diagVersions().back(), Pair("3", "3"));
 }
 
+TEST_F(TUSchedulerTests, IncluderCacheMemoryUsage) {
+  CDB.ExtraClangFlags = {"-xc++"};
+  TUScheduler S(CDB, optsForTest());
+  auto Main = testPath(std::string(180, 'm') + ".cc");
+  std::string Contents;
+  size_t OwnedPathBytes = Main.size();
+  for (int I = 0; I != 16; ++I) {
+    auto Header = std::string(180, 'h') + std::to_string(I) + ".h";
+    FS.Files[testPath(Header)] = "";
+    Contents += "#include \"" + Header + "\"\n";
+    OwnedPathBytes += testPath(Header).size() + Main.size();
+  }
+  auto Usage = [&] {
+    MemoryTree MT;
+    S.profile(MT);
+    return MT.child("header_includer_cache").total();
+  };
+  S.update(Main, getInputs(Main, Contents), WantDiagnostics::Yes);
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
+  auto FirstUsage = Usage();
+  EXPECT_GE(FirstUsage, OwnedPathBytes);
+
+  S.update(Main, getInputs(Main, "#define AGAIN\n" + Contents),
+           WantDiagnostics::Yes);
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
+  EXPECT_EQ(Usage(), FirstUsage) << "reassociation must not double-count";
+
+  auto Other = testPath("second.cc");
+  S.update(Other, getInputs(Other, Contents), WantDiagnostics::Yes);
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
+  auto TwoFilesUsage = Usage();
+  EXPECT_LT(TwoFilesUsage, 2 * FirstUsage)
+      << "the shared cache must only be counted once";
+  S.remove(Other);
+  S.remove(Main);
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
+  EXPECT_EQ(Usage(), TwoFilesUsage) << "retained cache storage is still owned";
+}
+
 // If a header file is missing from the CDB (or inferred using heuristics), and
 // it's included by another open file, then we parse it using that files flags.
 TEST_F(TUSchedulerTests, IncluderCache) {
@@ -1383,6 +1422,12 @@ TEST_F(TUSchedulerTests, IncluderCache) {
   EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   EXPECT_THAT(GetFlags(NoCmd), Contains("-DMAIN"))
       << "Included from main file, has no own command";
+#ifdef _WIN32
+  std::string LowercaseDriveNoCmd = NoCmd;
+  LowercaseDriveNoCmd[0] = llvm::toLower(LowercaseDriveNoCmd[0]);
+  EXPECT_THAT(GetFlags(LowercaseDriveNoCmd), Contains("-DMAIN"))
+      << "CDB/include spelling and LSP spelling differ in drive-letter case";
+#endif
   EXPECT_THAT(GetFlags(Unreliable), Contains("-DMAIN"))
       << "Included from main file, own command is heuristic";
   EXPECT_THAT(GetFlags(OK), Not(Contains("-DMAIN")))
@@ -1436,6 +1481,56 @@ TEST_F(TUSchedulerTests, IncluderCache) {
   EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
   EXPECT_THAT(GetFlags(NoCmd), Contains("-DMAIN3"))
       << "association invalidated and then claimed by main3";
+}
+
+// HeaderIncluderCache stores Association by unique_ptr so a DenseMap rehash
+// (dozens of unique headers) cannot dangle the circular list.
+TEST_F(TUSchedulerTests, IncluderCacheManyHeaders) {
+  static std::string Main = testPath("bulk_main.cpp");
+  struct ManyCDB : public GlobalCompilationDatabase {
+    std::optional<tooling::CompileCommand>
+    getCompileCommand(PathRef File) const override {
+      if (File == Main) {
+        auto Cmd = getFallbackCommand(File);
+        Cmd.Heuristic.clear();
+        Cmd.CommandLine.push_back("-DMAIN");
+        return Cmd;
+      }
+      return std::nullopt;
+    }
+  } ManyCDB;
+  TUScheduler S(ManyCDB, optsForTest());
+
+  std::string Includes;
+  std::vector<std::string> Headers;
+  Headers.reserve(64);
+  for (int I = 0; I < 64; ++I) {
+    std::string H = testPath("bulk" + std::to_string(I) + ".h");
+    Headers.push_back(H);
+    FS.Files[H] = ";";
+    Includes += "#include \"bulk" + std::to_string(I) + ".h\"\n";
+  }
+
+  auto GetFlags = [&](PathRef Header) {
+    S.update(Header, getInputs(Header, ";"), WantDiagnostics::Yes);
+    EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
+    Notification CmdDone;
+    tooling::CompileCommand Cmd;
+    S.runWithPreamble("GetFlags", Header, TUScheduler::StaleOrAbsent,
+                      [&](llvm::Expected<InputsAndPreamble> Inputs) {
+                        ASSERT_FALSE(!Inputs) << Inputs.takeError();
+                        Cmd = std::move(Inputs->Command);
+                        CmdDone.notify();
+                      });
+    CmdDone.wait();
+    EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
+    return Cmd.CommandLine;
+  };
+
+  S.update(Main, getInputs(Main, Includes), WantDiagnostics::Yes);
+  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
+  EXPECT_THAT(GetFlags(Headers.front()), Contains("-DMAIN"));
+  EXPECT_THAT(GetFlags(Headers.back()), Contains("-DMAIN"));
 }
 
 TEST_F(TUSchedulerTests, PreservesLastActiveFile) {
@@ -1569,7 +1664,7 @@ TEST_F(TUSchedulerTests, PreambleThrottle) {
       // Deliberately no synchronization.
       // The PreambleThrottler should serialize these calls, if not then tsan
       // will find a bug here.
-      Filenames.emplace_back(Path);
+      Filenames.emplace_back(Path.raw());
     }
   };
 
@@ -1593,8 +1688,7 @@ TEST_F(TUSchedulerTests, PreambleThrottle) {
     // The throttler saw all files, and we built them.
     EXPECT_THAT(Throttler.Acquires,
                 testing::UnorderedElementsAreArray(Filenames));
-    EXPECT_THAT(BuiltFilenames,
-                testing::UnorderedElementsAreArray(Filenames));
+    EXPECT_THAT(BuiltFilenames, testing::UnorderedElementsAreArray(Filenames));
     // We built the files in reverse order that the throttler saw them.
     EXPECT_THAT(BuiltFilenames,
                 testing::ElementsAreArray(Throttler.Acquires.rbegin(),

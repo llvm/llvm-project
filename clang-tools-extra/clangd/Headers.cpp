@@ -263,7 +263,7 @@ IncludeStructure::mainFileIncludesWithSpelling(llvm::StringRef Spelling) const {
 void IncludeInserter::addExisting(const Inclusion &Inc) {
   IncludedHeaders.insert(Inc.Written);
   if (!Inc.Resolved.empty())
-    IncludedHeaders.insert(Inc.Resolved);
+    IncludedHeaders.insert(Inc.Resolved.raw());
 }
 
 /// FIXME(ioeric): we might not want to insert an absolute include path if the
@@ -273,12 +273,13 @@ bool IncludeInserter::shouldInsertInclude(
   assert(InsertedHeader.valid());
   if (!HeaderSearchInfo && !InsertedHeader.Verbatim)
     return false;
-  if (FileName == DeclaringHeader || FileName == InsertedHeader.File)
+  if (PathRef(FileName) == DeclaringHeader ||
+      PathRef(FileName) == PathRef(InsertedHeader.File))
     return false;
   auto Included = [&](llvm::StringRef Header) {
     return IncludedHeaders.contains(Header);
   };
-  return !Included(DeclaringHeader) && !Included(InsertedHeader.File);
+  return !Included(DeclaringHeader.raw()) && !Included(InsertedHeader.File);
 }
 
 std::optional<std::string>
@@ -349,7 +350,7 @@ IncludeInserter::insert(llvm::StringRef VerbatimHeader,
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Inclusion &Inc) {
   return OS << Inc.Written << " = "
-            << (!Inc.Resolved.empty() ? Inc.Resolved : "[unresolved]")
+            << (!Inc.Resolved.empty() ? Inc.Resolved.raw() : "[unresolved]")
             << " at line" << Inc.HashLine;
 }
 

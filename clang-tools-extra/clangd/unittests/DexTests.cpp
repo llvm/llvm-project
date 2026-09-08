@@ -14,6 +14,7 @@
 #include "index/dex/Iterator.h"
 #include "index/dex/Token.h"
 #include "index/dex/Trigram.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -776,6 +777,19 @@ TEST(DexIndex, IndexedFiles) {
   EXPECT_EQ(ContainsFile("unittest:///foo.cc"), IndexContents::All);
   EXPECT_EQ(ContainsFile("unittest:///bar.cc"), IndexContents::All);
   EXPECT_EQ(ContainsFile("unittest:///foobar.cc"), IndexContents::None);
+}
+
+TEST(DexIndex, IndexedFilesDriveLetter) {
+  SymbolSlab Symbols;
+  RefSlab Refs;
+  auto Size = Symbols.bytes() + Refs.bytes();
+  auto Data = std::make_pair(std::move(Symbols), std::move(Refs));
+  llvm::StringSet<> Files = {"file:///c:/proj/foo.cpp"};
+  Dex I(std::move(Data.first), std::move(Data.second), RelationSlab(),
+        std::move(Files), IndexContents::All, std::move(Data), Size, true);
+  auto ContainsFile = I.indexedFiles();
+  EXPECT_EQ(ContainsFile("file:///C:/proj/foo.cpp"), IndexContents::All);
+  EXPECT_EQ(ContainsFile("C:\\proj\\foo.cpp"), IndexContents::All);
 }
 
 TEST(DexTest, PreferredTypesBoosting) {

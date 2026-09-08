@@ -176,13 +176,13 @@ llvm::Error validateEdits(const ClangdServer &Server, const FileEdits &FE) {
   size_t InvalidFileCount = 0;
   llvm::StringRef LastInvalidFile;
   for (const auto &It : FE) {
-    if (auto Draft = Server.getDraft(It.first())) {
+    if (auto Draft = Server.getDraft(It.first)) {
       // If the file is open in user's editor, make sure the version we
       // saw and current version are compatible as this is the text that
       // will be replaced by editors.
       if (!It.second.canApplyTo(*Draft)) {
         ++InvalidFileCount;
-        LastInvalidFile = It.first();
+        LastInvalidFile = It.first.raw();
       }
     }
   }
@@ -831,7 +831,7 @@ void ClangdLSPServer::onCommandApplyTweak(const TweakArgs &Args,
     // FIXME: use documentChanges when SupportDocumentChanges is true.
     WE.changes.emplace();
     for (const auto &It : R->ApplyEdits) {
-      (*WE.changes)[URI::createFile(It.first()).toString()] =
+      (*WE.changes)[URI::createFile(It.first.raw()).toString()] =
           It.second.asTextEdits();
     }
     // ApplyEdit will take care of calling Reply().
@@ -920,7 +920,7 @@ void ClangdLSPServer::onRename(const RenameParams &Params,
                    Result.changes.emplace();
                    for (const auto &Rep : R->GlobalChanges) {
                      (*Result
-                           .changes)[URI::createFile(Rep.first()).toString()] =
+                           .changes)[URI::createFile(Rep.first.raw()).toString()] =
                          Rep.second.asTextEdits();
                    }
                    Reply(Result);
@@ -934,11 +934,11 @@ void ClangdLSPServer::onDocumentDidClose(
 
   {
     std::lock_guard<std::mutex> Lock(DiagRefMutex);
-    DiagRefMap.erase(File);
+    DiagRefMap.erase(File.raw());
   }
   {
     std::lock_guard<std::mutex> HLock(SemanticTokensMutex);
-    LastSemanticTokens.erase(File);
+    LastSemanticTokens.erase(File.raw());
   }
   // clangd will not send updates for this file anymore, so we empty out the
   // list of diagnostics shown on the client (e.g. in the "Problems" pane of
@@ -1202,10 +1202,10 @@ static Location *getToggle(const TextDocumentPositionParams &Point,
   // Toggle only makes sense with two distinct locations.
   if (!Sym.Definition || *Sym.Definition == Sym.PreferredDeclaration)
     return nullptr;
-  if (Sym.Definition->uri.file() == Point.textDocument.uri.file() &&
+  if (Sym.Definition->uri == Point.textDocument.uri &&
       Sym.Definition->range.contains(Point.position))
     return &Sym.PreferredDeclaration;
-  if (Sym.PreferredDeclaration.uri.file() == Point.textDocument.uri.file() &&
+  if (Sym.PreferredDeclaration.uri == Point.textDocument.uri &&
       Sym.PreferredDeclaration.range.contains(Point.position))
     return &*Sym.Definition;
   return nullptr;
@@ -1444,19 +1444,20 @@ void ClangdLSPServer::onCallHierarchyOutgoingCalls(
 void ClangdLSPServer::applyConfiguration(
     const ConfigurationSettings &Settings) {
   // Per-file update to the compilation database.
-  llvm::StringSet<> ModifiedFiles;
+  PathSet ModifiedFiles;
   for (auto &[File, Command] : Settings.compilationDatabaseChanges) {
     auto Cmd =
         tooling::CompileCommand(std::move(Command.workingDirectory), File,
                                 std::move(Command.compilationCommand),
                                 /*Output=*/"");
     if (CDB->setCompileCommand(File, std::move(Cmd))) {
-      ModifiedFiles.insert(File);
+      ModifiedFiles.insert(Path(File));
     }
   }
 
-  Server->reparseOpenFilesIfNeeded(
-      [&](llvm::StringRef File) { return ModifiedFiles.count(File) != 0; });
+  Server->reparseOpenFilesIfNeeded([&](llvm::StringRef File) {
+    return ModifiedFiles.find_as(PathRef(File)) != ModifiedFiles.end();
+  });
 }
 
 void ClangdLSPServer::maybeExportMemoryProfile() {

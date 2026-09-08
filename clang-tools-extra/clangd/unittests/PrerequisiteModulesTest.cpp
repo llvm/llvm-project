@@ -97,14 +97,14 @@ public:
     CommandLine.insert(CommandLine.end(), ExtraFlags.begin(), ExtraFlags.end());
     CommandLine.push_back(std::string(AbsPath));
 
-    Commands[maybeCaseFoldPath(AbsPath)] = tooling::CompileCommand(
+    Commands[maybeCaseFoldPath(AbsPath).raw()] = tooling::CompileCommand(
         Directory, std::string(AbsPath), std::move(CommandLine), "");
     Files.push_back(std::string(AbsPath));
   }
 
   std::optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override {
-    auto It = Commands.find(maybeCaseFoldPath(File));
+    auto It = Commands.find(maybeCaseFoldPath(File).raw());
     if (It == Commands.end())
       return std::nullopt;
     tooling::CompileCommand Cmd = It->second;
@@ -164,7 +164,7 @@ public:
   std::optional<ProjectInfo> getProjectInfo(PathRef File) const override {
     // Treat each module-unit directory as its own project root so tests can
     // verify that the persistent cache follows the providing module unit.
-    llvm::SmallString<256> Root(File);
+    llvm::SmallString<256> Root(File.raw());
     llvm::sys::path::remove_filename(Root);
     return ProjectInfo{std::string(Root)};
   }

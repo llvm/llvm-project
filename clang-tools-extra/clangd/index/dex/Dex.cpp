@@ -12,6 +12,7 @@
 #include "Quality.h"
 #include "URI.h"
 #include "index/Index.h"
+#include "index/PathIdentity.h"
 #include "index/dex/Iterator.h"
 #include "index/dex/Token.h"
 #include "index/dex/Trigram.h"
@@ -404,7 +405,11 @@ void Dex::reverseRelations(
 llvm::unique_function<IndexContents(llvm::StringRef) const>
 Dex::indexedFiles() const {
   return [this](llvm::StringRef FileURI) {
-    return Files.contains(FileURI) ? IdxContents : IndexContents::None;
+    llvm::SmallString<256> Storage;
+    auto Identity = indexFileIdentity(FileURI, Storage);
+    return Identity && Files.find_as(*Identity) != Files.end()
+               ? IdxContents
+               : IndexContents::None;
   };
 }
 

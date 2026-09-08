@@ -103,6 +103,91 @@ std::unique_ptr<RelationSlab> relSlab(llvm::ArrayRef<const Relation> Rels) {
   return std::make_unique<RelationSlab>(std::move(RelBuilder).build());
 }
 
+class HintRequiredScheme : public URIScheme {
+public:
+  llvm::Expected<std::string>
+  getAbsolutePath(llvm::StringRef, llvm::StringRef Body,
+                  llvm::StringRef Hint) const override {
+    if (Hint.empty())
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "workspace hint required");
+    return testPath(Body.drop_front());
+  }
+  llvm::Expected<URI> uriFromAbsolutePath(llvm::StringRef) const override {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "not used to create URIs");
+  }
+};
+static URISchemeRegistry::Add<HintRequiredScheme>
+    HintRequired("hint-required", "test workspace-relative index keys");
+
+TEST(FileSymbolsTest, HintDependentURIKeys) {
+  FileSymbols FS(IndexContents::All, true);
+  constexpr llvm::StringLiteral Upper = "hint-required:///A.h";
+  constexpr llvm::StringLiteral Lower = "hint-required:///a.h";
+  auto Resolved = URI::resolve(Upper, testPath("main.cc"));
+  ASSERT_TRUE(bool(Resolved));
+  FS.update(Upper, numSlab(1, 1), nullptr, nullptr, false);
+  FS.update(Lower, numSlab(2, 2), nullptr, nullptr, false);
+  for (auto Type : {IndexType::Light, IndexType::Heavy}) {
+    auto Index = FS.buildIndex(Type);
+    EXPECT_THAT(runFuzzyFind(*Index, ""),
+                UnorderedElementsAre(qName("1"), qName("2")));
+    auto Contains = Index->indexedFiles();
+    EXPECT_EQ(Contains(Upper), IndexContents::All);
+    EXPECT_EQ(Contains(Lower), IndexContents::All);
+    EXPECT_EQ(Contains("hint-required:///missing.h"), IndexContents::None);
+  }
+  FS.update(Upper, nullptr, nullptr, nullptr, false);
+  auto Index = FS.buildIndex(IndexType::Light);
+  EXPECT_THAT(runFuzzyFind(*Index, ""), ElementsAre(qName("2")));
+  EXPECT_EQ(Index->indexedFiles()(Upper), IndexContents::None);
+  EXPECT_EQ(Index->indexedFiles()(Lower), IndexContents::All);
+}
+
+TEST(FileSymbolsTest, DriveLetterURIKeys) {
+  FileSymbols FS(IndexContents::All, true);
+  auto SlabC = numSlab(1, 1);
+  FS.update("file:///C:/proj/a.cpp", std::move(SlabC), nullptr, nullptr, false);
+  auto Slabc = numSlab(2, 2);
+  FS.update("file:///c:/proj/a.cpp", std::move(Slabc), nullptr, nullptr, false);
+
+  auto Index = FS.buildIndex(IndexType::Light);
+  EXPECT_THAT(runFuzzyFind(*Index, ""), UnorderedElementsAre(qName("2")))
+      << "second update must replace, not accumulate";
+  auto Contains = Index->indexedFiles();
+  EXPECT_EQ(Contains("file:///C:/proj/a.cpp"), IndexContents::All);
+  EXPECT_EQ(Contains("file:///c:/proj/a.cpp"), IndexContents::All);
+  EXPECT_EQ(Contains("C:/proj/a.cpp"), IndexContents::All);
+  EXPECT_EQ(Contains("c:\\proj\\a.cpp"), IndexContents::All);
+  EXPECT_EQ(Contains("file:///D:/proj/a.cpp"), IndexContents::None);
+}
+
+TEST(FileSymbolsTest, CaseDistinctFileURIKeys) {
+  constexpr llvm::StringLiteral Upper = "file:///C:/proj/Foo.h";
+  constexpr llvm::StringLiteral Lower = "file:///C:/proj/foo.h";
+  FileSymbols FS(IndexContents::All, true);
+  FS.update(Upper, numSlab(1, 1), nullptr, nullptr, false);
+  FS.update(Lower, numSlab(2, 2), nullptr, nullptr, false);
+  for (auto Type : {IndexType::Light, IndexType::Heavy}) {
+    auto Index = FS.buildIndex(Type);
+    EXPECT_THAT(runFuzzyFind(*Index, ""),
+                UnorderedElementsAre(qName("1"), qName("2")));
+    auto Contains = Index->indexedFiles();
+    EXPECT_EQ(Contains(Upper), IndexContents::All);
+    EXPECT_EQ(Contains(Lower), IndexContents::All);
+    EXPECT_EQ(Contains("file:///c:/proj/Foo.h"), IndexContents::All);
+    EXPECT_EQ(Contains("file:///C:/proj/FOO.h"), IndexContents::None);
+  }
+  FS.update(Upper, nullptr, nullptr, nullptr, false);
+  for (auto Type : {IndexType::Light, IndexType::Heavy}) {
+    auto Index = FS.buildIndex(Type);
+    EXPECT_THAT(runFuzzyFind(*Index, ""), ElementsAre(qName("2")));
+    EXPECT_EQ(Index->indexedFiles()(Upper), IndexContents::None);
+    EXPECT_EQ(Index->indexedFiles()(Lower), IndexContents::All);
+  }
+}
+
 TEST(FileSymbolsTest, UpdateAndGet) {
   FileSymbols FS(IndexContents::All, true);
   EXPECT_THAT(runFuzzyFind(*FS.buildIndex(IndexType::Light), ""), IsEmpty());
@@ -711,6 +796,87 @@ TEST(FileShardedIndexTest, Sharding) {
                 UnorderedElementsAre(BHeaderUri));
     EXPECT_TRUE(Shard->Cmd);
   }
+}
+
+TEST(FileShardedIndexTest, DriveLetterURIIdentity) {
+  constexpr llvm::StringLiteral Upper = "file:///C:/proj/a.h";
+  constexpr llvm::StringLiteral Lower = "file:///c:/proj/a.h";
+
+  auto Sym1 = symbol("1");
+  Sym1.CanonicalDeclaration.FileURI = Upper.data();
+  auto Sym2 = symbol("2");
+  Sym2.CanonicalDeclaration.FileURI = Lower.data();
+
+  IndexFileIn IF;
+  SymbolSlab::Builder Symbols;
+  Symbols.insert(Sym1);
+  Symbols.insert(Sym2);
+  IF.Symbols.emplace(std::move(Symbols).build());
+
+  FileShardedIndex ShardedIndex(std::move(IF));
+  EXPECT_THAT(ShardedIndex.getAllSources(), ElementsAre(Upper));
+
+  auto Shard = ShardedIndex.getShard(Lower);
+  ASSERT_TRUE(Shard);
+  EXPECT_THAT(*Shard->Symbols, UnorderedElementsAre(qName("1"), qName("2")));
+}
+
+TEST(FileShardedIndexTest, HintDependentURIIdentity) {
+  constexpr llvm::StringLiteral Upper = "hint-required:///A.h";
+  constexpr llvm::StringLiteral Lower = "hint-required:///a.h";
+  auto Sym1 = symbol("1");
+  Sym1.CanonicalDeclaration.FileURI = Upper.data();
+  auto Sym2 = symbol("2");
+  Sym2.CanonicalDeclaration.FileURI = Lower.data();
+  IndexFileIn IF;
+  SymbolSlab::Builder Symbols;
+  Symbols.insert(Sym1);
+  Symbols.insert(Sym2);
+  IF.Symbols.emplace(std::move(Symbols).build());
+  IF.Sources.emplace();
+  (*IF.Sources)[Upper].URI = Upper.data();
+  (*IF.Sources)[Lower].URI = Lower.data();
+
+  FileShardedIndex Sharded(std::move(IF));
+  EXPECT_THAT(Sharded.getAllSources(), UnorderedElementsAre(Upper, Lower));
+  auto A = Sharded.getShard(Upper);
+  auto B = Sharded.getShard(Lower);
+  ASSERT_TRUE(A);
+  ASSERT_TRUE(B);
+  EXPECT_THAT(*A->Symbols, ElementsAre(qName("1")));
+  EXPECT_THAT(*B->Symbols, ElementsAre(qName("2")));
+  EXPECT_TRUE(A->Sources->contains(Upper));
+  EXPECT_TRUE(B->Sources->contains(Lower));
+}
+
+TEST(FileShardedIndexTest, CaseDistinctFileURIIdentity) {
+  constexpr llvm::StringLiteral Upper = "file:///C:/proj/Foo.h";
+  constexpr llvm::StringLiteral Lower = "file:///C:/proj/foo.h";
+  auto Sym1 = symbol("1");
+  Sym1.CanonicalDeclaration.FileURI = Upper.data();
+  auto Sym2 = symbol("2");
+  Sym2.CanonicalDeclaration.FileURI = Lower.data();
+  SymbolSlab::Builder Symbols;
+  Symbols.insert(Sym1);
+  Symbols.insert(Sym2);
+  IndexFileIn IF;
+  IF.Symbols.emplace(std::move(Symbols).build());
+  IF.Sources.emplace();
+  (*IF.Sources)[Upper].URI = Upper;
+  (*IF.Sources)[Lower].URI = Lower;
+
+  FileShardedIndex Sharded(std::move(IF));
+  EXPECT_THAT(Sharded.getAllSources(), UnorderedElementsAre(Upper, Lower));
+  auto A = Sharded.getShard("file:///c:/proj/Foo.h");
+  auto B = Sharded.getShard(Lower);
+  ASSERT_TRUE(A);
+  ASSERT_TRUE(B);
+  EXPECT_THAT(*A->Symbols, ElementsAre(qName("1")));
+  EXPECT_THAT(*B->Symbols, ElementsAre(qName("2")));
+  EXPECT_TRUE(A->Sources->contains(Upper));
+  EXPECT_FALSE(A->Sources->contains(Lower));
+  EXPECT_TRUE(B->Sources->contains(Lower));
+  EXPECT_FALSE(B->Sources->contains(Upper));
 }
 
 TEST(FileIndexTest, Profile) {

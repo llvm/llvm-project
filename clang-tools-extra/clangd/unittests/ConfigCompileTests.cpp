@@ -188,6 +188,21 @@ TEST_F(ConfigCompileTests, Index) {
           "Invalid Background value 'Foo'. Valid values are Build, Skip.")));
 }
 
+TEST_F(ConfigCompileTests, ConfigRelativeDriveLetter) {
+  Frag = {};
+  Frag.Source.Directory = "C:/proj";
+  Frag.If.PathMatch.emplace_back("foo\\.cpp");
+  Parm.Path = "c:/proj/foo.cpp";
+  EXPECT_TRUE(compileAndApply());
+  ASSERT_THAT(Diags.Diagnostics, IsEmpty());
+
+  Frag = {};
+  Frag.Source.Directory = "C:/proj";
+  Frag.If.PathMatch.emplace_back("foo\\.cpp");
+  Parm.Path = "c:/other/foo.cpp";
+  EXPECT_FALSE(compileAndApply());
+}
+
 TEST_F(ConfigCompileTests, PathSpecMatch) {
   auto BarPath = llvm::sys::path::convert_to_slash(testPath("foo/bar.h"));
   Parm.Path = BarPath;

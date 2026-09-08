@@ -8,6 +8,7 @@
 
 #include "FS.h"
 #include "clang/Basic/LLVM.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <optional>
@@ -16,11 +17,11 @@
 namespace clang {
 namespace clangd {
 
-PreambleFileStatusCache::PreambleFileStatusCache(llvm::StringRef MainFilePath){
-  assert(llvm::sys::path::is_absolute(MainFilePath));
-  llvm::SmallString<256> MainFileCanonical(MainFilePath);
-  llvm::sys::path::remove_dots(MainFileCanonical, /*remove_dot_dot=*/true);
-  this->MainFilePath = std::string(MainFileCanonical);
+PreambleFileStatusCache::PreambleFileStatusCache(llvm::StringRef MainFilePath) {
+  assert(llvm::sys::path::is_absolute(MainFilePath) ||
+         (MainFilePath.size() >= 2 && llvm::isAlpha(MainFilePath[0]) &&
+          MainFilePath[1] == ':'));
+  this->MainFilePath = PathRef(MainFilePath).removeDots();
 }
 
 void PreambleFileStatusCache::update(const llvm::vfs::FileSystem &FS,
@@ -28,27 +29,28 @@ void PreambleFileStatusCache::update(const llvm::vfs::FileSystem &FS,
                                      llvm::StringRef File) {
   // Canonicalize path for later lookup, which is usually by absolute path.
   llvm::SmallString<32> PathStore(File);
-  if (FS.makeAbsolute(PathStore))
+  // Preserve absolute Windows paths on POSIX hosts, but still resolve
+  // drive-relative paths such as C:header.h against the current directory.
+  if (!llvm::sys::path::is_absolute(File, llvm::sys::path::Style::windows) &&
+      FS.makeAbsolute(PathStore))
     return;
-  llvm::sys::path::remove_dots(PathStore, /*remove_dot_dot=*/true);
+  Path Canonical = PathRef(PathStore).removeDots();
   // Do not cache status for the main file.
-  if (PathStore == MainFilePath)
+  if (Canonical == MainFilePath)
     return;
   // Stores the latest status in cache as it can change in a preamble build.
-  StatCache.insert({PathStore, std::move(S)});
+  StatCache[Canonical] = std::move(S);
 }
 
 std::optional<llvm::vfs::Status>
 PreambleFileStatusCache::lookup(llvm::StringRef File) const {
   // Canonicalize to match the cached form.
   // Lookup tends to be first by absolute path, so no need to make absolute.
-  llvm::SmallString<256> PathLookup(File);
-  llvm::sys::path::remove_dots(PathLookup, /*remove_dot_dot=*/true);
-
+  Path PathLookup = PathRef(File).removeDots();
   auto I = StatCache.find(PathLookup);
   if (I != StatCache.end())
     // Returned Status name should always match the requested File.
-    return llvm::vfs::Status::copyWithNewName(I->getValue(), File);
+    return llvm::vfs::Status::copyWithNewName(I->second, File);
   return std::nullopt;
 }
 
@@ -111,12 +113,6 @@ PreambleFileStatusCache::getConsumingFS(
     const PreambleFileStatusCache &StatCache;
   };
   return llvm::IntrusiveRefCntPtr<CacheVFS>(new CacheVFS(std::move(FS), *this));
-}
-
-Path removeDots(PathRef File) {
-  llvm::SmallString<128> CanonPath(File);
-  llvm::sys::path::remove_dots(CanonPath, /*remove_dot_dot=*/true);
-  return CanonPath.str().str();
 }
 
 } // namespace clangd

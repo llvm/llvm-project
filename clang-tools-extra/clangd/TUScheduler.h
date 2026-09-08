@@ -368,7 +368,7 @@ private:
   std::unique_ptr<ParsingCallbacks> Callbacks; // not nullptr
   Semaphore Barrier;
   Semaphore QuickRunBarrier;
-  llvm::StringMap<std::unique_ptr<FileData>> Files;
+  PathMap<std::unique_ptr<FileData>> Files;
   std::unique_ptr<ASTCache> IdleASTs;
   std::unique_ptr<HeaderIncluderCache> HeaderIncluders;
   // std::nullopt when running tasks synchronously and non-std::nullopt when

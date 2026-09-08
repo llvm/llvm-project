@@ -63,7 +63,7 @@ protected:
   PathRef path() const { return Path; }
 
 private:
-  std::string Path;
+  Path Path;
   // Members are mutable so read() can present a const interface.
   // (It is threadsafe and approximates read-through to TFS).
   mutable std::mutex Mu;

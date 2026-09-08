@@ -69,23 +69,23 @@ TEST(GlobalCompilationDatabaseTest, FallbackWorkingDirectory) {
   EXPECT_EQ(Cmd.Output, "");
 }
 
-static tooling::CompileCommand cmd(llvm::StringRef File, llvm::StringRef Arg) {
+static tooling::CompileCommand cmd(PathRef File, llvm::StringRef Arg) {
   return tooling::CompileCommand(
-      testRoot(), File, {"clang", std::string(Arg), std::string(File)}, "");
+      testRoot(), File.owned().raw(),
+      {"clang", std::string(Arg), File.owned().raw()}, "");
 }
 
 class OverlayCDBTest : public ::testing::Test {
   class BaseCDB : public GlobalCompilationDatabase {
   public:
     std::optional<tooling::CompileCommand>
-    getCompileCommand(llvm::StringRef File) const override {
-      if (File == testPath("foo.cc"))
+    getCompileCommand(PathRef File) const override {
+      if (File == PathRef(testPath("foo.cc")))
         return cmd(File, "-DA=1");
       return std::nullopt;
     }
 
-    tooling::CompileCommand
-    getFallbackCommand(llvm::StringRef File) const override {
+    tooling::CompileCommand getFallbackCommand(PathRef File) const override {
       return cmd(File, "-DA=2");
     }
 
@@ -98,6 +98,19 @@ protected:
   OverlayCDBTest() : Base(std::make_unique<BaseCDB>()) {}
   std::unique_ptr<GlobalCompilationDatabase> Base;
 };
+
+TEST_F(OverlayCDBTest, DriveLetterIdentity) {
+  OverlayCDB CDB(nullptr);
+  auto Override = cmd("C:/proj/a.cpp", "-DUPPER");
+  EXPECT_TRUE(CDB.setCompileCommand("C:/proj/a.cpp", Override));
+  auto Got = CDB.getCompileCommand("c:/proj/a.cpp");
+  ASSERT_TRUE(Got);
+  EXPECT_THAT(Got->CommandLine, Contains("-DUPPER"));
+  EXPECT_THAT(CDB.getCompileCommand("c:\\proj\\a.cpp")->CommandLine,
+              Contains("-DUPPER"));
+  // Second set with the other spelling is a no-op (same command).
+  EXPECT_FALSE(CDB.setCompileCommand("c:/proj/a.cpp", Override));
+}
 
 TEST_F(OverlayCDBTest, GetCompileCommand) {
   OverlayCDB CDB(Base.get());

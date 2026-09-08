@@ -8,8 +8,10 @@
 
 #include "CompileCommands.h"
 #include "Config.h"
+#include "GlobalCompilationDatabase.h"
 #include "TestFS.h"
 #include "support/Context.h"
+#include "support/Logger.h"
 
 #include "clang/Testing/CommandLineArgs.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
@@ -43,6 +45,19 @@ using ::testing::Not;
 
 // Make use of all features and assert the exact command we get out.
 // Other tests just verify presence/absence of certain args.
+TEST(CommandMangler, QueryDriverAllowlistIsCaseSensitive) {
+  std::string Logs;
+  llvm::raw_string_ostream OS(Logs);
+  StreamLogger Logger(OS, Logger::Verbose);
+  LoggingSession Session(Logger);
+  auto Extract = getSystemIncludeExtractor({testPath("SDK/clang")});
+  tooling::CompileCommand Cmd;
+  Cmd.Directory = testRoot();
+  Cmd.CommandLine = {testPath("sdk/clang"), "-xc++", "foo.cc"};
+  Extract(Cmd, testPath("foo.cc"));
+  EXPECT_THAT(Logs, HasSubstr("not allowed driver"));
+}
+
 TEST(CommandMangler, Everything) {
   llvm::InitializeAllTargetInfos(); // As in ClangdMain
   std::string Target = getAnyTargetForTesting();

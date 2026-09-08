@@ -15,6 +15,7 @@
 
 #include "Protocol.h"
 #include "support/Context.h"
+#include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
@@ -205,8 +206,8 @@ struct Edit {
   bool canApplyTo(llvm::StringRef Code) const;
 };
 /// A mapping from absolute file path (the one used for accessing the underlying
-/// VFS) to edits.
-using FileEdits = llvm::StringMap<Edit>;
+/// VFS) to edits. Keys use Path identity so C: and c: are the same file.
+using FileEdits = PathMap<Edit>;
 
 /// Formats the edits and code around it according to Style. Changes
 /// Replacements to formatted ones if succeeds.

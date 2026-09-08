@@ -128,6 +128,7 @@ add_clang_library(clangDaemon STATIC
   index/IndexAction.cpp
   index/MemIndex.cpp
   index/Merge.cpp
+  index/PathIdentity.cpp
   index/ProjectAware.cpp
   index/Ref.cpp
   index/Relation.cpp

@@ -10,6 +10,7 @@
 #include "FuzzyMatch.h"
 #include "Quality.h"
 #include "index/Index.h"
+#include "index/PathIdentity.h"
 #include "support/Trace.h"
 
 namespace clang {
@@ -21,7 +22,7 @@ std::unique_ptr<SymbolIndex> MemIndex::build(SymbolSlab Slab, RefSlab Refs,
   const auto BackingDataSize = Slab.bytes() + Refs.bytes();
   auto Data = std::make_pair(std::move(Slab), std::move(Refs));
   return std::make_unique<MemIndex>(Data.first, Data.second, Relations,
-                                     std::move(Data), BackingDataSize);
+                                    std::move(Data), BackingDataSize);
 }
 
 bool MemIndex::fuzzyFind(
@@ -149,7 +150,11 @@ void MemIndex::reverseRelations(
 llvm::unique_function<IndexContents(llvm::StringRef) const>
 MemIndex::indexedFiles() const {
   return [this](llvm::StringRef FileURI) {
-    return Files.contains(FileURI) ? IdxContents : IndexContents::None;
+    llvm::SmallString<256> Storage;
+    auto Identity = indexFileIdentity(FileURI, Storage);
+    return Identity && Files.find_as(*Identity) != Files.end()
+               ? IdxContents
+               : IndexContents::None;
   };
 }
 

@@ -27,9 +27,11 @@ namespace {
 std::string getShardPathFromFilePath(llvm::StringRef ShardRoot,
                                      llvm::StringRef FilePath) {
   llvm::SmallString<128> ShardRootSS(ShardRoot);
-  llvm::sys::path::append(ShardRootSS, llvm::sys::path::filename(FilePath) +
-                                           "." + llvm::toHex(digest(FilePath)) +
-                                           ".idx");
+  llvm::sys::path::append(
+      ShardRootSS,
+      llvm::sys::path::filename(FilePath) + "." +
+          llvm::toHex(digest(PathRef(FilePath).identityNormalized().raw())) +
+          ".idx");
   return std::string(ShardRootSS);
 }
 
@@ -118,12 +120,12 @@ public:
   // Creates or fetches to storage from cache for the specified project.
   BackgroundIndexStorage *operator()(PathRef File) {
     std::lock_guard<std::mutex> Lock(*IndexStorageMapMu);
-    llvm::SmallString<128> StorageDir(FallbackDir);
+    llvm::SmallString<128> StorageDir(FallbackDir.raw());
     if (auto PI = GetProjectInfo(File)) {
       StorageDir = PI->SourceRoot;
       llvm::sys::path::append(StorageDir, ".cache", "clangd", "index");
     }
-    auto &IndexStorage = IndexStorageMap[StorageDir];
+    auto &IndexStorage = IndexStorageMap[PathRef(StorageDir)];
     if (!IndexStorage)
       IndexStorage = create(StorageDir);
     return IndexStorage.get();
@@ -135,12 +137,12 @@ private:
       elog("Tried to create storage for empty directory!");
       return std::make_unique<NullStorage>();
     }
-    return std::make_unique<DiskBackedIndexStorage>(CDBDirectory);
+    return std::make_unique<DiskBackedIndexStorage>(CDBDirectory.raw());
   }
 
   Path FallbackDir;
 
-  llvm::StringMap<std::unique_ptr<BackgroundIndexStorage>> IndexStorageMap;
+  PathMap<std::unique_ptr<BackgroundIndexStorage>> IndexStorageMap;
   std::unique_ptr<std::mutex> IndexStorageMapMu;
 
   std::function<std::optional<ProjectInfo>(PathRef)> GetProjectInfo;

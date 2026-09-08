@@ -357,11 +357,17 @@ TEST(HeaderSourceSwitchTest, CaseSensitivity) {
   // - source on case insensitive file systems, as the HeaderAbsPath would match
   //   the filename in index.
 #ifdef CLANGD_PATH_CASE_INSENSITIVE
-  EXPECT_THAT(getCorrespondingHeaderOrSource(HeaderAbsPath, AST, Index.get()),
-              llvm::ValueIs(testing::StrCaseEq(testPath(TU.Filename))));
+  {
+    auto Got = getCorrespondingHeaderOrSource(HeaderAbsPath, AST, Index.get());
+    ASSERT_TRUE(Got);
+    EXPECT_THAT(Got->raw(), testing::StrCaseEq(testPath(TU.Filename)));
+  }
 #else
-  EXPECT_THAT(getCorrespondingHeaderOrSource(HeaderAbsPath, AST, Index.get()),
-              llvm::ValueIs(testing::StrCaseEq(testPath(TU.HeaderFilename))));
+  {
+    auto Got = getCorrespondingHeaderOrSource(HeaderAbsPath, AST, Index.get());
+    ASSERT_TRUE(Got);
+    EXPECT_THAT(Got->raw(), testing::StrCaseEq(testPath(TU.HeaderFilename)));
+  }
 #endif
 }
 

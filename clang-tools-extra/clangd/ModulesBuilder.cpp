@@ -69,9 +69,9 @@ std::string hashStringForCache(llvm::StringRef Content) {
 }
 
 std::string normalizePathForCache(PathRef Path) {
-  llvm::SmallString<256> Normalized(Path);
+  llvm::SmallString<256> Normalized(Path.raw());
   llvm::sys::path::remove_dots(Normalized, /*remove_dot_dot=*/true);
-  return maybeCaseFoldPath(Normalized);
+  return maybeCaseFoldPath(Normalized).raw();
 }
 
 /// Returns the root directory used for persistent module cache storage.
@@ -115,7 +115,7 @@ std::string getModuleUnitSourcePathHash(PathRef ModuleUnitFileName) {
 }
 
 std::string getModuleUnitSourceDirectoryName(PathRef ModuleUnitFileName) {
-  std::string Result = llvm::sys::path::filename(ModuleUnitFileName).str();
+  std::string Result = ModuleUnitFileName.filename().str();
   Result.push_back('-');
   Result.append(getModuleUnitSourcePathHash(ModuleUnitFileName));
   return Result;
@@ -167,7 +167,7 @@ getModuleSourceHashLockPath(PathRef ModuleUnitFileName,
 /// Returns a unique temporary path used to stage a BMI before atomically
 /// publishing it to the stable cache path.
 llvm::SmallString<256> getTemporaryModuleFilePath(PathRef ModuleFilePath) {
-  llvm::SmallString<256> ResultPattern(ModuleFilePath);
+  llvm::SmallString<256> ResultPattern(ModuleFilePath.raw());
   ResultPattern.append(".tmp-%%-%%-%%-%%-%%-%%");
   llvm::SmallString<256> Result;
   llvm::sys::fs::createUniquePath(ResultPattern, Result,
@@ -197,21 +197,20 @@ std::string getModuleFileVersionTimestamp() {
 
 llvm::SmallString<256>
 getCopyOnReadModuleFilePath(PathRef PublishedModuleFile) {
-  llvm::SmallString<256> Result(PublishedModuleFile);
+  llvm::SmallString<256> Result(PublishedModuleFile.raw());
   llvm::sys::path::remove_filename(Result);
   llvm::sys::path::append(
-      Result,
-      llvm::formatv("{0}-{1}{2}", llvm::sys::path::stem(PublishedModuleFile),
-                    getModuleFileVersionTimestamp(),
-                    llvm::sys::path::extension(PublishedModuleFile))
-          .str());
+      Result, llvm::formatv("{0}-{1}{2}", PublishedModuleFile.stem().raw(),
+                            getModuleFileVersionTimestamp(),
+                            PublishedModuleFile.extension())
+                  .str());
   return Result;
 }
 
 /// Ensures the lock anchor file exists before LockFileManager tries to acquire
 /// ownership, creating parent directories as needed.
 llvm::Error ensureLockAnchorFileExists(PathRef LockPath) {
-  llvm::SmallString<256> LockParent(LockPath);
+  llvm::SmallString<256> LockParent(LockPath.raw());
   llvm::sys::path::remove_filename(LockParent);
   if (std::error_code EC = llvm::sys::fs::create_directories(LockParent))
     return llvm::createStringError(llvm::formatv(
@@ -219,7 +218,7 @@ llvm::Error ensureLockAnchorFileExists(PathRef LockPath) {
 
   int FD = -1;
   if (std::error_code EC = llvm::sys::fs::openFileForWrite(
-          LockPath, FD, llvm::sys::fs::CD_OpenAlways))
+          LockPath.raw(), FD, llvm::sys::fs::CD_OpenAlways))
     return llvm::createStringError(llvm::formatv(
         "Failed to open lock file anchor {0}: {1}", LockPath, EC.message()));
   llvm::sys::Process::SafelyCloseFileDescriptor(FD);
@@ -290,7 +289,7 @@ private:
 // Get the stable published module file path under \param ModuleFilesPrefix.
 std::string getModuleFilePath(llvm::StringRef ModuleName,
                               PathRef ModuleFilesPrefix) {
-  llvm::SmallString<256> ModuleFilePath(ModuleFilesPrefix);
+  llvm::SmallString<256> ModuleFilePath(ModuleFilesPrefix.raw());
   auto [PrimaryModuleName, PartitionName] = ModuleName.split(':');
   llvm::sys::path::append(ModuleFilePath, PrimaryModuleName);
   if (!PartitionName.empty()) {
@@ -331,7 +330,7 @@ public:
 class ModuleFile {
 protected:
   ModuleFile(StringRef ModuleName, PathRef ModuleFilePath)
-      : ModuleName(ModuleName.str()), ModuleFilePath(ModuleFilePath.str()) {}
+      : ModuleName(ModuleName.str()), ModuleFilePath(ModuleFilePath.raw()) {}
 
 public:
   ModuleFile() = delete;
@@ -573,7 +572,7 @@ bool IsModuleFileUpToDate(PathRef ModuleFilePath,
   // without treating it as a hard error.
   // ReadAST will validate all input files internally and return OutOfDate
   // if any file is modified.
-  return Reader.ReadAST(ModuleFileName::makeExplicit(ModuleFilePath),
+  return Reader.ReadAST(ModuleFileName::makeExplicit(ModuleFilePath.raw()),
                         serialization::MK_MainFile, SourceLocation(),
                         ASTReader::ARR_OutOfDate) == ASTReader::Success;
 }
@@ -598,7 +597,7 @@ buildModuleFile(llvm::StringRef ModuleName, PathRef ModuleUnitFileName,
                 const ReusablePrerequisiteModules &BuiltModuleFiles,
                 bool &PublishedExistingModuleFile) {
   PublishedExistingModuleFile = false;
-  llvm::SmallString<256> ModuleFilesPrefix(ModuleFilePath);
+  llvm::SmallString<256> ModuleFilesPrefix(ModuleFilePath.raw());
   llvm::sys::path::remove_filename(ModuleFilesPrefix);
   if (std::error_code EC = llvm::sys::fs::create_directories(ModuleFilesPrefix))
     return llvm::createStringError(
@@ -675,9 +674,9 @@ buildModuleFile(llvm::StringRef ModuleName, PathRef ModuleUnitFileName,
                       ModuleUnitFileName));
   }
 
-  if (std::error_code EC =
-          llvm::sys::fs::rename(TemporaryModuleFilePath, ModuleFilePath)) {
-    if (!llvm::sys::fs::exists(ModuleFilePath))
+  if (std::error_code EC = llvm::sys::fs::rename(TemporaryModuleFilePath,
+                                                 ModuleFilePath.raw())) {
+    if (!llvm::sys::fs::exists(ModuleFilePath.raw()))
       return llvm::createStringError(
           llvm::formatv("Failed to publish module file {0}: {1}",
                         ModuleFilePath, EC.message()));
@@ -698,8 +697,8 @@ copyModuleFileForRead(llvm::StringRef ModuleName,
                       PathRef PublishedModuleFilePath) {
   llvm::SmallString<256> VersionedModuleFilePath =
       getCopyOnReadModuleFilePath(PublishedModuleFilePath);
-  if (std::error_code EC = llvm::sys::fs::copy_file(PublishedModuleFilePath,
-                                                    VersionedModuleFilePath))
+  if (std::error_code EC = llvm::sys::fs::copy_file(
+          PublishedModuleFilePath.raw(), VersionedModuleFilePath))
     return llvm::createStringError(llvm::formatv(
         "Failed to copy module file {0} to {1}: {2}", PublishedModuleFilePath,
         VersionedModuleFilePath, EC.message()));
@@ -712,7 +711,7 @@ bool ReusablePrerequisiteModules::canReuse(
   if (RequiredModules.empty())
     return true;
 
-  llvm::SmallVector<llvm::StringRef> BMIPaths;
+  llvm::SmallVector<PathRef> BMIPaths;
   for (auto &MF : RequiredModules)
     BMIPaths.push_back(MF->getModuleFilePath());
   return IsModuleFilesUpToDate(BMIPaths, *this, VFS);
@@ -769,7 +768,7 @@ private:
                 CommandHash.size() + 2);
     Key.append(ModuleName);
     Key.push_back('\0');
-    Key.append(maybeCaseFoldPath(ModuleUnitSource));
+    Key.append(maybeCaseFoldPath(ModuleUnitSource).raw());
     Key.push_back('\0');
     Key.append(CommandHash);
     return Key;
@@ -816,7 +815,7 @@ public:
 
   void addUniqueEntry(llvm::StringRef ModuleName, PathRef Source) {
     std::lock_guard<std::mutex> Lock(CacheMutex);
-    ModuleNameToUniqueSourceCache[ModuleName] = Source.str();
+    ModuleNameToUniqueSourceCache[ModuleName] = Source.raw();
   }
 
   void eraseUniqueEntry(llvm::StringRef ModuleName) {
@@ -830,7 +829,7 @@ public:
     auto Outer = ModuleNameToMultipleSourceCache.find(ModuleName);
     if (Outer == ModuleNameToMultipleSourceCache.end())
       return "";
-    auto Inner = Outer->second.find(maybeCaseFoldPath(RequiredSrcFile));
+    auto Inner = Outer->second.find(maybeCaseFoldPath(RequiredSrcFile).raw());
     if (Inner == Outer->second.end())
       return "";
     return Inner->second;
@@ -840,8 +839,8 @@ public:
                         PathRef Source) {
     std::lock_guard<std::mutex> Lock(CacheMutex);
     ModuleNameToMultipleSourceCache[ModuleName]
-                                   [maybeCaseFoldPath(RequiredSrcFile)] =
-                                       Source.str();
+                                   [maybeCaseFoldPath(RequiredSrcFile).raw()] =
+                                       Source.raw();
   }
 
   void eraseMultipleEntry(llvm::StringRef ModuleName, PathRef RequiredSrcFile) {
@@ -849,7 +848,7 @@ public:
     auto Outer = ModuleNameToMultipleSourceCache.find(ModuleName);
     if (Outer == ModuleNameToMultipleSourceCache.end())
       return;
-    Outer->second.erase(maybeCaseFoldPath(RequiredSrcFile));
+    Outer->second.erase(maybeCaseFoldPath(RequiredSrcFile).raw());
     if (Outer->second.empty())
       ModuleNameToMultipleSourceCache.erase(Outer);
   }
@@ -971,7 +970,7 @@ llvm::SmallVector<std::string> getAllRequiredModules(PathRef RequiredSource,
 std::vector<std::string> collectModuleFiles(PathRef CacheRoot) {
   std::vector<std::string> Result;
   std::error_code EC;
-  for (llvm::sys::fs::recursive_directory_iterator It(CacheRoot, EC), End;
+  for (llvm::sys::fs::recursive_directory_iterator It(CacheRoot.raw(), EC), End;
        It != End && !EC; It.increment(EC)) {
     if (llvm::sys::path::extension(It->path()) != ".pcm")
       continue;
@@ -1061,7 +1060,7 @@ void ModulesBuilder::ModulesBuilderImpl::
       return;
   }
 
-  llvm::SmallString<256> CacheRoot(ProjectRoot);
+  llvm::SmallString<256> CacheRoot(ProjectRoot.raw());
   llvm::sys::path::append(CacheRoot, ".cache", "clangd", "modules");
   log("Running GC pass for clangd built module files under {0} with age "
       "threshold {1} seconds (adjust with --modules-builder-versioned-gc-"

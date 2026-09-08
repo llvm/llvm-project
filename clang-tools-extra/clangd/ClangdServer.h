@@ -520,7 +520,7 @@ private:
   bool PublishInactiveRegions = false;
 
   // GUARDED_BY(CachedCompletionFuzzyFindRequestMutex)
-  llvm::StringMap<std::optional<FuzzyFindRequest>>
+  PathMap<std::optional<FuzzyFindRequest>>
       CachedCompletionFuzzyFindRequestByFile;
   mutable std::mutex CachedCompletionFuzzyFindRequestMutex;
 

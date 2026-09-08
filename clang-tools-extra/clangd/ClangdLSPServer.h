@@ -262,12 +262,11 @@ private:
   typedef std::map<DiagKey, ClangdServer::DiagRef>
       DiagnosticToDiagRefMap;
   /// Caches the mapping LSP and clangd-naive diagnostics per file.
-  llvm::StringMap<DiagnosticToDiagRefMap>
-      DiagRefMap;
+  PathMap<DiagnosticToDiagRefMap> DiagRefMap;
 
   // Last semantic-tokens response, for incremental requests.
   std::mutex SemanticTokensMutex;
-  llvm::StringMap<SemanticTokens> LastSemanticTokens;
+  PathMap<SemanticTokens> LastSemanticTokens;
 
   // Most code should not deal with Transport, callMethod, notify directly.
   // Use LSPBinder to handle incoming and outgoing calls.

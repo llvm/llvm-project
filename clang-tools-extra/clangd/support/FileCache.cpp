@@ -22,10 +22,10 @@ static constexpr uint64_t CacheDiskMismatch =
 // The cached value reflects that the file doesn't exist.
 static constexpr uint64_t FileNotFound = CacheDiskMismatch - 1;
 
-FileCache::FileCache(llvm::StringRef Path)
+FileCache::FileCache(PathRef Path)
     : Path(Path), ValidTime(std::chrono::steady_clock::time_point::min()),
       ModifiedTime(), Size(CacheDiskMismatch) {
-  assert(llvm::sys::path::is_absolute(Path));
+  assert(llvm::sys::path::is_absolute(Path.raw()));
 }
 
 void FileCache::read(
@@ -47,9 +47,9 @@ void FileCache::read(
       [&] { ValidTime = std::chrono::steady_clock::now(); });
 
   // stat is cheaper than opening the file. It's usually unchanged.
-  assert(llvm::sys::path::is_absolute(Path));
+  assert(llvm::sys::path::is_absolute(Path.raw()));
   auto FS = TFS.view(/*CWD=*/std::nullopt);
-  auto Stat = FS->status(Path);
+  auto Stat = FS->status(Path.raw());
   if (!Stat || !Stat->isRegularFile()) {
     if (Size != FileNotFound) // Allow "not found" value to be cached.
       Parse(std::nullopt);
@@ -66,7 +66,7 @@ void FileCache::read(
   Size = Stat->getSize();
   ModifiedTime = Stat->getLastModificationTime();
   // Now read the file from disk.
-  if (auto Buf = FS->getBufferForFile(Path)) {
+  if (auto Buf = FS->getBufferForFile(Path.raw())) {
     Parse(Buf->get()->getBuffer());
     // Result is cacheable if the actual read size matches the new cache key.
     // (We can't update the cache key, because we don't know the new mtime).

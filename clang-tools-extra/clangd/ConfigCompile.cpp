@@ -59,8 +59,10 @@ llvm::StringRef configRelative(llvm::StringRef Path,
                                llvm::StringRef FragmentDir) {
   if (FragmentDir.empty())
     return Path;
-  if (!Path.consume_front(FragmentDir))
+  if (Path.size() < FragmentDir.size() ||
+      !pathEquals(Path.take_front(FragmentDir.size()), FragmentDir))
     return llvm::StringRef();
+  Path = Path.drop_front(FragmentDir.size());
   return Path.empty() ? "." : Path;
 }
 
@@ -412,8 +414,9 @@ struct FragmentCompiler {
         C.Index.External = Spec;
         return;
       }
-      if (P.Path.empty() || !pathStartsWith(Spec.MountPoint, P.Path,
-                                            llvm::sys::path::Style::posix))
+      if (P.Path.empty() ||
+          !PathRef(Spec.MountPoint)
+               .startsWith(P.Path, llvm::sys::path::Style::posix))
         return;
       C.Index.External = Spec;
       // Disable background indexing for the files under the mountpoint.

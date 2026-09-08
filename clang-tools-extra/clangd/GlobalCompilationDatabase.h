@@ -230,7 +230,7 @@ public:
 
 private:
   mutable std::mutex Mutex;
-  llvm::StringMap<tooling::CompileCommand> Commands; /* GUARDED_BY(Mut) */
+  PathMap<tooling::CompileCommand> Commands; /* GUARDED_BY(Mut) */
   CommandMangler Mangler;
   std::vector<std::string> FallbackFlags;
 };

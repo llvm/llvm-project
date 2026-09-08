@@ -26,16 +26,16 @@ std::optional<Path> getCorrespondingHeaderOrSource(
       ".hpp",  ".hh",  ".hxx",  ".h++",  ".h",  ".inc",
       ".cppm", ".ccm", ".cxxm", ".c++m", ".ixx"};
 
-  llvm::StringRef PathExt = llvm::sys::path::extension(OriginalFile);
+  llvm::StringRef PathExt = OriginalFile.extension();
 
   // Lookup in a list of known extensions.
   const bool IsSource =
-      llvm::any_of(SourceExtensions, [&PathExt](PathRef SourceExt) {
+      llvm::any_of(SourceExtensions, [&PathExt](StringRef SourceExt) {
         return SourceExt.equals_insensitive(PathExt);
       });
 
   const bool IsHeader =
-      llvm::any_of(HeaderExtensions, [&PathExt](PathRef HeaderExt) {
+      llvm::any_of(HeaderExtensions, [&PathExt](StringRef HeaderExt) {
         return HeaderExt.equals_insensitive(PathExt);
       });
 
@@ -52,18 +52,18 @@ std::optional<Path> getCorrespondingHeaderOrSource(
     NewExts = SourceExtensions;
 
   // Storage for the new path.
-  llvm::SmallString<128> NewPath = OriginalFile;
+  llvm::SmallString<128> NewPath = OriginalFile.raw();
 
   // Loop through switched extension candidates.
   for (llvm::StringRef NewExt : NewExts) {
     llvm::sys::path::replace_extension(NewPath, NewExt);
     if (VFS->exists(NewPath))
-      return Path(NewPath);
+      return Path(NewPath.str());
 
     // Also check NewExt in upper-case, just in case.
     llvm::sys::path::replace_extension(NewPath, NewExt.upper());
     if (VFS->exists(NewPath))
-      return Path(NewPath);
+      return Path(NewPath.str());
   }
   return std::nullopt;
 }
@@ -81,11 +81,11 @@ std::optional<Path> getCorrespondingHeaderOrSource(PathRef OriginalFile,
     if (auto ID = getSymbolID(D))
       Request.IDs.insert(ID);
   }
-  llvm::StringMap<int> Candidates; // Target path => score.
+  PathMap<int> Candidates; // Target path => score.
   auto AwardTarget = [&](const char *TargetURI) {
-    if (auto TargetPath = URI::resolve(TargetURI, OriginalFile)) {
+    if (auto TargetPath = URI::resolve(TargetURI, OriginalFile.raw())) {
       if (!pathEqual(*TargetPath, OriginalFile)) // exclude the original file.
-        ++Candidates[*TargetPath];
+        ++Candidates[PathRef(*TargetPath)];
     } else {
       elog("Failed to resolve URI {0}: {1}", TargetURI, TargetPath.takeError());
     }
@@ -96,7 +96,7 @@ std::optional<Path> getCorrespondingHeaderOrSource(PathRef OriginalFile,
   //
   // For each symbol in the original file, we get its target location (decl or
   // def) from the index, then award that target file.
-  const bool IsHeader = isHeaderFile(OriginalFile, AST.getLangOpts());
+  const bool IsHeader = isHeaderFile(OriginalFile.raw(), AST.getLangOpts());
   Index->lookup(Request, [&](const Symbol &Sym) {
     if (IsHeader)
       AwardTarget(Sym.Definition.FileURI);
@@ -115,12 +115,12 @@ std::optional<Path> getCorrespondingHeaderOrSource(PathRef OriginalFile,
   for (auto It = Candidates.begin(); It != Candidates.end(); ++It) {
     if (It->second > Best->second)
       Best = It;
-    else if (It->second == Best->second && It->first() < Best->first())
+    else if (It->second == Best->second && It->first.raw() < Best->first.raw())
       // Select the first one in the lexical order if we have multiple
       // candidates.
       Best = It;
   }
-  return Path(Best->first());
+  return Best->first;
 }
 
 std::vector<const Decl *> getIndexableLocalDecls(ParsedAST &AST) {

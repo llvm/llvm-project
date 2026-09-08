@@ -15,6 +15,45 @@ namespace clang {
 namespace clangd {
 namespace {
 
+TEST(FSTests, PreambleStatusCacheDriveLetter) {
+  PreambleFileStatusCache StatCache("C:/proj/main.cpp");
+  llvm::vfs::Status S("fake", llvm::sys::fs::UniqueID(1, 2),
+                      std::chrono::system_clock::now(), 0, 0, 8,
+                      llvm::sys::fs::file_type::regular_file,
+                      llvm::sys::fs::all_all);
+  llvm::StringMap<std::string> Files;
+  auto FS = buildTestFS(Files);
+  StatCache.update(*FS, S, "C:/proj/header.h");
+  EXPECT_TRUE(StatCache.lookup("c:/proj/header.h"));
+  EXPECT_TRUE(StatCache.lookup("c:\\proj\\header.h"));
+  EXPECT_FALSE(StatCache.lookup("C:/proj/main.cpp"));
+}
+
+#ifdef _WIN32
+TEST(FSTests, PreambleStatusCacheDriveRelativePath) {
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  ASSERT_TRUE(FS->addFile("C:/one/header.h", 0,
+                          llvm::MemoryBuffer::getMemBuffer("one")));
+  ASSERT_TRUE(FS->addFile("C:/two/header.h", 0,
+                          llvm::MemoryBuffer::getMemBuffer("two longer")));
+  ASSERT_FALSE(FS->setCurrentWorkingDirectory("C:/one"));
+  PreambleFileStatusCache Cache("C:/one/main.cc");
+  auto Original = Cache.getProducingFS(FS)->status("C:header.h");
+  ASSERT_TRUE(Original);
+  EXPECT_TRUE(Cache.lookup("C:/one/header.h"));
+  EXPECT_FALSE(Cache.lookup("C:header.h"));
+
+  ASSERT_FALSE(FS->setCurrentWorkingDirectory("C:/two"));
+  auto Cached = Cache.getConsumingFS(FS)->status("C:header.h");
+  auto Actual = FS->status("C:header.h");
+  ASSERT_TRUE(Cached);
+  ASSERT_TRUE(Actual);
+  EXPECT_EQ(Cached->getUniqueID(), Actual->getUniqueID());
+  EXPECT_EQ(Cached->getSize(), Actual->getSize());
+  EXPECT_NE(Cached->getUniqueID(), Original->getUniqueID());
+}
+#endif
+
 TEST(FSTests, PreambleStatusCache) {
   llvm::StringMap<std::string> Files;
   Files["x"] = "";

@@ -577,12 +577,12 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   // Note that we don't need to copy the input contents, preamble can live
   // without those.
   auto ContentsBuffer =
-      llvm::MemoryBuffer::getMemBuffer(Inputs.Contents, FileName);
+      llvm::MemoryBuffer::getMemBuffer(Inputs.Contents, FileName.raw());
   auto Bounds = computePreambleBounds(CI.getLangOpts(), *ContentsBuffer,
                                       Inputs.Opts.SkipPreambleBuild);
 
   trace::Span Tracer("BuildPreamble");
-  SPAN_ATTACH(Tracer, "File", FileName);
+  SPAN_ATTACH(Tracer, "File", FileName.raw());
   std::vector<std::unique_ptr<FeatureModule::ASTListener>> ASTListeners;
   if (Inputs.FeatureModules) {
     for (auto &M : *Inputs.FeatureModules) {
@@ -628,7 +628,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
         for (const auto &L : ASTListeners)
           L->beforeExecute(CI);
       });
-  llvm::SmallString<32> AbsFileName(FileName);
+  llvm::SmallString<32> AbsFileName(FileName.raw());
   VFS->makeAbsolute(AbsFileName);
   auto StatCache = std::make_shared<PreambleFileStatusCache>(AbsFileName);
   auto StatCacheFS = StatCache->getProducingFS(VFS);
@@ -724,7 +724,7 @@ bool isPreambleCompatible(const PreambleData &Preamble,
                           const ParseInputs &Inputs, PathRef FileName,
                           const CompilerInvocation &CI) {
   auto ContentsBuffer =
-      llvm::MemoryBuffer::getMemBuffer(Inputs.Contents, FileName);
+      llvm::MemoryBuffer::getMemBuffer(Inputs.Contents, FileName.raw());
   auto Bounds = computePreambleBounds(CI.getLangOpts(), *ContentsBuffer,
                                       Inputs.Opts.SkipPreambleBuild);
   auto VFS = Inputs.TFS->view(Inputs.CompileCommand.Directory);

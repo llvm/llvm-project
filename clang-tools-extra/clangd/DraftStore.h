@@ -11,7 +11,6 @@
 
 #include "support/Path.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <mutex>
 #include <optional>
@@ -54,9 +53,12 @@ private:
   struct DraftAndTime {
     Draft D;
     std::time_t MTime;
+    // Keep file identity across snapshots, including content updates. A new
+    // draft gets a fresh ID, so cached statuses cannot alias unrelated files.
+    llvm::sys::fs::UniqueID ID = llvm::vfs::getNextVirtualUniqueID();
   };
   mutable std::mutex Mutex;
-  llvm::StringMap<DraftAndTime> Drafts;
+  PathMap<DraftAndTime> Drafts;
 };
 
 } // namespace clangd

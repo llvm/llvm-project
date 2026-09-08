@@ -194,7 +194,7 @@ private:
   /// different digests than \p ShardVersionsSnapshot. Also stores new index
   /// information on IndexStorage.
   void update(llvm::StringRef MainFile, IndexFileIn Index,
-              const llvm::StringMap<ShardVersion> &ShardVersionsSnapshot,
+              const PathMap<ShardVersion> &ShardVersionsSnapshot,
               bool HadErrors);
 
   // configuration
@@ -207,10 +207,11 @@ private:
 
   FileSymbols IndexedSymbols;
   BackgroundIndexRebuilder Rebuilder;
-  llvm::StringMap<ShardVersion> ShardVersions; // Key is absolute file path.
+  PathMap<ShardVersion> ShardVersions; // Key is absolute file path.
   std::mutex ShardVersionsMu;
 
   BackgroundIndexStorage::Factory IndexStorageFactory;
+  // XXX: `MainFiles` should be a vector of `Path`s
   // Tries to load shards for the MainFiles and their dependencies.
   std::vector<std::string> loadProject(std::vector<std::string> MainFiles);
 

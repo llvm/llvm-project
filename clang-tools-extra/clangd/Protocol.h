@@ -26,6 +26,7 @@
 #include "URI.h"
 #include "index/SymbolID.h"
 #include "support/MemoryTree.h"
+#include "support/Path.h"
 #include "clang/Index/IndexSymbol.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/JSON.h"
@@ -95,8 +96,7 @@ struct URIForFile {
   /// Files can be referred to by several paths (e.g. in the presence of links).
   /// Which one we prefer may depend on where we're coming from. \p TUPath is a
   /// hint, and should usually be the main entrypoint file we're processing.
-  static URIForFile canonicalize(llvm::StringRef AbsPath,
-                                 llvm::StringRef TUPath);
+  static URIForFile canonicalize(PathRef AbsPath, PathRef TUPath);
 
   static llvm::Expected<URIForFile> fromURI(const URI &U,
                                             llvm::StringRef HintPath);
@@ -108,7 +108,7 @@ struct URIForFile {
   std::string uri() const { return URI::createFile(File).toString(); }
 
   friend bool operator==(const URIForFile &LHS, const URIForFile &RHS) {
-    return LHS.File == RHS.File;
+    return PathRef(LHS.File) == PathRef(RHS.File);
   }
 
   friend bool operator!=(const URIForFile &LHS, const URIForFile &RHS) {
@@ -116,7 +116,7 @@ struct URIForFile {
   }
 
   friend bool operator<(const URIForFile &LHS, const URIForFile &RHS) {
-    return LHS.File < RHS.File;
+    return pathCompare(LHS.File, RHS.File) < 0;
   }
 
 private:

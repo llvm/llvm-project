@@ -16,6 +16,7 @@
 #include "index/Merge.h"
 #include "index/Symbol.h"
 #include "clang/Index/IndexSymbol.h"
+#include "llvm/ADT/StringSet.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <utility>
@@ -237,6 +238,21 @@ TEST(MemIndexTest, IndexedFiles) {
   EXPECT_EQ(ContainsFile("unittest:///foo.cc"), IndexContents::All);
   EXPECT_EQ(ContainsFile("unittest:///bar.cc"), IndexContents::All);
   EXPECT_EQ(ContainsFile("unittest:///foobar.cc"), IndexContents::None);
+}
+
+TEST(MemIndexTest, IndexedFilesDriveLetter) {
+  SymbolSlab Symbols;
+  RefSlab Refs;
+  auto Size = Symbols.bytes() + Refs.bytes();
+  auto Data = std::make_pair(std::move(Symbols), std::move(Refs));
+  llvm::StringSet<> Files = {"file:///c:/proj/foo.cpp"};
+  MemIndex I(std::move(Data.first), std::move(Data.second), RelationSlab(),
+             std::move(Files), IndexContents::All, std::move(Data), Size);
+  auto ContainsFile = I.indexedFiles();
+  EXPECT_EQ(ContainsFile("file:///C:/proj/foo.cpp"), IndexContents::All);
+  EXPECT_EQ(ContainsFile("file:///c:/proj/foo.cpp"), IndexContents::All);
+  EXPECT_EQ(ContainsFile("C:/proj/foo.cpp"), IndexContents::All);
+  EXPECT_EQ(ContainsFile("file:///D:/proj/foo.cpp"), IndexContents::None);
 }
 
 TEST(MemIndexTest, TemplateSpecialization) {
@@ -539,6 +555,32 @@ TEST(MergeIndexTest, IndexedFiles) {
             IndexContents::Symbols | IndexContents::References);
   EXPECT_EQ(ContainsFile("unittest:///bar.cc"), IndexContents::References);
   EXPECT_EQ(ContainsFile("unittest:///foobar.cc"), IndexContents::None);
+}
+
+TEST(MergeIndexTest, IndexedFilesDriveLetter) {
+  SymbolSlab DynSymbols;
+  RefSlab DynRefs;
+  auto DynSize = DynSymbols.bytes() + DynRefs.bytes();
+  auto DynData = std::make_pair(std::move(DynSymbols), std::move(DynRefs));
+  llvm::StringSet<> DynFiles = {"file:///c:/proj/foo.cpp"};
+  MemIndex DynIndex(std::move(DynData.first), std::move(DynData.second),
+                    RelationSlab(), std::move(DynFiles), IndexContents::Symbols,
+                    std::move(DynData), DynSize);
+  SymbolSlab StaticSymbols;
+  RefSlab StaticRefs;
+  auto StaticData =
+      std::make_pair(std::move(StaticSymbols), std::move(StaticRefs));
+  llvm::StringSet<> StaticFiles = {"file:///C:/proj/foo.cpp",
+                                   "file:///C:/proj/bar.cpp"};
+  MemIndex StaticIndex(
+      std::move(StaticData.first), std::move(StaticData.second), RelationSlab(),
+      std::move(StaticFiles), IndexContents::References, std::move(StaticData),
+      StaticSymbols.bytes() + StaticRefs.bytes());
+  MergedIndex Merge(&DynIndex, &StaticIndex);
+  auto ContainsFile = Merge.indexedFiles();
+  EXPECT_EQ(ContainsFile("file:///C:/proj/foo.cpp"),
+            IndexContents::Symbols | IndexContents::References);
+  EXPECT_EQ(ContainsFile("file:///c:/proj/bar.cpp"), IndexContents::References);
 }
 
 TEST(MergeIndexTest, NonDocumentation) {
