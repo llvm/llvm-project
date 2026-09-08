@@ -1532,7 +1532,7 @@ static bool upgradeIntrinsicWithDefaultArgs(Function *F, Function *&NewFn) {
   Intrinsic::ID IID = F->getIntrinsicID();
 
   unsigned FullArgCount = getFullArgCountForDefaultArgUpgrade(F, IID);
-  if (!FullArgCount)
+  if (FullArgCount == 0)
     return false;
 
   rename(F);
