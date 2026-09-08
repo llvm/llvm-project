@@ -581,6 +581,8 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
 
 // Emulated float128 tests
 TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
+  int exponent;
+
   EXPECT_FP_EQ(Float128(0.0),
                LIBC_NAMESPACE::shared::atan2f128(Float128(0.0), Float128(0.0)));
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::ceilf128(Float128(0.0)));
@@ -610,10 +612,9 @@ TEST(LlvmLibcSharedMathTest, AllEmuFloat128) {
                                   Float128(0.0), Float128(0.0)));
   EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::fminimum_numf128(
                                   Float128(0.0), Float128(0.0)));
-  int frexpf128_exp = 0;
-  EXPECT_FP_EQ(Float128(0.0), LIBC_NAMESPACE::shared::frexpf128(
-                                  Float128(0.0), &frexpf128_exp));
-  EXPECT_EQ(0, frexpf128_exp);
+  EXPECT_FP_EQ_ALL_ROUNDING(Float128(0.75), LIBC_NAMESPACE::shared::frexpf128(
+                                                Float128(24), &exponent));
+  EXPECT_EQ(exponent, 5);
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::ilogbf128(Float128(1.0)));
   EXPECT_EQ(1, LIBC_NAMESPACE::shared::iscanonicalf128(Float128(0.0)));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::isnanf128(Float128(0.0)));
