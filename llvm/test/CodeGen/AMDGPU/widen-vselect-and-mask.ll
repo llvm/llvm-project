@@ -51,30 +51,30 @@ bb:
 define amdgpu_kernel void @widen_vselect_and_mask_v4i64(<4 x i64> %arg) #0 {
 ; GCN-LABEL: widen_vselect_and_mask_v4i64:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
+; GCN-NEXT:    s_load_dwordx8 s[4:11], s[4:5], 0x9
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    s_mov_b32 s3, 0xf000
-; GCN-NEXT:    s_mov_b64 s[4:5], 0
-; GCN-NEXT:    v_cmp_eq_u64_e64 s[6:7], s[0:1], 0
-; GCN-NEXT:    v_cmp_ne_u64_e64 s[0:1], s[0:1], 0
-; GCN-NEXT:    s_and_b64 s[6:7], s[6:7], exec
-; GCN-NEXT:    s_cselect_b64 s[6:7], -1, 0
-; GCN-NEXT:    s_cmp_gt_i32 s7, -1
-; GCN-NEXT:    s_cselect_b64 s[6:7], -1, 0
-; GCN-NEXT:    s_and_b64 s[0:1], s[6:7], s[0:1]
-; GCN-NEXT:    s_and_b64 s[0:1], s[0:1], exec
-; GCN-NEXT:    s_cselect_b32 s6, 1, 0
+; GCN-NEXT:    s_mov_b32 s7, 0xf000
+; GCN-NEXT:    s_mov_b64 s[0:1], 0
+; GCN-NEXT:    v_cmp_eq_u64_e64 s[2:3], s[4:5], 0
+; GCN-NEXT:    v_cmp_ne_u64_e64 s[4:5], s[4:5], 0
+; GCN-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GCN-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; GCN-NEXT:    s_cmp_gt_i32 s3, -1
+; GCN-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; GCN-NEXT:    s_and_b64 s[2:3], s[2:3], s[4:5]
+; GCN-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GCN-NEXT:    s_cselect_b32 s2, 1, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, v1
 ; GCN-NEXT:    v_mov_b32_e32 v3, v1
 ; GCN-NEXT:    v_mov_b32_e32 v4, v1
-; GCN-NEXT:    s_mov_b64 s[0:1], 16
-; GCN-NEXT:    v_mov_b32_e32 v0, s6
-; GCN-NEXT:    s_mov_b32 s6, s2
-; GCN-NEXT:    s_mov_b32 s7, s3
-; GCN-NEXT:    buffer_store_dwordx4 v[1:4], off, s[0:3], 0
-; GCN-NEXT:    buffer_store_dwordx4 v[0:3], off, s[4:7], 0
+; GCN-NEXT:    s_mov_b64 s[4:5], 16
+; GCN-NEXT:    v_mov_b32_e32 v0, s2
+; GCN-NEXT:    s_mov_b32 s2, s6
+; GCN-NEXT:    s_mov_b32 s3, s7
+; GCN-NEXT:    buffer_store_dwordx4 v[1:4], off, s[4:7], 0
+; GCN-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
 bb:
   %tmp = extractelement <4 x i64> %arg, i64 0

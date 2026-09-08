@@ -242,35 +242,35 @@ define amdgpu_kernel void @no_agpr_no_reserve(ptr addrspace(1) %arg) #5 {
 ; GFX908-LABEL: no_agpr_no_reserve:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX908-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
+; GFX908-NEXT:    v_lshlrev_b32_e32 v12, 7, v0
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX908-NEXT:    global_load_dwordx4 v[1:4], v0, s[0:1] offset:16
-; GFX908-NEXT:    global_load_dwordx4 v[5:8], v0, s[0:1]
-; GFX908-NEXT:    global_load_dwordx4 v[9:12], v0, s[0:1] offset:48
-; GFX908-NEXT:    global_load_dwordx4 v[13:16], v0, s[0:1] offset:32
-; GFX908-NEXT:    global_load_dwordx4 v[17:20], v0, s[0:1] offset:80
-; GFX908-NEXT:    global_load_dwordx4 v[21:24], v0, s[0:1] offset:64
-; GFX908-NEXT:    global_load_dwordx4 v[25:28], v0, s[0:1] offset:112
-; GFX908-NEXT:    global_load_dwordx4 v[29:32], v0, s[0:1] offset:96
+; GFX908-NEXT:    global_load_dwordx4 v[0:3], v12, s[0:1] offset:16
+; GFX908-NEXT:    global_load_dwordx4 v[4:7], v12, s[0:1]
+; GFX908-NEXT:    global_load_dwordx4 v[8:11], v12, s[0:1] offset:48
+; GFX908-NEXT:    global_load_dwordx4 v[13:16], v12, s[0:1] offset:32
+; GFX908-NEXT:    global_load_dwordx4 v[17:20], v12, s[0:1] offset:80
+; GFX908-NEXT:    global_load_dwordx4 v[21:24], v12, s[0:1] offset:64
+; GFX908-NEXT:    global_load_dwordx4 v[25:28], v12, s[0:1] offset:112
+; GFX908-NEXT:    global_load_dwordx4 v[29:32], v12, s[0:1] offset:96
 ; GFX908-NEXT:    s_waitcnt vmcnt(7)
-; GFX908-NEXT:    v_add_u32_e32 v4, v4, v4
 ; GFX908-NEXT:    v_add_u32_e32 v3, v3, v3
 ; GFX908-NEXT:    v_add_u32_e32 v2, v2, v2
 ; GFX908-NEXT:    v_add_u32_e32 v1, v1, v1
+; GFX908-NEXT:    v_add_u32_e32 v0, v0, v0
 ; GFX908-NEXT:    s_waitcnt vmcnt(6)
-; GFX908-NEXT:    v_add_u32_e32 v8, v8, v8
 ; GFX908-NEXT:    v_add_u32_e32 v7, v7, v7
 ; GFX908-NEXT:    v_add_u32_e32 v6, v6, v6
+; GFX908-NEXT:    v_add_u32_e32 v5, v5, v5
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_add_u32_e32 v32, v32, v32
 ; GFX908-NEXT:    v_add_u32_e32 v31, v31, v31
 ; GFX908-NEXT:    v_add_u32_e32 v30, v30, v30
 ; GFX908-NEXT:    v_add_u32_e32 v29, v29, v29
-; GFX908-NEXT:    v_add_u32_e32 v5, v5, v5
-; GFX908-NEXT:    v_add_u32_e32 v12, v12, v12
+; GFX908-NEXT:    v_add_u32_e32 v4, v4, v4
 ; GFX908-NEXT:    v_add_u32_e32 v11, v11, v11
 ; GFX908-NEXT:    v_add_u32_e32 v10, v10, v10
 ; GFX908-NEXT:    v_add_u32_e32 v9, v9, v9
+; GFX908-NEXT:    v_add_u32_e32 v8, v8, v8
 ; GFX908-NEXT:    v_add_u32_e32 v16, v16, v16
 ; GFX908-NEXT:    v_add_u32_e32 v15, v15, v15
 ; GFX908-NEXT:    v_add_u32_e32 v14, v14, v14
@@ -287,14 +287,14 @@ define amdgpu_kernel void @no_agpr_no_reserve(ptr addrspace(1) %arg) #5 {
 ; GFX908-NEXT:    v_add_u32_e32 v27, v27, v27
 ; GFX908-NEXT:    v_add_u32_e32 v26, v26, v26
 ; GFX908-NEXT:    v_add_u32_e32 v25, v25, v25
-; GFX908-NEXT:    global_store_dwordx4 v0, v[29:32], s[0:1] offset:96
-; GFX908-NEXT:    global_store_dwordx4 v0, v[25:28], s[0:1] offset:112
-; GFX908-NEXT:    global_store_dwordx4 v0, v[21:24], s[0:1] offset:64
-; GFX908-NEXT:    global_store_dwordx4 v0, v[17:20], s[0:1] offset:80
-; GFX908-NEXT:    global_store_dwordx4 v0, v[13:16], s[0:1] offset:32
-; GFX908-NEXT:    global_store_dwordx4 v0, v[9:12], s[0:1] offset:48
-; GFX908-NEXT:    global_store_dwordx4 v0, v[5:8], s[0:1]
-; GFX908-NEXT:    global_store_dwordx4 v0, v[1:4], s[0:1] offset:16
+; GFX908-NEXT:    global_store_dwordx4 v12, v[29:32], s[0:1] offset:96
+; GFX908-NEXT:    global_store_dwordx4 v12, v[25:28], s[0:1] offset:112
+; GFX908-NEXT:    global_store_dwordx4 v12, v[21:24], s[0:1] offset:64
+; GFX908-NEXT:    global_store_dwordx4 v12, v[17:20], s[0:1] offset:80
+; GFX908-NEXT:    global_store_dwordx4 v12, v[13:16], s[0:1] offset:32
+; GFX908-NEXT:    global_store_dwordx4 v12, v[8:11], s[0:1] offset:48
+; GFX908-NEXT:    global_store_dwordx4 v12, v[4:7], s[0:1]
+; GFX908-NEXT:    global_store_dwordx4 v12, v[0:3], s[0:1] offset:16
 ; GFX908-NEXT:    s_endpgm
 ;
 ; GFX90A-LABEL: no_agpr_no_reserve:

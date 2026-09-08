@@ -8,8 +8,8 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_add_u32 flat_scratch_lo, s12, s17
 ; CHECK-NEXT:    s_addc_u32 flat_scratch_hi, s13, 0
-; CHECK-NEXT:    v_pk_mov_b32 v[44:45], 0, 0
-; CHECK-NEXT:    flat_load_dword v42, v[44:45]
+; CHECK-NEXT:    v_pk_mov_b32 v[46:47], 0, 0
+; CHECK-NEXT:    flat_load_dword v42, v[46:47]
 ; CHECK-NEXT:    s_mov_b64 s[34:35], s[8:9]
 ; CHECK-NEXT:    s_load_dwordx4 s[64:67], s[34:35], 0x8
 ; CHECK-NEXT:    s_load_dword s68, s[34:35], 0x0
@@ -24,7 +24,7 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    s_cselect_b32 s5, s9, 0
 ; CHECK-NEXT:    s_cselect_b32 s6, s68, 0
 ; CHECK-NEXT:    s_add_u32 s50, s34, 48
-; CHECK-NEXT:    v_mov_b32_e32 v47, s5
+; CHECK-NEXT:    v_mov_b32_e32 v45, s5
 ; CHECK-NEXT:    s_mov_b32 s5, s4
 ; CHECK-NEXT:    s_addc_u32 s51, s35, 0
 ; CHECK-NEXT:    v_pk_mov_b32 v[62:63], s[4:5], s[4:5] op_sel:[0,1]
@@ -33,7 +33,7 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    s_addc_u32 s5, s5, G@gotpcrel32@hi+12
 ; CHECK-NEXT:    s_load_dwordx2 s[54:55], s[4:5], 0x0
 ; CHECK-NEXT:    s_mov_b32 s53, s14
-; CHECK-NEXT:    v_mov_b32_e32 v46, s6
+; CHECK-NEXT:    v_mov_b32_e32 v44, s6
 ; CHECK-NEXT:    v_pk_mov_b32 v[56:57], s[64:65], s[64:65] op_sel:[0,1]
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[48:49]
 ; CHECK-NEXT:    s_mov_b64 s[6:7], s[38:39]
@@ -63,12 +63,12 @@ define amdgpu_kernel void @foo(ptr addrspace(5) %ptr5, ptr %p0, double %v0, <4 x
 ; CHECK-NEXT:    s_mov_b32 s13, s52
 ; CHECK-NEXT:    s_mov_b32 s14, s33
 ; CHECK-NEXT:    v_mov_b32_e32 v31, v40
-; CHECK-NEXT:    flat_store_dwordx2 v[44:45], v[58:59]
+; CHECK-NEXT:    flat_store_dwordx2 v[46:47], v[58:59]
 ; CHECK-NEXT:    flat_store_dwordx2 v[56:57], v[62:63]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; implicit-def: $sgpr15
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[54:55]
-; CHECK-NEXT:    flat_load_dwordx2 v[0:1], v[46:47] glc
+; CHECK-NEXT:    flat_load_dwordx2 v[0:1], v[44:45] glc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s67
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s68

@@ -741,16 +741,16 @@ define { double, double } @test_sincos_f64(double %a) {
 define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) {
 ; GNU-LABEL: test_sincos_v2f64:
 ; GNU:       @ %bb.0:
-; GNU-NEXT:    push {r4, lr}
+; GNU-NEXT:    push {r4, r5, r7, lr}
 ; GNU-NEXT:    sub sp, #32
 ; GNU-NEXT:    mov r1, r3
-; GNU-NEXT:    mov r12, r2
+; GNU-NEXT:    mov r4, r2
 ; GNU-NEXT:    add r2, sp, #24
 ; GNU-NEXT:    add r3, sp, #16
-; GNU-NEXT:    mov r4, r0
-; GNU-NEXT:    mov r0, r12
+; GNU-NEXT:    mov r5, r0
+; GNU-NEXT:    mov r0, r4
 ; GNU-NEXT:    bl sincos
-; GNU-NEXT:    ldrd r0, r1, [sp, #40]
+; GNU-NEXT:    ldrd r0, r1, [sp, #48]
 ; GNU-NEXT:    add r2, sp, #8
 ; GNU-NEXT:    mov r3, sp
 ; GNU-NEXT:    bl sincos
@@ -758,37 +758,37 @@ define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) {
 ; GNU-NEXT:    vldr d18, [sp, #24]
 ; GNU-NEXT:    vldr d17, [sp]
 ; GNU-NEXT:    vldr d16, [sp, #16]
-; GNU-NEXT:    vst1.64 {d18, d19}, [r4]!
-; GNU-NEXT:    vst1.64 {d16, d17}, [r4]
+; GNU-NEXT:    vst1.64 {d18, d19}, [r5]!
+; GNU-NEXT:    vst1.64 {d16, d17}, [r5]
 ; GNU-NEXT:    add sp, #32
-; GNU-NEXT:    pop {r4, pc}
+; GNU-NEXT:    pop {r4, r5, r7, pc}
 ;
 ; GNUEABI-LABEL: test_sincos_v2f64:
 ; GNUEABI:       @ %bb.0:
-; GNUEABI-NEXT:    .save {r4, lr}
-; GNUEABI-NEXT:    push {r4, lr}
+; GNUEABI-NEXT:    .save {r4, r5, r11, lr}
+; GNUEABI-NEXT:    push {r4, r5, r11, lr}
 ; GNUEABI-NEXT:    .pad #32
 ; GNUEABI-NEXT:    sub sp, sp, #32
 ; GNUEABI-NEXT:    mov r1, r3
-; GNUEABI-NEXT:    mov r12, r2
+; GNUEABI-NEXT:    mov r4, r2
 ; GNUEABI-NEXT:    add r2, sp, #24
 ; GNUEABI-NEXT:    add r3, sp, #16
-; GNUEABI-NEXT:    mov r4, r0
-; GNUEABI-NEXT:    mov r0, r12
+; GNUEABI-NEXT:    mov r5, r0
+; GNUEABI-NEXT:    mov r0, r4
 ; GNUEABI-NEXT:    bl sincos
-; GNUEABI-NEXT:    ldr r0, [sp, #40]
+; GNUEABI-NEXT:    ldr r0, [sp, #48]
 ; GNUEABI-NEXT:    add r2, sp, #8
-; GNUEABI-NEXT:    ldr r1, [sp, #44]
+; GNUEABI-NEXT:    ldr r1, [sp, #52]
 ; GNUEABI-NEXT:    mov r3, sp
 ; GNUEABI-NEXT:    bl sincos
 ; GNUEABI-NEXT:    vldr d19, [sp, #8]
 ; GNUEABI-NEXT:    vldr d18, [sp, #24]
 ; GNUEABI-NEXT:    vldr d17, [sp]
 ; GNUEABI-NEXT:    vldr d16, [sp, #16]
-; GNUEABI-NEXT:    vst1.64 {d18, d19}, [r4]!
-; GNUEABI-NEXT:    vst1.64 {d16, d17}, [r4]
+; GNUEABI-NEXT:    vst1.64 {d18, d19}, [r5]!
+; GNUEABI-NEXT:    vst1.64 {d16, d17}, [r5]
 ; GNUEABI-NEXT:    add sp, sp, #32
-; GNUEABI-NEXT:    pop {r4, pc}
+; GNUEABI-NEXT:    pop {r4, r5, r11, pc}
 ;
 ; IOS-NO-STRET-LABEL: test_sincos_v2f64:
 ; IOS-NO-STRET:       @ %bb.0:
@@ -796,29 +796,29 @@ define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) {
 ; IOS-NO-STRET-NEXT:    vpush {d8, d9, d10, d11}
 ; IOS-NO-STRET-NEXT:    ldr r8, [sp, #64]
 ; IOS-NO-STRET-NEXT:    mov r7, r1
-; IOS-NO-STRET-NEXT:    mov r4, r0
+; IOS-NO-STRET-NEXT:    mov r11, r0
 ; IOS-NO-STRET-NEXT:    mov r0, r3
 ; IOS-NO-STRET-NEXT:    mov r6, r3
 ; IOS-NO-STRET-NEXT:    mov r10, r2
 ; IOS-NO-STRET-NEXT:    mov r1, r8
 ; IOS-NO-STRET-NEXT:    bl _sin
-; IOS-NO-STRET-NEXT:    mov r11, r0
-; IOS-NO-STRET-NEXT:    mov r5, r1
+; IOS-NO-STRET-NEXT:    mov r5, r0
+; IOS-NO-STRET-NEXT:    mov r4, r1
 ; IOS-NO-STRET-NEXT:    mov r0, r6
 ; IOS-NO-STRET-NEXT:    mov r1, r8
 ; IOS-NO-STRET-NEXT:    bl _cos
 ; IOS-NO-STRET-NEXT:    vmov d9, r0, r1
 ; IOS-NO-STRET-NEXT:    mov r0, r7
 ; IOS-NO-STRET-NEXT:    mov r1, r10
-; IOS-NO-STRET-NEXT:    vmov d11, r11, r5
+; IOS-NO-STRET-NEXT:    vmov d11, r5, r4
 ; IOS-NO-STRET-NEXT:    bl _sin
 ; IOS-NO-STRET-NEXT:    vmov d10, r0, r1
 ; IOS-NO-STRET-NEXT:    mov r0, r7
 ; IOS-NO-STRET-NEXT:    mov r1, r10
 ; IOS-NO-STRET-NEXT:    bl _cos
 ; IOS-NO-STRET-NEXT:    vmov d8, r0, r1
-; IOS-NO-STRET-NEXT:    vst1.32 {d10, d11}, [r4]!
-; IOS-NO-STRET-NEXT:    vst1.32 {d8, d9}, [r4]
+; IOS-NO-STRET-NEXT:    vst1.32 {d10, d11}, [r11]!
+; IOS-NO-STRET-NEXT:    vst1.32 {d8, d9}, [r11]
 ; IOS-NO-STRET-NEXT:    vpop {d8, d9, d10, d11}
 ; IOS-NO-STRET-NEXT:    pop {r4, r5, r6, r7, r8, r10, r11, pc}
 ;
@@ -826,23 +826,23 @@ define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) {
 ; IOS-WITH-STRET:       @ %bb.0:
 ; IOS-WITH-STRET-NEXT:    push {r4, r5, r6, lr}
 ; IOS-WITH-STRET-NEXT:    sub sp, sp, #32
-; IOS-WITH-STRET-NEXT:    mov r4, r2
+; IOS-WITH-STRET-NEXT:    mov r5, r2
 ; IOS-WITH-STRET-NEXT:    ldr r2, [sp, #48]
-; IOS-WITH-STRET-NEXT:    mov r6, r0
+; IOS-WITH-STRET-NEXT:    mov r4, r0
 ; IOS-WITH-STRET-NEXT:    add r0, sp, #16
-; IOS-WITH-STRET-NEXT:    mov r5, r1
+; IOS-WITH-STRET-NEXT:    mov r6, r1
 ; IOS-WITH-STRET-NEXT:    mov r1, r3
 ; IOS-WITH-STRET-NEXT:    bl ___sincos_stret
 ; IOS-WITH-STRET-NEXT:    mov r0, sp
-; IOS-WITH-STRET-NEXT:    mov r1, r5
-; IOS-WITH-STRET-NEXT:    mov r2, r4
+; IOS-WITH-STRET-NEXT:    mov r1, r6
+; IOS-WITH-STRET-NEXT:    mov r2, r5
 ; IOS-WITH-STRET-NEXT:    bl ___sincos_stret
 ; IOS-WITH-STRET-NEXT:    vldr d17, [sp, #16]
 ; IOS-WITH-STRET-NEXT:    vldr d16, [sp]
 ; IOS-WITH-STRET-NEXT:    vldr d19, [sp, #24]
 ; IOS-WITH-STRET-NEXT:    vldr d18, [sp, #8]
-; IOS-WITH-STRET-NEXT:    vst1.32 {d16, d17}, [r6]!
-; IOS-WITH-STRET-NEXT:    vst1.32 {d18, d19}, [r6]
+; IOS-WITH-STRET-NEXT:    vst1.32 {d16, d17}, [r4]!
+; IOS-WITH-STRET-NEXT:    vst1.32 {d18, d19}, [r4]
 ; IOS-WITH-STRET-NEXT:    add sp, sp, #32
 ; IOS-WITH-STRET-NEXT:    pop {r4, r5, r6, pc}
 ;
