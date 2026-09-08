@@ -167,7 +167,8 @@ static void replaceWithHandleFromBinding(Module &M, CallInst *CI,
                                CI->getArgOperand(3), CI->getArgOperand(4));
 }
 
-// Replace the implicit counter binding call with a new call using explicit binding.
+// Replace the implicit counter binding call with a new call using explicit
+// binding.
 static void replaceWithCounterHandleFromBinding(Module &M, CallInst *CI,
                                                 Value *MainHandle,
                                                 uint32_t DescSet,
@@ -182,7 +183,8 @@ static void replaceWithCounterHandleFromBinding(Module &M, CallInst *CI,
   Type *OverloadTys[] = {CI->getType(), CI->getArgOperand(0)->getType()};
   Function *NewFunc = Intrinsic::getOrInsertDeclaration(
       &M, Intrinsic::spv_resource_counterhandlefrombinding, OverloadTys);
-  CallInst *NewCI = Builder.CreateCall(NewFunc, {MainHandle, DescSetOp, BindingOp});
+  CallInst *NewCI =
+      Builder.CreateCall(NewFunc, {MainHandle, DescSetOp, BindingOp});
   NewCI->setCallingConv(CI->getCallingConv());
   CI->replaceAllUsesWith(NewCI);
   CI->eraseFromParent();
@@ -196,8 +198,8 @@ static void replaceWithCounterHandleFromBinding(Module &M, CallInst *CI,
          "unexpected intrinsic");
   assert(CI->arg_size() == 3 &&
          "unexpected number of arguments for implicit binding intrinsic");
-  replaceWithCounterHandleFromBinding(
-      M, CI, CI->getArgOperand(0), DescSet, Binding);
+  replaceWithCounterHandleFromBinding(M, CI, CI->getArgOperand(0), DescSet,
+                                      Binding);
 }
 
 bool SPIRVLegalizeImplicitBindingImpl::replaceImplicitBindingCalls(Module &M) {
@@ -252,7 +254,7 @@ bool SPIRVLegalizeImplicitBindingImpl::replaceImplicitBindingCalls(Module &M) {
     // Replace the implicit binding call with an explicit binding call.
     if (CI->getIntrinsicID() ==
         Intrinsic::spv_resource_handlefromimplicitbinding)
-        replaceWithHandleFromBinding(M, CI, DescSet, Binding);
+      replaceWithHandleFromBinding(M, CI, DescSet, Binding);
     else
       replaceWithCounterHandleFromBinding(M, CI, DescSet, Binding);
     Changed = true;
