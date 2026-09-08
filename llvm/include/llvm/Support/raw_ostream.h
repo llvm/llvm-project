@@ -31,6 +31,7 @@
 namespace llvm {
 
 class Duration;
+class Error;
 class formatv_object_base;
 class FormattedString;
 class FormattedNumber;
@@ -575,6 +576,9 @@ public:
   ///
   void clear_error() { EC = std::error_code(); }
 
+  /// Return and clear any output error recorded by this stream.
+  Error takeError();
+
   /// Locks the underlying file.
   ///
   /// @returns RAII object that releases the lock upon leaving the scope, if the
@@ -647,6 +651,9 @@ public:
   /// advanced by this number. On error, -1 is returned, use error() to get the
   /// error code.
   LLVM_ABI ssize_t read(char *Ptr, size_t Size);
+
+  /// Resize the underlying file to \p Size bytes.
+  LLVM_ABI Error resize(uint64_t Size);
 
   /// Check if \p OS is a pointer of type raw_fd_stream*.
   LLVM_ABI static bool classof(const raw_ostream *OS);
