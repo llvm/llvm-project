@@ -33,14 +33,20 @@
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCStreamer.h"
@@ -180,14 +186,27 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
 }
 
 void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
-  if (GV->hasCommonLinkage()) {
-    OutContext.reportError(SMLoc(),
-                           "common symbols are not yet implemented for Wasm: " +
-                               getSymbol(GV)->getName());
-    return;
+  if (GV->hasAttribute("wasm-import-module") ||
+      GV->hasAttribute("wasm-import-name")) {
+    if (!GV->isDeclaration()) {
+      OutContext.reportError(SMLoc(), "definition of global '" + GV->getName() +
+                                          "' cannot have import attribute");
+      return;
+    }
+    if (!WebAssembly::isWasmVarAddressSpace(GV->getAddressSpace())) {
+      OutContext.reportError(SMLoc(),
+                             "imported global '" + GV->getName() +
+                                 "' must be in a wasm variable address space");
+      return;
+    }
   }
-
   if (!WebAssembly::isWasmVarAddressSpace(GV->getAddressSpace())) {
+    if (GV->hasAttribute("wasm-export-name")) {
+      auto *Sym = static_cast<MCSymbolWasm *>(getSymbol(GV));
+      StringRef Name = GV->getAttribute("wasm-export-name").getValueAsString();
+      Sym->setExportName(OutContext.allocateString(Name));
+      getTargetStreamer()->emitExportName(Sym, Name);
+    }
     AsmPrinter::emitGlobalVariable(GV);
     return;
   }
@@ -212,10 +231,30 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   emitVisibility(Sym, GV->getVisibility(), !GV->isDeclaration());
   emitSymbolType(Sym);
+  if (GV->isDeclaration()) {
+    if (GV->hasAttribute("wasm-import-module")) {
+      StringRef ImportModule =
+          GV->getAttribute("wasm-import-module").getValueAsString();
+      Sym->setImportModule(OutContext.allocateString(ImportModule));
+      getTargetStreamer()->emitImportModule(Sym, ImportModule);
+    }
+    if (GV->hasAttribute("wasm-import-name")) {
+      StringRef ImportName =
+          GV->getAttribute("wasm-import-name").getValueAsString();
+      Sym->setImportName(OutContext.allocateString(ImportName));
+      getTargetStreamer()->emitImportName(Sym, ImportName);
+    }
+  }
   if (GV->hasInitializer()) {
     assert(getSymbolPreferLocal(*GV) == Sym);
     emitLinkage(GV, Sym);
     OutStreamer->emitLabel(Sym);
+    if (GV->hasAttribute("wasm-export-name")) {
+      StringRef ExportName =
+          GV->getAttribute("wasm-export-name").getValueAsString();
+      Sym->setExportName(OutContext.allocateString(ExportName));
+      getTargetStreamer()->emitExportName(Sym, ExportName);
+    }
     // TODO: Actually emit the initializer value.  Otherwise the global has the
     // default value for its type (0, ref.null, etc).
     OutStreamer->addBlankLine();
@@ -808,11 +847,41 @@ bool WebAssemblyAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 char WebAssemblyAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(WebAssemblyAsmPrinter, "webassembly-asm-printer",
-                "WebAssembly Assmebly Printer", false, false)
+                "WebAssembly Assembly Printer", false, false)
 
 // Force static initialization.
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeWebAssemblyAsmPrinter() {
   RegisterAsmPrinter<WebAssemblyAsmPrinter> X(getTheWebAssemblyTarget32());
   RegisterAsmPrinter<WebAssemblyAsmPrinter> Y(getTheWebAssemblyTarget64());
+}
+
+PreservedAnalyses
+WebAssemblyAsmPrinterBeginPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  WebAssemblyAsmPrinter &AsmPrinter = static_cast<WebAssemblyAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+WebAssemblyAsmPrinterPass::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  WebAssemblyAsmPrinter &AsmPrinter = static_cast<WebAssemblyAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+WebAssemblyAsmPrinterEndPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  WebAssemblyAsmPrinter &AsmPrinter = static_cast<WebAssemblyAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }

@@ -437,7 +437,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::STORE, VT, Legal);
       setOperationAction(ISD::VSELECT, VT, Legal);
       setOperationAction(ISD::BITCAST, VT, Legal);
-      setOperationAction(ISD::UNDEF, VT, Legal);
+      setOperationAction({ISD::UNDEF, ISD::POISON}, VT, Legal);
 
       // Likewise, except that we need to replace the nodes with something
       // more specific.
@@ -698,9 +698,11 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FMAXNUM, Type, Legal);
       setOperationAction(ISD::FMAXIMUM, Type, Legal);
       setOperationAction(ISD::FMAXIMUMNUM, Type, Legal);
+      setOperationAction(ISD::PSEUDO_FMAX, Type, Legal);
       setOperationAction(ISD::FMINNUM, Type, Legal);
       setOperationAction(ISD::FMINIMUM, Type, Legal);
       setOperationAction(ISD::FMINIMUMNUM, Type, Legal);
+      setOperationAction(ISD::PSEUDO_FMIN, Type, Legal);
     }
 
     // Handle constrained floating-point operations.
@@ -723,6 +725,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::STRICT_FMINNUM, VT, Legal);
       setOperationAction(ISD::STRICT_FMAXIMUM, VT, Legal);
       setOperationAction(ISD::STRICT_FMINIMUM, VT, Legal);
+      setOperationAction(ISD::STRICT_PSEUDO_FMAX, VT, Legal);
+      setOperationAction(ISD::STRICT_PSEUDO_FMIN, VT, Legal);
     }
   }
 
@@ -1470,12 +1474,16 @@ bool SystemZTargetLowering::findOptimalMemOpLowering(
     return false; // Memset zero: Use XC.
 
   const int MVCFastLen = 16;
-  // Use MVC up to 16 bytes.  Small memset uses STC/MVI for first byte.
-  if ((Op.isMemset() ? Op.size() - 1 : Op.size()) <= MVCFastLen)
+  // Use MVC up to 16 bytes for memcpy.  Small memset uses STC/MVI for first
+  // byte.
+  if (Op.isMemcpy() && Op.size() <= MVCFastLen)
+    return false;
+  if (Op.isMemset() && Op.size() - 1 <= MVCFastLen)
     return false;
 
   // Avoid unaligned VL/VST:s.
-  if (!Op.isAligned(Align(8)) || (Op.size() >= 25 && Op.size() <= 31))
+  if ((Op.size() >= 16 && !Op.isAligned(Align(8))) ||
+      (Op.size() >= 25 && Op.size() <= 31))
     return false;
 
   return TargetLowering::findOptimalMemOpLowering(
@@ -1769,12 +1777,12 @@ SystemZTargetLowering::getRegisterByName(const char *RegName, LLT VT,
 }
 
 Register SystemZTargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return Subtarget.isTargetXPLINK64() ? SystemZ::R1D : SystemZ::R6D;
 }
 
 Register SystemZTargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return Subtarget.isTargetXPLINK64() ? SystemZ::R2D : SystemZ::R7D;
 }
 
@@ -1855,6 +1863,7 @@ void SystemZTargetLowering::LowerAsmOperandForConstraint(
 // Calling conventions
 //===----------------------------------------------------------------------===//
 
+#define GET_CALLING_CONV_IMPL
 #include "SystemZGenCallingConv.inc"
 
 const MCPhysReg *SystemZTargetLowering::getScratchRegisters(
@@ -7622,14 +7631,18 @@ SDValue SystemZTargetLowering::combineExtract(const SDLoc &DL, EVT ResVT,
         break;
       // We're extracting the low part of one operand of the BUILD_VECTOR.
       Op = Op.getOperand(End / OpBytesPerElement - 1);
+      EVT ResIntVT = MVT::getIntegerVT(ResVT.getSizeInBits());
+      if (!isTypeLegal(ResIntVT))
+        break;
       if (!Op.getValueType().isInteger()) {
-        EVT VT = MVT::getIntegerVT(Op.getValueSizeInBits());
-        Op = DAG.getNode(ISD::BITCAST, DL, VT, Op);
+        EVT OpIntVT = MVT::getIntegerVT(Op.getValueSizeInBits());
+        if (!isTypeLegal(OpIntVT))
+          break;
+        Op = DAG.getNode(ISD::BITCAST, DL, OpIntVT, Op);
         DCI.AddToWorklist(Op.getNode());
       }
-      EVT VT = MVT::getIntegerVT(ResVT.getSizeInBits());
-      Op = DAG.getNode(ISD::TRUNCATE, DL, VT, Op);
-      if (VT != ResVT) {
+      Op = DAG.getNode(ISD::TRUNCATE, DL, ResIntVT, Op);
+      if (ResIntVT != ResVT) {
         DCI.AddToWorklist(Op.getNode());
         Op = DAG.getNode(ISD::BITCAST, DL, ResVT, Op);
       }
@@ -8964,7 +8977,8 @@ static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask,
 TargetLoweringBase::CondMergingParams
 SystemZTargetLowering::getJumpConditionMergingParams(Instruction::BinaryOps Opc,
                                                      const Value *Lhs,
-                                                     const Value *Rhs) const {
+                                                     const Value *Rhs,
+                                                     const Function *) const {
   const auto isFlagOutOpCC = [](const Value *V) {
     using namespace llvm::PatternMatch;
     const Value *RHSVal;
@@ -10869,6 +10883,48 @@ SystemZTargetLowering::emitMemMemWrapper(MachineInstr &MI,
   return MBB;
 }
 
+MachineBasicBlock *
+SystemZTargetLowering::emitMemmoveImm(MachineInstr &MI,
+                                      MachineBasicBlock *MBB) const {
+  const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
+
+  DebugLoc DL = MI.getDebugLoc();
+  MachineOperand DstAddr = earlyUseOperand(MI.getOperand(0));
+  MachineOperand SrcAddr = earlyUseOperand(MI.getOperand(1));
+  uint64_t Len = MI.getOperand(2).getImm();
+  assert(Len > 0 && Len <= 256 && "Memmove of of unsupported constant length.");
+
+  // Use MVC or MVCRL after comparing the addresses.
+  MachineBasicBlock *DoneMBB = SystemZ::splitBlockAfter(MI, MBB);
+  MachineBasicBlock *MvcMBB = SystemZ::emitBlockAfter(MBB);
+  MachineBasicBlock *MvcrlMBB = SystemZ::emitBlockAfter(MvcMBB);
+  MBB->addSuccessor(MvcMBB);
+  MBB->addSuccessor(MvcrlMBB);
+  MvcMBB->addSuccessor(DoneMBB);
+  MvcrlMBB->addSuccessor(DoneMBB);
+
+  BuildMI(MBB, DL, TII->get(SystemZ::CLGR)).add(SrcAddr).add(DstAddr);
+  BuildMI(MBB, DL, TII->get(SystemZ::BRC))
+      .addImm(SystemZ::CCMASK_ICMP).addImm(SystemZ::CCMASK_CMP_LT)
+      .addMBB(MvcrlMBB);
+
+  BuildMI(MvcMBB, DL, TII->get(SystemZ::MVC))
+      .add(DstAddr).addImm(0)
+      .addImm(Len)
+      .add(SrcAddr).addImm(0)
+      .setMemRefs(MI.memoperands());
+  BuildMI(MvcMBB, DL, TII->get(SystemZ::J)).addMBB(DoneMBB);
+
+  BuildMI(MvcrlMBB, DL, TII->get(SystemZ::LHI), SystemZ::R0L).addImm(Len - 1);
+  BuildMI(MvcrlMBB, DL, TII->get(SystemZ::MVCRL))
+      .add(DstAddr).addImm(0)
+      .add(SrcAddr).addImm(0)
+      .setMemRefs(MI.memoperands());
+
+  MI.eraseFromParent();
+  return DoneMBB;
+}
+
 // Decompose string pseudo-instruction MI into a loop that continually performs
 // Opcode until CC != 3.
 MachineBasicBlock *SystemZTargetLowering::emitStringWrapper(
@@ -11240,6 +11296,8 @@ MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
   case SystemZ::MemsetRegImm:
   case SystemZ::MemsetRegReg:
     return emitMemMemWrapper(MI, MBB, SystemZ::MVC, true/*IsMemset*/);
+  case SystemZ::MemmoveImm:
+    return emitMemmoveImm(MI, MBB);
   case SystemZ::CLSTLoop:
     return emitStringWrapper(MI, MBB, SystemZ::CLST);
   case SystemZ::MVSTLoop:

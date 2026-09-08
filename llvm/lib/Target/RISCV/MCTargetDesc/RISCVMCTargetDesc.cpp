@@ -85,15 +85,18 @@ createRISCVMCObjectFileInfo(MCContext &Ctx, bool PIC,
 }
 
 void RISCV::updateCZceFeatureImplications(MCSubtargetInfo &STI) {
-  // Add Zcd if C and D are enabled.
+  // Add Zcd if C and D are enabled and we aren't targeting 64-bit RVY.
   if (STI.hasFeature(RISCV::FeatureStdExtC) &&
       STI.hasFeature(RISCV::FeatureStdExtD) &&
-      !STI.hasFeature(RISCV::FeatureStdExtZcd))
+      !STI.hasFeature(RISCV::FeatureStdExtZcd) &&
+      !(STI.hasFeature(RISCV::Feature64Bit) &&
+        STI.hasFeature(RISCV::FeatureStdExtY)))
     STI.ToggleFeature(RISCV::FeatureStdExtZcd);
 
-  // Add Zcf if F and C or Zce are enabled on RV32.
+  // Add Zcf if F and C or Zce are enabled on RV32 and Y is not enabled.
   if (!STI.hasFeature(RISCV::FeatureStdExtZcf) &&
       !STI.hasFeature(RISCV::Feature64Bit) &&
+      !STI.hasFeature(RISCV::FeatureStdExtY) &&
       STI.hasFeature(RISCV::FeatureStdExtF) &&
       (STI.hasFeature(RISCV::FeatureStdExtC) ||
        STI.hasFeature(RISCV::FeatureStdExtZce)))
@@ -104,22 +107,24 @@ void RISCV::updateCZceFeatureImplications(MCSubtargetInfo &STI) {
   // (PR119122). The rule is:
   // For RV32:
   //   - No F and no D: Zca alone implies C
-  //   - F but no D: Zca + Zcf implies C
-  //   - F and D: Zca + Zcf + Zcd implies C
+  //   - F but no D: Zca + Zcf/Y implies C
+  //   - F and D: Zca + Zcf/Y + Zcd implies C
   // For RV64:
   //   - No D: Zca alone implies C
-  //   - D: Zca + Zcd implies C
+  //   - D: Zca + Zcd/Y implies C
   if (!STI.hasFeature(RISCV::FeatureStdExtC) &&
       STI.hasFeature(RISCV::FeatureStdExtZca)) {
-    bool ShouldAddC = false;
+    bool ShouldAddC;
     if (!STI.hasFeature(RISCV::Feature64Bit))
       ShouldAddC = (!STI.hasFeature(RISCV::FeatureStdExtD) ||
                     STI.hasFeature(RISCV::FeatureStdExtZcd)) &&
-                   (!STI.hasFeature(RISCV::FeatureStdExtF) ||
+                   (STI.hasFeature(RISCV::FeatureStdExtY) ||
+                    !STI.hasFeature(RISCV::FeatureStdExtF) ||
                     STI.hasFeature(RISCV::FeatureStdExtZcf));
     else
-      ShouldAddC = (!STI.hasFeature(RISCV::FeatureStdExtD) ||
-                    STI.hasFeature(RISCV::FeatureStdExtZcd));
+      ShouldAddC = STI.hasFeature(RISCV::FeatureStdExtY) ||
+                   !STI.hasFeature(RISCV::FeatureStdExtD) ||
+                   STI.hasFeature(RISCV::FeatureStdExtZcd);
     if (ShouldAddC)
       STI.ToggleFeature(RISCV::FeatureStdExtC);
   }
@@ -127,15 +132,17 @@ void RISCV::updateCZceFeatureImplications(MCSubtargetInfo &STI) {
   // Add Zce if Zca+Zcb+Zcmp+Zcmt are enabled and the conditions are met.
   // For RV32:
   //   - No F and no D: Zca+Zcb+Zcmp+Zcmt alone implies Zce
-  //   - F: Zca+Zcb+Zcmp+Zcmt + Zcf implies Zce
+  //   - F: Zca+Zcb+Zcmp+Zcmt + Zcf/Y implies Zce
   // For RV64:
   //   - Zca+Zcb+Zcmp+Zcmt alone implies Zce
+  //   - Note: RV64Y is incompatible with Zcmp/Zcmt, never implies Zce
   if (!STI.hasFeature(RISCV::FeatureStdExtZce) &&
       STI.hasFeature(RISCV::FeatureStdExtZca) &&
       STI.hasFeature(RISCV::FeatureStdExtZcb) &&
       STI.hasFeature(RISCV::FeatureStdExtZcmp) &&
       STI.hasFeature(RISCV::FeatureStdExtZcmt)) {
     if (STI.hasFeature(RISCV::Feature64Bit) ||
+        STI.hasFeature(RISCV::FeatureStdExtY) ||
         !STI.hasFeature(RISCV::FeatureStdExtF) ||
         STI.hasFeature(RISCV::FeatureStdExtZcf))
       STI.ToggleFeature(RISCV::FeatureStdExtZce);

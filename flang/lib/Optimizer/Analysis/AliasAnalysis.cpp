@@ -21,7 +21,6 @@
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
@@ -30,6 +29,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
+#include <utility>
 
 using namespace mlir;
 
@@ -427,6 +427,17 @@ bool AliasAnalysis::Source::isPointer() const {
   return attributes.test(Attribute::Pointer);
 }
 
+bool AliasAnalysis::Source::isDeclaredAllocatable() const {
+  auto isAllocatable = [](mlir::Operation *op) {
+    auto var = mlir::dyn_cast_or_null<fir::FortranVariableOpInterface>(op);
+    return var && var.isAllocatable();
+  };
+
+  auto value = origin.u.dyn_cast<mlir::Value>();
+  return (value && isAllocatable(value.getDefiningOp())) ||
+         isAllocatable(origin.instantiationPoint);
+}
+
 bool AliasAnalysis::Source::isCrayPointee() const {
   return attributes.test(Attribute::CrayPointee);
 }
@@ -662,6 +673,71 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   if (lhs == rhs || getZeroOffsetViewRoot(lhs) == getZeroOffsetViewRoot(rhs))
     return AliasResult::MustAlias;
 
+  // OpenMP private clause copy region arguments are guaranteed to be disjoint.
+  // The copy region has two arguments: %arg0 (original/mold) and %arg1
+  // (private). By omp.private semantics, %arg1 is initialized with freshly
+  // allocated memory (from the init region), while %arg0 references the
+  // original variable. These cannot alias. This check handles both direct block
+  // argument comparisons and cases where one value is loaded from a block
+  // argument (common pattern: hlfir.assign %loaded to %arg1 where %loaded =
+  // fir.load %arg0).
+  auto getBlockArgOrLoadSource = [](mlir::Value v) -> mlir::BlockArgument {
+    if (auto arg = mlir::dyn_cast<BlockArgument>(v))
+      return arg;
+    // Check if this is a load from a block argument
+    if (auto defOp = v.getDefiningOp()) {
+      if (auto loadOp = mlir::dyn_cast<fir::LoadOp>(defOp)) {
+        return mlir::dyn_cast<BlockArgument>(loadOp.getMemref());
+      }
+    }
+    return {};
+  };
+
+  auto lhsArg = getBlockArgOrLoadSource(lhs);
+  auto rhsArg = getBlockArgOrLoadSource(rhs);
+
+  if (lhsArg && rhsArg &&
+      lhsArg.getParentRegion() == rhsArg.getParentRegion()) {
+    if (auto *parentOp = lhsArg.getParentRegion()->getParentOp()) {
+      if (auto privateOp = mlir::dyn_cast<omp::PrivateClauseOp>(parentOp)) {
+        auto &copyRegion = privateOp.getCopyRegion();
+        if (lhsArg.getParentRegion() == &copyRegion) {
+          // Both trace to block args from the copy region - check if they're
+          // the defined pair
+          auto moldArg = privateOp.getCopyMoldArg();
+          auto privArg = privateOp.getCopyPrivateArg();
+          if ((lhsArg == moldArg && rhsArg == privArg) ||
+              (lhsArg == privArg && rhsArg == moldArg)) {
+            // Check if this is a POINTER type.
+            // For POINTER + FIRSTPRIVATE: the descriptor is copied (private)
+            // but pointer association is preserved, so the DATA they point to
+            // is the same → ALIASING.
+            // For ALLOCATABLE: fresh memory is allocated → NO ALIASING.
+            auto isPointerType = [](mlir::Type ty) -> bool {
+              ty = fir::unwrapRefType(ty);
+              if (auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(ty))
+                return boxTy.isPointer();
+              return false;
+            };
+
+            if (isPointerType(lhsArg.getType()) ||
+                isPointerType(rhsArg.getType())) {
+              LLVM_DEBUG(llvm::dbgs()
+                         << "  may alias: omp.private POINTER preserves "
+                         << "association (data aliases)\n");
+              return AliasResult::MayAlias;
+            }
+
+            LLVM_DEBUG(llvm::dbgs()
+                       << "  no alias: omp.private copy region arguments "
+                       << "(mold vs private)\n");
+            return AliasResult::NoAlias;
+          }
+        }
+      }
+    }
+  }
+
   bool approximateSource = lhsSrc.approximateSource || rhsSrc.approximateSource;
   LLVM_DEBUG(llvm::dbgs() << "\nAliasAnalysis::alias\n";
              llvm::dbgs() << "  lhs: " << lhs << "\n";
@@ -766,8 +842,19 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
       return AliasResult::MayAlias;
     }
 
-    // Two host associated accesses may overlap due to an equivalence.
+    // Two host-associated accesses may overlap through EQUIVALENCE, so return
+    // MayAlias conservatively. The exception is distinct data accesses where
+    // at least one is allocatable, since allocatables cannot be EQUIVALENCE
+    // objects, provided neither can participate in pointer association.
     if (lhsSrc.kind == SourceKind::HostAssoc) {
+      if (lhsSrc.isData() && rhsSrc.isData() && !lhsSrc.isTargetOrPointer() &&
+          !rhsSrc.isTargetOrPointer() &&
+          (lhsSrc.isDeclaredAllocatable() || rhsSrc.isDeclaredAllocatable())) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "  no alias: distinct host-associated data involving "
+                      "an allocatable\n");
+        return AliasResult::NoAlias;
+      }
       LLVM_DEBUG(llvm::dbgs() << "  aliasing because of host association\n");
       return AliasResult::MayAlias;
     }
@@ -1108,9 +1195,40 @@ static mlir::Value walkBlockArgPassThroughs(mlir::Value v) {
   return v;
 }
 
+void AliasAnalysis::enableSourceCache() { sourceCacheEnabled = true; }
+
+void AliasAnalysis::disableSourceCache() {
+  sourceCacheEnabled = false;
+  clearSourceCache();
+}
+
 AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                                                bool getLastInstantiationPoint,
                                                bool collectScopedOrigins) {
+  if (!sourceCacheEnabled)
+    return getSourceImpl(v, getLastInstantiationPoint, collectScopedOrigins);
+
+  // Key on the queried value and the two boolean flags. Recursive sub-queries
+  // go through this same wrapper, so the whole walk is memoized.
+  std::pair<mlir::Value, unsigned> key{v,
+                                       (getLastInstantiationPoint ? 1u : 0u) |
+                                           (collectScopedOrigins ? 2u : 0u)};
+  auto it = getSourceCache.find(key);
+  if (it != getSourceCache.end()) {
+    ++sourceCacheHits;
+    return it->second;
+  }
+
+  ++sourceCacheMisses;
+  Source source =
+      getSourceImpl(v, getLastInstantiationPoint, collectScopedOrigins);
+  getSourceCache.try_emplace(key, source);
+  return source;
+}
+
+AliasAnalysis::Source
+AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
+                             bool collectScopedOrigins) {
   // If v is a pass-through block argument (see walkBlockArgPassThroughs),
   // continue from the underlying operand so the tracking loop below has a
   // defining op to chew on. Without this, a recursive query like the one in
@@ -1200,16 +1318,24 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           type = SourceKind::Allocate;
           breakFromLoop = true;
         })
-        .Case([&](fir::LoadOp op) {
+        .Case([&](fir::FortranObjectLoadOpInterface op) {
+          // Keyed off the interface rather than fir::LoadOp so that any
+          // operation yielding a value read from memory participates in the
+          // walk. The interface reports provenance only, which is all this
+          // walk needs; it does not promise the operation is a pure load.
+          // Keep this ahead of the FortranObjectViewOpInterface case below,
+          // which would otherwise win for an operation implementing both.
+          mlir::Value loadSource = op.getLoadSource(opResult);
+
           // If load is inside target and it points to mapped item,
           // continue tracking.
-          Operation *loadMemrefOp = op.getMemref().getDefiningOp();
+          Operation *loadMemrefOp = loadSource.getDefiningOp();
           bool isDeclareOp =
               llvm::isa_and_present<fir::DeclareOp>(loadMemrefOp) ||
               llvm::isa_and_present<hlfir::DeclareOp>(loadMemrefOp);
           if (isDeclareOp &&
               llvm::isa<omp::TargetOp>(loadMemrefOp->getParentOp())) {
-            v = op.getMemref();
+            v = loadSource;
             defOp = v.getDefiningOp();
             return;
           }
@@ -1235,7 +1361,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             // Passing true here would stop the inner walk at the declare
             // and force SourceKind::Indirect, which spuriously coarsens
             // getCallModRef (e.g. for box_addr of allocatable dummies).
-            auto boxSrc = getSource(op.getMemref(),
+            auto boxSrc = getSource(loadSource,
                                     /*getLastInstantiationPoint=*/false,
                                     collectScopedOrigins);
             attributes |= boxSrc.attributes;
@@ -1363,10 +1489,18 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           // but their handling is more complex. Maybe we can find better
           // abstractions to handle them in a general fashion.
           bool isPrivateItem = false;
+          // The private/map block argument is owned by the clause-carrying op
+          // (e.g. omp.wsloop), but the declare may be nested deeper (e.g. in an
+          // omp.loop_nest). Resolve the op from the block arg's owner rather
+          // than the declare's immediate parent to handle that nesting.
+          mlir::Operation *ompParentOp = op->getParentOp();
+          if (auto blockArg =
+                  mlir::dyn_cast<mlir::BlockArgument>(op.getMemref()))
+            ompParentOp = blockArg.getOwner()->getParentOp();
           if (omp::BlockArgOpenMPOpInterface argIface =
-                  dyn_cast<omp::BlockArgOpenMPOpInterface>(op->getParentOp())) {
+                  dyn_cast<omp::BlockArgOpenMPOpInterface>(ompParentOp)) {
             Value ompValArg;
-            llvm::TypeSwitch<Operation *>(op->getParentOp())
+            llvm::TypeSwitch<Operation *>(ompParentOp)
                 .Case([&](omp::TargetOp targetOp) {
                   // If declare operation is inside omp target region,
                   // continue alias analysis outside the target region

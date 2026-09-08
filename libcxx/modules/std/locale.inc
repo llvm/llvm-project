@@ -12,6 +12,7 @@ export namespace std {
   // [locale], locale
   using std::has_facet;
   using std::locale;
+  using std::swap;
   using std::use_facet;
 
   // [locale.convenience], convenience interfaces

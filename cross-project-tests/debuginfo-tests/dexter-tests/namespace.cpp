@@ -6,7 +6,7 @@
 // UNSUPPORTED: system-windows
 
 // RUN: %clang++ -g -O0 %s -o %t
-// RUN: %dexter -w --use-script \
+// RUN: %dexter -w \
 // RUN:     --binary %t %dexter_lldb_args -v -- %s | FileCheck %s
 
 #include <stdio.h>

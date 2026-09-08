@@ -12,7 +12,7 @@ func.func @parallel_gang_loop(%buf: memref<1xi32>) {
     acc.loop gang control(%arg0 : i32) = (%c1_i32 : i32) to (%c100_i32 : i32) step (%c1_i32 : i32) {
       memref.store %arg0, %dev[%c0] : memref<1xi32>
       acc.yield
-    } attributes {independent = [#acc.device_type<none>]}
+    } independent
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<1xi32>) to varPtr(%buf : memref<1xi32>)
@@ -32,7 +32,7 @@ func.func @parallel_loop_auto_collapse(%buf: memref<1xi32>, %lb0 : index, %ub0 :
       %vi = arith.index_cast %i : index to i32
       memref.store %vi, %dev[%c0] : memref<1xi32>
       acc.yield
-    } attributes {auto_ = [#acc.device_type<none>]}
+    } auto_
     acc.yield
   }
   acc.copyout accPtr(%dev : memref<1xi32>) to varPtr(%buf : memref<1xi32>)

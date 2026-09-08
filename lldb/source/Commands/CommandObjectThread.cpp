@@ -359,7 +359,7 @@ protected:
 
         // Get provider metadata for header.
         if (provider_id == 0) {
-          strm.Printf(": Base Unwinder ===\n");
+          strm.PutCString(": Base Unwinder ===\n");
         } else {
           // Find the descriptor in the provider chain.
           const auto &provider_chain = thread->GetProviderChainIds();
@@ -380,7 +380,7 @@ protected:
           if (provider_priority.has_value()) {
             strm.Printf(" (priority: %u)", *provider_priority);
           }
-          strm.Printf(" ===\n");
+          strm.PutCString(" ===\n");
 
           if (!provider_desc.empty()) {
             strm.Printf("Description: %s\n", provider_desc.c_str());
@@ -401,7 +401,7 @@ protected:
             selected_frame_marker);
 
         if (num_frames == 0) {
-          strm.Printf("(No frames available)\n");
+          strm.PutCString("(No frames available)\n");
         }
       }
 
@@ -707,8 +707,8 @@ protected:
         new_plan_sp = thread->QueueThreadPlanForStepInRange(
             abort_other_plans, range,
             frame->GetSymbolContext(eSymbolContextEverything),
-            m_options.m_step_in_target.c_str(), stop_other_threads,
-            new_plan_status, m_options.m_step_in_avoid_no_debug,
+            m_options.m_step_in_target, stop_other_threads, new_plan_status,
+            m_options.m_step_in_avoid_no_debug,
             m_options.m_step_out_avoid_no_debug);
 
         if (new_plan_sp && !m_options.m_avoid_regexp.empty()) {
@@ -1633,7 +1633,7 @@ public:
         return false;
       }
     } else
-      strm.Printf("(no siginfo)\n");
+      strm.PutCString("(no siginfo)\n");
     strm.PutChar('\n');
 
     return true;

@@ -610,7 +610,7 @@ void Host::Kill(lldb::pid_t pid, int signo) { ::kill(pid, signo); }
 #if !defined(__APPLE__)
 llvm::Error Host::OpenFileInExternalEditor(llvm::StringRef editor,
                                            const FileSpec &file_spec,
-                                           uint32_t line_no) {
+                                           uint32_t line_no, bool foreground) {
   return llvm::errorCodeToError(
       std::error_code(ENOTSUP, std::system_category()));
 }

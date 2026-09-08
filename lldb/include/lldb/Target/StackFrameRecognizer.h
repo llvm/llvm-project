@@ -47,6 +47,8 @@ public:
   /// displaying backtraces, for example.
   virtual bool ShouldHide() { return false; }
 
+  virtual lldb::ThreadPlanSP GetStepThroughPlan() { return {}; }
+
 protected:
   lldb::ValueObjectListSP m_arguments;
   std::string m_stop_desc;
@@ -77,8 +79,7 @@ public:
 /// tracks a particular Python classobject, which will be asked to recognize
 /// stack frames.
 class ScriptedStackFrameRecognizer : public StackFrameRecognizer {
-  lldb_private::ScriptInterpreter *m_interpreter;
-  lldb_private::StructuredData::ObjectSP m_python_object_sp;
+  lldb::ScriptedStackFrameRecognizerInterfaceSP m_interface_sp;
 
   std::string m_python_class;
 

@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes='separate-const-offset-from-gep<lower-gep>' \
 ; RUN:       -reassociate-geps-verify-no-dead-code -S | FileCheck %s
 
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu7.00-amd-amdhsa"
 
 %struct.Packed = type <{ [3 x i32], [8 x i64] }> ; <> means packed
 

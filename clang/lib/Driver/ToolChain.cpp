@@ -45,6 +45,7 @@
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
@@ -814,7 +815,6 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
     return getClang();
 
   case Action::OffloadBundlingJobClass:
-  case Action::OffloadUnbundlingJobClass:
     return getOffloadBundler();
 
   case Action::OffloadPackagerJobClass:
@@ -852,6 +852,8 @@ static StringRef getArchNameForCompilerRTLib(const ToolChain &TC,
 StringRef ToolChain::getOSLibName() const {
   if (Triple.isOSDarwin())
     return "darwin";
+  if (Triple.isWindowsCygwinEnvironment())
+    return "cygwin";
 
   switch (Triple.getOS()) {
   case llvm::Triple::FreeBSD:
@@ -1047,10 +1049,8 @@ void ToolChain::addFlangRTLibPath(const ArgList &Args,
                    options::OPT_shared_libflangrt, getTriple().isOSAIX()))
     CmdArgs.push_back(
         getCompilerRTArgString(Args, "runtime", ToolChain::FT_Static, true));
-  else {
+  else
     CmdArgs.push_back("-lflang_rt.runtime");
-    addArchSpecificRPath(*this, Args, CmdArgs);
-  }
 }
 
 // Android target triples contain a target version. If we don't have libraries
@@ -1121,6 +1121,20 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   const llvm::Triple &T = getTriple();
   if (auto Path = getPathForTriple(T))
     return *Path;
+
+  if (T.isAMDGCN()) {
+    // Clear the subarch as a fallback.
+    // TODO: Remove this when libc and compiler-rt builds are migrated.
+    llvm::Triple AMDGPUTriple = T;
+    AMDGPUTriple.setArch(Triple::amdgpu);
+    if (auto Path = getPathForTriple(AMDGPUTriple))
+      return *Path;
+
+    // Try legacy architecture name.
+    AMDGPUTriple.setArchName("amdgcn");
+    if (auto Path = getPathForTriple(AMDGPUTriple))
+      return *Path;
+  }
 
   if (T.isOSAIX()) {
     llvm::Triple AIXTriple;
@@ -1215,6 +1229,22 @@ ToolChain::path_list ToolChain::getArchSpecificLibPaths() const {
   };
 
   AddPath({getTriple().str()});
+
+  // For AMDGPU, fall back to the subarch-stripped triple path, trying both the
+  // canonical "amdgpu" name and the legacy "amdgcn" name.
+  //
+  // TODO: Also try major subarch?
+  // TODO: Remove this when libc and compiler-rt builds are migrated.
+  if (getTriple().isAMDGCN()) {
+    llvm::Triple Canon(getTriple());
+    for (StringRef ArchName : {"amdgpu", "amdgcn"}) {
+      if (ArchName == getTriple().getArchName())
+        continue;
+      Canon.setArchName(ArchName);
+      AddPath({Canon.str()});
+    }
+  }
+
   AddPath({getOSLibName(), llvm::Triple::getArchTypeName(getArch())});
   return Paths;
 }
@@ -1482,9 +1512,10 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args, BoundArch BA,
   }
   case llvm::Triple::aarch64_32:
     return getTripleString().str();
-  case llvm::Triple::amdgcn: {
+  case llvm::Triple::amdgpu: {
     llvm::Triple Triple = getTriple();
-    tools::AMDGPU::setArchNameInTriple(getDriver(), Args, InputType, Triple);
+    tools::AMDGPU::setArchNameInTriple(getDriver(), Args, BA, InputType,
+                                       Triple);
     return Triple.getTriple();
   }
   case llvm::Triple::arm:
@@ -1617,6 +1648,16 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
   }
 
   return *cxxStdlibType;
+}
+
+StringRef ToolChain::GetCXXStdlibName(const ArgList &Args) const {
+  switch (GetCXXStdlibType(Args)) {
+  case ToolChain::CST_Libcxx:
+    return "libc++";
+  case ToolChain::CST_Libstdcxx:
+    return "libstdc++";
+  }
+  llvm_unreachable("unknown C++ standard library type");
 }
 
 ToolChain::CStdlibType ToolChain::GetCStdlibType(const ArgList &Args) const {
@@ -2110,6 +2151,12 @@ void ToolChain::TranslateXarchArgs(
 static bool isXArchCompatibleTripleArch(const llvm::Triple &TT,
                                         StringRef XArchVal) {
   llvm::Triple ParsedTriple(XArchVal);
+
+  // Accept -Xarch_amdgcn for all amdgpu subarches, and -Xarch_amdgpu9 for
+  // amdgpu9.xx
+  if (TT.isAMDGCN() && ParsedTriple.isAMDGCN())
+    return llvm::AMDGPU::isSubArchCompatible(TT, ParsedTriple);
+
   return TT.getArch() == ParsedTriple.getArch() &&
          TT.getSubArch() == ParsedTriple.getSubArch();
 }

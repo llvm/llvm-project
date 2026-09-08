@@ -215,6 +215,7 @@ private:
   void createFiles(llvm::opt::InputArgList &args);
   void loadFiles();
   void inferMachineType();
+  void waitForLTOCleanup();
   template <class ELFT> void link(llvm::opt::InputArgList &args);
   template <class ELFT> void compileBitcodeFiles(bool skipLinkedOutput);
   // True if we are in --whole-archive and --no-whole-archive.
@@ -299,6 +300,7 @@ struct Config {
   llvm::StringRef thinLTOPrefixReplaceNativeObject;
   std::string rpath;
   llvm::SmallVector<VersionDefinition, 0> versionDefinitions;
+  std::optional<llvm::DenseSet<llvm::StringRef>> retainSymbols;
   llvm::SmallVector<llvm::StringRef, 0> auxiliaryList;
   llvm::SmallVector<llvm::StringRef, 0> filterList;
   llvm::SmallVector<llvm::StringRef, 0> passPlugins;
@@ -767,6 +769,10 @@ struct Ctx : CommonLinkerContext {
   // before a possible `sym = expr;`.
   unsigned scriptSymOrderCounter = 1;
   llvm::DenseMap<const Symbol *, unsigned> scriptSymOrder;
+
+  // Used to assert removeUnusedSyntheticSections-removed sections cannot become
+  // needed again.
+  SmallVector<SyntheticSection *, 0> removedSyntheticSections;
 
   // The set of TOC entries (.toc + addend) for which we should not apply
   // toc-indirect to toc-relative relaxation. const Symbol * refers to the

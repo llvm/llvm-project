@@ -89,11 +89,14 @@ func.func @do_not_inline(%arg0: i32, %arg1: i32, %arg2 : i32) -> i32 {
 }
 
 // CPP-DEFAULT:      float parentheses_for_low_precedence(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]]) {
-// CPP-DEFAULT-NEXT:   return (float) (([[VAL_1]] + [[VAL_2]]) * [[VAL_3]]);
+// CPP-DEFAULT-NEXT:   float [[VAL_4:v[0-9]+]] = (float) (([[VAL_1]] + [[VAL_2]]) * [[VAL_3]]);
+// CPP-DEFAULT-NEXT:   return [[VAL_4]];
 // CPP-DEFAULT-NEXT: }
 
 // CPP-DECLTOP:      float parentheses_for_low_precedence(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]]) {
-// CPP-DECLTOP-NEXT:   return (float) (([[VAL_1]] + [[VAL_2]]) * [[VAL_3]]);
+// CPP-DECLTOP-NEXT:   float [[VAL_4:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   [[VAL_4]] = (float) (([[VAL_1]] + [[VAL_2]]) * [[VAL_3]]);
+// CPP-DECLTOP-NEXT:   return [[VAL_4]];
 // CPP-DECLTOP-NEXT: }
 
 func.func @parentheses_for_low_precedence(%arg0: i32, %arg1: i32, %arg2: i32) -> f32 {
@@ -104,6 +107,41 @@ func.func @parentheses_for_low_precedence(%arg0: i32, %arg1: i32, %arg2: i32) ->
     emitc.yield %d : f32
   }
   return %e : f32
+}
+
+// CPP-DEFAULT:      float inline_cast_pure(int32_t [[VAL_1:v[0-9]+]]) {
+// CPP-DEFAULT-NEXT:   return (float) [[VAL_1]];
+// CPP-DEFAULT-NEXT: }
+
+// CPP-DECLTOP:      float inline_cast_pure(int32_t [[VAL_1:v[0-9]+]]) {
+// CPP-DECLTOP-NEXT:   return (float) [[VAL_1]];
+// CPP-DECLTOP-NEXT: }
+
+func.func @inline_cast_pure(%arg0: i32) -> f32 {
+  %0 = emitc.expression %arg0 : (i32) -> f32 {
+    %1 = cast %arg0 {pure} : i32 to f32
+    yield %1 : f32
+  }
+  return %0 : f32
+}
+
+// CPP-DEFAULT:      float do_not_inline_cast_without_pure(int32_t [[VAL_1:v[0-9]+]]) {
+// CPP-DEFAULT-NEXT:   float [[VAL_2:v[0-9]+]] = (float) [[VAL_1]];
+// CPP-DEFAULT-NEXT:   return [[VAL_2]];
+// CPP-DEFAULT-NEXT: }
+
+// CPP-DECLTOP:      float do_not_inline_cast_without_pure(int32_t [[VAL_1:v[0-9]+]]) {
+// CPP-DECLTOP-NEXT:   float [[VAL_2:v[0-9]+]];
+// CPP-DECLTOP-NEXT:   [[VAL_2]] = (float) [[VAL_1]];
+// CPP-DECLTOP-NEXT:   return [[VAL_2]];
+// CPP-DECLTOP-NEXT: }
+
+func.func @do_not_inline_cast_without_pure(%arg0: i32) -> f32 {
+  %0 = emitc.expression %arg0 : (i32) -> f32 {
+    %1 = cast %arg0 : i32 to f32
+    yield %1 : f32
+  }
+  return %0 : f32
 }
 
 // CPP-DEFAULT:      int32_t parentheses_for_same_precedence(int32_t [[VAL_1:v[0-9]+]], int32_t [[VAL_2:v[0-9]+]], int32_t [[VAL_3:v[0-9]+]]) {

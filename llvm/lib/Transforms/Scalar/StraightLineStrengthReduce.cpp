@@ -72,7 +72,9 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -119,6 +121,9 @@ DEBUG_COUNTER(StraightLineStrengthReduceCounter, "slsr-counter",
 static cl::opt<bool>
     EnablePoisonReuseGuard("enable-poison-reuse-guard", cl::init(true),
                            cl::desc("Enable poison-reuse guard"));
+
+STATISTIC(NumSCEVCandidateBasisDifferences,
+          "Number of candidate-basis SCEV differences computed by SLSR");
 
 namespace {
 
@@ -217,8 +222,8 @@ public:
     // Points to (Y - X) that will be used to rewrite this candidate.
     Value *Delta = nullptr;
 
-    // List of instructions we need to drop poison generating annotations from.
-    // This is used so we can defer dropping until the candidate is evaluated.
+    // List of instructions whose poison-generating annotations must be dropped
+    // if this candidate is used as the basis of an executed rewrite.
     SmallVector<Instruction *> DropList;
 
     /// Cost model: Evaluate the computational efficiency of the candidate.
@@ -416,6 +421,9 @@ private:
   // instructions are sorted in depth-first order.
   DenseMap<const SCEV *, SmallSetVector<Instruction *, 2>> SCEVToInsts;
 
+  using SCEVUnknownSet = SmallPtrSet<const SCEVUnknown *, 4>;
+  DenseMap<const SCEV *, SCEVUnknownSet> SCEVUnknownsCache;
+
   // Record the dependency between instructions. If C.Basis == B, we would have
   // {B.Ins -> {C.Ins, ...}}.
   MapVector<Instruction *, std::vector<Instruction *>> DependencyGraph;
@@ -505,6 +513,8 @@ private:
   }
 
   bool candidatePredicate(Candidate *Basis, Candidate &C, Candidate::DKind K);
+
+  bool hasSameSCEVUnknowns(const SCEV *A, const SCEV *B);
 
   bool searchFrom(const CandidateDictTy::BBToCandsTy &BBToCands, Candidate &C,
                   Candidate::DKind K);
@@ -639,6 +649,43 @@ static void unifyBitWidth(APInt &A, APInt &B) {
     B = B.sext(A.getBitWidth());
 }
 
+// Whether sign-extending V to a wider type may not distribute over arithmetic,
+// i.e. the narrow value does not sign-extend linearly. Only an add/sub/mul/shl
+// carrying the `nsw` flag is known to sign-extend linearly; anything else is
+// treated conservatively as possibly wrapping. This notably covers
+// `xor X, signmask`, which merely flips the sign bit but ScalarEvolution models
+// as a non-nsw `add X, signmask` (so sext does not distribute over it).
+static bool mayHaveSignedWrap(const Value *V) {
+  // OverflowingBinaryOperator covers exactly add/sub/mul/shl.
+  const auto *OBO = dyn_cast<OverflowingBinaryOperator>(V);
+  return !OBO || !OBO->hasNoSignedWrap();
+}
+
+// True when the GEP index is narrower than the index width, i.e. it is
+// implicitly sign-extended to the index width (not the pointer width) of the
+// address space before the address computation. A value already at or wider
+// than the index width is not sign-extended (it is used as-is or truncated), so
+// it cannot trigger the non-distributing-sext problem.
+static bool isSignExtendedGepIndex(const Value *Idx, GetElementPtrInst *GEP,
+                                   const DataLayout *DL) {
+  return Idx->getType()->getIntegerBitWidth() <
+         DL->getIndexSizeInBits(GEP->getAddressSpace());
+}
+
+// A narrow GEP index is sign-extended to the index width before the address
+// computation. SLSR's Stride-delta rewrite turns two such GEPs into
+// Basis + Index * (Sc - Sb), so the stride difference Sc - Sb is reconstructed
+// in the sign-extended domain. This requires sext(Sc) == sext(Sb) +
+// sext(Delta).
+//
+// This screens the rewritten candidate's stride Sc = Sb + Delta: if Sc is
+// computed by a possibly-wrapping op, sext(Sc) does not equal sext(Sb) +
+// sext(Delta) and the rewrite would produce a wrong pointer.
+static bool isSafeToFactorGepIndex(const Value *Idx, GetElementPtrInst *GEP,
+                                   const DataLayout *DL) {
+  return !isSignExtendedGepIndex(Idx, GEP, DL) || !mayHaveSignedWrap(Idx);
+}
+
 Value *StraightLineStrengthReduce::getDelta(const Candidate &C,
                                             const Candidate &Basis,
                                             Candidate::DKind K) const {
@@ -654,6 +701,7 @@ Value *StraightLineStrengthReduce::getDelta(const Candidate &C,
     const SCEV *BasisPart =
         (K == Candidate::BaseDelta) ? Basis.Base : Basis.StrideSCEV;
     const SCEV *CandPart = (K == Candidate::BaseDelta) ? C.Base : C.StrideSCEV;
+    ++NumSCEVCandidateBasisDifferences;
     const SCEV *Diff = SE->getMinusSCEV(CandPart, BasisPart);
     return getNearestValueOfSCEV(Diff, C.Ins);
   }
@@ -679,6 +727,31 @@ bool StraightLineStrengthReduce::isSimilar(Candidate &C, Candidate &Basis,
          Basis.CandidateKind == C.CandidateKind;
 }
 
+bool StraightLineStrengthReduce::hasSameSCEVUnknowns(const SCEV *A,
+                                                     const SCEV *B) {
+  auto CacheUnknowns = [&](const SCEV *Root) {
+    auto [It, Inserted] = SCEVUnknownsCache.try_emplace(Root);
+    if (!Inserted)
+      return;
+
+    struct Collector {
+      SCEVUnknownSet &Unknowns;
+
+      bool follow(const SCEV *S) {
+        if (auto *Unknown = dyn_cast<SCEVUnknown>(S))
+          Unknowns.insert(Unknown);
+        return true;
+      }
+      bool isDone() const { return false; }
+    } C{It->second};
+    visitAll(Root, C);
+  };
+  CacheUnknowns(A);
+  CacheUnknowns(B);
+
+  return SCEVUnknownsCache.find(A)->second == SCEVUnknownsCache.find(B)->second;
+}
+
 // Try to find a Delta that C can reuse Basis to rewrite.
 // Set C.Delta, C.Basis, and C.DeltaKind if found.
 // Return true if found a constant delta.
@@ -689,10 +762,41 @@ bool StraightLineStrengthReduce::candidatePredicate(Candidate *Basis,
   if (!isSimilar(C, *Basis, K))
     return false;
 
+  // Once a reusable delta is found, only a constant delta can improve it.
+  // Different symbolic leaves cannot cancel to a constant, so such a basis
+  // cannot improve C. Skip it and continue searching older candidates.
+  if (C.Delta && K != Candidate::IndexDelta) {
+    const SCEV *CandidateSCEV =
+        K == Candidate::BaseDelta ? C.Base : C.StrideSCEV;
+    const SCEV *BasisSCEV =
+        K == Candidate::BaseDelta ? Basis->Base : Basis->StrideSCEV;
+    if (!hasSameSCEVUnknowns(CandidateSCEV, BasisSCEV))
+      return false;
+  }
+
   assert(DT->dominates(Basis->Ins, C.Ins));
   Value *Delta = getDelta(C, *Basis, K);
   if (!Delta)
     return false;
+
+  // For a GEP Stride-delta rewrite g2 = g1 + Index * Delta, the addresses are
+  // computed from the sign-extended strides, so this requires
+  // sext(Sc) == sext(Sb) + sext(Delta).
+  //
+  // The rewritten candidate's stride Sc = Sb + Delta is already screened
+  // broadly at allocation time (allocateCandidatesAndFindBasis): a wrapping Sc
+  // breaks the identity for any Delta. The basis's stride Sb = Sc - Delta only
+  // needs screening when Delta folds to a *constant*: then sext(Sb) + C can
+  // differ from sext(Sc) if Sb wraps. For a *variable* Delta the basis may wrap
+  // and still be sound, because the candidate stride carries the no-wrap
+  // guarantee (e.g. Sc is an `add nsw`, as in stride_var); rejecting it would
+  // pessimize those.
+  if (K == Candidate::StrideDelta && C.CandidateKind == Candidate::GEP &&
+      isa<ConstantInt>(Delta)) {
+    auto *BasisGEP = cast<GetElementPtrInst>(Basis->Ins);
+    if (!isSafeToFactorGepIndex(Basis->Stride, BasisGEP, DL))
+      return false;
+  }
 
   // IndexDelta rewrite is not always profitable, e.g.,
   // X = B + 8 * S
@@ -703,11 +807,6 @@ bool StraightLineStrengthReduce::candidatePredicate(Candidate *Basis,
   if (K == Candidate::IndexDelta &&
       !C.isProfitableRewrite(*Delta, Candidate::IndexDelta))
     return false;
-
-  // If there is a Delta that we can reuse Basis to rewrite C, clean up
-  // previously collected poison generating instructions.
-  for (Instruction *I : Basis->DropList)
-    I->dropPoisonGeneratingAnnotations();
 
   // Record delta if none has been found yet, or the new delta is
   // a constant that is better than the existing delta.
@@ -839,6 +938,18 @@ auto StraightLineStrengthReduce::compressPath(Candidate &C,
     if (!isSimilar(C, *NextRoot, CurrKind))
       break;
 
+    // Path compression folds a constant Stride-delta directly against the
+    // deeper basis NextRoot, bypassing candidatePredicate's wrap guard. With a
+    // constant delta sext(Sb) + C can differ from sext(Sc) if the deeper
+    // basis's stride wraps, so do not compress past such a basis (mirrors the
+    // check in candidatePredicate).
+    if (CurrKind == Candidate::StrideDelta &&
+        C.CandidateKind == Candidate::GEP &&
+        !isSafeToFactorGepIndex(NextRoot->Stride,
+                                cast<GetElementPtrInst>(NextRoot->Ins), DL))
+      break;
+
+    ++NumSCEVCandidateBasisDifferences;
     if (auto DeltaVal =
             dyn_cast<SCEVConstant>(SE->getMinusSCEV(CandPart, BasisPart))) {
       Root = NextRoot;
@@ -925,8 +1036,10 @@ auto StraightLineStrengthReduce::pickRewriteCandidate(Instruction *I) const
 static bool isGEPFoldable(GetElementPtrInst *GEP,
                           const TargetTransformInfo *TTI) {
   SmallVector<const Value *, 4> Indices(GEP->indices());
-  return TTI->getGEPCost(GEP->getSourceElementType(), GEP->getPointerOperand(),
-                         Indices) == TargetTransformInfo::TCC_Free;
+  return TTI->getGEPCost(
+             GEP->getSourceElementType(), GEP->getPointerOperand(), Indices,
+             /*CostKind*/ TTI::TargetCostKind::TCK_SizeAndLatency) ==
+         TargetTransformInfo::TCC_Free;
 }
 
 // Returns whether (Base + Index * Stride) can be folded to an addressing mode.
@@ -950,6 +1063,8 @@ bool StraightLineStrengthReduce::isFoldable(const Candidate &C,
 void StraightLineStrengthReduce::allocateCandidatesAndFindBasis(
     Candidate::Kind CT, const SCEV *B, ConstantInt *Idx, Value *S,
     Instruction *I) {
+  bool IsSafe = CT != Candidate::GEP ||
+                isSafeToFactorGepIndex(S, cast<GetElementPtrInst>(I), DL);
   // Record the SCEV of S that we may use it as a variable delta.
   // Ensure that we rewrite C with a existing IR that reproduces delta value.
 
@@ -964,7 +1079,7 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasis(
   // mode if the constant falls within a certain range.
   // So, we also check if the instruction is already high efficient enough
   // for the strength reduction algorithm.
-  if (!isFoldable(C, TTI) && !C.isHighEfficiency()) {
+  if (IsSafe && !isFoldable(C, TTI) && !C.isHighEfficiency()) {
     setBasisAndDeltaFor(C);
 
     // Compress unnecessary rewrite to improve ILP
@@ -981,8 +1096,8 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasis(
   RewriteCandidates[C.Ins].push_back(&Candidates.back());
   // Only add to the dict if this instruction is safe to reuse as a basis. By
   // doing this early we avoid calling canReuseInstruction repeatedly for the
-  // same instruction. The DropList is stored on the Candidate so
-  // candidatePredicate can drop the flags when a rewrite is being done.
+  // same instruction. The DropList is stored on the Candidate so the flags can
+  // be dropped only if this candidate is used by an executed rewrite.
   if (!EnablePoisonReuseGuard ||
       SE->canReuseInstruction(SE->getSCEV(I), I, Candidates.back().DropList)) {
     CandidateDict.add(Candidates.back());
@@ -1235,6 +1350,9 @@ void StraightLineStrengthReduce::rewriteCandidate(const Candidate &C) {
   assert(C.Delta && C.CandidateKind == Basis.CandidateKind &&
          C.hasValidDelta(Basis));
 
+  for (Instruction *I : Basis.DropList)
+    I->dropPoisonGeneratingAnnotations();
+
   IRBuilder<> Builder(C.Ins);
   Value *Bump = emitBump(Basis, C, Builder, DL);
   Value *Reduced = nullptr; // equivalent to but weaker than C.Ins
@@ -1345,7 +1463,6 @@ StraightLineStrengthReducePass::run(Function &F, FunctionAnalysisManager &AM) {
 
   PreservedAnalyses PA;
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<ScalarEvolutionAnalysis>();
   PA.preserve<TargetIRAnalysis>();
   return PA;

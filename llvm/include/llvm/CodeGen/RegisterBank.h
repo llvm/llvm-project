@@ -20,7 +20,8 @@ namespace llvm {
 // Forward declarations.
 class RegisterBankInfo;
 class raw_ostream;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 /// This class implements the register bank concept.

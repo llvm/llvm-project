@@ -2,8 +2,6 @@
 # AIX using a shared library.
 #
 
-lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
-
 import lit.util
 if lit.util.isAIXTriple(config.target_triple):
   # Add the AIX version to the triple here because there currently isn't a good

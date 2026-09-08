@@ -712,51 +712,58 @@ bool Dependences::isValidSchedule(
 // dimension, then the loop is parallel. The distance is zero in the current
 // dimension if it is a subset of a map with equal values for the current
 // dimension.
-bool Dependences::isParallel(__isl_keep isl_union_map *Schedule,
-                             __isl_take isl_union_map *Deps,
-                             __isl_give isl_pw_aff **MinDistancePtr) const {
-  isl_set *Deltas, *Distance;
-  isl_map *ScheduleDeps;
-  unsigned Dimension;
-  bool IsParallel;
+isl::boolean Dependences::isKnownParallel(isl::union_map Schedule,
+                                          isl::union_map Deps,
+                                          isl::pw_aff *MinDistancePtr) const {
+  // A null input means an upstream ISL operation failed (e.g. the operation
+  // quota was exhausted). We cannot compute a result, so report the error
+  // state rather than silently propagating the null through the computation.
+  if (Schedule.is_null() || Deps.is_null())
+    return isl::boolean::error();
 
-  Deps = isl_union_map_apply_range(Deps, isl_union_map_copy(Schedule));
-  Deps = isl_union_map_apply_domain(Deps, isl_union_map_copy(Schedule));
+  Deps = Deps.apply_range(Schedule);
+  Deps = Deps.apply_domain(Schedule);
 
-  if (isl_union_map_is_empty(Deps)) {
-    isl_union_map_free(Deps);
+  isl::boolean UnionMapIsEmpty = Deps.is_empty();
+  if (UnionMapIsEmpty.is_error())
+    return isl::boolean::error();
+  if (UnionMapIsEmpty.is_true())
     return true;
-  }
 
-  ScheduleDeps = isl_map_from_union_map(Deps);
-  Dimension = isl_map_dim(ScheduleDeps, isl_dim_out) - 1;
+  isl::map ScheduleDeps = isl::map::from_union_map(Deps);
+  isl::size NumberOfDimensions = ScheduleDeps.dim(isl::dim::out);
+  if (NumberOfDimensions.is_error())
+    return isl::boolean::error();
+  if (unsigned(NumberOfDimensions) == 0)
+    return false;
+  unsigned Dimension = unsigned(NumberOfDimensions) - 1;
 
   for (unsigned i = 0; i < Dimension; i++)
-    ScheduleDeps = isl_map_equate(ScheduleDeps, isl_dim_out, i, isl_dim_in, i);
+    ScheduleDeps = ScheduleDeps.equate(isl::dim::out, i, isl::dim::in, i);
 
-  Deltas = isl_map_deltas(ScheduleDeps);
-  Distance = isl_set_universe(isl_set_get_space(Deltas));
+  isl::set Deltas = ScheduleDeps.deltas();
+  isl::set Distance = isl::set::universe(Deltas.get_space());
 
   // [0, ..., 0, +] - All zeros and last dimension larger than zero
   for (unsigned i = 0; i < Dimension; i++)
-    Distance = isl_set_fix_si(Distance, isl_dim_set, i, 0);
+    Distance = Distance.fix_si(isl::dim::set, i, 0);
 
-  Distance = isl_set_lower_bound_si(Distance, isl_dim_set, Dimension, 1);
-  Distance = isl_set_intersect(Distance, Deltas);
+  Distance = Distance.lower_bound_si(isl::dim::set, Dimension, 1);
+  Distance = Distance.intersect(Deltas);
 
-  IsParallel = isl_set_is_empty(Distance);
-  if (IsParallel || !MinDistancePtr) {
-    isl_set_free(Distance);
+  isl::boolean IsParallel = Distance.is_empty();
+  if (IsParallel.is_error())
+    return isl::boolean::error();
+  if (IsParallel.is_true() || !MinDistancePtr)
     return IsParallel;
-  }
 
-  Distance = isl_set_project_out(Distance, isl_dim_set, 0, Dimension);
-  Distance = isl_set_coalesce(Distance);
+  Distance = Distance.project_out(isl::dim::set, 0, Dimension);
+  Distance = Distance.coalesce();
 
   // This last step will compute a expression for the minimal value in the
   // distance polyhedron Distance with regards to the first (outer most)
   // dimension.
-  *MinDistancePtr = isl_pw_aff_coalesce(isl_set_dim_min(Distance, 0));
+  *MinDistancePtr = Distance.dim_min(0).coalesce();
 
   return false;
 }
@@ -855,7 +862,7 @@ const Dependences &DependenceAnalysis::Result::recomputeDependences(
 
 void DependenceAnalysis::Result::abandonDependences() {
   for (std::unique_ptr<Dependences> &Deps : D)
-    Deps.release();
+    Deps.reset();
 }
 
 DependenceAnalysis::Result polly::runDependenceAnalysis(Scop &S) {

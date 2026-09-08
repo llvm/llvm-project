@@ -19,6 +19,7 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
 
 namespace llvm {
@@ -236,13 +237,15 @@ struct FieldInfo {
   uint64_t BitFieldWidth;
   bool IsBitField;
   bool IsUnnamedBitfield;
+  bool HasNoUniqueAddress;
 
   FieldInfo(const Type *FieldType, uint64_t OffsetInBits = 0,
             bool IsBitField = false, uint64_t BitFieldWidth = 0,
-            bool IsUnnamedBitField = false)
+            bool IsUnnamedBitField = false, bool HasNoUniqueAddress = false)
       : FieldType(FieldType), OffsetInBits(OffsetInBits),
         BitFieldWidth(BitFieldWidth), IsBitField(IsBitField),
-        IsUnnamedBitfield(IsUnnamedBitField) {}
+        IsUnnamedBitfield(IsUnnamedBitField),
+        HasNoUniqueAddress(HasNoUniqueAddress) {}
 
   LLVM_ABI bool isEmpty() const;
 };
@@ -309,6 +312,12 @@ public:
   }
 
   LLVM_ABI bool isEmpty() const;
+
+  /// Returns the field, base, or virtual base whose extent contains
+  /// \p OffsetInBits, or nullptr if no such element exists. Empty bases and
+  /// unnamed bitfields are skipped.
+  LLVM_ABI const FieldInfo *
+  getElementContainingOffset(unsigned OffsetInBits) const;
 
   static bool classof(const Type *T) {
     return T->getKind() == TypeKind::Record;
@@ -402,10 +411,9 @@ public:
     FieldInfo *FieldArray = Allocator.Allocate<FieldInfo>(Fields.size());
 
     for (size_t I = 0, E = Fields.size(); I != E; ++I) {
-      const FieldInfo &Field = Fields[I];
-      new (&FieldArray[I])
-          FieldInfo(Field.FieldType, 0, Field.IsBitField, Field.BitFieldWidth,
-                    Field.IsUnnamedBitfield);
+      FieldInfo Field = Fields[I];
+      Field.OffsetInBits = 0;
+      new (&FieldArray[I]) FieldInfo(Field);
     }
 
     ArrayRef<FieldInfo> FieldsRef(FieldArray, Fields.size());

@@ -8,6 +8,8 @@
 
 #include "lldb/Host/ProcessRunLock.h"
 
+#include "llvm/Support/Process.h"
+
 #include "gtest/gtest.h"
 
 #include <condition_variable>
@@ -177,6 +179,11 @@ TEST(ProcessRunLockDeathTest, MoveLockedAcrossThreads) {
   // "ProcessRunLocker" common prefix only.
   EXPECT_DEATH(
       {
+        // The abort below is expected, so keep it away from the system crash
+        // reporter, which would otherwise record it as a real crash. This must
+        // stay inside the death-test statement so only the forked child is
+        // affected.
+        llvm::sys::Process::PreventCoreFiles();
         std::thread t([locker = std::move(a)]() mutable { (void)locker; });
         t.join();
       },

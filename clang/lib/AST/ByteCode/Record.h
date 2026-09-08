@@ -29,16 +29,21 @@ public:
     const FieldDecl *Decl;
     const Descriptor *Desc;
     unsigned Offset;
+    bool IsBitField;
+    bool IsUnnamedBitField;
 
-    bool isBitField() const { return Decl->isBitField(); }
-    bool isUnnamedBitField() const { return Decl->isUnnamedBitField(); }
+    bool isBitField() const { return IsBitField; }
+    bool isUnnamedBitField() const { return IsUnnamedBitField; }
     unsigned bitWidth() const {
       assert(isBitField());
       return Decl->getBitWidthValue();
     }
 
     Field(const FieldDecl *D, const Descriptor *Desc, unsigned Offset)
-        : Decl(D), Desc(Desc), Offset(Offset) {}
+        : Decl(D), Desc(Desc), Offset(Offset) {
+      IsBitField = Decl->isBitField();
+      IsUnnamedBitField = IsBitField && Decl->isUnnamedBitField();
+    }
   };
 
   /// Describes a base class.
@@ -93,6 +98,9 @@ public:
 
   unsigned getNumFields() const { return Fields.size(); }
   const Field *getField(unsigned I) const { return &Fields[I]; }
+  /// Find a field with the given offset.
+  /// This does a linear search, so use sparingly.
+  const Field *findField(unsigned Offset) const;
   /// Returns a field.
   const Field *getField(const FieldDecl *FD) const {
     return &Fields[FD->getFieldIndex()];
@@ -111,7 +119,9 @@ public:
   /// Returns a base descriptor.
   const Base *getBase(QualType T) const;
   /// Returns a base descriptor.
-  const Base *getBase(const RecordDecl *FD) const;
+  const Base *getBase(const RecordDecl *RD) const;
+  const Base *getBaseOrNull(const RecordDecl *RD) const;
+  const Base *findBase(unsigned Offset) const;
 
   using const_virtual_iter = VirtualBaseList::const_iterator;
   llvm::iterator_range<const_virtual_iter> virtual_bases() const {
@@ -121,7 +131,7 @@ public:
   unsigned getNumVirtualBases() const { return VirtualBases.size(); }
   const Base *getVirtualBase(unsigned I) const { return &VirtualBases[I]; }
   /// Returns a virtual base descriptor.
-  const Base *getVirtualBase(const RecordDecl *RD) const;
+  const Base *findVirtualBase(const RecordDecl *RD) const;
 
   void dump(llvm::raw_ostream &OS, unsigned Indentation = 0,
             unsigned Offset = 0) const;
@@ -142,13 +152,11 @@ private:
   BaseList Bases;
   /// List of all the fields in the record.
   FieldList Fields;
-  /// List o fall virtual bases.
+  /// List of all virtual bases.
   VirtualBaseList VirtualBases;
 
   /// Mapping from declarations to bases.
   llvm::DenseMap<const RecordDecl *, const Base *> BaseMap;
-  /// Mapping from declarations to virtual bases.
-  llvm::DenseMap<const RecordDecl *, Base *> VirtualBaseMap;
   /// Size of the structure.
   unsigned BaseSize;
   /// Size of all virtual bases.

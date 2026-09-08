@@ -5,10 +5,10 @@
 define void @test(i64 %p0, i64 %p1, i64 %p2, i64 %p3) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[P0:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> [[TMP0]], i64 [[P1:%.*]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[P2:%.*]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[P3:%.*]], i32 3
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[P0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> [[TMP0]], i64 [[P1:%.*]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[P2:%.*]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[P3:%.*]], i64 3
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP3]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul <4 x i64> [[TMP3]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sdiv <4 x i64> [[TMP3]], [[TMP3]]
@@ -30,10 +30,10 @@ define void @test(i64 %p0, i64 %p1, i64 %p2, i64 %p3) {
 ;
 ; AVX2-LABEL: @test(
 ; AVX2-NEXT:  entry:
-; AVX2-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[P0:%.*]], i32 0
-; AVX2-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> [[TMP0]], i64 [[P1:%.*]], i32 1
-; AVX2-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[P2:%.*]], i32 2
-; AVX2-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[P3:%.*]], i32 3
+; AVX2-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[P0:%.*]], i64 0
+; AVX2-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> [[TMP0]], i64 [[P1:%.*]], i64 1
+; AVX2-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[P2:%.*]], i64 2
+; AVX2-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> [[TMP2]], i64 [[P3:%.*]], i64 3
 ; AVX2-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP3]], [[TMP3]]
 ; AVX2-NEXT:    [[TMP5:%.*]] = mul <4 x i64> [[TMP3]], [[TMP3]]
 ; AVX2-NEXT:    [[TMP6:%.*]] = sdiv <4 x i64> [[TMP3]], [[TMP3]]

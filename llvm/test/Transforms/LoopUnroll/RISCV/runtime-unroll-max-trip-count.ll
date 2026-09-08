@@ -3,9 +3,10 @@
 
 ; Regression test: when a loop has a small MaxTripCount and falls through to
 ; runtime unrolling, the unroll count should be based on DefaultUnrollRuntimeCount
-; (not MaxTripCount). Previously, a quirk would set UP.Count = MaxTripCount (5)
-; before the power-of-two reduction, yielding count 2 (5 >> 1). Now the count
-; starts at DefaultUnrollRuntimeCount (8) and reduces to 4 (8 >> 1).
+; (not MaxTripCount). Previously, a quirk would seed the selected count with
+; MaxTripCount (5) before the power-of-two reduction, yielding count 2 (5 >> 1).
+; Now the count starts at DefaultUnrollRuntimeCount (8) and reduces to 4
+; (8 >> 1).
 ;
 ; This test uses RISC-V because we need a target that sets UP.Force = true
 ; (via RISCVTTIImpl::getUnrollingPreferences) to trigger the bug.

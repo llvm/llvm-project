@@ -240,7 +240,7 @@ private:
 
   /// One past end pointer for the current comment.  For BCPL comments points
   /// to newline or BufferEnd, for C comments points to star in '*/'.
-  const char *CommentEnd;
+  const char *CommentEnd = nullptr;
 
   SourceLocation FileLoc;
 

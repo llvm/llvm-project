@@ -37,8 +37,8 @@ void BufferDerefCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Adds the type and expression of a buffer that is used in the MPI call
   // expression to the captured containers.
-  auto AddBuffer = [&CE, &Result, &BufferTypes,
-                    &BufferExprs](const size_t BufferIdx) {
+  const auto AddBuffer = [&CE, &Result, &BufferTypes,
+                          &BufferExprs](const size_t BufferIdx) {
     // Skip null pointer constants and in place 'operators'.
     if (CE->getArg(BufferIdx)->isNullPointerConstant(
             *Result.Context, Expr::NPC_ValueDependentIsNull) ||

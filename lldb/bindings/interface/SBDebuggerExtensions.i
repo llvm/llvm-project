@@ -26,7 +26,8 @@ STRING_EXTENSION_OUTSIDE(SBDebugger)
 
         def __iter__(self):
             '''Iterate over all targets in a lldb.SBDebugger object.'''
-            return lldb_iter(self, 'GetNumTargets', 'GetTargetAtIndex')
+            for i in range(self.GetNumTargets()):
+                yield self.GetTargetAtIndex(i)
 
         def __len__(self):
             '''Return the number of targets in a lldb.SBDebugger object.'''

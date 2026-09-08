@@ -126,13 +126,13 @@ void applyExtractVecEltPairwiseAdd(
 
 bool isSignExtended(Register R, MachineRegisterInfo &MRI) {
   // TODO: check if extended build vector as well.
-  unsigned Opc = MRI.getVRegDef(R)->getOpcode();
-  return Opc == TargetOpcode::G_SEXT || Opc == TargetOpcode::G_SEXT_INREG;
+  return mi_match(R, MRI, m_GSExt(m_Reg())) ||
+         mi_match(R, MRI, m_GSExtInReg(m_Reg()));
 }
 
 bool isZeroExtended(Register R, MachineRegisterInfo &MRI) {
   // TODO: check if extended build vector as well.
-  return MRI.getVRegDef(R)->getOpcode() == TargetOpcode::G_ZEXT;
+  return mi_match(R, MRI, m_GZExt(m_Reg()));
 }
 
 bool matchAArch64MulConstCombine(
@@ -320,8 +320,7 @@ bool matchSplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI) {
     return false; // Don't split truncating stores.
   if (!MRI.hasOneNonDBGUse(Store.getValueReg()))
     return false;
-  auto MaybeCst = isConstantOrConstantSplatVector(
-      *MRI.getVRegDef(Store.getValueReg()), MRI);
+  auto MaybeCst = isConstantOrConstantSplatVector(Store.getValueReg(), MRI);
   return MaybeCst && MaybeCst->isZero();
 }
 
@@ -386,6 +385,42 @@ void applyOrToBSP(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
+/// Match G_TRUNC (G_OR X, Y) => G_ADDHN X, Y when both inputs are sign
+/// extended from the result element type. The high half of the addition then
+/// equals the truncation of the OR.
+bool matchTruncOrToADDHN(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         GISelValueTracking *VT, Register Dst, Register Or,
+                         Register Src0, Register Src1) {
+  if (!MRI.hasOneUse(Or))
+    return false;
+
+  LLT DstTy = MRI.getType(Dst);
+  LLT SrcTy = MRI.getType(Or);
+  if (!((DstTy == LLT::fixed_vector(8, 8) &&
+         SrcTy == LLT::fixed_vector(8, 16)) ||
+        (DstTy == LLT::fixed_vector(4, 16) &&
+         SrcTy == LLT::fixed_vector(4, 32)) ||
+        (DstTy == LLT::fixed_vector(2, 32) &&
+         SrcTy == LLT::fixed_vector(2, 64))))
+    return false;
+
+  // If the narrow result is immediately any-extended back to the original type,
+  // the G_OR is cheaper than G_ADDHN followed by a vector widen.
+  if (MRI.hasOneNonDBGUse(Dst)) {
+    MachineInstr &UseMI = *MRI.use_nodbg_instructions(Dst).begin();
+    if (UseMI.getOpcode() == TargetOpcode::G_ANYEXT &&
+        MRI.getType(UseMI.getOperand(0).getReg()) == SrcTy)
+      return false;
+  }
+
+  unsigned EltSize = SrcTy.getScalarSizeInBits();
+  if (VT->computeNumSignBits(Src0) != EltSize ||
+      VT->computeNumSignBits(Src1) != EltSize)
+    return false;
+
+  return true;
+}
+
 // Combines Mul(And(Srl(X, 15), 0x10001), 0xffff) into CMLTz
 bool matchCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
                          Register &SrcReg) {
@@ -404,12 +439,10 @@ bool matchCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
     return false;
 
   // Check the constant splat values
-  auto V1 = isConstantOrConstantSplatVector(
-      *MRI.getVRegDef(MI.getOperand(2).getReg()), MRI);
-  auto V2 = isConstantOrConstantSplatVector(
-      *MRI.getVRegDef(AndMI->getOperand(2).getReg()), MRI);
-  auto V3 = isConstantOrConstantSplatVector(
-      *MRI.getVRegDef(LShrMI->getOperand(2).getReg()), MRI);
+  auto V1 = isConstantOrConstantSplatVector(MI.getOperand(2).getReg(), MRI);
+  auto V2 = isConstantOrConstantSplatVector(AndMI->getOperand(2).getReg(), MRI);
+  auto V3 =
+      isConstantOrConstantSplatVector(LShrMI->getOperand(2).getReg(), MRI);
   if (!V1.has_value() || !V2.has_value() || !V3.has_value())
     return false;
   unsigned HalfSize = DstTy.getScalarSizeInBits() / 2;
@@ -890,7 +923,6 @@ void AArch64PostLegalizerCombinerLegacy::getAnalysisUsage(
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   if (!IsOptNone) {
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addRequired<GISelCSEAnalysisWrapperPass>();
     AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   }

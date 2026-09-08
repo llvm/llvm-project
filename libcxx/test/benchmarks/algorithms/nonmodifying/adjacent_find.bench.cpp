@@ -17,15 +17,12 @@
 
 #include <benchmark/benchmark.h>
 #include "../../GenerateInput.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_adjacent_find      = [](auto first, auto last) { return std::adjacent_find(first, last); };
   auto std_adjacent_find_pred = [](auto first, auto last) {
-    return std::adjacent_find(first, last, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x == y;
-    });
+    return std::adjacent_find(first, last, [](auto x, auto y) { return x == y; });
   };
 
   // Benchmark {std,ranges}::adjacent_find on a sequence of the form xyxyxyxyxyxyxyxyxyxy,
@@ -34,7 +31,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto adjacent_find) {
       benchmark::RegisterBenchmark(
           name,
-          [adjacent_find](auto& st) {
+          [adjacent_find](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             ValueType x            = Generate<ValueType>::random();

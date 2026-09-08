@@ -40,7 +40,7 @@ public:
     deque() noexcept(is_nothrow_default_constructible<allocator_type>::value);
     explicit deque(const allocator_type& a);
     explicit deque(size_type n);
-    explicit deque(size_type n, const allocator_type& a); // C++14
+    explicit deque(size_type n, const allocator_type& a);
     deque(size_type n, const value_type& v);
     deque(size_type n, const value_type& v, const allocator_type& a);
     template <class InputIterator>
@@ -228,9 +228,9 @@ template <class T, class Allocator, class Predicate>
 #  include <__type_traits/is_convertible.h>
 #  include <__type_traits/is_nothrow_assignable.h>
 #  include <__type_traits/is_nothrow_constructible.h>
+#  include <__type_traits/is_relocatable.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_swappable.h>
-#  include <__type_traits/is_trivially_relocatable.h>
 #  include <__type_traits/type_identity.h>
 #  include <__utility/exception_guard.h>
 #  include <__utility/forward.h>
@@ -289,7 +289,7 @@ template <class _ValueType,
               __deque_block_size<_ValueType, _DiffType>::value
 #  endif
           >
-class __deque_iterator {
+class _LIBCPP_WARN_UNUSED __deque_iterator {
   using __map_iterator _LIBCPP_NODEBUG = __rebind_pointer_t<_Pointer, const __rebind_pointer_t<_Pointer, _ValueType> >;
 
 // TODO(LLVM 25): Remove this check
@@ -502,7 +502,7 @@ const _DiffType __deque_iterator<_ValueType, _Pointer, _Reference, _MapPointer, 
     __deque_block_size<_ValueType, _DiffType>::value;
 
 template <class _Tp, class _Allocator /*= allocator<_Tp>*/>
-class deque {
+class _LIBCPP_WARN_UNUSED deque {
   template <class _Up, class _Alloc>
   using __split_buffer _LIBCPP_NODEBUG = std::__split_buffer<_Up, _Alloc, __split_buffer_pointer_layout>;
 
@@ -545,10 +545,8 @@ public:
   // - size_type: is always trivially relocatable, since it is required to be an integral type
   // - allocator_type: may not be trivially relocatable, so it's checked
   // None of these are referencing the `deque` itself, so if all of them are trivially relocatable, `deque` is too.
-  using __trivially_relocatable _LIBCPP_NODEBUG = __conditional_t<
-      __libcpp_is_trivially_relocatable<__map>::value && __libcpp_is_trivially_relocatable<allocator_type>::value,
-      deque,
-      void>;
+  using __trivially_relocatable _LIBCPP_NODEBUG =
+      __conditional_t<__is_trivially_relocatable_v<__map> && __is_trivially_relocatable_v<allocator_type>, deque, void>;
 
   static_assert(is_nothrow_default_constructible<allocator_type>::value ==
                     is_nothrow_default_constructible<__pointer_allocator>::value,
@@ -644,9 +642,7 @@ public:
   }
 
   explicit _LIBCPP_HIDE_FROM_ABI deque(size_type __n);
-#  if _LIBCPP_STD_VER >= 14
   explicit _LIBCPP_HIDE_FROM_ABI deque(size_type __n, const _Allocator& __a);
-#  endif
   _LIBCPP_HIDE_FROM_ABI deque(size_type __n, const value_type& __v);
 
   template <__enable_if_t<__is_allocator_v<_Allocator>, int> = 0>
@@ -1323,7 +1319,6 @@ deque<_Tp, _Allocator>::deque(size_type __n) : __start_(0), __size_(0) {
     __append(__n);
 }
 
-#  if _LIBCPP_STD_VER >= 14
 template <class _Tp, class _Allocator>
 deque<_Tp, _Allocator>::deque(size_type __n, const _Allocator& __a)
     : __map_(__pointer_allocator(__a)), __start_(0), __size_(0), __alloc_(__a) {
@@ -1331,7 +1326,6 @@ deque<_Tp, _Allocator>::deque(size_type __n, const _Allocator& __a)
   if (__n > 0)
     __append(__n);
 }
-#  endif
 
 template <class _Tp, class _Allocator>
 deque<_Tp, _Allocator>::deque(size_type __n, const value_type& __v) : __start_(0), __size_(0) {
@@ -2550,17 +2544,6 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <algorithm>
-#    include <atomic>
-#    include <concepts>
-#    include <cstdlib>
-#    include <functional>
-#    include <iosfwd>
-#    include <iterator>
-#    include <type_traits>
-#    include <typeinfo>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_DEQUE

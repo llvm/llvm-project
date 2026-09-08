@@ -4,9 +4,12 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
+#include <memory>
 
 namespace llvm {
 
@@ -110,6 +113,31 @@ public:
 
 private:
   std::unique_ptr<StaticDataProfileInfo> Info;
+};
+
+class LLVM_ABI StaticDataProfileInfoAnalysis
+    : public AnalysisInfoMixin<StaticDataProfileInfoAnalysis> {
+public:
+  static AnalysisKey Key;
+
+  class Result {
+    std::unique_ptr<StaticDataProfileInfo> HeldInfo;
+    Result(std::unique_ptr<StaticDataProfileInfo> &&Info)
+        : HeldInfo(std::move(Info)) {}
+    friend class StaticDataProfileInfoAnalysis;
+
+  public:
+    StaticDataProfileInfo &getStaticDataProfileInfo() {
+      return *HeldInfo;
+    }
+
+    bool invalidate(Module &, const PreservedAnalyses &,
+                    ModuleAnalysisManager::Invalidator &) {
+      return false;
+    }
+  };
+
+  Result run(Module &M, ModuleAnalysisManager &);
 };
 
 } // namespace llvm

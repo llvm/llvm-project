@@ -42,9 +42,9 @@ struct [[gsl::Pointer()]] View {
 };
 
 View return_view(View a) {
-  // CHECK: :[[@LINE-1]]:18: warning: parameter in intra-TU function should be marked {{\[\[}}clang::lifetimebound]] [-Wlifetime-safety-intra-tu-suggestions]
+  // CHECK: :[[@LINE-1]]:24: warning: parameter in intra-TU function should be marked {{\[\[}}clang::lifetimebound]] [-Wlifetime-safety-intra-tu-suggestions]
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:24-[[@LINE-2]]:24}:" {{\[\[}}clang::lifetimebound]]"
-  // CHECK-MACRO: :[[@LINE-3]]:18: warning: parameter in intra-TU function should be marked
+  // CHECK-MACRO: :[[@LINE-3]]:24: warning: parameter in intra-TU function should be marked
   // CHECK-MACRO: fix-it:"{{.*}}":{[[@LINE-4]]:24-[[@LINE-4]]:24}:" LIFETIMEBOUND_MACRO"
   // CHECK-BAD-MACRO: :[[@LINE-5]]:25: error: expected ')'
   // CHECK-BAD-MACRO: BAD_LIFETIMEBOUND_MACRO
@@ -52,9 +52,9 @@ View return_view(View a) {
 }
 
 MyObj &return_multi(MyObj &a, bool c, MyObj &b) {
-  // CHECK-DAG: :[[@LINE-1]]:21: warning: parameter in intra-TU function should be marked
+  // CHECK-DAG: :[[@LINE-1]]:29: warning: parameter in intra-TU function should be marked
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-2]]:29-[[@LINE-2]]:29}:" {{\[\[}}clang::lifetimebound]]"
-  // CHECK-DAG: :[[@LINE-3]]:39: warning: parameter in intra-TU function should be marked
+  // CHECK-DAG: :[[@LINE-3]]:47: warning: parameter in intra-TU function should be marked
   // CHECK-DAG: fix-it:"{{.*}}":{[[@LINE-4]]:47-[[@LINE-4]]:47}:" {{\[\[}}clang::lifetimebound]]"
   if (c)
     return a;
@@ -62,7 +62,7 @@ MyObj &return_multi(MyObj &a, bool c, MyObj &b) {
 }
 
 View return_partial(View a [[clang::lifetimebound]], bool c, View b) {
-  // CHECK: :[[@LINE-1]]:62: warning: parameter in intra-TU function should be marked
+  // CHECK: :[[@LINE-1]]:68: warning: parameter in intra-TU function should be marked
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:68-[[@LINE-2]]:68}:" {{\[\[}}clang::lifetimebound]]"
   if (c)
     return a;
@@ -70,25 +70,25 @@ View return_partial(View a [[clang::lifetimebound]], bool c, View b) {
 }
 
 View param_with_attr(View a [[maybe_unused]]) {
-  // CHECK: :[[@LINE-1]]:22: warning: parameter in intra-TU function should be marked
+  // CHECK: :[[@LINE-1]]:28: warning: parameter in intra-TU function should be marked
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:28-[[@LINE-2]]:28}:" {{\[\[}}clang::lifetimebound]]"
   return a;
 }
 
 View param_default(View a = View()) {
-  // CHECK: :[[@LINE-1]]:20: warning: parameter in intra-TU function should be marked
+  // CHECK: :[[@LINE-1]]:26: warning: parameter in intra-TU function should be marked
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:26-[[@LINE-2]]:26}:" {{\[\[}}clang::lifetimebound]]"
   return a;
 }
 
 int *arr_default(int a[2] = nullptr) {
-  // CHECK: :[[@LINE-1]]:18: warning: parameter in intra-TU function should be marked
+  // CHECK: :[[@LINE-1]]:23: warning: parameter in intra-TU function should be marked
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:23-[[@LINE-2]]:23}:" {{\[\[}}clang::lifetimebound]]"
   return a;
 }
 
 View multi_decl(View a);
-// CHECK: :[[@LINE-1]]:17: warning: parameter in intra-TU function should be marked
+// CHECK: :[[@LINE-1]]:23: warning: parameter in intra-TU function should be marked
 // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:23-[[@LINE-2]]:23}:" {{\[\[}}clang::lifetimebound]]"
 View multi_decl(View a);
 View multi_decl(View a) {
@@ -97,7 +97,7 @@ View multi_decl(View a) {
 
 template <typename T>
 T *template_identity(T *a) {
-  // CHECK: :[[@LINE-1]]:22: warning: parameter in intra-TU function should be marked
+  // CHECK: :[[@LINE-1]]:26: warning: parameter in intra-TU function should be marked
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:26-[[@LINE-2]]:26}:" {{\[\[}}clang::lifetimebound]]"
   return a;
 }
@@ -197,7 +197,7 @@ struct TrailingReturn {
 #define GNU_LIFETIMEBOUND_MACRO __attribute__((lifetimebound))
 
 View return_view_with_gnu_macro(View a) {
-  // CHECK: :[[@LINE-1]]:33: warning: parameter in intra-TU function should be marked
+  // CHECK: :[[@LINE-1]]:39: warning: parameter in intra-TU function should be marked
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:39-[[@LINE-2]]:39}:" GNU_LIFETIMEBOUND_MACRO"
   return a;
 }
@@ -223,7 +223,7 @@ View unnamed_macro(View a) {
 }
 
 View return_view_with_macro(View a) {
-  // CHECK: :[[@LINE-1]]:29: warning: parameter in intra-TU function should be marked
+  // CHECK: :[[@LINE-1]]:35: warning: parameter in intra-TU function should be marked
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:35-[[@LINE-2]]:35}:" MY_LIFETIMEBOUND_MACRO"
   return a;
 }
@@ -232,9 +232,9 @@ View return_view_with_macro(View a) {
 #define SECOND_LIFETIMEBOUND_MACRO [[clang::lifetimebound]]
 
 View return_view_with_latest_macro(View a) {
-  // CHECK: :[[@LINE-1]]:36: warning: parameter in intra-TU function should be marked
+  // CHECK: :[[@LINE-1]]:42: warning: parameter in intra-TU function should be marked
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:42-[[@LINE-2]]:42}:" SECOND_LIFETIMEBOUND_MACRO"
-  // CHECK-MACRO: :[[@LINE-3]]:36: warning: parameter in intra-TU function should be marked
+  // CHECK-MACRO: :[[@LINE-3]]:42: warning: parameter in intra-TU function should be marked
   // CHECK-MACRO: fix-it:"{{.*}}":{[[@LINE-4]]:42-[[@LINE-4]]:42}:" LIFETIMEBOUND_MACRO"
   return a;
 }
@@ -242,7 +242,7 @@ View return_view_with_latest_macro(View a) {
 #define REDEFINED_LIFETIMEBOUND_MACRO [[clang::lifetimebound]]
 
 View return_view_with_redefined_macro(View a) {
-  // CHECK: :[[@LINE-1]]:39: warning: parameter in intra-TU function should be marked
+  // CHECK: :[[@LINE-1]]:45: warning: parameter in intra-TU function should be marked
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:45-[[@LINE-2]]:45}:" REDEFINED_LIFETIMEBOUND_MACRO"
   return a;
 }
@@ -251,7 +251,7 @@ View return_view_with_redefined_macro(View a) {
 #define REDEFINED_LIFETIMEBOUND_MACRO [[maybe_unused]]
 
 View return_view_after_redefined_macro(View a) {
-  // CHECK: :[[@LINE-1]]:40: warning: parameter in intra-TU function should be marked
+  // CHECK: :[[@LINE-1]]:46: warning: parameter in intra-TU function should be marked
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:46-[[@LINE-2]]:46}:" SECOND_LIFETIMEBOUND_MACRO"
   return a;
 }
@@ -259,7 +259,7 @@ View return_view_after_redefined_macro(View a) {
 #define UNDEFINED_LIFETIMEBOUND_MACRO [[clang::lifetimebound]]
 
 View return_view_with_undefined_macro(View a) {
-  // CHECK: :[[@LINE-1]]:39: warning: parameter in intra-TU function should be marked
+  // CHECK: :[[@LINE-1]]:45: warning: parameter in intra-TU function should be marked
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:45-[[@LINE-2]]:45}:" UNDEFINED_LIFETIMEBOUND_MACRO"
   return a;
 }
@@ -267,7 +267,7 @@ View return_view_with_undefined_macro(View a) {
 #undef UNDEFINED_LIFETIMEBOUND_MACRO
 
 View return_view_after_undefined_macro(View a) {
-  // CHECK: :[[@LINE-1]]:40: warning: parameter in intra-TU function should be marked
+  // CHECK: :[[@LINE-1]]:46: warning: parameter in intra-TU function should be marked
   // CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:46-[[@LINE-2]]:46}:" SECOND_LIFETIMEBOUND_MACRO"
   return a;
 }

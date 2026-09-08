@@ -1,0 +1,5 @@
+# Smoke-check the regression test-tool infrastructure: that a tool under
+# test/tools is built, is on lit's PATH, and that its output can be matched.
+RUN: orc-rt-smoke-check | FileCheck %s
+
+CHECK: smoke check

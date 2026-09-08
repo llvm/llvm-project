@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Basic/AtomicLineLogger.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "gtest/gtest.h"
 
@@ -14,6 +15,9 @@ using namespace llvm;
 using namespace clang;
 
 namespace {
+
+// A logger instances to satisfy InMemoryModuleCache.
+AtomicLineLogger NoOpLogger;
 
 std::unique_ptr<MemoryBuffer> getBuffer(int I) {
   SmallVector<char, 8> Bytes;
@@ -23,7 +27,7 @@ std::unique_ptr<MemoryBuffer> getBuffer(int I) {
 }
 
 TEST(InMemoryModuleCacheTest, initialState) {
-  InMemoryModuleCache Cache;
+  InMemoryModuleCache Cache(NoOpLogger);
   EXPECT_EQ(InMemoryModuleCache::Unknown, Cache.getPCMState("B"));
   EXPECT_FALSE(Cache.isPCMFinal("B"));
   EXPECT_FALSE(Cache.shouldBuildPCM("B"));
@@ -38,7 +42,7 @@ TEST(InMemoryModuleCacheTest, addPCM) {
   auto B = getBuffer(1);
   auto *RawB = B.get();
 
-  InMemoryModuleCache Cache;
+  InMemoryModuleCache Cache(NoOpLogger);
   EXPECT_EQ(RawB, &Cache.addPCM("B", std::move(B), 0, 0));
   EXPECT_EQ(InMemoryModuleCache::Tentative, Cache.getPCMState("B"));
   off_t Size;
@@ -58,7 +62,7 @@ TEST(InMemoryModuleCacheTest, addBuiltPCM) {
   auto B = getBuffer(1);
   auto *RawB = B.get();
 
-  InMemoryModuleCache Cache;
+  InMemoryModuleCache Cache(NoOpLogger);
   EXPECT_EQ(RawB, &Cache.addBuiltPCM("B", std::move(B), 0, 0));
   EXPECT_EQ(InMemoryModuleCache::Final, Cache.getPCMState("B"));
   off_t Size;
@@ -81,7 +85,7 @@ TEST(InMemoryModuleCacheTest, tryToDropPCM) {
   auto *RawB2 = B2.get();
   ASSERT_NE(RawB1, RawB2);
 
-  InMemoryModuleCache Cache;
+  InMemoryModuleCache Cache(NoOpLogger);
   EXPECT_EQ(InMemoryModuleCache::Unknown, Cache.getPCMState("B"));
   EXPECT_EQ(RawB1, &Cache.addPCM("B", std::move(B1), 0, 0));
   EXPECT_FALSE(Cache.tryToDropPCM("B"));
@@ -114,7 +118,7 @@ TEST(InMemoryModuleCacheTest, finalizePCM) {
   auto B = getBuffer(1);
   auto *RawB = B.get();
 
-  InMemoryModuleCache Cache;
+  InMemoryModuleCache Cache(NoOpLogger);
   EXPECT_EQ(InMemoryModuleCache::Unknown, Cache.getPCMState("B"));
   EXPECT_EQ(RawB, &Cache.addPCM("B", std::move(B), 0, 0));
 

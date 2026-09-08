@@ -131,7 +131,7 @@ public:
 
   LogicalResult matchAndRewrite(TestCastOp op,
                                 PatternRewriter &rewriter) const override {
-    if (!op->hasAttr("test_fold_before_previously_folded_op"))
+    if (!op->hasDiscardableAttr("test_fold_before_previously_folded_op"))
       return failure();
     rewriter.setInsertionPointToStart(op->getBlock());
 
@@ -192,10 +192,11 @@ struct MakeOpEligible : public RewritePattern {
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
-    if (op->hasAttr("eligible"))
+    if (op->hasDiscardableAttr("eligible"))
       return failure();
-    rewriter.modifyOpInPlace(
-        op, [&]() { op->setAttr("eligible", rewriter.getUnitAttr()); });
+    rewriter.modifyOpInPlace(op, [&]() {
+      op->setDiscardableAttr("eligible", rewriter.getUnitAttr());
+    });
     return success();
   }
 };
@@ -210,7 +211,7 @@ struct HoistEligibleOps : public OpRewritePattern<test::OneRegionOp> {
     Operation *toBeHoisted = terminator->getOperands()[0].getDefiningOp();
     if (toBeHoisted->getParentOp() != op)
       return failure();
-    if (!toBeHoisted->hasAttr("eligible"))
+    if (!toBeHoisted->hasDiscardableAttr("eligible"))
       return failure();
     rewriter.moveOpBefore(toBeHoisted, op);
     return success();
@@ -305,7 +306,7 @@ struct MoveAfterParentOp : public RewritePattern {
       return failure();
 
     int64_t moveForwardBy = 0;
-    if (auto advanceBy = op->getAttrOfType<IntegerAttr>("advance"))
+    if (auto advanceBy = op->getDiscardableAttrOfType<IntegerAttr>("advance"))
       moveForwardBy = advanceBy.getInt();
 
     Operation *moveAfter = op->getParentOp();
@@ -363,10 +364,10 @@ struct CloneOp : public RewritePattern {
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     // Do not clone already cloned ops to avoid going into an infinite loop.
-    if (op->hasAttr("was_cloned"))
+    if (op->hasDiscardableAttr("was_cloned"))
       return failure();
     Operation *cloned = rewriter.clone(*op);
-    cloned->setAttr("was_cloned", rewriter.getUnitAttr());
+    cloned->setDiscardableAttr("was_cloned", rewriter.getUnitAttr());
     return success();
   }
 };
@@ -380,11 +381,13 @@ struct CloneRegionBeforeOp : public RewritePattern {
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     // Do not clone already cloned ops to avoid going into an infinite loop.
-    if (op->hasAttr("was_cloned"))
+    if (op->hasDiscardableAttr("was_cloned"))
       return failure();
     for (Region &r : op->getRegions())
       rewriter.cloneRegionBefore(r, op->getBlock());
-    op->setAttr("was_cloned", rewriter.getUnitAttr());
+    rewriter.modifyOpInPlace(op, [&]() {
+      op->setDiscardableAttr("was_cloned", rewriter.getUnitAttr());
+    });
     return success();
   }
 };
@@ -398,7 +401,7 @@ public:
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     Operation *newOp;
-    if (op->hasAttr("create_erase_op")) {
+    if (op->hasDiscardableAttr("create_erase_op")) {
       newOp = rewriter.create(
           op->getLoc(),
           OperationName("test.erase_op", op->getContext()).getIdentifier(),
@@ -434,6 +437,34 @@ public:
     }
 
     return failure();
+  }
+};
+
+/// Creates and immediately erases an operation and a block.
+class CreateAndEraseOpAndBlock : public RewritePattern {
+public:
+  CreateAndEraseOpAndBlock(MLIRContext *context)
+      : RewritePattern("test.create_and_erase_op_and_block", /*benefit=*/1,
+                       context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    if (op->hasDiscardableAttr("was_rewritten"))
+      return failure();
+
+    Operation *newOp = rewriter.create(
+        op->getLoc(),
+        OperationName("test.transient_op", op->getContext()).getIdentifier(),
+        ValueRange(), TypeRange());
+    rewriter.eraseOp(newOp);
+
+    Block *newBlock = rewriter.createBlock(op->getParentRegion());
+    rewriter.eraseBlock(newBlock);
+
+    rewriter.modifyOpInPlace(op, [&]() {
+      op->setDiscardableAttr("was_rewritten", rewriter.getUnitAttr());
+    });
+    return success();
   }
 };
 
@@ -595,9 +626,10 @@ public:
     (void)applyOpPatternsGreedily(ArrayRef(ops), std::move(patterns), config,
                                   &changed, &allErased);
     Builder b(ctx);
-    getOperation()->setAttr("pattern_driver_changed", b.getBoolAttr(changed));
-    getOperation()->setAttr("pattern_driver_all_erased",
-                            b.getBoolAttr(allErased));
+    getOperation()->setDiscardableAttr("pattern_driver_changed",
+                                       b.getBoolAttr(changed));
+    getOperation()->setDiscardableAttr("pattern_driver_all_erased",
+                                       b.getBoolAttr(allErased));
   }
 
   Option<std::string> strictMode{
@@ -614,15 +646,16 @@ private:
 
     LogicalResult matchAndRewrite(Operation *op,
                                   PatternRewriter &rewriter) const override {
-      if (op->hasAttr("skip"))
+      if (op->hasDiscardableAttr("skip"))
         return failure();
 
       Operation *newOp =
           rewriter.create(op->getLoc(), op->getName().getIdentifier(),
                           op->getOperands(), op->getResultTypes());
-      rewriter.modifyOpInPlace(
-          op, [&]() { op->setAttr("skip", rewriter.getBoolAttr(true)); });
-      newOp->setAttr("skip", rewriter.getBoolAttr(true));
+      rewriter.modifyOpInPlace(op, [&]() {
+        op->setDiscardableAttr("skip", rewriter.getBoolAttr(true));
+      });
+      newOp->setDiscardableAttr("skip", rewriter.getBoolAttr(true));
 
       return success();
     }
@@ -709,8 +742,8 @@ struct TestWalkPatternDriver final
 
     // Patterns for testing the WalkPatternRewriteDriver.
     patterns.add<IncrementIntAttribute<3>, MoveBeforeParentOp,
-                 MoveAfterParentOp, CloneOp, ReplaceWithNewOp, EraseFirstBlock>(
-        &getContext());
+                 MoveAfterParentOp, CloneOp, ReplaceWithNewOp, EraseFirstBlock,
+                 CreateAndEraseOpAndBlock>(&getContext());
 
     DumpNotifications dumpListener;
     walkAndApplyPatterns(getOperation(), std::move(patterns),
@@ -754,7 +787,8 @@ static void invokeCreateWithInferredReturnType(Operation *op) {
               properties, op->getRegions(), inferredReturnTypes))) {
         OperationState state(location, OpTy::getOperationName());
         // TODO: Expand to regions.
-        OpTy::build(b, state, values, op->getAttrs());
+        OpTy::build(b, state, values,
+                    op->getDiscardableAttrDictionary().getValue());
         (void)b.create(state);
       }
     }
@@ -981,9 +1015,9 @@ struct TestValueReplace : public ConversionPattern {
     // Replace the first operand with 2x the second operand.
     Value from = op->getOperand(0);
     Value repl = op->getOperand(1);
-    if (op->hasAttr("conditional")) {
+    if (op->hasDiscardableAttr("conditional")) {
       rewriter.replaceUsesWithIf(from, {repl, repl}, [=](OpOperand &use) {
-        return use.getOwner()->hasAttr("replace_uses");
+        return use.getOwner()->hasDiscardableAttr("replace_uses");
       });
     } else {
       rewriter.replaceAllUsesWith(from, {repl, repl});
@@ -991,8 +1025,8 @@ struct TestValueReplace : public ConversionPattern {
     rewriter.modifyOpInPlace(op, [&] {
       // If the "trigger_rollback" attribute is set, keep the op illegal, so
       // that a rollback is triggered.
-      if (!op->hasAttr("trigger_rollback"))
-        op->setAttr("is_legal", rewriter.getUnitAttr());
+      if (!op->hasDiscardableAttr("trigger_rollback"))
+        op->setDiscardableAttr("is_legal", rewriter.getUnitAttr());
     });
     return success();
   }
@@ -1038,7 +1072,7 @@ struct TestUndoPropertiesModification : public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    if (!op->hasAttr("modify_inplace"))
+    if (!op->hasDiscardableAttr("modify_inplace"))
       return failure();
     rewriter.modifyOpInPlace(
         op, [&]() { cast<TestOpWithProperties>(op).getProperties().setA(42); });
@@ -1255,9 +1289,7 @@ struct TestBoundedRecursiveRewrite
   LogicalResult matchAndRewrite(TestRecursiveRewriteOp op,
                                 PatternRewriter &rewriter) const final {
     // Decrement the depth of the op in-place.
-    rewriter.modifyOpInPlace(op, [&] {
-      op->setAttr("depth", rewriter.getI64IntegerAttr(op.getDepth() - 1));
-    });
+    rewriter.modifyOpInPlace(op, [&] { op.setDepth(op.getDepth() - 1); });
     return success();
   }
 };
@@ -1324,7 +1356,7 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    auto attr = op->getAttrOfType<TypeAttr>("type");
+    auto attr = op->getDiscardableAttrOfType<TypeAttr>("type");
     if (!attr)
       return failure();
     rewriter.replaceOpWithNewOp<TestValidProducerOp>(op, attr.getValue());
@@ -1349,7 +1381,8 @@ public:
     // converter.
     // with_converter absent: pattern must have been initialized without a type
     // converter.
-    if (op->hasAttr("with_converter") != static_cast<bool>(getTypeConverter()))
+    if (op->hasDiscardableAttr("with_converter") !=
+        static_cast<bool>(getTypeConverter()))
       return failure();
     rewriter.replaceOpWithNewOp<TestValidConsumerOp>(op, operands[0]);
     return success();
@@ -1426,7 +1459,8 @@ public:
         types.push_back(t);
       }
       OperationState state(op->getLoc(), name,
-                           /*operands=*/{}, types, op->getAttrs());
+                           /*operands=*/{}, types,
+                           op->getDiscardableAttrDictionary().getValue());
       auto *newOp = rewriter.create(state);
       SmallVector<ValueRange> repls;
       for (size_t i = 0, e = op->getNumResults(); i < e; ++i)
@@ -1470,8 +1504,9 @@ public:
     for (Region &r : op->getRegions())
       if (failed(rewriter.legalize(&r)))
         return failure();
-    rewriter.modifyOpInPlace(
-        op, [&]() { op->setAttr("is_legal", rewriter.getUnitAttr()); });
+    rewriter.modifyOpInPlace(op, [&]() {
+      op->setDiscardableAttr("is_legal", rewriter.getUnitAttr());
+    });
     return success();
   }
 };
@@ -1618,10 +1653,10 @@ struct TestLegalizePatternDriver
         [&](func::CallOp op) { return converter.isLegal(op); });
     target.addDynamicallyLegalOp(
         OperationName("test.value_replace", &getContext()),
-        [](Operation *op) { return op->hasAttr("is_legal"); });
+        [](Operation *op) { return op->hasDiscardableAttr("is_legal"); });
     target.addDynamicallyLegalOp(
         OperationName("test.post_order_legalization", &getContext()),
-        [](Operation *op) { return op->hasAttr("is_legal"); });
+        [](Operation *op) { return op->hasDiscardableAttr("is_legal"); });
 
     // TestCreateUnregisteredOp creates `arith.constant` operation,
     // which was not added to target intentionally to test
@@ -1638,7 +1673,7 @@ struct TestLegalizePatternDriver
     // Check support for marking certain operations as recursively legal.
     target.markOpRecursivelyLegal<func::FuncOp, ModuleOp>([](Operation *op) {
       return static_cast<bool>(
-          op->getAttrOfType<UnitAttr>("test.recursively_legal"));
+          op->getDiscardableAttrOfType<UnitAttr>("test.recursively_legal"));
     });
 
     // Mark the bound recursion operation as dynamically legal.
@@ -1679,7 +1714,8 @@ struct TestLegalizePatternDriver
     if (mode == ConversionMode::Full) {
       // Check support for marking unknown operations as dynamically legal.
       target.markUnknownOpDynamicallyLegal([](Operation *op) {
-        return (bool)op->getAttrOfType<UnitAttr>("test.dynamically_legal");
+        return (bool)op->getDiscardableAttrOfType<UnitAttr>(
+            "test.dynamically_legal");
       });
 
       if (failed(applyFullConversion(getOperation(), target,
@@ -1924,7 +1960,7 @@ struct RewriteDynamicOp : public RewritePattern {
 
     OperationState state(op->getLoc(), "test.dynamic_generic",
                          op->getOperands(), op->getResultTypes(),
-                         op->getAttrs());
+                         op->getDiscardableAttrDictionary().getValue());
     auto *newOp = rewriter.create(state);
     rewriter.replaceOp(op, newOp->getResults());
     return success();
@@ -2170,12 +2206,22 @@ struct TestTypeConversionDriver
         op = op->getParentOfType<FunctionOpInterface>();
       if (!op)
         return Type();
-      auto incrementAttr = op->getAttrOfType<IntegerAttr>("increment");
+      auto incrementAttr =
+          op->getDiscardableAttrOfType<IntegerAttr>("increment");
       if (!incrementAttr)
         return Type();
       return IntegerType::get(v.getContext(),
                               intType.getWidth() + incrementAttr.getInt());
     });
+    converter.addConversion(
+        [](Value v, SmallVectorImpl<Type> &) -> std::optional<LogicalResult> {
+          // Test dropping an i1 value used as an SCF condition.
+          Operation *definingOp = v.getDefiningOp();
+          if (!definingOp || !v.getType().isInteger(1) ||
+              !definingOp->hasAttr("drop_i1"))
+            return std::nullopt;
+          return success();
+        });
 
     /// Add the legal set of type materializations.
     converter.addSourceMaterialization([](OpBuilder &builder, Type resultType,

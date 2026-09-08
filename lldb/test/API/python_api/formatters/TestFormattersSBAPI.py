@@ -431,12 +431,17 @@ class SBFormattersAPITestCase(TestBase):
         self.expect(
             "frame variable foo_ptr", matching=True, substrs=["hello scripted world"]
         )
-        new_category.AddTypeSummary(
-            lldb.SBTypeNameSpecifier("JustAStruct"),
-            lldb.SBTypeSummary.CreateWithScriptCode(
-                "return 'hello scripted world';", lldb.eTypeOptionSkipPointers
-            ),
+        jas_summary_code = lldb.SBTypeSummary.CreateWithScriptCode(
+            "return 'hello scripted world';", lldb.eTypeOptionSkipPointers
         )
+        self.assertFalse(jas_summary_code.is_function_name)
+        self.assertTrue(jas_summary_code.is_function_code)
+        self.assertTrue(jas_summary_code.IsFunctionCode())
+
+        added_summary = new_category.AddTypeSummary(
+            lldb.SBTypeNameSpecifier("JustAStruct"), jas_summary_code
+        )
+        self.assertTrue(added_summary)
         self.expect(
             "frame variable foo", matching=True, substrs=["hello scripted world"]
         )

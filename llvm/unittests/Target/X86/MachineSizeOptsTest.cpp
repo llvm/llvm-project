@@ -14,8 +14,8 @@
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -47,14 +47,15 @@ class MachineSizeOptsTest : public testing::Test {
   std::unique_ptr<Module> M;
   struct BFIData {
     std::unique_ptr<MachineDominatorTree> MDT;
-    std::unique_ptr<MachineLoopInfo> MLI;
+    std::unique_ptr<MachineCycleInfo> MCI;
     std::unique_ptr<MachineBranchProbabilityInfo> MBPI;
     std::unique_ptr<MachineBlockFrequencyInfo> MBFI;
     BFIData(MachineFunction &MF) {
       MDT.reset(new MachineDominatorTree(MF));
-      MLI.reset(new MachineLoopInfo(*MDT));
+      MCI.reset(new MachineCycleInfo());
+      MCI->compute(MF);
       MBPI.reset(new MachineBranchProbabilityInfo());
-      MBFI.reset(new MachineBlockFrequencyInfo(MF, *MBPI, *MLI));
+      MBFI.reset(new MachineBlockFrequencyInfo(MF, *MBPI, *MCI));
     }
     MachineBlockFrequencyInfo *get() { return MBFI.get(); }
   };

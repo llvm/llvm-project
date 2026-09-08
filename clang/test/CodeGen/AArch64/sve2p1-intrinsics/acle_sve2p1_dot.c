@@ -72,7 +72,62 @@ svfloat32_t test_svdot_f32_x2(svfloat32_t op1, svfloat16_t op2, svfloat16_t op3)
   return SVE_ACLE_FUNC(svdot,_f32_f16,)(op1, op2, op3);
 }
 
+// CHECK-LABEL: @test_svdot_n_s32_x2(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[OP3:%.*]], i64 0
+// CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sdot.x2.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[DOTSPLAT]])
+// CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
+//
+// CPP-CHECK-LABEL: @_Z19test_svdot_n_s32_x2u11__SVInt32_tu11__SVInt16_ts(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[OP3:%.*]], i64 0
+// CPP-CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.sdot.x2.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[DOTSPLAT]])
+// CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
+//
+svint32_t test_svdot_n_s32_x2(svint32_t op1, svint16_t op2, int16_t op3) ATTR
+{
+  return SVE_ACLE_FUNC(svdot,_n_s32_s16,)(op1, op2, op3);
+}
 
+// CHECK-LABEL: @test_svdot_n_u32_x2(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[OP3:%.*]], i64 0
+// CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.udot.x2.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[DOTSPLAT]])
+// CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
+//
+// CPP-CHECK-LABEL: @_Z19test_svdot_n_u32_x2u12__SVUint32_tu12__SVUint16_tt(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[OP3:%.*]], i64 0
+// CPP-CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i16> [[DOTSPLATINSERT]], <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i32> @llvm.aarch64.sve.udot.x2.nxv4i32(<vscale x 4 x i32> [[OP1:%.*]], <vscale x 8 x i16> [[OP2:%.*]], <vscale x 8 x i16> [[DOTSPLAT]])
+// CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
+//
+svuint32_t test_svdot_n_u32_x2(svuint32_t op1, svuint16_t op2, uint16_t op3) ATTR
+{
+  return SVE_ACLE_FUNC(svdot,_n_u32_u16,)(op1, op2, op3);
+}
+
+// CHECK-LABEL: @test_svdot_n_f32_x2(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x half> poison, half [[OP3:%.*]], i64 0
+// CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x half> [[DOTSPLATINSERT]], <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.fdot.x2.nxv4f32(<vscale x 4 x float> [[OP1:%.*]], <vscale x 8 x half> [[OP2:%.*]], <vscale x 8 x half> [[DOTSPLAT]])
+// CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
+//
+// CPP-CHECK-LABEL: @_Z19test_svdot_n_f32_x2u13__SVFloat32_tu13__SVFloat16_tDh(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x half> poison, half [[OP3:%.*]], i64 0
+// CPP-CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x half> [[DOTSPLATINSERT]], <vscale x 8 x half> poison, <vscale x 8 x i32> zeroinitializer
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.fdot.x2.nxv4f32(<vscale x 4 x float> [[OP1:%.*]], <vscale x 8 x half> [[OP2:%.*]], <vscale x 8 x half> [[DOTSPLAT]])
+// CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
+//
+svfloat32_t test_svdot_n_f32_x2(svfloat32_t op1, svfloat16_t op2, float16_t op3) ATTR
+{
+  return SVE_ACLE_FUNC(svdot,_n_f32_f16,)(op1, op2, op3);
+}
 
 // CHECK-LABEL: @test_svdot_lane_s32_x2(
 // CHECK-NEXT:  entry:

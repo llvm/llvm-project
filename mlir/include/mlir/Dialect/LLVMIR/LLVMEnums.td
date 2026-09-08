@@ -84,6 +84,21 @@ def AsmATTOrIntel : LLVM_EnumAttr<
 }
 
 //===----------------------------------------------------------------------===//
+// ProfileCountType
+//===----------------------------------------------------------------------===//
+
+def ProfileCountReal : I64EnumAttrCase<
+  /*string sym=*/"Real", /*int val=*/0, /*string str=*/"real">;
+def ProfileCountSynthetic : I64EnumAttrCase<
+  /*string sym=*/"Synthetic", /*int val=*/1, /*string str=*/"synthetic">;
+def ProfileCountTypeAttr : I64EnumAttr<
+  /*string name=*/"ProfileCountType",
+  /*string description=*/"real or synthetic function entry count",
+  /*list<I64EnumAttrCase> cases=*/[ProfileCountReal, ProfileCountSynthetic]> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
+//===----------------------------------------------------------------------===//
 // Atomic Operations
 //===----------------------------------------------------------------------===//
 
@@ -505,9 +520,7 @@ def IntegerOverflowFlags : I32BitEnum<
 }
 
 def LLVM_IntegerOverflowFlagsAttr :
-    EnumAttr<LLVM_Dialect, IntegerOverflowFlags, "overflow"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<LLVM_Dialect, IntegerOverflowFlags, "overflow">;
 
 def LLVM_IntegerOverflowFlagsProp :
     NamedEnumPropWithAttrForm<IntegerOverflowFlags, "overflow", LLVM_IntegerOverflowFlagsAttr> {
@@ -541,9 +554,7 @@ def FastmathFlags : I32BitEnumAttr<
 }
 
 def LLVM_FastmathFlagsAttr :
-    EnumAttr<LLVM_Dialect, FastmathFlags, "fastmath"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<LLVM_Dialect, FastmathFlags, "fastmath">;
 
 //===----------------------------------------------------------------------===//
 // FCmp and ICmp Predicates
@@ -952,6 +963,26 @@ def GEPNoWrapFlags : I32BitEnum<
 
 def GEPNoWrapFlagsProp : EnumProp<GEPNoWrapFlags> {
   let defaultValue = interfaceType # "::none";
+}
+
+//===----------------------------------------------------------------------===//
+// TLSModel
+//===----------------------------------------------------------------------===//
+
+def LLVM_TLSMode
+    : LLVM_EnumAttr<
+          "ThreadLocalMode", "::llvm::GlobalValue::ThreadLocalMode", "TLS Mode",
+          [
+            LLVM_EnumAttrCase<"NotThreadLocal", "", "NotThreadLocal", 0>,
+            LLVM_EnumAttrCase<"GeneralDynamic", "generaldynamic",
+                              "GeneralDynamicTLSModel", 1>,
+            LLVM_EnumAttrCase<"LocalDynamic", "localdynamic",
+                              "LocalDynamicTLSModel", 2>,
+            LLVM_EnumAttrCase<"InitialExec", "initialexec",
+                              "InitialExecTLSModel", 3>,
+            LLVM_EnumAttrCase<"LocalExec", "localexec", "LocalExecTLSModel", 4>,
+          ]> {
+  let cppNamespace = "::mlir::LLVM";
 }
 
 #endif // LLVMIR_ENUMS

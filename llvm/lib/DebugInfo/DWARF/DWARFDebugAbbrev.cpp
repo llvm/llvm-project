@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cinttypes>
 #include <cstdint>
 
 using namespace llvm;
@@ -62,6 +60,7 @@ Error DWARFAbbreviationDeclarationSet::extract(DataExtractor Data,
     PrevAbbrCode = AbbrDecl.getCode();
     Decls.push_back(std::move(AbbrDecl));
   }
+  Decls.shrink_to_fit();
   return Error::success();
 }
 

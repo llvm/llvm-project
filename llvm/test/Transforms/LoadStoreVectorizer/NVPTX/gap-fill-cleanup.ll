@@ -9,10 +9,10 @@ define void @fillTwoGapsCanVectorize(ptr %in) {
 ; CHECK-LABEL: define void @fillTwoGapsCanVectorize(
 ; CHECK-SAME: ptr [[IN:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 16 [[IN]], <4 x i1> <i1 true, i1 false, i1 false, i1 true>, <4 x i32> poison)
-; CHECK-NEXT:    [[LOAD03:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    [[GAPFILL4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    [[GAPFILL25:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    [[LOAD36:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
+; CHECK-NEXT:    [[LOAD03:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[GAPFILL4:%.*]] = extractelement <4 x i32> [[TMP1]], i64 1
+; CHECK-NEXT:    [[GAPFILL25:%.*]] = extractelement <4 x i32> [[TMP1]], i64 2
+; CHECK-NEXT:    [[LOAD36:%.*]] = extractelement <4 x i32> [[TMP1]], i64 3
 ; CHECK-NEXT:    ret void
 ;
   %load0 = load i32, ptr %in, align 16

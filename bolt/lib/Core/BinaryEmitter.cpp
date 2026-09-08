@@ -481,8 +481,10 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         }
 
         // Prepare to tag this location with a label if we need to keep track of
-        // the location of calls/returns for BOLT address translation maps
-        if (BF.requiresAddressTranslation() && BC.MIB->getOffset(Instr)) {
+        // an instruction's output address to augment the IO address map (BAT,
+        // SDT/probe address translation, or --update-debug-sections DWARF range
+        // updates).
+        if (BF.requiresPreciseAddressMap() && BC.MIB->getOffset(Instr)) {
           const uint32_t Offset = *BC.MIB->getOffset(Instr);
           if (!InstrLabel)
             InstrLabel = BC.Ctx->createTempSymbol();
@@ -1035,7 +1037,7 @@ void BinaryEmitter::emitLSDA(BinaryFunction &BF, const FunctionFragment &FF) {
   // Emit encoding of entries in the call site table. The format is used for the
   // call site start, length, and corresponding landing pad.
   if (!LPStartSymbol)
-    Streamer.emitIntValue(dwarf::DW_EH_PE_sdata4, 1);
+    Streamer.emitIntValue(dwarf::DW_EH_PE_udata4, 1);
   else
     Streamer.emitIntValue(dwarf::DW_EH_PE_uleb128, 1);
 

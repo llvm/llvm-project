@@ -147,15 +147,11 @@ public:
   /// \param bigVal a sequence of words to form the initial value of the APInt
   LLVM_ABI APInt(unsigned numBits, ArrayRef<uint64_t> bigVal);
 
-  /// Equivalent to APInt(numBits, ArrayRef<uint64_t>(bigVal, numWords)), but
-  /// deprecated because this constructor is prone to ambiguity with the
-  /// APInt(unsigned, uint64_t, bool) constructor.
-  ///
-  /// Once all uses of this constructor are migrated to other constructors,
-  /// consider marking this overload ""= delete" to prevent calls from being
-  /// incorrectly bound to the APInt(unsigned, uint64_t, bool) constructor.
-  [[deprecated("Use other constructors of APInt")]]
-  LLVM_ABI APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[]);
+  /// Was equivalent to APInt(numBits, ArrayRef<uint64_t>(bigVal, numWords))
+  /// historically, but is now deleted because this constructor is prone to
+  /// ambiguity with the APInt(unsigned, uint64_t, bool) constructor.
+  LLVM_ABI APInt(unsigned numBits, unsigned numWords,
+                 const uint64_t bigVal[]) = delete;
 
   /// Construct an APInt from a string representation.
   ///
@@ -952,6 +948,8 @@ public:
   /// equivalent to:
   ///   (this->zext(NewWidth) << NewLSB.getBitWidth()) | NewLSB.zext(NewWidth)
   APInt concat(const APInt &NewLSB) const {
+    if (getBitWidth() == 0)
+      return NewLSB;
     /// If the result will be small, then both the merged values are small.
     unsigned NewWidth = getBitWidth() + NewLSB.getBitWidth();
     if (NewWidth <= APINT_BITS_PER_WORD)
@@ -2333,13 +2331,15 @@ LLVM_ABI APInt muluExtended(const APInt &C1, const APInt &C2);
 /// 0^0 is supported and returns 1.
 LLVM_ABI APInt pow(const APInt &X, int64_t N);
 
-/// Compute GCD of two unsigned APInt values.
+/// Compute GCD of two APInt values.
 ///
 /// This function returns the greatest common divisor of the two APInt values
 /// using Stein's algorithm.
 ///
-/// \returns the greatest common divisor of A and B.
-LLVM_ABI APInt GreatestCommonDivisor(APInt A, APInt B);
+/// \returns the greatest common divisor of A and B. If \p Signed is true, it
+/// takes the absolute value of the both arguments, and returns the unsigned
+/// greatest common divisor.
+LLVM_ABI APInt GreatestCommonDivisor(APInt A, APInt B, bool IsSigned = false);
 
 /// Converts the given APInt to a double value.
 ///

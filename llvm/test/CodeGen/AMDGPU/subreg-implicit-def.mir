@@ -4,7 +4,7 @@
 # and super-reg uses correctly.
 
 
-# RUN: llc -mtriple=amdgcn -mcpu=gfx802  -run-pass processimpdefs -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu8.02  -run-pass processimpdefs -asm-verbose=0 -verify-machineinstrs %s -o - | FileCheck %s
 
 # Must not add undef to use of implicit-def because def is partially redefined.
 ---

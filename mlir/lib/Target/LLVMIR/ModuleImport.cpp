@@ -150,6 +150,43 @@ static LogicalResult convertInstructionImpl(OpBuilder &odsBuilder,
   return failure();
 }
 
+FlatSymbolRefAttr
+ModuleImport::getMetadataGlobalValueSymbolRef(llvm::GlobalValue *global) {
+  if (auto *globalVar = dyn_cast<llvm::GlobalVariable>(global)) {
+    StringRef name = globalVar->getName();
+    if (name.empty())
+      return getOrCreateNamelessSymbolName(globalVar);
+    if (name == getGlobalCtorsVarName() || name == getGlobalDtorsVarName())
+      return {};
+  }
+
+  if (auto *func = dyn_cast<llvm::Function>(global)) {
+    // Intrinsics with a dedicated import conversion do not have an imported
+    // function declaration that a metadata symbol reference could resolve to.
+    if (func->isIntrinsic() &&
+        iface.isConvertibleIntrinsic(func->getIntrinsicID()))
+      return {};
+  }
+
+  if (global->getName().empty())
+    return {};
+  return FlatSymbolRefAttr::get(context, global->getName());
+}
+
+FlatSymbolRefAttr
+ModuleImport::getMetadataOperandSymbolRef(const llvm::Metadata *md) {
+  auto *valueAsMD = dyn_cast_or_null<llvm::ValueAsMetadata>(md);
+  if (!valueAsMD)
+    return {};
+  llvm::Value *value = valueAsMD->getValue();
+  llvm::GlobalValue *gv = dyn_cast<llvm::GlobalValue>(value);
+  if (!gv)
+    gv = dyn_cast<llvm::GlobalValue>(value->stripPointerCastsAndAliases());
+  if (!gv)
+    return {};
+  return getMetadataGlobalValueSymbolRef(gv);
+}
+
 /// Depth-first conversion of the metadata node `md` to the matching LLVM
 /// dialect metadata attribute. Returns a null attribute for shapes that the
 /// dialect's metadata-attribute hierarchy does not currently model. `path`
@@ -159,28 +196,47 @@ static LogicalResult convertInstructionImpl(OpBuilder &odsBuilder,
 /// set lets the traversal recognize such a back-edge and bail out. `attrMap`
 /// caches the attributes of fully converted nodes so that shared subgraphs
 /// are visited only once.
-static Attribute convertMetadataToAttrImpl(
-    MLIRContext *ctx, const llvm::Metadata *md,
-    SmallPtrSetImpl<const llvm::Metadata *> &path,
+Attribute ModuleImport::convertMetadataToAttrImpl(
+    const llvm::Metadata *md, SmallPtrSetImpl<const llvm::Metadata *> &path,
     DenseMap<const llvm::Metadata *, Attribute> &attrMap) {
   if (!md)
     return {};
   if (auto *mdStr = dyn_cast<llvm::MDString>(md))
-    return MDStringAttr::get(ctx, StringAttr::get(ctx, mdStr->getString()));
+    return MDStringAttr::get(context,
+                             StringAttr::get(context, mdStr->getString()));
   if (auto *cam = dyn_cast<llvm::ConstantAsMetadata>(md)) {
-    auto *ci = dyn_cast<llvm::ConstantInt>(cam->getValue());
-    if (!ci)
-      return {};
-    auto intType = IntegerType::get(ctx, ci->getBitWidth());
-    return MDConstantAttr::get(ctx, IntegerAttr::get(intType, ci->getValue()));
-  }
-  if (auto *vam = dyn_cast<llvm::ValueAsMetadata>(md)) {
-    auto *fn = dyn_cast<llvm::Function>(vam->getValue());
-    if (!fn)
-      return {};
-    return MDFuncAttr::get(ctx, FlatSymbolRefAttr::get(ctx, fn->getName()));
+    llvm::Constant *constant = cam->getValue();
+    if (auto *global = dyn_cast<llvm::GlobalValue>(constant)) {
+      if (FlatSymbolRefAttr symbolRef = getMetadataGlobalValueSymbolRef(global))
+        return MDGlobalValueAttr::get(context, symbolRef);
+    }
+    if (auto *ci = dyn_cast<llvm::ConstantInt>(constant)) {
+      auto intType = IntegerType::get(context, ci->getBitWidth());
+      return MDConstantAttr::get(context,
+                                 IntegerAttr::get(intType, ci->getValue()));
+    }
+    if (auto *nullPtr = dyn_cast<llvm::ConstantPointerNull>(constant))
+      return MDNullAttr::get(context,
+                             nullPtr->getType()->getPointerAddressSpace());
+    if (auto *constExpr = dyn_cast<llvm::ConstantExpr>(constant)) {
+      // Only `addrspacecast` is modelled; other constant expressions have no
+      // metadata-attribute counterpart.
+      if (constExpr->getOpcode() != llvm::Instruction::AddrSpaceCast)
+        return {};
+      Attribute argAttr = convertMetadataToAttrImpl(
+          llvm::ConstantAsMetadata::get(constExpr->getOperand(0)), path,
+          attrMap);
+      if (!argAttr)
+        return {};
+      return MDAddrSpaceCastAttr::get(
+          context, argAttr, constExpr->getType()->getPointerAddressSpace());
+    }
+    return {};
   }
   if (auto *node = dyn_cast<llvm::MDNode>(md)) {
+    // Metadata attributes cannot preserve distinctness, so bail out.
+    if (node->isDistinct())
+      return {};
     if (Attribute cached = attrMap.lookup(node))
       return cached;
     // If `node` is already on the current search path, this is a back-edge into
@@ -190,14 +246,13 @@ static Attribute convertMetadataToAttrImpl(
     SmallVector<Attribute> operands;
     operands.reserve(node->getNumOperands());
     for (const llvm::MDOperand &op : node->operands()) {
-      Attribute opAttr =
-          convertMetadataToAttrImpl(ctx, op.get(), path, attrMap);
+      Attribute opAttr = convertMetadataToAttrImpl(op.get(), path, attrMap);
       if (!opAttr)
         return {};
       operands.push_back(opAttr);
     }
     path.erase(node);
-    Attribute nodeAttr = MDNodeAttr::get(ctx, operands);
+    Attribute nodeAttr = MDNodeAttr::get(context, operands);
     attrMap.try_emplace(node, nodeAttr);
     return nodeAttr;
   }
@@ -206,13 +261,13 @@ static Attribute convertMetadataToAttrImpl(
 
 /// Converts the metadata node `md` to the matching LLVM dialect metadata
 /// attribute. Returns a null attribute for shapes that the dialect's
-/// metadata-attribute hierarchy does not currently model, including cyclic
-/// metadata graphs that the immutable metadata attributes cannot express.
-static Attribute convertMetadataToAttr(MLIRContext *ctx,
-                                       const llvm::Metadata *md) {
+/// metadata-attribute hierarchy does not currently model, including distinct
+/// nodes and cyclic metadata graphs that the immutable metadata attributes
+/// cannot express.
+Attribute ModuleImport::convertMetadataToAttr(const llvm::Metadata *md) {
   SmallPtrSet<const llvm::Metadata *, 8> path;
   DenseMap<const llvm::Metadata *, Attribute> attrMap;
-  return convertMetadataToAttrImpl(ctx, md, path, attrMap);
+  return convertMetadataToAttrImpl(md, path, attrMap);
 }
 
 /// Get a topologically sorted list of blocks for the given basic blocks.
@@ -699,7 +754,20 @@ convertProfileSummaryFormat(ModuleOp mlirModule, const llvm::Module *llvmModule,
     return std::nullopt;
   }
 
-  llvm::MDString *valMD = dyn_cast<llvm::MDString>(tupleEntry->getOperand(1));
+  llvm::Metadata *valueMD = tupleEntry->getOperand(1).get();
+  if (!valueMD) {
+    emitWarning(mlirModule.getLoc())
+        << "expected string metadata value for key 'ProfileFormat': null";
+    return std::nullopt;
+  }
+
+  llvm::MDString *valMD = dyn_cast<llvm::MDString>(valueMD);
+  if (!valMD) {
+    emitWarning(mlirModule.getLoc())
+        << "expected string metadata value for key 'ProfileFormat': "
+        << diagMD(valueMD, llvmModule);
+    return std::nullopt;
+  }
   std::optional<ProfileSummaryFormatKind> fmtKind =
       symbolizeProfileSummaryFormatKind(valMD->getString());
   if (!fmtKind) {
@@ -984,8 +1052,9 @@ LogicalResult ModuleImport::convertDependentLibrariesMetadata() {
           libraries.push_back(mdString->getString());
     }
     if (!libraries.empty())
-      mlirModule->setAttr(LLVM::LLVMDialect::getDependentLibrariesAttrName(),
-                          builder.getStrArrayAttr(libraries));
+      mlirModule->setDiscardableAttr(
+          LLVM::LLVMDialect::getDependentLibrariesAttrName(),
+          builder.getStrArrayAttr(libraries));
   }
   return success();
 }
@@ -1001,8 +1070,9 @@ LogicalResult ModuleImport::convertIdentMetadata() {
       if (auto *md = dyn_cast<llvm::MDNode>(named.getOperand(0)))
         if (md->getNumOperands() == 1)
           if (auto *mdStr = dyn_cast<llvm::MDString>(md->getOperand(0)))
-            mlirModule->setAttr(LLVMDialect::getIdentAttrName(),
-                                builder.getStringAttr(mdStr->getString()));
+            mlirModule->setDiscardableAttr(
+                LLVMDialect::getIdentAttrName(),
+                builder.getStringAttr(mdStr->getString()));
   }
   return success();
 }
@@ -1018,8 +1088,9 @@ LogicalResult ModuleImport::convertCommandlineMetadata() {
       if (auto *md = dyn_cast<llvm::MDNode>(nmd.getOperand(0)))
         if (md->getNumOperands() == 1)
           if (auto *mdStr = dyn_cast<llvm::MDString>(md->getOperand(0)))
-            mlirModule->setAttr(LLVMDialect::getCommandlineAttrName(),
-                                builder.getStringAttr(mdStr->getString()));
+            mlirModule->setDiscardableAttr(
+                LLVMDialect::getCommandlineAttrName(),
+                builder.getStringAttr(mdStr->getString()));
   }
   return success();
 }
@@ -1072,7 +1143,8 @@ void ModuleImport::processComdat(const llvm::Comdat *comdat) {
   builder.setInsertionPointToEnd(&comdatOp.getBody().back());
   auto selectorOp = ComdatSelectorOp::create(
       builder, mlirModule.getLoc(), comdat->getName(),
-      convertComdatFromLLVM(comdat->getSelectionKind()));
+      convertComdatFromLLVM(comdat->getSelectionKind()),
+      /*sym_visibility=*/nullptr);
   auto symbolRef =
       SymbolRefAttr::get(builder.getContext(), getGlobalComdatOpName(),
                          FlatSymbolRefAttr::get(selectorOp.getSymNameAttr()));
@@ -1138,27 +1210,30 @@ LogicalResult ModuleImport::convertDataLayout() {
   for (StringRef token : dataLayoutImporter.getUnhandledTokens())
     emitWarning(loc, "unhandled data layout token: ") << token;
 
-  mlirModule->setAttr(DLTIDialect::kDataLayoutAttrName,
-                      dataLayoutImporter.getDataLayoutSpec());
+  mlirModule->setDiscardableAttr(DLTIDialect::kDataLayoutAttrName,
+                                 dataLayoutImporter.getDataLayoutSpec());
   return success();
 }
 
 void ModuleImport::convertTargetTriple() {
-  mlirModule->setAttr(
+  mlirModule->setDiscardableAttr(
       LLVM::LLVMDialect::getTargetTripleAttrName(),
       builder.getStringAttr(llvmModule->getTargetTriple().str()));
 }
 
 void ModuleImport::convertModuleLevelAsm() {
-  llvm::StringRef asmStr = llvmModule->getModuleInlineAsm();
   llvm::SmallVector<mlir::Attribute> asmArrayAttr;
 
-  for (llvm::StringRef line : llvm::split(asmStr, '\n'))
-    if (!line.empty())
-      asmArrayAttr.push_back(builder.getStringAttr(line));
+  for (const llvm::Module::GlobalAsmFragment &Frag :
+       llvmModule->getModuleInlineAsm()) {
+    // TODO: Preserve module asm properties.
+    for (llvm::StringRef line : llvm::split(Frag.Asm, '\n'))
+      if (!line.empty())
+        asmArrayAttr.push_back(builder.getStringAttr(line));
+  }
 
-  mlirModule->setAttr(LLVM::LLVMDialect::getModuleLevelAsmAttrName(),
-                      builder.getArrayAttr(asmArrayAttr));
+  mlirModule->setDiscardableAttr(LLVM::LLVMDialect::getModuleLevelAsmAttrName(),
+                                 builder.getArrayAttr(asmArrayAttr));
 }
 
 LogicalResult ModuleImport::convertFunctions() {
@@ -1240,7 +1315,7 @@ void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
   value = bitEnumSet(value, FastmathFlags::afn, flags.approxFunc());
   value = bitEnumSet(value, FastmathFlags::reassoc, flags.allowReassoc());
   FastmathFlagsAttr attr = FastmathFlagsAttr::get(builder.getContext(), value);
-  iface->setAttr(iface.getFastmathAttrName(), attr);
+  iface.setFastmathAttr(attr);
 }
 
 /// Returns `type` if it is a builtin integer or floating-point vector type that
@@ -1469,12 +1544,12 @@ LogicalResult ModuleImport::convertAlias(llvm::GlobalAlias *alias) {
   OpBuilder::InsertionGuard guard = setGlobalInsertionPoint();
 
   Type type = convertType(alias->getValueType());
-  AliasOp aliasOp = AliasOp::create(builder, mlirModule.getLoc(), type,
-                                    convertLinkageFromLLVM(alias->getLinkage()),
-                                    alias->getName(),
-                                    /*dsoLocal=*/alias->isDSOLocal(),
-                                    /*thread_local=*/alias->isThreadLocal(),
-                                    /*attrs=*/ArrayRef<NamedAttribute>());
+  AliasOp aliasOp = AliasOp::create(
+      builder, mlirModule.getLoc(), type,
+      convertLinkageFromLLVM(alias->getLinkage()), alias->getName(),
+      /*dsoLocal=*/alias->isDSOLocal(),
+      convertThreadLocalModeFromLLVM(alias->getThreadLocalMode()),
+      /*attrs=*/ArrayRef<NamedAttribute>());
   globalInsertionOp = aliasOp;
 
   clearRegionState();
@@ -1503,7 +1578,8 @@ LogicalResult ModuleImport::convertIFunc(llvm::GlobalIFunc *ifunc) {
                   convertLinkageFromLLVM(ifunc->getLinkage()),
                   ifunc->isDSOLocal(), ifunc->getAddressSpace(),
                   convertUnnamedAddrFromLLVM(ifunc->getUnnamedAddr()),
-                  convertVisibilityFromLLVM(ifunc->getVisibility()));
+                  convertVisibilityFromLLVM(ifunc->getVisibility()),
+                  /*sym_visibility=*/nullptr);
   return success();
 }
 
@@ -1614,7 +1690,8 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
       convertLinkageFromLLVM(globalVar->getLinkage()), StringRef(globalName),
       valueAttr, alignment, /*addrSpace=*/globalVar->getAddressSpace(),
       /*dsoLocal=*/globalVar->isDSOLocal(),
-      /*thread_local=*/globalVar->isThreadLocal(), /*comdat=*/SymbolRefAttr(),
+      convertThreadLocalModeFromLLVM(globalVar->getThreadLocalMode()),
+      /*comdat=*/SymbolRefAttr(),
       /*attrs=*/ArrayRef<NamedAttribute>(), /*dbgExprs=*/globalExpressionAttrs);
   globalInsertionOp = globalOp;
 
@@ -1639,6 +1716,42 @@ LogicalResult ModuleImport::convertGlobal(llvm::GlobalVariable *globalVar) {
 
   if (globalVar->hasComdat())
     globalOp.setComdatAttr(comdatMapping.lookup(globalVar->getComdat()));
+
+  if (llvm::MDNode *associatedMD =
+          globalVar->getMetadata(llvm::LLVMContext::MD_associated)) {
+    FlatSymbolRefAttr symbolRef;
+    if (associatedMD->getNumOperands() == 1)
+      symbolRef =
+          getMetadataOperandSymbolRef(associatedMD->getOperand(0).get());
+    if (!symbolRef) {
+      emitWarning(globalOp.getLoc()) << "unhandled associated metadata: "
+                                     << diagMD(associatedMD, llvmModule.get())
+                                     << " on " << diag(*globalVar);
+    } else {
+      globalOp.setAssociatedAttr(symbolRef);
+    }
+  }
+
+  if (llvm::MDNode *absSymMD =
+          globalVar->getMetadata(llvm::LLVMContext::MD_absolute_symbol)) {
+    unsigned numOps = absSymMD->getNumOperands();
+    if (numOps >= 2 && numOps % 2 == 0) {
+      SmallVector<Attribute> rangeAttrs;
+      rangeAttrs.reserve(numOps);
+
+      for (const llvm::MDOperand &op : absSymMD->operands()) {
+        auto *constInt = llvm::mdconst::dyn_extract<llvm::ConstantInt>(op);
+        if (!constInt)
+          break;
+
+        auto intType = IntegerType::get(context, constInt->getBitWidth());
+        rangeAttrs.push_back(IntegerAttr::get(intType, constInt->getValue()));
+      }
+
+      if (rangeAttrs.size() == numOps)
+        globalOp.setAbsoluteSymbolAttr(ArrayAttr::get(context, rangeAttrs));
+    }
+  }
 
   processTargetSpecificAttrs(globalVar, globalOp);
 
@@ -1982,7 +2095,7 @@ FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
   // attribute.
   if (auto *mdAsVal = dyn_cast<llvm::MetadataAsValue>(value)) {
     llvm::Metadata *md = mdAsVal->getMetadata();
-    Attribute mdAttr = convertMetadataToAttr(context, md);
+    Attribute mdAttr = convertMetadataToAttr(md);
     if (!mdAttr)
       return emitError(mlirModule.getLoc())
              << "unsupported metadata: " << diagMD(md, llvmModule.get());
@@ -2812,6 +2925,7 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("target-features"),
     StringLiteral("trap-func-name"),
     StringLiteral("tune-cpu"),
+    StringLiteral("uniform-work-group-size"),
     StringLiteral("uwtable"),
     StringLiteral("vscale_range"),
     StringLiteral("willreturn"),
@@ -2910,6 +3024,8 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setOptsize(true);
   if (func->hasFnAttribute("save-reg-params"))
     funcOp.setSaveRegParams(true);
+  if (func->hasFnAttribute("uniform-work-group-size"))
+    funcOp.setUniformWorkGroupSize(true);
   if (func->hasFnAttribute(llvm::Attribute::MinSize))
     funcOp.setMinsize(true);
   if (func->hasFnAttribute(llvm::Attribute::ReturnsTwice))
@@ -3124,6 +3240,9 @@ static LogicalResult convertCallBaseAttributes(llvm::CallBase *inst, Op op) {
 
 LogicalResult ModuleImport::convertInvokeAttributes(llvm::InvokeInst *inst,
                                                     InvokeOp op) {
+  llvm::AttributeList invokeAttrs = inst->getAttributes();
+  op.setUniformWorkGroupSize(
+      invokeAttrs.getFnAttr("uniform-work-group-size").isValid());
   return convertCallBaseAttributes(inst, op);
 }
 
@@ -3143,6 +3262,8 @@ LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
   op.setOptsize(
       callAttrs.getFnAttr(llvm::Attribute::OptimizeForSize).isValid());
   op.setSaveRegParams(callAttrs.getFnAttr("save-reg-params").isValid());
+  op.setUniformWorkGroupSize(
+      callAttrs.getFnAttr("uniform-work-group-size").isValid());
   op.setBuiltin(callAttrs.getFnAttr(llvm::Attribute::Builtin).isValid());
   op.setNobuiltin(callAttrs.getFnAttr(llvm::Attribute::NoBuiltin).isValid());
   op.setMinsize(callAttrs.getFnAttr(llvm::Attribute::MinSize).isValid());
@@ -3246,18 +3367,45 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   // Handle Function attributes.
   processFunctionAttributes(func, funcOp);
 
-  // Convert non-debug metadata by using the dialect interface.
+  // Convert non-debug metadata by using the dialect interface. Metadata without
+  // a kind-specific conversion is preserved in the generic function metadata
+  // carrier.
   SmallVector<std::pair<unsigned, llvm::MDNode *>> allMetadata;
   func->getAllMetadata(allMetadata);
+  SmallVector<StringRef> metadataNames;
+  llvmModule->getMDKindNames(metadataNames);
+  SmallVector<Attribute> functionMetadata;
   for (auto &[kind, node] : allMetadata) {
-    if (!iface.isConvertibleMetadata(kind))
+    if (kind == llvm::LLVMContext::MD_dbg)
       continue;
-    if (failed(iface.setMetadataAttrs(builder, kind, node, funcOp, *this))) {
+
+    llvm::MDNode *metadataNode = node;
+    auto emitUnhandledFunctionMetadataWarning = [&]() {
       emitWarning(funcOp.getLoc())
-          << "unhandled function metadata: " << diagMD(node, llvmModule.get())
-          << " on " << diag(*func);
+          << "unhandled function metadata: "
+          << diagMD(metadataNode, llvmModule.get()) << " on " << diag(*func);
+    };
+
+    if (iface.isConvertibleMetadata(kind)) {
+      if (succeeded(iface.setMetadataAttrs(builder, kind, metadataNode, funcOp,
+                                           *this)))
+        continue;
+      emitUnhandledFunctionMetadataWarning();
+      continue;
     }
+
+    Attribute nodeAttr = convertMetadataToAttr(metadataNode);
+    auto mdNodeAttr = dyn_cast_if_present<LLVM::MDNodeAttr>(nodeAttr);
+    if (!mdNodeAttr || kind >= metadataNames.size()) {
+      emitUnhandledFunctionMetadataWarning();
+      continue;
+    }
+
+    functionMetadata.push_back(LLVM::FunctionMetadataAttr::get(
+        context, builder.getStringAttr(metadataNames[kind]), mdNodeAttr));
   }
+  if (!functionMetadata.empty())
+    funcOp.setFunctionMetadataAttr(builder.getArrayAttr(functionMetadata));
 
   if (func->isDeclaration())
     return success();

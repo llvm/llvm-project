@@ -202,6 +202,8 @@ public:
 
   ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
 
+  bool isValidFeatureName(StringRef Name) const override;
+
   llvm::APInt getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   ArrayRef<const char *> getGCCRegNames() const override;

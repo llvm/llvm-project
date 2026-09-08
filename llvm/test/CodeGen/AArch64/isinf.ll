@@ -47,7 +47,7 @@ define i32 @replace_isinf_call_f32(float %x) {
 ; CHECK-GI-NEXT:    cset w0, eq
 ; CHECK-GI-NEXT:    ret
   %abs = tail call float @llvm.fabs.f32(float %x)
-  %cmpinf = fcmp oeq float %abs, 0x7FF0000000000000
+  %cmpinf = fcmp oeq float %abs, +inf
   %ret = zext i1 %cmpinf to i32
   ret i32 %ret
 }
@@ -71,7 +71,7 @@ define i32 @replace_isinf_call_f64(double %x) {
 ; CHECK-GI-NEXT:    cset w0, eq
 ; CHECK-GI-NEXT:    ret
   %abs = tail call double @llvm.fabs.f64(double %x)
-  %cmpinf = fcmp oeq double %abs, 0x7FF0000000000000
+  %cmpinf = fcmp oeq double %abs, +inf
   %ret = zext i1 %cmpinf to i32
   ret i32 %ret
 }
@@ -82,11 +82,11 @@ define i32 @replace_isinf_call_f128(fp128 %x) {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    str q0, [sp, #-16]!
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-SD-NEXT:    ldp x9, x8, [sp], #16
-; CHECK-SD-NEXT:    and x8, x8, #0x7fffffffffffffff
-; CHECK-SD-NEXT:    eor x8, x8, #0x7fff000000000000
-; CHECK-SD-NEXT:    orr x8, x9, x8
-; CHECK-SD-NEXT:    cmp x8, #0
+; CHECK-SD-NEXT:    mov x8, #-562949953421312 // =0xfffe000000000000
+; CHECK-SD-NEXT:    ldp x10, x9, [sp], #16
+; CHECK-SD-NEXT:    lsl x9, x9, #1
+; CHECK-SD-NEXT:    cmp x10, #0
+; CHECK-SD-NEXT:    ccmp x8, x9, #0, eq
 ; CHECK-SD-NEXT:    cset w0, eq
 ; CHECK-SD-NEXT:    ret
 ;

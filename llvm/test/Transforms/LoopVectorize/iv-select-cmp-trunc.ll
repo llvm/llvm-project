@@ -18,7 +18,7 @@ define i32 @select_icmp_const_truncated_iv_widened_exit(ptr %a, i32 %n) {
 ; CHECK-VF4IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 4
 ; CHECK-VF4IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_PH]]:
-; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
 ; CHECK-VF4IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-VF4IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_BODY]]:
@@ -71,7 +71,7 @@ define i32 @select_icmp_const_truncated_iv_widened_exit(ptr %a, i32 %n) {
 ; CHECK-VF4IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 16
 ; CHECK-VF4IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_PH]]:
-; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 16
+; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 15
 ; CHECK-VF4IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-VF4IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_BODY]]:
@@ -145,7 +145,7 @@ define i32 @select_icmp_const_truncated_iv_widened_exit(ptr %a, i32 %n) {
 ; CHECK-VF1IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 4
 ; CHECK-VF1IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_PH]]:
-; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
 ; CHECK-VF1IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-VF1IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_BODY]]:
@@ -538,7 +538,7 @@ define i32 @select_icmp_truncated_unsigned_iv_range(ptr %a) {
 ; CHECK-VF4IC1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC1-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC1-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 2147483646, i32 2147483647, i32 -2147483648, i32 -2147483647>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-VF4IC1-NEXT:    [[IV:%.*]] = add i64 2147483646, [[INDEX]]
+; CHECK-VF4IC1-NEXT:    [[IV:%.*]] = add nuw i64 2147483646, [[INDEX]]
 ; CHECK-VF4IC1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; CHECK-VF4IC1-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[ARRAYIDX]], align 4
 ; CHECK-VF4IC1-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], splat (i32 3)
@@ -571,7 +571,7 @@ define i32 @select_icmp_truncated_unsigned_iv_range(ptr %a) {
 ; CHECK-VF4IC4-NEXT:    [[STEP_ADD:%.*]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-VF4IC4-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i32> [[STEP_ADD]], splat (i32 4)
 ; CHECK-VF4IC4-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i32> [[STEP_ADD_2]], splat (i32 4)
-; CHECK-VF4IC4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 2147483646, [[INDEX]]
+; CHECK-VF4IC4-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i64 2147483646, [[INDEX]]
 ; CHECK-VF4IC4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-VF4IC4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 4
 ; CHECK-VF4IC4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 8
@@ -692,7 +692,7 @@ define i32 @select_icmp_const_truncated_iv_unwidened_exit(ptr %a, i64 %n) {
 ; CHECK-VF4IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF4IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_PH]]:
-; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF4IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_BODY]]:
@@ -746,7 +746,7 @@ define i32 @select_icmp_const_truncated_iv_unwidened_exit(ptr %a, i64 %n) {
 ; CHECK-VF4IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; CHECK-VF4IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_PH]]:
-; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 16
+; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; CHECK-VF4IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF4IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_BODY]]:
@@ -833,7 +833,7 @@ define i32 @select_icmp_const_truncated_iv_unwidened_exit(ptr %a, i64 %n) {
 ; CHECK-VF1IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-VF1IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_PH]]:
-; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], 4
+; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 3
 ; CHECK-VF1IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-VF1IC4-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-VF1IC4:       [[FOR_BODY]]:
@@ -954,7 +954,7 @@ define i32 @select_icmp_const_truncated_iv_unsigned_loop_guard(ptr %a, i32 %n) {
 ; CHECK-VF4IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 4
 ; CHECK-VF4IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_PH]]:
-; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
 ; CHECK-VF4IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-VF4IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_BODY]]:
@@ -1010,7 +1010,7 @@ define i32 @select_icmp_const_truncated_iv_unsigned_loop_guard(ptr %a, i32 %n) {
 ; CHECK-VF4IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 16
 ; CHECK-VF4IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_PH]]:
-; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 16
+; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 15
 ; CHECK-VF4IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-VF4IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_BODY]]:
@@ -1096,7 +1096,7 @@ define i32 @select_icmp_const_truncated_iv_unsigned_loop_guard(ptr %a, i32 %n) {
 ; CHECK-VF1IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 4
 ; CHECK-VF1IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_PH]]:
-; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
 ; CHECK-VF1IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-VF1IC4-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-VF1IC4:       [[FOR_BODY]]:
@@ -1216,7 +1216,7 @@ define i32 @not_vectorized_select_icmp_truncated_iv_out_of_bound(ptr %a) {
 ; CHECK-VF4IC1-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 331), %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC1-NEXT:    [[LAST_ACTIVE_MASK:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC1-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 -2, i32 -1, i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-VF4IC1-NEXT:    [[IV:%.*]] = add i64 4294967294, [[INDEX]]
+; CHECK-VF4IC1-NEXT:    [[IV:%.*]] = add nuw i64 4294967294, [[INDEX]]
 ; CHECK-VF4IC1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; CHECK-VF4IC1-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[ARRAYIDX]], align 4
 ; CHECK-VF4IC1-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], splat (i32 3)
@@ -1254,7 +1254,7 @@ define i32 @not_vectorized_select_icmp_truncated_iv_out_of_bound(ptr %a) {
 ; CHECK-VF4IC4-NEXT:    [[STEP_ADD:%.*]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-VF4IC4-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i32> [[STEP_ADD]], splat (i32 4)
 ; CHECK-VF4IC4-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i32> [[STEP_ADD_2]], splat (i32 4)
-; CHECK-VF4IC4-NEXT:    [[IV:%.*]] = add i64 4294967294, [[INDEX]]
+; CHECK-VF4IC4-NEXT:    [[IV:%.*]] = add nuw i64 4294967294, [[INDEX]]
 ; CHECK-VF4IC4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; CHECK-VF4IC4-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX]], i64 4
 ; CHECK-VF4IC4-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX]], i64 8
@@ -1389,7 +1389,7 @@ define i32 @not_vectorized_select_iv_icmp_no_guard(ptr %a, ptr %b, i32 %start, i
 ; CHECK-VF4IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 4
 ; CHECK-VF4IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_PH]]:
-; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
 ; CHECK-VF4IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-VF4IC1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[START]], i64 0
 ; CHECK-VF4IC1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -1445,7 +1445,7 @@ define i32 @not_vectorized_select_iv_icmp_no_guard(ptr %a, ptr %b, i32 %start, i
 ; CHECK-VF4IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 16
 ; CHECK-VF4IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_PH]]:
-; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 16
+; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 15
 ; CHECK-VF4IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-VF4IC4-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[START]], i64 0
 ; CHECK-VF4IC4-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -1540,7 +1540,7 @@ define i32 @not_vectorized_select_iv_icmp_no_guard(ptr %a, ptr %b, i32 %start, i
 ; CHECK-VF1IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 4
 ; CHECK-VF1IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_PH]]:
-; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
 ; CHECK-VF1IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-VF1IC4-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-VF1IC4:       [[FOR_BODY]]:
@@ -1876,7 +1876,7 @@ define i16 @not_vectorized_select_iv_icmp_overflow_unwidened_tripcount(ptr %a, p
 ; CHECK-VF4IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 4
 ; CHECK-VF4IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_PH]]:
-; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
 ; CHECK-VF4IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-VF4IC1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i16> poison, i16 [[START]], i64 0
 ; CHECK-VF4IC1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
@@ -1938,7 +1938,7 @@ define i16 @not_vectorized_select_iv_icmp_overflow_unwidened_tripcount(ptr %a, p
 ; CHECK-VF4IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 16
 ; CHECK-VF4IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_PH]]:
-; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 16
+; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 15
 ; CHECK-VF4IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-VF4IC4-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i16> poison, i16 [[START]], i64 0
 ; CHECK-VF4IC4-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
@@ -2039,7 +2039,7 @@ define i16 @not_vectorized_select_iv_icmp_overflow_unwidened_tripcount(ptr %a, p
 ; CHECK-VF1IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[WIDE_TRIP_COUNT]], 4
 ; CHECK-VF1IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_PH]]:
-; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[WIDE_TRIP_COUNT]], 4
+; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[WIDE_TRIP_COUNT]], 3
 ; CHECK-VF1IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[WIDE_TRIP_COUNT]], [[N_MOD_VF]]
 ; CHECK-VF1IC4-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK-VF1IC4:       [[FOR_BODY]]:
@@ -2186,7 +2186,7 @@ define i1 @select_with_trunc_i1_iv(i64 %n, i64 %start) {
 ; CHECK-VF4IC1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-VF4IC1-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC1:       [[VECTOR_PH]]:
-; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; CHECK-VF4IC1-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-VF4IC1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-VF4IC1-NEXT:    [[TMP1:%.*]] = add i64 [[START]], [[N_VEC]]
 ; CHECK-VF4IC1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[START]], i64 0
@@ -2239,7 +2239,7 @@ define i1 @select_with_trunc_i1_iv(i64 %n, i64 %start) {
 ; CHECK-VF4IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
 ; CHECK-VF4IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF4IC4:       [[VECTOR_PH]]:
-; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 16
+; CHECK-VF4IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 15
 ; CHECK-VF4IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-VF4IC4-NEXT:    [[TMP1:%.*]] = add i64 [[START]], [[N_VEC]]
 ; CHECK-VF4IC4-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[START]], i64 0
@@ -2319,7 +2319,7 @@ define i1 @select_with_trunc_i1_iv(i64 %n, i64 %start) {
 ; CHECK-VF1IC4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-VF1IC4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-VF1IC4:       [[VECTOR_PH]]:
-; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; CHECK-VF1IC4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-VF1IC4-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-VF1IC4-NEXT:    [[TMP1:%.*]] = add i64 [[START]], [[N_VEC]]
 ; CHECK-VF1IC4-NEXT:    br label %[[LOOP:.*]]

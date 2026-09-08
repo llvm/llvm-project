@@ -298,6 +298,18 @@ void SourceMgr::PrintIncludeStack(SMLoc IncludeLoc, raw_ostream &OS) const {
      << ":" << FindLineNumber(IncludeLoc, CurBuf) << ":\n";
 }
 
+void SourceMgr::printIncludeStackForDiagnostic(SMLoc Loc,
+                                               raw_ostream &OS) const {
+  if (!Loc.isValid())
+    return;
+  unsigned DiagCurBuffer = FindBufferContainingLoc(Loc);
+  if (DiagCurBuffer && DiagCurBuffer != getMainFileID()) {
+    SMLoc ParentIncludeLoc = getParentIncludeLoc(DiagCurBuffer);
+    // Ignore macro instantiation buffers to avoid redundant include stacks.
+    PrintIncludeStack(ParentIncludeLoc, OS);
+  }
+}
+
 SMDiagnostic SourceMgr::GetMessage(SMLoc Loc, SourceMgr::DiagKind Kind,
                                    const Twine &Msg, ArrayRef<SMRange> Ranges,
                                    ArrayRef<SMFixIt> FixIts) const {

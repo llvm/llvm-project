@@ -30,6 +30,9 @@ static_assert(!__objc_no, "");
 
 static_assert((long long)0x00000000FFFF0000 == 4294901760, "");
 
+int kk[3];
+static_assert(kk + 3 == &kk[3], "");
+
 constexpr bool b = number;
 static_assert(b, "");
 constexpr int one = true;
@@ -1326,14 +1329,26 @@ namespace StmtExprs {
     constexpr long a(bool x) { return x ? 0 : (intptr_t)&&lbl + (0 && ({lbl: 0;})); }
   }
 
-  /// GCC agrees with the bytecode interpreter here.
+  /// FIXME: This should be accepted.
+  /// BUT accepting this breaks test/OpenMP/for_codegen.cpp
   void switchInSE() {
-    static_assert(({ // ref-error {{not an integral constant expression}}
-          int i = 20;
+    static_assert(({ // both-error {{not an integral constant expression}}
+          int i = 20; // expected-note {{declared here}}
            switch(10) {
-             case 10: i = 300; // ref-note {{a constant expression cannot modify an object that is visible outside that expression}}
+             case 10: i = 300; // ref-note {{a constant expression cannot modify an object that is visible outside that expression}} \
+                               //  expected-note {{read of non-const variable 'i'}}
            }
            i;
+        }) == 300);
+  }
+
+  /// We reject the test above because of the read from i, not because of the modification.
+  /// FIXME: The sourcelocation for the broken read is incorrect.
+  void switchInSE2() {
+    static_assert(({ // both-error {{not an integral constant expression}}
+          int i = 20; // expected-note {{read of non-const variable}} \
+                      // both-note {{declared here}}
+           i; // ref-note {{read of non-const variable}}
         }) == 300);
   }
 

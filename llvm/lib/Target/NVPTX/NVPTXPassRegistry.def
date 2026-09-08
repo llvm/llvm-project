@@ -17,8 +17,12 @@
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 MODULE_PASS("generic-to-nvvm", GenericToNVVMPass())
+MODULE_PASS("nvptx-asm-printer-begin", NVPTXAsmPrinterBeginPass())
+MODULE_PASS("nvptx-asm-printer-end", NVPTXAsmPrinterEndPass())
+MODULE_PASS("nvptx-assign-valid-global-names", NVPTXAssignValidGlobalNamesPass())
 MODULE_PASS("nvptx-lower-args", NVPTXLowerArgsPass(*this))
 MODULE_PASS("nvptx-lower-ctor-dtor", NVPTXCtorDtorLoweringPass())
+MODULE_PASS("nvptx-promote-param-align", NVPTXPromoteParamAlignPass())
 MODULE_PASS("nvvm-reflect", NVVMReflectPass())
 #undef MODULE_PASS
 
@@ -37,10 +41,31 @@ FUNCTION_ALIAS_ANALYSIS("nvptx-aa", NVPTXAA())
 #ifndef FUNCTION_PASS
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
-FUNCTION_PASS("nvvm-intr-range", NVVMIntrRangePass())
+FUNCTION_PASS("nvptx-alloca-hoisting", NVPTXAllocaHoistingPass())
+FUNCTION_PASS("nvptx-atomic-lower", NVPTXAtomicLowerPass())
 FUNCTION_PASS("nvptx-copy-byval-args", NVPTXCopyByValArgsPass())
-FUNCTION_PASS("nvptx-set-byval-param-align", NVPTXSetByValParamAlignPass())
+FUNCTION_PASS("nvptx-image-optimizer", NVPTXImageOptimizerPass())
+FUNCTION_PASS("nvptx-ir-peephole", NVPTXIRPeepholePass())
+FUNCTION_PASS("nvptx-lower-aggr-copies", NVPTXLowerAggrCopiesPass())
+FUNCTION_PASS("nvptx-lower-alloca", NVPTXLowerAllocaPass())
+FUNCTION_PASS("nvptx-lower-unreachable",
+              NVPTXLowerUnreachablePass(Options.TrapUnreachable,
+                                        Options.NoTrapAfterNoreturn))
 FUNCTION_PASS("nvptx-mark-kernel-ptrs-global", NVPTXMarkKernelPtrsGlobalPass())
 FUNCTION_PASS("nvptx-tag-invariant-loads", NVPTXTagInvariantLoadsPass())
-FUNCTION_PASS("nvptx-ir-peephole", NVPTXIRPeepholePass())
+FUNCTION_PASS("nvvm-intr-range", NVVMIntrRangePass())
 #undef FUNCTION_PASS
+
+#ifndef MACHINE_FUNCTION_PASS
+#define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
+#endif
+MACHINE_FUNCTION_PASS("nvptx-address-folder", NVPTXAddressFolderPass())
+MACHINE_FUNCTION_PASS("nvptx-asm-printer", NVPTXAsmPrinterPass())
+MACHINE_FUNCTION_PASS("nvptx-forward-params", NVPTXForwardParamsPass())
+MACHINE_FUNCTION_PASS("nvptx-isel", NVPTXISelDAGToDAGPass(*this, getOptLevel()))
+MACHINE_FUNCTION_PASS("nvptx-peephole", NVPTXPeepholePass())
+MACHINE_FUNCTION_PASS("nvptx-prolog-epilog", NVPTXPrologEpilogPass())
+MACHINE_FUNCTION_PASS("nvptx-proxyreg-erasure", NVPTXProxyRegErasurePass())
+MACHINE_FUNCTION_PASS("nvptx-replace-image-handles",
+                      NVPTXReplaceImageHandlesPass())
+#undef MACHINE_FUNCTION_PASS

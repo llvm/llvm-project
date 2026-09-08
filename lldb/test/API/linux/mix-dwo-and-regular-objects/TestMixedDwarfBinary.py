@@ -8,7 +8,7 @@ from lldbsuite.test import lldbutil
 class TestMixedDwarfBinary(TestBase):
     @no_debug_info_test  # Prevent the genaration of the dwarf version of this test
     @add_test_categories(["dwo"])
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_mixed_dwarf(self):
         """Test that 'frame variable' works
         for the executable built from two source files compiled

@@ -108,8 +108,8 @@ static bool hasPhysRegClassForType(const TargetRegisterInfo &TRI,
   if (TRI.isTypeLegalForClass(*RC, Ty))
     return true;
 
-  return llvm::any_of(TRI.regclasses(), [&](const TargetRegisterClass *RC) {
-    return RC->contains(Reg) && TRI.isTypeLegalForClass(*RC, Ty);
+  return llvm::any_of(TRI.regclasses(), [&](const TargetRegisterClass &RC) {
+    return RC.contains(Reg) && TRI.isTypeLegalForClass(RC, Ty);
   });
 }
 
@@ -731,12 +731,19 @@ void MachineVerifier::visitMachineFunctionBefore() {
   }
 }
 
+static bool hasPHIs(const MachineFunction &MF) {
+  return !MF.getProperties().hasNoPHIs() &&
+         any_of(MF, [](const MachineBasicBlock &MBB) {
+           return !MBB.phis().empty();
+         });
+}
+
 void
 MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   FirstTerminator = nullptr;
   FirstNonPHI = nullptr;
 
-  if (!MF->getProperties().hasNoPHIs() && MRI->tracksLiveness()) {
+  if (MRI->tracksLiveness() && hasPHIs(*MF)) {
     // If this block has allocatable physical registers live-in, check that
     // it is an entry block or landing pad.
     for (const auto &LI : MBB->liveins()) {
@@ -2191,6 +2198,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   case TargetOpcode::G_VECREDUCE_FMIN:
   case TargetOpcode::G_VECREDUCE_FMAXIMUM:
   case TargetOpcode::G_VECREDUCE_FMINIMUM:
+  case TargetOpcode::G_VECREDUCE_FMAXIMUMNUM:
+  case TargetOpcode::G_VECREDUCE_FMINIMUMNUM:
   case TargetOpcode::G_VECREDUCE_ADD:
   case TargetOpcode::G_VECREDUCE_MUL:
   case TargetOpcode::G_VECREDUCE_AND:
@@ -2360,7 +2369,7 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     if (!MI->getOperand(0).isReg() || !MI->getOperand(0).isDef())
       report("Unspillable Terminator does not define a reg", MI);
     Register Def = MI->getOperand(0).getReg();
-    if (Def.isVirtual() && !MF->getProperties().hasNoPHIs() &&
+    if (Def.isVirtual() && hasPHIs(*MF) &&
         std::distance(MRI->use_nodbg_begin(Def), MRI->use_nodbg_end()) > 1)
       report("Unspillable Terminator expected to have at most one use!", MI);
   }

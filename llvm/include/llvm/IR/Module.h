@@ -29,6 +29,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/IR/SymbolTableListTraits.h"
+#include "llvm/IR/ValueMap.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -169,6 +170,45 @@ public:
         : Behavior(B), Key(K), Val(V) {}
   };
 
+  struct GlobalAsmProperties {
+    std::string TargetFeatures;
+    std::string TargetCPU;
+
+    /// Set a property using a string name.
+    /// Returns whether the property name was valid.
+    LLVM_ABI bool set(StringRef Name, std::string Value);
+
+    /// Get a list of set properties as pairs of key and value.
+    LLVM_ABI SmallVector<std::pair<StringRef, StringRef>> getAsStrings() const;
+
+    bool operator==(const GlobalAsmProperties &Other) const {
+      return TargetFeatures == Other.TargetFeatures &&
+             TargetCPU == Other.TargetCPU;
+    }
+
+    bool operator!=(const GlobalAsmProperties &Other) const {
+      return !(*this == Other);
+    }
+  };
+
+  struct GlobalAsmFragment {
+    std::string Asm;
+    GlobalAsmProperties Props;
+
+    GlobalAsmFragment(StringRef Asm) : GlobalAsmFragment(Asm.str()) {}
+    GlobalAsmFragment(std::string AsmArg, GlobalAsmProperties Props = {})
+        : Asm(std::move(AsmArg)), Props(std::move(Props)) {
+      if (!Asm.empty() && Asm.back() != '\n')
+        Asm += '\n';
+    }
+
+    bool empty() const { return Asm.empty(); }
+
+    bool hasSameProperties(const GlobalAsmFragment &Other) const {
+      return Props == Other.Props;
+    }
+  };
+
 /// @}
 /// @name Member Variables
 /// @{
@@ -180,7 +220,8 @@ private:
   AliasListType AliasList;        ///< The Aliases in the module
   IFuncListType IFuncList;        ///< The IFuncs in the module
   NamedMDListType NamedMDList;    ///< The named metadata in the module
-  std::string GlobalScopeAsm;     ///< Inline Asm at global scope.
+  /// Inline Asm at the global scope.
+  SmallVector<GlobalAsmFragment, 0> GlobalScopeAsm;
   std::unique_ptr<ValueSymbolTable> ValSymTab; ///< Symbol table for values
   ComdatSymTabType ComdatSymTab;  ///< Symbol table for COMDATs
   std::unique_ptr<MemoryBuffer>
@@ -230,10 +271,14 @@ public:
   }
 
   /// \see BasicBlock::convertFromNewDbgValues.
-  void convertFromNewDbgValues() {
+  /// Returns true if any function's conversion modified the module.
+  bool convertFromNewDbgValues() {
+    bool Modified = false;
     for (auto &F : *this) {
-      F.convertFromNewDbgValues();
+      if (F.convertFromNewDbgValues())
+        Modified = true;
     }
+    return Modified;
   }
 
   /// The Module constructor. Note that there is no default constructor. You
@@ -287,8 +332,17 @@ public:
   LLVMContext &getContext() const { return Context; }
 
   /// Get any module-scope inline assembly blocks.
-  /// @returns a string containing the module-scope inline assembly blocks.
-  const std::string &getModuleInlineAsm() const { return GlobalScopeAsm; }
+  ArrayRef<GlobalAsmFragment> getModuleInlineAsm() const {
+    return GlobalScopeAsm;
+  }
+
+  /// Get any module-scope inline assembly blocks.
+  MutableArrayRef<GlobalAsmFragment> getModuleInlineAsm() {
+    return GlobalScopeAsm;
+  }
+
+  /// Return whether there is any module-scope inline assembly.
+  bool hasModuleInlineAsm() const { return !GlobalScopeAsm.empty(); }
 
   /// Get a RandomNumberGenerator salted for use with this module. The
   /// RNG can be seeded via -rng-seed=<uint64> and is salted with the
@@ -325,20 +379,45 @@ public:
   /// Set the target triple.
   void setTargetTriple(Triple T) { TargetTriple = std::move(T); }
 
+  void removeModuleInlineAsm() { GlobalScopeAsm.clear(); }
+
   /// Set the module-scope inline assembly blocks.
   /// A trailing newline is added if the input doesn't have one.
-  void setModuleInlineAsm(StringRef Asm) {
-    GlobalScopeAsm = std::string(Asm);
-    if (!GlobalScopeAsm.empty() && GlobalScopeAsm.back() != '\n')
-      GlobalScopeAsm += '\n';
+  void setModuleInlineAsm(GlobalAsmFragment Fragment) {
+    GlobalScopeAsm.clear();
+    appendModuleInlineAsm(std::move(Fragment));
+  }
+
+  void setModuleInlineAsm(ArrayRef<GlobalAsmFragment> Fragments) {
+    GlobalScopeAsm.clear();
+    append_range(GlobalScopeAsm, Fragments);
   }
 
   /// Append to the module-scope inline assembly blocks.
   /// A trailing newline is added if the input doesn't have one.
-  void appendModuleInlineAsm(StringRef Asm) {
-    GlobalScopeAsm += Asm;
-    if (!GlobalScopeAsm.empty() && GlobalScopeAsm.back() != '\n')
-      GlobalScopeAsm += '\n';
+  void appendModuleInlineAsm(GlobalAsmFragment Fragment) {
+    if (Fragment.empty())
+      return;
+
+    if (!GlobalScopeAsm.empty() &&
+        GlobalScopeAsm.back().hasSameProperties(Fragment)) {
+      GlobalScopeAsm.back().Asm += Fragment.Asm;
+    } else {
+      GlobalScopeAsm.emplace_back(std::move(Fragment));
+    }
+  }
+
+  /// Prepend to the module-scope inline assembly blocks.
+  void prependModuleInlineAsm(GlobalAsmFragment Fragment) {
+    if (Fragment.empty())
+      return;
+
+    if (!GlobalScopeAsm.empty() &&
+        GlobalScopeAsm.front().hasSameProperties(Fragment)) {
+      GlobalScopeAsm.front().Asm.insert(0, Fragment.Asm);
+    } else {
+      GlobalScopeAsm.insert(GlobalScopeAsm.begin(), std::move(Fragment));
+    }
   }
 
 /// @}
@@ -529,12 +608,20 @@ public:
   /// the module-level flags named metadata if it doesn't already exist.
   void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, Metadata *Val);
   void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, Constant *Val);
+  void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, uint64_t Val);
   void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, uint32_t Val);
+  inline void addModuleFlag(ModFlagBehavior Behavior, StringRef Key, int Val) {
+    addModuleFlag(Behavior, Key, static_cast<uint32_t>(Val));
+  }
   void addModuleFlag(MDNode *Node);
   /// Like addModuleFlag but replaces the old module flag if it already exists.
   void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, Metadata *Val);
   void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, Constant *Val);
+  void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, uint64_t Val);
   void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, uint32_t Val);
+  inline void setModuleFlag(ModFlagBehavior Behavior, StringRef Key, int Val) {
+    setModuleFlag(Behavior, Key, static_cast<uint32_t>(Val));
+  }
 
   /// @}
   /// @name Materialization
@@ -578,10 +665,39 @@ public:
   // Use global_size() to get the total number of global variables.
   // Use globals() to get the range of all global variables.
 
+  std::optional<GlobalValue::GUID> getGUID(const Value *V) const {
+    const auto It = ValueToGUIDMap.find(V);
+    if (It == ValueToGUIDMap.end())
+      return std::nullopt;
+
+    return It->second;
+  }
+
+  void insertGUID(const Value *V, GlobalValue::GUID GUID) {
+    const auto [It, WasInserted] = ValueToGUIDMap.insert({V, GUID});
+
+    (void)It, (void)WasInserted;
+#ifndef NDEBUG
+    if (!WasInserted) {
+      assert((It->second == GUID) && "insertGUID called with different value");
+    }
+#endif
+  }
+
 private:
-/// @}
-/// @name Direct access to the globals list, functions list, and symbol table
-/// @{
+  /// Do not transfer GUID of a value to the value it is being RAUWed with.
+  struct GUIDMapConfig : ValueMapConfig<const Value *> {
+    enum { FollowRAUW = false };
+  };
+
+  /// A mapping directly from Value to GUID. Populated from bitcode
+  /// (MODULE_CODE_GUIDLIST). Necessary for lazy-loading modules, where we
+  /// don't load metadata.
+  ValueMap<const Value *, GlobalValue::GUID, GUIDMapConfig> ValueToGUIDMap;
+
+  /// @}
+  /// @name Direct access to the globals list, functions list, and symbol table
+  /// @{
 
   /// Get the Module's list of global variables (constant).
   const GlobalListType   &getGlobalList() const       { return GlobalList; }
@@ -881,6 +997,11 @@ public:
              bool ShouldPreserveUseListOrder = false,
              bool IsForDebug = false) const;
 
+  /// Renumber the IDs stored in metadata nodes into canonical assembly order.
+  /// This mutates the IDs and should only be used immediately before final
+  /// assembly output.
+  void renumberMetadataForAssembly();
+
   /// Dump the module to stderr (for debugging).
   void dump() const;
 
@@ -941,6 +1062,27 @@ public:
 
   /// Set the code model (tiny, small, kernel, medium or large)
   void setCodeModel(CodeModel::Model CL);
+  /// @}
+
+  /// @}
+  /// @name Utility functions for querying the long double format
+  /// @{
+
+  /// Returns the long double format from the "long-double-type" module flag,
+  /// or the triple default when the flag is absent.
+  LongDoubleFormat getLongDoubleFormat() const;
+
+  /// Set the long double format.
+  void setLongDoubleFormat(LongDoubleFormat Format);
+  /// @}
+
+  /// @}
+  /// @name Utility function for querying the floating-point ABI
+  /// @{
+
+  /// Returns the floating-point ABI recorded by the "float-abi" module flag, or
+  /// the ABI implied by the target triple when the flag is absent.
+  FloatABI::ABIType getFloatABI() const;
   /// @}
 
   /// @}

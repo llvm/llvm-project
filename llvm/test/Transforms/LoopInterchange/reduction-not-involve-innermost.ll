@@ -25,10 +25,12 @@ define void @f() {
 ; CHECK-NEXT:    [[RED_I]] = phi i8 [ [[RED_J_NEXT_LCSSA:%.*]], %[[LOOP_J_LATCH_SPLIT]] ], [ 0, %[[LOOP_J_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[LOOP_I_HEADER_PREHEADER]]
 ; CHECK:       [[LOOP_K]]:
-; CHECK-NEXT:    [[K:%.*]] = phi i64 [ 0, %[[LOOP_I_HEADER]] ], [ [[K_INC:%.*]], %[[LOOP_K]] ]
+; CHECK-NEXT:    br label %[[LOOP_K1:.*]]
+; CHECK:       [[LOOP_K1]]:
+; CHECK-NEXT:    [[K:%.*]] = phi i64 [ 0, %[[LOOP_K]] ], [ [[K_INC:%.*]], %[[LOOP_K1]] ]
 ; CHECK-NEXT:    [[K_INC]] = add i64 [[K]], 1
 ; CHECK-NEXT:    [[EC_K:%.*]] = icmp eq i64 [[K_INC]], 10
-; CHECK-NEXT:    br i1 [[EC_K]], label %[[LOOP_J_LATCH:.*]], label %[[LOOP_K]]
+; CHECK-NEXT:    br i1 [[EC_K]], label %[[LOOP_J_LATCH:.*]], label %[[LOOP_K1]]
 ; CHECK:       [[LOOP_J_LATCH]]:
 ; CHECK-NEXT:    [[RED_J_NEXT]] = or i8 [[RED_J]], 42
 ; CHECK-NEXT:    [[J_INC:%.*]] = add i64 [[J]], 1

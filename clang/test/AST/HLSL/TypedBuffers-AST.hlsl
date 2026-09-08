@@ -60,8 +60,8 @@ RESOURCE<float> Buffer;
 
 // CHECK: FinalAttr {{.*}} Implicit final
 // CHECK-NEXT: FieldDecl {{.*}} implicit __handle '__hlsl_resource_t
-// CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
-// CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
+// CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 
 // Default constructor
@@ -171,7 +171,7 @@ RESOURCE<float> Buffer;
 // CHECK-SRV-NEXT: CallExpr
 // CHECK-SRV-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-SRV-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // CHECK-SRV-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-SRV-SAME: ' lvalue .__handle {{.*}}
 // CHECK-SRV-NEXT: CXXThisExpr {{.*}} 'const hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
@@ -187,7 +187,7 @@ RESOURCE<float> Buffer;
 // CHECK-UAV-NEXT: CallExpr
 // CHECK-UAV-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-UAV-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
+// CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
 // CHECK-UAV-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-UAV-SAME: ' lvalue .__handle {{.*}}
 // CHECK-UAV-NEXT: CXXThisExpr {{.*}} 'const hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
@@ -205,8 +205,8 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: CallExpr
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
-// CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
+// CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-SAME: ' lvalue .__handle {{.*}}
 // CHECK-NEXT: CXXThisExpr {{.*}} 'const hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
@@ -224,8 +224,8 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: CallExpr
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_load_with_status' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
-// CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
+// CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-NEXT: CXXThisExpr {{.*}} 'const hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'Index' 'unsigned int'
@@ -251,6 +251,6 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: BuiltinType {{.*}}  'float'
 // CHECK-NEXT: FinalAttr {{.*}} Implicit final
 // CHECK-NEXT: FieldDecl {{.*}} implicit referenced __handle '__hlsl_resource_t
-// CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
-// CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class(SRV)]]
+// CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class("UAV")]]
+// CHECK-SRV-SAME{LITERAL}: [[hlsl::resource_class("SRV")]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(float)]]

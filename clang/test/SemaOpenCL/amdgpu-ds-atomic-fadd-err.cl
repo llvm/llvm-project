@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -cl-std=CL2.0 -triple amdgcn -target-cpu gfx90a -verify %s
+// RUN: %clang_cc1 -fsyntax-only -cl-std=CL2.0 -triple amdgpu9.0a -verify %s
 
 kernel void test_ds_atomic_fadd_f32_valid(__local float *lds_ptr, float val) {
   float result;

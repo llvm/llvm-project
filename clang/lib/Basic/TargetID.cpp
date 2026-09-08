@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/TargetID.h"
+#include "clang/Basic/OffloadArch.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -24,16 +25,17 @@ getAllPossibleAMDGPUTargetIDFeatures(const llvm::Triple &T,
                                      llvm::StringRef Proc) {
   // Entries in returned vector should be in alphabetical order.
   llvm::SmallVector<llvm::StringRef, 4> Ret;
-  auto ProcKind = T.isAMDGCN() ? llvm::AMDGPU::parseArchAMDGCN(Proc)
-                               : llvm::AMDGPU::parseArchR600(Proc);
+  if (!T.isAMDGCN())
+    return Ret;
+  llvm::AMDGPU::GPUKind ProcKind = llvm::AMDGPU::parseArchAMDGCN(Proc);
   if (ProcKind == llvm::AMDGPU::GK_NONE)
     return Ret;
-  auto Features = T.isAMDGCN() ? llvm::AMDGPU::getArchAttrAMDGCN(ProcKind)
-                               : llvm::AMDGPU::getArchAttrR600(ProcKind);
-  if (Features & llvm::AMDGPU::FEATURE_SRAMECC)
+  const llvm::AMDGPU::AMDGPUFeatureBitset &Features =
+      llvm::AMDGPU::getFeatureBitset(ProcKind);
+  if (Features.test(llvm::AMDGPU::FEAT_SRAMECC_SUPPORT))
     Ret.push_back("sramecc");
   // Only allow xnack in target ID if the processor supports on/off modes.
-  if (Features & llvm::AMDGPU::FEATURE_XNACK_ON_OFF_MODES)
+  if (Features.test(llvm::AMDGPU::FEAT_XNACK_ON_OFF_MODES))
     Ret.push_back("xnack");
   return Ret;
 }
@@ -50,9 +52,20 @@ getAllPossibleTargetIDFeatures(const llvm::Triple &T,
 /// Returns canonical processor name or empty string if \p Processor is invalid.
 static llvm::StringRef getCanonicalProcessorName(const llvm::Triple &T,
                                                  llvm::StringRef Processor) {
-  if (T.isAMDGPU())
-    return llvm::AMDGPU::getCanonicalArchName(T, Processor);
-  return Processor;
+  if (!T.isAMDGPU())
+    return Processor;
+
+  if (llvm::StringRef Name = llvm::AMDGPU::getCanonicalArchName(T, Processor);
+      !Name.empty())
+    return Name;
+
+  // Accept the AMDGPU subarch triple spelling (e.g. "amdgpu9.00") as an alias
+  // for the corresponding gfx processor.
+  OffloadArch Arch =
+      getSubArchOffloadArch(llvm::Triple::parseSubArch(Processor));
+  if (Arch.isUnknown())
+    return {};
+  return OffloadArchToString(Arch);
 }
 
 llvm::StringRef getProcessorFromTargetID(const llvm::Triple &T,

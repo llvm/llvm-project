@@ -50,6 +50,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -619,7 +620,7 @@ bool CodeGenPrepare::_run(Function &F) {
       // optimization to those blocks.
       BasicBlock *Next = BB->getNextNode();
       if (!llvm::shouldOptimizeForSize(BB, PSI, BFI))
-        EverMadeChange |= bypassSlowDivision(BB, BypassWidths, DTU, LI);
+        EverMadeChange |= bypassSlowDivision(BB, BypassWidths, DTU, LI, BPI);
       BB = Next;
     }
   }
@@ -658,7 +659,7 @@ bool CodeGenPrepare::_run(Function &F) {
            "Incorrect DominatorTree updates in CGP");
 
   if (VerifyLoopInfo)
-    LI->verify(getDT());
+    LI->verify();
 #endif
 
   // If we are optimzing huge function, we need to consider the build time.
@@ -722,7 +723,7 @@ bool CodeGenPrepare::_run(Function &F) {
              "Incorrect DominatorTree updates in CGP");
 
     if (VerifyLoopInfo)
-      LI->verify(getDT());
+      LI->verify();
 #endif
 
     // Really free removed instructions during promotion.
@@ -853,9 +854,10 @@ void CodeGenPrepare::removeAllAssertingVHReferences(Value *V) {
 // Verify BFI has been updated correctly by recomputing BFI and comparing them.
 [[maybe_unused]] void CodeGenPrepare::verifyBFIUpdates(Function &F) {
   DominatorTree NewDT(F);
-  LoopInfo NewLI(NewDT);
-  BranchProbabilityInfo NewBPI(F, NewLI, TLInfo);
-  BlockFrequencyInfo NewBFI(F, NewBPI, NewLI);
+  CycleInfo NewCI;
+  NewCI.compute(F);
+  BranchProbabilityInfo NewBPI(F, NewCI, TLInfo);
+  BlockFrequencyInfo NewBFI(F, NewBPI, NewCI);
   NewBFI.verifyMatch(*BFI);
 }
 
@@ -946,11 +948,12 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F, bool &ResetLI) {
 
   ResetLI = false;
   bool MadeChange = false;
+  SmallPtrSet<PHINode *, 32> KnownNonDeadPHIs;
   // Note that this intentionally skips the entry block.
   for (auto &Block : llvm::drop_begin(F)) {
     // Delete phi nodes that could block deleting other empty blocks.
     if (!DisableDeletePHIs)
-      MadeChange |= DeleteDeadPHIs(&Block, TLInfo);
+      MadeChange |= DeleteDeadPHIs(&Block, TLInfo, nullptr, &KnownNonDeadPHIs);
   }
 
   for (auto &Block : llvm::drop_begin(F)) {
@@ -1486,6 +1489,49 @@ static bool SinkCast(CastInst *CI) {
   }
 
   return MadeChange;
+}
+
+/// Hoists bitcasts to the source block to reduce register pressure
+static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
+                            const DataLayout &DL) {
+  auto *SrcInst = dyn_cast<Instruction>(BCI->getOperand(0));
+  if (!SrcInst || SrcInst->getParent() == BCI->getParent() ||
+      SrcInst->isTerminator())
+    return false;
+
+  Type *DestTy = BCI->getType();
+  Type *SrcTy = SrcInst->getType();
+  EVT SrcVT = TLI.getValueType(DL, SrcTy);
+  EVT DestVT = TLI.getValueType(DL, DestTy);
+
+  // Bail out on scalable vectors and illegal destination types
+  if (SrcVT.isScalableVector() || DestVT.isScalableVector())
+    return false;
+
+  // Only hoist if it reduces physical register count
+  if (TLI.getNumRegisters(BCI->getContext(), SrcVT) <=
+      TLI.getNumRegisters(BCI->getContext(), DestVT))
+    return false;
+
+  // Block large or cross-domain scalars to prevent spills and broken atomics.
+  bool IsCrossDomain = DestTy->isFPOrFPVectorTy() != SrcTy->isFPOrFPVectorTy();
+
+  // A scalar is large if it requires more than one native register.
+  unsigned NativeWidth = DL.getPointerSizeInBits();
+  bool IsLargeScalar =
+      !DestTy->isVectorTy() &&
+      DL.getTypeSizeInBits(DestTy).getFixedValue() > NativeWidth;
+
+  if (IsCrossDomain || IsLargeScalar)
+    return false;
+
+  // Hoist the bitcast
+  BasicBlock *SrcBB = SrcInst->getParent();
+  auto InsertPt = isa<PHINode>(SrcInst) ? SrcBB->getFirstInsertionPt()
+                                        : std::next(SrcInst->getIterator());
+  BCI->moveBefore(*SrcBB, InsertPt);
+
+  return true;
 }
 
 /// If the specified cast instruction is a noop copy (e.g. it's casting from
@@ -2107,24 +2153,15 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
 
   Value *AddInst, *AddOffset;
   // Find out loop increment PHI.
-  auto *PN = dyn_cast<PHINode>(Incr);
+  PHINode *PN = dyn_cast<PHINode>(Incr);
   if (PN != nullptr) {
     AddInst = nullptr;
     AddOffset = nullptr;
   } else {
     // Search through a NUW add on top of the loop increment.
-    Value *V0, *V1;
-    if (!match(Incr, m_NUWAdd(m_Value(V0), m_Value(V1))))
+    if (!match(Incr, m_c_NUWAdd(m_Phi(PN), m_Value(AddOffset))))
       return false;
-
     AddInst = Incr;
-    PN = dyn_cast<PHINode>(V0);
-    if (PN != nullptr) {
-      AddOffset = V1;
-    } else {
-      PN = dyn_cast<PHINode>(V1);
-      AddOffset = V0;
-    }
   }
 
   if (!PN)
@@ -2926,10 +2963,9 @@ static bool isIntrinsicOrLFToBeTailCalled(const TargetLibraryInfo *TLInfo,
       return false;
     }
 
-  LibFunc LF;
   Function *Callee = CI->getCalledFunction();
-  if (Callee && TLInfo && TLInfo->getLibFunc(*Callee, LF))
-    switch (LF) {
+  if (Callee && TLInfo)
+    switch (TLInfo->getLibFunc(*Callee)) {
     case LibFunc_strcpy:
     case LibFunc_strncpy:
     case LibFunc_strcat:
@@ -7369,7 +7405,7 @@ bool CodeGenPrepare::optimizeExtUses(Instruction *I) {
   DenseMap<BasicBlock *, Instruction *> InsertedTruncs;
 
   bool MadeChange = false;
-  for (Use &U : Src->uses()) {
+  for (Use &U : make_early_inc_range(Src->uses())) {
     Instruction *User = cast<Instruction>(U.getUser());
 
     // Figure out which BB this ext is used in.
@@ -8938,6 +8974,14 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     // evaluation in a block other than then one that uses it (e.g. to hoist
     // the address of globals out of a loop).  If this is the case, we don't
     // want to forward-subst the cast.
+    if (auto *BCI = dyn_cast<BitCastInst>(CI)) {
+      // Hoist bitcasts of illegal types to reduce cross-block register pressure
+      // and prevent register splitting.
+      if (optimizeBitCast(BCI, *TLI, *DL)) {
+        return true;
+      }
+    }
+
     if (isa<Constant>(CI->getOperand(0)))
       return AnyChange;
 

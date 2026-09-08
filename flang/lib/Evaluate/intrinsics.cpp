@@ -8,7 +8,6 @@
 
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Common/enum-set.h"
-#include "flang/Common/float128.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/common.h"
@@ -23,7 +22,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <climits>
-#include <cmath>
 #include <map>
 #include <string>
 #include <utility>
@@ -1708,7 +1706,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"to", SameIntOrUnsigned, Rank::elemental, Optionality::required,
                 common::Intent::Out},
             {"topos", AnyInt}},
-        {}, Rank::elemental, IntrinsicClass::elementalSubroutine},
+        {}, Rank::elemental, IntrinsicClass::simpleElementalSubroutine},
     {"random_init",
         {{"repeatable", AnyLogical, Rank::scalar},
             {"image_distinct", AnyLogical, Rank::scalar}},
@@ -1770,7 +1768,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
                 common::Intent::InOut},
             {"back", AnyLogical, Rank::scalar, Optionality::optional,
                 common::Intent::In}},
-        {}, Rank::elemental, IntrinsicClass::pureSubroutine},
+        {}, Rank::elemental, IntrinsicClass::simpleSubroutine},
     {"tokenize",
         {{"string", SameCharNoLen, Rank::scalar, Optionality::required,
              common::Intent::In},
@@ -1780,7 +1778,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
                 common::Intent::Out},
             {"separator", SameCharNoLen, Rank::vector, Optionality::optional,
                 common::Intent::Out}},
-        {}, Rank::elemental, IntrinsicClass::pureSubroutine},
+        {}, Rank::elemental, IntrinsicClass::simpleSubroutine},
     {"tokenize",
         {{"string", SameCharNoLen, Rank::scalar, Optionality::required,
              common::Intent::In},
@@ -1790,7 +1788,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
                 common::Intent::Out},
             {"last", AnyInt, Rank::vector, Optionality::required,
                 common::Intent::Out}},
-        {}, Rank::elemental, IntrinsicClass::pureSubroutine},
+        {}, Rank::elemental, IntrinsicClass::simpleSubroutine},
     {"unlink",
         {{"path", DefaultChar, Rank::scalar, Optionality::required,
              common::Intent::In},
@@ -2799,7 +2797,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   for (std::size_t j{0}; j < dummies; ++j) {
     const IntrinsicDummyArgument &d{dummy[std::min(j, dummyArgPatterns - 1)]};
     if (const auto &arg{rearranged[j]}) {
-      if (const Expr<SomeType> *expr{arg->UnwrapExpr()}) {
+      if (const Expr<SomeType> *expr{arg->GetArgExpr()}) {
         std::string kw{d.keyword};
         if (arg->keyword()) {
           kw = arg->keyword()->ToString();
@@ -2876,10 +2874,14 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
   if (elementalRank > 0) {
     attrs.set(characteristics::Procedure::Attr::Elemental);
   }
-  // TODO: Mark intrinsic procedures that are SIMPLE per F2023
   if (call.isSubroutineCall) {
-    if (intrinsicClass == IntrinsicClass::pureSubroutine /* MOVE_ALLOC */ ||
-        intrinsicClass == IntrinsicClass::elementalSubroutine /* MVBITS */) {
+    if (intrinsicClass == IntrinsicClass::pureSubroutine /* MOVE_ALLOC */) {
+      // TODO: set Attr::Simple for MOVE_ALLOC when FROM is not a coarray
+      // (F2023)
+      attrs.set(characteristics::Procedure::Attr::Pure);
+    } else if (intrinsicClass == IntrinsicClass::simpleSubroutine ||
+        intrinsicClass == IntrinsicClass::simpleElementalSubroutine) {
+      attrs.set(characteristics::Procedure::Attr::Simple);
       attrs.set(characteristics::Procedure::Attr::Pure);
     }
     return SpecificCall{
@@ -2887,6 +2889,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
             name, characteristics::Procedure{std::move(dummyArgs), attrs}},
         std::move(rearranged)};
   } else {
+    // TODO: Mark intrinsic functions that are SIMPLE per F2023
     if (intrinsicClass != IntrinsicClass::impureFunction /* RAND and IRAND */)
       attrs.set(characteristics::Procedure::Attr::Pure);
     characteristics::TypeAndShape typeAndShape{resultType.value(), resultRank};

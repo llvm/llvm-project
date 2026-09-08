@@ -1,11 +1,11 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu8.03-amd-amdhsa < %s | FileCheck %s
 
 ; Make sure we do not crash during scheduling when DBG_VALUE is the first
 ; instruction in the basic block.
 
 ; LLVM IR generated with the following command and OpenCL source:
 ;
-; $clang -cl-std=CL2.0 -g -O2 -target amdgcn-amd-amdhsa -S -emit-llvm <path-to-file>
+; $clang -cl-std=CL2.0 -g -O2 -target amdgpu8.03-amd-amdhsa -S -emit-llvm <path-to-file>
 ;
 ; kernel void kernel1(global int *A, global int *B) {
 ;   if (*A == 1) {

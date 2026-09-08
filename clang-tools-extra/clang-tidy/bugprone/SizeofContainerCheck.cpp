@@ -35,7 +35,7 @@ void SizeofContainerCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *SizeOf =
       Result.Nodes.getNodeAs<UnaryExprOrTypeTraitExpr>("sizeof");
 
-  auto Diag =
+  const auto Diag =
       diag(SizeOf->getBeginLoc(), "sizeof() doesn't return the size of the "
                                   "container; did you mean .size()?");
 }

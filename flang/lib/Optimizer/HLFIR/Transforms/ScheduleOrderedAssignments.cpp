@@ -10,11 +10,9 @@
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "flang/Optimizer/Analysis/ArraySectionAnalyzer.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "mlir/IR/OperationSupport.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "flang-ordered-assignment"

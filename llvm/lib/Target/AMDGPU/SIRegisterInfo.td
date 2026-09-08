@@ -160,7 +160,8 @@ multiclass SIRegLoHi16 <string n, bits<10> regIdx, bit ArtificialHigh = 1,
 }
 
 // Special Registers
-defm VCC_LO : SIRegLoHi16<"vcc_lo", 106>;
+defm VCC_LO : SIRegLoHi16<"vcc_lo", 106, /*ArtificialHigh=*/1, /*isVGPR=*/0,
+                          /*isAGPR=*/0, /*DwarfEncodings=*/[512, 512]>;
 defm VCC_HI : SIRegLoHi16<"vcc_hi", 107>;
 
 // Pseudo-registers: Used as placeholders during isel and immediately
@@ -178,7 +179,7 @@ def PC_REG : SIReg<"pc", 0>, DwarfRegNum<[16, 16]> {
 }
 
 // VCC for 64-bit instructions
-def VCC : RegisterWithSubRegs<"vcc", [VCC_LO, VCC_HI]> {
+def VCC : RegisterWithSubRegs<"vcc", [VCC_LO, VCC_HI]>, DwarfRegNum<[768, 512]> {
   let Namespace = "AMDGPU";
   let SubRegIndices = [sub0, sub1];
   let HWEncoding = VCC_LO.HWEncoding;
@@ -1175,6 +1176,32 @@ def VS_128_Align2 : SIRegisterClass<"AMDGPU", VReg_128.RegTypes, 32,
   let Size = 128;
 }
 } // End GeneratePressureSet = 0
+
+// Indexed resources (GFX13) encode the buffer/image descriptor as a single
+// 32-bit index register (a Lo256 VGPR for the per-lane/non-uniform form, or an
+// SGPR for the uniform-indexed form) instead of the full SReg_128/SReg_256
+// descriptor.
+def RsrcReg32 : SIRegisterClass<"AMDGPU", Reg32Types.types, 32, (add VGPR_32_Lo256, SGPR_32)> {
+  let isAllocatable = 0;
+  let HasVGPR = 1;
+}
+
+// Parses rsrcidx(<reg>).
+def RsrcRegClass : AsmOperandClass {
+  let Name = "RsrcReg";
+  let ParserMethod = "parseRsrcReg";
+  let PredicateMethod = "isRsrcReg32";
+  let RenderMethod = "addRegOperands";
+}
+
+// Class does not contain any 128 bit values but for disassembler purposes allows
+// decoding to SReg_128.
+def RsrcReg128Op : RegisterOperand<RsrcReg32> {
+  let ParserMatchClass = RsrcRegClass;
+  let DecoderMethod = "decodeRsrcReg128";
+  let EncoderMethod = "getMachineOpValueRsrcRegOp";
+  let PrintMethod = "printRsrcReg";
+}
 
 // Define a register tuple class, along with one requiring an even
 // aligned base register.

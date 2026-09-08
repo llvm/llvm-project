@@ -57,6 +57,10 @@ public:
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const;
 
+  void getMachineOpValueRsrcRegOp(const MCInst &MI, unsigned OpNo, APInt &Op,
+                                  SmallVectorImpl<MCFixup> &Fixups,
+                                  const MCSubtargetInfo &STI) const;
+
   /// Use a fixup to encode the simm16 field for SOPP branch
   ///        instructions.
   void getSOPPBrEncoding(const MCInst &MI, unsigned OpNo, APInt &Op,
@@ -262,9 +266,8 @@ static uint32_t getLit64Encoding(const MCInstrDesc &Desc, uint64_t Val,
 
   // The rest part needs to align with AMDGPUInstPrinter::printLiteral64.
 
-  bool CanUse64BitLiterals =
-      STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-      !(Desc.TSFlags & (SIInstrFlags::VOP3 | SIInstrFlags::VOP3P));
+  bool CanUse64BitLiterals = STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
+                             !SIInstrFlags::isVOP3Like(Desc);
   if (IsFP) {
     return CanUse64BitLiterals && Lo_32(Val) ? 254 : 255;
   }
@@ -404,8 +407,7 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
 
   // Set unused op_sel_hi bits to 1 for VOP3P and MAI instructions.
   // Note that accvgpr_read/write are MAI, have src0, but do not use op_sel.
-  if (((Desc.TSFlags & SIInstrFlags::VOP3P) ||
-       Opcode == AMDGPU::V_ACCVGPR_READ_B32_vi ||
+  if ((SIInstrFlags::isVOP3P(Desc) || Opcode == AMDGPU::V_ACCVGPR_READ_B32_vi ||
        Opcode == AMDGPU::V_ACCVGPR_WRITE_B32_vi) &&
       // Matrix B format operand reuses op_sel_hi.
       !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_fmt) &&
@@ -421,7 +423,7 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
   }
 
   // NSA encoding.
-  if (AMDGPU::isGFX10Plus(STI) && Desc.TSFlags & SIInstrFlags::MIMG) {
+  if (AMDGPU::isGFX10Plus(STI) && SIInstrFlags::isMIMG(Desc)) {
     int vaddr0 = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
                                             AMDGPU::OpName::vaddr0);
     int srsrc = AMDGPU::getNamedOperandIdx(MI.getOpcode(),
@@ -683,6 +685,22 @@ void AMDGPUMCCodeEmitter::getMachineOpValueT16Lo128(
   getMachineOpValueCommon(MI, MO, OpNo, Op, Fixups, STI);
 }
 
+// Encode an indexed-resource (rsrcidx) operand into the 9-bit srsrc field:
+// bit 8 selects a VGPR (or AGPR) index register, bit 7 selects a 32-bit SGPR
+// index register, and bits 6-0 hold the register index.
+void AMDGPUMCCodeEmitter::getMachineOpValueRsrcRegOp(
+    const MCInst &MI, unsigned OpNo, APInt &Op,
+    SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  bool IsSReg32 =
+      MRI.getRegClass(AMDGPU::SReg_32RegClassID).contains(MO.getReg());
+  unsigned Enc = MRI.getEncodingValue(MO.getReg());
+  unsigned Idx = Enc & AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
+  bool IsVGPROrAGPR =
+      Enc & (AMDGPU::HWEncoding::IS_VGPR | AMDGPU::HWEncoding::IS_AGPR);
+  Op = Idx | IsVGPROrAGPR << 8 | IsSReg32 << 7;
+}
+
 void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
     const MCInst &MI, const MCOperand &MO, unsigned OpNo, APInt &Op,
     SmallVectorImpl<MCFixup> &Fixups, const MCSubtargetInfo &STI) const {
@@ -759,9 +777,8 @@ APInt AMDGPUMCCodeEmitter::postEncodeVOPCX(const MCInst &MI, APInt EncodedValue,
   // is ignored by HW. It was decided to define dst as "do not care"
   // in td files to allow disassembler accept any dst value.
   // However, dst is encoded as EXEC for compatibility with SP3.
-  [[maybe_unused]] const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
-  assert((Desc.TSFlags & SIInstrFlags::VOP3) &&
-         Desc.hasImplicitDefOfPhysReg(AMDGPU::EXEC));
+  assert(SIInstrFlags::isVOP3(MCII, MI) &&
+         MCII.get(MI.getOpcode()).hasImplicitDefOfPhysReg(AMDGPU::EXEC));
   EncodedValue |= MRI.getEncodingValue(AMDGPU::EXEC_LO) &
                   AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
   return postEncodeVOP3<true, true, false>(MI, EncodedValue, STI);

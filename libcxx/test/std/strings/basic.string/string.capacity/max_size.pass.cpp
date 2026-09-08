@@ -8,6 +8,10 @@
 
 // UNSUPPORTED: no-exceptions
 
+// This test is sensitive what __STDCPP_DEFAULT_NEW_ALIGNMENT__ is set to. Enable aligned-new for GCC so that GCC
+// defines the macro
+// ADDITIONAL_COMPILE_FLAGS(gcc): -faligned-new
+
 // <string>
 
 // size_type max_size() const; // constexpr since C++20

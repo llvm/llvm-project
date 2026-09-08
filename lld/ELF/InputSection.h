@@ -104,6 +104,11 @@ public:
 
   uint64_t getVA(uint64_t offset = 0) const;
 
+  // Translate an offset in relocations to an address. RelocScan::scanEhSection
+  // has already mapped .eh_frame offsets to the merged output section, so they
+  // must not be translated a second time.
+  uint64_t getRelocVA(uint64_t offset) const;
+
   bool isLive() const { return partition != 0; }
   void markLive() { partition = 1; }
   void markDead() { partition = 0; }

@@ -116,7 +116,8 @@ void ScriptedFrameProviderPythonInterface::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(),
       llvm::StringRef("Provide scripted stack frames for threads"),
-      CreateInstance, eScriptLanguagePython, {ci_usages, api_usages});
+      CreateInstance, eScriptedExtensionScriptedFrameProvider,
+      eScriptLanguagePython, {ci_usages, api_usages});
 }
 
 void ScriptedFrameProviderPythonInterface::Terminate() {

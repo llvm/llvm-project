@@ -66,8 +66,8 @@ llvm::Triple::ArchType darwin::getArchTypeForMachOArchName(StringRef Str) {
       .Cases({"armv8m.base", "armv8m.main", "armv8.1m.main"}, llvm::Triple::arm)
       .Cases({"arm64", "arm64e"}, llvm::Triple::aarch64)
       .Case("arm64_32", llvm::Triple::aarch64_32)
+      .Cases({"amdgpu", "amdgcn"}, llvm::Triple::amdgpu)
       .Case("r600", llvm::Triple::r600)
-      .Case("amdgcn", llvm::Triple::amdgcn)
       .Case("nvptx", llvm::Triple::nvptx)
       .Case("nvptx64", llvm::Triple::nvptx64)
       .Case("amdil", llvm::Triple::amdil)
@@ -190,6 +190,39 @@ void darwin::MachOTool::AddMachOArch(const ArgList &Args,
   // FIXME: Is this needed anymore?
   if (ArchName == "arm")
     CmdArgs.push_back("-force_cpusubtype_ALL");
+}
+
+void darwin::MachOTool::AddMachOArchOnly(const ArgList &Args,
+                                         ArgStringList &CmdArgs) const {
+  const toolchains::MachO &MachOTC = getMachOToolChain();
+
+  StringRef ArchName;
+  if (MachOTC.getTriple().isOSFirmware())
+    // Firmware uses the full triple as the arch name.
+    ArchName = MachOTC.getEffectiveTriple().getTriple();
+  else
+    ArchName = MachOTC.getMachOArchName(Args);
+
+  CmdArgs.push_back("-arch_only");
+  CmdArgs.push_back(Args.MakeArgString(ArchName));
+}
+
+static void AddMachOSysLibRoot(Compilation &C, const ArgList &Args,
+                               ArgStringList &CmdArgs) {
+  // Give --sysroot= preference, over the Apple specific behavior to also use
+  // --isysroot as the syslibroot.
+  // We check `OPT__sysroot_EQ` directly instead of `getSysRoot` to make sure we
+  // prioritise command line arguments over configuration of `DEFAULT_SYSROOT`.
+  if (const Arg *A = Args.getLastArg(options::OPT__sysroot_EQ)) {
+    CmdArgs.push_back("-syslibroot");
+    CmdArgs.push_back(A->getValue());
+  } else if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
+    CmdArgs.push_back("-syslibroot");
+    CmdArgs.push_back(A->getValue());
+  } else if (StringRef sysroot = C.getSysRoot(); sysroot != "") {
+    CmdArgs.push_back("-syslibroot");
+    CmdArgs.push_back(C.getArgs().MakeArgString(sysroot));
+  }
 }
 
 bool darwin::Linker::NeedsTempPath(const InputInfoList &Inputs) const {
@@ -439,20 +472,7 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
   Args.AddAllArgs(CmdArgs, options::OPT_sub__library);
   Args.AddAllArgs(CmdArgs, options::OPT_sub__umbrella);
 
-  // Give --sysroot= preference, over the Apple specific behavior to also use
-  // --isysroot as the syslibroot.
-  // We check `OPT__sysroot_EQ` directly instead of `getSysRoot` to make sure we
-  // prioritise command line arguments over configuration of `DEFAULT_SYSROOT`.
-  if (const Arg *A = Args.getLastArg(options::OPT__sysroot_EQ)) {
-    CmdArgs.push_back("-syslibroot");
-    CmdArgs.push_back(A->getValue());
-  } else if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
-    CmdArgs.push_back("-syslibroot");
-    CmdArgs.push_back(A->getValue());
-  } else if (StringRef sysroot = C.getSysRoot(); sysroot != "") {
-    CmdArgs.push_back("-syslibroot");
-    CmdArgs.push_back(C.getArgs().MakeArgString(sysroot));
-  }
+  AddMachOSysLibRoot(C, Args, CmdArgs);
 
   Args.AddLastArg(CmdArgs, options::OPT_twolevel__namespace);
   Args.AddLastArg(CmdArgs, options::OPT_twolevel__namespace__hints);
@@ -894,15 +914,31 @@ void darwin::StaticLibTool::ConstructJob(Compilation &C, const JobAction &JA,
   // Silence warnings when linking C code with a C++ '-stdlib' argument.
   Args.ClaimAllArgs(options::OPT_stdlib_EQ);
 
-  // libtool <options> <output_file> <input_files>
   ArgStringList CmdArgs;
-  // Create and insert file members with a deterministic index.
   CmdArgs.push_back("-static");
-  CmdArgs.push_back("-D");
-  CmdArgs.push_back("-no_warning_for_no_symbols");
+
+  if (Args.hasArg(options::OPT_static_lib_target_arch_only))
+    AddMachOArchOnly(Args, CmdArgs);
+
+  if (Args.hasFlag(options::OPT_static_lib_deterministic,
+                   options::OPT_no_static_lib_deterministic,
+                   /*Default=*/true))
+    CmdArgs.push_back("-D");
+
+  AddMachOSysLibRoot(C, Args, CmdArgs);
+  Args.AddAllArgs(CmdArgs, options::OPT_L);
+
+  if (!Args.hasFlag(options::OPT_static_lib_warn_no_symbols,
+                    options::OPT_no_static_lib_warn_no_symbols,
+                    /*Default=*/false))
+    CmdArgs.push_back("-no_warning_for_no_symbols");
+
+  Args.AddAllArgValues(CmdArgs, options::OPT_Xstatic_lib_tool);
+
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
+  Args.AddLastArg(CmdArgs, options::OPT_filelist);
   for (const auto &II : Inputs) {
     if (II.isFilename()) {
       CmdArgs.push_back(II.getFilename());
@@ -1210,10 +1246,23 @@ void Darwin::ensureTargetInitialized() const {
   else if (getTriple().isMacCatalystEnvironment())
     Environment = MacCatalyst;
 
-  VersionTuple OsVer = getTriple().getOSVersion();
+  VersionTuple OsVer;
+  if (Platform == MacOS) {
+    // Record the macOS product version (e.g. macosx15), not the Darwin kernel
+    // version (e.g. darwin24.3): version checks against the lazily-recorded
+    // target must behave as if AddDeploymentTarget() had computed it.
+    if (!getTriple().getMacOSXVersion(OsVer))
+      return;
+  } else {
+    OsVer = getTriple().getOSVersion();
+  }
   setTarget(Platform, Environment, OsVer.getMajor(),
             OsVer.getMinor().value_or(0), OsVer.getSubminor().value_or(0),
             VersionTuple());
+  // The version above is a guess from the triple alone; AddDeploymentTarget()
+  // may later derive a different deployment target from flags, environment
+  // variables, or the SDK, and overwrite this initialization.
+  TargetInitializedLazily = true;
 }
 
 AppleMachO::~AppleMachO() {}
@@ -2044,7 +2093,7 @@ struct DarwinPlatform {
                                           const DarwinSDKInfo &SDKInfo) {
     const llvm::Triple &PlatformTriple = SDKInfo.getCanonicalPlatformTriple();
     const llvm::Triple::OSType OS = PlatformTriple.getOS();
-    VersionTuple Version = SDKInfo.getVersion();
+    VersionTuple Version = SDKInfo.getDefaultDeploymentTarget();
     if (OS == llvm::Triple::MacOSX)
       Version = getVersionFromString(
           getSystemOrSDKMacOSVersion(Version.getAsString()));

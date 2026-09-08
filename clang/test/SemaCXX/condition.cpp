@@ -56,7 +56,7 @@ void test3() {
 }
 
 void test4(bool (&x)(void)) {
-  while (x);
+  while (x); // expected-warning {{address of function 'x' will always evaluate to 'true'}}
 }
 
 template <class>

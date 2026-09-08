@@ -225,7 +225,8 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
 }
 
 llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
-  in = lldb::SBFile(std::fopen(DEV_NULL, "r"), /*transfer_ownership=*/true);
+  in =
+      lldb::SBFile(std::fopen(DEV_NULL, "r"), "r", /*transfer_ownership=*/true);
 
   if (auto error = out.RedirectTo(
           m_loop, overrideOut,
@@ -520,17 +521,18 @@ void DAP::SendProgressEvent(uint64_t progress_id, const char *message,
   progress_event_reporter.Push(progress_id, message, completed, total);
 }
 
-int32_t DAP::CreateSourceReference(lldb::addr_t address) {
+src_ref_t DAP::CreateSourceReference(lldb::addr_t address) {
   std::lock_guard<std::mutex> guard(m_source_references_mutex);
   auto iter = llvm::find(m_source_references, address);
   if (iter != m_source_references.end())
     return std::distance(m_source_references.begin(), iter) + 1;
 
   m_source_references.emplace_back(address);
-  return static_cast<int32_t>(m_source_references.size());
+  return static_cast<src_ref_t>(m_source_references.size());
 }
 
-std::optional<lldb::addr_t> DAP::GetSourceReferenceAddress(int32_t reference) {
+std::optional<lldb::addr_t>
+DAP::GetSourceReferenceAddress(src_ref_t reference) {
   std::lock_guard<std::mutex> guard(m_source_references_mutex);
   if (reference <= LLDB_DAP_INVALID_SRC_REF)
     return std::nullopt;
@@ -942,11 +944,6 @@ void DAP::Received(const protocol::Event &event) {
 }
 
 void DAP::Received(const protocol::Request &request) {
-  if (request.command == "disconnect") {
-    std::lock_guard<std::mutex> guard(m_queue_mutex);
-    m_disconnecting = true;
-  }
-
   const std::optional<CancelArguments> cancel_args =
       getArgumentsIfRequest<CancelArguments>(request, "cancel");
   if (cancel_args) {
@@ -1064,8 +1061,15 @@ llvm::Error DAP::Loop() {
   // Don't wait to join the mainloop thread if our callback wasn't added
   // successfully, or we'll wait forever.
   if (m_loop.AddPendingCallback(
-          [](MainLoopBase &loop) { loop.RequestTermination(); }))
+          [](MainLoopBase &loop) { loop.RequestTermination(); })) {
     thread.join();
+  } else {
+    DAP_LOG(log,
+            "failed to terminate stop the main loop in {}. Detaching the "
+            "Transport Handler thread.",
+            GetClientName());
+    thread.detach();
+  }
 
   if (m_error_occurred)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),

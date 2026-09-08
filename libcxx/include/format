@@ -198,7 +198,6 @@ namespace std {
 
 #  if _LIBCPP_STD_VER >= 20
 #    include <__format/buffer.h>
-#    include <__format/concepts.h>
 #    include <__format/container_adaptor.h>
 #    include <__format/enable_insertable.h>
 #    include <__format/escaped_output_table.h>
@@ -212,6 +211,7 @@ namespace std {
 #    include <__format/format_parse_context.h>
 #    include <__format/format_string.h>
 #    include <__format/format_to_n_result.h>
+#    include <__format/formattable.h>
 #    include <__format/formatter.h>
 #    include <__format/formatter_bool_impl.h>
 #    include <__format/formatter_char.h>
@@ -233,34 +233,8 @@ namespace std {
 #    pragma GCC system_header
 #  endif
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 23
-#    include <cmath>
-#  endif
-
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <array>
-#    include <cctype>
-#    include <cerrno>
-#    include <clocale>
-#    include <cstddef>
-#    include <cstdint>
-#    include <cstdlib>
-#    include <cstring>
-#    include <initializer_list>
-#    include <limits>
-#    include <locale>
-#    include <new>
+#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER >= 20 && _LIBCPP_STD_VER <= 23
 #    include <optional>
-#    include <queue>
-#    include <stack>
-#    include <stdexcept>
-#    include <string>
-#    include <string_view>
-#    include <tuple>
-
-#    if _LIBCPP_HAS_WIDE_CHARACTERS
-#      include <cwchar>
-#    endif
 #  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 

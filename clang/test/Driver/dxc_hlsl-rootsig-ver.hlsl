@@ -1,7 +1,7 @@
-// RUN: %clang_dxc -T cs_6_0 -fcgl %s | FileCheck %s --check-prefix=CHECK-V1_1
+// RUN: %clang_dxc -T cs_6_0 -E EmptyEntry -fcgl %s | FileCheck %s --check-prefix=CHECK-V1_1
 
-// RUN: %clang_dxc -T cs_6_0 -fcgl -force-rootsig-ver rootsig_1_0 %s | FileCheck %s --check-prefix=CHECK-V1_0
-// RUN: %clang_dxc -T cs_6_0 -fcgl -force-rootsig-ver rootsig_1_1 %s | FileCheck %s --check-prefix=CHECK-V1_1
+// RUN: %clang_dxc -T cs_6_0 -E EmptyEntry -fcgl -force-rootsig-ver rootsig_1_0 %s | FileCheck %s --check-prefix=CHECK-V1_0
+// RUN: %clang_dxc -T cs_6_0 -fcgl -E EmptyEntry -force-rootsig-ver rootsig_1_1 %s | FileCheck %s --check-prefix=CHECK-V1_1
 
 // Test to demonstrate that we can specify the root-signature versions
 

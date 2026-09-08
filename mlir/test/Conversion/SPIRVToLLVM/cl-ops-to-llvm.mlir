@@ -69,6 +69,10 @@ spirv.func @cl_binary_float(%arg0: f32, %arg1: f32) "None" {
   %2 = spirv.CL.fmax %arg0, %arg1 : f32
   // CHECK: llvm.intr.minnum(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
   %3 = spirv.CL.fmin %arg0, %arg1 : f32
+  // CHECK: llvm.intr.copysign(%{{.*}}, %{{.*}}) : (f32, f32) -> f32
+  %4 = spirv.CL.copysign %arg0, %arg1 : f32
+  // CHECK: llvm.frem %{{.*}}, %{{.*}} : f32
+  %5 = spirv.CL.fmod %arg0, %arg1 : f32
   spirv.Return
 }
 
@@ -97,5 +101,25 @@ spirv.func @cl_integer(%arg0: i32, %arg1: i32) "None" {
   %2 = spirv.CL.u_max %arg0, %arg1 : i32
   // CHECK: llvm.intr.umin(%{{.*}}, %{{.*}}) : (i32, i32) -> i32
   %3 = spirv.CL.u_min %arg0, %arg1 : i32
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.mix
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @mix_scalar
+spirv.func @mix_scalar(%x: f32, %y: f32, %a: f32) "None" {
+  // CHECK: %[[DIFF:.*]] = llvm.fsub %{{.*}}, %{{.*}} : f32
+  // CHECK: llvm.intr.fma(%{{.*}}, %[[DIFF]], %{{.*}}) : (f32, f32, f32) -> f32
+  %0 = spirv.CL.mix %x, %y, %a : f32
+  spirv.Return
+}
+
+// CHECK-LABEL: @mix_vector
+spirv.func @mix_vector(%x: vector<4xf32>, %y: vector<4xf32>, %a: vector<4xf32>) "None" {
+  // CHECK: %[[DIFF:.*]] = llvm.fsub %{{.*}}, %{{.*}} : vector<4xf32>
+  // CHECK: llvm.intr.fma(%{{.*}}, %[[DIFF]], %{{.*}}) : (vector<4xf32>, vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+  %0 = spirv.CL.mix %x, %y, %a : vector<4xf32>
   spirv.Return
 }

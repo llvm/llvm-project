@@ -20,7 +20,6 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "llvm/Support/Debug.h"
 
 // Position of the different values in a `fir.box`.
 static constexpr unsigned kAddrPosInBox = 0;

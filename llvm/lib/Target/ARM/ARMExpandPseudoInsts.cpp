@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Support/Debug.h"
 
@@ -58,6 +59,11 @@ namespace {
 
     StringRef getPassName() const override {
       return ARM_EXPAND_PSEUDO_NAME;
+    }
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+      MachineFunctionPass::getAnalysisUsage(AU);
     }
 
   private:

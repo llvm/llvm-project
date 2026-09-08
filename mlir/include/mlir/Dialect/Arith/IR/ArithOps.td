@@ -1113,6 +1113,7 @@ def Arith_AddFOp : Arith_FloatBinaryOpWithRoundingMode<"addf", [Commutative]> {
     %a = arith.addf %b, %c to_nearest_even : f64
     ```
   }];
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
 
@@ -1499,6 +1500,7 @@ def Arith_ScalingExtFOp
     %h = arith.scaling_extf %i, %f : vector<32xf4E2M1FN>, vector<32xf8E8M0FNU> to vector<32xbf16>
     ```
   }];
+  let hasFolder = 1;
   let hasVerifier = 1;
   let assemblyFormat =
       [{ $in `,` $scale (`fastmath` `` $fastmath^)? attr-dict `:`
@@ -1688,6 +1690,7 @@ def Arith_ScalingTruncFOp
     %h = arith.scaling_truncf %i, %f : vector<32xbf16>, vector<32xf8E8M0FNU> to vector<32xf4E2M1FN>
     ```
   }];
+  let hasFolder = 1;
   let hasVerifier = 1;
   let assemblyFormat =
       [{ $in `,` $scale ($roundingmode^)? (`fastmath` `` $fastmath^)? attr-dict `:`

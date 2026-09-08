@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -x hip %s --hipstdpar -triple amdgcn-amd-amdhsa --std=c++17 \
+// RUN: %clang_cc1 -x hip %s --hipstdpar -triple amdgpu-amd-amdhsa --std=c++17 \
 // RUN:   -fcuda-is-device -emit-llvm -o /dev/null -verify
 
 // Note: These would happen implicitly, within the implementation of the

@@ -53,6 +53,19 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
   // If something is known about the difference between the two addresses,
   // see if it's enough to prove a NoAlias.
   if (canComputePointerDiff(SE, AS, BS)) {
+    // Firstly, try to convert the two pointers into address expressions to
+    // handle two pointers with different pointer bases.
+    // Either both pointers are used with ptrtoaddr or neither, so we can't end
+    // up with a ptr + int mix.
+    const SCEV *AInt = SE.getPtrToAddrExpr(AS);
+    const SCEV *BInt = SE.getPtrToAddrExpr(BS);
+    if (!isa<SCEVCouldNotCompute>(AInt) && !isa<SCEVCouldNotCompute>(BInt)) {
+      AS = AInt;
+      BS = BInt;
+    }
+
+    // Compute the bit width after the conversion above, as ptrtoaddr may
+    // produce a narrower (address-sized) type than the pointer representation.
     unsigned BitWidth = SE.getTypeSizeInBits(AS->getType());
     APInt ASizeInt(BitWidth, LocA.Size.hasValue()
                                  ? static_cast<uint64_t>(LocA.Size.getValue())
@@ -60,19 +73,6 @@ AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
     APInt BSizeInt(BitWidth, LocB.Size.hasValue()
                                  ? static_cast<uint64_t>(LocB.Size.getValue())
                                  : MemoryLocation::UnknownSize);
-
-    // Firstly, try to convert the two pointers into ptrtoint expressions to
-    // handle two pointers with different pointer bases.
-    // Either both pointers are used with ptrtoint or neither, so we can't end
-    // up with a ptr + int mix.
-    const SCEV *AInt =
-        SE.getPtrToIntExpr(AS, SE.getEffectiveSCEVType(AS->getType()));
-    const SCEV *BInt =
-        SE.getPtrToIntExpr(BS, SE.getEffectiveSCEVType(BS->getType()));
-    if (!isa<SCEVCouldNotCompute>(AInt) && !isa<SCEVCouldNotCompute>(BInt)) {
-      AS = AInt;
-      BS = BInt;
-    }
 
     // Compute the difference between the two pointers.
     const SCEV *BA = SE.getMinusSCEV(BS, AS);

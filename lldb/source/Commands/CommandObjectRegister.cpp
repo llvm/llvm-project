@@ -36,6 +36,58 @@ using namespace lldb_private;
 #define LLDB_OPTIONS_register_read
 #include "CommandOptions.inc"
 
+static size_t GetNameSize(const RegisterInfo *reg_info, bool use_primary_name) {
+  const char *reg_name = use_primary_name ? reg_info->name : reg_info->alt_name;
+  return reg_name ? strlen(reg_name) : 0;
+}
+
+static size_t ComputeLongestRegisterName(RegisterContext *reg_ctx,
+                                         const RegisterSet &reg_set,
+                                         bool use_primary_name,
+                                         bool primitive_only) {
+  const size_t num_registers = reg_set.num_registers;
+  size_t name_right_align_at = 0;
+
+  // Loop through all the registers to find the longest register name.
+  for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
+    const size_t reg = reg_set.registers[reg_idx];
+    if (const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg)) {
+      // Derived registers are skipped if primitive_only is true.
+      if (primitive_only && reg_info->value_regs)
+        continue;
+
+      name_right_align_at = std::max(name_right_align_at,
+                                     GetNameSize(reg_info, use_primary_name));
+    }
+  }
+
+  return name_right_align_at;
+}
+
+// We expect that [command] only contains register names to be printed.
+static size_t ComputeLongestRegisterName(Args &command,
+                                         RegisterContext *reg_ctx,
+                                         bool use_primary_name) {
+  size_t name_right_align_at = 0;
+
+  // Loop through all the arguments to find the longest register name.
+  for (auto &entry : command) {
+    // In most LLDB commands we accept '$<register>' as well as '<register>'
+    // for example '$rbx' for 'rbx'. However internally the name does not have
+    // '$'.
+    llvm::StringRef arg_str = entry.ref();
+    arg_str.consume_front("$");
+
+    if (const RegisterInfo *reg_info =
+            reg_ctx->GetRegisterInfoByName(arg_str)) {
+      name_right_align_at = std::max(name_right_align_at,
+                                     GetNameSize(reg_info, use_primary_name));
+    }
+  }
+
+  return name_right_align_at;
+}
+
 class CommandObjectRegisterRead : public CommandObjectParsed {
 public:
   CommandObjectRegisterRead(CommandInterpreter &interpreter)
@@ -75,7 +127,7 @@ public:
 
   bool DumpRegister(const ExecutionContext &exe_ctx, Stream &strm,
                     RegisterContext &reg_ctx, const RegisterInfo &reg_info,
-                    bool print_flags) {
+                    bool print_flags, size_t reg_name_right_align_at) {
     RegisterValue reg_value;
     if (!reg_ctx.ReadRegister(&reg_info, reg_value))
       return false;
@@ -85,7 +137,8 @@ public:
     bool prefix_with_altname = (bool)m_command_options.alternate_name;
     bool prefix_with_name = !prefix_with_altname;
     DumpRegisterValue(reg_value, strm, reg_info, prefix_with_name,
-                      prefix_with_altname, m_format_options.GetFormat(), 8,
+                      prefix_with_altname, m_format_options.GetFormat(),
+                      reg_name_right_align_at,
                       exe_ctx.GetBestExecutionContextScope(), print_flags,
                       exe_ctx.GetTargetSP());
     if ((reg_info.encoding == eEncodingUint) ||
@@ -123,6 +176,8 @@ public:
       strm.Printf("%s:\n", (reg_set->name ? reg_set->name : "unknown"));
       strm.IndentMore();
       const size_t num_registers = reg_set->num_registers;
+      size_t reg_name_right_align_at = ComputeLongestRegisterName(
+          reg_ctx, *reg_set, !m_command_options.alternate_name, primitive_only);
       for (size_t reg_idx = 0; reg_idx < num_registers; ++reg_idx) {
         const uint32_t reg = reg_set->registers[reg_idx];
         const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg);
@@ -130,8 +185,9 @@ public:
         if (primitive_only && reg_info && reg_info->value_regs)
           continue;
 
-        if (reg_info && DumpRegister(exe_ctx, strm, *reg_ctx, *reg_info,
-                                     /*print_flags=*/false))
+        if (reg_info &&
+            DumpRegister(exe_ctx, strm, *reg_ctx, *reg_info,
+                         /*print_flags=*/false, reg_name_right_align_at))
           ++available_count;
         else
           ++unavailable_count;
@@ -195,6 +251,10 @@ protected:
         result.AppendError("the --set <set> option can't be used when "
                            "registers names are supplied as arguments\n");
       } else {
+        int reg_name_right_align_at = ComputeLongestRegisterName(
+            command, reg_ctx, !m_command_options.alternate_name);
+        // Extra ident to be consistent with register sets dumping.
+        strm.IndentMore();
         for (auto &entry : command) {
           // in most LLDB commands we accept $rbx as the name for register RBX
           // - and here we would reject it and non-existant. we should be more
@@ -210,14 +270,15 @@ protected:
             // printing flags afterwards.
             bool print_flags =
                 !m_format_options.GetFormatValue().OptionWasSet();
-            if (!DumpRegister(m_exe_ctx, strm, *reg_ctx, *reg_info,
-                              print_flags))
+            if (!DumpRegister(m_exe_ctx, strm, *reg_ctx, *reg_info, print_flags,
+                              reg_name_right_align_at))
               strm.Printf("%-12s = error: unavailable\n", reg_info->name);
           } else {
             result.AppendErrorWithFormat("Invalid register name '%s'",
                                          arg_str.str().c_str());
           }
         }
+        strm.IndentLess();
       }
     }
     if (result.GetStatus() != eReturnStatusFailed)

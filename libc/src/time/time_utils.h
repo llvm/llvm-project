@@ -51,38 +51,8 @@ constexpr int TIME_OVERFLOW = ERANGE;
 ///
 /// \param total_seconds The number of seconds since January 1st, 1970.
 /// \param tm Pointer to the tm structure to update.
-/// \return 0 on success, or error code on failure.
-ErrorOr<int> update_from_seconds(time_t total_seconds, tm *tm);
-
-LIBC_INLINE ErrorOr<char *> asctime(const tm *timeptr, char *buffer,
-                                    size_t bufferLength) {
-  if (timeptr == nullptr || buffer == nullptr) {
-    return cpp::unexpected(EINVAL);
-  }
-  if (timeptr->tm_wday < 0 ||
-      timeptr->tm_wday > (time_constants::DAYS_PER_WEEK - 1)) {
-    return cpp::unexpected(EINVAL);
-  }
-  if (timeptr->tm_mon < 0 ||
-      timeptr->tm_mon > (time_constants::MONTHS_PER_YEAR - 1)) {
-    return cpp::unexpected(EINVAL);
-  }
-
-  // TODO(michaelr): move this to use the strftime machinery
-  // equivalent to strftime(buffer, bufferLength, "%a %b %T %Y\n", timeptr)
-  int written_size = __builtin_snprintf(
-      buffer, bufferLength, "%.3s %.3s%3d %.2d:%.2d:%.2d %d\n",
-      time_constants::WEEK_DAY_NAMES[timeptr->tm_wday].data(),
-      time_constants::MONTH_NAMES[timeptr->tm_mon].data(), timeptr->tm_mday,
-      timeptr->tm_hour, timeptr->tm_min, timeptr->tm_sec,
-      time_constants::TIME_YEAR_BASE + timeptr->tm_year);
-  if (written_size < 0)
-    return cpp::unexpected(EINVAL);
-  if (static_cast<size_t>(written_size) >= bufferLength) {
-    return cpp::unexpected(TIME_OVERFLOW);
-  }
-  return buffer;
-}
+/// \return void on success, or error code on failure.
+ErrorOr<void> update_from_seconds(time_t total_seconds, tm *tm);
 
 LIBC_INLINE ErrorOr<tm *> gmtime_internal(const time_t *timer, tm *result) {
   time_t seconds = *timer;
@@ -122,14 +92,17 @@ LIBC_INLINE ErrorOr<tm *> localtime(const time_t *t_ptr) {
   return time_utils::localtime_internal(t_ptr, &result);
 }
 
-// Returns number of years from (1, year).
-LIBC_INLINE constexpr int64_t get_num_of_leap_years_before(int64_t year) {
-  return (year / 4) - (year / 100) + (year / 400);
-}
-
 // Returns True if year is a leap year.
+// Uses the Drepper-Neri-Schneider algorithm (version 3).
+// https://www.benjoffe.com/fast-leap-year#drepper-neri-schneider
+//
+// % 25 is faster than % 100 on modern compilers. False positives (years
+// divisible by 25 but not 100) are harmless: the & 15 check only differs
+// from & 3 when the year truly is a century year, and non-century years
+// that happen to be divisible by 25 always pass both checks identically.
 LIBC_INLINE constexpr bool is_leap_year(const int64_t year) {
-  return (((year) % 4) == 0 && (((year) % 100) != 0 || ((year) % 400) == 0));
+  const bool is_mul_25 = (year % 25 == 0);
+  return (year & (is_mul_25 ? 15 : 3)) == 0;
 }
 
 LIBC_INLINE constexpr int get_days_in_year(const int year) {

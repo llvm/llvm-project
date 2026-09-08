@@ -104,7 +104,7 @@ end function
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_6]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFmax_arrayEb"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 42 : index
-! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<42xi32> {bindc_name = "max_array", uniq_name = "_QFmax_arrayEmax_array"}
+! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<42xi32> {bindc_name = "max_array", fir.must_be_stack = true, uniq_name = "_QFmax_arrayEmax_array"}
 ! CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_10]]) {uniq_name = "_QFmax_arrayEmax_array"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
 ! CHECK:           %[[VAL_12:.*]] = hlfir.elemental %[[VAL_3]] unordered : (!fir.shape<1>) -> !hlfir.expr<42xi32> {
@@ -139,7 +139,7 @@ end function
 ! CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_2]](%[[VAL_8]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFmax_dynamic_optional_arrayEc"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 10 : index
-! CHECK:           %[[VAL_11:.*]] = fir.alloca !fir.array<10xi32> {bindc_name = "max_dynamic_optional_array", uniq_name = "_QFmax_dynamic_optional_arrayEmax_dynamic_optional_array"}
+! CHECK:           %[[VAL_11:.*]] = fir.alloca !fir.array<10xi32> {bindc_name = "max_dynamic_optional_array", fir.must_be_stack = true, uniq_name = "_QFmax_dynamic_optional_arrayEmax_dynamic_optional_array"}
 ! CHECK:           %[[VAL_12:.*]] = fir.shape %[[VAL_10]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_11]](%[[VAL_12]]) {uniq_name = "_QFmax_dynamic_optional_arrayEmax_dynamic_optional_array"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK:           %[[VAL_14:.*]] = fir.is_present %[[VAL_9]]#0 : (!fir.ref<!fir.array<10xi32>>) -> i1
@@ -268,7 +268,7 @@ end function
 ! CHECK:           %[[VAL_6:.*]] = fir.shape %[[VAL_5]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_6]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFmin_arrayEb"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
 ! CHECK:           %[[VAL_8:.*]] = arith.constant 42 : index
-! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<42xi32> {bindc_name = "min_array", uniq_name = "_QFmin_arrayEmin_array"}
+! CHECK:           %[[VAL_9:.*]] = fir.alloca !fir.array<42xi32> {bindc_name = "min_array", fir.must_be_stack = true, uniq_name = "_QFmin_arrayEmin_array"}
 ! CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_8]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_10]]) {uniq_name = "_QFmin_arrayEmin_array"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
 ! CHECK:           %[[VAL_12:.*]] = hlfir.elemental %[[VAL_3]] unordered : (!fir.shape<1>) -> !hlfir.expr<42xi32> {
@@ -303,7 +303,7 @@ end function
 ! CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_2]](%[[VAL_8]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFmin_dynamic_optional_arrayEc"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 10 : index
-! CHECK:           %[[VAL_11:.*]] = fir.alloca !fir.array<10xi32> {bindc_name = "min_dynamic_optional_array", uniq_name = "_QFmin_dynamic_optional_arrayEmin_dynamic_optional_array"}
+! CHECK:           %[[VAL_11:.*]] = fir.alloca !fir.array<10xi32> {bindc_name = "min_dynamic_optional_array", fir.must_be_stack = true, uniq_name = "_QFmin_dynamic_optional_arrayEmin_dynamic_optional_array"}
 ! CHECK:           %[[VAL_12:.*]] = fir.shape %[[VAL_10]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_11]](%[[VAL_12]]) {uniq_name = "_QFmin_dynamic_optional_arrayEmin_dynamic_optional_array"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK:           %[[VAL_14:.*]] = fir.is_present %[[VAL_9]]#0 : (!fir.ref<!fir.array<10xi32>>) -> i1
@@ -542,7 +542,7 @@ end function
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_4]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFishftc_arrayEi"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 42 : index
-! CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.array<42xi32> {bindc_name = "ishftc_array", uniq_name = "_QFishftc_arrayEishftc_array"}
+! CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.array<42xi32> {bindc_name = "ishftc_array", fir.must_be_stack = true, uniq_name = "_QFishftc_arrayEishftc_array"}
 ! CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_8]]) {uniq_name = "_QFishftc_arrayEishftc_array"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 42 : index
@@ -609,7 +609,7 @@ end function
 ! CHECK:           %[[VAL_4:.*]] = fir.shape %[[VAL_3]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_4]]) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFishftc_dynamically_optional_arrayEi"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 42 : index
-! CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.array<42xi32> {bindc_name = "ishftc_dynamically_optional_array", uniq_name = "_QFishftc_dynamically_optional_arrayEishftc_dynamically_optional_array"}
+! CHECK:           %[[VAL_7:.*]] = fir.alloca !fir.array<42xi32> {bindc_name = "ishftc_dynamically_optional_array", fir.must_be_stack = true, uniq_name = "_QFishftc_dynamically_optional_arrayEishftc_dynamically_optional_array"}
 ! CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_8]]) {uniq_name = "_QFishftc_dynamically_optional_arrayEishftc_dynamically_optional_array"} : (!fir.ref<!fir.array<42xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<42xi32>>, !fir.ref<!fir.array<42xi32>>)
 ! CHECK:           %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_1]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFishftc_dynamically_optional_arrayEshift"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
@@ -705,7 +705,7 @@ end subroutine
 ! CHECK:           %[[VAL_24:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_25:.*]] = arith.cmpi sgt, %[[VAL_17]], %[[VAL_24]] : index
 ! CHECK:           %[[VAL_26:.*]] = arith.select %[[VAL_25]], %[[VAL_17]], %[[VAL_24]] : index
-! CHECK:           %[[VAL_27:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_20]], %[[VAL_23]], %[[VAL_26]] {fir.must_be_heap = true, uniq_name = "_QFallocatables_testEa.alloc"}
+! CHECK:           %[[VAL_27:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_20]], %[[VAL_23]], %[[VAL_26]] {alignment = 64 : i64, fir.must_be_heap = true, uniq_name = "_QFallocatables_testEa.alloc"}
 ! CHECK:           %[[VAL_28:.*]] = fir.shape %[[VAL_20]], %[[VAL_23]], %[[VAL_26]] : (index, index, index) -> !fir.shape<3>
 ! CHECK:           %[[VAL_29:.*]] = fir.embox %[[VAL_27]](%[[VAL_28]]) : (!fir.heap<!fir.array<?x?x?xi32>>, !fir.shape<3>) -> !fir.box<!fir.heap<!fir.array<?x?x?xi32>>>
 ! CHECK:           fir.store %[[VAL_29]] to %[[VAL_3]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
@@ -724,7 +724,7 @@ end subroutine
 ! CHECK:           %[[VAL_42:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_43:.*]] = arith.cmpi sgt, %[[VAL_35]], %[[VAL_42]] : index
 ! CHECK:           %[[VAL_44:.*]] = arith.select %[[VAL_43]], %[[VAL_35]], %[[VAL_42]] : index
-! CHECK:           %[[VAL_45:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_38]], %[[VAL_41]], %[[VAL_44]] {fir.must_be_heap = true, uniq_name = "_QFallocatables_testEb.alloc"}
+! CHECK:           %[[VAL_45:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_38]], %[[VAL_41]], %[[VAL_44]] {alignment = 64 : i64, fir.must_be_heap = true, uniq_name = "_QFallocatables_testEb.alloc"}
 ! CHECK:           %[[VAL_46:.*]] = fir.shape %[[VAL_38]], %[[VAL_41]], %[[VAL_44]] : (index, index, index) -> !fir.shape<3>
 ! CHECK:           %[[VAL_47:.*]] = fir.embox %[[VAL_45]](%[[VAL_46]]) : (!fir.heap<!fir.array<?x?x?xi32>>, !fir.shape<3>) -> !fir.box<!fir.heap<!fir.array<?x?x?xi32>>>
 ! CHECK:           fir.store %[[VAL_47]] to %[[VAL_4]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>
@@ -743,7 +743,7 @@ end subroutine
 ! CHECK:           %[[VAL_60:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_61:.*]] = arith.cmpi sgt, %[[VAL_53]], %[[VAL_60]] : index
 ! CHECK:           %[[VAL_62:.*]] = arith.select %[[VAL_61]], %[[VAL_53]], %[[VAL_60]] : index
-! CHECK:           %[[VAL_63:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_56]], %[[VAL_59]], %[[VAL_62]] {fir.must_be_heap = true, uniq_name = "_QFallocatables_testEc.alloc"}
+! CHECK:           %[[VAL_63:.*]] = fir.allocmem !fir.array<?x?x?xi32>, %[[VAL_56]], %[[VAL_59]], %[[VAL_62]] {alignment = 64 : i64, fir.must_be_heap = true, uniq_name = "_QFallocatables_testEc.alloc"}
 ! CHECK:           %[[VAL_64:.*]] = fir.shape %[[VAL_56]], %[[VAL_59]], %[[VAL_62]] : (index, index, index) -> !fir.shape<3>
 ! CHECK:           %[[VAL_65:.*]] = fir.embox %[[VAL_63]](%[[VAL_64]]) : (!fir.heap<!fir.array<?x?x?xi32>>, !fir.shape<3>) -> !fir.box<!fir.heap<!fir.array<?x?x?xi32>>>
 ! CHECK:           fir.store %[[VAL_65]] to %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x?xi32>>>>

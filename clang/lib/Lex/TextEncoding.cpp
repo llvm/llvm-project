@@ -8,6 +8,7 @@
 
 #include "clang/Lex/TextEncoding.h"
 #include "clang/Basic/DiagnosticDriver.h"
+#include "llvm/Support/TextEncoding.h"
 
 using namespace clang;
 
@@ -15,7 +16,7 @@ llvm::TextEncodingConverter *
 TextEncoding::getConverter(ConversionAction Action) const {
   switch (Action) {
   case CA_ToLiteralEncoding:
-    return ToLiteralEncodingConverter;
+    return ToLiteralEncodingConverter.get();
   default:
     return nullptr;
   }
@@ -38,7 +39,7 @@ TextEncoding::setConvertersFromOptions(TextEncoding &TE,
       llvm::TextEncodingConverter::create(UTF8, TE.LiteralEncoding);
   if (ErrorOrConverter)
     TE.ToLiteralEncodingConverter =
-        new TextEncodingConverter(std::move(*ErrorOrConverter));
+        std::make_unique<TextEncodingConverter>(std::move(*ErrorOrConverter));
   else
     return ErrorOrConverter.getError();
   return std::error_code();

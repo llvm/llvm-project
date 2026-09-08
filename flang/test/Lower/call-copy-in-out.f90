@@ -98,6 +98,29 @@ subroutine test_actual_arg_intent_in(x)
   call bar(x)
 end subroutine
 
+! Test the transitive copy-out case. The outer INTENT(IN) array is forwarded
+! to a dummy without INTENT, which then passes a noncontiguous section to an
+! implicit-interface procedure. Lowering cannot recognize the outer contract
+! at the inner call site, so the inner procedure still generates copy-back.
+! The outer array must therefore not be marked fir.read_only.
+! CHECK-LABEL: func.func @_QPtest_forwarded_intent_in(
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.array<4xf32>> {fir.bindc_name = "x"}) {
+subroutine test_forwarded_intent_in(x)
+  real, intent(in) :: x(4)
+  call test_forwarded_without_intent(x)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_forwarded_without_intent(
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.array<4xf32>> {fir.bindc_name = "x"}) {
+subroutine test_forwarded_without_intent(x)
+  real :: x(4)
+! CHECK: hlfir.copy_in
+! CHECK: fir.call @_QPbar
+! CHECK: hlfir.copy_out
+! CHECK-SAME: to
+  call bar(x(1:4:2))
+end subroutine
+
 ! Test copy-out is NOT skipped when passing a section of a pointer component
 ! of an INTENT(IN) dummy: the pointer target is not a subobject of the dummy
 ! (F2023 9.4.2 p5), so the callee may define it and copy-out is required.
@@ -118,7 +141,8 @@ end subroutine
 ! pointer dummy: INTENT(IN) on a pointer restricts pointer association, not
 ! the target's contents, so the callee may define the target and copy-out is
 ! required.
-! CHECK-LABEL: func @_QPtest_actual_intent_in_pointer(
+! CHECK-LABEL: func.func @_QPtest_actual_intent_in_pointer(
+! CHECK-SAME: %{{.*}}: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {fir.bindc_name = "pi", fir.read_only}) {
 subroutine test_actual_intent_in_pointer(pi)
   integer, intent(in), pointer :: pi(:)
 ! CHECK: hlfir.copy_in
@@ -165,8 +189,8 @@ subroutine test_scalar_substring_does_no_trigger_copy_inout(c, i, j)
   call bar_char_2(c(i:j))
 end subroutine
 
-! CHECK-LABEL: func @_QPissue871(
-subroutine issue871(p)
+! CHECK-LABEL: func @_QPderived_pointer_no_copy(
+subroutine derived_pointer_no_copy(p)
   ! Test passing implicit derived from scalar pointer (no copy-in/out).
   type t
     integer :: i
@@ -177,8 +201,8 @@ subroutine issue871(p)
   call bar_derived(p)
 end subroutine
 
-! CHECK-LABEL: func @_QPissue871_array(
-subroutine issue871_array(p)
+! CHECK-LABEL: func @_QPderived_pointer_no_copy_array(
+subroutine derived_pointer_no_copy_array(p)
   ! Test passing implicit derived from contiguous pointer (no copy-in/out).
   type t
     integer :: i

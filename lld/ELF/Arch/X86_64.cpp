@@ -54,8 +54,9 @@ public:
   void relaxCFIJumpTables() const override;
   void applyBranchToBranchOpt() const override;
   template <class ELFT, class RelTy>
-  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
-  void scanSection(InputSectionBase &sec) override;
+  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                       unsigned shard);
+  void scanSection(InputSectionBase &sec, unsigned shard) override;
 
 private:
   void relaxTlsGdToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
@@ -642,8 +643,9 @@ RelType X86_64::getDynRel(RelType type) const {
 }
 
 template <class ELFT, class RelTy>
-void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                             unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
 
   for (auto it = rels.begin(); it != rels.end(); ++it) {
@@ -769,16 +771,39 @@ void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
                       [](auto &l, auto &r) { return l.offset < r.offset; });
 }
 
-void X86_64::scanSection(InputSectionBase &sec) {
+void X86_64::scanSection(InputSectionBase &sec, unsigned shard) {
   if (ctx.arg.is64)
-    elf::scanSection1<X86_64, ELF64LE>(*this, sec);
+    elf::scanSection1<X86_64, ELF64LE>(*this, sec, shard);
   else // ilp32
-    elf::scanSection1<X86_64, ELF32LE>(*this, sec);
+    elf::scanSection1<X86_64, ELF32LE>(*this, sec, shard);
+}
+
+static bool isPltOff64Tls(const uint8_t *loc) {
+  return loc[4] == 0x48 && loc[5] == 0xb8;
 }
 
 void X86_64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
                             uint64_t val) const {
   if (rel.type == R_X86_64_TLSGD) {
+    // TLSGD can be directly followed by MOVABS (instead of CALL):
+    //   leaq x@tlsgd(%rip), %rdi             # 48 8d 3d <disp32>, TLSGD
+    //   movabsq $__tls_get_addr@pltoff, %rax # 48 b8 <imm64>, PLTOFF64
+    //   addq %REG, %rax
+    //   callq *%rax
+    if (isPltOff64Tls(loc)) {
+      // Convert to the following three instructions.
+      const uint8_t inst[] = {
+          0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00,
+          0x00, 0x00,                            // mov %fs:0x0,%rax
+          0x48, 0x8d, 0x80, 0,    0,    0,    0, // lea x@tpoff,%rax
+          0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00,    // 6-byte nop
+      };
+      memcpy(loc - 3, inst, sizeof(inst));
+      // The original code used a pc relative relocation and so we have to
+      // compensate for the -4 in had in the addend.
+      write32le(loc + 9, val + 4);
+      return;
+    }
     // Convert
     //   .byte 0x66
     //   leaq x@tlsgd(%rip), %rdi
@@ -792,9 +817,6 @@ void X86_64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
         0x48, 0x8d, 0x80, 0,    0,    0,    0, // lea x@tpoff,%rax
     };
     memcpy(loc - 4, inst, sizeof(inst));
-
-    // The original code used a pc relative relocation and so we have to
-    // compensate for the -4 in had in the addend.
     write32le(loc + 8, val + 4);
   } else if (rel.type == R_X86_64_GOTPC32_TLSDESC ||
              rel.type == R_X86_64_CODE_4_GOTPC32_TLSDESC) {
@@ -828,6 +850,25 @@ void X86_64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
 void X86_64::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
                             uint64_t val) const {
   if (rel.type == R_X86_64_TLSGD) {
+    if (isPltOff64Tls(loc)) {
+      // Convert
+      //   leaq x@tlsgd(%rip), %rdi             # 48 8d 3d <disp32>, TLSLD
+      //   movabsq $__tls_get_addr@pltoff, %rax # 48 b8 <imm64>, PLTOFF64
+      //   addq %REG, %rax
+      //   callq *%rax
+      // to the following three instructions.
+      const uint8_t inst[] = {
+          0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00,
+          0x00, 0x00,                            // mov %fs:0x0,%rax
+          0x48, 0x03, 0x05, 0,    0,    0,    0, // addq x@gottpoff(%rip),%rax
+          0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00,    // nopw 0x0(%rax,%rax,1)
+      };
+      memcpy(loc - 3, inst, sizeof(inst));
+      // Both code sequences are PC relatives, but since we are moving the
+      // constant forward by 9 bytes we have to subtract the value by 9.
+      write32le(loc + 9, val - 9);
+      return;
+    }
     // Convert
     //   .byte 0x66
     //   leaq x@tlsgd(%rip), %rdi
@@ -1001,6 +1042,24 @@ void X86_64::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
     // https://raw.githubusercontent.com/wiki/hjl-tools/x86-psABI/x86-64-psABI-1.0.pdf
     loc[-3] = 0x66;
     memcpy(loc - 2, inst, sizeof(inst));
+    return;
+  }
+
+  if (isPltOff64Tls(loc)) {
+    // Convert
+    //   leaq x@tlsld(%rip), %rdi
+    //   movabsq $__tls_get_addr@pltoff, %rax
+    //   addq %REG, %rax
+    //   callq *%rax
+    // to
+    //   data16 data16 data16 cs nopw 0x0(%rax,%rax,1)
+    //   movq %fs:0,%rax
+    const uint8_t inst[] = {
+        0x66, 0x66, 0x66, 0x66, 0x2e, 0x0f, 0x1f, 0x84, 0x00,
+        0x00, 0x00, 0x00, 0x00,                               // 13-byte nop
+        0x64, 0x48, 0x8b, 0x04, 0x25, 0x00, 0x00, 0x00, 0x00, // movq %fs:0,%rax
+    };
+    memcpy(loc - 3, inst, sizeof(inst));
     return;
   }
 

@@ -266,7 +266,8 @@ public:
   /// generated in non-LTO compilation.
   LLVM_ABI ModulePassManager buildFatLTODefaultPipeline(OptimizationLevel Level,
                                                         bool ThinLTO,
-                                                        bool EmitSummary);
+                                                        bool EmitSummary,
+                                                        bool Verify = true);
 
   /// Build a pre-link, ThinLTO-targeting default optimization pipeline to
   /// a pass manager.
