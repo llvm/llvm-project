@@ -7778,8 +7778,7 @@ Example (assuming 64-bit pointers):
 
 #### '`callees`' Metadata
 
-`callees` metadata may be attached to direct and indirect function call sites.
-It does not apply to inline assembly calls; attachments on those calls are ignored.
+`callees` metadata does not apply to inline assembly calls; attachments on those calls are ignored.
 Its operands provide an exhaustive list of possible callees.
 The list may be conservative: a listed function need not be dynamically feasible, but on every defined execution of the call the callee must be one of the listed functions.
 The order and duplication of operands are semantically irrelevant.
