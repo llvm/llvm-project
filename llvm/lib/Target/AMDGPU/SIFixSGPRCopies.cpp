@@ -457,7 +457,7 @@ getFirstNonPrologue(MachineBasicBlock *MBB, const TargetInstrInfo *TII) {
 // This is intended to combine M0 initializations, but can work with any
 // SGPR. A VGPR cannot be processed since we cannot guarantee vector
 // executioon.
-static bool hoistAndMergeSGPRInits(unsigned Reg,
+static bool hoistAndMergeSGPRInits(unsigned Reg, MachineFunction &MF,
                                    const MachineRegisterInfo &MRI,
                                    const TargetRegisterInfo *TRI,
                                    MachineDominatorTree &MDT,
@@ -469,12 +469,15 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
   SmallVector<MachineInstr*, 8> Clobbers;
   // List of instructions marked for deletion.
   SmallPtrSet<MachineInstr *, 8> MergedInstrs;
+  // Instructions already classified as an init or a clobber.
+  SmallPtrSet<MachineInstr *, 16> Classified;
 
   bool Changed = false;
 
-  for (auto &MI : MRI.def_instructions(Reg)) {
+  for (MachineInstr &MI : MRI.def_instructions(Reg)) {
+    Classified.insert(&MI);
     MachineOperand *Imm = nullptr;
-    for (auto &MO : MI.operands()) {
+    for (MachineOperand &MO : MI.operands()) {
       if ((MO.isReg() && ((MO.isDef() && MO.getReg() != Reg) || !MO.isDef())) ||
           (!MO.isImm() && !MO.isReg()) || (MO.isImm() && Imm)) {
         Imm = nullptr;
@@ -488,6 +491,16 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
     else
       Clobbers.push_back(&MI);
   }
+
+  if (Inits.empty())
+    return false;
+
+  // Calls clobber Reg with a regmask operand instead of an explicit def, so
+  // they do not appear on the def list of Reg.
+  for (MachineBasicBlock &MBB : MF)
+    for (MachineInstr &MI : MBB)
+      if (!Classified.contains(&MI) && MI.modifiesRegister(Reg, TRI))
+        Clobbers.push_back(&MI);
 
   for (auto &Init : Inits) {
     auto &Defs = Init.second;
@@ -609,7 +622,7 @@ static bool hoistAndMergeSGPRInits(unsigned Reg,
       const unsigned Threshold = 50;
       // Search until B or Threshold for a place to insert the initialization.
       for (unsigned I = 0; R != B && I < Threshold; ++R, ++I)
-        if (R->readsRegister(Reg, TRI) || R->definesRegister(Reg, TRI) ||
+        if (R->readsRegister(Reg, TRI) || R->modifiesRegister(Reg, TRI) ||
             TII->isSchedulingBoundary(*R, MBB, *MBB->getParent()))
           break;
 
@@ -811,7 +824,7 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
     TII->legalizeOperands(*Relegalize.pop_back_val(), MDT);
 
   if (MF.getTarget().getOptLevel() > CodeGenOptLevel::None && EnableM0Merge)
-    hoistAndMergeSGPRInits(AMDGPU::M0, *MRI, TRI, *MDT, TII);
+    hoistAndMergeSGPRInits(AMDGPU::M0, MF, *MRI, TRI, *MDT, TII);
 
   SiblingPenalty.clear();
   V2SCopies.clear();

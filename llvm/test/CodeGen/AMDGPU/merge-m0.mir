@@ -678,3 +678,136 @@ body:             |
   bb.3:
     S_ENDPGM 0
 ...
+
+# A call clobbers m0 with a regmask instead of an explicit def, so the init
+# after the call must be kept.
+
+# GCN-LABEL: name: merge-m0-call-clobber
+# GCN:      SI_INIT_M0 -1
+# GCN:      DS_WRITE_B32
+# GCN-NEXT: SI_CALL
+# GCN-NEXT: SI_INIT_M0 -1
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: S_ENDPGM
+
+---
+name: merge-m0-call-clobber
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: sreg_64_xexec }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = IMPLICIT_DEF
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    dead $sgpr30_sgpr31 = SI_CALL %2, 0, csr_amdgpu
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_ENDPGM 0
+...
+
+# The inits cannot be hoisted into the common dominator because the call in
+# that block clobbers m0.
+
+# GCN-LABEL: name: merge-m0-call-clobber-cross-block
+# GCN:      bb.0:
+# GCN-NOT:  SI_INIT_M0
+# GCN:      SI_CALL
+# GCN:      bb.1:
+# GCN:      SI_INIT_M0 -1
+# GCN-NEXT: DS_WRITE_B32
+# GCN:      bb.2:
+# GCN:      SI_INIT_M0 -1
+# GCN-NEXT: DS_WRITE_B32
+
+---
+name: merge-m0-call-clobber-cross-block
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: sreg_64_xexec }
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = IMPLICIT_DEF
+    dead $sgpr30_sgpr31 = SI_CALL %2, 0, csr_amdgpu
+    S_CBRANCH_VCCZ %bb.1, implicit undef $vcc
+    S_BRANCH %bb.2
+
+  bb.1:
+    successors: %bb.3
+
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    S_ENDPGM 0
+...
+
+# Both inits are dominated by the call, so they still merge, but the surviving
+# init must not move above the call.
+
+# GCN-LABEL: name: merge-m0-call-dominates-inits
+# GCN:      SI_CALL
+# GCN-NEXT: SI_INIT_M0 -1
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: S_ENDPGM
+
+---
+name: merge-m0-call-dominates-inits
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: sreg_64_xexec }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = IMPLICIT_DEF
+    dead $sgpr30_sgpr31 = SI_CALL %2, 0, csr_amdgpu
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_ENDPGM 0
+...
+
+# A single init must not be scheduled above a call.
+
+# GCN-LABEL: name: move-m0-call-clobber
+# GCN:      SI_CALL
+# GCN-NEXT: SI_INIT_M0 -1
+# GCN-NEXT: DS_WRITE_B32
+# GCN-NEXT: S_ENDPGM
+
+---
+name: move-m0-call-clobber
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: sreg_64_xexec }
+body:             |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    %2 = IMPLICIT_DEF
+    dead $sgpr30_sgpr31 = SI_CALL %2, 0, csr_amdgpu
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_ENDPGM 0
+...
