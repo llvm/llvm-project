@@ -2370,7 +2370,7 @@ func.func @fold_tensor_cast_into_forall_non_sequential_writes(
 // CHECK-SAME:      %[[ARG1:.*]]: tensor<2xf32>,
 // CHECK-SAME:      %[[ARG2:.*]]: tensor<2xf32>,
 // CHECK-SAME:      %[[ARG3:.*]]: tensor<2xf32>) -> (tensor<2xf32>, tensor<2xf32>) {
-// CHECK:           return %[[ARG1]], %[[ARG0]] : tensor<2xf32>, tensor<2xf32>
+// CHECK:           return %[[ARG0]], %[[ARG1]] : tensor<2xf32>, tensor<2xf32>
 // CHECK:         }
 func.func @promote_reversed_outputs(%a: tensor<2xf32>, %b: tensor<2xf32>, %init_a: tensor<2xf32>, %init_b: tensor<2xf32>) -> (tensor<2xf32>, tensor<2xf32>) {
   %r:2 = scf.forall (%i) in (1) shared_outs(%x = %init_a, %y = %init_b) -> (tensor<2xf32>, tensor<2xf32>) {
@@ -2390,8 +2390,8 @@ func.func @promote_reversed_outputs(%a: tensor<2xf32>, %b: tensor<2xf32>, %init_
 // CHECK-SAME:      %[[ARG1:.*]]: tensor<2xf32>,
 // CHECK-SAME:      %[[ARG2:.*]]: tensor<4xf32>,
 // CHECK-SAME:      %[[ARG3:.*]]: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
-// CHECK:           %[[INSERT_SLICE_0:.*]] = tensor.insert_slice %[[ARG1]] into %[[ARG3]][2] [2] [1] : tensor<2xf32> into tensor<4xf32>
-// CHECK:           %[[INSERT_SLICE_1:.*]] = tensor.insert_slice %[[ARG0]] into %[[ARG2]][0] [2] [1] : tensor<2xf32> into tensor<4xf32>
+// CHECK:           %[[INSERT_SLICE_0:.*]] = tensor.insert_slice %[[ARG0]] into %[[ARG2]][0] [2] [1] : tensor<2xf32> into tensor<4xf32>
+// CHECK:           %[[INSERT_SLICE_1:.*]] = tensor.insert_slice %[[ARG1]] into %[[ARG3]][2] [2] [1] : tensor<2xf32> into tensor<4xf32>
 // CHECK:           return %[[INSERT_SLICE_0]], %[[INSERT_SLICE_1]] : tensor<4xf32>, tensor<4xf32>
 // CHECK:         }
 func.func @promote_partial_outputs(%a: tensor<2xf32>, %b: tensor<2xf32>, %init_a: tensor<4xf32>, %init_b: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {

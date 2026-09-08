@@ -760,6 +760,24 @@ void mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp) {
   bbArgReplacements.append(forallOp.getOutputs().begin(),
                            forallOp.getOutputs().end());
 
+  // Collect insert ops in shared output order before inlining replaces the
+  // output block arguments. Keep a separate list for each output.
+  SmallVector<SmallVector<tensor::ParallelInsertSliceOp, 1>> yieldingOps;
+  yieldingOps.reserve(forallOp.getNumResults());
+
+  for (BlockArgument outputArg : forallOp.getRegionIterArgs()) {
+    auto &outputOps = yieldingOps.emplace_back();
+
+    for (Operation *op : forallOp.getCombiningOps(outputArg)) {
+      auto insertOp = dyn_cast<tensor::ParallelInsertSliceOp>(op);
+      if (!insertOp || insertOp->getParentOp() != terminator.getOperation() ||
+          insertOp.getDest() != outputArg)
+        continue;
+
+      outputOps.push_back(insertOp);
+    }
+  }
+
   // Move the loop body operations to the loop's containing block.
   rewriter.inlineBlockBefore(forallOp.getBody(), forallOp->getBlock(),
                              forallOp->getIterator(), bbArgReplacements);
@@ -768,26 +786,22 @@ void mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp) {
   rewriter.setInsertionPointAfter(forallOp);
   SmallVector<Value> results;
   results.reserve(forallOp.getResults().size());
-  for (auto &yieldingOp : terminator.getYieldingOps()) {
-    auto parallelInsertSliceOp =
-        dyn_cast<tensor::ParallelInsertSliceOp>(yieldingOp);
-    if (!parallelInsertSliceOp)
-      continue;
+  for (auto [output, insertOps] :
+       llvm::zip_equal(forallOp.getOutputs(), yieldingOps)) {
+    Value result = output;
 
-    Value dst = parallelInsertSliceOp.getDest();
-    Value src = parallelInsertSliceOp.getSource();
-    if (llvm::isa<TensorType>(src.getType())) {
-      results.push_back(tensor::InsertSliceOp::create(
-          rewriter, forallOp.getLoc(), dst.getType(), src, dst,
-          parallelInsertSliceOp.getOffsets(), parallelInsertSliceOp.getSizes(),
-          parallelInsertSliceOp.getStrides(),
-          parallelInsertSliceOp.getStaticOffsets(),
-          parallelInsertSliceOp.getStaticSizes(),
-          parallelInsertSliceOp.getStaticStrides()));
-    } else {
-      llvm_unreachable("unsupported terminator");
+    for (tensor::ParallelInsertSliceOp insertOp : insertOps) {
+      result = tensor::InsertSliceOp::create(
+          rewriter, forallOp.getLoc(), result.getType(),
+          insertOp.getSource(), result,
+          insertOp.getOffsets(), insertOp.getSizes(), insertOp.getStrides(),
+          insertOp.getStaticOffsets(), insertOp.getStaticSizes(),
+          insertOp.getStaticStrides());
     }
+
+    results.push_back(result);
   }
+
   rewriter.replaceAllUsesWith(forallOp.getResults(), results);
 
   // Erase the old terminator and the loop.
