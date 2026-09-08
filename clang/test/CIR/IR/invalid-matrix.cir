@@ -30,3 +30,14 @@ cir.func @invalid_column_number() {
   cir.return
 
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @negative_column_number() {
+  // expected-error@+1 {{custom op 'cir.alloca' invalid kind of attribute specified}}
+  %3 = cir.alloca !cir.matrix<4 x -1 x !s32i>, !cir.ptr<!cir.matrix<4 x -1 x !s32i>>
+  cir.return
+
+}
