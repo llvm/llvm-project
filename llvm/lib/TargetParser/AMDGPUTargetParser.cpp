@@ -867,9 +867,10 @@ static void printFeatureModifiers(raw_ostream &OS, TargetIDSetting SramEcc,
 void TargetID::print(raw_ostream &StreamRep) const {
   StreamRep << TargetTripleString << '-' << getArchNameAMDGCN(Arch);
 
-  if (IsAMDHSA)
+  if (IsAMDHSA) {
     printFeatureModifiers(StreamRep, getSramEccSetting(), getXnackSetting(),
                           isXnackHardwiredOn(Arch));
+  }
 }
 
 std::string TargetID::toString() const {
