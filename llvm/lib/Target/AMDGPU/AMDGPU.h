@@ -62,7 +62,25 @@ public:
     return MachineFunctionProperties().setRegBankSelected();
   }
 };
-FunctionPass *createAMDGPURegBankLegalizePass();
+FunctionPass *createAMDGPURegBankLegalizeLegacyPass();
+
+class AMDGPURegBankLegalizePass
+    : public RequiredPassInfoMixin<AMDGPURegBankLegalizePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties()
+        .setIsSSA()
+        .setLegalized()
+        .setRegBankSelected();
+  }
+
+  MachineFunctionProperties getClearedProperties() const {
+    return MachineFunctionProperties().setNoPHIs();
+  }
+};
 
 // SI Passes
 FunctionPass *createGCNDPPCombinePass();
@@ -245,8 +263,8 @@ extern char &AMDGPUGlobalISelDivergenceLoweringLegacyID;
 void initializeAMDGPURegBankSelectLegacyPass(PassRegistry &);
 extern char &AMDGPURegBankSelectLegacyID;
 
-void initializeAMDGPURegBankLegalizePass(PassRegistry &);
-extern char &AMDGPURegBankLegalizeID;
+void initializeAMDGPURegBankLegalizeLegacyPass(PassRegistry &);
+extern char &AMDGPURegBankLegalizeLegacyID;
 
 void initializeAMDGPUMarkLastScratchLoadLegacyPass(PassRegistry &);
 extern char &AMDGPUMarkLastScratchLoadID;
