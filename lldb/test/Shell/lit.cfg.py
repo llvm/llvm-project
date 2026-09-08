@@ -14,6 +14,7 @@ from lit.llvm import llvm_config
 from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
 
+sys.path.append(os.path.join(config.lldb_src_root, "test"))
 site.addsitedir(os.path.dirname(__file__))
 from helper import toolchain
 

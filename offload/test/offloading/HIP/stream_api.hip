@@ -22,12 +22,38 @@ static void print_error(const char *Label, hipError_t Error) {
 __global__ void setValue(int *Out, int Value) { *Out = Value; }
 
 int main(int argc, char **argv) {
+  print_error("null stream create", hipStreamCreate(nullptr));
+  // CHECK: null stream create value: 1
+  // CHECK: null stream create name: hipErrorInvalidValue
+  print_error("null flags stream create",
+              hipStreamCreateWithFlags(nullptr, hipStreamDefault));
+  // CHECK: null flags stream create value: 1
+  // CHECK: null flags stream create name: hipErrorInvalidValue
+
+  hipStream_t InvalidFlagsStream = nullptr;
+  print_error("invalid stream flags",
+              hipStreamCreateWithFlags(&InvalidFlagsStream, ~0u));
+  // CHECK: invalid stream flags value: 1
+  // CHECK: invalid stream flags name: hipErrorInvalidValue
+  printf("invalid flags stream: %d\n", InvalidFlagsStream == nullptr);
+  // CHECK: invalid flags stream: 1
+
   hipStream_t Stream = nullptr;
   if (hipStreamCreate(&Stream) != hipSuccess)
+    return 1;
+  hipStream_t BlockingStream = nullptr;
+  if (hipStreamCreateWithFlags(&BlockingStream, hipStreamDefault) != hipSuccess)
+    return 1;
+  hipStream_t NonBlockingStream = nullptr;
+  if (hipStreamCreateWithFlags(&NonBlockingStream, hipStreamNonBlocking) !=
+      hipSuccess)
     return 1;
 
   printf("stream created: %d\n", Stream != nullptr);
   // CHECK: stream created: 1
+  printf("stream flags created: %d %d\n", BlockingStream != nullptr,
+         NonBlockingStream != nullptr);
+  // CHECK: stream flags created: 1 1
 
   int *StreamPtr = nullptr;
   int *DefaultPtr = nullptr;

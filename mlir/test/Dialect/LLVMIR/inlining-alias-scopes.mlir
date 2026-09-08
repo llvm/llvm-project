@@ -264,7 +264,7 @@ llvm.func @missing_noalias_on_one_ptr(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2:
 llvm.func @might_return_arg_derived(!llvm.ptr) -> !llvm.ptr
 
 llvm.func @foo(%arg0: !llvm.ptr {llvm.noalias}, %arg1: !llvm.ptr {llvm.noalias}) {
-  %0 = llvm.mlir.constant(5 : i64) : i32
+  %0 = llvm.mlir.constant(5 : i32) : i32
   %1 = llvm.call @might_return_arg_derived(%arg0) : (!llvm.ptr) -> !llvm.ptr
   llvm.store %0, %1 : i32, !llvm.ptr
   llvm.return
@@ -291,7 +291,7 @@ llvm.func @bar(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
 llvm.func @random() -> i1
 
 llvm.func @block_arg(%arg0: !llvm.ptr {llvm.noalias}, %arg1: !llvm.ptr {llvm.noalias}) {
-  %0 = llvm.mlir.constant(5 : i64) : i32
+  %0 = llvm.mlir.constant(5 : i32) : i32
   %1 = llvm.call @random() : () -> i1
   llvm.cond_br %1, ^bb0(%arg0 : !llvm.ptr), ^bb0(%arg1 : !llvm.ptr)
 
@@ -320,7 +320,7 @@ llvm.func @bar(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
 llvm.func @random() -> i1
 
 llvm.func @region_branch(%arg0: !llvm.ptr {llvm.noalias}, %arg1: !llvm.ptr {llvm.noalias}) {
-  %0 = llvm.mlir.constant(5 : i64) : i32
+  %0 = llvm.mlir.constant(5 : i32) : i32
   test.region_if %arg0: !llvm.ptr -> !llvm.ptr then {
   ^bb0(%arg2: !llvm.ptr):
     test.region_if_yield %arg0 : !llvm.ptr
@@ -347,7 +347,7 @@ llvm.func @region_branch_inlining(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !ll
 // -----
 
 llvm.func @missing_region_branch(%arg0: !llvm.ptr {llvm.noalias}, %arg1: !llvm.ptr {llvm.noalias}) {
-  %0 = llvm.mlir.constant(5 : i64) : i32
+  %0 = llvm.mlir.constant(5 : i32) : i32
   "test.one_region_op"() ({
   ^bb0(%arg2: !llvm.ptr):
     llvm.store %0, %arg2 : i32, !llvm.ptr
@@ -374,7 +374,7 @@ llvm.func @missing_region_branch_inlining(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %a
 llvm.func @random() -> i1
 
 llvm.func @block_arg(%arg0: !llvm.ptr {llvm.noalias}, %arg1: !llvm.ptr {llvm.noalias}) {
-  %0 = llvm.mlir.constant(5 : i64) : i32
+  %0 = llvm.mlir.constant(5 : i32) : i32
   %1 = llvm.mlir.constant(1 : i64) : i64
   %2 = llvm.alloca %1 x i32 : (i64) -> !llvm.ptr
   %3 = llvm.call @random() : () -> i1
@@ -407,7 +407,7 @@ llvm.func @unknown() -> !llvm.ptr
 llvm.func @random() -> i1
 
 llvm.func @unknown_object(%arg0: !llvm.ptr {llvm.noalias}, %arg1: !llvm.ptr {llvm.noalias}) {
-  %0 = llvm.mlir.constant(5 : i64) : i32
+  %0 = llvm.mlir.constant(5 : i32) : i32
   %1 = llvm.call @random() : () -> i1
   %2 = llvm.call @unknown() : () -> !llvm.ptr
   llvm.cond_br %1, ^bb0(%arg0 : !llvm.ptr), ^bb0(%2 : !llvm.ptr)
@@ -439,7 +439,7 @@ llvm.func @bar(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
 // CHECK-DAG: #[[$ARG1_SCOPE:.*]] = #llvm.alias_scope<id = {{.*}}, domain = #[[DOMAIN]]{{(,.*)?}}>
 
 llvm.func @supported_operations(%arg0: !llvm.ptr {llvm.noalias}, %arg1: !llvm.ptr {llvm.noalias}) {
-  %0 = llvm.mlir.constant(5 : i64) : i32
+  %0 = llvm.mlir.constant(5 : i32) : i32
   llvm.store %0, %arg1 : i32, !llvm.ptr
   %1 = llvm.load %arg1 : !llvm.ptr -> i32
   "llvm.intr.memcpy"(%arg0, %arg1, %1) <{ isVolatile = false }> : (!llvm.ptr, !llvm.ptr, i32) -> ()

@@ -1253,8 +1253,6 @@ unsigned getWavesPerEUForWorkGroup(const MCSubtargetInfo &STI,
                     getNumWorkGroupSIMDs(isFullSIMDMode(STI)));
 }
 
-unsigned getMinFlatWorkGroupSize(const MCSubtargetInfo &STI) { return 1; }
-
 unsigned getWavesPerWorkGroup(const MCSubtargetInfo &STI,
                               unsigned FlatWorkGroupSize) {
   return divideCeil(FlatWorkGroupSize, getWavefrontSize(STI));
@@ -1404,17 +1402,6 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo &STI,
 
 unsigned getArchVGPRAllocGranule() { return 4; }
 
-unsigned getTotalNumVGPRs(const MCSubtargetInfo &STI) {
-  if (STI.getFeatureBits().test(FeatureGFX90AInsts))
-    return 512;
-  if (!isGFX10Plus(STI))
-    return 256;
-  bool IsWave32 = STI.getFeatureBits().test(FeatureWavefrontSize32);
-  if (STI.getFeatureBits().test(Feature1536VGPRs))
-    return IsWave32 ? 1536 : 768;
-  return IsWave32 ? 1024 : 512;
-}
-
 unsigned getAddressableNumArchVGPRs(const MCSubtargetInfo &STI) {
   const auto &Features = STI.getFeatureBits();
   if (Features.test(Feature1024AddressableVGPRs))
@@ -1439,9 +1426,11 @@ unsigned getAddressableNumVGPRs(const MCSubtargetInfo &STI,
 unsigned getNumWavesPerEUWithNumVGPRs(const MCSubtargetInfo &STI,
                                       unsigned NumVGPRs,
                                       unsigned DynamicVGPRBlockSize) {
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  bool IsWave32 = STI.getFeatureBits().test(FeatureWavefrontSize32);
   return getNumWavesPerEUWithNumVGPRs(
       NumVGPRs, getVGPRAllocGranule(STI, DynamicVGPRBlockSize),
-      getMaxWavesPerEU(parseArchAMDGCN(STI.getCPU())), getTotalNumVGPRs(STI));
+      getMaxWavesPerEU(Kind), AMDGPU::getTotalNumVGPRs(Kind, IsWave32));
 }
 
 unsigned getNumWavesPerEUWithNumVGPRs(unsigned NumVGPRs, unsigned Granule,
@@ -1487,11 +1476,13 @@ unsigned getMinNumVGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
   if (DynamicVGPREnabled)
     return 0;
 
-  unsigned MaxWavesPerEU = getMaxWavesPerEU(parseArchAMDGCN(STI.getCPU()));
+  GPUKind Kind = parseArchAMDGCN(STI.getCPU());
+  unsigned MaxWavesPerEU = getMaxWavesPerEU(Kind);
   if (WavesPerEU >= MaxWavesPerEU)
     return 0;
 
-  unsigned TotNumVGPRs = getTotalNumVGPRs(STI);
+  unsigned TotNumVGPRs = AMDGPU::getTotalNumVGPRs(
+      Kind, STI.getFeatureBits().test(FeatureWavefrontSize32));
   unsigned AddrsableNumVGPRs =
       getAddressableNumVGPRs(STI, DynamicVGPRBlockSize);
   unsigned Granule = getVGPRAllocGranule(STI, DynamicVGPRBlockSize);
@@ -1514,12 +1505,16 @@ unsigned getMaxNumVGPRs(const MCSubtargetInfo &STI, unsigned WavesPerEU,
                         unsigned DynamicVGPRBlockSize) {
   assert(WavesPerEU != 0);
 
+  unsigned TotNumVGPRs = AMDGPU::getTotalNumVGPRs(
+      parseArchAMDGCN(STI.getCPU()),
+      STI.getFeatureBits().test(FeatureWavefrontSize32));
+
   // In dynamic VGPR mode, WavesPerEU does not imply a VGPR limit.
   bool DynamicVGPREnabled = (DynamicVGPRBlockSize != 0);
   unsigned MaxNumVGPRs =
       DynamicVGPREnabled
-          ? getTotalNumVGPRs(STI)
-          : alignDown(getTotalNumVGPRs(STI) / WavesPerEU,
+          ? TotNumVGPRs
+          : alignDown(TotNumVGPRs / WavesPerEU,
                       getVGPRAllocGranule(STI, DynamicVGPRBlockSize));
   unsigned AddressableNumVGPRs =
       getAddressableNumVGPRs(STI, DynamicVGPRBlockSize);
@@ -2687,6 +2682,10 @@ bool isSGPR(MCRegister Reg, const MCRegisterInfo *TRI) {
          Reg == AMDGPU::SCC;
 }
 
+bool isRsrcIndexReg(MCRegister Reg, const MCRegisterInfo &MRI) {
+  return MRI.getRegClass(AMDGPU::RsrcReg32RegClassID).contains(Reg);
+}
+
 bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI) {
   return MRI.getEncodingValue(Reg) & AMDGPU::HWEncoding::IS_HI16;
 }
@@ -3345,7 +3344,7 @@ bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo) {
     // For non-compute shaders, SGPR inputs are marked with either inreg or
     // byval. Everything else is in VGPRs.
     return CB->paramHasAttr(ArgNo, Attribute::InReg) ||
-           CB->paramHasAttr(ArgNo, Attribute::ByVal);
+           CB->isByValArgument(ArgNo);
   default:
     return CB->paramHasAttr(ArgNo, Attribute::InReg);
   }

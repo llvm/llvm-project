@@ -152,9 +152,12 @@ Error_t GetDeviceProperties(DeviceProp_t *DeviceProp, int DeviceNo) {
 }
 
 Error_t StreamCreate(Stream_t *Stream) {
-  StreamTy *StreamObj = nullptr;
+  if (!Stream)
+    return setLastError(ErrorInvalidValue);
+
   StateTy &State = StateTy::get();
   ThreadStateTy &ThreadState = ThreadStateTy::get();
+  StreamTy *StreamObj = nullptr;
   ol_result_t Result = State.createStream(
       ThreadState.getDefaultDevice(), QueueKind::ExplicitBlocking, &StreamObj);
   if (Result == OL_SUCCESS)
@@ -162,7 +165,29 @@ Error_t StreamCreate(Stream_t *Stream) {
   return convertAndSetLastError(Result);
 }
 
+Error_t StreamCreateWithFlags(Stream_t *Stream, unsigned int Flags) {
+  if (!Stream)
+    return setLastError(ErrorInvalidValue);
+
+  if (Flags == StreamDefault)
+    return StreamCreate(Stream);
+  if (Flags != StreamNonBlocking)
+    return setLastError(ErrorInvalidValue);
+
+  StateTy &State = StateTy::get();
+  ThreadStateTy &ThreadState = ThreadStateTy::get();
+  StreamTy *StreamObj = nullptr;
+  ol_result_t Result =
+      State.createStream(ThreadState.getDefaultDevice(),
+                         QueueKind::ExplicitNonBlocking, &StreamObj);
+  if (Result == OL_SUCCESS)
+    *Stream = toLanguageStream(StreamObj);
+  return convertAndSetLastError(Result);
+}
+
 Error_t StreamDestroy(Stream_t Stream) {
+  if (!Stream)
+    return setLastError(ErrorInvalidValue);
   ol_result_t Result = StateTy::get().destroyStream(toInternalStream(Stream));
   return convertAndSetLastError(Result);
 }

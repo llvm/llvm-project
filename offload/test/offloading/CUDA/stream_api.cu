@@ -22,12 +22,39 @@ static void print_error(const char *Label, cudaError_t Error) {
 __global__ void setValue(int *Out, int Value) { *Out = Value; }
 
 int main(int argc, char **argv) {
+  print_error("null stream create", cudaStreamCreate(nullptr));
+  // CHECK: null stream create value: 1
+  // CHECK: null stream create name: cudaErrorInvalidValue
+  print_error("null flags stream create",
+              cudaStreamCreateWithFlags(nullptr, cudaStreamDefault));
+  // CHECK: null flags stream create value: 1
+  // CHECK: null flags stream create name: cudaErrorInvalidValue
+
+  cudaStream_t InvalidFlagsStream = nullptr;
+  print_error("invalid stream flags",
+              cudaStreamCreateWithFlags(&InvalidFlagsStream, ~0u));
+  // CHECK: invalid stream flags value: 1
+  // CHECK: invalid stream flags name: cudaErrorInvalidValue
+  printf("invalid flags stream: %d\n", InvalidFlagsStream == nullptr);
+  // CHECK: invalid flags stream: 1
+
   cudaStream_t Stream = nullptr;
   if (cudaStreamCreate(&Stream) != cudaSuccess)
+    return 1;
+  cudaStream_t BlockingStream = nullptr;
+  if (cudaStreamCreateWithFlags(&BlockingStream, cudaStreamDefault) !=
+      cudaSuccess)
+    return 1;
+  cudaStream_t NonBlockingStream = nullptr;
+  if (cudaStreamCreateWithFlags(&NonBlockingStream, cudaStreamNonBlocking) !=
+      cudaSuccess)
     return 1;
 
   printf("stream created: %d\n", Stream != nullptr);
   // CHECK: stream created: 1
+  printf("stream flags created: %d %d\n", BlockingStream != nullptr,
+         NonBlockingStream != nullptr);
+  // CHECK: stream flags created: 1 1
 
   int *StreamPtr = nullptr;
   int *DefaultPtr = nullptr;
