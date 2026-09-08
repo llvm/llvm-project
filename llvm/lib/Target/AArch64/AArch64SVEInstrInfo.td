@@ -5008,6 +5008,12 @@ defm TBLQ_ZZZ  : sve2p1_tblq<"tblq", int_aarch64_sve_tblq>;
 //===----------------------------------------------------------------------===//
 // SME2.2 or SVE2.2 instructions
 //===----------------------------------------------------------------------===//
+
+multiclass aarch64_lastp_pat<ValueType vtd, Instruction inst> {
+  def : Pat<(i64 (AArch64LastP vtd:$Pg, vtd:$Op1)),
+        (inst PPR:$Pg, PPR:$Op1)>;
+}
+
 let Predicates = [HasSVE2p2_or_SME2p2] in {
   // SVE Floating-point convert precision, zeroing predicate
   defm FCVT_ZPzZ : sve_fp_z2op_p_zd_b_0<"fcvt", "int_aarch64_sve_fcvt">;
@@ -5101,6 +5107,11 @@ let Predicates = [HasSVE2p2_or_SME2p2] in {
 
   def : Pat<(i64 (AArch64CttzEltsZeroPoison nxv2i1:$Pg, nxv2i1:$Op1)),
             (FIRSTP_XPP_D PPR:$Pg, PPR:$Op1)>;
+
+  defm : aarch64_lastp_pat<nxv16i1, LASTP_XPP_B>;
+  defm : aarch64_lastp_pat<nxv8i1, LASTP_XPP_H>;
+  defm : aarch64_lastp_pat<nxv4i1, LASTP_XPP_S>;
+  defm : aarch64_lastp_pat<nxv2i1, LASTP_XPP_D>;
 
   // SVE reverse within elements, zeroing predicate
   defm RBIT_ZPzZ : sve_int_perm_rev_rbit_z<"rbit", AArch64rbit_mt>;
