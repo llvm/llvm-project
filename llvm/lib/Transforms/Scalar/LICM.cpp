@@ -1427,7 +1427,6 @@ static bool isNotUsedOrFoldableInLoop(const Instruction &I, const Loop *CurLoop,
                                       const LoopSafetyInfo *SafetyInfo,
                                       TargetTransformInfo *TTI,
                                       bool &FoldableInLoop, bool LoopNestMode) {
-  const auto &BlockColors = SafetyInfo->getBlockColors();
   bool IsFoldable = isFoldableInLoop(I, CurLoop, TTI);
   for (const User *U : I.users()) {
     const Instruction *UI = cast<Instruction>(U);
@@ -1439,10 +1438,12 @@ static bool isNotUsedOrFoldableInLoop(const Instruction &I, const Loop *CurLoop,
 
       // We need to sink a callsite to a unique funclet.  Avoid sinking if the
       // phi use is too muddled.
-      if (isa<CallInst>(I))
+      if (isa<CallInst>(I)) {
+        const auto &BlockColors = SafetyInfo->getBlockColors();
         if (!BlockColors.empty() &&
             BlockColors.find(const_cast<BasicBlock *>(BB))->second.size() != 1)
           return false;
+      }
 
       if (LoopNestMode) {
         while (isa<PHINode>(UI) && UI->hasOneUser() &&
