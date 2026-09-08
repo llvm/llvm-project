@@ -243,8 +243,29 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   Info.IsMustTailCall = CB.isMustTailCall();
   Info.IsTailCall = CanBeTailCalled;
   Info.IsVarArg = IsVarArg;
+  Info.NoMerge = CB.cannotMerge();
+
+  // Remember the insertion point and containing block so that, once the
+  // target has built whatever instructions it needs for this call, we can
+  // find the actual call instruction among them and mark it NoMerge. This
+  // avoids requiring every target's lowerCall() to do so itself.
+  MachineBasicBlock &CallMBB = MIRBuilder.getMBB();
+  MachineBasicBlock::iterator InsertPtBefore = MIRBuilder.getInsertPt();
+  bool InsertAtBegin = InsertPtBefore == CallMBB.begin();
+  if (!InsertAtBegin)
+    --InsertPtBefore;
+
   if (!lowerCall(MIRBuilder, Info))
     return false;
+
+  if (Info.NoMerge && &MIRBuilder.getMBB() == &CallMBB) {
+    MachineBasicBlock::iterator Start =
+        InsertAtBegin ? CallMBB.begin() : std::next(InsertPtBefore);
+    for (MachineBasicBlock::iterator It = Start, End = MIRBuilder.getInsertPt();
+         It != End; ++It)
+      if (It->isCall())
+        It->setFlag(MachineInstr::MIFlag::NoMerge);
+  }
 
   if (ReturnHintAlignReg && !Info.LoweredTailCall) {
     MIRBuilder.buildAssertAlign(ResRegs[0], ReturnHintAlignReg,

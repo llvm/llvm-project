@@ -161,6 +161,10 @@ public:
     /// True if this call results in convergent operations.
     bool IsConvergent = true;
 
+    /// True if this call must not be merged with another call site (the
+    /// `nomerge` attribute)
+    bool NoMerge = false;
+
     GlobalValue *DeactivationSymbol = nullptr;
   };
 
