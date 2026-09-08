@@ -267,7 +267,7 @@ T FuzzedDataProvider::ConsumeFloatingPointInRange(T min, T max) {
 
   result += range * ConsumeProbability<T>();
 
-  // Rounding can push the resul above |max|, although never below |min|. Clamp
+  // Rounding can push the result above |max|, although never below |min|. Clamp
   // it.
   if (result > max)
     return max;
