@@ -310,6 +310,8 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
     // require analyzing the function bodies for all always-inline functions
     // for each of their call-sites. The approach taken here is therefore a
     // compromise between safety and usability.
+    // FIXME: Make `hasPossibleIncompatibleOps` consider intrinsics more
+    // accurately so that we can remove this stopgap.
     if (!Callee->hasFnAttribute(Attribute::AlwaysInline) &&
         hasPossibleIncompatibleOps(Callee, *getTLI()))
       return false;
