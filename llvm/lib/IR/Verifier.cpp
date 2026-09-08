@@ -7260,26 +7260,32 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       if (BlockEHFuncletColors.empty())
         BlockEHFuncletColors = colorEHFunclets(*F);
 
-      // Check for catch-/cleanup-pad in first funclet block
-      bool InEHFunclet = false;
+      // colorEHFunclets() leaves unreachable blocks colorless. Such a call
+      // is in no funclet and WinEHPrepare will not see it, so there is
+      // nothing to check.
       BasicBlock *CallBB = Call.getParent();
-      const ColorVector &CV = BlockEHFuncletColors.find(CallBB)->second;
-      assert(CV.size() > 0 && "Uncolored block");
-      for (BasicBlock *ColorFirstBB : CV)
-        if (auto It = ColorFirstBB->getFirstNonPHIIt();
-            It != ColorFirstBB->end())
-          if (isa_and_nonnull<FuncletPadInst>(&*It))
-            InEHFunclet = true;
+      auto ColorsIt = BlockEHFuncletColors.find(CallBB);
+      if (ColorsIt != BlockEHFuncletColors.end()) {
+        // Check for catch-/cleanup-pad in first funclet block
+        bool InEHFunclet = false;
+        const ColorVector &CV = ColorsIt->second;
+        assert(CV.size() > 0 && "Uncolored block");
+        for (BasicBlock *ColorFirstBB : CV)
+          if (auto It = ColorFirstBB->getFirstNonPHIIt();
+              It != ColorFirstBB->end())
+            if (isa_and_nonnull<FuncletPadInst>(&*It))
+              InEHFunclet = true;
 
-      // Check for funclet operand bundle
-      bool HasToken = false;
-      for (unsigned I = 0, E = Call.getNumOperandBundles(); I != E; ++I)
-        if (Call.getOperandBundleAt(I).getTagID() == LLVMContext::OB_funclet)
-          HasToken = true;
+        // Check for funclet operand bundle
+        bool HasToken = false;
+        for (unsigned I = 0, E = Call.getNumOperandBundles(); I != E; ++I)
+          if (Call.getOperandBundleAt(I).getTagID() == LLVMContext::OB_funclet)
+            HasToken = true;
 
-      // This would cause silent code truncation in WinEHPrepare
-      if (InEHFunclet)
-        Check(HasToken, "Missing funclet token on intrinsic call", &Call);
+        // This would cause silent code truncation in WinEHPrepare
+        if (InEHFunclet)
+          Check(HasToken, "Missing funclet token on intrinsic call", &Call);
+      }
     }
   }
 
