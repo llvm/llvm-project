@@ -23,10 +23,6 @@
 #define __has_builtin(x) 0
 #endif
 
-#if defined(__MVS__)
-#include <math.h>
-#endif
-
 #if defined(_MSC_VER) && !defined(__clang__)
 #include <math.h>
 #include <stdlib.h>
