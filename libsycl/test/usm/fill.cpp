@@ -2,7 +2,7 @@
 // RUN: %clangxx -fsycl %s -o %t.out
 // RUN: %t.out
 
-#include "include/fill_memset_common.hpp"
+#include "Inputs/fill_memset_common.hpp"
 
 int main() {
   sycl::queue Q;

@@ -41,3 +41,18 @@ TEST(Queue, MemsetZeroBytes) {
   Q.memset(nullptr, 1, 0, E);
   Q.memset(nullptr, 1, 0, std::vector<sycl::event>{E});
 }
+
+TEST(Queue, MemsetNullptr) {
+  mock::MockWrapper Mock;
+  sycl::queue Q;
+  sycl::event Dep = Q.memset(nullptr, 1, 0);
+  EXPECT_CALL(Mock.get(), olWaitEvents(_, _, _)).Times(0);
+  EXPECT_CALL(Mock.get(), olMemFill(_, _, _, _, _)).Times(0);
+  try {
+    Q.memset(nullptr, 1, 1);
+    FAIL() << "Expected thrown exception";
+  } catch (sycl::exception &E) {
+    EXPECT_NE(std::string(E.what()).find("Nullptr argument"),
+              std::string::npos);
+  }
+}

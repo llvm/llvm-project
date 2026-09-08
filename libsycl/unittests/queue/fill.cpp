@@ -42,3 +42,35 @@ TEST(Queue, FillZeroCount) {
   Q.fill(nullptr, 1, 0, E);
   Q.fill(nullptr, 1, 0, std::vector<sycl::event>{E});
 }
+
+TEST(Queue, FillNullptr) {
+  mock::MockWrapper Mock;
+  sycl::queue Q;
+  sycl::event Dep = Q.fill(nullptr, 1, 0);
+  EXPECT_CALL(Mock.get(), olWaitEvents(_, _, _)).Times(0);
+  EXPECT_CALL(Mock.get(), olMemFill(_, _, _, _, _)).Times(0);
+  try {
+    Q.fill(nullptr, 1, 1);
+    FAIL() << "Expected thrown exception";
+  } catch (sycl::exception &E) {
+    EXPECT_NE(std::string(E.what()).find("Nullptr argument"),
+              std::string::npos);
+  }
+}
+
+TEST(Queue, FillBytesGTSizeMax) {
+  mock::MockWrapper Mock;
+  sycl::queue Q;
+  int *Ptr = reinterpret_cast<int *>(1);
+  sycl::event Dep = Q.fill(Ptr, 1, 0);
+  EXPECT_CALL(Mock.get(), olWaitEvents(_, _, _)).Times(0);
+  EXPECT_CALL(Mock.get(), olMemFill(_, _, _, _, _)).Times(0);
+  try {
+    Q.fill(Ptr, 1, SIZE_MAX / sizeof(int) + 1);
+    FAIL() << "Expected thrown exception";
+  } catch (sycl::exception &E) {
+    EXPECT_NE(std::string(E.what()).find(
+                  "Total number of bytes to be filled exceeds SIZE_MAX"),
+              std::string::npos);
+  }
+}
