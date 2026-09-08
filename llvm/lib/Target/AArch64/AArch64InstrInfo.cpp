@@ -1679,7 +1679,6 @@ MachineInstr *AArch64InstrInfo::convertToCCMP(
     Opc = AArch64::CCMPXr;
     FirstOp = 1;
     break;
-
   }
 
   // The ccmp instruction should set the flags according to the comparison when
