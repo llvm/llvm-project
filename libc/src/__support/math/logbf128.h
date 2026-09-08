@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the implementation of logbf128, the float128 variant of
+/// logb.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_LOGBF128_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_LOGBF128_H

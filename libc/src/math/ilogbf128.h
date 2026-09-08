@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the ilogbf128 entrypoint, the
+/// float128 variant of the C standard ilogb function.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC_MATH_ILOGBF128_H
 #define LLVM_LIBC_SRC_MATH_ILOGBF128_H

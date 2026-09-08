@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file re-exports ilogbf128 through the shared::math namespace so that
+/// other LLVM components can use it without depending on libc internals.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SHARED_MATH_ILOGBF128_H
 #define LLVM_LIBC_SHARED_MATH_ILOGBF128_H
