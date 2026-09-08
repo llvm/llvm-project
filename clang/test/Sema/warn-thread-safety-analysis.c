@@ -908,6 +908,27 @@ void test_trylock_logical_insitu(int c) {
   mutex_unlock_mu1();
 }
 
+// A goto into a loop body from outside the loop: the loop is the blocks
+// its head dominates, so the check made before the jump (`if (ok)`, which
+// resolves nothing for a code-keyed capability) is not a check around the
+// loop and the result the jump carries in is reported at the loop join.
+int mutex_trylock_code2(struct Mutex *mu) EXCLUSIVE_TRYLOCK_FUNCTION(2, mu);
+
+void test_trylock_goto_into_loop(int e, int d) {
+  int ok2 = mutex_trylock_true(&mu1); // expected-note {{mutex acquired here}}
+  if (e) {
+    int ok = mutex_trylock_code2(&mu1); // expected-note {{mutex acquired here}}
+    if (ok)
+      goto inner;
+    return;
+  }
+  while (d) { // expected-warning {{unchecked result of try-acquire; mutex 'mu1' may still be held past this point}}
+  inner:;
+  }
+  if (ok2)
+    mutex_unlock_mu1();
+} // expected-warning {{unchecked result of try-acquire; mutex 'mu1' may still be held at the end of function}}
+
 // A cross-kind try-acquire in C: one conditional acquisition per kind,
 // each resolved on the outcome its own attribute names.
 int mutex_try_upgrade(struct Mutex *mu) EXCLUSIVE_TRYLOCK_FUNCTION(1, mu)
