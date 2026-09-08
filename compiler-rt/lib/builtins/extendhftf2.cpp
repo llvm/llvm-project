@@ -19,7 +19,7 @@
 #include "shared/bit.h"
 #include "shared/builtins/extendhftf2.h"
 
-#if defined(CRT_HAS_TF_MODE) && defined(COMPILER_RT_HAS_FLOAT16)
+#ifdef CRT_HAS_TF_MODE
 #define SRC_HALF
 #define DST_QUAD
 #include "fp_extend_impl.inc"

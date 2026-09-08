@@ -19,19 +19,13 @@
 #include "shared/bit.h"
 #include "shared/builtins/trunctfhf2.h"
 
-#if defined(CRT_HAS_TF_MODE) && defined(COMPILER_RT_HAS_FLOAT16)
+#ifdef CRT_HAS_TF_MODE
 #define SRC_QUAD
 #define DST_HALF
 #include "fp_trunc_impl.inc"
 
-#ifdef LIBC_TYPES_HAS_FLOAT16
 extern "C" COMPILER_RT_ABI dst_t __trunctfhf2(src_t a) {
   return LIBC_NAMESPACE::shared::bit_cast<dst_t>(
       LIBC_NAMESPACE::shared::trunctfhf2(a));
 }
-#else
-extern "C" COMPILER_RT_ABI dst_t __trunctfhf2(src_t a) {
-  return __truncXfYf2__(a);
-}
-#endif
 #endif
