@@ -93,7 +93,7 @@ public:
   /// native object files and add them to the link.
   ///
   /// If \p CacheLTOPartitions is true, \p Cache will also be used to cache the
-  /// parallel LTO codegen partitions.
+  /// parallel LTO codegen partitions. This is currently unused for DTLTO.
   ///
   /// The client will receive at most one callback (via either AddStream or
   /// Cache) for each task identifier.
