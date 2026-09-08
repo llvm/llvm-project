@@ -17,6 +17,12 @@ using namespace lldb_private;
 
 CommonABIRuntime::CommonABIRuntime(Process *process) : m_process(process) {}
 
+bool CommonABIRuntime::IsCXXClassOrStruct(const CompilerType &type) {
+  if (!type)
+    return false;
+  return (type.GetTypeClass() & (eTypeClassClass | eTypeClassStruct)) != 0;
+}
+
 lldb::TypeSP CommonABIRuntime::LookupTypeByName(llvm::StringRef type_name,
                                                 lldb::ModuleSP preferred_module,
                                                 bool &any_found) const {
@@ -60,7 +66,7 @@ lldb::TypeSP CommonABIRuntime::LookupTypeByName(llvm::StringRef type_name,
     type_sp = class_types.GetTypeAtIndex(0);
     if (!type_sp)
       return {};
-    if (!TypeSystemClang::IsCXXClassType(type_sp->GetForwardCompilerType()))
+    if (!IsCXXClassOrStruct(type_sp->GetForwardCompilerType()))
       return {};
 
     return type_sp;
@@ -83,7 +89,7 @@ lldb::TypeSP CommonABIRuntime::LookupTypeByName(llvm::StringRef type_name,
   for (size_t i = 0; i < class_types.GetSize(); i++) {
     type_sp = class_types.GetTypeAtIndex(i);
     if (type_sp) {
-      if (TypeSystemClang::IsCXXClassType(type_sp->GetForwardCompilerType())) {
+      if (IsCXXClassOrStruct(type_sp->GetForwardCompilerType())) {
         LLDB_LOG(log,
                  "'{0}' has multiple matching dynamic types, "
                  "picking this one: [{1}] uid={2:x}, type-name='{3}'\n",
