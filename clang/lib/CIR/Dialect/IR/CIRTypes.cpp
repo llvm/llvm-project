@@ -1598,9 +1598,7 @@ llvm::TypeSize cir::MatrixType::getTypeSizeInBits(
 uint64_t
 cir::MatrixType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                                  ::mlir::DataLayoutEntryListRef params) const {
-  // This hook answers in bytes, not bits.
-  return llvm::PowerOf2Ceil(
-      llvm::divideCeil(dataLayout.getTypeSizeInBits(*this), 8u));
+  return dataLayout.getTypeABIAlignment(getElementType());
 }
 
 mlir::LogicalResult cir::MatrixType::verify(

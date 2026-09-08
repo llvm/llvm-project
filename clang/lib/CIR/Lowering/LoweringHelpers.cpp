@@ -48,6 +48,7 @@ mlir::Type convertTypeForMemory(const mlir::TypeConverter &converter,
 
   if (auto matrixTy = mlir::dyn_cast<cir::MatrixType>(type)) {
     if (mlir::isa<cir::BoolType>(matrixTy.getElementType())) {
+      assert(!cir::MissingFeatures::hlsl());
       llvm_unreachable(
           "convertTypeForMemory: Matrix with bool as element type");
     }

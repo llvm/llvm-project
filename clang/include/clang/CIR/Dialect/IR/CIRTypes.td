@@ -538,14 +538,14 @@ def CIR_MatrixType : CIR_Type<"Matrix", "matrix", [
 ]> {
   let summary = "CIR matrix type";
   let description = [{
-    The `!cir.matrix` type represents a fixed-size 2-dimensional matrices.
-    It takes three parameters: the element type, the number of rows
+    The `!cir.matrix` type represents a fixed-size 2-dimensional matrix.
+    It takes three parameters: the element type, the number of rows,
     and columns.
 
     Syntax:
 
     ```
-    matrix-type ::= !cir.vector<row x colum x element-type>
+    matrix-type ::= !cir.matrix<row x colum x element-type>
     size ::= (decimal-literal | `[` decimal-literal `]`)
     element-type ::= float-type | integer-type | pointer-type
     ```
