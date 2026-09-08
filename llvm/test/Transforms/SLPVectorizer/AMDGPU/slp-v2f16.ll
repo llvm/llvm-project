@@ -559,6 +559,84 @@ bb:
   ret void
 }
 
+; Preserves the pre-fix non-contiguous gather (insertelement over idx+1/idx+3)
+; that the typo fix above would otherwise drop.
+define void @canonicalize_combine_v4f16_noncontiguous(ptr addrspace(1) %arg) {
+; GFX8-LABEL: define void @canonicalize_combine_v4f16_noncontiguous(
+; GFX8-SAME: ptr addrspace(1) [[ARG:%.*]]) {
+; GFX8-NEXT:  [[BB:.*:]]
+; GFX8-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; GFX8-NEXT:    [[ITMP1:%.*]] = zext i32 [[TMP]] to i64
+; GFX8-NEXT:    [[ITMP2:%.*]] = getelementptr inbounds half, ptr addrspace(1) [[ARG]], i64 [[ITMP1]]
+; GFX8-NEXT:    [[ITMP5:%.*]] = add nuw nsw i64 [[ITMP1]], 1
+; GFX8-NEXT:    [[ITMP6:%.*]] = getelementptr inbounds half, ptr addrspace(1) [[ARG]], i64 [[ITMP5]]
+; GFX8-NEXT:    [[TMP0:%.*]] = load <2 x half>, ptr addrspace(1) [[ITMP2]], align 2
+; GFX8-NEXT:    [[TMP1:%.*]] = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> [[TMP0]])
+; GFX8-NEXT:    store <2 x half> [[TMP1]], ptr addrspace(1) [[ITMP2]], align 2
+; GFX8-NEXT:    [[ITMP9:%.*]] = add nuw nsw i64 [[ITMP1]], 2
+; GFX8-NEXT:    [[ITMP10:%.*]] = getelementptr inbounds half, ptr addrspace(1) [[ARG]], i64 [[ITMP9]]
+; GFX8-NEXT:    [[ITMP11:%.*]] = load half, ptr addrspace(1) [[ITMP6]], align 2
+; GFX8-NEXT:    [[ITMP12:%.*]] = call half @llvm.canonicalize.f16(half [[ITMP11]])
+; GFX8-NEXT:    store half [[ITMP12]], ptr addrspace(1) [[ITMP10]], align 2
+; GFX8-NEXT:    [[ITMP13:%.*]] = add nuw nsw i64 [[ITMP1]], 3
+; GFX8-NEXT:    [[ITMP14:%.*]] = getelementptr inbounds half, ptr addrspace(1) [[ARG]], i64 [[ITMP13]]
+; GFX8-NEXT:    [[ITMP15:%.*]] = load half, ptr addrspace(1) [[ITMP14]], align 2
+; GFX8-NEXT:    [[ITMP16:%.*]] = call half @llvm.canonicalize.f16(half [[ITMP15]])
+; GFX8-NEXT:    store half [[ITMP16]], ptr addrspace(1) [[ITMP14]], align 2
+; GFX8-NEXT:    ret void
+;
+; GFX9-LABEL: define void @canonicalize_combine_v4f16_noncontiguous(
+; GFX9-SAME: ptr addrspace(1) [[ARG:%.*]]) {
+; GFX9-NEXT:  [[BB:.*:]]
+; GFX9-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; GFX9-NEXT:    [[ITMP1:%.*]] = zext i32 [[TMP]] to i64
+; GFX9-NEXT:    [[ITMP2:%.*]] = getelementptr inbounds half, ptr addrspace(1) [[ARG]], i64 [[ITMP1]]
+; GFX9-NEXT:    [[ITMP5:%.*]] = add nuw nsw i64 [[ITMP1]], 1
+; GFX9-NEXT:    [[ITMP6:%.*]] = getelementptr inbounds half, ptr addrspace(1) [[ARG]], i64 [[ITMP5]]
+; GFX9-NEXT:    [[TMP0:%.*]] = load <2 x half>, ptr addrspace(1) [[ITMP2]], align 2
+; GFX9-NEXT:    [[TMP1:%.*]] = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> [[TMP0]])
+; GFX9-NEXT:    store <2 x half> [[TMP1]], ptr addrspace(1) [[ITMP2]], align 2
+; GFX9-NEXT:    [[ITMP9:%.*]] = add nuw nsw i64 [[ITMP1]], 2
+; GFX9-NEXT:    [[ITMP10:%.*]] = getelementptr inbounds half, ptr addrspace(1) [[ARG]], i64 [[ITMP9]]
+; GFX9-NEXT:    [[ITMP11:%.*]] = load half, ptr addrspace(1) [[ITMP6]], align 2
+; GFX9-NEXT:    [[ITMP13:%.*]] = add nuw nsw i64 [[ITMP1]], 3
+; GFX9-NEXT:    [[ITMP14:%.*]] = getelementptr inbounds half, ptr addrspace(1) [[ARG]], i64 [[ITMP13]]
+; GFX9-NEXT:    [[ITMP15:%.*]] = load half, ptr addrspace(1) [[ITMP14]], align 2
+; GFX9-NEXT:    [[TMP2:%.*]] = insertelement <2 x half> poison, half [[ITMP11]], i64 0
+; GFX9-NEXT:    [[TMP3:%.*]] = insertelement <2 x half> [[TMP2]], half [[ITMP15]], i64 1
+; GFX9-NEXT:    [[TMP4:%.*]] = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> [[TMP3]])
+; GFX9-NEXT:    store <2 x half> [[TMP4]], ptr addrspace(1) [[ITMP10]], align 2
+; GFX9-NEXT:    ret void
+;
+bb:
+  %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %tmp1 = zext i32 %tmp to i64
+
+  %tmp2 = getelementptr inbounds half, ptr addrspace(1) %arg, i64 %tmp1
+  %tmp3 = load half, ptr addrspace(1) %tmp2, align 2
+  %tmp4 = call half @llvm.canonicalize.f16(half %tmp3)
+  store half %tmp4, ptr addrspace(1) %tmp2, align 2
+
+  %tmp5 = add nuw nsw i64 %tmp1, 1
+  %tmp6 = getelementptr inbounds half, ptr addrspace(1) %arg, i64 %tmp5
+  %tmp7 = load half, ptr addrspace(1) %tmp6, align 2
+  %tmp8 = call half @llvm.canonicalize.f16(half %tmp7)
+  store half %tmp8, ptr addrspace(1) %tmp6, align 2
+
+  %tmp9 = add nuw nsw i64 %tmp1, 2
+  %tmp10 = getelementptr inbounds half, ptr addrspace(1) %arg, i64 %tmp9
+  %tmp11 = load half, ptr addrspace(1) %tmp6, align 2
+  %tmp12 = call half @llvm.canonicalize.f16(half %tmp11)
+  store half %tmp12, ptr addrspace(1) %tmp10, align 2
+
+  %tmp13 = add nuw nsw i64 %tmp1, 3
+  %tmp14 = getelementptr inbounds half, ptr addrspace(1) %arg, i64 %tmp13
+  %tmp15 = load half, ptr addrspace(1) %tmp14, align 2
+  %tmp16 = call half @llvm.canonicalize.f16(half %tmp15)
+  store half %tmp16, ptr addrspace(1) %tmp14, align 2
+  ret void
+}
+
 ; FIXME: Should not vectorize on gfx8
 define void @minimumnum_combine_v2f16(ptr addrspace(1) %arg) {
 ; GCN-LABEL: define void @minimumnum_combine_v2f16(
