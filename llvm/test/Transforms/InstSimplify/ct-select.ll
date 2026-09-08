@@ -3,8 +3,7 @@
 
 define i32 @ct_select_true(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ct_select_true(
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.ct.select.i32(i1 true, i32 [[X:%.*]], i32 [[Y:%.*]])
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
   %r = call i32 @llvm.ct.select.i32(i1 true, i32 %x, i32 %y)
   ret i32 %r
@@ -12,8 +11,7 @@ define i32 @ct_select_true(i32 %x, i32 %y) {
 
 define i32 @ct_select_false(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ct_select_false(
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.ct.select.i32(i1 false, i32 [[X:%.*]], i32 [[Y:%.*]])
-; CHECK-NEXT:    ret i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[Y:%.*]]
 ;
   %r = call i32 @llvm.ct.select.i32(i1 false, i32 %x, i32 %y)
   ret i32 %r
@@ -21,8 +19,7 @@ define i32 @ct_select_false(i32 %x, i32 %y) {
 
 define i64 @ct_select_true_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: @ct_select_true_i64(
-; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.ct.select.i64(i1 true, i64 [[X:%.*]], i64 [[Y:%.*]])
-; CHECK-NEXT:    ret i64 [[X]]
+; CHECK-NEXT:    ret i64 [[X:%.*]]
 ;
   %r = call i64 @llvm.ct.select.i64(i1 true, i64 %x, i64 %y)
   ret i64 %r
@@ -30,8 +27,7 @@ define i64 @ct_select_true_i64(i64 %x, i64 %y) {
 
 define float @ct_select_false_f32(float %x, float %y) {
 ; CHECK-LABEL: @ct_select_false_f32(
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.ct.select.f32(i1 false, float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    ret float [[Y]]
+; CHECK-NEXT:    ret float [[Y:%.*]]
 ;
   %r = call float @llvm.ct.select.f32(i1 false, float %x, float %y)
   ret float %r
@@ -39,8 +35,7 @@ define float @ct_select_false_f32(float %x, float %y) {
 
 define ptr @ct_select_true_ptr(ptr %x, ptr %y) {
 ; CHECK-LABEL: @ct_select_true_ptr(
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ct.select.p0(i1 true, ptr [[X:%.*]], ptr [[Y:%.*]])
-; CHECK-NEXT:    ret ptr [[X]]
+; CHECK-NEXT:    ret ptr [[X:%.*]]
 ;
   %r = call ptr @llvm.ct.select.p0(i1 true, ptr %x, ptr %y)
   ret ptr %r
@@ -48,8 +43,7 @@ define ptr @ct_select_true_ptr(ptr %x, ptr %y) {
 
 define <4 x i32> @ct_select_true_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @ct_select_true_v4i32(
-; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.ct.select.v4i32(i1 true, <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]])
-; CHECK-NEXT:    ret <4 x i32> [[X]]
+; CHECK-NEXT:    ret <4 x i32> [[X:%.*]]
 ;
   %r = call <4 x i32> @llvm.ct.select.v4i32(i1 true, <4 x i32> %x, <4 x i32> %y)
   ret <4 x i32> %r
@@ -57,8 +51,7 @@ define <4 x i32> @ct_select_true_v4i32(<4 x i32> %x, <4 x i32> %y) {
 
 define i32 @ct_select_same_arms(i1 %c, i32 %x) {
 ; CHECK-LABEL: @ct_select_same_arms(
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.ct.select.i32(i1 [[C:%.*]], i32 [[X:%.*]], i32 [[X]])
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
   %r = call i32 @llvm.ct.select.i32(i1 %c, i32 %x, i32 %x)
   ret i32 %r
@@ -66,8 +59,7 @@ define i32 @ct_select_same_arms(i1 %c, i32 %x) {
 
 define <4 x i32> @ct_select_same_arms_vec(i1 %c, <4 x i32> %x) {
 ; CHECK-LABEL: @ct_select_same_arms_vec(
-; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.ct.select.v4i32(i1 [[C:%.*]], <4 x i32> [[X:%.*]], <4 x i32> [[X]])
-; CHECK-NEXT:    ret <4 x i32> [[X]]
+; CHECK-NEXT:    ret <4 x i32> [[X:%.*]]
 ;
   %r = call <4 x i32> @llvm.ct.select.v4i32(i1 %c, <4 x i32> %x, <4 x i32> %x)
   ret <4 x i32> %r
@@ -93,4 +85,65 @@ define i32 @ct_select_distinct_arms_no_fold(i1 %c, i32 %x, i32 %y) {
 ;
   %r = call i32 @llvm.ct.select.i32(i1 %c, i32 %x, i32 %y)
   ret i32 %r
+}
+
+define <2 x double> @ct_select_false_v2f64(<2 x double> %x, <2 x double> %y) {
+; CHECK-LABEL: @ct_select_false_v2f64(
+; CHECK-NEXT:    ret <2 x double> [[Y:%.*]]
+;
+  %r = call <2 x double> @llvm.ct.select.v2f64(i1 false, <2 x double> %x, <2 x double> %y)
+  ret <2 x double> %r
+}
+
+define <2 x ptr> @ct_select_true_v2p0(<2 x ptr> %x, <2 x ptr> %y) {
+; CHECK-LABEL: @ct_select_true_v2p0(
+; CHECK-NEXT:    ret <2 x ptr> [[X:%.*]]
+;
+  %r = call <2 x ptr> @llvm.ct.select.v2p0(i1 true, <2 x ptr> %x, <2 x ptr> %y)
+  ret <2 x ptr> %r
+}
+
+define <vscale x 4 x i32> @ct_select_true_nxv4i32(<vscale x 4 x i32> %x, <vscale x 4 x i32> %y) {
+; CHECK-LABEL: @ct_select_true_nxv4i32(
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[X:%.*]]
+;
+  %r = call <vscale x 4 x i32> @llvm.ct.select.nxv4i32(i1 true, <vscale x 4 x i32> %x, <vscale x 4 x i32> %y)
+  ret <vscale x 4 x i32> %r
+}
+
+define <vscale x 2 x i64> @ct_select_same_arms_nxv2i64(i1 %c, <vscale x 2 x i64> %x) {
+; CHECK-LABEL: @ct_select_same_arms_nxv2i64(
+; CHECK-NEXT:    ret <vscale x 2 x i64> [[X:%.*]]
+;
+  %r = call <vscale x 2 x i64> @llvm.ct.select.nxv2i64(i1 %c, <vscale x 2 x i64> %x, <vscale x 2 x i64> %x)
+  ret <vscale x 2 x i64> %r
+}
+
+; Negative test: vectors with a runtime condition must not fold either.
+define <4 x i32> @ct_select_distinct_arms_vec_no_fold(i1 %c, <4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @ct_select_distinct_arms_vec_no_fold(
+; CHECK-NEXT:    [[R:%.*]] = call <4 x i32> @llvm.ct.select.v4i32(i1 [[C:%.*]], <4 x i32> [[X:%.*]], <4 x i32> [[Y:%.*]])
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %r = call <4 x i32> @llvm.ct.select.v4i32(i1 %c, <4 x i32> %x, <4 x i32> %y)
+  ret <4 x i32> %r
+}
+
+define <vscale x 4 x i32> @ct_select_distinct_arms_scalable_no_fold(i1 %c, <vscale x 4 x i32> %x, <vscale x 4 x i32> %y) {
+; CHECK-LABEL: @ct_select_distinct_arms_scalable_no_fold(
+; CHECK-NEXT:    [[R:%.*]] = call <vscale x 4 x i32> @llvm.ct.select.nxv4i32(i1 [[C:%.*]], <vscale x 4 x i32> [[X:%.*]], <vscale x 4 x i32> [[Y:%.*]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[R]]
+;
+  %r = call <vscale x 4 x i32> @llvm.ct.select.nxv4i32(i1 %c, <vscale x 4 x i32> %x, <vscale x 4 x i32> %y)
+  ret <vscale x 4 x i32> %r
+}
+
+; An unused ct.select is trivially dead: nothing observes the selection, so
+; removing it cannot expose the condition.
+define void @ct_select_unused_is_dead(i1 %c, i32 %x, i32 %y) {
+; CHECK-LABEL: @ct_select_unused_is_dead(
+; CHECK-NEXT:    ret void
+;
+  %r = call i32 @llvm.ct.select.i32(i1 %c, i32 %x, i32 %y)
+  ret void
 }

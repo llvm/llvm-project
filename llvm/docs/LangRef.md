@@ -16011,29 +16011,20 @@ byte, floating-point, or pointer type, or on any vector of those types,
 including scalable vectors. The declarations below are a representative sample:
 
 ```
-declare i8 @llvm.ct.select.i8(i1 <cond>, i8 <val1>, i8 <val2>)
-declare b8 @llvm.ct.select.b8(i1 <cond>, b8 <val1>, b8 <val2>)
 declare i32 @llvm.ct.select.i32(i1 <cond>, i32 <val1>, i32 <val2>)
-declare i64 @llvm.ct.select.i64(i1 <cond>, i64 <val1>, i64 <val2>)
-declare half @llvm.ct.select.f16(i1 <cond>, half <val1>, half <val2>)
 declare float @llvm.ct.select.f32(i1 <cond>, float <val1>, float <val2>)
-declare double @llvm.ct.select.f64(i1 <cond>, double <val1>, double <val2>)
-declare fp128 @llvm.ct.select.f128(i1 <cond>, fp128 <val1>, fp128 <val2>)
 declare ptr @llvm.ct.select.p0(i1 <cond>, ptr <val1>, ptr <val2>)
 declare <4 x i32> @llvm.ct.select.v4i32(i1 <cond>, <4 x i32> <val1>, <4 x i32> <val2>)
-declare <2 x double> @llvm.ct.select.v2f64(i1 <cond>, <2 x double> <val1>, <2 x double> <val2>)
-declare <2 x ptr> @llvm.ct.select.v2p0(i1 <cond>, <2 x ptr> <val1>, <2 x ptr> <val2>)
-declare <vscale x 4 x i32> @llvm.ct.select.nxv4i32(i1 <cond>, <vscale x 4 x i32> <val1>, <vscale x 4 x i32> <val2>)
 ```
 
 ##### Overview:
 
-The '`llvm.ct.select`' family of intrinsic functions selects one of two
-values based on a condition, like the standard {ref}`select <i_select>`
-instruction, but is lowered to branchless code whose execution time does not
-depend on the condition value. This keeps the condition from leaking through
-timing side channels; see the Semantics section for the exact guarantee and
-its platform requirements.
+The '`llvm.ct.select`' intrinsic selects one of two values based on a
+condition, like the standard {ref}`select <i_select>` instruction, but is
+lowered to branchless code whose execution time does not depend on the
+condition value. This keeps the condition from leaking through timing side
+channels; see the Semantics section for the exact guarantee and its platform
+requirements.
 
 ##### Arguments:
 
@@ -16056,9 +16047,9 @@ If the condition evaluates to true, the intrinsic returns the first value
 argument; otherwise, it returns the second value argument.
 
 Poison and undef propagate as for {ref}`select <i_select>`: a `poison`
-condition yields `poison`, an `undef` condition yields `undef`. Unlike
-`select`, both value arguments are always evaluated, so a `poison` value in
-either one yields `poison`.
+condition yields `poison`, and an `undef` condition returns either value
+argument. Unlike `select`, both value arguments are always evaluated, so a
+`poison` value in either one yields `poison`.
 
 The key semantic difference from {ref}`select <i_select>` is the constant-time
 code generation guarantee: the intrinsic must be lowered to machine code that:
@@ -16100,13 +16091,20 @@ with data-dependent timing, or, except as described below, optimizing away
 either value argument before the selection completes.
 
 The call folds to one of its value arguments when the condition operand is a
-constant `i1`, or when both value arguments are the same value; the unused
-argument then becomes ordinary dead code. Optimizers must not derive the fold
-by running value analyses (known-bits, range, or dominating conditions) on a
-non-constant condition. A condition that another pass has already proved to be
-a compile-time constant is no longer secret-dependent, so folding it is
-permitted. Rewrites that keep the `llvm.ct.select`, such as swapping the
-arguments to remove a negated condition, are allowed.
+constant `i1`, or when both value arguments are the same value. Optimizers must
+not derive the fold by running value analyses (known-bits, range, or dominating
+conditions) on a non-constant condition. A condition that another pass has
+already proved to be a compile-time constant is no longer secret-dependent, so
+folding it is permitted. Rewrites that keep the `llvm.ct.select`, such as
+swapping the arguments to remove a negated condition, are allowed.
+
+A call whose result has no users may be removed. Nothing observes the
+selection in that case, so deleting it cannot expose the condition. This is the
+only way an `llvm.ct.select` disappears: as long as the result is used, the
+call is neither deleted, duplicated, merged with another `llvm.ct.select`, nor
+moved to a different point in the control-flow graph. Keeping it in place is
+what the intrinsic's `inaccessiblemem` memory effect is for; the effect does
+not model any real access to memory, and passes must not read it as one.
 
 Like other floating-point calls, `llvm.ct.select` may carry fast-math flags
 when it returns a supported floating-point type; the poison-generating flags
