@@ -33854,8 +33854,8 @@ static SDValue LowerCLMUL(SDValue Op, const X86Subtarget &Subtarget,
                                DAG.getTargetConstant(0x11, DL, MVT::i8));
     // Pack together lowest elements.
     SDValue Res02 = getUnpackl(DAG, DL, VT, DAG.getBitcast(VT, Res0),
-                               DAG.getBitcast(VT, Res1));
-    SDValue Res13 = getUnpackl(DAG, DL, VT, DAG.getBitcast(VT, Res2),
+                               DAG.getBitcast(VT, Res2));
+    SDValue Res13 = getUnpackl(DAG, DL, VT, DAG.getBitcast(VT, Res1),
                                DAG.getBitcast(VT, Res3));
     return getUnpack(DAG, DL, VT, Res02, Res13, IsHigh);
   }
