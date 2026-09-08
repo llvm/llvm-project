@@ -320,6 +320,9 @@ foreach Index = 0...15 in {
   defm TTMP#Index           : SIRegLoHi16<"ttmp"#Index, 0>;
 }
 
+defvar TTMPMembers = !foreach(i, !range(0, 16), !cast<Register>("TTMP"#i));
+def : RegisterSequence<TTMPMembers>;
+
 multiclass FLAT_SCR_LOHI_m <string n, bits<10> ci_e, bits<10> vi_e> {
   defm _ci : SIRegLoHi16<n, ci_e>;
   defm _vi : SIRegLoHi16<n, vi_e>;

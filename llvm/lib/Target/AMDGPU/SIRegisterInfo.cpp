@@ -15,6 +15,7 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -638,14 +639,9 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // Reserve Trap Handler registers - support is not implemented in Codegen.
   reserveRegisterTuples(Reserved, AMDGPU::TBA);
   reserveRegisterTuples(Reserved, AMDGPU::TMA);
-  reserveRegisterTuples(Reserved, AMDGPU::TTMP0_TTMP1);
-  reserveRegisterTuples(Reserved, AMDGPU::TTMP2_TTMP3);
-  reserveRegisterTuples(Reserved, AMDGPU::TTMP4_TTMP5);
-  reserveRegisterTuples(Reserved, AMDGPU::TTMP6_TTMP7);
-  reserveRegisterTuples(Reserved, AMDGPU::TTMP8_TTMP9);
-  reserveRegisterTuples(Reserved, AMDGPU::TTMP10_TTMP11);
-  reserveRegisterTuples(Reserved, AMDGPU::TTMP12_TTMP13);
-  reserveRegisterTuples(Reserved, AMDGPU::TTMP14_TTMP15);
+  constexpr MCRegisterSequenceBlock TTMPPairs = AMDGPU::TTMP_64;
+  for (unsigned Index : seq(TTMPPairs.Count))
+    reserveRegisterTuples(Reserved, TTMPPairs(Index * TTMPPairs.Step));
 
   // Reserve null register - it shall never be allocated
   reserveRegisterTuples(Reserved, AMDGPU::SGPR_NULL64);

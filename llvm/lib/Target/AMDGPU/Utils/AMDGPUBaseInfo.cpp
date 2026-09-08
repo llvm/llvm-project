@@ -2647,22 +2647,26 @@ bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI) {
     CASE_VI_GFX9PLUS(TTMP13)                                                                                   \
     CASE_VI_GFX9PLUS(TTMP14)                                                                                   \
     CASE_VI_GFX9PLUS(TTMP15)                                                                                   \
-    CASE_VI_GFX9PLUS(TTMP0_TTMP1)                                                                              \
-    CASE_VI_GFX9PLUS(TTMP2_TTMP3)                                                                              \
-    CASE_VI_GFX9PLUS(TTMP4_TTMP5)                                                                              \
-    CASE_VI_GFX9PLUS(TTMP6_TTMP7)                                                                              \
-    CASE_VI_GFX9PLUS(TTMP8_TTMP9)                                                                              \
-    CASE_VI_GFX9PLUS(TTMP10_TTMP11)                                                                            \
-    CASE_VI_GFX9PLUS(TTMP12_TTMP13)                                                                            \
-    CASE_VI_GFX9PLUS(TTMP14_TTMP15)                                                                            \
-    CASE_VI_GFX9PLUS(TTMP0_TTMP1_TTMP2_TTMP3)                                                                  \
-    CASE_VI_GFX9PLUS(TTMP4_TTMP5_TTMP6_TTMP7)                                                                  \
-    CASE_VI_GFX9PLUS(TTMP8_TTMP9_TTMP10_TTMP11)                                                                \
-    CASE_VI_GFX9PLUS(TTMP12_TTMP13_TTMP14_TTMP15)                                                              \
-    CASE_VI_GFX9PLUS(TTMP0_TTMP1_TTMP2_TTMP3_TTMP4_TTMP5_TTMP6_TTMP7)                                          \
-    CASE_VI_GFX9PLUS(TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11)                                        \
-    CASE_VI_GFX9PLUS(TTMP8_TTMP9_TTMP10_TTMP11_TTMP12_TTMP13_TTMP14_TTMP15)                                    \
-    CASE_VI_GFX9PLUS(                                                                                          \
+    CASE_VI_GFX9PLUS_SEQ(TTMP_64, 0, TTMP0_TTMP1)                                                              \
+    CASE_VI_GFX9PLUS_SEQ(TTMP_64, 2, TTMP2_TTMP3)                                                              \
+    CASE_VI_GFX9PLUS_SEQ(TTMP_64, 4, TTMP4_TTMP5)                                                              \
+    CASE_VI_GFX9PLUS_SEQ(TTMP_64, 6, TTMP6_TTMP7)                                                              \
+    CASE_VI_GFX9PLUS_SEQ(TTMP_64, 8, TTMP8_TTMP9)                                                              \
+    CASE_VI_GFX9PLUS_SEQ(TTMP_64, 10, TTMP10_TTMP11)                                                           \
+    CASE_VI_GFX9PLUS_SEQ(TTMP_64, 12, TTMP12_TTMP13)                                                           \
+    CASE_VI_GFX9PLUS_SEQ(TTMP_64, 14, TTMP14_TTMP15)                                                           \
+    CASE_VI_GFX9PLUS_SEQ(TTMP_128, 0, TTMP0_TTMP1_TTMP2_TTMP3)                                                 \
+    CASE_VI_GFX9PLUS_SEQ(TTMP_128, 4, TTMP4_TTMP5_TTMP6_TTMP7)                                                 \
+    CASE_VI_GFX9PLUS_SEQ(TTMP_128, 8, TTMP8_TTMP9_TTMP10_TTMP11)                                               \
+    CASE_VI_GFX9PLUS_SEQ(TTMP_128, 12, TTMP12_TTMP13_TTMP14_TTMP15)                                            \
+    CASE_VI_GFX9PLUS_SEQ(TTMP_256, 0,                                                                          \
+                         TTMP0_TTMP1_TTMP2_TTMP3_TTMP4_TTMP5_TTMP6_TTMP7)                                      \
+    CASE_VI_GFX9PLUS_SEQ(TTMP_256, 4,                                                                          \
+                         TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11)                                    \
+    CASE_VI_GFX9PLUS_SEQ(                                                                                      \
+        TTMP_256, 8, TTMP8_TTMP9_TTMP10_TTMP11_TTMP12_TTMP13_TTMP14_TTMP15)                                    \
+    CASE_VI_GFX9PLUS_TO(                                                                                       \
+        TTMP0_512,                                                                                             \
         TTMP0_TTMP1_TTMP2_TTMP3_TTMP4_TTMP5_TTMP6_TTMP7_TTMP8_TTMP9_TTMP10_TTMP11_TTMP12_TTMP13_TTMP14_TTMP15) \
     CASE_GFXPRE11_GFX11PLUS(M0)                                                                                \
     CASE_GFXPRE11_GFX11PLUS(SGPR_NULL)                                                                         \
@@ -2677,6 +2681,19 @@ bool isHi16Reg(MCRegister Reg, const MCRegisterInfo &MRI) {
 #define CASE_VI_GFX9PLUS(node)                                                 \
   case node:                                                                   \
     return isGFX9Plus(STI) ? node##_gfx9plus : node##_vi;
+
+// As above, for a register of a sequence block. Such a register has no
+// enumerator of its own, so it is named by its block and the member it starts
+// at. Its subtarget variants belong to no block and keep their long names.
+#define CASE_VI_GFX9PLUS_SEQ(block, member, node)                              \
+  case block(member).id():                                                     \
+    return isGFX9Plus(STI) ? node##_gfx9plus : node##_vi;
+
+// As above, for a register whose name and the names of its subtarget variants
+// share no common stem, so that neither can be formed from the other.
+#define CASE_VI_GFX9PLUS_TO(node, variant)                                     \
+  case node:                                                                   \
+    return isGFX9Plus(STI) ? variant##_gfx9plus : variant##_vi;
 
 #define CASE_GFXPRE11_GFX11PLUS(node)                                          \
   case node:                                                                   \
@@ -2694,6 +2711,8 @@ MCRegister getMCReg(MCRegister Reg, const MCSubtargetInfo &STI) {
 
 #undef CASE_CI_VI
 #undef CASE_VI_GFX9PLUS
+#undef CASE_VI_GFX9PLUS_SEQ
+#undef CASE_VI_GFX9PLUS_TO
 #undef CASE_GFXPRE11_GFX11PLUS
 #undef CASE_GFXPRE11_GFX11PLUS_TO
 
@@ -2704,6 +2723,14 @@ MCRegister getMCReg(MCRegister Reg, const MCSubtargetInfo &STI) {
 #define CASE_VI_GFX9PLUS(node)                                                 \
   case node##_vi:                                                              \
   case node##_gfx9plus:                                                        \
+    return node;
+#define CASE_VI_GFX9PLUS_SEQ(block, member, node)                              \
+  case node##_vi:                                                              \
+  case node##_gfx9plus:                                                        \
+    return block(member);
+#define CASE_VI_GFX9PLUS_TO(node, variant)                                     \
+  case variant##_vi:                                                           \
+  case variant##_gfx9plus:                                                     \
     return node;
 #define CASE_GFXPRE11_GFX11PLUS(node)                                          \
   case node##_gfx11plus:                                                       \
@@ -2740,6 +2767,8 @@ bool isInlineValue(MCRegister Reg) {
 
 #undef CASE_CI_VI
 #undef CASE_VI_GFX9PLUS
+#undef CASE_VI_GFX9PLUS_SEQ
+#undef CASE_VI_GFX9PLUS_TO
 #undef CASE_GFXPRE11_GFX11PLUS
 #undef CASE_GFXPRE11_GFX11PLUS_TO
 #undef MAP_REG2REG

@@ -7155,7 +7155,7 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
 
 bool AMDGPUAsmParser::subtargetHasRegister(const MCRegisterInfo &MRI,
                                            MCRegister Reg) {
-  if (MRI.regsOverlap(TTMP12_TTMP13_TTMP14_TTMP15, Reg))
+  if (MRI.regsOverlap(TTMP_128(12), Reg))
     return isGFX9Plus();
 
   // GFX10+ has 2 more SGPRs 104 and 105.
