@@ -10799,16 +10799,23 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
   SDValue Op = Node->getOperand(0);
   unsigned Len = VT.getScalarSizeInBits();
 
-  // Compute effective bit width from known bits
+  // Compute effective bit width from known bits, allowing us to shift the
+  // active bits down if necessary to fit into smaller specialized expansions.
   KnownBits Known = DAG.computeKnownBits(Op);
-  unsigned EffectiveLen = Known.countMaxActiveBits();
+  unsigned LZ = Known.countMinLeadingZeros();
+  unsigned TZ = Known.countMinTrailingZeros();
+  unsigned ShiftedActiveBits = Known.getBitWidth() - (LZ + TZ);
+
+  // If the active bits are not at the low end, shift them down
+  if (ShiftedActiveBits < Len && TZ > 0) {
+    Op = DAG.getNode(ISD::SRL, dl, VT, Op,
+                     DAG.getShiftAmountConstant(TZ, VT, dl));
+  }
 
   // Round up to 8-bit boundary for byte-oriented SWAR algorithm
-  if (EffectiveLen > 0 && EffectiveLen < Len) {
-    EffectiveLen = (EffectiveLen + 7) & ~7u;
-  } else {
-    EffectiveLen = Len;
-  }
+  unsigned EffectiveLen = Len;
+  if (ShiftedActiveBits > 0 && ShiftedActiveBits < Len)
+    EffectiveLen = std::min(alignTo(ShiftedActiveBits, 8), Len);
 
   assert(VT.isInteger() && "CTPOP not implemented for this type.");
 
