@@ -21,6 +21,7 @@
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -168,6 +169,18 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
   case AMDGPU::BI__builtin_amdgcn_s_setreg:
     return SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/0, /*Low=*/0,
                                            /*High=*/UINT16_MAX);
+  case AMDGPU::BI__builtin_amdgcn_buffer_inv: {
+    llvm::APSInt CPol;
+    if (SemaRef.BuiltinConstantArg(TheCall, /*ArgNum=*/0, CPol))
+      return true;
+
+    // BUFFER_INV only supports the SC0 (1) and SC1 (16) cache-policy bits.
+    if (!llvm::is_contained({0u, 1u, 16u, 17u}, CPol.getZExtValue()))
+      return Diag(TheCall->getArg(0)->getExprLoc(),
+                  diag::err_amdgcn_buffer_inv_invalid_cpol)
+             << TheCall->getArg(0)->getSourceRange();
+    return false;
+  }
   case AMDGPU::BI__builtin_amdgcn_s_wait_event: {
     llvm::APSInt Result;
     if (SemaRef.BuiltinConstantArg(TheCall, 0, Result))
