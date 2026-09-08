@@ -100,11 +100,21 @@ void SuperHInstPrinter::printMemri(const MCInst *MI, unsigned OpNo, raw_ostream 
 
   const MCOperand &Op0 = MI->getOperand(OpNo);
   const MCOperand &Op1 = MI->getOperand(OpNo+1);
+  
+  // For globals, we want to render a symbol.
+  // even if they get lowered beforehand.
+  if (Op0.isExpr()) {
+    if (const MCSymbolRefExpr *SymOp = dyn_cast<MCSymbolRefExpr>(Op0.getExpr())) {
+      OS << SymOp->getSymbol().getName();
+      return;
+    }
+    return;
+  }
 
   OS << "@(" << Op1.getImm() << "," << getRegName(Op0.getReg()) << ")";
 }
 
-void SuperHInstPrinter::printCPInstOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O) {
+void SuperHInstPrinter::printMemrii(const MCInst *MI, unsigned OpNo, raw_ostream &O) {
   printOperand(MI, OpNo, O);
 }
 

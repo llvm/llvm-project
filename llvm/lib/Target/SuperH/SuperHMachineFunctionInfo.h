@@ -62,6 +62,9 @@ public:
   SuperHConstantPoolConstant *tryGetConstant(ConstantSDNode *N, SelectionDAG &DAG, SHCP::SHCPModifier Modifier);
   SuperHConstantPoolSymbol *tryGetConstant(ExternalSymbolSDNode *N, SelectionDAG &DAG, SHCP::SHCPModifier Modifier);
 
+  // Helper for lower level passes that gets global value constants.
+  SuperHConstantPoolConstant *tryGetConstant(const GlobalValue *G, const MachineFunction& MF) const;
+
 private:
 	virtual void anchor();
 };

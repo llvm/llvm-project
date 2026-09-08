@@ -214,8 +214,10 @@ def brtarget       : Operand<OtherVT> {
 }
 
 // An operand for the CONSTPOOL_ENTRY pseudo-instruction.
-def cpinst_operand : Operand<i32> {
-  let PrintMethod = "printCPInstOperand";
+// Double-indirect memory operand.
+def memrii : Operand<i32> {
+  let OperandType = "OPERAND_MEMORY";
+  let PrintMethod = "printMemrii";
 }
 
 // Register Indirect
@@ -1404,35 +1406,39 @@ def Select32    : SHSelectPseudo<(outs GPR:$dst),
 // Frame Load/Store
 //===--------------------------------------------------------------------------===//
 
-// LOAD FROM FRAME
+// LOAD FROM ADDRESS
 let mayLoad = 1, Defs = [R0, R1], Uses = [R0, R1] in {
-def MOVBLFR : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
-                          "! MOVBLFR $src, $Rn",
-                          []>;
+def MOVBLPtr  : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
+                            "! MOVBLPtr $src, $Rn",
+                            []>;
 
-def MOVWLFR : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
-                          "! MOVWLFR $src, $Rn",
-                          []>;
+def MOVWLPtr  : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
+                            "! MOVWLPtr $src, $Rn",
+                            []>;
 
-def MOVLLFR : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
-                          "! MOVLLFR $src, $Rn",
-                          []>;
+def MOVLLPtr  : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
+                            "! MOVLLPtr $src, $Rn",
+                            []>;
 }
 
-// STORE TO FRAME
+// STORE TO ADDRESS
 let mayStore = 1, Defs = [R0, R1], Uses = [R0, R1] in {
-def MOVBSFR : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
-                           "! MOVBSFR $src, $dst",
-                           [(truncstorei8 i32:$src, addr:$dst)]>;
+def MOVBSPtr  : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
+                             "! MOVBSPtr $src, $dst",
+                             [(truncstorei8 i32:$src, addr:$dst)]>;
 
-def MOVWSFR : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
-                           "! MOVWSFR $src, $dst",
-                           [(truncstorei16 i32:$src, addr:$dst)]>;
+def MOVWSPtr  : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
+                             "! MOVWSPtr $src, $dst",
+                             [(truncstorei16 i32:$src, addr:$dst)]>;
 
-def MOVLSFR : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
-                           "! MOVLSFR $src, $dst",
-                           [(store i32:$src, addr:$dst)]>;
+def MOVLSPtr  : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
+                             "! MOVLSPtr $src, $dst",
+                             [(store i32:$src, addr:$dst)]>;
 }
+
+
+
+
 
 //===--------------------------------------------------------------------------===//
 // Shifts
@@ -1482,7 +1488,7 @@ def SHFrmIdx : SHPseudo<(outs GPR:$dst), (ins GPR:$src, disp12:$src2)>;
 /// is the index into the MachineConstantPool that this is, the third is the
 /// size in bytes of this constant pool entry.
 let hasSideEffects = 0, isNotDuplicable = 1, hasNoSchedulingInfo = 1 in
-def CONSTPOOL_ENTRY : SHPseudo<(outs), (ins cpinst_operand:$instid, cpinst_operand:$cpidx, i32imm:$size), 
+def CONSTPOOL_ENTRY : SHPseudo<(outs), (ins memrii:$instid, memrii:$cpidx, i32imm:$size), 
                               "!CONSTPOOL_ENTRY $instid, $cpidx, $size",
                               []>;
 
@@ -1504,6 +1510,10 @@ def ADJCALLSTACKUP : SHPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 //===--------------------------------------------------------------------------===//
 //===--------------------------------------------------------------------------===//
 
+def : Pat<(sext_inreg i32:$src, i1),  (EXTSB i32:$src)>;
+def : Pat<(sext_inreg i32:$src, i8),  (EXTSB i32:$src)>;
+def : Pat<(sext_inreg i32:$src, i16), (EXTSW i32:$src)>;
+
 //===--------------------------------------------------------------------------===//
 // Shifts
 //===--------------------------------------------------------------------------===//
@@ -1515,17 +1525,14 @@ def : Pat<(i32 (srl i32:$src1, i32:$src2)),         (SHRrr GPR:$src1, GPR:$src2)
 def : Pat<(i32 (sra i32:$src1, i32:$src2)),         (SRArr GPR:$src1, GPR:$src2)>;
 
 //===--------------------------------------------------------------------------===//
-// Zero-Extend Load
+// Loads
 //===--------------------------------------------------------------------------===//
 
-def : Pat<(i32 (sextloadi1  addr:$src)), (EXTSB (EXTUB (MOVBLFR addr:$src)))>;
-def : Pat<(i32 (sextloadi8  addr:$src)), (EXTSB (EXTUB (MOVBLFR addr:$src)))>;
-def : Pat<(i32 (sextloadi16 addr:$src)), (EXTSW (MOVWLFR addr:$src))>;
-def : Pat<(i32 (load        addr:$src)),        (MOVLLFR addr:$src)>;
-def : Pat<(i32 (zextloadi1  addr:$src)), (EXTUB (MOVBLFR addr:$src))>;
-def : Pat<(i32 (zextloadi8  addr:$src)), (EXTUB (MOVBLFR addr:$src))>;
-def : Pat<(i32 (zextloadi16 addr:$src)), (EXTUW (MOVWLFR addr:$src))>;
-
-def : Pat<(sext_inreg i32:$src, i1),  (EXTSB i32:$src)>;
-def : Pat<(sext_inreg i32:$src, i8),  (EXTSB i32:$src)>;
-def : Pat<(sext_inreg i32:$src, i16), (EXTSW i32:$src)>;
+def : Pat<(i32 (load        addr:$src)),               (MOVLLPtr addr:$src)>;
+def : Pat<(i32 (sextloadi1  addr:$src)), (EXTSB (EXTUB (MOVBLPtr addr:$src)))>;
+def : Pat<(i32 (sextloadi8  addr:$src)), (EXTSB (EXTUB (MOVBLPtr addr:$src)))>;
+def : Pat<(i32 (sextloadi16 addr:$src)),        (EXTSW (MOVWLPtr addr:$src))>;
+def : Pat<(i32 (load        addr:$src)),               (MOVLLPtr addr:$src)>;
+def : Pat<(i32 (zextloadi1  addr:$src)),        (EXTUB (MOVBLPtr addr:$src))>;
+def : Pat<(i32 (zextloadi8  addr:$src)),        (EXTUB (MOVBLPtr addr:$src))>;
+def : Pat<(i32 (zextloadi16 addr:$src)),        (EXTUW (MOVWLPtr addr:$src))>;
