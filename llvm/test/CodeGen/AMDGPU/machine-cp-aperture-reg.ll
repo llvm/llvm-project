@@ -1,4 +1,4 @@
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck %s
+; RUN: llc -global-isel -mtriple=amdgpu11.00-amd-amdhsa < %s | FileCheck %s
 
 ; src_shared_base has no addressable high half. Must not forward into VGPRs.
 
