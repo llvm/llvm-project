@@ -47,4 +47,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.types.struct_dirent
     libc.src.dirent.scandir
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )

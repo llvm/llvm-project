@@ -16,6 +16,7 @@
 #include "hdr/types/struct_dirent.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/dirent/opendir.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -24,11 +25,18 @@ LLVM_LIBC_FUNCTION(int, scandir,
                     int (*sel)(const struct dirent *),
                     int (*compar)(const struct dirent **,
                                   const struct dirent **))) {
-  (void)dir;
   (void)namelist;
   (void)sel;
   (void)compar;
-  return -1;
+
+  DIR *dir_fd = opendir(dir);
+  if (dir_fd == nullptr) {
+    // opendir set errno
+    return -1;
+  }
+
+
+  return 0;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
