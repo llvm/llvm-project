@@ -139,6 +139,67 @@ uint32_t SPIRVLegalizeImplicitBindingImpl::getAndReserveFirstUnusedBinding(
   return NewBinding;
 }
 
+// Replace the implicit binding call with a new call using explicit binding.
+static void replaceWithHandleFromBinding(Module &M, CallInst *CI,
+                                         uint32_t DescSet, uint32_t Binding,
+                                         Value *IndexOp, Value *RangeOp,
+                                         Value *Name) {
+  IRBuilder<> Builder(CI);
+  Value *DescSetOp = Builder.getInt32(DescSet);
+  Value *BindingOp = Builder.getInt32(Binding);
+  Function *NewFunc = Intrinsic::getOrInsertDeclaration(
+      &M, Intrinsic::spv_resource_handlefrombinding, {CI->getType()});
+  CallInst *NewCI = Builder.CreateCall(
+      NewFunc, {DescSetOp, BindingOp, IndexOp, RangeOp, Name});
+  NewCI->setCallingConv(CI->getCallingConv());
+  CI->replaceAllUsesWith(NewCI);
+  CI->eraseFromParent();
+}
+
+static void replaceWithHandleFromBinding(Module &M, CallInst *CI,
+                                         uint32_t DescSet, uint32_t Binding) {
+  assert(CI->getIntrinsicID() ==
+             Intrinsic::spv_resource_handlefromimplicitbinding &&
+         "unexpected intrinsic");
+  assert(CI->arg_size() == 5 &&
+         "unexpected number of arguments for implicit binding intrinsic");
+  replaceWithHandleFromBinding(M, CI, DescSet, Binding, CI->getArgOperand(2),
+                               CI->getArgOperand(3), CI->getArgOperand(4));
+}
+
+// Replace the implicit counter binding call with a new call using explicit binding.
+static void replaceWithCounterHandleFromBinding(Module &M, CallInst *CI,
+                                                Value *MainHandle,
+                                                uint32_t DescSet,
+                                                uint32_t Binding) {
+
+  assert(CI->getIntrinsicID() ==
+             Intrinsic::spv_resource_counterhandlefromimplicitbinding &&
+         "unexpected implicit binding intrinsic");
+  IRBuilder<> Builder(CI);
+  Value *DescSetOp = Builder.getInt32(DescSet);
+  Value *BindingOp = Builder.getInt32(Binding);
+  Type *OverloadTys[] = {CI->getType(), CI->getArgOperand(0)->getType()};
+  Function *NewFunc = Intrinsic::getOrInsertDeclaration(
+      &M, Intrinsic::spv_resource_counterhandlefrombinding, OverloadTys);
+  CallInst *NewCI = Builder.CreateCall(NewFunc, {MainHandle, DescSetOp, BindingOp});
+  NewCI->setCallingConv(CI->getCallingConv());
+  CI->replaceAllUsesWith(NewCI);
+  CI->eraseFromParent();
+}
+
+static void replaceWithCounterHandleFromBinding(Module &M, CallInst *CI,
+                                                uint32_t DescSet,
+                                                uint32_t Binding) {
+  assert(CI->getIntrinsicID() ==
+             Intrinsic::spv_resource_counterhandlefromimplicitbinding &&
+         "unexpected intrinsic");
+  assert(CI->arg_size() == 3 &&
+         "unexpected number of arguments for implicit binding intrinsic");
+  replaceWithCounterHandleFromBinding(
+      M, CI, CI->getArgOperand(0), DescSet, Binding);
+}
+
 bool SPIRVLegalizeImplicitBindingImpl::replaceImplicitBindingCalls(Module &M) {
   // Collect all implicit binding calls.
   SmallVector<std::pair<uint32_t, CallInst *>, 8> IBCalls;
@@ -180,7 +241,7 @@ bool SPIRVLegalizeImplicitBindingImpl::replaceImplicitBindingCalls(Module &M) {
     uint32_t Binding;
     uint32_t DescSet = getDescSet(CI);
     if (OrderId == LastOrderId) {
-      if (LastDescSet != DescSet)
+      if (DescSet != LastDescSet)
         report_fatal_error("Implicit binding calls with the same order ID must "
                            "have the same descriptor set");
       Binding = LastBinding;
@@ -188,35 +249,12 @@ bool SPIRVLegalizeImplicitBindingImpl::replaceImplicitBindingCalls(Module &M) {
       Binding = getAndReserveFirstUnusedBinding(DescSet);
     }
 
-    // Replace the implicit binding call with a new call using the new binding.
-    IRBuilder<> Builder(CI);
-    Intrinsic::ID IID;
-    SmallVector<Value *, 5> Args;
-    SmallVector<Type *, 2> OverloadTys = {CI->getType()};
+    // Replace the implicit binding call with an explicit binding call.
     if (CI->getIntrinsicID() ==
-        Intrinsic::spv_resource_handlefromimplicitbinding) {
-      IID = Intrinsic::spv_resource_handlefrombinding;
-      Args.push_back(Builder.getInt32(DescSet));
-      Args.push_back(Builder.getInt32(Binding));
-      // Copy the remaining arguments from the old call.
-      for (uint32_t i = 2; i < CI->arg_size(); ++i)
-        Args.push_back(CI->getArgOperand(i));
-    } else {
-      assert(CI->getIntrinsicID() ==
-                 Intrinsic::spv_resource_counterhandlefromimplicitbinding &&
-             "unexpected implicit binding intrinsic");
-      IID = Intrinsic::spv_resource_counterhandlefrombinding;
-      Args.push_back(CI->getArgOperand(0));
-      Args.push_back(Builder.getInt32(DescSet));
-      Args.push_back(Builder.getInt32(Binding));
-      OverloadTys.push_back(CI->getArgOperand(0)->getType());
-    }
-    Function *NewFunc = Intrinsic::getOrInsertDeclaration(&M, IID, OverloadTys);
-    CallInst *NewCI = Builder.CreateCall(NewFunc, Args);
-    NewCI->setCallingConv(CI->getCallingConv());
-
-    CI->replaceAllUsesWith(NewCI);
-    CI->eraseFromParent();
+        Intrinsic::spv_resource_handlefromimplicitbinding)
+        replaceWithHandleFromBinding(M, CI, DescSet, Binding);
+    else
+      replaceWithCounterHandleFromBinding(M, CI, DescSet, Binding);
     Changed = true;
 
     LastOrderId = OrderId;
