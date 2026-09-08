@@ -120,6 +120,41 @@ static bool usesExtendedRegister(const MachineInstr &MI) {
   return false;
 }
 
+// Return true if the EVEX form of \p MI can encode its memory displacement as
+// a compressed disp8*N (1 byte) while the VEX/legacy twin would be forced to
+// spend a full disp32 (4 bytes). In that window the EVEX encoding is strictly
+// shorter overall, despite its 1-2 byte larger prefix, so compressing it to
+// VEX would grow code size. Mirrors isDispOrCDisp8 in X86MCCodeEmitter.cpp.
+static bool hasShorterEVEXViaCDisp8(const MachineInstr &MI) {
+  uint64_t TSFlags = MI.getDesc().TSFlags;
+  unsigned CD8_Scale =
+      (TSFlags & X86II::CD8_Scale_Mask) >> X86II::CD8_Scale_Shift;
+  CD8_Scale = CD8_Scale ? 1U << (CD8_Scale - 1) : 0U;
+  // Without a CD8 scale > 1 there is no displacement advantage over VEX.
+  if (CD8_Scale <= 1)
+    return false;
+
+  int MemOpIdx = X86::getFirstAddrOperandIdx(MI);
+  if (MemOpIdx < 0)
+    return false;
+
+  const MachineOperand &Disp = MI.getOperand(MemOpIdx + X86::AddrDisp);
+  // Only a constant displacement can be range-checked here; symbolic ones
+  // (globals, constant pool, jump tables, ...) are resolved later.
+  if (!Disp.isImm())
+    return false;
+
+  int64_t Val = Disp.getImm();
+  // VEX can already use a disp8 in this range, so EVEX offers no saving.
+  if (isInt<8>(Val))
+    return false;
+  // EVEX can use disp8*N only when the value is a multiple of N and the scaled
+  // value fits in a signed byte.
+  if (Val % static_cast<int64_t>(CD8_Scale) != 0)
+    return false;
+  return isInt<8>(Val / static_cast<int64_t>(CD8_Scale));
+}
+
 // Do any custom cleanup needed to finalize the conversion.
 static bool performCustomAdjustments(MachineInstr &MI, unsigned NewOpc) {
   (void)NewOpc;
@@ -538,6 +573,10 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
 
   // Instructions with mask or 512-bit vector can't be converted to VEX.
   if (TSFlags & (X86II::EVEX_K | X86II::EVEX_L2))
+    return false;
+
+  // Keep the EVEX encoding when there's 1-byte compressed disp8*N.
+  if (hasShorterEVEXViaCDisp8(MI))
     return false;
 
   // Specialized mask-producing folds to MOVMSK/VBLENDV first.
