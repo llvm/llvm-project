@@ -35,7 +35,7 @@ struct option {
   int val;
 };
 
-int getopt(int argc, char *const argv[], const char *optstring);
+int getopt(int argc, char *const argv[], const char *optstring) throw();
 
 // from getopt.h
 extern char *optarg;
