@@ -1183,6 +1183,12 @@ TEST(DenseMapCustomTest, RemoveIfValueDtor) {
   EXPECT_EQ(0u, CtorTester::getNumConstructed());
 }
 
+TEST(DenseMapCustomTest, BucketComparison) {
+  IntBucket A(1, 2), B(1, 2), C(1, 3);
+  EXPECT_EQ(A, B);
+  EXPECT_NE(A, C);
+}
+
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
 TEST(DenseMapCustomTest, EraseInvalidatesIterators) {
   DenseMap<int, int> M;
@@ -1228,11 +1234,5 @@ TEST(DenseMapCustomTest, MoveAssignInvalidatesIterators) {
   EXPECT_DEATH((void)It->second, "invalid iterator access");
 }
 #endif
-
-TEST(DenseMapCustomTest, BucketComparison) {
-  IntBucket A(1, 2), B(1, 2), C(1, 3);
-  EXPECT_EQ(A, B);
-  EXPECT_NE(A, C);
-}
 
 } // namespace
