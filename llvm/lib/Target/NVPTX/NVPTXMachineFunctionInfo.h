@@ -23,12 +23,6 @@ class CallBase;
 class MCSymbol;
 
 class NVPTXMachineFunctionInfo : public MachineFunctionInfo {
-public:
-  struct CallPrototype {
-    const CallBase *CB;
-    MCSymbol *Symbol = nullptr;
-  };
-
 private:
   /// The parameter symbols whose image handles were replaced with image
   /// references.
@@ -36,7 +30,7 @@ private:
 
   /// Stores a mapping from a unique call-site id to the call instruction that
   /// needs an indirect-call prototype emitted.
-  std::map<unsigned, CallPrototype> CallPrototypes;
+  std::map<unsigned, const CallBase *> CallPrototypes;
 
 public:
   NVPTXMachineFunctionInfo(const Function &F, const TargetSubtargetInfo *STI) {}
@@ -59,23 +53,10 @@ public:
   }
 
   void addCallPrototype(unsigned Id, const CallBase *CB) {
-    CallPrototypes.try_emplace(Id, CallPrototype{CB});
+    CallPrototypes.try_emplace(Id, CB);
   }
 
-  void setCallPrototypeSymbol(unsigned Id, MCSymbol *Symbol) {
-    auto It = CallPrototypes.find(Id);
-    assert(It != CallPrototypes.end() && "unknown call prototype");
-    It->second.Symbol = Symbol;
-  }
-
-  MCSymbol *getCallPrototypeSymbol(unsigned Id) const {
-    auto It = CallPrototypes.find(Id);
-    assert(It != CallPrototypes.end() && "unknown call prototype");
-    assert(It->second.Symbol && "call prototype symbol not set");
-    return It->second.Symbol;
-  }
-
-  const std::map<unsigned, CallPrototype> &getCallPrototypes() const {
+  const std::map<unsigned, const CallBase *> &getCallPrototypes() const {
     return CallPrototypes;
   }
 };

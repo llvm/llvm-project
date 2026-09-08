@@ -67,8 +67,6 @@ MachineFunctionPass *createNVPTXPeepholeLegacyPass();
 MachineFunctionPass *createNVPTXProxyRegErasureLegacyPass();
 MachineFunctionPass *createNVPTXForwardParamsLegacyPass();
 MachineFunctionPass *createNVPTXAddressFolderLegacyPass();
-MachineFunctionPass *
-createNVPTXPreEmitSymbolLoweringLegacyPass(const TargetMachine &TM);
 
 void initializeNVVMReflectLegacyPassPass(PassRegistry &);
 void initializeGenericToNVVMLegacyPassPass(PassRegistry &);
@@ -76,7 +74,6 @@ void initializeNVPTXAllocaHoistingLegacyPassPass(PassRegistry &);
 void initializeNVPTXAsmPrinterPass(PassRegistry &);
 void initializeNVPTXAssignValidGlobalNamesLegacyPassPass(PassRegistry &);
 void initializeNVPTXAtomicLowerLegacyPassPass(PassRegistry &);
-void initializeNVPTXPreEmitSymbolLoweringLegacyPass(PassRegistry &);
 void initializeNVPTXCtorDtorLoweringLegacyPass(PassRegistry &);
 void initializeNVPTXLowerAggrCopiesLegacyPassPass(PassRegistry &);
 void initializeNVPTXLowerAllocaLegacyPassPass(PassRegistry &);

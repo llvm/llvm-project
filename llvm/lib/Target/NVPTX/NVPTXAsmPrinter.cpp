@@ -220,6 +220,7 @@ public:
 
 private:
   const Function *F;
+  DenseMap<unsigned, MCSymbol *> CallPrototypeSymbols;
 
   NVPTXTargetStreamer *getTargetStreamer() const;
 
@@ -232,6 +233,8 @@ private:
 
   void emitInstruction(const MachineInstr *) override;
   void lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
+  MCOperand lowerCallPrototypeArg(const MachineOperand &MO);
+  MCOperand lowerOperand(const MachineInstr &MI, unsigned OpNum);
   MCOperand lowerOperand(const MachineOperand &MO);
   MCOperand GetSymbolRef(const MCSymbol *Symbol);
   MCRegister encodeVirtualRegister(Register Reg);
@@ -590,8 +593,30 @@ void NVPTXAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 void NVPTXAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
   OutMI.setOpcode(MI->getOpcode());
-  for (const auto MO : MI->operands())
-    OutMI.addOperand(lowerOperand(MO));
+  for (unsigned I = 0, E = MI->getNumOperands(); I != E; ++I)
+    OutMI.addOperand(lowerOperand(*MI, I));
+}
+
+static bool isCallPrototypeOperand(const MachineInstr &MI,
+                                       unsigned OpNum) {
+  return OpNum == 3 &&
+         (MI.getOpcode() == NVPTX::CALL || MI.getOpcode() == NVPTX::CALL_conv);
+}
+
+MCOperand NVPTXAsmPrinter::lowerCallPrototypeArg(const MachineOperand &MO) {
+  assert(MO.isImm() && "call prototype operand must be an ID");
+  auto It = CallPrototypeSymbols.find(MO.getImm());
+  assert(It != CallPrototypeSymbols.end() && "unknown call prototype");
+  return GetSymbolRef(It->second);
+}
+
+MCOperand NVPTXAsmPrinter::lowerOperand(const MachineInstr &MI,
+                                        unsigned OpNum) {
+  const MachineOperand &MO = MI.getOperand(OpNum);
+  if (isCallPrototypeOperand(MI, OpNum))
+    return lowerCallPrototypeArg(MO);
+
+  return lowerOperand(MO);
 }
 
 MCOperand NVPTXAsmPrinter::lowerOperand(const MachineOperand &MO) {
@@ -941,10 +966,13 @@ void NVPTXAsmPrinter::emitFunctionBodyStart() {
   raw_svector_ostream O(Str);
   emitDemotedVars(&MF->getFunction(), O);
 
+  CallPrototypeSymbols.clear();
   const auto *MFI = MF->getInfo<NVPTXMachineFunctionInfo>();
-  for (const auto &Entry : MFI->getCallPrototypes()) {
-    const auto &Prototype = Entry.second;
-    emitCallPrototype(*Prototype.CB, Prototype.Symbol, O);
+  for (const auto &[Id, CB] : MFI->getCallPrototypes()) {
+    MCSymbol *Symbol = OutContext.createTempSymbol(
+        "prototype_" + Twine(Id), /*AlwaysAddSuffix=*/false);
+    CallPrototypeSymbols.try_emplace(Id, Symbol);
+    emitCallPrototype(*CB, Symbol, O);
   }
 
   OutStreamer->emitRawText(O.str());
@@ -955,6 +983,7 @@ void NVPTXAsmPrinter::emitFunctionBodyStart() {
 }
 
 void NVPTXAsmPrinter::emitFunctionBodyEnd() {
+  CallPrototypeSymbols.clear();
   VRegMapping.clear();
 }
 
