@@ -1,44 +1,43 @@
-.. title:: clang-tidy - readability-trivial-switch
+```{title} clang-tidy - readability-trivial-switch
+```
 
-readability-trivial-switch
-==========================
+# readability-trivial-switch
 
-Finds trivial ``switch`` statements that can be written more clearly.
+Finds trivial `switch` statements that can be written more clearly.
 
-Every ``switch`` statement should have at least two ``case`` labels other than a ``default`` label.
-Otherwise, the ``switch`` can be better expressed with an ``if`` statement.
-``switch`` statements without any labels are diagnosed as well.
+Every `switch` statement should have at least two `case` labels other than a `default` label.
+Otherwise, the `switch` can be better expressed with an `if` statement.
+`switch` statements without any labels are diagnosed as well.
 
-.. code-block:: c++
+```c++
+int i = 42;
 
-  int i = 42;
+switch (i) {
+case 1:
+  doSomething();
+  break;
+default:
+  doSomethingElse();
+  break;
+}
 
-  switch (i) {
-  case 1:
-    doSomething();
-    break;
-  default:
-    doSomethingElse();
-    break;
-  }
+// The switch can be written more clearly as:
+if (i == 1) {
+  doSomething();
+} else {
+  doSomethingElse();
+}
+```
 
-  // The switch can be written more clearly as:
-  if (i == 1) {
-    doSomething();
-  } else {
-    doSomethingElse();
-  }
+```c++
+// The switch without any labels will be diagnosed.
+int i = 42;
+switch (i) {}
+```
 
-.. code-block:: c++
+## Options
 
-  // The switch without any labels will be diagnosed.
-  int i = 42;
-  switch (i) {}
-
-Options
--------
-
-.. option:: IgnoreMacros
-
-   If set to `true`, the check will not give warnings inside macros. Default
-   is `true`.
+```{option} IgnoreMacros
+When `true`, the check will not give warnings inside macros.
+Default is `true`.
+```

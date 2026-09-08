@@ -1,30 +1,30 @@
-.. title:: clang-tidy - readability-use-concise-preprocessor-directives
+```{title} clang-tidy - readability-use-concise-preprocessor-directives
+```
 
-readability-use-concise-preprocessor-directives
-===============================================
+# readability-use-concise-preprocessor-directives
 
-Finds uses of ``#if`` that can be simplified to ``#ifdef`` or ``#ifndef`` and,
-since C23 and C++23, uses of ``#elif`` that can be simplified to ``#elifdef``
-or ``#elifndef``:
+Finds uses of `#if` that can be simplified to `#ifdef` or `#ifndef` and,
+since C23 and C++23, uses of `#elif` that can be simplified to `#elifdef`
+or `#elifndef`:
 
-.. code-block:: c++
+```c++
+#if defined(MEOW)
+#if !defined(MEOW)
 
-  #if defined(MEOW)
-  #if !defined(MEOW)
+// becomes
 
-  // becomes
-
-  #ifdef MEOW
-  #ifndef MEOW
+#ifdef MEOW
+#ifndef MEOW
+```
 
 Since C23 and C++23:
 
-.. code-block:: c++
+```c++
+#elif defined(MEOW)
+#elif !defined(MEOW)
 
-  #elif defined(MEOW)
-  #elif !defined(MEOW)
+// becomes
 
-  // becomes
-
-  #elifdef MEOW
-  #elifndef MEOW
+#elifdef MEOW
+#elifndef MEOW
+```
