@@ -156,7 +156,11 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
           return U->getOpcode() != ISD::ADD;
         });
       };
-      bool PosAnchored = IsAnchored(N1C);
+      // If Imm is materialized anyway, keep the ADD so it reuses Imm; an ADD is
+      // also more compressible than a SUB. This also lets us skip the search
+      // for -Imm below.
+      if (IsAnchored(N1C))
+        break;
       // Find the (unique) constant node for -Imm, if any.
       const SDNode *NegC = nullptr;
       for (const SDNode &Node : CurDAG->allnodes()) {
@@ -171,16 +175,11 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
         break;
       // Pick which of Imm/-Imm should be the surviving constant, so exactly
       // one of the pair is materialized and any ADDs of the other reuse it:
-      //  - if Imm is materialized anyway, keep the ADD so it reuses Imm (an ADD
-      //    is also more compressible than a SUB, so prefer it when both are
-      //    anchored and a rewrite would not remove a constant);
-      //  - else if -Imm is materialized anyway, reuse it (rewrite to SUB);
+      //  - if -Imm is materialized anyway, reuse it (rewrite to SUB);
       //  - else keep the cheaper constant, breaking ties towards the positive
       //    value so both ADDs of a C/-C pair agree on the survivor.
       bool Rewrite;
-      if (PosAnchored)
-        Rewrite = false;
-      else if (IsAnchored(NegC))
+      if (IsAnchored(NegC))
         Rewrite = true;
       else {
         int PosCost = RISCVMatInt::getIntMatCost(APInt(64, Imm), 64, *Subtarget,
