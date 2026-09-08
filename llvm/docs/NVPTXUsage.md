@@ -1761,8 +1761,7 @@ For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parall
 #### TMA Global-to-Shared Data-Validity Reporting
 
 The '`@llvm.nvvm.cp.async.bulk.tensor.g2s.*`' and '`@llvm.nvvm.cp.async.bulk.tensor.g2s.cta.*`' intrinsics, including the property-override
-forms, take an `i32 %validate_pattern` immediate argument in the range \[0, 6). It selects the data-validity reporting mechanism applied to the
-tensor data while it is copied:
+forms, take an `i32 %flag_valid_pattern` immediate argument in the range \[0, 6). The non-tensor '`@llvm.nvvm.cp.async.bulk.global.to.shared.cluster`', '`@llvm.nvvm.cp.async.bulk.global.to.shared.cluster.relaxed`', '`@llvm.nvvm.cp.async.bulk.global.to.shared.cta`', and '`@llvm.nvvm.cp.async.bulk.global.to.shared.cta.relaxed`' intrinsics also take the same `i32 %flag_valid_pattern` immediate argument. It selects the data-validity reporting mechanism applied to the data while it is copied:
 
 | Value | PTX Report Mechanism                                    | Semantics                                                        |
 |-------|---------------------------------------------------------|------------------------------------------------------------------|
@@ -1784,7 +1783,8 @@ For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parall
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster(ptr addrspace(7) %dst, ptr addrspace(3) %mbar, ptr addrspace(1) %src, i32 %size, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster.i16(ptr addrspace(7) %dst, ptr addrspace(3) %mbar, ptr addrspace(1) %src, i32 %size, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %flag_valid_pattern)
+declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster.i32(..., i32 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %flag_valid_pattern)
 ```
 
 ##### Overview:
@@ -1795,16 +1795,71 @@ instructions. These instructions initiate an asynchronous copy of bulk data from
 global memory to shared::cluster memory. The 32-bit operand `%size` specifies
 the amount of memory to be copied and it must be a multiple of 16.
 
-- The last two arguments to these intrinsics are boolean flags indicating
-  support for cache_hint and/or multicast modifiers. These flag arguments must
-  be compile-time constants. The backend looks through these flags and lowers
-  the intrinsics appropriately.
-- The Nth argument (denoted by `i1 %flag_ch`) when set, indicates a valid
-  cache_hint (`i64 %ch`) and generates the `.L2::cache_hint` variant of the
-  PTX instruction.
-- The [N-1]th argument (denoted by `i1 %flag_mc`) when set, indicates the
-  presence of a multicast mask (`i16 %mc`) and generates the PTX instruction
-  with the `.multicast::cluster` modifier.
+- The trailing `%flag_mc`, `%flag_ch`, and `%flag_valid_pattern` arguments control
+  the multicast and cache-hint modifiers and the data-validity reporting
+  pattern. They must be compile-time constants.
+- The argument denoted by `i1 %flag_ch`, when set, indicates a valid cache_hint
+  (`i64 %ch`) and generates the `.L2::cache_hint` variant of the PTX
+  instruction.
+- The argument denoted by `i1 %flag_mc`, when set, indicates the presence of a
+  multicast mask (`%mc`) and generates the PTX instruction with the
+  `.multicast::cluster` modifier. An `i16` mask selects the default/16-bit
+  multicast form while an `i32` mask selects the `.multicast::cluster::32b`
+  variant. Only `i16` and `i32` mask types are supported. The 32-bit form
+  requires `sm_107f` or later in the same family and is supported only on PTX
+  9.4 or later.
+- The trailing `i32 %flag_valid_pattern` flag selects the data-validity reporting
+  mechanism; see
+  [TMA Global-to-Shared Data-Validity Reporting](#tma-global-to-shared-data-validity-reporting).
+
+For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk).
+
+#### '`llvm.nvvm.cp.async.bulk.global.to.shared.cluster.relaxed`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster.relaxed.i16(ptr addrspace(7) %dst, ptr addrspace(3) %mbar, ptr addrspace(1) %src, i32 %size, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %flag_scope, i32 %flag_valid_pattern)
+declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster.relaxed.i32(..., i32 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %flag_scope, i32 %flag_valid_pattern)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.cp.async.bulk.global.to.shared.cluster.relaxed`' intrinsic
+corresponds to the
+`cp.async.bulk.relaxed.<scope>.shared::cluster.global.mbarrier::complete_tx::bytes{...}.b128`
+family of PTX instructions. These instructions initiate an asynchronous copy of bulk data from
+global memory to shared::cluster memory, like the weak variant above. Unlike
+the weak variant, the copy accesses memory with naturally-aligned strong
+memory operations with element-wise atomic size specified by the `.b128` type (implicit) and
+thread scope specified by `%flag_scope`; the complete-tx operation on the mbarrier has `.release` semantics at the
+`.cluster` scope.
+
+- The trailing `%flag_mc`, `%flag_ch`, `%flag_scope`, and `%flag_valid_pattern`
+  arguments control the multicast and cache-hint modifiers, the scope of the
+  relaxed memory ordering semantics, and the data-validity reporting pattern.
+  They must be compile-time constants.
+- The argument denoted by `i1 %flag_ch`, when set, indicates a valid cache_hint
+  (`i64 %ch`) and generates the `.L2::cache_hint` variant of the PTX
+  instruction.
+- The argument denoted by `i1 %flag_mc`, when set, indicates the presence of a
+  multicast mask (`%mc`) and generates the PTX instruction with the
+  `.multicast::cluster` modifier. An `i16` mask selects the default/16-bit
+  multicast form while an `i32` mask selects the `.multicast::cluster::32b`
+  variant. Only `i16` and `i32` mask types are supported.
+- The `i32 %flag_scope` argument takes values within the range \[0, 4) and selects
+  the `.scope` qualifier of the PTX instruction:
+
+| Value | `flag_scope` |
+|-------|--------------|
+|   0   | `.cta`       |
+|   1   | `.cluster`   |
+|   2   | `.gpu`       |
+|   3   | `.sys`       |
+
+- The trailing `i32 %flag_valid_pattern` flag selects the data-validity reporting
+  mechanism; see
+  [TMA Global-to-Shared Data-Validity Reporting](#tma-global-to-shared-data-validity-reporting).
 
 For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk).
 
@@ -1813,7 +1868,7 @@ For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thre
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cta(ptr addrspace(3) %dst, ptr addrspace(3) %mbar, ptr addrspace(1) %src, i32 %size, i64 %ch, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cta(ptr addrspace(3) %dst, ptr addrspace(3) %mbar, ptr addrspace(1) %src, i32 %size, i32 %ibl, i32 %ibr, i64 %ch, i1 %flag_ch, i1 %flag_oob, i32 %flag_valid_pattern)
 ```
 
 ##### Overview:
@@ -1822,10 +1877,75 @@ The '`@llvm.nvvm.cp.async.bulk.global.to.shared.cta`' intrinsic corresponds to
 the `cp.async.bulk.shared::cta.global.*` family of PTX instructions. These
 instructions initiate an asynchronous copy of bulk data from global memory to
 shared::cta memory. The 32-bit operand `%size` specifies the amount of memory
-to be copied and it must be a multiple of 16. The last argument (denoted by
-`i1 %flag_ch`) is a compile-time constant. When set, it indicates a valid
-cache_hint (`i64 %ch`) and generates the `.L2::cache_hint` variant of the
-PTX instruction.
+to be copied and it must be a multiple of 16.
+
+- The trailing `%flag_ch`, `%flag_oob`, and `%flag_valid_pattern` arguments
+  control the cache-hint modifier, the out-of-bounds handling, and the
+  data-validity reporting pattern. They must be compile-time constants.
+- The argument denoted by `i1 %flag_ch`, when set, indicates a valid cache_hint
+  (`i64 %ch`) and generates the `.L2::cache_hint` variant of the PTX
+  instruction.
+- The argument denoted by `i1 %flag_oob`, when set, generates the
+  `.ignore_oob` variant of the PTX instruction. In that case, the `i32 %ibl`
+  and `i32 %ibr` operands specify the numbers of bytes to ignore on the left
+  and right sides of the source, respectively. Both operands must be in the
+  range \[0, 15]; otherwise, the behavior is undefined. The `.ignore_oob`
+  modifier requires PTX ISA 9.2 or later. When `%flag_oob` is set,
+  `%flag_valid_pattern` must be 0 (data-validity reporting disabled).
+- The trailing `i32 %flag_valid_pattern` flag selects the data-validity reporting
+  mechanism; see
+  [TMA Global-to-Shared Data-Validity Reporting](#tma-global-to-shared-data-validity-reporting).
+
+For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk).
+
+#### '`llvm.nvvm.cp.async.bulk.global.to.shared.cta.relaxed`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cta.relaxed(ptr addrspace(3) %dst, ptr addrspace(3) %mbar, ptr addrspace(1) %src, i32 %size, i32 %ibl, i32 %ibr, i64 %ch, i1 %flag_ch, i1 %flag_oob, i32 %flag_scope, i32 %flag_valid_pattern)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.cp.async.bulk.global.to.shared.cta.relaxed`' intrinsic
+corresponds to the
+`cp.async.bulk.relaxed.<scope>.shared::cta.global.mbarrier::complete_tx::bytes{...}.b128`
+family of PTX instructions. These instructions initiate an asynchronous copy of bulk data from
+global memory to shared::cta memory, like the weak variant above. Unlike
+the weak variant, the copy accesses memory with naturally-aligned strong
+memory operations with element-wise atomic size specified by the `.b128` type (implicit) and
+thread scope specified by `%flag_scope`; the complete-tx operation on the mbarrier has `.release` semantics at the
+`.cluster` scope. The `.relaxed` variants require PTX ISA 9.3 or later and
+`sm_90a`, `sm_100f`, or `sm_110f` or later in the same family.
+
+- The trailing `%flag_ch`, `%flag_oob`, `%flag_scope`, and `%flag_valid_pattern`
+  arguments control the cache-hint modifier, the out-of-bounds handling, the
+  scope of the relaxed memory ordering semantics, and the data-validity
+  reporting pattern. They must be compile-time constants.
+- The argument denoted by `i1 %flag_ch`, when set, indicates a valid cache_hint
+  (`i64 %ch`) and generates the `.L2::cache_hint` variant of the PTX
+  instruction.
+- The argument denoted by `i1 %flag_oob`, when set, generates the
+  `.ignore_oob` variant of the PTX instruction. In that case, the `i32 %ibl`
+  and `i32 %ibr` operands specify the numbers of bytes to ignore on the left
+  and right sides of the source, respectively. Both operands must be in the
+  range \[0, 15]; otherwise, the behavior is undefined. When `%flag_oob` is
+  set, `%flag_valid_pattern` must be 0 (data-validity reporting disabled); this
+  mutual exclusion is enforced by the verifier.
+- The `i32 %flag_scope` argument takes values within the range \[0, 4) and selects
+  the `.scope` qualifier of the PTX instruction:
+
+| Value | `flag_scope` |
+|-------|--------------|
+|   0   | `.cta`       |
+|   1   | `.cluster`   |
+|   2   | `.gpu`       |
+|   3   | `.sys`       |
+
+- The trailing `i32 %flag_valid_pattern` flag selects the data-validity reporting
+  mechanism; see
+  [TMA Global-to-Shared Data-Validity Reporting](#tma-global-to-shared-data-validity-reporting).
 
 For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk).
 
@@ -2334,14 +2454,14 @@ and to the [PTX ISA discard documentation](https://docs.nvidia.com/cuda/parallel
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d.i32(..., i32 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %flag_valid_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d.i32(..., i32 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %flag_valid_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d.{i16,i32}(..., i32 %d0, i32 %d1, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.5d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.gather4.2d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.gather4.2d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %flag_valid_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.gather4.2d.i32(..., i32 %mc, i64 %ch, i1 %flag_mc, ...)
 ```
 
@@ -2377,7 +2497,7 @@ takes a total of 5 coordinates as input arguments. For more information on
   \[0, 3). The default value is '0' emits no cta_group modifier in the instruction.
   The values '1' and '2' lower to `cta_group::1` and `cta_group::2` variants of the PTX instruction
   respectively.
-- The last `i32 %validate_pattern` flag selects the data-validity reporting
+- The last `i32 %flag_valid_pattern` flag selects the data-validity reporting
   mechanism; see
   [TMA Global-to-Shared Data-Validity Reporting](#tma-global-to-shared-data-validity-reporting).
 
@@ -2388,17 +2508,17 @@ For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thre
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %flag_valid_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d.i32(..., i16 %im2col0, i32 %mc, i64 %ch, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.3d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.3d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %flag_valid_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.3d.i32(..., i16 %im2col0, i32 %mc, i64 %ch, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.4d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.5d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.3d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.3d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %flag_valid_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.3d.i32(..., i16 %im2col0, i32 %mc, i64 %ch, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.4d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.5d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
@@ -2430,13 +2550,13 @@ For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thre
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.1d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.1d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch, i32 %flag_valid_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.2d(..., i32 %d0, i32 %d1, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.gather4.2d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.gather4.2d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i64 %ch, i1 %flag_ch, i32 %flag_valid_pattern)
 ```
 
 ##### Overview:
@@ -2458,7 +2578,7 @@ takes a total of 5 coordinates as input arguments. For more information on
   reporting pattern. They must be compile-time constants. When `i1 %flag_ch`
   is set, it indicates a valid cache hint (`i64 %ch`) and generates the
   `.L2::cache_hint` variant of the PTX instruction.
-- The last `i32 %validate_pattern` flag selects the data-validity reporting
+- The last `i32 %flag_valid_pattern` flag selects the data-validity reporting
   mechanism; see
   [TMA Global-to-Shared Data-Validity Reporting](#tma-global-to-shared-data-validity-reporting).
 
@@ -2469,15 +2589,15 @@ For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thre
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i64 %ch, i1 %flag_ch, i32 %flag_valid_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %flag_ch, i32 %flag_valid_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.128.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.128.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %flag_ch, i32 %flag_valid_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.128.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.128.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
 ```
@@ -2508,19 +2628,19 @@ For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thre
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.1d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.1d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %flag_valid_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.1d.i32(..., i32 %mc, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.2d.{i16,i32}(..., i32 %d0, i32 %d1, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.3d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.4d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.5d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.gather4.override.addr.2d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.gather4.override.addr.2d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %flag_valid_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.gather4.override.addr.2d.i32(..., i32 %mc, ...)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.dim.1d.i32(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i32 %d0, i32 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.dim.1d.i32(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i32 %d0, i32 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %flag_valid_pattern)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.dim.stride.2d.i32(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i16 %ts1, i32 %stride0, i16 %upper_stride, i32 %d0, i32 %d1, i32 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.dim.stride.2d.i32(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i16 %ts1, i32 %stride0, i16 %upper_stride, i32 %d0, i32 %d1, i32 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %flag_valid_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.dim.stride.3d.i32(..., i16 %ts0, i16 %ts1, i16 %ts2, i32 %stride0, i32 %stride1, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.dim.stride.4d.i32(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i32 %stride0, i32 %stride1, i32 %stride2, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.dim.stride.5d.i32(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i16 %ts4, i32 %stride0, i32 %stride1, i32 %stride2, i32 %stride3, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
@@ -2541,7 +2661,7 @@ in [Tensor-Map Property Overrides](#tensor-map-property-overrides).
     | 0     | no cta group modifier (default) |
     | 1     | `cta_group::1`                  |
     | 2     | `cta_group::2`                  |
-- The last `i32 %validate_pattern` flag is described in
+- The last `i32 %flag_valid_pattern` flag is described in
 [TMA Global-to-Shared Data-Validity Reporting](#tma-global-to-shared-data-validity-reporting).
 
 All above described flag operands must be compile time constants.
@@ -2555,17 +2675,17 @@ with `.override::global_dim` or `.override::global_dim_stride`, and require
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.override.addr.3d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.override.addr.3d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %flag_valid_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.override.addr.3d.i32(..., i32 %mc, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.override.addr.4d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.override.addr.5d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.override.addr.3d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.override.addr.3d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %flag_valid_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.override.addr.3d.i32(..., i32 %mc, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.override.addr.4d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.override.addr.5d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.override.addr.3d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.override.addr.3d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %flag_valid_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.override.addr.3d.i32(..., i32 %mc, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.override.addr.4d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.override.addr.5d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
@@ -2578,7 +2698,7 @@ while allowing overriding properties in the opaque tensor map with
 explicit operands. The override operands and their restrictions are described
 in [Tensor-Map Property Overrides](#tensor-map-property-overrides).
 
-The `%flag_mc`, `%flag_ch`, `%cta_group`, and `%validate_pattern` operands
+The `%flag_mc`, `%flag_ch`, `%cta_group`, and `%flag_valid_pattern` operands
 have the same functionality as described in the `tile` mode override
 intrinsics above. All these flag operands must be compile-time constants.
 
@@ -2591,17 +2711,17 @@ with `.override::global_dim` or `.override::global_dim_stride`, and require
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.1d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.1d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i64 %ch, i1 %flag_ch, i32 %flag_valid_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.2d(..., i32 %d0, i32 %d1, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.gather4.override.addr.2d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.gather4.override.addr.2d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i64 %ch, i1 %flag_ch, i32 %flag_valid_pattern)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.dim.1d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i32 %d0, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.dim.1d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i32 %d0, i64 %ch, i1 %flag_ch, i32 %flag_valid_pattern)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.dim.stride.2d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i16 %ts1, i32 %stride0, i16 %upper_stride, i32 %d0, i32 %d1, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.dim.stride.2d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i16 %ts1, i32 %stride0, i16 %upper_stride, i32 %d0, i32 %d1, i64 %ch, i1 %flag_ch, i32 %flag_valid_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.dim.stride.3d(..., i16 %ts0, i16 %ts1, i16 %ts2, i32 %stride0, i32 %stride1, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.dim.stride.4d(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i32 %stride0, i32 %stride1, i32 %stride2, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.dim.stride.5d(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i16 %ts4, i32 %stride0, i32 %stride1, i32 %stride2, i32 %stride3, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
@@ -2615,7 +2735,7 @@ explicit operands. The override operands and their restrictions are described
 in [Tensor-Map Property Overrides](#tensor-map-property-overrides).
 
 - `%flag_ch` controls whether `%ch` cache hint is emitted.
-- The last `i32 %validate_pattern` flag is described in
+- The last `i32 %flag_valid_pattern` flag is described in
 [TMA Global-to-Shared Data-Validity Reporting](#tma-global-to-shared-data-validity-reporting).
 
 All above described flag operands must be compile time constants.
@@ -2629,15 +2749,15 @@ with `.override::global_dim` or `.override::global_dim_stride`, and require
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.override.addr.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.override.addr.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i64 %ch, i1 %flag_ch, i32 %flag_valid_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.override.addr.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.override.addr.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %flag_ch, i32 %flag_valid_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.128.override.addr.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.128.override.addr.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %flag_ch, i32 %flag_valid_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.128.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.128.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
 ```
@@ -2649,7 +2769,7 @@ while allowing overriding properties in the opaque tensor map with
 explicit operands. The override operands and their restrictions are described
 in [Tensor-Map Property Overrides](#tensor-map-property-overrides).
 
-The `%flag_ch` and `%validate_pattern` operands have the same functionality
+The `%flag_ch` and `%flag_valid_pattern` operands have the same functionality
 as described in the `tile` mode override intrinsics above. All these flag
 operands must be compile-time constants.
 
