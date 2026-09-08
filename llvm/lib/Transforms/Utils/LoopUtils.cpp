@@ -2330,6 +2330,11 @@ Value *llvm::addDiffRuntimeChecks(Instruction *Loc,
   // Map to keep track of created compares, The key is the pair of operands for
   // the compare, to allow detecting and re-using redundant compares.
   DenseMap<std::pair<Value *, Value *>, Value *> SeenCompares;
+
+  assert(Expander.getAllInsertedInstructions().empty() &&
+         "Expected a freshly created Expander so that we could freely erase "
+         "created instructions on bailout!");
+
   for (const auto &[SrcStart, SinkStart, AccessSize, AbsCommonStrideInBytes,
                     NeedsFreeze] : Checks) {
     assert(IC * AccessSize > 0 &&
@@ -2338,19 +2343,31 @@ Value *llvm::addDiffRuntimeChecks(Instruction *Loc,
 
     // Compute the distance between first/last bytes of the accessed memory
     // during one vector loop iteration. This is equal to
-    // VF*IC*Stride-(Stride-AccessSize).
-    static_assert((sizeof(IC) + sizeof(AbsCommonStrideInBytes)) * 8 <= 128,
-                  "APInt below would overflow!");
-    APInt ICTimesStride(128, IC);
-    ICTimesStride *= APInt(128, AbsCommonStrideInBytes);
-    if (ICTimesStride.getActiveBits() > Ty->getScalarSizeInBits())
-      Ty = Ty->getWithNewBitWidth(
-          NextPowerOf2(ICTimesStride.getActiveBits() - 1));
+    // VF*IC*Stride-(Stride-AccessSize). For non-unit-stride accesses we need to
+    // make sure the computation doesn't overflow. Huge strides aren't very
+    // interesting so we can make a conservative check by adding bit widths of
+    // all multiplication terms.
+
+    const SCEV *VFSCEV = SE.getElementCount(Ty, VF);
+    unsigned VFBits = SE.getUnsignedRangeMax(VFSCEV).getActiveBits();
+    unsigned VFxICBits = VFBits + APInt(64, IC).getActiveBits();
+    unsigned TyBits = Ty->getScalarSizeInBits();
+    unsigned AvailableStrideBits = TyBits > VFxICBits ? TyBits - VFxICBits : 0;
+
+    assert(AbsCommonStrideInBytes >= AccessSize &&
+           "Stride is expected to be at least AccessSize!");
+
+    if (AccessSize != AbsCommonStrideInBytes &&
+        !isUIntN(AvailableStrideBits, AbsCommonStrideInBytes)) {
+      if (MemoryRuntimeCheck)
+        RecursivelyDeleteTriviallyDeadInstructions(MemoryRuntimeCheck);
+      Expander.eraseDeadInstructions(nullptr);
+      return nullptr;
+    }
 
     const SCEV *VectorIterAccessSpan = SE.getMinusSCEV(
-        SE.getMulExpr(SE.getElementCount(Ty, VF),
-                      SE.getConstant(ICTimesStride.zextOrTrunc(
-                          Ty->getScalarSizeInBits()))),
+        SE.getMulExpr(SE.getElementCount(Ty, VF), SE.getConstant(Ty, IC),
+                      SE.getConstant(Ty, AbsCommonStrideInBytes)),
         SE.getConstant(Ty, AbsCommonStrideInBytes - AccessSize));
     Value *ThresholdMinusOne = Expander.expandCodeFor(
         SE.getMinusSCEV(VectorIterAccessSpan, SE.getConstant(Ty, 1)), Ty,

@@ -5,28 +5,28 @@
 ;
 ;Alias scope metadata is used to reduce the number of generated checks by
 ; declaring %p0* not aliasing %p1* and vice versa.
-define void @constant_strided_two_checks(ptr %p0, ptr %p0.out, ptr %p1, ptr %p1.out, i64 %n) {
+define void @constant_strided_two_checks(ptr %p0, ptr %p0.out, ptr %p1, ptr %p1.out, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @constant_strided_two_checks(
-; CHECK-SAME: ptr [[P0:%.*]], ptr [[P0_OUT:%.*]], ptr [[P1:%.*]], ptr [[P1_OUT:%.*]], i64 [[N:%.*]]) {
+; CHECK-SAME: ptr [[P0:%.*]], ptr [[P0_OUT:%.*]], ptr [[P1:%.*]], ptr [[P1_OUT:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P15:%.*]] = ptrtoaddr ptr [[P1]] to i64
-; CHECK-NEXT:    [[P1_OUT1:%.*]] = ptrtoaddr ptr [[P1_OUT]] to i64
-; CHECK-NEXT:    [[P03:%.*]] = ptrtoaddr ptr [[P0]] to i64
-; CHECK-NEXT:    [[P0_OUT2:%.*]] = ptrtoaddr ptr [[P0_OUT]] to i64
+; CHECK-NEXT:    [[P14:%.*]] = ptrtoaddr ptr [[P1]] to i64
+; CHECK-NEXT:    [[P1_OUT3:%.*]] = ptrtoaddr ptr [[P1_OUT]] to i64
+; CHECK-NEXT:    [[P02:%.*]] = ptrtoaddr ptr [[P0]] to i64
+; CHECK-NEXT:    [[P0_OUT1:%.*]] = ptrtoaddr ptr [[P0_OUT]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 128, [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 6
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP3]], -9
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[P0_OUT2]], [[P03]]
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], 1
-; CHECK-NEXT:    [[DIFF_CHECK8:%.*]] = icmp ult i64 [[TMP7]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[P1_OUT1]], [[P15]]
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], 1
-; CHECK-NEXT:    [[DIFF_CHECK10:%.*]] = icmp ult i64 [[TMP9]], [[TMP5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 6
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP3]], -9
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[P0_OUT1]], [[P02]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
+; CHECK-NEXT:    [[DIFF_CHECK8:%.*]] = icmp ult i64 [[TMP6]], [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[P1_OUT3]], [[P14]]
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP7]], 1
+; CHECK-NEXT:    [[DIFF_CHECK10:%.*]] = icmp ult i64 [[TMP8]], [[TMP4]]
 ; CHECK-NEXT:    [[CONFLICT_RDX11:%.*]] = or i1 [[DIFF_CHECK8]], [[DIFF_CHECK10]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX11]], [[SCALAR_PH]], [[VECTOR_PH:label %.*]]
 ;
@@ -60,9 +60,9 @@ exit:
 ; Same as above, but one access group is using different access size while
 ; keeping the strides the same, so that that "threshold" computation cannot be
 ; re-used.
-define void @constant_strided_two_checks_different_access_size(ptr %p0, ptr %p0.out, ptr %p1, ptr %p1.out, i64 %n) {
+define void @constant_strided_two_checks_different_access_size(ptr %p0, ptr %p0.out, ptr %p1, ptr %p1.out, i64 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @constant_strided_two_checks_different_access_size(
-; CHECK-SAME: ptr [[P0:%.*]], ptr [[P0_OUT:%.*]], ptr [[P1:%.*]], ptr [[P1_OUT:%.*]], i64 [[N:%.*]]) {
+; CHECK-SAME: ptr [[P0:%.*]], ptr [[P0_OUT:%.*]], ptr [[P1:%.*]], ptr [[P1_OUT:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[P14:%.*]] = ptrtoaddr ptr [[P1]] to i64
 ; CHECK-NEXT:    [[P1_OUT3:%.*]] = ptrtoaddr ptr [[P1_OUT]] to i64
@@ -74,15 +74,15 @@ define void @constant_strided_two_checks_different_access_size(ptr %p0, ptr %p0.
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 6
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP3]], -9
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[P0_OUT1]], [[P02]]
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], 1
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP7]], [[TMP5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP3]], -13
-; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[P1_OUT3]], [[P14]]
-; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP10]], 1
-; CHECK-NEXT:    [[DIFF_CHECK5:%.*]] = icmp ult i64 [[TMP11]], [[TMP9]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[TMP2]], 6
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP3]], -9
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[P0_OUT1]], [[P02]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[TMP5]], 1
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i64 [[TMP3]], -13
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 [[P1_OUT3]], [[P14]]
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i64 [[TMP8]], 1
+; CHECK-NEXT:    [[DIFF_CHECK5:%.*]] = icmp ult i64 [[TMP9]], [[TMP7]]
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK5]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], [[SCALAR_PH]], [[VECTOR_PH:label %.*]]
 ;

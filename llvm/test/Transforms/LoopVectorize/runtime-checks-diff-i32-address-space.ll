@@ -10,15 +10,18 @@ define void @test_wrap_i32_address_space(ptr addrspace(1) %a, ptr addrspace(1) %
 ; CHECK-LABEL: define void @test_wrap_i32_address_space(
 ; CHECK-SAME: ptr addrspace(1) [[A:%.*]], ptr addrspace(1) [[B:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[B2:%.*]] = ptrtoaddr ptr addrspace(1) [[B]] to i32
-; CHECK-NEXT:    [[A1:%.*]] = ptrtoaddr ptr addrspace(1) [[A]] to i32
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[A1]], [[B2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP2]], 15032385536
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[N]], 31
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 -2147483648, [[TMP0]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr addrspace(1) [[B]], i32 [[TMP1]]
+; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr addrspace(1) [[B]], i32 1
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr addrspace(1) [[A]], i32 [[TMP1]]
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr addrspace(1) [[A]], i32 1
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr addrspace(1) [[SCEVGEP]], [[SCEVGEP3]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr addrspace(1) [[SCEVGEP2]], [[SCEVGEP1]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], [[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ;
