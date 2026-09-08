@@ -569,16 +569,11 @@ void WinException::emitCSpecificHandlerTable(const MachineFunction *MF) {
   };
 
   if (!isAArch64) {
-    // Emit a label assignment with the SEH frame offset so we can use it for
-    // llvm.eh.recoverfp.
+    // Emit label assignments with the SEH frame offset and alignment so we can
+    // use it for llvm.eh.recoverfp.
     StringRef FLinkageName =
         GlobalValue::dropLLVMManglingEscape(MF->getFunction().getName());
-    // llvm.eh.recoverfp recovers the register the offsets handed out by
-    // llvm.localescape are relative to as
-    //
-    //   (EstablisherFrame + $parent_frame_offset) & $parent_frame_align_mask
-    //
-    // Frame lowering fills both quantities in when it emits the prologue.
+
     MCSymbol *ParentFrameOffset =
         Ctx.getOrCreateParentFrameOffsetSymbol(FLinkageName);
     const MCExpr *MCOffset =

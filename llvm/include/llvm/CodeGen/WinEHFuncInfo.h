@@ -112,14 +112,7 @@ struct WinEHFuncInfo {
   int EHRegNodeEndOffset = std::numeric_limits<int>::max();
   int EHGuardFrameIndex = std::numeric_limits<int>::max();
   int SEHSetFrameOffset = std::numeric_limits<int>::max();
-
-  /// The mask an outlined helper, such as an SEH filter, has to apply to the
-  /// establisher frame to undo this function's dynamic stack realignment. The
-  /// offsets @llvm.localescape hands out are relative to the realigned frame,
-  /// which sits a run-time-variable distance below the establisher frame, so
-  /// helpers redo the realignment the way a funclet prologue does. -1 is a
-  /// no-op mask, used when the prologue does not realign the stack.
-  int64_t SEHFrameAlignMask = -1;
+  int SEHFrameAlignMask = -1;
 
   LLVM_ABI WinEHFuncInfo();
 };

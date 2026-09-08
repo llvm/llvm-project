@@ -123,9 +123,9 @@ bool X86FrameLowering::needsFrameIndexResolution(
 /// allocas or if frame pointer elimination is disabled.
 bool X86FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return (MF.getTarget().Options.DisableFramePointerElim(MF) ||
-          TRI->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
-          MFI.isFrameAddressTaken() || MFI.hasOpaqueSPAdjustment() ||
+  return (MF.disableFramePointerElim() || TRI->hasStackRealignment(MF) ||
+          MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
+          MFI.hasOpaqueSPAdjustment() ||
           MF.getInfo<X86MachineFunctionInfo>()->getForceFramePointer() ||
           MF.getInfo<X86MachineFunctionInfo>()->hasPreallocatedCall() ||
           MF.callsUnwindInit() || MF.hasEHFunclets() || MF.callsEHReturn() ||
@@ -2349,12 +2349,6 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
     assert(HasFP && "There should be a frame pointer if stack is realigned.");
     BuildStackAlignAND(MBB, MBBI, DL, SPOrEstablisher, MaxAlign);
 
-    // The establisher frame the runtime hands to outlined helpers, such as SEH
-    // filters, is the value we just masked, and the offsets @llvm.localescape
-    // hands out are relative to the result. Since the AND strips a
-    // run-time-variable amount, helpers cannot reach the locals with a constant
-    // offset; record the mask so they can redo the realignment instead, the way
-    // a funclet prologue does. See the @llvm.eh.recoverfp lowering.
     if (!IsFunclet &&
         (isAsynchronousEHPersonality(Personality) || MF.hasEHFunclets())) {
       MF.getWinEHFuncInfo()->SEHFrameAlignMask = -(int64_t)MaxAlign;
