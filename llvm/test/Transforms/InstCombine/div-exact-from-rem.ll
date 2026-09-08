@@ -6,6 +6,7 @@ declare i32 @llvm.abs.i32(i32, i1 immarg)
 declare i1 @func_bool()
 declare void @func1()
 declare void @func2()
+declare void @abort() noreturn
 
 define i32 @udiv_exact_assume(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @udiv_exact_assume(
@@ -52,11 +53,11 @@ define i32 @udiv_exact_assume_self(i32 %x) {
   ret i32 %quot
 }
 
-; TODO: The following unconditional assumption makes the earlier division exact.
+; An unconditional assumption after the division makes it exact.
 define i32 @udiv_exact_assume_after_division(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @udiv_exact_assume_after_division(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[QUOT:%.*]] = udiv i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[QUOT:%.*]] = udiv exact i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[IS_ZERO:%.*]] = icmp eq i32 [[REM]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_ZERO]])
@@ -73,7 +74,7 @@ define i32 @udiv_exact_assume_after_division(i32 %x, i32 %y) {
 ; to the cache, so inferring exact requires another InstCombine iteration.
 define i32 @udiv_exact_assume_after_division_unreachable(i32 %x, i32 %y) "instcombine-no-verify-fixpoint" {
 ; CHECK-LABEL: define i32 @udiv_exact_assume_after_division_unreachable(
-; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[NOT_ZERO_NOT:%.*]] = icmp eq i32 [[REM]], 0
@@ -528,6 +529,35 @@ div:
   ret i32 %quot
 }
 
+; if (x % y != 0) abort(); return x / y;
+define i32 @udiv_exact_abort(i32 %x, i32 %y) {
+; CHECK-LABEL: define i32 @udiv_exact_abort(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[NOT_ZERO_NOT:%.*]] = icmp eq i32 [[REM]], 0
+; CHECK-NEXT:    br i1 [[NOT_ZERO_NOT]], label %[[DIV:.*]], label %[[ABORT:.*]]
+; CHECK:       [[ABORT]]:
+; CHECK-NEXT:    call void @abort()
+; CHECK-NEXT:    unreachable
+; CHECK:       [[DIV]]:
+; CHECK-NEXT:    [[QUOT:%.*]] = udiv exact i32 [[X]], [[Y]]
+; CHECK-NEXT:    ret i32 [[QUOT]]
+;
+entry:
+  %rem = urem i32 %x, %y
+  %not.zero = icmp ne i32 %rem, 0
+  br i1 %not.zero, label %abort, label %div
+
+abort:
+  call void @abort()
+  unreachable
+
+div:
+  %quot = udiv i32 %x, %y
+  ret i32 %quot
+}
+
 define i32 @udiv_exact_condition_on_other_path(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @udiv_exact_condition_on_other_path(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
@@ -650,6 +680,46 @@ div:
   ret i32 %quot
 }
 
+; (x - (x urem y)) udiv y is always exact by construction. The sub/rem identity
+; fold rewrites this to x udiv y. The trailing assume on the original %rem
+; should then mark that rewritten division exact.
+define i32 @udiv_exact_sub_rem(i32 %x, i32 %y) {
+; CHECK-LABEL: define i32 @udiv_exact_sub_rem(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[QUOT:%.*]] = udiv exact i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[IS_ZERO:%.*]] = icmp eq i32 [[REM]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_ZERO]])
+; CHECK-NEXT:    ret i32 [[QUOT]]
+;
+  %rem = urem i32 %x, %y
+  %sub = sub i32 %x, %rem
+  %quot = udiv i32 %sub, %y
+  %is.zero = icmp eq i32 %rem, 0
+  call void @llvm.assume(i1 %is.zero)
+  ret i32 %quot
+}
+
+; (x - (x srem y)) sdiv y is always exact by construction. The sub/rem identity
+; fold rewrites this to x sdiv y. The trailing assume on the original %rem
+; should then mark that rewritten division exact.
+define i32 @sdiv_exact_sub_rem(i32 %x, i32 %y) {
+; CHECK-LABEL: define i32 @sdiv_exact_sub_rem(
+; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
+; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[QUOT:%.*]] = sdiv exact i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[IS_ZERO:%.*]] = icmp eq i32 [[REM]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_ZERO]])
+; CHECK-NEXT:    ret i32 [[QUOT]]
+;
+  %rem = srem i32 %x, %y
+  %sub = sub i32 %x, %rem
+  %quot = sdiv i32 %sub, %y
+  %is.zero = icmp eq i32 %rem, 0
+  call void @llvm.assume(i1 %is.zero)
+  ret i32 %quot
+}
+
 ; A zero remainder must be true in all lanes for the division to be exact.
 define <2 x i32> @udiv_exact_vector_one_lane_zero_remainder(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: define <2 x i32> @udiv_exact_vector_one_lane_zero_remainder(
@@ -691,5 +761,57 @@ define <2 x i32> @udiv_exact_vector_all_lanes_zero_remainder(<2 x i32> %x, <2 x 
   %is.zero1 = icmp eq i32 %lane1, 0
   call void @llvm.assume(i1 %is.zero1)
   %quot = udiv <2 x i32> %x, %y
+  ret <2 x i32> %quot
+}
+
+; TODO: Zero remainders in all lanes make the vector division by a constant
+; denominator exact.
+define <2 x i32> @udiv_exact_vector_by_3(<2 x i32> %x) {
+; CHECK-LABEL: define <2 x i32> @udiv_exact_vector_by_3(
+; CHECK-SAME: <2 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[REM:%.*]] = urem <2 x i32> [[X]], splat (i32 3)
+; CHECK-NEXT:    [[LANE0:%.*]] = extractelement <2 x i32> [[REM]], i64 0
+; CHECK-NEXT:    [[IS_ZERO0:%.*]] = icmp eq i32 [[LANE0]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_ZERO0]])
+; CHECK-NEXT:    [[LANE1:%.*]] = extractelement <2 x i32> [[REM]], i64 1
+; CHECK-NEXT:    [[IS_ZERO1:%.*]] = icmp eq i32 [[LANE1]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_ZERO1]])
+; CHECK-NEXT:    [[QUOT:%.*]] = udiv <2 x i32> [[X]], splat (i32 3)
+; CHECK-NEXT:    ret <2 x i32> [[QUOT]]
+;
+  %rem = urem <2 x i32> %x, <i32 3, i32 3>
+  %lane0 = extractelement <2 x i32> %rem, i32 0
+  %is.zero0 = icmp eq i32 %lane0, 0
+  call void @llvm.assume(i1 %is.zero0)
+  %lane1 = extractelement <2 x i32> %rem, i32 1
+  %is.zero1 = icmp eq i32 %lane1, 0
+  call void @llvm.assume(i1 %is.zero1)
+  %quot = udiv <2 x i32> %x, <i32 3, i32 3>
+  ret <2 x i32> %quot
+}
+
+; TODO: Zero remainders in all lanes make the vector division exact, even
+; when each lane divides by a different constant.
+define <2 x i32> @udiv_exact_vector_mixed_constant_denominators_3_5(<2 x i32> %x) {
+; CHECK-LABEL: define <2 x i32> @udiv_exact_vector_mixed_constant_denominators_3_5(
+; CHECK-SAME: <2 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[REM:%.*]] = urem <2 x i32> [[X]], <i32 3, i32 5>
+; CHECK-NEXT:    [[LANE0:%.*]] = extractelement <2 x i32> [[REM]], i64 0
+; CHECK-NEXT:    [[IS_ZERO0:%.*]] = icmp eq i32 [[LANE0]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_ZERO0]])
+; CHECK-NEXT:    [[LANE1:%.*]] = extractelement <2 x i32> [[REM]], i64 1
+; CHECK-NEXT:    [[IS_ZERO1:%.*]] = icmp eq i32 [[LANE1]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_ZERO1]])
+; CHECK-NEXT:    [[QUOT:%.*]] = udiv <2 x i32> [[X]], <i32 3, i32 5>
+; CHECK-NEXT:    ret <2 x i32> [[QUOT]]
+;
+  %rem = urem <2 x i32> %x, <i32 3, i32 5>
+  %lane0 = extractelement <2 x i32> %rem, i32 0
+  %is.zero0 = icmp eq i32 %lane0, 0
+  call void @llvm.assume(i1 %is.zero0)
+  %lane1 = extractelement <2 x i32> %rem, i32 1
+  %is.zero1 = icmp eq i32 %lane1, 0
+  call void @llvm.assume(i1 %is.zero1)
+  %quot = udiv <2 x i32> %x, <i32 3, i32 5>
   ret <2 x i32> %quot
 }
