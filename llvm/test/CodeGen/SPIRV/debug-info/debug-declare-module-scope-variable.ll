@@ -21,7 +21,7 @@
 
 target triple = "spirv64-unknown-unknown"
 
-@shared = internal addrspace(3) global i32 undef, align 4
+@shared = internal addrspace(3) global i32 poison, align 4
 
 define spir_func void @k() !dbg !5 {
 entry:
