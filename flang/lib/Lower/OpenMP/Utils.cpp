@@ -13,6 +13,7 @@
 #include "Utils.h"
 
 #include "ClauseFinder.h"
+#include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/tools.h"
@@ -108,15 +109,62 @@ bool isWholeArraySection(const Object &object,
         evaluate::AsGenericExpr(std::move(foldedBaseBound)));
   };
 
+  auto matchesBound = [&](const auto *sectionBound, int dimension, bool lower) {
+    evaluate::FoldingContext &context = semaCtx.foldingContext();
+    if (matchesBaseBound(
+            sectionBound,
+            lower ? evaluate::GetLBOUND(context, arrayRef->base(), dimension)
+                  : evaluate::GetUBOUND(context, arrayRef->base(), dimension)))
+      return true;
+
+    // LBOUND/UBOUND may not fold when a dimension could be empty. A
+    // reduction section must be nonempty, so also compare its raw bounds.
+    // Do not re-evaluate mutable specification expressions here.
+    evaluate::MaybeExtentExpr rawBound =
+        lower
+            ? evaluate::MaybeExtentExpr{evaluate::GetRawLowerBound(
+                  context, arrayRef->base(), dimension)}
+            : evaluate::GetRawUpperBound(context, arrayRef->base(), dimension);
+    // An omitted lower bound of an assumed-shape dummy is one, not the
+    // lower bound of the incoming descriptor.
+    if (semantics::IsAssumedShape(object.sym()->GetUltimate()) &&
+        !(*shape)[dimension].lbound().GetExplicit())
+      rawBound =
+          lower ? evaluate::MaybeExtentExpr{evaluate::ExtentExpr{1}}
+                : evaluate::GetExtent(context, arrayRef->base(), dimension);
+    const semantics::MaybeSubscriptIntExpr &declaredLower =
+        (*shape)[dimension].lbound().GetExplicit();
+    if ((!declaredLower ||
+         evaluate::IsScopeInvariantExpr(*declaredLower, &context)) &&
+        matchesBaseBound(sectionBound, std::move(rawBound)))
+      return true;
+
+    std::optional<evaluate::Expr<evaluate::SomeType>> unconvertedBound =
+        evaluate::GetConvertInput(
+            evaluate::AsGenericExpr(evaluate::ExtentExpr{*sectionBound}));
+    const evaluate::ProcedureRef *inquiry =
+        unconvertedBound ? evaluate::UnwrapProcedureRef(*unconvertedBound)
+                         : nullptr;
+    if (!inquiry)
+      return false;
+    const evaluate::SpecificIntrinsic *intrinsic =
+        inquiry->proc().GetSpecificIntrinsic();
+    if (!intrinsic || intrinsic->name != (lower ? "lbound" : "ubound"))
+      return false;
+    const evaluate::Expr<evaluate::SomeType> *array = inquiry->UnwrapArgExpr(0);
+    const evaluate::Expr<evaluate::SomeType> *dim = inquiry->UnwrapArgExpr(1);
+    if (!array || !dim || evaluate::ToInt64(*dim) != dimension + 1)
+      return false;
+    std::optional<evaluate::NamedEntity> base =
+        evaluate::ExtractNamedEntity(*array);
+    return base && *base == arrayRef->base();
+  };
+
   for (auto [dimension, subscript] : llvm::enumerate(arrayRef->subscript())) {
     const auto *triplet = std::get_if<evaluate::Triplet>(&subscript.u);
     if (!triplet || evaluate::ToInt64(triplet->GetStride()) != 1 ||
-        !matchesBaseBound(triplet->GetLower(),
-                          evaluate::GetLBOUND(semaCtx.foldingContext(),
-                                              arrayRef->base(), dimension)) ||
-        !matchesBaseBound(triplet->GetUpper(),
-                          evaluate::GetUBOUND(semaCtx.foldingContext(),
-                                              arrayRef->base(), dimension)))
+        !matchesBound(triplet->GetLower(), dimension, /*lower=*/true) ||
+        !matchesBound(triplet->GetUpper(), dimension, /*lower=*/false))
       return false;
   }
   return true;
