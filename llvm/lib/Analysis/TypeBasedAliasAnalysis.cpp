@@ -752,9 +752,12 @@ MDNode *AAMDNodes::shiftTBAA(MDNode *MD, size_t Offset) {
 // value. Returns false if it is not a constant integer that fits in 64 bits.
 static bool getTBAAStructFieldAsInt64(const MDOperand &Op, uint64_t &Out) {
   auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(Op);
-  if (!CI || !CI->getValue().isIntN(64))
+  if (!CI)
     return false;
-  Out = CI->getZExtValue();
+  std::optional<uint64_t> Val = CI->getValue().tryZExtValue();
+  if (!Val)
+    return false;
+  Out = *Val;
   return true;
 }
 
