@@ -4220,6 +4220,77 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
   return false;
 }
 
+/// The `dest` types an interlocked operation accepts. Float is 32-bit only.
+enum class InterlockedDest { Int, IntOrFloat };
+
+/// Check a call to an HLSL interlocked builtin. The builtins are variadic, so
+/// this is the only check a direct call gets. Overload resolution checks the
+/// calls that come through the `InterlockedOp` overload sets.
+static bool CheckInterlockedBuiltin(Sema &S, CallExpr *TheCall,
+                                    unsigned MinArgs, unsigned MaxArgs,
+                                    InterlockedDest Dest,
+                                    bool ReportsOriginalValue) {
+  if (MinArgs == MaxArgs) {
+    if (S.checkArgCount(TheCall, MinArgs))
+      return true;
+  } else if (TheCall->getNumArgs() < MinArgs) {
+    S.Diag(TheCall->getEndLoc(), diag::err_typecheck_call_too_few_args_at_least)
+        << /*callee_type=*/0 << /*min_arg_count=*/MinArgs
+        << TheCall->getNumArgs() << /*is_non_object=*/0
+        << TheCall->getSourceRange();
+    return true;
+  } else if (S.checkArgCountAtMost(TheCall, MaxArgs)) {
+    return true;
+  }
+
+  QualType DestTy = TheCall->getArg(0)->getType().getUnqualifiedType();
+  const bool AllowsFloat = Dest == InterlockedDest::IntOrFloat;
+  if (!DestTy->isIntegerType() &&
+      !(AllowsFloat && DestTy->isSpecificBuiltinType(BuiltinType::Float))) {
+    S.Diag(TheCall->getArg(0)->getBeginLoc(),
+           diag::err_builtin_invalid_arg_type)
+        << /*ordinal=*/1 << /*scalar*/ 1 << /*integer*/ 1
+        << /*32 bit floating-point*/ (AllowsFloat ? 3 : 0) << DestTy;
+    return true;
+  }
+
+  // 64-bit interlocked ops require SM 6.6 on DXIL. The synthesized wrapper
+  // methods (e.g. RWByteAddressBuffer::InterlockedAdd64) are only declared on
+  // SM 6.6+, so this defensive check only fires for direct builtin calls; skip
+  // synthetic invocations (invalid source location).
+  const TargetInfo &TI = S.Context.getTargetInfo();
+  if (TheCall->getBeginLoc().isValid() &&
+      TI.getTriple().getArch() == llvm::Triple::dxil &&
+      S.Context.getTypeSize(DestTy) == 64 &&
+      TI.getPlatformMinVersion() < VersionTuple(6, 6)) {
+    S.Diag(TheCall->getBeginLoc(), diag::err_hlsl_builtin_requires_sm)
+        << TheCall->getDirectCallee() << VersionTuple(6, 6).getAsString();
+    return true;
+  }
+
+  if (CheckModifiableLValue(&S, TheCall, 0))
+    return true;
+
+  if (CheckArgAddrSpaceOneOf(&S, TheCall, 0,
+                             {LangAS::hlsl_groupshared, LangAS::hlsl_device}))
+    return true;
+
+  // Every argument after `dest` has the destination's type.
+  for (unsigned I = 1, E = TheCall->getNumArgs(); I != E; ++I)
+    if (CheckArgTypeMatches(&S, TheCall->getArg(I), DestTy))
+      return true;
+
+  // Operations that report the previous value write it back through their last
+  // argument.
+  const unsigned NumArgs = TheCall->getNumArgs();
+  if (ReportsOriginalValue && NumArgs == MaxArgs &&
+      CheckModifiableLValue(&S, TheCall, NumArgs - 1))
+    return true;
+
+  TheCall->setType(S.Context.VoidTy);
+  return false;
+}
+
 // Note: returning true in this case results in CheckBuiltinFunctionCall
 // returning an ExprError
 bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
@@ -4712,92 +4783,33 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   case Builtin::BI__builtin_hlsl_interlocked_add:
   case Builtin::BI__builtin_hlsl_interlocked_and:
-  case Builtin::BI__builtin_hlsl_interlocked_compare_store:
-  case Builtin::BI__builtin_hlsl_interlocked_exchange:
   case Builtin::BI__builtin_hlsl_interlocked_max:
   case Builtin::BI__builtin_hlsl_interlocked_min:
   case Builtin::BI__builtin_hlsl_interlocked_or:
-  case Builtin::BI__builtin_hlsl_interlocked_xor: {
-    // The builtin's prototype in Builtins.td is `void (...)`, so direct calls
-    // to `__builtin_hlsl_interlocked_op` bypass argument checking entirely.
-    // When reached via the synthesized `InterlockedOp` overload set in
-    // HLSLExternalSemaSource, overload resolution has already enforced the
-    // argument count, integer-type matching, and the address-space requirement
-    // on `dest`. The checks below are a safety net for callers that invoke the
-    // builtin by its mangled name and would otherwise reach CodeGen unchecked.
-    // InterlockedCompareStore takes `compare_value` and `value`, so its third
-    // argument is an input rather than an output.
-    const bool IsCompareStore =
-        BuiltinID == Builtin::BI__builtin_hlsl_interlocked_compare_store;
-    // InterlockedExchange always reports the previous value, so it requires
-    // `original_value` instead of accepting it as an optional argument.
-    if (IsCompareStore ||
-        BuiltinID == Builtin::BI__builtin_hlsl_interlocked_exchange) {
-      if (SemaRef.checkArgCount(TheCall, 3))
-        return true;
-    } else {
-      if (TheCall->getNumArgs() < 2) {
-        SemaRef.Diag(TheCall->getEndLoc(),
-                     diag::err_typecheck_call_too_few_args_at_least)
-            << /*callee_type=*/0 << /*min_arg_count=*/2 << TheCall->getNumArgs()
-            << /*is_non_object=*/0 << TheCall->getSourceRange();
-        return true;
-      }
-      if (SemaRef.checkArgCountAtMost(TheCall, 3))
-        return true;
-    }
-
-    QualType DestTy = TheCall->getArg(0)->getType().getUnqualifiedType();
-    // InterlockedExchange also operates on float. DXIL lowers that as a
-    // bitwise exchange of the value's bit pattern, and DXC accepts 32-bit
-    // float only, so half and double are rejected.
-    const bool AllowsFloat =
-        BuiltinID == Builtin::BI__builtin_hlsl_interlocked_exchange;
-    if (!DestTy->isIntegerType() &&
-        !(AllowsFloat && DestTy->isSpecificBuiltinType(BuiltinType::Float))) {
-      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
-                   diag::err_builtin_invalid_arg_type)
-          << /*ordinal=*/1 << /*scalar*/ 1 << /*integer*/ 1
-          << /*32 bit floating-point*/ (AllowsFloat ? 3 : 0) << DestTy;
+  case Builtin::BI__builtin_hlsl_interlocked_xor:
+    if (CheckInterlockedBuiltin(SemaRef, TheCall, /*MinArgs=*/2, /*MaxArgs=*/3,
+                                InterlockedDest::Int,
+                                /*ReportsOriginalValue=*/true))
       return true;
-    }
-
-    // 64-bit interlocked ops require SM 6.6 on DXIL. The synthesized wrapper
-    // methods (e.g. RWByteAddressBuffer::InterlockedAdd64) are only declared
-    // on SM 6.6+, so this defensive check only fires for direct builtin
-    // calls; skip synthetic invocations (invalid source location).
-    const TargetInfo &TI = SemaRef.Context.getTargetInfo();
-    if (TheCall->getBeginLoc().isValid() &&
-        TI.getTriple().getArch() == llvm::Triple::dxil &&
-        SemaRef.Context.getTypeSize(DestTy) == 64 &&
-        TI.getPlatformMinVersion() < VersionTuple(6, 6)) {
-      SemaRef.Diag(TheCall->getBeginLoc(), diag::err_hlsl_builtin_requires_sm)
-          << TheCall->getDirectCallee() << VersionTuple(6, 6).getAsString();
-      return true;
-    }
-
-    if (CheckModifiableLValue(&SemaRef, TheCall, 0))
-      return true;
-
-    if (CheckArgAddrSpaceOneOf(&SemaRef, TheCall, 0,
-                               {LangAS::hlsl_groupshared, LangAS::hlsl_device}))
-      return true;
-
-    if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), DestTy))
-      return true;
-
-    if (TheCall->getNumArgs() == 3) {
-      if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), DestTy))
-        return true;
-      // Only the read-modify-write operations write the previous value back
-      // through the third argument. For compare-store it is the new value.
-      if (!IsCompareStore && CheckModifiableLValue(&SemaRef, TheCall, 2))
-        return true;
-    }
-
-    TheCall->setType(SemaRef.Context.VoidTy);
     break;
-  }
+  case Builtin::BI__builtin_hlsl_interlocked_exchange:
+    if (CheckInterlockedBuiltin(SemaRef, TheCall, /*MinArgs=*/3, /*MaxArgs=*/3,
+                                InterlockedDest::IntOrFloat,
+                                /*ReportsOriginalValue=*/true))
+      return true;
+    break;
+  case Builtin::BI__builtin_hlsl_interlocked_compare_store:
+    if (CheckInterlockedBuiltin(SemaRef, TheCall, /*MinArgs=*/3, /*MaxArgs=*/3,
+                                InterlockedDest::Int,
+                                /*ReportsOriginalValue=*/false))
+      return true;
+    break;
+  case Builtin::BI__builtin_hlsl_interlocked_compare_exchange:
+    if (CheckInterlockedBuiltin(SemaRef, TheCall, /*MinArgs=*/4, /*MaxArgs=*/4,
+                                InterlockedDest::Int,
+                                /*ReportsOriginalValue=*/true))
+      return true;
+    break;
   // Note these are llvm builtins that we want to catch invalid intrinsic
   // generation. Normal handling of these builtins will occur elsewhere.
   case Builtin::BI__builtin_elementwise_bitreverse: {

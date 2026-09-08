@@ -1753,7 +1753,11 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
                                         "__builtin_hlsl_interlocked_add");
   addByteAddressBufferInterlockedMethod("InterlockedAnd", AST.UnsignedIntTy,
                                         "__builtin_hlsl_interlocked_and");
-  addByteAddressBufferInterlockedCompareStoreMethod(
+  addByteAddressBufferInterlockedCompareMethod(
+      "InterlockedCompareExchange", AST.UnsignedIntTy,
+      "__builtin_hlsl_interlocked_compare_exchange",
+      /*WithOriginalValue=*/true);
+  addByteAddressBufferInterlockedCompareMethod(
       "InterlockedCompareStore", AST.UnsignedIntTy,
       "__builtin_hlsl_interlocked_compare_store");
   addByteAddressBufferInterlockedMethod(
@@ -1791,7 +1795,11 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethods() {
     addByteAddressBufferInterlockedMethod("InterlockedAnd64",
                                           AST.UnsignedLongTy,
                                           "__builtin_hlsl_interlocked_and");
-    addByteAddressBufferInterlockedCompareStoreMethod(
+    addByteAddressBufferInterlockedCompareMethod(
+        "InterlockedCompareExchange64", AST.UnsignedLongTy,
+        "__builtin_hlsl_interlocked_compare_exchange",
+        /*WithOriginalValue=*/true);
+    addByteAddressBufferInterlockedCompareMethod(
         "InterlockedCompareStore64", AST.UnsignedLongTy,
         "__builtin_hlsl_interlocked_compare_store");
     addByteAddressBufferInterlockedMethod(
@@ -2722,14 +2730,13 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedMethod(
 }
 
 BuiltinTypeDeclBuilder &
-BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedCompareStoreMethod(
-    StringRef MethodName, QualType ValueTy, StringRef BuiltinName) {
+BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedCompareMethod(
+    StringRef MethodName, QualType ValueTy, StringRef BuiltinName,
+    bool WithOriginalValue) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
   ASTContext &AST = SemaRef.getASTContext();
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
-  // Compare-store reports nothing, so it has a single overload. It reaches the
-  // buffer slot the same way as the other interlocked methods.
   QualType AddrSpaceElemTy =
       AST.getAddrSpaceQualType(ValueTy, LangAS::hlsl_device);
   QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
@@ -2738,10 +2745,16 @@ BuiltinTypeDeclBuilder::addByteAddressBufferInterlockedCompareStoreMethod(
   MMB.addParam("Offset", AST.UnsignedIntTy)
       .addParam("CompareValue", ValueTy)
       .addParam("Value", ValueTy);
+  if (WithOriginalValue)
+    MMB.addParam("OriginalValue", ValueTy, HLSLParamModifierAttr::Keyword_out);
   MMB.callBuiltin("__builtin_hlsl_resource_getpointer_typed", ElemPtrTy,
                   PH::Handle, PH::_0, ValueTy)
-      .dereference(PH::LastStmt)
-      .callBuiltin(BuiltinName, AST.VoidTy, PH::LastStmt, PH::_1, PH::_2);
+      .dereference(PH::LastStmt);
+  if (WithOriginalValue)
+    MMB.callBuiltin(BuiltinName, AST.VoidTy, PH::LastStmt, PH::_1, PH::_2,
+                    PH::_3);
+  else
+    MMB.callBuiltin(BuiltinName, AST.VoidTy, PH::LastStmt, PH::_1, PH::_2);
   MMB.finalize();
   return *this;
 }
