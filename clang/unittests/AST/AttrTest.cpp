@@ -315,7 +315,7 @@ TEST(Attr, OMPInvariantPredicateBoundOnIntraTileLoop) {
             body(i);
         }
       )cpp",
-      {"-fopenmp"});
+      {"-fopenmp=libomp"});
   ASSERT_TRUE(AST);
 
   auto GetHint = [&AST](const char *FuncName) {

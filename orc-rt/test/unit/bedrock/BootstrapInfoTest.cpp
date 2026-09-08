@@ -15,6 +15,7 @@
 #include "orc-rt/support/move_only_function.h"
 #include "gtest/gtest.h"
 
+#include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
 
 using namespace orc_rt;

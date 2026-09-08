@@ -119,45 +119,25 @@ enum CodeObjectVersionKind {
 class TargetOptions {
 public:
   TargetOptions()
-      : NoTrappingFPMath(true), EnableAIXExtendedAltivecABI(false),
+      : EnableAIXExtendedAltivecABI(false),
         HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
         GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
         EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
-        DisableIntegratedAS(false), FunctionSections(false),
-        DataSections(false), IgnoreXCOFFVisibility(false),
-        XCOFFTracebackTable(true), UniqueSectionNames(true),
-        UniqueBasicBlockSectionNames(false), SeparateNamedSections(false),
-        TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
-        EmulatedTLS(false), EnableTLSDESC(false), EnableIPRA(false),
-        EmitStackSizeSection(false), EnableMachineOutliner(false),
-        EnableMachineFunctionSplitter(false),
+        FunctionSections(false), DataSections(false),
+        IgnoreXCOFFVisibility(false), XCOFFTracebackTable(true),
+        UniqueSectionNames(true), UniqueBasicBlockSectionNames(false),
+        SeparateNamedSections(false), TrapUnreachable(false),
+        NoTrapAfterNoreturn(false), TLSSize(0), EmulatedTLS(false),
+        EnableTLSDESC(false), EnableIPRA(false), EmitStackSizeSection(false),
+        EnableMachineOutliner(false), EnableMachineFunctionSplitter(false),
         EnableStaticDataPartitioning(false), SupportsDefaultOutlining(false),
         EnableDefaultMachineVerifier(true), EmitAddrsig(false),
         BBAddrMap(false), EmitCallGraphSection(false), EmitCallSiteInfo(false),
         SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
         ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
         XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
-        PPCGenScalarMASSEntries(false), JMCInstrument(false),
-        EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
-        VerifyArgABICompliance(true) {}
-
-  /// DisableFramePointerElim - This returns true if frame pointer elimination
-  /// optimization should be disabled for the given machine function.
-  LLVM_ABI bool DisableFramePointerElim(const MachineFunction &MF) const;
-
-  /// FramePointerIsReserved - This returns true if the frame pointer must
-  /// always either point to a new frame record or be un-modified in the given
-  /// function.
-  LLVM_ABI bool FramePointerIsReserved(const MachineFunction &MF) const;
-
-  /// If greater than 0, override the default value of
-  /// MCAsmInfo::BinutilsVersion.
-  std::pair<int, int> BinutilsVersion{0, 0};
-
-  /// NoTrappingFPMath - This flag is enabled when the
-  /// -enable-no-trapping-fp-math is specified on the command line. This
-  /// specifies that there are no trap handlers to handle exceptions.
-  unsigned NoTrappingFPMath : 1;
+        JMCInstrument(false), EnableCFIFixup(false), MisExpect(false),
+        XCOFFReadOnlyPointers(false), VerifyArgABICompliance(true) {}
 
   /// EnableAIXExtendedAltivecABI - This flag returns true when -vec-extabi is
   /// specified. The code generator is then able to use both volatile and
@@ -214,9 +194,6 @@ public:
   /// UseInitArray - Use .init_array instead of .ctors for static
   /// constructors.
   unsigned UseInitArray : 1;
-
-  /// Disable the integrated assembler.
-  unsigned DisableIntegratedAS : 1;
 
   /// Emit functions into separate sections.
   unsigned FunctionSections : 1;
@@ -326,9 +303,6 @@ public:
 
   /// Emit the hotpatch flag in CodeView debug.
   unsigned Hotpatch : 1;
-
-  /// Enables scalar MASS conversions
-  unsigned PPCGenScalarMASSEntries : 1;
 
   /// Enable JustMyCode instrumentation.
   unsigned JMCInstrument : 1;

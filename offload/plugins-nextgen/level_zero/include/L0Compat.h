@@ -38,4 +38,8 @@ API_HELPER_OPTIONAL(ze_result_t, zeCommandListAppendHostFunction,
 API_HELPER_OPTIONAL(ze_context_handle_t, zeDriverGetDefaultContext,
                     ze_driver_handle_t hDriver)
 
+API_HELPER_OPTIONAL(ze_result_t, zeIntelGetDriverVersionString,
+                    ze_driver_handle_t hDriver, char *pDriverVersion,
+                    size_t *pVersionSize)
+
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0COMPAT_H
