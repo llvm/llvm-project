@@ -2120,7 +2120,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F,
   if (F->getIntrinsicID() != Intrinsic::not_intrinsic)
     return canConstantFoldIntrinsic(F->getIntrinsicID(), Call->isStrictFP());
 
-  if (!TLI || !F->hasName() || Call->isStrictFP())
+  if (!TLI || Call->isStrictFP())
     return false;
 
   LibFunc Func = TLI->getLibFunc(*F);
