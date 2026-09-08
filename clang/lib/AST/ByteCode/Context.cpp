@@ -410,26 +410,24 @@ std::optional<uint64_t> Context::evaluateStrlen(State &Parent, const Expr *E) {
   return Result;
 }
 
-std::optional<uint64_t>
-Context::tryEvaluateObjectSize(State &Parent, const Expr *E, unsigned Kind) {
+std::optional<uint64_t> Context::tryEvaluateObjectSize(State &Parent,
+                                                       const Expr *E,
+                                                       unsigned Kind,
+                                                       bool IsDynamic) {
   assert(Stk.empty());
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
   std::optional<uint64_t> Result;
-
   auto PtrRes = C.interpretAsLValuePointer(E, [&](InterpState &S, CodePtr OpPC,
                                                   const Pointer &Ptr) {
-    const Descriptor *DeclDesc = Ptr.getDeclDesc();
-    if (!DeclDesc)
-      return false;
-
-    QualType T = DeclDesc->getType().getNonReferenceType();
+    QualType T = Ptr.getType().getNonReferenceType();
     if (T->isIncompleteType() || T->isFunctionType() ||
         !T->isConstantSizeType())
       return false;
 
     Pointer P = Ptr;
-    if (auto ObjectSize = evaluateBuiltinObjectSize(getASTContext(), Kind, P)) {
+    if (auto ObjectSize =
+            evaluateBuiltinObjectSize(getASTContext(), Kind, P, E, IsDynamic)) {
       Result = *ObjectSize;
       return true;
     }

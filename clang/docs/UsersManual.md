@@ -6065,7 +6065,7 @@ Execute `clang-cl /?` to see a list of supported options:
 >   -no-hip-rt              Do not link against HIP runtime libraries
 >   --no-offload-arch=<value>
 >                           Remove CUDA/HIP offloading device architecture (e.g. sm_35, gfx906) from the list of devices to compile for. 'all' resets the list to its default value.
->   --no-offload-new-driver Don't Use the new driver for offloading compilation.
+>   --no-offload-new-driver Deprecated; the legacy offloading driver has been removed.
 >   --no-offloadlib         Do not link device library for CUDA/HIP/SYCL device compilation
 >   --no-wasm-opt           Disable the wasm-opt optimizer
 >   -nobuiltininc           Disable builtin #include directories only
@@ -6080,7 +6080,7 @@ Execute `clang-cl /?` to see a list of supported options:
 >   --offload-host-device   Compile for both the offloading host and device (default).
 >   --offload-host-only     Only compile for the offloading host.
 >   --offload-jobs=<value>  Specify the number of threads to use for device offloading tasks during compilation. Can be a positive integer or the string 'jobserver' to use the make-style jobserver from the environment.
->   --offload-new-driver    Use the new driver for offloading compilation.
+>   --offload-new-driver    Deprecated; the new driver is always used for offloading compilation.
 >   --offload-targets=<value>
 >                           Specify a list of target architectures to use for offloading.
 >   --offloadlib            Link device libraries for GPU device compilation
