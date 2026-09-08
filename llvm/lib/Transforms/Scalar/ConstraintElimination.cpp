@@ -1086,9 +1086,23 @@ void State::addInfoForInductions(BasicBlock &BB) {
   auto IndValue =
       m_Value(A, m_CombineOr(m_Phi(PN), m_c_Add(m_Phi(PN), m_APInt(IncStep))));
 
-  if (!match(BB.getTerminator(),
-             m_Br(m_c_ICmp(Pred, IndValue, m_Value(B)), m_Value(), m_Value())))
+  auto *Br = dyn_cast<CondBrInst>(BB.getTerminator());
+  if (!Br)
     return;
+
+  auto CountingCmp = m_c_ICmp(Pred, IndValue, m_Value(B));
+  std::optional<bool> PeeledOnEdge;
+  if (!match(Br->getCondition(), CountingCmp)) {
+    // Look through AND/OR, and remember which edge requires all operands to be
+    // true.
+    if (match(Br->getCondition(), m_c_LogicalAnd(CountingCmp, m_Value())))
+      PeeledOnEdge = true;
+    else if (match(Br->getCondition(), m_c_LogicalOr(CountingCmp, m_Value())))
+      PeeledOnEdge = false;
+    else
+      return;
+  }
+
   if (PN->getParent() != Header || PN->getNumIncomingValues() != 2 ||
       !SE.isSCEVable(PN->getType()))
     return;
@@ -1106,10 +1120,14 @@ void State::addInfoForInductions(BasicBlock &BB) {
       Pred == CmpInst::ICMP_NE || ICmpInst::isLT(Pred) || ICmpInst::isLE(Pred);
   CmpInst::Predicate ContinuePred =
       ContinueOnTrue ? Pred.dropSameSign() : CmpInst::getInversePredicate(Pred);
-  BasicBlock *InLoopSucc = cast<CondBrInst>(BB.getTerminator())
-                               ->getSuccessor(ContinueOnTrue ? 0 : 1);
+  BasicBlock *InLoopSucc = Br->getSuccessor(ContinueOnTrue ? 0 : 1);
 
-  if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB) || InLoopSucc == &BB)
+  // The peeled condition only implies the compare on the edge where the
+  // combined condition forces its operands, which must be the in-loop edge.
+  if (PeeledOnEdge && *PeeledOnEdge != ContinueOnTrue)
+    return;
+
+  if (!L->contains(InLoopSucc) || !L->isLoopExiting(&BB))
     return;
 
   BasicBlock *LoopPred = L->getLoopPredecessor();
@@ -1297,6 +1315,10 @@ static bool canStrengthenFlags(Instruction *I) {
     // A - B does not wrap unsigned, if A >=u B. Subs with constant operands get
     // canonicalized to Add.
     return !BO->hasNoUnsignedWrap() && !isa<Constant>(BO->getOperand(1));
+  case Instruction::Add:
+    // NSW/NUW can be refined using constant ranges.
+    return (!BO->hasNoUnsignedWrap() || !BO->hasNoSignedWrap()) &&
+           isa<Constant>(BO->getOperand(1));
   case Instruction::Mul:
   case Instruction::Shl:
     if (BO->hasNoUnsignedWrap() && BO->hasNoSignedWrap())
@@ -1339,13 +1361,45 @@ static bool doesHoldInRange(const ConstraintInfo &Info, Value *Op,
   return true;
 }
 
+static bool tryToStrengthenBinOpFlags(Instruction *I, Value *Op0, Value *Op1,
+                                      ConstraintInfo &Info) {
+  auto *C = dyn_cast<ConstantInt>(Op1);
+  if (!C)
+    return false;
+
+  // For a constant Op1, the ranges of Op0 for which the operation does not
+  // wrap are known exactly; check if the systems imply one of them.
+  bool Changed = false;
+  auto Opcode = static_cast<Instruction::BinaryOps>(I->getOpcode());
+  using OBO = OverflowingBinaryOperator;
+  ConstantRange Other(C->getValue());
+  if (!I->hasNoUnsignedWrap() &&
+      doesHoldInRange(Info, Op0,
+                      ConstantRange::makeGuaranteedNoWrapRegion(
+                          Opcode, Other, OBO::NoUnsignedWrap),
+                      /*Signed=*/false)) {
+    LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
+    I->setHasNoUnsignedWrap();
+    Changed = true;
+  }
+  if (!I->hasNoSignedWrap() &&
+      doesHoldInRange(Info, Op0,
+                      ConstantRange::makeGuaranteedNoWrapRegion(
+                          Opcode, Other, OBO::NoSignedWrap),
+                      /*Signed=*/true)) {
+    LLVM_DEBUG(dbgs() << "Adding nsw to " << *I << "\n");
+    I->setHasNoSignedWrap();
+    Changed = true;
+  }
+  return Changed;
+}
+
 /// Try to strengthen \p I's poison generating flags using \p Info. Returns
 /// true if \p I was modified.
 static bool tryToStrengthenFlags(Instruction *I, ConstraintInfo &Info,
                                  SmallVectorImpl<Instruction *> &ToRemove) {
   assert(canStrengthenFlags(I) && "not a candidate for flag strengthening");
 
-  using OBO = OverflowingBinaryOperator;
   Value *Op0 = I->getOperand(0), *Op1 = I->getOperand(1);
   switch (I->getOpcode()) {
   case Instruction::Sub: {
@@ -1356,33 +1410,12 @@ static bool tryToStrengthenFlags(Instruction *I, ConstraintInfo &Info,
     I->setHasNoUnsignedWrap();
     return true;
   }
+  case Instruction::Add:
+    return tryToStrengthenBinOpFlags(I, Op0, Op1, Info);
   case Instruction::Mul:
   case Instruction::Shl: {
     auto Opcode = static_cast<Instruction::BinaryOps>(I->getOpcode());
-    bool Changed = false;
-    // For a constant Op1, the ranges of Op0 for which the operation does not
-    // wrap are known exactly; check if the systems imply one of them.
-    if (auto *C = dyn_cast<ConstantInt>(Op1)) {
-      ConstantRange Other(C->getValue());
-      if (!I->hasNoUnsignedWrap() &&
-          doesHoldInRange(Info, Op0,
-                          ConstantRange::makeGuaranteedNoWrapRegion(
-                              Opcode, Other, OBO::NoUnsignedWrap),
-                          /*Signed=*/false)) {
-        LLVM_DEBUG(dbgs() << "Adding nuw to " << *I << "\n");
-        I->setHasNoUnsignedWrap();
-        Changed = true;
-      }
-      if (!I->hasNoSignedWrap() &&
-          doesHoldInRange(Info, Op0,
-                          ConstantRange::makeGuaranteedNoWrapRegion(
-                              Opcode, Other, OBO::NoSignedWrap),
-                          /*Signed=*/true)) {
-        LLVM_DEBUG(dbgs() << "Adding nsw to " << *I << "\n");
-        I->setHasNoSignedWrap();
-        Changed = true;
-      }
-    }
+    bool Changed = tryToStrengthenBinOpFlags(I, Op0, Op1, Info);
     if (!I->hasNoUnsignedWrap() && I->hasNoSignedWrap() &&
         Info.isKnownNonNegative(Op0) &&
         (Opcode == Instruction::Shl || Info.isKnownNonNegative(Op1))) {

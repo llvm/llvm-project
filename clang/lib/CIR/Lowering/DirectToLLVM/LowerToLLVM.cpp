@@ -5429,6 +5429,7 @@ mlir::LogicalResult CIRToLLVMInlineAsmOpLowering::matchAndRewrite(
       /*tail_call_kind*/
       mlir::LLVM::TailCallKindAttr::get(
           getContext(), mlir::LLVM::tailcallkind::TailCallKind::None),
+      /*convergent=*/mlir::UnitAttr(),
       mlir::LLVM::AsmDialectAttr::get(getContext(), llDialect),
       rewriter.getArrayAttr(opAttrs));
 
@@ -5570,58 +5571,6 @@ mlir::LogicalResult CIRToLLVMTokenNoneOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-mlir::LogicalResult CIRToLLVMCoroFreeOpLowering::matchAndRewrite(
-    cir::CoroFreeOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::CoroFreeOp>(
-      op, mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
-      adaptor.getId(), adaptor.getCoroframe());
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMCoroEndOpLowering::matchAndRewrite(
-    cir::CoroEndOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::CoroEndOp>(
-      op, mlir::LLVM::LLVMVoidType::get(rewriter.getContext()),
-      adaptor.getHandle(), adaptor.getUnwind(), adaptor.getResultToken());
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMCoroAllocOpLowering::matchAndRewrite(
-    cir::CoroAllocOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::CoroAllocOp>(op, rewriter.getI1Type(),
-                                                       adaptor.getId());
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMCoroBeginOpLowering::matchAndRewrite(
-    cir::CoroBeginOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::CoroBeginOp>(
-      op, mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
-      adaptor.getId(), adaptor.getCoroframeAddr());
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMCoroIdOpLowering::matchAndRewrite(
-    cir::CoroIdOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::CoroIdOp>(
-      op, mlir::TokenType::get(rewriter.getContext()), adaptor.getAlign(),
-      adaptor.getPromise(), adaptor.getCoroaddr(), adaptor.getFnaddrs());
-  return mlir::success();
-}
-
-mlir::LogicalResult CIRToLLVMCoroSizeOpLowering::matchAndRewrite(
-    cir::CoroSizeOp op, OpAdaptor adaptor,
-    mlir::ConversionPatternRewriter &rewriter) const {
-  rewriter.replaceOpWithNewOp<mlir::LLVM::CoroSizeOp>(
-      op, getTypeConverter()->convertType(op.getType()));
-  return mlir::success();
-}
-
 mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
     cir::CpuIdOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -5660,6 +5609,7 @@ mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
           /*has_side_effects=*/mlir::UnitAttr{},
           /*is_align_stack=*/mlir::UnitAttr{},
           /*tail_call_kind=*/mlir::LLVM::TailCallKindAttr{},
+          /*convergent=*/{},
           /*asm_dialect=*/mlir::LLVM::AsmDialectAttr{},
           /*operand_attrs=*/mlir::ArrayAttr{})
           .getResult(0);
