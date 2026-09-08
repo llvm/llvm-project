@@ -331,3 +331,21 @@ __device__ void test_class_f32(bool* out, float a, int b) {
 __device__ void test_class_f64(bool* out, double a, int b) {
   *out = __builtin_amdgcn_class(a, b);
 }
+
+// CIR-LABEL: @_Z9test_ubfePjjjj
+// CIR: cir.call_llvm_intrinsic "amdgcn.ubfe" {{.*}} : (!u32i, !u32i, !u32i) -> !u32i
+// LLVM: define{{.*}} void @_Z9test_ubfePjjjj
+// LLVM: call{{.*}} i32 @llvm.amdgcn.ubfe.i32(i32 %{{.+}}, i32 %{{.+}}, i32 %{{.+}})
+__device__ void test_ubfe(unsigned int* out, unsigned int src0, unsigned int src1,
+                          unsigned int src2) {
+  *out = __builtin_amdgcn_ubfe(src0, src1, src2);
+}
+
+// CIR-LABEL: @_Z9test_sbfePjjjj
+// CIR: cir.call_llvm_intrinsic "amdgcn.sbfe" {{.*}} : (!u32i, !u32i, !u32i) -> !u32i
+// LLVM: define{{.*}} void @_Z9test_sbfePjjjj
+// LLVM: call{{.*}} i32 @llvm.amdgcn.sbfe.i32(i32 %{{.+}}, i32 %{{.+}}, i32 %{{.+}})
+__device__ void test_sbfe(unsigned int* out, unsigned int src0, unsigned int src1,
+                          unsigned int src2) {
+  *out = __builtin_amdgcn_sbfe(src0, src1, src2);
+}
