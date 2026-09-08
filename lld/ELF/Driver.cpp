@@ -3264,7 +3264,7 @@ template <class ELFT> static void linkDynamicDebug(Ctx &ctx) {
   for (auto *file : ctx.objectFiles) {
     auto *obj = cast<ObjFile<ELFT>>(file);
     if (obj->dynDbgSec) {
-      MemoryBufferRef mb(toStringRef(obj->dynDbgSec->content()),
+      MemoryBufferRef mb(toStringRef(obj->dynDbgSec->contentMaybeDecompress()),
                          obj->mb.getBufferIdentifier());
       dctx.driver.addFile(createObjFile(dctx, mb));
     }

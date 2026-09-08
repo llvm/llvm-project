@@ -1268,7 +1268,7 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
 // those reached by an inner relocation against a SHT_PROGBITS SHF_ALLOC
 // section with `isDynDbgRef`; the rest are only needed by debug sections.
 template <class ELFT> void ObjFile<ELFT>::initDynDbgSymbols() {
-  MemoryBufferRef dbgMb(toStringRef(dynDbgSec->content()),
+  MemoryBufferRef dbgMb(toStringRef(dynDbgSec->contentMaybeDecompress()),
                         mb.getBufferIdentifier());
   std::unique_ptr<ELFFileBase> efb = createObjFile(ctx, dbgMb);
   // Compare ekind (note ObjFile<ELFT>::classof only tests InputFile::kind()).
