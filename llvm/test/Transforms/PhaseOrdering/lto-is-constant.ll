@@ -23,4 +23,4 @@ define i1 @test() {
 }
 
 ;--- foo.ll
-t@foo = constant i32 42
+@foo = constant i32 42
