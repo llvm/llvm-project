@@ -20,6 +20,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Support/WasmAddressSpaces.h"
 
 namespace clang {
 
@@ -455,6 +456,15 @@ void SemaWasm::handleWebAssemblyExportNameAttr(Decl *D, const ParsedAttr &AL) {
 
   D->addAttr(::new (Context) WebAssemblyExportNameAttr(Context, AL, Str));
   D->addAttr(UsedAttr::CreateImplicit(Context));
+}
+
+void SemaWasm::handleWebAssemblyGlobalAttr(Decl *D, const ParsedAttr &AL) {
+  ASTContext &Context = getASTContext();
+  auto *VD = cast<VarDecl>(D);
+  VD->setType(Context.getAddrSpaceQualType(
+      VD->getType(), getLangASFromTargetAS(
+                         llvm::WebAssembly::WASM_ADDRESS_SPACE_VAR)));
+  D->addAttr(::new (Context) WebAssemblyGlobalAttr(Context, AL));
 }
 
 } // namespace clang

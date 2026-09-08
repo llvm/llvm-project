@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "llvm/Support/WasmAddressSpaces.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -53,6 +54,14 @@ public:
       : TargetCodeGenInfo(std::make_unique<WebAssemblyABIInfo>(CGT, K)) {
     SwiftInfo =
         std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/false);
+  }
+
+  LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
+                                  const VarDecl *D) const override {
+    if (D && D->hasAttr<WebAssemblyGlobalAttr>())
+      return getLangASFromTargetAS(
+          llvm::WebAssembly::WASM_ADDRESS_SPACE_VAR);
+    return TargetCodeGenInfo::getGlobalVarAddressSpace(CGM, D);
   }
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,

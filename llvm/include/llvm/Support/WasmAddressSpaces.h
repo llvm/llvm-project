@@ -1,4 +1,4 @@
-//===--- llvm/CodeGen/WasmAddressSpaces.h -----------------------*- C++ -*-===//
+//===---------------- WasmAddressSpaces.h ----------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,22 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Address Spaces for WebAssembly Type Handling
+// Address spaces for WebAssembly IR and type handling.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_WEBASSEMBLY_UTILS_WASMADDRESSSPACES_H
-#define LLVM_LIB_TARGET_WEBASSEMBLY_UTILS_WASMADDRESSSPACES_H
+#ifndef LLVM_SUPPORT_WASMADDRESSSPACES_H
+#define LLVM_SUPPORT_WASMADDRESSSPACES_H
 
 namespace llvm {
-
 namespace WebAssembly {
 
 enum WasmAddressSpace : unsigned {
   // Default address space, for pointers to linear memory (stack, heap, data).
   WASM_ADDRESS_SPACE_DEFAULT = 0,
   // A non-integral address space for pointers to named objects outside of
-  // linear memory: WebAssembly globals or WebAssembly locals.  Loads and stores
+  // linear memory: WebAssembly globals or WebAssembly locals. Loads and stores
   // to these pointers are lowered to global.get / global.set or local.get /
   // local.set, as appropriate.
   WASM_ADDRESS_SPACE_VAR = 1
@@ -38,7 +37,6 @@ inline bool isValidAddressSpace(unsigned AS) {
 }
 
 } // namespace WebAssembly
-
 } // namespace llvm
 
-#endif // LLVM_LIB_TARGET_WEBASSEMBLY_UTILS_WASMADDRESSSPACES_H
+#endif // LLVM_SUPPORT_WASMADDRESSSPACES_H

@@ -2602,6 +2602,12 @@ def WebAssemblyImportName : InheritableAttr,
   let Subjects = SubjectList<[Function, GlobalVar], ErrorDiag>;
 }
 
+def WebAssemblyGlobal : InheritableAttr, TargetSpecificAttr<TargetWebAssembly> {
+  let Spellings = [Clang<"wasm_global">];
+  let Documentation = [WebAssemblyGlobalDocs];
+  let Subjects = SubjectList<[GlobalVar], ErrorDiag>;
+}
+
 def NoSplitStack : InheritableAttr {
   let Spellings = [GCC<"no_split_stack">];
   let Subjects = SubjectList<[Function], ErrorDiag>;
