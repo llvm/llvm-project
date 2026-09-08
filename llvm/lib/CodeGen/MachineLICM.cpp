@@ -745,7 +745,7 @@ void MachineLICMImpl::HoistPostRA(MachineInstr *MI, Register Def,
 
   // Splice the instruction to the preheader.
   MachineBasicBlock *MBB = MI->getParent();
-  Preheader->splice(Preheader->getFirstTerminator(), MBB, MI);
+  Preheader->splice(Preheader->getBlockEndInsertPt(), MBB, MI);
 
   // Since we are moving the instruction out of its basic block, we do not
   // retain its debug location. Doing so would degrade the debugging
@@ -1672,7 +1672,7 @@ unsigned MachineLICMImpl::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
 
   if (!HasCSEDone) {
     // Otherwise, splice the instruction to the preheader.
-    Preheader->splice(Preheader->getFirstTerminator(),MI->getParent(),MI);
+    Preheader->splice(Preheader->getBlockEndInsertPt(), MI->getParent(), MI);
 
     // Since we are moving the instruction out of its basic block, we do not
     // retain its debug location. Doing so would degrade the debugging
