@@ -488,9 +488,6 @@ public:
   void setScalarizeGlobalBehavior(bool b) { ScalarizeGlobal = b; }
   bool getScalarizeGlobalBehavior() const { return ScalarizeGlobal; }
 
-  // static wrappers
-  static bool hasHalfRate64Ops(const TargetSubtargetInfo &STI);
-
   // XXX - Why is this here if it isn't in the default pass set?
   bool enableEarlyIfConversion() const override { return true; }
 
@@ -499,6 +496,8 @@ public:
 
   void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
                                  const SchedRegion &Region) const override;
+
+  void overridePipelinerPolicy(MachinePipelinerPolicy &Policy) const override;
 
   void mirFileLoaded(MachineFunction &MF) const override;
 
@@ -945,12 +944,12 @@ public:
 
   /// \returns Minimum flat work group size supported by the subtarget.
   unsigned getMinFlatWorkGroupSize() const override {
-    return AMDGPU::IsaInfo::getMinFlatWorkGroupSize(*this);
+    return AMDGPU::getMinFlatWorkGroupSize();
   }
 
   /// \returns Maximum flat work group size supported by the subtarget.
   unsigned getMaxFlatWorkGroupSize() const override {
-    return AMDGPU::IsaInfo::getMaxFlatWorkGroupSize();
+    return AMDGPU::getMaxFlatWorkGroupSize();
   }
 
   /// \returns Number of waves per execution unit required to support the given
@@ -963,7 +962,7 @@ public:
   /// \returns Minimum number of waves per execution unit supported by the
   /// subtarget.
   unsigned getMinWavesPerEU() const override {
-    return AMDGPU::IsaInfo::getMinWavesPerEU(*this);
+    return AMDGPU::getMinWavesPerEU();
   }
 
   void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
@@ -1054,6 +1053,18 @@ public:
   bool useDFAforSMS() const override { return false; }
 
   bool enableWindowScheduler() const override { return false; }
+
+  // \returns true if ISel should select the native i64 min/max instructions
+  // (V_MIN/MAX_{I|U}64).
+  bool useMinMaxI64Insts() const {
+    return hasMinMaxI64Insts() && !hasSlowMaxMinMulI64Insts();
+  }
+
+  // \returns true if ISel should select the native i64 mul instruction
+  // V_MUL_U64.
+  bool useVMulU64Inst() const {
+    return hasVMulU64Inst() && !hasSlowMaxMinMulI64Insts();
+  }
 };
 
 class GCNUserSGPRUsageInfo {

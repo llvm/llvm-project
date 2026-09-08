@@ -123,13 +123,14 @@ bool types::canTypeBeUserSpecified(ID Id) {
       TY_dSYM,
       TY_Dependencies,
       TY_CUDA_FATBIN,
-      TY_HIP_FATBIN};
+      TY_HIP_FATBIN,
+      TY_SYCL_FATBIN};
   return !llvm::is_contained(kStaticLangageTypes, Id);
 }
 
 bool types::appendSuffixForType(ID Id) {
   return Id == TY_PCH || Id == TY_dSYM || Id == TY_CUDA_FATBIN ||
-         Id == TY_HIP_FATBIN;
+         Id == TY_HIP_FATBIN || Id == TY_SYCL_FATBIN;
 }
 
 bool types::canLipoType(ID Id) {
@@ -428,8 +429,9 @@ types::getCompilationPhases(ID Id, phases::ID LastPhase) {
 
 llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases>
 types::getCompilationPhases(const clang::driver::Driver &Driver,
-                            llvm::opt::DerivedArgList &DAL, ID Id) {
-  return types::getCompilationPhases(Id, Driver.getFinalPhase(DAL));
+                            llvm::opt::DerivedArgList &DAL,
+                            llvm::ArrayRef<InputTy> Inputs, ID Id) {
+  return types::getCompilationPhases(Id, Driver.getFinalPhase(DAL, Inputs));
 }
 
 ID types::lookupCXXTypeForCType(ID Id) {

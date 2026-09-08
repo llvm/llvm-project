@@ -391,10 +391,10 @@ public:
   /// folded into the addressing mode of a load/store. If AccessType is null,
   /// then the resulting target type based off of PointeeType will be used as an
   /// approximation.
-  LLVM_ABI InstructionCost
-  getGEPCost(Type *PointeeType, const Value *Ptr,
-             ArrayRef<const Value *> Operands, Type *AccessType = nullptr,
-             TargetCostKind CostKind = TCK_SizeAndLatency) const;
+  LLVM_ABI InstructionCost getGEPCost(Type *PointeeType, const Value *Ptr,
+                                      ArrayRef<const Value *> Operands,
+                                      TargetCostKind CostKind,
+                                      Type *AccessType = nullptr) const;
 
   /// Describe known properties for a set of pointers.
   struct PointersChainInfo {
@@ -1366,10 +1366,6 @@ public:
   /// \return The width of the smallest vector register type.
   LLVM_ABI unsigned getMinVectorRegisterBitWidth() const;
 
-  /// \return The maximum value of vscale if the target specifies an
-  ///  architectural maximum vector length, and std::nullopt otherwise.
-  LLVM_ABI std::optional<unsigned> getMaxVScale() const;
-
   /// \return the value of vscale to tune the cost model for.
   LLVM_ABI std::optional<unsigned> getVScaleForTuning() const;
 
@@ -1702,11 +1698,11 @@ public:
   /// \return The cost of Load and Store instructions. The operand info
   /// \p OpdInfo should refer to the stored value for stores and the address
   /// for loads.
-  LLVM_ABI InstructionCost getMemoryOpCost(
-      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-      OperandValueInfo OpdInfo = {OK_AnyValue, OP_None},
-      const Instruction *I = nullptr) const;
+  LLVM_ABI InstructionCost
+  getMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
+                  unsigned AddressSpace, TTI::TargetCostKind CostKind,
+                  OperandValueInfo OpdInfo = {OK_AnyValue, OP_None},
+                  const Instruction *I = nullptr) const;
 
   /// \return The cost of the interleaved memory operation.
   /// \p Opcode is the memory operation code
@@ -1757,9 +1753,9 @@ public:
       unsigned Opcode, VectorType *Ty, std::optional<FastMathFlags> FMF,
       TTI::TargetCostKind CostKind) const;
 
-  LLVM_ABI InstructionCost getMinMaxReductionCost(
-      Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF = FastMathFlags(),
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
+  LLVM_ABI InstructionCost
+  getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,
+                         TTI::TargetCostKind CostKind) const;
 
   /// Calculate the cost of an extended reduction pattern, similar to
   /// getArithmeticReductionCost of an Add/Sub reduction with multiply and

@@ -640,10 +640,8 @@ define <16 x i8> @signed_minnsw_v16i16_to_v16i8(<16 x i16> %y) {
 ;
 ; CHECK-GI-LABEL: signed_minnsw_v16i16_to_v16i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.8h, #127
-; CHECK-GI-NEXT:    smin v0.8h, v0.8h, v2.8h
-; CHECK-GI-NEXT:    smin v1.8h, v1.8h, v2.8h
-; CHECK-GI-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    sqxtn v0.8b, v0.8h
+; CHECK-GI-NEXT:    sqxtn2 v0.16b, v1.8h
 ; CHECK-GI-NEXT:    ret
 entry:
   %min = call <16 x i16> @llvm.smin.v16i16(<16 x i16> %y, <16 x i16> <i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127, i16 127>)
@@ -662,10 +660,8 @@ define <8 x i16> @signed_minnsw_v8i32_to_v8i16(<8 x i32> %y) {
 ;
 ; CHECK-GI-LABEL: signed_minnsw_v8i32_to_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.4s, #127, msl #8
-; CHECK-GI-NEXT:    smin v0.4s, v0.4s, v2.4s
-; CHECK-GI-NEXT:    smin v1.4s, v1.4s, v2.4s
-; CHECK-GI-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    sqxtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    sqxtn2 v0.8h, v1.4s
 ; CHECK-GI-NEXT:    ret
 entry:
   %min = call <8 x i32> @llvm.smin.v8i32(<8 x i32> %y, <8 x i32> <i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767, i32 32767>)
@@ -687,13 +683,8 @@ define <4 x i32> @signed_minnsw_v4i64_to_v4i32(<4 x i64> %y) {
 ;
 ; CHECK-GI-LABEL: signed_minnsw_v4i64_to_v4i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI47_0
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI47_0]
-; CHECK-GI-NEXT:    cmgt v3.2d, v2.2d, v0.2d
-; CHECK-GI-NEXT:    cmgt v4.2d, v2.2d, v1.2d
-; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    bif v1.16b, v2.16b, v4.16b
-; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    sqxtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    sqxtn2 v0.4s, v1.2d
 ; CHECK-GI-NEXT:    ret
 entry:
   %min = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %y, <4 x i64> <i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647>)

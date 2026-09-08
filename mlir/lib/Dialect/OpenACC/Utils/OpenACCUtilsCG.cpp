@@ -172,7 +172,8 @@ GPUParallelDimsAttr getParDimsAttr(Operation *op) {
       .Case<ACC_OP_WITH_PAR_DIMS_LIST>(
           [](auto parOp) { return parOp.getParDimsAttr(); })
       .Default([](Operation *op) -> GPUParallelDimsAttr {
-        if (Attribute attr = op->getAttr(GPUParallelDimsAttr::name)) {
+        if (Attribute attr =
+                op->getDiscardableAttr(GPUParallelDimsAttr::name)) {
           GPUParallelDimsAttr parDimsAttr = dyn_cast<GPUParallelDimsAttr>(attr);
           assert(parDimsAttr && "acc.par_dims must be a GPUParallelDimsAttr");
           return parDimsAttr;
@@ -194,8 +195,9 @@ void setParDimsAttr(Operation *op, GPUParallelDimsAttr attr) {
   llvm::TypeSwitch<Operation *>(op)
       .Case<ACC_OP_WITH_PAR_DIMS_LIST>(
           [&](auto parOp) { parOp.setParDimsAttr(attr); })
-      .Default(
-          [&](Operation *op) { op->setAttr(GPUParallelDimsAttr::name, attr); });
+      .Default([&](Operation *op) {
+        op->setDiscardableAttr(GPUParallelDimsAttr::name, attr);
+      });
 }
 
 void updateParDimsAttr(Operation *op, GPUParallelDimsAttr attr) {
@@ -204,19 +206,21 @@ void updateParDimsAttr(Operation *op, GPUParallelDimsAttr attr) {
   llvm::TypeSwitch<Operation *>(op)
       .Case<ACC_OP_WITH_PAR_DIMS_LIST>(
           [&](auto parOp) { parOp.setParDimsAttr(attr); })
-      .Default(
-          [&](Operation *op) { op->setAttr(GPUParallelDimsAttr::name, attr); });
+      .Default([&](Operation *op) {
+        op->setDiscardableAttr(GPUParallelDimsAttr::name, attr);
+      });
 }
 
 #undef ACC_OP_WITH_PAR_DIMS_LIST
 
 bool hasGPUBlockRedundantAttr(Operation *op) {
-  return op->hasAttrOfType<GPUBlockRedundantAttr>(GPUBlockRedundantAttr::name);
+  return op->hasDiscardableAttrOfType<GPUBlockRedundantAttr>(
+      GPUBlockRedundantAttr::name);
 }
 
 void setGPUBlockRedundantAttr(Operation *op) {
-  op->setAttr(GPUBlockRedundantAttr::name,
-              GPUBlockRedundantAttr::get(op->getContext()));
+  op->setDiscardableAttr(GPUBlockRedundantAttr::name,
+                         GPUBlockRedundantAttr::get(op->getContext()));
 }
 
 void copyParDimsAttr(Operation *from, Operation *to) {
@@ -226,7 +230,8 @@ void copyParDimsAttr(Operation *from, Operation *to) {
 }
 
 ActiveParDimsAttr getActiveParDimsAttr(Operation *op) {
-  return op->getAttrOfType<ActiveParDimsAttr>(ActiveParDimsAttr::name);
+  return op->getDiscardableAttrOfType<ActiveParDimsAttr>(
+      ActiveParDimsAttr::name);
 }
 
 bool hasActiveParDimsAttr(Operation *op) {
@@ -234,7 +239,7 @@ bool hasActiveParDimsAttr(Operation *op) {
 }
 
 void setActiveParDimsAttr(Operation *op, ActiveParDimsAttr attr) {
-  op->setAttr(ActiveParDimsAttr::name, attr);
+  op->setDiscardableAttr(ActiveParDimsAttr::name, attr);
 }
 
 void setActiveParDimsAttr(Operation *op, ArrayRef<GPUParallelDimAttr> dims) {

@@ -116,7 +116,7 @@ func.func @compute_region_single_dim(%data: memref<1024xf32>,
         scf.reduce
       } {acc.par_dims = #acc<par_dims[thread_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   acc.copyout accPtr(%copy : memref<f32>) to varPtr(%result : memref<f32>) dataClause(acc_copy)
   acc.delete accPtr(%copyin : memref<1024xf32>)
@@ -125,7 +125,7 @@ func.func @compute_region_single_dim(%data: memref<1024xf32>,
 // CHECK: %[[W:.*]] = acc.par_width %{{.*}} par_dim(#acc.par_dim<thread_x>)
 // CHECK: acc.compute_region launch(%{{.*}} = %[[W]]) ins({{.*}}) : (memref<1024xf32>, memref<f32>) {
 // CHECK:   acc.yield
-// CHECK: } {origin = "acc.parallel"}
+// CHECK: } <{origin = "acc.parallel"}>
 
 // -----
 
@@ -159,7 +159,7 @@ func.func @compute_region_two_dims(%data: memref<8xi32>,
       } {acc.par_dims = #acc<par_dims[block_x, thread_x]>}
       acc.reduction_combine %init into %arg3 <add> : memref<i32>
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   acc.copyout accPtr(%copyin_red : memref<i32>) to varPtr(%reduction_var : memref<i32>) dataClause(acc_reduction)
   acc.delete accPtr(%copyin_data : memref<8xi32>)
@@ -169,7 +169,7 @@ func.func @compute_region_two_dims(%data: memref<8xi32>,
 // CHECK: %[[W1:.*]] = acc.par_width %{{.*}} par_dim(#acc.par_dim<thread_x>)
 // CHECK: acc.compute_region launch(%{{.*}} = %[[W0]], %{{.*}} = %[[W1]]) ins({{.*}}) : (memref<8xi32>, memref<i32>) {
 // CHECK:   acc.yield
-// CHECK: } {origin = "acc.parallel"}
+// CHECK: } <{origin = "acc.parallel"}>
 
 // -----
 
@@ -201,7 +201,7 @@ func.func @compute_region_unknown_width(%data: memref<100xf32>) {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[thread_x]>}
       acc.yield
-    } {origin = "acc.kernels"}
+    } <{origin = "acc.kernels"}>
   }
   acc.delete accPtr(%copyin : memref<100xf32>)
   return
@@ -209,7 +209,7 @@ func.func @compute_region_unknown_width(%data: memref<100xf32>) {
 // CHECK: %[[W:.*]] = acc.par_width par_dim(#acc.par_dim<thread_x>)
 // CHECK: acc.compute_region launch(%{{.*}} = %[[W]]) ins({{.*}}) : (memref<100xf32>) {
 // CHECK:   acc.yield
-// CHECK: } {origin = "acc.kernels"}
+// CHECK: } <{origin = "acc.kernels"}>
 
 // -----
 
@@ -224,7 +224,7 @@ func.func @compute_region_no_launch(%a: memref<i32>, %b: memref<i32>) {
       memref.store %c1, %arg0[] : memref<i32>
       memref.store %c1, %arg1[] : memref<i32>
       acc.yield
-    } {origin = "acc.serial"}
+    } <{origin = "acc.serial"}>
   }
   acc.copyout accPtr(%copy_a : memref<i32>) to varPtr(%a : memref<i32>) dataClause(acc_copy)
   acc.copyout accPtr(%copy_b : memref<i32>) to varPtr(%b : memref<i32>) dataClause(acc_copy)
@@ -232,7 +232,7 @@ func.func @compute_region_no_launch(%a: memref<i32>, %b: memref<i32>) {
 }
 // CHECK: acc.compute_region ins({{.*}}) : (memref<i32>, memref<i32>) {
 // CHECK:   acc.yield
-// CHECK: } {origin = "acc.serial"}
+// CHECK: } <{origin = "acc.serial"}>
 
 // -----
 
@@ -242,25 +242,25 @@ func.func @compute_region_launch_only() {
   %w0 = acc.par_width %c32 par_dim(#acc.par_dim<thread_x>)
   acc.compute_region launch(%arg0 = %w0) {
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 // CHECK: %[[W:.*]] = acc.par_width %{{.*}} par_dim(#acc.par_dim<thread_x>)
 // CHECK: acc.compute_region launch(%{{.*}} = %[[W]]) {
 // CHECK:   acc.yield
-// CHECK: } {origin = "acc.parallel"}
+// CHECK: } <{origin = "acc.parallel"}>
 
 // -----
 
 // CHECK-LABEL: func @compute_region_empty
 func.func @compute_region_empty() {
   acc.compute_region {
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 // CHECK: acc.compute_region {
 // CHECK:   acc.yield
-// CHECK: } {origin = "acc.parallel"}
+// CHECK: } <{origin = "acc.parallel"}>
 
 // -----
 
@@ -284,7 +284,7 @@ func.func @compute_region_all_fields(%data: memref<1024xf32>,
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x, thread_x]>}
       acc.yield
-    } {kernel_func_name = @compute_kernel, kernel_module_name = @device_module, origin = "acc.parallel"}
+    } <{kernel_func_name = @compute_kernel, kernel_module_name = @device_module, origin = "acc.parallel"}> {test.discardable}
   }
   acc.delete accPtr(%copyin : memref<1024xf32>)
   return
@@ -293,7 +293,7 @@ func.func @compute_region_all_fields(%data: memref<1024xf32>,
 // CHECK: %[[W1:.*]] = acc.par_width %{{.*}} par_dim(#acc.par_dim<thread_x>)
 // CHECK: acc.compute_region stream(%[[STREAM]] : !gpu.async.token) launch(%{{.*}} = %[[W0]], %{{.*}} = %[[W1]]) ins({{.*}}) : (memref<1024xf32>) {
 // CHECK:   acc.yield
-// CHECK: } {kernel_func_name = @compute_kernel, kernel_module_name = @device_module, origin = "acc.parallel"}
+// CHECK: } <{kernel_func_name = @compute_kernel, kernel_module_name = @device_module, origin = "acc.parallel"}> {test.discardable}
 
 // -----
 
@@ -361,13 +361,13 @@ func.func @compute_region_with_results() -> i32 {
   %0 = acc.compute_region launch(%arg0 = %w0) -> i32 {
     %c0_i32 = arith.constant 0 : i32
     acc.yield %c0_i32 : i32
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return %0 : i32
 }
 // CHECK: %[[W:.*]] = acc.par_width par_dim(#acc.par_dim<thread_x>)
 // CHECK: {{.*}} = acc.compute_region launch(%{{.*}} = %[[W]]) -> i32 {
 // CHECK:   acc.yield
-// CHECK: } {origin = "acc.parallel"}
+// CHECK: } <{origin = "acc.parallel"}>
 
 // -----
 
@@ -405,7 +405,7 @@ func.func @predicate_region_gang_vector_atomics(%c1: memref<i32>, %c2: memref<i3
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   acc.copyout accPtr(%copy_c1 : memref<i32>) to varPtr(%c1 : memref<i32>) dataClause(acc_copy)
   acc.copyout accPtr(%copy_c2 : memref<i32>) to varPtr(%c2 : memref<i32>) dataClause(acc_copy)
@@ -445,7 +445,7 @@ func.func @predicate_region_gang_redundant_setup(%idx: memref<i32>, %table: memr
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       acc.yield
-    } {origin = "acc.kernels"}
+    } <{origin = "acc.kernels"}>
   }
   acc.copyout accPtr(%copy_idx : memref<i32>) to varPtr(%idx : memref<i32>) dataClause(acc_copy)
   acc.delete accPtr(%copy_table : memref<10xi32>)

@@ -4064,17 +4064,13 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
     return nullptr;
 
   case SVE::BI__builtin_sve_svreinterpret_b: {
-    auto SVCountTy =
-        llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
     Function *CastFromSVCountF =
-        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool, SVCountTy);
+        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_from_svcount);
     return Builder.CreateCall(CastFromSVCountF, Ops[0]);
   }
   case SVE::BI__builtin_sve_svreinterpret_c: {
-    auto SVCountTy =
-        llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
     Function *CastToSVCountF =
-        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_from_svbool, SVCountTy);
+        CGM.getIntrinsic(Intrinsic::aarch64_sve_convert_to_svcount);
     return Builder.CreateCall(CastToSVCountF, Ops[0]);
   }
 

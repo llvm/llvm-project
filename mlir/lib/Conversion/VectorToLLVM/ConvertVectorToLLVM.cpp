@@ -45,10 +45,9 @@ static Value insertOne(ConversionPatternRewriter &rewriter,
                        int64_t pos) {
   assert(rank > 0 && "0-D vector corner case should have been handled already");
   if (rank == 1) {
-    auto idxType = rewriter.getIndexType();
+    Type idxType = typeConverter.convertType(rewriter.getIndexType());
     auto constant = LLVM::ConstantOp::create(
-        rewriter, loc, typeConverter.convertType(idxType),
-        rewriter.getIntegerAttr(idxType, pos));
+        rewriter, loc, idxType, rewriter.getIntegerAttr(idxType, pos));
     return LLVM::InsertElementOp::create(rewriter, loc, llvmType, val1, val2,
                                          constant);
   }
@@ -60,10 +59,9 @@ static Value extractOne(ConversionPatternRewriter &rewriter,
                         const LLVMTypeConverter &typeConverter, Location loc,
                         Value val, Type llvmType, int64_t rank, int64_t pos) {
   if (rank <= 1) {
-    auto idxType = rewriter.getIndexType();
+    Type idxType = typeConverter.convertType(rewriter.getIndexType());
     auto constant = LLVM::ConstantOp::create(
-        rewriter, loc, typeConverter.convertType(idxType),
-        rewriter.getIntegerAttr(idxType, pos));
+        rewriter, loc, idxType, rewriter.getIntegerAttr(idxType, pos));
     return LLVM::ExtractElementOp::create(rewriter, loc, llvmType, val,
                                           constant);
   }

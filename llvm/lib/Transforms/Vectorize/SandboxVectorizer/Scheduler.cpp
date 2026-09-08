@@ -347,6 +347,28 @@ void Scheduler::trimSchedule(ArrayRef<Instruction *> Instrs) {
   }
 }
 
+#ifndef NDEBUG
+void Scheduler::assertSameDirection(ArrayRef<Instruction *> Instrs) const {
+  // Check that we are not switching scheduling direction.
+  switch (Dir) {
+  case SchedDirection::BottomUp:
+    assert(none_of(Instrs,
+                   [this](Instruction *I) {
+                     return ScheduleTopItOpt->comesBefore(*I);
+                   }) &&
+           "Wrong scheduling direction!");
+    break;
+  case SchedDirection::TopDown:
+    assert(all_of(Instrs,
+                  [this](Instruction *I) {
+                    return ScheduleTopItOpt->comesBefore(*I);
+                  }) &&
+           "Wrong scheduling direction!");
+    break;
+  }
+}
+#endif // NDEBUG
+
 bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
   assert(all_of(drop_begin(Instrs),
                 [Instrs](Instruction *I) {
@@ -398,9 +420,14 @@ bool Scheduler::trySchedule(ArrayRef<Instruction *> Instrs) {
     return tryScheduleUntil(Instrs);
   case BndlSchedState::NoneScheduled: {
     // TODO: Set the window of the DAG that we are interested in.
-    if (!ScheduleTopItOpt)
+    if (!ScheduleTopItOpt) {
       // We start scheduling at the bottom instr of Instrs (top in TopDown).
       ScheduleTopItOpt = GetSchedPoint(Dir, Instrs);
+    } else {
+#ifndef NDEBUG
+      assertSameDirection(Instrs);
+#endif
+    }
     // Extend the DAG to include Instrs.
     Interval<Instruction> Extension = DAG.extend(Instrs);
     // Add nodes from the new interval to ready list if they are ready.
