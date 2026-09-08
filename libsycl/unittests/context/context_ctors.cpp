@@ -18,6 +18,8 @@ void dummyAsyncHandler(exception_list) {}
 TEST(Context, DefaultConstructor) {
   mock::MockWrapper Mock;
 
+  // This line triggers lazy platform discovery, which we want to suppress
+  // from the expected calls of the mock lib.
   // TODO: remove once context is properly implemented
   std::ignore = device{};
 
@@ -75,7 +77,10 @@ TEST(Context, DeviceListConstructorThrowsOnEmptyList) {
   mock::MockWrapper Mock;
   async_handler AsyncHandler = dummyAsyncHandler;
 
-  EXPECT_CALL(Mock.get(), olCreateContext(_, _, _)).Times(0);
+  EXPECT_CALL(Mock.get(), olCreateContext(0, _, _))
+      .Times(1)
+      .WillOnce(Return(
+          mock::getMockLiboffload().makeEmptyStrError(OL_ERRC_INVALID_SIZE)));
 
   try {
     context Ctx(std::vector<device>{}, AsyncHandler);

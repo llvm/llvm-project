@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <sycl/__impl/context.hpp>
 #include <sycl/__impl/device.hpp>
 #include <sycl/__impl/platform.hpp>
 

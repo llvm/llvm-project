@@ -28,8 +28,12 @@ ContextImpl::ContextImpl(std::vector<DeviceImpl *> &&DeviceList,
     DeviceIds.push_back(D->getOLHandle());
   }
 
-  callAndThrow(olCreateContext, DeviceIds.size(), DeviceIds.data(),
-               &MOffloadContext);
+  auto Result = callNoCheck(olCreateContext, DeviceIds.size(), DeviceIds.data(),
+                            &MOffloadContext);
+  if (isFailed(Result))
+    throw sycl::exception(make_error_code(errc::invalid),
+                          "Failed to create SYCL context: " +
+                              formatCodeString(Result));
 }
 
 ContextImpl::~ContextImpl() {
