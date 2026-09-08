@@ -688,6 +688,9 @@ static uint64_t computeIRComplexityScoreImpl(const Function &F) {
       } else if (const auto *PDI = dyn_cast<PossiblyDisjointInst>(&I)) {
         if (PDI->isDisjoint())
           ++Score;
+      } else if (const auto *ASC = dyn_cast<AddrSpaceCastInst>(&I)) {
+        if (ASC->hasNonNull())
+          ++Score;
       } else if (const auto *GEP = dyn_cast<GEPOperator>(&I)) {
         if (GEP->isInBounds())
           ++Score;

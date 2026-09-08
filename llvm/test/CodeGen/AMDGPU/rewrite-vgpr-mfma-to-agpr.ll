@@ -449,7 +449,7 @@ entry:
   %i2 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> zeroinitializer, <4 x half> zeroinitializer, <4 x float> %k0, i32 0, i32 0, i32 0)
   %i4 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> zeroinitializer, <4 x half> splat (half 0xH3C00), <4 x float> %k0, i32 0, i32 0, i32 0)
   %i6 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> zeroinitializer, <4 x half> splat (half 0xH7E00), <4 x float> %k0, i32 0, i32 0, i32 0)
-  %i5 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> zeroinitializer, <4 x half> zeroinitializer, <4 x float> splat (float 0x7FF8000000000000), i32 0, i32 0, i32 0)
+  %i5 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> zeroinitializer, <4 x half> zeroinitializer, <4 x float> splat (float +qnan), i32 0, i32 0, i32 0)
   %k = call <4 x float> asm sideeffect "; def $0", "=v"()
   %i1 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> zeroinitializer, <4 x half> zeroinitializer, <4 x float> %k, i32 0, i32 0, i32 0)
   %i7 = call <4 x float> @llvm.amdgcn.mfma.f32.16x16x16f16(<4 x half> zeroinitializer, <4 x half> splat (half 0xH3C00), <4 x float> %k, i32 0, i32 0, i32 0)
