@@ -425,6 +425,7 @@ exit /b 0
 :: Verify that the generated MSI has LLVM's permanent UpgradeCode.
 ::==============================================================================
 :verify_msi_upgrade_code
+:: This code has to match the value in llvm/CMakeLists.txt
 set "expected_upgrade_code=B08613CD-8BD0-4FB6-8937-621936604DE3"
 set "msi_path="
 for %%f in (*.msi) do (
@@ -439,19 +440,28 @@ if not defined msi_path (
   exit /b 1
 )
 
-set "wix_source=%TEMP%\llvm-msi-%RANDOM%.wxs"
-dark.exe -nologo -o "%wix_source%" "%msi_path%"
-if errorlevel 1 (
-  echo Failed to decompile "%msi_path%".
+:: Query the MSI's UpgradeCode through the Windows Installer COM API. WiX's
+:: dark.exe would do this too, but it is deprecated and removed in newer WiX.
+set "msi_query=SELECT Value FROM Property WHERE Property='UpgradeCode'"
+set "ps_cmd=$i = New-Object -ComObject WindowsInstaller.Installer;"
+set "ps_cmd=%ps_cmd% $db = $i.OpenDatabase($env:msi_path, 0);"
+set "ps_cmd=%ps_cmd% $v = $db.OpenView($env:msi_query);"
+set "ps_cmd=%ps_cmd% $v.Execute();"
+set "ps_cmd=%ps_cmd% $v.Fetch().StringData(1).Trim('{', '}')"
+
+set "actual_upgrade_code="
+for /f %%i in ('powershell -NoProfile -Command "%ps_cmd%"') do (
+  set "actual_upgrade_code=%%i"
+)
+if not defined actual_upgrade_code (
+  echo Failed to read the UpgradeCode from "%msi_path%".
   exit /b 1
 )
-findstr /i /c:"%expected_upgrade_code%" "%wix_source%" >nul
-if errorlevel 1 (
-  echo "%msi_path%" does not have the expected UpgradeCode %expected_upgrade_code%.
-  del /q "%wix_source%"
+if /i not "%actual_upgrade_code%"=="%expected_upgrade_code%" (
+  echo Unexpected UpgradeCode %actual_upgrade_code% in "%msi_path%".
+  echo Expected %expected_upgrade_code%.
   exit /b 1
 )
-del /q "%wix_source%"
 echo Verified MSI UpgradeCode: %expected_upgrade_code%
 exit /b 0
 
