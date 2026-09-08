@@ -7760,6 +7760,8 @@ void Sema::CheckAsmLabel(Scope *S, Expr *E, StorageClass SC,
   StringLiteral *SE = cast<StringLiteral>(E);
   StringRef Label = SE->getString();
   QualType R = TInfo->getType();
+  if (R->isIncompleteType())
+    return;
   if (S->getFnParent() != nullptr) {
     switch (SC) {
     case SC_None:

@@ -835,7 +835,7 @@ void GVNHoist::findHoistableCandidates(OutValuesType &CHIBBs,
 
   // CHIArgs now have the outgoing values, so check for anticipability and
   // accumulate hoistable candidates in HPL.
-  for (std::pair<BasicBlock *, SmallVector<CHIArg, 2>> &A : CHIBBs) {
+  for (auto &A : CHIBBs) {
     BasicBlock *BB = A.first;
     SmallVectorImpl<CHIArg> &CHIs = A.second;
     // Vector of PHIs contains PHIs for different instructions.

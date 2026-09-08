@@ -2630,10 +2630,6 @@ size_t Process::WriteMemory(addr_t addr, const void *buf, size_t size,
   if (!m_breakpoint_site_list.FindInRange(addr, addr + size, bp_sites_in_range))
     return WriteMemoryPrivate(addr, buf, size, error);
 
-  // No breakpoint sites overlap
-  if (bp_sites_in_range.IsEmpty())
-    return WriteMemoryPrivate(addr, buf, size, error);
-
   const uint8_t *ubuf = (const uint8_t *)buf;
   uint64_t bytes_written = 0;
 
