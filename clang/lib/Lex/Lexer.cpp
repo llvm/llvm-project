@@ -2341,7 +2341,8 @@ bool Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
 
     if (C == '\n' || C == '\r' ||             // Newline.
         (C == 0 && CurPtr-1 == BufferEnd)) {  // End of file.
-      if (!isLexingRawMode() && !LangOpts.AsmPreprocessor)
+      if (!isLexingRawMode() && !LangOpts.AsmPreprocessor &&
+          !LangOpts.TraditionalCPP)
         Diag(BufferPtr, diag::ext_unterminated_char_or_string) << 1;
       FormTokenWithChars(Result, CurPtr-1, tok::unknown);
       return true;
@@ -2564,7 +2565,8 @@ bool Lexer::LexCharConstant(Token &Result, const char *CurPtr,
 
   char C = getAndAdvanceChar(CurPtr, Result);
   if (C == '\'') {
-    if (!isLexingRawMode() && !LangOpts.AsmPreprocessor)
+    if (!isLexingRawMode() && !LangOpts.AsmPreprocessor &&
+        !LangOpts.TraditionalCPP)
       Diag(BufferPtr, diag::ext_empty_character);
     FormTokenWithChars(Result, CurPtr, tok::unknown);
     return true;
@@ -2577,7 +2579,8 @@ bool Lexer::LexCharConstant(Token &Result, const char *CurPtr,
 
     if (C == '\n' || C == '\r' ||             // Newline.
         (C == 0 && CurPtr-1 == BufferEnd)) {  // End of file.
-      if (!isLexingRawMode() && !LangOpts.AsmPreprocessor)
+      if (!isLexingRawMode() && !LangOpts.AsmPreprocessor &&
+          !LangOpts.TraditionalCPP)
         Diag(BufferPtr, diag::ext_unterminated_char_or_string) << 0;
       FormTokenWithChars(Result, CurPtr-1, tok::unknown);
       return true;
