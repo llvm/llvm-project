@@ -11,6 +11,7 @@
 #ifndef OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_PLUGININTERFACE_H
 #define OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_PLUGININTERFACE_H
 
+#include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -1258,6 +1259,16 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return OMPX_ReuseBlocksForHighTripCount;
   }
 
+  /// Whether the user asked for a trace of every kernel launch's duration.
+  /// @see OMPX_KernelDurationTracing
+  bool enableKernelDurationTracing() const {
+    return OMPX_KernelDurationTracing;
+  }
+
+  /// Get a unique, monotonically increasing identifier for the next kernel
+  /// launch on this device.
+  uint32_t getAndIncrementLaunchId() { return LaunchId.fetch_add(1); }
+
   /// Get the total amount of hardware parallelism supported by the target
   /// device. This is the total amount of warps or wavefronts that can be
   /// resident on the device simultaneously.
@@ -1445,6 +1456,14 @@ private:
 
   BoolEnvar OMPX_ReuseBlocksForHighTripCount =
       BoolEnvar("LIBOMPTARGET_REUSE_BLOCKS_FOR_HIGH_TRIP_COUNT", true);
+
+  /// Environment variable to trace the duration of every kernel launch.
+  BoolEnvar OMPX_KernelDurationTracing =
+      BoolEnvar("LIBOMPTARGET_KERNEL_EXE_TIME", false);
+
+  /// Counter handing out a unique identifier to each kernel launch on this
+  /// device.
+  std::atomic<uint32_t> LaunchId{0};
 
   /// Indicate whether mapped host buffers should be locked automatically.
   bool LockMappedBuffers;

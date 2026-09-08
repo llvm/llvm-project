@@ -12,6 +12,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <cinttypes>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -1040,6 +1041,19 @@ private:
     AMDGPUSignalManagerTy *SignalManager;
   };
 
+  /// Utility struct holding arguments for tracing a kernel's duration.
+  struct KernelDurationTracingArgsTy {
+    hsa_agent_t Agent;
+    AMDGPUSignalTy *Signal;
+    double TicksToTime;
+    int32_t DeviceId;
+    uint32_t LaunchId;
+    uint32_t NumTeams;
+    uint32_t NumThreads;
+    /// Owned by the kernel, which outlives the launch this traces.
+    const char *Name;
+  };
+
   using AMDGPUStreamCallbackTy = Error(void *Data);
 
   /// The stream is composed of N stream's slots. The struct below represents
@@ -1067,6 +1081,7 @@ private:
       MemcpyArgsTy MemcpyArgs;
       ReleaseBufferArgsTy ReleaseBufferArgs;
       ReleaseSignalArgsTy ReleaseSignalArgs;
+      KernelDurationTracingArgsTy KernelDurationTracingArgs;
       void *CallbackArgs;
     };
 
@@ -1104,6 +1119,18 @@ private:
       return Plugin::success();
     }
 
+    /// Schedule a kernel duration tracing action on the slot.
+    Error schedKernelDurationTracing(hsa_agent_t Agent, AMDGPUSignalTy *Signal,
+                                     double TicksToTime, int32_t DeviceId,
+                                     uint32_t LaunchId, uint32_t NumTeams,
+                                     uint32_t NumThreads, const char *Name) {
+      Callbacks.emplace_back(kernelDurationTracingAction);
+      ActionArgs.emplace_back().KernelDurationTracingArgs =
+          KernelDurationTracingArgsTy{Agent,    Signal,   TicksToTime, DeviceId,
+                                      LaunchId, NumTeams, NumThreads,  Name};
+      return Plugin::success();
+    }
+
     /// Register a callback to be called on compleition
     Error schedCallback(AMDGPUStreamCallbackTy *Func, void *Data) {
       Callbacks.emplace_back(Func);
@@ -1129,6 +1156,9 @@ private:
         } else if (Callback == releaseSignalAction) {
           if (auto Err = releaseSignalAction(&ActionArg))
             return Err;
+        } else if (Callback == kernelDurationTracingAction) {
+          if (auto Err = kernelDurationTracingAction(&ActionArg))
+            return Err;
         } else if (Callback) {
           if (auto Err = Callback(ActionArg.CallbackArgs))
             return Err;
@@ -1145,6 +1175,10 @@ private:
 
   /// The device agent where the stream was created.
   hsa_agent_t Agent;
+
+  /// Factor converting HSA clock ticks into nanoseconds. Only used when kernel
+  /// duration tracing is enabled.
+  double TicksToTime;
 
   /// The queue that the stream uses to launch kernels.
   AMDGPUQueueTy *Queue;
@@ -1383,6 +1417,32 @@ private:
     return Plugin::success();
   }
 
+  /// Report the duration of a completed kernel. This is a post completion
+  /// action, taken while the kernel's signal is still alive.
+  static Error kernelDurationTracingAction(void *Data) {
+    KernelDurationTracingArgsTy *Args =
+        reinterpret_cast<KernelDurationTracingArgsTy *>(Data);
+    assert(Args && "Invalid arguments");
+    assert(Args->Signal && "Invalid signal");
+
+    hsa_amd_profiling_dispatch_time_t TimeRec = {};
+    hsa_status_t Status = hsa_amd_profiling_get_dispatch_time(
+        Args->Agent, Args->Signal->get(), &TimeRec);
+    if (auto Err = Plugin::check(
+            Status, "error in hsa_amd_profiling_get_dispatch_time: %s"))
+      return Err;
+
+    uint64_t Duration = static_cast<uint64_t>(
+        static_cast<double>(TimeRec.end - TimeRec.start) * Args->TicksToTime);
+
+    INFO_MESSAGE(
+        Args->DeviceId,
+        "LaunchID: %2u TeamsXthrds:(%4uX%4u) Duration(ns): %" PRIu64 " n:%s\n",
+        Args->LaunchId, Args->NumTeams, Args->NumThreads, Duration, Args->Name);
+
+    return Plugin::success();
+  }
+
 public:
   /// Create an empty stream associated with a specific device.
   AMDGPUStreamTy(AMDGPUDeviceTy &Device);
@@ -1420,6 +1480,15 @@ public:
     // Setup the post action to release the kernel args buffer.
     if (auto Err = Slots[Curr].schedReleaseBuffer(KernelArgs, MemoryManager))
       return Err;
+
+    // When LIBOMPTARGET_KERNEL_EXE_TIME is set, register a post action that
+    // reports the kernel's duration once it has completed.
+    if (Device.enableKernelDurationTracing())
+      if (auto Err = Slots[Curr].schedKernelDurationTracing(
+              Agent, OutputSignal, TicksToTime, Device.getDeviceId(),
+              Device.getAndIncrementLaunchId(), NumBlocks[0], NumThreads[0],
+              Kernel.getName()))
+        return Err;
 
     // If we are running an RPC server we want to wake up the server thread
     // whenever there is a kernel running and let it sleep otherwise.
@@ -3813,9 +3882,19 @@ Error AMDGPUResourceRef<ResourceTy>::create(GenericDeviceTy &Device) {
   return Resource->init();
 }
 
+/// Compute the factor converting the device's clock ticks into nanoseconds.
+/// Returns zero if the system timestamp frequency is unavailable, in which case
+/// all reported durations are zero.
+static double getTicksToTime(AMDGPUDeviceTy &Device) {
+  uint64_t TicksPerSecond = Device.getSystemTimestampFrequency();
+  if (TicksPerSecond == 0)
+    return 0.0;
+  return 1e9 / static_cast<double>(TicksPerSecond);
+}
+
 AMDGPUStreamTy::AMDGPUStreamTy(AMDGPUDeviceTy &Device)
-    : Agent(Device.getAgent()), Queue(nullptr),
-      SignalManager(Device.getSignalManager()), Device(Device),
+    : Agent(Device.getAgent()), TicksToTime(getTicksToTime(Device)),
+      Queue(nullptr), SignalManager(Device.getSignalManager()), Device(Device),
       // Initialize the std::deque with some empty positions.
       Slots(32), NextSlot(0), SyncCycle(0),
       StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()),
