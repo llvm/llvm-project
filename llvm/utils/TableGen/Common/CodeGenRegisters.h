@@ -327,6 +327,47 @@ inline bool operator!=(const CodeGenRegister &A, const CodeGenRegister &B) {
   return !(A == B);
 }
 
+/// Where a register sits among the registers of the RegisterSequence it
+/// belongs to.
+struct RegisterSequencePos {
+  /// Which of the declared sequences the register belongs to.
+  unsigned SeqIndex;
+
+  /// Position of the register within that sequence.
+  unsigned MemberIndex;
+};
+
+/// A run of registers spread evenly over one register sequence, each spanning
+/// the same number of its members. Register Index of the block spans the
+/// members starting at member Index * Step.
+///
+/// Such a block needs no per-register names: naming its first register and
+/// saying how many follow describes them all.
+struct CodeGenRegisterSequenceBlock {
+  /// Name of the block, after its sequence and the width of its registers.
+  std::string Name;
+
+  /// The first register of the block. The rest follow it in enumeration order.
+  const CodeGenRegister *FirstReg = nullptr;
+
+  /// Number of registers in the block.
+  unsigned Count = 0;
+
+  /// Member-index distance between the members that adjacent registers begin
+  /// at. Not every member begins a register: with a step of four, only every
+  /// fourth one does.
+  unsigned Step = 0;
+};
+
+/// Where a register sits among the registers of the block it belongs to.
+struct SeqBlockPos {
+  /// Which of the blocks the register belongs to.
+  unsigned BlockIndex;
+
+  /// Position of the register within that block.
+  unsigned Index;
+};
+
 class CodeGenRegisterClass {
   CodeGenRegister::Vec Members;
   // Bit mask of members, indexed by getRegIndex.
@@ -666,6 +707,32 @@ class CodeGenRegBank {
   DenseMap<const Record *, CodeGenRegister *> Def2Reg;
   unsigned NumNativeRegUnits;
 
+  // Sequence blocks, in order of their first register's enumeration value.
+  std::vector<CodeGenRegisterSequenceBlock> SeqBlocks;
+
+  // Where each register declared to belong to a RegisterSequence sits in it.
+  // Registers belonging to no sequence are absent.
+  DenseMap<const Record *, RegisterSequencePos> RegSeqPositions;
+
+  // For every synthesized register spanning consecutive members of a sequence:
+  // the RegisterTuples def that produced it, where in the sequence its members
+  // begin, and the name the block of such registers would take. Registers
+  // spanning no sequence, which a tuple is free to do, are absent.
+  struct SeqRegOrigin {
+    const Record *TuplesDef;
+    RegisterSequencePos Start;
+    std::string BlockName;
+  };
+  DenseMap<const Record *, SeqRegOrigin> SeqRegOrigins;
+
+  // The registers that belong to a block, and so need no names of their own.
+  // Each is mapped to where it sits: the index of its block in SeqBlocks, and
+  // its own index within that block.
+  DenseMap<const Record *, SeqBlockPos> SeqBlockMembers;
+
+  void computeRegSeqPositions();
+  void computeSeqBlocks();
+
   std::map<TopoSigId, unsigned> TopoSigs;
 
   // Includes native (0..NumNativeRegUnits-1) and adopted register units.
@@ -786,6 +853,48 @@ public:
                        const CodeGenHwModes &CGH);
 
   const std::deque<CodeGenRegister> &getRegisters() const { return Registers; }
+
+  /// The sequence blocks, ordered by their first register's enumeration value.
+  /// Empty unless the target declares register sequences.
+  ArrayRef<CodeGenRegisterSequenceBlock> getSeqBlocks() const {
+    return SeqBlocks;
+  }
+
+  /// Returns where the given register sits in the sequence it belongs to, or
+  /// nullptr if it belongs to none.
+  const RegisterSequencePos *getRegSeqPos(const Record *Reg) const {
+    auto I = RegSeqPositions.find(Reg);
+    return I == RegSeqPositions.end() ? nullptr : &I->second;
+  }
+
+  /// Records that the given synthesized register, produced by the given
+  /// RegisterTuples def, spans the sequence members starting at Start, and
+  /// that a block of such registers would go by BlockName.
+  void noteSeqRegOrigin(const Record *Reg, const Record *TuplesDef,
+                        RegisterSequencePos Start, StringRef BlockName) {
+    SeqRegOrigins.try_emplace(Reg,
+                              SeqRegOrigin{TuplesDef, Start, BlockName.str()});
+  }
+
+  /// Returns the block the given register belongs to and its index in it, or
+  /// nullptr if the register belongs to no block and so has an enumerator of
+  /// its own.
+  std::pair<const CodeGenRegisterSequenceBlock *, unsigned>
+  getSeqBlockMember(const Record *Reg) const {
+    auto I = SeqBlockMembers.find(Reg);
+    if (I == SeqBlockMembers.end())
+      return {nullptr, 0};
+    return {&SeqBlocks[I->second.BlockIndex], I->second.Index};
+  }
+
+  /// Returns the block the given register begins, or nullptr if it begins
+  /// none.
+  const CodeGenRegisterSequenceBlock *
+  getSeqBlockStartingAt(const CodeGenRegister *Reg) const {
+    auto I = llvm::find_if(
+        SeqBlocks, [&](const auto &Block) { return Block.FirstReg == Reg; });
+    return I == SeqBlocks.end() ? nullptr : &*I;
+  }
 
   const StringMap<CodeGenRegister *> &getRegistersByName() const {
     return RegistersByName;

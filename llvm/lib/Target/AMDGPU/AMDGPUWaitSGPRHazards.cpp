@@ -297,7 +297,7 @@ public:
           return;
 
         // Track SGPRs by pair -- numeric ID of an 64b SGPR pair.
-        // i.e. SGPR0 = SGPR0_64 = 0, SGPR3 = SGPR2_64 = 1, etc
+        // i.e. SGPR0 = s[0:1] = 0, SGPR3 = s[2:3] = 1, etc
         unsigned RegN = *RegNumber;
         unsigned PairN = (RegN >> 1) & 0x3f;
 

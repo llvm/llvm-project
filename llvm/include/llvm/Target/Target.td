@@ -495,9 +495,17 @@ class RegisterTuples<list<SubRegIndex> Indices, list<dag> Regs,
 //
 //   def : RegisterSequence<[R0, R1, R2, R3]>;
 //
-// Register tuples whose sub-registers are consecutive members of a sequence are
-// named after the first of those members and their total width in bits, for
-// example SGPR0_128, rather than after every sub-register they contain.
+// Registers that span consecutive members of a sequence are gathered into
+// blocks: one block per RegisterTuples def, holding the registers of one
+// width, evenly spaced along the sequence. Such a block is named after the
+// sequence and that width, for example SGPR_128, and reserves a run of the
+// register enumeration, so that none of its registers needs an enumerator, or
+// a name, of its own. They are reached through the block instead, by the
+// member they begin at, which reads as the name they would have had:
+// SGPR_128(48) is SGPR48_128.
+//
+// Tuples are free to hold registers that span no sequence, and those are named
+// after every sub-register they contain and form no block.
 class RegisterSequence<list<Register> Regs> {
   list<Register> MemberList = Regs;
   assert !ge(!size(MemberList), 2), "Sequences must have at least 2 registers";

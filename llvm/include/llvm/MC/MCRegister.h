@@ -107,6 +107,35 @@ public:
   }
 };
 
+/// A block of registers spread evenly over one register sequence, each
+/// spanning the same number of its members.
+///
+/// The registers of a block are enumerated in the order of the members they
+/// begin at, so naming the first of them and saying how many follow describes
+/// them all, and none of them needs an enumerator of its own.
+struct MCRegisterSequenceBlock {
+  /// The first register of the block.
+  MCRegister FirstReg;
+
+  /// The number of registers in the block.
+  unsigned Count;
+
+  /// The member-index distance between the members that adjacent registers
+  /// begin at. Not every member begins a register: where the step is four,
+  /// only every fourth one does.
+  unsigned Step;
+
+  /// Returns the register that begins at the given member of the sequence.
+  /// The block name and the member read together as the name of that register:
+  /// SGPR_64(30) is SGPR30_64.
+  constexpr MCRegister operator()(unsigned Member) const {
+    assert(Member % Step == 0 && "No register begins at this member.");
+    unsigned Index = Member / Step;
+    assert(Index < Count && "Register index out of range.");
+    return FirstReg.id() + Index;
+  }
+};
+
 // Provide DenseMapInfo for MCRegister
 template <> struct DenseMapInfo<MCRegister> {
   static unsigned getHashValue(const MCRegister &Val) {

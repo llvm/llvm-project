@@ -609,6 +609,11 @@ unsigned CodeGenRegister::getWeight(const CodeGenRegBank &RegBank) const {
 namespace {
 
 struct TupleExpander : SetTheory::Expander {
+  // The register bank the expanded tuples belong to. Consulted for the
+  // declared register sequences, and told which of the tuples span one and
+  // where in it they begin.
+  CodeGenRegBank &RegBank;
+
   // Reference to SynthDefs in the containing CodeGenRegBank, to keep track of
   // the synthesized definitions for their lifetime.
   std::vector<std::unique_ptr<Record>> &SynthDefs;
@@ -616,44 +621,32 @@ struct TupleExpander : SetTheory::Expander {
   // Track all synthesized tuple names in order to detect duplicate definitions.
   llvm::StringSet<> TupleNames;
 
-  // Maps each register to the one that follows it. Registers that end a
-  // sequence, or that belong to none, are absent.
-  DenseMap<const Record *, const Record *> NextRegister;
-
-  TupleExpander(const RecordKeeper &Records,
+  TupleExpander(CodeGenRegBank &RegBank,
                 std::vector<std::unique_ptr<Record>> &SynthDefs)
-      : SynthDefs(SynthDefs) {
-    for (const Record *Seq :
-         Records.getAllDerivedDefinitionsIfDefined("RegisterSequence")) {
-      std::vector<const Record *> Members =
-          Seq->getValueAsListOfDefs("MemberList");
-      for (const auto &[Reg, Next] : zip_equal(
-               ArrayRef(Members).drop_back(), ArrayRef(Members).drop_front())) {
-        const Record *&NextReg = NextRegister[Reg];
-        if (NextReg) {
-          PrintFatalError(Seq->getLoc(), "Register '" + Reg->getName() +
-                                             "' is already followed by '" +
-                                             NextReg->getName() + "'.");
-        }
-        NextReg = Next;
-      }
-    }
-  }
+      : RegBank(RegBank), SynthDefs(SynthDefs) {}
 
-  // Returns whether each of the given registers is followed by the next one,
-  // so that stating the first of them and how many there are describes them
-  // all. A lone register follows nothing, so it is not a sequence.
-  bool isSequence(ArrayRef<const Record *> Regs) const {
+  // Returns where the given registers begin in the sequence they are
+  // consecutive members of, so that stating that member and how many registers
+  // there are describes them all. A tuple is free to hold registers that
+  // follow one another in no sequence, and std::nullopt says that these do.
+  // A lone register follows nothing, so it is not a run.
+  std::optional<RegisterSequencePos>
+  getSequenceRun(ArrayRef<const Record *> Regs) const {
     if (Regs.size() < 2)
-      return false;
+      return std::nullopt;
 
-    for (const auto &[Reg, Next] :
-         zip_equal(Regs.drop_back(), Regs.drop_front())) {
-      if (NextRegister.lookup(Reg) != Next)
-        return false;
+    const RegisterSequencePos *First = RegBank.getRegSeqPos(Regs.front());
+    if (!First)
+      return std::nullopt;
+
+    for (const auto &[Offset, Reg] : enumerate(Regs.drop_front())) {
+      const RegisterSequencePos *Pos = RegBank.getRegSeqPos(Reg);
+      if (!Pos || Pos->SeqIndex != First->SeqIndex ||
+          Pos->MemberIndex != First->MemberIndex + Offset + 1)
+        return std::nullopt;
     }
 
-    return true;
+    return *First;
   }
 
   void expand(SetTheory &ST, const Record *Def,
@@ -697,12 +690,20 @@ struct TupleExpander : SetTheory::Expander {
       // the tuple after those rather than after every register in turn. Sum
       // the sub-register sizes rather than assuming they are all the same, so
       // that mixed-size index lists work.
-      std::string Name;
-      if (isSequence(Regs)) {
+      std::string Name, BlockName;
+      std::optional<RegisterSequencePos> Start = getSequenceRun(Regs);
+      if (Start) {
         int64_t Width = 0;
         for (const Record *Idx : Indices)
           Width += Idx->getValueAsInt("Size");
-        Name = (Regs.front()->getName() + "_" + Twine(Width)).str();
+        StringRef FirstName = Regs.front()->getName();
+        Name = (FirstName + "_" + Twine(Width)).str();
+
+        // Members of one sequence are named alike but for the index that tells
+        // them apart, so dropping that index from the name of the first member
+        // names them collectively. A block of registers spanning them goes by
+        // that name and their common width, for example SGPR_64.
+        BlockName = (FirstName.rtrim("0123456789") + "_" + Twine(Width)).str();
       } else {
         for (const auto &[i, Reg] : enumerate(Regs)) {
           if (i)
@@ -731,6 +732,11 @@ struct TupleExpander : SetTheory::Expander {
           std::make_unique<Record>(Name, Def->getLoc(), Def->getRecords()));
       Record *NewReg = SynthDefs.back().get();
       Elts.insert(NewReg);
+
+      // Remember where in its sequence the new register begins, so that
+      // registers that form a block can later be recognized as such.
+      if (Start)
+        RegBank.noteSeqRegOrigin(NewReg, Def, *Start, BlockName);
 
       // Detect duplicates among synthesized registers.
       const auto Res = TupleNames.insert(NewReg->getName());
@@ -1273,16 +1279,103 @@ CodeGenRegisterCategory::CodeGenRegisterCategory(CodeGenRegBank &RegBank,
 //                               CodeGenRegBank
 //===----------------------------------------------------------------------===//
 
+// Note where every register of every declared sequence sits in it.
+void CodeGenRegBank::computeRegSeqPositions() {
+  for (const auto &[SeqIndex, Seq] : enumerate(
+           Records.getAllDerivedDefinitionsIfDefined("RegisterSequence"))) {
+    for (const auto &[MemberIndex, Reg] :
+         enumerate(Seq->getValueAsListOfDefs("MemberList"))) {
+      auto [I, Inserted] = RegSeqPositions.try_emplace(
+          Reg, RegisterSequencePos{unsigned(SeqIndex), unsigned(MemberIndex)});
+      if (!Inserted) {
+        PrintFatalError(Seq->getLoc(), "Register '" + Reg->getName() +
+                                           "' already belongs to a sequence.");
+      }
+    }
+  }
+}
+
+// Gather the registers that span consecutive members of a sequence into
+// blocks.
+//
+// The registers one RegisterTuples def produces from one sequence form a block
+// if they are enumerated one after another, begin at the start of the
+// sequence, and are evenly spaced along it. Then the first of them and their
+// number say what every one of them spans, and none of them needs a name of
+// its own. Registers that meet none of this get no block, and keep their
+// names.
+void CodeGenRegBank::computeSeqBlocks() {
+  // Walk the registers in enumeration order, collecting each run of registers
+  // of common origin, so that runs are seen whole and in order.
+  std::vector<const CodeGenRegister *> Run;
+  const Record *RunDef = nullptr;
+
+  auto FinishRun = [&] {
+    // We need at least two registers to tell the spacing between them.
+    if (Run.size() < 2)
+      return Run.clear();
+
+    const RegisterSequencePos &First = SeqRegOrigins.at(Run[0]->TheDef).Start;
+    unsigned Step = SeqRegOrigins.at(Run[1]->TheDef).Start.MemberIndex;
+
+    // The registers must all come from the one sequence and tile it from its
+    // first member on, so that the Index'th of them spans the members starting
+    // at member Index * Step.
+    bool IsBlock = First.MemberIndex == 0 && Step != 0 &&
+                   all_of(enumerate(Run), [&](const auto &IndexAndReg) {
+                     const auto &[Index, Reg] = IndexAndReg;
+                     const RegisterSequencePos &Start =
+                         SeqRegOrigins.at(Reg->TheDef).Start;
+                     return Start.SeqIndex == First.SeqIndex &&
+                            Start.MemberIndex == Index * Step;
+                   });
+
+    if (IsBlock) {
+      unsigned BlockIndex = SeqBlocks.size();
+      SeqBlocks.push_back({SeqRegOrigins.at(Run.front()->TheDef).BlockName,
+                           Run.front(), unsigned(Run.size()), Step});
+      for (const auto &[Index, Reg] : enumerate(Run))
+        SeqBlockMembers.try_emplace(Reg->TheDef,
+                                    SeqBlockPos{BlockIndex, unsigned(Index)});
+    }
+
+    Run.clear();
+  };
+
+  for (const CodeGenRegister &Reg : Registers) {
+    auto Origin = SeqRegOrigins.find(Reg.TheDef);
+    const Record *TuplesDef =
+        Origin == SeqRegOrigins.end() ? nullptr : Origin->second.TuplesDef;
+
+    // Any change of origin, including to no origin at all, ends the run. We
+    // walk the registers in enumeration order, so the registers of a run are
+    // enumerated one after another.
+    if (TuplesDef != RunDef) {
+      FinishRun();
+      RunDef = TuplesDef;
+    }
+
+    if (TuplesDef)
+      Run.push_back(&Reg);
+  }
+
+  FinishRun();
+}
+
 CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
                                const CodeGenHwModes &Modes,
                                const bool RegistersAreIntervals)
     : Records(Records), CGH(Modes),
       RegistersAreIntervals(RegistersAreIntervals) {
+  // Take note of the declared register sequences, so that registers spanning
+  // consecutive members of one can be recognized as they are expanded.
+  computeRegSeqPositions();
+
   // Configure register Sets to understand register classes and tuples.
   Sets.addFieldExpander("RegisterClass", "MemberList");
   Sets.addFieldExpander("CalleeSavedRegs", "SaveList");
   Sets.addExpander("RegisterTuples",
-                   std::make_unique<TupleExpander>(Records, SynthDefs));
+                   std::make_unique<TupleExpander>(*this, SynthDefs));
 
   // Read in the user-defined (named) sub-register indices.
   // More indices will be synthesized later.
@@ -1325,6 +1418,9 @@ CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
         getReg(RC);
     }
   }
+
+  // Now that the tuples are numbered, see which of them form blocks.
+  computeSeqBlocks();
 
   // Now all the registers are known. Build the object graph of explicit
   // register-register references.

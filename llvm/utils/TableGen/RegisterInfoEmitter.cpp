@@ -111,6 +111,8 @@ public:
   void debugDump(raw_ostream &OS);
 
 private:
+  std::string getRegName(const Record *Reg) const;
+
   void EmitRegMapping(raw_ostream &OS, const std::deque<CodeGenRegister> &Regs,
                       bool isCtor);
   void EmitRegMappingTables(raw_ostream &OS,
@@ -122,6 +124,34 @@ private:
 };
 
 } // end anonymous namespace
+
+// The enumerator that reserves the given block. Named after the block, so as
+// not to name any one register of it, and set apart from the block itself,
+// which goes by the plain name.
+static std::string getSeqBlockEnumName(const CodeGenRegisterSequenceBlock &B) {
+  return B.Name + "_SEQ";
+}
+
+// The name to refer to the given register by. Registers of a sequence block
+// have no names of their own, so refer to them by the enumerator that reserves
+// their block and how far into it they sit.
+std::string RegisterInfoEmitter::getRegName(const Record *Reg) const {
+  auto [Block, Index] = RegBank.getSeqBlockMember(Reg);
+  if (!Block)
+    return getQualifiedName(Reg);
+
+  // The enumerator is qualified the way the register itself would have been.
+  std::string Name = getSeqBlockEnumName(*Block);
+  if (Reg->getValue("Namespace")) {
+    StringRef NS = Reg->getValueAsString("Namespace");
+    if (!NS.empty())
+      Name = NS.str() + "::" + Name;
+  }
+
+  if (Index != 0)
+    Name += " + " + utostr(Index);
+  return Name;
+}
 
 static void emitInclude(StringRef FilenamePrefix, StringRef IncludeFile,
                         StringRef GuardMacro, raw_ostream &OS) {
@@ -143,6 +173,10 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS, raw_ostream &MainOS,
 
   emitSourceFileHeader("Target Register Enum Values", OS);
 
+  // Sequence blocks are emitted as objects, not as enumerators.
+  if (!RegBank.getSeqBlocks().empty())
+    OS << "#include \"llvm/MC/MCRegister.h\"\n\n";
+
   NamespaceEmitter LlvmNS(OS, "llvm");
 
   OS << "class MCRegisterClass;\n";
@@ -153,12 +187,35 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS, raw_ostream &MainOS,
     NamespaceEmitter RegNS(OS, Namespace);
     OS << "enum : unsigned {\n  NoRegister,\n";
 
-    for (const auto &Reg : Registers)
-      OS << "  " << Reg.getName() << " = " << Reg.EnumValue << ",\n";
+    // The registers of a sequence block are enumerated one after another, so
+    // one enumerator naming the first of them reserves the whole block. The
+    // registers themselves are then reached through the block, and none of
+    // them needs an enumerator of its own.
+    for (const auto &Reg : Registers) {
+      const CodeGenRegisterSequenceBlock *Block =
+          RegBank.getSeqBlockStartingAt(&Reg);
+      if (Block) {
+        OS << "  " << getSeqBlockEnumName(*Block) << " = " << Reg.EnumValue
+           << ", // " << Block->Count << " registers.\n";
+      } else if (!RegBank.getSeqBlockMember(Reg.TheDef).first) {
+        OS << "  " << Reg.getName() << " = " << Reg.EnumValue << ",\n";
+      }
+    }
     assert(Registers.size() == Registers.back().EnumValue &&
            "Register enum value mismatch!");
-    OS << "  NUM_TARGET_REGS // " << Registers.size() + 1 << "\n";
+    // Give the value explicitly. The preceding enumerator may be a sequence
+    // block that stands for many registers, in which case the implicit value
+    // would be too small.
+    OS << "  NUM_TARGET_REGS = " << Registers.size() + 1 << "\n";
     OS << "};\n";
+
+    // Emit the blocks themselves, so that their registers can be named by
+    // where they begin rather than one by one.
+    for (const CodeGenRegisterSequenceBlock &Block : RegBank.getSeqBlocks()) {
+      OS << "constexpr MCRegisterSequenceBlock " << Block.Name << " = {"
+         << getSeqBlockEnumName(Block) << ", " << Block.Count << ", "
+         << Block.Step << "};\n";
+    }
   }
 
   const auto &RegisterClasses = RegBank.getRegClasses();
@@ -481,8 +538,7 @@ void RegisterInfoEmitter::EmitRegMappingTables(
         }
 
         for (auto &I : Dwarf2LMap)
-          OS << "  { " << I.first << "U, " << getQualifiedName(I.second)
-             << " },\n";
+          OS << "  { " << I.first << "U, " << getRegName(I.second) << " },\n";
 
         OS << "};\n";
       } else {
@@ -539,7 +595,7 @@ void RegisterInfoEmitter::EmitRegMappingTables(
           if (RegNo == -1) // -1 is the default value, don't emit a mapping.
             continue;
 
-          OS << "  { " << getQualifiedName(DwarfRegNum.first) << ", " << RegNo
+          OS << "  { " << getRegName(DwarfRegNum.first) << ", " << RegNo
              << "U },\n";
         }
         OS << "};\n";
@@ -1092,7 +1148,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     OS << "  { ";
     ListSeparator LS;
     for (const CodeGenRegister *R : Roots)
-      OS << LS << getQualifiedName(R->TheDef);
+      OS << LS << getRegName(R->TheDef);
     OS << " },\n";
   }
   OS << "};\n\n";
@@ -1266,7 +1322,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
       continue;
     OS << "    /* " << StartIndices[Idx].RegIdx << " */ ";
     for (const Record *Reg : Order)
-      OS << getQualifiedName(Reg) << ", ";
+      OS << getRegName(Reg) << ", ";
     OS << "\n";
   }
 
@@ -1383,7 +1439,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
         if (RegByMode.hasMode(M)) {
           const CodeGenRegister *R = RegByMode.get(M);
           OS << indent(2) << "case " << M << ": return "
-             << getQualifiedName(R->TheDef) << "; // "
+             << getRegName(R->TheDef) << "; // "
              << Target.getHwModes().getModeName(M, true) << "\n";
         }
       }
@@ -1627,7 +1683,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
           if (!Elems.empty()) {
             OS << "  static const MCPhysReg AltOrder" << oi << "[] = {";
             for (unsigned elem = 0; elem != Elems.size(); ++elem)
-              OS << (elem ? ", " : " ") << getQualifiedName(Elems[elem]);
+              OS << (elem ? ", " : " ") << getRegName(Elems[elem]);
             OS << " };\n";
           }
         }
@@ -1933,7 +1989,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
     // Emit the *_SaveList list of callee-saved registers.
     OS << "static const MCPhysReg " << CSRSet->getName() << "_SaveList[] = { ";
     for (const Record *Reg : *Regs)
-      OS << getQualifiedName(Reg) << ", ";
+      OS << getRegName(Reg) << ", ";
     OS << "0 };\n";
 
     // Emit the *_RegMask bit mask of call-preserved registers.
@@ -2038,7 +2094,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
      << "  return\n";
   for (const auto &Reg : Regs)
     if (Reg.Constant)
-      OS << "      PhysReg == " << getQualifiedName(Reg.TheDef) << " ||\n";
+      OS << "      PhysReg == " << getRegName(Reg.TheDef) << " ||\n";
   OS << "      false;\n";
   OS << "}\n\n";
 

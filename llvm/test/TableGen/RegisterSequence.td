@@ -2,10 +2,10 @@
 // RUN: not llvm-tblgen -gen-register-info -I %p/../../include -I %p/Common \
 // RUN:   -DOVERLAP %s 2>&1 | FileCheck %s --check-prefix=OVERLAP
 
-// Check that tuples made of consecutive members of a register sequence are
-// named after the first of those members and their width, while tuples that
-// hold registers that do not follow one another keep being named after every
-// sub-register they contain.
+// Check that registers spanning consecutive members of a register sequence are
+// gathered into blocks, so that one enumerator reserves them all and none of
+// them needs a name of its own, while tuples that hold registers that do not
+// follow one another keep being named after every sub-register they contain.
 
 include "llvm/Target/Target.td"
 
@@ -71,36 +71,44 @@ def GPR64Spaced : RegisterClass<"TestTarget", [v2i32], 64, (add R64Spaced)>;
 def OtherGPR64 : RegisterClass<"TestTarget", [v2i32], 64, (add RX64)>;
 
 #ifdef OVERLAP
-// A register is followed by at most one register, so it may only be stated
-// once which one that is. Note that the last member of a sequence is followed
-// by nothing, so sequences may still be chained at their ends.
+// A register sits in one place of one sequence, so it may belong to no more
+// than one of them.
 def : RegisterSequence<[R2, R5]>;
 
-// OVERLAP: error: Register 'R2' is already followed by 'R3'.
+// OVERLAP: error: Register 'R2' already belongs to a sequence.
 #endif
 
-// Consecutive registers are named after the first of them and the width.
-// CHECK:      R0_64 = {{[0-9]+}},
-// CHECK-NEXT: R2_64 = {{[0-9]+}},
-// CHECK-NEXT: R4_64 = {{[0-9]+}},
-// CHECK-NEXT: R6_64 = {{[0-9]+}},
+// The four pairs of consecutive registers follow one another in the register
+// enumeration, so a single enumerator reserves them all.
+// CHECK:      R_64_SEQ = {{[0-9]+}}, // 4 registers.
 
 // Spaced registers do not follow one another, so they keep the longer names.
 // CHECK-NEXT: R0_R2 = {{[0-9]+}},
 // CHECK-NEXT: R2_R4 = {{[0-9]+}},
 // CHECK-NEXT: R4_R6 = {{[0-9]+}},
 
-// Quads of consecutive registers, told from the pairs by their width.
-// CHECK-NEXT: R0_128 = {{[0-9]+}},
-// CHECK-NEXT: R4_128 = {{[0-9]+}},
+// Quads of consecutive registers form a block of their own, told from the
+// pairs above by their width.
+// CHECK-NEXT: R_128_SEQ = {{[0-9]+}}, // 2 registers.
 
 // Registers that belong to no sequence keep the longer names as well.
 // CHECK-NEXT: RA_RB = {{[0-9]+}},
 // CHECK-NEXT: RC_RD = {{[0-9]+}},
 
-// The names the registers are known by are the shorter ones. Their asm names,
-// given as r[0:1] and so on above, are a separate matter and are emitted
-// elsewhere.
+// The blocks themselves, through which their registers are reached. The step
+// is the member-index distance between the members that adjacent registers
+// begin at: every second member begins a pair, every fourth one a quad.
+// CHECK:      constexpr MCRegisterSequenceBlock R_64 = {R_64_SEQ, 4, 2};
+// CHECK-NEXT: constexpr MCRegisterSequenceBlock R_128 = {R_128_SEQ, 2, 4};
+
+// The registers of a block still go by the shorter names, which is what a
+// register of a block prints as. Their asm names, given as r[0:1] and so on
+// above, are a separate matter and are emitted elsewhere.
 // CHECK: TestTargetRegStrings[]
 // CHECK: "R0_64\000"
 // CHECK: "R0_128\000"
+
+// Having no enumerators of their own, registers of a block are referred to by
+// the one that reserves the block and how far into it they sit. Here, the four
+// pairs among the members of GPR64.
+// CHECK:      /* 12 */ R_64_SEQ, R_64_SEQ + 1, R_64_SEQ + 2, R_64_SEQ + 3,

@@ -4236,7 +4236,7 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
 
 MCRegister SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const {
   // Not a callee saved register.
-  return AMDGPU::SGPR30_64;
+  return AMDGPU::SGPR_64(30);
 }
 
 const TargetRegisterClass *

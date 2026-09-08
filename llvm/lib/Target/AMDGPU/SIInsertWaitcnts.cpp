@@ -3758,12 +3758,12 @@ bool SIInsertWaitcnts::run() {
       //   V_NOP
       //   GLOBAL_PREFETCH_B8 V0, S[64:65] SCOPE:SCOPE_SE TH:TH_LOAD_RT
       BuildMI(EntryBB, InsertPt, DebugLoc(), TII.get(AMDGPU::S_MOV_B64),
-              AMDGPU::SGPR64_64)
+              AMDGPU::SGPR_64(64))
           .addImm(0);
       BuildMI(EntryBB, InsertPt, DebugLoc(), TII.get(AMDGPU::V_NOP_e32));
       BuildMI(EntryBB, InsertPt, DebugLoc(),
               TII.get(AMDGPU::GLOBAL_PREFETCH_B8_SADDR))
-          .addReg(AMDGPU::SGPR64_64)
+          .addReg(AMDGPU::SGPR_64(64))
           .addReg(AMDGPU::VGPR0, RegState::Undef)
           .addImm(0)
           .addImm(AMDGPU::CPol::SCOPE_SE | AMDGPU::CPol::TH_RT);
