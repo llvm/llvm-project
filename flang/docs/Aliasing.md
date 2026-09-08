@@ -284,7 +284,9 @@ end
 By default, optimizations assume that Cray pointers do not alias other
 variables unless the association is visible in the same procedure. In the
 above example, `ptr = loc(target)` causes accesses through `handle` and
-`target` to be treated as potentially aliasing.
+`target` to be treated as potentially aliasing. Lowering gives `target` the
+TARGET attribute in FIR so that this information is available to all FIR
+optimizations.
 
 In order to disable optimizations that assume that there is no aliasing between
 Cray pointer targets and entities they alias with when the association is not
