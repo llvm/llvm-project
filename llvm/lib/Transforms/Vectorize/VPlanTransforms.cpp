@@ -1717,9 +1717,7 @@ void VPlanTransforms::combineRecipes(VPlan &Plan) {
       // Replace the recipe with a new one.
       Def->replaceAllUsesWith(New);
       Def->eraseFromParent();
-      if (auto *NewR =
-              dyn_cast_if_present<VPSingleDefRecipe>(New->getDefiningRecipe()))
-        Worklist.push_back(NewR);
+      Worklist.push_back(New);
       // TODO: Append users to the worklist (might need a setvector)
     } else if (vputils::isDeadRecipe(*Def)) {
       // Recipe was modified - it may be dead now.
