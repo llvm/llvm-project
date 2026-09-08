@@ -13,6 +13,5 @@
 //===---------------------------------------------------------------------===//
 
   * Only SH2 level codegen is implemented.
-  * O1 compilation fails due to misgenerated fallthrough MBBs
   * 64-bit integers are not handled.
   * Varargs are not implemented.

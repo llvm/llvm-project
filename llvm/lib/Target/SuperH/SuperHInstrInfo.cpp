@@ -190,29 +190,32 @@ void SuperHInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBl
                                           Register SrcReg, bool isKill, int FrameIndex, 
                                           const TargetRegisterClass *RC, Register VReg, 
                                           MachineInstr::MIFlag Flags) const {
-  LLVM_DEBUG(dbgs() << "Store " << RI.getName(SrcReg) << " to slot " << FrameIndex << "\n");
-  
+
   MachineInstr &MI = *II;
+  const MachineFunction &MF = *MBB.getParent();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  uint ObjectSize = MFI.getObjectSize(FrameIndex);
   DebugLoc DL = MI.getDebugLoc();
+
+  LLVM_DEBUG(dbgs() << "Store " << RI.getName(SrcReg) 
+                    << " to slot " << FrameIndex
+                    << " size=" << ObjectSize << "\n");
+
   if (RI.isTypeLegalForClass(*RC, MVT::i8)) {
     BuildMI(MBB, II, DebugLoc(), get(SH::MOVBSFR))
-        .addReg(SrcReg, getKillRegState(isKill))
-        .addFrameIndex(FrameIndex)
-        .addImm(0)
-        .addDef(SH::R0)
-        .addUse(SH::R0);
+      .addReg(SrcReg, getKillRegState(isKill))
+      .addFrameIndex(FrameIndex)
+      .addImm(0);
   } else if (RI.isTypeLegalForClass(*RC, MVT::i16)) {
     BuildMI(MBB, II, DebugLoc(), get(SH::MOVWSFR))
-        .addReg(SrcReg, getKillRegState(isKill))
-        .addFrameIndex(FrameIndex)
-        .addImm(0)
-        .addDef(SH::R0)
-        .addUse(SH::R0);
+      .addReg(SrcReg, getKillRegState(isKill))
+      .addFrameIndex(FrameIndex)
+      .addImm(0);
   } else if (RI.isTypeLegalForClass(*RC, MVT::i32)) {
     BuildMI(MBB, II, DebugLoc(), get(SH::MOVLSFR))
-        .addReg(SrcReg, getKillRegState(isKill))
-        .addFrameIndex(FrameIndex)
-        .addImm(0);
+      .addReg(SrcReg, getKillRegState(isKill))
+      .addFrameIndex(FrameIndex)
+      .addImm(0);
   } else {
     llvm_unreachable("Cannot store this register into stack slot!");
   }
@@ -222,28 +225,35 @@ void SuperHInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicB
                                            Register DestReg, int FrameIndex, 
                                            const TargetRegisterClass *RC, Register VReg,
                                            unsigned SubReg, MachineInstr::MIFlag Flags) const {
-  LLVM_DEBUG(dbgs() << "Load " << RI.getName(DestReg) << " from slot " << FrameIndex << "\n");
 
   MachineInstr &MI = *II;
+  const MachineFunction &MF = *MBB.getParent();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  uint ObjectSize = MFI.getObjectSize(FrameIndex);
   DebugLoc DL = MI.getDebugLoc();
+
+  // HACK: This is ugly but it works.. somehow.
+  II = std::next(II);
+  II = std::next(II);
+
+  LLVM_DEBUG(dbgs() << "Load " << RI.getName(DestReg) 
+                    << " from slot " << FrameIndex
+                    << " size=" << ObjectSize << "\n");
+
   if (RI.isTypeLegalForClass(*RC, MVT::i8)) {
     BuildMI(MBB, II, DebugLoc(), get(SH::MOVBLFR), DestReg)
-        .addFrameIndex(FrameIndex)
-        .addImm(0)
-        .addDef(SH::R0)
-        .addUse(SH::R0);
+      .addFrameIndex(FrameIndex)
+      .addImm(0);
 
   } else if (RI.isTypeLegalForClass(*RC, MVT::i16)) {
     BuildMI(MBB, II, DebugLoc(), get(SH::MOVWLFR), DestReg)
-        .addFrameIndex(FrameIndex)
-        .addImm(0)
-        .addDef(SH::R0)
-        .addUse(SH::R0);
+      .addFrameIndex(FrameIndex)
+      .addImm(0);
 
   } else if (RI.isTypeLegalForClass(*RC, MVT::i32)) {
     BuildMI(MBB, II, DebugLoc(), get(SH::MOVLLFR), DestReg)
-        .addFrameIndex(FrameIndex)
-        .addImm(0);
+      .addFrameIndex(FrameIndex)
+      .addImm(0);
   } else {
     llvm_unreachable("Cannot load this register from stack slot!");
   }
