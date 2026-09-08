@@ -2118,6 +2118,11 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
     MI.setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
     for (int j = MI.getNumOperands() - 1, ee = 0; j > ee; --j)
       MI.removeOperand(j);
+    // The dead def of DstReg is left in place, so its live range is still
+    // correct. Drop it from the repaired set; repairIntervalsInRange would
+    // otherwise re-add an overlapping segment for the unchanged def.
+    if (LIS)
+      llvm::erase(OrigRegs, DstReg);
   } else {
     if (LIS) {
       // Force live interval recomputation if we moved to a partial definition
