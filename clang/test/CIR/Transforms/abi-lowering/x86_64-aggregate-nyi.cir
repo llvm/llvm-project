@@ -4,6 +4,7 @@
 !s16i = !cir.int<s, 16>
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
+!s128i = !cir.int<s, 128>
 !u8i = !cir.int<u, 8>
 !u32i = !cir.int<u, 32>
 !u64i = !cir.int<u, 64>
@@ -15,9 +16,26 @@
 !rec_ZeroLenArr = !cir.struct<"ZeroLenArr" packed {data !s8i, empty !cir.array<!s32i x 0>}>
 !rec_UPadByte = !cir.union<"UPadByte" {data !u8i}, padding = {!cir.array<!u8i x 3>}>
 !rec_E = !cir.struct<"E" {pad !u8i}>
-!rec_UBitEmpty =
-    !cir.union<"UBitEmpty" {data !cir.array<!rec_E x 4>,
-                            bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 8>]>}>
+!rec_UBitOverAligned =
+    !cir.union<"UBitOverAligned" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 3>]>},
+               padding = {!cir.array<!u8i x 7>}>
+!rec_UBitIntUnit =
+    !cir.union<"UBitIntUnit" {bitfield !cir.bitfield<!cir.array<!u8i x 9>,
+                                                     [#cir.bitfield_decl<!cir.int<s, 72, bitint>, 70>]>},
+               padding = {!cir.array<!u8i x 7>}>
+!rec_UBitWideDecl =
+    !cir.union<"UBitWideDecl" {bitfield !cir.bitfield<!cir.array<!u8i x 13>,
+                                                      [#cir.bitfield_decl<!s128i, 100>]>},
+               padding = {!cir.array<!u8i x 3>}>
+!rec_UMultiDecl =
+    !cir.union<"UMultiDecl" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s8i, 4>,
+                                                           #cir.bitfield_decl<!s32i, 4>]>},
+               padding = {!cir.array<!u8i x 3>}>
+!rec_UNamedPlusUnnamedSpan =
+    !cir.union<"UNamedPlusUnnamedSpan" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 3>]>,
+                                        empty !cir.bitfield<!cir.array<!u8i x 5>,
+                                                            [#cir.bitfield_decl<!s64i, 40, unnamed>]>},
+               padding = {!cir.array<!u8i x 3>}>
 !rec_UBitUnnamed =
     !cir.union<"UBitUnnamed" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 8>]>,
                               empty !cir.bitfield<!u64i, [#cir.bitfield_decl<!s64i, 64, unnamed>]>}>
@@ -101,15 +119,51 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.union<"UPadByte"
 
-  // A bit-field access unit's width can understate the bit-fields it holds.
-  // Here the only member that spans the union (the empty-record array)
-  // supplies no bytes, so the unit alone would coerce to i8 where classic
-  // gives i32.
-  cir.func @take_bitfield_empty_span(%arg0: !rec_UBitEmpty) {
+  // A bit-field's declared type reaches past its access unit, but `int` still
+  // leaves 4 of this union's 8 bytes to nothing at all.
+  cir.func @take_bitfield_over_aligned_union(%arg0: !rec_UBitOverAligned) {
     cir.return
   }
 
-  // CHECK: not yet implemented for type '!cir.union<"UBitEmpty"
+  // CHECK: not yet implemented for type '!cir.union<"UBitOverAligned"
+
+  // Past one eightbyte the declared extent settles nothing: the coercion
+  // follows this 9-byte unit and would give i8 for the second eightbyte,
+  // where classic sizes it from the record and gives i64.
+  cir.func @take_bitint_unit_union(%arg0: !rec_UBitIntUnit) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UBitIntUnit"
+
+  // A 13-byte unit does land on classic's i64 here, but by covering 5 bytes of
+  // the second eightbyte itself rather than through the declaration the basis
+  // skipped, so this is refused alongside the case above.
+  cir.func @take_wide_decl_union(%arg0: !rec_UBitWideDecl) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UBitWideDecl"
+
+  // A unit's second declaration is a field of its own at a nonzero offset, so
+  // covering the union from there would put that field past the union's bytes.
+  // A unit holding more than one declaration is refused outright rather than
+  // credited for the `int` here, which starts a byte in.
+  cir.func @take_multi_decl_union(%arg0: !rec_UMultiDecl) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UMultiDecl"
+
+  // Unlike take_bitfield_unnamed_span below, the unnamed-only unit here covers
+  // the union only through its declared `long long`, its storage being 5 of
+  // the 8 bytes.  It still supplies no data, and the named unit that does
+  // stops at 4.
+  cir.func @take_named_plus_unnamed_span(%arg0: !rec_UNamedPlusUnnamedSpan) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UNamedPlusUnnamedSpan"
 
   // The spanning member here is an access unit holding only unnamed
   // bit-fields, which supplies no data either, so the named unit alone would

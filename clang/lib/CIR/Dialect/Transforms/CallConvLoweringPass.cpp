@@ -76,12 +76,14 @@ namespace {
 // Integer (including `_BitInt` up to 128 bits) / pointer / vtable pointer /
 // bool / floating-point scalars are handled, as are struct / union / array
 // aggregates, `_Complex`, and a fixed-width vector whose width is a power
-// of two.  Other vectors, a padded record reached through a named bit-field
-// access unit, a record holding an empty-for-ABI member that occupies bytes
-// or a zero-sized one off its own alignment, a union no member of which spans
-// its declared size, and a union with a bit-field access unit no spanning
-// member of which supplies data are reported NYI by classifyX86_64Function
-// so an unsupported signature fails the pass instead of being misclassified.
+// of two.  Other vectors, a record holding an empty-for-ABI member that
+// occupies bytes or a zero-sized one off its own alignment, a union no member
+// of which spans its declared size (a single-declaration bit-field member
+// counting as far as its declared type extends, and only for a union of one
+// eightbyte or less), and a union with a named bit-field access unit no
+// spanning member of which supplies data are reported NYI by
+// classifyX86_64Function so an unsupported signature fails the pass instead of
+// being misclassified.
 //===----------------------------------------------------------------------===//
 
 /// Whether a struct's declared argument-passing kind (from the module's
@@ -234,8 +236,27 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
         if (recordBits > 128)
           return false;
       } else {
+        // A bit-field's declared type can extend past the unit that stores
+        // it, and it is that declared extent which accounts for bytes a
+        // narrower unit leaves looking like padding.  Only a declared extent
+        // may overshoot the union, which stored bytes never do, so it is the
+        // one compared without an equality.
+        //
+        // It settles only the first eightbyte, though.  Past that the coerce
+        // type follows the stored unit rather than the declaration, since
+        // reduceUnionForX8664 chooses the basis from the fields the union
+        // stores.
+        const bool declaredExtentCounts = recordBits <= 64;
         auto spansRecord = [&](mlir::Type m) {
-          return dl.getTypeSizeInBits(m).getFixedValue() == recordBits;
+          if (dl.getTypeSizeInBits(m).getFixedValue() == recordBits)
+            return true;
+          if (!declaredExtentCounts)
+            return false;
+          auto bfTy = dyn_cast<cir::BitFieldType>(m);
+          if (!bfTy)
+            return false;
+          std::optional<uint64_t> extentBits = bfTy.getDeclaredExtentInBits(dl);
+          return extentBits && *extentBits >= recordBits;
         };
         if (!llvm::any_of(members, spansRecord))
           return false;

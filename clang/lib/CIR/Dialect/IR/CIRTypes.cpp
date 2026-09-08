@@ -1487,6 +1487,14 @@ BitFieldType::getABIAlignment(const mlir::DataLayout &dataLayout,
   return 1;
 }
 
+std::optional<uint64_t> BitFieldType::getDeclaredExtentInBits(
+    const mlir::DataLayout &dataLayout) const {
+  if (getFields().size() != 1)
+    return std::nullopt;
+  return dataLayout.getTypeSizeInBits(getFields().front().getDeclaredType())
+      .getFixedValue();
+}
+
 //===----------------------------------------------------------------------===//
 // VectorType Definitions
 //===----------------------------------------------------------------------===//

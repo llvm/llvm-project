@@ -43,11 +43,24 @@
 !u32i = !cir.int<u, 32>
 !rec_UBitSpans = !cir.union<"UBitSpans" {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 20>]>}>
 !rec_UBitPlusLong = !cir.union<"UBitPlusLong" {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 20>]>, data !s64i}>
+!s16i = !cir.int<s, 16>
+!rec_UBitExtent = !cir.union<"UBitExtent" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 3>]>}, padding = {!cir.array<!u8i x 3>}>
+!rec_UBitExtentWide = !cir.union<"UBitExtentWide" {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s64i, 32>]>, data !s32i}, padding = {!cir.array<!u8i x 4>}>
+!rec_UBitArrayUnit = !cir.union<"UBitArrayUnit" {bitfield !cir.bitfield<!cir.array<!u8i x 3>, [#cir.bitfield_decl<!s32i, 20>]>}, padding = {!u8i}>
+!rec_UTwoBitUnits = !cir.union<"UTwoBitUnits" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 3>]>, bitfield !cir.bitfield<!cir.array<!u8i x 5>, [#cir.bitfield_decl<!s64i, 40>]>}, padding = {!cir.array<!u8i x 3>}>
+!rec_UUnnamedBitExtent = !cir.union<"UUnnamedBitExtent" {empty !cir.bitfield<!cir.array<!u8i x 3>, [#cir.bitfield_decl<!s32i, 20, unnamed>]>, data !s16i}, padding = {!cir.array<!u8i x 2>}>
+!rec_UBitEmptySpan = !cir.union<"UBitEmptySpan" {data !cir.array<!rec_E x 4>, bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 8>]>}>
+!rec_UBitExtentPacked = !cir.union<"UBitExtentPacked" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s64i, 3>]>}>
+!rec_UOvershoot = !cir.union<"UOvershoot" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s64i, 3>]>}, padding = {!u8i}>
+!rec_UBitNoRegs = !cir.union<"UBitNoRegs" {bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s32i, 3>]>}, padding = {!cir.array<!u8i x 3>}>
 
 module attributes {
   cir.triple = "x86_64-unknown-linux-gnu",
   cir.record_layouts = {
     UNoRegs = #cir.record_layout<
+      arg_passing_kind = cannot_pass_in_regs, has_trivial_dtor = false,
+      record_align = 4>,
+    UBitNoRegs = #cir.record_layout<
       arg_passing_kind = cannot_pass_in_regs, has_trivial_dtor = false,
       record_align = 4>,
     UBigOverAligned = #cir.record_layout<
@@ -339,6 +352,96 @@ module attributes {
 
   // CHECK: cir.func{{.*}} @take_bit_plus_long(%arg0: !s64i)
 
+  // The access unit is one byte where the union is four, and the `int` the
+  // bit-field was declared with is what accounts for the rest.
+  cir.func @take_bit_extent(%arg0: !rec_UBitExtent) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_bit_extent(%arg0: !u32i)
+
+  // The declared `long long` reaches all 8 bytes where the sibling `int` and
+  // the 4-byte unit both stop at 4.
+  cir.func @take_bit_extent_wide(%arg0: !rec_UBitExtentWide) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_bit_extent_wide(%arg0: !u64i)
+
+  // A 20-bit field takes a 3-byte unit, so the unit is an array rather than an
+  // integer.
+  cir.func @take_bit_array_unit(%arg0: !rec_UBitArrayUnit) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_bit_array_unit(%arg0: !u32i)
+  // CHECK:   %[[SLOT:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!u32i>
+  // CHECK:   cir.store %arg0, %[[SLOT]] : !u32i, !cir.ptr<!u32i>
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!u32i> -> !cir.ptr<!rec_UBitArrayUnit>
+  // CHECK:   %{{.*}} = cir.load %[[CAST]] : !cir.ptr<!rec_UBitArrayUnit>, !rec_UBitArrayUnit
+
+  // Each variant of a union is its own access unit, so the two bit-fields here
+  // do not share one.  The widest declaration among them is what counts.
+  cir.func @take_two_bit_units(%arg0: !rec_UTwoBitUnits) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_two_bit_units(%arg0: !u64i)
+
+  // An access unit of nothing but unnamed bit-fields is marked empty rather
+  // than bitfield.
+  cir.func @take_unnamed_bit_extent(%arg0: !rec_UUnnamedBitExtent) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_unnamed_bit_extent(%arg0: !u32i)
+
+  // The empty-record array covers the union but supplies no data, so the
+  // bit-field has to cover it too, which it does through its declared type.
+  cir.func @take_bit_empty_span(%arg0: !rec_UBitEmptySpan) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_bit_empty_span(%arg0: !u32i)
+
+  // Packed, so the one-byte unit covers this union without help from the
+  // declared `long long`.
+  cir.func @take_bit_extent_packed(%arg0: !rec_UBitExtentPacked) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_bit_extent_packed(%arg0: !u8i)
+
+  // Here neither the one-byte unit nor a sibling covers the two-byte union, so
+  // the declared `long long` is what covers it, overshooting by 6 bytes.
+  cir.func @take_overshoot(%arg0: !rec_UOvershoot) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_overshoot(%arg0: !u16i)
+
+  cir.func @ret_bit_array_unit(%arg0: !rec_UBitArrayUnit) -> !rec_UBitArrayUnit {
+    %0 = cir.alloca "u" align(4) : !cir.ptr<!rec_UBitArrayUnit>
+    cir.store %arg0, %0 : !rec_UBitArrayUnit, !cir.ptr<!rec_UBitArrayUnit>
+    %1 = cir.load %0 : !cir.ptr<!rec_UBitArrayUnit>, !rec_UBitArrayUnit
+    cir.return %1 : !rec_UBitArrayUnit
+  }
+
+  // CHECK: cir.func{{.*}} @ret_bit_array_unit(%arg0: !u32i) -> !u32i
+  // CHECK:   %[[RETSLOT:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_UBitArrayUnit>
+  // CHECK:   %[[RETCAST:.*]] = cir.cast bitcast %[[RETSLOT]] : !cir.ptr<!rec_UBitArrayUnit> -> !cir.ptr<!u32i>
+  // CHECK:   %[[RETVAL:.*]] = cir.load %[[RETCAST]] : !cir.ptr<!u32i>, !u32i
+  // CHECK:   cir.return %[[RETVAL]] : !u32i
+
+  cir.func @call_bit_array_unit(%arg0: !rec_UBitArrayUnit) {
+    cir.call @take_bit_array_unit(%arg0) : (!rec_UBitArrayUnit) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @call_bit_array_unit(%arg0: !u32i)
+  // CHECK:   %[[ARGVAL:.*]] = cir.load %{{.*}} : !cir.ptr<!u32i>, !u32i
+  // CHECK:   cir.call @take_bit_array_unit(%[[ARGVAL]]) : (!u32i) -> ()
+
   // Both eightbytes classify INTEGER and are flattened into one argument each,
   // so the empty member does not disturb a multi-eightbyte coercion.
   cir.func @take_empty_two_eightbytes(%arg0: !rec_UEmptyTwoEightbytes) {
@@ -393,6 +496,15 @@ module attributes {
   }
 
   // CHECK: cir.func{{.*}} @take_no_regs(%arg0: !cir.ptr<!rec_UNoRegs> {llvm.align = 4 : i64, llvm.byref = !rec_UNoRegs})
+
+  // A union that covers itself only through a bit-field's declared type is
+  // classified like take_no_regs above, and its argument-passing kind still
+  // sends it to memory.
+  cir.func @take_bit_no_regs(%arg0: !rec_UBitNoRegs) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_bit_no_regs(%arg0: !cir.ptr<!rec_UBitNoRegs> {llvm.align = 4 : i64, llvm.byref = !rec_UBitNoRegs})
 
   // A struct member that is itself a union is mapped through the same union
   // handling, so the enclosing 8-byte struct coerces to one i64.
@@ -490,6 +602,17 @@ module attributes {
 // LLVM: define void @take_empty_floats(<2 x float> %{{.+}})
 // LLVM: define void @take_bit_spans(i32 %{{.+}})
 // LLVM: define void @take_bit_plus_long(i64 %{{.+}})
+// LLVM: define void @take_bit_extent(i32 %{{[^,)]+}})
+// LLVM: define void @take_bit_extent_wide(i64 %{{[^,)]+}})
+// LLVM: define void @take_bit_array_unit(i32 %{{[^,)]+}})
+// LLVM: define void @take_two_bit_units(i64 %{{[^,)]+}})
+// LLVM: define void @take_unnamed_bit_extent(i32 %{{[^,)]+}})
+// LLVM: define void @take_bit_empty_span(i32 %{{[^,)]+}})
+// LLVM: define void @take_bit_extent_packed(i8 %{{[^,)]+}})
+// LLVM: define void @take_overshoot(i16 %{{[^,)]+}})
+// LLVM: define i32 @ret_bit_array_unit(i32 %{{[^,)]+}})
+// LLVM: define void @call_bit_array_unit(i32 %{{[^,)]+}})
+// LLVM:   call void @take_bit_array_unit(i32 %{{[^,)]+}})
 // LLVM: define void @take_empty_two_eightbytes(i64 %{{.+}}, i64 %{{.+}})
 // LLVM: define void @take_struct_with_empty_union(i64 %{{.+}})
 // LLVM: define i32 @ret_empty_int(i32 %{{.+}})
@@ -497,6 +620,7 @@ module attributes {
 // LLVM: define void @call_empty_int(i32 %{{.+}})
 // LLVM:   call void @take_empty_int(i32 %{{.+}})
 // LLVM: define void @take_no_regs(ptr byref(%union.UNoRegs) align 4 %{{.+}})
+// LLVM: define void @take_bit_no_regs(ptr byref(%union.UBitNoRegs) align 4 %{{[^,)]+}})
 // LLVM: define void @take_struct_with_union(i64 %{{.+}})
 // LLVM: define i32 @ret_int_float(i32 %{{.+}})
 // LLVM: define void @ret_big(ptr dead_on_unwind noalias writable sret(%union.UBig) align 1 %{{.+}}, ptr noundef byval(%union.UBig) align 8 %{{.+}})
