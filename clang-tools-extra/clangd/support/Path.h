@@ -11,7 +11,7 @@
 // letters are folded, and Windows path separators are interchangeable. This
 // handles the common CMake vs LSP mismatch (C: vs c:) without merging distinct
 // files. Operations that explicitly require legacy host-default case folding
-// use pathEqual() or maybeCaseFoldPath() instead.
+// use pathEqualLegacyCaseFold() or maybeCaseFoldPath() instead.
 //
 // Path/PathRef deliberately do not convert to StringRef implicitly. Callers
 // must use raw() when crossing into string-based APIs, making the loss of path
@@ -104,8 +104,9 @@ public:
   /// True if this is a proper ancestor of \p Other, or the same path.
   /// Lexical only: foo/bar/baz does not start with foo/./bar.
   /// Both paths must be absolute.
-  [[nodiscard]] bool startsWith(PathRef Other,
-                                Style Style = Style::native) const;
+  /// Retains legacy host-default case folding, unlike path identity equality.
+  [[nodiscard]] bool isAncestorOf(PathRef Other,
+                                  Style Style = Style::native) const;
 
   [[nodiscard]] llvm::StringRef filename(Style Style = Style::native) const {
     return llvm::sys::path::filename(Data, Style);
@@ -184,13 +185,7 @@ inline llvm::json::Value toJSON(PathRef P) { return P.raw(); }
 
 // Explicit legacy comparisons retain their host-default case folding.
 inline Path maybeCaseFoldPath(PathRef P) { return P.caseFolded(); }
-bool pathEqual(PathRef A, PathRef B);
-inline bool
-pathStartsWith(PathRef Ancestor, PathRef Path,
-               llvm::sys::path::Style Style = llvm::sys::path::Style::native) {
-  return Ancestor.startsWith(Path, Style);
-}
-inline PathRef absoluteParent(PathRef P) { return P.absoluteParent(); }
+bool pathEqualLegacyCaseFold(PathRef A, PathRef B);
 
 /// Map keyed by Path. Lookups normalize drive letters and Windows separators,
 /// preserving filename case and the first-inserted spelling.
@@ -269,7 +264,7 @@ public:
     Impl.erase(It);
     return true;
   }
-  iterator erase(iterator It) { return Impl.erase(It); }
+  void erase(iterator It) { Impl.erase(It); }
 
   size_t getMemorySize() const { return Impl.getMemorySize(); }
 

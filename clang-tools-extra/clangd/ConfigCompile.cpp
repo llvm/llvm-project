@@ -416,7 +416,7 @@ struct FragmentCompiler {
       }
       if (P.Path.empty() ||
           !PathRef(Spec.MountPoint)
-               .startsWith(P.Path, llvm::sys::path::Style::posix))
+               .isAncestorOf(P.Path, llvm::sys::path::Style::posix))
         return;
       C.Index.External = Spec;
       // Disable background indexing for the files under the mountpoint.

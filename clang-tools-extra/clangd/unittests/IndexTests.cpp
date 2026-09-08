@@ -255,6 +255,15 @@ TEST(MemIndexTest, IndexedFilesDriveLetter) {
   EXPECT_EQ(ContainsFile("file:///D:/proj/foo.cpp"), IndexContents::None);
 }
 
+TEST(MemIndexTest, MovesNormalizedFiles) {
+  IndexFileSet Files;
+  Files.insert(*indexFileIdentity("file:///C:/proj/a.cpp"));
+  MemIndex I(SymbolSlab(), RefSlab(), RelationSlab(), std::move(Files),
+             IndexContents::All, 0, 0);
+  EXPECT_TRUE(Files.empty());
+  EXPECT_EQ(I.indexedFiles()("file:///c:/proj/a.cpp"), IndexContents::All);
+}
+
 TEST(MemIndexTest, TemplateSpecialization) {
   SymbolSlab::Builder B;
 

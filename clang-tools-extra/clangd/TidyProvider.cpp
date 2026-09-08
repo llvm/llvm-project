@@ -106,8 +106,8 @@ public:
     llvm::SmallVector<DotClangTidyCache *> Caches;
     {
       std::lock_guard<std::mutex> Lock(Mu);
-      for (auto Ancestor = absoluteParent(AbsPath); !Ancestor.empty();
-           Ancestor = absoluteParent(Ancestor)) {
+      for (auto Ancestor = AbsPath.absoluteParent(); !Ancestor.empty();
+           Ancestor = Ancestor.absoluteParent()) {
         auto It = Cache.find(Ancestor.raw());
         // Assemble the actual config file path only if needed.
         if (It == Cache.end()) {

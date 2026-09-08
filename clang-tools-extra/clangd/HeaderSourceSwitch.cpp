@@ -84,7 +84,8 @@ std::optional<Path> getCorrespondingHeaderOrSource(PathRef OriginalFile,
   PathMap<int> Candidates; // Target path => score.
   auto AwardTarget = [&](const char *TargetURI) {
     if (auto TargetPath = URI::resolve(TargetURI, OriginalFile.raw())) {
-      if (!pathEqual(*TargetPath, OriginalFile)) // exclude the original file.
+      if (!pathEqualLegacyCaseFold(*TargetPath,
+                                   OriginalFile)) // exclude the original file.
         ++Candidates[PathRef(*TargetPath)];
     } else {
       elog("Failed to resolve URI {0}: {1}", TargetURI, TargetPath.takeError());

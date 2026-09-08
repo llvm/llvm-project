@@ -22,7 +22,7 @@ namespace {
 // Tries to strip \p Prefix from beginning of \p Path. Returns true on success.
 // If \p Prefix doesn't match, leaves \p Path untouched and returns false.
 bool pathConsumeFront(llvm::StringRef &Path, PathRef Prefix) {
-  if (!Prefix.startsWith(Path))
+  if (!Prefix.isAncestorOf(Path))
     return false;
   Path = Path.drop_front(Prefix.size());
   return true;
@@ -111,7 +111,7 @@ public:
   llvm::Expected<std::string>
   getAbsolutePath(llvm::StringRef /*Authority*/, llvm::StringRef Body,
                   llvm::StringRef HintPath) const override {
-    if (!HintPath.empty() && !PathRef(testRoot()).startsWith(HintPath))
+    if (!HintPath.empty() && !PathRef(testRoot()).isAncestorOf(HintPath))
       return error("Hint path is not empty and doesn't start with {0}: {1}",
                    testRoot(), HintPath);
     if (!Body.consume_front("/"))

@@ -87,6 +87,18 @@ indexFileIdentityFrom(const llvm::StringMapEntry<Val> &E) {
   return indexFileIdentity(E.getKey());
 }
 
+/// Transfer already-normalized sets without copying their keys or rehashing.
+inline IndexFileSet indexFileIdentities(IndexFileSet Files) { return Files; }
+
+template <typename FileRange>
+IndexFileSet indexFileIdentities(const FileRange &Files) {
+  IndexFileSet Result;
+  for (const auto &File : Files)
+    if (auto Identity = indexFileIdentityFrom(File))
+      Result.insert(std::move(*Identity));
+  return Result;
+}
+
 } // namespace clangd
 } // namespace clang
 

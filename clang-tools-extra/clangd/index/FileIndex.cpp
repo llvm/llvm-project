@@ -33,6 +33,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <algorithm>
@@ -107,23 +109,29 @@ SlabTuple indexSymbols(ASTContext &AST, Preprocessor &PP,
                          std::move(Relations));
 }
 
-// We keep only the node "U" and its edges. Any node other than "U" will be
-// empty in the resultant graph.
-IncludeGraph getSubGraph(llvm::StringRef URI, const IncludeGraph &FullGraph) {
-  IncludeGraph IG;
-
+// Merge aliases into one root node. Other nodes only describe its dependencies.
+void mergeSubGraph(
+    llvm::StringRef URI, const IncludeGraphNode &Source, IncludeGraph &IG,
+    llvm::function_ref<llvm::StringRef(llvm::StringRef)> CanonicalURI) {
   auto Entry = IG.try_emplace(URI).first;
   auto &Node = Entry->getValue();
-  Node = FullGraph.lookup(Entry->getKey());
   Node.URI = Entry->getKey();
+  Node.Flags = Node.Flags | Source.Flags;
+  if (Node.Digest == FileDigest{{0}})
+    Node.Digest = Source.Digest;
 
-  // URIs inside nodes must point into the keys of the same IncludeGraph.
-  for (auto &Include : Node.DirectIncludes) {
-    auto I = IG.try_emplace(Include).first;
+  for (auto Include : Source.DirectIncludes) {
+    Include = CanonicalURI(Include);
+    if (Include.empty())
+      continue;
+    auto [I, Inserted] = IG.try_emplace(Include);
     I->getValue().URI = I->getKey();
-    Include = I->getKey();
+    // Non-root nodes exist exactly when their edge has already been added.
+    // The root exists before processing edges, so handle self-includes too.
+    if (Inserted || (&I->getValue() == &Node &&
+                     !llvm::is_contained(Node.DirectIncludes, Node.URI)))
+      Node.DirectIncludes.push_back(I->getKey());
   }
-  return IG;
 }
 } // namespace
 
@@ -132,14 +140,15 @@ FileShardedIndex::FileShardedIndex(IndexFileIn Input)
   // Used to build RelationSlabs.
   llvm::DenseMap<SymbolID, FileShard *> SymbolIDToFile;
   auto ShardFor = [&](llvm::StringRef URI) -> FileShard * {
-    auto Identity = indexFileIdentity(URI);
+    llvm::SmallString<256> Storage;
+    auto Identity = indexFileIdentity(URI, Storage);
     if (!Identity)
       return nullptr;
-    auto It = Shards.find(*Identity);
+    auto It = Shards.find_as(*Identity);
     if (It == Shards.end()) {
       auto Shard = std::make_unique<FileShard>();
       Shard->URI = URI.str();
-      It = Shards.try_emplace(std::move(*Identity), std::move(Shard)).first;
+      It = Shards.try_emplace(IndexFileKey(*Identity), std::move(Shard)).first;
     }
     return It->second.get();
   };
@@ -191,9 +200,17 @@ FileShardedIndex::FileShardedIndex(IndexFileIn Input)
   // Store only the direct includes of a file in a shard.
   if (Index.Sources) {
     const auto &FullGraph = *Index.Sources;
+    // Establish one spelling for every source before canonicalizing edges.
+    for (const auto &It : FullGraph)
+      ShardFor(It.first());
     for (const auto &It : FullGraph) {
       if (FileShard *Shard = ShardFor(It.first()))
-        Shard->IG = getSubGraph(It.first(), FullGraph);
+        mergeSubGraph(Shard->URI, It.second, Shard->IG,
+                      [&](llvm::StringRef URI) -> llvm::StringRef {
+                        if (FileShard *Dependency = ShardFor(URI))
+                          return Dependency->URI;
+                        return {};
+                      });
     }
   }
 }

@@ -792,6 +792,15 @@ TEST(DexIndex, IndexedFilesDriveLetter) {
   EXPECT_EQ(ContainsFile("C:\\proj\\foo.cpp"), IndexContents::All);
 }
 
+TEST(DexIndex, MovesNormalizedFiles) {
+  IndexFileSet Files;
+  Files.insert(*indexFileIdentity("file:///C:/proj/a.cpp"));
+  Dex I(SymbolSlab(), RefSlab(), RelationSlab(), std::move(Files),
+        IndexContents::All, 0, 0, true);
+  EXPECT_TRUE(Files.empty());
+  EXPECT_EQ(I.indexedFiles()("file:///c:/proj/a.cpp"), IndexContents::All);
+}
+
 TEST(DexTest, PreferredTypesBoosting) {
   auto Sym1 = symbol("t1");
   Sym1.Type = "T1";

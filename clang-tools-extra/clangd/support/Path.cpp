@@ -118,7 +118,7 @@ bool pathEquals(llvm::StringRef LHS, llvm::StringRef RHS) {
   return pathEqualsImpl(LHS, RHS, /*IgnoreCase=*/false);
 }
 
-bool pathEqual(PathRef LHS, PathRef RHS) {
+bool pathEqualLegacyCaseFold(PathRef LHS, PathRef RHS) {
 #ifdef CLANGD_PATH_CASE_INSENSITIVE
   return pathEqualsImpl(LHS.raw(), RHS.raw(), /*IgnoreCase=*/true);
 #else
@@ -181,7 +181,7 @@ PathRef PathRef::absoluteParent() const {
   return Result;
 }
 
-bool PathRef::startsWith(PathRef Other, Style Style) const {
+bool PathRef::isAncestorOf(PathRef Other, Style Style) const {
   // Style describes separators, not necessarily the host path's root syntax.
   // Config paths on Windows use POSIX separators but still have drive roots.
   assert((isAbsolute() || isAbsolute(Style)) &&
@@ -190,10 +190,11 @@ bool PathRef::startsWith(PathRef Other, Style Style) const {
   // Keep the root separator when comparing drive roots: C: alone is relative
   // and does not have case-insensitive drive-letter identity on POSIX hosts.
   if (Ancestor.size() == 2 && isAbsoluteWindowsDrivePath(Data))
-    return pathEqual(Data, Other.raw().take_front(3));
+    return pathEqualLegacyCaseFold(Data, Other.raw().take_front(3));
   if (Ancestor.size() > Other.size())
     return false;
-  if (!pathEqual(Ancestor.raw(), Other.raw().take_front(Ancestor.size())))
+  if (!pathEqualLegacyCaseFold(Ancestor.raw(),
+                               Other.raw().take_front(Ancestor.size())))
     return false;
   llvm::StringRef Rest = Other.raw().drop_front(Ancestor.size());
   // Windows paths treat both slashes as separators even when Style is native

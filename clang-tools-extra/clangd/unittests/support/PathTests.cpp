@@ -24,37 +24,38 @@ TEST(PathTests, HasWindowsDrive) {
 }
 
 TEST(PathTests, IsAncestor) {
-  EXPECT_TRUE(PathRef(testPath("foo")).startsWith(testPath("foo")));
-  EXPECT_TRUE(PathRef(testPath("foo/")).startsWith(testPath("foo")));
+  EXPECT_TRUE(PathRef(testPath("foo")).isAncestorOf(testPath("foo")));
+  EXPECT_TRUE(PathRef(testPath("foo/")).isAncestorOf(testPath("foo")));
 
-  EXPECT_FALSE(PathRef(testPath("foo")).startsWith(testPath("fooz")));
-  EXPECT_FALSE(PathRef(testPath("foo/")).startsWith(testPath("fooz")));
+  EXPECT_FALSE(PathRef(testPath("foo")).isAncestorOf(testPath("fooz")));
+  EXPECT_FALSE(PathRef(testPath("foo/")).isAncestorOf(testPath("fooz")));
 
-  EXPECT_TRUE(PathRef(testPath("foo")).startsWith(testPath("foo/bar")));
-  EXPECT_TRUE(PathRef(testPath("foo/")).startsWith(testPath("foo/bar")));
+  EXPECT_TRUE(PathRef(testPath("foo")).isAncestorOf(testPath("foo/bar")));
+  EXPECT_TRUE(PathRef(testPath("foo/")).isAncestorOf(testPath("foo/bar")));
 
 #ifdef CLANGD_PATH_CASE_INSENSITIVE
-  EXPECT_TRUE(PathRef(testPath("fOo")).startsWith(testPath("foo/bar")));
-  EXPECT_TRUE(PathRef(testPath("foo")).startsWith(testPath("fOo/bar")));
+  EXPECT_TRUE(PathRef(testPath("fOo")).isAncestorOf(testPath("foo/bar")));
+  EXPECT_TRUE(PathRef(testPath("foo")).isAncestorOf(testPath("fOo/bar")));
 #else
-  EXPECT_FALSE(PathRef(testPath("fOo")).startsWith(testPath("foo/bar")));
-  EXPECT_FALSE(PathRef(testPath("foo")).startsWith(testPath("fOo/bar")));
+  EXPECT_FALSE(PathRef(testPath("fOo")).isAncestorOf(testPath("foo/bar")));
+  EXPECT_FALSE(PathRef(testPath("foo")).isAncestorOf(testPath("fOo/bar")));
 #endif
 }
 
 TEST(PathTests, PosixSeparatorsWithNativeRoots) {
   const auto Posix = llvm::sys::path::Style::posix;
   auto Parent = testPath("proj", Posix);
-  EXPECT_TRUE(PathRef(Parent).startsWith(testPath("proj/a.cpp", Posix), Posix));
+  EXPECT_TRUE(
+      PathRef(Parent).isAncestorOf(testPath("proj/a.cpp", Posix), Posix));
   EXPECT_FALSE(
-      PathRef(Parent).startsWith(testPath("project/a.cpp", Posix), Posix));
+      PathRef(Parent).isAncestorOf(testPath("project/a.cpp", Posix), Posix));
 }
 
 TEST(PathTests, DriveLetterIdentity) {
   Path Upper("C:/Users/src/foo.cpp");
   Path Lower("c:/Users/src/foo.cpp");
   EXPECT_EQ(PathRef(Upper), PathRef(Lower));
-  EXPECT_TRUE(pathEqual(Upper, Lower));
+  EXPECT_TRUE(pathEqualLegacyCaseFold(Upper, Lower));
   EXPECT_EQ(pathHash(Upper.raw()), pathHash(Lower.raw()));
   EXPECT_NE(PathRef("C:/Users/src/foo.cpp"), PathRef("D:/Users/src/foo.cpp"));
 
@@ -91,19 +92,16 @@ TEST(PathTests, RemoveDotsUsesPathStyle) {
             Path("\\\\server\\share\\a.cpp"));
 }
 
-TEST(PathTests, DriveLetterStartsWith) {
+TEST(PathTests, DriveLetterAncestor) {
   const auto Win = llvm::sys::path::Style::windows;
-  EXPECT_TRUE(pathStartsWith("C:/", "c:/proj/a.cpp", Win));
-  EXPECT_TRUE(pathStartsWith("C:\\", "c:/proj/a.cpp", Win));
-  EXPECT_TRUE(pathStartsWith("c:/", "C:\\", Win));
-  EXPECT_FALSE(pathStartsWith("C:/", "d:/proj/a.cpp", Win));
-  EXPECT_TRUE(
-      pathStartsWith(PathRef("C:/proj"), PathRef("c:/proj/src/a.cpp"), Win));
-  EXPECT_TRUE(pathStartsWith(PathRef("c:/proj/"), PathRef("C:/proj"), Win));
-  EXPECT_TRUE(
-      pathStartsWith(PathRef("C:/proj"), PathRef("c:\\proj\\src\\a.cpp"), Win));
-  EXPECT_FALSE(
-      pathStartsWith(PathRef("C:/proj"), PathRef("c:/other/a.cpp"), Win));
+  EXPECT_TRUE(PathRef("C:/").isAncestorOf("c:/proj/a.cpp", Win));
+  EXPECT_TRUE(PathRef("C:\\").isAncestorOf("c:/proj/a.cpp", Win));
+  EXPECT_TRUE(PathRef("c:/").isAncestorOf("C:\\", Win));
+  EXPECT_FALSE(PathRef("C:/").isAncestorOf("d:/proj/a.cpp", Win));
+  EXPECT_TRUE(PathRef("C:/proj").isAncestorOf("c:/proj/src/a.cpp", Win));
+  EXPECT_TRUE(PathRef("c:/proj/").isAncestorOf("C:/proj", Win));
+  EXPECT_TRUE(PathRef("C:/proj").isAncestorOf("c:\\proj\\src\\a.cpp", Win));
+  EXPECT_FALSE(PathRef("C:/proj").isAncestorOf("c:/other/a.cpp", Win));
 }
 
 TEST(PathTests, PathMapDriveLetter) {
@@ -123,6 +121,20 @@ TEST(PathTests, PathMapDriveLetter) {
   EXPECT_EQ(InsertedIt->second, 1);
 
   EXPECT_TRUE(M.erase(PathRef("c:/proj/a.cpp")));
+  EXPECT_TRUE(M.empty());
+}
+
+TEST(PathTests, PathMapEraseIterator) {
+  PathMap<int> M;
+  M["C:/proj/a.cpp"] = 1;
+  M["C:/proj/b.cpp"] = 2;
+  auto It = M.find("c:/proj/a.cpp");
+  ASSERT_NE(It, M.end());
+  M.erase(It);
+  EXPECT_FALSE(M.contains("C:/proj/a.cpp"));
+  EXPECT_EQ(M.lookup("C:/proj/b.cpp"), 2);
+  EXPECT_EQ(M.size(), 1u);
+  M.erase(M.begin());
   EXPECT_TRUE(M.empty());
 }
 

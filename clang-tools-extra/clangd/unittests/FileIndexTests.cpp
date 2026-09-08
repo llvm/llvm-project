@@ -821,6 +821,50 @@ TEST(FileShardedIndexTest, DriveLetterURIIdentity) {
   EXPECT_THAT(*Shard->Symbols, UnorderedElementsAre(qName("1"), qName("2")));
 }
 
+TEST(FileShardedIndexTest, DriveLetterAliasDependencies) {
+  constexpr llvm::StringLiteral Upper = "file:///C:/proj/a.h";
+  constexpr llvm::StringLiteral Lower = "file:///c:/proj/a.h";
+  constexpr llvm::StringLiteral One = "file:///C:/proj/one.h";
+  constexpr llvm::StringLiteral OneAlias = "file:///c:/proj/one.h";
+  constexpr llvm::StringLiteral Two = "file:///C:/proj/two.h";
+  auto Sym = symbol("1");
+  Sym.CanonicalDeclaration.FileURI = Upper.data();
+  SymbolSlab::Builder Symbols;
+  Symbols.insert(Sym);
+  auto Dependency = symbol("2");
+  Dependency.CanonicalDeclaration.FileURI = One.data();
+  Symbols.insert(Dependency);
+  IndexFileIn IF;
+  IF.Symbols.emplace(std::move(Symbols).build());
+  IF.Sources.emplace();
+  auto &Graph = *IF.Sources;
+  for (auto URI : {Upper, Lower, One, OneAlias, Two}) {
+    auto It = Graph.try_emplace(URI).first;
+    It->second.URI = It->getKey();
+  }
+  const FileDigest Digest{{1}};
+  Graph[Upper].Digest = Graph[Lower].Digest = Digest;
+  Graph[Upper].Flags = IncludeGraphNode::SourceFlag::IsTU;
+  Graph[Lower].Flags = IncludeGraphNode::SourceFlag::HadErrors;
+  Graph[Upper].DirectIncludes = {One, Upper};
+  Graph[Lower].DirectIncludes = {OneAlias, Two, Lower};
+
+  FileShardedIndex Sharded(std::move(IF));
+  for (auto URI : {Upper, Lower}) {
+    auto Shard = Sharded.getShard(URI);
+    ASSERT_TRUE(Shard);
+    ASSERT_TRUE(Shard->Sources);
+    EXPECT_THAT(Shard->Sources->keys(), UnorderedElementsAre(Upper, One, Two));
+    const auto &Root = Shard->Sources->find(Upper)->second;
+    EXPECT_EQ(Root.Digest, Digest);
+    EXPECT_EQ(Root.Flags, IncludeGraphNode::SourceFlag::IsTU |
+                              IncludeGraphNode::SourceFlag::HadErrors);
+    EXPECT_THAT(Root.DirectIncludes, UnorderedElementsAre(One, Two, Upper));
+    EXPECT_TRUE(Shard->Sources->lookup(One).DirectIncludes.empty());
+    EXPECT_TRUE(Shard->Sources->lookup(Two).DirectIncludes.empty());
+  }
+}
+
 TEST(FileShardedIndexTest, HintDependentURIIdentity) {
   constexpr llvm::StringLiteral Upper = "hint-required:///A.h";
   constexpr llvm::StringLiteral Lower = "hint-required:///a.h";

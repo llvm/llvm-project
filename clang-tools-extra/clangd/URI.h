@@ -9,8 +9,6 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_URI_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_URI_H
 
-#include "support/Path.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Registry.h"

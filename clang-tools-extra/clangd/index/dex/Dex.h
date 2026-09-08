@@ -78,9 +78,7 @@ public:
             std::forward<RelationsRange>(Relations),
             std::forward<Payload>(BackingData), BackingDataSize,
             SupportContainedRefs) {
-    for (const auto &F : Files)
-      if (auto Identity = indexFileIdentityFrom(F))
-        this->Files.insert(std::move(*Identity));
+    this->Files = indexFileIdentities(std::forward<FileRange>(Files));
     this->IdxContents = IdxContents;
   }
 
