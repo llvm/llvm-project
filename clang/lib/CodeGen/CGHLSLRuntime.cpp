@@ -1501,7 +1501,7 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
                                       Semantic->getAttrName()->getName(),
                                       /* BuiltIn::VertexIndex */ 42);
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
-                                        Signature);
+                                      Signature);
     }
   }
 
