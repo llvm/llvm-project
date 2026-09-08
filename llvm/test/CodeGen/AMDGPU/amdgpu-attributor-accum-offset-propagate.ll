@@ -525,7 +525,7 @@ define amdgpu_kernel void @shared_k2(ptr %p) {
 ;;
 ;;   A = @noroom_kernel_agpr16 : agpr-alloc 16,  accum-offset 112
 ;;   B = @noroom_kernel_noagpr : agpr-alloc 0,   accum-offset 128
-;;   C = @noroom_shared          agpr-alloc NA,  accum-offset 112 <- min(112, 128)
+;;   C = @noroom_shared          agpr-alloc (0,0),  accum-offset 112 <- min(112, 128)
 ;;
 ;; C may use 112 arch VGPRs and 0 AGPRs: any AGPR use would push it past the
 ;; 128-register limit when it runs under B's accum_offset.
@@ -617,12 +617,12 @@ define amdgpu_kernel void @noroom_kernel_noagpr() {
 ;;
 ;;   A = @room_kernel_agpr16 : agpr-alloc 16, accum-offset 112
 ;;   B = @room_kernel_agpr12 : agpr-alloc 12, accum-offset 116
-;;   C = @room_shared        : agpr-alloc NA, accum-offset 112
+;;   C = @room_shared        : agpr-alloc (0,12), accum-offset 112
 ;;
 ;; C may use 112 arch VGPRs. Its AGPR ceiling is its own requirement of 0 rather
 ;; than the 12 AGPRs both kernels happen to have headroom for, so it cannot use
 ;; AGPRs as spill space. That headroom is only recoverable by propagating a
-;; second, independent AGPR ceiling, which this attribute does not carry.
+;; second, independent AGPR ceiling.
 ;; ===========================================================================
 
 define internal void @room_use_most() {
