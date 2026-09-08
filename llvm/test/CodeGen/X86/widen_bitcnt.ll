@@ -1423,15 +1423,15 @@ define <4 x i32> @widen_cttz_poison_v2i32_v4i32(<2 x i32> %a0, <2 x i32> %a1) {
 ;
 ; AVX512VL-LABEL: widen_cttz_poison_v2i32_v4i32:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX512VL-NEXT:    vpaddd %xmm2, %xmm0, %xmm3
-; AVX512VL-NEXT:    vpandn %xmm3, %xmm0, %xmm0
-; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [32,32,32,32]
-; AVX512VL-NEXT:    vpaddd %xmm2, %xmm1, %xmm2
-; AVX512VL-NEXT:    vpandn %xmm2, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpsubd %xmm0, %xmm2, %xmm3
+; AVX512VL-NEXT:    vpand %xmm3, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpsubd %xmm1, %xmm2, %xmm2
+; AVX512VL-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512VL-NEXT:    vplzcntd %xmm0, %xmm0
-; AVX512VL-NEXT:    vpsubd %xmm0, %xmm3, %xmm0
+; AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [6.5781869535239477E-313,6.5781869535239477E-313]
+; AVX512VL-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VPOPCNT-LABEL: widen_cttz_poison_v2i32_v4i32:
@@ -1519,12 +1519,11 @@ define <8 x i32> @widen_cttz_poison_v4i32_v8i32(<4 x i32> %a0, <4 x i32> %a1) {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpcmpeqd %ymm1, %ymm1, %ymm1
-; AVX512VL-NEXT:    vpaddd %ymm1, %ymm0, %ymm1
-; AVX512VL-NEXT:    vpandn %ymm1, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpsubd %ymm0, %ymm1, %ymm1
+; AVX512VL-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vplzcntd %ymm0, %ymm0
-; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [32,32,32,32,32,32,32,32]
-; AVX512VL-NEXT:    vpsubd %ymm0, %ymm1, %ymm0
+; AVX512VL-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VPOPCNT-LABEL: widen_cttz_poison_v4i32_v8i32:
@@ -1646,16 +1645,15 @@ define <8 x i32> @widen_cttz_poison_v2i32_v8i32(<2 x i32> %a0, <2 x i32> %a1, <2
 ; AVX512VL-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
 ; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512VL-NEXT:    vinserti128 $1, %xmm3, %ymm1, %ymm1
-; AVX512VL-NEXT:    vpcmpeqd %ymm3, %ymm3, %ymm3
-; AVX512VL-NEXT:    vpaddd %ymm3, %ymm1, %ymm4
-; AVX512VL-NEXT:    vpandn %ymm4, %ymm1, %ymm1
+; AVX512VL-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; AVX512VL-NEXT:    vpsubd %ymm1, %ymm3, %ymm4
+; AVX512VL-NEXT:    vpand %ymm4, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpaddd %ymm3, %ymm0, %ymm2
-; AVX512VL-NEXT:    vpandn %ymm2, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpsubd %ymm0, %ymm3, %ymm2
+; AVX512VL-NEXT:    vpand %ymm2, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
 ; AVX512VL-NEXT:    vplzcntd %ymm0, %ymm0
-; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [32,32,32,32,32,32,32,32]
-; AVX512VL-NEXT:    vpsubd %ymm0, %ymm1, %ymm0
+; AVX512VL-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VPOPCNT-LABEL: widen_cttz_poison_v2i32_v8i32:

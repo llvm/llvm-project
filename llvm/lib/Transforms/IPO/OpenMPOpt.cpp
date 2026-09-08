@@ -149,6 +149,12 @@ static cl::opt<unsigned>
                       cl::desc("Maximum amount of shared memory to use."),
                       cl::init(std::numeric_limits<unsigned>::max()));
 
+static cl::opt<unsigned> MaxCalleesForSpecialization(
+    "openmp-opt-max-callees-for-specialization", cl::Hidden,
+    cl::desc("Number of possible callees above which an indirect call site is "
+             "left alone rather than specialized into an if-cascade."),
+    cl::init(3));
+
 STATISTIC(NumOpenMPRuntimeCallsDeduplicated,
           "Number of OpenMP runtime calls deduplicated");
 STATISTIC(NumOpenMPParallelRegionsDeleted,
@@ -650,6 +656,13 @@ struct OMPInformationCache : public InformationCache {
 
   /// Indicates if we have already linked in the OpenMP device library.
   bool OpenMPPostLink = false;
+
+  /// Kernels that OpenMPOpt transformed from generic to SPMD mode. Recorded at
+  /// the transform (changeToSPMDMode) so later cleanup does not have to
+  /// re-derive the mode. Such kernels no longer run a generic-mode state
+  /// machine, so the parallel data-sharing wrapper passed to __kmpc_parallel_60
+  /// is dead in them.
+  SmallPtrSet<Function *, 8> SPMDizedKernels;
 };
 
 template <typename Ty, bool InsertInvalidates = true>
@@ -969,6 +982,12 @@ struct OpenMPOpt {
       // TODO: This should be folded into buildCustomStateMachine.
       Changed |= rewriteDeviceCodeStateMachine();
 
+      // Drop the parallel data-sharing wrapper from __kmpc_parallel_60 calls in
+      // SPMD kernels, where the runtime never uses it, so the (otherwise dead)
+      // wrapper can be eliminated instead of lingering as a non-kernel LDS
+      // user.
+      Changed |= removeSPMDParallelWrappers();
+
       if (remarksEnabled())
         analysisGlobalization();
     } else {
@@ -1186,8 +1205,8 @@ private:
           InsertPointTy(ParentBB, ParentBB->end()), DL);
       OpenMPIRBuilder::InsertPointTy SeqAfterIP = cantFail(
           OMPInfoCache.OMPBuilder.createMaster(Loc, BodyGenCB, FiniCB));
-      cantFail(
-          OMPInfoCache.OMPBuilder.createBarrier(SeqAfterIP, OMPD_parallel));
+      cantFail(OMPInfoCache.OMPBuilder.createBarrier({SeqAfterIP, DL},
+                                                     OMPD_parallel));
 
       UncondBrInst::Create(SeqAfterBB, SeqAfterIP.getBlock());
 
@@ -1301,8 +1320,9 @@ private:
           // TODO: Remove barrier if the merged parallel region includes the
           // 'nowait' clause.
           cantFail(OMPInfoCache.OMPBuilder.createBarrier(
-              InsertPointTy(NewCI->getParent(),
-                            NewCI->getNextNode()->getIterator()),
+              {InsertPointTy(NewCI->getParent(),
+                             NewCI->getNextNode()->getIterator()),
+               NewCI->getDebugLoc()},
               OMPD_parallel));
         }
 
@@ -1806,10 +1826,13 @@ private:
 
     if (!Ident || !SingleChoice) {
       // The IRBuilder uses the insertion block to get to the module, this is
-      // unfortunate but we work around it for now.
+      // unfortunate but we work around it for now. No instruction is emitted
+      // here, so there is no debug location to preserve.
       if (!OMPInfoCache.OMPBuilder.getInsertionPoint().getBlock())
-        OMPInfoCache.OMPBuilder.updateToLocation(OpenMPIRBuilder::InsertPointTy(
-            &F.getEntryBlock(), F.getEntryBlock().begin()));
+        OMPInfoCache.OMPBuilder.updateToLocation(
+            {OpenMPIRBuilder::InsertPointTy(&F.getEntryBlock(),
+                                            F.getEntryBlock().begin()),
+             DebugLoc()});
       // Create a fallback location if non was found.
       // TODO: Use the debug locations of the calls instead.
       uint32_t SrcLocStrSize;
@@ -1982,6 +2005,11 @@ private:
   /// Rewrite the device (=GPU) code state machine create in non-SPMD mode in
   /// the cases we can avoid taking the address of a function.
   bool rewriteDeviceCodeStateMachine();
+
+  /// In SPMD kernels the parallel data-sharing wrapper passed to
+  /// __kmpc_parallel_60 is never used by the runtime; null it out so the dead
+  /// wrapper (and any LDS it references) can be removed.
+  bool removeSPMDParallelWrappers();
 
   ///
   ///}}
@@ -2244,6 +2272,47 @@ bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
 
     ++NumOpenMPParallelRegionsReplacedInGPUStateMachine;
 
+    Changed = true;
+  }
+
+  return Changed;
+}
+
+bool OpenMPOpt::removeSPMDParallelWrappers() {
+  // Nothing to clean up unless we SPMD-ized at least one kernel.
+  if (OMPInfoCache.SPMDizedKernels.empty())
+    return false;
+
+  OMPInformationCache::RuntimeFunctionInfo &KernelParallelRFI =
+      OMPInfoCache.RFIs[OMPRTL___kmpc_parallel_60];
+  if (!KernelParallelRFI || !KernelParallelRFI.Declaration)
+    return false;
+
+  constexpr unsigned WrapperFunctionArgNo = 6;
+  bool Changed = false;
+  for (User *U : KernelParallelRFI.Declaration->users()) {
+    auto *CI = dyn_cast<CallInst>(U);
+    if (!CI || CI->getCalledOperand() != KernelParallelRFI.Declaration ||
+        CI->arg_size() <= WrapperFunctionArgNo)
+      continue;
+
+    Value *Wrapper = CI->getArgOperand(WrapperFunctionArgNo);
+    if (isa<ConstantPointerNull>(Wrapper))
+      continue;
+
+    // Only drop the wrapper for a parallel region reached from a single kernel
+    // that we transformed to SPMD mode. A region also reachable from a
+    // generic-mode kernel still needs its wrapper for that kernel's state
+    // machine, and getUniqueKernelFor conservatively bails on such shared
+    // regions. (Mirrors the unique-kernel requirement in
+    // rewriteDeviceCodeStateMachine.)
+    Kernel K = getUniqueKernelFor(*CI->getFunction());
+    if (!K || !OMPInfoCache.SPMDizedKernels.contains(K))
+      continue;
+
+    CI->setArgOperand(
+        WrapperFunctionArgNo,
+        ConstantPointerNull::get(cast<PointerType>(Wrapper->getType())));
     Changed = true;
   }
 
@@ -4091,11 +4160,12 @@ struct AAKernelInfoFunction : AAKernelInfo {
       FunctionCallee BarrierFn =
           OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
               M, OMPRTL___kmpc_barrier_simple_spmd);
-      OMPInfoCache.OMPBuilder.updateToLocation(InsertPointTy(
-          RegionBarrierBB, RegionBarrierBB->getFirstInsertionPt()));
+      OMPInfoCache.OMPBuilder.updateToLocation(
+          {InsertPointTy(RegionBarrierBB,
+                         RegionBarrierBB->getFirstInsertionPt()),
+           DL});
       CallInst *Barrier =
           OMPInfoCache.OMPBuilder.Builder.CreateCall(BarrierFn, {Ident, Tid});
-      Barrier->setDebugLoc(DL);
       OMPInfoCache.setCallingConvention(BarrierFn, Barrier);
 
       // Second barrier ensures workers have read broadcast values.
@@ -4300,6 +4370,10 @@ struct AAKernelInfoFunction : AAKernelInfo {
                          ExecModeVal | OMP_TGT_EXEC_MODE_GENERIC_SPMD));
 
     ++NumOpenMPTargetRegionKernelsSPMD;
+
+    // Record that this kernel now runs SPMD so post-Attributor cleanup can drop
+    // the now-dead parallel data-sharing wrapper without re-deriving the mode.
+    OMPInfoCache.SPMDizedKernels.insert(Kernel);
 
     auto Remark = [&](OptimizationRemark OR) {
       return OR << "Transformed generic-mode kernel to SPMD-mode.";
@@ -5767,6 +5841,23 @@ AAFoldRuntimeCall &AAFoldRuntimeCall::createForPosition(const IRPosition &IRP,
   return *AA;
 }
 
+/// Bound the if-cascade AAIndirectCallInfo builds for an indirect call. Device
+/// code reaches its callees through function-pointer tables and virtual
+/// dispatch, so a call site can see every address-taken candidate in the
+/// module; specializing all of them costs more in code size and compile time
+/// than the direct calls are worth.
+///
+/// This is a threshold on the call site rather than a limit on how many callees
+/// get specialized: the Attributor asks about each callee with the same total,
+/// so a site above the threshold keeps its indirect call instead of getting
+/// this many direct ones plus a fallback.
+static bool shouldSpecializeIndirectCallee(Attributor &,
+                                           const AbstractAttribute &,
+                                           CallBase &, Function &,
+                                           unsigned NumAssumedCallees) {
+  return NumAssumedCallees <= MaxCalleesForSpecialization;
+}
+
 PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!containsOpenMP(M))
     return PreservedAnalyses::all();
@@ -5853,6 +5944,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   AC.OREGetter = OREGetter;
   AC.PassName = DEBUG_TYPE;
   AC.InitializationCallback = OpenMPOpt::registerAAsForFunction;
+  AC.IndirectCalleeSpecializationCallback = shouldSpecializeIndirectCallee;
   AC.IPOAmendableCB = [](const Function &F) {
     return F.hasFnAttribute("kernel");
   };
@@ -5933,6 +6025,7 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
   AC.OREGetter = OREGetter;
   AC.PassName = DEBUG_TYPE;
   AC.InitializationCallback = OpenMPOpt::registerAAsForFunction;
+  AC.IndirectCalleeSpecializationCallback = shouldSpecializeIndirectCallee;
 
   Attributor A(Functions, InfoCache, AC);
 

@@ -1,7 +1,7 @@
 // RUN: cir-opt %s -verify-diagnostics -split-input-file
 
 !u8i = !cir.int<u, 8>
-!rec_S = !cir.struct<"S" padded {!u8i}>
+!rec_S = !cir.struct<"S" {pad !u8i}>
 
 cir.func private @ctor(!cir.ptr<!rec_S>)
 cir.func private @operatorBool(!cir.ptr<!rec_S>) -> !cir.bool
@@ -16,8 +16,7 @@ cir.func @while_cleanup_missing_kind() {
     cir.condition(%cond)
   } do {
     cir.yield
-  // expected-error @below {{expected valid keyword or string}}
-  // expected-error @below {{failed to parse CIR_CleanupKindAttr}}
+  // expected-error @below {{expected string or keyword containing one of the following enum values for attribute 'cleanupKind' [normal, eh, all]}}
   } cleanup {
     cir.call @dtor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
     cir.yield
@@ -28,7 +27,7 @@ cir.func @while_cleanup_missing_kind() {
 // -----
 
 !u8i = !cir.int<u, 8>
-!rec_S = !cir.struct<"S" padded {!u8i}>
+!rec_S = !cir.struct<"S" {pad !u8i}>
 
 cir.func private @ctor(!cir.ptr<!rec_S>)
 cir.func private @operatorBool(!cir.ptr<!rec_S>) -> !cir.bool
@@ -45,8 +44,7 @@ cir.func @for_cleanup_missing_kind() {
     cir.yield
   } step {
     cir.yield
-  // expected-error @below {{expected valid keyword or string}}
-  // expected-error @below {{failed to parse CIR_CleanupKindAttr}}
+  // expected-error @below {{expected string or keyword containing one of the following enum values for attribute 'cleanupKind' [normal, eh, all]}}
   } cleanup {
     cir.call @dtor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
     cir.yield
@@ -57,7 +55,7 @@ cir.func @for_cleanup_missing_kind() {
 // -----
 
 !u8i = !cir.int<u, 8>
-!rec_S = !cir.struct<"S" padded {!u8i}>
+!rec_S = !cir.struct<"S" {pad !u8i}>
 
 cir.func private @ctor(!cir.ptr<!rec_S>)
 cir.func private @operatorBool(!cir.ptr<!rec_S>) -> !cir.bool
@@ -83,7 +81,7 @@ cir.func @while_cleanup_eh() {
 // -----
 
 !u8i = !cir.int<u, 8>
-!rec_S = !cir.struct<"S" padded {!u8i}>
+!rec_S = !cir.struct<"S" {pad !u8i}>
 
 cir.func private @ctor(!cir.ptr<!rec_S>)
 cir.func private @operatorBool(!cir.ptr<!rec_S>) -> !cir.bool

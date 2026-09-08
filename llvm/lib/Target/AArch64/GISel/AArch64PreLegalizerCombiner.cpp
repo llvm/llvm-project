@@ -349,19 +349,16 @@ void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
       // Split the elements into v16i8 and v8i8
       LLT MainTy = LLT::fixed_vector(16, LLT::integer(8));
       LLT LeftoverTy1, LeftoverTy2;
-      if ((!extractParts(Ext1SrcReg, MRI.getType(Ext1SrcReg), MainTy,
-                         LeftoverTy1, Ext1UnmergeReg, Leftover1, Builder,
-                         MRI)) ||
-          (!extractParts(Ext2SrcReg, MRI.getType(Ext2SrcReg), MainTy,
-                         LeftoverTy2, Ext2UnmergeReg, Leftover2, Builder,
-                         MRI))) {
+      if (!extractParts(Ext1SrcReg, MRI.getType(Ext1SrcReg), MainTy,
+                        LeftoverTy1, Ext1UnmergeReg, Leftover1, Builder, MRI) ||
+          !extractParts(Ext2SrcReg, MRI.getType(Ext2SrcReg), MainTy,
+                        LeftoverTy2, Ext2UnmergeReg, Leftover2, Builder, MRI)) {
         llvm_unreachable("Unable to split this vector properly");
       }
 
       // Pad the leftover v8i8 vector with register of 0s of type v8i8
-      Register v8Zeroes = Builder.buildConstant(LLT::fixed_vector(8, 8), 0)
-                              ->getOperand(0)
-                              .getReg();
+      auto v8Zeroes =
+          Builder.buildConstant(LLT::fixed_vector(8, LLT::integer(8)), 0);
 
       Ext1UnmergeReg.push_back(
           Builder
@@ -396,10 +393,10 @@ void applyExtAddvToDotAddv(MachineInstr &MI, MachineRegisterInfo &MRI,
         ZeroesLLT = LLT::fixed_vector(2, LLT::integer(32));
         NumElements += 2;
       }
-      auto Zeroes = Builder.buildConstant(ZeroesLLT, 0)->getOperand(0).getReg();
+      auto Zeroes = Builder.buildConstant(ZeroesLLT, 0);
       DotReg.push_back(
           Builder
-              .buildInstr(DotOpcode, {MRI.getType(Zeroes)},
+              .buildInstr(DotOpcode, {ZeroesLLT},
                           {Zeroes, Ext1UnmergeReg[i], Ext2UnmergeReg[i]})
               .getReg(0));
     }
@@ -656,16 +653,12 @@ bool matchSimplifyUADDO(MachineInstr &MI, MachineRegisterInfo &MRI,
   LLT WideTy1 = MRI.getType(Op1Wide);
   Register ResVal = MI.getOperand(0).getReg();
   LLT OpTy = MRI.getType(ResVal);
-  MachineInstr *Op0WideDef = MRI.getVRegDef(Op0Wide);
-  MachineInstr *Op1WideDef = MRI.getVRegDef(Op1Wide);
-
   unsigned OpTySize = OpTy.getScalarSizeInBits();
   // First check that the G_TRUNC feeding the G_UADDO are no-ops, because the
   // inputs have been zero-extended.
-  if (Op0WideDef->getOpcode() != TargetOpcode::G_ASSERT_ZEXT ||
-      Op1WideDef->getOpcode() != TargetOpcode::G_ASSERT_ZEXT ||
-      OpTySize != Op0WideDef->getOperand(2).getImm() ||
-      OpTySize != Op1WideDef->getOperand(2).getImm())
+  if (!mi_match(Op0Wide, MRI,
+                m_GAssertZext(m_Reg(), m_SpecificImm(OpTySize))) ||
+      !mi_match(Op1Wide, MRI, m_GAssertZext(m_Reg(), m_SpecificImm(OpTySize))))
     return false;
 
   // Only scalar UADDO with either 8 or 16 bit operands are handled.
@@ -845,7 +838,6 @@ void AArch64PreLegalizerCombinerLegacy::getAnalysisUsage(
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
-  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<GISelCSEAnalysisWrapperPass>();
   AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   AU.addRequired<LibcallLoweringInfoWrapper>();
@@ -924,7 +916,7 @@ AArch64PreLegalizerCombinerPass::run(MachineFunction &MF,
   if (!LibcallResult)
     reportFatalUsageError("LibcallLoweringModuleAnalysis result not available");
 
-  const LibcallLoweringInfo &Libcalls = LibcallResult->getLibcallLowering(ST);
+  const LibcallLoweringInfo &Libcalls = getLibcallLowering(*LibcallResult, ST);
 
   bool EnableOpt = MF.getTarget().getOptLevel() != CodeGenOptLevel::None;
 
@@ -934,7 +926,6 @@ AArch64PreLegalizerCombinerPass::run(MachineFunction &MF,
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
   PA.preserve<GISelValueTrackingAnalysis>();
-  PA.preserve<MachineDominatorTreeAnalysis>();
   PA.preserve<GISelCSEAnalysis>();
   return PA;
 }

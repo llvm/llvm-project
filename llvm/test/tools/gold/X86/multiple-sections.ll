@@ -1,20 +1,24 @@
 ; RUN: split-file %s %t
 ; RUN: llvm-as %t/a.ll -o %t.o
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     -m elf_x86_64 -o %t.exe %t.o \
 ; RUN:     --section-ordering-file=%t/order
 ; RUN: llvm-readelf -s %t.exe | FileCheck %s
 
+# REQUIRES: ld-bfd-supports-section-ordering-file
+
 ; Check that the order of the sections is tin -> _start -> pat.
 
-; CHECK:      00000000004000cf     1 FUNC    LOCAL  DEFAULT    1 pat
-; CHECK:      00000000004000b0     1 FUNC    LOCAL  DEFAULT    1 tin
-; CHECK:      00000000004000c0    15 FUNC    GLOBAL DEFAULT    1 _start
+; CHECK:      [[#%x, ADDR:]]       1  FUNC    LOCAL  DEFAULT    1 pat
+; CHECK:      [[#%x, ADDR - 31]]   1  FUNC    LOCAL  DEFAULT    1 tin
+; CHECK:      [[#%x, ADDR - 15]]   15 FUNC    GLOBAL DEFAULT    1 _start
 
 ;--- order
-.text.tin
-.text._start
-.text.pat
+.text : {
+    *(.text.tin)
+    *(.text._start)
+    *(.text.pat)
+}
 
 ;--- a.ll
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

@@ -95,8 +95,81 @@ private:
 };
 
 template <typename ValType>
-bool test(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
-          const char *LHSStr, const char *RHSStr, Location Loc);
+bool test_impl(RunContext *Ctx, TestCond Cond, ValType LHS, ValType RHS,
+               const char *LHSStr, const char *RHSStr, Location Loc);
+
+extern RunContext *current_context;
+
+// We make use of a template function, with |LHS| and |RHS| as explicit
+// parameters, for enhanced type checking. Other gtest like unittest
+// frameworks have a similar function which takes a boolean argument
+// instead of the explicit |LHS| and |RHS| arguments. This boolean argument
+// is the result of the |Cond| operation on |LHS| and |RHS|. Though not bad,
+// |Cond| on mismatched |LHS| and |RHS| types can potentially succeed because
+// of type promotion.
+template <typename ValType, cpp::enable_if_t<cpp::is_integral_v<ValType> ||
+                                                 is_big_int_v<ValType> ||
+                                                 cpp::is_fixed_point_v<ValType>,
+                                             int> = 0>
+bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
+          const char *RHSStr, internal::Location Loc) {
+  return test_impl(current_context, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
+}
+
+template <typename ValType, cpp::enable_if_t<cpp::is_enum_v<ValType>, int> = 0>
+bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
+          const char *RHSStr, internal::Location Loc) {
+  return test_impl(current_context, Cond, (long long)LHS, (long long)RHS,
+                   LHSStr, RHSStr, Loc);
+}
+
+template <typename ValType,
+          cpp::enable_if_t<cpp::is_pointer_v<ValType>, ValType> = nullptr>
+bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
+          const char *RHSStr, internal::Location Loc) {
+  return test_impl(current_context, Cond, (unsigned long long)LHS,
+                   (unsigned long long)RHS, LHSStr, RHSStr, Loc);
+}
+
+// Helper to allow macro invocations like `ASSERT_EQ(foo, nullptr)`.
+template <typename ValType,
+          cpp::enable_if_t<cpp::is_pointer_v<ValType>, ValType> = nullptr>
+bool test(TestCond Cond, ValType LHS, cpp::nullptr_t, const char *LHSStr,
+          const char *RHSStr, internal::Location Loc) {
+  return test(Cond, LHS, static_cast<ValType>(nullptr), LHSStr, RHSStr, Loc);
+}
+
+template <
+    typename ValType,
+    cpp::enable_if_t<cpp::is_same_v<ValType, LIBC_NAMESPACE::cpp::string_view>,
+                     int> = 0>
+bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
+          const char *RHSStr, internal::Location Loc) {
+  return test_impl(current_context, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
+}
+
+template <
+    typename ValType,
+    cpp::enable_if_t<cpp::is_same_v<ValType, LIBC_NAMESPACE::cpp::wstring_view>,
+                     int> = 0>
+bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
+          const char *RHSStr, internal::Location Loc) {
+  return test_impl(current_context, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
+}
+
+template <typename ValType,
+          cpp::enable_if_t<cpp::is_same_v<ValType, LIBC_NAMESPACE::cpp::string>,
+                           int> = 0>
+bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
+          const char *RHSStr, internal::Location Loc) {
+  return test_impl(current_context, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
+}
+
+bool test_str_eq(const char *LHS, const char *RHS, const char *LHSStr,
+                 const char *RHSStr, internal::Location Loc);
+
+bool test_str_ne(const char *LHS, const char *RHS, const char *LHSStr,
+                 const char *RHSStr, internal::Location Loc);
 
 } // namespace internal
 
@@ -113,9 +186,7 @@ struct TestOptions {
 // should use the macros TEST or TEST_F to write test cases.
 class Test {
   Test *Next = nullptr;
-  internal::RunContext *Ctx = nullptr;
 
-  void setContext(internal::RunContext *C) { Ctx = C; }
   static int getNumTests();
 
 public:
@@ -127,79 +198,6 @@ public:
 
 protected:
   static void addTest(Test *T);
-
-  // We make use of a template function, with |LHS| and |RHS| as explicit
-  // parameters, for enhanced type checking. Other gtest like unittest
-  // frameworks have a similar function which takes a boolean argument
-  // instead of the explicit |LHS| and |RHS| arguments. This boolean argument
-  // is the result of the |Cond| operation on |LHS| and |RHS|. Though not bad,
-  // |Cond| on mismatched |LHS| and |RHS| types can potentially succeed because
-  // of type promotion.
-  template <
-      typename ValType,
-      cpp::enable_if_t<cpp::is_integral_v<ValType> || is_big_int_v<ValType> ||
-                           cpp::is_fixed_point_v<ValType>,
-                       int> = 0>
-  bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
-            const char *RHSStr, internal::Location Loc) {
-    return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
-  }
-
-  template <typename ValType,
-            cpp::enable_if_t<cpp::is_enum_v<ValType>, int> = 0>
-  bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
-            const char *RHSStr, internal::Location Loc) {
-    return internal::test(Ctx, Cond, (long long)LHS, (long long)RHS, LHSStr,
-                          RHSStr, Loc);
-  }
-
-  template <typename ValType,
-            cpp::enable_if_t<cpp::is_pointer_v<ValType>, ValType> = nullptr>
-  bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
-            const char *RHSStr, internal::Location Loc) {
-    return internal::test(Ctx, Cond, (unsigned long long)LHS,
-                          (unsigned long long)RHS, LHSStr, RHSStr, Loc);
-  }
-
-  // Helper to allow macro invocations like `ASSERT_EQ(foo, nullptr)`.
-  template <typename ValType,
-            cpp::enable_if_t<cpp::is_pointer_v<ValType>, ValType> = nullptr>
-  bool test(TestCond Cond, ValType LHS, cpp::nullptr_t, const char *LHSStr,
-            const char *RHSStr, internal::Location Loc) {
-    return test(Cond, LHS, static_cast<ValType>(nullptr), LHSStr, RHSStr, Loc);
-  }
-
-  template <
-      typename ValType,
-      cpp::enable_if_t<
-          cpp::is_same_v<ValType, LIBC_NAMESPACE::cpp::string_view>, int> = 0>
-  bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
-            const char *RHSStr, internal::Location Loc) {
-    return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
-  }
-
-  template <
-      typename ValType,
-      cpp::enable_if_t<
-          cpp::is_same_v<ValType, LIBC_NAMESPACE::cpp::wstring_view>, int> = 0>
-  bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
-            const char *RHSStr, internal::Location Loc) {
-    return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
-  }
-
-  template <typename ValType,
-            cpp::enable_if_t<
-                cpp::is_same_v<ValType, LIBC_NAMESPACE::cpp::string>, int> = 0>
-  bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
-            const char *RHSStr, internal::Location Loc) {
-    return internal::test(Ctx, Cond, LHS, RHS, LHSStr, RHSStr, Loc);
-  }
-
-  bool testStrEq(const char *LHS, const char *RHS, const char *LHSStr,
-                 const char *RHSStr, internal::Location Loc);
-
-  bool testStrNe(const char *LHS, const char *RHS, const char *LHSStr,
-                 const char *RHSStr, internal::Location Loc);
 
   bool testMatch(bool MatchResult, MatcherBase &Matcher, const char *LHSStr,
                  const char *RHSStr, internal::Location Loc);
@@ -439,8 +437,9 @@ CString libc_make_test_file_path_func(const char *file_name);
         LIBC_NAMESPACE::testing::internal::Message()
 
 #define LIBC_TEST_BINOP_(COND, LHS, RHS, RET_OR_EMPTY)                         \
-  LIBC_TEST_SCAFFOLDING_(test(LIBC_NAMESPACE::testing::TestCond::COND, LHS,    \
-                              RHS, #LHS, #RHS, LIBC_TEST_LOC_()),              \
+  LIBC_TEST_SCAFFOLDING_(LIBC_NAMESPACE::testing::internal::test(              \
+                             LIBC_NAMESPACE::testing::TestCond::COND, LHS,     \
+                             RHS, #LHS, #RHS, LIBC_TEST_LOC_()),               \
                          RET_OR_EMPTY)
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -480,11 +479,17 @@ CString libc_make_test_file_path_func(const char *file_name);
   LIBC_TEST_SCAFFOLDING_(TEST_FUNC(LHS, RHS, #LHS, #RHS, LIBC_TEST_LOC_()),    \
                          RET_OR_EMPTY)
 
-#define EXPECT_STREQ(LHS, RHS) LIBC_TEST_STR_(testStrEq, LHS, RHS, )
-#define ASSERT_STREQ(LHS, RHS) LIBC_TEST_STR_(testStrEq, LHS, RHS, return)
+#define EXPECT_STREQ(LHS, RHS)                                                 \
+  LIBC_TEST_STR_(LIBC_NAMESPACE::testing::internal::test_str_eq, LHS, RHS, )
+#define ASSERT_STREQ(LHS, RHS)                                                 \
+  LIBC_TEST_STR_(LIBC_NAMESPACE::testing::internal::test_str_eq, LHS, RHS,     \
+                 return)
 
-#define EXPECT_STRNE(LHS, RHS) LIBC_TEST_STR_(testStrNe, LHS, RHS, )
-#define ASSERT_STRNE(LHS, RHS) LIBC_TEST_STR_(testStrNe, LHS, RHS, return)
+#define EXPECT_STRNE(LHS, RHS)                                                 \
+  LIBC_TEST_STR_(LIBC_NAMESPACE::testing::internal::test_str_ne, LHS, RHS, )
+#define ASSERT_STRNE(LHS, RHS)                                                 \
+  LIBC_TEST_STR_(LIBC_NAMESPACE::testing::internal::test_str_ne, LHS, RHS,     \
+                 return)
 
 ////////////////////////////////////////////////////////////////////////////////
 // Subprocess checks.
@@ -515,6 +520,14 @@ CString libc_make_test_file_path_func(const char *file_name);
   LIBC_TEST_PROCESS_(testProcessKilled, FUNC, SIG, return)
 
 #endif // LIBC_TEST_SKIP_DEATH_TESTS
+
+#else // LIBC_TEST_SUBPROCESS_TESTS
+
+// EXPECT_DEATH can appear in a test of any function, e.g. checking for a crash
+// if passing nullptr to the function. So it must be defined, even if it can't
+// do anything.
+#define EXPECT_DEATH(FUNC, SIG)
+#define ASSERT_DEATH(FUNC, SIG)
 
 #endif // LIBC_TEST_SUBPROCESS_TESTS
 

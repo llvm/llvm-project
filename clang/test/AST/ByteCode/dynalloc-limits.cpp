@@ -54,7 +54,8 @@ constexpr std::size_t s = S<std::size_t>(~0UL)[42]; // both-error {{constexpr va
 constexpr std::size_t ssmall = S<std::size_t>(100)[42];
 
 constexpr std::size_t s5 = S<std::size_t>(1025)[42]; // both-error {{constexpr variable 's5' must be initialized by a constant expression}} \
-                                   // both-note@#alloc {{cannot allocate array; evaluated array bound 1025 exceeds the limit (1024); use '-fconstexpr-steps' to increase this limit}} \
+                                   // both-note@#alloc {{cannot allocate array; evaluated array bound 1025 exceeds the limit (1024)}} \
+                                   // both-note@#alloc {{use -fconstexpr-steps}} \
                                    // both-note@#call {{in call to 'this->alloc.allocate(1025)'}} \
                                    // both-note {{in call}}
 
@@ -62,7 +63,8 @@ constexpr std::size_t s5 = S<std::size_t>(1025)[42]; // both-error {{constexpr v
 
 template <auto N>
 constexpr int stack_array() {
-    [[maybe_unused]] char BIG[N] = {1};  // both-note {{cannot allocate array; evaluated array bound 1025 exceeds the limit (1024)}}
+    [[maybe_unused]] char BIG[N] = {1};  // both-note {{cannot allocate array; evaluated array bound 1025 exceeds the limit (1024)}} \
+                                         // both-note {{use -fconstexpr-steps}}
     return BIG[N-1];
 }
 

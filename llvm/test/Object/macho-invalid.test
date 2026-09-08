@@ -326,6 +326,18 @@ INVALID-RPATH-NAME_OFFSET-TOOBIG: macho-invalid-rpath-name_offset-toobig': trunc
 RUN: not llvm-objdump --macho --private-headers %p/Inputs/macho-invalid-rpath-name_toobig 2>&1 | FileCheck --check-prefix=INVALID-RPATH-NAME_TOOBIG %s
 INVALID-RPATH-NAME_TOOBIG: macho-invalid-rpath-name_toobig': truncated or malformed object (load command 0 LC_RPATH library name extends past the end of the load command)
 
+RUN: yaml2obj %p/Inputs/macho-invalid-target-triple-small.yaml -o - | not llvm-objdump --macho --private-headers - 2>&1 | FileCheck --check-prefix=INVALID-TARGET-TRIPLE-SMALL %s
+INVALID-TARGET-TRIPLE-SMALL: '-': truncated or malformed object (load command 0 LC_TARGET_TRIPLE cmdsize too small)
+
+RUN: yaml2obj %p/Inputs/macho-invalid-target-triple-name_offset-toosmall.yaml -o - | not llvm-objdump --macho --private-headers - 2>&1 | FileCheck --check-prefix=INVALID-TARGET-TRIPLE-NAME_OFFSET-TOOSMALL %s
+INVALID-TARGET-TRIPLE-NAME_OFFSET-TOOSMALL: '-': truncated or malformed object (load command 0 LC_TARGET_TRIPLE triple.offset field too small, not past the end of the target_triple_command struct)
+
+RUN: yaml2obj %p/Inputs/macho-invalid-target-triple-name_offset-toobig.yaml -o - | not llvm-objdump --macho --private-headers - 2>&1 | FileCheck --check-prefix=INVALID-TARGET-TRIPLE-NAME_OFFSET-TOOBIG %s
+INVALID-TARGET-TRIPLE-NAME_OFFSET-TOOBIG: '-': truncated or malformed object (load command 0 LC_TARGET_TRIPLE triple.offset field extends past the end of the load command)
+
+RUN: yaml2obj %p/Inputs/macho-invalid-target-triple-name_toobig.yaml -o - | not llvm-objdump --macho --private-headers - 2>&1 | FileCheck --check-prefix=INVALID-TARGET-TRIPLE-NAME_TOOBIG %s
+INVALID-TARGET-TRIPLE-NAME_TOOBIG: '-': truncated or malformed object (load command 0 LC_TARGET_TRIPLE triple name extends past the end of the load command)
+
 RUN: not llvm-objdump --macho --private-headers %p/Inputs/macho-invalid-source-bad-size 2>&1 | FileCheck --check-prefix=INVALID-SOURCE-BAD-SIZE %s
 INVALID-SOURCE-BAD-SIZE: macho-invalid-source-bad-size': truncated or malformed object (LC_SOURCE_VERSION command 0 has incorrect cmdsize)
 

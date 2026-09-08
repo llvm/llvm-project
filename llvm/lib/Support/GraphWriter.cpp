@@ -18,18 +18,15 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/config.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
-
-#ifdef __APPLE__
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ManagedStatic.h"
-#endif
 
 #include <string>
 #include <system_error>
@@ -48,10 +45,38 @@ struct CreateViewBackground {
 };
 } // namespace
 static ManagedStatic<cl::opt<bool>, CreateViewBackground> ViewBackground;
-void llvm::initGraphWriterOptions() { *ViewBackground; }
-#else
-void llvm::initGraphWriterOptions() {}
 #endif
+
+namespace {
+struct CreateDAGGraphWriteLocation {
+  static void *call() {
+    return new cl::opt<std::string>(
+        "dag-file-location", cl::Hidden,
+        cl::desc("Location to place the DAG graphs selected to be viewed"));
+  }
+};
+
+struct CreateNoOpenDAGViewer {
+  static void *call() {
+    return new cl::opt<bool>(
+        "no-open-dag-viewer", cl::Hidden,
+        cl::desc("Don't open the DAG viewer program, just write the file"),
+        cl::init(false));
+  }
+};
+} // namespace
+static ManagedStatic<cl::opt<std::string>, CreateDAGGraphWriteLocation>
+    DAGGraphWriteLocation;
+static ManagedStatic<cl::opt<bool>, CreateNoOpenDAGViewer> NoOpenDAGViewer;
+
+void llvm::initGraphWriterOptions() {
+#ifdef __APPLE__
+  *ViewBackground;
+#endif
+
+  *DAGGraphWriteLocation;
+  *NoOpenDAGViewer;
+}
 
 std::string llvm::DOT::EscapeString(const std::string &Label) {
   std::string Str(Label);
@@ -120,8 +145,23 @@ std::string llvm::createGraphFilename(const Twine &Name, int &FD) {
   // Replace illegal characters in graph Filename with '_' if needed
   std::string CleansedName = replaceIllegalFilenameChars(N, '_');
 
-  std::error_code EC =
-      sys::fs::createTemporaryFile(CleansedName, "dot", FD, Filename);
+  // If no directory is specified, use the default tmp directory
+  // If a directory is specified, use that
+  std::error_code EC;
+  if (DAGGraphWriteLocation->empty()) {
+    EC = sys::fs::createTemporaryFile(CleansedName, "dot", FD, Filename);
+  } else {
+    llvm::SmallString<128> realpath; // Expand and correct given path
+    auto path_EC = sys::fs::real_path(*DAGGraphWriteLocation, realpath, true);
+    if (path_EC) {
+      errs() << "Error resolving path: " << path_EC.message() << "\n";
+      return "";
+    }
+
+    EC = sys::fs::createUniqueFile(
+        realpath + "/" + CleansedName + "-%%%%%%.dot", FD, Filename);
+  }
+
   if (EC) {
     errs() << "Error: " << EC.message() << "\n";
     return "";
@@ -193,6 +233,11 @@ bool llvm::DisplayGraph(StringRef FilenameRef, bool wait,
   std::string ErrMsg;
   std::string ViewerPath;
   GraphSession S;
+
+  if (*NoOpenDAGViewer) {
+    errs() << "Not opening graph viewer program as per options.\n";
+    return true;
+  }
 
 #ifdef __APPLE__
   wait &= !*ViewBackground;

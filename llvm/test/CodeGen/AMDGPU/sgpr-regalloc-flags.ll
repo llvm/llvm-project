@@ -18,7 +18,6 @@
 ; DEFAULT: Greedy Register Allocator
 ; DEFAULT-NEXT: Virtual Register Rewriter
 ; DEFAULT-NEXT: Stack Slot Coloring
-; DEFAULT-NEXT: Machine Cycle Info Analysis
 ; DEFAULT-NEXT: SI lower SGPR spill instructions
 ; DEFAULT-NEXT: Virtual Register Map
 ; DEFAULT-NEXT: Live Register Matrix
@@ -58,14 +57,14 @@
 
 ; BASIC-DEFAULT: Debug Variable Analysis
 ; BASIC-DEFAULT-NEXT: Live Stack Slot Analysis
-; BASIC-DEFAULT-NEXT: Machine Natural Loop Construction
+; BASIC-DEFAULT-NEXT: Machine Cycle Info Analysis
 ; BASIC-DEFAULT-NEXT: Machine Block Frequency Analysis
+; BASIC-DEFAULT-NEXT: Machine Natural Loop Construction
 ; BASIC-DEFAULT-NEXT: Virtual Register Map
 ; BASIC-DEFAULT-NEXT: Live Register Matrix
 ; BASIC-DEFAULT-NEXT: Basic Register Allocator
 ; BASIC-DEFAULT-NEXT: Virtual Register Rewriter
 ; BASIC-DEFAULT-NEXT: Stack Slot Coloring
-; BASIC-DEFAULT-NEXT: Machine Cycle Info Analysis
 ; BASIC-DEFAULT-NEXT: SI lower SGPR spill instructions
 ; BASIC-DEFAULT-NEXT: Virtual Register Map
 ; BASIC-DEFAULT-NEXT: Live Register Matrix
@@ -94,7 +93,6 @@
 ; DEFAULT-BASIC: Greedy Register Allocator
 ; DEFAULT-BASIC-NEXT: Virtual Register Rewriter
 ; DEFAULT-BASIC-NEXT: Stack Slot Coloring
-; DEFAULT-BASIC-NEXT: Machine Cycle Info Analysis
 ; DEFAULT-BASIC-NEXT: SI lower SGPR spill instructions
 ; DEFAULT-BASIC-NEXT: Virtual Register Map
 ; DEFAULT-BASIC-NEXT: Live Register Matrix
@@ -118,14 +116,14 @@
 
 ; BASIC-BASIC: Debug Variable Analysis
 ; BASIC-BASIC-NEXT: Live Stack Slot Analysis
-; BASIC-BASIC-NEXT: Machine Natural Loop Construction
+; BASIC-BASIC-NEXT: Machine Cycle Info Analysis
 ; BASIC-BASIC-NEXT: Machine Block Frequency Analysis
+; BASIC-BASIC-NEXT: Machine Natural Loop Construction
 ; BASIC-BASIC-NEXT: Virtual Register Map
 ; BASIC-BASIC-NEXT: Live Register Matrix
 ; BASIC-BASIC-NEXT: Basic Register Allocator
 ; BASIC-BASIC-NEXT: Virtual Register Rewriter
 ; BASIC-BASIC-NEXT: Stack Slot Coloring
-; BASIC-BASIC-NEXT: Machine Cycle Info Analysis
 ; BASIC-BASIC-NEXT: SI lower SGPR spill instructions
 ; BASIC-BASIC-NEXT: Virtual Register Map
 ; BASIC-BASIC-NEXT: Live Register Matrix

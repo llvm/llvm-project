@@ -1,8 +1,9 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; TODO: enable spirv-val: OpGroupAsyncCopy event arg needs OpTypeEvent, not OpTypePointer
-; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-SPIRV-DAG: %[[#]] = OpGroupAsyncCopy %[[#]] %[[#Scope:]]
+; CHECK-SPIRV-DAG: %[[#EventTy:]] = OpTypeEvent
+; CHECK-SPIRV-DAG: %[[#NullEvent:]] = OpConstantNull %[[#EventTy]]
+; CHECK-SPIRV-DAG: %[[#]] = OpGroupAsyncCopy %[[#EventTy]] %[[#Scope:]] %[[#]] %[[#]] %[[#]] %[[#]] %[[#NullEvent]]
 ; CHECK-SPIRV-DAG: %[[#Scope]] = OpConstant %[[#]]
 
 %opencl.event_t = type opaque

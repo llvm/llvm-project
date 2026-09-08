@@ -32,7 +32,7 @@ The first component is the conversion of `LLVM IR to Sandbox IR` which converts 
 From this point on the pass operates on Sandbox IR.
 The main entry point to the internal pass pipeline is the `Sandbox IR Function Pass Manger`, which runs all registered function passes.
 The following figure lists only a single Sandbox IR function pass, the `Seed Collection Pass` which goes over the instructions in the function and collects vectorization candidates, like Stores to consecutive memory addresses, and forms a [Region](#region).
-The `Seed Collection Pass` itself contains its own Region pass pipeline, which in the following example contains a `Transaction Save` pass, a `Bottom-Up Vectorization` pass, a `Pack Reuse` pass and a `Transaction Accept/Revert` pass.
+The `Seed Collection Pass` itself contains its own Region pass pipeline, which in the following example contains a `Transaction Save` pass, a `Bundle Vectorization` pass, a `Pack Reuse` pass and a `Transaction Accept/Revert` pass.
 
 ```
 ┌────────────────────────────────── Sandbox Vectorizer LLVM Function Pass ─────────────────────────────┐
@@ -43,7 +43,7 @@ The `Seed Collection Pass` itself contains its own Region pass pipeline, which i
 │ │       │ │ │                                                                                  │   │ │
 │ │       │ │ │ ┌───────┐  For   ┌─────────────── sanboxir::Region Pass Manager ───────────────┐ │   │ │
 │ │LLVM IR│ │ │ │Collect│  each  │ ┌───────────┐ ┌────────────────┐ ┌───────┐ ┌──────────────┐ │ │   │ │
-│ │  to   │ │ │ │ Seeds │ Region │ │Transaction│ │   Bottom─Up    │ │ Pack  │ │ Transaction  │ │ │   │ │
+│ │  to   │ │ │ │ Seeds │ Region │ │Transaction│ │     Bundle     │ │ Pack  │ │ Transaction  │ │ │   │ │
 │ │Sandbox│ │ │ │Create │ ─────> │ │   Save    │ │ Vectorization  │ │ Reuse │ │Accept/Revert │ │ │   │ │
 │ │  IR   │ │ │ │Regions│        │ └───────────┘ └────────────────┘ └───────┘ └──────────────┘ │ │   │ │
 │ │       │ │ │ └───────┘        └─────────────────────────────────────────────────────────────┘ │   │ │
@@ -59,7 +59,7 @@ You can specify your own custom pipeline with the `-sbvec-passes=` argument to `
 The pipeline shown above is equivalent to this:
 
 ```shell
-$ opt -p=sandbox-vectorizer -sbvec-passes='seed-collection<tr-save,bottom-up-vec,pack-reuse,tr-accept>' file.ll
+$ opt -p=sandbox-vectorizer -sbvec-passes='seed-collection<tr-save,bundle-vec(bottom-up),pack-reuse,tr-accept>' file.ll
 ```
 
 If the user does not define a pipeline, the Sandbox Vectorizer will run its default pass-pipeline, which is set in the constructor of the `SandboxVectorizerPass`.
@@ -75,7 +75,7 @@ There are two types of passes: [Transformation Passes](#transformation-passes) t
 |  **Pass Name**            |         **File Name**       | **Type** |                     **Description**                     |
 |---------------------------|-----------------------------|----------|---------------------------------------------------------|
 | `seed-collection`         | SeedCollection.h            | Function | Collects the instructions to start vectorizing from, creates a region and runs the region-pass pipeline |
-| `bottom-up-vec`           | BottomUpVec.h               | Region   | An SLP-style bottom-up vectorizer. It can vectorize both scalars and vectors |
+| `bundle-vec`              | BundleVec.h                 | Region   | An SLP-style vectorizer that forms bundles by recursively walking the use-def (def-use) chains bottom-up (top-down). It can vectorize both scalars and vectors. Requires a `bottom-up` or `top-down` argument, e.g. `bundle-vec(bottom-up)` |
 | `pack-reuse`              | PackReuse.h                 | Region   | A pass that de-duplicates packs                         |
 | `load-store-vec`          | LoadStoreVec.h              | Region   | Vectorize load-store chains                             |
 
@@ -179,7 +179,7 @@ So the following example defines one region (region `!0`) containing all three `
    !2 = !{i32 1}
 ```
 
-The auxiliary vector is currently used by the Seed Collection pass to communicate a group of seed instructions to the Bottom-Up-Vectorizer pass.
+The auxiliary vector is currently used by the Seed Collection pass to communicate a group of seed instructions to the Bundle Vectorizer pass.
 
 ## Testing Sandbox Vectorizer Passes In Isolation
 
@@ -264,7 +264,7 @@ The main interface function for the Dependency Graph is `DependencyGraph::extend
 ### InstrMaps
 
 Instruction Maps is a helper data structure that maintains a mapping between the original (often scalar) instructions and their corresponding vector instructions and the reverse.
-It is used by the `bottom-up-vec` region pass for tracing vector instructions back to the original instructions and the reverse.
+It is used by the `bundle-vec` region pass for tracing vector instructions back to the original instructions and the reverse.
 
 
 ## Debugging
@@ -275,5 +275,5 @@ There are a couple of useful `cl::opt` options for debugging the vectorizer, tha
 |---------------------------------|----------------------------------------------------|
 | `-sbvec-allow-files=<regex>`    | Enables the Sandbox Vectorizer as a whole only for source files matching the comma-separated list of regular expressions. |
 | `-sbvec-passes=<pass-pipeline>` | Allows you to change the internal pass pipeline and skip any potentially broken passes. |
-| `-sbvec-stop-at=<num>`          | Will stop invoking the bottom-up-vectorizer if the invocation count is greater or equal to `<num>`. |
-| `-sbvec-stop-bndl=<num>`        | Limits the vectorization depth of the bottom-up vectorizer to `<num>`. This means that the vectorizer will emit a pack and stop vectorizing further. |
+| `-sbvec-stop-at=<num>`          | Will stop invoking the bundle vectorizer if the invocation count is greater or equal to `<num>`. |
+| `-sbvec-stop-bndl=<num>`        | Limits the vectorization depth of the bundle vectorizer to `<num>`. This means that the vectorizer will emit a pack and stop vectorizing further. |

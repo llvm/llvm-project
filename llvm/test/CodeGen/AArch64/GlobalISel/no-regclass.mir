@@ -25,8 +25,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32all = COPY $w0
     ; CHECK-NEXT: $w0 = COPY [[COPY]]
-    %0:gpr(s32) = COPY $w0
-    %1:gpr(s64) = G_MERGE_VALUES %0(s32), %0(s32)
-    %2:gpr(s32), %3:gpr(s32) = G_UNMERGE_VALUES %1(s64)
-    $w0 = COPY %2(s32)
+    %0:gpr(i32) = COPY $w0
+    %1:gpr(i64) = G_MERGE_VALUES %0(i32), %0(i32)
+    %2:gpr(i32), %3:gpr(i32) = G_UNMERGE_VALUES %1(i64)
+    $w0 = COPY %2(i32)
 ...

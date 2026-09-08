@@ -35,12 +35,20 @@ tablegen("R600TargetParserDef") {
   tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
 }
 
+tablegen("AMDGPUTargetParserDef") {
+  visibility = [ ":gen" ]
+  args = [ "-gen-amdgpu-target-def" ]
+  td_file = "//llvm/lib/Target/AMDGPU/AMDGPU.td"
+  tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
+}
+
 group("gen") {
   deps = [
     ":AArch64TargetParserDef",
+    ":AMDGPUTargetParserDef",
     ":ARMTargetParserDef",
     ":PPCGenTargetFeatures",
-    ":RISCVTargetParserDef",
     ":R600TargetParserDef",
+    ":RISCVTargetParserDef",
   ]
 }

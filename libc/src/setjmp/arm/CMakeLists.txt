@@ -8,7 +8,7 @@ add_entrypoint_object(
     libc.hdr.types.jmp_buf
 )
 
-if (TARGET libc.src.setjmp.sigsetjmp_epilogue)
+if(TARGET libc.src.setjmp.sigsetjmp_epilogue)
   add_entrypoint_object(
     sigsetjmp
     SRCS

@@ -25,15 +25,73 @@ class GCNTargetMachine;
 class TargetMachine;
 
 // GlobalISel passes
-void initializeAMDGPUPreLegalizerCombinerPass(PassRegistry &);
-FunctionPass *createAMDGPUPreLegalizeCombiner(bool IsOptNone);
+void initializeAMDGPUPreLegalizerCombinerLegacyPass(PassRegistry &);
+FunctionPass *createAMDGPUPreLegalizeCombinerLegacyPass(bool IsOptLevelNone);
+
+class AMDGPUPreLegalizerCombinerPass
+    : public RequiredPassInfoMixin<AMDGPUPreLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 void initializeAMDGPUPostLegalizerCombinerPass(PassRegistry &);
 FunctionPass *createAMDGPUPostLegalizeCombiner(bool IsOptNone);
-FunctionPass *createAMDGPURegBankCombiner(bool IsOptNone);
-void initializeAMDGPURegBankCombinerPass(PassRegistry &);
+FunctionPass *createAMDGPURegBankCombinerLegacy(bool IsOptLevelNone);
+void initializeAMDGPURegBankCombinerLegacyPass(PassRegistry &);
+
+class AMDGPURegBankCombinerPass
+    : public RequiredPassInfoMixin<AMDGPURegBankCombinerPass> {
+  bool IsOptLevelNone;
+
+public:
+  explicit AMDGPURegBankCombinerPass(bool IsOptLevelNone = false);
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
-FunctionPass *createAMDGPURegBankSelectPass();
-FunctionPass *createAMDGPURegBankLegalizePass();
+
+class AMDGPUGlobalISelDivergenceLoweringPass
+    : public RequiredPassInfoMixin<AMDGPUGlobalISelDivergenceLoweringPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+FunctionPass *createAMDGPURegBankSelectLegacyPass();
+
+class AMDGPURegBankSelectPass
+    : public RequiredPassInfoMixin<AMDGPURegBankSelectPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setIsSSA().setLegalized();
+  }
+
+  MachineFunctionProperties getSetProperties() const {
+    return MachineFunctionProperties().setRegBankSelected();
+  }
+};
+FunctionPass *createAMDGPURegBankLegalizeLegacyPass();
+
+class AMDGPURegBankLegalizePass
+    : public RequiredPassInfoMixin<AMDGPURegBankLegalizePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties()
+        .setIsSSA()
+        .setLegalized()
+        .setRegBankSelected();
+  }
+
+  MachineFunctionProperties getClearedProperties() const {
+    return MachineFunctionProperties().setNoPHIs();
+  }
+};
 
 // SI Passes
 FunctionPass *createGCNDPPCombinePass();
@@ -44,7 +102,6 @@ FunctionPass *createSILowerI1CopiesLegacyPass();
 FunctionPass *createSIShrinkInstructionsLegacyPass();
 FunctionPass *createSILoadStoreOptimizerLegacyPass();
 FunctionPass *createSIWholeQuadModeLegacyPass();
-FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
 FunctionPass *createSIOptimizeVGPRLiveRangeLegacyPass();
 FunctionPass *createAMDGPUNextUseAnalysisLegacyPass();
@@ -211,14 +268,14 @@ extern char &SILowerWWMCopiesLegacyID;
 void initializeSILowerI1CopiesLegacyPass(PassRegistry &);
 extern char &SILowerI1CopiesLegacyID;
 
-void initializeAMDGPUGlobalISelDivergenceLoweringPass(PassRegistry &);
-extern char &AMDGPUGlobalISelDivergenceLoweringID;
+void initializeAMDGPUGlobalISelDivergenceLoweringLegacyPass(PassRegistry &);
+extern char &AMDGPUGlobalISelDivergenceLoweringLegacyID;
 
-void initializeAMDGPURegBankSelectPass(PassRegistry &);
-extern char &AMDGPURegBankSelectID;
+void initializeAMDGPURegBankSelectLegacyPass(PassRegistry &);
+extern char &AMDGPURegBankSelectLegacyID;
 
-void initializeAMDGPURegBankLegalizePass(PassRegistry &);
-extern char &AMDGPURegBankLegalizeID;
+void initializeAMDGPURegBankLegalizeLegacyPass(PassRegistry &);
+extern char &AMDGPURegBankLegalizeLegacyID;
 
 void initializeAMDGPUMarkLastScratchLoadLegacyPass(PassRegistry &);
 extern char &AMDGPUMarkLastScratchLoadID;

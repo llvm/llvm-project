@@ -26,6 +26,7 @@ int main(int, char**) {
 
   try { // Throw in vector() from allocator
     AllocVec vec;
+    (void)vec;
     assert(false);
   } catch (int) {
   }
@@ -35,6 +36,7 @@ int main(int, char**) {
   try { // Throw in vector(size_type, const allocator_type&) from allocator
     throwing_allocator<bool> alloc((throwing_on_allocation_tag()));
     AllocVec get_alloc(1, alloc);
+    (void)get_alloc;
     assert(false);
   } catch (int) {
   }
@@ -44,6 +46,7 @@ int main(int, char**) {
   try { // Throw in vector(size_type, const value_type&, const allocator_type&) from allocator
     throwing_allocator<bool> alloc((throwing_on_allocation_tag()));
     AllocVec get_alloc(1, true, alloc);
+    (void)get_alloc;
     assert(false);
   } catch (int) {
   }
@@ -52,6 +55,7 @@ int main(int, char**) {
   try { // Throw in vector(InputIterator, InputIterator) from input iterator
     std::vector<bool> vec(
         throwing_iterator<bool, std::input_iterator_tag>(), throwing_iterator<bool, std::input_iterator_tag>(2));
+    (void)vec;
     assert(false);
   } catch (int) {
   }
@@ -60,6 +64,7 @@ int main(int, char**) {
   try { // Throw in vector(InputIterator, InputIterator) from forward iterator
     std::vector<bool> vec(
         throwing_iterator<bool, std::forward_iterator_tag>(), throwing_iterator<bool, std::forward_iterator_tag>(2));
+    (void)vec;
     assert(false);
   } catch (int) {
   }
@@ -68,6 +73,7 @@ int main(int, char**) {
   try { // Throw in vector(InputIterator, InputIterator) from allocator
     bool a[] = {true, true};
     AllocVec vec(cpp17_input_iterator<bool*>(a), cpp17_input_iterator<bool*>(a + 2));
+    (void)vec;
     assert(false);
   } catch (int) {
   }
@@ -77,6 +83,7 @@ int main(int, char**) {
     std::allocator<bool> alloc;
     std::vector<bool> vec(
         throwing_iterator<bool, std::input_iterator_tag>(), throwing_iterator<bool, std::input_iterator_tag>(2), alloc);
+    (void)vec;
     assert(false);
   } catch (int) {
   }
@@ -87,6 +94,7 @@ int main(int, char**) {
     std::vector<bool> vec(throwing_iterator<bool, std::forward_iterator_tag>(),
                           throwing_iterator<bool, std::forward_iterator_tag>(2),
                           alloc);
+    (void)vec;
     assert(false);
   } catch (int) {
   }
@@ -96,6 +104,7 @@ int main(int, char**) {
     bool a[] = {true, false};
     throwing_allocator<bool> alloc((throwing_on_allocation_tag()));
     AllocVec vec(cpp17_input_iterator<bool*>(a), cpp17_input_iterator<bool*>(a + 2), alloc);
+    (void)vec;
     assert(false);
   } catch (int) {
   }
@@ -105,6 +114,7 @@ int main(int, char**) {
     bool a[] = {true, false};
     throwing_allocator<bool> alloc((throwing_on_allocation_tag()));
     AllocVec vec(forward_iterator<bool*>(a), forward_iterator<bool*>(a + 2), alloc);
+    (void)vec;
     assert(false);
   } catch (int) {
   }
@@ -117,6 +127,7 @@ int main(int, char**) {
     vec.push_back(true);
     alloc.throw_on_allocation_ = true;
     AllocVec vec2(vec, alloc);
+    (void)vec2;
     assert(false);
   } catch (int) {
   }
@@ -129,6 +140,7 @@ int main(int, char**) {
     alloc.throw_on_allocation_ = true;
     alloc.payload_             = 42; // makes allocators not equal and enforces reallocation
     AllocVec vec2(std::move(vec), alloc);
+    (void)vec2;
     assert(false);
   } catch (int) {
   }
@@ -137,6 +149,7 @@ int main(int, char**) {
   try { // Throw in vector(initializer_list<value_type>, const allocator_type&) constructor from allocator
     throwing_allocator<bool> alloc((throwing_on_allocation_tag()));
     AllocVec vec({true, true}, alloc);
+    (void)vec;
     assert(false);
   } catch (int) {
   }

@@ -8,7 +8,7 @@ add_libc_test(
     algorithm_test.cpp
   DEPENDS
     libc.src.__support.CPP.algorithm
-  )
+)
 
 add_libc_test(
   array_test
@@ -18,7 +18,7 @@ add_libc_test(
     array_test.cpp
   DEPENDS
     libc.src.__support.CPP.array
-  )
+)
 
 add_libc_test(
   bit_test
@@ -108,6 +108,17 @@ add_libc_test(
     libc.src.__support.CPP.utility
 )
 
+add_libc_test(
+  swap_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    swap_test.cpp
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.utility
+)
+
 
 # This test fails with invalid address space operations on sm_60
 if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
@@ -180,9 +191,9 @@ add_libc_test(
   SRCS
     string_test.cpp
   DEPENDS
-  libc.hdr.func.free
-  libc.src.__support.CPP.string
-  libc.src.__support.CPP.string_view
+    libc.hdr.func.free
+    libc.src.__support.CPP.string
+    libc.src.__support.CPP.string_view
 )
 
 add_libc_test(
@@ -190,9 +201,9 @@ add_libc_test(
   SUITE
     libc-cpp-utils-tests
   SRCS
-  type_traits_test.cpp
+    type_traits_test.cpp
   DEPENDS
-  libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.type_traits
 )
 
 if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)

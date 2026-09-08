@@ -11,7 +11,7 @@
 
 #include <__config>
 
-#if defined(_LIBCPP_MSVCRT_LIKE)
+#ifdef _WIN32
 #  include <stdlib.h>
 #else
 #  include <errno.h>
@@ -39,7 +39,7 @@
 // No _LIBCPP_ELAST needed on Apple
 #elif defined(__MVS__)
 #  define _LIBCPP_ELAST 1160
-#elif defined(_LIBCPP_MSVCRT_LIKE)
+#elif defined(_WIN32)
 #  define _LIBCPP_ELAST (_sys_nerr - 1)
 #elif defined(_AIX)
 #  define _LIBCPP_ELAST 127

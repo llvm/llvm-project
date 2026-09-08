@@ -182,23 +182,6 @@ void VTEmitter::run(raw_ostream &OS) {
   }
   OS << "#endif\n\n";
 
-  OS << "#ifdef GET_VT_VECATTR // (Ty, Sc, Tup, nElem, ElTy)\n";
-  for (const auto *VT : VTsByNumber) {
-    if (!VT || !VT->getValueAsBit("isVector"))
-      continue;
-    const auto *ElTy = VT->getValueAsDef("ElementType");
-    assert(ElTy);
-    // clang-format off
-    OS << "  GET_VT_VECATTR("
-       << VT->getValueAsString("LLVMName") << ", "
-       << VT->getValueAsBit("isScalable") << ", "
-       << VT->getValueAsBit("isRISCVVecTuple") << ", "
-       << VT->getValueAsInt("nElem") << ", "
-       << ElTy->getName() << ")\n";
-    // clang-format on
-  }
-  OS << "#endif\n\n";
-
   OS << "#ifdef GET_VT_EVT\n";
   for (const auto *VT : VTsByNumber) {
     if (!VT)

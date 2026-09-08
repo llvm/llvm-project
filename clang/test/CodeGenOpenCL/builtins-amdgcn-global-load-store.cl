@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu11.00-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu12.00-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu12.50-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu13.10-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 
 typedef __attribute__((__vector_size__(4 * sizeof(unsigned int)))) unsigned int v4u32;
 typedef v4u32 __global *global_ptr_to_v4u32;

@@ -26,10 +26,12 @@ void test() {
     std::unordered_multimap<int, operator_hijacker> mo;
     std::unordered_multimap<int, operator_hijacker> m;
     m = mo;
+    (void)m;
   }
   {
     std::unordered_multimap<operator_hijacker, int> mo;
     std::unordered_multimap<operator_hijacker, int> m;
     m = mo;
+    (void)m;
   }
 }

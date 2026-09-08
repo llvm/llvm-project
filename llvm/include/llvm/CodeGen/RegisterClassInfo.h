@@ -98,6 +98,15 @@ public:
   LLVM_ABI void runOnMachineFunction(const MachineFunction &MF,
                                      bool Rev = false);
 
+  /// Update cached register class information using ReservedInput, MRI's
+  /// current reserved-register set. Cached orders are compacted when
+  /// only registers are added and `-stress-regalloc` is disabled; otherwise,
+  /// they are invalidated and recomputed on demand.
+  ///
+  /// RegisterClassInfo must be initialized. Target information, callee-saved
+  /// registers, register costs, and allocation orders must remain unchanged.
+  LLVM_ABI void updateReservedRegs(const BitVector &ReservedInput);
+
   LLVM_ABI bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
                            MachineFunctionAnalysisManager::Invalidator &) {
     auto PAC = PA.getChecker<MachineRegisterClassAnalysis>();

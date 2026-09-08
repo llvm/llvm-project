@@ -222,7 +222,8 @@ __rev16(uint32_t __t) {
 
 static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
 __rev16ll(uint64_t __t) {
-  return (((uint64_t)__rev16(__t >> 32)) << 32) | (uint64_t)__rev16((uint32_t)__t);
+  return (((__t >> 8) & 0x00ff00ff00ff00ff) |
+          ((__t << 8) & 0xff00ff00ff00ff00));
 }
 
 static __inline__ unsigned long __attribute__((__always_inline__, __nodebug__))

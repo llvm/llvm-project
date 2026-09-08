@@ -24,7 +24,7 @@ foreach(file_name ${SANITIZER_IGNORELIST_FILES})
 endforeach()
 
 add_custom_target(sanitizer-ignorelist-files DEPENDS ${sanitizer_ignorelist_outputs})
-set_target_properties(sanitizer-ignorelist-files PROPERTIES FOLDER "Compiler-RT/Resources")
+set_target_properties(sanitizer-ignorelist-files PROPERTIES FOLDER "compiler-rt/Resources")
 add_dependencies(sanitizer-ignorelists sanitizer-ignorelist-files)
 
 # Install in the Clang resource directory. No -stripped variant: the ignorelists
@@ -40,6 +40,6 @@ add_custom_target(install-sanitizer-ignorelists
           -DCMAKE_INSTALL_COMPONENT=sanitizer-ignorelists
           -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
 set_target_properties(install-sanitizer-ignorelists PROPERTIES
-  FOLDER "Compiler-RT/Installation")
+  FOLDER "compiler-rt/Installation")
 add_dependencies(install-compiler-rt install-sanitizer-ignorelists)
 add_dependencies(install-compiler-rt-stripped install-sanitizer-ignorelists)

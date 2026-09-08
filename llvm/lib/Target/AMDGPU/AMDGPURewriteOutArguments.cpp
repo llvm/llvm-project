@@ -207,10 +207,9 @@ static StoreInst *findStoreForOutArgument(BasicBlock *BB, Argument *OutArg,
       }
     }
 
-    // Any other memory access that writes the location prevents the
+    // Any other memory access that may read or write the location prevents the
     // rewrite.
-    // FIXME: should handle aliasing reads too.
-    if (isModSet(BAA.getModRefInfo(I, ArgLoc)))
+    if (isModOrRefSet(BAA.getModRefInfo(I, ArgLoc)))
       return nullptr;
   }
 

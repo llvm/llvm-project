@@ -41,9 +41,11 @@ void test(
   // construction
   {
     Vector v2(std::move(v));
+    (void)v2;
   }
   {
     Vector v2(std::move(v), std::allocator<operator_hijacker>());
+    (void)v2;
   }
 
   // swap
