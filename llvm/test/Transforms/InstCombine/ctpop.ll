@@ -107,7 +107,9 @@ define <2 x i32> @mask_one_bit_splat(<2 x i32> %x, ptr %p) {
 ; CHECK-LABEL: @mask_one_bit_splat(
 ; CHECK-NEXT:    [[A:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 2048)
 ; CHECK-NEXT:    store <2 x i32> [[A]], ptr [[P:%.*]], align 8
-; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i32> [[A]], splat (i32 11)
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw <2 x i32> [[A]] to <2 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr exact <2 x i16> [[TMP1]], splat (i16 11)
+; CHECK-NEXT:    [[R:%.*]] = zext nneg <2 x i16> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %a = and <2 x i32> %x, <i32 2048, i32 2048>
@@ -182,10 +184,12 @@ define <2 x i32> @_parity_of_not_poison2(<2 x i32> %x) {
 ; PR48999
 define i32 @ctpop_add(i32 %a, i32 %b) {
 ; CHECK-LABEL: @ctpop_add(
-; CHECK-NEXT:    [[AND8:%.*]] = lshr i32 [[A:%.*]], 3
-; CHECK-NEXT:    [[CTPOP1:%.*]] = and i32 [[AND8]], 1
-; CHECK-NEXT:    [[AND2:%.*]] = lshr i32 [[B:%.*]], 1
-; CHECK-NEXT:    [[CTPOP2:%.*]] = and i32 [[AND2]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[A:%.*]] to i4
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i4 [[TMP1]], 3
+; CHECK-NEXT:    [[CTPOP1:%.*]] = zext nneg i4 [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[B:%.*]] to i2
+; CHECK-NEXT:    [[TMP4:%.*]] = lshr i2 [[TMP3]], 1
+; CHECK-NEXT:    [[CTPOP2:%.*]] = zext nneg i2 [[TMP4]] to i32
 ; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw i32 [[CTPOP1]], [[CTPOP2]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -199,8 +203,13 @@ define i32 @ctpop_add(i32 %a, i32 %b) {
 
 define i32 @ctpop_add_no_common_bits(i32 %a, i32 %b) {
 ; CHECK-LABEL: @ctpop_add_no_common_bits(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.fshl.i32(i32 [[A:%.*]], i32 [[B:%.*]], i32 16)
-; CHECK-NEXT:    [[RES:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[TMP1]])
+; CHECK-NEXT:    [[SHL16:%.*]] = shl i32 [[A:%.*]], 16
+; CHECK-NEXT:    [[CTPOP1:%.*]] = tail call range(i32 0, 17) i32 @llvm.ctpop.i32(i32 [[SHL16]])
+; CHECK-NEXT:    [[LSHL16:%.*]] = lshr i32 [[B:%.*]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i32 [[LSHL16]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i16 0, 17) i16 @llvm.ctpop.i16(i16 [[TMP1]])
+; CHECK-NEXT:    [[CTPOP2:%.*]] = zext nneg i16 [[TMP2]] to i32
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw i32 [[CTPOP1]], [[CTPOP2]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %shl16 = shl i32 %a, 16
@@ -213,8 +222,13 @@ define i32 @ctpop_add_no_common_bits(i32 %a, i32 %b) {
 
 define <2 x i32> @ctpop_add_no_common_bits_vec(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @ctpop_add_no_common_bits_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[A:%.*]], <2 x i32> [[B:%.*]], <2 x i32> splat (i32 16))
-; CHECK-NEXT:    [[RES:%.*]] = call range(i32 0, 33) <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[TMP1]])
+; CHECK-NEXT:    [[SHL16:%.*]] = shl <2 x i32> [[A:%.*]], splat (i32 16)
+; CHECK-NEXT:    [[CTPOP1:%.*]] = tail call range(i32 0, 17) <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[SHL16]])
+; CHECK-NEXT:    [[LSHL16:%.*]] = lshr <2 x i32> [[B:%.*]], splat (i32 16)
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw <2 x i32> [[LSHL16]] to <2 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i16 0, 17) <2 x i16> @llvm.ctpop.v2i16(<2 x i16> [[TMP1]])
+; CHECK-NEXT:    [[CTPOP2:%.*]] = zext nneg <2 x i16> [[TMP2]] to <2 x i32>
+; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <2 x i32> [[CTPOP1]], [[CTPOP2]]
 ; CHECK-NEXT:    ret <2 x i32> [[RES]]
 ;
   %shl16 = shl <2 x i32> %a, <i32 16, i32 16>
@@ -230,7 +244,9 @@ define <2 x i32> @ctpop_add_no_common_bits_vec_use(<2 x i32> %a, <2 x i32> %b, p
 ; CHECK-NEXT:    [[SHL16:%.*]] = shl <2 x i32> [[A:%.*]], splat (i32 16)
 ; CHECK-NEXT:    [[CTPOP1:%.*]] = tail call range(i32 0, 17) <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[SHL16]])
 ; CHECK-NEXT:    [[LSHL16:%.*]] = lshr <2 x i32> [[B:%.*]], splat (i32 16)
-; CHECK-NEXT:    [[CTPOP2:%.*]] = tail call range(i32 0, 17) <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[LSHL16]])
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw <2 x i32> [[LSHL16]] to <2 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i16 0, 17) <2 x i16> @llvm.ctpop.v2i16(<2 x i16> [[TMP1]])
+; CHECK-NEXT:    [[CTPOP2:%.*]] = zext nneg <2 x i16> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    store <2 x i32> [[CTPOP2]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <2 x i32> [[CTPOP1]], [[CTPOP2]]
 ; CHECK-NEXT:    ret <2 x i32> [[RES]]
@@ -250,7 +266,9 @@ define <2 x i32> @ctpop_add_no_common_bits_vec_use2(<2 x i32> %a, <2 x i32> %b, 
 ; CHECK-NEXT:    [[CTPOP1:%.*]] = tail call range(i32 0, 17) <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[SHL16]])
 ; CHECK-NEXT:    store <2 x i32> [[CTPOP1]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[LSHL16:%.*]] = lshr <2 x i32> [[B:%.*]], splat (i32 16)
-; CHECK-NEXT:    [[CTPOP2:%.*]] = tail call range(i32 0, 17) <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[LSHL16]])
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw <2 x i32> [[LSHL16]] to <2 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i16 0, 17) <2 x i16> @llvm.ctpop.v2i16(<2 x i16> [[TMP1]])
+; CHECK-NEXT:    [[CTPOP2:%.*]] = zext nneg <2 x i16> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    [[RES:%.*]] = add nuw nsw <2 x i32> [[CTPOP1]], [[CTPOP2]]
 ; CHECK-NEXT:    ret <2 x i32> [[RES]]
 ;
@@ -369,7 +387,8 @@ define i32 @zext_ctpop_extra_use(i16 %x, ptr %q) {
 ; CHECK-LABEL: @zext_ctpop_extra_use(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i16 [[X:%.*]] to i32
 ; CHECK-NEXT:    store i32 [[Z]], ptr [[Q:%.*]], align 4
-; CHECK-NEXT:    [[P:%.*]] = call range(i32 0, 17) i32 @llvm.ctpop.i32(i32 [[Z]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call range(i16 0, 17) i16 @llvm.ctpop.i16(i16 [[X]])
+; CHECK-NEXT:    [[P:%.*]] = zext nneg i16 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[P]]
 ;
   %z = zext i16 %x to i32
@@ -488,7 +507,9 @@ define i32 @select_ctpop_zero(i32 %x) {
 
 define i32 @ctpop_non_zero(i32 range(i32 1, 255) %x) {
 ; CHECK-LABEL: @ctpop_non_zero(
-; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 1, 9) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i8 1, 9) i8 @llvm.ctpop.i8(i8 [[TMP1]])
+; CHECK-NEXT:    [[CTPOP:%.*]] = zext nneg i8 [[TMP2]] to i32
 ; CHECK-NEXT:    ret i32 [[CTPOP]]
 ;
   %ctpop = call i32 @llvm.ctpop.i32(i32 %x)
@@ -497,9 +518,65 @@ define i32 @ctpop_non_zero(i32 range(i32 1, 255) %x) {
 
 define i32 @ctpop_non_zero_with_existing_range_attr(i32 range(i32 1, 255) %x) {
 ; CHECK-LABEL: @ctpop_non_zero_with_existing_range_attr(
-; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 1, 9) i32 @llvm.ctpop.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i32 [[X:%.*]] to i8
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i8 1, 9) i8 @llvm.ctpop.i8(i8 [[TMP1]])
+; CHECK-NEXT:    [[CTPOP:%.*]] = zext nneg i8 [[TMP2]] to i32
 ; CHECK-NEXT:    ret i32 [[CTPOP]]
 ;
   %ctpop = call range(i32 0, 9) i32 @llvm.ctpop.i32(i32 %x)
   ret i32 %ctpop
+}
+
+define i32 @ctpop_narrow_i64_to_i32_via_assume(i64 %x) {
+; CHECK-LABEL: @ctpop_narrow_i64_to_i32_via_assume(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[X:%.*]], 4294967296
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i64 [[X]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[TMP1]])
+; CHECK-NEXT:    ret i32 [[TMP2]]
+;
+  %cmp = icmp ult i64 %x, 4294967296
+  call void @llvm.assume(i1 %cmp)
+  %pop = call i64 @llvm.ctpop.i64(i64 %x)
+  %trunc = trunc i64 %pop to i32
+  ret i32 %trunc
+}
+
+define i64 @ctpop_no_narrow_no_assume(i64 %x) {
+; CHECK-LABEL: @ctpop_no_narrow_no_assume(
+; CHECK-NEXT:    [[POP:%.*]] = call range(i64 0, 65) i64 @llvm.ctpop.i64(i64 [[X:%.*]])
+; CHECK-NEXT:    ret i64 [[POP]]
+;
+  %pop = call i64 @llvm.ctpop.i64(i64 %x)
+  ret i64 %pop
+}
+
+define i32 @ctpop_no_narrow_not_enough_zeros(i64 %x) {
+; CHECK-LABEL: @ctpop_no_narrow_not_enough_zeros(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[X:%.*]], 8589934592
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[POP:%.*]] = call range(i64 0, 34) i64 @llvm.ctpop.i64(i64 [[X]])
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i64 [[POP]] to i32
+; CHECK-NEXT:    ret i32 [[TRUNC]]
+;
+  %cmp = icmp ult i64 %x, 8589934592
+  call void @llvm.assume(i1 %cmp)
+  %pop = call i64 @llvm.ctpop.i64(i64 %x)
+  %trunc = trunc i64 %pop to i32
+  ret i32 %trunc
+}
+
+declare i65 @llvm.ctpop.i65(i65)
+
+define i65 @ctpop_i65_masked(i65 %x) {
+; CHECK-LABEL: @ctpop_i65_masked(
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i65 [[X:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 8589934591
+; CHECK-NEXT:    [[TMP3:%.*]] = call range(i64 0, 34) i64 @llvm.ctpop.i64(i64 [[TMP2]])
+; CHECK-NEXT:    [[POP:%.*]] = zext nneg i64 [[TMP3]] to i65
+; CHECK-NEXT:    ret i65 [[POP]]
+;
+  %masked = and i65 %x, 8589934591
+  %pop = call i65 @llvm.ctpop.i65(i65 %masked)
+  ret i65 %pop
 }

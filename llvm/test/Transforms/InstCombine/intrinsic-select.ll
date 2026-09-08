@@ -141,7 +141,9 @@ define i32 @ctpop_sel_const_true_false_extra_use(i1 %b) {
 ; CHECK-LABEL: @ctpop_sel_const_true_false_extra_use(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 5, i32 7
 ; CHECK-NEXT:    call void @use(i32 [[S]])
-; CHECK-NEXT:    [[C:%.*]] = call range(i32 2, 4) i32 @llvm.ctpop.i32(i32 [[S]])
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw nsw i32 [[S]] to i4
+; CHECK-NEXT:    [[TMP2:%.*]] = call range(i4 2, 4) i4 @llvm.ctpop.i4(i4 [[TMP1]])
+; CHECK-NEXT:    [[C:%.*]] = zext nneg i4 [[TMP2]] to i32
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %s = select i1 %b, i32 5, i32 7
