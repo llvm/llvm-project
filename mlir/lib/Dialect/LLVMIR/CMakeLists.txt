@@ -2,6 +2,7 @@ add_subdirectory(Transforms)
 
 set(LLVM_OPTIONAL_SOURCES
   IR/LLVMOps.cpp
+  IR/ROCDLOps.cpp
   )
 
 set(LLVM_TARGET_DEFINITIONS IR/LLVMOps.cpp)
@@ -87,8 +88,18 @@ add_mlir_dialect_library(MLIRNVVMDialect
   MLIRInferIntRangeInterface
   )
 
+set(LLVM_TARGET_DEFINITIONS IR/ROCDLOps.cpp)
+foreach(index RANGE 7)
+  set(ROCDL_SHARDED_SRC ROCDLOps.${index}.cpp)
+  list(APPEND ROCDL_SHARDED_SRCS ${ROCDL_SHARDED_SRC})
+  tablegen(MLIR_SRC_SHARDER ${ROCDL_SHARDED_SRC}
+    -op-shard-index=${index})
+endforeach()
+add_public_tablegen_target(MLIRROCDLOpsShardGen)
+
 add_mlir_dialect_library(MLIRROCDLDialect
   IR/ROCDLDialect.cpp
+  ${ROCDL_SHARDED_SRCS}
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
@@ -96,6 +107,7 @@ add_mlir_dialect_library(MLIRROCDLDialect
   DEPENDS
   MLIRGPUCompilationAttrInterfacesIncGen
   MLIRROCDLOpsIncGen
+  MLIRROCDLOpsShardGen
   MLIRROCDLConversionsIncGen
   intrinsics_gen
 
