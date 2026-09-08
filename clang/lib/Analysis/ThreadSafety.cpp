@@ -744,6 +744,23 @@ public:
     }));
   }
 
+  /// The try fact of \p CapE in kind \p Kind recording the acquisition the
+  /// call \p Origin made: its own, or one of a call that \p SameAcquisition
+  /// says acquires exactly what it does. Two such calls are one
+  /// acquisition to any branch that resolves them, since the variable the
+  /// branch reads holds one of the two results
+  /// (ThreadSafetyAnalyzer::sameTryAcquireCaps()).
+  iterator findTryFactOfAcquisition(
+      FactManager &FM, const CapabilityExpr &CapE, const Expr *Origin,
+      LockKind Kind,
+      llvm::function_ref<bool(const Expr *, const Expr *)> SameAcquisition) {
+    return findIf(FM, [&](const FactEntry &FE) {
+      const auto *W = dyn_cast<TryFactEntry>(&FE);
+      return W && W->kind() == Kind && W->matches(CapE) &&
+             (W->origin() == Origin || SameAcquisition(W->origin(), Origin));
+    });
+  }
+
   /// The try fact of \p CapE from the call \p Origin in state \p S,
   /// whichever its kind: a call's failure record (ProvedNotHeld), the proof
   /// of a hold (ProvedHeld), its stale result (Released), or its unresolved
@@ -3182,8 +3199,22 @@ public:
   bool crossKindCompanion(const Expr *Call, const CapabilityExpr &CE);
   void collectNaturalLoop(const CFGBlock *Head, const CFGBlock *Latch,
                           llvm::SmallPtrSetImpl<const CFGBlock *> &LoopBlocks);
-  void collectInjectableTryFacts(const CFGBlock *Latch,
-                                 SmallVectorImpl<FactID> &Injectable);
+  /// What a back edge may carry out of its loop, before asking what the
+  /// loop checks (collectLoopCarriedTryFacts()).
+  struct LoopCarriedFacts {
+    /// Carried whatever the loop checks: a released result, or a possible
+    /// hold an iteration may have released.
+    SmallVector<FactID, 2> Certain;
+    /// Carried only where the loop checks the result, which decides
+    /// whether the possible hold leaves the loop or is reported lost at
+    /// its join (JoinContext::CheckedAroundLoop).
+    SmallVector<FactID, 2> IfChecked;
+    /// Whether any unresolved try fact reaches the latch: what the join's
+    /// beta unchecked-result report can be about, and the only reason
+    /// that report needs the loop walked.
+    bool AnyConditional = false;
+  };
+  LoopCarriedFacts collectLoopCarriedTryFacts(const CFGBlock *Latch);
   void patchLoopExitSets(const llvm::SmallPtrSetImpl<const CFGBlock *> &Loop,
                          ArrayRef<FactID> Injectable);
   void removeLock(FactSet &FSet, const CapabilityExpr &CapE,
@@ -8087,19 +8118,39 @@ void ThreadSafetyAnalyzer::collectNaturalLoop(
   }
 }
 
-/// The try facts of \p Latch's exit set that carry release evidence into
-/// the loop head: a released one, or a possible hold the body may have
-/// released. Empty where the function records no try-acquire at all.
-void ThreadSafetyAnalyzer::collectInjectableTryFacts(
-    const CFGBlock *Latch, SmallVectorImpl<FactID> &Injectable) {
+/// The try facts of \p Latch's exit set that a later iteration may carry
+/// to the loop head, sorted by whether the answer depends on what the
+/// loop checks.
+///
+/// A released result and a possible hold the body may have released are
+/// carried either way: the first so that the exit edges do not resolve or
+/// re-materialize against a stale result, the second because an iteration
+/// that did not release leaves the capability held whether or not anything
+/// branched on the result. A *bare* conditional is carried only where the
+/// loop checks it, since one the loop never checks is reported at the loop
+/// join instead (LocksetJoin::joinTryFactFromExit()) and would otherwise be
+/// reported twice.
+///
+/// Split from the walk so that the caller can decide from this scan alone
+/// -- linear in the latch's fact set -- whether the loop has to be walked
+/// at all. Empty where the function records no try-acquire.
+ThreadSafetyAnalyzer::LoopCarriedFacts
+ThreadSafetyAnalyzer::collectLoopCarriedTryFacts(const CFGBlock *Latch) {
+  LoopCarriedFacts Carried;
   if (TryAcquireCapsMap.empty())
-    return;
+    return Carried;
   for (const auto &Fact : BlockInfo[Latch->getBlockID()].ExitSet) {
     const FactEntry &FE = FactMan[Fact];
-    if (const auto *W = dyn_cast<TryFactEntry>(&FE);
-        W && (W->released() || (W->conditional() && W->mayBeReleased())))
-      Injectable.push_back(Fact);
+    const auto *W = dyn_cast<TryFactEntry>(&FE);
+    if (!W)
+      continue;
+    Carried.AnyConditional |= W->conditional();
+    if (W->released() || (W->conditional() && W->mayBeReleased()))
+      Carried.Certain.push_back(Fact);
+    else if (W->conditional())
+      Carried.IfChecked.push_back(Fact);
   }
+  return Carried;
 }
 
 /// Record the release evidence \p Injectable reaching a loop's latch -- a
@@ -8155,26 +8206,46 @@ void ThreadSafetyAnalyzer::patchLoopExitSets(
     FactSet &Target = BlockInfo[B->getBlockID()].ExitSet;
     for (FactID Fact : Injectable) {
       const auto *W = cast<TryFactEntry>(&FactMan[Fact]);
-      // A conditional try fact of the same call in the target is marked
+      // What the target already records about this acquisition: a try fact
+      // of the capability, in the same kind, from the call itself or from
+      // another call that acquires exactly what it does
+      // (sameTryAcquireCaps()). The second is the spin's pair, `bool ok =
+      // mu.TryLock(); while (!ok) ok = mu.TryLock();`, whose two calls one
+      // variable holds and one branch resolves: a target taking both
+      // would have the exit edges promote one acquisition twice. Twin-ness
+      // belongs to the call pair, so it is asked of the pair and not of
+      // whichever block happens to own an exit edge -- keying it on the
+      // target's own terminator misses every exit that is not the merged
+      // branch (a short-circuit component, a break under another
+      // condition) and folds nothing there -- and it holds whatever state
+      // the twin's fact is in: a twin already checked and released leaves
+      // a resolved fact behind, and taking the latch's conditional on top
+      // of that promotes the acquisition the loop may never have made.
+      // The fold the joins apply (LocksetJoin::joinTryFactFromExit()),
+      // which reaches the same pairing through the decode's MergedCall.
+      FactSet::iterator It =
+          Target.findTryFactOfAcquisition(FactMan, *W, W->origin(), W->kind(),
+                                          [&](const Expr *A, const Expr *B) {
+                                            return sameTryAcquireCaps(A, B);
+                                          });
+      // A conditional try fact of the acquisition in the target is marked
       // MayBeReleased with the back edge's release: the loop's exit edges must
       // not resolve a result the body may have released (getEdgeLockset()),
       // while the possible hold of the iteration that did not release it is
       // still diagnosed. A resolved try fact stays as it is -- what the head's
       // own iteration proved or failed is not refuted by a later iteration's
-      // release. A target without any try fact of the call takes a Released
-      // one (resolved: it adds no possible hold), but not a conditional one,
-      // which would.
-      if (FactSet::iterator It =
-              Target.findTryFactIter(FactMan, *W, W->origin(), W->kind());
-          It != Target.end()) {
+      // release. A target with no fact of the acquisition takes the latch's
+      // as it is: the stale result, or the possible hold, of a later
+      // iteration.
+      if (It != Target.end()) {
         const auto &Existing = cast<TryFactEntry>(FactMan[*It]);
-        if (Existing.conditional() && !Existing.mayBeReleased())
+        if (Existing.conditional() && !Existing.mayBeReleased() &&
+            (W->released() || W->mayBeReleased()))
           Target.replaceFact(
               FactMan, It, Existing.asMayBeReleased(FactMan, W->releaseLoc()));
         continue;
       }
-      if (W->released())
-        Target.addLockByID(Fact);
+      Target.addLockByID(Fact);
     }
   }
 }
@@ -8574,33 +8645,37 @@ void ThreadSafetyAnalyzer::checkBackEdges(const CFGBlock *CurrBlock) {
     Ctx.setRebranch(
         getConditionTrylockCallExpr(FirstLoopBlock, /*CheckAllPaths=*/true));
     Ctx.SealedEntry = true;
-    // Release evidence reaching the loop head on its back edge -- a
-    // Released try fact, or a conditional one marked MayBeReleased -- says
-    // an iteration may have released the capability. Read from the latch's
-    // exit set before the comparison below, which does not touch it, so
-    // that the natural loop the patch needs is walked together with the
-    // one the checked-result scan needs; patched after it, so that the
-    // head's own entry set is compared unpatched.
-    SmallVector<FactID, 2> Injectable;
-    collectInjectableTryFacts(CurrBlock, Injectable);
+    // What the back edge may carry out of the loop. Read from the latch's
+    // exit set before the comparison below, which does not touch it;
+    // patched after it, so that the head's own entry set is compared
+    // unpatched.
+    const LoopCarriedFacts Carried = collectLoopCarriedTryFacts(CurrBlock);
+    // The results the loop checks are needed to decide a bare
+    // conditional's fate, and, under beta, to exempt an unresolved result
+    // from the join's unchecked-result report -- which can only be about
+    // an unresolved fact. Nothing else needs the loop walked, and a latch
+    // whose try facts are all resolved needs neither.
     const bool WantChecked =
-        Handler.issueBetaWarnings() && hasTryLockFact(LoopEnd->ExitSet);
-    // The back edge's natural loop, walked once for both phases below and
-    // only if one of them asks. The scan is beta-only, the patch is not,
-    // so neither gate implies the other and the walk answers to both.
+        !Carried.IfChecked.empty() ||
+        (Handler.issueBetaWarnings() && Carried.AnyConditional);
     llvm::SmallPtrSet<const CFGBlock *, 8> LoopBlocks;
-    if (WantChecked || !Injectable.empty())
-      collectNaturalLoop(FirstLoopBlock, CurrBlock, LoopBlocks);
     llvm::SmallPtrSet<const Expr *, 4> CheckedInLoop;
+    if (WantChecked || !Carried.Certain.empty())
+      collectNaturalLoop(FirstLoopBlock, CurrBlock, LoopBlocks);
     if (WantChecked) {
       collectLoopCheckedResults(LoopBlocks, CheckedInLoop);
-      Ctx.CheckedAroundLoop = &CheckedInLoop;
+      if (Handler.issueBetaWarnings())
+        Ctx.CheckedAroundLoop = &CheckedInLoop;
     }
+    SmallVector<FactID, 2> Injectable(Carried.Certain);
+    for (FactID Fact : Carried.IfChecked)
+      if (CheckedInLoop.count(cast<TryFactEntry>(FactMan[Fact]).origin()))
+        Injectable.push_back(Fact);
     intersectAndWarn(PreLoop->EntrySet, LoopEnd->ExitSet, Ctx);
-    // Patch the evidence into the sealed exit sets the loop's exit edges
-    // are computed from: the blocks were analyzed before this back edge
-    // was seen, so those edges would otherwise resolve or re-materialize a
-    // hold the loop may have released (getEdgeLockset()).
+    // What the back edge carries to the loop head -- a released result, or
+    // a possible hold of a result the loop checks -- is what a later
+    // iteration may carry out of the loop: patch it into the sealed exit
+    // sets the loop's exit edges are computed from.
     if (!Injectable.empty())
       patchLoopExitSets(LoopBlocks, Injectable);
   }

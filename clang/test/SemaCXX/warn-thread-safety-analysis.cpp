@@ -5164,7 +5164,11 @@ struct TestTryLock {
   // reached (and the phi over the false initializer makes the other edge
   // ambiguous in turn, so nothing resolves at all), and the hold it would
   // otherwise manufacture stays lost. (The `&&` spelling, whose block is
-  // reached only when the left-hand side held, is unaffected.)
+  // reached only when the left-hand side held, is unaffected.) The
+  // release after the loop is still "may not be held": the back edge
+  // carries the possible hold out even though the exit edge cannot
+  // resolve it, which is what makes it a possibility rather than a
+  // certainty.
   void tryheld_loop_shortcircuit_escape_exit(int n) {
     int i = 0;
     bool ok = false;
@@ -5173,7 +5177,7 @@ struct TestTryLock {
       ++i;
     }
     a = 1;       // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
-    mu.Unlock(); // expected-warning {{releasing mutex 'mu' that was not held}}
+    mu.Unlock(); // expected-warning {{releasing mutex 'mu' that may not be held}}
   }
 
   // An uninitialized declaration ends the definition chain the same way an

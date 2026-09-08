@@ -55,10 +55,12 @@ void same_origin_continue_latch_still_conservative() {
     mu.Unlock();
 }
 
-// The same shape leaking (nothing releases after the loop) reports the same
-// way, and no more: the loop-carried result leaves no fact for the
-// unchecked-result diagnostics to report, in either mode. Pinned so that a
-// future beta-only leak report is a visible change rather than an accident.
+// The same shape leaking (nothing releases after the loop) reports the
+// same way here, and no more: the check-first idiom resolves its own
+// result on the latch, so the loop carries out no possible hold for this
+// mode to lose track of. The idiom that does carry one out is
+// loop_carried_result_leaks in warn-thread-safety-try-facts.cpp, and
+// loop_carried_leak_without_beta below is its counterpart in this mode.
 void same_origin_continue_latch_leak_adds_nothing() {
   bool b = false;
   while (cond) { // expected-warning 2 {{expecting mutex 'mu' to be held at start of each loop}}
@@ -189,7 +191,10 @@ void release_and_reset() {
 }
 
 // The in-loop acquire-and-continue leak, and a release that follows the
-// re-acquire without resetting the flag: both report without beta.
+// re-acquire without resetting the flag: both report without beta. The
+// release after the loop is "may not be held", not "was not held": an
+// iteration that acquired and took the continue leaves the loop holding
+// the capability, which is the hold the back edge carries out.
 void in_loop_acquire_continue() {
   while (cond) { // expected-warning {{expecting mutex 'mu' to be held at start of each loop}}
     if (mu.TryLock()) { // expected-note {{mutex acquired here}}
@@ -198,7 +203,34 @@ void in_loop_acquire_continue() {
     }
     g();
   }
-  mu.Unlock(); // expected-warning {{releasing mutex 'mu' that was not held}}
+  mu.Unlock(); // expected-warning {{releasing mutex 'mu' that may not be held}}
+}
+
+// The branch-join idiom that carries a hold out of the loop under beta
+// (loop_carried_result_leaks) carries nothing here: without beta the join
+// inside the body reports the lost hold eagerly instead of reconstituting
+// it, so there is no unresolved try fact at the latch to carry. Pinned so
+// that giving the default group a carry is a visible change.
+void loop_carried_leak_without_beta() {
+  bool ok = false;
+  while (cond) { // expected-warning {{mutex 'mu' is not held on every path through here}}
+    ok = mu.TryLock(); // expected-note {{mutex acquired here}}
+    if (ok)
+      a = 1;
+  }
+}
+
+// A blocking acquire after the same loop meets the carried hold too.
+void in_loop_acquire_continue_then_lock() {
+  while (cond) { // expected-warning {{expecting mutex 'mu' to be held at start of each loop}}
+    if (mu.TryLock()) { // expected-note 2 {{mutex acquired here}}
+      a = 1;
+      continue;
+    }
+    g();
+  }
+  mu.Lock(); // expected-warning {{acquiring mutex 'mu' that may already be held}}
+  mu.Unlock();
 }
 
 void release_after_reacquire() {

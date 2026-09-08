@@ -536,7 +536,16 @@ parameter, or simply returned to the caller. One acquisition is reported once,
 at the first merge that loses it. A loop merge is exempt only while the result
 is branched on somewhere inside the loop -- in a block the loop's head
 dominates, so a check made before a `goto` into the body does not count; a
-result never checked anywhere warns at the loop merge too.
+result never checked anywhere warns at the loop merge too. Such a result --
+one the loop checks and keeps -- leaves the loop as a *possible* hold on
+every exit edge, since an iteration may have acquired the capability and
+none afterwards released it: a branch after the loop resolves it
+(`if (ok) mu.Unlock();` is clean), and otherwise it is reported at the
+end of the function. A result an iteration may have released leaves the
+loop the same way, whether or not the loop checks it, so a release after
+the loop is "may not be held" rather than "was not held" and a blocking
+acquire is "may already be held" -- those two are ordinary
+`-Wthread-safety` diagnostics and do not need the beta flag.
 
 (trysuccesscodes)=
 A success value that is a specific integer constant other than `1`

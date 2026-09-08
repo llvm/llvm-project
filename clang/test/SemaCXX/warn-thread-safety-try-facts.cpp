@@ -22,6 +22,7 @@ Mutex mu;
 RMutex rmu;
 int a __attribute__((guarded_by(mu)));
 int b __attribute__((guarded_by(rmu)));
+bool cond;
 
 // The call's failure record survives a later acquisition by a blocking
 // call: the result is still falsy, so a re-check inside the locked region
@@ -100,4 +101,85 @@ void per_call_spent_veto(bool c) {
     a = 1;
     mu.Unlock();
   }
+}
+
+// A result the loop checks and keeps across the iteration's own join is a
+// possible hold on every exit of the loop: nothing after the loop checks
+// it here, so it is reported at the end of the function. (The loop join
+// itself is silent: the result is checked inside the loop.)
+void loop_carried_result_leaks() {
+  bool ok = false;
+  while (cond) {
+    ok = mu.TryLock(); // expected-note {{mutex acquired here}}
+    if (ok)
+      a = 1;
+  }
+} // expected-warning {{unchecked result of try-acquire; mutex 'mu' may still be held at the end of function}}
+
+// The same loop released after it: the carried result resolves the
+// post-loop branch, and the release is matched. Clean at the parent too
+// -- there was no possible hold to resolve there -- so this pins that the
+// hold the loop now carries out is one a later branch can still resolve.
+void loop_carried_result_released_after() {
+  bool ok = false;
+  while (cond) {
+    ok = mu.TryLock();
+    if (ok)
+      a = 1;
+  }
+  if (ok)
+    mu.Unlock();
+}
+
+// The possible hold leaves through any exit edge, a break included, and
+// resolves there the same way.
+void loop_carried_result_break() {
+  bool ok = false;
+  while (cond) {
+    ok = mu.TryLock();
+    if (ok) {
+      a = 1;
+      break;
+    }
+  }
+  if (ok)
+    mu.Unlock();
+}
+
+// Two calls of one acquisition, merged by the loop condition: the spin's
+// pre-loop call and its latch call. Only one of the two may be carried
+// out of the loop -- the variable holds one result and the branch after
+// the loop resolves it -- so a block that already records either call's
+// acquisition does not take the other's. Here the loop's exit edge is an
+// ordinary break, which is not the block that branches on the merge, so
+// keying the fold on the patched block's own terminator found no twin and
+// promoted the one acquisition twice.
+void loop_carried_twin_break() {
+  bool ok = mu.TryLock();
+  while (!ok) {
+    if (cond)
+      break;
+    ok = mu.TryLock();
+  }
+  if (ok) {
+    a = 1;
+    mu.Unlock();
+  }
+}
+
+// The same pair with the first call already checked and released before
+// the spin: its record at the head is resolved, not unresolved, and the
+// fold has to see it all the same. Taking the latch's possible hold on
+// top of it covers the path on which the loop never runs, and silences
+// both the race and the double unlock the zero-iteration path has.
+void loop_carried_twin_spent() {
+  bool ok = mu.TryLock();
+  if (ok) {
+    a = 1;
+    mu.Unlock(); // expected-note {{mutex released here}}
+  }
+  while (!ok)
+    ok = mu.TryLock();
+  a = 2;       // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
+  mu.Unlock(); // expected-warning {{releasing mutex 'mu' that was not held}}
 }
