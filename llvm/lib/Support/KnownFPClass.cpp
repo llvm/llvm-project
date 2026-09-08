@@ -377,6 +377,8 @@ KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS,
        Mode.Output == DenormalMode::PositiveZero))
     Known.knownNot(fcNegZero);
 
+  Known.propagateNonSNaN(KnownLHS, KnownRHS);
+
   return Known;
 }
 
@@ -406,6 +408,8 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
                                 const KnownFPClass &KnownRHS,
                                 DenormalMode Mode) {
   KnownFPClass Known;
+
+  Known.propagateNonSNaN(KnownLHS, KnownRHS);
 
   // +X * +Y or -X * -Y => +Q
   // +X * -Y or -X * +Y => -Q
@@ -468,6 +472,8 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
                                 DenormalMode Mode) {
   KnownFPClass Known;
 
+  Known.propagateNonSNaN(KnownLHS, KnownRHS);
+
   // Only 0/0, Inf/Inf produce NaN.
   if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
       (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverInfinity()) &&
@@ -509,10 +515,10 @@ KnownFPClass KnownFPClass::fdiv_self(const KnownFPClass &KnownSrc,
   // X / X is always exactly 1.0 or a NaN.
   KnownFPClass Known(fcNan | fcPosNormal);
 
+  Known.propagateNonSNaN(KnownSrc);
+
   if (KnownSrc.isKnownNeverInfOrNaN() && KnownSrc.isKnownNeverLogicalZero(Mode))
     Known.knownNot(fcNan);
-  else if (KnownSrc.isKnownNever(fcSNan))
-    Known.knownNot(fcSNan);
 
   return Known;
 }
@@ -570,7 +576,14 @@ KnownFPClass KnownFPClass::fma(const KnownFPClass &KnownLHS,
   //
   // If the multiply is a -0 due to rounding, the final -0 + 0 will be -0,
   // unlike for a separate fadd.
-  return fadd_impl(Mul, KnownAddend, Mode);
+  KnownFPClass Known = fadd_impl(Mul, KnownAddend, Mode);
+
+  // propagateNonSNaN for 3 arguments.
+  if (KnownLHS.isKnownNever(fcSNan) && KnownRHS.isKnownNever(fcSNan) &&
+      KnownAddend.isKnownNever(fcSNan))
+    Known.knownNot(fcSNan);
+
+  return Known;
 }
 
 KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared,
@@ -587,6 +600,8 @@ KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared,
   // prove that without a known range.
   if (KnownAddend.isKnownNever(fcNegInf | fcNan) && Squared.isKnownNever(fcNan))
     Known.knownNot(fcNan);
+
+  Known.propagateNonSNaN(KnownSquared, KnownAddend);
 
   return Known;
 }
