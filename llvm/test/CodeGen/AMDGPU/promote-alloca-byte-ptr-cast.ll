@@ -2,12 +2,11 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -passes=amdgpu-promote-alloca,verify < %s | FileCheck %s
 
 ; Promoting these allocas to a byte vector forces a conversion between a
-; byte-vector and a pointer of the same size. Byte types are not integers, so
-; before CreateBitPreservingCastChain learned to treat them like integers this
-; produced a direct (and invalid) `bitcast <2 x b32> to ptr`, which later
-; tripped the MachineVerifier ("bitcast cannot convert between pointers and
-; other types"). The conversion must instead route through a pointer-sized
-; integer via inttoptr/ptrtoint.
+; byte-vector and a pointer of the same size, in both directions. That
+; conversion is a plain bitcast, which preserves the provenance the byte value
+; carries; a ptrtoint/inttoptr pair would expose it. See
+; CodeGen/AMDGPU/GlobalISel/irtranslator-byte-ptr-bitcast.ll for the codegen
+; side of the same conversion.
 
 target datalayout = "e-p:64:64-p5:32:32-A5"
 
@@ -17,9 +16,8 @@ define amdgpu_kernel void @ptr_from_byte_vec(ptr %out, ptr %inptr) {
 ; CHECK-NEXT:    [[A:%.*]] = freeze <2 x b32> poison
 ; CHECK-NEXT:    [[PBITS:%.*]] = load b64, ptr [[INPTR:%.*]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = bitcast b64 [[PBITS]] to <2 x b32>
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x b32> [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr i64 [[TMP1]] to ptr
-; CHECK-NEXT:    store ptr [[TMP2]], ptr [[OUT:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x b32> [[TMP0]] to ptr
+; CHECK-NEXT:    store ptr [[TMP1]], ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -35,8 +33,7 @@ define amdgpu_kernel void @byte_vec_from_ptr(ptr %out, ptr %argp) {
 ; CHECK-LABEL: @byte_vec_from_ptr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = freeze <2 x b32> poison
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[ARGP:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[TMP0]] to <2 x b32>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast ptr [[ARGP:%.*]] to <2 x b32>
 ; CHECK-NEXT:    store <2 x b32> [[TMP1]], ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;

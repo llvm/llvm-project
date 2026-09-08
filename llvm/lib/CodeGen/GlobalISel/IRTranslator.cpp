@@ -272,6 +272,14 @@ class IRTranslatorImpl {
   /// emitted.
   bool translateBitCast(const User &U, MachineIRBuilder &MIRBuilder);
 
+  /// Translate an LLVM bitcast that crosses the byte/pointer boundary, to a
+  /// pointer if \p ToPtr and from a pointer otherwise. G_BITCAST cannot cross
+  /// that boundary, so G_INTTOPTR/G_PTRTOINT is emitted instead, preceded or
+  /// followed by a G_BITCAST when the byte side is shaped differently from the
+  /// pointer side.
+  bool translateByteToPtrBitCast(const User &U, bool ToPtr,
+                                 MachineIRBuilder &MIRBuilder);
+
   /// Translate an LLVM load instruction into generic IR.
   bool translateLoad(const User &U, MachineIRBuilder &MIRBuilder);
 
@@ -2354,18 +2362,44 @@ bool IRTranslatorImpl::translateBitCast(const User &U,
     return translateCopy(U, *U.getOperand(0), MIRBuilder);
   }
 
-  // Only the scalar byte<->ptr crossing is redirected to G_INTTOPTR/G_PTRTOINT,
-  // which is the well-typed MIR shape for that boundary. Vector byte<->ptr
-  // (e.g. <N x b32> -> ptr produced by mixed-type load coalescing) and other
-  // legacy ptr/non-ptr IR bitcasts (AMDGPU iN<->p3 kernarg packing, etc.)
-  // keep their historical G_BITCAST lowering — G_INTTOPTR has no vector-src
-  // -> scalar-ptr form, and downstream passes already handle G_BITCAST.
-  if (DstTy->isPointerTy() && SrcTy->isByteTy())
-    return translateCast(TargetOpcode::G_INTTOPTR, U, MIRBuilder);
-  if (SrcTy->isPointerTy() && DstTy->isByteTy())
-    return translateCast(TargetOpcode::G_PTRTOINT, U, MIRBuilder);
+  if (DstTy->isPtrOrPtrVectorTy() && SrcTy->isByteOrByteVectorTy())
+    return translateByteToPtrBitCast(U, /*ToPtr=*/true, MIRBuilder);
+  if (SrcTy->isPtrOrPtrVectorTy() && DstTy->isByteOrByteVectorTy())
+    return translateByteToPtrBitCast(U, /*ToPtr=*/false, MIRBuilder);
 
   return translateCast(TargetOpcode::G_BITCAST, U, MIRBuilder);
+}
+
+bool IRTranslatorImpl::translateByteToPtrBitCast(const User &U, bool ToPtr,
+                                                 MachineIRBuilder &MIRBuilder) {
+  if (!mayTranslateUserTypes(U))
+    return false;
+
+  // G_INTTOPTR and G_PTRTOINT require the byte side to have the shape of the
+  // pointer side, so a byte value of a different shape (e.g. the <2 x b32> ->
+  // ptr produced by mixed-type load coalescing) needs a G_BITCAST to the
+  // pointer-sized integer first.
+  Type *PtrTy = ToPtr ? U.getType() : U.getOperand(0)->getType();
+  LLT IntPtrTy = getLLTForType(*DL->getIntPtrType(PtrTy), *DL);
+
+  Register Src = getOrCreateVReg(*U.getOperand(0));
+  Register Res = getOrCreateVReg(U);
+
+  if (ToPtr) {
+    if (MRI->getType(Src) != IntPtrTy)
+      Src = MIRBuilder.buildBitcast(IntPtrTy, Src).getReg(0);
+    MIRBuilder.buildIntToPtr(Res, Src);
+    return true;
+  }
+
+  if (MRI->getType(Res) == IntPtrTy) {
+    MIRBuilder.buildPtrToInt(Res, Src);
+    return true;
+  }
+
+  auto Int = MIRBuilder.buildPtrToInt(IntPtrTy, Src);
+  MIRBuilder.buildBitcast(Res, Int);
+  return true;
 }
 
 bool IRTranslatorImpl::translateCast(unsigned Opcode, const User &U,
