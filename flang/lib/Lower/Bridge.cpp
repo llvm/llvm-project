@@ -6211,10 +6211,11 @@ private:
            Fortran::lower::pft::getHostModuleVariableList(funit))
         instantiateVar(var, storeMap);
 
-    // Map function equivalences and variables.
+    // Map function equivalences and variables. Use associated variables that
+    // are not referenced in the function-like unit are not instantiated.
     mlir::Value primaryFuncResultStorage;
     for (const Fortran::lower::pft::Variable &var :
-         Fortran::lower::pft::getScopeVariableList(scope)) {
+         Fortran::lower::pft::getScopeVariableList(funit)) {
       // Always instantiate aggregate storage blocks.
       if (var.isAggregateStore()) {
         instantiateVar(var, storeMap);

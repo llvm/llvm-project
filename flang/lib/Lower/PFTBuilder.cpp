@@ -1684,6 +1684,18 @@ struct SymbolDependenceAnalysis {
       analyze(iter.second.get());
     finalize();
   }
+  /// Analyze the symbols of a subprogram \p scope, skipping the use associated
+  /// symbols whose ultimate symbols are not in \p referencedSymbols.
+  explicit SymbolDependenceAnalysis(
+      const semantics::Scope &scope,
+      const llvm::SetVector<const semantics::Symbol *> &referencedSymbols)
+      : referencedSymbols{&referencedSymbols} {
+    analyzeEquivalenceSets(scope);
+    for (const auto &iter : scope)
+      if (!isUnreferencedUseAssociated(iter.second.get()))
+        analyze(iter.second.get());
+    finalize();
+  }
   explicit SymbolDependenceAnalysis(const semantics::Symbol &symbol) {
     analyzeEquivalenceSets(symbol.owner());
     analyze(symbol);
@@ -1727,7 +1739,8 @@ private:
     // Analyze local, USEd, and host procedure scope equivalences.
     for (const auto &iter : scope) {
       const semantics::Symbol &ultimate = iter.second.get().GetUltimate();
-      if (!skipSymbol(ultimate))
+      if (!skipSymbol(ultimate) &&
+          !isUnreferencedUseAssociated(iter.second.get()))
         analyzeLocalEquivalenceSets(ultimate.owner());
     }
     // Add all aggregate stores to the front of the variable list.
@@ -1890,6 +1903,21 @@ private:
     return depth;
   }
 
+  /// Is \p sym a use associated symbol that is not referenced in the
+  /// subprogram being analyzed? Such symbols do not need to be instantiated.
+  bool isUnreferencedUseAssociated(const semantics::Symbol &sym) const {
+    if (!referencedSymbols || !sym.has<semantics::UseDetails>())
+      return false;
+    const semantics::Symbol &ultimate = sym.GetUltimate();
+    if (referencedSymbols->contains(&ultimate))
+      return false;
+    // Procedure pointers may be hidden behind a generic with the same name.
+    if (const auto *generic = ultimate.detailsIf<semantics::GenericDetails>())
+      if (const semantics::Symbol *specific = generic->specific())
+        return !referencedSymbols->contains(&specific->GetUltimate());
+    return true;
+  }
+
   /// Skip symbol in alias analysis.
   bool skipSymbol(const semantics::Symbol &sym) {
     // Common block equivalences are largely managed by the front end.
@@ -1958,6 +1986,9 @@ private:
   /// Set of scopes that have been analyzed for aliases.
   llvm::SmallPtrSet<const semantics::Scope *, 4> analyzedScopes;
   std::vector<Fortran::lower::pft::Variable::AggregateStore> stores;
+  /// Ultimate symbols referenced in the analyzed subprogram, if the analysis
+  /// is restricted to referenced use associated symbols.
+  const llvm::SetVector<const semantics::Symbol *> *referencedSymbols = nullptr;
 };
 } // namespace
 
@@ -2199,6 +2230,23 @@ lower::pft::getScopeVariableList(const semantics::Scope &scope) {
       llvm::dbgs() << "\ngetScopeVariableList of [sub]program|block scope <"
                    << &scope << "> " << scope.GetName() << "\n");
   SymbolDependenceAnalysis sda(scope);
+  return sda.getVariableList();
+}
+
+/// Create an ordered list of equivalences and variables in the scope of \p
+/// funit. Use associated variables that are not referenced in \p funit are
+/// left out. The result is not cached.
+lower::pft::VariableList
+lower::pft::getScopeVariableList(const FunctionLikeUnit &funit) {
+  const semantics::Scope &scope = funit.getScope();
+  LLVM_DEBUG(llvm::dbgs() << "\ngetScopeVariableList of [sub]program scope <"
+                          << &scope << "> " << scope.GetName() << "\n");
+  llvm::SetVector<const semantics::Symbol *> referencedSymbols;
+  Fortran::lower::pft::visitAllSymbols(
+      funit, [&](const Fortran::semantics::Symbol &sym) {
+        referencedSymbols.insert(&sym.GetUltimate());
+      });
+  SymbolDependenceAnalysis sda(scope, referencedSymbols);
   return sda.getVariableList();
 }
 
