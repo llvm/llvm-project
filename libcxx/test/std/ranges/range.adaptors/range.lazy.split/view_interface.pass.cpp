@@ -60,6 +60,11 @@ constexpr bool test() {
     SplitViewForward v("abc", "");
     assert(*(v.front()).begin() == 'a');
   }
+  {
+    auto pattern = std::views::iota(0) | std::views::take(1) | std::views::reverse;
+    auto v       = std::views::single(42) | std::views::lazy_split(pattern);
+    assert(*v.front().begin() == 42);
+  }
 
   return true;
 }

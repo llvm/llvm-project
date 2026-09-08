@@ -97,6 +97,7 @@ Transforms/OpenMP/custom_state_machines.ll
 Transforms/OpenMP/custom_state_machines_remarks.ll
 Transforms/OpenMP/get_hardware_num_threads_in_block_fold.ll
 Transforms/OpenMP/gpu_state_machine_function_ptr_replacement.ll
+Transforms/OpenMP/indirect_call_specialization_cap.ll
 Transforms/OpenMP/parallel_region_merging.ll
 Transforms/OpenMP/parallel_region_merging_debug_loc.ll
 Transforms/OpenMP/single_threaded_execution.ll
