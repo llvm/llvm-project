@@ -307,17 +307,17 @@ _LIBCPP_HIDE_FROM_ABI _Tp __do_strtod(const char* __a, char** __p2);
 
 template <>
 inline _LIBCPP_HIDE_FROM_ABI float __do_strtod<float>(const char* __a, char** __p2) {
-  return __locale::__strtof(__a, __p2, _LIBCPP_GET_C_LOCALE);
+  return __locale::__str_to_float_c_locale<float>(__a, __p2, _LIBCPP_GET_C_LOCALE);
 }
 
 template <>
 inline _LIBCPP_HIDE_FROM_ABI double __do_strtod<double>(const char* __a, char** __p2) {
-  return __locale::__strtod(__a, __p2, _LIBCPP_GET_C_LOCALE);
+  return __locale::__str_to_float_c_locale<double>(__a, __p2, _LIBCPP_GET_C_LOCALE);
 }
 
 template <>
 inline _LIBCPP_HIDE_FROM_ABI long double __do_strtod<long double>(const char* __a, char** __p2) {
-  return __locale::__strtold(__a, __p2, _LIBCPP_GET_C_LOCALE);
+  return __locale::__str_to_float_c_locale<long double>(__a, __p2, _LIBCPP_GET_C_LOCALE);
 }
 
 template <class _Tp>

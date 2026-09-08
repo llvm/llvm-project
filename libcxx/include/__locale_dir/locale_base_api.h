@@ -54,9 +54,8 @@
 // ------------------
 // namespace __locale {
 //  // required by the headers
-//  float               __strtof(const char*, char**, __locale_t);
-//  double              __strtod(const char*, char**, __locale_t);
-//  long double         __strtold(const char*, char**, __locale_t);
+//  template <class FloatT>
+//  FloatT __str_to_float_c_locale(const char*, char**, __locale_t);
 // }
 //
 // Character manipulation functions
@@ -182,15 +181,24 @@ inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc) { return
 //
 // Strtonum functions
 //
-inline _LIBCPP_HIDE_FROM_ABI float __strtof(const char* __nptr, char** __endptr, __locale_t __loc) {
+template <class _FloatT>
+_LIBCPP_HIDE_FROM_ABI _FloatT __str_to_float_c_locale(const char* __nptr, char** __endptr, __locale_t __loc);
+
+template <>
+inline _LIBCPP_HIDE_FROM_ABI float
+__str_to_float_c_locale<float>(const char* __nptr, char** __endptr, __locale_t __loc) {
   return strtof_l(__nptr, __endptr, __loc);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI double __strtod(const char* __nptr, char** __endptr, __locale_t __loc) {
+template <>
+inline _LIBCPP_HIDE_FROM_ABI double
+__str_to_float_c_locale<double>(const char* __nptr, char** __endptr, __locale_t __loc) {
   return strtod_l(__nptr, __endptr, __loc);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double __strtold(const char* __nptr, char** __endptr, __locale_t __loc) {
+template <>
+inline _LIBCPP_HIDE_FROM_ABI long double
+__str_to_float_c_locale<long double>(const char* __nptr, char** __endptr, __locale_t __loc) {
   return strtold_l(__nptr, __endptr, __loc);
 }
 

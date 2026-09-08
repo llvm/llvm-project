@@ -299,12 +299,14 @@ const char* __get_locale_encoding(__locale_t loc) {
 // Strtonum functions
 //
 #if !defined(_LIBCPP_MSVCRT)
-float __strtof(const char* nptr, char** endptr, __locale_t loc) {
+template <>
+float __locale::__str_to_float_c_locale<float>(const char* nptr, char** endptr, __locale_t loc) {
   __locale_guard __current(loc);
   return std::strtof(nptr, endptr);
 }
 
-long double __strtold(const char* nptr, char** endptr, __locale_t loc) {
+template <>
+long double __locale::__str_to_float_c_locale<long double>(const char* nptr, char** endptr, __locale_t loc) {
   __locale_guard __current(loc);
   return std::strtold(nptr, endptr);
 }
