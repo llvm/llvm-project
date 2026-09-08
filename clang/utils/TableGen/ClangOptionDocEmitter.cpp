@@ -195,12 +195,12 @@ unsigned getNumArgsForKind(const Record *OptionKind, const Record *Option) {
       .Default(0);
 }
 
-std::string escapePlainTextForMarkdown(StringRef Str) {
+std::string escapeRST(StringRef Str) {
   std::string Out;
-  for (char C : Str) {
-    if (StringRef("*[]\\<>").count(C))
+  for (auto K : Str) {
+    if (StringRef("`*|[]\\").count(K))
       Out.push_back('\\');
-    Out.push_back(C);
+    Out.push_back(K);
   }
   return Out;
 }
@@ -219,42 +219,37 @@ bool canSphinxCopeWithOption(const Record *Option) {
 }
 
 void emitHeading(int Depth, const std::string &Heading, raw_ostream &OS) {
-  assert(Depth < 5 && "groups nested too deeply");
-  OS << std::string(Depth + 2, '#') << ' ' << Heading << "\n\n";
+  assert(Depth < 8 && "groups nested too deeply");
+  OS << Heading << '\n'
+     << std::string(Heading.size(), "=~-_'+<>"[Depth]) << "\n";
 }
 
 /// Get the value of field \p Primary, if possible. If \p Primary does not
-/// exist, get the value of \p Fallback and escape it for Markdown emission.
-std::string getMarkdownStringWithTextFallback(const Record *R,
-                                              StringRef Primary,
-                                              StringRef Fallback) {
+/// exist, get the value of \p Fallback and escape it for rST emission.
+std::string getRSTStringWithTextFallback(const Record *R, StringRef Primary,
+                                         StringRef Fallback) {
   for (auto Field : {Primary, Fallback}) {
     if (auto *V = R->getValue(Field)) {
       StringRef Value;
       if (auto *SV = dyn_cast_or_null<StringInit>(V->getValue()))
         Value = SV->getValue();
       if (!Value.empty())
-        return Field == Primary ? Value.str()
-                                : escapePlainTextForMarkdown(Value);
+        return Field == Primary ? Value.str() : escapeRST(Value);
     }
   }
   return std::string(StringRef());
 }
 
-// The Sphinx option directive contents do not need to be escaped. They use
-// standard usage conventions, where angle brackets are values, and square
-// brackets are optional arguments. See
-// https://www.sphinx-doc.org/en/master/usage/domains/standard.html#directive-option
 void emitOptionWithArgs(StringRef Prefix, const Record *Option,
                         ArrayRef<StringRef> Args, raw_ostream &OS) {
-  OS << Prefix << Option->getValueAsString("Name");
+  OS << Prefix << escapeRST(Option->getValueAsString("Name"));
 
   std::pair<StringRef, StringRef> Separators =
       getSeparatorsForKind(Option->getValueAsDef("Kind"));
 
   StringRef Separator = Separators.first;
   for (auto Arg : Args) {
-    OS << Separator << Arg;
+    OS << Separator << escapeRST(Arg);
     Separator = Separators.second;
   }
 }
@@ -351,15 +346,17 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
 
   std::string Program = DocInfo->getValueAsString("Program").lower();
   if (SphinxWorkaroundSuffix)
-    OS << "```{program} " << Program << SphinxWorkaroundSuffix << "\n```\n\n";
+    OS << ".. program:: " << Program << SphinxWorkaroundSuffix << "\n";
 
   // Emit the names of the option.
-  OS << ":::{option} ";
+  OS << ".. option:: ";
   bool EmittedAny = false;
   forEachOptionName(Option, DocInfo, [&](const Record *Option) {
     EmittedAny = emitOptionNames(Option, OS, EmittedAny);
   });
-  OS << "\n:::\n\n";
+  if (SphinxWorkaroundSuffix)
+    OS << "\n.. program:: " << Program;
+  OS << "\n\n";
 
   // Emit the description, if we have one.
   const Record *R = Option.Option;
@@ -379,8 +376,7 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
       for (const Init *Visibility : Visibilities) {
         if (Visibility->getAsUnquotedString() == DocInfoMask) {
           // Use the first one we find.
-          Description = escapePlainTextForMarkdown(
-              VisibilityHelp->getValueAsString("Text"));
+          Description = escapeRST(VisibilityHelp->getValueAsString("Text"));
           break;
         }
       }
@@ -394,7 +390,7 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
 
   // If there's not a program specific string, use the default one.
   if (Description.empty())
-    Description = getMarkdownStringWithTextFallback(R, "DocBrief", "HelpText");
+    Description = getRSTStringWithTextFallback(R, "DocBrief", "HelpText");
 
   if (!isa<UnsetInit>(R->getValueInit("Values"))) {
     if (!Description.empty() && Description.back() != '.')
@@ -408,23 +404,16 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
 
     SmallVector<StringRef> Values;
     SplitString(R->getValueAsString("Values"), Values, ",");
-    Description += " " + escapePlainTextForMarkdown(MetaVarName) + " must be '";
+    Description += (" " + MetaVarName + " must be '").str();
     if (Values.size() > 1) {
-      for (auto [I, Value] : enumerate(drop_end(Values))) {
-        if (I)
-          Description += "', '";
-        Description += escapePlainTextForMarkdown(Value);
-      }
+      Description += join(Values.begin(), Values.end() - 1, "', '");
       Description += "' or '";
     }
-    Description += escapePlainTextForMarkdown(Values.back()) + "'.";
+    Description += (Values.back() + "'.").str();
   }
 
   if (!Description.empty())
     OS << Description << "\n\n";
-
-  if (SphinxWorkaroundSuffix)
-    OS << "```{program} " << Program << "\n```\n\n";
 }
 
 void emitDocumentation(int Depth, const Documentation &Doc,
@@ -433,12 +422,11 @@ void emitDocumentation(int Depth, const Documentation &Doc,
 void emitGroup(int Depth, const DocumentedGroup &Group, const Record *DocInfo,
                raw_ostream &OS) {
   emitHeading(Depth,
-              getMarkdownStringWithTextFallback(Group.Group, "DocName", "Name"),
-              OS);
+              getRSTStringWithTextFallback(Group.Group, "DocName", "Name"), OS);
 
   // Emit the description, if we have one.
   std::string Description =
-      getMarkdownStringWithTextFallback(Group.Group, "DocBrief", "HelpText");
+      getRSTStringWithTextFallback(Group.Group, "DocBrief", "HelpText");
   if (!Description.empty())
     OS << Description << "\n\n";
 
@@ -464,8 +452,7 @@ void clang::EmitClangOptDocs(const RecordKeeper &Records, raw_ostream &OS) {
     return;
   }
   OS << DocInfo->getValueAsString("Intro") << "\n";
-  OS << "```{program} " << DocInfo->getValueAsString("Program").lower()
-     << "\n```\n\n";
+  OS << ".. program:: " << DocInfo->getValueAsString("Program").lower() << "\n";
 
   emitDocumentation(0, extractDocumentation(Records, DocInfo), DocInfo, OS);
 }
