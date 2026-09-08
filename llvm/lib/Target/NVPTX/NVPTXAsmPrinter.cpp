@@ -633,8 +633,6 @@ MCOperand NVPTXAsmPrinter::lowerOperand(const MachineOperand &MO) {
     return GetSymbolRef(MO.getMCSymbol());
   case MachineOperand::MO_ExternalSymbol:
     return GetSymbolRef(GetExternalSymbolSymbol(MO.getSymbolName()));
-  case MachineOperand::MO_MCSymbol:
-    return GetSymbolRef(MO.getMCSymbol());
   case MachineOperand::MO_JumpTableIndex:
     // The jump table index names the .branchtargets list emitted for a brx.idx
     // (see emitJumpTable); reference it by that label.
