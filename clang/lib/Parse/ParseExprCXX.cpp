@@ -2502,14 +2502,14 @@ bool Parser::ParseUnqualifiedIdOperator(CXXScopeSpec &SS, bool EnteringContext,
 
       unsigned OldLength = Tok.getLength();
 
+      bool CachingTokens = PP.IsPreviousCachedToken(Tok);
       Tok.setKind(tok::less);
       Tok.setLength(OldLength - LessLessLength);
       Tok.setLocation(TokLoc.getLocWithOffset(LessLessLength));
 
       // Update the cache if there is any.
-      bool CachingTokens = PP.IsPreviousCachedToken(Tok);
       if (CachingTokens)
-        PP.ReplacePreviousCachedToken({LessLess});
+        PP.ReplacePreviousCachedToken({LessLess, Tok});
 
       SymbolLocations[SymbolIdx++] = LessLessLoc;
       Op = OO_LessLess;
