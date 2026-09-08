@@ -1,6 +1,7 @@
 ; RUN: opt < %s -passes=tsan -S | FileCheck %s
 ; RUN: opt < %s -passes=tsan -tsan-use-dominance-analysis=false -S | FileCheck %s --check-prefix=NODOM
 ; RUN: opt < %s -passes=tsan -tsan-distinguish-volatile -S | FileCheck %s --check-prefix=VOLATILE
+; RUN: opt < %s -passes=tsan -tsan-instrument-read-before-write -S | FileCheck %s --check-prefix=RBW
 
 ; Tests for TSan dominance-based redundant instrumentation elimination.
 ; Redundant instrumentation is removed when one access dominates another to
@@ -11,6 +12,8 @@
 ;   NODOM   - optimization disabled; all accesses must remain instrumented
 ;   VOLATILE - -tsan-distinguish-volatile enabled; volatile and non-volatile
 ;              accesses emit different runtime calls and must not be merged
+;   RBW     - -tsan-instrument-read-before-write; read-then-write pairs reach
+;             DominanceBasedElimination instead of being pruned first
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -70,11 +73,30 @@ entry:
 ; CHECK-NOT:   call void @__tsan_read4(ptr @g1)
 ; CHECK:       ret void
 
-; A dominating read does NOT eliminate a write on a dominated path.
-; The read-before-write elimination in chooseInstructionsToInstrument only
-; applies within the same basic block, so this uses an inter-block scenario.
-; The write is only on one branch so it is NOT the post-dominator of the
-; read; the dominance check therefore applies in isolation.
+; A dominating read does NOT cover a subsequent write. With default flags the
+; pre-existing read-before-write elimination in chooseInstructionsToInstrument
+; drops the read before DominanceBasedElimination runs, so only the write is
+; emitted. Under RBW (-tsan-instrument-read-before-write) the pair reaches
+; DominanceBasedElimination, which must keep both accesses. Inter-block
+; counterpart: @dom_read_does_not_cover_write.
+define void @intra_block_read_write() nounwind uwtable sanitize_thread {
+entry:
+  %v = load i32, ptr @g1, align 4
+  store i32 1, ptr @g1, align 4
+  ret void
+}
+; CHECK-LABEL: define void @intra_block_read_write
+; CHECK-NOT:   call void @__tsan_read4(ptr @g1)
+; CHECK:       call void @__tsan_write4(ptr @g1)
+; CHECK:       ret void
+; RBW-LABEL: define void @intra_block_read_write
+; RBW:       call void @__tsan_read4(ptr @g1)
+; RBW:       call void @__tsan_write4(ptr @g1)
+; RBW:       ret void
+
+; A dominating read does NOT cover a write in a dominated block. Inter-block
+; because an intra-block pair is pruned by the read-before-write elimination
+; before DominanceBasedElimination runs (see @intra_block_read_write, RBW).
 define void @dom_read_does_not_cover_write(i1 %cond) nounwind uwtable sanitize_thread {
 entry:
   %v = load i32, ptr @g1, align 4
