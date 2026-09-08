@@ -24,6 +24,14 @@ class AArch64FunctionInfo;
 class AArch64InstrInfo;
 class AArch64PrologueEmitter;
 class AArch64EpilogueEmitter;
+class AArch64Subtarget;
+
+/// Returns true if multi-vector (SME2/SVE2p1) load/store instructions may be
+/// used for SVE register spills and fills in \p MF, taking into account the
+/// target features, the function's streaming mode and the
+/// -aarch64-disable-multivector-spill-fill option.
+bool enableMultiVectorSpillFill(const AArch64Subtarget &Subtarget,
+                                MachineFunction &MF);
 
 struct SVEStackSizes {
   uint64_t ZPRStackSize{0};
