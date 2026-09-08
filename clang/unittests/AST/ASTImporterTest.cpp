@@ -8296,6 +8296,177 @@ TEST_P(ImportAttributes, ImportC99NoThrowAttr) {
   checkImported(FromAttr->getAttrName(), ToAttr->getAttrName());
 }
 
+struct ImportMSInheritanceAttr : ASTImporterOptionSpecificTestBase {
+  std::vector<std::string> getExtraArgs() const override {
+    return {"--target=x86_64-pc-windows-msvc"};
+  }
+};
+
+// The implicit MSInheritanceAttr must be cloned onto an imported
+// redeclaration, since it becomes the most recent one and
+// getMSInheritanceModel() reads the attribute off of that.
+TEST_P(ImportMSInheritanceAttr, PropagatedOntoImportedRedecl) {
+  Decl *ToTU = getToTuDecl(
+      R"(
+      namespace NS { class Inner {}; }
+      struct HasPM { void (NS::Inner::*PM)(); };
+      )",
+      Lang_CXX17);
+  auto *ToInner = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, cxxRecordDecl(hasName("Inner"), isDefinition()));
+  ASSERT_TRUE(ToInner->hasAttr<MSInheritanceAttr>());
+
+  Decl *FromTU =
+      getTuDecl("namespace NS { class Inner; }", Lang_CXX17, "from.cc");
+  auto *FromInner = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("Inner")));
+
+  auto *ToImportedInner = cast<CXXRecordDecl>(Import(FromInner, Lang_CXX17));
+  ASSERT_TRUE(ToImportedInner);
+
+  // The newly imported redeclaration must have become the most recent one.
+  ASSERT_EQ(ToImportedInner, ToInner->getMostRecentDecl());
+
+  EXPECT_TRUE(ToImportedInner->hasAttr<MSInheritanceAttr>());
+  EXPECT_EQ(ToImportedInner->getMSInheritanceModel(),
+            MSInheritanceModel::Single);
+}
+
+TEST_P(ImportMSInheritanceAttr, PropagatedToExistingRedecl) {
+  Decl *ToTU = getToTuDecl("namespace NS { class Inner {}; }", Lang_CXX17);
+  auto *ToInner = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, cxxRecordDecl(hasName("Inner"), isDefinition()));
+  EXPECT_FALSE(ToInner->hasAttr<MSInheritanceAttr>());
+
+  Decl *FromRepTU =
+      getTuDecl("namespace NS { class Inner; }", Lang_CXX17, "from_rep.cc");
+  auto *FromRepDecl = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromRepTU, cxxRecordDecl(hasName("Inner")));
+  ASSERT_TRUE(FromRepDecl);
+
+  auto *ToImportedRep = cast<CXXRecordDecl>(Import(FromRepDecl, Lang_CXX17));
+  ASSERT_TRUE(ToImportedRep);
+  EXPECT_EQ(ToImportedRep, ToInner->getMostRecentDecl());
+
+  Decl *FromAttrTU = getTuDecl(
+      R"(
+      namespace NS { class Inner {}; }
+      struct HasPM { void (NS::Inner::*PM)(); };
+      )",
+      Lang_CXX17, "from_attr.cc");
+  auto *FromAttrDef = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromAttrTU, cxxRecordDecl(hasName("Inner"), isDefinition()));
+
+  auto *ToImportedAttr = cast<CXXRecordDecl>(Import(FromAttrDef, Lang_CXX17));
+  ASSERT_TRUE(ToImportedAttr);
+
+  // The newly imported redeclaration must have been fused into the older
+  // definition ...
+  EXPECT_EQ(ToImportedAttr, ToInner);
+  // ... and the repeated decl should be still the latest of the chain.
+  EXPECT_EQ(ToImportedRep, ToInner->getMostRecentDecl());
+
+  EXPECT_TRUE(ToInner->hasAttr<MSInheritanceAttr>());
+  EXPECT_TRUE(ToImportedRep->hasAttr<MSInheritanceAttr>());
+  EXPECT_EQ(ToImportedRep->getMSInheritanceModel(), MSInheritanceModel::Single);
+}
+
+TEST_P(ImportMSInheritanceAttr, PropagatedFromImportedRedecl) {
+  Decl *ToTU = getToTuDecl("class Inner;", Lang_CXX17);
+  auto *ToInner = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, cxxRecordDecl(hasName("Inner")));
+  EXPECT_FALSE(ToInner->hasAttr<MSInheritanceAttr>());
+
+  Decl *FromTU = getTuDecl(
+      R"(
+        class Inner;
+        class Inner {};
+        class Inner;
+        struct HasPM { void (Inner::*PM)(); };
+        )",
+      Lang_CXX17, "from.cc");
+  auto *FromInnerFst = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("Inner")));
+  auto *FromInnerDef = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("Inner"), isDefinition()));
+  auto *FromInnerLst = LastDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("Inner")));
+  ASSERT_TRUE(FromInnerFst);
+  ASSERT_TRUE(FromInnerDef);
+  ASSERT_TRUE(FromInnerLst);
+
+  EXPECT_FALSE(FromInnerFst->hasAttr<MSInheritanceAttr>());
+  EXPECT_FALSE(FromInnerDef->hasAttr<MSInheritanceAttr>());
+  EXPECT_TRUE(FromInnerLst->hasAttr<MSInheritanceAttr>());
+
+  auto *ToImportedInnerFst =
+      cast<CXXRecordDecl>(Import(FromInnerFst, Lang_CXX17));
+  ASSERT_TRUE(ToImportedInnerFst);
+  EXPECT_TRUE(ToImportedInnerFst->hasAttr<MSInheritanceAttr>());
+
+  auto *ToImportedInnerDef =
+      cast<CXXRecordDecl>(Import(FromInnerDef, Lang_CXX17));
+  ASSERT_TRUE(ToImportedInnerDef);
+  EXPECT_TRUE(ToImportedInnerDef->hasAttr<MSInheritanceAttr>());
+
+  auto *ToImportedInnerLst =
+      cast<CXXRecordDecl>(Import(FromInnerLst, Lang_CXX17));
+  ASSERT_TRUE(ToImportedInnerLst);
+  EXPECT_TRUE(ToImportedInnerLst->hasAttr<MSInheritanceAttr>());
+
+  EXPECT_EQ(ToInner->getMostRecentDecl()->getMSInheritanceModel(),
+            MSInheritanceModel::Single);
+}
+
+TEST_P(ImportMSInheritanceAttr,
+       PropagatedFromUnimportedRedeclToLatestDestinationRedecl) {
+  Decl *ToTU = getToTuDecl(
+      R"(
+      class Inner {};
+      class Inner;
+      )",
+      Lang_CXX17);
+  auto *ToInnerDef = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, cxxRecordDecl(hasName("Inner"), isDefinition()));
+  auto *ToInnerLatest = LastDeclMatcher<CXXRecordDecl>().match(
+      ToTU, cxxRecordDecl(hasName("Inner")));
+  ASSERT_TRUE(ToInnerDef);
+  ASSERT_TRUE(ToInnerLatest);
+  ASSERT_NE(ToInnerDef, ToInnerLatest);
+  ASSERT_EQ(ToInnerLatest, ToInnerDef->getMostRecentDecl());
+  EXPECT_FALSE(ToInnerDef->hasAttr<MSInheritanceAttr>());
+  EXPECT_FALSE(ToInnerLatest->hasAttr<MSInheritanceAttr>());
+
+  Decl *FromTU = getTuDecl(
+      R"(
+      class Inner {};
+      class Inner;
+      struct HasPM { void (Inner::*PM)(); };
+      )",
+      Lang_CXX17, "from.cc");
+  auto *FromInnerDef = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("Inner"), isDefinition()));
+  auto *FromInnerLatest = LastDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("Inner")));
+  ASSERT_TRUE(FromInnerDef);
+  ASSERT_TRUE(FromInnerLatest);
+  ASSERT_NE(FromInnerDef, FromInnerLatest);
+  EXPECT_FALSE(FromInnerDef->hasAttr<MSInheritanceAttr>());
+  EXPECT_TRUE(FromInnerLatest->hasAttr<MSInheritanceAttr>());
+
+  // Import only the definition. It merges into the older destination
+  // definition, while the attribute must travel from the unimported source
+  // redeclaration to the bare latest destination redeclaration.
+  auto *ToImportedInnerDef =
+      cast<CXXRecordDecl>(Import(FromInnerDef, Lang_CXX17));
+  ASSERT_TRUE(ToImportedInnerDef);
+  EXPECT_EQ(ToImportedInnerDef, ToInnerDef);
+  EXPECT_EQ(ToInnerLatest, ToImportedInnerDef->getMostRecentDecl());
+  EXPECT_FALSE(ToImportedInnerDef->hasAttr<MSInheritanceAttr>());
+  ASSERT_TRUE(ToInnerLatest->hasAttr<MSInheritanceAttr>());
+  EXPECT_EQ(ToInnerLatest->getMSInheritanceModel(), MSInheritanceModel::Single);
+}
+
 template <typename T>
 auto ExtendWithOptions(const T &Values, const std::vector<std::string> &Args) {
   auto Copy = Values;
@@ -10902,6 +11073,9 @@ INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportWithExternalSource,
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportAttributes,
                          DefaultTestValuesForRunOptions);
+
+INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportMSInheritanceAttr,
+                         ::testing::Values(std::vector<std::string>()));
 
 INSTANTIATE_TEST_SUITE_P(ParameterizedTests, ImportInjectedClassNameType,
                          DefaultTestValuesForRunOptions);
