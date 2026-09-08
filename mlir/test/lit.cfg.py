@@ -318,7 +318,7 @@ else:
 
 
 def enable_llc(llc_executable):
-    config.available_features.add("llc")
+    config.available_features.add("has_llc_binary")
     tools.extend(
         [
             ToolSubst(
@@ -329,11 +329,7 @@ def enable_llc(llc_executable):
     )
 
 
-llc_executable = (
-    lit_config.params.get("llc")
-    or os.environ.get("LLVM_LLC_EXECUTABLE", None)
-    or lit.util.which("llc", config.llvm_tools_dir)
-)
+llc_executable = lit.util.which("llc", config.llvm_tools_dir)
 if llc_executable:
     enable_llc(llc_executable)
 
