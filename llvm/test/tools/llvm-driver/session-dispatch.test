@@ -1,0 +1,7 @@
+# REQUIRES: llvm-driver
+
+## Exercise a real LLVM tool entry point through LLVMToolSession rather than
+## only testing the registry with synthetic callbacks.
+# RUN: %llvm cxxfilt _Z3foov | FileCheck %s
+
+# CHECK: foo()
