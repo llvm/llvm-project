@@ -83,14 +83,12 @@ template <class _FloatT>
 _LIBCPP_HIDE_FROM_ABI _FloatT __str_to_float_c_locale(const char* __nptr, char** __endptr, __locale_t);
 
 template <>
-inline _LIBCPP_HIDE_FROM_ABI float
-__str_to_float_c_locale<float>(const char* __nptr, char** __endptr, __locale_t) {
+inline _LIBCPP_HIDE_FROM_ABI float __str_to_float_c_locale<float>(const char* __nptr, char** __endptr, __locale_t) {
   return ::strtof(__nptr, __endptr);
 }
 
 template <>
-inline _LIBCPP_HIDE_FROM_ABI double
-__str_to_float_c_locale<double>(const char* __nptr, char** __endptr, __locale_t) {
+inline _LIBCPP_HIDE_FROM_ABI double __str_to_float_c_locale<double>(const char* __nptr, char** __endptr, __locale_t) {
   return ::strtod(__nptr, __endptr);
 }
 
