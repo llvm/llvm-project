@@ -463,18 +463,16 @@ If you need to fake part of the debug server but forward the rest to a real
 debug server, start by looking at the reverse execution tests which use
 `ReverseTestBase`.
 
-### The debug server's handling of specific packets or sequences of packets
-
-Use an API test that sends fake traffic to a real `lldb-server`. The existing
-tests in `lldb/test/API/tools/lldb-server` are your starting point.
-
 ### The Debug Server’s Handling of Specific Packets or Sequences of Packets
 
 Generally you can check this using `lldb`'s own commands in a Shell or API
-test.
+test. If you need exact packets, you can use an API test that sends fake traffic
+to a real `lldb-server`. The existing tests in `lldb/test/API/tools/lldb-server`
+are your starting point.
 
-However if you do not trust enough of the implementation yet to do that,
-you can have the inferior process check things for you.
+If you are using `lldb`'s own commands but you do not want to trust the
+implementation of those commands, you can have the inferior process check things
+for you.
 
 For example, to test register access the API test might:
 1. Launch the inferior, which writes a known pattern to the register using

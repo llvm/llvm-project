@@ -920,6 +920,13 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 12.1)
       append("-Wno-dangling-pointer" CMAKE_CXX_FLAGS)
     endif()
+
+    # Silence a false positive GCC -Wunused-but-set-parameter warning in
+    # constexpr cases. See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85827
+    # for details
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "14.0")
+      append("-Wno-unused-but-set-parameter" CMAKE_CXX_FLAGS)
+    endif()
   endif()
 
   # The LLVM libraries have no stable C++ API, so -Wnoexcept-type is not useful.

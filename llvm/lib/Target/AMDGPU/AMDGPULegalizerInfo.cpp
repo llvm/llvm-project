@@ -2556,6 +2556,11 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   const AMDGPUTargetMachine &TM
     = static_cast<const AMDGPUTargetMachine &>(MF.getTarget());
 
+  // The source is known non-null for llvm.amdgcn.addrspacecast.nonnull or a
+  // G_ADDRSPACE_CAST carrying the nonnull flag; otherwise we need to guess.
+  const bool IsNonNull =
+      isa<GIntrinsic>(MI) || MI.getFlag(MachineInstr::MIFlag::NonNull);
+
   if (TM.isNoopAddrSpaceCast(SrcAS, DestAS)) {
     MI.setDesc(B.getTII().get(TargetOpcode::G_BITCAST));
     return true;
@@ -2583,9 +2588,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
       return B.buildExtract(Dst, Src, 0).getReg(0);
     };
 
-    // For llvm.amdgcn.addrspacecast.nonnull we can always assume non-null, for
-    // G_ADDRSPACE_CAST we need to guess.
-    if (isa<GIntrinsic>(MI) || isKnownNonNull(Src, MRI, TM, SrcAS)) {
+    if (IsNonNull || isKnownNonNull(Src, MRI, TM, SrcAS)) {
       castFlatToLocalOrPrivate(Dst);
       MI.eraseFromParent();
       return true;
@@ -2655,9 +2658,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
       return B.buildMergeLikeInstr(Dst, {SrcAsInt, ApertureReg}).getReg(0);
     };
 
-    // For llvm.amdgcn.addrspacecast.nonnull we can always assume non-null, for
-    // G_ADDRSPACE_CAST we need to guess.
-    if (isa<GIntrinsic>(MI) || isKnownNonNull(Src, MRI, TM, SrcAS)) {
+    if (IsNonNull || isKnownNonNull(Src, MRI, TM, SrcAS)) {
       castLocalOrPrivateToFlat(Dst);
       MI.eraseFromParent();
       return true;
@@ -4310,7 +4311,11 @@ bool AMDGPULegalizerInfo::legalizeFPow(MachineInstr &MI,
                    .addUse(Ext0.getReg(0))
                    .addUse(Ext1.getReg(0))
                    .setMIFlags(Flags);
-    B.buildFExp2(Dst, B.buildFPTrunc(F16, Mul), Flags);
+    // The f32 product is finite whenever the original fpow was, but it can
+    // still be outside the f16 range. Drop ninf from the truncation and from
+    // the exp2, since neither can assume a finite value here.
+    unsigned FlagsNoNInf = Flags & ~MachineInstr::FmNoInfs;
+    B.buildFExp2(Dst, B.buildFPTrunc(F16, Mul, FlagsNoNInf), FlagsNoNInf);
   } else
     return false;
 

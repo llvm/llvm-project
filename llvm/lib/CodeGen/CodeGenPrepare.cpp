@@ -1491,6 +1491,49 @@ static bool SinkCast(CastInst *CI) {
   return MadeChange;
 }
 
+/// Hoists bitcasts to the source block to reduce register pressure
+static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
+                            const DataLayout &DL) {
+  auto *SrcInst = dyn_cast<Instruction>(BCI->getOperand(0));
+  if (!SrcInst || SrcInst->getParent() == BCI->getParent() ||
+      SrcInst->isTerminator())
+    return false;
+
+  Type *DestTy = BCI->getType();
+  Type *SrcTy = SrcInst->getType();
+  EVT SrcVT = TLI.getValueType(DL, SrcTy);
+  EVT DestVT = TLI.getValueType(DL, DestTy);
+
+  // Bail out on scalable vectors and illegal destination types
+  if (SrcVT.isScalableVector() || DestVT.isScalableVector())
+    return false;
+
+  // Only hoist if it reduces physical register count
+  if (TLI.getNumRegisters(BCI->getContext(), SrcVT) <=
+      TLI.getNumRegisters(BCI->getContext(), DestVT))
+    return false;
+
+  // Block large or cross-domain scalars to prevent spills and broken atomics.
+  bool IsCrossDomain = DestTy->isFPOrFPVectorTy() != SrcTy->isFPOrFPVectorTy();
+
+  // A scalar is large if it requires more than one native register.
+  unsigned NativeWidth = DL.getPointerSizeInBits();
+  bool IsLargeScalar =
+      !DestTy->isVectorTy() &&
+      DL.getTypeSizeInBits(DestTy).getFixedValue() > NativeWidth;
+
+  if (IsCrossDomain || IsLargeScalar)
+    return false;
+
+  // Hoist the bitcast
+  BasicBlock *SrcBB = SrcInst->getParent();
+  auto InsertPt = isa<PHINode>(SrcInst) ? SrcBB->getFirstInsertionPt()
+                                        : std::next(SrcInst->getIterator());
+  BCI->moveBefore(*SrcBB, InsertPt);
+
+  return true;
+}
+
 /// If the specified cast instruction is a noop copy (e.g. it's casting from
 /// one pointer type to another, i32->i8 on PPC), sink it into user blocks to
 /// reduce the number of virtual registers that must be created and coalesced.
@@ -8931,6 +8974,14 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     // evaluation in a block other than then one that uses it (e.g. to hoist
     // the address of globals out of a loop).  If this is the case, we don't
     // want to forward-subst the cast.
+    if (auto *BCI = dyn_cast<BitCastInst>(CI)) {
+      // Hoist bitcasts of illegal types to reduce cross-block register pressure
+      // and prevent register splitting.
+      if (optimizeBitCast(BCI, *TLI, *DL)) {
+        return true;
+      }
+    }
+
     if (isa<Constant>(CI->getOperand(0)))
       return AnyChange;
 

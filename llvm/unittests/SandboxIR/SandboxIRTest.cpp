@@ -6360,10 +6360,13 @@ TEST_F(SandboxIRTest, InstructionCallbacks_BeforeID) {
   auto It = BB.begin();
   sandboxir::Instruction *Add0 = &*It++;
   sandboxir::Instruction *Ret = &*It++;
+  auto *Arg0 = F.getArg(0);
 
+  // Callbacks write to this vector.
+  SmallVector<unsigned> CBs;
   {
     // Check EraseInstr callbacks.
-    SmallVector<unsigned> CBs;
+    CBs.clear();
     // The first callback.
     auto CB0 = Ctx.registerEraseInstrCallback(
         [&CBs](sandboxir::Instruction *I) { CBs.push_back(0); });
@@ -6381,7 +6384,7 @@ TEST_F(SandboxIRTest, InstructionCallbacks_BeforeID) {
   }
   {
     // Check CreateInstr callbacks.
-    SmallVector<unsigned> CBs;
+    CBs.clear();
     // The first callback.
     auto CB0 = Ctx.registerCreateInstrCallback(
         [&CBs](sandboxir::Instruction *I) { CBs.push_back(0); });
@@ -6400,40 +6403,40 @@ TEST_F(SandboxIRTest, InstructionCallbacks_BeforeID) {
   }
   {
     // Check MoveInstr callbacks.
-    SmallVector<unsigned> CBs;
+    CBs.clear();
     // The first callback.
     auto CB0 = Ctx.registerMoveInstrCallback(
         [&CBs](sandboxir::Instruction *I, const sandboxir::BBIterator &Where) {
-          CBs.push_back(0);
+          CBs.push_back(10);
         });
     // This should insert this callback before the first.
     [[maybe_unused]] auto CB1 = Ctx.registerMoveInstrCallback(
         [&CBs](sandboxir::Instruction *I, const sandboxir::BBIterator &Where) {
-          CBs.push_back(1);
+          CBs.push_back(11);
         },
         /*BeforeID=*/CB0);
     Ctx.save();
     Ret->moveBefore(Add0);
-    EXPECT_THAT(CBs, testing::ElementsAre(1, 0));
+    EXPECT_THAT(CBs, testing::ElementsAre(11, 10));
     Ctx.revert();
   }
   {
     // Check SetUse callbacks.
-    SmallVector<unsigned> CBs;
+    CBs.clear();
     // The first callback.
     auto CB0 = Ctx.registerSetUseCallback(
         [&CBs](sandboxir::Use U, sandboxir::Value *NewSrc) {
-          CBs.push_back(0);
+          CBs.push_back(100);
         });
     // This should insert this callback before the first.
     [[maybe_unused]] auto CB1 = Ctx.registerSetUseCallback(
         [&CBs](sandboxir::Use U, sandboxir::Value *NewSrc) {
-          CBs.push_back(1);
+          CBs.push_back(101);
         },
         /*BeforeID=*/CB0);
     Ctx.save();
-    Ret->moveBefore(Add0);
-    EXPECT_THAT(CBs, testing::ElementsAre(1, 0));
+    Add0->setOperand(0, Arg0);
+    EXPECT_THAT(CBs, testing::ElementsAre(101, 100));
     Ctx.revert();
   }
 }

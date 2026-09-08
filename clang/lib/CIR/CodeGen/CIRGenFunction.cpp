@@ -21,6 +21,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/FPEnv.h"
 
@@ -487,10 +488,17 @@ void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
                    convertType(paramVar->getType()), paramLoc, alignment,
                    /*insertIntoFnEntryBlock=*/true);
 
-    declare(addrVal, paramVar, paramVar->getType(), paramLoc, alignment,
+    mlir::ptr::MemorySpaceAttrInterface destAddrSpace =
+        cir::toCIRAddressSpaceAttr(getMLIRContext(),
+                                   paramVar->getType().getAddressSpace());
+    Address addr = Address(addrVal, alignment);
+    addr = maybeCastStackAddressSpace(addr, destAddrSpace);
+
+    declare(addr.getPointer(), paramVar, paramVar->getType(), paramLoc,
+            alignment,
             /*isParam=*/true);
 
-    setAddrOfLocalVar(paramVar, Address(addrVal, alignment));
+    setAddrOfLocalVar(paramVar, addr);
 
     bool isPromoted = isa<ParmVarDecl>(paramVar) &&
                       cast<ParmVarDecl>(paramVar)->isKNRPromoted();
@@ -972,10 +980,21 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   case Dtor_Base:
     assert(body);
 
+    bool needsVTableInit =
+        !CodeGenUtils::canSkipVTablePointerInitialization(getContext(), dtor);
+    // Launder 'this' if necessary.
+    if (needsVTableInit && cgm.getCodeGenOpts().StrictVTablePointers &&
+        cgm.getCodeGenOpts().OptimizationLevel > 0) {
+      cxxThisValue = cir::LaunderOp::create(
+          builder, getLoc(dtor->getBeginLoc()), loadCXXThis());
+    }
+
     // Enter the cleanup scopes for fields and non-virtual bases.
     enterDtorCleanups(dtor, Dtor_Base);
 
-    assert(!cir::MissingFeatures::vtableInitialization());
+    // Initialize the vtable pointers before entering the body.
+    if (needsVTableInit)
+      initializeVTablePointers(getLoc(dtor->getBeginLoc()), dtor->getParent());
 
     if (isTryBody) {
       cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
@@ -1364,11 +1383,11 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
       return;
 
   // Cast the dest ptr to the appropriate i8 pointer type.
-  if (builder.isInt8Ty(destPtr.getElementType())) {
-    cgm.errorNYI(loc, "Cast the dest ptr to the appropriate i8 pointer type");
-  }
+  if (!builder.isInt8Ty(destPtr.getElementType()))
+    destPtr = destPtr.withElementType(builder, uInt8Ty);
 
   // Get size and alignment info for this aggregate.
+  mlir::IntegerAttr sizeVal;
   const CharUnits size = getContext().getTypeSizeInChars(ty);
   if (size.isZero()) {
     // But note that getTypeInfo returns 0 for a VLA.
@@ -1378,6 +1397,8 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
     } else {
       return;
     }
+  } else {
+    sizeVal = cgm.getSize(size);
   }
 
   // If the type contains a pointer to data member we can't memset it to zero.
@@ -1396,12 +1417,15 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
     return;
   }
 
-  // In LLVM Codegen: otherwise, just memset the whole thing to zero using
-  // Builder.CreateMemSet. In CIR just emit a store of #cir.zero to the
-  // respective address.
-  // Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
-  const mlir::Value zeroValue = builder.getNullValue(convertType(ty), loc);
-  builder.createStore(loc, zeroValue, destPtr);
+  // Otherwise, just memset the whole thing to zero.  This is legal
+  // because in LLVM, all default initializers (other than the ones we just
+  // handled above, and the case handled below) are guaranteed to have a bit
+  // pattern of all zeros.
+  mlir::Value zero = builder.getNullValue(builder.getUInt8Ty(), loc);
+  mlir::Value sizeValue =
+      builder.getConstAPInt(loc, cgm.uInt64Ty, sizeVal.getValue());
+  destPtr = destPtr.withElementType(builder, cgm.voidTy);
+  builder.createMemSet(loc, destPtr, zero, sizeValue);
 }
 
 CIRGenFunction::CIRGenFPOptionsRAII::CIRGenFPOptionsRAII(CIRGenFunction &cgf,

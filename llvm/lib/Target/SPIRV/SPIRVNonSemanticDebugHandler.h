@@ -101,7 +101,7 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
     const DIExpression *Expr = nullptr;
     const GlobalVariable *LLVMGV = nullptr;
   };
-  DenseMap<const DIGlobalVariable *, GlobalVariableDebugInfo>
+  MapVector<const DIGlobalVariable *, GlobalVariableDebugInfo>
       GlobalVariableDebugInfoMap;
 
   // Distinct DILexicalBlock and DINamespace scopes, parent-before-child

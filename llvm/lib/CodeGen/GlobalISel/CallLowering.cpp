@@ -659,8 +659,7 @@ void CallLowering::buildCopyToRegs(MachineIRBuilder &B,
   LLT DstTy = MRI.getType(DstRegs[0]);
   LLT CoverTy = getCoverTy(SrcTy, PartTy);
   if (SrcTy.isVector() && DstRegs.size() > 1) {
-    TypeSize FullCoverSize =
-        DstTy.getSizeInBits().multiplyCoefficientBy(DstRegs.size());
+    TypeSize FullCoverSize = DstTy.getSizeInBits() * DstRegs.size();
 
     LLT EltTy = SrcTy.getElementType();
     TypeSize EltSize = EltTy.getSizeInBits();
