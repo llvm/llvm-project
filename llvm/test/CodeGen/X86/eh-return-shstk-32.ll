@@ -4,42 +4,32 @@
 
 target triple = "i386-pc-linux"
 
-define void @test(i32 %offset, ptr %handler) {
+define void @test(i32 %offset, ptr %handler) nounwind {
 ; RET-LABEL: test:
 ; RET:       # %bb.0: # %entry
 ; RET-NEXT:    pushl %ebp
-; RET-NEXT:    .cfi_def_cfa_offset 8
-; RET-NEXT:    .cfi_offset %ebp, -8
 ; RET-NEXT:    movl %esp, %ebp
-; RET-NEXT:    .cfi_def_cfa_register %ebp
 ; RET-NEXT:    pushl %eax
-; RET-NEXT:    .cfi_offset %eax, -12
 ; RET-NEXT:    movl 12(%ebp), %ecx
 ; RET-NEXT:    movl 8(%ebp), %eax
 ; RET-NEXT:    movl %ecx, 4(%ebp,%eax)
 ; RET-NEXT:    leal 4(%ebp,%eax), %ecx
 ; RET-NEXT:    popl %eax
 ; RET-NEXT:    popl %ebp
-; RET-NEXT:    .cfi_def_cfa %esp, 4
 ; RET-NEXT:    movl %ecx, %esp
 ; RET-NEXT:    retl # eh_return, addr: %ecx
 ;
 ; SHSTK-LABEL: test:
 ; SHSTK:       # %bb.0: # %entry
 ; SHSTK-NEXT:    pushl %ebp
-; SHSTK-NEXT:    .cfi_def_cfa_offset 8
-; SHSTK-NEXT:    .cfi_offset %ebp, -8
 ; SHSTK-NEXT:    movl %esp, %ebp
-; SHSTK-NEXT:    .cfi_def_cfa_register %ebp
 ; SHSTK-NEXT:    pushl %eax
-; SHSTK-NEXT:    .cfi_offset %eax, -12
 ; SHSTK-NEXT:    movl 12(%ebp), %ecx
 ; SHSTK-NEXT:    movl 8(%ebp), %eax
 ; SHSTK-NEXT:    movl %ecx, 4(%ebp,%eax)
 ; SHSTK-NEXT:    leal 4(%ebp,%eax), %ecx
 ; SHSTK-NEXT:    popl %eax
 ; SHSTK-NEXT:    popl %ebp
-; SHSTK-NEXT:    .cfi_def_cfa %esp, 4
 ; SHSTK-NEXT:    movl %ecx, %esp
 ; SHSTK-NEXT:    popl %ecx
 ; SHSTK-NEXT:    jmpl *%ecx

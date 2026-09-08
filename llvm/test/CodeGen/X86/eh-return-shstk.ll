@@ -2,7 +2,8 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs < %s | FileCheck %s --check-prefix=RET
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mattr=+shstk -verify-machineinstrs < %s | FileCheck %s --check-prefix=SHSTK
 ; RUN: llc -mtriple=x86_64-pc-windows-msvc -mattr=+shstk -verify-machineinstrs < %s | FileCheck %s --check-prefix=WIN64
-; RUN: llc -mtriple=x86_64-uefi -mattr=+shstk -verify-machineinstrs < %s | FileCheck %s --check-prefix=UEFI64
+; RUN: llc -mtriple=x86_64-uefi -verify-machineinstrs < %s | FileCheck %s --check-prefix=WINRET
+; RUN: llc -mtriple=x86_64-uefi -mattr=+shstk -verify-machineinstrs < %s | FileCheck %s --check-prefix=WIN64
 
 define void @test(i64 %offset, ptr %handler) {
 ; RET-LABEL: test:
@@ -51,22 +52,21 @@ define void @test(i64 %offset, ptr %handler) {
 ; WIN64-NEXT:    rex64 jmpq *%rcx
 ; WIN64-NEXT:    .seh_endproc
 ;
-; UEFI64-LABEL: test:
-; UEFI64:       # %bb.0: # %entry
-; UEFI64-NEXT:    pushq %rbp
-; UEFI64-NEXT:    .seh_pushreg %rbp
-; UEFI64-NEXT:    movq %rsp, %rbp
-; UEFI64-NEXT:    .seh_setframe %rbp, 0
-; UEFI64-NEXT:    .seh_endprologue
-; UEFI64-NEXT:    movq %rdx, 8(%rbp,%rcx)
-; UEFI64-NEXT:    leaq 8(%rbp,%rcx), %rcx
-; UEFI64-NEXT:    .seh_startepilogue
-; UEFI64-NEXT:    popq %rbp
-; UEFI64-NEXT:    .seh_endepilogue
-; UEFI64-NEXT:    movq %rcx, %rsp
-; UEFI64-NEXT:    popq %rcx
-; UEFI64-NEXT:    rex64 jmpq *%rcx
-; UEFI64-NEXT:    .seh_endproc
+; WINRET-LABEL: test:
+; WINRET:       # %bb.0: # %entry
+; WINRET-NEXT:    pushq %rbp
+; WINRET-NEXT:    .seh_pushreg %rbp
+; WINRET-NEXT:    movq %rsp, %rbp
+; WINRET-NEXT:    .seh_setframe %rbp, 0
+; WINRET-NEXT:    .seh_endprologue
+; WINRET-NEXT:    movq %rdx, 8(%rbp,%rcx)
+; WINRET-NEXT:    leaq 8(%rbp,%rcx), %rcx
+; WINRET-NEXT:    .seh_startepilogue
+; WINRET-NEXT:    popq %rbp
+; WINRET-NEXT:    .seh_endepilogue
+; WINRET-NEXT:    movq %rcx, %rsp
+; WINRET-NEXT:    retq # eh_return, addr: %rcx
+; WINRET-NEXT:    .seh_endproc
 entry:
   call void @llvm.eh.return.i64(i64 %offset, ptr %handler)
   unreachable
