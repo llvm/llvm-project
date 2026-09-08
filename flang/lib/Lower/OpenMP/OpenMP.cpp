@@ -5452,6 +5452,13 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
                            ConstructQueue::const_iterator item) {
   assert(item != queue.end());
 
+  // A reduction on an inner constituent can also create an implicit target
+  // map. Diagnose unsupported objects before mapping tries to lower them.
+  if (item->id == llvm::omp::Directive::OMPD_target)
+    for (auto it = item; it != queue.end(); ++it)
+      ClauseProcessor(converter, semaCtx, it->clauses)
+          .checkReductionObjects(loc);
+
   lower::StatementContext stmtCtx;
   mlir::Operation *newOp = nullptr;
 

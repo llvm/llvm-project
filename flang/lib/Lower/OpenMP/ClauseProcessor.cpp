@@ -1839,12 +1839,37 @@ static void checkUserDefinedReductionSubobject(
 }
 
 template <typename ReductionClause>
-static void checkComplexPartReductionObject(mlir::Location currentLocation,
-                                            llvm::StringRef clauseName,
-                                            const ReductionClause &clause) {
+static void checkReductionSubobjects(mlir::Location currentLocation,
+                                     llvm::StringRef clauseName,
+                                     const ReductionClause &clause,
+                                     lower::AbstractConverter &converter,
+                                     semantics::SemanticsContext &semaCtx) {
+  checkUserDefinedReductionSubobject(currentLocation, clauseName, clause,
+                                     converter, semaCtx);
   for (const Object &object : std::get<omp::ObjectList>(clause.t))
     if (object.ref() && evaluate::ExtractComplexPart(*object.ref()))
       TODO(currentLocation, llvm::Twine(clauseName) + " of a complex part");
+}
+
+void ClauseProcessor::checkReductionObjects(
+    mlir::Location currentLocation) const {
+  for (const Clause &clause : clauses)
+    common::visit(
+        common::visitors{
+            [&](const omp::clause::Reduction &clause) {
+              checkReductionSubobjects(currentLocation, "REDUCTION", clause,
+                                       converter, semaCtx);
+            },
+            [&](const omp::clause::InReduction &clause) {
+              checkReductionSubobjects(currentLocation, "IN_REDUCTION", clause,
+                                       converter, semaCtx);
+            },
+            [&](const omp::clause::TaskReduction &clause) {
+              checkReductionSubobjects(currentLocation, "TASK_REDUCTION",
+                                       clause, converter, semaCtx);
+            },
+            [](const auto &) {}},
+        clause.u);
 }
 
 bool ClauseProcessor::processInReduction(
@@ -1852,10 +1877,8 @@ bool ClauseProcessor::processInReduction(
     llvm::SmallVectorImpl<Object> &outReductionObjects) const {
   return findRepeatableClause<omp::clause::InReduction>(
       [&](const omp::clause::InReduction &clause, const parser::CharBlock &) {
-        checkUserDefinedReductionSubobject(currentLocation, "IN_REDUCTION",
-                                           clause, converter, semaCtx);
-        checkComplexPartReductionObject(currentLocation, "IN_REDUCTION",
-                                        clause);
+        checkReductionSubobjects(currentLocation, "IN_REDUCTION", clause,
+                                 converter, semaCtx);
         llvm::SmallVector<mlir::Value> inReductionVars;
         llvm::SmallVector<bool> inReduceVarByRef;
         llvm::SmallVector<mlir::Attribute> inReductionDeclSymbols;
@@ -2281,9 +2304,8 @@ bool ClauseProcessor::processReduction(
           TODO(currentLocation,
                "REDUCTION with TASK modifier of a partial array section");
 
-        checkUserDefinedReductionSubobject(currentLocation, "REDUCTION", clause,
-                                           converter, semaCtx);
-        checkComplexPartReductionObject(currentLocation, "REDUCTION", clause);
+        checkReductionSubobjects(currentLocation, "REDUCTION", clause,
+                                 converter, semaCtx);
 
         if (commonModifier && *commonModifier != effectiveModifier)
           TODO(currentLocation, "REDUCTION clauses with different modifiers");
@@ -2328,10 +2350,8 @@ bool ClauseProcessor::processTaskReduction(
     llvm::SmallVectorImpl<Object> &outReductionObjects) const {
   return findRepeatableClause<omp::clause::TaskReduction>(
       [&](const omp::clause::TaskReduction &clause, const parser::CharBlock &) {
-        checkUserDefinedReductionSubobject(currentLocation, "TASK_REDUCTION",
-                                           clause, converter, semaCtx);
-        checkComplexPartReductionObject(currentLocation, "TASK_REDUCTION",
-                                        clause);
+        checkReductionSubobjects(currentLocation, "TASK_REDUCTION", clause,
+                                 converter, semaCtx);
         llvm::SmallVector<mlir::Value> taskReductionVars;
         llvm::SmallVector<bool> taskReduceVarByRef;
         llvm::SmallVector<mlir::Attribute> taskReductionDeclSymbols;
