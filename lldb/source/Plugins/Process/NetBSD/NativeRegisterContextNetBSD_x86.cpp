@@ -268,7 +268,7 @@ NativeRegisterContextNetBSD_x86::NativeRegisterContextNetBSD_x86(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
     : NativeRegisterContextRegisterInfo(
           native_thread, CreateRegisterInfoInterface(target_arch)),
-      NativeRegisterContextDBReg_x86(native_thread), m_regset_offsets({0}) {
+      m_regset_offsets({0}) {
   assert(m_gpr.size() == GetRegisterInfoInterface().GetGPRSize());
   std::array<uint32_t, MaxRegularRegSet + 1> first_regnos;
 

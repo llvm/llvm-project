@@ -33,6 +33,9 @@
 ; RUN: llc -mtriple=amdgpu12.5-amd-amdhsa < %s | FileCheck -check-prefixes=GFX125 %s
 ; RUN: llc -mtriple=amdgpu12.5-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GFX1250 %s
 
+; RUN: llc -mtriple=amdgpu12.50s-amd-amdhsa < %s | FileCheck -check-prefixes=GFX1250-STRICT %s
+; RUN: llc -mtriple=amdgpu12.50s-amd-amdhsa -mcpu=gfx1250-strict < %s | FileCheck -check-prefixes=GFX1250-STRICT %s
+
 ; RUN: llc -mtriple=amdgpu13-amd-amdhsa < %s | FileCheck -check-prefixes=GFX13 %s
 ; RUN: llc -mtriple=amdgpu13-amd-amdhsa -mcpu=gfx1310 < %s | FileCheck -check-prefixes=GFX1310 %s
 
@@ -70,6 +73,8 @@
 
 ; GFX125: .amdgcn_target "amdgpu12.5-amd-amdhsa-unknown-gfx12-5-generic"
 ; GFX1250: .amdgcn_target "amdgpu12.5-amd-amdhsa-unknown-gfx1250"
+
+; GFX1250-STRICT: .amdgcn_target "amdgpu12.50s-amd-amdhsa-unknown-gfx1250-strict"
 
 ; GFX13: .amdgcn_target "amdgpu13-amd-amdhsa-unknown-gfx13-generic"
 ; GFX1310: .amdgcn_target "amdgpu13-amd-amdhsa-unknown-gfx1310"

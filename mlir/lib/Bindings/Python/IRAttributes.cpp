@@ -423,6 +423,8 @@ void PyIntegerAttribute::bindDerived(ClassTy &c) {
   c.def_prop_ro("value", toPyInt, "Returns the value of the integer attribute");
   c.def("__int__", toPyInt,
         "Converts the value of the integer attribute to a Python int");
+  c.def("__index__", toPyInt,
+        "Converts the value of the integer attribute to a Python int");
   c.def_prop_ro_static("static_typeid", [](nb::object & /*class*/) {
     return PyTypeID(mlirIntegerAttrGetTypeID());
   });

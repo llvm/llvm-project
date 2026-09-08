@@ -24,8 +24,10 @@ unittest("CASTests") {
       "OnDiskGraphDBTest.cpp",
       "OnDiskKeyValueDBTest.cpp",
       "OnDiskTrieRawHashMapTest.cpp",
+      "PluginCASTest.cpp",
       "ProgramTest.cpp",
       "UnifiedOnDiskCacheTest.cpp",
     ]
+    data_deps = [ "//llvm/tools/libCASPluginTest:CASPluginTest" ]
   }
 }

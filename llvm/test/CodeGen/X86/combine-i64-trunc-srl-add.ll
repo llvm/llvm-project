@@ -23,9 +23,8 @@ define i1 @test_ult_add(i64 %x) {
 ; X64-LABEL: test_ult_add:
 ; X64:       # %bb.0:
 ; X64-NEXT:    shrq $48, %rdi
-; X64-NEXT:    addl $14, %edi
-; X64-NEXT:    movzwl %di, %eax
-; X64-NEXT:    cmpl $3, %eax
+; X64-NEXT:    addl $-65522, %edi # imm = 0xFFFF000E
+; X64-NEXT:    cmpl $3, %edi
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
   %add = add i64 3940649673949184, %x
@@ -230,13 +229,12 @@ define i32 @test_trunc_xor_2(i64 %x) {
 define i32 @pr128158(i64 %x) {
 ; X64-LABEL: pr128158:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movabsq $-4294967296, %rax # imm = 0xFFFFFFFF00000000
-; X64-NEXT:    addq %rdi, %rax
-; X64-NEXT:    shrq $32, %rax
+; X64-NEXT:    shrq $32, %rdi
+; X64-NEXT:    decq %rdi
 ; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB16_1: # %for.body
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    cmpl $9, %eax
+; X64-NEXT:    cmpq $9, %rdi
 ; X64-NEXT:    jb .LBB16_1
 ; X64-NEXT:  # %bb.2: # %exit
 ; X64-NEXT:    xorl %eax, %eax

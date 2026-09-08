@@ -110,16 +110,36 @@ namespace llvm {
   ///  - sign-return-address-with-bkey
   LLVM_ABI void copyModuleAttrToFunctions(Module &M);
 
+  /// Single-operand tags replacing a removed two-operand form
+  /// !{!"<Enable>", i1 X}: X = true selects Enable, X = false selects Disable.
+  struct BooleanLoopTags {
+    StringLiteral Enable;
+    StringLiteral Disable;
+  };
+
+  inline constexpr BooleanLoopTags OldBooleanLoopTags[] = {
+      {"llvm.loop.distribute.enable", "llvm.loop.distribute.disable"},
+      {"llvm.loop.vectorize.enable", "llvm.loop.vectorize.disable"},
+      {"llvm.loop.vectorize.predicate.enable",
+       "llvm.loop.vectorize.predicate.disable"},
+      {"llvm.loop.vectorize.scalable.enable",
+       "llvm.loop.vectorize.scalable.disable"}};
+
+  /// Return the replacement tags for the enable tag \p Name, or nullptr.
+  inline const BooleanLoopTags *findBooleanLoopTags(StringRef Name) {
+    for (const BooleanLoopTags &Tags : OldBooleanLoopTags)
+      if (Tags.Enable == Name)
+        return &Tags;
+    return nullptr;
+  }
+
   /// Check whether a string looks like an old loop attachment tag.
   inline bool mayBeOldLoopAttachmentTag(StringRef Name) {
-    // "llvm.loop.distribute.enable" and "llvm.loop.vectorize.enable" are
-    // intentionally included: the current single-operand form shares the tag
-    // with the removed two-operand form (!{!"...", i1 X}), so we can only
-    // decide by inspecting the operands, which happens in
+    // The enable tags are intentionally included: the current single-operand
+    // form shares the tag with the removed two-operand form (!{!"...", i1 X}),
+    // so we can only decide by inspecting the operands, which happens in
     // upgradeLoopArgument().
-    return Name.starts_with("llvm.vectorizer.") ||
-           Name == "llvm.loop.distribute.enable" ||
-           Name == "llvm.loop.vectorize.enable";
+    return Name.starts_with("llvm.vectorizer.") || findBooleanLoopTags(Name);
   }
 
   /// Upgrade the loop attachment metadata node.

@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
@@ -41,6 +42,28 @@ enum class TMAReductionOp : uint8_t {
   XOR = 7,
 };
 
+inline StringRef getTMATensorReductionOpName(TMAReductionOp Op) {
+  switch (Op) {
+  case TMAReductionOp::ADD:
+    return "add";
+  case TMAReductionOp::MIN:
+    return "min";
+  case TMAReductionOp::MAX:
+    return "max";
+  case TMAReductionOp::INC:
+    return "inc";
+  case TMAReductionOp::DEC:
+    return "dec";
+  case TMAReductionOp::AND:
+    return "and";
+  case TMAReductionOp::OR:
+    return "or";
+  case TMAReductionOp::XOR:
+    return "xor";
+  }
+  llvm_unreachable("invalid TMA tensorreduction operation");
+}
+
 // Enum to represent the cta_group::1 and
 // cta_group::2 variants in TMA/TCGEN05 family of
 // PTX instructions.
@@ -50,13 +73,72 @@ enum class CTAGroupKind : uint8_t {
   CG_2 = 2,    // cta_group::2 modifier
 };
 
-enum class Tcgen05MMAKind : uint8_t { F16 = 0, TF32 = 1, F8F6F4 = 2, I8 = 3 };
+// Validate data patterns supported with the TMA Copy from Global to Shared
+// memory (CTA and Cluster) intrinsics.
+enum class TMAValidateDataPattern : uint8_t {
+  DISABLED = 0, // Default; no validate_data qualifier is emitted.
+  PER_16BYTES_80000000 = 1,
+  PER_16BYTES_8000 = 2,
+  PER_16BYTES_80 = 3,
+  PER_16BYTES_8 = 4,
+  PER_ELEMENT_FF = 5,
+};
+
+inline StringRef getTMAValidateDataPatternName(TMAValidateDataPattern Pattern) {
+  using VDTy = TMAValidateDataPattern;
+  switch (Pattern) {
+  case VDTy::DISABLED:
+    return "disabled";
+  case VDTy::PER_16BYTES_80000000:
+    return "per_16bytes::80000000";
+  case VDTy::PER_16BYTES_8000:
+    return "per_16bytes::8000";
+  case VDTy::PER_16BYTES_80:
+    return "per_16bytes::80";
+  case VDTy::PER_16BYTES_8:
+    return "per_16bytes::8";
+  case VDTy::PER_ELEMENT_FF:
+    return "per_element::ff";
+  }
+  llvm_unreachable("invalid TMA validate data pattern");
+}
+
+// Eviction priorities applicable for prefetch and applypriority intrinsics.
+enum class EvictPolicyType : uint8_t {
+  EVICT_NORMAL = 0, // default
+  EVICT_LAST = 1,
+};
+
+inline StringRef getEvictPolicyName(EvictPolicyType Policy) {
+  switch (Policy) {
+  case EvictPolicyType::EVICT_NORMAL:
+    return "L2::evict_normal";
+  case EvictPolicyType::EVICT_LAST:
+    return "L2::evict_last";
+  }
+  llvm_unreachable("invalid evict policy");
+}
+
+enum class Tcgen05MMAKind : uint8_t {
+  F16 = 0,
+  TF32 = 1,
+  F8F6F4 = 2,
+  I8 = 3,
+  TI16 = 4,
+};
 
 enum class Tcgen05CollectorUsageOp : uint8_t {
   DISCARD = 0,
   LASTUSE = 1,
   FILL = 2,
   USE = 3,
+};
+
+enum class Tcgen05MMACollectorBBuffer : uint8_t {
+  B0 = 0,
+  B1 = 1,
+  B2 = 2,
+  B3 = 3,
 };
 
 enum class TensormapElemType : uint8_t {
@@ -106,8 +188,18 @@ enum class TensormapFillMode : uint8_t {
 
 LLVM_ABI void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
 
+LLVM_ABI void printEvictPolicyType(raw_ostream &OS, const Constant *ImmArgVal);
+
+LLVM_ABI void printTMAReductionOp(raw_ostream &OS, const Constant *ImmArgVal);
+
+LLVM_ABI void printTMAValidateDataPattern(raw_ostream &OS,
+                                          const Constant *ImmArgVal);
+
 LLVM_ABI void printTcgen05CollectorUsageOp(raw_ostream &OS,
                                            const Constant *ImmArgVal);
+
+LLVM_ABI void printTcgen05MMACollectorBBuffer(raw_ostream &OS,
+                                              const Constant *ImmArgVal);
 
 LLVM_ABI void printTensormapElemType(raw_ostream &OS,
                                      const Constant *ImmArgVal);
@@ -119,6 +211,7 @@ LLVM_ABI void printTensormapSwizzleAtomicity(raw_ostream &OS,
                                              const Constant *ImmArgVal);
 LLVM_ABI void printTensormapFillMode(raw_ostream &OS,
                                      const Constant *ImmArgVal);
+LLVM_ABI void printFPRoundingMode(raw_ostream &OS, const Constant *ImmArgVal);
 
 inline bool FPToIntegerIntrinsicShouldFTZ(Intrinsic::ID IntrinsicID) {
   switch (IntrinsicID) {
@@ -551,47 +644,24 @@ inline DenormalMode GetNVVMDenormMode(bool ShouldFTZ) {
   return DenormalMode::getIEEE();
 }
 
-inline bool FAddShouldFTZ(Intrinsic::ID IntrinsicID) {
-  switch (IntrinsicID) {
-  case Intrinsic::nvvm_add_rm_ftz_f:
-  case Intrinsic::nvvm_add_rn_ftz_f:
-  case Intrinsic::nvvm_add_rp_ftz_f:
-  case Intrinsic::nvvm_add_rz_ftz_f:
-    return true;
-
-  case Intrinsic::nvvm_add_rm_f:
-  case Intrinsic::nvvm_add_rn_f:
-  case Intrinsic::nvvm_add_rp_f:
-  case Intrinsic::nvvm_add_rz_f:
-  case Intrinsic::nvvm_add_rm_d:
-  case Intrinsic::nvvm_add_rn_d:
-  case Intrinsic::nvvm_add_rp_d:
-  case Intrinsic::nvvm_add_rz_d:
-    return false;
-  }
-  llvm_unreachable("Checking FTZ flag for invalid NVVM add intrinsic");
+inline APFloat::roundingMode GetRoundingModeFromImmArg(const Value *ImmArgVal) {
+  return static_cast<APFloat::roundingMode>(
+      cast<ConstantInt>(ImmArgVal)->getSExtValue());
 }
 
-inline APFloat::roundingMode GetFAddRoundingMode(Intrinsic::ID IntrinsicID) {
-  switch (IntrinsicID) {
-  case Intrinsic::nvvm_add_rm_f:
-  case Intrinsic::nvvm_add_rm_d:
-  case Intrinsic::nvvm_add_rm_ftz_f:
-    return APFloat::rmTowardNegative;
-  case Intrinsic::nvvm_add_rn_f:
-  case Intrinsic::nvvm_add_rn_d:
-  case Intrinsic::nvvm_add_rn_ftz_f:
-    return APFloat::rmNearestTiesToEven;
-  case Intrinsic::nvvm_add_rp_f:
-  case Intrinsic::nvvm_add_rp_d:
-  case Intrinsic::nvvm_add_rp_ftz_f:
-    return APFloat::rmTowardPositive;
-  case Intrinsic::nvvm_add_rz_f:
-  case Intrinsic::nvvm_add_rz_d:
-  case Intrinsic::nvvm_add_rz_ftz_f:
-    return APFloat::rmTowardZero;
+inline StringRef GetRoundingModeName(APFloat::roundingMode RM) {
+  switch (RM) {
+  case APFloat::rmNearestTiesToEven:
+    return "rn";
+  case APFloat::rmTowardZero:
+    return "rz";
+  case APFloat::rmTowardNegative:
+    return "rm";
+  case APFloat::rmTowardPositive:
+    return "rp";
+  default:
+    return "";
   }
-  llvm_unreachable("Invalid FP instrinsic rounding mode for NVVM add");
 }
 
 inline bool FMulShouldFTZ(Intrinsic::ID IntrinsicID) {

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/HLSL/SemanticSignatures.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
@@ -41,6 +42,17 @@ Expected<uint64_t> extractInt(const MDNode *Node, unsigned OpId) {
   return CI->getZExtValue();
 }
 } // namespace
+
+dxbc::PSV::SemanticKind hlsl::getSemanticKind(StringRef SemanticName) {
+  if (!SemanticName.consume_front_insensitive("SV_"))
+    return dxbc::PSV::SemanticKind::Arbitrary;
+
+  for (const auto &Kind : dxbc::PSV::getSemanticKinds())
+    if (SemanticName.equals_insensitive(Kind.name()))
+      return Kind.value();
+
+  return dxbc::PSV::SemanticKind::Invalid;
+}
 
 Expected<SemanticSignatureElement>
 SemanticSignatureElement::fromMetadata(const MDNode *Node) {

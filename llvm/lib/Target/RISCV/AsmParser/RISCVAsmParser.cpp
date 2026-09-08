@@ -307,6 +307,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   std::unique_ptr<RISCVOperand> defaultFRMArgOp() const;
   std::unique_ptr<RISCVOperand> defaultFRMArgLegacyOp() const;
   std::unique_ptr<RISCVOperand> defaultSMTVType();
+  std::unique_ptr<RISCVOperand> defaultZeroOffset();
 
 public:
   enum RISCVMatchResultTy : unsigned {
@@ -956,6 +957,19 @@ public:
            (VK == RISCV::S_LO || VK == RISCV::S_PCREL_LO ||
             VK == RISCV::S_TPREL_LO || VK == ELF::R_RISCV_TLSDESC_LOAD_LO12 ||
             VK == ELF::R_RISCV_TLSDESC_ADD_LO12);
+  }
+
+  /// Returns NoMatch rather than the NearMatch of the underlying predicate
+  /// for anything that is not an immediate at all (such as the '(' token of an
+  /// offset-less memory operand). This lets the matcher skip this optional
+  /// operand and insert the default 0 offset. An immediate that fails Pred
+  /// (e.g. out of range) still reports the wrapped class diagnostic.
+  template <bool (RISCVOperand::*Pred)() const>
+  DiagnosticPredicate isOptionalMemOffset() const {
+    if (!isImm())
+      return DiagnosticPredicate::NoMatch;
+    return (this->*Pred)() ? DiagnosticPredicate::Match
+                           : DiagnosticPredicate::NearMatch;
   }
 
   bool isSImm12Lsb00000() const {
@@ -4104,6 +4118,11 @@ std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultFRMArgOp() const {
 std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultFRMArgLegacyOp() const {
   return RISCVOperand::createFRMArg(RISCVFPRndMode::RoundingMode::RNE,
                                     llvm::SMLoc());
+}
+
+std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultZeroOffset() {
+  return RISCVOperand::createExpr(MCConstantExpr::create(0, getContext()),
+                                  llvm::SMLoc(), llvm::SMLoc(), isRV64());
 }
 
 static unsigned getNFforLXSEG(unsigned Opcode) {

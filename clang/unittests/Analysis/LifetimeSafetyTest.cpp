@@ -66,6 +66,11 @@ public:
     // Run the main analysis.
     LifetimeSafetyOpts LSOpts;
     LSOpts.MaxCFGBlocks = 0;
+    LSOpts.SuggestAnnotations = true;
+    LSOpts.CheckNoescapeViolations = true;
+    LSOpts.CheckLifetimeboundViolations = true;
+    LSOpts.CheckMisplacedLifetimebound = true;
+    LSOpts.CheckInapplicableLifetimebound = true;
     Analysis =
         std::make_unique<LifetimeSafetyAnalysis>(*AnalysisCtx, nullptr, LSOpts);
     Analysis->run();
@@ -150,15 +155,17 @@ public:
     const auto &LiveOriginsAnalysis = Runner.getAnalysis().getLiveOrigins();
     const auto &LoanPropagation = Runner.getAnalysis().getLoanPropagation();
 
-    LivenessMap LiveOriginsMap = LiveOriginsAnalysis.getLiveOriginsAt(P);
+    LiveOriginSet LiveOrigins = LiveOriginsAnalysis.getLiveOriginsAt(P);
 
     LoanSet::Factory F;
     LoanSet Result = F.getEmptySet();
 
-    for (const auto &[OID, LI] : LiveOriginsMap) {
-      LoanSet Loans = LoanPropagation.getLoans(OID, P);
-      Result = clang::lifetimes::internal::utils::join(Result, Loans, F);
-    }
+    for (const LivenessMap &Live :
+         {LiveOrigins.Persistent, LiveOrigins.BlockLocal})
+      for (const auto &[OID, LI] : Live) {
+        LoanSet Loans = LoanPropagation.getLoans(OID, P);
+        Result = clang::lifetimes::internal::utils::join(Result, Loans, F);
+      }
 
     if (Result.isEmpty())
       return std::nullopt;
@@ -192,8 +199,11 @@ public:
     if (!PP)
       return std::nullopt;
     std::vector<std::pair<OriginID, LivenessKind>> Result;
-    for (auto &[OID, Info] : Analysis.getLiveOrigins().getLiveOriginsAt(PP))
-      Result.push_back({OID, Info.Kind});
+    LiveOriginSet LiveOrigins = Analysis.getLiveOrigins().getLiveOriginsAt(PP);
+    for (const LivenessMap &Live :
+         {LiveOrigins.Persistent, LiveOrigins.BlockLocal})
+      for (auto &[OID, Info] : Live)
+        Result.push_back({OID, Info.Kind});
     return Result;
   }
 

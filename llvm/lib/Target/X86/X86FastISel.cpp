@@ -249,9 +249,9 @@ bool X86FastISel::foldX86XALUIntrinsic(X86::CondCode &CC, const Instruction *I,
   switch (II->getIntrinsicID()) {
   default: return false;
   case Intrinsic::sadd_with_overflow:
-  case Intrinsic::ssub_with_overflow:
+  case Intrinsic::ssub_with_overflow: TmpCC = X86::COND_O; break;
   case Intrinsic::smul_with_overflow:
-  case Intrinsic::umul_with_overflow: TmpCC = X86::COND_O; break;
+  case Intrinsic::umul_with_overflow:
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::usub_with_overflow: TmpCC = X86::COND_B; break;
   }
@@ -2861,9 +2861,9 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     case Intrinsic::usub_with_overflow:
       BaseOpc = ISD::SUB; CondCode = X86::COND_B; break;
     case Intrinsic::smul_with_overflow:
-      BaseOpc = X86ISD::SMUL; CondCode = X86::COND_O; break;
+      BaseOpc = X86ISD::SMUL; CondCode = X86::COND_B; break;
     case Intrinsic::umul_with_overflow:
-      BaseOpc = X86ISD::UMUL; CondCode = X86::COND_O; break;
+      BaseOpc = X86ISD::UMUL; CondCode = X86::COND_B; break;
     }
 
     Register LHSReg = getRegForValue(LHS);

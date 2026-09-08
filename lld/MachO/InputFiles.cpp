@@ -643,6 +643,9 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
              relInfo.r_address == minuendInfo.r_address);
       Relocation p;
       p.type = minuendInfo.r_type;
+      p.pcrel = minuendInfo.r_pcrel;
+      p.length = minuendInfo.r_length;
+      p.offset = r.offset;
       if (minuendInfo.r_extern) {
         p.referent = symbols[minuendInfo.r_symbolnum];
         p.addend = totalAddend;

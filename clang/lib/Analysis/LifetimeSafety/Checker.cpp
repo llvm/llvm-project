@@ -105,10 +105,14 @@ public:
           checkAnnotations(OEF);
     issuePendingWarnings();
     suggestAnnotations();
-    reportNoescapeViolations();
-    reportLifetimeboundViolations();
-    reportMisplacedLifetimebound();
-    reportInapplicableLifetimebound();
+    if (LSOpts.CheckNoescapeViolations)
+      reportNoescapeViolations();
+    if (LSOpts.CheckLifetimeboundViolations)
+      reportLifetimeboundViolations();
+    if (LSOpts.CheckMisplacedLifetimebound)
+      reportMisplacedLifetimebound();
+    if (LSOpts.CheckInapplicableLifetimebound)
+      reportInapplicableLifetimebound();
     //  Annotation inference is currently guarded by a frontend flag. In the
     //  future, this might be replaced by a design that differentiates between
     //  explicit and inferred findings with separate warning groups.
@@ -185,29 +189,30 @@ public:
   /// hold that are prefixed by the expired path.
   void checkExpiry(const ExpireFact *EF) {
     const AccessPath &ExpiredPath = EF->getAccessPath();
-    LivenessMap Origins = LiveOrigins.getLiveOriginsAt(EF);
-    for (auto &[OID, LiveInfo] : Origins) {
-      LoanSet HeldLoans = LoanPropagation.getLoans(OID, EF);
-      for (LoanID HeldLoanID : HeldLoans) {
-        const Loan *HeldLoan = FactMgr.getLoanMgr().getLoan(HeldLoanID);
-        if (!ExpiredPath.isPrefixOf(HeldLoan->getAccessPath()))
-          continue;
-        // HeldLoan is expired because its base or itself is expired.
-        PendingWarning &CurWarning = FinalWarningsMap[HeldLoan->getID()];
-        const Expr *MovedExpr = nullptr;
-        if (auto *ME = MovedLoans.getMovedLoans(EF).lookup(HeldLoanID))
-          MovedExpr = *ME;
-        // Skip if we already have a dominating causing fact.
-        if (CurWarning.CausingFactDominatesExpiry)
-          continue;
-        if (causingFactDominatesExpiry(LiveInfo.Kind))
-          CurWarning.CausingFactDominatesExpiry = true;
-        CurWarning.CausingFact = LiveInfo.CausingFact;
-        CurWarning.ExpiryLoc = EF->getExpiryLoc();
-        CurWarning.MovedExpr = MovedExpr;
-        CurWarning.InvalidatedByExpr = nullptr;
+    LiveOriginSet Origins = LiveOrigins.getLiveOriginsAt(EF);
+    for (const LivenessMap &Live : {Origins.Persistent, Origins.BlockLocal})
+      for (auto &[OID, LiveInfo] : Live) {
+        LoanSet HeldLoans = LoanPropagation.getLoans(OID, EF);
+        for (LoanID HeldLoanID : HeldLoans) {
+          const Loan *HeldLoan = FactMgr.getLoanMgr().getLoan(HeldLoanID);
+          if (!ExpiredPath.isPrefixOf(HeldLoan->getAccessPath()))
+            continue;
+          // HeldLoan is expired because its base or itself is expired.
+          PendingWarning &CurWarning = FinalWarningsMap[HeldLoan->getID()];
+          const Expr *MovedExpr = nullptr;
+          if (auto *ME = MovedLoans.getMovedLoans(EF).lookup(HeldLoanID))
+            MovedExpr = *ME;
+          // Skip if we already have a dominating causing fact.
+          if (CurWarning.CausingFactDominatesExpiry)
+            continue;
+          if (causingFactDominatesExpiry(LiveInfo.Kind))
+            CurWarning.CausingFactDominatesExpiry = true;
+          CurWarning.CausingFact = LiveInfo.CausingFact;
+          CurWarning.ExpiryLoc = EF->getExpiryLoc();
+          CurWarning.MovedExpr = MovedExpr;
+          CurWarning.InvalidatedByExpr = nullptr;
+        }
       }
-    }
   }
 
   /// Checks for use-after-invalidation errors when a container is modified.
@@ -231,27 +236,29 @@ public:
       return false;
     };
     // For each live origin, check if it holds an invalidated loan and report.
-    LivenessMap Origins = LiveOrigins.getLiveOriginsAt(IOF);
-    for (auto &[OID, LiveInfo] : Origins) {
-      LoanSet HeldLoans = LoanPropagation.getLoans(OID, IOF);
-      for (LoanID LiveLoanID : HeldLoans)
-        if (IsInvalidated(FactMgr.getLoanMgr().getLoan(LiveLoanID))) {
-          bool CurDomination = causingFactDominatesExpiry(LiveInfo.Kind);
-          bool LastDomination =
-              FinalWarningsMap.lookup(LiveLoanID).CausingFactDominatesExpiry;
-          if (!LastDomination) {
-            FinalWarningsMap[LiveLoanID] = {
-                /*ExpiryLoc=*/{},
-                /*CausingFact=*/LiveInfo.CausingFact,
-                /*MovedExpr=*/nullptr,
-                /*InvalidatedByExpr=*/IOF->getInvalidationExpr(),
-                /*CausingFactDominatesExpiry=*/CurDomination};
+    LiveOriginSet Origins = LiveOrigins.getLiveOriginsAt(IOF);
+    for (const LivenessMap &Live : {Origins.Persistent, Origins.BlockLocal})
+      for (auto &[OID, LiveInfo] : Live) {
+        LoanSet HeldLoans = LoanPropagation.getLoans(OID, IOF);
+        for (LoanID LiveLoanID : HeldLoans)
+          if (IsInvalidated(FactMgr.getLoanMgr().getLoan(LiveLoanID))) {
+            bool CurDomination = causingFactDominatesExpiry(LiveInfo.Kind);
+            bool LastDomination =
+                FinalWarningsMap.lookup(LiveLoanID).CausingFactDominatesExpiry;
+            if (!LastDomination) {
+              FinalWarningsMap[LiveLoanID] = {
+                  /*ExpiryLoc=*/{},
+                  /*CausingFact=*/LiveInfo.CausingFact,
+                  /*MovedExpr=*/nullptr,
+                  /*InvalidatedByExpr=*/IOF->getInvalidationExpr(),
+                  /*CausingFactDominatesExpiry=*/CurDomination};
+            }
           }
-        }
-    }
+      }
   }
 
   void issuePendingWarnings() {
+    llvm::TimeTraceScope TimeTrace("IssuePendingWarnings");
     if (!SemaHelper)
       return;
     for (const auto &[LID, Warning] : FinalWarningsMap) {
@@ -330,11 +337,14 @@ public:
           SemaHelper->reportDanglingField(
               IssueExpr, FieldEscape->getFieldDecl(), MovedExpr,
               IsCapturedByLambda, ExpiryLoc);
-        } else if (const auto *GlobalEscape = dyn_cast<GlobalEscapeFact>(OEF))
+        } else if (const auto *GlobalEscape = dyn_cast<GlobalEscapeFact>(OEF)) {
           // Global escape.
+          bool IsMain = false;
+          if (const auto *Func = dyn_cast_if_present<FunctionDecl>(FD))
+            IsMain = Func->isMain();
           SemaHelper->reportDanglingGlobal(IssueExpr, GlobalEscape->getGlobal(),
-                                           MovedExpr, ExpiryLoc);
-        else
+                                           MovedExpr, ExpiryLoc, IsMain);
+        } else
           llvm_unreachable("Unhandled OriginEscapesFact type");
       } else
         llvm_unreachable("Unhandled CausingFact type");
@@ -431,6 +441,7 @@ public:
   }
 
   void reportNoescapeViolations() {
+    llvm::TimeTraceScope TimeTrace("ReportNoescapeViolations");
     for (auto [PVD, EscapeTarget] : NoescapeWarningsMap) {
       if (const auto *E = EscapeTarget.dyn_cast<const Expr *>())
         SemaHelper->reportNoescapeViolation(PVD, E);
@@ -444,6 +455,7 @@ public:
   }
 
   void reportLifetimeboundViolations() {
+    llvm::TimeTraceScope TimeTrace("ReportLifetimeboundViolations");
     if (!isa<FunctionDecl>(FD))
       return;
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD);
@@ -466,6 +478,7 @@ public:
   // Reports lifetimebound attributes that are placed on a function definition
   // but not on the corresponding declaration.
   void reportMisplacedLifetimebound() {
+    llvm::TimeTraceScope TimeTrace("ReportMisplacedLifetimebound");
     const FunctionDecl *FDef = dyn_cast<FunctionDecl>(FD);
     if (!FDef)
       return;
@@ -496,6 +509,7 @@ public:
   }
 
   void reportInapplicableLifetimebound() {
+    llvm::TimeTraceScope TimeTrace("ReportInapplicableLifetimebound");
     const auto *FDef = dyn_cast<FunctionDecl>(FD);
     if (!FDef)
       return;

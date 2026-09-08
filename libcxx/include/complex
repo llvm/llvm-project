@@ -266,6 +266,11 @@ template<class T> complex<T> tanh (const complex<T>&);
 #  include <__tuple/tuple_element.h>
 #  include <__tuple/tuple_size.h>
 #  include <__type_traits/conditional.h>
+#  include <__type_traits/is_arithmetic.h>
+#  include <__type_traits/is_floating_point.h>
+#  include <__type_traits/is_integral.h>
+#  include <__type_traits/is_same.h>
+#  include <__type_traits/promote.h>
 #  include <__utility/move.h>
 #  include <cmath>
 #  include <version>

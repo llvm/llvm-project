@@ -38,11 +38,9 @@ static bool isSyscall(const MCInst &Inst) {
 // Find the index of the memory operand if it has an %fs segment override.
 // Returns -1 if there is no memory operand or no %fs override.
 static int findFSMemOperand(const MCInst &Inst, const MCInstrInfo &InstInfo) {
-  const MCInstrDesc &Desc = InstInfo.get(Inst.getOpcode());
-  int MemRefIdx = X86II::getMemoryOperandNo(Desc.TSFlags);
-  if (MemRefIdx < 0)
+  int MemIdx = X86II::getMemoryOperandIdx(InstInfo.get(Inst.getOpcode()));
+  if (MemIdx < 0)
     return -1;
-  int MemIdx = MemRefIdx + X86II::getOperandBias(Desc);
   const MCOperand &Seg = Inst.getOperand(MemIdx + X86::AddrSegmentReg);
   if (Seg.isReg() && Seg.getReg() == X86::FS)
     return MemIdx;
@@ -71,11 +69,15 @@ static bool isGR64OrNone(MCRegister Reg) {
 
 // syscall
 // ->
+// .bundle_lock
 // leaq .Ltmp(%rip), %r11
 // jmpq *(%r14)
 // .Ltmp:
+// .bundle_unlock
 void X86::X86MCLFIRewriter::rewriteSyscall(const MCInst &Inst, MCStreamer &Out,
                                            const MCSubtargetInfo &STI) {
+  Out.emitBundleLock(/*AlignToEnd=*/false, STI);
+
   MCSymbol *Symbol = Out.getContext().createTempSymbol();
 
   // leaq .Ltmp(%rip), %r11
@@ -101,6 +103,7 @@ void X86::X86MCLFIRewriter::rewriteSyscall(const MCInst &Inst, MCStreamer &Out,
   Out.emitInstruction(Jmp, STI);
 
   Out.emitLabel(Symbol);
+  Out.emitBundleUnlock(STI);
 }
 
 // Emit: movq TPOffset(%r15), %Reg

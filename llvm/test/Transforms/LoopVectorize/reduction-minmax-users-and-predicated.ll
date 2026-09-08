@@ -115,7 +115,7 @@ define void @smax_with_invariant_store_user(ptr noalias %src, ptr %dst, i64 %n) 
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -175,7 +175,7 @@ define void @smax_with_multiple_invariant_store_user_same_addr(ptr noalias %src,
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -275,7 +275,7 @@ define void @smax_with_multiple_invariant_store_user_same_addr3(ptr noalias %src
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -507,15 +507,15 @@ define i32 @smax_reduction_multiple_incoming(ptr %src, i32 %n, i1 %cond) {
 ; CHECK:       [[LOOP_HEADER_PREHEADER]]:
 ; CHECK-NEXT:    [[IV_PH:%.*]] = phi i32 [ 10, %[[ELSE]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[MAX_PH:%.*]] = phi i32 [ 5, %[[ELSE]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 [[N]], [[IV_PH]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 [[TMP0]], [[IV_PH]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[N]], [[IV_PH]]
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP1]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[IV_PH]], [[N_VEC]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[MAX_PH]], i64 0

@@ -108,10 +108,9 @@ void SuspiciousMissingCommaCheck::check(
   unsigned int Count = 0;
   for (unsigned int I = 0; I < Size; ++I) {
     const Expr *Child = InitializerList->getInit(I)->IgnoreImpCasts();
-    if (const auto *Literal = dyn_cast<StringLiteral>(Child)) {
-      if (Literal->getNumConcatenated() > 1)
-        ++Count;
-    }
+    if (const auto *Literal = dyn_cast<StringLiteral>(Child);
+        Literal && Literal->getNumConcatenated() > 1)
+      ++Count;
   }
 
   // Warn only when concatenation is not common in this initializer list.

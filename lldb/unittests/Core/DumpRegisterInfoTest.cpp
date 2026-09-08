@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/DumpRegisterInfo.h"
+#include "lldb/Utility/RegisterType.h"
 #include "lldb/Utility/RegisterTypeFlags.h"
 #include "lldb/Utility/StreamString.h"
 #include "gtest/gtest.h"
+
+#include "llvm/Support/Casting.h"
 
 using namespace lldb_private;
 
@@ -95,7 +98,8 @@ TEST(DoDumpRegisterInfoTest, FieldsTable) {
                            RegisterTypeFlags::Field("C", 8, 15),
                            RegisterTypeFlags::Field("D", 0, 7)});
 
-  DoDumpRegisterInfo(strm, "foo", nullptr, 4, {}, {}, {}, &flags, 100);
+  const RegisterType *register_type = llvm::dyn_cast<RegisterType>(&flags);
+  DoDumpRegisterInfo(strm, "foo", nullptr, 4, {}, {}, {}, register_type, 100);
   ASSERT_EQ(strm.GetString(), "       Name: foo\n"
                               "       Size: 4 bytes (32 bits)\n"
                               "\n"
@@ -116,7 +120,8 @@ TEST(DoDumpRegisterInfoTest, Enumerators) {
                            RegisterTypeFlags::Field("B", 16, 23),
                            RegisterTypeFlags::Field("C", 8, 15, &enum_two)});
 
-  DoDumpRegisterInfo(strm, "abc", nullptr, 4, {}, {}, {}, &flags, 100);
+  const RegisterType *register_type = llvm::dyn_cast<RegisterType>(&flags);
+  DoDumpRegisterInfo(strm, "abc", nullptr, 4, {}, {}, {}, register_type, 100);
   ASSERT_EQ(strm.GetString(),
             "       Name: abc\n"
             "       Size: 4 bytes (32 bits)\n"
@@ -128,4 +133,17 @@ TEST(DoDumpRegisterInfoTest, Enumerators) {
             "A: 0 = an_enumerator\n"
             "\n"
             "C: 1 = another_enumerator, 2 = another_enumerator_2");
+}
+
+TEST(DoDumpRegisterInfoTest, VectorElements) {
+  StreamString strm;
+  RegisterTypeBuiltin element_type("ieee_single", lldb::eEncodingIEEE754,
+                                   lldb::eFormatFloat, 4);
+  RegisterTypeVector vector_type("v4f", &element_type, 4);
+
+  DoDumpRegisterInfo(strm, "v0", nullptr, 16, {}, {}, {}, &vector_type, 100);
+  ASSERT_EQ(strm.GetString(), "       Name: v0\n"
+                              "       Size: 16 bytes (128 bits)\n"
+                              "\n"
+                              "  Vector elements: 4");
 }

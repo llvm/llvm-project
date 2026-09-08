@@ -849,9 +849,9 @@ define void @v_constained_fma_v2f16_fpexcept_strict_fneg_fneg_uni(<2 x half> inr
 ; GFX900-LABEL: v_constained_fma_v2f16_fpexcept_strict_fneg_fneg_uni:
 ; GFX900:       ; %bb.0:
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    v_mov_b32_e32 v2, s17
-; GFX900-NEXT:    v_mov_b32_e32 v3, s18
-; GFX900-NEXT:    v_pk_fma_f16 v2, s16, v2, v3 neg_lo:[1,1,0] neg_hi:[1,1,0]
+; GFX900-NEXT:    v_mov_b32_e32 v2, s16
+; GFX900-NEXT:    v_mov_b32_e32 v3, s17
+; GFX900-NEXT:    v_pk_fma_f16 v2, v2, v3, s18 neg_lo:[1,1,0] neg_hi:[1,1,0]
 ; GFX900-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
@@ -859,9 +859,9 @@ define void @v_constained_fma_v2f16_fpexcept_strict_fneg_fneg_uni(<2 x half> inr
 ; GFX942-LABEL: v_constained_fma_v2f16_fpexcept_strict_fneg_fneg_uni:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v2, s1
-; GFX942-NEXT:    v_mov_b32_e32 v3, s2
-; GFX942-NEXT:    v_pk_fma_f16 v2, s0, v2, v3 neg_lo:[1,1,0] neg_hi:[1,1,0]
+; GFX942-NEXT:    v_mov_b32_e32 v2, s0
+; GFX942-NEXT:    v_mov_b32_e32 v3, s1
+; GFX942-NEXT:    v_pk_fma_f16 v2, v2, v3, s2 neg_lo:[1,1,0] neg_hi:[1,1,0]
 ; GFX942-NEXT:    global_store_dword v[0:1], v2, off
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
@@ -869,9 +869,9 @@ define void @v_constained_fma_v2f16_fpexcept_strict_fneg_fneg_uni(<2 x half> inr
 ; GFX11-LABEL: v_constained_fma_v2f16_fpexcept_strict_fneg_fneg_uni:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v2, s2
+; GFX11-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_pk_fma_f16 v2, s0, s1, v2 neg_lo:[1,1,0] neg_hi:[1,1,0]
+; GFX11-NEXT:    v_pk_fma_f16 v2, s0, v2, s2 neg_lo:[1,1,0] neg_hi:[1,1,0]
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;

@@ -264,39 +264,6 @@ static bool layoutCOFF(COFFParser &CP) {
     }
   }
 
-  uint32_t SymbolTableStart = CurrentSectionDataOffset;
-
-  // Calculate number of symbols.
-  uint32_t NumberOfSymbols = 0;
-  for (std::vector<COFFYAML::Symbol>::iterator i = CP.Obj.Symbols.begin(),
-                                               e = CP.Obj.Symbols.end();
-       i != e; ++i) {
-    uint32_t NumberOfAuxSymbols = 0;
-    if (i->FunctionDefinition)
-      NumberOfAuxSymbols += 1;
-    if (i->bfAndefSymbol)
-      NumberOfAuxSymbols += 1;
-    if (i->WeakExternal)
-      NumberOfAuxSymbols += 1;
-    if (!i->File.empty())
-      NumberOfAuxSymbols +=
-          (i->File.size() + CP.getSymbolSize() - 1) / CP.getSymbolSize();
-    if (i->SectionDefinition)
-      NumberOfAuxSymbols += 1;
-    if (i->CLRToken)
-      NumberOfAuxSymbols += 1;
-    i->Header.NumberOfAuxSymbols = NumberOfAuxSymbols;
-    NumberOfSymbols += 1 + NumberOfAuxSymbols;
-  }
-
-  // Store all the allocated start addresses in the header.
-  CP.Obj.Header.NumberOfSections = CP.Obj.Sections.size();
-  CP.Obj.Header.NumberOfSymbols = NumberOfSymbols;
-  if (NumberOfSymbols > 0 || CP.StringTable.size() > 4)
-    CP.Obj.Header.PointerToSymbolTable = SymbolTableStart;
-  else
-    CP.Obj.Header.PointerToSymbolTable = 0;
-
   *reinterpret_cast<support::ulittle32_t *>(CP.StringTable.data()) =
       CP.StringTable.size();
 
@@ -359,6 +326,32 @@ static uint32_t initializeOptionalHeader(COFFParser &CP, uint16_t Magic,
 }
 
 static bool writeCOFF(COFFParser &CP, ContiguousBlobAccumulator &CBA) {
+  // Calculate number of symbols.
+  CP.Obj.Header.NumberOfSymbols = 0;
+  for (COFFYAML::Symbol &Sym : CP.Obj.Symbols) {
+    uint32_t NumberOfAuxSymbols = 0;
+    if (Sym.FunctionDefinition)
+      NumberOfAuxSymbols += 1;
+    if (Sym.bfAndefSymbol)
+      NumberOfAuxSymbols += 1;
+    if (Sym.WeakExternal)
+      NumberOfAuxSymbols += 1;
+    if (!Sym.File.empty())
+      NumberOfAuxSymbols +=
+          (Sym.File.size() + CP.getSymbolSize() - 1) / CP.getSymbolSize();
+    if (Sym.SectionDefinition)
+      NumberOfAuxSymbols += 1;
+    if (Sym.CLRToken)
+      NumberOfAuxSymbols += 1;
+    Sym.Header.NumberOfAuxSymbols = NumberOfAuxSymbols;
+    CP.Obj.Header.NumberOfSymbols += 1 + NumberOfAuxSymbols;
+  }
+
+  CP.Obj.Header.NumberOfSections = CP.Obj.Sections.size();
+
+  // Save field offsets for writing back their final values.
+  uint64_t PointerToSymbolTableOffset;
+
   if (CP.isPE()) {
     // PE files start with a DOS stub.
     object::dos_header DH;
@@ -393,14 +386,18 @@ static bool writeCOFF(COFFParser &CP, ContiguousBlobAccumulator &CBA) {
     CBA.write(COFF::BigObjMagic, sizeof(COFF::BigObjMagic));
     CBA.writeZeros(4 * sizeof(uint32_t));
     CBA.write(CP.Obj.Header.NumberOfSections, LittleEndian);
-    CBA.write(CP.Obj.Header.PointerToSymbolTable, LittleEndian);
+    PointerToSymbolTableOffset = CBA.getOffset();
+    // The final symbol table offset is written after the section data.
+    CBA.writeZeros(sizeof(CP.Obj.Header.PointerToSymbolTable));
     CBA.write(CP.Obj.Header.NumberOfSymbols, LittleEndian);
   } else {
     CBA.write(CP.Obj.Header.Machine, LittleEndian);
     CBA.write(static_cast<int16_t>(CP.Obj.Header.NumberOfSections),
               LittleEndian);
     CBA.write(CP.Obj.Header.TimeDateStamp, LittleEndian);
-    CBA.write(CP.Obj.Header.PointerToSymbolTable, LittleEndian);
+    PointerToSymbolTableOffset = CBA.getOffset();
+    // The final symbol table offset is written after the section data.
+    CBA.writeZeros(sizeof(CP.Obj.Header.PointerToSymbolTable));
     CBA.write(CP.Obj.Header.NumberOfSymbols, LittleEndian);
     CBA.write(CP.Obj.Header.SizeOfOptionalHeader, LittleEndian);
     CBA.write(CP.Obj.Header.Characteristics, LittleEndian);
@@ -490,6 +487,14 @@ static bool writeCOFF(COFFParser &CP, ContiguousBlobAccumulator &CBA) {
   }
 
   // Output symbol table.
+  if (CP.Obj.Header.NumberOfSymbols || CP.StringTable.size() > 4)
+    CP.Obj.Header.PointerToSymbolTable = CBA.getOffset();
+  else
+    CP.Obj.Header.PointerToSymbolTable = 0;
+
+  CBA.updateDataAt(PointerToSymbolTableOffset,
+                   CP.Obj.Header.PointerToSymbolTable, LittleEndian);
+
   for (std::vector<COFFYAML::Symbol>::const_iterator i = CP.Obj.Symbols.begin(),
                                                      e = CP.Obj.Symbols.end();
        i != e; ++i) {

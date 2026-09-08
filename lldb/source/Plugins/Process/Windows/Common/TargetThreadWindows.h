@@ -34,6 +34,10 @@ public:
   bool CalculateStopInfo() override;
   const char *GetName() override;
 
+  /// Exposes this thread's TEB address under the "teb_address" key, so that
+  /// language runtimes can resolve thread-local storage.
+  lldb_private::StructuredData::ObjectSP FetchThreadExtendedInfo() override;
+
   Status DoResume();
 
   HostThread GetHostThread() const { return m_host_thread; }

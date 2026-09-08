@@ -5,9 +5,10 @@
 define amdgpu_ps void @test_wmma_f64_16x16x4_f64_matrix_a_reuse(<2 x double> %A, <2 x double> %B, <8 x double> %C, ptr addrspace(1) %out) {
 ; GFX1251-LABEL: test_wmma_f64_16x16x4_f64_matrix_a_reuse:
 ; GFX1251:       ; %bb.0: ; %bb
-; GFX1251-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1251-NEXT:    v_nop
 ; GFX1251-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1251-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1251-NEXT:    v_nop
+; GFX1251-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1251-NEXT:    v_wmma_f64_16x16x4_f64 v[8:23], v[0:3], v[4:7], v[8:23] matrix_a_reuse
 ; GFX1251-NEXT:    s_clause 0x3
 ; GFX1251-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:48
@@ -18,9 +19,10 @@ define amdgpu_ps void @test_wmma_f64_16x16x4_f64_matrix_a_reuse(<2 x double> %A,
 ;
 ; GISEL-LABEL: test_wmma_f64_16x16x4_f64_matrix_a_reuse:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GISEL-NEXT:    s_mov_b64 s[64:65], 0
+; GISEL-NEXT:    v_nop
+; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GISEL-NEXT:    v_wmma_f64_16x16x4_f64 v[8:23], v[0:3], v[4:7], v[8:23] matrix_a_reuse
 ; GISEL-NEXT:    s_clause 0x3
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[8:11], off
@@ -37,9 +39,10 @@ bb:
 define amdgpu_ps void @test_wmma_f64_16x16x4_f64_matrix_b_reuse(<2 x double> %A, <2 x double> %B, <8 x double> %C, ptr addrspace(1) %out) {
 ; GFX1251-LABEL: test_wmma_f64_16x16x4_f64_matrix_b_reuse:
 ; GFX1251:       ; %bb.0: ; %bb
-; GFX1251-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GFX1251-NEXT:    v_nop
 ; GFX1251-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1251-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1251-NEXT:    v_nop
+; GFX1251-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1251-NEXT:    v_wmma_f64_16x16x4_f64 v[8:23], v[0:3], v[4:7], v[8:23] matrix_b_reuse
 ; GFX1251-NEXT:    s_clause 0x3
 ; GFX1251-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:48
@@ -50,9 +53,10 @@ define amdgpu_ps void @test_wmma_f64_16x16x4_f64_matrix_b_reuse(<2 x double> %A,
 ;
 ; GISEL-LABEL: test_wmma_f64_16x16x4_f64_matrix_b_reuse:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    global_prefetch_b8 v0, null scope:SCOPE_SE
-; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GISEL-NEXT:    s_mov_b64 s[64:65], 0
+; GISEL-NEXT:    v_nop
+; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GISEL-NEXT:    v_wmma_f64_16x16x4_f64 v[8:23], v[0:3], v[4:7], v[8:23] matrix_b_reuse
 ; GISEL-NEXT:    s_clause 0x3
 ; GISEL-NEXT:    global_store_b128 v[24:25], v[8:11], off
