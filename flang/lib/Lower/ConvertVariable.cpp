@@ -1440,15 +1440,22 @@ static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
   // width matches the actual allocation size.
   // The caller stores it via a bitcasted address to preserve the bit pattern
   // (fir.convert from integer to !fir.logical normalizes nonzero -> true).
-  // Sub-byte and non-byte-multiple LOGICAL mappings are not supported:
+  // Sub-byte, non-byte-multiple, and padded LOGICAL mappings are not supported:
   //   - sub-byte (e.g. l4:1): APInt::getSplat requires destination width >= 8.
   //   - non-byte-multiple (e.g. l4:12): makeIntCst(12) builds an i12 splat of
   //     0xAA -> 0xAAA, which occupies bytes AA 0A rather than AA AA -- the
   //     high nibble of the second byte is not filled by the byte pattern.
+  //   - padded (e.g. l4:24): allocSize (4) > storeSize (3) leaves the trailing
+  //     allocation byte uninitialized.
   if (auto logTy = mlir::dyn_cast<fir::LogicalType>(eleTy)) {
     unsigned bits = builder.getKindMap().getLogicalBitsize(logTy.getFKind());
-    if (bits < 8 || bits % 8 != 0)
-      TODO(loc, "-finit-local= with a sub-byte or non-byte-multiple "
+    const mlir::DataLayout &dl = builder.getDataLayout();
+    mlir::Type intTy = builder.getIntegerType(bits);
+    uint64_t storeSize = dl.getTypeSize(intTy);
+    uint64_t allocSize =
+        llvm::alignTo(storeSize, dl.getTypeABIAlignment(intTy));
+    if (bits < 8 || bits % 8 != 0 || allocSize > storeSize)
+      TODO(loc, "-finit-local= with a sub-byte, non-byte-multiple, or padded "
                 "LOGICAL kind mapping");
     return makeIntCst(bits);
   }
@@ -1462,123 +1469,75 @@ static mlir::Value genByteSplatInit(fir::FirOpBuilder &builder,
   llvm_unreachable("genByteSplatInit: unhandled type in hex mode");
 }
 
-/// Emit a store of the -finit-local= pattern for a single scalar address.
-/// Fixed-length CHARACTER in hex mode: byte-loop over every byte of storage.
-/// LOGICAL stores via a bitcasted integer address to preserve the raw bit
-/// pattern past fir.convert normalization.
-/// All byte-view and coordinate types carry the source address volatility so
-/// that final stores are emitted as "store volatile" when the variable is
-/// volatile.
+/// Emit a byte-fill loop over [0, nBytes - 1] at \p addr.
+/// Uses an i8 sequence so fir.coordinate_of strides by exactly 1 byte.
+/// Preserves volatility of \p addr so that stores into volatile variables
+/// are emitted as "store volatile".
+static void emitByteLoop(fir::FirOpBuilder &builder, mlir::Location loc,
+                         mlir::Value addr, uint64_t nBytes,
+                         Fortran::lower::InitLocalKind mode, uint8_t hexByte) {
+  if (nBytes == 0)
+    return;
+  mlir::Type idxTy = builder.getIndexType();
+  mlir::Type i8Ty = builder.getIntegerType(8);
+  mlir::Type i8SeqTy =
+      fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, i8Ty);
+  bool addrVolatile = fir::isa_volatile_type(addr.getType());
+  mlir::Value byteBase = builder.createConvertWithVolatileCast(
+      loc, builder.getRefType(i8SeqTy, addrVolatile), addr);
+  mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+  mlir::Value last = builder.createIntegerConstant(
+      loc, idxTy, static_cast<int64_t>(nBytes) - 1);
+  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+  auto loop = fir::DoLoopOp::create(builder, loc, zero, last, one,
+                                    /*unordered=*/false,
+                                    /*finalCount=*/false);
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(loop.getBody());
+  mlir::Value iv = loop.getInductionVar();
+  bool byteVolatile = fir::isa_volatile_type(byteBase.getType());
+  mlir::Value byteAddr = fir::CoordinateOp::create(
+      builder, loc, builder.getRefType(i8Ty, byteVolatile), byteBase,
+      mlir::ValueRange{iv});
+  int64_t fillByte =
+      (mode == Fortran::lower::InitLocalKind::Zero) ? 0 : hexByte;
+  mlir::Value pat = builder.createIntegerConstant(loc, i8Ty, fillByte);
+  fir::StoreOp::create(builder, loc, pat, byteAddr);
+}
+
+/// Emit initialization for a single scalar address \p addr of type \p ty.
+/// If the allocation size exceeds the typed store size (or for CHARACTER where
+/// kind mappings or string length require byte coverage), an allocation-derived
+/// byte-fill loop is used. Otherwise, a single typed store is emitted.
 static void genInitLocalStore(fir::FirOpBuilder &builder, mlir::Location loc,
                               mlir::Type ty, mlir::Value addr,
                               Fortran::lower::InitLocalKind mode,
                               uint8_t hexByte) {
-  // Fixed-length CHARACTER: for hex mode emit a compile-time byte-loop so
-  // every code-unit gets the requested pattern. Zero falls through to
-  // fir.zero_bits below.
+  // Fixed-length CHARACTER: byte-loop over the full allocation stride.
   if (auto charTy = mlir::dyn_cast<fir::CharacterType>(ty)) {
-    // CHARACTER(0) has zero-length storage -- nothing to initialize.
     if (charTy.getLen() == 0)
       return;
-    if (mode == Fortran::lower::InitLocalKind::Hex) {
-      // Loop over every byte of the character storage. For kind=1 each
-      // code unit is one byte; for kind=2/4 (UTF-16/32) each code unit is
-      // kind bytes wide. We iterate nUnits * kindBytes times to cover all
-      // bytes.  Use KindMapping to get the true byte width under any
-      // --kind-mapping override.
-      int64_t nUnits = charTy.hasConstantLen() ? charTy.getLen() : 0;
-      // This block is hex-only; zero mode falls through to fir.zero_bits
-      // below, which fills the whole !fir.char<k,n> object at once and is
-      // correct at any kind width.
-      //
-      // Use the code unit's allocation stride rather than charBits / 8.
-      // charBits / 8 is the semantic byte width, but LLVM pads iN types to
-      // their ABI alignment: e.g. i24 has a 4-byte stride on most targets,
-      // so charBits/8 = 3 would leave the last byte of each code unit
-      // uninitialised.  The stride formula alignTo(ceil(charBits/8), ABI)
-      // handles all widths including sub-byte ones (i1 rounds up to i8,
-      // which has a 1-byte stride) so no diagnostic is needed here.
-      unsigned charBits =
-          builder.getKindMap().getCharacterBitsize(charTy.getFKind());
-      // ceil(charBits/8), clamped to at least 1 byte for sub-byte kinds.
-      unsigned charByteWidth = std::max(1u, (charBits + 7) / 8);
-      const mlir::DataLayout &charDL = builder.getDataLayout();
-      // Round up to the nearest byte-multiple before querying the DataLayout
-      // so that getIntegerType always receives a multiple-of-8 width.
-      mlir::Type charElemTy =
-          builder.getIntegerType(std::max(8u, llvm::alignTo(charBits, 8u)));
-      int64_t kindBytes = static_cast<int64_t>(llvm::alignTo(
-          static_cast<uint64_t>(charByteWidth),
-          static_cast<uint64_t>(charDL.getTypeABIAlignment(charElemTy))));
-      int64_t nBytes = nUnits * kindBytes;
-      if (nBytes > 0) {
-        mlir::Type idxTy = builder.getIndexType();
-        mlir::Type i8Ty = builder.getIntegerType(8);
-        // Use an i8 sequence so fir.coordinate_of strides by exactly 1 byte,
-        // regardless of any --kind-mapping override for character kind 1.
-        mlir::Type i8SeqTy = fir::SequenceType::get(
-            {fir::SequenceType::getUnknownExtent()}, i8Ty);
-        bool addrVolatile1 = fir::isa_volatile_type(addr.getType());
-        mlir::Value byteBase = builder.createConvertWithVolatileCast(
-            loc, builder.getRefType(i8SeqTy, addrVolatile1), addr);
-        mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
-        mlir::Value last =
-            builder.createIntegerConstant(loc, idxTy, nBytes - 1);
-        mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-        auto loop = fir::DoLoopOp::create(builder, loc, zero, last, one,
-                                          /*unordered=*/false,
-                                          /*finalCount=*/false);
-        mlir::OpBuilder::InsertionGuard guard(builder);
-        builder.setInsertionPointToStart(loop.getBody());
-        mlir::Value iv = loop.getInductionVar();
-        bool byteVolatile1 = fir::isa_volatile_type(byteBase.getType());
-        mlir::Value byteAddr = fir::CoordinateOp::create(
-            builder, loc, builder.getRefType(i8Ty, byteVolatile1), byteBase,
-            mlir::ValueRange{iv});
-        mlir::Value pat = builder.createIntegerConstant(
-            loc, i8Ty, static_cast<int64_t>(hexByte));
-        fir::StoreOp::create(builder, loc, pat, byteAddr);
-      }
-      return;
-    }
+    int64_t nUnits = charTy.hasConstantLen() ? charTy.getLen() : 0;
+    unsigned charBits =
+        builder.getKindMap().getCharacterBitsize(charTy.getFKind());
+    unsigned charByteWidth = std::max(1u, (charBits + 7) / 8);
+    const mlir::DataLayout &charDL = builder.getDataLayout();
+    mlir::Type charElemTy = builder.getIntegerType(charBits);
+    int64_t kindBytes = static_cast<int64_t>(llvm::alignTo(
+        static_cast<uint64_t>(charByteWidth),
+        static_cast<uint64_t>(charDL.getTypeABIAlignment(charElemTy))));
+    emitByteLoop(builder, loc, addr, nUnits * kindBytes, mode, hexByte);
+    return;
   }
-  // REAL and COMPLEX: when the allocation size exceeds the store size
-  // (e.g. x86_fp80 stores 10 bytes but occupies 16), fill the full
-  // allocation with a byte loop so padding bytes are also initialized.
-  auto emitByteLoop = [&](uint64_t nBytes) {
-    mlir::Type idxTy = builder.getIndexType();
-    mlir::Type i8Ty = builder.getIntegerType(8);
-    mlir::Type i8SeqTy =
-        fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, i8Ty);
-    bool addrVolatile2 = fir::isa_volatile_type(addr.getType());
-    mlir::Value byteBase = builder.createConvertWithVolatileCast(
-        loc, builder.getRefType(i8SeqTy, addrVolatile2), addr);
-    mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
-    mlir::Value last = builder.createIntegerConstant(
-        loc, idxTy, static_cast<int64_t>(nBytes) - 1);
-    mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-    auto loop = fir::DoLoopOp::create(builder, loc, zero, last, one,
-                                      /*unordered=*/false,
-                                      /*finalCount=*/false);
-    mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPointToStart(loop.getBody());
-    mlir::Value iv = loop.getInductionVar();
-    bool byteVolatile2 = fir::isa_volatile_type(byteBase.getType());
-    mlir::Value byteAddr = fir::CoordinateOp::create(
-        builder, loc, builder.getRefType(i8Ty, byteVolatile2), byteBase,
-        mlir::ValueRange{iv});
-    int64_t fillByte =
-        (mode == Fortran::lower::InitLocalKind::Zero) ? 0 : hexByte;
-    mlir::Value pat = builder.createIntegerConstant(loc, i8Ty, fillByte);
-    fir::StoreOp::create(builder, loc, pat, byteAddr);
-  };
 
+  // REAL and COMPLEX: when allocation size exceeds store size (e.g. x86_fp80),
+  // use the allocation-derived byte loop to cover padding bytes.
   if (mlir::isa<mlir::FloatType, mlir::ComplexType>(ty)) {
     const mlir::DataLayout &dl = builder.getDataLayout();
     uint64_t storeSize = dl.getTypeSize(ty);
     uint64_t allocSize = llvm::alignTo(storeSize, dl.getTypeABIAlignment(ty));
     if (allocSize > storeSize) {
-      emitByteLoop(allocSize);
+      emitByteLoop(builder, loc, addr, allocSize, mode, hexByte);
       return;
     }
   }
@@ -1704,38 +1663,9 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
           // Byte-fill the full allocation (fields + internal padding +
           // tail padding). A typed fir.zero_bits store would leave tail
           // padding as 'undef', which LLVM may not zero at -O2.
-          {
-            auto [byteSize, _align] = fir::getTypeSizeAndAlignmentOrCrash(
-                loc, recTy, builder.getDataLayout(), builder.getKindMap());
-            if (byteSize > 0) {
-              mlir::Type idxTy = builder.getIndexType();
-              mlir::Type i8Ty = builder.getIntegerType(8);
-              mlir::Type i8SeqTy = fir::SequenceType::get(
-                  {fir::SequenceType::getUnknownExtent()}, i8Ty);
-              bool addrVolatile3 = fir::isa_volatile_type(addr.getType());
-              mlir::Value byteBase = builder.createConvertWithVolatileCast(
-                  loc, builder.getRefType(i8SeqTy, addrVolatile3), addr);
-              mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
-              mlir::Value last = builder.createIntegerConstant(
-                  loc, idxTy, static_cast<int64_t>(byteSize) - 1);
-              mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-              auto loop = fir::DoLoopOp::create(builder, loc, zero, last, one,
-                                                /*unordered=*/false,
-                                                /*finalCount=*/false);
-              mlir::OpBuilder::InsertionGuard guard(builder);
-              builder.setInsertionPointToStart(loop.getBody());
-              mlir::Value iv = loop.getInductionVar();
-              bool byteVolatile3 = fir::isa_volatile_type(byteBase.getType());
-              mlir::Value byteAddr = fir::CoordinateOp::create(
-                  builder, loc, builder.getRefType(i8Ty, byteVolatile3),
-                  byteBase, mlir::ValueRange{iv});
-              int64_t fillByte =
-                  (mode == Fortran::lower::InitLocalKind::Zero) ? 0 : hexByte;
-              mlir::Value pat =
-                  builder.createIntegerConstant(loc, i8Ty, fillByte);
-              fir::StoreOp::create(builder, loc, pat, byteAddr);
-            }
-          }
+          auto [byteSize, _align] = fir::getTypeSizeAndAlignmentOrCrash(
+              loc, recTy, builder.getDataLayout(), builder.getKindMap());
+          emitByteLoop(builder, loc, addr, byteSize, mode, hexByte);
         } else if (!mlir::isa<fir::BaseBoxType>(ty)) {
           // Scalar (integer, real, complex, logical, character): delegate to
           // genInitLocalStore, which handles each type and mode combination.
@@ -1782,8 +1712,7 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
           builder.getKindMap().getCharacterBitsize(charTy.getFKind());
       unsigned charByteWidthRt = std::max(1u, (charBitsRt + 7) / 8);
       const mlir::DataLayout &charDLRt = builder.getDataLayout();
-      mlir::Type charElemTyRt =
-          builder.getIntegerType(std::max(8u, llvm::alignTo(charBitsRt, 8u)));
+      mlir::Type charElemTyRt = builder.getIntegerType(charBitsRt);
       int64_t kindBytes = static_cast<int64_t>(llvm::alignTo(
           static_cast<uint64_t>(charByteWidthRt),
           static_cast<uint64_t>(charDLRt.getTypeABIAlignment(charElemTyRt))));

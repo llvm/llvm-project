@@ -223,8 +223,10 @@ subroutine test_char10(res)
   res = x
 end subroutine
 ! ZERO-LABEL: func.func @_QPtest_char10
-! ZERO: fir.zero_bits !fir.char<1,10>
-! ZERO: fir.store {{.*}} : !fir.ref<!fir.char<1,10>>
+! ZERO:        fir.do_loop
+! ZERO:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! ZERO:          %[[C0_10:.*]] = arith.constant 0 : i8
+! ZERO:          fir.store %[[C0_10]] to {{.*}} : !fir.ref<i8>
 
 
 
@@ -484,8 +486,11 @@ subroutine test_char2_fixed(res)
   res = x
 end subroutine
 ! ZERO-LABEL: func.func @_QPtest_char2_fixed
-! ZERO: fir.zero_bits !fir.char<2,3>
-! ZERO: fir.store {{.*}} : !fir.ref<!fir.char<2,3>>
+! ZERO:        %[[C5_Z:.*]] = arith.constant 5 : index
+! ZERO:        fir.do_loop %{{.*}} = %{{.*}} to %[[C5_Z]] step %{{.*}} {
+! ZERO:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! ZERO:          %[[C0_2:.*]] = arith.constant 0 : i8
+! ZERO:          fir.store %[[C0_2]] to {{.*}} : !fir.ref<i8>
 
 ! HEX-LABEL:  func.func @_QPtest_char2_fixed
 ! HEX:        %[[C5:.*]] = arith.constant 5 : index
@@ -504,8 +509,11 @@ subroutine test_char4_fixed(res)
   res = x
 end subroutine
 ! ZERO-LABEL: func.func @_QPtest_char4_fixed
-! ZERO: fir.zero_bits !fir.char<4,2>
-! ZERO: fir.store {{.*}} : !fir.ref<!fir.char<4,2>>
+! ZERO:        %[[C7_Z:.*]] = arith.constant 7 : index
+! ZERO:        fir.do_loop %{{.*}} = %{{.*}} to %[[C7_Z]] step %{{.*}} {
+! ZERO:          fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! ZERO:          %[[C0_4:.*]] = arith.constant 0 : i8
+! ZERO:          fir.store %[[C0_4]] to {{.*}} : !fir.ref<i8>
 
 ! HEX-LABEL:  func.func @_QPtest_char4_fixed
 ! HEX:        %[[C7:.*]] = arith.constant 7 : index
