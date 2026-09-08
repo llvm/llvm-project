@@ -943,6 +943,25 @@ TEST_P(MCPlusBuilderTester, RISCV_isCleanReg) {
       MCInstBuilder(RISCV::ADDI).addReg(RISCV::X5).addReg(RISCV::X0).addImm(1);
   EXPECT_FALSE(BC->MIB->isCleanReg(NonZeroImmediate));
 
+  MCInst CompressedLI = MCInstBuilder(RISCV::C_LI).addReg(RISCV::X5).addImm(0);
+  EXPECT_TRUE(BC->MIB->isCleanReg(CompressedLI));
+
+  for (int64_t Imm : {-32, -1, 1, 31}) {
+    MCInst NonZeroCompressedLI =
+        MCInstBuilder(RISCV::C_LI).addReg(RISCV::X5).addImm(Imm);
+    EXPECT_FALSE(BC->MIB->isCleanReg(NonZeroCompressedLI));
+  }
+
+  MCInst CompressedLIWithExpr =
+      MCInstBuilder(RISCV::C_LI)
+          .addReg(RISCV::X5)
+          .addExpr(MCSymbolRefExpr::create(BB->getLabel(), *BC->Ctx));
+  EXPECT_FALSE(BC->MIB->isCleanReg(CompressedLIWithExpr));
+
+  MCInst CompressedMV =
+      MCInstBuilder(RISCV::C_MV).addReg(RISCV::X5).addReg(RISCV::X6);
+  EXPECT_FALSE(BC->MIB->isCleanReg(CompressedMV));
+
   MCInst XOR = MCInstBuilder(RISCV::XOR)
                    .addReg(RISCV::X5)
                    .addReg(RISCV::X6)
