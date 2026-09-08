@@ -2141,8 +2141,13 @@ VETargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
   const TargetRegisterClass *RC = MRI.getRegClass(DstReg);
   assert(TRI->isTypeLegalForClass(*RC, MVT::i32) && "Invalid destination!");
   (void)TRI;
-  Register MainDestReg = MRI.createVirtualRegister(RC);
-  Register RestoreDestReg = MRI.createVirtualRegister(RC);
+  // The setjmp result is i32, but the 0/1 values are materialized with LEAzii,
+  // which defines a full i64 register. Produce i64 values and take their low
+  // 32 bits for the i32 result.
+  Register MainDestReg = MRI.createVirtualRegister(&VE::I64RegClass);
+  Register RestoreDestReg = MRI.createVirtualRegister(&VE::I64RegClass);
+  Register MainDestReg32 = MRI.createVirtualRegister(RC);
+  Register RestoreDestReg32 = MRI.createVirtualRegister(RC);
 
   // For `v = call @llvm.eh.sjlj.setjmp(buf)`, we generate following
   // instructions.  SP/FP must be saved in jmpbuf before `llvm.eh.sjlj.setjmp`.
@@ -2217,13 +2222,15 @@ VETargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
       .addImm(0)
       .addImm(0)
       .addImm(0);
+  BuildMI(MainMBB, DL, TII->get(TargetOpcode::COPY), MainDestReg32)
+      .addReg(MainDestReg, RegState::Kill, VE::sub_i32);
   MainMBB->addSuccessor(SinkMBB);
 
   // SinkMBB:
   BuildMI(*SinkMBB, SinkMBB->begin(), DL, TII->get(VE::PHI), DstReg)
-      .addReg(MainDestReg)
+      .addReg(MainDestReg32)
       .addMBB(MainMBB)
-      .addReg(RestoreDestReg)
+      .addReg(RestoreDestReg32)
       .addMBB(RestoreMBB);
 
   // RestoreMBB:
@@ -2242,6 +2249,8 @@ VETargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
       .addImm(0)
       .addImm(0)
       .addImm(1);
+  BuildMI(RestoreMBB, DL, TII->get(TargetOpcode::COPY), RestoreDestReg32)
+      .addReg(RestoreDestReg, RegState::Kill, VE::sub_i32);
   BuildMI(RestoreMBB, DL, TII->get(VE::BRCFLa_t)).addMBB(SinkMBB);
   RestoreMBB->addSuccessor(SinkMBB);
 
