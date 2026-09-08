@@ -839,9 +839,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
     }
     switch (type) {
     case SHT_GROUP: {
-      // Discard groups for non-relocatable links and for embedded unoptimized
-      // dynamic debugging relocatable links.
-      if (!ctx.arg.relocatable || ctx.dynDbgRelocatable)
+      if (!ctx.arg.relocatable)
         sections[i] = &InputSection::discarded;
       // Use the verdict parse() recorded for this group instead of repeating
       // the signature hashing and comdatGroups lookup.
