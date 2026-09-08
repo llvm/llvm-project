@@ -1357,10 +1357,9 @@ private:
       const auto *Group = getInterleavedAccessGroup(I);
       assert(Group && "Fail to get an interleaved access group.");
 
-      if (interleavedAccessCanBeWidened(I, VF)) {
-        NumAccesses = Group->getNumMembers();
+      NumAccesses = Group->getNumMembers();
+      if (interleavedAccessCanBeWidened(I, VF))
         InterleaveCost = getInterleaveGroupCost(I, VF);
-      }
     }
 
     InstructionCost GatherScatterCost =
