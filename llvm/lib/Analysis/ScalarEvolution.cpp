@@ -9348,6 +9348,42 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
 
   ExitLimit EL = computeExitLimitFromICmp(L, Pred, LHS, RHS, ControlsOnlyExit,
                                           AllowPredicates);
+
+  // A samesign with unsigned compare is canonicalized by InstCombine
+  // (foldICmpUsingKnownBits) to give later folds a single predicate form to
+  // match, as unsigned compares combine better with zext, masks and known
+  // bits, while the samesign flag keeps the signed meaning recoverable.
+  // The unsigned and signed interpretations of the loop-exit compare are both
+  // valid, hence they give us 2 constraints on the maximum iterations. There
+  // are many cases where signed interpretation of the compare is better than
+  // unsigned one, and vice versa. Hence, we re-use existing analysis to
+  // compute both signed and unsigned interpretations and choose the tighter
+  // (better) constraint on loop exit policy.
+  if (Pred.hasSameSign() && ICmpInst::isUnsigned(Pred)) {
+    ExitLimit SignedEL =
+        computeExitLimitFromICmp(L, ICmpInst::getSignedPredicate(Pred), LHS,
+                                 RHS, ControlsOnlyExit, AllowPredicates);
+    // A is tighter than B if A has a constant max and B has none or a larger
+    // one.
+    auto HasTighterConstantMax = [](const ExitLimit &A, const ExitLimit &B) {
+      auto *MaxA = dyn_cast<SCEVConstant>(A.ConstantMaxNotTaken);
+      if (!MaxA)
+        return false;
+      auto *MaxB = dyn_cast<SCEVConstant>(B.ConstantMaxNotTaken);
+      if (!MaxB)
+        return true;
+      const APInt &ValA = MaxA->getAPInt(), &ValB = MaxB->getAPInt();
+      unsigned BitWidth = std::max(ValA.getBitWidth(), ValB.getBitWidth());
+      return ValA.zext(BitWidth).ult(ValB.zext(BitWidth));
+    };
+    bool PreferSigned =
+        SignedEL.hasFullInfo()
+            ? (!EL.hasFullInfo() || HasTighterConstantMax(SignedEL, EL))
+            : (!EL.hasAnyInfo() && SignedEL.hasAnyInfo());
+    if (PreferSigned)
+      EL = SignedEL;
+  }
+
   if (EL.hasAnyInfo())
     return EL;
 

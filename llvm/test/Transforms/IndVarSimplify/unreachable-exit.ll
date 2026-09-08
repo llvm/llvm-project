@@ -83,16 +83,17 @@ define void @optimize_two_trap(i32 %block_size, i32 %onebound, i32 %otherbound) 
 ; CHECK-NEXT:    [[CMP14_NOT:%.*]] = icmp eq i32 [[BLOCK_SIZE]], 0
 ; CHECK-NEXT:    br i1 [[CMP14_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[ONEBOUND]] to i64
-; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i64 [[TMP7]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[OTHERBOUND]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP8]])
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[ONEBOUND]], i32 -1)
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[SMAX]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[BLOCK_SIZE]], -1
-; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
-; CHECK-NEXT:    [[UMIN1:%.*]] = call i64 @llvm.umin.i64(i64 [[UMIN]], i64 [[TMP5]])
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP8]], [[UMIN1]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[TMP3]], [[UMIN1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i32 [[TMP4]]
+; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[OTHERBOUND]], i32 -1)
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[SMAX1]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = freeze i32 [[TMP3]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP2]], i32 [[TMP7]])
+; CHECK-NEXT:    [[UMIN2:%.*]] = call i32 @llvm.umin.i32(i32 [[UMIN]], i32 [[TMP5]])
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], [[UMIN2]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TMP3]], [[UMIN2]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP_LOOPEXIT:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP]]
