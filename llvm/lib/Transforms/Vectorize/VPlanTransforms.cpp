@@ -1223,8 +1223,8 @@ static VPValue *simplifyLogicalRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   return nullptr;
 }
 
-/// Return a simpler value for VPSingleDefRecipe \p Def if possible. This must
-/// not create or modify recipes.
+/// Return an existing value or a live in for VPSingleDefRecipe \p Def if
+/// possible. This shouldn't create or modify recipes.
 static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   // Simplification of live-in IR values for SingleDef recipes using
   // InstSimplifyFolder.
