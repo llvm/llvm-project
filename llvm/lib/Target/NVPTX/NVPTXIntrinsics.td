@@ -2541,23 +2541,6 @@ foreach rnd = FPRoundingModes in {
   }
 }
 
-// mixed precision, downconverting
-foreach t = [F16X2RT, BF16X2RT] in {
-  defvar ftz = !if(!eq(t, F16X2RT), "ftz", "");
-  defvar AddOp = !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fadd", ftz]>.ret);
-  defvar CvtOp = !cast<Intrinsic>("int_nvvm_ff2" # t.PtxType # "_rz");
-
-  def INT_NVVM_MIXED_ADD_rz_ # t.PtxType # _f32x2 :
-    BasicNVPTXInst<(outs t.RC:$dst), (ins B64:$a, B64:$b),
-      StrJoin<".", ["add.rz", ftz, t.PtxType, "f32x2", "f32x2"]>.ret,
-      // The cvt packs its first argument into the high half of the result.
-      [(set t.Ty:$dst,
-        (CvtOp (extractelt (AddOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 1),
-               (extractelt (AddOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 0),
-               /*pzo=*/0))]>,
-    Requires<[SM107f]>;
-}
-
 // Pattern for fadd when there is no FTZ flag
 let Predicates = [SM100, doNoF32FTZ] in {
   def : Pat<(f32 (fadd (f32 (fpextend f16:$a)), f32:$b)),
@@ -2578,6 +2561,27 @@ let Predicates = [SM107f, doNoF32FTZ] in
                            v2f32:$b)),
               (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b)>;
   }
+
+
+// mixed precision - downconverting
+
+// f16x2 - rz rounding mode, only with ftz
+// bf16x2 - rz rounding mode, without ftz
+foreach t = [F16X2RT, BF16X2RT] in {
+  defvar ftz = !if(!eq(t, F16X2RT), "ftz", "");
+  defvar AddOp = !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fadd", ftz]>.ret);
+  defvar CvtOp = !cast<Intrinsic>("int_nvvm_ff2" # t.PtxType # "_rz");
+
+  def INT_NVVM_MIXED_ADD_rz_ # t.PtxType # _f32x2 :
+    BasicNVPTXInst<(outs t.RC:$dst), (ins B64:$a, B64:$b),
+      StrJoin<".", ["add.rz", ftz, t.PtxType, "f32x2", "f32x2"]>.ret,
+      // The cvt packs its first argument into the high half of the result.
+      [(set t.Ty:$dst,
+        (CvtOp (extractelt (AddOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 1),
+               (extractelt (AddOp v2f32:$a, v2f32:$b, fp_rnd_rz_imm), 0),
+               /*pzo=*/0))]>,
+    Requires<[SM107f]>;
+}
 
 //
 // Sub
