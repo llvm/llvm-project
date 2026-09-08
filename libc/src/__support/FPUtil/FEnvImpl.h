@@ -118,6 +118,8 @@ LIBC_INLINE int set_env(const fenv_t *env) {
 #include "arm/FEnvImpl.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV) && defined(__riscv_flen)
 #include "riscv/FEnvImpl.h"
+#elif defined(LIBC_TARGET_ARCH_IS_HEXAGON)
+#include "hexagon/FEnvImpl.h"
 #else
 
 namespace LIBC_NAMESPACE_DECL {
