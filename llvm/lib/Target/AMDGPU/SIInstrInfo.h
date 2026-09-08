@@ -1756,6 +1756,8 @@ public:
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
 
+  unsigned getBlockingCycles(const MachineInstr &MI) const;
+
   const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
 
   ValueUniformity getValueUniformity(const MachineInstr &MI) const final;
