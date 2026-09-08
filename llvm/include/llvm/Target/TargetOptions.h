@@ -119,8 +119,7 @@ enum CodeObjectVersionKind {
 class TargetOptions {
 public:
   TargetOptions()
-      : EnableAIXExtendedAltivecABI(false),
-        HonorSignDependentRoundingFPMathOption(false), NoZerosInBSS(false),
+      : EnableAIXExtendedAltivecABI(false), NoZerosInBSS(false),
         GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
         EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
         FunctionSections(false), DataSections(false),
@@ -136,25 +135,14 @@ public:
         SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
         ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
         XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
-        PPCGenScalarMASSEntries(false), JMCInstrument(false),
-        EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
-        VerifyArgABICompliance(true) {}
+        JMCInstrument(false), EnableCFIFixup(false), MisExpect(false),
+        XCOFFReadOnlyPointers(false), VerifyArgABICompliance(true) {}
 
   /// EnableAIXExtendedAltivecABI - This flag returns true when -vec-extabi is
   /// specified. The code generator is then able to use both volatile and
   /// nonvolitle vector registers. When false, the code generator only uses
   /// volatile vector registers which is the default setting on AIX.
   unsigned EnableAIXExtendedAltivecABI : 1;
-
-  /// HonorSignDependentRoundingFPMath - This returns true when the
-  /// -enable-sign-dependent-rounding-fp-math is specified.  If this returns
-  /// false (the default), the code generator is allowed to assume that the
-  /// rounding behavior is the default (round-to-zero for all floating point
-  /// to integer conversions, and round-to-nearest for all other arithmetic
-  /// truncations).  If this is enabled (set to true), the code generator must
-  /// assume that the rounding mode may dynamically change.
-  unsigned HonorSignDependentRoundingFPMathOption : 1;
-  LLVM_ABI bool HonorSignDependentRoundingFPMath() const;
 
   /// NoZerosInBSS - By default some codegens place zero-initialized data to
   /// .bss section. This flag disables such behaviour (necessary, e.g. for
@@ -304,9 +292,6 @@ public:
 
   /// Emit the hotpatch flag in CodeView debug.
   unsigned Hotpatch : 1;
-
-  /// Enables scalar MASS conversions
-  unsigned PPCGenScalarMASSEntries : 1;
 
   /// Enable JustMyCode instrumentation.
   unsigned JMCInstrument : 1;

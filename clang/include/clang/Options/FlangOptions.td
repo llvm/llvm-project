@@ -321,7 +321,7 @@ defm fp_sum_reassociation
           PosFlag<SetTrue, [], [],
                   "Enable Fortran-standard compliant reassociation within "
                   "individual REAL and COMPLEX sum expressions. This may "
-                  "change exact floating-point results">,
+                  "change exact floating-point results. Enabled by default">,
           NegFlag<SetFalse, [], [],
                   "Disable reassociation within individual REAL and COMPLEX "
                   "sum expressions">>,
@@ -329,7 +329,8 @@ defm fp_sum_reassociation
         Enable Fortran-standard compliant reassociation within individual
         ``REAL`` and ``COMPLEX`` sum expressions. This can improve optimization
         opportunities and may change exact floating-point results while
-        preserving standard-conforming Fortran semantics.
+        preserving standard-conforming Fortran semantics. It is enabled by
+        default at all optimization levels.
       }]>;
 
 def freal_sum_reassociation : Flag<["-"], "freal-sum-reassociation">,

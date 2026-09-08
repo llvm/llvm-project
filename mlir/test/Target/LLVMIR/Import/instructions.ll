@@ -555,6 +555,19 @@ define i32 @inlineasm(i32 %arg1) {
 
 ; // -----
 
+; CHECK-LABEL: @inlineasm_convergent
+; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
+define i32 @inlineasm_convergent(i32 %arg1) {
+  ; CHECK:  %[[RES:.+]] = llvm.inline_asm convergent asm_dialect = att "bswap $0", "=r,r" %[[ARG1]] : (i32) -> i32
+  %1 = call i32 asm "bswap $0", "=r,r"(i32 %arg1) #0
+  ; CHECK: return %[[RES]]
+  ret i32 %1
+}
+
+attributes #0 = { convergent }
+
+; // -----
+
 ; CHECK-LABEL: @inlineasm2
 define void @inlineasm2() {
   %p = alloca ptr, align 8
