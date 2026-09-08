@@ -29,8 +29,8 @@ body:             |
     ; INORDER: liveins: $x10, $x11, $x12, $x13, $x15
     ; INORDER-NEXT: {{  $}}
     ; INORDER-NEXT: renamable $x14 = ADD killed renamable $x15, killed renamable $x10
-    ; INORDER-NEXT: renamable $x15 = LD killed renamable $x11, 0 :: (load (s64))
-    ; INORDER-NEXT: SD killed renamable $x15, killed renamable $x12, 0 :: (store (s64))
+    ; INORDER-NEXT: $x11 = LD killed renamable $x11, 0 :: (load (s64))
+    ; INORDER-NEXT: SD killed $x11, killed renamable $x12, 0 :: (store (s64))
     ; INORDER-NEXT: SD killed renamable $x14, killed renamable $x13, 0 :: (store (s64))
     ; INORDER-NEXT: PseudoRET
     ;
@@ -60,8 +60,8 @@ body:             |
     ; INORDER: liveins: $x10, $x11, $x12, $f10_d, $f11_d
     ; INORDER-NEXT: {{  $}}
     ; INORDER-NEXT: renamable $f12_d = nofpexcept FADD_D killed renamable $f10_d, killed renamable $f11_d, 7, implicit $frm
-    ; INORDER-NEXT: renamable $f10_d = FLD killed renamable $x10, 0 :: (load (s64))
-    ; INORDER-NEXT: FSD killed renamable $f10_d, killed renamable $x11, 0 :: (store (s64))
+    ; INORDER-NEXT: $f11_d = FLD killed renamable $x10, 0 :: (load (s64))
+    ; INORDER-NEXT: FSD killed $f11_d, killed renamable $x11, 0 :: (store (s64))
     ; INORDER-NEXT: FSD killed renamable $f12_d, killed renamable $x12, 0 :: (store (s64))
     ; INORDER-NEXT: PseudoRET
     ;
@@ -90,9 +90,9 @@ body:             |
     ; INORDER-LABEL: name: rvv_region_war
     ; INORDER: liveins: $x10, $x11, $v8
     ; INORDER-NEXT: {{  $}}
+    ; INORDER-NEXT: $v31 = VL1RE8_V killed renamable $x10 :: (load unknown-size, align 1)
     ; INORDER-NEXT: $x12 = PseudoVMV_X_S killed renamable $v8, 5 /* e32 */, implicit $vtype
-    ; INORDER-NEXT: renamable $v8 = VL1RE8_V killed renamable $x10 :: (load unknown-size, align 1)
-    ; INORDER-NEXT: VS1R_V killed renamable $v8, killed renamable $x11 :: (store unknown-size, align 1)
+    ; INORDER-NEXT: VS1R_V killed $v31, killed renamable $x11 :: (store unknown-size, align 1)
     ; INORDER-NEXT: PseudoRET
     ;
     ; OOO-LABEL: name: rvv_region_war
@@ -127,8 +127,8 @@ body:             |
   ; INORDER-NEXT:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
   ; INORDER-NEXT:   liveins: $x10, $x11, $x12, $x13
   ; INORDER-NEXT: {{  $}}
-  ; INORDER-NEXT:   renamable $x15 = LD renamable $x10, 0 :: (load (s64))
-  ; INORDER-NEXT:   renamable $x15 = ADD killed renamable $x15, renamable $x11
+  ; INORDER-NEXT:   $x14 = LD renamable $x10, 0 :: (load (s64))
+  ; INORDER-NEXT:   renamable $x15 = ADD killed $x14, renamable $x11
   ; INORDER-NEXT:   SD killed renamable $x15, renamable $x12, 0 :: (store (s64))
   ; INORDER-NEXT:   BNE renamable $x13, $x0, %bb.1
   ; INORDER-NEXT: {{  $}}
@@ -183,8 +183,8 @@ body:             |
   ; INORDER-NEXT:   successors: %bb.1(0x7c000000), %bb.2(0x04000000)
   ; INORDER-NEXT:   liveins: $x10, $x11, $x12, $f11_d
   ; INORDER-NEXT: {{  $}}
-  ; INORDER-NEXT:   renamable $f10_d = FLD renamable $x10, 0 :: (load (s64))
-  ; INORDER-NEXT:   renamable $f10_d = nofpexcept FADD_D killed renamable $f10_d, renamable $f11_d, 7, implicit $frm
+  ; INORDER-NEXT:   $f15_d = FLD renamable $x10, 0 :: (load (s64))
+  ; INORDER-NEXT:   renamable $f10_d = nofpexcept FADD_D killed $f15_d, renamable $f11_d, 7, implicit $frm
   ; INORDER-NEXT:   FSD killed renamable $f10_d, renamable $x11, 0 :: (store (s64))
   ; INORDER-NEXT:   BNE renamable $x12, $x0, %bb.1
   ; INORDER-NEXT: {{  $}}
@@ -241,8 +241,8 @@ body:             |
   ; INORDER-NEXT:   liveins: $x10, $x11, $x12, $v16m8
   ; INORDER-NEXT: {{  $}}
   ; INORDER-NEXT:   dead $x0 = PseudoVSETIVLI 0, 211 /* e32, m8, ta, ma */, implicit-def $vl, implicit-def $vtype
-  ; INORDER-NEXT:   renamable $v8m8 = PseudoVLE32_V_M8 undef renamable $v8m8, renamable $x10, $noreg /* vl */, 5 /* e32 */, 2 /* tu, ma */, implicit $vl, implicit $vtype :: (load unknown-size, align 4)
-  ; INORDER-NEXT:   renamable $v8m8 = nofpexcept PseudoVFADD_VV_M8_E32 undef renamable $v8m8, killed renamable $v8m8, renamable $v16m8, 7 /* frm=dyn */, $noreg /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $frm, implicit $vl, implicit $vtype
+  ; INORDER-NEXT:   $v24m8 = PseudoVLE32_V_M8 undef $v24m8, renamable $x10, $noreg /* vl */, 5 /* e32 */, 2 /* tu, ma */, implicit $vl, implicit $vtype :: (load unknown-size, align 4)
+  ; INORDER-NEXT:   renamable $v8m8 = nofpexcept PseudoVFADD_VV_M8_E32 undef renamable $v8m8, killed $v24m8, renamable $v16m8, 7 /* frm=dyn */, $noreg /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $frm, implicit $vl, implicit $vtype
   ; INORDER-NEXT:   PseudoVSE32_V_M8 killed renamable $v8m8, renamable $x11, $noreg /* vl */, 5 /* e32 */, implicit $vl, implicit $vtype :: (store unknown-size, align 4)
   ; INORDER-NEXT:   BNE renamable $x12, $x0, %bb.1
   ; INORDER-NEXT: {{  $}}

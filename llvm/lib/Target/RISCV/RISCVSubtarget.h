@@ -158,6 +158,12 @@ public:
 
   bool enablePostRAScheduler() const override { return UsePostRAScheduler; }
 
+  AntiDepBreakMode getPostMachineSchedulerAntiDepBreakMode() const {
+    const MCSchedModel &Model = getSchedModel();
+    return Model.hasInstrSchedModel() && !Model.isOutOfOrder() ? ANTIDEP_ALL
+                                                               : ANTIDEP_NONE;
+  }
+
   Align getPrefFunctionAlignment() const {
     return Align(TuneInfo->PrefFunctionAlignment);
   }
