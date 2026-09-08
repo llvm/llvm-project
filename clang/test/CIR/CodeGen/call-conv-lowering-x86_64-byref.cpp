@@ -131,6 +131,15 @@ void callInheritedCtor(WithDtor t) { Derived d(t); }
 // CIR:         cir.call @_ZN7DerivedCI14BaseE8WithDtor(%{{.*}}, %[[TMP]])
 // CIR-SAME:      llvm.byref = !rec_WithDtor
 
+// LLVM-CIR:     define dso_local void @_Z17callInheritedCtor8WithDtor(ptr byref(%struct.WithDtor) align 4 %[[INHARG:[0-9]+]])
+// OGCG:         define dso_local void @_Z17callInheritedCtor8WithDtor(ptr nofreeobj noundef align 4 dereferenceable(4) %[[INHARG:[^)]+]])
+// LLVM:          %[[INHTMP:.+]] = alloca %struct.WithDtor, align 4
+// LLVM:          call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[INHTMP]], ptr align 4 %[[INHARG]], i64 4, i1 false)
+// LLVM-CIR:      call void @_ZN7DerivedCI14BaseE8WithDtor(ptr noundef nonnull align 1 dereferenceable(1) %{{.+}}, ptr byref(%struct.WithDtor) align 4 %[[INHTMP]])
+// OGCG:          call void @_ZN7DerivedCI14BaseE8WithDtor(ptr noundef nonnull align 1 dereferenceable(1) %{{.+}}, ptr nofreeobj noundef align 4 dereferenceable(4) %[[INHTMP]])
+// LLVM-CIR:      call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dereferenceable(4) %[[INHTMP]])
+// OGCG:          call void @_ZN8WithDtorD1Ev(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[INHTMP]])
+
 // Both inheriting constructor variants hand their own parameter on unchanged.
 // CIR-LABEL: cir.func {{.*}}@_ZN7DerivedCI14BaseE8WithDtor
 // CIR-SAME:      %[[CI1ARG:[^:]*]]: !cir.ptr<!rec_WithDtor> {llvm.align = 4 : i64, llvm.byref = !rec_WithDtor}
