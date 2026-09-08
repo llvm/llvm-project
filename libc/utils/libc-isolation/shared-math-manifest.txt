@@ -313,6 +313,7 @@ shared/math/ldexpf.h
 shared/math/ldexpf128.h
 shared/math/ldexpf16.h
 shared/math/ldexpl.h
+shared/math/lgammaf.h
 shared/math/lgammaf16.h
 shared/math/llogb.h
 shared/math/llogbbf16.h
@@ -590,6 +591,7 @@ src/__support/CPP/utility/forward.h
 src/__support/CPP/utility/in_place.h
 src/__support/CPP/utility/integer_sequence.h
 src/__support/CPP/utility/move.h
+src/__support/CPP/utility/swap.h
 src/__support/FPUtil/BasicOperations.h
 src/__support/FPUtil/DivisionAndRemainderOperations.h
 src/__support/FPUtil/FEnvImpl.h
@@ -606,6 +608,7 @@ src/__support/FPUtil/comparison_operations.h
 src/__support/FPUtil/double_double.h
 src/__support/FPUtil/dyadic_float.h
 src/__support/FPUtil/except_value_utils.h
+src/__support/FPUtil/float128.h
 src/__support/FPUtil/generic/FMA.h
 src/__support/FPUtil/generic/FMod.h
 src/__support/FPUtil/generic/add_sub.h
@@ -911,6 +914,7 @@ src/__support/math/fsqrtl.h
 src/__support/math/fsub.h
 src/__support/math/fsubf128.h
 src/__support/math/fsubl.h
+src/__support/math/gamma_util.h
 src/__support/math/getpayload.h
 src/__support/math/getpayloadbf16.h
 src/__support/math/getpayloadf.h
@@ -947,6 +951,7 @@ src/__support/math/ldexpf.h
 src/__support/math/ldexpf128.h
 src/__support/math/ldexpf16.h
 src/__support/math/ldexpl.h
+src/__support/math/lgammaf.h
 src/__support/math/lgammaf16.h
 src/__support/math/llogb.h
 src/__support/math/llogbbf16.h

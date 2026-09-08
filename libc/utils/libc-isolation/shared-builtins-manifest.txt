@@ -137,6 +137,7 @@ src/__support/CPP/utility/forward.h
 src/__support/CPP/utility/in_place.h
 src/__support/CPP/utility/integer_sequence.h
 src/__support/CPP/utility/move.h
+src/__support/CPP/utility/swap.h
 src/__support/FPUtil/BasicOperations.h
 src/__support/FPUtil/FEnvImpl.h
 src/__support/FPUtil/FPBits.h
