@@ -1,10 +1,10 @@
 ; RUN: llc -mtriple s390x-zos < %s | FileCheck %s
 
 define void @jumptable(i32 signext %in, ptr %out) {
-; CHECK-LABEL: jumptable DS 0H
+; CHECK-LABEL: jumptable DS 0B
 ; CHECK:   larl 3,L#JTI0_0
-; CHECK: L#jumptable_end_0 DS 0H
-; CHECK: L#JTI0_0 DS 0H
+; CHECK: L#jumptable_end_0 DS 0B
+; CHECK: L#JTI0_0 DS 0D
 ; CHECK:   DC AD(L#BB0_2)
 ; CHECK:   DC AD(L#BB0_5)
 ; CHECK:   DC AD(L#BB0_3)

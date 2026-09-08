@@ -1,10 +1,9 @@
 ; RUN: llc -mtriple s390x-ibm-zos < %s | FileCheck %s
 
 define i32 @leaf(i32 signext %arg) {
-; CHECK:      DS 0B
-; CHECK-NEXT: * @leaf
+; CHECK:      * @leaf
 ; CHECK-NEXT: * XPLINK Routine Layout Entry
-; CHECK-NEXT: L#EPM_leaf_0 DS 0H
+; CHECK-NEXT: L#EPM_leaf_0 DS 0Q
 ; CHECK-NEXT: * Eyecatcher 0x00C300C500C500
 ; CHECK-NEXT:  DC XL7'00C300C500C500'
 ; CHECK-NEXT: * Mark Type C'1'
@@ -27,10 +26,9 @@ entry:
 }
 
 define i32 @nonleaf(i32 signext %arg) {
-; CHECK:      DS 0B
-; CHECK-NEXT: * @nonleaf
+; CHECK:      * @nonleaf
 ; CHECK-NEXT: * XPLINK Routine Layout Entry
-; CHECK-NEXT: L#EPM_nonleaf_0 DS 0H
+; CHECK-NEXT: L#EPM_nonleaf_0 DS 0Q
 ; CHECK-NEXT: * Eyecatcher 0x00C300C500C500
 ; CHECK-NEXT:  DC XL7'00C300C500C500'
 ; CHECK-NEXT: * Mark Type C'1'
@@ -45,20 +43,19 @@ define i32 @nonleaf(i32 signext %arg) {
 ; CHECK-NEXT:  ENTRY nonleaf
 
 ; CHECK:       stmg 6,7,1872(4)
-; CHECK-NEXT: L#stack_update0 DS 0H
+; CHECK-NEXT: L#stack_update0 DS 0B
 ; CHECK-NEXT:  aghi 4,-192
 ; CHECK-NEXT: *FENCE
-; CHECK-NEXT: L#end_of_prologue0 DS 0H
+; CHECK-NEXT: L#end_of_prologue0 DS 0B
 entry:
   %res = call i32 @leaf(i32 %arg)
   ret i32 %res
 }
 
 define i32 @withalloca(i32 signext %arg) {
-; CHECK:      DS 0B
-; CHECK-NEXT: * @withalloca
+; CHECK:      * @withalloca
 ; CHECK-NEXT: * XPLINK Routine Layout Entry
-; CHECK-NEXT: L#EPM_withalloca_0 DS 0H
+; CHECK-NEXT: L#EPM_withalloca_0 DS 0Q
 ; CHECK-NEXT: * Eyecatcher 0x00C300C500C500
 ; CHECK-NEXT:  DC XL7'00C300C500C500'
 ; CHECK-NEXT: * Mark Type C'1'
@@ -73,11 +70,11 @@ define i32 @withalloca(i32 signext %arg) {
 ; CHECK-NEXT:  ENTRY withalloca
 
 ; CHECK:       stmg 4,10,1856(4)
-; CHECK-NEXT: L#stack_update1 DS 0H
+; CHECK-NEXT: L#stack_update1 DS 0B
 ; CHECK-NEXT:  aghi 4,-192
 ; CHECK-NEXT:  lgr 8,4
 ; CHECK-NEXT: *FENCE
-; CHECK-NEXT: L#end_of_prologue1 DS 0H
+; CHECK-NEXT: L#end_of_prologue1 DS 0B
 entry:
   %p = alloca i8, i32 %arg
   %res = call i32 @other(ptr %p, i32 %arg)
@@ -124,7 +121,6 @@ declare i32 @other(ptr, i32)
 ; CHECK-NEXT:  DC XL4'93858186'
 ; CHECK-NEXT:  DC 2XL1'00'
 ; CHECK-NEXT:  DC A(L#EPM_leaf_0-L#PPA1_leaf_0)
-; CHECK-NEXT:  DS 0B
 ; CHECK-NEXT: * PPA1
 ; CHECK-NEXT: L#PPA1_nonleaf_0 DS 0H
 ; CHECK-NEXT: * Version
@@ -165,7 +161,6 @@ declare i32 @other(ptr, i32)
 ; CHECK-NEXT:  DC XL7'95969593858186'
 ; CHECK-NEXT:  DC 3XL1'00'
 ; CHECK-NEXT:  DC A(L#EPM_nonleaf_0-L#PPA1_nonleaf_0)
-; CHECK-NEXT:  DS 0B
 ; CHECK-NEXT: * PPA1
 ; CHECK-NEXT: L#PPA1_withalloca_0 DS 0H
 ; CHECK-NEXT: * Version

@@ -13,7 +13,7 @@
 ; Bare i32 passed to sitofp.  Correct: cefbr 0,1 (R1 is the source).
 ; Without the i32 rule: l 0,<offset>(4) then cefbr 0,0 (stack load).
 define float @sitofp_bare_i32(i32 %x) {
-; CHECK-LABEL: sitofp_bare_i32 DS 0H
+; CHECK-LABEL: sitofp_bare_i32 DS 0B
 ; CHECK: cefbr 0,1
   %r = sitofp i32 %x to float
   ret float %r
@@ -21,7 +21,7 @@ define float @sitofp_bare_i32(i32 %x) {
 
 ; Bare i32 passed to sitofp (double).  Correct: cdfbr 0,1.
 define double @sitofp_bare_i32_double(i32 %x) {
-; CHECK-LABEL: sitofp_bare_i32_double DS 0H
+; CHECK-LABEL: sitofp_bare_i32_double DS 0B
 ; CHECK: cdfbr 0,1
   %r = sitofp i32 %x to double
   ret double %r
@@ -30,7 +30,7 @@ define double @sitofp_bare_i32_double(i32 %x) {
 ; Two bare i32 arguments compared.  Correct: cr 1,2 (register compare).
 ; Without the i32 rule: two stack loads then a memory/register compare.
 define i1 @cmp_bare_i32(i32 %a, i32 %b) {
-; CHECK-LABEL: cmp_bare_i32 DS 0H
+; CHECK-LABEL: cmp_bare_i32 DS 0B
 ; CHECK: cr 1,2
   %r = icmp eq i32 %a, %b
   ret i1 %r
