@@ -148,19 +148,16 @@ void MipsAsmPrinter::emitPseudoIndirectBranch(MCStreamer &OutStreamer,
 //
 // This is an optimization hint for the linker which may then replace
 // an indirect call with a direct branch.
-void emitDirectiveRelocJalr(const MachineInstr &MI, MCContext &OutContext,
+void MipsAsmPrinter::emitDirectiveRelocJalr(const MachineInstr &MI, MCContext &OutContext,
                             TargetMachine &TM, MCStreamer &OutStreamer,
-                            const MipsSubtarget &Subtarget,
-                            const DataLayout &DL) {
+                            const MipsSubtarget &Subtarget) {
   for (const MachineOperand &MO :
        llvm::drop_begin(MI.operands(), MI.getDesc().getNumOperands())) {
     if (MO.isMCSymbol() && (MO.getTargetFlags() & MipsII::MO_JALR)) {
       MCSymbol *Callee = MO.getMCSymbol();
       if (Callee && !Callee->getName().empty()) {
-        SmallString<128> Name;
         MCSymbol *Sym = nullptr;
-        Mangler::getNameWithPrefix(Name, Callee->getName(), DL);
-        Sym = OutContext.getOrCreateSymbol(Name);
+	Sym = GetExternalSymbolSymbol(Callee->getName());
         MCSymbol *OffsetLabel = OutContext.createTempSymbol();
         const MCExpr *OffsetExpr =
             MCSymbolRefExpr::create(OffsetLabel, OutContext);
@@ -241,8 +238,7 @@ void MipsAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   if (EmitJalrReloc &&
       (MI->isReturn() || MI->isCall() || MI->isIndirectBranch())) {
-    emitDirectiveRelocJalr(*MI, OutContext, TM, *OutStreamer, *Subtarget,
-                           MF->getDataLayout());
+    emitDirectiveRelocJalr(*MI, OutContext, TM, *OutStreamer, *Subtarget);
   }
 
   MachineBasicBlock::const_instr_iterator I = MI->getIterator();
