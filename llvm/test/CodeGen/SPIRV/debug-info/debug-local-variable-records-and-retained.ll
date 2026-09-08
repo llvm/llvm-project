@@ -9,8 +9,9 @@
 ; CHECK-DAG: [[PATH:%[0-9]+]] = OpString "{{[/\\]}}src{{[/\\]}}debug-local-variable-records-and-retained.c"
 ; CHECK-DAG: [[NAME:%[0-9]+]] = OpString "dup"
 ; CHECK-DAG: [[INTNAME:%[0-9]+]] = OpString "int"
-; CHECK-DAG: [[C0:%[0-9]+]] = OpConstant [[I32T]] 0
-; CHECK-DAG: [[C3:%[0-9]+]] = OpConstant [[I32T]] 3
+; The trailing anchors keep e.g. [[C3]] from binding to "OpConstant %3 32".
+; CHECK-DAG: [[C0:%[0-9]+]] = OpConstant [[I32T]] 0{{ *$}}
+; CHECK-DAG: [[C3:%[0-9]+]] = OpConstant [[I32T]] 3{{ *$}}
 ; CHECK-DAG: [[DS:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugSource [[PATH]]
 ; CHECK-DAG: [[INT:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugTypeBasic [[INTNAME]] {{.*}} [[C0]]
 ; CHECK-DAG: [[DF:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugFunction {{.*}}

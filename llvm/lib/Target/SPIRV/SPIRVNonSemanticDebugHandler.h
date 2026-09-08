@@ -108,6 +108,16 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // records, dbg intrinsics, and subprogram retained nodes.
   SetVector<const DILocalVariable *> LocalVariables;
 
+  // DebugLocalVariable result id per variable that module-scope emission
+  // actually emitted. DebugDeclare needs it for its Local Variable operand; a
+  // variable missing here (skipped type or scope) gets no declare.
+  DenseMap<const DILocalVariable *, MCRegister> DebugLocalVariableRegs;
+
+  // DebugExpression result id per DIExpression that could be lowered. An
+  // expression missing here uses operations with no NonSemantic counterpart,
+  // so declares referencing it are skipped rather than described wrongly.
+  DenseMap<const DIExpression *, MCRegister> DebugExpressionRegs;
+
   // Distinct DILexicalBlock and DINamespace scopes, parent-before-child
   // order, collected in beginModule() for DebugLexicalBlock emission.
   SetVector<const DIScope *> LexicalBlocks;
@@ -393,13 +403,50 @@ private:
       MCRegister VoidTypeReg, MCRegister I32TypeReg, MCRegister ExtInstSetReg,
       SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Emit \c DebugExpression for \p Expr. Unimplemented: defined as a no-op
-  /// (\returns \c std::nullopt, emits nothing) so \c emitDebugGlobalVariable
-  /// can complete Variable-operand resolution for the opcodes we support today.
+  /// Collect the \c DIExpression of every debug value in the module
+  /// (\c DBG_VALUE, \c DBG_VALUE_LIST, \c DBG_INSTR_REF), in MIR order.
+  ///
+  /// Reads MIR rather than IR because only MIR shows which debug values
+  /// survived codegen and in what form, and because an expression synthesized
+  /// during lowering never appears in the IR at all. Must be called from
+  /// module-scope emission, which is where the resulting \c DebugExpression
+  /// instructions have to be emitted; every \c MachineFunction is still
+  /// reachable at that point through \c MachineModuleInfo.
+  ///
+  /// Deliberately independent of what the consumers can currently emit, so
+  /// that adding an instruction that needs an expression (\c DebugValue) needs
+  /// no change here. The cost is a \c DebugExpression that nothing references
+  /// yet, for a debug value no instruction is emitted for.
+  void collectDebugExpressions(SetVector<const DIExpression *> &Out) const;
+
+  /// Emit one \c DebugOperation per element of \p Expr followed by the
+  /// \c DebugExpression that lists them. An empty \p Expr yields a
+  /// \c DebugExpression with no operands, which is what a plain
+  /// \c !DIExpression() means.
+  ///
+  /// Must be called from module-scope emission only: \c DebugExpression and
+  /// \c DebugOperation are not in the spec's list of instructions allowed
+  /// inside a function, and forward references were removed in Rev 2.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if any element has no NonSemantic counterpart, or carries an
+  /// argument too large for the 32-bit \c OpConstant operands this set
+  /// requires.
   std::optional<MCRegister> emitDebugExpression(const DIExpression *Expr,
                                                 MCRegister VoidTypeReg,
+                                                MCRegister I32TypeReg,
                                                 MCRegister ExtInstSetReg,
                                                 SPIRV::ModuleAnalysisInfo &MAI);
+
+  /// Emit \c DebugDeclare for \p MI when it is an indirect \c DBG_VALUE whose
+  /// location register is defined by \c OpVariable, which is the shape
+  /// \c IRTranslator gives a \c #dbg_declare on storage the backend kept.
+  ///
+  /// Emits nothing when \p MI is not such a declare, when the variable has no
+  /// \c DebugLocalVariable, when the expression was not lowered, or when the
+  /// storage is anything other than an \c OpVariable (an access chain, a
+  /// constant, a function parameter, or a dead alloca with no def at all).
+  void emitDebugDeclare(const MachineInstr *MI);
 
   /// Emit \c DebugTypeVector for the vector composite type \p VT.
   ///
