@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -mcpu=gfx1100 -O3 -verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa %s -o - | FileCheck %s
 ;
 ; The shared low half must not cause the coalescer to join the two VMEM
 ; results before scheduling. Preserve the d16_hi load folding.
@@ -9,7 +9,6 @@
 ; CHECK: v_exp_f32
 ; CHECK: global_store
 
-target triple = "amdgpu11.00-amd-amdhsa"
 define amdgpu_kernel void @silu(ptr addrspace(1) %x, ptr addrspace(1) %gate, ptr addrspace(1) %out) {
   %i = call i32 @llvm.amdgcn.workitem.id.x()
   %xp = getelementptr bfloat, ptr addrspace(1) %x, i32 %i

@@ -4140,9 +4140,7 @@ static const MachineInstr *getHalfRegisterLoad(Register Reg, unsigned SubReg,
       return nullptr;
     Def = MO.getParent();
   }
-  if (!Def)
-    return nullptr;
-  if (Def->isCopy()) {
+  if (Def && Def->isCopy()) {
     const MachineOperand &Src = Def->getOperand(1);
     if (!Src.getReg().isVirtual() || Src.getSubReg() || Src.isUndef())
       return nullptr;
@@ -4158,39 +4156,28 @@ bool SIRegisterInfo::shouldCoalesce(
     MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
     const TargetRegisterClass *DstRC, unsigned DstSubReg,
     const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
-  unsigned SrcSize = getRegSizeInBits(*SrcRC);
-  unsigned DstSize = getRegSizeInBits(*DstRC);
-  unsigned NewSize = getRegSizeInBits(*NewRC);
+  if (!MI->isCopy() || !AMDGPU::AV_32RegClass.hasSubClassEq(SrcRC) ||
+      !AMDGPU::AV_32RegClass.hasSubClassEq(DstRC) || !hasVGPRs(SrcRC) ||
+      !hasVGPRs(DstRC))
+    return true;
 
-  // A copy of the shared half of two packed values can merge their unrelated
-  // VMEM results in the other half. This creates an artificial anti-dependence
-  // before machine scheduling. Keep this copy so both loads remain
-  // independently schedulable; ordinary copies from loads into a packed value
-  // still coalesce.
-  if (MI->isCopy() && SrcSize == 32 && DstSize == 32 && NewSize == 32 &&
-      hasVGPRs(SrcRC) && !hasSGPRs(SrcRC) && hasVGPRs(DstRC) &&
-      !hasSGPRs(DstRC)) {
-    const MachineOperand &Dst = MI->getOperand(0);
-    const MachineOperand &Src = MI->getOperand(1);
-    unsigned Half = Dst.getSubReg();
-    if (Dst.getReg().isVirtual() && Src.getReg().isVirtual() &&
-        Dst.getReg() != Src.getReg() && !Src.isUndef() &&
-        (Half == AMDGPU::lo16 || Half == AMDGPU::hi16) &&
-        Src.getSubReg() == Half) {
-      unsigned OtherHalf = Half == AMDGPU::lo16 ? AMDGPU::hi16 : AMDGPU::lo16;
-      const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
-      const MachineInstr *SrcLoad =
-          getHalfRegisterLoad(Src.getReg(), OtherHalf, MRI);
-      const MachineInstr *DstLoad =
-          getHalfRegisterLoad(Dst.getReg(), OtherHalf, MRI);
-      if (SrcLoad && DstLoad && SrcLoad != DstLoad &&
-          SrcLoad->getParent() == MI->getParent() &&
-          DstLoad->getParent() == MI->getParent())
-        return false;
-    }
-  }
+  const MachineOperand &Src = MI->getOperand(1);
+  unsigned Half = Src.getSubReg();
+  if (Src.isUndef() || MI->getOperand(0).getSubReg() != Half ||
+      (Half != AMDGPU::lo16 && Half != AMDGPU::hi16))
+    return true;
 
-  return true;
+  // Keep a shared-half copy from merging independent VMEM results in the other
+  // half. Ordinary copies into a packed value can still coalesce.
+  unsigned OtherHalf = Half == AMDGPU::lo16 ? AMDGPU::hi16 : AMDGPU::lo16;
+  const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+  const MachineInstr *SrcLoad =
+      getHalfRegisterLoad(Src.getReg(), OtherHalf, MRI);
+  const MachineInstr *DstLoad =
+      getHalfRegisterLoad(MI->getOperand(0).getReg(), OtherHalf, MRI);
+  return !SrcLoad || !DstLoad || SrcLoad == DstLoad ||
+         SrcLoad->getParent() != MI->getParent() ||
+         DstLoad->getParent() != MI->getParent();
 }
 
 unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
