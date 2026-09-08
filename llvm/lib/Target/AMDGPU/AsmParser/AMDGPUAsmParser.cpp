@@ -66,24 +66,13 @@ enum RegisterKind {
 // Operand
 //===----------------------------------------------------------------------===//
 
-// Why an operand predicate rejected an operand; higher values are more specific
-// and win the tiebreak in matchAndEmitInstruction. Keep None first.
-enum class OperandMatchError {
-  None,
-  VGPRAlignMismatch,
-};
-
 class AMDGPUOperand : public MCParsedAsmOperand {
   enum KindTy { Token, Immediate, Register, Expression } Kind;
 
   SMLoc StartLoc, EndLoc;
   const AMDGPUAsmParser *AsmParser;
 
-  mutable OperandMatchError MatchError = OperandMatchError::None;
-
 public:
-  OperandMatchError getMatchError() const { return MatchError; }
-
   AMDGPUOperand(KindTy Kind_, const AMDGPUAsmParser *AsmParser_)
       : Kind(Kind_), AsmParser(AsmParser_) {}
 
@@ -436,13 +425,8 @@ public:
 
   bool isRegClass(unsigned RCID) const;
 
-  // Check the register against the HwMode-resolved operand class; on failure
-  // also record the alignment diagnostic via diagnoseRegAlign.
+  // Check the register against the HwMode-resolved operand class.
   bool isRegClassByHwMode(unsigned RCByHwModeIdx) const;
-
-  // Record an alignment diagnostic if the register failed operand class RCID
-  // only for being odd-aligned; always returns false.
-  bool diagnoseRegAlign(int16_t RCID) const;
 
   bool isInlineValue() const;
 
@@ -2295,17 +2279,7 @@ bool AMDGPUOperand::isRegClassByHwMode(unsigned RCByHwModeIdx) const {
   if (!isRegKind())
     return false;
   int16_t RCID = AsmParser->getRegClassByHwMode(RCByHwModeIdx);
-  // On a class miss diagnoseRegAlign records a misalignment (a no-op on
-  // subtargets without aligned VGPRs); it always returns false.
-  return RCID >= 0 && (isRegClass(RCID) || diagnoseRegAlign(RCID));
-}
-
-bool AMDGPUOperand::diagnoseRegAlign(int16_t RCID) const {
-  const MCRegisterInfo *MRI = AsmParser->getMRI();
-  int UnalignedRCID = AMDGPU::getUnalignedEquivalentRC(RCID);
-  if (UnalignedRCID >= 0 && MRI->getRegClass(UnalignedRCID).contains(getReg()))
-    MatchError = OperandMatchError::VGPRAlignMismatch;
-  return false;
+  return RCID >= 0 && isRegClass(RCID);
 }
 
 bool AMDGPUOperand::isRegClass(unsigned RCID) const {
@@ -5944,32 +5918,25 @@ bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   MCInst Inst;
   Inst.setLoc(IDLoc);
   unsigned Result = Match_Success;
-  ErrorInfo = ~0ULL; // set by the loop; initialized so it can be read before.
 
-  // Rank a match status as (MatchResultOrder, MatchError):
-  // MnemonicFail < InvalidOperand < MissingFeature (Success lowest), ties
-  // broken by the failing operand's recorded OperandMatchError.
-  auto atLeastAsSpecific = [&](unsigned New, uint64_t NewIdx, unsigned Cur,
-                               uint64_t CurIdx) {
-    auto rank = [&](unsigned M, uint64_t I) {
-      int MROrder = M == Match_MnemonicFail     ? 1
-                    : M == Match_InvalidOperand ? 2
-                    : M == Match_MissingFeature ? 3
-                                                : 0; // Match_Success sentinel
-      OperandMatchError MatchError =
-          M == Match_InvalidOperand && I < Operands.size()
-              ? static_cast<const AMDGPUOperand &>(*Operands[I]).getMatchError()
-              : OperandMatchError::None;
-      return (MROrder << 16) | static_cast<int>(MatchError);
+  // Order match statuses from least to most specific and keep the most
+  // specific one:
+  //   Match_MnemonicFail < Match_InvalidOperand < Match_MissingFeature
+  auto atLeastAsSpecific = [](unsigned New, unsigned Cur) {
+    auto rank = [](unsigned M) {
+      return M == Match_MnemonicFail     ? 1
+             : M == Match_InvalidOperand ? 2
+             : M == Match_MissingFeature ? 3
+                                         : 0; // Match_Success sentinel
     };
-    return rank(New, NewIdx) >= rank(Cur, CurIdx);
+    return rank(New) >= rank(Cur);
   };
 
   for (auto Variant : getMatchedVariants()) {
     uint64_t EI;
     auto R =
         MatchInstructionImpl(Operands, Inst, EI, MatchingInlineAsm, Variant);
-    if (R == Match_Success || atLeastAsSpecific(R, EI, Result, ErrorInfo)) {
+    if (R == Match_Success || atLeastAsSpecific(R, Result)) {
       Result = R;
       ErrorInfo = EI;
     }
@@ -6015,17 +5982,6 @@ bool AMDGPUAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 
       if (isInvalidVOPDY(Operands, ErrorInfo))
         return Error(ErrorLoc, "invalid VOPDY instruction");
-
-      // A predicate may have recorded a more specific reason for rejecting the
-      // operand than the generic "invalid operand" below.
-      switch (ErrorOp.getMatchError()) {
-      case OperandMatchError::VGPRAlignMismatch:
-        return Error(
-            ErrorLoc,
-            "invalid register class: vgpr tuples must be 64 bit aligned");
-      case OperandMatchError::None:
-        break;
-      }
     }
     return Error(ErrorLoc, "invalid operand for instruction");
   }
