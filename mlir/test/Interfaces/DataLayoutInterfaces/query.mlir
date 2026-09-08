@@ -332,3 +332,21 @@ func.func @floats() {
     >} : () -> ()
   return
 }
+
+// CHECK-LABEL: @complex_floats
+func.func @complex_floats() {
+  "test.op_with_data_layout"() ({
+    // complex<f32>: f32 ABI alignment = 8 bytes (64 bits from entry)
+    // CHECK: alignment = 8
+    "test.data_layout_query"() : () -> complex<f32>
+    // complex<f128>: f128 ABI alignment = 8 bytes (64 bits from entry)
+    // Without fix this would return 16 (PowerOf2Ceil fallback)
+    // CHECK: alignment = 8
+    "test.data_layout_query"() : () -> complex<f128>
+    "test.maybe_terminator"() : () -> ()
+  }) { dlti.dl_spec = #dlti.dl_spec<
+      #dlti.dl_entry<f32,  dense<64>  : vector<1xi64>>,
+      #dlti.dl_entry<f128, dense<64>  : vector<1xi64>>
+    >} : () -> ()
+  return
+}
