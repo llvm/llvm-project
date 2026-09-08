@@ -1022,9 +1022,9 @@ def FeatureLimited64bitVectorMulBandwidth : SubtargetFeature<
     "Has limited 64bit vector multiply bandwidth compared to scalar multiply",
     [], InlineIgnore>;
 
-def FeaturePreferSVEVectors : SubtargetFeature <
-    "prefer-sve-vectors", "PreferSVEVectors", "true",
-    "Prefer Vectors to use SVE", [], InlineIgnore>;
+def FeatureNoSVELD1RDUP : SubtargetFeature <
+    "no-sve-ld1r-dup", "NoSVELD1RDUP", "true",
+    "Avoid using LD1RX instructions for DUP operations", [], InlineIgnore>;
 
 //===----------------------------------------------------------------------===//
 // Architectures.

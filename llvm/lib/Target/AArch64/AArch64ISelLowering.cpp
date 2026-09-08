@@ -30142,7 +30142,7 @@ static SDValue performDUPCombine(SDNode *N,
     //   v4i32 = SCALAR_TO_VECTOR (i32 (zextloadi8 addr)) ; Matches to ldr b0
     //   v4i32 = DUPLANE32 (v4i32), 0
     if (auto *LD = dyn_cast<LoadSDNode>(Op)) {
-      if (Subtarget->preferSVEVectors() &&
+      if (!Subtarget->noSVELD1RDUP() &&
           Subtarget->isSVEorStreamingSVEAvailable() && Op->hasOneUse() &&
           VT.getScalarType().isInteger() &&
           VT.getScalarType() != LD->getMemoryVT().getScalarType()) {
