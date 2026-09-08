@@ -205,6 +205,19 @@ void ExecutionEnvironment::Configure(int ac, const char *av[],
     }
   }
 
+  if (auto *x{std::getenv("FLANG_RT_COPYOUT_MODIFIED_ONLY")}) {
+    char *end;
+    auto n{std::strtol(x, &end, 10)};
+    if (n >= 0 && n <= 1 && *end == '\0') {
+      copyOutModifiedOnly = n != 0;
+    } else {
+      std::fprintf(stderr,
+          "Fortran runtime: FLANG_RT_COPYOUT_MODIFIED_ONLY=%s is invalid; "
+          "ignored\n",
+          x);
+    }
+  }
+
   if (auto *x{std::getenv("FLANG_RT_DEBUG")}) {
     internalDebugging = std::strtol(x, nullptr, 10);
   }

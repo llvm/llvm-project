@@ -10,6 +10,7 @@
 #include "flang-rt/runtime/assign-impl.h"
 #include "flang-rt/runtime/derived.h"
 #include "flang-rt/runtime/descriptor.h"
+#include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
@@ -838,8 +839,20 @@ void RTDEF(CopyOutAssign)(
   Terminator terminator{sourceFile, sourceLine};
   // Copyout from the temporary must not cause any finalizations
   // for LHS. The variable must be properly initialized already.
+  // Copy back only the elements that were modified through the temporary:
+  // the temporary was created as a bitwise copy of the variable (see
+  // CopyInAssign above), so an element the callee never assigned is still
+  // bit-identical to the original and must not be stored to. This keeps a
+  // compiler-generated copy-out from writing into read-only storage when the
+  // effective argument is not definable (e.g., a named constant) and the
+  // callee, conformingly, never modified it.
+  // FLANG_RT_COPYOUT_MODIFIED_ONLY=0 restores the unconditional copy-out.
   if (var) {
-    ShallowCopy(*var, temp);
+    if (executionEnvironment.copyOutModifiedOnly) {
+      ShallowCopyModifiedElements(*var, temp);
+    } else {
+      ShallowCopy(*var, temp);
+    }
   }
   temp.Deallocate();
 }

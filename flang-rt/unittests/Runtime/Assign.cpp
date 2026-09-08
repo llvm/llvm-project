@@ -10,7 +10,14 @@
 #include "CrashHandlerFixture.h"
 #include "tools.h"
 #include "gtest/gtest.h"
+#include "flang-rt/runtime/environment.h"
+#include <cstdint>
+#include <cstring>
 #include <vector>
+#if defined(__unix__) || defined(__APPLE__)
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
 
 using namespace Fortran::runtime;
 using Fortran::common::TypeCategory;
@@ -446,3 +453,118 @@ TEST(AssignSimpleCrash, NonAllocatableElementCountMismatch) {
   ASSERT_DEATH(RTNAME(AssignSimple)(dest, source, __FILE__, __LINE__),
       "AssignSimple: mismatching element counts");
 }
+
+TEST(Assign, RTNAME(CopyOutAssign)) {
+  // Copy-out writes back the elements the callee modified through the
+  // temporary and performs no stores for the elements it never touched.
+  // Discontiguous var: stride-2 view (elements 1,3,5,7) of an 8-element
+  // backing array, as copy-in/copy-out creates for a non-contiguous actual.
+  int data[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+  TypeCode intType{TypeCategory::Integer, 4};
+  StaticDescriptor<1> staticVar;
+  Descriptor &var{staticVar.descriptor()};
+  SubscriptValue extent[1]{4};
+  var.Establish(intType, sizeof(int), data, 1, extent);
+  var.GetDimension(0).SetLowerBound(1);
+  var.GetDimension(0).SetByteStride(sizeof(int) * 2);
+
+  StaticDescriptor<1> staticTemp;
+  Descriptor &temp{staticTemp.descriptor()};
+  RTNAME(CopyInAssign)(temp, var, __FILE__, __LINE__);
+  ASSERT_TRUE(temp.IsAllocated());
+  ASSERT_TRUE(temp.IsContiguous());
+
+  // The "callee" modifies the first and third elements of the temporary.
+  *temp.OffsetElement<int>(0 * sizeof(int)) = 100;
+  *temp.OffsetElement<int>(2 * sizeof(int)) = 300;
+
+  RTNAME(CopyOutAssign)(&var, temp, __FILE__, __LINE__);
+
+  int expected[8] = {100, 2, 3, 4, 300, 6, 7, 8};
+  EXPECT_EQ(std::memcmp(data, expected, 8 * sizeof(int)), 0);
+}
+
+#if defined(__unix__) || defined(__APPLE__)
+TEST(Assign, RTNAME(CopyOutAssignReadOnlyUnmodified)) {
+  // An unmodified copy-out must perform no stores at all: the original may
+  // live in read-only memory (e.g. a named constant's storage). The array
+  // includes a NaN element to verify that the comparison is bitwise — a
+  // value comparison would consider the unmodified NaN element "changed"
+  // and store to it, faulting on the read-only page.
+  std::size_t pageSize{static_cast<std::size_t>(sysconf(_SC_PAGESIZE))};
+  void *page{mmap(nullptr, pageSize, PROT_READ | PROT_WRITE,
+      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)};
+  ASSERT_NE(page, MAP_FAILED);
+  double *data{static_cast<double *>(page)};
+  for (int j{0}; j < 8; ++j) {
+    data[j] = j + 1;
+  }
+  std::uint64_t quietNaN{0x7FF8000000000000ULL};
+  std::memcpy(&data[2], &quietNaN, sizeof(double));
+  ASSERT_EQ(mprotect(page, pageSize, PROT_READ), 0);
+
+  // Discontiguous read-only var: stride-2 view (elements 1,NaN,5,7).
+  StaticDescriptor<1> staticVar;
+  Descriptor &var{staticVar.descriptor()};
+  SubscriptValue extent[1]{4};
+  var.Establish(
+      TypeCode{TypeCategory::Real, 8}, sizeof(double), data, 1, extent);
+  var.GetDimension(0).SetLowerBound(1);
+  var.GetDimension(0).SetByteStride(sizeof(double) * 2);
+
+  StaticDescriptor<1> staticTemp;
+  Descriptor &temp{staticTemp.descriptor()};
+  RTNAME(CopyInAssign)(temp, var, __FILE__, __LINE__);
+  ASSERT_TRUE(temp.IsAllocated());
+
+  // The "callee" only reads the temporary; copying out into the read-only
+  // original must not fault.
+  RTNAME(CopyOutAssign)(&var, temp, __FILE__, __LINE__);
+
+  std::uint64_t elem2Bits;
+  std::memcpy(&elem2Bits, &data[2], sizeof(double));
+  EXPECT_EQ(elem2Bits, quietNaN);
+  EXPECT_EQ(data[0], 1.0);
+  EXPECT_EQ(data[4], 5.0);
+  ASSERT_EQ(munmap(page, pageSize), 0);
+}
+#endif
+
+#if defined(__unix__) || defined(__APPLE__)
+TEST(Assign, RTNAME(CopyOutAssignUnconditionalEnvVar)) {
+  // With FLANG_RT_COPYOUT_MODIFIED_ONLY=0 semantics (unconditional copy-out),
+  // even an unmodified copy-out stores every element, so a read-only original
+  // faults. This proves the environment control selects the legacy path.
+  std::size_t pageSize{static_cast<std::size_t>(sysconf(_SC_PAGESIZE))};
+  void *page{mmap(nullptr, pageSize, PROT_READ | PROT_WRITE,
+      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)};
+  ASSERT_NE(page, MAP_FAILED);
+  double *data{static_cast<double *>(page)};
+  for (int j{0}; j < 8; ++j) {
+    data[j] = j + 1;
+  }
+  ASSERT_EQ(mprotect(page, pageSize, PROT_READ), 0);
+
+  StaticDescriptor<1> staticVar;
+  Descriptor &var{staticVar.descriptor()};
+  SubscriptValue extent[1]{4};
+  var.Establish(
+      TypeCode{TypeCategory::Real, 8}, sizeof(double), data, 1, extent);
+  var.GetDimension(0).SetLowerBound(1);
+  var.GetDimension(0).SetByteStride(sizeof(double) * 2);
+
+  StaticDescriptor<1> staticTemp;
+  Descriptor &temp{staticTemp.descriptor()};
+  RTNAME(CopyInAssign)(temp, var, __FILE__, __LINE__);
+  ASSERT_TRUE(temp.IsAllocated());
+
+  executionEnvironment.copyOutModifiedOnly = false;
+  EXPECT_DEATH(RTNAME(CopyOutAssign)(&var, temp, __FILE__, __LINE__), "");
+  executionEnvironment.copyOutModifiedOnly = true;
+
+  // The parent's temp is still allocated (the death happened in the child);
+  // clean it up through the default path.
+  RTNAME(CopyOutAssign)(&var, temp, __FILE__, __LINE__);
+  ASSERT_EQ(munmap(page, pageSize), 0);
+}
+#endif

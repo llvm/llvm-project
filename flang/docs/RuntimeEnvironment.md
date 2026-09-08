@@ -34,6 +34,17 @@ Determines data conversions applied to unformatted I/O.
 * `BIG_ENDIAN`: assume input is big-endian; emit big-endian output
 * `SWAP`: reverse endianness (always convert)
 
+## `FLANG_RT_COPYOUT_MODIFIED_ONLY`
+
+When the compiler passes a copy of an actual argument to a procedure
+(copy-in/copy-out), the runtime copies back only the elements whose bit
+patterns were changed through the temporary copy. This avoids stores to
+the original argument when the callee never modified the data -- in
+particular, stores into read-only storage backing a non-definable actual
+argument.
+Set `FLANG_RT_COPYOUT_MODIFIED_ONLY=0` to restore the unconditional
+copy-out of every element.
+
 ## `FORT_CHECK_POINTER_DEALLOCATION`
 
 Fortran requires that a pointer that appears in a `DEALLOCATE` statement

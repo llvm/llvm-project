@@ -525,6 +525,17 @@ RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from,
     bool toIsContiguous, bool fromIsContiguous);
 RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from);
 
+// Copies payload data like ShallowCopy(), but stores only to the elements of
+// 'to' whose bit patterns differ from the corresponding elements of 'from'.
+// Used by copy-out to avoid stores when the callee never modified the data,
+// so that an original that lives in read-only memory (e.g. a named constant)
+// is not written to by an unmodifying copy-out. The comparison is bitwise, so
+// it is exact when 'from' was originally produced from 'to' by ShallowCopy()
+// (as CopyInAssign() does): unmodified elements compare equal even for NaNs
+// and padding bytes, which a value comparison would misjudge.
+RT_API_ATTRS void ShallowCopyModifiedElements(
+    const Descriptor &to, const Descriptor &from);
+
 // Ensures that a character string is null-terminated, allocating a /p length +1
 // size memory for null-terminator if necessary. Returns the original or a newly
 // allocated null-terminated string (responsibility for deallocation is on the
