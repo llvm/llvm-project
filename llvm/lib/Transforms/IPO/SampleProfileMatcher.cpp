@@ -677,6 +677,17 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
         continue;
       NumCallGraphRecoveredProfiledFunc++;
     }
+    // Collect recovered samples from CFG match. Recovered samples might be
+    // mis-counted if function name is matches but CFG checksum mismatched.
+    for (const auto &F : M) {
+      if (GlobalValue::isAvailableExternallyLinkage(F.getLinkage()))
+        continue;
+      const auto *FS = Reader.getSamplesFor(F);
+      if (FS && checksumMismatch(F, *FS)) {
+        NumCallGraphRecoveredProfiledFunc++;
+        CallGraphRecoveredProfiles.insert(FS->getFunction());
+      }
+    }
   }
 
   // Count profile mismatches for profile staleness report.
@@ -695,14 +706,6 @@ void SampleProfileMatcher::computeAndReportProfileStaleness() {
 
     if (SalvageUnusedProfile && !CallGraphRecoveredProfiles.empty())
       countCallGraphRecoveredSamples(*FS, CallGraphRecoveredProfiles);
-    else {
-      auto I = FuncMappings.find(FS->getFuncName());
-      if (I != FuncMappings.end() && checksumMismatch(F, *FS)) {
-        NumCallGraphRecoveredProfiledFunc++;
-        CallGraphRecoveredProfiles.insert(FS->getFunction());
-        countCallGraphRecoveredSamples(*FS, CallGraphRecoveredProfiles);
-      }
-    }
 
     // Checksum mismatch is only used in pseudo-probe mode.
     if (FunctionSamples::ProfileIsProbeBased)
