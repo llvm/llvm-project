@@ -1049,7 +1049,7 @@ struct ReorderElementwiseOpsOnBroadcast final
     // Select the source shape for the reordered computation. Prefer the first
     // non-constant vector source so that scalar sources can be broadcast to its
     // shape. The compatibility check below ensures that all vector sources have
-    // the same shape and scalable dimensions. 
+    // the same shape and scalable dimensions.
     Value broadcastSource;
     Value firstBroadcastSource;
     for (Value operand : op->getOperands()) {

@@ -74,10 +74,10 @@ static LogicalResult bufferizeDestinationStyleOpInterface(
   // new op. Since the new op does not have any tensor results, it does not
   // return anything.
   assert(op->getNumRegions() == 1 && "expected that op has 1 region");
-  OperationState opState(op->getLoc(), op->getName(), newOperands, TypeRange{},
-                         op->getAttrs());
-  opState.addRegion();
-  Operation *newOp = Operation::create(opState);
+  Operation *newOp = Operation::create(
+      op->getLoc(), op->getName(), TypeRange{}, newOperands,
+      op->getDiscardableAttrDictionary(), op->getPropertiesStorage(),
+      /*successors=*/{}, /*numRegions=*/1);
   newOp->getRegion(0).getBlocks().splice(newOp->getRegion(0).begin(),
                                          op->getRegion(0).getBlocks());
 
@@ -226,7 +226,8 @@ struct PackOpInterface
     llvm::append_range(operands, packOp.getInnerTiles());
 
     linalg::PackOp::create(rewriter, packOp.getLoc(), TypeRange{}, operands,
-                           op->getAttrs());
+                           packOp.getProperties(),
+                           packOp->getDiscardableAttrDictionary().getValue());
     replaceOpWithBufferizedValues(rewriter, op, *destBuffer);
     return success();
   }
@@ -263,8 +264,10 @@ struct UnPackOpInterface
     operands.push_back(*destBuffer);
     llvm::append_range(operands, unPackOp.getInnerTiles());
 
-    linalg::UnPackOp::create(rewriter, unPackOp.getLoc(), TypeRange{}, operands,
-                             op->getAttrs());
+    linalg::UnPackOp::create(
+        rewriter, unPackOp.getLoc(), TypeRange{}, operands,
+        unPackOp.getProperties(),
+        unPackOp->getDiscardableAttrDictionary().getValue());
     replaceOpWithBufferizedValues(rewriter, op, *destBuffer);
     return success();
   }

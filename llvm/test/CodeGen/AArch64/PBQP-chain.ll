@@ -1,5 +1,5 @@
-; RUN: llc < %s -mcpu=cortex-a57 -mattr=+neon -fp-contract=fast -regalloc=pbqp -pbqp-coalescing | FileCheck %s --check-prefix CHECK --check-prefix CHECK-EVEN
-; RUN: llc < %s -mcpu=cortex-a57 -mattr=+neon -fp-contract=fast -regalloc=pbqp -pbqp-coalescing | FileCheck %s --check-prefix CHECK --check-prefix CHECK-ODD
+; RUN: llc < %s -mcpu=cortex-a57 -mattr=+neon -regalloc=pbqp -pbqp-coalescing | FileCheck %s --check-prefix CHECK --check-prefix CHECK-EVEN
+; RUN: llc < %s -mcpu=cortex-a57 -mattr=+neon -regalloc=pbqp -pbqp-coalescing | FileCheck %s --check-prefix CHECK --check-prefix CHECK-ODD
 ;
 ; Test PBQP is able to fulfill the accumulator chaining constraint.
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"

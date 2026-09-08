@@ -1647,20 +1647,31 @@ void clang::InitializePreprocessor(Preprocessor &PP,
   // Exit the command line and go back to <built-in> (2 is LC_LEAVE).
   Builder.append("# 1 \"<built-in>\" 2");
 
-  // If -imacros are specified, include them now.  These are processed before
-  // any -include directives.
-  for (unsigned i = 0, e = InitOpts.MacroIncludes.size(); i != e; ++i)
-    AddImplicitIncludeMacros(Builder, InitOpts.MacroIncludes[i]);
+  auto AddImplicitInputs = [&](MacroBuilder &ImplicitBuilder) {
+    // If -imacros are specified, include them now.  These are processed before
+    // any -include directives.
+    for (unsigned i = 0, e = InitOpts.MacroIncludes.size(); i != e; ++i)
+      AddImplicitIncludeMacros(ImplicitBuilder, InitOpts.MacroIncludes[i]);
 
-  // Process -include-pch/-include-pth directives.
-  if (!InitOpts.ImplicitPCHInclude.empty())
-    AddImplicitIncludePCH(Builder, PP, PCHContainerRdr,
-                          InitOpts.ImplicitPCHInclude);
+    // Process -include-pch/-include-pth directives.
+    if (!InitOpts.ImplicitPCHInclude.empty())
+      AddImplicitIncludePCH(ImplicitBuilder, PP, PCHContainerRdr,
+                            InitOpts.ImplicitPCHInclude);
 
-  // Process -include directives.
-  for (unsigned i = 0, e = InitOpts.Includes.size(); i != e; ++i) {
-    const std::string &Path = InitOpts.Includes[i];
-    AddImplicitInclude(Builder, Path);
+    // Process -include directives.
+    for (unsigned i = 0, e = InitOpts.Includes.size(); i != e; ++i)
+      AddImplicitInclude(ImplicitBuilder, InitOpts.Includes[i]);
+  };
+
+  if (LangOpts.CPlusPlusModules) {
+    std::string ImplicitInputs;
+    llvm::raw_string_ostream ImplicitInputsStream(ImplicitInputs);
+    MacroBuilder ImplicitBuilder(ImplicitInputsStream);
+    AddImplicitInputs(ImplicitBuilder);
+    if (!ImplicitInputs.empty())
+      PP.setDeferredGMFInputs(std::move(ImplicitInputs));
+  } else {
+    AddImplicitInputs(Builder);
   }
 
   // Instruct the preprocessor to skip the preamble.

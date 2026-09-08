@@ -127,8 +127,9 @@ void ExecuteOp::print(OpAsmPrinter &p) {
 
   // -> (!async.value<!return.type>, ...)
   p.printOptionalArrowTypeList(llvm::drop_begin(getResultTypes()));
-  p.printOptionalAttrDictWithKeyword((*this)->getAttrs(),
-                                     {kOperandSegmentSizesAttr});
+  p.printOptionalAttrDictWithKeyword(
+      (*this)->getDiscardableAttrDictionary().getValue(),
+      {kOperandSegmentSizesAttr});
   p << ' ';
   p.printRegion(getBodyRegion(), /*printEntryBlockArgs=*/false);
 }
@@ -301,8 +302,7 @@ LogicalResult AwaitOp::verify() {
 void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
                    FunctionType type, ArrayRef<NamedAttribute> attrs,
                    ArrayRef<DictionaryAttr> argAttrs) {
-  state.addAttribute(SymbolTable::getSymbolAttrName(),
-                     builder.getStringAttr(name));
+  state.getOrAddProperties<Properties>().sym_name = builder.getStringAttr(name);
   state.addAttribute(getFunctionTypeAttrName(state.name), TypeAttr::get(type));
 
   state.attributes.append(attrs.begin(), attrs.end());
@@ -367,7 +367,7 @@ LogicalResult FuncOp::verify() {
 
 LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   // Check that the callee attribute was specified.
-  auto fnAttr = (*this)->getAttrOfType<FlatSymbolRefAttr>("callee");
+  auto fnAttr = getCalleeAttr();
   if (!fnAttr)
     return emitOpError("requires a 'callee' symbol reference attribute");
   FuncOp fn = symbolTable.lookupNearestSymbolFrom<FuncOp>(*this, fnAttr);
