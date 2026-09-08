@@ -30142,10 +30142,11 @@ static SDValue performDUPCombine(SDNode *N,
     //   v4i32 = SCALAR_TO_VECTOR (i32 (zextloadi8 addr)) ; Matches to ldr b0
     //   v4i32 = DUPLANE32 (v4i32), 0
     if (auto *LD = dyn_cast<LoadSDNode>(Op)) {
-      if (!Subtarget->noSVELD1RDUP() &&
+      if (!Subtarget->noPredicatedLD1R() &&
           Subtarget->isSVEorStreamingSVEAvailable() && Op->hasOneUse() &&
           VT.getScalarType().isInteger() &&
-          VT.getScalarType() != LD->getMemoryVT().getScalarType()) {
+          VT.getScalarType() != LD->getMemoryVT().getScalarType() &&
+          !Subtarget->useSVEForFixedLengthVectors(VT)) {
         EVT ScalableVT = getContainerForFixedLengthVector(DCI.DAG, VT);
         SDValue SplatNode =
             DCI.DAG.getNode(ISD::SPLAT_VECTOR, DL, ScalableVT, Op);
