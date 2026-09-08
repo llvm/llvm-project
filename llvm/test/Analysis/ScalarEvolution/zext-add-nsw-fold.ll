@@ -107,7 +107,7 @@ define i64 @mul_umax_fold_round_up(i8 %x) {
 ; CHECK-NEXT:    %add = add nsw i32 -10, %mul
 ; CHECK-NEXT:    --> (-10 + (4 * (3 umax (zext i8 %x to i32)))<nuw><nsw>)<nsw> U: [2,1011) S: [2,1011)
 ; CHECK-NEXT:    %ext = zext i32 %add to i64
-; CHECK-NEXT:    --> (2 + (zext i32 (-12 + (4 * (3 umax (zext i8 %x to i32)))<nuw><nsw>)<nsw> to i64))<nuw><nsw> U: [2,1011) S: [2,1011)
+; CHECK-NEXT:    --> (-10 + (4 * (3 umax (zext i8 %x to i64)))<nuw><nsw>)<nsw> U: [2,1011) S: [2,1011)
 ; CHECK-NEXT:  Determining loop execution counts for: @mul_umax_fold_round_up
 ;
   %zx = zext i8 %x to i32
@@ -333,7 +333,7 @@ define i64 @mul_umax_fold_negative_a_non_cancelling(i8 %x) {
 ; CHECK-NEXT:    %add = add nsw i32 -5, %mul
 ; CHECK-NEXT:    --> (-5 + (4 * (3 umax (zext i8 %x to i32)))<nuw><nsw>)<nsw> U: [7,1016) S: [7,1016)
 ; CHECK-NEXT:    %ext = zext i32 %add to i64
-; CHECK-NEXT:    --> (3 + (zext i32 (-8 + (4 * (3 umax (zext i8 %x to i32)))<nuw><nsw>)<nsw> to i64))<nuw><nsw> U: [7,1016) S: [7,1016)
+; CHECK-NEXT:    --> (-5 + (4 * (3 umax (zext i8 %x to i64)))<nuw><nsw>)<nsw> U: [7,1016) S: [7,1016)
 ; CHECK-NEXT:  Determining loop execution counts for: @mul_umax_fold_negative_a_non_cancelling
 ;
   %zx = zext i8 %x to i32
@@ -361,9 +361,9 @@ define i128 @cascading_zext_fold(i8 %x) {
 ; CHECK-NEXT:    %add32 = add nsw i32 -10, %mul
 ; CHECK-NEXT:    --> (-10 + (4 * (3 umax (zext i8 %x to i32)))<nuw><nsw>)<nsw> U: [2,1011) S: [2,1011)
 ; CHECK-NEXT:    %ext64 = zext i32 %add32 to i64
-; CHECK-NEXT:    --> (2 + (zext i32 (-12 + (4 * (3 umax (zext i8 %x to i32)))<nuw><nsw>)<nsw> to i64))<nuw><nsw> U: [2,1011) S: [2,1011)
+; CHECK-NEXT:    --> (-10 + (4 * (3 umax (zext i8 %x to i64)))<nuw><nsw>)<nsw> U: [2,1011) S: [2,1011)
 ; CHECK-NEXT:    %ext128 = zext i64 %ext64 to i128
-; CHECK-NEXT:    --> (2 + (zext i32 (-12 + (4 * (3 umax (zext i8 %x to i32)))<nuw><nsw>)<nsw> to i128))<nuw><nsw> U: [2,1011) S: [2,1011)
+; CHECK-NEXT:    --> (-10 + (4 * (3 umax (zext i8 %x to i128)))<nuw><nsw>)<nsw> U: [2,1011) S: [2,1011)
 ; CHECK-NEXT:  Determining loop execution counts for: @cascading_zext_fold
 ;
   %zx = zext i8 %x to i32
