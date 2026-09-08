@@ -736,6 +736,11 @@ struct MakeRegionBranchOpSuccessorInputsDead : public RewritePattern {
       // Nothing to do for successor inputs that are already dead.
       if (value.use_empty())
         continue;
+      // Do not fold SSI-typed successor inputs across control-flow paths.
+      // Each block argument of SSI type is a distinct information point even
+      // when all predecessors forward the same dominating value.
+      if (value.getType().hasTrait<TypeTrait::SSIType>())
+        continue;
       // Nothing to do for successor inputs that may have multiple reachable
       // values.
       llvm::SmallDenseSet<Value> reachableValues;
@@ -1046,6 +1051,11 @@ struct RemoveDuplicateSuccessorInputUses : public RewritePattern {
     // Total complexity: O(n * k * max(log k, log n)). For each input, sorting
     // the signature costs O(k log k) and the std::map lookup costs O(k log n).
     for (Value input : inputs) {
+      // Do not deduplicate SSI-typed successor inputs. Each represents a
+      // distinct control-flow information point even when all predecessors
+      // forward identical values.
+      if (input.getType().hasTrait<TypeTrait::SSIType>())
+        continue;
       // Gather the predecessor value for each predecessor (region branch
       // point) and sort them to form this input's signature.
       Signature sig;

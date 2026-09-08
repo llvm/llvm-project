@@ -252,6 +252,16 @@ template <typename ConcreteType, template <typename> class TraitType>
 using TraitBase = detail::StorageUserTraitBase<ConcreteType, TraitType>;
 } // namespace TypeTrait
 
+namespace TypeTrait {
+/// Types with this trait opt out of redundant block argument simplification
+/// during region simplification. Block arguments of these types are not
+/// eliminated when all predecessors pass the same value. Use this to preserve
+/// SSI (Static Single Information) form where block arguments carry semantic
+/// meaning beyond their SSA def-use structure.
+template <typename ConcreteType>
+struct SSIType : public TraitBase<ConcreteType, SSIType> {};
+} // namespace TypeTrait
+
 //===----------------------------------------------------------------------===//
 // TypeInterface
 //===----------------------------------------------------------------------===//
