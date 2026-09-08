@@ -1943,16 +1943,16 @@ let isCodeGenOnly = 0 in
 def PseudoTAIL : Pseudo<(outs), (ins call_symbol:$dst), [],
                         "tail", "$dst">,
                  Sched<[WriteIALU, WriteJalr, ReadJalr]>;
-// PseudoTAILX7 is CodeGenOnly; used when cf-protection-branch is active.
-def PseudoTAILX7 : Pseudo<(outs), (ins call_symbol:$dst), [],
-                           "tail", "$dst, t2">,
-                   Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 // PseudoTAILReg is the asm form of "tail address, register" where the
 // register specifies the temp for AUIPC+JALR expansion.
 let isCodeGenOnly = 0, hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def PseudoTAILReg : Pseudo<(outs), (ins tail_call_symbol:$dst, GPR:$rs), [],
                             "tail", "$dst, $rs">,
                     Sched<[WriteIALU, WriteJalr, ReadJalr]>;
+// PseudoTAILX7 is CodeGenOnly; used when cf-protection-branch is active.
+// Lowered to PseudoTAILReg with X7 in RISCVAsmPrinter.
+def PseudoTAILX7 : Pseudo<(outs), (ins call_symbol:$dst), []>,
+                   Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 }
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [X2] in {
