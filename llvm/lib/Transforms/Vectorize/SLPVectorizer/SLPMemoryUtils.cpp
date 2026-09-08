@@ -42,6 +42,7 @@ bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
            getSameOpcode({GEP1->getOperand(1), GEP2->getOperand(1)}, TLI)));
 }
 
+/// Calculates minimal alignment as a common alignment.
 template <typename T> Align computeCommonAlignment(ArrayRef<Value *> VL) {
   Align CommonAlignment = cast<T>(VL.consume_front())->getAlign();
   for (Value *V : VL)
