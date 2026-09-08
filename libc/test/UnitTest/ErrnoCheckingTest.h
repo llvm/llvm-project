@@ -43,6 +43,10 @@ namespace testing {
 // contained the value pre-set by the system), and confirms it's still zero
 // at the end of the test, forcing the test author to explicitly account for all
 // non-zero values.
+//
+// Uses the Non-Virtual Interface (NVI) pattern: TearDown() is final so that
+// derived fixtures cannot accidentally bypass post-test verification. Derived
+// fixtures may override OnTearDown() for custom cleanup.
 class ErrnoCheckingTest : public Test {
 public:
   void SetUp() override {
@@ -50,10 +54,14 @@ public:
     libc_errno = 0;
   }
 
-  void TearDown() override {
+  void TearDown() override final {
+    OnTearDown();
     ASSERT_ERRNO_SUCCESS();
     Test::TearDown();
   }
+
+protected:
+  virtual void OnTearDown() {}
 };
 
 } // namespace testing
