@@ -15,6 +15,14 @@
 // MSVC-DEFAULT:   TimeDateStamp:
 // MSVC-DEFAULT-NOT: 1970-01-01 00:00:00 (0x0)
 
+// RUN: %clang_cc1 -triple x86_64-unknown-uefi -mno-incremental-linker-compatible -emit-obj %s -o - | llvm-readobj -h - | FileCheck %s --check-prefix=UEFI-NOINC
+// UEFI-NOINC: TimeDateStamp: 1970-01-01 00:00:00 (0x0)
+
+// RUN: %clang_cc1 -triple x86_64-unknown-uefi -emit-obj %s -o - | llvm-readobj -h - | FileCheck %s --check-prefix=UEFI-DEFAULT
+// UEFI-DEFAULT: ImageFileHeader {
+// UEFI-DEFAULT:   TimeDateStamp:
+// UEFI-DEFAULT-NOT: 1970-01-01 00:00:00 (0x0)
+
 
 int main(void) {
   return 0;
