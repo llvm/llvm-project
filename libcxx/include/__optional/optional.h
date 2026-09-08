@@ -155,23 +155,27 @@ struct __optional_storage_base : __optional_destruct_base<_Tp> {
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return this->__engaged_; }
 
   // [optional.observe]
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator*() const& noexcept {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp const& value() const& {
+    if (!this->has_value())
+      std::__throw_bad_optional_access();
     return this->__val_;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() & noexcept {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& value() & {
+    if (!this->has_value())
+      std::__throw_bad_optional_access();
     return this->__val_;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& operator*() && noexcept {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& value() && {
+    if (!this->has_value())
+      std::__throw_bad_optional_access();
     return std::move(this->__val_);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& operator*() const&& noexcept {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp const&& value() const&& {
+    if (!this->has_value())
+      std::__throw_bad_optional_access();
     return std::move(this->__val_);
   }
 
@@ -511,6 +515,25 @@ public:
   }
 
   // [optional.observe]
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator*() const& noexcept {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
+    return this->__get();
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() & noexcept {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
+    return this->__get();
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& operator*() && noexcept {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
+    return std::move(this->__get());
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& operator*() const&& noexcept {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator* called on a disengaged value");
+    return std::move(this->__get());
+  }
   _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<_Tp const> operator->() const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator-> called on a disengaged value");
     return std::addressof(this->__val_);
@@ -519,30 +542,6 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr add_pointer_t<_Tp> operator->() noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(this->has_value(), "optional operator-> called on a disengaged value");
     return std::addressof(this->__val_);
-  }
-
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp const& value() const& {
-    if (!this->has_value())
-      std::__throw_bad_optional_access();
-    return this->__val_;
-  }
-
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp& value() & {
-    if (!this->has_value())
-      std::__throw_bad_optional_access();
-    return this->__val_;
-  }
-
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& value() && {
-    if (!this->has_value())
-      std::__throw_bad_optional_access();
-    return std::move(this->__val_);
-  }
-
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp const&& value() const&& {
-    if (!this->has_value())
-      std::__throw_bad_optional_access();
-    return std::move(this->__val_);
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return has_value(); }
