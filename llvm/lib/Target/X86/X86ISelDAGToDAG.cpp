@@ -6771,6 +6771,53 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     CurDAG->RemoveDeadNode(Node);
     return;
   }
+  case X86ISD::STC:
+  case X86ISD::CLC: {
+    // Herbception (throws): set/clear the carry flag for a constant return
+    // discriminant. Like READ_CF, these are chained + glued nodes so nothing
+    // can be scheduled between them and the glued RET.
+    unsigned Opc = Node->getOpcode() == X86ISD::STC ? X86::STC : X86::CLC;
+    SmallVector<SDValue, 2> Ops;
+    Ops.push_back(Node->getOperand(0));
+    if (Node->getNumOperands() > 1)
+      Ops.push_back(Node->getOperand(1));
+    MachineSDNode *MI = CurDAG->getMachineNode(
+        Opc, dl, ArrayRef<EVT>{MVT::Other, MVT::Glue}, Ops);
+    ReplaceUses(SDValue(Node, 0), SDValue(MI, 0));
+    ReplaceUses(SDValue(Node, 1), SDValue(MI, 1));
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
+  case X86ISD::READ_CF: {
+    // Herbception (throws): read the carry flag (CF) right after a call,
+    // before CALLSEQ_END clobbers EFLAGS. The node is a chained node (chain +
+    // glue in/out), glued directly to the call, so that the setb is scheduled
+    // right after the call. Selecting this manually avoids the generic ISel
+    // routing of EFLAGS through a CopyToReg chained to the entry node, which
+    // would create a WAW scheduling cycle with the call's EFLAGS write.
+    assert(Node->getValueType(0) == MVT::i8 && "READ_CF must produce i8");
+    SDLoc dl(Node);
+    SDValue EFLAGS = CurDAG->getCopyFromReg(
+        Node->getOperand(0), dl, X86::EFLAGS, MVT::i32,
+        Node->getNumOperands() > 1 ? Node->getOperand(1) : SDValue());
+    // HERB_SETCCr: pseudo-instruction that reads CF into an i8 value.
+    // Distinguished from regular SETCCr so the peephole can target it without
+    // affecting ordinary setb patterns. Lowered to SETCCr(COND_B) post-RA.
+    // The machine node reads the physical EFLAGS register (its use is carried
+    // by the glued EFLAGS value) and is given an explicit glue result so the
+    // chain can continue past it (CALLSEQ_END and everything after must be
+    // scheduled after the setb reads EFLAGS).
+    MachineSDNode *MI = CurDAG->getMachineNode(
+        X86::HERB_SETCCr, dl, ArrayRef<EVT>{MVT::i8, MVT::Glue},
+        {EFLAGS.getValue(2)});
+    // Result 0: the value. Result 1: the chain continues from the EFLAGS
+    // copy. Result 2: the new glue produced by the setb.
+    ReplaceUses(SDValue(Node, 0), SDValue(MI, 0));
+    ReplaceUses(SDValue(Node, 1), EFLAGS.getValue(1));
+    ReplaceUses(SDValue(Node, 2), SDValue(MI, 1));
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
   case X86ISD::SBB: {
     if (isNullConstant(Node->getOperand(0)) &&
         isNullConstant(Node->getOperand(1))) {

@@ -122,6 +122,7 @@ namespace {
     void PrintRawDeclStmt(const DeclStmt *S);
     void PrintRawIfStmt(IfStmt *If);
     void PrintRawCXXCatchStmt(CXXCatchStmt *Catch);
+    void PrintRawCXXCatchThrowsStmt(const CXXCatchThrowsStmt *Catch);
     void PrintCallArgs(CallExpr *E);
     void PrintRawSEHExceptHandler(SEHExceptStmt *S);
     void PrintRawSEHFinallyStmt(SEHFinallyStmt *S);
@@ -708,18 +709,38 @@ void StmtPrinter::PrintRawCXXCatchStmt(CXXCatchStmt *Node) {
   PrintRawCompoundStmt(cast<CompoundStmt>(Node->getHandlerBlock()));
 }
 
+void StmtPrinter::PrintRawCXXCatchThrowsStmt(const CXXCatchThrowsStmt *Node) {
+  OS << "catch throws(";
+  if (Decl *ExDecl = Node->getExceptionDecl())
+    PrintRawDecl(ExDecl);
+  else
+    OS << "...";
+  OS << ") ";
+  PrintRawCompoundStmt(cast<CompoundStmt>(Node->getHandlerBlock()));
+}
+
 void StmtPrinter::VisitCXXCatchStmt(CXXCatchStmt *Node) {
   Indent();
   PrintRawCXXCatchStmt(Node);
   OS << NL;
 }
 
+void StmtPrinter::VisitCXXCatchThrowsStmt(CXXCatchThrowsStmt *Node) {
+  Indent();
+  PrintRawCXXCatchThrowsStmt(Node);
+  OS << NL;
+}
+
+
 void StmtPrinter::VisitCXXTryStmt(CXXTryStmt *Node) {
   Indent() << "try ";
   PrintRawCompoundStmt(Node->getTryBlock());
   for (unsigned i = 0, e = Node->getNumHandlers(); i < e; ++i) {
     OS << " ";
-    PrintRawCXXCatchStmt(Node->getHandler(i));
+    if (const auto *CT = dyn_cast<CXXCatchThrowsStmt>(Node->getHandler(i)))
+      PrintRawCXXCatchThrowsStmt(CT);
+    else
+      PrintRawCXXCatchStmt(Node->getCatchHandler(i));
   }
   OS << NL;
 }
@@ -2365,6 +2386,27 @@ void StmtPrinter::VisitCXXThrowExpr(CXXThrowExpr *Node) {
   }
 }
 
+void StmtPrinter::VisitCXXErrorValueExpr(CXXErrorValueExpr *Node) {
+  OS << "throw throws ";
+  PrintExpr(Node->getOperand());
+}
+
+void StmtPrinter::VisitCXXCxaExceptionExpr(CXXCxaExceptionExpr *Node) {
+  OS << "__cxa_exception_ptr";
+}
+
+void StmtPrinter::VisitCXXTryExpr(CXXTryExpr *Node) {
+  OS << "try(";
+  PrintExpr(Node->getSubExpr());
+  OS << ")";
+}
+
+void StmtPrinter::VisitCXXCatchReturnFailureExpr(CXXCatchReturnFailureExpr *Node) {
+  OS << "catch fails(";
+  PrintExpr(Node->getSubExpr());
+  OS << ")";
+}
+
 void StmtPrinter::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *Node) {
   // Nothing to print: we picked up the default argument.
 }
@@ -2732,6 +2774,12 @@ void StmtPrinter::VisitExpressionTraitExpr(ExpressionTraitExpr *E) {
 
 void StmtPrinter::VisitCXXNoexceptExpr(CXXNoexceptExpr *E) {
   OS << "noexcept(";
+  PrintExpr(E->getOperand());
+  OS << ")";
+}
+
+void StmtPrinter::VisitCXXThrowsExpr(CXXThrowsExpr *E) {
+  OS << "throws(";
   PrintExpr(E->getOperand());
   OS << ")";
 }

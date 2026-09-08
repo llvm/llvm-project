@@ -930,8 +930,30 @@ public:
     return {};
   }
 
+  // Herbception: the thrown object pointer of a legacy C++ exception being
+  // converted to std::error. The pointer is provided by cir.begin_catch in
+  // the catch-all handler of the enclosing herbception try.
+  mlir::Value VisitCXXCxaExceptionExpr(const CXXCxaExceptionExpr *e) {
+    assert(cgf.curHerbceptionExnPtr &&
+           "CXXCxaExceptionExpr outside a legacy conversion handler");
+    return builder.createPtrToInt(cgf.curHerbceptionExnPtr,
+                                  cgf.convertType(e->getType()));
+  }
+
   mlir::Value VisitCXXNoexceptExpr(CXXNoexceptExpr *e) {
     return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
+  }
+
+  mlir::Value VisitCXXThrowsExpr(CXXThrowsExpr *e) {
+    return builder.getBool(e->getValue(), cgf.getLoc(e->getExprLoc()));
+  }
+
+  // Herbception `try(expr)`: evaluate the throws/fails call and auto-propagate
+  // its error on failure. Returns the success value.
+  mlir::Value VisitCXXTryExpr(const CXXTryExpr *E) {
+    RValue rv = cgf.emitHerbceptionTry(E);
+    assert(rv.isScalar() && "scalar CXXTryExpr expects scalar result");
+    return rv.getValue();
   }
 
   mlir::Value emitFixedPointConversion(mlir::Value src, QualType srcTy,

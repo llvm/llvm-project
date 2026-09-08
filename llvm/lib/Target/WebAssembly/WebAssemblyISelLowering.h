@@ -31,6 +31,10 @@ private:
   /// right decision when generating code for different targets.
   const WebAssemblySubtarget *Subtarget;
 
+  /// WebAssembly returns the throws (herbception) discriminant as an extra
+  /// multivalue return value.
+  bool supportThrowsCC() const override { return true; }
+
   AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *) const override;
   bool shouldScalarizeBinop(SDValue VecOp) const override;

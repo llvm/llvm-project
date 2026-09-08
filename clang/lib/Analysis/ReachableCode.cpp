@@ -644,7 +644,10 @@ static SourceLocation GetUnreachableLoc(const Stmt *S,
       return CE->getBeginLoc();
     }
     case Stmt::CXXTryStmtClass: {
-      return cast<CXXTryStmt>(S)->getHandler(0)->getCatchLoc();
+      if (const auto *CT =
+              dyn_cast<CXXCatchThrowsStmt>(cast<CXXTryStmt>(S)->getHandler(0)))
+        return CT->getCatchLoc();
+      return cast<CXXTryStmt>(S)->getCatchHandler(0)->getCatchLoc();
     }
     case Expr::ObjCBridgedCastExprClass: {
       const ObjCBridgedCastExpr *CSC = cast<ObjCBridgedCastExpr>(S);

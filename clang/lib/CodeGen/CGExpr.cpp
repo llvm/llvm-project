@@ -1804,6 +1804,10 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     return EmitCXXConstructLValue(cast<CXXConstructExpr>(E));
   case Expr::CXXBindTemporaryExprClass:
     return EmitCXXBindTemporaryLValue(cast<CXXBindTemporaryExpr>(E));
+  case Expr::CXXTryExprClass:
+    // herbceptions: a try-expression with a reference-typed success value
+    // is itself an lvalue. Forward to the sub-expression.
+    return EmitLValue(cast<CXXTryExpr>(E)->getSubExpr(), IsKnownNonNull);
   case Expr::CXXUuidofExprClass:
     return EmitCXXUuidofLValue(cast<CXXUuidofExpr>(E));
   case Expr::LambdaExprClass:

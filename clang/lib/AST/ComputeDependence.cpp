@@ -340,6 +340,24 @@ ExprDependence clang::computeDependence(CXXThrowExpr *E) {
   return Op->getDependence() & ~ExprDependence::TypeValue;
 }
 
+ExprDependence clang::computeDependence(CXXErrorValueExpr *E) {
+  return E->getOperand()->getDependence();
+}
+
+ExprDependence clang::computeDependence(CXXTryExpr *E) {
+  // Unlike CXXThrowExpr (whose result type is void), the try expression's
+  // result type is the success value type of the operand call, so it is
+  // type-dependent whenever the operand is.
+  return E->getSubExpr()->getDependence();
+}
+
+ExprDependence clang::computeDependence(CXXCatchReturnFailureExpr *E) {
+  // The catch fails expression's result type is either{T, E}, built from the
+  // operand's value and error types, so it is type-dependent whenever the
+  // operand is (keeping `auto` deduction deferred until instantiation).
+  return E->getSubExpr()->getDependence();
+}
+
 ExprDependence clang::computeDependence(CXXBindTemporaryExpr *E) {
   return E->getSubExpr()->getDependence();
 }
@@ -375,6 +393,11 @@ ExprDependence clang::computeDependence(CXXNoexceptExpr *E, CanThrowResult CT) {
   auto D = E->getOperand()->getDependence() & ~ExprDependence::TypeValue;
   if (CT == CT_Dependent)
     D |= ExprDependence::ValueInstantiation;
+  return D;
+}
+
+ExprDependence clang::computeDependence(CXXThrowsExpr *E) {
+  auto D = E->getOperand()->getDependence() & ~ExprDependence::TypeValue;
   return D;
 }
 

@@ -988,6 +988,7 @@ void Parser::ParseMicrosoftTypeAttributes(ParsedAttributes &attrs) {
     case tok::kw___regcall:
     case tok::kw___cdecl:
     case tok::kw___vectorcall:
+    case tok::kw___wincall:
     case tok::kw___ptr64:
     case tok::kw___w64:
     case tok::kw___ptr32:
@@ -1042,6 +1043,7 @@ SourceLocation Parser::SkipExtendedMicrosoftTypeAttributes() {
     case tok::kw___thiscall:
     case tok::kw___cdecl:
     case tok::kw___vectorcall:
+    case tok::kw___wincall:
     case tok::kw___ptr32:
     case tok::kw___ptr64:
     case tok::kw___w64:
@@ -4054,6 +4056,7 @@ void Parser::ParseDeclarationSpecifiers(
     case tok::kw___thiscall:
     case tok::kw___regcall:
     case tok::kw___vectorcall:
+    case tok::kw___wincall:
       ParseMicrosoftTypeAttributes(DS.getAttributes());
       continue;
 
@@ -5738,6 +5741,7 @@ bool Parser::isTypeSpecifierQualifier(const Token &Tok) {
   case tok::kw___thiscall:
   case tok::kw___regcall:
   case tok::kw___vectorcall:
+  case tok::kw___wincall:
   case tok::kw___w64:
   case tok::kw___ptr64:
   case tok::kw___ptr32:
@@ -6021,6 +6025,7 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw___thiscall:
   case tok::kw___regcall:
   case tok::kw___vectorcall:
+  case tok::kw___wincall:
   case tok::kw___w64:
   case tok::kw___sptr:
   case tok::kw___uptr:
@@ -6336,6 +6341,7 @@ void Parser::ParseTypeQualifierListOpt(
     case tok::kw___thiscall:
     case tok::kw___regcall:
     case tok::kw___vectorcall:
+    case tok::kw___wincall:
       if (AttrReqs & AR_DeclspecAttributesParsed) {
         ParseMicrosoftTypeAttributes(DS.getAttributes());
         continue;
@@ -7347,7 +7353,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
     LocalEndLoc = RParenLoc;
     EndLoc = RParenLoc;
 
-    if (getLangOpts().CPlusPlus) {
+    if (getLangOpts().CPlusPlus || getLangOpts().HerbExceptions) {
       // FIXME: Accept these components in any order, and produce fixits to
       // correct the order if the user gets it wrong. Ideally we should deal
       // with the pure-specifier in the same way.
@@ -7436,9 +7442,11 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
   // Collect non-parameter declarations from the prototype if this is a function
   // declaration. They will be moved into the scope of the function. Only do
   // this in C and not C++, where the decls will continue to live in the
-  // surrounding context.
+  // surrounding context. Herbception 'fails{...}' is an exception
+  // specification, which cannot coexist with declarations in the prototype.
   SmallVector<NamedDecl *, 0> DeclsInPrototype;
-  if (getCurScope()->isFunctionDeclarationScope() && !getLangOpts().CPlusPlus) {
+  if (getCurScope()->isFunctionDeclarationScope() && !getLangOpts().CPlusPlus &&
+      ESpecType == EST_None) {
     for (Decl *D : getCurScope()->decls()) {
       NamedDecl *ND = dyn_cast<NamedDecl>(D);
       if (!ND || isa<ParmVarDecl>(ND))

@@ -2027,6 +2027,17 @@ public:
 
   void emitCXXThrowExpr(const CXXThrowExpr *e);
 
+  /// Herbception (throws): wrap the plain return payload into the function's
+  /// shaped {T, i1} result record, with the discriminant set to false.
+  mlir::Value wrapHerbceptionReturnValue(mlir::Location loc,
+                                         mlir::Value payload) {
+    return wrapHerbceptionReturnValue(loc, payload, /*disc=*/false);
+  }
+  /// Herbception (throws): wrap the plain return payload into the function's
+  /// shaped {T, i1} result record, with the discriminant set to \p disc.
+  mlir::Value wrapHerbceptionReturnValue(mlir::Location loc,
+                                         mlir::Value payload, bool disc);
+
   struct cxxTryBodyEmitter {
     virtual mlir::LogicalResult operator()(CIRGenFunction &cgf) = 0;
     virtual ~cxxTryBodyEmitter() = default;
@@ -2037,6 +2048,41 @@ public:
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s,
                                      cxxTryBodyEmitter &bodyCallback);
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s);
+
+private:
+  /// An active `try { } catch throws(E e) { }` handler. While the try body is
+  /// being emitted, herbception failure paths (a `throw throws` or, once
+  /// supported in CIR, a failing throws-call) route to the handler's label,
+  /// passing the error value through its slot.
+  struct HerbceptionCatchScope {
+    /// Name of the cir.label that starts the handler body.
+    std::string handlerLabel;
+    /// The slot holding the error value read by the handler.
+    Address errorSlot;
+  };
+  /// The stack of active herbception catch-throws scopes.
+  llvm::SmallVector<HerbceptionCatchScope, 4> herbceptionCatchScopes;
+  /// Counter used to generate unique labels for herbception handlers.
+  unsigned herbceptionTryCounter = 0;
+  /// While emitting the operand of a `try(expr)` / `catch fails(expr)`
+  /// expression. While set, calls inside are already being handled by
+  /// emitHerbceptionTry/emitHerbceptionCatchReturnFailure and must not be routed to an
+  /// enclosing herbception catch scope.
+  bool inHerbceptionOperand = false;
+  /// While emitting a legacy C++ exception conversion inside a herbception
+  /// catch-all handler, the thrown object pointer from cir.begin_catch.
+  mlir::Value curHerbceptionExnPtr = nullptr;
+
+public:
+  mlir::LogicalResult emitHerbceptionCatchTry(const clang::CXXTryStmt &s);
+
+  /// Herbception: emit a `try(expr)` expression. Evaluates the throws/fails
+  /// call and auto-propagates its error on failure. Returns the success value.
+  RValue emitHerbceptionTry(const clang::CXXTryExpr *E);
+
+  /// Herbception: emit a `catch fails(expr)` expression. Evaluates the
+  /// throws/fails call and produces an `either{T, E}` value.
+  RValue emitHerbceptionCatchReturnFailure(const clang::CXXCatchReturnFailureExpr *E);
 
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,
                         clang::CXXCtorType ctorType, FunctionArgList &args);

@@ -4783,7 +4783,11 @@ CFGBlock *CFGBuilder::VisitCXXTryStmt(CXXTryStmt *Terminator) {
   for (unsigned I = 0, E = Terminator->getNumHandlers(); I != E; ++I) {
     // The code after the try is the implicit successor.
     Succ = TrySuccessor;
-    CXXCatchStmt *CS = Terminator->getHandler(I);
+    // Herbception catch throws/catch fails handlers don't use the traditional
+    // unwinder and are not analyzed as C++ catch blocks here.
+    if (isa<CXXCatchThrowsStmt>(Terminator->getHandler(I)))
+      continue;
+    CXXCatchStmt *CS = Terminator->getCatchHandler(I);
     if (CS->getExceptionDecl() == nullptr) {
       HasCatchAll = true;
     }

@@ -1,0 +1,45 @@
+%{
+enum class msvc_exception_kind {
+    none,
+    msvc_system_error,
+    msvc__System_error,
+    msvc_logic_error,
+    msvc_domain_error,
+    msvc_invalid_argument,
+    msvc_length_error,
+    msvc_out_of_range,
+    msvc_runtime_error,
+    msvc_range_error,
+    msvc_overflow_error,
+    msvc_underflow_error,
+    msvc_bad_alloc,
+};
+%}
+
+%struct-type
+%language=C++
+%readonly-tables
+%compare-strncmp
+%define hash-function-name msvc_exception_hash
+%define lookup-function-name msvc_exception_lookup
+
+struct msvc_exception_entry {
+    char const* name;
+    msvc_exception_kind value;
+};
+
+%%
+.?AV_System_error@std@@, msvc_exception_kind::msvc_system_error
+.?AVsystem_error@std@@, msvc_exception_kind::msvc_system_error
+.?AVlogic_error@std@@, msvc_exception_kind::msvc_logic_error
+.?AVdomain_error@std@@, msvc_exception_kind::msvc_domain_error
+.?AVinvalid_argument@std@@, msvc_exception_kind::msvc_invalid_argument
+.?AVlength_error@std@@, msvc_exception_kind::msvc_length_error
+.?AVout_of_range@std@@, msvc_exception_kind::msvc_out_of_range
+.?AVruntime_error@std@@, msvc_exception_kind::msvc_runtime_error
+.?AVrange_error@std@@, msvc_exception_kind::msvc_range_error
+.?AVoverflow_error@std@@, msvc_exception_kind::msvc_overflow_error
+.?AVunderflow_error@std@@, msvc_exception_kind::msvc_underflow_error
+.?AVbad_alloc@std@@, msvc_exception_kind::msvc_bad_alloc
+%%
+

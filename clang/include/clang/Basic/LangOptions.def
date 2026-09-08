@@ -99,6 +99,8 @@ LANGOPT(ZVector           , 1, 0, NotCompatible, "System z vector extensions")
 LANGOPT(Exceptions        , 1, 0, NotCompatible, "exception handling")
 LANGOPT(ObjCExceptions    , 1, 0, NotCompatible, "Objective-C exceptions")
 LANGOPT(CXXExceptions     , 1, 0, NotCompatible, "C++ exceptions")
+LANGOPT(HerbExceptions    , 1, 0, NotCompatible,
+        "herbception (zero-overhead deterministic exceptions)")
 LANGOPT(EHAsynch          , 1, 0, NotCompatible, "C/C++ EH Asynch exceptions")
 LANGOPT(IgnoreExceptions  , 1, 0, NotCompatible, "ignore exceptions")
 LANGOPT(ExternCNoUnwind   , 1, 0, NotCompatible, "Assume extern C functions don't unwind")

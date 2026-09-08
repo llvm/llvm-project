@@ -555,6 +555,13 @@ void ASTDeclReader::Visit(Decl *D) {
     // if we have a fully initialized TypeDecl, we can safely read its type now.
     ID->TypeForDecl = Reader.GetType(DeferredTypeID).getTypePtrOrNull();
   } else if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+    // Herbception legacy-conversion expression, written before the body
+    // block (see ASTWriterDecl): consume it eagerly, then let the body stay
+    // lazy behind its GlobalOffset.
+    Stmt *LegacyVS = Record.readStmt();
+    assert((!LegacyVS || isa<Expr>(LegacyVS)) &&
+           "legacy error value must be an expression");
+    FD->setHerbceptionLegacyErrorValue(cast_or_null<Expr>(LegacyVS));
     // FunctionDecl's body was written last after all other Stmts/Exprs.
     if (Record.readInt())
       ReadFunctionDefinition(FD);

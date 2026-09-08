@@ -909,6 +909,12 @@ void CallConvLoweringPass::runOnOperation() {
         (hasIncompleteRecordByValue(fnTy.getReturnType()) ||
          llvm::any_of(fnTy.getInputs(), hasIncompleteRecordByValue)))
       return;
+    // Herbception: a 'cir.throws' function returns the shaped {T, i1} record
+    // through the backend's out-of-band discriminant mechanism, so its wire
+    // form is exactly as written regardless of size; leave it and its direct
+    // call sites alone.
+    if (f->hasAttr("cir.throws"))
+      return;
     std::optional<FunctionClassification> fc;
     if (isX86)
       fc = classifyX86_64Function(f, dl, *x86TypeMapper,
@@ -946,6 +952,9 @@ void CallConvLoweringPass::runOnOperation() {
       return;
     cir::FuncOp callee = lookupCallee(op, symbolTable);
     if (!callee)
+      return;
+    // Herbception: calls to 'cir.throws' callees keep the written form.
+    if (callee->hasAttr("cir.throws"))
       return;
     callers[callee].push_back(op);
 

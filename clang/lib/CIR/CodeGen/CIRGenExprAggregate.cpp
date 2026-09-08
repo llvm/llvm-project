@@ -18,6 +18,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "llvm/IR/Value.h"
@@ -217,12 +218,37 @@ public:
   void VisitInitListExpr(InitListExpr *e);
   void VisitCXXConstructExpr(const CXXConstructExpr *e);
 
+  // Herbception: fabricate the {domain, code} std::error value by evaluating
+  // the two compiler-generated accessor calls into the destination fields.
+  void VisitCXXErrorValueExpr(const CXXErrorValueExpr *e) {
+    const auto *rd = cast<RecordDecl>(e->getType()->castAs<RecordType>()->getDecl());
+    mlir::Value values[2] = {cgf.emitScalarExpr(e->getDomainCall()),
+                             cgf.emitScalarExpr(e->getCodeCall())};
+    LValue destLV = cgf.makeAddrLValue(dest.getAddress(), e->getType());
+    unsigned idx = 0;
+    for (const FieldDecl *field : rd->fields()) {
+      if (idx >= 2)
+        break;
+      LValue fieldLV = cgf.emitLValueForFieldInitialization(
+          destLV, field, field->getName());
+      cgf.emitStoreOfScalar(values[idx++], fieldLV, /*isInit=*/true);
+    }
+  }
+
   void visitCXXParenListOrInitListExpr(Expr *e, ArrayRef<Expr *> args,
                                        FieldDecl *initializedFieldInUnion,
                                        Expr *arrayFiller);
   void VisitCXXDefaultInitExpr(CXXDefaultInitExpr *die) {
     CIRGenFunction::CXXDefaultInitExprScope Scope(cgf, die);
     Visit(die->getExpr());
+  }
+  void VisitCXXTryExpr(const CXXTryExpr *E) {
+    RValue rv = cgf.emitHerbceptionTry(E);
+    emitFinalDestCopy(E->getType(), rv);
+  }
+  void VisitCXXCatchReturnFailureExpr(const CXXCatchReturnFailureExpr *E) {
+    RValue rv = cgf.emitHerbceptionCatchReturnFailure(E);
+    emitFinalDestCopy(E->getType(), rv);
   }
   void VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *e) {
     // Ensure that we have a slot, but if we already do, remember

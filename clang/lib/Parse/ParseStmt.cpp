@@ -338,6 +338,10 @@ Retry:
     Res = ParseReturnStatement();
     SemiError = "return";
     break;
+  case tok::kw_return_failure:      // herbception: return_failure-statement
+    Res = ParseReturnFailureStatement();
+    SemiError = "return_failure";
+    break;
   case tok::kw_co_return:            // C++ Coroutines: co_return statement
     Res = ParseReturnStatement();
     SemiError = "co_return";
@@ -1566,7 +1570,18 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     EnterExpressionEvaluationContext PotentiallyDiscarded(
         Actions, Context, nullptr,
         Sema::ExpressionEvaluationContextRecord::EK_Other, ShouldEnter);
+
+    // Herbception: a throw in a discarded `if constexpr` branch never
+    // happens, and with a dependent condition liveness is only decided at
+    // instantiation - defer the throw-context diagnostics for this branch.
+    const bool HerbceptionMaybeDiscarded =
+        getLangOpts().HerbExceptions && IsConstexpr &&
+        (!ConstexprCondition || !*ConstexprCondition);
+    if (HerbceptionMaybeDiscarded)
+      ++Actions.HerbceptionIfConstexprDepth;
     ThenStmt = ParseStatement(&InnerStatementTrailingElseLoc);
+    if (HerbceptionMaybeDiscarded)
+      --Actions.HerbceptionIfConstexprDepth;
   }
 
   if (Tok.isNot(tok::kw_else))
@@ -1611,7 +1626,17 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     EnterExpressionEvaluationContext PotentiallyDiscarded(
         Actions, Context, nullptr,
         Sema::ExpressionEvaluationContextRecord::EK_Other, ShouldEnter);
+
+    // See the 'then' branch above: defer herbception throw-context
+    // diagnostics for a discarded (or liveness-unknown) `if constexpr` branch.
+    const bool HerbceptionMaybeDiscarded =
+        getLangOpts().HerbExceptions && IsConstexpr &&
+        (!ConstexprCondition || *ConstexprCondition);
+    if (HerbceptionMaybeDiscarded)
+      ++Actions.HerbceptionIfConstexprDepth;
     ElseStmt = ParseStatement();
+    if (HerbceptionMaybeDiscarded)
+      --Actions.HerbceptionIfConstexprDepth;
 
     if (ElseStmt.isUsable())
       MIChecker.Check();
@@ -2497,6 +2522,22 @@ StmtResult Parser::ParseReturnStatement() {
   return Actions.ActOnReturnStmt(ReturnLoc, R.get(), getCurScope());
 }
 
+StmtResult Parser::ParseReturnFailureStatement() {
+  assert(Tok.is(tok::kw_return_failure) && "Not a return_failure stmt!");
+  SourceLocation ReturnFailureLoc = ConsumeToken();
+
+  ExprResult R;
+  if (Tok.isNot(tok::semi)) {
+    R = ParseExpression();
+    if (R.isInvalid()) {
+      SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
+      return StmtError();
+    }
+  }
+  return Actions.ActOnHerbceptionReturnFailureStmt(ReturnFailureLoc, R.get(),
+                                                   getCurScope());
+}
+
 StmtResult Parser::ParseDeferStatement(SourceLocation *TrailingElseLoc) {
   assert(Tok.is(tok::kw__Defer));
   SourceLocation DeferLoc = ConsumeToken();
@@ -2671,10 +2712,14 @@ StmtResult Parser::ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry) {
   if (Tok.isNot(tok::l_brace))
     return StmtError(Diag(Tok, diag::err_expected) << tok::l_brace);
 
+  // Herbception: track try-body nesting so that a throw inside a try nested
+  // within a herbception handler can be routed to the nested handlers.
+  ++Actions.HerbceptionTryBodyDepth;
   StmtResult TryBlock(ParseCompoundStatement(
       /*isStmtExpr=*/false,
       Scope::DeclScope | Scope::TryScope | Scope::CompoundStmtScope |
           (FnTry ? Scope::FnTryCatchScope : Scope::NoScope)));
+  --Actions.HerbceptionTryBodyDepth;
   if (TryBlock.isInvalid())
     return TryBlock;
 
@@ -2728,6 +2773,76 @@ StmtResult Parser::ParseCXXCatchBlock(bool FnCatch) {
   assert(Tok.is(tok::kw_catch) && "Expected 'catch'");
 
   SourceLocation CatchLoc = ConsumeToken();
+
+  // Track catch-clause nesting: herbception throws inside traditional
+  // handlers chain forward, so context diagnostics defer inside any clause.
+  ++Actions.HerbceptionCatchClauseDepth;
+  struct PopDepth {
+    Sema &Actions;
+    ~PopDepth() { --Actions.HerbceptionCatchClauseDepth; }
+  } PopDepthGuard{Actions};
+
+  // Herbception: `catch throws(E e) { ... }` block handler. The caught type
+  // must be std::error (checked by Sema). There is no `catch fails` block
+  // handler: `catch fails` exists only in its expression form,
+  // `catch fails(expr)`.
+  if (getLangOpts().HerbExceptions && Tok.is(tok::kw_return_failure)) {
+    SourceLocation SpecLoc = ConsumeToken();
+    Diag(SpecLoc, diag::err_catch_return_failure_expression_only);
+    SkipUntil(tok::l_brace, StopBeforeMatch);
+    if (Tok.is(tok::l_brace))
+      ConsumeBrace();
+    return StmtError();
+  }
+  if (getLangOpts().HerbExceptions && Tok.is(tok::kw_throws)) {
+    SourceLocation SpecLoc = ConsumeToken();
+
+    BalancedDelimiterTracker T(*this, tok::l_paren);
+    if (T.expectAndConsume())
+      return StmtError();
+
+    ParseScope CatchScope(
+        this, Scope::DeclScope | Scope::ControlScope | Scope::CatchScope |
+                  (FnCatch ? Scope::FnTryCatchScope : Scope::NoScope));
+
+    // exception-declaration is equivalent to '...' or a parameter-declaration
+    // without default arguments.
+    Decl *ExceptionDecl = nullptr;
+    if (Tok.isNot(tok::ellipsis)) {
+      ParsedAttributes Attributes(AttrFactory);
+      MaybeParseCXX11Attributes(Attributes);
+
+      DeclSpec DS(AttrFactory);
+
+      if (ParseCXXTypeSpecifierSeq(DS))
+        return StmtError();
+
+      Declarator ExDecl(DS, Attributes, DeclaratorContext::CXXCatch);
+      ParseDeclarator(ExDecl);
+      // The exception variable of a herbception catch is bound from the error
+      // payload directly (not copy-initialized), so tell Sema.
+      ExceptionDecl =
+          Actions.ActOnExceptionDeclarator(getCurScope(), ExDecl,
+                                           /*IsHerbception=*/true);
+    } else
+      ConsumeToken();
+
+    T.consumeClose();
+    if (T.getCloseLocation().isInvalid())
+      return StmtError();
+
+    if (Tok.isNot(tok::l_brace))
+      return StmtError(Diag(Tok, diag::err_expected) << tok::l_brace);
+
+    ++Actions.HerbceptionCatchDepth;
+    StmtResult Block(ParseCompoundStatement());
+    --Actions.HerbceptionCatchDepth;
+    if (Block.isInvalid())
+      return Block;
+
+    return Actions.ActOnCXXCatchThrowsBlock(CatchLoc, SpecLoc, ExceptionDecl,
+                                            Block.get());
+  }
 
   BalancedDelimiterTracker T(*this, tok::l_paren);
   if (T.expectAndConsume())

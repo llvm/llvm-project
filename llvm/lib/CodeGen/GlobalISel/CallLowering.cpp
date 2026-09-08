@@ -115,6 +115,8 @@ CallLowering::getAttributesForReturn(const CallBase &Call) const {
   addFlagsFromAttrSet(Flags, Call.getAttributes().getRetAttrs());
   if (const Function *F = Call.getCalledFunction())
     addFlagsFromAttrSet(Flags, F->getAttributes().getRetAttrs());
+  if (Call.hasFnAttr(Attribute::Throws))
+    Flags.setThrows();
   return Flags;
 }
 

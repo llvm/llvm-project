@@ -428,6 +428,10 @@ class VectorType;
       return true;
     }
 
+    /// ARM returns the throws (herbception) discriminant in the CPSR carry
+    /// flag (C bit).
+    bool supportThrowsCC() const override { return true; }
+
     bool supportSplitCSR(MachineFunction *MF) const override {
       return MF->getFunction().getCallingConv() == CallingConv::CXX_FAST_TLS &&
              MF->getFunction().hasFnAttribute(Attribute::NoUnwind);
@@ -640,7 +644,8 @@ class VectorType;
                             const SmallVectorImpl<ISD::InputArg> &Ins,
                             const SDLoc &dl, SelectionDAG &DAG,
                             SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
-                            SDValue ThisVal, bool isCmseNSCall) const;
+                            SDValue ThisVal, bool isCmseNSCall,
+                            bool IsThrows = false) const;
 
     void initializeSplitCSR(MachineBasicBlock *Entry) const override;
     void insertCopiesSplitCSR(

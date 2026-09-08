@@ -891,6 +891,14 @@ def AArch64csinv         : SDNode<"AArch64ISD::CSINV", SDT_AArch64CSel>;
 def AArch64csneg         : SDNode<"AArch64ISD::CSNEG", SDT_AArch64CSel>;
 // Conditional select increment.
 def AArch64csinc         : SDNode<"AArch64ISD::CSINC", SDT_AArch64CSel>;
+
+// Herbception (throws): read the NZCV.C flag into a GPR. Chained + glued like
+// a CSINC but marked so the peephole can fold it with a following CBZ/CBNZ
+// into a direct B.cc/B.cs. Lowered to CSINC in expandPostRAPseudo.
+def AArch64herb_read_cf   : SDNode<"AArch64ISD::HERB_READ_CF",
+                                   SDTypeProfile<1, 0, [SDTCisInt<0>]>,
+                                   [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+
 // Return with a glue operand. Operand 0 is the chain operand.
 def AArch64retglue       : SDNode<"AArch64ISD::RET_GLUE", SDTNone,
                                 [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
@@ -3649,7 +3657,16 @@ def : Pat<(and (topbitsallzero32:$val), (AArch64csel (i32 0), (i32 1), (i32 imm:
 def : Pat<(and (topbitsallzero64:$val), (AArch64csel (i64 0), (i64 1), (i32 imm:$cc), NZCV)),
           (CSELXr XZR, GPR64:$val, imm:$cc)>;
 def : Pat<(and (topbitsallzero64:$val), (zext (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV))),
-          (CSELXr XZR, GPR64:$val, imm:$cc)>;
+           (CSELXr XZR, GPR64:$val, imm:$cc)>;
+
+// Herbception (throws): pseudo-instruction for reading the NZCV.C flag after
+// a call. Distinguished from regular CSINC so the peephole can fold it with a
+// following CBZ/CBNZ into a direct B.cc/B.cs. Lowered to CSINC in
+// expandPostRAPseudo.
+let Uses = [NZCV], isPseudo = 1, isCodeGenOnly = 1 in {
+  def HERB_CSETWr : Pseudo<(outs GPR32:$dst), (ins), []>, Sched<[]>;
+  def HERB_CSETXr : Pseudo<(outs GPR64:$dst), (ins), []>, Sched<[]>;
+}
 
 // The inverse of the condition code from the alias instruction is what is used
 // in the aliased instruction. The parser all ready inverts the condition code

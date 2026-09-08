@@ -19,5 +19,6 @@ a position between Clang's AST and LLVM IR.
 ABILowering
 CleanupAndEHDesign
 CodeDuplication
+Herbceptions
 ```
 

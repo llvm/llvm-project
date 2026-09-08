@@ -137,6 +137,7 @@ private:
                           SplitStrategy Strategy, unsigned OtherOpc = 0);
   bool visitORR(MachineInstr &MI);
   bool visitCSEL(MachineInstr &MI);
+  bool visitHERB_CSET(MachineInstr &MI);
   bool visitINSERT(MachineInstr &MI);
   bool visitINSviGPR(MachineInstr &MI, unsigned Opc);
   bool visitINSvi64lane(MachineInstr &MI);
@@ -370,6 +371,75 @@ bool AArch64MIPeepholeOptImpl::visitCSEL(MachineInstr &MI) {
       .addReg(MI.getOperand(1).getReg())
       .addImm(0);
 
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AArch64MIPeepholeOptImpl::visitHERB_CSET(MachineInstr &MI) {
+  // Herbception (throws): fold HERB_CSET + CBZ/CBNZ/TBZ/TBNZ into B.cc/B.cs.
+  // HERB_CSET produces 1 if NZCV.C is set, else 0.
+  // CBZ/TBZ bit 0 branch if the value is zero -> branch if C is clear -> B.cc.
+  // CBNZ/TBNZ bit 0 branch if non-zero -> branch if C is set   -> B.cs.
+  Register DstReg = MI.getOperand(0).getReg();
+
+  // The HERB_CSET result must have exactly one use (the branch).
+  MachineInstr *Branch = nullptr;
+  for (MachineInstr &U : MRI->use_nodbg_instructions(DstReg)) {
+    if (Branch)
+      return false; // multiple uses, can't fold
+    Branch = &U;
+  }
+  if (!Branch)
+    return false;
+
+  // This fold rewrites the branch into Bcc on live NZCV and erases the
+  // HERB_CSET, so nothing between the HERB_CSET and the branch may modify
+  // NZCV (e.g. an ALU op scheduled in between); otherwise the rewritten
+  // Bcc would test a clobbered flag instead of the post-call carry.
+  if (Branch->getParent() != MI.getParent())
+    return false;
+  const TargetRegisterInfo &TRI = TII->getRegisterInfo();
+  for (auto It = std::next(MachineBasicBlock::iterator(MI));
+       It != MachineBasicBlock::iterator(Branch); ++It)
+    if (It->modifiesRegister(AArch64::NZCV, &TRI))
+      return false;
+
+  unsigned BrOpc = Branch->getOpcode();
+  bool IsCBZ;
+  if (BrOpc == AArch64::CBZW || BrOpc == AArch64::CBZX)
+    IsCBZ = true;
+  else if (BrOpc == AArch64::CBNZW || BrOpc == AArch64::CBNZX)
+    IsCBZ = false;
+  else if (BrOpc == AArch64::TBZW || BrOpc == AArch64::TBZX)
+    IsCBZ = true;
+  else if (BrOpc == AArch64::TBNZW || BrOpc == AArch64::TBNZX)
+    IsCBZ = false;
+  else
+    return false;
+
+  // For TBZ/TBNZ, only bit index 0 is equivalent to CBZ/CBNZ.
+  if (BrOpc == AArch64::TBZW || BrOpc == AArch64::TBZX ||
+      BrOpc == AArch64::TBNZW || BrOpc == AArch64::TBNZX) {
+    if (!Branch->getOperand(1).isImm() ||
+        Branch->getOperand(1).getImm() != 0)
+      return false;
+  }
+
+  // CBZ/TBZ branch on zero     -> C is clear -> B.cc (AArch64CC::LO).
+  // CBNZ/TBNZ branch on non-zero -> C is set   -> B.cs (AArch64CC::HS).
+  AArch64CC::CondCode CC = IsCBZ ? AArch64CC::LO : AArch64CC::HS;
+
+  // Replace Branch with a Bcc in-place to avoid invalidating the run loop
+  // iterator (which may be pointing to Branch if it follows MI).
+  MachineBasicBlock *TargetMBB =
+      Branch->getOperand(Branch->getNumOperands() - 1).getMBB();
+  while (Branch->getNumOperands() > 0)
+    Branch->removeOperand(0);
+  Branch->setDesc(TII->get(AArch64::Bcc));
+  Branch->addOperand(MachineOperand::CreateImm(CC));
+  Branch->addOperand(MachineOperand::CreateMBB(TargetMBB));
+
+  // Erase MI (the HERB_CSET). The run loop iterator is already past MI.
   MI.eraseFromParent();
   return true;
 }
@@ -1045,6 +1115,10 @@ bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
       case AArch64::CSELWr:
       case AArch64::CSELXr:
         Changed |= visitCSEL(MI);
+        break;
+      case AArch64::HERB_CSETWr:
+      case AArch64::HERB_CSETXr:
+        Changed |= visitHERB_CSET(MI);
         break;
       case AArch64::INSvi64gpr:
         Changed |= visitINSviGPR(MI, AArch64::INSvi64lane);

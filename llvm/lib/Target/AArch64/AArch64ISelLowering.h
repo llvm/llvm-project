@@ -503,6 +503,9 @@ public:
     return true;
   }
 
+  /// AArch64 returns the throws (herbception) discriminant in NZCV.C.
+  bool supportThrowsCC() const override { return true; }
+
   bool supportPtrAuthBundles() const override { return true; }
 
   bool supportKCFIBundles() const override { return true; }
@@ -652,7 +655,8 @@ private:
                           const SmallVectorImpl<CCValAssign> &RVLocs,
                           const SDLoc &DL, SelectionDAG &DAG,
                           SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
-                          SDValue ThisVal, bool RequiresSMChange) const;
+                          SDValue ThisVal, bool RequiresSMChange,
+                          bool IsThrows = false) const;
 
   SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;

@@ -290,6 +290,10 @@ public:
 
   const Triple &getTargetTriple() const { return TargetTriple; }
 
+  /// Tests whether the target is a Windows or UEFI x86_64apx PE/COFF target,
+  /// which defaults to the WinCall calling convention.
+  bool isWindowsAPX() const { return TargetTriple.isWindowsAPX(); }
+
   bool isTargetDarwin() const { return TargetTriple.isOSDarwin(); }
   bool isTargetFreeBSD() const { return TargetTriple.isOSFreeBSD(); }
   bool isTargetDragonFly() const { return TargetTriple.isOSDragonFly(); }
@@ -367,6 +371,7 @@ public:
     case CallingConv::X86_StdCall:
     case CallingConv::X86_ThisCall:
     case CallingConv::X86_VectorCall:
+    case CallingConv::X86_WinCall:
     case CallingConv::Intel_OCL_BI:
       return isTargetWin64();
     // This convention allows using the Win64 convention on other targets.

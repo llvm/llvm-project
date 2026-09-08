@@ -426,6 +426,20 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
     PopCleanupBlocks(PrologueCleanupDepth);
   }
 
+  // Emit the whole-function legacy-EH conversion handler (for a `throws`
+  // function that can call noexcept(false) callees) before the return block
+  // is finalized: the handler branches to the throws return path, so
+  // ReturnBlock must still exist. The catch scope is popped here first so the
+  // funclet catchpad (MSVC) is already the block's first instruction.
+  if (HerbceptionLegacyConvertBB && !EHStack.empty() &&
+      EHStack.begin()->getKind() == EHScope::Catch) {
+    EHCatchScope &CatchScope = cast<EHCatchScope>(*EHStack.begin());
+    bool LegacyLandingPadUsed = CatchScope.hasEHBranches();
+    popCatchScope();
+    if (LegacyLandingPadUsed)
+      emitHerbceptionLegacyConvertBody();
+  }
+
   // Emit function epilog (to return).
   llvm::DebugLoc Loc = EmitReturnBlock();
 
@@ -499,6 +513,18 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   EmitIfUsed(*this, EHResumeBlock);
   EmitIfUsed(*this, TerminateLandingPad);
   EmitIfUsed(*this, TerminateHandler);
+  // The herbception legacy-conversion block: move it to the very end of the
+  // function if it was used and emitted, otherwise drop it.
+  if (HerbceptionLegacyConvertBB) {
+    if (!HerbceptionLegacyConvertBB->use_empty()) {
+      if (HerbceptionLegacyConvertBB->getParent())
+        HerbceptionLegacyConvertBB->removeFromParent();
+      HerbceptionLegacyConvertBB->insertInto(CurFn);
+    } else {
+      delete HerbceptionLegacyConvertBB;
+      HerbceptionLegacyConvertBB = nullptr;
+    }
+  }
   EmitIfUsed(*this, UnreachableBlock);
 
   for (const auto &FuncletAndParent : TerminateFunclets)
@@ -1220,8 +1246,32 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
                   std::to_string(CGM.getCodeGenOpts().WarnStackSize));
 
   if (RetTy->isVoidType()) {
-    // Void type; nothing to return.
-    ReturnValue = Address::invalid();
+    // Void type; nothing to return, unless this is a herbception (throws)
+    // function: the return type is {E, i1}, so the payload slot holds the
+    // error value (std::error / E).
+    if (CurFnInfo->hasThrowsReturn()) {
+      ReturnValue =
+          CreateDefaultAlignTempAlloca(CurFnInfo->getHerbceptionErrorType(),
+                                       "retval");
+      // Herbception (throws): create a slot for the discriminant (the i1 of
+      // the {T, i1} return). A plain `return` stores false; `throw throws` /
+      // failure stores true. The epilogue reads it back.
+      HerbceptionDiscriminant =
+          CreateIRTempWithoutCast(getContext().BoolTy, "herbception.disc");
+      Builder.CreateStore(Builder.getFalse(), HerbceptionDiscriminant);
+
+      // In a coroutine, keep the discriminant on the stack (not in the
+      // coroutine frame). The frame is deallocated by the resume path before
+      // the ramp reads the discriminant back for the {T, i1} return, so it
+      // must not live in the frame.
+      if (auto *Alloca = dyn_cast<llvm::AllocaInst>(
+              HerbceptionDiscriminant.emitRawPointer(*this)))
+        Alloca->setMetadata(
+            llvm::LLVMContext::MD_coro_outside_frame,
+            llvm::MDNode::get(CGM.getLLVMContext(), {}));
+    } else {
+      ReturnValue = Address::invalid();
+    }
 
     // Count the implicit return.
     if (!endsWithReturn(D))
@@ -1256,7 +1306,36 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     ReturnValue = Address(Addr, ConvertType(RetTy),
                           CGM.getNaturalTypeAlignment(RetTy), KnownNonNull);
   } else {
-    ReturnValue = CreateIRTempWithoutCast(RetTy, "retval");
+    // Herbception (throws): the return payload slot must be able to hold
+    // either the success value T or the error value E, so size it to
+    // max(T, E) rather than the natural return type.
+    if (CurFnInfo->hasThrowsReturn()) {
+      llvm::Type *PayloadTy = CurFnInfo->getReturnInfo().getCoerceToType();
+      if (auto *ST = dyn_cast<llvm::StructType>(PayloadTy))
+        PayloadTy = ST->getElementType(0);
+      ReturnValue = CreateDefaultAlignTempAlloca(PayloadTy, "retval");
+    } else {
+      ReturnValue = CreateIRTempWithoutCast(RetTy, "retval");
+    }
+
+    // Herbception (throws): create a slot for the discriminant (the i1 of the
+    // {T, i1} return). A plain `return` stores false; `throw throws` / failure
+    // stores true. The epilogue reads it back.
+    if (CurFnInfo->hasThrowsReturn()) {
+      HerbceptionDiscriminant =
+          CreateIRTempWithoutCast(getContext().BoolTy, "herbception.disc");
+      Builder.CreateStore(Builder.getFalse(), HerbceptionDiscriminant);
+
+      // In a coroutine, keep the discriminant on the stack (not in the
+      // coroutine frame). The frame is deallocated by the resume path before
+      // the ramp reads the discriminant back for the {T, i1} return, so it
+      // must not live in the frame.
+      if (auto *Alloca = dyn_cast<llvm::AllocaInst>(
+              HerbceptionDiscriminant.emitRawPointer(*this)))
+        Alloca->setMetadata(
+            llvm::LLVMContext::MD_coro_outside_frame,
+            llvm::MDNode::get(CGM.getLLVMContext(), {}));
+    }
 
     // Tell the epilog emitter to autorelease the result.  We do this
     // now so that various specialized functions can suppress it

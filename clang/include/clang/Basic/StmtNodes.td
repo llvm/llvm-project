@@ -53,6 +53,7 @@ def ObjCAutoreleasePoolStmt : StmtNode<Stmt>;
 
 // C++ statements
 def CXXCatchStmt : StmtNode<Stmt>;
+def CXXCatchThrowsStmt : StmtNode<Stmt>;
 def CXXTryStmt : StmtNode<Stmt>;
 def CXXForRangeStmt : StmtNode<Stmt>;
 
@@ -143,6 +144,10 @@ def CXXBoolLiteralExpr : StmtNode<Expr>;
 def CXXNullPtrLiteralExpr : StmtNode<Expr>;
 def CXXThisExpr : StmtNode<Expr>;
 def CXXThrowExpr : StmtNode<Expr>;
+def CXXErrorValueExpr : StmtNode<Expr>;
+def CXXCxaExceptionExpr : StmtNode<Expr>;
+def CXXTryExpr : StmtNode<Expr>;
+def CXXCatchReturnFailureExpr : StmtNode<Expr>;
 def CXXDefaultArgExpr : StmtNode<Expr>;
 def CXXDefaultInitExpr : StmtNode<Expr>;
 def CXXScalarValueInitExpr : StmtNode<Expr>;
@@ -166,6 +171,7 @@ def OverloadExpr : StmtNode<Expr, 1>;
 def UnresolvedLookupExpr : StmtNode<OverloadExpr>;
 def UnresolvedMemberExpr : StmtNode<OverloadExpr>;
 def CXXNoexceptExpr : StmtNode<Expr>;
+def CXXThrowsExpr : StmtNode<Expr>;
 def PackExpansionExpr : StmtNode<Expr>;
 def SizeOfPackExpr : StmtNode<Expr>;
 def PackIndexingExpr : StmtNode<Expr>;

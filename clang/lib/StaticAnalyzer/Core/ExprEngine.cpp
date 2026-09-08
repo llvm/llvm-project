@@ -1688,6 +1688,11 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::CXXDependentScopeMemberExprClass:
     case Stmt::CXXReflectExprClass:
     case Stmt::CXXTryStmtClass:
+    case Stmt::CXXCatchThrowsStmtClass:
+    case Stmt::CXXTryExprClass:
+    case Stmt::CXXCatchReturnFailureExprClass:
+    case Stmt::CXXErrorValueExprClass:
+    case Stmt::CXXCxaExceptionExprClass:
     case Stmt::CXXTypeidExprClass:
     case Stmt::CXXUuidofExprClass:
     case Stmt::CXXFoldExprClass:
@@ -1702,6 +1707,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::DependentTemplateIdExprClass:
     case Stmt::RecoveryExprClass:
     case Stmt::CXXNoexceptExprClass:
+    case Stmt::CXXThrowsExprClass:
     case Stmt::PackExpansionExprClass:
     case Stmt::PackIndexingExprClass:
     case Stmt::SubstNonTypeTemplateParmPackExprClass:

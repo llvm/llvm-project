@@ -177,6 +177,7 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   switch (s->getStmtClass()) {
   case Stmt::NoStmtClass:
   case Stmt::CXXCatchStmtClass:
+  case Stmt::CXXCatchThrowsStmtClass:
   case Stmt::SEHExceptStmtClass:
   case Stmt::SEHFinallyStmtClass:
   case Stmt::MSDependentExistsStmtClass:
@@ -705,8 +706,12 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
     // Load the value from `__retval` and return it via the `cir.return` op.
     cir::AllocaOp retAlloca =
         mlir::cast<cir::AllocaOp>(fnRetAlloca->getDefiningOp());
-    auto value = cir::LoadOp::create(builder, loc, retAlloca.getAllocaType(),
-                                     *fnRetAlloca);
+    mlir::Value value = cir::LoadOp::create(
+        builder, loc, retAlloca.getAllocaType(), *fnRetAlloca);
+
+    // Herbception (throws): wrap the payload into the shaped {T, i1} result.
+    if (curFnInfo && curFnInfo->hasThrowsReturn())
+      value = wrapHerbceptionReturnValue(loc, value);
 
     cir::ReturnOp::create(builder, loc, {value});
   } else {

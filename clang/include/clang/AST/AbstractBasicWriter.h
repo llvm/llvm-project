@@ -203,7 +203,7 @@ public:
   void writeExceptionSpecInfo(
                         const FunctionProtoType::ExceptionSpecInfo &esi) {
     asImpl().writeUInt32(uint32_t(esi.Type));
-    if (esi.Type == EST_Dynamic) {
+    if (esi.Type == EST_Dynamic || esi.Type == EST_ThrowsTyped) {
       asImpl().writeArray(esi.Exceptions);
     } else if (isComputedNoexcept(esi.Type)) {
       asImpl().writeExprRef(esi.NoexceptExpr);

@@ -6770,6 +6770,20 @@ static void DiagnosedUnqualifiedCallsToStdFunctions(Sema &S,
       << FixItHint::CreateInsertion(DRE->getLocation(), "std::");
 }
 
+/// Return the function prototype of the callee of \p E if it is a call to a
+/// throws/fails function, or null otherwise.
+static const FunctionProtoType *getHerbceptionCalleeProto(const Expr *E) {
+  const auto *Call = dyn_cast<CallExpr>(E->IgnoreParenImpCasts());
+  if (!Call)
+    return nullptr;
+  const Decl *Callee = Call->getCalleeDecl();
+  if (const auto *FTD = dyn_cast_or_null<FunctionTemplateDecl>(Callee))
+    Callee = FTD->getTemplatedDecl();
+  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(Callee))
+    return FD->getType()->getAs<FunctionProtoType>();
+  return nullptr;
+}
+
 ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
                                MultiExprArg ArgExprs, SourceLocation RParenLoc,
                                Expr *ExecConfig) {
@@ -6794,12 +6808,58 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
     if (const auto *CE = dyn_cast<CallExpr>(Call.get()))
       DiagnosedUnqualifiedCallsToStdFunctions(*this, CE);
 
+    // Herbception (C++ only): a bare call to a throws/fails function inside a
+    // function declared 'throws'/'fails{...}' auto-propagates the error. This
+    // is only suppressed while parsing the operand of an explicit
+    // try(expr)/catch fails(expr). C code must always use try()/catch fails()
+    // explicitly, so this never applies in C.
+    if (LangOpts.HerbExceptions && HerbceptionOperandDepth == 0) {
+      if (const FunctionDecl *CurFD = getCurFunctionDecl(/*AllowLambda=*/true)) {
+        // The current function decl can exist but not yet have a type while
+        // the trailing exception specification of a lambda (or function
+        // declarator) is being parsed.
+        if (const auto *CurFPT = CurFD->getType().isNull()
+                                     ? nullptr
+                                     : CurFD->getType()->getAs<FunctionProtoType>();
+            CurFPT && CurFPT->hasThrowsSpec() &&
+            isHerbceptionThrowsCall(Call.get())) {
+          SourceLocation CallLoc = Call.get()->getBeginLoc();
+
+          // Inside a `catch throws(std::error)` handler the error slot holds a
+          // std::error. A bare call to a plain `fails{E2}` function would
+          // store its raw E2 payload there; require an explicit `try()` (which
+          // resolves std::error_domain<E2> and converts), C-style.
+          if (HerbceptionCatchDepth > 0 && CurFPT->hasReturnFailureSpec()) {
+            const FunctionProtoType *CalleeFPT =
+                getHerbceptionCalleeProto(Call.get());
+            if (CalleeFPT && CalleeFPT->hasReturnFailureSpec() &&
+                !CalleeFPT->hasBasicThrowsSpec()) {
+              Diag(CallLoc, diag::err_return_failure_call_in_catch_throws);
+              return ExprError();
+            }
+          }
+
+          Call = ActOnHerbceptionTry(CallLoc, Call.get());
+        }
+      }
+    }
+
     // If we previously found that the id-expression of this call refers to a
     // consteval function but the call is dependent, we should not treat is an
     // an invalid immediate call.
     if (auto *DRE = dyn_cast<DeclRefExpr>(Fn->IgnoreParens());
         DRE && Call.get()->isValueDependent()) {
       currentEvaluationContext().ReferenceToConsteval.erase(DRE);
+    }
+  } else if (LangOpts.HerbExceptions && HerbceptionOperandDepth == 0) {
+    // Herbception (C): calling a fails{E} function without an explicit
+    // try(expr) or catch fails(expr) wrapper is a compile error.
+    if (isHerbceptionThrowsCall(Call.get())) {
+      Diag(Call.get()->getBeginLoc(), diag::err_return_failure_call_without_wrapper);
+      if (const auto *CE = dyn_cast<CallExpr>(Call.get()))
+        if (const auto *FD = dyn_cast_or_null<FunctionDecl>(CE->getCalleeDecl()))
+          Diag(FD->getLocation(), diag::note_return_failure_function_declared_here);
+      return ExprError();
     }
   }
   return Call;
@@ -18930,12 +18990,13 @@ static bool funcHasParameterSizeMangling(Sema &S, FunctionDecl *FD) {
   if (S.getLangOpts().CPlusPlus && !FD->isExternC())
     return false;
 
-  // Stdcall, fastcall, and vectorcall need this special treatment.
+  // Stdcall, fastcall, vectorcall and wincall need this special treatment.
   CallingConv CC = FD->getType()->castAs<FunctionType>()->getCallConv();
   switch (CC) {
   case CC_X86StdCall:
   case CC_X86FastCall:
   case CC_X86VectorCall:
+  case CC_WinCall:
     return true;
   default:
     break;

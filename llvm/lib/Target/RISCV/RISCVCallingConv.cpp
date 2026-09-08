@@ -434,10 +434,23 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
   }
 
   // Any return value split in to more than two values can't be returned
-  // directly. Vectors are returned via the available vector registers.
+  // directly. Vectors are returned via the available vector registers. The
+  // throws (herbception) discriminant is an exception: it is returned in a2
+  // (X12) so up to three return registers are used (a0/a1 for the value, a2
+  // for the discriminant).
   if ((!LocVT.isVector() || Subtarget.isPExtPackedType(LocVT)) && IsRet &&
-      ValNo > 1)
+      ValNo > 1 && !ArgFlags.isThrows())
     return true;
+
+  // Herbception (throws) returns carry the success/failure discriminant in a2
+  // (X12). The actual return value uses a0 (and a1 if it is wider than XLEN).
+  if (IsRet && ArgFlags.isThrows()) {
+    if (MCRegister Reg = State.AllocateReg(RISCV::X12)) {
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
+    return true;
+  }
 
   // Double wide packed types require 2 GPRs so we can only return 1 of them.
   if (Subtarget.isPExtPackedDoubleType(LocVT) && IsRet && ValNo > 0)

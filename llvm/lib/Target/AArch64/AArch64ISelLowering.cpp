@@ -9954,11 +9954,29 @@ SDValue AArch64TargetLowering::LowerCallResult(
     SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<CCValAssign> &RVLocs, const SDLoc &DL,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
-    SDValue ThisVal, bool RequiresSMChange) const {
+    SDValue ThisVal, bool RequiresSMChange, bool IsThrows) const {
   DenseMap<unsigned, SDValue> CopiedRegs;
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0; i != RVLocs.size(); ++i) {
     CCValAssign VA = RVLocs[i];
+
+    // Herbception (throws): the discriminant is the last return value and is
+    // carried in NZCV.C, read right after the call.
+    if (IsThrows && i == RVLocs.size() - 1) {
+      // HERB_READ_CF: chained+glued node that reads NZCV.C into a GPR.
+      // The peephole can fold HERB_READ_CF + CBZ/CBNZ into B.cc/B.cs.
+      SmallVector<SDValue, 2> Ops;
+      Ops.push_back(Chain);
+      if (InGlue.getNode())
+        Ops.push_back(InGlue);
+      SDValue Val =
+          DAG.getNode(AArch64ISD::HERB_READ_CF, DL,
+                      DAG.getVTList(VA.getValVT(), MVT::Other, MVT::Glue), Ops);
+      Chain = Val.getValue(1);
+      InGlue = Val.getValue(2);
+      InVals.push_back(Val);
+      continue;
+    }
 
     // Pass 'this' value directly from the argument to return value, to avoid
     // reg unit interference
@@ -11204,7 +11222,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // return.
   SDValue Result = LowerCallResult(
       Chain, InGlue, CallConv, IsVarArg, RVLocs, DL, DAG, InVals, IsThisReturn,
-      IsThisReturn ? OutVals[0] : SDValue(), RequiresSMChange);
+      IsThisReturn ? OutVals[0] : SDValue(), RequiresSMChange, CLI.IsThrows);
 
   if (!Ins.empty())
     InGlue = Result.getValue(Result->getNumValues() - 1);
@@ -11275,11 +11293,20 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   SDValue Glue;
   SmallVector<std::pair<unsigned, SDValue>, 4> RetVals;
   SmallSet<unsigned, 4> RegsUsed;
+  // Herbception (throws): the discriminant is carried in NZCV.C instead of a
+  // return register. It is set before the return.
+  SDValue ThrowsDiscriminant;
   for (unsigned i = 0, realRVLocIdx = 0; i != RVLocs.size();
        ++i, ++realRVLocIdx) {
     CCValAssign &VA = RVLocs[i];
     assert(VA.isRegLoc() && "Can only return in registers!");
     SDValue Arg = OutVals[realRVLocIdx];
+
+    if (Outs[realRVLocIdx].Flags.isThrows()) {
+      // The throws discriminant is returned via the NZCV.C flag.
+      ThrowsDiscriminant = Arg;
+      continue;
+    }
 
     switch (VA.getLocInfo()) {
     default:
@@ -11380,6 +11407,18 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   }
 
   RetOps[0] = Chain; // Update chain.
+
+  // Herbception (throws): set NZCV.C = discriminant before returning. The
+  // caller reads the C flag right after the call.
+  if (ThrowsDiscriminant.getNode()) {
+    SDValue Carry = valueToCarryFlag(ThrowsDiscriminant, DAG,
+                                     /*Invert=*/false);
+    // Keep the flag-setting SUBS live and glue it to the return. Copy the
+    // produced NZCV flags to the NZCV register so RET observes them.
+    Chain = DAG.getCopyToReg(Chain, DL, AArch64::NZCV, Carry, Glue);
+    Glue = Chain.getValue(1);
+    RetOps.push_back(DAG.getRegister(AArch64::NZCV, FlagsVT));
+  }
 
   // Add the glue if we have it.
   if (Glue.getNode())

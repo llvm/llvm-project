@@ -56,8 +56,10 @@ namespace ISD {
       Pointer = 1U << 23,
       /// Whether this is part of a variable argument list (non-fixed).
       VarArg = 1U << 24,
+      /// Herbception 'throws' return discriminant.
+      Throws = 1U << 25,
 
-      LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ VarArg)
+      LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ Throws)
     };
 
   private:
@@ -165,6 +167,9 @@ namespace ISD {
 
     bool isVarArg() const { return FlagVals & VarArg; }
     void setVarArg() { setFlag(VarArg); }
+
+    bool isThrows() const { return FlagVals & Throws; }
+    void setThrows() { setFlag(Throws); }
 
     Align getNonZeroMemAlign() const {
       return decodeMaybeAlign(MemAlign).valueOrOne();

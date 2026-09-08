@@ -3614,6 +3614,8 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
     return "swiftcall";
   case CC_SwiftAsync:
     return "swiftasynccall";
+  case CC_WinCall:
+    return "wincall";
   }
   llvm_unreachable("bad calling convention");
 }
@@ -5040,6 +5042,11 @@ recurse:
   case Expr::CXXInheritedCtorInitExprClass:
   case Expr::CXXParenListInitExprClass:
   case Expr::CXXExpansionSelectExprClass:
+  case Expr::CXXTryExprClass:
+  case Expr::CXXCatchReturnFailureExprClass:
+  case Expr::CXXErrorValueExprClass:
+  case Expr::CXXCxaExceptionExprClass:
+  case Expr::CXXThrowsExprClass:
     llvm_unreachable("unexpected statement kind");
 
   case Expr::ConstantExprClass:

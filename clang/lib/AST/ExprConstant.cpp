@@ -906,6 +906,18 @@ namespace {
       return ObjectsUnderConstruction.lookup({Base, Path});
     }
 
+    /// Herbception: set when a `try(expr)` auto-propagation has stored an
+    /// error that should cause the enclosing function to return it via
+    /// ESR_ErrorReturned. Only read/written at statement boundaries.
+    bool HerbceptionErrorPending = false;
+    APValue HerbceptionErrorValue;
+
+    /// Herbception: fabricated per-domain opaque `error_domain_singleton`
+    /// objects, keyed by the `error_domain<T>` specialization record. Each
+    /// domain gets a unique pointer value in constant evaluation so that
+    /// `error_domain<A>::domain() != error_domain<B>::domain()`.
+    llvm::DenseMap<const CXXRecordDecl *, const ValueDecl *> HerbceptionDomains;
+
     /// If we're currently speculatively evaluating, the outermost call stack
     /// depth at which we can mutate state, otherwise 0.
     unsigned SpeculativeEvaluationDepth = 0;
@@ -5618,6 +5630,9 @@ enum EvalStmtResult {
   ESR_Failed,
   /// Hit a 'return' statement.
   ESR_Returned,
+  /// Hit a herbception failure return (`failure(expr)` / `throw throws e`).
+  /// The function call's error value is stored in StmtResult::ErrorValue.
+  ESR_ErrorReturned,
   /// Evaluation succeeded.
   ESR_Succeeded,
   /// Hit a 'continue' statement.
@@ -5753,6 +5768,9 @@ struct StmtResult {
   APValue &Value;
   /// The location containing the result, if any (used to support RVO).
   const LValue *Slot;
+  /// For an ESR_ErrorReturned, the error value (the `failure(expr)` operand or
+  /// the fabricated std::error). Null otherwise.
+  APValue *ErrorValue = nullptr;
 };
 
 struct TempVersionRAII {
@@ -5900,6 +5918,7 @@ static EvalStmtResult EvaluateSwitch(StmtResult &Result, EvalInfo &Info,
   case ESR_Continue:
   case ESR_Failed:
   case ESR_Returned:
+  case ESR_ErrorReturned:
     return ESR;
   case ESR_CaseNotFound:
     // This can only happen if the switch case is nested within a statement
@@ -6060,6 +6079,20 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
   switch (S->getStmtClass()) {
   default:
     if (const Expr *E = dyn_cast<Expr>(S)) {
+      // Herbception `throw throws e;` statement: evaluate the error value and
+      // signal a catchable error return.
+      if (const auto *Throw = dyn_cast<CXXThrowExpr>(E)) {
+        if (Throw->isHerbception()) {
+          const Expr *Op = Throw->getSubExpr();
+          FullExpressionRAII Scope(Info);
+          if (Op && !Evaluate(Info.HerbceptionErrorValue, Info, Op))
+            return ESR_Failed;
+          if (!Scope.destroy())
+            return ESR_Failed;
+          Info.HerbceptionErrorPending = true;
+          return ESR_ErrorReturned;
+        }
+      }
       if (E->isValueDependent()) {
         if (!EvaluateDependentExpr(E, Info))
           return ESR_Failed;
@@ -6112,11 +6145,36 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
       // We know we returned, but we don't know what the value is.
       return ESR_Failed;
     }
+    // Herbception: `return failure(expr)` / `return throw throws e` is a
+    // failure return. Evaluate the operand (the error value E) and signal
+    // ESR_ErrorReturned so `catch fails` / `try` can intercept it.
+    if (RetExpr)
+      if (const auto *Throw = dyn_cast<CXXThrowExpr>(
+              RetExpr->IgnoreParenImpCasts());
+          Throw && Throw->isHerbception()) {
+        const Expr *Op = Throw->getSubExpr();
+        if (Op && !Op->isValueDependent() && Result.ErrorValue) {
+          if (!Evaluate(*Result.ErrorValue, Info, Op))
+            return ESR_Failed;
+        }
+        return Scope.destroy() ? ESR_ErrorReturned : ESR_Failed;
+      }
     if (RetExpr &&
         !(Result.Slot
               ? EvaluateInPlace(Result.Value, Info, *Result.Slot, RetExpr)
               : Evaluate(Result.Value, Info, RetExpr)))
       return ESR_Failed;
+    // Herbception: a `try(expr)` / bare throws call inside the return
+    // expression may have auto-propagated an error; surface it as an error
+    // return. If there is no function-level error slot, leave the error in
+    // Info so an enclosing `try { } catch throws` can intercept it.
+    if (Info.HerbceptionErrorPending) {
+      if (Result.ErrorValue) {
+        *Result.ErrorValue = std::move(Info.HerbceptionErrorValue);
+        Info.HerbceptionErrorPending = false;
+      }
+      return Scope.destroy() ? ESR_ErrorReturned : ESR_Failed;
+    }
     return Scope.destroy() ? ESR_Returned : ESR_Failed;
   }
 
@@ -6132,6 +6190,17 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
         if (ESR != ESR_Failed && !Scope.destroy())
           return ESR_Failed;
         return ESR;
+      }
+      // Herbception: a `try(expr)` / bare throws call inside the just-evaluated
+      // statement may have auto-propagated an error; surface it as an error
+      // return. If there is no function-level error slot, leave the error in
+      // Info so an enclosing `try { } catch throws` can intercept it.
+      if (Info.HerbceptionErrorPending) {
+        if (Result.ErrorValue) {
+          *Result.ErrorValue = std::move(Info.HerbceptionErrorValue);
+          Info.HerbceptionErrorPending = false;
+        }
+        return Scope.destroy() ? ESR_ErrorReturned : ESR_Failed;
       }
     }
     if (Case)
@@ -6450,9 +6519,33 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
   case Stmt::CaseStmtClass:
   case Stmt::DefaultStmtClass:
     return EvaluateStmt(Result, Info, cast<SwitchCase>(S)->getSubStmt(), Case);
-  case Stmt::CXXTryStmtClass:
-    // Evaluate try blocks by evaluating all sub statements.
-    return EvaluateStmt(Result, Info, cast<CXXTryStmt>(S)->getTryBlock(), Case);
+  case Stmt::CXXTryStmtClass: {
+    // Evaluate the try block. If a herbception `throw throws` (or an
+    // auto-propagated error) occurred, dispatch it to a matching `catch
+    // throws` handler; otherwise fall through to the ordinary result.
+    const CXXTryStmt *TS = cast<CXXTryStmt>(S);
+    EvalStmtResult ESR = EvaluateStmt(Result, Info, TS->getTryBlock(), Case);
+    if (!Info.HerbceptionErrorPending)
+      return ESR;
+    APValue Err = std::move(Info.HerbceptionErrorValue);
+    Info.HerbceptionErrorPending = false;
+    for (unsigned I = 0, N = TS->getNumHandlers(); I != N; ++I) {
+      if (auto *CT = TS->getCatchThrowsHandler(I)) {
+        const VarDecl *ED = CT->getExceptionDecl();
+        if (ED && !ED->getType()->isDependentType()) {
+          LValue ErrLV;
+          APValue &Slot = Info.CurrentCall->createTemporary(
+              ED, ED->getType(), ScopeKind::Block, ErrLV);
+          Slot = std::move(Err);
+        }
+        return EvaluateStmt(Result, Info, CT->getHandlerBlock(), Case);
+      }
+    }
+    // No matching handler: propagate the error.
+    if (Result.ErrorValue)
+      *Result.ErrorValue = std::move(Err);
+    return ESR_ErrorReturned;
+  }
   }
 }
 
@@ -6524,7 +6617,7 @@ static bool CheckConstexprFunction(EvalInfo &Info, SourceLocation CallLoc,
   const FunctionDecl *DiagDecl = Definition ? Definition : Declaration;
   // Special note for the assert() macro, as the normal error message falsely
   // implies we cannot use an assertion during constant evaluation.
-  if (CallLoc.isMacroID() && DiagDecl->getIdentifier()) {
+  if (CallLoc.isMacroID() && DiagDecl->getDeclName().isIdentifier()) {
     // FIXME: Instead of checking for an implementation-defined function,
     // check and evaluate the assert() macro.
     StringRef Name = DiagDecl->getName();
@@ -7166,7 +7259,8 @@ static bool HandleFunctionCall(SourceLocation CallLoc,
                                const LValue *ObjectArg, const Expr *E,
                                ArrayRef<const Expr *> Args, CallRef Call,
                                const Stmt *Body, EvalInfo &Info,
-                               APValue &Result, const LValue *ResultSlot) {
+                               APValue &Result, const LValue *ResultSlot,
+                               APValue *ErrorValue = nullptr) {
   if (!Info.CheckCallLimit(CallLoc))
     return false;
 
@@ -7217,14 +7311,35 @@ static bool HandleFunctionCall(SourceLocation CallLoc,
                                         Frame.LambdaThisCaptureField);
   }
 
-  StmtResult Ret = {Result, ResultSlot};
+  StmtResult Ret = {Result, ResultSlot, ErrorValue};
   EvalStmtResult ESR = EvaluateStmt(Ret, Info, Body);
   if (ESR == ESR_Succeeded) {
     if (Callee->getReturnType()->isVoidType())
       return true;
     Info.FFDiag(Callee->getEndLoc(), diag::note_constexpr_no_return);
   }
-  return ESR == ESR_Returned;
+  // Herbception: a bare call to a throws/fails function whose body took the
+  // error return must surface the error to the enclosing statement evaluation
+  // so an enclosing `try { } catch throws` can intercept it.
+  if (ESR == ESR_ErrorReturned) {
+    if (ErrorValue) {
+      if (Info.HerbceptionErrorPending) {
+        *ErrorValue = std::move(Info.HerbceptionErrorValue);
+        Info.HerbceptionErrorPending = false;
+      }
+    } else if (Info.HerbceptionErrorPending) {
+      // Leave it pending for the enclosing CXXTryStmt / statement evaluator.
+    } else if (const auto *FPT =
+                   Callee->getType()->getAs<FunctionProtoType>();
+               FPT && FPT->hasThrowsSpec()) {
+      // The function returned an error via `return failure(...)` but the call
+      // has no error slot (a bare call). Convert to the pending mechanism so a
+      // `catch throws` handler can intercept it.
+      Info.HerbceptionErrorValue = Result;
+      Info.HerbceptionErrorPending = true;
+    }
+  }
+  return ESR == ESR_Returned || ESR == ESR_ErrorReturned;
 }
 
 static bool HandleConstructorCall(const Expr *E, const LValue &This,
@@ -8882,11 +8997,128 @@ public:
     APValue Result;
     if (!handleCallExpr(E, Result, nullptr))
       return false;
+    // Herbception: a bare call to a throws/fails function that took the error
+    // return leaves the error pending for the enclosing statement evaluator;
+    // there is no success value to materialize.
+    if (Info.HerbceptionErrorPending)
+      return true;
     return DerivedSuccess(Result, E);
   }
 
+  /// Evaluate a herbception `catch fails(expr)`: call the fails{E} function;
+  /// if it fails, build the N2289 aggregate {union{T value; E error}; bool
+  /// failed} with .failed=1/.error=E, else .failed=0/.value=T.
+  bool VisitCXXCatchReturnFailureExpr(const CXXCatchReturnFailureExpr *E) {
+    APValue Result, ErrorVal;
+    APValue *ErrorPtr = &ErrorVal;
+    if (!handleCallExpr(cast<CallExpr>(E->getSubExpr()->IgnoreParenImpCasts()),
+                        Result, nullptr, ErrorPtr))
+      return false;
+
+    // Build the catch-fails aggregate {union{T value; E error}; bool failed}.
+    const RecordDecl *RD = E->getType()->getAsRecordDecl();
+    if (!RD)
+      return Error(E);
+    const FieldDecl *UnionField = nullptr;
+    const FieldDecl *FailedField = nullptr;
+    for (const FieldDecl *F : RD->fields()) {
+      if (F->getName() == "failed")
+        FailedField = F;
+      else
+        UnionField = F; // the anonymous union
+    }
+    if (!UnionField || !FailedField)
+      return Error(E);
+    const RecordDecl *UR = UnionField->getType()->getAsRecordDecl();
+    const FieldDecl *ValueField = nullptr;
+    const FieldDecl *ErrorField = nullptr;
+    if (UR)
+      for (const FieldDecl *F : UR->fields()) {
+        if (F->getName() == "value")
+          ValueField = F;
+        else if (F->getName() == "error")
+          ErrorField = F;
+      }
+    if (!ValueField || !ErrorField)
+      return Error(E);
+
+    APValue UnionVal(ErrorPtr->hasValue() ? ErrorField : ValueField,
+                     ErrorPtr->hasValue() ? ErrorVal : Result);
+    APValue CatchResult(APValue::UninitStruct(), /*NumBases=*/0,
+                        /*NumMembers=*/2);
+    CatchResult.getStructField(0) = UnionVal;
+    // `.failed` is a _Bool (unsigned, width 1).
+    bool Failed = ErrorPtr->hasValue();
+    CatchResult.getStructField(1) =
+        APValue(APSInt(APInt(1, Failed ? 1 : 0), /*isUnsigned=*/true));
+    return DerivedSuccess(CatchResult, E);
+  }
+
+  /// Evaluate a herbception `try(expr)`: call the throws/fails function and
+  /// auto-propagate its error on failure.
+  bool VisitCXXTryExpr(const CXXTryExpr *E) {
+    APValue Result, ErrorVal;
+    APValue *ErrorPtr = &ErrorVal;
+    if (!handleCallExpr(cast<CallExpr>(E->getSubExpr()->IgnoreParenImpCasts()),
+                        Result, nullptr, ErrorPtr))
+      return false;
+    if (!ErrorPtr->hasValue())
+      return DerivedSuccess(Result, E);
+    // Auto-propagate: store the error into EvalInfo so the enclosing statement
+    // evaluation can turn this into an ESR_ErrorReturned for the current
+    // function.
+    Info.HerbceptionErrorValue = std::move(ErrorVal);
+    Info.HerbceptionErrorPending = true;
+    return true;
+  }
+
+  /// Fabricate a unique opaque `error_domain_singleton` object for the domain
+  /// type \p DomainRD (the `error_domain<T>` specialization) and return a
+  /// pointer to it. Each domain gets a distinct address so that
+  /// `error_domain<A>::domain() != error_domain<B>::domain()` in constant
+  /// evaluation. The object is zero-initialized so `~error()` reads
+  /// `do_cleanup == nullptr` and is a no-op.
+  bool fabricateDomainPointer(const CXXRecordDecl *DomainRD, QualType SingletonTy,
+                              LValue &Result) {
+    auto It = Info.HerbceptionDomains.find(DomainRD);
+    if (It != Info.HerbceptionDomains.end()) {
+      Result.set(APValue::LValueBase(It->second));
+      return true;
+    }
+    const RecordDecl *RD = SingletonTy->getAsRecordDecl();
+    APValue DomainVal;
+    if (RD) {
+      DomainVal = APValue(APValue::UninitStruct(), /*NumBases=*/0,
+                          RD->getNumFields());
+      // Zero-initialize each field. Pointer/reference/member-pointer fields
+      // are null; other fields (arrays, scalars) default to a null APValue.
+      unsigned Idx = 0;
+      for (const FieldDecl *F : RD->fields()) {
+        if (F->isUnnamedBitField())
+          continue;
+        QualType FieldTy = F->getType();
+        if (FieldTy->isPointerType() || FieldTy->isReferenceType() ||
+            FieldTy->isMemberPointerType()) {
+          LValue NullLV;
+          NullLV.setNull(Info.Ctx, FieldTy);
+          NullLV.moveInto(DomainVal.getStructField(Idx));
+        } else {
+          DomainVal.getStructField(Idx) = APValue();
+        }
+        ++Idx;
+      }
+    } else {
+      DomainVal = APValue();
+    }
+    const ValueDecl *DomainObj =
+        Info.Ctx.createUnnamedGlobalConstantDecl(SingletonTy, DomainVal);
+    Info.HerbceptionDomains[DomainRD] = DomainObj;
+    Result.set(APValue::LValueBase(DomainObj));
+    return true;
+  }
+
   bool handleCallExpr(const CallExpr *E, APValue &Result,
-                     const LValue *ResultSlot) {
+                     const LValue *ResultSlot, APValue *ErrorValue = nullptr) {
     CallScopeRAII CallScope(Info);
 
     const Expr *Callee = E->getCallee()->IgnoreParens();
@@ -9076,6 +9308,26 @@ public:
              CallScope.destroy();
     }
 
+    // Herbception domain magic: a call to `error_domain<T>::domain()` returns
+    // a unique opaque pointer per domain type T. Fabricate it here instead of
+    // evaluating the (extern "C") function body.
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+      if (MD->isStatic() && MD->getDeclName().isIdentifier() &&
+          MD->getName() == "domain" && MD->getNumParams() == 0 &&
+          MD->getReturnType()->isPointerType()) {
+        const CXXRecordDecl *DomainRD = MD->getParent();
+        if (DomainRD && DomainRD->getDeclName().isIdentifier() &&
+            DomainRD->getName() == "error_domain") {
+          LValue DomainLV;
+          if (!fabricateDomainPointer(
+                  DomainRD, MD->getReturnType()->getPointeeType(), DomainLV))
+            return false;
+          DomainLV.moveInto(Result);
+          return CallScope.destroy();
+        }
+      }
+    }
+
     const FunctionDecl *Definition = nullptr;
     Stmt *Body = FD->getBody(Definition);
     SourceLocation Loc = E->getExprLoc();
@@ -9087,7 +9339,7 @@ public:
 
     if (!CheckConstexprFunction(Info, Loc, FD, Definition, Body) ||
         !HandleFunctionCall(Loc, Definition, This, E, Args, Call, Body, Info,
-                            Result, ResultSlot))
+                            Result, ResultSlot, ErrorValue))
       return false;
 
     if (!CovariantAdjustmentPath.empty() &&
@@ -11371,6 +11623,43 @@ namespace {
     bool VisitCXXParenListOrInitListExpr(const Expr *ExprToVisit,
                                          ArrayRef<Expr *> Args);
     bool VisitDesignatedInitUpdateExpr(const DesignatedInitUpdateExpr *E);
+
+    /// Fabricate the compiler-built `std::error {domain, code}` value for a
+    /// `throw throws` in a constant expression.
+    bool VisitCXXErrorValueExpr(const CXXErrorValueExpr *E) {
+      // Evaluate the code call: error_domain<T>::code(operand).
+      APValue Code;
+      if (!handleCallExpr(
+              cast<CallExpr>(E->getCodeCall()->IgnoreParenImpCasts()), Code,
+              nullptr))
+        return false;
+      // Fabricate the unique opaque domain pointer. The DomainCall is
+      // `error_domain<T>::domain()`, which handleCallExpr intercepts.
+      APValue Domain;
+      if (!handleCallExpr(
+              cast<CallExpr>(E->getDomainCall()->IgnoreParenImpCasts()),
+              Domain, nullptr))
+        return false;
+      // Build the std::error value {domain_opaque, code_opaque}. The field
+      // names are implementation-defined (some headers use a __-prefixed
+      // spelling), so identify them by type: the domain is the pointer field,
+      // the code is the integral field.
+      const RecordDecl *RD = E->getType()->getAsRecordDecl();
+      if (!RD)
+        return Error(E);
+      APValue V(APValue::UninitStruct(), /*NumBases=*/0, RD->getNumFields());
+      unsigned Idx = 0;
+      for (const FieldDecl *F : RD->fields()) {
+        if (F->isUnnamedBitField())
+          continue;
+        if (F->getType()->isPointerType())
+          V.getStructField(Idx) = std::move(Domain);
+        else if (F->getType()->isIntegralOrEnumerationType())
+          V.getStructField(Idx) = std::move(Code);
+        ++Idx;
+      }
+      return Success(std::move(V), E);
+    }
   };
 }
 
@@ -16138,6 +16427,7 @@ public:
   bool VisitUnaryImag(const UnaryOperator *E);
 
   bool VisitCXXNoexceptExpr(const CXXNoexceptExpr *E);
+  bool VisitCXXThrowsExpr(const CXXThrowsExpr *E);
   bool VisitSizeOfPackExpr(const SizeOfPackExpr *E);
   bool VisitSourceLocExpr(const SourceLocExpr *E);
   bool VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E);
@@ -20259,6 +20549,10 @@ bool IntExprEvaluator::VisitCXXNoexceptExpr(const CXXNoexceptExpr *E) {
   return Success(E->getValue(), E);
 }
 
+bool IntExprEvaluator::VisitCXXThrowsExpr(const CXXThrowsExpr *E) {
+  return Success(E->getValue(), E);
+}
+
 bool IntExprEvaluator::VisitConceptSpecializationExpr(
        const ConceptSpecializationExpr *E) {
   return Success(E->isSatisfied(), E);
@@ -22475,6 +22769,10 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::CXXParenListInitExprClass:
   case Expr::HLSLOutArgExprClass:
   case Expr::CXXExpansionSelectExprClass:
+  case Expr::CXXTryExprClass:
+  case Expr::CXXCatchReturnFailureExprClass:
+  case Expr::CXXErrorValueExprClass:
+  case Expr::CXXCxaExceptionExprClass:
     return ICEDiag(IK_NotICE, E->getBeginLoc());
 
   case Expr::MemberExprClass: {
@@ -22539,6 +22837,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::ArrayTypeTraitExprClass:
   case Expr::ExpressionTraitExprClass:
   case Expr::CXXNoexceptExprClass:
+  case Expr::CXXThrowsExprClass:
   case Expr::CXXReflectExprClass:
     return NoDiag();
   case Expr::CallExprClass:

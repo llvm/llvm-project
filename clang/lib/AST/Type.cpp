@@ -3747,6 +3747,8 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
     return "fastcall";
   case CC_X86ThisCall:
     return "thiscall";
+  case CC_WinCall:
+    return "wincall";
   case CC_X86Pascal:
     return "pascal";
   case CC_X86VectorCall:
@@ -3870,7 +3872,8 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
   }
 
   // Fill in the exception type array if present.
-  if (getExceptionSpecType() == EST_Dynamic) {
+  if (getExceptionSpecType() == EST_Dynamic ||
+      getExceptionSpecType() == EST_ThrowsTyped) {
     auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
     size_t NumExceptions = epi.ExceptionSpec.Exceptions.size();
     assert(NumExceptions <= 1023 && "Not enough bits to encode exceptions");
@@ -4015,6 +4018,18 @@ CanThrowResult FunctionProtoType::canThrow() const {
   case EST_NoThrow:
     return CT_Cannot;
 
+  case EST_BasicThrows:
+  case EST_BasicThrowsTrue:
+  case EST_ThrowsTyped:
+    // Herbception: the function cannot throw C++ exceptions, but it can
+    // return a failure via the deterministic error channel.
+    return CT_Deterministic;
+
+  case EST_BasicThrowsFalse:
+    // `throws(false)`: cannot fail via herbception and cannot throw C++
+    // exceptions — equivalent to noexcept(true).
+    return CT_Cannot;
+
   case EST_None:
   case EST_MSAny:
   case EST_NoexceptFalse:
@@ -4082,7 +4097,8 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   ID.AddInteger(unsigned(epi.Variadic) + (epi.RefQualifier << 1) +
                 (epi.ExceptionSpec.Type << 3));
   ID.Add(epi.TypeQuals);
-  if (epi.ExceptionSpec.Type == EST_Dynamic) {
+  if (epi.ExceptionSpec.Type == EST_Dynamic ||
+      epi.ExceptionSpec.Type == EST_ThrowsTyped) {
     for (QualType Ex : epi.ExceptionSpec.Exceptions)
       ID.AddPointer(Ex.getAsOpaquePtr());
   } else if (isComputedNoexcept(epi.ExceptionSpec.Type)) {
@@ -4595,6 +4611,7 @@ bool AttributedType::isCallingConv() const {
   case attr::PreserveNone:
   case attr::RISCVVectorCC:
   case attr::RISCVVLSCC:
+  case attr::WinCall:
     return true;
   }
   llvm_unreachable("invalid attr kind");

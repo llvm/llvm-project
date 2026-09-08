@@ -3285,6 +3285,18 @@ void CIRGenModule::setCIRFunctionAttributesForDefinition(
     f->setAttr(cir::CIRDialect::getNoThrowAttrName(),
                mlir::UnitAttr::get(&getMLIRContext()));
 
+  // Set calling convention for function definitions.
+  // WinCall is the default for x86_64apx Windows targets or when the wincall
+  // attribute is present. The calling convention is stored on the function
+  // type.
+  if (decl) {
+    clang::CallingConv cc =
+        decl->getType()->castAs<clang::FunctionType>()->getCallConv();
+    if (cc == clang::CallingConv::CC_WinCall) {
+      f.setCallingConv(cir::CallingConv::X86WinCall);
+    }
+  }
+
   std::optional<cir::InlineKind> existingInlineKind = f.getInlineKind();
   bool isNoInline =
       existingInlineKind && *existingInlineKind == cir::InlineKind::NoInline;

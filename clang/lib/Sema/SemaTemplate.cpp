@@ -3513,6 +3513,29 @@ static QualType checkBuiltinTemplateIdType(
     return Ts.getPackAsArray()[N].getAsType();
   }
 
+  case BTK__invoke_herbceptions_return_failure_result: {
+    // __invoke_herbceptions_return_failure_result<F, Args...> yields a synthetic struct
+    // with `value_type` (F's return type) and `error_type` (the fails{E} error
+    // type, or void when F is not a fails function).
+    assert(Converted.size() >= 1);
+    if (llvm::any_of(Converted, [](auto &C) { return C.isDependent(); }))
+      return QualType();
+    QualType F = Converted[0].getAsType();
+    if (const auto *PT = F->getAs<PointerType>())
+      F = PT->getPointeeType();
+    else if (const auto *RT = F->getAs<ReferenceType>())
+      F = RT->getPointeeType();
+    QualType ValueTy = Context.VoidTy;
+    QualType ErrorTy = Context.VoidTy;
+    if (const auto *FPT = F->getAs<FunctionProtoType>()) {
+      ValueTy = FPT->getReturnType();
+      if (FPT->hasReturnFailureSpec())
+        ErrorTy = FPT->getExceptionType(0);
+    }
+    return SemaRef.Context.getInvokeHerbceptionsFailsResultType(ValueTy,
+                                                               ErrorTy);
+  }
+
   case BTK__builtin_common_type: {
     assert(Converted.size() == 4);
     if (llvm::any_of(Converted, [](auto &C) { return C.isDependent(); }))

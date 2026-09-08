@@ -225,7 +225,24 @@ enum CXCursor_ExceptionSpecificationKind {
   /**
    * The cursor has a __declspec(nothrow) exception specification.
    */
-  CXCursor_ExceptionSpecificationKind_NoThrow
+  CXCursor_ExceptionSpecificationKind_NoThrow,
+
+  /**
+   * The cursor has a herbception `throws` exception specification.
+   */
+  CXCursor_ExceptionSpecificationKind_BasicThrows,
+
+  /**
+   * The cursor has a herbception `throws(...)` exception specification with
+   * listed herbception error types.
+   */
+  CXCursor_ExceptionSpecificationKind_Throws,
+
+  /**
+   * The cursor has a herbception `throws noexcept(false)` exception
+   * specification.
+   */
+  CXCursor_ExceptionSpecificationKind_ThrowsNoexceptFalse
 };
 
 /**
@@ -3092,6 +3109,7 @@ enum CXCallingConv {
   CXCallingConv_RISCVVLSCall_16384 = 31,
   CXCallingConv_RISCVVLSCall_32768 = 32,
   CXCallingConv_RISCVVLSCall_65536 = 33,
+  CXCallingConv_WinCall = 34,
 
   CXCallingConv_Invalid = 100,
   CXCallingConv_Unexposed = 200

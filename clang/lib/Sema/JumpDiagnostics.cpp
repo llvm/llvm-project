@@ -420,7 +420,7 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
 
     // Jump from the catch into the try is not allowed either.
     for (unsigned I = 0, E = TS->getNumHandlers(); I != E; ++I) {
-      CXXCatchStmt *CS = TS->getHandler(I);
+      CXXCatchStmt *CS = TS->getCatchHandler(I);
       unsigned NewParentScope = Scopes.size();
       Scopes.push_back(GotoScope(ParentScope,
                                  diag::note_protected_by_cxx_catch,

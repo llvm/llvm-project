@@ -15,6 +15,7 @@
 #define LLVM_LTO_CONFIG_H
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/GlobalValue.h"
@@ -26,7 +27,12 @@
 #include "llvm/Target/TargetOptions.h"
 
 #include <functional>
+#include <memory>
+#include <mutex>
 #include <optional>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace llvm {
 
@@ -37,6 +43,44 @@ class raw_pwrite_stream;
 class PassPlugin;
 
 namespace lto {
+
+/// One Definition Rule checker for herbception ("throws"/"fails{E}")
+/// functions, shared by all modules of an LTO link (including ThinLTO
+/// backend threads).
+///
+/// The herbception specifier is not part of the C++ mangled name, so two
+/// translation units can disagree about whether a symbol is a throws
+/// function -- and about its error payload type -- while producing the very
+/// same symbol name. The herbception error channel changes the returned-
+/// function ABI ({T, i1} return plus a target discriminant), and only the
+/// linker sees all of the definitions, so this is where the disagreement
+/// has to be diagnosed.
+class HerbceptionODRChecker {
+public:
+  /// The herbception-relevant part of a function's ABI: whether it carries
+  /// the 'throws' attribute, and the payload element of its {T, i1} return
+  /// type ("" when there is no herbception error channel at all).
+  struct Signature {
+    bool Throws = false;
+    std::string PayloadTy;
+
+    bool operator==(const Signature &Other) const {
+      return Throws == Other.Throws && PayloadTy == Other.PayloadTy;
+    }
+  };
+
+  /// Record \p Sig for symbol \p Name seen in module \p ModuleID. Conflicts
+  /// with previously recorded signatures are appended to the violation list.
+  void record(StringRef Name, const Signature &Sig, StringRef ModuleID);
+
+  /// Returns and clears the accumulated violation messages.
+  std::vector<std::string> takeViolations();
+
+private:
+  std::mutex Mutex;
+  StringMap<std::pair<Signature, std::string>> Definitions;
+  std::vector<std::string> Violations;
+};
 
 /// LTO configuration. A linker can configure LTO by setting fields in this data
 /// structure and passing it to the lto::LTO constructor.
@@ -99,6 +143,20 @@ struct Config {
   /// The lld linker uses string saver to keep symbol names alive and doesn't
   /// need to create copies, so it can set this field to false.
   bool KeepSymbolNameCopies = true;
+
+  /// Check the herbception ("throws"/"fails{E}") signatures of all externally
+  /// visible functions across every LTO module (including ThinLTO backends)
+  /// and fail the link on One Definition Rule violations. On by default: the
+  /// herbception error channel changes the returned-function ABI but is not
+  /// part of the mangled name, so only the linker can catch translation units
+  /// that disagree about it.
+  bool CheckHerbceptionODR = true;
+
+  /// State shared by HerbceptionODRChecker scans of every input module. Kept
+  /// behind a shared_ptr so that copies of this Config (and ThinLTO backend
+  /// threads) all observe the same registry.
+  std::shared_ptr<HerbceptionODRChecker> HerbceptionODR =
+      std::make_shared<HerbceptionODRChecker>();
 
   /// This flag is used as one of parameters to calculate cache entries and to
   /// ensure that in-process cache and out-of-process (DTLTO) cache are

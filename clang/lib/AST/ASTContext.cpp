@@ -4997,6 +4997,19 @@ static bool isCanonicalExceptionSpecification(
     const FunctionProtoType::ExceptionSpecInfo &ESI, bool NoexceptInType) {
   if (ESI.Type == EST_None)
     return true;
+
+  // Herbception (throws/fails) is always part of the canonical type because it
+  // changes the function ABI (the return type is lowered to {T, i1}).
+  if (ESI.Type == EST_BasicThrows || ESI.Type == EST_BasicThrowsTrue ||
+      ESI.Type == EST_BasicThrowsFalse)
+    return true;
+  if (ESI.Type == EST_ThrowsTyped) {
+    for (QualType ET : ESI.Exceptions)
+      if (!ET.isCanonical())
+        return false;
+    return true;
+  }
+
   if (!NoexceptInType)
     return false;
 
@@ -5124,6 +5137,19 @@ QualType ASTContext::getFunctionTypeInternal(
       case EST_NoexceptTrue:
       case EST_NoThrow:
         CanonicalEPI.ExceptionSpec.Type = EST_BasicNoexcept;
+        break;
+
+      case EST_BasicThrows:
+      case EST_BasicThrowsTrue:
+      case EST_BasicThrowsFalse:
+        CanonicalEPI.ExceptionSpec.Type = EPI.ExceptionSpec.Type;
+        break;
+
+      case EST_ThrowsTyped:
+        CanonicalEPI.ExceptionSpec.Type = EPI.ExceptionSpec.Type;
+        for (QualType ET : EPI.ExceptionSpec.Exceptions)
+          ExceptionTypeStorage.push_back(getCanonicalType(ET));
+        CanonicalEPI.ExceptionSpec.Exceptions = ExceptionTypeStorage;
         break;
 
       case EST_DependentNoexcept:
@@ -8608,6 +8634,102 @@ QualType ASTContext::getBlockDescriptorType() const {
   BlockDescriptorType = RD;
 
   return getCanonicalTagType(BlockDescriptorType);
+}
+
+QualType ASTContext::getCatchReturnFailureType(QualType T, QualType E) const {
+  CanQualType CT = getCanonicalType(T);
+  CanQualType CE = getCanonicalType(E);
+  auto Key = std::make_pair(CT, CE);
+  auto It = CatchReturnFailureTypes.find(Key);
+  if (It != CatchReturnFailureTypes.end())
+    return getCanonicalTagType(It->second);
+
+  // N2289: struct { union { T value; E error; }; bool failed; }.
+  RecordDecl *RD = buildImplicitRecord("__herb_catch_fails");
+  RD->startDefinition();
+
+  // The anonymous union member { T value; E error; }. It must be truly
+  // unnamed: buildImplicitRecord("") would mint an empty IdentifierInfo,
+  // whose zero-length entry corrupts the module/PCH identifier lookup table.
+  RecordDecl *Union = buildImplicitRecord("", RecordDecl::TagKind::Union);
+  Union->setDeclName(DeclarationName());
+  Union->setAnonymousStructOrUnion(true);
+  Union->startDefinition();
+  for (const auto &F : {std::pair<const char *, QualType>{"value", T},
+                        std::pair<const char *, QualType>{"error", E}}) {
+    FieldDecl *Field = FieldDecl::Create(
+        *this, Union, SourceLocation(), SourceLocation(), &Idents.get(F.first),
+        F.second, /*TInfo=*/nullptr, /*BitWidth=*/nullptr, /*Mutable=*/false,
+        ICIS_NoInit);
+    Field->setAccess(AS_public);
+    Union->addDecl(Field);
+  }
+  Union->completeDefinition();
+
+  FieldDecl *UnionField = FieldDecl::Create(
+      *this, RD, SourceLocation(), SourceLocation(),
+      /*Id=*/nullptr, getTypeDeclType(static_cast<const TypeDecl *>(Union)),
+      /*TInfo=*/nullptr,
+      /*BitWidth=*/nullptr, /*Mutable=*/false, ICIS_NoInit);
+  UnionField->setImplicit();
+  UnionField->setAccess(AS_public);
+  RD->addDecl(UnionField);
+
+  // Inject `value`/`error` as IndirectFieldDecls so `r.value` / `r.error`
+  // resolve through the anonymous union.
+  for (const FieldDecl *Sub : Union->fields()) {
+    if (!Sub->getDeclName())
+      continue;
+    auto *Chain =
+        new (*const_cast<ASTContext *>(this)) NamedDecl *[2];
+    Chain[0] = UnionField;
+    Chain[1] = const_cast<FieldDecl *>(Sub);
+    IndirectFieldDecl *Ind = IndirectFieldDecl::Create(
+        *const_cast<ASTContext *>(this), RD, Sub->getLocation(),
+        Sub->getIdentifier(), Sub->getType(), {Chain, 2});
+    Ind->setImplicit();
+    Ind->setAccess(AS_public);
+    RD->addDecl(Ind);
+  }
+
+  FieldDecl *FailedField = FieldDecl::Create(
+      *this, RD, SourceLocation(), SourceLocation(), &Idents.get("failed"),
+      BoolTy, /*TInfo=*/nullptr, /*BitWidth=*/nullptr, /*Mutable=*/false,
+      ICIS_NoInit);
+  FailedField->setAccess(AS_public);
+  RD->addDecl(FailedField);
+
+  RD->completeDefinition();
+  CatchReturnFailureTypes[Key] = RD;
+  return getCanonicalTagType(RD);
+}
+
+QualType
+ASTContext::getInvokeHerbceptionsFailsResultType(QualType V, QualType E) const {
+  CanQualType CV = getCanonicalType(V);
+  CanQualType CE = getCanonicalType(E);
+  auto Key = std::make_pair(CV, CE);
+  auto It = InvokeHerbceptionsFailsResultTypes.find(Key);
+  if (It != InvokeHerbceptionsFailsResultTypes.end())
+    return getCanonicalTagType(It->second);
+
+  // struct { using value_type = V; using error_type = E; }
+  RecordDecl *RD = buildImplicitRecord("__herb_invoke_fails_result");
+  RD->startDefinition();
+
+  auto addTypedef = [&](StringRef Name, QualType Ty) {
+    TypedefDecl *TD = TypedefDecl::Create(
+        *const_cast<ASTContext *>(this), RD, SourceLocation(),
+        SourceLocation(), &Idents.get(Name), getTrivialTypeSourceInfo(Ty));
+    TD->setAccess(AS_public);
+    RD->addDecl(TD);
+  };
+  addTypedef("value_type", V);
+  addTypedef("error_type", E);
+
+  RD->completeDefinition();
+  InvokeHerbceptionsFailsResultTypes[Key] = RD;
+  return getCanonicalTagType(RD);
 }
 
 QualType ASTContext::getBlockDescriptorExtendedType() const {
@@ -13433,6 +13555,10 @@ CallingConv ASTContext::getDefaultCallingConvention(bool IsVariadic,
     if (getTargetInfo().hasFeature("sse2") && !IsVariadic)
       return CC_X86FastCall;
     break;
+  case LangOptions::DCC_WinCall:
+    if (!IsVariadic)
+      return CC_WinCall;
+    break;
   case LangOptions::DCC_StdCall:
     if (!IsVariadic)
       return CC_X86StdCall;
@@ -13869,6 +13995,12 @@ ASTContext::getUnnamedGlobalConstantDecl(QualType Ty,
       UnnamedGlobalConstantDecl::Create(*this, Ty, APVal);
   UnnamedGlobalConstantDecls.insert(New, Token);
   return New;
+}
+
+UnnamedGlobalConstantDecl *
+ASTContext::createUnnamedGlobalConstantDecl(QualType Ty,
+                                            const APValue &APVal) const {
+  return UnnamedGlobalConstantDecl::Create(*this, Ty, APVal);
 }
 
 TemplateParamObjectDecl *
@@ -14334,6 +14466,15 @@ ASTContext::mergeExceptionSpecs(FunctionProtoType::ExceptionSpecInfo ESI1,
   case EST_Uninstantiated:
   case EST_Unparsed:
     llvm_unreachable("shouldn't see unresolved exception specifications here");
+
+  // Herbception specs are part of the canonical type: they can only merge
+  // with an identical spec (a mismatched combination is rejected by Sema).
+  case EST_BasicThrows:
+  case EST_BasicThrowsTrue:
+  case EST_BasicThrowsFalse:
+  case EST_ThrowsTyped:
+    assert(EST2 == EST1 && "mismatched herbception exception specifications");
+    return ESI1;
   }
 
   llvm_unreachable("invalid ExceptionSpecificationType");

@@ -2568,6 +2568,20 @@ bool AArch64InstrInfo::removeCmpToZeroOrOne(
 }
 
 bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
+  if (MI.getOpcode() == AArch64::HERB_CSETWr ||
+      MI.getOpcode() == AArch64::HERB_CSETXr) {
+    // Herbception (throws): lower HERB_CSET to CSINC 0,0, inverse(HS).
+    // CSINC 0,0, inverse(HS) = cset dst, cs (dst = (C==1) ? 1 : 0).
+    MachineInstrBuilder MIB(*MI.getParent()->getParent(), MI);
+    bool Is64 = MI.getOpcode() == AArch64::HERB_CSETXr;
+    unsigned CsincOpc = Is64 ? AArch64::CSINCXr : AArch64::CSINCWr;
+    MIB->setDesc(get(CsincOpc));
+    MIB.addReg(Is64 ? AArch64::XZR : AArch64::WZR);            // Rn = tval = 0
+    MIB.addReg(Is64 ? AArch64::XZR : AArch64::WZR);            // Rm = fval = 0
+    MIB.addImm(AArch64CC::getInvertedCondCode(AArch64CC::HS)); // cc = LO
+    return true;
+  }
+
   if (MI.getOpcode() != TargetOpcode::LOAD_STACK_GUARD &&
       MI.getOpcode() != AArch64::CATCHRET &&
       MI.getOpcode() != AArch64::STACK_GUARD_UNMIX)

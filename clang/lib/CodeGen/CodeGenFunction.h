@@ -599,6 +599,35 @@ public:
   /// In ARC, whether we should autorelease the return value.
   bool AutoreleaseResult = false;
 
+  /// For a herbception (throws) function: the slot holding the discriminant
+  /// (the trailing i1 of the {T, i1} return). Plain `return` stores false;
+  /// `throw throws` / failure stores true.
+  Address HerbceptionDiscriminant = Address::invalid();
+
+  /// An active herbception `catch throws(E e)` handler. When a bare call to a
+  /// throws/fails function inside the try block fails, the error value is
+  /// stored into ErrorSlot and control branches to HandlerBlock instead of
+  /// being ignored or propagating.
+  struct HerbceptionCatchScope {
+    HerbceptionCatchScope(JumpDest H, Address S, llvm::Type *T)
+        : Handler(H), ErrorSlot(S), ErrorType(T) {}
+    /// The jump destination of the handler block, at the scope depth of the
+    /// enclosing try statement (so the try block's cleanups run first).
+    JumpDest Handler;
+    /// The slot holding the error value read by the handler.
+    Address ErrorSlot;
+    /// The LLVM type of the error value (the payload of the {T, i1} return).
+    llvm::Type *ErrorType;
+  };
+  /// The stack of active herbception catch-throws scopes.
+  SmallVector<HerbceptionCatchScope, 4> HerbceptionCatchScopes;
+
+  /// Whether we are currently emitting the operand of a `try(expr)` /
+  /// `catch fails(expr)` expression. While set, calls inside are already being
+  /// handled by EmitHerbceptionTry/EmitHerbceptionCatchReturnFailure and must not be
+  /// routed to an enclosing herbception catch scope.
+  bool InHerbceptionOperand = false;
+
   /// Whether we processed a Microsoft-style asm block during CodeGen. These can
   /// potentially set the return value.
   bool SawAsmBlock = false;
@@ -2181,6 +2210,11 @@ private:
   llvm::BasicBlock *TerminateHandler = nullptr;
   llvm::SmallVector<llvm::BasicBlock *, 2> TrapBBs;
 
+  /// Herbception: the whole-function catch-all handler that converts a legacy
+  /// C++ exception escaping a `throws` function into a fabricated std::error
+  /// on the herbception channel. Lazily created; emitted if used.
+  llvm::BasicBlock *HerbceptionLegacyConvertBB = nullptr;
+
   /// Terminate funclets keyed by parent funclet pad.
   llvm::MapVector<llvm::Value *, llvm::BasicBlock *> TerminateFunclets;
 
@@ -2650,6 +2684,17 @@ public:
   /// a catch handler) that just calls terminate.  This is used when
   /// a terminate scope encloses a try.
   llvm::BasicBlock *getTerminateHandler();
+
+  /// getHerbceptionLegacyConvert - Return the whole-function catch-all handler
+  /// for a `throws` function: it converts a legacy C++ exception that escapes
+  /// the function into a fabricated std::error and routes it to the throws
+  /// return path. Lazily created; emitted if used.
+  llvm::BasicBlock *getHerbceptionLegacyConvert();
+
+  /// emitHerbceptionLegacyConvertBody - Emit the body of the whole-function
+  /// legacy conversion handler. Called after the catch scope is popped so the
+  /// funclet catchpad (MSVC) is already the block's first instruction.
+  void emitHerbceptionLegacyConvertBody();
 
   llvm::Type *ConvertTypeForMem(QualType T);
   llvm::Type *ConvertType(QualType T);
@@ -3721,6 +3766,9 @@ public:
   void ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock = false);
 
   void EmitCXXTryStmt(const CXXTryStmt &S);
+  /// Emit a `try { } catch throws(E e) { }` block handler using discriminant
+  /// routing instead of the traditional EH machinery.
+  void EmitHerbceptionCatchTry(const CXXTryStmt &S);
   void EmitSEHTryStmt(const SEHTryStmt &S);
   void EmitSEHLeaveStmt(const SEHLeaveStmt &S);
   void EnterSEHTryStmt(const SEHTryStmt &S);
@@ -5272,6 +5320,37 @@ public:
   void EmitSynthesizedCXXCopyCtor(Address Dest, Address Src, const Expr *Exp);
 
   void EmitCXXThrowExpr(const CXXThrowExpr *E, bool KeepInsertionPoint = true);
+
+  /// Emit a herbception `throw throws expr`: return the error value with the
+  /// discriminant (the trailing i1 of {T, i1}) set to true.
+  void EmitHerbceptionThrow(const Expr *ErrorValue, SourceLocation Loc);
+
+  /// Emit the compiler-fabricated `std::error` value for a herbception
+  /// `throw throws e`: call error_domain<T>::domain() and ::code(e) and build
+  /// the {domain, code} two-word value. Returns it as an aggregate RValue.
+  RValue EmitErrorValueExpr(const CXXErrorValueExpr *E);
+
+  /// The thrown object pointer of the currently-caught legacy C++ exception,
+  /// i.e. `__cxa_get_exception_ptr(getExceptionFromSlot())`. Used as the code
+  /// of a fabricated std::error when converting a legacy exception to the
+  /// herbception channel. Returns a pointer value.
+  llvm::Value *EmitCxaExceptionPtr(const CXXCxaExceptionExpr *E);
+
+  /// Convert a `fails{E}` error payload value \p ErrVal into a `std::error`
+  /// value by calling error_domain<E>::domain() and error_domain<E>::code(e)
+  /// (where \p E is \p E->getErrorDomain()). Used when auto-propagating a
+  /// fails{E} error into a throws function. Returns the {void*, size_t} value,
+  /// or null if the conversion cannot be built.
+  llvm::Value *EmitFailsErrorToStdError(const CXXTryExpr *E,
+                                        llvm::Value *ErrVal);
+
+  /// Emit a herbception `try(expr)`: evaluate the throws/fails call and
+  /// auto-propagate its error on failure. Returns the success value.
+  RValue EmitHerbceptionTry(const CXXTryExpr *E);
+
+  /// Emit a herbception `catch fails(expr)`: evaluate the throws/fails call
+  /// and produce an `either{T, E}` value (positive, left, right).
+  RValue EmitHerbceptionCatchReturnFailure(const CXXCatchReturnFailureExpr *E);
 
   RValue EmitAtomicExpr(AtomicExpr *E);
 

@@ -83,6 +83,19 @@ ExprResult Parser::ParseAssignmentExpression(
 
   if (Tok.is(tok::kw_throw))
     return ParseThrowExpression();
+  // Herbception: `try(expr)` auto-propagates the error of a throws/fails call.
+  if (getLangOpts().HerbExceptions && Tok.is(tok::kw_try) &&
+      GetLookAheadToken(1).is(tok::l_paren))
+    return ParseHerbceptionTryExpression();
+  // Herbception: `catch return_failure(expr)` produces an `either{T, E}` value.
+  if (getLangOpts().HerbExceptions && Tok.is(tok::kw_catch) &&
+      GetLookAheadToken(1).is(tok::kw_return_failure) &&
+      GetLookAheadToken(2).is(tok::l_paren))
+    return ParseHerbceptionCatchReturnFailureExpression();
+  // Herbception (C-style `return_failure{E}`): `return_failure(expr)` returns
+  // the expression via the failure channel.
+  if (getLangOpts().HerbExceptions && Tok.is(tok::kw_return_failure))
+    return ParseHerbceptionReturnFailureExpression();
   if (Tok.is(tok::kw_co_yield))
     return ParseCoyieldExpression();
 
@@ -708,6 +721,9 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
     REVERTIBLE_TYPE_TRAIT(__is_void);
     REVERTIBLE_TYPE_TRAIT(__is_volatile);
     REVERTIBLE_TYPE_TRAIT(__reference_binds_to_temporary);
+    REVERTIBLE_TYPE_TRAIT(__is_herbceptions_throws_constructible);
+    REVERTIBLE_TYPE_TRAIT(__is_herbceptions_throws_invocable);
+    REVERTIBLE_TYPE_TRAIT(__is_herbceptions_throws_invocable_r);
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   REVERTIBLE_TYPE_TRAIT(RTT_JOIN(__, Trait));
 #include "clang/Basic/BuiltinTraits.inc"
@@ -1521,6 +1537,27 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
     if (!Res.isInvalid())
       Res = Actions.ActOnNoexceptExpr(KeyLoc, T.getOpenLocation(), Res.get(),
                                       T.getCloseLocation());
+    AllowSuffix = false;
+    break;
+  }
+
+  case tok::kw_throws: { // herbception: 'throws' '(' expression ')'
+    if (NotPrimaryExpression)
+      *NotPrimaryExpression = true;
+    SourceLocation KeyLoc = ConsumeToken();
+    BalancedDelimiterTracker T(*this, tok::l_paren);
+
+    if (T.expectAndConsume(diag::err_expected_lparen_after, "throws"))
+      return ExprError();
+    EnterExpressionEvaluationContext Unevaluated(
+        Actions, Sema::ExpressionEvaluationContext::Unevaluated);
+    Res = ParseExpression();
+
+    T.consumeClose();
+
+    if (!Res.isInvalid())
+      Res = Actions.ActOnThrowsExpr(KeyLoc, T.getOpenLocation(), Res.get(),
+                                    T.getCloseLocation());
     AllowSuffix = false;
     break;
   }

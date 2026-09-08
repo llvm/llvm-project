@@ -31,6 +31,9 @@ public:
 
   const LoongArchSubtarget &getSubtarget() const { return Subtarget; }
 
+  /// LoongArch returns the throws (herbception) discriminant in a2 (R6).
+  bool supportThrowsCC() const override { return true; }
+
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
   // Provide custom lowering hooks for some operations.

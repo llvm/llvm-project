@@ -287,6 +287,7 @@ public:
       SS_Dependent,
       SS_ExprSubstitutionFailure,
       SS_NoexceptNotMet,
+      SS_ThrowsNotMet,
       SS_TypeRequirementSubstitutionFailure,
       SS_ConstraintsNotSatisfied,
       SS_Satisfied
@@ -357,6 +358,7 @@ public:
 private:
   llvm::PointerUnion<Expr *, SubstitutionDiagnostic *> Value;
   SourceLocation NoexceptLoc; // May be empty if noexcept wasn't specified.
+  SourceLocation ThrowsLoc; // May be empty if throws wasn't specified.
   ReturnTypeRequirement TypeReq;
   ConceptSpecializationExpr *SubstitutedConstraintExpr;
   SatisfactionStatus Status;
@@ -369,10 +371,13 @@ public:
   /// \param IsSimple whether this was a simple requirement in source.
   /// \param NoexceptLoc the location of the noexcept keyword, if it was
   /// specified, otherwise an empty location.
+  /// \param ThrowsLoc the location of the throws keyword, if it was
+  /// specified, otherwise an empty location.
   /// \param Req the requirement for the type of the checked expression.
   /// \param Status the satisfaction status of this requirement.
   ExprRequirement(
       Expr *E, bool IsSimple, SourceLocation NoexceptLoc,
+      SourceLocation ThrowsLoc,
       ReturnTypeRequirement Req, SatisfactionStatus Status,
       ConceptSpecializationExpr *SubstitutedConstraintExpr = nullptr);
 
@@ -383,16 +388,22 @@ public:
   /// \param IsSimple whether this was a simple requirement in source.
   /// \param NoexceptLoc the location of the noexcept keyword, if it was
   /// specified, otherwise an empty location.
+  /// \param ThrowsLoc the location of the throws keyword, if it was
+  /// specified, otherwise an empty location.
   /// \param Req the requirement for the type of the checked expression (omit
   /// if no requirement was specified).
   ExprRequirement(SubstitutionDiagnostic *E, bool IsSimple,
-                  SourceLocation NoexceptLoc, ReturnTypeRequirement Req = {});
+                  SourceLocation NoexceptLoc, SourceLocation ThrowsLoc,
+                  ReturnTypeRequirement Req = {});
 
   bool isSimple() const { return getKind() == RK_Simple; }
   bool isCompound() const { return getKind() == RK_Compound; }
 
   bool hasNoexceptRequirement() const { return NoexceptLoc.isValid(); }
   SourceLocation getNoexceptLoc() const { return NoexceptLoc; }
+
+  bool hasThrowsRequirement() const { return ThrowsLoc.isValid(); }
+  SourceLocation getThrowsLoc() const { return ThrowsLoc; }
 
   SatisfactionStatus getSatisfactionStatus() const { return Status; }
 

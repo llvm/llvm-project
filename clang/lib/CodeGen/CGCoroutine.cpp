@@ -970,6 +970,14 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
   auto *CoroBegin = Builder.CreateCall(
       CGM.getIntrinsic(llvm::Intrinsic::coro_begin), {CoroId, Phi});
   CurCoro.Data->CoroBegin = CoroBegin;
+
+  // Herbception (throws) coroutine: initialize the discriminant slot in the
+  // coroutine frame to "success" now that the frame exists. The initial store
+  // emitted in StartFunction predates coro.begin, so it never reaches the
+  // frame-promoted alloca.
+  if (CurFnInfo->hasThrowsReturn())
+    Builder.CreateStore(Builder.getFalse(), HerbceptionDiscriminant);
+
   {
     CGDebugInfo *DI = getDebugInfo();
     ParamReferenceReplacerRAII ParamReplacer(LocalDeclMap);

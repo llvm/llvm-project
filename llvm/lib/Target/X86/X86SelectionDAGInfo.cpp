@@ -50,6 +50,7 @@ const char *X86SelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
     NODE_NAME_CASE(AESDECWIDE128KL)
     NODE_NAME_CASE(AESENCWIDE256KL)
     NODE_NAME_CASE(AESDECWIDE256KL)
+    NODE_NAME_CASE(READ_CF)
   }
 #undef NODE_NAME_CASE
 

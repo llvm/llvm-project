@@ -67,9 +67,14 @@ void llvm::computeSignatureVTs(const FunctionType *Ty,
   computeLegalValueVTs(ContextFunc, TM, Ty->getReturnType(), Results);
 
   MVT PtrVT = MVT::getIntegerVT(TM.createDataLayout().getPointerSizeInBits());
-  if (!WebAssembly::canLowerReturn(
-          Results.size(),
-          &TM.getSubtarget<WebAssemblySubtarget>(ContextFunc))) {
+  // Herbception (throws) functions return an extra discriminant value. Allow
+  // the {T, i1} return to be lowered as two wasm results instead of demoting
+  // to sret.
+  bool IsThrowsReturn = Results.size() == 2 &&
+                        ContextFunc.hasFnAttribute(Attribute::Throws);
+  if (!IsThrowsReturn && !WebAssembly::canLowerReturn(
+                             Results.size(),
+                             &TM.getSubtarget<WebAssemblySubtarget>(ContextFunc))) {
     // WebAssembly can't lower returns of multiple values without demoting to
     // sret unless multivalue is enabled (see
     // WebAssemblyTargetLowering::CanLowerReturn). So replace multiple return

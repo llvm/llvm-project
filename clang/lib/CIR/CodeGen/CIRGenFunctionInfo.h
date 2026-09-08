@@ -100,9 +100,17 @@ class CIRGenFunctionInfo final
   LLVM_PREFERRED_TYPE(bool)
   unsigned instanceMethod : 1;
 
+  // Whether this function returns through the herbception {T, i1} channel.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned throwsReturn : 1;
+
   RequiredArgs required;
 
   unsigned numArgs;
+
+  // For a herbception {T, i1} return, the IR type of the error payload. Null
+  // unless throwsReturn is set.
+  mlir::Type herbceptionErrorTy;
 
   CanQualType *getArgTypes() { return getTrailingObjects(); }
   const CanQualType *getArgTypes() const { return getTrailingObjects(); }
@@ -124,7 +132,9 @@ public:
                                     FunctionType::ExtInfo info,
                                     bool instanceMethod, CanQualType resultType,
                                     llvm::ArrayRef<CanQualType> argTypes,
-                                    RequiredArgs required);
+                                    RequiredArgs required,
+                                    bool throwsReturn = false,
+                                    mlir::Type herbceptionErrorTy = {});
 
   void operator delete(void *p) { ::operator delete(p); }
 
@@ -138,12 +148,16 @@ public:
   // This function has to be CamelCase because llvm::FoldingSet requires so.
   // NOLINTNEXTLINE(readability-identifier-naming)
   static void Profile(llvm::FoldingSetNodeID &id, bool instanceMethod,
+                      bool throwsReturn, mlir::Type herbceptionErrorTy,
                       FunctionType::ExtInfo info, RequiredArgs required,
                       CanQualType resultType,
                       llvm::ArrayRef<CanQualType> argTypes) {
     id.AddInteger(info.getCC());
     id.AddBoolean(instanceMethod);
     id.AddBoolean(info.getNoReturn());
+    id.AddBoolean(throwsReturn);
+    if (herbceptionErrorTy)
+      id.AddPointer(herbceptionErrorTy.getAsOpaquePointer());
     id.AddInteger(required.getOpaqueData());
     resultType.Profile(id);
     for (const CanQualType &arg : argTypes)
@@ -155,8 +169,8 @@ public:
     // If the Profile functions get out of sync, we can end up with incorrect
     // function signatures, so we call the static Profile function here rather
     // than duplicating the logic.
-    Profile(id, isInstanceMethod(), getExtInfo(), required, getReturnType(),
-            arguments());
+    Profile(id, isInstanceMethod(), hasThrowsReturn(), herbceptionErrorTy,
+            getExtInfo(), required, getReturnType(), arguments());
   }
 
   llvm::ArrayRef<CanQualType> arguments() const {
@@ -201,6 +215,8 @@ public:
 
   bool isNoReturn() const { return noReturn; }
   bool isInstanceMethod() const { return instanceMethod; }
+  bool hasThrowsReturn() const { return throwsReturn; }
+  mlir::Type getHerbceptionErrorType() const { return herbceptionErrorTy; }
 
   cir::CallingConv getCallingConvention() const {
     return static_cast<cir::CallingConv>(callingConvention);

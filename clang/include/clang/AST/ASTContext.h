@@ -527,6 +527,16 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// serialized.
   mutable RecordDecl *BlockDescriptorType = nullptr;
 
+  /// Cache of the `catch fails(expr)` record types (`{union{T,E}, bool}`),
+  /// keyed by the canonicalized (T, E) pair.
+  mutable llvm::DenseMap<std::pair<CanQualType, CanQualType>, RecordDecl *>
+      CatchReturnFailureTypes;
+
+  /// Cache of the synthetic `{value_type, error_type}` records produced by the
+  /// __invoke_herbceptions_return_failure_result builtin, keyed by (V, E).
+  mutable llvm::DenseMap<std::pair<CanQualType, CanQualType>, RecordDecl *>
+      InvokeHerbceptionsFailsResultTypes;
+
   /// Type for the Block descriptor for Blocks CodeGen.
   ///
   /// Since this is only used for generation of debug info, it is not
@@ -1721,6 +1731,17 @@ public:
   /// Gets the struct used to keep track of the descriptor for pointer to
   /// blocks.
   QualType getBlockDescriptorType() const;
+
+  /// Return the `catch fails(expr)` result type, matching N2289:
+  /// `struct { union { T value; E error; }; bool failed; }`. The discriminant
+  /// is `.failed`; `.value`/`.error` share a union.
+  QualType getCatchReturnFailureType(QualType T, QualType E) const;
+
+  /// Return the synthetic result struct for invoking a `fails{E}` function:
+  /// `struct { using value_type = V; using error_type = E; }` (or void for
+  /// error_type when the callable does not use fails). Backs the
+  /// __invoke_herbceptions_return_failure_result builtin.
+  QualType getInvokeHerbceptionsFailsResultType(QualType V, QualType E) const;
 
   /// Return a read_only pipe type for the specified type.
   QualType getReadPipeType(QualType T) const;
@@ -3713,6 +3734,14 @@ public:
   /// corresponding to a given APValue.
   UnnamedGlobalConstantDecl *
   getUnnamedGlobalConstantDecl(QualType Ty, const APValue &Value) const;
+
+  /// Return a fresh (non-uniquified) anonymous global constant for the given
+  /// APValue. Unlike getUnnamedGlobalConstantDecl, each call returns a distinct
+  /// decl, so two values with identical content get distinct addresses. Used by
+  /// the constexpr herbception machinery to fabricate per-domain opaque
+  /// pointers.
+  UnnamedGlobalConstantDecl *
+  createUnnamedGlobalConstantDecl(QualType Ty, const APValue &Value) const;
 
   /// Return the template parameter object of the given type with the given
   /// value.

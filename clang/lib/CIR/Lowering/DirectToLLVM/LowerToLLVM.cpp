@@ -274,6 +274,8 @@ static mlir::LLVM::CConv convertCallingConv(cir::CallingConv callingConv) {
     return LLVM::PTX_Kernel;
   case CIR::AMDGPUKernel:
     return LLVM::AMDGPU_KERNEL;
+  case CIR::X86WinCall:
+    return LLVM::X86_WinCall;
   }
   llvm_unreachable("Unknown calling convention");
 }
@@ -2140,6 +2142,7 @@ static void lowerCallAttributes(cir::CIRCallOpInterface op,
                                 SmallVectorImpl<mlir::NamedAttribute> &result) {
   for (mlir::NamedAttribute attr : op->getAttrs()) {
     if (attr.getName() == CIRDialect::getCalleeAttrName() ||
+        attr.getName() == "cir.throws" ||
         attr.getName() == CIRDialect::getSideEffectAttrName() ||
         attr.getName() == CIRDialect::getNoThrowAttrName() ||
         attr.getName() == CIRDialect::getNoUnwindAttrName() ||
@@ -2818,6 +2821,21 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   if (op->hasAttr(CIRDialect::getStrictFPAttrName()))
     fn.setPassthroughAttr(rewriter.getArrayAttr(
         {rewriter.getStringAttr(CIRDialect::getStrictFPAttrName())}));
+
+  // Herbception (throws): forward to the LLVM 'throws' function attribute so
+  // the backend carries the {T, i1} discriminant out-of-band. Herbception
+  // throws implies noexcept: errors return through the normal path, so the
+  // function must also be marked NoUnwind to keep mayThrow() false.
+  if (op->hasAttr("cir.throws")) {
+    mlir::ArrayAttr existing = fn.getPassthroughAttr();
+    SmallVector<mlir::Attribute> passthrough(
+        existing ? llvm::to_vector_of<mlir::Attribute>(existing)
+                 : mlir::SmallVector<mlir::Attribute>{});
+    passthrough.push_back(rewriter.getStringAttr("throws"));
+    fn.setPassthroughAttr(rewriter.getArrayAttr(passthrough));
+    fn.setNoUnwind(true);
+    fn->removeAttr("cir.throws");
+  }
 
   if (std::optional<cir::InlineKind> inlineKind = op.getInlineKind()) {
     fn.setNoInline(*inlineKind == cir::InlineKind::NoInline);

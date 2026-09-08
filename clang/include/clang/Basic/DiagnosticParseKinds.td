@@ -339,6 +339,19 @@ def err_invalid_token_after_declarator_suggest_equal : Error<
   "invalid %0 at end of declaration; did you mean '='?">;
 def err_expected_statement : Error<"expected statement">;
 def err_expected_lparen_after : Error<"expected '(' after '%0'">;
+def err_expected_lbrace_after : Error<"expected '{' after '%0'">;
+def err_throws_requires_cxx : Error<"'throws' is only available in C++">;
+def err_catch_return_failure_expression_only : Error<
+    "'catch return_failure' is only valid as an expression; use 'catch return_failure(expr)' "
+    "to inspect the error of a return_failure call">;
+def err_throws_noexcept_combined : Error<
+  "'throws'/'return_failure' and 'noexcept' cannot be combined">;
+def err_throws_fails_combined : Error<
+  "'throws' and 'fails{...}' cannot be combined: they are mutually exclusive "
+  "herbceptions specifiers">;
+def err_return_failure_paren_not_allowed : Error<
+  "'return_failure' takes a type in braces (e.g. 'return_failure{T}'); parentheses are for the "
+  "'throws' condition, not for the return_failure error type">;
 def err_expected_rparen_after : Error<"expected ')' after '%0'">;
 def err_expected_punc : Error<"expected ')' or ',' after '%0'">;
 def err_expected_less_after : Error<"expected '<' after '%0'">;
@@ -858,6 +871,9 @@ def err_requires_expr_expected_type_constraint : Error<
   "expected concept name with optional arguments">;
 def err_requires_expr_simple_requirement_noexcept : Error<
   "'noexcept' can only be used in a compound requirement (with '{' '}' around "
+  "the expression)">;
+def err_requires_expr_simple_requirement_throws : Error<
+  "'throws' can only be used in a compound requirement (with '{' '}' around "
   "the expression)">;
 def err_requires_expr_in_simple_requirement : Error<
   "requires expression in requirement body; did "

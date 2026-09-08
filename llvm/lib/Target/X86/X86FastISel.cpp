@@ -3200,6 +3200,12 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   bool Is64Bit        = Subtarget->is64Bit();
   bool IsWin64        = Subtarget->isCallingConvWin64(CC);
 
+  // Herbception (throws) calls return a {T, i1} value where the discriminant
+  // is carried in the carry flag. FastISel does not implement this mechanism,
+  // so fall back to SelectionDAG ISel.
+  if (CLI.IsThrows)
+    return false;
+
   // If the return type is illegal, check if the ABI requires a type conversion
   // that FastISel cannot handle. Fall back to DAG ISel in such cases.
   // For example, bfloat is returned as f16 in XMM0, however FastISel would

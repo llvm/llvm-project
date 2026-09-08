@@ -125,6 +125,7 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_CDecl:                                                   \
   case ParsedAttr::AT_FastCall:                                                \
   case ParsedAttr::AT_StdCall:                                                 \
+  case ParsedAttr::AT_WinCall:                                                 \
   case ParsedAttr::AT_ThisCall:                                                \
   case ParsedAttr::AT_RegCall:                                                 \
   case ParsedAttr::AT_Pascal:                                                  \
@@ -5375,7 +5376,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         SmallVector<SourceRange, 2> DynamicExceptionRanges;
         Expr *NoexceptExpr = nullptr;
 
-        if (FTI.getExceptionSpecType() == EST_Dynamic) {
+        if (FTI.getExceptionSpecType() == EST_Dynamic ||
+            FTI.getExceptionSpecType() == EST_ThrowsTyped) {
           // FIXME: It's rather inefficient to have to split into two vectors
           // here.
           unsigned N = FTI.getNumExceptions();
@@ -7771,6 +7773,8 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<FastCallAttr>(Ctx, Attr);
   case ParsedAttr::AT_StdCall:
     return createSimpleAttr<StdCallAttr>(Ctx, Attr);
+  case ParsedAttr::AT_WinCall:
+    return createSimpleAttr<WinCallAttr>(Ctx, Attr);
   case ParsedAttr::AT_ThisCall:
     return createSimpleAttr<ThisCallAttr>(Ctx, Attr);
   case ParsedAttr::AT_RegCall:
@@ -8324,6 +8328,10 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
       case EST_BasicNoexcept:
       case EST_NoexceptTrue:
       case EST_NoThrow:
+      case EST_BasicThrows:
+      case EST_BasicThrowsTrue:
+      case EST_BasicThrowsFalse:
+      case EST_ThrowsTyped:
         // Exception spec doesn't conflict with nothrow, so don't warn.
         [[fallthrough]];
       case EST_Unparsed:
@@ -8373,13 +8381,23 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
   if (CCOld != CC) {
     // Error out on when there's already an attribute on the type
     // and the CCs don't match.
-    if (S.getCallingConvAttributedType(type)) {
-      S.Diag(attr.getLoc(), diag::err_attributes_are_not_compatible)
-          << FunctionType::getNameForCallConv(CC)
-          << FunctionType::getNameForCallConv(CCOld)
-          << attr.isRegularKeywordAttribute();
-      attr.setInvalid();
-      return true;
+    const AttributedType *ExistingCC = S.getCallingConvAttributedType(type);
+    if (ExistingCC) {
+      // msabi and wincall may be combined: the MS x64 ABI is the base of
+      // WinCall, so [[msabi, wincall]] (in either order) resolves to wincall.
+      bool IsMSABIPlusWinCall = (ExistingCC->getAttrKind() == attr::MSABI &&
+                                 attr.getKind() == ParsedAttr::AT_WinCall) ||
+                                (ExistingCC->getAttrKind() == attr::WinCall &&
+                                 attr.getKind() == ParsedAttr::AT_MSABI);
+      if (!IsMSABIPlusWinCall) {
+        S.Diag(attr.getLoc(), diag::err_attributes_are_not_compatible)
+            << FunctionType::getNameForCallConv(CC)
+            << FunctionType::getNameForCallConv(CCOld)
+            << attr.isRegularKeywordAttribute();
+        attr.setInvalid();
+        return true;
+      }
+      CC = CC_WinCall;
     }
   }
 
@@ -10351,6 +10369,25 @@ QualType Sema::BuildUnaryTransformType(QualType BaseType, UTTKind UKind,
   }
   case UnaryTransformType::RemovePointer: {
     Result = BuiltinRemovePointer(BaseType, Loc);
+    break;
+  }
+  case UnaryTransformType::InvokeHerbceptionsFailsType: {
+    // Extract the error type E of a `fails{E}` function type. void if the
+    // argument is not a function type with a fails{E} spec.
+    if (BaseType->isDependentType()) {
+      Result = BaseType;
+      break;
+    }
+    QualType FnTy = BaseType;
+    if (const auto *PT = FnTy->getAs<PointerType>())
+      FnTy = PT->getPointeeType();
+    else if (const auto *RT = FnTy->getAs<ReferenceType>())
+      FnTy = RT->getPointeeType();
+    if (const auto *FPT = FnTy->getAs<FunctionProtoType>();
+        FPT && FPT->hasReturnFailureSpec())
+      Result = FPT->getExceptionType(0);
+    else
+      Result = Context.VoidTy;
     break;
   }
   case UnaryTransformType::Decay: {

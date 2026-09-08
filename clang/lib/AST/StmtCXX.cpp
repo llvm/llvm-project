@@ -116,6 +116,7 @@ CoroutineBodyStmt::CoroutineBodyStmt(CoroutineBodyStmt::CtorArgs const &Args)
   SubStmts[CoroutineBodyStmt::InitSuspend] = Args.InitialSuspend;
   SubStmts[CoroutineBodyStmt::FinalSuspend] = Args.FinalSuspend;
   SubStmts[CoroutineBodyStmt::OnException] = Args.OnException;
+  SubStmts[CoroutineBodyStmt::OnHerbception] = Args.OnHerbception;
   SubStmts[CoroutineBodyStmt::OnFallthrough] = Args.OnFallthrough;
   SubStmts[CoroutineBodyStmt::Allocate] = Args.Allocate;
   SubStmts[CoroutineBodyStmt::Deallocate] = Args.Deallocate;

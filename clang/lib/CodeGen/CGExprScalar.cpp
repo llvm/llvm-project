@@ -827,6 +827,23 @@ public:
     return nullptr;
   }
 
+  Value *VisitCXXErrorValueExpr(const CXXErrorValueExpr *E) {
+    RValue RV = CGF.EmitErrorValueExpr(E);
+    return RV.getScalarVal();
+  }
+
+  Value *VisitCXXCxaExceptionExpr(const CXXCxaExceptionExpr *E) {
+    // The thrown object pointer of the currently-caught legacy C++ exception,
+    // used as the `code` of a fabricated std::error. Only valid inside the
+    // conversion block that caught the exception (exn.slot is populated there).
+    return CGF.EmitCxaExceptionPtr(E);
+  }
+
+  Value *VisitCXXTryExpr(const CXXTryExpr *E) {
+    RValue RV = CGF.EmitHerbceptionTry(E);
+    return RV.getScalarVal();
+  }
+
   Value *VisitCXXNoexceptExpr(const CXXNoexceptExpr *E) {
     return Builder.getInt1(E->getValue());
   }
