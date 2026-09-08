@@ -3939,10 +3939,25 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
       QualType StrTy = Context.getConstantArrayType(
           Context.adjustStringLiteralBaseType(Context.CharTy.withConst()),
           llvm::APInt(32, Length + 1), nullptr, ArraySizeModifier::Normal, 0);
-      Expr *Lit =
-          StringLiteral::Create(Context, StringRef(TokSpelling.data(), Length),
-                                StringLiteralKind::Ordinary,
-                                /*Pascal*/ false, StrTy, TokLoc);
+      // Wrap the raw spelling in quotes and run it through StringLiteralParser
+      SmallString<256> SpellString;
+      SpellString += "\"";
+      SpellString += StringRef(TokSpelling.data(), Length);
+      SpellString += "\"";
+      Token RawStringTok;
+      RawStringTok.startToken();
+      RawStringTok.setKind(tok::string_literal);
+      RawStringTok.setLocation(TokLoc);
+      RawStringTok.setLiteralData(SpellString.data());
+      RawStringTok.setLength(SpellString.size());
+      StringLiteralParser TempLiteral(RawStringTok, PP,
+                                      StringLiteralEvalMethod::Evaluated,
+                                      CA_ToLiteralEncoding);
+      if (TempLiteral.hadError)
+        return ExprError();
+      Expr *Lit = StringLiteral::Create(Context, TempLiteral.GetString(),
+                                        StringLiteralKind::Ordinary,
+                                        /*Pascal*/ false, StrTy, TokLoc);
       return BuildLiteralOperatorCall(R, OpNameInfo, Lit, TokLoc);
     }
 
