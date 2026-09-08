@@ -826,7 +826,7 @@ define float @fmaxnum_constant_trip_count_tailfold(ptr %src) #0 {
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[TMP30:%.*]] = select <4 x i1> [[TMP0]], <4 x float> [[TMP24]], <4 x float> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = select i1 [[TMP27]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP30]]
-; CHECK-NEXT:    [[TMP32:%.*]] = select i1 [[TMP27]], i64 [[INDEX]], i64 30
+; CHECK-NEXT:    [[TMP32:%.*]] = select i1 [[TMP27]], i64 [[INDEX]], i64 32
 ; CHECK-NEXT:    [[TMP33:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP31]])
 ; CHECK-NEXT:    [[TMP34:%.*]] = xor i1 [[TMP27]], true
 ; CHECK-NEXT:    br i1 [[TMP34]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
