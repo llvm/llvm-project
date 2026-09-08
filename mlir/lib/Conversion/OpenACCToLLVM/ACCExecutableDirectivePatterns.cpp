@@ -29,15 +29,23 @@ using namespace mlir;
 using namespace mlir::acc;
 
 namespace {
+static Value castToInt(Location loc, Value value, IntegerType targetType,
+                       bool isUnsigned, ConversionPatternRewriter &rewriter) {
+  unsigned bitwidth = value.getType().getIntOrFloatBitWidth();
+  if (bitwidth > targetType.getWidth())
+    return arith::TruncIOp::create(rewriter, loc, targetType, value);
+  if (bitwidth < targetType.getWidth()) {
+    if (isUnsigned)
+      return arith::ExtUIOp::create(rewriter, loc, targetType, value);
+    return arith::ExtSIOp::create(rewriter, loc, targetType, value);
+  }
+  return value;
+}
+
 static Value castToI64(Location loc, Value value,
                        ConversionPatternRewriter &rewriter) {
-  Type i64Ty = IntegerType::get(rewriter.getContext(), 64);
-  unsigned bitwidth = value.getType().getIntOrFloatBitWidth();
-  if (bitwidth > 64)
-    return arith::TruncIOp::create(rewriter, loc, i64Ty, value);
-  if (bitwidth < 64)
-    return arith::ExtSIOp::create(rewriter, loc, i64Ty, value);
-  return value;
+  return castToInt(loc, value, rewriter.getI64Type(), /*isUnsigned=*/false,
+                   rewriter);
 }
 
 static Value getAsyncQueue(WaitOp op, ConversionPatternRewriter &rewriter,
@@ -99,7 +107,7 @@ struct WaitOpLowering : public ACCExecutableDirectivePattern<WaitOp> {
   using ACCExecutableDirectivePattern<WaitOp>::ACCExecutableDirectivePattern;
 
   LogicalResult
-  matchAndRewrite(WaitOp op, WaitOp::Adaptor,
+  matchAndRewrite(WaitOp op, WaitOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
     ModuleOp module = op->getParentOfType<ModuleOp>();
@@ -138,7 +146,15 @@ struct WaitOpLowering : public ACCExecutableDirectivePattern<WaitOp> {
       Value deviceType = LLVM::ConstantOp::create(
           rewriter, loc, i64Ty,
           config.getDeviceTypeRuntimeValue(DeviceType::None));
-      Value deviceNum = LLVM::ConstantOp::create(rewriter, loc, i32Ty, 0);
+      Value deviceNum = adaptor.getWaitDevnum();
+      if (deviceNum) {
+        // The converted operand is signless, so inspect the original type.
+        bool isUnsigned = op.getWaitDevnum().getType().isUnsignedInteger();
+        deviceNum = castToInt(loc, deviceNum, rewriter.getI32Type(), isUnsigned,
+                              rewriter);
+      } else {
+        deviceNum = LLVM::ConstantOp::create(rewriter, loc, i32Ty, 0);
+      }
 
       return createRuntimeCall(
           loc, rewriter, module, RuntimeFunction::ACCRTL_tgt_acc_wait, config,
