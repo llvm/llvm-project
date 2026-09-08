@@ -1262,6 +1262,15 @@ def AArch64CttzEltsZeroPoison
     : SDNode<"AArch64ISD::CTTZ_ELTS_ZERO_POISON", SDTypeProfile<1, 2,
              [SDTCisInt<0>, SDTCVecEltisVT<1,i1>, SDTCisSameAs<1,2>]>, []>;
 
+// res = lastp(pg, op)
+def AArch64LastP : SDNode<"AArch64ISD::LASTP", SDTypeProfile<1, 2,
+                          [SDTCisInt<0>, SDTCVecEltisVT<1,i1>,
+                           SDTCisSameAs<1,2>]>, []>;
+
+// Find the last active element in a mask, returning -1 if the mask is empty.
+def AArch64FindLastActive : SDNode<"AArch64ISD::FIND_LAST_ACTIVE",
+    SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>]>, []>;
+
 // NEON Load/Store with post-increment base updates.
 // TODO: Complete SDTypeProfile constraints.
 def AArch64ld2post : SDNode<"AArch64ISD::LD2post", SDTypeProfile<3, 2, []>,

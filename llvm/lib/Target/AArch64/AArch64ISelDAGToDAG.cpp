@@ -8300,6 +8300,16 @@ void AArch64DAGToDAGISel::PreprocessISelDAG() {
 
     SDValue Result;
     switch (N.getOpcode()) {
+    case AArch64ISD::FIND_LAST_ACTIVE: {
+      const auto *TLI = static_cast<const AArch64TargetLowering *>(
+          Subtarget->getTargetLowering());
+      Result = TLI->expandFindLastActive(SDValue(&N, 0), *CurDAG);
+      assert(Result.getOpcode() == AArch64ISD::LASTP &&
+             "FIND_LAST_ACTIVE must expand to LASTP");
+      CurDAG->ReplaceAllUsesOfValueWith(SDValue(&N, 0), Result);
+      MadeChange = true;
+      continue;
+    }
     case ISD::SCALAR_TO_VECTOR: {
       EVT ScalarTy = N.getValueType(0).getVectorElementType();
       if ((ScalarTy == MVT::i32 || ScalarTy == MVT::i64) &&
