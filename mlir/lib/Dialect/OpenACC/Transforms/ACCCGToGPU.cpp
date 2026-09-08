@@ -2661,6 +2661,28 @@ Value ACCCGToGPULowering::processPrivatize(acc::PrivatizeOp privatize) {
     return alloc.getResult();
   }
 
+  if (llvm::any_of(parDimsPair.first, [](mlir::acc::GPUParallelDimAttr parDim) {
+        return parDim.isThreadX();
+      })) {
+    // Reached only after canUseStackAlloca failed: either the static size is
+    // over the per-thread stack budget, or the shape is dynamic so the size
+    // is unknown. Heap-allocate in both cases so a large runtime extent
+    // cannot overflow the stack. Each lane still owns its own copy.
+    Value mem =
+        memref::AllocOp::create(rewriter, loc, baseTy, mappedDynamicSizes);
+    OpBuilder::InsertionGuard guard(rewriter);
+    Block *allocBlock = mem.getDefiningOp()->getBlock();
+    if (allocBlock->mightHaveTerminator()) {
+      rewriter.setInsertionPoint(allocBlock->getTerminator());
+      memref::DeallocOp::create(rewriter, loc, mem);
+    }
+    mapping.map(privatize.getResult(), mem);
+    rewriter.setInsertionPointAfter(mem.getDefiningOp());
+    if (!privatize->getParentOfType<acc::ComputeRegionOp>())
+      rewriter.replaceOp(privatize, mem);
+    return mem;
+  }
+
   // Predication - when threadYIsActive, don't predicate on ThreadY dimension
   // since each ThreadY needs to execute the allocation for its own slot
   SmallVector<mlir::acc::GPUParallelDimAttr> predicateDims;
