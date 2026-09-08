@@ -149,6 +149,12 @@ static cl::opt<unsigned>
                       cl::desc("Maximum amount of shared memory to use."),
                       cl::init(std::numeric_limits<unsigned>::max()));
 
+static cl::opt<unsigned> MaxCalleesForSpecialization(
+    "openmp-opt-max-callees-for-specialization", cl::Hidden,
+    cl::desc("Number of possible callees above which an indirect call site is "
+             "left alone rather than specialized into an if-cascade."),
+    cl::init(3));
+
 STATISTIC(NumOpenMPRuntimeCallsDeduplicated,
           "Number of OpenMP runtime calls deduplicated");
 STATISTIC(NumOpenMPParallelRegionsDeleted,
@@ -5835,6 +5841,23 @@ AAFoldRuntimeCall &AAFoldRuntimeCall::createForPosition(const IRPosition &IRP,
   return *AA;
 }
 
+/// Bound the if-cascade AAIndirectCallInfo builds for an indirect call. Device
+/// code reaches its callees through function-pointer tables and virtual
+/// dispatch, so a call site can see every address-taken candidate in the
+/// module; specializing all of them costs more in code size and compile time
+/// than the direct calls are worth.
+///
+/// This is a threshold on the call site rather than a limit on how many callees
+/// get specialized: the Attributor asks about each callee with the same total,
+/// so a site above the threshold keeps its indirect call instead of getting
+/// this many direct ones plus a fallback.
+static bool shouldSpecializeIndirectCallee(Attributor &,
+                                           const AbstractAttribute &,
+                                           CallBase &, Function &,
+                                           unsigned NumAssumedCallees) {
+  return NumAssumedCallees <= MaxCalleesForSpecialization;
+}
+
 PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!containsOpenMP(M))
     return PreservedAnalyses::all();
@@ -5921,6 +5944,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   AC.OREGetter = OREGetter;
   AC.PassName = DEBUG_TYPE;
   AC.InitializationCallback = OpenMPOpt::registerAAsForFunction;
+  AC.IndirectCalleeSpecializationCallback = shouldSpecializeIndirectCallee;
   AC.IPOAmendableCB = [](const Function &F) {
     return F.hasFnAttribute("kernel");
   };
@@ -6001,6 +6025,7 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
   AC.OREGetter = OREGetter;
   AC.PassName = DEBUG_TYPE;
   AC.InitializationCallback = OpenMPOpt::registerAAsForFunction;
+  AC.IndirectCalleeSpecializationCallback = shouldSpecializeIndirectCallee;
 
   Attributor A(Functions, InfoCache, AC);
 
