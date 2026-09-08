@@ -85,6 +85,9 @@ int main(int, char**) {
     assert(destruction_count == 1);
     assert(i == 42);
   }
+  {
+    // todo: multi threaded test
+  }
 
   return 0;
 }
