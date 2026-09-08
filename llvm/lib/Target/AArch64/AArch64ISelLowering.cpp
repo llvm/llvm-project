@@ -8200,6 +8200,14 @@ SDValue AArch64TargetLowering::LowerLOAD(SDValue Op,
   LoadSDNode *LoadNode = cast<LoadSDNode>(Op);
   assert(LoadNode && "Expected custom lowering of a load node");
 
+  // Extending loads of v2i8 -> v2i32/v2i64 are better lowered using SVE's
+  // extending load instructions as they otherwise require 2 or 3 instructions
+  // to promote.
+  bool OverrideNeon = !Subtarget->isNeonAvailable() ||
+                      cast<LoadSDNode>(Op)->getMemoryVT() == MVT::v2i8;
+  if (useSVEForFixedLengthVectorVT(Op.getValueType(), OverrideNeon))
+    return LowerFixedLengthVectorLoadToSVE(Op, DAG);
+
   if (SDValue Result = tryLowerSmallVectorExtLoad(LoadNode, DAG))
     return Result;
 
@@ -9007,9 +9015,6 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::MLOAD:
     return LowerMLOAD(Op, DAG);
   case ISD::LOAD:
-    if (useSVEForFixedLengthVectorVT(Op.getValueType(),
-                                     !Subtarget->isNeonAvailable()))
-      return LowerFixedLengthVectorLoadToSVE(Op, DAG);
     return LowerLOAD(Op, DAG);
   case ISD::ADD:
   case ISD::AND:
@@ -17275,9 +17280,9 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   }
 
   // Convert BUILD_VECTOR where all elements but the lowest are undef into
-  // SCALAR_TO_VECTOR, except for when we have a single-element constant vector
+  // SCALAR_TO_VECTOR, except for when we have a constant vector
   // as SimplifyDemandedBits will just turn that back into BUILD_VECTOR.
-  if (isOnlyLowElement && !(NumElts == 1 && isIntOrFPConstant(Value))) {
+  if (isOnlyLowElement && !isIntOrFPConstant(Value)) {
     LLVM_DEBUG(dbgs() << "LowerBUILD_VECTOR: only low element used, creating 1 "
                          "SCALAR_TO_VECTOR node\n");
     return DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Value);
@@ -31204,12 +31209,22 @@ static SDValue
 performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                              SelectionDAG &DAG) {
   SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
 
   // If a DUP(Op0) already exists, reuse it for the scalar_to_vector.
   if (DCI.isAfterLegalizeDAG()) {
     if (SDNode *LN = DCI.DAG.getNodeIfExists(AArch64ISD::DUP, N->getVTList(),
                                              N->getOperand(0)))
       return SDValue(LN, 0);
+  }
+
+  if (VT.isFixedLengthVector() && VT.getVectorNumElements() > 1 &&
+      isIntOrFPConstant(N0)) {
+    SDValue Undef = DAG.getPOISON(N0.getValueType());
+    SmallVector<SDValue> Ops(VT.getVectorNumElements(), Undef);
+    Ops[0] = N0;
+    return DAG.getBuildVector(VT, DL, Ops);
   }
 
   // Let's do below transform.
@@ -31225,15 +31240,13 @@ performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
-  EVT VT = N->getValueType(0);
   if (VT != MVT::v1i64)
     return SDValue();
 
-  SDValue ZEXT = N->getOperand(0);
-  if (ZEXT.getOpcode() != ISD::ZERO_EXTEND || ZEXT.getValueType() != MVT::i64)
+  if (N0.getOpcode() != ISD::ZERO_EXTEND || N0.getValueType() != MVT::i64)
     return SDValue();
 
-  SDValue EXTRACT_VEC_ELT = ZEXT.getOperand(0);
+  SDValue EXTRACT_VEC_ELT = N0.getOperand(0);
   if (EXTRACT_VEC_ELT.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
       EXTRACT_VEC_ELT.getValueType() != MVT::i32)
     return SDValue();

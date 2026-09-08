@@ -511,6 +511,7 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
 - Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
+- Fixed a crash when an `asm` label names the register for a global variable of incomplete type. (#GH219746)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -540,6 +541,13 @@ features cannot lower the translation-unit ABI level;
 
 #### Bug Fixes to C++ Support
 
+- Fixed false-positive module ODR diagnostics when a type is found through a
+  using-declaration in one definition and directly in another. ODR hashing also
+  now distinguishes differently qualified uses of types found through
+  using-declarations. (#GH78850)
+- Fixed an assertion when diagnosing module ODR violations for enum underlying
+  types found through using-declarations with the same name but different types.
+
 - Fixed a false type mismatch when a typedef naming an anonymous enumeration
   was used through a C++20 named module and its defining header was subsequently
   included. (#GH213299)
@@ -548,6 +556,7 @@ features cannot lower the translation-unit ABI level;
 
 - Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
 
+- Fixed a bug where we accepted ``__super`` being qualified by a scope specifier, causing codegen to assertion fail elsewhere. (#GH212988)
 - Fixed an issue where we tried to compare invalid NTTPs for variable declarations, which ended up in hitting an assertion with a constrained non-plain-auto NTTP, which we don't quite implement yet. (#GH208658)
 
 - Fixed a crash when a using-declaration naming an unresolvable member of a

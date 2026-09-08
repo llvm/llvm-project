@@ -19,7 +19,7 @@ define ptr @f() presplitcoroutine {
 ; CHECK-NEXT:    call void @capture_call(ptr [[X_RELOAD_ADDR]])
 ; CHECK-NEXT:    call void @nocapture_call(ptr [[Y]])
 ; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 24
-; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
 entry:
