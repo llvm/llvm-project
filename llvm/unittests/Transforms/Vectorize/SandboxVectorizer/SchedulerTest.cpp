@@ -1191,6 +1191,32 @@ define void @foo(ptr %ptr, i8 %v0) {
 #endif
 }
 
+TEST_F(SchedulerTest, SchedulingFrontierAfterTryScheduleFail) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v0) {
+  %add0 = add i8 %v0, 0
+  %add1 = add i8 %add0, 1
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add0 = cast<sandboxir::BinaryOperator>(&*It++);
+  auto *Add1 = cast<sandboxir::BinaryOperator>(&*It++);
+
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::BottomUp);
+  EXPECT_EQ(sandboxir::SchedulerInternalsAttorney::getScheduleFrontier(Sched),
+            std::nullopt);
+  EXPECT_FALSE(Sched.trySchedule({Add0, Add1}));
+  // Make sure it is still nullopt after failing to schedule.
+  EXPECT_EQ(sandboxir::SchedulerInternalsAttorney::getScheduleFrontier(Sched),
+            std::nullopt);
+}
+
 // When we initialize the scheduler to operate towards one direction we should
 // detect an attempt to schedule towards the reverse direction and cause an a
 // assertion failure with a descriptive comment.

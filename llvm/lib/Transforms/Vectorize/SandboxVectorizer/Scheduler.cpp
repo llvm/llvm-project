@@ -247,6 +247,7 @@ bool Scheduler::tryScheduleUntil(ArrayRef<Instruction *> Instrs) {
     ReadyList.insert(RetryN);
 
   eraseBundle(InstrsSB);
+  ScheduleFrontierOpt = std::nullopt;
   return false;
 }
 

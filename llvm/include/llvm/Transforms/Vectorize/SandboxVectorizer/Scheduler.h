@@ -413,6 +413,10 @@ public:
   static const ReadyListContainer &getReadyList(const Scheduler &Sched) {
     return Sched.ReadyList;
   }
+  static std::optional<SchedulingPoint>
+  getScheduleFrontier(const Scheduler &Sched) {
+    return Sched.ScheduleFrontierOpt;
+  }
 };
 
 } // namespace llvm::sandboxir
