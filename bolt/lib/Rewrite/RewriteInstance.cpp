@@ -2989,6 +2989,14 @@ void RewriteInstance::processDynamicRelocations() {
     }
   }
 
+  // DT_RELA aliases DT_JMPREL when .rela.dyn is empty. Skip it to avoid reading
+  // .rela.plt twice.
+  if (DynamicRelocationsAddress && PLTRelocationsAddress &&
+      *DynamicRelocationsAddress == *PLTRelocationsAddress) {
+    DynamicRelocationsAddress.reset();
+    DynamicRelocationsSize = 0;
+  }
+
   if (DynamicRelocationsSize > 0) {
     ErrorOr<BinarySection &> DynamicRelSectionOrErr =
         BC->getSectionForAddress(*DynamicRelocationsAddress);
