@@ -344,6 +344,8 @@ bool CallBase::isIndirectCall() const {
 
 bool CallBase::getCalleesMetadata(SmallVectorImpl<Function *> &Callees) const {
   Callees.clear();
+  if (isInlineAsm())
+    return false;
   const MDNode *MD = getMetadata(LLVMContext::MD_callees);
   if (!MD)
     return false;

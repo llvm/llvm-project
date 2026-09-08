@@ -1426,12 +1426,13 @@ public:
 
   /// Decode the exhaustive list of possible callees from !callees metadata.
   ///
-  /// Return true for a well-formed attachment, including an empty attachment.
-  /// Return false if the attachment is absent or contains an operand that is
-  /// not a Function. The result does not depend on the called operand and does
-  /// not check whether that operand satisfies the callee constraint.
-  /// \p Callees is cleared on failure. On success, duplicate functions are
-  /// omitted while preserving the order of their first occurrence.
+  /// Return true for a well-formed attachment on a function call, including an
+  /// empty attachment. Direct and indirect function calls are supported.
+  /// Return false for inline assembly calls, or if the attachment is absent or
+  /// contains an operand that is not a Function. This does not check whether
+  /// the called operand satisfies the callee constraint. \p Callees is cleared
+  /// on failure. On success, duplicate functions are omitted while preserving
+  /// the order of their first occurrence.
   LLVM_ABI bool getCalleesMetadata(SmallVectorImpl<Function *> &Callees) const;
 
   /// Determine whether the passed iterator points to the callee operand's Use.

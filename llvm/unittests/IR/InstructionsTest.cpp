@@ -178,12 +178,15 @@ TEST(InstructionsTest, CalleesMetadataDecoding) {
   ASSERT_EQ(Callees.size(), 1u);
   EXPECT_EQ(Callees[0], Target0);
 
-  // Decoding validates the attachment, not the identity of the called operand.
   InlineAsmCall->setMetadata(LLVMContext::MD_callees, Valid);
   Callees.push_back(Target1);
-  ASSERT_TRUE(InlineAsmCall->getCalleesMetadata(Callees));
-  ASSERT_EQ(Callees.size(), 1u);
-  EXPECT_EQ(Callees[0], Target0);
+  EXPECT_FALSE(InlineAsmCall->getCalleesMetadata(Callees));
+  EXPECT_TRUE(Callees.empty());
+
+  InlineAsmCall->setMetadata(LLVMContext::MD_callees, MDNode::get(C, {}));
+  Callees.push_back(Target1);
+  EXPECT_FALSE(InlineAsmCall->getCalleesMetadata(Callees));
+  EXPECT_TRUE(Callees.empty());
 
   Function *Invoker =
       Function::Create(CallerTy, GlobalValue::ExternalLinkage, "invoker", M);
