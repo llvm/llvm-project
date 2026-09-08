@@ -547,7 +547,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return has_value(); }
 
   using __base::has_value;
-  using __base::operator*;
+  using __base::value;
 
   template <class _Up = remove_cv_t<_Tp>>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp value_or(_Up&& __v) const& {
@@ -570,7 +570,7 @@ public:
     static_assert(
         __is_std_optional_v<remove_cvref_t<_Up>>, "Result of f(value()) must be a specialization of std::optional");
     if (*this)
-      return std::invoke(std::forward<_Func>(__f), this->value());
+      return std::invoke(std::forward<_Func>(__f), value());
     return remove_cvref_t<_Up>();
   }
 
@@ -580,7 +580,7 @@ public:
     static_assert(
         __is_std_optional_v<remove_cvref_t<_Up>>, "Result of f(value()) must be a specialization of std::optional");
     if (*this)
-      return std::invoke(std::forward<_Func>(__f), this->value());
+      return std::invoke(std::forward<_Func>(__f), value());
     return remove_cvref_t<_Up>();
   }
 
@@ -590,7 +590,7 @@ public:
     static_assert(__is_std_optional_v<remove_cvref_t<_Up>>,
                   "Result of f(std::move(value())) must be a specialization of std::optional");
     if (*this)
-      return std::invoke(std::forward<_Func>(__f), std::move(this->value()));
+      return std::invoke(std::forward<_Func>(__f), std::move(value()));
     return remove_cvref_t<_Up>();
   }
 
@@ -600,7 +600,7 @@ public:
     static_assert(__is_std_optional_v<remove_cvref_t<_Up>>,
                   "Result of f(std::move(value())) must be a specialization of std::optional");
     if (*this)
-      return std::invoke(std::forward<_Func>(__f), std::move(this->value()));
+      return std::invoke(std::forward<_Func>(__f), std::move(value()));
     return remove_cvref_t<_Up>();
   }
 
@@ -613,7 +613,7 @@ public:
     static_assert(
         __is_valid_optional_contained_type<_Up>, "Result of f(value()) should be a valid contained type for optional");
     if (*this)
-      return optional<_Up>(__optional_construct_from_invoke_tag{}, std::forward<_Func>(__f), this->value());
+      return optional<_Up>(__optional_construct_from_invoke_tag{}, std::forward<_Func>(__f), value());
     return optional<_Up>();
   }
 
@@ -626,7 +626,7 @@ public:
     static_assert(
         __is_valid_optional_contained_type<_Up>, "Result of f(value()) should be a valid contained type for optional");
     if (*this)
-      return optional<_Up>(__optional_construct_from_invoke_tag{}, std::forward<_Func>(__f), this->value());
+      return optional<_Up>(__optional_construct_from_invoke_tag{}, std::forward<_Func>(__f), value());
     return optional<_Up>();
   }
 
@@ -639,7 +639,7 @@ public:
     static_assert(
         __is_valid_optional_contained_type<_Up>, "Result of f(value()) should be a valid contained type for optional");
     if (*this)
-      return optional<_Up>(__optional_construct_from_invoke_tag{}, std::forward<_Func>(__f), std::move(this->value()));
+      return optional<_Up>(__optional_construct_from_invoke_tag{}, std::forward<_Func>(__f), std::move(value()));
     return optional<_Up>();
   }
 
@@ -652,7 +652,7 @@ public:
     static_assert(
         __is_valid_optional_contained_type<_Up>, "Result of f(value()) should be a valid contained type for optional");
     if (*this)
-      return optional<_Up>(__optional_construct_from_invoke_tag{}, std::forward<_Func>(__f), std::move(this->value()));
+      return optional<_Up>(__optional_construct_from_invoke_tag{}, std::forward<_Func>(__f), std::move(value()));
     return optional<_Up>();
   }
 
