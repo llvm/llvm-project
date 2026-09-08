@@ -476,13 +476,15 @@ TEST(DenseMapCustomTest, EqualityComparison) {
   EXPECT_NE(M1, M3);
 }
 
+using IntBucket = detail::DenseMapPair<int, int>;
+
+static_assert(std::is_trivially_copyable_v<IntBucket>);
+static_assert(!std::is_trivially_default_constructible_v<IntBucket>);
+
 // Converting a bucket to a std::pair copies both members, so it must not happen
 // implicitly: `const std::pair<int, int> &P = *M.begin();` would bind to a
 // temporary rather than the bucket.
-static_assert(!std::is_convertible_v<detail::DenseMapPair<int, int>,
-                                     std::pair<int, int>>);
-static_assert(std::is_constructible_v<std::pair<int, int>,
-                                      detail::DenseMapPair<int, int>>);
+static_assert(!std::is_convertible_v<IntBucket, std::pair<int, int>>);
 
 TEST(DenseMapCustomTest, InsertRange) {
   DenseMap<int, int> M;
@@ -505,6 +507,16 @@ TEST(DenseMapCustomTest, InsertRange) {
   ASSERT_NE(It, MoveMap.end());
   EXPECT_EQ(*It->second, 42);
   EXPECT_EQ(MoveOnly[0].second, nullptr);
+
+  // Converting a bucket explicitly still reaches a vector's element type, and a
+  // std::map's, whose key is const.
+  DenseMap<int, int> Src({{1, 10}, {2, 20}});
+  SmallVector<std::pair<int, int>> Vec(Src.begin(), Src.end());
+  EXPECT_THAT(Vec, testing::UnorderedElementsAre(testing::Pair(1, 10),
+                                                 testing::Pair(2, 20)));
+  std::map<int, int> Sorted(Src.begin(), Src.end());
+  EXPECT_THAT(Sorted,
+              testing::ElementsAre(testing::Pair(1, 10), testing::Pair(2, 20)));
 }
 
 TEST(SmallDenseMapCustomTest, InsertRange) {
@@ -1216,5 +1228,11 @@ TEST(DenseMapCustomTest, MoveAssignInvalidatesIterators) {
   EXPECT_DEATH((void)It->second, "invalid iterator access");
 }
 #endif
+
+TEST(DenseMapCustomTest, BucketComparison) {
+  IntBucket A(1, 2), B(1, 2), C(1, 3);
+  EXPECT_EQ(A, B);
+  EXPECT_NE(A, C);
+}
 
 } // namespace

@@ -63,11 +63,8 @@ template <typename KeyT, typename ValueT> struct DenseMapPair {
   DenseMapPair(std::pair<KeyT, ValueT> &&P)
       : first(std::move(P.first)), second(std::move(P.second)) {}
 
-  template <typename K, typename V,
-            std::enable_if_t<std::is_constructible_v<K, const KeyT &> &&
-                                 std::is_constructible_v<V, const ValueT &>,
-                             int> = 0>
-  explicit operator std::pair<K, V>() const {
+  explicit operator std::pair<KeyT, ValueT>() const { return {first, second}; }
+  explicit operator std::pair<const KeyT, ValueT>() const {
     return {first, second};
   }
 
