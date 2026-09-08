@@ -73,14 +73,13 @@ bool Type::isScalableTy() const {
   case TargetExtTyID:
     return isScalableTargetExtTy();
   case ArrayTyID:
-  case StructTyID:
-    break;
+  case StructTyID: {
+    SmallPtrSet<const Type *, 4> Visited;
+    return isScalableTy(Visited);
+  }
   default:
     return false;
   }
-
-  SmallPtrSet<const Type *, 4> Visited;
-  return isScalableTy(Visited);
 }
 
 bool Type::containsNonGlobalTargetExtType(
