@@ -488,6 +488,11 @@ LiveVariablesImpl::runOnBlock(const CFGBlock *block,
       continue;
     }
 
+    // Like the destructor case above, the cleanup function call is an
+    // implicit use of the variable: it receives the variable's address, so it
+    // may still read the value stored in it. Marking the VarDecl live here
+    // prevents liveness-based analyses (e.g. deadcode.DeadStores) from
+    // treating the assignment that feeds the cleanup as a dead store.
     if (std::optional<CFGCleanupFunction> Cleanup =
             elem.getAs<CFGCleanupFunction>()) {
       val.liveDecls = DSetFact.add(val.liveDecls, Cleanup->getVarDecl());

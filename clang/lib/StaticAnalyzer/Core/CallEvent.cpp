@@ -519,7 +519,8 @@ static void addParameterValuesToBindings(const StackFrame *CalleeSF,
 
     // The parameter region is keyed on the call expression when there is one;
     // Decl-origin calls (e.g. cleanup functions) have no call site, so the
-    // callee body resolves parameters via MemRegionManager::getVarRegion.
+    // callee body resolves parameters via MemRegionManager::getVarRegion,
+    // which returns a NonParamVarRegion to represent the parameter.
     // Bind to exactly that region.
     const MemRegion *ParamRegion =
         Call.getOriginExpr()
@@ -1499,15 +1500,15 @@ CallEventRef<> CallEventManager::getCaller(const StackFrame *CalleeSF,
   const CFGBlock *B = CalleeSF->getCallSiteBlock();
   CFGElement E = (*B)[CalleeSF->getIndex()];
 
-  if (std::optional<CFGCleanupFunction> Cleanup =
-          E.getAs<CFGCleanupFunction>()) {
+  if (const auto Cleanup = E.getAs<CFGCleanupFunction>()) {
     const auto *FD = cast<FunctionDecl>(CalleeSF->getDecl());
     return getCleanupFunctionCall(FD, Cleanup->getVarDecl(), State, CallerSF,
                                   ElemRef);
   }
 
   assert((E.getAs<CFGImplicitDtor>() || E.getAs<CFGTemporaryDtor>()) &&
-         "All other CFG elements should have exprs");
+         "All other CFG elements have exprs or are cleanup functions, "
+         "represented by a CleanupFunctionCall");
 
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
   const auto *Dtor = cast<CXXDestructorDecl>(CalleeSF->getDecl());
