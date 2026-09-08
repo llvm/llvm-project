@@ -153,9 +153,16 @@ float takeFloatEmptyFirst(FloatEmptyFirst v) { return v.a; }
 long takeHiWord(HiWord v) { return v.hi; }
 
 // CIR: cir.func {{.*}}@_Z10takeHiWord6HiWord(%arg0: !s64i {{.*}}) -> (!s64i
-// LLVM: define dso_local noundef i64 @_Z10takeHiWord6HiWord(i64 %{{[^,]+}})
-// LLVM:   %{{.+}} = getelementptr{{( inbounds)?}} i8, ptr %{{.+}}, i64 8
-// LLVM:   store i64 %{{.+}}, ptr %{{.+}}, align 8
+// CIR:   %[[SLOT:.+]] = cir.alloca "coerce"
+// CIR:   %[[U8:.+]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_HiWord> -> !cir.ptr<!u8i>
+// CIR:   %[[OFF:.+]] = cir.const #cir.int<8> : !s64i
+// CIR:   %[[GEP:.+]] = cir.ptr_stride %[[U8]], %[[OFF]]
+// CIR:   %[[HI:.+]] = cir.cast bitcast %[[GEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
+// CIR:   cir.store %arg0, %[[HI]] : !s64i, !cir.ptr<!s64i>
+// LLVM: define dso_local noundef i64 @_Z10takeHiWord6HiWord(i64 %[[ARG:[^)]+]])
+// LLVM:   %[[SLOT:.+]] = alloca %struct.HiWord, align 8
+// LLVM:   %[[HI:.+]] = getelementptr{{( inbounds)?}} i8, ptr %[[SLOT]], i64 8
+// LLVM:   store i64 %[[ARG]], ptr %[[HI]], align 8
 
 // The same offset on the return side.
 HiWord giveHiWord(long hi) {
@@ -170,13 +177,29 @@ HiWord giveHiWord(long hi) {
 // LLVM:   %[[RVAL:.+]] = load i64, ptr %[[RGEP]], align 8
 // LLVM:   ret i64 %[[RVAL]]
 
-// The caller's own signature is unaffected by the callee's coercion.
+// Caller-side coercion, on the return received and the argument passed.
 long callerHiWord(long hi) {
   return takeHiWord(giveHiWord(hi));
 }
 
 // CIR: cir.func {{.*}}@_Z12callerHiWordl(%arg0: !s64i {{.*}}) -> (!s64i
-// LLVM: define dso_local noundef i64 @_Z12callerHiWordl(i64 noundef %{{[^,]+}})
+// CIR:   %[[RET:.+]] = cir.call @_Z10giveHiWordl(
+// CIR:   %[[ROFF:.+]] = cir.const #cir.int<8> : !s64i
+// CIR:   %[[RGEP:.+]] = cir.ptr_stride %{{.+}}, %[[ROFF]]
+// CIR:   %[[RPTR:.+]] = cir.cast bitcast %[[RGEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
+// CIR:   cir.store %[[RET]], %[[RPTR]] : !s64i, !cir.ptr<!s64i>
+// CIR:   %[[AOFF:.+]] = cir.const #cir.int<8> : !s64i
+// CIR:   %[[AGEP:.+]] = cir.ptr_stride %{{.+}}, %[[AOFF]]
+// CIR:   %[[APTR:.+]] = cir.cast bitcast %[[AGEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
+// CIR:   %[[AVAL:.+]] = cir.load %[[APTR]] : !cir.ptr<!s64i>, !s64i
+// CIR:   %{{.+}} = cir.call @_Z10takeHiWord6HiWord(%[[AVAL]])
+// LLVM: define dso_local noundef i64 @_Z12callerHiWordl(i64 noundef %{{[^,)]+}})
+// LLVM:   %[[RET:.+]] = call i64 @_Z10giveHiWordl(i64 noundef %{{.+}})
+// LLVM:   %[[RSLOT:.+]] = getelementptr{{( inbounds)?}} i8, ptr %{{.+}}, i64 8
+// LLVM:   store i64 %[[RET]], ptr %[[RSLOT]], align 8
+// LLVM:   %[[ASLOT:.+]] = getelementptr{{( inbounds)?}} i8, ptr %{{.+}}, i64 8
+// LLVM:   %[[AVAL:.+]] = load i64, ptr %[[ASLOT]], align 8
+// LLVM:   %{{.+}} = call noundef i64 @_Z10takeHiWord6HiWord(i64 %[[AVAL]])
 
 // Past two eightbytes SysV says memory whatever the content, so an empty class
 // this size is passed indirectly at its declared alignment.

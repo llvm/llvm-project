@@ -43,11 +43,18 @@ void f3(struct s3_1 x) {}
 
 // The empty member owns eightbyte 0, so the live long is the second eightbyte
 // and the coercion starts at byte 8.
-// CIR-LABEL: cir.func {{.*}} @_Z2f34s3_1
-// LLVM-LABEL: define {{.*}} void @_Z2f34s3_1(i64 %{{[^,)]+}})
+// CIR-LABEL: cir.func {{.*}} @_Z2f34s3_1(%arg0: !s64i
+// CIR:         %[[SLOT:.+]] = cir.alloca "coerce"
+// CIR:         %[[U8:.+]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_s3_1> -> !cir.ptr<!u8i>
+// CIR:         %[[OFF:.+]] = cir.const #cir.int<8> : !s64i
+// CIR:         %[[GEP:.+]] = cir.ptr_stride %[[U8]], %[[OFF]]
+// CIR:         %[[HI:.+]] = cir.cast bitcast %[[GEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
+// CIR:         cir.store %arg0, %[[HI]] : !s64i, !cir.ptr<!s64i>
+// LLVM-LABEL: define {{.*}} void @_Z2f34s3_1(
+// LLVM-SAME:    i64 %[[ARG:[^,)]+]])
 // LLVM:         %[[SLOT:.+]] = alloca %struct.s3_1, align 8
 // LLVM:         %[[HI:.+]] = getelementptr{{( inbounds)?}} i8, ptr %[[SLOT]], i64 8
-// LLVM:         store i64 %{{.+}}, ptr %[[HI]], align 8
+// LLVM:         store i64 %[[ARG]], ptr %[[HI]], align 8
 // OGCG-LABEL: define {{.*}} void @_Z2f34s3_1(i64 %x.coerce)
 // OGCG:        %[[SLOT:.+]] = alloca %struct.s3_1, align 8
 // OGCG:        %[[HI:.+]] = getelementptr{{( inbounds)?}} i8, ptr %[[SLOT]], i64 8
@@ -127,11 +134,18 @@ namespace PR5179 {
 }
 
 // The empty base owns eightbyte 0, so the pointer is read from byte 8.
-// CIR-LABEL: cir.func {{.*}} @_ZN6PR51793barENS_2B2E
-// LLVM-LABEL: define {{.*}} ptr @_ZN6PR51793barENS_2B2E(ptr %{{[^,)]+}})
+// CIR-LABEL: cir.func {{.*}} @_ZN6PR51793barENS_2B2E(%arg0: !cir.ptr<!void>
+// CIR:         %[[SLOT:.+]] = cir.alloca "coerce"
+// CIR:         %[[U8:.+]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_PR51793A3AB2> -> !cir.ptr<!u8i>
+// CIR:         %[[OFF:.+]] = cir.const #cir.int<8> : !s64i
+// CIR:         %[[GEP:.+]] = cir.ptr_stride %[[U8]], %[[OFF]]
+// CIR:         %[[PA:.+]] = cir.cast bitcast %[[GEP]] : !cir.ptr<!u8i> -> !cir.ptr<!cir.ptr<!void>>
+// CIR:         cir.store %arg0, %[[PA]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+// LLVM-LABEL: define {{.*}} ptr @_ZN6PR51793barENS_2B2E(
+// LLVM-SAME:    ptr %[[ARG:[^,)]+]])
 // LLVM:         %[[SLOT:.+]] = alloca %"struct.PR5179::B2", align 8
 // LLVM:         %[[PA:.+]] = getelementptr{{( inbounds)?}} i8, ptr %[[SLOT]], i64 8
-// LLVM:         store ptr %{{.+}}, ptr %[[PA]], align 8
+// LLVM:         store ptr %[[ARG]], ptr %[[PA]], align 8
 // OGCG-LABEL: define {{.*}} ptr @_ZN6PR51793barENS_2B2E(ptr %b2.coerce)
 // OGCG:        %[[SLOT:.+]] = alloca %"struct.PR5179::B2", align 8
 // OGCG:        %[[PA:.+]] = getelementptr{{( inbounds)?}} i8, ptr %[[SLOT]], i64 8
