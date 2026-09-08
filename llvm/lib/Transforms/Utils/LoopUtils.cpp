@@ -2370,8 +2370,7 @@ Value *llvm::addDiffRuntimeChecks(Instruction *Loc,
                       SE.getConstant(Ty, AbsCommonStrideInBytes)),
         SE.getConstant(Ty, AbsCommonStrideInBytes - AccessSize));
     Value *ThresholdMinusOne = Expander.expandCodeFor(
-        SE.getMinusSCEV(VectorIterAccessSpan, SE.getConstant(Ty, 1)), Ty,
-        Loc);
+        SE.getMinusSCEV(VectorIterAccessSpan, SE.getConstant(Ty, 1)), Ty, Loc);
     Value *Diff = Expander.expandCodeFor(
         SE.getNoopOrSignExtend(SE.getMinusSCEV(SinkStart, SrcStart), Ty), Ty,
         Loc);
