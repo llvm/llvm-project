@@ -372,6 +372,36 @@ public:
                             formatted_raw_ostream &OS) override;
 };
 } // namespace
+
+/// Maximum number of users getValueAtUse() looks through to refine the value at
+/// a use.
+// TODO: Increase limit?
+static constexpr unsigned MaxUsesToInspect = 3;
+
+/// If getValueAtUse() refines a value of type \p Ty by looking through \p I,
+/// return the use it continues the walk at. Return nullptr if the one-use chain
+/// ends at \p I.
+static const Use *getNextUseToInspect(const Instruction *I, Type *Ty) {
+  // Only follow one-use chain, to allow direct intersection of conditions.
+  // If there are multiple uses, we would have to intersect with the union of
+  // all conditions at different uses.
+  // Stop walking if we hit a non-speculatable instruction. Even if the
+  // result is only used under a specific condition, executing the
+  // instruction itself may cause side effects or UB already.
+  // This also disallows looking through phi nodes: If the phi node is part
+  // of a cycle, we might end up reasoning about values from different cycle
+  // iterations (PR60629).
+  if (!I->hasOneUse() || !isSafeToSpeculativelyExecuteWithVariableReplaced(
+                             I, /*IgnoreUBImplyingAttrs=*/false))
+    return nullptr;
+  // Also stop walking at cross-lane operations, since they may rearrange
+  // lanes so that a later select per-lane condition might no longer
+  // correspond to the original value's lanes.
+  if (Ty->isVectorTy() && !isNotCrossLaneOperation(I))
+    return nullptr;
+  return &*I->use_begin();
+}
+
 // The actual implementation of the lazy analysis and update.
 class LazyValueInfoImpl {
 
@@ -507,6 +537,32 @@ public:
   /// This is part of the update interface to remove information related to this
   /// value from the cache.
   void forgetValue(Value *V) { TheCache.eraseValue(V); }
+
+  /// This is part of the update interface to remove information related to the
+  /// one-use chain getValueAtUse() looks through from the cache.
+  void forgetOneUseChain(Value *V) {
+    // getValueAtUse() may refine a value with conditions that only hold at the
+    // end of the one-use chain starting at its use. That is sound because the
+    // instructions on the chain have a single use each and are speculatable, so
+    // they could be sunk to the instruction it ends at -- but it also means
+    // that replacing V changes the value the instructions in the interior of
+    // that chain compute. Walk the same bounded chain and drop what has been
+    // cached for it.
+    //
+    // Start at 1: V is the element getValueAtUse() inspects first, so at most
+    // MaxUsesToInspect - 1 further ones can be on the chain.
+    Value *Cur = V;
+    for (unsigned I = 1; I < MaxUsesToInspect; ++I) {
+      auto *CurI = dyn_cast<Instruction>(Cur);
+      if (!CurI)
+        break;
+      const Use *NextU = getNextUseToInspect(CurI, V->getType());
+      if (!NextU)
+        break;
+      Cur = NextU->getUser();
+      TheCache.eraseValue(Cur);
+    }
+  }
 
   /// This is part of the update interface to inform the cache
   /// that a block has been deleted.
@@ -1881,8 +1937,6 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
   // Check whether the only (possibly transitive) use of the value is in a
   // position where V can be constrained by a select or branch condition.
   const Use *CurrU = &U;
-  // TODO: Increase limit?
-  const unsigned MaxUsesToInspect = 3;
   for (unsigned I = 0; I < MaxUsesToInspect; ++I) {
     std::optional<ValueLatticeElement> CondVal;
     auto *CurrI = cast<Instruction>(CurrU->getUser());
@@ -1918,25 +1972,10 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
     if (CondVal)
       VL = VL.intersect(*CondVal);
 
-    // Only follow one-use chain, to allow direct intersection of conditions.
-    // If there are multiple uses, we would have to intersect with the union of
-    // all conditions at different uses.
-    // Stop walking if we hit a non-speculatable instruction. Even if the
-    // result is only used under a specific condition, executing the
-    // instruction itself may cause side effects or UB already.
-    // This also disallows looking through phi nodes: If the phi node is part
-    // of a cycle, we might end up reasoning about values from different cycle
-    // iterations (PR60629).
-    if (!CurrI->hasOneUse() ||
-        !isSafeToSpeculativelyExecuteWithVariableReplaced(
-            CurrI, /*IgnoreUBImplyingAttrs=*/false))
+    const Use *NextU = getNextUseToInspect(CurrI, V->getType());
+    if (!NextU)
       break;
-    // Also stop walking at cross-lane operations, since they may rearrange
-    // lanes so that a later select per-lane condition might no longer
-    // correspond to the original value's lanes.
-    if (V->getType()->isVectorTy() && !isNotCrossLaneOperation(CurrI))
-      break;
-    CurrU = &*CurrI->use_begin();
+    CurrU = NextU;
   }
   return VL;
 }
@@ -2282,6 +2321,11 @@ void LazyValueInfo::threadEdge(BasicBlock *PredBB, BasicBlock *OldSucc,
 void LazyValueInfo::forgetValue(Value *V) {
   if (auto *Impl = getImpl())
     Impl->forgetValue(V);
+}
+
+void LazyValueInfo::forgetOneUseChain(Value *V) {
+  if (auto *Impl = getImpl())
+    Impl->forgetOneUseChain(V);
 }
 
 void LazyValueInfo::eraseBlock(BasicBlock *BB) {

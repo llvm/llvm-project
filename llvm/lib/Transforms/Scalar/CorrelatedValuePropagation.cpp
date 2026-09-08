@@ -604,14 +604,19 @@ static bool processMinMaxIntrinsic(MinMaxIntrinsic *MM, LazyValueInfo *LVI) {
                                                     /*UndefAllowed*/ false);
   ConstantRange RHS_CR = LVI->getConstantRangeAtUse(MM->getOperandUse(1),
                                                     /*UndefAllowed*/ false);
+  // The ranges above may only hold at the queried uses, in which case replacing
+  // MM changes the value the instructions LVI looked through compute. Drop what
+  // it has cached for them, while the use list of MM is still intact.
   if (LHS_CR.icmp(Pred, RHS_CR)) {
     ++NumMinMax;
+    LVI->forgetOneUseChain(MM);
     MM->replaceAllUsesWith(MM->getLHS());
     MM->eraseFromParent();
     return true;
   }
   if (RHS_CR.icmp(Pred, LHS_CR)) {
     ++NumMinMax;
+    LVI->forgetOneUseChain(MM);
     MM->replaceAllUsesWith(MM->getRHS());
     MM->eraseFromParent();
     return true;
