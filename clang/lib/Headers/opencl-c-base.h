@@ -632,6 +632,30 @@ CLINKAGE int printf(__constant const char *st, ...)
 #undef CLINKAGE
 #endif
 
+typedef enum coop_matrix_scope_t {
+  CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP = 3
+} coop_matrix_scope_t;
+
+typedef enum coop_matrix_operands_t {
+  CLK_COOPERATIVE_MATRIX_OPERAND_NONE = 0,
+  CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_A_SIGNED = 0x10,
+  CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_B_SIGNED = 0x20,
+  CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_C_SIGNED = 0x40,
+  CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_RESULT_SIGNED = 0x80,
+  CLK_COOPERATIVE_MATRIX_OPERAND_SATURATING_ACCUMULATION = 0x100
+} coop_matrix_operands_t;
+
+typedef enum coop_matrix_use_t {
+  CLK_COOPERATIVE_MATRIX_A = 0,
+  CLK_COOPERATIVE_MATRIX_B = 1,
+  CLK_COOPERATIVE_MATRIX_ACCUMULATOR = 2
+} coop_matrix_use_t;
+
+typedef enum coop_matrix_layout_t {
+  CLK_COOPERATIVE_MATRIX_LAYOUT_ROW_MAJOR = 0,
+  CLK_COOPERATIVE_MATRIX_LAYOUT_COLUMN_MAJOR = 1
+} coop_matrix_layout_t;
+
 #ifdef cl_intel_device_side_avc_motion_estimation
 
 #define CLK_AVC_ME_MAJOR_16x16_INTEL 0x0
@@ -771,27 +795,4 @@ CLINKAGE int printf(__constant const char *st, ...)
 // Disable any extensions we may have enabled previously.
 #pragma OPENCL EXTENSION all : disable
 
-typedef enum coop_matrix_scope_t {
-  CLK_COOPERATIVE_MATRIX_SCOPE_SUBGROUP = 3
-} coop_matrix_scope_t;
-
-typedef enum coop_matrix_operands_t {
-  CLK_COOPERATIVE_MATRIX_OPERAND_NONE = 0,
-  CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_A_SIGNED = 0x10,
-  CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_B_SIGNED = 0x20,
-  CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_C_SIGNED = 0x40,
-  CLK_COOPERATIVE_MATRIX_OPERAND_MATRIX_RESULT_SIGNED = 0x80,
-  CLK_COOPERATIVE_MATRIX_OPERAND_SATURATING_ACCUMULATION = 0x100
-} coop_matrix_operands_t;
-
-typedef enum coop_matrix_use_t {
-  CLK_COOPERATIVE_MATRIX_A = 0,
-  CLK_COOPERATIVE_MATRIX_B = 1,
-  CLK_COOPERATIVE_MATRIX_ACCUMULATOR = 2
-} coop_matrix_use_t;
-
-typedef enum coop_matrix_layout_t {
-  CLK_COOPERATIVE_MATRIX_LAYOUT_ROW_MAJOR = 0,
-  CLK_COOPERATIVE_MATRIX_LAYOUT_COLUMN_MAJOR = 1
-} coop_matrix_layout_t;
 #endif //_OPENCL_BASE_H_
