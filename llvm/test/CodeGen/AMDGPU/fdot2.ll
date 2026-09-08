@@ -493,4 +493,52 @@ define amdgpu_kernel void @dotproduct_f16_f32_afn(<2 x half> %a, <2 x half> %b, 
   ret void
 }
 
+; fdot2 hardwires lanes 0/1, so it must not fold when %i == %j at runtime.
+; GCN-LABEL: {{^}}Var_Idx_NotAdotproductContract
+; GFX906-DENORM-CONTRACT-NOT: v_dot2
+; GFX906-DENORM-CONTRACT: v_fma_mix_f32
+; GFX90A-PS-NOT: v_dot2
+; GFX90A-PS: v_fma_mix_f32
+define float @Var_Idx_NotAdotproductContract(<2 x half> %src1, <2 x half> %src2, float %acc, i32 %i, i32 %j) {
+  %src1.eli = extractelement <2 x half> %src1, i32 %i
+  %csrc1.eli = fpext half %src1.eli to float
+  %src2.eli = extractelement <2 x half> %src2, i32 %i
+  %csrc2.eli = fpext half %src2.eli to float
+
+  %src1.elj = extractelement <2 x half> %src1, i32 %j
+  %csrc1.elj = fpext half %src1.elj to float
+  %src2.elj = extractelement <2 x half> %src2, i32 %j
+  %csrc2.elj = fpext half %src2.elj to float
+
+  %mul2 = fmul contract float %csrc1.elj, %csrc2.elj
+  %mul1 = fmul contract float %csrc1.eli, %csrc2.eli
+  %acc1 = fadd contract float %mul2, %acc
+  %acc2 = fadd contract float %mul1, %acc1
+  ret float %acc2
+}
+
+; A mix of a constant and a variable index must not fold either.
+; GCN-LABEL: {{^}}Mixed_Idx_NotAdotproductContract
+; GFX906-DENORM-CONTRACT-NOT: v_dot2
+; GFX906-DENORM-CONTRACT: v_fma_mix_f32
+; GFX90A-PS-NOT: v_dot2
+; GFX90A-PS: v_fma_mix_f32
+define float @Mixed_Idx_NotAdotproductContract(<2 x half> %src1, <2 x half> %src2, float %acc, i32 %j) {
+  %src1.el0 = extractelement <2 x half> %src1, i32 0
+  %csrc1.el0 = fpext half %src1.el0 to float
+  %src2.el0 = extractelement <2 x half> %src2, i32 0
+  %csrc2.el0 = fpext half %src2.el0 to float
+
+  %src1.elj = extractelement <2 x half> %src1, i32 %j
+  %csrc1.elj = fpext half %src1.elj to float
+  %src2.elj = extractelement <2 x half> %src2, i32 %j
+  %csrc2.elj = fpext half %src2.elj to float
+
+  %mul2 = fmul contract float %csrc1.elj, %csrc2.elj
+  %mul1 = fmul contract float %csrc1.el0, %csrc2.el0
+  %acc1 = fadd contract float %mul2, %acc
+  %acc2 = fadd contract float %mul1, %acc1
+  ret float %acc2
+}
+
 attributes #0 = { denormal_fpenv(float: dynamic) }
