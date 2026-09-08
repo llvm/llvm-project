@@ -51,7 +51,6 @@ public:
   }
 
 private:
-
   ExecutionSession &ES;
   Mangler M;
 };
