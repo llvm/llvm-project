@@ -1,5 +1,5 @@
-; Check that DTLTO creates identical summary index shard files as are created
-; for an equivalent ThinLTO link.
+; Check that DTLTO creates equivalent summary index shards to an ordinary
+; ThinLTO link and embeds the serialized LTO configuration as metadata.
 
 RUN: rm -rf %t && split-file %s %t && cd %t
 
@@ -25,9 +25,22 @@ RUN:     -dtlto-distributor-arg=%llvm_src_root/utils/dtlto/mock.py,t1.o,t2.o
 ; Perform ThinLTO.
 RUN: %{command}
 
-; Check for equivalence. We use a wildcard to account for the PID.
-RUN: cmp t1.1.*.native.o.thinlto.bc t1.bc.thinlto.bc
-RUN: cmp t2.2.*.native.o.thinlto.bc t2.bc.thinlto.bc
+; Check the underlying indexes for equivalence. We use a wildcard to account
+; for the PID in the DTLTO filenames.
+RUN: llvm-dis t1.1.*.native.o.thinlto.bc -o - | grep '^\^' > t1.dtlto.ll
+RUN: llvm-dis t1.bc.thinlto.bc -o - | grep '^\^' > t1.thinlto.ll
+RUN: cmp t1.dtlto.ll t1.thinlto.ll
+RUN: llvm-dis t2.2.*.native.o.thinlto.bc -o - | grep '^\^' > t2.dtlto.ll
+RUN: llvm-dis t2.bc.thinlto.bc -o - | grep '^\^' > t2.thinlto.ll
+RUN: cmp t2.dtlto.ll t2.thinlto.ll
+
+; Check that each DTLTO index contains the configuration metadata.
+RUN: llvm-bcanalyzer -dump t1.1.*.native.o.thinlto.bc | FileCheck %s --check-prefix=CONFIG
+RUN: llvm-bcanalyzer -dump t2.2.*.native.o.thinlto.bc | FileCheck %s --check-prefix=CONFIG
+
+; CONFIG: <METADATA_BLOCK
+; CONFIG: record string = 'llvm.lto.config'
+; CONFIG: </METADATA_BLOCK>
 
 ;--- t1.ll
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

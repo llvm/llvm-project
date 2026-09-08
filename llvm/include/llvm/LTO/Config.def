@@ -1,0 +1,128 @@
+//===-- Config.def - LTO configuration database ---------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the fields stored in llvm::lto::Config. The Kind argument
+// identifies how a field is serialized; NONE denotes process-local state that
+// is intentionally omitted from serialized configurations.
+//
+// Users must define LTO_CONFIG_OPTION and LTO_CONFIG_MUTABLE_OPTION before
+// including this file.
+//
+// NOTE: NO INCLUDE GUARD DESIRED!
+//
+//===----------------------------------------------------------------------===//
+
+#if !(defined(LTO_CONFIG_OPTION) && defined(LTO_CONFIG_MUTABLE_OPTION))
+#error "Define the LTO_CONFIG_* macros before including Config.def"
+#endif
+
+LTO_CONFIG_OPTION(std::string, CPU, {}, STRING)
+LTO_CONFIG_OPTION(TargetOptions, Options, {}, TARGET_OPTIONS)
+LTO_CONFIG_OPTION(std::vector<std::string>, MAttrs, {}, STRING_LIST)
+LTO_CONFIG_OPTION(std::vector<std::string>, MllvmArgs, {}, STRING_LIST)
+
+/// Process-local pass plugins, intentionally not serialized.
+LTO_CONFIG_OPTION(std::vector<llvm::PassPlugin *>, LoadedPassPlugins, {}, NONE)
+
+LTO_CONFIG_OPTION(std::vector<std::string>, PassPluginFilenames, {},
+                  STRING_LIST)
+
+/// Process-local callback, intentionally not serialized.
+LTO_CONFIG_OPTION(std::function<void(legacy::PassManager &)>,
+                  PreCodeGenPassesHook, {}, NONE)
+
+LTO_CONFIG_OPTION(std::optional<Reloc::Model>, RelocModel, Reloc::PIC_,
+                  OPTIONAL_RELOC_MODEL)
+LTO_CONFIG_OPTION(std::optional<CodeModel::Model>, CodeModel, std::nullopt,
+                  OPTIONAL_ENUM)
+LTO_CONFIG_OPTION(CodeGenOptLevel, CGOptLevel, CodeGenOptLevel::Default, ENUM)
+LTO_CONFIG_OPTION(CodeGenFileType, CGFileType, CodeGenFileType::ObjectFile,
+                  ENUM)
+LTO_CONFIG_OPTION(unsigned, OptLevel, 2, U32)
+LTO_CONFIG_OPTION(bool, VerifyEach, false, BOOL)
+LTO_CONFIG_OPTION(bool, DisableVerify, false, BOOL)
+
+/// Do not assume that target builtins are present.
+LTO_CONFIG_OPTION(bool, Freestanding, false, BOOL)
+
+/// Disable the optimizer, including importing for ThinLTO.
+LTO_CONFIG_OPTION(bool, CodeGenOnly, false, BOOL)
+
+/// Run context-sensitive PGO IR instrumentation.
+LTO_CONFIG_OPTION(bool, RunCSIRInstr, false, BOOL)
+
+/// Warn about hash mismatches in PGO profile data.
+LTO_CONFIG_OPTION(bool, PGOWarnMismatch, true, BOOL)
+
+LTO_CONFIG_OPTION(bool, HasWholeProgramVisibility, false, BOOL)
+LTO_CONFIG_OPTION(bool, ValidateAllVtablesHaveTypeInfos, false, BOOL)
+LTO_CONFIG_OPTION(bool, AllVtablesHaveTypeInfos, false, BOOL)
+LTO_CONFIG_OPTION(bool, AlwaysEmitRegularLTOObj, false, BOOL)
+LTO_CONFIG_OPTION(bool, KeepSymbolNameCopies, true, BOOL)
+
+/// Distinguish in-process and out-of-process DTLTO cache entries.
+LTO_CONFIG_MUTABLE_OPTION(bool, Dtlto, 0, BOOL)
+
+LTO_CONFIG_OPTION(Config::VisScheme, VisibilityScheme, FromPrevailing, ENUM)
+
+LTO_CONFIG_OPTION(std::string, OptPipeline, {}, STRING)
+LTO_CONFIG_OPTION(std::string, AAPipeline, {}, STRING)
+LTO_CONFIG_OPTION(std::string, OverrideTriple, {}, STRING)
+LTO_CONFIG_OPTION(std::string, DefaultTriple, {}, STRING)
+LTO_CONFIG_OPTION(std::string, CSIRProfile, {}, STRING)
+LTO_CONFIG_OPTION(std::string, SampleProfile, {}, STRING)
+LTO_CONFIG_OPTION(std::string, ProfileRemapping, {}, STRING)
+LTO_CONFIG_OPTION(std::string, DwoDir, {}, STRING)
+LTO_CONFIG_OPTION(std::string, SplitDwarfFile, {}, STRING)
+LTO_CONFIG_OPTION(std::string, SplitDwarfOutput, {}, STRING)
+LTO_CONFIG_OPTION(std::string, RemarksFilename, {}, STRING)
+LTO_CONFIG_OPTION(std::string, RemarksPasses, {}, STRING)
+LTO_CONFIG_OPTION(bool, RemarksWithHotness, false, BOOL)
+
+/// Optional remarks threshold with disabled, manual, and automatic modes.
+LTO_CONFIG_OPTION(std::optional<uint64_t>, RemarksHotnessThreshold, 0,
+                  REMARKS_HOTNESS)
+
+LTO_CONFIG_OPTION(std::string, RemarksFormat, {}, STRING)
+LTO_CONFIG_OPTION(bool, DebugPassManager, false, BOOL)
+LTO_CONFIG_OPTION(std::string, StatsFile, {}, STRING)
+LTO_CONFIG_OPTION(std::vector<std::string>, ThinLTOModulesToCompile, {},
+                  STRING_LIST)
+LTO_CONFIG_OPTION(bool, TimeTraceEnabled, false, BOOL)
+LTO_CONFIG_OPTION(unsigned, TimeTraceGranularity, 500, U32)
+LTO_CONFIG_OPTION(bool, ShouldDiscardValueNames, true, BOOL)
+
+/// Process-local diagnostic callback, intentionally not serialized.
+LTO_CONFIG_OPTION(DiagnosticHandlerFunction, DiagHandler, {}, NONE)
+
+LTO_CONFIG_OPTION(bool, AddFSDiscriminator, false, BOOL)
+
+/// Process-local output stream, intentionally not serialized.
+LTO_CONFIG_OPTION(std::unique_ptr<raw_ostream>, ResolutionFile, {}, NONE)
+
+LTO_CONFIG_OPTION(PipelineTuningOptions, PTO, {}, PIPELINE_TUNING_OPTIONS)
+
+/// Process-local module hooks, intentionally not serialized.
+LTO_CONFIG_OPTION(ModuleHookFn, PreOptModuleHook, {}, NONE)
+LTO_CONFIG_OPTION(ModuleHookFn, PostPromoteModuleHook, {}, NONE)
+LTO_CONFIG_OPTION(ModuleHookFn, PostInternalizeModuleHook, {}, NONE)
+LTO_CONFIG_OPTION(ModuleHookFn, PostImportModuleHook, {}, NONE)
+LTO_CONFIG_OPTION(ModuleHookFn, PostOptModuleHook, {}, NONE)
+LTO_CONFIG_OPTION(ModuleHookFn, PreCodeGenModuleHook, {}, NONE)
+LTO_CONFIG_OPTION(CombinedIndexHookFn, CombinedIndexHook, {}, NONE)
+
+/// Process-local backend callbacks, intentionally not serialized.
+LTO_CONFIG_OPTION(std::function<std::unique_ptr<raw_pwrite_stream>(size_t)>,
+                  GetSummaryIndexOutputStream, {}, NONE)
+LTO_CONFIG_OPTION(std::function<std::vector<std::string> &(size_t)>,
+                  GetImportsListOutputArray, {}, NONE)
+LTO_CONFIG_OPTION(std::function<std::string &(size_t)>, GetCacheKeyOutputString,
+                  {}, NONE)
+
+#undef LTO_CONFIG_OPTION
+#undef LTO_CONFIG_MUTABLE_OPTION

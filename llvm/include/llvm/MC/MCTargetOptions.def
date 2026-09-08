@@ -1,0 +1,101 @@
+//===-- MCTargetOptions.def - MC target option database --------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the options stored in llvm::MCTargetOptions. Users of this
+// file must define MC_TARGET_OPTION before including it.
+//
+// NOTE: NO INCLUDE GUARD DESIRED!
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef MC_TARGET_OPTION
+#error "Define MC_TARGET_OPTION before including MCTargetOptions.def"
+#endif
+
+MC_TARGET_OPTION((bool), MCRelaxAll, 1, false, BITFIELD)
+MC_TARGET_OPTION((bool), MCNoExecStack, 1, false, BITFIELD)
+MC_TARGET_OPTION((bool), MCFatalWarnings, 1, false, BITFIELD)
+MC_TARGET_OPTION((bool), MCNoWarn, 1, false, BITFIELD)
+MC_TARGET_OPTION((bool), MCNoDeprecatedWarn, 1, false, BITFIELD)
+MC_TARGET_OPTION((bool), MCNoTypeCheck, 1, false, BITFIELD)
+MC_TARGET_OPTION((bool), MCSaveTempLabels, 1, false, BITFIELD)
+MC_TARGET_OPTION((bool), MCIncrementalLinkerCompatible, 1, false, BITFIELD)
+MC_TARGET_OPTION((bool), FDPIC, 1, false, BITFIELD)
+MC_TARGET_OPTION((bool), ShowMCEncoding, 1, false, BITFIELD)
+MC_TARGET_OPTION((bool), ShowMCInst, 1, false, BITFIELD)
+MC_TARGET_OPTION((bool), AsmVerbose, 1, false, BITFIELD)
+
+/// Preserve comments in assembly.
+MC_TARGET_OPTION((bool), PreserveAsmComments, 1, true, BITFIELD)
+
+MC_TARGET_OPTION((bool), Dwarf64, 1, false, BITFIELD)
+
+/// Use the CREL relocation format for ELF.
+MC_TARGET_OPTION((bool), Crel, 0, false, BOOL)
+
+MC_TARGET_OPTION((bool), ImplicitMapSyms, 0, false, BOOL)
+
+/// Prefer R_X86_64_[REX_]GOTPCRELX to R_X86_64_GOTPCREL on x86-64 ELF.
+MC_TARGET_OPTION((bool), X86RelaxRelocations, 0, true, BOOL)
+
+MC_TARGET_OPTION((bool), X86Sse2Avx, 0, false, BOOL)
+
+/// Disable the integrated assembler.
+MC_TARGET_OPTION((bool), DisableIntegratedAS, 0, false, BOOL)
+
+/// Control section-symbol conversion for ELF relocations.
+MC_TARGET_OPTION((RelocSectionSymType), RelocSectionSym, 0,
+                 RelocSectionSymType::All, ENUM)
+
+MC_TARGET_OPTION((std::optional<unsigned>), OutputAsmVariant, 0, {},
+                 OPTIONAL_UINT)
+
+MC_TARGET_OPTION((EmitDwarfUnwindType), EmitDwarfUnwind, 0,
+                 EmitDwarfUnwindType::Default, ENUM)
+
+MC_TARGET_OPTION((int), DwarfVersion, 0, 0, INT)
+
+/// If greater than 0, override the default MCAsmInfo binutils version.
+MC_TARGET_OPTION((std::pair<int, int>), BinutilsVersion, 0, {}, PAIR)
+
+MC_TARGET_OPTION((MCTargetOptions::DwarfDirectory), MCUseDwarfDirectory, 0,
+                 MCTargetOptions::DefaultDwarfDirectory, ENUM)
+
+/// Whether to compress DWARF debug sections.
+MC_TARGET_OPTION((DebugCompressionType), CompressDebugSections, 0,
+                 DebugCompressionType::None, ENUM)
+
+MC_TARGET_OPTION((std::string), ABIName, 0, {}, STRING)
+MC_TARGET_OPTION((std::string), AssemblyLanguage, 0, {}, STRING)
+MC_TARGET_OPTION((std::string), SplitDwarfFile, 0, {}, STRING)
+MC_TARGET_OPTION((std::string), AsSecureLogFile, 0, {}, STRING)
+
+/// Compiler path and command-line arguments recorded in CodeView LF_BUILDINFO.
+MC_TARGET_OPTION((std::string), Argv0, 0, {}, STRING)
+MC_TARGET_OPTION((std::string), CommandlineArgs, 0, {}, STRING)
+
+/// Additional paths searched for integrated-assembler .include directives.
+MC_TARGET_OPTION((std::vector<std::string>), IASSearchPaths, 0, {}, STRING_LIST)
+
+/// Instruction-printer options.
+MC_TARGET_OPTION((std::vector<std::string>), InstPrinterOptions, 0, {},
+                 STRING_LIST)
+
+/// Emit compact unwind for non-canonical personality functions on Darwin.
+MC_TARGET_OPTION((bool), EmitCompactUnwindNonCanonical, 1, false, BITFIELD)
+
+/// Emit SFrame unwind sections.
+MC_TARGET_OPTION((bool), EmitSFrameUnwind, 1, false, BITFIELD)
+
+/// Use full register names on PowerPC.
+MC_TARGET_OPTION((bool), PPCUseFullRegisterNames, 1, false, BITFIELD)
+
+/// Force 8-byte pointer encodings for ELF exception handling.
+MC_TARGET_OPTION((bool), LargeEHEncoding, 0, false, BOOL)
+
+#undef MC_TARGET_OPTION

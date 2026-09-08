@@ -1,0 +1,199 @@
+//===-- TargetOptions.def - Target option database ------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file defines the options stored in llvm::TargetOptions. Users of this
+// file must define TARGET_OPTION before including it.
+//
+// NOTE: NO INCLUDE GUARD DESIRED!
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef TARGET_OPTION
+#error "Define TARGET_OPTION before including TargetOptions.def"
+#endif
+
+/// Enable the extended Altivec ABI on AIX.
+TARGET_OPTION((unsigned), EnableAIXExtendedAltivecABI, 1, false, BOOL)
+
+/// Honor a dynamically changing, sign-dependent floating-point rounding mode.
+TARGET_OPTION((unsigned), HonorSignDependentRoundingFPMathOption, 1, false,
+              BOOL)
+
+/// Do not place zero-initialized data in the BSS section.
+TARGET_OPTION((unsigned), NoZerosInBSS, 1, false, BOOL)
+
+/// Perform guaranteed tail-call optimization for eligible fastcc calls.
+TARGET_OPTION((unsigned), GuaranteedTailCallOpt, 1, false, BOOL)
+
+/// Allow CodeGen to order local stack symbols.
+TARGET_OPTION((unsigned), StackSymbolOrdering, 1, true, BOOL)
+
+/// Enable fast-path instruction selection.
+TARGET_OPTION((unsigned), EnableFastISel, 1, false, BOOL)
+
+/// Enable global instruction selection.
+TARGET_OPTION((unsigned), EnableGlobalISel, 1, false, BOOL)
+
+/// Control abort behavior when global instruction selection fails.
+TARGET_OPTION((GlobalISelAbortMode), GlobalISelAbort, 0,
+              GlobalISelAbortMode::Enable, ENUM)
+
+/// Control when and how the Swift async frame pointer bit is set.
+TARGET_OPTION((SwiftAsyncFramePointerMode), SwiftAsyncFramePointer, 0,
+              SwiftAsyncFramePointerMode::Always, ENUM)
+
+/// Use .init_array instead of .ctors for static constructors.
+TARGET_OPTION((unsigned), UseInitArray, 1, false, BOOL)
+
+/// Emit functions into separate sections.
+TARGET_OPTION((unsigned), FunctionSections, 1, false, BOOL)
+
+/// Emit data into separate sections.
+TARGET_OPTION((unsigned), DataSections, 1, false, BOOL)
+
+/// Do not emit visibility attributes for XCOFF.
+TARGET_OPTION((unsigned), IgnoreXCOFFVisibility, 1, false, BOOL)
+
+/// Emit the XCOFF traceback table.
+TARGET_OPTION((unsigned), XCOFFTracebackTable, 1, true, BOOL)
+
+TARGET_OPTION((unsigned), UniqueSectionNames, 1, true, BOOL)
+
+/// Use unique names for basic block sections.
+TARGET_OPTION((unsigned), UniqueBasicBlockSectionNames, 1, false, BOOL)
+
+/// Emit named sections with the same name into different sections.
+TARGET_OPTION((unsigned), SeparateNamedSections, 1, false, BOOL)
+
+/// Emit a target-specific trap instruction for unreachable IR instructions.
+TARGET_OPTION((unsigned), TrapUnreachable, 1, false, BOOL)
+
+/// Do not emit a trap after noreturn calls even when TrapUnreachable is true.
+TARGET_OPTION((unsigned), NoTrapAfterNoreturn, 1, false, BOOL)
+
+/// Bit size of immediate TLS offsets (0 means use the default).
+TARGET_OPTION((unsigned), TLSSize, 8, 0, U32_BITFIELD)
+
+/// Enable the emulated TLS model.
+TARGET_OPTION((unsigned), EmulatedTLS, 1, false, BOOL)
+
+/// Enable TLS descriptors.
+TARGET_OPTION((unsigned), EnableTLSDESC, 1, false, BOOL)
+
+/// Enable interprocedural register allocation.
+TARGET_OPTION((unsigned), EnableIPRA, 1, false, BOOL)
+
+/// Emit a section containing function stack-size metadata.
+TARGET_OPTION((unsigned), EmitStackSizeSection, 1, false, BOOL)
+
+/// Enable the MachineOutliner pass.
+TARGET_OPTION((unsigned), EnableMachineOutliner, 1, false, BOOL)
+
+/// Enable the MachineFunctionSplitter pass.
+TARGET_OPTION((unsigned), EnableMachineFunctionSplitter, 1, false, BOOL)
+
+/// Enable the StaticDataSplitter pass.
+TARGET_OPTION((unsigned), EnableStaticDataPartitioning, 1, false, BOOL)
+
+/// Set if the target supports default outlining behavior.
+TARGET_OPTION((unsigned), SupportsDefaultOutlining, 1, false, BOOL)
+
+/// Enable the machine verifier at the end of default NPM CodeGen pipelines.
+TARGET_OPTION((unsigned), EnableDefaultMachineVerifier, 1, true, BOOL)
+
+/// Emit an address-significance table.
+TARGET_OPTION((unsigned), EmitAddrsig, 1, false, BOOL)
+
+/// Emit the SHT_LLVM_BB_ADDR_MAP section.
+TARGET_OPTION((unsigned), BBAddrMap, 1, false, BOOL)
+
+/// Select which basic blocks are emitted into separate sections.
+TARGET_OPTION((BasicBlockSection), BBSections, 0, BasicBlockSection::None, ENUM)
+
+/// Sampled basic-block information used to select basic block sections.
+TARGET_OPTION((std::shared_ptr<MemoryBuffer>), BBSectionsFuncListBuf, 0, {},
+              BUFFER)
+
+/// Emit a section containing call-graph metadata.
+TARGET_OPTION((unsigned), EmitCallGraphSection, 1, false, BOOL)
+
+/// Enable call-site information production.
+TARGET_OPTION((unsigned), EmitCallSiteInfo, 1, false, BOOL)
+
+/// Set if the target supports debug entry values by default.
+TARGET_OPTION((unsigned), SupportsDebugEntryValues, 1, false, BOOL)
+
+/// Force production of debug entry values (for testing only).
+TARGET_OPTION((unsigned), EnableDebugEntryValues, 1, false, BOOL)
+
+/// Use experimental value-tracking variable locations.
+TARGET_OPTION((unsigned), ValueTrackingVariableLocations, 1, false, BOOL)
+
+/// Emit the DWARF debug frame section.
+TARGET_OPTION((unsigned), ForceDwarfFrameSection, 1, false, BOOL)
+
+/// Emit the XRay function index section.
+TARGET_OPTION((unsigned), XRayFunctionIndex, 1, true, BOOL)
+
+/// Do not use DWARF extensions in later DWARF versions.
+TARGET_OPTION((unsigned), DebugStrictDwarf, 1, false, BOOL)
+
+/// Emit the hotpatch flag in CodeView debug information.
+TARGET_OPTION((unsigned), Hotpatch, 1, false, BOOL)
+
+/// Enable scalar MASS conversions.
+TARGET_OPTION((unsigned), PPCGenScalarMASSEntries, 1, false, BOOL)
+
+/// Enable JustMyCode instrumentation.
+TARGET_OPTION((unsigned), JMCInstrument, 1, false, BOOL)
+
+/// Enable the CFIFixup pass.
+TARGET_OPTION((unsigned), EnableCFIFixup, 1, false, BOOL)
+
+/// Enable MisExpect diagnostics.
+TARGET_OPTION((unsigned), MisExpect, 1, false, BOOL)
+
+/// Put const objects with relocatable addresses in XCOFF read-only data.
+TARGET_OPTION((unsigned), XCOFFReadOnlyPointers, 1, false, BOOL)
+
+/// Verify narrow-integer call/return argument extensions in target backends.
+TARGET_OPTION((unsigned), VerifyArgABICompliance, 1, true, BOOL)
+
+/// Name of the stack-usage output file.
+TARGET_OPTION((std::string), StackUsageFile, 0, {}, STRING)
+
+/// Override TargetLoweringBase::PrefLoopAlignment when greater than zero.
+TARGET_OPTION((unsigned), LoopAlignment, 0, 0, U32)
+
+/// Control formation of fused floating-point operations.
+TARGET_OPTION((FPOpFusion::FPOpFusionMode), AllowFPOpFusion, 0,
+              FPOpFusion::Standard, ENUM)
+
+/// Threading model assumed for operations such as atomics.
+TARGET_OPTION((ThreadModel::Model), ThreadModel, 0, ThreadModel::POSIX, ENUM)
+
+/// EABI version.
+TARGET_OPTION((EABI), EABIVersion, 0, EABI::Default, ENUM)
+
+/// Debugger for which debug information is tuned.
+TARGET_OPTION((DebuggerKind), DebuggerTuning, 0, DebuggerKind::Default, ENUM)
+
+/// Vector math library to use.
+TARGET_OPTION((VectorLibrary), VecLib, 0, VectorLibrary::NoLibrary, ENUM)
+
+/// Exception-handling model to use.
+TARGET_OPTION((ExceptionHandling), ExceptionModel, 0, ExceptionHandling::None,
+              ENUM)
+
+/// Machine-level options.
+TARGET_OPTION((MCTargetOptions), MCOptions, 0, {}, MC)
+
+/// Final object filename/path to record in CodeView debug information.
+TARGET_OPTION((std::string), ObjectFilenameForDebug, 0, {}, STRING)
+
+#undef TARGET_OPTION
