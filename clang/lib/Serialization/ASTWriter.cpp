@@ -5670,7 +5670,7 @@ void ASTWriter::computeNonAffectingInputFiles() {
     // wrote and its own entries stay untouched.
     if (!hasChain())
       continue;
-    ASTReader::LoadedFileLoc Loaded = getChain()->getLoadedFileLoc(
+    serialization::InputFileLoc Loaded = getChain()->getLoadedFileLoc(
         Cache->OrigEntry->getName(), Cache->OrigEntry->getSize());
     if (Loaded.FID.isInvalid())
       continue;

@@ -1449,17 +1449,10 @@ private:
   };
 
 public:
-  /// Records where a loaded module keeps its copy of a file. \c FID names the
-  /// copy and \c Offset is where its locations start. \c FID is invalid when
-  /// no loaded module has the file.
-  struct LoadedFileLoc {
-    FileID FID;
-    SourceLocation::UIntTy Offset = 0;
-  };
-
   /// Returns where a loaded module keeps the input file with resolved path
-  /// \p Path and size \p Size.
-  LoadedFileLoc getLoadedFileLoc(StringRef Path, off_t Size);
+  /// \p Path and size \p Size. The returned \c FID is invalid when no loaded
+  /// module has the file.
+  serialization::InputFileLoc getLoadedFileLoc(StringRef Path, off_t Size);
 
 private:
   /// An input file of a loaded module, as its own serialized data describes
@@ -1475,13 +1468,9 @@ private:
   llvm::StringMap<SmallVector<LoadedInputFile, 1>> LoadedInputFiles;
   bool LoadedInputFilesBuilt = false;
 
-  /// For each module we have walked, where it keeps each of its input files.
-  /// We walk a module only once something asks about a file it has.
-  llvm::DenseMap<ModuleFile *, llvm::DenseMap<unsigned, LoadedFileLoc>>
-      LoadedInputFileLocs;
-
   void buildLoadedInputFiles();
-  LoadedFileLoc getLoadedInputFileLoc(ModuleFile &F, unsigned InputID);
+  serialization::InputFileLoc getLoadedInputFileLoc(ModuleFile &F,
+                                                    unsigned InputID);
 
   /// The offset an SLoc entry's locations start at, and the index of the input
   /// file it names. \c InputID is zero for an entry that is not a file.

@@ -79,6 +79,14 @@ struct InputFileInfo {
   }
 };
 
+/// Where a module file keeps its own copy of an input file. \c FID names the
+/// copy and \c Offset is where its locations start. \c FID is invalid for an
+/// input file the module file wrote no source location entries for.
+struct InputFileLoc {
+  FileID FID;
+  SourceLocation::UIntTy Offset = 0;
+};
+
 /// The input file that has been loaded from this AST file, along with
 /// bools indicating whether this was an overridden buffer or if it was
 /// out-of-date or not-found.
@@ -303,6 +311,12 @@ public:
 
   /// The input file infos that have been loaded from this AST file.
   std::vector<InputFileInfo> InputFileInfosLoaded;
+
+  /// Where this module file keeps each of its input files. We read this out of
+  /// the source location entries the first time something asks, since only a
+  /// module write needs it.
+  std::vector<InputFileLoc> InputFileLocsLoaded;
+  bool InputFileLocsLoadedBuilt = false;
 
   // All user input files reside at the index range [0, NumUserInputFiles), and
   // system input files reside at [NumUserInputFiles, InputFilesLoaded.size()).

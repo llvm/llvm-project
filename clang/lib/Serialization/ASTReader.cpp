@@ -1889,10 +1889,10 @@ void ASTReader::buildLoadedInputFiles() {
   }
 }
 
-ASTReader::LoadedFileLoc ASTReader::getLoadedInputFileLoc(ModuleFile &F,
-                                                          unsigned InputID) {
-  auto [Known, Inserted] = LoadedInputFileLocs.try_emplace(&F);
-  if (Inserted) {
+InputFileLoc ASTReader::getLoadedInputFileLoc(ModuleFile &F, unsigned InputID) {
+  if (!F.InputFileLocsLoadedBuilt) {
+    F.InputFileLocsLoadedBuilt = true;
+    F.InputFileLocsLoaded.resize(F.InputFilesLoaded.size());
     for (unsigned I = 0; I != F.LocalNumSLocEntries; ++I) {
       Expected<SLocEntryInfo> MaybeInfo = readSLocFileEntry(&F, I);
       if (!MaybeInfo) {
@@ -1901,22 +1901,23 @@ ASTReader::LoadedFileLoc ASTReader::getLoadedInputFileLoc(ModuleFile &F,
         consumeError(MaybeInfo.takeError());
         continue;
       }
-      if (!MaybeInfo->InputID)
+      if (!MaybeInfo->InputID ||
+          MaybeInfo->InputID > F.InputFileLocsLoaded.size())
         continue;
       // A module writes its entries in order, so the first entry naming an
       // input file is the one we want.
-      Known->second.try_emplace(
-          MaybeInfo->InputID,
-          LoadedFileLoc{FileID::get(F.SLocEntryBaseID + I), MaybeInfo->Offset});
+      InputFileLoc &Loc = F.InputFileLocsLoaded[MaybeInfo->InputID - 1];
+      if (Loc.FID.isInvalid())
+        Loc = {FileID::get(F.SLocEntryBaseID + I), MaybeInfo->Offset};
     }
   }
 
-  auto It = Known->second.find(InputID);
-  return It == Known->second.end() ? LoadedFileLoc() : It->second;
+  if (InputID == 0 || InputID > F.InputFileLocsLoaded.size())
+    return InputFileLoc();
+  return F.InputFileLocsLoaded[InputID - 1];
 }
 
-ASTReader::LoadedFileLoc ASTReader::getLoadedFileLoc(StringRef Path,
-                                                     off_t Size) {
+InputFileLoc ASTReader::getLoadedFileLoc(StringRef Path, off_t Size) {
   if (!LoadedInputFilesBuilt)
     buildLoadedInputFiles();
 
@@ -1924,7 +1925,7 @@ ASTReader::LoadedFileLoc ASTReader::getLoadedFileLoc(StringRef Path,
   FileMgr.makeAbsolutePath(Key, /*Canonicalize=*/true);
   auto Known = LoadedInputFiles.find(Key);
   if (Known == LoadedInputFiles.end())
-    return LoadedFileLoc();
+    return InputFileLoc();
 
   for (const LoadedInputFile &In : Known->second) {
     if (In.Size != Size)
@@ -1932,11 +1933,11 @@ ASTReader::LoadedFileLoc ASTReader::getLoadedFileLoc(StringRef Path,
     // A module that has the file as an input may still have left its source
     // location entries out, in which case it has no copy to point at and we
     // keep looking.
-    LoadedFileLoc Loc = getLoadedInputFileLoc(*In.F, In.InputID);
+    InputFileLoc Loc = getLoadedInputFileLoc(*In.F, In.InputID);
     if (Loc.FID.isValid())
       return Loc;
   }
-  return LoadedFileLoc();
+  return InputFileLoc();
 }
 
 int ASTReader::getSLocEntryID(SourceLocation::UIntTy SLocOffset) {
