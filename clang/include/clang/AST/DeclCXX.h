@@ -352,28 +352,29 @@ private:
     DefinitionData(CXXRecordDecl *D);
 
     /// Retrieve the set of direct base classes.
-    CXXBaseSpecifier *getBases() const {
+    CXXBaseSpecifier *getBases(const ASTContext &Context) const {
       if (!Bases.isOffset())
         return Bases.get(nullptr);
-      return getBasesSlowCase();
+      return getBasesSlowCase(Context);
     }
 
     /// Retrieve the set of virtual base classes.
-    CXXBaseSpecifier *getVBases() const {
+    CXXBaseSpecifier *getVBases(const ASTContext &Context) const {
       if (!VBases.isOffset())
         return VBases.get(nullptr);
-      return getVBasesSlowCase();
+      return getVBasesSlowCase(Context);
+    }
+    ArrayRef<CXXBaseSpecifier> bases(const ASTContext &Context) const {
+      return {getBases(Context), NumBases};
     }
 
-    ArrayRef<CXXBaseSpecifier> bases() const { return {getBases(), NumBases}; }
-
-    ArrayRef<CXXBaseSpecifier> vbases() const {
-      return {getVBases(), NumVBases};
+    ArrayRef<CXXBaseSpecifier> vbases(const ASTContext &Context) const {
+      return {getVBases(Context), NumVBases};
     }
 
   private:
-    CXXBaseSpecifier *getBasesSlowCase() const;
-    CXXBaseSpecifier *getVBasesSlowCase() const;
+    CXXBaseSpecifier *getBasesSlowCase(const ASTContext &Context) const;
+    CXXBaseSpecifier *getVBasesSlowCase(const ASTContext &Context) const;
   };
 
   struct DefinitionData *DefinitionData;
@@ -612,8 +613,10 @@ public:
     return base_class_const_range(bases_begin(), bases_end());
   }
 
-  base_class_iterator bases_begin() { return data().getBases(); }
-  base_class_const_iterator bases_begin() const { return data().getBases(); }
+  base_class_iterator bases_begin() { return data().getBases(getASTContext()); }
+  base_class_const_iterator bases_begin() const {
+    return data().getBases(getASTContext());
+  }
   base_class_iterator bases_end() { return bases_begin() + data().NumBases; }
   base_class_const_iterator bases_end() const {
     return bases_begin() + data().NumBases;
@@ -629,8 +632,12 @@ public:
     return base_class_const_range(vbases_begin(), vbases_end());
   }
 
-  base_class_iterator vbases_begin() { return data().getVBases(); }
-  base_class_const_iterator vbases_begin() const { return data().getVBases(); }
+  base_class_iterator vbases_begin() {
+    return data().getVBases(getASTContext());
+  }
+  base_class_const_iterator vbases_begin() const {
+    return data().getVBases(getASTContext());
+  }
   base_class_iterator vbases_end() { return vbases_begin() + data().NumVBases; }
   base_class_const_iterator vbases_end() const {
     return vbases_begin() + data().NumVBases;

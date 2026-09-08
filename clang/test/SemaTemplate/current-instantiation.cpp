@@ -247,3 +247,18 @@ namespace RebuildDependentScopeDeclRefExpr {
   // FIXME: We should issue a typo-correction here.
   template<typename T> N<X<T>::think> X<T>::foo() {} // expected-error {{no member named 'think' in 'RebuildDependentScopeDeclRefExpr::X<T>'}}
 }
+
+namespace GH195133 {
+  template <typename T> struct A {
+    void f();
+  };
+
+  template <typename T> struct X {
+    struct S : A<int> {};
+    static void f(S *p) {
+      p->template A<int>::f();
+    }
+  };
+
+  void g() { X<int>::f(nullptr); }
+}
