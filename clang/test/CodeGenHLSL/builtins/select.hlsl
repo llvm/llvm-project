@@ -1,6 +1,10 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -emit-llvm -disable-llvm-passes \
-// RUN:   -o - | FileCheck %s --check-prefixes=CHECK
+// RUN:   -o - | FileCheck %s --check-prefixes=CHECK,NO_HALF
+// RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
+// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -emit-llvm \
+// RUN:   -disable-llvm-passes -o - | FileCheck %s \
+// RUN:   --check-prefixes=CHECK,NATIVE_HALF
 
 // CHECK-LABEL: test_select_bool_int
 // CHECK: [[SELECT:%.*]] = select i1 {{%.*}}, i32 {{%.*}}, i32 {{%.*}}
@@ -35,15 +39,17 @@ int1 test_select_vector_1(bool1 cond0, int1 tVals, int1 fVals) {
 }
 
 // CHECK-LABEL: test_select_float_vector_1
-// CHECK: [[SELECT:%.*]] = select i1 {{%.*}}, <1 x float> {{%.*}}, <1 x float> {{%.*}}
+// CHECK: [[SELECT:%.*]] = select {{.*}}i1 {{%.*}}, <1 x float> {{%.*}}, <1 x float> {{%.*}}
 // CHECK: ret <1 x float> [[SELECT]]
 float1 test_select_float_vector_1(bool1 cond0, float1 tVals, float1 fVals) {
   return select(cond0, tVals, fVals);
 }
 
 // CHECK-LABEL: test_select_half_vector_1
-// CHECK: [[SELECT:%.*]] = select i1 {{%.*}}, <1 x half> {{%.*}}, <1 x half> {{%.*}}
-// CHECK: ret <1 x half> [[SELECT]]
+// NO_HALF: [[SELECT:%.*]] = select {{.*}}i1 {{%.*}}, <1 x float> {{%.*}}, <1 x float> {{%.*}}
+// NO_HALF: ret <1 x float> [[SELECT]]
+// NATIVE_HALF: [[SELECT:%.*]] = select {{.*}}i1 {{%.*}}, <1 x half> {{%.*}}, <1 x half> {{%.*}}
+// NATIVE_HALF: ret <1 x half> [[SELECT]]
 half1 test_select_half_vector_1(bool1 cond0, half1 tVals, half1 fVals) {
   return select(cond0, tVals, fVals);
 }
