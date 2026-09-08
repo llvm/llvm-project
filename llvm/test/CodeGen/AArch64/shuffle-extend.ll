@@ -49,10 +49,11 @@ define <2 x i8> @test_v16i8_v2i32_016(<16 x i8> %a, <16 x i8> %b) {
 define <2 x i8> @test_v8i8_v2i32_08(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-SD-LABEL: test_v8i8_v2i32_08:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    mov b0, v0.b[0]
-; CHECK-SD-NEXT:    mov v0.b[4], v1.b[0]
+; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v1.8b
+; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-SD-NEXT:    zip1 v1.4h, v1.4h, v1.4h
+; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    add v0.2s, v0.2s, v0.2s
 ; CHECK-SD-NEXT:    ret
 ;
@@ -73,8 +74,9 @@ define <2 x i8> @test_v8i8_v2i32_08(<8 x i8> %a, <8 x i8> %b) {
 define <2 x i16> @test_v8i16_v2i32_08(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-SD-LABEL: test_v8i16_v2i32_08:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov h0, v0.h[0]
-; CHECK-SD-NEXT:    mov v0.h[2], v1.h[0]
+; CHECK-SD-NEXT:    zip1 v1.4h, v1.4h, v1.4h
+; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    add v0.2s, v0.2s, v0.2s
 ; CHECK-SD-NEXT:    ret
 ;
@@ -95,10 +97,9 @@ define <2 x i16> @test_v8i16_v2i32_08(<8 x i16> %a, <8 x i16> %b) {
 define <2 x i16> @test_v4i16_v2i32_04(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: test_v4i16_v2i32_04:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    mov h0, v0.h[0]
-; CHECK-SD-NEXT:    mov v0.h[2], v1.h[0]
+; CHECK-SD-NEXT:    zip1 v1.4h, v1.4h, v1.4h
+; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    add v0.2s, v0.2s, v0.2s
 ; CHECK-SD-NEXT:    ret
 ;

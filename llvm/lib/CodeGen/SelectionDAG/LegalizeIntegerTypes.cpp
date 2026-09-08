@@ -6138,11 +6138,70 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {
   if (OutVT.isScalableVector())
     report_fatal_error("Unable to promote scalable types using BUILD_VECTOR");
 
-  SDValue InOp0 = N->getOperand(0);
-  if (getTypeAction(InOp0.getValueType()) == TargetLowering::TypePromoteInteger)
-    InOp0 = GetPromotedInteger(InOp0);
+  auto TryPromotingExtract = [&](SDValue InOp0, EVT NOutVT, uint64_t Idx) {
+    assert(NOutVT.isFixedLengthVector());
+    EVT InVT = InOp0.getValueType();
+    EVT InSVT = InVT.getVectorElementType();
+    EVT OutSVT = NOutVT.getVectorElementType();
 
+    if (InSVT == OutSVT)
+      return DAG.getExtractSubvector(dl, NOutVT, InOp0, Idx);
+
+    // We can just extend(extract(src)).
+    unsigned OutNumElem = NOutVT.getVectorMinNumElements();
+    EVT ExtractTy = InVT.changeVectorElementCount(
+        *DAG.getContext(), ElementCount::get(OutNumElem, false));
+    if (isTypeLegal(ExtractTy) ||
+        getTypeAction(ExtractTy) == TargetLowering::TypeSplitVector)
+      return DAG.getAnyExtOrTrunc(
+          DAG.getExtractSubvector(dl, ExtractTy, InOp0, Idx), dl, NOutVT);
+
+    EVT PromotedInVecVT =
+        InVT.changeVectorElementType(*DAG.getContext(), OutSVT);
+    unsigned InMinNumElem = PromotedInVecVT.getVectorMinNumElements();
+    // FIXME: Arbitrary to avoid regressions in tests.
+    if (InMinNumElem > OutNumElem * 4)
+      return SDValue();
+    // We need to promote the input before extracting.
+    if (getTypeAction(ExtractTy) == TargetLowering::TypePromoteInteger)
+      if (isTypeLegal(PromotedInVecVT) ||
+          getTypeAction(PromotedInVecVT) ==
+              TargetLowering::TypePromoteInteger ||
+          (getTypeAction(PromotedInVecVT) == TargetLowering::TypeSplitVector &&
+           OutNumElem * 2 < InMinNumElem))
+        // Splitting uses extracts, stick to less than half size extracts to
+        // avoid cycles.
+        return DAG.getExtractSubvector(
+            dl, NOutVT, DAG.getAnyExtOrTrunc(InOp0, dl, PromotedInVecVT), Idx);
+    return SDValue();
+  };
+
+  SDValue InOp0 = N->getOperand(0);
   EVT InVT = InOp0.getValueType();
+
+  if (getTypeAction(InVT) == TargetLowering::TypeSplitVector) {
+    SDValue Lo, Hi;
+    GetSplitVector(InOp0, Lo, Hi);
+    uint64_t ExtractIdx = BaseIdx->getAsZExtVal();
+    // Only handle the case where the extract is contained entirely in one of
+    // the halves.
+    unsigned LoNumElem = Lo.getValueType().getVectorMinNumElements();
+    if (OutVT.getVectorNumElements() + ExtractIdx <= LoNumElem)
+      if (SDValue PromotedLo = TryPromotingExtract(Lo, NOutVT, ExtractIdx))
+        return PromotedLo;
+      else if (InVT.isFixedLengthVector() && ExtractIdx >= LoNumElem)
+        if (SDValue PromotedHi =
+                TryPromotingExtract(Hi, NOutVT, ExtractIdx - LoNumElem))
+          return PromotedHi;
+  } else {
+    if (getTypeAction(InVT) == TargetLowering::TypePromoteInteger)
+      InOp0 = GetPromotedInteger(InOp0);
+
+    if (SDValue V = TryPromotingExtract(InOp0, NOutVT, BaseIdx->getAsZExtVal()))
+      return V;
+  }
+
+  InVT = InOp0.getValueType();
   EVT InSVT = InVT.getVectorElementType();
 
   unsigned OutNumElems = OutVT.getVectorNumElements();

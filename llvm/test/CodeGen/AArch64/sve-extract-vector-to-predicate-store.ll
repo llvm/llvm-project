@@ -48,15 +48,11 @@ define void @pred_store_neg1(<vscale x 16 x i1> %pred, ptr %addr) #0 {
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    str p0, [sp, #7, mul vl]
 ; CHECK-NEXT:    ld1b { z0.d }, p1/z, [sp, #7, mul vl]
-; CHECK-NEXT:    mov w8, v0.s[2]
-; CHECK-NEXT:    mov z2.s, z0.s[4]
-; CHECK-NEXT:    mov z1.s, z0.s[6]
-; CHECK-NEXT:    mov v0.h[1], w8
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    mov v0.h[2], w8
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov v0.h[3], w8
-; CHECK-NEXT:    xtn v0.8b, v0.8h
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
+; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    xtn v0.4h, v0.4s
+; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -77,18 +73,9 @@ define void @pred_store_neg2(<vscale x 16 x i1> %pred, ptr %addr) #2 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    str p0, [sp, #7, mul vl]
-; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ld1b { z0.d }, p1/z, [sp, #7, mul vl]
-; CHECK-NEXT:    mov w8, v0.s[2]
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    mov z2.s, z0.s[4]
-; CHECK-NEXT:    mov z0.s, z0.s[6]
-; CHECK-NEXT:    mov v1.h[1], w8
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    mov v1.h[2], w8
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov v1.h[3], w8
-; CHECK-NEXT:    st1b { z1.h }, p0, [x0]
+; CHECK-NEXT:    st1b { z0.d }, p0, [x0]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -108,19 +95,9 @@ define void @pred_store_neg3(<vscale x 16 x i1> %pred, ptr %addr) #1 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    str p0, [sp, #7, mul vl]
-; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    ld1b { z0.d }, p1/z, [sp, #7, mul vl]
-; CHECK-NEXT:    mov z1.s, z0.s[10]
-; CHECK-NEXT:    mov z2.s, z0.s[8]
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov z1.s, z0.s[12]
-; CHECK-NEXT:    mov z0.s, z0.s[14]
-; CHECK-NEXT:    mov v2.h[1], w8
-; CHECK-NEXT:    fmov w8, s1
-; CHECK-NEXT:    mov v2.h[2], w8
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov v2.h[3], w8
-; CHECK-NEXT:    st1b { z2.h }, p0, [x0]
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #32
+; CHECK-NEXT:    st1b { z0.d }, p1, [x0]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -140,18 +117,9 @@ define void @pred_store_neg4(<vscale x 16 x i1> %pred, ptr %addr) #3 {
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    str p0, [sp, #7, mul vl]
-; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    ld1b { z0.d }, p1/z, [sp, #7, mul vl]
-; CHECK-NEXT:    mov w8, v0.s[2]
-; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    mov z2.s, z0.s[4]
-; CHECK-NEXT:    mov z0.s, z0.s[6]
-; CHECK-NEXT:    mov v1.h[1], w8
-; CHECK-NEXT:    fmov w8, s2
-; CHECK-NEXT:    mov v1.h[2], w8
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    mov v1.h[3], w8
-; CHECK-NEXT:    st1b { z1.h }, p0, [x0]
+; CHECK-NEXT:    st1b { z0.d }, p0, [x0]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -172,9 +140,7 @@ define void @pred_store_v2i8_multiuse(<vscale x 16 x i1> %pred, ptr %addr) #0 {
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    str p0, [sp, #7, mul vl]
 ; CHECK-NEXT:    ld1b { z0.d }, p1/z, [sp, #7, mul vl]
-; CHECK-NEXT:    movprfx z1, z0
-; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
-; CHECK-NEXT:    uzp1 v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    // fake_use: $d0
 ; CHECK-NEXT:    str p0, [x0]
 ; CHECK-NEXT:    addvl sp, sp, #1

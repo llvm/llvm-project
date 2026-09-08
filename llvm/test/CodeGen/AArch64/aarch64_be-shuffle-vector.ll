@@ -5,29 +5,25 @@
 define <4 x i16> @test_reconstructshuffle(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; CHECKLE-LABEL: test_reconstructshuffle:
 ; CHECKLE:       // %bb.0:
-; CHECKLE-NEXT:    mov b2, v0.b[3]
+; CHECKLE-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECKLE-NEXT:    mov d1, v1.d[1]
-; CHECKLE-NEXT:    mov v2.b[2], v0.b[2]
-; CHECKLE-NEXT:    mov v2.b[4], v0.b[1]
-; CHECKLE-NEXT:    mov v2.b[6], v0.b[0]
-; CHECKLE-NEXT:    zip2 v0.8b, v1.8b, v0.8b
-; CHECKLE-NEXT:    add v0.4h, v2.4h, v0.4h
+; CHECKLE-NEXT:    rev64 v0.4h, v0.4h
+; CHECKLE-NEXT:    zip2 v1.8b, v1.8b, v1.8b
+; CHECKLE-NEXT:    add v0.4h, v0.4h, v1.4h
 ; CHECKLE-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECKLE-NEXT:    ret
 ;
 ; CHECKBE-LABEL: test_reconstructshuffle:
 ; CHECKBE:       // %bb.0:
-; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECKBE-NEXT:    rev64 v1.16b, v1.16b
-; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECKBE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECKBE-NEXT:    mov b2, v0.b[3]
+; CHECKBE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECKBE-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECKBE-NEXT:    mov d1, v1.d[1]
-; CHECKBE-NEXT:    mov v2.b[2], v0.b[2]
-; CHECKBE-NEXT:    mov v2.b[4], v0.b[1]
-; CHECKBE-NEXT:    mov v2.b[6], v0.b[0]
-; CHECKBE-NEXT:    zip2 v0.8b, v1.8b, v0.8b
-; CHECKBE-NEXT:    add v0.4h, v2.4h, v0.4h
+; CHECKBE-NEXT:    rev64 v0.4h, v0.4h
+; CHECKBE-NEXT:    zip2 v1.8b, v1.8b, v1.8b
+; CHECKBE-NEXT:    add v0.4h, v0.4h, v1.4h
 ; CHECKBE-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECKBE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECKBE-NEXT:    ret

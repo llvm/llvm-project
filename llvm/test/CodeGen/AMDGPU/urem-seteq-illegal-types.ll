@@ -70,24 +70,24 @@ define <3 x i1> @test_urem_vec(<3 x i11> %X) nounwind {
 ; CHECK-LABEL: test_urem_vec:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_and_b32_e32 v1, 0x7ff, v1
-; CHECK-NEXT:    s_mov_b32 s5, 0xb6db6db7
-; CHECK-NEXT:    v_and_b32_e32 v2, 0x7ff, v2
-; CHECK-NEXT:    s_mov_b32 s4, 0x8311eb33
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x7ff, v0
-; CHECK-NEXT:    v_mul_lo_u32 v1, v1, s5
-; CHECK-NEXT:    s_mov_b32 s5, 0xaaaaaaab
+; CHECK-NEXT:    s_mov_b32 s4, 0x2aaaaaab
+; CHECK-NEXT:    v_mul_hi_u32 v3, v0, s4
+; CHECK-NEXT:    v_and_b32_e32 v1, 0x7ff, v1
+; CHECK-NEXT:    s_mov_b32 s4, 0x24924925
+; CHECK-NEXT:    v_and_b32_e32 v2, 0x7ff, v2
+; CHECK-NEXT:    v_mul_hi_u32 v4, v1, s4
+; CHECK-NEXT:    s_mov_b32 s4, 0x8311eb33
 ; CHECK-NEXT:    v_mul_lo_u32 v2, v2, s4
-; CHECK-NEXT:    v_mul_lo_u32 v0, v0, s5
-; CHECK-NEXT:    v_add_i32_e32 v1, vcc, 0x49249249, v1
+; CHECK-NEXT:    v_mul_u32_u24_e32 v3, 6, v3
+; CHECK-NEXT:    v_sub_i32_e32 v0, vcc, v0, v3
+; CHECK-NEXT:    v_mul_u32_u24_e32 v3, 7, v4
+; CHECK-NEXT:    v_sub_i32_e32 v1, vcc, v1, v3
 ; CHECK-NEXT:    v_add_i32_e32 v2, vcc, 0xf9dc299a, v2
-; CHECK-NEXT:    v_alignbit_b32 v0, v0, v0, 1
-; CHECK-NEXT:    s_mov_b32 s6, 0x2aaaaaaa
-; CHECK-NEXT:    s_mov_b32 s5, 0x24924924
-; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc, s6, v0
+; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
 ; CHECK-NEXT:    s_mov_b32 s4, 0x20140c
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
-; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc, s5, v1
+; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v1
 ; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc, s4, v2
 ; CHECK-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc

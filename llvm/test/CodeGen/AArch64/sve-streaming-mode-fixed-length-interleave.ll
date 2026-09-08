@@ -204,22 +204,28 @@ define void @masked_store_factor2_64bit(ptr %ptr, <2 x i32> %v0, <2 x i32> %v1, 
 define void @masked_store_factor2_128bit(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i1> %mask) {
 ; CHECK-COMPAT-LABEL: masked_store_factor2_128bit:
 ; CHECK-COMPAT:       // %bb.0:
-; CHECK-COMPAT-NEXT:    adrp x8, .LCPI7_0
 ; CHECK-COMPAT-NEXT:    // kill: def $d2 killed $d2 def $z2
+; CHECK-COMPAT-NEXT:    mov z3.h, z2.h[3]
+; CHECK-COMPAT-NEXT:    mov z4.h, z2.h[2]
 ; CHECK-COMPAT-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-COMPAT-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-COMPAT-NEXT:    mov z4.s, z1.s[3]
-; CHECK-COMPAT-NEXT:    mov z5.s, z0.s[3]
-; CHECK-COMPAT-NEXT:    ldr q3, [x8, :lo12:.LCPI7_0]
+; CHECK-COMPAT-NEXT:    mov x8, #4 // =0x4
+; CHECK-COMPAT-NEXT:    mov z5.h, z2.h[1]
 ; CHECK-COMPAT-NEXT:    mov z6.s, z1.s[2]
 ; CHECK-COMPAT-NEXT:    mov z7.s, z0.s[2]
 ; CHECK-COMPAT-NEXT:    ptrue p0.s, vl4
+; CHECK-COMPAT-NEXT:    zip1 z3.b, z4.b, z3.b
+; CHECK-COMPAT-NEXT:    mov z4.s, z1.s[3]
+; CHECK-COMPAT-NEXT:    zip1 z2.b, z2.b, z5.b
+; CHECK-COMPAT-NEXT:    mov z5.s, z0.s[3]
 ; CHECK-COMPAT-NEXT:    zip1 z0.s, z0.s, z1.s
-; CHECK-COMPAT-NEXT:    mov x8, #4 // =0x4
-; CHECK-COMPAT-NEXT:    tbl z3.h, { z2.h }, z3.h
-; CHECK-COMPAT-NEXT:    zip1 z2.h, z2.h, z2.h
+; CHECK-COMPAT-NEXT:    zip1 z2.h, z2.h, z3.h
 ; CHECK-COMPAT-NEXT:    zip1 z4.s, z5.s, z4.s
 ; CHECK-COMPAT-NEXT:    zip1 z5.s, z7.s, z6.s
+; CHECK-COMPAT-NEXT:    zip1 z2.b, z2.b, z2.b
+; CHECK-COMPAT-NEXT:    uunpklo z2.h, z2.b
+; CHECK-COMPAT-NEXT:    movprfx z3, z2
+; CHECK-COMPAT-NEXT:    ext z3.b, z3.b, z2.b, #8
 ; CHECK-COMPAT-NEXT:    uunpklo z2.s, z2.h
 ; CHECK-COMPAT-NEXT:    uunpklo z3.s, z3.h
 ; CHECK-COMPAT-NEXT:    lsl z2.s, z2.s, #31
@@ -235,19 +241,25 @@ define void @masked_store_factor2_128bit(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1,
 ;
 ; CHECK-STREAMING-LABEL: masked_store_factor2_128bit:
 ; CHECK-STREAMING:       // %bb.0:
-; CHECK-STREAMING-NEXT:    adrp x8, .LCPI7_0
-; CHECK-STREAMING-NEXT:    mov z4.s, z1.s[3]
-; CHECK-STREAMING-NEXT:    mov z5.s, z0.s[3]
-; CHECK-STREAMING-NEXT:    ldr q3, [x8, :lo12:.LCPI7_0]
+; CHECK-STREAMING-NEXT:    mov z3.h, z2.h[3]
+; CHECK-STREAMING-NEXT:    mov z4.h, z2.h[2]
+; CHECK-STREAMING-NEXT:    mov x8, #4 // =0x4
+; CHECK-STREAMING-NEXT:    mov z5.h, z2.h[1]
 ; CHECK-STREAMING-NEXT:    mov z6.s, z1.s[2]
 ; CHECK-STREAMING-NEXT:    mov z7.s, z0.s[2]
 ; CHECK-STREAMING-NEXT:    ptrue p0.s, vl4
+; CHECK-STREAMING-NEXT:    zip1 z3.b, z4.b, z3.b
+; CHECK-STREAMING-NEXT:    mov z4.s, z1.s[3]
+; CHECK-STREAMING-NEXT:    zip1 z2.b, z2.b, z5.b
+; CHECK-STREAMING-NEXT:    mov z5.s, z0.s[3]
 ; CHECK-STREAMING-NEXT:    zip1 z0.s, z0.s, z1.s
-; CHECK-STREAMING-NEXT:    mov x8, #4 // =0x4
-; CHECK-STREAMING-NEXT:    tbl z3.h, { z2.h }, z3.h
-; CHECK-STREAMING-NEXT:    zip1 z2.h, z2.h, z2.h
+; CHECK-STREAMING-NEXT:    zip1 z2.h, z2.h, z3.h
 ; CHECK-STREAMING-NEXT:    zip1 z4.s, z5.s, z4.s
 ; CHECK-STREAMING-NEXT:    zip1 z5.s, z7.s, z6.s
+; CHECK-STREAMING-NEXT:    zip1 z2.b, z2.b, z2.b
+; CHECK-STREAMING-NEXT:    uunpklo z2.h, z2.b
+; CHECK-STREAMING-NEXT:    movprfx z3, z2
+; CHECK-STREAMING-NEXT:    ext z3.b, z3.b, z2.b, #8
 ; CHECK-STREAMING-NEXT:    uunpklo z2.s, z2.h
 ; CHECK-STREAMING-NEXT:    uunpklo z3.s, z3.h
 ; CHECK-STREAMING-NEXT:    lsl z2.s, z2.s, #31

@@ -96,10 +96,8 @@ define void @v3i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    ldr s0, [x0]
 ; CHECK-SD-NEXT:    ldr s1, [x1]
-; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v0.8b
-; CHECK-SD-NEXT:    mul v0.4h, v0.4h, v1.4h
-; CHECK-SD-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
+; CHECK-SD-NEXT:    smull v0.8h, v0.8b, v1.8b
+; CHECK-SD-NEXT:    xtn v1.8b, v0.8h
 ; CHECK-SD-NEXT:    mov h0, v0.h[2]
 ; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-SD-NEXT:    stur b0, [x0, #2]
