@@ -651,10 +651,19 @@ TEST(UniquingSetTest, Basic) {
 
   EXPECT_TRUE(Set.erase(&A));
   EXPECT_FALSE(Set.erase(&A));
-  KeyedPair NeverInserted(3, 4);
-  EXPECT_FALSE(Set.erase(&NeverInserted));
+  KeyedPair C(3, 4);
+  EXPECT_FALSE(Set.erase(&C));
   EXPECT_EQ(1u, Set.size());
   EXPECT_EQ(nullptr, Set.lookup({1, 2}, Token));
+
+  // getOrInsert inserts an absent node and hands back the one in the set.
+  EXPECT_EQ(&C, Set.getOrInsert(&C));
+  EXPECT_EQ(2u, Set.size());
+  EXPECT_EQ(&C, Set.lookup({3, 4}, Token));
+  EXPECT_FALSE(bool(Token));
+  KeyedPair CDup(3, 4);
+  EXPECT_EQ(&C, Set.getOrInsert(&CDup));
+  EXPECT_EQ(2u, Set.size());
 }
 
 // Every key hashes to NotAHash, which must be remapped so that erase() does not

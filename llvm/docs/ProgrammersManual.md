@@ -2110,10 +2110,11 @@ if (FooNode *N = Pool.lookup({Opcode, LHS, RHS}, Token))
 Pool.insert(new (Allocator) FooNode(Opcode, LHS, RHS), Token);
 ```
 
-Prefer `UniquingSet` when a node can yield its key in O(1). Keep `FoldingSet`
-for keys that are wide or variable-length, which a `FoldingSetNodeID` represents
-naturally. `getKey` and a lookup site are two hand-maintained sides that can
-disagree, though the key type pins their arity and `insert` asserts that a node
+Prefer `UniquingSet` when a node can yield its key in O(1), or when a key can
+cheaply alias storage owned by the node (such as an `ArrayRef` or `StringRef`).
+Keep `FoldingSet` when nodes are polymorphic, or when keys must be assembled
+from recursive data structures.  `getKey` and a lookup site are two
+hand-maintained sides that can disagree, though `insert` asserts that a node
 hashes as its lookup did.
 
 (dss_set)=
