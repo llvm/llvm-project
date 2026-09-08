@@ -4953,47 +4953,6 @@ def CIR_AwaitOp : CIR_RegionBranchOpBase<"await", [
   let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
-<<<<<<< HEAD
-//===----------------------------------------------------------------------===//
-// CoroBody
-//===----------------------------------------------------------------------===//
-def CIR_CoroBodyOp : CIR_RegionBranchOpBase<"coro.body", [
-  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
-  RecursiveMemoryEffects
-]> {
-  let summary = "Region containing the user-authored coroutine body";
-  let description = [{
-    The `cir.coro.body` operation models the region where the user-authored
-    coroutine code is emitted.
-
-    This operation serves as a structural boundary separating the coroutine
-    setup and teardown logic (e.g. initial suspend, final suspend, and cleanup)
-    from the user-provided statements inside the coroutine.
-
-    The body region contains the code corresponding to the original function
-    body, including `co_await` and `co_return` expressions. In particular,
-    `cir.co_return` operations inside this region mark coroutine exit points
-    and introduce structured control flow that transfers execution to the
-    final suspend point of the coroutine.
-  }];
-
-  let regions = (region AnyRegion:$body);
-
-  let skipDefaultBuilders = 1;
-
-  let builders = [
-    OpBuilder<(ins "BuilderCallbackRef":$bodyBuilder)>
-  ];
-
-  let assemblyFormat = [{
-    $body attr-dict
-  }];
-
-  let hasLLVMLowering = false;
-  let hasVerifier = 1;
-}
-=======
->>>>>>> 56098cff2da3 ([CIR] Add cir.coroutine and remove cir.coroBody)
 
 //===----------------------------------------------------------------------===//
 // CoReturnOp
