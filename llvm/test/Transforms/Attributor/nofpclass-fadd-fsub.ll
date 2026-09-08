@@ -973,7 +973,7 @@ define float @fadd_known_negative_normal_dapz(float nofpclass(pinf pnorm pzero) 
   ret float %add
 }
 
-; Cannot conclude this can't return +0 due to undef.
+; Cannot conclude this can't return +0 due to the lack of noundef.
 define float @fadd_double_no_zero_maybe_undef(float nofpclass(zero) %arg) {
 ; CHECK-LABEL: define nofpclass(nzero) float @fadd_double_no_zero_maybe_undef(
 ; CHECK-SAME: float nofpclass(zero) [[ARG:%.*]]) #[[ATTR0]] {
