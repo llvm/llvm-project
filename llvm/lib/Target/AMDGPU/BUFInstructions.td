@@ -165,7 +165,7 @@ class getMTBUFInsDA<list<RegisterOperand> vdataList,
   RegisterOperand vdata_op = !if(!empty(vdataList), ?, !head(vdataList));
   RegisterOperand vaddr_op = !if(!empty(vaddrList), ?, !head(vaddrList));
 
-  dag SOffset = !if(hasRestrictedSOffset, (ins SReg_32:$soffset),
+  dag SOffset = !if(hasRestrictedSOffset, (ins SReg_32_Encodable:$soffset),
                                  (ins SCSrc_b32:$soffset));
 
   dag NonVaddrInputs = !con((ins RsrcRC:$srsrc), SOffset,
@@ -433,7 +433,7 @@ class getMUBUFInsDA<list<RegisterOperand> vdataList,
   RegisterOperand vaddr_op = !if(!empty(vaddrList), ?, !head(vaddrList));
   RegisterOperand vdata_op = getBUFVDataRegisterOperand<!cast<SIRegisterClassLike>(vdataClass.RegClass).Size, isTFE, isTrue16>.ret;
 
-  dag SOffset = !if(hasRestrictedSOffset, (ins SReg_32:$soffset), (ins SCSrc_b32:$soffset));
+  dag SOffset = !if(hasRestrictedSOffset, (ins SReg_32_Encodable:$soffset), (ins SCSrc_b32:$soffset));
   dag IsAsyncOpnd = !if(isLds, (ins i1imm_0:$IsAsync), (ins));
   dag NonVaddrInputs = !con((ins RsrcRC:$srsrc), SOffset, (ins Offset:$offset, CPol_0:$cpol, i1imm_0:$swz), IsAsyncOpnd);
 
@@ -799,7 +799,7 @@ class getMUBUFAtomicInsDA<RegisterOperand vdata_op, bit vdata_in, bit hasRestric
 
   dag VData = !if(vdata_in, (ins vdata_op:$vdata_in), (ins vdata_op:$vdata));
   dag Data = !if(!empty(vaddrList), VData, !con(VData, (ins vaddr_op:$vaddr)));
-  dag SOffset = !if(hasRestrictedSOffset, (ins SReg_32:$soffset), (ins SCSrc_b32:$soffset));
+  dag SOffset = !if(hasRestrictedSOffset, (ins SReg_32_Encodable:$soffset), (ins SCSrc_b32:$soffset));
   dag MainInputs = !con((ins RsrcRC:$srsrc), SOffset, (ins Offset:$offset));
   dag CPol = !if(vdata_in, (ins CPol_GLC_WithDefault:$cpol),
                            (ins CPol_NonGLC_WithDefault:$cpol));
