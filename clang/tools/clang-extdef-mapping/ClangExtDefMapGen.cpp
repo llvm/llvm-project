@@ -43,14 +43,11 @@ public:
     CurrentFileName = astFilePath.str();
   }
 
-  ~MapExtDefNamesConsumer() {
-    // Flush results to standard output.
-    llvm::outs() << createCrossTUIndexString(Index);
-  }
-
   void HandleTranslationUnit(ASTContext &Context) override {
     handleDecl(Context.getTranslationUnitDecl());
   }
+
+  static void printIndex() { llvm::outs() << createCrossTUIndexString(Index); }
 
 private:
   void handleDecl(const Decl *D);
@@ -58,9 +55,13 @@ private:
 
   ASTContext &Ctx;
   SourceManager &SM;
-  llvm::StringMap<std::string> Index;
+  static llvm::StringMap<std::string> Index;
+  static llvm::StringSet<> WeakNames;
   std::string CurrentFileName;
 };
+
+llvm::StringMap<std::string> MapExtDefNamesConsumer::Index;
+llvm::StringSet<> MapExtDefNamesConsumer::WeakNames;
 
 void MapExtDefNamesConsumer::handleDecl(const Decl *D) {
   if (!D)
@@ -100,8 +101,17 @@ void MapExtDefNamesConsumer::addIfInMain(const DeclaratorDecl *DD,
   case Linkage::External:
   case Linkage::VisibleNone:
   case Linkage::UniqueExternal:
-    if (SM.isInMainFile(defStart))
-      Index[*LookupName] = CurrentFileName;
+    if (SM.isInMainFile(defStart)) {
+      if (!DD->hasAttr<WeakAttr>()) {
+        Index[*LookupName] = CurrentFileName;
+        WeakNames.erase(*LookupName);
+      } else {
+        if (!Index.contains(*LookupName)) {
+          Index[*LookupName] = CurrentFileName;
+          WeakNames.insert(*LookupName);
+        }
+      }
+    }
     break;
   case Linkage::Invalid:
     llvm_unreachable("Linkage has not been computed!");
@@ -190,12 +200,15 @@ static int HandleFiles(ArrayRef<std::string> SourceFiles,
     }
   }
 
+  int Ret = 0;
   if (!SourcesToBeParsed.empty()) {
     ClangTool Tool(compilations, SourcesToBeParsed);
-    return Tool.run(newFrontendActionFactory<MapExtDefNamesAction>().get());
+    Ret = Tool.run(newFrontendActionFactory<MapExtDefNamesAction>().get());
   }
 
-  return 0;
+  MapExtDefNamesConsumer::printIndex();
+
+  return Ret;
 }
 
 int main(int argc, const char **argv) {
