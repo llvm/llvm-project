@@ -17,10 +17,10 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcScandirTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
-using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
 TEST_F(LlvmLibcScandirTest, TestBadDirname) {
   struct dirent **namelist;
-  ASSERT_THAT(LIBC_NAMESPACE::scandir("", &namelist, NULL, NULL), Fails(ENOTDIR, -1));
+  ASSERT_THAT(LIBC_NAMESPACE::scandir("", &namelist, NULL, NULL), Fails(ENOENT, -1));
 }

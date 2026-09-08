@@ -761,3 +761,5 @@ add_header(__action_fn_t
     .VISIT
 )
 add_header(__free_fn_t HDR __free_fn_t.h)
+add_header(__scandir_filter_t HDR __scandir_filter_t.h DEPENDS .struct_dirent)
+add_header(__scandir_compare_t HDR __scandir_compare_t.h DEPENDS .struct_dirent)

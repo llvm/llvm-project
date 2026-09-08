@@ -26,6 +26,8 @@ types:
   - type_name: reclen_t
   - type_name: size_t
   - type_name: ssize_t
+  - type_name: __scandir_filter_t
+  - type_name: __scandir_compare_t
 functions:
   - name: alphasort
     standards:
@@ -71,5 +73,5 @@ functions:
     arguments:
       - type: const char *
       - type: struct dirent ***
-      - type: int (*)(const struct dirent *)
-      - type: int (*)(const struct dirent **, const struct dirent **)
+      - type: __scandir_filter_t
+      - type: __scandir_compare_t
