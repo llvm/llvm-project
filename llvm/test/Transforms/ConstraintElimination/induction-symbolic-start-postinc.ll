@@ -544,7 +544,6 @@ exit:
   ret void
 }
 
-; TODO: Header == Latch form not supported yet.
 define void @postinc_symbolic_start_header_is_latch(i32 %start, i32 %n) {
 ; CHECK-LABEL: define void @postinc_symbolic_start_header_is_latch(
 ; CHECK-SAME: i32 [[START:%.*]], i32 [[N:%.*]]) {
@@ -554,8 +553,7 @@ define void @postinc_symbolic_start_header_is_latch(i32 %start, i32 %n) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[T:%.*]] = icmp ult i32 [[IV]], [[N]]
-; CHECK-NEXT:    call void @use(i1 [[T]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
@@ -622,5 +620,42 @@ loop:
   br i1 %ec, label %exit, label %loop
 
 exit:
+  ret void
+}
+
+; The facts derived from the header/latch also hold in the exit block.
+define void @postinc_symbolic_start_header_is_latch_exit_block(i32 %start, i32 %n) {
+; CHECK-LABEL: define void @postinc_symbolic_start_header_is_latch_exit_block(
+; CHECK-SAME: i32 [[START:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[PRE:%.*]] = icmp ult i32 [[START]], [[N]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    ret void
+;
+entry:
+  %pre = icmp ult i32 %start, %n
+  call void @llvm.assume(i1 %pre)
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %t = icmp ult i32 %iv, %n
+  call void @use(i1 %t)
+  %c.1 = icmp ule i32 %iv.next, %n
+  call void @use(i1 %c.1)
   ret void
 }
