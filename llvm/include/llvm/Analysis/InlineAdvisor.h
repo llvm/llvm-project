@@ -108,6 +108,15 @@ public:
     recordUnattemptedInliningImpl();
   }
 
+  /// Call when advice was requested only to decide whether an indirect call
+  /// should be promoted to this callee. No inlining outcome should be
+  /// attributed to this speculative query, and any state prepared for an
+  /// inline attempt must be discarded.
+  void recordCallPromotionQuery() {
+    markRecorded();
+    recordCallPromotionQueryImpl();
+  }
+
   /// Get the inlining recommendation.
   bool isInliningRecommended() const { return IsInliningRecommended; }
   const DebugLoc &getOriginalCallSiteDebugLoc() const { return DLoc; }
@@ -118,6 +127,7 @@ protected:
   virtual void recordInliningWithCalleeDeletedImpl() {}
   virtual void recordUnsuccessfulInliningImpl(const InlineResult &Result) {}
   virtual void recordUnattemptedInliningImpl() {}
+  virtual void recordCallPromotionQueryImpl() {}
 
   InlineAdvisor *const Advisor;
   /// Caller and Callee are pre-inlining.

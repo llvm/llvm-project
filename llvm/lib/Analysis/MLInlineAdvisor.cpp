@@ -673,3 +673,8 @@ void MLInlineAdvice::recordUnattemptedInliningImpl() {
     return R;
   });
 }
+
+void MLInlineAdvice::recordCallPromotionQueryImpl() {
+  getAdvisor()->getCachedFPI(*Caller) = PreInlineCallerFPI;
+  FPU.reset();
+}
