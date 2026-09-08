@@ -792,11 +792,10 @@ void mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp) {
 
     for (tensor::ParallelInsertSliceOp insertOp : insertOps) {
       result = tensor::InsertSliceOp::create(
-          rewriter, forallOp.getLoc(), result.getType(),
-          insertOp.getSource(), result,
-          insertOp.getOffsets(), insertOp.getSizes(), insertOp.getStrides(),
-          insertOp.getStaticOffsets(), insertOp.getStaticSizes(),
-          insertOp.getStaticStrides());
+          rewriter, forallOp.getLoc(), result.getType(), insertOp.getSource(),
+          result, insertOp.getOffsets(), insertOp.getSizes(),
+          insertOp.getStrides(), insertOp.getStaticOffsets(),
+          insertOp.getStaticSizes(), insertOp.getStaticStrides());
     }
 
     results.push_back(result);
