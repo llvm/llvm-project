@@ -2104,13 +2104,6 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(AMDGPU::V_CMPX_EQ_U64_nosdst_e32));
     break;
 
-  case AMDGPU::S_ANDN2_WREXEC_B64_term:
-    MI.setDesc(get(AMDGPU::S_ANDN2_WREXEC_B64));
-    break;
-  case AMDGPU::S_ANDN2_WREXEC_B32_term:
-    MI.setDesc(get(AMDGPU::S_ANDN2_WREXEC_B32));
-    break;
-
   case AMDGPU::SI_SPILL_S32_TO_VGPR:
     MI.setDesc(get(AMDGPU::V_WRITELANE_B32));
     break;
@@ -3262,8 +3255,6 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
     case AMDGPU::S_AND_SAVEEXEC_B32_term:
     case AMDGPU::V_CMPX_EQ_U32_nosdst_e32_term:
     case AMDGPU::V_CMPX_EQ_U64_nosdst_e32_term:
-    case AMDGPU::S_ANDN2_WREXEC_B32_term:
-    case AMDGPU::S_ANDN2_WREXEC_B64_term:
       break;
     case AMDGPU::SI_IF:
     case AMDGPU::SI_ELSE:
@@ -7500,15 +7491,17 @@ static void emitLoadScalarOpsFromVGPRLoop(
   I = BodyBB.end();
 
   if (UseNewExecInstructions) {
-    // Terminator form lets PHI elimination fold this into the exec PHI's
-    // def. Skip it at -O0: RegAllocFast spills live-out defs right after
-    // them, not at the first terminator.
-    bool UseTermForm = MF.getTarget().getOptLevel() != CodeGenOptLevel::None;
+    // Compute the remaining lanes into a plain virtual register and write EXEC
+    // from a terminator, so spill code for NewExec is placed before EXEC
+    // changes. SIOptimizeExecMasking opportunistically folds the pair back
+    // into S_ANDN2_WREXEC after register allocation; if it can't, this is
+    // still correct, just one instruction longer.
     MRI.setSimpleHint(NewExec, PhiExec);
-    BuildMI(BodyBB, I, DL,
-            TII.get(UseTermForm ? LMC.AndN2WrExecTermOpc : LMC.AndN2WrExecOpc),
-            NewExec)
-        .addReg(PhiExec);
+    BuildMI(BodyBB, I, DL, TII.get(LMC.AndN2Opc), NewExec)
+        .addReg(PhiExec)
+        .addReg(LMC.ExecReg);
+    BuildMI(BodyBB, I, DL, TII.get(LMC.MovTermOpc), LMC.ExecReg)
+        .addReg(NewExec);
   } else {
     // Update EXEC, switch all done bits to 0 and all todo bits to 1.
     BuildMI(BodyBB, I, DL, TII.get(LMC.XorTermOpc), LMC.ExecReg)

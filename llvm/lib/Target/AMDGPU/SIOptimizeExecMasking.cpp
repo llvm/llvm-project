@@ -64,6 +64,8 @@ private:
       SmallVectorImpl<MachineOperand *> *KillFlagCandidates = nullptr,
       unsigned MaxInstructions = 20) const;
   bool optimizeExecSequence();
+  bool optimizeAndN2WrExecSequence(MachineInstr &CopyToExecInst,
+                                   Register Dst) const;
   void tryRecordVCmpxAndSaveexecSequence(MachineInstr &MI);
   bool optimizeVCMPSaveExecSequence(MachineInstr &SaveExecInstr,
                                     MachineInstr &VCmp) const;
@@ -299,12 +301,6 @@ bool SIOptimizeExecMasking::removeTerminatorBit(MachineInstr &MI) const {
   case AMDGPU::V_CMPX_EQ_U64_nosdst_e32_term:
     MI.setDesc(TII->get(AMDGPU::V_CMPX_EQ_U64_nosdst_e32));
     return true;
-  case AMDGPU::S_ANDN2_WREXEC_B64_term:
-    MI.setDesc(TII->get(AMDGPU::S_ANDN2_WREXEC_B64));
-    return true;
-  case AMDGPU::S_ANDN2_WREXEC_B32_term:
-    MI.setDesc(TII->get(AMDGPU::S_ANDN2_WREXEC_B32));
-    return true;
   default:
     return false;
   }
@@ -494,6 +490,8 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
 
         CopyToExecInst->eraseFromParent();
         Changed = true;
+      } else if (optimizeAndN2WrExecSequence(*CopyToExecInst, CopyToExec)) {
+        Changed = true;
       }
 
       continue;
@@ -608,6 +606,94 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
   }
 
   return Changed;
+}
+
+// Fold
+//
+//     sdst = S_ANDN2_B32 ssrc, exec
+//     exec = COPY sdst
+// =>
+//     sdst = S_ANDN2_WREXEC_B32 ssrc
+//
+// The waterfall loop emits the two operations separately so that spill code
+// for sdst can be inserted before exec is narrowed.
+bool SIOptimizeExecMasking::optimizeAndN2WrExecSequence(
+    MachineInstr &CopyToExecInst, Register Dst) const {
+  if (!ST->hasNoSdstCMPX() || TII->pseudoToMCOpcode(LMC.AndN2WrExecOpc) == -1)
+    return false;
+
+  MachineBasicBlock &MBB = *CopyToExecInst.getParent();
+
+  // Keep the fused instruction ahead of any trailing meta instructions (e.g.
+  // DBG_VALUEs of Dst), which emit no code, so that the sequence is unchanged
+  // in the common case where the two are already adjacent.
+  MachineBasicBlock::iterator InsertPt = CopyToExecInst.getIterator();
+  while (InsertPt != MBB.begin() && std::prev(InsertPt)->isMetaInstruction())
+    --InsertPt;
+
+  // Scan back for the s_andn2 computing the new exec value. The scheduler may
+  // have moved it away from the exec write, so allow instructions in between
+  // as long as sinking the s_andn2 past them is safe.
+  const unsigned SearchLimit = 20;
+  unsigned Count = 0;
+  MachineInstr *AndN2Inst = nullptr;
+  for (MachineInstr &MI : make_range(
+           std::next(MachineBasicBlock::reverse_iterator(CopyToExecInst)),
+           MBB.rend())) {
+    if (MI.isMetaInstruction())
+      continue;
+    if (++Count > SearchLimit)
+      return false;
+    if (MI.getOpcode() == LMC.AndN2Opc && MI.getOperand(0).getReg() == Dst) {
+      AndN2Inst = &MI;
+      break;
+    }
+    bool ReadsDst = false, ModifiesDst = false, ModifiesExec = false,
+         ReadsSCC = false;
+    for (const MachineOperand &MO : MI.operands()) {
+      if (!MO.isReg())
+        continue;
+      if (TRI->regsOverlap(MO.getReg(), Dst)) {
+        if (MO.isUse())
+          ReadsDst = true;
+        else
+          ModifiesDst = true;
+      }
+      if (!MO.isUse() && TRI->regsOverlap(MO.getReg(), LMC.ExecReg))
+        ModifiesExec = true;
+      if (MO.isUse() && TRI->regsOverlap(MO.getReg(), AMDGPU::SCC))
+        ReadsSCC = true;
+    }
+    if (ReadsDst || ModifiesDst || ModifiesExec || ReadsSCC)
+      return false;
+  }
+
+  if (!AndN2Inst)
+    return false;
+
+  const MachineOperand &Src = AndN2Inst->getOperand(1);
+  const MachineOperand &Mask = AndN2Inst->getOperand(2);
+  if (!Src.isReg() || !Mask.isReg() || Mask.getReg() != LMC.ExecReg)
+    return false;
+
+  for (MachineInstr &MI :
+       make_range(std::next(MachineBasicBlock::iterator(AndN2Inst)), InsertPt))
+    if (MI.modifiesRegister(Src.getReg(), TRI))
+      return false;
+
+  // The fused form also clobbers SCC, at the point the s_andn2 is moved to.
+  if (isRegisterInUseAfter(CopyToExecInst, AMDGPU::SCC))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Fold exec write: " << *AndN2Inst);
+
+  BuildMI(MBB, InsertPt, AndN2Inst->getDebugLoc(), TII->get(LMC.AndN2WrExecOpc),
+          Dst)
+      .addReg(Src.getReg());
+
+  AndN2Inst->eraseFromParent();
+  CopyToExecInst.eraseFromParent();
+  return true;
 }
 
 // Inserts the optimized s_mov_b32 / v_cmpx sequence based on the
