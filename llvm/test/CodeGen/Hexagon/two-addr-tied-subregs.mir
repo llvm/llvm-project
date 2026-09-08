@@ -1,5 +1,5 @@
-# RUN: llc -march hexagon -run-pass livevars -run-pass twoaddressinstruction  -verify-machineinstrs -o - %s | FileCheck %s
-# RUN: llc -march hexagon --passes='require<live-vars>,two-address-instruction' -verify-each -o - %s | FileCheck %s
+# RUN: llc -march hexagon -run-pass liveintervals -run-pass twoaddressinstruction  -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -march hexagon --passes='require<live-intervals>,two-address-instruction' -verify-each -o - %s | FileCheck %s
 
 
 ###############################################################################
@@ -21,9 +21,9 @@ body:             |
 #
 # CHECK-LABEL: name:            test1
 # CHECK:  bb.0.entry:
-# CHECK:      %0:doubleregs = COPY killed $d0
-# CHECK-NEXT: %1:intregs = COPY killed %0.isub_lo
-# CHECK-NEXT: %1:intregs = S2_lsr_i_r_acc %1, %1, 16
+# CHECK:      %0:doubleregs = COPY $d0
+# CHECK-NEXT: %1:intregs = COPY %0.isub_lo
+# CHECK-NEXT: dead %1:intregs = S2_lsr_i_r_acc %1, %1, 16
 
 
 ###############################################################################
@@ -50,8 +50,8 @@ body:             |
 #
 # CHECK-LABEL: name:            test2
 # CHECK:  bb.0.entry:
-# CHECK:      %0:doubleregs = COPY killed $d0
+# CHECK:      %0:doubleregs = COPY $d0
 # CHECK-NEXT: %1:intregs = COPY %0.isub_lo
-# CHECK-NEXT: %1:intregs = S2_lsr_i_r_acc %1, %0.isub_hi, 16
+# CHECK-NEXT: dead %1:intregs = S2_lsr_i_r_acc %1, %0.isub_hi, 16
 
 ###############################################################################
