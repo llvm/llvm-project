@@ -1044,7 +1044,7 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 }
 
 bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                bool WillBeActivated) {
+                AccessKinds AK, bool WillBeActivated) {
   if (Ptr.isZero())
     return false;
 
@@ -1055,25 +1055,25 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
 
   if (!Ptr.block()->isAccessible()) {
-    if (!CheckLive(S, OpPC, Ptr, AK_Assign))
+    if (!CheckLive(S, OpPC, Ptr, AK))
       return false;
     if (!CheckExtern(S, OpPC, Ptr))
       return false;
-    return CheckDummy(S, OpPC, Ptr.block(), AK_Assign);
+    return CheckDummy(S, OpPC, Ptr.block(), AK);
   }
-  if (!WillBeActivated && !CheckLifetime(S, OpPC, Ptr, AK_Assign))
+  if (!WillBeActivated && !CheckLifetime(S, OpPC, Ptr, AK))
     return false;
-  if (!CheckRange(S, OpPC, Ptr, AK_Assign))
+  if (!CheckRange(S, OpPC, Ptr, AK))
     return false;
-  if (!CheckActive(S, OpPC, Ptr, AK_Assign, WillBeActivated))
+  if (!CheckActive(S, OpPC, Ptr, AK, WillBeActivated))
     return false;
   if (!CheckGlobal(S, OpPC, Ptr))
     return false;
   if (!CheckConst(S, OpPC, Ptr))
     return false;
-  if (!CheckVolatile(S, OpPC, Ptr, AK_Assign))
+  if (!CheckVolatile(S, OpPC, Ptr, AK))
     return false;
-  if (!CheckMutable(S, OpPC, Ptr, AK_Assign))
+  if (!CheckMutable(S, OpPC, Ptr, AK))
     return false;
   if (isConstexprUnknown(Ptr))
     return false;
@@ -3564,6 +3564,64 @@ bool virtBaseHelper(InterpState &S, const CXXRecordDecl *Decl,
     return false;
   S.Stk.push<Pointer>(Base.atField(VirtBase->Offset));
   return true;
+}
+
+bool Memcpy(InterpState &S, CodePtr OpPC) {
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  Pointer &Dest = S.Stk.peek<Pointer>();
+
+  if (Src.isDummy() || !Src.isBlockPointer())
+    return false;
+  if (!Dest.isBlockPointer())
+    return false;
+
+  if ((Src.getRecord() && Src.getRecord()->isUnion() &&
+       !Src.getRecord()->isAnonymousUnion()) ||
+      Src.inUnion()) {
+    if (!CheckLoad(S, OpPC, Src))
+      return false;
+  }
+
+  return DoMemcpy(S, OpPC, Src, Dest);
+}
+
+bool TrivialCopy(InterpState &S, CodePtr OpPC, bool Activate,
+                 const Function *Func) {
+  const Pointer &Src = S.Stk.pop<Pointer>();
+  Pointer &Dest = S.Stk.peek<Pointer>();
+
+  if (Src.isDummy() || Src.isConstexprUnknown() || !Src.isBlockPointer())
+    return false;
+  if (!Dest.isBlockPointer() || Dest.isDummy() || Dest.isConstexprUnknown())
+    return false;
+
+  if (!CheckStore(S, OpPC, Dest, AK_MemberCall,
+                  /*WillBeActivated=*/Activate))
+    return false;
+
+  if (S.checkingPotentialConstantExpression())
+    return false;
+
+  // NOTE: This is a fake function frame that doesn't do anything except show up
+  // in the "in call to" diagnostics. Since the copies we replace with this
+  // opcode are always defaulted/trivial, they don't add much there either
+  // though. Once we default to the bytecode interpreter, we shoud consider just
+  // removing it.
+  auto Memory = std::make_unique<char[]>(InterpFrame::allocSize(Func));
+  auto *NewFrame =
+      new (Memory.get()) InterpFrame(S, Func, S.PC, /*VarArgSize=*/0);
+  InterpFrame *FrameBefore = S.Current;
+  S.Current = NewFrame;
+
+  if (!CheckLoad(S, OpPC, Src, AK_Read)) {
+    S.Current = FrameBefore;
+    return false;
+  }
+
+  bool Result = DoMemcpy(S, OpPC, Src, Dest, Activate, /*Diagnose=*/true);
+  S.Current = FrameBefore;
+
+  return Result;
 }
 
 // FIXME: Would be nice to generate this instead of hardcoding it here.

@@ -82,9 +82,6 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 bool diagnoseUninitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                            AccessKinds AK);
-bool diagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
-                           const Block *B, Lifetime LT = Lifetime::Started,
-                           AccessKinds AK = AK_Read);
 
 /// Checks a direct load of a primitive value from a global or local variable.
 bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B);
@@ -92,7 +89,7 @@ bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B);
 
 /// Checks if a value can be stored in a block.
 bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                bool WillBeActivated = false);
+                AccessKinds AK = AK_Assign, bool WillBeActivated = false);
 
 /// Checks if a value can be initialized.
 bool CheckInit(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
@@ -2346,7 +2343,7 @@ bool StoreActivate(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (!CheckStore(S, OpPC, Ptr, /*WillBeActivated=*/true))
+  if (!CheckStore(S, OpPC, Ptr, AK_Assign, /*WillBeActivated=*/true))
     return false;
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
@@ -2361,7 +2358,7 @@ bool StoreActivatePop(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (!CheckStore(S, OpPC, Ptr, /*WillBeActivated=*/true))
+  if (!CheckStore(S, OpPC, Ptr, AK_Assign, /*WillBeActivated=*/true))
     return false;
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
@@ -2407,7 +2404,7 @@ bool StoreBitFieldActivate(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.peek<Pointer>();
 
-  if (!CheckStore(S, OpPC, Ptr, /*WillBeActivated=*/true))
+  if (!CheckStore(S, OpPC, Ptr, AK_Assign, /*WillBeActivated=*/true))
     return false;
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
@@ -2425,7 +2422,7 @@ bool StoreBitFieldActivatePop(InterpState &S, CodePtr OpPC) {
   const T &Value = S.Stk.pop<T>();
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (!CheckStore(S, OpPC, Ptr, /*WillBeActivated=*/true))
+  if (!CheckStore(S, OpPC, Ptr, AK_Assign, /*WillBeActivated=*/true))
     return false;
   if (Ptr.canBeInitialized()) {
     Ptr.initialize();
@@ -2536,18 +2533,6 @@ bool InitElemPop(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   return true;
 }
 
-inline bool Memcpy(InterpState &S, CodePtr OpPC) {
-  const Pointer &Src = S.Stk.pop<Pointer>();
-  Pointer &Dest = S.Stk.peek<Pointer>();
-
-  if (!Src.getRecord() || !Src.getRecord()->isAnonymousUnion()) {
-    if (!CheckLoad(S, OpPC, Src))
-      return false;
-  }
-
-  return DoMemcpy(S, OpPC, Src, Dest);
-}
-
 inline bool ToMemberPtr(InterpState &S) {
   const auto &Member = S.Stk.pop<MemberPointer>();
   const auto &Base = S.Stk.pop<Pointer>();
@@ -2565,6 +2550,10 @@ inline bool CastMemberPtrPtr(InterpState &S, CodePtr OpPC) {
   }
   return Invalid(S, OpPC);
 }
+
+bool Memcpy(InterpState &S, CodePtr OpPC);
+bool TrivialCopy(InterpState &S, CodePtr OpPC, bool Activate,
+                 const Function *Func);
 
 //===----------------------------------------------------------------------===//
 // AddOffset, SubOffset
