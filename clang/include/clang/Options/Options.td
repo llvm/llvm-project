@@ -3821,6 +3821,13 @@ def fno_modules_driver :
   Group<f_Group>,
   Visibility<[ClangOption]>,
   HelpText<"Disable support for driver managed module builds (experimental)">;
+def fdepscan_log_path : Joined<["-"], "fdepscan-log-path=">,
+  Group<f_Group>,
+  Visibility<[ClangOption]>,
+  Flags<[NoArgumentUnused]>,
+  MetaVarName<"<file>">,
+  HelpText<"Log the timing of dependency scanning actions to <file>. Only "
+           "takes effect while running the dependency scanner.">;
 
 def fincremental_extensions :
   Flag<["-"], "fincremental-extensions">,
@@ -6620,6 +6627,8 @@ def gpulibc : Flag<["-"], "gpulibc">, Visibility<[ClangOption, CC1Option, FlangO
 def nogpulibc : Flag<["-"], "nogpulibc">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def nodefaultlibs : Flag<["-"], "nodefaultlibs">,
   Visibility<[ClangOption, FlangOption]>;
+def nodefaultrtlibs : Flag<["-"], "nodefaultrtlibs">,
+  Visibility<[ClangOption]>;
 def nodriverkitlib : Flag<["-"], "nodriverkitlib">;
 def nofixprebinding : Flag<["-"], "nofixprebinding">;
 def nolibc : Flag<["-"], "nolibc">;
