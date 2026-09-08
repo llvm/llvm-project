@@ -6412,6 +6412,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_FixedPointToIntegral:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_CoopMatrixCast:
   case CK_HLSLVectorTruncation:
   case CK_HLSLMatrixTruncation:
   case CK_HLSLArrayRValue:
@@ -7697,7 +7698,6 @@ CodeGenFunction::EmitCoopMatBuiltinCall(llvm::StringRef BuiltinName,
   assert(!Args.empty() &&
          "Expected at least one argument for cooperative matrix builtin");
 
-  llvm::LLVMContext &Context = CGM.getLLVMContext();
   llvm::Module &Module = CGM.getModule();
 
   llvm::Type *ResultLLVMType = ConvertType(ResultTy);
