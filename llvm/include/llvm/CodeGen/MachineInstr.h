@@ -128,7 +128,9 @@ public:
     SameSign = 1 << 21,      // Both operands have the same sign.
     InBounds = 1 << 22,      // Pointer arithmetic remains inbounds.
                              // Implies NoUSWrap.
-    LRSplit = 1 << 23        // Instruction for live range split.
+    LRSplit = 1 << 23,       // Instruction for live range split.
+    NonNull = 1 << 24        // Address space cast source is not the null
+                             // value of the source address space.
   };
 
 private:

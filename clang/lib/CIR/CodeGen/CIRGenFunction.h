@@ -2548,7 +2548,7 @@ public:
   Address
   maybeCastStackAddressSpace(Address alloca,
                              mlir::ptr::MemorySpaceAttrInterface destAddrSpace,
-                             mlir::Value arraySize);
+                             mlir::Value arraySize = nullptr);
   Address createDefaultAlignTempAlloca(mlir::Type ty, mlir::Location loc,
                                        const Twine &name);
 
