@@ -2524,11 +2524,8 @@ MachineMemOperand::Flags TargetLoweringBase::getLoadMemOperandFlags(
   if (OptLevel != CodeGenOptLevel::None &&
       isDereferenceableAndAlignedPointer(
           LI.getPointerOperand(), LI.getType(), LI.getAlign(),
-          SimplifyQuery(DL, LibInfo, /*DT=*/nullptr, AC, &LI))) {
+          SimplifyQuery(DL, LibInfo, /*DT=*/nullptr, AC, &LI)))
     Flags |= MachineMemOperand::MODereferenceable;
-  } else if (LI.hasMetadata(LLVMContext::MD_dereferenceable)) {
-    Flags |= MachineMemOperand::MODereferenceable;
-  }
 
   Flags |= getTargetMMOFlags(LI);
   return Flags;
