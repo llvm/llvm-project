@@ -1714,8 +1714,7 @@ bool RISCVInstructionSelector::isRegInFprb(Register Reg) const {
 // using it as the address. Otherwise the ADD is selected on its own with
 // the full materialized constant, making the Hi materialization here redundant.
 bool RISCVInstructionSelector::isWorthFoldingAdd(Register AddResult) const {
-  for (const MachineOperand &Use : MRI->use_operands(AddResult)) {
-    const MachineInstr *User = Use.getParent();
+  for (const MachineInstr &User : MRI->use_nodbg_instructions(AddResult)) {
     auto *LdSt = dyn_cast<GLoadStore>(User);
     if (!LdSt)
       return false;
