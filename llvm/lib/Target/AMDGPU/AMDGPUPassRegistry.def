@@ -131,6 +131,7 @@ MACHINE_FUNCTION_PASS("amdgpu-pre-ra-optimizations", GCNPreRAOptimizationsPass()
 MACHINE_FUNCTION_PASS("amdgpu-prelegalizer-combiner",
                       AMDGPUPreLegalizerCombinerPass())
 MACHINE_FUNCTION_PASS("amdgpu-reg-bank-select", AMDGPURegBankSelectPass())
+MACHINE_FUNCTION_PASS("amdgpu-reg-bank-legalize", AMDGPURegBankLegalizePass())
 MACHINE_FUNCTION_PASS("amdgpu-preload-kern-arg-prolog", AMDGPUPreloadKernArgPrologPass())
 MACHINE_FUNCTION_PASS("amdgpu-prepare-agpr-alloc", AMDGPUPrepareAGPRAllocPass())
 MACHINE_FUNCTION_PASS("amdgpu-nsa-reassign", GCNNSAReassignPass())
@@ -167,7 +168,6 @@ MACHINE_FUNCTION_PASS("si-wqm", SIWholeQuadModePass())
 // Global ISel passes
 DUMMY_MACHINE_FUNCTION_PASS("amdgpu-postlegalizer-combiner",
                             AMDGPUPostLegalizerCombinerPass())
-DUMMY_MACHINE_FUNCTION_PASS("amdgpu-regbanklegalize", AMDGPURegBankLegalizePass())
 DUMMY_MACHINE_FUNCTION_PASS("amdgpu-regbank-combiner", AMDGPURegBankCombinerPass())
 
 #undef DUMMY_MACHINE_FUNCTION_PASS
