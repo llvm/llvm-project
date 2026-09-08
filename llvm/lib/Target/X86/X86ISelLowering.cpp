@@ -2631,11 +2631,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSQRT, MVT::bf16, Custom);
     setOperationAction(ISD::FMA, MVT::bf16, Custom);
 
-    setOperationAction(ISD::FFLOOR, MVT::bf16, Custom);
-    setOperationAction(ISD::FCEIL, MVT::bf16, Custom);
-    setOperationAction(ISD::FTRUNC, MVT::bf16, Custom);
-    setOperationAction(ISD::FRINT, MVT::bf16, Custom);
-    setOperationAction(ISD::FNEARBYINT, MVT::bf16, Custom);
     setOperationAction(ISD::FROUNDEVEN, MVT::bf16, Custom);
 
     if (Subtarget.useAVX512Regs()) {
@@ -2648,11 +2643,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
       SetFPMinMaxAction(MVT::v32bf16);
 
-      setOperationAction(ISD::FFLOOR, MVT::v32bf16, Legal);
-      setOperationAction(ISD::FCEIL, MVT::v32bf16, Legal);
-      setOperationAction(ISD::FTRUNC, MVT::v32bf16, Legal);
-      setOperationAction(ISD::FRINT, MVT::v32bf16, Legal);
-      setOperationAction(ISD::FNEARBYINT, MVT::v32bf16, Legal);
       setOperationAction(ISD::FROUNDEVEN, MVT::v32bf16, Legal);
     }
 
@@ -2664,11 +2654,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FSQRT, VT, Legal);
       setOperationAction(ISD::FMA, VT, Legal);
       setOperationAction(ISD::SETCC, VT, Custom);
-      setOperationAction(ISD::FFLOOR, VT, Legal);
-      setOperationAction(ISD::FCEIL, VT, Legal);
-      setOperationAction(ISD::FTRUNC, VT, Legal);
-      setOperationAction(ISD::FRINT, VT, Legal);
-      setOperationAction(ISD::FNEARBYINT, VT, Legal);
       setOperationAction(ISD::FROUNDEVEN, VT, Legal);
       SetFPMinMaxAction(VT);
     }
@@ -34780,11 +34765,6 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::FSQRT:
   case ISD::FDIV:
   case ISD::FMA:
-  case ISD::FFLOOR:
-  case ISD::FCEIL:
-  case ISD::FTRUNC:
-  case ISD::FRINT:
-  case ISD::FNEARBYINT:
   case ISD::FROUNDEVEN: {
     assert(N->getValueType(0) == MVT::bf16 && "Expected scalar bf16 result");
     // AVX10.2 has no scalar bf16 arithmetic or round-to-integer instructions,

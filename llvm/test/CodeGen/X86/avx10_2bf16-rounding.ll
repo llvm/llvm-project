@@ -2,15 +2,17 @@
 ; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-unknown-unknown -mattr=+avx10.2 | FileCheck %s --check-prefixes=AVX10_2
 ; RUN: llc < %s -verify-machineinstrs -mtriple=x86_64-unknown-unknown -mattr=+avx512bf16,+avx512vl | FileCheck %s --check-prefixes=AVX512BF16
 
-; AVX10.2 has packed bf16 round-to-integer instructions. The integral result of
-; floor/ceil/trunc/rint/nearbyint/roundeven is always representable in bf16, so
-; vrndscalebf16 gives the same answer as the AVX512BF16 sequence below (promote
-; each element to f32, round, convert back), but without scalarizing.
+; floor/ceil/trunc/rint/nearbyint should go through f32 as packed operation. Instead of getting scalarized.
+; While for roundeven we can use the native vrndscalebf16 to avoid this.
 
 define <8 x bfloat> @floor_v8bf16(<8 x bfloat> %a) {
 ; AVX10_2-LABEL: floor_v8bf16:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vrndscalebf16 $9, %xmm0, %xmm0
+; AVX10_2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX10_2-NEXT:    vpslld $16, %ymm0, %ymm0
+; AVX10_2-NEXT:    vroundps $9, %ymm0, %ymm0
+; AVX10_2-NEXT:    vcvtneps2bf16 %ymm0, %xmm0
+; AVX10_2-NEXT:    vzeroupper
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: floor_v8bf16:
@@ -28,7 +30,9 @@ define <8 x bfloat> @floor_v8bf16(<8 x bfloat> %a) {
 define bfloat @floor_bf16(bfloat %a) {
 ; AVX10_2-LABEL: floor_bf16:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vrndscalebf16 $9, %xmm0, %xmm0
+; AVX10_2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX10_2-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
+; AVX10_2-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: floor_bf16:
@@ -44,7 +48,11 @@ define bfloat @floor_bf16(bfloat %a) {
 define <8 x bfloat> @ceil_v8bf16(<8 x bfloat> %a) {
 ; AVX10_2-LABEL: ceil_v8bf16:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vrndscalebf16 $10, %xmm0, %xmm0
+; AVX10_2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX10_2-NEXT:    vpslld $16, %ymm0, %ymm0
+; AVX10_2-NEXT:    vroundps $10, %ymm0, %ymm0
+; AVX10_2-NEXT:    vcvtneps2bf16 %ymm0, %xmm0
+; AVX10_2-NEXT:    vzeroupper
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: ceil_v8bf16:
@@ -62,7 +70,9 @@ define <8 x bfloat> @ceil_v8bf16(<8 x bfloat> %a) {
 define bfloat @ceil_bf16(bfloat %a) {
 ; AVX10_2-LABEL: ceil_bf16:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vrndscalebf16 $10, %xmm0, %xmm0
+; AVX10_2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX10_2-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
+; AVX10_2-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: ceil_bf16:
@@ -78,7 +88,11 @@ define bfloat @ceil_bf16(bfloat %a) {
 define <8 x bfloat> @trunc_v8bf16(<8 x bfloat> %a) {
 ; AVX10_2-LABEL: trunc_v8bf16:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vrndscalebf16 $11, %xmm0, %xmm0
+; AVX10_2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX10_2-NEXT:    vpslld $16, %ymm0, %ymm0
+; AVX10_2-NEXT:    vroundps $11, %ymm0, %ymm0
+; AVX10_2-NEXT:    vcvtneps2bf16 %ymm0, %xmm0
+; AVX10_2-NEXT:    vzeroupper
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: trunc_v8bf16:
@@ -96,7 +110,9 @@ define <8 x bfloat> @trunc_v8bf16(<8 x bfloat> %a) {
 define bfloat @trunc_bf16(bfloat %a) {
 ; AVX10_2-LABEL: trunc_bf16:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vrndscalebf16 $11, %xmm0, %xmm0
+; AVX10_2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX10_2-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
+; AVX10_2-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: trunc_bf16:
@@ -112,7 +128,11 @@ define bfloat @trunc_bf16(bfloat %a) {
 define <8 x bfloat> @rint_v8bf16(<8 x bfloat> %a) {
 ; AVX10_2-LABEL: rint_v8bf16:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vrndscalebf16 $4, %xmm0, %xmm0
+; AVX10_2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX10_2-NEXT:    vpslld $16, %ymm0, %ymm0
+; AVX10_2-NEXT:    vroundps $4, %ymm0, %ymm0
+; AVX10_2-NEXT:    vcvtneps2bf16 %ymm0, %xmm0
+; AVX10_2-NEXT:    vzeroupper
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: rint_v8bf16:
@@ -130,7 +150,9 @@ define <8 x bfloat> @rint_v8bf16(<8 x bfloat> %a) {
 define bfloat @rint_bf16(bfloat %a) {
 ; AVX10_2-LABEL: rint_bf16:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vrndscalebf16 $4, %xmm0, %xmm0
+; AVX10_2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX10_2-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
+; AVX10_2-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: rint_bf16:
@@ -146,7 +168,11 @@ define bfloat @rint_bf16(bfloat %a) {
 define <8 x bfloat> @nearbyint_v8bf16(<8 x bfloat> %a) {
 ; AVX10_2-LABEL: nearbyint_v8bf16:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vrndscalebf16 $12, %xmm0, %xmm0
+; AVX10_2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX10_2-NEXT:    vpslld $16, %ymm0, %ymm0
+; AVX10_2-NEXT:    vroundps $12, %ymm0, %ymm0
+; AVX10_2-NEXT:    vcvtneps2bf16 %ymm0, %xmm0
+; AVX10_2-NEXT:    vzeroupper
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: nearbyint_v8bf16:
@@ -164,7 +190,9 @@ define <8 x bfloat> @nearbyint_v8bf16(<8 x bfloat> %a) {
 define bfloat @nearbyint_bf16(bfloat %a) {
 ; AVX10_2-LABEL: nearbyint_bf16:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vrndscalebf16 $12, %xmm0, %xmm0
+; AVX10_2-NEXT:    vpslld $16, %xmm0, %xmm0
+; AVX10_2-NEXT:    vroundss $12, %xmm0, %xmm0, %xmm0
+; AVX10_2-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: nearbyint_bf16:
@@ -215,7 +243,10 @@ define bfloat @roundeven_bf16(bfloat %a) {
 define <16 x bfloat> @floor_v16bf16(<16 x bfloat> %a) {
 ; AVX10_2-LABEL: floor_v16bf16:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vrndscalebf16 $9, %ymm0, %ymm0
+; AVX10_2-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; AVX10_2-NEXT:    vpslld $16, %zmm0, %zmm0
+; AVX10_2-NEXT:    vrndscaleps $9, %zmm0, %zmm0
+; AVX10_2-NEXT:    vcvtneps2bf16 %zmm0, %ymm0
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: floor_v16bf16:
@@ -232,7 +263,16 @@ define <16 x bfloat> @floor_v16bf16(<16 x bfloat> %a) {
 define <32 x bfloat> @floor_v32bf16(<32 x bfloat> %a) {
 ; AVX10_2-LABEL: floor_v32bf16:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vrndscalebf16 $9, %zmm0, %zmm0
+; AVX10_2-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; AVX10_2-NEXT:    vpslld $16, %zmm1, %zmm1
+; AVX10_2-NEXT:    vrndscaleps $9, %zmm1, %zmm1
+; AVX10_2-NEXT:    vcvtneps2bf16 %zmm1, %ymm1
+; AVX10_2-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
+; AVX10_2-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; AVX10_2-NEXT:    vpslld $16, %zmm0, %zmm0
+; AVX10_2-NEXT:    vrndscaleps $9, %zmm0, %zmm0
+; AVX10_2-NEXT:    vcvtneps2bf16 %zmm0, %ymm0
+; AVX10_2-NEXT:    vinsertf64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: floor_v32bf16:
@@ -256,7 +296,11 @@ define <32 x bfloat> @floor_v32bf16(<32 x bfloat> %a) {
 define <2 x bfloat> @floor_v2bf16(<2 x bfloat> %a) {
 ; AVX10_2-LABEL: floor_v2bf16:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vrndscalebf16 $9, %xmm0, %xmm0
+; AVX10_2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX10_2-NEXT:    vpslld $16, %ymm0, %ymm0
+; AVX10_2-NEXT:    vroundps $9, %ymm0, %ymm0
+; AVX10_2-NEXT:    vcvtneps2bf16 %ymm0, %xmm0
+; AVX10_2-NEXT:    vzeroupper
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: floor_v2bf16:
@@ -275,7 +319,11 @@ define <2 x bfloat> @floor_v2bf16(<2 x bfloat> %a) {
 define <8 x bfloat> @floor_v8bf16_load(ptr %p) {
 ; AVX10_2-LABEL: floor_v8bf16_load:
 ; AVX10_2:       # %bb.0:
-; AVX10_2-NEXT:    vrndscalebf16 $9, (%rdi), %xmm0
+; AVX10_2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX10_2-NEXT:    vpslld $16, %ymm0, %ymm0
+; AVX10_2-NEXT:    vroundps $9, %ymm0, %ymm0
+; AVX10_2-NEXT:    vcvtneps2bf16 %ymm0, %xmm0
+; AVX10_2-NEXT:    vzeroupper
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: floor_v8bf16_load:
@@ -296,8 +344,12 @@ define <8 x bfloat> @floor_v8bf16_mask(<8 x bfloat> %a, <8 x bfloat> %src, i8 %m
 ; AVX10_2-LABEL: floor_v8bf16_mask:
 ; AVX10_2:       # %bb.0:
 ; AVX10_2-NEXT:    kmovd %edi, %k1
-; AVX10_2-NEXT:    vrndscalebf16 $9, %xmm0, %xmm1 {%k1}
-; AVX10_2-NEXT:    vmovdqa %xmm1, %xmm0
+; AVX10_2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX10_2-NEXT:    vpslld $16, %ymm0, %ymm0
+; AVX10_2-NEXT:    vroundps $9, %ymm0, %ymm0
+; AVX10_2-NEXT:    vcvtneps2bf16 %ymm0, %xmm0
+; AVX10_2-NEXT:    vpblendmw %xmm0, %xmm1, %xmm0 {%k1}
+; AVX10_2-NEXT:    vzeroupper
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: floor_v8bf16_mask:
@@ -320,7 +372,12 @@ define <8 x bfloat> @floor_v8bf16_maskz(<8 x bfloat> %a, i8 %msk) {
 ; AVX10_2-LABEL: floor_v8bf16_maskz:
 ; AVX10_2:       # %bb.0:
 ; AVX10_2-NEXT:    kmovd %edi, %k1
-; AVX10_2-NEXT:    vrndscalebf16 $9, %xmm0, %xmm0 {%k1} {z}
+; AVX10_2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX10_2-NEXT:    vpslld $16, %ymm0, %ymm0
+; AVX10_2-NEXT:    vroundps $9, %ymm0, %ymm0
+; AVX10_2-NEXT:    vcvtneps2bf16 %ymm0, %xmm0
+; AVX10_2-NEXT:    vmovdqu16 %xmm0, %xmm0 {%k1} {z}
+; AVX10_2-NEXT:    vzeroupper
 ; AVX10_2-NEXT:    retq
 ;
 ; AVX512BF16-LABEL: floor_v8bf16_maskz:
@@ -339,8 +396,6 @@ define <8 x bfloat> @floor_v8bf16_maskz(<8 x bfloat> %a, i8 %msk) {
   ret <8 x bfloat> %res
 }
 
-; llvm.round is round-half-away-from-zero, which vrndscale cannot encode, so it
-; must stay scalarized rather than becoming a vrndscalebf16.
 define <8 x bfloat> @round_v8bf16(<8 x bfloat> %a) {
 ; AVX10_2-LABEL: round_v8bf16:
 ; AVX10_2:       # %bb.0:
