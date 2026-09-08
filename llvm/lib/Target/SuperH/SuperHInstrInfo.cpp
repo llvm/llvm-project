@@ -202,17 +202,17 @@ void SuperHInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBl
                     << " size=" << ObjectSize << "\n");
 
   if (RI.isTypeLegalForClass(*RC, MVT::i8)) {
-    BuildMI(MBB, II, DebugLoc(), get(SH::MOVBSFR))
+    BuildMI(MBB, II, DebugLoc(), get(SH::MOVBSPtr))
       .addReg(SrcReg, getKillRegState(isKill))
       .addFrameIndex(FrameIndex)
       .addImm(0);
   } else if (RI.isTypeLegalForClass(*RC, MVT::i16)) {
-    BuildMI(MBB, II, DebugLoc(), get(SH::MOVWSFR))
+    BuildMI(MBB, II, DebugLoc(), get(SH::MOVWSPtr))
       .addReg(SrcReg, getKillRegState(isKill))
       .addFrameIndex(FrameIndex)
       .addImm(0);
   } else if (RI.isTypeLegalForClass(*RC, MVT::i32)) {
-    BuildMI(MBB, II, DebugLoc(), get(SH::MOVLSFR))
+    BuildMI(MBB, II, DebugLoc(), get(SH::MOVLSPtr))
       .addReg(SrcReg, getKillRegState(isKill))
       .addFrameIndex(FrameIndex)
       .addImm(0);
@@ -241,17 +241,17 @@ void SuperHInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicB
                     << " size=" << ObjectSize << "\n");
 
   if (RI.isTypeLegalForClass(*RC, MVT::i8)) {
-    BuildMI(MBB, II, DebugLoc(), get(SH::MOVBLFR), DestReg)
+    BuildMI(MBB, II, DebugLoc(), get(SH::MOVBLPtr), DestReg)
       .addFrameIndex(FrameIndex)
       .addImm(0);
 
   } else if (RI.isTypeLegalForClass(*RC, MVT::i16)) {
-    BuildMI(MBB, II, DebugLoc(), get(SH::MOVWLFR), DestReg)
+    BuildMI(MBB, II, DebugLoc(), get(SH::MOVWLPtr), DestReg)
       .addFrameIndex(FrameIndex)
       .addImm(0);
 
   } else if (RI.isTypeLegalForClass(*RC, MVT::i32)) {
-    BuildMI(MBB, II, DebugLoc(), get(SH::MOVLLFR), DestReg)
+    BuildMI(MBB, II, DebugLoc(), get(SH::MOVLLPtr), DestReg)
       .addFrameIndex(FrameIndex)
       .addImm(0);
   } else {
