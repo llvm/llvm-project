@@ -154,8 +154,7 @@ static void strings(raw_ostream &OS, StringRef FileName, StringRef Contents) {
     return Ch;
   };
 
-  auto print = [&OS, FileName, &read, &cvt](unsigned Offset, StringRef L,
-                                            size_t N) {
+  auto print = [&OS, FileName](unsigned Offset, StringRef L, size_t N) {
     if (N < static_cast<size_t>(MinLength))
       return;
     if (PrintFileName)
