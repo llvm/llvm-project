@@ -10771,7 +10771,6 @@ libc_math_function(
     additional_deps = [":__support_math_atan2"],
 )
 
-
 libc_math_function(
     name = "atan2l",
     additional_deps = [
