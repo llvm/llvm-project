@@ -579,6 +579,8 @@ TEST(WalkAST, CleanupAttr) {
            "void foo() { __attribute__((__cleanup__(^freep))) char* x = 0; }");
 }
 
+// Objective-C Tests
+
 TEST(WalkAST, ObjCInterfaceTypeLoc) {
   testWalk(R"objc(
     @interface $explicit^MyClass
@@ -600,6 +602,18 @@ TEST(WalkAST, ObjCImplementationDeclDependsOnInterface) {
            R"objc(
     @implementation ^MyClass
     @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCClassFunctionArg) {
+  testWalk(R"objc(
+    @interface $explicit^MyClass
+    @end
+  )objc",
+           R"objc(
+    void test(^MyClass *obj) {
+    }
   )objc",
            {"-x", "objective-c"});
 }
@@ -1000,6 +1014,18 @@ TEST(WalkAST, ObjCPropertyRefExprSuperNestedProtocolReceiver) {
            {"-x", "objective-c"});
 }
 
+TEST(WalkAST, ObjCInterfaceDeclInheritance) {
+  testWalk(R"objc(
+    @interface $explicit^BaseClass
+    @end
+  )objc",
+           R"objc(
+    @interface DerivedClass : ^BaseClass
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
 TEST(WalkAST, ObjCProtocolInType) {
   testWalk(R"objc(
     @protocol $explicit^MyProtocol
@@ -1128,6 +1154,28 @@ TEST(WalkAST, ObjCCompatibleAliasUsage) {
     void test() {
       ^AliasName *obj;
     }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCForwardClassDecl) {
+  testWalk(R"objc(
+    @interface MyClass
+    @end
+  )objc",
+           R"objc(
+    @class ^MyClass;
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCForwardProtocolDecl) {
+  testWalk(R"objc(
+    @protocol MyProtocol
+    @end
+  )objc",
+           R"objc(
+    @protocol ^MyProtocol;
   )objc",
            {"-x", "objective-c"});
 }
@@ -1540,6 +1588,81 @@ TEST(WalkAST, ObjCEncodeExpr) {
            R"objc(
     void test() {
       const char *enc = @encode(struct ^MyStruct);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCBoxedExprInt) {
+  testWalk(R"objc(
+    @interface $explicit^NSNumber
+    + (id)numberWithInt:(int)val;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      id x = ^@42;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCBoxedExprStruct) {
+  testWalk(R"objc(
+    struct __attribute__((objc_boxable)) Point {
+      int x, y;
+    };
+    @interface $explicit^NSValue
+    + (id)valueWithBytes:(const void *)bytes objCType:(const char *)type;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+    struct Point p = {1, 2};
+      id x = ^@(p);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCArrayLiteral) {
+  testWalk(R"objc(
+    @interface $explicit^NSArray
+    + (id)arrayWithObjects:(const id *)objects count:(unsigned long)cnt;
+    @end
+  )objc",
+           R"objc(
+    void test(id a, id b) {
+      id arr = ^@[a, b];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCDictionaryLiteral) {
+  testWalk(R"objc(
+    @interface $explicit^NSDictionary
+    + (id)dictionaryWithObjects:(const id *)objects
+                        forKeys:(const id *)keys
+                          count:(unsigned long)cnt;
+    @end
+  )objc",
+           R"objc(
+    void test(id k, id v) {
+      id dict = ^@{k: v};
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCStringLiteral) {
+  testWalk(R"objc(
+    @interface $explicit^NSString
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      id s = ^@"hello";
     }
   )objc",
            {"-x", "objective-c"});
