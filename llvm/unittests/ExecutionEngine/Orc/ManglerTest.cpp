@@ -68,7 +68,7 @@ TEST(ManglerTest, MachOQuestionMarkIsMangled) {
 }
 
 TEST(ManglerTest, ExplicitManglingMode) {
-  Mangler Mangle(Mangler::ManglingMode::MachO);
+  Mangler Mangle(Mangler::Mode::MachO);
   EXPECT_EQ(Mangle.mangledCopy(SymbolNameSpec::ir("foo")), "_foo");
 }
 

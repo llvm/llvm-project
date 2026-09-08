@@ -27,7 +27,7 @@ namespace llvm::orc {
 /// ExecutionSession.
 class MangleAndInterner {
 public:
-  using ManglingMode = Mangler::ManglingMode;
+  using ManglingMode = Mangler::Mode;
 
   MangleAndInterner(ExecutionSession &ES, Mangler M)
       : ES(ES), M(std::move(M)) {}

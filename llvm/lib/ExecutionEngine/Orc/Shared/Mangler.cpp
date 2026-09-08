@@ -17,7 +17,7 @@
 
 namespace llvm::orc {
 
-Mangler::ManglingMode Mangler::fromDataLayoutStr(StringRef DLStr) {
+Mangler::Mode Mangler::fromDataLayoutStr(StringRef DLStr) {
   for (StringRef Spec : split(DLStr, '-')) {
     if (!Spec.starts_with("m:"))
       continue;
@@ -26,27 +26,27 @@ Mangler::ManglingMode Mangler::fromDataLayoutStr(StringRef DLStr) {
            "invalid data layout string from Triple::computeDataLayout");
     switch (ModeStr[0]) {
     case 'e':
-      return ManglingMode::ELF;
+      return Mode::ELF;
     case 'l':
-      return ManglingMode::GOFF;
+      return Mode::GOFF;
     case 'o':
-      return ManglingMode::MachO;
+      return Mode::MachO;
     case 'm':
-      return ManglingMode::Mips;
+      return Mode::Mips;
     case 'w':
-      return ManglingMode::WinCOFF;
+      return Mode::WinCOFF;
     case 'x':
-      return ManglingMode::WinCOFFX86;
+      return Mode::WinCOFFX86;
     case 'a':
-      return ManglingMode::XCOFF;
+      return Mode::XCOFF;
     default:
       llvm_unreachable("Invalid mangling mode from Triple::computeDataLayout");
     }
   }
-  return ManglingMode::None;
+  return Mode::None;
 }
 
-Mangler::ManglingMode Mangler::fromTriple(const Triple &TT, StringRef ABIName) {
+Mangler::Mode Mangler::fromTriple(const Triple &TT, StringRef ABIName) {
   return fromDataLayoutStr(TT.computeDataLayout(ABIName));
 }
 
