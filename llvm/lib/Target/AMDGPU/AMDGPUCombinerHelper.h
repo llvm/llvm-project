@@ -51,6 +51,12 @@ public:
 
   // Narrow a 64-bit shift when the amount is KnownBits->=32 but not constant.
   bool matchShiftKnownGeHalfWidth(MachineInstr &MI, BuildFnTy &MatchInfo) const;
+
+  /// fmin_legacy/fmax_legacy select s1 on NaN, and on a +0.0/-0.0 tie (s1 for
+  /// min, s0 for max). Returns true if that tie cannot be observed: nsz on
+  /// \p MI, or a known non-logical-zero \p LHS or \p RHS.
+  bool canIgnoreLegacyMinMaxTies(const MachineInstr &MI, Register LHS,
+                                 Register RHS) const;
 };
 
 } // namespace llvm
