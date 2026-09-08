@@ -447,7 +447,10 @@ uint64_t XCOFFObjectFile::getSectionFileOffsetToRawData(DataRefImpl Sec) const {
 
 Expected<uintptr_t> XCOFFObjectFile::getSectionFileOffsetToRawData(
     XCOFF::SectionTypeFlags SectType) const {
-  DataRefImpl DRI = getSectionByType(SectType);
+  Expected<DataRefImpl> DRIOrErr = getSectionByType(SectType);
+  if (!DRIOrErr)
+    return DRIOrErr.takeError();
+  DataRefImpl DRI = *DRIOrErr;
 
   if (DRI.p == 0) // No section is not an error.
     return 0;
@@ -807,20 +810,66 @@ Expected<DataRefImpl> XCOFFObjectFile::getSectionByNum(int16_t Num) const {
   return DRI;
 }
 
-DataRefImpl
+static StringRef getSectionTypeName(XCOFF::SectionTypeFlags SectType) {
+  switch (SectType) {
+  case XCOFF::STYP_PAD:
+    return "PAD";
+  case XCOFF::STYP_DWARF:
+    return "DWARF";
+  case XCOFF::STYP_TEXT:
+    return "TEXT";
+  case XCOFF::STYP_DATA:
+    return "DATA";
+  case XCOFF::STYP_BSS:
+    return "BSS";
+  case XCOFF::STYP_EXCEPT:
+    return "EXCEPT";
+  case XCOFF::STYP_INFO:
+    return "INFO";
+  case XCOFF::STYP_TDATA:
+    return "TDATA";
+  case XCOFF::STYP_TBSS:
+    return "TBSS";
+  case XCOFF::STYP_LOADER:
+    return "LOADER";
+  case XCOFF::STYP_DEBUG:
+    return "DEBUG";
+  case XCOFF::STYP_TYPCHK:
+    return "TYPCHK";
+  case XCOFF::STYP_OVRFLO:
+    return "OVRFLO";
+  }
+  return "";
+}
+
+template <typename SectionHeader>
+static Error findUniqueSection(ArrayRef<SectionHeader> Sections,
+                               XCOFF::SectionTypeFlags SectType,
+                               DataRefImpl &Result) {
+  for (const SectionHeader &Sec : Sections) {
+    if (Sec.getSectionType() != SectType)
+      continue;
+    if (Result.p != 0) {
+      StringRef Name = getSectionTypeName(SectType);
+      if (!Name.empty())
+        return createStringError("multiple '" + Name.str() +
+                                 "' sections found in XCOFF object");
+      return createStringError("multiple XCOFF sections have type flag 0x" +
+                               Twine::utohexstr(SectType));
+    }
+    Result.p = reinterpret_cast<uintptr_t>(&Sec);
+  }
+  return Error::success();
+}
+
+Expected<DataRefImpl>
 XCOFFObjectFile::getSectionByType(XCOFF::SectionTypeFlags SectType) const {
-  DataRefImpl DRI;
-  auto GetSectionAddr = [&](const auto &Sections) -> uintptr_t {
-    for (const auto &Sec : Sections)
-      if (Sec.getSectionType() == SectType)
-        return reinterpret_cast<uintptr_t>(&Sec);
-    return uintptr_t(0);
-  };
-  if (is64Bit())
-    DRI.p = GetSectionAddr(sections64());
-  else
-    DRI.p = GetSectionAddr(sections32());
-  return DRI;
+  DataRefImpl Result;
+  Result.p = 0;
+  if (Error E = is64Bit() ? findUniqueSection(sections64(), SectType, Result)
+                          : findUniqueSection(sections32(), SectType, Result))
+    return std::move(E);
+  return Result;
 }
 
 Expected<StringRef>
@@ -1055,7 +1104,10 @@ Expected<ArrayRef<ExceptEnt>> XCOFFObjectFile::getExceptionEntries() const {
   if (!ExceptionSectOrErr)
     return ExceptionSectOrErr.takeError();
 
-  DataRefImpl DRI = getSectionByType(XCOFF::STYP_EXCEPT);
+  Expected<DataRefImpl> DRIOrErr = getSectionByType(XCOFF::STYP_EXCEPT);
+  if (!DRIOrErr)
+    return DRIOrErr.takeError();
+  DataRefImpl DRI = *DRIOrErr;
   if (DRI.p == 0)
     return ArrayRef<ExceptEnt>();
 
