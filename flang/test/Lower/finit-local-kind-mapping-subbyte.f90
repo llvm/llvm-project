@@ -20,7 +20,7 @@
 ! RUN: %not_todo_cmd bbc -emit-hlfir --kind-mapping=l4:1 -finit-local=0xAA %s -o - 2>&1 | \
 ! RUN:     FileCheck %s
 
-! CHECK: not yet implemented: -finit-local= with a sub-byte or non-byte-multiple LOGICAL kind mapping
+! CHECK: not yet implemented: -finit-local= with a sub-byte, non-byte-multiple, or padded LOGICAL kind mapping
 
 subroutine test_logical4_subbyte(res)
   logical(kind=4) :: l
@@ -35,9 +35,24 @@ end subroutine
 ! RUN: %not_todo_cmd bbc -emit-hlfir --kind-mapping=l4:12 -finit-local=0xAA %s -o - 2>&1 | \
 ! RUN:     FileCheck --check-prefix=LOG-NONBYTE %s
 
-! LOG-NONBYTE: not yet implemented: -finit-local= with a sub-byte or non-byte-multiple LOGICAL kind mapping
+! LOG-NONBYTE: not yet implemented: -finit-local= with a sub-byte, non-byte-multiple, or padded LOGICAL kind mapping
 
 subroutine test_logical4_nonbyte(res)
+  logical(kind=4) :: l
+  integer :: res
+  if (l) res = 1
+end subroutine
+
+! LOGICAL padded mapping: --kind-mapping=l4:24 maps LOGICAL(4) to 24 bits.
+! An i24 has a 4-byte allocation size (storeSize=3, allocSize=4). A 3-byte store
+! would leave the 4th byte unwritten. The guard catches this and emits a TODO.
+!
+! RUN: %not_todo_cmd bbc -emit-hlfir --kind-mapping=l4:24 -finit-local=0xAA %s -o - 2>&1 | \
+! RUN:     FileCheck --check-prefix=LOG-PAD %s
+
+! LOG-PAD: not yet implemented: -finit-local= with a sub-byte, non-byte-multiple, or padded LOGICAL kind mapping
+
+subroutine test_logical4_padded(res)
   logical(kind=4) :: l
   integer :: res
   if (l) res = 1
@@ -69,7 +84,9 @@ end subroutine
 ! RUN:     FileCheck --check-prefix=CHAR-24BIT %s
 
 ! CHAR-12BIT-NOT: not yet implemented
-! CHAR-12BIT: fir.do_loop
+! CHAR-12BIT: %[[C3:.*]] = arith.constant 3 : index
+! CHAR-12BIT: fir.do_loop %{{.*}} = %{{.*}} to %[[C3]] step %{{.*}}
 
 ! CHAR-24BIT-NOT: not yet implemented
-! CHAR-24BIT: fir.do_loop
+! CHAR-24BIT: %[[C7:.*]] = arith.constant 7 : index
+! CHAR-24BIT: fir.do_loop %{{.*}} = %{{.*}} to %[[C7]] step %{{.*}}
