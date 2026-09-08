@@ -20,21 +20,25 @@
 #include "shared/bit.h"
 #include "shared/builtins/extendhfsf2.h"
 
-extern "C" {
-COMPILER_RT_ABI NOINLINE dst_t __extendhfsf2(src_t a) {
+static inline dst_t extendhfsf2_impl(src_t a) {
   return LIBC_NAMESPACE::shared::extendhfsf2(
       LIBC_NAMESPACE::shared::bit_cast<uint16_t>(a));
 }
 
+extern "C" {
+COMPILER_RT_ABI NOINLINE dst_t __extendhfsf2(src_t a) {
+  return extendhfsf2_impl(a);
+}
+
 #if defined(__ARM_EABI__)
 #if defined(COMPILER_RT_ARMHF_TARGET)
-AEABI_RTABI dst_t __gnu_h2f_ieee(src_t a) { return __extendhfsf2(a); }
-AEABI_RTABI dst_t __aeabi_h2f(src_t a) { return __extendhfsf2(a); }
+AEABI_RTABI dst_t __gnu_h2f_ieee(src_t a) { return extendhfsf2_impl(a); }
+AEABI_RTABI dst_t __aeabi_h2f(src_t a) { return extendhfsf2_impl(a); }
 #else
 COMPILER_RT_ALIAS(__extendhfsf2, __gnu_h2f_ieee)
 COMPILER_RT_ALIAS(__extendhfsf2, __aeabi_h2f)
 #endif
 #else
-COMPILER_RT_ABI dst_t __gnu_h2f_ieee(src_t a) { return __extendhfsf2(a); }
+COMPILER_RT_ABI dst_t __gnu_h2f_ieee(src_t a) { return extendhfsf2_impl(a); }
 #endif
 }
