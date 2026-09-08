@@ -855,10 +855,10 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
   AttributeSet RetAttrs = AttributeSet::get(F->getContext(), RAttrs);
 
   // allocsize names parameters by index, so deleting an argument ahead of one
-  // renumbers it. surveyFunction() keeps the arguments allocsize points at
-  // alive, so renumber the attribute rather than dropping it; drop it only if
-  // they went away regardless, which leaves the callee no way to report the
-  // size it allocates.
+  // renumbers it. surveyFunction() keeps the arguments the function's own
+  // allocsize names alive, so those always renumber. A call site's allocsize is
+  // independent of the callee's and gets no such treatment, so it can still
+  // name an argument that is gone, and is dropped.
   auto UpdateAllocSize = [&](AttributeSet FnAttrs) {
     std::optional<std::pair<unsigned, std::optional<unsigned>>> Args =
         FnAttrs.getAllocSizeArgs();
