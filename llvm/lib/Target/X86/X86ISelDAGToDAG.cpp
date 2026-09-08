@@ -16,6 +16,7 @@
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Config/llvm-config.h"
@@ -3682,7 +3683,40 @@ static bool mayUseCarryFlag(X86::CondCode CC) {
   return true;
 }
 
+/// Return true if \p Addr may be matched with a non-fixed frame index as base.
+static bool addrMayUseNonFixedFrameIndex(SDValue Addr,
+                                         const MachineFrameInfo &MFI,
+                                         unsigned Depth = 0) {
+  if (auto *FI = dyn_cast<FrameIndexSDNode>(Addr))
+    return !MFI.isFixedObjectIndex(FI->getIndex());
+  // Assume the worst if we can't see the whole address expression.
+  if (Depth >= SelectionDAG::MaxRecursionDepth)
+    return true;
+  switch (Addr.getOpcode()) {
+  case ISD::ADD:
+  case ISD::OR:
+  case ISD::XOR:
+    return addrMayUseNonFixedFrameIndex(Addr.getOperand(0), MFI, Depth + 1) ||
+           addrMayUseNonFixedFrameIndex(Addr.getOperand(1), MFI, Depth + 1);
+  case ISD::SUB:
+    return addrMayUseNonFixedFrameIndex(Addr.getOperand(0), MFI, Depth + 1);
+  default:
+    // Only add-like nodes and the LHS of a SUB can fold a frame index into the
+    // base; anything else is matched as a register or symbol base.
+    return false;
+  }
+}
+
 bool X86DAGToDAGISel::checkTCRetEnoughRegs(SDNode *N) const {
+  assert(N->getOpcode() == X86ISD::TC_RETURN);
+  // X86tcret args: (*chain, ptr, imm, regs..., glue)
+  const SDValue &BasePtr = cast<LoadSDNode>(N->getOperand(1))->getBasePtr();
+
+  // The tail call executes after the epilogue, where only fixed stack objects
+  // can still be addressed (the stack may end up realigned).
+  if (addrMayUseNonFixedFrameIndex(BasePtr, MF->getFrameInfo()))
+    return false;
+
   // Check that there is enough volatile registers to load the callee address.
 
   const X86RegisterInfo *RI = Subtarget->getRegisterInfo();
@@ -3711,13 +3745,9 @@ bool X86DAGToDAGISel::checkTCRetEnoughRegs(SDNode *N) const {
   // The load's base and index need up to two registers.
   unsigned LoadGPRs = 2;
 
-  assert(N->getOpcode() == X86ISD::TC_RETURN);
-  // X86tcret args: (*chain, ptr, imm, regs..., glue)
-
   if (Subtarget->is32Bit()) {
     // FIXME: This was carried from X86tcret_1reg which was used for 32-bit,
     // but it could apply to 64-bit too.
-    const SDValue &BasePtr = cast<LoadSDNode>(N->getOperand(1))->getBasePtr();
     if (isa<FrameIndexSDNode>(BasePtr)) {
       LoadGPRs -= 2; // Base is fixed index off ESP; no regs needed.
     } else if (BasePtr.getOpcode() == X86ISD::Wrapper &&
@@ -6738,6 +6768,53 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     }
 
     ReplaceUses(SDValue(Node, 0), Result);
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
+  case X86ISD::STC:
+  case X86ISD::CLC: {
+    // Herbception (throws): set/clear the carry flag for a constant return
+    // discriminant. Like READ_CF, these are chained + glued nodes so nothing
+    // can be scheduled between them and the glued RET.
+    unsigned Opc = Node->getOpcode() == X86ISD::STC ? X86::STC : X86::CLC;
+    SmallVector<SDValue, 2> Ops;
+    Ops.push_back(Node->getOperand(0));
+    if (Node->getNumOperands() > 1)
+      Ops.push_back(Node->getOperand(1));
+    MachineSDNode *MI = CurDAG->getMachineNode(
+        Opc, dl, ArrayRef<EVT>{MVT::Other, MVT::Glue}, Ops);
+    ReplaceUses(SDValue(Node, 0), SDValue(MI, 0));
+    ReplaceUses(SDValue(Node, 1), SDValue(MI, 1));
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
+  case X86ISD::READ_CF: {
+    // Herbception (throws): read the carry flag (CF) right after a call,
+    // before CALLSEQ_END clobbers EFLAGS. The node is a chained node (chain +
+    // glue in/out), glued directly to the call, so that the setb is scheduled
+    // right after the call. Selecting this manually avoids the generic ISel
+    // routing of EFLAGS through a CopyToReg chained to the entry node, which
+    // would create a WAW scheduling cycle with the call's EFLAGS write.
+    assert(Node->getValueType(0) == MVT::i8 && "READ_CF must produce i8");
+    SDLoc dl(Node);
+    SDValue EFLAGS = CurDAG->getCopyFromReg(
+        Node->getOperand(0), dl, X86::EFLAGS, MVT::i32,
+        Node->getNumOperands() > 1 ? Node->getOperand(1) : SDValue());
+    // HERB_SETCCr: pseudo-instruction that reads CF into an i8 value.
+    // Distinguished from regular SETCCr so the peephole can target it without
+    // affecting ordinary setb patterns. Lowered to SETCCr(COND_B) post-RA.
+    // The machine node reads the physical EFLAGS register (its use is carried
+    // by the glued EFLAGS value) and is given an explicit glue result so the
+    // chain can continue past it (CALLSEQ_END and everything after must be
+    // scheduled after the setb reads EFLAGS).
+    MachineSDNode *MI = CurDAG->getMachineNode(
+        X86::HERB_SETCCr, dl, ArrayRef<EVT>{MVT::i8, MVT::Glue},
+        {EFLAGS.getValue(2)});
+    // Result 0: the value. Result 1: the chain continues from the EFLAGS
+    // copy. Result 2: the new glue produced by the setb.
+    ReplaceUses(SDValue(Node, 0), SDValue(MI, 0));
+    ReplaceUses(SDValue(Node, 1), EFLAGS.getValue(1));
+    ReplaceUses(SDValue(Node, 2), SDValue(MI, 1));
     CurDAG->RemoveDeadNode(Node);
     return;
   }

@@ -798,6 +798,9 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
       case CC_X86ThisCall: POut << "__thiscall "; break;
       case CC_X86VectorCall: POut << "__vectorcall "; break;
       case CC_X86RegCall: POut << "__regcall "; break;
+      case CC_WinCall:
+        POut << "__wincall ";
+        break;
       // Only bother printing the conventions that MSVC knows about.
       default: break;
       }
@@ -3774,6 +3777,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case ArrayTypeTraitExprClass:
   case ExpressionTraitExprClass:
   case CXXNoexceptExprClass:
+  case CXXThrowsExprClass:
   case SizeOfPackExprClass:
   case ObjCStringLiteralClass:
   case ObjCEncodeExprClass:
@@ -3790,6 +3794,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case HLSLOutArgExprClass:
   case OpenACCAsteriskSizeExprClass:
   case CXXReflectExprClass:
+  case CXXCxaExceptionExprClass:
     // These never have a side-effect.
     return false;
 
@@ -3872,6 +3877,9 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case ConvertVectorExprClass:
   case AsTypeExprClass:
   case CXXParenListInitExprClass:
+  case CXXTryExprClass:
+  case CXXCatchReturnFailureExprClass:
+  case CXXErrorValueExprClass:
     // These have a side-effect if any subexpression does.
     break;
 

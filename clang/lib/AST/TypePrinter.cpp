@@ -966,6 +966,21 @@ FunctionProtoType::printExceptionSpecification(raw_ostream &OS,
     OS << ')';
   } else if (EST_NoThrow == getExceptionSpecType()) {
     OS << " __attribute__((nothrow))";
+  } else if (hasBasicThrowsSpec()) {
+    if (getExceptionSpecType() == EST_BasicThrowsTrue)
+      OS << " throws(true)";
+    else if (getExceptionSpecType() == EST_BasicThrowsFalse)
+      OS << " throws(false)";
+    else
+      OS << " throws";
+  } else if (hasReturnFailureSpec()) {
+    OS << " fails{";
+    for (unsigned I = 0, N = getNumExceptions(); I != N; ++I) {
+      if (I)
+        OS << ", ";
+      OS << getExceptionType(I).stream(Policy);
+    }
+    OS << '}';
   } else if (isNoexceptExceptionSpec(getExceptionSpecType())) {
     OS << " noexcept";
     // FIXME:Is it useful to print out the expression for a non-dependent
@@ -1153,6 +1168,9 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
       break;
     case CC_X86Pascal:
       OS << " __attribute__((pascal))";
+      break;
+    case CC_WinCall:
+      OS << " __attribute__((wincall))";
       break;
     case CC_AAPCS:
       OS << " __attribute__((pcs(\"aapcs\")))";
@@ -2113,6 +2131,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::MSABI: OS << "ms_abi"; break;
   case attr::SysVABI: OS << "sysv_abi"; break;
   case attr::RegCall: OS << "regcall"; break;
+  case attr::WinCall:
+    OS << "wincall";
+    break;
   case attr::Pcs: {
     OS << "pcs(";
    QualType t = T->getEquivalentType();

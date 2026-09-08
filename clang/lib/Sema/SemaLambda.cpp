@@ -860,9 +860,7 @@ QualType Sema::buildLambdaInitCaptureInitialization(
   }
   if (EllipsisLoc.isValid()) {
     if (Init->containsUnexpandedParameterPack()) {
-      Diag(EllipsisLoc, getLangOpts().CPlusPlus20
-                            ? diag::warn_cxx17_compat_init_capture_pack
-                            : diag::ext_init_capture_pack);
+      DiagCompat(EllipsisLoc, diag_compat::init_capture_pack);
       DeductType = Context.getPackExpansionType(DeductType, NumExpansions,
                                                 /*ExpectPackInType=*/false);
       TLB.push<PackExpansionTypeLoc>(DeductType).setEllipsisLoc(EllipsisLoc);
@@ -1110,6 +1108,14 @@ void Sema::CompleteLambdaCallOperator(
                                                  TemplateParams, MethodTyInfo));
   Method->setConstexprKind(ConstexprKind);
   Method->setStorageClass(SC);
+
+  // Herbception `fails{E}` is a C-style feature restricted to free (non-member)
+  // functions; a lambda's call operator is a member of its closure type.
+  if (getLangOpts().HerbExceptions &&
+      Method->getType()->getAs<FunctionProtoType>()->hasReturnFailureSpec()) {
+    Diag(LambdaLoc, diag::err_return_failure_only_free_function);
+    Method->setInvalidDecl();
+  }
   if (!Params.empty()) {
     CheckParmsForFunctionDef(Params, /*CheckParameterNames=*/false);
     Method->setParams(Params);
@@ -1196,9 +1202,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
        PrevCaptureLoc = C->Loc, ++C) {
     if (C->Kind == LCK_This || C->Kind == LCK_StarThis) {
       if (C->Kind == LCK_StarThis)
-        Diag(C->Loc, !getLangOpts().CPlusPlus17
-                         ? diag::ext_star_this_lambda_capture_cxx17
-                         : diag::warn_cxx14_compat_star_this_lambda_capture);
+        DiagCompat(C->Loc, diag_compat::star_this_lambda_capture);
 
       // C++11 [expr.prim.lambda]p8:
       //   An identifier or this shall not appear more than once in a
@@ -1217,9 +1221,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       //  "&identifier", "this", or "* this". [ Note: The form [&,this] is
       //  redundant but accepted for compatibility with ISO C++14. --end note ]
       if (Intro.Default == LCD_ByCopy && C->Kind != LCK_StarThis)
-        Diag(C->Loc, !getLangOpts().CPlusPlus20
-                         ? diag::ext_equals_this_lambda_capture_cxx20
-                         : diag::warn_cxx17_compat_equals_this_lambda_capture);
+        DiagCompat(C->Loc, diag_compat::equals_this_lambda_capture);
 
       // C++11 [expr.prim.lambda]p12:
       //   If this is captured by a local lambda expression, its nearest
@@ -1245,9 +1247,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
     ValueDecl *Var = nullptr;
     if (C->Init.isUsable()) {
-      Diag(C->Loc, getLangOpts().CPlusPlus14
-                       ? diag::warn_cxx11_compat_init_capture
-                       : diag::ext_init_capture);
+      DiagCompat(C->Loc, diag_compat::init_capture);
 
       // If the initializer expression is usable, but the InitCaptureType
       // is not, then an error has occurred - so ignore the capture for now.
@@ -1674,8 +1674,8 @@ static void repeatForLambdaConversionFunctionCallingConvs(
   /// detecting the attribute by the time we get here.
   if (S.getLangOpts().MSVCCompat) {
     CallingConv Convs[] = {
-        CC_C,        CC_X86StdCall, CC_X86FastCall, CC_X86VectorCall,
-        DefaultFree, DefaultMember, CallOpCC};
+        CC_C,       CC_X86StdCall, CC_X86FastCall, CC_X86VectorCall,
+        CC_WinCall, DefaultFree,   DefaultMember,  CallOpCC};
     llvm::sort(Convs);
     llvm::iterator_range<CallingConv *> Range(std::begin(Convs),
                                               llvm::unique(Convs));

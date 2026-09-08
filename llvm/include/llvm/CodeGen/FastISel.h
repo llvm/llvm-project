@@ -77,6 +77,9 @@ public:
     bool DoesNotReturn : 1;
     bool IsReturnValueUsed : 1;
     bool IsPatchPoint : 1;
+    /// The called function (or call site) returns its value with the throws
+    /// (herbception) discriminant.
+    bool IsThrows : 1;
 
     // IsTailCall Should be modified by implementations of FastLowerCall
     // that perform tail call conversions.
@@ -100,7 +103,8 @@ public:
 
     CallLoweringInfo()
         : RetSExt(false), RetZExt(false), IsVarArg(false), IsInReg(false),
-          DoesNotReturn(false), IsReturnValueUsed(true), IsPatchPoint(false) {}
+          DoesNotReturn(false), IsReturnValueUsed(true), IsPatchPoint(false),
+          IsThrows(false) {}
 
     CallLoweringInfo &setCallee(Type *ResultTy, FunctionType *FuncTy,
                                 const Value *Target, ArgListTy &&ArgsList,
@@ -118,6 +122,7 @@ public:
       CallConv = Call.getCallingConv();
       Args = std::move(ArgsList);
       NumFixedArgs = FuncTy->getNumParams();
+      IsThrows = Call.hasFnAttr(Attribute::Throws);
 
       CB = &Call;
 
@@ -138,6 +143,7 @@ public:
       IsReturnValueUsed = !Call.use_empty();
       RetSExt = Call.hasRetAttr(Attribute::SExt);
       RetZExt = Call.hasRetAttr(Attribute::ZExt);
+      IsThrows = Call.hasFnAttr(Attribute::Throws);
 
       CallConv = Call.getCallingConv();
       Args = std::move(ArgsList);

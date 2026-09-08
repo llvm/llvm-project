@@ -757,15 +757,34 @@ bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
   return getCIRGenRecordLayout(rd).isZeroInitializable();
 }
 
+cir::CallingConv
+CIRGenTypes::clangCallConvToCIRCallConv(clang::CallingConv cc) {
+  switch (cc) {
+  case CC_C:
+    // SPIR/SPIR-V lowers the default CC to spir_func, not plain C.
+    if (cgm.getTriple().isSPIROrSPIRV())
+      return cir::CallingConv::SpirFunction;
+    return cir::CallingConv::C;
+  case CC_DeviceKernel:
+    return cgm.getTargetCIRGenInfo().getDeviceKernelCallingConv();
+  case CC_WinCall:
+    return cir::CallingConv::X86WinCall;
+  default:
+    // TODO(cir): Support the remaining target-specific calling conventions.
+    return cir::CallingConv::C;
+  }
+}
+
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
     CanQualType returnType, bool isInstanceMethod,
     llvm::ArrayRef<CanQualType> argTypes, FunctionType::ExtInfo info,
-    RequiredArgs required) {
+    RequiredArgs required, bool throwsReturn, mlir::Type herbceptionErrorTy) {
   assert(llvm::all_of(argTypes,
                       [](CanQualType t) { return t.isCanonicalAsParam(); }));
   // Lookup or create unique function info.
   llvm::FoldingSetNodeID id;
-  CIRGenFunctionInfo::Profile(id, isInstanceMethod, info, required, returnType,
+  CIRGenFunctionInfo::Profile(id, isInstanceMethod, throwsReturn,
+                              herbceptionErrorTy, info, required, returnType,
                               argTypes);
 
   llvm::FoldingSetInsertToken insertToken;
@@ -780,14 +799,32 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
     return *fi;
   }
 
-  assert(!cir::MissingFeatures::opCallCallConv());
+  cir::CallingConv cirCC = clangCallConvToCIRCallConv(info.getCC());
 
   // Construction the function info. We co-allocate the ArgInfos.
-  fi = CIRGenFunctionInfo::create(info, isInstanceMethod, returnType, argTypes,
-                                  required);
+  fi = CIRGenFunctionInfo::create(cirCC, info, isInstanceMethod, returnType,
+                                  argTypes, required, throwsReturn,
+                                  herbceptionErrorTy);
   functionInfos.insert(fi, insertToken);
 
   return *fi;
+}
+
+mlir::Type
+CIRGenTypes::getHerbceptionErrorType(const clang::FunctionProtoType *ftp) {
+  if (!ftp || !ftp->hasThrowsSpec())
+    return {};
+  if (ftp->getExceptionSpecType() == EST_ThrowsTyped)
+    return convertType(ftp->getExceptionType(0));
+  // Bare `throws`: implicit std::error = {void *, size_t}, fabricated here
+  // because std::error is not wired into the AST.
+  auto &ctx = getMLIRContext();
+  mlir::Type voidPtrTy = builder.getPointerTo(builder.getVoidTy());
+  mlir::Type sizeTy = convertType(astContext.getSizeType());
+  llvm::SmallVector<mlir::Type> members{voidPtrTy, sizeTy};
+  return cir::StructType::get(&ctx, members,
+                              /*packed=*/false, /*is_class=*/false,
+                              cir::RecordType::getAllDataKinds(members));
 }
 
 const CIRGenFunctionInfo &

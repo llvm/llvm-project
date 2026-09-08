@@ -1,0 +1,24 @@
+# -*- Python -*-
+#===--- lit.site.cfg.py.in - libherbceptions lit configuration -------------===#
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+#===----------------------------------------------------------------------===#
+
+@LIT_SITE_CFG_IN_HEADER@
+
+import os
+
+# Tool-specific config options.
+config.test_source_root = path(r"@CMAKE_CURRENT_SOURCE_DIR@/test")
+config.test_exec_root = path(r"@CMAKE_CURRENT_BINARY_DIR@/test")
+config.herbceptions_obj_root = path(r"@CMAKE_CURRENT_BINARY_DIR@")
+config.herbceptions_src_root = path(r"@CMAKE_CURRENT_SOURCE_DIR@")
+
+# Suffixes for lit test files.
+config.suffixes = [".cpp"]
+
+# Load the test-specific lit configuration.
+lit_config.load_config(config, os.path.join(config.test_source_root, "lit.cfg.py"))

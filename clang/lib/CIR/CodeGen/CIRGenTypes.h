@@ -151,6 +151,12 @@ public:
 
   cir::FuncType getFunctionType(clang::GlobalDecl gd);
 
+  /// The IR type of the error value carried by a herbception throws/fails
+  /// function, or null if \p ftp carries no herbception spec. For
+  /// ``fails{E}`` this is E; for bare ``throws`` it is the fabricated
+  /// ``{void *, size_t}`` std::error.
+  mlir::Type getHerbceptionErrorType(const clang::FunctionProtoType *ftp);
+
   /// Determine if a C++ inheriting constructor should have parameters matching
   /// those of its inherited constructor.
   bool inheritingCtorHasParams(const InheritedConstructor &inherited,
@@ -226,10 +232,15 @@ public:
   const CIRGenFunctionInfo &arrangeFreeFunctionCall(const CallArgList &args,
                                                     const FunctionType *fnType);
 
+  /// Convert a clang calling convention to a CIR calling convention.
+  cir::CallingConv clangCallConvToCIRCallConv(clang::CallingConv cc);
+
   const CIRGenFunctionInfo &
   arrangeCIRFunctionInfo(CanQualType returnType, bool isInstanceMethod,
                          llvm::ArrayRef<CanQualType> argTypes,
-                         FunctionType::ExtInfo info, RequiredArgs required);
+                         FunctionType::ExtInfo info, RequiredArgs required,
+                         bool throwsReturn = false,
+                         mlir::Type herbceptionErrorTy = {});
 
   const CIRGenFunctionInfo &
   arrangeFreeFunctionType(CanQual<FunctionProtoType> fpt);

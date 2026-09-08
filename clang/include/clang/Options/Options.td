@@ -1286,10 +1286,10 @@ def no_offload_arch_EQ : CommaJoined<["--"], "no-offload-arch=">,
 
 def offload_new_driver : Flag<["--"], "offload-new-driver">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
-  MarshallingInfoFlag<LangOpts<"OffloadingNewDriver">>, HelpText<"Use the new driver for offloading compilation.">;
+  HelpText<"Deprecated; the new driver is always used for offloading compilation.">;
 def no_offload_new_driver : Flag<["--"], "no-offload-new-driver">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
-  HelpText<"Don't Use the new driver for offloading compilation.">;
+  HelpText<"Deprecated; the legacy offloading driver has been removed.">;
 def cuda_emit_nvcc_abi : Flag<["--"], "cuda-emit-nvcc-abi">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
   MarshallingInfoFlag<LangOpts<"CUDANVCCABI">>,
@@ -1525,8 +1525,6 @@ def hip_device_lib_EQ : Joined<["--"], "hip-device-lib=">, Group<hip_Group>,
   HelpText<"HIP device library">;
 def hip_version_EQ : Joined<["--"], "hip-version=">, Group<hip_Group>,
   HelpText<"HIP version in the format of major.minor.patch">;
-def fhip_dump_offload_linker_script : Flag<["-"], "fhip-dump-offload-linker-script">,
-  Group<hip_Group>, Flags<[NoArgumentUnused, HelpHidden]>;
 defm hip_new_launch_api : BoolFOption<"hip-new-launch-api",
   LangOpts<"HIPUseNewLaunchAPI">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use">,
@@ -2322,6 +2320,11 @@ def fcreate_profile : Flag<["-"], "fcreate-profile">, Group<f_Group>;
 defm cxx_exceptions: BoolFOption<"cxx-exceptions",
   LangOpts<"CXXExceptions">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable C++ exceptions">,
+  NegFlag<SetFalse>>;
+defm herbceptions: BoolFOption<"herbceptions",
+  LangOpts<"HerbExceptions">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+          "Enable herbception (zero-overhead deterministic exceptions)">,
   NegFlag<SetFalse>>;
 defm async_exceptions: BoolFOption<"async-exceptions",
   LangOpts<"EHAsynch">, DefaultFalse,
@@ -3823,6 +3826,13 @@ def fno_modules_driver :
   Group<f_Group>,
   Visibility<[ClangOption]>,
   HelpText<"Disable support for driver managed module builds (experimental)">;
+def fdepscan_log_path : Joined<["-"], "fdepscan-log-path=">,
+  Group<f_Group>,
+  Visibility<[ClangOption]>,
+  Flags<[NoArgumentUnused]>,
+  MetaVarName<"<file>">,
+  HelpText<"Log the timing of dependency scanning actions to <file>. Only "
+           "takes effect while running the dependency scanner.">;
 
 def fincremental_extensions :
   Flag<["-"], "fincremental-extensions">,
@@ -4375,11 +4385,10 @@ defm openmp_optimistic_collapse : BoolFOption<"openmp-optimistic-collapse",
   NegFlag<SetFalse>, BothFlags<[NoArgumentUnused, HelpHidden], []>>;
 def static_openmp: Flag<["-"], "static-openmp">,
   HelpText<"Use the static host OpenMP runtime while linking.">;
-def fopenmp_new_driver : Flag<["-"], "fopenmp-new-driver">, Flags<[HelpHidden]>,
-  HelpText<"Use the new driver for OpenMP offloading.">;
+def fopenmp_new_driver : Flag<["-"], "fopenmp-new-driver">,
+  Flags<[HelpHidden]>, Alias<offload_new_driver>;
 def fno_openmp_new_driver : Flag<["-"], "fno-openmp-new-driver">,
-  Flags<[HelpHidden]>,
-  HelpText<"Don't use the new driver for OpenMP offloading.">;
+  Flags<[HelpHidden]>, Alias<no_offload_new_driver>;
 def fno_optimize_sibling_calls : Flag<["-"], "fno-optimize-sibling-calls">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Disable tail call optimization, keeping the call stack accurate">,
@@ -4825,22 +4834,6 @@ def floop_interchange : Flag<["-"], "floop-interchange">, Group<f_Group>,
   HelpText<"Enable the loop interchange pass">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def fno_loop_interchange: Flag<["-"], "fno-loop-interchange">, Group<f_Group>,
   HelpText<"Disable the loop interchange pass">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
-defm enable_new_pm_codegen
-    : BoolFOption<"enable-new-pm-codegen", CodeGenOpts<"EnableNewPMCodeGen">, DefaultFalse,
-                  NegFlag<SetFalse, [], [CC1Option],
-                          "Do not use the NewPM for the Codegen Pipeline">,
-                  PosFlag<SetTrue, [], [CC1Option],
-                          "Use the NewPM for the Codegen Pipeline">>,
-      DocBrief<
-          [{When enabled, use the NewPM to drive the Codegen pipeline.}]>;
-def enable_new_pm_codegen : Joined<["-"], "fenable-new-pm-codegen=">,
-    Group<f_Group>,
-    Visibility<[CC1Option]>,
-    HelpText<"When enabled, use the NewPM to drive the CodeGen pipeline.">,
-    Values<"auto,force-on,force-disable">,
-    NormalizedValuesScope<"CodeGenOptions::NewPMEnablementLevel">,
-    NormalizedValues<["Auto","ForceEnable","ForceDisable"]>,
-    MarshallingInfoEnum<CodeGenOpts<"EnableNewPMCodeGen">, "Auto">;
 defm experimental_loop_fusion
     : OptInCC1FFlag<"experimental-loop-fusion", "Enable", "Disable",
                     "Enable the loop fusion pass",
@@ -6441,6 +6434,9 @@ def mno_fix_r5900 : Flag<["-"], "mno-fix-r5900">,
                     HelpText<"Disable R5900 short loop erratum fix">;
 def mcompact_branches_EQ : Joined<["-"], "mcompact-branches=">,
                            Group<m_mips_Features_Group>;
+foreach i = {1-31} in
+  def ffixed_#i : Flag<["-"], "ffixed-"#i>, Group<m_Group>,
+    HelpText<"Reserve the MIPS GPR "#i#" register (MIPS only)">;
 } // let Flags = [TargetSpecific]
 def mbranch_likely : Flag<["-"], "mbranch-likely">, Group<m_Group>,
   IgnoredGCCCompat;
@@ -9046,9 +9042,9 @@ def fnative_half_arguments_and_returns : Flag<["-"], "fnative-half-arguments-and
   ImpliedByAnyOf<[open_cl.KeyPath, hlsl.KeyPath, hip.KeyPath]>;
 def fdefault_calling_conv_EQ : Joined<["-"], "fdefault-calling-conv=">,
   HelpText<"Set default calling convention">,
-  Values<"cdecl,fastcall,stdcall,vectorcall,regcall,rtdcall">,
+  Values<"cdecl,fastcall,stdcall,vectorcall,regcall,rtdcall,wincall">,
   NormalizedValuesScope<"LangOptions">,
-  NormalizedValues<["DCC_CDecl", "DCC_FastCall", "DCC_StdCall", "DCC_VectorCall", "DCC_RegCall", "DCC_RtdCall"]>,
+  NormalizedValues<["DCC_CDecl", "DCC_FastCall", "DCC_StdCall", "DCC_VectorCall", "DCC_RegCall", "DCC_RtdCall", "DCC_WinCall"]>,
   MarshallingInfoEnum<LangOpts<"DefaultCallingConv">, "DCC_None">;
 
 // These options cannot be marshalled, because they are used to set up the LangOptions defaults.
@@ -9777,6 +9773,8 @@ def _SLASH_Gz : CLFlag<"Gz">,
   HelpText<"Set __stdcall as a default calling convention">;
 def _SLASH_Gv : CLFlag<"Gv">,
   HelpText<"Set __vectorcall as a default calling convention">;
+def _SLASH_Gwincall : CLFlag<"Gwincall">,
+  HelpText<"Set __wincall as a default calling convention">;
 def _SLASH_Gregcall : CLFlag<"Gregcall">,
   HelpText<"Set __regcall as a default calling convention">;
 def _SLASH_Gregcall4 : CLFlag<"Gregcall4">,

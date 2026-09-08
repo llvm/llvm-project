@@ -153,7 +153,7 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
     }
   }
 
-  if (Tok.is(tok::kw___super)) {
+  if (!HasScopeSpecifier && Tok.is(tok::kw___super)) {
     SourceLocation SuperLoc = ConsumeToken();
     if (!Tok.is(tok::coloncolon)) {
       Diag(Tok.getLocation(), diag::err_expected_coloncolon_after_super);
@@ -1141,9 +1141,7 @@ static void tryConsumeLambdaSpecifierToken(Parser &P,
 static void addStaticToLambdaDeclSpecifier(Parser &P, SourceLocation StaticLoc,
                                            DeclSpec &DS) {
   if (StaticLoc.isValid()) {
-    P.Diag(StaticLoc, !P.getLangOpts().CPlusPlus23
-                          ? diag::err_static_lambda
-                          : diag::warn_cxx20_compat_static_lambda);
+    P.DiagCompat(StaticLoc, diag_compat::static_lambda);
     const char *PrevSpec = nullptr;
     unsigned DiagID = 0;
     DS.SetStorageClassSpec(P.getActions(), DeclSpec::SCS_static, StaticLoc,
@@ -1158,9 +1156,7 @@ static void
 addConstexprToLambdaDeclSpecifier(Parser &P, SourceLocation ConstexprLoc,
                                   DeclSpec &DS) {
   if (ConstexprLoc.isValid()) {
-    P.Diag(ConstexprLoc, !P.getLangOpts().CPlusPlus17
-                             ? diag::ext_constexpr_on_lambda_cxx17
-                             : diag::warn_cxx14_compat_constexpr_on_lambda);
+    P.DiagCompat(ConstexprLoc, diag_compat::constexpr_on_lambda);
     const char *PrevSpec = nullptr;
     unsigned DiagID = 0;
     DS.SetConstexprSpec(ConstexprSpecKind::Constexpr, ConstexprLoc, PrevSpec,
@@ -1255,9 +1251,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
   MultiParseScope TemplateParamScope(*this);
   if (Tok.is(tok::less)) {
-    Diag(Tok, getLangOpts().CPlusPlus20
-                  ? diag::warn_cxx17_compat_lambda_template_parameter_list
-                  : diag::ext_lambda_template_parameter_list);
+    DiagCompat(Tok, diag_compat::lambda_template_parameter_list);
 
     SmallVector<NamedDecl*, 4> TemplateParams;
     SourceLocation LAngleLoc, RAngleLoc;
@@ -1755,6 +1749,32 @@ ExprResult Parser::ParseThrowExpression() {
   assert(Tok.is(tok::kw_throw) && "Not throw!");
   SourceLocation ThrowLoc = ConsumeToken();           // Eat the throw token.
 
+  // Herbception: `throw throws expr` is a deterministic error throw, or
+  // bare `throw throws` is a rethrow inside a `catch throws` handler.
+  if (Tok.is(tok::kw_throws)) {
+    SourceLocation ThrowsLoc = ConsumeToken();
+    // Bare `throw throws` without an operand: rethrow the caught error.
+    switch (Tok.getKind()) {
+    case tok::semi:
+    case tok::r_paren:
+    case tok::r_square:
+    case tok::r_brace:
+    case tok::colon:
+    case tok::comma:
+      return Actions.ActOnCXXThrowThrows(getCurScope(), ThrowLoc, ThrowsLoc,
+                                         nullptr);
+    default:
+      break;
+    }
+    // `throw throws expr` with an operand is disallowed; rethrowing must use
+    // bare `throw throws`.
+    ExprResult Expr = ParseAssignmentExpression();
+    if (Expr.isInvalid())
+      return Expr;
+    return Actions.ActOnCXXThrowThrows(getCurScope(), ThrowLoc, ThrowsLoc,
+                                       Expr.get());
+  }
+
   // If the current token isn't the start of an assignment-expression,
   // then the expression is not present.  This handles things like:
   //   "C ? throw : (void)42", which is crazy but legal.
@@ -1772,6 +1792,62 @@ ExprResult Parser::ParseThrowExpression() {
     if (Expr.isInvalid()) return Expr;
     return Actions.ActOnCXXThrow(getCurScope(), ThrowLoc, Expr.get());
   }
+}
+
+ExprResult Parser::ParseHerbceptionTryExpression() {
+  assert(Tok.is(tok::kw_try) && "Not try!");
+  SourceLocation TryLoc = ConsumeToken();  // Eat the try token.
+  assert(Tok.is(tok::l_paren) && "Expected '(' after try");
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.consumeOpen()) {
+    Diag(Tok, diag::err_expected_expression);
+    return ExprError();
+  }
+  ++Actions.HerbceptionOperandDepth;
+  ExprResult Expr = ParseExpression();
+  --Actions.HerbceptionOperandDepth;
+  if (Expr.isInvalid())
+    return Expr;
+  T.consumeClose();
+  return Actions.ActOnHerbceptionTry(TryLoc, Expr.get());
+}
+
+ExprResult Parser::ParseHerbceptionReturnFailureExpression() {
+  assert(Tok.is(tok::kw_return_failure) && "Not return_failure!");
+  SourceLocation FailureLoc = ConsumeToken();  // Eat the return_failure token.
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.consumeOpen()) {
+    Diag(Tok, diag::err_expected_expression);
+    return ExprError();
+  }
+  ExprResult Expr = ParseExpression();
+  if (Expr.isInvalid())
+    return Expr;
+  T.consumeClose();
+  return Actions.ActOnHerbceptionReturnFailure(FailureLoc, Expr.get());
+}
+
+ExprResult Parser::ParseHerbceptionCatchReturnFailureExpression() {
+  assert(Tok.is(tok::kw_catch) && "Not catch!");
+  SourceLocation CatchLoc = ConsumeToken();  // Eat the catch token.
+  assert(Tok.is(tok::kw_return_failure) && "Expected 'return_failure' after catch");
+  SourceLocation FailsLoc = ConsumeToken();  // Eat the return_failure token.
+  assert(Tok.is(tok::l_paren) && "Expected '(' after return_failure");
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.consumeOpen()) {
+    Diag(Tok, diag::err_expected_expression);
+    return ExprError();
+  }
+  ++Actions.HerbceptionOperandDepth;
+  ExprResult Expr = ParseExpression();
+  --Actions.HerbceptionOperandDepth;
+  if (Expr.isInvalid())
+    return Expr;
+  T.consumeClose();
+  return Actions.ActOnHerbceptionCatchReturnFailure(CatchLoc, FailsLoc, Expr.get());
 }
 
 ExprResult Parser::ParseCoyieldExpression() {
@@ -1868,10 +1944,7 @@ Parser::ParseAliasDeclarationInInitStatement(DeclaratorContext Context,
   if (!DG)
     return DG;
 
-  Diag(DeclStart, !getLangOpts().CPlusPlus23
-                      ? diag::ext_alias_in_init_statement
-                      : diag::warn_cxx20_alias_in_init_statement)
-      << SourceRange(DeclStart, DeclEnd);
+  DiagCompat(DeclStart, diag_compat::alias_in_init_statement);
 
   return DG;
 }
@@ -1914,9 +1987,7 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
 
   const auto WarnOnInit = [this, &CK] {
     if (getLangOpts().CPlusPlus)
-      Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
-                                  ? diag::warn_cxx14_compat_init_statement
-                                  : diag::ext_init_statement)
+      DiagCompat(Tok.getLocation(), diag_compat::init_statement)
           << (CK == Sema::ConditionKind::Switch);
     else
       DiagCompat(Tok.getLocation(), diag_compat::decl_statement)
@@ -2073,8 +2144,7 @@ Sema::ConditionResult Parser::ParseCondition(StmtResult *InitStmt,
 
   ExprResult InitExpr = ExprError();
   if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
-    Diag(Tok.getLocation(),
-         diag::warn_cxx98_compat_generalized_initializer_lists);
+    Diag(Tok.getLocation(), diag::compat_cxx11_generalized_initializer_lists);
     InitExpr = ParseBraceInitializer();
   } else if (CopyInitialization) {
     PreferredType.enterVariableInit(Tok.getLocation(), DeclOut);
@@ -3026,8 +3096,7 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
                                              ConstructorRParen,
                                              ConstructorArgs);
   } else if (Tok.is(tok::l_brace) && getLangOpts().CPlusPlus11) {
-    Diag(Tok.getLocation(),
-         diag::warn_cxx98_compat_generalized_initializer_lists);
+    Diag(Tok.getLocation(), diag::compat_cxx11_generalized_initializer_lists);
     Initializer = ParseBraceInitializer();
   }
   if (Initializer.isInvalid())
@@ -3236,7 +3305,7 @@ ExprResult Parser::ParseRequiresExpression() {
         // Compound requirement
         // C++ [expr.prim.req.compound]
         //     compound-requirement:
-        //         '{' expression '}' 'noexcept'[opt]
+        //         '{' expression '}' 'noexcept'[opt] 'throws'[opt]
         //             return-type-requirement[opt] ';'
         //     return-type-requirement:
         //         trailing-return-type
@@ -3259,9 +3328,12 @@ ExprResult Parser::ParseRequiresExpression() {
 
         concepts::Requirement *Req = nullptr;
         SourceLocation NoexceptLoc;
+        SourceLocation ThrowsLoc;
         TryConsumeToken(tok::kw_noexcept, NoexceptLoc);
+        TryConsumeToken(tok::kw_throws, ThrowsLoc);
         if (Tok.is(tok::semi)) {
-          Req = Actions.ActOnCompoundRequirement(Expression.get(), NoexceptLoc);
+          Req = Actions.ActOnCompoundRequirement(Expression.get(), NoexceptLoc,
+                                                 ThrowsLoc);
           if (Req)
             Requirements.push_back(Req);
           break;
@@ -3289,8 +3361,8 @@ ExprResult Parser::ParseRequiresExpression() {
         }
 
         Req = Actions.ActOnCompoundRequirement(
-            Expression.get(), NoexceptLoc, SS, takeTemplateIdAnnotation(Tok),
-            TemplateParameterDepth);
+            Expression.get(), NoexceptLoc, ThrowsLoc, SS,
+            takeTemplateIdAnnotation(Tok), TemplateParameterDepth);
         ConsumeAnnotationToken();
         if (Req)
           Requirements.push_back(Req);
@@ -3434,6 +3506,13 @@ ExprResult Parser::ParseRequiresExpression() {
         // User may have tried to put some compound requirement stuff here
         if (Tok.is(tok::kw_noexcept)) {
           Diag(Tok, diag::err_requires_expr_simple_requirement_noexcept)
+              << FixItHint::CreateInsertion(StartLoc, "{")
+              << FixItHint::CreateInsertion(Tok.getLocation(), "}");
+          SkipUntil(tok::semi, tok::r_brace, SkipUntilFlags::StopBeforeMatch);
+          break;
+        }
+        if (Tok.is(tok::kw_throws)) {
+          Diag(Tok, diag::err_requires_expr_simple_requirement_throws)
               << FixItHint::CreateInsertion(StartLoc, "{")
               << FixItHint::CreateInsertion(Tok.getLocation(), "}");
           SkipUntil(tok::semi, tok::r_brace, SkipUntilFlags::StopBeforeMatch);

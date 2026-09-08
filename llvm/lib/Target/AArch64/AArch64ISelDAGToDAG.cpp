@@ -5238,6 +5238,30 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       return;
     break;
 
+  case AArch64ISD::HERB_READ_CF: {
+    // Herbception (throws): read NZCV.C into a GPR. Copy NZCV from the call,
+    // then emit a HERB_CSET pseudo that the peephole can fold with a later
+    // CBZ/CBNZ into a direct B.cc/B.cs.
+    SDLoc dl(Node);
+    SDValue Chain = Node->getOperand(0);
+    SDValue InGlue =
+        Node->getNumOperands() > 1 ? Node->getOperand(1) : SDValue();
+    SDValue NZCV =
+        CurDAG->getCopyFromReg(Chain, dl, AArch64::NZCV, MVT::i32, InGlue);
+    unsigned Opc = Node->getValueType(0) == MVT::i64 ? AArch64::HERB_CSETXr
+                                                     : AArch64::HERB_CSETWr;
+    // HERB_CSET has no explicit operands; the NZCV use is implicit from
+    // Uses = [NZCV]. The chain/glue from CopyFromReg propagate through.
+    MachineSDNode *MI =
+        CurDAG->getMachineNode(Opc, dl, Node->getValueType(0), MVT::Other,
+                               MVT::Glue, ArrayRef<SDValue>());
+    CurDAG->ReplaceAllUsesOfValueWith(SDValue(Node, 0), SDValue(MI, 0));
+    CurDAG->ReplaceAllUsesOfValueWith(SDValue(Node, 1), NZCV.getValue(1));
+    CurDAG->ReplaceAllUsesOfValueWith(SDValue(Node, 2), NZCV.getValue(2));
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
+
   case ISD::Constant: {
     // Materialize zero constants as copies from WZR/XZR.  This allows
     // the coalescer to propagate these into other instructions.

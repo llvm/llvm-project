@@ -1561,7 +1561,8 @@ namespace {
                                   TypeSourceInfo *Declarator,
                                   SourceLocation StartLoc,
                                   SourceLocation NameLoc,
-                                  IdentifierInfo *Name);
+                                  IdentifierInfo *Name,
+                                  bool IsHerbception = false);
 
     /// Rebuild the Objective-C exception declaration and register the
     /// declaration as an instantiated local.
@@ -2102,9 +2103,11 @@ TemplateInstantiator::RebuildExceptionDecl(VarDecl *ExceptionDecl,
                                            TypeSourceInfo *Declarator,
                                            SourceLocation StartLoc,
                                            SourceLocation NameLoc,
-                                           IdentifierInfo *Name) {
+                                           IdentifierInfo *Name,
+                                           bool IsHerbception) {
   VarDecl *Var = inherited::RebuildExceptionDecl(ExceptionDecl, Declarator,
-                                                 StartLoc, NameLoc, Name);
+                                                 StartLoc, NameLoc, Name,
+                                                 IsHerbception);
   if (Var)
     getSema().CurrentInstantiationScope->InstantiatedLocal(ExceptionDecl, Var);
   return Var;
@@ -2821,10 +2824,12 @@ TemplateInstantiator::TransformExprRequirement(concepts::ExprRequirement *Req) {
   assert(TransRetReq && "All code paths leading here must set TransRetReq");
   if (Expr *E = TransExpr.dyn_cast<Expr *>())
     return RebuildExprRequirement(E, Req->isSimple(), Req->getNoexceptLoc(),
+                                  Req->getThrowsLoc(),
                                   std::move(*TransRetReq));
   return RebuildExprRequirement(
       cast<concepts::Requirement::SubstitutionDiagnostic *>(TransExpr),
-      Req->isSimple(), Req->getNoexceptLoc(), std::move(*TransRetReq));
+      Req->isSimple(), Req->getNoexceptLoc(), Req->getThrowsLoc(),
+      std::move(*TransRetReq));
 }
 
 concepts::NestedRequirement *

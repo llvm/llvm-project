@@ -2569,6 +2569,11 @@ DEF_TRAVERSE_STMT(ObjCAtCatchStmt, {
   // children() iterates over the handler block.
 })
 
+DEF_TRAVERSE_STMT(CXXCatchThrowsStmt, {
+  TRY_TO(TraverseDecl(S->getExceptionDecl()));
+  // children() iterates over the handler block.
+})
+
 DEF_TRAVERSE_STMT(DeclStmt, {
   for (auto *I : S->decls()) {
     TRY_TO(TraverseDecl(I));
@@ -2987,6 +2992,14 @@ DEF_TRAVERSE_STMT(CXXPseudoDestructorExpr, {
 
 DEF_TRAVERSE_STMT(CXXThisExpr, {})
 DEF_TRAVERSE_STMT(CXXThrowExpr, {})
+DEF_TRAVERSE_STMT(CXXErrorValueExpr, {
+  TRY_TO(TraverseStmt(S->getOperand()));
+  TRY_TO(TraverseStmt(S->getDomainCall()));
+  TRY_TO(TraverseStmt(S->getCodeCall()));
+})
+DEF_TRAVERSE_STMT(CXXCxaExceptionExpr, {})
+DEF_TRAVERSE_STMT(CXXTryExpr, { TRY_TO(TraverseStmt(S->getSubExpr())); })
+DEF_TRAVERSE_STMT(CXXCatchReturnFailureExpr, { TRY_TO(TraverseStmt(S->getSubExpr())); })
 DEF_TRAVERSE_STMT(UserDefinedLiteral, {})
 DEF_TRAVERSE_STMT(DesignatedInitExpr, {})
 DEF_TRAVERSE_STMT(DesignatedInitUpdateExpr, {})
@@ -3114,6 +3127,7 @@ DEF_TRAVERSE_STMT(UnaryOperator, {})
 DEF_TRAVERSE_STMT(BinaryOperator, {})
 DEF_TRAVERSE_STMT(CompoundAssignOperator, {})
 DEF_TRAVERSE_STMT(CXXNoexceptExpr, {})
+DEF_TRAVERSE_STMT(CXXThrowsExpr, {})
 DEF_TRAVERSE_STMT(PackExpansionExpr, {})
 DEF_TRAVERSE_STMT(SizeOfPackExpr, {})
 DEF_TRAVERSE_STMT(PackIndexingExpr, {})

@@ -1221,10 +1221,11 @@ public:
   // \p Operand is the expression in the throw statement, and can be
   // null if not present.
   CXXThrowExpr(Expr *Operand, QualType Ty, SourceLocation Loc,
-               bool IsThrownVariableInScope)
+               bool IsThrownVariableInScope, bool IsHerbception = false)
       : Expr(CXXThrowExprClass, Ty, VK_PRValue, OK_Ordinary), Operand(Operand) {
     CXXThrowExprBits.ThrowLoc = Loc;
     CXXThrowExprBits.IsThrownVariableInScope = IsThrownVariableInScope;
+    CXXThrowExprBits.IsHerbception = IsHerbception;
     setDependence(computeDependence(this));
   }
   CXXThrowExpr(EmptyShell Empty) : Expr(CXXThrowExprClass, Empty) {}
@@ -1233,6 +1234,9 @@ public:
   Expr *getSubExpr() { return cast_or_null<Expr>(Operand); }
 
   SourceLocation getThrowLoc() const { return CXXThrowExprBits.ThrowLoc; }
+
+  /// Whether this is a herbception `throw throws expr` (deterministic error).
+  bool isHerbception() const { return CXXThrowExprBits.IsHerbception; }
 
   /// Determines whether the variable thrown by this expression (if any!)
   /// is within the innermost try block.
@@ -1261,6 +1265,202 @@ public:
 
   const_child_range children() const {
     return const_child_range(&Operand, Operand ? &Operand + 1 : &Operand);
+  }
+};
+
+/// Represents the compiler-fabricated `std::error` value for a herbception
+/// `throw throws e`. Users cannot construct `std::error` (its constructors are
+/// deleted and all data members are private); only the compiler can, by going
+/// through `error_domain<T>::domain()` and `error_domain<T>::code(e)` for the
+/// operand's type T. This node wraps the operand and the two resolved member
+/// call expressions so CodeGen can emit those calls and build the two-word
+/// `{domain, code}` value.
+class CXXErrorValueExpr : public Expr {
+  friend class ASTStmtReader;
+
+  /// The value being thrown (e.g. an enum with an `error_domain<T>`
+  /// specialization).
+  Stmt *Operand;
+
+  /// `error_domain<T>::domain()` — the domain singleton lookup call.
+  Stmt *DomainCall;
+
+  /// `error_domain<T>::code(operand)` — the code lookup call.
+  Stmt *CodeCall;
+
+  /// The location of the 'throw'.
+  SourceLocation Loc;
+
+public:
+  CXXErrorValueExpr(Expr *Operand, Expr *DomainCall, Expr *CodeCall,
+                    QualType Ty, SourceLocation Loc)
+      : Expr(CXXErrorValueExprClass, Ty, VK_PRValue, OK_Ordinary),
+        Operand(Operand), DomainCall(DomainCall), CodeCall(CodeCall), Loc(Loc) {
+    setDependence(computeDependence(this));
+  }
+  CXXErrorValueExpr(EmptyShell Empty) : Expr(CXXErrorValueExprClass, Empty) {}
+
+  const Expr *getOperand() const { return cast<Expr>(Operand); }
+  Expr *getOperand() { return cast<Expr>(Operand); }
+
+  /// The `error_domain<T>::domain()` call expression.
+  const Expr *getDomainCall() const { return cast<Expr>(DomainCall); }
+  Expr *getDomainCall() { return cast<Expr>(DomainCall); }
+
+  /// The `error_domain<T>::code(operand)` call expression.
+  const Expr *getCodeCall() const { return cast<Expr>(CodeCall); }
+  Expr *getCodeCall() { return cast<Expr>(CodeCall); }
+
+  SourceLocation getThrowLoc() const { return Loc; }
+
+  SourceLocation getBeginLoc() const { return Loc; }
+  SourceLocation getEndLoc() const LLVM_READONLY { return getOperand()->getEndLoc(); }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXErrorValueExprClass;
+  }
+
+  // Iterators
+  child_range children() {
+    return child_range(&Operand, &CodeCall + 1);
+  }
+
+  const_child_range children() const {
+    return const_child_range(&Operand, &CodeCall + 1);
+  }
+};
+
+/// Represents the thrown object pointer of a legacy C++ exception being
+/// converted to a herbception error value. It is a magic expression, only
+/// valid inside the conversion block that catches a legacy exception: CodeGen
+/// lowers it to `__cxa_get_exception_ptr(getExceptionFromSlot())` and treats
+/// the result as the `code` of the fabricated `std::error` (whose domain is
+/// `error_domain<std::cxa_exception_code>`).
+class CXXCxaExceptionExpr : public Expr {
+  friend class ASTStmtReader;
+
+  /// The location of the conversion.
+  SourceLocation Loc;
+
+public:
+  CXXCxaExceptionExpr(QualType Ty, SourceLocation Loc)
+      : Expr(CXXCxaExceptionExprClass, Ty, VK_PRValue, OK_Ordinary), Loc(Loc) {}
+
+  explicit CXXCxaExceptionExpr(EmptyShell Empty)
+      : Expr(CXXCxaExceptionExprClass, Empty) {}
+
+  SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
+  SourceLocation getEndLoc() const LLVM_READONLY { return Loc; }
+
+  static bool classof(const Expr *T) {
+    return T->getStmtClass() == CXXCxaExceptionExprClass;
+  }
+
+  child_range children() { return child_range(StmtIterator(), StmtIterator()); }
+  const_child_range children() const {
+    return const_child_range(ConstStmtIterator(), ConstStmtIterator());
+  }
+};
+
+/// Represents a herbception `try(expr)` expression: evaluate \p SubExpr
+/// (which must call a `throws`/`fails{E}` function) and auto-propagate its
+/// error on failure. On success, the expression's value is the success value.
+class CXXTryExpr : public Expr {
+  friend class ASTStmtReader;
+
+  /// The subexpression being "tried".
+  Stmt *SubExpr;
+
+  /// The location of the "try".
+  SourceLocation TryLoc;
+
+  /// When auto-propagating a `fails{E}` call's error into a `throws` function
+  /// (whose implicit error type is std::error), the E error value must be
+  /// converted to std::error via `error_domain<E>::domain()` /
+  /// `error_domain<E>::code(e)`. If non-null, \p ErrorDomain is the resolved
+  /// `error_domain<E>` specialization to use for that conversion.
+  CXXRecordDecl *ErrorDomain;
+
+public:
+  /// \p Ty is the type of the success value. \p Loc is the location of the
+  /// try keyword. \p VK is the value kind of the success expression
+  /// (lvalue for T& returns, xvalue for T&& returns, prvalue otherwise).
+  CXXTryExpr(Expr *SubExpr, QualType Ty, SourceLocation Loc,
+             ExprValueKind VK = VK_PRValue, CXXRecordDecl *ErrorDomain = nullptr)
+      : Expr(CXXTryExprClass, Ty, VK, OK_Ordinary),
+        SubExpr(SubExpr), TryLoc(Loc), ErrorDomain(ErrorDomain) {
+    setDependence(computeDependence(this));
+  }
+  CXXTryExpr(EmptyShell Empty) : Expr(CXXTryExprClass, Empty) {}
+
+  const Expr *getSubExpr() const { return cast<Expr>(SubExpr); }
+  Expr *getSubExpr() { return cast<Expr>(SubExpr); }
+
+  /// The `error_domain<E>` specialization used to convert a `fails{E}` error
+  /// into std::error when propagating into a `throws` function, or null when
+  /// no conversion is needed (callee error type already matches).
+  CXXRecordDecl *getErrorDomain() const { return ErrorDomain; }
+
+  SourceLocation getTryLoc() const { return TryLoc; }
+
+  SourceLocation getBeginLoc() const { return TryLoc; }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return getSubExpr()->getEndLoc();
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXTryExprClass;
+  }
+
+  // Iterators
+  child_range children() { return child_range(&SubExpr, &SubExpr + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&SubExpr, &SubExpr + 1);
+  }
+};
+
+/// Represents a herbception `catch fails(expr)` expression: evaluate \p SubExpr
+/// (which must call a `throws`/`fails{E}` function) and produce an
+/// `either{T, E}` value with `.positive`, `.left` and `.right` fields.
+class CXXCatchReturnFailureExpr : public Expr {
+  friend class ASTStmtReader;
+
+  /// The subexpression being "caught".
+  Stmt *SubExpr;
+
+  /// The location of the "catch".
+  SourceLocation CatchLoc;
+
+public:
+  /// \p Ty is the `either{T, E}` type. \p Loc is the location of the catch
+  /// keyword.
+  CXXCatchReturnFailureExpr(Expr *SubExpr, QualType Ty, SourceLocation Loc)
+      : Expr(CXXCatchReturnFailureExprClass, Ty, VK_PRValue, OK_Ordinary),
+        SubExpr(SubExpr), CatchLoc(Loc) {
+    setDependence(computeDependence(this));
+  }
+  CXXCatchReturnFailureExpr(EmptyShell Empty) : Expr(CXXCatchReturnFailureExprClass, Empty) {}
+
+  const Expr *getSubExpr() const { return cast<Expr>(SubExpr); }
+  Expr *getSubExpr() { return cast<Expr>(SubExpr); }
+
+  SourceLocation getCatchLoc() const { return CatchLoc; }
+
+  SourceLocation getBeginLoc() const { return CatchLoc; }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return getSubExpr()->getEndLoc();
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXCatchReturnFailureExprClass;
+  }
+
+  // Iterators
+  child_range children() { return child_range(&SubExpr, &SubExpr + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&SubExpr, &SubExpr + 1);
   }
 };
 
@@ -4370,6 +4570,9 @@ public:
                   SourceLocation Keyword, SourceLocation RParen)
       : Expr(CXXNoexceptExprClass, Ty, VK_PRValue, OK_Ordinary),
         Operand(Operand), Range(Keyword, RParen) {
+    // noexcept(expr) is true only when the expression cannot fail at all
+    // (CT_Cannot). CT_Deterministic means the function may fail via the
+    // herbception error channel, so noexcept returns false.
     CXXNoexceptExprBits.Value = Val == CT_Cannot;
     setDependence(computeDependence(this, Val));
   }
@@ -4386,6 +4589,47 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CXXNoexceptExprClass;
+  }
+
+  // Iterators
+  child_range children() { return child_range(&Operand, &Operand + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&Operand, &Operand + 1);
+  }
+};
+
+/// Represents a herbception throws expression.
+///
+/// The throws expression tests whether a given expression might propagate a
+/// herbception error. Its result is a boolean constant.
+class CXXThrowsExpr : public Expr {
+  friend class ASTStmtReader;
+
+  Stmt *Operand;
+  SourceRange Range;
+
+public:
+  CXXThrowsExpr(QualType Ty, Expr *Operand, bool Val,
+                SourceLocation Keyword, SourceLocation RParen)
+      : Expr(CXXThrowsExprClass, Ty, VK_PRValue, OK_Ordinary),
+        Operand(Operand), Range(Keyword, RParen) {
+    CXXThrowsExprBits.Value = Val;
+    setDependence(computeDependence(this));
+  }
+
+  CXXThrowsExpr(EmptyShell Empty) : Expr(CXXThrowsExprClass, Empty) {}
+
+  Expr *getOperand() const { return static_cast<Expr *>(Operand); }
+
+  SourceLocation getBeginLoc() const { return Range.getBegin(); }
+  SourceLocation getEndLoc() const { return Range.getEnd(); }
+  SourceRange getSourceRange() const { return Range; }
+
+  bool getValue() const { return CXXThrowsExprBits.Value; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXThrowsExprClass;
   }
 
   // Iterators

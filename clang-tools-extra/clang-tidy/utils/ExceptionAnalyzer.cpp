@@ -560,7 +560,15 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
     ExceptionInfo Uncaught =
         throwsException(Try->getTryBlock(), Caught, CallStack);
     for (unsigned I = 0; I < Try->getNumHandlers(); ++I) {
-      const CXXCatchStmt *Catch = Try->getHandler(I);
+      const Stmt *Handler = Try->getHandler(I);
+      const auto *Catch = dyn_cast<CXXCatchStmt>(Handler);
+      if (!Catch) {
+        // A herbception 'catch throws'/'catch fails' handler does not catch
+        // traditional C++ exceptions; analyze its body in the enclosing
+        // context.
+        Results.merge(throwsException(Handler, Caught, CallStack));
+        continue;
+      }
 
       // Everything is caught through 'catch(...)'.
       if (!Catch->getExceptionDecl()) {

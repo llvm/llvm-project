@@ -10,8 +10,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CGCleanup.h"
 #include "CGDebugInfo.h"
 #include "CGOpenMPRuntime.h"
+#include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "CodeGenPGO.h"
@@ -97,6 +99,7 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   switch (S->getStmtClass()) {
   case Stmt::NoStmtClass:
   case Stmt::CXXCatchStmtClass:
+  case Stmt::CXXCatchThrowsStmtClass:
   case Stmt::SEHExceptStmtClass:
   case Stmt::SEHFinallyStmtClass:
   case Stmt::MSDependentExistsStmtClass:
@@ -1699,6 +1702,14 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
       if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::Indirect) {
         EmitStoreOfScalar(Ret, MakeAddrLValue(ReturnValue, RV->getType()),
                           /*isInit*/ true);
+      } else if (CurFnInfo->hasThrowsReturn()) {
+        // Herbception (throws): the payload slot is sized to hold the larger
+        // of the value and the error type, so store the value through a
+        // bitcast of the slot address to the value's type.
+        llvm::Type *RetTy2 = Ret->getType();
+        auto *I = Builder.CreateStore(
+            Ret, ReturnValue.withElementType(RetTy2));
+        addInstToCurrentSourceAtom(I, I->getValueOperand());
       } else {
         auto *I = Builder.CreateStore(Ret, ReturnValue);
         addInstToCurrentSourceAtom(I, I->getValueOperand());
@@ -1726,6 +1737,562 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
 
   cleanupScope.ForceCleanup();
   EmitBranchThroughCleanup(ReturnBlock);
+}
+
+void CodeGenFunction::EmitHerbceptionThrow(const Expr *ErrorValue,
+                                           SourceLocation Loc) {
+  const Expr *EV = ErrorValue;
+  if (const auto *EWC = dyn_cast_or_null<ExprWithCleanups>(EV))
+    EV = EWC->getSubExpr();
+
+  // A `throw throws` is routed to the nearest active `try { } catch throws`
+  // handler when one encloses it (like a traditional throw is caught by its
+  // enclosing handler), even in a plain (non-'throws') function.
+  if (!HerbceptionCatchScopes.empty()) {
+    const HerbceptionCatchScope &Scope = HerbceptionCatchScopes.back();
+    RunCleanupsScope ThrowScope(*this);
+    if (EV) {
+      // `throw throws expr` with an explicit operand (should be rejected
+      // in Sema, but handle it here for safety): evaluate the error value
+      // into the handler's error slot.
+      EmitAnyExprToMem(EV, Scope.ErrorSlot, Qualifiers(),
+                       /*IsInitializer=*/false);
+    }
+    // Bare `throw throws` rethrow: the error is already in the handler's
+    // error slot (from the original catch), so just run cleanups and branch
+    // to the handler.
+    ThrowScope.ForceCleanup();
+    EmitBranchThroughCleanup(Scope.Handler);
+    return;
+  }
+
+  if (!CurFnInfo->hasThrowsReturn()) {
+    // A `throw throws` in a plain function with no enclosing catch-throws
+    // handler has nowhere to go.
+    CGM.getDiags().Report(Loc, diag::err_throw_throws_no_catch_handler);
+    return;
+  }
+
+  assert(CurFnInfo && CurFnInfo->hasThrowsReturn() &&
+         "herbception throw outside a throws function");
+  assert(ReturnValue.isValid() && "throws function has no return value slot");
+
+  // Evaluate the error value into the return slot, then take the error path:
+  // run the scope cleanups and branch to the return block with the
+  // discriminant set to true.
+  RunCleanupsScope ThrowScope(*this);
+
+  if (FnRetTy->isVoidType()) {
+    // A void throws function returns {E, i1}; the payload slot holds the
+    // error value (std::error / E). Store the error expression into it.
+    EmitAnyExprToMem(EV, ReturnValue, Qualifiers(), /*IsInitializer=*/false);
+  } else if (getEvaluationKind(EV->getType()) == TEK_Scalar) {
+    llvm::Value *V = EmitScalarExpr(EV);
+    // Coerce the error value to the return slot type. The {T, i1} payload
+    // slot is sized for the return type, so truncate/bitcast to avoid a
+    // wider store corrupting adjacent stack slots.
+    llvm::Type *SlotTy = ReturnValue.getElementType();
+    if (V->getType() != SlotTy) {
+      if (V->getType()->isIntegerTy() && SlotTy->isIntegerTy()) {
+        V = Builder.CreateIntCast(V, SlotTy, false);
+      } else if (V->getType()->isPointerTy() && SlotTy->isIntegerTy()) {
+        V = Builder.CreatePtrToInt(V, SlotTy);
+      } else if (V->getType()->isIntegerTy() && SlotTy->isPointerTy()) {
+        V = Builder.CreateIntToPtr(V, SlotTy);
+      } else if (SlotTy->isStructTy() || SlotTy->isArrayTy()) {
+        // Scalar error value stored into an aggregate slot (e.g. a struct
+        // return type): store through a bitcast of the address to the value
+        // type so the scalar occupies the first bytes of the slot, truncated
+        // to the slot size so the store cannot overflow into adjacent slots.
+        unsigned SlotBits = CGM.getDataLayout().getTypeAllocSize(SlotTy) * 8;
+        llvm::Type *IntTy = Builder.getIntNTy(SlotBits);
+        llvm::Value *Scalar = V;
+        if (!Scalar->getType()->isIntegerTy())
+          Scalar = Builder.CreatePtrToInt(
+              Scalar, Builder.getInt64Ty());
+        if (Scalar->getType()->getPrimitiveSizeInBits() > SlotBits)
+          Scalar = Builder.CreateTrunc(Scalar, IntTy);
+        llvm::Value *P = Builder.CreateBitCast(
+            ReturnValue.emitRawPointer(*this), Builder.getPtrTy());
+        auto *I = Builder.CreateAlignedStore(
+            Scalar, P, ReturnValue.getAlignment());
+        addInstToCurrentSourceAtom(I, I->getValueOperand());
+        V = nullptr;
+      } else {
+        V = Builder.CreateBitCast(V, SlotTy);
+      }
+    }
+    if (V && V->getType() == SlotTy) {
+      auto *I = Builder.CreateStore(V, ReturnValue);
+      addInstToCurrentSourceAtom(I, I->getValueOperand());
+    }
+  } else if (getEvaluationKind(EV->getType()) == TEK_Complex) {
+    EmitComplexExprIntoLValue(EV, MakeAddrLValue(ReturnValue, EV->getType()),
+                              /*isInit*/ true);
+  } else {
+    EmitAggExpr(EV,
+                AggValueSlot::forAddr(ReturnValue, Qualifiers(),
+                                      AggValueSlot::IsDestructed,
+                                      AggValueSlot::DoesNotNeedGCBarriers,
+                                      AggValueSlot::IsNotAliased,
+                                      getOverlapForReturnValue()));
+  }
+
+  Builder.CreateStore(Builder.getTrue(), HerbceptionDiscriminant);
+  ThrowScope.ForceCleanup();
+  EmitBranchThroughCleanup(ReturnBlock);
+}
+
+/// Emit a direct call to a static member function \p MD with the given
+/// argument values, returning the scalar result.
+static llvm::Value *EmitStaticMemberCall(CodeGenFunction &CGF,
+                                         const CXXMethodDecl *MD,
+                                         ArrayRef<llvm::Value *> ArgVals,
+                                         SourceLocation Loc) {
+  GlobalDecl GD(const_cast<CXXMethodDecl *>(MD));
+  llvm::Constant *FnPtr =
+      CGF.CGM.GetAddrOfFunction(GD, CGF.getTypes().GetFunctionType(GD));
+  CGCallee Callee = CGCallee::forDirect(FnPtr, GD);
+
+  CallArgList Args;
+  for (unsigned I = 0, E = ArgVals.size(); I != E; ++I)
+    Args.add(RValue::get(ArgVals[I]), MD->getParamDecl(I)->getType());
+  RValue RV = CGF.EmitCall(CGF.getTypes().arrangeGlobalDeclaration(GD), Callee,
+                           ReturnValueSlot(), Args,
+                           /*CallOrInvoke=*/nullptr, /*IsMustTail=*/false, Loc);
+  assert(RV.isScalar() && "error_domain member call must return a scalar");
+  return RV.getScalarVal();
+}
+
+llvm::Value *
+CodeGenFunction::EmitFailsErrorToStdError(const CXXTryExpr *E,
+                                          llvm::Value *ErrVal) {
+  CXXRecordDecl *Domain = E->getErrorDomain();
+  if (!Domain)
+    return nullptr;
+
+  // error_domain<E>::domain() — the domain singleton pointer. If the
+  // specialization declares a `domain_alias_type` (aliasing another
+  // error_domain<U> sharing the same category), use the alias's domain().
+  auto FindDomain = [](CXXRecordDecl *RD) {
+    for (const Decl *D : RD->decls()) {
+      const auto *MD = dyn_cast<CXXMethodDecl>(D);
+      if (!MD || !MD->isStatic())
+        continue;
+      if (MD->getDeclName().isIdentifier() && MD->getName() == "domain")
+        return const_cast<CXXMethodDecl *>(MD);
+    }
+    return static_cast<CXXMethodDecl *>(nullptr);
+  };
+
+  CXXMethodDecl *DomainFn = FindDomain(Domain);
+  CXXMethodDecl *CodeFn = nullptr;
+  for (const Decl *D : Domain->decls()) {
+    const auto *MD = dyn_cast<CXXMethodDecl>(D);
+    if (!MD || !MD->isStatic())
+      continue;
+    if (MD->getDeclName().isIdentifier() && MD->getName() == "code")
+      CodeFn = const_cast<CXXMethodDecl *>(MD);
+  }
+  if (!DomainFn) {
+    // Follow the alias to error_domain<U>::domain(). The alias is declared as
+    // a member type `domain_alias_type`; resolve it via qualified lookup on
+    // the record.
+    ASTContext &Ctx = getContext();
+    DeclarationName DN = &Ctx.Idents.get("domain_alias_type");
+    DeclContext::lookup_result Lookup = Domain->lookup(DN);
+    if (!Lookup.empty()) {
+      if (auto *TD = dyn_cast<TypeDecl>(Lookup.front())) {
+        if (CXXRecordDecl *AliasDomain =
+                Ctx.getTypeDeclType(TD)->getAsCXXRecordDecl())
+          DomainFn = FindDomain(AliasDomain);
+      }
+    }
+  }
+  if (!DomainFn || !CodeFn)
+    return nullptr;
+
+  SourceLocation Loc = E->getBeginLoc();
+  llvm::Value *DomainVal =
+      EmitStaticMemberCall(*this, DomainFn, {}, Loc);
+  llvm::Value *CodeVal =
+      EmitStaticMemberCall(*this, CodeFn, {ErrVal}, Loc);
+
+  llvm::Type *ErrTy = CurFnInfo->getHerbceptionErrorType();
+  llvm::Value *V = llvm::UndefValue::get(ErrTy);
+  V = Builder.CreateInsertValue(V, DomainVal, 0);
+  V = Builder.CreateInsertValue(V, CodeVal, 1);
+  return V;
+}
+
+RValue CodeGenFunction::EmitErrorValueExpr(const CXXErrorValueExpr *E) {
+  // Fabricate the {domain, code} two-word std::error value:
+  //   %domain = call error_domain<T>::domain()
+  //   %code   = call error_domain<T>::code(%operand)
+  // Users cannot construct std::error; only this compiler path may build it.
+  llvm::Value *Domain = EmitScalarExpr(E->getDomainCall());
+  llvm::Value *Code = EmitScalarExpr(E->getCodeCall());
+
+  llvm::Type *ErrTy = ConvertType(E->getType());
+  if (!ErrTy->isStructTy())
+    ErrTy = CurFnInfo->getHerbceptionErrorType();
+
+  // Coerce the fabricated domain/code values to the struct field types: the
+  // code() call returns size_t, but the std::error code field may be a
+  // differently-sized integer on some targets (e.g. unsigned long on MSVC).
+  llvm::Value *V = llvm::UndefValue::get(ErrTy);
+  llvm::Type *DomainFieldTy = ErrTy->getStructElementType(0);
+  llvm::Type *CodeFieldTy = ErrTy->getStructElementType(1);
+  if (Domain->getType() != DomainFieldTy)
+    Domain = Builder.CreateBitCast(Domain, DomainFieldTy);
+  if (Code->getType() != CodeFieldTy)
+    Code = Builder.CreateIntCast(Code, CodeFieldTy, /*isSigned=*/false);
+  V = Builder.CreateInsertValue(V, Domain, 0);
+  V = Builder.CreateInsertValue(V, Code, 1);
+
+  Address Addr = CreateDefaultAlignTempAlloca(ErrTy, "herb.error");
+  auto *I = Builder.CreateStore(V, Addr);
+  addInstToCurrentSourceAtom(I, I->getValueOperand());
+  return RValue::getAggregate(Addr);
+}
+
+llvm::Value *
+CodeGenFunction::EmitCxaExceptionPtr(const CXXCxaExceptionExpr *E) {
+  // The thrown object pointer of the currently-caught legacy C++ exception,
+  // used as the `code` of the fabricated std::error. This is personality-
+  // dependent:
+  //   - Itanium / SjLj: __cxa_get_exception_ptr(exn) returns the adjusted
+  //     thrown object pointer (exn.slot is populated by the landing pad).
+  //   - MSVC (funclet pads): the exception pointer is obtained from the
+  //     catchpad token via llvm.eh.exceptionpointer.
+  //   - Wasm: wasm.get.exception at the shared catch.start already stored the
+  //     thrown object pointer in exn.slot, so it is used directly.
+  llvm::Value *Obj = nullptr;
+  const EHPersonality &Personality = EHPersonality::get(*this);
+  if (Personality.isMSVCXXPersonality()) {
+    llvm::Function *GetExnFn =
+        CGM.getIntrinsic(llvm::Intrinsic::eh_exceptionpointer, Int8PtrTy);
+    assert(CurrentFuncletPad && "legacy conversion outside a funclet catchpad");
+    Obj = Builder.CreateCall(GetExnFn, CurrentFuncletPad);
+  } else if (Personality.isWasmPersonality()) {
+    Obj = getExceptionFromSlot();
+  } else {
+    llvm::FunctionCallee Fn = CGM.CreateRuntimeFunction(
+        llvm::FunctionType::get(Int8PtrTy, Int8PtrTy, /*isVarArg=*/false),
+        "__cxa_get_exception_ptr");
+    Obj = EmitNounwindRuntimeCall(Fn, getExceptionFromSlot());
+  }
+  // The code slot is size_t, so the pointer is returned as its integer
+  // representation.
+  return Builder.CreatePtrToInt(Obj, ConvertType(E->getType()));
+}
+
+RValue CodeGenFunction::EmitHerbceptionTry(const CXXTryExpr *E) {
+  assert(CurFnInfo && CurFnInfo->hasThrowsReturn() &&
+         "herbception try outside a throws function");
+
+  const Expr *Sub = E->getSubExpr()->IgnoreParenImpCasts();
+  const CallExpr *Call = cast<CallExpr>(Sub);
+  QualType CallTy = Call->getType();
+
+  // Emit the call. It returns {T, i1}; capture the raw call so we can read
+  // both the success value and the discriminant. Suppress routing to an
+  // enclosing herbception catch scope: this expression handles the
+  // discriminant itself.
+  llvm::CallBase *CallOrInvoke = nullptr;
+  {
+    SaveAndRestore<bool> SaveInOperand(InHerbceptionOperand, true);
+    EmitCallExpr(Call, ReturnValueSlot(), &CallOrInvoke);
+  }
+  assert(CallOrInvoke && "throws call did not produce a call instruction");
+  assert(isa<llvm::StructType>(CallOrInvoke->getType()) &&
+         CallOrInvoke->getType()->getStructNumElements() == 2 &&
+         "throws call must return {T, i1}");
+
+  llvm::Value *Success = Builder.CreateExtractValue(CallOrInvoke, 0);
+  llvm::Value *Disc = Builder.CreateExtractValue(CallOrInvoke, 1);
+
+  // The payload slot is sized to hold the larger of the callee's success type
+  // and its error type (a union). On success it holds the value; on error it
+  // holds the error. When the payload type is wider than the success type, the
+  // success value occupies the low bytes, so reinterpreting it requires a
+  // trip through memory rather than a value bitcast.
+  llvm::Type *PayloadTy = Success->getType();
+
+  llvm::BasicBlock *OkBB = createBasicBlock("try.ok");
+  llvm::BasicBlock *ErrBB = createBasicBlock("try.err");
+  Builder.CreateCondBr(Disc, ErrBB, OkBB);
+
+  // Error path. When an enclosing `try { } catch throws(E e) { }` block is
+  // active, the auto-propagated error is intercepted by that handler: store
+  // the payload into the handler's error slot and branch through the try
+  // block's cleanups to the handler (mirroring the bare-call routing in
+  // EmitCall). Otherwise auto-propagate: store the error value, set the
+  // discriminant slot to true, run the scope cleanups, and return.
+  //
+  // The success value's type and the return slot's type may share the
+  // same machine layout but be different LLVM types (e.g. one is a named
+  // struct and the other uses opaque ptr). A value bitcast between such
+  // types is invalid IR under opaque pointers, so coerce through memory
+  // instead.
+  //
+  // The slot's first element may be wider than the success value (e.g.
+  // for reference returns the success is a single pointer but the slot
+  // is sized to hold the full error). In that case we store the success
+  // value at the slot's address and zero the trailing bytes.
+  auto CoerceToSlot = [this](llvm::Value *V, Address Slot) -> llvm::Value * {
+    llvm::Type *SlotElTy = Slot.getElementType();
+    if (V->getType() == SlotElTy)
+      return V;
+    unsigned SrcSize =
+        CGM.getDataLayout().getTypeAllocSize(V->getType());
+    unsigned DstSize = CGM.getDataLayout().getTypeAllocSize(SlotElTy);
+    if (SrcSize == DstSize) {
+      // Same size, different types (e.g. named vs opaque struct):
+      // round-trip through a temp of the source type.
+      Address Tmp =
+          CreateDefaultAlignTempAlloca(V->getType(), "herb.coerce");
+      auto *SI = Builder.CreateStore(V, Tmp);
+      addInstToCurrentSourceAtom(SI, SI->getValueOperand());
+      return Builder.CreateLoad(Tmp.withElementType(SlotElTy));
+    }
+    // Different sizes: store the source value at the slot's address and
+    // zero the trailing bytes so the wider slot carries a well-defined
+    // payload (callers may inspect the unused bytes through a different
+    // type when the discriminant changes meaning).
+    Builder.CreateStore(V, Slot.withElementType(V->getType()));
+    if (DstSize > SrcSize) {
+      // Zero the trailing bytes with memset.
+      llvm::Type *I8 = llvm::Type::getInt8Ty(CGM.getLLVMContext());
+      Address SlotAsI8 = Slot.withElementType(I8);
+      Address Tail =
+          Builder.CreateConstInBoundsGEP(SlotAsI8, SrcSize, "herb.coerce.tail");
+      Builder.CreateMemSet(
+          Tail, llvm::ConstantInt::get(I8, 0),
+          llvm::ConstantInt::get(llvm::Type::getInt64Ty(CGM.getLLVMContext()),
+                                 DstSize - SrcSize),
+          false);
+    }
+    return Builder.CreateLoad(Slot);
+  };
+
+  EmitBlock(ErrBB);
+  {
+    RunCleanupsScope CleanupScope(*this);
+
+    // If this is a `fails{E}` call being auto-propagated into a `throws`
+    // function, the E error payload must first be converted to std::error via
+    // error_domain<E>::domain() and error_domain<E>::code(e).
+    if (E->getErrorDomain()) {
+      llvm::Value *StdErr = EmitFailsErrorToStdError(E, Success);
+      if (StdErr) {
+        llvm::Value *Coerced = CoerceToSlot(StdErr, ReturnValue);
+        auto *I = Builder.CreateStore(Coerced, ReturnValue);
+        addInstToCurrentSourceAtom(I, I->getValueOperand());
+      }
+    } else if (FnRetTy->isVoidType()) {
+      // A void throws function's return slot holds the error value
+      // (std::error / E); store the payload into it on the error path.
+      llvm::Value *Coerced = CoerceToSlot(Success, ReturnValue);
+      auto *I = Builder.CreateStore(Coerced, ReturnValue);
+      addInstToCurrentSourceAtom(I, I->getValueOperand());
+    } else if (getEvaluationKind(CallTy) == TEK_Scalar) {
+      auto *I = Builder.CreateStore(Success, ReturnValue);
+      addInstToCurrentSourceAtom(I, I->getValueOperand());
+    } else if (getEvaluationKind(CallTy) == TEK_Complex) {
+      EmitComplexExprIntoLValue(Call, MakeAddrLValue(ReturnValue, CallTy),
+                                /*isInit*/ true);
+    } else {
+      // Aggregate success value: the {T, i1} payload already holds it, so
+      // store it into the return slot instead of re-calling.
+      llvm::Value *Coerced = CoerceToSlot(Success, ReturnValue);
+      auto *I = Builder.CreateStore(Coerced, ReturnValue);
+      addInstToCurrentSourceAtom(I, I->getValueOperand());
+    }
+    Builder.CreateStore(Builder.getTrue(), HerbceptionDiscriminant);
+
+    if (!HerbceptionCatchScopes.empty()) {
+      const HerbceptionCatchScope &Scope = HerbceptionCatchScopes.back();
+      llvm::Value *Coerced = Success;
+      if (Coerced->getType() != Scope.ErrorSlot.getElementType()) {
+        // The payload may be a different (but same-layout) type than the
+        // handler's exception variable (e.g. a literal vs a named struct), so
+        // coerce through memory rather than a value bitcast.
+        Address PayloadAddr =
+            CreateDefaultAlignTempAlloca(Coerced->getType(), "herb.payload");
+        auto *PI = Builder.CreateStore(Coerced, PayloadAddr);
+        addInstToCurrentSourceAtom(PI, PI->getValueOperand());
+        Coerced = Builder.CreateLoad(
+            PayloadAddr.withElementType(Scope.ErrorSlot.getElementType()));
+      }
+      auto *I = Builder.CreateStore(Coerced, Scope.ErrorSlot);
+      addInstToCurrentSourceAtom(I, I->getValueOperand());
+      CleanupScope.ForceCleanup();
+      EmitBranchThroughCleanup(Scope.Handler);
+    } else {
+      CleanupScope.ForceCleanup();
+      EmitBranchThroughCleanup(ReturnBlock);
+    }
+  }
+
+  // Success path: the try expression's value is the success value.
+  EmitBlock(OkBB);
+
+  // Define the forwarded payload on the success path as well: the error path
+  // stores the payload into the return slot, so mirror it here. Otherwise
+  // SROA promotes the return slot into a select with an undef arm, which
+  // blocks tail calls and bloats the plain "throws-call-as-statement"
+  // forwarding idiom.
+  {
+    llvm::Value *Coerced = CoerceToSlot(Success, ReturnValue);
+    auto *I = Builder.CreateStore(Coerced, ReturnValue);
+    addInstToCurrentSourceAtom(I, I->getValueOperand());
+  }
+
+  // A statement-level call has no value to materialize.
+  if (CallTy->isVoidType())
+    return RValue::getIgnored();
+
+  if (getEvaluationKind(CallTy) == TEK_Scalar) {
+    if (PayloadTy == ConvertType(CallTy))
+      return RValue::get(Success);
+    // The payload is wider than the scalar success value; reinterpret it
+    // through memory, reading the low bytes as the value type.
+    Address PayloadAddr =
+        CreateDefaultAlignTempAlloca(PayloadTy, "try.payload");
+    auto *I = Builder.CreateStore(Success, PayloadAddr);
+    addInstToCurrentSourceAtom(I, I->getValueOperand());
+    llvm::Value *V = Builder.CreateLoad(
+        PayloadAddr.withElementType(ConvertType(CallTy)));
+    return RValue::get(V);
+  }
+  if (getEvaluationKind(CallTy) == TEK_Complex)
+    return RValue::getComplex(std::make_pair(Success, Disc));
+  {
+    // Aggregate: materialize the payload into a temp and return it as an
+    // aggregate RValue. The payload may be wider than the aggregate success
+    // type, so go through a payload-typed temp and reinterpret the address.
+    Address PayloadAddr =
+        CreateDefaultAlignTempAlloca(PayloadTy, "try.payload");
+    auto *I = Builder.CreateStore(Success, PayloadAddr);
+    addInstToCurrentSourceAtom(I, I->getValueOperand());
+    llvm::Type *AggTy = ConvertType(CallTy);
+    Address Addr =
+        AggTy == PayloadTy ? PayloadAddr : PayloadAddr.withElementType(AggTy);
+    return RValue::getAggregate(Addr);
+  }
+}
+
+RValue CodeGenFunction::EmitHerbceptionCatchReturnFailure(const CXXCatchReturnFailureExpr *E) {
+  const Expr *Sub = E->getSubExpr()->IgnoreParenImpCasts();
+  const CallExpr *Call = cast<CallExpr>(Sub);
+
+  // Emit the call. It returns {T, i1} (value-or-error, discriminant).
+  // Suppress routing to an enclosing herbception catch scope: this expression
+  // handles the discriminant itself.
+  llvm::CallBase *CallOrInvoke = nullptr;
+  {
+    SaveAndRestore<bool> SaveInOperand(InHerbceptionOperand, true);
+    EmitCallExpr(Call, ReturnValueSlot(), &CallOrInvoke);
+  }
+  assert(CallOrInvoke && "throws call did not produce a call instruction");
+  assert(isa<llvm::StructType>(CallOrInvoke->getType()) &&
+         CallOrInvoke->getType()->getStructNumElements() == 2 &&
+         "throws call must return {T, i1}");
+
+  llvm::Value *Payload = Builder.CreateExtractValue(CallOrInvoke, 0);
+  llvm::Value *Disc = Builder.CreateExtractValue(CallOrInvoke, 1);
+
+  // Build the catch-fails value. C++: either{T, E} with .positive/.left/.right;
+  // C (N2289): struct { union { T value; E error; }; bool failed; }.
+  QualType EitherTy = E->getType();
+  const RecordDecl *RD = EitherTy->getAsRecordDecl();
+  assert(RD && "either type must be a record");
+
+  // Allocate a temp for the result value and initialize each field via its LLVM
+  // field number. This is robust to empty (zero-size) field types, which would
+  // be elided from the IR struct type.
+  const CGRecordLayout &RL = getTypes().getCGRecordLayout(RD);
+  Address Addr = CreateMemTempWithoutCast(EitherTy, "herb.catch");
+
+  // Find the (outer field, inner field) pair for a member named \p Name.
+  // For a plain field, both are the same FieldDecl. For a member reached
+  // through the anonymous union, outer is the anonymous-union FieldDecl and
+  // inner is the union sub-field.
+  auto FindField =
+      [&](StringRef Name) -> std::pair<const FieldDecl *, const FieldDecl *> {
+    for (const FieldDecl *F : RD->fields()) {
+      if (F->getName() == Name)
+        return {F, F};
+      if (F->isAnonymousStructOrUnion()) {
+        if (const auto *FR = F->getType()->getAsRecordDecl())
+          for (const FieldDecl *Sub : FR->fields())
+            if (Sub->getName() == Name)
+              return {F, Sub};
+      }
+    }
+    return {nullptr, nullptr};
+  };
+
+  // Store \p V into the field found by \p FindField, descending through an
+  // anonymous union if present.
+  auto StoreField = [&](StringRef Name, llvm::Value *V) {
+    auto [Outer, Inner] = FindField(Name);
+    if (!Inner)
+      return;
+    const FieldDecl *F = Inner;
+    const CGRecordLayout *TargetRL = &RL;
+    Address TargetAddr = Address::invalid();
+    if (Outer != Inner) {
+      // The field lives in an anonymous union: GEP to the union member first,
+      // then use the union's own record layout for the sub-field.
+      if (!RL.containsFieldDecl(Outer))
+        return;
+      Address UnionAddr =
+          Builder.CreateStructGEP(Addr, RL.getLLVMFieldNo(Outer));
+      const RecordDecl *UR = Outer->getType()->getAsRecordDecl();
+      const CGRecordLayout &URL = getTypes().getCGRecordLayout(UR);
+      if (!URL.containsFieldDecl(F))
+        return;
+      TargetAddr = Builder.CreateStructGEP(UnionAddr, URL.getLLVMFieldNo(F));
+      TargetRL = &URL;
+    } else {
+      if (!RL.containsFieldDecl(F))
+        return;
+      TargetAddr = Builder.CreateStructGEP(Addr, RL.getLLVMFieldNo(F));
+    }
+
+    llvm::Type *FieldIRTy = TargetRL->getLLVMType()->getStructElementType(
+        TargetRL->getLLVMFieldNo(F));
+    if (FieldIRTy == V->getType()) {
+      Builder.CreateStore(V, TargetAddr);
+    } else if (FieldIRTy->isIntegerTy() && V->getType()->isIntegerTy()) {
+      auto *I = Builder.CreateStore(
+          Builder.CreateIntCast(V, FieldIRTy, false), TargetAddr);
+      addInstToCurrentSourceAtom(I, I->getValueOperand());
+    } else {
+      // The payload may be wider than the field (e.g. the error type
+      // std::error is wider than an int field); reinterpret it through memory,
+      // reading the low bytes as the field type.
+      Address PayloadAddr =
+          CreateDefaultAlignTempAlloca(V->getType(), "herb.payload");
+      auto *SI = Builder.CreateStore(V, PayloadAddr);
+      addInstToCurrentSourceAtom(SI, SI->getValueOperand());
+      llvm::Value *Coerced =
+          Builder.CreateLoad(PayloadAddr.withElementType(FieldIRTy));
+      auto *I = Builder.CreateStore(Coerced, TargetAddr);
+      addInstToCurrentSourceAtom(I, I->getValueOperand());
+    }
+  };
+
+  // N2289 form: .failed = disc, and the payload is stored into both union
+  // arms (they share storage, so only one is observable; storing both keeps
+  // the IR simple and layout-agnostic).
+  StoreField("failed", Disc);
+  StoreField("value", Payload);
+  StoreField("error", Payload);
+
+  return RValue::getAggregate(Addr);
 }
 
 void CodeGenFunction::EmitDeclStmt(const DeclStmt &S) {

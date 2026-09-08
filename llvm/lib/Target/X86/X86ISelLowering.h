@@ -686,6 +686,10 @@ namespace llvm {
 
     bool supportSwiftError() const override;
 
+    /// x86-64/x86-32 return the throws (herbception) discriminant in the
+    /// carry flag (CF).
+    bool supportThrowsCC() const override { return true; }
+
     bool supportKCFIBundles() const override { return true; }
 
     MachineInstr *EmitKCFICheck(MachineBasicBlock &MBB,
@@ -761,7 +765,8 @@ namespace llvm {
                             const SmallVectorImpl<ISD::InputArg> &Ins,
                             const SDLoc &dl, SelectionDAG &DAG,
                             SmallVectorImpl<SDValue> &InVals,
-                            uint32_t *RegMask) const;
+                            uint32_t *RegMask,
+                            Register ThrowsDiscriminantReg = 0) const;
     SDValue LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
                              const SmallVectorImpl<ISD::InputArg> &ArgInfo,
                              const SDLoc &dl, SelectionDAG &DAG,

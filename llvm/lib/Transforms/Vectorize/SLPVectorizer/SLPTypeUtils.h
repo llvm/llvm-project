@@ -14,7 +14,11 @@
 #ifndef LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPTYPEUTILS_H
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPTYPEUTILS_H
 
+#include <limits>
+
 namespace llvm {
+class FixedVectorType;
+class TargetTransformInfo;
 class Type;
 class Value;
 } // namespace llvm
@@ -41,6 +45,45 @@ Type *getValueType(Value *V, bool ReVec, bool LookThroughCmp = false);
 
 /// \returns the vector type of ScalarTy based on vectorization factor.
 Type *getWidenedType(Type *ScalarTy, unsigned VF);
+
+/// Returns the number of elements of the given type \p Ty, not less than \p Sz,
+/// which forms type, which splits by \p TTI into whole vector types during
+/// legalization.
+unsigned getFullVectorNumberOfElements(const TargetTransformInfo &TTI, Type *Ty,
+                                       unsigned Sz, bool ReVec);
+
+/// Returns the number of elements of the given type \p Ty, not greater than \p
+/// Sz, which forms type, which splits by \p TTI into whole vector types during
+/// legalization.
+unsigned getFloorFullVectorNumberOfElements(const TargetTransformInfo &TTI,
+                                            Type *Ty, unsigned Sz, bool ReVec);
+
+/// For a non-power-of-2 \p NumElts-wide integer div/rem \p Opcode, returns the
+/// padded full-register vector type if padding is structurally possible, or
+/// nullptr if the vector already fills a register or the opcode is not
+/// div/rem. Does not check profitability.
+FixedVectorType *getMaskedDivRemType(const TargetTransformInfo &TTI,
+                                     unsigned Opcode, Type *ScalarTy,
+                                     unsigned NumElts, bool ReVec);
+
+/// Returns true if widened type of \p Ty elements with size \p Sz represents
+/// full vector type, i.e. adding extra element results in extra parts upon type
+/// legalization.
+bool hasFullVectorsOrPowerOf2(const TargetTransformInfo &TTI, Type *Ty,
+                              unsigned Sz, bool ReVec);
+
+/// True when \p AllowNonPowerOf2 is set and \p NumElts is a supported
+/// non-power-of-2 width: \p NumElts + 1 must be a power of two (e.g. 3 or 7
+/// lanes, i.e. almost a full power-of-2 register).
+bool isAllowedNonPowerOf2VF(unsigned NumElts, bool AllowNonPowerOf2);
+
+/// Returns number of parts, the type \p VecTy will be split at the codegen
+/// phase. If the type is going to be scalarized or does not use whole
+/// registers, returns 1.
+unsigned
+getNumberOfParts(const TargetTransformInfo &TTI, Type *VecTy, Type *ScalarTy,
+                 bool ReVec,
+                 unsigned Limit = std::numeric_limits<unsigned>::max());
 
 } // namespace llvm::slpvectorizer
 

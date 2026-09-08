@@ -361,6 +361,12 @@ void StmtProfiler::VisitCXXCatchStmt(const CXXCatchStmt *S) {
   VisitType(S->getCaughtType());
 }
 
+void StmtProfiler::VisitCXXCatchThrowsStmt(const CXXCatchThrowsStmt *S) {
+  VisitStmt(S);
+  if (VarDecl *VD = S->getExceptionDecl())
+    VisitType(VD->getType());
+}
+
 void StmtProfiler::VisitCXXTryStmt(const CXXTryStmt *S) {
   VisitStmt(S);
 }
@@ -1486,10 +1492,13 @@ void StmtProfiler::VisitIntegerLiteral(const IntegerLiteral *S) {
   if (Canonical)
     T = T.getCanonicalType();
   ID.AddInteger(T->getTypeClass());
-  if (auto BitIntT = T->getAs<BitIntType>())
-    BitIntT->Profile(ID);
-  else
+  if (auto BitIntT = T->getAs<BitIntType>()) {
+    auto [IsUnsigned, NumBits] = BitIntT->getKey();
+    ID.AddInteger(IsUnsigned);
+    ID.AddInteger(NumBits);
+  } else {
     ID.AddInteger(T->castAs<BuiltinType>()->getKind());
+  }
 }
 
 void StmtProfiler::VisitFixedPointLiteral(const FixedPointLiteral *S) {
@@ -2171,6 +2180,27 @@ void StmtProfiler::VisitCXXThrowExpr(const CXXThrowExpr *S) {
   VisitExpr(S);
 }
 
+void StmtProfiler::VisitCXXErrorValueExpr(const CXXErrorValueExpr *S) {
+  VisitExpr(S);
+  VisitStmt(S->getOperand());
+  VisitStmt(S->getDomainCall());
+  VisitStmt(S->getCodeCall());
+}
+
+void StmtProfiler::VisitCXXCxaExceptionExpr(const CXXCxaExceptionExpr *S) {
+  VisitExpr(S);
+}
+
+void StmtProfiler::VisitCXXTryExpr(const CXXTryExpr *S) {
+  VisitExpr(S);
+  VisitStmt(S->getSubExpr());
+}
+
+void StmtProfiler::VisitCXXCatchReturnFailureExpr(const CXXCatchReturnFailureExpr *S) {
+  VisitExpr(S);
+  VisitStmt(S->getSubExpr());
+}
+
 void StmtProfiler::VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *S) {
   VisitExpr(S);
   VisitDecl(S->getParam());
@@ -2396,6 +2426,10 @@ void StmtProfiler::VisitUnresolvedMemberExpr(const UnresolvedMemberExpr *S) {
 }
 
 void StmtProfiler::VisitCXXNoexceptExpr(const CXXNoexceptExpr *S) {
+  VisitExpr(S);
+}
+
+void StmtProfiler::VisitCXXThrowsExpr(const CXXThrowsExpr *S) {
   VisitExpr(S);
 }
 

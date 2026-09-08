@@ -1830,8 +1830,15 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
   unsigned NumValues = Types.size();
   if (NumValues == 0) return;
 
-  for (Type *Ty : Types) {
+  for (unsigned I = 0, E = NumValues; I != E; ++I) {
+    Type *Ty = Types[I];
     EVT VT = TLI.getValueType(DL, Ty);
+
+    // Skip zero-sized types (empty structs) for throws functions.
+    // An empty struct should not consume a return register slot.
+    if (VT.isZeroSized() && attr.hasFnAttr(Attribute::Throws))
+      continue;
+
     ISD::NodeType ExtendKind = ISD::ANY_EXTEND;
 
     if (attr.hasRetAttr(Attribute::SExt))
@@ -1851,6 +1858,11 @@ void llvm::GetReturnInfo(CallingConv::ID CC, Type *ReturnType,
     ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy();
     if (attr.hasRetAttr(Attribute::InReg))
       Flags.setInReg();
+
+    // Propagate the throws (herbception) discriminant flag from the function.
+    // The discriminant is the last part of the {T, i1} return value.
+    if (attr.hasFnAttr(Attribute::Throws) && I == E - 1)
+      Flags.setThrows();
 
     // Propagate extension type if any
     if (attr.hasRetAttr(Attribute::SExt))

@@ -456,6 +456,10 @@ void ASTDeclWriter::Visit(Decl *D) {
   // have been written. We want it last because we will not read it back when
   // retrieving it from the AST, we'll just lazily set the offset.
   if (auto *FD = dyn_cast<FunctionDecl>(D)) {
+    // Herbception legacy-conversion expression must precede the body block:
+    // the reader consumes it eagerly, while the body itself is only located
+    // lazily (PendingBodies offset) and must remain the last element.
+    Record.AddStmt(FD->getHerbceptionLegacyErrorValue());
     if (!GeneratingReducedBMI || !CanElideDeclDef(FD)) {
       Record.push_back(FD->doesThisDeclarationHaveABody());
       if (FD->doesThisDeclarationHaveABody())

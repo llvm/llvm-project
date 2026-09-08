@@ -1583,8 +1583,17 @@ bool WebAssemblyTargetLowering::CanLowerReturn(
     CallingConv::ID /*CallConv*/, MachineFunction & /*MF*/, bool /*IsVarArg*/,
     const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext & /*Context*/,
     const Type *RetTy) const {
-  // WebAssembly can only handle returning tuples with multivalue enabled
-  return WebAssembly::canLowerReturn(Outs.size(), Subtarget);
+  // WebAssembly can only handle returning tuples with multivalue enabled.
+  // Herbception (throws) functions return an extra discriminant value, so
+  // allow a second result in that case.
+  if (Outs.size() <= 1)
+    return true;
+  if (WebAssembly::canLowerMultivalueReturn(Subtarget))
+    return true;
+  // Allow {T, i1} throws returns: the discriminant is the extra value.
+  return Outs.size() == 2 && llvm::any_of(Outs, [](const ISD::OutputArg &Out) {
+           return Out.Flags.isThrows();
+         });
 }
 
 SDValue WebAssemblyTargetLowering::LowerReturn(
@@ -1592,7 +1601,10 @@ SDValue WebAssemblyTargetLowering::LowerReturn(
     const SmallVectorImpl<ISD::OutputArg> &Outs,
     const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
     SelectionDAG &DAG) const {
-  assert(WebAssembly::canLowerReturn(Outs.size(), Subtarget) &&
+  assert((WebAssembly::canLowerReturn(Outs.size(), Subtarget) ||
+          (Outs.size() == 2 && llvm::any_of(Outs, [](const ISD::OutputArg &Out) {
+             return Out.Flags.isThrows();
+           }))) &&
          "MVP WebAssembly can only return up to one value");
   if (!callingConvSupported(CallConv))
     fail(DL, DAG, "WebAssembly doesn't support non-C calling conventions");

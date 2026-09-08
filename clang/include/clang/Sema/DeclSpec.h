@@ -456,7 +456,7 @@ public:
             T == TST_class);
   }
   static bool isTransformTypeTrait(TST T) {
-    constexpr std::array<TST, 16> Traits = {
+    constexpr std::array<TST, 17> Traits = {
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) TST_##Trait,
 #include "clang/Basic/BuiltinTraits.inc"
     };
@@ -1422,7 +1422,7 @@ struct DeclaratorChunk {
 
     /// ExceptionSpecType - An ExceptionSpecificationType value.
     LLVM_PREFERRED_TYPE(ExceptionSpecificationType)
-    unsigned ExceptionSpecType : 4;
+    unsigned ExceptionSpecType : 5;
 
     /// DeleteParams - If this is true, we need to delete[] Params.
     LLVM_PREFERRED_TYPE(bool)

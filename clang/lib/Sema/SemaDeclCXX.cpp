@@ -239,6 +239,14 @@ Sema::ImplicitExceptionSpecification::CalledDecl(SourceLocation CallLoc,
     ClearExceptions();
     ComputedEST = EST_None;
     return;
+  // A herbception 'throws'/'fails{E}' spec implies noexcept(true): the call
+  // cannot propagate a traditional C++ exception.
+  case EST_BasicThrows:
+  case EST_BasicThrowsTrue:
+  case EST_BasicThrowsFalse:
+  case EST_ThrowsTyped:
+    return;
+
   // FIXME: If the call to this decl is using any of its default arguments, we
   // need to search them for potentially-throwing calls.
   // If this function has a basic noexcept, it doesn't affect the outcome.
@@ -751,9 +759,7 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
 }
 
 void Sema::DiagPlaceholderVariableDefinition(SourceLocation Loc) {
-  Diag(Loc, getLangOpts().CPlusPlus26
-                ? diag::warn_cxx23_placeholder_var_definition
-                : diag::ext_placeholder_var_definition);
+  DiagCompat(Loc, diag_compat::placeholder_var_definition);
 }
 
 NamedDecl *
@@ -2391,6 +2397,16 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     // try block check).
     if (!CheckConstexprFunctionStmt(
             SemaRef, Dcl, cast<CXXCatchStmt>(S)->getHandlerBlock(), ReturnStmts,
+            Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
+      return false;
+    return true;
+
+  case Stmt::CXXCatchThrowsStmtClass:
+    // Herbception `catch throws` handler: same treatment as a traditional
+    // catch (the enclosing try-block already allowed this in constexpr).
+    if (!CheckConstexprFunctionStmt(
+            SemaRef, Dcl,
+            cast<CXXCatchThrowsStmt>(S)->getHandlerBlock(), ReturnStmts,
             Cxx1yLoc, Cxx2aLoc, Cxx2bLoc, Kind))
       return false;
     return true;
@@ -11622,10 +11638,8 @@ void Sema::CheckConversionDeclarator(Declarator &D, QualType &R,
 
   // C++0x explicit conversion operators.
   if (DS.hasExplicitSpecifier())
-    Diag(DS.getExplicitSpecLoc(),
-         getLangOpts().CPlusPlus11
-             ? diag::warn_cxx98_compat_explicit_conversion_functions
-             : diag::ext_explicit_conversion_functions)
+    DiagCompat(DS.getExplicitSpecLoc(),
+               diag_compat::explicit_conversion_functions)
         << SourceRange(DS.getExplicitSpecRange());
 }
 
@@ -13677,10 +13691,7 @@ bool Sema::CheckUsingDeclQualifier(SourceLocation UsingLoc, bool HasTypename,
       // A using-declaration shall not name a scoped enumerator.
       // C++20 p1099 permits enumerators.
       if (EC && R && ED->isScoped())
-        Diag(SS.getBeginLoc(),
-             getLangOpts().CPlusPlus20
-                 ? diag::warn_cxx17_compat_using_decl_scoped_enumerator
-                 : diag::ext_using_decl_scoped_enumerator)
+        DiagCompat(SS.getBeginLoc(), diag_compat::using_decl_scoped_enumerator)
             << SS.getRange();
 
       // We want to consider the scope of the enumerator
@@ -17022,10 +17033,7 @@ bool Sema::CheckOverloadedOperatorDeclaration(FunctionDecl *FnDecl) {
   if (CXXMethodDecl *MethodDecl = dyn_cast<CXXMethodDecl>(FnDecl)) {
     if (MethodDecl->isStatic()) {
       if (Op == OO_Call || Op == OO_Subscript)
-        Diag(FnDecl->getLocation(),
-             (LangOpts.CPlusPlus23
-                  ? diag::warn_cxx20_compat_operator_overload_static
-                  : diag::ext_operator_overload_static))
+        DiagCompat(FnDecl->getLocation(), diag_compat::operator_overload_static)
             << FnDecl;
       else
         return Diag(FnDecl->getLocation(), diag::err_operator_overload_static)
@@ -17466,7 +17474,8 @@ Decl *Sema::ActOnEmptyDeclaration(Scope *S,
 VarDecl *Sema::BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
                                          SourceLocation StartLoc,
                                          SourceLocation Loc,
-                                         const IdentifierInfo *Name) {
+                                         const IdentifierInfo *Name,
+                                         bool IsHerbception) {
   bool Invalid = false;
   QualType ExDeclType = TInfo->getType();
 
@@ -17548,7 +17557,14 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
   if (getLangOpts().ObjCAutoRefCount && ObjC().inferObjCARCLifetime(ExDecl))
     Invalid = true;
 
-  if (!Invalid && !ExDeclType->isDependentType()) {
+  // For a herbception `catch throws(E e)` / `catch fails(E e)`, the exception
+  // variable is bound directly from the error payload; the compiler does not
+  // copy-initialize it from an exception object (and std::error cannot be
+  // copied at all). Skip the traditional copy-init / destructibility checks.
+  if (IsHerbception)
+    Invalid = ExDecl->isInvalidDecl();
+
+  if (!Invalid && !IsHerbception && !ExDeclType->isDependentType()) {
     if (auto *ClassDecl = ExDeclType->getAsCXXRecordDecl()) {
       // Insulate this from anything else we might currently be parsing.
       EnterExpressionEvaluationContext scope(
@@ -17597,7 +17613,8 @@ VarDecl *Sema::BuildExceptionDeclaration(Scope *S, TypeSourceInfo *TInfo,
   return ExDecl;
 }
 
-Decl *Sema::ActOnExceptionDeclarator(Scope *S, Declarator &D) {
+Decl *Sema::ActOnExceptionDeclarator(Scope *S, Declarator &D,
+                                     bool IsHerbception) {
   TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
   bool Invalid = D.isInvalidType();
 
@@ -17634,7 +17651,8 @@ Decl *Sema::ActOnExceptionDeclarator(Scope *S, Declarator &D) {
   }
 
   VarDecl *ExDecl = BuildExceptionDeclaration(
-      S, TInfo, D.getBeginLoc(), D.getIdentifierLoc(), D.getIdentifier());
+      S, TInfo, D.getBeginLoc(), D.getIdentifierLoc(), D.getIdentifier(),
+      IsHerbception);
   if (Invalid)
     ExDecl->setInvalidDecl();
 
@@ -18969,9 +18987,7 @@ void Sema::SetDeclDefaulted(Decl *Dcl, SourceLocation DefaultLoc) {
   // 'operator<=>' when parsing the '<=>' token.
   if (DefKind.isComparison() &&
       DefKind.asComparison() != DefaultedComparisonKind::ThreeWay) {
-    Diag(DefaultLoc, getLangOpts().CPlusPlus20
-                         ? diag::warn_cxx17_compat_defaulted_comparison
-                         : diag::ext_defaulted_comparison);
+    DiagCompat(DefaultLoc, diag_compat::defaulted_comparison);
   }
 
   FD->setDefaulted();
@@ -19048,7 +19064,7 @@ static void SearchForReturnInStmt(Sema &Self, Stmt *S) {
 
 void Sema::DiagnoseReturnInConstructorExceptionHandler(CXXTryStmt *TryBlock) {
   for (unsigned I = 0, E = TryBlock->getNumHandlers(); I != E; ++I) {
-    CXXCatchStmt *Handler = TryBlock->getHandler(I);
+    CXXCatchStmt *Handler = TryBlock->getCatchHandler(I);
     SearchForReturnInStmt(*this, Handler);
   }
 }
@@ -19763,6 +19779,11 @@ bool Sema::checkThisInStaticMemberFunctionExceptionSpec(CXXMethodDecl *Method) {
   case EST_DynamicNone:
   case EST_MSAny:
   case EST_None:
+  // Herbception specs never contain a noexcept expression to traverse.
+  case EST_BasicThrows:
+  case EST_BasicThrowsTrue:
+  case EST_BasicThrowsFalse:
+  case EST_ThrowsTyped:
     break;
 
   case EST_DependentNoexcept:
@@ -19833,7 +19854,7 @@ void Sema::checkExceptionSpecification(
     FunctionProtoType::ExceptionSpecInfo &ESI) {
   Exceptions.clear();
   ESI.Type = EST;
-  if (EST == EST_Dynamic) {
+  if (EST == EST_Dynamic || EST == EST_ThrowsTyped) {
     Exceptions.reserve(DynamicExceptions.size());
     for (unsigned ei = 0, ee = DynamicExceptions.size(); ei != ee; ++ei) {
       // FIXME: Preserve type source info.
@@ -19854,6 +19875,43 @@ void Sema::checkExceptionSpecification(
       // drop it if not.
       if (!CheckSpecifiedExceptionType(ET, DynamicExceptionRanges[ei]))
         Exceptions.push_back(ET);
+
+      // `fails{std::error}` is invalid: std::error is a compiler-fabricated
+      // value that may only be carried by the implicit `throws` channel, never
+      // returned as an explicit fails error type.
+      if (EST == EST_ThrowsTyped) {
+        if (NamespaceDecl *Std = getStdNamespace()) {
+          LookupResult R(*this, &PP.getIdentifierTable().get("error"),
+                         DynamicExceptionRanges[ei].getBegin(),
+                         LookupTagName);
+          if (LookupQualifiedName(R, Std)) {
+            if (RecordDecl *RD = R.getAsSingle<RecordDecl>()) {
+              QualType StdErrorTy =
+                  Context.getTypeDeclType(static_cast<const TypeDecl *>(RD));
+              if (Context.hasSameUnqualifiedType(ET, StdErrorTy)) {
+                Diag(DynamicExceptionRanges[ei].getBegin(),
+                     diag::err_return_failure_std_error_type)
+                    << DynamicExceptionRanges[ei];
+                continue;
+              }
+            }
+          }
+        }
+
+        // The `fails{E}` error type must be trivially copyable, matching the C
+        // behavior where the error value flows through the {T, i1} ABI slot by
+        // value.
+        if (RequireCompleteType(DynamicExceptionRanges[ei].getBegin(), ET,
+                                diag::err_incomplete_type)) {
+          continue;
+        }
+        if (!ET.isTriviallyCopyableType(Context)) {
+          Diag(DynamicExceptionRanges[ei].getBegin(),
+               diag::err_return_failure_type_not_trivially_copyable)
+              << ET << DynamicExceptionRanges[ei];
+          continue;
+        }
+      }
     }
     ESI.Exceptions = Exceptions;
     return;
@@ -19888,6 +19946,29 @@ void Sema::actOnDelayedExceptionSpecification(
   FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
   if (!FD)
     return;
+
+  // Herbception: a destructor cannot be declared 'throws' or 'fails{...}'.
+  // Destruction must be able to run during unwinding/cleanup, so it cannot
+  // itself fail through the herbception channel.
+  if (isa<CXXDestructorDecl>(FD) &&
+      hasHerbceptionExceptionSpec(EST)) {
+    Diag(SpecificationRange.getBegin(),
+         diag::err_herbceptions_destructor_spec)
+        << SpecificationRange;
+    // Keep the (diagnosed) spec so the function type stays well-formed; the
+    // declaration is already erroneous and never used for code generation.
+  }
+
+  // Herbception `fails{E}` is a C-style feature restricted to free (non-member)
+  // functions. Member functions (including static members) and lambda call
+  // operators reach this delayed path, so diagnose them here.
+  if (getLangOpts().HerbExceptions && getLangOpts().CPlusPlus &&
+      EST == EST_ThrowsTyped &&
+      FD->isCXXClassMember()) {
+    Diag(SpecificationRange.getBegin(), diag::err_return_failure_only_free_function)
+        << SpecificationRange;
+    FD->setInvalidDecl();
+  }
 
   // Check the exception specification.
   llvm::SmallVector<QualType, 4> Exceptions;

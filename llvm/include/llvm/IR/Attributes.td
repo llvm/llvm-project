@@ -382,6 +382,13 @@ def SwiftSelf : EnumAttr<"swiftself", IntersectPreserve, [ParamAttr]>;
 /// Argument is swift async context.
 def SwiftAsync : EnumAttr<"swiftasync", IntersectPreserve, [ParamAttr]>;
 
+/// Function returns its value with a discriminant flag, used to implement
+/// zero-overhead deterministic exceptions (herbception). When present, the
+/// backend may use a target-specific mechanism (e.g. a carry flag or an
+/// extra register) to carry the success/failure discriminant alongside the
+/// return value instead of a plain struct return.
+def Throws : EnumAttr<"throws", IntersectPreserve, [FnAttr]>;
+
 /// Function must be in a unwind table.
 def UWTable : IntAttr<"uwtable", IntersectPreserve, [FnAttr]>;
 

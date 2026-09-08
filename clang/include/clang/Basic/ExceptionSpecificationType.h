@@ -18,18 +18,22 @@ namespace clang {
 
 /// The various types of exception specifications that exist in C++11.
 enum ExceptionSpecificationType {
-  EST_None,             ///< no exception specification
-  EST_DynamicNone,      ///< throw()
-  EST_Dynamic,          ///< throw(T1, T2)
-  EST_MSAny,            ///< Microsoft throw(...) extension
-  EST_NoThrow,          ///< Microsoft __declspec(nothrow) extension
-  EST_BasicNoexcept,    ///< noexcept
-  EST_DependentNoexcept,///< noexcept(expression), value-dependent
-  EST_NoexceptFalse,    ///< noexcept(expression), evals to 'false'
-  EST_NoexceptTrue,     ///< noexcept(expression), evals to 'true'
-  EST_Unevaluated,      ///< not evaluated yet, for special member function
-  EST_Uninstantiated,   ///< not instantiated yet
-  EST_Unparsed          ///< not parsed yet
+  EST_None,              ///< no exception specification
+  EST_DynamicNone,       ///< throw()
+  EST_Dynamic,           ///< throw(T1, T2)
+  EST_MSAny,             ///< Microsoft throw(...) extension
+  EST_NoThrow,           ///< Microsoft __declspec(nothrow) extension
+  EST_BasicNoexcept,     ///< noexcept
+  EST_DependentNoexcept, ///< noexcept(expression), value-dependent
+  EST_NoexceptFalse,     ///< noexcept(expression), evals to 'false'
+  EST_NoexceptTrue,      ///< noexcept(expression), evals to 'true'
+  EST_Unevaluated,       ///< not evaluated yet, for special member function
+  EST_Uninstantiated,    ///< not instantiated yet
+  EST_Unparsed,          ///< not parsed yet
+  EST_BasicThrows,       ///< throws (herbception): implicit std::error
+  EST_BasicThrowsTrue,   ///< throws(true): can fail, implicit std::error
+  EST_BasicThrowsFalse,  ///< throws(false): cannot fail, implicit std::error
+  EST_ThrowsTyped        ///< return_failure{E}: explicit error type
 };
 
 inline bool isDynamicExceptionSpec(ExceptionSpecificationType ESpecType) {
@@ -55,9 +59,20 @@ inline bool isExplicitThrowExceptionSpec(ExceptionSpecificationType ESpecType) {
          ESpecType == EST_NoexceptFalse;
 }
 
+/// Whether this exception specification is a herbception `throws`/`return_failure{E}`
+/// spec. Such specs are part of the canonical function type (they change the
+/// calling convention), so they are only compatible with an identical spec.
+inline bool hasHerbceptionExceptionSpec(ExceptionSpecificationType ESpecType) {
+  return ESpecType == EST_BasicThrows ||
+         ESpecType == EST_BasicThrowsTrue ||
+         ESpecType == EST_BasicThrowsFalse ||
+         ESpecType == EST_ThrowsTyped;
+}
+
 /// Possible results from evaluation of a noexcept expression.
 enum CanThrowResult {
   CT_Cannot,
+  CT_Deterministic,  ///< herbception: can "fail" but cannot throw C++ exceptions
   CT_Dependent,
   CT_Can
 };

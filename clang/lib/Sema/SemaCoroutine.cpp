@@ -706,6 +706,30 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
   if (!checkCoroutineContext(*this, KWLoc, Keyword))
     return false;
 
+  // Herbception `fails{E}` is a C-style feature restricted to free functions;
+  // coroutines are not plain free functions, so reject a fails spec here.
+  if (getLangOpts().HerbExceptions && getLangOpts().CPlusPlus) {
+    if (const FunctionDecl *Fn = dyn_cast_or_null<FunctionDecl>(CurContext)) {
+      if (const auto *FPT = Fn->getType()->getAs<FunctionProtoType>();
+          FPT && FPT->hasReturnFailureSpec()) {
+        Diag(KWLoc, diag::err_return_failure_only_free_function);
+        const_cast<FunctionDecl *>(Fn)->setInvalidDecl();
+      }
+    }
+  }
+
+  // Herbception `throws` is not allowed on coroutine functions. All
+  // herbceptions must be caught within the coroutine body.
+  if (getLangOpts().HerbExceptions && getLangOpts().CPlusPlus) {
+    if (const FunctionDecl *Fn = dyn_cast_or_null<FunctionDecl>(CurContext)) {
+      if (const auto *FPT = Fn->getType()->getAs<FunctionProtoType>();
+          FPT && FPT->hasBasicThrowsSpec()) {
+        Diag(KWLoc, diag::err_throws_not_allowed_in_coroutine);
+        const_cast<FunctionDecl *>(Fn)->setInvalidDecl();
+      }
+    }
+  }
+
   // Support for coroutines is not stable on 32 bits windows
   // Warn about it.
   if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
@@ -1058,9 +1082,15 @@ StmtResult Sema::BuildCoreturnStmt(SourceLocation Loc, Expr *E,
   // A type-dependent operand can init to either void or non-void.
   // Delay selecting return_void or return_value until template init
   // rebuilds the co_return statement with the operand type.
-  if (E && !isa<InitListExpr>(E) && E->isTypeDependent())
+  if (E && !isa<InitListExpr>(E) && E->isTypeDependent()) {
+    // Still finish the full-expression, so that potential captures in the
+    // operand are turned into actual captures of the enclosing lambda.
+    ExprResult FE = ActOnFinishFullExpr(E, /*DiscardedValue=*/false);
+    if (FE.isInvalid())
+      return StmtError();
     return new (Context)
-        CoreturnStmt(Loc, E, /*PromiseCall=*/nullptr, IsImplicit);
+        CoreturnStmt(Loc, FE.get(), /*PromiseCall=*/nullptr, IsImplicit);
+  }
 
   VarDecl *Promise = FSI->CoroutinePromise;
   ExprResult PC;
@@ -1284,9 +1314,11 @@ bool CoroutineStmtBuilder::buildDependentStatements() {
   assert(this->IsValid && "coroutine already invalid");
   assert(!this->IsPromiseDependentType &&
          "coroutine cannot have a dependent promise type");
-  this->IsValid = makeOnException() && makeOnFallthrough() &&
-                  makeGroDeclAndReturnStmt() && makeReturnOnAllocFailure() &&
-                  makeNewAndDeleteExpr();
+  this->IsValid = makeOnException();
+  this->IsValid =
+      this->IsValid && makeOnFallthrough() &&
+      makeGroDeclAndReturnStmt() && makeReturnOnAllocFailure() &&
+      makeNewAndDeleteExpr();
   return this->IsValid;
 }
 

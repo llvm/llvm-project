@@ -2110,7 +2110,8 @@ DeclResult Sema::CheckClassTemplate(
           PrevDecl = (*Previous.begin())->getUnderlyingDecl();
       }
     }
-  } else if (PrevDecl && !isDeclInScope(Previous.getRepresentativeDecl(),
+  } else if (PrevDecl &&
+             !isTagRedeclarationInScope(Previous.getRepresentativeDecl(),
                                         SemanticContext, S, SS.isValid()))
     PrevDecl = PrevClassTemplate = nullptr;
 
@@ -3510,6 +3511,29 @@ static QualType checkBuiltinTemplateIdType(
     // We simply return the type at index `Index`.
     int64_t N = Index.getExtValue();
     return Ts.getPackAsArray()[N].getAsType();
+  }
+
+  case BTK__invoke_herbceptions_return_failure_result: {
+    // __invoke_herbceptions_return_failure_result<F, Args...> yields a synthetic struct
+    // with `value_type` (F's return type) and `error_type` (the fails{E} error
+    // type, or void when F is not a fails function).
+    assert(Converted.size() >= 1);
+    if (llvm::any_of(Converted, [](auto &C) { return C.isDependent(); }))
+      return QualType();
+    QualType F = Converted[0].getAsType();
+    if (const auto *PT = F->getAs<PointerType>())
+      F = PT->getPointeeType();
+    else if (const auto *RT = F->getAs<ReferenceType>())
+      F = RT->getPointeeType();
+    QualType ValueTy = Context.VoidTy;
+    QualType ErrorTy = Context.VoidTy;
+    if (const auto *FPT = F->getAs<FunctionProtoType>()) {
+      ValueTy = FPT->getReturnType();
+      if (FPT->hasReturnFailureSpec())
+        ErrorTy = FPT->getExceptionType(0);
+    }
+    return SemaRef.Context.getInvokeHerbceptionsFailsResultType(ValueTy,
+                                                               ErrorTy);
   }
 
   case BTK__builtin_common_type: {
@@ -5067,11 +5091,8 @@ TemplateNameKind Sema::ActOnTemplateName(Scope *S,
                                          TemplateTy &Result,
                                          bool AllowInjectedClassName) {
   if (TemplateKWLoc.isValid() && S && !S->getTemplateParamParent())
-    Diag(TemplateKWLoc,
-         getLangOpts().CPlusPlus11 ?
-           diag::warn_cxx98_compat_template_outside_of_template :
-           diag::ext_template_outside_of_template)
-      << FixItHint::CreateRemoval(TemplateKWLoc);
+    DiagCompat(TemplateKWLoc, diag_compat::template_outside_of_template)
+        << FixItHint::CreateRemoval(TemplateKWLoc);
 
   if (SS.isInvalid())
     return TNK_Non_template;
@@ -6920,13 +6941,10 @@ static bool CheckTemplateArgumentAddressOfObjectOrFunction(
 
   // Address / reference template args must have external linkage in C++98.
   if (Entity->getFormalLinkage() == Linkage::Internal) {
-    S.Diag(Arg->getBeginLoc(),
-           S.getLangOpts().CPlusPlus11
-               ? diag::warn_cxx98_compat_template_arg_object_internal
-               : diag::ext_template_arg_object_internal)
+    S.DiagCompat(Arg->getBeginLoc(), diag_compat::template_arg_object_internal)
         << !Func << Entity << Arg->getSourceRange();
     S.Diag(Entity->getLocation(), diag::note_template_arg_internal_object)
-      << !Func;
+        << !Func;
   } else if (!Entity->hasLinkage()) {
     S.Diag(Arg->getBeginLoc(), diag::err_template_arg_object_no_linkage)
         << !Func << Entity << Arg->getSourceRange();

@@ -2338,6 +2338,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoOutline;
   case bitc::ATTR_KIND_NOIPA:
     return Attribute::NoIPA;
+  case bitc::ATTR_KIND_THROWS:
+    return Attribute::Throws;
   }
 }
 
@@ -5370,6 +5372,9 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
             cast<TruncInst>(I)->setHasNoUnsignedWrap(true);
           if (Record[OpNum] & (1 << bitc::TIO_NO_SIGNED_WRAP))
             cast<TruncInst>(I)->setHasNoSignedWrap(true);
+        } else if (Opc == Instruction::AddrSpaceCast) {
+          if (Record[OpNum] & (1 << bitc::ASCI_NON_NULL))
+            cast<AddrSpaceCastInst>(I)->setNonNull(true);
         }
         if (isa<FPMathOperator>(I)) {
           uint64_t Flags = Record[OpNum];

@@ -181,6 +181,9 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::GNUNullExprClass:
   case Expr::OffsetOfExprClass:
   case Expr::CXXThrowExprClass:
+  case Expr::CXXErrorValueExprClass:
+  case Expr::CXXCxaExceptionExprClass:
+  case Expr::CXXCatchReturnFailureExprClass:
   case Expr::ShuffleVectorExprClass:
   case Expr::ConvertVectorExprClass:
   case Expr::IntegerLiteralClass:
@@ -192,6 +195,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::BlockExprClass:
   case Expr::FloatingLiteralClass:
   case Expr::CXXNoexceptExprClass:
+  case Expr::CXXThrowsExprClass:
   case Expr::CXXScalarValueInitExprClass:
   case Expr::TypeTraitExprClass:
   case Expr::ArrayTypeTraitExprClass:
@@ -230,6 +234,16 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   // Make HLSL this reference-like
   case Expr::CXXThisExprClass:
     return Lang.HLSL ? Cl::CL_LValue : Cl::CL_PRValue;
+
+  // herbceptions: the success value of a CXXTryExpr preserves the value
+  // kind of its underlying call (lvalue for T& returns, xvalue for T&&
+  // returns, prvalue otherwise).
+  case Expr::CXXTryExprClass:
+    if (E->isLValue())
+      return Cl::CL_LValue;
+    if (E->isXValue())
+      return Cl::CL_XValue;
+    return Cl::CL_PRValue;
 
   case Expr::ConstantExprClass:
     return ClassifyInternal(Ctx, cast<ConstantExpr>(E)->getSubExpr());

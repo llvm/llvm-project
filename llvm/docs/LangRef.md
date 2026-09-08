@@ -535,6 +535,10 @@ More calling conventions can be added/defined on an as-needed basis, to
 support Pascal conventions or any other well-known target-independent
 convention.
 
+The target-specific calling conventions are documented in their respective
+target documentation. In particular, the X86 WinCall calling convention
+(spelled ``x86_wincallcc`` in IR) is described in {doc}`WinCall`.
+
 (visibilitystyles)=
 
 ### Visibility Styles
@@ -13282,7 +13286,8 @@ If `value` is of the {ref}`byte type <t_byte>`:
 ##### Syntax:
 
 ```
-<result> = addrspacecast <pty> <ptrval> to <pty2>       ; yields pty2
+<result> = addrspacecast <pty> <ptrval> to <pty2>          ; yields pty2
+<result> = addrspacecast nonnull <pty> <ptrval> to <pty2>  ; yields pty2
 ```
 
 ##### Overview:
@@ -13318,6 +13323,10 @@ should yield the original bit pattern).
 
 Which address space casts are supported depends on the target. Unsupported
 address space casts return {ref}`poison <poisonvalues>`.
+
+The optional `nonnull` flag asserts that `ptrval` is not the null value of
+its source address space; if it is, the result is
+{ref}`poison <poisonvalues>`.
 
 ##### Example:
 

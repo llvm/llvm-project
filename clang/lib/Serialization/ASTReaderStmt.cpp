@@ -915,10 +915,12 @@ void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
         std::optional<concepts::ExprRequirement::ReturnTypeRequirement> Req;
         ConceptSpecializationExpr *SubstitutedConstraintExpr = nullptr;
         SourceLocation NoexceptLoc;
+        SourceLocation ThrowsLoc;
         if (RK == concepts::Requirement::RK_Simple) {
           Req.emplace();
         } else {
           NoexceptLoc = Record.readSourceLocation();
+          ThrowsLoc = Record.readSourceLocation();
           switch (/* returnTypeRequirementKind */Record.readInt()) {
             case 0:
               // No return type requirement.
@@ -942,11 +944,13 @@ void ASTStmtReader::VisitRequiresExpr(RequiresExpr *E) {
         if (Expr *Ex = E.dyn_cast<Expr *>())
           R = new (Record.getContext()) concepts::ExprRequirement(
                   Ex, RK == concepts::Requirement::RK_Simple, NoexceptLoc,
+                  ThrowsLoc,
                   std::move(*Req), Status, SubstitutedConstraintExpr);
         else
           R = new (Record.getContext()) concepts::ExprRequirement(
               cast<concepts::Requirement::SubstitutionDiagnostic *>(E),
               RK == concepts::Requirement::RK_Simple, NoexceptLoc,
+              ThrowsLoc,
               std::move(*Req));
       } break;
       case concepts::Requirement::RK_Nested: {
@@ -1756,6 +1760,14 @@ void ASTStmtReader::VisitCXXCatchStmt(CXXCatchStmt *S) {
   S->HandlerBlock = Record.readSubStmt();
 }
 
+void ASTStmtReader::VisitCXXCatchThrowsStmt(CXXCatchThrowsStmt *S) {
+  VisitStmt(S);
+  S->CatchLoc = readSourceLocation();
+  S->SpecLoc = readSourceLocation();
+  S->ExceptionDecl = readDeclAs<VarDecl>();
+  S->HandlerBlock = Record.readSubStmt();
+}
+
 void ASTStmtReader::VisitCXXTryStmt(CXXTryStmt *S) {
   VisitStmt(S);
   assert(Record.peekInt() == S->getNumHandlers() && "NumStmtFields is wrong ?");
@@ -1972,6 +1984,32 @@ void ASTStmtReader::VisitCXXThrowExpr(CXXThrowExpr *E) {
   E->CXXThrowExprBits.ThrowLoc = readSourceLocation();
   E->Operand = Record.readSubExpr();
   E->CXXThrowExprBits.IsThrownVariableInScope = Record.readInt();
+}
+
+void ASTStmtReader::VisitCXXErrorValueExpr(CXXErrorValueExpr *E) {
+  VisitExpr(E);
+  E->Loc = readSourceLocation();
+  E->Operand = Record.readSubExpr();
+  E->DomainCall = Record.readSubExpr();
+  E->CodeCall = Record.readSubExpr();
+}
+
+void ASTStmtReader::VisitCXXCxaExceptionExpr(CXXCxaExceptionExpr *E) {
+  VisitExpr(E);
+  E->Loc = readSourceLocation();
+}
+
+void ASTStmtReader::VisitCXXTryExpr(CXXTryExpr *E) {
+  VisitExpr(E);
+  E->TryLoc = readSourceLocation();
+  E->SubExpr = Record.readSubExpr();
+  E->ErrorDomain = readDeclAs<CXXRecordDecl>();
+}
+
+void ASTStmtReader::VisitCXXCatchReturnFailureExpr(CXXCatchReturnFailureExpr *E) {
+  VisitExpr(E);
+  E->CatchLoc = readSourceLocation();
+  E->SubExpr = Record.readSubExpr();
 }
 
 void ASTStmtReader::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
@@ -2281,6 +2319,13 @@ void ASTStmtReader::VisitExpressionTraitExpr(ExpressionTraitExpr *E) {
 void ASTStmtReader::VisitCXXNoexceptExpr(CXXNoexceptExpr *E) {
   VisitExpr(E);
   E->CXXNoexceptExprBits.Value = Record.readInt();
+  E->Range = readSourceRange();
+  E->Operand = Record.readSubExpr();
+}
+
+void ASTStmtReader::VisitCXXThrowsExpr(CXXThrowsExpr *E) {
+  VisitExpr(E);
+  E->CXXThrowsExprBits.Value = Record.readInt();
   E->Range = readSourceRange();
   E->Operand = Record.readSubExpr();
 }
@@ -3676,6 +3721,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) CXXCatchStmt(Empty);
       break;
 
+    case STMT_CXX_CATCH_THROWS:
+      S = new (Context) CXXCatchThrowsStmt(Empty);
+      break;
+
     case STMT_CXX_TRY:
       S = CXXTryStmt::Create(Context, Empty,
              /*numHandlers=*/Record[ASTStmtReader::NumStmtFields]);
@@ -4367,6 +4416,22 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       S = new (Context) CXXThrowExpr(Empty);
       break;
 
+    case EXPR_CXX_ERROR_VALUE:
+      S = new (Context) CXXErrorValueExpr(Empty);
+      break;
+
+    case EXPR_CXX_CXA_EXCEPTION:
+      S = new (Context) CXXCxaExceptionExpr(Empty);
+      break;
+
+    case EXPR_CXX_TRY:
+      S = new (Context) CXXTryExpr(Empty);
+      break;
+
+    case EXPR_CXX_CATCH_FAILS:
+      S = new (Context) CXXCatchReturnFailureExpr(Empty);
+      break;
+
     case EXPR_CXX_DEFAULT_ARG:
       S = CXXDefaultArgExpr::CreateEmpty(
           Context, /*HasRewrittenInit=*/Record[ASTStmtReader::NumExprFields]);
@@ -4485,6 +4550,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case EXPR_CXX_NOEXCEPT:
       S = new (Context) CXXNoexceptExpr(Empty);
+      break;
+
+    case EXPR_CXX_THROWS:
+      S = new (Context) CXXThrowsExpr(Empty);
       break;
 
     case EXPR_PACK_EXPANSION:

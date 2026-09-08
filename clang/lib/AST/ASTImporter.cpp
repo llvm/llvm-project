@@ -612,6 +612,7 @@ namespace clang {
     // FIXME: SEHLeaveStmt
     // FIXME: CapturedStmt
     ExpectedStmt VisitCXXCatchStmt(CXXCatchStmt *S);
+    ExpectedStmt VisitCXXCatchThrowsStmt(CXXCatchThrowsStmt *S);
     ExpectedStmt VisitCXXTryStmt(CXXTryStmt *S);
     ExpectedStmt VisitCXXForRangeStmt(CXXForRangeStmt *S);
     ExpectedStmt VisitCXXExpansionStmtPattern(CXXExpansionStmtPattern *S);
@@ -668,6 +669,10 @@ namespace clang {
     ExpectedStmt VisitExplicitCastExpr(ExplicitCastExpr *E);
     ExpectedStmt VisitOffsetOfExpr(OffsetOfExpr *OE);
     ExpectedStmt VisitCXXThrowExpr(CXXThrowExpr *E);
+    ExpectedStmt VisitCXXTryExpr(CXXTryExpr *E);
+    ExpectedStmt VisitCXXErrorValueExpr(CXXErrorValueExpr *E);
+    ExpectedStmt VisitCXXCxaExceptionExpr(CXXCxaExceptionExpr *E);
+    ExpectedStmt VisitCXXCatchReturnFailureExpr(CXXCatchReturnFailureExpr *E);
     ExpectedStmt VisitCXXNoexceptExpr(CXXNoexceptExpr *E);
     ExpectedStmt VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E);
     ExpectedStmt VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *E);
@@ -1180,20 +1185,24 @@ ASTNodeImporter::ImportExprRequirement(concepts::ExprRequirement *From) {
   ExpectedSLoc NoexceptLocOrErr = import(From->getNoexceptLoc());
   if (!NoexceptLocOrErr)
     return NoexceptLocOrErr.takeError();
+  ExpectedSLoc ThrowsLocOrErr = import(From->getThrowsLoc());
+  if (!ThrowsLocOrErr)
+    return ThrowsLocOrErr.takeError();
 
   if (Status == ExprRequirement::SS_ExprSubstitutionFailure) {
     auto DiagOrErr = import(From->getExprSubstitutionDiagnostic());
     if (!DiagOrErr)
       return DiagOrErr.takeError();
     return new (Importer.getToContext()) ExprRequirement(
-        *DiagOrErr, IsRKSimple, *NoexceptLocOrErr, std::move(*Req));
+        *DiagOrErr, IsRKSimple, *NoexceptLocOrErr, *ThrowsLocOrErr,
+        std::move(*Req));
   } else {
     Expected<Expr *> ExprOrErr = import(From->getExpr());
     if (!ExprOrErr)
       return ExprOrErr.takeError();
     return new (Importer.getToContext()) concepts::ExprRequirement(
-        *ExprOrErr, IsRKSimple, *NoexceptLocOrErr, std::move(*Req), Status,
-        SubstitutedConstraintExpr);
+        *ExprOrErr, IsRKSimple, *NoexceptLocOrErr, *ThrowsLocOrErr,
+        std::move(*Req), Status, SubstitutedConstraintExpr);
   }
 }
 
@@ -1638,16 +1647,18 @@ ASTNodeImporter::VisitFunctionProtoType(const FunctionProtoType *T) {
 
 ExpectedType ASTNodeImporter::VisitUnresolvedUsingType(
     const UnresolvedUsingType *T) {
-  Error Err = Error::success();
-  auto ToQualifier = importChecked(Err, T->getQualifier());
-  auto *ToD = importChecked(Err, T->getDecl());
-  if (Err)
-    return std::move(Err);
+  auto ToQualifierOrErr = import(T->getQualifier());
+  if (!ToQualifierOrErr)
+    return ToQualifierOrErr.takeError();
+  auto ToDeclOrErr = import(T->getDecl());
+  if (!ToDeclOrErr)
+    return ToDeclOrErr.takeError();
 
   if (T->isCanonicalUnqualified())
-    return Importer.getToContext().getCanonicalUnresolvedUsingType(ToD);
-  return Importer.getToContext().getUnresolvedUsingType(T->getKeyword(),
-                                                        ToQualifier, ToD);
+    return Importer.getToContext().getCanonicalUnresolvedUsingType(
+        *ToDeclOrErr);
+  return Importer.getToContext().getUnresolvedUsingType(
+      T->getKeyword(), *ToQualifierOrErr, *ToDeclOrErr);
 }
 
 ExpectedType ASTNodeImporter::VisitParenType(const ParenType *T) {
@@ -1704,14 +1715,18 @@ ExpectedType ASTNodeImporter::VisitTypeOfType(const TypeOfType *T) {
 }
 
 ExpectedType ASTNodeImporter::VisitUsingType(const UsingType *T) {
-  Error Err = Error::success();
-  auto ToQualifier = importChecked(Err, T->getQualifier());
-  auto *ToD = importChecked(Err, T->getDecl());
-  QualType ToT = importChecked(Err, T->desugar());
-  if (Err)
-    return std::move(Err);
-  return Importer.getToContext().getUsingType(T->getKeyword(), ToQualifier, ToD,
-                                              ToT);
+  auto ToQualifierOrErr = import(T->getQualifier());
+  if (!ToQualifierOrErr)
+    return ToQualifierOrErr.takeError();
+  auto ToDeclOrErr = import(T->getDecl());
+  if (!ToDeclOrErr)
+    return ToDeclOrErr.takeError();
+
+  ExpectedType ToTypeOrErr = import(T->desugar());
+  if (!ToTypeOrErr)
+    return ToTypeOrErr.takeError();
+  return Importer.getToContext().getUsingType(
+      T->getKeyword(), *ToQualifierOrErr, *ToDeclOrErr, *ToTypeOrErr);
 }
 
 ExpectedType ASTNodeImporter::VisitDecltypeType(const DecltypeType *T) {
@@ -7368,6 +7383,20 @@ ExpectedStmt ASTNodeImporter::VisitCXXCatchStmt(CXXCatchStmt *S) {
       ToCatchLoc, ToExceptionDecl, ToHandlerBlock);
 }
 
+ExpectedStmt ASTNodeImporter::VisitCXXCatchThrowsStmt(CXXCatchThrowsStmt *S) {
+
+  Error Err = Error::success();
+  auto ToCatchLoc = importChecked(Err, S->getCatchLoc());
+  auto ToSpecLoc = importChecked(Err, S->getSpecLoc());
+  auto ToExceptionDecl = importChecked(Err, S->getExceptionDecl());
+  auto ToHandlerBlock = importChecked(Err, S->getHandlerBlock());
+  if (Err)
+    return std::move(Err);
+
+  return new (Importer.getToContext()) CXXCatchThrowsStmt (
+      ToCatchLoc, ToSpecLoc, ToExceptionDecl, ToHandlerBlock);
+}
+
 ExpectedStmt ASTNodeImporter::VisitCXXTryStmt(CXXTryStmt *S) {
   ExpectedSLoc ToTryLocOrErr = import(S->getTryLoc());
   if (!ToTryLocOrErr)
@@ -7379,7 +7408,7 @@ ExpectedStmt ASTNodeImporter::VisitCXXTryStmt(CXXTryStmt *S) {
 
   SmallVector<Stmt *, 1> ToHandlers(S->getNumHandlers());
   for (unsigned HI = 0, HE = S->getNumHandlers(); HI != HE; ++HI) {
-    CXXCatchStmt *FromHandler = S->getHandler(HI);
+    Stmt *FromHandler = S->getHandler(HI);
     if (auto ToHandlerOrErr = import(FromHandler))
       ToHandlers[HI] = *ToHandlerOrErr;
     else
@@ -8422,6 +8451,61 @@ ExpectedStmt ASTNodeImporter::VisitCXXThrowExpr(CXXThrowExpr *E) {
 
   return new (Importer.getToContext()) CXXThrowExpr(
       ToSubExpr, ToType, ToThrowLoc, E->isThrownVariableInScope());
+}
+
+ExpectedStmt ASTNodeImporter::VisitCXXErrorValueExpr(CXXErrorValueExpr *E) {
+  Error Err = Error::success();
+  auto ToOperand = importChecked(Err, E->getOperand());
+  auto ToDomainCall = importChecked(Err, E->getDomainCall());
+  auto ToCodeCall = importChecked(Err, E->getCodeCall());
+  auto ToType = importChecked(Err, E->getType());
+  auto ToLoc = importChecked(Err, E->getThrowLoc());
+  if (Err)
+    return std::move(Err);
+
+  return new (Importer.getToContext())
+      CXXErrorValueExpr(ToOperand, ToDomainCall, ToCodeCall, ToType, ToLoc);
+}
+
+ExpectedStmt ASTNodeImporter::VisitCXXCxaExceptionExpr(CXXCxaExceptionExpr *E) {
+  Error Err = Error::success();
+  auto ToType = importChecked(Err, E->getType());
+  auto ToLoc = importChecked(Err, E->getBeginLoc());
+  if (Err)
+    return std::move(Err);
+
+  return new (Importer.getToContext()) CXXCxaExceptionExpr(ToType, ToLoc);
+}
+
+ExpectedStmt ASTNodeImporter::VisitCXXTryExpr(CXXTryExpr *E) {
+  Error Err = Error::success();
+  auto ToSubExpr = importChecked(Err, E->getSubExpr());
+  auto ToType = importChecked(Err, E->getType());
+  auto ToTryLoc = importChecked(Err, E->getTryLoc());
+  if (Err)
+    return std::move(Err);
+
+  CXXRecordDecl *ToErrorDomain = nullptr;
+  if (E->getErrorDomain()) {
+    auto ToErrorDomainOrErr = import(E->getErrorDomain());
+    if (!ToErrorDomainOrErr)
+      return ToErrorDomainOrErr.takeError();
+    ToErrorDomain = *ToErrorDomainOrErr;
+  }
+  return new (Importer.getToContext())
+      CXXTryExpr(ToSubExpr, ToType, ToTryLoc, VK_PRValue, ToErrorDomain);
+}
+
+ExpectedStmt ASTNodeImporter::VisitCXXCatchReturnFailureExpr(CXXCatchReturnFailureExpr *E) {
+  Error Err = Error::success();
+  auto ToSubExpr = importChecked(Err, E->getSubExpr());
+  auto ToType = importChecked(Err, E->getType());
+  auto ToCatchLoc = importChecked(Err, E->getCatchLoc());
+  if (Err)
+    return std::move(Err);
+
+  return new (Importer.getToContext())
+      CXXCatchReturnFailureExpr(ToSubExpr, ToType, ToCatchLoc);
 }
 
 ExpectedStmt ASTNodeImporter::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {

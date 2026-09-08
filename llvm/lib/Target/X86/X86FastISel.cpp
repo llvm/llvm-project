@@ -249,9 +249,9 @@ bool X86FastISel::foldX86XALUIntrinsic(X86::CondCode &CC, const Instruction *I,
   switch (II->getIntrinsicID()) {
   default: return false;
   case Intrinsic::sadd_with_overflow:
-  case Intrinsic::ssub_with_overflow:
+  case Intrinsic::ssub_with_overflow: TmpCC = X86::COND_O; break;
   case Intrinsic::smul_with_overflow:
-  case Intrinsic::umul_with_overflow: TmpCC = X86::COND_O; break;
+  case Intrinsic::umul_with_overflow:
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::usub_with_overflow: TmpCC = X86::COND_B; break;
   }
@@ -2861,9 +2861,9 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     case Intrinsic::usub_with_overflow:
       BaseOpc = ISD::SUB; CondCode = X86::COND_B; break;
     case Intrinsic::smul_with_overflow:
-      BaseOpc = X86ISD::SMUL; CondCode = X86::COND_O; break;
+      BaseOpc = X86ISD::SMUL; CondCode = X86::COND_B; break;
     case Intrinsic::umul_with_overflow:
-      BaseOpc = X86ISD::UMUL; CondCode = X86::COND_O; break;
+      BaseOpc = X86ISD::UMUL; CondCode = X86::COND_B; break;
     }
 
     Register LHSReg = getRegForValue(LHS);
@@ -3199,6 +3199,12 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   bool Is64Bit        = Subtarget->is64Bit();
   bool IsWin64        = Subtarget->isCallingConvWin64(CC);
+
+  // Herbception (throws) calls return a {T, i1} value where the discriminant
+  // is carried in the carry flag. FastISel does not implement this mechanism,
+  // so fall back to SelectionDAG ISel.
+  if (CLI.IsThrows)
+    return false;
 
   // If the return type is illegal, check if the ABI requires a type conversion
   // that FastISel cannot handle. Fall back to DAG ISel in such cases.

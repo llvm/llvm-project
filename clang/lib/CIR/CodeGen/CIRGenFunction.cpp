@@ -21,6 +21,7 @@
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/FPEnv.h"
 
@@ -356,12 +357,49 @@ cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
 
   if (!fn.getFunctionType().hasVoidReturn()) {
     // Load the value from `__retval` and return it via the `cir.return` op.
-    auto value = cir::LoadOp::create(
-        builder, loc, fn.getFunctionType().getReturnType(), *cgf.fnRetAlloca);
-    return cir::ReturnOp::create(builder, loc,
-                                 llvm::ArrayRef(value.getResult()));
+    mlir::Type retTy = fn.getFunctionType().getReturnType();
+    mlir::Value value;
+
+    if (cgf.fnRetAlloca) {
+      // Normal case: load from the return alloca.
+      value = cir::LoadOp::create(builder, loc, retTy, *cgf.fnRetAlloca);
+    } else if (cgf.curFnInfo && cgf.curFnInfo->hasThrowsReturn()) {
+      // Herbception (throws) with void AST return type: the payload is the
+      // error type. Create a default value (null) of the error type.
+      mlir::Type errTy = cgf.curFnInfo->getHerbceptionErrorType();
+      value = builder.getNullValue(errTy, loc);
+    } else {
+      llvm_unreachable("emitReturn: no return alloca for non-void function");
+    }
+
+    // Herbception (throws): wrap the payload into the shaped {T, i1} result.
+    if (cgf.curFnInfo && cgf.curFnInfo->hasThrowsReturn())
+      value = cgf.wrapHerbceptionReturnValue(loc, value);
+
+    return cir::ReturnOp::create(builder, loc, value);
   }
   return cir::ReturnOp::create(builder, loc);
+}
+
+mlir::Value CIRGenFunction::wrapHerbceptionReturnValue(mlir::Location loc,
+                                                       mlir::Value payload,
+                                                       bool disc) {
+  auto fn = cast<cir::FuncOp>(curFn);
+  auto shapedTy = cast<cir::RecordType>(fn.getFunctionType().getReturnType());
+  CharUnits align =
+      CharUnits::fromQuantity(cgm.getDataLayout().getABITypeAlign(shapedTy));
+  Address tmp = createTempAlloca(shapedTy, align, loc, "__herb.ret");
+  llvm::SmallVector<mlir::Type> members(shapedTy.getMembers().begin(),
+                                        shapedTy.getMembers().end());
+  for (unsigned idx = 0; idx < members.size(); ++idx) {
+    // Build the member pointer directly: the generic helper consults the
+    // data layout, which anonymous records have no entry for.
+    mlir::Value memberPtr = builder.createGetMember(
+        loc, builder.getPointerTo(members[idx]), tmp.getBasePointer(), "", idx);
+    builder.createStore(loc, idx == 0 ? payload : builder.getBool(disc, loc),
+                        Address(memberPtr, members[idx], align));
+  }
+  return builder.createLoad(loc, tmp);
 }
 
 // This is copied from CodeGenModule::MayDropFunctionReturn.  This is a
@@ -487,10 +525,17 @@ void CIRGenFunction::emitFunctionProlog(const FunctionArgList &args,
                    convertType(paramVar->getType()), paramLoc, alignment,
                    /*insertIntoFnEntryBlock=*/true);
 
-    declare(addrVal, paramVar, paramVar->getType(), paramLoc, alignment,
+    mlir::ptr::MemorySpaceAttrInterface destAddrSpace =
+        cir::toCIRAddressSpaceAttr(getMLIRContext(),
+                                   paramVar->getType().getAddressSpace());
+    Address addr = Address(addrVal, alignment);
+    addr = maybeCastStackAddressSpace(addr, destAddrSpace);
+
+    declare(addr.getPointer(), paramVar, paramVar->getType(), paramLoc,
+            alignment,
             /*isParam=*/true);
 
-    setAddrOfLocalVar(paramVar, Address(addrVal, alignment));
+    setAddrOfLocalVar(paramVar, addr);
 
     bool isPromoted = isa<ParmVarDecl>(paramVar) &&
                       cast<ParmVarDecl>(paramVar)->isKNRPromoted();
@@ -516,6 +561,11 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   curFn = fn;
 
   const Decl *d = gd.getDecl();
+
+  // Herbception (throws) and other signature-level queries need the arranged
+  // function info; classic CodeGen sets CurFnInfo here as well.
+  if (dyn_cast_or_null<clang::FunctionDecl>(d))
+    curFnInfo = &cgm.getTypes().arrangeGlobalDeclaration(gd);
 
   didCallStackSave = false;
   curCodeDecl = d;
@@ -972,10 +1022,21 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   case Dtor_Base:
     assert(body);
 
+    bool needsVTableInit =
+        !CodeGenUtils::canSkipVTablePointerInitialization(getContext(), dtor);
+    // Launder 'this' if necessary.
+    if (needsVTableInit && cgm.getCodeGenOpts().StrictVTablePointers &&
+        cgm.getCodeGenOpts().OptimizationLevel > 0) {
+      cxxThisValue = cir::LaunderOp::create(
+          builder, getLoc(dtor->getBeginLoc()), loadCXXThis());
+    }
+
     // Enter the cleanup scopes for fields and non-virtual bases.
     enterDtorCleanups(dtor, Dtor_Base);
 
-    assert(!cir::MissingFeatures::vtableInitialization());
+    // Initialize the vtable pointers before entering the body.
+    if (needsVTableInit)
+      initializeVTablePointers(getLoc(dtor->getBeginLoc()), dtor->getParent());
 
     if (isTryBody) {
       cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
@@ -1364,11 +1425,11 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
       return;
 
   // Cast the dest ptr to the appropriate i8 pointer type.
-  if (builder.isInt8Ty(destPtr.getElementType())) {
-    cgm.errorNYI(loc, "Cast the dest ptr to the appropriate i8 pointer type");
-  }
+  if (!builder.isInt8Ty(destPtr.getElementType()))
+    destPtr = destPtr.withElementType(builder, uInt8Ty);
 
   // Get size and alignment info for this aggregate.
+  mlir::IntegerAttr sizeVal;
   const CharUnits size = getContext().getTypeSizeInChars(ty);
   if (size.isZero()) {
     // But note that getTypeInfo returns 0 for a VLA.
@@ -1378,6 +1439,8 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
     } else {
       return;
     }
+  } else {
+    sizeVal = cgm.getSize(size);
   }
 
   // If the type contains a pointer to data member we can't memset it to zero.
@@ -1396,12 +1459,15 @@ void CIRGenFunction::emitNullInitialization(mlir::Location loc, Address destPtr,
     return;
   }
 
-  // In LLVM Codegen: otherwise, just memset the whole thing to zero using
-  // Builder.CreateMemSet. In CIR just emit a store of #cir.zero to the
-  // respective address.
-  // Builder.CreateMemSet(DestPtr, Builder.getInt8(0), SizeVal, false);
-  const mlir::Value zeroValue = builder.getNullValue(convertType(ty), loc);
-  builder.createStore(loc, zeroValue, destPtr);
+  // Otherwise, just memset the whole thing to zero.  This is legal
+  // because in LLVM, all default initializers (other than the ones we just
+  // handled above, and the case handled below) are guaranteed to have a bit
+  // pattern of all zeros.
+  mlir::Value zero = builder.getNullValue(builder.getUInt8Ty(), loc);
+  mlir::Value sizeValue =
+      builder.getConstAPInt(loc, cgm.uInt64Ty, sizeVal.getValue());
+  destPtr = destPtr.withElementType(builder, cgm.voidTy);
+  builder.createMemSet(loc, destPtr, zero, sizeValue);
 }
 
 CIRGenFunction::CIRGenFPOptionsRAII::CIRGenFPOptionsRAII(CIRGenFunction &cgf,

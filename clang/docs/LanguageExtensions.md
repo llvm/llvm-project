@@ -15,6 +15,7 @@ AutomaticReferenceCounting
 PointerAuthentication
 MatrixTypes
 CXXTypeAwareAllocators
+herbceptions/index
 ```
 
 ## Introduction

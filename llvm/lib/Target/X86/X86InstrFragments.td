@@ -60,6 +60,11 @@ def SDTX86SetCC_C : SDTypeProfile<1, 2,
                                   [SDTCisInt<0>,
                                    SDTCisVT<1, i8>, SDTCisVT<2, i32>]>;
 
+// Herbception (throws): read the carry flag (CF) into an i8 value. This is a
+// chained node (chain + glue in/out) so it can be glued right after a call,
+// before CALLSEQ_END clobbers EFLAGS. Custom-selected to a setb instruction.
+def SDTX86ReadCF : SDTypeProfile<1, 0, [SDTCisVT<0, i8>]>;
+
 def SDTX86sahf : SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisVT<1, i8>]>;
 
 def SDTX86rdrand : SDTypeProfile<2, 0, [SDTCisInt<0>, SDTCisVT<1, i32>]>;
@@ -202,6 +207,21 @@ def X86setcc   : SDNode<"X86ISD::SETCC",    SDTX86SetCC>;
 // Same as SETCC except it's materialized with a sbb and the value is all
 // one's or all zero's.
 def X86setcc_c : SDNode<"X86ISD::SETCC_CARRY", SDTX86SetCC_C>;
+
+// Herbception (throws): read the carry flag (CF) into an i8 value. This is a
+// chained node (chain + glue in/out) so it can be glued right after a call,
+// before CALLSEQ_END clobbers EFLAGS. Custom-selected to a setb instruction.
+def X86read_cf : SDNode<"X86ISD::READ_CF", SDTX86ReadCF,
+                        [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+
+// Herbception (throws): set/clear the carry flag directly (stc/clc). Used to
+// return a constant discriminant from a throws function without materializing
+// the ADD-with-AllOnes trick. Chained + glued like X86read_cf so the flag
+// state survives until the glued RET.
+def X86set_carry   : SDNode<"X86ISD::STC", SDTNone,
+                        [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+def X86clear_carry : SDNode<"X86ISD::CLC", SDTNone,
+                        [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
 // Get a random integer and indicate whether it is valid in CF.
 def X86rdrand  : SDNode<"X86ISD::RDRAND",   SDTX86rdrand,
@@ -562,6 +582,11 @@ def i32immSExt8  : ImmLeaf<i32, [{ return isInt<8>(Imm); }]>;
 def i64immSExt8  : ImmLeaf<i64, [{ return isInt<8>(Imm); }]>;
 def i64immSExt32 : ImmLeaf<i64, [{ return isInt<32>(Imm); }]>;
 def i64timmSExt32 : TImmLeaf<i64, [{ return isInt<32>(Imm); }]>;
+
+def GetLo32XForm : SDNodeXForm<imm, [{
+  // Transformation function: get the low 32 bits.
+  return getI32Imm((uint32_t)N->getZExtValue(), SDLoc(N));
+}]>;
 
 def i16relocImmSExt8 : PatLeaf<(i16 relocImm), [{
   return isSExtAbsoluteSymbolRef(8, N);

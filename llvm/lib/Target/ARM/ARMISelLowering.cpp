@@ -155,6 +155,12 @@ cl::opt<unsigned> ArmMaxBaseUpdatesToCheck(
 /// Value type used for "flags" operands / results (either CPSR or FPSCR_NZCV).
 constexpr MVT FlagsVT = MVT::i32;
 
+// Convert a value to a carry flag (used by herbception throws lowering).
+static SDValue valueToCarryFlag(SDValue Value, SelectionDAG &DAG, bool Invert);
+// Convert a carry flag to a value (used by herbception throws lowering).
+static SDValue carryFlagToValue(SDValue Flags, EVT VT, SelectionDAG &DAG,
+                                bool Invert);
+
 // The APCS parameter registers.
 static const MCPhysReg GPRArgRegs[] = {
   ARM::R0, ARM::R1, ARM::R2, ARM::R3
@@ -1797,7 +1803,7 @@ SDValue ARMTargetLowering::LowerCallResult(
     SDValue Chain, SDValue InGlue, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals, bool isThisReturn,
-    SDValue ThisVal, bool isCmseNSCall) const {
+    SDValue ThisVal, bool isCmseNSCall, bool IsThrows) const {
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, DAG.getMachineFunction(), RVLocs,
@@ -1807,6 +1813,20 @@ SDValue ARMTargetLowering::LowerCallResult(
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0; i != RVLocs.size(); ++i) {
     CCValAssign VA = RVLocs[i];
+
+    // Herbception (throws): the discriminant is carried in the CPSR carry flag
+    // (C bit), which is read right after the call. The value is converted back
+    // to an i1/i8 via ADDE 0, 0, Carry.
+    if (IsThrows && Ins[VA.getValNo()].Flags.isThrows()) {
+      SDValue CPSR = DAG.getCopyFromReg(Chain, dl, ARM::CPSR, MVT::i32, InGlue);
+      Chain = CPSR.getValue(1);
+      InGlue = CPSR.getValue(2);
+      SDValue Val = carryFlagToValue(CPSR.getValue(0), MVT::i32, DAG,
+                                     /*Invert=*/false);
+      Val = DAG.getZExtOrTrunc(Val, dl, VA.getValVT());
+      InVals.push_back(Val);
+      continue;
+    }
 
     // Pass 'this' value directly from the argument to return value, to avoid
     // reg unit interference
@@ -2703,7 +2723,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // return.
   return LowerCallResult(Chain, InGlue, CallConv, isVarArg, Ins, dl, DAG,
                          InVals, isThisReturn,
-                         isThisReturn ? OutVals[0] : SDValue(), isCmseNSCall);
+                         isThisReturn ? OutVals[0] : SDValue(), isCmseNSCall,
+                         CLI.IsThrows);
 }
 
 /// HandleByVal - Every parameter *after* a byval parameter is passed
@@ -2966,6 +2987,10 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   AFI->setReturnRegsCount(RVLocs.size());
 
+  // Herbception (throws): the discriminant is carried in the CPSR carry flag
+  // (C bit) instead of a return register.
+  SDValue ThrowsDiscriminant;
+
  // Report error if cmse entry function returns structure through first ptr arg.
   if (AFI->isCmseNSEntryFunction() && MF.getFunction().hasStructRetAttr()) {
     // Note: using an empty SDLoc(), as the first line of the function is a
@@ -2985,6 +3010,15 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
     SDValue Arg = OutVals[realRVLocIdx];
     bool ReturnF16 = false;
+
+    // Herbception (throws): the discriminant is carried in the CPSR carry
+    // flag (C bit) instead of a return register.
+    if (Outs[realRVLocIdx].Flags.isThrows()) {
+      assert(!ThrowsDiscriminant.getNode() &&
+             "Only one throws discriminant per return");
+      ThrowsDiscriminant = Arg;
+      continue;
+    }
 
     if (Subtarget->hasFullFP16() && Subtarget->isTargetHardFloat()) {
       // Half-precision return values can be returned like this:
@@ -3092,6 +3126,17 @@ ARMTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       else
         llvm_unreachable("Unexpected register class in CSRsViaCopy!");
     }
+  }
+
+  // Herbception (throws): return the discriminant in the CPSR carry flag. Use
+  // SUBC Value, 1 so that C = (Value != 0) = Value, and glue the flag into the
+  // RET so nothing clobbers it before the return.
+  if (ThrowsDiscriminant.getNode()) {
+    SDValue Carry =
+        valueToCarryFlag(ThrowsDiscriminant, DAG, /*Invert=*/false);
+    Chain = DAG.getCopyToReg(Chain, dl, ARM::CPSR, Carry, Glue);
+    Glue = Chain.getValue(1);
+    RetOps.push_back(DAG.getRegister(ARM::CPSR, MVT::i32));
   }
 
   // Update chain and glue.

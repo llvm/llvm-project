@@ -2964,6 +2964,24 @@ private:
       SmallVectorImpl<SourceRange> &DynamicExceptionRanges,
       ExprResult &NoexceptExpr, CachedTokens *&ExceptionSpecTokens);
 
+  /// Parse a `noexcept` specifier that follows a `throws` specifier, e.g.
+  /// `throws noexcept(false)`. `throws` implies noexcept(true), so a following
+  /// `noexcept(false)` is rejected; `noexcept(true)`/bare `noexcept` is
+  /// accepted and the function stays `throws`.
+  ExceptionSpecificationType tryParseNoexceptAfterThrows(
+      ExceptionSpecificationType ThrowsType);
+
+  /// Parse a `noexcept` specifier that follows a `fails{E}` specifier.
+  /// `fails{E} noexcept(false)` adds the traditional C++ exception channel
+  /// alongside the herbception error channel.
+  ExceptionSpecificationType
+  tryParseNoexceptAfterFails(ExceptionSpecificationType FailsType);
+
+  /// Cache a `noexcept(...)` that follows `throws`/`return_failure` so the
+  /// delayed re-parse of a member function exception spec sees both and
+  /// emits the mutual-exclusion diagnostic.
+  void cacheNoexceptAfterThrows(CachedTokens *&ExceptionSpecTokens);
+
   /// ParseDynamicExceptionSpecification - Parse a C++
   /// dynamic-exception-specification (C++ [except.spec]).
   /// EndLoc is filled with the location of the last token of the specification.
@@ -4846,6 +4864,20 @@ private:
   ///         'throw' assignment-expression[opt]
   /// \endverbatim
   ExprResult ParseThrowExpression();
+
+  /// ParseHerbceptionTryExpression - This handles the herbception
+  /// `try(expr)` expression, which auto-propagates the error of a throws/fails
+  /// call on failure.
+  ExprResult ParseHerbceptionTryExpression();
+
+  /// ParseHerbceptionCatchReturnFailureExpression - This handles the herbception
+  /// `catch fails(expr)` expression, which produces an `either{T, E}` value.
+  ExprResult ParseHerbceptionCatchReturnFailureExpression();
+
+  /// ParseHerbceptionReturnFailureExpression - This handles the herbception
+  /// `failure(expr)` expression, which returns \p expr via the failure channel
+  /// of a `fails{E}` function.
+  ExprResult ParseHerbceptionReturnFailureExpression();
 
   //===--------------------------------------------------------------------===//
   // C++ 2.13.5: C++ Boolean Literals
@@ -7608,6 +7640,13 @@ public:
   /// \endverbatim
   StmtResult ParseReturnStatement();
 
+  /// ParseReturnFailureStatement
+  /// \verbatim
+  ///       herbception-return-statement:
+  ///         'return_failure' expression[opt] ';'
+  /// \endverbatim
+  StmtResult ParseReturnFailureStatement();
+
   StmtResult ParseBreakOrContinueStatement(bool IsContinue);
 
   /// ParseDeferStatement
@@ -7737,6 +7776,17 @@ public:
   /// \endverbatim
   ///
   Decl *ParseFunctionTryBlock(Decl *Decl, ParseScope &BodyScope);
+
+  /// ParseFunctionBody - Parse the body of a function definition. The
+  /// '= default' and '= delete' forms are handled by the caller.
+  ///
+  /// \verbatim
+  ///       function-body:
+  ///         ctor-initializer[opt] compound-statement
+  ///         function-try-block
+  /// \endverbatim
+  ///
+  Decl *ParseFunctionBody(Decl *D, ParseScope &BodyScope);
 
   /// When in code-completion, skip parsing of the function/method body
   /// unless the body contains the code-completion point.

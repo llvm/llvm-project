@@ -59,6 +59,13 @@ std::string X86_MC::ParseX86Triple(const Triple &TT) {
   if (TT.isX32())
     FS += ",+x32";
 
+  if (TT.getSubArch() == Triple::X86_64SubArch_apx) {
+    FS += ",+egpr,+push2pop2,+ppx,+ndd,+ccmp,+nf,+zu,+jmpabs";
+    // APX (EVEX) implies AVX-512; WinCall assumes every instruction is
+    // EVEX-encoded so no vzeroupper is needed at WinCall boundaries.
+    FS += ",+avx512f,-vzeroupper";
+  }
+
   return FS;
 }
 

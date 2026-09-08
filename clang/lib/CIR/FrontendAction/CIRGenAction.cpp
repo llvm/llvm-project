@@ -66,6 +66,26 @@ lowerFromCIRToLLVMIR(mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx,
                                               mlirSaveTempsOutFile, fs);
 }
 
+// Herbception (throws): CIRGen marks shaped functions and call sites with a
+// placeholder 'throws' attribute, which lowerFromCIRToLLVMIR forwards as a
+// plain string on functions (the LLVM dialect has no enum equivalent). Swap
+// it for the real Attribute::Throws here and stamp the call sites so the
+// backend carries the {T, i1} discriminant out-of-band.
+static void propagateThrowsAttributes(llvm::Module &M) {
+  for (llvm::Function &F : M) {
+    if (!F.hasFnAttribute("throws"))
+      continue;
+    F.removeFnAttr("throws");
+    F.addFnAttr(llvm::Attribute::Throws);
+    for (llvm::User *U : F.users()) {
+      auto *CB = dyn_cast<llvm::CallBase>(U);
+      if (!CB || CB->getCalledOperand()->stripPointerCasts() != &F)
+        continue;
+      CB->addFnAttr(llvm::Attribute::Throws);
+    }
+  }
+}
+
 class CIRGenConsumer : public clang::ASTConsumer {
 
   virtual void anchor();
@@ -198,6 +218,8 @@ public:
       std::unique_ptr<llvm::Module> LLVMModule = lowerFromCIRToLLVMIR(
           MlirModule, LLVMCtx, C.getLangOpts().OpenMP, mlirSaveTempsOutFile,
           &CI.getVirtualFileSystem());
+
+      propagateThrowsAttributes(*LLVMModule);
 
       if (linkInModules(*LLVMModule))
         return;

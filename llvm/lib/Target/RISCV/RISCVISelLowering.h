@@ -460,6 +460,9 @@ public:
 
   bool supportKCFIBundles() const override { return true; }
 
+  /// RISC-V returns the throws (herbception) discriminant in a2 (X12).
+  bool supportThrowsCC() const override { return true; }
+
   SDValue expandIndirectJTBranch(const SDLoc &dl, SDValue Value, SDValue Addr,
                                  int JTI, SelectionDAG &DAG) const override;
 

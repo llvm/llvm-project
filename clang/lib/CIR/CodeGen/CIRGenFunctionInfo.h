@@ -17,6 +17,7 @@
 
 #include "clang/AST/CanonicalType.h"
 #include "clang/CIR/ABIArgInfo.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -84,6 +85,12 @@ public:
 class CIRGenFunctionInfo final
     : public llvm::FoldingSetNode,
       private llvm::TrailingObjects<CIRGenFunctionInfo, CanQualType> {
+  /// The CIR-level calling convention to use for this function.
+  unsigned callingConvention : 8;
+
+  /// The AST-level calling convention this function was declared with.
+  unsigned astCallingConvention : 8;
+
   // Whether this function has noreturn.
   LLVM_PREFERRED_TYPE(bool)
   unsigned noReturn : 1;
@@ -93,9 +100,17 @@ class CIRGenFunctionInfo final
   LLVM_PREFERRED_TYPE(bool)
   unsigned instanceMethod : 1;
 
+  // Whether this function returns through the herbception {T, i1} channel.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned throwsReturn : 1;
+
   RequiredArgs required;
 
   unsigned numArgs;
+
+  // For a herbception {T, i1} return, the IR type of the error payload. Null
+  // unless throwsReturn is set.
+  mlir::Type herbceptionErrorTy;
 
   CanQualType *getArgTypes() { return getTrailingObjects(); }
   const CanQualType *getArgTypes() const { return getTrailingObjects(); }
@@ -107,16 +122,19 @@ class CIRGenFunctionInfo final
     // here instead of explicit false/0.
     return FunctionType::ExtInfo(
         isNoReturn(), /*getHasRegParm=*/false, /*getRegParm=*/false,
-        /*getASTCallingConvention=*/CallingConv(0), /*isReturnsRetained=*/false,
+        getASTCallingConvention(), /*isReturnsRetained=*/false,
         /*isNoCallerSavedRegs=*/false, /*isNoCfCheck=*/false,
         /*isCmseNSCall=*/false);
   }
 
 public:
-  static CIRGenFunctionInfo *create(FunctionType::ExtInfo info,
+  static CIRGenFunctionInfo *create(cir::CallingConv cirCC,
+                                    FunctionType::ExtInfo info,
                                     bool instanceMethod, CanQualType resultType,
                                     llvm::ArrayRef<CanQualType> argTypes,
-                                    RequiredArgs required);
+                                    RequiredArgs required,
+                                    bool throwsReturn = false,
+                                    mlir::Type herbceptionErrorTy = {});
 
   void operator delete(void *p) { ::operator delete(p); }
 
@@ -130,11 +148,16 @@ public:
   // This function has to be CamelCase because llvm::FoldingSet requires so.
   // NOLINTNEXTLINE(readability-identifier-naming)
   static void Profile(llvm::FoldingSetNodeID &id, bool instanceMethod,
+                      bool throwsReturn, mlir::Type herbceptionErrorTy,
                       FunctionType::ExtInfo info, RequiredArgs required,
                       CanQualType resultType,
                       llvm::ArrayRef<CanQualType> argTypes) {
+    id.AddInteger(info.getCC());
     id.AddBoolean(instanceMethod);
     id.AddBoolean(info.getNoReturn());
+    id.AddBoolean(throwsReturn);
+    if (herbceptionErrorTy)
+      id.AddPointer(herbceptionErrorTy.getAsOpaquePointer());
     id.AddInteger(required.getOpaqueData());
     resultType.Profile(id);
     for (const CanQualType &arg : argTypes)
@@ -146,8 +169,8 @@ public:
     // If the Profile functions get out of sync, we can end up with incorrect
     // function signatures, so we call the static Profile function here rather
     // than duplicating the logic.
-    Profile(id, isInstanceMethod(), getExtInfo(), required, getReturnType(),
-            arguments());
+    Profile(id, isInstanceMethod(), hasThrowsReturn(), herbceptionErrorTy,
+            getExtInfo(), required, getReturnType(), arguments());
   }
 
   llvm::ArrayRef<CanQualType> arguments() const {
@@ -192,6 +215,16 @@ public:
 
   bool isNoReturn() const { return noReturn; }
   bool isInstanceMethod() const { return instanceMethod; }
+  bool hasThrowsReturn() const { return throwsReturn; }
+  mlir::Type getHerbceptionErrorType() const { return herbceptionErrorTy; }
+
+  cir::CallingConv getCallingConvention() const {
+    return static_cast<cir::CallingConv>(callingConvention);
+  }
+
+  CallingConv getASTCallingConvention() const {
+    return static_cast<CallingConv>(astCallingConvention);
+  }
 };
 
 } // namespace clang::CIRGen

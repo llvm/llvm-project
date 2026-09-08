@@ -3747,6 +3747,8 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
     return "fastcall";
   case CC_X86ThisCall:
     return "thiscall";
+  case CC_WinCall:
+    return "wincall";
   case CC_X86Pascal:
     return "pascal";
   case CC_X86VectorCall:
@@ -3870,7 +3872,8 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
   }
 
   // Fill in the exception type array if present.
-  if (getExceptionSpecType() == EST_Dynamic) {
+  if (getExceptionSpecType() == EST_Dynamic ||
+      getExceptionSpecType() == EST_ThrowsTyped) {
     auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
     size_t NumExceptions = epi.ExceptionSpec.Exceptions.size();
     assert(NumExceptions <= 1023 && "Not enough bits to encode exceptions");
@@ -4015,6 +4018,18 @@ CanThrowResult FunctionProtoType::canThrow() const {
   case EST_NoThrow:
     return CT_Cannot;
 
+  case EST_BasicThrows:
+  case EST_BasicThrowsTrue:
+  case EST_ThrowsTyped:
+    // Herbception: the function cannot throw C++ exceptions, but it can
+    // return a failure via the deterministic error channel.
+    return CT_Deterministic;
+
+  case EST_BasicThrowsFalse:
+    // `throws(false)`: cannot fail via herbception and cannot throw C++
+    // exceptions — equivalent to noexcept(true).
+    return CT_Cannot;
+
   case EST_None:
   case EST_MSAny:
   case EST_NoexceptFalse:
@@ -4047,7 +4062,7 @@ bool FunctionProtoType::isTemplateVariadic() const {
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
                                 const QualType *ArgTys, unsigned NumParams,
                                 const ExtProtoInfo &epi,
-                                const ASTContext &Context, bool Canonical) {
+                                const ASTContext &Context) {
   // We have to be careful not to get ambiguous profile encodings.
   // Note that valid type pointers are never ambiguous with anything else.
   //
@@ -4082,11 +4097,14 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   ID.AddInteger(unsigned(epi.Variadic) + (epi.RefQualifier << 1) +
                 (epi.ExceptionSpec.Type << 3));
   ID.Add(epi.TypeQuals);
-  if (epi.ExceptionSpec.Type == EST_Dynamic) {
+  if (epi.ExceptionSpec.Type == EST_Dynamic ||
+      epi.ExceptionSpec.Type == EST_ThrowsTyped) {
     for (QualType Ex : epi.ExceptionSpec.Exceptions)
       ID.AddPointer(Ex.getAsOpaquePtr());
   } else if (isComputedNoexcept(epi.ExceptionSpec.Type)) {
-    epi.ExceptionSpec.NoexceptExpr->Profile(ID, Context, Canonical);
+    // getFunctionTypeInternal compares noexcept expressions after the lookup,
+    // so the key only needs their canonical form.
+    epi.ExceptionSpec.NoexceptExpr->Profile(ID, Context, /*Canonical=*/true);
   } else if (epi.ExceptionSpec.Type == EST_Uninstantiated ||
              epi.ExceptionSpec.Type == EST_Unevaluated) {
     ID.AddPointer(epi.ExceptionSpec.SourceDecl->getCanonicalDecl());
@@ -4116,7 +4134,7 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
 void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID,
                                 const ASTContext &Ctx) {
   Profile(ID, getReturnType(), param_type_begin(), getNumParams(),
-          getExtProtoInfo(), Ctx, isCanonicalUnqualified());
+          getExtProtoInfo(), Ctx);
 }
 
 TypeCoupledDeclRefInfo::TypeCoupledDeclRefInfo(ValueDecl *D, bool Deref)
@@ -4593,6 +4611,7 @@ bool AttributedType::isCallingConv() const {
   case attr::PreserveNone:
   case attr::RISCVVectorCC:
   case attr::RISCVVLSCC:
+  case attr::WinCall:
     return true;
   }
   llvm_unreachable("invalid attr kind");
@@ -4626,18 +4645,6 @@ const TemplateTypeParmDecl *
 SubstTemplateTypeParmType::getReplacedParameter() const {
   return cast<TemplateTypeParmDecl>(std::get<0>(
       getReplacedTemplateParameter(getAssociatedDecl(), getIndex())));
-}
-
-void SubstTemplateTypeParmType::Profile(llvm::FoldingSetNodeID &ID,
-                                        QualType Replacement,
-                                        const Decl *AssociatedDecl,
-                                        unsigned Index,
-                                        UnsignedOrNone PackIndex, bool Final) {
-  Replacement.Profile(ID);
-  ID.AddPointer(AssociatedDecl);
-  ID.AddInteger(Index);
-  ID.AddInteger(PackIndex.toInternalRepresentation());
-  ID.AddBoolean(Final);
 }
 
 SubstPackType::SubstPackType(TypeClass Derived, QualType Canon,
@@ -4857,22 +4864,6 @@ void ObjCObjectTypeImpl::Profile(llvm::FoldingSetNodeID &ID) {
   Profile(ID, getBaseType(), getTypeArgsAsWritten(),
           llvm::ArrayRef(qual_begin(), getNumProtocols()),
           isKindOfTypeAsWritten());
-}
-
-void ObjCTypeParamType::Profile(llvm::FoldingSetNodeID &ID,
-                                const ObjCTypeParamDecl *OTPDecl,
-                                QualType CanonicalType,
-                                ArrayRef<ObjCProtocolDecl *> protocols) {
-  ID.AddPointer(OTPDecl);
-  ID.AddPointer(CanonicalType.getAsOpaquePtr());
-  ID.AddInteger(protocols.size());
-  for (auto *proto : protocols)
-    ID.AddPointer(proto);
-}
-
-void ObjCTypeParamType::Profile(llvm::FoldingSetNodeID &ID) {
-  Profile(ID, getDecl(), getCanonicalTypeInternal(),
-          llvm::ArrayRef(qual_begin(), getNumProtocols()));
 }
 
 namespace {

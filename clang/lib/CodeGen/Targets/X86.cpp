@@ -1426,15 +1426,19 @@ public:
     return isX86VectorCallAggregateSmallEnough(NumMembers);
   }
 
-  ABIArgInfo classifyArgForArm64ECVarArg(QualType Ty) const override {
+  ABIArgInfo classifyArgForArm64ECVarArg(QualType Ty,
+                                         bool IsNamedArg) const override {
     unsigned FreeSSERegs = 0;
-    return classify(Ty, FreeSSERegs, /*IsReturnType=*/false,
-                    llvm::CallingConv::C);
+    ClassifyKind Kind =
+        IsNamedArg ? ClassifyKind::FixedArgument : ClassifyKind::VarArg;
+    return classify(Ty, FreeSSERegs, Kind, llvm::CallingConv::C);
   }
 
 private:
-  ABIArgInfo classify(QualType Ty, unsigned &FreeSSERegs, bool IsReturnType,
-                      unsigned CC) const;
+  enum class ClassifyKind { Return, FixedArgument, VarArg };
+
+  ABIArgInfo classify(QualType Ty, unsigned &FreeSSERegs, ClassifyKind Kind,
+                      unsigned CC, bool IsThrows = false) const;
   ABIArgInfo reclassifyHvaArgForVectorCall(QualType Ty, unsigned &FreeSSERegs,
                                            const ABIArgInfo &current) const;
 
@@ -2200,6 +2204,10 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
     bool UseClang11Compat = getContext().getLangOpts().isCompatibleWith(
                                 LangOptions::ClangABI::Ver11) ||
                             getContext().getTargetInfo().getTriple().isPS();
+    bool ClassifyUnnamedBitFields =
+        getContext().getLangOpts().getClangABICompat() >
+            LangOptions::ClangABI::Ver23 &&
+        !getContext().getTargetInfo().getTriple().isPS();
     bool IsUnion = RT->isUnionType() && !UseClang11Compat;
 
     for (RecordDecl::field_iterator i = RD->field_begin(), e = RD->field_end();
@@ -2207,9 +2215,13 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
       bool BitField = i->isBitField();
 
-      // Ignore zero-length bit-fields. Other unnamed bit-fields are real
-      // storage and classify like named ones, matching GCC.
-      if (BitField && i->isZeroLengthBitField())
+      // Ignore padding bit-fields. Normally only zero-length bit-fields are
+      // padding, but under -fclang-abi-compat=23 every unnamed bit-field is,
+      // faithfully reproducing Clang 23 -- including its crash on aggregates
+      // where skipping one leaves part of a wider access unit (e.g. an
+      // __int128 bit-field run) unclassified.
+      if (BitField && (ClassifyUnnamedBitFields ? i->isZeroLengthBitField()
+                                                : i->isUnnamedBitField()))
         continue;
 
       // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger than
@@ -2250,7 +2262,8 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       // structure to be passed in memory even if unaligned, and
       // therefore they can straddle an eightbyte.
       if (BitField) {
-        assert(!i->isZeroLengthBitField());
+        assert(ClassifyUnnamedBitFields ? !i->isZeroLengthBitField()
+                                        : !i->isUnnamedBitField());
         uint64_t Offset = OffsetBase + Layout.getFieldOffset(idx);
         uint64_t Size = i->getBitWidthValue();
 
@@ -3452,15 +3465,28 @@ ABIArgInfo WinX86_64ABIInfo::reclassifyHvaArgForVectorCall(
 }
 
 ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
-                                      bool IsReturnType, unsigned CC) const {
+                                      ClassifyKind Kind, unsigned CC,
+                                      bool IsThrows) const {
   bool IsVectorCall = CC == llvm::CallingConv::X86_VectorCall;
   bool IsRegCall = CC == llvm::CallingConv::X86_RegCall;
+  bool IsWinCall = CC == llvm::CallingConv::X86_WinCall;
 
   if (Ty->isVoidType())
     return ABIArgInfo::getIgnore();
 
-  if (const auto *ED = Ty->getAsEnumDecl())
+  bool PromoteScopedEnum = false;
+  if (const auto *ED = Ty->getAsEnumDecl()) {
     Ty = ED->getIntegerType();
+    PromoteScopedEnum = Kind == ClassifyKind::VarArg && ED->isScoped() &&
+                        getContext().isPromotableIntegerType(Ty);
+  }
+
+  // MSVC extends scoped enums with a sub-int underlying type when they are
+  // passed through an ellipsis. Unlike unscoped enums, scoped enums are not
+  // subject to the language's default argument promotions, so handle the
+  // extension as part of the ABI classification.
+  if (PromoteScopedEnum)
+    return ABIArgInfo::getExtend(Ty);
 
   TypeInfo Info = getContext().getTypeInfo(Ty);
   uint64_t Width = Info.Width;
@@ -3468,7 +3494,7 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
 
   const RecordType *RT = Ty->getAsCanonical<RecordType>();
   if (RT) {
-    if (!IsReturnType) {
+    if (Kind != ClassifyKind::Return) {
       if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(RT, getCXXABI()))
         return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                        RAA == CGCXXABI::RAA_DirectInMemory);
@@ -3477,6 +3503,85 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     if (RT->getDecl()->getDefinitionOrSelf()->hasFlexibleArrayMember())
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                      /*ByVal=*/false);
+
+    // WinCall passes a record that is a single FP/SIMD member exactly like the
+    // scalar it wraps (in a vector register), as long as the record's size and
+    // alignment match the member's natural size and alignment. If the user
+    // bumped the alignment so that the record is bigger than the member (e.g.
+    // a 16-byte-aligned struct holding one double), fall through to the normal
+    // aggregate rules.
+    if (IsWinCall && !Ty->isAnyComplexType() && !Ty->isMemberPointerType() &&
+        !RT->getDecl()->isUnion()) {
+      unsigned NumFields = 0;
+      const FieldDecl *SingleField = nullptr;
+      for (const FieldDecl *FD : RT->getDecl()->fields()) {
+        if (FD->isUnnamedBitField())
+          continue;
+        if (FD->isBitField()) {
+          NumFields = 0;
+          break;
+        }
+        ++NumFields;
+        SingleField = FD;
+      }
+      if (NumFields == 1 && SingleField) {
+        QualType FieldTy = SingleField->getType();
+        llvm::Type *FieldLLTy = CGT.ConvertType(FieldTy);
+        bool IsScalarFP =
+            FieldTy->isFloatingType() && !FieldTy->isComplexType();
+        bool IsVector = FieldTy->isVectorType();
+        if ((IsScalarFP || IsVector) &&
+            (FieldLLTy->isFloatingPointTy() || FieldLLTy->isVectorTy())) {
+          // The record must be exactly as big as the single member so that no
+          // padding/alignment is being carried by the struct.
+          if (getContext().getTypeSize(Ty) ==
+              getContext().getTypeSize(FieldTy)) {
+            if (Kind == ClassifyKind::Return)
+              return ABIArgInfo::getDirect(FieldLLTy);
+            if (Width <= 128)
+              return ABIArgInfo::getDirect(FieldLLTy);
+            return ABIArgInfo::getExpand();
+          }
+        }
+      }
+    }
+
+    // wincall passes/returns aggregates that fit in 1, 2, 4, 8, 16 or 32 bytes
+    // (e.g. 4x size_t, like std::string/std::vector) directly in registers,
+    // instead of by pointer/sret like the MS x64 ABI.
+    if (IsWinCall && Width <= 256 && !Ty->isAnyComplexType() &&
+        !Ty->isMemberPointerType()) {
+      // Empty C++ objects take no register slots.
+      if (isEmptyRecord(getContext(), Ty, /*AllowArrays=*/true))
+        return ABIArgInfo::getIgnore();
+      if (Kind == ClassifyKind::Return)
+        return ABIArgInfo::getDirect();
+      // Pass as an integer of the aggregate size when it fits in one register,
+      // otherwise expand it into its 8-byte parts.
+      if (Width <= 64)
+        return ABIArgInfo::getDirect(
+            llvm::IntegerType::get(getVMContext(), Width));
+      return ABIArgInfo::getExpand();
+    }
+  }
+
+  // WinCall passes complex scalars in the vector registers: a complex value is
+  // just two elements of its component type, so coerce _Complex float/double
+  // to v2f32/v2f64 and pass/return them in XMM registers instead of by
+  // pointer/sret like the MS x64 ABI.
+  if (IsWinCall && Ty->isAnyComplexType()) {
+    QualType ElemTy = cast<ComplexType>(Ty)->getElementType();
+    llvm::Type *ElemLLTy = CGT.ConvertType(ElemTy);
+    if (llvm::FixedVectorType::isValidElementType(ElemLLTy)) {
+      auto *V2 = llvm::FixedVectorType::get(ElemLLTy, 2);
+      if (Kind == ClassifyKind::Return)
+        return ABIArgInfo::getDirect(V2);
+      // A 128-bit complex value fits in one XMM register; a wider one (e.g.
+      // long double complex) is expanded into its 64-bit parts.
+      if (Width <= 128)
+        return ABIArgInfo::getDirect(V2);
+      return ABIArgInfo::getExpand();
+    }
   }
 
   const Type *Base = nullptr;
@@ -3488,7 +3593,8 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     if (IsRegCall) {
       if (FreeSSERegs >= NumElts) {
         FreeSSERegs -= NumElts;
-        if (IsReturnType || Ty->isBuiltinType() || Ty->isVectorType())
+        if (Kind == ClassifyKind::Return || Ty->isBuiltinType() ||
+            Ty->isVectorType())
           return ABIArgInfo::getDirect();
         return ABIArgInfo::getExpand();
       }
@@ -3497,10 +3603,11 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
           /*ByVal=*/false);
     } else if (IsVectorCall) {
       if (FreeSSERegs >= NumElts &&
-          (IsReturnType || Ty->isBuiltinType() || Ty->isVectorType())) {
+          (Kind == ClassifyKind::Return || Ty->isBuiltinType() ||
+           Ty->isVectorType())) {
         FreeSSERegs -= NumElts;
         return ABIArgInfo::getDirect();
-      } else if (IsReturnType) {
+      } else if (Kind == ClassifyKind::Return) {
         return ABIArgInfo::getExpand();
       } else if (!Ty->isBuiltinType() && !Ty->isVectorType()) {
         // HVAs are delayed and reclassified in the 2nd step.
@@ -3522,9 +3629,21 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
   if (RT || Ty->isAnyComplexType() || Ty->isMemberPointerType()) {
     // MS x64 ABI requirement: "Any argument that doesn't fit in 8 bytes, or is
     // not 1, 2, 4, or 8 bytes, must be passed by reference."
-    if (Width > 64 || !llvm::isPowerOf2_64(Width))
+    if (Width > 64 || !llvm::isPowerOf2_64(Width)) {
+      // Herbception (throws): exactly 16-byte types with no destructor are
+      // coerced to {i64, i64} and passed as two register-sized parameters
+      // (RCX+RDX, or R8+R9, or stack), matching how {size_t, size_t} would
+      // be passed separately.  ComputeValueTypes decomposes the struct into
+      // two i64 leaves, each independently consuming one register.
+      if (IsThrows && Width == 128 &&
+          Ty.isDestructedType() == QualType::DK_none) {
+        llvm::Type *I64 = llvm::IntegerType::get(getVMContext(), 64);
+        return ABIArgInfo::getDirect(
+            llvm::StructType::get(getVMContext(), {I64, I64}));
+      }
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
                                      /*ByVal=*/false);
+    }
 
     // Otherwise, coerce it to a small integer.
     return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), Width));
@@ -3552,10 +3671,25 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     case BuiltinType::Int128:
     case BuiltinType::UInt128:
     case BuiltinType::Float128:
+      // wincall passes 128-bit integers in two integer registers and returns
+      // them in RAX (low) and RDX (high), per the spec.
+      if (IsWinCall && BT->getKind() != BuiltinType::Float128) {
+        if (Kind == ClassifyKind::Return)
+          return ABIArgInfo::getDirect();
+        return ABIArgInfo::getExpand();
+      }
+      if (IsWinCall) {
+        // std::float128_t is passed like __int128: in two integer registers.
+        if (Kind == ClassifyKind::Return)
+          return ABIArgInfo::getDirect(llvm::FixedVectorType::get(
+              llvm::Type::getInt64Ty(getVMContext()), 2));
+        return ABIArgInfo::getExpand();
+      }
+
       // If it's a parameter type, the normal ABI rule is that arguments larger
       // than 8 bytes are passed indirectly. GCC follows it. We follow it too,
       // even though it isn't particularly efficient.
-      if (!IsReturnType)
+      if (Kind != ClassifyKind::Return)
         return ABIArgInfo::getIndirect(
             Align, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
             /*ByVal=*/false);
@@ -3631,6 +3765,12 @@ void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
     return;
   }
 
+  // Herbception (throws): when the function carries a herbception error type,
+  // the function de facto changes the calling convention.  Trivially-copyable
+  // types ≤16 bytes are split across 2 integer registers instead of being
+  // passed by pointer.
+  bool IsThrows = FI.getHerbceptionErrorType() != nullptr;
+
   unsigned FreeSSERegs = 0;
   if (IsVectorCall) {
     // We can use up to 4 SSE return registers with vectorcall.
@@ -3641,7 +3781,8 @@ void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   }
 
   if (!getCXXABI().classifyReturnType(FI))
-    FI.getReturnInfo() = classify(FI.getReturnType(), FreeSSERegs, true, CC);
+    FI.getReturnInfo() = classify(FI.getReturnType(), FreeSSERegs,
+                                  ClassifyKind::Return, CC, IsThrows);
 
   if (IsVectorCall) {
     // We can use up to 6 SSE register parameters with vectorcall.
@@ -3659,7 +3800,10 @@ void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
     // registers are left.
     unsigned *MaybeFreeSSERegs =
         (IsVectorCall && ArgNum >= 6) ? &ZeroSSERegs : &FreeSSERegs;
-    I.info = classify(I.type, *MaybeFreeSSERegs, false, CC);
+    ClassifyKind Kind = ArgNum >= FI.getNumRequiredArgs()
+                            ? ClassifyKind::VarArg
+                            : ClassifyKind::FixedArgument;
+    I.info = classify(I.type, *MaybeFreeSSERegs, Kind, CC, IsThrows);
     ++ArgNum;
   }
 

@@ -53,7 +53,12 @@ AST_MATCHER_P(CXXTryStmt, hasHandlerFor,
               ast_matchers::internal::Matcher<QualType>, InnerMatcher) {
   const unsigned NH = Node.getNumHandlers();
   for (unsigned I = 0; I < NH; ++I) {
-    const CXXCatchStmt *CatchS = Node.getHandler(I);
+    const Stmt *HandlerS = Node.getHandler(I);
+    // Herbception 'catch throws'/'catch fails' handlers do not catch
+    // traditional C++ exceptions.
+    const auto *CatchS = dyn_cast<CXXCatchStmt>(HandlerS);
+    if (!CatchS)
+      continue;
     // Check for generic catch handler (match anything).
     if (CatchS->getCaughtType().isNull())
       return true;

@@ -23,6 +23,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -457,6 +458,16 @@ llvm::Value *CodeGenFunction::getSelectorFromSlot() {
 
 void CodeGenFunction::EmitCXXThrowExpr(const CXXThrowExpr *E,
                                        bool KeepInsertionPoint) {
+  // Herbception `throw throws`: return the error value with the
+  // discriminant set to true. This is not a traditional throw.
+  if (E->isHerbception()) {
+    const Expr *SubExpr = E->getSubExpr();
+    EmitHerbceptionThrow(SubExpr, E->getExprLoc());
+    if (KeepInsertionPoint)
+      EmitBlock(createBasicBlock("throw.cont"));
+    return;
+  }
+
   // If the exception is being emitted in an OpenMP target region,
   // and the target is a GPU, we do not support exception handling.
   // Therefore, we emit a trap which will abort the program, and
@@ -551,6 +562,28 @@ void CodeGenFunction::EmitStartEHSpec(const Decl *D) {
     // noexcept functions are simple terminate scopes.
     if (!getLangOpts().EHAsynch) // -EHa: HW exception still can occur
       EHStack.pushTerminate();
+  } else if (Proto->getExceptionSpecType() == EST_BasicThrows ||
+             Proto->getExceptionSpecType() == EST_BasicThrowsTrue) {
+    // A bare `throws` function implicitly converts any legacy C++ exception
+    // that escapes it (thrown by a `noexcept(false)` callee) into a
+    // fabricated std::error, returned on the herbception channel. Wrap the
+    // whole function body in a catch-all EH scope whose handler performs the
+    // conversion. The scope is only pushed when Sema has determined that a
+    // legacy C++ exception can actually escape this function (canThrow(Body)
+    // == CT_Can) and has built the conversion expression. Without the
+    // conversion expression, emitHerbceptionLegacyConvertBody would crash.
+    // When no legacy escape is possible (only throws/noexcept callees) the
+    // block is dropped.
+    if (FD && FD->getHerbceptionLegacyErrorValue()) {
+      EHCatchScope *CatchScope = EHStack.pushCatch(1);
+      CatchScope->setCatchAllHandler(0, getHerbceptionLegacyConvert());
+    }
+  } else if (Proto->getExceptionSpecType() == EST_ThrowsTyped) {
+    // A default `fails{E}` function implies noexcept(true): any legacy C++
+    // exception that escapes it calls std::terminate (exactly like a noexcept
+    // function).
+    if (!getLangOpts().EHAsynch)
+      EHStack.pushTerminate();
   }
 }
 
@@ -627,14 +660,36 @@ void CodeGenFunction::EmitEndEHSpec(const Decl *D) {
     EHFilterScope &filterScope = cast<EHFilterScope>(*EHStack.begin());
     emitFilterDispatchBlock(*this, filterScope);
     EHStack.popFilter();
-  } else if (Proto->canThrow() == CT_Cannot &&
-              /* possible empty when under async exceptions */
+  } else if ((Proto->canThrow() == CT_Cannot ||
+              Proto->getExceptionSpecType() == EST_ThrowsTyped) &&
+             /* possible empty when under async exceptions */
              !EHStack.empty()) {
     EHStack.popTerminate();
+  } else if (Proto->getExceptionSpecType() == EST_BasicThrows ||
+             Proto->getExceptionSpecType() == EST_BasicThrowsTrue) {
+    // The whole-function catch-all pushed in EmitStartEHSpec is normally
+    // popped by FinishFunction (which emits the conversion body first); this
+    // is a safety net for paths that did not run FinishFunction's handler.
+    if (FD && !EHStack.empty() &&
+        EHStack.begin()->getKind() == EHScope::Catch) {
+      popCatchScope();
+    }
   }
 }
 
 void CodeGenFunction::EmitCXXTryStmt(const CXXTryStmt &S) {
+  // Herbception: a `try { } catch throws(E e) { }` (or `catch fails(E e)`)
+  // handler catches the discriminant of bare throws/fails calls inside the try
+  // block. This does not use the traditional EH machinery.
+  bool HasHerbceptionHandler = false;
+  for (unsigned I = 0; I != S.getNumHandlers(); ++I)
+    if (isa<CXXCatchThrowsStmt>(S.getHandler(I)))
+      HasHerbceptionHandler = true;
+  if (HasHerbceptionHandler) {
+    EmitHerbceptionCatchTry(S);
+    return;
+  }
+
   const llvm::Triple &T = Target.getTriple();
   // If we encounter a try statement on in an OpenMP target region offloaded to
   // a GPU, we treat it as a basic block.
@@ -647,12 +702,310 @@ void CodeGenFunction::EmitCXXTryStmt(const CXXTryStmt &S) {
     ExitCXXTryStmt(S);
 }
 
+static void emitCatchDispatchBlock(CodeGenFunction &CGF,
+                                   EHCatchScope &catchScope);
+
+void CodeGenFunction::EmitHerbceptionCatchTry(const CXXTryStmt &S) {
+  // Continuation block, reached after the try block succeeds or a handler
+  // completes.
+  llvm::BasicBlock *ContBB = createBasicBlock("herb.try.cont");
+
+  // The scope depth at which the handlers live: the try statement's own scope.
+  // Branching to a handler from inside the try body runs the try block's
+  // cleanups.
+  EHScopeStack::stable_iterator TryDepth = EHStack.stable_begin();
+  unsigned SavedScopes = HerbceptionCatchScopes.size();
+
+  struct HandlerInfo {
+    const CXXCatchThrowsStmt *Stmt;
+    llvm::BasicBlock *Block;
+    Address ErrorSlot;
+    llvm::Type *ErrorType;
+    JumpDest HandlerDest;
+  };
+  SmallVector<HandlerInfo, 4> Handlers;
+
+  // Traditional handlers may be interleaved with herbception ones; the two
+  // channels dispatch independently. Legacy exceptions match the traditional
+  // clauses in their relative order; herbception errors scan the herbception
+  // handlers in their relative order. A throw inside a traditional handler
+  // routes to the next herbception handler after it (chained routing).
+  struct TradInfo {
+    const CXXCatchStmt *Stmt;
+    llvm::BasicBlock *Block;
+    const CXXCatchThrowsStmt *NextHerb;
+    bool Used;
+  };
+  SmallVector<TradInfo, 4> Trads;
+
+  // A std::error handler may also catch legacy C++ exceptions: the compiler
+  // wraps the try block in a catch-all EH landing pad and converts the caught
+  // exception to a fabricated std::error. Record the first such handler to
+  // route the conversion to, and whether any handler needs the landing pad.
+  // The conversion is only installed when there are no traditional clauses,
+  // which would otherwise claim (a prefix of) the legacy stream themselves.
+  const CXXCatchThrowsStmt *LegacyHandlerStmt = nullptr;
+  Address LegacyErrorSlot = Address::invalid();
+  JumpDest LegacyHandlerDest;
+  llvm::BasicBlock *LegacyConvertBB = createBasicBlock("herb.legacy.convert");
+
+  for (unsigned I = 0; I != S.getNumHandlers(); ++I) {
+    if (auto *CT = dyn_cast<CXXCatchThrowsStmt>(S.getHandler(I))) {
+      llvm::BasicBlock *HandlerBB = createBasicBlock("catch.throws");
+      llvm::Type *ErrorTy =
+          CT->getExceptionDecl()
+              ? ConvertType(CT->getExceptionDecl()->getType())
+              : ConvertType(getContext().VoidPtrTy);
+      Address ErrorSlot = CreateDefaultAlignTempAlloca(ErrorTy, "herb.error");
+      JumpDest HandlerDest(HandlerBB, TryDepth, NextCleanupDestIndex++);
+      HerbceptionCatchScopes.push_back({HandlerDest, ErrorSlot, ErrorTy});
+      Handlers.push_back({CT, HandlerBB, ErrorSlot, ErrorTy, HandlerDest});
+      if (CT->getLegacyExceptionErrorValue() && !LegacyHandlerStmt) {
+        LegacyHandlerStmt = CT;
+        LegacyErrorSlot = ErrorSlot;
+        LegacyHandlerDest = HandlerDest;
+      }
+    } else {
+      Trads.push_back({cast<CXXCatchStmt>(S.getHandler(I)), nullptr, nullptr,
+                       false});
+    }
+  }
+
+  // Resolve each traditional clause's chained routing target: the next
+  // herbception handler in declaration order.
+  {
+    SmallVector<TradInfo *, 4> WaitingTrads;
+    unsigned TradIdx = 0;
+    for (unsigned I = 0; I != S.getNumHandlers(); ++I) {
+      if (auto *CT = dyn_cast<CXXCatchThrowsStmt>(S.getHandler(I))) {
+        for (auto *T : WaitingTrads)
+          T->NextHerb = CT;
+        WaitingTrads.clear();
+      } else {
+        WaitingTrads.push_back(&Trads[TradIdx++]);
+      }
+    }
+  }
+
+  // Push the traditional clauses as one EH catch scope so legacy exceptions
+  // are type-matched against them in order.
+  bool HasTrads = !Trads.empty();
+  if (HasTrads) {
+    EHCatchScope *CS = EHStack.pushCatch(Trads.size());
+    for (unsigned K = 0; K != Trads.size(); ++K) {
+      const CXXCatchStmt *C = Trads[K].Stmt;
+      llvm::BasicBlock *HB = createBasicBlock("catch");
+      Trads[K].Block = HB;
+      if (C->getExceptionDecl()) {
+        Qualifiers CaughtTypeQuals;
+        QualType CaughtType = CGM.getContext().getUnqualifiedArrayType(
+            C->getCaughtType().getNonReferenceType(), CaughtTypeQuals);
+        CatchTypeInfo TypeInfo{nullptr, 0};
+        if (CaughtType->isObjCObjectPointerType())
+          TypeInfo.RTTI = CGM.getObjCRuntime().GetEHType(CaughtType);
+        else
+          TypeInfo = CGM.getCXXABI().getAddrOfCXXCatchHandlerType(
+              CaughtType, C->getCaughtType());
+        CS->setHandler(K, TypeInfo, HB);
+      } else {
+        CS->setHandler(K, CGM.getCXXABI().getCatchAllTypeInfo(), HB);
+      }
+    }
+  }
+
+  // If a std::error handler is present and no traditional clause competes for
+  // the legacy stream, push a catch-all EH scope so calls to noexcept(false)
+  // functions inside the try block become invokes that land in the conversion
+  // block (which fabricates a std::error and routes it here).
+  bool NeedLegacyLandingPad = LegacyHandlerStmt != nullptr && !HasTrads;
+  EHScopeStack::stable_iterator LegacyScope = EHStack.stable_end();
+  if (NeedLegacyLandingPad) {
+    EHCatchScope *CatchScope = EHStack.pushCatch(1);
+    CatchScope->setCatchAllHandler(0, LegacyConvertBB);
+    LegacyScope = EHStack.stable_begin();
+  }
+
+  // Emit the try block. Bare throws/fails calls inside it route the
+  // discriminant to the handler (see EmitCall).
+  EmitStmt(S.getTryBlock());
+  if (HaveInsertPoint())
+    Builder.CreateBr(ContBB);
+
+  // Pop the traditional catch scope first: its dispatch targets traditional
+  // handler bodies emitted below.
+  llvm::BasicBlock *TradDispatchBlock = nullptr;
+  SmallVector<EHCatchScope::Handler, 4> TradHandlers;
+  bool TradUsed = false;
+  if (HasTrads) {
+    EHCatchScope &CS = cast<EHCatchScope>(*EHStack.begin());
+    TradUsed = CS.hasEHBranches();
+    if (TradUsed) {
+      emitCatchDispatchBlock(*this, CS);
+      TradDispatchBlock = CS.getCachedEHDispatchBlock();
+      TradHandlers.assign(CS.begin(), CS.begin() + Trads.size());
+      EHStack.popCatch();
+      if (HaveInsertPoint())
+        Builder.CreateBr(ContBB);
+    } else {
+      CS.clearHandlerBlocks();
+      EHStack.popCatch();
+    }
+  }
+
+  // The herbception handlers are emitted with their catch scopes no longer
+  // active (traditional bodies above ran with them active, so bare calls and
+  // 'throw throws expr' inside a traditional handler chain into the next
+  // herbception handler).
+  HerbceptionCatchScopes.truncate(SavedScopes);
+  bool LegacyLandingPadUsed = false;
+  if (NeedLegacyLandingPad) {
+    EHCatchScope &CatchScope = cast<EHCatchScope>(*EHStack.begin());
+    LegacyLandingPadUsed = CatchScope.hasEHBranches();
+    popCatchScope();
+  }
+
+  // Emit the legacy-EH conversion block. It is the destination of the
+  // catch-all landing pad: exn.slot holds the exception, and the fabricated
+  // std::error (domain = error_domain<exception_ptr>::domain(), code =
+  // thrown object pointer) is stored into the std::error handler's error slot
+  // before running the try block's cleanups and branching to the handler.
+  if (LegacyLandingPadUsed) {
+    EmitBlock(LegacyConvertBB);
+    // In the funclet model (MSVC), the catch-all dispatch inserted a catchpad
+    // as the first instruction of this block; the exception pointer is derived
+    // from that token. (Wasm also uses funclet pads, but it stores the
+    // exception in exn.slot via wasm.get.exception at the shared catch.start,
+    // and the handler blocks do not begin with a catchpad.)
+    SaveAndRestore RestoreCurrentFuncletPad(CurrentFuncletPad);
+    if (EHPersonality::get(*this).isMSVCXXPersonality()) {
+      llvm::Instruction *First = &*LegacyConvertBB->begin();
+      if (auto *CPI = dyn_cast<llvm::CatchPadInst>(First))
+        CurrentFuncletPad = CPI;
+    }
+    RunCleanupsScope LegacyConvertScope(*this);
+    const Expr *Conv = LegacyHandlerStmt->getLegacyExceptionErrorValue();
+    EmitAnyExprToMem(Conv, LegacyErrorSlot, Qualifiers(),
+                     /*IsInitializer=*/false);
+    LegacyConvertScope.ForceCleanup();
+
+    // Route to the (first) std::error handler, running the try-block cleanups.
+    EmitBranchThroughCleanup(LegacyHandlerDest);
+  }
+
+  // Emit the traditional handler bodies (backwards, in source order after
+  // EmitBlockAfterUses). Herbception catch scopes are active during these
+  // bodies: a 'throw throws' inside a traditional handler chains to the next
+  // herbception handler after it.
+  if (TradUsed) {
+    SaveAndRestore RestoreCurrentFuncletPad(CurrentFuncletPad);
+    llvm::BasicBlock *WasmCatchStartBlock = nullptr;
+    bool IsWasm = EHPersonality::get(*this).isWasmPersonality();
+    if (IsWasm) {
+      auto *CatchSwitch =
+          cast<llvm::CatchSwitchInst>(TradDispatchBlock->getFirstNonPHIIt());
+      WasmCatchStartBlock = CatchSwitch->hasUnwindDest()
+                                ? CatchSwitch->getSuccessor(1)
+                                : CatchSwitch->getSuccessor(0);
+      auto *CPI =
+          cast<llvm::CatchPadInst>(WasmCatchStartBlock->getFirstNonPHIIt());
+      CurrentFuncletPad = CPI;
+    }
+
+    bool HasCatchAll = false;
+    for (unsigned K = Trads.size(); K != 0; --K) {
+      TradInfo &T = Trads[K - 1];
+      HasCatchAll |= !T.Stmt->getExceptionDecl();
+      EmitBlockAfterUses(T.Block);
+
+      RunCleanupsScope CatchScope(*this);
+      SaveAndRestore RestoreCurrentFuncletPad2(CurrentFuncletPad);
+      CGM.getCXXABI().emitBeginCatch(*this, T.Stmt);
+
+      incrementProfileCounter(T.Stmt);
+
+      // Chain: bare calls and throws inside this traditional handler route
+      // to the next herbception handler after it.
+      unsigned PushedAt = HerbceptionCatchScopes.size();
+      for (auto &H : Handlers)
+        if (H.Stmt == T.NextHerb) {
+          HerbceptionCatchScopes.push_back(
+              {H.HandlerDest, H.ErrorSlot, H.ErrorType});
+          break;
+        }
+
+      EmitStmt(T.Stmt->getHandlerBlock());
+
+      HerbceptionCatchScopes.truncate(PushedAt);
+      CatchScope.ForceCleanup();
+      if (HaveInsertPoint())
+        Builder.CreateBr(ContBB);
+    }
+
+    // Wasm merges all clauses into one catchpad; if none matched we must
+    // resume unwinding explicitly.
+    if (IsWasm && !HasCatchAll) {
+      llvm::BasicBlock *RethrowBlock = WasmCatchStartBlock;
+      while (llvm::Instruction *TI = RethrowBlock->getTerminatorOrNull())
+        RethrowBlock = cast<llvm::CondBrInst>(TI)->getSuccessor(1);
+      assert(RethrowBlock != WasmCatchStartBlock && RethrowBlock->empty());
+      Builder.SetInsertPoint(RethrowBlock);
+      llvm::Function *RethrowInFn =
+          CGM.getIntrinsic(llvm::Intrinsic::wasm_rethrow);
+      EmitNoreturnRuntimeCallOrInvoke(RethrowInFn, {});
+    }
+  }
+
+  // Emit the handlers: bind the exception variable from the error slot and run
+  // the handler body.
+  for (auto &H : Handlers) {
+    EmitBlock(H.Block);
+    RunCleanupsScope CatchScope(*this);
+    if (VarDecl *VD = H.Stmt->getExceptionDecl()) {
+      // Herbception catch: bind the exception variable directly from the error
+      // payload slot. The error value (std::error for `throws` or E for
+      // `fails{E}`) is a compiler-fabricated value whose constructors are
+      // deleted and fields private, so it is not default/copy-constructed.
+      // EmitAutoVarAlloca only allocates and registers the variable; skip
+      // EmitAutoVarInit, then store the payload into the slot. The variable's
+      // destructor IS registered so that ~std::error() run do_cleanup exactly
+      // once when the handler exits. The error slot above is plain storage and
+      // is never destroyed, so the catch variable is the sole owner of the
+      // value.
+      CodeGenFunction::AutoVarEmission var = EmitAutoVarAlloca(*VD);
+      Address Addr = var.getObjectAddress(*this);
+      llvm::Value *ErrVal = Builder.CreateLoad(H.ErrorSlot);
+      if (ErrVal->getType() != Addr.getElementType()) {
+        Address PayloadAddr =
+            CreateDefaultAlignTempAlloca(ErrVal->getType(), "herb.payload");
+        auto *PI = Builder.CreateStore(ErrVal, PayloadAddr);
+        addInstToCurrentSourceAtom(PI, PI->getValueOperand());
+        ErrVal = Builder.CreateLoad(
+            PayloadAddr.withElementType(Addr.getElementType()));
+      }
+      auto *I = Builder.CreateStore(ErrVal, Addr);
+      addInstToCurrentSourceAtom(I, I->getValueOperand());
+      EmitAutoVarCleanups(var);
+    }
+    EmitStmt(H.Stmt->getHandlerBlock());
+    CatchScope.ForceCleanup();
+    if (HaveInsertPoint())
+      Builder.CreateBr(ContBB);
+  }
+
+  EmitBlock(ContBB);
+}
+
 void CodeGenFunction::EnterCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
   unsigned NumHandlers = S.getNumHandlers();
   EHCatchScope *CatchScope = EHStack.pushCatch(NumHandlers);
 
   for (unsigned I = 0; I != NumHandlers; ++I) {
-    const CXXCatchStmt *C = S.getHandler(I);
+    // Herbception `catch throws`/`catch fails` handlers are not traditional
+    // C++ catch blocks: they do not participate in the EH catch dispatch, so
+    // record a null handler slot for them.
+    if (isa<CXXCatchThrowsStmt>(S.getHandler(I)))
+      continue;
+    const CXXCatchStmt *C = S.getCatchHandler(I);
 
     llvm::BasicBlock *Handler = createBasicBlock("catch");
     if (C->getExceptionDecl()) {
@@ -893,7 +1246,6 @@ llvm::BasicBlock *CodeGenFunction::EmitLandingPad() {
     case EHScope::Filter: {
       assert(I.next() == EHStack.end() && "EH filter is not end of EH stack");
       assert(!hasCatchAll && "EH filter reached after catch-all");
-
       // Filter scopes get added to the landingpad in weird ways.
       EHFilterScope &filter = cast<EHFilterScope>(*I);
       hasFilter = true;
@@ -1304,7 +1656,7 @@ void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
     EmitBlockAfterUses(CatchBlock);
 
     // Catch the exception if this isn't a catch-all.
-    const CXXCatchStmt *C = S.getHandler(I-1);
+    const CXXCatchStmt *C = S.getCatchHandler(I-1);
 
     // Enter a cleanup scope, including the catch variable and the
     // end-catch.
@@ -1598,6 +1950,75 @@ llvm::BasicBlock *CodeGenFunction::getTerminateHandler() {
   Builder.restoreIP(SavedIP);
 
   return TerminateHandler;
+}
+
+llvm::BasicBlock *CodeGenFunction::getHerbceptionLegacyConvert() {
+  if (HerbceptionLegacyConvertBB)
+    return HerbceptionLegacyConvertBB;
+
+  // Set up the whole-function legacy conversion handler. This block is
+  // inserted at the very end of the function by FinishFunction.
+  HerbceptionLegacyConvertBB = createBasicBlock("herb.legacy.convert");
+
+  return HerbceptionLegacyConvertBB;
+}
+
+// Emit the body of the whole-function legacy conversion handler. Called from
+// EmitEndEHSpec after the catch scope is popped, so that on the funclet model
+// (MSVC) the catch-all dispatch has already inserted the catchpad as the
+// first instruction of the block.
+void CodeGenFunction::emitHerbceptionLegacyConvertBody() {
+  assert(HerbceptionLegacyConvertBB && "no legacy conversion block");
+
+  CGBuilderTy::InsertPoint SavedIP = Builder.saveAndClearIP();
+  Builder.SetInsertPoint(HerbceptionLegacyConvertBB);
+  // Attach the block to the function so instructions that need the module
+  // (e.g. memcpy for aggregate error copies) can be created. EmitIfUsed will
+  // move it to the very end of the function.
+  HerbceptionLegacyConvertBB->insertInto(CurFn);
+
+  // In the funclet model (MSVC), the catch-all dispatch inserted a catchpad
+  // as the first instruction of this block; the exception pointer is derived
+  // from that token. (Wasm also uses funclet pads, but it stores the
+  // exception in exn.slot via wasm.get.exception at the shared catch.start,
+  // and the handler blocks do not begin with a catchpad.)
+  SaveAndRestore RestoreCurrentFuncletPad(CurrentFuncletPad);
+  if (EHPersonality::get(*this).isMSVCXXPersonality()) {
+    llvm::Instruction *First = &*HerbceptionLegacyConvertBB->begin();
+    if (auto *CPI = dyn_cast<llvm::CatchPadInst>(First))
+      CurrentFuncletPad = CPI;
+  }
+
+  // Fabricate the std::error from the caught legacy exception and route it to
+  // the throws return path (discriminant set, error stored in the payload).
+  const FunctionDecl *FD = cast<FunctionDecl>(CurCodeDecl);
+  const Expr *Conv = FD->getHerbceptionLegacyErrorValue();
+  assert(Conv && "herbceptions legacy conversion must be set by Sema");
+
+  EmitHerbceptionThrow(Conv, FD->getLocation());
+
+  // On the funclet model (MSVC), the branch that EmitHerbceptionThrow emitted
+  // to the return block must be a catchret out of the catchpad (a plain
+  // branch out of a funclet region is invalid funclet IR and miscompiles).
+  // Replace the final unconditional branch with a catchret.
+  if (EHPersonality::get(*this).isMSVCXXPersonality()) {
+    llvm::BasicBlock *BB = HerbceptionLegacyConvertBB;
+    llvm::Instruction *Term = BB->getTerminator();
+    if (auto *Br = dyn_cast<llvm::UncondBrInst>(Term)) {
+      llvm::CatchPadInst *CPI = nullptr;
+      for (llvm::Instruction &I : *BB)
+        if ((CPI = dyn_cast<llvm::CatchPadInst>(&I)))
+          break;
+      if (CPI) {
+        llvm::BasicBlock *Dest = Br->getSuccessor(0);
+        Br->eraseFromParent();
+        llvm::CatchReturnInst::Create(CPI, Dest, BB);
+      }
+    }
+  }
+
+  // Restore the saved insertion state.
+  Builder.restoreIP(SavedIP);
 }
 
 llvm::BasicBlock *CodeGenFunction::getTerminateFunclet() {

@@ -141,6 +141,11 @@ bool X86CallLowering::canLowerReturn(
   LLVMContext &Context = MF.getFunction().getContext();
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
+
+  // Use the expanded throws return convention on Win64.
+  // The frontend coerces trivially-copyable ≤16-byte types to i128,
+  // which ComputeValueTypes decomposes into two i64 leaves assignable
+  // via RetCC_X86Common.
   return checkReturn(CCInfo, Outs, RetCC_X86);
 }
 

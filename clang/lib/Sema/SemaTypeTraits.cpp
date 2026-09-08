@@ -20,6 +20,7 @@
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
@@ -29,6 +30,34 @@
 #include "llvm/ADT/STLExtras.h"
 
 using namespace clang;
+
+/// Whether \p T has a complete std::error_domain<T> specialization (directly or
+/// via domain_alias_type), i.e. T can be thrown via `throw throws`. Does not
+/// diagnose; an undefined primary template simply means "not throwsable".
+static bool isHerbceptionsThrowsable(Sema &S, SourceLocation Loc, QualType T) {
+  NamespaceDecl *Std = S.getStdNamespace();
+  if (!Std)
+    return false;
+  IdentifierInfo &II = S.getPreprocessor().getIdentifierTable().get("error_domain");
+  LookupResult R(S, &II, Loc, Sema::LookupOrdinaryName);
+  if (!S.LookupQualifiedName(R, Std) || R.empty())
+    return false;
+  ClassTemplateDecl *CTD = R.getAsSingle<ClassTemplateDecl>();
+  if (!CTD)
+    return false;
+  TemplateArgumentListInfo Args(Loc, Loc);
+  Args.addArgument(TemplateArgumentLoc(
+      TemplateArgument(T), S.Context.getTrivialTypeSourceInfo(T, Loc)));
+  QualType DomainTy = S.CheckTemplateIdType(ElaboratedTypeKeyword::None,
+                                            TemplateName(CTD), Loc, Args,
+                                            /*Scope=*/nullptr,
+                                            /*ForNestedNameSpecifier=*/false);
+  if (DomainTy.isNull())
+    return false;
+  // A complete, non-dependent error_domain<T> means T is throwsable. Note that
+  // the undefined primary template forms an incomplete type here.
+  return !DomainTy->isDependentType() && !DomainTy->isIncompleteType();
+}
 
 static CXXMethodDecl *LookupSpecialMemberFromXValue(Sema &SemaRef,
                                                     const CXXRecordDecl *RD,
@@ -340,6 +369,17 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
     llvm_unreachable("not a UTT");
     // is_complete_type somewhat obviously cannot require a complete type.
   case UTT_IsCompleteType:
+    // Fall-through
+
+    // Herbception traits: throwsable checks error_domain<T> existence and the
+    // has_herbceptions_throws_* traits inspect the type's special members; none
+    // require completeness of the argument to be evaluated.
+  case UTT_IsHerbceptionsThrowsable:
+  case UTT_IsInvokeHerbceptionsFails:
+  case UTT_HasHerbceptionsThrowsConstructor:
+  case UTT_HasHerbceptionsThrowsCopy:
+  case UTT_HasHerbceptionsThrowsAssign:
+  case UTT_HasHerbceptionsThrowsMoveAssign:
     // Fall-through
 
     // These traits are modeled on the type predicates in C++0x
@@ -665,6 +705,82 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     llvm_unreachable("not a UTT");
     // Type trait expressions corresponding to the primary type category
     // predicates in C++0x [meta.unary.cat].
+  case UTT_IsHerbceptionsThrowsable:
+    // True when T can be thrown via `throw throws`, i.e. there is a usable
+    // std::error_domain<T> specialization (directly or via domain_alias_type).
+    if (T->isDependentType())
+      return false;
+    if (!Self.getLangOpts().HerbExceptions)
+      return false;
+    return isHerbceptionsThrowsable(Self, KeyLoc, T);
+
+  case UTT_IsInvokeHerbceptionsFails:
+    // True when T is a function type (or pointer/reference to one) declared
+    // with a `fails{E}` herbception spec.
+    if (T->isDependentType())
+      return false;
+    if (!Self.getLangOpts().HerbExceptions)
+      return false;
+    if (const auto *PT = T->getAs<PointerType>())
+      T = PT->getPointeeType();
+    else if (const auto *RT = T->getAs<ReferenceType>())
+      T = RT->getPointeeType();
+    if (const auto *FPT = T->getAs<FunctionProtoType>())
+      return hasHerbceptionExceptionSpec(FPT->getExceptionSpecType()) &&
+             FPT->hasReturnFailureSpec();
+    return false;
+
+  case UTT_HasHerbceptionsThrowsConstructor:
+  case UTT_HasHerbceptionsThrowsCopy:
+  case UTT_HasHerbceptionsThrowsAssign:
+  case UTT_HasHerbceptionsThrowsMoveAssign:
+    // GNU/MS-style: true iff the relevant special member of the class is
+    // declared `throws` (i.e. can propagate a herbception error). Trivial and
+    // implicitly-declared members never can. Non-class types cannot either.
+    if (T->isDependentType())
+      return false;
+    if (auto *RD = T->getAsCXXRecordDecl()) {
+      bool Found = false;
+      if (UTT == UTT_HasHerbceptionsThrowsAssign ||
+          UTT == UTT_HasHerbceptionsThrowsMoveAssign) {
+        bool IsMove = UTT == UTT_HasHerbceptionsThrowsMoveAssign;
+        for (const auto *ND : RD->lookup(
+                 C.DeclarationNames.getCXXOperatorName(OO_Equal))) {
+          auto *Method = dyn_cast<CXXMethodDecl>(ND);
+          if (!Method || isa<FunctionTemplateDecl>(ND))
+            continue;
+          bool Desired = IsMove ? Method->isMoveAssignmentOperator()
+                                : Method->isCopyAssignmentOperator();
+          if (!Desired)
+            continue;
+          Found = true;
+          auto *CPT = Method->getType()->castAs<FunctionProtoType>();
+          CPT = Self.ResolveExceptionSpec(KeyLoc, CPT);
+          if (!CPT || !hasHerbceptionExceptionSpec(CPT->getExceptionSpecType()))
+            return false;
+        }
+      } else {
+        bool IsCopy = UTT == UTT_HasHerbceptionsThrowsCopy;
+        for (const auto *ND : Self.LookupConstructors(RD)) {
+          if (isa<FunctionTemplateDecl>(ND->getUnderlyingDecl()))
+            continue;
+          auto *Ctor = dyn_cast<CXXConstructorDecl>(ND);
+          if (!Ctor)
+            continue;
+          bool Desired = IsCopy ? Ctor->isCopyConstructor()
+                                : Ctor->isDefaultConstructor();
+          if (!Desired)
+            continue;
+          Found = true;
+          auto *CPT = Ctor->getType()->castAs<FunctionProtoType>();
+          CPT = Self.ResolveExceptionSpec(KeyLoc, CPT);
+          if (!CPT || !hasHerbceptionExceptionSpec(CPT->getExceptionSpecType()))
+            return false;
+        }
+      }
+      return Found;
+    }
+    return false;
   case UTT_IsVoid:
     return T->isVoidType();
   case UTT_IsIntegral:
@@ -1291,7 +1407,8 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
   case clang::BTT_ReferenceConvertsFromTemporary:
   case clang::TT_IsConstructible:
   case clang::TT_IsNothrowConstructible:
-  case clang::TT_IsTriviallyConstructible: {
+  case clang::TT_IsTriviallyConstructible:
+  case clang::TT_IsHerbceptionsThrowsConstructible: {
     // C++11 [meta.unary.prop]:
     //   is_trivially_constructible is defined as:
     //
@@ -1407,7 +1524,14 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
     }
 
     if (Kind == clang::TT_IsNothrowConstructible)
+      // is_nothrow is true only when the function cannot fail at all
+      // (CT_Cannot). CT_Deterministic means the function may fail via the
+      // herbception error channel, so is_nothrow is false.
       return S.canThrow(Result.get()) == CT_Cannot;
+
+    if (Kind == clang::TT_IsHerbceptionsThrowsConstructible)
+      // Herbception `throws` channel (implicit std::error).
+      return S.canHerbceptionThrow(Result.get(), QualType());
 
     if (Kind == clang::TT_IsTriviallyConstructible) {
       // Under Objective-C ARC and Weak, if the destination has non-trivial
@@ -1423,6 +1547,102 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
     llvm_unreachable("unhandled type trait");
     return false;
   }
+
+  case clang::TT_IsHerbceptionsThrowsInvocable:
+  case clang::TT_IsHerbceptionsThrowsInvocableR: {
+    // Whether F is invocable with Args... (and result convertible to R for the
+    // _r variant) and the resulting call can propagate a herbception error
+    // through the `throws` channel.
+    // Strategy: use __builtin_invoke to build the call expression (handles
+    // function pointers, member pointers, functors), then check
+    // canHerbceptionThrow.
+    assert(!Args.empty());
+
+    for (const auto *TSI : Args) {
+      QualType ArgTy = TSI->getType();
+      if (ArgTy->isVoidType() || ArgTy->isIncompleteArrayType())
+        continue;
+      if (S.RequireCompleteType(
+              KWLoc, ArgTy, diag::err_incomplete_type_used_in_type_trait_expr))
+        return false;
+    }
+
+    // For the _r variant, the first argument is R, the second is F, and the
+    // rest are the call arguments. For the non-_r variant, the first argument
+    // is F.
+    QualType R, F;
+    unsigned ArgStart;
+    if (Kind == clang::TT_IsHerbceptionsThrowsInvocableR) {
+      if (Args.size() < 2)
+        return false;
+      R = Args[0]->getType();
+      F = Args[1]->getType();
+      ArgStart = 2;
+    } else {
+      F = Args[0]->getType();
+      ArgStart = 1;
+    }
+
+    if (F->isIncompleteType())
+      return false;
+
+    llvm::BumpPtrAllocator OpaqueExprAllocator;
+    SmallVector<Expr *, 2> ArgExprs;
+    ArgExprs.reserve(Args.size() - ArgStart);
+    for (unsigned I = ArgStart, N = Args.size(); I != N; ++I) {
+      QualType ArgTy = Args[I]->getType();
+      if (ArgTy->isObjectType() || ArgTy->isFunctionType())
+        ArgTy = S.Context.getRValueReferenceType(ArgTy);
+      ArgExprs.push_back(
+          new (OpaqueExprAllocator.Allocate<OpaqueValueExpr>())
+              OpaqueValueExpr(Args[I]->getTypeLoc().getBeginLoc(),
+                              ArgTy.getNonLValueExprType(S.Context),
+                              Expr::getValueKindForType(ArgTy)));
+    }
+
+    // Build a call expression F(Args...) in a SFINAE trap to test invocability.
+    QualType CallResultType;
+    bool CanThrow = false;
+    {
+      EnterExpressionEvaluationContext Unevaluated(
+          S, Sema::ExpressionEvaluationContext::Unevaluated);
+      Sema::SFINAETrap SFINAE(S, /*ForValidityCheck=*/true);
+      Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
+
+      // Build the callee: an opaque value representing F.
+      QualType CalleeTy = F;
+      if (CalleeTy->isObjectType() || CalleeTy->isFunctionType())
+        CalleeTy = S.Context.getRValueReferenceType(CalleeTy);
+      Expr *Callee = new (OpaqueExprAllocator.Allocate<OpaqueValueExpr>())
+          OpaqueValueExpr(KWLoc, CalleeTy.getNonLValueExprType(S.Context),
+                          Expr::getValueKindForType(CalleeTy));
+
+      ExprResult Call = S.BuildCallExpr(/*Scope=*/nullptr, Callee, KWLoc,
+                                        ArgExprs, RParenLoc);
+      if (Call.isInvalid() || SFINAE.hasErrorOccurred())
+        return false;
+
+      CallResultType = Call.get()->getType();
+      CanThrow = S.canHerbceptionThrow(Call.get(), QualType());
+    }
+
+    // For the _r variant, check convertibility of the result to R.
+    if (Kind == clang::TT_IsHerbceptionsThrowsInvocableR && CanThrow) {
+      if (!R->isVoidType()) {
+        // Use EvaluateBinaryTypeTrait with BTT_IsConvertible.
+        TypeSourceInfo *ResultTSI =
+            S.Context.getTrivialTypeSourceInfo(CallResultType, KWLoc);
+        TypeSourceInfo *RTSI = S.Context.getTrivialTypeSourceInfo(R, KWLoc);
+        bool Convertible = EvaluateBinaryTypeTrait(S, BTT_IsConvertible,
+                                                   ResultTSI, RTSI, KWLoc);
+        if (!Convertible)
+          return false;
+      }
+    }
+
+    return CanThrow;
+  }
+
   default:
     llvm_unreachable("not a TT");
   }
@@ -1686,7 +1906,8 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
   }
   case BTT_IsConvertible:
   case BTT_IsConvertibleTo:
-  case BTT_IsNothrowConvertible: {
+  case BTT_IsNothrowConvertible:
+  case BTT_IsHerbceptionsThrowsConvertible: {
     if (RhsT->isVoidType())
       return LhsT->isVoidType();
     llvm::BumpPtrAllocator OpaqueExprAllocator;
@@ -1695,14 +1916,22 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
     if (Result.isInvalid())
       return false;
 
-    if (BTT != BTT_IsNothrowConvertible)
+    if (BTT != BTT_IsNothrowConvertible &&
+        BTT != BTT_IsHerbceptionsThrowsConvertible)
       return true;
 
-    return Self.canThrow(Result.get()) == CT_Cannot;
+    if (BTT == BTT_IsNothrowConvertible)
+      // is_nothrow is true only when the function cannot fail at all
+      // (CT_Cannot). CT_Deterministic means the function may fail via the
+      // herbception error channel, so is_nothrow is false.
+      return Self.canThrow(Result.get()) == CT_Cannot;
+    // Herbception `throws` channel (implicit std::error).
+    return Self.canHerbceptionThrow(Result.get(), QualType());
   }
 
   case BTT_IsAssignable:
   case BTT_IsNothrowAssignable:
+  case BTT_IsHerbceptionsThrowsAssignable:
   case BTT_IsTriviallyAssignable: {
     // C++11 [meta.unary.prop]p3:
     //   is_trivially_assignable is defined as:
@@ -1763,7 +1992,14 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT,
       return true;
 
     if (BTT == BTT_IsNothrowAssignable)
+      // is_nothrow is true only when the function cannot fail at all
+      // (CT_Cannot). CT_Deterministic means the function may fail via the
+      // herbception error channel, so is_nothrow is false.
       return Self.canThrow(Result.get()) == CT_Cannot;
+
+    if (BTT == BTT_IsHerbceptionsThrowsAssignable)
+      // Herbception `throws` channel (implicit std::error).
+      return Self.canHerbceptionThrow(Result.get(), QualType());
 
     if (BTT == BTT_IsTriviallyAssignable) {
       // Under Objective-C ARC and Weak, if the destination has non-trivial

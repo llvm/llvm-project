@@ -161,6 +161,7 @@ public:
     AArch64SubArch_lfi,
 
     X86_64SubArch_lfi,
+    X86_64SubArch_apx,
 
     KalimbaSubArch_v3,
     KalimbaSubArch_v4,
@@ -1009,6 +1010,17 @@ public:
            (getArch() == Triple::x86_64 &&
             getSubArch() == Triple::X86_64SubArch_lfi);
   }
+
+  /// Tests whether the target is x86-64 with Intel APX (wincall), i.e. the
+  /// x86_64apx architecture.
+  bool isX86_64APX() const {
+    return getArch() == Triple::x86_64 &&
+           getSubArch() == Triple::X86_64SubArch_apx;
+  }
+
+  /// Tests whether the target is a Windows or UEFI x86_64apx PE/COFF target,
+  /// which defaults to the wincall calling convention.
+  bool isWindowsAPX() const { return isX86_64APX() && isOSWindowsOrUEFI(); }
 
   /// Tests whether the target supports the EHABI exception
   /// handling standard.

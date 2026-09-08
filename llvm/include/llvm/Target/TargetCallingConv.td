@@ -61,6 +61,11 @@ class CCIfSwiftAsync<CCAction A> : CCIf<"ArgFlags.isSwiftAsync()", A> {
 class CCIfSwiftError<CCAction A> : CCIf<"ArgFlags.isSwiftError()", A> {
 }
 
+/// CCIfThrows - If the current argument has the throws (herbception)
+/// discriminant attribute, apply Action A.
+class CCIfThrows<CCAction A> : CCIf<"ArgFlags.isThrows()", A> {
+}
+
 /// CCIfCFGuardTarget - If the current argument has cfguardtarget parameter
 /// attribute, apply Action A.
 class CCIfCFGuardTarget<CCAction A> : CCIf<"ArgFlags.isCFGuardTarget()", A> {

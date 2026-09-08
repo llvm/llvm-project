@@ -1,0 +1,8 @@
+module "herbc_a" {
+  header "herbceptions-a.h"
+  export *
+}
+module "herbc_b" {
+  header "herbceptions-b.h"
+  export *
+}

@@ -171,6 +171,15 @@ let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1,
   }
 }
 
+// Herbception (throws): pseudo-instruction for reading the carry flag after
+// a call. Distinguished from regular SETCCr so the peephole optimizer can
+// target it without affecting ordinary setb/setbe patterns from comparisons.
+// Lowered to SETCCr(COND_B) in expandPostRAPseudo.
+let Uses = [EFLAGS], isPseudo = 1, isCodeGenOnly = 1, ForceDisassemble = 1 in
+  def HERB_SETCCr : I<0, Pseudo, (outs GR8:$dst), (ins),
+                     "setb\t$dst", []>,
+                     TB, Sched<[WriteSETCC]>;
+
 // SALC is an undocumented instruction. Information for this instruction can be found
 // here http://www.rcollins.org/secrets/opcodes/SALC.html
 // Set AL if carry. 

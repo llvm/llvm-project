@@ -856,13 +856,695 @@ Sema::ActOnCXXThrow(Scope *S, SourceLocation OpLoc, Expr *Ex) {
   return BuildCXXThrow(OpLoc, Ex, IsThrownVarInScope);
 }
 
+/// Return whether \p Ex is a call to a function (or function template)
+/// declared with a herbception 'throws'/'fails{E}' spec.
+bool Sema::isHerbceptionThrowsCall(const Expr *Ex) {
+  const auto *Call = dyn_cast<CallExpr>(Ex->IgnoreParenImpCasts());
+  if (!Call)
+    return false;
+
+  const FunctionProtoType *CalleeFPT = nullptr;
+  if (const Decl *Callee = Call->getCalleeDecl()) {
+    if (const auto *FTD = dyn_cast<FunctionTemplateDecl>(Callee))
+      Callee = FTD->getTemplatedDecl();
+    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(Callee))
+      CalleeFPT = FD->getType()->getAs<FunctionProtoType>();
+  }
+  return CalleeFPT && CalleeFPT->hasThrowsSpec();
+}
+
+ExprResult Sema::ActOnCXXThrowThrows(Scope *S, SourceLocation OpLoc,
+                                     SourceLocation ThrowsLoc, Expr *Ex) {
+  // Herbception `throw throws` is only valid inside a function declared
+  // with 'throws' or 'fails{E}', or inside a `catch throws` handler.
+  if (!getLangOpts().HerbExceptions) {
+    Diag(OpLoc, diag::err_herbceptions_disabled);
+    return ExprError();
+  }
+
+  const FunctionDecl *CurFD = getCurFunctionDecl();
+
+  // Determine whether we are inside a `try` block (whose `catch throws` handler
+  // is parsed after the body, so it is not visible here yet). The handler
+  // routing happens in CodeGen via the active herbception catch scopes.
+  bool InTry = false;
+  for (const Scope *S = getCurScope(); S; S = S->getParent()) {
+    if (S->isTryScope()) {
+      InTry = true;
+      break;
+    }
+  }
+
+  const FunctionProtoType *CurFPT =
+      CurFD ? (CurFD->getType().isNull() ? nullptr : CurFD->getType()->getAs<FunctionProtoType>()) : nullptr;
+  const bool InThrowsFunction = CurFPT && CurFPT->hasThrowsSpec();
+
+  // 'throw throws' belongs to the implicit-std::error ('throws') channel only.
+  // A 'fails{E}' function returns errors exclusively through
+  // 'return failure(expr);'.
+  if (CurFPT && CurFPT->hasReturnFailureSpec() && !CurFPT->hasBasicThrowsSpec()) {
+    Diag(ThrowsLoc, diag::err_throw_throws_in_return_failure_function);
+    return ExprError();
+  }
+
+  // Whether we are inside a herbception block handler body (parsed with
+  // HerbceptionCatchDepth, which - unlike the try scope - does not also cover
+  // the try block itself or a function-try-block body).
+  const bool InHerbceptionHandler = HerbceptionCatchDepth > 0;
+
+  // Inside an `if constexpr` branch the throw may be discarded (or its
+  // liveness only decided at instantiation), so defer all context diagnostics
+  // there; live-but-invalid throws are diagnosed by EmitHerbceptionThrow at
+  // CodeGen time. `if consteval` branches are both potentially live, so they
+  // are checked normally.
+  const bool MaybeDiscarded = HerbceptionIfConstexprDepth > 0;
+
+  // A try nested inside a herbception handler may consume the error with its
+  // own handlers, so an operand throw there is allowed; whether the nested
+  // handlers really catch it is verified at CodeGen time.
+  const bool InNestedTryWithinHandler =
+      HerbceptionTryBodyDepth > 0;
+
+  // A herbception catch-throws handler body counts as a valid context on its
+  // own: unlike the try block, its CatchScope is not nested inside the try's
+  // TryScope (handlers are parsed as siblings), so InTry would miss it. Any
+  // catch clause of a try also counts: throws inside traditional handlers
+  // chain forward to sibling herbception handlers (CodeGen verifies).
+  const bool ValidContext =
+      InThrowsFunction || InTry || MaybeDiscarded || HerbceptionCatchDepth ||
+      HerbceptionCatchClauseDepth;
+
+  if (!ValidContext) {
+    Diag(ThrowsLoc, diag::err_throw_throws_outside_throws_function);
+    return ExprError();
+  }
+
+  // Diagnose if this is in a CUDA device function, etc., like a normal throw.
+  if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
+    Diag(OpLoc, diag::err_omp_simd_region_cannot_use_stmt) << "throw";
+
+  if (Ex) {
+    // `throw throws expr` with an explicit operand creates a new error. It may
+    // appear in a throws/fails function or inside any try block (the error
+    // routes to the enclosing catch-throws handler). Inside a catch-throws
+    // handler itself the handler's catch scopes are already deactivated
+    // (CodeGen pops them before emitting handlers), so a new error can only
+    // leave via the enclosing function's own throws/fails channel; otherwise
+    // it has nowhere to go.
+    if (InHerbceptionHandler && !InNestedTryWithinHandler &&
+        !InThrowsFunction && !MaybeDiscarded) {
+      Diag(ThrowsLoc, diag::err_throw_throws_no_catch_handler);
+      return ExprError();
+    }
+
+    // The operand is the error value. For a basic `throws` function the error
+    // type is the implicit `std::error`, which users cannot construct: only the
+    // compiler can, by going through `error_domain<T>` to call its `domain()`
+    // and `code()` functions. Fabricate that value here. Defer fabrication when:
+    //  - the operand type is dependent (template), or
+    //  - we are inside an `if constexpr` branch that may be discarded.
+    // In both cases BuildErrorValueExpr is re-run at instantiation time.
+    if (!CurFPT || !CurFPT->hasReturnFailureSpec()) {
+      if (!Ex->getType()->isDependentType() && !MaybeDiscarded) {
+        ExprResult Fabricated = BuildErrorValueExpr(ThrowsLoc, Ex);
+        if (Fabricated.isInvalid())
+          return ExprError();
+        Ex = Fabricated.get();
+      }
+    }
+
+    return BuildCXXThrow(OpLoc, Ex, /*IsThrownVarInScope=*/false,
+                         /*IsHerbception=*/true);
+  }
+
+  // Bare `throw throws` (rethrow without operand): only valid inside a
+  // `catch throws` handler body, which owns the error slot to re-read.
+  if (!InHerbceptionHandler && !MaybeDiscarded) {
+    Diag(ThrowsLoc, diag::err_throw_throws_rethrow_outside_catch);
+    return ExprError();
+  }
+
+  // The rethrow is lowered in CodeGen by reading the error from the active
+  // HerbceptionCatchScope's error slot.
+  return BuildCXXThrow(OpLoc, /*Ex=*/nullptr, /*IsThrownVarInScope=*/false,
+                       /*IsHerbception=*/true);
+}
+
+/// Look up the std::error_domain<T> class template specialization for \p T.
+CXXRecordDecl *Sema::lookupErrorDomain(SourceLocation Loc, QualType T) {
+  NamespaceDecl *Std = getStdNamespace();
+  if (!Std)
+    return nullptr;
+
+  IdentifierInfo &II = PP.getIdentifierTable().get("error_domain");
+  LookupResult R(*this, &II, Loc, LookupOrdinaryName);
+  if (!LookupQualifiedName(R, Std) || R.empty())
+    return nullptr;
+
+  ClassTemplateDecl *CTD = R.getAsSingle<ClassTemplateDecl>();
+  if (!CTD)
+    return nullptr;
+
+  // Form the specialization error_domain<T>.
+  TemplateArgumentListInfo Args(Loc, Loc);
+  Args.addArgument(TemplateArgumentLoc(
+      TemplateArgument(T), Context.getTrivialTypeSourceInfo(T, Loc)));
+  QualType DomainTy = CheckTemplateIdType(ElaboratedTypeKeyword::None,
+                                          TemplateName(CTD), Loc, Args,
+                                          /*Scope=*/nullptr,
+                                          /*ForNestedNameSpecifier=*/false);
+  if (DomainTy.isNull())
+    return nullptr;
+  // Best-effort lookup: only honor a user-provided specialization (an explicit
+  // or partial specialization that already has a definition). When the user has
+  // not specialized error_domain<T> (e.g. the exception_ptr header is not
+  // included), referencing error_domain<T> yields an implicit specialization
+  // request of the (typically undefined) primary template. Calling
+  // RequireCompleteType on it would trigger instantiation and emit a hard
+  // "implicit instantiation of undefined template" error, defeating the
+  // silent best-effort fallback. Bail out before instantiating.
+  CXXRecordDecl *RD = DomainTy->getAsCXXRecordDecl();
+  if (!RD || !RD->getDefinition())
+    return nullptr;
+  if (RequireCompleteType(Loc, DomainTy, diag::err_throw_throws_no_error_domain))
+    return nullptr;
+  return RD;
+}
+
+/// Look up the `domain_alias_type` member of an `error_domain<T>` specialization
+/// and resolve it to the aliased `error_domain<U>` record. An aliased domain
+/// shares the same category as T (e.g. two libraries each define their own
+/// `win32_errc` but map to one category); the compiler fabricates the error
+/// value using the alias's `domain()`.
+static CXXRecordDecl *lookupErrorDomainAlias(Sema &S, SourceLocation Loc,
+                                             const CXXRecordDecl *Domain) {
+  DeclarationName DN = &S.PP.getIdentifierTable().get("domain_alias_type");
+  LookupResult R(S, DN, Loc, Sema::LookupOrdinaryName);
+  if (!S.LookupQualifiedName(R, const_cast<CXXRecordDecl *>(Domain)) ||
+      R.empty())
+    return nullptr;
+  auto *TD = R.getAsSingle<TypeDecl>();
+  if (!TD)
+    return nullptr;
+  QualType AliasTy = S.Context.getTypeDeclType(TD);
+  return AliasTy->getAsCXXRecordDecl();
+}
+
+/// Find a static member function \p Name on \p RD (e.g. error_domain<T>).
+static CXXMethodDecl *findStaticMember(Sema &S, const CXXRecordDecl *RD,
+                                       StringRef Name, SourceLocation Loc,
+                                       bool IgnoreAccess) {
+  DeclarationName DN = &S.PP.getIdentifierTable().get(Name);
+  LookupResult R(S, DN, Loc, Sema::LookupOrdinaryName);
+  if (IgnoreAccess)
+    R.suppressDiagnostics();
+  if (!S.LookupQualifiedName(R, const_cast<CXXRecordDecl *>(RD)) || R.empty())
+    return nullptr;
+  auto *MD = R.getAsSingle<CXXMethodDecl>();
+  if (!MD || !MD->isStatic())
+    return nullptr;
+  return MD;
+}
+
+/// Build a call to a static member function \p Fn with the given arguments.
+static ExprResult buildStaticMemberCall(Sema &S, CXXMethodDecl *Fn,
+                                        MultiExprArg Args,
+                                        SourceLocation Loc) {
+  if (!Fn)
+    return ExprError();
+  DeclRefExpr *DRE = S.BuildDeclRefExprForStaticMember(Fn, Loc);
+  if (!DRE)
+    return ExprError();
+  return S.BuildCallExpr(nullptr, DRE, Loc, Args, Loc);
+}
+
+/// Build a DeclRefExpr referring to the static member function \p Fn.
+DeclRefExpr *Sema::BuildDeclRefExprForStaticMember(CXXMethodDecl *Fn,
+                                                   SourceLocation Loc) {
+  DeclarationNameInfo NameInfo(Fn->getDeclName(), Loc);
+  return BuildDeclRefExpr(Fn, Fn->getType(), VK_PRValue, NameInfo,
+                          /*NNS=*/NestedNameSpecifierLoc(), /*FoundD=*/Fn,
+                          /*TemplateKWLoc=*/SourceLocation(),
+                          /*TemplateArgs=*/nullptr);
+}
+
+/// Build the compiler-fabricated `std::error` value for `throw throws e`.
+ExprResult Sema::BuildErrorValueExpr(SourceLocation Loc, Expr *Operand) {
+  QualType T = Operand->getType();
+
+  // If the operand is already a std::error value (e.g. rethrowing a caught
+  // error), pass it through unchanged — the compiler does not fabricate it.
+  if (NamespaceDecl *Std = getStdNamespace()) {
+    LookupResult R(*this, &PP.getIdentifierTable().get("error"), Loc,
+                   LookupTagName);
+    if (LookupQualifiedName(R, Std)) {
+      if (RecordDecl *RD = R.getAsSingle<RecordDecl>())
+        if (Context.hasSameUnqualifiedType(
+                T, Context.getTypeDeclType(
+                       static_cast<const TypeDecl *>(RD))))
+          return Operand;
+    }
+  }
+
+  // FFI boundary: if the operand is the global struct cxx_std_error
+  // ({void*, uintptr_t}), use it directly without going through
+  // error_domain<T>::domain()/code(). This allows throwing a C-produced error
+  // value returned from an extern "C" function declared
+  // return_failure{struct cxx_std_error}.
+  if (const auto *RT = T->getAsRecordDecl()) {
+    if (RT->isStruct() && !RT->isUnion() && RT->getName() == "cxx_std_error") {
+      // Must be at global scope (not nested in another namespace/scope).
+      const DeclContext *DC = RT->getDeclContext();
+      if (DC->isTranslationUnit()) {
+        auto Fields = RT->fields();
+        auto It = Fields.begin();
+        if (It != Fields.end()) {
+          FieldDecl *F1 = *It;
+          ++It;
+          if (It != Fields.end()) {
+            FieldDecl *F2 = *It;
+            ++It;
+            if (It == Fields.end() && F1->getType()->isPointerType() &&
+                F2->getType()->isIntegerType() &&
+                Context.getTypeSize(F2->getType()) ==
+                    Context.getTypeSize(Context.VoidPtrTy)) {
+              return Operand;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  CXXRecordDecl *Domain = lookupErrorDomain(Loc, T);
+  if (!Domain) {
+    Diag(Loc, diag::err_throw_throws_no_error_domain) << T;
+    return ExprError();
+  }
+
+  // error_domain<T>::domain() — no arguments. If the specialization declares a
+  // `domain_alias_type` instead (aliasing another error_domain<U> that shares
+  // the same category), follow the alias and use U::domain() for the fabricated
+  // domain pointer, so T and U values compare equal.
+  CXXMethodDecl *DomainFn =
+      findStaticMember(*this, Domain, "domain", Loc, false);
+  if (!DomainFn) {
+    if (CXXRecordDecl *AliasDomain = lookupErrorDomainAlias(*this, Loc, Domain))
+      DomainFn = findStaticMember(*this, AliasDomain, "domain", Loc, false);
+  }
+  if (!DomainFn) {
+    Diag(Loc, diag::err_throw_throws_no_error_domain) << T;
+    return ExprError();
+  }
+
+  // error_domain<T>::code(T) — one argument (the thrown value).
+  CXXMethodDecl *CodeFn = findStaticMember(*this, Domain, "code", Loc, false);
+  if (!CodeFn || CodeFn->getNumParams() != 1) {
+    Diag(Loc, diag::err_throw_throws_no_error_domain) << T;
+    return ExprError();
+  }
+
+  ExprResult DomainCall = buildStaticMemberCall(*this, DomainFn, {}, Loc);
+  if (DomainCall.isInvalid())
+    return ExprError();
+  ExprResult CodeCall =
+      buildStaticMemberCall(*this, CodeFn, MultiExprArg(Operand), Loc);
+  if (CodeCall.isInvalid())
+    return ExprError();
+
+  // The fabricated value's type is std::error, looked up by name. Its layout
+  // ({domain, code}) is what the ABI carries; users can never construct one.
+  QualType ErrorTy;
+  if (NamespaceDecl *Std = getStdNamespace()) {
+    LookupResult R(*this, &PP.getIdentifierTable().get("error"), Loc,
+                   LookupTagName);
+    if (LookupQualifiedName(R, Std)) {
+      if (RecordDecl *RD = R.getAsSingle<RecordDecl>())
+        ErrorTy = Context.getTypeDeclType(static_cast<const TypeDecl *>(RD));
+    }
+  }
+
+  return new (Context) CXXErrorValueExpr(Operand, DomainCall.get(),
+                                         CodeCall.get(), ErrorTy, Loc);
+}
+
+/// Rebuild a CXXErrorValueExpr after template instantiation.
+ExprResult Sema::RebuildErrorValueExpr(SourceLocation Loc, Expr *Operand,
+                                       Expr *DomainCall, Expr *CodeCall,
+                                       QualType Ty) {
+  return new (Context) CXXErrorValueExpr(Operand, DomainCall, CodeCall, Ty,
+                                         Loc);
+}
+
+/// Find an existing extern "C" declaration of \p Name in the translation
+/// unit, or create one implicitly. Used for the herbception runtime ABI
+/// symbols that the compiler fabricates calls to without requiring any
+/// user header.
+static FunctionDecl *
+findOrCreateImplicitExternCFunction(Sema &S, StringRef Name, QualType RetTy,
+                                    ArrayRef<QualType> ParamTys,
+                                    SourceLocation Loc) {
+  ASTContext &C = S.Context;
+  DeclContext *TU = C.getTranslationUnitDecl();
+  IdentifierInfo &II = C.Idents.get(Name);
+
+  // Reuse an existing declaration (e.g. from <herbceptions/error>) only
+  // when its signature matches exactly, so attributes survive onto the call.
+  LookupResult R(S, &II, Loc, Sema::LookupOrdinaryName);
+  if (S.LookupQualifiedName(R, TU))
+    if (auto *FD = R.getAsSingle<FunctionDecl>())
+      if (FD->getNumParams() == ParamTys.size() &&
+          S.Context.hasSameType(FD->getReturnType(), RetTy)) {
+        bool Match = true;
+        for (unsigned I = 0; Match && I != ParamTys.size(); ++I)
+          Match = S.Context.hasSameType(FD->getParamDecl(I)->getType(),
+                                        ParamTys[I]);
+        if (Match)
+          return FD;
+      }
+
+  DeclContext *Parent = TU;
+  if (S.getLangOpts().CPlusPlus) {
+    LinkageSpecDecl *CLinkageDecl = LinkageSpecDecl::Create(
+        C, Parent, Loc, Loc, LinkageSpecLanguageIDs::C, false);
+    CLinkageDecl->setImplicit();
+    Parent->addDecl(CLinkageDecl);
+    Parent = CLinkageDecl;
+  }
+
+  FunctionProtoType::ExtProtoInfo EPI;
+  QualType FnTy = C.getFunctionType(RetTy, ParamTys, EPI);
+  FunctionDecl *FD = FunctionDecl::Create(
+      C, Parent, Loc, Loc, DeclarationName(&II), FnTy,
+      /*TInfo=*/nullptr, SC_Extern, S.getCurFPFeatures().isFPConstrained(),
+      /*isInlineSpecified=*/false, /*hasBody=*/false,
+      ConstexprSpecKind::Unspecified);
+  FD->setImplicit();
+
+  SmallVector<ParmVarDecl *, 2> Params;
+  for (unsigned I = 0; I != ParamTys.size(); ++I) {
+    ParmVarDecl *Parm = ParmVarDecl::Create(
+        C, FD, SourceLocation(), SourceLocation(), nullptr, ParamTys[I],
+        /*TInfo=*/nullptr, SC_None, nullptr);
+    Parm->setScopeInfo(0, I);
+    Params.push_back(Parm);
+  }
+  FD->setParams(Params);
+  Parent->addDecl(FD);
+  return FD;
+}
+
+/// Build a plain call to a resolved free FunctionDecl.
+static ExprResult buildImplicitExternCCall(FunctionDecl *Fn, MultiExprArg Args,
+                                           SourceLocation Loc, Sema &S) {
+  DeclarationNameInfo NameInfo(Fn->getDeclName(), Loc);
+  ExprResult DRE =
+      S.BuildDeclarationNameExpr(CXXScopeSpec(), NameInfo, Fn, /*FoundD=*/Fn);
+  if (DRE.isInvalid())
+    return ExprError();
+  return S.BuildCallExpr(nullptr, DRE.get(), Loc, Args, Loc);
+}
+
+/// Build the compiler-fabricated `std::error` value that captures a legacy
+/// C++ exception: `{__cxa_error_domain_*_exception_ptr(),
+/// __cxa_error_code_*_exception_ptr(thrown_ptr)}`. These are direct ABI
+/// symbols provided by libherbceptions; the compiler emits plain extern "C"
+/// calls to them without consulting any error_domain<std::exception_ptr>
+/// specialization or header templates. Used when a legacy exception
+/// (thrown by a `noexcept(false)` function) is converted to the herbception
+/// channel: inside a `try { } catch throws(std::error e)` block, or escaping
+/// a `throws` function.
+ExprResult Sema::BuildCxaExceptionErrorValue(SourceLocation Loc) {
+  // Always fabricate the legacy-exception-to-herbception conversion. The
+  // compiler emits calls to the built-in ABI symbols
+  // (__cxa_error_domain_*_exception_ptr / __cxa_error_code_*_exception_ptr);
+  // the linker hard-errors if libherbceptions is not linked. With
+  // -fno-exceptions none of this is emitted.
+
+  bool IsMSVC{Context.getTargetInfo().getCXXABI().isMicrosoft()};
+  // On Windows targets (MSVC, MinGW, Cygwin), the ABI symbols live in the
+  // libherbceptions DLL and must be dllimported to avoid direct calls to
+  // symbols that only exist in the import library.
+  bool IsWindows = Context.getTargetInfo().getTriple().isOSWindows();
+
+  // __cxa_error_domain_{itanium,msvc}_exception_ptr() -> domain singleton
+  // pointer. Declared void const * here; EmitErrorValueExpr coerces to the
+  // std::error domain field type.
+  FunctionDecl *DomainFn = findOrCreateImplicitExternCFunction(
+      *this,
+      IsMSVC ? "__cxa_error_domain_msvc_exception_ptr"
+             : "__cxa_error_domain_itanium_exception_ptr",
+      Context.getPointerType(Context.VoidTy.withConst()), {}, Loc);
+  if (IsWindows)
+    DomainFn->addAttr(DLLImportAttr::CreateImplicit(Context));
+  ExprResult DomainCall = buildImplicitExternCCall(DomainFn, {}, Loc, *this);
+  if (DomainCall.isInvalid())
+    return ExprError();
+
+  // __cxa_error_code_itanium_exception_ptr(void *) / (no args, msvc): mint
+  // the code from the caught thrown-object pointer, refcounting it. The
+  // operand lowers to __cxa_get_exception_ptr / llvm.eh.exceptionpointer /
+  // wasm.get.exception per personality.
+  SmallVector<QualType, 1> CodeParamTys;
+  SmallVector<Expr *, 1> CodeArgs;
+  Expr *CxaOperand = new (Context) CXXCxaExceptionExpr(Context.VoidPtrTy, Loc);
+  if (!IsMSVC) {
+    CodeParamTys.push_back(Context.VoidPtrTy);
+    CodeArgs.push_back(CxaOperand);
+  }
+  FunctionDecl *CodeFn = findOrCreateImplicitExternCFunction(
+      *this,
+      IsMSVC ? "__cxa_error_code_msvc_exception_ptr"
+             : "__cxa_error_code_itanium_exception_ptr",
+      Context.getSizeType(), CodeParamTys, Loc);
+  if (IsWindows)
+    CodeFn->addAttr(DLLImportAttr::CreateImplicit(Context));
+  ExprResult CodeCall = buildImplicitExternCCall(CodeFn, CodeArgs, Loc, *this);
+  if (CodeCall.isInvalid())
+    return ExprError();
+
+  // The fabricated value's type: std::error if visible, otherwise a
+  // fallback {void const*, __SIZE_TYPE__} struct matching the ABI layout.
+  QualType ErrorTy;
+  if (NamespaceDecl *Std = getStdNamespace()) {
+    LookupResult R(*this, &PP.getIdentifierTable().get("error"), Loc,
+                   LookupTagName);
+    if (LookupQualifiedName(R, Std)) {
+      if (RecordDecl *RD = R.getAsSingle<RecordDecl>())
+        ErrorTy = Context.getTypeDeclType(static_cast<const TypeDecl *>(RD));
+    }
+  }
+  if (ErrorTy.isNull()) {
+    // std::error not visible: build an anonymous {void const*, __SIZE_TYPE__}
+    // struct matching the cxx_std_error ABI layout.
+    DeclContext *TU = Context.getTranslationUnitDecl();
+    auto *RD = RecordDecl::Create(Context, TagTypeKind::Struct, TU, Loc, Loc,
+                                  /*Id=*/nullptr, /*PrevDecl=*/nullptr);
+    RD->setImplicit();
+    RD->startDefinition();
+    QualType VoidPtr = Context.getPointerType(Context.VoidTy.withConst());
+    auto *F1 = FieldDecl::Create(Context, RD, Loc, Loc,
+                                 /*Id=*/nullptr, VoidPtr,
+                                 /*TInfo=*/nullptr, /*BW=*/nullptr,
+                                 /*Mutable=*/false, /*ICIS=*/ICIS_NoInit);
+    F1->setImplicit();
+    RD->addDecl(F1);
+    auto *F2 = FieldDecl::Create(Context, RD, Loc, Loc,
+                                 /*Id=*/nullptr, Context.getSizeType(),
+                                 /*TInfo=*/nullptr, /*BW=*/nullptr,
+                                 /*Mutable=*/false, /*ICIS=*/ICIS_NoInit);
+    F2->setImplicit();
+    RD->addDecl(F2);
+    RD->completeDefinition();
+    ErrorTy = Context.getTypeDeclType(static_cast<const TypeDecl *>(RD));
+  }
+
+  return new (Context) CXXErrorValueExpr(CxaOperand, DomainCall.get(),
+                                         /*CodeCall=*/CodeCall.get(), ErrorTy,
+                                         Loc);
+}
+
+ExprResult Sema::ActOnHerbceptionTry(SourceLocation TryLoc, Expr *Ex) {
+  if (!getLangOpts().HerbExceptions) {
+    Diag(TryLoc, diag::err_herbceptions_disabled);
+    return ExprError();
+  }
+
+  // `try(expr)` is only valid inside a function declared with 'throws' or
+  // 'fails{E}'.
+  const FunctionDecl *CurFD = getCurFunctionDecl();
+  if (!CurFD || CurFD->getType().isNull() ||
+      !CurFD->getType()->getAs<FunctionProtoType>()->hasThrowsSpec()) {
+    Diag(TryLoc, diag::err_try_throws_outside_throws_function);
+    return ExprError();
+  }
+
+  if (!Ex) {
+    Diag(TryLoc, diag::err_herbceptions_try_requires_operand);
+    return ExprError();
+  }
+
+  // The subexpression must call a function with a throws/fails spec. When the
+  // call is dependent (e.g. inside a template), defer the check to
+  // instantiation time.
+  if (!Ex->isTypeDependent() && !isHerbceptionThrowsCall(Ex)) {
+    Diag(Ex->getBeginLoc(), diag::err_try_expr_requires_throws_call);
+    return ExprError();
+  }
+
+  // The result type of the try expression is the success value type (T),
+  // stripped of the discriminant.
+  QualType Ty = Ex->getType();
+
+  // If this call is `fails{E}` and the enclosing function is `throws` (whose
+  // implicit error type is std::error), the auto-propagated E error value must
+  // be converted to std::error via error_domain<E>. Resolve it here so CodeGen
+  // can emit domain()/code() on the error path.
+  CXXRecordDecl *ErrorDomain = nullptr;
+  if (const FunctionDecl *CurFD = getCurFunctionDecl()) {
+    if (const auto *CurFPT =
+            CurFD->getType().isNull()
+                ? nullptr
+                : CurFD->getType()->getAs<FunctionProtoType>();
+        CurFPT && CurFPT->hasBasicThrowsSpec()) {
+      if (const CallExpr *Call = dyn_cast<CallExpr>(Ex->IgnoreParenImpCasts()))
+        if (const FunctionDecl *FD =
+                dyn_cast_or_null<FunctionDecl>(Call->getCalleeDecl()))
+          if (const auto *CalleeFPT =
+                  FD->getType()->getAs<FunctionProtoType>();
+              CalleeFPT && CalleeFPT->hasReturnFailureSpec())
+            ErrorDomain = lookupErrorDomain(TryLoc,
+                                            CalleeFPT->getExceptionType(0));
+    }
+  }
+
+  // Preserve reference identity: a `T&` / `T&&` return through `throws` is
+  // still a reference to the caller's referent, not a temporary. Without this
+  // the auto-propagation wrapper would materialize the reference as a
+  // prvalue and the caller's `return inner_call();` would later fail with
+  // "non-const lvalue reference cannot bind to a temporary".
+  ExprValueKind VK = Ex->getValueKind();
+
+  return new (Context) CXXTryExpr(Ex, Ty, TryLoc, VK, ErrorDomain);
+}
+
+ExprResult Sema::ActOnHerbceptionCatchReturnFailure(SourceLocation CatchLoc,
+                                            SourceLocation FailsLoc, Expr *Ex) {
+  if (!getLangOpts().HerbExceptions) {
+    Diag(CatchLoc, diag::err_herbceptions_disabled);
+    return ExprError();
+  }
+
+  if (!Ex) {
+    Diag(FailsLoc, diag::err_herbceptions_try_requires_operand);
+    return ExprError();
+  }
+
+  // The subexpression must call a function with a throws/fails spec. When the
+  // call is dependent (e.g. inside a template), defer the check to
+  // instantiation time.
+  if (!Ex->isTypeDependent() && !isHerbceptionThrowsCall(Ex)) {
+    Diag(Ex->getBeginLoc(), diag::err_catch_return_failure_expr_requires_throws_call);
+    return ExprError();
+  }
+
+  // `catch fails(expr)` yields an explicit error type E. A `throws` function's
+  // error type is the implicit compiler-fabricated std::error, which is only
+  // ever handled by a `try { } catch throws(std::error e) { }` block handler;
+  // it cannot flow through a `catch fails` aggregate. Reject it here.
+  if (!Ex->isTypeDependent()) {
+    const FunctionDecl *FD = nullptr;
+    if (const auto *Call = dyn_cast<CallExpr>(Ex->IgnoreParenImpCasts()))
+      FD = dyn_cast_or_null<FunctionDecl>(Call->getCalleeDecl());
+    if (const auto *FPT = FD ? FD->getType()->getAs<FunctionProtoType>()
+                             : nullptr;
+        FPT && FPT->hasBasicThrowsSpec() && !FPT->hasReturnFailureSpec()) {
+      Diag(Ex->getBeginLoc(), diag::err_catch_return_failure_expr_throws_function);
+      return ExprError();
+    }
+  }
+
+  // Determine the success value type T and the error type E of the
+  // catch-fails aggregate. `throws` functions were rejected above (their
+  // implicit std::error can only be handled by a `catch throws` block
+  // handler), so E is always the explicit `fails{E}` error type.
+  QualType ValueTy = Ex->getType();
+  QualType ErrorTy = ValueTy;
+  if (const auto *Call = dyn_cast<CallExpr>(Ex->IgnoreParenImpCasts()))
+    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(Call->getCalleeDecl()))
+      if (const auto *CalleeFPT =
+              FD->getType()->getAs<FunctionProtoType>()) {
+        ValueTy = FD->getReturnType();
+        if (CalleeFPT->hasReturnFailureSpec())
+          ErrorTy = CalleeFPT->getExceptionType(0);
+      }
+
+  // `catch fails(expr)` yields the N2289 aggregate
+  // `struct { union { T value; E error; }; bool failed; }` in both C and C++.
+  QualType EitherTy = Context.getCatchReturnFailureType(ValueTy, ErrorTy);
+  return new (Context) CXXCatchReturnFailureExpr(Ex, EitherTy, CatchLoc);
+}
+
+ExprResult Sema::ActOnHerbceptionReturnFailure(SourceLocation FailureLoc, Expr *Ex) {
+  if (!getLangOpts().HerbExceptions) {
+    Diag(FailureLoc, diag::err_herbceptions_disabled);
+    return ExprError();
+  }
+
+  if (!Ex) {
+    Diag(FailureLoc, diag::err_herbceptions_try_requires_operand);
+    return ExprError();
+  }
+
+  // `failure(expr)` is only valid inside a `fails{E}` function, and the operand
+  // must be of the explicit error type E.
+  const FunctionDecl *CurFD = getCurFunctionDecl();
+  const FunctionProtoType *CurFPT =
+      CurFD ? (CurFD->getType().isNull() ? nullptr : CurFD->getType()->getAs<FunctionProtoType>()) : nullptr;
+  if (!CurFPT || !CurFPT->hasReturnFailureSpec()) {
+    Diag(FailureLoc, diag::err_failure_outside_return_failure_function);
+    return ExprError();
+  }
+
+  // Reuse the compiler-fabricated error value path: failure(expr) is the
+  // C-style way to return an error via the failure channel, equivalent to
+  // `throw throws expr` for a fails{E} function.
+  return BuildCXXThrow(FailureLoc, Ex, /*IsThrownVarInScope=*/false,
+                       /*IsHerbception=*/true);
+}
+
+StmtResult Sema::ActOnHerbceptionReturnFailureStmt(
+    SourceLocation ReturnFailureLoc, Expr *E, Scope *CurScope) {
+  if (!getLangOpts().HerbExceptions) {
+    Diag(ReturnFailureLoc, diag::err_herbceptions_disabled);
+    return StmtError();
+  }
+
+  // `return_failure expr;` is the statement form: build the expression
+  // `return_failure(expr)` and wrap it as an expression statement.
+  if (!E) {
+    Diag(ReturnFailureLoc, diag::err_herbceptions_try_requires_operand);
+    return StmtError();
+  }
+
+  ExprResult Expr = ActOnHerbceptionReturnFailure(ReturnFailureLoc, E);
+  if (Expr.isInvalid())
+    return StmtError();
+
+  return ActOnExprStmt(Expr.get());
+}
+
 ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
-                               bool IsThrownVarInScope) {
+                               bool IsThrownVarInScope, bool IsHerbception) {
   const llvm::Triple &T = Context.getTargetInfo().getTriple();
   const bool IsOpenMPGPUTarget =
       getLangOpts().OpenMPIsTargetDevice && T.isGPU();
 
-  DiagnoseExceptionUse(OpLoc, /* IsTry= */ false);
+  // Herbception `throw throws expr` uses the deterministic error channel and
+  // is independent of traditional exceptions, so skip the exception-disabled
+  // check for it.
+  if (!IsHerbception)
+    DiagnoseExceptionUse(OpLoc, /* IsTry= */ false);
 
   // In OpenMP target regions, we replace 'throw' with a trap on GPU targets.
   if (IsOpenMPGPUTarget)
@@ -882,7 +1564,7 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
     Diag(OpLoc, diag::err_acc_branch_in_out_compute_construct)
         << /*throw*/ 2 << /*out of*/ 0;
 
-  if (Ex && !Ex->isTypeDependent()) {
+  if (Ex && !Ex->isTypeDependent() && !IsHerbception) {
     // Initialize the exception result.  This implicitly weeds out
     // abstract types or types with inaccessible copy constructors.
 
@@ -918,7 +1600,8 @@ ExprResult Sema::BuildCXXThrow(SourceLocation OpLoc, Expr *Ex,
     PPC().CheckPPCMMAType(Ex->getType(), Ex->getBeginLoc());
 
   return new (Context)
-      CXXThrowExpr(Ex, Context.VoidTy, OpLoc, IsThrownVarInScope);
+      CXXThrowExpr(Ex, Context.VoidTy, OpLoc, IsThrownVarInScope,
+                   IsHerbception);
 }
 
 static void
@@ -7592,6 +8275,28 @@ ExprResult Sema::ActOnNoexceptExpr(SourceLocation KeyLoc, SourceLocation,
   return BuildCXXNoexceptExpr(KeyLoc, Operand, RParen);
 }
 
+ExprResult Sema::ActOnThrowsExpr(SourceLocation KeyLoc, SourceLocation,
+                                 Expr *Operand, SourceLocation RParen) {
+  if (!getLangOpts().HerbExceptions)
+    return ExprError(Diag(KeyLoc, diag::err_herbceptions_disabled));
+
+  ExprResult R = CheckPlaceholderExpr(Operand);
+  if (R.isInvalid())
+    return R;
+
+  R = CheckUnevaluatedOperand(R.get());
+  if (R.isInvalid())
+    return ExprError();
+
+  Operand = R.get();
+
+  // throws(expr) tests the implicit `throws` channel (null E).
+  bool CanHerbceptionThrow = canHerbceptionThrow(Operand, QualType());
+  return new (Context)
+      CXXThrowsExpr(Context.BoolTy, Operand, CanHerbceptionThrow, KeyLoc,
+                    RParen);
+}
+
 static void MaybeDecrementCount(
     Expr *E, llvm::DenseMap<const VarDecl *, int> &RefsMinusAssignments) {
   DeclRefExpr *LHS = nullptr;
@@ -8001,6 +8706,7 @@ IfExistsResult Sema::CheckMicrosoftIfExistsSymbol(Scope *S,
 concepts::Requirement *Sema::ActOnSimpleRequirement(Expr *E) {
   return BuildExprRequirement(E, /*IsSimple=*/true,
                               /*NoexceptLoc=*/SourceLocation(),
+                              /*ThrowsLoc=*/SourceLocation(),
                               /*ReturnTypeRequirement=*/{});
 }
 
@@ -8035,14 +8741,16 @@ concepts::Requirement *Sema::ActOnTypeRequirement(
 }
 
 concepts::Requirement *
-Sema::ActOnCompoundRequirement(Expr *E, SourceLocation NoexceptLoc) {
-  return BuildExprRequirement(E, /*IsSimple=*/false, NoexceptLoc,
+Sema::ActOnCompoundRequirement(Expr *E, SourceLocation NoexceptLoc,
+                               SourceLocation ThrowsLoc) {
+  return BuildExprRequirement(E, /*IsSimple=*/false, NoexceptLoc, ThrowsLoc,
                               /*ReturnTypeRequirement=*/{});
 }
 
 concepts::Requirement *
 Sema::ActOnCompoundRequirement(
-    Expr *E, SourceLocation NoexceptLoc, CXXScopeSpec &SS,
+    Expr *E, SourceLocation NoexceptLoc, SourceLocation ThrowsLoc,
+    CXXScopeSpec &SS,
     TemplateIdAnnotation *TypeConstraint, unsigned Depth) {
   // C++2a [expr.prim.req.compound] p1.3.3
   //   [..] the expression is deduced against an invented function template
@@ -8068,7 +8776,8 @@ Sema::ActOnCompoundRequirement(
                           /*EllipsisLoc=*/SourceLocation(),
                           /*AllowUnexpandedPack=*/true))
     // Just produce a requirement with no type requirements.
-    return BuildExprRequirement(E, /*IsSimple=*/false, NoexceptLoc, {});
+    return BuildExprRequirement(E, /*IsSimple=*/false, NoexceptLoc, ThrowsLoc,
+                                {});
 
   auto *TPL = TemplateParameterList::Create(Context, SourceLocation(),
                                             SourceLocation(),
@@ -8076,13 +8785,14 @@ Sema::ActOnCompoundRequirement(
                                             SourceLocation(),
                                             /*RequiresClause=*/nullptr);
   return BuildExprRequirement(
-      E, /*IsSimple=*/false, NoexceptLoc,
+      E, /*IsSimple=*/false, NoexceptLoc, ThrowsLoc,
       concepts::ExprRequirement::ReturnTypeRequirement(TPL));
 }
 
 concepts::ExprRequirement *
 Sema::BuildExprRequirement(
     Expr *E, bool IsSimple, SourceLocation NoexceptLoc,
+    SourceLocation ThrowsLoc,
     concepts::ExprRequirement::ReturnTypeRequirement ReturnTypeRequirement) {
   auto Status = concepts::ExprRequirement::SS_Satisfied;
   ConceptSpecializationExpr *SubstitutedConstraintExpr = nullptr;
@@ -8091,6 +8801,10 @@ Sema::BuildExprRequirement(
     Status = concepts::ExprRequirement::SS_Dependent;
   else if (NoexceptLoc.isValid() && canThrow(E) == CanThrowResult::CT_Can)
     Status = concepts::ExprRequirement::SS_NoexceptNotMet;
+  else if (NoexceptLoc.isValid() && canHerbceptionThrow(E, QualType()))
+    Status = concepts::ExprRequirement::SS_NoexceptNotMet;
+  else if (ThrowsLoc.isValid() && !canHerbceptionThrow(E, QualType()))
+    Status = concepts::ExprRequirement::SS_ThrowsNotMet;
   else if (ReturnTypeRequirement.isSubstitutionFailure())
     Status = concepts::ExprRequirement::SS_TypeRequirementSubstitutionFailure;
   else if (ReturnTypeRequirement.isTypeConstraint()) {
@@ -8130,12 +8844,13 @@ Sema::BuildExprRequirement(
                               IDC->printPretty(OS, /*Helper=*/nullptr,
                                                getPrintingPolicy());
                             }),
-          IsSimple, NoexceptLoc, ReturnTypeRequirement);
+          IsSimple, NoexceptLoc, ThrowsLoc, ReturnTypeRequirement);
     }
     if (!SubstitutedConstraintExpr->isSatisfied())
       Status = concepts::ExprRequirement::SS_ConstraintsNotSatisfied;
   }
   return new (Context) concepts::ExprRequirement(E, IsSimple, NoexceptLoc,
+                                                 ThrowsLoc,
                                                  ReturnTypeRequirement, Status,
                                                  SubstitutedConstraintExpr);
 }
@@ -8143,10 +8858,11 @@ Sema::BuildExprRequirement(
 concepts::ExprRequirement *
 Sema::BuildExprRequirement(
     concepts::Requirement::SubstitutionDiagnostic *ExprSubstitutionDiagnostic,
-    bool IsSimple, SourceLocation NoexceptLoc,
+    bool IsSimple, SourceLocation NoexceptLoc, SourceLocation ThrowsLoc,
     concepts::ExprRequirement::ReturnTypeRequirement ReturnTypeRequirement) {
   return new (Context) concepts::ExprRequirement(ExprSubstitutionDiagnostic,
                                                  IsSimple, NoexceptLoc,
+                                                 ThrowsLoc,
                                                  ReturnTypeRequirement);
 }
 

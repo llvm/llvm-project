@@ -9723,9 +9723,22 @@ static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
   MVT LocVT = ValVT;
 
   // Any return value split into more than two values can't be returned
-  // directly.
-  if (IsRet && ValNo > 1)
+  // directly. The throws (herbception) discriminant is an exception: it is
+  // returned in a2 (R6) so up to three return registers are used (a0/a1 for
+  // the value, a2 for the discriminant).
+  if (IsRet && ValNo > 1 && !ArgFlags.isThrows())
     return true;
+
+  // Herbception (throws) returns carry the success/failure discriminant in a2
+  // (R6). The actual return value uses a0 (and a1 if it is wider than GRLen).
+  if (IsRet && ArgFlags.isThrows()) {
+    if (Register Reg = State.AllocateReg(LoongArch::R6)) {
+      LocVT = GRLenVT;
+      State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
+      return false;
+    }
+    return true;
+  }
 
   // If passing a variadic argument, or if no FPR is available.
   bool UseGPRForFloat = true;

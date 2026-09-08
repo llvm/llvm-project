@@ -83,6 +83,19 @@ ExprResult Parser::ParseAssignmentExpression(
 
   if (Tok.is(tok::kw_throw))
     return ParseThrowExpression();
+  // Herbception: `try(expr)` auto-propagates the error of a throws/fails call.
+  if (getLangOpts().HerbExceptions && Tok.is(tok::kw_try) &&
+      GetLookAheadToken(1).is(tok::l_paren))
+    return ParseHerbceptionTryExpression();
+  // Herbception: `catch return_failure(expr)` produces an `either{T, E}` value.
+  if (getLangOpts().HerbExceptions && Tok.is(tok::kw_catch) &&
+      GetLookAheadToken(1).is(tok::kw_return_failure) &&
+      GetLookAheadToken(2).is(tok::l_paren))
+    return ParseHerbceptionCatchReturnFailureExpression();
+  // Herbception (C-style `return_failure{E}`): `return_failure(expr)` returns
+  // the expression via the failure channel.
+  if (getLangOpts().HerbExceptions && Tok.is(tok::kw_return_failure))
+    return ParseHerbceptionReturnFailureExpression();
   if (Tok.is(tok::kw_co_yield))
     return ParseCoyieldExpression();
 
@@ -525,8 +538,8 @@ Parser::ParseRHSOfBinaryExpression(ExprResult LHS, prec::Level MinPrec) {
 
     if (!RHS.isInvalid() && RHSIsInitList) {
       if (ThisPrec == prec::Assignment) {
-        Diag(OpToken, diag::warn_cxx98_compat_generalized_initializer_lists)
-          << Actions.getExprRange(RHS.get());
+        Diag(OpToken, diag::compat_cxx11_generalized_initializer_lists)
+            << Actions.getExprRange(RHS.get());
       } else if (ColonLoc.isValid()) {
         Diag(ColonLoc, diag::err_init_list_bin_op)
           << /*RHS*/1 << ":"
@@ -708,6 +721,9 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
     REVERTIBLE_TYPE_TRAIT(__is_void);
     REVERTIBLE_TYPE_TRAIT(__is_volatile);
     REVERTIBLE_TYPE_TRAIT(__reference_binds_to_temporary);
+    REVERTIBLE_TYPE_TRAIT(__is_herbceptions_throws_constructible);
+    REVERTIBLE_TYPE_TRAIT(__is_herbceptions_throws_invocable);
+    REVERTIBLE_TYPE_TRAIT(__is_herbceptions_throws_invocable_r);
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
   REVERTIBLE_TYPE_TRAIT(RTT_JOIN(__, Trait));
 #include "clang/Basic/BuiltinTraits.inc"
@@ -1388,7 +1404,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
                          << DS.getSourceRange());
 
     if (Tok.is(tok::l_brace))
-      Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
+      Diag(Tok, diag::compat_cxx11_generalized_initializer_lists);
 
     Res = ParseCXXTypeConstructExpression(DS);
     break;
@@ -1521,6 +1537,27 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
     if (!Res.isInvalid())
       Res = Actions.ActOnNoexceptExpr(KeyLoc, T.getOpenLocation(), Res.get(),
                                       T.getCloseLocation());
+    AllowSuffix = false;
+    break;
+  }
+
+  case tok::kw_throws: { // herbception: 'throws' '(' expression ')'
+    if (NotPrimaryExpression)
+      *NotPrimaryExpression = true;
+    SourceLocation KeyLoc = ConsumeToken();
+    BalancedDelimiterTracker T(*this, tok::l_paren);
+
+    if (T.expectAndConsume(diag::err_expected_lparen_after, "throws"))
+      return ExprError();
+    EnterExpressionEvaluationContext Unevaluated(
+        Actions, Sema::ExpressionEvaluationContext::Unevaluated);
+    Res = ParseExpression();
+
+    T.consumeClose();
+
+    if (!Res.isInvalid())
+      Res = Actions.ActOnThrowsExpr(KeyLoc, T.getOpenLocation(), Res.get(),
+                                    T.getCloseLocation());
     AllowSuffix = false;
     break;
   }
@@ -1737,7 +1774,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         if (!getLangOpts().CPlusPlus23) {
           ExprResult Idx;
           if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
-            Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
+            Diag(Tok, diag::compat_cxx11_generalized_initializer_lists);
             Idx = ParseBraceInitializer();
           } else {
             Idx = ParseExpression(); // May be a comma expression
@@ -3070,8 +3107,7 @@ ExprResult Parser::ParseGenericSelectionExpression() {
     }
     const auto *LIT = cast<LocInfoType>(ControllingType.get().get());
     SourceLocation Loc = LIT->getTypeSourceInfo()->getTypeLoc().getBeginLoc();
-    Diag(Loc, getLangOpts().C2y ? diag::warn_c2y_compat_generic_with_type_arg
-                                : diag::ext_c2y_generic_with_type_arg);
+    DiagCompat(Loc, diag_compat::generic_with_type_arg);
   } else {
     // C11 6.5.1.1p3 "The controlling expression of a generic selection is
     // not evaluated."
@@ -3180,9 +3216,7 @@ ExprResult Parser::ParseFoldExpression(ExprResult LHS,
     }
   }
 
-  Diag(EllipsisLoc, getLangOpts().CPlusPlus17
-                        ? diag::warn_cxx14_compat_fold_expression
-                        : diag::ext_fold_expression);
+  DiagCompat(EllipsisLoc, diag_compat::fold_expression);
 
   T.consumeClose();
   return Actions.ActOnCXXFoldExpr(getCurScope(), T.getOpenLocation(), LHS.get(),
@@ -3226,7 +3260,7 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
 
     ExprResult Expr;
     if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
-      Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
+      Diag(Tok, diag::compat_cxx11_generalized_initializer_lists);
       Expr = ParseBraceInitializer();
     } else
       Expr = ParseAssignmentExpression();

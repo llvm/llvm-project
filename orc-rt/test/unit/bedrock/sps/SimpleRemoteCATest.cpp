@@ -18,6 +18,7 @@
 
 #include "gtest/gtest.h"
 
+#include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
 
 #include "orc-rt/support/sps/SimplePackedSerialization.h"
@@ -87,15 +88,15 @@ public:
       finishTeardown(Error::success());
   }
 
+  // A deque, not a vector: messages() returns pointers into this, and a later
+  // send must not invalidate them.
+  std::deque<Sent> &Messages;
   /// Clear to model a transport whose shutdown is asynchronous.
   bool FinishTeardownOnBegin = true;
   /// Set to tear down from inside connect, before beginAccepting runs.
   bool DropOutDuringConnect;
 
   unsigned TeardownsBegun = 0;
-  // A deque, not a vector: messages() returns pointers into this, and a later
-  // send must not invalidate them.
-  std::deque<Sent> &Messages;
 };
 
 using SentMessages = std::deque<TestSimpleRemoteCA::Sent>;

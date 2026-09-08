@@ -64,6 +64,66 @@ public:
   friend class ASTStmtReader;
 };
 
+/// CXXCatchThrowsStmt - This represents a C++ herbception catch block, i.e.
+/// `catch throws(E e) { ... }` (or `catch fails(E e) { ... }`). Unlike a
+/// traditional CXXCatchStmt, the handler does not use the exception unwinder:
+/// the enclosing try block's throws/fails calls are lowered to {T, i1} returns
+/// and the discriminant is tested to decide whether to enter this handler.
+///
+class CXXCatchThrowsStmt : public Stmt {
+  SourceLocation CatchLoc;
+  /// The location of the 'throws'/'fails' keyword.
+  SourceLocation SpecLoc;
+  /// The exception-declaration of the error value.
+  VarDecl *ExceptionDecl;
+  /// The handler block.
+  Stmt *HandlerBlock;
+  /// When this handler catches std::error from a legacy C++ exception, the
+  /// compiler-fabricated conversion expression (a CXXErrorValueExpr whose
+  /// domain is error_domain<std::cxa_exception_code> and whose code is the
+  /// thrown object pointer). Null when the handler is not a std::error catch.
+  Expr *LegacyExceptionErrorValue;
+
+public:
+  CXXCatchThrowsStmt(SourceLocation catchLoc, SourceLocation specLoc,
+                     VarDecl *exDecl, Stmt *handlerBlock,
+                     Expr *legacyErrorValue = nullptr)
+      : Stmt(CXXCatchThrowsStmtClass), CatchLoc(catchLoc), SpecLoc(specLoc),
+        ExceptionDecl(exDecl), HandlerBlock(handlerBlock),
+        LegacyExceptionErrorValue(legacyErrorValue) {}
+
+  CXXCatchThrowsStmt(EmptyShell Empty)
+      : Stmt(CXXCatchThrowsStmtClass), ExceptionDecl(nullptr),
+        HandlerBlock(nullptr), LegacyExceptionErrorValue(nullptr) {}
+
+  SourceLocation getBeginLoc() const LLVM_READONLY { return CatchLoc; }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return HandlerBlock->getEndLoc();
+  }
+
+  SourceLocation getCatchLoc() const { return CatchLoc; }
+  SourceLocation getSpecLoc() const { return SpecLoc; }
+  VarDecl *getExceptionDecl() const { return ExceptionDecl; }
+  Stmt *getHandlerBlock() const { return HandlerBlock; }
+  Expr *getLegacyExceptionErrorValue() const {
+    return LegacyExceptionErrorValue;
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CXXCatchThrowsStmtClass;
+  }
+
+  child_range children() {
+    return child_range(&HandlerBlock, &HandlerBlock + 1);
+  }
+
+  const_child_range children() const {
+    return const_child_range(&HandlerBlock, &HandlerBlock + 1);
+  }
+
+  friend class ASTStmtReader;
+};
+
 /// CXXTryStmt - A C++ try block, including all handlers.
 ///
 class CXXTryStmt final : public Stmt,
@@ -106,11 +166,24 @@ public:
   }
 
   unsigned getNumHandlers() const { return NumHandlers; }
-  CXXCatchStmt *getHandler(unsigned i) {
-    return cast<CXXCatchStmt>(getStmts()[i + 1]);
+  Stmt *getHandler(unsigned i) { return getStmts()[i + 1]; }
+  const Stmt *getHandler(unsigned i) const { return getStmts()[i + 1]; }
+
+  /// Return the Ith handler as a traditional C++ catch statement.
+  CXXCatchStmt *getCatchHandler(unsigned i) {
+    return cast<CXXCatchStmt>(getHandler(i));
   }
-  const CXXCatchStmt *getHandler(unsigned i) const {
-    return cast<CXXCatchStmt>(getStmts()[i + 1]);
+  const CXXCatchStmt *getCatchHandler(unsigned i) const {
+    return cast<CXXCatchStmt>(getHandler(i));
+  }
+
+  /// Return the Ith handler as a herbception `catch throws`/`catch fails`
+  /// statement, or null if it is a traditional catch.
+  CXXCatchThrowsStmt *getCatchThrowsHandler(unsigned i) {
+    return dyn_cast<CXXCatchThrowsStmt>(getHandler(i));
+  }
+  const CXXCatchThrowsStmt *getCatchThrowsHandler(unsigned i) const {
+    return dyn_cast<CXXCatchThrowsStmt>(getHandler(i));
   }
 
   static bool classof(const Stmt *T) {
@@ -325,6 +398,7 @@ class CoroutineBodyStmt final
     InitSuspend,   ///< The initial suspend statement, run before the body.
     FinalSuspend,  ///< The final suspend statement, run after the body.
     OnException,   ///< Handler for exceptions thrown in the body.
+    OnHerbception, ///< Handler for herbception (throws) errors in the body.
     OnFallthrough, ///< Handler for control flow falling off the body.
     Allocate,      ///< Coroutine frame memory allocation.
     Deallocate,    ///< Coroutine frame memory deallocation.
@@ -352,6 +426,7 @@ public:
     Expr *InitialSuspend = nullptr;
     Expr *FinalSuspend = nullptr;
     Stmt *OnException = nullptr;
+    Stmt *OnHerbception = nullptr;
     Stmt *OnFallthrough = nullptr;
     Expr *Allocate = nullptr;
     Expr *Deallocate = nullptr;
@@ -398,6 +473,9 @@ public:
 
   Stmt *getExceptionHandler() const {
     return getStoredStmts()[SubStmt::OnException];
+  }
+  Stmt *getHerbceptionHandler() const {
+    return getStoredStmts()[SubStmt::OnHerbception];
   }
   Stmt *getFallthroughHandler() const {
     return getStoredStmts()[SubStmt::OnFallthrough];

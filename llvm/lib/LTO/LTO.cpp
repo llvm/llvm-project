@@ -71,6 +71,83 @@ using namespace object;
 
 #define DEBUG_TYPE "lto"
 
+//===----------------------------------------------------------------------===//
+// Herbception ODR checking
+//
+// The herbception ('throws'/'fails{E}') specifier changes the returned-
+// function ABI ({T, i1} return plus a target discriminant) but is not part
+// of the C++ mangled name. Translation units that disagree about it link
+// silently otherwise; see HerbceptionODRChecker in LTO/Config.h.
+//===----------------------------------------------------------------------===//
+
+void HerbceptionODRChecker::record(StringRef Name, const Signature &Sig,
+                                   StringRef ModuleID) {
+  std::lock_guard<std::mutex> Lock(Mutex);
+  auto [It, Inserted] = Definitions.try_emplace(Name, Sig, ModuleID.str());
+  if (Inserted || It->second.first == Sig)
+    return;
+
+  const Signature &Prev = It->second.first;
+  std::string Msg;
+  raw_string_ostream OS(Msg);
+  OS << "herbception ODR violation: symbol '" << Name
+     << "' has conflicting definitions: it is ";
+  if (Prev.Throws && Sig.Throws) {
+    OS << "defined with herbception error payload type '" << Prev.PayloadTy
+       << "' in '" << It->second.second << "', but with payload type '"
+       << Sig.PayloadTy << "' in '" << ModuleID << "'";
+  } else {
+    bool PrevThrows = Prev.Throws;
+    OS << "defined as a herbception ('throws') function with error payload "
+          "type '"
+       << (PrevThrows ? Prev.PayloadTy : Sig.PayloadTy) << "' in '"
+       << (PrevThrows ? StringRef(It->second.second) : ModuleID)
+       << "', but without the herbception error channel in '"
+       << (PrevThrows ? ModuleID : StringRef(It->second.second)) << "'";
+  }
+  Violations.push_back(std::move(Msg));
+}
+
+std::vector<std::string> HerbceptionODRChecker::takeViolations() {
+  std::lock_guard<std::mutex> Lock(Mutex);
+  return std::exchange(Violations, {});
+}
+
+/// Describe the herbception payload carried by \p F: the success/error
+/// payload element of its {T, i1} return struct (or the whole return type if
+/// it does not have the expected shape).
+static std::string getHerbceptionPayloadDesc(const Function &F) {
+  Type *RetTy = F.getReturnType();
+  if (auto *ST = dyn_cast<StructType>(RetTy))
+    if (ST->getNumElements() == 2 && ST->getElementType(1)->isIntegerTy(1))
+      RetTy = ST->getElementType(0);
+  std::string Desc;
+  raw_string_ostream OS(Desc);
+  RetTy->print(OS);
+  return OS.str();
+}
+
+/// Record the herbception signature of every externally visible function in
+/// \p M and diagnose conflicts with any previously scanned module.
+///
+/// Note that only materialized bitcode modules can be inspected: modules that
+/// are never parsed in-process (e.g. --thinlto-index-only, ThinLTO cache
+/// hits, out-of-process DTLTO backends) are not scanned, and neither are
+/// definitions coming from native relocatable files.
+static void checkHerbceptionODRForModule(const Config &Conf, Module &M) {
+  if (!Conf.CheckHerbceptionODR || !Conf.HerbceptionODR)
+    return;
+  StringRef ModuleID = M.getModuleIdentifier();
+  HerbceptionODRChecker::Signature Sig;
+  for (Function &F : M.functions()) {
+    if (F.isIntrinsic() || F.hasLocalLinkage())
+      continue;
+    Sig.Throws = F.hasFnAttribute(llvm::Attribute::Throws);
+    Sig.PayloadTy = Sig.Throws ? getHerbceptionPayloadDesc(F) : std::string();
+    Conf.HerbceptionODR->record(F.getName(), Sig, ModuleID);
+  }
+}
+
 Error LTO::setupOptimizationRemarks() {
   // Setup the remark streamer according to the provided configuration.
   auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
@@ -976,6 +1053,8 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
   if (Error Err = M.materializeMetadata())
     return std::move(Err);
 
+  checkHerbceptionODRForModule(Conf, M);
+
   if (LTOMode == LTOK_UnifiedRegular) {
     // cfi.functions metadata is intended to be used with ThinLTO and may
     // trigger invalid IR transformations if they are present when doing regular
@@ -1376,6 +1455,18 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
     // reduce peak memory before importing.
     Result = runThinLTO(AddStream, Cache, GUIDPreservedSymbols);
 
+  // Report herbception ODR violations collected while adding/scanning all
+  // input modules (regular LTO scans happen during add(), ThinLTO scans on
+  // the backend threads, which have been joined by now). Note that modules
+  // that are never materialized -- e.g. with --thinlto-index-only or served
+  // directly from the ThinLTO cache or an out-of-process DTLTO backend --
+  // are not scanned.
+  if (Conf.HerbceptionODR)
+    for (std::string &Violation : Conf.HerbceptionODR->takeViolations())
+      Result = joinErrors(std::move(Result),
+                          make_error<StringError>(std::move(Violation),
+                                                  inconvertibleErrorCode()));
+
   if (StatsFile)
     PrintStatisticsJSON(StatsFile->os());
 
@@ -1650,6 +1741,8 @@ public:
       Expected<std::unique_ptr<Module>> MOrErr = BM.parseModule(BackendContext);
       if (!MOrErr)
         return MOrErr.takeError();
+
+      checkHerbceptionODRForModule(Conf, **MOrErr);
 
       return thinBackend(Conf, Task, AddStream, **MOrErr, CombinedIndex,
                          ImportList, DefinedGlobals, &ModuleMap,

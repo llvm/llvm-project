@@ -218,6 +218,22 @@ struct PFPField {
   FieldDecl *Field;
 };
 
+/// UniquingSet info for pools keyed on a QualType and a bool. DenseMapInfo has
+/// no bool specialization, so we cannot use the default UniquingSetInfo.
+struct QualTypeBoolInfo {
+  using KeyTy = std::pair<QualType, bool>;
+
+  template <typename T> static KeyTy getKey(const T &N) { return N.getKey(); }
+
+  static unsigned getHashValue(const KeyTy &Key) {
+    return llvm::hash_combine(Key.first.getAsOpaquePtr(), Key.second);
+  }
+
+  template <typename T> static bool isEqual(const KeyTy &Key, const T &N) {
+    return Key == N.getKey();
+  }
+};
+
 /// Holds long-lived AST nodes (such as types and decls) that can be
 /// referred to throughout the semantic analysis of a file.
 class ASTContext : public RefCountedBase<ASTContext> {
@@ -225,12 +241,14 @@ class ASTContext : public RefCountedBase<ASTContext> {
 
   mutable SmallVector<Type *, 0> Types;
   mutable llvm::FoldingSet<ExtQuals> ExtQualNodes;
-  mutable llvm::FoldingSet<ComplexType> ComplexTypes;
-  mutable llvm::FoldingSet<PointerType> PointerTypes{GeneralTypesLog2InitSize};
-  mutable llvm::FoldingSet<AdjustedType> AdjustedTypes;
-  mutable llvm::FoldingSet<BlockPointerType> BlockPointerTypes;
-  mutable llvm::FoldingSet<LValueReferenceType> LValueReferenceTypes;
-  mutable llvm::FoldingSet<RValueReferenceType> RValueReferenceTypes;
+  mutable llvm::UniquingSet<ComplexType> ComplexTypes;
+  mutable llvm::UniquingSet<PointerType> PointerTypes{GeneralTypesLog2InitSize};
+  mutable llvm::UniquingSet<AdjustedType> AdjustedTypes;
+  mutable llvm::UniquingSet<BlockPointerType> BlockPointerTypes;
+  mutable llvm::UniquingSet<LValueReferenceType, QualTypeBoolInfo>
+      LValueReferenceTypes;
+  mutable llvm::UniquingSet<RValueReferenceType, QualTypeBoolInfo>
+      RValueReferenceTypes;
   mutable llvm::FoldingSet<MemberPointerType> MemberPointerTypes;
   mutable llvm::ContextualFoldingSet<ConstantArrayType, ASTContext &>
       ConstantArrayTypes;
@@ -259,27 +277,27 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<PackIndexingType, ASTContext &>
       DependentPackIndexingTypes;
 
-  mutable llvm::FoldingSet<TemplateTypeParmType> TemplateTypeParmTypes;
-  mutable llvm::FoldingSet<ObjCTypeParamType> ObjCTypeParamTypes;
-  mutable llvm::FoldingSet<SubstTemplateTypeParmType>
-    SubstTemplateTypeParmTypes;
+  mutable llvm::UniquingSet<TemplateTypeParmType> TemplateTypeParmTypes;
+  mutable llvm::UniquingSet<ObjCTypeParamType> ObjCTypeParamTypes;
+  mutable llvm::UniquingSet<SubstTemplateTypeParmType>
+      SubstTemplateTypeParmTypes;
   mutable llvm::FoldingSet<SubstTemplateTypeParmPackType>
     SubstTemplateTypeParmPackTypes;
   mutable llvm::FoldingSet<SubstBuiltinTemplatePackType>
       SubstBuiltinTemplatePackTypes;
   mutable llvm::ContextualFoldingSet<TemplateSpecializationType, ASTContext&>
     TemplateSpecializationTypes;
-  mutable llvm::FoldingSet<ParenType> ParenTypes{GeneralTypesLog2InitSize};
+  mutable llvm::UniquingSet<ParenType> ParenTypes{GeneralTypesLog2InitSize};
   mutable llvm::FoldingSet<TagTypeFoldingSetPlaceholder> TagTypes;
   mutable llvm::FoldingSet<FoldingSetPlaceholder<UnresolvedUsingType>>
       UnresolvedUsingTypes;
   mutable llvm::FoldingSet<UsingType> UsingTypes;
   mutable llvm::FoldingSet<FoldingSetPlaceholder<TypedefType>> TypedefTypes;
   mutable llvm::FoldingSet<DependentNameType> DependentNameTypes;
-  mutable llvm::FoldingSet<PackExpansionType> PackExpansionTypes;
+  mutable llvm::UniquingSet<PackExpansionType> PackExpansionTypes;
   mutable llvm::FoldingSet<ObjCObjectTypeImpl> ObjCObjectTypes;
-  mutable llvm::FoldingSet<ObjCObjectPointerType> ObjCObjectPointerTypes;
-  mutable llvm::FoldingSet<UnaryTransformType> UnaryTransformTypes;
+  mutable llvm::UniquingSet<ObjCObjectPointerType> ObjCObjectPointerTypes;
+  mutable llvm::UniquingSet<UnaryTransformType> UnaryTransformTypes;
   // An AutoType can have a dependency on another AutoType via its template
   // arguments. Since both dependent and dependency are on the same set,
   // we can end up in an infinite recursion when looking for a node if we used
@@ -289,11 +307,11 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::DenseMap<llvm::FoldingSetNodeIDRef, AutoType *> AutoTypes;
   mutable llvm::FoldingSet<DeducedTemplateSpecializationType>
     DeducedTemplateSpecializationTypes;
-  mutable llvm::FoldingSet<AtomicType> AtomicTypes;
+  mutable llvm::UniquingSet<AtomicType> AtomicTypes;
   mutable llvm::ContextualFoldingSet<AttributedType, ASTContext &>
       AttributedTypes;
-  mutable llvm::FoldingSet<PipeType> PipeTypes;
-  mutable llvm::FoldingSet<BitIntType> BitIntTypes;
+  mutable llvm::UniquingSet<PipeType, QualTypeBoolInfo> PipeTypes;
+  mutable llvm::UniquingSet<BitIntType> BitIntTypes;
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
       DependentBitIntTypes;
   mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
@@ -508,6 +526,16 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// Since this is only used for generation of debug info, it is not
   /// serialized.
   mutable RecordDecl *BlockDescriptorType = nullptr;
+
+  /// Cache of the `catch fails(expr)` record types (`{union{T,E}, bool}`),
+  /// keyed by the canonicalized (T, E) pair.
+  mutable llvm::DenseMap<std::pair<CanQualType, CanQualType>, RecordDecl *>
+      CatchReturnFailureTypes;
+
+  /// Cache of the synthetic `{value_type, error_type}` records produced by the
+  /// __invoke_herbceptions_return_failure_result builtin, keyed by (V, E).
+  mutable llvm::DenseMap<std::pair<CanQualType, CanQualType>, RecordDecl *>
+      InvokeHerbceptionsFailsResultTypes;
 
   /// Type for the Block descriptor for Blocks CodeGen.
   ///
@@ -1703,6 +1731,17 @@ public:
   /// Gets the struct used to keep track of the descriptor for pointer to
   /// blocks.
   QualType getBlockDescriptorType() const;
+
+  /// Return the `catch fails(expr)` result type, matching N2289:
+  /// `struct { union { T value; E error; }; bool failed; }`. The discriminant
+  /// is `.failed`; `.value`/`.error` share a union.
+  QualType getCatchReturnFailureType(QualType T, QualType E) const;
+
+  /// Return the synthetic result struct for invoking a `fails{E}` function:
+  /// `struct { using value_type = V; using error_type = E; }` (or void for
+  /// error_type when the callable does not use fails). Backs the
+  /// __invoke_herbceptions_return_failure_result builtin.
+  QualType getInvokeHerbceptionsFailsResultType(QualType V, QualType E) const;
 
   /// Return a read_only pipe type for the specified type.
   QualType getReadPipeType(QualType T) const;
@@ -3695,6 +3734,14 @@ public:
   /// corresponding to a given APValue.
   UnnamedGlobalConstantDecl *
   getUnnamedGlobalConstantDecl(QualType Ty, const APValue &Value) const;
+
+  /// Return a fresh (non-uniquified) anonymous global constant for the given
+  /// APValue. Unlike getUnnamedGlobalConstantDecl, each call returns a distinct
+  /// decl, so two values with identical content get distinct addresses. Used by
+  /// the constexpr herbception machinery to fabricate per-domain opaque
+  /// pointers.
+  UnnamedGlobalConstantDecl *
+  createUnnamedGlobalConstantDecl(QualType Ty, const APValue &Value) const;
 
   /// Return the template parameter object of the given type with the given
   /// value.

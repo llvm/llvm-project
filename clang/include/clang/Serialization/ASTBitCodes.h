@@ -1848,6 +1848,10 @@ enum StmtCode {
   /// A CXXCatchStmt record.
   STMT_CXX_CATCH,
 
+  /// A herbception `catch throws(E e) { ... }` / `catch fails(E e) { ... }`
+  /// record.
+  STMT_CXX_CATCH_THROWS,
+
   /// A CXXTryStmt record.
   STMT_CXX_TRY,
   /// A CXXForRangeStmt record.
@@ -1916,6 +1920,10 @@ enum StmtCode {
   EXPR_CXX_TYPEID_TYPE,      // CXXTypeidExpr (of type).
   EXPR_CXX_THIS,             // CXXThisExpr
   EXPR_CXX_THROW,            // CXXThrowExpr
+  EXPR_CXX_ERROR_VALUE,      // CXXErrorValueExpr
+  EXPR_CXX_CXA_EXCEPTION,    // CXXCxaExceptionExpr
+  EXPR_CXX_TRY,              // CXXTryExpr
+  EXPR_CXX_CATCH_FAILS,      // CXXCatchReturnFailureExpr
   EXPR_CXX_DEFAULT_ARG,      // CXXDefaultArgExpr
   EXPR_CXX_DEFAULT_INIT,     // CXXDefaultInitExpr
   EXPR_CXX_BIND_TEMPORARY,   // CXXBindTemporaryExpr
@@ -1936,6 +1944,7 @@ enum StmtCode {
 
   EXPR_CXX_EXPRESSION_TRAIT, // ExpressionTraitExpr
   EXPR_CXX_NOEXCEPT,         // CXXNoexceptExpr
+EXPR_CXX_THROWS,           // CXXThrowsExpr
 
   EXPR_OPAQUE_VALUE,                // OpaqueValueExpr
   EXPR_BINARY_CONDITIONAL_OPERATOR, // BinaryConditionalOperator

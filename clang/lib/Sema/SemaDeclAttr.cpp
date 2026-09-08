@@ -5450,15 +5450,23 @@ static void handleGlobalAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (FD->isInlineSpecified() && !S.getLangOpts().CUDAIsDevice)
     S.Diag(FD->getBeginLoc(), diag::warn_kern_is_inline) << FD;
 
-  if (AL.getKind() == ParsedAttr::AT_DeviceKernel)
-    D->addAttr(::new (S.Context) DeviceKernelAttr(S.Context, AL));
-  else
-    D->addAttr(::new (S.Context) CUDAGlobalAttr(S.Context, AL));
+  switch (AL.getKind()) {
+  case ParsedAttr::AT_DeviceKernel:
+    if (!D->hasAttr<DeviceKernelAttr>())
+      D->addAttr(::new (S.Context) DeviceKernelAttr(S.Context, AL));
+    break;
+  case ParsedAttr::AT_CUDAGlobal:
+    if (!D->hasAttr<CUDAGlobalAttr>())
+      D->addAttr(::new (S.Context) CUDAGlobalAttr(S.Context, AL));
+    break;
+  default:
+    llvm_unreachable("Unexpected attribute kind");
+  }
   // In host compilation the kernel is emitted as a stub function, which is
   // a helper function for launching the kernel. The instructions in the helper
   // function has nothing to do with the source code of the kernel. Do not emit
   // debug info for the stub function to avoid confusing the debugger.
-  if (S.LangOpts.HIP && !S.LangOpts.CUDAIsDevice)
+  if (S.LangOpts.HIP && !S.LangOpts.CUDAIsDevice && !D->hasAttr<NoDebugAttr>())
     D->addAttr(NoDebugAttr::CreateImplicit(S.Context));
 }
 
@@ -5546,6 +5554,9 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   case ParsedAttr::AT_CDecl:
     D->addAttr(::new (S.Context) CDeclAttr(S.Context, AL));
+    return;
+  case ParsedAttr::AT_WinCall:
+    D->addAttr(::new (S.Context) WinCallAttr(S.Context, AL));
     return;
   case ParsedAttr::AT_Pascal:
     D->addAttr(::new (S.Context) PascalAttr(S.Context, AL));
@@ -5821,6 +5832,9 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
   case ParsedAttr::AT_ThisCall:
     CC = CC_X86ThisCall;
     break;
+  case ParsedAttr::AT_WinCall:
+    CC = CC_WinCall;
+    break;
   case ParsedAttr::AT_Pascal:
     CC = CC_X86Pascal;
     break;
@@ -5843,7 +5857,13 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     CC = CC_X86RegCall;
     break;
   case ParsedAttr::AT_MSABI:
-    CC = IsTargetDefaultMSABI ? CC_C : CC_Win64;
+    // On x86_64apx the MS ABI is WinCall (the APX-aware Microsoft convention),
+    // so msabi implies wincall there. Elsewhere msabi stays the classic MS x64
+    // convention, unless it is combined with an explicit wincall attribute.
+    if (Context.getTargetInfo().getTriple().isX86_64APX())
+      CC = CC_WinCall;
+    else
+      CC = IsTargetDefaultMSABI ? CC_C : CC_Win64;
     break;
   case ParsedAttr::AT_SysVABI:
     CC = IsTargetDefaultMSABI ? CC_X86_64SysV : CC_C;
@@ -8125,6 +8145,7 @@ ProcessDeclAttribute(Sema &S, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_CDecl:
   case ParsedAttr::AT_FastCall:
   case ParsedAttr::AT_ThisCall:
+  case ParsedAttr::AT_WinCall:
   case ParsedAttr::AT_Pascal:
   case ParsedAttr::AT_RegCall:
   case ParsedAttr::AT_SwiftCall:

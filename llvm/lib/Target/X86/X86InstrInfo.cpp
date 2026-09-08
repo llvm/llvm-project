@@ -5070,8 +5070,15 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
   CASE_ND(SHL32ri)
   CASE_ND(SHL64ri) {
     unsigned ShAmt = getTruncatedShiftCount(MI, 2);
-    if (isTruncatedShiftCountForLEA(ShAmt))
-      return false;
+    // Converting to LEA only pays off when the shifted operand stays live,
+    // since it spares a register copy; when the shift is the operand's only
+    // user, reusing the flags is strictly better.
+    if (isTruncatedShiftCountForLEA(ShAmt)) {
+      Register SrcReg = MI.getOperand(1).getReg();
+      const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+      if (!SrcReg.isVirtual() || !MRI.hasOneNonDBGUse(SrcReg))
+        return false;
+    }
     return ShAmt != 0;
   }
 
@@ -5464,6 +5471,116 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         NewOpcode == X86::CMP16rm || NewOpcode == X86::CMP8rm)
       return false;
   }
+  }
+
+  // Herbception (throws): the post-call discriminant is materialized with a
+  // HERB_SETCCr (pseudo setb, glued directly to the call) and typically reaches
+  // a conditional branch through a TEST8ri $1 round-trip:
+  //   %disc = herb_setb implicit EFLAGS
+  //   ...                          // must not clobber EFLAGS
+  //   testb $1, %disc
+  //   jcc eq/ne
+  // When EFLAGS survives untouched from the HERB_SETCCr to the branch, replace
+  // the branch with a direct jc/jae on CF and erase the HERB_SETCCr/TEST8ri
+  // pair.
+  if (CmpInstr.getOpcode() == X86::TEST8ri && CmpValue == 0 &&
+      CmpInstr.getOperand(1).isImm() && CmpInstr.getOperand(1).getImm() == 1 &&
+      CmpInstr.getOperand(0).isReg()) {
+    const TargetRegisterInfo *TRI = &getRegisterInfo();
+    Register DiscReg = CmpInstr.getOperand(0).getReg();
+    MachineInstr *SetB =
+        DiscReg.isVirtual() ? MRI->getVRegDef(DiscReg) : nullptr;
+    MachineBasicBlock *MBB = CmpInstr.getParent();
+    if (SetB && SetB->getOpcode() == X86::HERB_SETCCr &&
+        SetB->getParent() == MBB) {
+      bool Clean = true;
+      // The TEST must be the only non-debug user of the discriminant.
+      for (MachineInstr &U : MRI->use_nodbg_instructions(DiscReg))
+        if (&U != &CmpInstr) {
+          Clean = false;
+          break;
+        }
+      // Nothing between the SETCCr and the branch may clobber EFLAGS or
+      // touch the discriminant register. This fold turns the branch into a
+      // direct jb/jae on live CF and erases the HERB_SETCCr, so while the
+      // TEST8ri reads the register rather than the flags, the rewritten
+      // consumer would read live CF: any EFLAGS modifier in between (an
+      // ALU op, or ADJCALLSTACKUP lowering to an add) would corrupt the
+      // discriminant and must disqualify the fold.
+      for (MachineBasicBlock::iterator It =
+               std::next(MachineBasicBlock::iterator(SetB));
+           Clean && It != MachineBasicBlock::iterator(CmpInstr); ++It) {
+        if (It->modifiesRegister(X86::EFLAGS, TRI))
+          Clean = false;
+        else if (It->readsRegister(DiscReg, TRI))
+          Clean = false;
+      }
+      // Look for a single EFLAGS consumer (JCC or CMOV with E/NE condition)
+      // that reads the TEST's flags.  After the consumer, an EFLAGS modifier
+      // resets flag state, so subsequent EFLAGS readers observe the new flags
+      // and are harmless.
+      MachineInstr *Consumer = nullptr;
+      X86::CondCode ConsumerCC = X86::COND_INVALID;
+      bool IsCMOV = false;
+      bool FlagsRedefinedAfterConsumer = false;
+      for (MachineBasicBlock::iterator It =
+               std::next(MachineBasicBlock::iterator(CmpInstr));
+           Clean && It != MBB->end();) {
+        bool ReadsEFLAGS = It->readsRegister(X86::EFLAGS, TRI);
+        bool ModifiesEFLAGS = It->modifiesRegister(X86::EFLAGS, TRI);
+        if (ReadsEFLAGS) {
+          if (!Consumer && !ModifiesEFLAGS) {
+            X86::CondCode OldCC = X86::getCondFromMI(*It);
+            if (OldCC != X86::COND_INVALID &&
+                (OldCC == X86::COND_E || OldCC == X86::COND_NE) &&
+                (It->getOpcode() == X86::JCC_1 ||
+                 X86::isCMOVCC(It->getOpcode()))) {
+              Consumer = &*It;
+              ConsumerCC = OldCC;
+              IsCMOV = X86::isCMOVCC(It->getOpcode());
+              ++It;
+              continue;
+            }
+          }
+          if (Consumer && !FlagsRedefinedAfterConsumer)
+            Clean = false;
+          break;
+        }
+        if (ModifiesEFLAGS) {
+          if (Consumer)
+            FlagsRedefinedAfterConsumer = true;
+          else {
+            // A flag clobber between the TEST and the consumer would sit
+            // between the call and the rewritten jb/jae on live CF, so it
+            // is not harmless.
+            Clean = false;
+            break;
+          }
+        }
+        if (It->readsRegister(DiscReg, TRI)) {
+          Clean = false;
+          break;
+        }
+        ++It;
+      }
+      if (Clean && Consumer) {
+        // testb $1, %disc sets ZF iff the discriminant bit is zero, i.e. iff
+        // CF was clear. je/cmove therefore corresponds to jae/cmovae (CF clear)
+        // and jne/cmovne to jb/cmovb (CF set).
+        X86::CondCode NewCC = (ConsumerCC == X86::COND_E) ? X86::COND_AE
+                                                          : X86::COND_B;
+        const MCInstrDesc &Desc = Consumer->getDesc();
+        int CondOpIdx = X86::getCondSrcNoFromDesc(Desc);
+        if (CondOpIdx >= 0)
+          Consumer->getOperand(CondOpIdx + Desc.getNumDefs()).setImm(NewCC);
+        LLVM_DEBUG(dbgs() << "Herbception: folded setb/test into "
+                          << (IsCMOV ? "cmov" : "j")
+                          << (ConsumerCC == X86::COND_E ? "ae" : "b") << '\n');
+        CmpInstr.eraseFromParent();
+        SetB->eraseFromParent();
+        return true;
+      }
+    }
   }
 
   // The following code tries to remove the comparison by re-using EFLAGS
@@ -6355,6 +6472,13 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     return Expand2AddrUndef(MIB, get(X86::SBB32rr));
   case X86::SETB_C64r:
     return Expand2AddrUndef(MIB, get(X86::SBB64rr));
+  case X86::HERB_SETCCr: {
+    // Herbception (throws): lower the pseudo to a real SETCCr(COND_B).
+    // The EFLAGS use is already implicit from the Uses = [EFLAGS] constraint.
+    MIB->setDesc(get(X86::SETCCr));
+    MIB.addImm(X86::COND_B);
+    return true;
+  }
   case X86::MMX_SET0:
     return Expand2AddrUndef(MIB, get(X86::MMX_PXORrr));
   case X86::V_SET0:
@@ -8606,7 +8730,9 @@ X86InstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
       break;
     case X86::AVX512_512_SETALLONES:
       IsAllOnes = true;
-      [[fallthrough]];
+      Ty = FixedVectorType::get(Type::getInt32Ty(MF.getFunction().getContext()),
+                                16);
+      break;
     case X86::AVX1_SETALLONES:
     case X86::AVX2_SETALLONES:
     case X86::AVX512_256_SETALLONES:

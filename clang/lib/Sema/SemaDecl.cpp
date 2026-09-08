@@ -1658,6 +1658,17 @@ bool Sema::isDeclInScope(NamedDecl *D, DeclContext *Ctx, Scope *S,
   return IdResolver.isDeclInScope(D, Ctx, S, AllowInlineNamespace);
 }
 
+bool Sema::isTagRedeclarationInScope(NamedDecl *D, DeclContext *Ctx, Scope *S,
+                                     bool AllowInlineNamespace) const {
+  if (isDeclInScope(D, Ctx, S, AllowInlineNamespace))
+    return true;
+
+  if (auto *Shadow = dyn_cast<UsingShadowDecl>(D))
+    return isDeclInScope(Shadow->getTargetDecl(), Ctx, S, AllowInlineNamespace);
+
+  return false;
+}
+
 Scope *Sema::getScopeForDeclContext(Scope *S, DeclContext *DC) {
   DeclContext *TargetDC = DC->getPrimaryContext();
   do {
@@ -3011,6 +3022,8 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.Wasm().mergeImportModuleAttr(D, *IMA);
   else if (const auto *INA = dyn_cast<WebAssemblyImportNameAttr>(Attr))
     NewAttr = S.Wasm().mergeImportNameAttr(D, *INA);
+  else if (const auto *ENA = dyn_cast<WebAssemblyExportNameAttr>(Attr))
+    NewAttr = S.Wasm().mergeExportNameAttr(D, *ENA);
   else if (const auto *TCBA = dyn_cast<EnforceTCBAttr>(Attr))
     NewAttr = S.mergeEnforceTCBAttr(D, *TCBA);
   else if (const auto *TCBLA = dyn_cast<EnforceTCBLeafAttr>(Attr))
@@ -7747,6 +7760,8 @@ void Sema::CheckAsmLabel(Scope *S, Expr *E, StorageClass SC,
   StringLiteral *SE = cast<StringLiteral>(E);
   StringRef Label = SE->getString();
   QualType R = TInfo->getType();
+  if (R->isIncompleteType())
+    return;
   if (S->getFnParent() != nullptr) {
     switch (SC) {
     case SC_None:
@@ -10696,7 +10711,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       }
     }
 
-    if (!getLangOpts().CPlusPlus) {
+    if (!getLangOpts().CPlusPlus &&
+        FTI.getExceptionSpecType() == EST_None) {
       // In C, find all the tag declarations from the prototype and move them
       // into the function DeclContext. Remove them from the surrounding tag
       // injection context of the function, which is typically but not always
@@ -10754,6 +10770,21 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
 
   // Finally, we know we have the right number of parameters, install them.
   NewFD->setParams(Params);
+
+  // Herbception `fails{E}` is a C-style feature: it may only be attached to
+  // free (non-member) functions. It is disallowed on member functions
+  // (including static members), lambdas, and function templates, which keeps
+  // the fails{E} machinery (and its type traits) simple. (Coroutines are
+  // rejected separately when the body is parsed, since coroutine-ness is only
+  // known then.)
+  if (const auto *FPT = NewFD->getType()->getAs<FunctionProtoType>()) {
+    if (getLangOpts().HerbExceptions && getLangOpts().CPlusPlus &&
+        FPT->hasReturnFailureSpec() &&
+        (NewFD->isCXXClassMember() || NewFD->getDescribedFunctionTemplate())) {
+      Diag(D.getIdentifierLoc(), diag::err_return_failure_only_free_function);
+      NewFD->setInvalidDecl();
+    }
+  }
 
   // If this declarator is a declaration and not a definition, its parameters
   // will not be pushed onto a scope chain. That means we will not issue any
@@ -15545,14 +15576,16 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
   }
 
   if (UsedAttr *Attr = VD->getAttr<UsedAttr>()) {
-    if (!Attr->isInherited() && !VD->isThisDeclarationADefinition()) {
+    if (!Attr->isInherited() && !Attr->isImplicit() &&
+        !VD->isThisDeclarationADefinition()) {
       Diag(Attr->getLocation(), diag::warn_attribute_ignored_on_non_definition)
           << Attr;
       VD->dropAttr<UsedAttr>();
     }
   }
   if (RetainAttr *Attr = VD->getAttr<RetainAttr>()) {
-    if (!Attr->isInherited() && !VD->isThisDeclarationADefinition()) {
+    if (!Attr->isInherited() && !Attr->isImplicit() &&
+        !VD->isThisDeclarationADefinition()) {
       Diag(Attr->getLocation(), diag::warn_attribute_ignored_on_non_definition)
           << Attr;
       VD->dropAttr<RetainAttr>();
@@ -16828,6 +16861,64 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
                                     bool RetainFunctionScopeInfo) {
   FunctionScopeInfo *FSI = getCurFunction();
   FunctionDecl *FD = dcl ? dcl->getAsFunction() : nullptr;
+
+  // Herbception: error_domain<T>::domain() must not return nullptr. The
+  // fabricated std::error dereferences the domain pointer in ~error(), so a
+  // null domain would be a null-pointer dereference. Diagnose a definition
+  // whose body returns nullptr.
+  if (getLangOpts().HerbExceptions && FD && Body &&
+      !FD->isInvalidDecl() && FD->getDeclName().isIdentifier() &&
+      FD->getName() == "domain" && FD->isStatic() &&
+      isa<CXXRecordDecl>(FD->getDeclContext()) &&
+      cast<CXXRecordDecl>(FD->getDeclContext())->getName() == "error_domain") {
+    const Stmt *BodyS = Body;
+    if (const auto *CS = dyn_cast<CompoundStmt>(BodyS)) {
+      auto Begin = CS->body_begin();
+      auto End = CS->body_end();
+      if (Begin != End && std::next(Begin) == End)
+        BodyS = *Begin;
+    }
+    if (const auto *Ret = dyn_cast<ReturnStmt>(BodyS)) {
+      if (const Expr *Val = Ret->getRetValue()) {
+        Val = Val->IgnoreParenImpCasts();
+        if (auto *Lit = dyn_cast<CXXNullPtrLiteralExpr>(Val)) {
+          Diag(Lit->getExprLoc(),
+               diag::err_herbceptions_domain_nullptr)
+              << FD->getReturnType();
+          FD->setInvalidDecl();
+        } else if (auto *IL = dyn_cast<IntegerLiteral>(Val)) {
+          if (IL->getValue() == 0) {
+            Diag(IL->getExprLoc(),
+                 diag::err_herbceptions_domain_nullptr)
+                << FD->getReturnType();
+            FD->setInvalidDecl();
+          }
+        }
+      }
+    }
+  }
+
+  // Herbception: a bare `throws` function implicitly converts any legacy C++
+  // exception that escapes it (from a `noexcept(false)` callee) into a
+  // fabricated std::error on the herbception channel. The conversion - and
+  // its std::error_domain<std::exception_ptr> requirement - only matters when
+  // a legacy escape is actually possible; otherwise the function compiles
+  // silently without it.
+  if (getLangOpts().HerbExceptions && Body && FD && !FD->isInvalidDecl()) {
+    if (auto *FPT = FD->getType()->getAs<FunctionProtoType>();
+        FPT && FPT->hasBasicThrowsSpec() && !FD->isDependentContext() &&
+        canThrow(Body) == CT_Can) {
+      // A legacy C++ exception can escape this `throws` function. Fabricate
+      // the conversion to herbception using the built-in ABI calls
+      // (__cxa_error_domain_*_exception_ptr / __cxa_error_code_*_exception_ptr)
+      // baked into the compiler — no user types or headers needed. The linker
+      // hard-errors if libherbceptions is not linked; with -fno-exceptions
+      // none of this is emitted.
+      if (ExprResult Conv = BuildCxaExceptionErrorValue(FD->getLocation());
+          !Conv.isInvalid())
+        FD->setHerbceptionLegacyErrorValue(Conv.get());
+    }
+  }
 
   if (FSI->UsesFPIntrin && FD && !FD->hasAttr<StrictFPAttr>())
     FD->addAttr(StrictFPAttr::CreateImplicit(Context));
@@ -18647,8 +18738,9 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
       // in the same scope (so that the definition/declaration completes or
       // rementions the tag), reuse the decl.
       if (TUK == TagUseKind::Reference || TUK == TagUseKind::Friend ||
-          isDeclInScope(DirectPrevDecl, SearchDC, S,
-                        SS.isNotEmpty() || isMemberSpecialization)) {
+          isTagRedeclarationInScope(DirectPrevDecl, SearchDC, S,
+                                    SS.isNotEmpty() ||
+                                        isMemberSpecialization)) {
 
         if (auto *RD = dyn_cast<CXXRecordDecl>(PrevDecl);
             RD && RD->isInjectedClassName()) {
