@@ -177,8 +177,8 @@ _LIBCPP_HIDE_FROM_ABI _FloatT __str_to_float_c_locale(const char* __nptr, char**
 #if defined(_LIBCPP_MSVCRT)
 
 template <>
-inline _LIBCPP_HIDE_FROM_ABI float
-__str_to_float_c_locale<float>(const char* __nptr, char** __endptr, __locale_t __loc) {
+inline
+    _LIBCPP_HIDE_FROM_ABI float __str_to_float_c_locale<float>(const char* __nptr, char** __endptr, __locale_t __loc) {
   return ::_strtof_l(__nptr, __endptr, __loc);
 }
 
@@ -189,12 +189,10 @@ __str_to_float_c_locale<long double>(const char* __nptr, char** __endptr, __loca
 }
 #else
 template <>
-_LIBCPP_EXPORTED_FROM_ABI float
-__str_to_float_c_locale<float>(const char*, char**, __locale_t);
+_LIBCPP_EXPORTED_FROM_ABI float __str_to_float_c_locale<float>(const char*, char**, __locale_t);
 
 template <>
-_LIBCPP_EXPORTED_FROM_ABI long double
-__str_to_float_c_locale<long double>(const char*, char**, __locale_t);
+_LIBCPP_EXPORTED_FROM_ABI long double __str_to_float_c_locale<long double>(const char*, char**, __locale_t);
 #endif
 
 template <>
