@@ -721,6 +721,9 @@ llvm.func @useInlineAsm(%arg0: i32) {
   // CHECK-NEXT:  llvm.inline_asm "foo", "=r,=r,r" {{.*}} : (i32) -> !llvm.struct<(i8, i8)>
   %5 = llvm.inline_asm "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
 
+  // CHECK-NEXT:  llvm.inline_asm convergent {{.*}} (i32) -> i8
+  %6 = llvm.inline_asm convergent "bswap $0", "=r,r" %arg0 : (i32) -> i8
+
   llvm.return
 }
 
