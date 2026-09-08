@@ -128,6 +128,12 @@ public:
 
   uint32_t GetDependentModules(lldb_private::FileSpecList &files) override;
 
+  lldb_private::FileSpecList GetReExportedLibraries() override;
+
+  bool ReExportedLibrariesShadowLocalDefinitions() const override {
+    return true;
+  }
+
   lldb_private::Address
   GetImageInfoAddress(lldb_private::Target *target) override;
 
@@ -273,7 +279,7 @@ private:
                                  uint64_t length,
                                  lldb_private::ArchSpec &arch_spec);
 
-  static void ParseRISCVAttributes(lldb_private::DataExtractor &data,
+  static void ParseRISCVAttributes(const lldb_private::DataExtractor &data,
                                    uint64_t length,
                                    lldb_private::ArchSpec &arch_spec);
 

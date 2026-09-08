@@ -88,6 +88,10 @@ TEST(InputExtensionTests, SeparatorInField_L) {
       {2, "(DC,2L4)", ".F;T,", {false, true}},
       {2, "(DC,2L4)", ".T.;F,", {true, false}},
       {2, "(DC,2L4)", ".F.;T,", {false, true}},
+      {2, "(2B4)", "1   0,", {true, false}},
+      {2, "(2B4)", "0   1,", {false, true}},
+      {2, "(DC,2B4)", "1   0,", {true, false}},
+      {2, "(DC,2B4)", "0   1,", {false, true}},
   };
   for (std::size_t j{0}; j < sizeof test / sizeof *test; ++j) {
     auto cookie{IONAME(BeginInternalFormattedInput)(test[j].data,
@@ -100,7 +104,7 @@ TEST(InputExtensionTests, SeparatorInField_L) {
           << "expected " << test[j].expect[k] << ", got " << got;
     }
     auto status{IONAME(EndIoStatement)(cookie)};
-    ASSERT_EQ(status, 0) << "error status " << status << " on L test case "
+    ASSERT_EQ(status, 0) << "error status " << status << " on L/B test case "
                          << j;
   }
 }

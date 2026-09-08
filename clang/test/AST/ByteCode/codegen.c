@@ -9,6 +9,9 @@ const intptr_t Z1 = (intptr_t)(((char*)-1LL) + 1);
 const intptr_t Z2 = (intptr_t)(((char*)1LL) - 1);
 // CHECK: @Z2 = constant i64 0
 
+const int Shift = 2 >> 32;
+// CHECK: @Shift = constant i32 0
+
 struct A {
   char num_fields;
 };
@@ -24,3 +27,25 @@ int test(void) {
   return i23;
 }
 // CHECK: @test.i23 = internal global i32 4, align 4
+
+union reg
+{
+    unsigned char b[2][20];
+    unsigned short w[2];
+    unsigned int d;
+};
+struct cpu
+{
+    union reg pc;
+};
+extern struct cpu cpu;
+struct svar
+{
+    void *ptr;
+};
+
+// CHECK: @svars2 = {{(dso_local )?}}global [1 x %struct.svar] [%struct.svar { ptr getelementptr (i8, ptr @cpu, i64 1) }]
+struct svar svars2[] =
+{
+    { &((cpu.pc).b[0][1]) }
+};

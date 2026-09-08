@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1170 %s 2>&1 | FileCheck --check-prefix=GFX1170 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu11.70 %s 2>&1 | FileCheck --check-prefix=GFX1170 --implicit-check-not=error: %s
 
 // check for error with sgpr or imm operands
 

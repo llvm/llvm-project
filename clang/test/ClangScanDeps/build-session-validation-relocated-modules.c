@@ -20,7 +20,7 @@
 // This can occur on an incremental build where dependency relationships are updated.
 // RUN: sleep 1
 // RUN: mkdir %t/preferred_frameworks/
-// RUN: cp -r %t/fallback_frameworks/MovedDep.framework %t/preferred_frameworks/
+// RUN: cp -R %t/fallback_frameworks/MovedDep.framework %t/preferred_frameworks/
 // RUN: touch %t/fallback_frameworks/InvalidatedDep.framework/Modules/module.modulemap
 
 // RUN: clang-scan-deps -format experimental-full -j 1 \

@@ -53,6 +53,12 @@
   {}
 #endif
 
+#ifdef __x86_64__
+#define ALIGN_ARG_POINTER __attribute__((force_align_arg_pointer))
+#else
+#define ALIGN_ARG_POINTER
+#endif
+
 #pragma GCC visibility push(hidden)
 
 extern "C" {
@@ -1559,10 +1565,9 @@ extern "C" void __bolt_instr_clear_counters() {
 ///    to get a pointer to this function and call through the acquired
 ///    function pointer to dump profile data.
 ///
-extern "C" void __attribute((force_align_arg_pointer))
-__bolt_instr_data_dump(int FD, const char *LibPath = nullptr,
-                       const uint8_t *LibContents = nullptr,
-                       uint64_t LibSize = 0) {
+extern "C" void ALIGN_ARG_POINTER __bolt_instr_data_dump(
+    int FD, const char *LibPath = nullptr, const uint8_t *LibContents = nullptr,
+    uint64_t LibSize = 0) {
   if (LibPath)
     strCopy(TargetPath, LibPath, NameMax);
 
@@ -1658,9 +1663,7 @@ extern "C" void __bolt_instr_indirect_call();
 extern "C" void __bolt_instr_indirect_tailcall();
 
 /// Initialization code
-extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
-  __bolt_ind_call_counter_func_pointer = __bolt_instr_indirect_call;
-  __bolt_ind_tailcall_counter_func_pointer = __bolt_instr_indirect_tailcall;
+extern "C" void ALIGN_ARG_POINTER __bolt_instr_setup() {
   TextBaseAddress = getTextBaseAddress();
 
   const uint64_t CountersStart =
@@ -1695,6 +1698,12 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
     GlobalIndCallCounters =
         new (*GlobalAlloc, 0) IndirectCallHashTable[__bolt_instr_num_ind_calls];
 
+  // Set these up after initializing indirect call counters. Otherwise,
+  // background threads spawned through global constructors might try to access
+  // uninitialized counters.
+  __bolt_ind_call_counter_func_pointer = __bolt_instr_indirect_call;
+  __bolt_ind_tailcall_counter_func_pointer = __bolt_instr_indirect_tailcall;
+
   if (__bolt_instr_sleep_time != 0) {
     // Separate instrumented process to the own process group
     if (__bolt_instr_wait_forks)
@@ -1706,8 +1715,8 @@ extern "C" void __attribute((force_align_arg_pointer)) __bolt_instr_setup() {
   }
 }
 
-extern "C" __attribute((force_align_arg_pointer)) void
-instrumentIndirectCall(uint64_t Target, uint64_t IndCallID) {
+extern "C" ALIGN_ARG_POINTER void instrumentIndirectCall(uint64_t Target,
+                                                         uint64_t IndCallID) {
   GlobalIndCallCounters[IndCallID].incrementVal(Target, *GlobalAlloc);
 }
 

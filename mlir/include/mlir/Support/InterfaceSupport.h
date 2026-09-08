@@ -116,7 +116,7 @@ public:
     assert(!t || ConcreteType::getInterfaceFor(t) == conceptImpl);
   }
 
-  /// Constructor for DenseMapInfo's empty key and tombstone key.
+  /// Constructor for DenseMapInfo's empty key.
   Interface(ValueT t, std::nullptr_t) : BaseType(t), conceptImpl(nullptr) {}
 
   /// Support 'classof' by checking if the given object defines the concrete
@@ -297,12 +297,6 @@ namespace llvm {
 template <typename T>
 struct DenseMapInfo<T, std::enable_if_t<mlir::detail::IsInterface<T>::value>> {
   using ValueTypeInfo = llvm::DenseMapInfo<typename T::ValueType>;
-
-  static T getEmptyKey() { return T(ValueTypeInfo::getEmptyKey(), nullptr); }
-
-  static T getTombstoneKey() {
-    return T(ValueTypeInfo::getTombstoneKey(), nullptr);
-  }
 
   static unsigned getHashValue(T val) {
     return ValueTypeInfo::getHashValue(val);

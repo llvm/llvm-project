@@ -362,6 +362,10 @@ TopologyGeneric              "%1$s: %2$s (%3$d total cores)"
 AffGranularityBad            "%1$s: granularity setting: %2$s does not exist in topology.  Using granularity=%3$s instead."
 TopologyHybrid               "%1$s: hybrid core type detected: %2$d %3$s cores."
 TopologyHybridCoreEff        "%1$s:   %2$d with core efficiency %3$d."
+TraitParserError             "trait parser while parsing %1$s: error: %2$s"
+TraitParserInvalidTraitValue "trait parser while parsing %1$s: invalid value for trait '%2$s' (%3$s)"
+TraitParserMaxRecursion      "trait parser while parsing %1$s: max recursion depth (%2$d) exceeded"
+TraitParserFailed            "trait parser while parsing %1$s: failed to parse trait specification (%2$s)"
 
 # --- OpenMP errors detected at runtime ---
 #
@@ -482,6 +486,8 @@ AffHWSubsetIgnoringAttr      "KMP_HW_SUBSET: ignoring %1$s attribute. This machi
 TargetMemNotAvailable        "Target memory not available, will use default allocator."
 AffIgnoringNonHybrid         "%1$s ignored: This machine is not a hybrid architecutre. Using \"%2$s\" instead."
 AffIgnoringNotAvailable      "%1$s ignored: %2$s is not available. Using \"%3$s\" instead."
+SetNumTeamsInParOrTeamsRegion "%1$s() called inside a parallel or teams region; call ignored."
+SetTeamsThreadLimitInParOrTeamsRegion "%1$s() called inside a parallel or teams region; call ignored."
 
 # --------------------------------------------------------------------------------------------------
 -*- HINTS -*-

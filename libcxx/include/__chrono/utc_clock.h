@@ -27,9 +27,9 @@
 #    pragma GCC system_header
 #  endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #  if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace chrono {
 
@@ -153,10 +153,10 @@ utc_clock::to_sys(const utc_time<_Duration>& __time) {
 
 } // namespace chrono
 
+_LIBCPP_END_NAMESPACE_STD
+
 #  endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM &&
          // _LIBCPP_HAS_LOCALIZATION
-
-_LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
 

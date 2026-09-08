@@ -1,4 +1,6 @@
 add_lldb_unittest(UtilityTests
+  AcceleratorGDBRemotePacketsTest.cpp
+  AddressSpaceTest.cpp
   AnsiTerminalTest.cpp
   ArgsTest.cpp
   OptionsWithRawTest.cpp
@@ -27,6 +29,7 @@ add_lldb_unittest(UtilityTests
   RangeMapTest.cpp
   RangeTest.cpp
   RealpathPrefixesTest.cpp
+  RegisterTypeTest.cpp
   RegisterValueTest.cpp
   RegularExpressionTest.cpp
   ScalarTest.cpp

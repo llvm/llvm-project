@@ -7,19 +7,18 @@ define i32 @test(i32 %mul) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[H:%.*]] = alloca [4 x i32], align 16
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 0, 0
-; CHECK-NEXT:    [[ADD4:%.*]] = add i32 [[ADD]], 0
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @f1(i32 [[ADD4]])
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @f1(i32 [[ADD]])
 ; CHECK-NEXT:    [[MUL1:%.*]] = shl i32 0, 1
 ; CHECK-NEXT:    [[ADD5:%.*]] = add i32 [[CALL]], [[MUL1]]
 ; CHECK-NEXT:    store i32 [[ADD5]], ptr [[H]], align 16
 ; CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr i8, ptr [[H]], i64 4
 ; CHECK-NEXT:    [[ADD6:%.*]] = add i32 0, 0
 ; CHECK-NEXT:    [[ADD7:%.*]] = add i32 [[ADD6]], [[MUL]]
-; CHECK-NEXT:    [[ADD9:%.*]] = add i32 [[ADD7]], [[ADD4]]
+; CHECK-NEXT:    [[ADD9:%.*]] = add i32 [[ADD7]], [[ADD]]
 ; CHECK-NEXT:    store i32 [[ADD9]], ptr [[ARRAYINIT_ELEMENT]], align 4
 ; CHECK-NEXT:    [[ARRAYINIT_ELEMENT10:%.*]] = getelementptr i8, ptr [[H]], i64 8
-; CHECK-NEXT:    [[ADD11:%.*]] = or i32 [[ADD]], 0
-; CHECK-NEXT:    [[ADD12:%.*]] = add i32 [[ADD11]], [[ADD4]]
+; CHECK-NEXT:    [[ADD11:%.*]] = or i32 0, 0
+; CHECK-NEXT:    [[ADD12:%.*]] = add i32 [[ADD11]], [[ADD]]
 ; CHECK-NEXT:    store i32 [[ADD12]], ptr [[ARRAYINIT_ELEMENT10]], align 8
 ; CHECK-NEXT:    [[ARRAYINIT_ELEMENT13:%.*]] = getelementptr i8, ptr [[H]], i64 12
 ; CHECK-NEXT:    store i32 0, ptr [[ARRAYINIT_ELEMENT13]], align 4

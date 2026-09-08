@@ -19,6 +19,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Support/StateStack.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
@@ -34,6 +35,7 @@ class CallBase;
 class CanonicalLoopInfo;
 class Function;
 class IRBuilderBase;
+class Metadata;
 class OpenMPIRBuilder;
 class Value;
 namespace vfs {
@@ -345,6 +347,13 @@ public:
   /// it if it does not exist.
   llvm::NamedMDNode *getOrInsertNamedModuleMetadata(StringRef name);
 
+  /// Converts an LLVM dialect metadata attribute to LLVM IR metadata.
+  /// Returns failure and emits a diagnostic using `emitError` if the attribute
+  /// cannot be converted.
+  FailureOr<llvm::Metadata *>
+  convertMetadataAttr(Attribute attr,
+                      function_ref<InFlightDiagnostic()> emitError);
+
   /// Creates a stack frame of type `T` on ModuleTranslation stack. `T` must
   /// be derived from `StackFrameBase<T>` and constructible from the provided
   /// arguments. Doing this before entering the region of the op being
@@ -407,6 +416,7 @@ private:
                                      llvm::IRBuilderBase &builder,
                                      bool recordInsertions = false);
   LogicalResult convertFunctionSignatures();
+  LogicalResult convertFunctionMetadata();
   LogicalResult convertFunctions();
   LogicalResult convertIFuncs();
   LogicalResult convertComdats();
@@ -418,7 +428,18 @@ private:
   /// - Create named global variables that correspond to llvm.mlir.global
   /// definitions, similarly Convert llvm.global_ctors and global_dtors ops.
   /// - Create global alias that correspond to llvm.mlir.alias.
+  /// Global metadata that can reference other global objects (including
+  /// ifuncs) is converted later by `convertGlobalMetadata`.
   LogicalResult convertGlobalsAndAliases();
+
+  /// Attach metadata on LLVM globals after all global objects exist so that
+  /// symbol references (globals, aliases, functions, and ifuncs) can be
+  /// resolved.
+  LogicalResult convertGlobalMetadata();
+  /// Converts a symbol ref to LLVM IR metadata, or fails if unresolved.
+  FailureOr<llvm::Metadata *>
+  convertSymbolRefToMetadata(FlatSymbolRefAttr name,
+                             function_ref<InFlightDiagnostic()> emitError);
   LogicalResult convertOneFunction(LLVMFuncOp func);
   LogicalResult convertBlockImpl(Block &bb, bool ignoreArguments,
                                  llvm::IRBuilderBase &builder,

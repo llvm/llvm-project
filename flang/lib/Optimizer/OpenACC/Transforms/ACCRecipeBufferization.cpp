@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -76,6 +77,11 @@ static void bufferizeRegionArgsAndYields(mlir::Region &region,
         builder.setInsertionPoint(yield);
         mlir::Value alloca =
             BufferizeInterface::placeInMemory(builder, loc, oldYieldArg);
+        if (mlir::Operation *allocOp = alloca.getDefiningOp())
+          allocOp->setAttr(
+              mlir::acc::getVarNameAttrName(),
+              mlir::acc::VarNameAttr::get(allocOp->getContext(),
+                                          mlir::acc::getVarNamePlaceholder()));
         newOperands.push_back(alloca);
         changed = true;
       } else {

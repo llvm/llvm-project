@@ -57,9 +57,9 @@
 ; RUN: llvm-dis %t.out.2.4.opt.bc -o - | FileCheck %s --check-prefixes=IR,IR-INLINE
 
 ;; Next, add a threshold to prevent inlining of the promoted calls which have
-;; count 2 (the default threshold of 2 means they are inlinable by default).
+;; count 1 (a threshold of 2 will prevent inlining).
 ; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \
-; RUN:	-memprof-icp-noinline-threshold=3 \
+; RUN:	-memprof-icp-noinline-threshold=2 \
 ; RUN:	-enable-memprof-indirect-call-support=true \
 ; RUN:  -memprof-allow-recursive-callsites \
 ; RUN:  -supports-hot-cold-new \
@@ -105,13 +105,13 @@
 ;; In each version of foo we should have promoted the indirect call to two conditional
 ;; direct calls, one to B::bar and one to B0::bar. The cloned version of foo should call
 ;; the cloned versions of bar for both promotions.
-; REMARKS: Promote indirect call to _ZN1B3barEj with count 2 out of 4
+; REMARKS: Promote indirect call to _ZN1B3barEj with count 1 out of 2
 ; REMARKS: call in clone _Z3fooR2B0j promoted and assigned to call function clone _ZN1B3barEj
-; REMARKS: Promote indirect call to _ZN1B3barEj with count 2 out of 4
+; REMARKS: Promote indirect call to _ZN1B3barEj with count 1 out of 2
 ; REMARKS: call in clone _Z3fooR2B0j.memprof.1 promoted and assigned to call function clone _ZN1B3barEj.memprof.1
-; REMARKS: Promote indirect call to _ZN2B03barEj with count 2 out of 2
+; REMARKS: Promote indirect call to _ZN2B03barEj with count 1 out of 1
 ; REMARKS: call in clone _Z3fooR2B0j promoted and assigned to call function clone _ZN2B03barEj
-; REMARKS: Promote indirect call to _ZN2B03barEj with count 2 out of 2
+; REMARKS: Promote indirect call to _ZN2B03barEj with count 1 out of 1
 ; REMARKS: call in clone _Z3fooR2B0j.memprof.1 promoted and assigned to call function clone _ZN2B03barEj.memprof.1
 ; REMARKS: created clone _ZN2B03barEj.memprof.1
 ; REMARKS: call in clone _ZN2B03barEj marked with memprof allocation attribute notcold
@@ -178,7 +178,7 @@ entry:
   ret i32 0
 }
 
-!0 = !{!"VP", i32 0, i64 4, i64 4445083295448962937, i64 2, i64 -2718743882639408571, i64 2}
+!0 = !{!"VP", i32 0, i64 2, i64 4445083295448962937, i64 1, i64 -2718743882639408571, i64 1}
 !1 = !{i64 -2101080423462424381, i64 3456}
 
 ;--- main.ll

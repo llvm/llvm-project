@@ -14,7 +14,6 @@
 
 #include <locale>
 #include <string>
-#include <vector>
 #include <cassert>
 
 #include <stdio.h>
@@ -28,7 +27,6 @@ int main(int, char**)
         typedef std::ctype<char> F;
         const F& f = std::use_facet<F>(l);
         const std::string in(" A\x07.a1");
-        std::vector<F::mask> m(in.size());
         assert(f.scan_not(F::space, in.data(), in.data() + in.size()) - in.data() == 1);
         assert(f.scan_not(F::print, in.data(), in.data() + in.size()) - in.data() == 2);
         assert(f.scan_not(F::cntrl, in.data(), in.data() + in.size()) - in.data() == 0);

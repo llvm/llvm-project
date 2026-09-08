@@ -7,7 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-tidy/ClangTidyCheck.h"
-#include "clang-tidy/ClangTidyModuleRegistry.h"
+// TODO(LLVM 25): Remove this compatibility check when LLVM 25 branches.
+#if CLANG_VERSION_MAJOR > 23
+#  include "clang-tidy/ClangTidyModule.h"
+#else
+#  include "clang-tidy/ClangTidyModuleRegistry.h"
+#endif
 
 #include "uglify_attributes.hpp"
 #include "utilities.hpp"

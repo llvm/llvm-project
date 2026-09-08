@@ -258,6 +258,12 @@ struct BufferizationOptions {
   /// Memcpy function: Generate a memcpy between two buffers.
   using MemCpyFn =
       std::function<LogicalResult(OpBuilder &, Location, Value, Value)>;
+  /// Cast function: Convert a buffer value to a new value with the specified
+  /// type. This method is typically used when a simple cast-like operation is
+  /// sufficient to convert the buffer value, for example, when layout maps
+  /// between buffer value and resulting type do not match.
+  using CastFn =
+      std::function<FailureOr<Value>(OpBuilder &, Location, Type, Value)>;
   /// Initializer function for analysis state.
   using AnalysisStateInitFn = std::function<void(AnalysisState &)>;
   /// Tensor-like -> Buffer-like type conversion.
@@ -267,11 +273,18 @@ struct BufferizationOptions {
                                    func::FuncOp, const BufferizationOptions &)>;
   /// Tensor -> MemRef type conversion.
   /// Parameters: tensor type, memory space, bufferization options
-  using UnknownTypeConverterFn = std::function<BaseMemRefType(
-      TensorType, Attribute memorySpace, const BufferizationOptions &)>;
+  using UnknownTypeConverterFn = std::function<BufferLikeType(
+      TensorLikeType, Attribute memorySpace, const BufferizationOptions &)>;
   // Produce a MemorySpace attribute from a tensor type
   using DefaultMemorySpaceFn =
-      std::function<std::optional<Attribute>(TensorType t)>;
+      std::function<std::optional<Attribute>(TensorLikeType t)>;
+
+  /// Resolve a mismatch between buffer types that were independently inferred,
+  /// which results in a conflict at the "merge" point. Returns `failure()` to
+  /// signal bufferization failure; returns a buffer-like type when
+  /// reconciliation suceeded.
+  using ReconcileBufferTypeMismatchFn = std::function<FailureOr<BufferLikeType>(
+      BufferLikeType, BufferLikeType, const BufferizationOptions &)>;
 
   BufferizationOptions();
 
@@ -289,18 +302,6 @@ struct BufferizationOptions {
 
   /// Return `true` if the given op should be bufferized.
   bool isOpAllowed(Operation *op) const;
-
-  /// Helper functions for allocation and memory copying.
-  std::optional<AllocationFn> allocationFn;
-  std::optional<MemCpyFn> memCpyFn;
-
-  /// Create a memref allocation with the given type and dynamic extents.
-  FailureOr<Value> createAlloc(OpBuilder &b, Location loc, MemRefType type,
-                               ValueRange dynShape) const;
-
-  /// Creates a memcpy between two given buffers.
-  LogicalResult createMemCpy(OpBuilder &b, Location loc, Value from,
-                             Value to) const;
 
   /// Specifies whether not bufferizable ops are allowed in the input. If so,
   /// bufferization.to_buffer and bufferization.to_tensor ops are inserted at
@@ -335,12 +336,21 @@ struct BufferizationOptions {
   /// predictable.
   void setFunctionBoundaryTypeConversion(LayoutMapOption layoutMapOption);
 
+  /// Create a memref allocation with the given type and dynamic extents.
+  AllocationFn allocationFn = nullptr;
+
+  /// Creates a memcpy between two given buffers.
+  MemCpyFn memCpyFn = nullptr;
+
+  /// Creates a cast function from a buffer value to a new type.
+  CastFn castFn = nullptr;
+
   /// Type conversion from tensors to buffers. This type conversion is used to
   /// determine bufferized function argument and result types.
   ///
   /// By default, if tensor is a (builtin) tensor type, it is converted to a
   /// memref type with a fully dynamic layout map; if tensor is a (generic)
-  /// tensor-like type, it is converted using TensorLikeType::getBufferType().
+  /// tensor-like type, it is converted using unknownTypeConverterFn.
   ///
   /// If `bufferizeFunctionBoundaries` is not set, this function isn't used.
   FunctionArgTypeConverterFn functionArgTypeConverterFn = nullptr;
@@ -362,7 +372,17 @@ struct BufferizationOptions {
   // Returning std::nullopt will cause bufferization to fail (useful to indicate
   // failure to determine memory space for a tensor type).
   DefaultMemorySpaceFn defaultMemorySpaceFn =
-      [](TensorType t) -> std::optional<Attribute> { return Attribute(); };
+      [](TensorLikeType t) -> std::optional<Attribute> { return Attribute(); };
+
+  /// Hook to resolve a mismatch between conflicting buffer types that were
+  /// independently inferred and have to now "converge" to a common buffer type
+  /// (e.g. due to differences in iterations of a loop or branches of
+  /// if-statements). Depending on the situation and the types involved, this
+  /// may produce a "joined" type (e.g. a type combining properties of both), or
+  /// either one of the two types, etc. The default keeps the framework
+  /// behavior: promote to fully-dynamic layout on layout mismatch, fail on
+  /// memory-space mismatch.
+  ReconcileBufferTypeMismatchFn reconcileBufferTypeMismatchFn = nullptr;
 
   /// If set to `true`, the analysis is skipped. A buffer is copied before every
   /// write. This flag cannot be used together with `testAnalysisOnly = true`.
@@ -659,23 +679,6 @@ OpTy replaceOpWithNewBufferizedOp(RewriterBase &rewriter, Operation *op,
   replaceOpWithBufferizedValues(rewriter, op, newOp->getResults());
   return newOp;
 }
-
-/// Return a MemRefType to which the TensorType can be bufferized.
-///
-/// If possible, op bufferization implementations should not use this function
-/// and instead infer precise memref types for tensor results by themselves.
-///
-/// Unless a layout map was specified, `options.unknownTypeConverterFn`
-/// determines what kind of layout map will be used. For best composability
-/// (without copies), the fully dynamic layout map is used by default.
-///
-/// Note: Canonicalization patterns could clean up layout maps and infer more
-/// precise layout maps after bufferization. However, many possible
-/// canonicalizations are currently not implemented.
-BaseMemRefType getMemRefType(TensorType tensorType,
-                             const BufferizationOptions &options,
-                             MemRefLayoutAttrInterface layout = {},
-                             Attribute memorySpace = nullptr);
 
 /// Return a MemRef type with fully dynamic layout. If the given tensor type
 /// is unranked, return an unranked MemRef type.

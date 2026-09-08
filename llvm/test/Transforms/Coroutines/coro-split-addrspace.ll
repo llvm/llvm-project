@@ -52,11 +52,15 @@ entry:
 ; CHECK: ret ptr %hdl
 
 ; CHECK-LABEL: @f.resume({{.*}}) addrspace(200) {
+; CHECK: %[[DESTROY_ADDR:.+]] = getelementptr inbounds i8, ptr %hdl, i64 8
+; CHECK-NEXT: %[[DESTROY:.+]] = load ptr, ptr %[[DESTROY_ADDR]]
+; CHECK-NEXT: %[[IS_ELIDED:.+]] = icmp eq ptr %[[DESTROY]], addrspacecast (ptr addrspace(200) @f.cleanup to ptr)
 ; CHECK-NOT: call ptr @malloc
 ; CHECK-NOT: call void @print(i32 0)
 ; CHECK: call void @print(i32 1)
 ; CHECK-NOT: call void @print(i32 0)
-; CHECK: call void @free(
+; CHECK: %[[CORO_FREE:.+]] = select i1 %[[IS_ELIDED]], ptr null, ptr %hdl
+; CHECK-NEXT: call void @free(ptr %[[CORO_FREE]])
 ; CHECK: ret void
 
 ; CHECK-LABEL: @f.destroy({{.*}}) addrspace(200) {

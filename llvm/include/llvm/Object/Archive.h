@@ -170,7 +170,7 @@ public:
 //   char ar_fmag[2];  /* contains backtick (X'79'), followed by new line
 //   (X'15') */
 // };
-class ZOSArchiveMemberHeader : public ArchiveMemberHeader {
+class LLVM_ABI ZOSArchiveMemberHeader : public ArchiveMemberHeader {
 public:
   ZOSArchiveMemberHeader(Archive const *Parent, const char *RawHeaderPtr,
                          uint64_t Size, Error *Err);
@@ -348,6 +348,18 @@ public:
     LLVM_ABI Expected<Child> getMember() const;
     LLVM_ABI Symbol getNext() const;
     LLVM_ABI bool isECSymbol() const;
+
+    /// Archive attribute bit masks for K_ZOS archive symbol table entries.
+    static constexpr uint32_t ZOSAttrWSA = 0x1;
+    static constexpr uint32_t ZOSAttrXPLink = 0x2;
+    static constexpr uint32_t ZOSAttr64Bit = 0x4;
+    static constexpr uint32_t ZOSKnownAttrMask =
+        ZOSAttrWSA | ZOSAttrXPLink | ZOSAttr64Bit;
+
+    /// For K_ZOS archives, returns the 32-bit attribute word stored alongside
+    /// the symbol table entry. The low bits are described by the ZOSAttr*
+    /// constants above. Returns 0 for non-z/OS archives.
+    LLVM_ABI uint32_t getZOSAttributes() const;
   };
 
   class symbol_iterator {
@@ -490,7 +502,7 @@ public:
     char Magic[sizeof(ZOSArchiveMagic) - 1]; ///< ZOS archive magic string.
   };
 
-  ZOSArchive(MemoryBufferRef Source, Error &Err);
+  LLVM_ABI ZOSArchive(MemoryBufferRef Source, Error &Err);
 
 private:
   std::string SymbolTableBuf; // __.SYMDEF strings converted to ASCII.

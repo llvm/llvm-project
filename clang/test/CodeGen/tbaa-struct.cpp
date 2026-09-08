@@ -189,13 +189,13 @@ void copy12(UnionMember2 *a1, UnionMember2 *a2) {
 // CHECK-OLD  [[DOUBLE]] = !{!"double", [[CHAR]], i64 0}
 
 //.
-// CHECK-OLD: [[META2:![0-9]+]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// CHECK-OLD: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// CHECK-OLD: [[META3:![0-9]+]] = !{!"int", [[META4:![0-9]+]], i64 0}
 // CHECK-OLD: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
 // CHECK-OLD: [[META5]] = !{!"Simple C++ TBAA"}
-// CHECK-OLD: [[TBAA_STRUCT6]] = !{i64 0, i64 2, [[META7:![0-9]+]], i64 4, i64 4, [[META2]], i64 8, i64 1, [[META9:![0-9]+]], i64 12, i64 4, [[META2]]}
+// CHECK-OLD: [[TBAA_STRUCT6]] = !{i64 0, i64 2, [[META7:![0-9]+]], i64 4, i64 4, [[META2:![0-9]+]], i64 8, i64 1, [[META9:![0-9]+]], i64 12, i64 4, [[META2]]}
 // CHECK-OLD: [[META7]] = !{[[META8:![0-9]+]], [[META8]], i64 0}
 // CHECK-OLD: [[META8]] = !{!"short", [[META4]], i64 0}
+// CHECK-OLD: [[META2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
 // CHECK-OLD: [[META9]] = !{[[META4]], [[META4]], i64 0}
 // CHECK-OLD: [[TBAA_STRUCT10]] = !{i64 0, i64 1, [[META9]], i64 4, i64 2, [[META7]], i64 8, i64 4, [[META2]], i64 12, i64 1, [[META9]], i64 16, i64 4, [[META2]], i64 20, i64 4, [[META2]]}
 // CHECK-OLD: [[TBAA_STRUCT11]] = !{i64 0, i64 12, [[META9]]}
@@ -209,10 +209,9 @@ void copy12(UnionMember2 *a1, UnionMember2 *a2) {
 // CHECK-OLD: [[TBAA_STRUCT19]] = !{i64 0, i64 8, [[META9]], i64 8, i64 4, [[META2]]}
 // CHECK-OLD: [[TBAA_STRUCT20]] = !{i64 0, i64 4, [[META2]], i64 8, i64 8, [[META9]]}
 //.
-// CHECK-NEW: [[META2:![0-9]+]] = !{[[META3:![0-9]+]], [[META3]], i64 0, i64 4}
-// CHECK-NEW: [[META3]] = !{[[META4:![0-9]+]], i64 4, !"int"}
-// CHECK-NEW: [[META4]] = !{[[META5:![0-9]+]], i64 1, !"omnipotent char"}
+// CHECK-NEW: [[META4:![0-9]+]] = !{[[META5:![0-9]+]], i64 1, !"omnipotent char"}
 // CHECK-NEW: [[META5]] = !{!"Simple C++ TBAA"}
+// CHECK-NEW: [[META3:![0-9]+]] = !{[[META4]], i64 4, !"int"}
 // CHECK-NEW: [[TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0, i64 16}
 // CHECK-NEW: [[META7]] = !{[[META4]], i64 16, !"_ZTS1A", [[META8:![0-9]+]], i64 0, i64 2, [[META3]], i64 4, i64 4, [[META4]], i64 8, i64 1, [[META3]], i64 12, i64 4}
 // CHECK-NEW: [[META8]] = !{[[META4]], i64 2, !"short"}

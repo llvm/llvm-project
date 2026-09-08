@@ -73,6 +73,9 @@ public:
   /// Is this a box describing an array or assumed-rank?
   bool isArray() const;
 
+  /// Is this a box describing a coarray?
+  bool isCoarray() const;
+
   /// Return the same type, except for the shape, that is taken the shape
   /// of shapeMold.
   BaseBoxType getBoxTypeWithNewShape(mlir::Type shapeMold) const;
@@ -157,11 +160,12 @@ inline bool conformsWithPassByRef(mlir::Type t) {
 /// Is `t` a derived (record) type?
 inline bool isa_derived(mlir::Type t) { return mlir::isa<fir::RecordType>(t); }
 
-/// Is `t` type(c_ptr) or type(c_funptr)?
+/// Is `t` type(c_ptr), type(c_funptr), or type(c_devptr)?
 inline bool isa_builtin_cptr_type(mlir::Type t) {
   if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(t))
     return recTy.getName().ends_with("T__builtin_c_ptr") ||
-           recTy.getName().ends_with("T__builtin_c_funptr");
+           recTy.getName().ends_with("T__builtin_c_funptr") ||
+           recTy.getName().ends_with("T__builtin_c_devptr");
   return false;
 }
 
@@ -427,6 +431,9 @@ inline bool boxHasAddendum(fir::BaseBoxType boxTy) {
 /// Get the rank from a !fir.box type.
 unsigned getBoxRank(mlir::Type boxTy);
 
+/// Get the corank from a !fir.box type.
+unsigned getBoxCorank(mlir::Type boxTy);
+
 /// Return true iff `ty` is a RecordType with members that are allocatable.
 bool isRecordWithAllocatableMember(mlir::Type ty);
 
@@ -474,10 +481,11 @@ inline bool isNoneOrSeqNone(mlir::Type type) {
 /// is polymorphic and assumed shape return fir.box<T>.
 inline mlir::Type wrapInClassOrBoxType(mlir::Type eleTy,
                                        bool isPolymorphic = false,
-                                       bool isAssumedType = false) {
+                                       bool isAssumedType = false,
+                                       unsigned corank = 0) {
   if (isPolymorphic && !isAssumedType)
-    return fir::ClassType::get(eleTy);
-  return fir::BoxType::get(eleTy);
+    return fir::ClassType::get(eleTy, /*isVolatile*/ false, corank);
+  return fir::BoxType::get(eleTy, /*isVolatile*/ false, corank);
 }
 
 /// Re-create the given type with the given volatility, if this is a type

@@ -14,6 +14,7 @@
 #include "llvm/Transforms/Scalar/InferAlignment.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Instruction.h"
@@ -68,30 +69,41 @@ static bool tryToImproveAlign(
   if (!II)
     return false;
 
-  // TODO: Handle more memory intrinsics.
-  switch (II->getIntrinsicID()) {
-  case Intrinsic::masked_load:
-  case Intrinsic::masked_store: {
-    unsigned PtrOpIdx = II->getIntrinsicID() == Intrinsic::masked_load ? 0 : 1;
-    Value *PtrOp = II->getArgOperand(PtrOpIdx);
-    Type *Type = II->getIntrinsicID() == Intrinsic::masked_load
-                     ? II->getType()
-                     : II->getArgOperand(0)->getType();
-
-    Align OldAlign = II->getParamAlign(PtrOpIdx).valueOrOne();
-    Align PrefAlign = DL.getPrefTypeAlign(Type);
-    Align NewAlign = Fn(PtrOp, OldAlign, PrefAlign);
-    if (NewAlign <= OldAlign)
-      return false;
-
-    II->addParamAttr(PtrOpIdx,
-                     Attribute::getWithAlignment(II->getContext(), NewAlign));
-    return true;
-  }
-  default:
+  if (!isa<MemIntrinsic>(II) &&
+      II->getIntrinsicID() != Intrinsic::masked_load &&
+      II->getIntrinsicID() != Intrinsic::masked_store)
     return false;
+
+  bool Changed = false;
+  for (unsigned ArgNo = 0; ArgNo != II->arg_size(); ++ArgNo) {
+    Value *Arg = II->getArgOperand(ArgNo);
+    if (!Arg->getType()->isPointerTy())
+      continue;
+
+    Align OldAlign = II->getParamAlign(ArgNo).valueOrOne();
+    Align NewAlign = Fn(Arg, OldAlign, Align(1));
+    if (NewAlign <= OldAlign)
+      continue;
+
+    II->addParamAttr(ArgNo,
+                     Attribute::getWithAlignment(II->getContext(), NewAlign));
+    Changed = true;
   }
+  return Changed;
 }
+
+using ScopedHT =
+    ScopedHashTable<Value *, Align, DenseMapInfo<Value *>, BumpPtrAllocator>;
+struct AlignmentScope {
+  // If BB is nullptr, the BB is processed.
+  BasicBlock *BB;
+  DomTreeNode::const_iterator Iter;
+  DomTreeNode::const_iterator End;
+  ScopedHT::ScopeTy Scope;
+
+  AlignmentScope(DomTreeNode *N, ScopedHT &Table)
+      : BB(N->getBlock()), Iter(N->begin()), End(N->end()), Scope(Table) {}
+};
 
 bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
   const DataLayout &DL = F.getDataLayout();
@@ -121,7 +133,7 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
 
   // Propagate alignment between loads and stores that originate from the
   // same base pointer.
-  DenseMap<Value *, Align> BestBasePointerAligns;
+  ScopedHT BestBasePointerAligns;
   auto InferFromBasePointer = [&](Value *PtrOp, Align LoadStoreAlign) {
     APInt OffsetFromBase(DL.getIndexTypeSizeInBits(PtrOp->getType()), 0);
     PtrOp = PtrOp->stripAndAccumulateConstantOffsets(DL, OffsetFromBase, true);
@@ -130,39 +142,43 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
     Align BasePointerAlign =
         commonAlignment(LoadStoreAlign, OffsetFromBase.getLimitedValue());
 
-    auto [It, Inserted] =
-        BestBasePointerAligns.try_emplace(PtrOp, BasePointerAlign);
-    if (!Inserted) {
+    if (auto BestAlign = BestBasePointerAligns.lookup(PtrOp);
+        BestAlign != Align()) {
       // If the stored base pointer alignment is better than the
       // base pointer alignment we derived, we may be able to use it
       // to improve the load/store alignment. If not, store the
       // improved base pointer alignment for future iterations.
-      if (It->second > BasePointerAlign) {
+      if (BestAlign > BasePointerAlign) {
         Align BetterLoadStoreAlign =
-            commonAlignment(It->second, OffsetFromBase.getLimitedValue());
+            commonAlignment(BestAlign, OffsetFromBase.getLimitedValue());
         return BetterLoadStoreAlign;
       }
-      It->second = BasePointerAlign;
     }
+
+    BestBasePointerAligns.insert(PtrOp, BasePointerAlign);
     return LoadStoreAlign;
   };
 
-  for (BasicBlock &BB : F) {
-    // We need to reset the map for each block because alignment information
-    // can only be propagated from instruction A to B if A dominates B.
-    // This is because control flow (and exception throwing) could be dependent
-    // on the address (and its alignment) at runtime. Some sort of dominator
-    // tree approach could be better, but doing a simple forward pass through a
-    // single basic block is correct too.
-    BestBasePointerAligns.clear();
-
-    for (Instruction &I : BB) {
-      Changed |= tryToImproveAlign(
-          DL, &I, [&](Value *PtrOp, Align OldAlign, Align PrefAlign) {
-            return std::max(InferFromKnownBits(I, PtrOp),
-                            InferFromBasePointer(PtrOp, OldAlign));
-          });
+  // AlignmentScope is unmovable.
+  std::list<AlignmentScope> Stack;
+  Stack.emplace_back(DT.getRootNode(), BestBasePointerAligns);
+  while (!Stack.empty()) {
+    AlignmentScope &Top = Stack.back();
+    if (Top.BB) {
+      for (Instruction &I : *Top.BB) {
+        Changed |= tryToImproveAlign(
+            DL, &I, [&](Value *PtrOp, Align OldAlign, Align PrefAlign) {
+              return std::max(InferFromKnownBits(I, PtrOp),
+                              InferFromBasePointer(PtrOp, OldAlign));
+            });
+      }
+      Top.BB = nullptr;
     }
+
+    if (Top.Iter != Top.End)
+      Stack.emplace_back(*Top.Iter++, BestBasePointerAligns);
+    else
+      Stack.pop_back();
   }
 
   return Changed;

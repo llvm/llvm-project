@@ -12,5 +12,5 @@ void vararg(...);
 void test(X x) {
   // CHECK: call void @llvm.trap()
   vararg(x);
-  // CHECK: ret void
+  // CHECK-NEXT: unreachable
 }

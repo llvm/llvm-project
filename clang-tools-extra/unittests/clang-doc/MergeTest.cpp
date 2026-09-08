@@ -201,12 +201,14 @@ TEST_F(MergeTest, mergeSingleNamespaceInfo) {
   ReducedObj.IT = InfoType::IT_namespace;
   doc::Info *Reduced = &ReducedObj;
 
+  // mergeSingleInfo requires an arena, so allow this one usage.
+  llvm::BumpPtrAllocator Arena;
   Info *PtrOne = &One;
-  auto Err1 = mergeSingleInfo(Reduced, std::move(PtrOne), doc::PersistentArena);
+  auto Err1 = mergeSingleInfo(Reduced, std::move(PtrOne), Arena);
   assert(!Err1);
 
   Info *PtrTwo = &Two;
-  auto Err2 = mergeSingleInfo(Reduced, std::move(PtrTwo), doc::PersistentArena);
+  auto Err2 = mergeSingleInfo(Reduced, std::move(PtrTwo), Arena);
   assert(!Err2);
 
   CheckNamespaceInfo(InfoAsNamespace(&Expected),

@@ -8,17 +8,11 @@
 ! Privatizers appear at module scope; second subroutine's privatizer comes first.
 !CHECK: omp.private {type = private} @[[C1_PRIV:.*Ec1_private.*]] : !fir.char<1,10>
 
-! Verify the array privatizer operates on a box type, not a fir.ptr type,
-! and that it allocates the full array.
-!CHECK: omp.private {type = private} @[[A_PRIV:.*Ea_private.*]] : !fir.box<!fir.array<10xi32>> init {
-!CHECK:   %[[SHAPE:.*]] = fir.shape %{{.*}} : (index) -> !fir.shape<1>
-!CHECK:   %[[ALLOC:.*]] = fir.allocmem !fir.array<10xi32>
-!CHECK:   omp.yield
-! Verify the dealloc region frees the allocated memory.
-!CHECK: } dealloc {
-!CHECK:   fir.freemem %{{.*}} : !fir.heap<!fir.array<10xi32>>
-!CHECK:   omp.yield
-!CHECK: }
+! The array privatizer operates on the unwrapped fir.ptr data type. A constant-
+! shape, trivial-element array privatizes unboxed as a plain fir.array (no
+! descriptor, no init/dealloc region). The end-of-line anchor confirms there is
+! no `init {` region.
+!CHECK: omp.private {type = private} @[[A_PRIV:.*Ea_private.*]] : !fir.array<10xi32>{{$}}
 
 !CHECK-LABEL: func.func @_QPlastprivate_equivalence()
 !CHECK: %[[AGG:.*]] = fir.alloca !fir.array<40xi8>
@@ -29,9 +23,9 @@
 !CHECK:     omp.loop_nest
 ! Verify lastprivate writeback copies the private array to the original
 ! EQUIVALENCE alias address.
+!CHECK:       %[[A_PRIV_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}Ea"}
 !CHECK:       fir.if %{{.*}} {
-!CHECK:         %[[PRIV_BOX:.*]] = fir.load %{{.*}} : !fir.ref<!fir.box<!fir.array<10xi32>>>
-!CHECK:         hlfir.assign %[[PRIV_BOX]] to %[[A_DECL]]#0 : !fir.box<!fir.array<10xi32>>, !fir.ptr<!fir.array<10xi32>>
+!CHECK:         hlfir.assign %[[A_PRIV_DECL]]#0 to %[[A_DECL]]#0 : !fir.ptr<!fir.array<10xi32>>, !fir.ptr<!fir.array<10xi32>>
 !CHECK:       }
 !CHECK:       omp.yield
 !CHECK:     }

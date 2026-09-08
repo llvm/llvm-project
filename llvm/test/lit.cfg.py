@@ -17,17 +17,6 @@ from lit.llvm.subst import ToolSubst
 # name: The name of this test suite.
 config.name = "LLVM"
 
-# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
-# See https://github.com/llvm/llvm-project/issues/106636 for more details.
-#
-# We prefer the lit internal shell which provides a better user experience on failures
-# and is faster unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0
-# env var.
-use_lit_shell = True
-lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
-if lit_shell_env:
-    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
-
 # testFormat: The test format to use to interpret tests.
 extra_substitutions = extra_substitutions = (
     [
@@ -37,7 +26,7 @@ extra_substitutions = extra_substitutions = (
     if config.enable_profcheck
     else []
 )
-config.test_format = lit.formats.ShTest(not use_lit_shell, extra_substitutions)
+config.test_format = lit.formats.ShTest(extra_substitutions=extra_substitutions)
 
 # suffixes: A list of file extensions to treat as test files. This is overriden
 # by individual lit.local.cfg files in the test subdirectories.
@@ -79,7 +68,6 @@ if config.enable_profcheck:
     config.excludes.extend(
         [
             "Attributor",
-            "IROutliner",
             "BlockExtractor",
             "CodeExtractor",
             "HotColdSplit",
@@ -91,7 +79,7 @@ if config.enable_profcheck:
     )
     # Not aimed at being used for peak-optimized binaries. These will be
     # addressed later. PhaseOrdering has a couple of merge function tests.
-    config.excludes.extend(["GCOVProfiling", "MergeFunc", "PhaseOrdering"])
+    config.excludes.extend(["GCOVProfiling", "PhaseOrdering"])
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -194,6 +182,11 @@ if asan_rtlib:
     ld64_cmd = "env DYLD_INSERT_LIBRARIES={} {}".format(asan_rtlib, ld64_cmd)
 if config.osx_sysroot:
     ld64_cmd = "{} -syslibroot {}".format(ld64_cmd, config.osx_sysroot)
+elif config.osx_xcrun:
+    osx_sysroot = subprocess.check_output(
+        [config.osx_xcrun, "--show-sdk-path"], text=True
+    )
+    ld64_cmd = "{} -syslibroot {}".format(ld64_cmd, osx_sysroot)
 
 ocamlc_command = "%s ocamlc -cclib -L%s %s" % (
     config.ocamlfind_executable,
@@ -235,6 +228,7 @@ tools = [
     ToolSubst("%lli", FindTool("lli"), post=".", extra_args=lli_args),
     ToolSubst("%llc_dwarf", FindTool("llc"), extra_args=llc_args),
     ToolSubst("%gold", config.gold_executable, unresolved="ignore"),
+    ToolSubst("%ld_bfd", config.ld_bfd_executable, unresolved="ignore"),
     ToolSubst("%ld64", ld64_cmd, unresolved="ignore"),
     ToolSubst("%ocamlc", ocamlc_command, unresolved="ignore"),
     ToolSubst("%ocamlopt", ocamlopt_command, unresolved="ignore"),
@@ -302,7 +296,6 @@ tools.extend(
         "llvm-readelf",
         "llvm-readobj",
         "llvm-rtdyld",
-        "llvm-sim",
         "llvm-size",
         "llvm-split",
         "llvm-stress",
@@ -347,6 +340,7 @@ tools.extend(
         ToolSubst("OrcV2CBindingsLazy", unresolved="ignore"),
         ToolSubst("OrcV2CBindingsVeryLazy", unresolved="ignore"),
         ToolSubst("dxil-dis", unresolved="ignore"),
+        ToolSubst("llvm-calc-occupancy", unresolved="ignore"),
     ]
 )
 
@@ -591,6 +585,9 @@ if config.link_llvm_dylib:
 if config.have_tf_aot:
     config.available_features.add("have_tf_aot")
 
+if getattr(config, "have_mlir_lowering", False):
+    config.available_features.add("have_mlir_lowering")
+
 if getattr(config, "have_opencsd", False):
     config.available_features.add("opencsd")
 
@@ -653,14 +650,18 @@ if config.have_llvm_driver:
 import subprocess
 
 
-def have_ld_plugin_support():
+def have_ld_plugin_support(ld_executable, name):
     if not os.path.exists(
         os.path.join(config.llvm_shlib_dir, "LLVMgold" + config.llvm_shlib_ext)
     ):
         return False
 
+    # CMake was not able to find the linker executable.
+    if ld_executable.endswith("NOTFOUND"):
+        return False
+
     ld_cmd = subprocess.Popen(
-        [config.gold_executable, "--help"], stdout=subprocess.PIPE, env={"LANG": "C"}
+        [ld_executable, "--help"], stdout=subprocess.PIPE, env={"LANG": "C"}
     )
     ld_out = ld_cmd.stdout.read().decode()
     ld_cmd.wait()
@@ -683,18 +684,20 @@ def have_ld_plugin_support():
         config.available_features.add("ld_emu_elf32ppc")
 
     ld_version = subprocess.Popen(
-        [config.gold_executable, "--version"], stdout=subprocess.PIPE, env={"LANG": "C"}
+        [ld_executable, "--version"], stdout=subprocess.PIPE, env={"LANG": "C"}
     )
-    if not "GNU gold" in ld_version.stdout.read().decode():
+    if not name in ld_version.stdout.read().decode():
         return False
     ld_version.wait()
 
     return True
 
 
-if have_ld_plugin_support():
+if have_ld_plugin_support(config.ld_bfd_executable, "GNU ld"):
     config.available_features.add("ld_plugin")
 
+if have_ld_plugin_support(config.gold_executable, "GNU gold"):
+    config.available_features.add("gold_linker")
 
 def have_ld64_plugin_support():
     if not os.path.exists(
@@ -703,13 +706,6 @@ def have_ld64_plugin_support():
         return False
 
     if config.ld64_executable == "":
-        return False
-
-    ld_cmd = subprocess.Popen([config.ld64_executable, "-v"], stderr=subprocess.PIPE)
-    ld_out = ld_cmd.stderr.read().decode()
-    ld_cmd.wait()
-
-    if "ld64" not in ld_out or "LTO" not in ld_out:
         return False
 
     return True
@@ -763,6 +759,25 @@ def host_unwind_supports_jit():
 
 if host_unwind_supports_jit():
     config.available_features.add("host-unwind-supports-jit")
+
+
+# The triple that lli's JIT will target. This can be more specific than either
+# the host or the default target triple: e.g. an arm64e build of lli reports
+# arm64e-apple-darwin, while both CMake triples describe the machine as arm64.
+def host_jit_triple():
+    lli = lit.util.which("lli", config.llvm_tools_dir)
+    if not lli:
+        return None
+    try:
+        return subprocess.check_output([lli, "-host-jit-triple"], text=True).strip()
+    except (OSError, subprocess.CalledProcessError):
+        lit_config.warning("could not determine host JIT triple from lli")
+        return None
+
+
+config.host_jit_triple = host_jit_triple()
+if config.host_jit_triple:
+    config.available_features.add("host-jit-triple=" + config.host_jit_triple)
 
 # Ask llvm-config about asserts
 llvm_config.feature_config(
@@ -852,6 +867,99 @@ if "system-aix" in config.available_features:
 
 if config.has_logf128:
     config.available_features.add("has_logf128")
+
+# ANSI escape sequences.
+#
+# For example:
+#
+#   REQUIRES: ansi-escapes
+#   RUN: some-cmd -color 2>&1 | %{reveal-ansi-escapes} | FileCheck %s
+#   CHECK: Once in a <blue>blue moon<reset>, I'm <green>green with envy<reset>.
+if platform.system() not in ["Windows"]:
+    config.available_features.add("ansi-escapes")
+    # It is not clear that the escape sequence \x1b is portable across sed
+    # implementations, but that is ok because python substitutes the raw
+    # character here.
+    config.substitutions.append(
+        (
+            "%{reveal-ansi-escapes}",
+            "sed "
+            # Foreground colors.
+            "-e 's/\x1b\\[0;30m/<black>/g' "
+            "-e 's/\x1b\\[0;31m/<red>/g' "
+            "-e 's/\x1b\\[0;32m/<green>/g' "
+            "-e 's/\x1b\\[0;33m/<yellow>/g' "
+            "-e 's/\x1b\\[0;34m/<blue>/g' "
+            "-e 's/\x1b\\[0;35m/<magenta>/g' "
+            "-e 's/\x1b\\[0;36m/<cyan>/g' "
+            "-e 's/\x1b\\[0;37m/<white>/g' "
+            "-e 's/\x1b\\[0;90m/<bright-black>/g' "
+            "-e 's/\x1b\\[0;91m/<bright-red>/g' "
+            "-e 's/\x1b\\[0;92m/<bright-green>/g' "
+            "-e 's/\x1b\\[0;93m/<bright-yellow>/g' "
+            "-e 's/\x1b\\[0;94m/<bright-blue>/g' "
+            "-e 's/\x1b\\[0;95m/<bright-magenta>/g' "
+            "-e 's/\x1b\\[0;96m/<bright-cyan>/g' "
+            "-e 's/\x1b\\[0;97m/<bright-white>/g' "
+            # Bold foreground colors.
+            "-e 's/\x1b\\[0;1;30m/<bold-black>/g' "
+            "-e 's/\x1b\\[0;1;31m/<bold-red>/g' "
+            "-e 's/\x1b\\[0;1;32m/<bold-green>/g' "
+            "-e 's/\x1b\\[0;1;33m/<bold-yellow>/g' "
+            "-e 's/\x1b\\[0;1;34m/<bold-blue>/g' "
+            "-e 's/\x1b\\[0;1;35m/<bold-magenta>/g' "
+            "-e 's/\x1b\\[0;1;36m/<bold-cyan>/g' "
+            "-e 's/\x1b\\[0;1;37m/<bold-white>/g' "
+            "-e 's/\x1b\\[0;1;90m/<bold-bright-black>/g' "
+            "-e 's/\x1b\\[0;1;91m/<bold-bright-red>/g' "
+            "-e 's/\x1b\\[0;1;92m/<bold-bright-green>/g' "
+            "-e 's/\x1b\\[0;1;93m/<bold-bright-yellow>/g' "
+            "-e 's/\x1b\\[0;1;94m/<bold-bright-blue>/g' "
+            "-e 's/\x1b\\[0;1;95m/<bold-bright-magenta>/g' "
+            "-e 's/\x1b\\[0;1;96m/<bold-bright-cyan>/g' "
+            "-e 's/\x1b\\[0;1;97m/<bold-bright-white>/g' "
+            # Background colors.
+            "-e 's/\x1b\\[0;40m/<bg-black>/g' "
+            "-e 's/\x1b\\[0;41m/<bg-red>/g' "
+            "-e 's/\x1b\\[0;42m/<bg-green>/g' "
+            "-e 's/\x1b\\[0;43m/<bg-yellow>/g' "
+            "-e 's/\x1b\\[0;44m/<bg-blue>/g' "
+            "-e 's/\x1b\\[0;45m/<bg-magenta>/g' "
+            "-e 's/\x1b\\[0;46m/<bg-cyan>/g' "
+            "-e 's/\x1b\\[0;47m/<bg-white>/g' "
+            "-e 's/\x1b\\[0;100m/<bg-bright-black>/g' "
+            "-e 's/\x1b\\[0;101m/<bg-bright-red>/g' "
+            "-e 's/\x1b\\[0;102m/<bg-bright-green>/g' "
+            "-e 's/\x1b\\[0;103m/<bg-bright-yellow>/g' "
+            "-e 's/\x1b\\[0;104m/<bg-bright-blue>/g' "
+            "-e 's/\x1b\\[0;105m/<bg-bright-magenta>/g' "
+            "-e 's/\x1b\\[0;106m/<bg-bright-cyan>/g' "
+            "-e 's/\x1b\\[0;107m/<bg-bright-white>/g' "
+            # Bold background colors.
+            "-e 's/\x1b\\[0;1;40m/<bg-bold-black>/g' "
+            "-e 's/\x1b\\[0;1;41m/<bg-bold-red>/g' "
+            "-e 's/\x1b\\[0;1;42m/<bg-bold-green>/g' "
+            "-e 's/\x1b\\[0;1;43m/<bg-bold-yellow>/g' "
+            "-e 's/\x1b\\[0;1;44m/<bg-bold-blue>/g' "
+            "-e 's/\x1b\\[0;1;45m/<bg-bold-magenta>/g' "
+            "-e 's/\x1b\\[0;1;46m/<bg-bold-cyan>/g' "
+            "-e 's/\x1b\\[0;1;47m/<bg-bold-white>/g' "
+            "-e 's/\x1b\\[0;1;100m/<bg-bold-bright-black>/g' "
+            "-e 's/\x1b\\[0;1;101m/<bg-bold-bright-red>/g' "
+            "-e 's/\x1b\\[0;1;102m/<bg-bold-bright-green>/g' "
+            "-e 's/\x1b\\[0;1;103m/<bg-bold-bright-yellow>/g' "
+            "-e 's/\x1b\\[0;1;104m/<bg-bold-bright-blue>/g' "
+            "-e 's/\x1b\\[0;1;105m/<bg-bold-bright-magenta>/g' "
+            "-e 's/\x1b\\[0;1;106m/<bg-bold-bright-cyan>/g' "
+            "-e 's/\x1b\\[0;1;107m/<bg-bold-bright-white>/g' "
+            # Misc.
+            "-e 's/\x1b\\[1m/<bold>/g' "
+            "-e 's/\x1b\\[7m/<reverse>/g' "
+            "-e 's/\x1b\\[0m/<reset>/g' "
+            # Reveal any sequence we missed above.
+            "-e 's/\x1b/<esc>/g' ",
+        )
+    )
 
 if lit_config.update_tests:
     import sys

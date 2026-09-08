@@ -30,6 +30,11 @@ enum GDBStoppointType {
   eWatchpointReadWrite
 };
 
+// StringRef::getAsInteger()'s first argument specifies the
+// radix of the number it is parsing.  Define enums for easiser
+// searching/reading.
+enum { BASE_AUTOSENSE = 0, BASE_10 = 10, BASE_16 = 16 };
+
 enum class CompressionType {
   None = 0,    // no compression
   ZlibDeflate, // zlib's deflate compression scheme, requires zlib or Apple's
@@ -118,6 +123,10 @@ public:
 
   PacketType CheckForPacket(const uint8_t *src, size_t src_len,
                             StringExtractorGDBRemote &packet);
+
+  PacketType
+  CheckForPacketIgnoreNotifications(const uint8_t *src, size_t src_len,
+                                    StringExtractorGDBRemote &packet);
 
   bool GetSendAcks() { return m_send_acks; }
 

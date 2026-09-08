@@ -86,6 +86,11 @@ LIBC_INLINE constexpr float16 expm1f16(float16 x) {
       if (x_bits.is_inf())
         return FPBits::inf().get_val();
 
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      fputil::set_errno_if_required(ERANGE);
+      fputil::raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
+      return FPBits::inf().get_val();
+#else
       switch (fputil::quick_get_round()) {
       case FE_TONEAREST:
       case FE_UPWARD:
@@ -95,6 +100,7 @@ LIBC_INLINE constexpr float16 expm1f16(float16 x) {
       default:
         return FPBits::max_normal().get_val();
       }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     }
 
     // When x <= -11 * log(2).

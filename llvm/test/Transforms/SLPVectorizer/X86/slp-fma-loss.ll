@@ -13,7 +13,7 @@ define void @hr() {
 ; SSE4:       loop:
 ; SSE4-NEXT:    [[PHI0:%.*]] = phi double [ 0.000000e+00, [[TMP0:%.*]] ], [ [[OP_RDX:%.*]], [[LOOP]] ]
 ; SSE4-NEXT:    [[CVT0:%.*]] = uitofp i16 0 to double
-; SSE4-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> <double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>, double [[CVT0]], i32 0
+; SSE4-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> <double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>, double [[CVT0]], i64 0
 ; SSE4-NEXT:    [[TMP2:%.*]] = fmul fast <4 x double> zeroinitializer, [[TMP1]]
 ; SSE4-NEXT:    [[TMP3:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP2]])
 ; SSE4-NEXT:    [[OP_RDX]] = fadd fast double [[TMP3]], [[PHI0]]
@@ -40,7 +40,7 @@ define void @hr() {
 ; AVX2:       loop:
 ; AVX2-NEXT:    [[PHI0:%.*]] = phi double [ 0.000000e+00, [[TMP0:%.*]] ], [ [[OP_RDX:%.*]], [[LOOP]] ]
 ; AVX2-NEXT:    [[CVT0:%.*]] = uitofp i16 0 to double
-; AVX2-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> <double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>, double [[CVT0]], i32 0
+; AVX2-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> <double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>, double [[CVT0]], i64 0
 ; AVX2-NEXT:    [[TMP2:%.*]] = fmul fast <4 x double> zeroinitializer, [[TMP1]]
 ; AVX2-NEXT:    [[TMP3:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP2]])
 ; AVX2-NEXT:    [[OP_RDX]] = fadd fast double [[TMP3]], [[PHI0]]
@@ -75,7 +75,7 @@ exit:
 define double @hr_or_mul() {
 ; SSE4-LABEL: @hr_or_mul(
 ; SSE4-NEXT:    [[CVT0:%.*]] = uitofp i16 3 to double
-; SSE4-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[CVT0]], i32 0
+; SSE4-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[CVT0]], i64 0
 ; SSE4-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <4 x i32> zeroinitializer
 ; SSE4-NEXT:    [[TMP3:%.*]] = fmul fast <4 x double> <double 7.000000e+00, double -4.300000e+01, double 2.200000e-02, double 9.500000e+00>, [[TMP2]]
 ; SSE4-NEXT:    [[TMP4:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP3]])
@@ -84,23 +84,19 @@ define double @hr_or_mul() {
 ;
 ; AVX-LABEL: @hr_or_mul(
 ; AVX-NEXT:    [[CVT0:%.*]] = uitofp i16 3 to double
-; AVX-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[CVT0]], i32 0
-; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
-; AVX-NEXT:    [[TMP3:%.*]] = fmul fast <2 x double> <double -4.300000e+01, double 7.000000e+00>, [[TMP2]]
-; AVX-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i32 1
+; AVX-NEXT:    [[TMP4:%.*]] = fmul fast double 7.000000e+00, [[CVT0]]
 ; AVX-NEXT:    [[ADD3:%.*]] = fadd fast double [[TMP4]], [[CVT0]]
-; AVX-NEXT:    [[MUL1:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
+; AVX-NEXT:    [[MUL1:%.*]] = fmul fast double -4.300000e+01, [[CVT0]]
 ; AVX-NEXT:    [[ADD1:%.*]] = fadd fast double [[MUL1]], [[ADD3]]
-; AVX-NEXT:    [[TMP6:%.*]] = fmul fast <2 x double> <double 9.500000e+00, double 2.200000e-02>, [[TMP2]]
-; AVX-NEXT:    [[MUL2:%.*]] = extractelement <2 x double> [[TMP6]], i32 1
+; AVX-NEXT:    [[MUL2:%.*]] = fmul fast double 2.200000e-02, [[CVT0]]
 ; AVX-NEXT:    [[ADD2:%.*]] = fadd fast double [[MUL2]], [[ADD1]]
-; AVX-NEXT:    [[MUL3:%.*]] = extractelement <2 x double> [[TMP6]], i32 0
+; AVX-NEXT:    [[MUL3:%.*]] = fmul fast double 9.500000e+00, [[CVT0]]
 ; AVX-NEXT:    [[ADD4:%.*]] = fadd fast double [[MUL3]], [[ADD2]]
 ; AVX-NEXT:    ret double [[ADD4]]
 ;
 ; AVX2-LABEL: @hr_or_mul(
 ; AVX2-NEXT:    [[CVT0:%.*]] = uitofp i16 3 to double
-; AVX2-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[CVT0]], i32 0
+; AVX2-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[CVT0]], i64 0
 ; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <4 x i32> zeroinitializer
 ; AVX2-NEXT:    [[TMP3:%.*]] = fmul fast <4 x double> <double 7.000000e+00, double -4.300000e+01, double 2.200000e-02, double 9.500000e+00>, [[TMP2]]
 ; AVX2-NEXT:    [[TMP4:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP3]])

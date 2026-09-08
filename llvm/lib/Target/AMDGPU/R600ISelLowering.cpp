@@ -18,14 +18,13 @@
 #include "R600Defines.h"
 #include "R600MachineFunctionInfo.h"
 #include "R600Subtarget.h"
-#include "R600TargetMachine.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
-#include "llvm/Passes/CodeGenPassBuilder.h"
 
 using namespace llvm;
 
+#define GET_CALLING_CONV_IMPL
 #include "R600GenCallingConv.inc"
 
 R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
@@ -189,11 +188,6 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
   setOperationAction(ISD::ADDRSPACECAST, MVT::i32, Custom);
-
-  const MVT ScalarIntVTs[] = { MVT::i32, MVT::i64 };
-  for (MVT VT : ScalarIntVTs)
-    setOperationAction({ISD::ADDC, ISD::SUBC, ISD::ADDE, ISD::SUBE}, VT,
-                       Expand);
 
   // LLVM will expand these to atomic_cmp_swap(0)
   // and atomic_swap, respectively.
@@ -791,7 +785,7 @@ bool R600TargetLowering::isZero(SDValue Op) const {
 
 bool R600TargetLowering::isHWTrueValue(SDValue Op) const {
   if (ConstantFPSDNode * CFP = dyn_cast<ConstantFPSDNode>(Op)) {
-    return CFP->isExactlyValue(1.0);
+    return CFP->isOne();
   }
   return isAllOnesConstant(Op);
 }
@@ -816,7 +810,8 @@ SDValue R600TargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const 
 
   if (VT == MVT::f32) {
     DAGCombinerInfo DCI(DAG, AfterLegalizeVectorOps, true, nullptr);
-    SDValue MinMax = combineFMinMaxLegacy(DL, VT, LHS, RHS, True, False, CC, DCI);
+    SDValue MinMax = combineFMinMaxLegacy(DL, VT, LHS, RHS, True, False, CC,
+                                          SDNodeFlags(), DCI);
     if (MinMax)
       return MinMax;
   }
@@ -1515,13 +1510,13 @@ SDValue R600TargetLowering::LowerFormalArguments(
     Align Alignment = commonAlignment(Align(VT.getStoreSize()), PartOffset);
 
     MachinePointerInfo PtrInfo(AMDGPUAS::PARAM_I_ADDRESS);
-    SDValue Arg = DAG.getLoad(
-        ISD::UNINDEXED, Ext, VT, DL, Chain,
-        DAG.getConstant(PartOffset, DL, MVT::i32), DAG.getUNDEF(MVT::i32),
-        PtrInfo,
-        MemVT, Alignment, MachineMemOperand::MONonTemporal |
-                                        MachineMemOperand::MODereferenceable |
-                                        MachineMemOperand::MOInvariant);
+    SDValue Arg =
+        DAG.getLoad(ISD::UNINDEXED, Ext, VT, DL, Chain,
+                    DAG.getConstant(PartOffset, DL, MVT::i32),
+                    DAG.getPOISON(MVT::i32), PtrInfo, MemVT, Alignment,
+                    MachineMemOperand::MONonTemporal |
+                        MachineMemOperand::MODereferenceable |
+                        MachineMemOperand::MOInvariant);
 
     InVals.push_back(Arg);
   }
@@ -1586,7 +1581,7 @@ static SDValue CompactSwizzlableVector(
       if (C->isZero()) {
         RemapSwizzle[i] = 4; // SEL_0
         NewBldVec[i] = DAG.getUNDEF(MVT::f32);
-      } else if (C->isExactlyValue(1.0)) {
+      } else if (C->isOne()) {
         RemapSwizzle[i] = 5; // SEL_1
         NewBldVec[i] = DAG.getUNDEF(MVT::f32);
       }

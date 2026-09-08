@@ -69,13 +69,6 @@ namespace std::pmr {
 #    pragma GCC system_header
 #  endif
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER >= 17 && _LIBCPP_STD_VER <= 20
-#    include <mutex>
-#  endif
-
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#    include <stdexcept>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif /* _LIBCPP_MEMORY_RESOURCE */

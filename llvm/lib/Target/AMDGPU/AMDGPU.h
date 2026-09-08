@@ -25,14 +25,43 @@ class GCNTargetMachine;
 class TargetMachine;
 
 // GlobalISel passes
-void initializeAMDGPUPreLegalizerCombinerPass(PassRegistry &);
-FunctionPass *createAMDGPUPreLegalizeCombiner(bool IsOptNone);
+void initializeAMDGPUPreLegalizerCombinerLegacyPass(PassRegistry &);
+FunctionPass *createAMDGPUPreLegalizeCombinerLegacyPass(bool IsOptLevelNone);
+
+class AMDGPUPreLegalizerCombinerPass
+    : public RequiredPassInfoMixin<AMDGPUPreLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 void initializeAMDGPUPostLegalizerCombinerPass(PassRegistry &);
 FunctionPass *createAMDGPUPostLegalizeCombiner(bool IsOptNone);
 FunctionPass *createAMDGPURegBankCombiner(bool IsOptNone);
 void initializeAMDGPURegBankCombinerPass(PassRegistry &);
 FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
-FunctionPass *createAMDGPURegBankSelectPass();
+
+class AMDGPUGlobalISelDivergenceLoweringPass
+    : public RequiredPassInfoMixin<AMDGPUGlobalISelDivergenceLoweringPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+FunctionPass *createAMDGPURegBankSelectLegacyPass();
+
+class AMDGPURegBankSelectPass
+    : public RequiredPassInfoMixin<AMDGPURegBankSelectPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setIsSSA().setLegalized();
+  }
+
+  MachineFunctionProperties getSetProperties() const {
+    return MachineFunctionProperties().setRegBankSelected();
+  }
+};
 FunctionPass *createAMDGPURegBankLegalizePass();
 
 // SI Passes
@@ -44,7 +73,6 @@ FunctionPass *createSILowerI1CopiesLegacyPass();
 FunctionPass *createSIShrinkInstructionsLegacyPass();
 FunctionPass *createSILoadStoreOptimizerLegacyPass();
 FunctionPass *createSIWholeQuadModeLegacyPass();
-FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
 FunctionPass *createSIOptimizeVGPRLiveRangeLegacyPass();
 FunctionPass *createAMDGPUNextUseAnalysisLegacyPass();
@@ -92,7 +120,7 @@ struct AMDGPUUseNativeCallsPass
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-class SILowerI1CopiesPass : public OptionalPassInfoMixin<SILowerI1CopiesPass> {
+class SILowerI1CopiesPass : public RequiredPassInfoMixin<SILowerI1CopiesPass> {
 public:
   SILowerI1CopiesPass() = default;
   PreservedAnalyses run(MachineFunction &MF,
@@ -211,11 +239,11 @@ extern char &SILowerWWMCopiesLegacyID;
 void initializeSILowerI1CopiesLegacyPass(PassRegistry &);
 extern char &SILowerI1CopiesLegacyID;
 
-void initializeAMDGPUGlobalISelDivergenceLoweringPass(PassRegistry &);
-extern char &AMDGPUGlobalISelDivergenceLoweringID;
+void initializeAMDGPUGlobalISelDivergenceLoweringLegacyPass(PassRegistry &);
+extern char &AMDGPUGlobalISelDivergenceLoweringLegacyID;
 
-void initializeAMDGPURegBankSelectPass(PassRegistry &);
-extern char &AMDGPURegBankSelectID;
+void initializeAMDGPURegBankSelectLegacyPass(PassRegistry &);
+extern char &AMDGPURegBankSelectLegacyID;
 
 void initializeAMDGPURegBankLegalizePass(PassRegistry &);
 extern char &AMDGPURegBankLegalizeID;
@@ -326,12 +354,10 @@ struct AMDGPULowerExecSyncPass
 
 void initializeAMDGPUSwLowerLDSLegacyPass(PassRegistry &);
 extern char &AMDGPUSwLowerLDSLegacyPassID;
-ModulePass *
-createAMDGPUSwLowerLDSLegacyPass(const AMDGPUTargetMachine *TM = nullptr);
+ModulePass *createAMDGPUSwLowerLDSLegacyPass();
 
 struct AMDGPUSwLowerLDSPass : OptionalPassInfoMixin<AMDGPUSwLowerLDSPass> {
-  const AMDGPUTargetMachine &TM;
-  AMDGPUSwLowerLDSPass(const AMDGPUTargetMachine &TM_) : TM(TM_) {}
+  AMDGPUSwLowerLDSPass() = default;
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
@@ -356,7 +382,7 @@ public:
 };
 
 class AMDGPULowerKernelArgumentsPass
-    : public OptionalPassInfoMixin<AMDGPULowerKernelArgumentsPass> {
+    : public RequiredPassInfoMixin<AMDGPULowerKernelArgumentsPass> {
 private:
   TargetMachine &TM;
 
@@ -413,7 +439,7 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-class SIModeRegisterPass : public OptionalPassInfoMixin<SIModeRegisterPass> {
+class SIModeRegisterPass : public RequiredPassInfoMixin<SIModeRegisterPass> {
 public:
   SIModeRegisterPass() = default;
   PreservedAnalyses run(MachineFunction &F, MachineFunctionAnalysisManager &AM);
@@ -518,7 +544,7 @@ public:
 };
 
 class SIAnnotateControlFlowPass
-    : public OptionalPassInfoMixin<SIAnnotateControlFlowPass> {
+    : public RequiredPassInfoMixin<SIAnnotateControlFlowPass> {
 private:
   const AMDGPUTargetMachine &TM;
 

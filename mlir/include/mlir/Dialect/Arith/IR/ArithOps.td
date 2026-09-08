@@ -244,12 +244,8 @@ def Arith_ConstantOp : Op<Arith_Dialect, "constant",
   }];
 
   let arguments = (ins TypedAttrInterface:$value);
-  // TODO: Disallow arith.constant to return anything other than a signless
-  // integer or float like. Downstream users of Arith should only be
-  // working with signless integers, floats, or vectors/tensors thereof.
-  // However, it is necessary to allow arith.constant to return vectors/tensors
-  // of strings and signed/unsigned integers (for now) as an artefact of
-  // splitting the Standard dialect.
+  // Keep this broad so the custom verifier can produce arith.constant-specific
+  // diagnostics after checking that the value and result types match.
   let results = (outs /*SignlessIntegerOrIndexOrFloatLike*/AnyType:$result);
 
   let extraClassDeclaration = [{
@@ -1117,6 +1113,7 @@ def Arith_AddFOp : Arith_FloatBinaryOpWithRoundingMode<"addf", [Commutative]> {
     %a = arith.addf %b, %c to_nearest_even : f64
     ```
   }];
+  let hasCanonicalizer = 1;
   let hasFolder = 1;
 }
 
@@ -1503,6 +1500,7 @@ def Arith_ScalingExtFOp
     %h = arith.scaling_extf %i, %f : vector<32xf4E2M1FN>, vector<32xf8E8M0FNU> to vector<32xbf16>
     ```
   }];
+  let hasFolder = 1;
   let hasVerifier = 1;
   let assemblyFormat =
       [{ $in `,` $scale (`fastmath` `` $fastmath^)? attr-dict `:`
@@ -1692,6 +1690,7 @@ def Arith_ScalingTruncFOp
     %h = arith.scaling_truncf %i, %f : vector<32xbf16>, vector<32xf8E8M0FNU> to vector<32xf4E2M1FN>
     ```
   }];
+  let hasFolder = 1;
   let hasVerifier = 1;
   let assemblyFormat =
       [{ $in `,` $scale ($roundingmode^)? (`fastmath` `` $fastmath^)? attr-dict `:`

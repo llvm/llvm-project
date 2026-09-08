@@ -302,6 +302,12 @@ func.func @caller() {
 
 // -----
 
+// Regression test for https://github.com/llvm/llvm-project/issues/201521
+// CHECK-LABEL: func.func private @callee_multi_result(f64) -> (f64, i32, i32, f16, f16)
+func.func private @callee_multi_result(i64) -> (i64, i32, i32, f32)
+
+// -----
+
 //      CHECK: func.func @use_of_replaced_bbarg(
 // CHECK-SAME:     %[[arg0:.*]]: f64)
 //      CHECK:   "test.valid"(%[[arg0]])

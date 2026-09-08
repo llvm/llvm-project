@@ -1,9 +1,9 @@
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=kaveri -filetype=obj | llvm-readobj -S --sd --syms - | FileCheck --check-prefix=ELF %s
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=kaveri | llvm-mc -filetype=obj -triple amdgcn--amdpal -mcpu=kaveri | llvm-readobj -S --sd --syms - | FileCheck %s --check-prefix=ELF
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1010 -mattr=+wavefrontsize32 | FileCheck --check-prefix=GFX10 %s
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1010 -mattr=+wavefrontsize64 | FileCheck --check-prefix=GFX10 %s
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1100 -mattr=+wavefrontsize32 | FileCheck --check-prefix=GFX10 %s
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1100 -mattr=+wavefrontsize64 | FileCheck --check-prefix=GFX10 %s
+; RUN: llc < %s -mtriple=amdgpu7.00--amdpal -filetype=obj | llvm-readobj -S --sd --syms - | FileCheck --check-prefix=ELF %s
+; RUN: llc < %s -mtriple=amdgpu7.00--amdpal | llvm-mc -filetype=obj -triple amdgpu7.00--amdpal -mcpu=kaveri | llvm-readobj -S --sd --syms - | FileCheck %s --check-prefix=ELF
+; RUN: llc < %s -mtriple=amdgpu10.10--amdpal -mattr=+wavefrontsize32 | FileCheck --check-prefix=GFX10 %s
+; RUN: llc < %s -mtriple=amdgpu10.10--amdpal -mattr=+wavefrontsize64 | FileCheck --check-prefix=GFX10 %s
+; RUN: llc < %s -mtriple=amdgpu11.00--amdpal -mattr=+wavefrontsize32 | FileCheck --check-prefix=GFX10 %s
+; RUN: llc < %s -mtriple=amdgpu11.00--amdpal -mattr=+wavefrontsize64 | FileCheck --check-prefix=GFX10 %s
 
 ; ELF: Section {
 ; ELF: Name: .text

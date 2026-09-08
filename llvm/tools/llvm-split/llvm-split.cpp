@@ -116,7 +116,7 @@ void writeStringToFile(StringRef Content, StringRef Path) {
   OS << Content << "\n";
 }
 
-void writeModuleToFile(const Module &M, StringRef Path, bool OutputAssembly) {
+void writeModuleToFile(Module &M, StringRef Path, bool OutputAssembly) {
   int FD = -1;
   if (std::error_code EC = sys::fs::openFileForWrite(Path, FD)) {
     errs() << formatv("error opening file: {0}, error: {1}", Path, EC.message())
@@ -125,9 +125,10 @@ void writeModuleToFile(const Module &M, StringRef Path, bool OutputAssembly) {
   }
 
   raw_fd_ostream OS(FD, /*ShouldClose*/ true);
-  if (OutputAssembly)
+  if (OutputAssembly) {
+    M.renumberMetadataForAssembly();
     M.print(OS, /*AssemblyAnnotationWriter*/ nullptr);
-  else
+  } else
     WriteBitcodeToFile(M, OS);
 }
 
@@ -189,10 +190,6 @@ private:
 
 private:
   struct KeyInfo {
-    static SmallString<0> getEmptyKey() { return SmallString<0>(""); }
-
-    static SmallString<0> getTombstoneKey() { return SmallString<0>("-"); }
-
     static bool isEqual(const SmallString<0> &LHS, const SmallString<0> &RHS) {
       return LHS == RHS;
     }

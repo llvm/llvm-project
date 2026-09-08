@@ -24,6 +24,7 @@ add_llvm_target(LoongArchCodeGen
   LoongArchInstrInfo.cpp
   LoongArchISelDAGToDAG.cpp
   LoongArchISelLowering.cpp
+  LoongArchLateBranchOpt.cpp
   LoongArchMCInstLower.cpp
   LoongArchMergeBaseOffset.cpp
   LoongArchOptWInstrs.cpp
@@ -31,6 +32,7 @@ add_llvm_target(LoongArchCodeGen
   LoongArchSelectionDAGInfo.cpp
   LoongArchSubtarget.cpp
   LoongArchTargetMachine.cpp
+  LoongArchTargetObjectFile.cpp
   LoongArchTargetTransformInfo.cpp
 
   LINK_COMPONENTS

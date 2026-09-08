@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=load-store-vectorizer -S -o - %s | FileCheck %s
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' -S -o - %s | FileCheck %s
+; RUN: opt -mtriple=amdgpu-amd-amdhsa -passes=load-store-vectorizer -S -o - %s | FileCheck %s
+; RUN: opt -mtriple=amdgpu-amd-amdhsa -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' -S -o - %s | FileCheck %s
 
 ; This is NOT OK to vectorize, as either load may alias either store.
 

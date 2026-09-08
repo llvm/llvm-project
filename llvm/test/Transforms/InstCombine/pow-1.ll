@@ -14,7 +14,7 @@
 ; RUN: opt -passes=instcombine -S < %s -mtriple=i386-pc-windows-msvc     | FileCheck %s --check-prefixes=CHECK,LIB,CHECK-NO-EXP10,VC19,VC51
 ; RUN: opt -passes=instcombine -S < %s -mtriple=x86_64-pc-windows-msvc18 | FileCheck %s --check-prefixes=CHECK,LIB,CHECK-NO-EXP10,VC64
 ; RUN: opt -passes=instcombine -S < %s -mtriple=x86_64-pc-windows-msvc   | FileCheck %s --check-prefixes=CHECK,LIB,CHECK-NO-EXP10,VC19,VC83
-; RUN: opt -passes=instcombine -S < %s -mtriple=amdgcn--                 | FileCheck %s --check-prefixes=CHECK,CHECK-NO-EXP10,NOLIB
+; RUN: opt -passes=instcombine -S < %s -mtriple=amdgpu--                 | FileCheck %s --check-prefixes=CHECK,CHECK-NO-EXP10,NOLIB
 
 ; NOTE: The readonly attribute on the pow call should be preserved
 ; in the cases below where pow is transformed into another function call.
@@ -748,7 +748,7 @@ define float @powf_libcall_half_assume_ninf_noerrno(float %x) {
 ; NOLIB-NEXT:    ret float [[RETVAL]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
-  %not.inf = fcmp one float %fabs, 0x7FF0000000000000
+  %not.inf = fcmp one float %fabs, +inf
   call void @llvm.assume(i1 %not.inf)
   %retval = call float @powf(float %x, float 0.5) #0
   ret float %retval
@@ -887,7 +887,7 @@ define double @pow_libcall_half_fromdomcondition(double %x) {
 ; NOLIB-NEXT:    ret double [[RETVAL]]
 ;
   %a = call double @llvm.fabs.f64(double %x)
-  %c = fcmp oeq double %a, 0x7FF0000000000000
+  %c = fcmp oeq double %a, +inf
   br i1 %c, label %then, label %else
 
 then:
@@ -923,7 +923,7 @@ define float @test_simplify9(float %x) {
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    ret float +inf
 ;
-  %retval = call float @llvm.pow.f32(float 0xFFF0000000000000, float 0.5)
+  %retval = call float @llvm.pow.f32(float -inf, float 0.5)
   ret float %retval
 }
 
@@ -932,7 +932,7 @@ define double @test_simplify10(double %x) {
 ; CHECK-SAME: double [[X:%.*]]) {
 ; CHECK-NEXT:    ret double +inf
 ;
-  %retval = call double @llvm.pow.f64(double 0xFFF0000000000000, double 0.5)
+  %retval = call double @llvm.pow.f64(double -inf, double 0.5)
   ret double %retval
 }
 

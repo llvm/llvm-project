@@ -230,6 +230,15 @@ public:
   static std::unique_ptr<Architecture>
   CreateArchitectureInstance(const ArchSpec &arch);
 
+  // BugReporter
+  static void RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                             BugReporterCreateInstance create_callback);
+
+  static void UnregisterPlugin(BugReporterCreateInstance create_callback);
+
+  static std::unique_ptr<BugReporter>
+  CreateBugReporterInstance(llvm::StringRef name = {});
+
   // Disassembler
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              DisassemblerCreateInstance create_callback);
@@ -658,6 +667,7 @@ public:
   // Scripted Interface
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              ScriptedInterfaceCreateInstance create_callback,
+                             lldb::ScriptedExtension extension,
                              lldb::ScriptLanguage language,
                              ScriptedInterfaceUsages usages);
 
@@ -669,10 +679,17 @@ public:
 
   static llvm::StringRef GetScriptedInterfaceDescriptionAtIndex(uint32_t idx);
 
+  static lldb::ScriptedExtension
+  GetScriptedInterfaceExtensionAtIndex(uint32_t idx);
+
   static lldb::ScriptLanguage GetScriptedInterfaceLanguageAtIndex(uint32_t idx);
 
   static ScriptedInterfaceUsages
   GetScriptedInterfaceUsagesAtIndex(uint32_t idx);
+
+  static void AutoCompleteScriptedExtension(
+      llvm::StringRef partial_name, CompletionRequest &request,
+      lldb::ScriptLanguage language = lldb::eScriptLanguageUnknown);
 
   // REPL
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -791,6 +808,9 @@ public:
 
   static llvm::SmallVector<RegisteredPluginInfo> GetArchitecturePluginInfo();
   static bool SetArchitecturePluginEnabled(llvm::StringRef name, bool enable);
+
+  static llvm::SmallVector<RegisteredPluginInfo> GetBugReporterPluginInfo();
+  static bool SetBugReporterPluginEnabled(llvm::StringRef name, bool enable);
 
   static llvm::SmallVector<RegisteredPluginInfo> GetDisassemblerPluginInfo();
   static bool SetDisassemblerPluginEnabled(llvm::StringRef name, bool enable);

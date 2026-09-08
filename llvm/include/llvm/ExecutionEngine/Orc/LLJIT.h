@@ -261,7 +261,7 @@ protected:
   /// Create an LLJIT instance with a single compile thread.
   LLJIT(LLJITBuilderState &S, Error &Err);
 
-  Error applyDataLayout(Module &M);
+  Error applyTargetConfig(Module &M);
 
   std::unique_ptr<ExecutionSession> ES;
   std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr;
@@ -295,6 +295,8 @@ public:
   void setPartitionFunction(IRPartitionLayer::PartitionFunction Partition) {
     IPLayer->setPartitionFunction(std::move(Partition));
   }
+
+  LLVM_ABI ~LLLazyJIT();
 
   /// Returns a reference to the on-demand layer.
   CompileOnDemandLayer &getCompileOnDemandLayer() { return *CODLayer; }

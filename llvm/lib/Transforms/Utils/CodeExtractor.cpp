@@ -66,7 +66,6 @@
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
-using ProfileCount = Function::ProfileCount;
 
 #define DEBUG_TYPE "code-extractor"
 
@@ -164,6 +163,12 @@ static bool isBlockValidForExtraction(const BasicBlock &BB,
       continue;
     }
 
+    // llvm.experimental.deoptimize must return the enclosing function's return
+    // type. Extraction changes the outlined function signature, which can make
+    // the deoptimize call invalid.
+    if (BB.getTerminatingDeoptimizeCall())
+      return false;
+
     if (const CallInst *CI = dyn_cast<CallInst>(I)) {
       // musttail calls have several restrictions, generally enforcing matching
       // calling conventions between the caller parent and musttail callee.
@@ -247,7 +252,7 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
 /// for specified target preserves original alignment
 static bool isAlignmentPreservedForAddrCast(const Triple &TargetTriple) {
   switch (TargetTriple.getArch()) {
-  case Triple::ArchType::amdgcn:
+  case Triple::ArchType::amdgpu:
   case Triple::ArchType::r600:
     return true;
   // TODO: Add other architectures for which we are certain that alignment
@@ -983,6 +988,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::NoFree:
       case Attribute::NoImplicitFloat:
       case Attribute::NoInline:
+      case Attribute::NoIPA:
       case Attribute::NoOutline:
       case Attribute::NonLazyBind:
       case Attribute::NoRedZone:
@@ -1052,6 +1058,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::Range:
       case Attribute::Initializes:
       case Attribute::NoExt:
+      case Attribute::NoFreeObj:
       //  These are not really attributes.
       case Attribute::None:
       case Attribute::EndAttrKinds:
@@ -1092,8 +1099,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
   if (BFI) {
     auto Count = BFI->getProfileCountFromFreq(EntryFreq);
     if (Count.has_value())
-      newFunction->setEntryCount(
-          ProfileCount(*Count, Function::PCT_Real)); // FIXME
+      newFunction->setEntryCount(*Count);
   }
 
   return newFunction;
@@ -1312,9 +1318,8 @@ static void fixupDebugInfoPostExtraction(Function &OldFunc, Function &NewFunc,
                         &NewFunc.getEntryBlock());
       return;
     }
-    DIB.insertDbgValueIntrinsic(
-        NewLoc, DR->getVariable(), Expr, DR->getDebugLoc(),
-        NewFunc.getEntryBlock().getTerminator()->getIterator());
+    DIB.insertDbgValue(NewLoc, DR->getVariable(), Expr, DR->getDebugLoc(),
+                       NewFunc.getEntryBlock().getTerminator()->getIterator());
   };
   for (auto [Input, NewVal] : zip_equal(Inputs, NewValues)) {
     SmallVector<DbgVariableRecord *, 1> DPUsers;

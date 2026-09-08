@@ -13,9 +13,10 @@
 using namespace llvm;
 
 TEST_F(AMDGPUTestBase, TestWave64DwarfRegMapping) {
-  for (auto Triple :
-       {"amdgcn-amd-", "amdgcn-amd-amdhsa", "amdgcn-amd-amdpal"}) {
-    auto TM = createAMDGPUTargetMachine(Triple, "gfx1010", "+wavefrontsize64");
+  for (StringRef TripleStr : {"amdgpu10.10-amd-", "amdgpu10.10-amd-amdhsa",
+                              "amdgpu10.10-amd-amdpal"}) {
+    auto TM =
+        createAMDGPUTargetMachine(Triple(TripleStr), "", "+wavefrontsize64");
     if (TM) {
       GCNSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                       std::string(TM->getTargetFeatureString()), *TM);
@@ -53,9 +54,10 @@ TEST_F(AMDGPUTestBase, TestWave64DwarfRegMapping) {
 }
 
 TEST_F(AMDGPUTestBase, TestWave32DwarfRegMapping) {
-  for (auto Triple :
-       {"amdgcn-amd-", "amdgcn-amd-amdhsa", "amdgcn-amd-amdpal"}) {
-    auto TM = createAMDGPUTargetMachine(Triple, "gfx1010", "+wavefrontsize32");
+  for (StringRef TripleStr : {"amdgpu10.10-amd-", "amdgpu10.10-amd-amdhsa",
+                              "amdgpu10.10-amd-amdpal"}) {
+    auto TM =
+        createAMDGPUTargetMachine(Triple(TripleStr), "", "+wavefrontsize32");
     if (TM) {
       GCNSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                       std::string(TM->getTargetFeatureString()), *TM);

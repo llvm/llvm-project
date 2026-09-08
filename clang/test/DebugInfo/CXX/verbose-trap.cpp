@@ -1,19 +1,21 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios -std=c++20 -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s
 
 // CHECK-LABEL: define void @_Z2f0v()
-// CHECK: call void @llvm.trap(), !dbg ![[LOC17:.*]]
+// CHECK: call void @llvm.trap(){{.*}}, !dbg ![[LOC17:.*]]
 
 // CHECK: declare void @llvm.trap() #[[ATTR1:.*]]
 
 // CHECK-LABEL: define void @_Z2f1v()
-// CHECK: call void @llvm.trap(), !dbg ![[LOC23:.*]]
-// CHECK: call void @llvm.trap(), !dbg ![[LOC25:.*]]
+// CHECK: call void @llvm.trap(){{.*}}, !dbg ![[LOC23:.*]]
+
+// CHECK-LABEL: define void @_Z4f1_bv()
+// CHECK: call void @llvm.trap(){{.*}}, !dbg ![[LOC25:.*]]
 
 // CHECK-LABEL: define void @_Z2f3v()
 // CHECK: call void @_Z2f2IXadsoKcL_ZL8constCatEEEXadsoS0_L_ZL8constMsgEEEEvv()
 
 // CHECK-LABEL: define internal void @_Z2f2IXadsoKcL_ZL8constCatEEEXadsoS0_L_ZL8constMsgEEEEvv
-// CHECK: call void @llvm.trap(), !dbg ![[LOC36:.*]]
+// CHECK: call void @llvm.trap(){{.*}}, !dbg ![[LOC36:.*]]
 
 // CHECK: attributes #[[ATTR1]] = { cold {{.*}}}
 
@@ -32,12 +34,15 @@ void f0() {
 
 // CHECK: ![[SUBPROG22:.*]] = distinct !DISubprogram(name: "f1", linkageName: "_Z2f1v",
 // CHECK: ![[LOC23]] = !DILocation(line: 0, scope: ![[SUBPROG18]], inlinedAt: ![[LOC24:.*]])
-// CHECK: ![[LOC24]] = !DILocation(line: [[@LINE+5]], column: 3, scope: ![[SUBPROG22]])
+// CHECK: ![[LOC24]] = !DILocation(line: [[@LINE+6]], column: 3, scope: ![[SUBPROG22]])
+// CHECK: ![[SUBPROG_F1B:.*]] = distinct !DISubprogram(name: "f1_b", linkageName: "_Z4f1_bv",
 // CHECK: ![[LOC25]] = !DILocation(line: 0, scope: ![[SUBPROG26:.*]], inlinedAt: ![[LOC27:.*]])
 // CHECK: ![[SUBPROG26]] = distinct !DISubprogram(name: "__clang_trap_msg$category2$hello", scope: ![[FILESCOPE]], file: ![[FILESCOPE]], type: !{{.*}}, flags: DIFlagArtificial, spFlags: DISPFlagDefinition, unit: !{{.*}})
-// CHECK: ![[LOC27]] = !DILocation(line: [[@LINE+3]], column: 3, scope: ![[SUBPROG22]])
+// CHECK: ![[LOC27]] = !DILocation(line: [[@LINE+5]], column: 3, scope: ![[SUBPROG_F1B]])
 void f1() {
   __builtin_verbose_trap("category1", "Argument_must_not_be_null");
+}
+void f1_b() {
   __builtin_verbose_trap("category2", "hello");
 }
 

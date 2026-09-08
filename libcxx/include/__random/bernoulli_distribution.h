@@ -36,7 +36,7 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI explicit param_type(double __p = 0.5) : __p_(__p) {}
 
-    _LIBCPP_HIDE_FROM_ABI double p() const { return __p_; }
+    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI double p() const { return __p_; }
 
     friend _LIBCPP_HIDE_FROM_ABI bool operator==(const param_type& __x, const param_type& __y) {
       return __x.__p_ == __y.__p_;
@@ -60,20 +60,20 @@ public:
 
   // generating functions
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
     return (*this)(__g, __p_);
   }
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
 
   // property functions
-  _LIBCPP_HIDE_FROM_ABI double p() const { return __p_.p(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI double p() const { return __p_.p(); }
 
-  _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
   _LIBCPP_HIDE_FROM_ABI void param(const param_type& __p) { __p_ = __p; }
 
-  _LIBCPP_HIDE_FROM_ABI result_type min() const { return false; }
-  _LIBCPP_HIDE_FROM_ABI result_type max() const { return true; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type min() const { return false; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type max() const { return true; }
 
   friend _LIBCPP_HIDE_FROM_ABI bool operator==(const bernoulli_distribution& __x, const bernoulli_distribution& __y) {
     return __x.__p_ == __y.__p_;

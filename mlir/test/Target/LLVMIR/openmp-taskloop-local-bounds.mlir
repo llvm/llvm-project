@@ -22,7 +22,7 @@ llvm.func @_QPtest_taskloop_local_constants() {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -57,7 +57,7 @@ llvm.func @_QPtest_taskloop_local_derived_bound() {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 

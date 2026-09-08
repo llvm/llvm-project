@@ -342,6 +342,65 @@ spirv.module Logical GLSL450 {
    spirv.ExecutionMode @do_nothing "LocalSizeHint", 3, 4, 5
 }
 
+spirv.module Logical GLSL450 {
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // CHECK: spirv.ExecutionMode {{@.*}} "MaxWorkgroupSizeINTEL", 4, 4, 4
+   spirv.ExecutionMode @do_nothing "MaxWorkgroupSizeINTEL", 4, 4, 4
+}
+
+// Exercise every ExecutionMode that takes exactly one literal operand.
+spirv.module Logical GLSL450 {
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // CHECK: spirv.ExecutionMode {{@.*}} "Invocations", 4
+   spirv.ExecutionMode @do_nothing "Invocations", 4
+   // CHECK: spirv.ExecutionMode {{@.*}} "OutputVertices", 4
+   spirv.ExecutionMode @do_nothing "OutputVertices", 4
+   // CHECK: spirv.ExecutionMode {{@.*}} "VecTypeHint", 4
+   spirv.ExecutionMode @do_nothing "VecTypeHint", 4
+   // CHECK: spirv.ExecutionMode {{@.*}} "SubgroupSize", 4
+   spirv.ExecutionMode @do_nothing "SubgroupSize", 4
+   // CHECK: spirv.ExecutionMode {{@.*}} "SubgroupsPerWorkgroup", 4
+   spirv.ExecutionMode @do_nothing "SubgroupsPerWorkgroup", 4
+   // CHECK: spirv.ExecutionMode {{@.*}} "DenormPreserve", 32
+   spirv.ExecutionMode @do_nothing "DenormPreserve", 32
+   // CHECK: spirv.ExecutionMode {{@.*}} "DenormFlushToZero", 32
+   spirv.ExecutionMode @do_nothing "DenormFlushToZero", 32
+   // CHECK: spirv.ExecutionMode {{@.*}} "SignedZeroInfNanPreserve", 32
+   spirv.ExecutionMode @do_nothing "SignedZeroInfNanPreserve", 32
+   // CHECK: spirv.ExecutionMode {{@.*}} "RoundingModeRTE", 32
+   spirv.ExecutionMode @do_nothing "RoundingModeRTE", 32
+   // CHECK: spirv.ExecutionMode {{@.*}} "RoundingModeRTZ", 32
+   spirv.ExecutionMode @do_nothing "RoundingModeRTZ", 32
+   // CHECK: spirv.ExecutionMode {{@.*}} "OutputPrimitivesEXT", 4
+   spirv.ExecutionMode @do_nothing "OutputPrimitivesEXT", 4
+   // CHECK: spirv.ExecutionMode {{@.*}} "SharedLocalMemorySizeINTEL", 4
+   spirv.ExecutionMode @do_nothing "SharedLocalMemorySizeINTEL", 4
+   // CHECK: spirv.ExecutionMode {{@.*}} "RoundingModeRTPINTEL", 32
+   spirv.ExecutionMode @do_nothing "RoundingModeRTPINTEL", 32
+   // CHECK: spirv.ExecutionMode {{@.*}} "RoundingModeRTNINTEL", 32
+   spirv.ExecutionMode @do_nothing "RoundingModeRTNINTEL", 32
+   // CHECK: spirv.ExecutionMode {{@.*}} "FloatingPointModeALTINTEL", 32
+   spirv.ExecutionMode @do_nothing "FloatingPointModeALTINTEL", 32
+   // CHECK: spirv.ExecutionMode {{@.*}} "FloatingPointModeIEEEINTEL", 32
+   spirv.ExecutionMode @do_nothing "FloatingPointModeIEEEINTEL", 32
+   // CHECK: spirv.ExecutionMode {{@.*}} "MaxWorkDimINTEL", 3
+   spirv.ExecutionMode @do_nothing "MaxWorkDimINTEL", 3
+   // CHECK: spirv.ExecutionMode {{@.*}} "NumSIMDWorkitemsINTEL", 4
+   spirv.ExecutionMode @do_nothing "NumSIMDWorkitemsINTEL", 4
+   // CHECK: spirv.ExecutionMode {{@.*}} "SchedulerTargetFmaxMhzINTEL", 400
+   spirv.ExecutionMode @do_nothing "SchedulerTargetFmaxMhzINTEL", 400
+   // CHECK: spirv.ExecutionMode {{@.*}} "StreamingInterfaceINTEL", 0
+   spirv.ExecutionMode @do_nothing "StreamingInterfaceINTEL", 0
+   // CHECK: spirv.ExecutionMode {{@.*}} "NamedBarrierCountINTEL", 4
+   spirv.ExecutionMode @do_nothing "NamedBarrierCountINTEL", 4
+}
+
 // -----
 
 spirv.module Logical GLSL450 {
@@ -351,6 +410,50 @@ spirv.module Logical GLSL450 {
    spirv.EntryPoint "GLCompute" @do_nothing
    // expected-error @+1 {{custom op 'spirv.ExecutionMode' invalid execution_mode attribute specification: "GLCompute"}}
    spirv.ExecutionMode @do_nothing "GLCompute", 3, 4, 5
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionMode' op expected ExecutionMode that takes extra operands that are not <id> operands, got: LocalSizeId}}
+   spirv.ExecutionMode @do_nothing "LocalSizeId", 3, 4, 5
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionMode' op expected 0 value operand(s), got 1}}
+   spirv.ExecutionMode @do_nothing "ContractionOff", 3
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionMode' op expected 1 value operand(s), got 2}}
+   spirv.ExecutionMode @do_nothing "SubgroupSize", 3, 4
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionMode' op expected 3 value operand(s), got 2}}
+   spirv.ExecutionMode @do_nothing "LocalSize", 3, 4
 }
 
 // -----
@@ -419,6 +522,44 @@ spirv.module Logical GLSL450 {
    spirv.EntryPoint "GLCompute" @do_nothing
    // expected-error @+1 {{custom op 'spirv.ExecutionModeId' invalid kind of attribute specified}}
    spirv.ExecutionModeId @do_nothing "LocalSizeId" @x, @y, 2
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.SpecConstant @x = 3 : i32
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionModeId' op expected ExecutionMode that takes extra operands that are <id> operands, got: LocalSize}}
+   spirv.ExecutionModeId @do_nothing "LocalSize" @x
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.SpecConstant @x = 3 : i32
+   spirv.SpecConstant @y = 4 : i32
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionModeId' op expected 1 value operand(s), got 2}}
+   spirv.ExecutionModeId @do_nothing "SubgroupsPerWorkgroupId" @x, @y
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.SpecConstant @x = 3 : i32
+   spirv.SpecConstant @y = 4 : i32
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionModeId' op expected 3 value operand(s), got 2}}
+   spirv.ExecutionModeId @do_nothing "LocalSizeId" @x, @y
 }
 
 // -----
@@ -636,6 +777,56 @@ spirv.module Logical GLSL450 {
     spirv.GlobalVariable @var0 : !spirv.ptr<f32, Input>
     spirv.Return
   }
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @var0 {aliased_pointer} :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Private>
+  spirv.GlobalVariable @var1 {restrict_pointer} :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{must be decorated either 'AliasedPointer' or 'RestrictPointer'}}
+  spirv.GlobalVariable @var0 :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{must have exactly one aliasing decoration}}
+  spirv.GlobalVariable @var0 {aliased_pointer, restrict_pointer} :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @var0 {aliased_pointer} :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Private>
+  spirv.GlobalVariable @var1 {restrict_pointer} :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{must be decorated either 'AliasedPointer' or 'RestrictPointer'}}
+  spirv.GlobalVariable @var0 :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{must have exactly one aliasing decoration}}
+  spirv.GlobalVariable @var0 {aliased_pointer, restrict_pointer} :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Private>
 }
 
 // -----
@@ -1166,6 +1357,17 @@ spirv.module Logical GLSL450 {
 
     // expected-error @+1 {{invalid operand, must be defined by a constant operation}}
     %2 = spirv.SpecConstantOperation wraps "spirv.IAdd"(%1, %1) : (i32, i32) -> i32
+
+    spirv.Return
+  }
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.func @foo(%arg0: i32) -> () "None" {
+    // expected-error @+1 {{invalid operand, must be defined by a constant operation}}
+    %0 = spirv.SpecConstantOperation wraps "spirv.IAdd"(%arg0, %arg0) : (i32, i32) -> i32
 
     spirv.Return
   }

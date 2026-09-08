@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 -verify %s \
-// RUN:   -analyzer-checker=core,alpha.unix.cstring \
+// RUN:   -analyzer-checker=unix.cstring.UninitializedRead \
 // RUN:   -analyzer-output=text
 
 #include "Inputs/system-header-simulator.h"
@@ -14,12 +14,12 @@ void maybeWrite(const char *src, unsigned size, int *dst) {
 } // expected-note{{Returning without writing to '*dst'}}
 
 void returning_without_writing_to_memcpy(const char *src, unsigned size) {
-  int block[8 * 8]; // expected-note{{'block' initialized here}}
+  int block[8 * 8]; // expected-note{{'block' declared without an initial value}}
                                 // expected-note@+1{{Calling 'maybeWrite'}}
   maybeWrite(src, size, block); // expected-note{{Returning from 'maybeWrite'}}
 
   int buf[8 * 8];
-  memcpy(buf, &block[0], 8); // expected-warning{{The first element of the 2nd argument is undefined [alpha.unix.cstring.UninitializedRead]}}
+  memcpy(buf, &block[0], 8); // expected-warning{{The first element of the 2nd argument is undefined [unix.cstring.UninitializedRead]}}
                              // expected-note@-1{{The first element of the 2nd argument is undefined}}
                              // expected-note@-2{{Other elements might also be undefined}}
 }

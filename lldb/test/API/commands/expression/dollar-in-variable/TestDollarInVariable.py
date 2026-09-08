@@ -6,10 +6,7 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
     def test(self):
-        self.build()
-        lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.c")
-        )
+        self.build_and_run()
 
         self.expect_expr("$__lldb_expr_result", result_type="int", result_value="11")
         self.expect_expr("$foo", result_type="int", result_value="12")

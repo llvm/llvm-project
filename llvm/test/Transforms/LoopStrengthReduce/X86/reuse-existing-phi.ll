@@ -12,8 +12,8 @@ define void @reuse_existing_phi() {
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 8
 ; CHECK-NEXT:    [[IV_INC:%.*]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[USE:%.*]] = add i64 [[LSR_IV]], [[IV_INC]]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], 8
-; CHECK-NEXT:    [[CHECK:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 108
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV]], 8
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 112
 ; CHECK-NEXT:    br i1 [[CHECK]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -26,7 +26,7 @@ loop:
   %iv.next = add i64 %iv, 8
   %iv.inc = add i64 %iv, 1
   %use = add i64 %iv.next, %iv.inc
-  %check = icmp eq i64 %iv.next, 100
+  %check = icmp eq i64 %iv.next, 104
   br i1 %check, label %exit, label %loop
 
 exit:

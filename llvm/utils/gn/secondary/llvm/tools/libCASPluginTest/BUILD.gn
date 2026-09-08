@@ -1,0 +1,21 @@
+import("//llvm/utils/gn/build/symbol_exports.gni")
+
+symbol_exports("exports") {
+  exports_file = "libCASPluginTest.exports"
+}
+
+shared_library("CASPluginTest") {
+  # Put plugin next to the unit test executable.
+  output_dir = get_label_info("//llvm/unittests/CAS", "target_out_dir")
+  output_name = "CASPluginTest"
+  deps = [
+    ":exports",
+    "//llvm/lib/CAS",
+    "//llvm/lib/Support",
+  ]
+  sources = [ "libCASPluginTest.cpp" ]
+
+  if (current_os != "mac" && current_os != "win") {
+    cflags = [ "-fPIC" ]
+  }
+}

@@ -25,6 +25,7 @@ endif()
 
 add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   AddressableBits.cpp
+  AddressSpace.cpp
   ArchSpec.cpp
   Args.cpp
   Baton.cpp
@@ -37,13 +38,13 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   DataBufferLLVM.cpp
   DataEncoder.cpp
   DataExtractor.cpp
-  Diagnostics.cpp
   Environment.cpp
   ErrorMessages.cpp
   Event.cpp
   FileSpec.cpp
   FileSpecList.cpp
   GDBRemote.cpp
+  AcceleratorGDBRemotePackets.cpp
   IOObject.cpp
   LLDBAssert.cpp
   LLDBLog.cpp
@@ -53,6 +54,8 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   Policy.cpp
   ProcessInfo.cpp
   RealpathPrefixes.cpp
+  RegisterType.cpp
+  RegisterTypeFlags.cpp
   RegisterValue.cpp
   RegularExpression.cpp
   Instrumentation.cpp

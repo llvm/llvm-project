@@ -95,6 +95,42 @@ func.func @broadcast_stretch(%arg0: vector<1xf32>) -> vector<4xf32> {
   return %0 : vector<4xf32>
 }
 
+// CHECK-LABEL: func @broadcast_vec2d_from_vec1d_single_element
+// CHECK-SAME: %[[A:.*0]]: vector<1xf32>
+// CHECK:      %[[T0:.*]] = vector.extract %[[A]][0] : f32 from vector<1xf32>
+// CHECK:      %[[T1:.*]] = vector.broadcast %[[T0]] : f32 to vector<16x1xf32>
+// CHECK:      return %[[T1]] : vector<16x1xf32>
+
+func.func @broadcast_vec2d_from_vec1d_single_element(%arg0: vector<1xf32>) -> vector<16x1xf32> {
+  %0 = vector.broadcast %arg0 : vector<1xf32> to vector<16x1xf32>
+  return %0 : vector<16x1xf32>
+}
+
+// CHECK-LABEL: func @broadcast_vec2d_from_vec2d_single_element
+// CHECK-SAME: %[[A:.*0]]: vector<1x1xf32>
+// CHECK:      %[[T0:.*]] = vector.extract %[[A]][0, 0] : f32 from vector<1x1xf32>
+// CHECK:      %[[T1:.*]] = vector.broadcast %[[T0]] : f32 to vector<4x3xf32>
+// CHECK:      return %[[T1]] : vector<4x3xf32>
+
+func.func @broadcast_vec2d_from_vec2d_single_element(%arg0: vector<1x1xf32>) -> vector<4x3xf32> {
+  %0 = vector.broadcast %arg0 : vector<1x1xf32> to vector<4x3xf32>
+  return %0 : vector<4x3xf32>
+}
+
+// CHECK-LABEL: func @broadcast_vec2d_from_vec1d_unit_scalable_dim
+// CHECK-SAME: %[[A:.*0]]: vector<[1]xf32>
+// CHECK:      %[[U0:.*]] = ub.poison : vector<4x[1]xf32>
+// CHECK:      %[[T0:.*]] = vector.insert %[[A]], %[[U0]] [0] : vector<[1]xf32> into vector<4x[1]xf32>
+// CHECK:      %[[T1:.*]] = vector.insert %[[A]], %[[T0]] [1] : vector<[1]xf32> into vector<4x[1]xf32>
+// CHECK:      %[[T2:.*]] = vector.insert %[[A]], %[[T1]] [2] : vector<[1]xf32> into vector<4x[1]xf32>
+// CHECK:      %[[T3:.*]] = vector.insert %[[A]], %[[T2]] [3] : vector<[1]xf32> into vector<4x[1]xf32>
+// CHECK:      return %[[T3]] : vector<4x[1]xf32>
+
+func.func @broadcast_vec2d_from_vec1d_unit_scalable_dim(%arg0: vector<[1]xf32>) -> vector<4x[1]xf32> {
+  %0 = vector.broadcast %arg0 : vector<[1]xf32> to vector<4x[1]xf32>
+  return %0 : vector<4x[1]xf32>
+}
+
 // CHECK-LABEL: func @broadcast_stretch_at_start
 // CHECK-SAME: %[[A:.*0]]: vector<1x4xf32>
 // CHECK:      %[[U0:.*]] = ub.poison : vector<3x4xf32>
@@ -171,6 +207,33 @@ func.func @broadcast_stretch_in_middle(%arg0: vector<4x1x2xf32>) -> vector<4x3x2
 func.func @broadcast_scalable_duplication(%arg0: vector<[32]xf32>) -> vector<1x[32]xf32> {
   %res = vector.broadcast %arg0 : vector<[32]xf32> to vector<1x[32]xf32>
   return %res : vector<1x[32]xf32>
+}
+
+// TODO: Add support for scalable vectors
+
+// CHECK-LABEL: @broadcast_vec2d_from_vec1d_scalable_leading
+// CHECK-SAME:  %[[A:.*]]: vector<2xf32>)
+// CHECK: vector.broadcast %[[A]] : vector<2xf32> to vector<[4]x2xf32>
+
+func.func @broadcast_vec2d_from_vec1d_scalable_leading(%arg0: vector<2xf32>) -> vector<[4]x2xf32> {
+  %0 = vector.broadcast %arg0 : vector<2xf32> to vector<[4]x2xf32>
+  return %0 : vector<[4]x2xf32>
+}
+
+// TODO: Add support for scalable vectors
+
+// CHECK-LABEL: @broadcast_vec2d_from_vec1d_scalable_inner
+// CHECK-SAME:  %[[A:.*]]: vector<2xf32>)
+// CHECK:       %[[T0:.*]] = ub.poison : vector<3x[4]x2xf32>
+// CHECK:       %[[T1:.*]] = vector.broadcast %[[A]] : vector<2xf32> to vector<[4]x2xf32>
+// CHECK:       %[[T2:.*]] = vector.insert %[[T1]], %[[T0]] [0] : vector<[4]x2xf32> into vector<3x[4]x2xf32>
+// CHECK:       %[[T3:.*]] = vector.insert %[[T1]], %[[T2]] [1] : vector<[4]x2xf32> into vector<3x[4]x2xf32>
+// CHECK:       %[[T4:.*]] = vector.insert %[[T1]], %[[T3]] [2] : vector<[4]x2xf32> into vector<3x[4]x2xf32>
+// CHECK:       return %[[T4]] : vector<3x[4]x2xf32>
+
+func.func @broadcast_vec2d_from_vec1d_scalable_inner(%arg0: vector<2xf32>) -> vector<3x[4]x2xf32> {
+  %0 = vector.broadcast %arg0 : vector<2xf32> to vector<3x[4]x2xf32>
+  return %0 : vector<3x[4]x2xf32>
 }
 
 module attributes {transform.with_named_sequence} {

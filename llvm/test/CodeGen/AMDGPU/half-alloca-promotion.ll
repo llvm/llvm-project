@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -passes="amdgpu-promote-alloca-to-vector" -o - %s
+; RUN: opt -S -mtriple=amdgpu-amd-amdhsa -passes="amdgpu-promote-alloca-to-vector" -o - %s
 ; We don't really need to check anything here because with expensive check, this
 ; test case crashes. The correctness of the pass is beyond the scope.
 

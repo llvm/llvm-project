@@ -12,5 +12,5 @@ void test() {
   Child x;
 }
 
-// CHECK: @_ZTC5Child0_7Parent1 = linkonce_odr hidden unnamed_addr constant
-// CHECK: @_ZTC5Child8_7Parent2 = linkonce_odr hidden unnamed_addr constant
+// CHECK: @_ZTC5Child0_7Parent1 = linkonce_odr hidden constant
+// CHECK: @_ZTC5Child8_7Parent2 = linkonce_odr hidden constant

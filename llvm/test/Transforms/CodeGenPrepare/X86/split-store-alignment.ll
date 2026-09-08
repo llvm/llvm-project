@@ -66,3 +66,63 @@ define void @split_store_align8(float %x, ptr %p) {
   store i64 %o, ptr %p, align 8
   ret void
 }
+
+; Atomic and volatile stores are observable and must not be split.
+
+define void @atomic_store_no_split(ptr %p, i32 %lo, float %hi) {
+; CHECK-LABEL: @atomic_store_no_split(
+; CHECK-NEXT:    [[HI_I:%.*]] = bitcast float [[HI:%.*]] to i32
+; CHECK-NEXT:    [[LO64:%.*]] = zext i32 [[LO:%.*]] to i64
+; CHECK-NEXT:    [[HI64:%.*]] = zext i32 [[HI_I]] to i64
+; CHECK-NEXT:    [[HISHL:%.*]] = shl i64 [[HI64]], 32
+; CHECK-NEXT:    [[MERGED:%.*]] = or i64 [[LO64]], [[HISHL]]
+; CHECK-NEXT:    store atomic i64 [[MERGED]], ptr [[P:%.*]] seq_cst, align 8
+; CHECK-NEXT:    ret void
+;
+  %hi_i = bitcast float %hi to i32
+  %lo64 = zext i32 %lo to i64
+  %hi64 = zext i32 %hi_i to i64
+  %hishl = shl i64 %hi64, 32
+  %merged = or i64 %lo64, %hishl
+  store atomic i64 %merged, ptr %p seq_cst, align 8
+  ret void
+}
+
+define void @atomic_store_unordered_no_split(ptr %p, i32 %lo, float %hi) {
+; CHECK-LABEL: @atomic_store_unordered_no_split(
+; CHECK-NEXT:    [[HI_I:%.*]] = bitcast float [[HI:%.*]] to i32
+; CHECK-NEXT:    [[LO64:%.*]] = zext i32 [[LO:%.*]] to i64
+; CHECK-NEXT:    [[HI64:%.*]] = zext i32 [[HI_I]] to i64
+; CHECK-NEXT:    [[HISHL:%.*]] = shl i64 [[HI64]], 32
+; CHECK-NEXT:    [[MERGED:%.*]] = or i64 [[LO64]], [[HISHL]]
+; CHECK-NEXT:    store atomic i64 [[MERGED]], ptr [[P:%.*]] unordered, align 8
+; CHECK-NEXT:    ret void
+;
+  %hi_i = bitcast float %hi to i32
+  %lo64 = zext i32 %lo to i64
+  %hi64 = zext i32 %hi_i to i64
+  %hishl = shl i64 %hi64, 32
+  %merged = or i64 %lo64, %hishl
+  store atomic i64 %merged, ptr %p unordered, align 8
+  ret void
+}
+
+define void @volatile_store_no_split(ptr %p, i32 %lo, float %hi) {
+; CHECK-LABEL: @volatile_store_no_split(
+; CHECK-NEXT:    [[HI_I:%.*]] = bitcast float [[HI:%.*]] to i32
+; CHECK-NEXT:    [[LO64:%.*]] = zext i32 [[LO:%.*]] to i64
+; CHECK-NEXT:    [[HI64:%.*]] = zext i32 [[HI_I]] to i64
+; CHECK-NEXT:    [[HISHL:%.*]] = shl i64 [[HI64]], 32
+; CHECK-NEXT:    [[MERGED:%.*]] = or i64 [[LO64]], [[HISHL]]
+; CHECK-NEXT:    store volatile i64 [[MERGED]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    ret void
+;
+  %hi_i = bitcast float %hi to i32
+  %lo64 = zext i32 %lo to i64
+  %hi64 = zext i32 %hi_i to i64
+  %hishl = shl i64 %hi64, 32
+  %merged = or i64 %lo64, %hishl
+  store volatile i64 %merged, ptr %p, align 8
+  ret void
+}
+

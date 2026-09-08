@@ -40,7 +40,7 @@ private:
   const uint8_t *DeprecatedFeatures;
   // A complex method to determine if a certain instruction is deprecated or
   // not, and return the reason for deprecation.
-  const ComplexDeprecationPredicate *ComplexDeprecationInfos;
+  ComplexDeprecationPredicate ComplexDeprecationInfo;
   unsigned NumOpcodes;              // Number of entries in the desc array
 
 protected:
@@ -52,15 +52,14 @@ public:
   /// Initialize MCInstrInfo, called by TableGen auto-generated routines.
   /// *DO NOT USE*.
   void InitMCInstrInfo(const MCInstrDesc *D, const unsigned *NI, const char *ND,
-                       const uint8_t *DF,
-                       const ComplexDeprecationPredicate *CDI, unsigned NO,
-                       const int16_t *RCHWTables = nullptr,
+                       const uint8_t *DF, ComplexDeprecationPredicate CDI,
+                       unsigned NO, const int16_t *RCHWTables = nullptr,
                        int16_t NumRegClassByHwMode = 0) {
     LastDesc = D + NO - 1;
     InstrNameIndices = NI;
     InstrNameData = ND;
     DeprecatedFeatures = DF;
-    ComplexDeprecationInfos = CDI;
+    ComplexDeprecationInfo = CDI;
     NumOpcodes = NO;
     RegClassByHwModeTables = RCHWTables;
     NumRegClassByHwModes = NumRegClassByHwMode;

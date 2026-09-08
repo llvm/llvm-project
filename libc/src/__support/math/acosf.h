@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ACOSF_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_ACOSF_H
 
-#include "inv_trigf_utils.h"
+#include "asin_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/except_value_utils.h"
@@ -47,8 +47,11 @@ LIBC_INLINE_VAR constexpr fputil::ExceptValues<float, N_EXCEPTS> ACOSF_EXCEPTS =
 } // namespace acosf_internal
 
 LIBC_INLINE float acosf(float x) {
+  constexpr double M_MATH_PI = 0x1.921fb54442d18p+1;
+  constexpr double M_MATH_PI_2 = 0x1.921fb54442d18p+0;
+
   using namespace acosf_internal;
-  using namespace inv_trigf_utils_internal;
+  using namespace asin_internal;
   using FPBits = typename fputil::FPBits<float>;
 
   FPBits xbits(x);

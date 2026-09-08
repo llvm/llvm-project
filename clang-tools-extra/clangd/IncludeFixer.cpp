@@ -397,6 +397,13 @@ std::optional<std::string> getSpelledSpecifier(const CXXScopeSpec &SS,
 std::optional<CheapUnresolvedName> extractUnresolvedNameCheaply(
     const SourceManager &SM, const DeclarationNameInfo &Unresolved,
     CXXScopeSpec *SS, const LangOptions &LangOpts, bool UnresolvedIsSpecifier) {
+  // Sema reports an unresolved conversion target type separately. Don't
+  // overwrite that record with the enclosing conversion function name, whose
+  // type cannot be represented by Name + Scopes.
+  if (Unresolved.getName().getNameKind() ==
+      DeclarationName::CXXConversionFunctionName)
+    return std::nullopt;
+
   CheapUnresolvedName Result;
   Result.Name = Unresolved.getAsString();
   if (SS && SS->isNotEmpty()) { // "::" or "ns::"
@@ -613,13 +620,6 @@ IncludeFixer::lookupCached(const SymbolID &ID) const {
   Index.lookup(Req, [&](const Symbol &Sym) { Matches.insert(Sym); });
   auto Syms = std::move(Matches).build();
 
-  std::vector<Fix> Fixes;
-  if (!Syms.empty()) {
-    auto &Matched = *Syms.begin();
-    if (!Matched.IncludeHeaders.empty() && Matched.Definition &&
-        Matched.CanonicalDeclaration.FileURI == Matched.Definition.FileURI)
-      Fixes = fixesForSymbols(Syms);
-  }
   auto E = LookupCache.try_emplace(ID, std::move(Syms));
   return &E.first->second;
 }

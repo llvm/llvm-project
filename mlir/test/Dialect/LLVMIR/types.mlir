@@ -6,12 +6,12 @@ func.func @primitive() {
   "some.op"() : () -> !llvm.void
   // CHECK: !llvm.ppc_fp128
   "some.op"() : () -> !llvm.ppc_fp128
-  // CHECK: !llvm.token
-  "some.op"() : () -> !llvm.token
   // CHECK: !llvm.label
   "some.op"() : () -> !llvm.label
   // CHECK: !llvm.metadata
   "some.op"() : () -> !llvm.metadata
+  // CHECK: token
+  "some.op"() : () -> token
   return
 }
 
@@ -195,5 +195,16 @@ llvm.func @ext_target() {
     %3 = "some.op"() : () -> !llvm.target<"target4", 1, 0, 42>
     // CHECK: !llvm.target<"target5", i32, f64, 0, 5>
     %4 = "some.op"() : () -> !llvm.target<"target5", i32, f64, 0, 5>
+    llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: byte
+llvm.func @byte() {
+    // CHECK: !llvm.byte<8>
+    %0 = "some.op"() : () -> !llvm.byte<8>
+    // CHECK: !llvm.byte<1>
+    %1 = "some.op"() : () -> !llvm.byte<1>
     llvm.return
 }

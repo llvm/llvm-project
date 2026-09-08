@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_stat_macros.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/access.h"
 #include "src/unistd/close.h"
@@ -14,7 +15,6 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <sys/stat.h>
 #include <unistd.h>
 
 using LlvmLibcAccessTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;

@@ -26,6 +26,8 @@ enum class IntegralKind : uint8_t {
   Number = 0,
   /// A pointer to a ValueDecl.
   Address,
+  /// A pointer to an Expr.
+  ExprAddress,
   /// A pointer to an interp::Block.
   BlockAddress,
   /// A pointer to a AddrLabelExpr.

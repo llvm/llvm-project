@@ -1,7 +1,7 @@
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t
 ; RUN: mkdir -p %t/DstRoot/
-; RUN: cp -r %S/Inputs/LibFoo/* %t/DstRoot/
+; RUN: cp -R %S/Inputs/LibFoo/* %t/DstRoot/
 
 ; RUN: clang-installapi \
 ; RUN: -target arm64-apple-macos12 -install_name @rpath/libfoo.dylib \

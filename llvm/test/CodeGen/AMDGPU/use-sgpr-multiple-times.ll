@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=SI -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
 
 declare float @llvm.fma.f32(float, float, float) #1
 declare double @llvm.fma.f64(double, double, double) #1
@@ -40,19 +40,11 @@ define amdgpu_kernel void @test_sgpr_use_twice_ternary_op_a_a_b(ptr addrspace(1)
 }
 
 ; GCN-LABEL: {{^}}test_use_s_v_s:
-; SI: s_load_dwordx4 s[[[#LOAD:]]:{{[0-9]+}}], s{{\[[0-9]+:[0-9]+\]}}, {{0x9|0x24}}
-; SI: buffer_load_dword [[VA0:v[0-9]+]]
-; SI-NEXT: s_waitcnt vmcnt(0)
-; SI-NEXT: buffer_load_dword [[VA1:v[0-9]+]]
-; SI-NEXT: s_waitcnt vmcnt(0)
-
-; GCN-NOT: v_mov_b32
-
-; VI: buffer_load_dword [[VA0:v[0-9]+]]
-; VI-NEXT: s_waitcnt vmcnt(0)
-; VI-NEXT: buffer_load_dword [[VA1:v[0-9]+]]
-; VI-NEXT: s_waitcnt vmcnt(0)
-; VI: s_load_dwordx4 s[[[#LOAD:]]:{{[0-9]+}}], s{{\[[0-9]+:[0-9]+\]}}, {{0x9|0x24}}
+; GCN: buffer_load_dword [[VA0:v[0-9]+]]
+; GCN-NEXT: s_waitcnt vmcnt(0)
+; GCN-NEXT: buffer_load_dword [[VA1:v[0-9]+]]
+; GCN-NEXT: s_waitcnt vmcnt(0)
+; GCN: s_load_dwordx4 s[[[#LOAD:]]:{{[0-9]+}}], s{{\[[0-9]+:[0-9]+\]}}, {{0x9|0x24}}
 
 ; GCN-NOT: v_mov_b32
 ; GCN: v_mov_b32_e32 [[VB:v[0-9]+]], s[[#LOAD + 3]]

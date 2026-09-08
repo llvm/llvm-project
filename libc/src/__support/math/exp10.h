@@ -31,7 +31,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
-using Float128 = typename fputil::DyadicFloat<128>;
+using DFloat128 = typename fputil::DyadicFloat<128>;
 
 using LIBC_NAMESPACE::operator""_u128;
 
@@ -105,8 +105,8 @@ LIBC_INLINE DoubleDouble exp10_poly_approx_dd(const DoubleDouble &dx) {
 // Return exp(dx) ~ 1 + a0 * dx + a1 * dx^2 + ... + a6 * dx^7
 // For |dx| < 2^-14:
 //   | output - 10^dx | < 1.5 * 2^-124.
-LIBC_INLINE Float128 exp10_poly_approx_f128(const Float128 &dx) {
-  constexpr Float128 COEFFS_128[]{
+LIBC_INLINE DFloat128 exp10_poly_approx_f128(const DFloat128 &dx) {
+  constexpr DFloat128 COEFFS_128[]{
       {Sign::POS, -127, 0x80000000'00000000'00000000'00000000_u128}, // 1.0
       {Sign::POS, -126, 0x935d8ddd'aaa8ac16'ea56d62b'82d30a2d_u128},
       {Sign::POS, -126, 0xa9a92639'e753443a'80a99ce7'5f4d5bdb_u128},
@@ -117,39 +117,39 @@ LIBC_INLINE Float128 exp10_poly_approx_f128(const Float128 &dx) {
       {Sign::POS, -130, 0x45b937f0'd05bb1cd'fa7b46df'314112a9_u128},
   };
 
-  Float128 p = fputil::polyeval(dx, COEFFS_128[0], COEFFS_128[1], COEFFS_128[2],
-                                COEFFS_128[3], COEFFS_128[4], COEFFS_128[5],
-                                COEFFS_128[6], COEFFS_128[7]);
+  DFloat128 p = fputil::polyeval(dx, COEFFS_128[0], COEFFS_128[1],
+                                 COEFFS_128[2], COEFFS_128[3], COEFFS_128[4],
+                                 COEFFS_128[5], COEFFS_128[6], COEFFS_128[7]);
   return p;
 }
 
 // Compute 10^(x) using 128-bit precision.
 // TODO(lntue): investigate triple-double precision implementation for this
 // step.
-LIBC_INLINE Float128 exp10_f128(double x, double kd, int idx1, int idx2) {
+LIBC_INLINE DFloat128 exp10_f128(double x, double kd, int idx1, int idx2) {
   double t1 = fputil::multiply_add(kd, MLOG10_2_EXP2_M12_HI, x); // exact
   double t2 = kd * MLOG10_2_EXP2_M12_MID_32;                     // exact
   double t3 = kd * MLOG10_2_EXP2_M12_LO; // Error < 2^-144
 
-  Float128 dx = fputil::quick_add(
-      Float128(t1), fputil::quick_add(Float128(t2), Float128(t3)));
+  DFloat128 dx = fputil::quick_add(
+      DFloat128(t1), fputil::quick_add(DFloat128(t2), DFloat128(t3)));
 
   // TODO: Skip recalculating exp_mid1 and exp_mid2.
-  Float128 exp_mid1 =
-      fputil::quick_add(Float128(EXP2_MID1[idx1].hi),
-                        fputil::quick_add(Float128(EXP2_MID1[idx1].mid),
-                                          Float128(EXP2_MID1[idx1].lo)));
+  DFloat128 exp_mid1 =
+      fputil::quick_add(DFloat128(EXP2_MID1[idx1].hi),
+                        fputil::quick_add(DFloat128(EXP2_MID1[idx1].mid),
+                                          DFloat128(EXP2_MID1[idx1].lo)));
 
-  Float128 exp_mid2 =
-      fputil::quick_add(Float128(EXP2_MID2[idx2].hi),
-                        fputil::quick_add(Float128(EXP2_MID2[idx2].mid),
-                                          Float128(EXP2_MID2[idx2].lo)));
+  DFloat128 exp_mid2 =
+      fputil::quick_add(DFloat128(EXP2_MID2[idx2].hi),
+                        fputil::quick_add(DFloat128(EXP2_MID2[idx2].mid),
+                                          DFloat128(EXP2_MID2[idx2].lo)));
 
-  Float128 exp_mid = fputil::quick_mul(exp_mid1, exp_mid2);
+  DFloat128 exp_mid = fputil::quick_mul(exp_mid1, exp_mid2);
 
-  Float128 p = exp10_poly_approx_f128(dx);
+  DFloat128 p = exp10_poly_approx_f128(dx);
 
-  Float128 r = fputil::quick_mul(exp_mid, p);
+  DFloat128 r = fputil::quick_mul(exp_mid, p);
 
   r.exponent += static_cast<int>(kd) >> 12;
 
@@ -223,7 +223,7 @@ LIBC_INLINE double exp10_denorm(double x) {
     return r.value();
 
   // Use 128-bit precision
-  Float128 r_f128 = exp10_f128(x, kd, idx1, idx2);
+  DFloat128 r_f128 = exp10_f128(x, kd, idx1, idx2);
 
   return static_cast<double>(r_f128);
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
@@ -259,8 +259,10 @@ LIBC_INLINE double exp10_set_exceptional(double x) {
       if (xbits.is_nan())
         return x;
 
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       if (fputil::quick_get_round() == FE_UPWARD)
         return FPBits::min_subnormal().get_val();
+#endif
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_UNDERFLOW);
       return 0.0;
@@ -272,9 +274,11 @@ LIBC_INLINE double exp10_set_exceptional(double x) {
   // x >= log10(2^1024) or +inf/nan
   // x is finite
   if (x_u < 0x7ff0'0000'0000'0000ULL) {
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     int rounding = fputil::quick_get_round();
     if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
       return FPBits::max_normal().get_val();
+#endif
 
     fputil::set_errno_if_required(ERANGE);
     fputil::raise_except_if_required(FE_OVERFLOW);
@@ -489,7 +493,7 @@ LIBC_INLINE double exp10(double x) {
   }
 
   // Use 128-bit precision
-  Float128 r_f128 = exp10_f128(x, kd, idx1, idx2);
+  DFloat128 r_f128 = exp10_f128(x, kd, idx1, idx2);
 
   return static_cast<double>(r_f128);
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS

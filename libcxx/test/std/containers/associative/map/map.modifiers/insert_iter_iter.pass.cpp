@@ -11,7 +11,7 @@
 // class map
 
 // template <class InputIterator>
-//   void insert(InputIterator first, InputIterator last);
+//   constexpr void insert(InputIterator first, InputIterator last); // constexpr since C++26
 
 #include <array>
 #include <cassert>
@@ -21,7 +21,7 @@
 #include "min_allocator.h"
 
 template <class Iter, class Alloc>
-void test_alloc() {
+TEST_CONSTEXPR_CXX26 void test_alloc() {
   {   // Check that an empty range works correctly
     { // Without elements in the container
       using Map = std::map<int, int, std::less<int>, Alloc>;
@@ -188,13 +188,16 @@ void test_alloc() {
   }
 }
 
-void test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test_alloc<cpp17_input_iterator<std::pair<const int, int>*>, std::allocator<std::pair<const int, int> > >();
   test_alloc<cpp17_input_iterator<std::pair<const int, int>*>, min_allocator<std::pair<const int, int> > >();
+  return true;
 }
 
 int main(int, char**) {
   test();
-
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

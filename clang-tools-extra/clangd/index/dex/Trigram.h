@@ -37,9 +37,6 @@ namespace dex {
 // Trigram generation is the hot path of indexing, so Token is too wasteful.
 class Trigram {
   std::array<char, 4> Data; // Last element is length.
-  // Steal some invalid bit patterns for DenseMap sentinels.
-  enum class Sentinel { Tombstone = 4, Empty = 5 };
-  Trigram(Sentinel S) : Data{0, 0, 0, static_cast<char>(S)} {}
   uint32_t id() const { return llvm::bit_cast<uint32_t>(Data); }
 
 public:
@@ -90,12 +87,6 @@ std::vector<Token> generateQueryTrigrams(llvm::StringRef Query);
 namespace llvm {
 template <> struct DenseMapInfo<clang::clangd::dex::Trigram> {
   using Trigram = clang::clangd::dex::Trigram;
-  static inline Trigram getEmptyKey() {
-    return Trigram(Trigram::Sentinel::Empty);
-  }
-  static inline Trigram getTombstoneKey() {
-    return Trigram(Trigram::Sentinel::Tombstone);
-  }
   static unsigned getHashValue(Trigram V) {
     // Finalize step from MurmurHash3.
     uint32_t X = V.id();

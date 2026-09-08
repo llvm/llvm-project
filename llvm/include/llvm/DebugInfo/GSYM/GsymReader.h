@@ -58,10 +58,11 @@ protected:
   GsymDataExtractor FileEntryData;
   StringTable StrTab;
 
-  GsymReader(std::unique_ptr<MemoryBuffer> Buffer, llvm::endianness Endian);
+  LLVM_ABI GsymReader(std::unique_ptr<MemoryBuffer> Buffer,
+                      llvm::endianness Endian);
 
 public:
-  LLVM_ABI GsymReader(GsymReader &&RHS) = default;
+  GsymReader(GsymReader &&RHS) = default;
   virtual ~GsymReader() = default;
 
   bool isLittleEndian() const { return Endian == llvm::endianness::little; }
@@ -83,6 +84,10 @@ public:
 
   /// Get the string offset byte size for this GSYM file.
   virtual uint8_t getStringOffsetSize() const = 0;
+
+  /// Get the raw UUID bytes for this GSYM file, or an empty ref if none.
+  /// In v1 the UUID lives in the header; in v2 it is an optional data section.
+  virtual StringRef getUUID() const = 0;
 
   /// Construct a GsymReader from a file on disk.
   ///
@@ -197,6 +202,20 @@ public:
   ///
   /// \param  OS The output stream to dump to.
   virtual void dump(raw_ostream &OS) = 0;
+
+  enum class StatisticsFormat { Text, JSON, PrettyJSON };
+
+  /// Dump statistics about the GSYM data contained in this object.
+  ///
+  /// \param OS The output stream to dump to.
+  ///
+  /// \param Format Output format: Text, JSON (dense), or PrettyJSON.
+  ///
+  /// \param GSYMPath Optional file path, used only as a display label in the
+  /// output (empty for in-memory GSYM data).
+  LLVM_ABI void dumpStatistics(raw_ostream &OS,
+                               StatisticsFormat Format = StatisticsFormat::Text,
+                               StringRef GSYMPath = "");
 
   /// Dump a FunctionInfo object.
   ///
@@ -364,31 +383,31 @@ protected:
   ///
   /// \param Offset The byte offset where GlobalData entries begin.
   /// \returns Error on failure.
-  llvm::Error parseGlobalDataEntries(uint64_t Offset);
+  LLVM_ABI llvm::Error parseGlobalDataEntries(uint64_t Offset);
 
   /// Parse address offsets section bytes into AddrOffsets.
   ///
   /// \param Bytes The raw section bytes.
   /// \returns Error on failure.
-  llvm::Error parseAddrOffsets(StringRef Bytes);
+  LLVM_ABI llvm::Error parseAddrOffsets(StringRef Bytes);
 
   /// Set address info offsets section bytes into AddrInfoOffsetsData.
   ///
   /// \param Bytes The raw section bytes.
   /// \returns Error on failure.
-  llvm::Error setAddrInfoOffsetsData(StringRef Bytes);
+  LLVM_ABI llvm::Error setAddrInfoOffsetsData(StringRef Bytes);
 
   /// Set string table section bytes into StrTab.
   ///
   /// \param Bytes The raw section bytes.
   /// \returns Error on failure.
-  llvm::Error setStringTableData(StringRef Bytes);
+  LLVM_ABI llvm::Error setStringTableData(StringRef Bytes);
 
   /// Set file table section bytes into FileEntryData.
   ///
   /// \param Bytes The raw section bytes.
   /// \returns Error on failure.
-  llvm::Error setFileTableData(StringRef Bytes);
+  LLVM_ABI llvm::Error setFileTableData(StringRef Bytes);
 
   /// Get an appropriate address info offsets array.
   ///

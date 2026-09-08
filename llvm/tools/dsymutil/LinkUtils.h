@@ -65,7 +65,7 @@ struct LinkOptions {
   bool KeepFunctionForStatic = false;
 
   /// Type of DWARFLinker to use.
-  DsymutilDWARFLinkerType DWARFLinkerType = DsymutilDWARFLinkerType::Classic;
+  DsymutilDWARFLinkerType DWARFLinkerType = DsymutilDWARFLinkerType::Parallel;
 
   /// Use a 64-bit header when emitting universal binaries.
   bool Fat64 = false;

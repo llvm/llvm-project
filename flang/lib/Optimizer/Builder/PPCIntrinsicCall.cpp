@@ -14,8 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/PPCIntrinsicCall.h"
-#include "flang/Evaluate/common.h"
-#include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "mlir/Dialect/Index/IR/IndexOps.h"
@@ -779,6 +777,7 @@ static constexpr IntrinsicHandler ppcHandlers[]{
      {{{"arg1", asValue}, {"arg2", asValue}, {"arg3", asAddr}}},
      /*isElemental=*/false},
 };
+static_assert(fir::isSorted(ppcHandlers) && "map must be sorted");
 
 static constexpr MathOperation ppcMathOperations[] = {
     // fcfi is just another name for fcfid, there is no llvm.ppc.fcfi.
@@ -934,7 +933,10 @@ static constexpr MathOperation ppcMathOperations[] = {
      genLibCall},
 };
 
-const IntrinsicHandler *findPPCIntrinsicHandler(llvm::StringRef name) {
+const IntrinsicHandler *findPPCIntrinsicHandler(llvm::StringRef name,
+                                                bool isBindcCall) {
+  if (isBindcCall)
+    return nullptr;
   auto compare = [](const IntrinsicHandler &ppcHandler, llvm::StringRef name) {
     return name.compare(ppcHandler.name) > 0;
   };
@@ -955,18 +957,15 @@ checkPPCMathOperationsRange(llvm::StringRef name) {
 // Helper functions for vector element ordering.
 bool PPCIntrinsicLibrary::isBEVecElemOrderOnLE() {
   const auto triple{fir::getTargetTriple(builder.getModule())};
-  return (triple.isLittleEndian() &&
-          converter->getLoweringOptions().getNoPPCNativeVecElemOrder());
+  return (triple.isLittleEndian() && options.noPPCNativeVecElemOrder);
 }
 bool PPCIntrinsicLibrary::isNativeVecElemOrderOnLE() {
   const auto triple{fir::getTargetTriple(builder.getModule())};
-  return (triple.isLittleEndian() &&
-          !converter->getLoweringOptions().getNoPPCNativeVecElemOrder());
+  return (triple.isLittleEndian() && !options.noPPCNativeVecElemOrder);
 }
 bool PPCIntrinsicLibrary::changeVecElemOrder() {
   const auto triple{fir::getTargetTriple(builder.getModule())};
-  return (triple.isLittleEndian() !=
-          converter->getLoweringOptions().getNoPPCNativeVecElemOrder());
+  return (triple.isLittleEndian() != options.noPPCNativeVecElemOrder);
 }
 
 static mlir::FunctionType genMmaVpFuncType(mlir::MLIRContext *context,

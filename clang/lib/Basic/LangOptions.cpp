@@ -12,6 +12,7 @@
 
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/LangStandard.h"
+#include "clang/Config/config.h"
 #include "llvm/Support/Path.h"
 
 using namespace clang;
@@ -123,6 +124,7 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
   Opts.CPlusPlus20 = Std.isCPlusPlus20();
   Opts.CPlusPlus23 = Std.isCPlusPlus23();
   Opts.CPlusPlus26 = Std.isCPlusPlus26();
+  Opts.CPlusPlus29 = Std.isCPlusPlus29();
   Opts.GNUMode = Std.isGNUMode();
   Opts.GNUCVersion = 0;
   Opts.HexFloats = Std.hasHexFloats();
@@ -142,34 +144,55 @@ void LangOptions::setLangDefaults(LangOptions &Opts, Language Lang,
 
   // Set OpenCL Version.
   Opts.OpenCL = Std.isOpenCL();
-  if (LangStd == LangStandard::lang_opencl10)
+  switch (LangStd) {
+  case LangStandard::lang_opencl10:
     Opts.OpenCLVersion = 100;
-  else if (LangStd == LangStandard::lang_opencl11)
+    break;
+  case LangStandard::lang_opencl11:
     Opts.OpenCLVersion = 110;
-  else if (LangStd == LangStandard::lang_opencl12)
+    break;
+  case LangStandard::lang_opencl12:
     Opts.OpenCLVersion = 120;
-  else if (LangStd == LangStandard::lang_opencl20)
+    break;
+  case LangStandard::lang_opencl20:
     Opts.OpenCLVersion = 200;
-  else if (LangStd == LangStandard::lang_opencl30)
+    break;
+  case LangStandard::lang_opencl30:
     Opts.OpenCLVersion = 300;
-  else if (LangStd == LangStandard::lang_openclcpp10)
+    break;
+  case LangStandard::lang_opencl31:
+    Opts.OpenCLVersion = 310;
+    break;
+  case LangStandard::lang_openclcpp10:
     Opts.OpenCLCPlusPlusVersion = 100;
-  else if (LangStd == LangStandard::lang_openclcpp2021)
+    break;
+  case LangStandard::lang_openclcpp2021:
     Opts.OpenCLCPlusPlusVersion = 202100;
-  else if (LangStd == LangStandard::lang_hlsl2015)
+    break;
+  case LangStandard::lang_hlsl2015:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_2015;
-  else if (LangStd == LangStandard::lang_hlsl2016)
+    break;
+  case LangStandard::lang_hlsl2016:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_2016;
-  else if (LangStd == LangStandard::lang_hlsl2017)
+    break;
+  case LangStandard::lang_hlsl2017:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_2017;
-  else if (LangStd == LangStandard::lang_hlsl2018)
+    break;
+  case LangStandard::lang_hlsl2018:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_2018;
-  else if (LangStd == LangStandard::lang_hlsl2021)
+    break;
+  case LangStandard::lang_hlsl2021:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_2021;
-  else if (LangStd == LangStandard::lang_hlsl202x)
+    break;
+  case LangStandard::lang_hlsl202x:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_202x;
-  else if (LangStd == LangStandard::lang_hlsl202y)
+    break;
+  case LangStandard::lang_hlsl202y:
     Opts.HLSLVersion = (unsigned)LangOptions::HLSL_202y;
+    break;
+  default:
+    break;
+  }
 
   // OpenCL has some additional defaults.
   if (Opts.OpenCL) {
@@ -255,7 +278,9 @@ std::optional<uint32_t> LangOptions::getCPlusPlusLangStd() const {
     return std::nullopt;
 
   LangStandard::Kind Std;
-  if (CPlusPlus26)
+  if (CPlusPlus29)
+    Std = LangStandard::lang_cxx29;
+  else if (CPlusPlus26)
     Std = LangStandard::lang_cxx26;
   else if (CPlusPlus23)
     Std = LangStandard::lang_cxx23;

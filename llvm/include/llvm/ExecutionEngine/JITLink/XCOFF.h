@@ -23,13 +23,13 @@ namespace jitlink {
 /// Note: The graph does not take ownership of the underlying buffer, nor copy
 /// its contents. The caller is responsible for ensuring that the object buffer
 /// outlives the graph.
-Expected<std::unique_ptr<LinkGraph>>
+LLVM_ABI Expected<std::unique_ptr<LinkGraph>>
 createLinkGraphFromXCOFFObject(MemoryBufferRef ObjectBuffer,
                                std::shared_ptr<orc::SymbolStringPool> SSP);
 
 /// Link the given graph.
-void link_XCOFF(std::unique_ptr<LinkGraph> G,
-                std::unique_ptr<JITLinkContext> Ctx);
+LLVM_ABI void link_XCOFF(std::unique_ptr<LinkGraph> G,
+                         std::unique_ptr<JITLinkContext> Ctx);
 
 } // namespace jitlink
 } // namespace llvm

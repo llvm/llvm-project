@@ -12,6 +12,9 @@ RUN: echo > %t.in '123 abc -1'
  ERR-NEXT:<stdin>:1:1: note: with "122+1" equal to "123"
  ERR-NEXT:123 abc -1
  ERR-NEXT:^
+ ERR-NEXT:<stdin>:1:1: note: pattern attempts to capture variables: "STR", "NUM"
+ ERR-NEXT:123 abc -1
+ ERR-NEXT:^
  ERR-NEXT:<stdin>:1:3: note: possible intended match here
  ERR-NEXT:123 abc -1
  ERR-NEXT:  ^
@@ -19,10 +22,12 @@ RUN: echo > %t.in '123 abc -1'
 
      DUMP:<<<<<<
 DUMP-NEXT:           1: 123 abc -1 
-DUMP-NEXT:check:1'0     X~~~~~~~~~~ error: match failed for invalid pattern
-DUMP-NEXT:check:1'1                 unable to substitute variable or numeric expression: overflow error
-DUMP-NEXT:check:1'2                 with "122+1" equal to "123"
-DUMP-NEXT:check:1'3       ?         possible intended match
+DUMP-NEXT:check:1'0    {           } search range (exclusive bounds)
+DUMP-NEXT:check:1'1                  error: match failed for invalid pattern
+DUMP-NEXT:check:1'2                  unable to substitute variable or numeric expression: overflow error
+DUMP-NEXT:check:1'3                  with "122+1" equal to "123"
+DUMP-NEXT:check:1'4                  pattern attempts to capture variables: "STR", "NUM"
+DUMP-NEXT:check:1'5       ?          possible intended match
 DUMP-NEXT:>>>>>>
 
 ;--------------------------------------------------

@@ -1,6 +1,6 @@
 ! Test unstructured code adjacent to and inside OpenMP constructs.
 
-! RUN: bbc %s -fopenmp -emit-hlfir -o "-" \
+! RUN: bbc --wrap-unstructured-constructs-in-execute-region %s -fopenmp -emit-hlfir -o "-" \
 ! RUN: | FileCheck %s
 
 ! CHECK-LABEL: func @_QPss1{{.*}} {
@@ -64,42 +64,44 @@ end
 ! CHECK:     %[[ALLOCA_K:.*]] = fir.alloca i32 {bindc_name = "k", pinned}
 ! CHECK:     %[[K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_K]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
-! CHECK:     br ^bb1
-! CHECK:   ^bb1:  // 2 preds: ^bb0, ^bb3
-! CHECK:     cond_br %{{[0-9]*}}, ^bb2, ^bb4
-! CHECK:   ^bb2:  // pred: ^bb1
+! CHECK:     fir.do_loop
+! CHECK:       omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[ALLOCA_2:.*]] : !fir.ref<i32>) {
+! CHECK:         omp.loop_nest (%[[ARG1:.*]]) : {{.*}} {
+! CHECK:           %[[OMP_LOOP_K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_2]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           hlfir.assign %[[ARG1]] to %[[OMP_LOOP_K_DECL]]#0 : i32, !fir.ref<i32>
+! CHECK:           @_FortranAioBeginExternalListOutput
+! CHECK:           %[[LOAD_1:.*]] = fir.load %[[OMP_LOOP_K_DECL]]#0 : !fir.ref<i32>
+! CHECK:           @_FortranAioOutputInteger32(%{{.*}}, %[[LOAD_1]])
+! CHECK:           omp.yield
+! CHECK:         }
+! CHECK:       }
 
-! CHECK:     omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[ALLOCA_2:.*]] : !fir.ref<i32>) {
-! CHECK:       omp.loop_nest (%[[ARG1:.*]]) : {{.*}} {
-! CHECK:         %[[OMP_LOOP_K_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_2]] {uniq_name = "_QFss3Ek"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:         hlfir.assign %[[ARG1]] to %[[OMP_LOOP_K_DECL]]#0 : i32, !fir.ref<i32>
-! CHECK:         @_FortranAioBeginExternalListOutput
-! CHECK:         %[[LOAD_1:.*]] = fir.load %[[OMP_LOOP_K_DECL]]#0 : !fir.ref<i32>
-! CHECK:         @_FortranAioOutputInteger32(%{{.*}}, %[[LOAD_1]])
-! CHECK:         omp.yield
+! CHECK:       omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[ALLOCA_1:.*]] : !fir.ref<i32>) {
+! CHECK:         omp.loop_nest (%[[ARG2:.*]]) : {{.*}} {
+! CHECK:           %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_1]] {uniq_name = "_QFss3Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           hlfir.assign %[[ARG2]] to %[[OMP_LOOP_J_DECL]]#0 : i32, !fir.ref<i32>
+! CHECK:           scf.execute_region no_inline {
+! CHECK:             cf.br ^bb1
+! CHECK:           ^bb1:
+! CHECK:             cf.br ^bb2
+! CHECK:           ^bb2:
+! CHECK:             cf.cond_br %{{[0-9]*}}, ^bb3, ^bb6
+! CHECK:           ^bb3:
+! CHECK:             cf.cond_br %{{[0-9]*}}, ^bb4, ^bb5
+! CHECK:           ^bb4:
+! CHECK:             cf.br ^bb6
+! CHECK:           ^bb5:
+! CHECK:             @_FortranAioBeginExternalListOutput
+! CHECK:             %[[LOAD_2:.*]] = fir.load %[[K_DECL]]#0 : !fir.ref<i32>
+! CHECK:             @_FortranAioOutputInteger32(%{{.*}}, %[[LOAD_2]])
+! CHECK:             cf.br ^bb2
+! CHECK:           ^bb6:
+! CHECK:             scf.yield
+! CHECK:           }
+! CHECK:           omp.yield
+! CHECK:         }
 ! CHECK:       }
 ! CHECK:     }
-
-! CHECK:     omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[ALLOCA_1:.*]] : !fir.ref<i32>) {
-! CHECK:       omp.loop_nest (%[[ARG2:.*]]) : {{.*}} {
-! CHECK:         %[[OMP_LOOP_J_DECL:.*]]:2 = hlfir.declare %[[ALLOCA_1]] {uniq_name = "_QFss3Ej"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:         hlfir.assign %[[ARG2]] to %[[OMP_LOOP_J_DECL]]#0 : i32, !fir.ref<i32>
-! CHECK:         br ^bb1
-! CHECK:       ^bb2:  // 2 preds: ^bb1, ^bb5
-! CHECK:         cond_br %{{[0-9]*}}, ^bb3, ^bb6
-! CHECK:       ^bb3:  // pred: ^bb2
-! CHECK:         cond_br %{{[0-9]*}}, ^bb4, ^bb5
-! CHECK:       ^bb4:  // pred: ^bb3
-! CHECK:         @_FortranAioBeginExternalListOutput
-! CHECK:         %[[LOAD_2:.*]] = fir.load %[[K_DECL]]#0 : !fir.ref<i32>
-! CHECK:         @_FortranAioOutputInteger32(%{{.*}}, %[[LOAD_2]])
-! CHECK:         br ^bb2
-! CHECK:       ^bb6:  // 2 preds: ^bb2, ^bb4
-! CHECK:         omp.yield
-! CHECK:       }
-! CHECK:     }
-! CHECK:     br ^bb1
-! CHECK:   ^bb4:  // pred: ^bb1
 ! CHECK:     omp.terminator
 ! CHECK:   }
 ! CHECK: }
@@ -158,18 +160,19 @@ end
 ! CHECK:  omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
 ! CHECK:    omp.wsloop private({{.*}}) {
 ! CHECK:      omp.loop_nest {{.*}} {
-! CHECK:        br ^[[BB1:.*]]
-! CHECK:      ^[[BB1]]:
-! CHECK:        br ^[[BB2:.*]]
-! CHECK:      ^[[BB2]]:
-! CHECK:        cond_br %{{.*}}, ^[[BB3:.*]], ^[[BB6:.*]]
-! CHECK:      ^[[BB3]]:
-! CHECK:        cond_br %{{.*}}, ^[[BB4:.*]], ^[[BB3:.*]]
-! CHECK:      ^[[BB4]]:
-! CHECK:        br ^[[BB6]]
-! CHECK:      ^[[BB3]]:
-! CHECK:        br ^[[BB2]]
-! CHECK:      ^[[BB6]]:
+! CHECK:        scf.execute_region no_inline {
+! CHECK:          cf.br ^[[BB1:.*]]
+! CHECK:        ^[[BB1]]:
+! CHECK:          cf.cond_br %{{.*}}, ^[[BB2:.*]], ^[[BB5:.*]]
+! CHECK:        ^[[BB2]]:
+! CHECK:          cf.cond_br %{{.*}}, ^[[BB3:.*]], ^[[BB4:.*]]
+! CHECK:        ^[[BB3]]:
+! CHECK:          cf.br ^[[BB5]]
+! CHECK:        ^[[BB4]]:
+! CHECK:          cf.br ^[[BB1]]
+! CHECK:        ^[[BB5]]:
+! CHECK:          scf.yield
+! CHECK:        }
 ! CHECK:        omp.yield
 ! CHECK:      }
 ! CHECK:    }
@@ -193,30 +196,27 @@ subroutine ss5() ! EXIT inside OpenMP wsloop (inside parallel)
 end
 
 ! CHECK-LABEL: func @_QPss6() {
-! CHECK:  omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}) {
-! CHECK:    br ^[[BB1_OUTER:.*]]
-! CHECK:  ^[[BB1_OUTER]]:
-! CHECK:    cond_br %{{.*}}, ^[[BB2_OUTER:.*]], ^[[BB3_OUTER:.*]]
-! CHECK:  ^[[BB2_OUTER]]:
-! CHECK:    omp.wsloop private({{.*}}) {
-! CHECK:      omp.loop_nest {{.*}} {
-! CHECK:        br ^[[BB1:.*]]
-! CHECK:      ^[[BB1]]:
-! CHECK:        br ^[[BB2:.*]]
-! CHECK:      ^[[BB2]]:
-! CHECK:        cond_br %{{.*}}, ^[[BB3:.*]], ^[[BB6:.*]]
-! CHECK:      ^[[BB3]]:
-! CHECK:        cond_br %{{.*}}, ^[[BB4:.*]], ^[[BB5:.*]]
-! CHECK:      ^[[BB4]]:
-! CHECK:        br ^[[BB6]]
-! CHECK:      ^[[BB5]]
-! CHECK:        br ^[[BB2]]
-! CHECK:      ^[[BB6]]:
-! CHECK:        omp.yield
+! CHECK:  omp.parallel private(@{{.*}} %{{.*}}#0 -> %{{.*}}, @{{.*}} %{{.*}}#0 -> %{{.*}} : {{.*}}, {{.*}}) {
+! CHECK:    fir.do_loop
+! CHECK:      omp.wsloop private({{.*}}) {
+! CHECK:        omp.loop_nest {{.*}} {
+! CHECK:          scf.execute_region no_inline {
+! CHECK:            cf.br ^[[BB1:.*]]
+! CHECK:          ^[[BB1]]:
+! CHECK:            cf.cond_br %{{.*}}, ^[[BB2:.*]], ^[[BB5:.*]]
+! CHECK:          ^[[BB2]]:
+! CHECK:            cf.cond_br %{{.*}}, ^[[BB3:.*]], ^[[BB4:.*]]
+! CHECK:          ^[[BB3]]:
+! CHECK:            cf.br ^[[BB5]]
+! CHECK:          ^[[BB4]]:
+! CHECK:            cf.br ^[[BB1]]
+! CHECK:          ^[[BB5]]:
+! CHECK:            scf.yield
+! CHECK:          }
+! CHECK:          omp.yield
+! CHECK:        }
 ! CHECK:      }
 ! CHECK:    }
-! CHECK:    br ^[[BB1_OUTER]]
-! CHECK:  ^[[BB3_OUTER]]:
 ! CHECK:    omp.terminator
 ! CHECK:  }
 subroutine ss6() ! EXIT inside OpenMP wsloop in a do loop (inside parallel)
@@ -239,33 +239,30 @@ subroutine ss6() ! EXIT inside OpenMP wsloop in a do loop (inside parallel)
 end
 
 ! CHECK-LABEL: func @_QPss7() {
-! CHECK: br ^[[BB1_OUTER:.*]]
-! CHECK: ^[[BB1_OUTER]]:
-! CHECK:   cond_br %{{.*}}, ^[[BB2_OUTER:.*]], ^[[BB3_OUTER:.*]]
-! CHECK-NEXT: ^[[BB2_OUTER:.*]]:
-! CHECK:   omp.parallel  {
-! CHECK:     omp.wsloop private({{.*}}) {
-! CHECK:       omp.loop_nest {{.*}} {
-! CHECK:         br ^[[BB1:.*]]
-! CHECK-NEXT:       ^[[BB1]]:
-! CHECK:         br ^[[BB2:.*]]
-! CHECK-NEXT:       ^[[BB2]]:
-! CHECK:         cond_br %{{.*}}, ^[[BB3:.*]], ^[[BB6:.*]]
-! CHECK-NEXT:       ^[[BB3]]:
-! CHECK:         cond_br %{{.*}}, ^[[BB4:.*]], ^[[BB5:.*]]
-! CHECK-NEXT:       ^[[BB4]]:
-! CHECK:         br ^[[BB6]]
-! CHECK-NEXT:       ^[[BB5]]:
-! CHECK:         br ^[[BB2]]
-! CHECK-NEXT:       ^[[BB6]]:
-! CHECK:         omp.yield
+! CHECK:   fir.do_loop
+! CHECK:     omp.parallel  {
+! CHECK:       omp.wsloop private({{.*}}) {
+! CHECK:         omp.loop_nest {{.*}} {
+! CHECK:           scf.execute_region no_inline {
+! CHECK:             cf.br ^[[BB1:.*]]
+! CHECK:           ^[[BB1]]:
+! CHECK:             cf.cond_br %{{.*}}, ^[[BB2:.*]], ^[[BB5:.*]]
+! CHECK:           ^[[BB2]]:
+! CHECK:             cf.cond_br %{{.*}}, ^[[BB3:.*]], ^[[BB4:.*]]
+! CHECK:           ^[[BB3]]:
+! CHECK:             cf.br ^[[BB5]]
+! CHECK:           ^[[BB4]]:
+! CHECK:             cf.br ^[[BB1]]
+! CHECK:           ^[[BB5]]:
+! CHECK:             scf.yield
+! CHECK:           }
+! CHECK:           omp.yield
+! CHECK:         }
 ! CHECK:       }
+! CHECK:       omp.terminator
 ! CHECK:     }
-! CHECK:     omp.terminator
 ! CHECK:   }
-! CHECK:   br ^[[BB1_OUTER]]
-! CHECK-NEXT: ^[[BB3_OUTER]]:
-! CHECK-NEXT:   return
+! CHECK:   return
 subroutine ss7() ! EXIT inside OpenMP parallel do (inside do loop)
   integer :: x
     do i = 1, 3
@@ -286,18 +283,19 @@ end
 ! CHECK:  omp.parallel  {
 ! CHECK:    omp.wsloop private({{.*}}) {
 ! CHECK:      omp.loop_nest {{.*}} {
-! CHECK:        br ^[[BB1:.*]]
-! CHECK-NEXT:      ^[[BB1]]:
-! CHECK:        br ^[[BB2:.*]]
-! CHECK:      ^[[BB2]]:
-! CHECK:        cond_br %{{.*}}, ^[[BB3:.*]], ^[[BB6:.*]]
-! CHECK:      ^[[BB3]]:
-! CHECK:        cond_br %{{.*}}, ^[[BB4:.*]], ^[[BB5:.*]]
-! CHECK:      ^[[BB4]]:
-! CHECK-NEXT:      br ^[[BB6]]
-! CHECK:      ^[[BB5]]:
-! CHECK:        br ^[[BB2]]
-! CHECK-NEXT:      ^[[BB6]]:
+! CHECK:        scf.execute_region no_inline {
+! CHECK:          cf.br ^[[BB1:.*]]
+! CHECK:        ^[[BB1]]:
+! CHECK:          cf.cond_br %{{.*}}, ^[[BB2:.*]], ^[[BB5:.*]]
+! CHECK:        ^[[BB2]]:
+! CHECK:          cf.cond_br %{{.*}}, ^[[BB3:.*]], ^[[BB4:.*]]
+! CHECK:        ^[[BB3]]:
+! CHECK:          cf.br ^[[BB5]]
+! CHECK:        ^[[BB4]]:
+! CHECK:          cf.br ^[[BB1]]
+! CHECK:        ^[[BB5]]:
+! CHECK:          scf.yield
+! CHECK:        }
 ! CHECK:        omp.yield
 ! CHECK:      }
 ! CHECK:    }

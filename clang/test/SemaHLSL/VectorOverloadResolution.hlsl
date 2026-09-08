@@ -68,7 +68,7 @@ void Fn4( float2 p0);
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int64_t2':'vector<int64_t, 2>' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int64_t2':'vector<int64_t, 2>' lvalue ParmVar {{.*}} 'p0' 'int64_t2':'vector<int64_t, 2>'
 // CHECKIR-LABEL: Call5
-// CHECKIR: {{.*}} = sitofp <2 x i64> {{.*}} to <2 x float>
+// CHECKIR: {{.*}} = sitofp reassoc nnan ninf nsz arcp afn <2 x i64> {{.*}} to <2 x float>
 void Call5(int64_t2 p0) {
   Fn4(p0);
 }

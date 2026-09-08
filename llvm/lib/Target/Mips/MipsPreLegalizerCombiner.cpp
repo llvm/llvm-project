@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 
 #define DEBUG_TYPE "mips-prelegalizer-combiner"
 
@@ -58,7 +57,8 @@ public:
     default:
       return false;
     case TargetOpcode::G_MEMCPY_INLINE:
-      return Helper.tryEmitMemcpyInline(MI);
+    case TargetOpcode::G_MEMSET_INLINE:
+      return Helper.tryCombineMemCpyFamily(MI);
     case TargetOpcode::G_LOAD:
     case TargetOpcode::G_SEXTLOAD:
     case TargetOpcode::G_ZEXTLOAD: {

@@ -18,7 +18,7 @@ namespace pdb {
 
 class NativeSession;
 
-class NativeTypeBuiltin : public NativeRawSymbol {
+class LLVM_ABI NativeTypeBuiltin : public NativeRawSymbol {
 public:
   NativeTypeBuiltin(NativeSession &PDBSession, SymIndexId Id,
                     codeview::ModifierOptions Mods, PDB_BuiltinType T,

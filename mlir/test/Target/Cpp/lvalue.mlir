@@ -4,7 +4,7 @@ emitc.func @lvalue_variables(%v1: i32, %v2: i32) -> i32 {
   %val = emitc.mul %v1, %v2 : (i32, i32) -> i32
   %variable = "emitc.variable"() {value = #emitc.opaque<"">} : () -> !emitc.lvalue<i32> 
   emitc.assign %val : i32 to %variable : !emitc.lvalue<i32>
-  %addr = emitc.apply "&"(%variable) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+  %addr = emitc.address_of %variable : !emitc.lvalue<i32>
   emitc.call @zero (%addr) : (!emitc.ptr<i32>) -> ()
   %updated_val = emitc.load %variable : !emitc.lvalue<i32>
   %neg_one = "emitc.constant"() {value = -1 : i32} : () -> i32

@@ -81,9 +81,10 @@ define i32 @and_0xfff_shl_2_multi_use(i32 %x) {
 define i64 @and_0xfff_shl_33(i64 %x) {
 ; RV32I-LABEL: and_0xfff_shl_33:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    slli a0, a0, 20
-; RV32I-NEXT:    srli a1, a0, 19
+; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    li a0, 0
+; RV32I-NEXT:    slli a1, a1, 20
+; RV32I-NEXT:    srli a1, a1, 19
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and_0xfff_shl_33:

@@ -44,16 +44,6 @@ struct PrefetchHint {
 
 // Provides DenseMapInfo for UniqueBBID.
 template <> struct DenseMapInfo<UniqueBBID> {
-  static inline UniqueBBID getEmptyKey() {
-    unsigned EmptyKey = DenseMapInfo<unsigned>::getEmptyKey();
-    return UniqueBBID{EmptyKey, EmptyKey};
-  }
-
-  static inline UniqueBBID getTombstoneKey() {
-    unsigned TombstoneKey = DenseMapInfo<unsigned>::getTombstoneKey();
-    return UniqueBBID{TombstoneKey, TombstoneKey};
-  }
-
   static unsigned getHashValue(const UniqueBBID &Val) {
     return DenseMapInfo<unsigned>::getHashValue(Val.BaseID) ^
            DenseMapInfo<unsigned>::getHashValue(Val.CloneID);

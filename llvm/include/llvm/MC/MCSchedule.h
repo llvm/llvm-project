@@ -36,7 +36,7 @@ namespace cl {
 class OptionCategory;
 }
 
-extern cl::OptionCategory MCScheduleOptions;
+extern LLVM_ABI cl::OptionCategory MCScheduleOptions;
 
 /// Define a kind of processor resource that will be modeled by the scheduler.
 struct MCProcResourceDesc {
@@ -137,12 +137,12 @@ struct MCSchedClassDesc {
   uint16_t BeginGroup : 1;
   uint16_t EndGroup : 1;
   uint16_t RetireOOO : 1;
+  uint16_t ReadAdvanceIdx;  // First index into ReadAdvanceTable.
   uint16_t WriteProcResIdx; // First index into WriteProcResTable.
-  uint16_t NumWriteProcResEntries;
   uint16_t WriteLatencyIdx; // First index into WriteLatencyTable.
-  uint16_t NumWriteLatencyEntries;
-  uint16_t ReadAdvanceIdx; // First index into ReadAdvanceTable.
   uint16_t NumReadAdvanceEntries;
+  uint8_t NumWriteProcResEntries;
+  uint8_t NumWriteLatencyEntries;
 
   bool isValid() const {
     return NumMicroOps != InvalidNumMicroOps;
@@ -151,6 +151,15 @@ struct MCSchedClassDesc {
     return NumMicroOps == VariantNumMicroOps;
   }
 };
+
+// Guard against accidental growth. If either assertion fails, try to repack
+// MCSchedClassDesc to preserve the compact layout; remove the assertion if the
+// layout can no longer be kept.
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+static_assert(sizeof(MCSchedClassDesc) == 16);
+#else
+static_assert(sizeof(MCSchedClassDesc) == 12);
+#endif
 
 /// Specify the cost of a register definition in terms of number of physical
 /// register allocated at register renaming stage. For example, AMD Jaguar.
@@ -274,7 +283,7 @@ struct MCSchedModel {
   // has a bandwidth limitation, then that can be naturally modeled by adding an
   // out-of-order processor resource.
   unsigned IssueWidth;
-  static const unsigned DefaultIssueWidth = 1;
+  static constexpr unsigned DefaultIssueWidth = 1;
 
   // MicroOpBufferSize is the number of micro-ops that the processor may buffer
   // for out-of-order execution.
@@ -291,7 +300,7 @@ struct MCSchedModel {
   // estimate of highly machine specific characteristics such as the register
   // renaming pool and reorder buffer.
   unsigned MicroOpBufferSize;
-  static const unsigned DefaultMicroOpBufferSize = 0;
+  static constexpr unsigned DefaultMicroOpBufferSize = 0;
 
   // LoopMicroOpBufferSize is the number of micro-ops that the processor may
   // buffer for optimized loop execution. More generally, this represents the
@@ -299,23 +308,23 @@ struct MCSchedModel {
   // unrolled to bring the count of micro-ops in the loop body closer to this
   // number.
   unsigned LoopMicroOpBufferSize;
-  static const unsigned DefaultLoopMicroOpBufferSize = 0;
+  static constexpr unsigned DefaultLoopMicroOpBufferSize = 0;
 
   // LoadLatency is the expected latency of load instructions.
   unsigned LoadLatency;
-  static const unsigned DefaultLoadLatency = 4;
+  static constexpr unsigned DefaultLoadLatency = 4;
 
   // HighLatency is the expected latency of "very high latency" operations.
   // See TargetInstrInfo::isHighLatencyDef().
   // By default, this is set to an arbitrarily high number of cycles
   // likely to have some impact on scheduling heuristics.
   unsigned HighLatency;
-  static const unsigned DefaultHighLatency = 10;
+  static constexpr unsigned DefaultHighLatency = 10;
 
   // MispredictPenalty is the typical number of extra cycles the processor
   // takes to recover from a branch misprediction.
   unsigned MispredictPenalty;
-  static const unsigned DefaultMispredictPenalty = 10;
+  static constexpr unsigned DefaultMispredictPenalty = 10;
 
   bool PostRAScheduler; // default value is false
 

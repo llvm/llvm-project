@@ -53,10 +53,21 @@ extern llvm::codegenoptions::DebugInfoKind noDebugInfo;
 /// Optimizer Passes
 extern llvm::cl::opt<bool> disableCfgConversion;
 extern llvm::cl::opt<bool> disableFirAliasTags;
-extern llvm::cl::opt<bool> disableFirAvc;
+extern llvm::cl::opt<bool> disableFirLICM;
 extern llvm::cl::opt<bool> disableFirMao;
-extern llvm::cl::opt<bool> enableFirLICM;
 extern llvm::cl::opt<bool> useOldAliasTags;
+
+/// Experimental option to replace the stack-arrays and memory-allocation-opt
+/// passes with the unified allocation-placement pass.
+extern llvm::cl::opt<bool> enableAllocationPlacement;
+
+/// Constant-size arrays up to this many bytes are considered "small" and placed
+/// on the stack by the allocation-placement pass.
+extern llvm::cl::opt<std::size_t> allocationPlacementSmallArraySize;
+
+/// Per-function budget (in bytes) for small arrays placed on the stack by the
+/// allocation-placement pass.
+extern llvm::cl::opt<std::size_t> allocationPlacementStackLimit;
 
 /// CodeGen Passes
 extern llvm::cl::opt<bool> disableCodeGenRewrite;

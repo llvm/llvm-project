@@ -94,6 +94,8 @@ public:
 
   static llvm::StringRef GetPluginDescriptionStatic();
 
+  static llvm::StringRef GetDwoDiagnosticSuffix();
+
   static SymbolFile *CreateInstance(lldb::ObjectFileSP objfile_sp);
 
   // Constructors and Destructors
@@ -280,6 +282,8 @@ public:
   void DumpClangAST(Stream &s, llvm::StringRef filter,
                     bool show_colors) override;
 
+  lldb_private::ModuleSpecList GetSeparateDebugInfoFiles() override;
+
   /// List separate dwo files.
   bool GetSeparateDebugInfo(StructuredData::Dictionary &d, bool errors_only,
                             bool load_all_debug_info = false) override;
@@ -375,6 +379,8 @@ public:
 
   /// Returns the DWARFIndex for this symbol, if it exists.
   DWARFIndex *getIndex() { return m_index.get(); }
+
+  lldb::TypeSP GetTypeEnclosingVariableUID(lldb::user_id_t uid) override;
 
 private:
   /// Find the definition DIE for the specified \c label in this

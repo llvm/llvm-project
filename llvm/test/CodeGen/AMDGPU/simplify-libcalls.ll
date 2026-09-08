@@ -1,9 +1,9 @@
-; RUN: opt -S -O1 -mtriple=amdgcn-- -amdgpu-simplify-libcall < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-POSTLINK %s
-; RUN: opt -S -O1 -mtriple=amdgcn-- -amdgpu-simplify-libcall -amdgpu-prelink -amdgpu-enable-ocl-mangling-mismatch-workaround=0 <%s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-PRELINK %s
-; RUN: opt -S -O1 -mtriple=amdgcn-- -amdgpu-use-native -amdgpu-prelink < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-NATIVE %s
-; RUN: opt -S -passes='default<O1>' -mtriple=amdgcn-- -amdgpu-simplify-libcall < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-POSTLINK %s
-; RUN: opt -S -passes='default<O1>' -mtriple=amdgcn-- -amdgpu-simplify-libcall -amdgpu-prelink -amdgpu-enable-ocl-mangling-mismatch-workaround=0 <%s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-PRELINK %s
-; RUN: opt -S -passes='default<O1>' -mtriple=amdgcn-- -amdgpu-use-native -amdgpu-prelink < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-NATIVE %s
+; RUN: opt -S -O1 -mtriple=amdgpu-- -amdgpu-simplify-libcall < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-POSTLINK %s
+; RUN: opt -S -O1 -mtriple=amdgpu-- -amdgpu-simplify-libcall -amdgpu-prelink -amdgpu-enable-ocl-mangling-mismatch-workaround=0 <%s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-PRELINK %s
+; RUN: opt -S -O1 -mtriple=amdgpu-- -amdgpu-use-native -amdgpu-prelink < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-NATIVE %s
+; RUN: opt -S -passes='default<O1>' -mtriple=amdgpu-- -amdgpu-simplify-libcall < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-POSTLINK %s
+; RUN: opt -S -passes='default<O1>' -mtriple=amdgpu-- -amdgpu-simplify-libcall -amdgpu-prelink -amdgpu-enable-ocl-mangling-mismatch-workaround=0 <%s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-PRELINK %s
+; RUN: opt -S -passes='default<O1>' -mtriple=amdgpu-- -amdgpu-use-native -amdgpu-prelink < %s | FileCheck -enable-var-scope -check-prefix=GCN -check-prefix=GCN-NATIVE %s
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_sincos
 ; GCN-POSTLINK: call fast float @_Z3sinf(
@@ -359,7 +359,7 @@ declare half @_Z4pownDhi(half, i32)
 ; GCN-LABEL: {{^}}define half @test_pown_f16(
 ; GCN-NATIVE: %__fabs = tail call fast half @llvm.fabs.f16(half %x)
 ; GCN-NATIVE: %__log2 = tail call fast half @llvm.log2.f16(half %__fabs)
-; GCN-NATIVE: %pownI2F = sitofp i32 %y to half
+; GCN-NATIVE: %pownI2F = sitofp fast i32 %y to half
 ; GCN-NATIVE: %__ylogx = fmul fast half %__log2, %pownI2F
 ; GCN-NATIVE: %__exp2 = tail call fast nofpclass(nan ninf nzero nsub nnorm) half @llvm.exp2.f16(half %__ylogx)
 ; GCN-NATIVE: %__ytou = trunc i32 %y to i16
@@ -410,7 +410,7 @@ entry:
 ; GCN: %conv = fptosi float %tmp1 to i32
 ; GCN: %__fabs = tail call fast float @llvm.fabs.f32(float %tmp)
 ; GCN: %__log2 = tail call fast float @llvm.log2.f32(float %__fabs)
-; GCN: %pownI2F = sitofp i32 %conv to float
+; GCN: %pownI2F = sitofp fast i32 %conv to float
 ; GCN: %__ylogx = fmul fast float %__log2, %pownI2F
 ; GCN: %__exp2 = tail call fast nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float %__ylogx)
 ; GCN: %__yeven = shl i32 %conv, 31

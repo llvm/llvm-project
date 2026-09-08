@@ -14,6 +14,7 @@ include "mlir/IR/DialectBase.td"
 def AMDGPU_Dialect : Dialect {
   let name = "amdgpu";
   let cppNamespace = "::mlir::amdgpu";
+  let useStrictPropertiesInAssemblyFormat = 1;
   let description = [{
     The `AMDGPU` dialect provides wrappers around AMD-specific functionality
     and LLVM intrinsics. These wrappers should be used in conjunction with
@@ -81,6 +82,9 @@ def AMDGPU_Dialect : Dialect {
     in a more programmer-friendly fashion, such as through enums or though
     using separate arguments that are later combined. (For example, see the
     design of the `amdgpu.dpp` and `amdgpu.fat_raw_buffer_cast` operations.)
+    However, in the case where an immediate argument corresponds directly to an
+    enum in the backend compiler, that enum should be in the ROCDL dialect
+    instead.
 
     If sufficiently similar functionality on multiple hardware generations can be
     encapsulated into a single operation, it should be done. The lowering to

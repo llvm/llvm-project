@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}store_v2i32_as_v4i16_align_4:
 ; GCN: s_load_dwordx2

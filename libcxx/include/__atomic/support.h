@@ -99,12 +99,21 @@
 // template <class _Tp>
 // _Tp __cxx_atomic_fetch_xor(_Atmc<_Tp>* __a, _Tp __pattern, memory_order __order) noexcept;
 //
+// template <class _Tp>
+// _Tp __cxx_atomic_fetch_max(_Atmc<_Tp> volatile* __a, _Tp __pattern, memory_order __order) noexcept;
+// template <class _Tp>
+// _Tp __cxx_atomic_fetch_max(_Atmc<_Tp>* __a, _Tp __pattern, memory_order __order) noexcept;
+// template <class _Tp>
+// _Tp __cxx_atomic_fetch_min(_Atmc<_Tp> volatile* __a, _Tp __pattern, memory_order __order) noexcept;
+// template <class _Tp>
+// _Tp __cxx_atomic_fetch_min(_Atmc<_Tp>* __a, _Tp __pattern, memory_order __order) noexcept;
+//
 // clang-format on
 //
 
-#if _LIBCPP_HAS_GCC_ATOMIC_IMP
+#ifdef _LIBCPP_COMPILER_GCC
 #  include <__atomic/support/gcc.h>
-#elif _LIBCPP_HAS_C_ATOMIC_IMP
+#else
 #  include <__atomic/support/c11.h>
 #endif
 

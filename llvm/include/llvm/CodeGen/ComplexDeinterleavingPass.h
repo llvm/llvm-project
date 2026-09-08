@@ -29,7 +29,7 @@ private:
 public:
   ComplexDeinterleavingPass(const TargetMachine &TM) : TM(&TM) {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 enum class ComplexDeinterleavingOperation {

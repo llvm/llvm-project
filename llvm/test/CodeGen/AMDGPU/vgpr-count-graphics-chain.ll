@@ -1,5 +1,4 @@
-; RUN: llc -mcpu=gfx1200 < %s | FileCheck %s
-target triple = "amdgcn--amdpal"
+; RUN: llc -mtriple=amdgpu12.00--amdpal < %s | FileCheck %s
 
 @global = addrspace(1) global i32 poison, align 4
 

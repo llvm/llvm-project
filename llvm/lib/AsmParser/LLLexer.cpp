@@ -801,7 +801,6 @@ lltok::Kind LLLexer::LexIdentifier() {
 
   // Use-list order directives.
   KEYWORD(uselistorder);
-  KEYWORD(uselistorder_bb);
 
   KEYWORD(personality);
   KEYWORD(cleanup);
@@ -1010,6 +1009,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   DWKEYWORD(TAG, DwarfTag);
   DWKEYWORD(ATE, DwarfAttEncoding);
   DWKEYWORD(VIRTUALITY, DwarfVirtuality);
+  DWKEYWORD(LLVM_LANG_DIALECT, DwarfLangDialect);
   DWKEYWORD(LANG, DwarfLang);
   DWKEYWORD(LNAME, DwarfSourceLangName);
   DWKEYWORD(CC, DwarfCC);

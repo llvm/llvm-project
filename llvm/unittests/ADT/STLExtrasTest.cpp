@@ -1170,7 +1170,7 @@ TEST(STLExtrasTest, getSingleElement) {
 }
 
 TEST(STLExtrasTest, hasNItems) {
-  const std::list<int> V0 = {}, V1 = {1}, V2 = {1, 2};
+  const std::list<int> V0 = {}, V1 = {1};
   const std::list<int> V3 = {1, 3, 5};
 
   EXPECT_TRUE(hasNItems(V0, 0));
@@ -1191,7 +1191,7 @@ TEST(STLExtrasTest, hasNItems) {
 }
 
 TEST(STLExtras, hasNItemsOrMore) {
-  const std::list<int> V0 = {}, V1 = {1}, V2 = {1, 2};
+  const std::list<int> V1 = {1}, V2 = {1, 2};
   const std::list<int> V3 = {1, 3, 5};
 
   EXPECT_TRUE(hasNItemsOrMore(V1, 1));

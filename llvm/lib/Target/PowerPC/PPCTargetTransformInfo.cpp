@@ -153,12 +153,12 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
             Value *Op0ToUse = (DL.isLittleEndian()) ? Op1 : Op0;
             Value *Op1ToUse = (DL.isLittleEndian()) ? Op0 : Op1;
             ExtractedElts[Idx] = IC.Builder.CreateExtractElement(
-                Idx < 16 ? Op0ToUse : Op1ToUse, IC.Builder.getInt32(Idx & 15));
+                Idx < 16 ? Op0ToUse : Op1ToUse, Idx & 15);
           }
 
           // Insert this value into the result vector.
-          Result = IC.Builder.CreateInsertElement(Result, ExtractedElts[Idx],
-                                                  IC.Builder.getInt32(I));
+          Result =
+              IC.Builder.CreateInsertElement(Result, ExtractedElts[Idx], I);
         }
         return CastInst::Create(Instruction::BitCast, Result, II.getType());
       }
@@ -352,20 +352,22 @@ bool PPCTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
   TargetSchedModel SchedModel;
   SchedModel.init(ST);
 
-  // FIXME: Sure there is no other way to get TTI? This should be cheap though.
-  TargetTransformInfo TTI =
-      TM.getTargetTransformInfo(*L->getHeader()->getParent());
-
   // Do not convert small short loops to CTR loop.
   unsigned ConstTripCount = SE.getSmallConstantTripCount(L);
   if (ConstTripCount && ConstTripCount < SmallCTRLoopThreshold) {
     SmallPtrSet<const Value *, 32> EphValues;
     CodeMetrics::collectEphemeralValues(L, &AC, EphValues);
-    CodeMetrics Metrics;
-    for (BasicBlock *BB : L->blocks())
-      Metrics.analyzeBasicBlock(BB, TTI, EphValues);
+    InstructionCost NumInsts;
+    for (BasicBlock *BB : L->blocks()) {
+      for (Instruction &I : *BB) {
+        if (EphValues.count(&I))
+          continue;
+        SmallVector<const Value *, 4> Operands(I.operand_values());
+        NumInsts += getInstructionCost(&I, Operands, TTI::TCK_CodeSize);
+      }
+    }
     // 6 is an approximate latency for the mtctr instruction.
-    if (Metrics.NumInsts <= (6 * SchedModel.getIssueWidth()))
+    if (NumInsts <= (6 * SchedModel.getIssueWidth()))
       return false;
   }
 
@@ -526,7 +528,8 @@ unsigned PPCTTIImpl::getPrefetchDistance() const {
   return 300;
 }
 
-unsigned PPCTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+unsigned PPCTTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                            bool HasUnorderedReductions) const {
   unsigned Directive = ST->getCPUDirective();
   // The 440 has no SIMD support, but floating-point instructions
   // have a 5-cycle latency, so unroll by 5x for latency hiding.
@@ -616,9 +619,9 @@ InstructionCost PPCTTIImpl::getArithmeticInstrCost(
 
 InstructionCost PPCTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            VectorType *DstTy, VectorType *SrcTy,
-                                           ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind,
-                                           int Index, VectorType *SubTp,
+                                           ArrayRef<int> Mask, int Index,
+                                           VectorType *SubTp,
                                            ArrayRef<const Value *> Args,
                                            const Instruction *CxtI) const {
 
@@ -922,20 +925,6 @@ PPCTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   return InstructionCost::getInvalid();
 }
 
-bool PPCTTIImpl::areInlineCompatible(const Function *Caller,
-                                     const Function *Callee) const {
-  const TargetMachine &TM = getTLI()->getTargetMachine();
-
-  const FeatureBitset &CallerBits =
-      TM.getSubtargetImpl(*Caller)->getFeatureBits();
-  const FeatureBitset &CalleeBits =
-      TM.getSubtargetImpl(*Callee)->getFeatureBits();
-
-  // Check that targets features are exactly the same. We can revisit to see if
-  // we can improve this.
-  return CallerBits == CalleeBits;
-}
-
 bool PPCTTIImpl::areTypesABICompatible(const Function *Caller,
                                        const Function *Callee,
                                        ArrayRef<Type *> Types) const {
@@ -1170,4 +1159,47 @@ PPCTTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
       VecTy->getScalarSizeInBits() != 8)
     Cost += 1; // need shift for length
   return Cost;
+}
+
+InstructionCost PPCTTIImpl::getPartialReductionCost(
+    unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+    ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+    TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+    TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
+  InstructionCost Invalid = InstructionCost::getInvalid();
+
+  if (!getST()->hasAltivec())
+    return Invalid;
+  if (Opcode != Instruction::Add)
+    return Invalid;
+  if (BinOp && BinOp.value() != Instruction::Mul)
+    return Invalid;
+
+  EVT AccVT = TLI->getValueType(DL, AccumType, true);
+  if (AccVT != MVT::i32)
+    return Invalid;
+  if (InputTypeA != InputTypeB)
+    return Invalid;
+
+  Type *ATy = VectorType::get(InputTypeA, VF);
+  EVT AVT = TLI->getValueType(DL, ATy, true);
+
+  if (OpAExtend != TTI::PR_SignExtend && OpAExtend != TTI::PR_ZeroExtend)
+    return Invalid;
+  if (OpBExtend != TTI::PR_SignExtend && OpBExtend != TTI::PR_ZeroExtend)
+    return Invalid;
+
+  if (AVT == MVT::v16i8) {
+    // For v16i8 PPC supports vmsumubm (zext/zext) and vmsummbm (sext/zext)
+    if (OpBExtend != TTI::PR_ZeroExtend)
+      return Invalid;
+  } else if (AVT == MVT::v8i16) {
+    // For v8i16 PPC supports vmsumuhm (zext/zext) and vmsumshm (sext/sext)
+    if (OpAExtend != OpBExtend)
+      return Invalid;
+  } else {
+    return Invalid;
+  }
+
+  return vectorCostAdjustmentFactor(Instruction::Add, ATy, nullptr);
 }

@@ -37,13 +37,14 @@ using TableGenMainFn =
 using MultiFileTableGenMainFn = function_ref<bool(TableGenOutputFiles &OutFiles,
                                                   const RecordKeeper &Records)>;
 
-int TableGenMain(const char *argv0, TableGenMainFn MainFn = nullptr);
+LLVM_ABI int TableGenMain(const char *argv0, TableGenMainFn MainFn = nullptr);
 
-int TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn = nullptr);
+LLVM_ABI int TableGenMain(const char *argv0,
+                          MultiFileTableGenMainFn MainFn = nullptr);
 
 /// Controls emitting large character arrays as strings or character arrays.
 /// Typically set to false when building with MSVC.
-extern cl::opt<bool> EmitLongStrLiterals;
+extern LLVM_ABI cl::opt<bool> EmitLongStrLiterals;
 
 } // end namespace llvm
 

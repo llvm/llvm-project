@@ -183,6 +183,16 @@ class PythonSynthDataFormatterTestCase(TestBase):
         self.assertEqual(foo_var.GetChildAtIndex(1).GetName(), "fake_a")
         self.assertEqual(foo_var.GetChildAtIndex(2).GetName(), "r")
 
+        # Test the `child` accessor with indexes of hidden children: those with
+        # indexes beyond num_children. wrapfooSynthProvider has a hidden child
+        # at index=num_children, access by the name "$$dereference$$".
+        hidden_index = wrapper_var.GetIndexOfChildWithName("$$dereference$$")
+        self.assertNotEqual(hidden_index, lldb.LLDB_INVALID_INDEX32)
+        self.assertGreaterEqual(hidden_index, wrapper_var.num_children)
+        hidden_child = wrapper_var.child[hidden_index]
+        self.assertIsNotNone(hidden_child)
+        self.assertGreater(hidden_child.num_children, 0)
+
         # now delete the synth and add the filter
         self.runCmd("type synth delete foo")
         self.runCmd("type synth delete wrapfoo")

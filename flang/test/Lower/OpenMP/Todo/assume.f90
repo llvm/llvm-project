@@ -1,6 +1,6 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-fir -fopenmp -fopenmp-version=51 -o - %s 2>&1 | FileCheck %s
 
-! CHECK: not yet implemented: OpenMP ASSUME construct
+! CHECK: not yet implemented: assumption clause is not implemented yet
 program p
   integer r
   r = 1

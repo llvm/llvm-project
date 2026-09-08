@@ -173,7 +173,7 @@ namespace test73 {
 // CHECK-HIDDEN: @_ZN6Test143varE = external global
 // CHECK: @_ZN6Test154TempINS_1AEE5Inner6bufferE = external global [0 x i8]
 // CHECK-HIDDEN: @_ZN6Test154TempINS_1AEE5Inner6bufferE = external global [0 x i8]
-// CHECK: @_ZTVN6test701BE = external hidden unnamed_addr constant { [5 x ptr] }, align 8
+// CHECK: @_ZTVN6test701BE = external hidden constant { [5 x ptr] }, align 8
 // CHECK: @_ZTTN6test701BE = external hidden unnamed_addr constant [2 x ptr], align 8
 
 namespace test27 {
@@ -191,13 +191,13 @@ namespace test27 {
 
   void C<int>::D::g() {
   }
-  // CHECK: _ZTVN6test271CIiE1DE = unnamed_addr constant
-  // CHECK-HIDDEN: _ZTVN6test271CIiE1DE = unnamed_addr constant
+  // CHECK: _ZTVN6test271CIiE1DE = constant
+  // CHECK-HIDDEN: _ZTVN6test271CIiE1DE = constant
 }
 
 // CHECK: @_ZTVN5Test63fooE = linkonce_odr hidden unnamed_addr constant
 
-// CHECK-HIDDEN: @_ZTVN6Test161AIcEE = external unnamed_addr constant
+// CHECK-HIDDEN: @_ZTVN6Test161AIcEE = external constant
 // CHECK-HIDDEN: @_ZTTN6Test161AIcEE = external unnamed_addr constant
 
 // CHECK: @_ZZN6test681fC1EvE4test = linkonce_odr global

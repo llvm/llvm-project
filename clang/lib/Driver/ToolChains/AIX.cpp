@@ -243,15 +243,13 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // Specify linker input file(s).
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
-  if (D.isUsingLTO())
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
-                  D.getLTOMode() == LTOK_Thin);
+  if (auto LTO = ToolChain.getLTOMode(Args); LTO != LTOK_None)
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
   if (Args.hasArg(options::OPT_shared) && !hasExportListLinkerOpts(CmdArgs)) {
 
     const char *CreateExportListExec = Args.MakeArgString(
-        path::parent_path(ToolChain.getDriver().ClangExecutable) +
-        "/llvm-nm");
+        path::parent_path(ToolChain.getDriver().DriverExecutable) + "/llvm-nm");
     ArgStringList CreateExportCmdArgs;
 
     std::string CreateExportListPath =
@@ -558,7 +556,7 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
 
 void AIX::addClangTargetOptions(
     const llvm::opt::ArgList &Args, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadingKind) const {
+    BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const {
   Args.AddLastArg(CC1Args, options::OPT_mignore_xcoff_visibility);
   Args.AddLastArg(CC1Args, options::OPT_mdefault_visibility_export_mapping_EQ);
   Args.addOptInFlag(CC1Args, options::OPT_mxcoff_roptr, options::OPT_mno_xcoff_roptr);

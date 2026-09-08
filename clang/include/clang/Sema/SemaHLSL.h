@@ -60,7 +60,8 @@ using llvm::dxil::ResourceClass;
 // longer need to create builtin buffer types in HLSLExternalSemaSource.
 bool CreateHLSLAttributedResourceType(
     Sema &S, QualType Wrapped, ArrayRef<const Attr *> AttrList,
-    QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo = nullptr);
+    QualType &ResType, HLSLAttributedResourceLocInfo *LocInfo = nullptr,
+    Expr *SampleCountExpr = nullptr);
 
 enum class BindingType : uint8_t { NotAssigned, Explicit, Implicit };
 
@@ -138,6 +139,8 @@ public:
   bool CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr, Expr *RHSExpr,
                           SourceLocation Loc);
 
+  bool canHaveOverloadedBinOp(QualType Ty, BinaryOperatorKind Opc);
+
   QualType handleVectorBinOpConversion(ExprResult &LHS, ExprResult &RHS,
                                        QualType LHSType, QualType RHSType,
                                        bool IsCompAssign);
@@ -146,8 +149,7 @@ public:
   // Returns the result of converting ConstantBuffer<T> to
   // `const hlsl_constant T&`. If `BaseExpr`'s type is not ConstantBuffer<T>
   // then the return value is `std::nullopt`.
-  std::optional<ExprResult>
-  tryPerformConstantBufferConversion(ExprResult &BaseExpr);
+  std::optional<ExprResult> tryPerformConstantBufferConversion(Expr *BaseExpr);
 
   // Returns the conversion operator to convert `RD` to `const hlsl_constant
   // Type&`. Returns `nullptr` if it could not be found.
@@ -187,9 +189,12 @@ public:
   void handleShaderAttr(Decl *D, const ParsedAttr &AL);
   void handleResourceBindingAttr(Decl *D, const ParsedAttr &AL);
   void handleParamModifierAttr(Decl *D, const ParsedAttr &AL);
-  void handleMatrixLayoutAttr(Decl *D, const ParsedAttr &AL);
-  bool diagnoseInstantiatedMatrixLayoutAttr(Decl *D,
-                                            const HLSLMatrixLayoutAttr *Attr);
+  Attr *buildMatrixLayoutTypeAttr(QualType T, const ParsedAttr &AL);
+  bool diagnoseMatrixLayoutInstantiation(attr::Kind K, QualType T,
+                                         SourceLocation Loc);
+  // Re-type a layout-adapting matrix builtin call \p E with \p DestType's
+  // row_major/column_major sugar so CodeGen lowers it into that layout.
+  void propagateContextualMatrixLayout(Expr *E, QualType DestType);
   bool handleResourceTypeAttr(QualType T, const ParsedAttr &AL);
 
   template <typename T>

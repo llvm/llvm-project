@@ -391,6 +391,12 @@ CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
     Callee = Builder.CreateBitCast(Callee, CB.getCalledOperand()->getType());
   auto *Cond = Builder.CreateICmpEQ(CB.getCalledOperand(), Callee);
 
+  // The address comparison has made the callee's address significant.
+  // Strip unnamed_addr so the symbol is recorded as address-significant
+  // and kept unique by the linker.
+  if (auto *GV = dyn_cast<GlobalValue>(Callee->stripPointerCasts()))
+    GV->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
+
   return versionCallSiteWithCond(CB, Cond, BranchWeights);
 }
 
@@ -474,27 +480,6 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
       if (FailureReason)
         *FailureReason = "SRet arg to vararg function";
       return false;
-    }
-  }
-
-  // Check target feature compatibility. This is also needed to avoid incorrect
-  // inlining if the callee has the always_inline attribute. An always_inline
-  // function can be incorrectly inlined via two paths: either it is directly
-  // called and inlined, or it is indirectly called, promoted, and then inlined.
-  // The check here only prevents the latter case.
-  auto CalleeFeatures =
-      Callee->getFnAttribute("target-features").getValueAsString();
-  auto CallerFeatures =
-      CB.getCaller()->getFnAttribute("target-features").getValueAsString();
-  SmallVector<StringRef, 8> CalleeFeats;
-  CalleeFeatures.split(CalleeFeats, ',');
-  for (auto Feat : CalleeFeats) {
-    if (Feat.starts_with("+")) {
-      if (!CallerFeatures.contains(Feat)) {
-        if (FailureReason)
-          *FailureReason = "Incompatible target features";
-        return false;
-      }
     }
   }
 
@@ -637,11 +622,11 @@ CallBase *llvm::promoteCallWithIfThenElse(CallBase &CB, Function &Callee,
   IndirectBBIns->setIndex(IndirectID);
   IndirectBBIns->insertInto(&IndirectBB, IndirectBB.getFirstInsertionPt());
 
-  const GlobalValue::GUID CalleeGUID = AssignGUIDPass::getGUID(Callee);
+  const GlobalValue::GUID CalleeGUID = Callee.getGUID();
   const uint32_t NewCountersSize = IndirectID + 1;
 
   auto ProfileUpdater = [&](PGOCtxProfContext &Ctx) {
-    assert(Ctx.guid() == AssignGUIDPass::getGUID(Caller));
+    assert(Ctx.guid() == Caller.getGUID());
     assert(NewCountersSize - 2 == Ctx.counters().size());
     // All the ctx-es belonging to a function must have the same size counters.
     Ctx.resizeCounters(NewCountersSize);
@@ -676,7 +661,6 @@ CallBase *llvm::promoteCallWithIfThenElse(CallBase &CB, Function &Callee,
     // times, and the indirect BB, IndirectCount times
     Ctx.counters()[DirectID] = DirectCount;
     Ctx.counters()[IndirectID] = IndirectCount;
-
   };
   CtxProf.update(ProfileUpdater, Caller);
   return &DirectCall;
@@ -689,8 +673,15 @@ CallBase &llvm::promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
   assert(!AddressPoints.empty() && "Caller should guarantee");
   IRBuilder<> Builder(&CB);
   SmallVector<Value *, 2> ICmps;
-  for (auto &AddressPoint : AddressPoints)
+  for (auto &AddressPoint : AddressPoints) {
     ICmps.push_back(Builder.CreateICmpEQ(VPtr, AddressPoint));
+    // The address comparison has made the vtable address significant.
+    // Strip unnamed_addr so the vtable is recorded as address-significant
+    // and kept unique by the linker.
+    if (auto *GV =
+            dyn_cast<GlobalValue>(AddressPoint->stripInBoundsConstantOffsets()))
+      GV->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
+  }
 
   // TODO: Perform tree height reduction if the number of ICmps is high.
   Value *Cond = Builder.CreateOr(ICmps);

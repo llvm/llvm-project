@@ -36,6 +36,19 @@ class PassBuilder;
 }
 namespace clang {
 
+/// A target's ABI policy for whether a class's vtable can be assumed to have
+/// a unique address program-wide. This is the basis for the exact dynamic_cast
+/// optimization (and, where a vtable is not assumed unique, for whether it may
+/// be marked unnamed_addr so the platform can duplicate it).
+enum class VTableUniquenessKind {
+  /// Every vtable has a single address program-wide.
+  AlwaysUnique,
+  /// A vtable with strong linkage (e.g., a class with a key function) is
+  /// unique, but a vague-linkage (weak) vtable may be duplicated by the
+  /// platform and so has no unique address.
+  UniqueIfStrongLinkage,
+};
+
 /// Bitfields of CodeGenOptions, split out from CodeGenOptions to ensure
 /// that this large collection of bitfields is a trivial class type.
 class CodeGenOptionsBase {
@@ -66,7 +79,7 @@ public:
   using AsanDtorKind = llvm::AsanDtorKind;
   using VectorLibrary = llvm::driver::VectorLibrary;
   using ZeroCallUsedRegsKind = llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind;
-  using WinX64EHUnwindV2Mode = llvm::WinX64EHUnwindV2Mode;
+  using WinX64EHUnwindMode = llvm::WinX64EHUnwindMode;
   using ControlFlowGuardMechanism = llvm::ControlFlowGuardMechanism;
 
   using DebugCompressionType = llvm::DebugCompressionType;
@@ -227,6 +240,12 @@ public:
     NonStrictDefault = NonZero
   };
 
+  enum class NewPMEnablementLevel {
+    Auto,         // Use the target dependent default.
+    ForceEnable,  // Always enable regardless of the target default.
+    ForceDisable, // Always disable regardless of the target default.
+  };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 
@@ -267,6 +286,14 @@ public:
   /// The string containing the commandline for the llvm.commandline metadata,
   /// if non-empty.
   std::string RecordCommandLine;
+
+  /// The string containing the commandline for the dx.source.args metadata,
+  /// if non-empty.
+  std::string HLSLRecordCommandLine;
+
+  /// The vector contains parsed commandline for the dx.source.args metadata,
+  /// if parsing was successful.
+  llvm::SmallVector<llvm::SmallString<8>> HLSLParsedCommandLine;
 
   llvm::SmallVector<std::pair<std::string, std::string>, 0> DebugPrefixMap;
 
@@ -370,9 +397,13 @@ public:
   /// Prefix to use for -save-temps output.
   std::string SaveTempsFilePrefix;
 
-  /// Name of file passed with -fcuda-include-gpubinary option to forward to
-  /// CUDA runtime back-end for incorporating them into host-side object file.
-  std::string CudaGpuBinaryFileName;
+  /// Prefix to use for -save-dynamic-debugging-temps output.
+  std::string SaveDynDbgTempsFilePrefix;
+
+  /// Name of file passed with -foffload-include-binary option to forward to
+  /// offloading runtime back-end for incorporating them into host-side object
+  /// file.
+  std::string OffloadBinaryToEmbedFile;
 
   /// List of filenames passed in using the -fembed-offload-object option. These
   /// are offloading binaries containing device images and metadata.
@@ -692,6 +723,10 @@ public:
     }
     llvm_unreachable("Unknown BoolFromMem enum");
   }
+
+  /// Remap specified path prefix using provided DebugPrefixMap map.
+  /// Returns updated path or unchanged if no substitution was found.
+  std::string remapDebugPathPrefix(StringRef Path) const;
 };
 
 }  // end namespace clang

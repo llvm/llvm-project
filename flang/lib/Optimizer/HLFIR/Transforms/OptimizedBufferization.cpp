@@ -22,8 +22,6 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
-#include "flang/Optimizer/Support/Utils.h"
-#include "flang/Optimizer/Transforms/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
@@ -401,6 +399,28 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) const {
     return std::nullopt;
   }
   for (const mlir::MemoryEffects::EffectInstance &effect : *effects) {
+    // A deallocation between the elemental and the assignment would invalidate
+    // memory accessed by the elemental once its evaluation is moved down to the
+    // assignment. containsReadOrWriteEffectOn only covers Read/Write effects,
+    // so MemoryEffects::Free is checked explicitly here.
+    if (mlir::isa<mlir::MemoryEffects::Free>(effect.getEffect())) {
+      mlir::Value freed = effect.getValue();
+      auto mayAccessFreed = [&](llvm::ArrayRef<mlir::Value> vals) {
+        if (!freed)
+          return true; // unknown freed memory - be conservative
+        for (mlir::Value val : vals)
+          if (!aliasAnalysis.alias(val, freed).isNo())
+            return true;
+        return false;
+      };
+      if (mayAccessFreed(notToBeWrittenBeforeAssign) ||
+          mayAccessFreed(notToBeAccessedBeforeAssign)) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "disallowed deallocation between elemental and assign: "
+                   << freed << " for " << elemental.getLoc() << "\n");
+        return std::nullopt;
+      }
+    }
     // not safe to access anything written in the elemental as this write
     // will be moved to the assignment
     for (mlir::Value val : notToBeAccessedBeforeAssign) {
@@ -616,15 +636,29 @@ tryUsingAssignLhsDirectly(hlfir::EvaluateInMemoryOp evalInMem,
   mlir::Location loc = evalInMem.getLoc();
   hlfir::DestroyOp destroy;
   hlfir::AssignOp assign;
-  for (auto user : llvm::enumerate(evalInMem->getUsers())) {
-    if (user.index() > 2)
+  // To evaluate the hlfir.eval_in_mem directly into the LHS, its result must
+  // only be used in the assignment, in a destroy, and in hlfir.shape_of (which
+  // can be replaced by a direct use of the shape operand).
+  llvm::SmallVector<hlfir::ShapeOfOp> shapeOfs;
+  for (mlir::Operation *user : evalInMem->getUsers()) {
+    if (auto op = mlir::dyn_cast<hlfir::AssignOp>(user)) {
+      if (assign)
+        return mlir::failure();
+      assign = op;
+    } else if (auto op = mlir::dyn_cast<hlfir::DestroyOp>(user)) {
+      if (destroy)
+        return mlir::failure();
+      destroy = op;
+    } else if (auto op = mlir::dyn_cast<hlfir::ShapeOfOp>(user)) {
+      shapeOfs.push_back(op);
+    } else {
       return mlir::failure();
-    mlir::TypeSwitch<mlir::Operation *, void>(user.value())
-        .Case([&](hlfir::AssignOp op) { assign = op; })
-        .Case([&](hlfir::DestroyOp op) { destroy = op; });
+    }
   }
   if (!assign || !destroy || destroy.mustFinalizeExpr() ||
       assign.isAllocatableAssignment())
+    return mlir::failure();
+  if (!shapeOfs.empty() && !evalInMem.getShape())
     return mlir::failure();
 
   hlfir::Entity lhs{assign.getLhs()};
@@ -668,6 +702,10 @@ tryUsingAssignLhsDirectly(hlfir::EvaluateInMemoryOp evalInMem,
   fir::FirOpBuilder builder(rewriter, evalInMem.getOperation());
   mlir::Value rawLhs = hlfir::genVariableRawAddress(loc, builder, lhs);
   hlfir::computeEvaluateOpIn(loc, builder, evalInMem, rawLhs);
+  // Redirect shape_of users to the shape operand so the eval_in_mem can be
+  // erased without leaving dangling uses.
+  for (hlfir::ShapeOfOp shapeOf : shapeOfs)
+    rewriter.replaceOp(shapeOf, evalInMem.getShape());
   rewriter.eraseOp(assign);
   rewriter.eraseOp(destroy);
   rewriter.eraseOp(evalInMem);

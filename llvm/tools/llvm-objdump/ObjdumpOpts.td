@@ -76,6 +76,11 @@ def disassemble_symbols_EQ : Joined<["--"], "disassemble-symbols=">,
            "Accept demangled names when --demangle is "
            "specified, otherwise accept mangled names">;
 
+def disassemble_EQ : Joined<["--"], "disassemble=">,
+  HelpText<"Specify a symbol name to diasassemble. "
+           "Accept demangled names when --demangle is "
+           "specified, otherwise accept mangled names">;
+
 def disassemble_zeroes : Flag<["--"], "disassemble-zeroes">,
   HelpText<"Do not skip blocks of zeroes when disassembling">;
 def : Flag<["-"], "z">, Alias<disassemble_zeroes>,
@@ -231,12 +236,28 @@ def unwind_info : Flag<["--"], "unwind-info">,
 def : Flag<["-"], "u">, Alias<unwind_info>,
   HelpText<"Alias for --unwind-info">;
 
+def unwind_show_wod_pool : Flag<["--"], "unwind-show-wod-pool">,
+  HelpText<"Also display the raw Windows x64 unwind V3 WOD pool with byte offsets "
+           "(requires --unwind-info)">;
+
 def wide : Flag<["--"], "wide">,
   HelpText<"Ignored for compatibility with GNU objdump">;
 def : Flag<["-"], "w">, Alias<wide>;
 
 defm prefix : Eq<"prefix", "Add prefix to absolute paths">,
               MetaVarName<"prefix">;
+def source_dir : Separate<["--"], "source-dir">,
+  MetaVarName<"<dir>">,
+  HelpText<"Add a directory to the front of the source search path when "
+           "looking up source files. May be specified multiple times">;
+def : Separate<["-"], "source-dir">, Alias<source_dir>;
+
+def substitute_path : MultiArg<["--"], "substitute-path", 2>,
+  MetaVarName<"<from> <to>">,
+  HelpText<"Replace <from> with <to> at the start of the directory part of "
+           "source file paths when looking up sources. The rule is applied "
+           "only if <from> ends at a directory separator in the path. May be "
+           "specified multiple times">;
 defm prefix_strip
     : Eq<"prefix-strip", "Strip out initial directories from absolute "
                          "paths. No effect without --prefix">,

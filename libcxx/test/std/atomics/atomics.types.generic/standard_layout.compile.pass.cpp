@@ -26,6 +26,7 @@ struct CheckStandardLayout {
 };
 
 void tests() {
+  CheckStandardLayout<bool>()();
   TestEachIntegralType<CheckStandardLayout>()();
   TestEachFloatingPointType<CheckStandardLayout>()();
   TestEachPointerType<CheckStandardLayout>()();

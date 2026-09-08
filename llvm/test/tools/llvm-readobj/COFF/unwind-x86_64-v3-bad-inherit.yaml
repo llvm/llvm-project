@@ -1,0 +1,155 @@
+# RUN: yaml2obj %s -o %t.exe
+# RUN: llvm-readobj --unwind %t.exe 2>%t.err | FileCheck %s
+# RUN: FileCheck %s --check-prefix=WARN < %t.err
+
+## T10: V3 malformed — first epilog has NumberOfOps=0 (invalid inheritance).
+## The first epilog descriptor cannot inherit because there is no previous
+## descriptor. The tool should warn.
+##
+## .xdata hex breakdown:
+## Byte 0: 0x03  (Version=3, Flags=0)
+## Byte 1: 0x0B  (SizeOfProlog=11)
+## Byte 2: 0x05  (PayloadWords=5 words -> 10 bytes payload)
+## Byte 3: 0x23  (NumberOfOps=3, NumberOfEpilogs=1: (1<<5)|3)
+## Payload (10 bytes):
+##   +0: 07        Prolog IP offset[0]: +7
+##   +1: 02        Prolog IP offset[1]: +2
+##   +2: 00        Prolog IP offset[2]: +0
+##   +3: 00        Epilog[0] FlagsAndNumOps: flags=0, nops=0 (INVALID, 3 bytes only)
+##   +4: 14 00     Epilog[0] EpilogOffset: +20
+##   +6: 38 34 3C  WOD pool: ALLOC_SMALL(32), PUSH RSI, PUSH RDI
+##   +9: 00        Padding
+
+# CHECK-LABEL:  UnwindInformation [
+# CHECK-NEXT:     RuntimeFunction {
+# CHECK:            UnwindInfo {
+# CHECK-NEXT:         Version: 3
+# CHECK-NEXT:         Flags [ (0x0)
+# CHECK-NEXT:         ]
+# CHECK-NEXT:         SizeOfProlog: 0xB
+# CHECK-NEXT:         PayloadWords: 5
+# CHECK-NEXT:         NumberOfOps: 3
+# CHECK-NEXT:         NumberOfEpilogs: 1
+# CHECK-NEXT:         Prolog [3 ops]:
+# CHECK-NEXT:           [0] IP +0x0007: ALLOC_SMALL Size=0x20
+# CHECK-NEXT:           [1] IP +0x0002: PUSH Reg=RSI
+# CHECK-NEXT:           [2] IP +0x0000: PUSH Reg=RDI
+# CHECK-NEXT:         Epilog [0] {
+# CHECK-NEXT:           Flags [ (0x0)
+# CHECK-NEXT:           ]
+# CHECK-NEXT:           EpilogOffset: +0x14
+# CHECK-NEXT:           NumberOfOps: 0
+# CHECK-NEXT:         }
+# CHECK-NEXT:       }
+# CHECK-NEXT:     }
+# CHECK-NEXT:   ]
+# WARN: warning: first epilog cannot inherit (NumberOfOps=0)
+
+--- !COFF
+OptionalHeader:
+  AddressOfEntryPoint: 4096
+  ImageBase:       0
+  SectionAlignment: 4096
+  FileAlignment:   512
+  MajorOperatingSystemVersion: 6
+  MinorOperatingSystemVersion: 0
+  MajorImageVersion: 0
+  MinorImageVersion: 0
+  MajorSubsystemVersion: 6
+  MinorSubsystemVersion: 0
+  Subsystem:       IMAGE_SUBSYSTEM_WINDOWS_CUI
+  DLLCharacteristics: [ IMAGE_DLL_CHARACTERISTICS_HIGH_ENTROPY_VA, IMAGE_DLL_CHARACTERISTICS_DYNAMIC_BASE, IMAGE_DLL_CHARACTERISTICS_NX_COMPAT ]
+  SizeOfStackReserve: 1048576
+  SizeOfStackCommit: 4096
+  SizeOfHeapReserve: 1048576
+  SizeOfHeapCommit: 4096
+  ExportTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ImportTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ResourceTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ExceptionTable:
+    RelativeVirtualAddress: 12288
+    Size:            12
+  CertificateTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  BaseRelocationTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  Debug:
+    RelativeVirtualAddress: 0
+    Size:            0
+  Architecture:
+    RelativeVirtualAddress: 0
+    Size:            0
+  GlobalPtr:
+    RelativeVirtualAddress: 0
+    Size:            0
+  TlsTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  LoadConfigTable:
+    RelativeVirtualAddress: 0
+    Size:            0
+  BoundImport:
+    RelativeVirtualAddress: 0
+    Size:            0
+  IAT:
+    RelativeVirtualAddress: 0
+    Size:            0
+  DelayImportDescriptor:
+    RelativeVirtualAddress: 0
+    Size:            0
+  ClrRuntimeHeader:
+    RelativeVirtualAddress: 0
+    Size:            0
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  4096
+    VirtualSize:     16
+    SectionData:     '00000000000000000000000000000000'
+  - Name:            .xdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  8192
+    VirtualSize:     14
+    SectionData:     '030B052307020000140038343C00'
+  - Name:            .pdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  12288
+    VirtualSize:     12
+    SectionData:     '001000001010000000200000'
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .xdata
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            .pdata
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            func
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

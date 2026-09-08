@@ -96,7 +96,7 @@ body:             |
     ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], killed [[FCVTNv2i32_]], %subreg.dsub
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY [[MOVIv2d_ns]].dsub
     ; CHECK-NEXT: STRDui killed [[COPY2]], [[COPY]], 2 :: (store (s64) into %ir.0 + 16)
-    ; CHECK-NEXT: STRQui killed [[INSERT_SUBREG2]], [[COPY]], 0 :: (store (s128) into %ir.0, align 8)
+    ; CHECK-NEXT: STRQui [[INSERT_SUBREG2]], [[COPY]], 0 :: (store (s128) into %ir.0, align 8)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64common = COPY $x0
     %1:fpr128 = MOVIv2d_ns 0
@@ -559,7 +559,7 @@ body:             |
     ; CHECK-NEXT: [[MOVID:%[0-9]+]]:fpr64 = MOVID 0
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_ZERO:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], killed [[MOVID]], %subreg.dsub
-    ; CHECK-NEXT: STRQui killed [[INSERT_LOW]], [[PTR]], 0 :: (store (s128) into %ir.dst, align 8)
+    ; CHECK-NEXT: STRQui [[INSERT_LOW]], [[PTR]], 0 :: (store (s128) into %ir.dst, align 8)
     ; CHECK-NEXT: RET_ReallyLR
     %0:gpr64common = COPY $x0
     %1:gpr64common = COPY $x1

@@ -27,7 +27,16 @@
 
 #include "test_iterators.h"
 
+#include "../../range_adaptor_types.h"
 #include "../types.h"
+
+using ConstIterIncompatibleView =
+    BasicView<forward_iterator<int*>,
+              forward_iterator<int*>,
+              random_access_iterator<const int*>,
+              random_access_iterator<const int*>>;
+static_assert(!std::is_convertible_v<std::ranges::iterator_t<ConstIterIncompatibleView>,
+                                     std::ranges::iterator_t<const ConstIterIncompatibleView>>);
 
 template <class Iterator, class Sentinel = sentinel_wrapper<Iterator>>
 constexpr void test() {
@@ -42,31 +51,50 @@ constexpr void test() {
     return EnumerateView(std::move(view));
   };
 
-  static_assert(std::is_convertible_v<EnumerateIterator, EnumerateConstIterator>);
+  static_assert(std::convertible_to<EnumerateIterator, EnumerateConstIterator>);
 
   std::array array{0, 84, 2, 3, 4};
   auto view = make_enumerate_view(array.begin(), array.end());
   {
-    std::same_as<EnumerateIterator> decltype(auto) it     = view.begin();
-    std::same_as<const Iterator&> decltype(auto) itResult = it.base();
-    assert(base(base(itResult)) == std::to_address(base(array.begin())));
-
-    auto [index, value] = *(++it);
-    assert(index == 1);
-    assert(value == 84);
-  }
-  {
+    // Assigning a non-const iterator to a const-iterator-typed variable invokes
+    // the converting constructor.
     std::same_as<EnumerateConstIterator> decltype(auto) it = view.begin();
     std::same_as<const Iterator&> decltype(auto) itResult  = it.base();
     assert(base(base(itResult)) == std::to_address(base(array.begin())));
 
+    // Verify ++it
     auto [index, value] = *(++it);
     assert(index == 1);
     assert(value == 84);
   }
 }
 
-constexpr bool tests() {
+constexpr bool test() {
+  int buffer[3] = {1, 2, 3};
+  {
+    // Underlying non-const to const not convertible.
+    std::ranges::enumerate_view v(ConstIterIncompatibleView{buffer});
+    auto it       = v.begin();
+    auto const_it = std::as_const(v).begin();
+
+    static_assert(!std::same_as<decltype(it), decltype(const_it)>);
+
+    static_assert(!std::is_constructible_v<decltype(it), decltype(const_it)>);
+    static_assert(!std::is_constructible_v<decltype(const_it), decltype(it)>);
+  }
+  {
+    std::ranges::enumerate_view v(NonSimpleCommon{buffer});
+    auto it = v.begin();
+
+    std::ranges::iterator_t<const decltype(v)> const_it = it;
+    assert(it == const_it);
+
+    static_assert(!std::same_as<decltype(it), decltype(const_it)>);
+
+    // We cannot create a non-const iterator from a const iterator.
+    static_assert(!std::is_constructible_v<decltype(it), decltype(const_it)>);
+  }
+
   test<cpp17_input_iterator<int*>>();
   test<cpp20_input_iterator<int*>>();
   test<forward_iterator<int*>>();
@@ -79,8 +107,8 @@ constexpr bool tests() {
 }
 
 int main(int, char**) {
-  tests();
-  static_assert(tests());
+  test();
+  static_assert(test());
 
   return 0;
 }

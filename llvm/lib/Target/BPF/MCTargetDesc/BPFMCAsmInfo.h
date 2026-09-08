@@ -26,7 +26,6 @@ public:
       IsLittleEndian = false;
 
     InternalSymbolPrefix = ".L";
-    PrivateLabelPrefix = ".L";
     WeakRefDirective = "\t.weak\t";
 
     UsesELFSectionDirectiveForBSS = true;

@@ -1,0 +1,57 @@
+; REQUIRES: system-linux
+
+; RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-cross-cu-with-loclist.s -o %t.o
+; RUN: %clang %cflags -nostdlib -no-pie %t.o -o %t.exe
+; RUN: llvm-bolt %t.exe -o %t.exe.bolt --update-debug-sections --always-convert-to-ranges --debug-thread-count=4 2>&1 | FileCheck %s --check-prefix=BOLT
+; RUN: llvm-objdump --disassemble %t.exe.bolt > %t.txt
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info --debug-ranges %t.exe.bolt >> %t.txt
+; RUN: FileCheck %s --input-file=%t.txt
+
+;; Test that two cross-referenced CUs processed in the same bucket keep their own .debug_ranges entries.
+
+; BOLT-NOT: warning: DWARF unit from offset {{.*}} incl. to offset {{.*}} excl. tries to read DIEs at offset {{.*}}
+
+; CHECK: <main>:
+; CHECK-NEXT: [[#%.6x,MAIN:]]
+; CHECK: <_Z4foo2i>:
+; CHECK-NEXT: [[#%.6x,FOO2:]]
+
+; CHECK:      DW_AT_name [DW_FORM_strp]{{.*}}= "main.cpp"
+; CHECK-NEXT: DW_AT_stmt_list [DW_FORM_sec_offset]
+; CHECK-NEXT: DW_AT_comp_dir [DW_FORM_strp]
+; CHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
+; CHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x[[#%.8x,MAIN_CU_RANGES:]]
+; CHECK-NEXT: [0x0000000000[[#%.6x,MAIN]], 0x0000000000[[#%.6x,MAIN_END:]]))
+
+; CHECK:      DW_TAG_subprogram [2]
+; CHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x[[#%.8x,MAIN_SUB_RANGES:]]
+; CHECK-NEXT: [0x0000000000[[#MAIN]], 0x0000000000[[#MAIN_END]]))
+; CHECK-NEXT: DW_AT_frame_base [DW_FORM_exprloc]
+; CHECK-NEXT: DW_AT_GNU_all_call_sites [DW_FORM_flag_present]
+; CHECK-NEXT: DW_AT_name [DW_FORM_strp]{{.*}}= "main"
+
+; CHECK:      DW_AT_name [DW_FORM_strp]{{.*}}= "helper1.cpp"
+; CHECK-NEXT: DW_AT_stmt_list [DW_FORM_sec_offset]
+; CHECK-NEXT: DW_AT_comp_dir [DW_FORM_strp]
+; CHECK-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
+; CHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x[[#%.8x,HELPER_CU_RANGES:]]
+; CHECK-NEXT: [0x0000000000[[#FOO2]], 0x0000000000[[#%.6x,FOO2_END:]]))
+
+; CHECK:      DW_TAG_subprogram [14]
+; CHECK-NEXT: DW_AT_ranges [DW_FORM_sec_offset] (0x[[#%.8x,HELPER_SUB_RANGES:]]
+; CHECK-NEXT: [0x0000000000[[#FOO2]], 0x0000000000[[#FOO2_END]]))
+; CHECK-NEXT: DW_AT_frame_base [DW_FORM_exprloc]
+; CHECK-NEXT: DW_AT_GNU_all_call_sites [DW_FORM_flag_present]
+; CHECK-NEXT: DW_AT_linkage_name [DW_FORM_strp]{{.*}}= "_Z4foo2i"
+; CHECK-NEXT: DW_AT_name [DW_FORM_strp]{{.*}}= "foo2"
+
+; CHECK:      DW_TAG_inlined_subroutine
+; CHECK-NEXT: DW_AT_abstract_origin
+; CHECK-NEXT: DW_AT_ranges {{.*}}(0x[[#%.8x,INLINED_RANGES:]]
+
+; CHECK:      .debug_ranges contents:
+; CHECK:      [[#%.8x,MAIN_CU_RANGES]] 0000000000[[#%.6x,MAIN]] 0000000000[[#%.6x,MAIN + 0x8]]
+; CHECK:      [[#%.8x,MAIN_SUB_RANGES]] 0000000000[[#%.6x,MAIN]] 0000000000[[#%.6x,MAIN + 0x8]]
+; CHECK:      [[#%.8x,HELPER_CU_RANGES]] 0000000000[[#%.6x,FOO2]] 0000000000[[#%.6x,FOO2 + 0x4]]
+; CHECK:      [[#%.8x,HELPER_SUB_RANGES]] 0000000000[[#%.6x,FOO2]] 0000000000[[#%.6x,FOO2 + 0x4]]
+; CHECK:      [[#%.8x,INLINED_RANGES]] 0000000000[[#%.6x,FOO2]] 0000000000[[#%.6x,FOO2 + 0x3]]

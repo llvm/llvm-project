@@ -17,4 +17,4 @@ entry:
 }
 
 !0 = !{!1}
-!1 = !{i64 0, !"_ZTSFvcE.generalized"}
+!1 = !{!"_ZTSFvcE.generalized"}

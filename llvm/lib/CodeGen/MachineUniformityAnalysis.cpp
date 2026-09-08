@@ -109,7 +109,7 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::pushUsers(
 
 template <>
 bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::usesValueFromCycle(
-    const MachineInstr &I, const MachineCycle &DefCycle) const {
+    const MachineInstr &I, CycleRef DefCycle) const {
   assert(!isAlwaysUniform(I));
   for (auto &Op : I.operands()) {
     if (!Op.isReg() || !Op.readsReg())
@@ -122,27 +122,27 @@ bool llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::usesValueFromCycle(
       return true;
 
     auto *Def = F.getRegInfo().getVRegDef(Reg);
-    if (DefCycle.contains(Def->getParent()))
+    if (CI.contains(DefCycle, Def->getParent()))
       return true;
   }
   return false;
 }
 
 template <>
-void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::
-    propagateTemporalDivergence(const MachineInstr &I,
-                                const MachineCycle &DefCycle) {
+void llvm::GenericUniformityAnalysisImpl<
+    MachineSSAContext>::propagateTemporalDivergence(const MachineInstr &I,
+                                                    CycleRef DefCycle) {
   const auto &RegInfo = F.getRegInfo();
   for (auto &Op : I.all_defs()) {
     if (!Op.getReg().isVirtual())
       continue;
     auto Reg = Op.getReg();
     for (MachineInstr &UserInstr : RegInfo.use_instructions(Reg)) {
-      if (DefCycle.contains(UserInstr.getParent()))
+      if (CI.contains(DefCycle, UserInstr.getParent()))
         continue;
       markDivergent(UserInstr);
 
-      recordTemporalDivergence(Reg, &UserInstr, &DefCycle);
+      recordTemporalDivergence(Reg, &UserInstr, DefCycle);
     }
   }
 }

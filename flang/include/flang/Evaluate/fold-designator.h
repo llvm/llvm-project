@@ -28,7 +28,6 @@
 #include "type.h"
 #include "variable.h"
 #include <optional>
-#include <variant>
 
 namespace Fortran::evaluate {
 

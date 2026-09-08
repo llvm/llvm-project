@@ -100,3 +100,39 @@ transform.sequence failures(propagate) {
   // expected-error@below {{expected '('}}
   %res = transform.structured.generalize %arg0 : !transform.any_op -> !transform.any_op 
 }
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error@below {{expected one of 'Unknown', 'Multiple' or 'Equal', but got 'Foo'}}
+  %1, %loop = transform.structured.tile_using_for %arg0 tile_sizes [8] inner_tile_alignments = [Foo] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error@below {{expected one of 'Unknown', 'Multiple' or 'Equal', but got 'Bogus'}}
+  %1, %loop = transform.structured.fuse %arg0 tile_sizes [8] inner_tile_alignments = [Bogus] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.structured.match ops{["tensor.empty"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  // expected-error@below {{expected one of 'Unknown', 'Multiple' or 'Equal', but got 'Nope'}}
+  %fused, %new = transform.structured.fuse_into_containing_op %0 into %1 inner_tile_alignments = [Nope] : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %0 = transform.structured.match ops{["scf.for"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  // expected-error@below {{expected one of 'Unknown', 'Multiple' or 'Equal', but got 'Xyz'}}
+  %a, %b = transform.test.fuse_consumer %1 into (%0) inner_tile_alignments = [Xyz] : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+}

@@ -52,10 +52,6 @@ namespace std {
 
 #  endif // _LIBCPP_HAS_THREADS
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#    include <cstddef>
-#    include <iosfwd>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_STOP_TOKEN

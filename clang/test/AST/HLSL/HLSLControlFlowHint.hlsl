@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-compute -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -ast-dump %s | FileCheck %s
 
 // CHECK: FunctionDecl {{.*}} used branch 'int (int)'
 // CHECK: AttributedStmt

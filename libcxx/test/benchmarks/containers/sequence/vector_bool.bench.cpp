@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03
+
 #include <benchmark/benchmark.h>
 #include <memory_resource>
 #include <vector>
 
 #include "test_macros.h"
 
-static void BM_vector_bool_copy_ctor(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_vector_bool_copy_ctor(benchmark::State& state) {
   std::vector<bool> vec(100, true);
 
   for (auto _ : state) {
@@ -23,7 +25,7 @@ static void BM_vector_bool_copy_ctor(benchmark::State& state) {
 }
 BENCHMARK(BM_vector_bool_copy_ctor)->Name("std::vector<bool>::ctor(const Self&)");
 
-static void BM_vector_bool_move_ctor_alloc_equal(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_vector_bool_move_ctor_alloc_equal(benchmark::State& state) {
   std::vector<bool> vec(100, true);
 
   for (auto _ : state) {
@@ -37,7 +39,7 @@ BENCHMARK(BM_vector_bool_move_ctor_alloc_equal)
     ->Name("std::vector<bool>::ctor(Self&&, const allocator_type&) (equal allocators)");
 
 #if TEST_STD_VER >= 17
-static void BM_vector_bool_move_ctor_alloc_different(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_vector_bool_move_ctor_alloc_different(benchmark::State& state) {
   std::pmr::monotonic_buffer_resource resource;
   std::pmr::vector<bool> vec(100, true, &resource);
 
@@ -51,7 +53,7 @@ BENCHMARK(BM_vector_bool_move_ctor_alloc_different)
     ->Name("std::vector<bool>::ctor(Self&&, const allocator_type&) (different allocators)");
 #endif
 
-static void BM_vector_bool_size_ctor(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_vector_bool_size_ctor(benchmark::State& state) {
   for (auto _ : state) {
     std::vector<bool> vec(100, true);
     benchmark::DoNotOptimize(vec);
@@ -59,7 +61,7 @@ static void BM_vector_bool_size_ctor(benchmark::State& state) {
 }
 BENCHMARK(BM_vector_bool_size_ctor)->Name("std::vector<bool>::ctor(size_type, const value_type&)");
 
-static void BM_vector_bool_reserve(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_vector_bool_reserve(benchmark::State& state) {
   for (auto _ : state) {
     std::vector<bool> vec;
     vec.reserve(100);
@@ -68,7 +70,7 @@ static void BM_vector_bool_reserve(benchmark::State& state) {
 }
 BENCHMARK(BM_vector_bool_reserve)->Name("std::vector<bool>::reserve()");
 
-static void BM_vector_bool_resize(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_vector_bool_resize(benchmark::State& state) {
   for (auto _ : state) {
     std::vector<bool> vec;
     vec.resize(100);

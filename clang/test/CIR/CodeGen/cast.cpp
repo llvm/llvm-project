@@ -8,8 +8,8 @@ unsigned char cxxstaticcast_0(unsigned int x) {
 }
 
 // CIR: cir.func{{.*}} @_Z15cxxstaticcast_0j
-// CIR:    %[[XPTR:[0-9]+]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["x", init] {alignment = 4 : i64}
-// CIR:    %[[RV:[0-9]+]] = cir.alloca !u8i, !cir.ptr<!u8i>, ["__retval"] {alignment = 1 : i64}
+// CIR:    %[[XPTR:[0-9]+]] = cir.alloca "x" align(4) init : !cir.ptr<!u32i>
+// CIR:    %[[RV:[0-9]+]] = cir.alloca "__retval" align(1) : !cir.ptr<!u8i>
 // CIR:    cir.store %arg0, %[[XPTR]] : !u32i, !cir.ptr<!u32i>
 // CIR:    %[[XVAL:[0-9]+]] = cir.load{{.*}} %[[XPTR]] : !cir.ptr<!u32i>, !u32i
 // CIR:    %[[CASTED:[0-9]+]] = cir.cast integral %[[XVAL]] : !u32i -> !u8i
@@ -90,15 +90,15 @@ bool cptr(void *d) {
 }
 
 // CIR: cir.func{{.*}} @_Z4cptrPv(%arg0: !cir.ptr<!void>
-// CIR:   %[[DPTR:[0-9]+]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["d", init] {alignment = 8 : i64}
+// CIR:   %[[DPTR:[0-9]+]] = cir.alloca "d" align(8) init : !cir.ptr<!cir.ptr<!void>>
 
 // CIR:   %[[DVAL:[0-9]+]] = cir.load{{.*}} %[[DPTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:   %{{[0-9]+}} = cir.cast ptr_to_bool %[[DVAL]] : !cir.ptr<!void> -> !cir.bool
 
 // LLVM-LABEL: define{{.*}} i1 @_Z4cptrPv(ptr {{.*}} %0)
-// LLVM:         %[[ARG_STORAGE:.*]] = alloca ptr, i64 1
-// LLVM:         %[[RETVAL:.*]] = alloca i8, i64 1
-// LLVM:         %[[X_STORAGE:.*]] = alloca i8, i64 1
+// LLVM:         %[[ARG_STORAGE:.*]] = alloca ptr, 
+// LLVM:         %[[RETVAL:.*]] = alloca i8, 
+// LLVM:         %[[X_STORAGE:.*]] = alloca i8, 
 // LLVM:         store ptr %0, ptr %[[ARG_STORAGE]]
 // LLVM:         %[[LOADED_PTR:.*]] = load ptr, ptr %[[ARG_STORAGE]]
 // LLVM:         %[[NULL_CHECK:.*]] = icmp ne ptr %[[LOADED_PTR]], null
@@ -140,8 +140,8 @@ void f(long int start) {
 // CIR:          cir.cast int_to_ptr %[[MID]] : !u64i -> !cir.ptr<!void>
 
 // LLVM-LABEL: define{{.*}} void @_Z1fl(i64 {{.*}} %0)
-// LLVM: %[[ADDR:.*]] = alloca i64, i64 1, align 8
-// LLVM: %[[PADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM: %[[ADDR:.*]] = alloca i64, align 8
+// LLVM: %[[PADDR:.*]] = alloca ptr, align 8
 // LLVM: store i64 %0, ptr %[[ADDR]], align 8
 // LLVM: %[[L:.*]] = load i64, ptr %[[ADDR]], align 8
 // LLVM: %[[PTR:.*]] = inttoptr i64 %[[L]] to ptr

@@ -48,11 +48,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY [[COPY]].ssub
-    ; CHECK-NEXT: STRSui [[COPY1]], %stack.0.alloca, 0 :: (store (s32) into %ir.alloca)
+    ; CHECK-NEXT: STRSui [[COPY1]], %stack.0.alloca, 0 :: (store (i32) into %ir.alloca)
     ; CHECK-NEXT: RET_ReallyLR
-    %0:fpr(s64) = COPY $d0
+    %0:fpr(i64) = COPY $d0
     %1:gpr(p0) = G_FRAME_INDEX %stack.0.alloca
-    G_STORE %0(s64), %1(p0) :: (store (s32) into %ir.alloca)
+    G_STORE %0(i64), %1(p0) :: (store (i32) into %ir.alloca)
     RET_ReallyLR
 
 ...
@@ -78,11 +78,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr16 = COPY [[COPY]].hsub
-    ; CHECK-NEXT: STRHui [[COPY1]], %stack.0.alloca, 0 :: (store (s16) into %ir.alloca)
+    ; CHECK-NEXT: STRHui [[COPY1]], %stack.0.alloca, 0 :: (store (i16) into %ir.alloca)
     ; CHECK-NEXT: RET_ReallyLR
-    %0:fpr(s64) = COPY $d0
+    %0:fpr(i64) = COPY $d0
     %1:gpr(p0) = G_FRAME_INDEX %stack.0.alloca
-    G_STORE %0(s64), %1(p0) :: (store (s16) into %ir.alloca)
+    G_STORE %0(i64), %1(p0) :: (store (i16) into %ir.alloca)
     RET_ReallyLR
 
 ...
@@ -108,11 +108,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr8 = COPY [[COPY]].bsub
-    ; CHECK-NEXT: STRBui [[COPY1]], %stack.0.alloca, 0 :: (store (s8) into %ir.alloca)
+    ; CHECK-NEXT: STRBui [[COPY1]], %stack.0.alloca, 0 :: (store (i8) into %ir.alloca)
     ; CHECK-NEXT: RET_ReallyLR
-    %0:fpr(s64) = COPY $d0
+    %0:fpr(i64) = COPY $d0
     %1:gpr(p0) = G_FRAME_INDEX %stack.0.alloca
-    G_STORE %0(s64), %1(p0) :: (store (s8) into %ir.alloca)
+    G_STORE %0(i64), %1(p0) :: (store (i8) into %ir.alloca)
     RET_ReallyLR
 
 ...

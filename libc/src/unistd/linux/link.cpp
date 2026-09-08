@@ -8,30 +8,20 @@
 
 #include "src/unistd/link.h"
 
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/linux/syscall_wrappers/link.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
-#include "hdr/fcntl_macros.h"
-#include <sys/syscall.h> // For syscall numbers.
-
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, link, (const char *path1, const char *path2)) {
-#ifdef SYS_link
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_link, path1, path2);
-#elif defined(SYS_linkat)
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_linkat, AT_FDCWD, path1,
-                                              AT_FDCWD, path2, 0);
-#else
-#error "link or linkat syscalls not available."
-#endif
-  if (ret < 0) {
-    libc_errno = -ret;
+  auto result = linux_syscalls::link(path1, path2);
+  if (!result) {
+    libc_errno = result.error();
     return -1;
   }
-  return ret;
+  return result.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

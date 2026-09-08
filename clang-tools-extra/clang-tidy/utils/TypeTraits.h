@@ -34,6 +34,9 @@ bool hasNonTrivialMoveConstructor(QualType Type);
 /// Return true if `Type` has a non-trivial move assignment operator.
 bool hasNonTrivialMoveAssignment(QualType Type);
 
+/// Returns `true` if `Type` is a `std::initializer_list<...>` specialization.
+bool isStdInitializerList(QualType Type);
+
 } // namespace clang::tidy::utils::type_traits
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_TYPETRAITS_H

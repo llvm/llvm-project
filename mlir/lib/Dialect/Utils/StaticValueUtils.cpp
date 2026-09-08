@@ -152,6 +152,15 @@ std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
   return apInt->first.getSExtValue();
 }
 
+/// If ofr is a constant integer or an IntegerAttr, return the integer
+/// zero-extended to 64 bits.
+std::optional<uint64_t> getConstantUIntValue(OpFoldResult ofr) {
+  std::optional<std::pair<APInt, bool>> apInt = getConstantAPIntValue(ofr);
+  if (!apInt)
+    return std::nullopt;
+  return apInt->first.getZExtValue();
+}
+
 std::optional<SmallVector<int64_t>>
 getConstantIntValues(ArrayRef<OpFoldResult> ofrs) {
   SmallVector<int64_t> res;
@@ -321,6 +330,12 @@ std::optional<APInt> constantTripCount(
     // Note: LB and UB could match at runtime, even though they are different
     // SSA values. That case cannot be detected here.
     return APInt(bitwidth, 0);
+  }
+  if (isZeroInteger(lb) && ub == step) {
+    // Fast path: LB == 0 && UB == step. The loop has a single iteration.
+    // Note: LB and UB could match at runtime, even though they are different
+    // SSA values. That case cannot be detected here.
+    return APInt(bitwidth, 1);
   }
 
   std::optional<std::pair<APInt, bool>> maybeStepCst =

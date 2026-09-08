@@ -71,7 +71,7 @@ exit:
   ret i32 %fib2
 }
 
-define i32 @main() {
+define i32 @main() personality ptr null {
   ; params & retval
   %n = call i32 @get_n(i32 4)
   ; loops
@@ -243,35 +243,35 @@ exit:
 ; CHECK-NEXT:           to label %next5 unwind label %cleanup jump to %next5
 ; CHECK-NEXT:   indirectbr ptr blockaddress(@main, %exit), [label %exit] jump to %exit
 ; CHECK-NEXT: Entering function: fib
-; CHECK-NEXT:   ptr %self = ptr 0x8 [fib]
+; CHECK-NEXT:   ptr %self = ptr 0x8 [@fib]
 ; CHECK-NEXT:   i32 %n = i32 5
 ; CHECK-NEXT:   %cond = icmp ugt i32 %n, 1 => T
 ; CHECK-NEXT:   br i1 %cond, label %if.then, label %if.else jump to %if.then
 ; CHECK-NEXT:   %sub1 = sub i32 %n, 1 => i32 4
 ; CHECK-NEXT:   %sub2 = sub i32 %n, 2 => i32 3
 ; CHECK-NEXT: Entering function: fib
-; CHECK-NEXT:   ptr %self = ptr 0x8 [fib]
+; CHECK-NEXT:   ptr %self = ptr 0x8 [@fib]
 ; CHECK-NEXT:   i32 %n = i32 4
 ; CHECK-NEXT:   %cond = icmp ugt i32 %n, 1 => T
 ; CHECK-NEXT:   br i1 %cond, label %if.then, label %if.else jump to %if.then
 ; CHECK-NEXT:   %sub1 = sub i32 %n, 1 => i32 3
 ; CHECK-NEXT:   %sub2 = sub i32 %n, 2 => i32 2
 ; CHECK-NEXT: Entering function: fib
-; CHECK-NEXT:   ptr %self = ptr 0x8 [fib]
+; CHECK-NEXT:   ptr %self = ptr 0x8 [@fib]
 ; CHECK-NEXT:   i32 %n = i32 3
 ; CHECK-NEXT:   %cond = icmp ugt i32 %n, 1 => T
 ; CHECK-NEXT:   br i1 %cond, label %if.then, label %if.else jump to %if.then
 ; CHECK-NEXT:   %sub1 = sub i32 %n, 1 => i32 2
 ; CHECK-NEXT:   %sub2 = sub i32 %n, 2 => i32 1
 ; CHECK-NEXT: Entering function: fib
-; CHECK-NEXT:   ptr %self = ptr 0x8 [fib]
+; CHECK-NEXT:   ptr %self = ptr 0x8 [@fib]
 ; CHECK-NEXT:   i32 %n = i32 2
 ; CHECK-NEXT:   %cond = icmp ugt i32 %n, 1 => T
 ; CHECK-NEXT:   br i1 %cond, label %if.then, label %if.else jump to %if.then
 ; CHECK-NEXT:   %sub1 = sub i32 %n, 1 => i32 1
 ; CHECK-NEXT:   %sub2 = sub i32 %n, 2 => i32 0
 ; CHECK-NEXT: Entering function: fib
-; CHECK-NEXT:   ptr %self = ptr 0x8 [fib]
+; CHECK-NEXT:   ptr %self = ptr 0x8 [@fib]
 ; CHECK-NEXT:   i32 %n = i32 1
 ; CHECK-NEXT:   %cond = icmp ugt i32 %n, 1 => F
 ; CHECK-NEXT:   br i1 %cond, label %if.then, label %if.else jump to %if.else
@@ -279,7 +279,7 @@ exit:
 ; CHECK-NEXT: Exiting function: fib
 ; CHECK-NEXT:   %res1 = call i32 @fib(ptr %self, i32 %sub1) => i32 1
 ; CHECK-NEXT: Entering function: fib
-; CHECK-NEXT:   ptr %self = ptr 0x8 [fib]
+; CHECK-NEXT:   ptr %self = ptr 0x8 [@fib]
 ; CHECK-NEXT:   i32 %n = i32 0
 ; CHECK-NEXT:   %cond = icmp ugt i32 %n, 1 => F
 ; CHECK-NEXT:   br i1 %cond, label %if.then, label %if.else jump to %if.else
@@ -291,7 +291,7 @@ exit:
 ; CHECK-NEXT: Exiting function: fib
 ; CHECK-NEXT:   %res1 = call i32 @fib(ptr %self, i32 %sub1) => i32 2
 ; CHECK-NEXT: Entering function: fib
-; CHECK-NEXT:   ptr %self = ptr 0x8 [fib]
+; CHECK-NEXT:   ptr %self = ptr 0x8 [@fib]
 ; CHECK-NEXT:   i32 %n = i32 1
 ; CHECK-NEXT:   %cond = icmp ugt i32 %n, 1 => F
 ; CHECK-NEXT:   br i1 %cond, label %if.then, label %if.else jump to %if.else
@@ -303,14 +303,14 @@ exit:
 ; CHECK-NEXT: Exiting function: fib
 ; CHECK-NEXT:   %res1 = call i32 @fib(ptr %self, i32 %sub1) => i32 3
 ; CHECK-NEXT: Entering function: fib
-; CHECK-NEXT:   ptr %self = ptr 0x8 [fib]
+; CHECK-NEXT:   ptr %self = ptr 0x8 [@fib]
 ; CHECK-NEXT:   i32 %n = i32 2
 ; CHECK-NEXT:   %cond = icmp ugt i32 %n, 1 => T
 ; CHECK-NEXT:   br i1 %cond, label %if.then, label %if.else jump to %if.then
 ; CHECK-NEXT:   %sub1 = sub i32 %n, 1 => i32 1
 ; CHECK-NEXT:   %sub2 = sub i32 %n, 2 => i32 0
 ; CHECK-NEXT: Entering function: fib
-; CHECK-NEXT:   ptr %self = ptr 0x8 [fib]
+; CHECK-NEXT:   ptr %self = ptr 0x8 [@fib]
 ; CHECK-NEXT:   i32 %n = i32 1
 ; CHECK-NEXT:   %cond = icmp ugt i32 %n, 1 => F
 ; CHECK-NEXT:   br i1 %cond, label %if.then, label %if.else jump to %if.else
@@ -318,7 +318,7 @@ exit:
 ; CHECK-NEXT: Exiting function: fib
 ; CHECK-NEXT:   %res1 = call i32 @fib(ptr %self, i32 %sub1) => i32 1
 ; CHECK-NEXT: Entering function: fib
-; CHECK-NEXT:   ptr %self = ptr 0x8 [fib]
+; CHECK-NEXT:   ptr %self = ptr 0x8 [@fib]
 ; CHECK-NEXT:   i32 %n = i32 0
 ; CHECK-NEXT:   %cond = icmp ugt i32 %n, 1 => F
 ; CHECK-NEXT:   br i1 %cond, label %if.then, label %if.else jump to %if.else
@@ -334,21 +334,21 @@ exit:
 ; CHECK-NEXT: Exiting function: fib
 ; CHECK-NEXT:   %res1 = call i32 @fib(ptr %self, i32 %sub1) => i32 5
 ; CHECK-NEXT: Entering function: fib
-; CHECK-NEXT:   ptr %self = ptr 0x8 [fib]
+; CHECK-NEXT:   ptr %self = ptr 0x8 [@fib]
 ; CHECK-NEXT:   i32 %n = i32 3
 ; CHECK-NEXT:   %cond = icmp ugt i32 %n, 1 => T
 ; CHECK-NEXT:   br i1 %cond, label %if.then, label %if.else jump to %if.then
 ; CHECK-NEXT:   %sub1 = sub i32 %n, 1 => i32 2
 ; CHECK-NEXT:   %sub2 = sub i32 %n, 2 => i32 1
 ; CHECK-NEXT: Entering function: fib
-; CHECK-NEXT:   ptr %self = ptr 0x8 [fib]
+; CHECK-NEXT:   ptr %self = ptr 0x8 [@fib]
 ; CHECK-NEXT:   i32 %n = i32 2
 ; CHECK-NEXT:   %cond = icmp ugt i32 %n, 1 => T
 ; CHECK-NEXT:   br i1 %cond, label %if.then, label %if.else jump to %if.then
 ; CHECK-NEXT:   %sub1 = sub i32 %n, 1 => i32 1
 ; CHECK-NEXT:   %sub2 = sub i32 %n, 2 => i32 0
 ; CHECK-NEXT: Entering function: fib
-; CHECK-NEXT:   ptr %self = ptr 0x8 [fib]
+; CHECK-NEXT:   ptr %self = ptr 0x8 [@fib]
 ; CHECK-NEXT:   i32 %n = i32 1
 ; CHECK-NEXT:   %cond = icmp ugt i32 %n, 1 => F
 ; CHECK-NEXT:   br i1 %cond, label %if.then, label %if.else jump to %if.else
@@ -356,7 +356,7 @@ exit:
 ; CHECK-NEXT: Exiting function: fib
 ; CHECK-NEXT:   %res1 = call i32 @fib(ptr %self, i32 %sub1) => i32 1
 ; CHECK-NEXT: Entering function: fib
-; CHECK-NEXT:   ptr %self = ptr 0x8 [fib]
+; CHECK-NEXT:   ptr %self = ptr 0x8 [@fib]
 ; CHECK-NEXT:   i32 %n = i32 0
 ; CHECK-NEXT:   %cond = icmp ugt i32 %n, 1 => F
 ; CHECK-NEXT:   br i1 %cond, label %if.then, label %if.else jump to %if.else
@@ -368,7 +368,7 @@ exit:
 ; CHECK-NEXT: Exiting function: fib
 ; CHECK-NEXT:   %res1 = call i32 @fib(ptr %self, i32 %sub1) => i32 2
 ; CHECK-NEXT: Entering function: fib
-; CHECK-NEXT:   ptr %self = ptr 0x8 [fib]
+; CHECK-NEXT:   ptr %self = ptr 0x8 [@fib]
 ; CHECK-NEXT:   i32 %n = i32 1
 ; CHECK-NEXT:   %cond = icmp ugt i32 %n, 1 => F
 ; CHECK-NEXT:   br i1 %cond, label %if.then, label %if.else jump to %if.else

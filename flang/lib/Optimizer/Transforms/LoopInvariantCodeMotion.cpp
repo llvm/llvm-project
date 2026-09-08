@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
-#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
@@ -25,6 +24,7 @@
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/DebugLog.h"
+#include <utility>
 
 namespace fir {
 #define GEN_PASS_DEF_LOOPINVARIANTCODEMOTION
@@ -47,7 +47,7 @@ using namespace mlir;
 /// may be added later).
 /// The safety of hoisting is proven by:
 ///   * Proving that the loop runs at least one iteration.
-///   * Proving that is is always safe to load from this location
+///   * Proving that it is always safe to load from this location
 ///     (see isSafeToHoistLoad() comments below).
 struct LoopInvariantCodeMotion
     : fir::impl::LoopInvariantCodeMotionBase<LoopInvariantCodeMotion> {
@@ -240,6 +240,28 @@ static bool canHoistLoad(Operation *op, LoopLikeOpInterface loopLike,
   return false;
 }
 
+/// Returns true iff hoisting \p op out of a nested region is expected to be
+/// inexpensive. This is a cost heuristic only; the safety of the hoisting is
+/// established separately.
+///
+/// fir.convert and fir.address_of are at most one instruction and are often
+/// free. A load of a trivial non-vector type is a single access, and a load of
+/// a descriptor of known rank is a fixed-size copy. Vector loads may be large,
+/// an assumed-rank descriptor load lowers to a runtime-sized memcpy, and
+/// CHARACTER, derived types and arrays may be arbitrarily large, so those are
+/// left to the aggressive mode.
+static bool isCheapToHoistFromNestedRegion(Operation *op) {
+  if (isa<fir::ConvertOp, fir::AddrOfOp>(op))
+    return true;
+  if (auto load = dyn_cast<fir::LoadOp>(op)) {
+    Type resultType = load.getType();
+    if (isa<fir::BaseBoxType>(resultType))
+      return !fir::isa_unknown_size_box(resultType);
+    return fir::isa_trivial(resultType) && !fir::isa_vector(resultType);
+  }
+  return false;
+}
+
 /// Recursively collect regions from operations inside \p region, skipping
 /// IsolatedFromAbove operations (whose regions form a separate scope) and
 /// LoopLikeOpInterface operations (which have their own LICM invocation).
@@ -266,7 +288,15 @@ void LoopInvariantCodeMotion::runOnOperation() {
   LDBG() << "Enter [HL]FIR LoopInvariantCodeMotion()";
 
   auto &aliasAnalysis = getAnalysis<AliasAnalysis>();
-  aliasAnalysis.addAnalysisImplementation(fir::AliasAnalysis{});
+  // Enable getSource() memoization on the FIR AliasAnalysis for the duration
+  // of this pass. This is a frozen-snapshot cache with no automatic
+  // invalidation, but it is sound here because LICM only moves operations, so
+  // getSource()'s inputs are unchanged across the hoists. The cache lives no
+  // longer than this analysis instance, which the pass manager drops when the
+  // analysis is invalidated after the pass.
+  fir::AliasAnalysis firAliasAnalysis;
+  firAliasAnalysis.enableSourceCache();
+  aliasAnalysis.addAnalysisImplementation(std::move(firAliasAnalysis));
 
   std::function<bool(Operation *, LoopLikeOpInterface, bool)>
       shouldMoveOutOfLoop = [&](Operation *op, LoopLikeOpInterface loopLike,
@@ -429,14 +459,12 @@ void LoopInvariantCodeMotion::runOnOperation() {
       moveLoopInvariantCode(nestedRegions, isDefinedOutsideRegion,
                             shouldMoveFromNestedRegion, moveOutOfRegion);
     } else {
-      // "cheap" mode: only hoist fir.convert.
-      // TODO: refine the cost model for "cheap" hoisting to include
-      // other inexpensive operations.
+      // "cheap" mode: only hoist operations that are inexpensive to move.
       moveLoopInvariantCode(
           nestedRegions, isDefinedOutsideRegion,
           /*shouldMoveOutOfRegion=*/
           [&](Operation *op, Region *region) {
-            return isa<fir::ConvertOp>(op) &&
+            return isCheapToHoistFromNestedRegion(op) &&
                    shouldMoveFromNestedRegion(op, region);
           },
           moveOutOfRegion);

@@ -193,8 +193,7 @@ class SystemZInstrInfo : public SystemZGenInstrInfo {
                        unsigned HighOpcode) const;
   void expandZExtPseudo(MachineInstr &MI, unsigned LowOpcode,
                         unsigned Size) const;
-  void expandLoadStackGuard(MachineInstr *MI) const;
-
+  void expandStackGuardPseudo(MachineInstr &MI, unsigned Opcode) const;
   MachineInstrBuilder
   emitGRX32Move(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                 const DebugLoc &DL, unsigned DestReg, unsigned SrcReg,
@@ -405,6 +404,9 @@ public:
   getSerializableDirectMachineOperandTargetFlags() const override;
 
   MCInst getNop() const override;
+  bool isSchedulingBoundary(const MachineInstr &MI,
+                            const MachineBasicBlock *MBB,
+                            const MachineFunction &MF) const override;
 };
 
 } // end namespace llvm

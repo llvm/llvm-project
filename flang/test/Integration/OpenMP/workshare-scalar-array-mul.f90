@@ -26,12 +26,14 @@ end program
 ! HLFIR-O3:        hlfir.destroy
 ! HLFIR-O3:        omp.terminator
 ! HLFIR-O3:      omp.terminator
+! HLFIR-O3:    omp.combined
 
 ! FIR-O3:    omp.parallel {
 ! FIR-O3:      omp.wsloop nowait {
 ! FIR-O3:        omp.loop_nest
 ! FIR-O3:      omp.barrier
 ! FIR-O3:      omp.terminator
+! FIR-O3-NOT:omp.combined
 
 ! HLFIR-O0:    omp.parallel {
 ! HLFIR-O0:      omp.workshare {
@@ -40,6 +42,7 @@ end program
 ! HLFIR-O0:        hlfir.destroy
 ! HLFIR-O0:        omp.terminator
 ! HLFIR-O0:      omp.terminator
+! HLFIR-O0:    omp.combined
 
 ! Check the copyprivate copy function
 ! FIR-O0:  func.func private @_workshare_copy_heap_{{.*}}(%[[DST:.*]]: {{.*}}, %[[SRC:.*]]: {{.*}})
@@ -63,3 +66,4 @@ end program
 ! FIR-O0:        omp.terminator
 ! FIR-O0:      omp.barrier
 ! FIR-O0:      omp.terminator
+! FIR-O0-NOT:omp.combined

@@ -10,7 +10,7 @@ program main
 
   !$omp do ordered
   do i = 1, N
-    !ERROR: At most one THREADS clause can appear on the ORDERED directive
+    !ERROR: At most one THREADS clause can appear on ORDERED directive
     !$omp ordered threads threads
     arrayA(i) = i
     !$omp end ordered
@@ -19,7 +19,7 @@ program main
 
   !$omp simd
   do i = 1, N
-    !ERROR: At most one SIMD clause can appear on the ORDERED directive
+    !ERROR: At most one SIMD clause can appear on ORDERED directive
     !$omp ordered simd simd
     arrayA(i) = i
     !$omp end ordered
@@ -28,7 +28,7 @@ program main
 
   !$omp do simd ordered
   do i = 1, N
-    !ERROR: At most one SIMD clause can appear on the ORDERED directive
+    !ERROR: At most one SIMD clause can appear on ORDERED directive
     !$omp ordered simd simd
     arrayA(i) = i
     !$omp end ordered
@@ -38,17 +38,21 @@ program main
   !$omp do ordered(1)
   do i = 2, N
     !ERROR: Only SINK or SOURCE dependence types are allowed when ORDERED construct is a standalone construct with no ORDERED region
-    !ERROR: At most one SOURCE dependence type can appear on the ORDERED directive
+    !ERROR: At most one SOURCE dependence type can appear on ORDERED directive
     !$omp ordered depend(source) depend(inout: arrayA) depend(source)
     arrayA(i) = foo(i)
     !ERROR: The SINK and SOURCE dependence types are mutually exclusive
-    !ERROR: At most one SOURCE dependence type can appear on the ORDERED directive
+    !ERROR: At most one SOURCE dependence type can appear on ORDERED directive
     !$omp ordered depend(sink: i - 1) depend(source) depend(source)
     arrayB(i) = bar(arrayA(i), arrayB(i-1))
     !ERROR: Only SINK or SOURCE dependence types are allowed when ORDERED construct is a standalone construct with no ORDERED region
     !ERROR: Only SINK or SOURCE dependence types are allowed when ORDERED construct is a standalone construct with no ORDERED region
     !$omp ordered depend(out: arrayC) depend(in: arrayB)
     arrayC(i) = baz(arrayB(i-1))
+    !ERROR: Iteration vector must be specified with SINK dependence type
+    !$omp ordered depend(sink)
+    !ERROR: Iteration vector may not be specified with SOURCE dependence type
+    !$omp ordered depend(source: i - 2)
   end do
   !$omp end do
 

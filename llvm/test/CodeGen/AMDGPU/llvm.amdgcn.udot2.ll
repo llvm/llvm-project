@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx906 < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX906
-; RUN: llc -mtriple=amdgcn -mcpu=gfx942 < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX942-SDAG
-; RUN: llc -mtriple=amdgcn -mcpu=gfx942 -global-isel -new-reg-bank-select < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX942-GISEL
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1011 < %s | FileCheck %s --check-prefixes=GCN,GFX10
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1012 < %s | FileCheck %s --check-prefixes=GCN,GFX10
+; RUN: llc -mtriple=amdgpu9.06 < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX906
+; RUN: llc -mtriple=amdgpu9.42 < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX942-SDAG
+; RUN: llc -mtriple=amdgpu9.42 -global-isel < %s | FileCheck %s --check-prefixes=GCN,GFX9,GFX942-GISEL
+; RUN: llc -mtriple=amdgpu10.11 < %s | FileCheck %s --check-prefixes=GCN,GFX10
+; RUN: llc -mtriple=amdgpu10.12 < %s | FileCheck %s --check-prefixes=GCN,GFX10
 
 declare i32 @llvm.amdgcn.udot2(<2 x i16> %a, <2 x i16> %b, i32 %c, i1 %clamp)
 declare i32 @llvm.amdgcn.workitem.id.x()

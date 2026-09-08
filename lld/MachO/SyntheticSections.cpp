@@ -26,6 +26,8 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/xxhash.h"
 
+#include <limits>
+
 #if defined(__APPLE__)
 #include <sys/mman.h>
 
@@ -897,15 +899,19 @@ StringRef ObjCStubsSection::getMethname(Symbol *sym) {
   return methname;
 }
 
+size_t ObjCStubsSection::getStubSize() const {
+  return config->objcStubsMode == ObjCStubsMode::fast
+             ? target->objcStubsFastSize
+             : target->objcStubsSmallSize;
+}
+
 void ObjCStubsSection::addEntry(Symbol *sym) {
   StringRef methname = getMethname(sym);
   // We create a selref entry for each unique methname.
   if (!ObjCSelRefsHelper::getSelRef(methname))
     ObjCSelRefsHelper::makeSelRef(methname);
 
-  auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
-                      ? target->objcStubsFastSize
-                      : target->objcStubsSmallSize;
+  size_t stubSize = getStubSize();
   Defined *newSym = replaceSymbol<Defined>(
       sym, sym->getName(), nullptr, isec,
       /*value=*/symbols.size() * stubSize,
@@ -938,10 +944,22 @@ void ObjCStubsSection::setUp() {
 }
 
 uint64_t ObjCStubsSection::getSize() const {
-  auto stubSize = config->objcStubsMode == ObjCStubsMode::fast
-                      ? target->objcStubsFastSize
-                      : target->objcStubsSmallSize;
-  return stubSize * symbols.size();
+  return getStubSize() * symbols.size();
+}
+
+void ObjCStubsSection::sortSymbols(
+    const llvm::DenseMap<const Symbol *, int> &priorities) {
+  llvm::stable_sort(symbols, [&](const Defined *a, const Defined *b) {
+    auto priority = [&](const Defined *sym) {
+      auto it = priorities.find(sym);
+      return it == priorities.end() ? std::numeric_limits<int>::max()
+                                    : it->second;
+    };
+    return priority(a) < priority(b);
+  });
+  size_t stubSize = getStubSize();
+  for (auto [idx, sym] : llvm::enumerate(symbols))
+    sym->value = idx * stubSize;
 }
 
 void ObjCStubsSection::writeTo(uint8_t *buf) const {
@@ -1445,6 +1463,8 @@ template <class LP> void SymtabSectionImpl<LP>::writeTo(uint8_t *buf) const {
       nList->n_desc |= defined->isExternalWeakDef() ? N_WEAK_DEF : 0;
       nList->n_desc |=
           defined->referencedDynamically ? REFERENCED_DYNAMICALLY : 0;
+      if (config->outputType == MH_OBJECT)
+        nList->n_desc |= defined->isCold() ? N_COLD_FUNC : 0;
     } else if (auto *dysym = dyn_cast<DylibSymbol>(entry.sym)) {
       uint16_t n_desc = nList->n_desc;
       int16_t ordinal = ordinalForDylibSymbol(*dysym);
@@ -1870,7 +1890,7 @@ void WordLiteralSection::finalizeContents() {
         if (!isec->isLive(off))
           continue;
         uint32_t value = *reinterpret_cast<const uint32_t *>(buf + off);
-        literal4Map.emplace(value, literal4Map.size());
+        literal4Map.try_emplace(value, literal4Map.size());
       }
       break;
     }
@@ -1879,7 +1899,7 @@ void WordLiteralSection::finalizeContents() {
         if (!isec->isLive(off))
           continue;
         uint64_t value = *reinterpret_cast<const uint64_t *>(buf + off);
-        literal8Map.emplace(value, literal8Map.size());
+        literal8Map.try_emplace(value, literal8Map.size());
       }
       break;
     }
@@ -1888,7 +1908,7 @@ void WordLiteralSection::finalizeContents() {
         if (!isec->isLive(off))
           continue;
         UInt128 value = *reinterpret_cast<const UInt128 *>(buf + off);
-        literal16Map.emplace(value, literal16Map.size());
+        literal16Map.try_emplace(value, literal16Map.size());
       }
       break;
     }

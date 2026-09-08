@@ -26,12 +26,14 @@ add_lldb_library(lldbCore NO_PLUGIN_DEPENDENCIES
   AddressRangeListImpl.cpp
   AddressResolver.cpp
   AddressResolverFileLine.cpp
+  BugReporter.cpp
   Communication.cpp
   DataFileCache.cpp
   Debugger.cpp
   DebuggerEvents.cpp
   Declaration.cpp
   DemangledNameInfo.cpp
+  Diagnostics.cpp
   Disassembler.cpp
   DumpDataExtractor.cpp
   DumpRegisterValue.cpp

@@ -679,14 +679,12 @@ define <32 x i8> @var_fshl_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %amt) nou
 ; GFNIAVX512VL-NEXT:    vpand %ymm4, %ymm0, %ymm0
 ; GFNIAVX512VL-NEXT:    vgf2p8mulb %ymm6, %ymm0, %ymm0
 ; GFNIAVX512VL-NEXT:    vpandn %ymm3, %ymm2, %ymm2
-; GFNIAVX512VL-NEXT:    vpshufb %ymm2, %ymm7, %ymm3
-; GFNIAVX512VL-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %ymm1 # [0,128,64,32,16,8,4,2,0,128,64,32,16,8,4,2,0,128,64,32,16,8,4,2,0,128,64,32,16,8,4,2]
-; GFNIAVX512VL-NEXT:    vpbroadcastq {{.*#+}} ymm4 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
-; GFNIAVX512VL-NEXT:    vgf2p8affineqb $0, %ymm4, %ymm1, %ymm1
-; GFNIAVX512VL-NEXT:    vpand %ymm3, %ymm1, %ymm1
-; GFNIAVX512VL-NEXT:    vpshufb %ymm2, %ymm5, %ymm2
-; GFNIAVX512VL-NEXT:    vgf2p8mulb %ymm2, %ymm1, %ymm1
-; GFNIAVX512VL-NEXT:    vgf2p8affineqb $0, %ymm4, %ymm1, %ymm1
+; GFNIAVX512VL-NEXT:    vpshufb %ymm2, %ymm5, %ymm3
+; GFNIAVX512VL-NEXT:    vpshufb %ymm2, %ymm7, %ymm2
+; GFNIAVX512VL-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %ymm1 # [2,4,8,16,32,64,128,0,2,4,8,16,32,64,128,0,2,4,8,16,32,64,128,0,2,4,8,16,32,64,128,0]
+; GFNIAVX512VL-NEXT:    vpand %ymm2, %ymm1, %ymm1
+; GFNIAVX512VL-NEXT:    vgf2p8mulb %ymm3, %ymm1, %ymm1
+; GFNIAVX512VL-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %ymm1, %ymm1 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX512VL-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; GFNIAVX512VL-NEXT:    retq
 ;
@@ -1608,20 +1606,18 @@ define <64 x i8> @var_fshl_v64i8(<64 x i8> %a, <64 x i8> %b, <64 x i8> %amt) nou
 ; GFNIAVX512VL-NEXT:    vpshufb %ymm4, %ymm7, %ymm4
 ; GFNIAVX512VL-NEXT:    vpshufb %ymm2, %ymm7, %ymm2
 ; GFNIAVX512VL-NEXT:    vinserti64x4 $1, %ymm4, %zmm2, %zmm2
-; GFNIAVX512VL-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm1 # [0,128,64,32,16,8,4,2,0,128,64,32,16,8,4,2,0,128,64,32,16,8,4,2,0,128,64,32,16,8,4,2,0,128,64,32,16,8,4,2,0,128,64,32,16,8,4,2,0,128,64,32,16,8,4,2,0,128,64,32,16,8,4,2]
-; GFNIAVX512VL-NEXT:    vpbroadcastq {{.*#+}} zmm4 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
-; GFNIAVX512VL-NEXT:    vgf2p8affineqb $0, %zmm4, %zmm1, %zmm1
+; GFNIAVX512VL-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm1 # [2,4,8,16,32,64,128,0,2,4,8,16,32,64,128,0,2,4,8,16,32,64,128,0,2,4,8,16,32,64,128,0,2,4,8,16,32,64,128,0,2,4,8,16,32,64,128,0,2,4,8,16,32,64,128,0,2,4,8,16,32,64,128,0]
 ; GFNIAVX512VL-NEXT:    vpandq %zmm2, %zmm1, %zmm1
 ; GFNIAVX512VL-NEXT:    vgf2p8mulb %zmm3, %zmm1, %zmm1
-; GFNIAVX512VL-NEXT:    vgf2p8affineqb $0, %zmm4, %zmm1, %zmm1
+; GFNIAVX512VL-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm1 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; GFNIAVX512VL-NEXT:    vporq %zmm1, %zmm0, %zmm0
 ; GFNIAVX512VL-NEXT:    retq
 ;
 ; GFNIAVX512BW-LABEL: var_fshl_v64i8:
 ; GFNIAVX512BW:       # %bb.0:
 ; GFNIAVX512BW-NEXT:    vpunpckhbw {{.*#+}} zmm3 = zmm1[8],zmm0[8],zmm1[9],zmm0[9],zmm1[10],zmm0[10],zmm1[11],zmm0[11],zmm1[12],zmm0[12],zmm1[13],zmm0[13],zmm1[14],zmm0[14],zmm1[15],zmm0[15],zmm1[24],zmm0[24],zmm1[25],zmm0[25],zmm1[26],zmm0[26],zmm1[27],zmm0[27],zmm1[28],zmm0[28],zmm1[29],zmm0[29],zmm1[30],zmm0[30],zmm1[31],zmm0[31],zmm1[40],zmm0[40],zmm1[41],zmm0[41],zmm1[42],zmm0[42],zmm1[43],zmm0[43],zmm1[44],zmm0[44],zmm1[45],zmm0[45],zmm1[46],zmm0[46],zmm1[47],zmm0[47],zmm1[56],zmm0[56],zmm1[57],zmm0[57],zmm1[58],zmm0[58],zmm1[59],zmm0[59],zmm1[60],zmm0[60],zmm1[61],zmm0[61],zmm1[62],zmm0[62],zmm1[63],zmm0[63]
-; GFNIAVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %zmm2
 ; GFNIAVX512BW-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; GFNIAVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %zmm2
 ; GFNIAVX512BW-NEXT:    vpunpckhbw {{.*#+}} zmm5 = zmm2[8],zmm4[8],zmm2[9],zmm4[9],zmm2[10],zmm4[10],zmm2[11],zmm4[11],zmm2[12],zmm4[12],zmm2[13],zmm4[13],zmm2[14],zmm4[14],zmm2[15],zmm4[15],zmm2[24],zmm4[24],zmm2[25],zmm4[25],zmm2[26],zmm4[26],zmm2[27],zmm4[27],zmm2[28],zmm4[28],zmm2[29],zmm4[29],zmm2[30],zmm4[30],zmm2[31],zmm4[31],zmm2[40],zmm4[40],zmm2[41],zmm4[41],zmm2[42],zmm4[42],zmm2[43],zmm4[43],zmm2[44],zmm4[44],zmm2[45],zmm4[45],zmm2[46],zmm4[46],zmm2[47],zmm4[47],zmm2[56],zmm4[56],zmm2[57],zmm4[57],zmm2[58],zmm4[58],zmm2[59],zmm4[59],zmm2[60],zmm4[60],zmm2[61],zmm4[61],zmm2[62],zmm4[62],zmm2[63],zmm4[63]
 ; GFNIAVX512BW-NEXT:    vpsllvw %zmm5, %zmm3, %zmm3
 ; GFNIAVX512BW-NEXT:    vpsrlw $8, %zmm3, %zmm3
@@ -1862,8 +1858,8 @@ define <64 x i8> @var_fshr_v64i8(<64 x i8> %a, <64 x i8> %b, <64 x i8> %amt) nou
 ; GFNIAVX512BW-LABEL: var_fshr_v64i8:
 ; GFNIAVX512BW:       # %bb.0:
 ; GFNIAVX512BW-NEXT:    vpunpckhbw {{.*#+}} zmm3 = zmm1[8],zmm0[8],zmm1[9],zmm0[9],zmm1[10],zmm0[10],zmm1[11],zmm0[11],zmm1[12],zmm0[12],zmm1[13],zmm0[13],zmm1[14],zmm0[14],zmm1[15],zmm0[15],zmm1[24],zmm0[24],zmm1[25],zmm0[25],zmm1[26],zmm0[26],zmm1[27],zmm0[27],zmm1[28],zmm0[28],zmm1[29],zmm0[29],zmm1[30],zmm0[30],zmm1[31],zmm0[31],zmm1[40],zmm0[40],zmm1[41],zmm0[41],zmm1[42],zmm0[42],zmm1[43],zmm0[43],zmm1[44],zmm0[44],zmm1[45],zmm0[45],zmm1[46],zmm0[46],zmm1[47],zmm0[47],zmm1[56],zmm0[56],zmm1[57],zmm0[57],zmm1[58],zmm0[58],zmm1[59],zmm0[59],zmm1[60],zmm0[60],zmm1[61],zmm0[61],zmm1[62],zmm0[62],zmm1[63],zmm0[63]
-; GFNIAVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %zmm2
 ; GFNIAVX512BW-NEXT:    vpxor %xmm4, %xmm4, %xmm4
+; GFNIAVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %zmm2
 ; GFNIAVX512BW-NEXT:    vpunpckhbw {{.*#+}} zmm5 = zmm2[8],zmm4[8],zmm2[9],zmm4[9],zmm2[10],zmm4[10],zmm2[11],zmm4[11],zmm2[12],zmm4[12],zmm2[13],zmm4[13],zmm2[14],zmm4[14],zmm2[15],zmm4[15],zmm2[24],zmm4[24],zmm2[25],zmm4[25],zmm2[26],zmm4[26],zmm2[27],zmm4[27],zmm2[28],zmm4[28],zmm2[29],zmm4[29],zmm2[30],zmm4[30],zmm2[31],zmm4[31],zmm2[40],zmm4[40],zmm2[41],zmm4[41],zmm2[42],zmm4[42],zmm2[43],zmm4[43],zmm2[44],zmm4[44],zmm2[45],zmm4[45],zmm2[46],zmm4[46],zmm2[47],zmm4[47],zmm2[56],zmm4[56],zmm2[57],zmm4[57],zmm2[58],zmm4[58],zmm2[59],zmm4[59],zmm2[60],zmm4[60],zmm2[61],zmm4[61],zmm2[62],zmm4[62],zmm2[63],zmm4[63]
 ; GFNIAVX512BW-NEXT:    vpsrlvw %zmm5, %zmm3, %zmm3
 ; GFNIAVX512BW-NEXT:    vpbroadcastw {{.*#+}} zmm5 = [255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]

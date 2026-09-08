@@ -43,7 +43,7 @@ bool LineEntry::DumpStopContext(Stream *s, bool show_fullpaths) const {
     if (show_fullpaths)
       file.Dump(s->AsRawOstream());
     else
-      file.GetFilename().Dump(s);
+      s->PutCString(file.GetFilename());
 
     if (line)
       s->PutChar(':');

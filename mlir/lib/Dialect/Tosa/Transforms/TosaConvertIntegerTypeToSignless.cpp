@@ -84,7 +84,8 @@ public:
 
     // Create new op with replaced operands and results
     auto *newOp = Operation::create(
-        op->getLoc(), op->getName(), resultTypes, operands, op->getAttrs(),
+        op->getLoc(), op->getName(), resultTypes, operands,
+        op->getDiscardableAttrDictionary().getValue(),
         op->getPropertiesStorage(), op->getSuccessors(), op->getNumRegions());
 
     // Handle regions in e.g. tosa.cond_if and tosa.while_loop
@@ -119,7 +120,8 @@ class ConvertTosaConstWithIntegerTensorType
 
     ElementsAttr newAttr = oldAttr;
     if (auto denseAttr = llvm::dyn_cast<DenseElementsAttr>(oldAttr)) {
-      newAttr = DenseElementsAttr::get(newTy, denseAttr.getRawData());
+      newAttr =
+          DenseElementsAttr::getFromRawBuffer(newTy, denseAttr.getRawData());
     } else {
       return rewriter.notifyMatchFailure(op, "unknown elements attribute type");
     }

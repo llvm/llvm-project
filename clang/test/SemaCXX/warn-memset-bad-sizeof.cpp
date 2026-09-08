@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wno-sizeof-array-argument %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wno-sizeof-array-argument -Wno-stringop-overread %s
 //
 extern "C" void *bzero(void *, unsigned);
 extern "C" void *memset(void *, int, unsigned);

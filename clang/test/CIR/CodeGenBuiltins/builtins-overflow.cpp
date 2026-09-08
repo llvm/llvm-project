@@ -388,3 +388,19 @@ bool test_bool_math_overflow(bool x, bool y, int *res) {
 // LLVM: call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %[[X_CAST]], i32 %[[Y_CAST]])
 }
 
+bool f(int x, int y, bool *r) {
+  return __builtin_add_overflow(x, y, r);
+}
+
+//      CIR: cir.func {{.*}} @_Z1fiiPb
+//      CIR:   %[[#X:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   %[[#Y:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   %[[#R_PTR:]] = cir.load{{.*}} %{{.+}} : !cir.ptr<!cir.ptr<!cir.bool>>, !cir.ptr<!cir.bool>
+// CIR-NEXT:   %[[RES:.+]], %{{.+}} = cir.add.overflow %[[#X]], %[[#Y]] : !s32i -> !cir.bool
+// CIR-NEXT:   cir.store{{.*}} %[[RES]], %[[#R_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
+//      CIR: }
+
+// LLVM-LABEL: @_Z1fiiPb(
+// LLVM: call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %{{.+}}, i32 %{{.+}})
+// LLVM: trunc i32 %{{.+}} to i1
+// LLVM: store i8 %{{.+}}, ptr %{{.+}}

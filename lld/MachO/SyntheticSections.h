@@ -18,14 +18,11 @@
 #include "Writer.h"
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include <unordered_map>
 
 namespace llvm {
 class DWARFUnit;
@@ -349,7 +346,13 @@ public:
   static bool isObjCStubSymbol(Symbol *sym);
   static StringRef getMethname(Symbol *sym);
 
+  /// Stably sort the stubs by \p priorities and reassign their offsets. Must
+  /// run before addresses are assigned.
+  void sortSymbols(const llvm::DenseMap<const Symbol *, int> &priorities);
+
 private:
+  size_t getStubSize() const;
+
   std::vector<Defined *> symbols;
   Symbol *objcMsgSend = nullptr;
 };
@@ -621,15 +624,10 @@ public:
 private:
   std::vector<WordLiteralInputSection *> inputs;
 
-  template <class T> struct Hasher {
-    llvm::hash_code operator()(T v) const { return llvm::hash_value(v); }
-  };
-  // We're using unordered_map instead of DenseMap here because we need to
-  // support all possible integer values -- there are no suitable tombstone
-  // values for DenseMap.
-  std::unordered_map<UInt128, uint64_t, Hasher<UInt128>> literal16Map;
-  std::unordered_map<uint64_t, uint64_t> literal8Map;
-  std::unordered_map<uint32_t, uint64_t> literal4Map;
+  // Literal values can be any bit pattern.
+  llvm::DenseMap<UInt128, uint64_t> literal16Map;
+  llvm::DenseMap<uint64_t, uint64_t> literal8Map;
+  llvm::DenseMap<uint32_t, uint64_t> literal4Map;
 };
 
 class ObjCImageInfoSection final : public SyntheticSection {

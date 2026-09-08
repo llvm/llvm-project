@@ -175,6 +175,20 @@ define i32 @memset_memmove_dest_buffers_not_alias() {
   ret i32 %val
 }
 
+; memset covers size of memmove but not the source offset.
+define void @memset_shorter_than_offset_plus_size(ptr %array) {
+; CHECK-LABEL: @memset_shorter_than_offset_plus_size(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[ARRAY:%.*]], i8 0, i64 8, i1 false)
+; CHECK-NEXT:    [[ARRAY_IDX:%.*]] = getelementptr inbounds i8, ptr [[ARRAY]], i64 4
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 16 [[ARRAY]], ptr align 4 [[ARRAY_IDX]], i64 8, i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0.i64(ptr align 16 %array, i8 0, i64 8, i1 false)
+  %array.idx = getelementptr inbounds i8, ptr %array, i64 4
+  call void @llvm.memmove.p0.p0.i64(ptr align 16 %array, ptr align 4 %array.idx, i64 8, i1 false)
+  ret void
+}
+
 declare void @opaque(ptr)
 declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1)
 declare void @llvm.memmove.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1)

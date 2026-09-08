@@ -142,7 +142,6 @@ std::tuple<Decl *, Decl *> ASTImporterTestBase::getImportedDecl(
     StringRef FromSrcCode, TestLanguage FromLang, StringRef ToSrcCode,
     TestLanguage ToLang, StringRef Identifier) {
   std::vector<std::string> FromArgs = getCommandLineArgsForLanguage(FromLang);
-  std::vector<std::string> ToArgs = getCommandLineArgsForLanguage(ToLang);
 
   FromTUs.emplace_back(FromSrcCode, InputFileName, FromArgs, Creator,
                        ODRHandling);
@@ -185,7 +184,6 @@ TranslationUnitDecl *ASTImporterTestBase::getTuDecl(StringRef SrcCode,
 
 TranslationUnitDecl *ASTImporterTestBase::getToTuDecl(StringRef ToSrcCode,
                                                       TestLanguage ToLang) {
-  std::vector<std::string> ToArgs = getCommandLineArgsForLanguage(ToLang);
   assert(!ToAST);
   lazyInitToAST(ToLang, ToSrcCode, OutputFileName);
   return ToAST->getASTContext().getTranslationUnitDecl();

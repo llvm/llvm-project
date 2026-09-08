@@ -238,6 +238,14 @@ void AsmPrinter::emitCFIInstruction(const MCCFIInstruction &Inst) const {
   case MCCFIInstruction::OpNegateRAStateWithPC:
     OutStreamer->emitCFINegateRAStateWithPC(Loc);
     break;
+  case MCCFIInstruction::OpLLVMSetRAState: {
+    if (MCSymbol *Symbol = Inst.getRASignSymbol())
+      OutStreamer->emitCFILLVMSetRAState(Inst.getRASignState(), Symbol, Loc);
+    else
+      OutStreamer->emitCFILLVMSetRAState(Inst.getRASignState(),
+                                         Inst.getRASignOffset(), Loc);
+    break;
+  }
   case MCCFIInstruction::OpSameValue:
     OutStreamer->emitCFISameValue(Inst.getRegister(), Loc);
     break;

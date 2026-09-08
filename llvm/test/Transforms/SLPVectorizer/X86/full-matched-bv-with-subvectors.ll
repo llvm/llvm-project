@@ -6,8 +6,8 @@ define i32 @test(i64 %l.549) {
 ; CHECK-SAME: i64 [[L_549:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CONV3:%.*]] = sext i32 0 to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[CONV3]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i64> poison, i64 [[L_549]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i64> poison, i64 [[CONV3]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i64> poison, i64 [[L_549]], i64 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i64> [[TMP8]], <4 x i64> poison, <4 x i32> <i32 poison, i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    br label %[[IF_THEN19:.*]]
 ; CHECK:       [[P:.*]]:
@@ -16,7 +16,7 @@ define i32 @test(i64 %l.549) {
 ; CHECK:       [[Q]]:
 ; CHECK-NEXT:    [[XOR39:%.*]] = phi i64 [ 0, %[[P]] ], [ 0, %[[LAND_LHS_TRUE:.*]] ]
 ; CHECK-NEXT:    [[TMP16:%.*]] = phi <2 x i64> [ zeroinitializer, %[[P]] ], [ zeroinitializer, %[[LAND_LHS_TRUE]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> [[TMP0]], i64 [[XOR39]], i32 3
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i64> [[TMP0]], i64 [[XOR39]], i64 3
 ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x i64> [[TMP16]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <4 x i64> [[TMP4]], <4 x i64> [[TMP18]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    br i1 false, label %[[LOR_LHS_FALSE:.*]], label %[[R:.*]]

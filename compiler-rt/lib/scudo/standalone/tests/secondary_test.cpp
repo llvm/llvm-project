@@ -145,7 +145,7 @@ template <typename Config> static void testBasic() {
 
   // If the Secondary can't cache that pointer, it will be unmapped.
   if (!Info.Allocator->canCache(Size)) {
-    EXPECT_DEATH(
+    SCUDO_EXPECT_DEATH(
         {
           // Repeat few time to avoid missing crash if it's mmaped by unrelated
           // code.
@@ -182,6 +182,90 @@ TEST(ScudoSecondaryTest, Basic) {
   testBasic<TestCacheConfig>();
   testBasic<TestCacheNoGuardPageConfig>();
   testBasic<scudo::DefaultConfig>();
+}
+
+template <typename Config> static void testMteCacheRemapping() {
+  using ConfigWrapper = scudo::SecondaryConfig<Config>;
+  AllocatorInfoType<Config> Info;
+
+  if (!scudo::useMemoryTagging<ConfigWrapper>(Info.Options) ||
+      !Info.Allocator->canCache(1U << 16)) {
+    TEST_SKIP("Memory tagging is not supported or can't cache");
+  }
+
+  const scudo::uptr PageSize = scudo::getPageSizeCached();
+  const scudo::uptr LargeSize = 64 * 1024;
+  // SmallSize must be at least 52KB to ensure it stays within the
+  // 16KB (4 pages) cache fragmentation limit for reuse.
+  const scudo::uptr SmallSize = 52 * 1024;
+
+  // 1. Initial Allocation (64KB, page-aligned)
+  void *P1 = Info.Allocator->allocate(Info.Options, LargeSize, PageSize);
+  EXPECT_NE(P1, nullptr);
+  memset(P1, 'A', LargeSize);
+  const scudo::uptr AllocPos1 = reinterpret_cast<scudo::uptr>(P1);
+  const scudo::uptr CommitBase1 =
+      scudo::LargeBlock::getHeader<ConfigWrapper>(P1)->CommitBase;
+
+  // Free P1 to cache it
+  Info.Allocator->deallocate(Info.Options, P1);
+
+  // 2. Reuse cached block for smaller allocation (52KB) -> Shift Forwards
+  void *P2 = Info.Allocator->allocate(Info.Options, SmallSize, PageSize);
+  EXPECT_NE(P2, nullptr);
+  memset(P2, 'A', SmallSize);
+  const scudo::uptr AllocPos2 = reinterpret_cast<scudo::uptr>(P2);
+  const scudo::uptr CommitBase2 =
+      scudo::LargeBlock::getHeader<ConfigWrapper>(P2)->CommitBase;
+
+  // Verify that P2 reused P1's block
+  EXPECT_EQ(CommitBase1, CommitBase2);
+
+  // Since SmallSize < LargeSize, AllocPos2 must shift forwards (right)
+  EXPECT_GT(AllocPos2, AllocPos1);
+
+  // Verify MTE is disabled on the old header page
+  {
+    // P1 is AllocPos - 16. We add 16 (Chunk::getHeaderSize()) to get AllocPos,
+    // and subtract PageSize to target the start of the old header page.
+    const scudo::uptr OldHeaderPage = scudo::untagPointer(AllocPos1) +
+                                      scudo::Chunk::getHeaderSize() - PageSize;
+    *reinterpret_cast<volatile char *>(OldHeaderPage) = 'X';
+    EXPECT_EQ(*reinterpret_cast<volatile char *>(OldHeaderPage), 'X');
+  }
+
+  // Free P2 to cache it again (now cached with P2's smaller layout)
+  Info.Allocator->deallocate(Info.Options, P2);
+
+  // 3. Reuse cached block for larger allocation (64KB) -> Shift Backwards
+  void *P3 = Info.Allocator->allocate(Info.Options, LargeSize, PageSize);
+  EXPECT_NE(P3, nullptr);
+  memset(P3, 'A', LargeSize);
+  const scudo::uptr AllocPos3 = reinterpret_cast<scudo::uptr>(P3);
+  const scudo::uptr CommitBase3 =
+      scudo::LargeBlock::getHeader<ConfigWrapper>(P3)->CommitBase;
+
+  // Verify that P3 reused the same block
+  EXPECT_EQ(CommitBase1, CommitBase3);
+
+  // Since we went back to LargeSize, AllocPos3 must shift backwards (left)
+  EXPECT_LT(AllocPos3, AllocPos2);
+
+  // Verify MTE is disabled on the old header page of P2
+  {
+    // P2 is AllocPos - 16. We add 16 (Chunk::getHeaderSize()) to get AllocPos,
+    // and subtract PageSize to target the start of the old header page of P2.
+    const scudo::uptr OldHeaderPageB = scudo::untagPointer(AllocPos2) +
+                                       scudo::Chunk::getHeaderSize() - PageSize;
+    *reinterpret_cast<volatile char *>(OldHeaderPageB) = 'Y';
+    EXPECT_EQ(*reinterpret_cast<volatile char *>(OldHeaderPageB), 'Y');
+  }
+
+  Info.Allocator->deallocate(Info.Options, P3);
+}
+
+TEST(ScudoSecondaryTest, MteCacheRemapping) {
+  testMteCacheRemapping<scudo::DefaultConfig>();
 }
 
 // This exercises a variety of combinations of size and alignment for the
@@ -313,6 +397,12 @@ void testGetMappedSize(scudo::uptr Size, scudo::uptr *mapped,
   *mapped = Stats[scudo::StatMapped] - *mapped;
 
   Info.Allocator->deallocate(Info.Options, Ptr);
+
+  // Cache is disabled therefore every deallocation is guaranteed to bypass the
+  // cache and increment UncacheableUnmaps.
+  scudo::ScopedString Str;
+  Info.Allocator->getStats(&Str);
+  EXPECT_NE(strstr(Str.data(), "Uncacheable unmaps: 1"), nullptr);
 
   *guard_page_size = Info.Allocator->getGuardPageSize();
 }
@@ -478,6 +568,10 @@ TEST(ScudoSecondaryTest, AllocatorCacheMemoryLeakTest) {
   // Evicted entry should be marked due to unmap callback
   EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()),
             UnmappedMarker);
+  scudo::ScopedString Str;
+  Info.Cache->getStats(&Str);
+  Str.output();
+  EXPECT_NE(strstr(Str.data(), "Unmapped due to eviction: 1"), nullptr);
 }
 
 TEST(ScudoSecondaryTest, AllocatorCacheOptions) {
@@ -585,4 +679,151 @@ TEST(ScudoSecondaryTest, ReleaseOlderThanGroups) {
   for (size_t I = 0; I < 6; I++) {
     EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[I].getBase()), 0U);
   }
+}
+
+TEST(ScudoSecondaryTest, AllocatorCacheMaxResidentBytes) {
+  CacheInfoType<TestCacheConfig> Info;
+
+  Info.Cache->setOption(scudo::Option::ReleaseInterval, -1);
+  Info.Cache->setOption(scudo::Option::MaxCacheEntriesCount, 10);
+  Info.Cache->setOption(scudo::Option::MaxCacheEntrySize, 1024 * 1024);
+
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), 0U);
+  EXPECT_EQ(Info.Cache->getMaxResidentBytesTestOnly(), 0U);
+
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  const scudo::uptr Size1 = Info.MemMaps[0].getCapacity();
+  EXPECT_NE(0U, Size1);
+  Info.storeMemMap(Info.MemMaps[0]);
+
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size1);
+  EXPECT_EQ(Info.Cache->getMaxResidentBytesTestOnly(), Size1);
+
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  const scudo::uptr Size2 = Info.MemMaps[1].getCapacity();
+  EXPECT_NE(0U, Size2);
+  Info.storeMemMap(Info.MemMaps[1]);
+
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size1 + Size2);
+  EXPECT_EQ(Info.Cache->getMaxResidentBytesTestOnly(), Size1 + Size2);
+
+  const scudo::uptr PeakBytes = Size1 + Size2;
+
+  // Releasing pages should drop CurrentResidentBytes to 0, while
+  // MaxResidentBytes stays at peak
+  Info.Cache->releaseOlderThanTestOnly(UINT64_MAX);
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), 0U);
+  EXPECT_EQ(Info.Cache->getMaxResidentBytesTestOnly(), PeakBytes);
+
+  // Store a third map to verify CurrentResidentBytes increases again
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  const scudo::uptr Size3 = Info.MemMaps[2].getCapacity();
+  EXPECT_NE(0U, Size3);
+  Info.storeMemMap(Info.MemMaps[2]);
+
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size3);
+  EXPECT_EQ(Info.Cache->getMaxResidentBytesTestOnly(), PeakBytes);
+}
+
+TEST(ScudoSecondaryTest, AllocatorCacheMaxCacheResidentBytes) {
+  CacheInfoType<TestCacheConfig> Info;
+
+  Info.Cache->setOption(scudo::Option::ReleaseInterval, -1);
+  Info.Cache->setOption(scudo::Option::MaxCacheEntriesCount, 10);
+  Info.Cache->setOption(scudo::Option::MaxCacheEntrySize, 1024 * 1024);
+
+  EXPECT_FALSE(Info.Cache->setOption(scudo::Option::MaxCacheResidentBytes, -1));
+
+  // Allocate 3 blocks
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  const scudo::uptr Size1 = Info.MemMaps[0].getCapacity();
+  EXPECT_NE(0U, Size1);
+  *reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()) = 0x1111;
+
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  const scudo::uptr Size2 = Info.MemMaps[1].getCapacity();
+  EXPECT_NE(0U, Size2);
+  *reinterpret_cast<scudo::u32 *>(Info.MemMaps[1].getBase()) = 0x2222;
+
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  const scudo::uptr Size3 = Info.MemMaps[2].getCapacity();
+  EXPECT_NE(0U, Size3);
+  *reinterpret_cast<scudo::u32 *>(Info.MemMaps[2].getBase()) = 0x3333;
+
+  // Set MaxCacheResidentBytes to Size1 + Size2
+  EXPECT_TRUE(Info.Cache->setOption(scudo::Option::MaxCacheResidentBytes,
+                                    static_cast<scudo::sptr>(Size1 + Size2)));
+
+  // Store first block: CurrentResidentBytes == Size1
+  Info.storeMemMap(Info.MemMaps[0]);
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size1);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()),
+            0x1111U);
+
+  // Store second block: CurrentResidentBytes == Size1 + Size2
+  Info.storeMemMap(Info.MemMaps[1]);
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size1 + Size2);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()),
+            0x1111U);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[1].getBase()),
+            0x2222U);
+
+  // Store third block: would exceed Size1 + Size2.
+  // The oldest block (MemMaps[0]) must have its physical pages released
+  // (zeroed). CurrentResidentBytes becomes Size2 + Size3 (which is <= Size1 +
+  // Size2).
+  Info.storeMemMap(Info.MemMaps[2]);
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size2 + Size3);
+  EXPECT_EQ(Info.Cache->getMaxResidentBytesTestOnly(), Size1 + Size2 + Size3);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()), 0U);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[1].getBase()),
+            0x2222U);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[2].getBase()),
+            0x3333U);
+}
+
+TEST(ScudoSecondaryTest, AllocatorCacheMaxCacheResidentBytesDynamicShrink) {
+  CacheInfoType<TestCacheConfig> Info;
+
+  Info.Cache->setOption(scudo::Option::ReleaseInterval, -1);
+  Info.Cache->setOption(scudo::Option::MaxCacheEntriesCount, 10);
+  Info.Cache->setOption(scudo::Option::MaxCacheEntrySize, 1024 * 1024);
+
+  // Allocate and store 3 blocks without resident limit (limit = 0)
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  const scudo::uptr Size1 = Info.MemMaps[0].getCapacity();
+  *reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()) = 0x1111;
+  Info.storeMemMap(Info.MemMaps[0]);
+
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  const scudo::uptr Size2 = Info.MemMaps[1].getCapacity();
+  *reinterpret_cast<scudo::u32 *>(Info.MemMaps[1].getBase()) = 0x2222;
+  Info.storeMemMap(Info.MemMaps[1]);
+
+  Info.MemMaps.emplace_back(Info.allocate(1024));
+  const scudo::uptr Size3 = Info.MemMaps[2].getCapacity();
+  *reinterpret_cast<scudo::u32 *>(Info.MemMaps[2].getBase()) = 0x3333;
+  Info.storeMemMap(Info.MemMaps[2]);
+
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(),
+            Size1 + Size2 + Size3);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()),
+            0x1111U);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[1].getBase()),
+            0x2222U);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[2].getBase()),
+            0x3333U);
+
+  // Dynamically set MaxCacheResidentBytes to Size3 (enough to hold only 1
+  // block)
+  EXPECT_TRUE(Info.Cache->setOption(scudo::Option::MaxCacheResidentBytes,
+                                    static_cast<scudo::sptr>(Size3)));
+
+  // setOption must immediately trim the 2 oldest blocks (MemMaps[0] and
+  // MemMaps[1])
+  EXPECT_EQ(Info.Cache->getCurrentResidentBytesTestOnly(), Size3);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[0].getBase()), 0U);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[1].getBase()), 0U);
+  EXPECT_EQ(*reinterpret_cast<scudo::u32 *>(Info.MemMaps[2].getBase()),
+            0x3333U);
 }

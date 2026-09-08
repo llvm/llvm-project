@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_DEPENDENCYSCANNING_INPROCESSMODULECACHE_H
 #define LLVM_CLANG_DEPENDENCYSCANNING_INPROCESSMODULECACHE_H
 
+#include "clang/Basic/AtomicLineLogger.h"
 #include "clang/Serialization/ModuleCache.h"
 #include "llvm/ADT/StringMap.h"
 
@@ -54,7 +55,7 @@ struct ModuleCacheEntries {
 };
 
 std::shared_ptr<ModuleCache>
-makeInProcessModuleCache(ModuleCacheEntries &Entries);
+makeInProcessModuleCache(ModuleCacheEntries &Entries, AtomicLineLogger &Logger);
 
 } // namespace dependencies
 } // namespace clang

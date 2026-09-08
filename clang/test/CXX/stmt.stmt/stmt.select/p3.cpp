@@ -25,9 +25,9 @@ void ifInitStatement() {
   if (Var + Var; true) {}
   if (; true) {}
 #ifdef CPP17
-  // expected-warning@-4 {{if initialization statements are incompatible with C++ standards before C++17}}
-  // expected-warning@-4 {{if initialization statements are incompatible with C++ standards before C++17}}
-  // expected-warning@-4 {{if initialization statements are incompatible with C++ standards before C++17}}
+  // expected-warning@-4 {{'if' initialization statements are incompatible with C++ standards before C++17}}
+  // expected-warning@-4 {{'if' initialization statements are incompatible with C++ standards before C++17}}
+  // expected-warning@-4 {{'if' initialization statements are incompatible with C++ standards before C++17}}
 #else
   // expected-warning@-8 {{'if' initialization statements are a C++17 extension}}
   // expected-warning@-8 {{'if' initialization statements are a C++17 extension}}
@@ -42,9 +42,9 @@ void switchInitStatement() {
   switch (Var + Var; Var) {}
   switch (; Var) {}
 #ifdef CPP17
-  // expected-warning@-4 {{switch initialization statements are incompatible with C++ standards before C++17}}
-  // expected-warning@-4 {{switch initialization statements are incompatible with C++ standards before C++17}}
-  // expected-warning@-4 {{switch initialization statements are incompatible with C++ standards before C++17}}
+  // expected-warning@-4 {{'switch' initialization statements are incompatible with C++ standards before C++17}}
+  // expected-warning@-4 {{'switch' initialization statements are incompatible with C++ standards before C++17}}
+  // expected-warning@-4 {{'switch' initialization statements are incompatible with C++ standards before C++17}}
 #else
   // expected-warning@-8 {{'switch' initialization statements are a C++17 extension}}
   // expected-warning@-8 {{'switch' initialization statements are a C++17 extension}}

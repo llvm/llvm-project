@@ -18,6 +18,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include <cmath>
 #include <limits>
 #include <optional>
 
@@ -72,9 +73,8 @@ struct LoopExpansionInfo {
 std::optional<uint64_t> getAverageMemOpLoopTripCount(const MemIntrinsic &I) {
   if (ProfcheckDisableMetadataFixes)
     return std::nullopt;
-  if (std::optional<Function::ProfileCount> EC =
-          I.getFunction()->getEntryCount();
-      !EC || !EC->getCount())
+  if (std::optional<uint64_t> EC = I.getFunction()->getEntryCount();
+      !EC || *EC == 0)
     return std::nullopt;
   if (const auto Len = I.getLengthInBytes())
     return Len->getZExtValue();

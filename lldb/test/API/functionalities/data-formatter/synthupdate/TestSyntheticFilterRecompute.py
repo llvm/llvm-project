@@ -16,7 +16,7 @@ class SyntheticFilterRecomputingTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number("main.m", "// Set break point at this line.")
 
-    @skipUnlessDarwin
+    @requireDarwin
     def test_rdar12437442_with_run_command(self):
         """Test that we update SBValues correctly as dynamic types change."""
         self.build()

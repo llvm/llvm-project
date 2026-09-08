@@ -6,7 +6,7 @@ subroutine f00
   type t
   end type
 
-!ERROR: 't' must be a variable
+!ERROR: 't' must be a variable list item
 !$omp single copyprivate(t)
 !$omp end single
 end

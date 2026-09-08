@@ -424,8 +424,7 @@ static const char* GetCFNumberTypeStr(uint64_t i) {
 #endif
 
 void CFNumberChecker::checkPreStmt(const CallExpr *CE,
-                                         CheckerContext &C) const {
-  ProgramStateRef state = C.getState();
+                                   CheckerContext &C) const {
   const FunctionDecl *FD = C.getCalleeDecl(CE);
   if (!FD)
     return;
@@ -876,7 +875,7 @@ static ProgramStateRef checkElementNonNil(CheckerContext &C,
   if (!isKnownNonNilCollectionType(FCS->getCollection()->getType()))
     return State;
 
-  const LocationContext *LCtx = C.getLocationContext();
+  const StackFrame *SF = C.getStackFrame();
   const Stmt *Element = FCS->getElement();
 
   // FIXME: Copied from ExprEngineObjC.
@@ -884,9 +883,9 @@ static ProgramStateRef checkElementNonNil(CheckerContext &C,
   if (const DeclStmt *DS = dyn_cast<DeclStmt>(Element)) {
     const VarDecl *ElemDecl = cast<VarDecl>(DS->getSingleDecl());
     assert(ElemDecl->getInit() == nullptr);
-    ElementLoc = State->getLValue(ElemDecl, LCtx);
+    ElementLoc = State->getLValue(ElemDecl, SF);
   } else if (const auto *E = dyn_cast<Expr>(Element)) {
-    ElementLoc = State->getSVal(E, LCtx).getAs<Loc>();
+    ElementLoc = State->getSVal(E, SF).getAs<Loc>();
   }
 
   if (!ElementLoc)
@@ -966,7 +965,7 @@ void ObjCLoopChecker::checkPostStmt(const ObjCForCollectionStmt *FCS,
   ProgramStateRef State = C.getState();
 
   // Check if this is the branch for the end of the loop.
-  if (!ExprEngine::hasMoreIteration(State, FCS, C.getLocationContext())) {
+  if (!ExprEngine::hasMoreIteration(State, FCS, C.getStackFrame())) {
     if (!alreadyExecutedAtLeastOneLoopIteration(C.getPredecessor(), FCS))
       State = assumeCollectionNonEmpty(C, State, FCS, /*Assumption*/false);
 

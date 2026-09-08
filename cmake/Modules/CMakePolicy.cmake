@@ -47,3 +47,9 @@ endif()
 if(POLICY CMP0182)
   cmake_policy(SET CMP0182 NEW)
 endif()
+
+# CMP0164: add_library(... SHARED ...) fails on platforms that do not support
+# shared libraries, instead of silently building a static library.
+if(POLICY CMP0164)
+  cmake_policy(SET CMP0164 NEW)
+endif()

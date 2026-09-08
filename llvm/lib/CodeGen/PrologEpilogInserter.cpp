@@ -30,7 +30,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
@@ -67,7 +66,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "prologepilog"
+#define DEBUG_TYPE "prolog-epilog"
 
 using MBBVector = SmallVector<MachineBasicBlock *, 4>;
 
@@ -161,8 +160,6 @@ STATISTIC(NumBytesStackSpace,
 
 void PEILegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addPreserved<MachineLoopInfoWrapperPass>();
-  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -285,6 +282,8 @@ bool PEIImpl::run(MachineFunction &MF) {
   if (TRI->requiresRegisterScavenging(MF) && FrameIndexVirtualScavenging)
     scavengeFrameVirtualRegs(MF, *RS);
 
+  insertZeroCallUsedRegs(MF);
+
   // Warn on stack size when we exceeds the given limit.
   MachineFrameInfo &MFI = MF.getFrameInfo();
   uint64_t StackSize = MFI.getStackSize();
@@ -365,10 +364,7 @@ PrologEpilogInserterPass::run(MachineFunction &MF,
   if (!PEIImpl(&ORE).run(MF))
     return PreservedAnalyses::all();
 
-  return getMachineFunctionPassPreservedAnalyses()
-      .preserveSet<CFGAnalyses>()
-      .preserve<MachineDominatorTreeAnalysis>()
-      .preserve<MachineLoopAnalysis>();
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }
 
 /// Calculate the MaxCallFrameSize variable for the function's frame
@@ -523,7 +519,8 @@ static void assignCalleeSavedSpillSlots(MachineFunction &F,
         // the TargetRegisterClass if the stack alignment is smaller. Use the
         // min.
         Alignment = std::min(Alignment, TFI->getStackAlign());
-        FrameIdx = MFI.CreateStackObject(Size, Alignment, true);
+        FrameIdx = MFI.CreateStackObject(Size, Alignment, true, nullptr,
+                                         RegInfo->getSpillStackID(*RC));
         MFI.setIsCalleeSavedObjectIndex(FrameIdx, true);
       } else {
         // Spill it to the stack where we must.
@@ -1178,9 +1175,6 @@ void PEIImpl::insertPrologEpilogCode(MachineFunction &MF) {
   for (MachineBasicBlock *RestoreBlock : RestoreBlocks)
     TFI.emitEpilogue(MF, *RestoreBlock);
 
-  // Zero call used registers before restoring callee-saved registers.
-  insertZeroCallUsedRegs(MF);
-
   for (MachineBasicBlock *SaveBlock : SaveBlocks)
     TFI.inlineStackProbe(MF, *SaveBlock);
 
@@ -1277,8 +1271,11 @@ void PEIImpl::insertZeroCallUsedRegs(MachineFunction &MF) {
     // Want only registers used for arguments.
     if (OnlyArg) {
       if (OnlyUsed) {
-        if (!LiveIns[Reg.id()])
-          continue;
+        for (MCRegister LiveReg : LiveIns.set_bits()) {
+          if (TRI.regsOverlap(Reg, LiveReg))
+            RegsToZero.set(LiveReg);
+        }
+        continue;
       } else if (!TRI.isArgumentRegister(MF, Reg)) {
         continue;
       }
@@ -1343,7 +1340,7 @@ void PEIImpl::insertZeroCallUsedRegs(MachineFunction &MF) {
   const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
   for (MachineBasicBlock &MBB : MF)
     if (MBB.isReturnBlock())
-      TFI.emitZeroCallUsedRegs(RegsToZero, MBB);
+      TFI.emitZeroCallUsedRegs(RegsToZero, MBB, RS);
 }
 
 /// Replace all FrameIndex operands with physical register references and actual

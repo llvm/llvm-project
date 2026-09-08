@@ -40,9 +40,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
@@ -74,7 +74,7 @@ struct __fn;
 template <move_constructible _Tp, semiregular _Bound = unreachable_sentinel_t>
   requires(is_object_v<_Tp> && same_as<_Tp, remove_cv_t<_Tp>> &&
            (__integer_like_with_usable_difference_type<_Bound> || same_as<_Bound, unreachable_sentinel_t>))
-class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS repeat_view : public view_interface<repeat_view<_Tp, _Bound>> {
+class _LIBCPP_LLVM18_NO_UNIQUE_ADDRESS_ABI_TAG repeat_view : public view_interface<repeat_view<_Tp, _Bound>> {
   friend struct views::__take::__fn;
   friend struct views::__drop::__fn;
   class __iterator;
@@ -265,9 +265,9 @@ inline constexpr bool __is_repeat_specialization<repeat_view<_Tp, _Bound>> = tru
 
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_POP_MACROS
 

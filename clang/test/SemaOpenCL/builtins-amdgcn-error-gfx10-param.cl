@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-- -target-cpu gfx1010 -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu10.10-- -verify -S -o - %s
 
 typedef unsigned int uint;
 

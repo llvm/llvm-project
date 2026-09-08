@@ -22,7 +22,7 @@
  *===-----------------------------------------------------------------------===
  */
 #ifndef __IMMINTRIN_H
-#error "Never use <avx512vp2intersect.h> directly; include <immintrin.h> instead."
+#error "Never use <avx512vp2intersectintrin.h> directly; include <immintrin.h> instead."
 #endif
 
 #ifndef _AVX512VP2INTERSECT_H

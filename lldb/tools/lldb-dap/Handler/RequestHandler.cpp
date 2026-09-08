@@ -96,6 +96,13 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
     return llvm::make_error<DAPError>(
         "program must be set to when using runInTerminal");
 
+  llvm::StringMap<protocol::String> env = arguments.env;
+#ifdef _WIN32
+  if (dap.debugger.GetSetting("platform.plugin.windows.disable-debug-heap")
+          .GetBooleanValue(true))
+    env.try_emplace("_NO_DEBUG_HEAP", "1");
+#endif
+
   dap.is_attach = true;
   lldb::SBAttachInfo attach_info;
 
@@ -113,8 +120,8 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
 #endif
 
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
-      arguments.configuration.program, arguments.args, arguments.env,
-      arguments.cwd, comm_file->GetPath(), debugger_pid, arguments.stdio,
+      arguments.configuration.program, arguments.args, env, arguments.cwd,
+      comm_file->GetPath(), debugger_pid, arguments.stdio,
       arguments.console == protocol::eConsoleExternalTerminal);
   dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
                                                     std::move(reverse_request));
@@ -261,7 +268,7 @@ llvm::Error BaseRequestHandler::LaunchProcess(
 
       // The custom commands might have created a new target so we should use
       // the selected target after these commands are run.
-      dap.target = dap.debugger.GetSelectedTarget();
+      dap.SetTarget(dap.debugger.GetSelectedTarget());
     }
   }
 

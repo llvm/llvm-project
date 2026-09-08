@@ -107,6 +107,19 @@ func.func @reshape(%arg0: memref<?x?xf32, 1>, %arg1: memref<1xindex>) -> memref<
   return %reshape : memref<?xf32>
 }
 
+// CHECK-LABEL:   func.func @reshape_unranked(
+// CHECK-SAME:      %[[ARG0:.*]]: memref<?x?xf32, 1>,
+// CHECK-SAME:      %[[ARG1:.*]]: memref<?xindex>) -> memref<*xf32> {
+// CHECK:           %[[RESHAPE_0:.*]] = memref.reshape %[[ARG0]](%[[ARG1]]) : (memref<?x?xf32, 1>, memref<?xindex>) -> memref<*xf32, 1>
+// CHECK:           %[[MEMORY_SPACE_CAST_0:.*]] = memref.memory_space_cast %[[RESHAPE_0]] : memref<*xf32, 1> to memref<*xf32>
+// CHECK:           return %[[MEMORY_SPACE_CAST_0]] : memref<*xf32>
+// CHECK:         }
+func.func @reshape_unranked(%arg0: memref<?x?xf32, 1>, %arg1: memref<?xindex>) -> memref<*xf32> {
+  %memspacecast = memref.memory_space_cast %arg0 : memref<?x?xf32, 1> to memref<?x?xf32>
+  %reshape = memref.reshape %memspacecast(%arg1) : (memref<?x?xf32>, memref<?xindex>) -> memref<*xf32>
+  return %reshape : memref<*xf32>
+}
+
 // CHECK-LABEL:   func.func @expand_shape(
 // CHECK-SAME:      %[[ARG0:.*]]: memref<12xf32, 1>) -> memref<3x4xf32> {
 // CHECK:           %[[VAL_0:.*]] = memref.expand_shape %[[ARG0]] {{\[\[}}0, 1]] output_shape [3, 4] : memref<12xf32, 1> into memref<3x4xf32, 1>

@@ -295,6 +295,8 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
 
   case Stmt::CoroutineBodyStmtClass:
   case Stmt::CoreturnStmtClass:
+  case Stmt::CXXExpansionStmtPatternClass:
+  case Stmt::CXXExpansionStmtInstantiationClass:
     K = CXCursor_UnexposedStmt;
     break;
 
@@ -345,6 +347,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::EmbedExprClass:
   case Stmt::HLSLOutArgExprClass:
   case Stmt::OpenACCAsteriskSizeExprClass:
+  case Stmt::CXXExpansionSelectExprClass:
     K = CXCursor_UnexposedExpr;
     break;
 
@@ -611,6 +614,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::SubstNonTypeTemplateParmPackExprClass:
   case Stmt::FunctionParmPackExprClass:
   case Stmt::UnresolvedLookupExprClass:
+  case Stmt::DependentTemplateIdExprClass:
     K = CXCursor_DeclRefExpr;
     break;
 
@@ -772,8 +776,11 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::OMPScanDirectiveClass:
     K = CXCursor_OMPScanDirective;
     break;
-  case Stmt::OMPOrderedDirectiveClass:
-    K = CXCursor_OMPOrderedDirective;
+  case Stmt::OMPOrderedStandaloneDirectiveClass:
+    K = CXCursor_OMPOrderedStandaloneDirective;
+    break;
+  case Stmt::OMPOrderedBlockAssocDirectiveClass:
+    K = CXCursor_OMPOrderedBlockAssocDirective;
     break;
   case Stmt::OMPAtomicDirectiveClass:
     K = CXCursor_OMPAtomicDirective;
@@ -1622,12 +1629,6 @@ static inline CXCursorSet_Impl *unpackCXCursorSet(CXCursorSet set) {
 namespace llvm {
 template <> struct DenseMapInfo<CXCursor> {
 public:
-  static inline CXCursor getEmptyKey() {
-    return MakeCXCursorInvalid(CXCursor_InvalidFile);
-  }
-  static inline CXCursor getTombstoneKey() {
-    return MakeCXCursorInvalid(CXCursor_NoDeclFound);
-  }
   static inline unsigned getHashValue(const CXCursor &cursor) {
     return llvm::DenseMapInfo<std::pair<const void *, const void *>>::
         getHashValue(std::make_pair(cursor.data[0], cursor.data[1]));

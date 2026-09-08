@@ -42,12 +42,12 @@ let Attributes = [NoThrow] in {
   def writeeflags_u64 : X86Builtin<"void(unsigned long long int)">;
 }
 
-let Features = "sse", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "sse", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def cvtss2si64 : X86Builtin<"long long int(_Vector<4, float>)">;
   def cvttss2si64 : X86Builtin<"long long int(_Vector<4, float>)">;
 }
 
-let Features = "sse2", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
+let Features = "sse2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def cvtsd2si64 : X86Builtin<"long long int(_Vector<2, double>)">;
   def cvttsd2si64 : X86Builtin<"long long int(_Vector<2, double>)">;
 }
@@ -248,10 +248,6 @@ let Features = "amx-avx512,avx10.2", Attributes = [NoThrow, RequiredVectorWidth<
   def tilemovrow_internal : X86Builtin<"_Vector<16, int>(unsigned short, unsigned short, _Vector<256, int>, unsigned int)">;
 }
 
-let Features = "amx-tf32", Attributes = [NoThrow] in {
-  def tmmultf32ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Vector<256, int>, _Vector<256, int>, _Vector<256, int>)">;
-}
-
 let Features = "amx-fp8", Attributes = [NoThrow] in {
   def tdpbf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Vector<256, int>, _Vector<256, int>, _Vector<256, int>)">;
   def tdpbhf8ps_internal : X86Builtin<"_Vector<256, int>(unsigned short, unsigned short, unsigned short, _Vector<256, int>, _Vector<256, int>, _Vector<256, int>)">;
@@ -321,10 +317,6 @@ let Features = "amx-fp8", Attributes = [NoThrow] in {
   def tdpbhf8ps : X86Builtin<"void(_Constant unsigned char, unsigned _Constant char, unsigned _Constant char)">;
   def tdphbf8ps : X86Builtin<"void(_Constant unsigned char, unsigned _Constant char, unsigned _Constant char)">;
   def tdphf8ps : X86Builtin<"void(_Constant unsigned char, unsigned _Constant char, unsigned _Constant char)">;
-}
-
-let Features = "amx-tf32", Attributes = [NoThrow] in {
-  def tmmultf32ps : X86Builtin<"void(_Constant unsigned char, _Constant unsigned char, _Constant unsigned char)">;
 }
 
 let Features = "prefetchi", Attributes = [NoThrow, Const] in {

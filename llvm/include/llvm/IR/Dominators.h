@@ -60,35 +60,6 @@ using BBUpdates = ArrayRef<llvm::cfg::Update<BasicBlock *>>;
 using BBDomTreeGraphDiff = GraphDiff<BasicBlock *, false>;
 using BBPostDomTreeGraphDiff = GraphDiff<BasicBlock *, true>;
 
-extern template LLVM_TEMPLATE_ABI void Calculate<BBDomTree>(BBDomTree &DT);
-extern template LLVM_TEMPLATE_ABI void
-CalculateWithUpdates<BBDomTree>(BBDomTree &DT, BBUpdates U);
-
-extern template LLVM_TEMPLATE_ABI void
-Calculate<BBPostDomTree>(BBPostDomTree &DT);
-
-extern template LLVM_TEMPLATE_ABI void
-InsertEdge<BBDomTree>(BBDomTree &DT, BasicBlock *From, BasicBlock *To);
-extern template LLVM_TEMPLATE_ABI void
-InsertEdge<BBPostDomTree>(BBPostDomTree &DT, BasicBlock *From, BasicBlock *To);
-
-extern template LLVM_TEMPLATE_ABI void
-DeleteEdge<BBDomTree>(BBDomTree &DT, BasicBlock *From, BasicBlock *To);
-extern template LLVM_TEMPLATE_ABI void
-DeleteEdge<BBPostDomTree>(BBPostDomTree &DT, BasicBlock *From, BasicBlock *To);
-
-extern template LLVM_TEMPLATE_ABI void
-ApplyUpdates<BBDomTree>(BBDomTree &DT, BBDomTreeGraphDiff &,
-                        BBDomTreeGraphDiff *);
-extern template LLVM_TEMPLATE_ABI void
-ApplyUpdates<BBPostDomTree>(BBPostDomTree &DT, BBPostDomTreeGraphDiff &,
-                            BBPostDomTreeGraphDiff *);
-
-extern template LLVM_TEMPLATE_ABI bool
-Verify<BBDomTree>(const BBDomTree &DT, BBDomTree::VerificationLevel VL);
-extern template LLVM_TEMPLATE_ABI bool
-Verify<BBPostDomTree>(const BBPostDomTree &DT,
-                      BBPostDomTree::VerificationLevel VL);
 }  // namespace DomTreeBuilder
 
 using DomTreeNode = DomTreeNodeBase<BasicBlock>;
@@ -118,14 +89,6 @@ template <> struct DenseMapInfo<BasicBlockEdge> {
   using BBInfo = DenseMapInfo<const BasicBlock *>;
 
   LLVM_ABI static unsigned getHashValue(const BasicBlockEdge *V);
-
-  static inline BasicBlockEdge getEmptyKey() {
-    return BasicBlockEdge(BBInfo::getEmptyKey(), BBInfo::getEmptyKey());
-  }
-
-  static inline BasicBlockEdge getTombstoneKey() {
-    return BasicBlockEdge(BBInfo::getTombstoneKey(), BBInfo::getTombstoneKey());
-  }
 
   static unsigned getHashValue(const BasicBlockEdge &Edge) {
     return hash_combine(BBInfo::getHashValue(Edge.getStart()),

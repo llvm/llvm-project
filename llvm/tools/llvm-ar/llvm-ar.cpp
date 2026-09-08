@@ -83,6 +83,7 @@ static void printArHelp(StringRef ToolName) {
     =darwin             -   darwin
     =bsd                -   bsd
     =bigarchive         -   big archive (AIX OS)
+    =zos                -   zos archive (z/OS OS)
     =coff               -   coff
   --plugin=<string>     - ignored for compatibility
   -h --help             - display this help and exit
@@ -195,7 +196,16 @@ static SmallVector<const char *, 256> PositionalArgs;
 static bool MRI;
 
 namespace {
-enum Format { Default, GNU, COFF, BSD, DARWIN, BIGARCHIVE, Unknown };
+enum Format {
+  Default,
+  GNU,
+  COFF,
+  BSD,
+  DARWIN,
+  BIGARCHIVE,
+  ZOSARCHIVE,
+  Unknown
+};
 }
 
 static Format FormatType = Default;
@@ -713,8 +723,11 @@ static void performReadOperation(ArchiveOperation Operation,
         });
         if (I == Members.end())
           continue;
-        if (CountParam && ++MemberCount[Name] != CountParam)
-          continue;
+        if (CountParam) {
+          std::string CountKey = normalizePath(*I);
+          if (++MemberCount[CountKey] != CountParam)
+            continue;
+        }
         Members.erase(I);
       }
 
@@ -854,14 +867,19 @@ static InsertAction computeInsertAction(ArchiveOperation Operation,
   if (Operation == QuickAppend || Members.empty())
     return IA_AddOldMember;
 
-  auto MI = find_if(Members, [Name](StringRef Path) {
+  std::string CountKey;
+  auto MI = find_if(Members, [Name, &CountKey](StringRef Path) {
+    SmallString<128> MatchPath(Path);
     if (Thin && !sys::path::is_absolute(Path)) {
       Expected<std::string> PathOrErr =
           computeArchiveRelativePath(ArchiveName, Path);
-      return comparePaths(Name, PathOrErr ? *PathOrErr : Path);
-    } else {
-      return comparePaths(Name, Path);
+      if (PathOrErr)
+        MatchPath = *PathOrErr;
     }
+    if (!comparePaths(Name, MatchPath))
+      return false;
+    CountKey = normalizePath(MatchPath);
+    return true;
   });
 
   if (MI == Members.end())
@@ -870,7 +888,7 @@ static InsertAction computeInsertAction(ArchiveOperation Operation,
   Pos = MI;
 
   if (Operation == Delete) {
-    if (CountParam && ++MemberCount[Name] != CountParam)
+    if (CountParam && ++MemberCount[CountKey] != CountParam)
       return IA_AddOldMember;
     return IA_Delete;
   }
@@ -1070,6 +1088,11 @@ static void performWriteOperation(ArchiveOperation Operation,
     if (Thin)
       fail("only the gnu format has a thin mode");
     Kind = object::Archive::K_AIXBIG;
+    break;
+  case ZOSARCHIVE:
+    if (Thin)
+      fail("only the gnu format has a thin mode");
+    Kind = object::Archive::K_ZOS;
     break;
   case Unknown:
     llvm_unreachable("");
@@ -1389,6 +1412,7 @@ static int ar_main(int argc, char **argv) {
                        .Case("bsd", BSD)
                        .Case("bigarchive", BIGARCHIVE)
                        .Case("coff", COFF)
+                       .Case("zos", ZOSARCHIVE)
                        .Default(Unknown);
       if (FormatType == Unknown)
         fail(std::string("Invalid format ") + Match);

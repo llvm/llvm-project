@@ -92,19 +92,23 @@ static NamedMDNode *emitResourceMetadata(Module &M, DXILResourceMap &DRM,
   LLVMContext &Context = M.getContext();
 
   for (ResourceInfo &RI : DRM)
-    if (!RI.hasSymbol())
+    if (RI.hasBinding() && !RI.hasSymbol())
       RI.createSymbol(M,
                       DRTM[RI.getHandleTy()].createElementStruct(RI.getName()));
 
   SmallVector<Metadata *> SRVs, UAVs, CBufs, Smps;
   for (const ResourceInfo &RI : DRM.srvs())
-    SRVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
+    if (RI.hasBinding())
+      SRVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
   for (const ResourceInfo &RI : DRM.uavs())
-    UAVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
+    if (RI.hasBinding())
+      UAVs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
   for (const ResourceInfo &RI : DRM.cbuffers())
-    CBufs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
+    if (RI.hasBinding())
+      CBufs.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
   for (const ResourceInfo &RI : DRM.samplers())
-    Smps.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
+    if (RI.hasBinding())
+      Smps.push_back(RI.getAsMetadata(M, DRTM[RI.getHandleTy()]));
 
   Metadata *SRVMD = SRVs.empty() ? nullptr : MDNode::get(Context, SRVs);
   Metadata *UAVMD = UAVs.empty() ? nullptr : MDNode::get(Context, UAVs);
@@ -514,15 +518,18 @@ static void cleanModuleFlags(Module &M) {
     M.addModuleFlag(Flag.Behavior, Flag.Key->getString(), Flag.Val);
 }
 
-using GlobalMDList = std::array<StringLiteral, 7>;
+using GlobalMDList = std::array<StringLiteral, 11>;
 
 // The following are compatible with DXIL but not emit with clang, they can
 // be added when applicable:
 // dx.typeAnnotations, dx.viewIDState, dx.dxrPayloadAnnotations
 static GlobalMDList CompatibleNamedModuleMDs = {
-    "llvm.ident",     "llvm.module.flags", "dx.resources",   "dx.valver",
-    "dx.shaderModel", "dx.version",        "dx.entryPoints",
-};
+    "llvm.ident",        "llvm.module.flags",
+    "dx.resources",      "dx.valver",
+    "dx.shaderModel",    "dx.version",
+    "dx.entryPoints",    "dx.source.contents",
+    "dx.source.defines", "dx.source.mainFileName",
+    "dx.source.args"};
 
 static void translateGlobalMetadata(Module &M, DXILResourceMap &DRM,
                                     DXILResourceTypeMap &DRTM,

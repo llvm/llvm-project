@@ -1,15 +1,20 @@
 // REQUIRES: arm
-// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t
-// RUN: echo "SECTIONS { \
-// RUN:       . = SIZEOF_HEADERS; \
-// RUN:       .text_low : { *(.text_low) *(.text_low2) } \
-// RUN:       .text_high 0x2000000 : { *(.text_high) *(.text_high2) } \
-// RUN:       } " > %t.script
-// RUN: ld.lld --pic-veneer --no-rosegment --script %t.script %t -o %t2
-// RUN: llvm-objdump --no-print-imm-hex -d %t2 | FileCheck %s
+// RUN: rm -rf %t && split-file %s %t && cd %t
+// RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-none-linux-gnueabi a.s -o a.o
+// RUN: ld.lld --pic-veneer --no-rosegment --script a.lds a.o -o exe
+// RUN: llvm-objdump --no-print-imm-hex -d exe | FileCheck %s
 
 // Test that we can force generation of position independent thunks even when
 // inputs are not pic.
+
+//--- a.lds
+
+SECTIONS {
+  .text_low 0x94 : AT(0x94) { *(.text_low) *(.text_low2) }
+  .text_high 0x2000000 : AT(0x2000000) { *(.text_high) *(.text_high2) }
+}
+
+//--- a.s
 
  .syntax unified
  .section .text_low, "ax", %progbits
@@ -35,22 +40,22 @@ low_target2:
 // CHECK-NEXT: <_start>:
 // CHECK-NEXT:       94:        4770    bx      lr
 // CHECK: <low_target>:
-// CHECK-NEXT:       96:        f000 f803       bl      0xa0 <__ThumbV7PILongThunk_high_target>
-// CHECK-NEXT:       9a:        f000 f807       bl      0xac <__ThumbV7PILongThunk_high_target2>
+// CHECK-NEXT:       96:        f000 f809       bl      0xac <__ThumbV7PILongThunk_high_target>
+// CHECK-NEXT:       9a:        f000 f801       bl      0xa0 <__ThumbV7PILongThunk_high_target2>
 // CHECK-NEXT:       9e:        d4d4 
-// CHECK: <__ThumbV7PILongThunk_high_target>:
-// CHECK-NEXT:       a0:        f64f 7c55       movw    r12, #65365
+// CHECK: <__ThumbV7PILongThunk_high_target2>:
+// CHECK-NEXT:       a0:        f64f 7c75       movw    r12, #65397
 // CHECK-NEXT:       a4:        f2c0 1cff       movt    r12, #511
 // CHECK-NEXT:       a8:        44fc    add     r12, pc
 // CHECK-NEXT:       aa:        4760    bx      r12
-// CHECK: <__ThumbV7PILongThunk_high_target2>:
-// CHECK-NEXT:       ac:        f64f 7c69       movw    r12, #65385
+// CHECK: <__ThumbV7PILongThunk_high_target>:
+// CHECK-NEXT:       ac:        f64f 7c49       movw    r12, #65353
 // CHECK-NEXT:       b0:        f2c0 1cff       movt    r12, #511
 // CHECK-NEXT:       b4:        44fc    add     r12, pc
 // CHECK-NEXT:       b6:        4760    bx      r12
 // CHECK: <low_target2>:
-// CHECK-NEXT:       b8:        f7ff fff2       bl      0xa0 <__ThumbV7PILongThunk_high_target>
-// CHECK-NEXT:       bc:        f7ff fff6       bl      0xac <__ThumbV7PILongThunk_high_target2>
+// CHECK-NEXT:       b8:        f7ff fff8       bl      0xac <__ThumbV7PILongThunk_high_target>
+// CHECK-NEXT:       bc:        f7ff fff0       bl      0xa0 <__ThumbV7PILongThunk_high_target2>
 
 
  .section .text_high, "ax", %progbits

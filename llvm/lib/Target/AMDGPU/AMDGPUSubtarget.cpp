@@ -19,7 +19,6 @@
 #include "R600Subtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -44,15 +43,19 @@ AMDGPUSubtarget::getMaxLocalMemSizeWithWaveCount(unsigned NWaves,
       std::max(1u, (WorkGroupSize + WaveSize - 1) / WaveSize);
 
   const unsigned WorkGroupsPerCU =
-      std::max(1u, (NWaves * getEUsPerCU()) / WavesPerWorkgroup);
+      std::max(1u, (NWaves * getNumWorkGroupSIMDs()) / WavesPerWorkgroup);
 
-  return getLocalMemorySize() / WorkGroupsPerCU;
+  const unsigned Granularity = std::max(LDSAllocationGranularity, 1u);
+  return alignDown(getLocalMemorySize() / WorkGroupsPerCU, Granularity);
 }
 
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(
     uint32_t LDSBytes, std::pair<unsigned, unsigned> FlatWorkGroupSizes) const {
 
-  // FIXME: We should take into account the LDS allocation granularity.
+  // LDS granularity accounted for by aligning the queried LDS size to the
+  // allocation block size.
+  const unsigned Granularity = std::max(LDSAllocationGranularity, 1u);
+  LDSBytes = alignTo(LDSBytes, Granularity);
   const unsigned MaxWGsLDS = getLocalMemorySize() / std::max(LDSBytes, 1u);
 
   // Queried LDS size may be larger than available on a CU, in which case we
@@ -85,7 +88,7 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(
   if (MinWavesPerCU >= MaxWavesPerCU) {
     std::swap(MinWavesPerCU, MaxWavesPerCU);
   } else {
-    const unsigned WaveSlotsPerCU = WavesPerEU * getEUsPerCU();
+    const unsigned WaveSlotsPerCU = WavesPerEU * getNumWorkGroupSIMDs();
 
     // Look for a potential smaller group size than the maximum which decreases
     // the concurrent number of waves on the CU for the same number of
@@ -125,8 +128,9 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(
 
   // Return the minimum/maximum number of waves on any EU, assuming that all
   // wavefronts are spread across all EUs as evenly as possible.
-  return {std::clamp(MinWavesPerCU / getEUsPerCU(), 1U, WavesPerEU),
-          std::clamp(divideCeil(MaxWavesPerCU, getEUsPerCU()), 1U, WavesPerEU)};
+  return {std::clamp(MinWavesPerCU / getNumWorkGroupSIMDs(), 1U, WavesPerEU),
+          std::clamp(divideCeil(MaxWavesPerCU, getNumWorkGroupSIMDs()), 1U,
+                     WavesPerEU)};
 }
 
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(
@@ -171,10 +175,6 @@ std::pair<unsigned, unsigned> AMDGPUSubtarget::getFlatWorkGroupSizes(
     return Default;
 
   return Requested;
-}
-
-bool AMDGPUSubtarget::isSingleWavefrontWorkgroup(const Function &F) const {
-  return getFlatWorkGroupSizes(F).second <= getWavefrontSize();
 }
 
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getEffectiveWavesPerEU(
@@ -429,11 +429,4 @@ const AMDGPUSubtarget &AMDGPUSubtarget::get(const TargetMachine &TM, const Funct
     return static_cast<const AMDGPUSubtarget&>(TM.getSubtarget<GCNSubtarget>(F));
   return static_cast<const AMDGPUSubtarget &>(
       TM.getSubtarget<R600Subtarget>(F));
-}
-
-// FIXME: This has no reason to be in subtarget
-SmallVector<unsigned>
-AMDGPUSubtarget::getMaxNumWorkGroups(const Function &F) const {
-  return AMDGPU::getIntegerVecAttribute(F, "amdgpu-max-num-workgroups", 3,
-                                        std::numeric_limits<uint32_t>::max());
 }

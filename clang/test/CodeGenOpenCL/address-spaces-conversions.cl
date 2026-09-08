@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -O0 -ffake-address-space-map -cl-std=CL2.0 -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -O0 -ffake-address-space-map -cl-std=CL3.0 -cl-ext=+__opencl_c_generic_address_space -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -O0 -cl-std=CL2.0 -emit-llvm -o - | FileCheck --check-prefix=CHECK-NOFAKE %s
-// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -O0 -cl-std=CL3.0 -cl-ext=+__opencl_c_generic_address_space -emit-llvm -o - | FileCheck --check-prefix=CHECK-NOFAKE %s
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -O0 -ffake-address-space-map -cl-std=CL2.0 -emit-llvm -o - -Wno-deprecated-attributes | FileCheck %s
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -O0 -ffake-address-space-map -cl-std=CL3.0 -cl-ext=+__opencl_c_generic_address_space -emit-llvm -o - -Wno-deprecated-attributes | FileCheck %s
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -O0 -cl-std=CL2.0 -emit-llvm -o - -Wno-deprecated-attributes | FileCheck --check-prefix=CHECK-NOFAKE %s
+// RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -O0 -cl-std=CL3.0 -cl-ext=+__opencl_c_generic_address_space -emit-llvm -o - -Wno-deprecated-attributes | FileCheck --check-prefix=CHECK-NOFAKE %s
 // When -ffake-address-space-map is not used, all addr space mapped to 0 for x86_64.
 
 // test that we generate address space casts everywhere we need conversions of
@@ -30,10 +30,10 @@ void test(global int *arg_glob, generic int *arg_gen,
   // CHECK-NOFAKE-NOT: addrspacecast
 
   var_priv = arg_gen - arg_glob; // arithmetic operation
-  // CHECK: %{{.*}} = ptrtoint ptr addrspace(4) %{{.*}} to i64
-  // CHECK: %{{.*}} = ptrtoint ptr addrspace(1) %{{.*}} to i64
-  // CHECK-NOFAKE: %{{.*}} = ptrtoint ptr %{{.*}} to i64
-  // CHECK-NOFAKE: %{{.*}} = ptrtoint ptr %{{.*}} to i64
+  // CHECK: %{{.*}} = ptrtoaddr ptr addrspace(4) %{{.*}} to i64
+  // CHECK: %{{.*}} = ptrtoaddr ptr addrspace(1) %{{.*}} to i64
+  // CHECK-NOFAKE: %{{.*}} = ptrtoaddr ptr %{{.*}} to i64
+  // CHECK-NOFAKE: %{{.*}} = ptrtoaddr ptr %{{.*}} to i64
 
   var_priv = arg_gen > arg_glob; // comparison
   // CHECK: %{{[0-9]+}} = addrspacecast ptr addrspace(1) %{{[0-9]+}} to ptr addrspace(4)

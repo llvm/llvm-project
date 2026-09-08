@@ -14,23 +14,23 @@
 // RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -S \
 // RUN:   -disable-llvm-passes -o - %s \
 // RUN:   | FileCheck -check-prefixes=COMMON,NV-ON %s
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -S \
-// RUN:   -O1 -target-cpu gfx906 -disable-llvm-passes -o - -x hip %s \
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgpu9.06-amd-amdhsa -S \
+// RUN:   -O1 -disable-llvm-passes -o - -x hip %s \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-ON %s
 // RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -S \
 // RUN:   -O3 -o - %s \
 // RUN:   | FileCheck -check-prefixes=COMMON,NV-OPT-FAST %s
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -S \
-// RUN:   -O3 -target-cpu gfx906 -o - -x hip %s \
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgpu9.06-amd-amdhsa -S \
+// RUN:   -O3 -o - -x hip %s \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-OPT-FASTSTD %s
 
 // Check separate compile/backend steps corresponding to -save-temps.
 
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -emit-llvm \
-// RUN:   -O3 -disable-llvm-passes -target-cpu gfx906 -o %t.ll -x hip %s
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgpu9.06-amd-amdhsa -emit-llvm \
+// RUN:   -O3 -disable-llvm-passes -o %t.ll -x hip %s
 // RUN: cat %t.ll  | FileCheck -check-prefixes=COMMON,AMD-OPT-FAST-IR %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -S \
-// RUN:   -O3 -target-cpu gfx906 -o - -x ir %t.ll \
+// RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -S \
+// RUN:   -O3 -o - -x ir %t.ll \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-OPT-FASTSTD %s
 
 // Explicit -ffp-contract=fast
@@ -43,16 +43,16 @@
 // RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -S \
 // RUN:   -ffp-contract=fast -disable-llvm-passes -o - %s \
 // RUN:   | FileCheck -check-prefixes=COMMON,NV-ON %s
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -S \
-// RUN:   -O1 -target-cpu gfx906 -disable-llvm-passes -o - -x hip %s \
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgpu9.06-amd-amdhsa -S \
+// RUN:   -O1 -disable-llvm-passes -o - -x hip %s \
 // RUN:   -ffp-contract=fast \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-ON %s
 // RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -S \
 // RUN:   -O3 -o - %s \
 // RUN:   -ffp-contract=fast \
 // RUN:   | FileCheck -check-prefixes=COMMON,NV-OPT-FAST %s
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -S \
-// RUN:   -O3 -target-cpu gfx906 -o - -x hip %s \
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgpu9.06-amd-amdhsa -S \
+// RUN:   -O3 -o - -x hip %s \
 // RUN:   -ffp-contract=fast \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-OPT-FAST %s
 
@@ -60,12 +60,12 @@
 // When input is IR, -ffp-contract has no effect. Backend uses default
 // default FP fuse option.
 
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -emit-llvm \
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgpu9.06-amd-amdhsa -emit-llvm \
 // RUN:   -ffp-contract=fast \
-// RUN:   -O3 -disable-llvm-passes -target-cpu gfx906 -o %t.ll -x hip %s
+// RUN:   -O3 -disable-llvm-passes -o %t.ll -x hip %s
 // RUN: cat %t.ll  | FileCheck -check-prefixes=COMMON,AMD-OPT-FAST-IR %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -S \
-// RUN:   -O3 -target-cpu gfx906 -o - -x ir %t.ll \
+// RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -S \
+// RUN:   -O3 -o - -x ir %t.ll \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-OPT-FASTSTD %s
 
 // Explicit -ffp-contract=fast-honor-pragmas
@@ -78,16 +78,16 @@
 // RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -S \
 // RUN:   -ffp-contract=fast-honor-pragmas -disable-llvm-passes -o - %s \
 // RUN:   | FileCheck -check-prefixes=COMMON,NV-ON %s
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -S \
-// RUN:   -O1 -target-cpu gfx906 -disable-llvm-passes -o - -x hip %s \
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgpu9.06-amd-amdhsa -S \
+// RUN:   -O1 -disable-llvm-passes -o - -x hip %s \
 // RUN:   -ffp-contract=fast-honor-pragmas \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-ON %s
 // RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -S \
 // RUN:   -O3 -o - %s \
 // RUN:   -ffp-contract=fast-honor-pragmas \
 // RUN:   | FileCheck -check-prefixes=COMMON,NV-OPT-FASTSTD %s
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -S \
-// RUN:   -O3 -target-cpu gfx906 -o - -x hip %s \
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgpu9.06-amd-amdhsa -S \
+// RUN:   -O3 -o - -x hip %s \
 // RUN:   -ffp-contract=fast-honor-pragmas \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-OPT-FASTSTD %s
 
@@ -95,12 +95,12 @@
 // When input is IR, -ffp-contract has no effect. Backend uses default
 // default FP fuse option.
 
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -emit-llvm \
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgpu9.06-amd-amdhsa -emit-llvm \
 // RUN:   -ffp-contract=fast-honor-pragmas \
-// RUN:   -O3 -disable-llvm-passes -target-cpu gfx906 -o %t.ll -x hip %s
+// RUN:   -O3 -disable-llvm-passes -o %t.ll -x hip %s
 // RUN: cat %t.ll  | FileCheck -check-prefixes=COMMON,AMD-OPT-FAST-IR %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -S \
-// RUN:   -O3 -target-cpu gfx906 -o - -x ir %t.ll \
+// RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -S \
+// RUN:   -O3 -o - -x ir %t.ll \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-OPT-FASTSTD %s
 
 // Explicit -ffp-contract=on -- fusing by front-end.
@@ -116,27 +116,27 @@
 // RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -S \
 // RUN:   -ffp-contract=on -disable-llvm-passes -o - %s \
 // RUN:   | FileCheck -check-prefixes=COMMON,NV-ON %s
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -S \
-// RUN:   -O1 -target-cpu gfx906 -disable-llvm-passes -o - -x hip %s \
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgpu9.06-amd-amdhsa -S \
+// RUN:   -O1 -disable-llvm-passes -o - -x hip %s \
 // RUN:   -ffp-contract=on \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-ON %s
 // RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -S \
 // RUN:   -O3 -o - %s \
 // RUN:   -ffp-contract=on \
 // RUN:   | FileCheck -check-prefixes=COMMON,NV-OPT-ON %s
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -S \
-// RUN:   -O3 -target-cpu gfx906 -o - -x hip %s \
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgpu9.06-amd-amdhsa -S \
+// RUN:   -O3 -o - -x hip %s \
 // RUN:   -ffp-contract=on \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-OPT-ON %s
 
 // Check separate compile/backend steps corresponding to -save-temps.
 
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -emit-llvm \
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgpu9.06-amd-amdhsa -emit-llvm \
 // RUN:   -ffp-contract=on \
-// RUN:   -O3 -disable-llvm-passes -target-cpu gfx906 -o %t.ll -x hip %s
+// RUN:   -O3 -disable-llvm-passes -o %t.ll -x hip %s
 // RUN: cat %t.ll  | FileCheck -check-prefixes=COMMON,AMD-OPT-ON-IR %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -S \
-// RUN:   -O3 -target-cpu gfx906 -o - -x ir %t.ll \
+// RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -S \
+// RUN:   -O3 -o - -x ir %t.ll \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-OPT-ON %s
 
 // Explicit -ffp-contract=off should disable instruction fusing.
@@ -149,27 +149,27 @@
 // RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -S \
 // RUN:   -ffp-contract=off -disable-llvm-passes -o - %s \
 // RUN:   | FileCheck -check-prefixes=COMMON,NV-OFF %s
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -S \
-// RUN:   -target-cpu gfx906 -disable-llvm-passes -o - -x hip %s \
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgpu9.06-amd-amdhsa -S \
+// RUN: -disable-llvm-passes -o - -x hip %s \
 // RUN:   -ffp-contract=off \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-OFF %s
 // RUN: %clang_cc1 -fcuda-is-device -triple nvptx-nvidia-cuda -S \
 // RUN:   -O3 -o - %s \
 // RUN:   -ffp-contract=off \
 // RUN:   | FileCheck -check-prefixes=COMMON,NV-OPT-OFF %s
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -S \
-// RUN:   -O3 -target-cpu gfx906 -o - -x hip %s \
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgpu9.06-amd-amdhsa -S \
+// RUN:   -O3 -o - -x hip %s \
 // RUN:   -ffp-contract=off \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-OPT-OFF %s
 
 // Check separate compile/backend steps corresponding to -save-temps.
 
-// RUN: %clang_cc1 -fcuda-is-device -triple amdgcn-amd-amdhsa -emit-llvm \
+// RUN: %clang_cc1 -fcuda-is-device -triple amdgpu9.06-amd-amdhsa -emit-llvm \
 // RUN:   -ffp-contract=off \
-// RUN:   -O3 -disable-llvm-passes -target-cpu gfx906 -o %t.ll -x hip %s
+// RUN:   -O3 -disable-llvm-passes -o %t.ll -x hip %s
 // RUN: cat %t.ll  | FileCheck -check-prefixes=COMMON,AMD-OPT-OFF-IR %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -S \
-// RUN:   -O3 -target-cpu gfx906 -o - -x ir %t.ll \
+// RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -S \
+// RUN:   -O3 -o - -x ir %t.ll \
 // RUN:   | FileCheck -check-prefixes=COMMON,AMD-OPT-OFF %s
 
 #include "Inputs/cuda.h"
@@ -252,21 +252,16 @@ __host__ __device__ float func2(float a, float b, float c) {
 // AMD-OPT-OFF-NEXT: v_add_f32_e32
 // AMD-OPT-OFF-NEXT: s_setpc_b64
 
-// Test multiply/add in the different statements, which is forced
-// to be compiled with fp contract on. fmul/fadd without contract
-// flags are emitted in IR. In nvptx, they are emitted as FMA in
-// fp-contract is fast but not on, as nvptx backend uses the same
-// fp fuse option as front end, whereas fast fp fuse option in
-// backend fuses fadd/fmul disregarding contract flag. In amdgcn
-// they are not fused as amdgcn always use standard fp fusion
-// option which respects contract flag.
+// Test multiply/add in the different statements, which is forced to be compiled
+// with fp contract on. fmul/fadd without contract flags are emitted in IR.
   __host__ __device__ float func3(float a, float b, float c) {
 #pragma clang fp contract(on)
   float t = b * c;
   return t + a;
 }
 // COMMON-LABEL: _Z5func3fff
-// NV-OPT-FAST: fma.rn.f32
+// NV-OPT-FAST: mul.rn.f32
+// NV-OPT-FAST: add.rn.f32
 // NV-OPT-FAST-NEXT: st.param.b32
 // NV-OPT-FASTSTD: mul.rn.f32
 // NV-OPT-FASTSTD: add.rn.f32
@@ -285,7 +280,8 @@ __host__ __device__ float func2(float a, float b, float c) {
 // AMD-OPT-OFF-IR: fmul float
 // AMD-OPT-OFF-IR: fadd float
 
-// AMD-OPT-FAST: v_fmac_f32_e32
+// AMD-OPT-FAST: v_mul_f32_e32
+// AMD-OPT-FAST-NEXT: v_add_f32_e32
 // AMD-OPT-FAST-NEXT: s_setpc_b64
 // AMD-OPT-FASTSTD: v_mul_f32_e32
 // AMD-OPT-FASTSTD-NEXT: v_add_f32_e32
