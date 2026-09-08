@@ -25,4 +25,5 @@ add_llvm_target_unittest(ARMTests
   MachineInstrTest.cpp
   InstSizes.cpp
   ARMSelectionDAGTest.cpp
+  CalleeOperandTest.cpp
   )
