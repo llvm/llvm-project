@@ -320,6 +320,11 @@ struct MCSeqBlockDesc {
   /// The first register of the block. The others are described relative to it.
   MCPhysReg FirstReg;
 
+  /// Index of the descriptor shared by every register of the block. Registers
+  /// of a block have no descriptors of their own, so the descriptors are not
+  /// indexed by register number and this says where to find theirs.
+  uint16_t DescIndex;
+
   /// The number of registers in the block.
   uint16_t Count;
 
@@ -368,6 +373,10 @@ class LLVM_ABI MCRegisterInfo {
 public:
   using regclass_iterator = const MCRegisterClass *;
 
+  /// Set in an element of RegDescIndexes where the rest of it indexes the
+  /// sequence blocks rather than the register descriptors.
+  static constexpr uint16_t IndexesSeqBlock = 1;
+
   /// DwarfLLVMRegPair - Emitted by tablegen so Dwarf<->LLVM reg mappings can be
   /// performed with a binary search.
   struct DwarfLLVMRegPair {
@@ -403,6 +412,10 @@ private:
   const MCSeqSuperRegSeries *SeqSuperRegSeries; // The series of register that
                                                 // the registers of each block
                                                 // are contained by.
+  const uint16_t *RegDescIndexes; // For each register, the index of
+                                  // what describes it: a sequence block
+                                  // in SeqBlocks, or a descriptor in
+                                  // Desc. See IndexesSeqBlock.
 
   unsigned L2DwarfRegsSize;
   unsigned EHL2DwarfRegsSize;
@@ -421,32 +434,21 @@ private:
   /// Returns the sequence block the given register belongs to, or nullptr if
   /// it belongs to none and so has a description of its own.
   const MCSeqBlockDesc *getSeqBlockOf(MCRegister Reg) const {
-    // Most targets declare no sequences, and in those that do, most registers
-    // are below the first block. Reject those without searching.
-    if (NumSeqBlocks == 0 || Reg.id() < SeqBlocks[0].FirstReg)
+    assert(Reg.id() < NumRegs && "No such register!");
+    uint16_t Index = RegDescIndexes[Reg.id()];
+    if (!(Index & IndexesSeqBlock))
       return nullptr;
 
-    // Blocks are ordered by their first register, so the last block starting
-    // at or before Reg is the only one that can contain it.
-    unsigned Lo = 0, Hi = NumSeqBlocks;
-    while (Hi - Lo > 1) {
-      unsigned Mid = Lo + (Hi - Lo) / 2;
-      if (SeqBlocks[Mid].FirstReg <= Reg.id())
-        Lo = Mid;
-      else
-        Hi = Mid;
-    }
-
-    const MCSeqBlockDesc &Block = SeqBlocks[Lo];
-    return Reg.id() < unsigned(Block.FirstReg) + Block.Count ? &Block : nullptr;
+    assert((Index >> 1) < NumSeqBlocks && "No such sequence block!");
+    return &SeqBlocks[Index >> 1];
   }
 
   /// The descriptor of the given register.
   ///
-  /// A register of a sequence block gets the descriptor of the first register
-  /// of that block. Registers of a block differ only in how far along the
-  /// sequence they start, so one descriptor says as much about them as a
-  /// descriptor can, and only the first of them has one.
+  /// A register of a sequence block gets the descriptor of its block, which
+  /// describes every register of it. Registers of a block differ only in how
+  /// far along the sequence they start, so one descriptor says as much about
+  /// them as a descriptor can, and they have none of their own.
   ///
   /// What differs between them is held by the block instead, and the register
   /// info puts the two together: where their sub-registers and register units
@@ -454,9 +456,10 @@ private:
   const MCRegisterDesc &get(MCRegister Reg) const {
     assert(Reg.id() < NumRegs &&
            "Attempting to access record for invalid register number!");
-    if (const MCSeqBlockDesc *Block = getSeqBlockOf(Reg))
-      return Desc[Block->FirstReg];
-    return Desc[Reg.id()];
+    uint16_t Index = RegDescIndexes[Reg.id()];
+    if (Index & IndexesSeqBlock)
+      return Desc[SeqBlocks[Index >> 1].DescIndex];
+    return Desc[Index >> 1];
   }
 
   /// Iterator class that can traverse the differentially encoded values in
@@ -552,6 +555,7 @@ public:
                           const uint16_t *SubIndices, unsigned NumIndices,
                           const uint16_t *RET,
                           const unsigned (*RUI)[2] = nullptr,
+                          const uint16_t *RDI = nullptr,
                           const MCSeqBlockDesc *SB = nullptr, unsigned NSB = 0,
                           const MCSeqSuperRegSeries *SSK = nullptr) {
     Desc = D;
@@ -570,6 +574,7 @@ public:
     NumSubRegIndices = NumIndices;
     RegEncodingTable = RET;
     RegUnitIntervals = RUI;
+    RegDescIndexes = RDI;
     SeqBlocks = SB;
     NumSeqBlocks = NSB;
     SeqSuperRegSeries = SSK;
@@ -673,13 +678,14 @@ public:
   }
 
   /// Returns where the sub-register indices of the given register begin, in
-  /// MCRI::SubRegIndices. They run alongside its sub-registers.
+  /// MCRegisterInfo::SubRegIndices. They run alongside its sub-registers.
   const uint16_t *getSubRegIndices(MCRegister Reg) const {
     return SubRegIndices + get(Reg).SubRegIndices;
   }
 
   /// Returns where the lane masks of the given register's register units
-  /// begin, in MCRI::RegUnitMaskSequences. They run alongside its units.
+  /// begin, in MCRegisterInfo::RegUnitMaskSequences. They run alongside its
+  /// units.
   const LaneBitmask *getRegUnitLaneMasks(MCRegister Reg) const {
     return &RegUnitMaskSequences[get(Reg).RegUnitLaneMasks];
   }

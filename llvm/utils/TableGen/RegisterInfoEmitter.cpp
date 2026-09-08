@@ -1218,9 +1218,40 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
      << "RegDesc[] = { // Descriptors\n";
   OS << "  { " << RegStrings.get("") << ", 0, 0, 0, 0, 0, 0, 0 },\n";
 
+  // For each register, the index of what describes it: a sequence block where
+  // the low bit is set, and a descriptor where it is clear. The registers of a
+  // block have no descriptors of their own, so the descriptors are no longer
+  // indexed by register number.
+  // The value must be kept in sync with MCRegisterInfo.h.
+  constexpr uint16_t IndexesSeqBlock = 1;
+
+  std::vector<uint16_t> RegDescIndexes(Regs.size() + 1);
+  unsigned NumDescs = 1; // The null register takes the first descriptor.
+
+  // The index of the descriptor of each block.
+  std::vector<uint16_t> BlockDescIndexes(SeqBlocks.size());
+
   // Emit the register descriptors now.
   i = 0;
   for (const auto &Reg : Regs) {
+    auto [Block, Index] = GetSeqBlockMember(Reg);
+
+    // A register of a block is described by the block, which holds the one
+    // descriptor they share. That descriptor is written out here, when the
+    // first register of the block is reached, and the rest of them are passed
+    // over.
+    if (Block) {
+      unsigned BlockIndex = Block - SeqBlocks.begin();
+      RegDescIndexes[Reg.EnumValue] = BlockIndex << 1 | IndexesSeqBlock;
+      if (Index != 0) {
+        ++i;
+        continue;
+      }
+      BlockDescIndexes[BlockIndex] = NumDescs;
+    } else {
+      RegDescIndexes[Reg.EnumValue] = NumDescs << 1;
+    }
+
     unsigned FirstRU = Reg.getNativeRegUnits().find_first();
     unsigned Offset = DiffSeqs.get(RegUnitLists[i]);
     // The value must be kept in sync with MCRegisterInfo.h.
@@ -1228,45 +1259,41 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     assert(isUInt<RegUnitBits>(FirstRU) && "Too many regunits");
     assert(isUInt<32 - RegUnitBits>(Offset) && "Offset is too big");
 
-    // The registers of a sequence block after the first are described by that
-    // first register and the slopes, so they list no sub-registers of their
-    // own. Point them at an empty list, so that reading one regardless says
-    // there are none rather than naming registers that have nothing to do
-    // with them.
-    auto [Block, Index] = GetSeqBlockMember(Reg);
-    unsigned SubRegs =
-        DiffSeqs.get(Block && Index != 0 ? DiffVec() : SubRegLists[i]);
-
-    // Likewise the registers containing them, which their block says the series
-    // of, so that they list none of their own.
+    // The registers containing those of a block are what its series say, so
+    // the first register of a block lists none of its own either.
+    unsigned SubRegs = DiffSeqs.get(SubRegLists[i]);
     unsigned SuperRegs = DiffSeqs.get(Block ? DiffVec() : SuperRegLists[i]);
 
-    // Their register units likewise: those are the first register's, carried
-    // as far along as the register sits, which the block says how far is. So
-    // the registers of a block after the first hold neither the list nor the
-    // unit it is walked from, and the field reads as no units at all.
-    if (Block && Index != 0) {
-      FirstRU = 0;
-      Offset = 0;
-    }
-
-    // What the registers of a block have in common they read from the first
-    // of them, so the rest hold none of it.
-    bool Shares = Block && Index != 0;
-
-    OS << "  { " << RegStrings.get(Shares ? "" : Reg.getName().str()) << ", "
-       << SubRegs << ", " << SuperRegs << ", "
-       << (Shares ? 0 : SubRegIdxSeqs.get(SubRegIdxLists[i])) << ", "
-       << (Offset << RegUnitBits | FirstRU) << ", "
-       << (Shares ? 0 : LaneMaskSeqs.get(RegUnitLaneMasks[i])) << ", "
-       << (Shares ? false : Reg.Constant) << ", "
-       << (Shares ? false : Reg.Artificial) << " },\n";
+    OS << "  { " << RegStrings.get(Reg.getName().str()) << ", " << SubRegs
+       << ", " << SuperRegs << ", " << SubRegIdxSeqs.get(SubRegIdxLists[i])
+       << ", " << (Offset << RegUnitBits | FirstRU) << ", "
+       << LaneMaskSeqs.get(RegUnitLaneMasks[i]) << ", " << Reg.Constant << ", "
+       << Reg.Artificial << " },\n";
+    ++NumDescs;
     ++i;
   }
   OS << "};\n\n"; // End of register descriptors...
 
-  // Emit the sequence blocks, so that the registers described by their first
-  // register can be told from those described on their own.
+  // Say where what describes each register is, so that the register info can
+  // reach it in one step. An index is shifted up past the bit saying which of
+  // the two it indexes, so both are bounded by half the range of an index.
+  assert(SeqBlocks.size() <= (UINT16_MAX >> 1) && "Too many sequence blocks!");
+  assert(NumDescs <= (UINT16_MAX >> 1) && "Too many register descriptors!");
+
+  constexpr unsigned PerLine = 16;
+  OS << "extern const uint16_t " << TargetName
+     << "RegDescIndexes[] = { // Where what describes each register is\n";
+  for (const auto &[Reg, DescIndex] : enumerate(RegDescIndexes)) {
+    OS << (Reg % PerLine == 0 ? "  " : " ") << DescIndex << ",";
+    if (Reg % PerLine == PerLine - 1)
+      OS << "\n";
+  }
+  if (RegDescIndexes.size() % PerLine)
+    OS << "\n";
+  OS << "};\n\n";
+
+  // Emit the sequence blocks, so that the registers they describe can be told
+  // from those described on their own.
   if (!SeqBlocks.empty()) {
     // The series of register the registers of each block are contained by.
     OS << "extern const MCSeqSuperRegSeries " << TargetName
@@ -1289,12 +1316,13 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     OS << "extern const MCSeqBlockDesc " << TargetName
        << "SeqBlocks[] = { // Sequence blocks\n";
     unsigned FirstSeries = 0;
-    for (const CodeGenRegisterSequenceBlock &Block : SeqBlocks) {
+    for (const auto &[Index, Block] : enumerate(SeqBlocks)) {
       DiffVec Slopes(Block.SubRegSlopes);
-      OS << "  { " << getRegName(Block.FirstReg->TheDef) << ", " << Block.Count
-         << ", " << Block.Step << ", " << DiffSeqs.get(Slopes) << ", "
-         << RegStrings.get(Block.Name) << ", " << Block.RegUnitStride << ", "
-         << FirstSeries << ", " << Block.SuperRegSeries.size() << " },\n";
+      OS << "  { " << getRegName(Block.FirstReg->TheDef) << ", "
+         << BlockDescIndexes[Index] << ", " << Block.Count << ", " << Block.Step
+         << ", " << DiffSeqs.get(Slopes) << ", " << RegStrings.get(Block.Name)
+         << ", " << Block.RegUnitStride << ", " << FirstSeries << ", "
+         << Block.SuperRegSeries.size() << " },\n";
       FirstSeries += Block.SuperRegSeries.size();
     }
     OS << "};\n\n";
@@ -1577,7 +1605,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
      << TargetName << "RegEncodingTable, "
      << (Target.getRegistersAreIntervals() ? TargetName + "RegUnitIntervals"
                                            : "nullptr")
-     << ", "
+     << ", " << TargetName << "RegDescIndexes, "
      << (SeqBlocks.empty() ? Twine("nullptr") : TargetName + "SeqBlocks")
      << ", " << SeqBlocks.size();
   // The rest is defaulted, so a target with no sequences says nothing of it.
@@ -2115,6 +2143,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
   OS << "extern const MCPhysReg " << TargetName << "RegUnitRoots[][2];\n";
   OS << "extern const uint16_t " << TargetName << "SubRegIdxLists[];\n";
   OS << "extern const uint16_t " << TargetName << "RegEncodingTable[];\n";
+  OS << "extern const uint16_t " << TargetName << "RegDescIndexes[];\n";
   if (Target.getRegistersAreIntervals())
     OS << "extern const unsigned " << TargetName << "RegUnitIntervals[][2];\n";
   ArrayRef<CodeGenRegisterSequenceBlock> SeqBlocks = RegBank.getSeqBlocks();
@@ -2142,7 +2171,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
   InitMCRegisterInfo({0}RegDesc, {1}, RA, PC,
     &get{0}MCRegisterClass(0), {2}, {0}RegUnitRoots, {3}, {0}RegDiffLists,
     {0}LaneMaskLists, {0}RegStrings, {0}RegClassStrings, {0}SubRegIdxLists, {4},
-    {0}RegEncodingTable, {5}, {6}, {7}{8});
+    {0}RegEncodingTable, {5}, {0}RegDescIndexes, {6}, {7}{8});
 
 )",
       TargetName, Regs.size() + 1, RegisterClasses.size(),

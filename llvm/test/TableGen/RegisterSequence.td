@@ -159,17 +159,30 @@ def : RegisterSequence<[R2, R5]>;
 // member it begins at, R_64 and member 2 naming R2_64, so the Name field of
 // the rest, the first, is the empty string at offset 2.
 //
-// And what is left is the same for every register of a block, so the first of
-// them holds that too and the rest hold nothing at all: their sub-register
-// indices, the lane masks of their register units, and whether they are
-// constant or artificial.
+// And what is left is the same for every register of a block: their
+// sub-register indices, the lane masks of their register units, and whether
+// they are constant or artificial.
 //
-// The first two pairs, then. The first holds a whole entry, being the first
-// register of its block; the second holds an empty one, everything about it
-// coming from the block and from that first register.
+// So the whole of a descriptor is the same for every register of a block, and
+// one descriptor serves them all. The descriptor after that of the pairs is
+// therefore not another pair's; it belongs to the next register that has one,
+// which is the first of the tuples over registers of no sequence.
 // CHECK:      extern const MCRegisterDesc TestTargetRegDesc[]
 // CHECK:      { {{[0-9]+}}, 20, 7, 0, {{[0-9]+}}, {{[0-9]+}}, 0, 0 },
-// CHECK-NEXT: { 2, 7, 7, 0, 0, 0, 0, 0 },
+// CHECK-NEXT: { {{[0-9]+}}, 27, 60, 0, {{[0-9]+}}, {{[0-9]+}}, 0, 0 },
+
+// The descriptors not being indexed by register number any more, this says
+// where what describes each register is: the index of a sequence block where
+// the low bit is set, and of a descriptor where it is clear.
+//
+// Registers 21 to 24 are the pairs of the first block and so all four index
+// it, as 28 and 29 index the block of quads and 32 to 34 the block of the
+// second sequence. Between them sit registers belonging to no block, which
+// index descriptors of their own as registers always have.
+// CHECK:      extern const uint16_t TestTargetRegDescIndexes[]
+// CHECK:      {{^}}  0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30,
+// CHECK-NEXT: {{^}}  32, 34, 36, 38, 40, 1, 1, 1, 1, 44, 46, 48, 3, 3, 52, 54,
+// CHECK-NEXT: {{^}}  5, 5, 5, 58,
 
 // The series of register that the registers of a block are contained by, said
 // as where one sits with respect to the register it contains: the register it
@@ -187,19 +200,19 @@ def : RegisterSequence<[R2, R5]>;
 // CHECK-NEXT: { R_128_SEQ, 0, 4, 2, 1 },
 // CHECK-NEXT: { R_128_SEQ, 2, 4, 2, 1 },
 
-// The blocks as the register info sees them: the first register, how many
-// there are, how many members apart they begin, where the distances above
-// start, the name their registers go by, how far the first register unit
-// moves from one of them to the next, and which of the series above are
-// theirs.
+// The blocks as the register info sees them: the first register, where the
+// descriptor describing them is, how many there are, how many members apart
+// they begin, where the distances above start, the name their registers go by,
+// how far the first register unit moves from one of them to the next, and
+// which of the series above are theirs.
 //
 // A pair holds the units of two plain registers and a quad those of four, so
 // the units move two along from one pair to the next and four from one quad to
 // the next.
 // CHECK:      extern const MCSeqBlockDesc TestTargetSeqBlocks[]
-// CHECK-NEXT: { R_64_SEQ, 4, 2, {{[0-9]+}}, {{[0-9]+}}, 2, 0, 2 },
-// CHECK-NEXT: { R_128_SEQ, 2, 4, 46, {{[0-9]+}}, 4, 2, 0 },
-// CHECK-NEXT: { T_64_SEQ, 3, 2, {{[0-9]+}}, {{[0-9]+}}, 2, 2, 0 },
+// CHECK-NEXT: { R_64_SEQ, {{[0-9]+}}, 4, 2, {{[0-9]+}}, {{[0-9]+}}, 2, 0, 2 },
+// CHECK-NEXT: { R_128_SEQ, {{[0-9]+}}, 2, 4, 46, {{[0-9]+}}, 4, 2, 0 },
+// CHECK-NEXT: { T_64_SEQ, {{[0-9]+}}, 3, 2, {{[0-9]+}}, {{[0-9]+}}, 2, 2, 0 },
 
 // Having no enumerators of their own, registers of a block are referred to by
 // the one that reserves the block and how far into it they sit. Here, the four
