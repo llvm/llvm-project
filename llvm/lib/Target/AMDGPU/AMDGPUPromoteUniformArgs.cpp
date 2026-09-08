@@ -128,8 +128,6 @@ static bool promoteUniformArgsToInReg(Module &M) {
 
 PreservedAnalyses AMDGPUPromoteUniformArgsPass::run(Module &M,
                                                     ModuleAnalysisManager &AM) {
-  if (!M.getTargetTriple().isAMDGCN())
-    return PreservedAnalyses::all();
   if (!promoteUniformArgsToInReg(M))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
