@@ -236,16 +236,10 @@ static bool isSupportedType(mlir::Type ty, const DataLayout &dl) {
         if (recordBits > 128)
           return false;
       } else {
-        // A bit-field's declared type can extend past the unit that stores
-        // it, and it is that declared extent which accounts for bytes a
-        // narrower unit leaves looking like padding.  Only a declared extent
-        // may overshoot the union, which stored bytes never do, so it is the
-        // one compared without an equality.
-        //
-        // It settles only the first eightbyte, though.  Past that the coerce
-        // type follows the stored unit rather than the declaration, since
-        // reduceUnionForX8664 chooses the basis from the fields the union
-        // stores.
+        // A declared type may reach past its unit and overshoot the union,
+        // which stored bytes never do, hence the inequality.  It counts only
+        // within the first eightbyte: past that reduceUnionForX8664 picks the
+        // coerce basis from the fields the union stores.
         const bool declaredExtentCounts = recordBits <= 64;
         auto spansRecord = [&](mlir::Type m) {
           if (dl.getTypeSizeInBits(m).getFixedValue() == recordBits)

@@ -735,13 +735,9 @@ def CIR_BitFieldType : CIR_Type<"BitField", "bitfield", [
       return offset;
     }
 
-    /// The size of the type this unit's bit-field was declared with.  The
-    /// storage type can be narrower, so this measures the type the source
-    /// named rather than the bytes the record stores for it.
-    ///
-    /// A unit packing several bit-fields together has no single such type
-    /// and returns nullopt.  Only the first of them starts at the unit's
-    /// first bit, so one size could not stand for the others.
+    /// The size of the type this unit's bit-field was declared with, which
+    /// can exceed the storage type's size.  Returns nullopt when the unit
+    /// holds more than one bit-field.
     std::optional<uint64_t>
     getDeclaredExtentInBits(const mlir::DataLayout &dataLayout) const;
   }];
