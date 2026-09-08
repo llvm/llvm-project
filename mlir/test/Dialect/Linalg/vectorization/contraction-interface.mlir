@@ -375,7 +375,7 @@ func.func @matmul_mixed_precision_unsigned(
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.structured.vectorize %0 {create_named_contraction} : !transform.any_op
+    transform.structured.vectorize %0 create_named_contraction : !transform.any_op
     transform.yield
   }
 }
@@ -404,7 +404,7 @@ func.func @matmul_float_to_unsigned_integer(
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.structured.vectorize %0 {create_named_contraction} : !transform.any_op
+    transform.structured.vectorize %0 create_named_contraction : !transform.any_op
     transform.yield
   }
 }
@@ -433,7 +433,7 @@ func.func @matmul_float_to_signed_integer(
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.structured.vectorize %0 {create_named_contraction} : !transform.any_op
+    transform.structured.vectorize %0 create_named_contraction : !transform.any_op
     transform.yield
   }
 }
@@ -463,7 +463,7 @@ func.func @matmul_mixed_precision_signed(
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.structured.vectorize %0 {create_named_contraction} : !transform.any_op
+    transform.structured.vectorize %0 create_named_contraction : !transform.any_op
     transform.yield
   }
 }
@@ -490,7 +490,7 @@ func.func @matmul_same_precision_unsigned(
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.structured.vectorize %0 {create_named_contraction} : !transform.any_op
+    transform.structured.vectorize %0 create_named_contraction : !transform.any_op
     transform.yield
   }
 }
@@ -521,7 +521,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.structured.vectorize %0 vector_sizes [4, 4, 16]
-      {create_named_contraction} : !transform.any_op
+      create_named_contraction : !transform.any_op
     transform.yield
   }
 }
@@ -661,7 +661,7 @@ func.func @contract_mixed_precision_unsigned(
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.contract"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    transform.structured.vectorize %0 {create_named_contraction} : !transform.any_op
+    transform.structured.vectorize %0 create_named_contraction : !transform.any_op
     transform.yield
   }
 }
