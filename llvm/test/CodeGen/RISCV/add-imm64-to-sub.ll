@@ -202,7 +202,7 @@ define i64 @add_both_const_anchored(i64 %x, i64 %y, i64 %a) {
 ; CHECK-NEXT:    add a4, a4, a6
 ; CHECK-NEXT:    mul a0, a0, a3
 ; CHECK-NEXT:    mul a1, a1, a4
-; CHECK-NEXT:    sub a2, a2, a4
+; CHECK-NEXT:    add a2, a2, a3
 ; CHECK-NEXT:    xor a0, a0, a1
 ; CHECK-NEXT:    xor a0, a0, a2
 ; CHECK-NEXT:    ret

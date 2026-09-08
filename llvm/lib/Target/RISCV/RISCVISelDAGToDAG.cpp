@@ -148,41 +148,40 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
       // selectNegImm. Skip INT64_MIN too, whose negation is itself.
       if (isInt<32>(Imm) || Imm == INT64_MIN)
         break;
-      // Look for existing constant nodes for Imm and -Imm, and whether either
-      // has a user other than an ADD, i.e. is materialized regardless of this
-      // fold.
-      bool NegExists = false, NegAnchored = false, PosAnchored = false;
-      for (const SDNode &Node : CurDAG->allnodes()) {
-        auto *C = dyn_cast<ConstantSDNode>(&Node);
-        if (!C || C->getSimpleValueType(0) != VT)
-          continue;
-        int64_t V = C->getSExtValue();
-        if (V != Imm && V != -Imm)
-          continue;
-        bool NonAddUser = any_of(Node.users(), [](const SDNode *U) {
+      // A constant is anchored if it has a user other than an ADD, i.e. it is
+      // materialized regardless of this fold. N1C is the (unique) node for Imm,
+      // so the positive side needs no search.
+      auto IsAnchored = [](const SDNode *C) {
+        return any_of(C->users(), [](const SDNode *U) {
           return U->getOpcode() != ISD::ADD;
         });
-        if (V == -Imm) {
-          NegExists = true;
-          NegAnchored |= NonAddUser;
-        } else {
-          PosAnchored |= NonAddUser;
+      };
+      bool PosAnchored = IsAnchored(N1C);
+      // Find the (unique) constant node for -Imm, if any.
+      const SDNode *NegC = nullptr;
+      for (const SDNode &Node : CurDAG->allnodes()) {
+        auto *C = dyn_cast<ConstantSDNode>(&Node);
+        if (C && C->getSimpleValueType(0) == VT && C->getSExtValue() == -Imm) {
+          NegC = &Node;
+          break;
         }
       }
       // Reuse is only free if -Imm is already in the DAG.
-      if (!NegExists)
+      if (!NegC)
         break;
       // Pick which of Imm/-Imm should be the surviving constant, so exactly
       // one of the pair is materialized and any ADDs of the other reuse it:
-      //  - if -Imm is materialized anyway, reuse it (rewrite to SUB);
-      //  - else if Imm is materialized anyway, keep the ADD so it reuses Imm;
+      //  - if Imm is materialized anyway, keep the ADD so it reuses Imm (an ADD
+      //    is also more compressible than a SUB, so prefer it when both are
+      //    anchored and a rewrite would not remove a constant);
+      //  - else if -Imm is materialized anyway, reuse it (rewrite to SUB);
       //  - else keep the cheaper constant, breaking ties towards the positive
       //    value so both ADDs of a C/-C pair agree on the survivor.
       bool Rewrite;
-      if (NegAnchored)
-        Rewrite = true;
-      else if (PosAnchored)
+      if (PosAnchored)
         Rewrite = false;
+      else if (IsAnchored(NegC))
+        Rewrite = true;
       else {
         int PosCost = RISCVMatInt::getIntMatCost(APInt(64, Imm), 64, *Subtarget,
                                                  /*CompressionCost=*/true);
