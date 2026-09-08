@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -33,7 +34,7 @@ protected:
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
 
-  std::vector<StringRef> Order;
+  SmallVector<StringRef, 2> Order;
 
   PassBuilderEPCallbackTest() {
     M = parseIR(C, "define void @f() { ret void }");
@@ -61,7 +62,7 @@ TEST_F(PassBuilderEPCallbackTest, ThinLTO_O0) {
                                      /*ImportSummary=*/nullptr);
   MPM.run(*M, MAM);
 
-  EXPECT_EQ(Order, (std::vector<StringRef>{"Early", "Last"}));
+  EXPECT_EQ(Order, (SmallVector<StringRef, 2>{"Early", "Last"}));
 }
 
 TEST_F(PassBuilderEPCallbackTest, ThinLTO_O2) {
@@ -70,7 +71,7 @@ TEST_F(PassBuilderEPCallbackTest, ThinLTO_O2) {
                                      /*ImportSummary=*/nullptr);
   MPM.run(*M, MAM);
 
-  EXPECT_EQ(Order, (std::vector<StringRef>{"Early", "Last"}));
+  EXPECT_EQ(Order, (SmallVector<StringRef, 2>{"Early", "Last"}));
 }
 
 } // namespace
