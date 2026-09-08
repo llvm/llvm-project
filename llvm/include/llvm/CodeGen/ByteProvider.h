@@ -8,9 +8,7 @@
 //
 // \file
 // This file implements ByteProvider. The purpose of ByteProvider is to provide
-// a map between a target node's byte (byte position is DestOffset) and the
-// source (and byte position) that provides it (in Src and SrcOffset
-// respectively) See CodeGen/SelectionDAG/DAGCombiner.cpp MatchLoadCombine
+// a map between a byte of a target node and the source that provides it.
 //
 //===----------------------------------------------------------------------===//
 
@@ -49,10 +47,9 @@ public:
   // For constant zero providers Src is set to nullopt. For actual providers
   // Src represents the node which originally produced the relevant bits.
   std::optional<ISelOp> Src = std::nullopt;
-  // DestOffset is the offset of the byte in the dest we are trying to map for.
+  // DestOffset and SrcOffset are producer defined, see DAGCombiner.cpp and
+  // SIISelLowering.cpp.
   int64_t DestOffset = 0;
-  // SrcOffset is the offset in the ultimate source node that maps to the
-  // DestOffset
   int64_t SrcOffset = 0;
 
   ByteProvider() = default;
@@ -78,6 +75,46 @@ public:
            Other.SrcOffset == SrcOffset;
   }
 };
+
+/// Visits both operands even once one answers, because \p Recurse may have
+/// side effects (DAGCombiner accumulates an and mask there).
+template <typename ISelOp, typename RecurseT>
+std::optional<ByteProvider<ISelOp>>
+calculateByteProviderForOr(ISelOp Op, unsigned Index, RecurseT Recurse) {
+  std::optional<ByteProvider<ISelOp>> LHS = Recurse(Op.getOperand(0), Index);
+  if (!LHS)
+    return std::nullopt;
+  std::optional<ByteProvider<ISelOp>> RHS = Recurse(Op.getOperand(1), Index);
+  if (!RHS)
+    return std::nullopt;
+
+  // A well formed or has two ByteProviders for each byte, one of which is
+  // constant zero.
+  if (LHS->isConstantZero())
+    return RHS;
+  if (RHS->isConstantZero())
+    return LHS;
+  return std::nullopt;
+}
+
+/// \p NarrowBitWidth is a parameter because it is not always the operand
+/// width, for instance sign_extend_inreg takes it from the VTSDNode.
+template <typename ISelOp, typename RecurseT>
+std::optional<ByteProvider<ISelOp>>
+calculateByteProviderForExtend(ISelOp Op, unsigned Index,
+                               unsigned NarrowBitWidth, bool ZeroFills,
+                               RecurseT Recurse) {
+  if (NarrowBitWidth % 8 != 0)
+    return std::nullopt;
+
+  if (Index >= NarrowBitWidth / 8) {
+    if (!ZeroFills)
+      return std::nullopt;
+    return ByteProvider<ISelOp>::getConstantZero();
+  }
+  return Recurse(Op.getOperand(0), Index);
+}
+
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_BYTEPROVIDER_H

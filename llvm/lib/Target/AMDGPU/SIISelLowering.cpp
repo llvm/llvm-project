@@ -15184,30 +15184,16 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
   if (Index > BitWidth / 8 - 1)
     return std::nullopt;
 
+  auto Recurse = [&](SDValue NextOp, unsigned NextIndex) {
+    return calculateByteProvider(NextOp, NextIndex, Depth + 1, StartingIndex);
+  };
+
   bool IsVec = Op.getValueType().isVector();
   switch (Op.getOpcode()) {
-  case ISD::OR: {
+  case ISD::OR:
     if (IsVec)
       return std::nullopt;
-
-    auto RHS = calculateByteProvider(Op.getOperand(1), Index, Depth + 1,
-                                     StartingIndex);
-    if (!RHS)
-      return std::nullopt;
-    auto LHS = calculateByteProvider(Op.getOperand(0), Index, Depth + 1,
-                                     StartingIndex);
-    if (!LHS)
-      return std::nullopt;
-    // A well formed Or will have two ByteProviders for each byte, one of which
-    // is constant zero
-    if (!LHS->isConstantZero() && !RHS->isConstantZero())
-      return std::nullopt;
-    if (!LHS || LHS->isConstantZero())
-      return RHS;
-    if (!RHS || RHS->isConstantZero())
-      return LHS;
-    return std::nullopt;
-  }
+    return calculateByteProviderForOr(Op, Index, Recurse);
 
   case ISD::AND: {
     if (IsVec)
@@ -15238,7 +15224,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
 
     // fshr(X,Y,Z): (X << (BW - (Z % BW))) | (Y >> (Z % BW))
     auto *ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(2));
-    if (!ShiftOp || Op.getValueType().isVector())
+    if (!ShiftOp)
       return std::nullopt;
 
     uint64_t BitsProvided = Op.getValueSizeInBits();
@@ -15256,7 +15242,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     uint64_t BytesProvided = BitsProvided / 8;
     SDValue NextOp = Op.getOperand(NewIndex >= BytesProvided ? 0 : 1);
     NewIndex %= BytesProvided;
-    return calculateByteProvider(NextOp, NewIndex, Depth + 1, StartingIndex);
+    return Recurse(NextOp, NewIndex);
   }
 
   case ISD::SRA:
@@ -15304,10 +15290,8 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     // the index we are trying to provide, then it provides 0s. If not,
     // then this bytes are not definitively 0s, and the corresponding byte
     // of interest is Index - ByteShift of the src
-    return Index < ByteShift
-               ? ByteProvider<SDValue>::getConstantZero()
-               : calculateByteProvider(Op.getOperand(0), Index - ByteShift,
-                                       Depth + 1, StartingIndex);
+    return Index < ByteShift ? ByteProvider<SDValue>::getConstantZero()
+                             : Recurse(Op.getOperand(0), Index - ByteShift);
   }
   case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
@@ -15318,38 +15302,23 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     if (IsVec)
       return std::nullopt;
 
-    SDValue NarrowOp = Op->getOperand(0);
-    unsigned NarrowBitWidth = NarrowOp.getValueSizeInBits();
+    unsigned NarrowBitWidth = Op->getOperand(0).getValueSizeInBits();
     if (Op->getOpcode() == ISD::SIGN_EXTEND_INREG ||
         Op->getOpcode() == ISD::AssertZext ||
         Op->getOpcode() == ISD::AssertSext) {
       auto *VTSign = cast<VTSDNode>(Op->getOperand(1));
       NarrowBitWidth = VTSign->getVT().getSizeInBits();
     }
-    if (NarrowBitWidth % 8 != 0)
-      return std::nullopt;
-    uint64_t NarrowByteWidth = NarrowBitWidth / 8;
-
-    if (Index >= NarrowByteWidth)
-      return Op.getOpcode() == ISD::ZERO_EXTEND
-                 ? std::optional<ByteProvider<SDValue>>(
-                       ByteProvider<SDValue>::getConstantZero())
-                 : std::nullopt;
-    return calculateByteProvider(NarrowOp, Index, Depth + 1, StartingIndex);
+    return calculateByteProviderForExtend(
+        Op, Index, NarrowBitWidth, Op.getOpcode() == ISD::ZERO_EXTEND, Recurse);
   }
 
   case ISD::TRUNCATE: {
     if (IsVec)
       return std::nullopt;
 
-    uint64_t NarrowByteWidth = BitWidth / 8;
-
-    if (NarrowByteWidth >= Index) {
-      return calculateByteProvider(Op.getOperand(0), Index, Depth + 1,
-                                   StartingIndex);
-    }
-
-    return std::nullopt;
+    // Index is already bounded by BitWidth / 8 above.
+    return Recurse(Op.getOperand(0), Index);
   }
 
   case ISD::CopyFromReg: {
@@ -15377,19 +15346,14 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
                  : std::nullopt;
     }
 
-    if (NarrowByteWidth > Index) {
-      return calculateSrcByte(Op, StartingIndex, Index);
-    }
-
-    return std::nullopt;
+    return calculateSrcByte(Op, StartingIndex, Index);
   }
 
   case ISD::BSWAP: {
     if (IsVec)
       return std::nullopt;
 
-    return calculateByteProvider(Op->getOperand(0), BitWidth / 8 - Index - 1,
-                                 Depth + 1, StartingIndex);
+    return Recurse(Op->getOperand(0), BitWidth / 8 - Index - 1);
   }
 
   case ISD::EXTRACT_VECTOR_ELT: {
