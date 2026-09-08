@@ -218,6 +218,22 @@ struct PFPField {
   FieldDecl *Field;
 };
 
+/// UniquingSet info for pools keyed on a QualType and a bool. DenseMapInfo has
+/// no bool specialization, so we cannot use the default UniquingSetInfo.
+struct QualTypeBoolInfo {
+  using KeyTy = std::pair<QualType, bool>;
+
+  template <typename T> static KeyTy getKey(const T &N) { return N.getKey(); }
+
+  static unsigned getHashValue(const KeyTy &Key) {
+    return llvm::hash_combine(Key.first.getAsOpaquePtr(), Key.second);
+  }
+
+  template <typename T> static bool isEqual(const KeyTy &Key, const T &N) {
+    return Key == N.getKey();
+  }
+};
+
 /// Holds long-lived AST nodes (such as types and decls) that can be
 /// referred to throughout the semantic analysis of a file.
 class ASTContext : public RefCountedBase<ASTContext> {
@@ -225,12 +241,14 @@ class ASTContext : public RefCountedBase<ASTContext> {
 
   mutable SmallVector<Type *, 0> Types;
   mutable llvm::FoldingSet<ExtQuals> ExtQualNodes;
-  mutable llvm::FoldingSet<ComplexType> ComplexTypes;
-  mutable llvm::FoldingSet<PointerType> PointerTypes{GeneralTypesLog2InitSize};
+  mutable llvm::UniquingSet<ComplexType> ComplexTypes;
+  mutable llvm::UniquingSet<PointerType> PointerTypes{GeneralTypesLog2InitSize};
   mutable llvm::FoldingSet<AdjustedType> AdjustedTypes;
-  mutable llvm::FoldingSet<BlockPointerType> BlockPointerTypes;
-  mutable llvm::FoldingSet<LValueReferenceType> LValueReferenceTypes;
-  mutable llvm::FoldingSet<RValueReferenceType> RValueReferenceTypes;
+  mutable llvm::UniquingSet<BlockPointerType> BlockPointerTypes;
+  mutable llvm::UniquingSet<LValueReferenceType, QualTypeBoolInfo>
+      LValueReferenceTypes;
+  mutable llvm::UniquingSet<RValueReferenceType, QualTypeBoolInfo>
+      RValueReferenceTypes;
   mutable llvm::FoldingSet<MemberPointerType> MemberPointerTypes;
   mutable llvm::ContextualFoldingSet<ConstantArrayType, ASTContext &>
       ConstantArrayTypes;
@@ -269,7 +287,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
       SubstBuiltinTemplatePackTypes;
   mutable llvm::ContextualFoldingSet<TemplateSpecializationType, ASTContext&>
     TemplateSpecializationTypes;
-  mutable llvm::FoldingSet<ParenType> ParenTypes{GeneralTypesLog2InitSize};
+  mutable llvm::UniquingSet<ParenType> ParenTypes{GeneralTypesLog2InitSize};
   mutable llvm::FoldingSet<TagTypeFoldingSetPlaceholder> TagTypes;
   mutable llvm::FoldingSet<FoldingSetPlaceholder<UnresolvedUsingType>>
       UnresolvedUsingTypes;
@@ -289,10 +307,10 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::DenseMap<llvm::FoldingSetNodeIDRef, AutoType *> AutoTypes;
   mutable llvm::FoldingSet<DeducedTemplateSpecializationType>
     DeducedTemplateSpecializationTypes;
-  mutable llvm::FoldingSet<AtomicType> AtomicTypes;
+  mutable llvm::UniquingSet<AtomicType> AtomicTypes;
   mutable llvm::ContextualFoldingSet<AttributedType, ASTContext &>
       AttributedTypes;
-  mutable llvm::FoldingSet<PipeType> PipeTypes;
+  mutable llvm::UniquingSet<PipeType, QualTypeBoolInfo> PipeTypes;
   mutable llvm::FoldingSet<BitIntType> BitIntTypes;
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
       DependentBitIntTypes;

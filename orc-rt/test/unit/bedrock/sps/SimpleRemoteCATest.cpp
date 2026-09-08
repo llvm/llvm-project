@@ -18,6 +18,7 @@
 
 #include "gtest/gtest.h"
 
+#include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
 
 #include "orc-rt/support/sps/SimplePackedSerialization.h"
