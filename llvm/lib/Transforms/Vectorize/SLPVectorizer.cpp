@@ -20,6 +20,7 @@
 #include "SLPVectorizer/SLPCompatibilityAnalysis.h"
 #include "SLPVectorizer/SLPCostAnalysis.h"
 #include "SLPVectorizer/SLPMemoryUtils.h"
+#include "SLPVectorizer/SLPReductionUtils.h"
 #include "SLPVectorizer/SLPTypeUtils.h"
 #include "SLPVectorizer/SLPUtils.h"
 #include "llvm/ADT/DenseMap.h"
@@ -33060,28 +33061,6 @@ static Instruction *getReductionInstr(const DominatorTree *DT, PHINode *P,
   return nullptr;
 }
 
-static bool matchRdxBop(Instruction *I, Value *&V0, Value *&V1) {
-  if (match(I, m_BinOp(m_Value(V0), m_Value(V1))))
-    return true;
-  if (match(I, m_FMaxNum(m_Value(V0), m_Value(V1))))
-    return true;
-  if (match(I, m_FMinNum(m_Value(V0), m_Value(V1))))
-    return true;
-  if (match(I, m_FMaximum(m_Value(V0), m_Value(V1))))
-    return true;
-  if (match(I, m_FMinimum(m_Value(V0), m_Value(V1))))
-    return true;
-  if (match(I, m_Intrinsic<Intrinsic::smax>(m_Value(V0), m_Value(V1))))
-    return true;
-  if (match(I, m_Intrinsic<Intrinsic::smin>(m_Value(V0), m_Value(V1))))
-    return true;
-  if (match(I, m_Intrinsic<Intrinsic::umax>(m_Value(V0), m_Value(V1))))
-    return true;
-  if (match(I, m_Intrinsic<Intrinsic::umin>(m_Value(V0), m_Value(V1))))
-    return true;
-  return false;
-}
-
 /// We could have an initial reduction that is not an add.
 ///  r *= v1 + v2 + v3 + v4
 /// In such a case start looking for a tree rooted in the first '+'.
@@ -33100,24 +33079,6 @@ static Instruction *tryGetSecondaryReductionRoot(PHINode *Phi,
   if (RHS == Phi)
     return dyn_cast<Instruction>(LHS);
   return nullptr;
-}
-
-/// \p Returns the first operand of \p I that does not match \p Phi. If
-/// operand is not an instruction it returns nullptr.
-static Instruction *getNonPhiOperand(Instruction *I, PHINode *Phi) {
-  Value *Op0 = nullptr;
-  Value *Op1 = nullptr;
-  if (!matchRdxBop(I, Op0, Op1))
-    return nullptr;
-  return dyn_cast<Instruction>(Op0 == Phi ? Op1 : Op0);
-}
-
-/// \Returns true if \p I is a candidate instruction for reduction vectorization.
-static bool isReductionCandidate(Instruction *I) {
-  bool IsSelect = match(I, m_Select(m_Value(), m_Value(), m_Value()));
-  Value *B0 = nullptr, *B1 = nullptr;
-  bool IsBinop = matchRdxBop(I, B0, B1);
-  return IsBinop || IsSelect;
 }
 
 bool SLPVectorizerPass::vectorizeHorReduction(
