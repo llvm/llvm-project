@@ -185,11 +185,10 @@ entry:
 define <2 x float> @test_vbfdotq_lane_f32_v2f32_load(ptr %r_val_vals, ptr %a_val_vals, ptr %b_val_vals) {
 ; CHECK-LABEL: test_vbfdotq_lane_f32_v2f32_load:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ldr d0, [x2]
-; CHECK-NEXT:    ldr d2, [x1]
-; CHECK-NEXT:    dup v1.2s, v0.s[1]
 ; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    bfdot v0.2s, v2.4h, v1.4h
+; CHECK-NEXT:    ldr d1, [x1]
+; CHECK-NEXT:    ldr d2, [x2]
+; CHECK-NEXT:    bfdot v0.2s, v1.4h, v2.2h[1]
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <2 x float>, ptr %r_val_vals, align 4
