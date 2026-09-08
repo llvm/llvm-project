@@ -2136,6 +2136,25 @@ class RVPBinaryIntrinsic
   def int_riscv_pmhaccsu  : RVPTernaryIntrinsic;
   def int_riscv_pmhraccsu : RVPTernaryIntrinsic;
 
+  // Packed Multiplication with Horizontal Addition.
+  class RVPHorizontalMulIntrinsic
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [llvm_anyvector_ty, LLVMMatchType<1>],
+                              [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pm4add     : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2add     : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2add_x   : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm4addu    : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2addu    : RVPHorizontalMulIntrinsic;
+  def int_riscv_pmq2add    : RVPHorizontalMulIntrinsic;
+  def int_riscv_pmqr2add   : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2sadd    : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2sadd_x  : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2sub     : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2sub_x   : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm4addsu   : RVPHorizontalMulIntrinsic;
+  def int_riscv_pm2addsu   : RVPHorizontalMulIntrinsic;
+
   // Packed Multiply Parts. The packed forms multiply the selected element of
   // every pair, so the operands are the result with each element split in two.
   class RVPPackedMulPartsIntrinsic

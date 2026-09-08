@@ -35,21 +35,21 @@ void acc_data(int parmVar) {
 
 #pragma acc data copy(capture, always, alwaysin, alwaysout:  parmVar)
   ;
-  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("parmVar") <modifiers = "always,capture"> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("parmVar") <modifiers = [always,capture]> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.data dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("parmVar") <modifiers = "always,capture">
+  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("parmVar") <modifiers = [always,capture]>
 
 #pragma acc data copy(capture: parmVar) copy(always, alwaysin, alwaysout:  parmVar)
   ;
-  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("parmVar") <modifiers = capture> -> !cir.ptr<!s32i>
-  // CHECK-NEXT: %[[COPYIN2:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("parmVar") <modifiers = "always"> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("parmVar") <modifiers = [capture]> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN2:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("parmVar") <modifiers = [always]> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.data dataOperands(%[[COPYIN1]], %[[COPYIN2]] : !cir.ptr<!s32i>, !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN2]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("parmVar") <modifiers = "always">
-  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("parmVar") <modifiers = capture>
+  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN2]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("parmVar") <modifiers = [always]>
+  // CHECK-NEXT: acc.copyout accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copy) name("parmVar") <modifiers = [capture]>
 
 #pragma acc data copyin(parmVar)
   ;
@@ -79,21 +79,21 @@ void acc_data(int parmVar) {
 
 #pragma acc data copyin(capture, always, alwaysin, readonly:  parmVar)
   ;
-  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = "always,readonly,capture"> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = [always,readonly,capture]> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.data dataOperands(%[[COPYIN1]] : !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.delete accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) dataClause(acc_copyin) name("parmVar") <modifiers = "always,readonly,capture">
+  // CHECK-NEXT: acc.delete accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) dataClause(acc_copyin) name("parmVar") <modifiers = [always,readonly,capture]>
 
 #pragma acc data copyin(capture: parmVar) copyin(readonly, always, alwaysin:  parmVar)
   ;
-  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = capture> -> !cir.ptr<!s32i>
-  // CHECK-NEXT: %[[COPYIN2:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = "always,readonly"> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN1:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = [capture]> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[COPYIN2:.*]] = acc.copyin varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = [always,readonly]> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.data dataOperands(%[[COPYIN1]], %[[COPYIN2]] : !cir.ptr<!s32i>, !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.delete accPtr(%[[COPYIN2]] : !cir.ptr<!s32i>) dataClause(acc_copyin) name("parmVar") <modifiers = "always,readonly">
-  // CHECK-NEXT: acc.delete accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) dataClause(acc_copyin) name("parmVar") <modifiers = capture>
+  // CHECK-NEXT: acc.delete accPtr(%[[COPYIN2]] : !cir.ptr<!s32i>) dataClause(acc_copyin) name("parmVar") <modifiers = [always,readonly]>
+  // CHECK-NEXT: acc.delete accPtr(%[[COPYIN1]] : !cir.ptr<!s32i>) dataClause(acc_copyin) name("parmVar") <modifiers = [capture]>
 
 #pragma acc data copyout(parmVar)
   ;
@@ -125,21 +125,21 @@ void acc_data(int parmVar) {
 
 #pragma acc data copyout(capture, zero, alwaysout:  parmVar)
   ;
-  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copyout) name("parmVar") <modifiers = "zero,alwaysout,capture"> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copyout) name("parmVar") <modifiers = [zero,alwaysout,capture]> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.data dataOperands(%[[CREATE1]] : !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.copyout accPtr(%[[CREATE1]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = "zero,alwaysout,capture">
+  // CHECK-NEXT: acc.copyout accPtr(%[[CREATE1]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = [zero,alwaysout,capture]>
 
 #pragma acc data copyout(capture: parmVar) copyout(always, alwaysout:  parmVar)
   ;
-  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copyout) name("parmVar") <modifiers = capture> -> !cir.ptr<!s32i>
-  // CHECK-NEXT: %[[CREATE2:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copyout) name("parmVar") <modifiers = "always"> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copyout) name("parmVar") <modifiers = [capture]> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[CREATE2:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) dataClause(acc_copyout) name("parmVar") <modifiers = [always]> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.data dataOperands(%[[CREATE1]], %[[CREATE2]] : !cir.ptr<!s32i>, !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.copyout accPtr(%[[CREATE2]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = "always">
-  // CHECK-NEXT: acc.copyout accPtr(%[[CREATE1]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = capture>
+  // CHECK-NEXT: acc.copyout accPtr(%[[CREATE2]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = [always]>
+  // CHECK-NEXT: acc.copyout accPtr(%[[CREATE1]] : !cir.ptr<!s32i>) to varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = [capture]>
 
 #pragma acc data create(parmVar)
   ;
@@ -172,21 +172,21 @@ void acc_data(int parmVar) {
 
 #pragma acc data create(capture, zero:  parmVar)
   ;
-  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = "zero,capture"> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = [zero,capture]> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.data dataOperands(%[[CREATE1]] : !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.delete accPtr(%[[CREATE1]] : !cir.ptr<!s32i>) dataClause(acc_create) name("parmVar") <modifiers = "zero,capture">
+  // CHECK-NEXT: acc.delete accPtr(%[[CREATE1]] : !cir.ptr<!s32i>) dataClause(acc_create) name("parmVar") <modifiers = [zero,capture]>
 
 #pragma acc data create(capture: parmVar) create(zero:  parmVar)
   ;
-  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = capture> -> !cir.ptr<!s32i>
-  // CHECK-NEXT: %[[CREATE2:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = zero> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[CREATE1:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = [capture]> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[CREATE2:.*]] = acc.create varPtr(%[[PARM]] : !cir.ptr<!s32i>) name("parmVar") <modifiers = [zero]> -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.data dataOperands(%[[CREATE1]], %[[CREATE2]] : !cir.ptr<!s32i>, !cir.ptr<!s32i>) {
   // CHECK-NEXT: acc.terminator
   // CHECK-NEXT: } loc
-  // CHECK-NEXT: acc.delete accPtr(%[[CREATE2]] : !cir.ptr<!s32i>) dataClause(acc_create) name("parmVar") <modifiers = zero>
-  // CHECK-NEXT: acc.delete accPtr(%[[CREATE1]] : !cir.ptr<!s32i>) dataClause(acc_create) name("parmVar") <modifiers = capture>
+  // CHECK-NEXT: acc.delete accPtr(%[[CREATE2]] : !cir.ptr<!s32i>) dataClause(acc_create) name("parmVar") <modifiers = [zero]>
+  // CHECK-NEXT: acc.delete accPtr(%[[CREATE1]] : !cir.ptr<!s32i>) dataClause(acc_create) name("parmVar") <modifiers = [capture]>
 
 #pragma acc data no_create(parmVar)
   ;
