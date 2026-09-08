@@ -1,4 +1,5 @@
 add_lldb_library(lldbPluginTypeSystemClike PLUGIN
+  Identifier.cpp
   TypeSystemClike.cpp
 
   LINK_COMPONENTS
