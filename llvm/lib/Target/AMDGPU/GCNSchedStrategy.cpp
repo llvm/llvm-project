@@ -2323,20 +2323,16 @@ isRewriteCandidateMAI(const MachineInstr *MI, const SIInstrInfo *TII,
 static bool canWriteAGPR(const MachineInstr *MI, Register Reg,
                          const TargetRegisterClass *RegAGPRClass,
                          const SIInstrInfo *TII, const SIRegisterInfo *SRI) {
-  if (MI->getDesc().getNumDefs() == 0 || !RegAGPRClass)
+  if (MI->getDesc().getNumDefs() == 0)
     return false;
-  int DefOpIdx =
-      MI->findRegisterDefOperandIdx(Reg, /*TRI=*/nullptr, false, false);
-  return DefOpIdx >= 0 && MI->getRegClassConstraintEffect(
-                              DefOpIdx, RegAGPRClass, TII, SRI) != nullptr;
+  return MI->getRegClassConstraintEffectForVReg(Reg, RegAGPRClass, TII, SRI) !=
+         nullptr;
 }
 
 static bool useAcceptsAGPR(const MachineOperand *Use,
                            const TargetRegisterClass *RegAGPRClass,
                            const SIInstrInfo *TII, const SIRegisterInfo *SRI) {
   const MachineInstr *UseMI = Use->getParent();
-  if (!RegAGPRClass)
-    return false;
   return UseMI->getRegClassConstraintEffect(Use->getOperandNo(), RegAGPRClass,
                                             TII, SRI) != nullptr;
 }
@@ -2791,6 +2787,8 @@ bool RewriteMFMAFormStage::rewrite(
     bool DstRecolorSafe =
         !DstAlreadyRedef &&
         isRecolorSafe(DstReg, DstReachingUses, RewriteCandsSet, /*IsDst=*/true);
+    const TargetRegisterClass *DstAGPRClass =
+        SRI->getEquivalentAGPRClass(DAG.MRI.getRegClass(DstReg));
     for (MachineOperand *RUOp : DstReachingUses) {
       MachineInstr *UserMI = RUOp->getParent();
       // Decide whether this reaching use can read the dst's AGPR form directly
@@ -2800,15 +2798,10 @@ bool RewriteMFMAFormStage::rewrite(
       //     to AGPR (DstRecolorSafe) and its operand accepts an AGPR. When the
       //     dst is unsafe, its original reg stays VGPR, so every non-MFMA user
       //     must go through a bridge copy.
-      bool CanReadAGPR;
-      if (TII->isMAI(*UserMI))
-        CanReadAGPR = RewriteCandsSet.contains(UserMI);
-      else
-        CanReadAGPR =
-            DstRecolorSafe &&
-            useAcceptsAGPR(
-                RUOp, SRI->getEquivalentAGPRClass(DAG.MRI.getRegClass(DstReg)),
-                TII, SRI);
+      bool CanReadAGPR =
+          TII->isMAI(*UserMI)
+              ? RewriteCandsSet.contains(UserMI)
+              : DstRecolorSafe && useAcceptsAGPR(RUOp, DstAGPRClass, TII, SRI);
       if (!CanReadAGPR &&
           find(DstReachingUseCopies, RUOp) == DstReachingUseCopies.end())
         DstReachingUseCopies.push_back(RUOp);
