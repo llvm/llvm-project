@@ -6541,10 +6541,63 @@ private:
     }
   }
 
+  /// Add TARGET while lowering entities used in visible Cray pointer
+  /// associations. The attributes are restored before lowering another
+  /// procedure so that hidden associations retain the default no-alias
+  /// behavior.
+  void markVisibleCrayPointerTargets(
+      Fortran::lower::pft::EvaluationList &evaluationList,
+      llvm::SmallVectorImpl<Fortran::semantics::Symbol *> &modifiedSymbols) {
+    for (Fortran::lower::pft::Evaluation &eval : evaluationList) {
+      eval.visit(Fortran::common::visitors{
+          [&](const Fortran::parser::AssignmentStmt &stmt) {
+            if (!stmt.typedAssignment || !stmt.typedAssignment->v)
+              return;
+            const Fortran::evaluate::Assignment &assignment =
+                *stmt.typedAssignment->v;
+            const Fortran::semantics::Symbol *pointer =
+                Fortran::evaluate::GetLastSymbol(assignment.lhs);
+            if (!pointer || !pointer->GetUltimate().test(
+                                Fortran::semantics::Symbol::Flag::CrayPointer))
+              return;
+
+            const Fortran::evaluate::ProcedureRef *procedure =
+                Fortran::evaluate::UnwrapProcedureRef(assignment.rhs);
+            const Fortran::evaluate::SpecificIntrinsic *intrinsic =
+                procedure ? procedure->proc().GetSpecificIntrinsic() : nullptr;
+            if (!intrinsic || intrinsic->name != "loc" ||
+                procedure->arguments().size() != 1 ||
+                !procedure->arguments()[0])
+              return;
+
+            const Fortran::lower::SomeExpr *targetExpr =
+                procedure->arguments()[0]->UnwrapExpr();
+            const Fortran::semantics::Symbol *target =
+                targetExpr ? Fortran::evaluate::GetFirstSymbol(*targetExpr)
+                           : nullptr;
+            if (!target)
+              return;
+
+            auto &ultimate =
+                const_cast<Fortran::semantics::Symbol &>(target->GetUltimate());
+            if (!ultimate.attrs().test(Fortran::semantics::Attr::TARGET)) {
+              ultimate.attrs().set(Fortran::semantics::Attr::TARGET);
+              modifiedSymbols.push_back(&ultimate);
+            }
+          },
+          [](const auto &) {}});
+      if (eval.hasNestedEvaluations())
+        markVisibleCrayPointerTargets(eval.getNestedEvaluations(),
+                                      modifiedSymbols);
+    }
+  }
+
   /// Lower a procedure (nest).
   void lowerFunc(Fortran::lower::pft::FunctionLikeUnit &funit) {
     setCurrentPosition(funit.getStartingSourceLoc());
     setCurrentFunctionUnit(&funit);
+    llvm::SmallVector<Fortran::semantics::Symbol *> crayPointerTargets;
+    markVisibleCrayPointerTargets(funit.evaluationList, crayPointerTargets);
     for (int entryIndex = 0, last = funit.entryPointList.size();
          entryIndex < last; ++entryIndex) {
       funit.setActiveEntry(entryIndex);
@@ -6568,6 +6621,8 @@ private:
     }
     funit.setActiveEntry(0);
     setCurrentFunctionUnit(nullptr);
+    for (Fortran::semantics::Symbol *symbol : crayPointerTargets)
+      symbol->attrs().reset(Fortran::semantics::Attr::TARGET);
     for (Fortran::lower::pft::ContainedUnit &unit : funit.containedUnitList)
       if (auto *f = std::get_if<Fortran::lower::pft::FunctionLikeUnit>(&unit))
         lowerFunc(*f); // internal procedure
