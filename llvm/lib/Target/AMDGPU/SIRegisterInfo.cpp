@@ -4125,6 +4125,74 @@ bool SIRegisterInfo::isAGPR(const MachineRegisterInfo &MRI,
   return RC && isAGPRClass(RC);
 }
 
+// Find a single VMEM definition of a half register, allowing the COPY inserted
+// when REG_SEQUENCE is lowered. Do not look through general value-producing
+// instructions or registers with multiple definitions.
+static const MachineInstr *getHalfRegisterLoad(Register Reg, unsigned SubReg,
+                                               const MachineRegisterInfo &MRI) {
+  const MachineInstr *Def = nullptr;
+  for (const MachineOperand &MO : MRI.def_operands(Reg)) {
+    if (!MO.getSubReg())
+      return nullptr;
+    if (MO.getSubReg() != SubReg)
+      continue;
+    if (Def)
+      return nullptr;
+    Def = MO.getParent();
+  }
+  if (!Def)
+    return nullptr;
+  if (Def->isCopy()) {
+    const MachineOperand &Src = Def->getOperand(1);
+    if (!Src.getReg().isVirtual() || Src.getSubReg() || Src.isUndef())
+      return nullptr;
+    Def = MRI.getUniqueVRegDef(Src.getReg());
+  }
+  if (!Def || !SIInstrInfo::isVMEM(*Def) || !Def->mayLoad() ||
+      Def->mayStore() || Def->hasOrderedMemoryRef())
+    return nullptr;
+  return Def;
+}
+
+bool SIRegisterInfo::shouldCoalesce(
+    MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
+    const TargetRegisterClass *DstRC, unsigned DstSubReg,
+    const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
+  unsigned SrcSize = getRegSizeInBits(*SrcRC);
+  unsigned DstSize = getRegSizeInBits(*DstRC);
+  unsigned NewSize = getRegSizeInBits(*NewRC);
+
+  // A copy of the shared half of two packed values can merge their unrelated
+  // VMEM results in the other half. This creates an artificial anti-dependence
+  // before machine scheduling. Keep this copy so both loads remain
+  // independently schedulable; ordinary copies from loads into a packed value
+  // still coalesce.
+  if (MI->isCopy() && SrcSize == 32 && DstSize == 32 && NewSize == 32 &&
+      hasVGPRs(SrcRC) && !hasSGPRs(SrcRC) && hasVGPRs(DstRC) &&
+      !hasSGPRs(DstRC)) {
+    const MachineOperand &Dst = MI->getOperand(0);
+    const MachineOperand &Src = MI->getOperand(1);
+    unsigned Half = Dst.getSubReg();
+    if (Dst.getReg().isVirtual() && Src.getReg().isVirtual() &&
+        Dst.getReg() != Src.getReg() && !Src.isUndef() &&
+        (Half == AMDGPU::lo16 || Half == AMDGPU::hi16) &&
+        Src.getSubReg() == Half) {
+      unsigned OtherHalf = Half == AMDGPU::lo16 ? AMDGPU::hi16 : AMDGPU::lo16;
+      const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+      const MachineInstr *SrcLoad =
+          getHalfRegisterLoad(Src.getReg(), OtherHalf, MRI);
+      const MachineInstr *DstLoad =
+          getHalfRegisterLoad(Dst.getReg(), OtherHalf, MRI);
+      if (SrcLoad && DstLoad && SrcLoad != DstLoad &&
+          SrcLoad->getParent() == MI->getParent() &&
+          DstLoad->getParent() == MI->getParent())
+        return false;
+    }
+  }
+
+  return true;
+}
+
 unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
                                              MachineFunction &MF) const {
   unsigned MinOcc = ST.getOccupancyWithWorkGroupSizes(MF).first;
