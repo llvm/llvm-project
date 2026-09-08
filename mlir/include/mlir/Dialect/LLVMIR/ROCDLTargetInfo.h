@@ -182,6 +182,12 @@ private:
   bool dualWavefrontSize = false;
 };
 
+/// Returns the target architecture that a pass should parse, given its `arch`
+/// option and the value of the deprecated alias that `arch` replaced.
+///
+/// The alias is only consulted when `arch` is left at "invalid".
+StringRef resolveArchOption(StringRef arch, StringRef deprecatedAlias);
+
 } // namespace mlir::ROCDL
 
 #endif // MLIR_DIALECT_LLVMIR_ROCDLTARGETINFO_H_

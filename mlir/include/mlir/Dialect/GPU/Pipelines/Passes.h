@@ -80,6 +80,9 @@ struct GPUToROCDLPipelineOptions
           "amdgpu9.0a-amd-amdhsa--gfx90a:xnack-). Required: AMDGCN binaries "
           "are "
           "not forward-compatible across chip families.")};
+  PassOptions::Option<std::string> chip{
+      *this, "chip", llvm::cl::desc("Deprecated alias for 'arch'."),
+      llvm::cl::init("")};
   PassOptions::Option<std::string> binaryFormat{
       *this, "binary-format",
       llvm::cl::desc("Final GPU binary emission format (e.g. fatbin, binary, "

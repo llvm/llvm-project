@@ -113,6 +113,13 @@ TargetInfo::get(StringRef arch, unsigned waveSize,
   return info;
 }
 
+StringRef mlir::ROCDL::resolveArchOption(StringRef arch,
+                                         StringRef deprecatedAlias) {
+  if (!arch.empty() && arch != "invalid")
+    return arch;
+  return deprecatedAlias.empty() ? arch : deprecatedAlias;
+}
+
 bool TargetInfo::isGeneration(unsigned major) const {
   // The generation features are cumulative: a gfx12 target has every
   // FEAT_GFX*_INSTS bit from gfx8 up to gfx12. So a target is *in* generation N

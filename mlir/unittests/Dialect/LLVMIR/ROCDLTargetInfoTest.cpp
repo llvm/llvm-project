@@ -359,6 +359,28 @@ TEST(TargetInfoTest, MigrateArchFeaturesToModuleFlags) {
   EXPECT_FALSE(migrate("gfx90a:xnack-", presetXnackTrue).xnack.getValue());
 }
 
+TEST(TargetInfoTest, ResolveArchOption) {
+  // Anything actually passed as `arch` wins over the deprecated alias, whether
+  // or not the alias was given.
+  EXPECT_EQ(resolveArchOption("gfx942", ""), "gfx942");
+  EXPECT_EQ(resolveArchOption("gfx942", "gfx90a"), "gfx942");
+
+  // The alias is consulted only for the sentinels that mean "no target given":
+  // "invalid" for the passes that require one, and "" for the passes where
+  // asking for no target is a legitimate request.
+  EXPECT_EQ(resolveArchOption("invalid", "gfx90a"), "gfx90a");
+  EXPECT_EQ(resolveArchOption("", "gfx90a"), "gfx90a");
+
+  // A target ID goes through the alias unchanged, so an old invocation that
+  // named one keeps naming it.
+  EXPECT_EQ(resolveArchOption("invalid", "gfx90a:xnack+"), "gfx90a:xnack+");
+
+  // With neither given, the sentinel survives, so the pass still reports it as
+  // the target it could not resolve rather than reporting an empty name.
+  EXPECT_EQ(resolveArchOption("invalid", ""), "invalid");
+  EXPECT_EQ(resolveArchOption("", ""), "");
+}
+
 TEST(TargetInfoTest, DefaultIsUnknown) {
   TargetInfo target;
   EXPECT_TRUE(target.isUnknown());

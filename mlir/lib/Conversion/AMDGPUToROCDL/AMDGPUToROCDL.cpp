@@ -4535,7 +4535,8 @@ struct ConvertAMDGPUToROCDLPass
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
     FailureOr<ROCDL::TargetInfo> targetInfo = ROCDL::TargetInfo::get(
-        arch, /*waveSize=*/0, [&] { return emitError(UnknownLoc::get(ctx)); });
+        ROCDL::resolveArchOption(arch, chipset),
+        /*waveSize=*/0, [&] { return emitError(UnknownLoc::get(ctx)); });
     if (failed(targetInfo))
       return signalPassFailure();
 
