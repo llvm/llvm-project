@@ -8976,7 +8976,7 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
     if (auto *C = isConstOrConstSplat(Y, /*AllowUndefs=*/true)) {
       const APInt &YVal = C->getAPIntValue();
       unsigned N = YVal.countr_one();
-      if (YVal.isMask() && (isPowerOf2_32(N) || N == BW)) {
+      if (YVal.isAllOnes() || (YVal.isMask() && isPowerOf2_32(N))) {
         SDValue R = X;
         for (unsigned I = 1; I < N; I <<= 1) {
           SDValue ShAmt = DAG.getShiftAmountConstant(I, VT, DL);
