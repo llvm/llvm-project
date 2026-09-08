@@ -584,6 +584,11 @@ bool getMAIIsDGEMM(unsigned Opc) {
   return Info && Info->is_dgemm;
 }
 
+bool getMAIIsSGEMM(unsigned Opc) {
+  const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
+  return Info && Info->is_sgemm;
+}
+
 bool getMAIIsGFX940XDL(unsigned Opc) {
   const MAIInstInfo *Info = getMAIInstInfoHelper(Opc);
   return Info && Info->is_gfx940_xdl;
