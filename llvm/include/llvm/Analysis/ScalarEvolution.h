@@ -192,6 +192,21 @@ template <typename SCEVPtrT> SCEVUseT(SCEVPtrT) -> SCEVUseT<SCEVPtrT>;
 
 using SCEVUse = SCEVUseT<const SCEV *>;
 
+/// The no-wrap flags to apply when creating a SCEV expression, to the
+/// expression and use respectively.
+struct SCEVFlags {
+  /// Flags applied directly to a SCEV expression, must be valid wherever the
+  /// expression is valid.
+  SCEVNoWrapFlags ExprFlags;
+
+  /// Flags only applied to a SCEVUse.
+  SCEVNoWrapFlags UseFlags;
+
+  constexpr SCEVFlags(SCEVNoWrapFlags ExprFlags = SCEVNoWrapFlags::FlagAnyWrap,
+                      SCEVNoWrapFlags UseFlags = SCEVNoWrapFlags::FlagAnyWrap)
+      : ExprFlags(ExprFlags), UseFlags(UseFlags) {}
+};
+
 /// Provide PointerLikeTypeTraits for SCEVUse, so it can be used with
 /// SmallPtrSet, among others.
 template <> struct PointerLikeTypeTraits<SCEVUse> {
@@ -750,22 +765,16 @@ public:
   LLVM_ABI const SCEV *getAnyExtendExpr(SCEVUse Op, Type *Ty);
 
   LLVM_ABI SCEVUse getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
-                              SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                              unsigned Depth = 0,
-                              SCEV::NoWrapFlags UseFlags = SCEV::FlagAnyWrap);
-  SCEVUse getAddExpr(SCEVUse LHS, SCEVUse RHS,
-                     SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                     unsigned Depth = 0,
-                     SCEV::NoWrapFlags UseFlags = SCEV::FlagAnyWrap) {
+                              SCEVFlags Flags = {}, unsigned Depth = 0);
+  SCEVUse getAddExpr(SCEVUse LHS, SCEVUse RHS, SCEVFlags Flags = {},
+                     unsigned Depth = 0) {
     SmallVector<SCEVUse, 2> Ops = {LHS, RHS};
-    return getAddExpr(Ops, Flags, Depth, UseFlags);
+    return getAddExpr(Ops, Flags, Depth);
   }
   SCEVUse getAddExpr(SCEVUse Op0, SCEVUse Op1, SCEVUse Op2,
-                     SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                     unsigned Depth = 0,
-                     SCEV::NoWrapFlags UseFlags = SCEV::FlagAnyWrap) {
+                     SCEVFlags Flags = {}, unsigned Depth = 0) {
     SmallVector<SCEVUse, 3> Ops = {Op0, Op1, Op2};
-    return getAddExpr(Ops, Flags, Depth, UseFlags);
+    return getAddExpr(Ops, Flags, Depth);
   }
   LLVM_ABI const SCEV *getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
                                   SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
