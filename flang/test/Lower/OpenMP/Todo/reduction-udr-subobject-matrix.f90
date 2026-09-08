@@ -25,6 +25,18 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/task-reduction-section.f90 2>&1 | FileCheck %s --check-prefix=TASK-SECTION
 ! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/complex-part.f90 2>&1 | FileCheck %s --check-prefix=ELEMENT
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/complex-part.f90 2>&1 | FileCheck %s --check-prefix=ELEMENT
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/complex-array-part.f90 2>&1 | FileCheck %s --check-prefix=COMPLEX
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/complex-array-part.f90 2>&1 | FileCheck %s --check-prefix=COMPLEX
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/complex-scalar-part.f90 2>&1 | FileCheck %s --check-prefix=COMPLEX
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/complex-scalar-part.f90 2>&1 | FileCheck %s --check-prefix=COMPLEX
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/complex-task.f90 2>&1 | FileCheck %s --check-prefix=IN-COMPLEX
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/complex-task.f90 2>&1 | FileCheck %s --check-prefix=IN-COMPLEX
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/complex-target.f90 2>&1 | FileCheck %s --check-prefix=IN-COMPLEX
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/complex-target.f90 2>&1 | FileCheck %s --check-prefix=IN-COMPLEX
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/complex-task-reduction.f90 2>&1 | FileCheck %s --check-prefix=TASK-COMPLEX
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/complex-task-reduction.f90 2>&1 | FileCheck %s --check-prefix=TASK-COMPLEX
+! RUN: %not_todo_cmd bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/complex-taskloop.f90 2>&1 | FileCheck %s --check-prefix=COMPLEX
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/complex-taskloop.f90 2>&1 | FileCheck %s --check-prefix=COMPLEX
 ! RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/supported.f90 | FileCheck %s --check-prefix=SUPPORTED --implicit-check-not="not yet implemented"
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/supported.f90 | FileCheck %s --check-prefix=SUPPORTED --implicit-check-not="not yet implemented"
 
@@ -36,11 +48,13 @@
 ! SECTION: not yet implemented: REDUCTION of a partial array section using a user-defined reduction
 ! IN-SECTION: not yet implemented: IN_REDUCTION of a partial array section using a user-defined reduction
 ! TASK-SECTION: not yet implemented: TASK_REDUCTION of a partial array section using a user-defined reduction
+! COMPLEX: not yet implemented: REDUCTION of a complex part
+! IN-COMPLEX: not yet implemented: IN_REDUCTION of a complex part
+! TASK-COMPLEX: not yet implemented: TASK_REDUCTION of a complex part
 
 ! SUPPORTED-LABEL: func.func @_QPwhole_section
 ! SUPPORTED-LABEL: func.func @_QPpredefined_element
 ! SUPPORTED-LABEL: func.func @_QPpredefined_section
-! SUPPORTED-LABEL: func.func @_QPpredefined_complex_part
 
 !--- parallel-section.f90
 subroutine parallel_section(a)
@@ -181,6 +195,56 @@ subroutine complex_part(z)
   !$omp end parallel
 end subroutine
 
+!--- complex-array-part.f90
+subroutine complex_array_part(z)
+  complex :: z(4)
+  !$omp parallel reduction(+ : z(2)%im)
+  z(2)%im = z(2)%im + 1.0
+  !$omp end parallel
+end subroutine
+
+!--- complex-scalar-part.f90
+subroutine complex_scalar_part(z)
+  complex :: z
+  !$omp parallel reduction(+ : z%re)
+  z%re = z%re + 1.0
+  !$omp end parallel
+end subroutine
+
+!--- complex-task.f90
+subroutine complex_task(z)
+  complex :: z(4)
+  !$omp task in_reduction(+ : z(2)%re)
+  z(2)%re = z(2)%re + 1.0
+  !$omp end task
+end subroutine
+
+!--- complex-target.f90
+subroutine complex_target(z)
+  complex :: z(4)
+  !$omp target in_reduction(+ : z(2)%im) map(tofrom : z)
+  z(2)%im = z(2)%im + 1.0
+  !$omp end target
+end subroutine
+
+!--- complex-task-reduction.f90
+subroutine complex_task_reduction(z)
+  complex :: z
+  !$omp taskgroup task_reduction(+ : z%im)
+  z%im = z%im + 1.0
+  !$omp end taskgroup
+end subroutine
+
+!--- complex-taskloop.f90
+subroutine complex_taskloop(z)
+  complex :: z(4)
+  integer :: i
+  !$omp taskloop reduction(+ : z(2)%re)
+  do i = 1, 1
+    z(2)%re = z(2)%re + i
+  end do
+end subroutine
+
 !--- supported.f90
 subroutine whole_section(a)
   integer :: a(4)
@@ -202,12 +266,5 @@ subroutine predefined_section(a)
   integer :: a(4)
   !$omp parallel reduction(+ : a(2:3))
   a(2:3) = a(2:3) + 1
-  !$omp end parallel
-end subroutine
-
-subroutine predefined_complex_part(z)
-  complex :: z(4)
-  !$omp parallel reduction(+ : z(2)%re)
-  z(2)%re = z(2)%re + 1.0
   !$omp end parallel
 end subroutine

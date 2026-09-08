@@ -6348,6 +6348,9 @@ struct NameHelper {
   static const parser::Name *Visit(const parser::ArrayElement &x) {
     return Visit(x.Base());
   }
+  static const parser::Name *Visit(const parser::StructureComponent &x) {
+    return &x.Component();
+  }
   static const parser::Name *Visit(const parser::Designator &x) {
     return common::visit([](auto &&s) { return Visit(s); }, x.u);
   }
