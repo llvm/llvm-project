@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Compiler.h"
+#include "../ExprConstShared.h"
 #include "ByteCodeEmitter.h"
 #include "Context.h"
 #include "FixedPoint.h"
@@ -455,8 +456,12 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
 
   switch (E->getCastKind()) {
   case CK_LValueToRValue: {
-    if (ToLValue && E->getType()->isPointerType())
-      return this->delegate(SubExpr);
+    if (ToLValue && E->getType()->isPointerType()) {
+      assert(!DiscardResult);
+      if (!this->visit(SubExpr))
+        return false;
+      return this->emitLoadPopL(E);
+    }
 
     if (SubExpr->getType().isVolatileQualified())
       return this->emitInvalidCast(CastKind::Volatile, /*Fatal=*/true, E);
@@ -846,13 +851,14 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *E) {
   }
 
   case CK_PointerToBoolean:
-  case CK_MemberPointerToBoolean: {
-    PrimType PtrT = classifyPrim(SubExpr->getType());
-
     if (!this->visit(SubExpr))
       return false;
-    return this->emitIsNonNull(PtrT, E);
-  }
+    return this->emitIsNonNullPtr(E);
+
+  case CK_MemberPointerToBoolean:
+    if (!this->visit(SubExpr))
+      return false;
+    return this->emitIsNonNullMemberPtr(E);
 
   case CK_IntegralComplexToBoolean:
   case CK_FloatingComplexToBoolean: {
@@ -4334,11 +4340,9 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
         if (IsNoThrow) {
           if (!this->emitDupPtr(E))
             return false;
-          if (!this->emitNullPtr(0, nullptr, E))
+          if (!this->emitIsNonNullPtr(E))
             return false;
-          if (!this->emitEQPtr(E))
-            return false;
-          if (!this->jumpTrue(EndLabel, E))
+          if (!this->jumpFalse(EndLabel, E))
             return false;
         }
 
@@ -5891,7 +5895,7 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
                 return false;
             } else {
               // Must be a virtual base.
-              assert(EntryRecord->getVirtualBase(Base));
+              assert(EntryRecord->findVirtualBase(Base));
               if (!this->emitGetPtrVirtBasePop(Base, Info))
                 return false;
             }
@@ -6102,7 +6106,7 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
         return false;
 
     } else {
-      if (!this->visitAsLValue(Arg0))
+      if (!this->visitAsLValue(ignorePointerCastsAndParens(Arg0)))
         return false;
     }
     if (!this->visit(E->getArg(1)))
@@ -6935,6 +6939,7 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
   if (!this->visitStmt(EndStmt))
     return false;
 
+  LocalScope<Emitter> CondScope(this);
   // Now the condition as well as the loop variable assignment.
   this->fallthrough(CondLabel);
   this->emitLabel(CondLabel);
@@ -6957,6 +6962,8 @@ bool Compiler<Emitter>::visitCXXForRangeStmt(const CXXForRangeStmt *S) {
       return false;
   }
 
+  if (!CondScope.destroyLocals())
+    return false;
   if (!this->jump(CondLabel, S))
     return false;
 
@@ -7444,7 +7451,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
           Base && Init->isBaseVirtual()) {
         const auto *BaseDecl = Base->getAsCXXRecordDecl();
         assert(BaseDecl);
-        assert(R->getVirtualBase(BaseDecl));
+        assert(R->findVirtualBase(BaseDecl));
         if (!this->emitGetPtrThisVirtBase(BaseDecl, Ctor))
           return false;
         if (!this->visitInitializerPop(Init->getInit()))
@@ -8724,8 +8731,13 @@ bool Compiler<Emitter>::emitDestructionPop(const Descriptor *Desc,
 template <class Emitter>
 bool Compiler<Emitter>::emitDummyPtr(DeclOrExpr D, const Expr *E, bool CU) {
   assert(!DiscardResult && "Should've been checked before");
-  unsigned DummyID = P.getOrCreateDummy(D, CU);
 
+  if (ToLValue) {
+    if (const auto *VD = D.asValueDecl())
+      return this->emitGetOpaquePtr(VD, CU, E);
+  }
+
+  unsigned DummyID = P.getOrCreateDummy(D, CU);
   if (!this->emitGetPtrGlobal(DummyID, E))
     return false;
   if (E->getType()->isVoidType())

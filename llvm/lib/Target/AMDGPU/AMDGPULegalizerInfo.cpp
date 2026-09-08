@@ -1476,7 +1476,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
           .widenScalarToNextPow2(0)
           .scalarize(0)
           .lower();
-      if (ST.hasMinMaxI64Insts()) {
+      if (ST.useMinMaxI64Insts()) {
         getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
             .legalFor({S32, S16, S64, V2S16})
             .clampMaxNumElements(0, S16, 2)
@@ -3747,9 +3747,9 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
         Ty == F16 && (!MI.getFlag(MachineInstr::FmAfn) || !ST.has16BitInsts());
     if (PromoteToF32) {
       Register LogVal = MRI.createGenericVirtualRegister(F32);
-      auto PromoteSrc = B.buildFPExt(F32, X);
+      auto PromoteSrc = B.buildFPExt(F32, X, Flags);
       legalizeFlogUnsafe(B, LogVal, PromoteSrc.getReg(0), IsLog10, Flags);
-      B.buildFPTrunc(Dst, LogVal);
+      B.buildFPTrunc(Dst, LogVal, Flags);
     } else {
       legalizeFlogUnsafe(B, Dst, X, IsLog10, Flags);
     }
@@ -4310,7 +4310,11 @@ bool AMDGPULegalizerInfo::legalizeFPow(MachineInstr &MI,
                    .addUse(Ext0.getReg(0))
                    .addUse(Ext1.getReg(0))
                    .setMIFlags(Flags);
-    B.buildFExp2(Dst, B.buildFPTrunc(F16, Mul), Flags);
+    // The f32 product is finite whenever the original fpow was, but it can
+    // still be outside the f16 range. Drop ninf from the truncation and from
+    // the exp2, since neither can assume a finite value here.
+    unsigned FlagsNoNInf = Flags & ~MachineInstr::FmNoInfs;
+    B.buildFExp2(Dst, B.buildFPTrunc(F16, Mul, FlagsNoNInf), FlagsNoNInf);
   } else
     return false;
 
@@ -4702,7 +4706,7 @@ bool AMDGPULegalizerInfo::legalizeMul(LegalizerHelper &Helper,
   assert(Ty.isScalar());
 
   unsigned Size = Ty.getSizeInBits();
-  if (ST.hasVMulU64Inst() && Size == 64)
+  if (ST.useVMulU64Inst() && Size == 64)
     return true;
 
   unsigned NumParts = Size / 32;

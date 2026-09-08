@@ -3971,11 +3971,8 @@ void ASTContext::adjustExceptionSpec(
 QualType ASTContext::getComplexType(QualType T) const {
   // Unique pointers, to guarantee there is only one pointer of a particular
   // structure.
-  llvm::FoldingSetNodeID ID;
-  ComplexType::Profile(ID, T);
-
   llvm::FoldingSetInsertToken Token;
-  if (ComplexType *CT = ComplexTypes.lookup(ID, Token))
+  if (ComplexType *CT = ComplexTypes.lookup(T, Token))
     return QualType(CT, 0);
 
   // If the pointee type isn't canonical, this won't be a canonical type either,
@@ -3984,9 +3981,7 @@ QualType ASTContext::getComplexType(QualType T) const {
   if (!T.isCanonical()) {
     Canonical = getComplexType(getCanonicalType(T));
 
-    // Get the new insert position for the node we care about.
-    ComplexType *NewIP = ComplexTypes.lookup(ID, Token);
-    assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
+    assert(!ComplexTypes.lookup(T, Token) && "Shouldn't be in the map!");
   }
   auto *New = new (*this, alignof(ComplexType)) ComplexType(T, Canonical);
   Types.push_back(New);
@@ -3999,11 +3994,8 @@ QualType ASTContext::getComplexType(QualType T) const {
 QualType ASTContext::getPointerType(QualType T) const {
   // Unique pointers, to guarantee there is only one pointer of a particular
   // structure.
-  llvm::FoldingSetNodeID ID;
-  PointerType::Profile(ID, T);
-
   llvm::FoldingSetInsertToken Token;
-  if (PointerType *PT = PointerTypes.lookup(ID, Token))
+  if (PointerType *PT = PointerTypes.lookup(T, Token))
     return QualType(PT, 0);
 
   // If the pointee type isn't canonical, this won't be a canonical type either,
@@ -4012,9 +4004,7 @@ QualType ASTContext::getPointerType(QualType T) const {
   if (!T.isCanonical()) {
     Canonical = getPointerType(getCanonicalType(T));
 
-    // Get the new insert position for the node we care about.
-    PointerType *NewIP = PointerTypes.lookup(ID, Token);
-    assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
+    assert(!PointerTypes.lookup(T, Token) && "Shouldn't be in the map!");
   }
   auto *New = new (*this, alignof(PointerType)) PointerType(T, Canonical);
   Types.push_back(New);
@@ -4123,11 +4113,8 @@ QualType ASTContext::getBlockPointerType(QualType T) const {
   assert(T->isFunctionType() && "block of function types only");
   // Unique pointers, to guarantee there is only one block of a particular
   // structure.
-  llvm::FoldingSetNodeID ID;
-  BlockPointerType::Profile(ID, T);
-
   llvm::FoldingSetInsertToken Token;
-  if (BlockPointerType *PT = BlockPointerTypes.lookup(ID, Token))
+  if (BlockPointerType *PT = BlockPointerTypes.lookup(T, Token))
     return QualType(PT, 0);
 
   // If the block pointee type isn't canonical, this won't be a canonical
@@ -4136,9 +4123,7 @@ QualType ASTContext::getBlockPointerType(QualType T) const {
   if (!T.isCanonical()) {
     Canonical = getBlockPointerType(getCanonicalType(T));
 
-    // Get the new insert position for the node we care about.
-    BlockPointerType *NewIP = BlockPointerTypes.lookup(ID, Token);
-    assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
+    assert(!BlockPointerTypes.lookup(T, Token) && "Shouldn't be in the map!");
   }
   auto *New =
       new (*this, alignof(BlockPointerType)) BlockPointerType(T, Canonical);
@@ -4157,11 +4142,9 @@ ASTContext::getLValueReferenceType(QualType T, bool SpelledAsLValue) const {
 
   // Unique pointers, to guarantee there is only one pointer of a particular
   // structure.
-  llvm::FoldingSetNodeID ID;
-  ReferenceType::Profile(ID, T, SpelledAsLValue);
-
   llvm::FoldingSetInsertToken Token;
-  if (LValueReferenceType *RT = LValueReferenceTypes.lookup(ID, Token))
+  if (LValueReferenceType *RT =
+          LValueReferenceTypes.lookup({T, SpelledAsLValue}, Token))
     return QualType(RT, 0);
 
   const auto *InnerRef = T->getAs<ReferenceType>();
@@ -4173,9 +4156,8 @@ ASTContext::getLValueReferenceType(QualType T, bool SpelledAsLValue) const {
     QualType PointeeType = (InnerRef ? InnerRef->getPointeeType() : T);
     Canonical = getLValueReferenceType(getCanonicalType(PointeeType));
 
-    // Get the new insert position for the node we care about.
-    LValueReferenceType *NewIP = LValueReferenceTypes.lookup(ID, Token);
-    assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
+    assert(!LValueReferenceTypes.lookup({T, SpelledAsLValue}, Token) &&
+           "Shouldn't be in the map!");
   }
 
   auto *New = new (*this, alignof(LValueReferenceType))
@@ -4195,11 +4177,8 @@ QualType ASTContext::getRValueReferenceType(QualType T) const {
 
   // Unique pointers, to guarantee there is only one pointer of a particular
   // structure.
-  llvm::FoldingSetNodeID ID;
-  ReferenceType::Profile(ID, T, false);
-
   llvm::FoldingSetInsertToken Token;
-  if (RValueReferenceType *RT = RValueReferenceTypes.lookup(ID, Token))
+  if (RValueReferenceType *RT = RValueReferenceTypes.lookup({T, false}, Token))
     return QualType(RT, 0);
 
   const auto *InnerRef = T->getAs<ReferenceType>();
@@ -4211,9 +4190,8 @@ QualType ASTContext::getRValueReferenceType(QualType T) const {
     QualType PointeeType = (InnerRef ? InnerRef->getPointeeType() : T);
     Canonical = getRValueReferenceType(getCanonicalType(PointeeType));
 
-    // Get the new insert position for the node we care about.
-    RValueReferenceType *NewIP = RValueReferenceTypes.lookup(ID, Token);
-    assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
+    assert(!RValueReferenceTypes.lookup({T, false}, Token) &&
+           "Shouldn't be in the map!");
   }
 
   auto *New = new (*this, alignof(RValueReferenceType))
@@ -4286,6 +4264,10 @@ QualType ASTContext::getConstantArrayType(QualType EltTy,
   // the target.
   llvm::APInt ArySize(ArySizeIn);
   ArySize = ArySize.zextOrTrunc(Target->getMaxPointerWidth());
+
+  // The type stores only the CVR bits of the index qualifiers, so key on
+  // those.
+  IndexTypeQuals &= Qualifiers::CVRMask;
 
   llvm::FoldingSetNodeID ID;
   ConstantArrayType::Profile(ID, *this, EltTy, ArySize.getZExtValue(), SizeExpr,
@@ -5066,7 +5048,7 @@ QualType ASTContext::getFunctionTypeInternal(
   // structure.
   llvm::FoldingSetNodeID ID;
   FunctionProtoType::Profile(ID, ResultTy, ArgArray.begin(), NumArgs, EPI,
-                             *this, true);
+                             *this);
 
   QualType Canonical;
   bool Unique = false;
@@ -5203,11 +5185,8 @@ QualType ASTContext::getFunctionTypeInternal(
 }
 
 QualType ASTContext::getPipeType(QualType T, bool ReadOnly) const {
-  llvm::FoldingSetNodeID ID;
-  PipeType::Profile(ID, T, ReadOnly);
-
   llvm::FoldingSetInsertToken Token;
-  if (PipeType *PT = PipeTypes.lookup(ID, Token))
+  if (PipeType *PT = PipeTypes.lookup({T, ReadOnly}, Token))
     return QualType(PT, 0);
 
   // If the pipe element type isn't canonical, this won't be a canonical type
@@ -5216,10 +5195,8 @@ QualType ASTContext::getPipeType(QualType T, bool ReadOnly) const {
   if (!T.isCanonical()) {
     Canonical = getPipeType(getCanonicalType(T), ReadOnly);
 
-    // Get the new insert position for the node we care about.
-    PipeType *NewIP = PipeTypes.lookup(ID, Token);
-    assert(!NewIP && "Shouldn't be in the map!");
-    (void)NewIP;
+    assert(!PipeTypes.lookup({T, ReadOnly}, Token) &&
+           "Shouldn't be in the map!");
   }
   auto *New = new (*this, alignof(PipeType)) PipeType(T, Canonical, ReadOnly);
   Types.push_back(New);
@@ -5701,8 +5678,8 @@ UnresolvedUsingType *ASTContext::getUnresolvedUsingTypeInternal(
   auto *T = new (Mem) UnresolvedUsingType(Keyword, Qualifier, D, CanonicalType);
   if (Token) {
     auto *Placeholder = new (T->getFoldingSetPlaceholder())
-        FoldingSetPlaceholder<TypedefType>();
-    TypedefTypes.insert(Placeholder, Token);
+        FoldingSetPlaceholder<UnresolvedUsingType>();
+    UnresolvedUsingTypes.insert(Placeholder, Token);
   }
   Types.push_back(T);
   return T;
@@ -6193,20 +6170,16 @@ QualType ASTContext::getTemplateSpecializationType(
 
 QualType
 ASTContext::getParenType(QualType InnerType) const {
-  llvm::FoldingSetNodeID ID;
-  ParenType::Profile(ID, InnerType);
-
   llvm::FoldingSetInsertToken Token;
-  ParenType *T = ParenTypes.lookup(ID, Token);
+  ParenType *T = ParenTypes.lookup(InnerType, Token);
   if (T)
     return QualType(T, 0);
 
   QualType Canon = InnerType;
   if (!Canon.isCanonical()) {
     Canon = getCanonicalType(InnerType);
-    ParenType *CheckT = ParenTypes.lookup(ID, Token);
-    assert(!CheckT && "Paren canonical type broken");
-    (void)CheckT;
+    assert(!ParenTypes.lookup(InnerType, Token) &&
+           "Paren canonical type broken");
   }
 
   T = new (*this, alignof(ParenType)) ParenType(InnerType, Canon);
@@ -6534,13 +6507,6 @@ ASTContext::applyObjCProtocolQualifiers(QualType type,
 QualType
 ASTContext::getObjCTypeParamType(const ObjCTypeParamDecl *Decl,
                                  ArrayRef<ObjCProtocolDecl *> protocols) const {
-  // Look in the folding set for an existing type.
-  llvm::FoldingSetNodeID ID;
-  ObjCTypeParamType::Profile(ID, Decl, Decl->getUnderlyingType(), protocols);
-  llvm::FoldingSetInsertToken Token;
-  if (ObjCTypeParamType *TypeParam = ObjCTypeParamTypes.lookup(ID, Token))
-    return QualType(TypeParam, 0);
-
   // We canonicalize to the underlying type.
   QualType Canonical = getCanonicalType(Decl->getUnderlyingType());
   if (!protocols.empty()) {
@@ -6550,6 +6516,14 @@ ASTContext::getObjCTypeParamType(const ObjCTypeParamDecl *Decl,
         Canonical, protocols, hasError, true /*allowOnPointerType*/));
     assert(!hasError && "Error when apply protocol qualifier to bound type");
   }
+
+  // Key on the canonical type the node is constructed with, which is what
+  // Profile() reports; the decl's underlying type can be updated later.
+  llvm::FoldingSetNodeID ID;
+  ObjCTypeParamType::Profile(ID, Decl, Canonical, protocols);
+  llvm::FoldingSetInsertToken Token;
+  if (ObjCTypeParamType *TypeParam = ObjCTypeParamTypes.lookup(ID, Token))
+    return QualType(TypeParam, 0);
 
   unsigned size = sizeof(ObjCTypeParamType);
   size += protocols.size() * sizeof(ObjCProtocolDecl *);
@@ -6837,6 +6811,12 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
 QualType
 ASTContext::getUnaryTransformType(QualType BaseType, QualType UnderlyingType,
                                   UnaryTransformType::UTTKind Kind) const {
+  // Clear UnderlyingType for a dependent base before building the ID: that is
+  // what the node is constructed with, and what Profile() reports.
+  if (BaseType->isDependentType()) {
+    assert(UnderlyingType.isNull() || BaseType == UnderlyingType);
+    UnderlyingType = QualType();
+  }
 
   llvm::FoldingSetNodeID ID;
   UnaryTransformType::Profile(ID, BaseType, UnderlyingType, Kind);
@@ -6849,8 +6829,6 @@ ASTContext::getUnaryTransformType(QualType BaseType, QualType UnderlyingType,
   if (!BaseType->isDependentType()) {
     CanonType = UnderlyingType.getCanonicalType();
   } else {
-    assert(UnderlyingType.isNull() || BaseType == UnderlyingType);
-    UnderlyingType = QualType();
     if (QualType CanonBase = BaseType.getCanonicalType();
         BaseType != CanonBase) {
       CanonType = getUnaryTransformType(CanonBase, QualType(), Kind);
@@ -6994,11 +6972,8 @@ QualType ASTContext::getDeducedTemplateSpecializationType(
 QualType ASTContext::getAtomicType(QualType T) const {
   // Unique pointers, to guarantee there is only one pointer of a particular
   // structure.
-  llvm::FoldingSetNodeID ID;
-  AtomicType::Profile(ID, T);
-
   llvm::FoldingSetInsertToken Token;
-  if (AtomicType *AT = AtomicTypes.lookup(ID, Token))
+  if (AtomicType *AT = AtomicTypes.lookup(T, Token))
     return QualType(AT, 0);
 
   // If the atomic value type isn't canonical, this won't be a canonical type
@@ -7007,9 +6982,7 @@ QualType ASTContext::getAtomicType(QualType T) const {
   if (!T.isCanonical()) {
     Canonical = getAtomicType(getCanonicalType(T));
 
-    // Get the new insert position for the node we care about.
-    AtomicType *NewIP = AtomicTypes.lookup(ID, Token);
-    assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
+    assert(!AtomicTypes.lookup(T, Token) && "Shouldn't be in the map!");
   }
   auto *New = new (*this, alignof(AtomicType)) AtomicType(T, Canonical);
   Types.push_back(New);
@@ -15839,6 +15812,11 @@ private:
       return;
     }
 
+    if (const auto *BITy = D.Ty->getAs<BitIntType>()) {
+      VisitBitInt(BITy, D.StartBitOffset);
+      return;
+    }
+
     uint64_t SizeBit = getScalarOccupiedSizeInBits(D.Ty);
     OccuppiedIntervals.push_back(
         ASTContext::BitInterval{D.StartBitOffset, D.StartBitOffset + SizeBit});
@@ -15947,6 +15925,47 @@ private:
     }();
     OccuppiedIntervals.push_back(
         ASTContext::BitInterval{StartBitOffset, StartBitOffset + SizeBit});
+  }
+
+  /// Compute the occupied bit intervals for a BitInt.
+  ///
+  /// In the case of little endian, the occupied bits are always contiguous so a
+  /// single interval is sufficient. However in big endian, the intervals can be
+  /// disjoint.
+  void VisitBitInt(const BitIntType *Ty, uint64_t StartBitOffset) {
+    const uint64_t OccupiedSizeInBits = Ty->getNumBits();
+
+    if (Ctx.getTargetInfo().isLittleEndian()) {
+      OccuppiedIntervals.push_back(
+          {StartBitOffset, StartBitOffset + OccupiedSizeInBits});
+      return;
+    }
+
+    // In big endian mode, the layout of a BitInt in memory has its bytes in
+    // reverse order, and is pictured in this order:
+    //   1. Fully padding bytes.
+    //   2. One partially occupied byte, with padding at the most significant
+    //   bits. ("remaining occupied bits")
+    //   3. A sequence of fully occupied bytes up until the end of the storage.
+    const uint64_t StorageSizeInBits = Ctx.getTypeSize(Ty);
+    const uint64_t CharWidth = Ctx.getCharWidth();
+    const uint64_t NumFullyPaddingBytes =
+        (StorageSizeInBits - OccupiedSizeInBits) / CharWidth;
+    const uint64_t NumFullyOccupiedBytes = OccupiedSizeInBits / CharWidth;
+    const uint64_t NumRemainingOccupiedBits = OccupiedSizeInBits % CharWidth;
+
+    // Partially occupied byte
+    if (NumRemainingOccupiedBits > 0)
+      OccuppiedIntervals.push_back(
+          {StartBitOffset + NumFullyPaddingBytes * CharWidth,
+           StartBitOffset + NumFullyPaddingBytes * CharWidth +
+               NumRemainingOccupiedBits});
+
+    // Fully occupied bytes
+    if (NumFullyOccupiedBytes > 0)
+      OccuppiedIntervals.push_back({StartBitOffset + StorageSizeInBits -
+                                        NumFullyOccupiedBytes * CharWidth,
+                                    StartBitOffset + StorageSizeInBits});
   }
 
   void MergeOccuppiedIntervals() {
