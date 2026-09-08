@@ -1775,6 +1775,24 @@ public:
     return Action == Legal || Action == Custom;
   }
 
+  /// Return how a VECTOR_INTERLEAVE or VECTOR_DEINTERLEAVE node with the
+  /// given interleave factor and VT should be handled.
+  LegalizeAction getVectorInterleaveAction(unsigned Opc, unsigned Factor,
+                                           EVT VT) const {
+    assert((Opc == ISD::VECTOR_INTERLEAVE || Opc == ISD::VECTOR_DEINTERLEAVE));
+    VectorInterleaveActionKey Key = {Opc, Factor, VT.getSimpleVT().SimpleTy};
+    auto It = VectorInterleaveActions.find(Key);
+    return It != VectorInterleaveActions.end() ? It->second : Expand;
+  }
+
+  /// Return true if a VECTOR_INTERLEAVE or VECTOR_DEINTERLEAVE node with the
+  /// given interleave factor and fragment type is legal or custom.
+  bool isVectorInterleaveLegalOrCustom(unsigned Opc, unsigned Factor,
+                                       EVT VT) const {
+    LegalizeAction Action = getVectorInterleaveAction(Opc, Factor, VT);
+    return Action == Legal || Action == Custom;
+  }
+
   /// If the action for this operation is to promote, this method returns the
   /// ValueType to promote to.
   MVT getTypeToPromoteTo(unsigned Op, MVT VT) const {
@@ -2881,6 +2899,23 @@ protected:
       setPartialReduceMLAAction(Opc, AccVT, InputVT, Action);
   }
 
+  /// Indicate how a VECTOR_INTERLEAVE or VECTOR_DEINTERLEAVE node with the
+  /// given interleave factor Factor and type VT should be treated.
+  void setVectorInterleaveAction(unsigned Opc, unsigned Factor, MVT VT,
+                                 LegalizeAction Action) {
+    assert((Opc == ISD::VECTOR_INTERLEAVE || Opc == ISD::VECTOR_DEINTERLEAVE));
+    VectorInterleaveActionKey Key = {Opc, Factor, VT.SimpleTy};
+    VectorInterleaveActions[Key] = Action;
+  }
+
+  void setVectorInterleaveAction(ArrayRef<unsigned> Opcodes,
+                                 ArrayRef<unsigned> Factors, MVT VT,
+                                 LegalizeAction Action) {
+    for (unsigned Opc : Opcodes)
+      for (unsigned Factor : Factors)
+        setVectorInterleaveAction(Opc, Factor, VT, Action);
+  }
+
   /// If Opc/OrigVT is specified as being promoted, the promotion code defaults
   /// to trying a larger integer/fp until it can find one that works. If that
   /// default is insufficient, this method can be used by the target to override
@@ -3910,6 +3945,12 @@ private:
   /// keep a LegalizeAction which indicates how instruction selection should
   /// deal with this operation.
   DenseMap<PartialReduceActionTypes, LegalizeAction> PartialReduceMLAActions;
+
+  using VectorInterleaveActionKey =
+      std::tuple<unsigned, unsigned, MVT::SimpleValueType>;
+  /// For each vector (de)interleave opcode, interleave factor and fragment
+  /// type combination, keep the corresponding LegalizeAction.
+  DenseMap<VectorInterleaveActionKey, LegalizeAction> VectorInterleaveActions;
 
   ValueTypeActionImpl ValueTypeActions;
 

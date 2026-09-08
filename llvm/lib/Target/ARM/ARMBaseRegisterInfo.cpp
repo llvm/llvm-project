@@ -43,7 +43,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 #include <cassert>
 #include <utility>
 
@@ -510,7 +509,7 @@ bool ARMBaseRegisterInfo::canRealignStack(const MachineFunction &MF) const {
 bool ARMBaseRegisterInfo::
 cannotEliminateFrame(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  if (MF.getTarget().Options.DisableFramePointerElim(MF) && MFI.adjustsStack())
+  if (MF.disableFramePointerElim() && MFI.adjustsStack())
     return true;
   return MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
          hasStackRealignment(MF);

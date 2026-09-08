@@ -49,47 +49,11 @@ FIROpenACCSupportAnalysis::emitNYI(Location loc, const Twine &message) {
 bool FIROpenACCSupportAnalysis::isValidSymbolUse(Operation *user,
                                                  SymbolRefAttr symbol,
                                                  Operation **definingOpPtr) {
-  // First check using the default OpenACC utility (recipes, device globals,
-  // acc routine, LLVM intrinsics, declare attribute).
-  Operation *definingOp = nullptr;
-  if (mlir::acc::isValidSymbolUse(user, symbol, &definingOp)) {
-    if (definingOpPtr)
-      *definingOpPtr = definingOp;
-    return true;
-  }
-
-  // Default said no; if we have no defining op, nothing more to check.
-  if (!definingOp)
-    return false;
-  if (definingOpPtr)
-    *definingOpPtr = definingOp;
-
-  // Functions marked as Fortran runtime are valid (GPU version expected
-  // to be offloaded).
-  if (definingOp->hasAttr("fir.runtime"))
-    return true;
-
-  // Functions with CUF device/global/host_device attribute are valid.
-  if (auto cufProcAttr = definingOp->getAttrOfType<cuf::ProcAttributeAttr>(
-          cuf::getProcAttrName())) {
-    if (cufProcAttr.getValue() != cuf::ProcAttribute::Host)
-      return true;
-  }
-
-  return false;
+  return fir::acc::isValidSymbolUse(user, symbol, definingOpPtr);
 }
 
 bool FIROpenACCSupportAnalysis::isValidValueUse(Value v, Region &region) {
-  // First check using the base utility.
-  if (mlir::acc::isValidValueUse(v, region))
-    return true;
-
-  // FIR-specific: fir.logical is a trivial scalar type that can be
-  // passed by value.
-  if (mlir::isa<fir::LogicalType>(v.getType()))
-    return true;
-
-  return false;
+  return fir::acc::isValidValueUse(v, region);
 }
 
 std::optional<mlir::acc::TypeSizeAndAlignment>
