@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS
   Core
   IRReader
   OrcJIT
+  OrcShared
   OrcTargetProcess
   ExecutionEngine
   Support

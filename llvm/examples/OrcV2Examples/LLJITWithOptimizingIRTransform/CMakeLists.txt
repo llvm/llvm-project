@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
   IPO
   IRReader
   OrcJIT
+  OrcShared
   ScalarOpts
   Support
   nativecodegen

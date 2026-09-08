@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
   JITLink
   MC
   OrcJIT
+  OrcShared
   Support
   Target
   nativecodegen

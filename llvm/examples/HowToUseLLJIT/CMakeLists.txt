@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   Core
   OrcJIT
+  OrcShared
   Support
   nativecodegen
   )
