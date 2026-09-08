@@ -5,6 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of the float128 ilogb function.
+///
+//===----------------------------------------------------------------------===//
 
 #include "src/math/ilogbf128.h"
 #include "src/__support/CPP/bit.h"

@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the implementation of logbf128, the float128 variant of
-/// logb.
+/// Implementation of the float128 logb function.
 ///
 //===----------------------------------------------------------------------===//
 

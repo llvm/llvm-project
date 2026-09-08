@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of the frexpf128 entrypoint, the
-/// float128 variant of the C standard frexp function.
+/// Declaration of the float128 frexp function.
 ///
 //===----------------------------------------------------------------------===//
 

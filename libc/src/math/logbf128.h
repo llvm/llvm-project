@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the declaration of the logbf128 entrypoint, the
-/// float128 variant of the C standard logb function.
+/// Declaration of the float128 logb function.
 ///
 //===----------------------------------------------------------------------===//
 

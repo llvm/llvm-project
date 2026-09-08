@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the implementation of ilogbf128, the float128 variant of
-/// ilogb.
+/// Implementation of the float128 ilogb function.
 ///
 //===----------------------------------------------------------------------===//
 

@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the implementation of frexpf128, the float128 variant of
-/// frexp.
+/// Implementation of the float128 frexp function.
 ///
 //===----------------------------------------------------------------------===//
 

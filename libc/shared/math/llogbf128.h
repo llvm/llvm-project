@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file re-exports llogbf128 through the shared::math namespace so that
-/// other LLVM components can use it without depending on libc internals.
+/// Shared declaration of the float128 llogb function.
 ///
 //===----------------------------------------------------------------------===//
 
