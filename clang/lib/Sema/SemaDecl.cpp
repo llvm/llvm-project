@@ -18356,15 +18356,14 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
     if (TUK == TagUseKind::Friend || TUK == TagUseKind::Reference) {
       DC = computeDeclContext(SS, false);
       if (!DC) {
-        if (SS.getScopeRep().getAsType() &&
-            !SS.getScopeRep().getAsType()->containsErrors()) {
-          // This is a genuinely dependent nested-name-specifier (e.g. it
-          // depends on an uninstantiated template parameter), not one that
-          // merely appears dependent because of an embedded error-recovery
-          // placeholder. Only in that genuine case should we defer/treat this
-          // as a dependent name for the caller to handle.
-          IsDependent = true;
-        }
+        // This is a genuinely dependent nested-name-specifier (e.g. it
+        // depends on an uninstantiated template parameter), not one that
+        // merely appears dependent because of an embedded error-recovery
+        // placeholder. Only in that genuine case should we defer/treat this
+        // as a dependent name for the caller to handle.
+        const Type *T = SS.getScopeRep().getAsType();
+        IsDependent =
+            isDependentScopeSpecifier(SS) && (!T || !T->containsErrors());
         return true;
       }
     } else {
