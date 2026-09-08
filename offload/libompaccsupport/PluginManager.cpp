@@ -474,8 +474,8 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
       }
 
       // 2) Load the image onto the given device.
-      auto BinaryOrErr = Device.loadBinary(Img);
-      if (llvm::Error Err = BinaryOrErr.takeError()) {
+      auto LoadedOrErr = Device.loadBinary(Img);
+      if (llvm::Error Err = LoadedOrErr.takeError()) {
         REPORT() << "Failed to load image " << llvm::toString(std::move(Err));
         Rc = OFFLOAD_FAIL;
         break;
@@ -489,14 +489,20 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
         if (Entry.Kind != object::OffloadKind::OFK_OpenMP)
           continue;
 
-        __tgt_device_binary &Binary = *BinaryOrErr;
+        ProgramTy &Program = *LoadedOrErr;
 
         llvm::offloading::EntryTy DeviceEntry = Entry;
         if (Entry.Size) {
-          if (!(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT_VTABLE))
-            if (Device.RTL->get_global(Binary, Entry.Size, Entry.SymbolName,
-                                       &DeviceEntry.Address) != OFFLOAD_SUCCESS)
-              REPORT() << "Failed to load symbol " << Entry.SymbolName;
+          if (!(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT_VTABLE)) {
+            auto AddrOrErr =
+                getAndRecordGlobalAddress(Device, Program, Entry.SymbolName);
+            if (!AddrOrErr) {
+              REPORT() << "Failed to load symbol " << Entry.SymbolName << ": "
+                       << llvm::toString(AddrOrErr.takeError());
+            } else {
+              DeviceEntry.Address = *AddrOrErr;
+            }
+          }
 
           // If unified memory is active, the corresponding global is a device
           // reference to the host global. We need to initialize the pointer on
@@ -511,9 +517,13 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
               REPORT() << "Failed to write symbol for USM " << Entry.SymbolName;
           }
         } else if (Entry.Address) {
-          if (Device.RTL->get_function(Binary, Entry.SymbolName,
-                                       &DeviceEntry.Address) != OFFLOAD_SUCCESS)
-            REPORT() << "Failed to load kernel " << Entry.SymbolName;
+          auto AddrOrErr = Program.getKernelAddress(Entry.SymbolName);
+          if (!AddrOrErr) {
+            REPORT() << "Failed to load kernel " << Entry.SymbolName << ": "
+                     << llvm::toString(AddrOrErr.takeError());
+          } else {
+            DeviceEntry.Address = *AddrOrErr;
+          }
         }
         ODBG(ODT_Mapping) << "Entry point " << Entry.Address << " maps to"
                           << (Entry.Size ? " global" : "") << " "
