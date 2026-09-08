@@ -1150,7 +1150,7 @@ void llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
   BasicBlock *InsertTop;
   BasicBlock *InsertBot;
   BasicBlock *NewPreHeader = nullptr;
-  DenseMap<Instruction *, Value *> ExitValues;
+  SmallMapVector<Instruction *, Value *, 4> ExitValues;
   if (PeelLast) {
     // It is convenient to split the single exit block from the latch the
     // into 3 parts - two blocks to anchor the peeled copy of the loop body,
