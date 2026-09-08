@@ -6508,23 +6508,31 @@ TEST_P(ErrorHandlingTest, ErrorHappensBeforeCreatingANewNode) {
 // encountering the error.
 TEST_P(ErrorHandlingTest,
        ErrorHappensAfterCreatingTheNodeButBeforeLinkingThatToTheAST) {
-  TranslationUnitDecl *FromTU = getTuDecl(
-      std::string("void foo() { ") + ErroneousStmt + " }", Lang_CXX03);
-  auto *FromFoo = FirstDeclMatcher<FunctionDecl>().match(
-      FromTU, functionDecl(hasName("foo")));
+  TranslationUnitDecl *FromTU = getTuDecl(std::string(R"(
+      struct S {
+        S() : X(({ )") + ErroneousStmt + R"( 0; })) {}
+        int X;
+      };
+      )",
+                                          Lang_CXX03);
+  auto *FromCtor = FirstDeclMatcher<CXXConstructorDecl>().match(
+      FromTU, cxxConstructorDecl(hasName("S"), unless(isImplicit())));
 
-  FunctionDecl *ImportedFoo = Import(FromFoo, Lang_CXX03);
-  EXPECT_FALSE(ImportedFoo);
+  CXXConstructorDecl *ImportedCtor = Import(FromCtor, Lang_CXX03);
+  EXPECT_FALSE(ImportedCtor);
 
   TranslationUnitDecl *ToTU = ToAST->getASTContext().getTranslationUnitDecl();
+  auto *ToS = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, cxxRecordDecl(hasName("S")));
+  ASSERT_TRUE(ToS);
   // Created, but not linked.
-  EXPECT_EQ(
-      DeclCounter<FunctionDecl>().match(ToTU, functionDecl(hasName("foo"))),
-      0u);
+  EXPECT_EQ(DeclCounter<CXXConstructorDecl>().match(
+                ToS, cxxConstructorDecl(hasName("S"), unless(isImplicit()))),
+            0u);
 
-  ASTImporter *Importer = findFromTU(FromFoo)->Importer.get();
+  ASTImporter *Importer = findFromTU(FromCtor)->Importer.get();
   std::optional<ASTImportError> OptErr =
-      Importer->getImportDeclErrorIfAny(FromFoo);
+      Importer->getImportDeclErrorIfAny(FromCtor);
   ASSERT_TRUE(OptErr);
   EXPECT_EQ(OptErr->Error, ASTImportError::UnsupportedConstruct);
 }
@@ -6549,7 +6557,7 @@ TEST_P(ErrorHandlingTest, ErrorHappensAfterNodeIsCreatedAndLinked) {
   // there.
   TranslationUnitDecl *ToTU = ToAST->getASTContext().getTranslationUnitDecl();
   EXPECT_EQ(DeclCounter<FunctionDecl>().match(ToTU, functionDecl(hasName("f"))),
-            1u);
+            2u);
   // Match the fwd decl.
   auto *ToProto =
       FirstDeclMatcher<FunctionDecl>().match(ToTU, functionDecl(hasName("f")));
@@ -9344,6 +9352,34 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportRecursiveFieldInitializer1) {
   EXPECT_TRUE(FromA->field_begin()->getInClassInitializer());
   // auto *ToA = Import(FromA, Lang_CXX11);
   // EXPECT_TRUE(ToA->field_begin()->getInClassInitializer());
+}
+
+// Check that we are able to import a global variable of class type that
+// is initialized with a lambda that captures a reference to the variable
+// itself, and that the class's constructor template names a variable template
+// specialization whose (dependent) argument is the lambda's own closure type.
+// The lambda's call operator is looked up during the import of its own body
+// (through a chain of decls). This is problematic if we do not link function
+// decls to the context before importing their bodies.
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ImportSelfReferencingGlobalWithLambdaInTemplateArg) {
+  TranslationUnitDecl *FromTU = getTuDecl(std::string(R"(
+    namespace ns {
+    template <typename> constexpr bool always_false = false;
+    }
+    class SelfReferencingWrapper {
+    public:
+      template <class Callback> SelfReferencingWrapper(Callback callback) {
+        ns::always_false<Callback>;
+      }
+    } selfRef { []{ (void)selfRef; } };
+    void trigger() { selfRef; }
+    )"),
+                                          Lang_CXX20);
+  auto *FromFunc = FirstDeclMatcher<FunctionDecl>().match(
+      FromTU, functionDecl(hasName("trigger")));
+  auto *ToFunc = Import(FromFunc, Lang_CXX20);
+  EXPECT_TRUE(ToFunc);
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, isNewDecl) {

@@ -4175,6 +4175,10 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
                                             FromCXXMethod))
       return std::move(Err);
 
+  // Make the function visible in its DeclContext's lookup table *before*
+  // importing its body.
+  addDeclToContexts(D, ToFunction);
+
   if (D->doesThisDeclarationHaveABody()) {
     Error Err = ImportFunctionDeclBody(D, ToFunction);
 
@@ -4195,8 +4199,6 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   }
 
   // FIXME: Other bits to merge?
-
-  addDeclToContexts(D, ToFunction);
 
   // Import the rest of the chain. I.e. import all subsequent declarations.
   for (++RedeclIt; RedeclIt != Redecls.end(); ++RedeclIt) {
