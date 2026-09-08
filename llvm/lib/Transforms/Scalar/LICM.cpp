@@ -307,6 +307,33 @@ private:
 };
 } // namespace
 
+// Return true if L contains a trivial loop-unswitch candidate: a block that
+// dominates the latch and exits the loop via a loop-invariant condition. Such a
+// branch runs on every iteration and can be hoisted into the preheader.
+static bool hasLoopInvariantExitCandidate(const Loop &L,
+                                          const DominatorTree &DT) {
+  BasicBlock *Latch = L.getLoopLatch();
+  if (!Latch)
+    return false;
+  for (DomTreeNode *N = DT.getNode(Latch); N; N = N->getIDom()) {
+    BasicBlock *BB = N->getBlock();
+    if (!L.contains(BB))
+      break;
+    Value *Cond;
+    Instruction *Term = BB->getTerminator();
+    if (auto *BI = dyn_cast<CondBrInst>(Term))
+      Cond = BI->getCondition();
+    else if (auto *SI = dyn_cast<SwitchInst>(Term))
+      Cond = SI->getCondition();
+    else
+      continue;
+    if (L.isLoopInvariant(Cond) &&
+        any_of(successors(BB), [&L](BasicBlock *S) { return !L.contains(S); }))
+      return true;
+  }
+  return false;
+}
+
 PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
                                 LoopStandardAnalysisResults &AR, LPMUpdater &) {
   if (!AR.MSSA)
@@ -326,10 +353,12 @@ PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
   auto PA = getLoopPassPreservedAnalyses();
   PA.preserve<MemorySSAAnalysis>();
 
-  // Hoisting an invariant exit condition can leave a now loop-invariant exit
-  // branch in the loop; request extra trivial unswitching to remove it.
-  AM.getResult<ShouldRunExtraSimpleLoopUnswitch>(L, AR);
-  PA.preserve<ShouldRunExtraSimpleLoopUnswitch>();
+  // If the loop now exits via a loop-invariant condition, request extra trivial
+  // unswitching to hoist that branch out of the loop.
+  if (hasLoopInvariantExitCandidate(L, AR.DT)) {
+    AM.getResult<ShouldRunExtraSimpleLoopUnswitch>(L, AR);
+    PA.preserve<ShouldRunExtraSimpleLoopUnswitch>();
+  }
 
   return PA;
 }
