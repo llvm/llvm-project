@@ -1709,9 +1709,6 @@ public:
   /// Return the number of devices this plugin can support.
   int32_t number_of_devices();
 
-  /// Returns non-zero if the data can be exchanged between the two devices.
-  int32_t is_data_exchangable(int32_t SrcDeviceId, int32_t DstDeviceId);
-
   /// Initializes the record and replay mechanism inside the plugin.
   int32_t initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
                                    void *VAddr, bool IsRecord, bool IsNative,

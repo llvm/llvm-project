@@ -487,16 +487,6 @@ bool DeviceTy::printDeviceInfo() {
   return true;
 }
 
-// Whether data can be copied to DstDevice directly
-bool DeviceTy::isDataExchangable(const DeviceTy &DstDevice) {
-  if (RTL != DstDevice.RTL)
-    return false;
-
-  if (RTL->is_data_exchangable(RTLDeviceID, DstDevice.RTLDeviceID))
-    return true;
-  return false;
-}
-
 int32_t DeviceTy::synchronize(AsyncInfoTy &AsyncInfo) {
   ol_queue_handle_t Queue = AsyncInfo.getQueue();
   if (!Queue)
