@@ -2071,12 +2071,15 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
 
   // Reshape must preserve the number of elements when statically known.
   if (expandedType.hasStaticShape() && collapsedType.hasStaticShape()) {
-    int64_t expandedNumElements = expandedType.getNumElements();
-    int64_t collapsedNumElements = collapsedType.getNumElements();
-    if (expandedNumElements != collapsedNumElements) {
+    std::optional<int64_t> expandedNumElements =
+        ShapedType::tryGetNumElements(expandedType.getShape());
+    std::optional<int64_t> collapsedNumElements =
+        ShapedType::tryGetNumElements(collapsedType.getShape());
+    if (!expandedNumElements || !collapsedNumElements)
+      return op.emitOpError("number of elements exceeds the int64 range");
+    if (*expandedNumElements != *collapsedNumElements)
       return op.emitOpError("number of elements must be preserved: ")
-             << expandedNumElements << " != " << collapsedNumElements;
-    }
+             << *expandedNumElements << " != " << *collapsedNumElements;
   }
 
   auto maps = op.getReassociationMaps();
