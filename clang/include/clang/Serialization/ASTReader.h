@@ -1449,16 +1449,16 @@ private:
   };
 
 public:
-  /// Where a loaded module keeps its copy of a file: the FileID naming it and
-  /// the offset its locations start at. The FileID is invalid when no loaded
-  /// module has the file.
+  /// Records where a loaded module keeps its copy of a file. \c FID names the
+  /// copy and \c Offset is where its locations start. \c FID is invalid when
+  /// no loaded module has the file.
   struct LoadedFileLoc {
     FileID FID;
     SourceLocation::UIntTy Offset = 0;
   };
 
-  /// Where a loaded module keeps the input file with resolved path \p Path and
-  /// size \p Size.
+  /// Returns where a loaded module keeps the input file with resolved path
+  /// \p Path and size \p Size.
   LoadedFileLoc getLoadedFileLoc(StringRef Path, off_t Size);
 
 private:
@@ -1480,7 +1480,6 @@ private:
   llvm::DenseMap<ModuleFile *, llvm::DenseMap<unsigned, LoadedFileLoc>>
       LoadedInputFileLocs;
 
-  void canonicalizePathForIdentity(SmallVectorImpl<char> &Path) const;
   void buildLoadedInputFiles();
   LoadedFileLoc getLoadedInputFileLoc(ModuleFile &F, unsigned InputID);
 

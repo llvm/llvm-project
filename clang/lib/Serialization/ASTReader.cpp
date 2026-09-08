@@ -1864,10 +1864,6 @@ ASTReader::readSLocFileEntry(ModuleFile *F, unsigned Index) {
   }
 }
 
-void ASTReader::canonicalizePathForIdentity(SmallVectorImpl<char> &Path) const {
-  FileMgr.makeAbsolutePath(Path, /*Canonicalize=*/true);
-}
-
 void ASTReader::buildLoadedInputFiles() {
   LoadedInputFilesBuilt = true;
   // ModuleManager hands modules out in index order, so the copy we settle on
@@ -1883,8 +1879,11 @@ void ASTReader::buildLoadedInputFiles() {
         continue;
       auto Filename =
           ResolveImportedPath(PathBuf, FI.UnresolvedImportedFilename, F);
+      // Both sides of a comparison have to spell a path the same way, so make
+      // it absolute and drop any dot segments. This works on the string alone
+      // and reads nothing from the file system.
       SmallString<128> Key(*Filename);
-      canonicalizePathForIdentity(Key);
+      FileMgr.makeAbsolutePath(Key, /*Canonicalize=*/true);
       LoadedInputFiles[Key].push_back({FI.StoredSize, &F, I + 1});
     }
   }
@@ -1892,25 +1891,24 @@ void ASTReader::buildLoadedInputFiles() {
 
 ASTReader::LoadedFileLoc ASTReader::getLoadedInputFileLoc(ModuleFile &F,
                                                           unsigned InputID) {
-  auto Known = LoadedInputFileLocs.find(&F);
-  if (Known == LoadedInputFileLocs.end()) {
-    llvm::DenseMap<unsigned, LoadedFileLoc> Locs;
+  auto [Known, Inserted] = LoadedInputFileLocs.try_emplace(&F);
+  if (Inserted) {
     for (unsigned I = 0; I != F.LocalNumSLocEntries; ++I) {
-      auto MaybeEntry = readSLocFileEntry(&F, I);
-      if (!MaybeEntry) {
-        consumeError(MaybeEntry.takeError());
+      Expected<SLocEntryInfo> MaybeInfo = readSLocFileEntry(&F, I);
+      if (!MaybeInfo) {
+        // Losing an entry only costs us a redirect, so leave the file to the
+        // module that is writing it rather than failing the write.
+        consumeError(MaybeInfo.takeError());
         continue;
       }
-      const SLocEntryInfo &Info = *MaybeEntry;
-      if (!Info.InputID)
+      if (!MaybeInfo->InputID)
         continue;
       // A module writes its entries in order, so the first entry naming an
       // input file is the one we want.
-      Locs.try_emplace(
-          Info.InputID,
-          LoadedFileLoc{FileID::get(F.SLocEntryBaseID + I), Info.Offset});
+      Known->second.try_emplace(
+          MaybeInfo->InputID,
+          LoadedFileLoc{FileID::get(F.SLocEntryBaseID + I), MaybeInfo->Offset});
     }
-    Known = LoadedInputFileLocs.try_emplace(&F, std::move(Locs)).first;
   }
 
   auto It = Known->second.find(InputID);
@@ -1923,7 +1921,7 @@ ASTReader::LoadedFileLoc ASTReader::getLoadedFileLoc(StringRef Path,
     buildLoadedInputFiles();
 
   SmallString<128> Key(Path);
-  canonicalizePathForIdentity(Key);
+  FileMgr.makeAbsolutePath(Key, /*Canonicalize=*/true);
   auto Known = LoadedInputFiles.find(Key);
   if (Known == LoadedInputFiles.end())
     return LoadedFileLoc();
