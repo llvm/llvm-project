@@ -19,4 +19,5 @@ add_llvm_component_library(LLVMOrcShared
 
   LINK_COMPONENTS
   Support
+  TargetParser
   )
