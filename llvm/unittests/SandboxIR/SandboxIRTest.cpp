@@ -6362,9 +6362,11 @@ TEST_F(SandboxIRTest, InstructionCallbacks_BeforeID) {
   sandboxir::Instruction *Ret = &*It++;
   auto *Arg0 = F.getArg(0);
 
+  // Callbacks write to this vector.
+  SmallVector<unsigned> CBs;
   {
     // Check EraseInstr callbacks.
-    SmallVector<unsigned> CBs;
+    CBs.clear();
     // The first callback.
     auto CB0 = Ctx.registerEraseInstrCallback(
         [&CBs](sandboxir::Instruction *I) { CBs.push_back(0); });
@@ -6382,7 +6384,7 @@ TEST_F(SandboxIRTest, InstructionCallbacks_BeforeID) {
   }
   {
     // Check CreateInstr callbacks.
-    SmallVector<unsigned> CBs;
+    CBs.clear();
     // The first callback.
     auto CB0 = Ctx.registerCreateInstrCallback(
         [&CBs](sandboxir::Instruction *I) { CBs.push_back(0); });
@@ -6401,7 +6403,7 @@ TEST_F(SandboxIRTest, InstructionCallbacks_BeforeID) {
   }
   {
     // Check MoveInstr callbacks.
-    SmallVector<unsigned> CBs;
+    CBs.clear();
     // The first callback.
     auto CB0 = Ctx.registerMoveInstrCallback(
         [&CBs](sandboxir::Instruction *I, const sandboxir::BBIterator &Where) {
@@ -6420,7 +6422,7 @@ TEST_F(SandboxIRTest, InstructionCallbacks_BeforeID) {
   }
   {
     // Check SetUse callbacks.
-    SmallVector<unsigned> CBs;
+    CBs.clear();
     // The first callback.
     auto CB0 = Ctx.registerSetUseCallback(
         [&CBs](sandboxir::Use U, sandboxir::Value *NewSrc) {

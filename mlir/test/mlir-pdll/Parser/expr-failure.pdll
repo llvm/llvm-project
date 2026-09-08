@@ -399,3 +399,11 @@ Pattern {
   // CHECK: expected `>` after type literal
   let foo = type<"";
 }
+
+// -----
+
+Pattern {
+  let op: Op<my_dialect.unregistered>;
+  // CHECK: result index is too large
+  let result = op.2147483648;
+}
