@@ -39,7 +39,7 @@ template <typename T> Align computeCommonAlignment(ArrayRef<Value *> VL);
 /// Checks if the provided list of pointers \p Pointers represents the strided
 /// pointers for type ElemTy. If they are not, nullptr is returned.
 /// Otherwise, SCEV* of the stride value is returned.
-/// If `PointerOps` can be rearanged into the following sequence:
+/// If `PointerOps` can be rearranged into the following sequence:
 /// ```
 /// %x + c_0 * stride,
 /// %x + c_1 * stride,

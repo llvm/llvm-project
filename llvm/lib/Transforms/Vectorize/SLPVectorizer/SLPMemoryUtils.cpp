@@ -42,7 +42,6 @@ bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
            getSameOpcode({GEP1->getOperand(1), GEP2->getOperand(1)}, TLI)));
 }
 
-/// Calculates minimal alignment as a common alignment.
 template <typename T> Align computeCommonAlignment(ArrayRef<Value *> VL) {
   Align CommonAlignment = cast<T>(VL.consume_front())->getAlign();
   for (Value *V : VL)
@@ -53,17 +52,6 @@ template <typename T> Align computeCommonAlignment(ArrayRef<Value *> VL) {
 template Align computeCommonAlignment<LoadInst>(ArrayRef<Value *>);
 template Align computeCommonAlignment<StoreInst>(ArrayRef<Value *>);
 
-/// Checks if the provided list of pointers \p Pointers represents the strided
-/// pointers for type ElemTy. If they are not, nullptr is returned.
-/// Otherwise, SCEV* of the stride value is returned.
-/// If `PointerOps` can be rearanged into the following sequence:
-/// ```
-/// %x + c_0 * stride,
-/// %x + c_1 * stride,
-/// %x + c_2 * stride
-/// ...
-/// ```
-/// where each `c_i` is constant. The SCEV of the `stride` will be returned.
 const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
                               const DataLayout &DL, ScalarEvolution &SE,
                               SmallVectorImpl<unsigned> &SortedIndices) {
