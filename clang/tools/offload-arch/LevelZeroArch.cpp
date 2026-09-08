@@ -14,6 +14,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Error.h"
+#include "llvm/TargetParser/IntelGPUTargetParser.h"
 #include <cstdio>
 
 #define ZE_MAX_DEVICE_NAME 256
@@ -30,6 +31,7 @@ enum ze_result_t {
 enum ze_structure_type_t {
   ZE_STRUCTURE_TYPE_INIT_DRIVER_TYPE_DESC = 0x00020021,
   ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES = 0x3,
+  ZE_STRUCTURE_TYPE_DEVICE_IP_VERSION_EXT = 0x1000f,
   ZE_STRUCTURE_TYPE_FORCE_UINT32 = 0x7fffffff
 };
 
@@ -70,6 +72,13 @@ struct ze_device_properties_t {
   uint32_t kernelTimestampValidBits;
   ze_device_uuid_t uuid;
   char name[ZE_MAX_DEVICE_NAME];
+};
+
+// Chained onto ze_device_properties_t::pNext to request the device IP version.
+struct ze_device_ip_version_ext_t {
+  ze_structure_type_t stype;
+  const void *pNext;
+  uint32_t ipVersion;
 };
 
 ze_result_t zeInitDrivers(uint32_t *pCount, ze_driver_handle_t *phDrivers,
@@ -148,6 +157,13 @@ static bool loadLevelZero() {
     }                                                                          \
   } while (0)
 
+// Translate a GMDID into an architecture name that is a legal --offload-arch
+// parameter, or "" if this build does not know the device.
+StringRef getIntelGPUArchName(uint32_t IPVersion) {
+  return IntelGPU::getArchName(
+      IntelGPU::getKindForGMDID(IntelGPU::decodeGMDID(IPVersion)));
+}
+
 int printGPUsByLevelZero() {
   if (!loadLevelZero())
     return 1;
@@ -173,11 +189,42 @@ int printGPUsByLevelZero() {
     CALL_ZE_AND_CHECK(zeDeviceGet, Driver, &DeviceCount, Devices.data());
 
     for (auto Device : Devices) {
+      ze_device_ip_version_ext_t IPVersion = {};
+      IPVersion.stype = ZE_STRUCTURE_TYPE_DEVICE_IP_VERSION_EXT;
+      IPVersion.pNext = nullptr;
+
       ze_device_properties_t DeviceProperties = {};
       DeviceProperties.stype = ZE_STRUCTURE_TYPE_DEVICE_PROPERTIES;
-      DeviceProperties.pNext = nullptr;
+      DeviceProperties.pNext = &IPVersion;
       CALL_ZE_AND_CHECK(zeDeviceGetProperties, Device, &DeviceProperties);
-      llvm::outs() << DeviceProperties.name << '\n';
+
+      // A driver that does not support the extension leaves the chained
+      // structure untouched, in which case there is no architecture to name.
+      if (IPVersion.ipVersion == 0) {
+        if (Verbose)
+          llvm::errs() << "Unable to query the IP version of device '"
+                       << DeviceProperties.name << "'\n";
+        continue;
+      }
+
+      if (Verbose)
+        llvm::errs() << "Found device '" << DeviceProperties.name << "'\n";
+
+      // Naming an unknown device after its GMDID would print something that
+      // --offload-arch cannot accept, because this build knows no IGCA level to
+      // compile for.  Report it instead, spelling out the GMDID so that the
+      // device can be identified.
+      StringRef Arch = getIntelGPUArchName(IPVersion.ipVersion);
+      if (Arch.empty()) {
+        llvm::errs() << "Unknown Intel GPU '" << DeviceProperties.name
+                     << "', which reports the architecture "
+                     << IntelGPU::getNumericArchName(
+                            IntelGPU::decodeGMDID(IPVersion.ipVersion))
+                     << "\n";
+        return 1;
+      }
+
+      llvm::outs() << Arch << '\n';
     }
   }
 
