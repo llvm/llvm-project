@@ -1005,58 +1005,58 @@ let hasSideEffects = 0, Constraints = "$src = $Rn" in {
   def SHAR            : InstRn<0b0100000000100001, 
                               (outs GPR:$Rn), (ins GPR:$src),
                               "shar $Rn",
-                              [(set i32:$Rn, (sra i32:$src, (i8 1)))]>;
+                              []>;
 
   // shll Rn
   let Defs = [SR] in
   def SHLL            : InstRn<0b0100000000000000, 
                               (outs GPR:$Rn), (ins GPR:$src),
                               "shll $Rn",
-                              [(set i32:$Rn, (shl i32:$src, (i8 1)))]>;
+                              []>;
 
   // shll2 Rn
   let Defs = [SR] in
   def SHLL2           : InstRn<0b0100000000001000, 
                               (outs GPR:$Rn), (ins GPR:$src),
                               "shll2 $Rn",
-                              [(set i32:$Rn, (shl i32:$src, (i8 2)))]>;
+                              []>;
 
   // shll8 Rn
   def SHLL8           : InstRn<0b0100000000011000, 
                               (outs GPR:$Rn), (ins GPR:$src),
                               "shll8 $Rn",
-                              [(set i32:$Rn, (shl i32:$src, (i8 8)))]>;
+                              []>;
 
   // shll16 Rn
   def SHLL16          : InstRn<0b0100000000101000, 
                               (outs GPR:$Rn), (ins GPR:$src),
                               "shll16 $Rn",
-                              [(set i32:$Rn, (shl i32:$src, (i8 16)))]>;
+                              []>;
 
   // shlr Rn
   let Defs = [SR] in
   def SHLR            : InstRn<0b0100000000000001, 
                               (outs GPR:$Rn), (ins GPR:$src),
                               "shlr $Rn",
-                              [(set i32:$Rn, (srl i32:$src, (i8 1)))]>;
+                              []>;
 
   // shlr2 Rn
   def SHLR2           : InstRn<0b0100000000001001, 
                               (outs GPR:$Rn), (ins GPR:$src),
                               "shlr2 $Rn",
-                              [(set i32:$Rn, (srl i32:$src, (i8 2)))]>;
+                              []>;
 
   // shlr8 Rn
   def SHLR8           : InstRn<0b0100000000011001, 
                               (outs GPR:$Rn), (ins GPR:$src),
                               "shlr8 $Rn",
-                              [(set i32:$Rn, (srl i32:$src, (i8 8)))]>;
+                              []>;
 
   // shlr16 Rn
   def SHLR16          : InstRn<0b0100000000101001, 
                               (outs GPR:$Rn), (ins GPR:$src),
                               "shlr16 $Rn",
-                              [(set i32:$Rn, (srl i32:$src, (i8 16)))]>;
+                              []>;
 
 }
 
@@ -1421,7 +1421,6 @@ def MOVLLFR : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
 
 // STORE TO FRAME
 let mayStore = 1, Defs = [R0, R1], Uses = [R0, R1] in {
-
 def MOVBSFR : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
                            "! MOVBSFR $src, $dst",
                            [(truncstorei8 i32:$src, addr:$dst)]>;
@@ -1433,6 +1432,40 @@ def MOVWSFR : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
 def MOVLSFR : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
                            "! MOVLSFR $src, $dst",
                            [(store i32:$src, addr:$dst)]>;
+}
+
+//===--------------------------------------------------------------------------===//
+// Shifts
+//===--------------------------------------------------------------------------===//
+
+// Shift by immediate
+let Defs = [SR], Constraints = "$src = $dst" in {
+def SHLri       : SHPseudo<(outs GPR:$dst), (ins GPR:$src, i32imm:$shift),
+                          "! SHL $src, $shift",
+                          []>;
+
+def SHRri       : SHPseudo<(outs GPR:$dst), (ins GPR:$src, i32imm:$shift),
+                          "! SHR $src, $shift",
+                          []>;
+
+def SRAri       : SHPseudo<(outs GPR:$dst), (ins GPR:$src, i32imm:$shift),
+                          "! SRA $src, $shift",
+                          []>;
+}
+
+// Shift by register
+let Defs = [SR], Constraints = "$src1 = $dst" in {
+def SHLrr       : SHPseudo<(outs GPR:$dst), (ins GPR:$src1, GPR:$src2),
+                          "! SHL $src1, $src2",
+                          []>;
+
+def SHRrr       : SHPseudo<(outs GPR:$dst), (ins GPR:$src1, GPR:$src2),
+                          "! SHR $src1, $src2",
+                          []>;
+
+def SRArr       : SHPseudo<(outs GPR:$dst), (ins GPR:$src1, GPR:$src2),
+                          "! SRA $src1, $src2",
+                          []>;
 }
 
 //===--------------------------------------------------------------------------===//
@@ -1470,6 +1503,16 @@ def ADJCALLSTACKUP : SHPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 //                            Non-Instruction Patterns
 //===--------------------------------------------------------------------------===//
 //===--------------------------------------------------------------------------===//
+
+//===--------------------------------------------------------------------------===//
+// Shifts
+//===--------------------------------------------------------------------------===//
+def : Pat<(i32 (shl i32:$src, (i32 timm:$shift))),  (SHLri GPR:$src,  i32imm:$shift)>;
+def : Pat<(i32 (srl i32:$src, (i32 timm:$shift))),  (SHRri GPR:$src,  i32imm:$shift)>;
+def : Pat<(i32 (sra i32:$src, (i32 timm:$shift))),  (SRAri GPR:$src,  i32imm:$shift)>;
+def : Pat<(i32 (shl i32:$src1, i32:$src2)),         (SHLrr GPR:$src1, GPR:$src2)>;
+def : Pat<(i32 (srl i32:$src1, i32:$src2)),         (SHRrr GPR:$src1, GPR:$src2)>;
+def : Pat<(i32 (sra i32:$src1, i32:$src2)),         (SRArr GPR:$src1, GPR:$src2)>;
 
 //===--------------------------------------------------------------------------===//
 // Zero-Extend Load

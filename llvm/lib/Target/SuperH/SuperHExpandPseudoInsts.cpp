@@ -77,6 +77,7 @@ static int64_t getOffsetForStackOffset(const MachineFrameInfo &MFI, int64_t Stac
 
 
 
+
 //===----------------------------------------------------------------------===//
 //                              Frame Stores
 //===----------------------------------------------------------------------===//
@@ -311,6 +312,186 @@ bool SuperHExpandPseudo::expand<SH::MOVLLFR>(Block &MBB, BlockIt MBBI) {
 
 
 
+
+//===----------------------------------------------------------------------===//
+//                              Bit Shifting
+//===----------------------------------------------------------------------===//
+
+template <>
+bool SuperHExpandPseudo::expand<SH::SHLri>(Block &MBB, BlockIt MBBI) {
+  const DebugLoc &DL = MBBI->getDebugLoc();
+  MachineInstr &MI = *MBBI;
+  const MachineFunction &MF = *MBB.getParent();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  auto DstReg = MI.getOperand(0).getReg();
+  auto SrcReg = MI.getOperand(1).getReg();
+  int64_t Offset = MI.getOperand(2).getImm();
+
+  while(Offset > 0) {
+
+    if (Offset > 16) {
+      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL16), DstReg)
+        .addReg(SrcReg);
+
+      Offset -= 16;
+      continue;
+    }
+
+    if (Offset > 8) {
+      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL8), DstReg)
+        .addReg(SrcReg);
+
+      Offset -= 8;
+      continue;
+    }
+
+    if (Offset > 2) {
+      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL2), DstReg)
+        .addReg(SrcReg);
+
+      Offset -= 2;
+      continue;
+    }
+
+    BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL), DstReg)
+      .addReg(SrcReg);
+    Offset -= 1;
+    continue;
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
+template <>
+bool SuperHExpandPseudo::expand<SH::SHRri>(Block &MBB, BlockIt MBBI) {
+  const DebugLoc &DL = MBBI->getDebugLoc();
+  MachineInstr &MI = *MBBI;
+  const MachineFunction &MF = *MBB.getParent();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  auto DstReg = MI.getOperand(0).getReg();
+  auto SrcReg = MI.getOperand(1).getReg();
+  int64_t Offset = MI.getOperand(2).getImm();
+
+  while(Offset > 0) {
+    
+    if (Offset > 16) {
+      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR16), DstReg)
+        .addReg(SrcReg);
+
+      Offset -= 16;
+      continue;
+    }
+
+    if (Offset > 8) {
+      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR8), DstReg)
+        .addReg(SrcReg);
+
+      Offset -= 8;
+      continue;
+    }
+
+    if (Offset > 2) {
+      BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR2), DstReg)
+        .addReg(SrcReg);
+
+      Offset -= 2;
+      continue;
+    }
+
+    BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR), DstReg)
+      .addReg(SrcReg);
+    Offset -= 1;
+    continue;
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
+template <>
+bool SuperHExpandPseudo::expand<SH::SRAri>(Block &MBB, BlockIt MBBI) {
+  const DebugLoc &DL = MBBI->getDebugLoc();
+  MachineInstr &MI = *MBBI;
+  const MachineFunction &MF = *MBB.getParent();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  auto DstReg = MI.getOperand(0).getReg();
+  auto SrcReg = MI.getOperand(1).getReg();
+  int64_t Offset = MI.getOperand(2).getImm();
+
+  while(Offset > 0) {
+    BuildMI(MBB, MBBI, DL, TII->get(SH::SHAR), DstReg)
+      .addReg(SrcReg);
+    Offset -= 1;
+  }
+
+  MI.eraseFromParent();
+  return true;
+}
+
+template <>
+bool SuperHExpandPseudo::expand<SH::SHLrr>(Block &MBB, BlockIt MBBI) {
+  const DebugLoc &DL = MBBI->getDebugLoc();
+  MachineInstr &MI = *MBBI;
+
+  auto Src1Reg = MI.getOperand(1).getReg();
+  auto Src2Reg = MI.getOperand(2).getReg();
+
+  BuildMI(MBB, MBBI, DL, TII->get(SH::SHLL))
+    .addReg(Src1Reg);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::DT))
+    .addReg(Src2Reg);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::BF))
+    .addImm(-4);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+template <>
+bool SuperHExpandPseudo::expand<SH::SHRrr>(Block &MBB, BlockIt MBBI) {
+  const DebugLoc &DL = MBBI->getDebugLoc();
+  MachineInstr &MI = *MBBI;
+
+  auto Src1Reg = MI.getOperand(1).getReg();
+  auto Src2Reg = MI.getOperand(2).getReg();
+
+  BuildMI(MBB, MBBI, DL, TII->get(SH::SHLR))
+    .addReg(Src1Reg);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::DT))
+    .addReg(Src2Reg);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::BF))
+    .addImm(-4);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+template <>
+bool SuperHExpandPseudo::expand<SH::SRArr>(Block &MBB, BlockIt MBBI) {
+  const DebugLoc &DL = MBBI->getDebugLoc();
+  MachineInstr &MI = *MBBI;
+
+  auto Src1Reg = MI.getOperand(1).getReg();
+  auto Src2Reg = MI.getOperand(2).getReg();
+
+  BuildMI(MBB, MBBI, DL, TII->get(SH::SHAR))
+    .addReg(Src1Reg);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::DT))
+    .addReg(Src2Reg);
+  BuildMI(MBB, MBBI, DL, TII->get(SH::BF))
+    .addImm(-4);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+
+
+
 //===----------------------------------------------------------------------===//
 //                            General Interface
 //===----------------------------------------------------------------------===//
@@ -375,6 +556,12 @@ bool SuperHExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
     EXPAND(SH::MOVBLFR);
     EXPAND(SH::MOVWLFR);
     EXPAND(SH::MOVLLFR);
+    EXPAND(SH::SHLri);
+    EXPAND(SH::SHRri);
+    EXPAND(SH::SRAri);
+    EXPAND(SH::SHLrr);
+    EXPAND(SH::SHRrr);
+    EXPAND(SH::SRArr);
   }
 #undef EXPAND
   return false;
