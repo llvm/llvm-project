@@ -33,7 +33,7 @@ int main(int, char**) {
 
 #if TEST_STD_VER >= 14
   try { // Throw in vector(size_type, const allocator_type&) from allocator
-    throwing_allocator<bool> alloc(/*throw_on_ctor = */ false, /*throw_on_allocation = */ true);
+    throwing_allocator<bool> alloc((throwing_on_allocation_tag()));
     AllocVec get_alloc(1, alloc);
     assert(false);
   } catch (int) {
@@ -42,7 +42,7 @@ int main(int, char**) {
 #endif // TEST_STD_VER >= 14
 
   try { // Throw in vector(size_type, const value_type&, const allocator_type&) from allocator
-    throwing_allocator<bool> alloc(/*throw_on_ctor = */ false, /*throw_on_allocation = */ true);
+    throwing_allocator<bool> alloc((throwing_on_allocation_tag()));
     AllocVec get_alloc(1, true, alloc);
     assert(false);
   } catch (int) {
@@ -94,7 +94,7 @@ int main(int, char**) {
 
   try { // Throw in vector(InputIterator, InputIterator, const allocator_type&) from allocator
     bool a[] = {true, false};
-    throwing_allocator<bool> alloc(/*throw_on_ctor = */ false, /*throw_on_allocation = */ true);
+    throwing_allocator<bool> alloc((throwing_on_allocation_tag()));
     AllocVec vec(cpp17_input_iterator<bool*>(a), cpp17_input_iterator<bool*>(a + 2), alloc);
     assert(false);
   } catch (int) {
@@ -103,7 +103,7 @@ int main(int, char**) {
 
   try { // Throw in vector(InputIterator, InputIterator, const allocator_type&) from allocator
     bool a[] = {true, false};
-    throwing_allocator<bool> alloc(/*throw_on_ctor = */ false, /*throw_on_allocation = */ true);
+    throwing_allocator<bool> alloc((throwing_on_allocation_tag()));
     AllocVec vec(forward_iterator<bool*>(a), forward_iterator<bool*>(a + 2), alloc);
     assert(false);
   } catch (int) {
@@ -112,7 +112,7 @@ int main(int, char**) {
 
 #if TEST_STD_VER >= 11
   try { // Throw in vector(const vector&, const allocator_type&) from allocator
-    throwing_allocator<bool> alloc(/*throw_on_ctor = */ false, /*throw_on_allocation = */ false);
+    throwing_allocator<bool> alloc((permitting_allocation_tag()));
     AllocVec vec(alloc);
     vec.push_back(true);
     alloc.throw_on_allocation_ = true;
@@ -123,7 +123,7 @@ int main(int, char**) {
   check_new_delete_called();
 
   try { // Throw in vector(vector&&, const allocator_type&) from allocator
-    throwing_allocator<bool> alloc(/*throw_on_ctor = */ false, /*throw_on_allocation = */ false);
+    throwing_allocator<bool> alloc((permitting_allocation_tag()));
     AllocVec vec(alloc);
     vec.push_back(true);
     alloc.throw_on_allocation_ = true;
@@ -135,7 +135,7 @@ int main(int, char**) {
   check_new_delete_called();
 
   try { // Throw in vector(initializer_list<value_type>, const allocator_type&) constructor from allocator
-    throwing_allocator<bool> alloc(/*throw_on_ctor = */ false, /*throw_on_allocation = */ true);
+    throwing_allocator<bool> alloc((throwing_on_allocation_tag()));
     AllocVec vec({true, true}, alloc);
     assert(false);
   } catch (int) {

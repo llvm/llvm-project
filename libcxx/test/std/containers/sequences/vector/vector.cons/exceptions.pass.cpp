@@ -49,7 +49,7 @@ int main(int, char**) {
   check_new_delete_called();
 
   try { // Throw in vector(size_type, const allocator_type&) from allocator
-    throwing_allocator<int> alloc(/*throw_on_ctor = */ false, /*throw_on_allocation = */ true);
+    throwing_allocator<int> alloc((throwing_on_allocation_tag()));
     AllocVec get_alloc(1, alloc);
     assert(false);
   } catch (int) {
@@ -118,7 +118,7 @@ int main(int, char**) {
 
   try { // Throw in vector(InputIterator, InputIterator, const allocator_type&) from allocator
     int a[] = {1, 2};
-    throwing_allocator<int> alloc(/*throw_on_ctor = */ false, /*throw_on_allocation = */ true);
+    throwing_allocator<int> alloc((throwing_on_allocation_tag()));
     AllocVec vec(cpp17_input_iterator<int*>(a), cpp17_input_iterator<int*>(a + 2), alloc);
     assert(false);
   } catch (int) {
@@ -127,7 +127,7 @@ int main(int, char**) {
 
   try { // Throw in vector(InputIterator, InputIterator, const allocator_type&) from allocator
     int a[] = {1, 2};
-    throwing_allocator<int> alloc(/*throw_on_ctor = */ false, /*throw_on_allocation = */ true);
+    throwing_allocator<int> alloc((throwing_on_allocation_tag()));
     AllocVec vec(forward_iterator<int*>(a), forward_iterator<int*>(a + 2), alloc);
     assert(false);
   } catch (int) {

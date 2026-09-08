@@ -143,6 +143,9 @@ struct throwing_data {
   friend bool operator!=(const throwing_data& lhs, const throwing_data& rhs) { return !(lhs == rhs); }
 };
 
+struct permitting_allocation_tag {};
+struct throwing_on_allocation_tag {};
+
 template <class T>
 struct throwing_allocator {
   using value_type = T;
@@ -150,16 +153,11 @@ struct throwing_allocator {
   bool throw_on_allocation_ = false;
   int payload_              = 0;
 
-  explicit throwing_allocator(bool throw_on_ctor = true) {
-    if (throw_on_ctor)
-      throw 0;
-  }
+  explicit throwing_allocator() { throw 0; }
 
-  explicit throwing_allocator(bool throw_on_ctor, bool throw_on_allocation)
-      : throw_on_allocation_(throw_on_allocation) {
-    if (throw_on_ctor)
-      throw 0;
-  }
+  explicit throwing_allocator(permitting_allocation_tag) : throw_on_allocation_(false) {}
+
+  explicit throwing_allocator(throwing_on_allocation_tag) : throw_on_allocation_(true) {}
 
   throwing_allocator(const throwing_allocator& rhs) TEST_NOEXCEPT
       : throw_on_allocation_(rhs.throw_on_allocation_),
