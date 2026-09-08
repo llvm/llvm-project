@@ -14,6 +14,8 @@
 #include <__functional/function_ref.h>
 #include <__memory/unique_ptr.h> // for default_delete
 #include <__rcu/rcu_domain.h>
+#include <__type_traits/is_assignable.h>
+#include <__type_traits/is_constructible.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -26,14 +28,20 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Dp = default_delete<_Tp>>
 class rcu_obj_base : private __rcu_node {
+  static_assert(std::is_default_constructible_v<_Dp>);
+  static_assert(std::is_move_assignable_v<_Dp>);
+  static_assert(requires(_Tp* __ptr, _Dp __d) { __d(__ptr); }, "Deleter must be callable with an object pointer.");
+
 public:
   _LIBCPP_HIDE_FROM_ABI void retire(_Dp __deleter = _Dp(), rcu_domain& __dom = rcu_default_domain()) noexcept {
-    __deleter_ = std::move(__deleter);
+    static_assert(std::is_base_of_v<rcu_obj_base, _Tp>, "T must be an rcu-protectable type.");
+    __deleter_  = std::move(__deleter);
+    __callback_ = function_ref<void()>(std::cw<&rcu_obj_base::__destroy>, this);
     __dom.__retire(this);
   }
 
 protected:
-  _LIBCPP_HIDE_FROM_ABI rcu_obj_base() { __callback_ = function_ref<void()>(std::cw<&rcu_obj_base::__destroy>, this); }
+  _LIBCPP_HIDE_FROM_ABI rcu_obj_base()                               = default;
   _LIBCPP_HIDE_FROM_ABI rcu_obj_base(const rcu_obj_base&)            = default;
   _LIBCPP_HIDE_FROM_ABI rcu_obj_base(rcu_obj_base&&)                 = default;
   _LIBCPP_HIDE_FROM_ABI rcu_obj_base& operator=(const rcu_obj_base&) = default;
