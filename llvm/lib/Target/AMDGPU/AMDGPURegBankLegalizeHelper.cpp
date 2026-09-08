@@ -759,11 +759,6 @@ bool RegBankLegalizeHelper::lowerV_BFE(MachineInstr &MI) {
     WidthImm = ConstWidth->Value.getZExtValue();
     if (IsIntrinsic) {
       WidthImm &= 63;
-      if (WidthImm == 0) {
-        B.buildConstant(Dst, 0);
-        MI.eraseFromParent();
-        return true;
-      }
       // The Width operand is out of range, use the masked value.
       if (WidthImm != ConstWidth->Value.getZExtValue())
         Width = B.buildConstant(VgprRB_I32, WidthImm).getReg(0);

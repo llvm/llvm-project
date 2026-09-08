@@ -668,4 +668,40 @@ TEST_F(AArch64GISelMITest, TestConstantFoldICMP) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+TEST_F(AArch64GISelMITest, TestConstantFoldBFX) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT s32 = LLT::scalar(32);
+  LLT s64 = LLT::scalar(64);
+
+  GISelCSEInfo CSEInfo;
+  CSEInfo.setCSEConfig(std::make_unique<CSEConfigConstantOnly>());
+  CSEInfo.analyze(*MF);
+  B.setCSEInfo(&CSEInfo);
+  CSEMIRBuilder CSEB(B.getState());
+
+  auto Lsb = CSEB.buildConstant(s32, 4);
+  auto Width0 = CSEB.buildConstant(s32, 0);
+  auto Width8 = CSEB.buildConstant(s32, 8);
+
+  // A zero-width extract always folds to 0, regardless of Src.
+  auto *Ubfx0 = &*CSEB.buildUbfx(s64, Copies[0], Lsb, Width0);
+  EXPECT_TRUE(Ubfx0->getOpcode() == TargetOpcode::G_CONSTANT);
+  EXPECT_EQ(Ubfx0->getOperand(1).getCImm()->getZExtValue(), 0U);
+
+  auto *Sbfx0 = &*CSEB.buildSbfx(s64, Copies[0], Lsb, Width0);
+  EXPECT_TRUE(Sbfx0->getOpcode() == TargetOpcode::G_CONSTANT);
+  EXPECT_EQ(Sbfx0->getOperand(1).getCImm()->getZExtValue(), 0U);
+
+  // Non-zero constant width, or non-constant width: no fold.
+  auto *Ubfx8 = &*CSEB.buildUbfx(s64, Copies[0], Lsb, Width8);
+  EXPECT_TRUE(Ubfx8->getOpcode() == TargetOpcode::G_UBFX);
+
+  auto TruncWidth = CSEB.buildInstr(TargetOpcode::G_TRUNC, {s32}, {Copies[1]});
+  auto *SbfxVar = &*CSEB.buildSbfx(s64, Copies[0], Lsb, TruncWidth);
+  EXPECT_TRUE(SbfxVar->getOpcode() == TargetOpcode::G_SBFX);
+}
+
 } // namespace
