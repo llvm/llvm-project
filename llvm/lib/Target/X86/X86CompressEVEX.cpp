@@ -577,7 +577,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
 
   // Keep the EVEX encoding when there's 1-byte compressed disp8*N.
   if (hasShorterEVEXViaCDisp8(MI))
-    return 0;
+    return false;
 
   // Specialized mask-producing folds to MOVMSK/VBLENDV first.
   if (tryCompressMaskProducer(MI, MBB, ST, ToErase))
