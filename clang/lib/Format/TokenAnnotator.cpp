@@ -6724,6 +6724,11 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     return false;
   }
 
+  if (Style.BraceWrapping.AfterRequiresExpression &&
+      Right.is(TT_RequiresExpressionLBrace)) {
+    return true;
+  }
+
   auto ShortLambdaOption = Style.AllowShortLambdasOnASingleLine;
   if (Style.BraceWrapping.BeforeLambdaBody && Right.is(TT_LambdaLBrace)) {
     if (isAllmanLambdaBrace(Left))

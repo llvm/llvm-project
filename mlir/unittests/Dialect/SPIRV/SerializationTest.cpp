@@ -412,14 +412,15 @@ TEST_F(SerializationTest, LongSpecConstantCompositeIsSplit) {
   constituents.reserve(kLongCompositeSize);
   for (unsigned i = 0; i < kLongCompositeSize; ++i) {
     std::string name = ("sc" + Twine(i)).str();
-    auto sc =
-        spirv::SpecConstantOp::create(builder, loc, builder.getStringAttr(name),
-                                      builder.getI32IntegerAttr(0));
+    auto sc = spirv::SpecConstantOp::create(
+        builder, loc, builder.getStringAttr(name), builder.getI32IntegerAttr(0),
+        /*sym_visibility=*/nullptr);
     constituents.push_back(SymbolRefAttr::get(sc));
   }
   spirv::SpecConstantCompositeOp::create(builder, loc, TypeAttr::get(arrayType),
                                          builder.getStringAttr("long_scc"),
-                                         builder.getArrayAttr(constituents));
+                                         builder.getArrayAttr(constituents),
+                                         /*sym_visibility=*/nullptr);
 
   ASSERT_TRUE(succeeded(spirv::serialize(module.get(), binary)));
   EXPECT_TRUE(allInstructionsWithinWordLimit(binary));

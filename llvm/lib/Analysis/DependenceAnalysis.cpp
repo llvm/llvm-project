@@ -2743,17 +2743,15 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
   const SCEV *DstEv = SE->getMinusSCEV(DstSCEV, DstBase);
 
   // Check that memory access offsets are multiples of element sizes.
-  if (!SE->isKnownMultipleOf(SrcEv, EltSize, Assume) ||
-      !SE->isKnownMultipleOf(DstEv, EltSize, Assume)) {
+  // Add to Assume if only runtime assumptions are allowed.
+  if (!SE->isKnownMultipleOf(SrcEv, EltSize,
+                             UnderRuntimeAssumptions ? &Assume : nullptr) ||
+      !SE->isKnownMultipleOf(DstEv, EltSize,
+                             UnderRuntimeAssumptions ? &Assume : nullptr)) {
     LLVM_DEBUG(dbgs() << "can't analyze SCEV with different offsets\n");
     return std::make_unique<Dependence>(Src, Dst,
                                         SCEVUnionPredicate(Assume, *SE));
   }
-
-  // Runtime assumptions needed but not allowed.
-  if (!Assume.empty() && !UnderRuntimeAssumptions)
-    return std::make_unique<Dependence>(Src, Dst,
-                                        SCEVUnionPredicate(Assume, *SE));
 
   unsigned Pairs = 1;
   SmallVector<Subscript, 2> Pair(Pairs);

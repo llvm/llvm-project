@@ -272,6 +272,10 @@ def __builtin_amdgcn_struct_buffer_store_format_v4f16 : AMDGPUBuiltin<"void(_Ext
 def __builtin_amdgcn_raw_ptr_buffer_atomic_add_i32 : AMDGPUBuiltin<"int(int, __amdgpu_buffer_rsrc_t, int, int, _Constant int)">;
 
 def __builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f32 : AMDGPUBuiltin<"float(float, __amdgpu_buffer_rsrc_t, int, int, _Constant int)", [], "atomic-fadd-rtn-insts">;
+def __builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f64 : AMDGPUBuiltin<"double(double, __amdgpu_buffer_rsrc_t, int, int, _Constant int)", [], "flat-buffer-global-fadd-f64-inst"> {
+  let Documentation = [DocRawPtrBufferAtomicFAddF64];
+  let ArgNames = ["vdata", "rsrc", "offset", "soffset", "aux"];
+}
 def __builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16 : AMDGPUBuiltin<"_ExtVector<2, _Float16>(_ExtVector<2, _Float16>, __amdgpu_buffer_rsrc_t, int, int, _Constant int)", [], "atomic-buffer-global-pk-add-f16-insts">;
 
 def __builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f32 : AMDGPUBuiltin<"float(float, __amdgpu_buffer_rsrc_t, int, int, _Constant int)", [], "atomic-fmin-fmax-global-f32">;

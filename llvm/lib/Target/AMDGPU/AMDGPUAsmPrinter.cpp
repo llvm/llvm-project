@@ -32,7 +32,6 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDKernelCodeTUtils.h"
 #include "Utils/SIDefinesUtils.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinterAnalysis.h"
@@ -386,7 +385,26 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 }
 
 bool AMDGPUAsmPrinter::doInitialization(Module &M) {
-  const llvm::Triple &TT = M.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
+  if (TT.getSubArch() == Triple::NoSubArch) {
+    Triple::SubArchType SubArch =
+        AMDGPU::getSubArch(AMDGPU::parseArchAMDGCN(getGlobalSTI()->getCPU()));
+    if (SubArch != Triple::NoSubArch) {
+      Triple Fixed(TT);
+      Fixed.setArch(Triple::amdgpu, SubArch);
+      M.getContext().diagnose(DiagnosticInfoGeneric(
+          "codegen with no subarch in the target triple is deprecated and will "
+          "become an error; use the target triple '" +
+              Fixed.str() + "' instead",
+          DS_Warning));
+    } else {
+      M.getContext().diagnose(DiagnosticInfoGeneric(
+          "codegen with no subarch in the target triple is deprecated and will "
+          "become an error",
+          DS_Warning));
+    }
+  }
+
   CodeObjectVersion = AMDGPU::getAMDHSACodeObjectVersion(M);
 
   if (TT.getOS() == Triple::AMDHSA) {
@@ -419,7 +437,7 @@ const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
                                     const MCExpr *NumVGPRs,
                                     unsigned DynamicVGPRBlockSize,
                                     const GCNSubtarget &STM, MCContext &Ctx) {
-  unsigned MaxWaves = IsaInfo::getMaxWavesPerEU(STM);
+  unsigned MaxWaves = STM.getMaxWavesPerEU();
   unsigned Granule = IsaInfo::getVGPRAllocGranule(STM, DynamicVGPRBlockSize);
   unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(STM);
 

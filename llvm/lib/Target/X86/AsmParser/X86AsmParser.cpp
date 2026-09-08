@@ -15,7 +15,6 @@
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "TargetInfo/X86TargetInfo.h"
 #include "X86Operand.h"
-#include "X86RegisterInfo.h"
 #include "llvm-c/Visibility.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"

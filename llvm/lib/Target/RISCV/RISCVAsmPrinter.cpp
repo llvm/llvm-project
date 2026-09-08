@@ -1330,7 +1330,7 @@ void RISCVAsmPrinter::emitMachineConstantPoolValue(
 MaybeAlign
 RISCVAsmPrinter::getRequiredGlobalAlignmentGranule(const GlobalVariable &GV) {
   const MCSubtargetInfo &MCSTI = TM.getMCSubtargetInfo();
-  if (!GV.getType()->isSized())
+  if (!GV.getValueType()->isSized())
     return std::nullopt;
 
   uint64_t Size = GV.getGlobalSize(getDataLayout());

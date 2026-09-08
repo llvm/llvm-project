@@ -17,7 +17,7 @@ load(
     "mlir_c_api_cc_library",
 )
 load(":linalggen.bzl", "genlinalg")
-load(":tblgen.bzl", "gentbl_cc_library", "td_library")
+load(":tblgen.bzl", "gentbl_cc_library", "gentbl_sharded_op_defs", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -95,33 +95,24 @@ filegroup(
 
 exports_files(glob(["include/**/*.td"]))
 
-gentbl_cc_library(
-    name = "RegionKindInterfaceIncGen",
-    tbl_outs = {
-        "include/mlir/IR/RegionKindInterface.h.inc": ["-gen-op-interface-decls"],
-        "include/mlir/IR/RegionKindInterface.cpp.inc": ["-gen-op-interface-defs"],
-        "include/mlir/IR/RegionKindInterfaceAttrInterface.h.inc": ["-gen-attr-interface-decls"],
-        "include/mlir/IR/RegionKindInterfaceAttrInterface.cpp.inc": ["-gen-attr-interface-defs"],
-    },
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/IR/RegionKindInterface.td",
-    deps = [":OpBaseTdFiles"],
-)
-
-gentbl_cc_library(
-    name = "SymbolInterfacesIncGen",
-    tbl_outs = {
-        "include/mlir/IR/SymbolInterfaces.h.inc": ["-gen-op-interface-decls"],
-        "include/mlir/IR/SymbolInterfaces.cpp.inc": ["-gen-op-interface-defs"],
-        "include/mlir/IR/SymbolInterfacesAttrInterface.h.inc": ["-gen-attr-interface-decls"],
-        "include/mlir/IR/SymbolInterfacesAttrInterface.cpp.inc": ["-gen-attr-interface-defs"],
-        "include/mlir/IR/SymbolInterfacesTypeInterface.h.inc": ["-gen-type-interface-decls"],
-        "include/mlir/IR/SymbolInterfacesTypeInterface.cpp.inc": ["-gen-type-interface-defs"],
-    },
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/IR/SymbolInterfaces.td",
-    deps = [":OpBaseTdFiles"],
-)
+[
+    gentbl_cc_library(
+        name = name + "IncGen",
+        tbl_outs = {
+            "include/mlir/IR/" + name + ".h.inc": ["-gen-op-interface-decls"],
+            "include/mlir/IR/" + name + ".cpp.inc": ["-gen-op-interface-defs"],
+            "include/mlir/IR/" + name + "AttrInterface.h.inc": ["-gen-attr-interface-decls"],
+            "include/mlir/IR/" + name + "AttrInterface.cpp.inc": ["-gen-attr-interface-defs"],
+        },
+        tblgen = ":mlir-tblgen",
+        td_file = "include/mlir/IR/" + name + ".td",
+        deps = [":OpBaseTdFiles"],
+    )
+    for name in [
+        "RegionKindInterface",
+        "SymbolInterfaces",
+    ]
+]
 
 gentbl_cc_library(
     name = "OpAsmInterfaceIncGen",
@@ -1623,6 +1614,7 @@ td_library(
         ":FuncTdFiles",
         ":InferIntDivisibilityOpInterfaceTdFiles",
         ":LoopLikeInterfaceTdFiles",
+        ":MemorySlotInterfacesTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
@@ -3994,6 +3986,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArithUtils",
+        ":ControlFlowInterfaces",
         ":DialectUtils",
         ":GPUDialect",
         ":IR",
@@ -4171,6 +4164,8 @@ cc_library(
         ":InliningUtils",
         ":LoopLikeInterface",
         ":MemRefDialect",
+        ":MemorySlotInterfaces",
+        ":MemorySlotUtils",
         ":ShapedOpInterfaces",
         ":Support",
         ":UBDialect",
@@ -4637,6 +4632,23 @@ cc_library(
     deps = [
         ":DataLayoutInterfacesIncGen",
         ":IR",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "ABI",
+    srcs = [
+        "lib/ABI/ABITypeMapper.cpp",
+        "lib/ABI/Targets/Test/TestTarget.cpp",
+    ],
+    hdrs = glob(["include/mlir/ABI/**/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":DataLayoutInterfaces",
+        ":FunctionInterfaces",
+        ":IR",
+        "//llvm:ABI",
         "//llvm:Support",
     ],
 )
@@ -5497,6 +5509,7 @@ cc_library(
             "lib/Dialect/LLVMIR/IR/*.h",
         ],
         exclude = [
+            "lib/Dialect/LLVMIR/IR/LLVMOps.cpp",
             "lib/Dialect/LLVMIR/IR/*AMX*.cpp",
             "lib/Dialect/LLVMIR/IR/*AMX*.h",
             "lib/Dialect/LLVMIR/IR/*ArmSVE*.cpp",
@@ -5513,6 +5526,10 @@ cc_library(
             "lib/Dialect/LLVMIR/IR/XeVM*.cpp",
             "lib/Dialect/LLVMIR/IR/XeVM*.h",
         ],
+    ) + gentbl_sharded_op_defs(
+        name = "LLVMOps_sharded_defs",
+        shard_count = 8,
+        source_file = "lib/Dialect/LLVMIR/IR/LLVMOps.cpp",
     ),
     hdrs = glob(
         ["include/mlir/Dialect/LLVMIR/*.h"],
@@ -5527,7 +5544,10 @@ cc_library(
             "include/mlir/Dialect/LLVMIR/XeVM*.h",
         ],
     ),
-    includes = ["include"],
+    includes = [
+        "include",
+        "lib/Dialect/LLVMIR",
+    ],
     deps = [
         ":BytecodeDialectInterfaceIncGen",
         ":BytecodeOpInterface",
@@ -5538,6 +5558,7 @@ cc_library(
         ":IR",
         ":InferTypeOpInterface",
         ":InliningUtils",
+        ":LLVMAllOpsIncGen",
         ":LLVMDialectBytecodeIncGen",
         ":LLVMDialectInterfaceIncGen",
         ":LLVMIntrinsicOpsIncGen",
@@ -6356,6 +6377,23 @@ gentbl_cc_library(
     },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/LLVMOps.td",
+    deps = [":LLVMOpsTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "LLVMAllOpsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/LLVMIR/LLVMAllOps.h.inc": [
+            "-gen-op-decls",
+            "-op-shard-count=8",
+        ],
+        "include/mlir/Dialect/LLVMIR/LLVMAllOps.cpp.inc": [
+            "-gen-op-defs",
+            "-op-shard-count=8",
+        ],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/LLVMIR/LLVMAllOps.td",
     deps = [":LLVMOpsTdFiles"],
 )
 
@@ -8218,6 +8256,7 @@ cc_library(
     hdrs = [
         "include/mlir/Transforms/BubbleDownMemorySpaceCasts.h",
         "include/mlir/Transforms/CSE.h",
+        "include/mlir/Transforms/CompositePass.h",
         "include/mlir/Transforms/EndomorphismSimplification.h",
         "include/mlir/Transforms/HomomorphismSimplification.h",
         "include/mlir/Transforms/LocationSnapshot.h",
@@ -10726,6 +10765,7 @@ cc_library(
         ":DialectUtils",
         ":FuncDialect",
         ":FunctionInterfaces",
+        ":GPUDialect",
         ":IR",
         ":LLVMDialect",
         ":MemRefDialect",
@@ -11012,6 +11052,7 @@ cc_library(
         ":OpenACCDialect",
         ":OpenACCUtils",
         ":Pass",
+        ":SideEffectInterfaces",
         ":Transforms",
         "//llvm:Support",
     ],

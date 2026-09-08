@@ -252,7 +252,7 @@ public:
       // Under -gpu=mem:unified, plain host module-scope variables (no
       // explicit CUF data attribute, not a constant) get a no-body
       // declaration in the GPU module: clear the body, init value, and
-      // linkName. With no linkName, the LLVM lowering uses the default
+      // linkage. With no linkage, the LLVM lowering uses the default
       // External linkage (see convertLinkage in CodeGen.cpp), so an
       // initializer-less global emits as `.extern .global ...` in PTX.
       // The host-side definition stays. CUFAddConstructor will emit
@@ -263,15 +263,15 @@ public:
           !globalOp.getDataAttrAttr()) {
         clonedGlobal.getRegion().getBlocks().clear();
         clonedGlobal.removeInitValAttr();
-        clonedGlobal.removeLinkNameAttr();
+        clonedGlobal.removeLinkageAttr();
       }
       // Registered CUDA globals with internal linkage must have a visible
       // device symbol so runtime lookups (cudaGetSymbolAddress) can resolve
       // them. Drop internal linkage from the GPU clone so it uses default
       // external linkage.
       if (cuf::isRegisteredDeviceGlobal(globalOp) &&
-          globalOp.getLinkName() == "internal")
-        clonedGlobal.removeLinkNameAttr();
+          globalOp.getLinkage() == fir::LinkageEnum::Internal)
+        clonedGlobal.removeLinkageAttr();
       gpuSymTable.insert(cloned);
     }
     // Type-info globals for mutually recursive derived types form initializer

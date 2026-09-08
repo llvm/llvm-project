@@ -2,6 +2,7 @@
 
 from mlir.ir import *
 from mlir.dialects import transform
+from mlir.dialects.transform import structured
 from mlir.dialects.transform import pdl as transform_pdl
 
 
@@ -299,6 +300,19 @@ def testApplyPatternsOpWithType(module: Module):
         # CHECK: apply_patterns to
         # CHECK: transform.apply_patterns.canonicalization
         # CHECK: !transform.op<"test.dummy">
+
+
+@run
+def testApplyLinalgSwapExtractSliceWithFillPattern(module: Module):
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        with InsertionPoint(transform.ApplyPatternsOp(sequence.bodyTarget).patterns):
+            structured.apply_patterns_linalg_swap_extract_slice_with_fill()
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testApplyLinalgSwapExtractSliceWithFillPattern
+    # CHECK: transform.apply_patterns.linalg.swap_extract_slice_with_fill
 
 
 @run
