@@ -89,6 +89,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -136,6 +137,8 @@ STATISTIC(NumRetsDup, "Number of return instructions duplicated");
 STATISTIC(NumDbgValueMoved, "Number of debug value instructions moved");
 STATISTIC(NumSelectsExpanded, "Number of selects turned into branches");
 STATISTIC(NumStoreExtractExposed, "Number of store(extractelement) exposed");
+STATISTIC(NumZExtsHoisted,
+          "Number of zext instructions hoisted to source block");
 
 static cl::opt<bool> DisableBranchOpts(
     "disable-cgp-branch-opts", cl::Hidden, cl::init(false),
@@ -277,6 +280,10 @@ static cl::opt<unsigned>
 static cl::opt<bool>
     DisableDeletePHIs("disable-cgp-delete-phis", cl::Hidden, cl::init(false),
                       cl::desc("Disable elimination of dead PHI nodes."));
+
+static cl::opt<bool> EnableZExtHoisting(
+    "cgp-hoist-zext", cl::Hidden, cl::init(true),
+    cl::desc("Enable hoisting zext instructions to their source block"));
 
 namespace {
 
@@ -471,6 +478,7 @@ private:
   bool combineToUSubWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   bool combineToUAddWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
   bool unfoldPowerOf2Test(CmpInst *Cmp);
+  bool hoistZExtToSourceBlock(ZExtInst *ZExt);
   void verifyBFIUpdates(Function &F);
   bool _run(Function &F);
 };
@@ -7212,6 +7220,95 @@ bool CodeGenPrepare::canFormExtLd(
   return TLI->isExtLoad(LI, Inst, *DL);
 }
 
+/// Hoist a cross-block zext to the block where its source is defined when
+/// doing so enables additional folding, working around SelectionDAG's
+/// single-block limitation.
+///
+/// IR before:                    IR after:
+///   bb.0:                         bb.0:
+///     %a = and i16 %x, 16383       %a = and i16 %x, 16383
+///     %c = icmp eq i16 %a, 0        %w = zext i16 %a to i32  ; hoisted
+///     br i1 %c, bb.1, bb.2          %c = icmp eq i16 %a, 0
+///   bb.1:                            br i1 %c, bb.1, bb.2
+///     %w = zext i16 %a to i32     bb.1:
+///     ...                            ...  (uses %w directly)
+///
+/// x86 asm before (without hoist):  x86 asm after (with hoist):
+///   bb.0:                            bb.0:
+///     andw $16383, %ax                 andl $16383, %ecx
+///     ...                              ...
+///   bb.1:                            bb.1:
+///     movzwl %ax, %ecx                 ...  (movzwl eliminated)
+///     ...                              ...
+///
+/// SelectionDAG processes one block at a time. Without the hoist, it
+/// cannot see across the block boundary to fold zext(and(x, c)) into
+/// and(zext(x), c), so it emits a 16-bit and in bb.0 followed by a
+/// movzwl in bb.1. With the hoist, both are in bb.0 and SelectionDAG
+/// folds them into a single 32-bit andl, eliminating the movzwl.
+bool CodeGenPrepare::hoistZExtToSourceBlock(ZExtInst *ZExt) {
+  if (!EnableZExtHoisting)
+    return false;
+
+  // Source must be an instruction in a different block.
+  // Same-block cases are already handled by SelectionDAG.
+  Value *Src = ZExt->getOperand(0);
+  auto *SrcInst = dyn_cast<Instruction>(Src);
+  if (!SrcInst || SrcInst->getParent() == ZExt->getParent())
+    return false;
+
+  if (SrcInst->isTerminator())
+    return false;
+
+  Type *SrcTy = Src->getType();
+  if (!SrcTy->isIntegerTy())
+    return false;
+  unsigned SrcBitWidth = SrcTy->getIntegerBitWidth();
+  if (SrcBitWidth < 8 || SrcBitWidth >= 32)
+    return false;
+  if (TLI->isZExtFree(SrcTy, ZExt->getType()))
+    return false;
+  EVT SrcVT = TLI->getValueType(*DL, SrcTy);
+  EVT WideVT = TLI->getValueType(*DL, ZExt->getType());
+  if (!TLI->isTypeLegal(SrcVT) || !TLI->isTypeLegal(WideVT))
+    return false;
+  // Only hoist patterns SelectionDAG will actually fold. Known-zero upper
+  // bits are the precondition for that: once the zext and its source share
+  // a block, the pattern reaches DAGCombiner::visitZERO_EXTEND, whose
+  // isTruncateOf() check folds (zext (truncate x)) away when the truncated
+  // bits are already zero. Without cleared bits the zext is real work, and
+  // hoisting it to a potentially higher-frequency block is a pessimization.
+  KnownBits Known = computeKnownBits(Src, *DL);
+  if (Known.countMinLeadingZeros() == 0)
+    return false;
+  // Don't hoist when the source has another use in its own block that needs
+  // the narrow value. Such a use keeps the narrow value live alongside the
+  // widened one, so the hoist would just compute the same number in two
+  // registers. A comparison is exempt because SelectionDAG can widen its
+  // operands along with the zext, and a second zext of the same source folds
+  // the same way.
+  for (User *U : SrcInst->users()) {
+    auto *UI = dyn_cast<Instruction>(U);
+    if (!UI || UI == ZExt || UI->getParent() != SrcInst->getParent())
+      continue;
+    if (isa<ICmpInst>(UI) || isa<PHINode>(UI) || isa<ZExtInst>(UI))
+      continue;
+    return false;
+  }
+
+  LLVM_DEBUG(dbgs() << "CGP: Hoisting zext to source block: " << *ZExt << "\n");
+
+  // Place after the source, or after all PHIs if the source is a PHI.
+  if (isa<PHINode>(SrcInst))
+    ZExt->moveBefore(*SrcInst->getParent(),
+                     SrcInst->getParent()->getFirstNonPHIIt());
+  else
+    ZExt->moveAfter(SrcInst);
+
+  ++NumZExtsHoisted;
+  return true;
+}
+
 /// Move a zext or sext fed by a load into the same basic block as the load,
 /// unless conditions are unfavorable. This allows SelectionDAG to fold the
 /// extend into the load.
@@ -9009,7 +9106,13 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
           return true;
 
         bool MadeChange = optimizeExt(I);
-        return MadeChange | optimizeExtUses(I);
+        if (MadeChange | optimizeExtUses(I))
+          return true;
+
+        // If no other extension optimization applied, try hoisting a
+        // cross-block zext to its source block as a last resort.
+        if (auto *ZExt = dyn_cast<ZExtInst>(I))
+          return hoistZExtToSourceBlock(ZExt);
       }
     }
     return AnyChange;
