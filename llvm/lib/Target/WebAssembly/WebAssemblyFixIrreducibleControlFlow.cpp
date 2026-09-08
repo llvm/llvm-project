@@ -15,7 +15,7 @@
 /// it linearizes control flow, turning diamonds into two triangles, which is
 /// both unnecessary and undesirable for WebAssembly.
 ///
-/// The big picture: We recursively process each "region", WebAssembly/WebAssemblyFixIrreducibleControlFlow.cppdefined as a group
+/// The big picture: We recursively process each "region", defined as a group
 /// of blocks with a single entry and no branches back to that entry. A region
 /// may be the entire function body, or the inner part of a loop, i.e., the
 /// loop's body without branches back to the loop entry. In each region we
