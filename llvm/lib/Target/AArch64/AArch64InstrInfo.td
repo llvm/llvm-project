@@ -1259,6 +1259,16 @@ def AArch64rshrnb_pf : PatFrags<(ops node:$rs, node:$i),
 def AArch64CttzElts : SDNode<"AArch64ISD::CTTZ_ELTS", SDTypeProfile<1, 2,
                              [SDTCisInt<0>, SDTCVecEltisVT<1,i1>, SDTCisSameAs<1,2>]>, []>;
 
+// res = lastp(pg, op)
+def AArch64LastP : SDNode<"AArch64ISD::LASTP", SDTypeProfile<1, 2,
+                          [SDTCisInt<0>, SDTCVecEltisVT<1,i1>,
+                           SDTCisSameAs<1,2>]>, []>;
+
+// Find the last active element in a mask. Result 0 is a safe index and result
+// 1 is nonzero when the mask contains an active element.
+def AArch64FindLastActive : SDNode<"AArch64ISD::FIND_LAST_ACTIVE",
+    SDTypeProfile<2, 1, [SDTCisInt<0>, SDTCisVT<1, i32>, SDTCisVec<2>]>, []>;
+
 // NEON Load/Store with post-increment base updates.
 // TODO: Complete SDTypeProfile constraints.
 def AArch64ld2post : SDNode<"AArch64ISD::LD2post", SDTypeProfile<3, 2, []>,
