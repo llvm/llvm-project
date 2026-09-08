@@ -260,6 +260,29 @@ static bool willLowerDirectly(SDValue Incoming) {
   return isIntOrFPConstant(Incoming) || Incoming.isUndef();
 }
 
+FunctionLoweringInfo::StatepointDirectLeaf::StatepointDirectLeaf(SDValue V) {
+  assert(willLowerDirectly(V) && !V.isUndef() &&
+         "not a non-undef directly-lowered leaf");
+  if (auto *FI = dyn_cast<FrameIndexSDNode>(V)) {
+    Kind = FrameIndex;
+    FrameIndexValue = FI->getIndex();
+  } else {
+    Kind = Constant;
+    IntValue = cast<ConstantSDNode>(V)->getAPIntValue();
+  }
+}
+
+SDValue FunctionLoweringInfo::StatepointDirectLeaf::rematerialize(
+    SelectionDAG &DAG, const SDLoc &DL, EVT VT) const {
+  switch (Kind) {
+  case FrameIndex:
+    return DAG.getFrameIndex(FrameIndexValue, VT);
+  case Constant:
+    return DAG.getConstant(IntValue, DL, VT);
+  }
+  llvm_unreachable("unhandled directly-lowered leaf kind");
+}
+
 /// Try to find existing copies of the incoming values in stack slots used for
 /// statepoint spilling.  If we can find a spill slot for the incoming value,
 /// mark that slot as allocated, and reuse the same slot for this safepoint.
@@ -931,17 +954,18 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
       Record.payload.FI = cast<FrameIndexSDNode>(Loc)->getIndex();
     } else {
       Record.type = RecordType::NoRelocate;
-      // If we didn't relocate a value, we'll essentialy end up inserting an
-      // additional use of the original value when lowering the gc.relocate.
-      // We need to make sure the value is available at the new use, which
-      // might be in another block.
-      if (Relocate->getParent() != StatepointInstr->getParent())
-        ExportFromCurrentBlock(V);
+      assert(willLowerDirectly(SDV) && "NoRelocate value must lower directly");
+
+      // A gc.relocate in another block needs the value there. Exporting it
+      // would define a vreg after the call that does not dominate a use on the
+      // unwind edge, so record the leaf and rebuild it in visitGCRelocate
+      // instead. undef re-lowers trivially and is left to the fallback path.
+      if (Relocate->getParent() != StatepointInstr->getParent() &&
+          !SDV.isUndef())
+        Record.RematLeaf.emplace(SDV);
     }
     RelocationMap[Relocate] = Record;
   }
-
-  
 
   SDNode *SinkNode = StatepointMCNode;
 
@@ -1291,6 +1315,17 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
   }
 
   assert(Record.type == RecordType::NoRelocate);
+
+  // Rebuild a leaf recorded for a cross-block gc.relocate instead of using a
+  // value from the statepoint's block.
+  if (Record.RematLeaf) {
+    EVT VT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
+                                                      Relocate.getType());
+    setValue(&Relocate,
+             Record.RematLeaf->rematerialize(DAG, getCurSDLoc(), VT));
+    return;
+  }
+
   SDValue SD = getValue(DerivedPtr);
 
   if (SD.isUndef() && SD.getValueType().getSizeInBits() <= 64) {
