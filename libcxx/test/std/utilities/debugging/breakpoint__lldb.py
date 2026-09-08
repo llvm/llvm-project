@@ -77,7 +77,7 @@ def __lldb_init_module(debugger, internal_dict):
     try:
         run_test(debugger)
     except Exception as e:
-        print(f"Test Failure: {e}", file=sys.stderr)
+        print(f"Test Failure: {e}", file=sys.stderr, flush=True)
         exit_code = 1
 
     debugger.HandleCommand(f"quit {exit_code}")

@@ -37,7 +37,7 @@ def __lldb_init_module(debugger, internal_dict):
         if process.GetExitStatus() != 0:
             fail("std::is_debugger_present() should be true and ret code == 0")
     except TestFail as e:
-        print(f"{e}", file=sys.stderr)
+        print(f"{e}", file=sys.stderr, flush=True)
         debugger.HandleCommand("quit 1")
 
     debugger.HandleCommand("quit 0")
