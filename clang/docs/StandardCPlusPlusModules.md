@@ -2084,39 +2084,7 @@ However, the behavior is inconsistent with other compilers. This is tracked by
 
 ODR violations are a common issue when using modules. Clang sometimes produces
 false-positive diagnostics or fails to produce true-positive diagnostics of the
-One Definition Rule. One often-reported example is:
-
-```c++
-// part.cc
-module;
-typedef long T;
-namespace ns {
-inline void fun() {
-    (void)(T)0;
-}
-}
-export module repro:part;
-
-// repro.cc
-module;
-typedef long T;
-namespace ns {
-    using ::T;
-}
-namespace ns {
-inline void fun() {
-    (void)(T)0;
-}
-}
-export module repro;
-export import :part;
-```
-
-Currently the compiler incorrectly diagnoses the inconsistent definition of
-`fun()` in two module units. Because both definitions of `fun()` have the
-same spelling and `T` refers to the same type entity, there is no ODR
-violation. This is tracked by
-[#78850](https://github.com/llvm/llvm-project/issues/78850).
+One Definition Rule.
 
 #### Using TU-local entity in other units
 

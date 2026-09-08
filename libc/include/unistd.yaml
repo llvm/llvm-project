@@ -144,6 +144,14 @@ functions:
       - type: int
       - type: int
       - type: int
+  - name: execl
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const char *
+      - type: const char *
+      - type: '...'
   - name: execle
     standards:
       - posix
