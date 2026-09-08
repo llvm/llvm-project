@@ -187,6 +187,8 @@ class Twine {
     assert(isValid() && "Invalid twine!");
   }
 
+  friend Twine operator""_twine(const char *Str, size_t Len);
+
   /// Check for the null twine.
   bool isNull() const { return getLHSKind() == NullKind; }
 
@@ -539,6 +541,15 @@ inline Twine operator+(const char *LHS, StringRef RHS) {
 
 inline Twine operator+(StringRef LHS, const char *RHS) {
   return Twine(LHS, RHS);
+}
+
+/// Construct a Twine from a string literal.
+inline Twine operator""_twine(const char *Str, size_t Len) {
+  Twine::Child LHS, RHS;
+  LHS.ptrAndLength.ptr = Str;
+  LHS.ptrAndLength.length = Len;
+  RHS.twine = nullptr;
+  return Twine(LHS, Twine::StringLiteralKind, RHS, Twine::EmptyKind);
 }
 
 inline raw_ostream &operator<<(raw_ostream &OS, const Twine &RHS) {

@@ -26,6 +26,7 @@ std::string repr(const Twine &Value) {
 TEST(TwineTest, Construction) {
   EXPECT_EQ("", Twine().str());
   EXPECT_EQ("hi", Twine("hi").str());
+  EXPECT_EQ("hi", "hi"_twine.str());
   EXPECT_EQ("hi", Twine(std::string("hi")).str());
   EXPECT_EQ("hi", Twine(StringRef("hi")).str());
   EXPECT_EQ("hi", Twine(StringRef(std::string("hi"))).str());
@@ -100,6 +101,9 @@ TEST(TwineTest, toNullTerminatedStringRef) {
   EXPECT_EQ(
       0,
       *Twine(StringLiteral("hello")).toNullTerminatedStringRef(storage).end());
+  StringRef LiteralRef = "hello"_twine.toNullTerminatedStringRef(storage);
+  EXPECT_EQ("hello", LiteralRef);
+  EXPECT_EQ(0, *LiteralRef.end());
   EXPECT_EQ(0, *Twine(SmallString<11>("hello"))
                     .toNullTerminatedStringRef(storage)
                     .end());
@@ -110,8 +114,14 @@ TEST(TwineTest, toNullTerminatedStringRef) {
 
 TEST(TwineTest, isSingleStringLiteral) {
   EXPECT_TRUE(Twine(StringLiteral("hi")).isSingleStringLiteral());
+  EXPECT_TRUE("hi"_twine.isSingleStringLiteral());
   EXPECT_FALSE(Twine("hi").isSingleStringLiteral());
   EXPECT_FALSE(Twine(StringRef("hi")).isSingleStringLiteral());
+}
+
+TEST(TwineTest, UserDefinedLiteral) {
+  EXPECT_EQ("(Twine constexprPtrAndLength:\"hi\" empty)", repr("hi"_twine));
+  EXPECT_EQ(StringRef("a\0b", 3), "a\0b"_twine.getSingleStringRef());
 }
 
 TEST(TwineTest, LazyEvaluation) {
