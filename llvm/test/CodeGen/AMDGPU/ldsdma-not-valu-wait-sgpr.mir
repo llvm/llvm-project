@@ -4,7 +4,7 @@
 # reader, the pass would insert an S_WAITCNT_DEPCTR .VaSdst_0 before it; it must
 # not. This hazard pass only performs a full scan on gfx12 (not gfx11/gfx1250),
 # so the test targets gfx1200 and runs the pass on its own.
-# RUN: llc -mtriple=amdgpu12.00 -run-pass amdgpu-wait-sgpr-hazards -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu12.00 -run-pass=amdgpu-wait-sgpr-hazards -o - %s | FileCheck %s
 
 ---
 name: ldsdma_not_valu_for_sgpr_hazard
