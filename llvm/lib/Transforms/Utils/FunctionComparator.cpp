@@ -656,10 +656,6 @@ int FunctionComparator::cmpOperations(const Instruction *L,
   if (int Res = cmpValues(L, R))
     return Res;
 
-  // Differences from Instruction::isSameOperationAs:
-  //  * replace type comparison with calls to cmpTypes.
-  //  * we test for I->getRawSubclassOptionalData (nuw/nsw/tail) at the top.
-  //  * because of the above, we don't test for the tail bit on calls later on.
   if (int Res = cmpNumbers(L->getOpcode(), R->getOpcode()))
     return Res;
 
@@ -676,10 +672,6 @@ int FunctionComparator::cmpOperations(const Instruction *L,
     return Res;
 
   if (int Res = cmpTypes(L->getType(), R->getType()))
-    return Res;
-
-  if (int Res = cmpNumbers(L->getRawSubclassOptionalData(),
-                           R->getRawSubclassOptionalData()))
     return Res;
 
   // We have two instructions of identical opcode and #operands.  Check to see

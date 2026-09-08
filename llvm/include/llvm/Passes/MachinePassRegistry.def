@@ -151,6 +151,8 @@ MACHINE_FUNCTION_PASS("stack-frame-layout", StackFrameLayoutAnalysisPass())
 MACHINE_FUNCTION_PASS("stack-slot-coloring", StackSlotColoringPass())
 MACHINE_FUNCTION_PASS("static-data-splitter", StaticDataSplitterPass())
 MACHINE_FUNCTION_PASS("tailduplication", TailDuplicatePass())
+MACHINE_FUNCTION_PASS("trigger-crash-machine-function",
+                      TriggerCrashMachineFunctionPass())
 MACHINE_FUNCTION_PASS("trigger-verifier-error", TriggerVerifierErrorPass())
 MACHINE_FUNCTION_PASS("two-address-instruction", TwoAddressInstructionPass())
 MACHINE_FUNCTION_PASS("unpack-mi-bundles", UnpackMachineBundlesPass())

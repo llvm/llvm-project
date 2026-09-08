@@ -104,7 +104,7 @@ class DenseGlobalBuilder {
 public:
   static fir::GlobalOp
   tryCreating(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type symTy,
-              llvm::StringRef globalName, mlir::StringAttr linkage,
+              llvm::StringRef globalName, fir::LinkageAttr linkage,
               bool isConst, const Fortran::lower::SomeExpr &initExpr,
               cuf::DataAttributeAttr dataAttr, bool setDefaultAlignment) {
     DenseGlobalBuilder globalBuilder;
@@ -130,7 +130,7 @@ public:
   template <Fortran::common::TypeCategory TC, int KIND>
   static fir::GlobalOp tryCreating(
       fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type symTy,
-      llvm::StringRef globalName, mlir::StringAttr linkage, bool isConst,
+      llvm::StringRef globalName, fir::LinkageAttr linkage, bool isConst,
       const Fortran::evaluate::Constant<Fortran::evaluate::Type<TC, KIND>>
           &constant,
       cuf::DataAttributeAttr dataAttr, bool setDefaultAlignment = true) {
@@ -202,7 +202,7 @@ private:
   fir::GlobalOp tryCreatingGlobal(fir::FirOpBuilder &builder,
                                   mlir::Location loc, mlir::Type symTy,
                                   llvm::StringRef globalName,
-                                  mlir::StringAttr linkage, bool isConst,
+                                  fir::LinkageAttr linkage, bool isConst,
                                   cuf::DataAttributeAttr dataAttr,
                                   bool setDefaultAlignment) const {
     // Not a "trivial" intrinsic constant array, or empty array.
@@ -228,7 +228,7 @@ private:
 
 fir::GlobalOp Fortran::lower::tryCreatingDenseGlobal(
     fir::FirOpBuilder &builder, mlir::Location loc, mlir::Type symTy,
-    llvm::StringRef globalName, mlir::StringAttr linkage, bool isConst,
+    llvm::StringRef globalName, fir::LinkageAttr linkage, bool isConst,
     const Fortran::lower::SomeExpr &initExpr, cuf::DataAttributeAttr dataAttr,
     bool setDefaultAlignment) {
   return DenseGlobalBuilder::tryCreating(builder, loc, symTy, globalName,

@@ -111,6 +111,19 @@ recordAddr(StringRef Name, ExecutorAddr *A,
   };
 }
 
+/// Records the address of the symbol with the given, already-interned name.
+///
+/// If the symbol is weakly referenced and not found then *A is set to null.
+inline LookupPrepareFn
+recordAddr(SymbolStringPtr Name, ExecutorAddr *A,
+           SymbolLookupFlags LF = SymbolLookupFlags::RequiredSymbol) {
+  return [Name = std::move(Name), A,
+          LF](SymbolLookupSet &LS, ExecutionSession &ES) -> LookupApplyFn {
+    LS.add(Name, LF);
+    return [A, Name](const SymbolMap &M) { *A = M.lookup(Name).getAddress(); };
+  };
+}
+
 } // namespace llvm::orc
 
 #endif // LLVM_EXECUTIONENGINE_ORC_LOOKUPANDAPPLY_H

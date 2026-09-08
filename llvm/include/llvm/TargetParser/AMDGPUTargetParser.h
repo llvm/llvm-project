@@ -113,6 +113,11 @@ LLVM_ABI StringRef getArchFamilyNameAMDGCN(GPUKind AK);
 LLVM_ABI StringRef getBaseArchNameAMDGCN(GPUKind AK);
 
 LLVM_ABI Triple::SubArchType getSubArch(GPUKind AK);
+
+/// Returns the preferred subarch for a GPU name \p CPU, or NoSubArch if
+/// unrecognized.
+LLVM_ABI Triple::SubArchType getSubArchFromGPUName(StringRef CPU);
+
 LLVM_ABI Triple::SubArchType getMajorSubArch(Triple::SubArchType SubArch);
 
 /// Return true if subarch \p A is compatible with subarch \p B, i.e. they are
@@ -202,12 +207,24 @@ LLVM_ABI unsigned getAddressableNumSGPRs(Triple::SubArchType SubArch);
 LLVM_ABI unsigned getSGPRAllocGranule(GPUKind AK);
 LLVM_ABI unsigned getSGPRAllocGranule(Triple::SubArchType SubArch);
 
+/// \returns VGPR allocation granularity for \p AK, in registers. \p IsWave32
+/// selects the wavefront size, which is a per-kernel mode rather than a
+/// property of the GPU. This does not account for dynamic VGPR mode, where the
+/// block size chosen by the caller is the granule.
+LLVM_ABI unsigned getVGPRAllocGranule(GPUKind AK, bool IsWave32);
+LLVM_ABI unsigned getVGPRAllocGranule(Triple::SubArchType SubArch,
+                                      bool IsWave32);
+
 /// \returns Maximum LDS in bytes a single work-group can address. This is a
 /// fixed hardware cap and does not depend on how many SIMDs a work-group runs
 /// on.
 LLVM_ABI unsigned getMaxHWAddressableLocalMemorySize(GPUKind AK);
 LLVM_ABI unsigned
 getMaxHWAddressableLocalMemorySize(Triple::SubArchType SubArch);
+
+/// \returns Number of LDS banks per compute unit.
+LLVM_ABI unsigned getLDSBankCount(GPUKind AK);
+LLVM_ABI unsigned getLDSBankCount(Triple::SubArchType SubArch);
 
 /// \returns Number of SIMDs a work-group's waves run on. All four SIMDs of the
 /// functional block in full-SIMD mode, half of them otherwise.
@@ -222,6 +239,15 @@ constexpr unsigned getMinWavesPerEU() { return 1; }
 /// limitation.
 LLVM_ABI unsigned getMaxWavesPerEU(GPUKind AK);
 LLVM_ABI unsigned getMaxWavesPerEU(Triple::SubArchType SubArch);
+
+/// \returns Minimum flat work group size.
+constexpr unsigned getMinFlatWorkGroupSize() { return 1; }
+
+/// \returns Maximum flat work group size.
+constexpr unsigned getMaxFlatWorkGroupSize() {
+  // Some subtargets allow encoding 2048, but this isn't tested or supported.
+  return 1024;
+}
 
 /// Fills Features map with default values for given target GPU.
 /// \p Features contains overriding target features and this function returns
