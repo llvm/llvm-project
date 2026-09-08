@@ -29,7 +29,7 @@ define amdgpu_kernel void @workgroup_ids_kernel() {
 ; GFX9ARCH-GISEL:       ; %bb.0: ; %.entry
 ; GFX9ARCH-GISEL-NEXT:    s_mov_b32 s0, ttmp9
 ; GFX9ARCH-GISEL-NEXT:    s_and_b32 s1, ttmp7, 0xffff
-; GFX9ARCH-GISEL-NEXT:    s_lshr_b32 s2, ttmp7, 16
+; GFX9ARCH-GISEL-NEXT:    s_bfe_u32 s2, ttmp7, 0x100010
 ; GFX9ARCH-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9ARCH-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX9ARCH-GISEL-NEXT:    v_mov_b32_e32 v2, s2
@@ -49,7 +49,7 @@ define amdgpu_kernel void @workgroup_ids_kernel() {
 ; GFX12-GISEL:       ; %bb.0: ; %.entry
 ; GFX12-GISEL-NEXT:    s_mov_b32 s0, ttmp9
 ; GFX12-GISEL-NEXT:    s_and_b32 s1, ttmp7, 0xffff
-; GFX12-GISEL-NEXT:    s_lshr_b32 s2, ttmp7, 16
+; GFX12-GISEL-NEXT:    s_bfe_u32 s2, ttmp7, 0x100010
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX12-GISEL-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], null
@@ -251,7 +251,7 @@ define void @workgroup_ids_device_func(ptr addrspace(1) %outx, ptr addrspace(1) 
 ; GFX9ARCH-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9ARCH-GISEL-NEXT:    v_mov_b32_e32 v6, ttmp9
 ; GFX9ARCH-GISEL-NEXT:    s_and_b32 s4, ttmp7, 0xffff
-; GFX9ARCH-GISEL-NEXT:    s_lshr_b32 s5, ttmp7, 16
+; GFX9ARCH-GISEL-NEXT:    s_bfe_u32 s5, ttmp7, 0x100010
 ; GFX9ARCH-GISEL-NEXT:    global_store_dword v[0:1], v6, off
 ; GFX9ARCH-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9ARCH-GISEL-NEXT:    v_mov_b32_e32 v0, s4
@@ -262,27 +262,49 @@ define void @workgroup_ids_device_func(ptr addrspace(1) %outx, ptr addrspace(1) 
 ; GFX9ARCH-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9ARCH-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX12-LABEL: workgroup_ids_device_func:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    s_and_b32 s0, ttmp7, 0xffff
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_dual_mov_b32 v6, ttmp9 :: v_dual_mov_b32 v7, s0
-; GFX12-NEXT:    s_lshr_b32 s1, ttmp7, 16
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    v_mov_b32_e32 v8, s1
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_store_b32 v[0:1], v6, off scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_store_b32 v[2:3], v7, off scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_store_b32 v[4:5], v8, off scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-SDAG-LABEL: workgroup_ids_device_func:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-NEXT:    s_and_b32 s0, ttmp7, 0xffff
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-SDAG-NEXT:    v_dual_mov_b32 v6, ttmp9 :: v_dual_mov_b32 v7, s0
+; GFX12-SDAG-NEXT:    s_lshr_b32 s1, ttmp7, 16
+; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-SDAG-NEXT:    v_mov_b32_e32 v8, s1
+; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
+; GFX12-SDAG-NEXT:    global_store_b32 v[0:1], v6, off scope:SCOPE_SYS
+; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
+; GFX12-SDAG-NEXT:    global_store_b32 v[2:3], v7, off scope:SCOPE_SYS
+; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
+; GFX12-SDAG-NEXT:    global_store_b32 v[4:5], v8, off scope:SCOPE_SYS
+; GFX12-SDAG-NEXT:    s_wait_storecnt 0x0
+; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-LABEL: workgroup_ids_device_func:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-NEXT:    s_and_b32 s0, ttmp7, 0xffff
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    v_dual_mov_b32 v6, ttmp9 :: v_dual_mov_b32 v7, s0
+; GFX12-GISEL-NEXT:    s_bfe_u32 s1, ttmp7, 0x100010
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-NEXT:    v_mov_b32_e32 v8, s1
+; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
+; GFX12-GISEL-NEXT:    global_store_b32 v[0:1], v6, off scope:SCOPE_SYS
+; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
+; GFX12-GISEL-NEXT:    global_store_b32 v[2:3], v7, off scope:SCOPE_SYS
+; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
+; GFX12-GISEL-NEXT:    global_store_b32 v[4:5], v8, off scope:SCOPE_SYS
+; GFX12-GISEL-NEXT:    s_wait_storecnt 0x0
+; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %id.x = call i32 @llvm.amdgcn.workgroup.id.x()
   %id.y = call i32 @llvm.amdgcn.workgroup.id.y()
   %id.z = call i32 @llvm.amdgcn.workgroup.id.z()
@@ -299,4 +321,5 @@ declare void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32>, ptr addrspace(8)
 
 attributes #0 = { nounwind "amdgpu-no-workgroup-id-y" "amdgpu-no-cluster-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-cluster-id-z" }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GFX12: {{.*}}
 ; GFX9ARCH: {{.*}}

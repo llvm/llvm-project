@@ -4637,6 +4637,9 @@ CpAsyncBulkTensorGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
   llvm::Value *cg =
       llvm::ConstantInt::get(llvm::Type::getInt32Ty(mt.getLLVMContext()), val);
 
+  // validate_pattern = disabled
+  llvm::Value *validatePattern = builder.getInt32(0);
+
   if (!isCTAOnly) {
     // For shared::cluster, all the arguments that we build are applicable.
     args.push_back(hasMC ? mt.lookupValue(mcMask) : i16Zero);
@@ -4644,10 +4647,12 @@ CpAsyncBulkTensorGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
     args.push_back(builder.getInt1(hasMC));
     args.push_back(builder.getInt1(hasCacheHint));
     args.push_back(cg);
+    args.push_back(validatePattern);
   } else {
     // For shared::cta, only cache-hint is applicable.
     args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Zero);
     args.push_back(builder.getInt1(hasCacheHint));
+    args.push_back(validatePattern);
   }
 
   constexpr size_t numDims = 5;  // 1D to 5D
@@ -5505,38 +5510,29 @@ NVVM::IDArgPair ConvertS2F6x2ToBF16x2Op::getIntrinsicIDAndArgs(
   return {ids[idx], std::move(args)};
 }
 
-llvm::Intrinsic::ID
-Tcgen05AllocOp::getIntrinsicIDAndArgs(Operation &op,
-                                      LLVM::ModuleTranslation &mt,
-                                      llvm::SmallVector<llvm::Value *> &args) {
+mlir::NVVM::IDArgPair Tcgen05AllocOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto curOp = cast<NVVM::Tcgen05AllocOp>(op);
   bool is2CTAMode = curOp.getGroup() == CTAGroupKind::CTA_2;
 
   llvm::Intrinsic::ID id = is2CTAMode ? llvm::Intrinsic::nvvm_tcgen05_alloc_cg2
                                       : llvm::Intrinsic::nvvm_tcgen05_alloc_cg1;
 
-  // Fill the Intrinsic Args
-  args.push_back(mt.lookupValue(curOp.getAddr()));
-  args.push_back(mt.lookupValue(curOp.getNCols()));
-  args.push_back(llvm::ConstantInt::getFalse(mt.getLLVMContext()));
-
-  return id;
+  return {id,
+          {mt.lookupValue(curOp.getAddr()), mt.lookupValue(curOp.getNCols()),
+           builder.getInt1(curOp.getIsExclusive())}};
 }
 
-llvm::Intrinsic::ID Tcgen05DeallocOp::getIntrinsicIDAndArgs(
-    Operation &op, LLVM::ModuleTranslation &mt,
-    llvm::SmallVector<llvm::Value *> &args) {
+mlir::NVVM::IDArgPair Tcgen05DeallocOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto curOp = cast<NVVM::Tcgen05DeallocOp>(op);
-  auto id = (curOp.getGroup() == CTAGroupKind::CTA_1)
-                ? llvm::Intrinsic::nvvm_tcgen05_dealloc_cg1
-                : llvm::Intrinsic::nvvm_tcgen05_dealloc_cg2;
+  llvm::Intrinsic::ID id = (curOp.getGroup() == CTAGroupKind::CTA_1)
+                               ? llvm::Intrinsic::nvvm_tcgen05_dealloc_cg1
+                               : llvm::Intrinsic::nvvm_tcgen05_dealloc_cg2;
 
-  // Fill the Intrinsic Args
-  args.push_back(mt.lookupValue(curOp.getTaddr()));
-  args.push_back(mt.lookupValue(curOp.getNCols()));
-  args.push_back(llvm::ConstantInt::getFalse(mt.getLLVMContext()));
-
-  return id;
+  return {id,
+          {mt.lookupValue(curOp.getTaddr()), mt.lookupValue(curOp.getNCols()),
+           builder.getInt1(curOp.getIsExclusive())}};
 }
 
 llvm::Intrinsic::ID
@@ -7148,9 +7144,14 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
                      "NVVM target attribute must be attached to a GPU module");
   }
 
-  const unsigned targetFullSmVersion =
+  std::optional<unsigned> targetFullSmVersion =
       NVVMCheckSMVersion::getTargetFullSmVersionFromStr(getChip());
-  if (!NVVMCheckSMVersion::isMinimumSMVersion(targetFullSmVersion)) {
+  if (!targetFullSmVersion)
+    return emitError(gpuModule->getLoc())
+           << "invalid NVVM target chip \"" << getChip()
+           << "\", expected sm_<version>[a|f]";
+
+  if (!NVVMCheckSMVersion::isMinimumSMVersion(*targetFullSmVersion)) {
     return emitError(gpuModule->getLoc(),
                      "Minimum NVVM target SM version is sm_20");
   }
@@ -7160,7 +7161,7 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
             if (auto reqOp = llvm::dyn_cast<NVVM::RequiresSMInterface>(op)) {
               const NVVMCheckSMVersion requirement =
                   reqOp.getRequiredMinSMVersion();
-              if (!requirement.isCompatibleWith(targetFullSmVersion)) {
+              if (!requirement.isCompatibleWith(*targetFullSmVersion)) {
                 op->emitOpError() << "is not supported on " << getChip();
                 return WalkResult::interrupt();
               }

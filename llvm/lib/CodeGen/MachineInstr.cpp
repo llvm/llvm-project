@@ -621,6 +621,11 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
     if (ICmp->hasSameSign())
       MIFlags |= MachineInstr::MIFlag::SameSign;
 
+  // Copy the nonnull flag.
+  if (const auto *ASC = dyn_cast<AddrSpaceCastInst>(&I))
+    if (ASC->hasNonNull())
+      MIFlags |= MachineInstr::MIFlag::NonNull;
+
   // Copy the exact flag.
   if (const PossiblyExactOperator *PE = dyn_cast<PossiblyExactOperator>(&I))
     if (PE->isExact())
@@ -1899,6 +1904,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "inbounds ";
   if (getFlag(MachineInstr::LRSplit))
     OS << "lr-split ";
+  if (getFlag(MachineInstr::NonNull))
+    OS << "nonnull ";
 
   // Print the opcode name.
   if (TII)
