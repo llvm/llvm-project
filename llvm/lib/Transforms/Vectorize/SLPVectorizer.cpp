@@ -31807,12 +31807,14 @@ public:
       for (Instruction *Op : ReducedValsToOps.at(RdxVal))
         if (auto *FPMO = dyn_cast<FPMathOperator>(Op))
           RdxFMF &= FPMO->getFastMathFlags();
-    // This is an ordered reduction, selected because the reduction operations
-    // are not associative (e.g. an fadd without nsz). The accumulation order
-    // must be preserved, so the generated llvm.vector.reduce.fadd has to stay
-    // ordered. Drop 'reassoc' from the flags used to emit and cost the
-    // reduction.
-    RdxFMF.setAllowReassoc(/*B=*/false);
+    // The reduced values keep their original accumulation order, so the
+    // emitted reduction may reassociate exactly when every reduction operation
+    // allows it. That is what the intersection above already computes. A chain
+    // with round-trip links is folded into a scalar chain instead of a
+    // reduction intrinsic, so there reassoc would price a tree that is never
+    // emitted.
+    if (!all_of(RoundedLinks, equal_to(nullptr)))
+      RdxFMF.setAllowReassoc(/*B=*/false);
 
     unsigned MaxVecRegSize = V.getMaxVecRegSize();
     unsigned EltSize = V.getVectorElementSize(Candidates[0]);
