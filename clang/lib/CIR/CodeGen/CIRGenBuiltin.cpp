@@ -3005,6 +3005,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       llvm::Triple::getArchTypePrefix(getTarget().getTriple().getArch());
   if (!prefix.empty()) {
     intrinsicID = Intrinsic::getIntrinsicForClangBuiltin(prefix, name);
+    if (intrinsicID == Intrinsic::not_intrinsic && prefix == "spv" &&
+        getTarget().getTriple().getOS() == llvm::Triple::OSType::AMDHSA)
+      intrinsicID = Intrinsic::getIntrinsicForClangBuiltin("amdgcn", name);
     // NOTE we don't need to perform a compatibility flag check here since the
     // intrinsics are declared in Builtins*.def via LANGBUILTIN which filter the
     // MS builtins via ALL_MS_LANGUAGES and are filtered earlier.
@@ -3193,6 +3196,13 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
     return cgf->emitRISCVBuiltinExpr(builtinID, e);
+  case llvm::Triple::spirv32:
+  case llvm::Triple::spirv64:
+    if (cgf->getTarget().getTriple().getOS() == llvm::Triple::OSType::AMDHSA)
+      return cgf->emitAMDGPUBuiltinExpr(builtinID, e);
+    [[fallthrough]];
+  case llvm::Triple::spirv:
+    return std::nullopt;
   default:
     return std::nullopt;
   }
