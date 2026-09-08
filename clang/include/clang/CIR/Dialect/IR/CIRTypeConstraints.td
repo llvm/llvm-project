@@ -371,8 +371,8 @@ def CIR_AnyBitwiseType
 //===----------------------------------------------------------------------===//
 
 def CIR_MatrixElementType
-    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyIntOrFloatType, CIR_AnyPtrType],
-                "any cir boolean, integer, floating point or pointer type"> {
+    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyIntOrFloatType],
+                "any cir boolean, integer, floating point"> {
   let cppFunctionName = "isValidMatrixTypeElementType";
 }
 
