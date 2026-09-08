@@ -22,6 +22,8 @@ on:
           - ubuntu-22.04
           - ubuntu-22.04-arm
           - macos-14
+          - windows-2022
+          - windows-11-arm
 
   workflow_call:
     inputs:
@@ -69,14 +71,9 @@ jobs:
       attestation-name: ${{ steps.vars.outputs.attestation-name }}
 
     steps:
-    - name: Checkout LLVM
-      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      with:
-          persist-credentials: false
-
     - name: Validate Release Version
       if: inputs.release-version != ''
-      uses: ./.github/workflows/validate-release-version
+      uses: $/.github/workflows/validate-release-version
       with:
         release-version: ${{ inputs.release-version }}
 
@@ -84,7 +81,7 @@ jobs:
     # to fetch it here.
     - id: version-from-source
       if: runner.os == 'Windows'
-      uses: ./.github/workflows/get-llvm-version
+      uses: $/.github/workflows/get-llvm-version
 
     - name: Collect Variables
       id: vars
@@ -158,13 +155,6 @@ jobs:
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_COMPILER_RT_ENABLE_IOS=OFF"
           if [ "$RUNNER_ARCH" = "ARM64" ]; then
             arches=arm64
-          else
-            arches=x86_64
-            # Disable Flang builds on macOS x86_64.  The FortranLower library takes
-            # 2-3 hours to build on macOS, much slower than on Linux.
-            # The long build time causes the release build to time out on x86_64,
-            # so we need to disable flang there.
-            target_cmake_flags="$target_cmake_flags -DLLVM_RELEASE_ENABLE_PROJECTS='clang;lld;lldb;clang-tools-extra;polly;mlir'"
           fi
           target_cmake_flags="$target_cmake_flags -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_ARCHS=$arches -DBOOTSTRAP_BOOTSTRAP_DARWIN_osx_BUILTIN_ARCHS=$arches"
         fi
@@ -291,16 +281,27 @@ jobs:
         release_dir=`find "$BUILD_PREFIX/build" -iname 'stage2-bins'`
         mv "$release_dir/$RELEASE_BINARY_FILENAME" .
 
+    # Wix is not installed by default on Windows ARM64
+    - name: Install Wix (Windows ARM64)
+      env:
+        WIX_VERSION: 3.14
+      if: runner.os == 'Windows' && runner.arch == 'ARM64'
+      run: |
+        choco install wixtoolset --version "$($env:WIX_VERSION).1.20250415"
+        # Add wix install directory to PATH.
+        echo "C:\Program Files (x86)\WiX Toolset v$($env:WIX_VERSION)\bin" >> $env:GITHUB_PATH
+
     - name: Build Windows
       id: build-windows
       if: runner.os == 'Windows'
       env:
         INPUTS_RUNS_ON: ${{ inputs.runs-on }}
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
+        EXTRA_ARGS: ${{ case(needs.prepare.outputs.build-runs-on == 'windows-11-arm', '--fast-build', '--fast-build') }}
       run: |
         subst S: ${{ github.workspace }}
         cd S:\llvm\utils\release\
-        .\build_llvm_release.bat "--$($env:RUNNER_ARCH.ToLower())" --version $env:LLVM_VERSION --local-python --skip-checkout
+        .\build_llvm_release.bat "--$($env:RUNNER_ARCH.ToLower())" --version $env:LLVM_VERSION --local-python --skip-checkout $env:EXTRA_ARGS
         if ($env:INPUTS_RUNS_ON -eq "windows-11-arm") {
           $zstd = (Get-ChildItem -Recurse -Filter "zstd.exe" | Select-Object -First 1).fullName
           mv $zstd $env:GITHUB_WORKSPACE
@@ -313,7 +314,7 @@ jobs:
         echo "windows-installer-filename=$(Split-Path -Path $installer -Leaf)" >> $env:GITHUB_OUTPUT
     
     - name: Dump Wix logs
-      if: runner.os == 'Windows' && always()
+      if: runner.os == 'Windows' && failure()
       env:
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
         BUILD_DIR_SUFFIX: ${{ case(runner.arch == 'ARM64', 'arm64', 'amd64') }}

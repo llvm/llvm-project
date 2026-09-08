@@ -1914,9 +1914,9 @@ static void emitCommonOMPParallelDirective(
 
   if (const auto *NumThreadsClause = S.getSingleClause<OMPNumThreadsClause>()) {
     CodeGenFunction::RunCleanupsScope NumThreadsScope(CGF);
-    NumThreads = CGF.EmitScalarExpr(NumThreadsClause->getNumThreads(),
+    NumThreads = CGF.EmitScalarExpr(NumThreadsClause->getNumThreads().front(),
                                     /*IgnoreResultAssign=*/true);
-    Modifier = NumThreadsClause->getModifier();
+    Modifier = NumThreadsClause->getPrescriptivenessModifier();
     if (const auto *MessageClause = S.getSingleClause<OMPMessageClause>()) {
       Message = MessageClause->getMessageString();
       MessageLoc = MessageClause->getBeginLoc();
@@ -2114,7 +2114,7 @@ void CodeGenFunction::EmitOMPParallelDirective(const OMPParallelDirective &S) {
 
     llvm::Value *NumThreads = nullptr;
     if (const auto *NumThreadsClause = S.getSingleClause<OMPNumThreadsClause>())
-      NumThreads = EmitScalarExpr(NumThreadsClause->getNumThreads(),
+      NumThreads = EmitScalarExpr(NumThreadsClause->getNumThreads().front(),
                                   /*IgnoreResultAssign=*/true);
 
     ProcBindKind ProcBind = OMP_PROC_BIND_default;
@@ -2247,7 +2247,11 @@ static void emitBody(CodeGenFunction &CGF, const Stmt *S, const Stmt *NextLoop,
       emitBody(CGF, CurStmt, NextLoop, MaxLevel, Level);
     return;
   }
-  if (SimplifiedS == NextLoop) {
+
+  // `tryToFindNextInnerLoop` keeps the intra-tile hint wrapper around, so match
+  // against the loop it annotates. The tile overshoot guard is emitted
+  // separately via EmitOMPLoopBody's finals-conditions handling.
+  if (SimplifiedS == OMPLoopBasedDirective::ignoreIntraTileHint(NextLoop)) {
     if (auto *Dir = dyn_cast<OMPLoopTransformationDirective>(SimplifiedS))
       SimplifiedS = Dir->getTransformedStmt();
     if (const auto *CanonLoop = dyn_cast<OMPCanonicalLoop>(SimplifiedS))
@@ -7315,7 +7319,7 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
       [IsOffloadEntry](CodeGenFunction &CGF,
                        const OMPLoopDirective &D) -> llvm::Value * {
     if (IsOffloadEntry) {
-      OMPLoopScope(CGF, D);
+      OMPLoopScope PreInitScope(CGF, D);
       // Emit calculation of the iterations count.
       llvm::Value *NumIterations = CGF.EmitScalarExpr(D.getNumIterations());
       NumIterations = CGF.Builder.CreateIntCast(NumIterations, CGF.Int64Ty,
@@ -8926,5 +8930,11 @@ void CodeGenFunction::EmitSimpleOMPExecutableDirective(
 }
 
 void CodeGenFunction::EmitOMPAssumeDirective(const OMPAssumeDirective &S) {
+  for (const auto *C : S.getClausesOfKind<OMPHoldsClause>()) {
+    const Expr *E = C->getExpr();
+    assert(E && "holds clause requires an expression");
+    if (!E->HasSideEffects(getContext()))
+      Builder.CreateAssumption(EvaluateExprAsBool(E));
+  }
   EmitStmt(S.getAssociatedStmt());
 }

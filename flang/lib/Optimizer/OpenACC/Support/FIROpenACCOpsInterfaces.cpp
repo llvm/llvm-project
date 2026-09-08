@@ -137,6 +137,11 @@ bool GlobalVariableModel::isDeviceData(mlir::Operation *op) const {
   return false;
 }
 
+bool GlobalVariableModel::isCompilerGenerated(mlir::Operation *op) const {
+  auto globalOp = mlir::cast<fir::GlobalOp>(op);
+  return fir::NameUniquer::isCompilerGenerated(globalOp.getSymName());
+}
+
 bool OutlineRematerializationModel<
     fir::ConvertOp>::isRematerializationCandidate(mlir::Operation *op) const {
   auto convertOp = mlir::cast<fir::ConvertOp>(op);

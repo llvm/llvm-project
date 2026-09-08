@@ -37,6 +37,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -636,7 +637,6 @@ public:
   void removeChildLoop(Loop *OuterLoop, Loop *InnerLoop);
 
 private:
-  void adjustLoopLinks();
   void adjustLoopBranches();
 
   Loop *OuterLoop;
@@ -815,7 +815,7 @@ bool LoopInterchangeLegality::containsUnsafeInstructions(BasicBlock *BB,
 
 static FreezeInst *findFreezeInReNestedBlocks(Loop *OuterLoop,
                                               Loop *InnerLoop) {
-  // adjustLoopLinks swaps the preheader bodies after changing their loop
+  // adjustLoopBranches swaps the preheader bodies after changing their loop
   // roles, so the original outer-preheader body remains outside the new outer
   // loop and retains its execution count.
   BasicBlock *Blocks[] = {
@@ -1059,6 +1059,11 @@ static bool checkReductionKind(Loop *L, PHINode *PHI,
   if (RecurrenceDescriptor::isReductionPHI(PHI, L, RD)) {
     // Detect floating point reduction only when it can be reordered.
     if (RD.getExactFPMathInst() != nullptr)
+      return false;
+
+    // The extra uses of a reduction phi outside of its reduction chain make
+    // the order in which the elements are visited observable.
+    if (RD.hasUsesOutsideReductionChain())
       return false;
 
     RecurKind RK = RD.getRecurrenceKind();
@@ -1539,41 +1544,39 @@ static bool areOuterLoopExitPHIsSupported(Loop *OuterLoop, Loop *InnerLoop) {
   return true;
 }
 
-/// The transform clones the inner latch's exit condition into the new latch
-/// (see MoveInstructions in LoopInterchangeTransform::transform), but it does
-/// not relocate PHI nodes. So if a PHI in the inner latch feeds that condition,
-/// a later interchange can leave the cloned PHI with a stale incoming block,
-/// producing invalid IR. Reject that case here.
+/// The transform partially clones the inner loop's latch block, but PHI nodes
+/// cannot be cloned this way. This function follows the instruction trees that
+/// would be cloned and checks whether any PHI node other than the induction
+/// PHIs feeds them. If such a PHI is found, the interchange is rejected.
 ///
-/// For example, %p is a PHI in the inner latch and the inner loop's exit test
-/// reads %p, so %p feeds the condition that would be cloned:
-///
-///   inner.latch:
-///     %p  = phi i64 [ %v, %subloop.latch ]
-///     %ec = icmp eq i64 %iv, %p              ; inner exit test reads %p
-///     br i1 %ec, label %exit, label %inner.header
-///
-/// TODO: Handle transformation of lcssa phis in the InnerLoop latch in case of
-/// multi-level loop nests.
-static bool areInnerLoopLatchPHIsSupported(Loop *InnerLoop) {
-  if (InnerLoop->getSubLoops().empty())
-    return true;
-
+/// TODO: This check strongly depends on the current implementation of the
+/// transform. Ideally, the transform should be able to handle such PHI nodes in
+/// the inner loop latch.
+static bool areInnerLoopLatchPHIsSupported(Loop *InnerLoop,
+                                           ArrayRef<PHINode *> InductionPHIs) {
   BasicBlock *InnerLoopLatch = InnerLoop->getLoopLatch();
-  auto *LatchBI = dyn_cast<CondBrInst>(InnerLoopLatch->getTerminator());
-  if (!LatchBI)
-    return true;
-  auto *CondI = dyn_cast<Instruction>(LatchBI->getCondition());
-  if (!CondI)
-    return true;
 
-  // Bail if a phi in the inner latch feeds the exit condition, walking operands
-  // within the inner loop.
+  // Seed the worklist with the roots of the use-def chains the transform
+  // clones: the latch's exit condition and the incoming values of the induction
+  // PHIs from the latch.
   SmallSetVector<Instruction *, 8> Worklist;
-  Worklist.insert(CondI);
+  if (auto *LatchBI = dyn_cast<CondBrInst>(InnerLoopLatch->getTerminator()))
+    if (auto *CondI = dyn_cast<Instruction>(LatchBI->getCondition()))
+      Worklist.insert(CondI);
+  for (PHINode *InductionPHI : InductionPHIs) {
+    if (auto *IncomingI = dyn_cast<Instruction>(
+            InductionPHI->getIncomingValueForBlock(InnerLoopLatch)))
+      if (!is_contained(InductionPHIs, IncomingI))
+        Worklist.insert(IncomingI);
+  }
+
+  // Bail if a PHI node other than the induction PHIs feeds the cloned
+  // instructions, walking the operand trees within the inner loop.
+  SmallPtrSet<Instruction *, 4> InductionPHISet(InductionPHIs.begin(),
+                                                InductionPHIs.end());
   for (unsigned I = 0; I < Worklist.size(); ++I) {
     Instruction *Cur = Worklist[I];
-    if (isa<PHINode>(Cur) && Cur->getParent() == InnerLoopLatch)
+    if (isa<PHINode>(Cur) && !InductionPHISet.contains(Cur))
       return false;
     for (Value *Op : Cur->operands())
       if (auto *OpI = dyn_cast<Instruction>(Op))
@@ -1629,7 +1632,7 @@ bool LoopInterchangeLegality::canInterchangeLoops(unsigned InnerLoopId,
     return false;
   }
 
-  if (!areInnerLoopLatchPHIsSupported(InnerLoop)) {
+  if (!areInnerLoopLatchPHIsSupported(InnerLoop, InnerLoopInductions)) {
     LLVM_DEBUG(dbgs() << "Found unsupported PHI nodes in inner loop latch.\n");
     ORE->emit([&]() {
       return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedInnerLatchPHI",
@@ -2076,7 +2079,7 @@ void LoopInterchangeTransform::restructureLoops(
     OuterLoopParent->addChildLoop(NewOuter);
   } else {
     removeChildLoop(NewInner, NewOuter);
-    LI->changeTopLevelLoop(NewInner, NewOuter);
+    LI->replaceLoop(NewInner, NewOuter);
   }
   while (!NewOuter->isInnermost())
     NewInner->addChildLoop(NewOuter->removeChildLoop(NewOuter->begin()));
@@ -2283,7 +2286,7 @@ void LoopInterchangeTransform::transform(
       I.moveBeforePreserving(OuterLoopHeader->getTerminator()->getIterator());
   }
 
-  adjustLoopLinks();
+  adjustLoopBranches();
 
   // Finally, drop the nsw/nuw/ninf flags from the instructions for reduction
   // calculations.
@@ -2641,6 +2644,12 @@ void LoopInterchangeTransform::adjustLoopBranches() {
   InnerLoopHeader->replacePhiUsesWith(OuterLoopPreHeader, InnerLoopPreHeader);
   InnerLoopHeader->replacePhiUsesWith(OuterLoopLatch, InnerLoopLatch);
 
+  // Swap the preheader contents so each definition sits in the preheader of the
+  // loop it now belongs to. This runs before the LCSSA rebuild below so that
+  // any definition referenced across the interchanged levels dominates its uses
+  // when formLCSSAForInstructions runs.
+  swapBBContents(OuterLoop->getLoopPreheader(), InnerLoop->getLoopPreheader());
+
   // Values defined in the outer loop header could be used in the inner loop
   // latch. In that case, we need to create LCSSA phis for them, because after
   // interchanging they will be defined in the new inner loop and used in the
@@ -2649,19 +2658,13 @@ void LoopInterchangeTransform::adjustLoopBranches() {
   for (Instruction &I :
        make_range(OuterLoopHeader->begin(), std::prev(OuterLoopHeader->end())))
     MayNeedLCSSAPhis.push_back(&I);
+
+#ifndef NDEBUG
+  assert(!verifyFunction(*OuterLoopHeader->getParent(), &errs()) &&
+         "LoopInterchange handed dominance-broken IR to LCSSA rebuild");
+#endif
+
   formLCSSAForInstructions(MayNeedLCSSAPhis, *DT, *LI, SE);
-}
-
-void LoopInterchangeTransform::adjustLoopLinks() {
-  // Adjust all branches in the inner and outer loop.
-  adjustLoopBranches();
-
-  // We have interchanged the preheaders so we need to interchange the data in
-  // the preheaders as well. This is because the content of the inner
-  // preheader was previously executed inside the outer loop.
-  BasicBlock *OuterLoopPreHeader = OuterLoop->getLoopPreheader();
-  BasicBlock *InnerLoopPreHeader = InnerLoop->getLoopPreheader();
-  swapBBContents(OuterLoopPreHeader, InnerLoopPreHeader);
 }
 
 PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,

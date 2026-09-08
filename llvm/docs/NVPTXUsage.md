@@ -1024,11 +1024,12 @@ The following table describes the rounding modes used across these intrinsics:
 
 (scale-factor)=
 
-Some conversions involve a scale factor which is provided as a packed 16-bit
-integer containing two scaling factors of type `ue8m0`, one for each input.
-For down conversion, inputs are divided by `scale_factor` and then the
-conversion is performed. For up-conversion, inputs are converted to destination
-type and then multiplied by `scale_factor`.
+Some conversions involve a scale factor of type `ue8m0`. For
+`scale.n2.ue8m0`, the operand is a packed 16-bit integer containing two
+`ue8m0` scale values, one for each input. For `scale.n1.ue8m0`, a single `ue8m0`
+scale factor is applied to both inputs. For down conversion, inputs are divided
+by `scale_factor` and then the conversion is performed. For up-conversion, 
+inputs are converted to destination type and then multiplied by `scale_factor`.
 
 #### `fp8` Conversion Intrinsics
 
@@ -1037,21 +1038,31 @@ type and then multiplied by `scale_factor`.
 ```llvm
 declare i16 @llvm.nvvm.ff.to{.e4m3x2, .e5m2x2}.rn{.relu}(float %a, float %b)
 declare i16 @llvm.nvvm.ff.to.ue8m0x2{.rz, .rp}{.satfinite}(float %a, float %b)
+declare i16 @llvm.nvvm.ff.to.ue5m3x2{.rn, .rz, .rp}{.satfinite}(float %a, float %b)
+declare i16 @llvm.nvvm.ff.to.ue5m3x2{.rn, .rz}{.satfinite}.scale.n1.ue8m0(float %a, float %b, i16 %scale_factor)
 declare i16 @llvm.f16x2.to{.e4m3x2, .e5m2x2}.rn{.relu}(<2 x half> %a)
+declare i16 @llvm.nvvm.f16x2.to.ue5m3x2{.rn, .rz, .rp}{.satfinite}(<2 x half> %a)
+declare i16 @llvm.nvvm.f16x2.to.ue5m3x2{.rn, .rz}{.satfinite}.scale.n1.ue8m0(<2 x half> %a, i16 %scale_factor)
 declare i16 @llvm.bf16x2.to{.e4m3x2, .e5m2x2}.rn{.relu}.satfinite(<2 x bfloat> %a)
 declare i16 @llvm.bf16x2.to.ue8m0x2{.rz, .rp}{.satfinite}(<2 x bfloat> %a)
+declare i16 @llvm.nvvm.bf16x2.to.ue5m3x2{.rn, .rz, .rp}{.satfinite}(<2 x bfloat> %a)
+declare i16 @llvm.nvvm.bf16x2.to.ue5m3x2{.rn, .rz}{.satfinite}.scale.n1.ue8m0(<2 x bfloat> %a, i16 %scale_factor)
 declare <2 x half> @llvm.nvvm{.e4m3x2, .e5m2x2}.to.f16x2.rn{.relu}(i16 %a)
+declare <2 x half> @llvm.nvvm.ue5m3x2.to.f16x2.rn(i16 %a)
 declare <2 x bfloat> @llvm.nvvm{.e4m3x2, .e5m2x2}.to.bf16x2.rn{.relu}{.satfinite}.scale.n2.ue8m0(i16 %a, i16 %scale_factor)
 declare <2 x bfloat> @llvm.nvvm.ue8m0x2.to.bf16x2(i16 %a)
+declare <2 x bfloat> @llvm.nvvm.ue5m3x2.to.bf16x2.rn{.satfinite}(i16 %a)
+declare <2 x bfloat> @llvm.nvvm.ue5m3x2.to.bf16x2.rn{.satfinite}.scale.n2.ue8m0(i16 %a, i16 %scale_factor)
 declare <4 x i8> @llvm.nvvm.f32x4.to{.e4m3x4, .e5m2x4}.rs{.relu}.satfinite(<4 x f32> %a, i32 %rnd_bits)
 ```
 
 ##### Overview:
 
-These intrinsics perform conversions involving the `e4m3` and `e5m2` narrow
-floating-point formats. In case of two inputs, the value converted from input
-`%a` is stored in the upper 8-bits of the result, and the value converted
-from input `%b` is stored in the lower 8-bits of the result.
+These intrinsics perform conversions involving the `e4m3`, `e5m2`, `ue8m0`,
+and `ue5m3` narrow floating-point formats. In case of two inputs, the value
+converted from input `%a` is stored in the upper 8-bits of the result, and
+the value converted from input `%b` is stored in the lower 8-bits of the
+result.
 
 For rounding modes, see {ref}`narrow-fp-rounding-modes`.
 
@@ -1060,9 +1071,9 @@ The `relu` modifier clamps negative results to 0.
 When `satfinite` is specified, if the absolute value of input (ignoring sign)
 is greater than `MAX_NORM` of the specified destination format, then the
 result is sign-preserved `MAX_NORM` of the destination format and a positive
-`MAX_NORM` in `.ue8m0x2` for which the destination sign is not supported.
-Also, if the input value is `NaN`, then the result is `NaN` in the
-specified destination format. The `satfinite` modifier is assumed to be
+`MAX_NORM` in `.ue8m0x2`/`.ue5m3x2` for which the destination sign is not
+supported. Also, if the input value is `NaN`, then the result is `NaN` in
+the specified destination format. The `satfinite` modifier is assumed to be
 present for conversions involving `e4m3` and `e5m2` types as the
 destination.
 
@@ -1174,6 +1185,33 @@ For more information, see [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread
 
 ### Arithmetic Intrinsics
 
+Some of these intrinsics take the rounding mode as an `i32` immediate operand
+instead of encoding it in the intrinsic name. The accepted values match the
+`llvm::RoundingMode` enumeration and are described in the following table:
+
+(fp-rounding-modes)=
+
+```{list-table} Floating-Point Rounding Modes
+:widths: 15 15 70
+:header-rows: 1
+
+   * - Value
+     - Rounding Mode
+     - Description
+   * - 0
+     - `rz`
+     - Round towards zero
+   * - 1
+     - `rn`
+     - Round to nearest, with ties to even
+   * - 2
+     - `rp`
+     - Round towards positive infinity
+   * - 3
+     - `rm`
+     - Round towards negative infinity
+```
+
 #### '`llvm.nvvm.fabs.*`' Intrinsic
 
 ##### Syntax:
@@ -1273,29 +1311,65 @@ used in the '`llvm.nvvm.idp4a.[us].u`' variants, while sign-extension is used
 with '`llvm.nvvm.idp4a.[us].s`' variants. The dot product of these 4-element
 vectors is added to `%c` to produce the return.
 
-#### '`llvm.nvvm.add.*`' Half-precision Intrinsics
+#### '`llvm.nvvm.fadd.*`' Intrinsics
 
 ##### Syntax:
 
-```llvm
-declare half @llvm.nvvm.add.rn.sat.f16(half %a, half %b)
-declare <2 x half> @llvm.nvvm.add.rn.sat.v2f16(<2 x half> %a, <2 x half> %b)
+This is an overloaded intrinsic. The '`.ftz`' and '`.sat`' modifiers are
+optional.
 
-declare half @llvm.nvvm.add.rn.ftz.sat.f16(half %a, half %b)
-declare <2 x half> @llvm.nvvm.add.rn.ftz.sat.v2f16(<2 x half> %a, <2 x half> %b)
+```llvm
+declare half         @llvm.nvvm.fadd{.ftz}{.sat}.f16(half %a, half %b, i32 immarg %rnd)
+declare <2 x half>   @llvm.nvvm.fadd{.ftz}{.sat}.v2f16(<2 x half> %a, <2 x half> %b, i32 immarg %rnd)
+declare bfloat       @llvm.nvvm.fadd.bf16(bfloat %a, bfloat %b, i32 immarg %rnd)
+declare <2 x bfloat> @llvm.nvvm.fadd.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, i32 immarg %rnd)
+declare float        @llvm.nvvm.fadd{.ftz}{.sat}.f32(float %a, float %b, i32 immarg %rnd)
+declare <2 x float>  @llvm.nvvm.fadd{.ftz}.v2f32(<2 x float> %a, <2 x float> %b, i32 immarg %rnd)
+declare double       @llvm.nvvm.fadd.f64(double %a, double %b, i32 immarg %rnd)
 ```
 
 ##### Overview:
 
-The '`llvm.nvvm.add.*`' intrinsics perform an addition operation with the
-specified rounding mode and modifiers.
+The '`llvm.nvvm.fadd.*`' intrinsics add `%a` and `%b` using the rounding mode
+selected by `%rnd` and the modifiers present in the intrinsic name. They
+correspond directly to the `add` PTX instruction.
 
 ##### Semantics:
 
-The '`.sat`' modifier performs a saturating addition where the result is
-clamped to `[0.0, 1.0]` and `NaN` results are flushed to `+0.0f`.
+`%rnd` selects the rounding mode applied to the result, see
+{ref}`fp-rounding-modes`.
+
 The '`.ftz`' modifier flushes subnormal inputs and results to sign-preserving
 zero.
+The '`.sat`' modifier performs a saturating addition where the result is
+clamped to `[0.0, 1.0]` and `NaN` results are flushed to `+0.0f`.
+
+Not every combination of operand type, rounding mode and modifier maps to a
+PTX instruction. The supported combinations are:
+
+```{list-table}
+:widths: 25 25 25
+:header-rows: 1
+
+   * - Operand Type
+     - Rounding Modes
+     - Modifiers
+   * - `half`, `<2 x half>`
+     - `rn`
+     - `.ftz`, `.sat`
+   * - `bfloat`, `<2 x bfloat>`
+     - `rn`
+     - None
+   * - `float`
+     - `rn`, `rz`, `rp`, `rm`
+     - `.ftz`, `.sat`
+   * - `<2 x float>`
+     - `rn`, `rz`, `rp`, `rm`
+     - `.ftz`
+   * - `double`
+     - `rn`, `rz`, `rp`, `rm`
+     - None
+```
 
 #### '`llvm.nvvm.mul.*`' Half-precision Intrinsics
 
@@ -1621,6 +1695,58 @@ of the permutation is defined as follows:
 
 ### TMA family of Intrinsics
 
+#### Tensor-Map Property Overrides
+
+Tensor intrinsics with `override` in their name replace properties in the
+opaque tensor map with explicit operands. The supported override variants and
+operand layouts are:
+
+| Intrinsic suffix           | Modes and dimensions                                                                                 | Operands after `%tensor_map`                                                                      |
+|----------------------------|------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
+| `override.addr`            | `tile` 1D--5D; `im2col`, `im2col.w`, and `im2col.w.128` 3D--5D; `tile.gather4` or `tile.scatter4` 2D | `ptr addrspace(1) %override_addr`                                                                 |
+| `override.addr.dim`        | `tile` 1D                                                                                            | `%override_addr, i16 %ts0`                                                                        |
+| `override.addr.dim.stride` | `tile` 2D--5D                                                                                        | `%override_addr, i16 %ts0 ... i16 %ts{N-1}, i32 %stride0 ... i32 %stride{N-2}, i16 %upper_stride` |
+
+`%override_addr` replaces the tensor map's global base address. It must be
+16-byte aligned; otherwise a runtime error is raised. The 128 KiB range
+beginning at that address must be allocated and accessible while the
+instruction executes; otherwise the behavior is undefined.
+
+`%ts0 ... %ts{N-1}` replace the global dimensions. For
+`override.addr.dim.stride`, `%stride0 ... %stride{N-2}` contain bits 4--35 of
+the corresponding byte strides and `%upper_stride` contains bits 36--51 of
+every stride. Equivalently, stride `i` is
+`((zext(%upper_stride) << 32) | zext(%stride{i})) << 4` bytes. Tensor
+coordinates must be zero when dimensions or strides are overridden; otherwise
+the behavior is undefined.
+
+These variants lower to `.override::global_address`, optionally followed by
+`.override::global_dim` or `.override::global_dim_stride`, and require
+`sm_107f` and PTX 9.4 or later.
+
+For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-overriding-tensor-property-value).
+
+#### TMA Global-to-Shared Data-Validity Reporting
+
+The '`@llvm.nvvm.cp.async.bulk.tensor.g2s.*`' and '`@llvm.nvvm.cp.async.bulk.tensor.g2s.cta.*`' intrinsics, including the property-override
+forms, take an `i32 %validate_pattern` immediate argument in the range \[0, 6). It selects the data-validity reporting mechanism applied to the
+tensor data while it is copied:
+
+| Value | PTX Report Mechanism                                    | Semantics                                                        |
+|-------|---------------------------------------------------------|------------------------------------------------------------------|
+|   0   | *disabled; qualifier omitted*                           | No data inspection (default)                                     |
+|   1   | `.mbarrier::report::validity::per_16bytes::80000000`    | Sample 4 FP32 values per aligned 16-byte chunk and match `-0`    |
+|   2   | `.mbarrier::report::validity::per_16bytes::8000`        | Sample 8 FP16 values per aligned 16-byte chunk and match `-0`    |
+|   3   | `.mbarrier::report::validity::per_16bytes::80`          | Sample 16 FP8 values per aligned 16-byte chunk and match `-0`    |
+|   4   | `.mbarrier::report::validity::per_16bytes::8`           | Sample 32 FP4 values per aligned 16-byte chunk and match `-0`    |
+|   5   | `.mbarrier::report::validity::per_element::ff`          | Inspect each 8-/4-bit element for the `ff` pattern               |
+
+When the reporting mechanism is not specified, it defaults to disabled, which emits no qualifier in the PTX instruction and maintains compatibility with older PTX versions. For values 1 through 5, the associated mbarrier must be initialized with `layout::v1` layout; otherwise, the behavior is undefined.
+
+The nonzero report mechanism requires `sm_107f` or later in the same family and is supported only on PTX 9.4 or later.
+
+For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor).
+
 #### '`llvm.nvvm.cp.async.bulk.global.to.shared.cluster`'
 
 ##### Syntax:
@@ -1739,6 +1865,216 @@ prefetched in terms of bytes and it must be a multiple of 16.
 
 For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch).
 
+#### '`llvm.nvvm.cp.async.bulk.prefetch.evict.priority`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.prefetch.evict.priority(ptr addrspace(1) %src, i32 %size, i32 %evict_policy)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.cp.async.bulk.prefetch.evict.priority`' intrinsic
+asynchronously prefetches `%size` bytes from global memory into the L2 cache
+using the selected eviction priority. It lowers to the
+`cp.async.bulk.prefetch.L2.global` PTX instruction with an L2
+eviction-priority qualifier. Unlike `@llvm.nvvm.cp.async.bulk.prefetch.L2`,
+it takes an eviction policy instead of a cache hint. `%size` must be a
+multiple of 16.
+
+The trailing `i32 %evict_policy` is an immediate (`immarg`) argument that
+selects the L2 eviction policy.
+
+| Value | Name           | PTX qualifier       |
+|-------|----------------|---------------------|
+| 0     | `evict_normal` | (none, the default) |
+| 1     | `evict_last`   | `.L2::evict_last`   |
+
+This intrinsic requires `sm_107f` and PTX 9.4 or later.
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.tile.[1-5]d`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.tile.1d(ptr %tensor_map, i32 %d0, i32 %evict_policy)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.tile.2d(..., i32 %d0, i32 %d1, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.tile.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.tile.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.tile.gather4.2d(ptr %tensor_map, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i32 %evict_policy)
+```
+
+##### Overview:
+
+These intrinsics asynchronously prefetch tile-mode tensor data from global
+memory into the L2 cache using the selected eviction priority. They are the
+eviction-priority forms of the corresponding
+`@llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.*` intrinsics, and the
+trailing `i32 %evict_policy` uses the encoding described for
+`@llvm.nvvm.cp.async.bulk.prefetch.evict.priority`. They do not take cache-hint
+operands and require `sm_107f` and PTX 9.4 or later.
+
+For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor).
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.im2col.[3-5]d`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.im2col.3d(ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i32 %evict_policy)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.im2col.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.im2col.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
+
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.im2col.w.3d(ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i32 %evict_policy)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.im2col.w.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.im2col.w.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.im2col.w.128.3d(ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i32 %evict_policy)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.im2col.w.128.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.im2col.w.128.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+```
+
+##### Overview:
+
+These intrinsics asynchronously prefetch im2col-mode tensor data from global
+memory into the L2 cache using the selected eviction priority. An N-dimensional
+form takes N `i32` tensor coordinates. The `im2col` forms take N - 2 `i16`
+im2col offsets, while the `im2col.w` and `im2col.w.128` forms take
+`i16 %wHalo` and `i16 %wOffset`.
+
+The trailing `i32 %evict_policy` uses the encoding described for
+`@llvm.nvvm.cp.async.bulk.prefetch.evict.priority`. These forms do not take
+cache-hint operands and require `sm_107f` and PTX 9.4 or later.
+
+For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor).
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.override*.[1-5]d`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.override.addr.1d(ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i64 %cache_hint, i1 %flag_cache_hint)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.override.addr.2d(..., i32 %d0, i32 %d1, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.override.addr.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.gather4.override.addr.2d(ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i64 %cache_hint, i1 %flag_cache_hint)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.override.addr.dim.1d(ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i32 %d0, i64 %cache_hint, i1 %flag_cache_hint)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.override.addr.dim.stride.2d(ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i16 %ts1, i32 %stride0, i16 %upper_stride, i32 %d0, i32 %d1, i64 %cache_hint, i1 %flag_cache_hint)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.override.addr.dim.stride.3d(..., i16 %ts0, i16 %ts1, i16 %ts2, i32 %stride0, i32 %stride1, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.override.addr.dim.stride.4d(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i32 %stride0, i32 %stride1, i32 %stride2, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.tile.override.addr.dim.stride.5d(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i16 %ts4, i32 %stride0, i32 %stride1, i32 %stride2, i32 %stride3, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+```
+
+##### Overview:
+
+These intrinsics asynchronously prefetch tile-mode tensor data from global
+memory into the L2 cache while overriding tensor-map properties with explicit
+operands. They lower to the
+`cp.async.bulk.prefetch.tensor.<N>d.L2.global.tile` PTX instructions
+qualified with `.override::*`.
+
+The supported override variants and operands are described in
+[Tensor-Map Property Overrides](#tensor-map-property-overrides).
+
+- The last argument is a compile-time boolean indicating whether `%cache_hint`
+  is valid. When set, it indicates a valid cache_hint (`i64 %ch`) and generates the
+  `.L2::cache_hint` variant of the PTX instruction.
+
+For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor).
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.override.addr.[3-5]d`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.override.addr.3d(ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i64 %cache_hint, i1 %flag_cache_hint)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.override.addr.4d(..., i16 %im2col0, i16 %im2col1, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.override.addr.5d(..., i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.w.override.addr.{3,4,5}d(..., i16 %wHalo, i16 %wOffset, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.im2col.w.128.override.addr.{3,4,5}d(..., i16 %wHalo, i16 %wOffset, ...)
+```
+
+##### Overview:
+
+These intrinsics asynchronously prefetch im2col-mode tensor data from global
+memory into the L2 cache while overriding the tensor-map global address. An
+N-dimensional form takes N `i32` tensor coordinates. The `im2col` forms take
+N - 2 `i16` im2col offsets, while the `im2col.w` and `im2col.w.128` forms take
+`i16 %wHalo` and `i16 %wOffset`.
+
+`%override_addr` and its requirements are described in
+[Tensor-Map Property Overrides](#tensor-map-property-overrides). The trailing
+`i1 %flag_cache_hint` must be a compile-time constant; when set, it marks
+`i64 %cache_hint` as valid and emits the `.L2::cache_hint` PTX qualifier.
+
+For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor).
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.tile.override*.[1-5]d`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.tile.override.addr.1d(ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %evict_policy)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.tile.override.addr.2d(..., i32 %d0, i32 %d1, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.tile.override.addr.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.tile.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.tile.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.tile.override.addr.dim.1d(ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i32 %d0, i32 %evict_policy)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.tile.override.addr.dim.stride.2d(ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i16 %ts1, i32 %stride0, i16 %upper_stride, i32 %d0, i32 %d1, i32 %evict_policy)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.tile.override.addr.dim.stride.3d(..., i16 %ts0, i16 %ts1, i16 %ts2, i32 %stride0, i32 %stride1, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.tile.override.addr.dim.stride.4d(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i32 %stride0, i32 %stride1, i32 %stride2, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.tile.override.addr.dim.stride.5d(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i16 %ts4, i32 %stride0, i32 %stride1, i32 %stride2, i32 %stride3, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.tile.gather4.override.addr.2d(ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i32 %evict_policy)
+```
+
+##### Overview:
+
+These intrinsics asynchronously prefetch tile-mode tensor data from global
+memory into the L2 cache using the selected eviction priority while overriding
+tensor-map properties. They are the eviction-priority forms of the
+corresponding tensor prefetch override intrinsics. The override operands are
+described in
+[Tensor-Map Property Overrides](#tensor-map-property-overrides). The remaining
+operands use the coordinate layout of the corresponding tile or
+`tile.gather4` intrinsic.
+
+The trailing `i32 %evict_policy` is an immediate argument: 0 selects the
+default `evict_normal` policy and emits no PTX qualifier; 1 selects
+`.L2::evict_last`. These forms do not take cache-hint operands.
+
+For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor).
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.im2col.override.addr.[3-5]d`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.im2col.override.addr.3d(ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i32 %evict_policy)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.im2col.override.addr.4d(..., i16 %im2col0, i16 %im2col1, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.im2col.override.addr.5d(..., i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.im2col.w.override.addr.{3,4,5}d(..., i16 %wHalo, i16 %wOffset, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.prefetch.evict.priority.im2col.w.128.override.addr.{3,4,5}d(..., i16 %wHalo, i16 %wOffset, ...)
+```
+
+##### Overview:
+
+These intrinsics asynchronously prefetch im2col-mode tensor data from global
+memory into the L2 cache using the selected eviction priority while overriding
+the tensor-map global address. An N-dimensional form takes N `i32` tensor
+coordinates. The `im2col` forms take N - 2 `i16` im2col offsets, while the
+`im2col.w` and `im2col.w.128` forms take `i16 %wHalo` and `i16 %wOffset`.
+
+`%override_addr` and its requirements are described in
+[Tensor-Map Property Overrides](#tensor-map-property-overrides). The trailing
+`i32 %evict_policy` uses the encoding described for
+`@llvm.nvvm.cp.async.bulk.prefetch.evict.priority`; these forms do not take
+cache-hint operands.
+
+For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-prefetch-tensor).
+
 #### '`llvm.nvvm.prefetch.*`'
 
 ##### Syntax:
@@ -1803,7 +2139,126 @@ operand size is an integer constant that specifies the amount of data, in bytes,
 in the specified cache level on which the priority is to be applied. The only
 supported value for the size operand is 128.
 
+#### '`llvm.nvvm.applypriority.async.bulk.evict.priority`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.applypriority.async.bulk.evict.priority(ptr addrspace(1) %global_ptr, i32 %size, i32 %evict_policy)
+```
+
+##### Overview:
+
+The '`@llvm.nvvm.applypriority.async.bulk.evict.priority`' intrinsic applies
+the selected L2 eviction priority to `[%global_ptr, %global_ptr + %size)`.
+It lowers to the `applypriority.async.bulk.global.bulk_group` PTX instruction.
+`%size` may be a register or an immediate and must be a multiple of 16.
+`%global_ptr` must be aligned to 128 bytes.
+
+`%evict_policy` is an immediate argument. Its only valid value is 0, which
+selects `.L2::evict_normal`.
+
+This intrinsic requires `sm_107f` and PTX 9.4 or later.
+
+#### '`llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.tile.[1-5]d`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.tile.1d(ptr %tensor_map, i32 %d0, i32 %evict_policy)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.tile.2d(..., i32 %d0, i32 %d1, ...)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.tile.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.tile.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.tile.gather4.2d(ptr %tensor_map, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i32 %evict_policy)
+```
+
+##### Overview:
+
+These intrinsics apply `evict_normal` priority to a tile tensor region. An
+N-dimensional tile form takes N `i32` tensor coordinates; the `tile.gather4`
+form takes `i32 %x0` followed by four row coordinates `%y0 ... %y3`. The
+trailing `%evict_policy` is an immediate argument whose only valid value is 0.
+They require `sm_107f` and PTX 9.4 or later.
+
+#### '`llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.im2col.[3-5]d`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.im2col.3d(ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i32 %evict_policy)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.im2col.4d(..., i16 %im2col0, i16 %im2col1, ...)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.im2col.5d(..., i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.im2col.w.{3,4,5}d(..., i16 %wHalo, i16 %wOffset, ...)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.im2col.w.128.{3,4,5}d(..., i16 %wHalo, i16 %wOffset, ...)
+```
+
+##### Overview:
+
+These intrinsics apply `evict_normal` priority to an im2col tensor region
+described by `%tensor_map`. An N-dimensional form takes N `i32` tensor
+coordinates. The `im2col` forms take N - 2 `i16` im2col offsets, while the
+`im2col.w` and `im2col.w.128` forms take `i16 %wHalo` and `i16 %wOffset`.
+
+The trailing `%evict_policy` is an immediate argument whose only valid value is
+0. These intrinsics require `sm_107f` and PTX 9.4 or later.
+
+#### '`llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.tile.override*.[1-5]d`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.tile.override.addr.1d(ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %evict_policy)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.tile.override.addr.2d(..., i32 %d0, i32 %d1, ...)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.tile.override.addr.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.tile.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.tile.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.tile.override.addr.dim.1d(ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i32 %d0, i32 %evict_policy)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.tile.override.addr.dim.stride.2d(ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i16 %ts1, i32 %stride0, i16 %upper_stride, i32 %d0, i32 %d1, i32 %evict_policy)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.tile.override.addr.dim.stride.3d(..., i16 %ts0, i16 %ts1, i16 %ts2, i32 %stride0, i32 %stride1, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.tile.override.addr.dim.stride.4d(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i32 %stride0, i32 %stride1, i32 %stride2, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.tile.override.addr.dim.stride.5d(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i16 %ts4, i32 %stride0, i32 %stride1, i32 %stride2, i32 %stride3, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.tile.gather4.override.addr.2d(ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i32 %evict_policy)
+```
+
+##### Overview:
+
+These intrinsics apply the selected L2 eviction priority to a tile region while
+overriding tensor-map properties with explicit operands. Their supported
+override variants and operands are described in
+[Tensor-Map Property Overrides](#tensor-map-property-overrides). An
+N-dimensional tile form takes N `i32` tensor coordinates; the `tile.gather4`
+form takes `i32 %x0` followed by four row coordinates `%y0 ... %y3`.
+
+`%evict_policy` is an immediate argument whose only valid value is 0
+(`evict_normal`).
+
 For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-applypriority).
+
+#### '`llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.im2col.override.addr.[3-5]d`'
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.im2col.override.addr.3d(ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i32 %evict_policy)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.im2col.override.addr.4d(..., i16 %im2col0, i16 %im2col1, ...)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.im2col.override.addr.5d(..., i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.im2col.w.override.addr.{3,4,5}d(..., i16 %wHalo, i16 %wOffset, ...)
+declare void @llvm.nvvm.applypriority.async.bulk.tensor.evict.priority.im2col.w.128.override.addr.{3,4,5}d(..., i16 %wHalo, i16 %wOffset, ...)
+```
+
+##### Overview:
+
+These intrinsics apply the selected L2 eviction priority to an im2col region
+while overriding the tensor-map global address. An N-dimensional form takes N
+`i32` tensor coordinates. The `im2col` forms take N - 2 `i16` im2col offsets,
+while the `im2col.w` and `im2col.w.128` forms take `i16 %wHalo` and
+`i16 %wOffset`.
+
+`%override_addr` and its requirements are described in
+[Tensor-Map Property Overrides](#tensor-map-property-overrides).
+`%evict_policy` is an immediate argument whose only valid value is 0
+(`evict_normal`).
 
 #### `llvm.nvvm.discard.*`'
 
@@ -1847,13 +2302,15 @@ and to the [PTX ISA discard documentation](https://docs.nvidia.com/cuda/parallel
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %flag_cta_group)
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d(..., i32 %d0, i32 %d1, ...)
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.1d.i32(..., i32 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.2d.{i16,i32}(..., i32 %d0, i32 %d1, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.3d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.4d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.5d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.gather4.2d(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %flag_cta_group)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.gather4.2d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.gather4.2d.i32(..., i32 %mc, i64 %ch, i1 %flag_mc, ...)
 ```
 
 ##### Overview:
@@ -1871,22 +2328,26 @@ followed by four coordinates indicating the four row-indices. So, this mode
 takes a total of 5 coordinates as input arguments. For more information on
 `gather4` mode, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes).
 
-- The last three arguments to these intrinsics are flags indicating support for
-  multicast, cache_hint and cta_group::1/2 modifiers. These flag arguments must
-  be compile-time constants. The backend looks through these flags and lowers
-  the intrinsics appropriately.
-- The argument denoted by `i1 %flag_ch` when set, indicates a valid cache_hint
+- The last four operands control the multicast and cache-hint modifiers, the
+  CTA group, and the data-validity reporting pattern. They must be compile-time
+  constants. The backend uses them to select the appropriate instruction.
+- The argument denoted by `i1 %flag_ch`, when set, indicates a valid cache_hint
   (`i64 %ch`) and generates the `.L2::cache_hint` variant of the PTX
   instruction.
-- The argument denoted by `i1 %flag_mc` when set, indicates the presence of a
-  multicast mask (`i16 %mc`) and generates the PTX instruction with the
-  `.multicast::cluster` modifier.
-- The argument denoted by `i32 %flag_cta_group` takes values within the range
-  \[0, 3) i.e. {0,1,2}. When the value of `%flag_cta_group` is not within the
-  range, it may raise an error from the Verifier. The default value is '0' with
-  no cta_group modifier in the instruction. The values of '1' and '2' lower to
-  `cta_group::1` and `cta_group::2` variants of the PTX instruction
+- The argument denoted by `i1 %flag_mc`, when set, indicates the presence of a
+  multicast mask (`%mc`) and generates the PTX instruction with the
+  `.multicast::cluster` modifier. An `i16` mask selects the default/16-bit
+  multicast form while an `i32` mask selects the `.multicast::cluster::32b`
+  variant. Only `i16` and `i32` mask types are supported. The 32-bit form is
+  supported only on `sm_107f` or later in the same family and is supported only
+  on the PTX 9.4 or later.
+- The argument denoted by `i32 %cta_group` takes values within the range
+  \[0, 3). The default value is '0' emits no cta_group modifier in the instruction.
+  The values '1' and '2' lower to `cta_group::1` and `cta_group::2` variants of the PTX instruction
   respectively.
+- The last `i32 %validate_pattern` flag selects the data-validity reporting
+  mechanism; see
+  [TMA Global-to-Shared Data-Validity Reporting](#tma-global-to-shared-data-validity-reporting).
 
 For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor).
 
@@ -1895,17 +2356,20 @@ For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thre
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %flag_cta_group)
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, ...)
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.3d.i32(..., i16 %im2col0, i32 %mc, i64 %ch, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.4d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.5d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.3d(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %flag_cta_group)
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.3d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.3d.i32(..., i16 %im2col0, i32 %mc, i64 %ch, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.4d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.5d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.3d(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %flag_cta_group)
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.3d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.3d.i32(..., i16 %im2col0, i32 %mc, i64 %ch, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.4d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.5d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
 ```
 
 ##### Overview:
@@ -1924,7 +2388,7 @@ number of offsets is always 2, denoted by `i16 %wHalo` and `i16 %wOffset`
 arguments. For more information on `im2col.w` and `im2col.w.128` modes,
 refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes).
 
-The last three arguments to these intrinsics are flags, with the same
+The last four arguments to these intrinsics are flags, with the same
 functionality as described in the `tile` mode intrinsics above.
 
 For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor).
@@ -1934,13 +2398,13 @@ For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thre
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.1d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.1d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.2d(..., i32 %d0, i32 %d1, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.gather4.2d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i64 %ch, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.gather4.2d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
 ```
 
 ##### Overview:
@@ -1958,10 +2422,13 @@ followed by four coordinates indicating the four row-indices. So, this mode
 takes a total of 5 coordinates as input arguments. For more information on
 `gather4` mode, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-tiled-scatter4-gather4-modes).
 
-- The last argument to these intrinsics is a boolean flag indicating support for
-  cache_hint. This flag argument must be a compile-time constant. When set, it
-  indicates a valid cache_hint (`i64 %ch`) and generates the
+- The last two operands are a boolean cache-hint flag and the data-validity
+  reporting pattern. They must be compile-time constants. When `i1 %flag_ch`
+  is set, it indicates a valid cache hint (`i64 %ch`) and generates the
   `.L2::cache_hint` variant of the PTX instruction.
+- The last `i32 %validate_pattern` flag selects the data-validity reporting
+  mechanism; see
+  [TMA Global-to-Shared Data-Validity Reporting](#tma-global-to-shared-data-validity-reporting).
 
 For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor).
 
@@ -1970,15 +2437,15 @@ For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thre
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i64 %ch, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
 
-declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.128.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %flag_ch)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.128.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.128.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
 declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.128.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
 ```
@@ -1998,12 +2465,166 @@ tensor operation. For the `im2col.w` and `im2col.w.128` mode, the number of
 offsets is always 2, denoted by `i16 %wHalo` and `i16 %wOffset` arguments.
 For more information on `im2col.w` and `im2col.w.128` modes, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-im2col-w-w128-modes).
 
-- The last argument to these intrinsics is a boolean flag indicating support
-  for cache_hint. This flag argument must be a compile-time constant. When set,
-  it indicates a valid cache_hint (`i64 %ch`) and generates the
-  `.L2::cache_hint` variant of the PTX instruction.
+The last two operands are a boolean cache-hint flag and the data-validity
+reporting pattern, with the same functionality as described in the `tile`
+mode intrinsics above.
 
 For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor).
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.g2s.tile*.override*[1-5]d`' Intrinsics
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.1d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.1d.i32(..., i32 %mc, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.2d.{i16,i32}(..., i32 %d0, i32 %d1, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.3d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.4d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.5d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.gather4.override.addr.2d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.gather4.override.addr.2d.i32(..., i32 %mc, ...)
+
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.dim.1d.i32(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i32 %d0, i32 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.dim.stride.2d.i32(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i16 %ts1, i32 %stride0, i16 %upper_stride, i32 %d0, i32 %d1, i32 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.dim.stride.3d.i32(..., i16 %ts0, i16 %ts1, i16 %ts2, i32 %stride0, i32 %stride1, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.dim.stride.4d.i32(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i32 %stride0, i32 %stride1, i32 %stride2, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.tile.override.addr.dim.stride.5d.i32(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i16 %ts4, i32 %stride0, i32 %stride1, i32 %stride2, i32 %stride3, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+```
+
+##### Overview:
+
+These intrinsics asynchronously copy tile-mode tensor data from Global memory to Shared Cluster memory
+while allowing overriding properties in the opaque tensor map with
+explicit operands. The override operands and their restrictions are described
+in [Tensor-Map Property Overrides](#tensor-map-property-overrides).
+
+- `%flag_mc` controls whether the multicast mask (i16/i32 `%mc`) is emitted.
+- `%flag_ch` controls whether `%ch` cache hint is emitted.
+- `%cta_group` selects CTA-group qualifier, it can represent three values:
+    | Value | CTA Group Modifier              |
+    |-------|---------------------------------|
+    | 0     | no cta group modifier (default) |
+    | 1     | `cta_group::1`                  |
+    | 2     | `cta_group::2`                  |
+- The last `i32 %validate_pattern` flag is described in
+[TMA Global-to-Shared Data-Validity Reporting](#tma-global-to-shared-data-validity-reporting).
+
+All above described flag operands must be compile time constants.
+
+These intrinsics lower to the `.override::global_address` form, optionally
+with `.override::global_dim` or `.override::global_dim_stride`, and require
+`sm_107f` and PTX 9.4 or later.
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.g2s.im2col*.override.addr.[3-5]d`' Intrinsics
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.override.addr.3d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.override.addr.3d.i32(..., i32 %mc, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.override.addr.4d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.override.addr.5d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
+
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.override.addr.3d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.override.addr.3d.i32(..., i32 %mc, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.override.addr.4d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.override.addr.5d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.override.addr.3d.i16(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i16 %mc, i64 %ch, i1 %flag_mc, i1 %flag_ch, i32 %cta_group, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.override.addr.3d.i32(..., i32 %mc, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.override.addr.4d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.im2col.w.128.override.addr.5d.{i16,i32}(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+```
+
+##### Overview:
+
+These intrinsics asynchronously copy im2col-mode tensor data from Global memory to Shared Cluster memory
+while allowing overriding properties in the opaque tensor map with
+explicit operands. The override operands and their restrictions are described
+in [Tensor-Map Property Overrides](#tensor-map-property-overrides).
+
+The `%flag_mc`, `%flag_ch`, `%cta_group`, and `%validate_pattern` operands
+have the same functionality as described in the `tile` mode override
+intrinsics above. All these flag operands must be compile-time constants.
+
+These intrinsics lower to the `.override::global_address` form, optionally
+with `.override::global_dim` or `.override::global_dim_stride`, and require
+`sm_107f` and PTX 9.4 or later.
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile*.override*[1-5]d`' Intrinsics
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.1d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.2d(..., i32 %d0, i32 %d1, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.3d(..., i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.gather4.override.addr.2d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %x0, i32 %y0, i32 %y1, i32 %y2, i32 %y3, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
+
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.dim.1d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i32 %d0, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
+
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.dim.stride.2d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i16 %ts0, i16 %ts1, i32 %stride0, i16 %upper_stride, i32 %d0, i32 %d1, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.dim.stride.3d(..., i16 %ts0, i16 %ts1, i16 %ts2, i32 %stride0, i32 %stride1, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.dim.stride.4d(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i32 %stride0, i32 %stride1, i32 %stride2, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.tile.override.addr.dim.stride.5d(..., i16 %ts0, i16 %ts1, i16 %ts2, i16 %ts3, i16 %ts4, i32 %stride0, i32 %stride1, i32 %stride2, i32 %stride3, i16 %upper_stride, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+```
+
+##### Overview:
+
+These intrinsics asynchronously copy tile-mode tensor data from Global memory to Shared CTA memory
+while allowing overriding properties in the opaque tensor map with
+explicit operands. The override operands and their restrictions are described
+in [Tensor-Map Property Overrides](#tensor-map-property-overrides).
+
+- `%flag_ch` controls whether `%ch` cache hint is emitted.
+- The last `i32 %validate_pattern` flag is described in
+[TMA Global-to-Shared Data-Validity Reporting](#tma-global-to-shared-data-validity-reporting).
+
+All above described flag operands must be compile time constants.
+
+These intrinsics lower to the `.override::global_address` form, optionally
+with `.override::global_dim` or `.override::global_dim_stride`, and require
+`sm_107f` and PTX 9.4 or later.
+
+#### '`llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col*.override.addr.[3-5]d`' Intrinsics
+
+##### Syntax:
+
+```llvm
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.override.addr.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %im2col0, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i16 %im2col0, i16 %im2col1, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i16 %im2col0, i16 %im2col1, i16 %im2col2, ...)
+
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.override.addr.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.128.override.addr.3d(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr %tensor_map, ptr addrspace(1) %override_addr, i32 %d0, i32 %d1, i32 %d2, i16 %wHalo, i16 %wOffset, i64 %ch, i1 %flag_ch, i32 %validate_pattern)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.128.override.addr.4d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, ...)
+declare void @llvm.nvvm.cp.async.bulk.tensor.g2s.cta.im2col.w.128.override.addr.5d(..., i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, ...)
+```
+
+##### Overview:
+
+These intrinsics asynchronously copy im2col-mode tensor data from Global memory to Shared CTA memory
+while allowing overriding properties in the opaque tensor map with
+explicit operands. The override operands and their restrictions are described
+in [Tensor-Map Property Overrides](#tensor-map-property-overrides).
+
+The `%flag_ch` and `%validate_pattern` operands have the same functionality
+as described in the `tile` mode override intrinsics above. All these flag
+operands must be compile-time constants.
+
+These intrinsics lower to the `.override::global_address` form, optionally
+with `.override::global_dim` or `.override::global_dim_stride`, and require
+`sm_107f` and PTX 9.4 or later.
+
 
 #### '`llvm.nvvm.cp.async.bulk.tensor.s2g.tile.[1-5]d`'
 
@@ -2284,23 +2905,10 @@ declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.scatter4.override.addr.2d(
 The '`@llvm.nvvm.cp.async.bulk.tensor.s2g.tile.override*.[1-5]d`' intrinsics correspond to the `cp.async.bulk.tensor.[1-5]d.*` set of PTX instructions qualified with the `.override::*` qualifiers.
 These instructions initiate an asynchronous copy of tensor data from shared::cta to global memory (indicated by the `s2g` prefix) in `tile` mode, while overriding specific properties of the opaque tensor-map object with explicit instruction operands.
 
-The `.override::*` qualifiers allow certain tensor-map properties to be ignored and instead supplied as explicit operands.
-The supported override variants are:
-
-- `override.addr` (`.override::global_address`): The global base address from the tensor-map is ignored and the explicit `ptr addrspace(1) %override_addr` operand is used instead.
-  The address must be 16B aligned; otherwise a runtime error is raised.
-  The memory range `[%override_addr, %override_addr + 128 KiB)` must be allocated and accessible during execution; otherwise the behavior is undefined.
-
-- `override.addr.dim` (`.override::global_address` + `.override::global_dim`, 1D only): Overrides the base address and the tensor global dimension.
-  The `i16 %ts0` operand specifies the new tensor size.
-  This variant requires the `tile` load mode; the base address override is mandatory when overriding attributes.
-  The tensor start coordinates must be zero; otherwise the behavior is undefined.
-
-- `override.addr.dim.stride` (`.override::global_address` + `.override::global_dim_stride`, 2D and higher): Overrides the base address, the tensor global dimensions, and the global strides.
-  The `i16 %ts0 ... i16 %ts{dim-1}` operands specify the new tensor sizes, the `i32 %stride0 ... i32 %stride{dim-2}` operands specify the lower strides, and the `i16 %upper_stride` operand specifies the upper stride.
-  The effective global stride is computed as `global_stride[i] = ((%stride{i} + (%upper_stride{i} << 32)) << 4)`.
-  This variant requires the `tile` load mode; the base address override is mandatory when overriding attributes.
-  The tensor start coordinates must be zero; otherwise the behavior is undefined.
+The `.override::*` qualifiers ignore certain tensor-map properties and
+instead take them as explicit instruction operands.
+The supported override variants, operands, and restrictions are described in
+[Tensor-Map Property Overrides](#tensor-map-property-overrides).
 
 The `scatter4.override.addr` variant combines the `tile.scatter4` mode (2D only) with the base address override.
 In `tile.scatter4` mode, a single 2D source tensor is divided into four rows in the 2D destination tensor.
@@ -2326,9 +2934,11 @@ declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.override.addr.5d(..., i3
 ##### Overview:
 
 The '`@llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.override.addr.[3-5]d`' intrinsics correspond to the `cp.async.bulk.tensor.im2col_no_offs.[3-5]d.*` set of PTX instructions qualified with the `.override::global_address` qualifier.
-These instructions initiate an asynchronous copy of tensor data from shared::cta to global memory (indicated by the `s2g` prefix) in `im2col` mode, while overriding the global base address from the tensor-map with the explicit `ptr addrspace(1) %override_addr` operand.
-The address must be 16B aligned and the memory range `[%override_addr, %override_addr + 128 KiB)` must be allocated and accessible during execution; otherwise the behavior is undefined.
-The override address semantics and the last boolean flag argument have the same functionality as described in the `s2g.tile` override intrinsics above.
+They copy tensor data from shared::cta to global memory in `im2col` mode
+using the `override.addr` operands described in
+[Tensor-Map Property Overrides](#tensor-map-property-overrides).
+The last boolean flag argument has the same functionality as described in the
+`s2g.tile` override intrinsics above.
 
 For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor).
 
@@ -2345,8 +2955,11 @@ declare void @llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.w.override.addr.5d(..., 
 ##### Overview:
 
 The '`@llvm.nvvm.cp.async.bulk.tensor.s2g.im2col.w.override.addr.[3-5]d`' intrinsics correspond to the `cp.async.bulk.tensor.im2col_no_offs::w.[3-5]d.*` set of PTX instructions qualified with the `.override::global_address` qualifier.
-These instructions initiate an asynchronous copy of tensor data from shared::cta to global memory (indicated by the `s2g` prefix) in `im2col_w` mode, while overriding the global base address from the tensor-map with the explicit `ptr addrspace(1) %override_addr` operand.
-The override address semantics and the last boolean flag argument have the same functionality as described in the `s2g.tile` override intrinsics above.
+They copy tensor data from shared::cta to global memory in `im2col_w` mode
+using the `override.addr` operands described in
+[Tensor-Map Property Overrides](#tensor-map-property-overrides).
+The last boolean flag argument has the same functionality as described in the
+`s2g.tile` override intrinsics above.
 
 For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor).
 
@@ -2376,7 +2989,8 @@ declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override.addr.dim.strid
 
 The '`@llvm.nvvm.cp.async.bulk.tensor.reduce.tile.override*.[1-5]d`' intrinsics correspond to the `cp.reduce.async.bulk.tensor.[1-5]d.global.shared::cta.*` set of PTX instructions qualified with the `.override::*` qualifiers.
 These instructions initiate an asynchronous reduction operation of tensor data in global memory with the tensor data in shared::cta memory, using `tile` mode, while overriding specific properties of the opaque tensor-map object with explicit instruction operands.
-The three override variants (`override.addr`, `override.addr.dim`, and `override.addr.dim.stride`) have the same semantics as described in the `s2g.tile` override intrinsics above.
+The supported override variants and operands are described in
+[Tensor-Map Property Overrides](#tensor-map-property-overrides).
 
 The `i32 %red_op` argument selects the reduction operation to perform.
 It must be a compile-time constant in the half-open range `[0, 8)`, with the following encoding:
@@ -2414,7 +3028,9 @@ declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.override.addr.5d(...,
 
 The '`@llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.override.addr.[3-5]d`' intrinsics correspond to the `cp.reduce.async.bulk.tensor.im2col_no_offs.[3-5]d.global.shared::cta.*` set of PTX instructions qualified with the `.override::global_address` qualifier.
 These instructions initiate an asynchronous reduction operation of tensor data in global memory with the tensor data in shared::cta memory, using `im2col` mode, while overriding the global base address from the tensor-map with the explicit `ptr addrspace(1) %override_addr` operand.
-The `i32 %red_op` argument, the override address semantics, and the last boolean flag argument have the same functionality as described in the `reduce.tile` override intrinsics above.
+The `override.addr` operands are described in
+[Tensor-Map Property Overrides](#tensor-map-property-overrides).
+`%red_op` and the last boolean flag are as described for `reduce.tile` above.
 
 For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor).
 
@@ -2432,7 +3048,9 @@ declare void @llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.w.override.addr.5d(..
 
 The '`@llvm.nvvm.cp.async.bulk.tensor.reduce.im2col.w.override.addr.[3-5]d`' intrinsics correspond to the `cp.reduce.async.bulk.tensor.im2col_no_offs::w.[3-5]d.global.shared::cta.*` set of PTX instructions qualified with the `.override::global_address` qualifier.
 These instructions initiate an asynchronous reduction operation of tensor data in global memory with the tensor data in shared::cta memory, using `im2col_w` mode, while overriding the global base address from the tensor-map with the explicit `ptr addrspace(1) %override_addr` operand.
-The `i32 %red_op` argument, the override address semantics, and the last boolean flag argument have the same functionality as described in the `reduce.tile` override intrinsics above.
+The `override.addr` operands are described in
+[Tensor-Map Property Overrides](#tensor-map-property-overrides).
+`%red_op` and the last boolean flag are as described for `reduce.tile` above.
 
 For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor).
 
@@ -2798,24 +3416,28 @@ For more information on tensor-memory load/store instructions, refer to [PTX ISA
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.tcgen05.alloc.cg1(ptr %dst, i32 %ncols)
-declare void @llvm.nvvm.tcgen05.alloc.cg2(ptr %dst, i32 %ncols)
-declare void @llvm.nvvm.tcgen05.alloc.shared.cg1(ptr addrspace(3) %dst, i32 %ncols)
-declare void @llvm.nvvm.tcgen05.alloc.shared.cg2(ptr addrspace(3) %dst, i32 %ncols)
+declare void @llvm.nvvm.tcgen05.alloc.{cg1,cg2}.p0(ptr %dst, i32 %ncols, i1 %is_exclusive_flag)
+declare void @llvm.nvvm.tcgen05.alloc.{cg1,cg2}.p3(ptr addrspace(3) %dst, i32 %ncols, i1 %is_exclusive_flag)
 ```
 
 ##### Overview:
 
 The '`@llvm.nvvm.tcgen05.alloc.*`' intrinsics correspond to the
-`tcgen05.alloc.cta_group*.sync.aligned.b32` family of PTX instructions.
-The `tcgen05.alloc` is a potentially blocking instruction which dynamically
-allocates the specified number of columns in the Tensor Memory and writes the
-address of the allocated Tensor Memory into shared memory at the location
-specified by `%dst`. The 32-bit operand `%ncols` specifies the number of
-columns to be allocated and it must be a power-of-two. The `.shared` variant
-explicitly uses shared memory address space for the `%dst` operand. The
-`.cg1` and `.cg2` variants generate `cta_group::1` and `cta_group::2`
-variants of the instruction respectively.
+`tcgen05.alloc{.exclusive}.cta_group*.sync.aligned.b32` family of PTX 
+instructions. The `tcgen05.alloc` is a potentially blocking instruction which
+dynamically allocates the specified number of columns in the Tensor Memory 
+and writes the address of the allocated Tensor Memory into shared memory at the
+location specified by `%dst`. The 32-bit operand `%ncols` specifies the number
+of columns to be allocated and it must be a power-of-two for non-exclusive
+allocations and it must be a multiple of 32 for exclusive allocations. The
+overloaded pointer argument may use generic or shared memory address space;
+a shared pointer emits the `.shared::cta` qualifier. The `.cg1` and `.cg2`
+variants generate `cta_group::1` and `cta_group::2` variants of the instruction
+respectively. The last argument to these intrinsics is a boolean flag indicating
+support for exclusive allocation. This flag argument must be a compile-time
+constant. When set, the `.exclusive` variant is emitted, which claims ownership
+of the allocation permit. No other allocation may exist at the same time as an
+exclusive allocation.
 
 For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions).
 
@@ -2824,19 +3446,23 @@ For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parall
 ##### Syntax:
 
 ```llvm
-declare void @llvm.nvvm.tcgen05.dealloc.cg1(ptr addrspace(6) %tmem_addr, i32 %ncols)
-declare void @llvm.nvvm.tcgen05.dealloc.cg2(ptr addrspace(6) %tmem_addr, i32 %ncols)
+declare void @llvm.nvvm.tcgen05.dealloc.{cg1,cg2}(ptr addrspace(6) %tmem_addr, i32 %ncols, i1 %is_exclusive_flag)
 ```
 
 ##### Overview:
 
 The '`@llvm.nvvm.tcgen05.dealloc.*`' intrinsics correspond to the
-`tcgen05.dealloc.*` set of PTX instructions. The `tcgen05.dealloc`
+`tcgen05.dealloc{.exclusive}.*` set of PTX instructions. The `tcgen05.dealloc`
 instructions deallocates the Tensor Memory specified by the Tensor Memory
 address `%tmem_addr`. The operand `%tmem_addr` must point to a previous
 Tensor Memory allocation. The 32-bit operand `%ncols` specifies the number
 of columns to be de-allocated. The `.cg1` and `.cg2` variants generate
 `cta_group::1` and `cta_group::2` variants of the instruction respectively.
+The last argument to these intrinsics is a boolean flag indicating
+support for exclusive allocation. This flag argument must be a compile-time
+constant. When set, the `.exclusive` variant is emitted. Memory must
+be deallocated with `.exclusive` if and only if it was allocated with
+`.exclusive`.
 
 For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-memory-allocation-and-management-instructions).
 

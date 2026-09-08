@@ -655,6 +655,139 @@ gentbl_cc_library(
     td_file = "lib/Sema/OpenCLBuiltins.td",
 )
 
+# CIR TableGen targets
+td_library(
+    name = "CIRTdFiles",
+    srcs = glob(["include/clang/CIR/**/*.td"]),
+    includes = ["include"],
+    deps = [
+        "//mlir:BuiltinDialectTdFiles",
+        "//mlir:ControlFlowInterfacesTdFiles",
+        "//mlir:FunctionInterfacesTdFiles",
+        "//mlir:InferTypeOpInterfaceTdFiles",
+        "//mlir:LoopLikeInterfaceTdFiles",
+        "//mlir:MemorySlotInterfacesTdFiles",
+        "//mlir:OpBaseTdFiles",
+        "//mlir:PassBaseTdFiles",
+        "//mlir:PtrTdFiles",
+        "//mlir:SideEffectInterfacesTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "MLIRCIROpsIncGen",
+    tbl_outs = {
+        "include/clang/CIR/Dialect/IR/CIROps.h.inc": ["-gen-op-decls"],
+        "include/clang/CIR/Dialect/IR/CIROps.cpp.inc": ["-gen-op-defs"],
+        "include/clang/CIR/Dialect/IR/CIROpsTypes.h.inc": ["-gen-typedef-decls"],
+        "include/clang/CIR/Dialect/IR/CIROpsTypes.cpp.inc": ["-gen-typedef-defs"],
+        "include/clang/CIR/Dialect/IR/CIROpsDialect.h.inc": ["-gen-dialect-decls"],
+        "include/clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc": ["-gen-dialect-defs"],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "include/clang/CIR/Dialect/IR/CIROps.td",
+    deps = [":CIRTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MLIRCIREnumsGen",
+    tbl_outs = {
+        "include/clang/CIR/Dialect/IR/CIROpsEnums.h.inc": ["-gen-enum-decls"],
+        "include/clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc": ["-gen-enum-defs"],
+        "include/clang/CIR/Dialect/IR/CIROpsAttributes.h.inc": ["-gen-attrdef-decls"],
+        "include/clang/CIR/Dialect/IR/CIROpsAttributes.cpp.inc": ["-gen-attrdef-defs"],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "include/clang/CIR/Dialect/IR/CIROps.td",
+    deps = [":CIRTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "CIRLowering",
+    tbl_outs = {
+        "include/clang/CIR/Dialect/IR/CIRLowering.inc": ["-gen-cir-lowering"],
+    },
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/CIR/Dialect/IR/CIROps.td",
+    deps = [":CIRTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MLIRCIRTypeConstraintsIncGen",
+    tbl_outs = {
+        "include/clang/CIR/Dialect/IR/CIRTypeConstraints.h.inc": ["-gen-type-constraint-decls"],
+        "include/clang/CIR/Dialect/IR/CIRTypeConstraints.cpp.inc": ["-gen-type-constraint-defs"],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "include/clang/CIR/Dialect/IR/CIRTypeConstraints.td",
+    deps = [":CIRTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MLIRCIRPassIncGen",
+    tbl_outs = {
+        "include/clang/CIR/Dialect/Passes.h.inc": [
+            "-gen-pass-decls",
+            "-name=CIR",
+        ],
+        "include/clang/CIR/Dialect/Passes.capi.h.inc": [
+            "-gen-pass-capi-header",
+            "--prefix=CIR",
+        ],
+        "include/clang/CIR/Dialect/Passes.capi.cpp.inc": [
+            "-gen-pass-capi-impl",
+            "--prefix=CIR",
+        ],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "include/clang/CIR/Dialect/Passes.td",
+    deps = [":CIRTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MLIRCIRASTAttrInterfacesIncGen",
+    tbl_outs = {
+        "include/clang/CIR/Interfaces/ASTAttrInterfaces.h.inc": ["-gen-attr-interface-decls"],
+        "include/clang/CIR/Interfaces/ASTAttrInterfaces.cpp.inc": ["-gen-attr-interface-defs"],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "include/clang/CIR/Interfaces/ASTAttrInterfaces.td",
+    deps = [":CIRTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MLIRCIROpInterfacesIncGen",
+    tbl_outs = {
+        "include/clang/CIR/Interfaces/CIROpInterfaces.h.inc": ["-gen-op-interface-decls"],
+        "include/clang/CIR/Interfaces/CIROpInterfaces.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "include/clang/CIR/Interfaces/CIROpInterfaces.td",
+    deps = [":CIRTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MLIRCIRLoopOpInterfaceIncGen",
+    tbl_outs = {
+        "include/clang/CIR/Interfaces/CIRLoopOpInterface.h.inc": ["-gen-op-interface-decls"],
+        "include/clang/CIR/Interfaces/CIRLoopOpInterface.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "include/clang/CIR/Interfaces/CIRLoopOpInterface.td",
+    deps = [":CIRTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MLIRCIRTypeInterfacesIncGen",
+    tbl_outs = {
+        "include/clang/CIR/Interfaces/CIRTypeInterfaces.h.inc": ["-gen-type-interface-decls"],
+        "include/clang/CIR/Interfaces/CIRTypeInterfaces.cpp.inc": ["-gen-type-interface-defs"],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "include/clang/CIR/Interfaces/CIRTypeInterfaces.td",
+    deps = [":CIRTdFiles"],
+)
+
 # Table definition files can be used for documentation:
 filegroup(
     name = "all_table_defs",
@@ -1310,10 +1443,14 @@ cc_library(
         "include/clang/Testing/TestLanguage.def",
     ],
     deps = [
+        ":ast",
         ":basic",
         ":frontend",
+        ":lex",
+        ":serialization",
         "//llvm:MC",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//third-party/unittest:gtest",
     ],
 )
@@ -1511,6 +1648,7 @@ cc_library(
         ":driver",
         ":frontend",
         ":index",
+        ":static_analyzer_core_options",
         ":unified_symbol_resolution",
         "//llvm:Option",
         "//llvm:Support",
@@ -1957,6 +2095,7 @@ cc_library(
         ":parse",
         ":sema",
         ":serialization",
+        "//compiler-rt:emutls",
         "//llvm:AllTargetsAsmParsers",
         "//llvm:AllTargetsCodeGens",
         "//llvm:Core",
@@ -1973,6 +2112,20 @@ cc_library(
         "//llvm:TargetParser",
         "//llvm:TransformUtils",
         "//llvm:config",
+    ],
+)
+
+cc_library(
+    name = "codegen_utils",
+    srcs = glob([
+        "lib/CodeGenUtils/*.cpp",
+    ]),
+    hdrs = glob(["include/clang/CodeGenUtils/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ast",
+        ":basic",
+        "//llvm:Support",
     ],
 )
 
@@ -1998,6 +2151,7 @@ cc_library(
         ":basic_riscv_andes_vector_builtin_cg_gen",
         ":basic_riscv_sifive_vector_builtin_cg_gen",
         ":basic_riscv_vector_builtin_cg_gen",
+        ":codegen_utils",
         ":driver",
         ":frontend",
         ":lex",
@@ -2136,6 +2290,7 @@ cc_library(
         ":ast",
         ":basic",
         ":frontend",
+        ":lex",
         ":support",
         "//llvm:Core",
         "//llvm:Demangle",
@@ -2198,6 +2353,7 @@ cc_library(
         ":scalable_static_analysis_core",
         ":scalable_static_analysis_frontend",
         ":scalable_static_analysis_source_transformation",
+        ":static_analyzer_core_options",
         ":static_analyzer_frontend",
         "//llvm:Option",
         "//llvm:Support",
@@ -2769,6 +2925,9 @@ cc_library(
     deps = [
         ":ast",
         ":basic",
+        ":frontend",
+        ":lex",
+        ":scalable_static_analysis_analyses",
         ":scalable_static_analysis_core",
         ":support",
         ":tooling_core",
@@ -2825,5 +2984,410 @@ cc_binary(
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:TargetParser",
+    ],
+)
+
+# CIR C++ libraries
+cc_library(
+    name = "cir_headers",
+    hdrs = glob(["include/clang/CIR/**/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":MLIRCIRASTAttrInterfacesIncGen",
+        ":MLIRCIREnumsGen",
+        ":MLIRCIRLoopOpInterfaceIncGen",
+        ":MLIRCIROpInterfacesIncGen",
+        ":MLIRCIROpsIncGen",
+        ":MLIRCIRPassIncGen",
+        ":MLIRCIRTypeConstraintsIncGen",
+        ":MLIRCIRTypeInterfacesIncGen",
+        ":ast",
+        ":basic",
+        ":codegen",
+        ":frontend",
+        "//llvm:ABI",
+        "//llvm:Core",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//mlir:Analysis",
+        "//mlir:CallOpInterfaces",
+        "//mlir:ControlFlowInterfaces",
+        "//mlir:DLTIDialect",
+        "//mlir:DataLayoutInterfaces",
+        "//mlir:FuncDialect",
+        "//mlir:FunctionInterfaces",
+        "//mlir:IR",
+        "//mlir:InferTypeOpInterface",
+        "//mlir:LLVMDialect",
+        "//mlir:LoopLikeInterface",
+        "//mlir:MemorySlotInterfaces",
+        "//mlir:OpenACCDialect",
+        "//mlir:OpenMPDialect",
+        "//mlir:Pass",
+        "//mlir:PtrDialect",
+        "//mlir:SideEffectInterfaces",
+        "//mlir:Support",
+        "//mlir:TransformUtils",
+        "//mlir:Transforms",
+    ],
+)
+
+cc_library(
+    name = "cir_interfaces",
+    srcs = glob(["lib/CIR/Interfaces/*.cpp"]),
+    hdrs = glob(["include/clang/CIR/Interfaces/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":MLIRCIRASTAttrInterfacesIncGen",
+        ":MLIRCIREnumsGen",
+        ":MLIRCIRLoopOpInterfaceIncGen",
+        ":MLIRCIROpInterfacesIncGen",
+        ":MLIRCIRTypeInterfacesIncGen",
+        ":ast",
+        ":cir_headers",
+        "//llvm:Support",
+        "//mlir:CallOpInterfaces",
+        "//mlir:ControlFlowInterfaces",
+        "//mlir:IR",
+        "//mlir:LoopLikeInterface",
+        "//mlir:Support",
+    ],
+)
+
+cc_library(
+    name = "cir_dialect",
+    srcs = glob(["lib/CIR/Dialect/IR/*.cpp"]),
+    hdrs = glob([
+        "include/clang/CIR/Dialect/IR/*.h",
+        "include/clang/CIR/Dialect/Builder/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":MLIRCIREnumsGen",
+        ":MLIRCIRLoopOpInterfaceIncGen",
+        ":MLIRCIROpInterfacesIncGen",
+        ":MLIRCIROpsIncGen",
+        ":MLIRCIRTypeConstraintsIncGen",
+        ":ast",
+        ":basic",
+        ":cir_headers",
+        ":cir_interfaces",
+        "//llvm:Core",
+        "//llvm:Support",
+        "//mlir:BytecodeOpInterface",
+        "//mlir:CallOpInterfaces",
+        "//mlir:ControlFlowInterfaces",
+        "//mlir:DLTIDialect",
+        "//mlir:DataLayoutInterfaces",
+        "//mlir:FuncDialect",
+        "//mlir:FunctionInterfaces",
+        "//mlir:IR",
+        "//mlir:InferTypeOpInterface",
+        "//mlir:LoopLikeInterface",
+        "//mlir:MemorySlotInterfaces",
+        "//mlir:PtrDialect",
+        "//mlir:SideEffectInterfaces",
+        "//mlir:Support",
+    ],
+)
+
+cc_library(
+    name = "cir_openacc_support",
+    srcs = glob(["lib/CIR/Dialect/OpenACC/*.cpp"]),
+    hdrs = glob(["include/clang/CIR/Dialect/OpenACC/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":MLIRCIRTypeConstraintsIncGen",
+        ":cir_dialect",
+        "//mlir:IR",
+        "//mlir:OpenACCDialect",
+        "//mlir:OpenACCOpsIncGen",
+    ],
+)
+
+cc_library(
+    name = "cir_openmp_support",
+    srcs = glob(["lib/CIR/Dialect/OpenMP/*.cpp"]),
+    hdrs = glob(["include/clang/CIR/Dialect/OpenMP/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":MLIRCIROpsIncGen",
+        ":cir_dialect",
+        "//mlir:IR",
+        "//mlir:OpenMPDialect",
+        "//mlir:OpenMPOpsIncGen",
+    ],
+)
+
+cc_library(
+    name = "cir_all_dialects",
+    srcs = ["lib/CIR/RegisterAllDialects.cpp"],
+    hdrs = ["include/clang/CIR/InitAllDialects.h"],
+    includes = ["include"],
+    deps = [
+        ":cir_dialect",
+        ":cir_openacc_support",
+        ":cir_openmp_support",
+        "//mlir:DLTIDialect",
+        "//mlir:IR",
+        "//mlir:OpenACCDialect",
+        "//mlir:OpenMPDialect",
+    ],
+)
+
+cc_library(
+    name = "cir_analysis",
+    srcs = glob(["lib/CIR/Dialect/Analysis/*.cpp"]),
+    hdrs = glob(["include/clang/CIR/Dialect/Analysis/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":cir_dialect",
+        "//llvm:Support",
+        "//mlir:Analysis",
+        "//mlir:IR",
+        "//mlir:SideEffectInterfaces",
+    ],
+)
+
+cc_library(
+    name = "cir_target_lowering",
+    srcs = glob(["lib/CIR/Dialect/Transforms/TargetLowering/**/*.cpp"]),
+    hdrs = glob(["lib/CIR/Dialect/Transforms/TargetLowering/*.h"]),
+    includes = [
+        "include",
+        "lib/CIR/Dialect/Transforms/TargetLowering",
+    ],
+    deps = [
+        ":ast",
+        ":basic",
+        ":cir_dialect",
+        ":cir_headers",
+        ":cir_interfaces",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//mlir:ABI",
+        "//mlir:Analysis",
+        "//mlir:DLTIDialect",
+        "//mlir:DataLayoutInterfaces",
+        "//mlir:IR",
+        "//mlir:LLVMDialect",
+        "//mlir:Pass",
+        "//mlir:Support",
+        "//mlir:TransformUtils",
+    ],
+)
+
+cc_library(
+    name = "cir_transforms",
+    srcs = glob([
+        "lib/CIR/Dialect/Transforms/*.cpp",
+        "lib/CIR/Dialect/Transforms/*.h",
+    ]),
+    hdrs = glob([
+        "include/clang/CIR/Dialect/Passes.h",
+        "include/clang/CIR/Dialect/Transforms/*.h",
+    ]),
+    includes = [
+        "include",
+        "lib/CIR/Dialect/Transforms",
+    ],
+    deps = [
+        ":CIRLowering",
+        ":MLIRCIRPassIncGen",
+        ":ast",
+        ":basic",
+        ":cir_dialect",
+        ":cir_headers",
+        ":cir_interfaces",
+        ":cir_openacc_support",
+        ":cir_openmp_support",
+        ":cir_target_lowering",
+        "//llvm:ABI",
+        "//llvm:Core",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//mlir:ABI",
+        "//mlir:Analysis",
+        "//mlir:ControlFlowInterfaces",
+        "//mlir:DLTIDialect",
+        "//mlir:DataLayoutInterfaces",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:LLVMDialect",
+        "//mlir:OpenACCDialect",
+        "//mlir:OpenACCOpsIncGen",
+        "//mlir:OpenMPDialect",
+        "//mlir:OpenMPOpsIncGen",
+        "//mlir:Pass",
+        "//mlir:PtrDialect",
+        "//mlir:Rewrite",
+        "//mlir:SideEffectInterfaces",
+        "//mlir:Support",
+        "//mlir:TransformUtils",
+    ],
+)
+
+cc_library(
+    name = "cir_codegen",
+    srcs = glob([
+        "lib/CIR/CodeGen/**/*.cpp",
+        "lib/CIR/CodeGen/**/*.h",
+    ]),
+    hdrs = [
+        "include/clang/CIR/CIRGenerator.h",
+        "include/clang/CIR/MissingFeatures.h",
+    ],
+    includes = [
+        "include",
+        "lib/CIR/CodeGen",
+    ],
+    deps = [
+        ":analysis",
+        ":ast",
+        ":basic",
+        ":basic_arm_cde_cg_gen",
+        ":basic_arm_sme_builtin_cg_gen",
+        ":basic_arm_sve_builtin_cg_gen",
+        ":basic_riscv_andes_vector_builtin_cg_gen",
+        ":basic_riscv_sifive_vector_builtin_cg_gen",
+        ":basic_riscv_vector_builtin_cg_gen",
+        ":cir_all_dialects",
+        ":cir_dialect",
+        ":cir_headers",
+        ":cir_interfaces",
+        ":cir_openacc_support",
+        ":cir_openmp_support",
+        ":codegen",
+        ":codegen_utils",
+        ":frontend",
+        ":lex",
+        ":sema",
+        ":type_nodes_gen",
+        "//llvm:Core",
+        "//llvm:FrontendOpenMP",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//mlir:Analysis",
+        "//mlir:ArithDialect",
+        "//mlir:BytecodeOpInterface",
+        "//mlir:DLTIDialect",
+        "//mlir:DataLayoutInterfaces",
+        "//mlir:FromLLVMIRTranslation",
+        "//mlir:FuncDialect",
+        "//mlir:IR",
+        "//mlir:LLVMDialect",
+        "//mlir:OpenACCDialect",
+        "//mlir:OpenMPDialect",
+        "//mlir:PtrDialect",
+        "//mlir:Support",
+    ],
+)
+
+cc_library(
+    name = "cir_lowering_common",
+    srcs = glob(["lib/CIR/Lowering/*.cpp"]),
+    hdrs = [
+        "include/clang/CIR/ABIArgInfo.h",
+        "include/clang/CIR/CIRDataLayoutSpec.h",
+        "include/clang/CIR/CIRToCIRPasses.h",
+        "include/clang/CIR/LoweringHelpers.h",
+        "include/clang/CIR/Passes.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":ast",
+        ":basic",
+        ":cir_codegen",
+        ":cir_dialect",
+        ":cir_headers",
+        ":cir_transforms",
+        "//llvm:Core",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//mlir:Analysis",
+        "//mlir:DataLayoutInterfaces",
+        "//mlir:IR",
+        "//mlir:LLVMDialect",
+        "//mlir:Pass",
+        "//mlir:Support",
+        "//mlir:TransformUtils",
+        "//mlir:Transforms",
+    ],
+)
+
+cc_library(
+    name = "cir_lowering_direct_to_llvm",
+    srcs = glob([
+        "lib/CIR/Lowering/DirectToLLVM/*.cpp",
+        "lib/CIR/Lowering/DirectToLLVM/*.h",
+    ]),
+    hdrs = [
+        "include/clang/CIR/LowerToLLVM.h",
+    ],
+    includes = [
+        "include",
+        "lib/CIR/Lowering/DirectToLLVM",
+    ],
+    deps = [
+        ":CIRLowering",
+        ":MLIRCIREnumsGen",
+        ":MLIRCIROpInterfacesIncGen",
+        ":MLIRCIROpsIncGen",
+        ":cir_dialect",
+        ":cir_headers",
+        ":cir_lowering_common",
+        ":cir_target_lowering",
+        ":cir_transforms",
+        "//llvm:Core",
+        "//llvm:Support",
+        "//mlir:BuiltinToLLVMIRTranslation",
+        "//mlir:DLTIDialect",
+        "//mlir:DataLayoutInterfaces",
+        "//mlir:FuncDialect",
+        "//mlir:FuncToLLVM",
+        "//mlir:IR",
+        "//mlir:LLVMCommonConversion",
+        "//mlir:LLVMDialect",
+        "//mlir:LLVMToLLVMIRTranslation",
+        "//mlir:OpenMPDialect",
+        "//mlir:OpenMPToLLVM",
+        "//mlir:OpenMPToLLVMIRTranslation",
+        "//mlir:OpenMPTransforms",
+        "//mlir:Pass",
+        "//mlir:PtrDialect",
+        "//mlir:Support",
+        "//mlir:ToLLVMIRTranslation",
+        "//mlir:TransformUtils",
+    ],
+)
+
+cc_library(
+    name = "cir_frontend_action",
+    srcs = glob([
+        "lib/CIR/FrontendAction/*.cpp",
+        "lib/CIR/FrontendAction/*.h",
+    ]),
+    hdrs = [
+        "include/clang/CIR/FrontendAction/CIRGenAction.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":MLIRCIROpInterfacesIncGen",
+        ":MLIRCIROpsIncGen",
+        ":ast",
+        ":basic",
+        ":cir_codegen",
+        ":cir_dialect",
+        ":cir_headers",
+        ":cir_lowering_common",
+        ":cir_lowering_direct_to_llvm",
+        ":codegen",
+        ":frontend",
+        "//llvm:Core",
+        "//llvm:IPO",
+        "//llvm:Linker",
+        "//llvm:Support",
+        "//mlir:IR",
+        "//mlir:Pass",
     ],
 )

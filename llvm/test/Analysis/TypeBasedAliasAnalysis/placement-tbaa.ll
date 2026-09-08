@@ -18,7 +18,7 @@
 
 ; Basic AA says MayAlias, TBAA says NoAlias
 ; CHECK: MayAlias: ptr* %5, i64* %9
-; CHECK: NoAlias: store i64 %conv, ptr %9, align 8, !tbaa !6 <->   store ptr null, ptr %5, align 8, !tbaa !9
+; CHECK: NoAlias: store i64 %conv, ptr %9, align 8, !tbaa !{{[0-9]+}} <->   store ptr null, ptr %5, align 8, !tbaa !{{[0-9]+}}
 
 %struct.Foo = type { i64 }
 %struct.Bar = type { ptr }

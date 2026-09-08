@@ -108,6 +108,12 @@ static cl::opt<bool> ForceToDataRelocations(
 
     cl::Hidden, cl::cat(BoltCategory));
 
+static cl::opt<bool> MergeTextSections(
+    "merge-text-sections",
+    cl::desc("emit new hot and cold code under a single .text section header "
+             "instead of separate .text/.text.cold sections (relocation mode)"),
+    cl::init(false), cl::cat(BoltCategory));
+
 static cl::opt<std::string>
     BoltID("bolt-id",
            cl::desc("add any string to tag this execution in the "
@@ -523,6 +529,27 @@ static bool shouldDisassemble(const BinaryFunction &BF) {
     return true;
 
   return !BF.isIgnored();
+}
+
+static void createRISCVIFuncResolverFunctions(BinaryContext &BC) {
+  assert(BC.isRISCV() && "expected RISC-V target");
+
+  for (const BinarySection &Section : BC.allocatableSections()) {
+    for (const Relocation &Rel : Section.dynamicRelocations()) {
+      if (!Rel.isIRelative() || !Rel.Addend ||
+          BC.getBinaryFunctionAtAddress(Rel.Addend))
+        continue;
+
+      ErrorOr<BinarySection &> ResolverSection =
+          BC.getSectionForAddress(Rel.Addend);
+      assert(ResolverSection &&
+             "cannot get section for address from IFUNC resolver");
+
+      const std::string FunctionName =
+          "__BOLT_IFUNC_RESOLVERat" + Twine::utohexstr(Rel.Addend).str();
+      BC.createBinaryFunction(FunctionName, *ResolverSection, Rel.Addend, 0);
+    }
+  }
 }
 
 // Return if a section stored in the image falls into a segment address space.
@@ -1347,6 +1374,13 @@ void RewriteInstance::discoverFileObjects() {
   // that is a subject to dynamic relocation processing.
   processDynamicRelocations();
 
+  // LLD may canonicalize the only RISC-V IFUNC symbol to its IPLT entry,
+  // leaving the resolver identifiable only by an R_RISCV_IRELATIVE addend.
+  // Register every such resolver before PLT disassembly so .iplt can use the
+  // normal PLT processing path.
+  if (BC->isRISCV())
+    createRISCVIFuncResolverFunctions(*BC);
+
   // Process PLT section.
   disassemblePLT();
 
@@ -1880,7 +1914,7 @@ void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
 
   MCSymbol *Symbol = Rel->Symbol;
   if (!Symbol) {
-    if (BC->isRISCV() || !Rel->Addend || !Rel->isIRelative())
+    if (!Rel->Addend || !Rel->isIRelative())
       return;
 
     // IFUNC trampoline without symbol
@@ -1904,6 +1938,28 @@ void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
   else
     BF->addAlternativeName(Symbol->getName().str() + "@PLT");
   setPLTSymbol(BF, Symbol->getName());
+
+  // R_RISCV_IRELATIVE has no symbol, so the IPLT entry above is named after
+  // one BinaryFunction at the resolver address. Multiple STT_GNU_IFUNC
+  // symbols can alias that resolver, and R_RISCV_CALL_PLT relocations may use
+  // any of their names. Register every such name for the same IPLT entry so
+  // getPLTBinaryDataByName() can resolve those call sites.
+  if (BC->isRISCV() && Rel->isIRelative()) {
+    auto ResolverSyms = FileSymRefs.equal_range(Rel->Addend);
+    for (const SymbolRef &AliasSymbol : llvm::make_second_range(
+             llvm::make_range(ResolverSyms.first, ResolverSyms.second))) {
+      if (ELFSymbolRef(AliasSymbol).getELFType() != ELF::STT_GNU_IFUNC)
+        continue;
+      StringRef AliasName = cantFail(AliasSymbol.getName());
+      const std::string PLTName = AliasName.str() + "@PLT";
+      if (!BC->getBinaryDataByName(PLTName)) {
+        BF->addAlternativeName(PLTName);
+        BC->registerNameAtAddress(PLTName, EntryAddress, EntrySize,
+                                  Section->getAlignment());
+      }
+      setPLTSymbol(BF, AliasName);
+    }
+  }
 }
 
 void RewriteInstance::disassemblePLTInstruction(const BinarySection &Section,
@@ -1992,8 +2048,10 @@ void RewriteInstance::disassemblePLTSectionRISCV(BinarySection &Section) {
     }
   };
 
-  // Skip the first special entry since no relocation points to it.
-  uint64_t InstrOffset = 32;
+  // A regular .plt has a first special entry with no relocations pointing to
+  // it, while all .iplt sections are headerless.
+  const bool IsHeaderless = Section.getName() == ".iplt";
+  uint64_t InstrOffset = IsHeaderless ? 0 : 32;
 
   while (InstrOffset < SectionSize) {
     InstructionListType Instructions;
@@ -2494,11 +2552,22 @@ Error RewriteInstance::readSpecialSections() {
     BC->outs() << "BOLT-INFO: enabling " << (opts::StrictMode ? "strict " : "")
                << "relocation mode\n";
 
-  // Read EH frame for function boundaries info.
-  Expected<const DWARFDebugFrame *> EHFrameOrError = BC->DwCtx->getEHFrame();
-  if (!EHFrameOrError)
-    report_error("expected valid eh_frame section", EHFrameOrError.takeError());
-  CFIRdWrt.reset(new CFIReaderWriter(*BC, *EHFrameOrError.get()));
+  // Read EH frame for function boundaries info. Parse only the frame index
+  // (FDE addresses/ranges); the CFI instruction programs are parsed on demand
+  // per function during disassembly (see CFIReaderWriter::fillCFIInfoFor) so we
+  // never materialize every function's CFI program at once. We parse our own
+  // DWARFDebugFrame instead of DwCtx->getEHFrame() so that the (fully parsed)
+  // frame is not cached in the DWARF context for the lifetime of the run.
+  const DWARFObject &DObj = BC->DwCtx->getDWARFObj();
+  const DWARFSection &EHFrameSection = DObj.getEHFrameSection();
+  DWARFDataExtractor EHFrameData(
+      DObj, EHFrameSection, BC->DwCtx->isLittleEndian(), DObj.getAddressSize());
+  auto EHFrame = std::make_unique<DWARFDebugFrame>(
+      BC->DwCtx->getArch(), /*IsEH=*/true, EHFrameSection.Address);
+  if (Error E = EHFrame->parse(EHFrameData, /*ParseCFIProgram=*/false))
+    report_error("expected valid eh_frame section", std::move(E));
+  CFIRdWrt.reset(
+      new CFIReaderWriter(*BC, std::move(EHFrame), std::move(EHFrameData)));
 
   processSectionMetadata();
 
@@ -2616,6 +2685,19 @@ void RewriteInstance::adjustCommandLineOptions() {
   if (opts::UseOldText && !BC->HasRelocations) {
     BC->errs() << "BOLT-WARNING: cannot use old .text in non-relocation mode\n";
     opts::UseOldText = false;
+  }
+
+  if (opts::MergeTextSections) {
+    if (!BC->HasRelocations) {
+      BC->errs() << "BOLT-ERROR: --merge-text-sections requires relocation "
+                    "mode\n";
+      exit(1);
+    }
+    if (!BC->isELF()) {
+      BC->errs() << "BOLT-ERROR: --merge-text-sections is only supported for "
+                    "ELF binaries\n";
+      exit(1);
+    }
   }
 
   if (!opts::AlignText.getNumOccurrences())
@@ -2750,6 +2832,7 @@ bool RewriteInstance::analyzeRelocation(
   };
 
   const bool IsAArch64 = BC->isAArch64();
+  const bool IsRISCV = BC->isRISCV();
 
   const size_t RelSize = Relocation::getSizeForType(RType);
 
@@ -2778,8 +2861,14 @@ bool RewriteInstance::analyzeRelocation(
     // Section symbols are marked as ST_Debug.
     IsSectionRelocation = (cantFail(Symbol.getType()) == SymbolRef::ST_Debug);
     // Check for PLT entry registered with symbol name
-    if (!SymbolAddress && !IsWeakReference(Symbol) &&
-        (IsAArch64 || BC->isRISCV())) {
+    // LLD may give a defined RISC-V IFUNC symbol the .iplt entry address.
+    // R_RISCV_CALL_PLT must still resolve it through the registered @PLT
+    // BinaryData instead of treating that symbol value as a normal function.
+    const bool IsRISCVIFuncPLT =
+        IsRISCV && RType == ELF::R_RISCV_CALL_PLT &&
+        ELFSymbolRef(Symbol).getELFType() == ELF::STT_GNU_IFUNC;
+    if ((!SymbolAddress || IsRISCVIFuncPLT) && !IsWeakReference(Symbol) &&
+        (IsAArch64 || IsRISCV)) {
       const BinaryData *BD = BC->getPLTBinaryDataByName(SymbolName);
       SymbolAddress = BD ? BD->getAddress() : 0;
     }
@@ -2839,7 +2928,7 @@ bool RewriteInstance::analyzeRelocation(
     if (SkipVerification)
       return true;
 
-    if (IsAArch64 || BC->isRISCV())
+    if (IsAArch64 || IsRISCV)
       return true;
 
     if (SymbolName == "__hot_start" || SymbolName == "__hot_end")
@@ -3784,6 +3873,8 @@ void RewriteInstance::readDebugInfo() {
                        TimerGroupDesc, opts::TimeRewrite);
     BC->collectDebugScopeBoundaries();
   }
+
+  BC->releaseAllDWOContexts();
 }
 
 void RewriteInstance::preprocessProfileData() {
@@ -4035,6 +4126,10 @@ void RewriteInstance::disassembleFunctions() {
           Function.parseLSDA(LSDAData, LSDASection->getAddress()));
     }
   }
+
+  // CFI programs and the FDE index are only needed while disassembling; release
+  // them now so they don't occupy memory for the rest of the pipeline.
+  CFIRdWrt->releaseFrameData();
 }
 
 void RewriteInstance::buildFunctionsCFG() {
@@ -4361,58 +4456,111 @@ void RewriteInstance::mapFileSections(BOLTLinker::SectionMapper MapSection) {
   }
 }
 
+namespace {
+
+/// Defines the strict weak ordering for BOLT-produced code sections.
+class CodeSectionOrder {
+public:
+  CodeSectionOrder(StringRef ColdSectionName, StringRef HotTextMoverSectionName,
+                   StringRef MainSectionName, StringRef WarmSectionName,
+                   bool HotText, bool HotFunctionsAtEnd)
+      : ColdSectionName(ColdSectionName),
+        HotTextMoverSectionName(HotTextMoverSectionName),
+        MainSectionName(MainSectionName), WarmSectionName(WarmSectionName),
+        HotText(HotText), HotFunctionsAtEnd(HotFunctionsAtEnd) {}
+
+  bool operator()(StringRef AName, StringRef BName) const {
+    const SectionKind AKind = getKind(AName);
+    const SectionKind BKind = getKind(BName);
+    const unsigned ARank = getRank(AKind);
+    const unsigned BRank = getRank(BKind);
+    if (ARank != BRank)
+      return ARank < BRank;
+
+    if (AKind == SectionKind::Cold) {
+      if (AName.size() != BName.size())
+        return HotFunctionsAtEnd ? AName.size() > BName.size()
+                                 : AName.size() < BName.size();
+      if (AName != BName)
+        return HotFunctionsAtEnd ? AName > BName : AName < BName;
+    }
+
+    return false;
+  }
+
+private:
+  enum class SectionKind { Mover, Main, Warm, Cold, Other };
+
+  SectionKind getKind(StringRef Name) const {
+    if (HotText && Name == HotTextMoverSectionName)
+      return SectionKind::Mover;
+    if (Name == MainSectionName)
+      return SectionKind::Main;
+    if (Name == WarmSectionName)
+      return SectionKind::Warm;
+    if (Name.starts_with(ColdSectionName))
+      return SectionKind::Cold;
+    return SectionKind::Other;
+  }
+
+  unsigned getRank(SectionKind Kind) const {
+    if (Kind == SectionKind::Mover)
+      return 0;
+    if (HotFunctionsAtEnd) {
+      switch (Kind) {
+      case SectionKind::Other:
+        return 1;
+      case SectionKind::Cold:
+        return 2;
+      case SectionKind::Warm:
+        return 3;
+      case SectionKind::Main:
+        return 4;
+      case SectionKind::Mover:
+        llvm_unreachable("handled above");
+      }
+    }
+    switch (Kind) {
+    case SectionKind::Main:
+      return 1;
+    case SectionKind::Warm:
+      return 2;
+    case SectionKind::Cold:
+      return 3;
+    case SectionKind::Other:
+      return 4;
+    case SectionKind::Mover:
+      llvm_unreachable("handled above");
+    }
+    llvm_unreachable("unknown section kind");
+  }
+
+  StringRef ColdSectionName;
+  StringRef HotTextMoverSectionName;
+  StringRef MainSectionName;
+  StringRef WarmSectionName;
+  bool HotText;
+  bool HotFunctionsAtEnd;
+};
+
+} // namespace
+
 std::vector<BinarySection *> RewriteInstance::getCodeSections() {
   std::vector<BinarySection *> CodeSections;
   for (BinarySection &Section : BC->textSections())
     if (Section.hasValidSectionID())
       CodeSections.emplace_back(&Section);
 
-  auto compareSections = [&](const BinarySection *A, const BinarySection *B) {
-    if (A == B)
-      return false;
-
-    // If both A and B have names starting with ".text.cold", then
-    // - if opts::HotFunctionsAtEnd is true, we want order
-    //   ".text.cold.T", ".text.cold.T-1", ... ".text.cold.1", ".text.cold"
-    // - if opts::HotFunctionsAtEnd is false, we want order
-    //   ".text.cold", ".text.cold.1", ... ".text.cold.T-1", ".text.cold.T"
-    if (A->getName().starts_with(BC->getColdCodeSectionName()) &&
-        B->getName().starts_with(BC->getColdCodeSectionName())) {
-      if (A->getName().size() != B->getName().size())
-        return (opts::HotFunctionsAtEnd)
-                   ? (A->getName().size() > B->getName().size())
-                   : (A->getName().size() < B->getName().size());
-      return (opts::HotFunctionsAtEnd) ? (A->getName() > B->getName())
-                                       : (A->getName() < B->getName());
-    }
-
-    // Place hot text movers before anything else.
-    if (opts::HotText) {
-      if (A->getName() == BC->getHotTextMoverSectionName())
-        return true;
-      if (B->getName() == BC->getHotTextMoverSectionName())
-        return false;
-    }
-
-    // Depending on opts::HotFunctionsAtEnd, place main and warm sections in
-    // order.
-    if (opts::HotFunctionsAtEnd) {
-      if (B->getName() == BC->getMainCodeSectionName())
-        return true;
-      if (A->getName() == BC->getMainCodeSectionName())
-        return false;
-      return (B->getName() == BC->getWarmCodeSectionName());
-    } else {
-      if (A->getName() == BC->getMainCodeSectionName())
-        return true;
-      if (B->getName() == BC->getMainCodeSectionName())
-        return false;
-      return (A->getName() == BC->getWarmCodeSectionName());
-    }
-  };
+  const CodeSectionOrder CompareSections(
+      BC->getColdCodeSectionName(), BC->getHotTextMoverSectionName(),
+      BC->getMainCodeSectionName(), BC->getWarmCodeSectionName(), opts::HotText,
+      opts::HotFunctionsAtEnd);
 
   // Determine the order of sections.
-  llvm::stable_sort(CodeSections, compareSections);
+  llvm::stable_sort(CodeSections,
+                    [&](const BinarySection *A, const BinarySection *B) {
+                      return CompareSections(A->getName(), B->getName());
+                    });
 
 #ifndef NDEBUG
   // Verify that the order of sections and functions is consistent.
@@ -4570,6 +4718,52 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
     BC->outs() << "BOLT-INFO: padding code to 0x"
                << Twine::utohexstr(NextAvailableAddress)
                << " to accommodate hot text\n";
+
+  if (opts::MergeTextSections)
+    mergeCodeSections(CodeSections);
+}
+
+void RewriteInstance::mergeCodeSections(
+    const std::vector<BinarySection *> &CodeSections) {
+  if (CodeSections.size() < 2)
+    return;
+
+  // The header carrier is the lowest-addressed section and the merged extent
+  // runs to the end of the highest-addressed one. The order of hot and cold
+  // code within the range (e.g. --hot-functions-at-end) does not matter and
+  // is kept unchanged.
+  BinarySection *Head = *llvm::min_element(
+      CodeSections, [](const BinarySection *A, const BinarySection *B) {
+        return A->getOutputAddress() < B->getOutputAddress();
+      });
+  uint64_t End = 0;
+  for (const BinarySection *Section : CodeSections)
+    End = std::max(End, Section->getOutputAddress() + Section->getOutputSize());
+
+  // Record the pre-merge identity of every section while the names are intact.
+  for (const BinarySection *Section : CodeSections)
+    MergedTextMarkers.push_back(
+        {(Twine(".bolt.pre_merge") + Section->getOutputName()).str(),
+         Section->getOutputAddress()});
+
+  MergedTextSection = Head;
+  MergedTextSize = End - Head->getOutputAddress();
+
+  for (BinarySection *Section : CodeSections) {
+    if (Section == Head)
+      continue;
+    Section->setAnonymous(true);
+    MergedAwayTextSections.push_back(Section);
+  }
+
+  // The merged section has the canonical name regardless of which original
+  // section is allocated first.
+  Head->setOutputName(BC->getMainCodeSectionName());
+
+  BC->outs() << "BOLT-INFO: merged " << CodeSections.size()
+             << " code sections into " << BC->getMainCodeSectionName() << " [0x"
+             << Twine::utohexstr(Head->getOutputAddress()) << ", 0x"
+             << Twine::utohexstr(End) << ")\n";
 }
 
 void RewriteInstance::mapCodeSectionsInPlace(
@@ -5210,7 +5404,9 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
     NewSection.sh_type = ELF::SHT_PROGBITS;
     NewSection.sh_addr = Section.getOutputAddress();
     NewSection.sh_offset = Section.getOutputFileOffset();
-    NewSection.sh_size = Section.getOutputSize();
+    NewSection.sh_size = (&Section == MergedTextSection)
+                             ? MergedTextSize
+                             : Section.getOutputSize();
     NewSection.sh_entsize = 0;
     NewSection.sh_flags = Section.getELFFlags();
     NewSection.sh_link = 0;
@@ -5322,6 +5518,12 @@ RewriteInstance::getOutputSections(ELFObjectFile<ELFT> *File,
   // Assign indices to sections.
   for (uint32_t Index = 1; Index < OutputSections.size(); ++Index)
     OutputSections[Index].first->setIndex(Index);
+
+  // Sections folded into the merged code section emit no header of their own.
+  // Point symbols defined in them at the merged section.
+  if (MergedTextSection)
+    for (BinarySection *Section : MergedAwayTextSections)
+      Section->setIndex(MergedTextSection->getIndex());
 
   // Update section index mapping
   NewSectionIndex.clear();
@@ -5852,6 +6054,24 @@ void RewriteInstance::updateELFSymbolTable(
   if (opts::HotData && !NumHotDataSymsUpdated) {
     AddEmittedSymbol("__hot_data_start");
     AddEmittedSymbol("__hot_data_end");
+  }
+
+  // The code sections folded into the merged .text have no section header in
+  // the output. Emit a local marker per section so the name and start address
+  // each one had before the merge stay recoverable from the symbol table. The
+  // marker symbols have size zero: a sized NOTYPE symbol spanning the section
+  // might compete with the STT_FUNC symbols inside it during symbolization.
+  assert((MergedTextMarkers.empty() || MergedTextSection) &&
+         "merged code section must be set when markers exist");
+  for (const MergedTextMarker &Marker : MergedTextMarkers) {
+    ELFSymTy Symbol;
+    Symbol.st_value = Marker.Address;
+    Symbol.st_size = 0;
+    Symbol.st_shndx = MergedTextSection->getIndex();
+    Symbol.st_name = AddToStrTab(Marker.Name);
+    Symbol.st_other = 0;
+    Symbol.setBindingAndType(ELF::STB_LOCAL, ELF::STT_NOTYPE);
+    Symbols.emplace_back(Symbol);
   }
 
   // Put local symbols at the beginning.

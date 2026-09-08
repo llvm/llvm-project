@@ -26,6 +26,14 @@ func.func @alloc_tensor_copy_and_dims(%t: tensor<?xf32>, %sz: index) {
 
 // -----
 
+func.func @alloc_tensor_memory_space_in_attr_dict() {
+  // expected-error@+1 {{inherent attribute 'memory_space' cannot be parsed from attr-dict when strict properties in assembly format is enabled}}
+  %0 = bufferization.alloc_tensor() {memory_space = "foo"} : tensor<4xf32>
+  return
+}
+
+// -----
+
 // expected-error @+1{{invalid value for 'bufferization.access'}}
 func.func private @invalid_buffer_access_type(tensor<*xf32> {bufferization.access = "foo"})
 

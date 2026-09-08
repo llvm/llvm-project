@@ -974,7 +974,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction({ISD::SMULO, ISD::UMULO}, MVT::i64, Custom);
 
-  if (Subtarget->hasVMulU64Inst())
+  if (Subtarget->useVMulU64Inst())
     setOperationAction(ISD::MUL, MVT::i64, Legal);
   else if (Subtarget->hasScalarSMulU64())
     setOperationAction(ISD::MUL, MVT::i64, Custom);
@@ -1010,7 +1010,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        Custom);
   }
 
-  if (Subtarget->hasMinMaxI64Insts())
+  if (Subtarget->useMinMaxI64Insts())
     setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX}, MVT::i64,
                        Legal);
 
@@ -1056,7 +1056,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FEXP2, ISD::FLOG2, ISD::FSQRT}, MVT::bf16, Legal);
   }
 
-  if (Subtarget->hasOCPFP8ConversionInsts()) {
+  const bool HasE5M3ConversionInsts =
+      Subtarget->hasFP8ConversionInsts() && Subtarget->hasFP8E5M3Insts();
+  if (Subtarget->hasOCPFP8ConversionInsts() || HasE5M3ConversionInsts) {
     setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, {MVT::f32, MVT::v2f32},
                        Custom);
     setOperationAction(ISD::CONVERT_FROM_ARBITRARY_FP, MVT::v2i8, Custom);
@@ -1107,6 +1109,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::UMIN,
                        ISD::UMAX,
                        ISD::USUBSAT,
+                       ISD::UADDSAT,
                        ISD::AND,
                        ISD::OR,
                        ISD::XOR,
@@ -1891,23 +1894,6 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
   }
   default:
     return;
-  }
-}
-
-void SITargetLowering::CollectTargetIntrinsicOperands(
-    const CallInst &I, SmallVectorImpl<SDValue> &Ops, SelectionDAG &DAG) const {
-  switch (cast<IntrinsicInst>(I).getIntrinsicID()) {
-  case Intrinsic::amdgcn_addrspacecast_nonnull: {
-    // The DAG's ValueType loses the addrspaces.
-    // Add them as 2 extra Constant operands "from" and "to".
-    unsigned SrcAS = I.getOperand(0)->getType()->getPointerAddressSpace();
-    unsigned DstAS = I.getType()->getPointerAddressSpace();
-    Ops.push_back(DAG.getTargetConstant(SrcAS, SDLoc(), MVT::i32));
-    Ops.push_back(DAG.getTargetConstant(DstAS, SDLoc(), MVT::i32));
-    break;
-  }
-  default:
-    break;
   }
 }
 
@@ -7546,6 +7532,12 @@ bool SITargetLowering::isFMADLegal(const SelectionDAG &DAG,
                      getDenormalFPEnv(DAG.getMachineFunction()));
 }
 
+bool SITargetLowering::isFMADLegal(const Function &F, Type *Ty) const {
+  return isFMADLegal(getValueType(F.getDataLayout(), Ty->getScalarType(),
+                                  /*AllowUnknown=*/true),
+                     F.getDenormalFPEnv());
+}
+
 //===----------------------------------------------------------------------===//
 // Custom DAG Lowering Operations
 //===----------------------------------------------------------------------===//
@@ -7618,9 +7610,11 @@ SDValue SITargetLowering::splitTernaryVectorOp(SDValue Op,
   assert(VT.isVector() && VT.getVectorElementCount().isKnownEven());
 
   SDValue Op0 = Op.getOperand(0);
-  auto [Lo0, Hi0] = Op0.getValueType().isVector()
-                        ? DAG.SplitVectorOperand(Op.getNode(), 0)
-                        : std::pair(Op0, Op0);
+  SDValue Lo0, Hi0;
+  if (Op0.getValueType().isVector())
+    std::tie(Lo0, Hi0) = DAG.SplitVectorOperand(Op.getNode(), 0);
+  else
+    Lo0 = Hi0 = DAG.getFreeze(Op0);
 
   auto [Lo1, Hi1] = DAG.SplitVectorOperand(Op.getNode(), 1);
   auto [Lo2, Hi2] = DAG.SplitVectorOperand(Op.getNode(), 2);
@@ -7953,69 +7947,6 @@ SDValue SITargetLowering::lowerIntrinsicLoad(MemSDNode *M, bool IsFormat,
       DL);
 }
 
-static SDValue lowerICMPIntrinsic(const SITargetLowering &TLI, SDNode *N,
-                                  SelectionDAG &DAG) {
-  EVT VT = N->getValueType(0);
-  unsigned CondCode = N->getConstantOperandVal(3);
-  if (!ICmpInst::isIntPredicate(static_cast<ICmpInst::Predicate>(CondCode)))
-    return DAG.getPOISON(VT);
-
-  ICmpInst::Predicate IcInput = static_cast<ICmpInst::Predicate>(CondCode);
-
-  SDValue LHS = N->getOperand(1);
-  SDValue RHS = N->getOperand(2);
-
-  SDLoc DL(N);
-
-  EVT CmpVT = LHS.getValueType();
-  if (CmpVT == MVT::i16 && !TLI.isTypeLegal(MVT::i16)) {
-    unsigned PromoteOp =
-        ICmpInst::isSigned(IcInput) ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND;
-    LHS = DAG.getNode(PromoteOp, DL, MVT::i32, LHS);
-    RHS = DAG.getNode(PromoteOp, DL, MVT::i32, RHS);
-  }
-
-  ISD::CondCode CCOpcode = getICmpCondCode(IcInput);
-
-  unsigned WavefrontSize = TLI.getSubtarget()->getWavefrontSize();
-  EVT CCVT = EVT::getIntegerVT(*DAG.getContext(), WavefrontSize);
-
-  SDValue SetCC = DAG.getNode(AMDGPUISD::SETCC, DL, CCVT, LHS, RHS,
-                              DAG.getCondCode(CCOpcode));
-  if (VT.bitsEq(CCVT))
-    return SetCC;
-  return DAG.getZExtOrTrunc(SetCC, DL, VT);
-}
-
-static SDValue lowerFCMPIntrinsic(const SITargetLowering &TLI, SDNode *N,
-                                  SelectionDAG &DAG) {
-  EVT VT = N->getValueType(0);
-
-  unsigned CondCode = N->getConstantOperandVal(3);
-  if (!FCmpInst::isFPPredicate(static_cast<FCmpInst::Predicate>(CondCode)))
-    return DAG.getPOISON(VT);
-
-  SDValue Src0 = N->getOperand(1);
-  SDValue Src1 = N->getOperand(2);
-  EVT CmpVT = Src0.getValueType();
-  SDLoc SL(N);
-
-  if (CmpVT == MVT::f16 && !TLI.isTypeLegal(CmpVT)) {
-    Src0 = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Src0);
-    Src1 = DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Src1);
-  }
-
-  FCmpInst::Predicate IcInput = static_cast<FCmpInst::Predicate>(CondCode);
-  ISD::CondCode CCOpcode = getFCmpCondCode(IcInput);
-  unsigned WavefrontSize = TLI.getSubtarget()->getWavefrontSize();
-  EVT CCVT = EVT::getIntegerVT(*DAG.getContext(), WavefrontSize);
-  SDValue SetCC = DAG.getNode(AMDGPUISD::SETCC, SL, CCVT, Src0, Src1,
-                              DAG.getCondCode(CCOpcode));
-  if (VT.bitsEq(CCVT))
-    return SetCC;
-  return DAG.getZExtOrTrunc(SetCC, SL, VT);
-}
-
 static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
                                     SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
@@ -8057,6 +7988,27 @@ static SDValue lowerBALLOTIntrinsic(const SITargetLowering &TLI, SDNode *N,
   return DAG.getNode(
       AMDGPUISD::SETCC, SL, VT, DAG.getZExtOrTrunc(Src, SL, MVT::i32),
       DAG.getConstant(0, SL, MVT::i32), DAG.getCondCode(ISD::SETNE));
+}
+
+static SDValue lowerBFEIntrinsic(SDValue Op, SelectionDAG &DAG,
+                                 Intrinsic::ID IntrinsicID) {
+  bool Signed = IntrinsicID == Intrinsic::amdgcn_sbfe;
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  SDValue Src = Op.getOperand(1);
+  SDValue Offset = Op.getOperand(2);
+  SDValue Width = Op.getOperand(3);
+
+  if (VT != MVT::i32) {
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        DAG.getMachineFunction().getFunction(),
+        Twine(Intrinsic::getBaseName(IntrinsicID)) + " only supports i32",
+        DL.getDebugLoc()));
+    return DAG.getPOISON(VT);
+  }
+
+  return DAG.getNode(Signed ? AMDGPUISD::BFE_I32 : AMDGPUISD::BFE_U32, DL, VT,
+                     Src, Offset, Width);
 }
 
 static SDValue emitRemovedIntrinsicError(SelectionDAG &DAG, const SDLoc &DL,
@@ -8943,6 +8895,7 @@ static unsigned getExtOpcodeForPromotedOp(SDValue Op) {
   case ISD::UMIN:
   case ISD::UMAX:
   case ISD::USUBSAT:
+  case ISD::UADDSAT:
     return ISD::ZERO_EXTEND;
   case ISD::ADD:
   case ISD::SUB:
@@ -8992,7 +8945,7 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
          Opc == ISD::OR || Opc == ISD::XOR || Opc == ISD::MUL ||
          Opc == ISD::SETCC || Opc == ISD::SELECT || Opc == ISD::SMIN ||
          Opc == ISD::SMAX || Opc == ISD::UMIN || Opc == ISD::UMAX ||
-         Opc == ISD::USUBSAT);
+         Opc == ISD::USUBSAT || Opc == ISD::UADDSAT);
 
   EVT OpTy = (Opc != ISD::SETCC) ? Op.getValueType()
                                  : Op->getOperand(0).getValueType();
@@ -9034,7 +8987,12 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
   SDValue NewVal;
   if (Opc == ISD::SELECT)
     NewVal = DAG.getNode(ISD::SELECT, DL, ExtTy, {Op->getOperand(0), LHS, RHS});
-  else
+  else if (Opc == ISD::UADDSAT) {
+    SDValue Sum = DAG.getNode(ISD::ADD, DL, ExtTy, LHS, RHS);
+    SDValue MaxVal = DAG.getConstant(
+        APInt::getMaxValue(OpTy.getScalarSizeInBits()).zext(32), DL, ExtTy);
+    NewVal = DAG.getNode(ISD::UMIN, DL, ExtTy, Sum, MaxVal);
+  } else
     NewVal = DAG.getNode(Opc, DL, ExtTy, {LHS, RHS});
 
   return DAG.getZExtOrTrunc(NewVal, DL, OpTy);
@@ -9437,22 +9395,11 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   const AMDGPUTargetMachine &TM =
       static_cast<const AMDGPUTargetMachine &>(getTargetMachine());
 
-  unsigned DestAS, SrcAS;
-  SDValue Src;
-  bool IsNonNull = false;
-  if (const auto *ASC = dyn_cast<AddrSpaceCastSDNode>(Op)) {
-    SrcAS = ASC->getSrcAddressSpace();
-    Src = ASC->getOperand(0);
-    DestAS = ASC->getDestAddressSpace();
-  } else {
-    assert(Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
-           Op.getConstantOperandVal(0) ==
-               Intrinsic::amdgcn_addrspacecast_nonnull);
-    Src = Op->getOperand(1);
-    SrcAS = Op->getConstantOperandVal(2);
-    DestAS = Op->getConstantOperandVal(3);
-    IsNonNull = true;
-  }
+  const auto *ASC = cast<AddrSpaceCastSDNode>(Op);
+  unsigned SrcAS = ASC->getSrcAddressSpace();
+  SDValue Src = ASC->getOperand(0);
+  unsigned DestAS = ASC->getDestAddressSpace();
+  bool IsNonNull = ASC->getFlags().hasNonNull();
 
   SDValue FlatNullPtr = DAG.getConstant(0, SL, MVT::i64);
 
@@ -11014,16 +10961,43 @@ SDValue SITargetLowering::lowerFromFP8(SDValue Op, bool IsBF8,
 SDValue
 SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
                                                  SelectionDAG &DAG) const {
-  // Only handle OCP FP8 formats (E4M3FN, E5M2). FNUZ formats that are supported
-  // by gfx942 fall through to the generic expansion.
+  // Handle the OCP FP8 formats (E4M3FN, E5M2) and unsigned E5M3 on subtargets
+  // with matching HW conversions. Other formats use the generic expansion.
   APFloatBase::Semantics FPSemantic =
       static_cast<APFloatBase::Semantics>(Op.getConstantOperandVal(1));
-  if (FPSemantic != APFloatBase::S_Float8E4M3FN &&
-      FPSemantic != APFloatBase::S_Float8E5M2)
-    return SDValue();
+  const bool IsFP8 = FPSemantic == APFloatBase::S_Float8E4M3FN;
   const bool IsBF8 = FPSemantic == APFloatBase::S_Float8E5M2;
+  const bool IsE5M3 = FPSemantic == APFloatBase::S_Float8E5M3FNU;
+  const bool HasE5M3ConversionInsts =
+      Subtarget->hasFP8ConversionInsts() && Subtarget->hasFP8E5M3Insts();
+  const bool IsSupported = IsFP8 || IsBF8 || (IsE5M3 && HasE5M3ConversionInsts);
+  if (!IsSupported)
+    return SDValue();
 
   EVT DstVT = Op.getValueType();
+  if (IsE5M3) {
+    if (DstVT.getScalarType() != MVT::f32)
+      return SDValue();
+
+    SDLoc SL(Op);
+    SDValue Src = Op.getOperand(0);
+    assert((!DstVT.isVector() || DstVT == MVT::v2f32) &&
+           "only the v2f32 vector result is custom lowered");
+
+    if (DstVT.isVector())
+      Src = DAG.getNode(ISD::BITCAST, SL, MVT::i16, Src);
+    Src = DAG.getAnyExtOrTrunc(Src, SL, MVT::i32);
+
+    auto ConvertByte = [&](unsigned ByteSel) {
+      return DAG.getNode(AMDGPUISD::CVT_F32_FP8_E5M3, SL, MVT::f32, Src,
+                         DAG.getTargetConstant(ByteSel, SL, MVT::i32));
+    };
+
+    if (!DstVT.isVector())
+      return ConvertByte(0);
+    return DAG.getBuildVector(DstVT, SL, {ConvertByte(0), ConvertByte(1)});
+  }
+
   if (!DstVT.isVector()) {
     SDValue Src = Op.getOperand(0);
     if (Src.getValueType() != MVT::i32) {
@@ -11041,7 +11015,7 @@ SITargetLowering::LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op,
   return SDValue();
 }
 
-SDValue SITargetLowering::lowerToFP8(SDValue Op, bool IsBF8,
+SDValue SITargetLowering::lowerToFP8(SDValue Op, bool IsBF8, bool IsE5M3,
                                      SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue Src = Op.getOperand(0);
@@ -11059,7 +11033,9 @@ SDValue SITargetLowering::lowerToFP8(SDValue Op, bool IsBF8,
     return DAG.getNode(ISD::BITCAST, SL, ResVT, Bytes);
   }
 
-  unsigned Opc = IsBF8 ? AMDGPUISD::CVT_PK_BF8_F32 : AMDGPUISD::CVT_PK_FP8_F32;
+  unsigned Opc = IsBF8    ? AMDGPUISD::CVT_PK_BF8_F32
+                 : IsE5M3 ? AMDGPUISD::CVT_PK_FP8_F32_E5M3
+                          : AMDGPUISD::CVT_PK_FP8_F32;
   SDValue PoisonI32 = DAG.getPOISON(MVT::i32);
   SDValue WordSel = DAG.getTargetConstant(0, SL, MVT::i1);
 
@@ -11081,32 +11057,40 @@ SDValue SITargetLowering::lowerToFP8(SDValue Op, bool IsBF8,
 SDValue
 SITargetLowering::LowerCONVERT_TO_ARBITRARY_FP(SDValue Op,
                                                SelectionDAG &DAG) const {
-  // Only the OCP fp8 formats E4M3FN and E5M2 map to HW conversions, everything
-  // else uses the generic expansion.
+  // The OCP FP8 formats (E4M3FN, E5M2) and unsigned E5M3 map to HW conversions
+  // on subtargets that support them. Everything else uses generic expansion.
   APFloatBase::Semantics Sem =
       static_cast<APFloatBase::Semantics>(Op.getConstantOperandVal(1));
-  if (Sem != APFloatBase::S_Float8E4M3FN && Sem != APFloatBase::S_Float8E5M2)
+  const bool IsFP8 = Sem == APFloatBase::S_Float8E4M3FN;
+  const bool IsBF8 = Sem == APFloatBase::S_Float8E5M2;
+  const bool IsE5M3 = Sem == APFloatBase::S_Float8E5M3FNU;
+  const bool HasE5M3ConversionInsts =
+      Subtarget->hasFP8ConversionInsts() && Subtarget->hasFP8E5M3Insts();
+  const bool IsSupported = IsFP8 || IsBF8 || (IsE5M3 && HasE5M3ConversionInsts);
+  if (!IsSupported)
     return SDValue();
-  bool IsBF8 = Sem == APFloatBase::S_Float8E5M2;
 
-  // The packed HW conversions round to nearest-even and never saturate.
+  // The HW conversions only support nearest-even. The OCP conversions do not
+  // saturate. The unsigned E5M3 conversion always clamps out-of-range inputs,
+  // which also refines the non-saturating form where those inputs are poison.
   if (static_cast<RoundingMode>(Op.getConstantOperandVal(2)) !=
       RoundingMode::NearestTiesToEven)
     return SDValue();
-  if (Op.getConstantOperandVal(3) != 0)
+  if (!IsE5M3 && Op.getConstantOperandVal(3) != 0)
     return SDValue();
 
   EVT SrcEltVT = Op.getOperand(0).getValueType().getScalarType();
   // The f32 form is built here rather than by a tablegen pattern because the
   // HW result is i32 while the node result is i16 after the i8 promotion.
   if (SrcEltVT == MVT::f32)
-    return lowerToFP8(Op, IsBF8, DAG);
-  if (SrcEltVT == MVT::f16 && Subtarget->hasF16FP8ConversionInsts()) {
+    return lowerToFP8(Op, IsBF8, IsE5M3, DAG);
+  if (!IsE5M3 && SrcEltVT == MVT::f16 &&
+      Subtarget->hasF16FP8ConversionInsts()) {
     // A scalar conversion is selected from the generic node by tablegen, only
     // the illegal v2i8 result type needs lowering here.
     if (!Op.getValueType().isVector())
       return Op;
-    return lowerToFP8(Op, IsBF8, DAG);
+    return lowerToFP8(Op, IsBF8, false, DAG);
   }
   return SDValue();
 }
@@ -11436,17 +11420,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(AMDGPUISD::DIV_SCALE, DL, Op->getVTList(), Src0,
                        Denominator, Numerator);
   }
-  case Intrinsic::amdgcn_icmp: {
-    // There is a Pat that handles this variant, so return it as-is.
-    if (Op.getOperand(1).getValueType() == MVT::i1 &&
-        Op.getConstantOperandVal(2) == 0 &&
-        Op.getConstantOperandVal(3) == ICmpInst::Predicate::ICMP_NE)
-      return Op;
-    return lowerICMPIntrinsic(*this, Op.getNode(), DAG);
-  }
-  case Intrinsic::amdgcn_fcmp: {
-    return lowerFCMPIntrinsic(*this, Op.getNode(), DAG);
-  }
   case Intrinsic::amdgcn_ballot:
     return lowerBALLOTIntrinsic(*this, Op.getNode(), DAG);
   case Intrinsic::amdgcn_fmed3:
@@ -11459,11 +11432,8 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(AMDGPUISD::FMUL_LEGACY, DL, VT, Op.getOperand(1),
                        Op.getOperand(2));
   case Intrinsic::amdgcn_sbfe:
-    return DAG.getNode(AMDGPUISD::BFE_I32, DL, VT, Op.getOperand(1),
-                       Op.getOperand(2), Op.getOperand(3));
   case Intrinsic::amdgcn_ubfe:
-    return DAG.getNode(AMDGPUISD::BFE_U32, DL, VT, Op.getOperand(1),
-                       Op.getOperand(2), Op.getOperand(3));
+    return lowerBFEIntrinsic(Op, DAG, IntrinsicID);
   case Intrinsic::amdgcn_cvt_pkrtz:
   case Intrinsic::amdgcn_cvt_pknorm_i16:
   case Intrinsic::amdgcn_cvt_pknorm_u16:
@@ -11644,8 +11614,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     }
     return SDValue();
   }
-  case Intrinsic::amdgcn_addrspacecast_nonnull:
-    return lowerADDRSPACECAST(Op, DAG);
   case Intrinsic::amdgcn_readlane:
   case Intrinsic::amdgcn_readfirstlane:
   case Intrinsic::amdgcn_writelane:
@@ -11753,12 +11721,31 @@ SITargetLowering::lowerStructBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
                                  M->getMemOperand());
 }
 
+static void initializeM0ToZeroForClusterLoad(SDValue Op, SelectionDAG &DAG,
+                                             SDLoc DL) {
+  SDNode *N = Op.getNode();
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i32);
+  unsigned NumOperands = N->getNumOperands();
+  if (N->getOperand(NumOperands - 1) == Zero)
+    return;
+  SmallVector<SDValue, 7> Ops(N->ops());
+  Ops[NumOperands - 1] = Zero; // M0 = 0
+  DAG.UpdateNodeOperands(N, Ops);
+}
+
 SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                                  SelectionDAG &DAG) const {
   unsigned IntrID = Op.getConstantOperandVal(1);
   SDLoc DL(Op);
 
   switch (IntrID) {
+  case Intrinsic::amdgcn_cluster_load_b32:
+  case Intrinsic::amdgcn_cluster_load_b64:
+  case Intrinsic::amdgcn_cluster_load_b128: {
+    if (Subtarget->hasGFX1250_STRICT())
+      initializeM0ToZeroForClusterLoad(Op, DAG, DL);
+    return SDValue();
+  }
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap: {
     MemSDNode *M = cast<MemSDNode>(Op);
@@ -12548,6 +12535,14 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   unsigned IntrinsicID = Op.getConstantOperandVal(1);
 
   switch (IntrinsicID) {
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b128: {
+    if (Subtarget->hasGFX1250_STRICT())
+      initializeM0ToZeroForClusterLoad(Op, DAG, DL);
+    return SDValue();
+  }
   case Intrinsic::amdgcn_exp_compr: {
     SDValue Src0 = Op.getOperand(4);
     SDValue Src1 = Op.getOperand(5);
@@ -13237,7 +13232,7 @@ SDValue SITargetLowering::lowerPointerAsRsrcIntrin(SDNode *Op,
   SDValue ExtStride = DAG.getAnyExtOrTrunc(Stride, Loc, MVT::i32);
   SDValue Rsrc;
 
-  if (Subtarget->has45BitNumRecordsBufferResource()) {
+  if (Subtarget->getBufferResourceNumRecordsWidth() == 45) {
     NumRecords = DAG.getZExtOrTrunc(NumRecords, Loc, MVT::i64);
     NumRecords = DAG.getNode(ISD::AND, Loc, MVT::i64, NumRecords,
                              DAG.getConstant((1ULL << 45) - 1, Loc, MVT::i64));
@@ -14987,7 +14982,7 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
   // and (op x, c1), (op y, c2) -> perm x, y, permute_mask(c1, c2)
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   if (VT == MVT::i32 && LHS.hasOneUse() && RHS.hasOneUse() &&
-      N->isDivergent() && TII->pseudoToMCOpcode(AMDGPU::V_PERM_B32_e64) != -1) {
+      TII->pseudoToMCOpcode(AMDGPU::V_PERM_B32_e64) != -1) {
     uint32_t LHSMask = getPermuteMask(LHS);
     uint32_t RHSMask = getPermuteMask(RHS);
     if (LHSMask != ~0u && RHSMask != ~0u) {
@@ -15505,6 +15500,14 @@ static SDValue getDWordFromOffset(SelectionDAG &DAG, SDLoc SL, SDValue Src,
     }
 
     assert(ScalarTySize < 32);
+    if (TypeSize % 32 == 0) {
+      assert(DWordOffset < TypeSize / 32);
+      SDValue Cast = DAG.getBitcast(
+          EVT::getVectorVT(*DAG.getContext(), MVT::i32, TypeSize / 32), Src);
+      return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Cast,
+                         DAG.getConstant(DWordOffset, SL, MVT::i32));
+    }
+
     auto NumElements = TypeSize / ScalarTySize;
     auto Trunc32Elements = (ScalarTySize * NumElements) / 32;
     auto NormalizedTrunc = Trunc32Elements * 32 / ScalarTySize;
@@ -15677,7 +15680,7 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
   // or (op x, c1), (op y, c2) -> perm x, y, permute_mask(c1, c2)
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   if (VT == MVT::i32 && LHS.hasOneUse() && RHS.hasOneUse() &&
-      N->isDivergent() && TII->pseudoToMCOpcode(AMDGPU::V_PERM_B32_e64) != -1) {
+      TII->pseudoToMCOpcode(AMDGPU::V_PERM_B32_e64) != -1) {
 
     // If all the uses of an or need to extract the individual elements, do not
     // attempt to lower into v_perm
@@ -17202,10 +17205,7 @@ unsigned SITargetLowering::getFusedOpcode(const SelectionDAG &DAG,
       isOperationLegal(ISD::FMAD, VT))
     return ISD::FMAD;
 
-  const TargetOptions &Options = DAG.getTarget().Options;
-  if ((Options.AllowFPOpFusion == FPOpFusion::Fast ||
-       (N0->getFlags().hasAllowContract() &&
-        N1->getFlags().hasAllowContract())) &&
+  if (N0->getFlags().hasAllowContract() && N1->getFlags().hasAllowContract() &&
       isFMAFasterThanFMulAndFAdd(DAG.getMachineFunction(), VT)) {
     return ISD::FMA;
   }
@@ -17738,7 +17738,9 @@ SDValue SITargetLowering::performAddCombine(SDNode *N,
       return Folded;
   }
 
-  if ((isMul(LHS) || isMul(RHS)) && Subtarget->hasDot7Insts() &&
+  // dot4 produces a 32-bit result, so a wider VT can't be folded.
+  if (!VT.isVector() && VT.getSizeInBits() <= 32 &&
+      (isMul(LHS) || isMul(RHS)) && Subtarget->hasDot7Insts() &&
       (Subtarget->hasDot1Insts() || Subtarget->hasDot8Insts())) {
     SDValue TempNode(N, 0);
     std::optional<bool> IsSigned;
@@ -18333,10 +18335,7 @@ SDValue SITargetLowering::performFMACombine(SDNode *N,
   }
 
   // fp-contract allows reassociating the fma tree into a dot product.
-  const TargetOptions &Options = DAG.getTarget().Options;
-  if (Options.AllowFPOpFusion == FPOpFusion::Fast ||
-      (N->getFlags().hasAllowContract() &&
-       FMA->getFlags().hasAllowContract())) {
+  if (N->getFlags().hasAllowContract() && FMA->getFlags().hasAllowContract()) {
     Op1 = Op1.getOperand(0);
     Op2 = Op2.getOperand(0);
     if (Op1.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
@@ -18365,8 +18364,10 @@ SDValue SITargetLowering::performFMACombine(SDNode *N,
     SDValue Vec4 = FMAOp2.getOperand(0);
     SDValue Idx2 = FMAOp1.getOperand(1);
 
-    if (Idx1 != Op2.getOperand(1) || Idx2 != FMAOp2.getOperand(1) ||
-        // Idx1 and Idx2 cannot be the same.
+    if (Idx1 != Op2.getOperand(1) || Idx2 != FMAOp2.getOperand(1))
+      return SDValue();
+
+    if (!isa<ConstantSDNode>(Idx1) || !isa<ConstantSDNode>(Idx2) ||
         Idx1 == Idx2)
       return SDValue();
 
@@ -18888,6 +18889,127 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
   return getCanonicalConstantFP(DCI.DAG, SDLoc(N), N->getValueType(0), F);
 }
 
+// Check if V is the exponent result of a frexp operation. Returns the frexp
+// input via FrexpInput if matched. We only match the exponent (not mantissa)
+// because V_FREXP_MANT returns its input for Inf/NaN, not zero.
+static bool isFrexpExp(SDValue V, SDValue &FrexpInput) {
+  // ISD::FFREXP returns {mant, exp} - only match if using the exp result
+  // (result number 1).
+  if (V.getOpcode() == ISD::FFREXP && V.getResNo() == 1) {
+    FrexpInput = V.getOperand(0);
+    return true;
+  }
+  if (sd_match(V, m_IntrinsicWOChain<Intrinsic::amdgcn_frexp_exp>(
+                      m_Value(FrexpInput))))
+    return true;
+  return false;
+}
+
+SDValue
+SITargetLowering::performFrexpSelectCombine(SDNode *N,
+                                            DAGCombinerInfo &DCI) const {
+  // This optimization only applies when the hardware handles inf/nan correctly.
+  if (Subtarget->hasFractBug())
+    return SDValue();
+
+  SDValue Cond = N->getOperand(0);
+  SDValue TrueVal = N->getOperand(1);
+  SDValue FalseVal = N->getOperand(2);
+
+  // Identify which operand is the frexp result and which is the zero constant.
+  // Pattern 1: select cond, 0, frexp_result (cond true -> return 0)
+  // Pattern 2: select cond, frexp_result, 0 (cond false -> return 0)
+  SDValue FrexpVal;
+  SDValue ZeroVal;
+  bool CondSelectsZero; // If true, condition=true selects zero
+
+  // Check if FrexpVal comes from ISD::FFREXP (exponent result only) or
+  // amdgcn_frexp_exp intrinsic.
+  SDValue FrexpInput;
+  if (isFrexpExp(FalseVal, FrexpInput)) {
+    FrexpVal = FalseVal;
+    ZeroVal = TrueVal;
+    CondSelectsZero = true;
+  } else if (isFrexpExp(TrueVal, FrexpInput)) {
+    FrexpVal = TrueVal;
+    ZeroVal = FalseVal;
+    CondSelectsZero = false;
+  } else {
+    return SDValue();
+  }
+
+  // frexp_exp returns integer, so check for integer zero.
+  if (!isNullConstant(ZeroVal))
+    return SDValue();
+
+  // The frexp intrinsics ignore sign, so we can strip sign ops when comparing.
+  SDValue FrexpInputStripped = peekFPSignOps(FrexpInput);
+
+  bool IsNonFiniteTest = false;
+
+  // Handle SETCC conditions for inf/nan tests.
+  // The canonical form of these checks is fcmp + fabs.
+  if (Cond.getOpcode() == ISD::SETCC) {
+    ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
+    SDValue CondLHS = Cond.getOperand(0);
+    SDValue CondRHS = Cond.getOperand(1);
+
+    // Check if LHS is fabs(FrexpInput) - required for infinity comparisons.
+    SDValue FAbsInput;
+    bool LHSIsFabs = sd_match(CondLHS, m_FAbs(m_Value(FAbsInput)));
+    bool LHSMatchesFrexp =
+        (CondLHS == FrexpInput) ||
+        (LHSIsFabs && peekFPSignOps(FAbsInput) == FrexpInputStripped) ||
+        (peekFPSignOps(CondLHS) == FrexpInputStripped);
+    bool RHSMatchesFrexp = (CondRHS == FrexpInput) ||
+                           (peekFPSignOps(CondRHS) == FrexpInputStripped);
+
+    if (CC == ISD::SETUO) {
+      // fcmp uno x, y - true if either x or y is NaN
+      // We can only fold if the non-frexp operand is known to never be NaN,
+      // otherwise the comparison could be true due to the other operand.
+      // Special case: fcmp uno x, x (same operand) is a valid NaN test.
+      SelectionDAG &DAG = DCI.DAG;
+      if (LHSMatchesFrexp &&
+          (CondLHS == CondRHS || DAG.isKnownNeverNaN(CondRHS)))
+        IsNonFiniteTest = CondSelectsZero;
+      else if (RHSMatchesFrexp && DAG.isKnownNeverNaN(CondLHS))
+        IsNonFiniteTest = CondSelectsZero;
+    } else if ((CC == ISD::SETOEQ || CC == ISD::SETUEQ) && LHSMatchesFrexp &&
+               LHSIsFabs &&
+               sd_match(CondRHS,
+                        m_SpecificFP(APFloat::getInf(
+                            CondRHS.getValueType().getFltSemantics())))) {
+      // fcmp oeq/ueq fabs(x), +inf - true if x is inf (or inf/nan for ueq)
+      IsNonFiniteTest = CondSelectsZero;
+    } else if ((CC == ISD::SETONE || CC == ISD::SETUNE) && LHSMatchesFrexp &&
+               LHSIsFabs &&
+               sd_match(CondRHS,
+                        m_SpecificFP(APFloat::getInf(
+                            CondRHS.getValueType().getFltSemantics())))) {
+      // fcmp one/une fabs(x), +inf - true if x is NOT inf
+      IsNonFiniteTest = !CondSelectsZero;
+    } else if (CC == ISD::SETO) {
+      // fcmp ord x, y - true if both are NOT NaN
+      // We can only fold if the non-frexp operand is known to never be NaN,
+      // otherwise the comparison could be false due to the other operand.
+      // Special case: fcmp ord x, x (same operand) is a valid not-NaN test.
+      SelectionDAG &DAG = DCI.DAG;
+      if (LHSMatchesFrexp &&
+          (CondLHS == CondRHS || DAG.isKnownNeverNaN(CondRHS)))
+        IsNonFiniteTest = !CondSelectsZero;
+      else if (RHSMatchesFrexp && DAG.isKnownNeverNaN(CondLHS))
+        IsNonFiniteTest = !CondSelectsZero;
+    }
+  }
+
+  if (!IsNonFiniteTest)
+    return SDValue();
+
+  // The select can be eliminated - just return the frexp result directly.
+  return FrexpVal;
+}
+
 SDValue SITargetLowering::performSelectCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
 
@@ -18991,6 +19113,7 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::UMIN:
   case ISD::UMAX:
   case ISD::USUBSAT:
+  case ISD::UADDSAT:
     if (auto Res = promoteUniformOpToI32(SDValue(N, 0), DCI))
       return Res;
     break;
@@ -19019,6 +19142,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SETCC:
     return performSetCCCombine(N, DCI);
   case ISD::SELECT:
+    if (auto Res = performFrexpSelectCombine(N, DCI))
+      return Res;
     if (auto Res = performSelectCombine(N, DCI))
       return Res;
     break;

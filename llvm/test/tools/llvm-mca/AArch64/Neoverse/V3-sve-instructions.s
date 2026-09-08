@@ -517,6 +517,7 @@
 # CHECK-NEXT:  1      2     0.25                        dupm	z0.s, #0xfffffff9
 # CHECK-NEXT:  1      2     0.25                        dupm	z23.h, #0xfff9
 # CHECK-NEXT:  1      2     0.25                        dupm	z5.b, #0xf9
+# CHECK-NEXT:  1      3     1.00                        mov	z0.s, w1
 # CHECK-NEXT:  1      2     0.50                        eor	p0.b, p0/z, p0.b, p1.b
 # CHECK-NEXT:  1      2     0.25                        eor	z0.d, z0.d, #0x6
 # CHECK-NEXT:  1      2     0.25                        eor	z0.d, z0.d, #0xfffffffffffffff9
@@ -562,11 +563,15 @@
 # CHECK-NEXT:  1      2     1.00                        facge	p0.h, p0/z, z1.h, z0.h
 # CHECK-NEXT:  1      2     1.00                        facge	p0.s, p0/z, z0.s, z1.s
 # CHECK-NEXT:  1      2     1.00                        facge	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  1      2     1.00                        facge	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  1      2     1.00                        facge	p0.s, p0/z, z1.s, z0.s
 # CHECK-NEXT:  1      2     1.00                        facgt	p0.d, p0/z, z0.d, z1.d
 # CHECK-NEXT:  1      2     1.00                        facgt	p0.d, p0/z, z1.d, z0.d
 # CHECK-NEXT:  1      2     1.00                        facgt	p0.h, p0/z, z0.h, z1.h
 # CHECK-NEXT:  1      2     1.00                        facgt	p0.h, p0/z, z1.h, z0.h
 # CHECK-NEXT:  1      2     1.00                        facgt	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  1      2     1.00                        facgt	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  1      2     1.00                        facgt	p0.d, p0/z, z1.d, z0.d
 # CHECK-NEXT:  1      2     1.00                        facgt	p0.s, p0/z, z1.s, z0.s
 # CHECK-NEXT:  1      2     0.25                        fadd	z0.d, p0/m, z0.d, #0.5
 # CHECK-NEXT:  1      2     0.25                        fadd	z0.d, p7/m, z0.d, z31.d
@@ -3454,7 +3459,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     245.00 245.00 696.50 400.88 303.88 41.88  41.88  41.88  41.88  41.88  41.88  451.50 1606.00 1268.50 817.00 681.50
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     245.00 245.00 696.50 401.88 303.88 41.88  41.88  41.88  41.88  41.88  41.88  451.50 1610.00 1268.50 817.00 681.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [2.3]  [3.0]  [3.1]  [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   Instructions:
@@ -3965,6 +3970,7 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   dupm	z0.s, #0xfffffff9
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   dupm	z23.h, #0xfff9
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   dupm	z5.b, #0xf9
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -     mov	z0.s, w1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -     eor	p0.b, p0/z, p0.b, p1.b
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   eor	z0.d, z0.d, #0x6
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   eor	z0.d, z0.d, #0xfffffffffffffff9
@@ -4010,11 +4016,15 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     facge	p0.h, p0/z, z1.h, z0.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     facge	p0.s, p0/z, z0.s, z1.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     facge	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     facge	p0.d, p0/z, z1.d, z0.d
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     facge	p0.s, p0/z, z1.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     facgt	p0.d, p0/z, z0.d, z1.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     facgt	p0.d, p0/z, z1.d, z0.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     facgt	p0.h, p0/z, z0.h, z1.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     facgt	p0.h, p0/z, z1.h, z0.h
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     facgt	p0.s, p0/z, z0.s, z1.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     facgt	p0.s, p0/z, z1.s, z0.s
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     facgt	p0.d, p0/z, z1.d, z0.d
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     facgt	p0.s, p0/z, z1.s, z0.s
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fadd	z0.d, p0/m, z0.d, #0.5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25   fadd	z0.d, p7/m, z0.d, z31.d
