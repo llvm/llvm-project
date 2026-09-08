@@ -2209,8 +2209,13 @@ llvm.func @useInlineAsm(%arg0: i32, %arg1 : !llvm.ptr) {
   // CHECK-NEXT:  notail call { i8, i8 } asm "foo", "=r,=r,r"(i32 {{.*}})
   %8 = llvm.inline_asm tail_call_kind = <notail> "foo", "=r,=r,r" %arg0 : (i32) -> !llvm.struct<(i8, i8)>
 
+  // CHECK-NEXT:  call i8 asm "foo", "=r,r"(i32 {{.*}}) #[[$CONVERGENT:.*]]
+  %9 = llvm.inline_asm convergent "foo", "=r,r" %arg0 : (i32) -> i8
+
   llvm.return
 }
+
+// CHECK: attributes #[[$CONVERGENT]] = { convergent }
 
 // -----
 
