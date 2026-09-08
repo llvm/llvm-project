@@ -397,11 +397,11 @@ set(files
   __flat_set/ra_iterator.h
   __flat_set/utils.h
   __format/buffer.h
-  __format/concepts.h
   __format/container_adaptor.h
   __format/enable_insertable.h
   __format/escaped_output_table.h
   __format/extended_grapheme_cluster_table.h
+  __format/fmt_char_type.h
   __format/fmt_pair_like.h
   __format/format_arg.h
   __format/format_arg_store.h
@@ -412,6 +412,7 @@ set(files
   __format/format_parse_context.h
   __format/format_string.h
   __format/format_to_n_result.h
+  __format/formattable.h
   __format/formatter.h
   __format/formatter_bool.h
   __format/formatter_bool_impl.h
@@ -701,6 +702,7 @@ set(files
   __pstl/cpu_algos/for_each.h
   __pstl/cpu_algos/is_heap_until.h
   __pstl/cpu_algos/merge.h
+  __pstl/cpu_algos/min_element.h
   __pstl/cpu_algos/mismatch.h
   __pstl/cpu_algos/reverse.h
   __pstl/cpu_algos/search.h

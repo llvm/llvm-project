@@ -11,7 +11,7 @@
 #define _LIBCPP___FORMAT_FORMATTER_BOOL_H
 
 #include <__config>
-#include <__format/concepts.h>
+#include <__format/fmt_char_type.h>
 #include <__format/formatter.h>
 #include <__format/parser_std_format_spec_data.h>
 
