@@ -413,11 +413,14 @@ private:
   bool HasInvalidWorksharingNesting(
       const parser::OmpDirectiveName &name, const llvm::omp::Directives &);
 
+  // Directive paths run from the innermost construct to the outermost.
   using EffectiveDirectivePath = llvm::SmallVector<llvm::omp::Directive, 8>;
+  // Construct traits run from the outermost construct to the innermost.
   using ConstructTraitSequence = llvm::SmallVector<llvm::omp::TraitProperty, 8>;
 
   struct MetadirectiveReplacementBranch {
     EffectiveDirectivePath enclosingPath;
+    // Null represents an explicit or implicit NOTHING replacement.
     const parser::OmpDirectiveSpecification *spec{nullptr};
   };
   struct MetadirectiveReplacementContext {
@@ -602,15 +605,14 @@ private:
 
   struct PendingLoopDirectiveGroup {
     llvm::SmallVector<MetadirectiveReplacementBranch, 4> branches;
-    bool activatesReplacementContext{false};
-    bool checkDefaultNoneInAssociatedLoop{false};
+    bool isStandaloneMetadirective{false};
   };
   std::vector<PendingLoopDirectiveGroup> pendingLoopDirectiveGroups_;
   std::vector<std::size_t> pendingLoopDirectiveScopeStarts_;
   std::vector<ConstructTraitSequence> metadirectiveConstructSelectors_;
-  std::vector<bool> directiveSpecificationReachability_;
+  llvm::SmallVector<bool> directiveSpecificationReachability_;
   std::vector<MetadirectiveReplacementContext> activeMetadirectiveReplacements_;
-  std::vector<std::size_t> executionPartReplacementCounts_;
+  std::vector<std::size_t> executionPartReplacementDepths_;
 
   std::multimap<const parser::Label,
       std::pair<parser::CharBlock, const parser::OpenMPConstruct *>>
