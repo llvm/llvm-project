@@ -358,6 +358,17 @@ static Value *handleInterlockedCompareOp(CodeGenFunction &CGF,
   Value *Compare = CGF.EmitScalarExpr(E->getArg(1));
   Value *Val = CGF.EmitScalarExpr(E->getArg(2));
 
+  // `cmpxchg` takes an integer or a pointer, so the float-bitwise operations
+  // work on the bit pattern of the float. This is what those operations mean,
+  // and DXIL and SPIR-V both need the integer form.
+  if (Compare->getType()->isFloatingPointTy()) {
+    llvm::Type *IntTy =
+        CGF.Builder.getIntNTy(Compare->getType()->getPrimitiveSizeInBits());
+    Compare = CGF.Builder.CreateBitCast(Compare, IntTy);
+    Val = CGF.Builder.CreateBitCast(Val, IntTy);
+    DestAddr = DestAddr.withElementType(IntTy);
+  }
+
   Value *Pair = CGF.Builder.CreateAtomicCmpXchg(
       DestAddr, Compare, Val, llvm::AtomicOrdering::Monotonic,
       llvm::AtomicOrdering::Monotonic, getHLSLAtomicScope(CGF, DestLV));
@@ -1516,7 +1527,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::And);
   }
   case Builtin::BI__builtin_hlsl_interlocked_compare_exchange:
-  case Builtin::BI__builtin_hlsl_interlocked_compare_store: {
+  case Builtin::BI__builtin_hlsl_interlocked_compare_store:
+  case Builtin::BI__builtin_hlsl_interlocked_compare_store_float_bitwise: {
     return handleInterlockedCompareOp(*this, E);
   }
   case Builtin::BI__builtin_hlsl_interlocked_exchange: {

@@ -924,13 +924,18 @@ static void defineHLSLInterlockedFunc(Sema &S, NamespaceDecl *NS,
 
 // Synthesize the compare-and-swap overload sets: {int, uint, int64_t,
 // uint64_t} x {groupshared, device}. Each function has one form only.
+// The float-bitwise operations have their own names and take float only.
 static void defineHLSLInterlockedCompareFunc(Sema &S, NamespaceDecl *NS,
                                              StringRef FuncName,
                                              StringRef BuiltinName,
-                                             AtomicOverloadShape Shape) {
+                                             AtomicOverloadShape Shape,
+                                             bool FloatOnly = false) {
   ASTContext &AST = S.getASTContext();
-  QualType Elems[] = {AST.IntTy, AST.UnsignedIntTy, AST.LongTy,
-                      AST.UnsignedLongTy};
+  QualType IntElems[] = {AST.IntTy, AST.UnsignedIntTy, AST.LongTy,
+                         AST.UnsignedLongTy};
+  QualType FloatElems[] = {AST.FloatTy};
+  ArrayRef<QualType> Elems =
+      FloatOnly ? ArrayRef<QualType>(FloatElems) : ArrayRef<QualType>(IntElems);
 
   for (QualType ElemTy : Elems)
     for (LangAS AS : {LangAS::hlsl_groupshared, LangAS::hlsl_device})
@@ -950,6 +955,10 @@ void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
                                    "InterlockedCompareStore",
                                    "__builtin_hlsl_interlocked_compare_store",
                                    AtomicOverloadShape::CompareStore);
+  defineHLSLInterlockedCompareFunc(
+      *SemaPtr, HLSLNamespace, "InterlockedCompareStoreFloatBitwise",
+      "__builtin_hlsl_interlocked_compare_store_float_bitwise",
+      AtomicOverloadShape::CompareStore, /*FloatOnly=*/true);
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedExchange",
                             "__builtin_hlsl_interlocked_exchange",
                             /*RequiresOriginalValue=*/true,
