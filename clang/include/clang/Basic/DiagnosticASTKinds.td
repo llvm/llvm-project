@@ -428,6 +428,10 @@ def warn_cxx20_compat_requires_explicit_init_non_aggregate : Warning<
 def warn_integer_constant_overflow : Warning<
   "overflow in expression; result is %0 with type %1">,
   InGroup<DiagGroup<"integer-overflow">>;
+def warn_unsigned_integer_overflow : Warning<
+  "unsigned constant expression wraps around: %0 %1 %2 is %3, which does not "
+  "fit in %4 and becomes %5">,
+  DefaultIgnore, InGroup<DiagGroup<"unsigned-integer-overflow">>;
 def warn_fixedpoint_constant_overflow : Warning<
   "overflow in expression; result is %0 with type %1">,
   InGroup<DiagGroup<"fixed-point-overflow">>;
