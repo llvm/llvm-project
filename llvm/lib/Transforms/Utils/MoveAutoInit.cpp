@@ -178,9 +178,12 @@ static bool runMoveAutoInit(Function &F, DominatorTree &DT, MemorySSA &MSSA) {
       UsersDominator = DominatingPredecessor;
     }
 
-    // CatchSwitchInst blocks can only have one instruction, so they are not
-    // good candidates for insertion.
-    while (isa<CatchSwitchInst>(UsersDominator->getFirstNonPHIIt())) {
+    // EH pad blocks are not good candidates for insertion: CatchSwitchInst
+    // blocks can only have one instruction, and for the other pads
+    // getFirstInsertionPt() skips the pad instruction, which may itself have a
+    // memory access, while the MemorySSA update below assumes the moved
+    // instruction becomes the first access of the block.
+    while (UsersDominator->isEHPad()) {
       for (BasicBlock *Pred : predecessors(UsersDominator))
         if (DT.isReachableFromEntry(Pred))
           UsersDominator = DT.findNearestCommonDominator(UsersDominator, Pred);
