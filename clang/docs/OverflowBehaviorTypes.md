@@ -773,3 +773,42 @@ typedef float __attribute__((overflow_behavior(wrap))) wrapping_float;
 typedef struct S { int i; } __attribute__((overflow_behavior(wrap))) S_t;
 // error: 'overflow_behavior' attribute cannot be applied to non-integer type 'struct S'
 ```
+
+### Incompatibility With `_Atomic`
+
+Overflow behavior types do not compose with `_Atomic`. An error is issued for
+any spelling of the combination.
+
+```c++
+typedef int __ob_trap trapping_int;
+
+_Atomic trapping_int a;
+// error: _Atomic cannot be applied to overflow behavior type '__ob_trap int'
+
+_Atomic __ob_trap int b;
+// error: __ob_trap specifier cannot be applied to atomic type '_Atomic(int)'
+```
+
+The reason is that atomic read-modify-write operations cannot carry the
+guarantee. A compound assignment or increment on an `_Atomic` object lowers to
+a single `atomicrmw` instruction, which is never instrumented — this is true of
+plain atomic types under `-fsanitize=signed-integer-overflow` as well. A
+`trap` type is defined as being checked regardless of the global flags in
+effect, so permitting `_Atomic __ob_trap int` would mean silently honoring that
+contract for some expressions and not others:
+
+```c++
+_Atomic trapping_int counter;
+int x = counter + 1;  // checked
+counter++;            // would NOT be checked: lowers to a bare atomicrmw
+```
+
+Rather than provide a guarantee that holds only for some uses of a type, the
+combination is rejected outright. `wrap` is rejected as well, so that the rule
+is a single one that does not depend on the behavior kind.
+
+Instrumenting checked atomic read-modify-write operations would require
+lowering them to a compare-exchange loop, which changes both the performance
+characteristics and the memory-ordering story of the operation. That may be
+revisited if a concrete use case appears; relaxing this error later is a
+backwards-compatible change.

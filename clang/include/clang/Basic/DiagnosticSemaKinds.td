@@ -4211,6 +4211,9 @@ def err_overflow_behavior_unknown_ident
 def err_overflow_behavior_non_integer_type
     : Error<"%0 %select{attribute|specifier}2 cannot be applied to "
             "non-integer type '%1'">;
+def err_overflow_behavior_atomic_type
+    : Error<"%0 %select{attribute|specifier}2 cannot be applied to atomic type "
+            "'%1'">;
 def err_conflicting_overflow_behaviors
     : Error<"conflicting %select{'overflow_behavior' attributes|overflow "
             "behavior specification; specifier specifies '%1' but attribute "
@@ -7520,8 +7523,8 @@ def err_func_def_incomplete_result : Error<
 def err_atomic_specifier_bad_type
     : Error<"_Atomic cannot be applied to "
             "%select{incomplete |array |function |reference |atomic |qualified "
-            "|sizeless ||integer |}0type "
-            "%1 %select{|||||||which is not trivially copyable||in C23}0">;
+            "|sizeless ||integer ||overflow behavior }0type "
+            "%1 %select{|||||||which is not trivially copyable||in C23|}0">;
 def warn_atomic_member_access : Warning<
   "accessing a member of an atomic structure or union is undefined behavior">,
   InGroup<DiagGroup<"atomic-access">>, DefaultError;
