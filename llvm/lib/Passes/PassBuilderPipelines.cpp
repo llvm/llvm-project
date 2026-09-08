@@ -818,8 +818,11 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
                          /*AllowSpeculation=*/true));
     // LICM can hoist a loop-invariant exit condition into the preheader;
     // trivial unswitching then hoists the invariant exit branch out of the
-    // loop.
-    LPM.addPass(SimpleLoopUnswitchPass(/*NonTrivial=*/false, /*Trivial=*/true));
+    // loop. Only run it when LICM changed the loop.
+    ExtraLoopPassManager<ShouldRunExtraSimpleLoopUnswitch> ExtraPasses;
+    ExtraPasses.addPass(
+        SimpleLoopUnswitchPass(/*NonTrivial=*/false, /*Trivial=*/true));
+    LPM.addPass(std::move(ExtraPasses));
     FPM.addPass(
         createFunctionToLoopPassAdaptor(std::move(LPM), /*UseMemorySSA=*/true));
   }

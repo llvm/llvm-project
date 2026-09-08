@@ -127,7 +127,6 @@
 ; CHECK-O23-NEXT: Running pass: LoopSimplifyPass
 ; CHECK-O23-NEXT: Running pass: LCSSAPass
 ; CHECK-O23-NEXT: Running pass: LICMPass
-; CHECK-O23-NEXT: Running pass: SimpleLoopUnswitchPass
 ; CHECK-O23-NEXT: Running pass: CoroElidePass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: InstCombinePass

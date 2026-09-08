@@ -78,6 +78,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/SimpleLoopUnswitch.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -324,6 +325,11 @@ PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
 
   auto PA = getLoopPassPreservedAnalyses();
   PA.preserve<MemorySSAAnalysis>();
+
+  // Hoisting an invariant exit condition can leave a now loop-invariant exit
+  // branch in the loop; request extra trivial unswitching to remove it.
+  AM.getResult<ShouldRunExtraSimpleLoopUnswitch>(L, AR);
+  PA.preserve<ShouldRunExtraSimpleLoopUnswitch>();
 
   return PA;
 }
