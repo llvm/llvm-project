@@ -10634,7 +10634,7 @@ CharUnits GetAlignOfExpr(const ASTContext &Ctx, const Expr *E,
   return GetAlignOfType(Ctx, E->getType(), ExprKind);
 }
 
-CharUnits GetBaseAlignment(const ASTContext &Ctx,
+CharUnits getBaseAlignment(const ASTContext &Ctx,
                            const APValue::LValueBase &Base) {
   if (const auto *VD = Base.dyn_cast<const ValueDecl *>())
     return Ctx.getDeclAlign(VD);
@@ -10734,7 +10734,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
 
     // If there is a base object, then it must have the correct alignment.
     if (OffsetResult.Base) {
-      CharUnits BaseAlignment = GetBaseAlignment(Info.Ctx, OffsetResult.Base);
+      CharUnits BaseAlignment = getBaseAlignment(Info.Ctx, OffsetResult.Base);
 
       if (BaseAlignment < Align) {
         Result.Designator.setInvalid();
@@ -10782,7 +10782,7 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
     }
 
-    CharUnits BaseAlignment = GetBaseAlignment(Info.Ctx, Result.Base);
+    CharUnits BaseAlignment = getBaseAlignment(Info.Ctx, Result.Base);
     CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Result.Offset);
     // For align_up/align_down, we can return the same value if the alignment
     // is known to be greater or equal to the requested value.
@@ -17109,7 +17109,7 @@ static bool EvaluateStdcLoad8(EvalInfo &Info, const CallExpr *E, bool IsBE,
 
   if (IsAligned) {
     CharUnits RequiredAlign = Info.Ctx.getTypeAlignInChars(E->getType());
-    CharUnits BaseAlignment = GetBaseAlignment(Info.Ctx, Ptr.Base);
+    CharUnits BaseAlignment = getBaseAlignment(Info.Ctx, Ptr.Base);
     CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Ptr.Offset);
     if (PtrAlign < RequiredAlign) {
       Info.FFDiag(E, diag::note_constexpr_load8_unaligned)
@@ -17296,7 +17296,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         return false;
       }
 
-      CharUnits BaseAlignment = GetBaseAlignment(Info.Ctx, Ptr.Base);
+      CharUnits BaseAlignment = getBaseAlignment(Info.Ctx, Ptr.Base);
       CharUnits PtrAlign = BaseAlignment.alignmentAtOffset(Ptr.Offset);
       // We can return true if the known alignment at the computed offset is
       // greater than the requested alignment.
