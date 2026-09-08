@@ -185,19 +185,19 @@ struct __optional_storage_base : __optional_destruct_base<_Tp> {
   template <class _That>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __construct_from(_That&& __opt) {
     if (__opt.has_value())
-      __construct(std::forward<_That>(__opt).operator*());
+      __construct(std::forward<_That>(__opt).value());
   }
 
   template <class _That>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __assign_from(_That&& __opt) {
     if (this->__engaged_ == __opt.has_value()) {
       if (this->__engaged_)
-        static_cast<_Tp&>(this->__val_) = std::forward<_That>(__opt).operator*();
+        static_cast<_Tp&>(this->__val_) = std::forward<_That>(__opt).value();
     } else {
       if (this->__engaged_)
         this->reset();
       else
-        __construct(std::forward<_That>(__opt).operator*());
+        __construct(std::forward<_That>(__opt).value());
     }
   }
 };

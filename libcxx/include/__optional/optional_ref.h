@@ -107,7 +107,7 @@ private:
   template <class _That>
   _LIBCPP_HIDE_FROM_ABI constexpr void __construct_from(_That&& __opt) {
     if (__opt.has_value())
-      __construct(std::forward<_That>(__opt).operator*());
+      __construct(std::forward<_That>(__opt).value());
   }
 
   static constexpr bool __has_iterator_ = requires { typename __optional_ref_iterator_base<_Tp&>::iterator; };
