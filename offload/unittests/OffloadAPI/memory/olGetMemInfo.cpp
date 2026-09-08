@@ -18,13 +18,13 @@ struct olGetMemInfoAllocTypeTest : OffloadDeviceTestWithParam<ol_alloc_type_t> {
         OffloadDeviceTestWithParam<ol_alloc_type_t>::SetUp());
     AllocType = getTestParam();
     if (AllocType == OL_ALLOC_TYPE_HOST)
-      ASSERT_SUCCESS(olMemAllocHost(Device, SIZE, &Ptr));
+      ASSERT_SUCCESS(olMemAllocHost(Context, Device, SIZE, &Ptr));
     else
-      ASSERT_SUCCESS(olMemAlloc(Device, AllocType, SIZE, &Ptr));
+      ASSERT_SUCCESS(olMemAlloc(Context, Device, AllocType, SIZE, &Ptr));
   }
 
   void TearDown() override {
-    ASSERT_SUCCESS(olMemFree(Ptr));
+    ASSERT_SUCCESS(olMemFree(Context, Ptr));
     RETURN_ON_FATAL_FAILURE(
         OffloadDeviceTestWithParam<ol_alloc_type_t>::TearDown());
   }
@@ -37,11 +37,12 @@ struct olGetMemInfoAllocTypeTest : OffloadDeviceTestWithParam<ol_alloc_type_t> {
 struct olGetMemInfoTest : OffloadDeviceTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::SetUp());
-    ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, SIZE, &Ptr));
+    ASSERT_SUCCESS(
+        olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE, SIZE, &Ptr));
   }
 
   void TearDown() override {
-    ASSERT_SUCCESS(olMemFree(Ptr));
+    ASSERT_SUCCESS(olMemFree(Context, Ptr));
     RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::TearDown());
   }
 
@@ -54,30 +55,38 @@ OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE_WITH_PARAM(
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetMemInfoTest);
 
 TEST_P(olGetMemInfoAllocTypeTest, SuccessDevice) {
+  // Host-pool allocations have no per-device affinity, so querying
+  // OL_MEM_INFO_DEVICE is invalid for them.
   ol_device_handle_t RetrievedDevice;
-  ASSERT_SUCCESS(olGetMemInfo(Ptr, OL_MEM_INFO_DEVICE, sizeof(RetrievedDevice),
-                              &RetrievedDevice));
+  if (AllocType == OL_ALLOC_TYPE_HOST) {
+    ASSERT_ERROR(OL_ERRC_INVALID_ARGUMENT,
+                 olGetMemInfo(Context, Ptr, OL_MEM_INFO_DEVICE,
+                              sizeof(RetrievedDevice), &RetrievedDevice));
+    return;
+  }
+  ASSERT_SUCCESS(olGetMemInfo(Context, Ptr, OL_MEM_INFO_DEVICE,
+                              sizeof(RetrievedDevice), &RetrievedDevice));
   ASSERT_EQ(RetrievedDevice, Device);
 }
 
 TEST_P(olGetMemInfoAllocTypeTest, SuccessBase) {
   void *RetrievedBase;
-  ASSERT_SUCCESS(olGetMemInfo(Ptr, OL_MEM_INFO_BASE, sizeof(RetrievedBase),
-                              &RetrievedBase));
+  ASSERT_SUCCESS(olGetMemInfo(Context, Ptr, OL_MEM_INFO_BASE,
+                              sizeof(RetrievedBase), &RetrievedBase));
   ASSERT_EQ(RetrievedBase, Ptr);
 }
 
 TEST_P(olGetMemInfoAllocTypeTest, SuccessSize) {
   size_t RetrievedSize;
-  ASSERT_SUCCESS(olGetMemInfo(Ptr, OL_MEM_INFO_SIZE, sizeof(RetrievedSize),
-                              &RetrievedSize));
+  ASSERT_SUCCESS(olGetMemInfo(Context, Ptr, OL_MEM_INFO_SIZE,
+                              sizeof(RetrievedSize), &RetrievedSize));
   ASSERT_EQ(RetrievedSize, SIZE);
 }
 
 TEST_P(olGetMemInfoAllocTypeTest, SuccessType) {
   ol_alloc_type_t RetrievedType;
-  ASSERT_SUCCESS(olGetMemInfo(Ptr, OL_MEM_INFO_TYPE, sizeof(RetrievedType),
-                              &RetrievedType));
+  ASSERT_SUCCESS(olGetMemInfo(Context, Ptr, OL_MEM_INFO_TYPE,
+                              sizeof(RetrievedType), &RetrievedType));
   ASSERT_EQ(RetrievedType, getTestParam());
 }
 
@@ -86,33 +95,35 @@ TEST_P(olGetMemInfoTest, InvalidNotFound) {
   // pointer
   void *RetrievedBase;
   ASSERT_ERROR(OL_ERRC_NOT_FOUND,
-               olGetMemInfo(reinterpret_cast<void *>(0x1234), OL_MEM_INFO_BASE,
-                            sizeof(RetrievedBase), &RetrievedBase));
+               olGetMemInfo(Context, reinterpret_cast<void *>(0x1234),
+                            OL_MEM_INFO_BASE, sizeof(RetrievedBase),
+                            &RetrievedBase));
 }
 
 TEST_P(olGetMemInfoTest, InvalidNullPtr) {
   ol_device_handle_t RetrievedDevice;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
-               olGetMemInfo(nullptr, OL_MEM_INFO_DEVICE,
+               olGetMemInfo(Context, nullptr, OL_MEM_INFO_DEVICE,
                             sizeof(RetrievedDevice), &RetrievedDevice));
 }
 
 TEST_P(olGetMemInfoTest, InvalidSizeZero) {
   ol_device_handle_t RetrievedDevice;
-  ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
-               olGetMemInfo(Ptr, OL_MEM_INFO_DEVICE, 0, &RetrievedDevice));
+  ASSERT_ERROR(
+      OL_ERRC_INVALID_SIZE,
+      olGetMemInfo(Context, Ptr, OL_MEM_INFO_DEVICE, 0, &RetrievedDevice));
 }
 
 TEST_P(olGetMemInfoTest, InvalidSizeSmall) {
   ol_device_handle_t RetrievedDevice;
   ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
-               olGetMemInfo(Ptr, OL_MEM_INFO_DEVICE,
+               olGetMemInfo(Context, Ptr, OL_MEM_INFO_DEVICE,
                             sizeof(RetrievedDevice) - 1, &RetrievedDevice));
 }
 
 TEST_P(olGetMemInfoTest, InvalidNullPointerPropValue) {
   ol_device_handle_t RetrievedDevice;
-  ASSERT_ERROR(
-      OL_ERRC_INVALID_NULL_POINTER,
-      olGetMemInfo(Ptr, OL_MEM_INFO_DEVICE, sizeof(RetrievedDevice), nullptr));
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
+               olGetMemInfo(Context, Ptr, OL_MEM_INFO_DEVICE,
+                            sizeof(RetrievedDevice), nullptr));
 }

@@ -481,8 +481,22 @@ CUresult cuMemFreeAsync(CUdeviceptr, CUstream);
 
 CUresult cuMemPrefetchAsync(CUdeviceptr, size_t, CUdevice, CUstream);
 
+typedef enum CUmemorytype_enum {
+  CU_MEMORYTYPE_HOST = 0x01,
+  CU_MEMORYTYPE_DEVICE = 0x02,
+  CU_MEMORYTYPE_ARRAY = 0x03,
+  CU_MEMORYTYPE_UNIFIED = 0x04,
+} CUmemorytype;
+
 typedef enum CUpointer_attribute_enum {
-  CU_POINTER_ATTRIBUTE_IS_MANAGED = 8
+  CU_POINTER_ATTRIBUTE_CONTEXT = 1,
+  CU_POINTER_ATTRIBUTE_MEMORY_TYPE = 2,
+  CU_POINTER_ATTRIBUTE_DEVICE_POINTER = 3,
+  CU_POINTER_ATTRIBUTE_HOST_POINTER = 4,
+  CU_POINTER_ATTRIBUTE_IS_MANAGED = 8,
+  CU_POINTER_ATTRIBUTE_DEVICE_ORDINAL = 9,
+  CU_POINTER_ATTRIBUTE_RANGE_START_ADDR = 11,
+  CU_POINTER_ATTRIBUTE_RANGE_SIZE = 12,
 } CUpointer_attribute;
 
 CUresult cuPointerGetAttribute(void *, CUpointer_attribute, CUdeviceptr);

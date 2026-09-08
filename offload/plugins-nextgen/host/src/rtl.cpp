@@ -12,6 +12,8 @@
 
 #include <cassert>
 #include <cstddef>
+#include <map>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 
@@ -488,6 +490,54 @@ struct GenELF64PluginContextTy final : public PluginContextTy {
   Error initAsyncInfoImpl(GenericDeviceTy &, AsyncInfoWrapperTy &) override {
     return Plugin::success();
   }
+
+  Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
+                            TargetAllocTy Kind, size_t Alignment) override {
+    auto PtrOrErr = PluginContextTy::allocate(Device, Size, Kind, Alignment);
+    if (!PtrOrErr)
+      return PtrOrErr.takeError();
+    void *Ptr = *PtrOrErr;
+    std::lock_guard<std::mutex> Lock(AllocsMutex);
+    Allocs[Ptr] = Entry{&Device, Kind, static_cast<size_t>(Size)};
+    return Ptr;
+  }
+
+  Error deallocate(GenericDeviceTy &Device, void *Ptr,
+                   TargetAllocTy Kind) override {
+    {
+      std::lock_guard<std::mutex> Lock(AllocsMutex);
+      Allocs.erase(Ptr);
+    }
+    return PluginContextTy::deallocate(Device, Ptr, Kind);
+  }
+
+  Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override {
+    std::lock_guard<std::mutex> Lock(AllocsMutex);
+    if (Allocs.empty())
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "pointer is not a known allocation in this context");
+    auto It = Allocs.upper_bound(const_cast<void *>(Ptr));
+    if (It == Allocs.begin())
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "pointer is not a known allocation in this context");
+    --It;
+    void *Base = It->first;
+    const Entry &E = It->second;
+    if (reinterpret_cast<const char *>(Ptr) >=
+        reinterpret_cast<char *>(Base) + E.Size)
+      return Plugin::error(error::ErrorCode::NOT_FOUND,
+                           "pointer is not a known allocation in this context");
+    return PluginAllocInfoTy{E.Device, E.Kind, Base, E.Size};
+  }
+
+private:
+  struct Entry {
+    GenericDeviceTy *Device;
+    TargetAllocTy Kind;
+    size_t Size;
+  };
+  std::map<void *, Entry> Allocs;
+  std::mutex AllocsMutex;
 };
 
 /// Class implementing the plugin functionalities for GenELF64.
