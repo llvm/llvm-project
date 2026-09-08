@@ -7633,7 +7633,7 @@ static Value *simplifyIntrinsic(CallBase *Call, ArrayRef<Value *> Args,
 static Value *tryConstantFoldCall(CallBase *Call, ArrayRef<Value *> Args,
                                   const SimplifyQuery &Q) {
   auto *F = Call->getCalledFunction();
-  if (!F || !canConstantFoldCallTo(Call, F))
+  if (!F || !canConstantFoldCallTo(Call, F, Q.TLI))
     return nullptr;
 
   SmallVector<Constant *, 4> ConstantArgs;

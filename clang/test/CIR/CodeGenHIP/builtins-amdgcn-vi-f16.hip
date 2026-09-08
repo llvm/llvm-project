@@ -121,3 +121,11 @@ __device__ void test_frexp_mant_f16(_Float16* out, _Float16 a) {
 __device__ void test_ldexp_f16(_Float16* out, _Float16 a, int b) {
     *out = __builtin_amdgcn_ldexph(a, b);
 }
+
+// CIR-LABEL: @_Z14test_class_f16PbDF16_i
+// CIR: cir.call_llvm_intrinsic "amdgcn.class" {{.*}} : (!cir.f16, !s32i) -> !cir.bool
+// LLVM: define{{.*}} void @_Z14test_class_f16PbDF16_i
+// LLVM: call{{.*}} i1 @llvm.amdgcn.class.f16(half %{{.*}}, i32 %{{.*}})
+__device__ void test_class_f16(bool* out, _Float16 a, int b) {
+  *out = __builtin_amdgcn_classh(a, b);
+}
