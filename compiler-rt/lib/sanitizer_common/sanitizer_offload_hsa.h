@@ -1,4 +1,4 @@
-//===-- hsa.h ---------------------------------------------------*- C++ -*-===//
+//===-- sanitizer_offload_hsa.h ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,11 +10,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef UBSAN_HSA_DECLS_H
-#define UBSAN_HSA_DECLS_H
+#ifndef SANITIZER_OFFLOAD_HSA_H
+#define SANITIZER_OFFLOAD_HSA_H
 
 #include <stddef.h>
 #include <stdint.h>
+
+#define SANITIZER_HSA_LIBRARY "libhsa-runtime64"
+
+#define SANITIZER_HSA_FUNCTIONS(X)        \
+  X(hsa_iterate_agents)                   \
+  X(hsa_agent_get_info)                   \
+  X(hsa_executable_get_symbol_by_name)    \
+  X(hsa_executable_symbol_get_info)       \
+  X(hsa_memory_copy)                      \
+  X(hsa_amd_memory_pool_allocate)         \
+  X(hsa_amd_memory_pool_free)             \
+  X(hsa_amd_agents_allow_access)          \
+  X(hsa_amd_memory_pool_get_info)         \
+  X(hsa_amd_agent_iterate_memory_pools)   \
+  X(hsa_system_get_major_extension_table) \
+  X(hsa_amd_signal_create)                \
+  X(hsa_signal_destroy)                   \
+  X(hsa_signal_store_screlease)           \
+  X(hsa_signal_wait_scacquire)
 
 extern "C" {
 
@@ -106,59 +125,58 @@ typedef enum {
 
 // Version 1.01 of HSA_EXTENSION_AMD_LOADER. Slot order is the extension ABI.
 struct LoaderApi {
-  hsa_status_t (*QueryHostAddress)(const void *, const void **);
-  void *UnusedQuerySegmentDescriptors;
-  void *UnusedQueryExecutable;
+  hsa_status_t (*QueryHostAddress)(const void*, const void**);
+  void* UnusedQuerySegmentDescriptors;
+  void* UnusedQueryExecutable;
   hsa_status_t (*IterateLoadedCodeObjects)(
       hsa_executable_t,
-      hsa_status_t (*)(hsa_executable_t, hsa_loaded_code_object_t, void *),
-      void *);
+      hsa_status_t (*)(hsa_executable_t, hsa_loaded_code_object_t, void*),
+      void*);
   hsa_status_t (*GetCodeObjectInfo)(
       hsa_loaded_code_object_t, hsa_ven_amd_loader_loaded_code_object_info_t,
-      void *);
+      void*);
 };
-static_assert(sizeof(LoaderApi) == 5 * sizeof(void *), "layout drift");
+static_assert(sizeof(LoaderApi) == 5 * sizeof(void*), "layout drift");
 
 hsa_status_t hsa_init(void);
 hsa_status_t hsa_shut_down(void);
-hsa_status_t hsa_iterate_agents(hsa_status_t (*callback)(hsa_agent_t, void *),
-                                void *data);
+hsa_status_t hsa_iterate_agents(hsa_status_t (*callback)(hsa_agent_t, void*),
+                                void* data);
 hsa_status_t hsa_agent_get_info(hsa_agent_t agent, hsa_agent_info_t attribute,
-                                void *value);
+                                void* value);
 hsa_status_t hsa_executable_destroy(hsa_executable_t executable);
 hsa_status_t hsa_executable_freeze(hsa_executable_t executable,
-                                   const char *options);
+                                   const char* options);
 hsa_status_t hsa_executable_get_symbol_by_name(hsa_executable_t executable,
-                                               const char *symbol_name,
-                                               const hsa_agent_t *agent,
-                                               hsa_executable_symbol_t *symbol);
-hsa_status_t
-hsa_executable_symbol_get_info(hsa_executable_symbol_t symbol,
-                               hsa_executable_symbol_info_t attribute,
-                               void *value);
+                                               const char* symbol_name,
+                                               const hsa_agent_t* agent,
+                                               hsa_executable_symbol_t* symbol);
+hsa_status_t hsa_executable_symbol_get_info(
+    hsa_executable_symbol_t symbol, hsa_executable_symbol_info_t attribute,
+    void* value);
 hsa_status_t hsa_amd_memory_pool_allocate(hsa_amd_memory_pool_t memory_pool,
                                           size_t size, uint32_t flags,
-                                          void **ptr);
-hsa_status_t hsa_amd_memory_pool_free(void *ptr);
+                                          void** ptr);
+hsa_status_t hsa_amd_memory_pool_free(void* ptr);
 hsa_status_t hsa_amd_memory_pool_get_info(hsa_amd_memory_pool_t memory_pool,
                                           hsa_amd_memory_pool_info_t attribute,
-                                          void *value);
+                                          void* value);
 hsa_status_t hsa_amd_agent_iterate_memory_pools(
-    hsa_agent_t agent, hsa_status_t (*callback)(hsa_amd_memory_pool_t, void *),
-    void *data);
+    hsa_agent_t agent, hsa_status_t (*callback)(hsa_amd_memory_pool_t, void*),
+    void* data);
 hsa_status_t hsa_amd_agents_allow_access(uint32_t num_agents,
-                                         const hsa_agent_t *agents,
-                                         const uint32_t *flags,
-                                         const void *ptr);
+                                         const hsa_agent_t* agents,
+                                         const uint32_t* flags,
+                                         const void* ptr);
 hsa_status_t hsa_system_get_major_extension_table(uint16_t extension,
                                                   uint16_t version_major,
                                                   size_t table_length,
-                                                  void *table);
-hsa_status_t hsa_memory_copy(void *dst, const void *src, size_t size);
+                                                  void* table);
+hsa_status_t hsa_memory_copy(void* dst, const void* src, size_t size);
 hsa_status_t hsa_amd_signal_create(hsa_signal_value_t initial_value,
                                    uint32_t num_consumers,
-                                   const hsa_agent_t *consumers,
-                                   uint64_t attributes, hsa_signal_t *signal);
+                                   const hsa_agent_t* consumers,
+                                   uint64_t attributes, hsa_signal_t* signal);
 hsa_status_t hsa_signal_destroy(hsa_signal_t signal);
 void hsa_signal_store_screlease(hsa_signal_t signal, hsa_signal_value_t value);
 hsa_signal_value_t hsa_signal_wait_scacquire(hsa_signal_t signal,
@@ -167,6 +185,6 @@ hsa_signal_value_t hsa_signal_wait_scacquire(hsa_signal_t signal,
                                              uint64_t timeout_hint,
                                              hsa_wait_state_t wait_state_hint);
 
-} // extern "C"
+}  // extern "C"
 
-#endif // UBSAN_HSA_DECLS_H
+#endif  // SANITIZER_OFFLOAD_HSA_H

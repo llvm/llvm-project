@@ -1094,3 +1094,60 @@ config.substitutions.append(("%crt_src", config.compiler_rt_src_root))
 config.substitutions.append(("%llvm_src", config.llvm_src_root))
 
 config.substitutions.append(("%python", '"%s"' % (sys.executable)))
+
+# Names of device archives under lib/<gpu-triple>/, e.g. "ubsan_standalone".
+# Stored as data; lit's process pool cannot pickle callables on the config.
+config.gpu_runtimes = []
+_rt_prefix = "libclang_rt."
+_rt_suffix = ".a"
+for _triple in ("amdgpu-amd-amdhsa", "amdgcn-amd-amdhsa"):
+    _libdir = os.path.join(config.compiler_rt_output_dir, "lib", _triple)
+    try:
+        _names = os.listdir(_libdir)
+    except OSError:
+        continue
+    for _fname in _names:
+        if _fname.startswith(_rt_prefix) and _fname.endswith(_rt_suffix):
+            config.gpu_runtimes.append(_fname[len(_rt_prefix) : -len(_rt_suffix)])
+
+if getattr(config, "gpu_arch", ""):
+    config.available_features.add("amdgpu")
+    config.substitutions.append(("%gpu_arch", config.gpu_arch))
+
+if getattr(config, "can_run_hip", False):
+    config.available_features.add("hip")
+    hip_flags = [
+        config.clang,
+        "-xhip",
+        "--offload-arch=" + config.gpu_arch,
+        "-nogpuinc",
+        "-nogpulib",
+        "-g",
+        "-isystem",
+        os.path.join(config.compiler_rt_src_root, "test", "Inputs"),
+        "-include",
+        "hip.h",
+    ]
+    config.substitutions.append(("%clang_hip ", " ".join(hip_flags) + " "))
+    config.substitutions.append(
+        (
+            "%hip_libs",
+            "-L%s -lamdhip64 -Wl,-rpath,%s" % (config.hip_lib_dir, config.hip_lib_dir),
+        )
+    )
+
+if getattr(config, "can_run_openmp_offload", False):
+    config.available_features.add("openmp-offload")
+    omp_flags = [
+        config.clang,
+        "-fopenmp",
+        "--offload-arch=" + config.gpu_arch,
+        "-g",
+        "-frtlib-add-rpath",
+    ]
+    config.substitutions.append(("%clang_omp_offload ", " ".join(omp_flags) + " "))
+
+if getattr(config, "can_run_hip", False) or getattr(
+    config, "can_run_openmp_offload", False
+):
+    lit_config.parallelism_groups["gpu"] = 1
