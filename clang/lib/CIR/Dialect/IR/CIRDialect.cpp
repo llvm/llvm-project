@@ -158,7 +158,7 @@ static LogicalResult verifyOffloadContainer(mlir::Operation *op) {
   if (std::next(body.begin()) == body.end())
     return container.emitOpError() << "expects at least one device module";
 
-  for (auto op : llvm::drop_begin(body)) {
+  for (auto &op : llvm::drop_begin(body)) {
     auto module = mlir::dyn_cast<mlir::ModuleOp>(op);
     if (!module)
       return container.emitOpError()
