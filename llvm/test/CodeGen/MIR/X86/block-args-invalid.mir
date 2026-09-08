@@ -1,0 +1,53 @@
+# RUN: split-file %s %t
+
+# The "arguments:" block header accepts only plain virtual register
+# definitions. Reject subregister indices, $noreg, immediates, and other
+# non-register value expressions.
+
+;--- subreg.mir
+# RUN: not llc %t/subreg.mir -mtriple=x86_64-- -run-pass=none -filetype=null 2>&1 | FileCheck %t/subreg.mir
+# CHECK: error: {{.*}} unexpected subregister index on a block argument
+---
+name: subreg
+usesBlockArgs: true
+body: |
+  bb.0:
+    arguments: %0.sub_32bit:gr32
+    RET64
+...
+
+;--- noreg.mir
+# RUN: not llc %t/noreg.mir -mtriple=x86_64-- -run-pass=none -filetype=null 2>&1 | FileCheck %t/noreg.mir
+# CHECK: error: {{.*}} block argument cannot be $noreg
+---
+name: noreg
+usesBlockArgs: true
+body: |
+  bb.0:
+    arguments: $noreg
+    RET64
+...
+
+;--- immediate.mir
+# RUN: not llc %t/immediate.mir -mtriple=x86_64-- -run-pass=none -filetype=null 2>&1 | FileCheck %t/immediate.mir
+# CHECK: error: {{.*}} expected a register
+---
+name: immediate
+usesBlockArgs: true
+body: |
+  bb.0:
+    arguments: 42
+    RET64
+...
+
+;--- mbb.mir
+# RUN: not llc %t/mbb.mir -mtriple=x86_64-- -run-pass=none -filetype=null 2>&1 | FileCheck %t/mbb.mir
+# CHECK: error: {{.*}} expected a register
+---
+name: mbb
+usesBlockArgs: true
+body: |
+  bb.0:
+    arguments: %bb.0
+    RET64
+...

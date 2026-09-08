@@ -558,6 +558,7 @@ MachineFunction::CreateMachineBasicBlock(const BasicBlock *BB,
 /// Delete the given MachineBasicBlock.
 void MachineFunction::deleteMachineBasicBlock(MachineBasicBlock *MBB) {
   assert(MBB->getParent() == this && "MBB parent mismatch!");
+  MBB->clearBlockArgs();
   // Clean up any references to MBB in jump tables before deleting it.
   if (JumpTableInfo)
     JumpTableInfo->RemoveMBBFromJumpTables(MBB);
