@@ -43,7 +43,7 @@ _LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_EXPORTED_FROM_ABI void __breakpoint() noe
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
-_LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_NODEBUG _LIBCPP_ALWAYS_INLINE inline void breakpoint() noexcept {
+_LIBCPP_NODEBUG _LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_ALWAYS_INLINE inline void breakpoint() noexcept {
 #    if __has_builtin(__builtin_debugtrap)
   __builtin_debugtrap();
 #    else
@@ -51,7 +51,7 @@ _LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_NODEBUG _LIBCPP_ALWAYS_INLINE inline void
 #    endif
 }
 
-_LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_NODEBUG _LIBCPP_ALWAYS_INLINE inline void breakpoint_if_debugging() noexcept {
+_LIBCPP_NODEBUG _LIBCPP_AVAILABILITY_DEBUGGING _LIBCPP_ALWAYS_INLINE inline void breakpoint_if_debugging() noexcept {
   if (is_debugger_present())
     breakpoint();
 }
