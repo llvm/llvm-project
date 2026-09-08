@@ -246,12 +246,9 @@ static unsigned getAtomicOpElementSize(const DataLayout &, Inst *I) {
   return getAtomicOpSize(I);
 }
 
-/// Return the size \p I has to be aligned to. The element size is smaller than
-/// the whole access only for elementwise atomics, and only counts if the target
-/// can issue them at element alignment.
 template <typename Inst>
-static unsigned getRequiredAtomicSize(const TargetLowering *TLI,
-                                      const DataLayout &DL, Inst *I) {
+static unsigned getMinAtomicAlignmentSupported(const TargetLowering *TLI,
+                                               const DataLayout &DL, Inst *I) {
   unsigned Size = getAtomicOpSize(I);
   unsigned ElementSize = getAtomicOpElementSize(DL, I);
   if (ElementSize != Size &&
@@ -298,7 +295,7 @@ template <typename Inst>
 static bool atomicSizeSupported(const TargetLowering *TLI, const DataLayout &DL,
                                 Inst *I) {
   unsigned MaxSize = TLI->getMaxAtomicSizeInBitsSupported() / 8;
-  return I->getAlign() >= getRequiredAtomicSize(TLI, DL, I) &&
+  return I->getAlign() >= getMinAtomicAlignmentSupported(TLI, DL, I) &&
          getAtomicOpSize(I) <= MaxSize;
 }
 
@@ -306,15 +303,19 @@ template <typename Inst>
 static void writeUnsupportedAtomicSizeReason(const TargetLowering *TLI,
                                              const DataLayout &DL, Inst *I,
                                              raw_ostream &OS) {
-  unsigned RequiredSize = getRequiredAtomicSize(TLI, DL, I);
   unsigned Size = getAtomicOpSize(I);
+  unsigned ElementSize = getAtomicOpElementSize(DL, I);
   Align Alignment = I->getAlign();
   bool NeedSeparator = false;
 
-  if (Alignment < RequiredSize) {
-    OS << "instruction alignment " << Alignment.value()
-       << " is smaller than the required " << RequiredSize
-       << "-byte alignment for this atomic operation";
+  if (Alignment < getMinAtomicAlignmentSupported(TLI, DL, I)) {
+    OS << "instruction alignment " << Alignment.value();
+    if (ElementSize == Size)
+      OS << " is smaller than the required " << Size
+         << "-byte alignment for this atomic operation";
+    else
+      OS << " is not supported for this " << Size
+         << "-byte atomic operation with " << ElementSize << "-byte elements";
     NeedSeparator = true;
   }
 
