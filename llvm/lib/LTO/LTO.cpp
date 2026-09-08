@@ -131,7 +131,7 @@ extern cl::opt<bool> SupportsHotColdNew;
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
 } // namespace llvm
 
-static void hashLTOConfig(const lto::Config &Conf, SHA1 &Hasher) {
+void llvm::computeLTOConfigHash(const lto::Config &Conf, SHA1 &Hasher) {
   // Start with the compiler revision
   Hasher.update(LLVM_VERSION_STRING);
 #ifdef LLVM_REVISION
@@ -197,14 +197,6 @@ static void hashLTOConfig(const lto::Config &Conf, SHA1 &Hasher) {
   }
 }
 
-void llvm::computeLTOConfigHash(const lto::Config &Conf,
-                                SmallVectorImpl<uint8_t> &Out) {
-  SHA1 Hasher;
-  hashLTOConfig(Conf, Hasher);
-  std::array<uint8_t, 20> Res = Hasher.result();
-  Out.append(Res.begin(), Res.end());
-}
-
 // Computes a unique hash for the Module considering the current list of
 // export/import and other global analysis results.
 // Returns the hash in its hexadecimal representation.
@@ -222,7 +214,7 @@ std::string llvm::computeLTOCacheKey(
   // list of ResolvedODR for the module, and the list of preserved symbols.
   SHA1 Hasher;
 
-  hashLTOConfig(Conf, Hasher);
+  computeLTOConfigHash(Conf, Hasher);
 
   // Include the parts of the LTO configuration that affect code generation.
   auto AddString = [&](StringRef Str) {

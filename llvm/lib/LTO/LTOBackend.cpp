@@ -518,9 +518,7 @@ static std::string computeLTOPartitionCacheKey(const Config &C,
   SHA1 Hasher;
 
   // Hash the LTO configuration as that affects code-gen.
-  SmallVector<uint8_t, 20> ConfigHash;
-  computeLTOConfigHash(C, ConfigHash);
-  Hasher.update(ConfigHash);
+  computeLTOConfigHash(C, Hasher);
 
   // Hash the module bitcode as a whole.
   Hasher.update(BC);
