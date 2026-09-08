@@ -960,6 +960,10 @@
 #    error "__cpp_lib_type_identity should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_type_order
+#    error "__cpp_lib_type_order should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_type_trait_variable_templates
 #    error "__cpp_lib_type_trait_variable_templates should not be defined before c++17"
 #  endif
@@ -2011,6 +2015,10 @@
 
 #  ifdef __cpp_lib_type_identity
 #    error "__cpp_lib_type_identity should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_type_order
+#    error "__cpp_lib_type_order should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_type_trait_variable_templates
@@ -3244,6 +3252,10 @@
 
 #  ifdef __cpp_lib_type_identity
 #    error "__cpp_lib_type_identity should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_type_order
+#    error "__cpp_lib_type_order should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_type_trait_variable_templates
@@ -4753,6 +4765,10 @@
 #  endif
 #  if __cpp_lib_type_identity != 201806L
 #    error "__cpp_lib_type_identity should have the value 201806L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_type_order
+#    error "__cpp_lib_type_order should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_type_trait_variable_templates
@@ -6490,6 +6506,10 @@
 #  endif
 #  if __cpp_lib_type_identity != 201806L
 #    error "__cpp_lib_type_identity should have the value 201806L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_type_order
+#    error "__cpp_lib_type_order should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_type_trait_variable_templates
@@ -8565,6 +8585,19 @@
 #    error "__cpp_lib_type_identity should have the value 201806L in c++26"
 #  endif
 
+#  if __has_builtin(__builtin_type_order)
+#    ifndef __cpp_lib_type_order
+#      error "__cpp_lib_type_order should be defined in c++26"
+#    endif
+#    if __cpp_lib_type_order != 202506L
+#      error "__cpp_lib_type_order should have the value 202506L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_type_order
+#      error "__cpp_lib_type_order should not be defined when the requirement '__has_builtin(__builtin_type_order)' is not met!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_type_trait_variable_templates
 #    error "__cpp_lib_type_trait_variable_templates should be defined in c++26"
 #  endif
@@ -9241,8 +9274,8 @@
 #  ifndef __cpp_lib_expected
 #    error "__cpp_lib_expected should be defined in c++29"
 #  endif
-#  if __cpp_lib_expected != 202211L
-#    error "__cpp_lib_expected should have the value 202211L in c++29"
+#  if __cpp_lib_expected != 202606L
+#    error "__cpp_lib_expected should have the value 202606L in c++29"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_FILESYSTEM
@@ -10692,6 +10725,19 @@
 #    error "__cpp_lib_type_identity should have the value 201806L in c++29"
 #  endif
 
+#  if __has_builtin(__builtin_type_order)
+#    ifndef __cpp_lib_type_order
+#      error "__cpp_lib_type_order should be defined in c++29"
+#    endif
+#    if __cpp_lib_type_order != 202506L
+#      error "__cpp_lib_type_order should have the value 202506L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_type_order
+#      error "__cpp_lib_type_order should not be defined when the requirement '__has_builtin(__builtin_type_order)' is not met!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_type_trait_variable_templates
 #    error "__cpp_lib_type_trait_variable_templates should be defined in c++29"
 #  endif
@@ -10741,17 +10787,11 @@
 #    error "__cpp_lib_variant should have the value 202306L in c++29"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_view_interface
-#      error "__cpp_lib_view_interface should be defined in c++29"
-#    endif
-#    if __cpp_lib_view_interface != 202606L
-#      error "__cpp_lib_view_interface should have the value 202606L in c++29"
-#    endif
-#  else
-#    ifdef __cpp_lib_view_interface
-#      error "__cpp_lib_view_interface should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_view_interface
+#    error "__cpp_lib_view_interface should be defined in c++29"
+#  endif
+#  if __cpp_lib_view_interface != 202606L
+#    error "__cpp_lib_view_interface should have the value 202606L in c++29"
 #  endif
 
 #  ifndef __cpp_lib_void_t

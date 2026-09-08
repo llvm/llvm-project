@@ -149,6 +149,12 @@ static cl::opt<unsigned>
                       cl::desc("Maximum amount of shared memory to use."),
                       cl::init(std::numeric_limits<unsigned>::max()));
 
+static cl::opt<unsigned> MaxCalleesForSpecialization(
+    "openmp-opt-max-callees-for-specialization", cl::Hidden,
+    cl::desc("Number of possible callees above which an indirect call site is "
+             "left alone rather than specialized into an if-cascade."),
+    cl::init(3));
+
 STATISTIC(NumOpenMPRuntimeCallsDeduplicated,
           "Number of OpenMP runtime calls deduplicated");
 STATISTIC(NumOpenMPParallelRegionsDeleted,
@@ -1199,8 +1205,8 @@ private:
           InsertPointTy(ParentBB, ParentBB->end()), DL);
       OpenMPIRBuilder::InsertPointTy SeqAfterIP = cantFail(
           OMPInfoCache.OMPBuilder.createMaster(Loc, BodyGenCB, FiniCB));
-      cantFail(
-          OMPInfoCache.OMPBuilder.createBarrier(SeqAfterIP, OMPD_parallel));
+      cantFail(OMPInfoCache.OMPBuilder.createBarrier({SeqAfterIP, DL},
+                                                     OMPD_parallel));
 
       UncondBrInst::Create(SeqAfterBB, SeqAfterIP.getBlock());
 
@@ -1314,8 +1320,9 @@ private:
           // TODO: Remove barrier if the merged parallel region includes the
           // 'nowait' clause.
           cantFail(OMPInfoCache.OMPBuilder.createBarrier(
-              InsertPointTy(NewCI->getParent(),
-                            NewCI->getNextNode()->getIterator()),
+              {InsertPointTy(NewCI->getParent(),
+                             NewCI->getNextNode()->getIterator()),
+               NewCI->getDebugLoc()},
               OMPD_parallel));
         }
 
@@ -1819,10 +1826,13 @@ private:
 
     if (!Ident || !SingleChoice) {
       // The IRBuilder uses the insertion block to get to the module, this is
-      // unfortunate but we work around it for now.
+      // unfortunate but we work around it for now. No instruction is emitted
+      // here, so there is no debug location to preserve.
       if (!OMPInfoCache.OMPBuilder.getInsertionPoint().getBlock())
-        OMPInfoCache.OMPBuilder.updateToLocation(OpenMPIRBuilder::InsertPointTy(
-            &F.getEntryBlock(), F.getEntryBlock().begin()));
+        OMPInfoCache.OMPBuilder.updateToLocation(
+            {OpenMPIRBuilder::InsertPointTy(&F.getEntryBlock(),
+                                            F.getEntryBlock().begin()),
+             DebugLoc()});
       // Create a fallback location if non was found.
       // TODO: Use the debug locations of the calls instead.
       uint32_t SrcLocStrSize;
@@ -4150,11 +4160,12 @@ struct AAKernelInfoFunction : AAKernelInfo {
       FunctionCallee BarrierFn =
           OMPInfoCache.OMPBuilder.getOrCreateRuntimeFunction(
               M, OMPRTL___kmpc_barrier_simple_spmd);
-      OMPInfoCache.OMPBuilder.updateToLocation(InsertPointTy(
-          RegionBarrierBB, RegionBarrierBB->getFirstInsertionPt()));
+      OMPInfoCache.OMPBuilder.updateToLocation(
+          {InsertPointTy(RegionBarrierBB,
+                         RegionBarrierBB->getFirstInsertionPt()),
+           DL});
       CallInst *Barrier =
           OMPInfoCache.OMPBuilder.Builder.CreateCall(BarrierFn, {Ident, Tid});
-      Barrier->setDebugLoc(DL);
       OMPInfoCache.setCallingConvention(BarrierFn, Barrier);
 
       // Second barrier ensures workers have read broadcast values.
@@ -5830,6 +5841,23 @@ AAFoldRuntimeCall &AAFoldRuntimeCall::createForPosition(const IRPosition &IRP,
   return *AA;
 }
 
+/// Bound the if-cascade AAIndirectCallInfo builds for an indirect call. Device
+/// code reaches its callees through function-pointer tables and virtual
+/// dispatch, so a call site can see every address-taken candidate in the
+/// module; specializing all of them costs more in code size and compile time
+/// than the direct calls are worth.
+///
+/// This is a threshold on the call site rather than a limit on how many callees
+/// get specialized: the Attributor asks about each callee with the same total,
+/// so a site above the threshold keeps its indirect call instead of getting
+/// this many direct ones plus a fallback.
+static bool shouldSpecializeIndirectCallee(Attributor &,
+                                           const AbstractAttribute &,
+                                           CallBase &, Function &,
+                                           unsigned NumAssumedCallees) {
+  return NumAssumedCallees <= MaxCalleesForSpecialization;
+}
+
 PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!containsOpenMP(M))
     return PreservedAnalyses::all();
@@ -5916,6 +5944,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   AC.OREGetter = OREGetter;
   AC.PassName = DEBUG_TYPE;
   AC.InitializationCallback = OpenMPOpt::registerAAsForFunction;
+  AC.IndirectCalleeSpecializationCallback = shouldSpecializeIndirectCallee;
   AC.IPOAmendableCB = [](const Function &F) {
     return F.hasFnAttribute("kernel");
   };
@@ -5996,6 +6025,7 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
   AC.OREGetter = OREGetter;
   AC.PassName = DEBUG_TYPE;
   AC.InitializationCallback = OpenMPOpt::registerAAsForFunction;
+  AC.IndirectCalleeSpecializationCallback = shouldSpecializeIndirectCallee;
 
   Attributor A(Functions, InfoCache, AC);
 

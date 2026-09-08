@@ -73,9 +73,10 @@ ol_result_t olSyncQueue(ol_queue_handle_t Queue) {
   return mock::getMockLiboffload().olSyncQueue(Queue);
 }
 
-ol_result_t olCreateProgram(ol_device_handle_t Device, const void *ProgData,
+ol_result_t olCreateProgram(ol_context_handle_t Context,
+                            ol_device_handle_t Device, const void *ProgData,
                             size_t ProgDataSize, ol_program_handle_t *Program) {
-  return mock::getMockLiboffload().olCreateProgram(Device, ProgData,
+  return mock::getMockLiboffload().olCreateProgram(Context, Device, ProgData,
                                                    ProgDataSize, Program);
 }
 

@@ -29,6 +29,7 @@ public:
     eRegisterTypeKindFlags,
     eRegisterTypeKindEnum,
     eRegisterTypeKindBuiltin,
+    eRegisterTypeKindVector,
   };
 
   RegisterTypeKind getKind() const { return m_kind; }
@@ -104,6 +105,31 @@ private:
   const lldb::Encoding m_encoding;
   const lldb::Format m_format;
   const std::optional<uint64_t> m_byte_size;
+};
+
+/// A GDB target-description vector type. The element type must outlive it.
+class RegisterTypeVector : public RegisterType {
+public:
+  RegisterTypeVector(std::string id, const RegisterType *element_type,
+                     uint32_t count);
+
+  const RegisterType *GetElementType() const { return m_element_type; }
+  uint32_t GetCount() const { return m_count; }
+  std::optional<uint64_t> GetByteSize() const override;
+  bool IsByteSizeCompatible(uint64_t byte_size) const;
+
+  void DumpToLog(Log *log) const;
+
+  void ToXMLElement(Stream &strm,
+                    const RegisterType *user = nullptr) const override;
+
+  static bool classof(const RegisterType *type) {
+    return type->getKind() == eRegisterTypeKindVector;
+  }
+
+private:
+  const RegisterType *m_element_type;
+  const uint32_t m_count;
 };
 
 } // namespace lldb_private
