@@ -327,7 +327,7 @@ but not yet run are not included.
 :::
 
 :::{option} --filter-requires EXPR
-Run only those tests with a `REQUIRES` alternative matching the requested positive
+Run only those tests with a `REQUIRES` combination matching the requested positive
 features exactly and no extra exclusions. Names are case sensitive and commas mean
 AND. `Base` selects tests without requirements. Matching tests bypass `REQUIRES`
 availability checks. `UNSUPPORTED` and `XFAIL` still apply. Regexes are unsupported.

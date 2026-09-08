@@ -35,21 +35,21 @@ class _Parser(BooleanExpression):
 
 
 class FilterRequires:
-    """Select alternative groups, not tests satisfied by available features.
+    """Select tests by their required features, not available features.
 
-    A group is a pair of positive and negative literal sets. A matching pair
-    has identical positives and includes every test negative in the caller's
-    negatives. Contradictory alternatives are discarded, not satisfied by
-    treating unspecified features as false.
+    Expressions are expanded into combinations of required and excluded
+    features. A test combination matches a filter combination when their
+    required features are identical and the test adds no extra excluded
+    features. Contradictory combinations are discarded.
     """
 
-    MAX_ALTERNATIVES = 1024
+    MAX_COMBINATIONS = 1024
     MAX_STEPS = 100000
 
     def __init__(self, expression):
         self.expression = expression
         self.is_base = expression.strip() == "Base"
-        self.groups = None if self.is_base else self._normalize([expression])
+        self.combinations = None if self.is_base else self._normalize([expression])
 
     def __str__(self):
         return self.expression
@@ -67,12 +67,12 @@ class FilterRequires:
                     "limit (%d steps)" % cls.MAX_STEPS
                 )
 
-        def add(groups, group):
-            groups.add(group)
-            if len(groups) > cls.MAX_ALTERNATIVES:
+        def add(combinations, combination):
+            combinations.add(combination)
+            if len(combinations) > cls.MAX_COMBINATIONS:
                 raise ValueError(
-                    "--filter-requires expression exceeds the alternative "
-                    "limit (%d groups)" % cls.MAX_ALTERNATIVES
+                    "--filter-requires expression exceeds the combination "
+                    "limit (%d combinations)" % cls.MAX_COMBINATIONS
                 )
 
         def combine(left, right):
@@ -84,7 +84,7 @@ class FilterRequires:
                         add(result, (lp | rp, ln | rn))
             return result
 
-        def alternatives(node, negate=False):
+        def expand(node, negate=False):
             step()
             kind, value = node
             if kind == "literal":
@@ -93,19 +93,19 @@ class FilterRequires:
                 literal = frozenset([value])
                 return {(empty[0], literal) if negate else (literal, empty[1])}
             if kind == "not":
-                return alternatives(value, not negate)
+                return expand(value, not negate)
             # Push NOT through AND/OR using De Morgan's laws.
             conjunction = (kind == "and") != negate
-            groups = {empty} if conjunction else set()
+            combinations = {empty} if conjunction else set()
             for child in value:
-                child_groups = alternatives(child, negate)
+                child_combinations = expand(child, negate)
                 if conjunction:
-                    groups = combine(groups, child_groups)
+                    combinations = combine(combinations, child_combinations)
                 else:
-                    for group in child_groups:
+                    for combination in child_combinations:
                         step()
-                        add(groups, group)
-            return groups
+                        add(combinations, combination)
+            return combinations
 
         empty = (frozenset(), frozenset())
         result = {empty}
@@ -114,7 +114,7 @@ class FilterRequires:
                 # Commas delimit complete expressions, as in REQUIRES lines.
                 for part in expression.split(","):
                     tree = _Parser(part.strip(), set()).parseAll()
-                    result = combine(result, alternatives(tree))
+                    result = combine(result, expand(tree))
         except RecursionError:
             raise ValueError(
                 "--filter-requires expression is nested too deeply"
@@ -128,9 +128,9 @@ class FilterRequires:
             return not requirements
         if not requirements:
             return False
-        test_groups = self._normalize(requirements)
+        test_combinations = self._normalize(requirements)
         return any(
             test_positive == caller_positive and test_negative <= caller_negative
-            for test_positive, test_negative in test_groups
-            for caller_positive, caller_negative in self.groups
+            for test_positive, test_negative in test_combinations
+            for caller_positive, caller_negative in self.combinations
         )

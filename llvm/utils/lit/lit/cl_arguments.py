@@ -461,7 +461,7 @@ def parse_args():
         "--filter-requires",
         metavar="EXPR",
         type=_requires_filter,
-        help="Select REQUIRES alternative groups with exactly the requested "
+        help="Select REQUIRES combinations with exactly the requested "
         "positive features and no unrequested exclusions. Supports &&, ||, !, "
         "parentheses, and commas (AND), not regexes or wildcards. Feature names "
         "are case-sensitive. Base selects tests with no REQUIRES entries. "

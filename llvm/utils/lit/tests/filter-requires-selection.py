@@ -74,7 +74,7 @@
 # RUN: %{lit} -a -j2 --filter-requires=Half %S/Inputs/filter-requires/half.txt %S/Inputs/filter-requires/features.txt | FileCheck %s --check-prefix=PARALLEL
 # PARALLEL: Passed{{ *}}: 2
 
-# Like REQUIRES availability checks, group matching gates execution, not discovery.
+# Like REQUIRES availability checks, requirement matching gates execution, not discovery.
 # RUN: %{lit} -a --max-tests=1 --filter-requires=Base %S/Inputs/filter-requires | FileCheck %s --check-prefix=MAX
 # MAX: EXCLUDED{{:}} filter-requires :: and.txt
 # MAX-NOT: PASS:

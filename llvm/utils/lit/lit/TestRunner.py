@@ -2112,7 +2112,7 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
     may be returned. This can be used for test formats where the actual script
     is optional or ignored.
 
-    With --filter-requires, select REQUIRES alternative groups instead of
+    With --filter-requires, select REQUIRES combinations instead of
     checking their availability. UNSUPPORTED and XFAIL still use the configured
     available features.
     """

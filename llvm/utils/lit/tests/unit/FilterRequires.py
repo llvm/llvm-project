@@ -130,11 +130,11 @@ class TestFilterRequires(unittest.TestCase):
                     FilterRequires("Half").matches([expression])
 
     def test_limits(self):
-        # Even if an early alternative matches, never silently truncate the rest.
+        # Even if an early combination matches, never silently truncate the rest.
         expression = "Half || " + " || ".join("f%d" % i for i in range(1024))
-        with self.assertRaisesRegex(ValueError, "alternative limit"):
+        with self.assertRaisesRegex(ValueError, "combination limit"):
             FilterRequires(expression)
-        with self.assertRaisesRegex(ValueError, "alternative limit"):
+        with self.assertRaisesRegex(ValueError, "combination limit"):
             FilterRequires("Half").matches([expression])
         with patch.object(FilterRequires, "MAX_STEPS", 100):
             with self.assertRaisesRegex(ValueError, "normalization limit"):
@@ -146,7 +146,7 @@ class TestFilterRequires(unittest.TestCase):
 
     def test_cartesian_limit(self):
         expression = " && ".join("(a%d || b%d)" % (i, i) for i in range(11))
-        with self.assertRaisesRegex(ValueError, "alternative limit"):
+        with self.assertRaisesRegex(ValueError, "combination limit"):
             FilterRequires(expression)
         # Deduplication keeps repeated, rather than independent, choices small.
         self.assertTrue(FilterRequires(" && ".join(["(a || b)"] * 20)).matches(["a"]))
