@@ -5032,6 +5032,20 @@ bool SIInstrInfo::isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
 
   assert((MO.isTargetIndex() || MO.isFI() || MO.isGlobal()) &&
          "unexpected imm-like operand kind");
+
+  // VOP3 instructions do not support 64b literals so cannot support 64b relocs
+  if (MO.isGlobal() && SIInstrFlags::isVOP3Like(InstDesc)) {
+    switch (MO.getTargetFlags() & SIInstrInfo::MO_MASK) {
+    case SIInstrInfo::MO_ABS64:
+    case SIInstrInfo::MO_GOTPCREL:
+    case SIInstrInfo::MO_GOTPCREL64:
+    case SIInstrInfo::MO_REL64:
+      return false;
+    default:
+      break;
+    }
+  }
+
   const MCOperandInfo &OpInfo = InstDesc.operands()[OpNo];
   return isLiteralOperandLegal(InstDesc, OpInfo);
 }
