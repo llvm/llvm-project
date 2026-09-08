@@ -5815,8 +5815,8 @@ QualType ASTContext::getOverflowBehaviorType(
   // canonical type already puts them.
   SplitQualType Split = Underlying.getSplitUnqualifiedType();
   if (Split.Quals.hasQualifiers())
-    return getQualifiedType(getOverflowBehaviorType(Kind, QualType(Split.Ty, 0)),
-                            Split.Quals);
+    return getQualifiedType(
+        getOverflowBehaviorType(Kind, QualType(Split.Ty, 0)), Split.Quals);
 
   llvm::FoldingSetNodeID ID;
   OverflowBehaviorType::Profile(ID, Underlying, Kind);
