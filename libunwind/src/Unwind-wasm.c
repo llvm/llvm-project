@@ -22,6 +22,11 @@
 _LIBUNWIND_EXPORT thread_local struct _Unwind_LandingPadContext
     __wasm_lpad_context;
 
+_LIBUNWIND_EXPORT struct _Unwind_LandingPadContext *
+_Unwind_GetWasmLPadContext(void) {
+  return &__wasm_lpad_context;
+}
+
 /// Called by __cxa_throw.
 _LIBUNWIND_EXPORT _Unwind_Reason_Code
 _Unwind_RaiseException(_Unwind_Exception *exception_object) {

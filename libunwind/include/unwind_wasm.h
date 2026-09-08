@@ -22,6 +22,9 @@ struct _Unwind_LandingPadContext {
 
 // Communication channel between compiler-generated user code and personality
 // function
-extern thread_local struct _Unwind_LandingPadContext __wasm_lpad_context;
+#ifdef __cplusplus
+extern "C"
+#endif
+    struct _Unwind_LandingPadContext *_Unwind_GetWasmLPadContext(void);
 
 #endif // __WASM_UNWIND_H__

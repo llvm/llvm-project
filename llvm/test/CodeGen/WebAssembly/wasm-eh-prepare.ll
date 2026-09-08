@@ -7,8 +7,6 @@
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
-; CHECK: @__wasm_lpad_context = external thread_local global { i32, ptr, i32 }
-
 @_ZTIi = external constant ptr
 %struct.Temp = type { i8 }
 
@@ -42,12 +40,15 @@ catch.start:                                      ; preds = %catch.dispatch
 ; CHECK: catch.start:
 ; CHECK-NEXT:   %[[CATCHPAD:.*]] = catchpad
 ; CHECK-NEXT:   %[[EXN:.*]] = call ptr @llvm.wasm.catch(i32 0)
+; CHECK-NEXT:   %[[CONTEXT:.*]] = call ptr @_Unwind_GetWasmLPadContext()
+; CHECK-NEXT:   %lsda_gep = getelementptr inbounds { i32, ptr, i32 }, ptr %[[CONTEXT]], i32 0, i32 1
+; CHECK-NEXT:   %selector_gep = getelementptr inbounds { i32, ptr, i32 }, ptr %[[CONTEXT]], i32 0, i32 2
 ; CHECK-NEXT:   call void @llvm.wasm.landingpad.index(token %[[CATCHPAD]], i32 0)
-; CHECK-NEXT:   store i32 0, ptr @__wasm_lpad_context
+; CHECK-NEXT:   store i32 0, ptr %[[CONTEXT]]
 ; CHECK-NEXT:   %[[LSDA:.*]] = call ptr @llvm.wasm.lsda()
-; CHECK-NEXT:   store ptr %[[LSDA]], ptr getelementptr inbounds ({ i32, ptr, i32 }, ptr @__wasm_lpad_context, i32 0, i32 1)
+; CHECK-NEXT:   store ptr %[[LSDA]], ptr %lsda_gep
 ; CHECK-NEXT:   call i32 @__gxx_wasm_personality_v0(ptr %[[EXN]]) {{.*}} [ "funclet"(token %[[CATCHPAD]]) ]
-; CHECK-NEXT:   %[[SELECTOR:.*]] = load i32, ptr getelementptr inbounds ({ i32, ptr, i32 }, ptr @__wasm_lpad_context, i32 0, i32 2)
+; CHECK-NEXT:   %[[SELECTOR:.*]] = load i32, ptr %selector_gep
 ; CHECK:   icmp eq i32 %[[SELECTOR]]
 
 catch:                                            ; preds = %catch.start
