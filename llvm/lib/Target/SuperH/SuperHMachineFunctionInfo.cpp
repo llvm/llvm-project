@@ -13,6 +13,7 @@
 
 #include "SuperHMachineFunctionInfo.h"
 #include "SuperHConstantPoolValue.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include <type_traits>
 
@@ -58,6 +59,23 @@ SuperHConstantPoolConstant *SuperHMachineFunctionInfo::tryGetConstant(
     SHCP::SHCPKind::CPValue,
     Modifier
   );
+}
+
+SuperHConstantPoolConstant *
+SuperHMachineFunctionInfo::tryGetConstant(const GlobalValue *G, const MachineFunction& MF) const {
+
+  // Run though the constant pool that is tied to the DAG and search for 
+  // the constant there.
+  const MachineConstantPool *MCP = MF.getConstantPool();
+  for (auto &MC : MCP->getConstants()) {
+    if (MC.isMachineConstantPoolEntry()) {
+      if (auto *CPV = (SuperHConstantPoolConstant*)MC.Val.MachineCPVal) {
+        if (CPV->getGV() == G)
+          return CPV;
+      }
+    }
+  }
+  return nullptr;
 }
 
 SuperHConstantPoolConstant *SuperHMachineFunctionInfo::tryGetConstant(
