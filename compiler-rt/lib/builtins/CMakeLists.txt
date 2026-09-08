@@ -267,14 +267,14 @@ set(x86_80_BIT_SOURCES
 option(COMPILER_RT_USE_LIBC_MATH
       "Use LLVM libc math routines for floating-point builtins" OFF)
 
-# libc include root; point at an isolated subset (see libc-isolation/) to prove
-# the builtins build against that subset alone. Empty = the in-tree libc.
+# libc include root; point at an isolated subset (libc/utils/libc-isolation) to
+# prove the builtins build against it alone. Empty = the in-tree libc.
 set(COMPILER_RT_LIBC_SHARED_INCLUDE_ROOT "" CACHE PATH
     "Include root for the libc-backed builtins (default: the LLVM-libc source tree)")
 
 # Where compiler-rt-export-libc-shared writes that subset (per the manifest).
 set(COMPILER_RT_LIBC_SHARED_EXPORT_DIR "" CACHE PATH
-    "Destination for the extracted LLVM-libc shared subset (see libc-isolation/)")
+    "Destination for the extracted LLVM-libc shared subset")
 
 # Swap the legacy soft-float <name>.c builtin in <list> for the libc-backed
 # <name>.cpp implementation (which delegates to LIBC_NAMESPACE::shared::*).
@@ -303,10 +303,9 @@ if(COMPILER_RT_USE_LIBC_MATH)
   if(COMPILER_RT_LIBC_SHARED_EXPORT_DIR)
     add_custom_target(compiler-rt-export-libc-shared
       COMMAND ${CMAKE_COMMAND}
-              -DLIBC_ROOT=${_libc_root}
               -DDEST=${COMPILER_RT_LIBC_SHARED_EXPORT_DIR}
-              -DMANIFEST=${CMAKE_CURRENT_SOURCE_DIR}/libc-isolation/libc-shared-manifest.txt
-              -P ${CMAKE_CURRENT_SOURCE_DIR}/libc-isolation/export-libc-shared.cmake
+              -DMANIFEST=${_libc_root}/utils/libc-isolation/shared-builtins-manifest.txt
+              -P ${_libc_root}/../cmake/Modules/FindLibcCommonUtils.cmake
       VERBATIM
       COMMENT "Exporting LLVM-libc shared subset to ${COMPILER_RT_LIBC_SHARED_EXPORT_DIR}")
   endif()
