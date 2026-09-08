@@ -1580,8 +1580,10 @@ public:
   ///
   /// \param Loc The location where the taskwait directive was encountered.
   /// \param Dependencies dependencies as specified by the 'depend' clause.
+  /// \param IsNowait True when a 'nowait' clause is present
   LLVM_ABI void createTaskwait(const LocationDescription &Loc,
-                               DependenciesInfo Dependencies = {});
+                               DependenciesInfo Dependencies = {},
+                               bool IsNowait = false);
 
   ///  Return the LLVM struct type matching runtime `kmp_task_affinity_info_t`.
   /// `{ kmp_intptr_t base_addr; size_t len; flags (bitfield storage as i32) }`
