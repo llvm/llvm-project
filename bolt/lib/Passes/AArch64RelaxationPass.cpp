@@ -44,9 +44,9 @@ void AArch64RelaxationPass::runOnFunction(BinaryFunction &BF) {
     for (auto It = BB.begin(); It != BB.end(); ++It) {
       MCInst &Inst = *It;
       bool IsADR = BC.MIB->isADR(Inst);
-
-      // TODO: Handle other types of LDR (literal, PC-relative) instructions.
-      if (!IsADR && !BC.MIB->isLoadLiteralGPR(Inst))
+      bool IsLoadLiteralGPR = BC.MIB->isLoadLiteralGPR(Inst);
+      bool IsLoadLiteralFPR = BC.MIB->isLoadLiteralFPR(Inst);
+      if (!IsADR && !IsLoadLiteralGPR && !IsLoadLiteralFPR)
         continue;
 
       const MCSymbol *Symbol = BC.MIB->getTargetSymbol(Inst, IsADR ? 0 : 1);
@@ -78,16 +78,31 @@ void AArch64RelaxationPass::runOnFunction(BinaryFunction &BF) {
 
       InstructionListType AdrpMaterialization;
       {
+        // TODO: If possible, use the actual alignment of the target label
+        // instead of conservatively assuming 1-byte alignment when relaxing a
+        // LoadLiteral instruction.
         auto L = BC.scopeLock();
         AdrpMaterialization =
             IsADR ? BC.MIB->undoAdrpAddRelaxation(Inst, BC.Ctx.get())
-                  : BC.MIB->createAdrpLdr(Inst, BC.Ctx.get());
+                  : BC.MIB->relaxLoadLiteral(Inst, BC.Ctx.get(), 1);
       }
 
-      if (It != BB.begin() && BC.MIB->isNoop(*std::prev(It))) {
-        It = BB.eraseInstruction(std::prev(It));
-      } else if (std::next(It) != BB.end() && BC.MIB->isNoop(*std::next(It))) {
-        BB.eraseInstruction(std::next(It));
+      size_t PrecedingNopCount = 0;
+      for (auto RevIt = std::make_reverse_iterator(It);
+           RevIt != BB.rend() && BC.MIB->isNoop(*RevIt); ++RevIt)
+        ++PrecedingNopCount;
+
+      size_t FollowingNopCount = 0;
+      for (auto FwdIt = std::next(It);
+           FwdIt != BB.end() && BC.MIB->isNoop(*FwdIt); ++FwdIt)
+        ++FollowingNopCount;
+
+      size_t InsertedInstCount = AdrpMaterialization.size() - 1;
+      if (PrecedingNopCount + FollowingNopCount >= InsertedInstCount) {
+        // Place the relaxed instruction sequence in place if possible.
+        auto Dst = It - std::min(InsertedInstCount, PrecedingNopCount);
+        std::copy(AdrpMaterialization.begin(), AdrpMaterialization.end(), Dst);
+        It += FollowingNopCount;
       } else if (!BF.isSimple()) {
         // If the function is not simple, it may contain a jump table undetected
         // by us. This jump table may use an offset from the branch instruction
@@ -99,8 +114,9 @@ void AArch64RelaxationPass::runOnFunction(BinaryFunction &BF) {
                   << " in non-simple function " << BF << '\n';
         PassFailed = true;
         return;
+      } else {
+        It = BB.replaceInstruction(It, AdrpMaterialization);
       }
-      It = BB.replaceInstruction(It, AdrpMaterialization);
     }
   }
 }

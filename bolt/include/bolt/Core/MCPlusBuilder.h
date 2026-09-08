@@ -867,6 +867,11 @@ public:
     return false;
   }
 
+  virtual bool isLoadLiteralFPR(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   virtual bool isMOVW(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
@@ -1844,7 +1849,11 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  /// Take \p LDRInst and return ADRP+LDR instruction sequence - for
+  /// Take \p LDRInst and return ADRP+LDR or ADRP+ADD+LDR instruction sequence.
+  /// \p TargetAlign represents the alignment of the target label.
+  /// Use ADRP+LDR if the target label is sufficiently aligned; otherwise use
+  /// ADRP+ADD+LDR. For example, assume that \p TargetAlign is 4.
+  /// For
   ///
   ///     ldr  x0, [label]
   ///
@@ -1852,8 +1861,21 @@ public:
   ///
   ///     adrp x0, PageBase(label)
   ///     ldr  x0, [x0, PageOffset(label)]
-  virtual InstructionListType createAdrpLdr(const MCInst &LDRInst,
-                                            MCContext *Ctx) const {
+  ///
+  /// For
+  ///
+  ///     ldr  q0, [label]
+  ///
+  /// the following sequence will be generated:
+  ///
+  ///     stp x16, x17, [sp, #-16]!
+  ///     adrp x16, PageBase(label)
+  ///     add x16, x16, PageOffset(label)
+  ///     ldr  q0, [x16]
+  ///     ldp x16, x17, [sp], #16
+  virtual InstructionListType relaxLoadLiteral(const MCInst &LDRInst,
+                                               MCContext *Ctx,
+                                               uint16_t TargetAlign) const {
     llvm_unreachable("not implemented");
   }
 
