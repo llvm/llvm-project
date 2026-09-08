@@ -2116,6 +2116,11 @@ void LoopInterchangeTransform::restructureLoops(
 
   // Tell SE that we move the loops around.
   SE->forgetLoop(NewOuter);
+
+  // Blocks have moved between the two loops and the branches between them have
+  // been rewired. forgetLoop only reaches SCEVs derived from NewOuter, so drop
+  // the disposition caches wholesale: any cached disposition may be stale.
+  SE->forgetBlockAndLoopDispositions();
 }
 
 ///  User can write, or optimizers can generate the reduction for inner loop.
