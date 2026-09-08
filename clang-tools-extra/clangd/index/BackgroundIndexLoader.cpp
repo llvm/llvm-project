@@ -57,7 +57,7 @@ BackgroundIndexLoader::loadShard(PathRef StartSourceFile, PathRef DependentTU) {
 
   LS.AbsolutePath = StartSourceFile.owned();
   LS.DependentTU = DependentTU.owned();
-  BackgroundIndexStorage *Storage = IndexStorageFactory(LS.AbsolutePath.raw());
+  BackgroundIndexStorage *Storage = IndexStorageFactory(LS.AbsolutePath);
   auto Shard = Storage->loadShard(StartSourceFile.raw());
   if (!Shard || !Shard->Sources) {
     vlog("Failed to load shard: {0}", StartSourceFile);

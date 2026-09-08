@@ -10,7 +10,6 @@
 #include "support/Logger.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -25,7 +24,7 @@ namespace clangd {
 std::optional<DraftStore::Draft> DraftStore::getDraft(PathRef File) const {
   std::lock_guard<std::mutex> Lock(Mutex);
 
-  auto It = Drafts.find(File.raw());
+  auto It = Drafts.find(File);
   if (It == Drafts.end())
     return std::nullopt;
 
@@ -82,7 +81,7 @@ std::string DraftStore::addDraft(PathRef File, llvm::StringRef Version,
                                  llvm::StringRef Contents) {
   std::lock_guard<std::mutex> Lock(Mutex);
 
-  auto &D = Drafts[File.raw()];
+  auto &D = Drafts[File];
   updateVersion(D.D, Version);
   std::time(&D.MTime);
   D.D.Contents = std::make_shared<std::string>(Contents);
@@ -92,18 +91,14 @@ std::string DraftStore::addDraft(PathRef File, llvm::StringRef Version,
 void DraftStore::removeDraft(PathRef File) {
   std::lock_guard<std::mutex> Lock(Mutex);
 
-  Drafts.erase(File.raw());
+  Drafts.erase(File);
 }
 
 namespace {
 using PathStyle = llvm::sys::path::Style;
 
-bool isWindowsPath(llvm::StringRef Path) {
-  return Path.size() >= 2 && llvm::isAlpha(Path[0]) && Path[1] == ':';
-}
-
 PathStyle pathStyle(llvm::StringRef Path) {
-  return isWindowsPath(Path) ? PathStyle::windows : PathStyle::native;
+  return hasWindowsDrive(Path) ? PathStyle::windows : PathStyle::native;
 }
 
 /// A read-only MemoryBuffer that keeps the draft contents alive.

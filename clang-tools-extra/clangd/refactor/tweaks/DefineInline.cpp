@@ -499,7 +499,7 @@ public:
 
     Effect E;
     for (auto &Pair : Edits)
-      E.ApplyEdits.try_emplace(std::move(Pair.first).raw(),
+      E.ApplyEdits.try_emplace(std::move(Pair.first),
                                std::move(Pair.second));
     return E;
   }

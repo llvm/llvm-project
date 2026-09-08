@@ -659,7 +659,7 @@ public:
     }
 
     if (SameFile) {
-      tooling::Replacements &R = Effect->ApplyEdits[CCFile->raw()].Replacements;
+      tooling::Replacements &R = Effect->ApplyEdits[*CCFile].Replacements;
       R = R.merge(HeaderUpdates);
     } else {
       auto HeaderFE = Effect::fileEdit(SM, SM.getMainFileID(), HeaderUpdates);

@@ -18,10 +18,6 @@ namespace clang {
 namespace clangd {
 namespace {
 
-bool hasWindowsDrive(llvm::StringRef S) {
-  return S.size() >= 2 && llvm::isAlpha(S[0]) && S[1] == ':';
-}
-
 bool hasURIScheme(llvm::StringRef S) {
   if (S.empty() || !llvm::isAlpha(S.front()))
     return false;

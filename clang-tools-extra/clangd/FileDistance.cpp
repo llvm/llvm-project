@@ -33,6 +33,7 @@
 #include "FileDistance.h"
 #include "URI.h"
 #include "support/Logger.h"
+#include "support/Path.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
@@ -52,8 +53,7 @@ static llvm::SmallString<128> canonicalize(llvm::StringRef Path) {
   if (Result.empty() || Result.front() != '/')
     Result.insert(Result.begin(), '/');
   // C:\foo\bar --> /c:/foo/bar (drive letter is never case-sensitive).
-  if (Result.size() >= 3 && Result[0] == '/' && Result[2] == ':' &&
-      llvm::isAlpha(Result[1]))
+  if (hasWindowsDrive(Result.str().drop_front()))
     Result[1] = llvm::toLower(Result[1]);
   return Result;
 }

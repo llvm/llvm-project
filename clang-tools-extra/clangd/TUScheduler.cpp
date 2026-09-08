@@ -321,7 +321,7 @@ public:
   // Headers not in the list will have their associations removed.
   void update(PathRef MainFile, llvm::ArrayRef<std::string> Headers) {
     std::lock_guard<std::mutex> Lock(Mu);
-    auto It = MainToFirst.try_emplace(MainFile.raw(), nullptr);
+    auto It = MainToFirst.try_emplace(MainFile, nullptr);
     if (It.second)
       OwnedBytes += It.first->first.raw().capacity() + 1;
     Association *&First = It.first->second;
@@ -1693,7 +1693,7 @@ bool TUScheduler::blockUntilIdle(Deadline D) const {
 
 bool TUScheduler::update(PathRef File, ParseInputs Inputs,
                          WantDiagnostics WantDiags) {
-  std::unique_ptr<FileData> &FD = Files[File.raw()];
+  std::unique_ptr<FileData> &FD = Files[File];
   bool NewFile = FD == nullptr;
   bool ContentChanged = false;
   if (!FD) {
@@ -1717,7 +1717,7 @@ bool TUScheduler::update(PathRef File, ParseInputs Inputs,
 }
 
 void TUScheduler::remove(PathRef File) {
-  bool Removed = Files.erase(File.raw());
+  bool Removed = Files.erase(File);
   if (!Removed)
     elog("Trying to remove file from TUScheduler that is not tracked: {0}",
          File);
@@ -1764,7 +1764,7 @@ void TUScheduler::runWithAST(
     llvm::StringRef Name, PathRef File,
     llvm::unique_function<void(llvm::Expected<InputsAndAST>)> Action,
     TUScheduler::ASTActionInvalidation Invalidation) {
-  auto It = Files.find(File.raw());
+  auto It = Files.find(File);
   if (It == Files.end()) {
     Action(llvm::make_error<LSPError>(
         "trying to get AST for non-added document", ErrorCode::InvalidParams));
@@ -1778,7 +1778,7 @@ void TUScheduler::runWithAST(
 void TUScheduler::runWithPreamble(llvm::StringRef Name, PathRef File,
                                   PreambleConsistency Consistency,
                                   Callback<InputsAndPreamble> Action) {
-  auto It = Files.find(File.raw());
+  auto It = Files.find(File);
   if (It == Files.end()) {
     Action(llvm::make_error<LSPError>(
         "trying to get preamble for non-added document",

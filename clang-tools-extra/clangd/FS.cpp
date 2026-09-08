@@ -8,7 +8,6 @@
 
 #include "FS.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <optional>
@@ -19,8 +18,7 @@ namespace clangd {
 
 PreambleFileStatusCache::PreambleFileStatusCache(llvm::StringRef MainFilePath) {
   assert(llvm::sys::path::is_absolute(MainFilePath) ||
-         (MainFilePath.size() >= 2 && llvm::isAlpha(MainFilePath[0]) &&
-          MainFilePath[1] == ':'));
+         hasWindowsDrive(MainFilePath));
   this->MainFilePath = PathRef(MainFilePath).removeDots();
 }
 

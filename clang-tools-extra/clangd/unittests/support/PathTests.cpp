@@ -15,6 +15,14 @@ namespace clang {
 namespace clangd {
 namespace {
 
+TEST(PathTests, HasWindowsDrive) {
+  for (llvm::StringRef P : {"C:", "c:foo", "C:/foo", "z:\\foo"})
+    EXPECT_TRUE(hasWindowsDrive(P)) << P;
+  for (llvm::StringRef P : {"", "C", ":", "1:/foo", "/C:/foo",
+                            "\\\\server\\share", "/foo", "file:///C:/foo"})
+    EXPECT_FALSE(hasWindowsDrive(P)) << P;
+}
+
 TEST(PathTests, IsAncestor) {
   EXPECT_TRUE(PathRef(testPath("foo")).startsWith(testPath("foo")));
   EXPECT_TRUE(PathRef(testPath("foo/")).startsWith(testPath("foo")));

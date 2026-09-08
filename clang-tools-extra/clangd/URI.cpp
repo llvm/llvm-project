@@ -8,6 +8,7 @@
 
 #include "URI.h"
 #include "support/Logger.h"
+#include "support/Path.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
@@ -19,10 +20,6 @@ LLVM_INSTANTIATE_REGISTRY(clang::clangd::URISchemeRegistry)
 namespace clang {
 namespace clangd {
 namespace {
-
-bool isWindowsPath(llvm::StringRef Path) {
-  return Path.size() > 1 && llvm::isAlpha(Path[0]) && Path[1] == ':';
-}
 
 bool isNetworkPath(llvm::StringRef Path) {
   return Path.size() > 2 && Path[0] == Path[1] &&
@@ -46,7 +43,7 @@ public:
     if (!Authority.empty()) {
       // Windows UNC paths e.g. file://server/share => \\server\share
       ("//" + Authority).toVector(Path);
-    } else if (isWindowsPath(Body.substr(1))) {
+    } else if (hasWindowsDrive(Body.substr(1))) {
       // Windows paths e.g. file:///X:/path => X:\path
       Body.consume_front("/");
     }
@@ -64,7 +61,7 @@ public:
       // Windows UNC paths e.g. \\server\share => file://server/share
       Authority = Root.drop_front(2);
       AbsolutePath.consume_front(Root);
-    } else if (isWindowsPath(Root)) {
+    } else if (hasWindowsDrive(Root)) {
       // Windows paths e.g. X:\path => file:///X:/path
       Body = "/";
     }

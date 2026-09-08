@@ -235,7 +235,7 @@ void BackgroundIndex::update(llvm::StringRef MainFile, IndexFileIn Index,
     {
       std::lock_guard<std::mutex> Lock(ShardVersionsMu);
       const auto &Hash = FileIt.second.Digest;
-      auto DigestIt = ShardVersions.try_emplace(Path.raw());
+      auto DigestIt = ShardVersions.try_emplace(Path);
       ShardVersion &SV = DigestIt.first->second;
       // Skip if file is already up to date, unless previous index was broken
       // and this one is not.
@@ -387,7 +387,7 @@ BackgroundIndex::loadProject(std::vector<std::string> MainFiles) {
           LS.Shard->Relations
               ? std::make_unique<RelationSlab>(std::move(*LS.Shard->Relations))
               : nullptr;
-      ShardVersion &SV = ShardVersions[LS.AbsolutePath.raw()];
+      ShardVersion &SV = ShardVersions[LS.AbsolutePath];
       SV.Digest = LS.Digest;
       SV.HadErrors = LS.HadErrors;
       ++LoadedShards;

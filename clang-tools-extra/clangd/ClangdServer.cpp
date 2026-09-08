@@ -91,7 +91,7 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
     auto Task = [FIndex(FIndex), Path(Path.owned()), Version(Version.str()),
                  ASTCtx(std::move(ASTCtx)), PI(std::move(PI))]() mutable {
       trace::Span Tracer("PreambleIndexing");
-      FIndex->updatePreamble(Path.raw(), Version, ASTCtx.getASTContext(),
+      FIndex->updatePreamble(Path, Version, ASTCtx.getASTContext(),
                              ASTCtx.getPreprocessor(), *PI);
     };
 
@@ -446,7 +446,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
       {
         std::lock_guard<std::mutex> Lock(CachedCompletionFuzzyFindRequestMutex);
         SpecFuzzyFind->CachedReq =
-            CachedCompletionFuzzyFindRequestByFile[File.raw()];
+            CachedCompletionFuzzyFindRequestByFile[File];
       }
     }
     ParseInputs ParseInput{IP->Command, &getHeaderFS(), IP->Contents.str()};
@@ -480,7 +480,7 @@ void ClangdServer::codeComplete(PathRef File, Position Pos,
       return;
     if (SpecFuzzyFind->NewReq) {
       std::lock_guard<std::mutex> Lock(CachedCompletionFuzzyFindRequestMutex);
-      CachedCompletionFuzzyFindRequestByFile[File.raw()] =
+      CachedCompletionFuzzyFindRequestByFile[File] =
           *SpecFuzzyFind->NewReq;
     }
     // Explicitly block until async task completes, this is fine as we've

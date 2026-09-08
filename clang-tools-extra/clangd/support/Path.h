@@ -50,6 +50,10 @@ namespace clangd {
 
 class PathRef;
 
+/// Whether the path starts with an ASCII drive letter and ':'.
+/// This includes drive-relative paths such as C:foo, not just C:/foo.
+bool hasWindowsDrive(llvm::StringRef Path);
+
 /// Owned filesystem path with conservative lexical identity.
 class Path {
 public:

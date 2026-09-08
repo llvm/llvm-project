@@ -787,7 +787,7 @@ OverlayCDB::getCompileCommand(PathRef File) const {
   std::optional<tooling::CompileCommand> Cmd;
   {
     std::lock_guard<std::mutex> Lock(Mutex);
-    auto It = Commands.find(File.removeDots().raw());
+    auto It = Commands.find(File.removeDots());
     if (It != Commands.end())
       Cmd = It->second;
   }
@@ -836,14 +836,14 @@ bool OverlayCDB::setCompileCommand(PathRef File,
     std::unique_lock<std::mutex> Lock(Mutex);
     if (Cmd) {
       if (auto [It, Inserted] =
-              Commands.try_emplace(CanonPath.raw(), std::move(*Cmd));
+              Commands.try_emplace(CanonPath, std::move(*Cmd));
           !Inserted) {
         if (It->second == *Cmd)
           return false;
         It->second = *Cmd;
       }
     } else
-      Commands.erase(CanonPath.raw());
+      Commands.erase(CanonPath);
   }
   OnCommandChanged.broadcast({CanonPath.raw()});
   return true;

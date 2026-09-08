@@ -17,11 +17,12 @@
 
 namespace clang {
 namespace clangd {
-namespace {
 
 bool hasWindowsDrive(llvm::StringRef P) {
   return P.size() >= 2 && llvm::isAlpha(P[0]) && P[1] == ':';
 }
+
+namespace {
 
 llvm::StringRef dropWindowsDrive(llvm::StringRef P) {
   return hasWindowsDrive(P) ? P.drop_front(2) : P;
