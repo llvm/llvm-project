@@ -52,6 +52,7 @@ TEST(Queue, MemsetNullptr) {
     Q.memset(nullptr, 1, 1);
     FAIL() << "Expected thrown exception";
   } catch (sycl::exception &E) {
+    EXPECT_EQ(E.code(), make_error_code(sycl::errc::invalid));
     EXPECT_NE(std::string(E.what()).find("Nullptr argument"),
               std::string::npos);
   }

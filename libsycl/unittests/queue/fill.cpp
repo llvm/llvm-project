@@ -53,6 +53,7 @@ TEST(Queue, FillNullptr) {
     Q.fill(nullptr, 1, 1);
     FAIL() << "Expected thrown exception";
   } catch (sycl::exception &E) {
+    EXPECT_EQ(E.code(), make_error_code(sycl::errc::invalid));
     EXPECT_NE(std::string(E.what()).find("Nullptr argument"),
               std::string::npos);
   }
@@ -69,6 +70,7 @@ TEST(Queue, FillBytesGTSizeMax) {
     Q.fill(Ptr, 1, SIZE_MAX / sizeof(int) + 1);
     FAIL() << "Expected thrown exception";
   } catch (sycl::exception &E) {
+    EXPECT_EQ(E.code(), make_error_code(sycl::errc::invalid));
     EXPECT_NE(std::string(E.what()).find(
                   "Total number of bytes to be filled exceeds SIZE_MAX"),
               std::string::npos);
