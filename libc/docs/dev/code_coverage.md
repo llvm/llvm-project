@@ -51,10 +51,12 @@ executed across parent and child processes directly to the profile file.
 
 ### Build System Integration
 Setting `-DLIBC_ENABLE_COVERAGE=ON` in the CMake configuration passes
-`-fprofile-instr-generate=libc_cov_%c%p.profraw`, `-fcoverage-mapping`, and
+`-fprofile-instr-generate=libc_cov_%p.profraw`, `-fcoverage-mapping`, and
 `-fprofile-continuous` across all LLVM-libc compilation units and test link
-steps. This ensures uniform instrumentation across entrypoints, unit tests, and
-hermetic test harnesses.
+steps. When `-fprofile-continuous` is enabled, Clang automatically prepends
+`%c` to the profile file template, avoiding duplicate specifier warnings at
+runtime. Setting `-DLIBC_ENABLE_COVERAGE_MCDC=ON` additionally enables
+`-fcoverage-mcdc`.
 
 ## Running Code Coverage Locally
 
@@ -63,10 +65,9 @@ hermetic test harnesses.
 Generating coverage reports requires Clang, LLVM profile tools, CMake, and
 Ninja:
 
-* **Compiler:** Clang 18 or later (Clang 21+ for MC/DC, Clang 24 / HEAD
-  recommended for full-build mode). In full-build mode, compiler-rt must match
-  the compiler version and cannot rely on distro-built libraries with glibc
-  source fortification.
+* **Compiler:** Clang 24+ (or Clang built from HEAD). In full-build mode,
+  compiler-rt must match the compiler version and cannot rely on distro-built
+  libraries with glibc source fortification.
 * **LLVM Utilities:** Matching major versions of `llvm-profdata` and `llvm-cov`.
 * **Linker:** `lld` is recommended when configuring full-build mode.
 * **Build System:** CMake 3.28+ and Ninja.
@@ -164,20 +165,21 @@ cmake -G Ninja -S runtimes -B build-cov \
 
 ### 2. Build and Execute Tests
 
-Compiles and executes test executables in parallel. Run `libc-unit-tests` for
-unit tests, `libc-hermetic-tests` for hermetic tests, or both:
+Compiles and executes test executables in parallel. Select the test target
+corresponding to your build mode:
+
+* **Overlay Mode (`LLVM_LIBC_FULL_BUILD=OFF`):** Execute `libc-unit-tests`.
+* **Full-Build Mode (`LLVM_LIBC_FULL_BUILD=ON`):** Execute
+  `libc-hermetic-tests`.
 
 ```bash
-export LLVM_PROFILE_FILE="libc_cov_%c%p.profraw"
+export LLVM_PROFILE_FILE="libc_cov_%p.profraw"
 
-# Run unit tests
+# Option A: Run unit tests (overlay mode)
 ninja -k 0 -C build-cov libc-unit-tests
 
-# Run hermetic tests (full-build mode)
+# Option B: Run hermetic tests (full-build mode)
 ninja -k 0 -C build-cov libc-hermetic-tests
-
-# Run both unit and hermetic tests
-ninja -k 0 -C build-cov libc-unit-tests libc-hermetic-tests
 ```
 
 :::{note}
@@ -262,8 +264,9 @@ decision.
 
 ### 1. CMake Configuration
 
-Configures CMake with `-fcoverage-mcdc` alongside profiling flags, enabling the
-compiler frontend to generate boolean condition bitmaps for compound decisions:
+Configures CMake with `-DLIBC_ENABLE_COVERAGE_MCDC=ON` alongside profiling
+flags, enabling the compiler frontend to generate boolean condition bitmaps for
+compound decisions:
 
 #### Option A: Overlay Mode (Default)
 ```bash
@@ -274,8 +277,7 @@ cmake -G Ninja -S runtimes -B build-cov-mcdc \
   -DLLVM_ENABLE_RUNTIMES="libc" \
   -DLLVM_LIBC_FULL_BUILD=OFF \
   -DLIBC_ENABLE_COVERAGE=ON \
-  -DCMAKE_C_FLAGS="-fcoverage-mcdc" \
-  -DCMAKE_CXX_FLAGS="-fcoverage-mcdc"
+  -DLIBC_ENABLE_COVERAGE_MCDC=ON
 ```
 
 #### Option B: Full-Build Mode
@@ -288,27 +290,26 @@ cmake -G Ninja -S runtimes -B build-cov-mcdc \
   -DLLVM_ENABLE_RUNTIMES="libc" \
   -DLLVM_LIBC_FULL_BUILD=ON \
   -DLIBC_ENABLE_COVERAGE=ON \
-  -DCMAKE_C_FLAGS="-fcoverage-mcdc" \
-  -DCMAKE_CXX_FLAGS="-fcoverage-mcdc"
+  -DLIBC_ENABLE_COVERAGE_MCDC=ON
 ```
 
 ### 2. Build and Execute Tests
 
 Compiles and executes test executables in parallel with MC/DC instrumentation
-enabled. Run `libc-unit-tests` for unit tests, `libc-hermetic-tests` for
-hermetic tests, or both:
+enabled. Select the test target corresponding to your build mode:
+
+* **Overlay Mode (`LLVM_LIBC_FULL_BUILD=OFF`):** Execute `libc-unit-tests`.
+* **Full-Build Mode (`LLVM_LIBC_FULL_BUILD=ON`):** Execute
+  `libc-hermetic-tests`.
 
 ```bash
-export LLVM_PROFILE_FILE="libc_cov_%c%p.profraw"
+export LLVM_PROFILE_FILE="libc_cov_%p.profraw"
 
-# Run unit tests
+# Option A: Run unit tests (overlay mode)
 ninja -k 0 -C build-cov-mcdc libc-unit-tests
 
-# Run hermetic tests (full-build mode)
+# Option B: Run hermetic tests (full-build mode)
 ninja -k 0 -C build-cov-mcdc libc-hermetic-tests
-
-# Run both unit and hermetic tests
-ninja -k 0 -C build-cov-mcdc libc-unit-tests libc-hermetic-tests
 ```
 
 ### 3. Merge Profiles
@@ -390,7 +391,7 @@ Compiles and runs only the specified test binary, immediately writing execution
 profile counters to disk upon completion:
 
 ```bash
-export LLVM_PROFILE_FILE="libc_cov_%c%p.profraw"
+export LLVM_PROFILE_FILE="libc_cov_%p.profraw"
 
 # For a standard coverage build
 ninja -C build-cov libc.test.src.ctype.isalpha_test
@@ -480,9 +481,10 @@ When inspecting with `--show-mcdc`, `llvm-cov` displays an MC/DC analysis table
 beneath each compound decision. For instance, consider the following decision:
 
 ```text
-   19|  if (c < 0 || c > 255)
-  -----------------------------------------------
-  | Conditions: C1 = (c < 0), C2 = (c > 255)
+   19|  if (c < 0 || c > cpp::numeric_limits<unsigned char>::max())
+  ------------------------------------------------------------------
+  | Conditions: C1 = (c < 0)
+  |             C2 = (c > cpp::numeric_limits<unsigned char>::max())
   |
   | Executed Test Vectors:
   |    C1, C2    Result
@@ -492,10 +494,11 @@ beneath each compound decision. For instance, consider the following decision:
   | C1-Pair: covered (1, 2)
   | C2-Pair: not covered
   | MC/DC Coverage: 50.00%
-  -----------------------------------------------
+  ------------------------------------------------------------------
 ```
 
-* **Conditions:** **C1** represents `c < 0` and **C2** represents `c > 255`.
+* **Conditions:** **C1** represents `c < 0` and **C2** represents
+  `c > cpp::numeric_limits<unsigned char>::max()`.
 * **Executed Vectors:**
   * **Vector 1 (`F, F = F`):** Tested with a valid character (`c = 'a'`). Both
     C1 and C2 evaluated False, producing an overall False result.

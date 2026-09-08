@@ -905,7 +905,7 @@ function(add_libc_hermetic test_name)
       ${LIBC_LINK_OPTIONS_DEFAULT}
       ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
     )
-    if(LIBC_ENABLE_COVERAGE AND NOT LIBC_TARGET_ARCHITECTURE_IS_AMDGPU AND NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+    if(LIBC_ENABLE_COVERAGE)
       list(APPEND link_options
         -noprofilelib
         -Wl,--allow-multiple-definition
@@ -923,7 +923,7 @@ function(add_libc_hermetic test_name)
       ${LIBC_LINK_OPTIONS_DEFAULT}
       ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
     )
-    if(LIBC_ENABLE_COVERAGE AND NOT LIBC_TARGET_ARCHITECTURE_IS_AMDGPU AND NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+    if(LIBC_ENABLE_COVERAGE)
       list(APPEND link_options
         -noprofilelib
         -Wl,--allow-multiple-definition
@@ -935,21 +935,7 @@ function(add_libc_hermetic test_name)
   endif()
 
   set(coverage_link_libs "")
-  if(LIBC_ENABLE_COVERAGE AND NOT LIBC_TARGET_ARCHITECTURE_IS_AMDGPU AND NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-    if(NOT LIBC_CLANG_PROFILE_LIB)
-      execute_process(
-        COMMAND ${CMAKE_CXX_COMPILER} --print-file-name=libclang_rt.profile.a
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        OUTPUT_VARIABLE LIBC_CLANG_PROFILE_LIB
-      )
-      if(NOT EXISTS "${LIBC_CLANG_PROFILE_LIB}")
-        execute_process(
-          COMMAND ${CMAKE_CXX_COMPILER} --print-file-name=libclang_rt.profile-${LIBC_TARGET_ARCHITECTURE}.a
-          OUTPUT_STRIP_TRAILING_WHITESPACE
-          OUTPUT_VARIABLE LIBC_CLANG_PROFILE_LIB
-        )
-      endif()
-    endif()
+  if(LIBC_ENABLE_COVERAGE)
     set(coverage_link_libs
       "${LIBC_CLANG_PROFILE_LIB}"
       libc
@@ -966,7 +952,7 @@ function(add_libc_hermetic test_name)
       ${compiler_runtime}
   )
   set(coverage_deps "")
-  if(LIBC_ENABLE_COVERAGE AND NOT LIBC_TARGET_ARCHITECTURE_IS_AMDGPU AND NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
+  if(LIBC_ENABLE_COVERAGE)
     set(coverage_deps libc)
   endif()
   add_dependencies(${fq_build_target_name} ${fq_deps_list} ${coverage_deps})
