@@ -3110,6 +3110,32 @@ func.func @omp_target_host_eval(%x : !llvm.ptr) {
 
 // -----
 
+// Rejected even though 'llvm.getelementptr' has no memory effects, because a
+// host address must not be usable to reach host memory from the device.
+func.func @omp_target_host_eval_gep(%x : !llvm.ptr) {
+  // expected-error @below {{op host_eval argument illegal use in 'llvm.getelementptr' operation}}
+  omp.target kernel_type(generic) host_eval(%x -> %arg0 : !llvm.ptr) {
+    %0 = llvm.mlir.constant(1 : i32) : i32
+    %1 = llvm.getelementptr %arg0[%0] : (!llvm.ptr, i32) -> !llvm.ptr, f32
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+// The argument type is accepted, but 'llvm.alloca' has memory effects.
+func.func @omp_target_host_eval_alloca(%x : i32) {
+  // expected-error @below {{op host_eval argument illegal use in 'llvm.alloca' operation}}
+  omp.target kernel_type(generic) host_eval(%x -> %arg0 : i32) {
+    %0 = llvm.alloca %arg0 x f32 : (i32) -> !llvm.ptr
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
 func.func @omp_target_host_eval_teams(%x : i1) {
   // expected-error @below {{op host_eval argument only legal as 'num_teams' and 'thread_limit' in 'omp.teams'}}
   omp.target kernel_type(generic) host_eval(%x -> %arg0 : i1) {

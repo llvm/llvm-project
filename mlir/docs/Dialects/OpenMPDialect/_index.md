@@ -572,9 +572,18 @@ These host-evaluated values in MLIR would need to be placed outside of the
 which is not possible because of the `IsolatedFromAbove` trait. The solution
 implemented to address this problem has been to introduce the `host_eval`
 argument to the `omp.target` operation. It works similarly to a `map` clause,
-but its only intended use is to forward host-evaluated values to their
-corresponding operation inside of the region. Any uses outside of the previously
-described result in a verifier error.
+and its purpose is to forward host-evaluated values to their corresponding
+operation inside of the region.
+
+Since these values are passed to the kernel as arguments, they are ordinary
+values inside of the region. An integer entry block argument may therefore also
+be consumed there by operations that do not access memory. This is needed, for
+example, by a collapsed loop nest with intervening code, where the guard for
+that code must be computed from the same bounds that defined the trip count.
+
+Any other direct use results in a verifier error. In particular, pointer-typed
+arguments may only appear in the operations listed above and cannot directly
+feed pointer arithmetic or memory accesses inside the region.
 
 ```mlir
 // Initialize %0, %1, %2, %3...

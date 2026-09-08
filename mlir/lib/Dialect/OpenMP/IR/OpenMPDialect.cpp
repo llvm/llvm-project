@@ -2974,8 +2974,11 @@ LogicalResult TargetOp::verifyRegions() {
                                 "must be evaluated in the host";
       }
 
-      return emitOpError() << "host_eval argument illegal use in '"
-                           << user->getName() << "' operation";
+      // Integer host_eval values may feed memory-effect-free computation.
+      // Other types are restricted because they may hold host addresses.
+      if (!hostEvalArg.getType().isIntOrIndex() || !isMemoryEffectFree(user))
+        return emitOpError() << "host_eval argument illegal use in '"
+                             << user->getName() << "' operation";
     }
   }
 

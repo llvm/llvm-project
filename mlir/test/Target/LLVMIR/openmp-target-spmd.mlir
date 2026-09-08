@@ -1,6 +1,7 @@
 // RUN: split-file %s %t
 // RUN: mlir-translate -mlir-to-llvmir %t/host.mlir | FileCheck %s --check-prefix=HOST
 // RUN: mlir-translate -mlir-to-llvmir %t/device.mlir | FileCheck %s --check-prefix=DEVICE
+// RUN: mlir-translate -mlir-to-llvmir %t/host-extra-use.mlir | FileCheck %s --check-prefix=EXTRA
 
 //--- host.mlir
 
@@ -91,3 +92,39 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 
 // DEVICE:      define internal void @[[DISTRIBUTE_OUTLINE]]({{.*}})
 // DEVICE:        call void @__kmpc_distribute_for_static_loop{{.*}}({{.*}})
+
+//--- host-extra-use.mlir
+
+// A host_eval block argument may be consumed by operations other than the loop
+// bounds. Trip count recovery searches all of its uses, so the unrecognized one
+// must be skipped rather than defeating the search.
+
+module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  llvm.func @extra_use(%x : i32) {
+    omp.target kernel_type(spmd) host_eval(%x -> %lb, %x -> %ub, %x -> %step : i32, i32, i32) {
+      omp.teams {
+        omp.parallel {
+          omp.distribute {
+            omp.wsloop {
+              omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+                %0 = llvm.icmp "eq" %iv, %ub : i32
+                omp.yield
+              }
+            } {omp.composite}
+          } {omp.composite}
+          omp.terminator
+        } {omp.composite}
+        omp.terminator
+      } {omp.combined}
+      omp.terminator
+    } {omp.combined}
+    llvm.return
+  }
+}
+
+// EXTRA-LABEL: define void @extra_use
+// EXTRA:         %omp_loop.tripcount = {{.*}}
+// EXTRA:         %[[TRIPCOUNT:.*]] = zext i32 %omp_loop.tripcount to i64
+// EXTRA:         %[[TRIPCOUNT_KARG:.*]] = getelementptr inbounds nuw %struct.__tgt_kernel_arguments, ptr %[[KARGS:.*]], i32 0, i32 8
+// EXTRA-NEXT:    store i64 %[[TRIPCOUNT]], ptr %[[TRIPCOUNT_KARG]]
+// EXTRA:         call i32 @__tgt_target_kernel({{.*}}, ptr %[[KARGS]])

@@ -9059,7 +9059,13 @@ extractHostEvalClauses(omp::TargetOp targetOp, Value &numThreads,
             (void)found;
             assert(found && "unsupported host_eval use");
           })
-          .DefaultUnreachable("unsupported host_eval use");
+          // Uses that do not define a launch parameter contribute nothing to
+          // the kernel configuration and are skipped.
+          .Default([]([[maybe_unused]] Operation *op) {
+            assert(isMemoryEffectFree(op) &&
+                   "host_eval use with memory effects should have been "
+                   "rejected by the omp.target verifier");
+          });
     }
   }
 }
