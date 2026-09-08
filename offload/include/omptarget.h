@@ -117,7 +117,7 @@ struct DeviceTy;
 // temporary helper from liboffload until all usage of AsyncInfo
 // are migrated to use liboffload queues.
 extern "C" __tgt_async_info *
-__ol__tgt_GetAsyncInfoFromQueue(ol_queue_handle_t Queue);
+__ol_tgt_GetAsyncInfoFromQueue(ol_queue_handle_t Queue);
 
 /// The libomptarget wrapper around a __tgt_async_info object directly
 /// associated with a libomptarget layer device. RAII semantics to avoid
@@ -150,7 +150,7 @@ public:
   /// Implicit conversion to the __tgt_async_info which is used in the
   /// plugin interface.
   operator __tgt_async_info *() {
-    return __ol__tgt_GetAsyncInfoFromQueue(Queue);
+    return __ol_tgt_GetAsyncInfoFromQueue(Queue);
   }
 
   /// Get the underlying queue handle.
