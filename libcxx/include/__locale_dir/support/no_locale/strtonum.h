@@ -36,7 +36,8 @@ inline _LIBCPP_HIDE_FROM_ABI double __str_to_float_c_locale<double>(const char* 
 }
 
 template <>
-inline _LIBCPP_HIDE_FROM_ABI long double __str_to_float_c_locale<long double>(const char* __nptr, char** __endptr, __locale_t) {
+inline _LIBCPP_HIDE_FROM_ABI long double
+__str_to_float_c_locale<long double>(const char* __nptr, char** __endptr, __locale_t) {
   return std::strtold(__nptr, __endptr);
 }
 
