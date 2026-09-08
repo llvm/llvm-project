@@ -952,10 +952,10 @@ TEST_P(MCPlusBuilderTester, RISCV_isCleanReg) {
     EXPECT_FALSE(BC->MIB->isCleanReg(NonZeroCompressedLI));
   }
 
-  MCInst CompressedLIWithExpr =
-      MCInstBuilder(RISCV::C_LI)
-          .addReg(RISCV::X5)
-          .addExpr(MCSymbolRefExpr::create(BB->getLabel(), *BC->Ctx));
+  MCInst CompressedLIWithExpr = MCInstBuilder(RISCV::C_LI)
+                                    .addReg(RISCV::X5)
+                                    .addExpr(MCSymbolRefExpr::create(
+                                        BC->Ctx->createTempSymbol(), *BC->Ctx));
   EXPECT_FALSE(BC->MIB->isCleanReg(CompressedLIWithExpr));
 
   MCInst CompressedMV =
