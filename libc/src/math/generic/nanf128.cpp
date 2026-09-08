@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/nanf128.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/math/nanf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float128, nanf128, (const char *arg)) {
-  return math::nanf128(arg);
+  return cpp::bit_cast<float128>(math::nanf128(arg));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
