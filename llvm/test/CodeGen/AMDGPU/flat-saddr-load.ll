@@ -4856,13 +4856,11 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16lo_reg_hi(ptr inreg %sbase, 
 ; GFX1250-SDAG-TRUE16-NEXT:    v_nop
 ; GFX1250-SDAG-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-TRUE16-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v1, 0
-; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-TRUE16-NEXT:    v_add_nc_u64_e32 v[0:1], s[2:3], v[0:1]
 ; GFX1250-SDAG-TRUE16-NEXT:    flat_load_u16 v0, v[0:1]
-; GFX1250-SDAG-TRUE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GFX1250-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX1250-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.h
 ; GFX1250-SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-NOECC-LABEL: flat_load_saddr_i16_d16lo_reg_hi:
@@ -4923,13 +4921,11 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16lo_reg_hi_immneg128(ptr inre
 ; GFX1250-SDAG-TRUE16-NEXT:    v_nop
 ; GFX1250-SDAG-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-TRUE16-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v1, 0
-; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-TRUE16-NEXT:    v_add_nc_u64_e32 v[0:1], s[2:3], v[0:1]
 ; GFX1250-SDAG-TRUE16-NEXT:    flat_load_u16 v0, v[0:1] offset:-128
-; GFX1250-SDAG-TRUE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GFX1250-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX1250-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.h
 ; GFX1250-SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-NOECC-LABEL: flat_load_saddr_i16_d16lo_reg_hi_immneg128:
@@ -4991,13 +4987,11 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16lo_zexti8_reg_hi(ptr inreg %
 ; GFX1250-SDAG-TRUE16-NEXT:    v_nop
 ; GFX1250-SDAG-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-TRUE16-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v1, 0
-; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-TRUE16-NEXT:    v_add_nc_u64_e32 v[0:1], s[2:3], v[0:1]
 ; GFX1250-SDAG-TRUE16-NEXT:    flat_load_u8 v0, v[0:1]
-; GFX1250-SDAG-TRUE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GFX1250-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX1250-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.h
 ; GFX1250-SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-NOECC-LABEL: flat_load_saddr_i16_d16lo_zexti8_reg_hi:
@@ -5059,13 +5053,11 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16lo_zexti8_reg_hi_immneg128(p
 ; GFX1250-SDAG-TRUE16-NEXT:    v_nop
 ; GFX1250-SDAG-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-TRUE16-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v1, 0
-; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-TRUE16-NEXT:    v_add_nc_u64_e32 v[0:1], s[2:3], v[0:1]
 ; GFX1250-SDAG-TRUE16-NEXT:    flat_load_u8 v0, v[0:1] offset:-128
-; GFX1250-SDAG-TRUE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GFX1250-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX1250-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.h
 ; GFX1250-SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-NOECC-LABEL: flat_load_saddr_i16_d16lo_zexti8_reg_hi_immneg128:
@@ -5130,13 +5122,11 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16lo_sexti8_reg_hi(ptr inreg %
 ; GFX1250-SDAG-TRUE16-NEXT:    v_nop
 ; GFX1250-SDAG-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-TRUE16-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v1, 0
-; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-TRUE16-NEXT:    v_add_nc_u64_e32 v[0:1], s[2:3], v[0:1]
 ; GFX1250-SDAG-TRUE16-NEXT:    flat_load_i8 v0, v[0:1]
-; GFX1250-SDAG-TRUE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GFX1250-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX1250-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.h
 ; GFX1250-SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-TRUE16-LABEL: flat_load_saddr_i16_d16lo_sexti8_reg_hi:
@@ -5217,13 +5207,11 @@ define amdgpu_ps <2 x half> @flat_load_saddr_i16_d16lo_sexti8_reg_hi_immneg128(p
 ; GFX1250-SDAG-TRUE16-NEXT:    v_nop
 ; GFX1250-SDAG-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-TRUE16-NEXT:    v_dual_mov_b32 v2, v1 :: v_dual_mov_b32 v1, 0
-; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX1250-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-TRUE16-NEXT:    v_add_nc_u64_e32 v[0:1], s[2:3], v[0:1]
 ; GFX1250-SDAG-TRUE16-NEXT:    flat_load_i8 v0, v[0:1] offset:-128
-; GFX1250-SDAG-TRUE16-NEXT:    s_wait_xcnt 0x0
-; GFX1250-SDAG-TRUE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
 ; GFX1250-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v1.l
+; GFX1250-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v2.h
 ; GFX1250-SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-TRUE16-LABEL: flat_load_saddr_i16_d16lo_sexti8_reg_hi_immneg128:

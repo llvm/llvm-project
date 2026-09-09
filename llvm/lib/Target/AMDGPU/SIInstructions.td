@@ -3554,6 +3554,12 @@ def : GCNPat <
   (EXTRACT_SUBREG $a, sub0)
 >;
 
+let True16Predicate = UseRealTrue16Insts in
+def : GCNPat <
+  (i16 (DivergentUnaryFrag<trunc> (i32 (srl_oneuse i32:$src, (i32 16))))),
+  (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $src, VGPR_32)), hi16)
+>;
+
 def : GCNPat <
   (v2i32 (UniformUnaryFrag<trunc> v2i64:$a)),
   (v2i32 (REG_SEQUENCE SReg_64,
