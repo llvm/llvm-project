@@ -98,6 +98,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
+  case VPVectorEndPointerSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
@@ -153,6 +154,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPBlendSC:
   case VPReductionEVLSC:
   case VPReductionSC:
+  case VPVectorEndPointerSC:
   case VPVectorPointerSC:
   case VPWidenCanonicalIVSC:
   case VPWidenCastSC:
@@ -876,9 +878,13 @@ Value *VPInstruction::generate(VPTransformState &State) {
         cast<VPBasicBlock>(getParent()->getSuccessors()[1]);
     BasicBlock *SecondIRSucc = State.CFG.VPBB2IRBB.lookup(SecondVPSucc);
     BasicBlock *IRBB = State.CFG.VPBB2IRBB[getParent()];
-    auto *Br = Builder.CreateCondBr(Cond, IRBB, SecondIRSucc);
+    // Placeholder for a successor. Assigned in connectToPredecessors.
+    auto *Br =
+        Builder.CreateCondBr(Cond, IRBB, SecondIRSucc ? SecondIRSucc : IRBB);
     // First successor is always forward, reset it to nullptr.
     Br->setSuccessor(0, nullptr);
+    if (!SecondIRSucc)
+      Br->setSuccessor(1, nullptr);
     IRBB->getTerminator()->eraseFromParent();
     applyMetadata(*Br);
     return Br;
@@ -1571,6 +1577,11 @@ void VPInstruction::addOperand(VPValue *Op) {
            "matching operand 1's type and i1, respectively");
     break;
   }
+  case Instruction::PHI:
+    assert((getNumOperands() == 0 ||
+            Ty == getOperand(0)->getScalarType()) &&
+           "all incoming values must have the same type");
+    break;
   default:
     llvm_unreachable("opcode does not support growing the operand list "
                      "outside of construction");

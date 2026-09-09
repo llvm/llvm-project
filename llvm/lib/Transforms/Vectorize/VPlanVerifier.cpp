@@ -310,6 +310,12 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
           continue;
         }
 
+        if (VPBasicBlock *CheckExit =
+                VPBB->getPlan()->getCheckFirstExitBlock()) {
+          if (is_contained(CheckExit->getPredecessors(), VPBB))
+            continue;
+        }
+
         errs() << "Use before def!\n";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
         VPSlotTracker Tracker(VPBB->getPlan());
