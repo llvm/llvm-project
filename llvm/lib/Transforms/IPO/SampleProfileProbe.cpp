@@ -227,7 +227,10 @@ void SampleProfileProber::findInvokeNormalDests(
     auto *TI = BB.getTerminator();
     if (auto *II = dyn_cast<InvokeInst>(TI)) {
       auto *ND = II->getNormalDest();
-      InvokeNormalDests.insert(ND);
+      // A self-looping invoke is the original block, not a split continuation.
+      // Still instrument it.
+      if (ND != &BB)
+        InvokeNormalDests.insert(ND);
 
       // The normal dest and the try/catch block are connected by an
       // unconditional branch.
