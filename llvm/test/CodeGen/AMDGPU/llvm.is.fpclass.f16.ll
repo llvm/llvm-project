@@ -1753,14 +1753,13 @@ define <4 x i1> @isnan_v4f16(<4 x half> %x) nounwind {
 ; GFX11SELDAG-TRUE16:       ; %bb.0:
 ; GFX11SELDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0.l, v0.l
-; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
-; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0.h, v0.h
 ; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v5, 0, 1, vcc_lo
 ; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v1.l, v1.l
-; GFX11SELDAG-TRUE16-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc_lo
+; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v0.h, v0.h
+; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
 ; GFX11SELDAG-TRUE16-NEXT:    v_cmp_u_f16_e32 vcc_lo, v1.h, v1.h
-; GFX11SELDAG-TRUE16-NEXT:    v_mov_b32_e32 v1, v5
+; GFX11SELDAG-TRUE16-NEXT:    v_dual_mov_b32 v0, v5 :: v_dual_mov_b32 v1, v4
 ; GFX11SELDAG-TRUE16-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc_lo
 ; GFX11SELDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;

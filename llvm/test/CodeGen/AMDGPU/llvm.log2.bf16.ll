@@ -99,13 +99,13 @@ define bfloat @v_log2_bf16_fast(bfloat %in) {
 }
 
 define <2 x bfloat> @v_log2_v2bf16(<2 x bfloat> %in) {
-; GFX-SDAG-TRUE16-LABEL: v_log2_v2bf16:
-; GFX-SDAG-TRUE16:       ; %bb.0:
-; GFX-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX-SDAG-TRUE16-NEXT:    v_log_bf16_e32 v0.h, v0.h
-; GFX-SDAG-TRUE16-NEXT:    v_log_bf16_e32 v0.l, v0.l
-; GFX-SDAG-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX-TRUE16-LABEL: v_log2_v2bf16:
+; GFX-TRUE16:       ; %bb.0:
+; GFX-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX-TRUE16-NEXT:    v_log_bf16_e32 v0.l, v0.l
+; GFX-TRUE16-NEXT:    v_log_bf16_e32 v0.h, v0.h
+; GFX-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX-SDAG-FAKE16-LABEL: v_log2_v2bf16:
 ; GFX-SDAG-FAKE16:       ; %bb.0:
@@ -118,14 +118,6 @@ define <2 x bfloat> @v_log2_v2bf16(<2 x bfloat> %in) {
 ; GFX-SDAG-FAKE16-NEXT:    v_nop
 ; GFX-SDAG-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX-GISEL-TRUE16-LABEL: v_log2_v2bf16:
-; GFX-GISEL-TRUE16:       ; %bb.0:
-; GFX-GISEL-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX-GISEL-TRUE16-NEXT:    v_log_bf16_e32 v0.l, v0.l
-; GFX-GISEL-TRUE16-NEXT:    v_log_bf16_e32 v0.h, v0.h
-; GFX-GISEL-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX-GISEL-FAKE16-LABEL: v_log2_v2bf16:
 ; GFX-GISEL-FAKE16:       ; %bb.0:
@@ -147,8 +139,8 @@ define <2 x bfloat> @v_log2_fabs_v2bf16(<2 x bfloat> %in) {
 ; GFX-SDAG-TRUE16:       ; %bb.0:
 ; GFX-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX-SDAG-TRUE16-NEXT:    v_log_bf16_e64 v0.h, |v0.h|
 ; GFX-SDAG-TRUE16-NEXT:    v_log_bf16_e64 v0.l, |v0.l|
+; GFX-SDAG-TRUE16-NEXT:    v_log_bf16_e64 v0.h, |v0.h|
 ; GFX-SDAG-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX-SDAG-FAKE16-LABEL: v_log2_fabs_v2bf16:
@@ -196,8 +188,8 @@ define <2 x bfloat> @v_log2_fneg_fabs_v2bf16(<2 x bfloat> %in) {
 ; GFX-SDAG-TRUE16:       ; %bb.0:
 ; GFX-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX-SDAG-TRUE16-NEXT:    v_log_bf16_e64 v0.h, -|v0.h|
 ; GFX-SDAG-TRUE16-NEXT:    v_log_bf16_e64 v0.l, -|v0.l|
+; GFX-SDAG-TRUE16-NEXT:    v_log_bf16_e64 v0.h, -|v0.h|
 ; GFX-SDAG-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX-SDAG-FAKE16-LABEL: v_log2_fneg_fabs_v2bf16:
@@ -246,8 +238,8 @@ define <2 x bfloat> @v_log2_fneg_v2bf16(<2 x bfloat> %in) {
 ; GFX-SDAG-TRUE16:       ; %bb.0:
 ; GFX-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX-SDAG-TRUE16-NEXT:    v_log_bf16_e64 v0.h, -v0.h
 ; GFX-SDAG-TRUE16-NEXT:    v_log_bf16_e64 v0.l, -v0.l
+; GFX-SDAG-TRUE16-NEXT:    v_log_bf16_e64 v0.h, -v0.h
 ; GFX-SDAG-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX-SDAG-FAKE16-LABEL: v_log2_fneg_v2bf16:
@@ -291,13 +283,13 @@ define <2 x bfloat> @v_log2_fneg_v2bf16(<2 x bfloat> %in) {
 }
 
 define <2 x bfloat> @v_log2_v2bf16_fast(<2 x bfloat> %in) {
-; GFX-SDAG-TRUE16-LABEL: v_log2_v2bf16_fast:
-; GFX-SDAG-TRUE16:       ; %bb.0:
-; GFX-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX-SDAG-TRUE16-NEXT:    v_log_bf16_e32 v0.h, v0.h
-; GFX-SDAG-TRUE16-NEXT:    v_log_bf16_e32 v0.l, v0.l
-; GFX-SDAG-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX-TRUE16-LABEL: v_log2_v2bf16_fast:
+; GFX-TRUE16:       ; %bb.0:
+; GFX-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX-TRUE16-NEXT:    v_log_bf16_e32 v0.l, v0.l
+; GFX-TRUE16-NEXT:    v_log_bf16_e32 v0.h, v0.h
+; GFX-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX-SDAG-FAKE16-LABEL: v_log2_v2bf16_fast:
 ; GFX-SDAG-FAKE16:       ; %bb.0:
@@ -310,14 +302,6 @@ define <2 x bfloat> @v_log2_v2bf16_fast(<2 x bfloat> %in) {
 ; GFX-SDAG-FAKE16-NEXT:    v_nop
 ; GFX-SDAG-FAKE16-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
 ; GFX-SDAG-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-;
-; GFX-GISEL-TRUE16-LABEL: v_log2_v2bf16_fast:
-; GFX-GISEL-TRUE16:       ; %bb.0:
-; GFX-GISEL-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX-GISEL-TRUE16-NEXT:    v_log_bf16_e32 v0.l, v0.l
-; GFX-GISEL-TRUE16-NEXT:    v_log_bf16_e32 v0.h, v0.h
-; GFX-GISEL-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX-GISEL-FAKE16-LABEL: v_log2_v2bf16_fast:
 ; GFX-GISEL-FAKE16:       ; %bb.0:

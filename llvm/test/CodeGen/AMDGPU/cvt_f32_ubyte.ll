@@ -1732,10 +1732,10 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(ptr addrspace(1) noalias %o
 ; GFX11-TRUE16-NEXT:    global_load_b32 v5, v0, s[0:1]
 ; GFX11-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-TRUE16-NEXT:    v_add_nc_u16 v0.l, v5.h, 9
-; GFX11-TRUE16-NEXT:    v_add_nc_u16 v0.h, v5.l, 9
-; GFX11-TRUE16-NEXT:    v_and_b16 v1.l, 0xff00, v5.h
-; GFX11-TRUE16-NEXT:    v_and_b16 v1.h, 0xff00, v5.l
+; GFX11-TRUE16-NEXT:    v_add_nc_u16 v0.l, v5.l, 9
+; GFX11-TRUE16-NEXT:    v_add_nc_u16 v0.h, v5.h, 9
+; GFX11-TRUE16-NEXT:    v_and_b16 v1.l, 0xff00, v5.l
+; GFX11-TRUE16-NEXT:    v_and_b16 v1.h, 0xff00, v5.h
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_ubyte3_e32 v3, v5
 ; GFX11-TRUE16-NEXT:    v_and_b16 v0.l, 0xff, v0.l
 ; GFX11-TRUE16-NEXT:    v_and_b16 v0.h, 0xff, v0.h
@@ -1746,12 +1746,12 @@ define amdgpu_kernel void @load_v4i8_to_v4f32_2_uses(ptr addrspace(1) noalias %o
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_ubyte1_e32 v1, v5
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_ubyte0_e32 v0, v5
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-TRUE16-NEXT:    v_add_nc_u16 v5.h, 0x900, v4.l
-; GFX11-TRUE16-NEXT:    v_add_nc_u16 v5.l, 0x900, v4.h
+; GFX11-TRUE16-NEXT:    v_add_nc_u16 v4.l, 0x900, v4.l
+; GFX11-TRUE16-NEXT:    v_add_nc_u16 v4.h, 0x900, v4.h
 ; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    s_clause 0x1
 ; GFX11-TRUE16-NEXT:    global_store_b128 v6, v[0:3], s[0:1]
-; GFX11-TRUE16-NEXT:    global_store_b32 v6, v5, s[2:3]
+; GFX11-TRUE16-NEXT:    global_store_b32 v6, v4, s[2:3]
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: load_v4i8_to_v4f32_2_uses:
