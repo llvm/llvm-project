@@ -10,6 +10,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SwapByteOrder.h"
@@ -2319,6 +2320,58 @@ std::string Triple::merge(const Triple &Other) const {
     return AMDGPU::mergeSubArch(*this, Other);
 
   return Other.str();
+}
+
+bool Triple::isValidAddrSpaceCast(unsigned SrcAS, unsigned DstAS) const {
+  if (SrcAS == DstAS)
+    return true;
+
+  switch (getArch()) {
+  // AMDGPU addrspacecasts among flat, global, constant (and reserved
+  // downstream address spaces) preserve dereferenceability.
+  case Triple::amdgpu:
+  case Triple::r600:
+    return AMDGPU::isFlatGlobalAddrSpace(SrcAS) &&
+           AMDGPU::isFlatGlobalAddrSpace(DstAS);
+
+  // X86 address spaces >= 256 are segment-relative offsets that refer to
+  // different memory; only casts within the first 256 spaces preserve
+  // dereferenceability.
+  case Triple::x86:
+  case Triple::x86_64:
+    return SrcAS < 256 && DstAS < 256;
+
+  // Mips reserves the first 256 address spaces for software use (e.g. OpenCL)
+  // and treats casts between them as noops.
+  case Triple::mips:
+  case Triple::mipsel:
+  case Triple::mips64:
+  case Triple::mips64el:
+    return SrcAS < 256 && DstAS < 256;
+
+  // These targets have no distinct hardware address spaces and their
+  // TargetMachine hooks unconditionally treat addrspacecasts as noops.
+  case Triple::arm:
+  case Triple::armeb:
+  case Triple::thumb:
+  case Triple::thumbeb:
+  case Triple::aarch64:
+  case Triple::aarch64_be:
+  case Triple::aarch64_32:
+  case Triple::hexagon:
+  case Triple::loongarch32:
+  case Triple::loongarch64:
+  case Triple::ppc:
+  case Triple::ppcle:
+  case Triple::ppc64:
+  case Triple::ppc64le:
+  case Triple::riscv32:
+  case Triple::riscv64:
+    return true;
+
+  default:
+    return false;
+  }
 }
 
 bool Triple::isMacOSXVersionLT(unsigned Major, unsigned Minor,
