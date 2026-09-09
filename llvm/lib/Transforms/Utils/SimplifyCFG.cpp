@@ -5140,7 +5140,7 @@ bool SimplifyCFGOpt::simplifySwitchOnSelectRemap(SwitchInst *SI,
       // denominator.
       uint64_t SwitchTotalWeight = sum_of(SwitchWeights, uint64_t{0});
       SmallVector<uint64_t> NewSwitchWeights;
-      NewSwitchWeights.reserve(SwitchWeights.size() + IsDefault);
+      NewSwitchWeights.reserve(SwitchWeights.size());
       NewSwitchWeights.push_back(SwitchWeights[0] * SelectTotalWeight);
       for (const auto &[SwitchCase, SwitchWeight] :
            zip(SI->cases(), drop_begin(SwitchWeights))) {
